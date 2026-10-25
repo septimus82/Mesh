@@ -1,0 +1,60 @@
+{
+  "cottage_m17.glb": {
+    "sha256": "4b745284d9fd7c9618b54b9732d603dec8f36d22c397996f160ecdd93d9e2d62",
+    "built_by": "tooling/hd2d_assets/pilot_m17/build_cottage_m17.py",
+    "build_command": "blender --factory-startup -noaudio --background --python tooling/hd2d_assets/pilot_m17/build_cottage_m17.py -- tooling/hd2d_assets/pilot_m17/models/cottage_m17.glb",
+    "blender": "Blender 5.2.0 LTS (hash fbe6228777e7), exporter Khronos glTF Blender I/O v5.2.39",
+    "deterministic": "a second build gave the same sha256",
+    "geometry_source": "tooling/hd2d_assets/build_cottage.py build() (unchanged) plus blender_kit.py box/material/export (unchanged)",
+    "pilot_textures": {
+      "stone_b_seamfix.png": {
+        "use": "lower walls (stone plinth, 0.1-0.9 m) and the floor slab's 0.1 m outer edge",
+        "endpoint": "https://api.pixellab.ai/v2/inpaint-v3",
+        "raw_file": "raw/textures/i11_stone_b_seamfix/image.png",
+        "seed": 2801,
+        "generation_id": "7e62bc0f-1d3f-4b21-b95a-c192401cbcaf",
+        "md5": "69569ca01f2fb71e81f5b3ddadacbbbe"
+      },
+      "roof_slate.png": {
+        "use": "roof slopes",
+        "endpoint": "https://api.pixellab.ai/v2/create-image-pixflux",
+        "raw_file": "raw/textures/p06_roof_slate/image.png",
+        "seed": 2501,
+        "md5": "437cd82f8dd8a60027b7d3946aa203e3"
+      },
+      "window_a.png": {
+        "use": "two window decals on the south wall, centred in each 1.9 m span beside the doorway, 1.1-2.006 m, 1 cm out; CLAMP_TO_EDGE",
+        "endpoint": "https://api.pixellab.ai/v2/create-image-bitforge",
+        "raw_file": "raw/textures/b08_window_a/image.png",
+        "seed": 2601,
+        "md5": "dc97942002812c5af08937f70b1e9f2b"
+      }
+    },
+    "pilot_textures_record": "full requests, prompts, job ids and times: ../textures/provenance.json",
+    "starter_assets_reused": {
+      "tooling/hd2d_assets/textures/timber.png": "lintel, corner posts, sill beam, door jambs (md5 dad097548d2f8b4a21c92562cd5dfb8f)",
+      "tooling/hd2d_assets/textures/floorboards.png": "floor top (md5 ba9b7e4470b3d134c74ac600f2e98e46)",
+      "tooling/hd2d_assets/textures/plaster.png": "upper walls and gable ends, 1 tile per metre (md5 3d1bfa72a45ccfda969202172f57db55)"
+    },
+    "not_used": {
+      "door_a.png": "the door is a separate sprite entity; doorway left open as in the starter",
+      "moss_*": "failed candidates"
+    },
+    "images": "embedded in the GLB (PNG), pixel-identical to the source files; no resizing; samplers magFilter NEAREST, minFilter NEAREST_MIPMAP_NEAREST (same as the starter kit)",
+    "texel_density_px_per_m": 32,
+    "collision": "identical to assets/hd2d_starter/models/cottage.glb: same 7 col_ nodes, extras, transforms and byte-identical POSITION/index data",
+    "iteration": 2,
+    "tried_and_rejected": {
+      "plaster_b.png": {
+        "use": "iteration 1 only (upper walls, gable ends)",
+        "endpoint": "https://api.pixellab.ai/v2/create-tiles-pro",
+        "raw_file": "raw/textures/t01_plaster_64/tile_2.png",
+        "seed": 1701,
+        "tile_id": "cbf0f6d4-a61e-4971-8575-65647cc08433",
+        "md5": "135ab7a44d8089d4bf1b3fff4b037c18",
+        "reason": "In game (m17_visual_pilot compare, iteration 1) its single bold crack read as a large scribble repeating every 2 m on an otherwise flat field; a step down from the starter plaster. Replaced by the starter plaster in iteration 2."
+      },
+      "side-wall windows": "iteration 1 put window_a on the east and west walls; the game camera only sees the south face, so they were never visible. Dropped in iteration 2."
+    }
+  }
+}
