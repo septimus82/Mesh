@@ -13,12 +13,18 @@ What the creator does here:
   gets a box, a character the ordinary object inspector;
 - **move**: drag a structure (or a character) over the ground, snapped to a 0.5 m grid unless snapping is off; the
   inspector raises, lowers and turns it and takes exact values in metres and degrees;
-- **place**: "Add a structure" lists the project's .glb models; the chosen one follows the mouse until a click
-  places it.
+- **place**: the Models browser ("Models..." in the 3D view section) lists the project's Blender models with their
+  pictures; "Place in scene" makes the chosen one follow the mouse until a click places it, turned and scaled as the
+  model's defaults say;
+- **import and reimport** (Stage 5B): "Import 3D model..." checks a .glb exported from Blender, shows what it holds
+  and a picture of it, and copies it into the project's catalogue (``engine.hd2d.catalog``); "Reimport" replaces a
+  model's file with a new export after saying what changes (collision, floors, characters left without room to
+  stand), and every placed copy keeps its id and place.
 
-Every change is one ``project_ops`` operation through Mesh Studio's ordinary edit path (``Studio._edit``): one undo
-step, saved with the room, the same operations AI tools propose. A 2D room never creates this view's state or
-draws through it.
+Every change to a room is one ``project_ops`` operation through Mesh Studio's ordinary edit path (``Studio._edit``):
+one undo step, saved with the room, the same operations AI tools propose. Importing writes model files straight
+away, like importing a picture or a tileset (not an undo step); it never overwrites, and a failure writes nothing.
+A 2D room never creates this view's state or draws through it.
 """
 
 from __future__ import annotations
@@ -34,7 +40,7 @@ from engine import project_ops as ops
 from engine.hd2d.picking import Picker, box, box_edges, ground_point
 from engine.hd2d.renderer import Camera
 from engine.hd2d.settings import PIXELS_PER_METRE
-from engine.studio_ui import C_MUTED, S_ACTIVE, S_BUTTON, gui
+from engine.studio_ui import C_ERROR, C_MUTED, C_WARN, S_ACTIVE, S_BUTTON, gui
 
 if TYPE_CHECKING:
     from engine.studio import Studio
@@ -60,6 +66,13 @@ class Hd2dView:
         self.structure: str | None = None  # the selected structure's id
         self.drag: dict[str, Any] | None = None
         self.placing: str | None = None  # a model being placed (follows the mouse)
+        self.placing_turn, self.placing_scale = 0.0, 1.0  # ... with its catalogue defaults
+        self.chosen_model: str | None = None  # the model browser's selection (an asset id)
+        self.model_filter = ""
+        self.import_form: dict[str, Any] = {"path": "", "name": "", "category": "", "license": "", "sharp": True}
+        self.reimport_form: dict[str, Any] = {"id": None, "path": ""}
+        self._assets: list[Any] | None = None  # the catalogue as last read (None: read it again)
+        self._facts: dict[tuple[str, int, int], tuple[Any | None, str | None]] = {}  # (file, mtime, size) -> (report, problem)
         self.snap = True
         self.picker = Picker()
         self.tips: list[tuple[Any, str]] = []  # (button, short tooltip) for the 3D view's buttons
@@ -385,13 +398,9 @@ class Hd2dView:
 
     # ------------------------------------------------------------------ placing a structure
     def models_in_project(self) -> list[str]:
-        root = Path(self.studio.project.root)
-        found = []
-        for path in sorted(root.rglob("*.glb")):
-            rel = path.relative_to(root).as_posix()
-            if not any(part.startswith(".") or part in ("artifacts", "exports") for part in path.relative_to(root).parts):
-                found.append(rel)
-        return found
+        from engine.hd2d.catalog import glb_files  # noqa: PLC0415
+
+        return glb_files(self.studio.project.root)
 
     def _ensure_model(self, model: str) -> bool:
         renderer = self.renderer
@@ -407,10 +416,10 @@ class Hd2dView:
             renderer.models[model] = load_glb(Path(self.studio.project.root) / model)
         return True
 
-    def start_placing(self, model: str) -> None:
+    def start_placing(self, model: str, rotation: float = 0.0, scale: float = 1.0) -> None:
         if not self._ensure_model(model):
             return
-        self.placing = model
+        self.placing, self.placing_turn, self.placing_scale = model, rotation, scale
         self.studio.panel = "inspect"
         self.studio._say(f"Placing {Path(model).name}: click the ground to put it there (Esc cancels).")
         self.studio._rebuild()
@@ -425,7 +434,7 @@ class Hd2dView:
             return
         gx = _snap(at[0] / PIXELS_PER_METRE, self.snap) * PIXELS_PER_METRE
         gy = _snap(at[1] / PIXELS_PER_METRE, self.snap) * PIXELS_PER_METRE
-        renderer.set_preview(self.placing, gx, gy)
+        renderer.set_preview(self.placing, gx, gy, rotation=self.placing_turn, scale=self.placing_scale)
 
     def place_here(self, x: float, y: float) -> None:
         model, at = self.placing, self.ground_px(x, y)
@@ -440,9 +449,10 @@ class Hd2dView:
         gx = _snap(at[0] / PIXELS_PER_METRE, self.snap) * PIXELS_PER_METRE
         gy = _snap(at[1] / PIXELS_PER_METRE, self.snap) * PIXELS_PER_METRE
         made: dict[str, str] = {}
+        turn, scale = self.placing_turn, self.placing_scale
 
         def change(scene: dict[str, Any]) -> dict[str, Any]:
-            new_scene, sid = ops.place_structure(scene, model, gx, gy)
+            new_scene, sid = ops.place_structure(scene, model, gx, gy, rotation=turn, scale=scale)
             made["id"] = sid
             return new_scene
 
@@ -510,27 +520,360 @@ class Hd2dView:
         row.add(self._button("Frame it", self.frame_selected, "Zoom to the selected structure (F)", width=half))
         box.add(row)
         box.add(studio._label("Middle-drag pans, wheel zooms, WASD moves.", color=C_MUTED, size=10, width=width))
-        box.add(self._button("Add a structure...", self.open_models, "Place a copy of a Blender model (.glb) "
-                             "from this project", width=width, style=S_ACTIVE if studio.panel == "structures" else S_BUTTON))
+        box.add(self._button("Models...", self.open_models, "Blender models in this project: import, browse, place "
+                             "and reimport", width=width, style=S_ACTIVE if studio.panel == "structures" else S_BUTTON))
 
+    # ------------------------------------------------------------------ the model browser (Stage 5B)
     def open_models(self) -> None:
         studio = self.studio
         studio._flush_fields()
+        self._assets = None
         studio.panel = "inspect" if studio.panel == "structures" else "structures"
+        studio.panel_scroll = 0
         studio._rebuild()
+
+    def models(self) -> list[Any]:
+        """The project's models (``engine.hd2d.catalog.ModelAsset``), read once per visit to the browser."""
+        if self._assets is None:
+            try:
+                self._assets = self.studio.project.model_assets()
+            except ops.OpError as err:
+                self.studio._say(str(err), ok=False)
+                self._assets = []
+        return self._assets
+
+    def _asset(self, asset_id: str | None) -> Any | None:
+        return next((a for a in self.models() if a.id == asset_id), None)
+
+    def facts(self, asset: Any) -> tuple[Any | None, str | None]:
+        """``(report, problem)`` for a model's file, read once per version of the file."""
+        from engine.hd2d.glb import GlbError, inspect_glb, model_problem  # noqa: PLC0415
+
+        path = Path(self.studio.project.root) / asset.model
+        try:
+            stat = path.stat()
+        except OSError:
+            return None, f"The file {asset.model} is missing: reimport it, or put it back."
+        key = (str(path), stat.st_mtime_ns, stat.st_size)
+        if key not in self._facts:
+            problem = model_problem(self.studio.project.root, asset.model)
+            try:
+                self._facts[key] = (None, problem) if problem else (inspect_glb(path)[1], None)
+            except GlbError as err:
+                self._facts[key] = (None, str(err))
+        return self._facts[key]
+
+    def _thumbnail(self, rows: Any, asset: Any, width: int, height: int) -> None:
+        """A model's picture: its saved preview, or (for a model imported before Stage 5B) one drawn now."""
+        studio = self.studio
+        space = gui.UISpace(width=width, height=height)
+        key = str(Path(studio.project.root) / asset.preview) if asset.preview else ""
+        if not key or not Path(key).is_file():
+            key = f"model-preview:{asset.model}"
+            if key not in studio._images:
+                from engine.hd2d.glb import GlbError, load_glb  # noqa: PLC0415
+                from engine.hd2d.thumbnail import render  # noqa: PLC0415
+
+                try:
+                    studio._images[key] = render(load_glb(Path(studio.project.root) / asset.model))
+                except (GlbError, OSError):
+                    studio._images[key] = None
+        studio._thumbs.append((space, key))
+        rows.add(space)
+
+    def _forget_pictures(self, asset_id: str) -> None:
+        """After an import or reimport: the browser reads the new preview and facts."""
+        studio = self.studio
+        for key in [k for k in studio._images if asset_id in k or k.startswith("model-preview:")]:
+            studio._images.pop(key, None)
+            studio._textures.pop(("thumb", key), None)
+        self._assets = None
+
+    def choose_model(self, asset_id: str) -> None:
+        self.chosen_model = None if self.chosen_model == asset_id else asset_id
+        self.studio._rebuild()
+
+    def set_model_filter(self, text: str) -> None:
+        self.model_filter = text.strip()
+        self.studio.panel_scroll = 0
+        self.studio._rebuild()
 
     def models_panel(self, rows: Any, width: int) -> None:
         studio = self.studio
-        rows.add(studio._label("Add a structure", bold=True, size=12))
-        rows.add(studio._label("Models (.glb) in this project, as exported from Blender. Pick one, then click the "
-                               "ground where it goes.", color=C_MUTED, width=width))
-        models = self.models_in_project()
-        if not models:
-            rows.add(studio._label("No .glb files in this project yet: export one from Blender into assets/.",
-                                   color=C_MUTED, width=width))
-        for model in models:
-            rows.add(self._button(Path(model).name, partial(self.start_placing, model), model, width=width))
-        rows.add(studio._button("Cancel", self.open_models, width=96))
+        rows.add(studio._label("Models", bold=True, size=12))
+        rows.add(studio._label("3D structures made in Blender (.glb). Pictures and sprites are under each object's "
+                               "Picture.", color=C_MUTED, size=10, width=width))
+        row = _row()
+        row.add(self._button("Import 3D model...", self.open_import, "Bring a .glb exported from Blender into the "
+                             "project", width=width - 86, style=S_ACTIVE))
+        row.add(studio._button("Close", self.open_models, width=80))
+        rows.add(row)
+        rows.add(self._search_row(width))
+        words = self.model_filter.lower().split()
+        everything = self.models()
+        shown = [a for a in everything if all(w in f"{a.name} {a.category} {a.id} {a.notes}".lower() for w in words)]
+        if not everything:
+            rows.add(studio._label("No models yet. Export one from Blender (File > Export > glTF 2.0, glTF Binary), "
+                                   "then Import 3D model.", color=C_MUTED, width=width))
+        elif not shown:
+            rows.add(studio._label(f"No model matches '{self.model_filter}'.", color=C_MUTED, width=width))
+        here: dict[str, int] = {}
+        for st in self.structures():
+            here[st.model] = here.get(st.model, 0) + 1
+        category = None
+        for asset in shown:
+            if asset.category != category and asset.category:
+                category = asset.category
+                rows.add(studio._label(category, color=C_MUTED, size=10))
+            row = _row()
+            self._thumbnail(row, asset, 48, 36)
+            count = here.get(asset.model, 0)
+            label = asset.name + (" (missing file)" if asset.missing else f"  x{count}" if count else "")
+            row.add(self._button(label, partial(self.choose_model, asset.id), f"{asset.model}", width=width - 54,
+                                 style=S_ACTIVE if asset.id == self.chosen_model else S_BUTTON))
+            rows.add(row)
+            if asset.id == self.chosen_model:
+                self._model_details(rows, asset, width, count)
+
+    def _search_row(self, width: int) -> Any:
+        row = _row()
+        row.add(self.studio._label("Search", color=C_MUTED, size=10, width=56))
+        row.add(self.studio._field(self.model_filter, self.set_model_filter, width=width - 62, key="model_search"))
+        return row
+
+    def _model_details(self, rows: Any, asset: Any, width: int, count: int) -> None:
+        studio = self.studio
+        self._thumbnail(rows, asset, width, int(width * 0.55))
+        report, problem = self.facts(asset)
+        if problem:
+            rows.add(studio._label(problem, color=C_ERROR, size=10, width=width))
+        elif report is not None:
+            for line in report.lines():
+                rows.add(studio._label(line, color=C_MUTED, size=10, width=width))
+            if report.floors:
+                rows.add(studio._label("Floors: " + ", ".join(report.floors), color=C_MUTED, size=10, width=width))
+        rows.add(studio._label(f"{count} cop{'y' if count == 1 else 'ies'} in this room. File: {asset.model}",
+                               color=C_MUTED, size=10, width=width))
+        source = asset.source or {}
+        if source:
+            rows.add(studio._label(f"Imported {str(source.get('imported', '?'))[:10]} from {source.get('file', '?')}",
+                                   color=C_MUTED, size=10, width=width))
+        elif not asset.catalogued:
+            rows.add(studio._label("Not in the catalogue yet (from before model import); fill in its details below.",
+                                   color=C_MUTED, size=10, width=width))
+        half = (width - 6) // 2
+        row = _row()
+        row.add(self._button("Place in scene", partial(self.place_chosen, asset.id), "Then click the ground where it "
+                             "goes (Esc cancels)", width=half, style=S_ACTIVE, disabled=bool(problem)))
+        row.add(self._button("Reimport...", partial(self.open_reimport, asset.id), "Update it from a new Blender "
+                             "export; placed copies keep their places", width=half))
+        rows.add(row)
+        rows.add(studio._label("Details", bold=True, size=11))
+        for label, key, value in (("Name", "name", asset.name), ("Category", "category", asset.category),
+                                  ("Default turn", "rotation", f"{asset.rotation:g}"),
+                                  ("Default scale", "scale", f"{asset.scale:g}"),
+                                  ("Licence", "license", asset.license), ("Notes", "notes", asset.notes)):
+            studio._labeled(rows, label, studio._field(value, partial(self.set_model_property, asset.id, key),
+                                                       width=width - 122, key=f"model_{key}"), width)
+
+    def set_model_property(self, asset_id: str, key: str, value: str) -> None:
+        try:
+            asset = self.studio.project.set_model_properties(asset_id, **{key: value})
+        except ops.OpError as err:
+            self.studio._say(str(err), ok=False)
+            return
+        self._assets = None
+        self.chosen_model = asset.id
+        self.studio._say(f"{asset.name}: {key} saved.")
+        self.studio._rebuild()
+
+    def place_chosen(self, asset_id: str) -> None:
+        asset = self._asset(asset_id)
+        if asset is not None:
+            self.start_placing(asset.model, asset.rotation, asset.scale)
+
+    # ------------------------------------------------------------------ import
+    def open_import(self) -> None:
+        self.studio._flush_fields()
+        self.studio.panel, self.studio.panel_scroll = "import_model", 0
+        self.studio._rebuild()
+
+    def browse_import(self, form_key: str = "import") -> None:
+        from engine.studio_ui import ask_path  # noqa: PLC0415  # a native file dialog: people only, never tests
+
+        path = ask_path(folder=False, title="A model exported from Blender (glTF Binary)",
+                        filetypes=[("glTF Binary", "*.glb"), ("All files", "*.*")])
+        if path:
+            (self.set_import_path if form_key == "import" else self.set_reimport_path)(path)
+
+    def set_import_path(self, path: str) -> None:
+        form = self.import_form
+        form["path"] = path.strip().strip('"')
+        if form["path"] and not form["name"]:
+            form["name"] = Path(form["path"]).stem.replace("_", " ").replace("-", " ").strip().title()
+        self.studio._rebuild()
+
+    def _set_import(self, key: str, value: Any) -> None:
+        self.import_form[key] = value.strip() if isinstance(value, str) else value
+        self.studio._rebuild()
+
+    def _inspection_picture(self, rows: Any, found: Any, width: int) -> None:
+        if found.model is None:
+            return
+        studio = self.studio
+        try:
+            stat = found.source.stat()
+            key = f"model-import:{found.source}:{stat.st_mtime_ns}:{stat.st_size}"
+        except OSError:
+            return
+        if key not in studio._images:
+            from engine.hd2d.thumbnail import render  # noqa: PLC0415
+
+            studio._images[key] = render(found.model)
+        space = gui.UISpace(width=width, height=int(width * 0.5))
+        studio._thumbs.append((space, key))
+        rows.add(space)
+
+    def import_panel(self, rows: Any, width: int) -> None:
+        from engine.hd2d.catalog import inspect_source  # noqa: PLC0415
+
+        studio, form = self.studio, self.import_form
+        rows.add(studio._label("Import a 3D model", bold=True, size=12))
+        rows.add(studio._label("A .glb from Blender: File > Export > glTF 2.0, Format glTF Binary, with "
+                               "Include > Custom Properties on (for collision).", color=C_MUTED, size=10, width=width))
+        rows.add(studio._label("File (Enter to check)", color=C_MUTED))
+        row = _row()
+        row.add(studio._field(form["path"], self.set_import_path, width=width - 92, key="model_path"))
+        row.add(studio._button("Browse...", self.browse_import, width=86))
+        rows.add(row)
+        for label, key in (("Name", "name"), ("Category", "category"), ("Licence / source", "license")):
+            studio._labeled(rows, label, studio._field(form[key], partial(self._set_import, key), width=width - 122,
+                                                       key=f"model_import_{key}"), width)
+        rows.add(self._button(f"Keep pixels sharp: {'On' if form['sharp'] else 'Off'}",
+                              lambda: self._set_import("sharp", not form["sharp"]),
+                              "Pixel-art textures stay crisp even if Blender exported them smooth (Linear)",
+                              width=width, style=S_ACTIVE if form["sharp"] else S_BUTTON))
+        found = inspect_source(studio.project.root, form["path"], name=form["name"],
+                               pixels="sharp" if form["sharp"] else "as exported") if form["path"] else None
+        ok = found is not None and found.ok and not found.duplicate_of
+        row = _row()
+        row.add(studio._button("Import", self.import_now, width=96, style=S_ACTIVE, disabled=not ok))
+        row.add(studio._button("Cancel", self.open_models_again, width=80))
+        rows.add(row)
+        if found is None:
+            rows.add(studio._label("Choose a file to see what it holds.", color=C_MUTED, size=10, width=width))
+        elif not found.ok:
+            rows.add(studio._label(found.problem or "", color=C_ERROR, size=10, width=width))
+        else:
+            self._inspection_picture(rows, found, width)
+            for line in found.report.lines() if found.report else []:
+                rows.add(studio._label(line, color=C_MUTED, size=10, width=width))
+            if found.sharpened:
+                rows.add(studio._label(f"Made sharp: {', '.join(found.sharpened)}.", color=C_WARN, size=10, width=width))
+            if found.duplicate_of:
+                rows.add(studio._label(f"Already imported as '{found.duplicate_of}'.", color=C_ERROR, size=10, width=width))
+            else:
+                rows.add(studio._label(f"It becomes assets/models/{found.asset_id}.glb.", color=C_MUTED, size=10, width=width))
+
+    def open_models_again(self) -> None:
+        self.studio.panel, self.studio.panel_scroll = "structures", 0
+        self.studio._rebuild()
+
+    def import_now(self) -> None:
+        studio, form = self.studio, self.import_form
+        studio._flush_fields()
+        try:
+            asset = studio.project.import_model(form["path"], name=form["name"], category=form["category"],
+                                                license=form["license"],
+                                                pixels="sharp" if form["sharp"] else "as exported")
+        except ops.OpError as err:
+            studio._say(str(err), ok=False)
+            return
+        self._forget_pictures(asset.id)
+        self.import_form = {"path": "", "name": "", "category": "", "license": "", "sharp": True}
+        self.chosen_model = asset.id
+        self.open_models_again()
+        studio._say(f"Imported {asset.name} as {asset.model}. Place in scene puts a copy in the room.")
+
+    # ------------------------------------------------------------------ reimport
+    def open_reimport(self, asset_id: str) -> None:
+        asset = self._asset(asset_id)
+        if asset is None:
+            return
+        self.studio._flush_fields()
+        self.reimport_form = {"id": asset.id, "path": str((asset.source or {}).get("file", ""))}
+        self.studio.panel, self.studio.panel_scroll = "reimport_model", 0
+        self.studio._rebuild()
+
+    def set_reimport_path(self, path: str) -> None:
+        self.reimport_form["path"] = path.strip().strip('"')
+        self.studio._rebuild()
+
+    def reimport_panel(self, rows: Any, width: int) -> None:
+        studio, form = self.studio, self.reimport_form
+        asset = self._asset(form["id"])
+        if asset is None:
+            self.open_models_again()
+            return
+        rows.add(studio._label(f"Reimport {asset.name}", bold=True, size=12))
+        rows.add(studio._label("Replace this model with a new export from Blender. Every copy in every room keeps "
+                               "its name, place and turn.", color=C_MUTED, size=10, width=width))
+        rows.add(studio._label("From file (Enter to check)", color=C_MUTED))
+        row = _row()
+        row.add(studio._field(form["path"], self.set_reimport_path, width=width - 92, key="reimport_path"))
+        row.add(studio._button("Browse...", partial(self.browse_import, "reimport"), width=86))
+        rows.add(row)
+        try:
+            plan = studio.project.plan_reimport(asset.id, form["path"] or None)
+        except ops.OpError as err:
+            plan, problem = None, str(err)
+        else:
+            problem = plan.inspection.problem
+        row = _row()
+        row.add(studio._button("Reimport", self.reimport_now, width=96, style=S_ACTIVE, disabled=bool(problem)))
+        row.add(studio._button("Cancel", self.open_models_again, width=80))
+        rows.add(row)
+        if problem or plan is None:
+            rows.add(studio._label(problem or "", color=C_ERROR, size=10, width=width))
+        else:
+            self._inspection_picture(rows, plan.inspection, width)
+            rows.add(studio._label("What changes", bold=True, size=11))
+            for line in plan.changes:
+                rows.add(studio._label(line, color=C_MUTED, size=10, width=width))
+            for line in plan.warnings:
+                rows.add(studio._label(line, color=C_WARN, size=10, width=width))
+
+    def reimport_now(self) -> None:
+        studio, form = self.studio, self.reimport_form
+        studio._flush_fields()
+        root = Path(studio.project.root)
+        asset = self._asset(form["id"])
+        if asset is None:
+            return
+        keep = {rel: (root / rel).read_bytes() if (root / rel).is_file() else None
+                for rel in (asset.model, asset.preview or "", "assets/models/catalog.json") if rel}
+        try:
+            plan = studio.project.reimport_model(asset.id, form["path"] or None)
+        except ops.OpError as err:
+            studio._say(str(err), ok=False)
+            return
+        self._forget_pictures(asset.id)
+        studio._reload()  # the room's renderer and world are rebuilt from the new file (the old GPU objects freed)
+        error = getattr(studio.window, "hd2d_error", None)
+        if error:  # it read fine but the room won't build with it: put the previous files back
+            for rel, data in keep.items():
+                if data is None:
+                    (root / rel).unlink(missing_ok=True)
+                else:
+                    (root / rel).write_bytes(data)
+            self._forget_pictures(asset.id)
+            studio._reload()
+            studio._say(f"The room couldn't use the new {asset.name} ({error}); the previous version is back.", ok=False)
+            return
+        self.open_models_again()
+        changed = "; ".join(plan.changes[:2])
+        studio._say(f"Reimported {asset.name}: {changed}" + (f" ({len(plan.warnings)} warning(s))" if plan.warnings else ""),
+                    ok=not plan.warnings)
 
     def inspector(self, rows: Any, width: int) -> None:
         """The selected structure: what it is, where it is (metres, degrees), and buttons to move it."""

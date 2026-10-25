@@ -50,7 +50,7 @@ def _step(run: dict, name: str) -> dict:
 def test_the_hd2d_room_opens_in_studio_as_a_lit_3d_view(run: dict) -> None:
     opened = _step(run, "open")
     assert opened["active"] and opened["structures"] == ["crossing"]
-    assert opened["lamps"] == 2 and opened["shadows"] and opened["left_panel_3d"] and opened["add_structure_button"]
+    assert opened["lamps"] == 2 and opened["shadows"] and opened["left_panel_3d"] and opened["models_button"]
 
 
 def test_picking_selects_characters_and_structures_apart(run: dict) -> None:

@@ -1445,6 +1445,10 @@ class Studio(InspectorMixin):
             self._preview_panel(rows, width)
         elif self.panel == "structures" and self.hd2d.active:
             self.hd2d.models_panel(rows, width)
+        elif self.panel == "import_model" and self.hd2d.active:
+            self.hd2d.import_panel(rows, width)
+        elif self.panel == "reimport_model" and self.hd2d.active:
+            self.hd2d.reimport_panel(rows, width)
         elif self.hd2d.active and self.hd2d.structure is not None and self.hd2d.find(self.hd2d.structure) is not None:
             self.hd2d.inspector(rows, width)
         else:

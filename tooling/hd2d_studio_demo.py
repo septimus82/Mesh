@@ -97,14 +97,31 @@ class StudioDriver:
         self.window.dispatch_event("on_mouse_release", *end, button, 0)
         self.frame()
 
-    def button(self, text: str) -> None:
-        """Click Mesh Studio's button with this text, where it is on screen."""
+    def button(self, text: str, *, prefix: bool = False) -> None:
+        """Click Mesh Studio's button with this text (or, with ``prefix``, starting with it), where it is on screen."""
         for widget in self.studio.ui.walk_widgets():
-            if getattr(widget, "text", None) == text:
+            label = getattr(widget, "text", None)
+            if label == text or (prefix and isinstance(label, str) and label.startswith(text)):
                 r = widget.rect
                 self.click(r.left + r.width / 2, r.bottom + r.height / 2)
                 return
         raise AssertionError(f"no button '{text}' on screen")
+
+    def type_into(self, key: str, text: str) -> None:
+        """Click Mesh Studio's text field ``key``, select what is in it (Ctrl+A), type ``text`` and press Enter, as a
+        person types (key and text events into the window)."""
+        k = self.arcade.key
+        field = self.studio._focusable[key]
+        r = field.rect
+        self.click(r.left + r.width / 2, r.bottom + r.height / 2)
+        self.window.dispatch_event("on_key_press", k.A, k.MOD_CTRL)
+        self.window.dispatch_event("on_key_release", k.A, k.MOD_CTRL)
+        self.window.dispatch_event("on_text", text)
+        self.key(k.ENTER)
+
+    def labels(self) -> list[str]:
+        """Every text Mesh Studio shows (labels and buttons), top to bottom."""
+        return [w.text for w in self.studio.ui.walk_widgets() if isinstance(getattr(w, "text", None), str) and w.text]
 
     def has_button(self, text: str) -> bool:
         return any(getattr(w, "text", None) == text for w in self.studio.ui.walk_widgets())
@@ -154,7 +171,7 @@ def check(project: Path, out: Path) -> dict[str, Any]:
         renderer = d.renderer
         step("open", active=view.active, structures=[st.id for st in view.structures()],
              lamps=len(renderer.lighting.lamps), shadows=renderer.lighting.enabled,
-             left_panel_3d=d.has_button("Turn left"), add_structure_button=d.has_button("Add a structure..."))
+             left_panel_3d=d.has_button("Turn left"), models_button=d.has_button("Models..."))
         d.picture(out / "01_studio_3d_view.png")
         gl_edit = d.gl_counts()
         original = d.structure("crossing")
@@ -261,9 +278,10 @@ def check(project: Path, out: Path) -> dict[str, Any]:
              gl_objects_after_second_round=gl_back2)
 
         # placing a second copy from the project's models
-        d.button("Add a structure...")
+        d.button("Models...")
         listed = [m for m in view.models_in_project()]
-        d.button("stone_crossing.glb")
+        d.button("Stone Crossing", prefix=True)  # the model browser: choose it...
+        d.button("Place in scene")  # ... and place a copy
         spot = d.screen((7.0, 20.0, 0.0))
         d.window.dispatch_event("on_mouse_motion", spot[0], spot[1], 0, 0)
         d.picture(out / "07_placing_preview.png")

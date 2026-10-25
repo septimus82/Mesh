@@ -93,6 +93,10 @@ def _on_screen(widget: Any) -> bool:
     return getattr(widget, "parent", None) is not None
 
 
+# Panels whose pictures (``_thumbs``) are drawn: the inspector, the picture picker and the 3D model panels.
+_PICTURE_PANELS = ("inspect", "pick_image", "structures", "import_model", "reimport_model")
+
+
 def _short(text: str, limit: int) -> str:
     text = " ".join(str(text).split())
     return text if len(text) <= limit else text[: limit - 1] + "…"
@@ -1138,7 +1142,7 @@ class InspectorMixin:
     def _draw_previews(self) -> None:
         a = optional_arcade.arcade
         for space, path in self._thumbs:
-            if self.panel not in ("inspect", "pick_image") or space.width <= 1 or not _on_screen(space):
+            if self.panel not in _PICTURE_PANELS or space.width <= 1 or not _on_screen(space):
                 continue
             image = self._image(path)
             if image is None:
