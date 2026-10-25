@@ -200,7 +200,8 @@ class AIOps:
         prefab_path: Optional[str] = None,
     ) -> AIOpsResult:
         scene_file, scene = self._load_scene(scene_path)
-        palette = load_prefab_palette(prefab_path or None or "", strict=False)
+        # No path: the project's prefab catalogue (an empty path would name the project folder itself)
+        palette = load_prefab_palette(prefab_path, strict=False) if prefab_path else load_prefab_palette(strict=False)
         match = find_prefab_palette_entry(palette, prefab_name)
         if match is None and prefab_path:
             try:
