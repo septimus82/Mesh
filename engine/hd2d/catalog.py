@@ -546,3 +546,40 @@ def reimport_model(root: str | Path, ref: str, source: str | Path | None = None,
     _commit(base, {rel: data, _check_destination(base, preview): _preview_bytes(found.model), CATALOG: _catalog_bytes(doc)})
     plan.asset = find(base, asset.id) or asset
     return plan
+
+
+# ------------------------------------------------------------------------------------------------- bundled kits
+def install_kit(root: str | Path, kit: str | Path) -> list[ModelAsset]:
+    """Add a bundled model kit to the project's catalogue: a folder with ``catalog.json`` (entries with ``id``,
+    ``model`` and ``preview`` relative to the kit, ``name``, ``category``, ``notes``, ``license``, ``collision``,
+    ``floors``), ``models/`` and ``previews/``. Each model and its picture are copied into ``assets/models``; the
+    entry's source is the kit's name and the model's SHA-256, never a path on the machine that made it. Nothing is
+    overwritten: an id or file already in the project refuses the whole kit, and either everything is written or
+    nothing is (the same staged commit as an import)."""
+    base, folder = Path(root), Path(kit)
+    try:
+        manifest = json.loads((folder / "catalog.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise CatalogError(f"The model kit at {folder} can't be read ({exc}).") from exc
+    taken = _taken_ids(base)
+    doc = _read_catalog(base)
+    kit_name = f"{manifest.get('kit', folder.name)} {manifest.get('version', '')}".strip()
+    writes: dict[str, bytes] = {}
+    for item in manifest.get("models", []):
+        asset_id = str(item.get("id", ""))
+        if not asset_id or asset_id in taken:
+            raise CatalogError(f"The kit's model '{asset_id}' is already in this project; nothing was added.")
+        data = (folder / item["model"]).read_bytes()
+        rel, preview = f"{MODELS_DIR}/{asset_id}.glb", f"{PREVIEWS_DIR}/{asset_id}.png"
+        writes[rel] = data
+        writes[preview] = (folder / item["preview"]).read_bytes()
+        doc["models"].append({"id": asset_id, "model": rel, "name": str(item.get("name") or asset_id),
+                              "category": str(item.get("category") or ""), "preview": preview, "scale": 1.0,
+                              "rotation": 0.0, "pixels": "sharp", "collision": item.get("collision", {}),
+                              "floors": item.get("floors", []), "notes": str(item.get("notes") or ""),
+                              "license": str(item.get("license") or ""),
+                              "source": {"kit": kit_name, "sha256": _sha(data)}})
+        taken.add(asset_id)
+    writes[CATALOG] = _catalog_bytes(doc)
+    _commit(base, writes)
+    return [a for a in assets(base) if a.source.get("kit") == kit_name]

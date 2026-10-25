@@ -13,6 +13,10 @@ What the creator does here:
   gets a box, a character the ordinary object inspector;
 - **move**: drag a structure (or a character) over the ground, snapped to a 0.5 m grid unless snapping is off; the
   inspector raises, lowers and turns it and takes exact values in metres and degrees;
+- **place objects**: a person, sign or other object chosen in the Objects list is placed by clicking a floor in 3D
+  (the ground, a platform, a bridge deck, a landing): it stands at that floor's height (``elevation``), so the game
+  puts it on that floor. A spot nobody could stand on (inside a wall, under a low deck) is refused with the reason;
+  while choosing, a green square shows where it would stand;
 - **place**: the Models browser ("Models..." in the 3D view section) lists the project's Blender models with their
   pictures; "Place in scene" makes the chosen one follow the mouse until a click places it, turned and scaled as the
   model's defaults say;
@@ -74,6 +78,7 @@ class Hd2dView:
         self.reimport_form: dict[str, Any] = {"id": None, "path": ""}
         self._assets: list[Any] | None = None  # the catalogue as last read (None: read it again)
         self._facts: dict[tuple[str, int, int], tuple[Any | None, str | None]] = {}  # (file, mtime, size) -> (report, problem)
+        self.object_marker: tuple[float, float, float] | None = None  # where an object being placed would stand (m)
         self.snap = True
         self.picker = Picker()
         self.tips: list[tuple[Any, str]] = []  # (button, short tooltip) for the 3D view's buttons
@@ -244,6 +249,10 @@ class Hd2dView:
             lo, hi = box(st, renderer.models[st.model])
             renderer.draw_lines(vp, box_edges(lo, hi), (1.0, 0.82, 0.25, 0.45), through=True)  # where it's hidden
             renderer.draw_lines(vp, box_edges(lo, hi), (1.0, 0.82, 0.25, 1.0))
+        if self.object_marker is not None and self.studio.place_prefab is not None:  # where it would stand: green
+            mx, my, mz = self.object_marker
+            renderer.draw_lines(vp, box_edges((mx - 0.3, my - 0.3, mz), (mx + 0.3, my + 0.3, mz + 1.6)),
+                                (0.4, 1.0, 0.5, 1.0), through=True)
         entity_sprite = self._selected_sprite()
         if entity_sprite is not None:
             e = (entity_sprite.mesh_entity_data or {}).get("elevation", 0.0) or 0.0
@@ -427,6 +436,11 @@ class Hd2dView:
 
     def hover(self, x: float, y: float) -> None:
         renderer = self.renderer
+        if self.studio.place_prefab is not None and renderer is not None:
+            spot = self.object_spot(x, y)
+            self.object_marker = None if isinstance(spot, str) else spot[1]
+            return
+        self.object_marker = None
         if self.placing is None or renderer is None:
             return
         at = self.ground_px(x, y)
@@ -436,6 +450,69 @@ class Hd2dView:
         gx = _snap(at[0] / PIXELS_PER_METRE, self.snap) * PIXELS_PER_METRE
         gy = _snap(at[1] / PIXELS_PER_METRE, self.snap) * PIXELS_PER_METRE
         renderer.set_preview(self.placing, gx, gy, rotation=self.placing_turn, scale=self.placing_scale)
+
+    def _feet_below_centre(self) -> float:
+        """How far (px) below its centre the armed object's feet are: what a floor holds up. A character's are the
+        bottom of its frame (an "auto" footprint collider, ``engine.physics_runtime.footprint``); other objects
+        stand on their centre."""
+        from engine.physics_runtime import footprint  # noqa: PLC0415
+
+        raw = (self.studio.place_prefab or {}).get("entity")
+        entity: dict[str, Any] = raw if isinstance(raw, dict) else {}
+        components = entity.get("components")
+        collider = components.get("collider") if isinstance(components, dict) else None
+        if not (isinstance(collider, dict) and collider.get("auto")):
+            return 0.0
+        config = entity.get("behaviour_config")
+        animator = config.get("Animator") if isinstance(config, dict) else None
+        clips = animator.get("animations") if isinstance(animator, dict) else None
+        clips = clips if isinstance(clips, dict) else {}
+        height = next((float(c["frame_height"]) for c in clips.values() if isinstance(c, dict) and c.get("frame_height")), 0.0)
+        if not height and isinstance(entity.get("sprite"), str):
+            image = self.studio._image(str(Path(self.studio.project.root) / entity["sprite"]))
+            height = float(image.height) if image is not None else 0.0
+        return -float(footprint(32.0, height or 32.0)["offset_y"])
+
+    def object_spot(self, x: float, y: float) -> tuple[tuple[float, float, float], tuple[float, float, float], str] | str:
+        """Where the armed object would go if the canvas were clicked at (x, y): ((its x, y, elevation) px, where
+        its feet stand (m), the floor's name), or why it can't go there. The feet are on Studio's 16 px object grid
+        when that spot is fine, else exactly under the mouse."""
+        from engine.hd2d.world import NAV_HALF  # noqa: PLC0415
+        from engine.studio import GRID  # noqa: PLC0415
+
+        def snap(v: float) -> float:
+            return round(v * PIXELS_PER_METRE / GRID) * GRID / PIXELS_PER_METRE
+
+        lift = self._feet_below_centre()
+        world = getattr(self.studio.window, "hd2d_world", None)
+        if world is None:  # a room without collision models: everything stands on the ground
+            at = self.ground_px(x, y)
+            if at is None:
+                return "Point at the ground to place it there."
+            fx, fy = snap(at[0] / PIXELS_PER_METRE), snap(at[1] / PIXELS_PER_METRE)
+            return (fx * PIXELS_PER_METRE, fy * PIXELS_PER_METRE + lift, 0.0), (fx, fy, 0.0), "ground"
+        hit = world.walkable_hit(*self.ray(x, y))
+        if hit is None:
+            return "Point at the ground or a floor (a platform, a bridge, stairs) to place it there."
+        (hx, hy, hz), floor = hit
+        for fx, fy in ((snap(hx), snap(hy)), (hx, hy)):
+            stood = world.stand(fx, fy, hz, *NAV_HALF)
+            if stood is not None:
+                z = stood[0]
+                return ((round(fx * PIXELS_PER_METRE, 2), round(fy * PIXELS_PER_METRE + lift, 2), round(z * PIXELS_PER_METRE, 2)),
+                        (fx, fy, z), stood[1])
+        where = "the ground" if floor == "ground" else f"'{floor}'"
+        return f"Nobody could stand there on {where}: something is in the way, or a floor is too low overhead."
+
+    def place_object(self, x: float, y: float) -> None:
+        """A click with an object chosen in the Objects list: put it on the floor under the mouse."""
+        spot = self.object_spot(x, y)
+        if isinstance(spot, str):
+            self.studio._say(spot, ok=False)  # still chosen: click somewhere else
+            return
+        (px, py, pz), _feet, floor = spot
+        self.object_marker = None
+        self.studio.place_at(px, py, elevation=pz, where="the ground" if floor == "ground" else f"'{floor}'", snap=False)
 
     def place_here(self, x: float, y: float) -> None:
         model, at = self.placing, self.ground_px(x, y)

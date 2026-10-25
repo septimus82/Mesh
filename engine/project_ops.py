@@ -139,12 +139,17 @@ def ensure_entity_ids(scene: Doc, scene_key: str) -> Doc:
     return out
 
 
-def place_prefab(scene: Doc, scene_key: str, prefab: Doc, x: float, y: float) -> tuple[Doc, str]:
-    """A new object of a project object type (prefab), at ``(x, y)``; returns its id."""
+def place_prefab(scene: Doc, scene_key: str, prefab: Doc, x: float, y: float, elevation: float = 0.0) -> tuple[Doc, str]:
+    """A new object of a project object type (prefab), at ``(x, y)``; returns its id. In an HD-2D room
+    ``elevation`` (px) puts it on a floor that far up (a platform 2 m up is 64): it stands on that floor."""
     prefab_id = str(prefab.get("id") or "object")
     out = copy.deepcopy(scene)
     entity_id = unique_entity_id(out, make_entity_id(scene_key, prefab_id, x, y))
     entity = build_prefab_entity_definition(prefab, prefab_id, x, y, out, entity_id=entity_id)
+    if elevation:
+        height = _number(elevation, "The height (elevation)", 0, 4000)
+        if height:
+            entity["elevation"] = round(height, 2)
     out.setdefault("entities", []).append(entity)
     return _checked(scene, out), entity_id
 
@@ -1677,10 +1682,11 @@ def set_light(scene: Doc, index: int, *, x: Any = _UNSET, y: Any = _UNSET, radiu
               flicker_enabled: Any = _UNSET, flicker_amount: Any = _UNSET, flicker_speed: Any = _UNSET,
               enabled: Any = _UNSET, shadows: Any = _UNSET, flicker: Any = _UNSET, flicker_strength: Any = _UNSET,
               flicker_brightness: Any = _UNSET, flicker_reach: Any = _UNSET, flicker_irregularity: Any = _UNSET,
-              mode: Any = _UNSET) -> Doc:
+              mode: Any = _UNSET, elevation: Any = _UNSET, intensity: Any = _UNSET) -> Doc:
     """Change a light: position, size (radius), colour (a name, "#rrggbb" or [r, g, b]), flicker, on/off,
     whether walls block it (``shadows``; on unless set off, when the room has shadows on), and its falloff
-    (``mode``: "soft" or "hard").
+    (``mode``: "soft" or "hard"). In an HD-2D room a lamp hangs ``elevation`` px above the ground (1.5 m when
+    unset) and shines with ``intensity`` (1 = normal).
 
     ``flicker`` is a preset: "steady" (none), "candle", "torch", "fire", "faulty" or "custom";
     ``flicker_strength`` scales it (1 = as the preset). Custom flicker: ``flicker_speed`` (wavers a
@@ -1692,7 +1698,8 @@ def set_light(scene: Doc, index: int, *, x: Any = _UNSET, y: Any = _UNSET, radiu
     from engine.lighting.flicker import FLICKER_NAMES, FLICKER_PRESETS, FLICKER_RANGES  # noqa: PLC0415
 
     fields = {"x": x, "y": y, "radius": radius, "color": color, "flicker_enabled": flicker_enabled,
-              "flicker_amount": flicker_amount, "enabled": enabled, "shadows": shadows}
+              "flicker_amount": flicker_amount, "enabled": enabled, "shadows": shadows, "elevation": elevation,
+              "intensity": intensity}
     out = copy.deepcopy(scene)
     light = _light(out, index)
     if mode is not _UNSET:
@@ -1729,6 +1736,10 @@ def set_light(scene: Doc, index: int, *, x: Any = _UNSET, y: Any = _UNSET, radiu
             light[key] = float(round(_number(value, key, -100000, 100000)))
         elif key == "radius":
             light[key] = float(round(_number(value, "Size", 8, 4000)))
+        elif key == "elevation":
+            light[key] = round(_number(value, "Height", 0, 4000), 2)
+        elif key == "intensity":
+            light[key] = round(_number(value, "Brightness", 0, 10), 2)
         elif key == "color":
             light["color"] = _colour(value)
             light.pop("color_rgba", None)  # an older editor's override would hide the new colour

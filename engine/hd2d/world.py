@@ -222,6 +222,27 @@ class World:
                         self._nav[(i, j)] = heights
         return self._nav
 
+    def walkable_hit(self, origin: tuple[float, float, float],
+                     direction: tuple[float, float, float]) -> tuple[tuple[float, float, float], str] | None:
+        """Where a ray (metres) first meets something walkable, and that floor's name: what a click in Mesh
+        Studio's 3D view points at when placing a character. None if it meets no floor."""
+        ox, oy, oz = origin
+        dx, dy, dz = direction
+        best: tuple[float, tuple[float, float, float], str] | None = None
+        for surface in self.surfaces:
+            a, b, c = surface.plane
+            denom = dz - a * dx - b * dy
+            if abs(denom) < 1e-9:
+                continue
+            t = (a * ox + b * oy + c - oz) / denom
+            if t <= 0 or (best is not None and t >= best[0]):
+                continue
+            px, py = ox + t * dx, oy + t * dy
+            if surface.height(px, py) is None:
+                continue
+            best = (t, (px, py, oz + t * dz), surface.floor)
+        return None if best is None else (best[1], best[2])
+
     def walkable(self) -> int:
         """How many places (navigation cells, counting each floor of a stack) a character can stand."""
         return sum(len(heights) for heights in self._nav_grid().values())
