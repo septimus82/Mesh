@@ -57,8 +57,7 @@ jobs:
             tests/test_shadow_backend_selection_determinism.py \
             tests/test_render_shadow_mask_fbo_use.py \
             tests/test_shadow_mask_fbo_binding.py \
-            tests/test_hard_shadows_composite_activate_fallback.py \
-            tests/test_hard_shadows_composite_draw_signature_fallback.py \
+            tests/test_shadow_shapes.py \
             tests/test_lighting_module_path_resolution.py \
             tests/test_post_processing.py \
             tests/test_mesh_cli_headless_imports.py
