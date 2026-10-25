@@ -256,6 +256,23 @@ def check(out: Path, blender: Path | None = None) -> dict[str, Any]:
              project_files_unchanged=files_before == files_after, stairs_before=stairs_before,
              stairs_dragged=stairs_dragged, stairs_after_undo=stairs_undone)
 
+        # repeated reimports (v1 / v2 / v1 ...), each through the same buttons: GPU objects must not grow
+        counts = []
+        for i in range(6):
+            export_from_blender(blender, art, v2=i % 2 == 1)
+            if studio.panel != "structures":
+                d.button("Models...")
+            if view.chosen_model != "cottage":
+                if view.chosen_model is not None:
+                    d.button("< All models")
+                d.button("Cottage", prefix=True)
+            d.button("Reimport...")
+            d.button("Reimport")
+            counts.append(d.gl_counts())
+        step("repeated_reimport", gl_after_each=counts,
+             floors_now=sorted({sf.floor for sf in d.window.hd2d_world.surfaces if sf.floor.startswith("cottage")}))
+        d.button("Close") if studio.panel == "structures" else None
+
         # 8. Play: walk to the staircase and up it
         d.key(k.F4)
         player = d.game.player()
@@ -320,6 +337,7 @@ def _performance(d: StudioDriver, project: Path, art: Path) -> dict[str, Any]:
 
     if studio.panel != "structures":
         d.button("Models...")
+    view.choose_model(None)  # the list, not a model's page
     view._assets = None
     def reopen() -> None:
         view._assets = None  # the browser reads the catalogue again, as when it is opened
@@ -327,6 +345,15 @@ def _performance(d: StudioDriver, project: Path, art: Path) -> dict[str, Any]:
         d.frame()
 
     open_ms = timed(reopen)
+
+    def ordinary() -> None:
+        studio.panel = "inspect"  # Mesh Studio's ordinary right panel, measured the same way (rebuild and draw)
+        studio._rebuild()
+        d.frame()
+
+    ordinary_ms = timed(ordinary)
+    studio.panel = "structures"
+    studio._rebuild()
     frame_ms = timed(lambda: d.frame(), 30)
     search_ms = timed(lambda: view.set_model_filter("set 2"), 6)
     view.set_model_filter("")
@@ -342,7 +369,7 @@ def _performance(d: StudioDriver, project: Path, art: Path) -> dict[str, Any]:
     commit_ms = timed(lambda: studio._edit(lambda sc: ops.set_structure(sc, first, rotation=(view.find(first).rotation + 15) % 360),
                                             "turn"), 6)
     return {"models_in_catalogue": len(view.models()), "structures_in_room": count,
-            "browser_open_ms": open_ms, "browser_frame_ms": frame_ms, "search_ms": search_ms,
+            "browser_open_ms": open_ms, "ordinary_panel_ms": ordinary_ms, "browser_frame_ms": frame_ms, "search_ms": search_ms,
             "choose_model_ms": select_ms, "room_frame_ms": room_frame_ms, "edit_commit_ms": commit_ms}
 
 

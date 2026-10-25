@@ -303,7 +303,8 @@ def import_model(root: str | Path, source: str | Path, *, name: str = "", catego
         inside = found.source.resolve().relative_to(base.resolve()).as_posix()
     except ValueError:
         inside = None
-    if inside is not None and find(base, inside) is not None and find(base, inside).catalogued:  # type: ignore[union-attr]
+    already = find(base, inside) if inside is not None else None
+    if already is not None and already.catalogued:
         raise CatalogError(f"{inside} is already in the catalogue.")
     asset_id = found.asset_id
     rel = _check_destination(base, inside or f"{MODELS_DIR}/{asset_id}.glb")
@@ -418,11 +419,11 @@ def impact(root: str | Path, rooms: dict[str, dict[str, Any]], model_rel: str, o
                     others[st.model] = load_glb(base / st.model) if contained(base, st.model) else None
                 except GlbError:
                     others[st.model] = None
-        usable = {m: others[m] for m in others if others[m] is not None}
+        usable: dict[str, Model] = {m: model for m, model in others.items() if model is not None}
         kept = tuple(st for st in hd2d.structures if st.model == model_rel or st.model in usable)
         room = dataclasses.replace(hd2d, structures=kept)
-        world_old = hd2d_world.World(room, {**usable, model_rel: old})  # type: ignore[dict-item]
-        world_new = hd2d_world.World(room, {**usable, model_rel: new})  # type: ignore[dict-item]
+        world_old = hd2d_world.World(room, {**usable, model_rel: old})
+        world_new = hd2d_world.World(room, {**usable, model_rel: new})
         users = [st.id for st in kept if st.model == model_rel]
         hw, hh = hd2d_world.NAV_HALF
         for entity in scene.get("entities", []):

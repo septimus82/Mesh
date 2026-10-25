@@ -97,6 +97,12 @@ def test_a_broken_export_is_refused_and_undo_works(run: dict) -> None:
     assert fail["stairs_dragged"]["x"] != fail["stairs_before"]["x"] and fail["stairs_after_undo"] == fail["stairs_before"]
 
 
+def test_repeated_reimports_free_what_they_replace(run: dict) -> None:
+    counts = run["repeated_reimport"]["gl_after_each"]
+    assert counts[0] == counts[2] == counts[4] and counts[1] == counts[3] == counts[5], counts  # v2, v1, v2, ...
+    assert "cottage/col_porch" in run["repeated_reimport"]["floors_now"], "the last reimport (v2) is in effect"
+
+
 def test_play_walks_up_the_imported_staircase(run: dict) -> None:
     landing = run["play"]["walk"][-1]
     assert landing["elevation_m"] == pytest.approx(2.0, abs=0.05) and landing["floor"] == "stairs/col_landing"

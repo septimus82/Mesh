@@ -118,7 +118,8 @@ def test_keep_pixels_sharp_fixes_smooth_textures_in_the_copy_only(root: Path, ar
     source.write_bytes(STAIRS.read_bytes())
     found = catalog.inspect_source(root, source)
     assert sorted(found.sharpened) == ["cobbles", "floorboards", "timber"]
-    assert any("Smooth (Linear) texture filtering" in w for w in found.report.warnings)  # type: ignore[union-attr]
+    assert found.report is not None
+    assert any("Smooth (Linear) texture filtering" in w for w in found.report.warnings)
     asset = catalog.import_model(root, source)
     assert set(_samplers(root / asset.model)) == {glb.GL_NEAREST}
     assert all(p.material.nearest for p in glb.load_glb(root / asset.model).parts)
