@@ -36,6 +36,10 @@ _TEMPLATES = [
              "a house you can enter, trees and water in your way. Esc opens the menu to save and load.",
              launcher=True, preview="assets/templates/adventure.png"),
     Template("starter", "Starter Room", "Walkable player and a Guide NPC who says hello."),
+    # Milestone 16 Stage 6A: developer-only (not in the launcher) until the installed-engine gate passes (Stage 6B).
+    Template("hd2d_rpg", "HD-2D RPG (developer preview)",
+             "A small 3D village to play and edit: hills joined by a bridge, stairs, a cottage you can enter, a shop, "
+             "people to talk to and a sign; built from Mesh's HD-2D starter kit of Blender models."),
     Template("monster", "Monster Test Game", "Blank room plus the companion-monster test data (species, moves, battle sprites, sounds)."),
     # Older scene layout (top-level "layers"); Mesh Studio can't edit these. Kept for the CLI.
     Template("lighting_playground", "Lighting Playground", "Scene with lights, occluders, and fog preset."),
@@ -59,7 +63,7 @@ def apply_template(root: Path, template_id: str) -> None:
         _LOG.warning("Unknown template '%s', defaulting to blank", template_id)
         builder = _apply_blank
     builder(root)
-    if builder in (_apply_blank, _apply_adventure, _apply_starter):
+    if builder in (_apply_blank, _apply_adventure, _apply_starter, _apply_hd2d_rpg):
         _share_player(root)
 
 
@@ -245,6 +249,16 @@ def _apply_adventure(root: Path) -> None:
     _write_person_prefab(root)
 
 
+def _apply_hd2d_rpg(root: Path) -> None:
+    """The HD-2D starter village (engine.hd2d.starter_village)."""
+    from .hd2d import starter_village  # noqa: PLC0415  # only this template loads the 3D code
+    from .project_scaffold import _engine_root  # noqa: PLC0415
+
+    _write_person_prefab(root)
+    starter_village.build(root, _engine_root(), _person_entity("Person", "Hello!"), _sign_entity(""), _walking,
+                          _blank_scene())
+
+
 def _apply_lighting_playground(root: Path) -> None:
     # Scene with lights and occluders
     scene = {
@@ -333,6 +347,7 @@ _BUILDERS = {
     "adventure": _apply_adventure,
     "starter": _apply_starter,
     "monster": _apply_blank,  # the monster data itself is copied by create_project
+    "hd2d_rpg": _apply_hd2d_rpg,
     "lighting_playground": _apply_lighting_playground,
     "demo_slice": _apply_demo_slice,
 }

@@ -62,10 +62,22 @@ _STARTER_FILES = (
 )
 
 
+# The placeholder sheet of projects made before Milestone 11 (provenance unverified): only those projects need it,
+# so a project that never names it (an HD-2D starter) never gets it.
+_LEGACY_PLACEHOLDER = "assets/sprites/animated_player.png"
+
+
+def _names_legacy_placeholder(root: Path) -> bool:
+    return any(_LEGACY_PLACEHOLDER.rsplit("/", 1)[1] in path.read_text(encoding="utf-8", errors="replace")
+               for folder in ("packs", "assets") for path in (Path(root) / folder).rglob("*.json"))
+
+
 def ensure_starter_files(root: Path) -> None:
     """Copy any missing starter file into an existing project (e.g. one made before maps)."""
     for rel_path in _STARTER_FILES:
         if not (Path(root) / rel_path).is_file():
+            if rel_path == _LEGACY_PLACEHOLDER and not _names_legacy_placeholder(Path(root)):
+                continue
             _copy_engine_asset(rel_path, Path(root))
 
 _MONSTER_STARTER_FILES = (
@@ -199,6 +211,8 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
 
     apply_template(root, template_id)
     for rel_path in _STARTER_FILES:
+        if rel_path == _LEGACY_PLACEHOLDER and template_id == "hd2d_rpg":
+            continue  # the HD-2D starter uses only Mesh's own art
         _copy_engine_asset(rel_path, root)
     # The monster game was a test project; only its own template ships its data.
     if template_id == "monster":
