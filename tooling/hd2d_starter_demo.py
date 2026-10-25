@@ -6,7 +6,8 @@ Creates a project from the developer-only ``hd2d_rpg`` template (timed) in OUT_D
 Mesh Studio's and the game's own window events (clicks, drags, typing, key presses; no JSON, no Blender):
 
 1. open it in Mesh Studio; 2. select the shop and drag it 1 m east; 3. choose Person and click the west plateau in
-3D (a click into the fence first is refused); undo and redo it; 4. change a lamp's colour and height in Lighting;
+3D (a click into the fence first is refused); undo and redo it; edit what they say; 4. change a lamp's colour and
+height in Lighting;
 5. an AI proposes a sign on the east plateau; the person accepts; 6. save, close and reopen; 7. Play: climb the west
 stairs, talk to the new person, cross the bridge, talk to the Elder, go down the east stairs, walk under the bridge,
 read the sign, walk into the cottage's door (the second room), quick-save, move, quick-load; 8. Stop and edit again.
@@ -35,6 +36,7 @@ from hd2d_studio_demo import StudioDriver  # noqa: E402
 
 PX = 32.0
 WEST_PLATEAU_SPOT = (10.0, 24.0)  # m, 2 m up: where the new person is placed
+NEW_LINE = "Welcome to the west hill!"  # what the new person is given to say in Mesh Studio
 
 
 def _write(path: Path, data: Any) -> None:
@@ -116,6 +118,17 @@ def check(out: Path, project: Path | None = None) -> dict[str, Any]:
         after_redo = any(e.get("id") == new_id for e in studio.project.scene()["entities"])
         step("place_person", refused_message=refused, marker=marker, message=placed_message, entity=person,
              stands_on=stands, gone_after_undo=not after_undo, back_after_redo=after_redo)
+
+        # edit what the new person says, in the Dialogue tab (selecting them by clicking them, if need be)
+        if studio.selected != new_id:
+            d.click(*d.screen((*WEST_PLATEAU_SPOT, 2.8)))
+        selected = studio.selected
+        d.button("Dialogue")
+        d.type_into("says", NEW_LINE)
+        person = dict(next(e for e in studio.project.scene()["entities"] if e.get("id") == new_id)) if new_id else None
+        from engine import project_ops as ops  # noqa: PLC0415
+
+        step("edit_person", selected=selected, says=ops.dialogue_text(person) if person else None)
 
         # a lamp: colour and height, in Lighting
         d.button("Lighting")

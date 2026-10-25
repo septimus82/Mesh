@@ -7,15 +7,17 @@ no repository in sight. Nothing here may import from the repository; it checks t
 
     <venv python> -I hd2d_install_driver.py OUT REPO PLAYER_PYTHON
 
-1. ``mesh new Village --template hd2d_rpg`` (the installed command);
+1. Mesh's launcher (``python -m engine.launcher``), in a hidden window: New Project, the HD-2D RPG (Preview) card,
+   a name and Create & Open (the launcher's own start of Mesh Studio is recorded, not shown);
 2-9. tooling/hd2d_starter_demo.check on that project: open it in Mesh Studio, move the shop, turn a crate, place a
    person on the raised plateau in 3D, change a lamp, browse the starter kit and place a lamp post, an AI's sign, save,
    reopen (everything kept), play up the stairs, over and under the bridge, three conversations, the sign, into the
    cottage, quick save and load, stop;
 10. ``mesh export build`` in the project, then the exported game started from the bundle by a Python that has
    Mesh's dependencies and not Mesh (PLAYER_PYTHON): the HD-2D village loads and the player walks.
-Also the HD-2D visual standard and the cutaway measured in a fresh project (tooling/hd2d_visual_study.py's walk), a
-2D project (``--template starter``) made, played and opened in Mesh Studio, and the template still developer-only.
+Also the HD-2D visual standard and the cutaway measured in a fresh project (tooling/hd2d_visual_study.py's walk), and
+the 2D templates: the launcher's default choice (Top-down Adventure) and ``mesh new --template blank``, each played and
+opened in Mesh Studio.
 Pictures and OUT/acceptance.json.
 """
 
@@ -87,36 +89,111 @@ def _within(path: str | Path, root: Path) -> bool:
     return Path(path).resolve().is_relative_to(root.resolve())
 
 
-def two_d_project(mesh: Path, projects: Path, evidence: Path) -> dict[str, Any]:
-    """A 2D starter project from the installed engine: played a little, and opened in Mesh Studio."""
+def two_d_project(project: Path, evidence: Path, name: str) -> dict[str, Any]:
+    """A 2D project from the installed engine: played a little (the player walks), and opened in Mesh Studio."""
     from hd2d_demo import HiddenGame
     from hd2d_studio_demo import StudioDriver
 
-    made = _run([str(mesh), "new", "Pond", "--template", "starter", "--dest", str(projects)], OUT / "work")
-    pond = projects / "Pond"
-    config = json.loads((pond / "config.json").read_text(encoding="utf-8"))
-    game = HiddenGame(pond, size=(1280, 720))
+    config = json.loads((project / "config.json").read_text(encoding="utf-8"))
+    game = HiddenGame(project, size=(1280, 720))
     try:
         game.load(config["start_scene"])
         game.step(60)
         player = game.player()
         y0 = player.center_y
         game.hold(game.arcade.key.UP, 30)
-        game.draw().convert("RGB").save(evidence / "21_2d_starter_played.png")
+        game.draw().convert("RGB").save(evidence / f"{name}_played.png")
         walked = round((player.center_y - y0) / 32, 2)
         hd2d = game.window.hd2d_renderer
     finally:
         game.close()
-    d = StudioDriver(pond)
+    d = StudioDriver(project)
     try:
         d.frame(20)
-        d.picture(evidence / "22_2d_starter_in_studio.png")
+        d.picture(evidence / f"{name}_in_studio.png")
         studio_room = d.studio.project.current
         hd2d_in_studio = d.studio.hd2d.active
     finally:
         d.close()
-    return {"new": made, "walked_up_m": walked, "hd2d_renderer": hd2d is not None, "studio_room": studio_room,
+    return {"walked_up_m": walked, "hd2d_renderer": hd2d is not None, "studio_room": studio_room,
             "studio_hd2d": hd2d_in_studio}
+
+
+def launcher_new_project(evidence: Path, projects: Path, name: str, template_id: str | None, prefix: str) -> dict[str, Any]:
+    """Mesh's launcher (engine.launcher) in a hidden window, worked through its own buttons and fields: New Project,
+    the template card clicked (``template_id``; None keeps the default choice), a name, the location, Create & Open.
+    The launcher then starts Mesh Studio in a process of its own, which would show a window: that start is recorded
+    here instead, and the project is opened in Studio in a hidden window by the workflow that follows."""
+    import subprocess as subprocess_module
+
+    import engine.launcher as launcher
+    import engine.optional_arcade as optional_arcade
+
+    arcade = optional_arcade.arcade
+    original_init, original_popen = arcade.Window.__init__, subprocess_module.Popen
+    started: list[dict[str, Any]] = []
+
+    def hidden(window: Any, *args: Any, **kwargs: Any) -> None:
+        kwargs["visible"] = False
+        original_init(window, *args, **kwargs)
+
+    class Started:
+        pid = 0
+
+        def poll(self) -> None:
+            return None
+
+    def record(command: list[str], **kwargs: Any) -> Started:
+        started.append({"command": [Path(c).name if os.sep in c else c for c in command], "cwd": kwargs.get("cwd")})
+        return Started()
+
+    arcade.Window.__init__ = hidden
+    setattr(subprocess_module, "Popen", record)  # restored below
+    window = arcade.Window(launcher.WIDTH, launcher.HEIGHT, "Mesh Studio")
+    window._allow_dispatch_event = True  # handle these events now, as the OS's would be (pyglet queues them otherwise)
+    try:
+        app = launcher.Launcher(window)
+
+        def frame() -> Any:
+            window.dispatch_event("on_draw")
+            return arcade.get_image(0, 0, *window.get_framebuffer_size())
+
+        def widget(text: str) -> Any:
+            return next(w for w in app.ui.walk_widgets() if getattr(w, "text", None) == text)
+
+        def click(target: Any) -> None:
+            x, y = target.rect.center
+            window.dispatch_event("on_mouse_press", x, y, arcade.MOUSE_BUTTON_LEFT, 0)
+            window.dispatch_event("on_mouse_release", x, y, arcade.MOUSE_BUTTON_LEFT, 0)
+            frame()
+
+        def type_into(key: str, text: str) -> None:
+            click(app._fields[key])
+            window.dispatch_event("on_key_press", arcade.key.A, arcade.key.MOD_CTRL)
+            window.dispatch_event("on_key_release", arcade.key.A, arcade.key.MOD_CTRL)
+            window.dispatch_event("on_text", text)
+            frame()
+
+        frame()
+        frame().convert("RGB").save(evidence / f"{prefix}_1_home.png")
+        click(widget("New Project"))
+        default = app.template.id
+        frame().convert("RGB").save(evidence / f"{prefix}_2_new_project.png")
+        offered = [(t.id, t.title, t.description) for t in app.templates]
+        if template_id is not None:
+            click(app._cards[template_id])
+        chosen = app.template.id
+        type_into("name", name)
+        type_into("location", str(projects))
+        frame().convert("RGB").save(evidence / f"{prefix}_3_chosen.png")
+        click(widget("Create & Open"))
+        frame().convert("RGB").save(evidence / f"{prefix}_4_opening.png")
+        return {"default": default, "offered": offered, "chosen": chosen, "screen": app.screen,
+                "message": app.message, "created": (projects / name).is_dir(), "studio_started": started}
+    finally:
+        window.close()
+        arcade.Window.__init__ = original_init
+        setattr(subprocess_module, "Popen", original_popen)
 
 
 def presentation(evidence: Path) -> dict[str, Any]:
@@ -164,7 +241,7 @@ def main() -> int:
         "repo_on_sys_path": [p for p in sys.path if p and _within(p, REPO)],
         "repo_env": {k: v for k, v in os.environ.items() if k in ("MESH_REPO_ROOT", "PYTHONPATH")},
         "cwd_outside_repo": not _within(Path.cwd(), REPO),
-        "hd2d_rpg_in_launcher": "hd2d_rpg" in [t.id for t in list_templates(launcher_only=True)],
+        "launcher_templates": [t.id for t in list_templates(launcher_only=True)],
     }
     assert report["engine_from_venv"] and not report["repo_on_sys_path"] and report["cwd_outside_repo"], report
     mesh = Path(sys.executable).parent / ("mesh.exe" if os.name == "nt" else "mesh")
@@ -172,9 +249,18 @@ def main() -> int:
     projects.mkdir(parents=True, exist_ok=True)
     evidence.mkdir(parents=True, exist_ok=True)
 
-    # 1. create with the installed command
-    report["new"] = _run([str(mesh), "new", "Village", "--template", "hd2d_rpg", "--dest", str(projects)], OUT / "work")
-    village = projects / "Village"
+    # 1. create through the launcher: New Project, the HD-2D RPG (Preview) card, a name, Create & Open
+    report["launcher"] = launcher_new_project(evidence, projects, "Mesh Village", "hd2d_rpg", "30_launcher")
+    village = projects / "Mesh Village"
+    share = Path(sys.prefix) / "share" / "mesh-engine"
+    report["installed_files"] = {
+        "count": sum(1 for f in share.rglob("*") if f.is_file()),
+        "notices": {rel: (share / rel).is_file() for rel in ("assets/NOTICE.md", "assets/branding/NOTICE.md",
+                                                            "assets/icons/NOTICE.md", "assets/icons/lucide/LICENSE",
+                                                            "assets/hd2d_starter/PROVENANCE.md")},
+        "unverified_sprites": [name for name in ("animated_player.png", "sproutling.png", "shelltide.png")
+                               if any(share.rglob(name))],
+        "help_in_project": (village / "HD-2D Help.md").is_file()}
 
     # 2-9. Mesh Studio and the game, through window events only
     import hd2d_starter_demo
@@ -194,7 +280,11 @@ def main() -> int:
     report["exported_game"]["manifest_repo_root"] = paths.get("repo_root")
 
     report["presentation"] = presentation(evidence)
-    report["two_d"] = two_d_project(mesh, projects, evidence)
+    # the 2D templates: the launcher's default choice (Top-down Adventure), and Blank from the command line
+    report["launcher_2d"] = launcher_new_project(evidence, projects, "Meadow", None, "40_launcher_default")
+    report["adventure"] = two_d_project(projects / "Meadow", evidence, "41_adventure")
+    report["blank_new"] = _run([str(mesh), "new", "Pond", "--template", "blank", "--dest", str(projects)], OUT / "work")
+    report["blank"] = two_d_project(projects / "Pond", evidence, "42_blank")
     (OUT / "acceptance.json").write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
     return 0
 
