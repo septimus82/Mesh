@@ -102,7 +102,10 @@ def _private_recent_projects(tmp_path_factory):
     user = tmp_path_factory.mktemp("mesh_user")
     added = {key: value for key, value in (("MESH_PROJECTS_PATH", str(user / "projects.json")),
                                            ("MESH_USER_DIR", str(user)),
-                                           ("MESH_PROJECTS_DIR", str(user / "Mesh Projects")))
+                                           ("MESH_PROJECTS_DIR", str(user / "Mesh Projects")),
+                                           # the game's settings (volume, fog, flicker...) save to the repo's
+                                           # tracked user_settings.json otherwise
+                                           ("MESH_RUNTIME_SETTINGS_PATH", str(user / "user_settings.json")))
              if not os.environ.get(key)}
     os.environ.update(added)
     yield
@@ -112,16 +115,17 @@ def _private_recent_projects(tmp_path_factory):
 
 @pytest.fixture(scope="session", autouse=True)
 def _repo_projects_json_untouched():
-    # Tests have leaked last_root into the tracked projects.json three times;
-    # fail loudly instead of shipping it.
+    # Tests have leaked last_root into the tracked projects.json three times, and settings into the tracked
+    # user_settings.json; fail loudly instead of shipping either.
     from pathlib import Path
 
-    path = Path(__file__).resolve().parent.parent / "projects.json"
-    before = path.read_bytes() if path.exists() else None
+    root = Path(__file__).resolve().parent.parent
+    paths = [root / "projects.json", root / "user_settings.json"]
+    before = [path.read_bytes() if path.exists() else None for path in paths]
     yield
-    after = path.read_bytes() if path.exists() else None
-    if after != before:
-        pytest.fail(f"test session modified {path}; write to tmp_path instead", pytrace=False)
+    for path, was in zip(paths, before):
+        if (path.read_bytes() if path.exists() else None) != was:
+            pytest.fail(f"test session modified {path}; write to tmp_path instead", pytrace=False)
 
 
 @pytest.fixture(scope="session", autouse=True)
