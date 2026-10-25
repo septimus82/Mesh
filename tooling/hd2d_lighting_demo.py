@@ -27,7 +27,7 @@ import statistics
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
@@ -477,5 +477,6 @@ if __name__ == "__main__":
     parser.add_argument("project", type=Path)
     parser.add_argument("out", type=Path)
     args = parser.parse_args()
-    run = {"check": check, "bench": bench, "studio": studio_play}[args.command]
+    commands: dict[str, Callable[[Path, Path], dict[str, Any]]] = {"check": check, "bench": bench, "studio": studio_play}
+    run = commands[args.command]
     print(json.dumps(run(args.project.resolve(), args.out.resolve()), indent=1, default=str))

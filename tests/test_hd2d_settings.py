@@ -28,7 +28,7 @@ def test_settings_parse_with_defaults_in_mesh_pixels() -> None:
     ([], "must be an object"),
     ({"structurez": []}, "unknown keys: structurez"),
     ({"structures": [{"model": "outpost.obj"}]}, r"structures\[0\].model must be a project-relative .glb"),
-    ({"structures": [{"model": "a.glb", "x": "east"}]}, r"structures\[0\].x must be a number"),
+    ({"structures": [{"model": "a.glb", "x": "east"}]}, r"structures\[0\].x must be a finite number"),
     ({"structures": [{"model": "a.glb", "scale": 0}]}, r"structures\[0\].scale must be between"),
     ({"camera": {"pitch": 95}}, "camera.pitch must be between"),
     ({"ground": {"to": [1]}}, r"ground.to must be \[x, y\]"),

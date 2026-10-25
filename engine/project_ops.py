@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import posixpath
 import re
 from typing import Any, Iterable
@@ -1867,3 +1868,124 @@ def player_prefab_entry(definition: Doc) -> Doc:
     return {"id": PLAYER_PREFAB, "display_name": str(definition.get("name") or "Player"), "tags": ["player"],
             "metadata": {"shared_player": True, "note": "the game's player: every room uses it"},
             "entity": copy.deepcopy(definition)}
+
+
+# --- HD-2D structures (Milestone 16 Stage 5A) ---------------------------------------------------
+# An HD-2D room's structures are ``settings.hd2d.structures``: placed GLB models with stable ids, in Mesh pixels
+# (32 px = 1 m). These ops are the one way Mesh Studio and AI tools change them; each result is validated as the
+# runtime will read it (engine.hd2d.settings.parse_hd2d). Whether the model file exists and is a usable GLB is
+# checked where the project's files are known (Mesh Studio, engine.authoring), not here.
+
+
+def structures(scene: Doc) -> list[Doc]:
+    """The room's placed structures (empty for a room that isn't HD-2D)."""
+    hd2d = (scene.get("settings") or {}).get("hd2d")
+    items = hd2d.get("structures") if isinstance(hd2d, dict) else None
+    return items if isinstance(items, list) else []
+
+
+def find_structure(scene: Doc, structure_id: str) -> Doc | None:
+    return next((s for s in structures(scene) if isinstance(s, dict) and s.get("id") == structure_id), None)
+
+
+def _hd2d_block(out: Doc) -> Doc:
+    hd2d = (out.get("settings") or {}).get("hd2d")
+    if not isinstance(hd2d, dict):
+        raise OpError("This room isn't an HD-2D room (it has no settings.hd2d), so it has no structures.")
+    return hd2d
+
+
+def _checked_structures(after: Doc) -> Doc:
+    from engine.hd2d.settings import Hd2dSettingsError, parse_hd2d  # noqa: PLC0415
+
+    settings = after.get("settings") or {}
+    w, h = settings.get("world_width"), settings.get("world_height")
+    size = (float(w), float(h)) if isinstance(w, (int, float)) and isinstance(h, (int, float)) else None
+    try:
+        parsed = parse_hd2d(settings.get("hd2d"), map_size_px=size)
+    except Hd2dSettingsError as err:
+        raise OpError(str(err)) from err
+    ground = parsed.ground
+    if ground is not None:
+        for st in parsed.structures:
+            if not (ground.lo[0] <= st.x <= ground.hi[0] and ground.lo[1] <= st.y <= ground.hi[1]):
+                raise OpError(f"Structure '{st.id}' would stand at ({st.x / 32:.1f} m, {st.y / 32:.1f} m), outside "
+                              f"the room's ground ({ground.hi[0] / 32:.0f} x {ground.hi[1] / 32:.0f} m).")
+    return after
+
+
+def _structure_number(name: str, value: Any) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise OpError(f"A structure's {name} must be a finite number (got {value!r}).")
+    return float(value)
+
+
+def unique_structure_id(scene: Doc, base: str) -> str:
+    taken = {s.get("id") for s in structures(scene) if isinstance(s, dict)}
+    for i, st in enumerate(structures(scene)):
+        if isinstance(st, dict) and not st.get("id"):
+            taken.add(f"structure{i}")  # an id-less structure is known by its position
+    base = slug(base) or "structure"
+    candidate, n = base, 2
+    while candidate in taken:
+        candidate = f"{base}_{n}"
+        n += 1
+    return candidate
+
+
+def place_structure(scene: Doc, model: str, x: float, y: float, elevation: float = 0.0, rotation: float = 0.0,
+                    scale: float = 1.0, structure_id: str | None = None) -> tuple[Doc, str]:
+    """Place a copy of an imported Blender model (a project-relative .glb) in this HD-2D room, at (x, y) px on the
+    ground (32 px = 1 m), ``elevation`` px up, turned ``rotation`` degrees. Its collision and floors come with the
+    model. Returns the new structure's id (unique in the room; from the model's name unless given)."""
+    out = copy.deepcopy(scene)
+    hd2d = _hd2d_block(out)
+    if not isinstance(model, str) or not model.lower().endswith(".glb"):
+        raise OpError(f"A structure's model must be a project-relative .glb file (got {model!r}).")
+    from engine.hd2d.settings import Hd2dSettingsError, asset_path  # noqa: PLC0415
+
+    try:
+        model = asset_path(model, "A structure's model")
+    except Hd2dSettingsError as err:
+        raise OpError(str(err)) from err
+    sid = str(structure_id) if structure_id else unique_structure_id(out, posixpath.splitext(posixpath.basename(model.replace("\\", "/")))[0])
+    if find_structure(out, sid) is not None:
+        raise OpError(f"There is already a structure '{sid}' in this room.")
+    entry: Doc = {"id": sid, "model": model, "x": round(_structure_number("x", x), 2),
+                  "y": round(_structure_number("y", y), 2)}
+    for key, value, default in (("elevation", elevation, 0.0), ("rotation", rotation, 0.0), ("scale", scale, 1.0)):
+        number = _structure_number(key, value)
+        if key == "rotation":
+            number %= 360.0
+        if number != default:
+            entry[key] = round(number, 2)
+    hd2d.setdefault("structures", []).append(entry)
+    return _checked_structures(out), sid
+
+
+def set_structure(scene: Doc, structure_id: str, x: Any = _UNSET, y: Any = _UNSET, elevation: Any = _UNSET,
+                  rotation: Any = _UNSET, scale: Any = _UNSET) -> Doc:
+    """Move, raise, turn or resize a placed structure (px, degrees); settings left out stay as they are."""
+    out = copy.deepcopy(scene)
+    _hd2d_block(out)
+    entry = find_structure(out, structure_id)
+    if entry is None:
+        raise OpError(f"There is no structure '{structure_id}' in this room.")
+    for key, value in (("x", x), ("y", y), ("elevation", elevation), ("rotation", rotation), ("scale", scale)):
+        if value is _UNSET:
+            continue
+        number = _structure_number(key, value)
+        if key == "rotation":
+            number %= 360.0
+        entry[key] = round(number, 2)
+    return _checked_structures(out)
+
+
+def remove_structure(scene: Doc, structure_id: str) -> Doc:
+    """Take a placed structure out of this HD-2D room (its model file stays in the project)."""
+    out = copy.deepcopy(scene)
+    hd2d = _hd2d_block(out)
+    if find_structure(out, structure_id) is None:
+        raise OpError(f"There is no structure '{structure_id}' in this room.")
+    hd2d["structures"] = [s for s in structures(out) if not (isinstance(s, dict) and s.get("id") == structure_id)]
+    return _checked_structures(out)
