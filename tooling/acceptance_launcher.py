@@ -83,7 +83,7 @@ def run(out: Path, old_projects: list[Path]) -> int:
         """Double-click equivalent: run the .bat the way Explorer does, then find its window."""
         launcher_layout.unlink(missing_ok=True)
         subprocess.Popen(["cmd", "/c", str(REPO / "Mesh Engine.bat")], cwd=str(REPO), env=env,
-                         creationflags=subprocess.CREATE_NO_WINDOW)
+                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))  # Windows only
         driver = Driver.attach("Mesh Studio", out / "shots", logical_size=(960, 640))  # the launcher (Milestone 15: "Mesh Studio")
         held["launcher"], held["L"] = driver, Page(driver, launcher_layout)
         held["L"].wait(lambda s: s["screen"] == "home", "the launcher's home screen", timeout=30)

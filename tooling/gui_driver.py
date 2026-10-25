@@ -13,12 +13,14 @@ from __future__ import annotations
 import ctypes
 import os
 import subprocess
+import sys
 import time
 from ctypes import wintypes
 from pathlib import Path
 
 from PIL import Image
 
+assert sys.platform == "win32", "the GUI driver drives Windows windows (and type checkers on other systems skip it)"
 user32 = ctypes.windll.user32
 gdi32 = ctypes.windll.gdi32
 # Physical coordinates everywhere: the game is DPI-unaware, this driver is per-monitor aware.
