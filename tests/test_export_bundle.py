@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from tooling.export_bundle import (
+from engine.tooling.export_bundle import (
     BundleDiff,
     BundleManifest,
     ExportFile,
@@ -529,3 +529,41 @@ class TestEndToEndWorkflow:
         assert loaded is not None
         assert loaded.version == 1
         assert loaded.file_count > 0
+
+
+# --------------------------------------------------------------------------- #
+# A creator's project (Milestone 16 Stage 6B: mesh export from a pip install)
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.fast
+def test_a_project_exports_as_a_standalone_game(tmp_path: Path) -> None:
+    import engine
+    from engine.project_scaffold import create_project
+    from engine.tooling.export_bundle import is_project
+
+    project = tmp_path / "game"
+    create_project(project, "Game", "blank")
+    assert is_project(project) and not is_project(Path(engine.__file__).resolve().parent.parent)
+    code, manifest = build_bundle(project, project / "dist" / "bundle")
+    assert code == 0 and manifest is not None
+    bundle = project / "dist" / "bundle"
+    shipped = {f["path"] for f in manifest.files}
+    assert {"main.py", "config.json", "engine/__init__.py", "engine/self_test.py", "engine/schemas/scene.schema.json",
+            "packs/core_regions/worlds/main.json", "packs/core_regions/scenes/start.json"} <= shipped
+    assert {p.relative_to(project).as_posix() for p in (project / "assets").rglob("*") if p.is_file()} <= shipped, \
+        "every file of the project's own assets"
+    assert not any("__pycache__" in f or f.endswith(".pyc") for f in shipped)
+    assert manifest.repo_root == "." and (bundle / "engine" / "hd2d" / "renderer.py").is_file()
+
+
+@pytest.mark.fast
+def test_an_export_never_replaces_a_folder_that_is_not_an_earlier_bundle(tmp_path: Path) -> None:
+    from engine.project_scaffold import create_project
+
+    project = tmp_path / "game"
+    create_project(project, "Game", "blank")
+    keep = tmp_path / "my documents"
+    keep.mkdir()
+    (keep / "letter.txt").write_text("mine", encoding="utf-8")
+    assert build_bundle(project, keep)[0] == 1 and (keep / "letter.txt").read_text(encoding="utf-8") == "mine"
+    assert build_bundle(project, tmp_path / "bundle")[0] == 0 and build_bundle(project, tmp_path / "bundle")[0] == 0

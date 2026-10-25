@@ -138,7 +138,7 @@ def handle(args: argparse.Namespace) -> int:
 
 def _handle_export_build(args: argparse.Namespace) -> int:
     """Handle export build command."""
-    from tooling.export_bundle import build_bundle
+    from engine.tooling.export_bundle import build_bundle
 
     repo_root = Path(str(getattr(args, "repo_root", ".") or ".")).resolve()
     out_raw = str(getattr(args, "out", "") or "dist/bundle")
@@ -169,7 +169,7 @@ def _handle_export_build(args: argparse.Namespace) -> int:
 
 def _handle_export_plan(args: argparse.Namespace) -> int:
     """Handle export plan command."""
-    from tooling.export_bundle import compute_export_plan
+    from engine.tooling.export_bundle import compute_export_plan
 
     repo_root = Path(str(getattr(args, "repo_root", ".") or ".")).resolve()
     include_unused = bool(getattr(args, "include_unused", False))
@@ -210,7 +210,7 @@ def _handle_export_plan(args: argparse.Namespace) -> int:
 
 def _handle_export_diff(args: argparse.Namespace) -> int:
     """Handle export diff command."""
-    from tooling.export_bundle import diff_bundles
+    from engine.tooling.export_bundle import diff_bundles
 
     bundle_a = Path(str(getattr(args, "bundle_a", ""))).resolve()
     bundle_b = Path(str(getattr(args, "bundle_b", ""))).resolve()

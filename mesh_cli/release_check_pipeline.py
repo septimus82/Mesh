@@ -100,7 +100,7 @@ def _run_assets_audit(repo_root: Path, out_path: Path) -> tuple[int, dict[str, A
 
 
 def _run_export_build(repo_root: Path, out_dir: Path, *, deterministic: bool = False) -> tuple[int, dict[str, Any]]:
-    from tooling.export_bundle import build_bundle
+    from engine.tooling.export_bundle import build_bundle
 
     exit_code, manifest = build_bundle(
         repo_root,

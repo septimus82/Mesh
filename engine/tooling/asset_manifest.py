@@ -6,8 +6,8 @@ manifest with hashes, then parses scenes/prefabs to extract references
 and detect missing dependencies.
 
 Usage:
-    python -m tooling.asset_manifest build --repo-root . --out artifacts/asset_manifest.json
-    python -m tooling.asset_manifest audit --repo-root . --out artifacts/asset_deps.json
+    python -m engine.tooling.asset_manifest build --repo-root . --out artifacts/asset_manifest.json
+    python -m engine.tooling.asset_manifest audit --repo-root . --out artifacts/asset_deps.json
 """
 
 from __future__ import annotations

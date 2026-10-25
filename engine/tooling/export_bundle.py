@@ -4,10 +4,15 @@ This module produces shippable bundles using the asset manifest and dependency
 graph. It copies only required assets + runtime code/config and writes a
 bundle_manifest.json with hashes of shipped files.
 
+Given a creator's project (``config.json`` and ``packs/``, no ``engine/`` of its own), the bundle is a standalone
+game: the project's ``main.py``, ``config.json``, ``packs/`` and every file in its ``assets/`` (Mesh plays some of
+them by name, such as the interface sounds), with the installed Mesh engine package as its runtime. It runs with
+``python main.py`` wherever Mesh's dependencies (arcade, pillow, jsonschema) are installed, without Mesh itself.
+
 Usage:
-    python -m tooling.export_bundle build --repo-root . --out dist/bundle
-    python -m tooling.export_bundle plan --repo-root .
-    python -m tooling.export_bundle diff --bundle-a dist/bundle1 --bundle-b dist/bundle2
+    python -m engine.tooling.export_bundle build --repo-root . --out dist/bundle
+    python -m engine.tooling.export_bundle plan --repo-root .
+    python -m engine.tooling.export_bundle diff --bundle-a dist/bundle1 --bundle-b dist/bundle2
 """
 
 from __future__ import annotations
@@ -22,7 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from tooling.asset_manifest import (
+from engine.tooling.asset_manifest import (
     audit_dependencies,
     build_manifest,
     compute_sha256,
@@ -63,6 +68,21 @@ CONTENT_DIRS: tuple[str, ...] = (
     "scenes",
     "worlds",
 )
+PROJECT_CONTENT_DIRS: tuple[str, ...] = ("packs",)  # a creator's project keeps its rooms and worlds here
+
+
+def is_project(root: Path) -> bool:
+    """A creator's Mesh project (its content in ``packs/``, run by an installed Mesh), not the engine's source tree."""
+    return (root / "config.json").is_file() and (root / "packs").is_dir() and not (root / "engine").is_dir()
+
+
+def _runtime_dirs(repo_root: Path) -> list[tuple[str, Path]]:
+    """(name in the bundle, folder): the engine's own runtime folders, or for a project the installed engine package."""
+    if is_project(repo_root):
+        import engine  # noqa: PLC0415
+
+        return [("engine", Path(engine.__file__).resolve().parent)]
+    return [(name, repo_root / name) for name in RUNTIME_DIRS]
 
 
 # --------------------------------------------------------------------------- #
@@ -273,8 +293,8 @@ def _collect_runtime_files(repo_root: Path) -> list[ExportFile]:
                 continue
 
     # Runtime directories
-    for dir_name in RUNTIME_DIRS:
-        dir_path = repo_root / dir_name
+    project = is_project(repo_root)
+    for dir_name, dir_path in _runtime_dirs(repo_root):
         if not dir_path.is_dir():
             continue
 
@@ -284,9 +304,12 @@ def _collect_runtime_files(repo_root: Path) -> list[ExportFile]:
 
             for filename in sorted(filenames):
                 file_path = Path(root) / filename
-                rel_path = file_path.relative_to(repo_root).as_posix()
+                rel_path = f"{dir_name}/{file_path.relative_to(dir_path).as_posix()}"
 
-                if _should_exclude_runtime(rel_path, filename):
+                # The installed engine package goes whole (minus caches): it holds no tests, and modules such as
+                # engine/self_test.py are part of it.
+                cache = "__pycache__" in rel_path or filename.endswith((".pyc", ".pyo"))
+                if cache if project else _should_exclude_runtime(rel_path, filename):
                     continue
 
                 try:
@@ -307,7 +330,7 @@ def _collect_content_files(repo_root: Path) -> list[ExportFile]:
     """Collect content files (scenes, worlds)."""
     files: list[ExportFile] = []
 
-    for dir_name in CONTENT_DIRS:
+    for dir_name in CONTENT_DIRS + (PROJECT_CONTENT_DIRS if is_project(repo_root) else ()):
         dir_path = repo_root / dir_name
         if not dir_path.is_dir():
             continue
@@ -351,6 +374,7 @@ def compute_export_plan(
         ExportPlan with files to include and any issues
     """
     plan = ExportPlan()
+    include_unused = include_unused or is_project(repo_root)  # a project ships all of its own assets
 
     # Build manifest and dependency report
     manifest = build_manifest(repo_root)
@@ -450,8 +474,11 @@ def build_bundle(
             print(f"  - {err}")
         return 1, None
 
-    # Prepare output directory
+    # Prepare output directory: only ever replace an earlier bundle (or an empty folder), never other files
     if output_dir.exists():
+        if any(output_dir.iterdir()) and not (output_dir / "bundle_manifest.json").is_file():
+            print(f"[export-bundle] ERROR: {output_dir} is not empty and is not an earlier bundle; choose another folder")
+            return 1, None
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True)
 
@@ -477,7 +504,7 @@ def build_bundle(
         provenance = provenance_to_dict(get_provenance(deterministic=True))
     else:
         created_at = datetime.now(timezone.utc).isoformat()
-        repo_root_field = repo_root.resolve().as_posix()
+        repo_root_field = "." if is_project(repo_root) else repo_root.resolve().as_posix()  # no path of the maker's
         provenance = provenance_to_dict(get_provenance())
 
     manifest = BundleManifest(

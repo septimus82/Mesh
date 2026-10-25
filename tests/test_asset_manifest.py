@@ -14,8 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from tests._typing import as_any
-from tooling.asset_manifest import (
+from engine.tooling.asset_manifest import (
     AssetReference,
     DependencyReport,
     ManifestEntry,
@@ -26,6 +25,7 @@ from tooling.asset_manifest import (
     extract_dependencies,
     get_asset_type,
 )
+from tests._typing import as_any
 
 # --------------------------------------------------------------------------- #
 # Fixtures
