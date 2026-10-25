@@ -240,11 +240,39 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xvfb
 
-      # windows-latest has only Microsoft's OpenGL 1.1 driver; the window tests need OpenGL 3.3. Mesa's software
-      # renderer gives Windows what Xvfb + Mesa give Linux.
+      # windows-latest has only Microsoft's OpenGL 1.1 driver; the window tests need OpenGL 3.3. Mesa's llvmpipe software
+      # renderer gives Windows what Xvfb + Mesa give Linux. Only this job's Python gets it: Mesa's opengl32.dll and its
+      # driver are copied beside python.exe, which Windows loads before System32's opengl32.dll. Nothing is registered
+      # system-wide and no script from the archive runs.
+      # Source: mesa3d-<version>-release-msvc.7z from https://github.com/pal1000/mesa-dist-win/releases (the build the
+      # Mesa docs point Windows users to). MESA_SHA256 is the SHA-256 GitHub recorded when the maintainer uploaded that
+      # asset, not one computed from a download; the archive is checked against it before anything is extracted.
+      # To update: choose a release, read its digest with
+      #   gh api repos/pal1000/mesa-dist-win/releases/tags/<version> --jq '.assets[] | select(.name | endswith("-release-msvc.7z")) | .digest'
+      # and change MESA_VERSION and MESA_SHA256 together.
       - name: Install Mesa OpenGL (Windows)
         if: runner.os == 'Windows'
-        uses: ssciwr/setup-mesa-dist-win@v2
+        env:
+          MESA_VERSION: "26.0.3"
+          MESA_SHA256: "de1ec45c906164de2c046288a8969e83cf2d51d031dc8dfd1f9371bb31cd6755"
+        run: |
+          $name = "mesa3d-$env:MESA_VERSION-release-msvc.7z"
+          $archive = Join-Path $env:RUNNER_TEMP $name
+          Invoke-WebRequest -Uri "https://github.com/pal1000/mesa-dist-win/releases/download/$env:MESA_VERSION/$name" -OutFile $archive
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
+          if ($actual -ne $env:MESA_SHA256) { throw "$name has SHA-256 $actual, expected $env:MESA_SHA256" }
+          $unpacked = Join-Path $env:RUNNER_TEMP "mesa"
+          7z x $archive "-o$unpacked" "x64\*" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "7z failed with exit code $LASTEXITCODE" }
+          foreach ($dll in "opengl32.dll", "libgallium_wgl.dll", "libglapi.dll") {
+            $source = Join-Path $unpacked "x64\$dll"
+            if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $env:pythonLocation }
+            elseif ($dll -ne "libglapi.dll") { throw "$dll is not in $name" }
+          }
+          "GALLIUM_DRIVER=llvmpipe" >> $env:GITHUB_ENV
+          $env:GALLIUM_DRIVER = "llvmpipe"
+          python -c "import pyglet; w = pyglet.window.Window(visible=False); from pyglet.gl import gl_info; print('OpenGL', gl_info.get_version_string(), '|', gl_info.get_renderer()); w.close()"
+          if ($LASTEXITCODE -ne 0) { throw "Python cannot open an OpenGL context" }
 
       - name: Compile Python sources
         run: |
