@@ -24,9 +24,9 @@ _BASELINE_EXCEPTION_ENVELOPES = {
         2084, 2117, 2149, 2183, 2206, 2232, 2268, 2325, 2390, 2444,
         2480,
     ),
-    "engine/lighting/__init__.py": (  # the same handlers; Milestones 12, 12.1 and 13 moved them down
-        480, 488, 497, 505, 514, 533, 542, 552, 796, 936,
-        965, 1002,
+    "engine/lighting/__init__.py": (  # the same handlers; Milestones 12, 12.1, 13 and the post-M16 health check
+        480, 488, 497, 505, 514, 533, 542, 552, 796, 936,   # (one line: the old light layer's release) moved them
+        965, 1003,
     ),
     "engine/ui_overlays/hud.py": (62, 156),
 }

@@ -6,6 +6,40 @@
     "verify-demo": 21789,
     "web-smoke": 10071
   },
+  "platforms": {
+    "linux": {
+      "budgets_ms": {
+        "exception-policy-scan": 2845,
+        "player-package-gate": 1095,
+        "pytest-fast": 63237,
+        "verify-demo": 10217,
+        "web-smoke": 3657
+      },
+      "ratio_limits": {
+        "exception-policy-scan": 1.25,
+        "player-package-gate": 1.25,
+        "pytest-fast": 1.25,
+        "verify-demo": 1.25,
+        "web-smoke": 1.25
+      }
+    },
+    "windows": {
+      "budgets_ms": {
+        "exception-policy-scan": 2989,
+        "player-package-gate": 1770,
+        "pytest-fast": 93708,
+        "verify-demo": 18171,
+        "web-smoke": 5218
+      },
+      "ratio_limits": {
+        "exception-policy-scan": 1.25,
+        "player-package-gate": 1.25,
+        "pytest-fast": 1.3,
+        "verify-demo": 1.4,
+        "web-smoke": 1.25
+      }
+    }
+  },
   "ratio_limits": {
     "exception-policy-scan": 1.25,
     "player-package-gate": 1.25,

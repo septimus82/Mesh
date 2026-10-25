@@ -4,6 +4,7 @@ import argparse
 import ast
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any, Callable, TypedDict
 
@@ -65,6 +66,10 @@ def _verify_all_invalid_args() -> int:
     payload = {"ok": False, "steps": [], "artifacts": {"dir": None, "written": {}}}
     sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
     return 2
+
+
+def _verify_step_budget_platform() -> str:
+    return {"win32": "windows", "darwin": "macos"}.get(sys.platform, sys.platform)
 
 
 def _verify_step_budget_enforced() -> bool:
@@ -362,6 +367,13 @@ def _write_verify_step_budget_baseline(
         top_n=top_n,
         tolerance_ms=tolerance_ms,
     )
+    # A baseline with budgets for this platform keeps everything else: only this platform's budgets are replaced.
+    existing = json.loads(baseline_path.read_text(encoding="utf-8")) if baseline_path.is_file() else {}
+    platforms = existing.get("platforms") if isinstance(existing, dict) else None
+    platform = _verify_step_budget_platform()
+    if isinstance(platforms, dict) and platform in platforms:
+        section = {"budgets_ms": payload["budgets_ms"], "ratio_limits": payload["ratio_limits"]}
+        payload = {**existing, "platforms": {**platforms, platform: section}}
     baseline_path.parent.mkdir(parents=True, exist_ok=True)
     write_json_atomic(
         baseline_path,
@@ -1194,6 +1206,16 @@ def _evaluate_verify_step_budget_guard(
     )
     ratio_limits_raw = baseline_raw.get("ratio_limits")
     ratio_limits_map = ratio_limits_raw if isinstance(ratio_limits_raw, dict) else {}
+    # The same steps take very different times on different runners, so `platforms.<name>` overrides the budgets
+    # (and ratio limits) on that platform. Other platforms use the top-level values.
+    platforms_raw = baseline_raw.get("platforms")
+    platform = _verify_step_budget_platform()
+    platform_raw = platforms_raw.get(platform) if isinstance(platforms_raw, dict) else None
+    if isinstance(platform_raw, dict):
+        platform_budgets = platform_raw.get("budgets_ms")
+        platform_ratios = platform_raw.get("ratio_limits")
+        budgets_raw = {**budgets_raw, **(platform_budgets if isinstance(platform_budgets, dict) else {})}
+        ratio_limits_map = {**ratio_limits_map, **(platform_ratios if isinstance(platform_ratios, dict) else {})}
 
     checked_steps: list[_VerifyStepBudgetCheckRow] = []
     for step_name in sorted(str(name) for name in budgets_raw):
@@ -1270,7 +1292,7 @@ def _evaluate_verify_step_budget_guard(
     return (
         2,
         (
-            f"verify slow-step budget exceeded: {offender_text}; "
+            f"verify slow-step budget exceeded ({platform} budgets): {offender_text}; "
             f"update baseline with: {update_command}"
         ),
         payload,
@@ -2209,6 +2231,27 @@ def _build_verify_all_payload(args: argparse.Namespace):
                     if trace_budget_error:
                         print(f"[Mesh][Verify] {trace_budget_error}", file=sys.stderr)
 
+    if artifacts_dir is not None:
+        missing_metric_artifacts = _missing_required_verify_metric_artifacts(artifacts_dir)
+        if missing_metric_artifacts:
+            overall_ok = False
+            if exit_code == 0:
+                exit_code = 1
+            print(
+                "[Mesh][Verify] missing required metric artifacts: "
+                + ", ".join(missing_metric_artifacts),
+                file=sys.stderr,
+            )
+
+    # The outcome is settled now. Write the verify-all summary before the reports derived from it (verify_report,
+    # release notes, verify_summary, index), so they describe this run; it is rewritten at the end to list them too.
+    if artifacts_dir is not None:
+        with suppress_stdout():
+            _write_verify_all_summary_artifact(
+                artifacts_dir,
+                _verify_all_payload(overall_ok, steps, pytest_fast_metrics, artifacts_dir_json, artifacts_written),
+            )
+
     # --report-json-artifact: write verify_report.json to artifacts dir
     if artifacts_dir is not None and getattr(args, "report_json_artifact", False):
         try:
@@ -2317,34 +2360,27 @@ def _build_verify_all_payload(args: argparse.Namespace):
             _log_swallow("VFYC-032", "blanket exception fallback", once=False)
             pass  # best-effort; keep exit code unchanged
 
-    if artifacts_dir is not None:
-        missing_metric_artifacts = _missing_required_verify_metric_artifacts(artifacts_dir)
-        if missing_metric_artifacts:
-            overall_ok = False
-            if exit_code == 0:
-                exit_code = 1
-            print(
-                "[Mesh][Verify] missing required metric artifacts: "
-                + ", ".join(missing_metric_artifacts),
-                file=sys.stderr,
-            )
+    payload = _verify_all_payload(overall_ok, steps, pytest_fast_metrics, artifacts_dir_json, artifacts_written)
 
-    payload = {
+    if artifacts_dir is not None:
+        # Always write the verify-all summary artifact (even on failure). This final copy also lists the reports
+        # derived from the first one.
+        with suppress_stdout():
+            _write_verify_all_summary_artifact(artifacts_dir, payload)
+
+    return payload, exit_code
+
+
+def _verify_all_payload(overall_ok, steps, pytest_fast_metrics, artifacts_dir_json, artifacts_written) -> dict:
+    return {
         "ok": bool(overall_ok),
         "steps": steps,
         "pytest_fast": pytest_fast_metrics,
         "artifacts": {
             "dir": artifacts_dir_json,
-            "written": artifacts_written,
+            "written": dict(artifacts_written),
         },
     }
-
-    if artifacts_dir is not None:
-        # Always write the verify-all summary artifact (even on failure).
-        with suppress_stdout():
-            _write_verify_all_summary_artifact(artifacts_dir, payload)
-
-    return payload, exit_code
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
