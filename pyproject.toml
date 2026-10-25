@@ -68,6 +68,7 @@ engine = ["schemas/*.json", "py.typed"]
 [tool.setuptools.data-files]
 "share/mesh-engine" = ["config.json"]
 "share/mesh-engine/assets" = ["assets/NOTICE.md"]
+"share/mesh-engine/docs" = ["docs/hd2d_preview.md"]
 "share/mesh-engine/assets/data" = [
     "assets/data/monster_species.json",
     "assets/data/monster_moves.json",
@@ -99,6 +100,7 @@ engine = ["schemas/*.json", "py.typed"]
 "share/mesh-engine/assets/templates" = [
     "assets/templates/blank.png",
     "assets/templates/adventure.png",
+    "assets/templates/hd2d_rpg.png",
 ]
 "share/mesh-engine/assets/hd2d_starter" = [
     "assets/hd2d_starter/catalog.json",
