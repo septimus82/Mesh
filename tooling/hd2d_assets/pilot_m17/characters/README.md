@@ -1,5 +1,89 @@
 # M17 pilot: PixelLab player-character candidate (`hero_m17.png`)
 
+## Stage 1B: pixel-edit repairs (h2, h3, h4)
+
+### Files
+- **Sheets:** `hero_m17_h2.png`, `hero_m17_h3.png` and `hero_m17_h4.png`.
+  - Same format as Stage 1: 4x4 frames of 32x48; rows down/left/right/up; columns stand/step/stand/step; idle =
+    column 0.
+  - All frames have binary alpha and feet on row 47.
+- **Script:** `build_hero_1b.py` derives all three from the unchanged `hero_m17.png`. It makes no PixelLab calls and
+  is deterministic: run `py -3.13 tooling/hd2d_assets/pilot_m17/characters/build_hero_1b.py`.
+- **Evidence:** `gameplay_1b/` holds the gameplay-scale evidence from `tooling/m17_visual_pilot.py compare --set hero`:
+  `hero.json`, the 1:1 + 4x strips per spot, and the 1:1 walk clip.
+- **Record:** `provenance.json` → `stage_1b` lists every edit with pixel counts, the h4 iterations and the
+  measurements.
+
+### What each candidate changes
+- **h2 "repaired"** (Stage 1 colours only):
+  - **Front/back walk rebuilt** as [stand, step A, stand, step B] around one canonical upper body per row (down_0
+    rows 0-34, up_0 rows 0-35). The stand has both feet planted; it is built by mirroring the planted leg: down about
+    x=16, up about x=15. The steps keep their original order:
+    - down: down_0 (right foot up), then down_1's legs (left foot up);
+    - up: up_0 (left foot up), then up_3's legs (right foot up).
+  - **Dropped frames:** down_2 (the different, sterner face and wide arms), down_3, up_1 and up_2. In Stage 1 no
+    down/up frame had both feet down: down_3 lifts the right foot about 4 px.
+  - **Effect:** the idle stands, the rhythm alternates evenly, the head stays level and the face is identical in all
+    four frames.
+  - **Side rows:**
+    - red removed from the legs (the scarf red bleeding into west frames 1 and 3, and red boot-top pixels): dark red
+      → dark trouser, red → boot brown;
+    - red removed from the west mouth and the east cheek/forehead → skin shades;
+  - **Satchel removed:** it appeared in only 2 of 16 frames (east 1 and 2): cleared and re-outlined in east 2, merged
+    into the back-arm shadow in east 1.
+- **h3 "moss tunic":** h2 with the grey tunic ramp (rows 17-37 only) → moss `#4f5a34 / #66733f / #7d8a4f`, at about
+  the old values. The grey still used by hair, boot and trouser highlights is kept.
+- **h4 "legible":** h3 plus three changes:
+  - a deeper moss ramp `#38422a / #4b5733 / #61703f`, well below the grass (luma about 115) and dirt (about 122) in
+    value;
+  - every outline pixel darkened `#392a23` → `#1c1412` (L about 0.09, the baseline's darkest);
+  - a continuous 1 px outline ring around the silhouette on the sides and top. The feet stay on row 47, so the figure
+    becomes 44-45 px tall and 2 px wider: it still fits 32x48, with the widest stride at 25 px.
+
+### Gameplay scale (the 720-line picture, art at 2x; the owner's rule: gameplay first)
+Pixels covered / edge luma step / edge colour step, by spot:
+
+| | cottage | path | centre |
+|---|---|---|---|
+| H0 baseline | 1721 / 32.8 / 52.6 | 2431 / 41.8 / 66.7 | 2392 / 44.6 / 75.1 |
+| H1 Stage 1 | 1416 / 26.4 / 46.6 | 1888 / 37.4 / 60.1 | 1996 / 41.6 / 69.7 |
+| H2 repaired | 1416 / 27.7 / 48.2 | 1940 / 36.9 / 59.3 | 2092 / 40.3 / 67.5 |
+| H3 moss tunic | 1416 / 27.6 / 47.9 | 1940 / 36.9 / 59.3 | 2092 / 40.3 / 67.5 |
+| **H4 legible** | **1785 / 36.1 / 56.4** | 2326 / **53.0 / 83.5** | **2476 / 54.7 / 91.8** |
+
+- **H2 and H3:** these are repairs. Their edge contrast is about Stage 1's, still below H0 at every spot, so they fail
+  the gameplay bar.
+- **H4:** beats H0 on both contrast measures at all three spots:
+  - cottage: +3.3 luma / +3.8 colour;
+  - path: +11.2 / +16.8;
+  - centre: +10.1 / +16.7.
+  - It covers more pixels than H0 at the cottage and centre, and 4% fewer at the path.
+
+### How h4 got there (the measured iterations)
+1. **Outline `#241a17`:** won at the path and centre, but was short at the cottage (luma -0.8, colour -2.6), where the
+   head is against the dark timber wall.
+2. **Lighter chestnut hair:** no change at all. The metric reads only the outermost pixels, and the hair interior
+   never touches them.
+3. **Lighter hair with no ring around the head:** fixed the cottage but lost the path and centre.
+4. **Darker ring/outline:** every spot's background is lighter than the outline, so darker means more contrast
+   everywhere.
+   - `#1c1412` clears H0 at all spots and was chosen.
+   - `#120c0b` clears it by more (the cottage reaches +9.2 / +13.3), but it is near-black, which goes against Stage 1's
+     direction against near-black outlines. It is the next step if more margin is wanted.
+
+### Remaining defects
+- **Front/back rows:** the arms no longer swing (one canonical upper body), and the steps lift a foot 3-4 px with
+  little knee bend. The walk is classic-RPG even, but stiff.
+- **Side rows:** these are untouched apart from the colour cleanups, so the head bob is 1 px uneven in west frame 1
+  (42 px vs 43). East frame 1 keeps a dark back-arm mass where the satchel was.
+- **h4's look:** at 4x the doubled dark edge (original outline plus ring) looks heavy, and it darkens the face and hair
+  detail. At 1:1 it reads as a bold, clean figure.
+- **Lighting:** still not verified per pixel for upper-left light (unchanged from Stage 1).
+
+---
+
+**Stage 1 record below (unchanged).**
+
 One original traveller hero made with PixelLab (v2 API) and fitted to Mesh's character sheet format using exact pixel
 operations only. The baseline is `assets/sprites/hd2d_hero.png`, which this pilot did not touch.
 

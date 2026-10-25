@@ -699,5 +699,159 @@
    }
   ]
  },
- "scripts": "one-off, kept in the session scratchpad (char/gen.py, build.py, palette.py); logic summarised above"
+ "scripts": "one-off, kept in the session scratchpad (char/gen.py, build.py, palette.py); logic summarised above",
+ "stage_1b": {
+  "date_utc": "2026-10-25",
+  "pixellab_calls": 0,
+  "source": "hero_m17.png (Stage 1, unchanged)",
+  "script": "build_hero_1b.py (deterministic; rerun twice gives identical bytes)",
+  "outputs": {
+   "hero_m17_h2.png": "repaired",
+   "hero_m17_h3.png": "moss tunic",
+   "hero_m17_h4.png": "legible"
+  },
+  "edits": [
+   "down: canonical upper body = Stage-1 down_0 rows 0-34; red mouth -> skin shadow (2 px)",
+   "down: [stand, down_0, stand, down_1 legs]; stand = down_0 with its planted left leg (rows 35-47) mirrored about x=16; down_2 (different face, wide arms) and down_3 (irregular) dropped",
+   "up: [stand, up_0, stand, up_3 legs]; stand = up_0 with its planted right leg (rows 36-47) mirrored about x=15; up_1/up_2 dropped",
+   "left_0: legs red->trouser/boot (4 px), face red->skin (2 px)",
+   "left_1: legs red->trouser/boot (30 px), face red->skin (2 px)",
+   "left_2: legs red->trouser/boot (1 px), face red->skin (2 px)",
+   "left_3: legs red->trouser/boot (8 px), face red->skin (2 px)",
+   "right_0: legs red->trouser/boot (0 px), face red->skin (0 px)",
+   "right_1: legs red->trouser/boot (0 px), face red->skin (2 px)",
+   "right_2: legs red->trouser/boot (0 px), face red->skin (2 px)",
+   "right_3: legs red->trouser/boot (0 px), face red->skin (0 px)",
+   "right_2: satchel cleared (x 8-12, y 30-36), silhouette re-outlined (3 px)",
+   "right_1: satchel pixels (x 10-13, y 30-32) -> outline, merging into the back arm (9 px)",
+   "h3: tunic ramp ['shadow->#4f5a34', 'base->#66733f', 'light->#7d8a4f'] (765 px, rows 17-37)",
+   "h4: deeper tunic ramp {'shadow': '#38422a', 'base': '#4b5733', 'light': '#61703f'}; outline #392a23 -> #1c1412 (2599 px); 1 px outer outline ring added (1617 px)"
+  ],
+  "h4_iterations": [
+   {
+    "outline": "#241a17",
+    "result": "beats H0 at path/centre, short at cottage (luma -0.8, colour -2.6)"
+   },
+   {
+    "variant": "lighter chestnut hair (head rows 0-15)",
+    "result": "identical numbers: hair interior never touches the edge; dropped"
+   },
+   {
+    "variant": "lighter hair, no ring and hair-shadow outline on the head",
+    "result": "cottage +3.7/+5.6 but path -0.8 luma, centre -2.2/-4.1; dropped"
+   },
+   {
+    "outline": "#1c1412",
+    "result": "beats H0 at all spots (chosen)"
+   },
+   {
+    "outline": "#120c0b",
+    "result": "beats H0 by more (cottage +9.2/+13.3) but near-black; not chosen"
+   }
+  ],
+  "gameplay_command": "py -3.13 tooling/m17_visual_pilot.py compare <scratchpad>/m17b/hero --set hero --hero H2 ... H3 ... H4 ...",
+  "gameplay_measurements": {
+   "H0": {
+    "cottage": {
+     "pixels": 1721,
+     "edge_luma_step": 32.8,
+     "edge_colour_step": 52.6,
+     "edge_luma_below_12_pct": 24.8
+    },
+    "path": {
+     "pixels": 2431,
+     "edge_luma_step": 41.8,
+     "edge_colour_step": 66.7,
+     "edge_luma_below_12_pct": 10.7
+    },
+    "centre": {
+     "pixels": 2392,
+     "edge_luma_step": 44.6,
+     "edge_colour_step": 75.1,
+     "edge_luma_below_12_pct": 11.0
+    }
+   },
+   "H1": {
+    "cottage": {
+     "pixels": 1416,
+     "edge_luma_step": 26.4,
+     "edge_colour_step": 46.6,
+     "edge_luma_below_12_pct": 22.3
+    },
+    "path": {
+     "pixels": 1888,
+     "edge_luma_step": 37.4,
+     "edge_colour_step": 60.1,
+     "edge_luma_below_12_pct": 14.2
+    },
+    "centre": {
+     "pixels": 1996,
+     "edge_luma_step": 41.6,
+     "edge_colour_step": 69.7,
+     "edge_luma_below_12_pct": 9.1
+    }
+   },
+   "H2": {
+    "cottage": {
+     "pixels": 1416,
+     "edge_luma_step": 27.7,
+     "edge_colour_step": 48.2,
+     "edge_luma_below_12_pct": 22.3
+    },
+    "path": {
+     "pixels": 1940,
+     "edge_luma_step": 36.9,
+     "edge_colour_step": 59.3,
+     "edge_luma_below_12_pct": 14.6
+    },
+    "centre": {
+     "pixels": 2092,
+     "edge_luma_step": 40.3,
+     "edge_colour_step": 67.5,
+     "edge_luma_below_12_pct": 13.1
+    }
+   },
+   "H3": {
+    "cottage": {
+     "pixels": 1416,
+     "edge_luma_step": 27.6,
+     "edge_colour_step": 47.9,
+     "edge_luma_below_12_pct": 22.3
+    },
+    "path": {
+     "pixels": 1940,
+     "edge_luma_step": 36.9,
+     "edge_colour_step": 59.3,
+     "edge_luma_below_12_pct": 14.6
+    },
+    "centre": {
+     "pixels": 2092,
+     "edge_luma_step": 40.3,
+     "edge_colour_step": 67.5,
+     "edge_luma_below_12_pct": 13.1
+    }
+   },
+   "H4": {
+    "cottage": {
+     "pixels": 1785,
+     "edge_luma_step": 36.1,
+     "edge_colour_step": 56.4,
+     "edge_luma_below_12_pct": 17.8
+    },
+    "path": {
+     "pixels": 2326,
+     "edge_luma_step": 53.0,
+     "edge_colour_step": 83.5,
+     "edge_luma_below_12_pct": 9.2
+    },
+    "centre": {
+     "pixels": 2476,
+     "edge_luma_step": 54.7,
+     "edge_colour_step": 91.8,
+     "edge_luma_below_12_pct": 10.1
+    }
+   }
+  },
+  "gameplay_evidence": "gameplay_1b/ (hero.json, hero_hero_{cottage,path,centre}.png, hero_walk.webp)"
+ }
 }

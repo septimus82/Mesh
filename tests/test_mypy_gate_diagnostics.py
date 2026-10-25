@@ -138,3 +138,17 @@ def test_mypy_gate_update_baseline_writes_normalized_occurrences(
         'engine/example.py: error: Name "rows" already defined on line <line>  [no-redef]',
         'engine/example.py: error: Name "rows" already defined on line <line>  [no-redef]',
     ]
+
+
+def test_mypy_gate_skips_untracked_and_ignored_folders(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from tooling import mypy_gate
+
+    listings = {False: "my_game/\nnotes.txt\n", True: ".mypy_cache/\ntooling/x/raw/\nengine/__pycache__/\n"}
+
+    def fake_run(cmd: list[str], **_kwargs: object) -> _MypyResult:
+        result = _MypyResult(listings["--ignored" in cmd])
+        result.returncode = 0
+        return result
+
+    monkeypatch.setattr(mypy_gate.subprocess, "run", fake_run)
+    assert mypy_gate._untracked_dirs(tmp_path) == ["my_game", ".mypy_cache", "tooling/x/raw"]
