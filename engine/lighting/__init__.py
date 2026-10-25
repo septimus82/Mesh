@@ -997,6 +997,7 @@ class LightManager:
     def _rebuild_layer(self) -> None:
         if not self.available:
             return
+        _release_light_layer(self._layer)  # the previous room's: freed now, not by the cycle collector
         try:
             self._layer = self._create_layer()
         except Exception:  # noqa: BLE001  # REASON: layer create
@@ -1212,3 +1213,30 @@ __all__ = [
     "compute_shadow_hulls_from_configs",
     "compute_shadow_geometry_from_configs",
 ]
+
+
+def _release_light_layer(layer: Any) -> None:
+    """Free a light layer this manager made and no longer draws with: every room load replaces it. Its lights
+    point back at it (``Light._light_layer``), so dropping it left its textures, framebuffers and programs for
+    Python's cycle collector, a few full-screen textures per room change. Only what the layer created itself
+    is deleted; nothing is shared with another layer."""
+    if layer is None:
+        return
+    lights = getattr(layer, "_lights", None)
+    for light in list(lights or ()):
+        if getattr(light, "_light_layer", None) is layer:
+            light._light_layer = None
+    if isinstance(lights, list):
+        lights.clear()
+    for name in ("_fbo", "_light_buffer"):
+        fbo = getattr(layer, name, None)
+        attachments = list(getattr(fbo, "color_attachments", None) or ())
+        for obj in [fbo, *attachments]:
+            delete = getattr(obj, "delete", None)
+            if callable(delete):
+                delete()
+    for name in ("_buffer", "_light_program", "_combine_program"):
+        delete = getattr(getattr(layer, name, None), "delete", None)
+        if callable(delete):
+            delete()
+
