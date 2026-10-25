@@ -110,7 +110,8 @@ def test_the_village_has_what_the_starter_promises(project: Path) -> None:
 
 def test_existing_templates_keep_their_files(tmp_path: Path) -> None:
     create_project(tmp_path / "blank", "Blank", "blank")
-    assert (tmp_path / "blank" / "assets" / "sprites" / "animated_player.png").is_file(), "2D templates unchanged"
+    assert (tmp_path / "blank" / "assets" / "sprites" / "starter_hero.png").is_file(), "2D templates keep their art"
+    assert not (tmp_path / "blank" / "assets" / "sprites" / "animated_player.png").exists(), "and no unverified sheet"
     assert not (tmp_path / "blank" / "assets" / "models").exists()
 
 
@@ -119,7 +120,7 @@ def test_studio_never_adds_the_legacy_sheet_to_a_project_that_doesnt_use_it(proj
     assert not (project / "assets" / "sprites" / "animated_player.png").exists()
     old = tmp_path / "old"
     create_project(old, "Old", "blank")
-    (old / "assets" / "sprites" / "animated_player.png").unlink()
+    assert not (old / "assets" / "sprites" / "animated_player.png").exists()
     prefabs = old / "assets" / "prefabs.json"  # the shared player lives here
     prefabs.write_text(prefabs.read_text(encoding="utf-8").replace("starter_hero.png", "animated_player.png"),
                        encoding="utf-8")
