@@ -63,7 +63,7 @@ reach; **Low** is minor or hygiene.
 | 12 | Low | **GPU-gated tests never run in CI** (`MESH_GL_SMOKE` isn't set). #351 rotted unnoticed. | — | Recommendation: run the GPU tier locally before each merge, as these stages did, or add a scheduled GL lane |
 | 13 | Low | **Studio's per-frame UI layout:** arcade 3's `UIManager.draw()` lays every widget out every frame, about 4.4 ms of a 10 ms Studio frame (profiled), in 2D and HD-2D alike. | cProfile (Phase 4) | Noted; proportional to widget count, not a defect |
 | 15 | Medium | **`verify-all`'s step-time budget is out of date and has never been enforced.** The fast tier takes 87–129 s against a 43 s budget set in June, when it had 62% fewer tests. Now that CI reaches `verify-all`, this is the last red check on both OSes. | CI run `40187015582`; local timing; test counts at `c25c2b2` and now | **Fixed:** de-duplicated, then per-platform budgets from 6 CI samples each; enforced and passing on both OSes (see CI results) |
-| 16 | Medium | **CI's "Diff against baseline" gate can't pass reliably.** Total `verify-all` time is compared with a fixed 50 ms threshold against one local run from February (36.5 s then, 115 s now, with more than 10% spread between identical runs). It had never been reached. | CI runs `40193191718`, `40193196720` | **Fixed (option A):** total time is informational; broken bundles are errors; the report is built after the summary. Passing in CI. Closes [#360](https://github.com/septimus82/Mesh/issues/360) when #358 merges |
+| 16 | Medium | **CI's "Diff against baseline" gate can't pass reliably.** Total `verify-all` time is compared with a fixed 50 ms threshold against one local run from February (36.5 s then, 115 s now, with more than 10% spread between identical runs). It had never been reached. | CI runs `40193191718`, `40193196720` | **Fixed (option A):** total time is informational; broken bundles are errors; the report is built after the summary. Passing in CI. [#360](https://github.com/septimus82/Mesh/issues/360) has to be closed by hand when #358 merges (its base is not the default branch, so GitHub won't close it) |
 | 17 | Low | **All 13 release replay goldens are stale.** They're used only by the `ship` job (dispatch and `release/` branches); the base branch gives identical digests. | CI run `40190965398`; local runs on the base and the branch | **Open: [#359](https://github.com/septimus82/Mesh/issues/359)** |
 | 14 | Low | **Repeated selections grow Python memory slowly**: a one-off ~3.8 MB warm-up (pyglet vertex domains, glyph caches), then about 4 KB per selection inside pyglet and arcade-gui. GL objects stay flat and nothing goes stale. | `tracemalloc` over 120 selections plus 20 edit/undo cycles | Noted |
 
@@ -424,7 +424,7 @@ It predates redesign's content, so it is now incomplete:
 
 **Next actions:**
 
-1. Owner review of #358, then merge it (it closes #360).
+1. Owner review of #358, then merge it and close #360 by hand.
 2. Release only: go through the 13 replay goldens (#359), case by case.
 3. Replace the three unverified sprites with original, redistributable art.
 4. Update #345 per the plan above.
