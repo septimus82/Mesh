@@ -1,0 +1,269 @@
+{
+  "steps": [
+    {
+      "step": "open",
+      "active": true,
+      "structures": [
+        "crossing"
+      ],
+      "lamps": 2,
+      "shadows": true,
+      "left_panel_3d": true,
+      "add_structure_button": true
+    },
+    {
+      "step": "pick",
+      "character": "start_player_128_128_0_0",
+      "character_is_entity": true,
+      "structure": "crossing",
+      "inspector": true
+    },
+    {
+      "step": "move_and_turn",
+      "before": {
+        "id": "crossing",
+        "model": "assets/models/stone_crossing.glb",
+        "x": 512.0,
+        "y": 384.0
+      },
+      "after_drag": {
+        "id": "crossing",
+        "model": "assets/models/stone_crossing.glb",
+        "x": 576.0,
+        "y": 416.0
+      },
+      "after_turn": {
+        "id": "crossing",
+        "model": "assets/models/stone_crossing.glb",
+        "x": 576.0,
+        "y": 416.0,
+        "rotation": 90.0
+      }
+    },
+    {
+      "step": "undo_redo",
+      "undo1": {
+        "id": "crossing",
+        "model": "assets/models/stone_crossing.glb",
+        "x": 576.0,
+        "y": 416.0
+      },
+      "undo2": {
+        "id": "crossing",
+        "model": "assets/models/stone_crossing.glb",
+        "x": 512.0,
+        "y": 384.0
+      },
+      "redo2": {
+        "id": "crossing",
+        "model": "assets/models/stone_crossing.glb",
+        "x": 576.0,
+        "y": 416.0,
+        "rotation": 90.0
+      }
+    },
+    {
+      "step": "save",
+      "dirty_after": false
+    },
+    {
+      "step": "reopen",
+      "structure": {
+        "id": "crossing",
+        "model": "assets/models/stone_crossing.glb",
+        "rotation": 90.0,
+        "x": 576.0,
+        "y": 416.0
+      },
+      "same_matrix": true,
+      "floor_at_moved_platform": [
+        2.0,
+        "crossing/col_platform_west"
+      ],
+      "drawn_top_at_moved_platform": 2.0,
+      "floors": [
+        "crossing/col_bridge_deck",
+        "crossing/col_landing_east",
+        "crossing/col_landing_west",
+        "crossing/col_platform_east",
+        "crossing/col_platform_west",
+        "crossing/col_stairs_east",
+        "crossing/col_stairs_west",
+        "ground"
+      ]
+    },
+    {
+      "step": "play",
+      "mode": "play",
+      "hd2d": true,
+      "start_feet": [
+        16.0,
+        3.0
+      ],
+      "blocked_by_moved_structure": true,
+      "walk": [
+        {
+          "after": "up: into the moved platform's side",
+          "feet_m": [
+            16.0,
+            3.78
+          ],
+          "elevation_m": 0.0,
+          "standable": true
+        },
+        {
+          "after": "right: past its east end",
+          "feet_m": [
+            27.02,
+            3.78
+          ],
+          "elevation_m": 0.0,
+          "standable": true
+        },
+        {
+          "after": "up: along its east side",
+          "feet_m": [
+            27.02,
+            13.0
+          ],
+          "elevation_m": 0.0,
+          "standable": true
+        },
+        {
+          "after": "left: towards it again",
+          "feet_m": [
+            23.97,
+            13.0
+          ],
+          "elevation_m": 0.0,
+          "standable": true
+        }
+      ]
+    },
+    {
+      "step": "stop",
+      "mode": "edit",
+      "active": true,
+      "gl_objects_after_edit_play_edit": {
+        "texture": 23,
+        "framebuffer": 12,
+        "program": 33
+      },
+      "gl_objects_after_second_round": {
+        "texture": 27,
+        "framebuffer": 16,
+        "program": 37
+      }
+    },
+    {
+      "step": "place_second_copy",
+      "models_listed": [
+        "assets/models/stone_crossing.glb"
+      ],
+      "preview_shown": true,
+      "new_id": "stone_crossing",
+      "placed": {
+        "id": "stone_crossing",
+        "model": "assets/models/stone_crossing.glb",
+        "x": 224.0,
+        "y": 640.0
+      },
+      "collision_floors": [
+        "stone_crossing/col_bridge_deck",
+        "stone_crossing/col_landing_east",
+        "stone_crossing/col_landing_west",
+        "stone_crossing/col_platform_east",
+        "stone_crossing/col_platform_west",
+        "stone_crossing/col_stairs_east",
+        "stone_crossing/col_stairs_west"
+      ],
+      "after_undo": null,
+      "after_redo": {
+        "id": "stone_crossing",
+        "model": "assets/models/stone_crossing.glb",
+        "x": 224.0,
+        "y": 640.0
+      }
+    },
+    {
+      "step": "ai_proposal",
+      "summary": [
+        "Start: places structure 'stone_crossing_2' (assets/models/stone_crossing.glb) at (25.0 m, 5.0 m)",
+        "Start: moves structure 'stone_crossing' (7.0 m, 20.0 m) -> (9.0 m, 20.0 m, turned 180 degrees)"
+      ],
+      "accepted": {
+        "copy": {
+          "id": "stone_crossing",
+          "model": "assets/models/stone_crossing.glb",
+          "x": 288.0,
+          "y": 640.0,
+          "rotation": 180.0
+        },
+        "third": {
+          "id": "stone_crossing_2",
+          "model": "assets/models/stone_crossing.glb",
+          "x": 800.0,
+          "y": 160.0
+        },
+        "selected_structure": "stone_crossing_2",
+        "warning": "Accepted: 2 change(s). Undo takes them back. Careful: Player can't stand there now (inside a structure). Move them, or the structure.",
+        "newly_buried": [
+          "Player"
+        ]
+      },
+      "missing_model_refused": {
+        "ok": false,
+        "mode": "live_studio",
+        "reason": "invalid_change",
+        "index": 0,
+        "op": "place_structure",
+        "message": "Change 0 (place_structure): There is no model 'assets/models/missing.glb' in the project (a .glb file, as Blender exports it)."
+      }
+    }
+  ],
+  "edit_renderer_objects": {
+    "held_before_play": 36,
+    "still_alive_after_stop": []
+  },
+  "structure_selected_for_edits": "crossing",
+  "performance": {
+    "draw_ms_median": 2.212,
+    "draw_ms_p95": 9.235,
+    "pick_ms_median": 0.538,
+    "structure_click_with_redraw_ms": 283.62,
+    "object_click_with_redraw_ms": 316.13,
+    "studio_frame_ms": 15.9,
+    "edit_commit_ms_median": 289.0,
+    "renderer": {
+      "draw_calls": 6,
+      "static_draws": 4,
+      "triangles": 810,
+      "buffer_bytes": 68784,
+      "texture_bytes": 28672,
+      "target_bytes": 3744000,
+      "batched": true,
+      "shadows": true,
+      "shadow_draws": 5,
+      "shadow_map_bytes": 36700160,
+      "lamps": 2,
+      "shadow_lamps": 2
+    }
+  },
+  "gl_objects": {
+    "edit_first_open": {
+      "texture": 20,
+      "framebuffer": 9,
+      "program": 30
+    },
+    "edit_after_play_and_stop": {
+      "texture": 23,
+      "framebuffer": 12,
+      "program": 33
+    },
+    "edit_after_second_play_and_stop": {
+      "texture": 27,
+      "framebuffer": 16,
+      "program": 37
+    }
+  }
+}

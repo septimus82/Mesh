@@ -251,6 +251,18 @@ def _collider(reader: _Reader, doc: dict, node: dict, index: int, world: Matrix,
     return Collider(name, kind, triangles, lo, hi)
 
 
+def model_problem(root: str | Path, model: str) -> str | None:
+    """Why a project-relative ``model`` can't be placed as a structure (missing, not a usable GLB), or None."""
+    path = Path(root) / str(model)
+    if not str(model).lower().endswith(".glb") or not path.is_file():
+        return f"There is no model '{model}' in the project (a .glb file, as Blender exports it)."
+    try:
+        load_glb(path)
+    except GlbError as err:
+        return str(err)
+    return None
+
+
 def load_glb(path: str | Path) -> Model:
     """A GLB file as a Model (Z-up metres). Raises GlbError, naming the file and the problem."""
     reader = _Reader(Path(path))
