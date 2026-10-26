@@ -1,0 +1,154 @@
+{
+  "before": {
+    "entered_from_village": {
+      "room": "cottage.json",
+      "feet": [
+        9.2,
+        6.013
+      ]
+    },
+    "idle_600_inside": "cottage.json",
+    "exit_straight": {
+      "left_room": true,
+      "last_feet_inside_m": [
+        7.95,
+        5.575
+      ],
+      "now": "start.json"
+    },
+    "arrived_village_feet": [
+      10.0,
+      7.378
+    ],
+    "idle_600_outside": "start.json",
+    "exit_diagonal_from_east": {
+      "start": [
+        10.0,
+        7.378
+      ],
+      "left_room": true,
+      "last_feet_inside_m": [
+        10.0,
+        7.378
+      ],
+      "now": "start.json"
+    },
+    "exit_diagonal_from_west": {
+      "start": [
+        6.934,
+        5.184
+      ],
+      "left_room": true,
+      "last_feet_inside_m": [
+        6.99,
+        5.129
+      ],
+      "now": "start.json"
+    },
+    "walk_down_west_of_door": {
+      "left_room": false,
+      "last_feet_inside_m": [
+        5.997,
+        3.934
+      ],
+      "now": "cottage.json",
+      "start_x": 6.0
+    },
+    "along_south_wall_east": {
+      "left_room": true,
+      "last_feet_inside_m": [
+        7.091,
+        3.934
+      ],
+      "now": "start.json"
+    },
+    "across_room_at_4_8": {
+      "start": [
+        9.2,
+        4.794
+      ],
+      "left_room": true,
+      "last_feet_inside_m": [
+        8.887,
+        4.794
+      ],
+      "now": "start.json"
+    }
+  },
+  "after": {
+    "entered_from_village": {
+      "room": "cottage.json",
+      "feet": [
+        9.2,
+        6.013
+      ]
+    },
+    "idle_600_inside": "cottage.json",
+    "exit_straight": {
+      "left_room": true,
+      "last_feet_inside_m": [
+        7.95,
+        3.778
+      ],
+      "now": "start.json"
+    },
+    "arrived_village_feet": [
+      10.0,
+      7.378
+    ],
+    "idle_600_outside": "start.json",
+    "exit_diagonal_from_east": {
+      "start": [
+        8.966,
+        5.184
+      ],
+      "left_room": false,
+      "last_feet_inside_m": [
+        5.541,
+        3.914
+      ],
+      "now": "cottage.json"
+    },
+    "exit_diagonal_from_west": {
+      "start": [
+        6.934,
+        5.184
+      ],
+      "left_room": true,
+      "last_feet_inside_m": [
+        8.26,
+        3.748
+      ],
+      "now": "start.json"
+    },
+    "walk_down_west_of_door": {
+      "left_room": false,
+      "last_feet_inside_m": [
+        5.997,
+        3.934
+      ],
+      "now": "cottage.json",
+      "start_x": 6.0
+    },
+    "along_south_wall_east": {
+      "left_room": false,
+      "last_feet_inside_m": [
+        10.45,
+        3.934
+      ],
+      "now": "cottage.json"
+    },
+    "across_room_at_4_8": {
+      "start": [
+        9.2,
+        4.794
+      ],
+      "left_room": false,
+      "last_feet_inside_m": [
+        5.528,
+        4.794
+      ],
+      "now": "cottage.json"
+    }
+  }
+}
