@@ -318,7 +318,7 @@ def test_a_2d_room_s_rain_lands_on_its_ground_and_stays_on_its_map(tmp_path: Pat
             return data[data[:, 3] < 1e8]
 
         kept = probe()
-        layer.bounds = None  # the negative control: Stage 18A's 2D rain covered the whole view
+        layer.bounds = (-1e6, -1e6, 1e6, 1e6)  # the negative control: Stage 18A's 2D rain covered the whole view
         loose = probe()
         layer.bounds = (x0, y0, x1, y1)
     finally:

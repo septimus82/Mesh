@@ -370,32 +370,49 @@ def _structure_lines(label: str, before: list[Doc], after: list[Doc]) -> list[st
 
 
 def _weather_words(effects: Any) -> str:
-    """A room's ``settings.particles`` in words: "rain x3000 (wind 0.8 east), wind x400" (Milestone 18B)."""
+    """A room's ``settings.particles`` in words: "rain x3000 (wind 0.8 east m/s), leaves x400" (Milestone 18B)."""
     if not effects:
         return "none"
+    if not isinstance(effects, list):
+        return f"unreadable ({_short(effects)})"
     parts = []
-    for e in effects if isinstance(effects, list) else []:
+    for e in effects:
         if not isinstance(e, dict):
+            parts.append(f"unreadable ({_short(e)})")
             continue
-        text = f"{e.get('preset', '?')}" + (f" x{e['count']}" if "count" in e else "")
+        preset = e.get("preset", "?")
+        text = ("leaves" if preset == "wind" else str(preset)) + (f" x{e['count']}" if "count" in e else "")
         wind = e.get("wind")
-        if isinstance(wind, (list, tuple)) and len(wind) == 2:
+        if isinstance(wind, (list, tuple)) and len(wind) == 2 and all(isinstance(c, (int, float)) for c in wind):
             east, north = wind
             dirs = ([f"{abs(east):g} {'east' if east >= 0 else 'west'}"] if east else []) + (
                 [f"{abs(north):g} {'north' if north >= 0 else 'south'}"] if north else [])
-            text += f" (wind {', '.join(dirs) or 'none'} m/s)"
+            text += f" (wind {', '.join(dirs)} m/s)" if dirs else " (no wind)"
         if e.get("enabled") is False:
             text += " (off)"
         parts.append(text)
-    return ", ".join(parts) or "none"
+    return ", ".join(parts)
+
+
+def _effect_dicts(effects: Any) -> list[Doc]:
+    return [e if isinstance(e, dict) else {} for e in (effects if isinstance(effects, list) else [])]
 
 
 def _weather_lines(label: str, before: Doc, after: Doc) -> list[str]:
     """A room's weather settings (particles, weather_exposure) changed, in words."""
     lines = []
-    if before.get("particles") != after.get("particles"):
-        lines.append(f"{label}: weather {_weather_words(before.get('particles'))} -> "
-                     f"{_weather_words(after.get('particles'))}")
+    old, new = before.get("particles"), after.get("particles")
+    if old != new:
+        was, now = _weather_words(old), _weather_words(new)
+        if was == now:  # the change is in a setting the words leave out (opacity, gust, area, seed...): name it
+            olds, news = _effect_dicts(old), _effect_dicts(new)
+            keys: set[str] = set()
+            for i in range(max(len(olds), len(news))):
+                a, b = olds[i] if i < len(olds) else {}, news[i] if i < len(news) else {}
+                keys |= {k for k in a.keys() | b.keys() if a.get(k) != b.get(k)}
+            lines.append(f"{label}: weather {now}: changes {', '.join(sorted(keys)) or 'its settings'}")
+        else:
+            lines.append(f"{label}: weather {was} -> {now}")
     if before.get("weather_exposure") != after.get("weather_exposure"):
         lines.append(f"{label}: weather exposure {before.get('weather_exposure') or 'outdoor'} -> "
                      f"{after.get('weather_exposure') or 'outdoor'}")

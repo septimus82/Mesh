@@ -525,18 +525,19 @@ def configure(window: Any, settings: Any, scene: Any = None) -> None:
     window.scene_particles_notice = None
     settings = settings if isinstance(settings, dict) else {}
     raw = settings.get("particles")
-    if raw is None:
-        return
     try:
+        indoor = parse_exposure(settings.get("weather_exposure")) == "indoor"  # checked even without particles
+        if raw is None:
+            return
         effects = parse_particles(raw)
-        if parse_exposure(settings.get("weather_exposure")) == "indoor" and effects:
+        if indoor and effects:
             # Milestone 18B: weather is the outdoors'; an indoor room gets none, whatever asks for it
             window.scene_particles_notice = (f"This room is indoors (weather_exposure), so its "
                                              f"{', '.join(e.preset for e in effects)} is not shown.")
             effects = ()
         renderer = getattr(window, "hd2d_renderer", None)
         if renderer is not None:
-            renderer.set_particles(effects)
+            renderer.set_particles(effects, bounds=room_bounds_2d(settings, scene))
         elif effects and getattr(window, "ctx", None) is not None:
             import engine.optional_arcade as optional_arcade  # noqa: PLC0415
 
@@ -583,6 +584,9 @@ def draw_2d(window: Any) -> None:
     layer = getattr(window, "scene_particles", None)
     if layer is None:
         return
+    if layer.bounds is None:  # a map from its own file: its size is known once it has loaded
+        size = (getattr(window, "world_width", None), getattr(window, "world_height", None))
+        layer.bounds = room_bounds_2d({"world_width": size[0], "world_height": size[1]}, None)
     ctx = window.ctx
     vp = ctx.projection_matrix @ ctx.view_matrix
     camera = getattr(window, "camera", None)

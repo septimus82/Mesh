@@ -450,9 +450,11 @@ class Hd2dRenderer:
         self.set_particles(())
         self.precipitation.release()
 
-    def set_particles(self, effects: tuple[Any, ...]) -> None:
+    def set_particles(self, effects: tuple[Any, ...],
+                      bounds: tuple[float, float, float, float] | None = None) -> None:
         """The room's environmental particles (engine.scene_particles.ParticleEffect), drawn in its 3D world; none frees
-        them."""
+        them. ``bounds``: the room's rectangle (m) they're kept inside; without one, what the room is built of (its
+        structures and ground), or nowhere if it has neither."""
         if self.particles is not None:
             self.particles.release()
             self.particles = None
@@ -460,8 +462,10 @@ class Hd2dRenderer:
         if effects:
             from engine.scene_particles import ParticleLayer  # noqa: PLC0415
 
-            lo, hi = self.world_box()
-            self.particles = ParticleLayer(self.ctx, tuple(effects), gl=self.arcade.gl, bounds=(lo[0], lo[1], hi[0], hi[1]))
+            if bounds is None and (self.settings.structures or self.settings.ground is not None):
+                lo, hi = self.world_box()  # no room size given: what it's built of
+                bounds = (lo[0], lo[1], hi[0], hi[1])
+            self.particles = ParticleLayer(self.ctx, tuple(effects), gl=self.arcade.gl, bounds=bounds)
 
     def precipitation_maps(self) -> list[Any]:
         """Per particle effect, the precipitation map its fall needs (engine.hd2d.precipitation), made from the

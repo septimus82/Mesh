@@ -80,8 +80,8 @@ class _Renderer:
     def __init__(self) -> None:
         self.effects: Any = None
 
-    def set_particles(self, effects: Any) -> None:
-        self.effects = effects
+    def set_particles(self, effects: Any, bounds: Any = None) -> None:
+        self.effects, self.bounds = effects, bounds
 
 
 def test_a_room_load_hands_particles_to_its_renderer_or_keeps_2d_rooms_untouched() -> None:
@@ -98,7 +98,7 @@ def test_a_room_load_hands_particles_to_its_renderer_or_keeps_2d_rooms_untouched
     assert broken.scene_particles is None and "preset must be one of" in broken.scene_particles_error
 
     class _NoDriver:
-        def set_particles(self, effects: Any) -> None:
+        def set_particles(self, effects: Any, bounds: Any = None) -> None:
             raise RuntimeError("shader didn't compile")
 
     no_gl = SimpleNamespace(hd2d_renderer=_NoDriver(), ctx=None, scene_particles=None)
@@ -246,5 +246,29 @@ def test_weather_changes_are_authored_checked_and_told_in_words() -> None:
         ops.set_weather_exposure(scene, "cellar")
     assert "set_weather_exposure" in authoring.operations()
     lines = authoring.summarize({"rooms": {"start": scene}}, {"rooms": {"start": inside}})
-    assert "start: weather none -> rain x3000 (wind 0.8 east, 1 south m/s)" in lines
+    assert "start: weather none -> rain x3000 (wind 0.8 east, 1 south m/s)" in lines, lines
     assert "start: weather exposure outdoor -> indoor" in lines
+
+
+def test_an_hd2d_room_keeps_its_weather_inside_its_own_rectangle() -> None:
+    hd2d = SimpleNamespace(hd2d_renderer=_Renderer(), ctx=None, scene_particles=None)
+    sp.configure(hd2d, {"particles": [{"preset": "rain"}], "world_width": 1280, "world_height": 960})
+    assert hd2d.hd2d_renderer.bounds == (0.0, 0.0, 40.0, 30.0), "the room's size, not only what it's built of"
+    sp.configure(hd2d, {"particles": [{"preset": "rain"}]})
+    assert hd2d.hd2d_renderer.bounds is None, "no size given: the renderer decides (its structures and ground)"
+
+
+def test_a_bad_exposure_is_told_even_in_a_room_without_weather() -> None:
+    window = SimpleNamespace(hd2d_renderer=None, ctx=None, scene_particles=None)
+    sp.configure(window, {"weather_exposure": "cellar"})
+    assert "weather_exposure must be one of" in window.scene_particles_error
+
+
+def test_weather_changes_the_summary_words_leave_out_are_named() -> None:
+    from engine import authoring
+
+    lines = authoring._weather_lines("V", {"particles": [{"preset": "rain", "count": 4000}]},
+                                     {"particles": [{"preset": "rain", "count": 4000, "opacity": 0.3}]})
+    assert lines == ["V: weather rain x4000: changes opacity"]
+    assert authoring._weather_lines("V", {}, {"particles": [{"preset": "wind", "count": 200, "wind": [0, 0]}]}) == [
+        "V: weather none -> leaves x200 (no wind)"]

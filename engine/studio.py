@@ -298,19 +298,20 @@ class Studio(InspectorMixin):
 
     def _weather_message(self, again: bool = False) -> None:
         """Milestone 18B: what's wrong with this room's weather (settings that can't be used, a precipitation map
-        that couldn't be made), or why it isn't shown (an indoor room), in the status line: once, when it changes."""
+        that couldn't be made), or why it isn't shown (an indoor room), in the status line: each once while the room
+        is open (an edit's reload doesn't say it again over the edit's own message); ``again``: say it anew."""
         renderer = getattr(self.window, "hd2d_renderer", None)
         error = (getattr(self.window, "scene_particles_error", None)
                  or (renderer.precipitation.error if renderer is not None else None))
         notice = getattr(self.window, "scene_particles_notice", None)
-        said = (self.project.current, error, notice)
-        if said == getattr(self, "_weather_said", None) and not again:
-            return
-        self._weather_said = said
-        if error:
-            self._say(f"Weather is off in this room: {error}", ok=False)
-        elif notice:
-            self._say(notice)
+        room = self.project.current
+        if again or room != getattr(self, "_weather_room", None):
+            self._weather_room, self._weather_said = room, set()
+        for text, ok in ((f"Weather is off in this room: {error}" if error else None, False), (notice, True)):
+            if text and text not in self._weather_said:
+                self._weather_said.add(text)
+                self._say(text, ok=ok)
+                return
 
     def _center_on_room(self) -> None:
         """Frame the room: its whole map if it has one, otherwise its objects."""
