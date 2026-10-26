@@ -56,6 +56,30 @@ def test_the_cottage_door_stands_in_its_doorway(project: Path) -> None:
     assert (arrival["x"], arrival["y"]) == (door["x"], door["y"] - 96), "arriving 3 m south of the door, outside"
 
 
+def test_the_cottage_inside_door_stands_in_its_south_doorway(project: Path) -> None:
+    """The inside's exit door stands (on its opaque bottom edge, like every billboard) just in front of the room's south
+    wall, centred on its doorway; as first made it stood free on the floor by the west wall, its picture 0.15 m through
+    that wall. The arrival and the start inside are beside the door's line: it neither hides them nor is touched."""
+    from PIL import Image
+
+    inside = json.loads((project / ROOMS[1]).read_text(encoding="utf-8"))
+    room = next(st for st in inside["settings"]["hd2d"]["structures"] if st["id"] == "room")
+    door = next(e for e in inside["entities"] if e.get("tag") == "door")
+    with Image.open(project / door["sprite"]) as sprite:
+        left, top, right, below = sprite.convert("RGBA").getchannel("A").getbbox() or (0, 0, 0, 0)
+        bottom = door["y"] - sprite.height / 2 + (sprite.height - below)
+        half_width = (right - left) / 2
+    south_face = room["y"] - 2.5 * 32  # the interior model's walls reach 2.5 m south of where it stands
+    assert door["x"] == room["x"], "centred on the south doorway"
+    assert 0 < south_face - bottom <= 0.05 * 32, "just in front of the south wall's face: not in it, not in the room"
+    assert room["x"] - 3.0 * 32 <= door["x"] - half_width and door["x"] + half_width <= room["x"] + 3.0 * 32, \
+        "its picture within the room's width: through no wall"
+    player_half = 10  # px: the player's hit box is about 0.28 m either side of its centre
+    for e in inside["entities"]:
+        if e.get("tag") == "spawn_point" or e.get("prefab_id") == "player":
+            assert abs(e["x"] - door["x"]) >= half_width + player_half, (e.get("tag"), "beside the door's line")
+
+
 def test_the_template_is_offered_as_a_labelled_preview() -> None:
     offered = list_templates(launcher_only=True)
     hd2d = next(t for t in offered if t.id == "hd2d_rpg")
