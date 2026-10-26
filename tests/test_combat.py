@@ -80,7 +80,7 @@ def test_hitbox_damage(window):
 
     # Mock collision check to return True
     with pytest.MonkeyPatch.context() as m:
-        m.setattr(optional_arcade.arcade, "check_for_collision_with_list", lambda sprite, colliders: [target])
+        m.setattr(optional_arcade.arcade, "check_for_collision", lambda sprite, other: other is target)
 
         # Update hitbox
         hitbox.update(0.1)
