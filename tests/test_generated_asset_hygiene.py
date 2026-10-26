@@ -15,8 +15,6 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.fast
-
 REPO = Path(__file__).resolve().parents[1]
 TEXT = {".json", ".jsonl", ".md", ".txt", ".py", ".yml", ".yaml", ".toml", ".cfg", ".ini", ".csv", ".log", ".html",
         ".htm", ".js", ".xml", ".svg"}
@@ -60,6 +58,7 @@ def _tracked() -> list[str]:
     return listing.stdout.splitlines()
 
 
+@pytest.mark.fast
 def test_raw_generator_records_are_ignored() -> None:
     _tracked()
     for path in ("tooling/hd2d_assets/pilot_m17/raw/characters/calls.jsonl",
@@ -68,11 +67,13 @@ def test_raw_generator_records_are_ignored() -> None:
         assert _git("check-ignore", "-q", path).returncode == 0, f"{path} would not be ignored"
 
 
+@pytest.mark.fast
 def test_no_raw_generator_records_are_tracked() -> None:
     raw = [p for p in _tracked() if "raw" in p.split("/")[:-1]]
     assert raw == []
 
 
+@pytest.mark.integration  # reads every tracked text file (seconds): CI's full pytest run, not the fast tier
 def test_tracked_text_holds_no_storage_urls_or_credentials() -> None:
     token = os.environ.get("PIXELLAB_API_TOKEN", "")
     found: list[str] = []
@@ -87,6 +88,7 @@ def test_tracked_text_holds_no_storage_urls_or_credentials() -> None:
     assert found == []
 
 
+@pytest.mark.fast
 def test_the_private_digests_recognise_a_bare_value() -> None:
     assert not _private("job 12345678-9abc-def0-1234-56789abcdef0 finished")
     digest = hashlib.sha256(b"123456789abcdef0123456789abcdef0").hexdigest()
@@ -99,6 +101,7 @@ def test_the_private_digests_recognise_a_bare_value() -> None:
         PRIVATE_DIGESTS.discard(digest)
 
 
+@pytest.mark.fast
 def test_the_patterns_catch_what_they_are_for() -> None:
     account = "12345678-9abc-def0-1234-56789abcdef0"
     url = f"https://backblaze.pixellab.ai/file/pixellab-characters/{account}/c/south.png?t=1"

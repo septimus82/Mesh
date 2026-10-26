@@ -122,7 +122,7 @@ Fixed after QA, and re-verified on the final commit:
   - QA's attack tests held: 40 concurrent reservations on a budget of 20 accepted exactly 20, split 15 and 5.
 - **Hygiene:**
   - `raw/` folders are git-ignored;
-  - `tests/test_generated_asset_hygiene.py` (fast) rejects tracked raw records, storage or signed URLs containing ids, bearer-token literals, and the owner's token or account id by digest.
+  - `tests/test_generated_asset_hygiene.py` (its full scan is integration-tier: it reads every tracked text file, about 2.6 s, so it runs in CI's whole-suite pytest step rather than the time-budgeted fast tier) rejects tracked raw records, storage or signed URLs containing ids, bearer-token literals, and the owner's token or account id by digest.
 - **mypy gate:** `tooling/mypy_gate.py` skips git-ignored folders as well as untracked ones.
 
 ## Licensing
@@ -148,6 +148,13 @@ run's failures were enforced fixed-millisecond budgets on runners the speed advi
 The PR run's runners were 0.60–0.67×. A re-run with budgets unchanged passed. The only real difference from the
 updated base is that the stacked branches predate #369, so their pushes still trigger the retired `build.yml`. No test
 or budget was changed.
+
+**On this PR's own CI.**
+
+- The first push run was fully green.
+- The pull-request run's Windows `tests` job failed the same fixed `pytest-fast` budget twice, on runners measured at 1.22× and then 1.34× the median: 131.7 s and 130.7 s against 121.8 s. The advisory judged both within range for those speeds (120.7–176.8 s at 1.34×).
+- Part of the time was this branch's: the hygiene test's full scan reads every tracked text file (about 2.6 s locally). It is now `integration`-tier. It still runs on every PR in CI's whole-suite pytest step, but no longer in the time-budgeted fast tier.
+- No budget was changed.
 
 ## Tests on the final commit
 

@@ -41,7 +41,7 @@ their provenance and licence review. They are not merged.
 
 - **Raw generator records are never committed.**
   - Every `raw/` folder is git-ignored: PixelLab job dumps hold the account id inside storage URLs.
-  - `tests/test_generated_asset_hygiene.py` (fast tier) fails on any of these in a tracked file:
+  - `tests/test_generated_asset_hygiene.py` fails on any of these in a tracked file (its full scan runs in CI's whole-suite pytest step; its quick checks are in the fast tier):
     - a raw record;
     - a storage URL or signed URL containing an id;
     - a bearer-token literal;
