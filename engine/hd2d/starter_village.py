@@ -45,9 +45,10 @@ MARGIN = 4.0  # m of grass around the village, so the camera never looks past th
 FEET_48 = 18.0  # px: a 48 px character's feet are this far below its centre (engine.physics_runtime.footprint)
 FEET_32 = 12.0  # ... and a 32 px sign's
 # m, feet: where the player starts and arrives inside the cottage: beside the line of its exit door (in the south
-# doorway, nearest the camera, which hides the floor behind it at the indoor camera's 55 degrees and is touched up to
-# y 5.4 in front of it), so neither hidden nor touching, and far enough north (arriving, the feet land 0.19 m south of
-# this) that walking west past the door's line doesn't touch it either; east of the table, west of Tomas.
+# doorway, nearest the camera, which hides the floor behind it at the indoor camera's 55 degrees; a player whose feet
+# come within about y 5.6 in front of it touches it), so neither hidden nor touching, and far enough north (arriving,
+# the feet land 0.19 m south of this) that walking west past the door's line doesn't touch it either; east of the
+# table, west of Tomas.
 INSIDE_ARRIVAL = (9.2, 6.2)
 # The inside's exit door (m, its sprite's centre), standing in the room's south doorway (the room at (8.0, 6.0), its
 # walls 2.5 m south): like the outside door, a billboard stands on its bottom edge, so the 64 px (2 m) door sprite's
@@ -212,7 +213,7 @@ def build(root: Path, bundled: Callable[[str], Path | None], person: dict[str, A
     inside = _place(inside, "room", "interior", 8.0, 6.0, margin=False)
     inside["lights"] = []
     inside = _lamp(inside, 8.0, 7.0, 2.0, "#ffd29a", 200, margin=False)
-    tomas = _talker(person, "Tomas", "Make yourself at home.\nThe door in the south wall takes you back outside.")
+    tomas = _talker(person, "Tomas", "Make yourself at home.\nThe door at the front of the room takes you back outside.")
     tomas.update({"id": f"{inside_key}_tomas", "x": 10.0 * PX, "y": 5.0 * PX + FEET_48, "elevation": 0.1 * PX})
     inside["entities"].append(tomas)
     # Inside, the player starts and arrives at INSIDE_ARRIVAL: in view and clear of the exit door.
