@@ -89,3 +89,13 @@ def test_a_door_s_touch_is_its_hit_box_as_before() -> None:
     assert seen[True] > 20 and seen[False] > 20
     corner = _sprite("player", 40, 40, size=8)  # inside the bounding box, outside the diamond
     assert not arcade.check_for_collision(door, corner)
+
+
+def test_a_door_never_touches_itself() -> None:
+    """As arcade's list check did: a door tagged like its target (an odd setup) doesn't fire on its own box."""
+    door = _sprite("player")
+    fired: list[Any] = []
+    behaviour = SceneTransition(door, StubWindow([door]), target_scene="scenes/any.json", trigger_on_touch=True)
+    setattr(behaviour, "_trigger_transition", lambda **kw: fired.append(kw))  # noqa: B010
+    behaviour.update(1 / 60)
+    assert fired == []

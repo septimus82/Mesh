@@ -154,7 +154,7 @@ class SceneTransition(Behaviour):
 
         candidates = []
         for sprite in scene_controller.all_sprites:
-            if getattr(sprite, "mesh_tag", "") == self.target_tag:
+            if sprite is not self.entity and getattr(sprite, "mesh_tag", "") == self.target_tag:
                 candidates.append(sprite)
 
         if not candidates:
