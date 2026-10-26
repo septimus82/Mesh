@@ -4,7 +4,7 @@ import os
 from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
-from engine import scene_particles
+from engine import scene_particles, water
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow, record_swallowed
 from engine.ui import maybe_auto_open_quest_log, maybe_enqueue_demo_interior_hint, maybe_enqueue_quest_progress_toast
@@ -242,6 +242,7 @@ def on_update(window: "GameWindow", delta_time: float) -> None:
     if hd2d is not None:
         hd2d.update(delta_time)
     scene_particles.update(window, delta_time)  # a 2D room's environmental particles (an HD-2D room's: its renderer)
+    water.advance(window, delta_time)  # its puddles and ponds move
     window.particle_manager.update()
     lighting = getattr(window, "lighting", None)
     if lighting is not None:

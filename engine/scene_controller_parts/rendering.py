@@ -83,6 +83,9 @@ def draw(self) -> None:
     else:
         for layer in self._tilemap_background_layers:
             layer.draw()
+    from engine import water  # noqa: PLC0415
+
+    water.draw_2d(self.window)  # puddles and ponds: on the ground, under the characters
 
     scene_controller_module.execute_scene_plan(
         plan,

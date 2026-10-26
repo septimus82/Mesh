@@ -996,6 +996,10 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             from engine.scene_particles import release as release_particles  # noqa: PLC0415
 
             release_particles(self)
+        if getattr(self, "scene_water", None) is not None:  # a 2D room's water: likewise
+            from engine.water import release as release_water  # noqa: PLC0415
+
+            release_water(self)
         arcade = engine.optional_arcade.arcade
         try:
             active = arcade.get_window() if callable(getattr(arcade, "get_window", None)) else None

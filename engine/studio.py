@@ -74,7 +74,8 @@ LAYER_NAME = {ops.GROUND: "the ground", ops.WALLS: "walls (they block movement)"
               ops.OVERHEAD: "the layer above characters (roofs, treetops; never blocks)"}
 # Always in the Objects list: an object to dress up yourself, and a zone to walk into.
 BUILT_IN_OBJECTS: list[dict[str, Any]] = [{"id": "object", "display_name": "Empty object", "built_in": "blank"},
-                                          {"id": "zone", "display_name": "Trigger zone", "built_in": "zone"}]
+                                          {"id": "zone", "display_name": "Trigger zone", "built_in": "zone"},
+                                          {"id": "water", "display_name": "Water", "built_in": "water"}]
 SHAPE_HELP = {"brush": "Click or drag on the map.", "rect": "Drag a rectangle on the map.",
               "fill": "Click an area to fill it."}
 
@@ -308,7 +309,10 @@ class Studio(InspectorMixin):
         if again or room != getattr(self, "_weather_room", None):
             self._weather_room = room
             self._weather_said: set[str] = set()
-        for text, ok in ((f"Weather is off in this room: {error}" if error else None, False), (notice, True)):
+        water_error = (renderer.water_error if renderer is not None
+                       else getattr(self.window, "scene_water_error", None))
+        for text, ok in ((f"Weather is off in this room: {error}" if error else None, False),
+                         (f"Water is off in this room: {water_error}" if water_error else None, False), (notice, True)):
             if text and text not in self._weather_said:
                 self._weather_said.add(text)
                 self._say(text, ok=ok)
@@ -399,6 +403,9 @@ class Studio(InspectorMixin):
             door = ops.door_settings(entity)
             if door["width"] > 0 and door["height"] > 0:
                 return float(entity.get("x", 0)), float(entity.get("y", 0)), door["width"], door["height"]
+        water = ops.water_of(entity)
+        if water is not None:  # water: its own size (it has no picture)
+            return float(entity.get("x", 0)), float(entity.get("y", 0)), water["width"], water["height"]
         if sprite is not None and entity.get("sprite") and getattr(sprite, "width", 0) > 2:
             return sprite.center_x, sprite.center_y, sprite.width, sprite.height
         return float(entity.get("x", 0)), float(entity.get("y", 0)), 32.0, 32.0
@@ -758,9 +765,12 @@ class Studio(InspectorMixin):
         def change(scene: dict[str, Any]) -> dict[str, Any]:
             kind, at = prefab.get("built_in"), ((_snap(wx), _snap(wy)) if snap else (round(wx, 2), round(wy, 2)))
             if kind:
-                out, new_id = ops.place_blank(scene, self.project.current, "Zone" if kind == "zone" else "Object", *at)
+                name = {"zone": "Zone", "water": "Puddle"}.get(str(kind), "Object")
+                out, new_id = ops.place_blank(scene, self.project.current, name, *at)
                 if kind == "zone":
                     out = ops.set_trigger_zone(out, new_id, width=96, height=96)
+                elif kind == "water":  # Milestone 19A: a puddle to start with; Look turns it into a pond
+                    out = ops.set_water(out, new_id, preset="puddle")
             else:
                 out, new_id = ops.place_prefab(scene, self.project.current, prefab, *at, elevation=elevation)
             if elevation and kind:
@@ -768,7 +778,8 @@ class Studio(InspectorMixin):
             created.append(new_id)
             return out
 
-        hint = {"blank": " Give it a picture in Look.", "zone": " Drag its orange corner to size it."}.get(
+        hint = {"blank": " Give it a picture in Look.", "zone": " Drag its orange corner to size it.",
+                "water": " Puddle or pond, size and look: on the right."}.get(
             str(prefab.get("built_in")), "")
         on = f" on {where}, {elevation / 32:.1f} m up" if where else ""
         if self._edit(change, f"Placed {prefab.get('display_name', prefab['id'])}{on}.{hint}"):
@@ -2233,8 +2244,17 @@ class Studio(InspectorMixin):
         for entity in ops.entities(self.project.scene()):
             eid = entity.get("id")
             cx, cy, w, h = self._bounds(entity, sprites.get(str(eid)))
-            zone = self._live_zone(entity)
-            if zone is not None:
+            water, zone = self._live_water(entity), self._live_zone(entity)
+            if water is not None:  # drawn by the game itself; here its outline and name, to find and size it
+                x0, x1 = cx - water["width"] / 2, cx + water["width"] / 2
+                y0, y1 = cy - water["height"] / 2, cy + water["height"] / 2
+                if water.get("shape") == "rect":
+                    a.draw_lrbt_rectangle_outline(x0, x1, y0, y1, (110, 190, 255), 2)
+                else:
+                    a.draw_ellipse_outline(cx, cy, water["width"], water["height"], (110, 190, 255), 2)
+                self._text(f"water:{eid}", f"{str(water.get('preset', 'water')).capitalize()}: {entity.get('name') or ''}",
+                           cx, y1 + 4, (150, 210, 255))
+            elif zone is not None:
                 x0, x1 = cx - zone["width"] / 2, cx + zone["width"] / 2
                 y0, y1 = cy - zone["height"] / 2, cy + zone["height"] / 2
                 a.draw_lrbt_rectangle_filled(x0, x1, y0, y1, (255, 150, 40, 45))
@@ -2299,6 +2319,13 @@ class Studio(InspectorMixin):
             return zone
         return ops.trigger_zone(entity)
 
+    def _live_water(self, entity: dict[str, Any]) -> dict[str, Any] | None:
+        drag = self.handle_drag
+        if drag is not None and drag.get("entity") == entity.get("id") and drag["name"] == "water_size":
+            water: dict[str, Any] = drag["water"]
+            return water
+        return ops.water_of(entity)
+
     def _handles(self) -> list[dict[str, Any]]:
         """Drag handles for the selected object's collider (Collision tab) and trigger zone, or for the room's
         lights while the Lighting panel is open, in world units."""
@@ -2317,6 +2344,9 @@ class Studio(InspectorMixin):
         zone = self._live_zone(entity)
         if zone is not None:
             out.append({"name": "zone_size", "x": x + zone["width"] / 2, "y": y - zone["height"] / 2})
+        water = self._live_water(entity)
+        if water is not None:
+            out.append({"name": "water_size", "x": x + water["width"] / 2, "y": y - water["height"] / 2})
         return out
 
     def _handle_at(self, x: float, y: float) -> dict[str, Any] | None:
@@ -2344,6 +2374,9 @@ class Studio(InspectorMixin):
         if drag["name"] == "zone_size":
             drag["zone"].update(width=max(8.0, round(2 * abs(wx - x))), height=max(8.0, round(2 * abs(wy - y))))
             return
+        if drag["name"] == "water_size":
+            drag["water"].update(width=max(8.0, round(2 * abs(wx - x))), height=max(8.0, round(2 * abs(wy - y))))
+            return
         collider = drag["collider"]
         cx, cy = x + collider["offset_x"], y + collider["offset_y"]
         if drag["name"] == "collider_move":
@@ -2365,6 +2398,11 @@ class Studio(InspectorMixin):
                 self._edit(lambda s: ops.set_light(s, index, radius=light["radius"]), f"Light size {light['radius']:g}.")
             return
         target = drag["entity"]
+        if drag["name"] == "water_size":
+            water = drag["water"]
+            self._edit(lambda s: ops.set_water(s, target, width=water["width"], height=water["height"]),
+                       f"Water is {water['width']:g} x {water['height']:g}.")
+            return
         if drag["name"] == "zone_size":
             zone = drag["zone"]
             self._edit(lambda s: ops.set_trigger_zone(s, target, width=zone["width"], height=zone["height"], once=zone["once"],
@@ -2425,6 +2463,9 @@ class Studio(InspectorMixin):
         if lighting is not None:
             lighting.update(delta_time)  # flicker shows while editing; nothing else of the game runs
         self.hd2d.advance_weather(delta_time)  # ... nor does the weather, unless it's being previewed
+        from engine import water  # noqa: PLC0415
+
+        water.advance(self.window, delta_time)  # puddles and ponds move while editing
         self._weather_message()  # a precipitation map is made on the first frame drawn: its failure shows then
         return True  # no gameplay runs while editing
 
@@ -2646,7 +2687,8 @@ class Studio(InspectorMixin):
             if handle is not None:
                 entity = self._entity(self.selected) or {}
                 self.handle_drag = {"name": handle["name"], "entity": self.selected, "moved": False,
-                                    "collider": dict(ops.collider_of(entity, self._picture_size(entity))), "zone": dict(ops.trigger_zone(entity) or {})}
+                                    "collider": dict(ops.collider_of(entity, self._picture_size(entity))), "zone": dict(ops.trigger_zone(entity) or {}),
+                                    "water": dict(ops.water_of(entity) or {})}
                 return True
             hit = self._entity_at(wx, wy)
             self.select(hit)

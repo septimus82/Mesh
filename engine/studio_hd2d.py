@@ -292,21 +292,18 @@ class Hd2dView:
         stretch = 1.0 / max(0.5, math.cos(math.radians(self.camera.pitch)))
         hit = self.picker.pick(origin, direction, self.structures(), renderer.models, sprites, self.camera.right(), stretch)
         self.timings["pick_ms"].append((time.perf_counter() - start) * 1000)
+        water = self._water_at(origin, direction) if hit is None else None
+        if water is not None:  # a puddle or pond (no picture to click): the object it is
+            self._grab_entity(water[0], water[1], x, y)
+            return True
         if hit is None:
             self.select_structure(None)
             self.studio.select(None)
             return True
         if hit.kind == "sprite":  # a character or object: Studio's ordinary object editing
-            self.structure = None
             entity_id = hit.target.mesh_entity_data["id"]
-            self.studio.select(entity_id)
-            entity = self.studio._entity(entity_id) or {}
             z = float((hit.target.mesh_entity_data or {}).get("elevation", 0.0) or 0.0) / PIXELS_PER_METRE
-            at = self.ground_px(x, y, z)
-            if at is not None:
-                self.drag = {"kind": "entity", "id": entity_id, "plane": z, "moved": False,
-                             "dx": float(entity.get("x", 0)) - at[0], "dy": float(entity.get("y", 0)) - at[1],
-                             "to": (entity.get("x", 0), entity.get("y", 0))}
+            self._grab_entity(entity_id, z, x, y)
             return True
         st = self.find(hit.target)
         self.select_structure(hit.target)
@@ -317,6 +314,36 @@ class Hd2dView:
                 self.drag = {"kind": "structure", "id": st.id, "plane": plane, "moved": False,
                              "dx": st.x - at[0], "dy": st.y - at[1], "x": st.x, "y": st.y}
         return True
+
+    def _grab_entity(self, entity_id: str, z: float, x: float, y: float) -> None:
+        """Select an object and start dragging it on the plane ``z`` m up."""
+        self.structure = None
+        self.studio.select(entity_id)
+        entity = self.studio._entity(entity_id) or {}
+        at = self.ground_px(x, y, z)
+        if at is not None:
+            self.drag = {"kind": "entity", "id": entity_id, "plane": z, "moved": False,
+                         "dx": float(entity.get("x", 0)) - at[0], "dy": float(entity.get("y", 0)) - at[1],
+                         "to": (entity.get("x", 0), entity.get("y", 0))}
+
+    def _water_at(self, origin: tuple[float, float, float], direction: tuple[float, float, float]) -> tuple[str, float] | None:
+        """The nearest water surface the mouse's ray meets (its object's id and level, m), if any (Milestone 19A)."""
+        from engine import water as water_mod  # noqa: PLC0415
+
+        best: tuple[float, str, float] | None = None
+        for body in water_mod.bodies_of(self.studio.window):
+            cx, cy, z = body.place()
+            if abs(direction[2]) < 1e-6:
+                continue
+            t = (z - origin[2]) / direction[2]
+            if t <= 0:
+                continue
+            px = ((origin[0] + direction[0] * t) * PIXELS_PER_METRE, (origin[1] + direction[1] * t) * PIXELS_PER_METRE)
+            entity_id = (getattr(body.entity, "mesh_entity_data", None) or {}).get("id")
+            on = water_mod.inside(body.water, (cx * PIXELS_PER_METRE, cy * PIXELS_PER_METRE), px)
+            if entity_id and on and (best is None or t < best[0]):
+                best = (t, str(entity_id), z)
+        return None if best is None else (best[1], best[2])
 
     def drag_to(self, x: float, y: float) -> None:
         drag, renderer = self.drag, self.renderer

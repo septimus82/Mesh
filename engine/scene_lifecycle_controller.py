@@ -21,6 +21,7 @@ from engine.ui import (
     maybe_enqueue_preset_mode_toast,
     maybe_enqueue_shadowmask_enabled_toast,
 )
+from engine.water import reset as reset_water
 
 
 def _restore_camera(window: Any, pos: tuple[float, float], zoom: float | None) -> None:
@@ -248,6 +249,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     configure_scene_lighting(controller.window, scene, controller.scene_settings, scene_path)
     configure_hd2d_scene(controller.window, controller.scene_settings, scene)
     configure_scene_particles(controller.window, controller.scene_settings, scene)  # after the renderer: HD-2D's own them
+    reset_water(controller.window)  # its water surfaces register as their objects are made (engine.water)
 
     # Handle music
     music_path = controller.scene_settings.get("music")

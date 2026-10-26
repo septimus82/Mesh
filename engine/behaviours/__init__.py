@@ -82,6 +82,7 @@ _BUILTIN_MODULES: tuple[str, ...] = (
     "engine.behaviours.trigger_zone",
     "engine.behaviours.vendor",
     "engine.behaviours.wander",
+    "engine.behaviours.water_surface",
 )
 
 _BUILTINS_LOADED = False
