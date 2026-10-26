@@ -52,10 +52,13 @@ def test_each_agent_spends_only_its_own_cap_and_delegating_adds_none(tmp_path: P
     assert budget.status(path)["committed"] == 19
 
 
-@pytest.mark.parametrize("caps", [{}, {"textures": 0}, {"textures": 15, "character": 6}])
-def test_a_ledger_needs_positive_caps_within_the_approved_budget(tmp_path: Path, caps: dict[str, float]) -> None:
+@pytest.mark.parametrize(("approved", "caps"), [(20, {}), (20, {"textures": 0}), (20, {"textures": 15, "character": 6}),
+                                                (float("nan"), {"textures": 1000}), (float("inf"), {"textures": 5}),
+                                                (20, {"textures": float("inf")})])
+def test_a_ledger_needs_positive_caps_within_the_approved_budget(tmp_path: Path, approved: float,
+                                                                 caps: dict[str, float]) -> None:
     with pytest.raises(budget.BudgetError, match="caps"):
-        budget.init(tmp_path / "ledger.json", 20, caps)
+        budget.init(tmp_path / "ledger.json", approved, caps)
     assert not (tmp_path / "ledger.json").exists()
 
 
@@ -67,7 +70,7 @@ def test_reservations_take_whole_positive_units(tmp_path: Path, units: Any) -> N
     assert budget.status(path)["committed"] == 0
 
 
-@pytest.mark.parametrize("used", [-1, float("nan"), "2"])
+@pytest.mark.parametrize("used", [-1, float("nan"), float("inf"), "2"])
 def test_settle_takes_a_real_non_negative_usage(tmp_path: Path, used: Any) -> None:
     path = _ledger(tmp_path)
     rid = budget.reserve(path, "textures", "create-image-pixflux", "door")
@@ -85,6 +88,18 @@ def test_sanitize_drops_account_fields_and_storage_paths(monkeypatch: pytest.Mon
     text = repr(clean)
     assert account not in text and "env-token" not in text and "a@b.c" not in text
     assert clean == {"files": ["<path removed>", "plain"], "header": "x-api-key <redacted>", "job": "j1"}
+
+
+def test_sanitize_catches_creators_keyed_urls_encoded_paths_and_bearer_values(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    account = "12345678-9abc-def0-1234-56789abcdef0"
+    monkeypatch.delenv("PIXELLAB_API_TOKEN", raising=False)
+    raw = {"creator": account, f"https://cdn.example/{account}/a.png": "x", f"files/{account}/b.png": "y",
+           "path": f"pixellab-characters%2F{account}%2Fc.png", "header": "Authorization: Bearer abc.def-123",
+           "id": "job-7"}
+    clean = budget.sanitize(raw)
+    assert account not in repr(clean) and "abc.def" not in repr(clean)
+    assert clean == {"path": "<path removed>", "header": "Authorization: Bearer <redacted>", "id": "job-7"}
 
 
 def test_settle_records_usage_overruns_and_sanitized_results(tmp_path: Path) -> None:

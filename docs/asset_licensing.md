@@ -40,12 +40,14 @@ their provenance and licence review. They are not merged.
 ## Safeguards already in place
 
 - **Raw generator records are never committed.**
-  - `tooling/hd2d_assets/**/raw/` is git-ignored: PixelLab job dumps hold the account id inside storage URLs.
+  - Every `raw/` folder is git-ignored: PixelLab job dumps hold the account id inside storage URLs.
   - `tests/test_generated_asset_hygiene.py` (fast tier) fails on any of these in a tracked file:
     - a raw record;
     - a storage URL or signed URL containing an id;
     - a bearer-token literal;
-    - the owner's token or account id, recognised by their SHA-256 digests.
+    - the owner's token or account id, with or without hyphens, recognised by their SHA-256 digests.
+  - Nothing can strip every identifier from a generator's response: a bare account id under an ordinary key looks
+    like a job id. The digest check is the backstop.
 - **Generation runs on one shared budget.**
   - `tooling/pixellab_budget.py`: every request reserves its cost before it is sent.
   - Endpoints without an established cost are refused, and so is anything over the approved budget or the agent's

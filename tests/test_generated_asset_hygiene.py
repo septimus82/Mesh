@@ -1,7 +1,7 @@
 """Generated art must never bring account data or credentials into a commit (Milestone 17).
 
-PixelLab's raw job records hold the account id inside storage URLs, and its API takes a bearer token. The raw records
-are ignored (``tooling/hd2d_assets/**/raw/``); what is tracked is only sanitized provenance. These checks read what
+PixelLab's raw job records hold the account id inside storage URLs, and its API takes a bearer token. Raw records
+are ignored (any ``raw/`` folder); what is tracked is only sanitized provenance. These checks read what
 git tracks, so they hold in CI and on any checkout.
 """
 
@@ -18,7 +18,8 @@ import pytest
 pytestmark = pytest.mark.fast
 
 REPO = Path(__file__).resolve().parents[1]
-TEXT = {".json", ".jsonl", ".md", ".txt", ".py", ".yml", ".yaml", ".toml", ".cfg", ".ini", ".csv"}
+TEXT = {".json", ".jsonl", ".md", ".txt", ".py", ".yml", ".yaml", ".toml", ".cfg", ".ini", ".csv", ".log", ".html",
+        ".htm", ".js", ".xml", ".svg"}
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 # What leaks is an account id inside a storage path, not the host's name (reviews describe the URL form). Assembled
 # from parts so this file doesn't match itself.
@@ -30,17 +31,19 @@ FORBIDDEN = {
 }
 
 
-# SHA-256 of the owner's PixelLab API token and account id (both UUID-shaped, so their digests can't be reversed):
-# CI has neither value, so a bare token or account id is recognised by its digest.
+# SHA-256 of the owner's PixelLab API token and account id, lower case without hyphens (both are UUIDs, so their
+# digests can't be reversed): CI has neither value, so a bare token or account id, with or without hyphens, is
+# recognised by its digest.
 PRIVATE_DIGESTS = {
-    "a66601fb24f37573baf0ebc0a09b70e6ca7adb1486bcc4c57501692fb0cae9a7",  # the API token
-    "9f838975bf09a5de437b82781df594a8e0ecea311bc8efea0927688a69fe4263",  # the account id
+    "82393a40101eaf6ce5274def5e581c4437d30c718cb23246911a2ee9fc09b03a",  # the API token
+    "417dd669e8b5291385a87778f4db800c5efec3e9b2eda3d67a183c9d5fb7e998",  # the account id
 }
-UUID_ANYWHERE = re.compile(UUID, re.IGNORECASE)
+ID_ANYWHERE = re.compile(UUID + r"|(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])", re.IGNORECASE)
 
 
 def _private(text: str) -> bool:
-    return any(hashlib.sha256(m.lower().encode()).hexdigest() in PRIVATE_DIGESTS for m in UUID_ANYWHERE.findall(text))
+    return any(hashlib.sha256(m.lower().replace("-", "").encode()).hexdigest() in PRIVATE_DIGESTS
+               for m in ID_ANYWHERE.findall(text))
 
 
 def _git(*args: str) -> subprocess.CompletedProcess[str]:
@@ -60,12 +63,13 @@ def _tracked() -> list[str]:
 def test_raw_generator_records_are_ignored() -> None:
     _tracked()
     for path in ("tooling/hd2d_assets/pilot_m17/raw/characters/calls.jsonl",
-                 "tooling/hd2d_assets/any_pilot/raw/textures/job/record.json"):
+                 "tooling/hd2d_assets/any_pilot/raw/textures/job/record.json", "raw/record.json",
+                 "assets/somewhere/raw/job.json"):
         assert _git("check-ignore", "-q", path).returncode == 0, f"{path} would not be ignored"
 
 
 def test_no_raw_generator_records_are_tracked() -> None:
-    raw = [p for p in _tracked() if p.startswith("tooling/hd2d_assets/") and "/raw/" in p]
+    raw = [p for p in _tracked() if "raw" in p.split("/")[:-1]]
     assert raw == []
 
 
@@ -85,10 +89,12 @@ def test_tracked_text_holds_no_storage_urls_or_credentials() -> None:
 
 def test_the_private_digests_recognise_a_bare_value() -> None:
     assert not _private("job 12345678-9abc-def0-1234-56789abcdef0 finished")
-    digest = hashlib.sha256(b"12345678-9abc-def0-1234-56789abcdef0").hexdigest()
+    digest = hashlib.sha256(b"123456789abcdef0123456789abcdef0").hexdigest()
     PRIVATE_DIGESTS.add(digest)
     try:
         assert _private("job 12345678-9ABC-def0-1234-56789abcdef0 finished")  # any case
+        assert _private('{"key": "123456789abcdef0123456789abcdef0"}')  # without hyphens
+        assert not _private("sha 0123456789abcdef0123456789abcdef0123")  # part of a longer hex string
     finally:
         PRIVATE_DIGESTS.discard(digest)
 

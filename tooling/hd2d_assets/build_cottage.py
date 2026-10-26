@@ -13,7 +13,7 @@ middle of its south wall. Collision:
 (``solid``, 0.15 m up), a stone hearth against the east wall (``wall``) and a chimney on the roof.
 
 ``build_kit()`` is the starter kit's cottage (``build_starter_kit.py``, Milestone 17): the same floor, walls, doorway
-and collision, refined with the same starter textures (docs/reviews/milestone17_stage1b_refinement.md):
+and collision, refined with the same starter textures (docs/reviews/milestone17_cottage_integration.md):
 
 - a cobbled plinth to PLINTH instead of timber to 1.3 m, and no faces hidden inside the model (the wall boxes' tops
   and bottoms, the lintel's ends and top), so no two materials are coplanar where the cutaway opens a wall;
@@ -74,6 +74,7 @@ GAP = 0.01  # the framing stands this far clear of the wall faces
 SILL_DEPTH, POST_DEPTH, POST_WIDTH = 0.04, 0.06, 0.16
 EPS = 0.002  # between abutting framing pieces, so no two faces are coplanar
 EAVE_PHASE = 2 / 32  # roof: the shingles' darkest gap row ends at the eave
+BOARD = 8 / 32  # the timber texture's boards (m at one tile per metre)
 PX_PER_M = 32  # the window is laid out on the art's grid: px from its top left
 OPENING = (6, 6, 22, 25)  # x0, y0, x1, y1
 FRAME = {"stile_l": (6, 6, 8, 25, True), "stile_r": (20, 6, 22, 25, True), "rail_top": (8, 6, 20, 8, False),
@@ -155,6 +156,17 @@ def _window(side: str, cx: float, timber, pane_mat) -> None:
         obj = box(f"window_{side}_{name}", a, Y0 - FRAME_OUT, b, c, Y0 - PANE_OUT[1], d, timber)
         if vertical:
             _vertical_grain(obj)
+        _mid_board(obj)
+
+
+def _mid_board(obj) -> None:
+    """Shift V so the piece's front face sits in the middle of a board: the timber texture's 8 px boards each end in
+    a dark line, which would otherwise run along a 2 px frame piece's edge."""
+    uv = obj.data.uv_layers["UVMap"].data
+    front = [uv[li].uv[1] for poly in obj.data.polygons if poly.normal.y < -0.5 for li in poly.loop_indices]
+    shift = BOARD / 2 - ((min(front) + max(front)) / 2) % BOARD
+    for loop in uv:
+        loop.uv = (loop.uv[0], loop.uv[1] + shift)
 
 
 def build_kit() -> None:

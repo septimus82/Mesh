@@ -36,4 +36,4 @@ saves/
 
 # Raw generator API records (PixelLab job dumps, downloads): they hold account ids in storage URLs. Never commit them;
 # sanitized provenance lives beside each asset instead (tests/test_generated_asset_hygiene.py)
-tooling/hd2d_assets/**/raw/
+raw/

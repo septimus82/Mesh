@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import time
@@ -29,6 +30,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
+from urllib.parse import unquote
 
 # Generations per request, with where the figure comes from. An endpoint not listed has no established cost: establish
 # it (PixelLab's documentation, or one approved probe whose ``usage`` is recorded here) before using it.
@@ -41,10 +43,11 @@ COSTS: dict[str, tuple[float, str]] = {
     "characters/animations": (1, "M17 Stage 1: template walk, about 1 per direction (cost the directions as units)"),
 }
 SECRET_KEYS = {"authorization", "api_key", "apikey", "token", "access_token", "secret", "password", "cookie"}
-PRIVATE_KEY_PARTS = ("account", "user", "owner", "email")  # keys naming who made a request
+PRIVATE_KEY_PARTS = ("account", "user", "owner", "creator", "email")  # keys naming who made a request
 URL = re.compile(r"[a-z][a-z0-9+.-]*://\S+", re.IGNORECASE)
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 STORAGE_PATH = re.compile(r"\S*/" + UUID + r"\S*", re.IGNORECASE)  # a path with an id in it, with or without a scheme
+BEARER = re.compile(r"(bearer)\s+\S+", re.IGNORECASE)
 
 
 class BudgetError(RuntimeError):
@@ -52,13 +55,18 @@ class BudgetError(RuntimeError):
 
 
 def _private(key: Any) -> bool:
-    key = str(key).lower()
-    return key in SECRET_KEYS or any(part in key for part in PRIVATE_KEY_PARTS)
+    """A key that names a credential or who made the request, or that is itself a URL or a path with an id."""
+    text = unquote(str(key))
+    lower = text.lower()
+    return (lower in SECRET_KEYS or any(part in lower for part in PRIVATE_KEY_PARTS) or bool(URL.search(text))
+            or bool(STORAGE_PATH.search(text)))
 
 
 def sanitize(value: Any, secret: str | None = None) -> Any:
     """``value`` (a response, a request) safe to keep in provenance: URLs, storage paths, account and user fields,
-    blobs and credentials removed. ``secret`` defaults to the PixelLab token in the environment."""
+    blobs and credentials removed. ``secret`` defaults to the PixelLab token in the environment. A bare id under an
+    ordinary key (a job's ``id``) is kept: it can't be told from the account's, so the hygiene test
+    (tests/test_generated_asset_hygiene.py) is what keeps the account id out of commits."""
     if secret is None:
         secret = os.environ.get("PIXELLAB_API_TOKEN", "")
     if isinstance(value, dict):
@@ -70,6 +78,7 @@ def sanitize(value: Any, secret: str | None = None) -> Any:
             value = value.replace(secret, "<redacted>")
         if len(value) > 256:
             return f"<{len(value)} characters removed>"
+        value = BEARER.sub(lambda m: m.group(1) + " <redacted>", unquote(value))
         return STORAGE_PATH.sub("<path removed>", URL.sub("<url removed>", value))
     return value
 
@@ -106,7 +115,8 @@ def init(path: Path, approved: float, agents: dict[str, float]) -> None:
     """A stage's ledger: its approved budget and each generation agent's cap (never a QA agent's)."""
     if path.exists():
         raise BudgetError(f"{path} exists; a stage's ledger is never reset")
-    if not agents or any(not cap > 0 for cap in agents.values()) or sum(agents.values()) > approved:
+    positive = [math.isfinite(v) and v > 0 for v in (approved, *agents.values())]
+    if not agents or not all(positive) or sum(agents.values()) > approved:
         raise BudgetError(f"every agent needs a cap above 0, and the caps ({agents}) can't exceed {approved}")
     path.write_text(json.dumps({"approved": approved, "agents": agents, "entries": []}, indent=2) + "\n",
                     encoding="utf-8")
@@ -144,7 +154,7 @@ def _entry(ledger: dict[str, Any], rid: str) -> dict[str, Any]:
 
 def settle(path: Path, rid: str, used: float, result: Any = None, secret: str | None = None) -> None:
     """Record what the request actually used (the API's ``usage``) and its sanitized result."""
-    if isinstance(used, bool) or not isinstance(used, (int, float)) or not used >= 0:
+    if isinstance(used, bool) or not isinstance(used, (int, float)) or not (math.isfinite(used) and used >= 0):
         raise BudgetError(f"used must be a number of generations, at least 0 (got {used!r})")
     with _locked(path) as ledger:
         entry = _entry(ledger, rid)
