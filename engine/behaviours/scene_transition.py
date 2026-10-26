@@ -169,12 +169,13 @@ class SceneTransition(Behaviour):
                     self._trigger_transition(reason="collision", actor=candidate)
                     return
             return
-        sprite_list = optional_arcade.arcade.SpriteList()
+        # Sprite against sprite (their hit boxes), not through a SpriteList made for the check: a SpriteList holds GPU
+        # buffers, and a sprite keeps every list it joins, so one per update grew the GPU's buffers without end.
+        check = optional_arcade.arcade.check_for_collision
         for candidate in candidates:
-            sprite_list.append(candidate)
-        hit_list = optional_arcade.arcade.check_for_collision_with_list(self.entity, sprite_list)
-        if hit_list:
-            self._trigger_transition(reason="collision", actor=hit_list[0])
+            if check(self.entity, candidate):
+                self._trigger_transition(reason="collision", actor=candidate)
+                return
 
     def on_interact(self, window: Any, actor: Any) -> None:  # noqa: D401
         if not self.allow_interact:

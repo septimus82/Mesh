@@ -128,10 +128,10 @@ class Projectile(Behaviour):
 
         # Check collision
 
-        sprite_list = optional_arcade.arcade.SpriteList()
-        for candidate in candidates:
-            sprite_list.append(candidate)
-        hits = optional_arcade.arcade.check_for_collision_with_list(self.entity, sprite_list)
+        # Sprite against sprite, not through a SpriteList made per update: each held GPU buffers that every candidate
+        # kept (a sprite keeps the lists it joins), so they grew without end.
+        check = optional_arcade.arcade.check_for_collision
+        hits = [candidate for candidate in candidates if check(self.entity, candidate)]
         for hit in hits:
             tag = getattr(hit, "mesh_tag", "")
 
