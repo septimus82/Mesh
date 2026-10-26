@@ -7,9 +7,82 @@ improved geometry of Stage 1B's variant B, built with the existing starter textu
   - one kit model (with its preview and catalog entry);
   - the launcher's HD-2D template picture;
   - the builder.
-- **What is preserved:** collision, floors, the door, navigation, the cutaway, Studio reimport, export and save/load all behave as before, and existing projects are untouched.
+- **What is preserved:** collision, floors, door entry and exit, navigation, the cutaway, Studio reimport, export and save/load all behave as before, and existing projects are untouched.
 - **What is not adopted:** no PixelLab or other generated art. The rejected hero candidates and the starter characters are untouched.
 - **The experimental PRs:** #370 and #371 are not merged and stay as review records.
+- **The doorway:** the dark area beside the cottage's door, which the owner reported, is diagnosed and fixed. The template stood the door sprite 1.1 m in front of the wall; it now stands in the doorway. See [The doorway](#the-doorway).
+
+## The doorway
+
+**The report.** The door didn't cover a dark rectangle behind it and to its right. It shows in the earlier
+[close-up](milestone17_cottage_integration_evidence/integration_cottage_close.png), on the old cottage as well as the new one.
+
+**The cause: a misplaced sprite, and the shadow that misplacement throws. There is no geometric gap.**
+
+- An HD-2D billboard stands on its **bottom edge** (`engine/hd2d/renderer.py`, `_sprite_quads`).
+- The template placed the 64 px (2 m) door sprite's **centre** 0.1 m from the wall, so the door stood **1.1 m in front of the wall**: its base was at y 8.9 m, the wall face at 10.0 m.
+- That produced two dark areas:
+  - **To the right of the door: the door's sun shadow on the wall.** A 2 m board standing 1.1 m out casts its upper shadow onto the wall, offset east by the south-west sun. In the 4× close-up it is 7,799 px, 96% of it right of the door. It disappears with sun shadows off or the door hidden.
+  - **Above the door: the doorway itself.** From the 30° camera, the 1.2 m opening (dark, roof-shaded interior floor) shows between the door's top and the lintel. That happens with shadows on or off.
+- The opening and the door hidden show nothing wrong with the cottage model.
+
+Controlled renders, all from the same project with the same camera, geometry and player, changing one thing at a time
+([2× sheet](milestone17_cottage_integration_evidence/door/sheet_2x_door.png),
+[4× sheet](milestone17_cottage_integration_evidence/door/sheet_4x_door.png),
+[numbers](milestone17_cottage_integration_evidence/door/diag.json)):
+
+- sun shadows on or off;
+- the door shown or hidden;
+- the old placement or the fixed one;
+- the camera centred, or moved 2 m west or east.
+
+![Diagnosis at gameplay scale](milestone17_cottage_integration_evidence/door/sheet_2x_door.png)
+
+**The fix.** One template constant: `COTTAGE_DOOR` in `engine/hd2d/starter_village.py`. It stands the door sprite's bottom edge **6 cm in front of the wall face**.
+
+- **Why 6 cm:** it's just clear of the timber sill beam, which stands 5 cm out. My first version used 2 cm; independent visual QA found that the beam then cut a notch across the door's edges.
+- **Unchanged:**
+  - the door's size: it is still 1.5 × 1.94 m of art over the 1.2 × 2.0 m opening, overlapping the wall, as it always has;
+  - every shadow setting;
+  - the cottage model;
+  - no patch was painted.
+- **What moves with it:** the arrival point for leaving the cottage stays 3 m south of the door.
+- **Existing projects keep their door:** only the template moved. To fix an existing project, move its door about 1 m north in Mesh Studio.
+- **The test:** `test_the_cottage_door_stands_in_its_doorway` checks that the door is centred in the doorway with its opaque bottom edge 5–10 cm in front of the wall face. It fails on the old placement.
+
+**Visual acceptance at gameplay scale** (1:1 crops at 2×, sun shadows on, before and after):
+
+- [the front](milestone17_cottage_integration_evidence/door/compare_front.png);
+- the camera moved [west](milestone17_cottage_integration_evidence/door/compare_front_camera_west.png) and [east](milestone17_cottage_integration_evidence/door/compare_front_camera_east.png);
+- [the player beside the door](milestone17_cottage_integration_evidence/door/compare_beside.png);
+- [walking in](milestone17_cottage_integration_evidence/door/compare_entering.webp);
+- [inside](milestone17_cottage_integration_evidence/door/compare_inside.png);
+- [back outside](milestone17_cottage_integration_evidence/door/compare_arrived_outside.png);
+- [behind the cottage, with the cutaway](milestone17_cottage_integration_evidence/door/compare_behind.png);
+- [4× close-up](milestone17_cottage_integration_evidence/door/compare_front_close.png).
+
+![Before and after, the front at gameplay scale](milestone17_cottage_integration_evidence/door/compare_front.png)
+
+**Independent QA of the fix** (read-only):
+
+- [**Visual QA**](milestone17_cottage_integration_evidence/door/visual_qa.md):
+  - it confirmed the diagnosis;
+  - after the fix, the door's shadow on the wall is 0 px from all three cameras, with no dark sliver and no z-fighting;
+  - outside the door, the only changes are the door, its old shadow and the player at the moved arrival point.
+  - It found the sill-beam notch at 2 cm, recommended 6 cm and checked it in its own renders. That change is in the final commit.
+  - **Low, cosmetic, not changed:** the door covers the lower half of the lintel and reaches about 0.15 m past the opening's sides. The owner asked not to resize the door; if it matters, widen the opening in the model.
+- [**Technical QA**](milestone17_cottage_integration_evidence/door/tech_qa.md), reviewed at 2 cm; 6 cm differs by 4 cm in depth:
+  - **Entering:** works from straight on, both diagonals and along the wall. Straight on, it triggers 1.08 m before the wall face; before the fix it was 2.17 m.
+  - **Beside the door:** standing there doesn't trigger it.
+  - **Leaving:** the player lands 1.47 m clear of the door, with no re-entry over 600 frames.
+  - **Movement:** a 1,200-frame random walk never enters the wall.
+  - **Unchanged:** save/load both ways, the cutaway (the door hides 0 player pixels at 35 positions behind the cottage) and existing projects. The installed engine's new project has the new door.
+  - **One improvement:** walking along the cottage's front at y 8.5 no longer enters it by accident.
+- **On the final commit (6 cm),** I re-ran: the renders above, entering (it triggers with the feet at 8.94 m) and leaving (arrival at 7.38 m), the template tests, the GPU suite and the fast tier.
+
+**Remaining, outside this fix's scope:**
+- The cottage's **interior** door, the way back out, stands by the inside west wall rather than in the room's south doorway. It pokes 0.15 m through that wall into the dark void.
+- That door has the same bottom-edge placement issue. It's reported by technical QA, and not changed here because the owner scoped this to the cottage's door.
 
 ## What changed
 
@@ -61,7 +134,7 @@ Rendering conditions:
 - the starter hero in both;
 - 1:1 crops (the art at 2×), not resampled.
 
-The renders come from the M17 comparison harness on #371's branch (`tooling/m17_visual_pilot.py`), with the shipped cottage against this branch's kit cottage swapped in under the same structure id.
+The renders come from the M17 comparison harness on #371's branch (`tooling/m17_visual_pilot.py`), with the shipped cottage against this branch's kit cottage swapped in under the same structure id. The door in these pictures is still at its old placement, 1.1 m out. See [The doorway](#the-doorway) for the fix.
 
 ![Before and after beside the cottage door, gameplay scale](milestone17_cottage_integration_evidence/integration_cottage.png)
 
@@ -154,7 +227,17 @@ or budget was changed.
 - The first push run was fully green.
 - The pull-request run's Windows `tests` job failed the same fixed `pytest-fast` budget twice, on runners measured at 1.22× and then 1.34× the median: 131.7 s and 130.7 s against 121.8 s. The advisory judged both within range for those speeds (120.7–176.8 s at 1.34×).
 - Part of the time was this branch's: the hygiene test's full scan reads every tracked text file (about 2.6 s locally). It is now `integration`-tier. It still runs on every PR in CI's whole-suite pytest step, but no longer in the time-budgeted fast tier.
+- The next push (13aa21d) passed. The pull-request run then missed the budget again: 136.0 s at 1.17×, and on its one re-run 129.4 s at 0.98×.
+- Timed side by side on one machine, this branch's fast tier is no slower than the base: base 4e8ea36 ran 135.1 s (cold) then 118.4 s; this branch ran 117.4 s then 117.0 s, with 25 more tests.
 - No budget was changed.
+
+**The Windows `verify-all` budget instability is pre-existing, and it is a timing issue, not a functional one.**
+
+- Over the last 30 CI runs, the Windows `pytest-fast` step took 66–136 s, depending on runner speed (0.62–1.34× the median). Its enforced threshold is a fixed 121.8 s.
+- About 6 of roughly 23 executions went over it: #369's PR run, #371's push run, and four on this PR. Every one was inside the advisory's speed-adjusted range, and every test passed.
+- The base branch hits it too.
+- Every failure and re-run is recorded on its PR. None was re-run until green and then hidden.
+- A recalibration is proposed separately for review in [septimus82/Mesh#373](https://github.com/septimus82/Mesh/issues/373), with the data and three options. Nothing is changed here.
 
 ## Tests on the final commit
 

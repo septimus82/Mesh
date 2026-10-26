@@ -1,0 +1,50 @@
+{
+  "before": {
+    "beside_feet_m": [
+      11.48,
+      9.64
+    ],
+    "behind": {
+      "feet_m": [
+        10.0,
+        15.03
+      ],
+      "visible_px": 1730
+    },
+    "entered": {
+      "room": "cottage.json",
+      "last_feet_y_outside_m": 7.84
+    },
+    "exited": {
+      "room": "start.json",
+      "arrival_feet_m": [
+        10.0,
+        6.34
+      ]
+    }
+  },
+  "after": {
+    "beside_feet_m": [
+      11.48,
+      9.64
+    ],
+    "behind": {
+      "feet_m": [
+        10.0,
+        15.03
+      ],
+      "visible_px": 1730
+    },
+    "entered": {
+      "room": "cottage.json",
+      "last_feet_y_outside_m": 8.94
+    },
+    "exited": {
+      "room": "start.json",
+      "arrival_feet_m": [
+        10.0,
+        7.38
+      ]
+    }
+  }
+}
