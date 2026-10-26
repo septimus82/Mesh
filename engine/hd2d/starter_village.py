@@ -44,7 +44,16 @@ VILLAGE_W, VILLAGE_H = 40, 44  # m (one 32 px tile per metre); north of the hill
 MARGIN = 4.0  # m of grass around the village, so the camera never looks past the ground's edge
 FEET_48 = 18.0  # px: a 48 px character's feet are this far below its centre (engine.physics_runtime.footprint)
 FEET_32 = 12.0  # ... and a 32 px sign's
-INSIDE_ARRIVAL = (8.0, 5.6)  # m, feet: where the player starts and arrives inside the cottage
+# m, feet: where the player starts and arrives inside the cottage: beside the line of its exit door (in the south
+# doorway, nearest the camera, which hides the floor behind it at the indoor camera's 55 degrees; a player whose feet
+# come within about y 5.6 in front of it touches it), so neither hidden nor touching, and far enough north (arriving,
+# the feet land 0.19 m south of this) that walking west past the door's line doesn't touch it either; east of the
+# table, west of Tomas.
+INSIDE_ARRIVAL = (9.2, 6.2)
+# The inside's exit door (m, its sprite's centre), standing in the room's south doorway (the room at (8.0, 6.0), its
+# walls 2.5 m south): like the outside door, a billboard stands on its bottom edge, so the 64 px (2 m) door sprite's
+# centre is 1 m north of where it stands, 2 cm in front of the south wall's outer face (no trim indoors).
+INSIDE_DOOR = (8.0, 6.0 - 2.5 - 0.02 + 1.0)
 FOV = 12.0  # degrees: a long lens, near-orthographic with some depth
 OUTDOOR_VIEW, INDOOR_VIEW = 11.25, 7.5  # m of the world top to bottom at the player: 64 / 96 px per m at 720 px
 SUN = [-0.45, -0.55, 0.70]  # towards the sun: Mesh's default, high in the south-west
@@ -204,17 +213,16 @@ def build(root: Path, bundled: Callable[[str], Path | None], person: dict[str, A
     inside = _place(inside, "room", "interior", 8.0, 6.0, margin=False)
     inside["lights"] = []
     inside = _lamp(inside, 8.0, 7.0, 2.0, "#ffd29a", 200, margin=False)
-    tomas = _talker(person, "Tomas", "Make yourself at home.\nThe door behind the table takes you back outside.")
+    tomas = _talker(person, "Tomas", "Make yourself at home.\nThe door at the front of the room takes you back outside.")
     tomas.update({"id": f"{inside_key}_tomas", "x": 10.0 * PX, "y": 5.0 * PX + FEET_48, "elevation": 0.1 * PX})
     inside["entities"].append(tomas)
-    # Inside, the player starts and arrives in the middle of the room: the south wall (2.2 m, nearest the camera)
-    # hides about 1.5 m of floor behind it at the indoor camera's 55 degrees.
+    # Inside, the player starts and arrives at INSIDE_ARRIVAL: in view and clear of the exit door.
     for e in inside["entities"]:
         if e.get("tag") == "player":
             e["x"], e["y"], e["elevation"] = INSIDE_ARRIVAL[0] * PX, INSIDE_ARRIVAL[1] * PX + FEET_48, 0.1 * PX
-    # A door in the cottage's doorway (its arrival 3 m south, outside), and one by the west wall inside.
+    # A door in each doorway: the cottage's (its arrival 3 m south, outside) and the inside's south one.
     village, inside = ops.link_rooms(village, "start", "Village", _at(*COTTAGE_DOOR), inside, inside_key, "Cottage",
-                                     (5.6 * PX, 7.6 * PX))
+                                     (INSIDE_DOOR[0] * PX, INSIDE_DOOR[1] * PX))
     for e in inside["entities"]:  # the inside's door and arrival stand on the wooden floor, 0.1 m up
         if e.get("tag") in ("door", "spawn_point"):
             e["elevation"] = 0.1 * PX
