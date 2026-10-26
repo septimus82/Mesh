@@ -14,7 +14,8 @@ the deck whatever the camera sees.
 - A cache: one map per fall direction in use (at most one per falling effect), keyed by the direction quantised to
   ``STEP_DEG``, built the first time it's needed, dropped by ``invalidate`` (structures changed) and ``retain``
   (directions no longer used), freed by ``release``. A build that fails frees what it made, keeps the reason
-  (``error``) and isn't retried until ``invalidate``: the effect falls as in Stage 18A, without shelter.
+  (``error``) and isn't retried while this renderer lasts (the room's next load tries again): the effect falls as
+  in Stage 18A, without shelter.
 """
 
 from __future__ import annotations
@@ -68,7 +69,7 @@ class PrecipitationMaps:
         self.failed: dict[Key, str] = {}
         self.program: Any = None
         self.builds = 0  # maps drawn since made (to see invalidations at work)
-        self.build_ms: list[float] = []  # how long each took (CPU wall, until its draws were issued and finished)
+        self.build_ms: list[float] = []  # how long each took (CPU wall, until its draws were issued; no GPU wait)
         self.error: str | None = None  # the last build's failure, if any
 
     def get(self, fall: tuple[float, float, float], draws: Callable[[], list[tuple[Any, Any, tuple[float, ...]]]],
@@ -120,7 +121,6 @@ class PrecipitationMaps:
                 for geometry, _texture, matrix in draws:
                     self.program["u_model"] = matrix
                     geometry.render(self.program)
-                ctx.finish()
             finally:
                 previous.use()
         except BaseException:
@@ -138,11 +138,11 @@ class PrecipitationMaps:
             self._free(key)
 
     def invalidate(self) -> None:
-        """The structures changed (moved, edited, reimported): every map is drawn again when next needed."""
+        """The structures changed (moved, edited, reimported): every map is drawn again when next needed. A
+        direction whose map couldn't be made stays failed (no retrying every frame of a Studio drag): the room's
+        next load (a new renderer) tries again."""
         for key in list(self.maps):
             self._free(key)
-        self.failed.clear()
-        self.error = None
 
     def _free(self, key: Key) -> None:
         for obj in self.maps.pop(key).objects():
@@ -150,6 +150,8 @@ class PrecipitationMaps:
 
     def release(self) -> None:
         self.invalidate()
+        self.failed.clear()
+        self.error = None
         if self.program is not None:
             self.program.delete()
             self.program = None

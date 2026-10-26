@@ -466,7 +466,7 @@ def _lifecycle(game: HiddenGame) -> dict[str, Any]:
 
 def _failure(game: HiddenGame) -> dict[str, Any]:
     """A map that can't be made (the driver refuses a framebuffer): rain still falls (18A), what was made is freed,
-    the reason is kept; after an invalidation the map is made."""
+    the reason is kept; a structure edit doesn't retry it, the room's next load does."""
     from engine.scene_particles import parse_particles
 
     ctx, hd = game.window.ctx, game.window.hd2d_renderer
@@ -489,10 +489,37 @@ def _failure(game: HiddenGame) -> dict[str, Any]:
     ctx.gc()
     out = {"error": hd.stats()["precipitation_error"], "rain_draw_calls": hd.particles.draw_calls,
            "gl_unchanged": _gl_counts(ctx) == before, "maps": len(hd.precipitation.maps)}
-    hd.precipitation.invalidate()
+    hd.precipitation.invalidate()  # a structure edit doesn't retry it (no retrying every frame of a drag)
     game.window.dispatch_event("on_draw")
     out["after_invalidate_maps"] = len(hd.precipitation.maps)
-    out["after_invalidate_error"] = hd.stats()["precipitation_error"]
+    game.load(f"{SCENES}/start.json")  # the room's next load does
+    hd = game.window.hd2d_renderer
+    hd.set_particles(parse_particles([{"preset": "rain", "count": 5000}]))
+    game.window.dispatch_event("on_draw")
+    out["after_room_reload_maps"] = len(hd.precipitation.maps)
+    out["after_room_reload_error"] = hd.stats()["precipitation_error"]
+    return out
+
+
+def _drag(game: HiddenGame, frames: int = 60) -> dict[str, Any]:
+    """A structure dragged as in Mesh Studio (moved every frame: the maps made again each frame), the frame's wall
+    time (draw and GPU finished) with the weather drawn and switched off, interleaved."""
+    hd, ctx = game.window.hd2d_renderer, game.window.ctx
+    st = hd.settings.structures[0]
+    hd.set_live_ids([st.id])
+    times: dict[str, list[float]] = {"on": [], "off": []}
+    for i in range(frames):
+        for on in (True, False):
+            for k in range(len(hd.particles.effects)):
+                hd.particles.set_enabled(k, on)
+            hd.set_live(st.id, st.x + (i % 20) * 4.0, st.y, st.elevation, st.rotation, st.scale)
+            start = time.perf_counter()
+            game.window.dispatch_event("on_draw")
+            ctx.finish()
+            times["on" if on else "off"].append((time.perf_counter() - start) * 1000)
+    hd.set_live_ids([])
+    out = {k: round(statistics.median(v), 2) for k, v in times.items()}
+    out["added_ms"] = round(out["on"] - out["off"], 2)
     return out
 
 
@@ -567,6 +594,8 @@ def perf(out: Path) -> dict[str, Any]:
             game.window.dispatch_event("on_draw")
             rebuilds.append(hd.precipitation.build_ms[-1])
         report["map_rebuild_ms"] = {"median": round(statistics.median(rebuilds), 2), "max": round(max(rebuilds), 2)}
+        hd.set_particles(parse_particles(PERF_CASES["rain_and_snow_15000"]))
+        report["studio_drag_two_maps"] = _drag(game)
         report["lifecycle"] = _lifecycle(game)
         report["failure_recovery"] = _failure(game)
     finally:

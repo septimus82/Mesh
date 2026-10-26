@@ -475,8 +475,9 @@ class Hd2dRenderer:
             return []
         from engine.scene_particles import fall_of  # noqa: PLC0415
 
-        falls = [fall_of(e) if on else None for e, on in zip(self.particles.effects, self.particles.enabled)]
-        self.precipitation.retain({key_for(f) for f in falls if f is not None})
+        every = [fall_of(e) for e in self.particles.effects]
+        self.precipitation.retain({key_for(f) for f in every if f is not None})  # an effect switched off keeps its map
+        falls = [f if on else None for f, on in zip(every, self.particles.enabled)]
         if not any(falls):
             return [None] * len(falls)
         lo, hi = self.world_box()

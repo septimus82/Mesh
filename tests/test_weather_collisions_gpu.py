@@ -188,8 +188,14 @@ def test_a_map_that_cant_be_made_leaves_the_rain_falling_as_in_18a(tmp_path: Pat
         assert _gl_counts(ctx)["texture"] == base["texture"], "what the failed map made is freed"
         game.draw()
         assert not hd.precipitation.maps, "not retried every frame"
-        hd.precipitation.invalidate()  # e.g. the next structure edit
+        hd.precipitation.invalidate()  # a structure edit (a Studio drag: every frame) doesn't retry it either
         game.draw()
+        assert not hd.precipitation.maps
+        import hd2d_visual_study as study
+
+        game.load(f"{study.SCENES}/start.json")  # the room's next load does
+        game.draw()
+        hd = game.window.hd2d_renderer
         assert len(hd.precipitation.maps) == 1 and hd.stats()["precipitation_error"] is None
     finally:
         game.close()
