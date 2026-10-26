@@ -101,6 +101,7 @@ uniform vec4 u_colour; out vec4 f_color;
 void main() { f_color = u_colour; }
 """
 IDENTITY = (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+STEEP_TEXTURE = "assets/hd2d_starter/textures/dirt.png"  # sculpted ground's steep faces (Milestone 20A), if present
 
 
 # ---------------------------------------------------------------------- small linear algebra (column-major out)
@@ -272,7 +273,15 @@ class Hd2dRenderer:
                                                                        st.elevation / PIXELS_PER_METRE, st.rotation, st.scale)))
         self._static_buffers: list[Any] = []
         self._build_structures(skip=live_ids)
-        self.ground = self._build_ground(resolve) if settings.ground is not None else None
+        self.terrain: Any = None  # the ground's sculpted heights (engine.hd2d.terrain, Milestone 20A), if it has any
+        self.terrain_version = 0  # edits since loading (update_terrain): what the water's copy of the heights follows
+        self._terrain_draws: dict[tuple[int, int], list[tuple[Any, Any, tuple[float, ...]]]] = {}  # chunk -> draws
+        self._terrain_buffers: dict[tuple[int, int], list[Any]] = {}
+        self.ground = None
+        if settings.ground is not None and settings.ground.terrain is not None:
+            self._build_terrain(resolve)
+        elif settings.ground is not None:
+            self.ground = self._build_ground(resolve)
         self.lighting = Lighting(ctx, self.arcade, settings, *self.world_box())
 
     def world_box(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
@@ -299,6 +308,10 @@ class Hd2dRenderer:
             z = g.elevation / PIXELS_PER_METRE
             corners += [(g.lo[0] / PIXELS_PER_METRE, g.lo[1] / PIXELS_PER_METRE, z),
                         (g.hi[0] / PIXELS_PER_METRE, g.hi[1] / PIXELS_PER_METRE, z)]
+            if getattr(self, "terrain", None) is not None:  # its hills and hollows
+                low, high = self.terrain.range_z()
+                corners += [(g.lo[0] / PIXELS_PER_METRE, g.lo[1] / PIXELS_PER_METRE, low),
+                            (g.hi[0] / PIXELS_PER_METRE, g.hi[1] / PIXELS_PER_METRE, high)]
         if not corners:
             corners = [(0.0, 0.0, 0.0), (1.0, 1.0, 0.0)]
         lo3 = (min(c[0] for c in corners), min(c[1] for c in corners), min(c[2] for c in corners))
@@ -402,6 +415,65 @@ class Hd2dRenderer:
                            x1, y1, z, 0, 0, 1, x1, y1, x0, y1, z, 0, 0, 1, x0, y1])
         return self._geometry(quad, "3f 3f 2f", ["in_pos", "in_nrm", "in_uv"], array("I", [0, 1, 2, 0, 2, 3])), texture
 
+    # ------------------------------------------------------------------ sculpted ground (Milestone 20A)
+    def _build_terrain(self, resolve: Callable[[str], Path]) -> None:
+        from engine.hd2d.terrain import Terrain  # noqa: PLC0415
+
+        g = self.settings.ground
+        assert g is not None
+        self.terrain = Terrain.from_ground(g)
+        if g.texture:
+            with Image.open(resolve(g.texture)) as img:
+                self._ground_texture = self._texture(img, repeat=True)
+        else:
+            self._ground_texture = self._texture(Image.new("RGBA", (1, 1), (86, 132, 72, 255)), repeat=True)
+        try:
+            with Image.open(resolve(STEEP_TEXTURE)) as img:
+                self._steep_texture = self._texture(img, repeat=True)
+        except (OSError, ValueError):  # a project without the starter kit (or its path refused): plain earth
+            self._steep_texture = self._texture(Image.new("RGBA", (1, 1), (112, 84, 58, 255)), repeat=True)
+        cx_n, cy_n = self.terrain.chunk_count()
+        for cj in range(cy_n):
+            for ci in range(cx_n):
+                self._terrain_chunk((ci, cj))
+
+    def _terrain_chunk(self, key: tuple[int, int]) -> None:
+        """(Re)make one chunk's drawing: its gentle faces with the ground's texture, its steep ones with dirt."""
+        self._free_terrain_chunk(key)
+        gentle, steep = self.terrain.chunk_mesh(*key)
+        draws: list[tuple[Any, Any, tuple[float, ...]]] = []
+        buffers: list[Any] = []
+        gl = self.arcade.gl
+        for data, texture in ((gentle, self._ground_texture), (steep, self._steep_texture)):
+            if not data:
+                continue
+            buffer = self.ctx.buffer(data=data.tobytes())
+            buffers.append(buffer)
+            geometry = self.ctx.geometry([gl.BufferDescription(buffer, "3f 3f 2f", ["in_pos", "in_nrm", "in_uv"])])
+            draws.append((geometry, texture, IDENTITY))
+        self._terrain_draws[key], self._terrain_buffers[key] = draws, buffers
+
+    def _free_terrain_chunk(self, key: tuple[int, int]) -> None:
+        for geometry, _texture, _matrix in self._terrain_draws.pop(key, []):
+            geometry.flush()
+        for buffer in self._terrain_buffers.pop(key, []):
+            buffer.delete()
+
+    def update_terrain(self, terrain: Any, chunks: Iterable[tuple[int, int]]) -> None:
+        """The ground was sculpted (``Terrain.sculpt``): only ``chunks`` are drawn anew, and the rain's precipitation
+        maps are made again when next needed (the room's extent, its shadow and rain boxes, stays as loaded)."""
+        self.terrain = terrain
+        self.terrain_version += 1
+        for key in chunks:
+            self._terrain_chunk(key)
+        self.precipitation.invalidate()
+
+    def _ground_draws(self) -> list[tuple[Any, Any, tuple[float, ...]]]:
+        """The ground: the flat quad, or the sculpted ground's chunks."""
+        if self.terrain is not None:
+            return [d for draws in self._terrain_draws.values() for d in draws]
+        return [(self.ground[0], self.ground[1], IDENTITY)] if self.ground else []
+
     def _target_fbo(self, size: tuple[int, int]) -> Any:
         if self._fbo is not None and tuple(self._fbo.size) == tuple(size):
             return self._fbo
@@ -422,7 +494,8 @@ class Hd2dRenderer:
     def gl_objects(self) -> list[Any]:
         """Every GPU object this renderer holds right now (to check that ``release`` freed them all)."""
         light = self.lighting
-        objects = (list(self._buffers) + list(self._textures) + list(self._sprite_textures.values()) + list(self._fbo_parts)
+        terrain = [b for bufs in self._terrain_buffers.values() for b in bufs]
+        objects = (list(self._buffers) + terrain + list(self._textures) + list(self._sprite_textures.values()) + list(self._fbo_parts)
                    + [self._fbo] + list(self._dynamic[1:] if self._dynamic else []) + list(self._lines[1:] if self._lines else [])
                    + [self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog]
                    + list(light._targets) + [light.caster, light.lamp_caster, light.sprite_caster, light.probe_prog]
@@ -445,6 +518,8 @@ class Hd2dRenderer:
         for buffer in self._buffers:
             buffer.delete()
         self._buffers, self._textures, self._sprite_textures, self.static = [], [], {}, []
+        for key in list(self._terrain_draws):
+            self._free_terrain_chunk(key)
         self.ground = None
         for program in (self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog):
             program.delete()
@@ -490,7 +565,7 @@ class Hd2dRenderer:
 
     def _precipitation_draws(self) -> list[tuple[Any, Any, tuple[float, ...]]]:
         """What a precipitation map is drawn from (only when one is made): the ground and every structure."""
-        return (([(self.ground[0], self.ground[1], IDENTITY)] if self.ground else []) + self.static
+        return (self._ground_draws() + self.static
                 + [d for model, matrix in self.live.values() for d in self._model_draws(model, matrix)])
 
     # ------------------------------------------------------------------ the scene's sprites
@@ -716,8 +791,9 @@ class Hd2dRenderer:
         verts, idx, ranges = self._sprite_quads(sprites, shadows=solid is None and not lighting.enabled, right=cam.right())
         geometry_sprites = self._upload_dynamic(verts, idx) if sprites else None
         live = self.live_draws()
-        if solid is None:
-            lighting.render_shadows(self.static + live, geometry_sprites, ranges)  # the ground receives, never casts
+        if solid is None:  # the flat ground receives, never casts; sculpted ground's hills cast too
+            casters = self.static + live + (self._ground_draws() if self.terrain is not None else [])
+            lighting.render_shadows(casters, geometry_sprites, ranges)
         weather = self.particles is not None and solid is None and (camera is None or self.weather_preview)
         maps = self.precipitation_maps() if weather else []  # before the frame's target is in use: cached, mostly
         fbo.use()
@@ -727,7 +803,7 @@ class Hd2dRenderer:
         mp["u_vp"] = vp
         mp["u_tex"] = 0
         lighting.bind(mp)
-        statics = ([(self.ground[0], self.ground[1], IDENTITY)] if self.ground else []) + self.static + live
+        statics = self._ground_draws() + self.static + live
         self._bind_cutaway(mp, cam if camera is None else None)
         for draw in statics:
             geometry, texture, matrix = draw
@@ -812,6 +888,7 @@ class Hd2dRenderer:
         if self.water is None:
             self.water = water_mod.WaterLayer(self.ctx, gl=self.arcade.gl)
         self.water.set_bodies(bodies)
+        self.water.set_terrain(self.terrain, self.terrain_version)
         if self.last_vp is not None and not self.water.in_view(self.last_vp):
             self.water.draw_calls = 0
             return
@@ -837,7 +914,9 @@ class Hd2dRenderer:
         texture_bytes = sum(t.width * t.height * 4 for t in self._textures + list(self._sprite_textures.values()))
         target_bytes = sum(p.width * p.height * 4 for p in self._fbo_parts)
         buffer_bytes = sum(b.size for b in self._buffers + list(self._dynamic[1:] if self._dynamic else []))
-        return {"draw_calls": self.draw_calls, "static_draws": len(self.static) + (1 if self.ground else 0),
+        terrain_bytes = sum(b.size for bufs in self._terrain_buffers.values() for b in bufs)
+        return {"draw_calls": self.draw_calls, "static_draws": len(self.static) + len(self._ground_draws()),
+                "terrain_bytes": terrain_bytes, "terrain_draws": len(self._ground_draws()) if self.terrain else 0,
                 "triangles": self.triangles, "buffer_bytes": buffer_bytes,
                 "texture_bytes": texture_bytes, "target_bytes": target_bytes, "batched": self.batched,
                 "shadows": self.lighting.enabled, "shadow_draws": self.lighting.shadow_draws,

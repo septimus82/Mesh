@@ -55,6 +55,10 @@ class Ground:
     lo: tuple[float, float]
     hi: tuple[float, float]
     elevation: float = 0.0
+    terrain: Any = None  # its sculpted heights (engine.hd2d.terrain, Milestone 20A): {"cell", "chunks"}; None flat
+
+    def __hash__(self) -> int:  # (terrain is a dict: hashed by what it reads as)
+        return hash((self.texture, self.lo, self.hi, self.elevation, repr(self.terrain)))
 
 
 @dataclass(frozen=True)
@@ -190,9 +194,22 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
         if texture is not None:
             texture = asset_path(texture, "settings.hd2d.ground.texture")
         default_hi = map_size_px or (32.0 * 24, 32.0 * 16)
+        terrain = None
+        if g.get("terrain") is not None:
+            from engine.hd2d.terrain import Terrain, TerrainError, parse_terrain  # noqa: PLC0415
+
+            try:
+                terrain = parse_terrain(g["terrain"])
+            except TerrainError as exc:
+                raise Hd2dSettingsError(str(exc)) from exc
         ground = Ground(texture, _pair(g, "from", "settings.hd2d.ground", (0.0, 0.0)),
                         _pair(g, "to", "settings.hd2d.ground", default_hi),
-                        _number(g, "elevation", "settings.hd2d.ground", 0.0))
+                        _number(g, "elevation", "settings.hd2d.ground", 0.0), terrain)
+        if terrain is not None:
+            try:
+                Terrain.from_ground(ground)  # its chunks' keys and sizes against the ground's extent
+            except TerrainError as exc:
+                raise Hd2dSettingsError(str(exc)) from exc
     c = raw.get("camera", {}) or {}
     if not isinstance(c, dict):
         raise Hd2dSettingsError("settings.hd2d.camera must be an object")

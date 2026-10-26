@@ -62,7 +62,8 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
         hd2d = dataclasses.replace(hd2d, **parse_scene_lights(lights, settings))  # the room's own lights
         window.hd2d_renderer = Hd2dRenderer(window, hd2d, _contained(resolve_path))
         models = window.hd2d_renderer.models
-        if any(model.colliders for model in models.values()):  # floors and walls authored in the GLBs
+        sculpted = hd2d.ground is not None and hd2d.ground.terrain is not None  # Milestone 20A
+        if sculpted or any(model.colliders for model in models.values()):  # floors and walls authored in the GLBs
             from engine.hd2d.world import World  # noqa: PLC0415
 
             window.hd2d_world = World(hd2d, models)

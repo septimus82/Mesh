@@ -807,7 +807,8 @@ class InspectorMixin:
         rows.add(self._button("New natural outline", partial(change, "A new natural outline.", shape="natural",
                                                              seed=seed % 9999 + 1), width=width))
         if material:
-            buttons([("none", "No bank"), ("mud", "Mud"), ("grass", "Grass"), ("stone", "Stone")], "shore")
+            buttons([("none", "None"), ("mud", "Mud"), ("grass", "Grass"), ("stone", "Stone"), ("terrain", "Ground")],
+                    "shore")  # Ground: the sculpted ground is its shore (Milestone 20A)
             pair("Bank width / depth", self._field(f"{water.get('shore_width', 0):g}", number("shore_width"),
                                                    width=half, key="water_bank"),
                  self._field(f"{water.get('depth', 0):g}", number("depth"), width=half, key="water_depth"))

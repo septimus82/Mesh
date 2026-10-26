@@ -16,6 +16,10 @@ all use it:
 
 Movement is axis-separated like the 2D sweep, so characters slide along walls. The scene's 2D solids (wall tiles,
 solid objects) still apply, to characters on their level. 2D scenes never build a world.
+
+Sculpted ground (Milestone 20A, ``engine.hd2d.terrain``): its triangles are the ground's surfaces (solid, floor
+"ground"), all but the too steep ones, which nobody stands on, so they stop characters like a ledge does. Walking up a
+gentle slope is the rule above, frame by frame. ``update_terrain`` swaps only the chunks an edit changed.
 """
 
 from __future__ import annotations
@@ -29,6 +33,7 @@ from engine.hd2d.settings import PIXELS_PER_METRE, Hd2dSettings
 
 if TYPE_CHECKING:  # the reader is only needed where models are loaded (engine.hd2d.runtime)
     from engine.hd2d.glb import Model
+    from engine.hd2d.terrain import Terrain
 
 STEP = 0.35  # m: the highest a character steps up or down without stairs
 BODY = 1.5  # m: a character's standing height (a 48 px sprite)
@@ -112,7 +117,18 @@ class World:
                     if surface is not None:
                         self.surfaces.append(surface)
         g = settings.ground
-        if g is not None:  # the ground: solid, the whole of it walkable
+        self.terrain: Terrain | None = None
+        self._terrain: dict[tuple[int, int], list[Surface]] = {}  # chunk -> its surfaces (update_terrain)
+        if g is not None and g.terrain is not None:  # sculpted ground (Milestone 20A)
+            from engine.hd2d.terrain import Terrain  # noqa: PLC0415
+
+            self.terrain = Terrain.from_ground(g)
+            cx_n, cy_n = self.terrain.chunk_count()
+            for cj in range(cy_n):
+                for ci in range(cx_n):
+                    self._terrain[(ci, cj)] = self._terrain_chunk(ci, cj)
+                    self.surfaces += self._terrain[(ci, cj)]
+        elif g is not None:  # the ground: solid, the whole of it walkable
             z = g.elevation / PIXELS_PER_METRE
             (x0, y0), (x1, y1) = [(v[0] / PIXELS_PER_METRE, v[1] / PIXELS_PER_METRE) for v in (g.lo, g.hi)]
             for tri in (((x0, y0, z), (x1, y0, z), (x1, y1, z)), ((x0, y0, z), (x1, y1, z), (x0, y1, z))):
@@ -121,14 +137,45 @@ class World:
                     self.surfaces.append(surface)
         self._index: dict[tuple[int, int], list[Surface]] = {}
         for surface in self.surfaces:
-            x0, y0, x1, y1 = surface.box
-            for i in range(math.floor(x0 / _BUCKET), math.floor(x1 / _BUCKET) + 1):
-                for j in range(math.floor(y0 / _BUCKET), math.floor(y1 / _BUCKET) + 1):
-                    self._index.setdefault((i, j), []).append(surface)
+            self._add_to_index(surface)
+        self._measure()
+
+    def _add_to_index(self, surface: Surface) -> None:
+        x0, y0, x1, y1 = surface.box
+        for i in range(math.floor(x0 / _BUCKET), math.floor(x1 / _BUCKET) + 1):
+            for j in range(math.floor(y0 / _BUCKET), math.floor(y1 / _BUCKET) + 1):
+                self._index.setdefault((i, j), []).append(surface)
+
+    def _measure(self) -> None:
         boxes = [s.box for s in self.surfaces]
         self.bounds = (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes),
                        max(b[3] for b in boxes)) if boxes else (0.0, 0.0, 0.0, 0.0)
         self._nav: dict[tuple[int, int], list[float]] | None = None
+
+    def _terrain_chunk(self, ci: int, cj: int) -> list[Surface]:
+        assert self.terrain is not None
+        out = []
+        for tri in self.terrain.chunk_surfaces(ci, cj):
+            surface = _surface("ground", True, tri)
+            if surface is not None:
+                out.append(surface)
+        return out
+
+    def update_terrain(self, terrain: Terrain, chunks: Iterable[tuple[int, int]]) -> None:
+        """The ground was sculpted: its surfaces in ``chunks`` (``Terrain.sculpt``'s) made again, nothing else."""
+        self.terrain = terrain
+        chunks = set(chunks)
+        old = {id(s) for key in chunks for s in self._terrain.get(key, ())}
+        self.surfaces = [s for s in self.surfaces if id(s) not in old]
+        for key, bucket in list(self._index.items()):
+            if any(id(s) in old for s in bucket):
+                self._index[key] = [s for s in bucket if id(s) not in old]
+        for key in chunks:
+            self._terrain[key] = self._terrain_chunk(*key)
+            for surface in self._terrain[key]:
+                self.surfaces.append(surface)
+                self._add_to_index(surface)
+        self._measure()
 
     # ------------------------------------------------------------------ the rule
     def heights_at(self, x: float, y: float) -> list[tuple[float, Surface]]:

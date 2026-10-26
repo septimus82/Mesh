@@ -63,7 +63,7 @@ STEP_RIPPLE_S = 1.0  # how long a footstep's ring lasts
 _KEYS = {"preset", "width", "height", "colour", "opacity", "shape", "waves", "rain_ripples", "walkable", "step_sound",
          "reflection", "rotation", "seed", "shore", "shore_width", "deep_colour", "depth", "ripples"}
 SHAPES = ("ellipse", "rect", "natural")
-SHORES = ("none", "mud", "grass", "stone")
+SHORES = ("none", "mud", "grass", "stone", "terrain")  # terrain: the sculpted ground is its shore (Milestone 20A)
 CLASSIC = ("puddle", "pond")  # Stage 19A's look, kept exactly (older rooms; the negative controls)
 LOOK_19B = ("shore", "shore_width", "deep_colour", "depth", "ripples")  # the material's settings (not CLASSIC's)
 REFLECTIONS = ("full", "half", "sky")  # settings.hd2d.water_reflections: the frame copy at full or half size, or none
@@ -332,6 +332,8 @@ uniform float u_rain; uniform int u_shelter; uniform sampler2D u_precip; uniform
 uniform vec4 u_steps[8]; uniform int u_steps_n;
 uniform int u_reflect; uniform sampler2D u_scene; uniform sampler2D u_scene_depth; uniform vec2 u_screen;
 uniform int u_lit;  // 1: lit by the room's sun, lamps and shadows (HD-2D: engine.hd2d.lighting), else u_light
+// Milestone 20A: the sculpted ground's heights (m) at its corners, for water whose shore is the ground ("terrain")
+uniform int u_has_terrain; uniform sampler2D u_terrain; uniform vec4 u_terrain_box;  // origin x, y (m), cell (m), -
 in vec3 v_world; flat in vec4 v_rect; flat in vec4 v_info; flat in vec4 v_colour; flat in vec4 v_look;
 flat in vec4 v_deep; flat in vec4 v_shore; flat in vec4 v_amp; flat in vec4 v_phase;
 out vec4 f_color;
@@ -432,7 +434,13 @@ vec4 bank(vec2 q, float b, int shore) {
     }
     return vec4(0.0);  // stone: its stones only (stone())
 }
+// the sculpted ground's height (m) at p: its corners' heights, read between them
+float ground_at(vec2 p) {
+    vec2 n = vec2(textureSize(u_terrain, 0));
+    return texture(u_terrain, ((p - u_terrain_box.xy) / u_terrain_box.z + 0.5) / n).r;
+}
 vec3 shade(vec3 c) { return floor(c * 24.0 + 0.5) / 24.0; }  // a few flat shades: pixel art, not a gradient
+const float LIFT = """ + repr(LIFT_M) + """;  // the surface stands this far above its level (LIFT_M)
 const float STONE_OVER = 0.16;  // an outer stone may reach this far past its bank's width (drawn whole)
 void main() {
     // the pixel grid: everything is worked out at the centre of this fragment's texel (32 per metre)
@@ -445,10 +453,14 @@ void main() {
     vec3 light = u_lit == 1 ? light_at(vec3(q, v_world.z), vec3(0.0, 0.0, 1.0), false) : u_light;
     vec2 sun = u_lit == 1 ? u_sun_dir.xy : vec2(-0.45, -0.55);
     int shore = int(v_shore.x + 0.5);
-    float reach = v_shore.y, inside = 0.0, edge_m = 0.0, shadow = 1.0;
+    float reach = v_shore.y, inside = 0.0, edge_m = 0.0, shadow = 1.0, water_depth = -1.0;
     if (material) {
         float sd = sd_at(m);
-        if (sd > reach + (shore == 3 ? STONE_OVER : 0.0) || (sd > 0.0 && shore == 0)) discard;
+        if (sd > reach + (shore == 3 ? STONE_OVER : 0.0) || (sd > 0.0 && (shore == 0 || shore == 4))) discard;
+        if (shore == 4 && u_has_terrain == 1) {  // the sculpted ground is the shore: water only where it lies above it
+            water_depth = v_world.z - LIFT - ground_at(q);
+            if (water_depth <= 0.0) discard;
+        }
         if (shore == 3 && sd > -0.4) {  // (deeper in, no stone reaches)
             vec4 s = stone(q, reach, sun);
             if (s.a > 0.0) { f_color = vec4(shade(s.rgb * light), 1.0); return; }
@@ -533,7 +545,9 @@ void main() {
     vec3 col = v_colour.rgb;
     float deep = 0.0, rim = 0.0, alpha_water = v_colour.a;
     if (material) {
-        deep = smoothstep(0.02, 0.1 + 1.5 * (1.0 - v_deep.w), edge_m);
+        // how deep it looks: from its edge inwards, or (its shore the ground) from how deep the water really is
+        deep = water_depth >= 0.0 ? smoothstep(0.0, 0.05 + 1.2 * (1.0 - v_deep.w), water_depth)
+                                  : smoothstep(0.02, 0.1 + 1.5 * (1.0 - v_deep.w), edge_m);
         col = mix(col, v_deep.rgb, deep);
         alpha_water = v_colour.a * mix(0.45, 1.0, deep);
     } else {
@@ -585,7 +599,8 @@ void main() {
     float alpha;
     if (material) {
         // the near edge's waterline catches the light (a texel wide, crisp: no soft rim all round)
-        bool waterline = edge_m < 0.045 && sd_at(to_local(q - normalize(view.xy + 1e-4) * 0.05)) > 0.0;
+        bool waterline = water_depth >= 0.0 ? water_depth < 0.025  // (all round, where it meets the ground)
+                                            : edge_m < 0.045 && sd_at(to_local(q - normalize(view.xy + 1e-4) * 0.05)) > 0.0;
         lit = mix(lit, vec3(0.80, 0.86, 0.86) * light, (waterline ? 0.45 : 0.0) + clamp(splash, 0.0, 1.0) * 0.8);
         alpha = clamp((waterline ? max(alpha_water, 0.85) : alpha_water) + clamp(rings, 0.0, 1.0) * 0.2 + splash * 0.6, 0.0, 1.0);
     } else {
@@ -613,6 +628,8 @@ class WaterLayer:
         self.depth_test = True  # False only to show what the depth test hides (diagnostics)
         self.shelter = True  # False: rain rings it even under a roof (diagnostics: the negative control)
         self._key: Any = None
+        self.terrain: Any = None  # the sculpted ground's heights as a texture (set_terrain), if the room has any
+        self._terrain_key: Any = None
         try:
             self.program = ctx.program(vertex_shader=VS, fragment_shader=FS)
             self.quad = ctx.buffer(data=array("f", [-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0]).tobytes())
@@ -720,6 +737,27 @@ class WaterLayer:
                 obj.delete()
         self.copy = None
 
+    def set_terrain(self, terrain: Any, version: int = 0) -> None:
+        """The room's sculpted ground (``engine.hd2d.terrain.Terrain``; None: none): its heights as a float texture,
+        for water whose shore is the ground. Made again only when ``version`` (the renderer's edit count) changes."""
+        key = None if terrain is None else (id(terrain), version)
+        if key == self._terrain_key:
+            return
+        self._free_terrain()
+        self._terrain_key = None
+        if terrain is not None:
+            data = array("f", [(terrain.base + h) / PX_PER_M for h in terrain.heights])
+            tex = self.ctx.texture((terrain.nx + 1, terrain.ny + 1), components=1, dtype="f4", data=data.tobytes())
+            tex.filter = (self.ctx.LINEAR, self.ctx.LINEAR)
+            tex.wrap_x = tex.wrap_y = self.ctx.CLAMP_TO_EDGE
+            self.terrain = (tex, (terrain.origin[0] / PX_PER_M, terrain.origin[1] / PX_PER_M, terrain.cell / PX_PER_M, 0.0))
+        self._terrain_key = key
+
+    def _free_terrain(self) -> None:
+        if self.terrain is not None:
+            self.terrain[0].delete()
+        self.terrain = None
+
     def _uniforms(self, time: float, steps: list[tuple[float, float, float]], rain: float, shelter: Any,
                   light: tuple[float, float, float], sky: tuple[float, float, float]) -> None:
         prog = self.program
@@ -735,6 +773,11 @@ class WaterLayer:
         if shelter is not None:
             shelter.depth.use(4)
             prog["u_precip_vp"] = shelter.vp
+        prog["u_terrain"] = 7
+        prog["u_has_terrain"] = 1 if self.terrain is not None else 0
+        if self.terrain is not None:
+            self.terrain[0].use(7)
+            prog["u_terrain_box"] = self.terrain[1]
 
     def draw_3d(self, vp: tuple[float, ...], eye: tuple[float, float, float], fbo: Any, *, time: float,
                 steps: list[tuple[float, float, float]], rain: float, shelter: Any,
@@ -791,19 +834,25 @@ class WaterLayer:
         self.draw_calls = 1
 
     def gl_objects(self) -> list[Any]:
-        return [o for o in (self.program, self.quad, self.instances, *(self.copy or ())) if o is not None]
+        return [o for o in (self.program, self.quad, self.instances, *(self.copy or ()),
+                            self.terrain[0] if self.terrain else None) if o is not None]
 
     def memory_bytes(self) -> int:
         size = (self.instances.size if self.instances is not None else 0) + (self.quad.size if self.quad else 0)
         if self.copy is not None:
             w, h = self.copy[1].size
             size += w * h * 8
+        if self.terrain is not None:
+            w, h = self.terrain[0].size
+            size += w * h * 4
         return int(size)
 
     def release(self) -> None:
         """Free every GPU object (also of a partly made layer); a second call does nothing."""
         self._free_geometry()
         self._free_copy()
+        self._free_terrain()
+        self._terrain_key = None
         for obj in (self.quad, self.program):
             if obj is not None:
                 obj.delete()
