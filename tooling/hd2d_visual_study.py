@@ -187,7 +187,7 @@ class Walk:
         go("LEFT", 0, 10.0)
         shot("behind_cottage")
         go("RIGHT", 0, 13.5)
-        go("DOWN", 1, 6.5)  # the door's trigger reaches about 2 m: approach it from the south, not along its front
+        go("DOWN", 1, 6.5)  # the door's trigger reaches 1-2 m out (2 m before the M17 door fix): approach from the south, not along its front
         go("LEFT", 0, 10.0)
         self.enter("UP")
         shot("inside")

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kit": "Mesh HD-2D starter kit",
-  "version": 1,
+  "version": 2,
   "models": [
     {
       "id": "cottage",
@@ -9,7 +9,7 @@
       "name": "Cottage",
       "category": "Buildings",
       "preview": "previews/cottage.png",
-      "notes": "A timber-and-plaster cottage with a doorway; walk inside.",
+      "notes": "A timber-framed cottage on a cobbled plinth, with windows; walk inside.",
       "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
       "collision": {
         "solid": 1,

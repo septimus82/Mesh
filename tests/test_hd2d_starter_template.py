@@ -36,6 +36,26 @@ def _rooms(project: Path) -> dict[str, dict]:
     return {rel: json.loads((project / rel).read_text(encoding="utf-8")) for rel in ROOMS}
 
 
+def test_the_cottage_door_stands_in_its_doorway(project: Path) -> None:
+    """A billboard stands on its bottom edge (its hit box's: the sprite's lowest opaque row): the door's is just in front
+    of the cottage's south wall, clear of the sill beam, centred on the doorway. 1.1 m out (as first made), it showed
+    the doorway above it and cast its sun shadow on the wall beside it; 2 cm out, the sill beam cut across its edges."""
+    from PIL import Image
+
+    village = json.loads((project / ROOMS[0]).read_text(encoding="utf-8"))
+    cottage = next(st for st in village["settings"]["hd2d"]["structures"] if st["id"] == "cottage")
+    door = next(e for e in village["entities"] if e.get("tag") == "door")
+    with Image.open(project / door["sprite"]) as sprite:
+        opaque = sprite.convert("RGBA").getchannel("A").getbbox()
+        assert opaque is not None
+        bottom = door["y"] - sprite.height / 2 + (sprite.height - opaque[3])  # rows from the top; y runs north
+    wall_face = cottage["y"] - 2.0 * 32  # the cottage reaches 2 m south of where it stands
+    assert door["x"] == cottage["x"], "centred on the doorway"
+    assert 0.05 * 32 < wall_face - bottom <= 0.1 * 32, "clear of the sill beam (5 cm out), not out on the ground"
+    arrival = next(e for e in village["entities"] if e.get("tag") == "spawn_point")
+    assert (arrival["x"], arrival["y"]) == (door["x"], door["y"] - 96), "arriving 3 m south of the door, outside"
+
+
 def test_the_template_is_offered_as_a_labelled_preview() -> None:
     offered = list_templates(launcher_only=True)
     hd2d = next(t for t in offered if t.id == "hd2d_rpg")
@@ -48,8 +68,10 @@ def test_the_project_has_the_kit_and_only_mesh_art(project: Path) -> None:
     listed = {a.id: a for a in catalog.assets(project)}
     kit = json.loads((KIT / "catalog.json").read_text(encoding="utf-8"))
     assert set(listed) == {m["id"] for m in kit["models"]} and len(listed) == 14
-    assert all(a.catalogued and not a.missing and a.source == {"kit": "Mesh HD-2D starter kit 1",
+    assert all(a.catalogued and not a.missing and a.source == {"kit": "Mesh HD-2D starter kit 2",
                                                                 "sha256": a.source["sha256"]} for a in listed.values())
+    for model in kit["models"]:  # a new project gets the kit as it is now (the Milestone 17 cottage included)
+        assert (project / listed[model["id"]].model).read_bytes() == (KIT / model["model"]).read_bytes(), model["id"]
     sprites = sorted(p.name for p in (project / "assets" / "sprites").iterdir())
     assert sprites == ["door.png", "hd2d_hero.png", "hd2d_merchant.png", "hd2d_villager.png", "starter_hero.png",
                        "starter_sign.png", "starter_villager.png"]
