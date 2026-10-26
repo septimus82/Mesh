@@ -10,15 +10,15 @@
     ],
     "triangles": 1624,
     "18B": {
-      "falling": 33925,
-      "landed": 3874,
+      "falling": 33888,
+      "landed": 3869,
       "falling_under_shelter": 0,
-      "landed_on_a_surface": 3872,
+      "landed_on_a_surface": 3867,
       "landed_off_any_surface": 2,
       "landed_under_shelter": 0,
       "landed_height_error_m_max": 0.137,
       "landed_on": {
-        "ground": 3038,
+        "ground": 3033,
         "platform_4m": 298,
         "path_2m": 276,
         "cottage": 74,
@@ -78,13 +78,13 @@
       }
     },
     "18A_no_shelter": {
-      "falling": 40233,
+      "falling": 40178,
       "landed": 0,
       "falling_under_shelter": 922
     },
     "maps": 1,
     "map_build_ms": [
-      5.71
+      6.29
     ]
   },
   "rain_wind": {
@@ -101,81 +101,81 @@
     ],
     "triangles": 1624,
     "18B": {
-      "falling": 32851,
-      "landed": 3794,
+      "falling": 32781,
+      "landed": 3753,
       "falling_under_shelter": 0,
-      "landed_on_a_surface": 3792,
-      "landed_off_any_surface": 2,
+      "landed_on_a_surface": 3753,
+      "landed_off_any_surface": 0,
       "landed_under_shelter": 0,
-      "landed_height_error_m_max": 0.142,
+      "landed_height_error_m_max": 0.114,
       "landed_on": {
-        "ground": 2927,
-        "path_2m": 324,
-        "platform_4m": 263,
-        "cottage": 68,
-        "bridge_6m": 44,
-        "stairs": 102,
+        "ground": 2920,
+        "path_2m": 320,
+        "platform_4m": 251,
+        "cottage": 66,
+        "bridge_6m": 40,
+        "stairs": 94,
         "lamp_post": 8,
         "fence_2m": 2,
         "shop": 46,
-        "crate": 4,
+        "crate": 2,
         "barrel": 4
       },
       "landed_heights_m": {
         "ground": [
           -0.01,
-          0.06
+          0.01
         ],
         "platform_4m": [
           0.08,
-          2.05
+          2.01
         ],
         "path_2m": [
-          0.01,
-          0.07
+          0.0,
+          0.03
+        ],
+        "bridge_6m": [
+          2.0,
+          2.65
         ],
         "cottage": [
           0.47,
-          3.84
-        ],
-        "bridge_6m": [
-          1.99,
-          2.65
+          3.8
         ],
         "stairs": [
-          0.24,
+          0.25,
           2.8
         ],
         "lamp_post": [
           0.72,
-          1.81
+          1.8
         ],
         "fence_2m": [
           0.41,
           0.41
         ],
         "crate": [
-          0.78,
-          1.01
+          1.0,
+          1.0
         ],
         "shop": [
           0.55,
           3.19
         ],
         "barrel": [
-          0.99,
-          0.99
+          1.0,
+          1.01
         ]
       }
     },
     "18A_no_shelter": {
-      "falling": 39431,
+      "falling": 39361,
       "landed": 0,
       "falling_under_shelter": 877
     },
     "maps": 1,
     "map_build_ms": [
-      5.31
+      4.17
     ]
   },
   "snow": {
@@ -188,55 +188,55 @@
     ],
     "triangles": 1624,
     "18B": {
-      "falling": 22578,
-      "landed": 3538,
+      "falling": 22554,
+      "landed": 3550,
       "falling_under_shelter": 0,
-      "landed_on_a_surface": 3532,
-      "landed_off_any_surface": 6,
+      "landed_on_a_surface": 3530,
+      "landed_off_any_surface": 20,
       "landed_under_shelter": 0,
-      "landed_height_error_m_max": 0.11,
+      "landed_height_error_m_max": 0.147,
       "landed_on": {
-        "ground": 2802,
-        "path_2m": 296,
-        "cottage": 70,
-        "platform_4m": 220,
-        "bridge_6m": 68,
-        "stairs": 38,
-        "shop": 24,
-        "barrel": 12,
+        "ground": 2780,
+        "path_2m": 290,
+        "platform_4m": 232,
+        "cottage": 66,
+        "bridge_6m": 60,
+        "stairs": 66,
+        "shop": 28,
+        "barrel": 6,
         "crate": 2
       },
       "landed_heights_m": {
-        "cottage": [
-          2.61,
-          3.68
-        ],
         "ground": [
           -0.01,
-          0.1
+          0.03
         ],
         "bridge_6m": [
           2.0,
-          2.09
+          2.01
         ],
         "path_2m": [
-          0.01,
-          0.11
+          0.02,
+          0.03
         ],
         "platform_4m": [
-          0.08,
-          2.09
+          0.05,
+          2.01
+        ],
+        "cottage": [
+          2.55,
+          3.8
         ],
         "stairs": [
-          0.31,
-          2.82
+          0.45,
+          2.8
         ],
         "shop": [
           2.62,
-          3.33
+          3.3
         ],
         "barrel": [
-          0.99,
+          1.0,
           1.0
         ],
         "crate": [
@@ -246,82 +246,59 @@
       }
     },
     "18A_no_shelter": {
-      "falling": 28413,
+      "falling": 28373,
       "landed": 0,
       "falling_under_shelter": 724
     },
     "maps": 1,
     "map_build_ms": [
-      6.21
+      4.81
     ]
   },
   "anchored": {
     "rain": {
-      "landed_seen_from_both_targets": 265,
+      "landed_seen_from_both_targets": 264,
       "max_difference_m_camera_moved": 0.0,
-      "landed_followed_over_time": 495,
-      "max_drift_m_over_0_09_s": 0.0035,
-      "median_drift_m": 0.0,
+      "landed_followed_over_time": 543,
+      "max_drift_m_over_their_life": 0.0031,
+      "p99_drift_m": 0.0028,
+      "median_drift_m": 0.0002,
       "drifts_over_3_cm": 0,
       "where_over_3_cm": []
     },
     "rain_wind": {
-      "landed_seen_from_both_targets": 250,
-      "max_difference_m_camera_moved": 0.0,
-      "landed_followed_over_time": 497,
-      "max_drift_m_over_0_09_s": 0.1023,
-      "median_drift_m": 0.001,
-      "drifts_over_3_cm": 6,
-      "where_over_3_cm": [
-        [
-          16.1,
-          16.98,
-          2.57
-        ],
-        [
-          16.1,
-          16.98,
-          2.57
-        ],
-        [
-          13.87,
-          19.96,
-          0.71
-        ],
-        [
-          12.03,
-          6.09,
-          0.02
-        ],
-        [
-          21.84,
-          24.56,
-          2.01
-        ],
-        [
-          13.87,
-          19.96,
-          0.71
-        ]
-      ]
-    },
-    "snow": {
       "landed_seen_from_both_targets": 248,
       "max_difference_m_camera_moved": 0.0,
-      "landed_followed_over_time": 729,
-      "max_drift_m_over_0_09_s": 0.0393,
-      "median_drift_m": 0.001,
-      "drifts_over_3_cm": 2,
+      "landed_followed_over_time": 537,
+      "max_drift_m_over_their_life": 0.0232,
+      "p99_drift_m": 0.0182,
+      "median_drift_m": 0.0027,
+      "drifts_over_3_cm": 0,
+      "where_over_3_cm": []
+    },
+    "snow": {
+      "landed_seen_from_both_targets": 249,
+      "max_difference_m_camera_moved": 0.0,
+      "landed_followed_over_time": 510,
+      "max_drift_m_over_their_life": 2.197,
+      "p99_drift_m": 0.0275,
+      "median_drift_m": 0.0014,
+      "drifts_over_3_cm": 3,
       "where_over_3_cm": [
         [
-          26.01,
-          10.69,
-          2.68
+          23.02,
+          25.85,
+          2.0
         ],
         [
-          8.05,
-          12.26,
-          3.67
+          23.02,
+          25.85,
+          2.0
+        ],
+        [
+          13.0,
+          25.88,
+          2.0
         ]
       ]
     }
@@ -334,7 +311,7 @@
       "notice": "This room is indoors (weather_exposure), so its rain is not shown."
     },
     "outdoor": {
-      "particle_pixels": 1756,
+      "particle_pixels": 11070,
       "layer": true,
       "notice": null
     }

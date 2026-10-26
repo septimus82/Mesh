@@ -8,30 +8,30 @@
       "maps": 1,
       "map_bytes": 5242880,
       "map_build_ms": [
-        4.84
+        3.16
       ],
-      "first_frame_ms": 47.89,
+      "first_frame_ms": 44.17,
       "18B": {
-        "frame_ms_on": 7.74,
-        "draw_cpu_ms_on": 4.98,
-        "frame_gpu_ms_on": 1.48,
-        "particle_pass_gpu_ms_on": 0.008,
-        "frame_ms_off": 7.49,
-        "draw_cpu_ms_off": 4.48,
-        "frame_gpu_ms_off": 1.578,
-        "added_frame_ms": 0.25,
-        "added_frame_gpu_ms": -0.098
+        "frame_ms_on": 7.28,
+        "draw_cpu_ms_on": 4.87,
+        "frame_gpu_ms_on": 1.051,
+        "particle_pass_gpu_ms_on": 0.005,
+        "frame_ms_off": 7.14,
+        "draw_cpu_ms_off": 4.54,
+        "frame_gpu_ms_off": 1.24,
+        "added_frame_ms": 0.14,
+        "added_frame_gpu_ms": -0.189
       },
       "18A": {
-        "frame_ms_on": 5.02,
-        "draw_cpu_ms_on": 2.08,
+        "frame_ms_on": 5.07,
+        "draw_cpu_ms_on": 2.11,
         "frame_gpu_ms_on": 1.582,
         "particle_pass_gpu_ms_on": 0.008,
-        "frame_ms_off": 4.76,
-        "draw_cpu_ms_off": 1.92,
-        "frame_gpu_ms_off": 1.58,
-        "added_frame_ms": 0.26,
-        "added_frame_gpu_ms": 0.002
+        "frame_ms_off": 4.78,
+        "draw_cpu_ms_off": 1.95,
+        "frame_gpu_ms_off": 1.579,
+        "added_frame_ms": 0.29,
+        "added_frame_gpu_ms": 0.003
       }
     },
     "rain_5000": {
@@ -41,30 +41,30 @@
       "maps": 1,
       "map_bytes": 5242880,
       "map_build_ms": [
-        4.11
+        1.08
       ],
-      "first_frame_ms": 6.53,
+      "first_frame_ms": 3.49,
       "18B": {
-        "frame_ms_on": 4.82,
+        "frame_ms_on": 4.81,
         "draw_cpu_ms_on": 2.04,
-        "frame_gpu_ms_on": 1.489,
+        "frame_gpu_ms_on": 1.49,
         "particle_pass_gpu_ms_on": 0.02,
-        "frame_ms_off": 4.71,
-        "draw_cpu_ms_off": 1.9,
-        "frame_gpu_ms_off": 1.483,
-        "added_frame_ms": 0.11,
-        "added_frame_gpu_ms": 0.006
+        "frame_ms_off": 4.67,
+        "draw_cpu_ms_off": 1.91,
+        "frame_gpu_ms_off": 1.482,
+        "added_frame_ms": 0.14,
+        "added_frame_gpu_ms": 0.008
       },
       "18A": {
-        "frame_ms_on": 4.82,
+        "frame_ms_on": 4.85,
         "draw_cpu_ms_on": 2.05,
-        "frame_gpu_ms_on": 1.588,
-        "particle_pass_gpu_ms_on": 0.02,
-        "frame_ms_off": 4.71,
-        "draw_cpu_ms_off": 1.91,
-        "frame_gpu_ms_off": 1.477,
-        "added_frame_ms": 0.11,
-        "added_frame_gpu_ms": 0.111
+        "frame_gpu_ms_on": 1.489,
+        "particle_pass_gpu_ms_on": 0.022,
+        "frame_ms_off": 4.68,
+        "draw_cpu_ms_off": 1.94,
+        "frame_gpu_ms_off": 1.479,
+        "added_frame_ms": 0.17,
+        "added_frame_gpu_ms": 0.01
       }
     },
     "rain_10000": {
@@ -74,30 +74,30 @@
       "maps": 1,
       "map_bytes": 5242880,
       "map_build_ms": [
-        6.07
+        1.24
       ],
-      "first_frame_ms": 8.59,
+      "first_frame_ms": 3.69,
       "18B": {
-        "frame_ms_on": 4.9,
+        "frame_ms_on": 4.86,
         "draw_cpu_ms_on": 2.04,
-        "frame_gpu_ms_on": 1.505,
+        "frame_gpu_ms_on": 1.506,
         "particle_pass_gpu_ms_on": 0.034,
-        "frame_ms_off": 4.73,
+        "frame_ms_off": 4.66,
         "draw_cpu_ms_off": 1.9,
-        "frame_gpu_ms_off": 1.478,
-        "added_frame_ms": 0.17,
+        "frame_gpu_ms_off": 1.479,
+        "added_frame_ms": 0.2,
         "added_frame_gpu_ms": 0.027
       },
       "18A": {
-        "frame_ms_on": 4.89,
-        "draw_cpu_ms_on": 2.04,
-        "frame_gpu_ms_on": 1.52,
-        "particle_pass_gpu_ms_on": 0.034,
-        "frame_ms_off": 4.74,
+        "frame_ms_on": 4.77,
+        "draw_cpu_ms_on": 2.03,
+        "frame_gpu_ms_on": 1.599,
+        "particle_pass_gpu_ms_on": 0.035,
+        "frame_ms_off": 4.66,
         "draw_cpu_ms_off": 1.91,
-        "frame_gpu_ms_off": 1.478,
-        "added_frame_ms": 0.15,
-        "added_frame_gpu_ms": 0.042
+        "frame_gpu_ms_off": 1.388,
+        "added_frame_ms": 0.11,
+        "added_frame_gpu_ms": 0.211
       }
     },
     "rain_20000": {
@@ -107,30 +107,30 @@
       "maps": 1,
       "map_bytes": 5242880,
       "map_build_ms": [
-        4.54
+        1.09
       ],
-      "first_frame_ms": 7.03,
+      "first_frame_ms": 3.56,
       "18B": {
-        "frame_ms_on": 4.86,
-        "draw_cpu_ms_on": 2.06,
-        "frame_gpu_ms_on": 1.447,
-        "particle_pass_gpu_ms_on": 0.059,
-        "frame_ms_off": 4.53,
-        "draw_cpu_ms_off": 1.95,
-        "frame_gpu_ms_off": 1.309,
-        "added_frame_ms": 0.33,
-        "added_frame_gpu_ms": 0.138
+        "frame_ms_on": 4.83,
+        "draw_cpu_ms_on": 2.05,
+        "frame_gpu_ms_on": 1.54,
+        "particle_pass_gpu_ms_on": 0.06,
+        "frame_ms_off": 4.6,
+        "draw_cpu_ms_off": 1.91,
+        "frame_gpu_ms_off": 1.476,
+        "added_frame_ms": 0.23,
+        "added_frame_gpu_ms": 0.064
       },
       "18A": {
         "frame_ms_on": 4.82,
-        "draw_cpu_ms_on": 2.08,
-        "frame_gpu_ms_on": 1.529,
-        "particle_pass_gpu_ms_on": 0.059,
-        "frame_ms_off": 4.56,
-        "draw_cpu_ms_off": 1.93,
-        "frame_gpu_ms_off": 1.386,
-        "added_frame_ms": 0.26,
-        "added_frame_gpu_ms": 0.143
+        "draw_cpu_ms_on": 2.04,
+        "frame_gpu_ms_on": 1.533,
+        "particle_pass_gpu_ms_on": 0.065,
+        "frame_ms_off": 4.63,
+        "draw_cpu_ms_off": 1.9,
+        "frame_gpu_ms_off": 1.389,
+        "added_frame_ms": 0.19,
+        "added_frame_gpu_ms": 0.144
       }
     },
     "snow_10000": {
@@ -140,30 +140,30 @@
       "maps": 1,
       "map_bytes": 5242880,
       "map_build_ms": [
-        4.42
+        1.19
       ],
-      "first_frame_ms": 7.0,
+      "first_frame_ms": 3.57,
       "18B": {
-        "frame_ms_on": 4.85,
-        "draw_cpu_ms_on": 2.09,
-        "frame_gpu_ms_on": 1.419,
-        "particle_pass_gpu_ms_on": 0.028,
-        "frame_ms_off": 4.68,
-        "draw_cpu_ms_off": 1.94,
-        "frame_gpu_ms_off": 1.393,
-        "added_frame_ms": 0.17,
-        "added_frame_gpu_ms": 0.026
+        "frame_ms_on": 4.73,
+        "draw_cpu_ms_on": 2.07,
+        "frame_gpu_ms_on": 1.415,
+        "particle_pass_gpu_ms_on": 0.025,
+        "frame_ms_off": 4.52,
+        "draw_cpu_ms_off": 1.92,
+        "frame_gpu_ms_off": 1.238,
+        "added_frame_ms": 0.21,
+        "added_frame_gpu_ms": 0.177
       },
       "18A": {
-        "frame_ms_on": 5.19,
-        "draw_cpu_ms_on": 2.25,
-        "frame_gpu_ms_on": 1.497,
-        "particle_pass_gpu_ms_on": 0.028,
-        "frame_ms_off": 5.03,
-        "draw_cpu_ms_off": 2.07,
-        "frame_gpu_ms_off": 1.578,
-        "added_frame_ms": 0.16,
-        "added_frame_gpu_ms": -0.081
+        "frame_ms_on": 4.59,
+        "draw_cpu_ms_on": 2.05,
+        "frame_gpu_ms_on": 1.254,
+        "particle_pass_gpu_ms_on": 0.022,
+        "frame_ms_off": 4.49,
+        "draw_cpu_ms_off": 1.91,
+        "frame_gpu_ms_off": 1.238,
+        "added_frame_ms": 0.1,
+        "added_frame_gpu_ms": 0.016
       }
     },
     "rain_and_snow_15000": {
@@ -173,31 +173,31 @@
       "maps": 2,
       "map_bytes": 10485760,
       "map_build_ms": [
-        4.13,
-        3.0
+        1.07,
+        1.22
       ],
-      "first_frame_ms": 9.9,
+      "first_frame_ms": 5.0,
       "18B": {
-        "frame_ms_on": 4.89,
-        "draw_cpu_ms_on": 2.14,
-        "frame_gpu_ms_on": 1.52,
-        "particle_pass_gpu_ms_on": 0.045,
-        "frame_ms_off": 4.68,
-        "draw_cpu_ms_off": 1.94,
-        "frame_gpu_ms_off": 1.479,
-        "added_frame_ms": 0.21,
+        "frame_ms_on": 4.93,
+        "draw_cpu_ms_on": 2.12,
+        "frame_gpu_ms_on": 1.428,
+        "particle_pass_gpu_ms_on": 0.041,
+        "frame_ms_off": 4.61,
+        "draw_cpu_ms_off": 1.93,
+        "frame_gpu_ms_off": 1.387,
+        "added_frame_ms": 0.32,
         "added_frame_gpu_ms": 0.041
       },
       "18A": {
-        "frame_ms_on": 5.11,
-        "draw_cpu_ms_on": 2.15,
-        "frame_gpu_ms_on": 1.615,
-        "particle_pass_gpu_ms_on": 0.046,
-        "frame_ms_off": 5.03,
-        "draw_cpu_ms_off": 2.07,
-        "frame_gpu_ms_off": 1.578,
-        "added_frame_ms": 0.08,
-        "added_frame_gpu_ms": 0.037
+        "frame_ms_on": 4.8,
+        "draw_cpu_ms_on": 2.14,
+        "frame_gpu_ms_on": 1.42,
+        "particle_pass_gpu_ms_on": 0.041,
+        "frame_ms_off": 4.65,
+        "draw_cpu_ms_off": 1.93,
+        "frame_gpu_ms_off": 1.388,
+        "added_frame_ms": 0.15,
+        "added_frame_gpu_ms": 0.032
       }
     }
   },
@@ -210,36 +210,41 @@
     ]
   },
   "map_rebuild_ms": {
-    "median": 3.17,
-    "max": 3.95
+    "median": 1.14,
+    "max": 10.33
+  },
+  "studio_drag_two_maps": {
+    "on": 13.77,
+    "off": 9.84,
+    "added_ms": 3.93
   },
   "lifecycle": {
     "none": {
-      "buffer": 121,
+      "buffer": 125,
       "texture": 42,
       "framebuffer": 6,
       "program": 28
     },
     "rain_and_snow_two_maps": {
-      "buffer": 124,
+      "buffer": 128,
       "texture": 47,
       "framebuffer": 8,
       "program": 29
     },
     "after_50_invalidations": {
-      "buffer": 124,
+      "buffer": 128,
       "texture": 47,
       "framebuffer": 8,
       "program": 29
     },
     "after_20_wind_changes_one_map": {
-      "buffer": 123,
+      "buffer": 127,
       "texture": 45,
       "framebuffer": 7,
       "program": 29
     },
     "released": {
-      "buffer": 121,
+      "buffer": 125,
       "texture": 42,
       "framebuffer": 6,
       "program": 28
@@ -250,8 +255,9 @@
     "rain_draw_calls": 1,
     "gl_unchanged": true,
     "maps": 0,
-    "after_invalidate_maps": 1,
-    "after_invalidate_error": null
+    "after_invalidate_maps": 0,
+    "after_room_reload_maps": 1,
+    "after_room_reload_error": null
   },
   "room_changes_no_weather": {
     "gl_before": {
@@ -266,7 +272,7 @@
       "framebuffer": 6,
       "program": 27
     },
-    "python_heap_growth_kb": 9999.6
+    "python_heap_growth_kb": 9977.4
   },
   "room_changes_rain_and_snow": {
     "gl_before": {
@@ -281,11 +287,11 @@
       "framebuffer": 8,
       "program": 29
     },
-    "python_heap_growth_kb": 6367.4
+    "python_heap_growth_kb": 6504.2
   },
   "room_load_and_first_frame_ms": {
-    "no_weather": 199.6,
-    "rain_and_snow": 235.8
+    "no_weather": 198.2,
+    "rain_and_snow": 225.3
   },
   "play_stop": {
     "edit_then_after_each_play_stop": [
