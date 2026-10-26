@@ -1,0 +1,342 @@
+{
+  "method": "py -3.13 tooling/m18b_weather_study.py proof OUT   # shelter and impacts, judged in world space; pictures\n    py -3.13 tooling/m18b_weather_study.py pictures OUT  # top-down shelter maps, 18A beside 18B, a pan, Studio\n    py -3.13 tooling/m18b_weather_study.py perf OUT    # the cost against Stage 18A's; maps, lifecycle, failures",
+  "rain": {
+    "effects": [
+      {
+        "preset": "rain",
+        "count": 6000,
+        "seed": 2
+      }
+    ],
+    "triangles": 1624,
+    "18B": {
+      "falling": 33925,
+      "landed": 3874,
+      "falling_under_shelter": 0,
+      "landed_on_a_surface": 3872,
+      "landed_off_any_surface": 2,
+      "landed_under_shelter": 0,
+      "landed_height_error_m_max": 0.137,
+      "landed_on": {
+        "ground": 3038,
+        "platform_4m": 298,
+        "path_2m": 276,
+        "cottage": 74,
+        "stairs": 62,
+        "bridge_6m": 48,
+        "lamp_post": 4,
+        "fence_2m": 2,
+        "shop": 64,
+        "barrel": 2,
+        "crate": 4
+      },
+      "landed_heights_m": {
+        "lamp_post": [
+          2.85,
+          2.85
+        ],
+        "ground": [
+          -0.0,
+          0.0
+        ],
+        "stairs": [
+          0.25,
+          2.8
+        ],
+        "bridge_6m": [
+          2.0,
+          2.65
+        ],
+        "platform_4m": [
+          1.35,
+          2.0
+        ],
+        "path_2m": [
+          -0.0,
+          0.02
+        ],
+        "cottage": [
+          2.52,
+          3.76
+        ],
+        "fence_2m": [
+          0.85,
+          0.85
+        ],
+        "shop": [
+          2.2,
+          3.28
+        ],
+        "barrel": [
+          1.0,
+          1.0
+        ],
+        "crate": [
+          1.0,
+          1.0
+        ]
+      }
+    },
+    "18A_no_shelter": {
+      "falling": 40233,
+      "landed": 0,
+      "falling_under_shelter": 922
+    },
+    "maps": 1,
+    "map_build_ms": [
+      5.71
+    ]
+  },
+  "rain_wind": {
+    "effects": [
+      {
+        "preset": "rain",
+        "count": 6000,
+        "seed": 2,
+        "wind": [
+          4.0,
+          1.0
+        ]
+      }
+    ],
+    "triangles": 1624,
+    "18B": {
+      "falling": 32851,
+      "landed": 3794,
+      "falling_under_shelter": 0,
+      "landed_on_a_surface": 3792,
+      "landed_off_any_surface": 2,
+      "landed_under_shelter": 0,
+      "landed_height_error_m_max": 0.142,
+      "landed_on": {
+        "ground": 2927,
+        "path_2m": 324,
+        "platform_4m": 263,
+        "cottage": 68,
+        "bridge_6m": 44,
+        "stairs": 102,
+        "lamp_post": 8,
+        "fence_2m": 2,
+        "shop": 46,
+        "crate": 4,
+        "barrel": 4
+      },
+      "landed_heights_m": {
+        "ground": [
+          -0.01,
+          0.06
+        ],
+        "platform_4m": [
+          0.08,
+          2.05
+        ],
+        "path_2m": [
+          0.01,
+          0.07
+        ],
+        "cottage": [
+          0.47,
+          3.84
+        ],
+        "bridge_6m": [
+          1.99,
+          2.65
+        ],
+        "stairs": [
+          0.24,
+          2.8
+        ],
+        "lamp_post": [
+          0.72,
+          1.81
+        ],
+        "fence_2m": [
+          0.41,
+          0.41
+        ],
+        "crate": [
+          0.78,
+          1.01
+        ],
+        "shop": [
+          0.55,
+          3.19
+        ],
+        "barrel": [
+          0.99,
+          0.99
+        ]
+      }
+    },
+    "18A_no_shelter": {
+      "falling": 39431,
+      "landed": 0,
+      "falling_under_shelter": 877
+    },
+    "maps": 1,
+    "map_build_ms": [
+      5.31
+    ]
+  },
+  "snow": {
+    "effects": [
+      {
+        "preset": "snow",
+        "count": 4000,
+        "seed": 2
+      }
+    ],
+    "triangles": 1624,
+    "18B": {
+      "falling": 22578,
+      "landed": 3538,
+      "falling_under_shelter": 0,
+      "landed_on_a_surface": 3532,
+      "landed_off_any_surface": 6,
+      "landed_under_shelter": 0,
+      "landed_height_error_m_max": 0.11,
+      "landed_on": {
+        "ground": 2802,
+        "path_2m": 296,
+        "cottage": 70,
+        "platform_4m": 220,
+        "bridge_6m": 68,
+        "stairs": 38,
+        "shop": 24,
+        "barrel": 12,
+        "crate": 2
+      },
+      "landed_heights_m": {
+        "cottage": [
+          2.61,
+          3.68
+        ],
+        "ground": [
+          -0.01,
+          0.1
+        ],
+        "bridge_6m": [
+          2.0,
+          2.09
+        ],
+        "path_2m": [
+          0.01,
+          0.11
+        ],
+        "platform_4m": [
+          0.08,
+          2.09
+        ],
+        "stairs": [
+          0.31,
+          2.82
+        ],
+        "shop": [
+          2.62,
+          3.33
+        ],
+        "barrel": [
+          0.99,
+          1.0
+        ],
+        "crate": [
+          1.0,
+          1.0
+        ]
+      }
+    },
+    "18A_no_shelter": {
+      "falling": 28413,
+      "landed": 0,
+      "falling_under_shelter": 724
+    },
+    "maps": 1,
+    "map_build_ms": [
+      6.21
+    ]
+  },
+  "anchored": {
+    "rain": {
+      "landed_seen_from_both_targets": 265,
+      "max_difference_m_camera_moved": 0.0,
+      "landed_followed_over_time": 495,
+      "max_drift_m_over_0_09_s": 0.0035,
+      "median_drift_m": 0.0,
+      "drifts_over_3_cm": 0,
+      "where_over_3_cm": []
+    },
+    "rain_wind": {
+      "landed_seen_from_both_targets": 250,
+      "max_difference_m_camera_moved": 0.0,
+      "landed_followed_over_time": 497,
+      "max_drift_m_over_0_09_s": 0.1023,
+      "median_drift_m": 0.001,
+      "drifts_over_3_cm": 6,
+      "where_over_3_cm": [
+        [
+          16.1,
+          16.98,
+          2.57
+        ],
+        [
+          16.1,
+          16.98,
+          2.57
+        ],
+        [
+          13.87,
+          19.96,
+          0.71
+        ],
+        [
+          12.03,
+          6.09,
+          0.02
+        ],
+        [
+          21.84,
+          24.56,
+          2.01
+        ],
+        [
+          13.87,
+          19.96,
+          0.71
+        ]
+      ]
+    },
+    "snow": {
+      "landed_seen_from_both_targets": 248,
+      "max_difference_m_camera_moved": 0.0,
+      "landed_followed_over_time": 729,
+      "max_drift_m_over_0_09_s": 0.0393,
+      "median_drift_m": 0.001,
+      "drifts_over_3_cm": 2,
+      "where_over_3_cm": [
+        [
+          26.01,
+          10.69,
+          2.68
+        ],
+        [
+          8.05,
+          12.26,
+          3.67
+        ]
+      ]
+    }
+  },
+  "interior": {
+    "template_exposure": "indoor",
+    "indoor": {
+      "particle_pixels": 0,
+      "layer": false,
+      "notice": "This room is indoors (weather_exposure), so its rain is not shown."
+    },
+    "outdoor": {
+      "particle_pixels": 1756,
+      "layer": true,
+      "notice": null
+    }
+  }
+}

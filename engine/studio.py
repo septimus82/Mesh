@@ -194,6 +194,7 @@ class Studio(InspectorMixin):
         self._reload(recenter=True)
         self._rebuild()
         self._say("Click an object to edit it. Right-click for actions. F4 plays your game.")
+        self._weather_message(again=True)  # what's wrong with the room's weather outranks the greeting
         self._check_player()
 
     def _check_player(self) -> None:
@@ -292,7 +293,24 @@ class Studio(InspectorMixin):
         if recenter:
             self._center_on_room()
         self.hd2d.room_loaded(recenter)
+        self._weather_message()
         self.window.set_caption(f"Mesh Studio - {self.project.label(self.project.current)}")
+
+    def _weather_message(self, again: bool = False) -> None:
+        """Milestone 18B: what's wrong with this room's weather (settings that can't be used, a precipitation map
+        that couldn't be made), or why it isn't shown (an indoor room), in the status line: once, when it changes."""
+        renderer = getattr(self.window, "hd2d_renderer", None)
+        error = (getattr(self.window, "scene_particles_error", None)
+                 or (renderer.precipitation.error if renderer is not None else None))
+        notice = getattr(self.window, "scene_particles_notice", None)
+        said = (self.project.current, error, notice)
+        if said == getattr(self, "_weather_said", None) and not again:
+            return
+        self._weather_said = said
+        if error:
+            self._say(f"Weather is off in this room: {error}", ok=False)
+        elif notice:
+            self._say(notice)
 
     def _center_on_room(self) -> None:
         """Frame the room: its whole map if it has one, otherwise its objects."""
@@ -422,6 +440,7 @@ class Studio(InspectorMixin):
         self._reload(recenter=True)
         self._rebuild()
         self._say(f"Editing {self.project.label(key)}.")
+        self._weather_message(again=True)
 
     def save(self) -> None:
         self._flush_fields()
@@ -2403,6 +2422,8 @@ class Studio(InspectorMixin):
         lighting = getattr(self.window, "lighting", None)
         if lighting is not None:
             lighting.update(delta_time)  # flicker shows while editing; nothing else of the game runs
+        self.hd2d.advance_weather(delta_time)  # ... nor does the weather, unless it's being previewed
+        self._weather_message()  # a precipitation map is made on the first frame drawn: its failure shows then
         return True  # no gameplay runs while editing
 
     def on_key_press(self, symbol: int, modifiers: int) -> bool:

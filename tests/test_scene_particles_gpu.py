@@ -65,14 +65,17 @@ def test_rain_is_drawn_in_the_world_depth_tested_in_one_draw_call(village: Any) 
         calls_without = hd.stats()["draw_calls"]
     finally:
         layer.set_enabled(0, True)
-    layer.depth_test = False
+    # The camera's depth test, on its own: with shelter (18B) off, so drops stopped by roofs don't count as hidden
+    layer.shelter = False
     try:
+        open_sky = village.draw().convert("RGB")
+        layer.depth_test = False
         no_depth = village.draw().convert("RGB")
     finally:
-        layer.depth_test = True
+        layer.depth_test, layer.shelter = True, True
     assert calls_with - calls_without == 1, "every particle in one draw call"
-    shown, unhidden = _mask(with_rain, dry), _mask(no_depth, dry)
-    drawn, hidden = sum(shown), sum(1 for s, u in zip(shown, unhidden) if u and not s)
+    shown, unhidden = _mask(open_sky, dry), _mask(no_depth, dry)
+    drawn, hidden = sum(_mask(with_rain, dry)), sum(1 for s, u in zip(shown, unhidden) if u and not s)
     assert drawn > 5000, "rain is drawn"
     assert hidden > 500, "particles behind buildings, hills and characters are hidden by them"
     assert village.draw().convert("RGB").tobytes() == with_rain.tobytes(), "the same time, the same picture"

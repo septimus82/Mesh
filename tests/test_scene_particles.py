@@ -175,3 +175,76 @@ def test_a_room_s_particles_are_authored_checked_and_saved_in_its_settings() -> 
     with pytest.raises(ops.OpError, match="aren't readable"):
         ops.set_particles({"settings": "odd"}, [{"preset": "rain"}])
     assert "set_particles" in authoring.operations(), "AI and Studio author them through the same checked edit"
+
+
+# --- Milestone 18B: where rain and snow meet the world ------------------------------------------------------------
+
+
+def test_precipitation_maps_are_keyed_by_the_fall_direction_quantised() -> None:
+    from engine.hd2d.precipitation import STEP_DEG, direction_of, key_for
+
+    assert key_for((0.0, 0.0, -9.0)) == (0.0, 0.0), "straight down"
+    assert key_for((0.8, 0.0, -9.0)) == key_for((0.801, 0.0, -9.0)), "a hair's difference shares a map"
+    assert key_for((0.8, 0.0, -9.0)) != key_for((1.0, 0.0, -9.0)), "a real change of wind makes another"
+    assert key_for((0.8, 0.0, -9.0)) != key_for((-0.8, 0.0, -9.0)), "... and so does the wind turning"
+    for fall in ((0.8, 0.0, -9.0), (4.0, 1.0, -9.0), (-3.0, 2.0, -1.1)):
+        d = direction_of(key_for(fall))
+        n = math.sqrt(sum(c * c for c in fall))
+        angle = math.degrees(math.acos(sum(a * b / n for a, b in zip(d, fall))))
+        assert angle <= STEP_DEG, (fall, angle)
+
+
+def test_what_falls_and_how_far_its_impact_reaches() -> None:
+    rain, snow, leaves, still = sp.parse_particles([{"preset": "rain", "wind": [1.0, 0.0]}, {"preset": "snow"},
+                                                    {"preset": "wind"}, {"preset": "rain", "speed": 0}])
+    assert sp.fall_of(rain) == (1.0, 0.0, -9.0) and sp.fall_of(snow) == (0.3, 0.0, -1.1)
+    assert sp.fall_of(leaves) is None and sp.fall_of(still) is None, "leaves are carried, not falling"
+    assert sp.impact_reach(rain) > 1.6 and sp.impact_reach(leaves) == 0.0
+    assert sp.PRESETS["rain"].impact == 0.15 and sp.PRESETS["snow"].impact == 1.5 and sp.PRESETS["wind"].impact == 0.0
+
+
+def test_the_splash_frames_are_pixel_art_in_the_atlas() -> None:
+    image = sp.atlas_image()
+    for x, y, w, h in sp.SPLASH:
+        box = image.crop((x, y, x + w, y + h)).getchannel("A")
+        assert box.getbbox() is not None and set(box.getdata()) <= {0, 255}
+
+
+def test_an_indoor_room_gets_no_weather_and_says_why() -> None:
+    assert sp.parse_exposure(None) == "outdoor" and sp.parse_exposure("indoor") == "indoor"
+    with pytest.raises(sp.SceneParticlesError, match="weather_exposure"):
+        sp.parse_exposure("cellar")
+    hd2d = SimpleNamespace(hd2d_renderer=_Renderer(), ctx=None, scene_particles=None)
+    sp.configure(hd2d, {"particles": [{"preset": "rain"}, {"preset": "snow"}], "weather_exposure": "indoor"})
+    assert hd2d.hd2d_renderer.effects == () and "rain, snow is not shown" in hd2d.scene_particles_notice
+    bad = SimpleNamespace(hd2d_renderer=_Renderer(), ctx=None, scene_particles=None)
+    sp.configure(bad, {"particles": [{"preset": "rain"}], "weather_exposure": "cellar"})
+    assert "weather_exposure must be one of" in bad.scene_particles_error
+
+
+def test_a_2d_room_keeps_its_particles_inside_its_map() -> None:
+    window = SimpleNamespace(hd2d_renderer=None, ctx=_FakeGL(fail_at=-1), scene_particles=None)
+    sp.configure(window, {"particles": [{"preset": "snow", "count": 0}], "world_width": 640, "world_height": 320})
+    assert window.scene_particles.bounds == (0.0, 0.0, 20.0, 10.0)
+    tilemap = {"width": 24, "height": 16, "tilewidth": 32, "tileheight": 32}
+    sp.configure(window, {"particles": [{"preset": "snow", "count": 0}]}, {"tilemap": tilemap})
+    assert window.scene_particles.bounds == (0.0, 0.0, 24.0, 16.0), "or its map's"
+    sp.configure(window, {"particles": [{"preset": "snow", "count": 0}]})
+    assert window.scene_particles.bounds is None, "no size at all: no rectangle to keep to"
+
+
+def test_weather_changes_are_authored_checked_and_told_in_words() -> None:
+    from engine import authoring
+    from engine import project_ops as ops
+
+    scene = {"settings": {"world_width": 640}, "entities": []}
+    rainy = ops.set_particles(scene, [{"preset": "rain", "count": 3000, "wind": [0.8, -1]}])
+    inside = ops.set_weather_exposure(rainy, "indoor")
+    assert inside["settings"]["weather_exposure"] == "indoor"
+    assert "weather_exposure" not in ops.set_weather_exposure(inside, "outdoor")["settings"], "outdoor: the default"
+    with pytest.raises(ops.OpError, match="weather_exposure must be one of"):
+        ops.set_weather_exposure(scene, "cellar")
+    assert "set_weather_exposure" in authoring.operations()
+    lines = authoring.summarize({"rooms": {"start": scene}}, {"rooms": {"start": inside}})
+    assert "start: weather none -> rain x3000 (wind 0.8 east, 1 south m/s)" in lines
+    assert "start: weather exposure outdoor -> indoor" in lines
