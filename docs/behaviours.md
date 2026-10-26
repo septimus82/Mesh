@@ -1726,12 +1726,19 @@ A puddle or pond: drawn as water, rippled by rain and footsteps (Studio: the Wat
 
 | Name | Description | Type | Default |
 | --- | --- | --- | --- |
-| preset | puddle or pond | string | puddle |
+| preset | muddy_puddle, natural_pond, stone_pool, or the simple puddle or pond | string | puddle |
 | width | Width (px) | float | 64.0 |
 | height | Height (px) | float | 40.0 |
 | colour | Colour (#rrggbb; empty: the preset's) | string | - |
 | opacity | Opacity (0.05-1; 0: the preset's) | float | 0.0 |
-| shape | ellipse or rect (empty: the preset's) | string | - |
+| shape | ellipse, rect or natural (empty: the preset's) | string | - |
+| rotation | Turned by this many degrees, anticlockwise | float | 0.0 |
+| seed | Which natural outline (1-9999; 0: the preset's) | int | 0 |
+| shore | The bank: none, mud, grass or stone (empty: the preset's) | string | - |
+| shore_width | The bank's width (px, 0-64; -1: the preset's) | float | -1.0 |
+| deep_colour | Colour where deep (#rrggbb; empty: the preset's) | string | - |
+| depth | How soon it gets deep, 0-1 (-1: the preset's) | float | -1.0 |
+| ripples | Rain and footstep ripple strength, 0-1 (-1: the preset's) | float | -1.0 |
 | waves | How much it moves (0-1; -1: the preset's) | float | -1.0 |
 | reflection | How much it mirrors (0-1; -1: the preset's) | float | -1.0 |
 | rain_ripples | The room's rain rings it | bool | True |

@@ -5,7 +5,12 @@ through project_ops, as Studio and AI do): the water is depth-tested (the shop's
 with the world; rain rings it, and not under the bridge's deck (Stage 18B's precipitation map); the player's steps
 through the puddle splash and announce themselves; a pond set not walkable stops the player; a 2D room draws its water
 under its characters; the GPU objects stay level over room changes; and the whole Studio workflow, through its own
-buttons, fields and keys."""
+buttons, fields and keys.
+
+Milestone 19B (tooling/m19b_water_study.py): the new presets' banks, the mirror kept under the water's colour, the
+room's reflection setting (full, half-size or no frame copy), water under a roof, against a cliff, on a plateau and
+under the bridge, footsteps, blocking and ripple strength, a 2D room, and Studio's placing, shaping, turning and
+banking."""
 
 from __future__ import annotations
 
@@ -104,7 +109,7 @@ def test_a_creator_adds_and_edits_water_in_studio(tmp_path: Path) -> None:
     import m19_water_study as study
 
     r = study.studio_workflow(tmp_path)
-    assert r["placed"]["water"]["preset"] == "puddle", r
+    assert r["placed"]["water"]["preset"] == "muddy_puddle", r  # Stage 19B: a new Water starts as a muddy puddle
     assert r["pond_180"] == {"preset": "pond", "width": 180.0} and r["undo_redo_width"][1] == 180.0, r
     assert r["undo_redo_width"][0] != 180.0, "undo took the width back"
     assert r["drawn_in_editing_view"]["water_surfaces"] == 1 and r["drawn_in_editing_view"]["moving"] > 500, r
@@ -201,3 +206,111 @@ def test_a_puddle_on_a_path_shows(tmp_path: Path) -> None:
     finally:
         game.close()
     assert int(study._mask(wet, dry).sum()) > 1500, "the puddle is drawn on the path"
+
+
+# --- Milestone 19B: banks, depths, shapes, the room's reflection setting (tooling/m19b_water_study.py) -----------
+
+def test_19b_water_has_its_bank_and_19a_s_has_none(tmp_path: Path) -> None:
+    """The natural pond draws its bank outside its edge (a grass and earth bank; without it, fewer pixels), and the
+    mirror stays under the water's colour where Stage 19A's overpowered it (the same place, camera and moment)."""
+    from dataclasses import replace
+
+    import m19_water_study as m19
+    import m19b_water_study as study
+
+    game = study._open(tmp_path, "bank", ["natural_pond"], rain=False)
+    try:
+        study.at_moment(game, 3.0)
+        x, y, _z = study._spot("natural_pond")
+        dry = study._without_water(game, x, y)
+        banked = int(m19._mask(study.shot_at(game, x, y), dry).sum())
+        body = m19._body(game, "natural pond")
+        body.water = replace(body.water, shore="none")
+        bare = int(m19._mask(study.shot_at(game, x, y), dry).sum())
+    finally:
+        game.close()
+    assert banked > bare + 2000, (banked, bare)
+    shares = {}
+    for key in ("classic_pond", "natural_pond"):  # the same place, camera and moment
+        game = study._open(tmp_path, f"mirror_{key}", [key], rain=False)
+        try:
+            study.at_moment(game, 3.0)
+            shares[key] = study._reflection_share(game, x, y)
+        finally:
+            game.close()
+    assert shares["natural_pond"]["mean_change"] < 0.7 * shares["classic_pond"]["mean_change"], shares
+    assert shares["natural_pond"]["share_changed_over_24"] < 0.1 < shares["classic_pond"]["share_changed_over_24"], shares
+
+
+def test_the_room_s_reflection_setting_sizes_or_drops_the_frame_copy(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    import m19_water_study as m19
+    import m19b_water_study as study
+    from hd2d_demo import _gl_counts
+
+    game = study._open(tmp_path, "mirrors", ["natural_pond", "stone_pool"], rain=False)
+    try:
+        hd, ctx = game.window.hd2d_renderer, game.window.ctx
+        x, y, _z = study._spot("natural_pond")
+        dry = study._without_water(game, x, y)
+        seen, sizes, counts = {}, {}, []
+        for _round in range(2):
+            for mode in ("full", "half", "sky"):
+                hd.settings = replace(hd.settings, water_reflections=mode)
+                seen[mode] = int(m19._mask(study.shot_at(game, x, y), dry).sum())
+                sizes[mode] = (hd.water.copy[1].size if hd.water.copy else None, hd.water.memory_bytes())
+            ctx.gc()
+            counts.append(_gl_counts(ctx))
+    finally:
+        game.close()
+    assert sizes["full"][0] == tuple(study.study.SIZE) and sizes["half"][0] == (640, 360) and sizes["sky"][0] is None
+    assert sizes["half"][1] < sizes["full"][1] / 3.5 and sizes["sky"][1] < 10_000, sizes
+    assert min(seen.values()) > 20000, seen  # the water is drawn in every setting
+    assert counts[0] == counts[1], counts  # switching back and forth leaves nothing behind
+
+
+def test_water_on_an_elevated_floor_beside_a_cliff_and_under_a_roof(tmp_path: Path) -> None:
+    import m19b_water_study as study
+
+    r = study.places(tmp_path)
+    assert r["roof"]["pixels_hidden_by_what_stands_in_front"] > 1000, r  # the shop's roof in front of the pond
+    assert r["cliff"]["pixels_hidden_by_what_stands_in_front"] > 500, r  # its far side runs into the plateau
+    floor = r["elevated_floor"]
+    assert floor["at_2m_drawn"] > 1500 and floor["at_0m_drawn"] < floor["at_2m_drawn"] / 4, r  # at 0 m: inside it
+    bridge = r["bridge"]
+    assert min(bridge["path_puddle"]) > 200 and sum(bridge["under_bridge"]) < 0.3 * sum(
+        bridge["under_bridge_negative_control_shelter_off"]), r
+
+
+def test_19b_water_keeps_its_gameplay(tmp_path: Path) -> None:
+    import m19b_water_study as study
+
+    r = study.gameplay(tmp_path)
+    assert r["steps"]["through_the_muddy_puddle"] >= 2 and r["steps"]["water_step_events"] == r["steps"]["through_the_muddy_puddle"], r
+    assert r["walkable"]["feet_reached_m"] >= r["walkable"]["centre_m"] - 0.1, r
+    assert r["blocking"]["feet_reached_m"] < r["blocking"]["box_south_edge_m"] + 0.05, r  # stopped at the turned box
+    s = r["ripple_change_by_strength"]
+    assert s["1.0"] > 1.5 * s["0.5"] > 0 and s["0.0"] == 0, r
+
+
+def test_a_creator_places_shapes_turns_and_banks_water_in_studio(tmp_path: Path) -> None:
+    import m19b_water_study as study
+
+    r = study.studio_workflow(tmp_path)
+    assert r["placed"] == {"preset": "muddy_puddle", "shape": "natural", "shore": "mud"}, r
+    assert r["adjusted"] == {"preset": "natural_pond", "width": 200.0, "height": 128.0, "rotation": 30.0, "seed": 8,
+                             "shore": "grass"}, r
+    assert r["stone_bank"] == {"shore": "stone", "depth": 0.8, "deep_colour": "#16324a"}, r
+    assert r["room_reflections"] == "half" and r["undo"]["reflections"] == "full" and r["redo"]["reflections"] == "half"
+    assert r["undo"]["deep_colour"] != "#16324a" and r["redo"]["deep_colour"] == "#16324a", r
+    assert r["drawn_and_moving"] > 500 and r["clicked_in_3d_selects_it"] and r["saved_dirty_after"] is False, r
+    assert r["reopened_same"] and r["in_play"] == {"mode": "play", "water_surfaces": 1, "reflections": "half"}, r
+    assert r["after_stop_mode"] == "edit", r
+
+
+def test_19b_water_in_a_2d_room_is_drawn_under_its_characters(tmp_path: Path) -> None:
+    import m19b_water_study as study
+
+    r = study.two_d(tmp_path)
+    assert r["water_pixels"] > 20000 and r["player_pixels_changed_by_water"] == 0 and r["error"] is None, r

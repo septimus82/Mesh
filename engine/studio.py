@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import os
 from functools import partial
 from pathlib import Path
@@ -78,6 +79,16 @@ BUILT_IN_OBJECTS: list[dict[str, Any]] = [{"id": "object", "display_name": "Empt
                                           {"id": "water", "display_name": "Water", "built_in": "water"}]
 SHAPE_HELP = {"brush": "Click or drag on the map.", "rect": "Drag a rectangle on the map.",
               "fill": "Click an area to fill it."}
+
+
+def _water_settings(water: dict[str, Any]) -> Any:
+    """A water's settings as ``project_ops.water_of`` (or a drag) gives them, as ``engine.water`` reads them."""
+    from engine import water as water_mod  # noqa: PLC0415
+
+    try:
+        return water_mod.parse_water({k: v for k, v in water.items() if k != "error"})
+    except water_mod.WaterError:  # shown as its preset meanwhile (water_of says why)
+        return water_mod.PRESETS.get(str(water.get("preset")), water_mod.PRESETS["puddle"])
 
 
 def _snap(value: float) -> float:
@@ -404,8 +415,10 @@ class Studio(InspectorMixin):
             if door["width"] > 0 and door["height"] > 0:
                 return float(entity.get("x", 0)), float(entity.get("y", 0)), door["width"], door["height"]
         water = ops.water_of(entity)
-        if water is not None:  # water: its own size (it has no picture)
-            return float(entity.get("x", 0)), float(entity.get("y", 0)), water["width"], water["height"]
+        if water is not None:  # water: its own size, as it is turned (it has no picture)
+            from engine.water import extent  # noqa: PLC0415
+
+            return (float(entity.get("x", 0)), float(entity.get("y", 0)), *extent(_water_settings(water)))
         if sprite is not None and entity.get("sprite") and getattr(sprite, "width", 0) > 2:
             return sprite.center_x, sprite.center_y, sprite.width, sprite.height
         return float(entity.get("x", 0)), float(entity.get("y", 0)), 32.0, 32.0
@@ -414,8 +427,16 @@ class Studio(InspectorMixin):
         sprites = self._sprites_by_id()
         for entity in reversed(ops.entities(self.project.scene())):
             cx, cy, w, h = self._bounds(entity, sprites.get(str(entity.get("id"))))
-            if abs(wx - cx) <= w / 2 and abs(wy - cy) <= h / 2:
-                return entity.get("id")
+            if abs(wx - cx) > w / 2 or abs(wy - cy) > h / 2:
+                continue
+            water = ops.water_of(entity)
+            if water is not None:  # water: on it (or its bank), not anywhere in the box round it as turned
+                from engine.water import inside  # noqa: PLC0415
+
+                settings = _water_settings(water)
+                if not inside(settings, (cx, cy), (wx, wy), margin=-max(4.0, settings.shore_width)):
+                    continue
+            return entity.get("id")
         return None
 
     # ==================================================================== actions
@@ -769,8 +790,8 @@ class Studio(InspectorMixin):
                 out, new_id = ops.place_blank(scene, self.project.current, name, *at)
                 if kind == "zone":
                     out = ops.set_trigger_zone(out, new_id, width=96, height=96)
-                elif kind == "water":  # Milestone 19A: a puddle to start with; Look turns it into a pond
-                    out = ops.set_water(out, new_id, preset="puddle")
+                elif kind == "water":  # Milestone 19B: a muddy puddle to start with; Look makes it a pond or pool
+                    out = ops.set_water(out, new_id, preset="muddy_puddle")
             else:
                 out, new_id = ops.place_prefab(scene, self.project.current, prefab, *at, elevation=elevation)
             if elevation and kind:
@@ -2246,14 +2267,12 @@ class Studio(InspectorMixin):
             cx, cy, w, h = self._bounds(entity, sprites.get(str(eid)))
             water, zone = self._live_water(entity), self._live_zone(entity)
             if water is not None:  # drawn by the game itself; here its outline and name, to find and size it
-                x0, x1 = cx - water["width"] / 2, cx + water["width"] / 2
-                y0, y1 = cy - water["height"] / 2, cy + water["height"] / 2
-                if water.get("shape") == "rect":
-                    a.draw_lrbt_rectangle_outline(x0, x1, y0, y1, (110, 190, 255), 2)
-                else:
-                    a.draw_ellipse_outline(cx, cy, water["width"], water["height"], (110, 190, 255), 2)
-                self._text(f"water:{eid}", f"{str(water.get('preset', 'water')).capitalize()}: {entity.get('name') or ''}",
-                           cx, y1 + 4, (150, 210, 255))
+                from engine import water as water_mod  # noqa: PLC0415
+
+                edge = water_mod.outline_points(_water_settings(water), (cx, cy))
+                a.draw_polygon_outline(edge, (110, 190, 255), 2)
+                self._text(f"water:{eid}", f"{water_mod.PRESET_NAMES.get(str(water.get('preset')), 'Water')}: "
+                           f"{entity.get('name') or ''}", cx, max(p[1] for p in edge) + 4, (150, 210, 255))
             elif zone is not None:
                 x0, x1 = cx - zone["width"] / 2, cx + zone["width"] / 2
                 y0, y1 = cy - zone["height"] / 2, cy + zone["height"] / 2
@@ -2321,7 +2340,7 @@ class Studio(InspectorMixin):
 
     def _live_water(self, entity: dict[str, Any]) -> dict[str, Any] | None:
         drag = self.handle_drag
-        if drag is not None and drag.get("entity") == entity.get("id") and drag["name"] == "water_size":
+        if drag is not None and drag.get("entity") == entity.get("id") and drag["name"] in ("water_size", "water_turn"):
             water: dict[str, Any] = drag["water"]
             return water
         return ops.water_of(entity)
@@ -2345,8 +2364,12 @@ class Studio(InspectorMixin):
         if zone is not None:
             out.append({"name": "zone_size", "x": x + zone["width"] / 2, "y": y - zone["height"] / 2})
         water = self._live_water(entity)
-        if water is not None:
-            out.append({"name": "water_size", "x": x + water["width"] / 2, "y": y - water["height"] / 2})
+        if water is not None:  # its corner sizes it, the handle beyond its top turns it (both as it is turned)
+            a = math.radians(float(water.get("rotation") or 0.0))
+            for name, lx, ly in (("water_size", water["width"] / 2, -water["height"] / 2),
+                                 ("water_turn", 0.0, water["height"] / 2 + 18 / self.zoom)):
+                out.append({"name": name, "x": x + lx * math.cos(a) - ly * math.sin(a),
+                            "y": y + lx * math.sin(a) + ly * math.cos(a)})
         return out
 
     def _handle_at(self, x: float, y: float) -> dict[str, Any] | None:
@@ -2374,8 +2397,16 @@ class Studio(InspectorMixin):
         if drag["name"] == "zone_size":
             drag["zone"].update(width=max(8.0, round(2 * abs(wx - x))), height=max(8.0, round(2 * abs(wy - y))))
             return
-        if drag["name"] == "water_size":
-            drag["water"].update(width=max(8.0, round(2 * abs(wx - x))), height=max(8.0, round(2 * abs(wy - y))))
+        if drag["name"] in ("water_size", "water_turn"):
+            water = drag["water"]
+            a = math.radians(float(water.get("rotation") or 0.0))
+            if drag["name"] == "water_turn":  # the handle points the way its top faces
+                turned = math.degrees(math.atan2(wy - y, wx - x)) - 90.0
+                water["rotation"] = float(round(((turned + 180.0) % 360.0 - 180.0) / 5.0) * 5.0)
+                return
+            lx = (wx - x) * math.cos(a) + (wy - y) * math.sin(a)  # in its own frame
+            ly = -(wx - x) * math.sin(a) + (wy - y) * math.cos(a)
+            water.update(width=max(8.0, round(2 * abs(lx))), height=max(8.0, round(2 * abs(ly))))
             return
         collider = drag["collider"]
         cx, cy = x + collider["offset_x"], y + collider["offset_y"]
@@ -2402,6 +2433,11 @@ class Studio(InspectorMixin):
             water = drag["water"]
             self._edit(lambda s: ops.set_water(s, target, width=water["width"], height=water["height"]),
                        f"Water is {water['width']:g} x {water['height']:g}.")
+            return
+        if drag["name"] == "water_turn":
+            water = drag["water"]
+            self._edit(lambda s: ops.set_water(s, target, rotation=water["rotation"]),
+                       f"Water turned to {water['rotation']:g}°.")
             return
         if drag["name"] == "zone_size":
             zone = drag["zone"]

@@ -744,24 +744,46 @@ class InspectorMixin:
                              width=(width - 6) // 2, style=S_DANGER))
         rows.add(row)
 
-    # ---------------------------------------------------------------- Water (Milestone 19A)
+    # ---------------------------------------------------------------- Water (Milestones 19A, 19B)
     def _water_look(self, rows: Rows, target: str, water: dict[str, Any], width: int) -> None:
         """A puddle's or pond's settings: every change one checked edit (``project_ops.set_water``), so it undoes,
-        redoes and saves like any other."""
+        redoes and saves like any other. The banks, depths and ripple strength are the Stage 19B presets'; the simple
+        puddle and pond (Stage 19A's) keep their look."""
+        from engine.water import CLASSIC, PRESET_NAMES  # noqa: PLC0415
+
         half = (width - 126) // 2
+        material = water.get("preset") not in CLASSIC
 
         def change(ok: str = "Water changed.", **values: Any) -> None:
             self._edit(lambda s: ops.set_water(s, target, **values), ok)
 
-        def number(key: str) -> Callable[[str], object]:
+        def number(key: str, whole: bool = False) -> Callable[[str], object]:
             def commit(text: str) -> None:
                 try:
-                    value = float(text)
+                    value: float | int = int(text) if whole else float(text)
                 except ValueError:
-                    self._say(f"{key.capitalize()} must be a number.", ok=False)
+                    self._say(f"{key.replace('_', ' ').capitalize()} must be a{' whole' if whole else ''} number.", ok=False)
+                    return
+                if value < 0 and key != "rotation":  # (-1 in the file means "the preset's": not something to type)
+                    self._say(f"{key.replace('_', ' ').capitalize()} can't be negative.", ok=False)
                     return
                 change("Water changed.", **{key: value})
             return commit
+
+        def buttons(choices: list[tuple[str, str]], key: str) -> None:
+            row = gui.UIBoxLayout(vertical=False, space_between=4)
+            each = (width - 4 * (len(choices) - 1)) // len(choices)
+            for value, title in choices:
+                row.add(self._button(title, partial(change, f"Water: {title.lower()}.", **{key: value}), width=each,
+                                     style=S_ACTIVE if water.get(key) == value else S_BUTTON))
+            rows.add(row)
+
+        def pair(label: str, a: Any, b: Any) -> None:
+            row = gui.UIBoxLayout(vertical=False, space_between=4)
+            row.add(self._label(label, color=C_MUTED, size=10, width=118))
+            row.add(a)
+            row.add(b)
+            rows.add(row)
 
         rows.add(self._label("Water", bold=True, size=12))
         if water.get("error"):  # hand-edited into something the game can't use: it shows as its preset meanwhile
@@ -769,37 +791,54 @@ class InspectorMixin:
                                  size=9, width=width))
         rows.add(self._label("Drawn as water and rippled by the room's rain and by footsteps. Its elevation is its "
                              "level.", color=C_MUTED, size=9, width=width))
+        buttons([(k, PRESET_NAMES[k]) for k in ("muddy_puddle", "natural_pond", "stone_pool")], "preset")
+        buttons([(k, PRESET_NAMES[k]) for k in CLASSIC], "preset")
+        pair("Width / height", self._field(f"{water.get('width', 0):g}", number("width"), width=half, key="water_w"),
+             self._field(f"{water.get('height', 0):g}", number("height"), width=half, key="water_h"))
+        buttons([("ellipse", "Round"), ("rect", "Square"), ("natural", "Natural")], "shape")
+        seed, turned = int(water.get("seed") or 1), float(water.get("rotation") or 0.0)
         row = gui.UIBoxLayout(vertical=False, space_between=4)
-        for preset, title in (("puddle", "Puddle"), ("pond", "Pond")):
-            row.add(self._button(title, partial(change, f"It's a {preset} now.", preset=preset), width=(width - 4) // 2,
-                                 style=S_ACTIVE if water.get("preset") == preset else S_BUTTON))
+        row.add(self._label("Turn (°)", color=C_MUTED, size=10, width=118))
+        row.add(self._field(f"{turned:g}", number("rotation"), width=half, key="water_turn"))
+        for step in (-15, 15):  # as structures turn in the 3D view (a 2D map also has its round handle)
+            row.add(self._button(f"{step:+d}", partial(change, "Turned.", rotation=(turned + step + 180) % 360 - 180),
+                                 width=(half - 4) // 2))
         rows.add(row)
-        row = gui.UIBoxLayout(vertical=False, space_between=4)
-        row.add(self._label("Width / height", color=C_MUTED, size=10, width=118))
-        row.add(self._field(f"{water.get('width', 0):g}", number("width"), width=half, key="water_w"))
-        row.add(self._field(f"{water.get('height', 0):g}", number("height"), width=half, key="water_h"))
-        rows.add(row)
-        row = gui.UIBoxLayout(vertical=False, space_between=4)
-        row.add(self._label("Colour / opacity", color=C_MUTED, size=10, width=118))
-        row.add(self._field(str(water.get("colour", "")), lambda v: change(colour=v.strip()), width=half, key="water_colour"))
-        row.add(self._field(f"{water.get('opacity', 0):g}", number("opacity"), width=half, key="water_opacity"))
-        rows.add(row)
-        row = gui.UIBoxLayout(vertical=False, space_between=4)
-        row.add(self._label("Waves / reflection", color=C_MUTED, size=10, width=118))
-        row.add(self._field(f"{water.get('waves', 0):g}", number("waves"), width=half, key="water_waves"))
-        row.add(self._field(f"{water.get('reflection', 0):g}", number("reflection"), width=half, key="water_reflect"))
-        rows.add(row)
-        row = gui.UIBoxLayout(vertical=False, space_between=4)
-        for shape, title in (("ellipse", "Round"), ("rect", "Square")):
-            row.add(self._button(title, partial(change, shape=shape), width=(width - 4) // 2,
-                                 style=S_ACTIVE if water.get("shape") == shape else S_BUTTON))
-        rows.add(row)
+        rows.add(self._button("New natural outline", partial(change, "A new natural outline.", shape="natural",
+                                                             seed=seed % 9999 + 1), width=width))
+        if material:
+            buttons([("none", "No bank"), ("mud", "Mud"), ("grass", "Grass"), ("stone", "Stone")], "shore")
+            pair("Bank width / depth", self._field(f"{water.get('shore_width', 0):g}", number("shore_width"),
+                                                   width=half, key="water_bank"),
+                 self._field(f"{water.get('depth', 0):g}", number("depth"), width=half, key="water_depth"))
+        pair("Shallow / deep colour" if material else "Colour / opacity",
+             self._field(str(water.get("colour", "")), lambda v: change(colour=v.strip()), width=half, key="water_colour"),
+             self._field(str(water.get("deep_colour", "")), lambda v: change(deep_colour=v.strip()), width=half,
+                         key="water_deep") if material else
+             self._field(f"{water.get('opacity', 0):g}", number("opacity"), width=half, key="water_opacity"))
+        if material:
+            pair("Opacity / ripples", self._field(f"{water.get('opacity', 0):g}", number("opacity"), width=half,
+                                                  key="water_opacity"),
+                 self._field(f"{water.get('ripples', 0):g}", number("ripples"), width=half, key="water_ripples"))
+        pair("Waves / reflection", self._field(f"{water.get('waves', 0):g}", number("waves"), width=half, key="water_waves"),
+             self._field(f"{water.get('reflection', 0):g}", number("reflection"), width=half, key="water_reflect"))
         rows.add(self._toggle("Rippled by rain", bool(water.get("rain_ripples")), lambda on: change(rain_ripples=on), width))
         rows.add(self._toggle("Walk through it", bool(water.get("walkable")), lambda on: change(
             "Characters walk through it." if on else "It blocks movement now.", walkable=on), width))
         self._labeled(rows, "Step sound", self._field(str(water.get("step_sound") or ""), lambda v: change(step_sound=v.strip()),
                                                       width=width - 122, key="water_sound"), width)
-        rows.add(self._label("Drag its blue corner on the map to size it (the 2D view).", color=C_MUTED, size=9, width=width))
+        hd2d = (self.project.scene().get("settings") or {}).get("hd2d")
+        if isinstance(hd2d, dict):  # the room's: how all its water mirrors (cheaper for modest hardware)
+            rows.add(self._label("Mirrors in this room (all its water)", color=C_MUTED, size=10, width=width))
+            row = gui.UIBoxLayout(vertical=False, space_between=4)
+            now = hd2d.get("water_reflections", "full")
+            for mode, title in (("full", "Full"), ("half", "Half size"), ("sky", "Sky only")):
+                row.add(self._button(title, partial(self._edit, partial(ops.set_water_reflections, mode=mode),
+                                                    f"Water reflections: {title.lower()}."),
+                                     width=(width - 8) // 3, style=S_ACTIVE if now == mode else S_BUTTON))
+            rows.add(row)
+        rows.add(self._label("A 2D room's map: drag its blue corner to size it, the handle beyond its top to turn it.", color=C_MUTED,
+                             size=9, width=width))
         rows.add(self._button("Remove water", lambda: self._edit(lambda s: ops.remove_water(s, target), "Water removed."),
                               width=(width - 6) // 2, style=S_DANGER))
 

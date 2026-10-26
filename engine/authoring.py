@@ -335,7 +335,7 @@ def summarize(before: Doc, after: Doc) -> list[str]:
                 continue
             if eid not in olds:
                 water = ops.water_of(entity)
-                what = (f"{water['preset']} water {water['width']:g} x {water['height']:g}" if water
+                what = (f"{water['preset'].replace('_', ' ')} water {water['width']:g} x {water['height']:g}" if water
                         else entity.get("prefab_id") or ("a picture" if entity.get("sprite") else "no picture"))
                 lines.append(f"{label}: adds '{name}' ({what}) at {entity.get('x', 0):g}, {entity.get('y', 0):g}")
                 continue
@@ -421,6 +421,10 @@ def _weather_lines(label: str, before: Doc, after: Doc) -> list[str]:
     if before.get("weather_exposure") != after.get("weather_exposure"):
         lines.append(f"{label}: weather exposure {before.get('weather_exposure') or 'outdoor'} -> "
                      f"{after.get('weather_exposure') or 'outdoor'}")
+    mirrors = [(s.get("hd2d") or {}).get("water_reflections") if isinstance(s.get("hd2d"), dict) else None
+               for s in (before, after)]
+    if mirrors[0] != mirrors[1]:  # Milestone 19B
+        lines.append(f"{label}: water reflections {mirrors[0] or 'full'} -> {mirrors[1] or 'full'}")
     return lines
 
 

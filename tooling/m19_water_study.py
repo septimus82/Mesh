@@ -379,7 +379,7 @@ def studio_workflow(out: Path) -> dict[str, Any]:
         entity = ops.find_entity(studio.project.scene(), new_id) if new_id else {}
         report["placed"] = {"message": studio.message, "water": ops.water_of(entity) if entity else None,
                             "where_m": [round(entity.get("x", 0) / PX, 2), round(entity.get("y", 0) / PX, 2)] if entity else None}
-        d.button("Pond")
+        d.button("Simple pond")  # (Stage 19B named Stage 19A's presets "simple")
         d.type_into("water_w", "180")
         def water_now() -> dict[str, Any]:
             found = ops.water_of(ops.find_entity(studio.project.scene(), new_id))

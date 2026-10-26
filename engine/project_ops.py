@@ -750,7 +750,7 @@ def set_weather_exposure(scene: Doc, exposure: Any) -> Doc:
 def water_of(entity: Doc) -> Doc | None:
     """The object's water (``WaterSurface``) as its settings complete from its preset, colour as "#rrggbb"; None if
     it isn't water."""
-    from engine.water import PRESETS, WaterError, colour_hex, parse_water  # noqa: PLC0415
+    from engine.water import CLASSIC, PRESETS, WaterError, colour_hex, parse_water  # noqa: PLC0415
 
     config = (entity.get("behaviour_config") or {}).get("WaterSurface")
     if "WaterSurface" not in entity_behaviours(entity):
@@ -763,7 +763,11 @@ def water_of(entity: Doc) -> Doc | None:
         w = PRESETS.get(str((config or {}).get("preset")), PRESETS["puddle"]) if isinstance(config, dict) else PRESETS["puddle"]
     out: Doc = {"preset": w.preset, "width": w.width, "height": w.height, "colour": colour_hex(w.colour),
                 "opacity": w.opacity, "shape": w.shape, "waves": w.waves, "reflection": w.reflection,
-                "rain_ripples": w.rain_ripples, "walkable": w.walkable, "step_sound": w.step_sound}
+                "rain_ripples": w.rain_ripples, "walkable": w.walkable, "step_sound": w.step_sound,
+                "rotation": w.rotation, "seed": w.seed}
+    if w.preset not in CLASSIC:  # Stage 19B's material
+        out.update(shore=w.shore, shore_width=w.shore_width, deep_colour=colour_hex(w.deep_colour), depth=w.depth,
+                   ripples=w.ripples)
     if error:
         out["error"] = error
     return out
@@ -772,15 +776,21 @@ def water_of(entity: Doc) -> Doc | None:
 def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = _UNSET, height: Any = _UNSET,
               colour: Any = _UNSET, opacity: Any = _UNSET, shape: Any = _UNSET, waves: Any = _UNSET,
               reflection: Any = _UNSET, rain_ripples: Any = _UNSET, walkable: Any = _UNSET,
-              step_sound: Any = _UNSET) -> Doc:
-    """Make the object a water surface, or change it: ``preset`` "puddle" (shallow, mirror-like, small ripples) or
-    "pond" (larger, gentle waves, darker middle and a lighter rim); ``width``/``height`` (px, 8-8192); ``colour``
-    ("#rrggbb"); ``opacity`` (0.05-1); ``shape`` ("ellipse" or "rect"); ``waves`` and ``reflection`` (0-1);
-    ``rain_ripples`` (true: the room's rain rings it); ``walkable`` (false: it blocks movement, made solid with a box
-    its size); ``step_sound`` (a sound file played on each step through it, "" none). Only what is given changes;
-    a preset given anew starts from that preset's look (its size kept unless given). In an HD-2D room the object's
-    elevation is the water's level."""
-    from engine.water import WaterError, parse_water  # noqa: PLC0415
+              step_sound: Any = _UNSET, rotation: Any = _UNSET, seed: Any = _UNSET, shore: Any = _UNSET,
+              shore_width: Any = _UNSET, deep_colour: Any = _UNSET, depth: Any = _UNSET, ripples: Any = _UNSET) -> Doc:
+    """Make the object a water surface, or change it: ``preset`` "muddy_puddle" (shallow and brown, a ring of wet mud),
+    "natural_pond" (an irregular pond, a grassy earth bank, clear shallows and a deep middle), "stone_pool" (lined with
+    stones) or Stage 19A's simple "puddle" and "pond" (no bank); ``width``/``height`` (px, 8-8192); ``shape``
+    ("ellipse", "rect" or "natural": irregular, ``seed`` 1-9999 picking which); ``rotation`` (degrees); ``colour``
+    (its shallow colour, "#rrggbb"); ``opacity`` (0.05-1); ``waves`` and ``reflection`` (0-1); ``rain_ripples`` (true:
+    the room's rain rings it); ``walkable`` (false: it blocks movement, made solid with a box round it);
+    ``step_sound`` (a sound file played on each step through it, "" none); and, for the three new presets only,
+    ``shore`` ("none", "mud", "grass" or "stone"), ``shore_width`` (px, 0-64), ``deep_colour`` ("#rrggbb"), ``depth``
+    (0-1: how soon it gets deep away from its edge) and ``ripples`` (0-1: how strongly rain and footsteps ring it).
+    Only what is given changes; a preset given anew starts from that preset's look (its size kept unless given). In
+    an HD-2D room the object's elevation is the water's level; ``set_water_reflections`` sets how the room's water
+    mirrors."""
+    from engine.water import LOOK_19B, WaterError, extent, parse_water  # noqa: PLC0415
 
     out = copy.deepcopy(scene)
     entity = find_entity(out, entity_id)
@@ -790,7 +800,7 @@ def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = 
     if preset is not _UNSET and preset != config.get("preset"):
         from engine.water import PRESETS  # noqa: PLC0415
 
-        for key in ("colour", "opacity", "shape", "waves", "reflection"):  # the new preset's look
+        for key in ("colour", "opacity", "shape", "waves", "reflection", "seed", *LOOK_19B):  # the new preset's look
             config.pop(key, None)
         old = PRESETS.get(str(config.get("preset", "puddle")))
         if old is not None and (config.get("width"), config.get("height")) in ((old.width, old.height), (None, None)):
@@ -798,11 +808,12 @@ def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = 
             config.pop("height", None)
     given = {"preset": preset, "width": width, "height": height, "colour": colour, "opacity": opacity, "shape": shape,
              "waves": waves, "reflection": reflection, "rain_ripples": rain_ripples, "walkable": walkable,
-             "step_sound": step_sound}
+             "step_sound": step_sound, "rotation": rotation, "seed": seed, "shore": shore, "shore_width": shore_width,
+             "deep_colour": deep_colour, "depth": depth, "ripples": ripples}
     for key, value in given.items():
         if value is not _UNSET:
-            config[key] = round(float(value), 2) if key in ("width", "height") and isinstance(value, (int, float)) \
-                and not isinstance(value, bool) else value
+            config[key] = round(float(value), 2) if key in ("width", "height", "rotation", "shore_width") \
+                and isinstance(value, (int, float)) and not isinstance(value, bool) else value
     config.setdefault("preset", "puddle")
     try:
         water = parse_water(config)
@@ -817,12 +828,31 @@ def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = 
             components.pop("collider", None)
     else:  # a pond characters can't walk into: solid, with a box the water's size
         entity["solid"] = True
-        components["collider"] = {"kind": "box", "offset_x": 0.0, "offset_y": 0.0, "w": round(water.width, 2),
-                                  "h": round(water.height, 2)}
+        w, h = extent(water)  # the box round it as it is turned
+        components["collider"] = {"kind": "box", "offset_x": 0.0, "offset_y": 0.0, "w": w, "h": h}
     if components:
         entity["components"] = components
     else:
         entity.pop("components", None)
+    return _checked(scene, out)
+
+
+def set_water_reflections(scene: Doc, mode: Any) -> Doc:
+    """How the room's puddles and ponds mirror what stands above them (HD-2D rooms): "full" (a copy of the frame:
+    8 bytes a screen pixel), "half" (a half-size copy, a quarter of that memory, for modest hardware) or "sky" (the
+    sky's colour only: no copy, the cheapest)."""
+    from engine.water import REFLECTIONS  # noqa: PLC0415
+
+    if mode not in REFLECTIONS:
+        raise OpError(f"Water reflections are {', '.join(REFLECTIONS)} (got {mode!r}).")
+    out = copy.deepcopy(scene)
+    hd2d = (out.get("settings") or {}).get("hd2d") if isinstance(out.get("settings"), dict) else None
+    if not isinstance(hd2d, dict):
+        raise OpError("Water reflections are an HD-2D room's setting; this room isn't HD-2D.")
+    if mode == "full":
+        hd2d.pop("water_reflections", None)  # the default: no key, as older rooms have
+    else:
+        hd2d["water_reflections"] = mode
     return _checked(scene, out)
 
 

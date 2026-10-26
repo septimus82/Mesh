@@ -8,14 +8,16 @@ scene (x east, y north); 32 px is one metre in the 3D world.
         "camera": {"pitch": 32, "fov": 30, "distance": 15, "ortho": false, "follow": "player", "height": 0.8,
                    "bounds": [0, 0, 768, 512]},
         "sun": [-0.45, -0.55, 0.7], "ambient": 0.55,
-        "shadows": true, "shadow_resolution": 2048, "sky": "#76a0d6"
+        "shadows": true, "shadow_resolution": 2048, "sky": "#76a0d6", "water_reflections": "full"
     }}
 
 ``sun`` may also be ``{"direction": [x, y, z], "color": "#ffe8c0", "intensity": 1.0}`` (a direction alone is white
 sunlight of intensity 1). Lamps are the scene's ordinary ``lights`` (as 2D rooms use them; ``parse_scene_lights``),
 with an optional HD-2D ``elevation``; a light of ``"type": "ambient"`` tints the ambient light. The room's
 ``lighting_shadow_softness`` (sharp / soft / softer) and ``lighting_shadow_strength`` shape HD-2D shadows as they
-shape 2D ones. ``sky`` is the colour behind everything (an interior's darkness, say).
+shape 2D ones. ``sky`` is the colour behind everything (an interior's darkness, say). ``water_reflections`` is how its
+puddles and ponds mirror what stands above them: ``"full"`` (a copy of the frame, 8 bytes a pixel), ``"half"`` (a
+half-size copy: a quarter of the memory, coarser mirror images) or ``"sky"`` (the sky's colour only, no copy).
 """
 
 from __future__ import annotations
@@ -101,6 +103,7 @@ class Hd2dSettings:
     shadow_strength: float = 1.0  # the room's lighting_shadow_strength: 0 none .. 1 full
     lights: tuple[PointLight, ...] = ()
     sky: Rgb = (118 / 255, 160 / 255, 214 / 255)
+    water_reflections: str = "full"  # engine.water.REFLECTIONS
 
 
 def asset_path(value: Any, where: str) -> str:
@@ -149,7 +152,8 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
     """``settings.hd2d`` as Hd2dSettings. Raises Hd2dSettingsError naming the bad key."""
     if not isinstance(raw, dict):
         raise Hd2dSettingsError(f"settings.hd2d must be an object (got {type(raw).__name__})")
-    unknown = set(raw) - {"structures", "ground", "camera", "sun", "ambient", "shadows", "shadow_resolution", "sky"}
+    unknown = set(raw) - {"structures", "ground", "camera", "sun", "ambient", "shadows", "shadow_resolution", "sky",
+                        "water_reflections"}
     if unknown:
         raise Hd2dSettingsError(f"settings.hd2d has unknown keys: {', '.join(sorted(unknown))}")
     structures = []
@@ -214,13 +218,16 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
     resolution = raw.get("shadow_resolution", 2048)
     if resolution not in (1024, 2048, 4096):
         raise Hd2dSettingsError(f"settings.hd2d.shadow_resolution must be 1024, 2048 or 4096 (got {resolution!r})")
+    reflections = raw.get("water_reflections", "full")
+    if reflections not in ("full", "half", "sky"):
+        raise Hd2dSettingsError(f"settings.hd2d.water_reflections must be full, half or sky (got {reflections!r})")
     sky = rgb(raw.get("sky", "#76a0d6"))
     if sky is None:
         raise Hd2dSettingsError(f"settings.hd2d.sky must be a colour (got {raw.get('sky')!r})")
     return Hd2dSettings(tuple(structures), ground, camera, (float(sun[0]), float(sun[1]), float(sun[2])),
                         _number(raw, "ambient", "settings.hd2d", 0.55, 0.0, 1.0), sun_color,
                         _number(sun_block, "intensity", "settings.hd2d.sun", 1.0, 0.0, 10.0), shadows=shadows,
-                        shadow_resolution=int(resolution), sky=sky)
+                        shadow_resolution=int(resolution), sky=sky, water_reflections=reflections)
 
 
 def rgb(value: Any) -> Rgb | None:

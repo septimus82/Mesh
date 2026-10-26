@@ -794,6 +794,8 @@ class Hd2dRenderer:
         if not bodies or solid is not None or self.water_error is not None:
             if self.water is not None:
                 self.water.draw_calls = 0
+                if not bodies:  # none there now (their "Show when" flags): the frame copy isn't kept for them
+                    self.water._free_copy()
             return
         try:
             self._draw_water_now(water_mod, bodies, vp, cam, fbo, weather, maps)
@@ -822,7 +824,7 @@ class Hd2dRenderer:
                       for a, c in zip(st.ambient_color, st.sun_color))
         self.water.draw_3d(vp, cam.eye(), fbo, time=float(getattr(self.window, "water_time", 0.0)),
                            steps=list(getattr(self.window, "water_steps", None) or []), rain=rain, shelter=shelter,
-                           light=light, sky=tuple(st.sky), lighting=self.lighting)
+                           light=light, sky=tuple(st.sky), reflections=st.water_reflections, lighting=self.lighting)
         self.draw_calls += self.water.draw_calls
 
     def visible_pixels(self, sprite: Any) -> int:
