@@ -238,7 +238,7 @@ def run_case(out: Path, name: str, effects: list[dict]) -> dict[str, Any]:
 
 def anchored(out: Path, case: str) -> dict[str, Any]:
     """Impacts stay put: the same moment probed from two camera targets gives the same landed positions; and a
-    landed particle keeps its place over the next 0.1 s while it shows."""
+    landed particle keeps its place over most of the time it shows (rain 0.15 s, snow 1.5 s)."""
     game = HiddenGame(m18.make_project(out, f"proj_anchor_{case}", CASES[case]), size=study.SIZE)
     try:
         game.load(f"{SCENES}/start.json")
@@ -255,7 +255,8 @@ def anchored(out: Path, case: str) -> dict[str, Any]:
         moved_camera = max((float(np.linalg.norm(pa[i] - pb[i])) for i in both), default=0.0)
         drifts: list[float] = []
         big: list[list[float]] = []
-        for dt in (0.03, 0.06, 0.09):
+        life = 1.5 if case == "snow" else 0.15  # follow them over most of the time they show
+        for dt in (life * 0.2, life * 0.4, life * 0.6, life * 0.8):
             hd.particles.time = 7.0 + dt
             c = probe(game)
             pc = dict(zip(c["landed_ids"].tolist(), c["landed"]))
@@ -264,7 +265,8 @@ def anchored(out: Path, case: str) -> dict[str, Any]:
     finally:
         game.close()
     return {"landed_seen_from_both_targets": len(both), "max_difference_m_camera_moved": round(moved_camera, 4),
-            "landed_followed_over_time": len(drifts), "max_drift_m_over_0_09_s": round(max(drifts, default=0.0), 4),
+            "landed_followed_over_time": len(drifts), "max_drift_m_over_their_life": round(max(drifts, default=0.0), 4),
+            "p99_drift_m": round(float(np.percentile(drifts, 99)), 4) if drifts else None,
             "median_drift_m": round(statistics.median(drifts), 4) if drifts else None,
             "drifts_over_3_cm": sum(1 for d in drifts if d > 0.03), "where_over_3_cm": big[:12]}
 

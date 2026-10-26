@@ -306,7 +306,8 @@ class Studio(InspectorMixin):
         notice = getattr(self.window, "scene_particles_notice", None)
         room = self.project.current
         if again or room != getattr(self, "_weather_room", None):
-            self._weather_room, self._weather_said = room, set()
+            self._weather_room = room
+            self._weather_said: set[str] = set()
         for text, ok in ((f"Weather is off in this room: {error}" if error else None, False), (notice, True)):
             if text and text not in self._weather_said:
                 self._weather_said.add(text)

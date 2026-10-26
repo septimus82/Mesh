@@ -240,6 +240,7 @@ in vec2 in_corner; in vec4 in_seed; in vec2 in_var;
 out vec2 v_uv; out float v_alpha; flat out vec4 v_probe;
 float hash(float n) { return fract(sin(n) * 43758.5453); }
 float g_alpha, g_flip, g_bob;  // the particle's own fade, flutter and bob (leaves), set by place()
+bool g_sway = true;  // false: a snowflake's path without its sway (where it lands is found from that)
 // Where the particle is at time t (m, before the box's wrap): a pure function of its seed and the time.
 vec3 place(float t) {
     float phase = in_seed.w, sp = in_var.y;
@@ -251,8 +252,10 @@ vec3 place(float t) {
         w += vec3(u_wind * drift, -u_fall * t) * sp;
     } else if (u_kind == 1) {   // snow: slow, swaying
         w += vec3(u_wind * drift, -u_fall * t) * sp;
-        w.x += 0.35 * sin(t * 0.9 * sp + phase * 6.2832);
-        w.y += 0.25 * sin(t * 0.7 * sp + phase * 4.0);
+        if (g_sway) {
+            w.x += 0.35 * sin(t * 0.9 * sp + phase * 6.2832);
+            w.y += 0.25 * sin(t * 0.7 * sp + phase * 4.0);
+        }
     } else {                     // windborne: carried along, bobbing, fluttering; seen for u_life s, then elsewhere
         float life = t / u_life + phase, cycle = floor(life), age = fract(life);
         w += vec3(hash(cycle * 12.9898 + phase * 78.233), hash(cycle * 39.346 + phase * 11.135), 0.0) * u_box_size;
@@ -264,16 +267,6 @@ vec3 place(float t) {
     return w;
 }
 vec3 wrapped(vec3 w) { return u_box_min + mod(w - u_box_min, u_box_size); }
-// How fast a falling particle (rain, snow) moves at time t (m/s): place()'s derivative, gusts and sway included.
-vec3 velocity(float t) {
-    float phase = in_seed.w, sp = in_var.y;
-    vec3 v = vec3(u_wind * (1.0 + u_gust * sin(t * 0.7 + phase * 6.2832)), -u_fall) * sp;
-    if (u_kind == 1) {
-        v.x += 0.35 * 0.9 * sp * cos(t * 0.9 * sp + phase * 6.2832);
-        v.y += 0.25 * 0.7 * sp * cos(t * 0.7 * sp + phase * 4.0);
-    }
-    return v;
-}
 // How far (m, along the fall) a point is past the first surface the fall meets; negative: above it (or no surface:
 // outside the map, or open to the bottom of the world).
 float past_surface(vec3 p) {
@@ -302,12 +295,21 @@ void main() {
         } else {
             float s = past_surface(p);
             if (s >= 0.0) {  // it met a surface (or is under one: it met that one first)
-                age = s / max(dot(velocity(t), u_precip_dir), 1e-3);  // how long ago, at the speed it has now
+                // how long ago: from heights alone (gusts and sway move it across, never up or down, so its fall in
+                // height is exact; on a level surface the moment it landed, and so where, stays fixed)
+                // the surface's height under it, along its fall: for snow, under its path without the sway (which
+                // moves slowly), so a flake settling by an edge doesn't swap the roof for the ground below
+                g_sway = false;
+                vec3 steady = wrapped(place(t));
+                g_sway = true;
+                float s0 = past_surface(steady);
+                float h = u_kind == 1 && s0 >= 0.0 ? (steady - u_precip_dir * s0).z : (p - u_precip_dir * s).z;
+                age = (h - p.z) / max(u_fall * sp, 1e-3);
                 if (age < u_impact) {  // where it landed: back along its own fall, from where it was then
                     vec3 then = wrapped(place(t - age));
                     float off = past_surface(then);
                     p = then - u_precip_dir * max(off, 0.0);
-                    landed = abs(off) < 0.12;  // a gust carried it across an edge since: no splash (none in the
+                    landed = abs(off) < (u_kind == 1 ? 0.5 : 0.12);  // carried across an edge since: no splash (none in the
                     alpha = landed ? alpha : 0.0;  // ... wrong place), it simply isn't seen
                 } else {
                     alpha = 0.0;  // landed earlier, or sheltered: gone until it comes round again
@@ -328,8 +330,9 @@ void main() {
         vr = u_splash[int(min(2.0, floor(age / u_impact * 3.0)))];
     }
     vec2 flat_at = u_flat == 1 ? vec2(p.x, p.y + p.z) : p.xy;  // where it shows on a 2D map, or stands in 3D
-    if (u_clip == 1 && (flat_at.x < u_bounds.x || flat_at.x > u_bounds.z || flat_at.y < u_bounds.y || flat_at.y > u_bounds.w)) {
-        alpha = 0.0;  // outside the room
+    if (u_clip == 1) {  // outside the room: not drawn; fading over its last 0.75 m (no pop at its edge)
+        vec2 inside = min(flat_at - u_bounds.xy, u_bounds.zw - flat_at);
+        alpha *= clamp(min(inside.x, inside.y) / 0.75, 0.0, 1.0);
     }
     vec2 size = vr.zw / 32.0;  // the art's 32 px per metre
     vec3 across = u_right * size.x, along = u_up * size.y;
