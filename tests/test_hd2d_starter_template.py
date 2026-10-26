@@ -36,6 +36,24 @@ def _rooms(project: Path) -> dict[str, dict]:
     return {rel: json.loads((project / rel).read_text(encoding="utf-8")) for rel in ROOMS}
 
 
+def test_the_cottage_door_stands_in_its_doorway(project: Path) -> None:
+    """A billboard stands on its bottom edge: the door's (its sprite's centre less half its height) is just in front of
+    the cottage's south wall, centred on the doorway. 1.1 m out (as first made), it showed the doorway above it and
+    cast its sun shadow on the wall beside it."""
+    from PIL import Image
+
+    village = json.loads((project / ROOMS[0]).read_text(encoding="utf-8"))
+    cottage = next(st for st in village["settings"]["hd2d"]["structures"] if st["id"] == "cottage")
+    door = next(e for e in village["entities"] if e.get("tag") == "door")
+    with Image.open(project / door["sprite"]) as sprite:
+        bottom = door["y"] - sprite.height / 2
+    wall_face = cottage["y"] - 2.0 * 32  # the cottage reaches 2 m south of where it stands
+    assert door["x"] == cottage["x"], "centred on the doorway"
+    assert 0 < wall_face - bottom <= 0.05 * 32, "in front of the wall's face, never on it or out on the ground"
+    arrival = next(e for e in village["entities"] if e.get("tag") == "spawn_point")
+    assert (arrival["x"], arrival["y"]) == (door["x"], door["y"] - 96), "arriving 3 m south of the door, outside"
+
+
 def test_the_template_is_offered_as_a_labelled_preview() -> None:
     offered = list_templates(launcher_only=True)
     hd2d = next(t for t in offered if t.id == "hd2d_rpg")

@@ -48,6 +48,11 @@ INSIDE_ARRIVAL = (8.0, 5.6)  # m, feet: where the player starts and arrives insi
 FOV = 12.0  # degrees: a long lens, near-orthographic with some depth
 OUTDOOR_VIEW, INDOOR_VIEW = 11.25, 7.5  # m of the world top to bottom at the player: 64 / 96 px per m at 720 px
 SUN = [-0.45, -0.55, 0.70]  # towards the sun: Mesh's default, high in the south-west
+# The cottage's door (m, its sprite's centre), standing in the doorway: a billboard stands on its bottom edge, so the
+# 64 px (2 m) door sprite's centre is 1 m north of where it stands, 2 cm in front of the south wall's outer face (the
+# cottage at y 8.0, 2 m deep each way). Standing further out, it showed the doorway above it and threw its sun shadow
+# onto the wall beside it.
+COTTAGE_DOOR = (6.0, 8.0 - 2.0 - 0.02 + 1.0)
 
 # (id, model, x m, y m, turn degrees): the village's structures, placed in this order.
 VILLAGE = [
@@ -208,7 +213,7 @@ def build(root: Path, bundled: Callable[[str], Path | None], person: dict[str, A
         if e.get("tag") == "player":
             e["x"], e["y"], e["elevation"] = INSIDE_ARRIVAL[0] * PX, INSIDE_ARRIVAL[1] * PX + FEET_48, 0.1 * PX
     # A door in the cottage's doorway (its arrival 3 m south, outside), and one by the west wall inside.
-    village, inside = ops.link_rooms(village, "start", "Village", _at(6.0, 5.9), inside, inside_key, "Cottage",
+    village, inside = ops.link_rooms(village, "start", "Village", _at(*COTTAGE_DOOR), inside, inside_key, "Cottage",
                                      (5.6 * PX, 7.6 * PX))
     for e in inside["entities"]:  # the inside's door and arrival stand on the wooden floor, 0.1 m up
         if e.get("tag") in ("door", "spawn_point"):
