@@ -148,6 +148,47 @@ def test_room_changes_free_every_particle_gl_object(village: Any) -> None:
     layer.release()  # a second release does nothing
 
 
+@pytest.mark.parametrize(("method", "nth"), [("texture", 1), ("buffer", 3), ("geometry", 2)])
+def test_a_layer_that_fails_on_the_gpu_part_way_leaves_nothing_behind(village: Any, monkeypatch: pytest.MonkeyPatch,
+                                                                     method: str, nth: int) -> None:
+    """The real context's ``nth`` texture / buffer / geometry fails (a driver out of memory, say): the objects made
+    before it are freed at once, and the renderer keeps no layer."""
+    from hd2d_demo import _gl_counts
+
+    from engine.scene_particles import ParticleLayer, parse_particles
+
+    ctx, hd = village.window.ctx, village.window.hd2d_renderer
+    effects = parse_particles([{"preset": "rain", "count": 2000}, {"preset": "wind", "count": 300}])
+    hd.set_particles(())
+    try:
+        ctx.gc()
+        before = _gl_counts(ctx)
+        real, calls = getattr(ctx, method), []
+
+        def failing(*args: Any, **kwargs: Any) -> Any:
+            calls.append(1)
+            if len(calls) == nth:
+                raise RuntimeError("out of GPU memory (injected)")
+            return real(*args, **kwargs)
+
+        monkeypatch.setattr(ctx, method, failing)
+        with pytest.raises(RuntimeError, match="injected"):
+            ParticleLayer(ctx, effects, gl=village.arcade.gl)
+        monkeypatch.undo()
+        ctx.gc()
+        assert _gl_counts(ctx) == before, "nothing it made is left"
+        with pytest.raises(RuntimeError, match="injected"):
+            monkeypatch.setattr(ctx, method, failing)
+            calls.clear()
+            hd.set_particles(effects)
+        monkeypatch.undo()
+        assert hd.particles is None
+    finally:
+        hd.set_particles(parse_particles([{"preset": "rain", "count": 3000, "seed": 3}]))  # the village's own rain
+    village.draw()
+    assert hd.particles.draw_calls == 1, "a good layer still draws afterwards"
+
+
 def test_a_2d_room_draws_particles_only_when_it_asks(tmp_path: Path) -> None:
     from hd2d_demo import HiddenGame
 

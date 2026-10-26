@@ -261,20 +261,27 @@ class ParticleLayer:
         self.enabled = [e.enabled for e in effects]
         self.depth_test = True  # False only to show what depth testing hides (diagnostics)
         self.draw_calls = 0
-        self.program = ctx.program(vertex_shader=VS, fragment_shader=FS)
-        image = atlas_image()
-        self.texture = ctx.texture(image.size, components=4, data=image.tobytes(),
-                                   filter=(ctx.NEAREST, ctx.NEAREST))
-        self.quad = ctx.buffer(data=array("f", [-0.5, 0.0, 0.5, 0.0, -0.5, 1.0, 0.5, 1.0]).tobytes())
+        self.program: Any = None
+        self.texture: Any = None
+        self.quad: Any = None
         self.buffers: list[Any] = []
         self.geometries: list[Any] = []
-        for effect in effects:
-            buffer = ctx.buffer(data=seeds(effect).tobytes()) if effect.count else None
-            self.buffers.append(buffer)
-            self.geometries.append(None if buffer is None else ctx.geometry(
-                [gl.BufferDescription(self.quad, "2f", ["in_corner"]),
-                 gl.BufferDescription(buffer, "4f 2f", ["in_seed", "in_var"], instanced=True)],
-                mode=ctx.TRIANGLE_STRIP))
+        try:  # one GPU object after another: if one fails, free those already made (not left to GC), then raise
+            self.program = ctx.program(vertex_shader=VS, fragment_shader=FS)
+            image = atlas_image()
+            self.texture = ctx.texture(image.size, components=4, data=image.tobytes(),
+                                       filter=(ctx.NEAREST, ctx.NEAREST))
+            self.quad = ctx.buffer(data=array("f", [-0.5, 0.0, 0.5, 0.0, -0.5, 1.0, 0.5, 1.0]).tobytes())
+            for effect in effects:
+                buffer = ctx.buffer(data=seeds(effect).tobytes()) if effect.count else None
+                self.buffers.append(buffer)
+                self.geometries.append(None if buffer is None else ctx.geometry(
+                    [gl.BufferDescription(self.quad, "2f", ["in_corner"]),
+                     gl.BufferDescription(buffer, "4f 2f", ["in_seed", "in_var"], instanced=True)],
+                    mode=ctx.TRIANGLE_STRIP))
+        except BaseException:
+            self.release()
+            raise
         self.uniforms = [self._uniforms(e) for e in effects]  # per effect, fixed: set as they are each frame
 
     @staticmethod
@@ -304,18 +311,15 @@ class ParticleLayer:
         return [self.program, self.texture, self.quad, *(b for b in self.buffers if b is not None)]
 
     def release(self) -> None:
-        if self.program is None:  # already released
-            return
+        """Free every GPU object this layer made (also a partly made one); a second call does nothing."""
         for geometry in self.geometries:
             if geometry is not None:
                 geometry.flush()  # its vertex arrays
-        for buffer in self.buffers:
-            if buffer is not None:
-                buffer.delete()
-        self.quad.delete()
-        self.texture.delete()
-        self.program.delete()
-        self.buffers, self.geometries, self.program = [], [], None
+        for obj in (*self.buffers, self.quad, self.texture, self.program):
+            if obj is not None:
+                obj.delete()
+        self.buffers, self.geometries = [], []
+        self.quad = self.texture = self.program = None
 
     def _draw(self, vp: tuple[float, ...], boxes: list[tuple[tuple[float, float, float], tuple[float, float, float]]],
               right: tuple[float, float, float], up: tuple[float, float, float], light: tuple[float, float, float],

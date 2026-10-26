@@ -209,6 +209,26 @@ The perf run's `gl_lifecycle` block counts GL objects after a GL garbage collect
 - `tests/test_scene_particles_gpu.py` asserts the room-change stability and that `set_particles(())` frees every
   object.
 
+### GPU initialization safety (added at acceptance)
+
+`ParticleLayer.__init__` makes its GPU objects one after another: the program, the atlas texture, the quad buffer,
+then a seed buffer and a geometry (vertex array) per effect.
+
+- **Before:** if a later allocation failed (a shader that won't compile, a driver out of memory), the objects
+  already made were left for garbage collection to reclaim.
+- **Now:** the constructor frees everything it has made, then re-raises. The room-load path still catches the error,
+  logs it, keeps it on `scene_particles_error` and loads the room without particles. `release()` frees whatever
+  exists (also a partly made layer) and is safe to call twice.
+- **Tests:**
+  - `test_a_layer_that_fails_part_way_frees_what_it_had_made` (fast) uses a fake context that fails at each of the
+    7 allocation stages in turn, and asserts that every object made before the failure is freed.
+  - `test_a_2d_room_whose_particles_fail_on_the_gpu_still_loads_without_them` (fast) checks that the room still
+    loads and records the error.
+  - `test_a_layer_that_fails_on_the_gpu_part_way_leaves_nothing_behind` (GPU, 3 cases) injects failures into the
+    real context at the texture, the second seed buffer and the second geometry. It asserts that the GL counts after
+    `ctx.gc()` equal those before, that the renderer keeps no layer, and that a good layer made afterwards still
+    draws in one call.
+
 ### Targets (from the measured hardware)
 
 - A particle pass under 0.15 ms of GPU time at the per-effect maximum of 20,000 particles on this GPU.

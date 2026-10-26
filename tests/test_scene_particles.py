@@ -106,6 +106,61 @@ def test_a_room_load_hands_particles_to_its_renderer_or_keeps_2d_rooms_untouched
     assert "didn't compile" in no_gl.scene_particles_error, "a driver that can't build them: the room still loads"
 
 
+class _FakeGL:
+    """A GL context whose ``fail_at``-th allocation fails; it records every object made and whether it was freed."""
+
+    NEAREST, TRIANGLE_STRIP = 0, 5
+
+    def __init__(self, fail_at: int) -> None:
+        self.fail_at, self.made = fail_at, []
+
+    def _make(self, kind: str) -> Any:
+        if len(self.made) == self.fail_at:
+            raise RuntimeError(f"no {kind} (driver)")
+        obj = SimpleNamespace(kind=kind, freed=False, size=24, width=32, height=24)
+        obj.delete = obj.flush = lambda o=obj: setattr(o, "freed", True)
+        self.made.append(obj)
+        return obj
+
+    def program(self, **_: Any) -> Any:
+        return self._make("program")
+
+    def texture(self, *_: Any, **__: Any) -> Any:
+        return self._make("texture")
+
+    def buffer(self, **_: Any) -> Any:
+        return self._make("buffer")
+
+    def geometry(self, *_: Any, **__: Any) -> Any:
+        return self._make("geometry")
+
+
+_GL_MODULE = SimpleNamespace(BufferDescription=lambda *a, **k: None)
+
+
+def test_a_layer_that_fails_part_way_frees_what_it_had_made() -> None:
+    effects = sp.parse_particles([{"preset": "rain", "count": 10}, {"preset": "snow", "count": 0},
+                                  {"preset": "wind", "count": 10}])
+    whole = _FakeGL(fail_at=-1)
+    layer = sp.ParticleLayer(whole, effects, gl=_GL_MODULE)  # program, texture, quad, 2 x (buffer, geometry)
+    assert [o.kind for o in whole.made] == ["program", "texture", "buffer", "buffer", "geometry", "buffer", "geometry"]
+    layer.release()
+    layer.release()  # a second release does nothing
+    assert all(o.freed for o in whole.made)
+    for stage in range(7):  # the program, the texture, the quad, each seed buffer and each geometry failing
+        gl = _FakeGL(fail_at=stage)
+        with pytest.raises(RuntimeError, match="driver"):
+            sp.ParticleLayer(gl, effects, gl=_GL_MODULE)
+        assert len(gl.made) == stage and all(o.freed for o in gl.made), (stage, [(o.kind, o.freed) for o in gl.made])
+
+
+def test_a_2d_room_whose_particles_fail_on_the_gpu_still_loads_without_them() -> None:
+    window = SimpleNamespace(hd2d_renderer=None, ctx=_FakeGL(fail_at=2), scene_particles=None)
+    sp.configure(window, {"particles": [{"preset": "snow", "count": 10}]})
+    assert window.scene_particles is None and "driver" in window.scene_particles_error
+    assert all(o.freed for o in window.ctx.made)
+
+
 def test_a_room_s_particles_are_authored_checked_and_saved_in_its_settings() -> None:
     from engine import authoring
     from engine import project_ops as ops
