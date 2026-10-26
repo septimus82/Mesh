@@ -54,6 +54,11 @@ INSIDE_ARRIVAL = (9.2, 6.2)
 # walls 2.5 m south): like the outside door, a billboard stands on its bottom edge, so the 64 px (2 m) door sprite's
 # centre is 1 m north of where it stands, 2 cm in front of the south wall's outer face (no trim indoors).
 INSIDE_DOOR = (8.0, 6.0 - 2.5 - 0.02 + 1.0)
+# Where walking into that door goes through. Its picture's box (the default) stands up from its base across the floor
+# in front of it, so the player left about 1.9 m before the doorway, and walking across the room's south part did too.
+# Instead: a 0.5 x 0.25 m area at the picture's base (SceneTransition area_at "base"), which the player's feet reach only
+# by stepping into the doorway (below about y 3.8; walking along, or pressed against, the wall stays above 3.88).
+INSIDE_DOOR_AREA = {"area_width": 0.5 * PX, "area_height": 0.25 * PX, "area_at": "base"}
 FOV = 12.0  # degrees: a long lens, near-orthographic with some depth
 OUTDOOR_VIEW, INDOOR_VIEW = 11.25, 7.5  # m of the world top to bottom at the player: 64 / 96 px per m at 720 px
 SUN = [-0.45, -0.55, 0.70]  # towards the sun: Mesh's default, high in the south-west
@@ -226,8 +231,10 @@ def build(root: Path, bundled: Callable[[str], Path | None], person: dict[str, A
     for e in inside["entities"]:  # the inside's door and arrival stand on the wooden floor, 0.1 m up
         if e.get("tag") in ("door", "spawn_point"):
             e["elevation"] = 0.1 * PX
-        if e.get("tag") == "spawn_point":  # 3.3 m from the door: outside its reach
+        if e.get("tag") == "spawn_point":  # beside the door's line: outside its reach
             e["x"], e["y"] = INSIDE_ARRIVAL[0] * PX, INSIDE_ARRIVAL[1] * PX + FEET_32
+        if e.get("tag") == "door":  # walked into in its doorway, not across the floor in front of it
+            e["behaviour_config"]["SceneTransition"].update(INSIDE_DOOR_AREA)
     json_io.write_json_atomic(root / START, village)
     json_io.write_json_atomic(root / inside_path, inside)
     json_io.write_json_atomic(root / WORLD, world)

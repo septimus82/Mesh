@@ -83,6 +83,9 @@ class SceneTransition(Behaviour):
         "once": ParamDef(bool, default=False, description="Prevent the transition from firing more than once"),
         "area_width": ParamDef(float, default=0.0, description="Width of the area walking into triggers (0: the picture)"),
         "area_height": ParamDef(float, default=0.0, description="Height of that area (0: the picture)"),
+        "area_at": ParamDef(str, default="centre",
+                            description="Where that area is centred: the picture's centre, or its base (where an "
+                                        "HD-2D billboard stands)"),
     }
 
     def __init__(self, entity: Any, window: Any, **config: Any) -> None:
@@ -114,6 +117,8 @@ class SceneTransition(Behaviour):
             self.area = (max(0.0, float(merged.get("area_width") or 0)), max(0.0, float(merged.get("area_height") or 0)))
         except (TypeError, ValueError):
             self.area = (0.0, 0.0)
+        # An HD-2D door stands on its picture's bottom edge, so its doorway is there, not at the picture's centre.
+        self.area_at = "base" if str(merged.get("area_at") or "").strip().lower() == "base" else "centre"
         self.config.update(
             {
                 "target_scene": self.target_scene,
@@ -155,7 +160,8 @@ class SceneTransition(Behaviour):
         if not candidates:
             return
         if self.area[0] > 0 and self.area[1] > 0:
-            x, y = float(self.entity.center_x), float(self.entity.center_y)
+            x = float(self.entity.center_x)
+            y = float(self.entity.bottom if self.area_at == "base" else self.entity.center_y)
             half_w, half_h = self.area[0] / 2, self.area[1] / 2
             for candidate in candidates:
                 if (candidate.left < x + half_w and candidate.right > x - half_w

@@ -75,6 +75,7 @@ def test_the_cottage_inside_door_stands_in_its_south_doorway(project: Path) -> N
     assert room["x"] - 3.0 * 32 <= door["x"] - half_width and door["x"] + half_width <= room["x"] + 3.0 * 32, \
         "its picture within the room's width: through no wall"
     player_half = 10  # px: the player's hit box is about 0.28 m either side of its centre
+    assert door["behaviour_config"]["SceneTransition"].get("area_at") == "base", "walked into at its doorway"
     for e in inside["entities"]:
         if e.get("tag") == "spawn_point" or e.get("prefab_id") == "player":
             assert abs(e["x"] - door["x"]) >= half_width + player_half, (e.get("tag"), "beside the door's line")
@@ -232,3 +233,44 @@ def test_the_template_follows_the_hd2d_visual_standard(project: Path) -> None:
     sheets |= {(p["id"], p["entity"].get("sprite")) for p in prefabs if p.get("id") in ("person", "player")}
     assert all(sheet and "/hd2d_" in sheet for _name, sheet in sheets), sheets
     assert {name for name, _sheet in sheets} >= {"Elder", "Mara", "Tomas", "person", "player"}
+
+
+def test_the_inside_door_takes_the_player_out_only_from_its_doorway(project: Path) -> None:
+    """Where walking into the inside's exit door goes through, measured with the game's own door behaviour. Its
+    picture's box (the original trigger) reached 1.9 m across the floor in front of the doorway (feet to about y 5.6,
+    and anyone crossing the room's south part); the area at its base fires only once the feet step into the doorway
+    (below about y 3.8). Walking along the south wall (feet at 3.93, the closest the wall allows) never fires."""
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock
+
+    from PIL import Image
+
+    from engine.behaviours.scene_transition import SceneTransition
+
+    inside = json.loads((project / ROOMS[1]).read_text(encoding="utf-8"))
+    door = next(e for e in inside["entities"] if e.get("tag") == "door")
+    config = door["behaviour_config"]["SceneTransition"]
+    with Image.open(project / door["sprite"]) as sprite:
+        _left, top, _right, below = sprite.convert("RGBA").getchannel("A").getbbox() or (0, 0, 0, 0)
+        door_bottom = door["y"] - sprite.height / 2 + (sprite.height - below)
+        picture_reach_m = (door_bottom + (below - top)) / 32  # how far north the picture's box reaches
+
+    def fires(x_m: float, feet_m: float) -> bool:
+        player = SimpleNamespace(mesh_tag="player", mesh_name="Hero", left=x_m * 32 - 16, right=x_m * 32 + 16,
+                                 bottom=feet_m * 32 - 6, top=feet_m * 32 - 6 + 48)  # a 32 x 48 hero, feet 6 px up
+        entity = MagicMock(mesh_name=door["name"], center_x=door["x"], center_y=door["y"], bottom=door_bottom,
+                           mesh_entity_data=door)
+        window = MagicMock()
+        window.get_flag = lambda name, default=False: default
+        window.scene_controller = SimpleNamespace(all_sprites=[player])
+        SceneTransition(entity, window, **config).update(1 / 60)
+        return bool(window.request_scene_change.called)
+
+    steps = [round(3.5 + i * 0.01, 2) for i in range(300)]  # feet y 3.50 .. 6.49 m, straight in at the door's x
+    furthest = max(y for y in steps if fires(door["x"] / 32, y))
+    assert 3.70 <= furthest <= 3.85, f"fires only in the doorway (feet below {furthest} m)"
+    assert picture_reach_m - furthest > 1.5, "the original trigger (its picture's box) reached 1.5 m further"
+    assert not fires(door["x"] / 32, 5.0), "not from the floor in front of the doorway"
+    assert not any(fires(x / 10, 3.934) for x in range(55, 106)), "not walking along the south wall"
+    arrival = next(e for e in inside["entities"] if e.get("tag") == "spawn_point")
+    assert not fires(arrival["x"] / 32, arrival["y"] / 32 - 0.375 - 0.1875), "not where the player arrives"
