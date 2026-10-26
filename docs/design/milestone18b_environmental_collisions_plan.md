@@ -1,17 +1,18 @@
 # Milestone 18B plan: weather that meets the world
 
-Status: **plan for owner review. Nothing is implemented.** It builds on Stage 18A (`engine/scene_particles.py`,
-merged with #377) and keeps 18A's model: stateless GPU particles, one instanced draw call per effect, and no
-per-particle work on the CPU.
+**Status:** the owner accepted this direction on 2026-10-26, with the refinements folded in below. It builds on
+Stage 18A (`engine/scene_particles.py`, #377) and keeps 18A's model: stateless GPU particles, one instanced draw call
+per effect, and no per-particle work on the CPU. The long-term aim is an environmental toolkit that creators control
+without editing JSON. 18B builds the collision foundation for it.
 
 ## The problem: hidden is not sheltered
 
 In 18A, a raindrop behind the cottage's roof is hidden only because the camera's depth buffer says the roof is in
-front of it. That is the right thing for drawing, but it is not shelter:
+front of it. That is right for drawing, but it is not shelter:
 
 - **Under the bridge,** drops fall through the deck and keep falling in the underpass. Wherever the camera sees
   under the deck, they show.
-- **Roofs** don't stop rain. A drop that passes behind the roof comes out below the eaves, still falling.
+- **Roofs** don't stop rain. A drop that passes behind a roof comes out below the eaves, still falling.
 - **Nothing lands,** so nothing splashes.
 - **The cottage interior** fills with rain or snow if a room asks for it, and particles fill the void around the
   room.
@@ -19,109 +20,136 @@ front of it. That is the right thing for drawing, but it is not shelter:
 Shelter depends on where the sky is blocked along the fall direction, independent of the camera. 18B needs its own
 map of that.
 
-## Recommended architecture: a precipitation map
+## The precipitation map
 
-The renderer already makes exactly this kind of map for the sun (`engine/hd2d/lighting.py`):
+The precipitation map is an orthographic depth map looking along a fall direction (down, tilted by the effect's
+mean wind). It is drawn from the room's real environmental geometry: the ground, every structure (roofs, decks,
+stairs, terraces, walls), and structures being dragged in Studio.
 
-- `sun_matrix(direction, world_lo, world_hi)` gives an orthographic view-projection along a direction that fits the
-  room;
-- `_depth_target` gives a depth texture and framebuffer;
-- the `caster` program draws the batched structures (buildings, the bridge, stairs, terraces) into it. The renderer
-  passes `self.static + live` to it; the sun pass leaves the ground out (it receives shadow and never casts).
-  The precipitation map must include `self.ground` too, so drops land on it.
+- **Built like the sun's shadow map, but not coupled to it.** It uses the same building blocks (`sun_matrix` fitted
+  to the room, a depth texture and framebuffer, the caster shaders), but it has its own matrix, resolution (1024²,
+  about 6 cm a texel over the village), programs and lifecycle. Sun direction, intensity, shadow softness or
+  shadows switched off never change it.
+- **Cutaways open nothing.** The cutaway is a discard in the camera pass only (`MESH_FS`); the map's caster draws
+  every structure whole. A roof that is cut away or see-through for the camera still shelters.
+- **Billboards are not in it.** Characters, doors and lamps are left out, so people don't shelter rain. This is
+  documented as a limitation.
 
-18B adds one more such map, the **precipitation map**: depth along the fall direction (straight down, tilted by the
-effect's mean wind), drawn from the room's static structures.
+### Lifecycle (a cached environmental resource)
 
-| | Sun shadow map | Precipitation map |
-|---|---|---|
-| Direction | towards the sun | the fall: down, tilted by the mean wind (one map per room, or per effect if two winds differ a lot) |
-| Contents | structures and billboards (not the ground), every frame | the ground and the structures (roofs, decks, terraces, walls), no billboards, **once per room**, and again only when Studio edits a structure (an `invalidate()` like the lamps' maps have) |
-| Size | 2048² | 1024² is about 6 cm per texel over the village (about 4 MB of depth) |
-| Cost | about 30 draws, every frame | the same draws, once |
+- **Owner.** The renderer owns a small cache: one map per distinct fall direction in use (at most one per falling
+  effect, so at most 4). The cache is keyed by the fall direction quantised to 0.5°, together with the structure
+  version.
+- **Built when first needed.** A map is built on the first frame that a falling effect is drawn. It costs about the
+  same draws as one sun shadow pass, once.
+- **Invalidated by structure changes.** Anything that changes structures invalidates every map: the hooks the lamps'
+  maps already use (`set_live_ids`, `set_live` during a Studio drag), and room reloads, which make a new renderer
+  (Studio's commits, undo/redo, reimport). An invalidated map is rebuilt before the next frame that needs it.
+- **Direction changes can't reuse a stale map.** A different wind or speed gives a different key, so a new map. A
+  map not used by any current effect is freed.
+- **Freed explicitly.** Maps are released on `set_particles`, room change, `release()` and window close, and counted
+  in `gl_objects()` / `stats()`. A failure while building one frees what it made (as 18A's layer does).
 
 ### In the particle vertex shader (still stateless)
 
-For each particle at its world position `p` (computed as in 18A):
+1. **The particle's position** `p(t)` is computed as in 18A, as a pure function of its seed and the time.
+2. **Project it along the fall:** `q = M_precip * p`. The map's depth at `q.xy` is the first surface the fall meets
+   along that column. `s = (q.z − d_surface) × depth_scale` is how far past that surface the particle is, in metres
+   along the fall direction.
+3. **Sheltered or above the surface:**
+   - If `s < 0`, the particle is still above the surface and is drawn as in 18A.
+   - If `s ≥ 0`, it has met the surface; this applies under a roof and beneath the deck. A drop below a roof had
+     already landed on the roof, so it is not drawn.
+4. **The impact point follows the fall, not the particle's XY.**
+   - The landing time is `t_c = t − s / v_fall`, and the impact point is `p(t_c)` moved back onto the surface along
+     the fall direction.
+   - A wind-slanted drop therefore lands where its own slanted path meets the surface. It is not at the XY where it
+     is now.
+   - Because `t_c` is a function of the seed only, the splash stays fixed in the world for its whole short life.
+5. **The impact shows** for a moment, in the same quad and the same draw call:
+   - **rain:** a 2–3 frame pixel-art splash for about 0.15 s;
+   - **snow:** a settled flake that fades over about 1.5 s. It is not accumulation.
 
-1. **Project `p` into the precipitation map:** `q = u_precip_vp * p`. The map gives the depth `d_surface` of the
-   first surface the fall meets there.
-2. **Sheltered:** if `q.z > d_surface + bias`, something above stops this drop (a roof, the deck). It isn't drawn.
-   That is the real underpass and eave shelter, whatever the camera sees.
-3. **Landing:** the surface height under the drop is reconstructed from `d_surface` (an affine depth, so it is
-   exact). How long ago the drop crossed it is `age = (h_surface - p.z) / fall_speed`.
-   - **Rain:** for `age < 0.15 s` the quad is drawn as a **splash**: 2–3 atlas frames chosen by age, laid flat on
-     the surface at `(x, y, h_surface)`. After that it isn't drawn until it wraps back to the top.
-   - **Snow:** for `age < settle_time` (about 1–2 s) the flake rests on the surface and fades. It is a settled
-     flake, not accumulation.
-   - **Leaves:** unchanged. They are carried by the wind, not falling, and skip the shelter test.
+   Splashes and flakes stand on the surface, facing the camera, and are depth-tested like the drops.
+6. **Room boundary:** particles whose XY is outside the room's rectangle are discarded.
+7. **Leaves** (the windborne preset) are carried horizontally, not falling. They skip shelter and impacts but are
+   clipped to the room.
 
-   Splashes therefore appear exactly where drops meet roofs, the bridge deck, terraces and the ground. They come
-   from the same draw call, at the cost of one texture fetch per vertex. There is no second particle system and no
-   CPU collision.
-4. **Room boundary:** particles outside the room's world rectangle (the renderer's `world_lo`/`world_hi`, already
-   known) are discarded. That removes the "stars" around the cottage and the backdrop in 2D rooms.
+### Wind, gusts, mixed effects and moving structures
+
+| Change | What happens |
+|---|---|
+| Wind direction or speed, fall speed | A different mean fall direction, so a different map key and a rebuilt map. A stale map is never sampled. |
+| Gusts | The map uses the mean direction. Gusts change a drop's horizontal speed by up to ±`gust` × wind, which moves its landing point by at most `height_fallen × gust × |wind| / fall`. With the rain defaults over 12 m that is up to 0.2 m, inside the 1.5 m edge fades, and documented. The landing point stays consistent: the splash appears where that drop ends. |
+| Mixed effects (rain + snow) | Each falling effect samples the map for its own direction, so rain and snow get separate maps. |
+| Moving structures | Studio drags invalidate the maps each frame of the drag; the map follows the structure. The game has no moving structures yet. |
+| Map unavailable (it failed to build) | Rain and snow fall as in 18A, with no shelter and no impacts. The reason is kept on the renderer and shown in Studio. |
+| Out of bounds | A sample outside the map means "no surface". Room clipping discards those particles first. |
 
 ### Indoors
 
-- An interior has walls and is seen from above, so its precipitation map would show open sky.
-- Room-level exposure decides instead. Add `settings.weather_exposure`: `"outdoor"` (the default for rooms with
-  ground) or `"indoor"` (the HD-2D interior template's default, the cottage among them).
-- An indoor room draws no precipitation, even when a future world-level weather event is active. 18A's per-room
-  `settings.particles` keeps working; an author can still ask for leaves indoors.
-- This also prepares event-driven weather. The world says "rain", and each room's exposure decides whether it
-  shows.
+- A per-room setting, `settings.weather_exposure`, takes `"outdoor"` (the default) or `"indoor"`.
+- An indoor room draws no rain or snow, so weather being active elsewhere never wets an interior. Studio shows why
+  if the room asks for them anyway.
+- The HD-2D interior template rooms (the cottage among them) are indoor.
+- Windborne leaves follow the same rule, since they are outdoor weather too.
 
 ### 2D rooms
 
-- 2D maps have no 3D structure, so 18B gives them a boundary clip and splashes on the ground only.
-- 2D roofs, using map regions or a "covered" tile layer as a 2D precipitation mask, are a possible later
-  extension. They are not in 18B.
+- 2D maps have no 3D structure. 18B gives them clipping to the room's map rectangle and splashes and settling at
+  ground level, in the same draw call, using the same "time since it met the ground" approach.
+- 2D roof shelter would need a separate roof mask and is **not** claimed in 18B.
+
+## Studio
+
+- **Preview Weather:** a toggle in the 3D view's panel. When on, the editing view draws the room's particles,
+  sheltered, with impacts, through the same renderer, and their clock runs in Studio's edit tick. It is on by
+  default when the room has `settings.particles`.
+- **Errors:** invalid particle settings, or an indoor room asking for rain, show in Studio's status line instead of
+  only in the log.
+- **The AI review panel:** `authoring.summarize` gains a settings line, for example "Village: particles rain ×3000
+  (wind 0.8 m/s east) → snow ×2000". A proposal that changes weather is then readable before it is accepted.
+- **Later stages:** a full Weather panel (visual controls, presets, transitions, combinations) and event-driven
+  weather transitions.
 
 ## Why this, and not the alternatives
 
 | Option | Verdict |
 |---|---|
-| Per-raindrop collision in Python (ray-cast each drop) | Rejected. 10,000 drops means 10,000 ray casts a frame in Python, plus state and a buffer upload per frame. It gives up everything 18A won. |
-| Analytic boxes (each roof, deck and wall as an AABB passed as uniforms) | Workable only for a handful of boxes. It doesn't follow real meshes (pitched roofs, stairs, terrain) and needs hand-made data per model. Rejected as the primary method. |
-| Stateful GPU particles (transform feedback / compute) | Unnecessary. Shelter and landing are functions of position, which the stateless shader already has. Keep it in reserve for puddles or flowing water. |
-| Precipitation depth map (recommended) | Uses the existing shadow-map code and the real geometry. It costs one static render per room and one texture fetch per vertex, and needs no new dependencies. |
+| Per-raindrop collision in Python (ray-cast each drop) | Rejected. 10,000 ray casts a frame in Python, plus state and buffer uploads, would give up everything 18A won. |
+| Analytic boxes (each roof, deck and wall as an AABB in uniforms) | Rejected as the primary method. It doesn't follow real meshes and needs hand-made data per model. |
+| Stateful GPU particles (transform feedback / compute) | Unnecessary. Shelter and impact are functions of position, which the stateless shader already has. Keep it in reserve for water. |
+| Precipitation depth map (chosen) | It reuses proven shadow-map techniques and real geometry, costs one cached render per room and direction plus a texture fetch per vertex, and needs no new dependencies. |
 
-## Studio preview (the 18A usability gap)
+## Acceptance proof (Stage 18B)
 
-- **Studio's HD-2D view:** draw the layer in the edit camera too. `draw_3d` already works for any camera; 18A
-  limited it to the game view (`camera is None`). Put it behind a **"Preview weather"** toggle in Studio's View
-  menu, on by default when the room has `settings.particles`, and advance the clock from Studio's tick.
-- **Studio's 2D view:** call `draw_2d` under the editor camera with the same toggle.
-- **Errors:** show the room's `scene_particles_error` in Studio's status line instead of the log only.
-- **AI review card:** add a settings line to `authoring.summarize`, for example "Start: particles rain ×3000". The
-  same change fixes the existing `set_room_lighting` gap.
-- **No weather panel yet.** Editing stays with the `set_particles` operation (AI) and JSON until the owner asks for
-  the panel.
+The proof is rendered in hidden windows from the starter village. It uses reusable systems; nothing is tied to
+village coordinates.
 
-## Acceptance proof for 18B (planned)
-
-The proof would be rendered by the 18A study tool, extended.
-
-| Check | Measure |
-|---|---|
-| Underpass sheltered | With depth testing off (so camera occlusion doesn't count), no rain pixels under the deck. Rain on top of the deck splashes. |
-| Roofs stop rain | No rain below the cottage eaves inside the roof's footprint; splashes on the roof. |
-| Ground and elevated splashes | Splashes counted on the ground, the terraces, the deck and the roof, each at the surface's height (checked against the map). |
-| Snow reaches surfaces | Flakes settle at surface height under open sky and not under cover. |
-| Indoors and boundaries | The cottage interior shows zero precipitation pixels. No particles outside the room rectangle in either 2D or HD-2D. |
-| Performance kept | The 18A table rerun. Targets: under 0.2 ms of GPU time for the particle pass at 20,000 with shelter, and under 50 ms of precipitation map render per room load. Still one draw call per effect. |
-| Lifecycle | The map is freed with the room, and the GL counts are stable over room changes and Play/Stop, as in 18A. |
+- **A world-position readback.** A diagnostic mode writes each drawn particle's world position and id into a float
+  target. Shelter is then judged in world space, with camera-depth occlusion disabled, so being hidden behind
+  something can't pass for shelter.
+- **Ray casts against the real geometry.** Every sampled splash is cast along its own fall direction against the
+  actual model triangles. Nothing may be above it, and it must sit on a surface.
+- **Checks:**
+  - rain splashes on the roof;
+  - a dry patch under the eaves;
+  - splashes on the bridge deck and none in the underpass;
+  - splashes on the ground and terraces at their heights;
+  - wind-angled rain landing at the right positions;
+  - snow settling at the right elevation;
+  - a dry interior;
+  - impacts that stay put while the camera moves;
+  - Studio's preview matching the game.
+- **Negative controls:** the same renders with shelter off (18A behaviour).
+- **Performance:** the 18A table rerun at 1k, 5k, 10k and 20k. Also measured: map build time, map memory,
+  invalidations, room changes, Play/Stop, and recovery from failures. The target is a particle pass of about
+  0.2 ms or less at 20,000 on the RTX 4070.
 
 ## Out of scope (later stages)
 
-- **Puddles, ponds, rivers, wet-surface darkening and ripples:** the lightweight-water stage.
-- **Accumulating snow cover:** that needs state, a texture painted over time.
-- **Characters sheltering under umbrellas, or rain on characters:** the map holds structures only.
-- **Weather events and transitions** (fade in and out driven by events), and **the Studio weather panel**.
-
-## Size estimate
-
-The work is one new map in `lighting.py`, shelter, splash and settle code in the particle shader, a splash atlas
-row (procedural, as in 18A), the exposure setting, Studio preview wiring, and tests extending the 18A suites. It
-fits one stage and one draft PR.
+- Puddles, ponds, rivers, wet surfaces and ripples (the lightweight-water stage).
+- Accumulating snow cover.
+- Thunderstorms.
+- Characters sheltering under umbrellas, or rain on characters.
+- Weather events and transitions, and the full Studio weather panel.
