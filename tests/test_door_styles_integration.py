@@ -130,3 +130,26 @@ def test_a_door_set_to_press_e_waits_for_e(linked) -> None:
     window.request_scene_change.assert_not_called()  # standing in it does nothing
     behaviour.on_interact(window, _Feet(door["x"], door["y"]))
     window.request_scene_change.assert_called_once_with(yard)
+
+
+def test_a_door_area_centres_on_the_picture_unless_asked_for_its_base() -> None:
+    """``area_at: "base"`` puts a door's area at its picture's bottom edge (where an HD-2D billboard stands); the
+    default stays the picture's centre, so every existing door and project is unchanged."""
+    door = {"name": "Door", "x": 100.0, "y": 100.0,
+            "behaviour_config": {"SceneTransition": {"target_scene": "yard", "trigger_on_touch": True,
+                                                     "area_width": 16.0, "area_height": 8.0}}}
+
+    def fires(config_extra: dict, player_y: float) -> bool:
+        cfg = {**door["behaviour_config"]["SceneTransition"], **config_extra}
+        entity = MagicMock(mesh_name="Door", center_x=100.0, center_y=100.0, bottom=68.0,
+                           mesh_entity_data={**door, "behaviour_config": {"SceneTransition": cfg}})
+        window = MagicMock()
+        window.get_flag = lambda name, default=False: default
+        window.scene_controller = SimpleNamespace(all_sprites=[_Feet(100.0, player_y)])  # a 40 px tall box
+        SceneTransition(entity, window, **cfg).update(1 / 60)
+        return window.request_scene_change.called
+
+    # The area is 8 px high: about y 96-104 at the centre, 64-72 at the base. A player at y 110 overlaps only the first,
+    # one at y 60 only the second.
+    assert fires({}, 110.0) and not fires({}, 60.0), "by default, at the picture's centre"
+    assert fires({"area_at": "base"}, 60.0) and not fires({"area_at": "base"}, 110.0), "at its base when asked"
