@@ -1983,7 +1983,8 @@ def remove_light(scene: Doc, index: int) -> Doc:
 # Rooms are expanded for editing (the player looks like any object to the ops) and split again when stored.
 
 PLAYER_PREFAB = "player"
-ROOM_PLAYER_FIELDS = ("id", "x", "y")  # what a room decides about its player; everything else is shared
+ROOM_PLAYER_FIELDS = ("id", "x", "y", "elevation")  # what a room decides about its player (where it starts, how
+# high: Milestone 20A, its floor or ground there); everything else is shared
 
 
 def shared_player_ids(scene: Doc) -> list[str]:
@@ -2193,3 +2194,173 @@ def remove_structure(scene: Doc, structure_id: str) -> Doc:
         raise OpError(f"There is no structure '{structure_id}' in this room.")
     hd2d["structures"] = [s for s in structures(out) if not (isinstance(s, dict) and s.get("id") == structure_id)]
     return _checked_structures(out)
+
+
+# --- sculpted ground (Milestone 20A, feasibility) ---------------------------------------------------------------
+
+def _parsed_ground(scene: Doc) -> Any:
+    from engine.hd2d.settings import Hd2dSettingsError, parse_hd2d  # noqa: PLC0415
+
+    settings = scene.get("settings") or {}
+    w, h = settings.get("world_width"), settings.get("world_height")
+    size = (float(w), float(h)) if isinstance(w, (int, float)) and isinstance(h, (int, float)) else None
+    try:
+        ground = parse_hd2d(settings.get("hd2d"), map_size_px=size).ground
+    except Hd2dSettingsError as err:
+        raise OpError(str(err)) from err
+    if ground is None:
+        raise OpError("This HD-2D room has no ground to sculpt.")
+    return ground
+
+
+def sculpt_terrain(scene: Doc, tool: str, x: float, y: float, radius: float = 96.0, strength: float = 16.0,
+                   target: Any = _UNSET) -> Doc:
+    """Sculpt this HD-2D room's ground with one brush stroke centred at (x, y) px: ``tool`` "raise" or "lower" (by up
+    to ``strength`` px at the centre, 0-512), "smooth" (towards its neighbours) or "flatten" (towards ``target`` px,
+    the height at the centre if not given), by up to ``strength`` (0-1) of the way; ``radius`` px (8-2048), easing to
+    nothing at its edge (32 px = 1 m). Structures, objects and water keep their elevations: sculpting never moves
+    them (``terrain_anchoring`` lists any it leaves buried or floating; ``settle_on_ground`` stands objects back on
+    it). Ground made flat again is the plain ground."""
+    from engine.hd2d.terrain import TOOLS, Terrain, TerrainError  # noqa: PLC0415
+
+    if tool not in TOOLS:
+        raise OpError(f"The terrain tool is one of {', '.join(TOOLS)} (got {tool!r}).")
+    x, y = _number(x, "x", -1e6, 1e6), _number(y, "y", -1e6, 1e6)
+    radius = _number(radius, "The brush radius", 8, 2048)
+    strength = _number(strength, "The strength", 0, 512) if tool in ("raise", "lower") else _number(
+        strength, "The strength (the share of the way, for smooth and flatten)", 0, 1)
+    goal = None if target is _UNSET or target is None else _number(target, "The target height", -8192, 8192)
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has no ground to sculpt.")
+    hd2d = _hd2d_block(out)
+    ground = _parsed_ground(out)
+    if not (ground.lo[0] - radius < x < ground.hi[0] + radius and ground.lo[1] - radius < y < ground.hi[1] + radius):
+        raise OpError(f"The brush at ({x / 32:.1f} m, {y / 32:.1f} m) is off the room's ground.")
+    terrain = Terrain.from_ground(ground)
+    try:
+        terrain.sculpt(tool, x, y, radius, strength, goal)
+    except TerrainError as err:
+        raise OpError(str(err)) from err
+    raw = hd2d["ground"]
+    if not isinstance(raw, dict):
+        raw = hd2d["ground"] = {}
+    stored = terrain.settings()
+    if stored:
+        raw["terrain"] = stored
+    else:
+        raw.pop("terrain", None)  # flat again: the plain ground, as before it was sculpted
+    return _checked_structures(out)
+
+
+def flatten_all_terrain(scene: Doc) -> Doc:
+    """Make this HD-2D room's sculpted ground flat again (the plain ground at its elevation)."""
+    out = copy.deepcopy(scene)
+    hd2d = _hd2d_block(out)
+    if isinstance(hd2d.get("ground"), dict):
+        hd2d["ground"].pop("terrain", None)
+    return _checked_structures(out)
+
+
+def _ground_heights(scene: Doc) -> Any:
+    """A function (x, y) px -> the ground's height (px) there, or None off it: the sculpted ground's, else the flat
+    ground's elevation. None if the room has no HD-2D ground."""
+    from engine.hd2d.terrain import Terrain  # noqa: PLC0415
+
+    try:
+        ground = _parsed_ground(scene)
+    except OpError:
+        return None
+    if ground.terrain is not None:
+        return Terrain.from_ground(ground).height
+
+    def flat(x: float, y: float) -> float | None:
+        inside = ground.lo[0] <= x <= ground.hi[0] and ground.lo[1] <= y <= ground.hi[1]
+        return float(ground.elevation) if inside else None
+
+    return flat
+
+
+def _out_of_place(scene: Doc, tolerance: float) -> dict[str, tuple[str, str, str]]:
+    """What stands out of step with the ground under it: id -> (kind, name, words). Objects by the ground under their
+    feet (a small box below the picture's centre, where characters stand: on a slope, any of it will do); structures
+    by the ground under their centre and across their middle (partly buried)."""
+    height = _ground_heights(scene)
+    if height is None:
+        return {}
+    out: dict[str, tuple[str, str, str]] = {}
+    for s in structures(scene):
+        if not isinstance(s, dict) or not isinstance(s.get("x"), (int, float)) or not isinstance(s.get("y"), (int, float)):
+            continue
+        x, y, z = float(s["x"]), float(s["y"]), float(s.get("elevation") or 0.0)
+        centre = height(x, y)
+        if centre is None:
+            continue
+        around = [h for dx in (-48, 0, 48) for dy in (-48, 0, 48) if (h := height(x + dx, y + dy)) is not None]
+        name = str(s.get("id"))
+        if centre - z > tolerance or max(around) - z > 16.0:
+            out[name] = ("structure", name, f"'{name}' is {(max(centre, max(around)) - z) / 32:.1f} m into the ground")
+        elif z - centre > tolerance:
+            out[name] = ("structure", name, f"'{name}' is {(z - centre) / 32:.1f} m above the ground")
+    for e in entities(scene):
+        if "WaterSurface" in entity_behaviours(e) or not isinstance(e.get("x"), (int, float)) \
+                or not isinstance(e.get("y"), (int, float)):
+            continue
+        elevation = e.get("elevation", 0.0)
+        z = float(elevation) if isinstance(elevation, (int, float)) and not isinstance(elevation, bool) else 0.0
+        x, y = float(e["x"]), float(e["y"]) - 16.0  # (the feet: below the picture's centre)
+        under = [h for dx in (-8, 0, 8) for dy in (-8, 0, 8) if (h := height(x + dx, y + dy)) is not None]
+        if not under or any(abs(z - h) <= tolerance for h in under):
+            continue
+        name = str(e.get("name") or e.get("prefab_id") or e.get("tag") or e.get("id"))
+        gap = z - min(under, key=lambda h: abs(z - h))
+        out[str(e.get("id"))] = ("object", name, f"'{name}' is {abs(gap) / 32:.1f} m {'above' if gap > 0 else 'below'} "
+                                                 "the ground")
+    return out
+
+
+def terrain_anchoring(scene: Doc, before: Any = None, tolerance: float = 8.0) -> list[str]:
+    """What stands out of step with the ground: objects whose elevation is more than ``tolerance`` px from the ground
+    under their feet, structures sunk into it or above it ("'Elder' is 1.5 m above the ground"). With ``before`` (the
+    room before an edit), only what that edit left out of place: what stood on the ground then and doesn't now (a
+    bridge over a valley or someone on a platform was never on the ground). Nothing is moved: ``settle_on_ground``
+    does that, when asked."""
+    now = _out_of_place(scene, tolerance)
+    if isinstance(before, dict):
+        was = _out_of_place(before, tolerance)
+        now = {k: v for k, v in now.items() if k not in was}
+    return [words for _kind, _name, words in now.values()]
+
+
+def anchoring_ids(scene: Doc, before: Any = None, tolerance: float = 8.0) -> list[str]:
+    """The objects ``terrain_anchoring`` lists (their ids): what ``settle_on_ground`` would settle."""
+    now = _out_of_place(scene, tolerance)
+    if isinstance(before, dict):
+        was = _out_of_place(before, tolerance)
+        now = {k: v for k, v in now.items() if k not in was}
+    return [k for k, (kind, _name, _words) in now.items() if kind == "object"]
+
+
+def find_entity_or_none(scene: Doc, entity_id: str) -> Doc | None:
+    return next((e for e in entities(scene) if e.get("id") == entity_id), None)
+
+
+def settle_on_ground(scene: Doc, entity_ids: list[str]) -> Doc:
+    """Stand these objects on the ground under their feet (their elevation made the ground's height there): the
+    explicit answer to ``terrain_anchoring``'s list after sculpting (it is never done by itself)."""
+    height = _ground_heights(scene)
+    if height is None:
+        raise OpError("This room has no HD-2D ground to stand things on.")
+    if not isinstance(entity_ids, list) or not entity_ids:
+        raise OpError("Name the objects to settle (their ids), as a list.")
+    out = copy.deepcopy(scene)
+    for entity_id in entity_ids:
+        entity = find_entity(out, str(entity_id))
+        x, y = entity.get("x"), entity.get("y")
+        if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
+            raise OpError(f"'{entity_id}' has no place to settle at.")
+        here = height(float(x), float(y) - 16.0)
+        if here is None:
+            raise OpError(f"'{entity_id}' isn't over the room's ground.")
+        entity["elevation"] = round(here, 2)
+    return _checked(scene, out)

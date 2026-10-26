@@ -16,6 +16,11 @@ all use it:
 
 Movement is axis-separated like the 2D sweep, so characters slide along walls. The scene's 2D solids (wall tiles,
 solid objects) still apply, to characters on their level. 2D scenes never build a world.
+
+Sculpted ground (Milestone 20A, ``engine.hd2d.terrain``) is the ground (solid, floor "ground"), read straight from
+its heights where asked (``Terrain.surface_at``: the drawn triangle under the point), not stored as triangles; faces
+too steep to stand on (``MAX_SLOPE``) are left out, so they stop characters like a ledge does. Walking up a gentle slope
+is the rule above, frame by frame. ``update_terrain`` takes the edited heights (nothing to rebuild).
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ from engine.hd2d.settings import PIXELS_PER_METRE, Hd2dSettings
 
 if TYPE_CHECKING:  # the reader is only needed where models are loaded (engine.hd2d.runtime)
     from engine.hd2d.glb import Model
+    from engine.hd2d.terrain import Terrain
 
 STEP = 0.35  # m: the highest a character steps up or down without stairs
 BODY = 1.5  # m: a character's standing height (a 48 px sprite)
@@ -79,6 +85,11 @@ def _surface(floor: str, solid: bool, corners: tuple[tuple[float, float, float],
     return Surface(floor, solid, corners, (a, b, z1 - a * x1 - b * y1), (min(xs), min(ys), max(xs), max(ys)))
 
 
+# the sculpted ground as heights_at reports it (its height comes from Terrain.surface_at; this says what it is)
+_GROUND = Surface("ground", True, ((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0, 0.0))
+_MAX_SLOPE = 0.7  # engine.hd2d.terrain.MAX_SLOPE (not imported here: 2D rooms never load the terrain module)
+
+
 def _place(p: tuple[float, float, float], at: tuple[float, float, float], turn: float, scale: float) -> tuple[float, float, float]:
     c, s = math.cos(math.radians(turn)), math.sin(math.radians(turn))
     return (at[0] + (c * p[0] - s * p[1]) * scale, at[1] + (s * p[0] + c * p[1]) * scale, at[2] + p[2] * scale)
@@ -112,7 +123,12 @@ class World:
                     if surface is not None:
                         self.surfaces.append(surface)
         g = settings.ground
-        if g is not None:  # the ground: solid, the whole of it walkable
+        self.terrain: Terrain | None = None
+        if g is not None and g.terrain is not None:  # sculpted ground (Milestone 20A): read from its heights
+            from engine.hd2d.terrain import Terrain  # noqa: PLC0415
+
+            self.terrain = Terrain.from_ground(g)
+        elif g is not None:  # the ground: solid, the whole of it walkable
             z = g.elevation / PIXELS_PER_METRE
             (x0, y0), (x1, y1) = [(v[0] / PIXELS_PER_METRE, v[1] / PIXELS_PER_METRE) for v in (g.lo, g.hi)]
             for tri in (((x0, y0, z), (x1, y0, z), (x1, y1, z)), ((x0, y0, z), (x1, y1, z), (x0, y1, z))):
@@ -121,22 +137,44 @@ class World:
                     self.surfaces.append(surface)
         self._index: dict[tuple[int, int], list[Surface]] = {}
         for surface in self.surfaces:
-            x0, y0, x1, y1 = surface.box
-            for i in range(math.floor(x0 / _BUCKET), math.floor(x1 / _BUCKET) + 1):
-                for j in range(math.floor(y0 / _BUCKET), math.floor(y1 / _BUCKET) + 1):
-                    self._index.setdefault((i, j), []).append(surface)
+            self._add_to_index(surface)
+        self._measure()
+
+    def _add_to_index(self, surface: Surface) -> None:
+        x0, y0, x1, y1 = surface.box
+        for i in range(math.floor(x0 / _BUCKET), math.floor(x1 / _BUCKET) + 1):
+            for j in range(math.floor(y0 / _BUCKET), math.floor(y1 / _BUCKET) + 1):
+                self._index.setdefault((i, j), []).append(surface)
+
+    def _measure(self) -> None:
         boxes = [s.box for s in self.surfaces]
+        if self.terrain is not None:
+            t = self.terrain
+            boxes.append((t.origin[0] / PIXELS_PER_METRE, t.origin[1] / PIXELS_PER_METRE,
+                          (t.origin[0] + t.size[0]) / PIXELS_PER_METRE, (t.origin[1] + t.size[1]) / PIXELS_PER_METRE))
         self.bounds = (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes),
                        max(b[3] for b in boxes)) if boxes else (0.0, 0.0, 0.0, 0.0)
         self._nav: dict[tuple[int, int], list[float]] | None = None
 
-    # ------------------------------------------------------------------ the rule
+    def update_terrain(self, terrain: Terrain, chunks: Iterable[tuple[int, int]] = ()) -> None:
+        """The ground was sculpted: its heights are read as they are now (``chunks``: what changed; nothing is
+        stored per chunk, so nothing to rebuild but the navigation grid, made again when next needed)."""
+        if self.terrain is None:  # the room loaded flat: its plain ground gives way to the sculpted one
+            self.surfaces = [s for s in self.surfaces if s.floor != "ground"]
+            self._index = {k: [s for s in v if s.floor != "ground"] for k, v in self._index.items()}
+        self.terrain = terrain
+        self._measure()
+
     def heights_at(self, x: float, y: float) -> list[tuple[float, Surface]]:
         out = []
         for surface in self._index.get((math.floor(x / _BUCKET), math.floor(y / _BUCKET)), ()):
             h = surface.height(x, y)
             if h is not None:
                 out.append((h, surface))
+        if self.terrain is not None:
+            here = self.terrain.surface_at(x * PIXELS_PER_METRE, y * PIXELS_PER_METRE)
+            if here is not None and here[1] >= _MAX_SLOPE:
+                out.append((here[0] / PIXELS_PER_METRE, _GROUND))
         return out
 
     def stand(self, x: float, y: float, z: float, half_w: float, half_h: float) -> tuple[float, str] | None:
@@ -241,6 +279,12 @@ class World:
             if surface.height(px, py) is None:
                 continue
             best = (t, (px, py, oz + t * dz), surface.floor)
+        if self.terrain is not None:  # the sculpted ground: met where the ray meets its heights
+            hit = self.terrain.ray(origin, direction)
+            if hit is not None:
+                t = math.dist(origin, hit) / max(1e-12, math.sqrt(dx * dx + dy * dy + dz * dz))
+                if best is None or t < best[0]:
+                    best = (t, hit, "ground")
         return None if best is None else (best[1], best[2])
 
     def walkable(self) -> int:

@@ -349,6 +349,7 @@ def summarize(before: Doc, after: Doc) -> list[str]:
             lines.append(f"{label}: repaints {len(tiles)} tile(s)")
         lines += _structure_lines(label, ops.structures(old), ops.structures(room))
         lines += _weather_lines(label, old.get("settings") or {}, room.get("settings") or {})
+        lines += _terrain_lines(label, old, room)
     if world_b.get("start_scene") != world_a.get("start_scene") and world_b:
         lines.append(f"Start room: {world_b.get('start_scene')} -> {world_a.get('start_scene')}")
     return lines
@@ -397,6 +398,38 @@ def _weather_words(effects: Any) -> str:
             text += " (off)"
         parts.append(text)
     return ", ".join(parts)
+
+
+def _terrain_lines(label: str, before: Doc, after: Doc) -> list[str]:
+    """A room's sculpted ground changed, in words (Milestone 20A): how much of it, how far up and down, and what it
+    left out of place ("'Elder' is 1.5 m above the ground"), not its stored heights."""
+    def terrain(scene: Doc) -> Any:
+        hd2d = (scene.get("settings") or {}).get("hd2d") if isinstance(scene.get("settings"), dict) else None
+        ground = hd2d.get("ground") if isinstance(hd2d, dict) else None
+        return ground.get("terrain") if isinstance(ground, dict) else None
+
+    if terrain(before) == terrain(after):
+        return []
+    from engine.hd2d.terrain import Terrain  # noqa: PLC0415
+
+    try:
+        old, new = (Terrain.from_ground(ops._parsed_ground(s)) for s in (before, after))
+    except (ops.OpError, ValueError):
+        return [f"{label}: the ground's sculpted heights change"]
+    if len(old.heights) != len(new.heights):
+        return [f"{label}: the ground's sculpted heights change"]
+    deltas = [b - a for a, b in zip(old.heights, new.heights) if b != a]
+    if not deltas:
+        return []
+    area = len(deltas) * (old.cell / 32.0) ** 2
+    up, down = max(0.0, max(deltas)) / 32.0, max(0.0, -min(deltas)) / 32.0
+    moves = " and ".join(part for part in (f"raised up to {up:.2f} m" if up else "",
+                                          f"lowered up to {down:.2f} m" if down else "") if part)
+    low, high = new.range_z()
+    lines = [f"{label}: ground sculpted over about {area:.0f} m²: {moves} (now {low:.2f} to {high:.2f} m)"
+             if not new.is_flat() else f"{label}: ground made flat again"]
+    lines += [f"{label}: left out of place (not moved): {words}" for words in ops.terrain_anchoring(after, before)]
+    return lines
 
 
 def _effect_dicts(effects: Any) -> list[Doc]:

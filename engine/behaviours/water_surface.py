@@ -41,7 +41,7 @@ class WaterSurface(Behaviour):
         "shape": ParamDef(str, default="", description="ellipse, rect or natural (empty: the preset's)"),
         "rotation": ParamDef(float, default=0.0, description="Turned by this many degrees, anticlockwise"),
         "seed": ParamDef(int, default=0, description="Which natural outline (1-9999; 0: the preset's)"),
-        "shore": ParamDef(str, default="", description="The bank: none, mud, grass or stone (empty: the preset's)"),
+        "shore": ParamDef(str, default="", description="The bank: none, mud, grass, stone, or terrain (the sculpted ground; empty: the preset's)"),
         "shore_width": ParamDef(float, default=-1.0, description="The bank's width (px, 0-64; -1: the preset's)"),
         "deep_colour": ParamDef(str, default="", description="Colour where deep (#rrggbb; empty: the preset's)"),
         "depth": ParamDef(float, default=-1.0, description="How soon it gets deep, 0-1 (-1: the preset's)"),

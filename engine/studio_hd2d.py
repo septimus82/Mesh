@@ -86,7 +86,12 @@ class Hd2dView:
         self._room: str | None = None
         self._buried: set[str] = set()  # objects that can't stand where they are (inside a structure)
         self.newly_buried: list[str] = []  # ... since the last load: what the last change did
-        self.timings: dict[str, list[float]] = {"draw_ms": [], "pick_ms": [], "edit_ms": []}
+        self.timings: dict[str, list[float]] = {"draw_ms": [], "pick_ms": [], "edit_ms": [], "sculpt_ms": []}
+        # Milestone 20A (prototype): sculpting the ground, a click at a time; None: not sculpting
+        self.sculpt: dict[str, Any] | None = None  # {"tool", "radius" px, "strength"}
+        self.sculpt_at: tuple[float, float, float] | None = None  # the ground under the mouse (m)
+        self.unsettled: list[str] = []  # objects the last stroke left off the ground (ids): "Settle on the ground"
+        self._grid: tuple[Any, list[tuple[float, float, float]]] = (None, [])  # the 1 m grid over sculpted ground
 
     # ------------------------------------------------------------------ state
     @property
@@ -233,8 +238,26 @@ class Hd2dView:
             x0, y0 = g.lo[0] / PIXELS_PER_METRE, g.lo[1] / PIXELS_PER_METRE
             x1, y1 = g.hi[0] / PIXELS_PER_METRE, g.hi[1] / PIXELS_PER_METRE
             z = g.elevation / PIXELS_PER_METRE + 0.01
-            lines = [p for i in range(int(x0), int(x1) + 1) for p in ((float(i), y0, z), (float(i), y1, z))]
-            lines += [p for j in range(int(y0), int(y1) + 1) for p in ((x0, float(j), z), (x1, float(j), z))]
+            if renderer.terrain is None:
+                lines = [p for i in range(int(x0), int(x1) + 1) for p in ((float(i), y0, z), (float(i), y1, z))]
+                lines += [p for j in range(int(y0), int(y1) + 1) for p in ((x0, float(j), z), (x1, float(j), z))]
+            elif self._grid[0] == (id(renderer.terrain), renderer.terrain_version):
+                lines = self._grid[1]
+            else:  # over sculpted ground: the grid follows it, in half-metre pieces (worked out once per edit)
+                terrain = renderer.terrain
+
+                def on(px: float, py: float) -> tuple[float, float, float]:
+                    h = terrain.height(px * PIXELS_PER_METRE, py * PIXELS_PER_METRE)
+                    return px, py, (h / PIXELS_PER_METRE if h is not None else z) + 0.02
+
+                lines = []
+                for i in range(int(x0), int(x1) + 1):
+                    ys = [y0 + k * 0.5 for k in range(int((y1 - y0) / 0.5) + 1)]
+                    lines += [p for a, b in zip(ys, ys[1:]) for p in (on(float(i), a), on(float(i), b))]
+                for j in range(int(y0), int(y1) + 1):
+                    xs = [x0 + k * 0.5 for k in range(int((x1 - x0) / 0.5) + 1)]
+                    lines += [p for a, b in zip(xs, xs[1:]) for p in (on(a, float(j)), on(b, float(j)))]
+                self._grid = ((id(terrain), renderer.terrain_version), lines)
             renderer.draw_lines(vp, lines, (1.0, 1.0, 1.0, 0.16))
         if renderer.preview is not None and self.placing is not None:  # the model about to be placed: a cyan box
             from engine.hd2d.picking import _apply  # noqa: PLC0415
@@ -251,6 +274,18 @@ class Hd2dView:
             lo, hi = box(st, renderer.models[st.model])
             renderer.draw_lines(vp, box_edges(lo, hi), (1.0, 0.82, 0.25, 0.45), through=True)  # where it's hidden
             renderer.draw_lines(vp, box_edges(lo, hi), (1.0, 0.82, 0.25, 1.0))
+        if self.sculpt is not None and self.sculpt_at is not None:  # the brush: a ring on the ground, its radius
+            cx, cy, _cz = self.sculpt_at
+            r = self.sculpt["radius"] / PIXELS_PER_METRE
+            ring = []
+            for k in range(48):
+                pts = []
+                for a in (k * math.tau / 48, (k + 1) * math.tau / 48):
+                    px, py = cx + r * math.cos(a), cy + r * math.sin(a)
+                    h = renderer.terrain.height(px * PIXELS_PER_METRE, py * PIXELS_PER_METRE) if renderer.terrain else None
+                    pts.append((px, py, (h / PIXELS_PER_METRE if h is not None else _cz) + 0.04))
+                ring += pts
+            renderer.draw_lines(vp, ring, (1.0, 0.85, 0.3, 1.0), through=True)
         if self.object_marker is not None and self.studio.place_prefab is not None:  # where it would stand: green
             mx, my, mz = self.object_marker
             renderer.draw_lines(vp, box_edges((mx - 0.3, my - 0.3, mz), (mx + 0.3, my + 0.3, mz + 1.6)),
@@ -285,6 +320,9 @@ class Hd2dView:
             return False
         if self.placing is not None:
             self.place_here(x, y)
+            return True
+        if self.sculpt is not None:
+            self.sculpt_here(x, y)
             return True
         start = time.perf_counter()
         origin, direction = self.ray(x, y)
@@ -465,6 +503,9 @@ class Hd2dView:
 
     def hover(self, x: float, y: float) -> None:
         renderer = self.renderer
+        if self.sculpt is not None:
+            self.sculpt_at = self.ground_hit(x, y)
+            return
         if self.studio.place_prefab is not None and renderer is not None:
             spot = self.object_spot(x, y)
             self.object_marker = None if isinstance(spot, str) else spot[1]
@@ -634,6 +675,106 @@ class Hd2dView:
                                  width=width, style=S_ACTIVE if self.weather else S_BUTTON))
         box.add(self._button("Models...", self.open_models, "Blender models in this project: import, browse, place "
                              "and reimport", width=width, style=S_ACTIVE if studio.panel == "structures" else S_BUTTON))
+        if renderer is not None and renderer.settings.ground is not None:
+            self._sculpt_section(box, width)
+
+    # ------------------------------------------------------------------ sculpting the ground (Milestone 20A prototype)
+    def ground_hit(self, x: float, y: float) -> tuple[float, float, float] | None:
+        """Where the mouse meets the ground itself (m): the sculpted ground if any, else its plane."""
+        renderer = self.renderer
+        if renderer is None or renderer.settings.ground is None:
+            return None
+        if renderer.terrain is not None:
+            hit: tuple[float, float, float] | None = renderer.terrain.ray(*self.ray(x, y))
+            return hit
+        z = renderer.settings.ground.elevation / PIXELS_PER_METRE
+        at = self.ground_px(x, y, z)
+        return None if at is None else (at[0] / PIXELS_PER_METRE, at[1] / PIXELS_PER_METRE, z)
+
+    def toggle_sculpt(self) -> None:
+        self.sculpt = None if self.sculpt is not None else {"tool": "raise", "radius": 64.0, "strength": 8.0}
+        self.sculpt_at = None
+        self.studio._say("Sculpting: click the ground (each click is one undoable change)." if self.sculpt
+                         else "Sculpting off.")
+        self.studio._rebuild()
+
+    def set_sculpt(self, **change: Any) -> None:
+        if self.sculpt is None:
+            return
+        self.sculpt.update(change)
+        if change.get("tool") in ("smooth", "flatten") and self.sculpt["strength"] > 1:
+            self.sculpt["strength"] = 0.5  # a share of the way for these
+        elif change.get("tool") in ("raise", "lower") and self.sculpt["strength"] <= 1:
+            self.sculpt["strength"] = 8.0  # px for these
+        self.studio._rebuild()
+
+    def sculpt_here(self, x: float, y: float) -> None:
+        """One brush stroke where the mouse meets the ground: one checked edit (``project_ops.sculpt_terrain``),
+        undone, redone and saved like any other; what it leaves out of place is said, never moved."""
+        from engine import project_ops as ops  # noqa: PLC0415
+
+        brush, at = self.sculpt, self.ground_hit(x, y)
+        if brush is None or at is None:
+            self.studio._say("Point at the ground to sculpt it.", ok=False)
+            return
+        start = time.perf_counter()
+        before = self.studio.project.scene()
+        done = self.studio._edit(lambda s: ops.sculpt_terrain(s, brush["tool"], at[0] * PIXELS_PER_METRE,
+                                                              at[1] * PIXELS_PER_METRE, brush["radius"],
+                                                              brush["strength"]),
+                                 {"raise": "Raised", "lower": "Lowered", "smooth": "Smoothed",
+                                  "flatten": "Flattened"}[brush["tool"]] + " the ground.")
+        self.timings["sculpt_ms"].append((time.perf_counter() - start) * 1000)
+        del self.timings["sculpt_ms"][:-240]
+        if done:  # what this stroke left out of place: said, never moved (Settle on the ground stands them on it)
+            after = self.studio.project.scene()
+            out_of_place = ops.terrain_anchoring(after, before)
+            self.unsettled = sorted(set(self.unsettled) | set(ops.anchoring_ids(after, before)))
+            if out_of_place:
+                self.studio._say("Out of place now (not moved): " + "; ".join(out_of_place[:3])
+                                 + (" ..." if len(out_of_place) > 3 else ""), ok=False)
+            self.studio._rebuild()
+
+    def settle(self) -> None:
+        """Stand the objects sculpting left off the ground back on it: one undoable edit."""
+        from engine import project_ops as ops  # noqa: PLC0415
+
+        ids = [i for i in self.unsettled if ops.find_entity_or_none(self.studio.project.scene(), i) is not None]
+        self.unsettled = []
+        if ids and self.studio._edit(lambda s: ops.settle_on_ground(s, ids), f"Stood {len(ids)} back on the ground."):
+            return
+        self.studio._rebuild()
+
+    def _sculpt_section(self, box: Any, width: int) -> None:
+        studio, brush = self.studio, self.sculpt
+        box.add(self._button(f"Sculpt ground: {'on' if brush else 'off'}", self.toggle_sculpt,
+                             "Raise, lower, smooth or flatten the ground where you click", width=width,
+                             style=S_ACTIVE if brush else S_BUTTON))
+        if brush is None:
+            return
+        quarter = (width - 12) // 4
+        row = _row()
+        for tool in ("raise", "lower", "smooth", "flatten"):
+            row.add(self._button(tool.capitalize(), lambda tool=tool: self.set_sculpt(tool=tool), f"{tool} the ground",
+                                 width=quarter, style=S_ACTIVE if brush["tool"] == tool else S_BUTTON))
+        box.add(row)
+        row = _row()
+        row.add(self._button("Smaller", lambda: self.set_sculpt(radius=max(16.0, brush["radius"] / 1.25)),
+                             "A smaller brush", width=quarter))
+        row.add(self._button("Bigger", lambda: self.set_sculpt(radius=min(1024.0, brush["radius"] * 1.25)),
+                             "A bigger brush", width=quarter))
+        gentle = brush["tool"] in ("smooth", "flatten")
+        row.add(self._button("Softer", lambda: self.set_sculpt(strength=max(0.05 if gentle else 1.0, brush["strength"] / 1.5)),
+                             "Less at a time", width=quarter))
+        row.add(self._button("Stronger", lambda: self.set_sculpt(strength=min(1.0 if gentle else 64.0, brush["strength"] * 1.5)),
+                             "More at a time", width=quarter))
+        box.add(row)
+        if self.unsettled:
+            box.add(self._button(f"Settle on the ground ({len(self.unsettled)})", self.settle,
+                                 "Stand the objects sculpting left floating or buried back on the ground", width=width))
+        amount = f"{brush['strength']:.2g} of the way" if gentle else f"{brush['strength'] / PIXELS_PER_METRE:.2f} m"
+        box.add(studio._label(f"Brush radius {brush['radius'] / PIXELS_PER_METRE:.1f} m; {amount} a click.",
+                              color=C_MUTED, size=10, width=width))
 
     def toggle_weather(self) -> None:
         self.weather = not self.weather

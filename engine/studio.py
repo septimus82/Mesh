@@ -322,7 +322,9 @@ class Studio(InspectorMixin):
             self._weather_said: set[str] = set()
         water_error = (renderer.water_error if renderer is not None
                        else getattr(self.window, "scene_water_error", None))
-        for text, ok in ((f"Weather is off in this room: {error}" if error else None, False),
+        terrain_error = getattr(self.window, "hd2d_terrain_error", None)
+        for text, ok in ((f"This room's sculpted ground is shown flat: {terrain_error}" if terrain_error else None, False),
+                         (f"Weather is off in this room: {error}" if error else None, False),
                          (f"Water is off in this room: {water_error}" if water_error else None, False), (notice, True)):
             if text and text not in self._weather_said:
                 self._weather_said.add(text)
@@ -366,10 +368,10 @@ class Studio(InspectorMixin):
         self._rebuild()
         if ok:
             self._say(ok)
-        if self.hd2d.newly_buried:  # an HD-2D change left someone inside a structure: say so (it's allowed)
+        if self.hd2d.newly_buried:  # an HD-2D change left someone unable to stand: say so (it's allowed)
             names = ", ".join(self.hd2d.newly_buried[:3])
-            self._say(f"{ok + ' ' if ok else ''}Careful: {names} can't stand there now (inside a structure). "
-                      "Move them, or the structure.", ok=False)
+            self._say(f"{ok + ' ' if ok else ''}Careful: {names} can't stand there now (inside a structure, or the "
+                      "ground under them moved). Move them, or what's in the way.", ok=False)
 
     def _entity(self, entity_id: str | None) -> dict[str, Any] | None:
         if not entity_id:
