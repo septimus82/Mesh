@@ -183,3 +183,39 @@ def test_stage_19a_rows_draw_as_before() -> None:
     pond, pool = layer._key
     assert len(pond) == 32 and pond[6] == 1.0 and pond[15] == 1.0 and pond[20:23] == (0.0, 0.0, 0.0)
     assert pool[6] == 2.0 and pool[20] == 3.0 and pool[21] == pytest.approx(12 / 32)
+
+
+def test_the_ai_s_list_of_operations_says_what_water_can_be() -> None:
+    """``authoring.describe`` gives an operation's first paragraph: set_water's must name its presets and settings."""
+    summary = next(o["summary"] for o in authoring.describe() if o["op"] == "set_water")
+    for word in ("muddy_puddle", "natural_pond", "stone_pool", "rotation", "seed", "shore", "depth", "ripples"):
+        assert word in summary, word
+
+
+def test_a_blocking_pond_s_box_hugs_its_outline_however_it_is_turned() -> None:
+    """QA: the box round a turned ellipse or natural outline, not round its rectangle (a player stopped metres short)."""
+    for raw in ({"preset": "natural_pond", "rotation": 30}, {"preset": "pond", "rotation": 45},
+                {"preset": "natural_pond"}):
+        w = water.parse_water(raw)
+        edge = water.outline_points(w, (0.0, 0.0), 720)
+        width, height = water.extent(w)
+        assert width == pytest.approx(2 * max(abs(x) for x, _ in edge), abs=0.5)
+        assert height == pytest.approx(2 * max(abs(y) for _, y in edge), abs=0.5)
+    plain = water.parse_water({"preset": "pond", "width": 200, "height": 120})
+    assert water.extent(plain) == (200.0, 120.0), "Stage 19A's unturned pond: its box as before"
+
+
+def test_a_2d_click_picks_water_only_on_it_not_in_the_box_round_it() -> None:
+    """QA: a turned pond's box covers ground beside it; a click there picks what is there, not the pond."""
+    from engine.studio import Studio
+
+    pond = {"id": "pond", "x": 400.0, "y": 300.0, "behaviours": ["WaterSurface"],
+            "behaviour_config": {"WaterSurface": {"preset": "natural_pond", "rotation": 45}}}
+    rock = {"id": "rock", "x": 470.0, "y": 230.0}  # across its turned axis: off the water, inside its box
+    scene = {"entities": [rock, pond]}
+    fake = SimpleNamespace(project=SimpleNamespace(scene=lambda: scene), _sprites_by_id=lambda: {})
+    fake._bounds = lambda e, s: Studio._bounds(fake, e, s)
+    assert Studio._entity_at(fake, 470.0, 230.0) == "rock", "the rock beside it, inside the pond's turned box"
+    assert Studio._entity_at(fake, 470.0, 370.0) == "pond", "along its turned length: on the water"
+    assert Studio._entity_at(fake, 400.0, 300.0) == "pond"
+    assert Studio._entity_at(fake, 330.0, 370.0) is None, "inside its box, off the water"

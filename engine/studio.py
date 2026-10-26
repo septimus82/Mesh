@@ -427,8 +427,16 @@ class Studio(InspectorMixin):
         sprites = self._sprites_by_id()
         for entity in reversed(ops.entities(self.project.scene())):
             cx, cy, w, h = self._bounds(entity, sprites.get(str(entity.get("id"))))
-            if abs(wx - cx) <= w / 2 and abs(wy - cy) <= h / 2:
-                return entity.get("id")
+            if abs(wx - cx) > w / 2 or abs(wy - cy) > h / 2:
+                continue
+            water = ops.water_of(entity)
+            if water is not None:  # water: on it (or its bank), not anywhere in the box round it as turned
+                from engine.water import inside  # noqa: PLC0415
+
+                settings = _water_settings(water)
+                if not inside(settings, (cx, cy), (wx, wy), margin=-max(4.0, settings.shore_width)):
+                    continue
+            return entity.get("id")
         return None
 
     # ==================================================================== actions

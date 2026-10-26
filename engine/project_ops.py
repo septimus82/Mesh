@@ -778,19 +778,18 @@ def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = 
               reflection: Any = _UNSET, rain_ripples: Any = _UNSET, walkable: Any = _UNSET,
               step_sound: Any = _UNSET, rotation: Any = _UNSET, seed: Any = _UNSET, shore: Any = _UNSET,
               shore_width: Any = _UNSET, deep_colour: Any = _UNSET, depth: Any = _UNSET, ripples: Any = _UNSET) -> Doc:
-    """Make the object a water surface, or change it.
-
-    ``preset``: "muddy_puddle" (shallow and brown, a ring of wet mud), "natural_pond" (an irregular pond, a grassy
-    earth bank, shallow edges and a deep middle) or "stone_pool" (a pool lined with stones), or Stage 19A's simple
-    "puddle" and "pond" (no bank). ``width``/``height`` (px, 8-8192); ``shape`` ("ellipse", "rect" or "natural": an
-    irregular outline, ``seed`` 1-9999 picking which); ``rotation`` (degrees); ``colour`` (its shallow colour,
-    "#rrggbb"); ``opacity`` (0.05-1); ``waves`` and ``reflection`` (0-1); ``rain_ripples`` (true: the room's rain
-    rings it); ``walkable`` (false: it blocks movement, made solid with a box its size); ``step_sound`` (a sound file
-    played on each step through it, "" none). The three Stage 19B presets also have ``shore`` ("none", "mud", "grass"
-    or "stone"), ``shore_width`` (px, 0-64), ``deep_colour`` ("#rrggbb"), ``depth`` (0-1: how soon it gets deep away
-    from its edge) and ``ripples`` (0-1: how strongly rain and footsteps ring it). Only what is given changes; a preset
-    given anew starts from that preset's look (its size kept unless given). In an HD-2D room the object's elevation is
-    the water's level; how its room's water mirrors things is ``set_water_reflections``."""
+    """Make the object a water surface, or change it: ``preset`` "muddy_puddle" (shallow and brown, a ring of wet mud),
+    "natural_pond" (an irregular pond, a grassy earth bank, clear shallows and a deep middle), "stone_pool" (lined with
+    stones) or Stage 19A's simple "puddle" and "pond" (no bank); ``width``/``height`` (px, 8-8192); ``shape``
+    ("ellipse", "rect" or "natural": irregular, ``seed`` 1-9999 picking which); ``rotation`` (degrees); ``colour``
+    (its shallow colour, "#rrggbb"); ``opacity`` (0.05-1); ``waves`` and ``reflection`` (0-1); ``rain_ripples`` (true:
+    the room's rain rings it); ``walkable`` (false: it blocks movement, made solid with a box round it);
+    ``step_sound`` (a sound file played on each step through it, "" none); and, for the three new presets only,
+    ``shore`` ("none", "mud", "grass" or "stone"), ``shore_width`` (px, 0-64), ``deep_colour`` ("#rrggbb"), ``depth``
+    (0-1: how soon it gets deep away from its edge) and ``ripples`` (0-1: how strongly rain and footsteps ring it).
+    Only what is given changes; a preset given anew starts from that preset's look (its size kept unless given). In
+    an HD-2D room the object's elevation is the water's level; ``set_water_reflections`` sets how the room's water
+    mirrors."""
     from engine.water import LOOK_19B, WaterError, extent, parse_water  # noqa: PLC0415
 
     out = copy.deepcopy(scene)

@@ -764,6 +764,9 @@ class InspectorMixin:
                 except ValueError:
                     self._say(f"{key.replace('_', ' ').capitalize()} must be a{' whole' if whole else ''} number.", ok=False)
                     return
+                if value < 0 and key != "rotation":  # (-1 in the file means "the preset's": not something to type)
+                    self._say(f"{key.replace('_', ' ').capitalize()} can't be negative.", ok=False)
+                    return
                 change("Water changed.", **{key: value})
             return commit
 

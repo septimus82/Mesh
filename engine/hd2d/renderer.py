@@ -794,6 +794,8 @@ class Hd2dRenderer:
         if not bodies or solid is not None or self.water_error is not None:
             if self.water is not None:
                 self.water.draw_calls = 0
+                if not bodies:  # none there now (their "Show when" flags): the frame copy isn't kept for them
+                    self.water._free_copy()
             return
         try:
             self._draw_water_now(water_mod, bodies, vp, cam, fbo, weather, maps)

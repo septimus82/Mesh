@@ -230,10 +230,13 @@ def outline_points(water: Water, centre: tuple[float, float], n: int = 48) -> li
 
 
 def extent(water: Water) -> tuple[float, float]:
-    """The width and height (px) of the box round the water as turned (a blocking pond's collider)."""
-    a = math.radians(water.rotation)
-    c, s = abs(math.cos(a)), abs(math.sin(a))
-    return round(water.width * c + water.height * s, 2), round(water.width * s + water.height * c, 2)
+    """The width and height (px) of the box round the water's outline as turned (a blocking pond's collider)."""
+    if water.shape == "rect":
+        a = math.radians(water.rotation)
+        c, s = abs(math.cos(a)), abs(math.sin(a))
+        return round(water.width * c + water.height * s, 2), round(water.width * s + water.height * c, 2)
+    edge = outline_points(water, (0.0, 0.0), 360)
+    return (round(2 * max(abs(x) for x, _y in edge), 2), round(2 * max(abs(y) for _x, y in edge), 2))
 
 
 def inside(water: Water, centre: tuple[float, float], point: tuple[float, float], margin: float = 0.0) -> bool:
@@ -313,7 +316,7 @@ void main() {
     // waves, reflection, seed, ripple strength; in_deep: deep colour, depth; in_shore: shore (0 none, 1 mud, 2 grass,
     // 3 stone), its width (m), rotation (rad), the natural outline's c0; in_amp, in_phase: its harmonics (outline())
     float a = in_shore.z;
-    vec2 off = in_corner * (in_rect.zw + in_shore.y);  // the bank round it is drawn too
+    vec2 off = in_corner * (in_rect.zw + in_shore.y + (in_shore.x > 2.5 ? 0.16 : 0.0));  // the bank round it too
     off = vec2(cos(a) * off.x - sin(a) * off.y, sin(a) * off.x + cos(a) * off.y);
     vec3 world = vec3(in_rect.xy + off, in_info.x);
     v_world = world; v_rect = in_rect; v_info = in_info; v_colour = in_colour; v_look = in_look;
@@ -365,10 +368,22 @@ float sd_at(vec2 m) {
         vec2 d = abs(m) - b + rad;
         return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - rad;
     }
+    // the ellipse or natural outline: f = rho - r(theta) in the size's frame, over its gradient in metres (so long,
+    // narrow water keeps an even bank); inside, no further than the short half-axis allows
     vec2 l = m / b;
     float rho = length(l);
-    vec2 dir = rho > 1e-4 ? l / rho : vec2(1.0, 0.0);
-    return (rho - radius_at(l)) * length(dir * b);
+    vec4 k = vec4(2.0, 3.0, 4.0, 5.0);
+    float th = atan(l.y, l.x), r = 1.0, dr = 0.0;
+    if (v_info.y > 1.5) {
+        r = v_shore.w + dot(v_amp, cos(k * th + v_phase));
+        dr = -dot(v_amp * k, sin(k * th + v_phase));
+    }
+    if (rho < 1e-4) return -min(b.x, b.y) * r;
+    float f = rho - r;
+    // (the outline's turn, r'/rho, only matters near the edge: bounded, it doesn't swamp the middle)
+    vec2 g = (l / rho - dr * vec2(-l.y, l.x) / (rho * max(rho, 0.5))) / b;
+    float d = f / max(length(g), 1e-4);
+    return f < 0.0 ? max(d, -min(b.x, b.y) * (r - rho)) : d;
 }
 // a stone rim: cells of about 0.26 m, a stone in each whose centre lies on the bank (or just over the water's edge),
 // drawn whole with its mortar round it and lit on its sunward side; (rgb, 1) where one is, else 0
@@ -417,7 +432,8 @@ vec4 bank(vec2 q, float b, int shore) {
     }
     return vec4(0.0);  // stone: its stones only (stone())
 }
-vec3 shade(vec3 c) { return floor(c * 24.0 + 0.5) / 24.0; }  // a few flat shades: pixel art, not a gradient
+vec3 shade(vec3 c) { return floor(c * 24.0 + 0.5) / 24.0; }
+const float STONE_OVER = 0.16;  // an outer stone may reach this far past its bank's width (drawn whole)  // a few flat shades: pixel art, not a gradient
 void main() {
     // the pixel grid: everything is worked out at the centre of this fragment's texel (32 per metre)
     vec2 q = (floor(v_world.xy * 32.0) + 0.5) / 32.0;
@@ -432,12 +448,13 @@ void main() {
     float reach = v_shore.y, inside = 0.0, edge_m = 0.0, shadow = 1.0;
     if (material) {
         float sd = sd_at(m);
-        if (sd > reach || (sd > 0.0 && shore == 0)) discard;
-        if (shore == 3) {
+        if (sd > reach + (shore == 3 ? STONE_OVER : 0.0) || (sd > 0.0 && shore == 0)) discard;
+        if (shore == 3 && sd > -0.4) {  // (deeper in, no stone reaches)
             vec4 s = stone(q, reach, sun);
             if (s.a > 0.0) { f_color = vec4(shade(s.rgb * light), 1.0); return; }
         }
         if (sd >= 0.0) {
+            if (sd > reach) discard;  // (past the stones)
             vec4 c = bank(q, sd / max(reach, 1e-3), shore);
             if (c.a <= 0.0) discard;
             f_color = vec4(shade(c.rgb * light), c.a);
@@ -564,7 +581,7 @@ void main() {
         float fresnel = v_look.y * mix(0.85, 0.35, facing);
         lit = mix(col * light, refl, fresnel);
     }
-    lit += vec3(0.85, 0.92, 1.0) * clamp(rings, 0.0, 1.0) * 0.35;  // rings catch the light
+    lit += vec3(0.85, 0.92, 1.0) * clamp(rings, 0.0, 1.0) * 0.35 * (material ? light : vec3(1.0));  // rings catch the light
     float alpha;
     if (material) {
         // the near edge's waterline catches the light (a texel wide, crisp: no soft rim all round)
@@ -645,7 +662,7 @@ class WaterLayer:
         """Whether any water surface is in the picture (its corners' clip-space box overlaps the screen): with none,
         the pass (and its frame copy) is skipped."""
         for row in self._key or ():
-            reach = max(row[2], row[3]) + row[21]  # turned, with its bank: within this of its centre
+            reach = math.hypot(row[2], row[3]) + row[21] + 0.16  # turned, with its bank: within this of its centre
             x, y, hw, hh, z = row[0], row[1], reach, reach, row[4]
             pts = []
             for cx, cy in ((x - hw, y - hh), (x + hw, y - hh), (x - hw, y + hh), (x + hw, y + hh)):

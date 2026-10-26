@@ -1726,7 +1726,7 @@ A puddle or pond: drawn as water, rippled by rain and footsteps (Studio: the Wat
 
 | Name | Description | Type | Default |
 | --- | --- | --- | --- |
-| preset | puddle or pond | string | puddle |
+| preset | muddy_puddle, natural_pond, stone_pool, or the simple puddle or pond | string | puddle |
 | width | Width (px) | float | 64.0 |
 | height | Height (px) | float | 40.0 |
 | colour | Colour (#rrggbb; empty: the preset's) | string | - |

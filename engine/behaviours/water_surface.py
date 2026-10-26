@@ -24,7 +24,8 @@ STEP_PX = 14.0  # a footstep every this many px walked through water
     "WaterSurface",
     description="A puddle or pond: drawn as water, rippled by rain and footsteps (Studio: the Water object).",
     config_fields=[
-        {"name": "preset", "description": "puddle or pond", "type": "string", "default": "puddle"},
+        {"name": "preset", "description": "muddy_puddle, natural_pond, stone_pool, or the simple puddle or pond",
+         "type": "string", "default": "puddle"},
         {"name": "width", "description": "Width (px)", "type": "float", "default": 64.0},
         {"name": "height", "description": "Height (px)", "type": "float", "default": 40.0},
     ],
