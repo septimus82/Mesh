@@ -22,6 +22,7 @@ from PIL import Image
 
 from engine.hd2d.glb import Model, load_glb
 from engine.hd2d.lighting import LIGHTING_GLSL, Lighting
+from engine.hd2d.precipitation import PrecipitationMaps, key_for
 from engine.hd2d.settings import PIXELS_PER_METRE, Hd2dSettings
 from engine.logging_tools import get_logger
 
@@ -259,6 +260,8 @@ class Hd2dRenderer:
         self._materials: dict[tuple[str, str], Any] = {}
         self.live: dict[str, tuple[str, tuple[float, ...]]] = {}  # id -> (model, matrix)
         self.particles: Any = None  # the room's environmental particles (engine.scene_particles), if it has any
+        self.precipitation = PrecipitationMaps(ctx)  # where they meet the world (Milestone 18B; made when needed)
+        self.weather_preview = False  # Mesh Studio's "Preview weather": draw them in its editing view too
         self.preview: tuple[str, tuple[float, ...]] | None = None  # a model about to be placed (Mesh Studio)
         live_ids = set(live)
         for st in settings.structures:
@@ -272,7 +275,12 @@ class Hd2dRenderer:
 
     def world_box(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
         """The room's extent in metres (structures and ground, with headroom for characters): what the sun's
-        shadow map covers."""
+        shadow map and the precipitation maps cover. Worked out once (the room's structures as loaded)."""
+        if getattr(self, "_world_box", None) is None:
+            self._world_box = self._measure_world_box()
+        return self._world_box
+
+    def _measure_world_box(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
         corners: list[tuple[float, float, float]] = []
         for st in self.settings.structures:
             m = _placement(st.x / PIXELS_PER_METRE, st.y / PIXELS_PER_METRE, st.elevation / PIXELS_PER_METRE,
@@ -416,7 +424,8 @@ class Hd2dRenderer:
                    + [self._fbo] + list(self._dynamic[1:] if self._dynamic else []) + list(self._lines[1:] if self._lines else [])
                    + [self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog]
                    + list(light._targets) + [light.caster, light.lamp_caster, light.sprite_caster, light.probe_prog]
-                   + (self.particles.gl_objects() if self.particles is not None else []))
+                   + (self.particles.gl_objects() if self.particles is not None else [])
+                   + self.precipitation.gl_objects())
         return [o for o in objects if o is not None]
 
     def release(self) -> None:
@@ -439,17 +448,45 @@ class Hd2dRenderer:
             program.delete()
         self.lighting.release()
         self.set_particles(())
+        self.precipitation.release()
 
-    def set_particles(self, effects: tuple[Any, ...]) -> None:
+    def set_particles(self, effects: tuple[Any, ...],
+                      bounds: tuple[float, float, float, float] | None = None) -> None:
         """The room's environmental particles (engine.scene_particles.ParticleEffect), drawn in its 3D world; none frees
-        them."""
+        them. ``bounds``: the room's rectangle (m) they're kept inside; without one, what the room is built of (its
+        structures and ground), or nowhere if it has neither."""
         if self.particles is not None:
             self.particles.release()
             self.particles = None
+        self.precipitation.retain(set())  # the next frame makes the maps the new effects need
         if effects:
             from engine.scene_particles import ParticleLayer  # noqa: PLC0415
 
-            self.particles = ParticleLayer(self.ctx, tuple(effects), gl=self.arcade.gl)
+            if bounds is None and (self.settings.structures or self.settings.ground is not None):
+                lo, hi = self.world_box()  # no room size given: what it's built of
+                bounds = (lo[0], lo[1], hi[0], hi[1])
+            self.particles = ParticleLayer(self.ctx, tuple(effects), gl=self.arcade.gl, bounds=bounds)
+
+    def precipitation_maps(self) -> list[Any]:
+        """Per particle effect, the precipitation map its fall needs (engine.hd2d.precipitation), made from the
+        ground and every structure (dragged ones included; not a model being placed) if it isn't cached; None for one
+        that doesn't fall or is switched off, or if the map can't be made (it falls as in Stage 18A)."""
+        if self.particles is None:
+            return []
+        from engine.scene_particles import fall_of  # noqa: PLC0415
+
+        every = [fall_of(e) for e in self.particles.effects]
+        self.precipitation.retain({key_for(f) for f in every if f is not None})  # an effect switched off keeps its map
+        falls = [f if on else None for f, on in zip(every, self.particles.enabled)]
+        if not any(falls):
+            return [None] * len(falls)
+        lo, hi = self.world_box()
+        return [self.precipitation.get(f, self._precipitation_draws, lo, hi) if f is not None else None for f in falls]
+
+    def _precipitation_draws(self) -> list[tuple[Any, Any, tuple[float, ...]]]:
+        """What a precipitation map is drawn from (only when one is made): the ground and every structure."""
+        return (([(self.ground[0], self.ground[1], IDENTITY)] if self.ground else []) + self.static
+                + [d for model, matrix in self.live.values() for d in self._model_draws(model, matrix)])
 
     # ------------------------------------------------------------------ the scene's sprites
     def _sprites(self) -> list[Any]:
@@ -566,6 +603,7 @@ class Hd2dRenderer:
                      for st in self.settings.structures if st.id in ids}
         self._build_structures(skip=ids)
         self.lighting.invalidate()
+        self.precipitation.invalidate()
 
     def set_live(self, structure_id: str, x: float, y: float, elevation: float, rotation: float, scale: float) -> None:
         """Move a live structure (px, degrees) for this and later frames; its shadows follow."""
@@ -573,6 +611,7 @@ class Hd2dRenderer:
         self.live[structure_id] = (model, _column_major(_placement(x / PIXELS_PER_METRE, y / PIXELS_PER_METRE,
                                                                    elevation / PIXELS_PER_METRE, rotation, scale)))
         self.lighting.invalidate()
+        self.precipitation.invalidate()  # rain falls on it where it is now
 
     def set_preview(self, model: str | None, x: float = 0.0, y: float = 0.0, elevation: float = 0.0,
                     rotation: float = 0.0, scale: float = 1.0) -> None:
@@ -674,6 +713,8 @@ class Hd2dRenderer:
         live = self.live_draws()
         if solid is None:
             lighting.render_shadows(self.static + live, geometry_sprites, ranges)  # the ground receives, never casts
+        weather = self.particles is not None and solid is None and (camera is None or self.weather_preview)
+        maps = self.precipitation_maps() if weather else []  # before the frame's target is in use: cached, mostly
         fbo.use()
         fbo.clear(color=(*(round(c * 255) for c in self.settings.sky), 255), depth=1.0)
         ctx.enable(ctx.DEPTH_TEST)
@@ -712,13 +753,15 @@ class Hd2dRenderer:
                     texture.use(0)
                     geometry.render(sp, first=first, vertices=count)
                 self.draw_calls += 1
-        if self.particles is not None and solid is None and camera is None:  # the game's view: falling in its world
+        if weather:  # the game's view (or Studio's, previewing): falling in its world, landing on it
             ground = self.settings.ground.elevation / PIXELS_PER_METRE if self.settings.ground is not None else 0.0
             st = self.settings
             light = tuple(min(1.2, st.ambient * a + st.sun_intensity * 0.55 * max(0.0, st.sun[2]) * c)
                           for a, c in zip(st.ambient_color, st.sun_color))
-            self.particles.draw_3d(vp, cam, ground, light, fbo)
+            self.particles.draw_3d(vp, cam, ground, light, fbo, maps)
             self.draw_calls += self.particles.draw_calls
+        elif self.particles is not None:
+            self.particles.draw_calls = 0  # not drawn in this view (Studio, not previewing)
         if overlay is not None and solid is None:
             overlay(vp)
         ctx.disable(ctx.DEPTH_TEST)
@@ -753,4 +796,8 @@ class Hd2dRenderer:
                 "shadow_lamps": sum(1 for slot in self.lighting.lamp_slots if slot >= 0),
                 "particles": sum(e.count for e, on in zip(self.particles.effects, self.particles.enabled) if on)
                 if self.particles is not None else 0,
-                "particle_bytes": self.particles.memory_bytes() if self.particles is not None else 0}
+                "particle_bytes": self.particles.memory_bytes() if self.particles is not None else 0,
+                "precipitation_maps": len(self.precipitation.maps),
+                "precipitation_bytes": self.precipitation.memory_bytes(),
+                "precipitation_builds": self.precipitation.builds,
+                "precipitation_error": self.precipitation.error}

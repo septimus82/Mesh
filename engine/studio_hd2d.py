@@ -80,6 +80,7 @@ class Hd2dView:
         self._facts: dict[tuple[str, int, int], tuple[Any | None, str | None]] = {}  # (file, mtime, size) -> (report, problem)
         self.object_marker: tuple[float, float, float] | None = None  # where an object being placed would stand (m)
         self.snap = True
+        self.weather = True  # Milestone 18B, "Preview weather": the room's rain, snow or leaves in this view too
         self.picker = Picker()
         self.tips: list[tuple[Any, str]] = []  # (button, short tooltip) for the 3D view's buttons
         self._room: str | None = None
@@ -218,6 +219,7 @@ class Hd2dView:
         if renderer is None:
             return
         start = time.perf_counter()
+        renderer.weather_preview = self.weather
         renderer.draw(camera=self.camera, viewport=self.viewport(), overlay=self._overlay)
         self.timings["draw_ms"].append((time.perf_counter() - start) * 1000)
         del self.timings["draw_ms"][:-240]
@@ -598,8 +600,24 @@ class Hd2dView:
         row.add(self._button("Frame it", self.frame_selected, "Zoom to the selected structure (F)", width=half))
         box.add(row)
         box.add(studio._label("Middle-drag pans, wheel zooms, WASD moves.", color=C_MUTED, size=10, width=width))
+        renderer = self.renderer
+        if renderer is not None and renderer.particles is not None:  # the room has weather: show it here, or not
+            box.add(self._button(f"Preview weather: {'on' if self.weather else 'off'}", self.toggle_weather,
+                                 "Rain, snow and leaves in this view, landing where they would in play",
+                                 width=width, style=S_ACTIVE if self.weather else S_BUTTON))
         box.add(self._button("Models...", self.open_models, "Blender models in this project: import, browse, place "
                              "and reimport", width=width, style=S_ACTIVE if studio.panel == "structures" else S_BUTTON))
+
+    def toggle_weather(self) -> None:
+        self.weather = not self.weather
+        self.studio._say(f"Weather preview {'on' if self.weather else 'off'}.")
+        self.studio._rebuild()
+
+    def advance_weather(self, delta_time: float) -> None:
+        """The previewed weather moves while editing (nothing else of the game runs)."""
+        renderer = self.renderer
+        if self.weather and renderer is not None and renderer.particles is not None:
+            renderer.particles.update(delta_time)
 
     # ------------------------------------------------------------------ the model browser (Stage 5B)
     def open_models(self) -> None:

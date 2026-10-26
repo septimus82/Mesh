@@ -247,7 +247,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     controller.window.world_height = controller.scene_settings.get("world_height")
     configure_scene_lighting(controller.window, scene, controller.scene_settings, scene_path)
     configure_hd2d_scene(controller.window, controller.scene_settings, scene)
-    configure_scene_particles(controller.window, controller.scene_settings)  # after the renderer: HD-2D's own them
+    configure_scene_particles(controller.window, controller.scene_settings, scene)  # after the renderer: HD-2D's own them
 
     # Handle music
     music_path = controller.scene_settings.get("music")

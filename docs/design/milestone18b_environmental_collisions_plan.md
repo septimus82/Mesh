@@ -92,7 +92,8 @@ stairs, terraces, walls), and structures being dragged in Studio.
 - An indoor room draws no rain or snow, so weather being active elsewhere never wets an interior. Studio shows why
   if the room asks for them anyway.
 - The HD-2D interior template rooms (the cottage among them) are indoor.
-- Windborne leaves follow the same rule, since they are outdoor weather too.
+- Only precipitation (rain, snow) is kept out. Particles a room asks for that don't fall from the sky, such as
+  windborne leaves and later dust or ash, still show indoors (corrected at acceptance, 2026-10-26).
 
 ### 2D rooms
 

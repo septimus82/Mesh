@@ -717,6 +717,27 @@ def set_particles(scene: Doc, effects: Any) -> Doc:
     return _checked(scene, out)
 
 
+def set_weather_exposure(scene: Doc, exposure: Any) -> Doc:
+    """Whether the room is out in the weather (``settings.weather_exposure``): "outdoor" (the default: rain and snow
+    show, landing on its ground and structures) or "indoor" (no rain or snow, whatever asks; other particles the
+    room asks for, such as windborne leaves, still show)."""
+    from engine.scene_particles import SceneParticlesError, parse_exposure  # noqa: PLC0415
+
+    try:
+        parse_exposure(exposure)
+    except SceneParticlesError as exc:
+        raise OpError(str(exc)) from exc
+    out = copy.deepcopy(scene)
+    settings = out.get("settings")
+    if settings is not None and not isinstance(settings, dict):
+        raise OpError("This room's settings aren't readable.")
+    if exposure == "indoor":
+        out.setdefault("settings", {})["weather_exposure"] = "indoor"
+    elif settings:
+        settings.pop("weather_exposure", None)
+    return _checked(scene, out)
+
+
 # --- how a door shows (Milestone 12.2) ------------------------------------------------------------
 # One door behaviour (SceneTransition); three ways to show it. A door picture; an invisible passage (an area the
 # player walks into, outlined only in Studio); or an area over a door, stairs or opening painted on the map. The

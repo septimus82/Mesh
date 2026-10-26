@@ -235,6 +235,7 @@ def build(root: Path, bundled: Callable[[str], Path | None], person: dict[str, A
             e["x"], e["y"] = INSIDE_ARRIVAL[0] * PX, INSIDE_ARRIVAL[1] * PX + FEET_32
         if e.get("tag") == "door":  # walked into in its doorway, not across the floor in front of it
             e["behaviour_config"]["SceneTransition"].update(INSIDE_DOOR_AREA)
+    inside.setdefault("settings", {})["weather_exposure"] = "indoor"  # Milestone 18B: no rain or snow in here
     json_io.write_json_atomic(root / START, village)
     json_io.write_json_atomic(root / inside_path, inside)
     json_io.write_json_atomic(root / WORLD, world)
