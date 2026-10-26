@@ -738,6 +738,98 @@ def set_weather_exposure(scene: Doc, exposure: Any) -> Doc:
     return _checked(scene, out)
 
 
+# --- water surfaces (Milestone 19A) -----------------------------------------------------------------------------
+
+def water_of(entity: Doc) -> Doc | None:
+    """The object's water (``WaterSurface``) as its settings complete from its preset, colour as "#rrggbb"; None if
+    it isn't water."""
+    from engine.water import WaterError, colour_hex, parse_water  # noqa: PLC0415
+
+    config = (entity.get("behaviour_config") or {}).get("WaterSurface")
+    if "WaterSurface" not in entity_behaviours(entity) or not isinstance(config, dict):
+        return None
+    try:
+        w = parse_water({k: v for k, v in config.items() if k != "target_tags"})
+    except WaterError:
+        return dict(config)
+    return {"preset": w.preset, "width": w.width, "height": w.height, "colour": colour_hex(w.colour),
+            "opacity": w.opacity, "shape": w.shape, "waves": w.waves, "reflection": w.reflection,
+            "rain_ripples": w.rain_ripples, "walkable": w.walkable, "step_sound": w.step_sound}
+
+
+def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = _UNSET, height: Any = _UNSET,
+              colour: Any = _UNSET, opacity: Any = _UNSET, shape: Any = _UNSET, waves: Any = _UNSET,
+              reflection: Any = _UNSET, rain_ripples: Any = _UNSET, walkable: Any = _UNSET,
+              step_sound: Any = _UNSET) -> Doc:
+    """Make the object a water surface, or change it: ``preset`` "puddle" (shallow, mirror-like, small ripples) or
+    "pond" (larger, gentle waves, darker middle and a lighter rim); ``width``/``height`` (px, 8-8192); ``colour``
+    ("#rrggbb"); ``opacity`` (0.05-1); ``shape`` ("ellipse" or "rect"); ``waves`` and ``reflection`` (0-1);
+    ``rain_ripples`` (true: the room's rain rings it); ``walkable`` (false: it blocks movement, made solid with a box
+    its size); ``step_sound`` (a sound file played on each step through it, "" none). Only what is given changes;
+    a preset given anew starts from that preset's look (its size kept unless given). In an HD-2D room the object's
+    elevation is the water's level."""
+    from engine.water import WaterError, parse_water  # noqa: PLC0415
+
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    config = _behaviour_config(entity, "WaterSurface", create=True)
+    assert config is not None
+    was_blocking = config.get("walkable") is False
+    if preset is not _UNSET and preset != config.get("preset"):
+        from engine.water import PRESETS  # noqa: PLC0415
+
+        for key in ("colour", "opacity", "shape", "waves", "reflection"):  # the new preset's look
+            config.pop(key, None)
+        old = PRESETS.get(str(config.get("preset", "puddle")))
+        if old is not None and (config.get("width"), config.get("height")) in ((old.width, old.height), (None, None)):
+            config.pop("width", None)  # still the old preset's own size: the new one's
+            config.pop("height", None)
+    given = {"preset": preset, "width": width, "height": height, "colour": colour, "opacity": opacity, "shape": shape,
+             "waves": waves, "reflection": reflection, "rain_ripples": rain_ripples, "walkable": walkable,
+             "step_sound": step_sound}
+    for key, value in given.items():
+        if value is not _UNSET:
+            config[key] = round(float(value), 2) if key in ("width", "height") and isinstance(value, (int, float)) \
+                and not isinstance(value, bool) else value
+    config.setdefault("preset", "puddle")
+    try:
+        water = parse_water({k: v for k, v in config.items() if k != "target_tags"})
+    except WaterError as exc:
+        raise OpError(str(exc)) from exc
+    config.setdefault("width", water.width)
+    config.setdefault("height", water.height)
+    components = dict(entity.get("components") or {}) if isinstance(entity.get("components"), dict) else {}
+    if water.walkable:
+        if was_blocking:  # it blocked because it was water that couldn't be walked through: not any more
+            entity.pop("solid", None)
+            components.pop("collider", None)
+    else:  # a pond characters can't walk into: solid, with a box the water's size
+        entity["solid"] = True
+        components["collider"] = {"kind": "box", "offset_x": 0.0, "offset_y": 0.0, "w": round(water.width, 2),
+                                  "h": round(water.height, 2)}
+    if components:
+        entity["components"] = components
+    else:
+        entity.pop("components", None)
+    return _checked(scene, out)
+
+
+def remove_water(scene: Doc, entity_id: str) -> Doc:
+    """Stop the object being water (and blocking movement because of it)."""
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    blocking = ((entity.get("behaviour_config") or {}).get("WaterSurface") or {}).get("walkable") is False
+    _drop_behaviour(entity, "WaterSurface")
+    found = entity.get("components")
+    components: Doc = found if isinstance(found, dict) else {}
+    if blocking:  # its solidity was the water's
+        components.pop("collider", None)
+        entity.pop("solid", None)
+        if not components:
+            entity.pop("components", None)
+    return _checked(scene, out)
+
+
 # --- how a door shows (Milestone 12.2) ------------------------------------------------------------
 # One door behaviour (SceneTransition); three ways to show it. A door picture; an invisible passage (an area the
 # player walks into, outlined only in Studio); or an area over a door, stairs or opening painted on the map. The

@@ -1382,6 +1382,7 @@ Requests a new scene when the player interacts or an event fires.
 | target_tag | Tag of entity that triggers collision | string | player |
 | area_width | Width of the area walking into triggers (0: the picture) | float | 0.0 |
 | area_height | Height of that area (0: the picture) | float | 0.0 |
+| area_at | Where that area is centred: the picture's centre, or its base (where an HD-2D billboard stands) | string | centre |
 
 Example configuration snippet:
 ```json
@@ -1715,6 +1716,38 @@ Example configuration snippet:
   "behaviour_config": {
     "Wander": {
       "wander_radius": "<value>"
+    }
+  }
+}
+```
+
+## WaterSurface
+A puddle or pond: drawn as water, rippled by rain and footsteps (Studio: the Water object).
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| preset | puddle or pond | string | puddle |
+| width | Width (px) | float | 64.0 |
+| height | Height (px) | float | 40.0 |
+| colour | Colour (#rrggbb; empty: the preset's) | string | - |
+| opacity | Opacity (0.05-1; 0: the preset's) | float | 0.0 |
+| shape | ellipse or rect (empty: the preset's) | string | - |
+| waves | How much it moves (0-1; -1: the preset's) | float | -1.0 |
+| reflection | How much it mirrors (0-1; -1: the preset's) | float | -1.0 |
+| rain_ripples | The room's rain rings it | bool | True |
+| walkable | Characters walk through it (false: it blocks) | bool | True |
+| step_sound | A sound played on each step through it | string | - |
+| target_tags | Tags of the characters whose steps splash (player) | array | [] |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["WaterSurface"],
+  "behaviour_config": {
+    "WaterSurface": {
+      "preset": "<value>"
     }
   }
 }

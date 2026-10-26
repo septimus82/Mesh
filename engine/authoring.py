@@ -331,7 +331,9 @@ def summarize(before: Doc, after: Doc) -> list[str]:
         for eid, entity in news.items():
             name = entity.get("name") or eid
             if eid not in olds:
-                what = entity.get("prefab_id") or ("a picture" if entity.get("sprite") else "no picture")
+                water = ops.water_of(entity)
+                what = (f"{water['preset']} water {water['width']:g} x {water['height']:g}" if water
+                        else entity.get("prefab_id") or ("a picture" if entity.get("sprite") else "no picture"))
                 lines.append(f"{label}: adds '{name}' ({what}) at {entity.get('x', 0):g}, {entity.get('y', 0):g}")
                 continue
             for path, (was, now) in changes_between(olds[eid], entity).items():
@@ -446,6 +448,8 @@ def _friendly(path: tuple[Any, ...]) -> str:
             return "conversation openings"
         if behaviour == "Dialogue" and rest[:2] == ("dialogue", "speaker"):
             return "conversation speaker"
+        if behaviour == "WaterSurface" and rest:  # Milestone 19A
+            return f"water {rest[0].replace('_', ' ')}"
         for key in ((behaviour, rest[0]) if rest else (), (behaviour,)):
             if key in _BEHAVIOUR_WORDS:
                 return _BEHAVIOUR_WORDS[key]

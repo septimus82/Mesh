@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 TABS = (("look", "Look"), ("animation", "Animation"), ("collision", "Collision"),
         ("dialogue", "Dialogue"), ("conditions", "Conditions"), ("behaviours", "Behaviours"))
 _DOOR_TABS = ("look", "conditions", "behaviours")  # a door doesn't talk, animate or block
+_WATER_TABS = ("look", "conditions", "behaviours")  # water: its look is the water (Milestone 19A)
 
 
 def _tabs_for(entity: dict[str, Any]) -> tuple[tuple[str, str], ...]:
@@ -37,6 +38,8 @@ def _tabs_for(entity: dict[str, Any]) -> tuple[tuple[str, str], ...]:
         return ()
     if tag == "door":
         return tuple(t for t in TABS if t[0] in _DOOR_TABS)
+    if "WaterSurface" in ops.entity_behaviours(entity):
+        return tuple(t for t in TABS if t[0] in _WATER_TABS)
     return TABS
 THUMB = 96  # picture and animation previews, in pixels
 _DOOR_STYLE_HELP = {  # short lines: they must not need wrapping
@@ -269,6 +272,10 @@ class InspectorMixin:
     # ---------------------------------------------------------------- Look
     def _look_tab(self, rows: Rows, entity: dict[str, Any], width: int) -> None:
         target, sprite = entity["id"], str(entity.get("sprite") or "")
+        water = ops.water_of(entity)
+        if water is not None:
+            self._water_look(rows, target, water, width)
+            return
         if entity.get("tag") == "door" and "SceneTransition" in ops.entity_behaviours(entity):
             self._door_look(rows, entity, width)
             if ops.door_style(entity) != "door":
@@ -736,6 +743,62 @@ class InspectorMixin:
         row.add(self._button("Remove zone", lambda: self._edit(lambda s: ops.remove_trigger_zone(s, target), "Zone removed."),
                              width=(width - 6) // 2, style=S_DANGER))
         rows.add(row)
+
+    # ---------------------------------------------------------------- Water (Milestone 19A)
+    def _water_look(self, rows: Rows, target: str, water: dict[str, Any], width: int) -> None:
+        """A puddle's or pond's settings: every change one checked edit (``project_ops.set_water``), so it undoes,
+        redoes and saves like any other."""
+        half = (width - 126) // 2
+
+        def change(ok: str = "Water changed.", **values: Any) -> None:
+            self._edit(lambda s: ops.set_water(s, target, **values), ok)
+
+        def number(key: str) -> Callable[[str], object]:
+            def commit(text: str) -> None:
+                try:
+                    value = float(text)
+                except ValueError:
+                    self._say(f"{key.capitalize()} must be a number.", ok=False)
+                    return
+                change("Water changed.", **{key: value})
+            return commit
+
+        rows.add(self._label("Water", bold=True, size=12))
+        rows.add(self._label("Drawn as water and rippled by the room's rain and by footsteps. Its elevation is its "
+                             "level.", color=C_MUTED, size=9, width=width))
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for preset, title in (("puddle", "Puddle"), ("pond", "Pond")):
+            row.add(self._button(title, partial(change, f"It's a {preset} now.", preset=preset), width=(width - 4) // 2,
+                                 style=S_ACTIVE if water.get("preset") == preset else S_BUTTON))
+        rows.add(row)
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        row.add(self._label("Width / height", color=C_MUTED, size=10, width=118))
+        row.add(self._field(f"{water.get('width', 0):g}", number("width"), width=half, key="water_w"))
+        row.add(self._field(f"{water.get('height', 0):g}", number("height"), width=half, key="water_h"))
+        rows.add(row)
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        row.add(self._label("Colour / opacity", color=C_MUTED, size=10, width=118))
+        row.add(self._field(str(water.get("colour", "")), lambda v: change(colour=v.strip()), width=half, key="water_colour"))
+        row.add(self._field(f"{water.get('opacity', 0):g}", number("opacity"), width=half, key="water_opacity"))
+        rows.add(row)
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        row.add(self._label("Waves / reflection", color=C_MUTED, size=10, width=118))
+        row.add(self._field(f"{water.get('waves', 0):g}", number("waves"), width=half, key="water_waves"))
+        row.add(self._field(f"{water.get('reflection', 0):g}", number("reflection"), width=half, key="water_reflect"))
+        rows.add(row)
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for shape, title in (("ellipse", "Round"), ("rect", "Square")):
+            row.add(self._button(title, partial(change, shape=shape), width=(width - 4) // 2,
+                                 style=S_ACTIVE if water.get("shape") == shape else S_BUTTON))
+        rows.add(row)
+        rows.add(self._toggle("Rippled by rain", bool(water.get("rain_ripples")), lambda on: change(rain_ripples=on), width))
+        rows.add(self._toggle("Walk through it", bool(water.get("walkable")), lambda on: change(
+            "Characters walk through it." if on else "It blocks movement now.", walkable=on), width))
+        self._labeled(rows, "Step sound", self._field(str(water.get("step_sound") or ""), lambda v: change(step_sound=v.strip()),
+                                                      width=width - 122, key="water_sound"), width)
+        rows.add(self._label("Drag its blue corner on the map to size it (the 2D view).", color=C_MUTED, size=9, width=width))
+        rows.add(self._button("Remove water", lambda: self._edit(lambda s: ops.remove_water(s, target), "Water removed."),
+                              width=(width - 6) // 2, style=S_DANGER))
 
     def _picture_size(self, entity: dict[str, Any]) -> tuple[float, float]:
         sprite = self._sprites_by_id().get(str(entity.get("id") or ""))

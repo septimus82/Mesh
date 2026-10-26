@@ -262,6 +262,7 @@ class Hd2dRenderer:
         self.particles: Any = None  # the room's environmental particles (engine.scene_particles), if it has any
         self.precipitation = PrecipitationMaps(ctx)  # where they meet the world (Milestone 18B; made when needed)
         self.weather_preview = False  # Mesh Studio's "Preview weather": draw them in its editing view too
+        self.water: Any = None  # the room's puddles and ponds on the GPU (engine.water; made when it has any)
         self.preview: tuple[str, tuple[float, ...]] | None = None  # a model about to be placed (Mesh Studio)
         live_ids = set(live)
         for st in settings.structures:
@@ -425,7 +426,7 @@ class Hd2dRenderer:
                    + [self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog]
                    + list(light._targets) + [light.caster, light.lamp_caster, light.sprite_caster, light.probe_prog]
                    + (self.particles.gl_objects() if self.particles is not None else [])
-                   + self.precipitation.gl_objects())
+                   + self.precipitation.gl_objects() + (self.water.gl_objects() if self.water is not None else []))
         return [o for o in objects if o is not None]
 
     def release(self) -> None:
@@ -449,6 +450,9 @@ class Hd2dRenderer:
         self.lighting.release()
         self.set_particles(())
         self.precipitation.release()
+        if self.water is not None:
+            self.water.release()
+            self.water = None
 
     def set_particles(self, effects: tuple[Any, ...],
                       bounds: tuple[float, float, float, float] | None = None) -> None:
@@ -753,6 +757,7 @@ class Hd2dRenderer:
                     texture.use(0)
                     geometry.render(sp, first=first, vertices=count)
                 self.draw_calls += 1
+        self._draw_water(vp, cam, fbo, weather, maps, solid)
         if weather:  # the game's view (or Studio's, previewing): falling in its world, landing on it
             ground = self.settings.ground.elevation / PIXELS_PER_METRE if self.settings.ground is not None else 0.0
             st = self.settings
@@ -778,6 +783,32 @@ class Hd2dRenderer:
                 self._blit.render(self.blit_prog)
         return pixels
 
+    def _draw_water(self, vp: tuple[float, ...], cam: Camera, fbo: Any, weather: bool, maps: list[Any],
+                    solid: Any) -> None:
+        """The room's puddles and ponds (engine.water), after its structures and characters: rippled by its rain when
+        that is drawn (and not kept off them by something above: the rain's precipitation map)."""
+        from engine import water as water_mod  # noqa: PLC0415
+
+        bodies = water_mod.bodies_of(self.window)
+        if not bodies or solid is not None:
+            if self.water is not None:
+                self.water.draw_calls = 0
+            return
+        if self.water is None:
+            self.water = water_mod.WaterLayer(self.ctx, gl=self.arcade.gl)
+        self.water.set_bodies(bodies)
+        rain, shelter = 0.0, None
+        if weather and self.particles is not None:
+            rain = water_mod.rain_rate(self.particles.effects, self.particles.enabled)
+            shelter = next((m for e, m in zip(self.particles.effects, maps) if e.preset == "rain" and m is not None), None)
+        st = self.settings
+        light = tuple(min(1.2, st.ambient * a + st.sun_intensity * 0.55 * max(0.0, st.sun[2]) * c)
+                      for a, c in zip(st.ambient_color, st.sun_color))
+        self.water.draw_3d(vp, cam.eye(), fbo, time=float(getattr(self.window, "water_time", 0.0)),
+                           steps=list(getattr(self.window, "water_steps", None) or []), rain=rain, shelter=shelter,
+                           light=light, sky=tuple(st.sky))
+        self.draw_calls += self.water.draw_calls
+
     def visible_pixels(self, sprite: Any) -> int:
         """How many of ``sprite``'s pixels pass the depth test against the world (for tests and diagnostics)."""
         data = self.draw(solid=sprite, read=True)
@@ -800,4 +831,6 @@ class Hd2dRenderer:
                 "precipitation_maps": len(self.precipitation.maps),
                 "precipitation_bytes": self.precipitation.memory_bytes(),
                 "precipitation_builds": self.precipitation.builds,
-                "precipitation_error": self.precipitation.error}
+                "precipitation_error": self.precipitation.error,
+                "water_surfaces": self.water.count if self.water is not None else 0,
+                "water_bytes": self.water.memory_bytes() if self.water is not None else 0}
