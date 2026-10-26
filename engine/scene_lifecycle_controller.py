@@ -11,6 +11,7 @@ from engine.depth_tint_model import parse_depth_tint_settings
 from engine.hd2d.runtime import configure_scene as configure_hd2d_scene
 from engine.parallax_model import parse_background_planes
 from engine.scene_lifecycle_model import SceneLoadInputs, build_scene_load_plan
+from engine.scene_particles import configure as configure_scene_particles
 from engine.scene_runtime import room_memory
 from engine.scene_runtime.index_build import build_scene_index_from_sprites
 from engine.sprite_outline_model import parse_outline_settings
@@ -246,6 +247,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     controller.window.world_height = controller.scene_settings.get("world_height")
     configure_scene_lighting(controller.window, scene, controller.scene_settings, scene_path)
     configure_hd2d_scene(controller.window, controller.scene_settings, scene)
+    configure_scene_particles(controller.window, controller.scene_settings)  # after the renderer: HD-2D's own them
 
     # Handle music
     music_path = controller.scene_settings.get("music")

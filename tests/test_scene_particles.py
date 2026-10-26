@@ -1,0 +1,122 @@
+"""Milestone 18A: a room's environmental particles (engine.scene_particles), headless: the settings, the seeds, the
+box they fill, the pictures, and how a room load hands them out. The GPU drawing is tests/test_scene_particles_gpu.py."""
+
+from __future__ import annotations
+
+import math
+from types import SimpleNamespace
+from typing import Any
+
+import pytest
+
+from engine import scene_particles as sp
+
+pytestmark = pytest.mark.fast
+
+
+def test_presets_fill_in_what_a_room_leaves_out() -> None:
+    rain, snow, wind = sp.parse_particles([{"preset": "rain"}, {"preset": "snow", "count": 50, "wind": [-1, 0.5]},
+                                           {"preset": "wind", "gust": 0.9, "seed": 4, "enabled": False}])
+    assert (rain.preset, rain.count, rain.wind, rain.enabled) == ("rain", sp.PRESETS["rain"].count, (0.8, 0.0), True)
+    assert (snow.count, snow.wind) == (50, (-1.0, 0.5))
+    assert (wind.gust, wind.seed, wind.enabled, wind.lifetime) == (0.9, 4, False, 6.0)
+    assert sp.parse_particles(None) == () and sp.parse_particles([]) == ()
+
+
+@pytest.mark.parametrize(("raw", "message"), [
+    ({"preset": "rain"}, "list of effects"),
+    ([{"preset": "hail"}], "preset must be one of"),
+    ([{"preset": "rain", "count": 20001}], "count"),
+    ([{"preset": "rain", "count": -1}], "count"),
+    ([{"preset": "rain", "count": 2.5}], "count"),
+    ([{"preset": "rain", "speed": float("nan")}], "speed"),
+    ([{"preset": "rain", "wind": [1]}], "wind"),
+    ([{"preset": "rain", "wind": [99, 0]}], "wind"),
+    ([{"preset": "rain", "opacity": 2}], "opacity"),
+    ([{"preset": "rain", "area": [1, 2]}], "area"),
+    ([{"preset": "rain", "colour": "red"}], "unknown setting"),
+    ([{"preset": "rain", "enabled": "yes"}], "enabled"),
+    ([{"preset": "rain"}] * 5, "at most"),
+])
+def test_bad_settings_are_refused_with_the_reason(raw: Any, message: str) -> None:
+    with pytest.raises(sp.SceneParticlesError, match=message):
+        sp.parse_particles(raw)
+
+
+def test_seeds_are_deterministic_and_in_range() -> None:
+    effect = sp.parse_particles([{"preset": "wind", "count": 500, "seed": 9}])[0]
+    a, b = sp.seeds(effect), sp.seeds(effect)
+    assert a == b and len(a) == 500 * 6
+    other = sp.seeds(sp.parse_particles([{"preset": "wind", "count": 500, "seed": 10}])[0])
+    assert other != a, "another seed, another pattern"
+    rows = [a[i:i + 6] for i in range(0, len(a), 6)]
+    assert all(0 <= v < 1 for row in rows for v in row[:4])
+    assert {int(row[4]) for row in rows} == set(range(len(sp.PRESETS["wind"].variants)))
+    assert all(0.8 <= row[5] <= 1.2 for row in rows)
+
+
+def test_the_box_follows_the_camera_and_reaches_south_for_high_particles() -> None:
+    lo, size = sp.box_for_3d((20.0, 10.0, 0.8), 30.0, (30.0, 34.0, 12.0), ground=0.0)
+    assert lo[0] == 5.0 and size[0] == 30.0 and lo[2] == 0.0 and size[2] == 12.0
+    back = 12.0 / math.tan(math.radians(30.0))
+    assert lo[1] == pytest.approx(10.0 - 17.0 - back) and size[1] == pytest.approx(34.0 + back)
+    lo2, size2 = sp.box_for_2d((40.0, 20.0), (40.0, 22.5), (30.0, 34.0, 12.0))
+    assert size2[0] == 44.0 and lo2[0] == 18.0, "a 2D room's box covers its view, whatever the area"
+    assert size2[1] == pytest.approx(34.0 + 12.0)
+
+
+def test_the_atlas_is_pixel_art() -> None:
+    image = sp.atlas_image()
+    assert image.size == (32, 24)
+    alphas = set(image.getchannel("A").getdata())
+    assert alphas <= {0, 255}, "binary alpha"
+    for preset in sp.PRESETS.values():
+        for x, y, w, h in preset.variants:
+            box = image.crop((x, y, x + w, y + h)).getchannel("A")
+            assert box.getbbox() is not None, (preset, (x, y, w, h))
+
+
+class _Renderer:
+    def __init__(self) -> None:
+        self.effects: Any = None
+
+    def set_particles(self, effects: Any) -> None:
+        self.effects = effects
+
+
+def test_a_room_load_hands_particles_to_its_renderer_or_keeps_2d_rooms_untouched() -> None:
+    hd2d = SimpleNamespace(hd2d_renderer=_Renderer(), ctx=None, scene_particles=None)
+    sp.configure(hd2d, {"particles": [{"preset": "snow"}]})
+    assert [e.preset for e in hd2d.hd2d_renderer.effects] == ["snow"] and hd2d.scene_particles is None
+
+    plain = SimpleNamespace(hd2d_renderer=None, ctx=None, scene_particles=None)
+    sp.configure(plain, {"world_width": 640})
+    assert plain.scene_particles is None and plain.scene_particles_error is None, "a room without them: nothing"
+
+    broken = SimpleNamespace(hd2d_renderer=None, ctx=None, scene_particles=None)
+    sp.configure(broken, {"particles": [{"preset": "hail"}]})
+    assert broken.scene_particles is None and "preset must be one of" in broken.scene_particles_error
+
+    class _NoDriver:
+        def set_particles(self, effects: Any) -> None:
+            raise RuntimeError("shader didn't compile")
+
+    no_gl = SimpleNamespace(hd2d_renderer=_NoDriver(), ctx=None, scene_particles=None)
+    sp.configure(no_gl, {"particles": [{"preset": "rain"}]})
+    assert "didn't compile" in no_gl.scene_particles_error, "a driver that can't build them: the room still loads"
+
+
+def test_a_room_s_particles_are_authored_checked_and_saved_in_its_settings() -> None:
+    from engine import authoring
+    from engine import project_ops as ops
+
+    scene = {"settings": {"world_width": 640}, "entities": []}
+    rainy = ops.set_particles(scene, [{"preset": "rain", "count": 1200}])
+    assert rainy["settings"]["particles"] == [{"preset": "rain", "count": 1200}] and "particles" not in scene["settings"]
+    with pytest.raises(ops.OpError, match="preset must be one of"):
+        ops.set_particles(scene, [{"preset": "hail"}])
+    assert "particles" not in ops.set_particles(rainy, [])["settings"], "an empty list removes them"
+    assert "settings" not in ops.set_particles({"entities": []}, []), "and adds nothing to a room without settings"
+    with pytest.raises(ops.OpError, match="aren't readable"):
+        ops.set_particles({"settings": "odd"}, [{"preset": "rain"}])
+    assert "set_particles" in authoring.operations(), "AI and Studio author them through the same checked edit"

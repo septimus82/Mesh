@@ -689,6 +689,34 @@ def with_tileset(map_doc: Doc, map_project_path: str, tileset_project_path: str,
 _UNSET: Any = object()
 
 
+# --- environmental particles (Milestone 18A) ---------------------------------------------------------------------
+
+def set_particles(scene: Doc, effects: Any) -> Doc:
+    """The room's environmental particles (``settings.particles``; engine.scene_particles): a list of up to 4 effects
+    such as ``[{"preset": "rain", "count": 3000, "wind": [1.0, 0.0]}]``. An empty list (or None) removes them.
+    HD-2D rooms draw them in their 3D world; 2D rooms over their map. Checked as the game reads them.
+
+    Each effect: ``preset`` ("rain", "snow" or "wind": windborne leaves), and optionally ``count`` (0-20000),
+    ``speed`` (0-5, times the preset's fall or drift), ``wind`` ([east, north] m/s, each -30..30), ``gust`` (0-1),
+    ``lifetime`` (0.5-60 s, how long a leaf is seen), ``seed`` (a whole number: another pattern), ``area``
+    ([across 4-120, along 4-120, high 1-40] m about the camera), ``opacity`` (0-1), ``enabled`` (true/false)."""
+    from engine.scene_particles import SceneParticlesError, parse_particles  # noqa: PLC0415
+
+    try:
+        parse_particles(effects)
+    except SceneParticlesError as exc:
+        raise OpError(str(exc)) from exc
+    out = copy.deepcopy(scene)
+    settings = out.get("settings")
+    if settings is not None and not isinstance(settings, dict):
+        raise OpError("This room's settings aren't readable.")
+    if effects:
+        out.setdefault("settings", {})["particles"] = copy.deepcopy(list(effects))
+    elif settings:
+        settings.pop("particles", None)
+    return _checked(scene, out)
+
+
 # --- how a door shows (Milestone 12.2) ------------------------------------------------------------
 # One door behaviour (SceneTransition); three ways to show it. A door picture; an invisible passage (an area the
 # player walks into, outlined only in Studio); or an area over a door, stairs or opening painted on the map. The

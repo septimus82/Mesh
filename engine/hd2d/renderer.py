@@ -258,6 +258,7 @@ class Hd2dRenderer:
         self._parts: dict[tuple[str, int], Any] = {}  # (model, part) -> its geometry in its own space (live drawing)
         self._materials: dict[tuple[str, str], Any] = {}
         self.live: dict[str, tuple[str, tuple[float, ...]]] = {}  # id -> (model, matrix)
+        self.particles: Any = None  # the room's environmental particles (engine.scene_particles), if it has any
         self.preview: tuple[str, tuple[float, ...]] | None = None  # a model about to be placed (Mesh Studio)
         live_ids = set(live)
         for st in settings.structures:
@@ -414,7 +415,8 @@ class Hd2dRenderer:
         objects = (list(self._buffers) + list(self._textures) + list(self._sprite_textures.values()) + list(self._fbo_parts)
                    + [self._fbo] + list(self._dynamic[1:] if self._dynamic else []) + list(self._lines[1:] if self._lines else [])
                    + [self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog]
-                   + list(light._targets) + [light.caster, light.lamp_caster, light.sprite_caster, light.probe_prog])
+                   + list(light._targets) + [light.caster, light.lamp_caster, light.sprite_caster, light.probe_prog]
+                   + (self.particles.gl_objects() if self.particles is not None else []))
         return [o for o in objects if o is not None]
 
     def release(self) -> None:
@@ -436,6 +438,18 @@ class Hd2dRenderer:
         for program in (self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog):
             program.delete()
         self.lighting.release()
+        self.set_particles(())
+
+    def set_particles(self, effects: tuple[Any, ...]) -> None:
+        """The room's environmental particles (engine.scene_particles.ParticleEffect), drawn in its 3D world; none frees
+        them."""
+        if self.particles is not None:
+            self.particles.release()
+            self.particles = None
+        if effects:
+            from engine.scene_particles import ParticleLayer  # noqa: PLC0415
+
+            self.particles = ParticleLayer(self.ctx, tuple(effects), gl=self.arcade.gl)
 
     # ------------------------------------------------------------------ the scene's sprites
     def _sprites(self) -> list[Any]:
@@ -613,6 +627,8 @@ class Hd2dRenderer:
         program["u_cut_floor"] = floor + 0.05
 
     def update(self, delta_time: float) -> None:
+        if self.particles is not None:
+            self.particles.update(delta_time)
         sprite = self.followed()
         if sprite is None:
             return
@@ -696,6 +712,13 @@ class Hd2dRenderer:
                     texture.use(0)
                     geometry.render(sp, first=first, vertices=count)
                 self.draw_calls += 1
+        if self.particles is not None and solid is None and camera is None:  # the game's view: falling in its world
+            ground = self.settings.ground.elevation / PIXELS_PER_METRE if self.settings.ground is not None else 0.0
+            st = self.settings
+            light = tuple(min(1.2, st.ambient * a + st.sun_intensity * 0.55 * max(0.0, st.sun[2]) * c)
+                          for a, c in zip(st.ambient_color, st.sun_color))
+            self.particles.draw_3d(vp, cam, ground, light, fbo)
+            self.draw_calls += self.particles.draw_calls
         if overlay is not None and solid is None:
             overlay(vp)
         ctx.disable(ctx.DEPTH_TEST)
@@ -727,4 +750,7 @@ class Hd2dRenderer:
                 "texture_bytes": texture_bytes, "target_bytes": target_bytes, "batched": self.batched,
                 "shadows": self.lighting.enabled, "shadow_draws": self.lighting.shadow_draws,
                 "shadow_map_bytes": self.lighting.memory_bytes(), "lamps": len(self.lighting.lamps),
-                "shadow_lamps": sum(1 for slot in self.lighting.lamp_slots if slot >= 0)}
+                "shadow_lamps": sum(1 for slot in self.lighting.lamp_slots if slot >= 0),
+                "particles": sum(e.count for e, on in zip(self.particles.effects, self.particles.enabled) if on)
+                if self.particles is not None else 0,
+                "particle_bytes": self.particles.memory_bytes() if self.particles is not None else 0}
