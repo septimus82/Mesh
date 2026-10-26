@@ -240,3 +240,26 @@ def test_flat_rooms_read_as_before() -> None:
     plain = parse_hd2d({"ground": {"from": [0, 0], "to": [64, 64], "extra": 1}}).ground
     assert plain is not None, "unknown ground keys are still ignored, as before"
     assert math.isclose(World(parse_hd2d({"ground": {"from": [0, 0], "to": [64, 64]}}), {}).surfaces[0].plane[2], 0.0)
+
+
+def test_settling_the_shared_player_settles_it_in_its_room_only(tmp_path: Path) -> None:
+    """QA: the player is shared across rooms; where it starts (x, y and now its elevation) is each room's own."""
+    from engine.project_scaffold import create_project
+    from engine.studio_project import Project
+
+    root = tmp_path / "game"
+    create_project(root, "Game", template_id="hd2d_rpg")
+    project = Project(root, json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"])
+    rooms = [key for key, _label, _path in project.rooms()]
+    room, other = rooms[0], next(r for r in rooms if r != rooms[0])
+    pid = next(e["id"] for e in project.scene(room)["entities"] if project.is_shared_player(e.get("id"), room))
+    oid = next(e["id"] for e in project.scene(other)["entities"] if project.is_shared_player(e.get("id"), other))
+    before = project.scene(other)
+    player = ops.find_entity(project.scene(room), pid)
+    authoring.apply(project, [{"op": "sculpt_terrain", "room": room, "tool": "raise", "x": player["x"],
+                               "y": player["y"], "radius": 96, "strength": 24},
+                              {"op": "settle_on_ground", "room": room, "entity_ids": [pid]}])
+    assert ops.find_entity(project.scene(room), pid).get("elevation", 0) > 8, "settled up onto the raised ground"
+    was = ops.find_entity(before, oid).get("elevation")
+    assert ops.find_entity(project.scene(other), oid).get("elevation") == was, "the other room's player starts as it did"
+    assert ops.ROOM_PLAYER_FIELDS == ("id", "x", "y", "elevation")

@@ -493,9 +493,11 @@ class Hd2dRenderer:
         Studio's edits make, renews them)."""
         self.terrain = terrain
         self.terrain_version += 1
-        for key in chunks:
-            self._terrain_chunk(key)
-        self.precipitation.invalidate()
+        try:
+            for key in chunks:
+                self._terrain_chunk(key)
+        finally:  # (a refused upload stops here: what was rebuilt stands, and rain looks at the ground afresh)
+            self.precipitation.invalidate()
 
     def _ground_draws(self, vp: list[list[float]] | None = None) -> list[tuple[Any, Any, tuple[float, ...]]]:
         """The ground: the flat quad, or the sculpted ground's chunks (with ``vp``, only those in the picture)."""

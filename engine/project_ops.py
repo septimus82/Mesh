@@ -1983,7 +1983,8 @@ def remove_light(scene: Doc, index: int) -> Doc:
 # Rooms are expanded for editing (the player looks like any object to the ops) and split again when stored.
 
 PLAYER_PREFAB = "player"
-ROOM_PLAYER_FIELDS = ("id", "x", "y")  # what a room decides about its player; everything else is shared
+ROOM_PLAYER_FIELDS = ("id", "x", "y", "elevation")  # what a room decides about its player (where it starts, how
+# high: Milestone 20A, its floor or ground there); everything else is shared
 
 
 def shared_player_ids(scene: Doc) -> list[str]:
