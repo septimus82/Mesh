@@ -26,20 +26,25 @@ def _default_cache_dir(repo_root: Path) -> Path:
 
 
 def _untracked_dirs(repo_root: Path) -> list[str]:
-    """Local folders git doesn't track (a game project, scratch work): not this repository's code.
+    """Local folders git doesn't track (a game project, scratch work) or ignores (raw generator records and their
+    scripts): not this repository's code.
 
     A project folder's own main.py made mypy stop with "Duplicate module named 'main'" before checking
     anything, so the gate (and every verify-all test after it) failed in any checkout holding one.
     """
-    try:
-        result = subprocess.run(["git", "ls-files", "--others", "--directory", "--exclude-standard"], cwd=repo_root,
-                                capture_output=True, text=True)
-    except OSError:
-        return []
-    if getattr(result, "returncode", 1) != 0:
-        return []
-    out = str(getattr(result, "stdout", "") or "")
-    return [line.rstrip("/") for line in out.splitlines() if line.endswith("/")]
+    folders: list[str] = []
+    for extra in ([], ["--ignored"]):
+        try:
+            result = subprocess.run(["git", "ls-files", "--others", *extra, "--directory", "--exclude-standard"],
+                                    cwd=repo_root, capture_output=True, text=True)
+        except OSError:
+            return folders
+        if getattr(result, "returncode", 1) != 0:
+            return folders
+        out = str(getattr(result, "stdout", "") or "")
+        folders += [line.rstrip("/") for line in out.splitlines()
+                    if line.endswith("/") and not line.endswith("__pycache__/")]
+    return folders
 
 
 def _build_mypy_command(repo_root: Path) -> tuple[list[str], Path]:
