@@ -335,3 +335,27 @@ def test_a_2d_room_s_rain_lands_on_its_ground_and_stays_on_its_map(tmp_path: Pat
     assert ((loose_flat < [x0, y0]) | (loose_flat > [x1, y1])).any(axis=1).sum() > 50, "18A: also off the map"
     landed = kept[kept[:, 3] < 0]
     assert len(landed) > 20 and np.allclose(landed[:, 2], 0.0, atol=1e-4), "splashes on the ground"
+
+
+def test_indoors_leaves_still_blow_but_rain_does_not_fall(tmp_path: Path) -> None:
+    import hd2d_visual_study as study
+
+    project = study.new_project(tmp_path, "inside_leaves", stage6a=False)
+    path = project / study.SCENES / "cottage.json"
+    scene = json.loads(path.read_text(encoding="utf-8"))
+    scene["settings"]["particles"] = [{"preset": "rain", "count": 3000}, {"preset": "wind", "count": 400}]
+    path.write_text(json.dumps(scene), encoding="utf-8")
+    game = study.HiddenGame(project, size=study.SIZE)
+    try:
+        game.load(f"{study.SCENES}/cottage.json")
+        game.step(30)
+        hd = game.window.hd2d_renderer
+        assert [e.preset for e in hd.particles.effects] == ["wind"], "leaves kept, rain kept out"
+        assert "its rain is not shown" in game.window.scene_particles_notice
+        with_leaves = game.draw().convert("RGB")
+        assert hd.particles.draw_calls == 1 and not hd.precipitation.maps, "leaves don't fall: no map"
+        hd.particles.set_enabled(0, False)
+        without = game.draw().convert("RGB")
+    finally:
+        game.close()
+    assert sum(1 for p, q in zip(with_leaves.getdata(), without.getdata()) if p != q) > 50, "the leaves are drawn"

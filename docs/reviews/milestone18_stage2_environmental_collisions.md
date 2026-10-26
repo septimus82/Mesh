@@ -15,8 +15,8 @@
   the rain.
 - **Rooms:**
   - Weather is kept inside the room's own rectangle (its map), fading out over the last 0.75 m.
-  - A room can be marked indoors (`settings.weather_exposure: "indoor"`), and then shows no weather at all. The
-    starter cottage interior is indoors.
+  - A room can be marked indoors (`settings.weather_exposure: "indoor"`), and then shows no rain or snow. Other
+    particles it asks for, such as windborne leaves, still show. The starter cottage interior is indoors.
 - **Mesh Studio:**
   - The 3D view has a **Preview weather** toggle (on by default when the room has weather). Rain, snow and leaves
     move and land in the editing view as in play.

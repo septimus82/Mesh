@@ -216,7 +216,7 @@ def test_an_indoor_room_gets_no_weather_and_says_why() -> None:
         sp.parse_exposure("cellar")
     hd2d = SimpleNamespace(hd2d_renderer=_Renderer(), ctx=None, scene_particles=None)
     sp.configure(hd2d, {"particles": [{"preset": "rain"}, {"preset": "snow"}], "weather_exposure": "indoor"})
-    assert hd2d.hd2d_renderer.effects == () and "rain, snow is not shown" in hd2d.scene_particles_notice
+    assert hd2d.hd2d_renderer.effects == () and "its rain and snow are not shown" in hd2d.scene_particles_notice
     bad = SimpleNamespace(hd2d_renderer=_Renderer(), ctx=None, scene_particles=None)
     sp.configure(bad, {"particles": [{"preset": "rain"}], "weather_exposure": "cellar"})
     assert "weather_exposure must be one of" in bad.scene_particles_error
@@ -272,3 +272,24 @@ def test_weather_changes_the_summary_words_leave_out_are_named() -> None:
     assert lines == ["V: weather rain x4000: changes opacity"]
     assert authoring._weather_lines("V", {}, {"particles": [{"preset": "wind", "count": 200, "wind": [0, 0]}]}) == [
         "V: weather none -> leaves x200 (no wind)"]
+
+
+@pytest.mark.parametrize(("asked", "kept", "named"), [
+    (["rain"], [], "its rain is not shown"),
+    (["snow"], [], "its snow is not shown"),
+    (["wind"], ["wind"], None),
+    (["rain", "wind", "snow"], ["wind"], "its rain and snow are not shown"),
+])
+def test_indoors_only_rain_and_snow_are_kept_out(asked: list[str], kept: list[str], named: str | None) -> None:
+    effects = [{"preset": p, "count": 0} for p in asked]
+    hd2d = SimpleNamespace(hd2d_renderer=_Renderer(), ctx=None, scene_particles=None)
+    sp.configure(hd2d, {"particles": effects, "weather_exposure": "indoor"})
+    assert [e.preset for e in hd2d.hd2d_renderer.effects] == kept, "HD-2D: only what isn't precipitation stays"
+    assert (hd2d.scene_particles_notice is None) if named is None else (named in hd2d.scene_particles_notice)
+    flat = SimpleNamespace(hd2d_renderer=None, ctx=_FakeGL(fail_at=-1), scene_particles=None)
+    sp.configure(flat, {"particles": effects, "weather_exposure": "indoor"})
+    layer = flat.scene_particles
+    assert ([e.preset for e in layer.effects] if layer is not None else []) == kept, "2D: the same"
+    outside = SimpleNamespace(hd2d_renderer=_Renderer(), ctx=None, scene_particles=None)
+    sp.configure(outside, {"particles": effects})
+    assert [e.preset for e in outside.hd2d_renderer.effects] == asked and outside.scene_particles_notice is None

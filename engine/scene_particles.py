@@ -69,7 +69,8 @@ class _Preset:
 # A raindrop's splash where it lands (Milestone 18B): three frames in the atlas, (x, y, w, h) px, played over its
 # impact time; a snowflake settles as its own picture, fading.
 SPLASH = ((12, 4, 3, 2), (16, 4, 5, 2), (22, 4, 7, 2))
-EXPOSURES = ("outdoor", "indoor")  # settings.weather_exposure: an indoor room gets no weather (rain, snow, leaves)
+EXPOSURES = ("outdoor", "indoor")  # settings.weather_exposure: an indoor room gets no precipitation
+PRECIPITATION = ("rain", "snow")  # what falls from the sky: kept out of indoor rooms (leaves, and later dust or ash, stay)
 
 
 PRESETS: dict[str, _Preset] = {
@@ -533,11 +534,12 @@ def configure(window: Any, settings: Any, scene: Any = None) -> None:
         if raw is None:
             return
         effects = parse_particles(raw)
-        if indoor and effects:
-            # Milestone 18B: weather is the outdoors'; an indoor room gets none, whatever asks for it
-            window.scene_particles_notice = (f"This room is indoors (weather_exposure), so its "
-                                             f"{', '.join(e.preset for e in effects)} is not shown.")
-            effects = ()
+        if indoor and any(e.preset in PRECIPITATION for e in effects):
+            # Milestone 18B: rain and snow fall outdoors; an indoor room keeps only what else it asks for (leaves)
+            gone = sorted({e.preset for e in effects if e.preset in PRECIPITATION}, key=PRECIPITATION.index)
+            window.scene_particles_notice = (f"This room is indoors (weather_exposure), so its {' and '.join(gone)} "
+                                             f"{'is' if len(gone) == 1 else 'are'} not shown.")
+            effects = tuple(e for e in effects if e.preset not in PRECIPITATION)
         renderer = getattr(window, "hd2d_renderer", None)
         if renderer is not None:
             renderer.set_particles(effects, bounds=room_bounds_2d(settings, scene))

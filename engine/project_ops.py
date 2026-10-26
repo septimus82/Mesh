@@ -718,8 +718,9 @@ def set_particles(scene: Doc, effects: Any) -> Doc:
 
 
 def set_weather_exposure(scene: Doc, exposure: Any) -> Doc:
-    """Whether the room is out in the weather (``settings.weather_exposure``): "outdoor" (the default: rain, snow and
-    windborne leaves show, landing on its ground and structures) or "indoor" (none of them show, whatever asks)."""
+    """Whether the room is out in the weather (``settings.weather_exposure``): "outdoor" (the default: rain and snow
+    show, landing on its ground and structures) or "indoor" (no rain or snow, whatever asks; other particles the
+    room asks for, such as windborne leaves, still show)."""
     from engine.scene_particles import SceneParticlesError, parse_exposure  # noqa: PLC0415
 
     try:
