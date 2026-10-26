@@ -1,10 +1,10 @@
 {
   "depth_and_anchoring": {
-    "pond_pixels_drawn": 47798,
-    "pond_pixels_hidden_by_structures": 3382,
+    "pond_pixels_drawn": 47818,
+    "pond_pixels_hidden_by_structures": 3254,
     "world_shift_px": -31,
     "water_pixels_found_where_the_world_moved": 0.998,
-    "water_pixels_found_where_they_were_on_screen": 0.902
+    "water_pixels_found_where_they_were_on_screen": 0.903
   },
   "ripples": {
     "puddle": {
@@ -13,9 +13,9 @@
         1.62
       ],
       "ripple_pixels_per_frame": [
-        1118,
-        1582,
-        2262
+        1095,
+        1527,
+        2204
       ]
     },
     "pond": {
@@ -24,9 +24,9 @@
         4.69
       ],
       "ripple_pixels_per_frame": [
-        14529,
-        15104,
-        12230
+        14798,
+        15644,
+        12308
       ]
     },
     "sheltered": {
@@ -36,8 +36,8 @@
       ],
       "ripple_pixels_per_frame": [
         72,
-        58,
-        134
+        56,
+        132
       ]
     },
     "sheltered_negative_control_shelter_off": {
@@ -46,15 +46,15 @@
         1.25
       ],
       "ripple_pixels_per_frame": [
-        442,
-        818,
-        916
+        436,
+        819,
+        912
       ]
     },
     "rings_follow_the_world": {
       "best_shift_px": -31,
-      "overlap_at_best": 0.924,
-      "overlap_unshifted": 0.249
+      "overlap_at_best": 0.926,
+      "overlap_unshifted": 0.25
     }
   },
   "footsteps": {
@@ -76,7 +76,7 @@
     }
   },
   "two_d": {
-    "water_pixels": 24032,
+    "water_pixels": 24020,
     "player_pixels_changed_by_water": 0,
     "player_box": [
       119,
