@@ -48,8 +48,10 @@ def test_the_project_has_the_kit_and_only_mesh_art(project: Path) -> None:
     listed = {a.id: a for a in catalog.assets(project)}
     kit = json.loads((KIT / "catalog.json").read_text(encoding="utf-8"))
     assert set(listed) == {m["id"] for m in kit["models"]} and len(listed) == 14
-    assert all(a.catalogued and not a.missing and a.source == {"kit": "Mesh HD-2D starter kit 1",
+    assert all(a.catalogued and not a.missing and a.source == {"kit": "Mesh HD-2D starter kit 2",
                                                                 "sha256": a.source["sha256"]} for a in listed.values())
+    for model in kit["models"]:  # a new project gets the kit as it is now (the Milestone 17 cottage included)
+        assert (project / listed[model["id"]].model).read_bytes() == (KIT / model["model"]).read_bytes(), model["id"]
     sprites = sorted(p.name for p in (project / "assets" / "sprites").iterdir())
     assert sprites == ["door.png", "hd2d_hero.png", "hd2d_merchant.png", "hd2d_villager.png", "starter_hero.png",
                        "starter_sign.png", "starter_villager.png"]

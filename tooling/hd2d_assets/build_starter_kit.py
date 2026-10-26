@@ -133,7 +133,7 @@ def interior() -> None:
 
 
 KIT = {
-    "cottage": build_cottage.build,
+    "cottage": build_cottage.build_kit,
     "shop": shop,
     "wall_2m": wall_2m,
     "roof_4m": roof_4m,

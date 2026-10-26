@@ -26,7 +26,7 @@ LICENSE = "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships w
 
 # id -> (name, category, notes): what the model browser shows. Defaults turn 0, scale 1.
 MODELS = {
-    "cottage": ("Cottage", "Buildings", "A timber-and-plaster cottage with a doorway; walk inside."),
+    "cottage": ("Cottage", "Buildings", "A timber-framed cottage on a cobbled plinth, with windows; walk inside."),
     "shop": ("Shop", "Buildings", "A stall-shop with a counter and awning; walk in at the counter's east end."),
     "wall_2m": ("Wall (2 m)", "Building parts", "A wall module, 2.5 m high: line several up."),
     "roof_4m": ("Roof (4 x 4 m)", "Building parts", "A gable roof: place it 2.5 m up on four wall modules."),
@@ -66,7 +66,7 @@ def main(blender: Path) -> None:
                             "collision": report.collision, "floors": report.floors})
     for texture in GROUND_TEXTURES:
         shutil.copyfile(HERE / "textures" / f"{texture}.png", KIT / "textures" / f"{texture}.png")
-    (KIT / "catalog.json").write_text(json.dumps({"schema_version": 1, "kit": "Mesh HD-2D starter kit", "version": 1,
+    (KIT / "catalog.json").write_text(json.dumps({"schema_version": 1, "kit": "Mesh HD-2D starter kit", "version": 2,
                                                   "models": entries}, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {len(entries)} models to {KIT}")
 
