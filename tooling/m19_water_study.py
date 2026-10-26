@@ -508,8 +508,10 @@ def perf(out: Path) -> dict[str, Any]:
             game.load(f"{SCENES}/start.json")
             game.step(30)
             hd = game.window.hd2d_renderer
-            hd.camera.target = (17.0, 12.0, 0.8)
-            hd._camera_ready = True
+            player = game.player()  # the camera follows the player: put them between the puddle and the pond
+            player.center_x = 17.0 * PX
+            player.center_y += 12.0 * PX - player.bottom
+            game.step(90)
             bodies = list(game.window.water_bodies)
             game.window.dispatch_event("on_draw")
             rounds: dict[str, list[float]] = {"on": [], "off": [], "gpu_on": [], "gpu_off": []}

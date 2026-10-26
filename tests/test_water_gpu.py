@@ -137,3 +137,39 @@ def test_water_layer_that_fails_part_way_leaves_nothing(tmp_path: Path, monkeypa
         assert _gl_counts(ctx) == before
     finally:
         game.close()
+
+
+def test_a_driver_refusing_the_water_turns_it_off_for_the_room_not_the_game(tmp_path: Path,
+                                                                            monkeypatch: pytest.MonkeyPatch) -> None:
+    import hd2d_visual_study as visual
+    import m19_water_study as study
+    from hd2d_demo import _gl_counts
+
+    game = visual.HiddenGame(study.make_project(tmp_path, "refuse", rain=False), size=visual.SIZE)
+    try:
+        game.load(f"{visual.SCENES}/start.json")
+        game.step(30)
+        hd, ctx = game.window.hd2d_renderer, game.window.ctx
+        bodies = game.window.water_bodies
+        game.window.water_bodies = []
+        game.draw()  # the frame's own target made first
+        game.window.water_bodies = bodies
+        ctx.gc()
+        before = _gl_counts(ctx)
+
+        def refuse(*_: Any, **__: Any) -> Any:
+            raise RuntimeError("no depth texture (injected)")
+
+        monkeypatch.setattr(ctx, "depth_texture", refuse)
+        for _ in range(3):
+            assert game.draw() is not None, "the game keeps drawing"
+        monkeypatch.undo()
+        assert hd.water is None and "injected" in hd.stats()["water_error"], "water off, the reason kept"
+        ctx.gc()
+        assert _gl_counts(ctx) == before, "what it had made is freed"
+        game.load(f"{visual.SCENES}/start.json")  # the room's next load tries again
+        game.step(3)
+        game.draw()
+        assert game.window.hd2d_renderer.water is not None and game.window.hd2d_renderer.water_error is None
+    finally:
+        game.close()

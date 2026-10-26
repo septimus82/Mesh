@@ -263,6 +263,7 @@ class Hd2dRenderer:
         self.precipitation = PrecipitationMaps(ctx)  # where they meet the world (Milestone 18B; made when needed)
         self.weather_preview = False  # Mesh Studio's "Preview weather": draw them in its editing view too
         self.water: Any = None  # the room's puddles and ponds on the GPU (engine.water; made when it has any)
+        self.water_error: str | None = None  # why they're off in this room, if the GPU refused them
         self.preview: tuple[str, tuple[float, ...]] | None = None  # a model about to be placed (Mesh Studio)
         live_ids = set(live)
         for st in settings.structures:
@@ -790,13 +791,28 @@ class Hd2dRenderer:
         from engine import water as water_mod  # noqa: PLC0415
 
         bodies = water_mod.bodies_of(self.window)
-        if not bodies or solid is not None:
+        if not bodies or solid is not None or self.water_error is not None:
             if self.water is not None:
                 self.water.draw_calls = 0
             return
+        try:
+            self._draw_water_now(water_mod, bodies, vp, cam, fbo, weather, maps)
+        except Exception as exc:  # the driver refused it: no water in this room (its next load tries again)
+            self.water_error = f"water: {exc}"
+            logger.error("[Mesh][Water] %s (water is off in this room)", self.water_error)
+            if self.water is not None:
+                self.water.release()
+                self.water = None
+            fbo.use(force=True)
+
+    def _draw_water_now(self, water_mod: Any, bodies: list[Any], vp: tuple[float, ...], cam: Camera, fbo: Any,
+                        weather: bool, maps: list[Any]) -> None:
         if self.water is None:
             self.water = water_mod.WaterLayer(self.ctx, gl=self.arcade.gl)
         self.water.set_bodies(bodies)
+        if self.last_vp is not None and not self.water.in_view(self.last_vp):
+            self.water.draw_calls = 0
+            return
         rain, shelter = 0.0, None
         if weather and self.particles is not None:
             rain = water_mod.rain_rate(self.particles.effects, self.particles.enabled)
@@ -833,4 +849,5 @@ class Hd2dRenderer:
                 "precipitation_builds": self.precipitation.builds,
                 "precipitation_error": self.precipitation.error,
                 "water_surfaces": self.water.count if self.water is not None else 0,
-                "water_bytes": self.water.memory_bytes() if self.water is not None else 0}
+                "water_bytes": self.water.memory_bytes() if self.water is not None else 0,
+                "water_error": self.water_error}

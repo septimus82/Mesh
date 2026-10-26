@@ -317,14 +317,16 @@ class WaterLayer:
         key = tuple(rows)
         if key == self._key:
             return
-        self._key, self.count = key, len(rows)
         data = array("f", [v for row in rows for v in row]).tobytes() if rows else b""
-        if self.instances is not None and self.instances.size >= max(1, len(data)):
+        if self.geometry is not None and self.instances.size >= max(1, len(data)):
             if data:
                 self.instances.write(data)
+            self._key, self.count = key, len(rows)
             return
         self._free_geometry()
+        self._key, self.count = None, 0  # recorded only once the geometry is made (a failure tries again)
         if not rows:
+            self._key = key
             return
         self.instances = self.ctx.buffer(data=data)
         gl = self.gl
@@ -333,6 +335,23 @@ class WaterLayer:
              gl.BufferDescription(self.instances, "4f 4f 4f 4f", ["in_rect", "in_info", "in_colour", "in_look"],
                                   instanced=True)],
             mode=self.ctx.TRIANGLE_STRIP)
+        self._key, self.count = key, len(rows)
+
+    def in_view(self, vp: list[list[float]]) -> bool:
+        """Whether any water surface is in the picture (its corners' clip-space box overlaps the screen): with none,
+        the pass (and its frame copy) is skipped."""
+        for row in self._key or ():
+            x, y, hw, hh, z = row[0], row[1], row[2], row[3], row[4]
+            pts = []
+            for cx, cy in ((x - hw, y - hh), (x + hw, y - hh), (x - hw, y + hh), (x + hw, y + hh)):
+                c = [vp[r][0] * cx + vp[r][1] * cy + vp[r][2] * z + vp[r][3] for r in (0, 1, 3)]
+                if c[2] <= 1e-6:
+                    return True  # a corner behind the camera: can't tell cheaply, draw it
+                pts.append((c[0] / c[2], c[1] / c[2]))
+            if (min(p[0] for p in pts) <= 1 and max(p[0] for p in pts) >= -1
+                    and min(p[1] for p in pts) <= 1 and max(p[1] for p in pts) >= -1):
+                return True
+        return False
 
     def _free_geometry(self) -> None:
         if self.geometry is not None:

@@ -309,7 +309,9 @@ class Studio(InspectorMixin):
         if again or room != getattr(self, "_weather_room", None):
             self._weather_room = room
             self._weather_said: set[str] = set()
-        for text, ok in ((f"Weather is off in this room: {error}" if error else None, False), (notice, True)):
+        water_error = renderer.water_error if renderer is not None else None
+        for text, ok in ((f"Weather is off in this room: {error}" if error else None, False),
+                         (f"Water is off in this room: {water_error}" if water_error else None, False), (notice, True)):
             if text and text not in self._weather_said:
                 self._weather_said.add(text)
                 self._say(text, ok=ok)
