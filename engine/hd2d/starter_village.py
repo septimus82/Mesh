@@ -49,10 +49,10 @@ FOV = 12.0  # degrees: a long lens, near-orthographic with some depth
 OUTDOOR_VIEW, INDOOR_VIEW = 11.25, 7.5  # m of the world top to bottom at the player: 64 / 96 px per m at 720 px
 SUN = [-0.45, -0.55, 0.70]  # towards the sun: Mesh's default, high in the south-west
 # The cottage's door (m, its sprite's centre), standing in the doorway: a billboard stands on its bottom edge, so the
-# 64 px (2 m) door sprite's centre is 1 m north of where it stands, 2 cm in front of the south wall's outer face (the
-# cottage at y 8.0, 2 m deep each way). Standing further out, it showed the doorway above it and threw its sun shadow
-# onto the wall beside it.
-COTTAGE_DOOR = (6.0, 8.0 - 2.0 - 0.02 + 1.0)
+# 64 px (2 m) door sprite's centre is 1 m north of where it stands, 6 cm in front of the south wall's outer face (the
+# cottage at y 8.0, 2 m deep each way): just clear of the sill beam (5 cm out), which would otherwise cut across the
+# door's edges. Standing further out, it showed the doorway above it and threw its sun shadow onto the wall beside it.
+COTTAGE_DOOR = (6.0, 8.0 - 2.0 - 0.06 + 1.0)
 
 # (id, model, x m, y m, turn degrees): the village's structures, placed in this order.
 VILLAGE = [
