@@ -90,6 +90,7 @@ class Hd2dView:
         # Milestone 20A (prototype): sculpting the ground, a click at a time; None: not sculpting
         self.sculpt: dict[str, Any] | None = None  # {"tool", "radius" px, "strength"}
         self.sculpt_at: tuple[float, float, float] | None = None  # the ground under the mouse (m)
+        self.unsettled: list[str] = []  # objects the last stroke left off the ground (ids): "Settle on the ground"
         self._grid: tuple[Any, list[tuple[float, float, float]]] = (None, [])  # the 1 m grid over sculpted ground
 
     # ------------------------------------------------------------------ state
@@ -717,6 +718,7 @@ class Hd2dView:
             self.studio._say("Point at the ground to sculpt it.", ok=False)
             return
         start = time.perf_counter()
+        before = self.studio.project.scene()
         done = self.studio._edit(lambda s: ops.sculpt_terrain(s, brush["tool"], at[0] * PIXELS_PER_METRE,
                                                               at[1] * PIXELS_PER_METRE, brush["radius"],
                                                               brush["strength"]),
@@ -724,11 +726,24 @@ class Hd2dView:
                                   "flatten": "Flattened"}[brush["tool"]] + " the ground.")
         self.timings["sculpt_ms"].append((time.perf_counter() - start) * 1000)
         del self.timings["sculpt_ms"][:-240]
-        if done:
-            out_of_place = ops.terrain_anchoring(self.studio.project.scene())
+        if done:  # what this stroke left out of place: said, never moved (Settle on the ground stands them on it)
+            after = self.studio.project.scene()
+            out_of_place = ops.terrain_anchoring(after, before)
+            self.unsettled = sorted(set(self.unsettled) | set(ops.anchoring_ids(after, before)))
             if out_of_place:
                 self.studio._say("Out of place now (not moved): " + "; ".join(out_of_place[:3])
                                  + (" ..." if len(out_of_place) > 3 else ""), ok=False)
+            self.studio._rebuild()
+
+    def settle(self) -> None:
+        """Stand the objects sculpting left off the ground back on it: one undoable edit."""
+        from engine import project_ops as ops  # noqa: PLC0415
+
+        ids = [i for i in self.unsettled if ops.find_entity_or_none(self.studio.project.scene(), i) is not None]
+        self.unsettled = []
+        if ids and self.studio._edit(lambda s: ops.settle_on_ground(s, ids), f"Stood {len(ids)} back on the ground."):
+            return
+        self.studio._rebuild()
 
     def _sculpt_section(self, box: Any, width: int) -> None:
         studio, brush = self.studio, self.sculpt
@@ -754,8 +769,11 @@ class Hd2dView:
         row.add(self._button("Stronger", lambda: self.set_sculpt(strength=min(1.0 if gentle else 64.0, brush["strength"] * 1.5)),
                              "More at a time", width=quarter))
         box.add(row)
+        if self.unsettled:
+            box.add(self._button(f"Settle on the ground ({len(self.unsettled)})", self.settle,
+                                 "Stand the objects sculpting left floating or buried back on the ground", width=width))
         amount = f"{brush['strength']:.2g} of the way" if gentle else f"{brush['strength'] / PIXELS_PER_METRE:.2f} m"
-        box.add(studio._label(f"Brush {brush['radius'] / PIXELS_PER_METRE:.1f} m across the radius, {amount} a click.",
+        box.add(studio._label(f"Brush radius {brush['radius'] / PIXELS_PER_METRE:.1f} m; {amount} a click.",
                               color=C_MUTED, size=10, width=width))
 
     def toggle_weather(self) -> None:

@@ -198,7 +198,17 @@ def test_sculpting_never_moves_what_stands_there_and_says_what_it_left_out_of_pl
     assert ops.terrain_anchoring(room) == []
     raised = ops.sculpt_terrain(room, "raise", 320, 240, 96, 32)
     assert raised["entities"] == room["entities"], "not moved"
-    assert ops.terrain_anchoring(raised) == ["'Elder' is 1.0 m below the ground"]
+    said = ops.terrain_anchoring(raised, room)  # (judged under his feet, half a metre below his picture's centre)
+    assert len(said) == 1 and said[0].startswith("'Elder' is 0.") and said[0].endswith("m below the ground"), said
+    assert ops.anchoring_ids(raised, room) == ["e"]
+    settled = ops.settle_on_ground(raised, ["e"])
+    assert ops.terrain_anchoring(settled) == [] and settled["entities"][0]["elevation"] > 16, "stood back on it"
+    # someone on a platform (never on the ground) isn't this edit's doing: only what the edit moved off it is said
+    up = {**room, "entities": [{"id": "p", "name": "Guard", "x": 100.0, "y": 100.0, "elevation": 64.0}]}
+    assert ops.terrain_anchoring(up) == ["'Guard' is 2.0 m above the ground"]
+    assert ops.terrain_anchoring(ops.sculpt_terrain(up, "raise", 320, 240, 96, 32), up) == []
+    with pytest.raises(ops.OpError, match="Name the objects"):
+        ops.settle_on_ground(raised, [])
 
 
 def test_ai_sculpts_with_the_same_operation(tmp_path: Path) -> None:

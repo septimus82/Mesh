@@ -56,8 +56,9 @@ def test_sculpting_moves_nothing_and_says_what_it_left_out_of_place(tmp_path: Pa
 
     r = study.anchoring(tmp_path)
     assert r["moved"] == {"cottage": False, "Elder": False}, r
-    assert "'cottage' is 0.6 m below the ground" in r["out_of_place_after"], r
-    assert "'Elder' is 1.5 m above the ground" in r["out_of_place_after"], r
+    assert r["left_out_of_place_by_the_edits"] == ["'cottage' is 0.6 m into the ground",
+                                                    "'Elder' is 1.5 m above the ground"], r  # not the bridge: never on it
+    assert r["settle_would_stand"] == ["start_elder"], r
     assert r["elder_can_stand_where_he_is"] is False, r
 
 

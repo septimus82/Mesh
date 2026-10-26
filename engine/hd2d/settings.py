@@ -108,6 +108,7 @@ class Hd2dSettings:
     lights: tuple[PointLight, ...] = ()
     sky: Rgb = (118 / 255, 160 / 255, 214 / 255)
     water_reflections: str = "full"  # engine.water.REFLECTIONS
+    terrain_error: str | None = None  # why the ground's sculpted heights were set aside (parse_hd2d(lenient=True))
 
 
 def asset_path(value: Any, where: str) -> str:
@@ -152,8 +153,11 @@ def _bounds(value: Any, where: str) -> tuple[float, float, float, float] | None:
     return float(value[0]), float(value[1]), float(value[2]), float(value[3])
 
 
-def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> Hd2dSettings:
-    """``settings.hd2d`` as Hd2dSettings. Raises Hd2dSettingsError naming the bad key."""
+def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None, lenient: bool = False) -> Hd2dSettings:
+    """``settings.hd2d`` as Hd2dSettings. Raises Hd2dSettingsError naming the bad key. ``lenient`` (loading a room
+    to play or edit): broken sculpted heights are set aside, the ground flat, the reason kept in ``terrain_error``,
+    rather than the whole room failing."""
+    terrain_error = None
     if not isinstance(raw, dict):
         raise Hd2dSettingsError(f"settings.hd2d must be an object (got {type(raw).__name__})")
     unknown = set(raw) - {"structures", "ground", "camera", "sun", "ambient", "shadows", "shadow_resolution", "sky",
@@ -201,7 +205,11 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
             try:
                 terrain = parse_terrain(g["terrain"])
             except TerrainError as exc:
-                raise Hd2dSettingsError(str(exc)) from exc
+                if not lenient:
+                    raise Hd2dSettingsError(str(exc)) from exc
+                terrain_error = str(exc)
+            if terrain is not None and not terrain["chunks"]:
+                terrain = None  # no heights: the plain ground exactly
         ground = Ground(texture, _pair(g, "from", "settings.hd2d.ground", (0.0, 0.0)),
                         _pair(g, "to", "settings.hd2d.ground", default_hi),
                         _number(g, "elevation", "settings.hd2d.ground", 0.0), terrain)
@@ -209,7 +217,10 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
             try:
                 Terrain.from_ground(ground)  # its chunks' keys and sizes against the ground's extent
             except TerrainError as exc:
-                raise Hd2dSettingsError(str(exc)) from exc
+                if not lenient:
+                    raise Hd2dSettingsError(str(exc)) from exc
+                terrain_error = str(exc)
+                ground = Ground(ground.texture, ground.lo, ground.hi, ground.elevation, None)
     c = raw.get("camera", {}) or {}
     if not isinstance(c, dict):
         raise Hd2dSettingsError("settings.hd2d.camera must be an object")
@@ -244,7 +255,8 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
     return Hd2dSettings(tuple(structures), ground, camera, (float(sun[0]), float(sun[1]), float(sun[2])),
                         _number(raw, "ambient", "settings.hd2d", 0.55, 0.0, 1.0), sun_color,
                         _number(sun_block, "intensity", "settings.hd2d.sun", 1.0, 0.0, 10.0), shadows=shadows,
-                        shadow_resolution=int(resolution), sky=sky, water_reflections=reflections)
+                        shadow_resolution=int(resolution), sky=sky, water_reflections=reflections,
+                        terrain_error=terrain_error)
 
 
 def rgb(value: Any) -> Rgb | None:

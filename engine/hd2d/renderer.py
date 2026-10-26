@@ -135,6 +135,21 @@ def _mul(a: list[list[float]], b: list[list[float]]) -> list[list[float]]:
     return [[sum(a[i][k] * b[k][j] for k in range(4)) for j in range(4)] for i in range(4)]
 
 
+def _box_in_view(lo: tuple[float, ...], hi: tuple[float, ...], vp: list[list[float]]) -> bool:
+    """Whether a box (m) may be in the picture: its corners' clip-space box overlaps the screen (one behind the
+    camera: maybe, drawn)."""
+    xs, ys = [], []
+    for x in (lo[0], hi[0]):
+        for y in (lo[1], hi[1]):
+            for z in (lo[2], hi[2]):
+                w = vp[3][0] * x + vp[3][1] * y + vp[3][2] * z + vp[3][3]
+                if w <= 1e-6:
+                    return True
+                xs.append((vp[0][0] * x + vp[0][1] * y + vp[0][2] * z + vp[0][3]) / w)
+                ys.append((vp[1][0] * x + vp[1][1] * y + vp[1][2] * z + vp[1][3]) / w)
+    return min(xs) <= 1 and max(xs) >= -1 and min(ys) <= 1 and max(ys) >= -1
+
+
 def _column_major(m: list[list[float]]) -> tuple[float, ...]:
     return tuple(float(m[r][c]) for c in range(4) for r in range(4))
 
@@ -277,6 +292,7 @@ class Hd2dRenderer:
         self.terrain_version = 0  # edits since loading (update_terrain): what the water's copy of the heights follows
         self._terrain_draws: dict[tuple[int, int], list[tuple[Any, Any, tuple[float, ...]]]] = {}  # chunk -> draws
         self._terrain_buffers: dict[tuple[int, int], list[Any]] = {}
+        self._terrain_boxes: dict[tuple[int, int], tuple[tuple[float, ...], tuple[float, ...]]] = {}  # (lo, hi) m
         self.ground = None
         if settings.ground is not None and settings.ground.terrain is not None:
             self._build_terrain(resolve)
@@ -438,20 +454,32 @@ class Hd2dRenderer:
                 self._terrain_chunk((ci, cj))
 
     def _terrain_chunk(self, key: tuple[int, int]) -> None:
-        """(Re)make one chunk's drawing: its gentle faces with the ground's texture, its steep ones with dirt."""
-        self._free_terrain_chunk(key)
+        """(Re)make one chunk's drawing: its gentle faces with the ground's texture, its steep ones with dirt. The new
+        buffers are made first: if the driver refuses one, the chunk keeps its old drawing (and nothing leaks)."""
         gentle, steep = self.terrain.chunk_mesh(*key)
         draws: list[tuple[Any, Any, tuple[float, ...]]] = []
         buffers: list[Any] = []
         gl = self.arcade.gl
-        for data, texture in ((gentle, self._ground_texture), (steep, self._steep_texture)):
-            if not data:
-                continue
-            buffer = self.ctx.buffer(data=data.tobytes())
-            buffers.append(buffer)
-            geometry = self.ctx.geometry([gl.BufferDescription(buffer, "3f 3f 2f", ["in_pos", "in_nrm", "in_uv"])])
-            draws.append((geometry, texture, IDENTITY))
+        try:
+            for data, texture in ((gentle, self._ground_texture), (steep, self._steep_texture)):
+                if not data:
+                    continue
+                buffer = self.ctx.buffer(data=data.tobytes())
+                buffers.append(buffer)
+                geometry = self.ctx.geometry([gl.BufferDescription(buffer, "3f 3f 2f", ["in_pos", "in_nrm", "in_uv"])])
+                draws.append((geometry, texture, IDENTITY))
+        except BaseException:
+            for geometry, _texture, _matrix in draws:
+                geometry.flush()
+            for buffer in buffers:
+                buffer.delete()
+            raise
+        points = [(d[k], d[k + 1], d[k + 2]) for d in (gentle, steep) for k in range(0, len(d), 8)]
+        self._free_terrain_chunk(key)
         self._terrain_draws[key], self._terrain_buffers[key] = draws, buffers
+        self._terrain_boxes[key] = ((min(p[0] for p in points), min(p[1] for p in points), min(p[2] for p in points)),
+                                    (max(p[0] for p in points), max(p[1] for p in points), max(p[2] for p in points))) \
+            if points else ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
 
     def _free_terrain_chunk(self, key: tuple[int, int]) -> None:
         for geometry, _texture, _matrix in self._terrain_draws.pop(key, []):
@@ -461,17 +489,19 @@ class Hd2dRenderer:
 
     def update_terrain(self, terrain: Any, chunks: Iterable[tuple[int, int]]) -> None:
         """The ground was sculpted (``Terrain.sculpt``): only ``chunks`` are drawn anew, and the rain's precipitation
-        maps are made again when next needed (the room's extent, its shadow and rain boxes, stays as loaded)."""
+        maps are made again when next needed. The sun's shadow box and the lamps' maps stay as loaded (a reload, as
+        Studio's edits make, renews them)."""
         self.terrain = terrain
         self.terrain_version += 1
         for key in chunks:
             self._terrain_chunk(key)
         self.precipitation.invalidate()
 
-    def _ground_draws(self) -> list[tuple[Any, Any, tuple[float, ...]]]:
-        """The ground: the flat quad, or the sculpted ground's chunks."""
+    def _ground_draws(self, vp: list[list[float]] | None = None) -> list[tuple[Any, Any, tuple[float, ...]]]:
+        """The ground: the flat quad, or the sculpted ground's chunks (with ``vp``, only those in the picture)."""
         if self.terrain is not None:
-            return [d for draws in self._terrain_draws.values() for d in draws]
+            return [d for key, draws in self._terrain_draws.items()
+                    if vp is None or _box_in_view(*self._terrain_boxes[key], vp) for d in draws]
         return [(self.ground[0], self.ground[1], IDENTITY)] if self.ground else []
 
     def _target_fbo(self, size: tuple[int, int]) -> Any:
@@ -803,7 +833,7 @@ class Hd2dRenderer:
         mp["u_vp"] = vp
         mp["u_tex"] = 0
         lighting.bind(mp)
-        statics = self._ground_draws() + self.static + live
+        statics = self._ground_draws(self.last_vp) + self.static + live
         self._bind_cutaway(mp, cam if camera is None else None)
         for draw in statics:
             geometry, texture, matrix = draw

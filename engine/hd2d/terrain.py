@@ -36,7 +36,7 @@ from typing import Any
 PX = 32.0  # px per metre
 CHUNK = 16  # cells (and corners) per chunk side
 QUANTUM = 0.25  # px: a stored height's step
-LIMIT = 256.0 * PX  # px: the most a corner may be raised or lowered
+LIMIT = 32767 * 0.25  # px (about 256 m): the most a corner may be raised or lowered (its int16 store's limit)
 CELLS = (8, 16, 32)  # px: the cell sizes a terrain may use
 STEEP = 0.75  # a face's normal z below this (about 41 degrees) is drawn as dirt
 MAX_SLOPE = 0.7  # a face's normal z below this (about 46 degrees) can't be stood on
@@ -149,6 +149,26 @@ class Terrain:
             h = h00 + fu * (h11 - h01) + fv * (h01 - h00)
         return self.base + h
 
+    def surface_at(self, x: float, y: float) -> tuple[float, float] | None:
+        """The ground at (x, y) px: its height (px, its elevation included) and how upright its face is there (the
+        normal's z: 1 level, MAX_SLOPE and below too steep to stand on); None off the ground. What collision reads,
+        a lookup, not a search through triangles."""
+        u, v = (x - self.origin[0]) / self.cell, (y - self.origin[1]) / self.cell
+        if u < -1e-6 or v < -1e-6 or x > self.origin[0] + self.size[0] + 1e-6 or y > self.origin[1] + self.size[1] + 1e-6:
+            return None
+        i, j = min(int(u), self.nx - 1), min(int(v), self.ny - 1)
+        (x0, y0), (x1, y1) = self.corner_xy(i, j), self.corner_xy(i + 1, j + 1)
+        w, d = max(1e-9, x1 - x0), max(1e-9, y1 - y0)
+        fu, fv = (x - x0) / w, (y - y0) / d
+        h00, h10, h01, h11 = self.corner(i, j), self.corner(i + 1, j), self.corner(i, j + 1), self.corner(i + 1, j + 1)
+        if fu >= fv:
+            h = h00 + fu * (h10 - h00) + fv * (h11 - h10)
+            gx, gy = (h10 - h00) / w, (h11 - h10) / d
+        else:
+            h = h00 + fu * (h11 - h01) + fv * (h01 - h00)
+            gx, gy = (h11 - h01) / w, (h01 - h00) / d
+        return self.base + h, 1.0 / math.sqrt(1.0 + gx * gx + gy * gy)
+
     def is_flat(self) -> bool:
         return not any(self.heights)
 
@@ -240,25 +260,51 @@ class Terrain:
 
     def chunk_mesh(self, ci: int, cj: int) -> tuple[array, array]:
         """The chunk's vertices (x, y, z, nx, ny, nz, u, v; 8 floats each, three per triangle), as two lists: the
-        ground's texture's (gentle) and the steep faces' (dirt)."""
+        ground's texture's (gentle cells) and dirt's (a cell either of whose faces is steeper than STEEP: one material
+        a cell, so their boundary follows the cells, not a sawtooth of triangles), and, on the ground's border, a dirt
+        skirt down to below its lowest point, so ground cut by the room's edge isn't a paper shell."""
         gentle, steep = array("f"), array("f")
         cells_i, cells_j = self.chunk_cells(ci, cj)
-        flat = self.chunk_flat(ci, cj) is not None
         for j in cells_j:
             for i in cells_i:
                 corners = ((i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1))
-                for tri in ((0, 1, 2), (0, 2, 3)):
-                    pts = [self._point(*corners[t]) for t in tri]
-                    face = _face_normal(*pts)
-                    out = steep if face[2] < STEEP else gentle
+                tris = [[self._point(*corners[t]) for t in tri] for tri in ((0, 1, 2), (0, 2, 3))]
+                faces = [_face_normal(*pts) for pts in tris]
+                out = steep if min(f[2] for f in faces) < STEEP else gentle
+                for tri, pts, face in zip(((0, 1, 2), (0, 2, 3)), tris, faces):
                     for t, p in zip(tri, pts):
-                        n = (0.0, 0.0, 1.0) if flat else self._normal_at(*corners[t])
+                        n = self._normal_at(*corners[t])
                         if out is steep:  # box-mapped onto the face's side: texels keep their size on a cliff
                             uv = (p[1], p[2]) if abs(face[0]) > abs(face[1]) else (p[0], p[2])
                         else:
                             uv = (p[0], p[1])
                         out.extend((p[0], p[1], p[2], n[0], n[1], n[2], uv[0], uv[1]))
+        self._skirt(ci, cj, steep)
         return gentle, steep
+
+    def _skirt(self, ci: int, cj: int, out: array) -> None:
+        """The border's side wall within this chunk, where the ground there leaves its base level: between the ground
+        and the base (and a little below), so a hill cut by the room's edge, or a hollow, is closed, not a paper
+        shell. Level border stays as the flat ground's edge. Only this chunk's own corners decide it."""
+        cells_i, cells_j = self.chunk_cells(ci, cj)
+        edges = []
+        if cells_j and cells_j.start == 0:
+            edges += [((i + 1, 0), (i, 0), (0.0, -1.0)) for i in cells_i]
+        if cells_j and cells_j.stop == self.ny:
+            edges += [((i, self.ny), (i + 1, self.ny), (0.0, 1.0)) for i in cells_i]
+        if cells_i and cells_i.start == 0:
+            edges += [((0, j), (0, j + 1), (-1.0, 0.0)) for j in cells_j]
+        if cells_i and cells_i.stop == self.nx:
+            edges += [((self.nx, j + 1), (self.nx, j), (1.0, 0.0)) for j in cells_j]
+        base = self.base / PX
+        for a, b, (nx, ny) in edges:
+            if self.corner(*a) == 0.0 and self.corner(*b) == 0.0:
+                continue
+            pa, pb = self._point(*a), self._point(*b)
+            ta, tb = (pa[0], pa[1], max(pa[2], base)), (pb[0], pb[1], max(pb[2], base))
+            ba, bb = (pa[0], pa[1], min(pa[2], base) - 0.25), (pb[0], pb[1], min(pb[2], base) - 0.25)
+            for q in (ta, tb, bb, ta, bb, ba):
+                out.extend((q[0], q[1], q[2], nx, ny, 0.0, q[1] if nx else q[0], q[2]))
 
     def chunk_surfaces(self, ci: int, cj: int) -> list[tuple[tuple[float, float, float], ...]]:
         """The chunk's triangles a character may stand on (m): all but the too-steep ones."""
@@ -314,9 +360,9 @@ def chunks_of(corners: set[tuple[int, int]]) -> set[tuple[int, int]]:
     """The chunks whose drawing a change to these corners touches (a corner on a chunk's edge is its neighbour's
     too)."""
     out = set()
-    for i, j in corners:
-        for ii in {i // CHUNK, (i - 1) // CHUNK}:
-            for jj in {j // CHUNK, (j - 1) // CHUNK}:
+    for i, j in corners:  # its own cells' chunks, and those whose corners' normals read it (one corner further out)
+        for ii in range((i - 2) // CHUNK, (i + 1) // CHUNK + 1):
+            for jj in range((j - 2) // CHUNK, (j + 1) // CHUNK + 1):
                 if ii >= 0 and jj >= 0:
                     out.add((ii, jj))
     return out

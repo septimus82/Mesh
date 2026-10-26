@@ -311,13 +311,15 @@ def anchoring(out: Path) -> dict[str, Any]:
                 "Elder": {k: v for k, v in next(e for e in scene["entities"] if e.get("name") == "Elder").items()
                           if k in ("x", "y", "elevation")}}
 
-    before = where()
+    before, original = where(), json.loads(json.dumps(scene))
     report: dict[str, Any] = {"out_of_place_before": ops.terrain_anchoring(scene)}
     scene = ops.sculpt_terrain(scene, "raise", 5.0 * PX, 6.0 * PX, 3.0 * PX, 0.6 * PX)  # under the cottage
     for _ in range(4):  # the hill under the Elder, flattened away
         scene = ops.sculpt_terrain(scene, "flatten", HILL[0] * PX, HILL[1] * PX, 5.0 * PX, 1.0, target=0.0)
     report["moved"] = {k: before[k] != v for k, v in where().items()}
     report["out_of_place_after"] = ops.terrain_anchoring(scene)
+    report["left_out_of_place_by_the_edits"] = ops.terrain_anchoring(scene, original)
+    report["settle_would_stand"] = ops.anchoring_ids(scene, original)
     path.write_text(json.dumps(scene, indent=2) + "\n", encoding="utf-8")
     game = HiddenGame(project, size=study.SIZE)
     try:  # in the game the Elder keeps his 1.5 m, nothing under him: until moved down he can't step anywhere
@@ -612,7 +614,7 @@ def perf(out: Path) -> dict[str, Any]:
         meshes = [terrain.chunk_mesh(*c) for c in chunks]
         report["terrain"] = {"cells": terrain.nx * terrain.ny, "cell_m": terrain.cell / PX, "chunks": len(chunks),
                              "chunk_cells": CHUNK, "triangles_drawn": sum(len(a) + len(b) for a, b in meshes) // 24,
-                             "collision_surfaces": sum(1 for s in world.surfaces if s.floor == "ground"),
+                             "collision_surfaces_stored_for_the_ground": sum(1 for s in world.surfaces if s.floor == "ground"),
                              "gpu_bytes": hd.stats()["terrain_bytes"], "cpu_heights": len(terrain.heights),
                              "stored_chars": sum(len(v) for v in terrain.chunks().values())}
         scene = json.loads((out / "perf" / SCENES / "hills.json").read_text(encoding="utf-8"))
@@ -625,6 +627,12 @@ def perf(out: Path) -> dict[str, Any]:
                                             "collision": _timed(lambda: world.update_terrain(terrain, chunks), 3),
                                             "collision_world_from_scratch": _timed(lambda: World(hd.settings, hd.models), 3)}
         report["one_chunk_mesh_ms"] = _timed(lambda: terrain.chunk_mesh(1, 0), 10)
+
+        def nav() -> None:
+            world._nav = None
+            world.walkable()
+
+        report["nav_grid_build_ms"] = _timed(nav, 3)
         rng = random.Random(4)  # collision queries: standing on sculpted ground against the plain flat ground
         pts = [(rng.uniform(1, 31), rng.uniform(1, 23)) for _ in range(2000)]
         zs = [terrain.height(x * PX, y * PX) / PX for x, y in pts]
