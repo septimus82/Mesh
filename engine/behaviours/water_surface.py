@@ -31,12 +31,20 @@ STEP_PX = 14.0  # a footstep every this many px walked through water
 )
 class WaterSurface(Behaviour):
     PARAM_DEFS = {  # what engine.water.parse_water reads (checked there; Studio and AI: project_ops.set_water)
-        "preset": ParamDef(str, default="puddle", description="puddle or pond"),
+        "preset": ParamDef(str, default="puddle",
+                           description="muddy_puddle, natural_pond, stone_pool, or Stage 19A's simple puddle or pond"),
         "width": ParamDef(float, default=0.0, description="Width (px; 0: the preset's)"),
         "height": ParamDef(float, default=0.0, description="Height (px; 0: the preset's)"),
         "colour": ParamDef(str, default="", description="Colour (#rrggbb; empty: the preset's)"),
         "opacity": ParamDef(float, default=0.0, description="Opacity (0.05-1; 0: the preset's)"),
-        "shape": ParamDef(str, default="", description="ellipse or rect (empty: the preset's)"),
+        "shape": ParamDef(str, default="", description="ellipse, rect or natural (empty: the preset's)"),
+        "rotation": ParamDef(float, default=0.0, description="Turned by this many degrees, anticlockwise"),
+        "seed": ParamDef(int, default=0, description="Which natural outline (1-9999; 0: the preset's)"),
+        "shore": ParamDef(str, default="", description="The bank: none, mud, grass or stone (empty: the preset's)"),
+        "shore_width": ParamDef(float, default=-1.0, description="The bank's width (px, 0-64; -1: the preset's)"),
+        "deep_colour": ParamDef(str, default="", description="Colour where deep (#rrggbb; empty: the preset's)"),
+        "depth": ParamDef(float, default=-1.0, description="How soon it gets deep, 0-1 (-1: the preset's)"),
+        "ripples": ParamDef(float, default=-1.0, description="Rain and footstep ripple strength, 0-1 (-1: the preset's)"),
         "waves": ParamDef(float, default=-1.0, description="How much it moves (0-1; -1: the preset's)"),
         "reflection": ParamDef(float, default=-1.0, description="How much it mirrors (0-1; -1: the preset's)"),
         "rain_ripples": ParamDef(bool, default=True, description="The room's rain rings it"),

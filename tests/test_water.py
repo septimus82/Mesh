@@ -26,7 +26,14 @@ def test_presets_fill_in_what_an_object_leaves_out() -> None:
 
 @pytest.mark.parametrize(("raw", "message"), [
     ({"preset": "lake"}, "preset must be one of"),
-    ({"preset": "pond", "depth": 3}, "unknown setting"),
+    ({"preset": "pond", "volume": 3}, "unknown setting"),
+    ({"preset": "pond", "depth": 0.5}, "simple pond has no depth"),  # Stage 19A's look has no bank or depths
+    ({"preset": "puddle", "shore": "mud"}, "simple puddle has no shore"),
+    ({"preset": "natural_pond", "shore": "sand"}, "shore must be one of"),
+    ({"preset": "natural_pond", "seed": 1.5}, "seed must be a whole number"),
+    ({"preset": "natural_pond", "depth": 2}, "depth"),
+    ({"preset": "stone_pool", "deep_colour": "deep"}, "deep_colour"),
+    ({"preset": "stone_pool", "shore_width": 99}, "shore_width"),
     ({"preset": "pond", "colour": "blue"}, "colour like"),
     ({"preset": "pond", "width": 2}, "width"),
     ({"preset": "pond", "opacity": 2}, "opacity"),
