@@ -3,6 +3,7 @@
     py -3.13 tooling/m18b_weather_study.py proof OUT   # shelter and impacts, judged in world space; pictures
     py -3.13 tooling/m18b_weather_study.py pictures OUT  # top-down shelter maps, 18A beside 18B, a pan, Studio
     py -3.13 tooling/m18b_weather_study.py perf OUT    # the cost against Stage 18A's; maps, lifecycle, failures
+    py -3.13 tooling/m18b_weather_study.py defects OUT # the known defects accepted with 18B, measured
 
 The proof doesn't trust pictures for shelter: a drop hidden behind a roof looks the same as a drop stopped by it.
 A probe draws the particles (no depth test: the camera's occlusion can't hide anything) top-down into a float target
@@ -309,6 +310,151 @@ def proof(out: Path) -> dict[str, Any]:
     report["interior"] = interior(out)
     print("interior", report["interior"], flush=True)
     (out / "proof.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    return report
+
+
+# ---------------------------------------------------------------------- known defects (accepted with 18B; tracked)
+def _rain_path(effect: Any, index: int, box: tuple[Any, Any], t: float, times: Any) -> Any:
+    """Where rain particle ``index`` is at ``times`` (m): the shader's own motion (Python), in the wrap cell it is in
+    at ``t`` (so the path is continuous)."""
+    from engine.scene_particles import PRESETS, seeds
+
+    s = np.array(seeds(effect), dtype=np.float64).reshape(-1, 6)[index]
+    box_min, size = (np.array(v, dtype=np.float64) for v in box)
+    phase, sp = s[3], s[5]
+    wind, fall = np.array(effect.wind, dtype=np.float64), PRESETS["rain"].fall * effect.speed
+
+    def unwrapped(tt: Any) -> Any:
+        drift = tt + effect.gust * (np.cos(phase * 6.2832) - np.cos(tt * 0.7 + phase * 6.2832)) / 0.7
+        xy = s[None, :2] * size[:2] + np.outer(drift, wind) * sp
+        z = s[2] * size[2] - fall * tt * sp
+        return np.column_stack([xy, z])
+
+    now = unwrapped(np.array([t]))[0]
+    shift = box_min + np.mod(now - box_min, size) - now
+    return unwrapped(np.asarray(times)) + shift
+
+
+def gust_accuracy(out: Path, wind: tuple[float, float], gust: float = 0.2, sample: int = 480) -> dict[str, Any]:
+    """Splashes against where each drop's real (gusting) path first meets the village's triangles: the shader finds
+    the landing along the map's mean fall, a gust can carry a drop past a top edge that column hits."""
+    from engine.scene_particles import box_for_3d, impact_reach
+
+    effects = [{"preset": "rain", "count": 6000, "seed": 2, "wind": list(wind), "gust": gust}]
+    game = HiddenGame(m18.make_project(out, f"proj_gust_{wind[0]:g}_{wind[1]:g}", effects), size=study.SIZE)
+    errors: list[float] = []
+    worst: list[dict[str, Any]] = []
+    try:
+        game.load(f"{SCENES}/start.json")
+        game.step(30)
+        hd = game.window.hd2d_renderer
+        tris, owner, names = triangles(hd)
+        effect = hd.particles.effects[0]
+        ground = hd.settings.ground.elevation / 32.0 if hd.settings.ground is not None else 0.0
+        for target in targets(hd)[:4]:
+            hd.camera.target = target
+            t = 6.0
+            hd.particles.time = t
+            s = probe(game)
+            box = box_for_3d(target, hd.camera.pitch, effect.area, ground, impact_reach(effect))
+            for i, at in list(zip(s["landed_ids"].tolist(), s["landed"]))[: sample // 4]:
+                times = np.linspace(t - 1.6, t, 321)
+                path = _rain_path(effect, i, box, t, times)
+                lo_xy, hi_xy = tris[:, :, :2].min(axis=1), tris[:, :, :2].max(axis=1)  # triangles near its path
+                near = np.nonzero(((lo_xy <= at[:2] + 6) & (hi_xy >= at[:2] - 6)).all(axis=1))[0]
+                first = None
+                for k in range(len(path) - 1):  # the path's first segment that meets a surface, in time order
+                    step = path[k + 1] - path[k]
+                    hit, which = ray_hits(path[k:k + 1], step, tris[near])
+                    if np.isfinite(hit[0]) and hit[0] <= 1.0:
+                        first = path[k] + step * hit[0]
+                        break
+                if first is None:
+                    continue
+                err = float(np.linalg.norm(first - at))
+                errors.append(err)
+                if err > 0.10:
+                    worst.append({"id": i, "splash_m": [round(float(c), 2) for c in at],
+                                  "true_first_hit_m": [round(float(c), 2) for c in first], "error_m": round(err, 2)})
+    finally:
+        game.close()
+    e = np.array(errors) if errors else np.zeros(1)
+    return {"wind": list(wind), "gust": gust, "compared": len(errors), "median_m": round(float(np.median(e)), 4),
+            "p99_m": round(float(np.percentile(e, 99)), 3), "max_m": round(float(e.max()), 2),
+            "over_10_cm": int((e > 0.10).sum()), "over_10_cm_share": round(float((e > 0.10).mean()), 4),
+            "worst": sorted(worst, key=lambda w: -w["error_m"])[:8]}
+
+
+def snow_hops(out: Path) -> dict[str, Any]:
+    """Settled snowflakes followed through their 1.5 s; those that move > 3 cm, where, and a 4x close-up of the worst
+    one before and after (the game's view)."""
+    from PIL import Image
+
+    game = HiddenGame(m18.make_project(out, "proj_snow_hop", CASES["snow"]), size=study.SIZE)
+    hops: list[dict[str, Any]] = []
+    try:
+        game.load(f"{SCENES}/start.json")
+        game.step(30)
+        hd = game.window.hd2d_renderer
+        followed = 0
+        for target in targets(hd):
+            hd.camera.target = target
+            hd.particles.time = 7.0
+            a = probe(game)
+            pa = dict(zip(a["landed_ids"].tolist(), a["landed"]))
+            for dt in (0.3, 0.6, 0.9, 1.2):
+                hd.particles.time = 7.0 + dt
+                b = probe(game)
+                pb = dict(zip(b["landed_ids"].tolist(), b["landed"]))
+                for i in pa:
+                    if i in pb:
+                        followed += 1
+                        d = float(np.linalg.norm(pa[i] - pb[i]))
+                        if d > 0.03:
+                            hops.append({"id": i, "target": list(target), "dt_s": dt, "moved_m": round(d, 3),
+                                         "from_m": [round(float(c), 2) for c in pa[i]],
+                                         "to_m": [round(float(c), 2) for c in pb[i]]})
+        if hops:
+            worst = max(hops, key=lambda h: h["moved_m"])
+            x, y, z = worst["from_m"]
+            hd.camera.target = (x, y - 1.0, z + 0.5)
+            hd._camera_ready = True
+            shots = []
+            for t in (7.0, 7.0 + worst["dt_s"]):
+                hd.particles.time = t
+                picture = Image.frombytes("RGB", study.SIZE, hd.draw(read=True)).transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+                shots.append(m18.crop_at(picture, study.SIZE[0] / 2, study.SIZE[1] / 2, (240, 135))
+                             .resize((960, 540), Image.Resampling.NEAREST))
+            m18.pair(shots, [f"snow hop: t 7.0 s (flake at {worst['from_m']})",
+                             f"t {7.0 + worst['dt_s']:.1f} s (at {worst['to_m']})"]).save(out / "snow_edge_hop.png")
+    finally:
+        game.close()
+    return {"followed": followed, "moved_over_3_cm": len(hops), "hops": sorted(hops, key=lambda h: -h["moved_m"])[:10]}
+
+
+def defects(out: Path) -> dict[str, Any]:
+    """The defects accepted with Stage 18B, measured so a later fix can be checked against them."""
+    from engine.scene_particles import parse_particles
+
+    out.mkdir(parents=True, exist_ok=True)
+    report: dict[str, Any] = {"snow_edge_hop": snow_hops(out)}
+    print("snow", {k: v for k, v in report["snow_edge_hop"].items() if k != "hops"}, flush=True)
+    report["gust_impact_accuracy"] = [gust_accuracy(out, w) for w in ((0.8, 0.0), (4.0, 1.0), (-6.0, 0.0))]
+    for g in report["gust_impact_accuracy"]:
+        print("gust", {k: v for k, v in g.items() if k != "worst"}, flush=True)
+    game = HiddenGame(m18.make_project(out, "proj_drag", []), size=study.SIZE)
+    try:
+        game.load(f"{SCENES}/start.json")
+        game.step(30)
+        hd = game.window.hd2d_renderer
+        hd.set_particles(parse_particles([{"preset": "rain", "count": 10000}]))
+        report["studio_drag_one_map"] = _drag(game)
+        hd.set_particles(parse_particles(PERF_CASES["rain_and_snow_15000"]))
+        report["studio_drag_two_maps"] = _drag(game)
+    finally:
+        game.close()
+    print("drag", report["studio_drag_one_map"], report["studio_drag_two_maps"], flush=True)
+    (out / "known_defects.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     return report
 
 
@@ -623,11 +769,14 @@ def perf(out: Path) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("command", choices=["proof", "pictures", "perf"])
+    parser.add_argument("command", choices=["proof", "pictures", "perf", "defects"])
     parser.add_argument("out", type=Path)
     args = parser.parse_args()
     if args.command == "pictures":
         print(pictures(args.out))
+        return
+    if args.command == "defects":
+        defects(args.out)
         return
     report = proof(args.out) if args.command == "proof" else perf(args.out)
     if args.command == "perf":

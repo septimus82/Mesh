@@ -363,6 +363,40 @@ Local results (Windows), on the final code:
 - **Weather is per room** (`settings.particles`). World-level weather, event transitions, the Weather panel, presets
   and combinations without JSON are later stages, as briefed.
 
+## Known defects, accepted and tracked
+
+The owner accepted 18B with these rare defects tracked rather than fixed now. They are measured by
+`py -3.13 tooling/m18b_weather_study.py defects OUT` (hidden windows) on the final shader; the numbers are in
+[known_defects/known_defects.json](milestone18_stage2_environmental_collisions_evidence/known_defects/known_defects.json),
+so a later fix can be checked against them.
+
+1. **A snowflake switches to a lower surface near bridge edges.**
+   - 5 of 2,474 settled flakes followed through their 1.5 s moved more than 3 cm.
+   - The worst, particle 2372 (snow, seed 2), settled on the deck's north edge at (23.02, 25.85, 2.0) m and was at
+     (23.92, 26.0, 0.0) m 0.9 s later. Before and after:
+     [snow_edge_hop.png](milestone18_stage2_environmental_collisions_evidence/known_defects/snow_edge_hop.png).
+   - The cause: its sway-free path still drifts with the wind, so its column crosses the deck's edge during the
+     settle.
+2. **An occasional inaccurate strong-gust impact.**
+   - Each splash is compared with where that drop's real gusting path first meets the village's triangles, using a
+     NumPy replica of the shader's motion. That replica agrees with the shader to within 1 cm at preset wind.
+   - Results for about 480 splashes per wind:
+
+     | Wind (m/s) | Median error | p99 | Over 10 cm |
+     |---|---|---|---|
+     | (0.8, 0) | 0.9 mm | 7 mm | none |
+     | (4, 1) | 4.6 mm | 3.3 cm | 1 (0.2%), the worst 0.26 m |
+     | (−6, 0) | 6.1 mm | 8 cm | 1 (0.2%) |
+
+   - The (−6, 0) outlier is particle 2509. Its true first hit is the cottage roof at (7.23, 11.14, 3.31) m, but it
+     splashed on the ground at (4.58, 11.14, 0.0) m, 4.24 m away. The gust carried it past the eave that its
+     map column (along the mean fall) misses.
+3. **Precipitation-map regeneration overhead during Studio drags.**
+   - With the preview on, every drag frame makes the maps again: +4.6 ms per frame with one map (21.6 → 26.1 ms) and
+     +7.1 ms with two (21.6 → 28.8 ms) in this measurement, against +3.9 ms in the perf run above.
+   - Play and ordinary editing are unaffected.
+   - Candidate fixes: throttle rebuilds during a drag, or rebuild only the dragged structure's region.
+
 ## Next steps (not started)
 
 - **Water stage:** puddles, wet surfaces, ripples, ponds and rivers. The precipitation map can tell them where rain
