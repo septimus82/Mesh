@@ -282,6 +282,10 @@ class Lighting:
         """Draw the lamps' shadow maps again before the next frame (after structures or lamps change)."""
         self._lamp_maps_ready = False
 
+    def set_world_box(self, world_lo: tuple[float, float, float], world_hi: tuple[float, float, float]) -> None:
+        """The room grew (sculpted ground raised above it or sunk below, Milestone 20B): the sun's map covers it."""
+        self.sun_vp = sun_matrix(self.sun, world_lo, world_hi)
+
     # ------------------------------------------------------------------ uniforms for a lit program
     def bind(self, program: Any, *, terms: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> None:
         s = self.settings

@@ -1005,6 +1005,17 @@ class Studio(InspectorMixin):
             self._focusable[self._focus_after_build].activate()
         self._focus_after_build = None
 
+    def _refresh_top_bar(self) -> None:
+        """The top bar again (Save, Undo, Redo, the title's unsaved mark) without rebuilding the panels: what a live
+        edit (a sculpting stroke) changes. Falls back to a full rebuild if there is no bar to replace."""
+        old = getattr(self, "_top_bar_box", None)
+        root = getattr(old, "parent", None)
+        if old is None or root is None or self.mode != "edit":
+            self._rebuild()
+            return
+        root.remove(old)
+        self._top_bar_box = root.add(self._top_bar(), anchor_x="left", anchor_y="top", align_x=8, align_y=-8)
+
     def _rebuild_status(self) -> None:
         label = getattr(self, "_status_label", None)
         if label is not None:
@@ -2501,6 +2512,7 @@ class Studio(InspectorMixin):
         if lighting is not None:
             lighting.update(delta_time)  # flicker shows while editing; nothing else of the game runs
         self.hd2d.advance_weather(delta_time)  # ... nor does the weather, unless it's being previewed
+        self.hd2d.tick(delta_time)  # a sculpting stroke held still keeps working; what it changed is drawn
         from engine import water  # noqa: PLC0415
 
         water.advance(self.window, delta_time)  # puddles and ponds move while editing

@@ -263,3 +263,83 @@ def test_settling_the_shared_player_settles_it_in_its_room_only(tmp_path: Path) 
     was = ops.find_entity(before, oid).get("elevation")
     assert ops.find_entity(project.scene(other), oid).get("elevation") == was, "the other room's player starts as it did"
     assert ops.ROOM_PLAYER_FIELDS == ("id", "x", "y", "elevation")
+
+
+# --- Milestone 20B: live strokes' contract, partial saving, anchoring and the shared player -------------------------
+
+def test_a_whole_stroke_is_one_checked_edit_that_replays_exactly() -> None:
+    """Studio records a stroke's dabs and commits them through sculpt_terrain_stroke: applying the same dabs to the
+    same ground gives the same heights (what was shown is what is saved), and only the chunks it changed are stored
+    afresh."""
+    room = ops.sculpt_terrain(_room(), "raise", 100, 100, 64, 12)  # some ground stored already
+    dabs = [[200 + 6 * k, 240 + 2 * k, 3.5] for k in range(40)]
+    live = Terrain.from_ground(ops._parsed_ground(room))
+    for x, y, s in dabs:
+        live.sculpt("raise", x, y, 48, s)
+    saved = ops.sculpt_terrain_stroke(room, "raise", dabs, 48)
+    assert Terrain.from_ground(ops._parsed_ground(saved)).heights == live.heights
+    full = Terrain.from_ground(ops._parsed_ground(saved))
+    assert saved["settings"]["hd2d"]["ground"]["terrain"]["chunks"] == full.chunks(), "partial encoding = full"
+
+
+@pytest.mark.parametrize(("dabs", "message"), [
+    ([], "at least one"),
+    ([[1, 2]], r"must be \[x, y, strength\]"),
+    ([[1, 2, "a"]], "strength must be a number"),
+    ([[5000, 5000, 1]], "off the room's ground"),
+    ("x", "list of"),
+])
+def test_bad_strokes_are_refused_whole(dabs: Any, message: str) -> None:
+    with pytest.raises(ops.OpError, match=message):
+        ops.sculpt_terrain_stroke(_room(), "raise", dabs, 48)
+    with pytest.raises(ops.OpError, match="share of the way"):
+        ops.sculpt_terrain_stroke(_room(), "smooth", [[10, 10, 3]], 48)
+    with pytest.raises(ops.OpError, match="at most"):
+        ops.sculpt_terrain_stroke(_room(), "raise", [[10, 10, 1]] * (ops.STROKE_DABS + 1), 48)
+
+
+def test_a_flatten_stroke_without_a_target_flattens_to_its_start() -> None:
+    room = ops.sculpt_terrain(_room(), "raise", 320, 240, 160, 32)
+    start = Terrain.from_ground(ops._parsed_ground(room)).height(320, 240)
+    out = ops.sculpt_terrain_stroke(room, "flatten", [[320, 240, 1.0], [360, 240, 1.0], [400, 240, 1.0]], 32)
+    t = Terrain.from_ground(ops._parsed_ground(out))
+    assert t.height(400, 240) == pytest.approx(start, abs=0.5)
+
+
+def test_slopes_between_gentle_and_steep_get_the_dithered_band() -> None:
+    t = Terrain.from_ground(_ground())
+    for _ in range(3):
+        t.sculpt("raise", 320, 240, 96, 24)  # a mound with gentle, middling and steep faces
+    gentle, blend, steep = t.chunk_mesh(1, 1)
+    assert gentle and blend and steep
+
+
+def test_anchoring_reports_water_left_dry_or_in_the_air_and_settles_structures() -> None:
+    room = _room()
+    room["settings"]["hd2d"]["structures"] = [{"id": "hut", "model": "assets/m.glb", "x": 320.0, "y": 240.0,
+                                               "elevation": 0.0}]
+    scene, pid = ops.place_blank(room, "r", "Pond", 160.0, 120.0)
+    scene = ops.set_water(scene, pid, preset="natural_pond", width=96, height=64, shore="grass")
+    raised = ops.sculpt_terrain(scene, "raise", 160, 120, 160, 32)  # the ground rises over the pond's level
+    words = ops.terrain_anchoring(raised, scene)
+    assert any("'Pond' (water) is under the ground" in w for w in words), words
+    raised = ops.sculpt_terrain(raised, "raise", 320, 240, 96, 24)
+    assert "hut" in ops.anchoring_structure_ids(raised, scene)
+    settled = ops.settle_on_ground(raised, [], ["hut"])
+    assert ops.find_structure(settled, "hut")["elevation"] > 16
+    lowered = ops.sculpt_terrain(scene, "lower", 160, 120, 160, 32)
+    assert any("(water) stands" in w for w in ops.terrain_anchoring(lowered, scene)), "a banked pond in the air"
+
+
+def test_a_hand_made_shared_player_keeps_its_elevation_without_migration() -> None:
+    """A shared player definition carrying an elevation stays as it is when a room is saved (no silent migration);
+    a room keeps its own elevation only where it differs."""
+    shared = {"tag": "player", "sprite": "p.png", "elevation": 18.0}
+    room = {"entities": [{"id": "p1", "prefab_id": "player", "x": 1.0, "y": 2.0}]}
+    expanded = ops.expand_players(room, shared)
+    stored, definition = ops.split_players(expanded, ["p1"], shared)
+    assert definition is not None and definition.get("elevation") == 18.0, "the definition keeps it"
+    assert "elevation" not in ops.find_entity(stored, "p1"), "the room doesn't copy it"
+    moved = {**expanded, "entities": [{**expanded["entities"][0], "elevation": 40.0}]}
+    stored2, definition2 = ops.split_players(moved, ["p1"], shared)
+    assert ops.find_entity(stored2, "p1")["elevation"] == 40.0 and definition2["elevation"] == 18.0

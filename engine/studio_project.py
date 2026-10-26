@@ -109,7 +109,7 @@ class Project:
 
     def _store(self, key: str, doc: Doc, player_ids: list[str]) -> None:
         """Keep an edited room, the shared player split back out of it (its definition may have changed)."""
-        stored, definition = ops.split_players(doc, player_ids)
+        stored, definition = ops.split_players(doc, player_ids, self.player)
         self.scenes[key] = stored
         self.dirty.add(key)
         if definition is not None and definition != self.player:

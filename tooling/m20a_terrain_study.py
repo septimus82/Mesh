@@ -437,11 +437,11 @@ def environment(out: Path) -> dict[str, Any]:
         terrain = hd.terrain
         light = hd.lighting  # shadows: the ground's hills cast them (with, against without it among the casters)
         original = light.render_shadows
-        ground = {id(d) for draws in hd._terrain_draws.values() for d in draws}
+        ground = {id(d[0]) for d in hd._terrain_casters()}  # (the ground's one caster geometry, Milestone 20B)
         with_shadow = shot(game, 5.0, 18.0)
 
         def without(statics: Any, *a: Any, **k: Any) -> Any:
-            return original([d for d in statics if id(d) not in ground], *a, **k)
+            return original([d for d in statics if id(d[0]) not in ground], *a, **k)
 
         light.render_shadows = without
         try:
@@ -533,14 +533,14 @@ def studio(out: Path) -> dict[str, Any]:
         view = d.studio.hd2d
         report["cursor_on_the_ground_m"] = [round(v, 2) for v in view.sculpt_at] if view.sculpt_at else None
         d.picture(out / "studio_1_brush.png")
-        for _ in range(4):
-            d.click(*at)
+        for _ in range(4):  # (Stage 20B: held a moment each, as strength now goes by time; one undo step each)
+            d.drag(at, at, steps=30)
         raised = heights(s)
         raised_h = Terrain.from_ground(ops._parsed_ground(s.project.scene())).height(spot[0] * PX, spot[1] * PX)
         report["raised_m"] = round((raised_h or 0.0) / PX, 3)
         d.button("Flatten")
-        d.button("Bigger")
-        d.click(*d.screen((18.0, 6.0, 0.0)))
+        d.key(d.arcade.key.BRACKETRIGHT)  # (a bigger brush: the ] key, Stage 20B)
+        d.drag(d.screen((18.0, 6.0, 0.0)), d.screen((18.0, 6.0, 0.0)), steps=10)
         d.frame(2)
         d.picture(out / "studio_2_sculpted.png")
         report["sculpt_click_ms"] = [round(v, 1) for v in view.timings["sculpt_ms"]]
@@ -613,7 +613,7 @@ def perf(out: Path) -> dict[str, Any]:
         chunks = [(i, j) for j in range(cy_n) for i in range(cx_n)]
         meshes = [terrain.chunk_mesh(*c) for c in chunks]
         report["terrain"] = {"cells": terrain.nx * terrain.ny, "cell_m": terrain.cell / PX, "chunks": len(chunks),
-                             "chunk_cells": CHUNK, "triangles_drawn": sum(len(a) + len(b) for a, b in meshes) // 24,
+                             "chunk_cells": CHUNK, "triangles_drawn": sum(len(part) for mesh in meshes for part in mesh) // 24,
                              "collision_surfaces_stored_for_the_ground": sum(1 for s in world.surfaces if s.floor == "ground"),
                              "gpu_bytes": hd.stats()["terrain_bytes"], "cpu_heights": len(terrain.heights),
                              "stored_chars": sum(len(v) for v in terrain.chunks().values())}

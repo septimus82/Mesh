@@ -743,6 +743,11 @@ class WaterLayer:
         key = None if terrain is None else (id(terrain), version)
         if key == self._terrain_key:
             return
+        if terrain is not None and self.terrain is not None and self._terrain_key is not None \
+                and self._terrain_key[0] == id(terrain):  # the same ground, edited: its heights written in place
+            self.terrain[0].write(array("f", [(terrain.base + h) / PX_PER_M for h in terrain.heights]).tobytes())
+            self._terrain_key = key
+            return
         self._free_terrain()
         self._terrain_key = None
         if terrain is not None:
