@@ -56,7 +56,7 @@ Each scenario starts from the inside freshly loaded ([results](milestone17_inter
 
 ## Billboard height and shadows: investigated, not changed here
 
-See [the separate renderer issue](#) (link in the PR), with this evidence:
+See the separate renderer issue, [#375](https://github.com/septimus82/Mesh/issues/375), with this evidence:
 - [prototype picture](milestone17_interior_door_trigger_evidence/shadow_current_vs_prototype.png);
 - [numbers](milestone17_interior_door_trigger_evidence/shadow_proto.json).
 
