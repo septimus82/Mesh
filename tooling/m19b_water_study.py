@@ -184,7 +184,7 @@ def renders(out: Path) -> dict[str, Any]:
         game = _open(out, f"village_{tag}", ["natural_pond", "path_puddle", "edge_puddle", "stone_pool"], rain=rain)
         try:  # 2-4: the muddy puddles on the path, the stone pool, the natural pond
             at_moment(game, 3.0)
-            for name, (x, y) in (("puddles", (15.5, 7.0)), ("stone_pool", (15.5, 13.0)), ("natural_pond", (24.5, 18.5))):
+            for name, (x, y) in (("puddles", (15.5, 9.2)), ("stone_pool", (15.5, 13.0)), ("natural_pond", (24.5, 18.5))):
                 shot_at(game, x, y).save(out / f"{name}_{tag}.png")
             report[f"water_surfaces_{tag}"] = game.window.hd2d_renderer.stats()["water_surfaces"]
         finally:

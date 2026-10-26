@@ -432,8 +432,8 @@ vec4 bank(vec2 q, float b, int shore) {
     }
     return vec4(0.0);  // stone: its stones only (stone())
 }
-vec3 shade(vec3 c) { return floor(c * 24.0 + 0.5) / 24.0; }
-const float STONE_OVER = 0.16;  // an outer stone may reach this far past its bank's width (drawn whole)  // a few flat shades: pixel art, not a gradient
+vec3 shade(vec3 c) { return floor(c * 24.0 + 0.5) / 24.0; }  // a few flat shades: pixel art, not a gradient
+const float STONE_OVER = 0.16;  // an outer stone may reach this far past its bank's width (drawn whole)
 void main() {
     // the pixel grid: everything is worked out at the centre of this fragment's texel (32 per metre)
     vec2 q = (floor(v_world.xy * 32.0) + 0.5) / 32.0;
