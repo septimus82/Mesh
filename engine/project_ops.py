@@ -2366,35 +2366,33 @@ def _out_of_place(scene: Doc, tolerance: float) -> dict[str, tuple[str, str, str
     return out
 
 
+def left_out_of_place(scene: Doc, before: Any = None, tolerance: float = 8.0) -> dict[str, tuple[str, str, str]]:
+    """``_out_of_place``, less (given ``before``, the room before an edit) what was already out of place then: what
+    the three lists below are made from (one call gives all three, for a caller that wants them all)."""
+    now = _out_of_place(scene, tolerance)
+    if isinstance(before, dict):
+        was = _out_of_place(before, tolerance)
+        now = {k: v for k, v in now.items() if k not in was}
+    return now
+
+
 def terrain_anchoring(scene: Doc, before: Any = None, tolerance: float = 8.0) -> list[str]:
     """What stands out of step with the ground: objects whose elevation is more than ``tolerance`` px from the ground
     under their feet, structures sunk into it or above it ("'Elder' is 1.5 m above the ground"). With ``before`` (the
     room before an edit), only what that edit left out of place: what stood on the ground then and doesn't now (a
     bridge over a valley or someone on a platform was never on the ground). Nothing is moved: ``settle_on_ground``
     does that, when asked."""
-    now = _out_of_place(scene, tolerance)
-    if isinstance(before, dict):
-        was = _out_of_place(before, tolerance)
-        now = {k: v for k, v in now.items() if k not in was}
-    return [words for _kind, _name, words in now.values()]
+    return [words for _kind, _name, words in left_out_of_place(scene, before, tolerance).values()]
 
 
 def anchoring_ids(scene: Doc, before: Any = None, tolerance: float = 8.0) -> list[str]:
     """The objects ``terrain_anchoring`` lists (their ids): what ``settle_on_ground`` would settle."""
-    now = _out_of_place(scene, tolerance)
-    if isinstance(before, dict):
-        was = _out_of_place(before, tolerance)
-        now = {k: v for k, v in now.items() if k not in was}
-    return [k for k, (kind, _name, _words) in now.items() if kind == "object"]
+    return [k for k, (kind, _n, _w) in left_out_of_place(scene, before, tolerance).items() if kind == "object"]
 
 
 def anchoring_structure_ids(scene: Doc, before: Any = None, tolerance: float = 8.0) -> list[str]:
     """The structures ``terrain_anchoring`` lists (their ids): what ``settle_on_ground`` settles given them."""
-    now = _out_of_place(scene, tolerance)
-    if isinstance(before, dict):
-        was = _out_of_place(before, tolerance)
-        now = {k: v for k, v in now.items() if k not in was}
-    return [k for k, (kind, _name, _words) in now.items() if kind == "structure"]
+    return [k for k, (kind, _n, _w) in left_out_of_place(scene, before, tolerance).items() if kind == "structure"]
 
 
 def find_entity_or_none(scene: Doc, entity_id: str) -> Doc | None:

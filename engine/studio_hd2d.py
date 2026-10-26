@@ -93,7 +93,9 @@ class Hd2dView:
         self._redraw: set[tuple[int, int]] = set()  # chunks a cancelled stroke changed, still to be drawn again
         self.sculpt_at: tuple[float, float, float] | None = None  # the ground under the mouse (m)
         self.unsettled: list[str] = []  # objects the last stroke left off the ground (ids): "Settle on the ground"
-        self._grid: tuple[Any, list[tuple[float, float, float]]] = (None, [])  # the 1 m grid over sculpted ground
+        self._grid: tuple[Any, Any] = (None, None)  # the 1 m grid over sculpted ground: (key, packed points)
+        self._grid_chunks: dict[tuple[int, int], Any] = {}  # ... per chunk
+        self._grid_dirty: set[tuple[int, int]] = set()  # chunks a stroke changed since the grid was worked out
 
     # ------------------------------------------------------------------ state
     @property
@@ -246,26 +248,11 @@ class Hd2dView:
             if renderer.terrain is None:
                 lines = [p for i in range(int(x0), int(x1) + 1) for p in ((float(i), y0, z), (float(i), y1, z))]
                 lines += [p for j in range(int(y0), int(y1) + 1) for p in ((x0, float(j), z), (x1, float(j), z))]
-            elif self._grid[0] == (id(renderer.terrain), renderer.terrain_version) or (
-                    self.stroke is not None and self._grid[1]):
-                lines = self._grid[1]  # (mid-stroke: as it was; worked out again once the stroke ends)
-            else:  # over sculpted ground: the grid follows it, in half-metre pieces (worked out once per edit)
-                terrain = renderer.terrain
-
-                def on(px: float, py: float) -> tuple[float, float, float]:
-                    h = terrain.height(px * PIXELS_PER_METRE, py * PIXELS_PER_METRE)
-                    return px, py, (h / PIXELS_PER_METRE if h is not None else z) + 0.02
-
+            else:  # over sculpted ground: the grid follows it (half-metre pieces), kept per chunk and packed
+                renderer.draw_lines(vp, [], (1.0, 1.0, 1.0, 0.16), packed=self._terrain_grid(renderer, z))
                 lines = []
-                for i in range(int(x0), int(x1) + 1):
-                    ys = [y0 + k * 0.5 for k in range(int((y1 - y0) / 0.5) + 1)]
-                    lines += [p for a, b in zip(ys, ys[1:]) for p in (on(float(i), a), on(float(i), b))]
-                for j in range(int(y0), int(y1) + 1):
-                    xs = [x0 + k * 0.5 for k in range(int((x1 - x0) / 0.5) + 1)]
-                    lines += [p for a, b in zip(xs, xs[1:]) for p in (on(a, float(j)), on(b, float(j)))]
-                self._grid = ((id(terrain), renderer.terrain_version), lines)
-                self._grid_at = time.perf_counter()
-            renderer.draw_lines(vp, lines, (1.0, 1.0, 1.0, 0.16))
+            if lines:
+                renderer.draw_lines(vp, lines, (1.0, 1.0, 1.0, 0.16))
         if renderer.preview is not None and self.placing is not None:  # the model about to be placed: a cyan box
             from engine.hd2d.picking import _apply  # noqa: PLC0415
 
@@ -307,6 +294,59 @@ class Hd2dView:
             half = abs(entity_sprite.width) / 64
             renderer.draw_lines(vp, box_edges((sx - half, sy - half / 2, sz), (sx + half, sy + half / 2, sz + 1.6)),
                                 (0.45, 0.8, 1.0, 1.0), through=True)
+
+    def _terrain_grid(self, renderer: Any, z: float) -> Any:
+        """The 1 m grid over sculpted ground, as packed line points. Worked out per chunk and kept: after a stroke
+        only the chunks it touched are worked out again (all of them after a reload); during a stroke it stays as it
+        was. (Milestone 20B: at 128 m a whole grid is 130,000 height samples, too slow for every edit or frame.)"""
+        from array import array  # noqa: PLC0415
+
+        from engine.hd2d.terrain import CHUNK  # noqa: PLC0415
+
+        terrain = renderer.terrain
+        key = (id(terrain), renderer.terrain_version)
+        if self._grid[0] == key or (self.stroke is not None and self._grid[1]):
+            return self._grid[1]
+        if self._grid[0] is None or self._grid[0][0] != id(terrain) or not self._grid_dirty:
+            self._grid_chunks, self._grid_dirty = {}, set()  # a different ground (a reload): every chunk
+            cx_n, cy_n = terrain.chunk_count()
+            todo = {(ci, cj) for cj in range(cy_n) for ci in range(cx_n)}
+        else:
+            todo, self._grid_dirty = set(self._grid_dirty), set()
+        gx0, gy0 = terrain.origin[0] / PIXELS_PER_METRE, terrain.origin[1] / PIXELS_PER_METRE
+        gx1, gy1 = gx0 + terrain.size[0] / PIXELS_PER_METRE, gy0 + terrain.size[1] / PIXELS_PER_METRE
+        span = terrain.cell * CHUNK / PIXELS_PER_METRE
+
+        def on(px: float, py: float, out: Any) -> None:
+            h = terrain.height(px * PIXELS_PER_METRE, py * PIXELS_PER_METRE)
+            out.extend((px, py, (h / PIXELS_PER_METRE if h is not None else z) + 0.02))
+
+        for ci, cj in todo:
+            cx0, cy0 = gx0 + ci * span, gy0 + cj * span
+            cx1, cy1 = min(gx1, cx0 + span), min(gy1, cy0 + span)
+            out = array("f")
+            if cx0 >= gx1 or cy0 >= gy1:
+                self._grid_chunks[(ci, cj)] = out
+                continue
+            last_x, last_y = cx1 >= gx1, cy1 >= gy1  # (the ground's far edges' lines belong to the last chunks)
+            xs = [float(i) for i in range(math.ceil(cx0), math.floor(cx1) + 1) if i < cx1 or last_x]
+            ys = [float(j) for j in range(math.ceil(cy0), math.floor(cy1) + 1) if j < cy1 or last_y]
+            steps_y = [cy0 + k * 0.5 for k in range(int((cy1 - cy0) / 0.5) + 1)]
+            steps_x = [cx0 + k * 0.5 for k in range(int((cx1 - cx0) / 0.5) + 1)]
+            for x in xs:
+                for a, b in zip(steps_y, steps_y[1:]):
+                    on(x, a, out)
+                    on(x, b, out)
+            for y in ys:
+                for a, b in zip(steps_x, steps_x[1:]):
+                    on(a, y, out)
+                    on(b, y, out)
+            self._grid_chunks[(ci, cj)] = out
+        packed = array("f")
+        for part in self._grid_chunks.values():
+            packed.extend(part)
+        self._grid = (key, packed)
+        return packed
 
     def _shown_structure(self) -> Any | None:
         """The selected structure as it is now: where a drag has it, or as placed."""
@@ -866,6 +906,7 @@ class Hd2dView:
             return
         self._flush_stroke()
         self.stroke = None
+        self._grid_dirty |= stroke["touched"]
         if not stroke["dabs"]:
             return
         studio = self.studio
@@ -884,9 +925,10 @@ class Hd2dView:
             studio._reload()  # (never expected: the saved stroke is the shown one; the saved one wins)
         self.timings["edit_ms"].append((time.perf_counter() - start) * 1000)
         after = studio.project.scene()
-        out_of_place = ops.terrain_anchoring(after, before)
-        unsettled = sorted(set(self.unsettled) | set(ops.anchoring_ids(after, before))
-                           | {f"structure:{i}" for i in ops.anchoring_structure_ids(after, before)})
+        left = ops.left_out_of_place(after, before)  # (one pass: each parses the whole ground, twice)
+        out_of_place = [words for _kind, _name, words in left.values()]
+        unsettled = sorted(set(self.unsettled) | {k for k, (kind, _n, _w) in left.items() if kind == "object"}
+                           | {f"structure:{k}" for k, (kind, _n, _w) in left.items() if kind == "structure"})
         changed_panel, self.unsettled = unsettled != self.unsettled, unsettled
         self._buried = self.buried()
         if changed_panel:  # the Settle button appears or counts more: the panel again
@@ -912,6 +954,7 @@ class Hd2dView:
             if world is not None:
                 world.update_terrain(renderer.terrain)
             self._redraw = set(stroke["touched"])
+            self._grid_dirty |= stroke["touched"]
             self._redraw_ground()
         self.studio._say(why, ok=False)
         return True

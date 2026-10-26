@@ -813,16 +813,17 @@ class Hd2dRenderer:
 
     # ------------------------------------------------------------------ overlay lines (Mesh Studio)
     def draw_lines(self, vp: tuple[float, ...], points: list[tuple[float, float, float]],
-                   colour: tuple[float, float, float, float], *, through: bool = False) -> None:
-        """Line segments (pairs of world points, metres) in one colour, depth-tested unless ``through``."""
-        if not points:
+                   colour: tuple[float, float, float, float], *, through: bool = False, packed: Any = None) -> None:
+        """Line segments (pairs of world points, metres) in one colour, depth-tested unless ``through``. ``packed``:
+        the points already as an ``array("f")`` (x, y, z each), for a caller that keeps them between frames."""
+        data = packed if packed is not None else array("f", [c for p in points for c in p])
+        if not data:
             return
         ctx = self.ctx
-        data = array("f", [c for p in points for c in p])
         if self._lines is None or self._lines[1].size < len(data) * 4:
             if self._lines is not None:
                 self._lines[1].delete()
-            buffer = ctx.buffer(reserve=12 * max(256, len(points) * 2))
+            buffer = ctx.buffer(reserve=12 * max(256, len(data) // 3 * 2))
             self._lines = (ctx.geometry([self.arcade.gl.BufferDescription(buffer, "3f", ["in_pos"])], mode=ctx.LINES),
                            buffer)
         self._lines[1].write(data.tobytes())
@@ -831,7 +832,7 @@ class Hd2dRenderer:
         if through:
             ctx.disable(ctx.DEPTH_TEST)
         with ctx.enabled(ctx.BLEND):  # faint lines are see-through
-            self._lines[0].render(self.line_prog, vertices=len(points))
+            self._lines[0].render(self.line_prog, vertices=len(data) // 3)
         if through:
             ctx.enable(ctx.DEPTH_TEST)
 
