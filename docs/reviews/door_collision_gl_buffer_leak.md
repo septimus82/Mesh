@@ -20,7 +20,9 @@ hit_list = arcade.check_for_collision_with_list(self.entity, sprite_list)
 - **Why it stays alive:** appending a sprite to a list makes the sprite hold the list (`sprite.sprite_lists`).
   - The player is long-lived, so every list made for a check stayed referenced, and with it its GL buffers. That is
     one list, about 5 buffers, per update while such a door is in the room.
-  - On a room change the old player and its lists form a reference cycle. Only Python's cyclic garbage collector
+  - While the player stays in the room, nothing frees them, not even `gc.collect()`: independent QA saw 271 →
+    15,271 buffers over 3,000 updates, unchanged after `gc.collect()`.
+  - After a room change the old player and its lists form a reference cycle. Only Python's cyclic garbage collector
     frees it, whenever it happens to run, so in 2D the count kept climbing across room changes.
   - The player's growing `sprite_lists` also made every move of the player update every one of those lists.
 - **The same pattern:** `Hitbox` and `Projectile` (`engine/behaviours/hitbox.py`, `projectile.py`) did the same per
@@ -81,6 +83,35 @@ stood still for 300 frames.
 
 Every leg reached the right room, and no arrival re-entered a door during its 300 still frames.
 
+### CPU cost (independent performance QA)
+
+The door's check, median per update, early → late over 3,000 updates:
+
+| Candidates | Before | After |
+|---|---|---|
+| 1 | 266 → 278 µs | 1.0 µs |
+| 100 | 552 → 825 µs | 48 µs |
+
+Moving the candidates also slowed down before, as their lists piled up. With 100 candidates it went from 1.2 to 77.6
+ms per frame; after the fix it is flat at 40 µs.
+
+### Room changes and Studio Play/Stop (independent performance QA)
+
+| Case | Before | After |
+|---|---|---|
+| 2D, 20 room changes | +300 buffers per round (to 6,086 with gc off) | 86 flat |
+| Studio, 10 Play/Stop with a walk-in door | +305 each | 88, after a one-time +1 on the first Play |
+
+### Other SpriteList sites in the engine
+
+QA counted every `SpriteList` made during 1,000 frames of walking, lit 2D, door rooms, the village with rain and the
+cottage. After the fix none is made per frame; only the render queue's cache is made once and reused.
+
+- `physics_runtime` and `gameplay_runtime` reuse existing lists.
+- Tilemap, scene and authoring sites run per load or per edit, and their counts stay flat across room changes.
+- `engine/self_test.py`'s collision wrapper would leak the same way when given a plain list. It is a latent,
+  self-test-only path; no runtime code calls it so, and it is left as it is.
+
 ## Issue #356
 
 #356 reported +5 buffers per load of an ordinary 2D room, in a blank room with no doors. It is not this leak: its
@@ -99,7 +130,9 @@ Both of its reproductions now show no growth, on the base `da87d9c` and on this 
 - **A blank room reloaded 12 times** (after `gc.collect()` + `ctx.gc()`): 66 at every load. With 60 frames
   between loads: 86, then 81 at every later load.
 
-It was fixed by earlier work, and its original reproduction is clean.
+Its original reproduction is clean. Independent QA traced the fix to `39b7336` ("Assets: slice each sprite sheet
+once, not on every room load", 2026-10-25). The probe shows +56 buffers on `348a4a5`, the issue's branch, and none
+after that commit, the only engine change between the two.
 
 ## Tests
 
