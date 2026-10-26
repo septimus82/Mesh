@@ -155,6 +155,7 @@ def reset(window: Any) -> None:
     window.water_bodies = []
     window.water_steps = []
     window.water_time = 0.0
+    window.scene_water_error = None
     layer = getattr(window, "scene_water", None)
     if layer is not None:
         layer.release()
@@ -514,8 +515,20 @@ def bodies_of(window: Any) -> list[Body]:
 def draw_2d(window: Any) -> None:
     """A 2D room's water, after its ground and before its characters (``engine.scene_controller_parts.rendering``)."""
     bodies = bodies_of(window)
-    if not bodies or getattr(window, "hd2d_renderer", None) is not None or getattr(window, "ctx", None) is None:
+    if (not bodies or getattr(window, "hd2d_renderer", None) is not None or getattr(window, "ctx", None) is None
+            or getattr(window, "scene_water_error", None)):
         return
+    try:
+        _draw_2d(window, bodies)
+    except Exception as exc:  # the driver refused it: no water in this room (its next load tries again)
+        window.scene_water_error = f"water: {exc}"
+        from engine.logging_tools import get_logger  # noqa: PLC0415
+
+        get_logger(__name__).error("[Mesh][Water] %s (water is off in this room)", window.scene_water_error)
+        release(window)
+
+
+def _draw_2d(window: Any, bodies: list[Body]) -> None:
     layer = getattr(window, "scene_water", None)
     if layer is None:
         import engine.optional_arcade as optional_arcade  # noqa: PLC0415

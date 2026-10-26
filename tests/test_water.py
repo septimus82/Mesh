@@ -209,3 +209,19 @@ def test_a_missing_step_sound_is_told_once_and_steps_go_quiet(monkeypatch: pytes
     pond = _Sprite(center_x=0.0, center_y=0.0, mesh_name="Pond", mesh_entity_data={})
     behaviour = WaterSurface(pond, _room(pond), preset="pond", step_sound="assets/sounds/no_such_splash.wav")
     assert behaviour.sound == "" and len(told) == 1 and "not found" in told[0]
+
+
+def test_a_2d_room_whose_water_the_driver_refuses_carries_on_without_it() -> None:
+    class Refusing:
+        def program(self, **_: Any) -> Any:
+            raise RuntimeError("no program (injected)")
+
+    body = water.Body(SimpleNamespace(center_x=0.0, center_y=0.0, mesh_entity_data={}), water.PRESETS["puddle"])
+    window = SimpleNamespace(water_bodies=[body], hd2d_renderer=None, ctx=Refusing(), scene_water=None)
+    water.reset(window)
+    window.water_bodies = [body]
+    water.draw_2d(window)
+    water.draw_2d(window)  # not tried again every frame
+    assert "injected" in window.scene_water_error and window.scene_water is None
+    water.reset(window)
+    assert window.scene_water_error is None, "the room's next load tries again"
