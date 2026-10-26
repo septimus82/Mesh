@@ -402,6 +402,9 @@ class Studio(InspectorMixin):
             door = ops.door_settings(entity)
             if door["width"] > 0 and door["height"] > 0:
                 return float(entity.get("x", 0)), float(entity.get("y", 0)), door["width"], door["height"]
+        water = ops.water_of(entity)
+        if water is not None:  # water: its own size (it has no picture)
+            return float(entity.get("x", 0)), float(entity.get("y", 0)), water["width"], water["height"]
         if sprite is not None and entity.get("sprite") and getattr(sprite, "width", 0) > 2:
             return sprite.center_x, sprite.center_y, sprite.width, sprite.height
         return float(entity.get("x", 0)), float(entity.get("y", 0)), 32.0, 32.0

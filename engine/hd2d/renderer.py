@@ -822,7 +822,7 @@ class Hd2dRenderer:
                       for a, c in zip(st.ambient_color, st.sun_color))
         self.water.draw_3d(vp, cam.eye(), fbo, time=float(getattr(self.window, "water_time", 0.0)),
                            steps=list(getattr(self.window, "water_steps", None) or []), rain=rain, shelter=shelter,
-                           light=light, sky=tuple(st.sky))
+                           light=light, sky=tuple(st.sky), lighting=self.lighting)
         self.draw_calls += self.water.draw_calls
 
     def visible_pixels(self, sprite: Any) -> int:

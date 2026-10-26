@@ -46,9 +46,7 @@ class WaterSurface(Behaviour):
     }
 
     def __init__(self, entity: Any, window: Any, **config: Any) -> None:
-        unset = {"width": 0.0, "height": 0.0, "colour": "", "opacity": 0.0, "shape": "", "waves": -1.0,
-                 "reflection": -1.0}  # the declared defaults that mean "the preset's"
-        settings = {k: v for k, v in config.items() if k in water_mod._KEYS and unset.get(k, object()) != v}
+        settings = {k: v for k, v in config.items() if k in water_mod._KEYS}  # UNSET values: parse_water's
         super().__init__(entity, window, **{k: v for k, v in config.items() if k in self.PARAM_DEFS})
         self.entity_name = str(getattr(entity, "mesh_name", "") or "Water")
         try:
@@ -61,6 +59,13 @@ class WaterSurface(Behaviour):
         self.tags = {str(t) for t in tags} if isinstance(tags, list) and tags else {"player"}
         self._last: dict[int, tuple[float, float]] = {}  # character -> where its last splash was (px)
         self.steps = 0
+        self.sound = self.water.step_sound
+        if self.sound:
+            from engine.paths import resolve_path  # noqa: PLC0415
+
+            if not resolve_path(self.sound).is_file():  # said once, not on every step
+                self._log(f"step sound {self.sound!r} not found: steps are silent")
+                self.sound = ""
         if not getattr(entity, "mesh_entity_data", {}).get("sprite"):
             entity.mesh_drawn = False  # the water is its picture
         bodies = getattr(window, "water_bodies", None)
@@ -71,8 +76,8 @@ class WaterSurface(Behaviour):
     def update(self, dt: float) -> None:
         water = self.water
         scene = getattr(self.window, "scene_controller", None)
-        if water is None or scene is None:
-            return
+        if water is None or scene is None or not water_mod.active(self.window, self.entity):
+            return  # (not there now: its "Show when" flags hide it)
         centre = (float(self.entity.center_x), float(self.entity.center_y))
         for sprite in list(getattr(scene, "all_sprites", None) or []):
             if getattr(sprite, "mesh_tag", None) not in self.tags:
@@ -91,11 +96,10 @@ class WaterSurface(Behaviour):
     def _step(self, sprite: Any, feet: tuple[float, float]) -> None:
         self.steps += 1
         water_mod.add_step(self.window, feet[0] / water_mod.PX_PER_M, feet[1] / water_mod.PX_PER_M)
-        assert self.water is not None
-        if self.water.step_sound:
+        if self.sound:
             audio = getattr(self.window, "audio", None)
             if audio is not None and hasattr(audio, "play_world_sfx"):
-                audio.play_world_sfx(self.water.step_sound, feet, window=self.window, base_volume=0.6)
+                audio.play_world_sfx(self.sound, feet, window=self.window, base_volume=0.6)
         emit_gameplay_event(self.window, "water_step",
                             {"who": str(getattr(sprite, "mesh_name", "") or ""), "water": self.entity_name,
                              "x": round(feet[0], 1), "y": round(feet[1], 1)},

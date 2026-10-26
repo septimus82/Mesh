@@ -146,3 +146,66 @@ def test_studio_offers_water_among_its_objects() -> None:
     from engine.studio import BUILT_IN_OBJECTS
 
     assert {"id": "water", "display_name": "Water", "built_in": "water"} in BUILT_IN_OBJECTS
+
+
+def test_placeholders_mean_the_preset_s_everywhere() -> None:
+    """What adding the behaviour plainly writes ("", 0, -1) is the preset's, for the game, Studio and AI alike."""
+    plain = {"preset": "pond", "width": 0, "height": 0, "colour": "", "opacity": 0, "shape": "", "waves": -1,
+             "reflection": -1, "target_tags": []}
+    assert water.parse_water(plain) == water.PRESETS["pond"]
+    scene = {"entities": [{"id": "w", "name": "W", "x": 0, "y": 0, "behaviours": ["WaterSurface"],
+                           "behaviour_config": {"WaterSurface": dict(plain)}}]}
+    wider = ops.set_water(scene, "w", width=300)
+    assert ops.water_of(ops.find_entity(wider, "w"))["width"] == 300.0, "editable after a plain add_behaviour"
+
+
+def test_a_hand_broken_water_shows_as_its_preset_with_the_reason_and_breaks_nothing() -> None:
+    scene = {"entities": [{"id": "w", "name": "W", "x": 0, "y": 0, "behaviours": ["WaterSurface"],
+                           "behaviour_config": {"WaterSurface": {"preset": "lake", "width": "big"}}}]}
+    shown = ops.water_of(ops.find_entity(scene, "w"))
+    assert shown is not None and shown["width"] == water.PRESETS["puddle"].width and "preset must be one of" in shown["error"]
+    lines = authoring.summarize({"rooms": {"r": {"entities": []}}}, {"rooms": {"r": scene}})
+    assert lines and "puddle water" in lines[0]
+    with pytest.raises(ops.OpError, match="preset must be one of"):
+        ops.set_behaviour_param(ops.set_water({"entities": [{"id": "v", "name": "V", "x": 0, "y": 0}]}, "v"), "v",
+                                "WaterSurface", "preset", "lake")
+
+
+def test_removing_water_reads_as_such() -> None:
+    scene, wid = ops.place_blank({"entities": []}, "r", "Pond", 0, 0)
+    pond = ops.set_water(scene, wid, preset="pond", walkable=False)
+    assert authoring.summarize({"rooms": {"r": pond}}, {"rooms": {"r": ops.remove_water(pond, wid)}}) == [
+        "r: 'Pond' stops being water"]
+
+
+def test_show_when_flags_hide_water_and_its_splashes(monkeypatch: pytest.MonkeyPatch) -> None:
+    from engine.behaviours import water_surface
+
+    monkeypatch.setattr(water_surface, "emit_gameplay_event", lambda *a, **k: None)
+    gate = SimpleNamespace(met=False)
+    activator = type("ConditionalActivator", (), {"_requirements_met": lambda self: gate.met})()
+    pond = _Sprite(center_x=200.0, center_y=200.0, mesh_name="Pond", mesh_entity_data={},
+                   mesh_behaviours_runtime=[activator])
+    hero = _Sprite(center_x=150.0, center_y=216.0, mesh_tag="player", mesh_name="Hero")
+    window = _room(pond, hero)
+    behaviour = water_surface.WaterSurface(pond, window, preset="pond", width=200, height=100)
+    assert water.bodies_of(window) == [], "its flag is off: no water"
+    for _ in range(10):
+        hero.center_x += 6
+        behaviour.update(1 / 60)
+    assert behaviour.steps == 0, "and no splashes"
+    gate.met = True
+    assert len(water.bodies_of(window)) == 1
+    hero.center_x += 20
+    behaviour.update(1 / 60)
+    assert behaviour.steps == 1
+
+
+def test_a_missing_step_sound_is_told_once_and_steps_go_quiet(monkeypatch: pytest.MonkeyPatch) -> None:
+    from engine.behaviours.water_surface import WaterSurface
+
+    told: list[str] = []
+    monkeypatch.setattr(WaterSurface, "_log", lambda self, message: told.append(message))
+    pond = _Sprite(center_x=0.0, center_y=0.0, mesh_name="Pond", mesh_entity_data={})
+    behaviour = WaterSurface(pond, _room(pond), preset="pond", step_sound="assets/sounds/no_such_splash.wav")
+    assert behaviour.sound == "" and len(told) == 1 and "not found" in told[0]

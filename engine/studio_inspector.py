@@ -764,6 +764,9 @@ class InspectorMixin:
             return commit
 
         rows.add(self._label("Water", bold=True, size=12))
+        if water.get("error"):  # hand-edited into something the game can't use: it shows as its preset meanwhile
+            rows.add(self._label(f"Not used as set: {water['error']}. Correct that setting here.", color=C_ERROR,
+                                 size=9, width=width))
         rows.add(self._label("Drawn as water and rippled by the room's rain and by footsteps. Its elevation is its "
                              "level.", color=C_MUTED, size=9, width=width))
         row = gui.UIBoxLayout(vertical=False, space_between=4)

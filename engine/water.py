@@ -35,7 +35,10 @@ from array import array
 from dataclasses import dataclass, replace
 from typing import Any
 
+from engine.hd2d.lighting import LIGHTING_GLSL
+
 PX_PER_M = 32.0
+LIFT_M = 0.035  # the surface stands this far above its level: over the ground and paths (2 cm tall), not z-fighting
 MAX_STEPS = 8  # footstep ripples alive at once (the oldest gives way)
 STEP_RIPPLE_S = 1.0  # how long a footstep's ring lasts
 _KEYS = {"preset", "width", "height", "colour", "opacity", "shape", "waves", "rain_ripples", "walkable", "step_sound",
@@ -64,7 +67,7 @@ class Water:
 
 PRESETS: dict[str, Water] = {
     "puddle": Water("puddle", 64.0, 40.0, (0.42, 0.50, 0.58), 0.62, "ellipse", 0.15, 0.85, True, True, ""),
-    "pond": Water("pond", 224.0, 144.0, (0.16, 0.36, 0.42), 0.84, "ellipse", 0.6, 0.55, True, True, ""),
+    "pond": Water("pond", 224.0, 144.0, (0.16, 0.36, 0.42), 0.84, "ellipse", 0.6, 0.35, True, True, ""),
 }
 
 
@@ -85,10 +88,17 @@ def _number(value: Any, where: str, lo: float, hi: float) -> float:
     return float(value)
 
 
+# What a setting holds to mean "the preset's" (the behaviour's declared defaults: what adding it plainly writes).
+UNSET = {"width": 0, "height": 0, "colour": "", "opacity": 0, "shape": "", "waves": -1, "reflection": -1}
+
+
 def parse_water(raw: Any) -> Water:
-    """A ``WaterSurface`` config checked and completed from its preset."""
+    """A ``WaterSurface`` config checked and completed from its preset (a setting holding its ``UNSET`` value, or
+    absent, is the preset's; ``target_tags`` is the behaviour's own)."""
     if not isinstance(raw, dict):
         raise WaterError("water settings must be an object like {\"preset\": \"pond\"}")
+    raw = {k: v for k, v in raw.items()
+           if k != "target_tags" and not (k in UNSET and not isinstance(v, bool) and v == UNSET[k])}
     unknown = set(raw) - _KEYS
     if unknown:
         raise WaterError(f"water: unknown setting(s) {', '.join(sorted(unknown))}")
@@ -194,8 +204,10 @@ uniform float u_time; uniform int u_flat; uniform mat4 u_vp; uniform vec3 u_eye;
 uniform float u_rain; uniform int u_shelter; uniform sampler2D u_precip; uniform mat4 u_precip_vp;
 uniform vec4 u_steps[8]; uniform int u_steps_n;
 uniform int u_reflect; uniform sampler2D u_scene; uniform sampler2D u_scene_depth; uniform vec2 u_screen;
+uniform int u_lit;  // 1: lit by the room's sun, lamps and shadows (HD-2D: engine.hd2d.lighting), else u_light
 in vec3 v_world; in vec2 v_local; flat in vec4 v_rect; flat in vec4 v_info; flat in vec4 v_colour; flat in vec4 v_look;
 out vec4 f_color;
+""" + LIGHTING_GLSL + """
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 // rings on the surface: a ring of radius r (m) about c, as a narrow band, fading with age 0..1
 float ring(vec2 q, vec2 c, float r, float age) {
@@ -253,7 +265,8 @@ void main() {
     float rim = (kind > 0.5 ? 1.0 - smoothstep(0.0, 0.16, edge_m) : 1.0 - smoothstep(0.0, 0.06, edge_m));
     // what it mirrors: the sky, or (HD-2D) what's on screen along the mirrored view ray
     vec3 view = u_flat == 1 ? vec3(0.0, 0.35, -0.94) : normalize(vec3(q, v_world.z) - u_eye);
-    vec3 r = reflect(view, n);
+    // the mirror is calmer than the surface: a quarter of the waves' slope (the full slope scattered it to blotches)
+    vec3 r = reflect(view, normalize(vec3(-slope * 0.25, 1.0)));
     vec3 refl = u_sky;
     if (u_reflect == 1) {
         for (int s = 1; s <= 10; s++) {
@@ -263,17 +276,22 @@ void main() {
             vec2 uv = ndc.xy * 0.5 + 0.5;
             if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) break;
             float scene_d = texture(u_scene_depth, uv).r;
-            if (scene_d < ndc.z * 0.5 + 0.5 - 0.000002) {  // something on screen is in front of the ray here
-                refl = texture(u_scene, (floor(uv * u_screen) + 0.5) / u_screen).rgb;
+            // something on screen in front of the ray here, standing above the water (the ground beside it, met at a
+            // grazing angle, would mirror as dark blotches)
+            if (scene_d < ndc.z * 0.5 + 0.5 - 0.000002 && p.z - v_world.z > 0.3) {
+                // towards the picture's edges it gives way to the sky (what's off screen can't be mirrored)
+                float edge = smoothstep(0.0, 0.14, min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)));
+                refl = mix(u_sky, texture(u_scene, (floor(uv * u_screen) + 0.5) / u_screen).rgb, edge);
                 break;
             }
         }
     }
+    vec3 light = u_lit == 1 ? light_at(vec3(q, v_world.z), vec3(0.0, 0.0, 1.0), false) : u_light;
     float facing = clamp(-view.z, 0.0, 1.0);
     float fresnel = v_look.y * mix(0.85, 0.35, facing);
-    vec3 lit = mix(col * u_light, refl, fresnel);
+    vec3 lit = mix(col * light, refl, fresnel);
     lit += vec3(0.85, 0.92, 1.0) * clamp(rings, 0.0, 1.0) * 0.35;  // rings catch the light
-    lit = mix(lit, vec3(0.88, 0.94, 1.0) * u_light, rim * 0.35 + clamp(splash, 0.0, 1.0) * 0.8);
+    lit = mix(lit, vec3(0.88, 0.94, 1.0) * light, rim * 0.35 + clamp(splash, 0.0, 1.0) * 0.8);
     float alpha = clamp(v_colour.a * smoothstep(0.0, 0.04, inside * 2.0) + clamp(rings, 0.0, 1.0) * 0.2 + splash * 0.6, 0.0, 1.0);
     // a few flat shades: pixel art, not a gradient
     lit = floor(lit * 24.0 + 0.5) / 24.0;
@@ -312,7 +330,7 @@ class WaterLayer:
             x, y, z = body.place()
             w = body.water
             rows.append((x, y, w.width / PX_PER_M / 2, w.height / PX_PER_M / 2,
-                         z + 0.012, 0.0 if w.shape == "ellipse" else 1.0, 1.0 if w.preset == "pond" else 0.0,
+                         z + LIFT_M, 0.0 if w.shape == "ellipse" else 1.0, 1.0 if w.preset == "pond" else 0.0,
                          1.0 if w.rain_ripples else 0.0, *w.colour, w.opacity, w.waves, w.reflection, 1.7 * i, 0.0))
         key = tuple(rows)
         if key == self._key:
@@ -398,25 +416,30 @@ class WaterLayer:
         prog["u_light"], prog["u_sky"] = light, sky
         shelter = shelter if self.shelter else None
         prog["u_shelter"] = 1 if shelter is not None else 0
-        prog["u_precip"], prog["u_scene"], prog["u_scene_depth"] = 1, 2, 3
+        prog["u_precip"], prog["u_scene"], prog["u_scene_depth"] = 4, 5, 6  # 1 and 2: the lighting's shadow maps
         if shelter is not None:
-            shelter.depth.use(1)
+            shelter.depth.use(4)
             prog["u_precip_vp"] = shelter.vp
 
     def draw_3d(self, vp: tuple[float, ...], eye: tuple[float, float, float], fbo: Any, *, time: float,
                 steps: list[tuple[float, float, float]], rain: float, shelter: Any,
-                light: tuple[float, float, float], sky: tuple[float, float, float], reflect: bool = True) -> None:
-        """Into an HD-2D frame already drawn (structures and characters, their depth kept)."""
+                light: tuple[float, float, float], sky: tuple[float, float, float], reflect: bool = True,
+                lighting: Any = None) -> None:
+        """Into an HD-2D frame already drawn (structures and characters, their depth kept); lit by ``lighting``
+        (engine.hd2d.lighting: the room's sun, lamps and their shadows) if given, else by ``light``."""
         self.draw_calls = 0
         if self.geometry is None or not self.count:
             return
         ctx, prog = self.ctx, self.program
         if reflect:
             _frame, colour, depth = self._copy_of(fbo)
-            colour.use(2)
-            depth.use(3)
+            colour.use(5)
+            depth.use(6)
             prog["u_screen"] = tuple(float(v) for v in fbo.size)
         prog["u_reflect"] = 1 if reflect else 0
+        prog["u_lit"] = 1 if lighting is not None else 0
+        if lighting is not None:
+            lighting.bind(prog)
         prog["u_vp"], prog["u_eye"], prog["u_flat"] = vp, eye, 0
         self._uniforms(time, steps, rain, shelter, light, sky)
         fbo.use(force=True)  # copy_framebuffer left the copy bound for drawing, unknown to arcade's own record
@@ -440,7 +463,7 @@ class WaterLayer:
         if self.geometry is None or not self.count:
             return
         prog = self.program
-        prog["u_vp"], prog["u_eye"], prog["u_flat"], prog["u_reflect"] = vp, (0.0, 0.0, 0.0), 1, 0
+        prog["u_vp"], prog["u_eye"], prog["u_flat"], prog["u_reflect"], prog["u_lit"] = vp, (0.0, 0.0, 0.0), 1, 0, 0
         prog["u_screen"] = (1.0, 1.0)
         self._uniforms(time, steps, rain, None, (1.0, 1.0, 1.0), sky)
         with self.ctx.enabled(self.ctx.BLEND):
@@ -468,16 +491,24 @@ class WaterLayer:
         self._key, self.count = None, 0
 
 
-def bodies_of(window: Any) -> list[Body]:
-    """The room's water surfaces shown now: all of them, but those an object's "Show when" flags hide (a water
-    object has no picture, so its sprite is never ``visible``: that isn't the test)."""
-    bodies = list(getattr(window, "water_bodies", None) or [])
+def active(window: Any, entity: Any) -> bool:
+    """Whether a water object is there now: its "Show when" flags (Studio keeps them in its ConditionalActivator;
+    older objects at the entity's own require/forbid flags). A water object has no picture, so its sprite is never
+    ``visible``: that isn't the test."""
+    for behaviour in getattr(entity, "mesh_behaviours_runtime", None) or ():
+        if type(behaviour).__name__ == "ConditionalActivator":
+            return bool(behaviour._requirements_met())
     get_flag = getattr(window, "get_flag", None)
-    if not bodies or not callable(get_flag):
-        return bodies
+    if not callable(get_flag):
+        return True
     from engine.scene_entity_gating import runtime_entity_passes_flag_gates  # noqa: PLC0415
 
-    return [b for b in bodies if runtime_entity_passes_flag_gates(b.entity, get_flag=get_flag)]
+    return runtime_entity_passes_flag_gates(entity, get_flag=get_flag)
+
+
+def bodies_of(window: Any) -> list[Body]:
+    """The room's water surfaces there now (``active``)."""
+    return [b for b in (getattr(window, "water_bodies", None) or []) if active(window, b.entity)]
 
 
 def draw_2d(window: Any) -> None:

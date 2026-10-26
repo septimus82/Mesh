@@ -327,6 +327,13 @@ def set_behaviour_param(scene: Doc, entity_id: str, behaviour: str, param: str, 
     if behaviour not in entity_behaviours(entity):
         raise OpError(f"This object doesn't have {behaviour}.")
     entity.setdefault("behaviour_config", {}).setdefault(behaviour, {})[param] = coerce_field(fields[param], value)
+    if behaviour == "WaterSurface":  # water's settings are checked as the game reads them (Milestone 19A)
+        from engine.water import WaterError, parse_water  # noqa: PLC0415
+
+        try:
+            parse_water(entity["behaviour_config"][behaviour])
+        except WaterError as exc:
+            raise OpError(str(exc)) from exc
     return _checked(scene, out)
 
 
@@ -743,18 +750,23 @@ def set_weather_exposure(scene: Doc, exposure: Any) -> Doc:
 def water_of(entity: Doc) -> Doc | None:
     """The object's water (``WaterSurface``) as its settings complete from its preset, colour as "#rrggbb"; None if
     it isn't water."""
-    from engine.water import WaterError, colour_hex, parse_water  # noqa: PLC0415
+    from engine.water import PRESETS, WaterError, colour_hex, parse_water  # noqa: PLC0415
 
     config = (entity.get("behaviour_config") or {}).get("WaterSurface")
-    if "WaterSurface" not in entity_behaviours(entity) or not isinstance(config, dict):
+    if "WaterSurface" not in entity_behaviours(entity):
         return None
+    error = None
     try:
-        w = parse_water({k: v for k, v in config.items() if k != "target_tags"})
-    except WaterError:
-        return dict(config)
-    return {"preset": w.preset, "width": w.width, "height": w.height, "colour": colour_hex(w.colour),
-            "opacity": w.opacity, "shape": w.shape, "waves": w.waves, "reflection": w.reflection,
-            "rain_ripples": w.rain_ripples, "walkable": w.walkable, "step_sound": w.step_sound}
+        w = parse_water(config if isinstance(config, dict) else {})
+    except WaterError as exc:  # hand-edited into something the game can't use: shown as its preset, with the reason
+        error = str(exc)
+        w = PRESETS.get(str((config or {}).get("preset")), PRESETS["puddle"]) if isinstance(config, dict) else PRESETS["puddle"]
+    out: Doc = {"preset": w.preset, "width": w.width, "height": w.height, "colour": colour_hex(w.colour),
+                "opacity": w.opacity, "shape": w.shape, "waves": w.waves, "reflection": w.reflection,
+                "rain_ripples": w.rain_ripples, "walkable": w.walkable, "step_sound": w.step_sound}
+    if error:
+        out["error"] = error
+    return out
 
 
 def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = _UNSET, height: Any = _UNSET,
@@ -793,7 +805,7 @@ def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = 
                 and not isinstance(value, bool) else value
     config.setdefault("preset", "puddle")
     try:
-        water = parse_water({k: v for k, v in config.items() if k != "target_tags"})
+        water = parse_water(config)
     except WaterError as exc:
         raise OpError(str(exc)) from exc
     config.setdefault("width", water.width)

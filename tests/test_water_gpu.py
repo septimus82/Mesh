@@ -173,3 +173,31 @@ def test_a_driver_refusing_the_water_turns_it_off_for_the_room_not_the_game(tmp_
         assert game.window.hd2d_renderer.water is not None and game.window.hd2d_renderer.water_error is None
     finally:
         game.close()
+
+
+def test_a_puddle_on_a_path_shows(tmp_path: Path) -> None:
+    """The path model stands 2 cm above the ground: water must sit above it, not under it (rendering QA)."""
+    import json
+
+    import hd2d_visual_study as visual
+    import m19_water_study as study
+
+    from engine import project_ops as ops
+
+    project = study.make_project(tmp_path, "onpath", puddle=False, pond=False, rain=False)
+    path = project / visual.SCENES / "start.json"
+    scene = json.loads(path.read_text(encoding="utf-8"))
+    scene, wid = ops.place_blank(scene, "start", "OnPath", 640, 224)  # the paths' crossing
+    path.write_text(json.dumps(ops.set_water(scene, wid, preset="puddle", width=80, height=48)), encoding="utf-8")
+    game = visual.HiddenGame(project, size=visual.SIZE)
+    try:
+        game.load(f"{visual.SCENES}/start.json")
+        game.step(30)
+        wet = study.shot(game, (20.0, 6.2, 0.8))
+        bodies = game.window.water_bodies
+        game.window.water_bodies = []
+        dry = study.shot(game, (20.0, 6.2, 0.8))
+        game.window.water_bodies = bodies
+    finally:
+        game.close()
+    assert int(study._mask(wet, dry).sum()) > 1500, "the puddle is drawn on the path"
