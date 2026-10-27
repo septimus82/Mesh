@@ -1,4 +1,5 @@
-"""Advisory runner-speed check of verify-all's slow steps. It never fails a run and never changes the enforced verdict.
+"""Runner-speed check of verify-all's slow steps. It never fails a run by itself; under rule f (#400) it can only excuse
+a fixed-threshold failure it judges within this runner's speed-adjusted range (mesh_cli.verify._apply_rule_f).
 
 The enforced slow-step budgets (``tooling/metrics/verify_step_budget.json``, ``_evaluate_verify_step_budget_guard`` in
 ``mesh_cli/verify.py``) stay as they are. Next to them, this module judges each modelled step against what the run's own
@@ -117,7 +118,8 @@ def build_speed_advisory(
     return {
         "schema_version": ADVISORY_SCHEMA_VERSION,
         "advisory_only": True,
-        "note": "Advisory only: never fails the run. The enforced verdict comes from verify_step_budget_check.json.",
+        "note": "Never fails a run by itself. Rule f: a fixed-threshold failure counts only where this says slow "
+                "(or can't judge); see verify_step_budget_check.json, rule_f.",
         "status": status,
         "platform": platform,
         "model_fitted": {k: pm.get(k) for k in ("runs", "first_run", "last_run")} if pm else None,
@@ -142,7 +144,8 @@ def _sec(ms: Any) -> str:
 def format_speed_advisory(payload: dict[str, Any]) -> list[str]:
     """A short per-step comparison for the console."""
     tag = "[Mesh][Verify][advisory]"
-    head = f"{tag} runner-speed check ({payload['platform']}): advisory only, never fails the run; enforced budgets unchanged."
+    head = (f"{tag} runner-speed check ({payload['platform']}): never fails a run by itself; rule f: a step over its "
+            "fixed threshold fails only if this also says slow.")
     if payload["status"] != "ok":
         return [head, f"{tag} {payload['status'].replace('_', ' ')}: enforced verdicts only."]
     seen = payload.get("speed_seen") or ["?", "?"]

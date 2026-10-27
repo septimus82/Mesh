@@ -402,7 +402,9 @@ def _build_manifest_with_seal(
         file_map[MANIFEST_SEAL_NAME] = FileEntry(archive_path=MANIFEST_SEAL_NAME, disk_path=seal_path)
 
     files = [file_map[path] for path in sorted(file_map.keys())]
+    # Once per bundle, not per manifest pass: each costs git subprocesses, and the passes must agree to converge.
     seal_provenance = provenance_to_dict(get_provenance(deterministic=timestamp is not None))
+    git_hash = _git_hash()
 
     stable = False
     for _ in range(5):
@@ -412,7 +414,8 @@ def _build_manifest_with_seal(
             work_dir=work_dir,
             files=files,
         )
-        iter_manifest = build_package_manifest(iter_plan, timestamp=timestamp)
+        iter_manifest = build_package_manifest(iter_plan, timestamp=timestamp, provenance=seal_provenance,
+                                               git_hash=git_hash)
         _write_json_atomic(manifest_json_path, iter_manifest.to_dict(), indent=2, sort_keys=True, trailing_newline=True)
         _write_text_atomic(manifest_txt_path, iter_manifest.to_text(), encoding="utf-8")
 
@@ -434,7 +437,8 @@ def _build_manifest_with_seal(
         work_dir=work_dir,
         files=files,
     )
-    final_manifest = build_package_manifest(final_plan, timestamp=timestamp)
+    final_manifest = build_package_manifest(final_plan, timestamp=timestamp, provenance=seal_provenance,
+                                            git_hash=git_hash)
     _write_json_atomic(manifest_json_path, final_manifest.to_dict(), indent=2, sort_keys=True, trailing_newline=True)
     _write_text_atomic(manifest_txt_path, final_manifest.to_text(), encoding="utf-8")
 
@@ -448,7 +452,8 @@ def _build_manifest_with_seal(
     current_text = seal_path.read_text(encoding="utf-8")
     if current_text != verify_text:
         _write_text_atomic(seal_path, verify_text, encoding="utf-8")
-        final_manifest = build_package_manifest(final_plan, timestamp=timestamp)
+        final_manifest = build_package_manifest(final_plan, timestamp=timestamp, provenance=seal_provenance,
+                                                git_hash=git_hash)
         _write_json_atomic(manifest_json_path, final_manifest.to_dict(), indent=2, sort_keys=True, trailing_newline=True)
         _write_text_atomic(manifest_txt_path, final_manifest.to_text(), encoding="utf-8")
 
@@ -636,23 +641,26 @@ def build_package_manifest(
     plan: ReleaseBundlePlan,
     *,
     timestamp: str | None = None,
+    provenance: dict[str, Any] | None = None,
+    git_hash: str | None = None,
 ) -> PackageManifest:
     """Build a PackageManifest from a completed plan.
 
     When *timestamp* is supplied the provenance block is built in
     deterministic mode (no volatile ``build_timestamp_utc``) so that
     repeated calls with the same inputs produce identical output.
+    *provenance* and *git_hash*, when given, are used as they are (computed once by the caller).
     """
     deterministic = timestamp is not None
     manifest = PackageManifest(
         seed=plan.seed,
         campaign=plan.campaign,
         engine_version=_engine_version(),
-        git_hash=_git_hash(),
+        git_hash=git_hash or _git_hash(),
         python_version=platform.python_version(),
         platform_tag=platform.platform(),
         created_utc=timestamp or _utc_iso(),
-        provenance=provenance_to_dict(get_provenance(deterministic=deterministic)),
+        provenance=provenance or provenance_to_dict(get_provenance(deterministic=deterministic)),
     )
 
     total_size = 0

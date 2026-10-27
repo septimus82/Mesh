@@ -280,7 +280,7 @@ def scale(out: Path) -> dict[str, Any]:
     return report
 
 
-def walks(out: Path) -> dict[str, Any]:
+def walks(out: Path, *, film: bool = True) -> dict[str, Any]:
     """Stage 20A's walks (the game's own key events), in the decorated room: over the hill, up the ramp, into the
     cliff, along the valley under the bridge, up the stairs and across, into the pond; then into the boulder."""
     from hd2d_floors_demo import _feet, hold_key
@@ -288,7 +288,7 @@ def walks(out: Path) -> dict[str, Any]:
     kept = m20a.open_room
     m20a.open_room = lambda o, name, **kw: open_room(o, name)  # (the same walks, this room)
     try:
-        report: dict[str, Any] = m20a.walking(out)
+        report: dict[str, Any] = m20a.walking(out, film=film)
     finally:
         m20a.open_room = kept
     game = open_room(out, "boulder")
