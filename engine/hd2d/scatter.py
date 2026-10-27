@@ -60,6 +60,9 @@ class Part:
     streams: bool = False
     cast: bool = False
     scale: float = 1.0
+    nearer: float = 0.0  # m: drawn this much nearer the camera than its anchor (a flame in its cup, not behind it)
+    lift: float = 0.0  # m: its light taken this far toward the sun (a canopy: its own clusters don't shade it)
+    limp: int | None = None  # its cell in still air (a banner hanging; its frames when the wind blows)
 
 
 @dataclass(frozen=True)
@@ -81,6 +84,7 @@ class Asset:
     shore: float = 0.0
     blocks: bool = False
     shadow: bool = False
+    reach: float = 0.0  # m: how far it spreads above the ground (a tree's canopy): kept that far off structures
     # How it moves when the room's motion is on (engine.hd2d.motion, Milestone 20E): ``flex`` how much the wind
     # bends it (0 stiff .. 1 grass and reeds); ``frames`` its sprite's frames (cells after ``cell``), shown at
     # ``fps``, looping or ``pingpong``, instances out of step by ``phase`` (0-1); ``glow`` how much it shines in
@@ -111,21 +115,21 @@ ASSETS: dict[str, Asset] = {a.id: a for a in (
           flex=1.0),
     Asset("reeds_cattail", "Cattails", cell=(16,), spacing=0.35, on=("grass", "mud", "sand"), shore=0.3, flex=0.9),
     # Milestone 20E: animated decoration (frames on the GPU, from one shared sheet), and a small tree
-    Asset("bellflowers", "Bellflowers", cell=(33,), spacing=0.4, flex=0.8, frames=3, fps=2.0, loop="pingpong"),
-    Asset("glowcap", "Glowcaps", cell=(31,), spacing=0.5, size=(0.8, 1.2), on=("grass", "earth", "mud"), flex=0.1,
+    Asset("bellflowers", "Bellflowers", cell=(36,), spacing=0.4, flex=0.8, frames=3, fps=2.0, loop="pingpong"),
+    Asset("glowcap", "Glowcaps", cell=(34,), spacing=0.5, size=(0.8, 1.2), on=("grass", "earth", "mud"), flex=0.1,
           frames=2, fps=1.5, glow=0.9),
     Asset("torch", "Torch", cell=(17,), spacing=1.5, size=(0.95, 1.05), slope=20.0, on=MATERIALS,
-          parts=(Part(18, at=(0.0, 0.0, 0.94), flex=0.45, frames=4, fps=9.0, glow=1.0),)),
-    Asset("banner", "Banner", cell=(22,), spacing=1.5, size=(0.95, 1.05), slope=20.0, on=MATERIALS,
-          parts=(Part(23, at=(0.0, 0.0, 0.63), flex=0.2, frames=4, fps=6.0, streams=True),)),
-    Asset("dripping_rock", "Dripping rock", cell=(27,), spacing=1.0, size=(0.9, 1.1), slope=30.0, on=MATERIALS,
+          parts=(Part(18, at=(0.0, 0.0, 0.97), flex=0.45, frames=6, fps=10.0, glow=1.0, nearer=0.05),)),
+    Asset("banner", "Banner", cell=(24,), spacing=1.5, size=(0.95, 1.05), slope=20.0, on=MATERIALS,
+          parts=(Part(25, at=(0.0, 0.0, 0.63), flex=0.2, frames=4, fps=6.0, streams=True, limp=29),)),
+    Asset("dripping_rock", "Dripping rock", cell=(30,), spacing=1.0, size=(0.9, 1.1), slope=30.0, on=MATERIALS,
           frames=4, fps=3.0, phase=1.0),
     Asset("tree_small", "Small tree", model=f"{KIT}/tree_small.glb", spacing=3.0, size=(0.85, 1.2), slope=25.0,
-          on=("grass", "earth"), blocks=True, shadow=True,
-          parts=(Part(37, at=(0.0, 0.05, 1.45), flex=0.3, cast=True, scale=1.5),
-                 Part(38, at=(-0.45, 0.15, 1.2), flex=0.35, cast=True, scale=1.2),
-                 Part(39, at=(0.5, 0.1, 1.3), flex=0.35, cast=True, scale=1.2),
-                 Part(38, at=(0.1, -0.2, 1.95), flex=0.3, cast=True, scale=1.15))),
+          on=("grass", "earth"), blocks=True, shadow=True, reach=1.1,
+          parts=(Part(40, at=(0.0, 0.05, 1.45), flex=0.45, cast=True, scale=1.5, lift=1.2),
+                 Part(41, at=(-0.45, 0.15, 1.2), flex=0.5, cast=True, scale=1.2, lift=1.2),
+                 Part(42, at=(0.5, 0.1, 1.3), flex=0.5, cast=True, scale=1.2, lift=1.2),
+                 Part(41, at=(0.1, -0.2, 1.95), flex=0.45, cast=True, scale=1.15, lift=1.2))),
     Asset("rock_small", "Small rock", model=f"{KIT}/rock_small.glb", spacing=0.5, size=(0.8, 1.6), slope=40.0,
           on=MATERIALS, shadow=True),
     Asset("rock_medium", "Rock", model=f"{KIT}/rock_medium.glb", spacing=1.0, size=(0.75, 1.3), slope=40.0,
@@ -268,7 +272,11 @@ def allowed(asset: Asset, x: float, y: float, ground: Ground, rules: Rules) -> b
     if level is not None and rules.avoid_water and height < level + 0.05 * PX \
             and not (asset.shore and height >= level - asset.shore * PX):
         return False
-    return not (rules.avoid_structures and ground.structure(x, y))
+    if not rules.avoid_structures:
+        return True
+    r = asset.reach * PX  # (a tree's canopy: clear of walls and doorways all round, not only at its trunk)
+    return not any(ground.structure(x + dx, y + dy) for dx, dy in ((0, 0), (r, 0), (-r, 0), (0, r), (0, -r))
+                   if r or (dx, dy) == (0, 0))
 
 
 # ---------------------------------------------------------------------- the brush

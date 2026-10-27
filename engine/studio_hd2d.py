@@ -1642,7 +1642,29 @@ class Hd2dView:
         self.studio._edit(lambda s: ops.set_wind(s, **now), said)
 
     def set_motion(self, said: str, **change: Any) -> None:
-        self.studio._edit(lambda s: ops.set_motion(s, **change), said)
+        """One undo step; the view takes the new motion in place (uniforms: nothing rebuilt, no reload), so tuning
+        Sway or Speed doesn't wait on the room loading again. (The wind reloads: the room's rain falls in it too.)"""
+        import dataclasses  # noqa: PLC0415
+
+        from engine.hd2d.motion import parse_motion  # noqa: PLC0415
+
+        studio = self.studio
+        start = time.perf_counter()
+        try:
+            studio.project.edit_scene(lambda s: ops.set_motion(s, **change))
+        except ops.OpError as err:
+            studio._say(str(err), ok=False)
+            return
+        renderer = self.renderer
+        hd2d = (studio.project.scene().get("settings") or {}).get("hd2d")
+        if renderer is not None:
+            renderer.settings = dataclasses.replace(renderer.settings, motion=parse_motion(
+                hd2d.get("motion") if isinstance(hd2d, dict) else None))
+            if renderer.scatter is not None:
+                renderer.scatter.set_motion(renderer.motion, renderer.wind)
+        self.timings["edit_ms"].append((time.perf_counter() - start) * 1000)
+        studio._rebuild()
+        studio._say(said)
 
     def advance_motion(self, delta_time: float) -> None:
         """The room's decoration moves while editing, as in play (when its animation is on)."""

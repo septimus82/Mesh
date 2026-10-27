@@ -536,9 +536,13 @@ def configure(window: Any, settings: Any, scene: Any = None) -> None:
         indoor = parse_exposure(settings.get("weather_exposure")) == "indoor"  # checked even without particles
         if raw is None:
             return
-        from engine.wind import parse_wind  # noqa: PLC0415
+        from engine.wind import WindError, parse_wind  # noqa: PLC0415
 
-        effects = parse_particles(raw, parse_wind(settings.get("wind")))
+        try:  # (a room wind that can't be used: still air, as its decoration takes it; the rain still falls)
+            wind = parse_wind(settings.get("wind"))
+        except WindError:
+            wind = None
+        effects = parse_particles(raw, wind)
         if indoor and any(e.preset in PRECIPITATION for e in effects):
             # Milestone 18B: rain and snow fall outdoors; an indoor room keeps only what else it asks for (leaves)
             gone = sorted({e.preset for e in effects if e.preset in PRECIPITATION}, key=PRECIPITATION.index)

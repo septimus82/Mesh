@@ -175,12 +175,13 @@ def reeds(seed: int, heads: int = 3) -> Image.Image:
 WOOD = [(70, 48, 32), (96, 66, 42), (124, 88, 56), (150, 112, 72)]
 IRON = [(48, 46, 54), (72, 70, 80), (98, 96, 104)]
 FLAME = [(198, 72, 30), (236, 124, 42), (252, 186, 70), (255, 238, 164)]
+FLAME_EDGE = (138, 40, 26)
 CLOTH = [(104, 28, 36), (140, 40, 48), (172, 58, 62), (214, 176, 84)]
 STONE = [(70, 72, 76), (92, 94, 98), (118, 118, 120), (146, 144, 140)]
 MOSS = [(64, 96, 50), (86, 122, 60)]
 WATER = [(120, 160, 196), (170, 204, 230), (216, 236, 250)]
-GLOW = [(40, 120, 120), (70, 196, 184), (150, 246, 226)]
-BELL = [(88, 76, 168), (120, 110, 210), (170, 160, 236)]
+GLOW = [(40, 92, 90), (70, 146, 136), (118, 192, 172)]  # (muted toward the kit's greens: they glow in the dark)
+BELL = [(78, 76, 128), (104, 100, 160), (140, 136, 188)]
 
 
 def torch_post() -> Image.Image:
@@ -198,23 +199,37 @@ def torch_post() -> Image.Image:
 
 
 def flame(frame: int) -> Image.Image:
-    """A torch's flame (one of four): a tongue of fire standing on the cell's bottom row, its tip and sides moving."""
-    img, d = _cell()
+    """A torch's flame (one of six): a tongue of fire standing in the cup (the cell's bottom row, no wider than the
+    cup), its tip leaning and forking, a dark red edge round it, sparks rising off it."""
+    img = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
     cx = CELL // 2
-    rng = random.Random(500 + frame)
-    sway = (0, 1, 0, -1)[frame]
-    height = (13, 15, 12, 14)[frame]
-    for y in range(height):  # widest low down, a flickering tip
+    height = (12, 14, 11, 15, 13, 12)[frame]
+    lean = (0.0, 1.0, 1.5, 0.5, -1.0, -1.5)[frame]
+    fork = frame in (1, 3)
+    shape = set()
+    for y in range(height):
         t = y / height
-        half = max(0.0, 3.6 * (1 - t) ** 0.8 + (0.6 if y < 2 else 0))
-        x0 = cx - 0.5 + sway * t * 1.5
+        half = 2.6 * (1 - t) ** 0.7 + (0.4 if y < 3 else 0.0)
+        x0 = cx - 0.5 + lean * t * t * 2.0
         for x in range(round(x0 - half), round(x0 + half) + 1):
-            edge = abs(x - x0) / max(0.5, half)
-            tone = 3 if edge < 0.35 and t < 0.55 else 2 if edge < 0.7 else 1 if t < 0.85 else 0
-            img.putpixel((x, CELL - 1 - y), (*FLAME[tone], 255))
-    for _ in range(2):  # sparks above
-        x, y = cx + rng.randint(-3, 3), CELL - 1 - height - rng.randint(1, 4)
-        img.putpixel((x, y), (*FLAME[2], 255))
+            if fork and t > 0.7 and abs(x - x0) < 0.6:
+                continue  # (a forked tip)
+            shape.add((x, CELL - 1 - y))
+    for x, y in shape:
+        t = (CELL - 1 - y) / height
+        inner = sum((x + dx, y + dy) in shape for dx, dy in ((1, 0), (-1, 0), (0, -1), (0, 1))) == 4
+        tone = 3 if inner and t < 0.45 else 2 if inner else 1 if t < 0.8 else 0
+        img.putpixel((x, y), (*FLAME[tone], 255))
+    px: Any = img.load()
+    for x, y in shape:  # the dark red edge, beside and over it (its foot is in the cup)
+        for dx, dy in ((1, 0), (-1, 0), (0, -1)):
+            q = (x + dx, y + dy)
+            if q not in shape and 0 <= q[0] < CELL and 0 <= q[1] < CELL and px[q][3] == 0:
+                px[q] = (*FLAME_EDGE, 255)
+    for k in range(2):  # sparks: each rises a little more each frame
+        rise = (frame * 2 + k * 5) % 9
+        x = cx + (-2 if k else 2) + round(lean * 0.7) + (rise // 4) * (1 if k else -1)
+        img.putpixel((x, CELL - 1 - height - 2 - rise), (*FLAME[2 if rise < 5 else 1], 255))
     return img
 
 
@@ -251,44 +266,73 @@ def banner_cloth(frame: int) -> Image.Image:
     return img
 
 
+def banner_limp() -> Image.Image:
+    """The cloth in still air: hanging down beside the pole from the same top, folds down its length."""
+    img = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
+    cx, height = CELL // 2, 17
+    for y in range(CELL - height, CELL):
+        depth = y - (CELL - height)
+        width = 4 + (1 if depth > 6 else 0)
+        for i in range(width):
+            fold = (i + depth // 5) % 3 == 0
+            stripe = height * 0.45 <= depth <= height * 0.58
+            img.putpixel((cx + i, y), (*CLOTH[3 if stripe and i else 0 if i == 0 else 1 if fold else 2], 255))
+    for i in range(1, 5, 2):  # a ragged lower hem
+        img.putpixel((cx + i, CELL - 1), (0, 0, 0, 0))
+    return img
+
+
 def dripping_rock(frame: int) -> Image.Image:
-    """A mossy rock with an overhanging lip that water drips from (one of four): a drop forms, falls, splashes."""
+    """A mossy rock with an overhanging lip that water drips from (one of four): a drop forms, swells, falls and
+    splashes into the little pool at the rock's foot. Shaded and outlined as the kit's other sprites."""
     img, d = _cell()
-    rng = random.Random(610)
-    for _ in range(9):
-        rx, ry = rng.randint(4, 7), rng.randint(4, 7)
-        x, y = 20 + rng.randint(-5, 4), CELL - 1 - ry - rng.randint(0, 9)
-        d.ellipse([x - rx, y - ry, x + rx, y + ry], fill=(*STONE[1], 255))
-    d.polygon([(22, 28), (31, 30), (30, 32), (21, 33)], fill=(*STONE[2], 255))  # the lip
+    rng = random.Random(611)
+    d.polygon([(12, 47), (11, 40), (13, 33), (17, 29), (24, 28), (30, 30), (32, 32), (29, 34), (28, 40), (29, 47)],
+              fill=(*STONE[1], 255))  # (its lip juts out to the right)
     px: Any = img.load()
-    for x in range(12, 31):  # moss along its top
-        col = [y for y in range(CELL) if px[x, y][3]]
-        if col and rng.random() < 0.8:
-            img.putpixel((x, col[0]), (*MOSS[rng.randint(0, 1)], 255))
-    for x in range(26, 36):  # a little puddle below the lip
-        img.putpixel((x, CELL - 1), (*WATER[0], 255))
-    out = _shade(img, top=False)
+    shape = {(x, y) for y in range(CELL) for x in range(CELL) if px[x, y][3]}
+    for x, y in shape:  # lit up and to the left, a darker foot
+        k = (y - 28) / 19 * 0.8 + (x - 12) / 20 * 0.5
+        px[x, y] = (*STONE[3 if k < 0.25 else 2 if k < 0.55 else 1 if k < 0.9 else 0], 255)
+    for _ in range(14):  # its grain
+        x, y = rng.randint(13, 28), rng.randint(31, 46)
+        if (x, y) in shape:
+            px[x, y] = (*STONE[0], 255)
+    for x, y in ((18, 35), (19, 36), (19, 37), (24, 41), (25, 42)):  # a crack
+        if (x, y) in shape:
+            px[x, y] = (*STONE[0], 255)
+    for x in range(14, 31):  # moss along its top
+        col = [y for y in range(CELL) if (x, y) in shape]
+        if col and rng.random() < 0.85:
+            for y in col[:rng.choice([1, 2])]:
+                px[x, y] = (*MOSS[rng.randint(0, 1)], 255)
+    out = _shade(img)
     o: Any = out.load()
-    drop: list[list[tuple[int, int]]] = [[(30, 33)], [(30, 33), (30, 34)], [(30, 39), (30, 40)], []]
+    for x in range(28, 37):  # the pool: against the rock's foot, under the drip
+        o[x, CELL - 1] = (*WATER[0 if x in (28, 36) else 1], 255)
+    drop: list[list[tuple[int, int]]] = [[(30, 33)], [(30, 33), (31, 33), (30, 34), (31, 34)],
+                                         [(30, 40), (31, 40), (30, 41), (31, 41), (30, 39)], []]
     for x, y in drop[frame]:
         o[x, y] = (*WATER[2], 255)
-    if frame == 3:
-        for x, y in ((28, 46), (32, 46), (29, 45), (31, 45)):
-            o[x, y] = (*WATER[1], 255)
+    if frame == 3:  # the splash
+        for x, y in ((29, 45), (32, 45), (28, 44), (33, 44), (30, 46), (31, 46)):
+            o[x, y] = (*WATER[2 if y < 46 else 1], 255)
     return out
 
 
 def glowcaps(frame: int) -> Image.Image:
-    """Three small glowing mushrooms (one of two: their spores drifting up). They shine in the dark (Asset.glow)."""
+    """Three small glowing mushrooms (one of two: their spores drifting up), dark-edged caps. They shine in the
+    dark (Asset.glow); by day they are muted, as the kit's other plants."""
     img, d = _cell()
     cx = CELL // 2
     for x, h, w in ((cx - 5, 7, 3), (cx + 1, 10, 4), (cx + 6, 5, 3)):
-        d.line([(x, CELL - 1), (x, CELL - h)], fill=(200, 210, 190, 255))
+        d.line([(x, CELL - 1), (x, CELL - h)], fill=(176, 182, 160, 255))
         d.ellipse([x - w, CELL - h - 3, x + w, CELL - h + 1], fill=(*GLOW[1], 255))
         d.line([(x - w + 1, CELL - h - 2), (x, CELL - h - 3)], fill=(*GLOW[2], 255))
         d.line([(x - w, CELL - h), (x + w, CELL - h)], fill=(*GLOW[0], 255))
+        d.point([(x - w, CELL - h - 1), (x + w, CELL - h - 1)], fill=(*GLOW[0], 255))
     rng = random.Random(620 + frame)
-    for _ in range(4):
+    for _ in range(3):
         img.putpixel((cx + rng.randint(-7, 7), CELL - 14 - rng.randint(0, 8)), (*GLOW[2], 255))
     return img
 
@@ -365,13 +409,13 @@ SHEET = [  # cells in the order engine.hd2d.scatter.ASSETS uses them (several va
     lambda: bush(77, 26, 16, berries=(186, 62, 64)),  # 13 berry bush
     lambda: reeds(78, heads=0), lambda: reeds(88, heads=1),  # 14-15 reeds
     lambda: reeds(79),  # 16 cattails
-    torch_post, *(lambda f=f: flame(f) for f in range(4)),  # 17 torch, 18-21 its flame
-    banner_pole, *(lambda f=f: banner_cloth(f) for f in range(4)),  # 22 banner, 23-26 its cloth
-    *(lambda f=f: dripping_rock(f) for f in range(4)),  # 27-30 dripping rock
-    *(lambda f=f: glowcaps(f) for f in range(2)),  # 31-32 glowcaps
-    *(lambda f=f: bellflowers(f) for f in range(3)),  # 33-35 bellflowers
-    trunk_sprite,  # 36 a trunk as a sprite (comparisons only)
-    lambda: canopy(641, 40, 30), lambda: canopy(642, 32, 24), lambda: canopy(643, 36, 28),  # 37-39 canopy clusters
+    torch_post, *(lambda f=f: flame(f) for f in range(6)),  # 17 torch, 18-23 its flame
+    banner_pole, *(lambda f=f: banner_cloth(f) for f in range(4)), banner_limp,  # 24 banner, 25-28 cloth, 29 limp
+    *(lambda f=f: dripping_rock(f) for f in range(4)),  # 30-33 dripping rock
+    *(lambda f=f: glowcaps(f) for f in range(2)),  # 34-35 glowcaps
+    *(lambda f=f: bellflowers(f) for f in range(3)),  # 36-38 bellflowers
+    trunk_sprite,  # 39 a trunk as a sprite (comparisons only)
+    lambda: canopy(641, 40, 30), lambda: canopy(642, 32, 24), lambda: canopy(643, 36, 28),  # 40-42 canopy clusters
 ]
 
 

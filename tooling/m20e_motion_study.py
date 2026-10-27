@@ -27,11 +27,12 @@ from hd2d_demo import SCENES, HiddenGame  # noqa: E402
 
 PX = 32.0
 BLENDER = Path("D:/program/blender.exe")  # (headless only)
-# where the new decoration goes (m): torches either side of the cottage's path, a banner by the bridge, small trees
-# on the meadow and the hill, glowcaps and bellflowers under them, a dripping rock at the cliff's foot
-DECOR = [("Torch", (3.5, 3.7)), ("Torch", (7.4, 2.3)), ("Banner", (13.4, 10.6)), ("Small tree", (9.5, 9.5)),
-         ("Small tree", (3.2, 16.5)), ("Small tree", (19.5, 9.8)), ("Glowcaps", (11.3, 10.3)), ("Glowcaps", (5.0, 15.7)),
-         ("Glowcaps", (17.7, 10.4)), ("Bellflowers", (10.6, 7.6)), ("Bellflowers", (18.6, 8.8)),
+# where the new decoration goes (m): torches either side of the cottage's door, a banner by the bridge, small trees on
+# the meadow, west of the cottage and on the hill (clear of the stairs and bridge: their canopies spread), glowcaps
+# and bellflowers near them, a dripping rock at the cliff's foot
+DECOR = [("Torch", (3.4, 2.6)), ("Torch", (7.6, 2.6)), ("Banner", (13.4, 10.6)), ("Small tree", (17.2, 8.4)),
+         ("Small tree", (6.5, 12.0)), ("Small tree", (3.2, 16.5)), ("Glowcaps", (15.4, 8.8)), ("Glowcaps", (5.0, 15.7)),
+         ("Glowcaps", (8.2, 11.4)), ("Bellflowers", (10.6, 7.6)), ("Bellflowers", (19.4, 7.4)),
          ("Dripping rock", (21.8, 14.4))]
 
 
@@ -154,19 +155,57 @@ def _film_still_camera(game: HiddenGame, x: float, y: float, seconds: float, fps
     return [_crop(at(game, start + k / fps, x, y)) for k in range(int(seconds * fps))]
 
 
-WINDS = {  # the five demonstrations: set_wind's arguments (m/s, toward degrees, gust)
+WINDS = {  # the demonstrations: set_wind's arguments (m/s, toward degrees, gust); the last two: stills and lean only
     "calm": {"speed": 0.0},
     "breeze": {"speed": 3.0, "direction": 15.0, "gust": 0.3},
     "strong": {"speed": 11.0, "direction": 15.0, "gust": 0.15},
     "gusts": {"speed": 5.0, "direction": 15.0, "gust": 0.95},
     "rain_wind": {"speed": 8.0, "direction": 195.0, "gust": 0.5},
+    "away": {"speed": 9.0, "direction": 90.0, "gust": 0.3},  # (into the picture)
+    "toward": {"speed": 9.0, "direction": 270.0, "gust": 0.3},  # (out of it, toward the camera)
 }
-WIND_VIEW = (11.5, 8.6)  # the meadow below the bridge: grass, flowers, a tree, the banner
+WIND_VIEW = (14.5, 8.6)  # the meadow below the bridge: grass, flowers, a tree, the banner
+REED_AT = (15.0, 4.0)  # (open grass by the path: one reed alone, measured)
+
+
+def measured_lean(game: HiddenGame, wind: Any, seconds: float = 6.0) -> dict[str, float]:
+    """A single tall reed in this wind, its lean measured from the pictures (not the formula): how far its top's
+    middle is across from its foot, against its height, as drawn, ten times a second; and its height on screen
+    against still air's (squashed or stretched?)."""
+    import numpy as np
+
+    layer = game.window.hd2d_renderer.scatter
+    kept = {k: list(v) for k, v in layer.instances.items()}
+    x, y = REED_AT
+    try:
+        layer.set_instances({})
+        plain = np.asarray(at(game, 1.0, x, y))
+        layer.set_instances({"reeds": [(round(x * PX), round(y * PX), 0, 160)]})
+        leans, heights = [], []
+        for k in range(int(seconds * 10)):
+            mask = np.any(np.asarray(at(game, 30.0 + k / 10, x, y)) != plain, axis=2)
+            ys, xs = np.nonzero(mask)
+            if len(ys) < 20:
+                continue
+            top, bottom = ys.min(), ys.max()
+            height = bottom - top
+            foot, tip = xs[ys >= bottom - 2].mean(), xs[ys <= top + 3].mean()
+            leans.append(math.degrees(math.atan2(tip - foot, max(1.0, height))))
+            heights.append(height)
+    finally:
+        layer.set_instances(kept)
+    return {"mean_deg": round(float(np.mean(leans)), 1), "max_deg": round(float(np.max(np.abs(leans))), 1),
+            "height_px_mean": round(float(np.mean(heights)), 1), "height_px_min": int(np.min(heights)),
+            "height_px_max": int(np.max(heights))}
 
 
 def winds(out: Path) -> dict[str, Any]:
-    """Each wind for four seconds at one camera (clips), and how far the grass and the tree's canopy lean on average and
-    at most in it (the shader's twin over the same seconds)."""
+    """Each wind at one camera: four seconds' clip (ten for the gusts: a swell and its quick gusts), its first
+    picture; a lone reed's lean measured from the pictures (``measured_lean``, still air's height to compare); and
+    how far the grass, a bush and the tree's canopy lean by the shader's twin (across the picture), over the same
+    seconds. In the breeze, the torch's flame filmed at 30 frames a second, lossless (a strip)."""
+    from PIL import Image
+
     from engine.hd2d import motion as m
     from engine.hd2d.scatter import ASSETS
     from engine.wind import parse_wind
@@ -178,24 +217,34 @@ def winds(out: Path) -> dict[str, Any]:
         game = open_room(out, f"wind_{name}", decor=True, rain=name == "rain_wind", wind=wind if wind["speed"] else None,
                          motion={"enabled": True})
         try:
-            frames = _film_still_camera(game, *WIND_VIEW, 4.0)
-            _save_clip(frames, out / f"wind_{name}.webp")
-            frames[0].save(out / f"wind_{name}_first.png")
+            if name in ("away", "toward"):
+                _crop(at(game, 20.0, *WIND_VIEW)).save(out / f"wind_{name}_first.png")
+            else:
+                frames = _film_still_camera(game, *WIND_VIEW, 10.0 if name == "gusts" else 4.0)
+                _save_clip(frames, out / f"wind_{name}.webp")
+                frames[0].save(out / f"wind_{name}_first.png")
+            if name == "breeze":
+                flame = [at(game, 40.0 + k / 30, 3.4, 2.6).crop((580, 330, 700, 450)) for k in range(30)]
+                strip = Image.new("RGB", (120 * 10, 120 * 3))
+                for k, img in enumerate(flame):
+                    strip.paste(img, ((k % 10) * 120, (k // 10) * 120))
+                strip.save(out / "torch_30fps_strip.png")
             w = parse_wind(wind if wind["speed"] else None)
-            row: dict[str, Any] = {}
-            for label, flex in (("grass", ASSETS["grass_tall"].flex), ("reeds", ASSETS["reeds"].flex),
-                                ("bush", ASSETS["bush"].flex), ("tree_canopy", ASSETS["tree_small"].parts[0].flex)):
-                angles = [m.angle(11.0, 8.0, 20 + k / 30, flex, 0.37, w, on) for k in range(180)]
-                row[label] = {"mean_deg": round(math.degrees(sum(angles) / len(angles)), 1),
-                              "max_deg": round(math.degrees(max(map(abs, angles))), 1)}
+            row: dict[str, Any] = {"reed_measured": measured_lean(game, w)}
+            for label, flex in (("grass", ASSETS["grass_tall"].flex), ("bush", ASSETS["bush"].flex),
+                                ("tree_canopy", ASSETS["tree_small"].parts[0].flex)):
+                angles = [m.angle(11.0, 8.0, 20 + k / 30, flex, 0.37, w, on) for k in range(300)]
+                across = [a for a, _d in angles]
+                row[label] = {"mean_deg": round(math.degrees(sum(across) / len(across)), 1),
+                              "max_deg": round(math.degrees(max(map(abs, across))), 1),
+                              "depth_max_deg": round(math.degrees(max(abs(d) for _a, d in angles)), 1)}
             hd = game.window.hd2d_renderer
-            effects = hd.particles.effects if hd.particles is not None else ()
-            row["rain_wind"] = [list(e.wind) for e in effects]
+            row["rain_wind"] = [list(e.wind) for e in (hd.particles.effects if hd.particles is not None else ())]
             report[name] = row
+            print(name, json.dumps(row), flush=True)
         finally:
             game.close()
     return report
-
 
 def gameplay(out: Path) -> dict[str, Any]:
     """Playing: the player walks the path past the torches, the meadow and the tree in a gusty wind, then in rain
@@ -296,7 +345,7 @@ def trees(out: Path) -> dict[str, Any]:
             if pitch is not None:
                 hd.camera.pitch = pitch
             try:
-                at(game, 30.0, 16.5, row_y + 1.0, yaw=yaw).save(out / f"trees_{label}.png")
+                at(game, 30.0, 16.5, row_y + 1.0, yaw=yaw).crop((0, 0, 1280, 520)).save(out / f"trees_{label}.png")
                 if label in ("front", "turned45"):
                     frames = [_crop(at(game, 30.0 + k / 10, 16.5, row_y + 1.0, yaw=yaw), 640, 330, (720, 300)) for k in range(40)]
                     _save_clip(frames, out / f"trees_{label}.webp")
@@ -416,57 +465,125 @@ def _mixed(n: int, size_m: tuple[float, float]) -> dict[str, list[list[int]]]:
     return stored(rows)
 
 
-def scale(out: Path) -> dict[str, Any]:
-    """100, 1,000 and 10,000 instances over a 64 x 64 m sculpted room (and 10,000 over 128 x 128 m), shadows on,
-    at the gameplay camera, in a gusty wind: each room measured still (animation off) and moving, alternately, twice:
-    the frame's CPU and GPU time, draw calls, shadow draws, GPU memory; and over 600 frames moving, whether any chunk
-    was rebuilt or memory grew; GPU objects over reloads and after release. Run it alone (timings)."""
+def _scale_room(out: Path, side: float, n: int, mix: str) -> tuple[HiddenGame, dict[str, Any]]:
+    """A 64 or 128 m sculpted room with ``n`` instances of a mix ("20e": swaying and animated things, trees; "20d":
+    20D's own mix, no motion settings: runs on the base too), the player in the middle. Returns it, and its load."""
     import time
 
-    import m19_water_study as m19
     import m20b_sculpt_study as m20b
+
+    size = (side, side)
+    project = m20b.scale_project(out, f"scale_{mix}_{int(side)}_{n}", size)
+    path = project / SCENES / "hills.json"
+    scene = json.loads(path.read_text(encoding="utf-8"))
+    scene["settings"]["hd2d"]["scatter"] = _mixed(n, size) if mix == "20e" else m20d._instances(n, size, None)
+    if mix == "20e":
+        scene["settings"]["hd2d"]["motion"] = {}
+        scene["settings"]["wind"] = {"speed": 6.0, "direction": 20.0, "gust": 0.7}
+    path.write_text(json.dumps(scene) + "\n", encoding="utf-8")
+    game = HiddenGame(project, size=study.SIZE)
+    t0 = time.perf_counter()
+    game.load(f"{SCENES}/hills.json")
+    row: dict[str, Any] = {"room_load_ms": round((time.perf_counter() - t0) * 1000, 1)}
+    game.step(10)
+    hd = game.window.hd2d_renderer
+    player = game.player()
+    player.center_x = side / 2 * PX
+    player.center_y += side / 2 * PX - player.bottom
+    player.mesh_entity_data["elevation"] = hd.terrain.height(player.center_x, side / 2 * PX) or 0.0
+    m20d._frame(game, 600)  # (warm: the first frames of a room cost twice what later ones do)
+    return game, row
+
+
+def _passes(game: HiddenGame, frames: int = 30, repeat: int = 20) -> dict[str, float]:
+    """The GPU time (ms) of the scatter's own passes, each timed alone: a timer query round ``repeat`` draws of
+    the sprite pass (and of the canopies' shadow pass, where there is one), median over ``frames`` frames. (A query
+    round a whole frame also counts the GPU waiting on Python: not the passes' cost.)"""
+    import statistics
+
+    ctx, layer = game.window.ctx, game.window.hd2d_renderer.scatter
+    found: dict[str, list[float]] = {}
+    kept = {name: getattr(layer, name) for name in ("draw_sprites", "draw_casters") if hasattr(layer, name)}
+
+    def timed(name: str, original: Any) -> Any:
+        def run(*a: Any, **kw: Any) -> Any:
+            ctx.finish()
+            query = ctx.query(samples=False, primitives=False)
+            with query:
+                for _ in range(repeat):
+                    result = original(*a, **kw)
+            ctx.finish()
+            found.setdefault(name, []).append(query.time_elapsed / 1e6 / repeat)
+            return result
+        return run
+
+    for name, original in kept.items():
+        setattr(layer, name, timed(name, original))
+    try:
+        for _ in range(frames):
+            game.window.dispatch_event("on_update", 1 / 60)
+            game.window.dispatch_event("on_draw")
+    finally:
+        for name, original in kept.items():
+            setattr(layer, name, original)
+    return {f"{'sprite' if k == 'draw_sprites' else 'canopy_shadow'}_pass_gpu_ms": round(statistics.median(v), 4)
+            for k, v in found.items()}
+
+
+def _wall(game: HiddenGame) -> float:
+    """A frame's wall time (ms: update, draw and the GPU finishing it), median of 60."""
+    import statistics
+
+    return round(float(statistics.median(m20d._frame(game, 60))), 2)
+
+
+ROOMS = ((64.0, 100), (64.0, 1000), (64.0, 10000), (128.0, 10000))
+
+
+def scale(out: Path) -> dict[str, Any]:
+    """100, 1,000 and 10,000 instances over a 64 x 64 m sculpted room (and 10,000 over 128 x 128 m), shadows on,
+    at the gameplay camera, in a gusty wind, after 600 frames' warm-up: still (animation off) and moving, in the order
+    still, moving, moving, still, three times; each block's frame wall time and the scatter passes' own GPU time
+    (``_passes``); the differences moving minus still of each neighbouring pair (their median is the cost of
+    motion); draw calls, shadow draws, GPU memory; then 600 frames moving: any chunk rebuilt, memory grown; GPU
+    objects over reloads and after release. Run it alone (timings); ``baseline`` gives 20D's own cost to compare."""
+    import statistics
+
     from hd2d_demo import _gl_counts
 
     from engine.hd2d.motion import Motion, parse_motion
 
     out.mkdir(parents=True, exist_ok=True)
     report: dict[str, Any] = {}
-    for side, n in ((64.0, 100), (64.0, 1000), (64.0, 10000), (128.0, 10000)):
-        size = (side, side)
-        project = m20b.scale_project(out, f"scale_{int(side)}_{n}", size)
-        path = project / SCENES / "hills.json"
-        scene = json.loads(path.read_text(encoding="utf-8"))
-        scene["settings"]["hd2d"]["scatter"] = _mixed(n, size)
-        scene["settings"]["hd2d"]["motion"] = {}
-        scene["settings"]["wind"] = {"speed": 6.0, "direction": 20.0, "gust": 0.7}
-        path.write_text(json.dumps(scene) + "\n", encoding="utf-8")
-        row: dict[str, Any] = {}
-        game = HiddenGame(project, size=study.SIZE)
+    for side, n in ROOMS:
+        game, row = _scale_room(out, side, n, "20e")
         try:
-            t0 = time.perf_counter()
-            game.load(f"{SCENES}/hills.json")
-            row["room_load_ms"] = round((time.perf_counter() - t0) * 1000, 1)
-            game.step(10)
             hd = game.window.hd2d_renderer
-            player = game.player()
-            player.center_x = size[0] / 2 * PX
-            player.center_y += size[1] / 2 * PX - player.bottom
-            player.mesh_entity_data["elevation"] = hd.terrain.height(player.center_x, size[1] / 2 * PX) or 0.0
             layer = hd.scatter
-            moving, still = parse_motion({}), Motion()
-            m20d._frame(game, 60)
-            for label, motion in (("still", still), ("moving", moving), ("still_2", still), ("moving_2", moving)):
-                layer.set_motion(motion, hd.wind)
-                m20d._frame(game, 30)
-                stats = hd.stats()
-                row[label] = {"frame_ms": m20b._stats(m20d._frame(game)), "gpu_ms": round(m19._frame_gpu_ms(game, 30), 3),
-                              "draw_calls": stats["draw_calls"], "shadow_draws": stats["shadow_draws"],
-                              "scatter_bytes": stats["scatter_bytes"]}
+            blocks: list[tuple[str, float, dict[str, float]]] = []
+            for _ in range(3):
+                for label in ("still", "moving", "moving", "still"):
+                    layer.set_motion(parse_motion({}) if label == "moving" else Motion(), hd.wind)
+                    m20d._frame(game, 30)
+                    blocks.append((label, _wall(game), _passes(game)))
+            stats = hd.stats()
+            pairs = [(blocks[i], blocks[i + 1]) for i in range(0, len(blocks), 2)]
+            for label in ("still", "moving"):
+                mine = [b for b in blocks if b[0] == label]
+                row[label] = {"frame_wall_ms": round(statistics.median(b[1] for b in mine), 2),
+                              **{k: round(statistics.median(b[2][k] for b in mine), 4) for k in mine[0][2]}}
+            diff = [(m[1] - s_[1], {k: m[2][k] - s_[2][k] for k in m[2]}) for a, b in pairs
+                    for s_, m in [(a, b) if a[0] == "still" else (b, a)]]
+            row["moving_minus_still"] = {"frame_wall_ms": round(statistics.median(d[0] for d in diff), 2),
+                                         **{k: round(statistics.median(d[1][k] for d in diff), 4) for k in diff[0][1]}}
+            row.update(draw_calls=stats["draw_calls"], shadow_draws=stats["shadow_draws"],
+                       scatter_bytes=stats["scatter_bytes"])
+            layer.set_motion(parse_motion({}), hd.wind)
             builds, size_b = dict(layer.builds), layer.memory_bytes()
             m20d._frame(game, 600)
             row["moving_600_frames"] = {"chunks_rebuilt": sum(layer.builds[k] - builds.get(k, 0) for k in layer.builds),
                                         "bytes_grew": layer.memory_bytes() - size_b,
-                                        "motion_time_s": round(game.window.motion_time, 2)}
+                                        "draw_calls_same": hd.stats()["draw_calls"] == stats["draw_calls"]}
             row.update(instances=layer.count(), chunks=len(layer.boxes), casting_chunks=len(layer.cast_quads),
                        canopy_shadow_draws=len(layer.canopy_blocks))
             counts = []
@@ -488,13 +605,41 @@ def scale(out: Path) -> dict[str, Any]:
     return report
 
 
+def baseline(out: Path) -> dict[str, Any]:
+    """20D's mix in the same rooms, no motion settings: run here and on the base checkout, what 20E costs a room
+    that doesn't move (its larger vertices, its second sheet, its uniforms). Frame wall time (three blocks), the
+    sprite pass's GPU time, draw calls, shadow draws, GPU memory."""
+    import statistics
+
+    out.mkdir(parents=True, exist_ok=True)
+    report: dict[str, Any] = {}
+    for side, n in ROOMS:
+        game, row = _scale_room(out, side, n, "20d")
+        try:
+            hd = game.window.hd2d_renderer
+            walls, passes = [], []
+            for _ in range(3):
+                walls.append(_wall(game))
+                passes.append(_passes(game))
+            stats = hd.stats()
+            row.update(frame_wall_ms=round(statistics.median(walls), 2),
+                       sprite_pass_gpu_ms=round(statistics.median(p["sprite_pass_gpu_ms"] for p in passes), 4),
+                       draw_calls=stats["draw_calls"], shadow_draws=stats["shadow_draws"],
+                       scatter_bytes=stats["scatter_bytes"])
+        finally:
+            game.close()
+        report[f"{int(side)}m_{n}"] = row
+        print(f"{int(side)}m_{n}", json.dumps(row), flush=True)
+    return report
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("what", choices=["identity", "smoke", "winds", "gameplay", "trees", "studio", "scale"])
+    parser.add_argument("what", choices=["identity", "smoke", "winds", "gameplay", "trees", "studio", "scale", "baseline"])
     parser.add_argument("out", type=Path)
     args = parser.parse_args()
     result = {"identity": identity, "smoke": smoke, "winds": winds, "gameplay": gameplay,
-              "trees": trees, "studio": studio, "scale": scale}[args.what](args.out)
+              "trees": trees, "studio": studio, "scale": scale,
+              "baseline": baseline}[args.what](args.out)
     print(json.dumps(result, indent=1))
 
 

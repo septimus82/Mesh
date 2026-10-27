@@ -30,7 +30,7 @@ from typing import Any, Callable, Iterable
 from PIL import Image
 
 from engine.hd2d.lighting import LIGHTING_GLSL
-from engine.hd2d.motion import MAX_ANGLE, OFF, Motion, glsl, seed_of
+from engine.hd2d.motion import MAX_ANGLE, OFF, Motion, glsl, seed_of, wrap_safe_fps
 from engine.hd2d.scatter import ASSETS, CELL_PX, FIRST_MOTION, MOTION_SHEET, SHEET, SLOTS
 from engine.wind import CALM, PERIOD, Wind
 
@@ -46,13 +46,11 @@ FLOATS = 9
 BILLBOARD_VS = """
 #version 330
 uniform mat4 u_vp; uniform vec3 u_right; uniform float u_stretch;
-uniform float u_sheet[%d];  // per slot: 1 if its cells are in 20E's sheet
 in vec3 in_pos; in vec2 in_corner; in vec2 in_uv; in float in_slot; in float in_seed;
-out vec2 v_uv; out vec3 v_world; out float v_glow; flat out float v_sheet;
-""" % max(1, len(SLOTS)) + glsl(len(SLOTS)) + """
+out vec2 v_uv; out vec3 v_world; out float v_glow; flat out float v_sheet; flat out float v_lift;
+""" + glsl(len(SLOTS)) + """
 void main() {
-    vec3 w = placed(v_uv, v_glow);
-    v_sheet = u_sheet[int(in_slot + 0.5)];
+    vec3 w = placed(v_uv, v_glow, v_sheet, v_lift);
     v_world = w; gl_Position = u_vp * vec4(w, 1.0);
 }
 """
@@ -62,17 +60,19 @@ vec4 sheet_texel(vec2 uv, float sheet) { return sheet > 0.5 ? texture(u_tex2, uv
 """
 BILLBOARD_FS = """
 #version 330
-in vec2 v_uv; in vec3 v_world; in float v_glow; flat in float v_sheet; out vec4 f_color;
+in vec2 v_uv; in vec3 v_world; in float v_glow; flat in float v_sheet; flat in float v_lift; out vec4 f_color;
 """ + SAMPLE + LIGHTING_GLSL + """
 void main() {
     vec4 c = sheet_texel(v_uv, v_sheet);
     if (c.a < 0.5) discard;
-    f_color = vec4(c.rgb * max(light_at(v_world, vec3(0.0, -1.0, 0.0), true), vec3(v_glow)), 1.0);
+    // (a canopy takes its light a little toward the sun: its own clusters, in the sun's map, don't shade it)
+    vec3 p = v_lift > 0.0 ? v_world + u_sun_dir * v_lift : v_world;
+    f_color = vec4(c.rgb * max(light_at(p, vec3(0.0, -1.0, 0.0), true), vec3(v_glow)), 1.0);
 }
 """
 CASTER_FS = """
 #version 330
-in vec2 v_uv; in vec3 v_world; in float v_glow; flat in float v_sheet;
+in vec2 v_uv; in vec3 v_world; in float v_glow; flat in float v_sheet; flat in float v_lift;
 """ + SAMPLE + """
 void main() { if (sheet_texel(v_uv, v_sheet).a < 0.5) discard; }
 """
@@ -120,11 +120,12 @@ class ScatterLayer:
         self.texture2 = renderer._texture(motion_sheet if motion_sheet is not None
                                           else Image.new("RGBA", (CELL_PX, CELL_PX)))
         self.prog = self.ctx.program(vertex_shader=BILLBOARD_VS, fragment_shader=BILLBOARD_FS)
-        self.caster = self.ctx.program(vertex_shader=BILLBOARD_VS, fragment_shader=CASTER_FS)
+        try:
+            self.caster = self.ctx.program(vertex_shader=BILLBOARD_VS, fragment_shader=CASTER_FS)
+        except BaseException:  # (the first made is freed, not left to the collector)
+            self.prog.delete()
+            raise
         self._slots = self._slot_tables()
-        self._sheets = tuple(1.0 if (ASSETS[name].cell or (0,))[0] >= FIRST_MOTION and number == 0
-                             or number > 0 and ASSETS[name].parts[number - 1].cell >= FIRST_MOTION else 0.0
-                             for (name, number), _s in sorted(SLOTS.items(), key=lambda item: item[1]))
         self.set_instances(scatter)
 
     # ------------------------------------------------------------------ building
@@ -211,7 +212,8 @@ class ScatterLayer:
                     verts.extend((ax, ay, az, x0, z0, u0, v1, slot, seed, ax, ay, az, x1, z0, u1, v1, slot, seed,
                                   ax, ay, az, x0, z1, u0, v0, slot, seed, ax, ay, az, x1, z1, u1, v0, slot, seed))
                     idx.extend((base, base + 1, base + 2, base + 1, base + 3, base + 2))
-                reach = max(abs(x0), abs(x1)) + (math.sin(MAX_ANGLE) * z1 if flex > 0 else 0.0)  # (as it sways)
+                # (as it sways: drawn up to twice as tall as it is, at the steepest camera)
+                reach = max(abs(x0), abs(x1)) + (2 * math.sin(MAX_ANGLE) * z1 if flex > 0 else 0.0)
                 for n, (a, b) in enumerate(((ax - reach, ax + reach), (ay - reach, ay + reach), (az + z0, az + z1))):
                     lo[n], hi[n] = min(lo[n], a), max(hi[n], b)
 
@@ -383,22 +385,31 @@ class ScatterLayer:
         self.motion, self.wind = motion, wind
         self._slots = self._slot_tables()
 
-    def _slot_tables(self) -> tuple[tuple[float, ...], tuple[float, ...]]:
-        """Per motion slot (a sprite part), what the shader reads: (flex, frames, fps, phase) and (glow, ping-pong,
-        moving, streams), with the room's per-asset settings applied."""
+    def _slot_tables(self) -> tuple[tuple[float, ...], tuple[float, ...], tuple[float, ...]]:
+        """Per motion slot (a sprite part), what the shader reads: (flex, frames, fps, phase), (glow, ping-pong,
+        moving, streams) and (sheet, nearer the camera, light toward the sun, still-air cell), with the room's
+        per-asset settings applied. A streaming part's frames turn faster the stronger the wind (it is a uniform:
+        the wind changes only with the settings)."""
         a: list[float] = []
         b: list[float] = []
+        c: list[float] = []
         motion = self.motion
         for (name, number), _slot in sorted(SLOTS.items(), key=lambda item: item[1]):
             asset = ASSETS[name]
             part: Any = asset if number == 0 else asset.parts[number - 1]
+            cell = (asset.cell or (0,))[0] if part is asset else part.cell
             own = motion.of(name)
-            fps = own.fps if own.fps is not None and part.frames > 1 else part.fps
-            a.extend((part.flex * own.sway, float(part.frames), fps * motion.speed,
+            pingpong = (own.loop or part.loop) == "pingpong"
+            fps = (own.fps if own.fps is not None and part.frames > 1 else part.fps) * motion.speed
+            if part.streams:
+                fps *= min(1.6, max(0.4, self.wind.speed / 5.0))
+            a.extend((part.flex * own.sway, float(part.frames), wrap_safe_fps(fps, part.frames, pingpong),
                       own.phase if own.phase is not None else part.phase))
-            b.extend((part.glow, 1.0 if (own.loop or part.loop) == "pingpong" else 0.0, 1.0 if own.enabled else 0.0,
-                      1.0 if part.streams else 0.0))
-        return tuple(a), tuple(b)
+            b.extend((part.glow, 1.0 if pingpong else 0.0, 1.0 if own.enabled else 0.0, 1.0 if part.streams else 0.0))
+            limp = getattr(part, "limp", None)
+            c.extend((1.0 if cell >= FIRST_MOTION else 0.0, getattr(part, "nearer", 0.0), getattr(part, "lift", 0.0),
+                      float(limp - cell) if limp is not None else 0.0))
+        return tuple(a), tuple(b), tuple(c)
 
     def bind_motion(self, prog: Any, time: float, right: tuple[float, float, float], stretch: float) -> None:
         motion, wind = self.motion, self.wind
@@ -413,8 +424,7 @@ class ScatterLayer:
         prog["u_influence"] = motion.wind
         prog["u_rate"] = motion.speed
         prog["u_frame_du"] = CELL_PX / self.motion_size[0]  # (only 20E's cells have frames)
-        prog["u_slot_a"], prog["u_slot_b"] = self._slots
-        prog["u_sheet"] = self._sheets
+        prog["u_slot_a"], prog["u_slot_b"], prog["u_slot_c"] = self._slots
         prog["u_tex"], prog["u_tex2"] = 0, 3  # (1 and 2: the shadow maps)
         self.texture.use(0)
         self.texture2.use(3)
@@ -447,7 +457,9 @@ class ScatterLayer:
         far = SPRITE_FAR * SPRITE_FAR
         for key, (geometry, _b) in self.sprite_draws.items():
             cx, cy = self.centres[key]
-            if (cx - focus[0]) ** 2 + (cy - focus[1]) ** 2 > far or not in_view(*self.boxes[key], vp):
+            # (far off, small things are a few pixels; not trees' canopies, whose trunks and shadows are drawn)
+            if (cx - focus[0]) ** 2 + (cy - focus[1]) ** 2 > far and key not in self.cast_quads \
+                    or not in_view(*self.boxes[key], vp):
                 continue
             geometry.render(prog)
             self.draw_calls += 1

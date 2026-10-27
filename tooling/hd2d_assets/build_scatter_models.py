@@ -88,9 +88,9 @@ def tree(name: str, seed: int, canopy: bool = False) -> None:
             bm.faces.new((a[s], a[(s + 1) % 8], b[(s + 1) % 8], b[s]))
     bm.faces.new(tuple(rings[-1]))
     _finish(name, bm, (bark, bark), None)
-    for k, (z, ang, up) in enumerate(((1.15, 2.6, 0.55), (1.35, -0.4, 0.6), (1.6, 1.2, 0.5))):
+    for k, (z, ang, up) in enumerate(((1.4, 2.6, 0.65), (1.5, -0.4, 0.65), (1.65, 1.2, 0.55))):  # (all in the canopy)
         bm = bmesh.new()
-        r0, r1, length = 0.06, 0.03, 0.7 + rng.uniform(-0.1, 0.1)
+        r0, r1, length = 0.06, 0.03, 0.55 + rng.uniform(-0.08, 0.08)
         tip = (length * math.cos(ang) * (1 - up), length * math.sin(ang) * (1 - up), z + length * up)
         ring0 = [bm.verts.new((r0 * math.cos(2 * math.pi * s / 6), r0 * math.sin(2 * math.pi * s / 6), z))
                  for s in range(6)]

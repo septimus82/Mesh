@@ -7,8 +7,9 @@ agree on which way and how hard it blows.
 - ``direction``: degrees the wind blows *toward*, counter-clockwise from east (0 east, 90 north), as a particle
   effect's ``wind`` vector [east, north] points.
 - ``gust``: 0-1, how much it swells and drops: at a place and time the wind is ``speed * (1 + gust * g)``, ``g``
-  between -1 and 1. Gusts are fronts travelling with the wind (``gust_wave``), so neighbouring plants feel one a
-  moment apart and the meadow ripples in waves rather than all at once.
+  between -1 and 1. Gusts are fronts travelling with the wind (``gust_wave``): slow swells (about nine seconds) and
+  quick gusts (2.5 s, a few metres apart), so neighbouring plants feel one a moment apart and the meadow ripples in
+  waves rather than all at once.
 
 A particle effect without its own ``wind`` or ``gust`` takes the room's (engine.scene_particles); one with its own
 keeps it, so rooms made before the room's wind behave as they did. The gusts' rate matches the particles'
@@ -29,6 +30,7 @@ from typing import Any
 PERIOD = 3600.0  # s: the motion clock wraps here (seamlessly: every rate below turns a whole number of times)
 W1 = 2 * math.pi * 401 / PERIOD  # rad/s: the main swell (0.6999: the particles' 0.7)
 W2 = 2 * math.pi * 649 / PERIOD  # rad/s: a second, out of step, so the swells never repeat exactly
+W3 = 2 * math.pi * 1440 / PERIOD  # rad/s: quick gusts (2.5 s): fronts a few metres apart, seen crossing a meadow
 ACROSS = 0.35  # rad/m: gust fronts are patches, not endless straight lines
 MAX_SPEED = 30.0
 
@@ -90,7 +92,8 @@ def gust_wave(x: float, y: float, t: float, wind: Wind) -> float:
     dx, dy = (vx / s, vy / s) if s > 0 else (1.0, 0.0)
     along, across = x * dx + y * dy, -x * dy + y * dx
     a = t - along / max(1.5, s)
-    return 0.65 * math.sin(W1 * a + ACROSS * across) + 0.35 * math.sin(W2 * a + 1.3 - 0.6 * ACROSS * across)
+    return (0.45 * math.sin(W1 * a + ACROSS * across) + 0.25 * math.sin(W2 * a + 1.3 - 0.6 * ACROSS * across)
+            + 0.3 * math.sin(W3 * a + 2.1 + 1.7 * ACROSS * across))
 
 
 def speed_at(x: float, y: float, t: float, wind: Wind) -> float:
@@ -99,12 +102,13 @@ def speed_at(x: float, y: float, t: float, wind: Wind) -> float:
 
 
 GLSL = """
-const float W1 = %r, W2 = %r, ACROSS = %r;
+const float W1 = %r, W2 = %r, W3 = %r, ACROSS = %r;
 float gust_wave(vec2 p, float t, vec2 wind) {
     float s = length(wind);
     vec2 d = s > 0.0 ? wind / s : vec2(1.0, 0.0);
     float along = dot(p, d), across = -p.x * d.y + p.y * d.x;
     float a = t - along / max(1.5, s);
-    return 0.65 * sin(W1 * a + ACROSS * across) + 0.35 * sin(W2 * a + 1.3 - 0.6 * ACROSS * across);
+    return 0.45 * sin(W1 * a + ACROSS * across) + 0.25 * sin(W2 * a + 1.3 - 0.6 * ACROSS * across)
+         + 0.3 * sin(W3 * a + 2.1 + 1.7 * ACROSS * across);
 }
-""" % (W1, W2, ACROSS)
+""" % (W1, W2, W3, ACROSS)
