@@ -67,6 +67,7 @@ uniform sampler2D u_tex;    // unpainted: the ground's own texture (gentle faces
 uniform sampler2D u_mats;   // the painted materials' tiles side by side: earth, stone, mud, sand on top, then sides
 uniform sampler2D u_paint;  // per corner: earth, stone, mud and sand's weights (RGBA); the rest is unpainted
 uniform vec4 u_paint_at;    // the ground's origin (m), corners per metre, and 1 if any of it is painted
+uniform vec4 u_paint_edge;  // the last cell's first corner (i, j) and its width (cells: the ground's edge may cut it)
 uniform int u_side;         // a steep face (its uv box-mapped onto its side)
 uniform float u_wobble;
 in vec3 v_nrm; in vec2 v_uv; in vec3 v_world; out vec4 f_color;
@@ -85,15 +86,17 @@ float value(vec2 t, float across, int m) {  // smooth value noise, ``across`` te
     float b = mix(hash(i + ivec2(0, 1), m), hash(i + ivec2(1, 1), m), f.x);
     return mix(a, b, f.y);
 }
-float noise(vec2 t, int m) {  // broad bays and points, smaller bumps on them, and a very little of each texel's own
-    return 0.6 * value(t, 9.0, m) + 0.32 * value(t, 3.0, m + 16) + 0.08 * hash(ivec2(t), m + 32);
+float noise(vec2 t, int m) {  // broad bays and points, smaller bumps on them (no texel's own: stray pixels)
+    return 0.65 * value(t, 9.0, m) + 0.35 * value(t, 3.0, m + 16);
 }
 void main() {
     vec2 texel = floor(v_uv * 32.0);
     vec4 w = vec4(0.0);
     if (u_paint_at.w > 0.5) {
         vec2 at = u_side == 1 ? v_world.xy : (texel + 0.5) / 32.0;  // (gentle: the texel's centre, so it is one)
-        w = texture(u_paint, ((at - u_paint_at.xy) * u_paint_at.z + 0.5) / vec2(textureSize(u_paint, 0)));
+        vec2 g = (at - u_paint_at.xy) * u_paint_at.z;  // in corners
+        g = mix(g, u_paint_edge.xy + (g - u_paint_edge.xy) / u_paint_edge.zw, step(u_paint_edge.xy, g));
+        w = texture(u_paint, (g + 0.5) / vec2(textureSize(u_paint, 0)));
     }
     if (u_side == 0 && u_wobble > 0.0)  // bare earth for grass along cliff tops and where gentle ground is steepest
         w.r += clamp((0.93 - normalize(v_nrm).z) * 6.0, 0.0, 1.0) * max(0.0, 1.0 - (w.r + w.g + w.b + w.a));
@@ -155,7 +158,7 @@ IDENTITY = (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0
 STEEP_TEXTURE = "assets/hd2d_starter/textures/dirt.png"  # sculpted ground's steep faces (Milestone 20A), if present
 # What sculpted ground may be painted (Milestone 20C; engine.hd2d.terrain.MATERIALS past grass): its tile on gentle
 # ground and on steep faces, and its colour should the file be missing
-MATERIAL_TEXTURES = (("dirt", "dirt", (150, 116, 78)), ("stone", "rock", (124, 120, 112)),
+MATERIAL_TEXTURES = (("dirt", "dirt", (150, 116, 78)), ("stone", "stone", (124, 120, 112)),
                      ("mud", "mud", (92, 70, 50)), ("sand", "sand", (212, 188, 138)))
 WOBBLE = 0.6  # soft edges: how far the noise moves a border (a share of a material's weight)
 CASTER_SLOT = 16 * 16 * 6 + 4 * 16 * 6  # vertices a chunk's slot in the casters' buffer holds (cells; four skirt
@@ -1080,6 +1083,8 @@ class Hd2dRenderer:
         painted = self._paint_texture is not None
         gp["u_paint_at"] = (terrain.origin[0] / PIXELS_PER_METRE, terrain.origin[1] / PIXELS_PER_METRE,
                             PIXELS_PER_METRE / terrain.cell, 1.0 if painted else 0.0)
+        gp["u_paint_edge"] = (terrain.nx - 1.0, terrain.ny - 1.0, terrain.size[0] / terrain.cell - (terrain.nx - 1),
+                              terrain.size[1] / terrain.cell - (terrain.ny - 1))
         gp["u_wobble"] = WOBBLE if terrain.edges == "soft" else 0.0
         self.lighting.bind(gp)
         self._material_atlas.use(3)

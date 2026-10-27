@@ -10,7 +10,7 @@ The room is Milestone 20A's Hills room (tooling/m20a_terrain_study.py: a hill, a
 over a valley, a pond in a basin, the cottage), painted only through ``project_ops.paint_terrain_stroke`` (as Studio
 and AI paint):
 
-- a winding earth path from the cottage, down into the valley under the bridge and up again, to the pond;
+- a winding earth path from the cottage, down into the valley south of the bridge and up again, to the pond;
 - a stone path up the ramp onto the terrace, and the terrace's cliff and its top edge bare rock;
 - mud around the pond, a little sand on its far side;
 - the hill left grass.
@@ -34,8 +34,8 @@ import m20a_terrain_study as m20a  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame  # noqa: E402
 
 PX = 32.0
-# the winding earth path (m): from the cottage's door east, down into the valley under the bridge, up to the pond
-EARTH_PATH = [(5.0, 4.2), (7.0, 3.6), (9.2, 4.4), (11.0, 6.0), (12.6, 6.4), (14.2, 5.6), (15.6, 6.2), (17.2, 7.4),
+# the winding earth path (m): from the cottage's door east, down into the valley south of the bridge, up to the pond
+EARTH_PATH = [(5.6, 3.4), (7.0, 3.6), (9.2, 4.4), (11.0, 6.0), (12.6, 6.4), (14.2, 5.6), (15.6, 6.2), (17.2, 7.4),
               (19.0, 7.0), (20.6, 6.0), (22.0, 6.4)]
 STONE_PATH = [(18.6, 17.4), (20.0, 18.6), (21.6, 19.2), (23.2, 18.8), (24.6, 19.0), (26.0, 19.6), (27.4, 19.2)]
 
@@ -82,10 +82,8 @@ def paint(scene: dict[str, Any]) -> tuple[dict[str, Any], int]:
     x0, x1, y0, _y1, _h = m20a.TERRACE  # the terrace's cliff (its south side) and its top edge: bare rock
     stroke("stone", [(x0 + 1.0 + 0.5 * k, y0 + 0.1 * math.sin(k)) for k in range(int((x1 - x0 - 1.0) / 0.5))], 1.1, 0.6)
     bx, by, br, _d = m20a.BASIN  # the pond's banks mud, wider on its west (the path's) side; a little sand east
-    for ring, reach in ((0.55, 1.0), (0.85, 1.0)):
-        stroke("mud", [(bx + br * ring * reach * math.cos(a / 20 * math.tau) * (1.15 if math.cos(a / 20 * math.tau) < 0
-                                                                                 else 1.0),
-                        by + br * ring * math.sin(a / 20 * math.tau)) for a in range(21)], 1.0, 0.5)
+    stroke("mud", [(bx + br * 0.7 * math.cos(a / 20 * math.tau) * (1.15 if math.cos(a / 20 * math.tau) < 0 else 1.0),
+                    by + br * 0.65 * math.sin(a / 20 * math.tau)) for a in range(21)], 0.9, 0.5)
     stroke("sand", [(bx + br * 0.8, by - 1.2), (bx + br * 0.95, by + 0.2), (bx + br * 0.75, by + 1.4)], 0.7, 0.45)
     return scene, n
 
@@ -275,6 +273,18 @@ def studio(out: Path) -> dict[str, Any]:
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
         d.frame(2)
         report["refused_upload"] = {**unchanged(), "message": s.message}
+        # focus lost mid-stroke (Alt+Tab): the stroke ends there, as one undo step, and paints no more
+        m20b._stroke(d, _on_ground(d, mid), release=False)
+        d.window.dispatch_event("on_deactivate")
+        held = _paint(s.project)
+        d.frame(20)
+        report["focus_lost_mid_stroke"] = {"stroke_ended": view.stroke is None,
+                                           "undo_steps_added": len(s.project._undo) - undo_n,
+                                           "paints_no_more": _paint(s.project) == held and _whole(
+                                               view.renderer.terrain.paint, view.renderer.terrain) == _whole(
+                                               held, view.renderer.terrain)}
+        d.key(k.Z, k.MOD_CTRL)
+        d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
         # Shift paints grass back over part of the path; Alt+click picks; [ ] resize; edges
         d.window.dispatch_event("on_key_press", k.LSHIFT, 0)
         m20b._stroke(d, _on_ground(d, [(10.6, 5.6), (11.4, 6.4)]))
@@ -291,12 +301,15 @@ def studio(out: Path) -> dict[str, Any]:
         r1 = view.sculpt["radius"]
         d.key(k.BRACKETLEFT)
         undo_e = len(s.project._undo)
+        d.button("Soft")  # (soft already: no edit, no undo step)
+        soft_again = len(s.project._undo) - undo_e
         d.button("Hard")
         hard = view.renderer.terrain.edges
         d.picture(out / "studio_paint_controls.png")
         d.key(k.Z, k.MOD_CTRL)
         report["controls"] = {"alt_click_picked": picked, "radius_px": [r0, r1, view.sculpt["radius"]],
                               "hard_edges": hard, "edges_one_undo_step": len(s.project._undo) == undo_e,
+                              "soft_when_soft_adds_undo_steps": soft_again,
                               "edges_after_undo": view.renderer.terrain.edges}
         if view.sculpt is None:
             d.button("Paint ground")

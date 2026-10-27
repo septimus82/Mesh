@@ -219,28 +219,22 @@ def stone() -> Image.Image:
 
 
 def mud() -> Image.Image:
-    """Wet dark earth with standing water in its hollows: what ground beside a pond is painted (Milestone 20C)."""
+    """Wet dark earth with a scattered sheen: what ground beside a pond is painted (Milestone 20C). No patches or
+    puddles: any mark large enough to see would show the tile repeating every metre."""
     rng = random.Random(61)
-    img = Image.new("RGBA", (SIZE, SIZE), (92, 70, 50, 255))
-    _speckle(img, rng, [(84, 62, 44), (102, 78, 56), (76, 58, 42)], 260)
-    d = ImageDraw.Draw(img)
-    for k in range(3):  # wetter patches, close in colour (strong marks would show the tile repeating), one glinting
-        x, y, w, h = rng.randrange(SIZE), rng.randrange(SIZE), rng.choice([6, 8, 10]), rng.choice([3, 4])
-        for dx in range(-SIZE, SIZE + 1, SIZE):  # (drawn wrapped, so the tile repeats seamlessly)
-            for dy in range(-SIZE, SIZE + 1, SIZE):
-                d.ellipse([x + dx, y + dy, x + dx + w, y + dy + h], fill=(80, 60, 44, 255))
-                if k == 0:
-                    d.point([(x + dx + 2, y + dy + 1)], fill=(126, 112, 96, 255))
-    _speckle(img, rng, [(84, 62, 44), (72, 54, 40)], 60)
+    img = Image.new("RGBA", (SIZE, SIZE), (84, 64, 48, 255))
+    _speckle(img, rng, [(76, 58, 44), (94, 72, 54), (70, 52, 40)], 300)
+    _speckle(img, rng, [(64, 50, 40)], 80)
+    _speckle(img, rng, [(126, 118, 108), (104, 96, 88)], 14)
     return img
 
 
 def sand() -> Image.Image:
     """Pale sand with darker grains and a few shell-white specks (Milestone 20C)."""
     rng = random.Random(62)
-    img = Image.new("RGBA", (SIZE, SIZE), (212, 188, 138, 255))
-    _speckle(img, rng, [(200, 176, 126), (222, 200, 150), (194, 168, 120)], 300)
-    _speckle(img, rng, [(240, 232, 214), (170, 146, 104)], 12)
+    img = Image.new("RGBA", (SIZE, SIZE), (194, 172, 124, 255))
+    _speckle(img, rng, [(182, 160, 114), (204, 184, 136), (176, 152, 108)], 300)
+    _speckle(img, rng, [(226, 218, 200), (152, 130, 92)], 12)
     return img
 
 

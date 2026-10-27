@@ -90,8 +90,8 @@ Each stroke is one change, so one Ctrl+Z undoes it, and Esc cancels a stroke bef
 - **Sculpt:** Raise, Lower, Smooth or Flatten. Shift lowers, Ctrl smooths, and Alt+click picks a height to flatten
   to. Sculpting never moves people or buildings: Mesh says what it left floating or buried, and **Settle on the
   ground** stands them back on it.
-- **Paint:** Grass, Earth, Stone, Mud or Sand. Use Earth for paths and Mud for pond banks; Stone shows as rock on
-  cliffs. Shift paints grass back, and Alt+click picks the material under the mouse. Painting changes how the ground
+- **Paint:** Grass, Earth, Stone, Mud or Sand. Use Earth for paths, Mud for pond banks and Stone for
+  rocky ground and cliffs. Shift paints grass back, and Alt+click picks the material under the mouse. Painting changes how the ground
   looks, never where anyone can walk.
 - **Edges:** **Soft** borders wander a little, in crisp pixels, and show bare earth along cliff tops. **Hard** keeps
   borders exactly where you painted them.

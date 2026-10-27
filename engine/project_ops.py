@@ -2361,16 +2361,28 @@ def set_terrain_edges(scene: Doc, edges: str) -> Doc:
 
 
 def flatten_all_terrain(scene: Doc) -> Doc:
-    """Make this HD-2D room's sculpted ground flat again (the plain ground at its elevation); its paint stays."""
+    """Make this HD-2D room's sculpted ground flat again (the plain ground at its elevation); its paint and edges
+    stay."""
+    return _ground_terrain_without(scene, "chunks")
+
+
+def clear_terrain_paint(scene: Doc) -> Doc:
+    """Take all the paint off this HD-2D room's ground (grass everywhere again); its heights and edges stay. Also the
+    way out when the paint can't be read (the room then shows unpainted, and says why)."""
+    return _ground_terrain_without(scene, "materials")
+
+
+def _ground_terrain_without(scene: Doc, key: str) -> Doc:
     out = copy.deepcopy(scene)
     hd2d = _hd2d_block(out)
     ground = hd2d.get("ground")
-    if isinstance(ground, dict):
-        terrain = ground.get("terrain")
-        if isinstance(terrain, dict) and terrain.get("materials"):
-            ground["terrain"] = {**terrain, "chunks": {}}
+    terrain = ground.get("terrain") if isinstance(ground, dict) else None
+    if isinstance(ground, dict) and isinstance(terrain, dict):
+        kept = {k: v for k, v in terrain.items() if k != key}
+        if kept.get("chunks") or kept.get("materials") or kept.get("edges", "soft") != "soft":
+            ground["terrain"] = {**kept, "chunks": kept.get("chunks") or {}}
         else:
-            ground.pop("terrain", None)
+            ground.pop("terrain", None)  # (nothing left: the plain ground)
     return _checked_structures(out)
 
 

@@ -64,6 +64,13 @@ def _snap(value_m: float, on: bool) -> float:
     return round(value_m / GRID_M) * GRID_M if on else value_m
 
 
+def _steps(stroke: dict[str, Any]) -> str:
+    """A finished stroke's dabs and undo steps, in words (a very long one is saved in parts)."""
+    parts = stroke.get("parts", 1)
+    return (f"{len(stroke['dabs'])} dabs, one undo step" if parts == 1
+            else f"a long stroke, saved in {parts} parts: {parts} undo steps")
+
+
 class Hd2dView:
     def __init__(self, studio: Studio) -> None:
         self.studio = studio
@@ -803,12 +810,22 @@ class Hd2dView:
 
     def set_edges(self, edges: str) -> None:
         """The room's material borders, soft or hard: one undoable edit."""
-        if self.renderer is None or self.renderer.terrain is not None and self.renderer.terrain.edges == edges:
-            return
+        renderer = self.renderer
+        if renderer is None or (renderer.terrain.edges if renderer.terrain is not None else "soft") == edges:
+            return  # (already so: no edit, no undo step)
         self.cancel_stroke()
         self.studio._edit(lambda s: ops.set_terrain_edges(s, edges),
                           "Soft edges: borders wander a little, bare earth along cliff tops." if edges == "soft"
                           else "Hard edges: borders exactly where they were painted.")
+
+    def clear_paint(self) -> None:
+        """All the room's paint off (its heights stay): one undoable edit."""
+        self.cancel_stroke()
+        raw = (((self.studio.project.scene().get("settings") or {}).get("hd2d") or {}).get("ground") or {})
+        if not (raw.get("terrain") or {}).get("materials"):
+            self.studio._say("Nothing is painted here.")
+            return
+        self.studio._edit(ops.clear_terrain_paint, "Cleared the paint: grass everywhere again (heights kept).")
 
     # ------------------------------------------------------------------ a live stroke (Milestone 20B)
     def _brush_now(self) -> tuple[str, float, float | None]:
@@ -902,6 +919,7 @@ class Hd2dView:
         if len(stroke["dabs"]) >= STROKE_DABS:  # a stroke as long as one edit may be: it is saved, and goes on as a new one
             keep = {k: stroke[k] for k in ("tool", "material", "rate", "radius", "target", "last", "t", "moved",
                                            "started") if k in stroke}
+            keep["parts"] = stroke.get("parts", 1) + 1  # (said when it ends: one undo step a part)
             self.end_stroke()
             terrain = renderer.terrain
             if terrain is None:
@@ -1035,7 +1053,7 @@ class Hd2dView:
         else:  # only the top bar (undo, redo, unsaved): a full rebuild costs a quarter of a second
             studio._refresh_top_bar()
         words = {"raise": "Raised", "lower": "Lowered", "smooth": "Smoothed", "flatten": "Flattened"}[stroke["tool"]]
-        studio._say(f"{words} the ground ({len(stroke['dabs'])} dabs, one undo step)." + (
+        studio._say(f"{words} the ground ({_steps(stroke)})." + (
             " Out of place now (not moved): " + "; ".join(out_of_place[:3]) + (" ..." if len(out_of_place) > 3 else "")
             if out_of_place else ""), ok=not out_of_place)
 
@@ -1070,7 +1088,7 @@ class Hd2dView:
             studio._reload()  # (never expected: the saved stroke is the shown one; the saved one wins)
         self.timings["edit_ms"].append((time.perf_counter() - start) * 1000)
         studio._refresh_top_bar()
-        studio._say(f"Painted {stroke['material']} ({len(stroke['dabs'])} dabs, one undo step).")
+        studio._say(f"Painted {stroke['material']} ({_steps(stroke)}).")
 
     def cancel_stroke(self, why: str = "Stroke cancelled: the ground is as it was.") -> bool:
         """Esc (or a refused upload): the stroke's changes undone on screen and nothing saved. True if there was
@@ -1226,7 +1244,7 @@ class Hd2dView:
         fifth = (width - 16) // 5
         row = _row()
         tips = {"grass": "Grass: the ground's own texture (paints the others away; or hold Shift with any)",
-                "earth": "Bare earth: paths, worn ground", "stone": "Stone: paved or rocky ground; rock on cliffs",
+                "earth": "Bare earth: paths, worn ground", "stone": "Stone: rocky ground and stone faces on cliffs",
                 "mud": "Mud: wet ground, pond banks", "sand": "Sand: shores and dry ground"}
         for material in MATERIALS:
             row.add(self._button(material.capitalize(), lambda m=material: self.set_sculpt(material=m), tips[material],
@@ -1265,6 +1283,8 @@ class Hd2dView:
                              "bare earth added", width=(width - half // 2 - 8) // 2,
                              style=S_ACTIVE if edges == "hard" else S_BUTTON))
         box.add(row)
+        box.add(self._button("Clear paint", self.clear_paint, "Take all the paint off this room's ground (its heights "
+                             "stay); one undo step", width=width))
         box.add(studio._label("Drag to paint (one undo step a stroke). Shift paints grass back, Alt+click picks the "
                               "material under the mouse, [ ] resize, Esc cancels a stroke.", color=C_MUTED, size=10,
                               width=width))

@@ -402,7 +402,8 @@ def _weather_words(effects: Any) -> str:
 
 def _terrain_lines(label: str, before: Doc, after: Doc) -> list[str]:
     """A room's sculpted ground changed, in words (Milestone 20A): how much of it, how far up and down, and what it
-    left out of place ("'Elder' is 1.5 m above the ground"), not its stored heights."""
+    left out of place ("'Elder' is 1.5 m above the ground"), not its stored heights; what was painted and the
+    edges chosen (Milestone 20C)."""
     def terrain(scene: Doc) -> Any:
         hd2d = (scene.get("settings") or {}).get("hd2d") if isinstance(scene.get("settings"), dict) else None
         ground = hd2d.get("ground") if isinstance(hd2d, dict) else None
@@ -418,17 +419,42 @@ def _terrain_lines(label: str, before: Doc, after: Doc) -> list[str]:
         return [f"{label}: the ground's sculpted heights change"]
     if len(old.heights) != len(new.heights):
         return [f"{label}: the ground's sculpted heights change"]
+    lines = _paint_lines(label, old, new)
     deltas = [b - a for a, b in zip(old.heights, new.heights) if b != a]
     if not deltas:
-        return []
+        return lines
     area = len(deltas) * (old.cell / 32.0) ** 2
     up, down = max(0.0, max(deltas)) / 32.0, max(0.0, -min(deltas)) / 32.0
     moves = " and ".join(part for part in (f"raised up to {up:.2f} m" if up else "",
                                           f"lowered up to {down:.2f} m" if down else "") if part)
     low, high = new.range_z()
-    lines = [f"{label}: ground sculpted over about {area:.0f} m²: {moves} (now {low:.2f} to {high:.2f} m)"
-             if not new.is_flat() else f"{label}: ground made flat again"]
+    lines.insert(0, f"{label}: ground sculpted over about {area:.0f} m²: {moves} (now {low:.2f} to {high:.2f} m)"
+                 if not new.is_flat() else f"{label}: ground made flat again")
     lines += [f"{label}: left out of place (not moved): {words}" for words in ops.terrain_anchoring(after, before)]
+    return lines
+
+
+def _paint_lines(label: str, old: Any, new: Any) -> list[str]:
+    """What a change painted (Milestone 20C): about how much ground became each material, and the edges."""
+    from engine.hd2d.terrain import MATERIALS, PAINTED  # noqa: PLC0415
+
+    lines = []
+    if old.paint != new.paint:
+        size = PAINTED * (new.nx + 1) * (new.ny + 1)
+        a, b = bytes(old.paint or bytes(size)), bytes(new.paint or bytes(size))
+        gained = [0] * len(MATERIALS)
+        for k in range(0, size, PAINTED):
+            if a[k:k + PAINTED] != b[k:k + PAINTED]:
+                was = [255 - sum(a[k:k + PAINTED]), *a[k:k + PAINTED]]
+                now = [255 - sum(b[k:k + PAINTED]), *b[k:k + PAINTED]]
+                if was.index(max(was)) != now.index(max(now)):
+                    gained[now.index(max(now))] += 1
+        cell_m2 = (new.cell / 32.0) ** 2
+        parts = [f"{name} about {n * cell_m2:.0f} m²" for name, n in zip(MATERIALS, gained) if n]
+        lines.append(f"{label}: ground painted: {', '.join(parts)}" if parts
+                     else f"{label}: ground painted a little (no place changes material)")
+    if old.edges != new.edges:
+        lines.append(f"{label}: material edges {new.edges}")
     return lines
 
 

@@ -35,7 +35,7 @@ PX = 32.0  # px per metre
 KIT = "assets/hd2d_starter"
 GRASS = f"{KIT}/textures/grass.png"
 # the ground and what it may be painted (Milestone 20C)
-GROUND_TEXTURES = tuple(f"{KIT}/textures/{n}.png" for n in ("grass", "dirt", "stone", "rock", "mud", "sand"))
+GROUND_TEXTURES = tuple(f"{KIT}/textures/{n}.png" for n in ("grass", "dirt", "stone", "mud", "sand"))
 HD_HERO, HD_VILLAGER, HD_MERCHANT = (f"assets/sprites/hd2d_{name}.png" for name in ("hero", "villager", "merchant"))
 # The game's dialogue and menu sounds: tones synthesised by tooling/generate_sounds.py (Mesh's own).
 HELP = "docs/hd2d_preview.md"  # creator help for the HD-2D RPG (Preview)

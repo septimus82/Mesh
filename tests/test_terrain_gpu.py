@@ -244,6 +244,10 @@ def test_studio_paints_live_one_stroke_one_undo_step(tmp_path: Path) -> None:
     assert r["escape"]["stroke_had_painted"], r
     assert r["shift_paints_grass"] == "grass" and r["controls"]["alt_click_picked"] == "earth", r
     assert r["controls"]["hard_edges"] == "hard" and r["controls"]["edges_after_undo"] == "soft", r
+    assert r["controls"]["soft_when_soft_adds_undo_steps"] == 0, r
+    assert r["focus_lost_mid_stroke"] == {"stroke_ended": True, "undo_steps_added": 1, "paints_no_more": True}, r
+    assert r["sculpt_over_the_path"]["paint_kept"] and r["sculpt_over_the_path"]["still_earth_there"] == "earth", r
+    assert r["branch_over_the_mound"] == "earth", r
     assert r["reopened_same"], r
 
 

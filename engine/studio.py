@@ -324,7 +324,11 @@ class Studio(InspectorMixin):
         water_error = (renderer.water_error if renderer is not None
                        else getattr(self.window, "scene_water_error", None))
         terrain_error = getattr(self.window, "hd2d_terrain_error", None)
-        for text, ok in ((f"This room's sculpted ground is shown flat: {terrain_error}" if terrain_error else None, False),
+        if terrain_error:  # (broken heights: shown flat; broken paint alone: only the paint is set aside)
+            terrain_error = (f"This room's ground is shown unpainted: {terrain_error}. Clear paint starts it afresh."
+                             if terrain_error.startswith("its paint") else
+                             f"This room's sculpted ground is shown flat: {terrain_error}")
+        for text, ok in ((terrain_error, False),
                          (f"Weather is off in this room: {error}" if error else None, False),
                          (f"Water is off in this room: {water_error}" if water_error else None, False), (notice, True)):
             if text and text not in self._weather_said:
@@ -2788,8 +2792,12 @@ class Studio(InspectorMixin):
         return True
 
     def on_deactivate(self) -> None:
-        """The window lost the keyboard (Alt+Tab): keys held then are let go unseen, so none stays held here."""
+        """The window lost the keyboard (Alt+Tab): keys held then are let go unseen, so none stays held here; a brush
+        stroke ends where it is (its release would never come, and a held brush would keep working)."""
         self.keys.clear()
+        self.panning = False
+        if self.hd2d.stroke is not None:
+            self.hd2d.end_stroke()
 
     def on_mouse_release(self, x: float, y: float, button: int, modifiers: int) -> bool:
         if self.mode == "play":

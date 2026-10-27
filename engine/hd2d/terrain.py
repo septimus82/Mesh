@@ -345,7 +345,10 @@ class Terrain:
                 new = [c + w * ((1.0 if n == m else 0.0) - c) for n, c in enumerate(was)]
                 if exact is not None:
                     exact[k] = new
-                q = [round(c * 255) if c * 255 >= TRACE else 0 for c in new]  # (a trace never shows: none is kept)
+                # rounded towards where the brush takes it (so repeated dabs always get there, never stick a byte
+                # short), and a trace never shows: none is kept
+                q = [(math.ceil(c * 255 - 1e-6) if n == m else math.floor(c * 255 + 1e-6)) if c * 255 >= TRACE else 0
+                     for n, c in enumerate(new)]
                 if sum(q) > 255:  # (rounded up past all of one: the largest gives way)
                     q[q.index(max(q))] -= sum(q) - 255
                 if bytes(q) != paint[at:at + PAINTED]:
@@ -361,8 +364,11 @@ class Terrain:
         """The material most of the ground is at (x, y) px (its nearest corner's): what an eyedropper picks."""
         if self.paint is None:
             return MATERIALS[0]
-        i = min(max(round((x - self.origin[0]) / self.cell), 0), self.nx)
-        j = min(max(round((y - self.origin[1]) / self.cell), 0), self.ny)
+        def nearest(v: float, n: int, axis: int) -> int:  # (where the corners really are: the ground's edge may cut
+            k = min(max(int((v - self.origin[axis]) / self.cell), 0), n)  # the last cell short)
+            return min((k, min(k + 1, n)), key=lambda c: abs(self.corner_xy(c, c)[axis] - v))
+
+        i, j = nearest(x, self.nx, 0), nearest(y, self.ny, 1)
         at = (i + j * (self.nx + 1)) * PAINTED
         weights = [255 - sum(self.paint[at:at + PAINTED]), *self.paint[at:at + PAINTED]]
         return MATERIALS[weights.index(max(weights))]

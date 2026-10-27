@@ -113,6 +113,14 @@ def test_sculpting_flattening_and_edges_keep_the_paint() -> None:
     assert "edges" not in ops.set_terrain_edges(hard, "soft")["settings"]["hd2d"]["ground"]["terrain"]
 
 
+def test_hard_edges_chosen_on_a_plain_room_are_kept_for_its_first_stroke() -> None:
+    hard = ops.set_terrain_edges(_room(), "hard")
+    assert parse_hd2d(hard["settings"]["hd2d"]).ground.terrain == {"cell": 16, "chunks": {}, "edges": "hard"}
+    painted = ops.paint_terrain_stroke(hard, "earth", [[100, 100, 0.5]], 32)
+    assert painted["settings"]["hd2d"]["ground"]["terrain"]["edges"] == "hard"
+    assert "terrain" not in ops.set_terrain_edges(hard, "soft")["settings"]["hd2d"]["ground"]
+
+
 def test_a_20b_room_reads_and_writes_exactly_as_before() -> None:
     old = ops.sculpt_terrain_stroke(_room(), "raise", [[320, 240, 40]], 128)["settings"]["hd2d"]["ground"]["terrain"]
     assert set(old) == {"cell", "chunks"}
@@ -185,7 +193,7 @@ def test_the_ai_and_the_cli_paint_with_studio_s_operation(tmp_path: Path) -> Non
     root = tmp_path / "game"
     create_project(root, "Game", template_id="hd2d_rpg")
     assert {"paint_terrain_stroke", "set_terrain_edges"} <= set(authoring.operations())
-    for name in ("stone", "rock", "mud", "sand"):  # (the template brings the materials' textures)
+    for name in ("stone", "mud", "sand"):  # (the template brings the materials' textures)
         assert (root / "assets" / "hd2d_starter" / "textures" / f"{name}.png").is_file()
     project = Project(root, json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"])
     room = project.current
@@ -201,3 +209,44 @@ def test_the_ai_and_the_cli_paint_with_studio_s_operation(tmp_path: Path) -> Non
     fresh = Project(root, json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"])
     assert fresh.scene(room)["settings"]["hd2d"]["ground"]["terrain"]["edges"] == "hard"
     assert MATERIALS[0] == "grass"
+
+
+# --- Technical QA's findings (Stage 20C), kept fixed ------------------------------------------------------------------
+def test_the_ai_s_summary_says_what_was_painted_and_the_edges() -> None:
+    from engine.authoring import _terrain_lines
+
+    painted = ops.paint_terrain_stroke(_room(), "stone", [[320, 240, 1.0]], 64)
+    lines = _terrain_lines("Hills", _room(), painted)
+    assert len(lines) == 1 and lines[0].startswith("Hills: ground painted: stone about"), lines
+    assert _terrain_lines("Hills", painted, ops.set_terrain_edges(painted, "hard")) == ["Hills: material edges hard"]
+
+
+def test_broken_paint_sets_aside_only_the_paint_and_clear_paint_mends_it() -> None:
+    hilly = ops.sculpt_terrain_stroke(_room(), "raise", [[320, 240, 40]], 128)
+    room = ops.paint_terrain_stroke(hilly, "mud", [[100, 100, 0.8]], 48)
+    room["settings"]["hd2d"]["ground"]["terrain"]["materials"]["0,0"] = "not base64!"
+    lenient = parse_hd2d(room["settings"]["hd2d"], lenient=True)
+    assert lenient.ground.terrain is not None and "materials" not in lenient.ground.terrain, "the heights stay"
+    assert lenient.terrain_error.startswith("its paint is set aside (") and "isn't base64" in lenient.terrain_error
+    assert Terrain.from_ground(lenient.ground).heights == _terrain(hilly).heights
+    mended = ops.clear_terrain_paint(room)
+    assert "materials" not in mended["settings"]["hd2d"]["ground"]["terrain"]
+    assert _terrain(mended).heights == _terrain(hilly).heights
+    assert "terrain" not in ops.clear_terrain_paint(ops.paint_terrain_stroke(_room(), "mud", [[1, 1, 1]], 48))[
+        "settings"]["hd2d"]["ground"], "nothing else there: the plain ground"
+
+
+def test_flattening_keeps_hard_edges_and_erasing_leaves_no_trace() -> None:
+    hard = ops.set_terrain_edges(ops.sculpt_terrain_stroke(_room(), "raise", [[320, 240, 40]], 128), "hard")
+    assert ops.flatten_all_terrain(hard)["settings"]["hd2d"]["ground"]["terrain"] == {"cell": 16, "chunks": {},
+                                                                                      "edges": "hard"}
+    room = ops.paint_terrain_stroke(_room(), "stone", [[320, 240, 1.0]], 64)
+    for _ in range(40):  # (light, separate strokes: each starts from the stored bytes)
+        room = ops.paint_terrain_stroke(room, "grass", [[320, 240, 0.6]], 96)  # (a brush wider than the patch)
+    assert "terrain" not in room["settings"]["hd2d"]["ground"], "erased: the plain ground again"
+
+
+def test_the_eyedropper_finds_paint_in_a_cell_the_ground_s_edge_cuts_short() -> None:
+    t = Terrain.from_ground(parse_hd2d({"ground": {"from": [0, 0], "to": [650, 480]}}).ground)  # (40 cells and 10 px)
+    t.paint_dab("sand", 650, 240, 9, 1.0)  # (only the corner on the edge, at x = 650)
+    assert t.material_at(648, 240) == "sand" and t.material_at(636, 240) == "grass"
