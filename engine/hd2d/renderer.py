@@ -14,7 +14,6 @@ shadow maps); a frame is the sun's shadow pass (and, once, the lamps'), then the
 from __future__ import annotations
 
 import math
-import random
 from array import array
 from pathlib import Path
 from typing import Any, Callable, Iterable
@@ -56,6 +55,68 @@ void main() {
         if (along < reach - 0.2 && distance(v_world, u_cut_eye + dir * along) < u_cut_at.w) discard;
     }
     vec4 c = texture(u_tex, v_uv);
+    f_color = vec4(c.rgb * light_at(v_world, normalize(v_nrm), false), 1.0);
+}
+"""
+GROUND_FS = """
+#version 330
+// Sculpted ground (Milestone 20C): one material a texel (32 a metre), the one whose painted weight at the texel's
+// centre is greatest, each weight nudged by a fixed noise of that texel's own: borders are crisp pixels along curves
+// that wander a little (u_wobble; 0, hard edges, exactly along the paint), never a blend or a repeating dither.
+uniform sampler2D u_tex;    // unpainted: the ground's own texture (gentle faces) or earth (steep faces)
+uniform sampler2D u_mats;   // the painted materials' tiles side by side: earth, stone, mud, sand on top, then sides
+uniform sampler2D u_paint;  // per corner: earth, stone, mud and sand's weights (RGBA); the rest is unpainted
+uniform vec4 u_paint_at;    // the ground's origin (m), corners per metre, and 1 if any of it is painted
+uniform vec4 u_paint_edge;  // the last cell's first corner (i, j) and its width (cells: the ground's edge may cut it)
+uniform int u_side;         // a steep face (its uv box-mapped onto its side)
+uniform float u_wobble;
+in vec3 v_nrm; in vec2 v_uv; in vec3 v_world; out vec4 f_color;
+""" + LIGHTING_GLSL + """
+float hash(ivec2 p, int m) {
+    uint h = uint(p.x) * 374761393u + uint(p.y) * 668265263u + uint(m) * 2246822519u;
+    h = (h ^ (h >> 13u)) * 1274126177u;
+    return float(h ^ (h >> 16u)) / 4294967295.0;
+}
+float value(vec2 t, float across, int m) {  // smooth value noise, ``across`` texels between its points
+    vec2 c = t / across;
+    ivec2 i = ivec2(floor(c));
+    vec2 f = fract(c);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = mix(hash(i, m), hash(i + ivec2(1, 0), m), f.x);
+    float b = mix(hash(i + ivec2(0, 1), m), hash(i + ivec2(1, 1), m), f.x);
+    return mix(a, b, f.y);
+}
+float noise(vec2 t, int m) {  // broad bays and points, smaller bumps on them (no texel's own: stray pixels)
+    return 0.65 * value(t, 9.0, m) + 0.35 * value(t, 3.0, m + 16);
+}
+void main() {
+    vec2 texel = floor(v_uv * 32.0);
+    vec4 w = vec4(0.0);
+    if (u_paint_at.w > 0.5) {
+        vec2 at = u_side == 1 ? v_world.xy : (texel + 0.5) / 32.0;  // (gentle: the texel's centre, so it is one)
+        vec2 g = (at - u_paint_at.xy) * u_paint_at.z;  // in corners
+        g = mix(g, u_paint_edge.xy + (g - u_paint_edge.xy) / u_paint_edge.zw, step(u_paint_edge.xy, g));
+        w = texture(u_paint, (g + 0.5) / vec2(textureSize(u_paint, 0)));
+    }
+    if (u_side == 0 && u_wobble > 0.0)  // bare earth for grass along cliff tops and where gentle ground is steepest
+        w.r += clamp((0.93 - normalize(v_nrm).z) * 6.0, 0.0, 1.0) * max(0.0, 1.0 - (w.r + w.g + w.b + w.a));
+    float v[5] = float[5](1.0 - (w.r + w.g + w.b + w.a), w.r, w.g, w.b, w.a);
+    int pick = 0;
+    float best = v[0], second = -1.0;
+    for (int m = 1; m <= 4; m++) {
+        if (v[m] > best) { second = best; best = v[m]; pick = m; } else { second = max(second, v[m]); }
+    }
+    if (best - second <= u_wobble) {  // (a lead the noise can't overturn needs none worked out: most texels)
+        best = v[0] + u_wobble * (noise(texel, 0) - 0.5);
+        pick = 0;
+        for (int m = 1; m <= 4; m++) {
+            float s = v[m] + u_wobble * (noise(texel, m) - 0.5);
+            if (s > best) { best = s; pick = m; }
+        }
+    }
+    vec4 own = texture(u_tex, v_uv);
+    vec4 mat = textureLod(u_mats, vec2((float(pick - 1 + 4 * u_side) + fract(v_uv.x)) / 8.0, fract(v_uv.y)), 0.0);
+    vec4 c = pick == 0 ? own : mat;
     f_color = vec4(c.rgb * light_at(v_world, normalize(v_nrm), false), 1.0);
 }
 """
@@ -103,6 +164,11 @@ void main() { f_color = u_colour; }
 """
 IDENTITY = (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
 STEEP_TEXTURE = "assets/hd2d_starter/textures/dirt.png"  # sculpted ground's steep faces (Milestone 20A), if present
+# What sculpted ground may be painted (Milestone 20C; engine.hd2d.terrain.MATERIALS past grass): its tile on gentle
+# ground and on steep faces, and its colour should the file be missing
+MATERIAL_TEXTURES = (("dirt", "dirt", (150, 116, 78)), ("stone", "stone", (124, 120, 112)),
+                     ("mud", "mud", (92, 70, 50)), ("sand", "sand", (212, 188, 138)))
+WOBBLE = 0.6  # soft edges: how far the noise moves a border (a share of a material's weight)
 CASTER_SLOT = 16 * 16 * 6 + 4 * 16 * 6  # vertices a chunk's slot in the casters' buffer holds (cells; four skirt
 # sides: a ground 16 cells across is one chunk touching both edges)
 
@@ -138,20 +204,28 @@ def _mul(a: list[list[float]], b: list[list[float]]) -> list[list[float]]:
     return [[sum(a[i][k] * b[k][j] for k in range(4)) for j in range(4)] for i in range(4)]
 
 
-def _dithered(ground: Any, resolve: Callable[[str], Path], dirt: Image.Image) -> Image.Image:
-    """The ground's texture with patches of dirt (2 x 2 texel clumps, about two in five, always the same): the
-    fringe of grass beside sculpted ground's dirt, so the two don't meet on a hard line."""
-    try:
-        with Image.open(resolve(ground.texture)) as img:
-            grass = img.convert("RGBA")
-    except (OSError, ValueError, TypeError, AttributeError):  # no ground texture: its plain colour
-        grass = Image.new("RGBA", (1, 1), (86, 132, 72, 255))
-    size = (max(grass.width, dirt.width, 4), max(grass.height, dirt.height, 4))
-    grass, dirt = grass.resize(size, Image.Resampling.NEAREST), dirt.resize(size, Image.Resampling.NEAREST)
-    mask = Image.new("L", size)
-    clumps = random.Random(20).choices((0, 255), weights=(3, 2), k=(size[0] // 2 + 1) * (size[1] // 2 + 1))
-    mask.putdata([clumps[x // 2 + (y // 2) * (size[0] // 2 + 1)] for y in range(size[1]) for x in range(size[0])])
-    return Image.composite(dirt, grass, mask)
+def _material_tiles(resolve: Callable[[str], Path]) -> Image.Image:
+    """The painted materials' tiles side by side (32 x 32 each, one a metre): their tops, then their sides. Each from
+    the project's starter kit, else (a project made before Milestone 20C) Mesh's own copy, read where it is and never
+    copied into the project, else its plain colour."""
+    from engine.repo_root import bundled_file  # noqa: PLC0415
+
+    atlas = Image.new("RGBA", (32 * 2 * len(MATERIAL_TEXTURES), 32))
+    for side in (0, 1):
+        for k, (top, steep, colour) in enumerate(MATERIAL_TEXTURES):
+            rel = f"assets/hd2d_starter/textures/{(top, steep)[side]}.png"
+            tile = Image.new("RGBA", (32, 32), (*colour, 255))
+            for find in (resolve, bundled_file):
+                try:
+                    path = find(rel)
+                    if path is not None and Path(path).is_file():
+                        with Image.open(path) as img:
+                            tile = img.convert("RGBA").resize((32, 32), Image.Resampling.NEAREST)
+                        break
+                except (OSError, ValueError):  # (refused or unreadable: the next place, or its colour)
+                    continue
+            atlas.paste(tile, ((side * len(MATERIAL_TEXTURES) + k) * 32, 0))
+    return atlas
 
 
 def _box_in_view(lo: tuple[float, ...], hi: tuple[float, ...], vp: list[list[float]]) -> bool:
@@ -315,6 +389,8 @@ class Hd2dRenderer:
         self._terrain_boxes: dict[tuple[int, int], tuple[tuple[float, ...], tuple[float, ...]]] = {}  # (lo, hi) m
         self._caster_buffer: Any = None  # the ground's shape for shadows and rain: a slot per chunk (Milestone 20B)
         self._caster_geometry: Any = None
+        self.ground_prog: Any = None  # the sculpted ground's materials (Milestone 20C; made with it)
+        self._paint_texture: Any = None
         self.ground = None
         if settings.ground is not None and settings.ground.terrain is not None:
             self._build_terrain(resolve)
@@ -471,7 +547,10 @@ class Hd2dRenderer:
         except (OSError, ValueError):  # a project without the starter kit (or its path refused): plain earth
             dirt = Image.new("RGBA", (1, 1), (112, 84, 58, 255))
         self._steep_texture = self._texture(dirt, repeat=True)
-        self._blend_texture = self._texture(_dithered(g, resolve, dirt), repeat=True)
+        self._material_atlas = self._texture(_material_tiles(resolve))
+        self._paint_texture = None  # the paint's weights, made when the ground has any (update_paint)
+        if self.ground_prog is None:
+            self.ground_prog = self.ctx.program(vertex_shader=MESH_VS, fragment_shader=GROUND_FS)
         cx_n, cy_n = self.terrain.chunk_count()
         # Milestone 20B: every chunk's shape in one buffer (a slot each), so the sun's shadow pass, the lamps' and the
         # rain's precipitation maps draw the whole ground in one call however many chunks it has
@@ -480,6 +559,26 @@ class Hd2dRenderer:
         for cj in range(cy_n):
             for ci in range(cx_n):
                 self._terrain_chunk((ci, cj))
+        if self.terrain.paint is not None:
+            self.update_paint(self.terrain, (0, 0, self.terrain.nx, self.terrain.ny))
+
+    def update_paint(self, terrain: Any, corners: tuple[int, int, int, int]) -> None:
+        """The ground was painted (``Terrain.paint_dab``): the corners (i0, j0, i1, j1) are sent to the GPU again,
+        only those (the ground's meshes, shadows and everything else stay as they are: paint changes no height)."""
+        self.terrain = terrain
+        if terrain.paint is None:
+            return
+        w, h = terrain.nx + 1, terrain.ny + 1
+        if self._paint_texture is None:
+            ctx = self.ctx
+            self._paint_texture = ctx.texture((w, h), components=4, filter=(ctx.LINEAR, ctx.LINEAR))
+            self._paint_texture.wrap_x = self._paint_texture.wrap_y = ctx.CLAMP_TO_EDGE
+            self._textures.append(self._paint_texture)
+            corners = (0, 0, w - 1, h - 1)
+        i0, j0, i1, j1 = corners
+        row = 4 * w
+        data = b"".join(terrain.paint[j * row + 4 * i0:j * row + 4 * (i1 + 1)] for j in range(j0, j1 + 1))
+        self._paint_texture.write(data, viewport=(i0, j0, i1 - i0 + 1, j1 - j0 + 1))
 
     def ensure_terrain(self) -> Any:
         """The ground's heights to sculpt live (Mesh Studio, Milestone 20B): a flat room's plain ground becomes
@@ -495,15 +594,15 @@ class Hd2dRenderer:
         return [(self._caster_geometry, None, IDENTITY)] if self._caster_geometry is not None else []
 
     def _terrain_chunk(self, key: tuple[int, int]) -> None:
-        """(Re)make one chunk's drawing: its gentle faces with the ground's texture, its steep ones with dirt. The new
-        buffers are made first: if the driver refuses one, the chunk keeps its old drawing (and nothing leaks)."""
-        gentle, blend, steep = self.terrain.chunk_mesh(*key)
+        """(Re)make one chunk's drawing: its gentle faces (unpainted: the ground's texture) and its steep ones
+        (unpainted: earth). The new buffers are made first: if the driver refuses one, the chunk keeps its old drawing
+        (and nothing leaks)."""
+        gentle, steep = self.terrain.chunk_mesh(*key)
         draws: list[tuple[Any, Any, tuple[float, ...]]] = []
         buffers: list[Any] = []
         gl = self.arcade.gl
         try:
-            for data, texture in ((gentle, self._ground_texture), (blend, self._blend_texture),
-                                  (steep, self._steep_texture)):
+            for data, texture in ((gentle, self._ground_texture), (steep, self._steep_texture)):
                 if not data:
                     continue
                 buffer = self.ctx.buffer(data=data.tobytes())
@@ -516,7 +615,7 @@ class Hd2dRenderer:
             for buffer in buffers:
                 buffer.delete()
             raise
-        points = [(d[k], d[k + 1], d[k + 2]) for d in (gentle, blend, steep) for k in range(0, len(d), 8)]
+        points = [(d[k], d[k + 1], d[k + 2]) for d in (gentle, steep) for k in range(0, len(d), 8)]
         if self._caster_buffer is not None:  # its slot in the casters' buffer (unused vertices: zero, drawn as nothing)
             shape = array("f", [c for p in points[:CASTER_SLOT] for c in p])
             shape.extend([0.0] * (CASTER_SLOT * 3 - len(shape)))
@@ -603,7 +702,7 @@ class Hd2dRenderer:
         terrain = [b for bufs in self._terrain_buffers.values() for b in bufs] + [self._caster_buffer]
         objects = (list(self._buffers) + terrain + list(self._textures) + list(self._sprite_textures.values()) + list(self._fbo_parts)
                    + [self._fbo] + list(self._dynamic[1:] if self._dynamic else []) + [part[1] for part in self._lines.values()]
-                   + [self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog]
+                   + [self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog, self.ground_prog]
                    + list(light._targets) + [light.caster, light.lamp_caster, light.sprite_caster, light.probe_prog]
                    + (self.particles.gl_objects() if self.particles is not None else [])
                    + self.precipitation.gl_objects() + (self.water.gl_objects() if self.water is not None else []))
@@ -633,6 +732,10 @@ class Hd2dRenderer:
         self.ground = None
         for program in (self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog):
             program.delete()
+        if self.ground_prog is not None:
+            self.ground_prog.delete()
+            self.ground_prog = None
+        self._paint_texture = None  # (deleted with the other textures)
         self.lighting.release()
         self.set_particles(())
         self.precipitation.release()
@@ -918,7 +1021,11 @@ class Hd2dRenderer:
         mp["u_vp"] = vp
         mp["u_tex"] = 0
         lighting.bind(mp)
-        statics = self._ground_draws(self.last_vp) + self.static + live
+        ground_draws = self._ground_draws(self.last_vp)
+        if self.terrain is not None:  # sculpted ground: its own program (its materials)
+            self._draw_terrain(ground_draws, vp)
+            ground_draws = []
+        statics = ground_draws + self.static + live
         self._bind_cutaway(mp, cam if camera is None else None)
         for draw in statics:
             geometry, texture, matrix = draw
@@ -974,6 +1081,27 @@ class Hd2dRenderer:
             else:
                 self._blit.render(self.blit_prog)
         return pixels
+
+    def _draw_terrain(self, draws: list[tuple[Any, Any, tuple[float, ...]]], vp: tuple[float, ...]) -> None:
+        """The sculpted ground's chunks in the picture, each texel the material painted there (GROUND_FS)."""
+        gp, terrain = self.ground_prog, self.terrain
+        gp["u_vp"] = vp
+        gp["u_model"] = IDENTITY
+        gp["u_tex"], gp["u_mats"], gp["u_paint"] = 0, 3, 4
+        painted = self._paint_texture is not None
+        gp["u_paint_at"] = (terrain.origin[0] / PIXELS_PER_METRE, terrain.origin[1] / PIXELS_PER_METRE,
+                            PIXELS_PER_METRE / terrain.cell, 1.0 if painted else 0.0)
+        gp["u_paint_edge"] = (terrain.nx - 1.0, terrain.ny - 1.0, terrain.size[0] / terrain.cell - (terrain.nx - 1),
+                              terrain.size[1] / terrain.cell - (terrain.ny - 1))
+        gp["u_wobble"] = WOBBLE if terrain.edges == "soft" else 0.0
+        self.lighting.bind(gp)
+        self._material_atlas.use(3)
+        (self._paint_texture or self._material_atlas).use(4)  # (unpainted: never read)
+        for geometry, texture, _matrix in draws:
+            gp["u_side"] = 1 if texture is self._steep_texture else 0
+            texture.use(0)
+            geometry.render(gp)
+            self.draw_calls += 1
 
     def _draw_water(self, vp: tuple[float, ...], cam: Camera, fbo: Any, weather: bool, maps: list[Any],
                     solid: Any) -> None:

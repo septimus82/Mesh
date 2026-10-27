@@ -41,7 +41,7 @@ MODELS = {
     "barrel": ("Barrel", "Props", "A 1 m barrel."),
     "lamp_post": ("Lamp post", "Props", "Add a lamp light at its lantern, 2.5 m up."),
 }
-GROUND_TEXTURES = ("grass", "dirt")
+GROUND_TEXTURES = ("grass", "dirt", "stone", "mud", "sand")  # the ground and what it may be painted
 
 
 def main(blender: Path) -> None:

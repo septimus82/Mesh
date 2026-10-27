@@ -55,7 +55,7 @@ class Ground:
     lo: tuple[float, float]
     hi: tuple[float, float]
     elevation: float = 0.0
-    terrain: Any = None  # its sculpted heights (engine.hd2d.terrain, Milestone 20A): {"cell", "chunks"}; None flat
+    terrain: Any = None  # its sculpted heights and paint (engine.hd2d.terrain): {"cell", "chunks", ...}; None plain
 
     def __hash__(self) -> int:  # (terrain is a dict: hashed by what it reads as)
         return hash((self.texture, self.lo, self.hi, self.elevation, repr(self.terrain)))
@@ -199,28 +199,31 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None, leni
             texture = asset_path(texture, "settings.hd2d.ground.texture")
         default_hi = map_size_px or (32.0 * 24, 32.0 * 16)
         terrain = None
+        lo, hi = _pair(g, "from", "settings.hd2d.ground", (0.0, 0.0)), _pair(g, "to", "settings.hd2d.ground", default_hi)
+        elevation = _number(g, "elevation", "settings.hd2d.ground", 0.0)
         if g.get("terrain") is not None:
             from engine.hd2d.terrain import Terrain, TerrainError, parse_terrain  # noqa: PLC0415
 
-            try:
-                terrain = parse_terrain(g["terrain"])
-            except TerrainError as exc:
-                if not lenient:
-                    raise Hd2dSettingsError(str(exc)) from exc
-                terrain_error = str(exc)
-            if terrain is not None and not terrain["chunks"]:
-                terrain = None  # no heights: the plain ground exactly
-        ground = Ground(texture, _pair(g, "from", "settings.hd2d.ground", (0.0, 0.0)),
-                        _pair(g, "to", "settings.hd2d.ground", default_hi),
-                        _number(g, "elevation", "settings.hd2d.ground", 0.0), terrain)
-        if terrain is not None:
-            try:
-                Terrain.from_ground(ground)  # its chunks' keys and sizes against the ground's extent
-            except TerrainError as exc:
-                if not lenient:
-                    raise Hd2dSettingsError(str(exc)) from exc
-                terrain_error = str(exc)
-                ground = Ground(ground.texture, ground.lo, ground.hi, ground.elevation, None)
+            tries = [g["terrain"]]
+            if lenient and isinstance(g["terrain"], dict) and "materials" in g["terrain"]:  # (broken paint alone: only
+                tries.append({k: v for k, v in g["terrain"].items() if k != "materials"})  # the paint is set aside)
+            for attempt, candidate in enumerate(tries):
+                try:
+                    terrain = parse_terrain(candidate)
+                    if not terrain["chunks"] and not terrain.get("materials") and terrain.get("edges", "soft") == "soft":
+                        terrain = None  # no heights, no paint, no edges chosen: the plain ground exactly
+                    if terrain is not None:  # its chunks' keys and sizes against the ground's extent
+                        Terrain.from_ground(Ground(texture, lo, hi, elevation, terrain))
+                    break
+                except TerrainError as exc:
+                    if not lenient:
+                        raise Hd2dSettingsError(str(exc)) from exc
+                    terrain = None
+                    if attempt == 0:
+                        terrain_error = str(exc)
+            if terrain_error and terrain is not None:
+                terrain_error = f"its paint is set aside ({terrain_error})"
+        ground = Ground(texture, lo, hi, elevation, terrain)
     c = raw.get("camera", {}) or {}
     if not isinstance(c, dict):
         raise Hd2dSettingsError("settings.hd2d.camera must be an object")

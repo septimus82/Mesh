@@ -178,3 +178,83 @@ def test_qa_s_findings_stay_fixed(tmp_path: Path) -> None:
     assert box["mid_stroke"] > box["before"] and box["after_esc"] == box["before"], r
     assert r["settle_list_in_another_room"] == [], r
     assert r["flat_room"] == {"plain_after_esc": True, "plain_after_noop": True, "noop_undo_steps": 0}, r
+
+
+# --- Milestone 20C: painted materials (tooling/m20c_material_study.py) ----------------------------------------------
+def test_painted_ground_shows_each_material_live_and_leaves_nothing_behind(tmp_path: Path) -> None:
+    import hd2d_visual_study as visual
+    import m20a_terrain_study as m20a
+    import m20c_material_study as study
+    import numpy as np
+    from hd2d_demo import _gl_counts
+
+    from engine.hd2d.terrain import MATERIALS
+
+    game = study.open_room(tmp_path, "paint", painted=False)
+    try:
+        hd = game.window.hd2d_renderer
+        plain = np.asarray(m20a.shot(game, 9.0, 5.0)).astype(float)
+        means = {}
+        for material in MATERIALS[1:]:  # one patch at a time, in place (no reload), then painted grass again
+            corners = hd.terrain.paint_dab(material, 9.0 * 32, 5.0 * 32, 40, 1.0)
+            hd.update_paint(hd.terrain, corners)
+            shot = np.asarray(m20a.shot(game, 9.0, 5.0)).astype(float)
+            changed = np.any(shot != plain, axis=2)
+            assert 0.003 < changed.mean() < 0.1, (material, changed.mean())
+            means[material] = shot[changed].mean(axis=0)
+            hd.update_paint(hd.terrain, hd.terrain.paint_dab("grass", 9.0 * 32, 5.0 * 32, 40, 1.0))
+        assert np.array_equal(np.asarray(m20a.shot(game, 9.0, 5.0)).astype(float), plain), "grass again: as before"
+        luma = {m: float(c @ (0.3, 0.59, 0.11)) for m, c in means.items()}
+        assert luma["sand"] > luma["earth"] > luma["mud"], luma
+        assert np.ptp(means["stone"]) < np.ptp(means["earth"]), means  # stone grey, earth brown
+        ctx, counts = game.window.ctx, []
+        for k in range(4):  # live paint, then room changes: nothing piles up
+            hd = game.window.hd2d_renderer
+            hd.update_paint(hd.terrain, hd.terrain.paint_dab("stone", (6 + k) * 32.0, 6 * 32.0, 48, 0.5))
+            game.window.dispatch_event("on_draw")
+            game.load(f"{visual.SCENES}/start.json")
+            game.step(2)
+            game.window.dispatch_event("on_draw")
+            game.load(f"{visual.SCENES}/hills.json")
+            game.step(2)
+            game.window.dispatch_event("on_draw")
+            ctx.gc()
+            counts.append(_gl_counts(ctx))
+        assert counts[1:] == counts[:-1] == [counts[1]] * 3, counts
+        hd = game.window.hd2d_renderer
+        hd.update_paint(hd.terrain, hd.terrain.paint_dab("mud", 300.0, 200.0, 48, 0.5))  # (its texture made)
+        objects = hd.gl_objects()
+        assert hd._paint_texture in objects and hd.ground_prog in objects
+        hd.release()
+        assert all(getattr(getattr(o, "_glo", None), "value", 0) == 0 for o in objects)
+    finally:
+        game.close()
+
+
+def test_studio_paints_live_one_stroke_one_undo_step(tmp_path: Path) -> None:
+    import m20c_material_study as study
+
+    r = study.studio(tmp_path)
+    stroke = r["stroke"]
+    assert stroke["undo_steps_added"] == 1 and stroke["shown_equals_saved"], r
+    assert stroke["heights_unchanged"] and stroke["collision_unchanged"], r
+    assert r["undo_gives_before"] and r["redo_gives_after"] and not r["saved_dirty_after"], r
+    for cancel in ("escape", "play_mid_stroke", "room_change_mid_stroke", "refused_upload"):
+        assert r[cancel]["nothing_recorded"] and r[cancel]["paint_is_saved"], (cancel, r)
+    assert r["escape"]["stroke_had_painted"], r
+    assert r["shift_paints_grass"] == "grass" and r["controls"]["alt_click_picked"] == "earth", r
+    assert r["controls"]["hard_edges"] == "hard" and r["controls"]["edges_after_undo"] == "soft", r
+    assert r["controls"]["soft_when_soft_adds_undo_steps"] == 0, r
+    assert r["focus_lost_mid_stroke"] == {"stroke_ended": True, "undo_steps_added": 1, "paints_no_more": True}, r
+    assert r["sculpt_over_the_path"]["paint_kept"] and r["sculpt_over_the_path"]["still_earth_there"] == "earth", r
+    assert r["branch_over_the_mound"] == "earth", r
+    assert r["reopened_same"], r
+
+
+def test_a_plain_room_s_first_paint_stroke_its_undo_and_esc(tmp_path: Path) -> None:
+    import m20c_material_study as study
+
+    r = study.first_paint_on_flat(tmp_path)
+    assert r["before"] == {"terrain": False}, r
+    assert r["after"]["materials_stored"] and not r["after"]["heights_stored"], r
+    assert r["undo_back_to_plain_ground"] and r["escape_back_to_plain_ground"], r

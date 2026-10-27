@@ -15,9 +15,14 @@ it was: its texture, extent and elevation. A room without terrain, or with all o
   exactly what is drawn (``chunk_mesh``) and walked on (``chunk_surfaces``).
 - **Edits** (``sculpt``): raise, lower, smooth and flatten within a radius, with a soft cosine falloff; each returns
   the chunks whose drawing and collision change (a corner on a chunk's edge is shared with its neighbours).
-- **Drawing:** per chunk a mesh in the ground's own vertex format (position, normal, uv): the ground's texture on
-  gentle ground (its uv the world's metres, as the flat ground), a second texture (dirt) on faces steeper than
-  ``STEEP`` (uv box-mapped onto the face's side, so its texels keep their size).
+- **Drawing:** per chunk a mesh in the ground's own vertex format (position, normal, uv): gentle faces (their uv the
+  world's metres, as the flat ground's) and faces steeper than ``STEEP`` (uv box-mapped onto the face's side, so its
+  texels keep their size; earth unless painted).
+- **Materials** (Milestone 20C, ``"materials"``): what the ground is painted, per corner, as weights of ``MATERIALS``
+  past the first (grass: the ground's own texture, what is left over), in the same sparse chunks as the heights
+  (four bytes a corner). The renderer picks one material per texel from them (``engine.hd2d.renderer``), so borders
+  are crisp pixels along smooth curves. ``"edges": "hard"`` keeps them exactly on the painted weights, with no
+  wobble and no bare earth along cliff tops. Painting never changes a height: what is walked on stays as it was.
 - **Walking** (``engine.hd2d.world``): its triangles are solid walkable surfaces, like the flat ground's, except those
   steeper than ``MAX_SLOPE``: nobody stands on them, so they stop characters (a cliff). Structures, floors, stairs and
   bridges stand on it as they stand on the flat ground; caves, overhangs and stacked walkable surfaces are theirs to
@@ -31,7 +36,7 @@ import math
 import sys
 from array import array
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 
 PX = 32.0  # px per metre
 CHUNK = 16  # cells (and corners) per chunk side
@@ -41,6 +46,10 @@ CELLS = (8, 16, 32)  # px: the cell sizes a terrain may use
 STEEP = 0.75  # a face's normal z below this (about 41 degrees) is drawn as dirt
 MAX_SLOPE = 0.7  # a face's normal z below this (about 46 degrees) can't be stood on
 TOOLS = ("raise", "lower", "smooth", "flatten")
+MATERIALS = ("grass", "earth", "stone", "mud", "sand")  # what the ground may be painted (grass: the ground's own texture)
+EDGES = ("soft", "hard")  # borders between materials: wobbling a little, or exactly along the painted weights
+PAINTED = 4  # bytes a corner's paint takes: a weight (0-255) for each material past grass
+TRACE = 2.5  # a weight below this (of 255) is stored as none: it can't win a texel, even with soft edges' wobble
 
 
 class TerrainError(ValueError):
@@ -57,11 +66,14 @@ class Terrain:
     base: float
     cell: int = 16
     heights: list[float] = field(default_factory=list)
+    paint: bytearray | None = None  # PAINTED bytes a corner, ordered as ``heights``; None: nothing painted (grass)
+    edges: str = "soft"
 
     def __post_init__(self) -> None:
         self.nx = max(1, math.ceil(self.size[0] / self.cell))
         self.ny = max(1, math.ceil(self.size[1] / self.cell))
         self.changed: set[tuple[int, int]] = set()  # stored chunks whose corners changed since loading
+        self.paint_changed: set[tuple[int, int]] = set()  # ... whose paint did
         if not self.heights:
             self.heights = [0.0] * ((self.nx + 1) * (self.ny + 1))
 
@@ -72,8 +84,10 @@ class Terrain:
         raw = getattr(ground, "terrain", None) or {}
         cell = int(raw.get("cell", 16))
         size = (ground.hi[0] - ground.lo[0], ground.hi[1] - ground.lo[1])
-        terrain = cls((float(ground.lo[0]), float(ground.lo[1])), size, float(ground.elevation), cell)
+        terrain = cls((float(ground.lo[0]), float(ground.lo[1])), size, float(ground.elevation), cell,
+                      edges=str(raw.get("edges", "soft")))
         terrain.load_chunks(raw.get("chunks") or {})
+        terrain.load_paint(raw.get("materials") or {})
         return terrain
 
     def chunk_count(self) -> tuple[int, int]:
@@ -100,6 +114,41 @@ class Terrain:
                 if i <= self.nx and j <= self.ny:
                     self.heights[i + j * (self.nx + 1)] = v * QUANTUM
 
+    def load_paint(self, chunks: dict[str, str]) -> None:
+        cx_n, cy_n = self.chunk_count()
+        stride = self.nx + 1
+        for key, text in chunks.items():
+            ci, cj = parse_key(key)
+            if not (0 <= ci < cx_n and 0 <= cj < cy_n):
+                raise TerrainError(f"terrain materials chunk '{key}' lies outside the ground")
+            try:
+                data = base64.b64decode(text, validate=True)
+            except (ValueError, TypeError) as exc:
+                raise TerrainError(f"terrain materials chunk '{key}' isn't base64") from exc
+            if len(data) != CHUNK * CHUNK * PAINTED:
+                raise TerrainError(f"terrain materials chunk '{key}' has {len(data)} bytes "
+                                   f"(expected {CHUNK * CHUNK * PAINTED})")
+            if any(a + b + c + d > 255 for a, b, c, d in zip(*(iter(data),) * PAINTED)):
+                raise TerrainError(f"terrain materials chunk '{key}': a corner's weights add up to more than 255")
+            if self.paint is None:
+                self.paint = bytearray(PAINTED * stride * (self.ny + 1))
+            i0, width = ci * CHUNK, (min(self.nx, ci * CHUNK + CHUNK - 1) - ci * CHUNK + 1) * PAINTED
+            for row in range(min(CHUNK, self.ny + 1 - cj * CHUNK)):  # (a row of the chunk at a time)
+                at = (i0 + (cj * CHUNK + row) * stride) * PAINTED
+                self.paint[at:at + width] = data[row * CHUNK * PAINTED:row * CHUNK * PAINTED + width]
+
+    def paint_text(self, ci: int, cj: int) -> str | None:
+        """One stored chunk of paint, or None if none of it is painted."""
+        if self.paint is None:
+            return None
+        out = bytearray(CHUNK * CHUNK * PAINTED)
+        stride = self.nx + 1
+        i0, width = ci * CHUNK, (min(self.nx, ci * CHUNK + CHUNK - 1) - ci * CHUNK + 1) * PAINTED
+        for row in range(min(CHUNK, self.ny + 1 - cj * CHUNK)):
+            at = (i0 + (cj * CHUNK + row) * stride) * PAINTED
+            out[row * CHUNK * PAINTED:row * CHUNK * PAINTED + width] = self.paint[at:at + width]
+        return base64.b64encode(bytes(out)).decode("ascii") if any(out) else None
+
     def chunk_text(self, ci: int, cj: int) -> str | None:
         """One stored chunk (its corners' heights as saved), or None if all of it is level with the base."""
         values = array("h", [0] * (CHUNK * CHUNK))
@@ -117,10 +166,13 @@ class Terrain:
             values.byteswap()
         return base64.b64encode(values.tobytes()).decode("ascii")
 
-    def chunks(self, previous: dict[str, str] | None = None, changed: set[tuple[int, int]] | None = None) -> dict[str, str]:
+    def chunks(self, previous: dict[str, str] | None = None, changed: set[tuple[int, int]] | None = None,
+               text: Callable[[int, int], str | None] | None = None) -> dict[str, str]:
         """The heights as stored: non-flat chunks only, sorted, deterministic. With ``previous`` (the stored form these
         heights were read from) and ``changed`` (the stored chunks edited since, ``Terrain.changed``), only those
-        are encoded again; the rest of the text is kept as it was."""
+        are encoded again; the rest of the text is kept as it was. ``text``: what encodes a chunk (``paint_text``:
+        the paint)."""
+        text_of = text or self.chunk_text
         out: dict[str, str] = {}
         if previous is not None and changed is not None:
             out = dict(previous)
@@ -129,19 +181,29 @@ class Terrain:
             cx_n, cy_n = self.chunk_count()
             keys = {(ci, cj) for cj in range(cy_n) for ci in range(cx_n)}
         for ci, cj in keys:
-            text = self.chunk_text(ci, cj)
-            if text is None:
+            encoded = text_of(ci, cj)
+            if encoded is None:
                 out.pop(f"{ci},{cj}", None)
             else:
-                out[f"{ci},{cj}"] = text
+                out[f"{ci},{cj}"] = encoded
         return dict(sorted(out.items(), key=lambda kv: parse_key(kv[0])[::-1]))
 
     def settings(self, previous: dict[str, Any] | None = None) -> dict[str, Any]:
-        """``ground.terrain`` as saved ({} when flat: the plain ground). ``previous``: the ``ground.terrain`` these
-        heights were read from; only the stored chunks changed since (``changed``) are encoded again."""
-        old = (previous or {}).get("chunks") if isinstance(previous, dict) else None
-        chunks = self.chunks(old, self.changed) if isinstance(old, dict) else self.chunks()
-        return {"cell": self.cell, "chunks": chunks} if chunks else {}
+        """``ground.terrain`` as saved ({} when flat and unpainted: the plain ground). ``previous``: the
+        ``ground.terrain`` these heights were read from; only the stored chunks changed since (``changed``,
+        ``paint_changed``) are encoded again."""
+        old = previous if isinstance(previous, dict) else {}
+        chunks = self.chunks(old["chunks"], self.changed) if isinstance(old.get("chunks"), dict) else self.chunks()
+        materials = (self.chunks(old["materials"], self.paint_changed, self.paint_text)
+                     if isinstance(old.get("materials"), dict) else self.chunks(text=self.paint_text))
+        if not chunks and not materials and self.edges == "soft":
+            return {}
+        out: dict[str, Any] = {"cell": self.cell, "chunks": chunks}
+        if materials:
+            out["materials"] = materials
+        if self.edges != "soft":
+            out["edges"] = self.edges
+        return out
 
     # ------------------------------------------------------------------ heights
     def corner(self, i: int, j: int) -> float:
@@ -244,15 +306,76 @@ class Terrain:
         self.changed |= {(i // CHUNK, j // CHUNK) for i, j in changed}
         return chunks_of(changed)
 
+    def paint_dab(self, material: str, x: float, y: float, radius: float, strength: float,
+                  exact: dict[int, list[float]] | None = None) -> tuple[int, int, int, int] | None:
+        """One dab of paint at (x, y) px: the corner under its centre moves ``strength`` (0-1) of the way to all
+        ``material`` (grass: all the ground's own texture), those further out less, to none at ``radius`` px (as if
+        painted for less time: sculpting's cosine falloff on the rate). Returns the corners changed, (i0, j0, i1, j1)
+        inclusive, or None. ``exact``: the weights before rounding to a byte, carried from dab to dab of one stroke
+        (as ``sculpt``'s heights)."""
+        if material not in MATERIALS:
+            raise TerrainError(f"terrain material must be one of {', '.join(MATERIALS)} (got {material!r})")
+        m = MATERIALS.index(material) - 1  # (-1: grass; every painted weight fades)
+        stride = self.nx + 1
+        if self.paint is None:
+            if m < 0:
+                return None  # (grass on unpainted ground: nothing to do)
+            self.paint = bytearray(PAINTED * stride * (self.ny + 1))
+        paint = self.paint
+        r_cells = radius / self.cell
+        ci, cj = (x - self.origin[0]) / self.cell, (y - self.origin[1]) / self.cell
+        i0, i1 = max(0, math.floor(ci - r_cells)), min(self.nx, math.ceil(ci + r_cells))
+        j0, j1 = max(0, math.floor(cj - r_cells)), min(self.ny, math.ceil(cj + r_cells))
+        lo, hi = (i1 + 1, j1 + 1), (-1, -1)
+        share = min(1.0, strength)
+        for j in range(j0, j1 + 1):
+            for i in range(i0, i1 + 1):
+                px, py = self.corner_xy(i, j)
+                d = math.hypot(px - x, py - y)
+                if d >= radius:
+                    continue
+                # the falloff scales the brush's rate, not its share: n dabs of 1 - e^(-r/n) then paint exactly what
+                # one of 1 - e^(-r) does, at every distance (so Studio's frame rate never shows)
+                w = 1.0 - (1.0 - share) ** (0.5 * (1.0 + math.cos(math.pi * d / radius)))
+                k = i + j * stride
+                at = k * PAINTED
+                was = exact.get(k) if exact is not None else None
+                if was is None:
+                    was = [b / 255 for b in paint[at:at + PAINTED]]
+                new = [c + w * ((1.0 if n == m else 0.0) - c) for n, c in enumerate(was)]
+                if exact is not None:
+                    exact[k] = new
+                # rounded towards where the brush takes it (so repeated dabs always get there, never stick a byte
+                # short), and a trace never shows: none is kept
+                q = [math.ceil(c * 255 - 1e-6) if n == m else math.floor(c * 255 + 1e-6) for n, c in enumerate(new)]
+                q = [b if b >= TRACE else 0 for b in q]
+                if sum(q) > 255:  # (rounded up past all of one: the largest gives way)
+                    q[q.index(max(q))] -= sum(q) - 255
+                if bytes(q) != paint[at:at + PAINTED]:
+                    paint[at:at + PAINTED] = bytes(q)
+                    lo, hi = (min(lo[0], i), min(lo[1], j)), (max(hi[0], i), max(hi[1], j))
+        if hi[0] < 0:
+            return None
+        self.paint_changed |= {(a, b) for a in range(lo[0] // CHUNK, hi[0] // CHUNK + 1)
+                               for b in range(lo[1] // CHUNK, hi[1] // CHUNK + 1)}
+        return lo[0], lo[1], hi[0], hi[1]
+
+    def material_at(self, x: float, y: float) -> str:
+        """The material most of the ground is at (x, y) px (its nearest corner's): what an eyedropper picks."""
+        if self.paint is None:
+            return MATERIALS[0]
+        def nearest(v: float, n: int, axis: int) -> int:  # (where the corners really are: the ground's edge may cut
+            k = min(max(int((v - self.origin[axis]) / self.cell), 0), n)  # the last cell short)
+            return min((k, min(k + 1, n)), key=lambda c: abs(self.corner_xy(c, c)[axis] - v))
+
+        i, j = nearest(x, self.nx, 0), nearest(y, self.ny, 1)
+        at = (i + j * (self.nx + 1)) * PAINTED
+        weights = [255 - sum(self.paint[at:at + PAINTED]), *self.paint[at:at + PAINTED]]
+        return MATERIALS[weights.index(max(weights))]
+
     # ------------------------------------------------------------------ geometry
     def chunk_cells(self, ci: int, cj: int) -> tuple[range, range]:
         return range(ci * CHUNK, min(self.nx, (ci + 1) * CHUNK)), range(cj * CHUNK, min(self.ny, (cj + 1) * CHUNK))
-
-    def _steep(self, i: int, j: int) -> bool:
-        """Whether cell (i, j) is drawn as dirt: either of its faces' normal z below STEEP. (A corner's change can
-        change its neighbours' fringe, two cells out at most: ``chunks_of`` already redraws that far.)"""
-        p0, p1, p2, p3 = self._point(i, j), self._point(i + 1, j), self._point(i + 1, j + 1), self._point(i, j + 1)
-        return min(_face_normal(p0, p1, p2)[2], _face_normal(p0, p2, p3)[2]) < STEEP
 
     def _point(self, i: int, j: int) -> tuple[float, float, float]:
         x, y = self.corner_xy(i, j)
@@ -289,17 +412,16 @@ class Terrain:
         n = math.sqrt(dx * dx + dy * dy + 1.0)
         return -dx / n, -dy / n, 1.0 / n
 
-    def chunk_mesh(self, ci: int, cj: int) -> tuple[array, array, array]:
-        """The chunk's vertices (x, y, z, nx, ny, nz, u, v; 8 floats each, three per triangle), as three lists: the
-        ground's texture's (gentle cells), the grass-and-dirt's (gentle cells beside a steep one: a one-cell fringe
-        so dirt doesn't meet grass on a hard line) and dirt's (a cell either of whose faces is steeper than STEEP: one
-        material a cell, so their boundary follows the cells, not a sawtooth of triangles), and, on the ground's
-        border, a dirt skirt where it leaves its base level, so ground cut by the room's edge isn't a paper shell.
-        Each corner's place and normal is worked out once."""
-        gentle, blend, steep = array("f"), array("f"), array("f")
+    def chunk_mesh(self, ci: int, cj: int) -> tuple[array, array]:
+        """The chunk's vertices (x, y, z, nx, ny, nz, u, v; 8 floats each, three per triangle), as two lists: gentle
+        cells' and steep ones' (a cell either of whose faces is steeper than STEEP: one kind a cell, so their boundary
+        follows the cells, not a sawtooth of triangles), with, on the ground's border, a skirt where it leaves its
+        base level, so ground cut by the room's edge isn't a paper shell. Each corner's place and normal is worked
+        out once. (Which material each texel shows is the renderer's, from the paint and the corners' normals.)"""
+        gentle, steep = array("f"), array("f")
         cells_i, cells_j = self.chunk_cells(ci, cj)
         if not cells_i or not cells_j:
-            return gentle, blend, steep
+            return gentle, steep
         i0, j0 = cells_i.start, cells_j.start
         w, d = len(cells_i) + 1, len(cells_j) + 1
         stride, cell, base = self.nx + 1, self.cell, self.base
@@ -318,25 +440,14 @@ class Terrain:
                 gy = (hs[i + jp * stride] - hs[i + jm * stride]) / (2 * cell)
                 n = math.sqrt(gx * gx + gy * gy + 1.0)
                 nrm.append((-gx / n, -gy / n, 1.0 / n))
-        faces = {}  # the chunk's cells' two faces' normals, from the corners above
-        for jj in range(d - 1):
-            for ii in range(w - 1):
-                k00 = ii + jj * w
-                p0, p2 = pts[k00], pts[k00 + 1 + w]
-                faces[(i0 + ii, j0 + jj)] = (_face_normal(p0, pts[k00 + 1], p2), _face_normal(p0, p2, pts[k00 + w]))
-        steep_cells = {c for c, (fa, fb) in faces.items() if min(fa[2], fb[2]) < STEEP}
-        steep_cells |= {(i, j) for j in range(max(j0 - 1, 0), min(j0 + d, self.ny))  # the ring just outside it
-                        for i in range(max(i0 - 1, 0), min(i0 + w, self.nx)) if (i, j) not in faces and self._steep(i, j)}
         for jj in range(d - 1):
             for ii in range(w - 1):
                 k00 = ii + jj * w
                 ks = (k00, k00 + 1, k00 + 1 + w, k00 + w)
-                ci_, cj_ = i0 + ii, j0 + jj
-                fa, fb = faces[(ci_, cj_)]
-                is_steep = (ci_, cj_) in steep_cells
-                fringe = bool(steep_cells) and not is_steep and any(
-                    (ci_ + a, cj_ + b) in steep_cells for a in (-1, 0, 1) for b in (-1, 0, 1))
-                out = steep if is_steep else (blend if fringe else gentle)
+                p0, p2 = pts[k00], pts[k00 + 1 + w]
+                fa, fb = _face_normal(p0, pts[k00 + 1], p2), _face_normal(p0, p2, pts[k00 + w])
+                is_steep = min(fa[2], fb[2]) < STEEP
+                out = steep if is_steep else gentle
                 for tri, face in (((0, 1, 2), fa), ((0, 2, 3), fb)):
                     for t_ in tri:
                         k = ks[t_]
@@ -347,7 +458,7 @@ class Terrain:
                             u, v = p[0], p[1]
                         out.extend((p[0], p[1], p[2], nv[0], nv[1], nv[2], u, v))
         self._skirt(ci, cj, steep)
-        return gentle, blend, steep
+        return gentle, steep
 
     def _skirt(self, ci: int, cj: int, out: array) -> None:
         """The border's side wall within this chunk, where the ground there leaves its base level: between the ground
@@ -439,7 +550,7 @@ def parse_terrain(raw: Any, where: str = "settings.hd2d.ground.terrain") -> dict
     """``ground.terrain`` checked (its cell and its chunks' keys and sizes; the heights are read with the ground)."""
     if not isinstance(raw, dict):
         raise TerrainError(f"{where} must be an object like {{\"cell\": 16, \"chunks\": {{}}}}")
-    unknown = set(raw) - {"cell", "chunks"}
+    unknown = set(raw) - {"cell", "chunks", "materials", "edges"}
     if unknown:
         raise TerrainError(f"{where} has unknown keys: {', '.join(sorted(unknown))}")
     cell = raw.get("cell", 16)
@@ -448,6 +559,17 @@ def parse_terrain(raw: Any, where: str = "settings.hd2d.ground.terrain") -> dict
     chunks = raw.get("chunks", {})
     if not isinstance(chunks, dict) or not all(isinstance(v, str) for v in chunks.values()):
         raise TerrainError(f"{where}.chunks must map 'i,j' to base64 heights")
-    for key in chunks:
+    materials = raw.get("materials", {})
+    if not isinstance(materials, dict) or not all(isinstance(v, str) for v in materials.values()):
+        raise TerrainError(f"{where}.materials must map 'i,j' to base64 weights")
+    edges = raw.get("edges", "soft")
+    if edges not in EDGES:
+        raise TerrainError(f"{where}.edges must be one of {', '.join(EDGES)} (got {edges!r})")
+    for key in [*chunks, *materials]:
         parse_key(key)
-    return {"cell": int(cell), "chunks": dict(chunks)}
+    out: dict[str, Any] = {"cell": int(cell), "chunks": dict(chunks)}
+    if materials:
+        out["materials"] = dict(materials)
+    if edges != "soft":
+        out["edges"] = edges
+    return out

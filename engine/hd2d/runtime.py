@@ -61,7 +61,8 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
         hd2d = parse_hd2d(raw, map_size_px=map_size, lenient=True)
         if hd2d.terrain_error:  # broken sculpted heights: the room plays on flat ground, the reason kept and logged
             window.hd2d_terrain_error = hd2d.terrain_error
-            logger.error("[Mesh][HD-2D] this room's ground is drawn flat: %s", hd2d.terrain_error)
+            logger.error("[Mesh][HD-2D] this room's ground is drawn %s: %s", "unpainted"
+                         if hd2d.terrain_error.startswith("its paint") else "flat", hd2d.terrain_error)
         lights = scene.get("lights") if isinstance(scene, dict) else None
         hd2d = dataclasses.replace(hd2d, **parse_scene_lights(lights, settings))  # the room's own lights
         window.hd2d_renderer = Hd2dRenderer(window, hd2d, _contained(resolve_path))

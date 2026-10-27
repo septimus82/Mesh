@@ -105,7 +105,7 @@ def studio(out: Path) -> dict[str, Any]:
     d = _driver(project)
     try:
         s, view, k = d.studio, d.studio.hd2d, d.arcade.key
-        d.button("Sculpt ground: off")
+        d.button("Sculpt ground")
         before = list(_heights(s.project))
         undo_before = len(s.project._undo)
         # 1. a continuous stroke over the hill and down its far side
@@ -165,7 +165,7 @@ def studio(out: Path) -> dict[str, Any]:
         d.button("Hills")
         d.frame(2)
         if view.sculpt is None:
-            d.button("Sculpt ground: off")
+            d.button("Sculpt ground")
         report["room_change_mid_stroke"] = {"nothing_recorded": len(s.project._undo) == undo_n,
                                             "ground_is_saved": view.renderer.terrain.heights == saved}
         # 6. a refused GPU upload mid-stroke
@@ -242,7 +242,7 @@ def first_stroke_on_flat(out: Path) -> dict[str, Any]:
         d.frame(3)
         terrain_key = lambda: ((s.project.scene().get("settings") or {}).get("hd2d") or {}).get("ground", {}).get("terrain")  # noqa: E731
         report["before"] = {"sculpted": terrain_key() is not None}
-        d.button("Sculpt ground: off")
+        d.button("Sculpt ground")
         frames = _stroke(d, _path((14.0, 13.0), (18.0, 13.0), 16))
         report["after"] = {"sculpted": terrain_key() is not None, "frame_ms": _stats(frames),
                            "walk_world": getattr(d.window, "hd2d_world", None) is not None,
@@ -264,7 +264,7 @@ def rechecks(out: Path) -> dict[str, Any]:
     try:
         s, view, k = d.studio, d.studio.hd2d, d.arcade.key
         left, right = d.arcade.MOUSE_BUTTON_LEFT, d.arcade.MOUSE_BUTTON_RIGHT
-        d.button("Sculpt ground: off")
+        d.button("Sculpt ground")
         d.type_into("sculpt_rate", "1")
         # strength by time: a 1 m/s brush held still for about a second
         p = d.screen((20.0, 6.0, 0.0))
@@ -530,7 +530,7 @@ def scale(out: Path) -> dict[str, Any]:
         d = _driver(project)
         try:
             s, view = d.studio, d.studio.hd2d
-            d.button("Sculpt ground: off")
+            d.button("Sculpt ground")
             t1 = time.perf_counter()
             d.studio._reload()
             row["studio_room_reload_ms"] = round((time.perf_counter() - t1) * 1000, 1)

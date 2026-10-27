@@ -82,6 +82,21 @@ Mesh doesn't watch your Blender files: reimporting is always your choice.
   Edit what someone says in the inspector's **Dialogue** tab.
 - **Undo and save:** Ctrl+Z / Ctrl+Y undo and redo every edit; Ctrl+S saves.
 
+## Shaping and painting the ground
+
+In the 3D view's panel, **Sculpt ground** and **Paint ground** turn a brush on. Hold the mouse on the ground and drag.
+Each stroke is one change, so one Ctrl+Z undoes it, and Esc cancels a stroke before you let go.
+
+- **Sculpt:** Raise, Lower, Smooth or Flatten. Shift lowers, Ctrl smooths, and Alt+click picks a height to flatten
+  to. Sculpting never moves people or buildings: Mesh says what it left floating or buried, and **Settle on the
+  ground** stands them back on it.
+- **Paint:** Grass, Earth, Stone, Mud or Sand. Use Earth for paths, Mud for pond banks and Stone for
+  rocky ground and cliffs. Shift paints grass back, and Alt+click picks the material under the mouse. Painting changes how the ground
+  looks, never where anyone can walk.
+- **Edges:** **Soft** borders wander a little, in crisp pixels, and show bare earth along cliff tops. **Hard** keeps
+  borders exactly where you painted them.
+- `[` and `]` change the brush's size.
+
 ## Seeing through buildings (cutaway)
 
 A building can hide the player who walks behind or into it. Select the building and switch on

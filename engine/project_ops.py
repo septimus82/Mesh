@@ -2286,12 +2286,146 @@ def sculpt_terrain_stroke(scene: Doc, tool: str, dabs: Any, radius: float = 96.0
     return _checked_structures(out)
 
 
+def paint_terrain_stroke(scene: Doc, material: str, dabs: Any, radius: float = 32.0) -> Doc:
+    """One whole brush stroke of paint over this HD-2D room's ground (what Mesh Studio records while the mouse is
+    held in Paint): its ``dabs``, ``[[x, y, strength], ...]`` px in order, each moving the ground under the brush
+    ``strength`` (0-1) of the way to all ``material`` ("grass", the ground's own texture, takes paint away), softly
+    to the brush's edge, ``radius`` px. Heights are never changed: what is walked on stays as it was. One edit: one
+    undo step; the same dabs on the same ground always give the same paint, so what Studio showed is what is saved."""
+    from engine.hd2d.terrain import MATERIALS, Terrain, TerrainError  # noqa: PLC0415
+
+    if material not in MATERIALS:
+        raise OpError(f"The ground's material is one of {', '.join(MATERIALS)} (got {material!r}).")
+    if not isinstance(dabs, list) or not dabs:
+        raise OpError("A stroke's dabs are a list of [x, y, strength], at least one.")
+    if len(dabs) > STROKE_DABS:
+        raise OpError(f"A stroke holds at most {STROKE_DABS} dabs (got {len(dabs)}).")
+    radius = _number(radius, "The brush radius", 8, 2048)
+    checked = []
+    for k, dab in enumerate(dabs):
+        if not isinstance(dab, (list, tuple)) or len(dab) != 3:
+            raise OpError(f"Dab {k} must be [x, y, strength] (got {dab!r}).")
+        checked.append((_number(dab[0], f"Dab {k}'s x", -1e6, 1e6), _number(dab[1], f"Dab {k}'s y", -1e6, 1e6),
+                        _number(dab[2], f"Dab {k}'s strength (the share of the way)", 0, 1)))
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has no ground to paint.")
+    hd2d = _hd2d_block(out)
+    ground = _parsed_ground(out)
+    for x, y, _s in checked:
+        if not (ground.lo[0] - radius < x < ground.hi[0] + radius and ground.lo[1] - radius < y < ground.hi[1] + radius):
+            raise OpError(f"The brush at ({x / 32:.1f} m, {y / 32:.1f} m) is off the room's ground.")
+    terrain = Terrain.from_ground(ground)
+    exact: dict[int, list[float]] = {}  # (as Studio carries them: the same dabs give the same paint)
+    try:
+        for x, y, strength in checked:
+            terrain.paint_dab(material, x, y, radius, strength, exact)
+    except TerrainError as err:
+        raise OpError(str(err)) from err
+    raw = hd2d["ground"]
+    if not isinstance(raw, dict):
+        raw = hd2d["ground"] = {}
+    stored = terrain.settings(raw.get("terrain"))  # (only the stored chunks the stroke changed are encoded again)
+    if stored:
+        raw["terrain"] = stored
+    else:
+        raw.pop("terrain", None)  # flat and unpainted again: the plain ground, as before
+    return _checked_structures(out)
+
+
+def set_terrain_paint(scene: Doc, chunks: Any) -> Doc:
+    """Set stored chunks of this HD-2D room's paint exactly: ``{"i,j": base64 weights, or None for none}``, as
+    ``ground.terrain.materials`` keeps them (16 x 16 corners, four bytes each: earth, stone, mud, sand). What Mesh
+    Studio saves when a paint stroke ends (the paint it drew, chunk by chunk); to paint, ``paint_terrain_stroke``.
+    Each chunk is checked (its place on the ground, its size, no corner more than all of one material)."""
+    from engine.hd2d.terrain import Terrain, TerrainError, parse_key  # noqa: PLC0415
+
+    if not isinstance(chunks, dict) or not all(isinstance(k, str) and (v is None or isinstance(v, str))
+                                               for k, v in chunks.items()):
+        raise OpError('The paint is {"i,j": base64 weights or null, ...}.')
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has no ground to paint.")
+    hd2d = _hd2d_block(out)
+    ground = _parsed_ground(out)
+    raw = hd2d["ground"]
+    if not isinstance(raw, dict):
+        raw = hd2d["ground"] = {}
+    terrain = dict(raw["terrain"]) if isinstance(raw.get("terrain"), dict) else {"cell": 16, "chunks": {}}
+    probe = Terrain((float(ground.lo[0]), float(ground.lo[1])), (ground.hi[0] - ground.lo[0], ground.hi[1] - ground.lo[1]),
+                    0.0, int(terrain.get("cell", 16)))
+    try:
+        probe.load_paint({k: v for k, v in chunks.items() if v is not None})
+        materials = dict(terrain.get("materials") or {})
+        for key, text in chunks.items():
+            parse_key(key)
+            if text is None:
+                materials.pop(key, None)
+            else:
+                materials[key] = text
+    except TerrainError as err:
+        raise OpError(str(err)) from err
+    if materials:
+        terrain["materials"] = dict(sorted(materials.items(), key=lambda kv: parse_key(kv[0])[::-1]))
+    else:
+        terrain.pop("materials", None)
+    if terrain.get("chunks") or terrain.get("materials") or terrain.get("edges", "soft") != "soft":
+        raw["terrain"] = terrain
+    else:
+        raw.pop("terrain", None)  # (nothing left: the plain ground)
+    return out
+
+
+def set_terrain_edges(scene: Doc, edges: str) -> Doc:
+    """How this HD-2D room's painted materials meet: "soft" (their borders wander a little, crisp pixels, and bare
+    earth shows along cliff tops) or "hard" (exactly along the paint)."""
+    from engine.hd2d.terrain import EDGES  # noqa: PLC0415
+
+    if edges not in EDGES:
+        raise OpError(f"The ground's edges are one of {', '.join(EDGES)} (got {edges!r}).")
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has no ground.")
+    hd2d = _hd2d_block(out)
+    _parsed_ground(out)
+    raw = hd2d["ground"]
+    if not isinstance(raw, dict):
+        raw = hd2d["ground"] = {}
+    terrain: dict[str, Any] = dict(raw["terrain"]) if isinstance(raw.get("terrain"), dict) else {}
+    if edges == "soft":
+        terrain.pop("edges", None)
+    else:
+        terrain = {"cell": 16, "chunks": {}, **terrain, "edges": edges}
+    if terrain and (terrain.get("chunks") or terrain.get("materials") or terrain.get("edges")):
+        raw["terrain"] = terrain
+    else:
+        raw.pop("terrain", None)
+    return _checked_structures(out)
+
+
 def flatten_all_terrain(scene: Doc) -> Doc:
-    """Make this HD-2D room's sculpted ground flat again (the plain ground at its elevation)."""
+    """Make this HD-2D room's sculpted ground flat again (the plain ground at its elevation); its paint and edges
+    stay."""
+    return _ground_terrain_without(scene, "chunks")
+
+
+def clear_terrain_paint(scene: Doc) -> Doc:
+    """Take all the paint off this HD-2D room's ground (grass everywhere again); its heights and edges stay. Also the
+    way out when the paint can't be read (the room then shows unpainted, and says why)."""
+    return _ground_terrain_without(scene, "materials")
+
+
+def _ground_terrain_without(scene: Doc, key: str) -> Doc:
     out = copy.deepcopy(scene)
     hd2d = _hd2d_block(out)
-    if isinstance(hd2d.get("ground"), dict):
-        hd2d["ground"].pop("terrain", None)
+    ground = hd2d.get("ground")
+    terrain = ground.get("terrain") if isinstance(ground, dict) else None
+    if isinstance(ground, dict) and isinstance(terrain, dict):
+        kept = {k: v for k, v in terrain.items() if k != key}
+        if kept.get("chunks") or kept.get("materials") or kept.get("edges", "soft") != "soft":
+            ground["terrain"] = {**kept, "chunks": kept.get("chunks") or {}}
+        else:
+            ground.pop("terrain", None)  # (nothing left: the plain ground)
     return _checked_structures(out)
 
 
