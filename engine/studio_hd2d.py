@@ -1224,7 +1224,7 @@ class Hd2dView:
         if ((studio.project.scene().get("settings") or {}).get("hd2d") or {}).get("scatter", {}) != shown:
             studio._reload(recenter=False)  # (never expected; the saved one wins)
         self.timings["edit_ms"].append((time.perf_counter() - start) * 1000)
-        blocked, _out = ops.scatter_report(studio.project.scene(), renderer.models)
+        blocked = ops.scatter_obstructions(studio.project.scene(), renderer.models)
         studio._refresh_top_bar()
         what = (f"Scattered {added} ({stroke['collection']})" if stroke["mode"] == "add"
                 else f"{'Removed' if stroke['mode'] == 'remove' else 'Thinned out'} {removed}")

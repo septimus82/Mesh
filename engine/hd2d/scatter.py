@@ -215,13 +215,15 @@ def allowed(asset: Asset, x: float, y: float, ground: Ground, rules: Rules) -> b
 class Scatter:
     """A room's instances while they are edited, with a 1 m grid index for the spacing checks."""
 
-    instances: dict[str, list[tuple[int, int, int, int]]] = field(default_factory=dict)
+    instances: dict[str, Any] = field(default_factory=dict)  # asset -> its instances (kept as sets: removing is
+    # quick at any count; ``stored`` orders them)
 
     def __post_init__(self) -> None:
-        self._grid: dict[tuple[int, int], list[tuple[str, tuple[int, int, int, int]]]] = {}
+        self.instances = {a: set(rows) for a, rows in self.instances.items()}
+        self._grid: dict[tuple[int, int], set[tuple[str, tuple[int, int, int, int]]]] = {}
         for asset, rows in self.instances.items():
             for r in rows:
-                self._grid.setdefault(self._key(r[0], r[1]), []).append((asset, r))
+                self._grid.setdefault(self._key(r[0], r[1]), set()).add((asset, r))
 
     @staticmethod
     def _key(x: float, y: float) -> tuple[int, int]:
@@ -237,14 +239,14 @@ class Scatter:
                         yield asset, row
 
     def add(self, asset: str, row: tuple[int, int, int, int]) -> None:
-        self.instances.setdefault(asset, []).append(row)
-        self._grid.setdefault(self._key(row[0], row[1]), []).append((asset, row))
+        self.instances.setdefault(asset, set()).add(row)
+        self._grid.setdefault(self._key(row[0], row[1]), set()).add((asset, row))
 
     def remove(self, asset: str, row: tuple[int, int, int, int]) -> None:
-        self.instances[asset].remove(row)
+        self.instances[asset].discard(row)
         if not self.instances[asset]:
             del self.instances[asset]
-        self._grid[self._key(row[0], row[1])].remove((asset, row))
+        self._grid[self._key(row[0], row[1])].discard((asset, row))
 
     def count(self) -> int:
         return sum(len(rows) for rows in self.instances.values())
@@ -284,7 +286,7 @@ def brush(scatter: Scatter, mode: str, weights: dict[str, float], x: float, y: f
     mine = [(a, r) for a, r in scatter.near(x, y, radius) if not names or a in names]
     changed: list[tuple[str, tuple[int, int, int, int], bool]] = []
     if mode in ("thin", "remove"):
-        for asset, row in sorted(mine, key=lambda ar: (ar[0], ar[1])):
+        for asset, row in sorted(mine, key=lambda ar: (ar[0], ar[1]))[:PER_DAB]:
             if mode == "thin" and seen is not None:
                 if (asset, row) in seen:
                     continue
@@ -302,7 +304,7 @@ def brush(scatter: Scatter, mode: str, weights: dict[str, float], x: float, y: f
     area = math.pi * (radius / PX) ** 2
     wanted = round(density * area)  # (but no more than the spacing lets stand: more is only wasted tries; one
     fits = max(1 if wanted else 0, round(0.9 / (spacing * spacing) * area))  # asked for is always tried)
-    need = min(PER_DAB, wanted, fits) - len(mine)
+    need = min(PER_DAB, max(0, min(wanted, fits) - len(mine)), MAX_INSTANCES - scatter.count())
     placed = misses = 0
     for _try in range(max(0, need) * 12):
         if placed >= need or misses > 40 + need:  # (the rules or the spacing leave no room: stop looking)

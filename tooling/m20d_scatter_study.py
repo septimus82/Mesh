@@ -174,7 +174,8 @@ def _frame(game: HiddenGame, n: int = 60) -> list[float]:
 
 
 def scale(out: Path) -> dict[str, Any]:
-    """100, 1,000 and 10,000 instances (and none) over a 64 x 64 m sculpted room, shadows on, playing at the
+    """100, 1,000 and 10,000 instances (and none) over a 64 x 64 m sculpted room (and 10,000 over 128 x 128 m),
+    shadows on, playing at the
     gameplay camera: load, frame (CPU, GPU), draw calls, GPU memory, chunks drawn; then the cost of the models'
     shadows and of distance culling (each switched off), a zoomed-out view, and GPU objects over reloads."""
     import time
@@ -186,10 +187,10 @@ def scale(out: Path) -> dict[str, Any]:
     import engine.hd2d.scatter_layer as layer_mod
 
     out.mkdir(parents=True, exist_ok=True)
-    size = (64.0, 64.0)
     report: dict[str, Any] = {}
-    for n in (0, 100, 1000, 10000):
-        project = m20b.scale_project(out, f"scale_{n}", size)
+    for side, n in ((64.0, 0), (64.0, 100), (64.0, 1000), (64.0, 10000), (128.0, 0), (128.0, 10000)):
+        size = (side, side)
+        project = m20b.scale_project(out, f"scale_{int(side)}_{n}", size)
         path = project / SCENES / "hills.json"
         scene = json.loads(path.read_text(encoding="utf-8"))
         if n:
@@ -271,8 +272,8 @@ def scale(out: Path) -> dict[str, Any]:
                 row["save_ms"] = round((time.perf_counter() - t1) * 1000, 1)
             finally:
                 d.close()
-        report[str(n)] = row
-        print(n, json.dumps(row), flush=True)
+        report[f"{int(side)}m_{n}"] = row
+        print(f"{int(side)}m_{n}", json.dumps(row), flush=True)
     return report
 
 

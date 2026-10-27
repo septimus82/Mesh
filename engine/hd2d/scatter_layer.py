@@ -28,6 +28,7 @@ from engine.hd2d.scatter import ASSETS, CELL_PX, SHEET
 
 PX = 32.0
 CHUNK_PX = 256.0  # 8 m
+BLOCK = 4  # chunks a side of a block of the models' shadow casters (32 m): one caster draw a block
 SPRITE_FAR = 60.0  # m from where the camera looks (its target): sprite chunks further away aren't drawn
 IDENTITY = (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
 
@@ -69,8 +70,13 @@ class ScatterLayer:
         self.r = renderer
         self.ctx = renderer.ctx
         self.height = height
-        self.instances: dict[str, list[tuple[int, int, int, int]]] = {}
-        self.chunks: dict[tuple[int, int], dict[str, list[tuple[int, int, int, int]]]] = {}
+        self.instances: dict[str, set[tuple[int, int, int, int]]] = {}
+        self.chunks: dict[tuple[int, int], dict[str, set[tuple[int, int, int, int]]]] = {}
+        self.cast: dict[tuple[int, int], array] = {}  # chunk -> its casting models' triangles (positions)
+        self.blocks: dict[tuple[int, int], tuple[Any, Any]] = {}  # block -> (geometry, buffer): the casters
+        self._dirty_blocks: set[tuple[int, int]] = set()
+        self.centres: dict[tuple[int, int], tuple[float, float]] = {}
+        self._bounds: dict[str, Any] = {}
         self.sprite_draws: dict[tuple[int, int], tuple[Any, Any]] = {}  # chunk -> (geometry, buffer)
         self.model_draws: dict[tuple[int, int], list[tuple[Any, Any, Any, bool]]] = {}  # -> (geom, buf, texture, cast)
         self.boxes: dict[tuple[int, int], tuple[tuple[float, ...], tuple[float, ...]]] = {}
@@ -86,11 +92,11 @@ class ScatterLayer:
     def set_instances(self, scatter: dict[str, list[tuple[int, int, int, int]]],
                       chunks: Iterable[tuple[int, int]] | None = None) -> None:
         """The scatter is now ``scatter``: rebuild ``chunks`` (all if None)."""
-        self.instances = {k: list(v) for k, v in scatter.items()}
-        by_chunk: dict[tuple[int, int], dict[str, list[tuple[int, int, int, int]]]] = {}
+        self.instances = {k: set(v) for k, v in scatter.items() if v}
+        by_chunk: dict[tuple[int, int], dict[str, set[tuple[int, int, int, int]]]] = {}
         for name, rows in self.instances.items():
             for row in rows:
-                by_chunk.setdefault(_chunk(row[0], row[1]), {}).setdefault(name, []).append(row)
+                by_chunk.setdefault(_chunk(row[0], row[1]), {}).setdefault(name, set()).add(row)
         todo = set(by_chunk) | set(self.chunks) if chunks is None else set(chunks)
         self.chunks = by_chunk
         for key in todo:
@@ -102,14 +108,14 @@ class ScatterLayer:
         touched = set()
         for name, row, added in changes:
             key = _chunk(row[0], row[1])
-            rows = self.chunks.setdefault(key, {}).setdefault(name, [])
-            every = self.instances.setdefault(name, [])
+            rows = self.chunks.setdefault(key, {}).setdefault(name, set())
+            every = self.instances.setdefault(name, set())
             if added:
-                rows.append(row)
-                every.append(row)
+                rows.add(row)
+                every.add(row)
             else:
-                rows.remove(row)
-                every.remove(row)
+                rows.discard(row)
+                every.discard(row)
             touched.add(key)
         for key in touched:
             self.chunks[key] = {k: v for k, v in self.chunks[key].items() if v}
@@ -130,16 +136,20 @@ class ScatterLayer:
     def _build(self, key: tuple[int, int]) -> None:
         self._free(key)
         rows_by_asset = self.chunks.get(key)
+        self._dirty_blocks.add((key[0] // BLOCK, key[1] // BLOCK))
+        self.cast.pop(key, None)
         if not rows_by_asset:
             self.boxes.pop(key, None)
+            self.centres.pop(key, None)
             return
+        shadow = array("f")  # (its casting models' triangles)
         sprite_v, sprite_i = array("f"), array("I")
         merged: dict[int, tuple[Any, array, array, bool]] = {}
         lo, hi = [math.inf] * 3, [-math.inf] * 3
         sw, sh = self.sheet_size
-        for name, rows in rows_by_asset.items():
+        for name, rows in sorted(rows_by_asset.items()):
             asset = ASSETS[name]
-            for x, y, turn, size in rows:
+            for x, y, turn, size in sorted(rows):  # (in a fixed order: the same scatter, the same buffers)
                 k = size / 100
                 z = self.height(x, y) / PX
                 fx, fy = x / PX, y / PX
@@ -167,7 +177,9 @@ class ScatterLayer:
                 if model is None:
                     continue
                 c, s = math.cos(math.radians(turn)), math.sin(math.radians(turn))
-                (mx0, my0, _mz0), (mx1, my1, _mz1) = model.bounds()
+                if asset.model not in self._bounds:
+                    self._bounds[asset.model] = model.bounds()
+                (mx0, my0, mz0), (mx1, my1, mz1) = self._bounds[asset.model]
                 z = foot_height(self.height, x, y, max(abs(mx0), abs(mx1), abs(my0), abs(my1)) * k * PX * 0.7,
                                 turn) / PX
                 for part in model.parts:
@@ -176,14 +188,21 @@ class ScatterLayer:
                                                                             asset.shadow))
                     first = len(verts) // 8
                     v = part.vertices
+                    placed = array("f")
                     for i in range(0, len(v), 8):
                         px, py, pz = v[i] * k, v[i + 1] * k, v[i + 2] * k
                         wx, wy, wz = fx + c * px - s * py, fy + s * px + c * py, z + pz
                         verts.extend((wx, wy, wz, c * v[i + 3] - s * v[i + 4], s * v[i + 3] + c * v[i + 4], v[i + 5],
                                       v[i + 6], v[i + 7]))
-                        for n, val in enumerate((wx, wy, wz)):
-                            lo[n], hi[n] = min(lo[n], val), max(hi[n], val)
+                        placed.extend((wx, wy, wz))
                     idx.extend(j + first for j in part.indices)
+                    if asset.shadow:  # (its triangles, positions only, for the block's one caster draw)
+                        for j in part.indices:
+                            shadow.extend(placed[j * 3:j * 3 + 3])
+                reach = max(abs(mx0), abs(mx1), abs(my0), abs(my1)) * k  # (its box, turned any way)
+                for n, (a, b) in enumerate(((fx - reach, fx + reach), (fy - reach, fy + reach),
+                                            (z + mz0 * k, z + mz1 * k))):
+                    lo[n], hi[n] = min(lo[n], a), max(hi[n], b)
         gl = self.r.arcade.gl
         if sprite_i:
             buffer = self.ctx.buffer(data=sprite_v.tobytes())
@@ -198,9 +217,14 @@ class ScatterLayer:
             geometry = self.ctx.geometry([gl.BufferDescription(buffer, "3f 3f 2f", ["in_pos", "in_nrm", "in_uv"])],
                                          index_buffer=index, index_element_size=4)
             draws.append((geometry, (buffer, index), texture, cast))
-        self.model_draws[key] = draws
+        if draws:  # (none kept empty: the frame's culling looks at fewer)
+            self.model_draws[key] = draws
+        if shadow:
+            self.cast[key] = shadow
         self.boxes[key] = ((lo[0], lo[1], lo[2]), (hi[0], hi[1], hi[2])) if lo[0] < math.inf else \
             ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
+        b_lo, b_hi = self.boxes[key]
+        self.centres[key] = ((b_lo[0] + b_hi[0]) / 2, (b_lo[1] + b_hi[1]) / 2)
 
     def _model(self, rel: str | None) -> Any:
         """A scatter model, read when first needed (a room only reads the models its scatter uses)."""
@@ -233,8 +257,27 @@ class ScatterLayer:
                 if vp is None or in_view(*self.boxes[key], vp) for g, _b, t, _c in draws]
 
     def casters(self) -> list[tuple[Any, Any, tuple[float, ...]]]:
-        """What casts the sun's shadow: the models whose assets do."""
-        return [(g, t, IDENTITY) for draws in self.model_draws.values() for g, _b, t, cast in draws if cast]
+        """What casts the sun's shadow: the models whose assets do, one position-only draw per 32 m block (a draw
+        a chunk and texture cost the frame more CPU than the shadow itself)."""
+        if self._dirty_blocks:
+            gl = self.r.arcade.gl
+            for block in self._dirty_blocks:
+                self._free_block(block)
+                data = array("f")
+                for (i, j), tris in self.cast.items():
+                    if (i // BLOCK, j // BLOCK) == block:
+                        data.extend(tris)
+                if data:
+                    buffer = self.ctx.buffer(data=data.tobytes())
+                    self.blocks[block] = (self.ctx.geometry([gl.BufferDescription(buffer, "3f", ["in_pos"])]), buffer)
+            self._dirty_blocks = set()
+        return [(g, None, IDENTITY) for g, _b in self.blocks.values()]
+
+    def _free_block(self, block: tuple[int, int]) -> None:
+        old = self.blocks.pop(block, None)
+        if old is not None:
+            old[0].flush()
+            old[1].delete()
 
     def draw_sprites(self, vp_cols: tuple[float, ...], vp: list[list[float]], focus: tuple[float, float, float],
                      right: tuple[float, float, float], stretch: float, lighting: Any,
@@ -249,10 +292,10 @@ class ScatterLayer:
         prog["u_tex"] = 0
         lighting.bind(prog)
         self.texture.use(0)
+        far = SPRITE_FAR * SPRITE_FAR
         for key, (geometry, _b) in self.sprite_draws.items():
-            lo, hi = self.boxes[key]
-            centre = ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2)
-            if math.dist(centre[:2], focus[:2]) > SPRITE_FAR or not in_view(lo, hi, vp):
+            cx, cy = self.centres[key]
+            if (cx - focus[0]) ** 2 + (cy - focus[1]) ** 2 > far or not in_view(*self.boxes[key], vp):
                 continue
             geometry.render(prog)
             self.draw_calls += 1
@@ -260,7 +303,8 @@ class ScatterLayer:
     # ------------------------------------------------------------------ bookkeeping
     def gl_objects(self) -> list[Any]:
         return ([self.prog] + [b for _g, bs in self.sprite_draws.values() for b in bs]
-                + [b for draws in self.model_draws.values() for _g, bs, _t, _c in draws for b in bs])
+                + [b for draws in self.model_draws.values() for _g, bs, _t, _c in draws for b in bs]
+                + [b for _g, b in self.blocks.values()])
 
     def memory_bytes(self) -> int:
         return int(sum(b.size for b in self.gl_objects()[1:]) + self.texture.width * self.texture.height * 4)
@@ -271,6 +315,8 @@ class ScatterLayer:
     def release(self) -> None:
         for key in list(self.sprite_draws) + list(self.model_draws):
             self._free(key)
+        for block in list(self.blocks):
+            self._free_block(block)
         self.prog.delete()
 
 

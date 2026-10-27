@@ -2598,9 +2598,14 @@ def set_scatter(scene: Doc, scatter: Any) -> Doc:
     saves when a scatter stroke ends (what it drew); to scatter, ``scatter_stroke``."""
     from engine.hd2d.scatter import ScatterError, parse_scatter, stored  # noqa: PLC0415
 
-    out = copy.deepcopy(scene)
-    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+    if not isinstance((scene.get("settings") or {}).get("hd2d"), dict):
         raise OpError("This room isn't an HD-2D room, so it has nothing to scatter on.")
+    old = scene["settings"]["hd2d"].pop("scatter", None)  # (not copied only to be replaced: thousands of rows)
+    try:
+        out = copy.deepcopy(scene)
+    finally:
+        if old is not None:
+            scene["settings"]["hd2d"]["scatter"] = old
     hd2d = _hd2d_block(out)
     try:
         result = stored(parse_scatter(scatter))
@@ -2629,6 +2634,25 @@ def clear_scatter(scene: Doc, assets: Any = None) -> Doc:
             return out
     hd2d.pop("scatter", None)
     return out
+
+
+def scatter_obstructions(scene: Doc, models: Any = None) -> list[str]:
+    """``scatter_report``'s first half alone, reading only what blocks: what Studio says as a stroke ends."""
+    from engine.hd2d.scatter import ASSETS, ScatterError, obstructions, parse_scatter  # noqa: PLC0415
+
+    hd2d = (scene.get("settings") or {}).get("hd2d")
+    raw = hd2d.get("scatter") if isinstance(hd2d, dict) else None
+    if not isinstance(raw, dict):
+        return []
+    blocking = {k: v for k, v in raw.items() if k in ASSETS and ASSETS[k].blocks}
+    if not blocking:
+        return []
+    try:
+        instances = parse_scatter(blocking)
+        _ground, spots, routes = scatter_context(scene, models)
+    except (ScatterError, OpError):
+        return []
+    return obstructions(instances, spots, routes)
 
 
 def scatter_report(scene: Doc, models: Any = None) -> tuple[list[str], dict[str, int]]:
