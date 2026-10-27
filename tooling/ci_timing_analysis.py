@@ -152,7 +152,10 @@ def load_index(index_path: Path, durations_dir: Path) -> list[Run]:
     runs = []
     for entry in json.loads(index_path.read_text(encoding="utf-8")):
         payload = json.loads((durations_dir / str(entry["durations"])).read_text(encoding="utf-8"))
-        runs.append(_run_from_entry(entry, _steps_from_durations(payload)))
+        steps = _steps_from_durations(payload)
+        if not steps.get("pytest-fast"):
+            continue  # (verify-all stopped at an earlier failing step: the rest read 0 ms, not a timing sample)
+        runs.append(_run_from_entry(entry, steps))
     return sorted(runs, key=lambda r: (r.os, r.date, r.run_id))
 
 
@@ -416,6 +419,16 @@ def model_policy(checked: Sequence[str], k: float) -> Fitter:
     return fit
 
 
+def both_policy(first: Fitter, second: Fitter) -> Fitter:
+    """A step fails only when both rules flag it (#373's option 1: the fixed ceiling and the advisory together)."""
+
+    def fit(train: Sequence[Run]) -> Checker:
+        one, two = first(train), second(train)
+        return lambda sample: one(sample) & two(sample)
+
+    return fit
+
+
 def policies(thresholds: Mapping[str, int], checked: Sequence[str], k: float) -> list[tuple[str, Fitter]]:
     return [
         ("a. current rule (committed budgets)", current_policy(thresholds)),
@@ -427,6 +440,8 @@ def policies(thresholds: Mapping[str, int], checked: Sequence[str], k: float) ->
         ("c1. per-platform limit, k*sigma of log time", normalised_policy(checked, covariate="none", slope=0.0, k=k)),
         ("c2. per-platform limit, slowest/median + 0.10", empirical_ratio_policy(checked)),
         ("e. external calibration (job's full pytest)", normalised_policy(checked, covariate="external", slope=None, k=k)),
+        ("f. a and A both (fixed ceiling and advisory)",
+         both_policy(current_policy(thresholds), model_policy(model_checked_steps(thresholds), k))),
     ]
 
 
