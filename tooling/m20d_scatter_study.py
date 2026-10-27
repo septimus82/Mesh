@@ -314,6 +314,8 @@ def studio(out: Path) -> dict[str, Any]:
     import m18_particles_study as m18
     import m20b_sculpt_study as m20b
 
+    import engine.hd2d.scatter_layer as layer_mod
+
     out.mkdir(parents=True, exist_ok=True)
     project = m20c.make_project(out, "studio")
     report: dict[str, Any] = {}
@@ -426,12 +428,12 @@ def studio(out: Path) -> dict[str, Any]:
         # rules: grass off (only on earth: the path), so the meadow lands nowhere off the path
         view.set_scatter_rule(toggle_on="earth")  # (earth on, then grass off: one always stays on)
         view.set_scatter_rule(toggle_on="grass")
-        before = _count(view)
-        m20b._stroke(d, m20c._on_ground(d, [(9.0, 7.5), (12.0, 8.5)], 0.1))
-        report["materials_only_earth"] = {"on": list(view.sculpt["on"]), "added": _count(view) - before,
-                                          "all_on_earth": all(view.renderer.terrain.material_at(x, y) == "earth"
-                                                              for rows in _rows(view).values()
-                                                              for x, y, _t, _s in rows if abs(y - 8 * PX) < 2 * PX)}
+        before_rows = {(n, tuple(r)) for n, rows in _rows(view).items() for r in rows}
+        m20b._stroke(d, m20c._on_ground(d, m20c.EARTH_PATH[2:6], 0.1))  # (along the path)
+        new = [r for n, rows in _rows(view).items() for r in rows if (n, tuple(r)) not in before_rows]
+        report["materials_only_earth"] = {"on": list(view.sculpt["on"]), "added": len(new),
+                                          "all_on_earth": bool(new) and all(
+                                              view.renderer.terrain.material_at(x, y) == "earth" for x, y, _t, _s in new)}
         view.set_scatter_rule(collection="Pond edge")
         bx, by, br, _d = m20a.BASIN
         m20c._look_at(d, bx, by, 16.0)
@@ -464,12 +466,15 @@ def studio(out: Path) -> dict[str, Any]:
         d.button("Sculpt")
         m20c._look_at(d, 9.0, 6.0, 16.0)
         rows_before = _paint(s.project)
-        boxes_before = {key: box[1][2] for key, box in view.renderer.scatter.boxes.items()}
+        layer = view.renderer.scatter
+        stood = {(x, y): view.renderer.ground_height(x, y) for rows in _rows(view).values() for x, y, _t, _s in rows}
+        drawn = {key: id(g) for key, (g, _b) in layer.sprite_draws.items()}
         m20b._stroke(d, m20c._on_ground(d, [(8.0, 6.2), (11.0, 6.6)], 0.1))
-        boxes_after = {key: box[1][2] for key, box in view.renderer.scatter.boxes.items()}
+        risen = [xy for xy, h in stood.items() if view.renderer.ground_height(*xy) > h + 1.0]
+        rebuilt = {key for key, (g, _b) in view.renderer.scatter.sprite_draws.items() if drawn.get(key) != id(g)}
         report["sculpt_under_scatter"] = {
-            "instances_unmoved": _paint(s.project) == rows_before,
-            "chunks_risen": sum(1 for key in boxes_before if boxes_after.get(key, 0) > boxes_before[key] + 0.05),
+            "instances_unmoved": _paint(s.project) == rows_before, "instances_risen_with_the_ground": len(risen),
+            "their_chunks_rebuilt": all(layer_mod._chunk(*xy) in rebuilt for xy in risen),
             "message": s.message}
         d.picture(out / "scatter_after_sculpt.png")
         final = _paint(s.project)
