@@ -76,8 +76,9 @@ def compose(scene: dict[str, Any]) -> tuple[dict[str, Any], int]:
     stroke("Meadow", [(hx + 1.3, hy - 0.4), (hx + 1.6, hy + 0.8)], 0.7, 3.0, 26, clumping=0.3)
     x0, x1, y0, _y1, _h = m20a.TERRACE  # the cliff's foot: larger stones, unevenly, tufts at their bases
     foot = [(x0 + 1.0 + d, y0 - 0.55 + j) for d, j in ((0.0, 0.0), (0.9, -0.15), (2.3, 0.1), (2.8, -0.2), (4.4, 0.05),
-                                                        (5.9, -0.1), (6.4, 0.1))]
+                                                        (5.3, -0.2), (5.9, -0.1), (6.4, 0.1))]
     stroke({"rock_medium": 3, "rock_small": 2}, foot, 0.45, 2.2, 31, on=["grass", "earth", "stone"])
+    stroke("Rock", foot[4:], 0.5, 2.0, 35, on=["grass", "earth", "stone"])  # (the east half too: the tiling breaks)
     stroke("Meadow", foot, 0.5, 4.0, 34, clumping=0.2)
     stroke("Boulder", [(x0 - 0.9, y0 - 1.5)], 0.5, 1.5, 33, avoid_structures=True)
     bx, by, br, _d = m20a.BASIN  # the pond's far bank: reeds; its near side and the path's left open
@@ -89,9 +90,11 @@ def compose(scene: dict[str, Any]) -> tuple[dict[str, Any], int]:
            0.6, 1.0, 42, clumping=0.7)
     stroke("Shrubs", [(12.9, 12.8), (13.4, 13.3), (17.1, 12.6)], 0.7, 1.6, 51, avoid_structures=False)  # the bridge
     stroke("Shrubs", [(2.4, 5.2), (7.7, 6.4)], 0.6, 1.4, 52, avoid_structures=False)  # beside the cottage
-    stroke("Deadfall", [(hx + 4.0 * 0.7, hy - 4.0 * 0.5), (hx + 4.0 * 0.85, hy - 4.0 * 0.15)], 0.8, 0.9, 61)
+    stroke("Deadfall", [(hx + 4.6, hy - 2.6), (hx + 5.0, hy - 1.8)], 0.8, 0.9, 61)  # (past the hill's foot: a
+    stroke("Fallen branch", [(hx + 4.8, hy - 2.2)], 0.6, 2.0, 62)  # branch needs level ground)
     for x, seed in ((13.0, 71), (21.5, 72), (29.0, 73)):  # the near edge: a little depth in the foreground
         stroke({"bush": 1, "grass_tall": 4}, [(x, 0.7), (x + 1.4, 0.9)], 0.6, 2.0, seed, clumping=0.4)
+        stroke("Tall grass", [(x - 0.3, 0.6), (x + 1.7, 0.8)], 0.5, 3.0, seed + 10, clumping=0.2)  # (at their bases)
     return scene, n
 
 

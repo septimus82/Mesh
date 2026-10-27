@@ -65,9 +65,9 @@ ASSETS: dict[str, Asset] = {a.id: a for a in (
     Asset("grass_dry", "Dry grass", cell=(5, 6), spacing=0.35, on=("grass", "earth", "sand")),
     Asset("flowers_yellow", "Yellow flowers", cell=(7, 8), spacing=0.4),
     Asset("flowers_pink", "Pink flowers", cell=(9, 10), spacing=0.4),
-    Asset("bush", "Bush", cell=(11, 12), spacing=1.1, size=(1.1, 1.45), slope=30.0),
+    Asset("bush", "Bush", cell=(11, 12), spacing=1.1, size=(0.9, 1.45), slope=30.0),
     Asset("bush_berries", "Berry bush", cell=(13,), spacing=0.9, size=(0.85, 1.15), slope=30.0),
-    Asset("reeds", "Reeds", cell=(14, 15), spacing=0.3, on=("grass", "mud", "sand"), shore=0.3),
+    Asset("reeds", "Reeds", cell=(14, 15), spacing=0.3, size=(0.7, 1.2), on=("grass", "mud", "sand"), shore=0.3),
     Asset("reeds_cattail", "Cattails", cell=(16,), spacing=0.35, on=("grass", "mud", "sand"), shore=0.3),
     Asset("rock_small", "Small rock", model=f"{KIT}/rock_small.glb", spacing=0.5, size=(0.8, 1.6), slope=40.0,
           on=MATERIALS, shadow=True),
@@ -165,9 +165,10 @@ def ground_for(terrain: Any, flat: tuple[tuple[float, float], tuple[float, float
         return max(levels) if levels else None
 
     spot_list = list(spots)
+    near_side = clear * 1.6  # (towards the camera, south: what stands there is drawn over a character's feet)
 
     def structure(x: float, y: float) -> bool:
-        if any((x - sx) ** 2 + (y - sy) ** 2 < clear * clear for sx, sy in spot_list):
+        if any((x - sx) ** 2 + (y - sy) ** 2 < (near_side if y < sy else clear) ** 2 for sx, sy in spot_list):
             return True
         for cx, cy, hw, hd, turn in footprints:
             a = math.radians(-turn)

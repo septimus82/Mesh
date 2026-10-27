@@ -29,7 +29,7 @@ REED = [(92, 120, 60), (110, 140, 70), (128, 156, 82)]
 CATTAIL = [(96, 64, 38), (118, 80, 46)]
 
 
-def _shade(img: Image.Image, outline: bool = True) -> Image.Image:
+def _shade(img: Image.Image, outline: bool = True, top: bool = True) -> Image.Image:
     """Light from the upper left: right and lowest edges darker, upper-left edges lighter; then (``outline``) a
     one-pixel outline in a darker shade of the colour it edges, below and to the sides only (tops stay soft)."""
     w, h = img.size
@@ -54,7 +54,8 @@ def _shade(img: Image.Image, outline: bool = True) -> Image.Image:
             for x in range(w):
                 if (x, y) in opaque:
                     continue
-                near = next(((x + dx, y + dy) for dx, dy in ((0, -1), (-1, 0), (1, 0)) if (x + dx, y + dy) in opaque),
+                sides = ((0, -1), (-1, 0), (1, 0)) if top else ((0, -1),)  # (top=False: under it only)
+                near = next(((x + dx, y + dy) for dx, dy in sides if (x + dx, y + dy) in opaque),
                             None)  # (the pixel above, or beside: an outline under and around, not over the tips)
                 if near is not None and y < h:
                     po[x, y] = tone(po[near], 0.5, (24, 20, 30), 0.25)
@@ -129,13 +130,19 @@ def bush(seed: int, width: int, height: int, berries: tuple | None = None) -> Im
     px: Any = img.load()  # (PixelAccess: its items are RGBA tuples here)
     assert px is not None
     shape = {(x, y) for y in range(CELL) for x in range(CELL) if px[x, y][3]}
+    for x in range(CELL):  # a leafy top edge: 1-2 px notches out of the dome's outline
+        column = [y for y in range(CELL) if (x, y) in shape]
+        if column and rng.random() < 0.45:
+            for y in column[: rng.choice([1, 2])]:
+                shape.discard((x, y))
+                px[x, y] = (0, 0, 0, 0)
     for x, y in shape:  # the dome's shade: lighter up and to the left, darker low down and to the right
         k = (y - (CELL - height)) / height * 0.9 + (x - cx) / width * 0.5
         px[x, y] = (*LEAF[0 if k > 0.75 else 1 if k > 0.35 else 2], 255)
     for _ in range(18):  # leaf clusters, 3-4 px, lit on top (not a speckle: clumps of leaves read as a bush)
         x, y = cx + rng.randint(-width // 2 + 2, width // 2 - 2), CELL - 1 - rng.randint(3, height - 2)
         if (x, y) in shape:
-            lit = LEAF[3] if y < CELL - height * 0.55 else LEAF[2]
+            lit = (128, 178, 92) if y < CELL - height * 0.55 else LEAF[3]  # (lit clusters stand out on the dome)
             for dx, dy in ((0, 0), (1, 0), (0, 1), (-1, 1), (1, 1)):
                 if (x + dx, y + dy) in shape:
                     px[x + dx, y + dy] = (*(lit if dy == 0 else LEAF[1]), 255)
@@ -144,7 +151,7 @@ def bush(seed: int, width: int, height: int, berries: tuple | None = None) -> Im
             x, y = cx + rng.randint(-width // 2 + 3, width // 2 - 3), CELL - 1 - rng.randint(4, height - 3)
             if px[x, y][3]:
                 px[x, y] = (*berries, 255)
-    return _shade(img)
+    return _shade(img, top=False)
 
 
 def reeds(seed: int, heads: int = 3) -> Image.Image:
