@@ -1,7 +1,7 @@
 # Milestone 20E: environmental animation
 
 - **Branch:** `feature/m20e-env-animation`.
-- **Draft PR:** see the PR linked from this branch, into `redesign/visual-editor`.
+- **Draft PR:** [#388](https://github.com/septimus82/Mesh/pull/388), into `redesign/visual-editor`.
 - **Builds on:** Stage 20D (#387, merged as `1d2501d`).
 - **In scope:** a room's wind shared by weather and decoration; GPU sway of scattered plants; animated decoration
   (sprite frames); one small tree; Studio controls; performance and QA.
