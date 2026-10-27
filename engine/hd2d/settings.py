@@ -109,6 +109,8 @@ class Hd2dSettings:
     sky: Rgb = (118 / 255, 160 / 255, 214 / 255)
     water_reflections: str = "full"  # engine.water.REFLECTIONS
     terrain_error: str | None = None  # why the ground's sculpted heights were set aside (parse_hd2d(lenient=True))
+    scatter: dict[str, Any] = field(default_factory=dict, hash=False)  # scattered decoration (engine.hd2d.scatter, 20D)
+    scatter_error: str | None = None  # why it was set aside (lenient)
 
 
 def asset_path(value: Any, where: str) -> str:
@@ -161,7 +163,7 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None, leni
     if not isinstance(raw, dict):
         raise Hd2dSettingsError(f"settings.hd2d must be an object (got {type(raw).__name__})")
     unknown = set(raw) - {"structures", "ground", "camera", "sun", "ambient", "shadows", "shadow_resolution", "sky",
-                        "water_reflections"}
+                        "water_reflections", "scatter"}
     if unknown:
         raise Hd2dSettingsError(f"settings.hd2d has unknown keys: {', '.join(sorted(unknown))}")
     structures = []
@@ -255,11 +257,22 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None, leni
     sky = rgb(raw.get("sky", "#76a0d6"))
     if sky is None:
         raise Hd2dSettingsError(f"settings.hd2d.sky must be a colour (got {raw.get('sky')!r})")
+    scatter: dict[str, Any] = {}
+    scatter_error = None
+    if raw.get("scatter") is not None:
+        from engine.hd2d.scatter import ScatterError, parse_scatter  # noqa: PLC0415
+
+        try:
+            scatter = parse_scatter(raw["scatter"])
+        except ScatterError as exc:
+            if not lenient:
+                raise Hd2dSettingsError(str(exc)) from exc
+            scatter_error = str(exc)  # (broken scatter: none drawn, the reason kept; the rest of the room stands)
     return Hd2dSettings(tuple(structures), ground, camera, (float(sun[0]), float(sun[1]), float(sun[2])),
                         _number(raw, "ambient", "settings.hd2d", 0.55, 0.0, 1.0), sun_color,
                         _number(sun_block, "intensity", "settings.hd2d.sun", 1.0, 0.0, 10.0), shadows=shadows,
                         shadow_resolution=int(resolution), sky=sky, water_reflections=reflections,
-                        terrain_error=terrain_error)
+                        terrain_error=terrain_error, scatter=scatter, scatter_error=scatter_error)
 
 
 def rgb(value: Any) -> Rgb | None:

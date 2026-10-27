@@ -138,6 +138,9 @@ class World:
         self._index: dict[tuple[int, int], list[Surface]] = {}
         for surface in self.surfaces:
             self._add_to_index(surface)
+        self._flat_z = g.elevation / PIXELS_PER_METRE if g is not None else 0.0
+        self._models = models
+        self.set_scatter(settings.scatter)
         self._measure()
 
     def _add_to_index(self, surface: Surface) -> None:
@@ -163,7 +166,32 @@ class World:
             self.surfaces = [s for s in self.surfaces if s.floor != "ground"]
             self._index = {k: [s for s in v if s.floor != "ground"] for k, v in self._index.items()}
         self.terrain = terrain
+        self.set_scatter(self._scatter)  # (blocking scatter stands on the ground as it is now)
         self._measure()
+
+    def set_scatter(self, scatter: dict[str, Any]) -> None:
+        """The room's scattered decoration (engine.hd2d.scatter): what of it blocks (the boulder) gets its model's
+        walls, standing on the ground under it; the rest is walked through. Mesh Studio calls this after a stroke."""
+        from engine.hd2d.scatter import ASSETS  # noqa: PLC0415  # (2D rooms never load it: they have no scatter)
+
+        self._scatter = scatter
+        self.walls = [w for w in self.walls if not w.name.startswith("scatter:")]
+        for name, rows in (scatter or {}).items():
+            asset = ASSETS.get(name)
+            model = self._models.get(asset.model) if asset is not None and asset.blocks and asset.model else None
+            if model is None:
+                continue
+            for x, y, turn, size in rows:
+                h = self.terrain.height(x, y) if self.terrain is not None else None
+                at = (x / PIXELS_PER_METRE, y / PIXELS_PER_METRE, h / PIXELS_PER_METRE if h is not None else self._flat_z)
+                for col in model.colliders:
+                    if col.kind != "wall":
+                        continue
+                    corners = [_place((cx, cy, cz), at, turn, size / 100) for cx in (col.lo[0], col.hi[0])
+                               for cy in (col.lo[1], col.hi[1]) for cz in (col.lo[2], col.hi[2])]
+                    xs, ys, zs = [c[0] for c in corners], [c[1] for c in corners], [c[2] for c in corners]
+                    self.walls.append(Wall(f"scatter:{name}", (min(xs), min(ys), min(zs)), (max(xs), max(ys), max(zs))))
+        self._nav = None
 
     def heights_at(self, x: float, y: float) -> list[tuple[float, Surface]]:
         out = []

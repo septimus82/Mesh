@@ -138,6 +138,13 @@ engine = ["schemas/*.json", "py.typed"]
     "assets/hd2d_starter/previews/stairs.png",
     "assets/hd2d_starter/previews/wall_2m.png",
 ]
+"share/mesh-engine/assets/hd2d_starter/scatter" = [
+    "assets/hd2d_starter/scatter/boulder.glb",
+    "assets/hd2d_starter/scatter/fallen_branch.glb",
+    "assets/hd2d_starter/scatter/foliage.png",
+    "assets/hd2d_starter/scatter/rock_medium.glb",
+    "assets/hd2d_starter/scatter/rock_small.glb",
+]
 "share/mesh-engine/assets/hd2d_starter/textures" = [
     "assets/hd2d_starter/textures/dirt.png",
     "assets/hd2d_starter/textures/grass.png",

@@ -8,6 +8,8 @@ with Mesh for every creator to use in their own games: the HD-2D RPG template co
 |---|---|
 | `models/*.glb` (14 models) | `tooling/hd2d_assets/build_starter_kit.py`, run in headless Blender (first built with Blender 4; Blender 5.2 LTS rebuilds them byte-identically). It uses `build_cottage.py` (the kit's cottage is `build_kit()`, refined in Milestone 17 with the same starter textures), `build_stairs.py` and `blender_kit.py`. Collision objects are tagged `mesh_collision`. |
 | The models' textures (embedded in the GLBs); `textures/grass.png`, `dirt.png`, and the materials sculpted ground may be painted (Milestone 20C): `stone.png`, `mud.png`, `sand.png` | `tooling/hd2d_assets/pixel_textures.py`: drawn in code with PIL, 32 x 32 px, from fixed seeds. |
+| `scatter/foliage.png` (Milestone 20D: grass tufts, dry grass, flowers, bushes, reeds) | `tooling/hd2d_assets/scatter_art.py`: drawn in code with PIL, 48 x 48 px cells at 32 px a metre, from fixed seeds. |
+| `scatter/*.glb` (rocks, the boulder, a fallen branch) | `tooling/hd2d_assets/build_scatter_models.py`, run in headless Blender (5.2 LTS), with `boulder.png` and `bark.png` from `pixel_textures.py`; fixed seeds. The boulder's collision object is tagged `mesh_collision` (wall). |
 | `previews/*.png` | `engine/hd2d/thumbnail.py`: Mesh's CPU preview of each model. |
 | `catalog.json` | `tooling/hd2d_assets/make_starter_kit.py`: names, categories, notes, licence line, collision facts. |
 

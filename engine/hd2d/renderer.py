@@ -396,6 +396,9 @@ class Hd2dRenderer:
             self._build_terrain(resolve)
         elif settings.ground is not None:
             self.ground = self._build_ground(resolve)
+        self.scatter: Any = None  # the room's scattered decoration (engine.hd2d.scatter_layer, Milestone 20D)
+        if settings.scatter:
+            self.ensure_scatter(settings.scatter)
         self.lighting = Lighting(ctx, self.arcade, settings, *self.world_box())
 
     def world_box(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
@@ -580,6 +583,28 @@ class Hd2dRenderer:
         data = b"".join(terrain.paint[j * row + 4 * i0:j * row + 4 * (i1 + 1)] for j in range(j0, j1 + 1))
         self._paint_texture.write(data, viewport=(i0, j0, i1 - i0 + 1, j1 - j0 + 1))
 
+    def ground_height(self, x: float, y: float) -> float:
+        """The ground's height (px) at (x, y) px as drawn now: the sculpted ground's, else the plain ground's."""
+        if self.terrain is not None:
+            h = self.terrain.height(x, y)
+            if h is not None:
+                return float(h)
+        return float(self.settings.ground.elevation) if self.settings.ground is not None else 0.0
+
+    def ensure_scatter(self, scatter: dict[str, Any] | None = None) -> Any:
+        """The room's scatter layer (made, with the models its assets need, if it has none yet)."""
+        if self.scatter is None:
+            from engine.hd2d.scatter import ASSETS  # noqa: PLC0415
+            from engine.hd2d.scatter_layer import ScatterLayer, model_path  # noqa: PLC0415
+
+            for asset in ASSETS.values():  # (all of them: a stroke may add any; they are small)
+                if asset.model and asset.model not in self.models:
+                    path = model_path(self, asset.model)
+                    if path is not None:
+                        self.models[asset.model] = load_glb(path)
+            self.scatter = ScatterLayer(self, scatter or {}, self.ground_height)
+        return self.scatter
+
     def ensure_terrain(self) -> Any:
         """The ground's heights to sculpt live (Mesh Studio, Milestone 20B): a flat room's plain ground becomes
         sculpted ground in place, level, so a stroke can start on it. None if the room has no ground."""
@@ -656,6 +681,14 @@ class Hd2dRenderer:
         finally:  # (a refused upload stops here: what was rebuilt stands, and rain looks at the ground afresh)
             self.precipitation.invalidate()
             self._follow_terrain(chunks)
+            if self.scatter is not None and chunks:  # scatter stands on the ground as it is now
+                from engine.hd2d.terrain import CHUNK  # noqa: PLC0415
+
+                span = CHUNK * terrain.cell
+                ox, oy = terrain.origin
+                self.scatter.follow_ground(ox + min(c[0] for c in chunks) * span, oy + min(c[1] for c in chunks) * span,
+                                           ox + (max(c[0] for c in chunks) + 1) * span,
+                                           oy + (max(c[1] for c in chunks) + 1) * span)
 
     def _follow_terrain(self, chunks: list[tuple[int, int]]) -> None:
         """The room's box and the lamps' shadow maps after an in-place edit of the ground."""
@@ -703,6 +736,7 @@ class Hd2dRenderer:
         objects = (list(self._buffers) + terrain + list(self._textures) + list(self._sprite_textures.values()) + list(self._fbo_parts)
                    + [self._fbo] + list(self._dynamic[1:] if self._dynamic else []) + [part[1] for part in self._lines.values()]
                    + [self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog, self.ground_prog]
+                   + (self.scatter.gl_objects() if self.scatter is not None else [])
                    + list(light._targets) + [light.caster, light.lamp_caster, light.sprite_caster, light.probe_prog]
                    + (self.particles.gl_objects() if self.particles is not None else [])
                    + self.precipitation.gl_objects() + (self.water.gl_objects() if self.water is not None else []))
@@ -736,6 +770,9 @@ class Hd2dRenderer:
             self.ground_prog.delete()
             self.ground_prog = None
         self._paint_texture = None  # (deleted with the other textures)
+        if self.scatter is not None:
+            self.scatter.release()
+            self.scatter = None
         self.lighting.release()
         self.set_particles(())
         self.precipitation.release()
@@ -1010,7 +1047,8 @@ class Hd2dRenderer:
         geometry_sprites = self._upload_dynamic(verts, idx) if sprites else None
         live = self.live_draws()
         if solid is None:  # the flat ground receives, never casts; sculpted ground's hills cast too
-            casters = self.static + live + (self._terrain_casters() if self.terrain is not None else [])
+            casters = (self.static + live + (self._terrain_casters() if self.terrain is not None else [])
+                       + (self.scatter.casters() if self.scatter is not None else []))
             lighting.render_shadows(casters, geometry_sprites, ranges)
         weather = self.particles is not None and solid is None and (camera is None or self.weather_preview)
         maps = self.precipitation_maps() if weather else []  # before the frame's target is in use: cached, mostly
@@ -1025,7 +1063,8 @@ class Hd2dRenderer:
         if self.terrain is not None:  # sculpted ground: its own program (its materials)
             self._draw_terrain(ground_draws, vp)
             ground_draws = []
-        statics = ground_draws + self.static + live
+        statics = ground_draws + self.static + live + (self.scatter.statics(self.last_vp, _box_in_view)
+                                                         if self.scatter is not None else [])
         self._bind_cutaway(mp, cam if camera is None else None)
         for draw in statics:
             geometry, texture, matrix = draw
@@ -1034,6 +1073,10 @@ class Hd2dRenderer:
             texture.use(0)
             geometry.render(mp)
             self.draw_calls += 1
+        if self.scatter is not None and solid is None:  # grass, flowers, bushes, reeds: billboards, a draw a chunk
+            stretch = 1.0 / max(0.5, math.cos(math.radians(self.camera.pitch)))
+            self.scatter.draw_sprites(vp, self.last_vp, cam.target, cam.right(), stretch, lighting, _box_in_view)
+            self.draw_calls += self.scatter.draw_calls
         if solid is not None:  # keep the depth, clear the colour
             fbo.depth_mask = False
             fbo.clear(color=(0, 0, 0, 255))
@@ -1175,4 +1218,7 @@ class Hd2dRenderer:
                 "precipitation_error": self.precipitation.error,
                 "water_surfaces": self.water.count if self.water is not None else 0,
                 "water_bytes": self.water.memory_bytes() if self.water is not None else 0,
+                "scatter_instances": self.scatter.count() if self.scatter is not None else 0,
+                "scatter_bytes": self.scatter.memory_bytes() if self.scatter is not None else 0,
+                "scatter_sprite_draws": self.scatter.draw_calls if self.scatter is not None else 0,
                 "water_error": self.water_error}

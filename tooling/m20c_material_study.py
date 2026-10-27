@@ -172,7 +172,7 @@ def studio(out: Path) -> dict[str, Any]:
     d = m20b._driver(project)
     try:
         s, view, k = d.studio, d.studio.hd2d, d.arcade.key
-        d.button("Paint ground")
+        d.button("Paint")
         d.button("Earth")
         terrain = view.renderer.terrain
         heights = list(terrain.heights)
@@ -247,7 +247,7 @@ def studio(out: Path) -> dict[str, Any]:
         d.button("Hills")
         d.frame(2)
         if view.sculpt is None:
-            d.button("Paint ground")
+            d.button("Paint")
         _look_at(d, 12.0, 6.0, 30.0)
         report["room_change_mid_stroke"] = unchanged()
         # a refused upload mid-stroke (the paint's texture write fails)
@@ -312,7 +312,7 @@ def studio(out: Path) -> dict[str, Any]:
                               "soft_when_soft_adds_undo_steps": soft_again,
                               "edges_after_undo": view.renderer.terrain.edges}
         if view.sculpt is None:
-            d.button("Paint ground")
+            d.button("Paint")
         # the rest of the study room, painted in Studio: stone up the ramp and over the cliff, mud by the pond
         x0, x1, y0, _y1, _h = m20a.TERRACE
         d.button("Stone")
@@ -333,14 +333,14 @@ def studio(out: Path) -> dict[str, Any]:
         # shape), and a branch painted up over the mound
         _look_at(d, 13.5, 5.0, 18.0)
         paint_before = _paint(s.project)
-        d.button("Sculpt ground")
+        d.button("Sculpt")
         m20b._stroke(d, _on_ground(d, [(12.6, 5.2), (13.2, 6.0), (13.8, 6.8)]))
         mound = view.renderer.terrain
         report["sculpt_over_the_path"] = {
             "paint_kept": _paint(s.project) == paint_before,
             "path_raised_m": round((mound.height(13.2 * PX, 6.0 * PX) or 0.0) / PX, 3),
             "still_earth_there": mound.material_at(13.2 * PX, 6.0 * PX)}
-        d.button("Paint ground")
+        d.button("Paint")
         d.button("Earth")
         m20b._stroke(d, _on_ground(d, [(13.2, 6.0), (13.6, 4.4), (14.6, 3.2)]))  # (towards the camera: in view)
         report["branch_over_the_mound"] = view.renderer.terrain.material_at(13.6 * PX, 4.4 * PX)
@@ -377,7 +377,7 @@ def first_paint_on_flat(out: Path) -> dict[str, Any]:
             return ((s.project.scene().get("settings") or {}).get("hd2d") or {}).get("ground", {}).get("terrain")
 
         report["before"] = {"terrain": terrain_key() is not None}
-        d.button("Paint ground")
+        d.button("Paint")
         frames = m20b._stroke(d, _on_ground(d, [(14.0, 13.0), (18.0, 13.5)]))
         t = terrain_key() or {}
         report["after"] = {"materials_stored": bool(t.get("materials")), "heights_stored": bool(t.get("chunks")),
@@ -385,7 +385,7 @@ def first_paint_on_flat(out: Path) -> dict[str, Any]:
         d.picture(out / "flat_first_paint.png")
         d.key(k.Z, k.MOD_CTRL)
         report["undo_back_to_plain_ground"] = terrain_key() is None and view.renderer.terrain is None
-        d.button("Paint ground")
+        d.button("Paint")
         m20b._stroke(d, _on_ground(d, [(14.0, 13.0), (18.0, 13.5)]), release=False)
         d.key(k.ESCAPE)
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
@@ -482,7 +482,7 @@ def scale(out: Path) -> dict[str, Any]:
             d = m20b._driver(project)
             try:
                 s, view, k = d.studio, d.studio.hd2d, d.arcade.key
-                d.button("Paint ground")
+                d.button("Paint")
                 d.button("Stone")
                 t1 = time.perf_counter()
                 d.studio._reload()
