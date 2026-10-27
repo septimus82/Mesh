@@ -503,9 +503,14 @@ def scale(out: Path) -> dict[str, Any]:
                     idle.append((time.perf_counter() - t1) * 1000)
                 row["studio_idle_frame_ms"] = m20b._stats(idle)
                 # the widest brush (16 m) held still for 3 s, then let go: what it costs live, and the release
-                reloads = []
+                reloads: list[int] = []
                 original_reload = s._reload
-                s._reload = lambda *a, **kw: (reloads.append(1), original_reload(*a, **kw))[1]
+
+                def counted(*a: Any, **kw: Any) -> Any:
+                    reloads.append(1)
+                    return original_reload(*a, **kw)
+
+                s._reload = counted
                 view.set_sculpt(radius=16.0 * PX, material="mud")  # (the panel's "Mud" can be shadowed by an
                 # object of that name further down, which the driver may click instead)
                 point = _on_ground(d, [(cx, cy)])[0]
