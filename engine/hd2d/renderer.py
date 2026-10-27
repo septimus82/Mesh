@@ -14,6 +14,7 @@ shadow maps); a frame is the sun's shadow pass (and, once, the lamps'), then the
 from __future__ import annotations
 
 import math
+import random
 from array import array
 from pathlib import Path
 from typing import Any, Callable, Iterable
@@ -102,7 +103,8 @@ void main() { f_color = u_colour; }
 """
 IDENTITY = (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
 STEEP_TEXTURE = "assets/hd2d_starter/textures/dirt.png"  # sculpted ground's steep faces (Milestone 20A), if present
-CASTER_SLOT = 16 * 16 * 6 + 2 * 16 * 6  # vertices a chunk's slot in the casters' buffer holds (cells; two skirt sides)
+CASTER_SLOT = 16 * 16 * 6 + 4 * 16 * 6  # vertices a chunk's slot in the casters' buffer holds (cells; four skirt
+# sides: a ground 16 cells across is one chunk touching both edges)
 
 
 # ---------------------------------------------------------------------- small linear algebra (column-major out)
@@ -136,12 +138,9 @@ def _mul(a: list[list[float]], b: list[list[float]]) -> list[list[float]]:
     return [[sum(a[i][k] * b[k][j] for k in range(4)) for j in range(4)] for i in range(4)]
 
 
-BAYER4 = (0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5)  # an ordered dither's thresholds, 4 x 4
-
-
 def _dithered(ground: Any, resolve: Callable[[str], Path], dirt: Image.Image) -> Image.Image:
-    """The ground's texture and dirt, half and half in a 4 x 4 ordered dither, texel by texel: sculpted ground's
-    material between gentle and steep (pixel art's way of blending, no smooth gradient)."""
+    """The ground's texture with patches of dirt (2 x 2 texel clumps, about two in five, always the same): the
+    fringe of grass beside sculpted ground's dirt, so the two don't meet on a hard line."""
     try:
         with Image.open(resolve(ground.texture)) as img:
             grass = img.convert("RGBA")
@@ -150,7 +149,8 @@ def _dithered(ground: Any, resolve: Callable[[str], Path], dirt: Image.Image) ->
     size = (max(grass.width, dirt.width, 4), max(grass.height, dirt.height, 4))
     grass, dirt = grass.resize(size, Image.Resampling.NEAREST), dirt.resize(size, Image.Resampling.NEAREST)
     mask = Image.new("L", size)
-    mask.putdata([255 if BAYER4[(y % 4) * 4 + x % 4] < 8 else 0 for y in range(size[1]) for x in range(size[0])])
+    clumps = random.Random(20).choices((0, 255), weights=(3, 2), k=(size[0] // 2 + 1) * (size[1] // 2 + 1))
+    mask.putdata([clumps[x // 2 + (y // 2) * (size[0] // 2 + 1)] for y in range(size[1]) for x in range(size[0])])
     return Image.composite(dirt, grass, mask)
 
 
@@ -275,7 +275,7 @@ class Hd2dRenderer:
         self.shadow_prog = ctx.program(vertex_shader=SPRITE_VS, fragment_shader=SHADOW_FS)
         self.blit_prog = ctx.program(vertex_shader=BLIT_VS, fragment_shader=BLIT_FS)
         self.line_prog = ctx.program(vertex_shader=LINE_VS, fragment_shader=LINE_FS)
-        self._lines: tuple[Any, Any] | None = None  # Mesh Studio's overlay lines: (geometry, reused buffer)
+        self._lines: dict[str, list[Any]] = {}  # Mesh Studio's overlay lines: slot -> [geometry, buffer, kept data]
         self.last_vp: list[list[float]] | None = None
         self._buffers: list[Any] = []
         self._textures: list[Any] = []
@@ -560,11 +560,10 @@ class Hd2dRenderer:
 
     def _follow_terrain(self, chunks: list[tuple[int, int]]) -> None:
         """The room's box and the lamps' shadow maps after an in-place edit of the ground."""
-        lo, hi = self.world_box()
-        low, high = self.terrain.range_z()
-        if low < lo[2] or high + 2.5 > hi[2]:  # (the box keeps 2.5 m of headroom over the ground for characters)
-            self._world_box = ((lo[0], lo[1], min(lo[2], low)), (hi[0], hi[1], max(hi[2], high + 2.5)))
-            self.lighting.set_world_box(*self._world_box)
+        box = self._measure_world_box()  # (as a fresh load measures it: it grows and shrinks with the ground)
+        if box != self.world_box():
+            self._world_box = box
+            self.lighting.set_world_box(*box)
         boxes = [self._terrain_boxes[k] for k in chunks if k in self._terrain_boxes]
         for lamp, slot in zip(self.lighting.lamps, self.lighting.lamp_slots):
             if slot < 0:
@@ -603,7 +602,7 @@ class Hd2dRenderer:
         light = self.lighting
         terrain = [b for bufs in self._terrain_buffers.values() for b in bufs] + [self._caster_buffer]
         objects = (list(self._buffers) + terrain + list(self._textures) + list(self._sprite_textures.values()) + list(self._fbo_parts)
-                   + [self._fbo] + list(self._dynamic[1:] if self._dynamic else []) + list(self._lines[1:] if self._lines else [])
+                   + [self._fbo] + list(self._dynamic[1:] if self._dynamic else []) + [part[1] for part in self._lines.values()]
                    + [self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog]
                    + list(light._targets) + [light.caster, light.lamp_caster, light.sprite_caster, light.probe_prog]
                    + (self.particles.gl_objects() if self.particles is not None else [])
@@ -617,9 +616,9 @@ class Hd2dRenderer:
             for buffer in self._dynamic[1:]:
                 buffer.delete()
             self._dynamic = None
-        if self._lines is not None:
-            self._lines[1].delete()
-            self._lines = None
+        for part in self._lines.values():
+            part[1].delete()
+        self._lines = {}
         for texture in list(self._sprite_textures.values()) + self._textures:
             texture.delete()
         for buffer in self._buffers:
@@ -820,19 +819,23 @@ class Hd2dRenderer:
         if not data:
             return
         ctx = self.ctx
-        if self._lines is None or self._lines[1].size < len(data) * 4:
-            if self._lines is not None:
-                self._lines[1].delete()
+        slot = "packed" if packed is not None else "points"  # (a kept grid has its own buffer: uploaded once)
+        part = self._lines.get(slot)
+        if part is None or part[1].size < len(data) * 4:
+            if part is not None:
+                part[1].delete()
             buffer = ctx.buffer(reserve=12 * max(256, len(data) // 3 * 2))
-            self._lines = (ctx.geometry([self.arcade.gl.BufferDescription(buffer, "3f", ["in_pos"])], mode=ctx.LINES),
-                           buffer)
-        self._lines[1].write(data.tobytes())
+            part = self._lines[slot] = [
+                ctx.geometry([self.arcade.gl.BufferDescription(buffer, "3f", ["in_pos"])], mode=ctx.LINES), buffer, None]
+        if part[2] is not data:
+            part[1].write(data.tobytes())
+            part[2] = packed
         self.line_prog["u_vp"] = vp
         self.line_prog["u_colour"] = colour
         if through:
             ctx.disable(ctx.DEPTH_TEST)
         with ctx.enabled(ctx.BLEND):  # faint lines are see-through
-            self._lines[0].render(self.line_prog, vertices=len(data) // 3)
+            part[0].render(self.line_prog, vertices=len(data) // 3)
         if through:
             ctx.enable(ctx.DEPTH_TEST)
 

@@ -3,6 +3,8 @@
     py -3.13 tooling/m20b_sculpt_study.py studio OUT    # strokes, cursor, undo/redo/save/reopen, cancels, failures
     py -3.13 tooling/m20b_sculpt_study.py world OUT     # water, shadows, rain, collision following a live edit
     py -3.13 tooling/m20b_sculpt_study.py scale OUT     # 32 x 24, 64 x 64, 128 x 128 m: load, strokes, frames, save
+    py -3.13 tooling/m20b_sculpt_study.py flat OUT      # a flat room's first stroke, and its undo
+    py -3.13 tooling/m20b_sculpt_study.py rechecks OUT  # QA's findings, checked again in Studio
 
 Projects come from the HD-2D RPG template with the Hills room (tooling/m20a_terrain_study.py), or, for scale, a room
 whose ground is sculpted all over.
@@ -252,6 +254,71 @@ def first_stroke_on_flat(out: Path) -> dict[str, Any]:
     return report
 
 
+def rechecks(out: Path) -> dict[str, Any]:
+    """QA's findings, checked again in Studio: strength by time (not frame rate), modifiers let go when the window
+    loses focus, Ctrl+Z and other buttons mid-stroke, Esc of a tall stroke shrinks the room's box back, the Settle
+    list stays in its room, a flat room's cancelled or no-op stroke leaves the plain ground."""
+    project = m20a.make_project(out, "rechecks", stages=("hill",), pond=False)
+    d = _driver(project)
+    report: dict[str, Any] = {}
+    try:
+        s, view, k = d.studio, d.studio.hd2d, d.arcade.key
+        left, right = d.arcade.MOUSE_BUTTON_LEFT, d.arcade.MOUSE_BUTTON_RIGHT
+        d.button("Sculpt ground: off")
+        d.type_into("sculpt_rate", "1")
+        # strength by time: a 1 m/s brush held still for about a second
+        p = d.screen((20.0, 6.0, 0.0))
+        before = list(view.renderer.terrain.heights)
+        d.window.dispatch_event("on_mouse_motion", *p, 0, 0)
+        d.window.dispatch_event("on_mouse_press", *p, left, 0)
+        while time.perf_counter() - view.stroke["started"] < 1.0:
+            d.frame()
+        held = time.perf_counter() - view.stroke["started"]
+        d.window.dispatch_event("on_mouse_release", *p, left, 0)
+        d.frame()
+        moved = max(a - b for a, b in zip(view.renderer.terrain.heights, before)) / PX
+        report["held_still"] = {"held_s": round(held, 2), "raised_m": round(moved, 3)}
+        # modifiers let go when the window loses the keyboard (Alt+Tab)
+        d.window.dispatch_event("on_key_press", k.LALT, k.MOD_ALT)
+        d.window.dispatch_event("on_deactivate")
+        report["keys_after_focus_lost"] = sorted(s.keys)
+        # Ctrl+Z and a right click mid-stroke
+        undo = len(s.project._undo)
+        _stroke(d, _path((12.0, 12.0), (14.0, 12.0), 4), release=False)
+        d.window.dispatch_event("on_mouse_release", *d.screen((14.0, 12.0, 0.0)), right, 0)
+        report["right_release_keeps_the_stroke"] = view.stroke is not None
+        d.key(k.Z, k.MOD_CTRL)
+        report["ctrl_z_mid_stroke"] = {"stroke": view.stroke is not None, "undo_steps": len(s.project._undo) - undo,
+                                       "shown_is_saved": view.renderer.terrain.heights == _heights(s.project)}
+        # Esc of a tall stroke: the room's box (the sun's shadow map) back as a fresh load has it
+        box = view.renderer.world_box()
+        d.type_into("sculpt_rate", "8")
+        _stroke(d, [(16.0, 12.0, 0.0)] * 90, release=False)  # (taller than the bridge: about 5 m)
+        grown = view.renderer.world_box()
+        d.key(k.ESCAPE)
+        d.frame()
+        report["box_top_m"] = {"before": box[1][2], "mid_stroke": grown[1][2], "after_esc": view.renderer.world_box()[1][2]}
+        # the Settle list belongs to its room
+        view.unsettled, view._unsettled_room = ["structure:bridge"], s.project.current
+        d.button("Village")
+        d.frame(3)
+        report["settle_list_in_another_room"] = list(view.unsettled)
+        # a flat room: Esc of the first stroke, and a stroke that changes nothing (smooth on level ground)
+        d.type_into("sculpt_rate", "1")
+        _stroke(d, _path((14.0, 13.0), (16.0, 13.0), 6), release=False)
+        d.key(k.ESCAPE)
+        d.frame()
+        plain_after_esc = view.renderer.terrain is None
+        undo = len(s.project._undo)
+        d.button("Smooth")
+        _stroke(d, _path((14.0, 13.0), (16.0, 13.0), 6))
+        report["flat_room"] = {"plain_after_esc": plain_after_esc, "plain_after_noop": view.renderer.terrain is None,
+                               "noop_undo_steps": len(s.project._undo) - undo}
+    finally:
+        d.close()
+    return report
+
+
 # --- the world follows a live edit (the game, the same in-place path Studio uses) -------------------------------
 
 def _live(game: HiddenGame, tool: str, x: float, y: float, radius: float, strength: float, n: int = 1,
@@ -491,7 +558,7 @@ def scale(out: Path) -> dict[str, Any]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     steps: dict[str, Callable[[Path], Any]] = {"studio": studio, "flat": first_stroke_on_flat, "world": world,
-                                               "scale": scale}
+                                               "scale": scale, "rechecks": rechecks}
     parser.add_argument("command", choices=list(steps))
     parser.add_argument("out", type=Path)
     args = parser.parse_args()

@@ -39,7 +39,6 @@ QUANTUM = 0.25  # px: a stored height's step
 LIMIT = 32767 * 0.25  # px (about 256 m): the most a corner may be raised or lowered (its int16 store's limit)
 CELLS = (8, 16, 32)  # px: the cell sizes a terrain may use
 STEEP = 0.75  # a face's normal z below this (about 41 degrees) is drawn as dirt
-BLEND = 0.85  # ... and from this down to STEEP (about 32-41 degrees), grass and dirt dithered (Milestone 20B)
 MAX_SLOPE = 0.7  # a face's normal z below this (about 46 degrees) can't be stood on
 TOOLS = ("raise", "lower", "smooth", "flatten")
 
@@ -194,10 +193,12 @@ class Terrain:
 
     # ------------------------------------------------------------------ edits
     def sculpt(self, tool: str, x: float, y: float, radius: float, strength: float,
-               target: float | None = None) -> set[tuple[int, int]]:
+               target: float | None = None, exact: dict[int, float] | None = None) -> set[tuple[int, int]]:
         """One brush stroke at (x, y) px: ``raise`` / ``lower`` by up to ``strength`` px at its centre; ``smooth``
         towards the neighbours' mean, ``flatten`` towards ``target`` px (the height at the centre if None), by up to
-        ``strength`` (0-1) of the way. ``radius`` px; a cosine falloff to its edge. Returns the chunks to redraw."""
+        ``strength`` (0-1) of the way. ``radius`` px; a cosine falloff to its edge. Returns the chunks to redraw.
+        ``exact``: the heights before rounding to the stored step, carried from dab to dab of one stroke (many small
+        dabs then add up to what one big one would, instead of each rounding away)."""
         if tool not in TOOLS:
             raise TerrainError(f"terrain tool must be one of {', '.join(TOOLS)} (got {tool!r})")
         if target is None and tool == "flatten":
@@ -219,7 +220,7 @@ class Terrain:
                     continue
                 w = 0.5 * (1.0 + math.cos(math.pi * d / radius))
                 k = i + j * (self.nx + 1)
-                h = before[k]
+                h = before[k] if exact is None else exact.get(k, before[k])
                 if tool == "raise":
                     new = h + strength * w
                 elif tool == "lower":
@@ -233,7 +234,10 @@ class Terrain:
                 else:
                     assert target is not None
                     new = h + min(1.0, strength) * w * (target - h)
-                new = round(max(-LIMIT, min(LIMIT, new)) / QUANTUM) * QUANTUM
+                new = max(-LIMIT, min(LIMIT, new))
+                if exact is not None:
+                    exact[k] = new
+                new = round(new / QUANTUM) * QUANTUM
                 if new != self.heights[k]:
                     self.heights[k] = new
                     changed.add((i, j))
@@ -243,6 +247,12 @@ class Terrain:
     # ------------------------------------------------------------------ geometry
     def chunk_cells(self, ci: int, cj: int) -> tuple[range, range]:
         return range(ci * CHUNK, min(self.nx, (ci + 1) * CHUNK)), range(cj * CHUNK, min(self.ny, (cj + 1) * CHUNK))
+
+    def _steep(self, i: int, j: int) -> bool:
+        """Whether cell (i, j) is drawn as dirt: either of its faces' normal z below STEEP. (A corner's change can
+        change its neighbours' fringe, two cells out at most: ``chunks_of`` already redraws that far.)"""
+        p0, p1, p2, p3 = self._point(i, j), self._point(i + 1, j), self._point(i + 1, j + 1), self._point(i, j + 1)
+        return min(_face_normal(p0, p1, p2)[2], _face_normal(p0, p2, p3)[2]) < STEEP
 
     def _point(self, i: int, j: int) -> tuple[float, float, float]:
         x, y = self.corner_xy(i, j)
@@ -281,9 +291,9 @@ class Terrain:
 
     def chunk_mesh(self, ci: int, cj: int) -> tuple[array, array, array]:
         """The chunk's vertices (x, y, z, nx, ny, nz, u, v; 8 floats each, three per triangle), as three lists: the
-        ground's texture's (gentle cells), the dithered grass-and-dirt's (cells between BLEND and STEEP: a one-cell
-        band so slopes don't change material abruptly) and dirt's (a cell either of whose faces is steeper than STEEP:
-        one material a cell, so their boundary follows the cells, not a sawtooth of triangles), and, on the ground's
+        ground's texture's (gentle cells), the grass-and-dirt's (gentle cells beside a steep one: a one-cell fringe
+        so dirt doesn't meet grass on a hard line) and dirt's (a cell either of whose faces is steeper than STEEP: one
+        material a cell, so their boundary follows the cells, not a sawtooth of triangles), and, on the ground's
         border, a dirt skirt where it leaves its base level, so ground cut by the room's edge isn't a paper shell.
         Each corner's place and normal is worked out once."""
         gentle, blend, steep = array("f"), array("f"), array("f")
@@ -308,16 +318,18 @@ class Terrain:
                 gy = (hs[i + jp * stride] - hs[i + jm * stride]) / (2 * cell)
                 n = math.sqrt(gx * gx + gy * gy + 1.0)
                 nrm.append((-gx / n, -gy / n, 1.0 / n))
-        flat_n = math.cos(math.acos(STEEP))  # (STEEP itself: a face's normal z)
+        steep_cells = {(i, j) for j in range(max(j0 - 1, 0), min(j0 + d, self.ny))
+                       for i in range(max(i0 - 1, 0), min(i0 + w, self.nx)) if self._steep(i, j)}
         for jj in range(d - 1):
             for ii in range(w - 1):
                 k00 = ii + jj * w
                 ks = (k00, k00 + 1, k00 + 1 + w, k00 + w)
                 p0, p1, p2, p3 = (pts[k] for k in ks)
                 fa, fb = _face_normal(p0, p1, p2), _face_normal(p0, p2, p3)
-                upright = min(fa[2], fb[2])
-                is_steep = upright < flat_n
-                out = steep if is_steep else (blend if upright < BLEND else gentle)
+                ci_, cj_ = i0 + ii, j0 + jj
+                is_steep = (ci_, cj_) in steep_cells
+                fringe = not is_steep and any((ci_ + a, cj_ + b) in steep_cells for a in (-1, 0, 1) for b in (-1, 0, 1))
+                out = steep if is_steep else (blend if fringe else gentle)
                 for tri, face in (((0, 1, 2), fa), ((0, 2, 3), fb)):
                     for t_ in tri:
                         k = ks[t_]

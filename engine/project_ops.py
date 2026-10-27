@@ -2253,8 +2253,8 @@ def sculpt_terrain_stroke(scene: Doc, tool: str, dabs: Any, radius: float = 96.0
         if not isinstance(dab, (list, tuple)) or len(dab) != 3:
             raise OpError(f"Dab {k} must be [x, y, strength] (got {dab!r}).")
         x, y = _number(dab[0], f"Dab {k}'s x", -1e6, 1e6), _number(dab[1], f"Dab {k}'s y", -1e6, 1e6)
-        strength = (_number(dab[2], "The strength (the share of the way, for smooth and flatten)", 0, 1) if gentle
-                    else _number(dab[2], "The strength", 0, 512))
+        strength = (_number(dab[2], f"Dab {k}'s strength (the share of the way, for smooth and flatten)", 0, 1)
+                    if gentle else _number(dab[2], f"Dab {k}'s strength", 0, 512))
         checked.append((x, y, strength))
     goal = None if target is _UNSET or target is None else _number(target, "The target height", -8192, 8192)
     out = copy.deepcopy(scene)
@@ -2269,9 +2269,10 @@ def sculpt_terrain_stroke(scene: Doc, tool: str, dabs: Any, radius: float = 96.0
     if tool == "flatten" and goal is None:  # the height under the stroke's start
         here = terrain.height(checked[0][0], checked[0][1])
         goal = here if here is not None else float(ground.elevation)
+    exact: dict[int, float] = {}  # (as Studio carries them: the same dabs give the same heights)
     try:
         for x, y, strength in checked:
-            terrain.sculpt(tool, x, y, radius, strength, goal)
+            terrain.sculpt(tool, x, y, radius, strength, goal, exact)
     except TerrainError as err:
         raise OpError(str(err)) from err
     raw = hd2d["ground"]

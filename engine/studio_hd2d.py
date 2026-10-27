@@ -135,6 +135,7 @@ class Hd2dView:
         self.newly_buried = sorted(buried - self._buried) if key == self._room else []
         self._buried = buried
         self._room = key
+        self._prune_unsettled()
         if self.placing is not None:  # an edit reloaded the room mid-placement: show the preview again
             self._ensure_model(self.placing)
 
@@ -563,8 +564,10 @@ class Hd2dView:
         if self.sculpt is not None:
             self.sculpt_at = self.ground_hit(x, y)
             if self.sculpt_at is not None and self.stroke is None:  # the ground's height under the brush
-                said = f"Ground {self.sculpt_at[2]:+.2f} m here."
-                if said != getattr(self, "_height_said", None):
+                said = f"Ground {round(self.sculpt_at[2], 2) + 0.0:+.2f} m here."
+                studio = self.studio
+                warned = not studio.message_ok and time.perf_counter() - getattr(studio, "message_at", 0.0) < 4.0
+                if said != getattr(self, "_height_said", None) and not warned:
                     self._height_said = said
                     self.studio._say(said)
             return
@@ -825,7 +828,7 @@ class Hd2dView:
         self.stroke = {"tool": tool, "rate": rate, "radius": float(self.sculpt["radius"]), "target": target,
                        "before": list(terrain.heights), "was_sculpted": was_sculpted, "dabs": [], "touched": set(),
                        "pending": set(), "last": (at[0] * PIXELS_PER_METRE, at[1] * PIXELS_PER_METRE),
-                       "t": time.perf_counter(), "moved": False, "started": time.perf_counter()}
+                       "t": time.perf_counter(), "moved": False, "started": time.perf_counter(), "exact": {}}
         x0, y0 = self.stroke["last"]
         self._dab(x0, y0, 1 / 60)  # (a tap does a little: a 60th of a second's worth)
         self._flush_stroke()
@@ -841,7 +844,16 @@ class Hd2dView:
         amount = round(min(amount, 512.0 if tool in ("raise", "lower") else 1.0), 6)
         if amount <= 0:
             return
-        dirty = renderer.terrain.sculpt(tool, x, y, stroke["radius"], amount, stroke["target"])
+        from engine.project_ops import STROKE_DABS  # noqa: PLC0415
+
+        if len(stroke["dabs"]) >= STROKE_DABS:  # a stroke as long as one edit may be: it is saved, and goes on as a new one
+            keep = {k: stroke[k] for k in ("tool", "rate", "radius", "target", "last", "t", "moved", "started")}
+            self.end_stroke()
+            if renderer.terrain is None:
+                return
+            stroke = self.stroke = {**keep, "before": list(renderer.terrain.heights), "was_sculpted": True,
+                                    "dabs": [], "touched": set(), "pending": set(), "exact": {}}
+        dirty = renderer.terrain.sculpt(tool, x, y, stroke["radius"], amount, stroke["target"], stroke["exact"])
         stroke["dabs"].append([round(x, 3), round(y, 3), amount])
         stroke["pending"] |= dirty
         stroke["touched"] |= dirty
@@ -850,7 +862,7 @@ class Hd2dView:
         """The mouse moved with the button held: dabs along the way, a quarter of the brush's radius apart, sharing
         the time since the last ones (so what is done depends on time, not on how often the mouse reports)."""
         stroke = self.stroke
-        at = self.ground_hit(x, y)
+        at = self.ground_hit(x, y) if self.studio._in_map(x, y) else None  # (off the view: nothing it can't see)
         if stroke is None or at is None:
             return
         now = time.perf_counter()
@@ -870,7 +882,10 @@ class Hd2dView:
         if stroke is None:
             return
         now = time.perf_counter()
-        if not stroke["moved"] and now - stroke["t"] > 0:
+        if self.studio.panning:  # (the view is being moved: the brush waits)
+            stroke["t"] = now
+        elif not stroke["moved"] and now - stroke["t"] >= 1 / 30:  # (held still: 30 dabs a second at most, so a long
+            # hold isn't thousands of dabs to save; what they do depends on time only)
             x0, y0 = stroke["last"]
             self._dab(x0, y0, min(0.25, now - stroke["t"]))
             stroke["t"] = now
@@ -910,6 +925,12 @@ class Hd2dView:
         if not stroke["dabs"]:
             return
         studio = self.studio
+        if self.renderer is not None and self.renderer.terrain is not None \
+                and self.renderer.terrain.heights == stroke["before"]:
+            if not stroke["was_sculpted"]:
+                studio._reload(recenter=False)  # (the plain ground again, as saved)
+            studio._say("The stroke changed nothing.")
+            return
         before = studio.project.scene()
         start = time.perf_counter()
         try:
@@ -930,6 +951,7 @@ class Hd2dView:
         unsettled = sorted(set(self.unsettled) | {k for k, (kind, _n, _w) in left.items() if kind == "object"}
                            | {f"structure:{k}" for k, (kind, _n, _w) in left.items() if kind == "structure"})
         changed_panel, self.unsettled = unsettled != self.unsettled, unsettled
+        self._unsettled_room = studio.project.current
         self._buried = self.buried()
         if changed_panel:  # the Settle button appears or counts more: the panel again
             studio._rebuild()
@@ -947,7 +969,9 @@ class Hd2dView:
         self.stroke = None
         if stroke is None:
             return False
-        if renderer is not None and renderer.terrain is not None:
+        if not stroke["was_sculpted"] and renderer is not None:  # a flat room's first stroke: the plain ground again
+            self.studio._reload(recenter=False)
+        elif renderer is not None and renderer.terrain is not None:
             # the heights (what is walked on and saved) go back at once; their drawing as soon as the GPU takes it
             renderer.terrain.heights[:] = stroke["before"]
             world = getattr(self.studio.window, "hd2d_world", None)
@@ -974,10 +998,27 @@ class Hd2dView:
             return
         self._redraw, self._redraw_said = set(), False
 
+    def _prune_unsettled(self) -> None:
+        """The Settle list keeps only its own room's objects that are still out of place (after undo, other edits)."""
+        if not self.unsettled:
+            return
+        from engine import project_ops as ops  # noqa: PLC0415
+
+        if getattr(self, "_unsettled_room", None) != self.studio.project.current:
+            self.unsettled = []
+            return
+        now = ops.left_out_of_place(self.studio.project.scene())
+        self.unsettled = [i for i in self.unsettled if i.split(":", 1)[-1] in now]
+
     def settle(self) -> None:
         """Stand the objects sculpting left off the ground back on it: one undoable edit."""
         from engine import project_ops as ops  # noqa: PLC0415
 
+        self._prune_unsettled()
+        if not self.unsettled:
+            self.studio._say("Nothing the strokes left out of place is out of place now.")
+            self.studio._rebuild()
+            return
         scene = self.studio.project.scene()
         ids = [i for i in self.unsettled if ops.find_entity_or_none(scene, i) is not None]
         sids = [i.split(":", 1)[1] for i in self.unsettled if i.startswith("structure:")
@@ -1011,6 +1052,8 @@ class Hd2dView:
                 try:
                     value = float(text)
                 except ValueError:
+                    value = math.nan
+                if not math.isfinite(value):
                     studio._say("Type a number.", ok=False)
                     return
                 self.set_sculpt(**{key: min(hi, max(lo, value)) * scale})
@@ -1030,12 +1073,12 @@ class Hd2dView:
             target = brush.get("target")
             row = _row()
             row.add(studio._label(f"To {target / PIXELS_PER_METRE:+.2f} m (picked)" if target is not None
-                                  else "To the height where a stroke starts", color=C_MUTED, size=10, width=width - quarter - 4))
+                                  else "To where a stroke starts", color=C_MUTED, size=10, width=width - half - 4))
             row.add(self._button("Pick", lambda: self.set_sculpt(picking=True), "The next click picks the height to "
-                                 "flatten to (as Alt+click)", width=(quarter - 2) // 2,
+                                 "flatten to (as Alt+click)", width=half // 2,
                                  style=S_ACTIVE if brush.get("picking") else S_BUTTON))
             row.add(self._button("Clear", lambda: self.set_sculpt(target=None), "Flatten to where each stroke starts",
-                                 width=(quarter - 2) // 2))
+                                 width=half // 2))
             box.add(row)
         if self.unsettled:
             box.add(self._button(f"Settle on the ground ({len(self.unsettled)})", self.settle,

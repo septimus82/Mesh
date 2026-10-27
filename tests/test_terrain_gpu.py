@@ -163,3 +163,18 @@ def test_the_world_follows_a_live_edit(tmp_path: Path) -> None:
     walked = r["walked_onto_the_mound"]
     assert walked["elevation_m"] > 0.8 and abs(walked["elevation_m"] - walked["ground_m"]) < 0.01, r
     assert r["route_over_or_round_the_mound"]["points"] > 0 and r["chunk_edges_not_meeting"] == 0, r
+
+
+def test_qa_s_findings_stay_fixed(tmp_path: Path) -> None:
+    import m20b_sculpt_study as study
+
+    r = study.rechecks(tmp_path)
+    held = r["held_still"]
+    assert abs(held["raised_m"] - held["held_s"]) < 0.15 * held["held_s"], r  # 1 m a second, whatever the frame rate
+    assert r["keys_after_focus_lost"] == [], r
+    assert r["right_release_keeps_the_stroke"], r
+    assert r["ctrl_z_mid_stroke"] == {"stroke": False, "undo_steps": 0, "shown_is_saved": True}, r
+    box = r["box_top_m"]
+    assert box["mid_stroke"] > box["before"] and box["after_esc"] == box["before"], r
+    assert r["settle_list_in_another_room"] == [], r
+    assert r["flat_room"] == {"plain_after_esc": True, "plain_after_noop": True, "noop_undo_steps": 0}, r
