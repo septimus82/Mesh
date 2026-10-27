@@ -16,7 +16,8 @@ sculpted ground rebuilds the chunks over it (instances stand on the ground as it
 Milestone 20E: the sprites move (engine.hd2d.motion) without their buffers changing: each vertex carries its part's
 slot in the motion tables (its flex, frames, glow: uniforms, so changing a setting rebuilds nothing) and its
 instance's seed, and the shader turns it about its anchor in the wind and picks its frame by the time. Parts that
-cast (a tree's canopy) are a second buffer a chunk, drawn into the sun's shadow map with the same motion.
+cast (a tree's canopy) are drawn into the sun's shadow map with the same motion, merged per 32 m block as the
+models' casters are (one draw a block).
 """
 
 from __future__ import annotations
@@ -101,7 +102,8 @@ class ScatterLayer:
         self.builds: dict[tuple[int, int], int] = {}  # chunk -> how often it was built (diagnostics, tests)
         self._bounds: dict[str, Any] = {}
         self.sprite_draws: dict[tuple[int, int], tuple[Any, Any]] = {}  # chunk -> (geometry, buffer)
-        self.cast_draws: dict[tuple[int, int], tuple[Any, Any]] = {}  # chunk -> its casting sprites (canopies)
+        self.cast_quads: dict[tuple[int, int], tuple[array, array]] = {}  # chunk -> its casting sprites (canopies)
+        self.canopy_blocks: dict[tuple[int, int], tuple[Any, Any]] = {}  # block -> (geometry, buffers): their draw
         self.motion: Motion = OFF
         self.wind: Wind = CALM
         self.model_draws: dict[tuple[int, int], list[tuple[Any, Any, Any, bool]]] = {}  # -> (geom, buf, texture, cast)
@@ -176,6 +178,7 @@ class ScatterLayer:
         self.builds[key] = self.builds.get(key, 0) + 1
         self._dirty_blocks.add((key[0] // BLOCK, key[1] // BLOCK))
         self.cast.pop(key, None)
+        self.cast_quads.pop(key, None)
         if not rows_by_asset:
             self.boxes.pop(key, None)
             self.centres.pop(key, None)
@@ -268,13 +271,10 @@ class ScatterLayer:
                 if asset.parts:
                     parts(x, y, turn, k, z)
         gl = self.r.arcade.gl
-        for verts, idx, into in ((sprite_v, sprite_i, self.sprite_draws), (cast_v, cast_i, self.cast_draws)):
-            if idx:
-                buffer = self.ctx.buffer(data=verts.tobytes())
-                index = self.ctx.buffer(data=idx.tobytes())
-                geometry = self.ctx.geometry([gl.BufferDescription(buffer, VERTEX, VERTEX_NAMES)],
-                                             index_buffer=index, index_element_size=4)
-                into[key] = (geometry, (buffer, index))
+        if sprite_i:
+            self.sprite_draws[key] = self._sprite_geometry(sprite_v, sprite_i)
+        if cast_i:
+            self.cast_quads[key] = (cast_v, cast_i)
         draws = []
         for texture, verts, idx, cast in merged.values():
             buffer = self.ctx.buffer(data=verts.tobytes())
@@ -311,13 +311,20 @@ class ScatterLayer:
             return None
         return (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes))
 
+    def _sprite_geometry(self, verts: array, idx: array) -> tuple[Any, tuple[Any, Any]]:
+        gl = self.r.arcade.gl
+        buffer = self.ctx.buffer(data=verts.tobytes())
+        index = self.ctx.buffer(data=idx.tobytes())
+        geometry = self.ctx.geometry([gl.BufferDescription(buffer, VERTEX, VERTEX_NAMES)], index_buffer=index,
+                                     index_element_size=4)
+        return geometry, (buffer, index)
+
     def _free(self, key: tuple[int, int]) -> None:
-        for draws in (self.sprite_draws, self.cast_draws):
-            sprite = draws.pop(key, None)
-            if sprite is not None:
-                sprite[0].flush()
-                for b in sprite[1]:
-                    b.delete()
+        sprite = self.sprite_draws.pop(key, None)
+        if sprite is not None:
+            sprite[0].flush()
+            for b in sprite[1]:
+                b.delete()
         for geometry, buffers, _t, _c in self.model_draws.pop(key, []):
             geometry.flush()
             for b in buffers:
@@ -332,25 +339,43 @@ class ScatterLayer:
     def casters(self) -> list[tuple[Any, Any, tuple[float, ...]]]:
         """What casts the sun's shadow: the models whose assets do, one position-only draw per 32 m block (a draw
         a chunk and texture cost the frame more CPU than the shadow itself)."""
-        if self._dirty_blocks:
-            gl = self.r.arcade.gl
-            for block in self._dirty_blocks:
-                self._free_block(block)
-                data = array("f")
-                for (i, j), tris in self.cast.items():
-                    if (i // BLOCK, j // BLOCK) == block:
-                        data.extend(tris)
-                if data:
-                    buffer = self.ctx.buffer(data=data.tobytes())
-                    self.blocks[block] = (self.ctx.geometry([gl.BufferDescription(buffer, "3f", ["in_pos"])]), buffer)
-            self._dirty_blocks = set()
+        self._refresh_blocks()
         return [(g, None, IDENTITY) for g, _b in self.blocks.values()]
+
+    def _refresh_blocks(self) -> None:
+        """Remake the blocks whose chunks changed: the models' casters and the canopies' (Milestone 20E)."""
+        if not self._dirty_blocks:
+            return
+        gl = self.r.arcade.gl
+        for block in self._dirty_blocks:
+            self._free_block(block)
+            data = array("f")
+            verts, idx = array("f"), array("I")
+            for (i, j), tris in self.cast.items():
+                if (i // BLOCK, j // BLOCK) == block:
+                    data.extend(tris)
+            for (i, j), (v, ix) in self.cast_quads.items():
+                if (i // BLOCK, j // BLOCK) == block:
+                    first = len(verts) // FLOATS
+                    verts.extend(v)
+                    idx.extend(k + first for k in ix)
+            if data:
+                buffer = self.ctx.buffer(data=data.tobytes())
+                self.blocks[block] = (self.ctx.geometry([gl.BufferDescription(buffer, "3f", ["in_pos"])]), buffer)
+            if idx:
+                self.canopy_blocks[block] = self._sprite_geometry(verts, idx)
+        self._dirty_blocks = set()
 
     def _free_block(self, block: tuple[int, int]) -> None:
         old = self.blocks.pop(block, None)
         if old is not None:
             old[0].flush()
             old[1].delete()
+        canopy = self.canopy_blocks.pop(block, None)
+        if canopy is not None:
+            canopy[0].flush()
+            for b in canopy[1]:
+                b.delete()
 
     # ------------------------------------------------------------------ motion (Milestone 20E)
     def set_motion(self, motion: Motion, wind: Wind) -> None:
@@ -396,15 +421,17 @@ class ScatterLayer:
 
     def draw_casters(self, vp_cols: tuple[float, ...], time: float, right: tuple[float, float, float],
                      stretch: float) -> int:
-        """The casting sprites (trees' canopies) into the sun's shadow map, as they sway; returns the draws."""
-        if not self.cast_draws:
+        """The casting sprites (trees' canopies) into the sun's shadow map, as they sway, one draw a block; returns
+        the draws."""
+        self._refresh_blocks()
+        if not self.canopy_blocks:
             return 0
         prog = self.caster
         prog["u_vp"] = vp_cols
         self.bind_motion(prog, time, right, stretch)
-        for geometry, _b in self.cast_draws.values():
+        for geometry, _b in self.canopy_blocks.values():
             geometry.render(prog)
-        return len(self.cast_draws)
+        return len(self.canopy_blocks)
 
     def draw_sprites(self, vp_cols: tuple[float, ...], vp: list[list[float]], focus: tuple[float, float, float],
                      right: tuple[float, float, float], stretch: float, lighting: Any,
@@ -428,7 +455,7 @@ class ScatterLayer:
     # ------------------------------------------------------------------ bookkeeping
     def gl_objects(self) -> list[Any]:
         return ([self.prog, self.caster] + [b for _g, bs in self.sprite_draws.values() for b in bs]
-                + [b for _g, bs in self.cast_draws.values() for b in bs]
+                + [b for _g, bs in self.canopy_blocks.values() for b in bs]
                 + [b for draws in self.model_draws.values() for _g, bs, _t, _c in draws for b in bs]
                 + [b for _g, b in self.blocks.values()])
 
@@ -440,9 +467,9 @@ class ScatterLayer:
         return sum(len(rows) for rows in self.instances.values())
 
     def release(self) -> None:
-        for key in list(self.sprite_draws) + list(self.cast_draws) + list(self.model_draws):
+        for key in list(self.sprite_draws) + list(self.model_draws):
             self._free(key)
-        for block in list(self.blocks):
+        for block in set(self.blocks) | set(self.canopy_blocks):
             self._free_block(block)
         self.prog.delete()
         self.caster.delete()

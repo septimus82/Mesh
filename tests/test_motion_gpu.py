@@ -36,7 +36,7 @@ def test_decoration_moves_on_the_gpu_alone_and_stands_still_when_off(tmp_path: P
     try:
         hd = game.window.hd2d_renderer
         layer = hd.scatter
-        assert layer is not None and layer.cast_draws  # (the trees' canopies cast)
+        assert layer is not None and layer.cast_quads  # (the trees' canopies cast)
         a, b = (np.asarray(study.at(game, t, 9.0, 7.0)) for t in (10.0, 10.4))
         assert np.any(a != b, axis=2).mean() > 0.002
         builds, size = dict(layer.builds), layer.memory_bytes()  # (after a first frame: its shadow casters made)

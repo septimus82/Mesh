@@ -467,7 +467,8 @@ def scale(out: Path) -> dict[str, Any]:
             row["moving_600_frames"] = {"chunks_rebuilt": sum(layer.builds[k] - builds.get(k, 0) for k in layer.builds),
                                         "bytes_grew": layer.memory_bytes() - size_b,
                                         "motion_time_s": round(game.window.motion_time, 2)}
-            row.update(instances=layer.count(), chunks=len(layer.boxes), casting_chunks=len(layer.cast_draws))
+            row.update(instances=layer.count(), chunks=len(layer.boxes), casting_chunks=len(layer.cast_quads),
+                       canopy_shadow_draws=len(layer.canopy_blocks))
             counts = []
             for _ in range(3):
                 game.load(f"{SCENES}/hills.json")

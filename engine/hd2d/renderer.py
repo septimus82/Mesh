@@ -1070,7 +1070,7 @@ class Hd2dRenderer:
             casters = (self.static + live + (self._terrain_casters() if self.terrain is not None else [])
                        + (self.scatter.casters() if self.scatter is not None else []))
             scatter = self.scatter
-            extra = (None if scatter is None or not scatter.cast_draws else  # (trees' canopies, as they sway)
+            extra = (None if scatter is None or not scatter.cast_quads else  # (trees' canopies, as they sway)
                      lambda sun_vp: scatter.draw_casters(sun_vp, self.motion_time, cam.right(), stretch))
             lighting.render_shadows(casters, geometry_sprites, ranges, extra=extra)
         weather = self.particles is not None and solid is None and (camera is None or self.weather_preview)
