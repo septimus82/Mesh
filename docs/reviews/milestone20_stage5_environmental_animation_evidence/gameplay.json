@@ -1,0 +1,18 @@
+{
+ "walk_gusty": {
+  "frames": 39,
+  "motion_time_s": 5.5,
+  "player_end_m": [
+   26.75,
+   7.94
+  ]
+ },
+ "walk_rain": {
+  "frames": 39,
+  "motion_time_s": 5.5,
+  "player_end_m": [
+   26.75,
+   7.94
+  ]
+ }
+}

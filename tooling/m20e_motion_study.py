@@ -224,7 +224,13 @@ def winds(out: Path) -> dict[str, Any]:
                 _save_clip(frames, out / f"wind_{name}.webp")
                 frames[0].save(out / f"wind_{name}_first.png")
             if name == "breeze":
-                flame = [at(game, 40.0 + k / 30, 3.4, 2.6).crop((580, 330, 700, 450)) for k in range(30)]
+                import numpy as np
+
+                first = np.asarray(at(game, 40.0, 3.4, 2.6)).astype(int)  # (where the flame is: its bright orange)
+                ys, xs = np.nonzero((first[..., 0] > 230) & (first[..., 1] > 100) & (first[..., 2] < 110))
+                fx, fy = int(np.median(xs)), int(np.median(ys))
+                flame = [at(game, 40.0 + k / 30, 3.4, 2.6).crop((fx - 60, fy - 70, fx + 60, fy + 50))
+                         for k in range(30)]
                 strip = Image.new("RGB", (120 * 10, 120 * 3))
                 for k, img in enumerate(flame):
                     strip.paste(img, ((k % 10) * 120, (k // 10) * 120))

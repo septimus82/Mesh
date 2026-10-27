@@ -1,0 +1,130 @@
+{
+ "64m_100": {
+  "room_load_ms": 515.4,
+  "still": {
+   "frame_wall_ms": 6.04,
+   "canopy_shadow_pass_gpu_ms": 0.0011,
+   "sprite_pass_gpu_ms": 0.0079
+  },
+  "moving": {
+   "frame_wall_ms": 4.97,
+   "canopy_shadow_pass_gpu_ms": 0.0012,
+   "sprite_pass_gpu_ms": 0.0089
+  },
+  "moving_minus_still": {
+   "frame_wall_ms": 0.03,
+   "canopy_shadow_pass_gpu_ms": 0.0002,
+   "sprite_pass_gpu_ms": 0.0016
+  },
+  "draw_calls": 48,
+  "shadow_draws": 20,
+  "scatter_bytes": 444272,
+  "moving_600_frames": {
+   "chunks_rebuilt": 0,
+   "bytes_grew": 0,
+   "draw_calls_same": false
+  },
+  "instances": 100,
+  "chunks": 52,
+  "casting_chunks": 1,
+  "canopy_shadow_draws": 1,
+  "gl_objects_stable_over_reloads": true,
+  "release_frees_all": true
+ },
+ "64m_1000": {
+  "room_load_ms": 490.0,
+  "still": {
+   "frame_wall_ms": 4.93,
+   "canopy_shadow_pass_gpu_ms": 0.0026,
+   "sprite_pass_gpu_ms": 0.0871
+  },
+  "moving": {
+   "frame_wall_ms": 5.16,
+   "canopy_shadow_pass_gpu_ms": 0.0032,
+   "sprite_pass_gpu_ms": 0.2225
+  },
+  "moving_minus_still": {
+   "frame_wall_ms": 0.19,
+   "canopy_shadow_pass_gpu_ms": 0.0006,
+   "sprite_pass_gpu_ms": 0.1353
+  },
+  "draw_calls": 71,
+  "shadow_draws": 24,
+  "scatter_bytes": 897712,
+  "moving_600_frames": {
+   "chunks_rebuilt": 0,
+   "bytes_grew": 0,
+   "draw_calls_same": false
+  },
+  "instances": 1000,
+  "chunks": 64,
+  "casting_chunks": 10,
+  "canopy_shadow_draws": 4,
+  "gl_objects_stable_over_reloads": true,
+  "release_frees_all": true
+ },
+ "64m_10000": {
+  "room_load_ms": 749.7,
+  "still": {
+   "frame_wall_ms": 6.0,
+   "canopy_shadow_pass_gpu_ms": 0.0153,
+   "sprite_pass_gpu_ms": 0.2609
+  },
+  "moving": {
+   "frame_wall_ms": 6.05,
+   "canopy_shadow_pass_gpu_ms": 0.0159,
+   "sprite_pass_gpu_ms": 0.3766
+  },
+  "moving_minus_still": {
+   "frame_wall_ms": -0.09,
+   "canopy_shadow_pass_gpu_ms": 0.0005,
+   "sprite_pass_gpu_ms": 0.1076
+  },
+  "draw_calls": 104,
+  "shadow_draws": 24,
+  "scatter_bytes": 5662032,
+  "moving_600_frames": {
+   "chunks_rebuilt": 0,
+   "bytes_grew": 0,
+   "draw_calls_same": false
+  },
+  "instances": 10000,
+  "chunks": 64,
+  "casting_chunks": 49,
+  "canopy_shadow_draws": 4,
+  "gl_objects_stable_over_reloads": true,
+  "release_frees_all": true
+ },
+ "128m_10000": {
+  "room_load_ms": 1272.9,
+  "still": {
+   "frame_wall_ms": 8.91,
+   "canopy_shadow_pass_gpu_ms": 0.0066,
+   "sprite_pass_gpu_ms": 0.3956
+  },
+  "moving": {
+   "frame_wall_ms": 8.52,
+   "canopy_shadow_pass_gpu_ms": 0.0065,
+   "sprite_pass_gpu_ms": 0.6932
+  },
+  "moving_minus_still": {
+   "frame_wall_ms": 0.05,
+   "canopy_shadow_pass_gpu_ms": 0.0018,
+   "sprite_pass_gpu_ms": 0.3057
+  },
+  "draw_calls": 146,
+  "shadow_draws": 48,
+  "scatter_bytes": 5662032,
+  "moving_600_frames": {
+   "chunks_rebuilt": 0,
+   "bytes_grew": 0,
+   "draw_calls_same": false
+  },
+  "instances": 10000,
+  "chunks": 256,
+  "casting_chunks": 74,
+  "canopy_shadow_draws": 16,
+  "gl_objects_stable_over_reloads": true,
+  "release_frees_all": true
+ }
+}

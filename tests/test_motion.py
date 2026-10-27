@@ -180,9 +180,12 @@ def test_every_sprite_part_has_a_slot_and_its_frames_are_in_the_sheets() -> None
     from engine.hd2d.scatter import KIT, MOTION_SHEET, SHEET
     from engine.repo_root import bundled_file
 
-    first, second = (Image.open(bundled_file(p)) for p in (SHEET, MOTION_SHEET))
-    assert first.width // 48 == FIRST_MOTION  # (20D's sheet: exactly as it was)
-    cells = FIRST_MOTION + second.width // 48
+    widths = []
+    for sheet in (SHEET, MOTION_SHEET):
+        with Image.open(bundled_file(sheet)) as img:
+            widths.append(img.width)
+    assert widths[0] // 48 == FIRST_MOTION  # (20D's sheet: exactly as it was)
+    cells = FIRST_MOTION + widths[1] // 48
     for asset in ASSETS.values():
         for number, part in asset.sprite_parts():
             assert (asset.id, number) in SLOTS
