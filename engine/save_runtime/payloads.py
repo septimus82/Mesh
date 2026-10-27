@@ -522,6 +522,11 @@ def build_slot_payload(
     else:
         snapshot["saved_quests"] = {"schema_version": 1, "quests": {}}
 
+    # The room's authored settings aren't saved: loading takes them from the room as it is then (#390)
+    from engine.scene_runtime.saved_world import ROOM_IDS, room_ids, slim
+
+    slim(snapshot)
+
     # Add save schema version
     snapshot["save_schema_version"] = SAVE_SCHEMA_VERSION
     snapshot, _ = normalize_save_payload(snapshot, source="save_runtime/build_slot_payload")
@@ -544,6 +549,7 @@ def build_slot_payload(
         "scene_path": room,
         "timestamp": timestamp,
         "version": constants.SLOT_META_VERSION,
+        ROOM_IDS: room_ids(window.scene_controller),
     }
     snapshot["save_format_version"] = SAVE_FORMAT_VERSION
 

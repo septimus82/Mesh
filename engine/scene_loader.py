@@ -179,6 +179,11 @@ class SceneLoader:
             # SaveManager before it loads the slot as a scene); keep only the scene part.
             meta = raw_scene.get("meta")
             saved_from = meta.get("scene_path") if isinstance(meta, dict) else None
+            room = self._saved_room(saved_from)
+            if room is not None:  # (#390: the room as it is now, with what play changed: engine.scene_runtime.saved_world)
+                from engine.scene_runtime.saved_world import compose  # noqa: PLC0415
+
+                raw_scene = compose(raw_scene, room, str(saved_from))
             raw_scene = {k: v for k, v in raw_scene.items() if k in SCENE_TOP_LEVEL_KEYS}
         self.last_saved_from = saved_from if isinstance(saved_from, str) and saved_from.strip() else None
         migrated_scene = migrate_payload("scene", raw_scene)
@@ -230,6 +235,23 @@ class SceneLoader:
             f"'{scene.get('name', '<unnamed>')}' with {len(normalized_entities)} entities",
         )
         return scene
+
+    def _saved_room(self, saved_from: Any) -> Dict[str, Any] | None:
+        """The room a save was made in, as it is now (an open document, else its file); None (with a warning) if it
+        can't be read: the save then loads from its own copy of the room, as saves always did."""
+        if not isinstance(saved_from, str) or not saved_from.strip():
+            return None
+        path = resolve_path(saved_from)
+        document = self.documents.get(document_key(path))
+        if document is not None:
+            return copy.deepcopy(document)
+        try:
+            room = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            diag_warn("scene_loader.saved_room_missing", f"The room '{saved_from}' this save was made in can't be read "
+                      f"({exc}); the save loads its own copy of it", "engine.scene_loader", location=str(saved_from))
+            return None
+        return room if isinstance(room, dict) else None
 
     def validate_scene_file(self, scene_path: str, strict: bool = False) -> ValidationReport:
         """Validate a scene JSON file without loading it into the engine."""
