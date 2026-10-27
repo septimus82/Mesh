@@ -502,3 +502,21 @@ class TestPackageManifestFormat:
         m = PackageManifest(git_hash=None)
         text = m.to_text()
         assert "Git:" not in text
+
+
+def test_a_failed_bundle_keeps_only_its_known_reports(tmp_path: Path) -> None:
+    """#394: a failed bundle keeps release-check's own reports for CI's artifact upload, and nothing else from its
+    work folder (no debug bundle, no test scratch projects, no payload)."""
+    from mesh_cli.release_bundle import FAILURE_REPORTS, _keep_failure_reports
+
+    work = tmp_path / "_work_release_bundle"
+    for rel in ("release/verify_all_summary.json", "release/verify_demo_failure.json", "release/pytest_fast.log",
+                "release/debug_bundle.json", "release/verify_demo_pytest/pid1-run0001/basetemp/p/config.json",
+                "release/player_pkg/config.json", "release/secrets.txt", "bundle/main.py"):
+        (work / rel).parent.mkdir(parents=True, exist_ok=True)
+        (work / rel).write_text("{}", encoding="utf-8")
+    dest = tmp_path / "release_bundle_failure"
+    _keep_failure_reports(work, dest)
+    kept = sorted(p.relative_to(dest).as_posix() for p in dest.rglob("*") if p.is_file())
+    assert kept == ["release/pytest_fast.log", "release/verify_all_summary.json", "release/verify_demo_failure.json"]
+    assert set(kept) <= set(FAILURE_REPORTS)

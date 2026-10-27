@@ -897,21 +897,32 @@ def _handle_bundle(args: argparse.Namespace) -> int:
                 pass
 
 
+# The reports a failed bundle keeps (relative to its work folder): what release-check's steps wrote about themselves.
+# Only these known files; never the bundle's payload, test projects, debug bundles or anything else in the folder.
+FAILURE_REPORTS = tuple(f"release/{name}" for name in (
+    "release_report.json", "release_report.txt", "verify_all_summary.json", "verify_summary.json", "verify_summary.txt",
+    "verify_step_budget_check.json", "verify_step_durations.json", "verify_step_speed_advisory.json",
+    "pytest_fast_budget_diagnostic.json", "pytest_fast_budget_diagnostic.txt", "pytest_fast.log",
+    "verify_demo.log", "verify_demo_failure.json", "runtime_smoke.json", "web_smoke.json",
+))
+
+
 def _keep_failure_reports(work_dir: Path, dest: Path, limit_bytes: int = 2_000_000) -> None:
-    """Copy a failed bundle's reports (JSON, logs, text: what each step wrote about itself) to ``dest``, so CI's
-    artifact upload carries them; large files (the bundle's payload, test scratch projects) are left out."""
+    """Copy a failed bundle's known reports (``FAILURE_REPORTS``, each under ``limit_bytes``) to ``dest``, so CI's
+    artifact upload carries them."""
     if not work_dir.exists():
         return
     try:
-        for src in sorted(work_dir.rglob("*")):
-            rel = src.relative_to(work_dir)
-            if (not src.is_file() or src.suffix not in (".json", ".log", ".txt", ".md")
-                    or "basetemp" in rel.parts or src.stat().st_size > limit_bytes):
+        kept = 0
+        for rel in FAILURE_REPORTS:
+            src = work_dir / rel
+            if not src.is_file() or src.stat().st_size > limit_bytes:
                 continue
             target = dest / rel
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, target)
-        print(f"[Mesh][Release-Bundle] the failed steps' reports: {dest.as_posix()}")
+            kept += 1
+        print(f"[Mesh][Release-Bundle] the failed steps' reports ({kept}): {dest.as_posix()}")
     except OSError as exc:  # (never hide the original failure behind a copy problem)
         print(f"[Mesh][Release-Bundle] WARNING: could not keep the failure reports: {exc}", file=sys.stderr)
 

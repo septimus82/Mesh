@@ -95,25 +95,32 @@ def _next_verify_demo_run_root(scratch_dir: Path | None) -> Path | None:
 # Windows refuses paths over 260 characters (MAX_PATH), and the demo tests build project trees inside their tmp_path
 # (``packs/core_regions/scenes/<variant>.json`` under a 30-character test folder: about 100 characters). Nested in a
 # deep artifacts folder (the release bundle's ``_work_release_bundle/release/verify_demo_pytest/...``) the files went
-# past it: FileNotFoundError, inside the release pipeline only (#394). Past this length, basetemp is a short folder in
-# the system's temp folder instead (removed when the run passes; kept on failure, the failure report records where).
+# past it: FileNotFoundError, inside the release pipeline only (#394).
 MAX_BASETEMP_CHARS = 150  # (260, less about 100 for the deepest test project inside, and a margin)
+BASETEMP_POINTER = "basetemp_location.txt"
 
 
 def _basetemp_for(run_root: Path | None) -> Path | None:
+    """The run's pytest basetemp. Normally ``<run root>/basetemp``: beside the artifacts, one per run. When that path is
+    too long for the demo tests' project trees, a new short folder in the system's temp folder, unique to this run
+    (``mkdtemp``), its location written to ``<run root>/basetemp_location.txt``; removed when the run passes, kept
+    (and named in the failure report) when it fails."""
     if run_root is None:
         return None
     basetemp = run_root / "basetemp"
-    if len(str(basetemp.resolve())) > MAX_BASETEMP_CHARS:
-        basetemp = Path(tempfile.gettempdir()) / "mesh-vd" / run_root.name / "basetemp"
-    return basetemp
+    if len(str(basetemp.resolve())) <= MAX_BASETEMP_CHARS:
+        return basetemp
+    run_root.mkdir(parents=True, exist_ok=True)
+    short = Path(tempfile.mkdtemp(prefix="mvd-")) / "basetemp"
+    (run_root / BASETEMP_POINTER).write_text(f"{short}\n", encoding="utf-8")
+    return short
 
 
 def _build_verify_demo_pytest_isolation_args(run_root: Path | None, basetemp: Path | None = None) -> List[str]:
     if run_root is None:
         return []
     run_root.mkdir(parents=True, exist_ok=True)
-    basetemp = basetemp or _basetemp_for(run_root) or run_root / "basetemp"
+    basetemp = basetemp or run_root / "basetemp"
     cache_dir = run_root / "cache"
     return [
         "--basetemp",
@@ -197,6 +204,21 @@ def _diagnostic_artifact_dir(*, log_path: Path | None, scratch_dir: Path | None)
     return scratch_root
 
 
+# Environment variables whose values a failure report may show; any other MESH_/PYTHON/PYTEST variable is listed by
+# name with its value redacted (a CI job's environment can hold tokens and keys).
+_SHOWN_ENV_VALUES = frozenset({
+    "MESH_CI_SEED", "MESH_REPO_ROOT", "MESH_VERIFY_BUDGET_ENFORCE", "MESH_GL_SMOKE", "PYTHONPATH", "PYTHONHOME",
+    "PYTHONUTF8", "PYTHONIOENCODING", "PYTHONDONTWRITEBYTECODE", "PYTHONHASHSEED", "PYTHONWARNINGS", "PYTEST_ADDOPTS",
+})
+
+
+def _diagnostic_environment() -> dict[str, str]:
+    """What the pytest subprocess inherited (#394: it failed inside the release pipeline, not alone), values redacted
+    except the known-safe ones."""
+    return {k: (v if k in _SHOWN_ENV_VALUES else "<redacted>") for k, v in sorted(os.environ.items())
+            if k.startswith(("MESH_", "PYTHON", "PYTEST"))}
+
+
 def _launched_root() -> str:
     from engine.repo_root import get_launched_project_root
 
@@ -231,7 +253,7 @@ def _write_failure_artifact(
         "stderr_head": _head_lines(stderr),
         "missing_path": missing_path,
         # What the pytest subprocess inherited (#394: it failed inside the release pipeline, not alone)
-        "environment": {k: v for k, v in sorted(os.environ.items()) if k.startswith(("MESH_", "PYTHON", "PYTEST"))},
+        "environment": _diagnostic_environment(),
         "launched_project_root": _launched_root(),
     }
     write_json_atomic(
@@ -309,7 +331,8 @@ def run_verify_demo(
 
     if result.returncode == 0:
         if basetemp is not None and run_root is not None and run_root not in basetemp.parents:
-            shutil.rmtree(basetemp.parent, ignore_errors=True)  # (the short one in the temp folder)
+            shutil.rmtree(basetemp.parent, ignore_errors=True)  # (the run's own short folder in the temp folder)
+            (run_root / BASETEMP_POINTER).unlink(missing_ok=True)
         if not quiet:
             _LOG.info("PASSED")
         return 0
