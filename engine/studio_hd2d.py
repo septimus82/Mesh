@@ -64,6 +64,17 @@ def _snap(value_m: float, on: bool) -> float:
     return round(value_m / GRID_M) * GRID_M if on else value_m
 
 
+def _scatter_note(scene: dict[str, Any], models: Any) -> str:
+    """After sculpting or painting under scattered decoration: it followed the ground (never moved sideways); how many
+    now stand where their own rules wouldn't put them (too steep, the wrong material, in water), kept and said."""
+    if not (((scene.get("settings") or {}).get("hd2d") or {}).get("scatter")):
+        return ""
+    _blocked, out = ops.scatter_report(scene, models)
+    n = sum(out.values())
+    return (f" {n} scattered thing{'s' if n != 1 else ''} now stand{'s' if n == 1 else ''} where {'they' if n != 1 else 'it'}"
+            " wouldn't be put (kept; Scatter with Ctrl thins, Shift removes)." if n else "")
+
+
 def _steps(stroke: dict[str, Any]) -> str:
     """A finished stroke's dabs and undo steps, in words (a very long one is saved in parts)."""
     parts = stroke.get("parts", 1)
@@ -807,8 +818,8 @@ class Hd2dView:
                          "Painting: hold the mouse on the ground and drag (each stroke is one undoable change). "
                          "Shift paints grass back, Alt+click picks the material under the mouse, [ ] resizes, Esc "
                          "cancels." if self.sculpt and mode == "paint" else
-                         "Scattering: drag over the ground to fill it to the density (each stroke is one undoable "
-                         "change). Shift removes what is under the brush, Ctrl thins it, [ ] resizes, Esc cancels."
+                         "Scattering: drag to fill the ground to the density (one undo step a stroke). Shift removes, "
+                         "Ctrl thins, Esc cancels."
                          if self.sculpt else
                          {"sculpt": "Sculpting off.", "paint": "Painting off.", "scatter": "Scattering off."}[was or mode])
         self.studio._rebuild()
@@ -1133,7 +1144,7 @@ class Hd2dView:
         words = {"raise": "Raised", "lower": "Lowered", "smooth": "Smoothed", "flatten": "Flattened"}[stroke["tool"]]
         studio._say(f"{words} the ground ({_steps(stroke)})." + (
             " Out of place now (not moved): " + "; ".join(out_of_place[:3]) + (" ..." if len(out_of_place) > 3 else "")
-            if out_of_place else ""), ok=not out_of_place)
+            if out_of_place else "") + _scatter_note(after, self.renderer.models if self.renderer else None), ok=not out_of_place)
 
     def _begin_scatter(self, at: tuple[float, float, float]) -> None:
         """A scatter stroke starts: Shift removes what is under the brush, Ctrl thins it, else it adds the chosen
@@ -1241,7 +1252,7 @@ class Hd2dView:
             studio._reload(recenter=False)  # (never expected; the saved one wins)
         self.timings["edit_ms"].append((time.perf_counter() - start) * 1000)
         studio._refresh_top_bar()
-        studio._say(f"Painted {stroke['material']} ({_steps(stroke)}).")
+        studio._say(f"Painted {stroke['material']} ({_steps(stroke)})." + _scatter_note(studio.project.scene(), renderer.models if renderer else None))
 
     def cancel_stroke(self, why: str = "Stroke cancelled: the ground is as it was.") -> bool:
         """Esc (or a refused upload): the stroke's changes undone on screen and nothing saved. True if there was

@@ -40,13 +40,13 @@ MATERIALS = ("grass", "earth", "stone", "mud", "sand")  # (engine.hd2d.terrain.M
 class Asset:
     """One thing to scatter. ``cell``: its sprite's cell in the sheet (sprites stand upright, facing the camera), or
     ``model``: a GLB (rocks, the branch: lit and shadowed like structures). ``spacing`` m between two instances'
-    centres (the larger of theirs); ``size`` the range of sizes (a share of drawn size); ``slope`` the steepest
+    centres (two things: the mean of theirs); ``size`` the range of sizes (a share of drawn size); ``slope`` the steepest
     ground (degrees) and ``on`` the materials it is put on by default; ``shore``: may stand in water this shallow
     (m: reeds); ``blocks``: characters can't walk through it; ``shadow``: casts a shadow (models)."""
 
     id: str
     name: str
-    cell: int | None = None
+    cell: tuple[int, ...] | None = None  # its variants (an instance's is chosen by where it stands)
     model: str | None = None
     spacing: float = 0.3
     size: tuple[float, float] = (0.8, 1.2)
@@ -58,16 +58,16 @@ class Asset:
 
 
 ASSETS: dict[str, Asset] = {a.id: a for a in (
-    Asset("grass_tuft", "Grass tuft", cell=0, spacing=0.3),
-    Asset("grass_tall", "Tall grass", cell=1, spacing=0.35),
-    Asset("grass_dry", "Dry grass", cell=2, spacing=0.35, on=("grass", "earth", "sand")),
-    Asset("flowers_yellow", "Yellow flowers", cell=3, spacing=0.4),
-    Asset("flowers_pink", "Pink flowers", cell=4, spacing=0.4),
-    Asset("bush", "Bush", cell=5, spacing=1.1, size=(0.85, 1.15), slope=30.0),
-    Asset("bush_berries", "Berry bush", cell=6, spacing=0.9, size=(0.85, 1.15), slope=30.0),
-    Asset("reeds", "Reeds", cell=7, spacing=0.3, on=("grass", "mud", "sand"), shore=0.3),
-    Asset("reeds_cattail", "Cattails", cell=8, spacing=0.35, on=("grass", "mud", "sand"), shore=0.3),
-    Asset("rock_small", "Small rock", model=f"{KIT}/rock_small.glb", spacing=0.5, size=(0.7, 1.4), slope=60.0,
+    Asset("grass_tuft", "Grass tuft", cell=(0, 1, 2), spacing=0.3, size=(0.75, 1.15)),
+    Asset("grass_tall", "Tall grass", cell=(3, 4), spacing=0.35),
+    Asset("grass_dry", "Dry grass", cell=(5, 6), spacing=0.35, on=("grass", "earth", "sand")),
+    Asset("flowers_yellow", "Yellow flowers", cell=(7, 8), spacing=0.4),
+    Asset("flowers_pink", "Pink flowers", cell=(9, 10), spacing=0.4),
+    Asset("bush", "Bush", cell=(11, 12), spacing=1.1, size=(0.85, 1.15), slope=30.0),
+    Asset("bush_berries", "Berry bush", cell=(13,), spacing=0.9, size=(0.85, 1.15), slope=30.0),
+    Asset("reeds", "Reeds", cell=(14, 15), spacing=0.3, on=("grass", "mud", "sand"), shore=0.3),
+    Asset("reeds_cattail", "Cattails", cell=(16,), spacing=0.35, on=("grass", "mud", "sand"), shore=0.3),
+    Asset("rock_small", "Small rock", model=f"{KIT}/rock_small.glb", spacing=0.5, size=(0.8, 1.6), slope=60.0,
           on=MATERIALS, shadow=True),
     Asset("rock_medium", "Rock", model=f"{KIT}/rock_medium.glb", spacing=1.0, size=(0.75, 1.3), slope=60.0,
           on=MATERIALS, shadow=True),
@@ -303,8 +303,8 @@ def brush(scatter: Scatter, mode: str, weights: dict[str, float], x: float, y: f
         kind = ASSETS[pick]
         if not allowed(kind, px, py, ground, rules):
             continue
-        reach = max(kind.spacing, WIDEST) * PX
-        if any((r[0] - px) ** 2 + (r[1] - py) ** 2 < (max(kind.spacing, ASSETS[o].spacing) * PX) ** 2
+        reach = (kind.spacing + WIDEST) / 2 * PX  # (two things keep apart by the mean of their spacings: a boulder
+        if any((r[0] - px) ** 2 + (r[1] - py) ** 2 < ((kind.spacing + ASSETS[o].spacing) / 2 * PX) ** 2  # may lie by a pebble)
                for o, r in scatter.near(px, py, reach)):
             continue
         row = (px, py, turn, round(size * 100))

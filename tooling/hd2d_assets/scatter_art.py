@@ -22,9 +22,9 @@ OUT = ROOT / "assets" / "hd2d_starter" / "scatter" / "foliage.png"
 CELL = 48
 
 # the kit's grass (tooling/hd2d_assets/pixel_textures.py: grass) and its flowers
-GRASS = [(46, 80, 38), (96, 150, 64), (108, 164, 72), (120, 176, 80), (164, 202, 104)]  # (brighter than the ground)
+GRASS = [(62, 104, 48), (74, 124, 54), (84, 136, 60), (96, 150, 66), (132, 178, 86)]  # (the ground's greens, lit tips)
 DRY = [(104, 86, 48), (150, 128, 70), (172, 150, 86), (210, 190, 120)]
-LEAF = [(52, 92, 46), (70, 122, 58), (86, 142, 66), (104, 160, 78)]
+LEAF = [(50, 88, 46), (68, 118, 56), (84, 138, 64), (110, 160, 80)]
 REED = [(92, 120, 60), (110, 140, 70), (128, 156, 82)]
 CATTAIL = [(96, 64, 38), (118, 80, 46)]
 
@@ -80,17 +80,18 @@ def _blades(d: ImageDraw.ImageDraw, rng: random.Random, n: int, width: int, heig
         for k in range(h + 1):
             t = k / max(1, h)
             x, y = round(x0 + spread * t * t), CELL - 1 - k
-            c = colours[0] if k < 2 else (colours[-1] if k >= h - 1 else colour)
+            c = colours[0] if k < 1 else (colours[-1] if k >= h - 1 else colour)
             if last is not None and abs(x - last) > 1:  # (no gaps where it bends)
                 d.point([((x + last) // 2, y)], fill=(*c, 255))
             d.point([(x, y)], fill=(*c, 255))
             last = x
 
 
-def grass_tuft(seed: int, tall: bool = False) -> Image.Image:
+def grass_tuft(seed: int, tall: bool = False, wide: bool = False) -> Image.Image:
     img, d = _cell()
     rng = random.Random(seed)
-    _blades(d, rng, 24 if not tall else 26, 10 if not tall else 9, (5, 11) if not tall else (8, 16), GRASS, 2.0)
+    n, width, height = (26, 9, (8, 16)) if tall else (28, 16, (4, 9)) if wide else (22, 10, (5, 11))
+    _blades(d, rng, n, width, height, GRASS, 2.6 if wide else 2.0)
     return img
 
 
@@ -154,10 +155,16 @@ def reeds(seed: int) -> Image.Image:
     return img
 
 
-SHEET = [  # in engine.hd2d.scatter.SPRITES order
-    lambda: grass_tuft(71), lambda: grass_tuft(72, tall=True), lambda: dry_grass(73),
-    lambda: flowers(74, [(236, 220, 120), (244, 236, 160)]), lambda: flowers(75, [(230, 150, 170), (238, 232, 226)]),
-    lambda: bush(76, 34, 22), lambda: bush(77, 26, 16, berries=(186, 62, 64)), lambda: reeds(78), lambda: reeds(79),
+SHEET = [  # cells in the order engine.hd2d.scatter.ASSETS uses them (several variants a thing)
+    lambda: grass_tuft(71), lambda: grass_tuft(81), lambda: grass_tuft(91, wide=True),  # 0-2 grass tuft
+    lambda: grass_tuft(72, tall=True), lambda: grass_tuft(82, tall=True),  # 3-4 tall grass
+    lambda: dry_grass(73), lambda: dry_grass(83),  # 5-6 dry grass
+    lambda: flowers(74, [(236, 220, 120), (244, 236, 160)]), lambda: flowers(84, [(236, 220, 120), (250, 246, 220)]),
+    lambda: flowers(75, [(230, 150, 170), (238, 232, 226)]), lambda: flowers(85, [(214, 140, 196), (238, 232, 226)]),
+    lambda: bush(76, 34, 22), lambda: bush(86, 30, 20),  # 11-12 bush
+    lambda: bush(77, 26, 16, berries=(186, 62, 64)),  # 13 berry bush
+    lambda: reeds(78), lambda: reeds(88),  # 14-15 reeds
+    lambda: reeds(79),  # 16 cattails
 ]
 
 

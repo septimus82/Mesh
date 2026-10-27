@@ -2481,7 +2481,7 @@ def scatter_context(scene: Doc, models: Any = None) -> tuple[Any, list[tuple[str
             spots.append((f"the door '{name}'", at))
         elif e.get("tag") == "spawn_point":
             spots.append((f"the arrival '{name}'", at))
-        elif e.get("prefab_id") == "player":
+        elif e.get("prefab_id") == "player" or e.get("tag") == "player":  # (stored, or as editors see it)
             spots.append(("the player's start", at))
         for config in (e.get("behaviour_config") or {}).values():
             for value in (config or {}).values() if isinstance(config, dict) else ():

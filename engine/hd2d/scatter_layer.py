@@ -144,13 +144,14 @@ class ScatterLayer:
                 z = self.height(x, y) / PX
                 fx, fy = x / PX, y / PX
                 if asset.cell is not None:
-                    box = self.cells[asset.cell] if asset.cell < len(self.cells) else None
+                    cell = asset.cell[(x * 7 + y * 13) % len(asset.cell)]  # (a variant by where it stands: fixed)
+                    box = self.cells[cell] if cell < len(self.cells) else None
                     if box is None:
                         continue
                     left, top, right, bottom = box
                     x0, x1 = (left - CELL_PX / 2) / PX * k, (right - CELL_PX / 2) / PX * k
                     z0, z1 = (CELL_PX - bottom) / PX * k, (CELL_PX - top) / PX * k
-                    u0, u1 = (asset.cell * CELL_PX + left) / sw, (asset.cell * CELL_PX + right) / sw
+                    u0, u1 = (cell * CELL_PX + left) / sw, (cell * CELL_PX + right) / sw
                     if turn >= 180:  # (mirrored: half of them)
                         u0, u1, x0, x1 = u1, u0, -x1, -x0
                     v0, v1 = top / sh, bottom / sh
