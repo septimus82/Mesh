@@ -184,9 +184,69 @@ def lantern() -> Image.Image:
     return img
 
 
+def stone() -> Image.Image:
+    """Bare stone ground seen from above: irregular slabs (cells around scattered points, wrapping, so it tiles) with
+    dark joints, lit edges and a little moss in the joints. Sculpted ground painted "stone" (Milestone 20C)."""
+    rng = random.Random(60)
+    seeds = [(rng.uniform(0, SIZE), rng.uniform(0, SIZE), rng.choice([(128, 124, 116), (116, 112, 106),
+                                                                      (138, 132, 122), (122, 120, 114)]))
+             for _ in range(9)]
+
+    def near(x: float, y: float) -> list[tuple[float, int]]:
+        out = []
+        for k, (sx, sy, _c) in enumerate(seeds):
+            dx, dy = abs(x - sx), abs(y - sy)
+            dx, dy = min(dx, SIZE - dx), min(dy, SIZE - dy)
+            out.append((dx * dx + dy * dy, k))
+        return sorted(out)
+
+    img = Image.new("RGBA", (SIZE, SIZE))
+    px = img.load()
+    assert px is not None
+    for y in range(SIZE):
+        for x in range(SIZE):
+            (d0, k0), (d1, _k1) = near(x + 0.5, y + 0.5)[:2]
+            if d1 ** 0.5 - d0 ** 0.5 < 1.4:  # a joint between two slabs
+                px[x, y] = (78, 96, 62, 255) if rng.random() < 0.18 else (66, 64, 60, 255)
+                continue
+            above = near(x + 0.5, (y - 0.5) % SIZE)[0][1]
+            colour = seeds[k0][2]
+            if above != k0:  # the slab's top edge catches the light
+                colour = (min(255, colour[0] + 22), min(255, colour[1] + 22), min(255, colour[2] + 22))
+            px[x, y] = (*colour, 255)
+    _speckle(img, rng, [(104, 100, 94), (146, 140, 130)], 40)
+    return img
+
+
+def mud() -> Image.Image:
+    """Wet dark earth with standing water in its hollows: what ground beside a pond is painted (Milestone 20C)."""
+    rng = random.Random(61)
+    img = Image.new("RGBA", (SIZE, SIZE), (92, 70, 50, 255))
+    _speckle(img, rng, [(84, 62, 44), (102, 78, 56), (76, 58, 42)], 260)
+    d = ImageDraw.Draw(img)
+    for k in range(3):  # wetter patches, close in colour (strong marks would show the tile repeating), one glinting
+        x, y, w, h = rng.randrange(SIZE), rng.randrange(SIZE), rng.choice([6, 8, 10]), rng.choice([3, 4])
+        for dx in range(-SIZE, SIZE + 1, SIZE):  # (drawn wrapped, so the tile repeats seamlessly)
+            for dy in range(-SIZE, SIZE + 1, SIZE):
+                d.ellipse([x + dx, y + dy, x + dx + w, y + dy + h], fill=(80, 60, 44, 255))
+                if k == 0:
+                    d.point([(x + dx + 2, y + dy + 1)], fill=(126, 112, 96, 255))
+    _speckle(img, rng, [(84, 62, 44), (72, 54, 40)], 60)
+    return img
+
+
+def sand() -> Image.Image:
+    """Pale sand with darker grains and a few shell-white specks (Milestone 20C)."""
+    rng = random.Random(62)
+    img = Image.new("RGBA", (SIZE, SIZE), (212, 188, 138, 255))
+    _speckle(img, rng, [(200, 176, 126), (222, 200, 150), (194, 168, 120)], 300)
+    _speckle(img, rng, [(240, 232, 214), (170, 146, 104)], 12)
+    return img
+
+
 TEXTURES = {"timber": timber, "plaster": plaster, "shingles": shingles, "floorboards": floorboards, "cobbles": cobbles,
             "grass": grass, "dirt": dirt, "rock": rock, "crate": crate, "barrel": barrel, "iron": iron, "awning": awning,
-            "lantern": lantern}
+            "lantern": lantern, "stone": stone, "mud": mud, "sand": sand}
 
 
 def main() -> None:

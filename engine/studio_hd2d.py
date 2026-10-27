@@ -283,6 +283,11 @@ class Hd2dView:
             colour = {"raise": (1.0, 0.85, 0.3, 1.0), "lower": (0.45, 0.75, 1.0, 1.0), "smooth": (0.6, 1.0, 0.6, 1.0),
                       "flatten": (1.0, 0.55, 0.9, 1.0)}.get(self.stroke["tool"] if self.stroke else self.sculpt["tool"],
                                                             (1.0, 0.85, 0.3, 1.0))
+            if self.sculpt["tool"] == "paint":  # painting: the material's own colour, light enough to see on it
+                material = self.stroke["material"] if self.stroke else self.sculpt["material"]
+                colour = {"grass": (0.55, 1.0, 0.45, 1.0), "earth": (1.0, 0.75, 0.45, 1.0),
+                          "stone": (0.85, 0.85, 0.9, 1.0), "mud": (0.8, 0.6, 0.45, 1.0),
+                          "sand": (1.0, 0.92, 0.6, 1.0)}[material]
             renderer.draw_lines(vp, ring, colour, through=True)
         if self.object_marker is not None and self.studio.place_prefab is not None:  # where it would stand: green
             mx, my, mz = self.object_marker
@@ -565,6 +570,11 @@ class Hd2dView:
             self.sculpt_at = self.ground_hit(x, y)
             if self.sculpt_at is not None and self.stroke is None:  # the ground's height under the brush
                 said = f"Ground {round(self.sculpt_at[2], 2) + 0.0:+.2f} m here."
+                terrain = renderer.terrain if renderer is not None else None
+                if self.sculpt["tool"] == "paint":  # (and what it is painted)
+                    here = "grass" if terrain is None else terrain.material_at(self.sculpt_at[0] * PIXELS_PER_METRE,
+                                                                               self.sculpt_at[1] * PIXELS_PER_METRE)
+                    said = f"Ground {round(self.sculpt_at[2], 2) + 0.0:+.2f} m here, {here}."
                 studio = self.studio
                 warned = not studio.message_ok and time.perf_counter() - getattr(studio, "message_at", 0.0) < 4.0
                 if said != getattr(self, "_height_said", None) and not warned:
@@ -707,7 +717,7 @@ class Hd2dView:
             self.remove()
         elif symbol in (k.BRACKETLEFT, k.BRACKETRIGHT) and self.sculpt is not None:  # the brush's size
             radius = self.sculpt["radius"] * (1.25 if symbol == k.BRACKETRIGHT else 0.8)
-            self.set_sculpt(radius=round(min(1024.0, max(16.0, radius)), 1))
+            self.set_sculpt(radius=round(min(1024.0, max(8.0, radius)), 1))
             self.studio._say(f"Brush radius {self.sculpt['radius'] / PIXELS_PER_METRE:.1f} m.")
         elif symbol == k.ESCAPE:
             return self.cancel()
@@ -763,13 +773,23 @@ class Hd2dView:
         at = self.ground_px(x, y, z)
         return None if at is None else (at[0] / PIXELS_PER_METRE, at[1] / PIXELS_PER_METRE, z)
 
-    def toggle_sculpt(self) -> None:
+    def toggle_sculpt(self, mode: str = "sculpt") -> None:
+        """Sculpt or Paint (Milestone 20C) on, or off if it was on already: the ground brush."""
         self.cancel_stroke()
-        self.sculpt = None if self.sculpt is not None else {"tool": "raise", "radius": 64.0, "rate": 32.0, "target": None}
+        was = None if self.sculpt is None else ("paint" if self.sculpt["tool"] == "paint" else "sculpt")
+        if was == mode:
+            self.sculpt = None
+        elif mode == "paint":
+            self.sculpt = {"tool": "paint", "material": "earth", "radius": 32.0, "rate": 6.0, "target": None}
+        else:
+            self.sculpt = {"tool": "raise", "radius": 64.0, "rate": 32.0, "target": None}
         self.sculpt_at = None
         self.studio._say("Sculpting: hold the mouse on the ground and drag (each stroke is one undoable change). "
                          "Shift lowers, Ctrl smooths, Alt+click picks a flatten height, [ ] resizes, Esc cancels."
-                         if self.sculpt else "Sculpting off.")
+                         if self.sculpt and mode == "sculpt" else
+                         "Painting: hold the mouse on the ground and drag (each stroke is one undoable change). "
+                         "Shift paints grass back, Alt+click picks the material under the mouse, [ ] resizes, Esc "
+                         "cancels." if self.sculpt else f"{(was or mode).capitalize()}ing off.")
         self.studio._rebuild()
 
     def set_sculpt(self, **change: Any) -> None:
@@ -781,6 +801,15 @@ class Hd2dView:
         self.sculpt.update(change)
         self.studio._rebuild()
 
+    def set_edges(self, edges: str) -> None:
+        """The room's material borders, soft or hard: one undoable edit."""
+        if self.renderer is None or self.renderer.terrain is not None and self.renderer.terrain.edges == edges:
+            return
+        self.cancel_stroke()
+        self.studio._edit(lambda s: ops.set_terrain_edges(s, edges),
+                          "Soft edges: borders wander a little, bare earth along cliff tops." if edges == "soft"
+                          else "Hard edges: borders exactly where they were painted.")
+
     # ------------------------------------------------------------------ a live stroke (Milestone 20B)
     def _brush_now(self) -> tuple[str, float, float | None]:
         """The tool this stroke uses, given the keys held as it starts: Shift lowers (raises, with Lower), Ctrl
@@ -790,6 +819,8 @@ class Hd2dView:
         held = self.studio.keys
         tool = self.sculpt["tool"]
         rate = float(self.sculpt["rate"])
+        if tool == "paint":  # (Shift: grass back; the material is the stroke's own)
+            return tool, rate, None
         if held & {k.LCTRL, k.RCTRL}:
             tool, rate = "smooth", (rate if self.sculpt["tool"] in ("smooth", "flatten") else 2.0)
         elif held & {k.LSHIFT, k.RSHIFT} and tool in ("raise", "lower"):
@@ -806,14 +837,35 @@ class Hd2dView:
             self.studio._say("Point at the ground to sculpt it.", ok=False)
             return
         k = optional_arcade.arcade.key
+        painting = self.sculpt["tool"] == "paint"
         if self.sculpt.pop("picking", False) or self.studio.keys & {k.LALT, k.RALT}:  # the eyedropper
-            self.sculpt.update(tool="flatten", target=round(at[2] * PIXELS_PER_METRE, 2), rate=2.0)
-            self.studio._say(f"Flatten to {at[2]:.2f} m (picked from the ground).")
+            if painting:
+                from engine.hd2d.terrain import MATERIALS  # noqa: PLC0415
+
+                here = (renderer.terrain.material_at(at[0] * PIXELS_PER_METRE, at[1] * PIXELS_PER_METRE)
+                        if renderer.terrain is not None else MATERIALS[0])
+                self.sculpt["material"] = here
+                self.studio._say(f"Painting {here} (picked from the ground).")
+            else:
+                self.sculpt.update(tool="flatten", target=round(at[2] * PIXELS_PER_METRE, 2), rate=2.0)
+                self.studio._say(f"Flatten to {at[2]:.2f} m (picked from the ground).")
             self.studio._rebuild()
             return
         was_sculpted = renderer.terrain is not None
         terrain = renderer.ensure_terrain()
         if terrain is None:
+            return
+        if painting:  # (paint changes no height: nothing to walk on anew)
+            material = "grass" if self.studio.keys & {k.LSHIFT, k.RSHIFT} else self.sculpt["material"]
+            self.stroke = {"tool": "paint", "material": material, "rate": float(self.sculpt["rate"]),
+                           "radius": float(self.sculpt["radius"]), "target": None,
+                           "before": None if terrain.paint is None else bytes(terrain.paint),
+                           "was_sculpted": was_sculpted, "dabs": [], "touched": set(), "pending": None,
+                           "last": (at[0] * PIXELS_PER_METRE, at[1] * PIXELS_PER_METRE),
+                           "t": time.perf_counter(), "moved": False, "started": time.perf_counter(), "exact": {}}
+            x0, y0 = self.stroke["last"]
+            self._dab(x0, y0, 1 / 60)
+            self._flush_stroke()
             return
         world = getattr(self.studio.window, "hd2d_world", None)
         if world is None:  # a room without floors had no collision world: it gets one now, on the same heights
@@ -846,13 +898,25 @@ class Hd2dView:
             return
         from engine.project_ops import STROKE_DABS  # noqa: PLC0415
 
+        painting = tool == "paint"
         if len(stroke["dabs"]) >= STROKE_DABS:  # a stroke as long as one edit may be: it is saved, and goes on as a new one
-            keep = {k: stroke[k] for k in ("tool", "rate", "radius", "target", "last", "t", "moved", "started")}
+            keep = {k: stroke[k] for k in ("tool", "material", "rate", "radius", "target", "last", "t", "moved",
+                                           "started") if k in stroke}
             self.end_stroke()
-            if renderer.terrain is None:
+            terrain = renderer.terrain
+            if terrain is None:
                 return
-            stroke = self.stroke = {**keep, "before": list(renderer.terrain.heights), "was_sculpted": True,
-                                    "dabs": [], "touched": set(), "pending": set(), "exact": {}}
+            before = (None if terrain.paint is None else bytes(terrain.paint)) if painting else list(terrain.heights)
+            stroke = self.stroke = {**keep, "before": before, "was_sculpted": True, "dabs": [], "touched": set(),
+                                    "pending": None if painting else set(), "exact": {}}
+        if painting:
+            corners = renderer.terrain.paint_dab(stroke["material"], x, y, stroke["radius"], amount, stroke["exact"])
+            stroke["dabs"].append([round(x, 3), round(y, 3), amount])
+            if corners is not None:  # (the corners still to send to the GPU: one rectangle around them all)
+                was = stroke["pending"]
+                stroke["pending"] = corners if was is None else (min(was[0], corners[0]), min(was[1], corners[1]),
+                                                                 max(was[2], corners[2]), max(was[3], corners[3]))
+            return
         dirty = renderer.terrain.sculpt(tool, x, y, stroke["radius"], amount, stroke["target"], stroke["exact"])
         stroke["dabs"].append([round(x, 3), round(y, 3), amount])
         stroke["pending"] |= dirty
@@ -897,6 +961,16 @@ class Hd2dView:
         if stroke is None or renderer is None or not stroke["pending"]:
             return
         start = time.perf_counter()
+        if stroke["tool"] == "paint":
+            pending, stroke["pending"] = stroke["pending"], None
+            try:
+                renderer.update_paint(renderer.terrain, pending)
+            except Exception as exc:  # noqa: BLE001  # REASON: a refused upload stops the stroke; the paint goes back
+                self.cancel_stroke(f"The stroke stopped: the paint couldn't be drawn ({exc}).")
+                return
+            self.timings["sculpt_ms"].append((time.perf_counter() - start) * 1000)
+            del self.timings["sculpt_ms"][:-240]
+            return
         pending, stroke["pending"] = stroke["pending"], set()
         try:
             renderer.update_terrain(renderer.terrain, pending)
@@ -923,6 +997,9 @@ class Hd2dView:
         self.stroke = None
         self._grid_dirty |= stroke["touched"]
         if not stroke["dabs"]:
+            return
+        if stroke["tool"] == "paint":
+            self._end_paint(stroke)
             return
         studio = self.studio
         if self.renderer is not None and self.renderer.terrain is not None \
@@ -962,6 +1039,39 @@ class Hd2dView:
             " Out of place now (not moved): " + "; ".join(out_of_place[:3]) + (" ..." if len(out_of_place) > 3 else "")
             if out_of_place else ""), ok=not out_of_place)
 
+    def _end_paint(self, stroke: dict[str, Any]) -> None:
+        """A paint stroke let go: one checked edit (``project_ops.paint_terrain_stroke``), no reload; what was shown
+        is checked against what was saved, and should they ever differ the room is reloaded from the saved one."""
+        from engine import project_ops as ops  # noqa: PLC0415
+        from engine.hd2d.terrain import Terrain  # noqa: PLC0415
+
+        studio, renderer = self.studio, self.renderer
+        terrain = None if renderer is None else renderer.terrain
+        size = 0 if terrain is None else 4 * (terrain.nx + 1) * (terrain.ny + 1)
+
+        def whole(paint: Any) -> bytes:  # (none painted: all zero)
+            return bytes(paint) if paint is not None else bytes(size)
+
+        if terrain is None or whole(terrain.paint) == whole(stroke["before"]):
+            if not stroke["was_sculpted"]:
+                studio._reload(recenter=False)  # (the plain ground again, as saved)
+            studio._say("The stroke changed nothing.")
+            return
+        start = time.perf_counter()
+        try:
+            studio.project.edit_scene(lambda s: ops.paint_terrain_stroke(s, stroke["material"], stroke["dabs"],
+                                                                         stroke["radius"]))
+        except ops.OpError as err:
+            self.stroke = stroke
+            self.cancel_stroke(str(err))
+            return
+        saved = Terrain.from_ground(ops._parsed_ground(studio.project.scene())).paint
+        if self.renderer is not renderer or whole(saved) != whole(terrain.paint):
+            studio._reload()  # (never expected: the saved stroke is the shown one; the saved one wins)
+        self.timings["edit_ms"].append((time.perf_counter() - start) * 1000)
+        studio._refresh_top_bar()
+        studio._say(f"Painted {stroke['material']} ({len(stroke['dabs'])} dabs, one undo step).")
+
     def cancel_stroke(self, why: str = "Stroke cancelled: the ground is as it was.") -> bool:
         """Esc (or a refused upload): the stroke's changes undone on screen and nothing saved. True if there was
         one."""
@@ -971,6 +1081,17 @@ class Hd2dView:
             return False
         if not stroke["was_sculpted"] and renderer is not None:  # a flat room's first stroke: the plain ground again
             self.studio._reload(recenter=False)
+        elif stroke["tool"] == "paint" and renderer is not None and renderer.terrain is not None:
+            terrain = renderer.terrain
+            terrain.paint = None if stroke["before"] is None else bytearray(stroke["before"])
+            if terrain.paint is None:  # (none before: the texture shows none again)
+                terrain.paint = bytearray(4 * (terrain.nx + 1) * (terrain.ny + 1))
+            try:
+                renderer.update_paint(terrain, (0, 0, terrain.nx, terrain.ny))
+            except Exception:  # noqa: BLE001  # REASON: the GPU refused: the saved room, drawn afresh, is the truth
+                self.studio._reload(recenter=False)
+            if stroke["before"] is None:
+                terrain.paint = None
         elif renderer is not None and renderer.terrain is not None:
             # the heights (what is walked on and saved) go back at once; their drawing as soon as the GPU takes it
             renderer.terrain.heights[:] = stroke["before"]
@@ -1031,10 +1152,20 @@ class Hd2dView:
 
     def _sculpt_section(self, box: Any, width: int) -> None:
         studio, brush = self.studio, self.sculpt
-        box.add(self._button(f"Sculpt ground: {'on' if brush else 'off'}", self.toggle_sculpt,
-                             "Hold the mouse on the ground and drag to raise, lower, smooth or flatten it", width=width,
-                             style=S_ACTIVE if brush else S_BUTTON))
+        painting = brush is not None and brush["tool"] == "paint"
+        half = (width - 4) // 2
+        row = _row()
+        row.add(self._button("Sculpt ground", lambda: self.toggle_sculpt("sculpt"),
+                             "Hold the mouse on the ground and drag to raise, lower, smooth or flatten it (click again: "
+                             "off)", width=half, style=S_ACTIVE if brush is not None and not painting else S_BUTTON))
+        row.add(self._button("Paint ground", lambda: self.toggle_sculpt("paint"),
+                             "Hold the mouse on the ground and drag to paint it earth, stone, mud or sand, or grass "
+                             "again (click again: off)", width=half, style=S_ACTIVE if painting else S_BUTTON))
+        box.add(row)
         if brush is None:
+            return
+        if painting:
+            self._paint_section(box, width)
             return
         quarter = (width - 12) // 4
         row = _row()
@@ -1085,6 +1216,58 @@ class Hd2dView:
                                  "Stand the objects sculpting left floating or buried back on the ground", width=width))
         box.add(studio._label("Drag to sculpt (one undo step a stroke). Shift lowers, Ctrl smooths, Alt+click picks a "
                               "flatten height, [ ] resize, Esc cancels a stroke.", color=C_MUTED, size=10, width=width))
+
+    def _paint_section(self, box: Any, width: int) -> None:
+        """Paint's controls (Milestone 20C): the material, the brush, the room's edges."""
+        from engine.hd2d.terrain import MATERIALS  # noqa: PLC0415
+
+        studio, brush = self.studio, self.sculpt
+        assert brush is not None
+        fifth = (width - 16) // 5
+        row = _row()
+        tips = {"grass": "Grass: the ground's own texture (paints the others away; or hold Shift with any)",
+                "earth": "Bare earth: paths, worn ground", "stone": "Stone: paved or rocky ground; rock on cliffs",
+                "mud": "Mud: wet ground, pond banks", "sand": "Sand: shores and dry ground"}
+        for material in MATERIALS:
+            row.add(self._button(material.capitalize(), lambda m=material: self.set_sculpt(material=m), tips[material],
+                                 width=fifth, style=S_ACTIVE if brush["material"] == material else S_BUTTON))
+        box.add(row)
+
+        def number(key: str, lo: float, hi: float, scale: float) -> Any:
+            def commit(text: str) -> None:
+                try:
+                    value = float(text)
+                except ValueError:
+                    value = math.nan
+                if not math.isfinite(value):
+                    studio._say("Type a number.", ok=False)
+                    return
+                self.set_sculpt(**{key: min(hi, max(lo, value)) * scale})
+            return commit
+
+        half = (width - 4) // 2
+        row = _row()
+        row.add(studio._label("Radius (m)", color=C_MUTED, size=10, width=half // 2))
+        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.2g}", number("radius", 0.25, 32.0, PIXELS_PER_METRE),
+                              width=half - half // 2, key="paint_radius"))
+        row.add(studio._label("Strength", color=C_MUTED, size=10, width=half // 2))
+        row.add(studio._field(f"{brush['rate']:.2g}", number("rate", 0.1, 40.0, 1.0), width=half - half // 2,
+                              key="paint_rate"))
+        box.add(row)
+        terrain = self.renderer.terrain if self.renderer is not None else None
+        edges = terrain.edges if terrain is not None else "soft"
+        row = _row()
+        row.add(studio._label("Edges", color=C_MUTED, size=10, width=half // 2))
+        row.add(self._button("Soft", lambda: self.set_edges("soft"), "Borders wander a little, in crisp pixels, and "
+                             "bare earth shows along cliff tops", width=(width - half // 2 - 8) // 2,
+                             style=S_ACTIVE if edges == "soft" else S_BUTTON))
+        row.add(self._button("Hard", lambda: self.set_edges("hard"), "Borders exactly where they were painted, no "
+                             "bare earth added", width=(width - half // 2 - 8) // 2,
+                             style=S_ACTIVE if edges == "hard" else S_BUTTON))
+        box.add(row)
+        box.add(studio._label("Drag to paint (one undo step a stroke). Shift paints grass back, Alt+click picks the "
+                              "material under the mouse, [ ] resize, Esc cancels a stroke.", color=C_MUTED, size=10,
+                              width=width))
 
     def toggle_weather(self) -> None:
         self.weather = not self.weather

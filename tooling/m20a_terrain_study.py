@@ -525,7 +525,7 @@ def studio(out: Path) -> dict[str, Any]:
         d.button("Hills")
         d.frame(3)
         before = heights(s)
-        d.button("Sculpt ground: off")
+        d.button("Sculpt ground")
         spot = (20.0, 6.0, 0.0)
         at = d.screen(spot)
         d.window.dispatch_event("on_mouse_motion", *at, 0, 0)

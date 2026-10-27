@@ -55,7 +55,7 @@ class Ground:
     lo: tuple[float, float]
     hi: tuple[float, float]
     elevation: float = 0.0
-    terrain: Any = None  # its sculpted heights (engine.hd2d.terrain, Milestone 20A): {"cell", "chunks"}; None flat
+    terrain: Any = None  # its sculpted heights and paint (engine.hd2d.terrain): {"cell", "chunks", ...}; None plain
 
     def __hash__(self) -> int:  # (terrain is a dict: hashed by what it reads as)
         return hash((self.texture, self.lo, self.hi, self.elevation, repr(self.terrain)))
@@ -208,8 +208,8 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None, leni
                 if not lenient:
                     raise Hd2dSettingsError(str(exc)) from exc
                 terrain_error = str(exc)
-            if terrain is not None and not terrain["chunks"]:
-                terrain = None  # no heights: the plain ground exactly
+            if terrain is not None and not terrain["chunks"] and not terrain.get("materials"):
+                terrain = None  # no heights and no paint: the plain ground exactly
         ground = Ground(texture, _pair(g, "from", "settings.hd2d.ground", (0.0, 0.0)),
                         _pair(g, "to", "settings.hd2d.ground", default_hi),
                         _number(g, "elevation", "settings.hd2d.ground", 0.0), terrain)

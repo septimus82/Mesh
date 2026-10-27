@@ -141,6 +141,10 @@ engine = ["schemas/*.json", "py.typed"]
 "share/mesh-engine/assets/hd2d_starter/textures" = [
     "assets/hd2d_starter/textures/dirt.png",
     "assets/hd2d_starter/textures/grass.png",
+    "assets/hd2d_starter/textures/mud.png",
+    "assets/hd2d_starter/textures/rock.png",
+    "assets/hd2d_starter/textures/sand.png",
+    "assets/hd2d_starter/textures/stone.png",
 ]
 "share/mesh-engine/assets/branding" = [
     "assets/branding/NOTICE.md",

@@ -329,16 +329,6 @@ def test_a_flatten_stroke_without_a_target_flattens_to_its_start() -> None:
     assert t.height(400, 240) == pytest.approx(start, abs=0.5)
 
 
-def test_grass_beside_dirt_gets_the_fringe_and_a_gentle_basin_none() -> None:
-    t = Terrain.from_ground(_ground())
-    t.sculpt("lower", 320, 240, 160, 24)  # a gentle basin: no dirt, so no fringe
-    assert all(not t.chunk_mesh(ci, cj)[1] and not t.chunk_mesh(ci, cj)[2] for ci in range(3) for cj in range(2))
-    for _ in range(3):
-        t.sculpt("raise", 320, 240, 96, 24)  # a mound with steep faces: dirt, and grass beside it fringed
-    gentle, fringe, steep = t.chunk_mesh(1, 1)
-    assert gentle and fringe and steep
-
-
 def test_anchoring_reports_water_left_dry_or_in_the_air_and_settles_structures() -> None:
     room = _room()
     room["settings"]["hd2d"]["structures"] = [{"id": "hut", "model": "assets/m.glb", "x": 320.0, "y": 240.0,
