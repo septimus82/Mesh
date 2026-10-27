@@ -139,3 +139,18 @@ def test_verify_demo_strict_guard_rejects_selection_changing_flags(monkeypatch, 
     rc = run_verify_demo(["-k", "smoke"])
     assert rc != 0
     _ = capsys.readouterr()
+
+
+@pytest.mark.fast
+def test_verify_demo_basetemp_stays_short_inside_a_deep_artifacts_folder(tmp_path: Path) -> None:
+    """#394: nested in the release bundle's work folder, the demo tests' project trees went past Windows' 260
+    characters (FileNotFoundError inside the release pipeline only). A deep artifacts folder gets a short basetemp."""
+    from engine.tooling_runtime.verify_demo import MAX_BASETEMP_CHARS, _basetemp_for
+
+    deep = tmp_path.joinpath(*["a_rather_long_folder_name"] * 8) / "verify_demo_pytest" / "pid1-run0001"
+    basetemp = _basetemp_for(deep)
+    assert basetemp is not None and len(str(basetemp)) <= MAX_BASETEMP_CHARS
+    assert deep not in basetemp.parents
+    shallow = tmp_path / "artifacts" / "verify_demo_pytest" / "pid1-run0001"
+    if len(str(shallow / "basetemp")) <= MAX_BASETEMP_CHARS:
+        assert _basetemp_for(shallow) == shallow / "basetemp"  # (as before: inspectable beside the artifacts)

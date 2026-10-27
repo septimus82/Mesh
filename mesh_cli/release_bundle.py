@@ -800,6 +800,7 @@ def _handle_bundle(args: argparse.Namespace) -> int:
 
     # Use a temp working directory next to the output zip
     work_dir = zip_path.parent / f"_work_{zip_path.stem}"
+    succeeded = False
     try:
         if work_dir.exists():
             shutil.rmtree(work_dir)
@@ -881,9 +882,12 @@ def _handle_bundle(args: argparse.Namespace) -> int:
                 f"[Mesh][Release-Bundle] OK â€” {zip_path.name} "
                 f"({final_manifest.file_count} files, {size_mb:.1f} MB)"
             )
+        succeeded = True
         return 0
 
     finally:
+        if not succeeded:  # (#394: the failing steps' own reports, kept beside the zip before the work dir goes)
+            _keep_failure_reports(work_dir, zip_path.parent / f"{zip_path.stem}_failure")
         # Clean up work directory
         if work_dir.exists():
             try:
@@ -891,6 +895,25 @@ def _handle_bundle(args: argparse.Namespace) -> int:
             except Exception:
                 _log_swallow("RELE-003", "mesh_cli/release_bundle.py pass-only blanket swallow")
                 pass
+
+
+def _keep_failure_reports(work_dir: Path, dest: Path, limit_bytes: int = 2_000_000) -> None:
+    """Copy a failed bundle's reports (JSON, logs, text: what each step wrote about itself) to ``dest``, so CI's
+    artifact upload carries them; large files (the bundle's payload, test scratch projects) are left out."""
+    if not work_dir.exists():
+        return
+    try:
+        for src in sorted(work_dir.rglob("*")):
+            rel = src.relative_to(work_dir)
+            if (not src.is_file() or src.suffix not in (".json", ".log", ".txt", ".md")
+                    or "basetemp" in rel.parts or src.stat().st_size > limit_bytes):
+                continue
+            target = dest / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, target)
+        print(f"[Mesh][Release-Bundle] the failed steps' reports: {dest.as_posix()}")
+    except OSError as exc:  # (never hide the original failure behind a copy problem)
+        print(f"[Mesh][Release-Bundle] WARNING: could not keep the failure reports: {exc}", file=sys.stderr)
 
 
 # ---------------------------------------------------------------------------
