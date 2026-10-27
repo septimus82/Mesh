@@ -250,3 +250,26 @@ def test_the_eyedropper_finds_paint_in_a_cell_the_ground_s_edge_cuts_short() -> 
     t = Terrain.from_ground(parse_hd2d({"ground": {"from": [0, 0], "to": [650, 480]}}).ground)  # (40 cells and 10 px)
     t.paint_dab("sand", 650, 240, 9, 1.0)  # (only the corner on the edge, at x = 650)
     assert t.material_at(648, 240) == "sand" and t.material_at(636, 240) == "grass"
+
+
+# --- Performance QA's findings (Stage 20C) ----------------------------------------------------------------------------
+def test_studio_saves_the_chunks_it_drew_checked_and_in_order() -> None:
+    painted = ops.paint_terrain_stroke(_room(size=(2048, 1536)), "stone", _path(), 24)
+    t = _terrain(painted)
+    texts = {f"{ci},{cj}": t.paint_text(ci, cj) for ci in range(8) for cj in range(6)}
+    out = ops.set_terrain_paint(_room(size=(2048, 1536)), texts)
+    assert out == painted, "the same paint, stored the same way (sparse, sorted)"
+    assert "terrain" not in ops.set_terrain_paint(out, dict.fromkeys(texts))["settings"]["hd2d"]["ground"]
+    over = base64.b64encode(bytes([200, 100, 0, 0]) * (CHUNK * CHUNK)).decode()
+    for bad, words in (({"0,0": over}, "more than 255"), ({"0,0": "!!"}, "isn't base64"), ({"99,0": texts["0,0"] or over},
+                       "outside the ground"), ([1], "base64 weights or null")):
+        with pytest.raises(ops.OpError, match=words):
+            ops.set_terrain_paint(_room(size=(2048, 1536)), bad)
+
+
+def test_no_trace_of_a_weight_is_ever_stored() -> None:
+    room = _room()
+    for k in range(30):
+        room = ops.paint_terrain_stroke(room, ("earth", "mud", "grass")[k % 3], [[100 + 13 * k, 240, 0.4]], 96)
+    paint = _terrain(room).paint or bytearray()
+    assert not any(0 < b < 3 for b in paint)

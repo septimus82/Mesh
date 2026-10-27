@@ -724,7 +724,8 @@ class Hd2dView:
             self.remove()
         elif symbol in (k.BRACKETLEFT, k.BRACKETRIGHT) and self.sculpt is not None:  # the brush's size
             radius = self.sculpt["radius"] * (1.25 if symbol == k.BRACKETRIGHT else 0.8)
-            self.set_sculpt(radius=round(min(1024.0, max(8.0, radius)), 1))
+            biggest = 512.0 if self.sculpt["tool"] == "paint" else 1024.0  # (paint: 16 m, as its field)
+            self.set_sculpt(radius=round(min(biggest, max(8.0, radius)), 1))
             self.studio._say(f"Brush radius {self.sculpt['radius'] / PIXELS_PER_METRE:.1f} m.")
         elif symbol == k.ESCAPE:
             return self.cancel()
@@ -908,6 +909,7 @@ class Hd2dView:
         stroke, renderer = self.stroke, self.renderer
         if stroke is None or renderer is None or renderer.terrain is None:
             return
+        x, y = round(x, 3), round(y, 3)  # (as recorded: the shown dab is the saved one, to the last corner)
         tool, rate = stroke["tool"], stroke["rate"]
         amount = rate * seconds if tool in ("raise", "lower") else 1.0 - math.exp(-rate * seconds)
         amount = round(min(amount, 512.0 if tool in ("raise", "lower") else 1.0), 6)
@@ -929,14 +931,18 @@ class Hd2dView:
                                     "pending": None if painting else set(), "exact": {}}
         if painting:
             corners = renderer.terrain.paint_dab(stroke["material"], x, y, stroke["radius"], amount, stroke["exact"])
-            stroke["dabs"].append([round(x, 3), round(y, 3), amount])
-            if corners is not None:  # (the corners still to send to the GPU: one rectangle around them all)
+            stroke["dabs"].append([x, y, amount])
+            if corners is not None:  # (the corners still to send to the GPU: one rectangle around them all; and the
+                from engine.hd2d.terrain import CHUNK  # noqa: PLC0415  # stored chunks they're in, to save)
+
+                stroke["touched"] |= {(a, b) for a in range(corners[0] // CHUNK, corners[2] // CHUNK + 1)
+                                      for b in range(corners[1] // CHUNK, corners[3] // CHUNK + 1)}
                 was = stroke["pending"]
                 stroke["pending"] = corners if was is None else (min(was[0], corners[0]), min(was[1], corners[1]),
                                                                  max(was[2], corners[2]), max(was[3], corners[3]))
             return
         dirty = renderer.terrain.sculpt(tool, x, y, stroke["radius"], amount, stroke["target"], stroke["exact"])
-        stroke["dabs"].append([round(x, 3), round(y, 3), amount])
+        stroke["dabs"].append([x, y, amount])
         stroke["pending"] |= dirty
         stroke["touched"] |= dirty
 
@@ -1013,7 +1019,8 @@ class Hd2dView:
             return
         self._flush_stroke()
         self.stroke = None
-        self._grid_dirty |= stroke["touched"]
+        if stroke["tool"] != "paint":  # (paint moves no grid line)
+            self._grid_dirty |= stroke["touched"]
         if not stroke["dabs"]:
             return
         if stroke["tool"] == "paint":
@@ -1058,10 +1065,10 @@ class Hd2dView:
             if out_of_place else ""), ok=not out_of_place)
 
     def _end_paint(self, stroke: dict[str, Any]) -> None:
-        """A paint stroke let go: one checked edit (``project_ops.paint_terrain_stroke``), no reload; what was shown
-        is checked against what was saved, and should they ever differ the room is reloaded from the saved one."""
+        """A paint stroke let go: one checked edit, no reload. What is saved is what was shown: the paint of the
+        stored chunks the stroke touched, as drawn (``project_ops.set_terrain_paint``; replaying a long stroke of a
+        wide brush would cost seconds). Should the saved text ever differ, the room is reloaded from the saved one."""
         from engine import project_ops as ops  # noqa: PLC0415
-        from engine.hd2d.terrain import Terrain  # noqa: PLC0415
 
         studio, renderer = self.studio, self.renderer
         terrain = None if renderer is None else renderer.terrain
@@ -1076,16 +1083,17 @@ class Hd2dView:
             studio._say("The stroke changed nothing.")
             return
         start = time.perf_counter()
+        shown = {f"{ci},{cj}": terrain.paint_text(ci, cj) for ci, cj in sorted(stroke["touched"])}
         try:
-            studio.project.edit_scene(lambda s: ops.paint_terrain_stroke(s, stroke["material"], stroke["dabs"],
-                                                                         stroke["radius"]))
+            studio.project.edit_scene(lambda s: ops.set_terrain_paint(s, shown))
         except ops.OpError as err:
             self.stroke = stroke
             self.cancel_stroke(str(err))
             return
-        saved = Terrain.from_ground(ops._parsed_ground(studio.project.scene())).paint
-        if self.renderer is not renderer or whole(saved) != whole(terrain.paint):
-            studio._reload()  # (never expected: the saved stroke is the shown one; the saved one wins)
+        raw = ((studio.project.scene().get("settings") or {}).get("hd2d") or {}).get("ground") or {}
+        saved = (raw.get("terrain") or {}).get("materials") or {}
+        if self.renderer is not renderer or any(saved.get(key) != text for key, text in shown.items()):
+            studio._reload(recenter=False)  # (never expected; the saved one wins)
         self.timings["edit_ms"].append((time.perf_counter() - start) * 1000)
         studio._refresh_top_bar()
         studio._say(f"Painted {stroke['material']} ({_steps(stroke)}).")
@@ -1266,8 +1274,8 @@ class Hd2dView:
         half = (width - 4) // 2
         row = _row()
         row.add(studio._label("Radius (m)", color=C_MUTED, size=10, width=half // 2))
-        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.2g}", number("radius", 0.25, 32.0, PIXELS_PER_METRE),
-                              width=half - half // 2, key="paint_radius"))
+        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.2g}", number("radius", 0.25, 16.0, PIXELS_PER_METRE),
+                              width=half - half // 2, key="paint_radius"))  # (a dab's cost grows with its area)
         row.add(studio._label("Strength", color=C_MUTED, size=10, width=half // 2))
         row.add(studio._field(f"{brush['rate']:.2g}", number("rate", 0.1, 40.0, 1.0), width=half - half // 2,
                               key="paint_rate"))

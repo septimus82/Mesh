@@ -502,6 +502,29 @@ def scale(out: Path) -> dict[str, Any]:
                     d.frame()
                     idle.append((time.perf_counter() - t1) * 1000)
                 row["studio_idle_frame_ms"] = m20b._stats(idle)
+                # the widest brush (16 m) held still for 3 s, then let go: what it costs live, and the release
+                reloads = []
+                original_reload = s._reload
+                s._reload = lambda *a, **kw: (reloads.append(1), original_reload(*a, **kw))[1]
+                view.set_sculpt(radius=16.0 * PX, material="mud")  # (the panel's "Mud" can be shadowed by an
+                # object of that name further down, which the driver may click instead)
+                point = _on_ground(d, [(cx, cy)])[0]
+                held = []
+                m20b.RELEASES.clear()
+
+                def hold() -> None:
+                    end = time.perf_counter() + 3.0
+                    while time.perf_counter() < end:
+                        t2 = time.perf_counter()
+                        d.frame()
+                        held.append((time.perf_counter() - t2) * 1000)
+
+                m20b._stroke(d, [point, point], hold=None, each=lambda i: hold())
+                row["studio_wide_brush_held_frame_ms"] = m20b._stats(held)
+                row["studio_wide_brush_release_to_next_frame_ms"] = (round(m20b.RELEASES[-1], 1) if m20b.RELEASES
+                                                                     else None)
+                row["studio_mismatch_reloads"] = len(reloads)
+                s._reload = original_reload
                 t1 = time.perf_counter()
                 d.key(k.Z, k.MOD_CTRL)
                 row["studio_undo_ms"] = round((time.perf_counter() - t1) * 1000, 1)

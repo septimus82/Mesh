@@ -347,8 +347,8 @@ class Terrain:
                     exact[k] = new
                 # rounded towards where the brush takes it (so repeated dabs always get there, never stick a byte
                 # short), and a trace never shows: none is kept
-                q = [(math.ceil(c * 255 - 1e-6) if n == m else math.floor(c * 255 + 1e-6)) if c * 255 >= TRACE else 0
-                     for n, c in enumerate(new)]
+                q = [math.ceil(c * 255 - 1e-6) if n == m else math.floor(c * 255 + 1e-6) for n, c in enumerate(new)]
+                q = [b if b >= TRACE else 0 for b in q]
                 if sum(q) > 255:  # (rounded up past all of one: the largest gives way)
                     q[q.index(max(q))] -= sum(q) - 255
                 if bytes(q) != paint[at:at + PAINTED]:

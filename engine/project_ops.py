@@ -2333,6 +2333,49 @@ def paint_terrain_stroke(scene: Doc, material: str, dabs: Any, radius: float = 3
     return _checked_structures(out)
 
 
+def set_terrain_paint(scene: Doc, chunks: Any) -> Doc:
+    """Set stored chunks of this HD-2D room's paint exactly: ``{"i,j": base64 weights, or None for none}``, as
+    ``ground.terrain.materials`` keeps them (16 x 16 corners, four bytes each: earth, stone, mud, sand). What Mesh
+    Studio saves when a paint stroke ends (the paint it drew, chunk by chunk); to paint, ``paint_terrain_stroke``.
+    Each chunk is checked (its place on the ground, its size, no corner more than all of one material)."""
+    from engine.hd2d.terrain import Terrain, TerrainError, parse_key  # noqa: PLC0415
+
+    if not isinstance(chunks, dict) or not all(isinstance(k, str) and (v is None or isinstance(v, str))
+                                               for k, v in chunks.items()):
+        raise OpError('The paint is {"i,j": base64 weights or null, ...}.')
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has no ground to paint.")
+    hd2d = _hd2d_block(out)
+    ground = _parsed_ground(out)
+    raw = hd2d["ground"]
+    if not isinstance(raw, dict):
+        raw = hd2d["ground"] = {}
+    terrain = dict(raw["terrain"]) if isinstance(raw.get("terrain"), dict) else {"cell": 16, "chunks": {}}
+    probe = Terrain((float(ground.lo[0]), float(ground.lo[1])), (ground.hi[0] - ground.lo[0], ground.hi[1] - ground.lo[1]),
+                    0.0, int(terrain.get("cell", 16)))
+    try:
+        probe.load_paint({k: v for k, v in chunks.items() if v is not None})
+        materials = dict(terrain.get("materials") or {})
+        for key, text in chunks.items():
+            parse_key(key)
+            if text is None:
+                materials.pop(key, None)
+            else:
+                materials[key] = text
+    except TerrainError as err:
+        raise OpError(str(err)) from err
+    if materials:
+        terrain["materials"] = dict(sorted(materials.items(), key=lambda kv: parse_key(kv[0])[::-1]))
+    else:
+        terrain.pop("materials", None)
+    if terrain.get("chunks") or terrain.get("materials") or terrain.get("edges", "soft") != "soft":
+        raw["terrain"] = terrain
+    else:
+        raw.pop("terrain", None)  # (nothing left: the plain ground)
+    return out
+
+
 def set_terrain_edges(scene: Doc, edges: str) -> Doc:
     """How this HD-2D room's painted materials meet: "soft" (their borders wander a little, crisp pixels, and bare
     earth shows along cliff tops) or "hard" (exactly along the paint)."""

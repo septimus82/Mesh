@@ -100,11 +100,19 @@ void main() {
     }
     if (u_side == 0 && u_wobble > 0.0)  // bare earth for grass along cliff tops and where gentle ground is steepest
         w.r += clamp((0.93 - normalize(v_nrm).z) * 6.0, 0.0, 1.0) * max(0.0, 1.0 - (w.r + w.g + w.b + w.a));
-    float best = 1.0 - (w.r + w.g + w.b + w.a) + u_wobble * (noise(texel, 0) - 0.5);
+    float v[5] = float[5](1.0 - (w.r + w.g + w.b + w.a), w.r, w.g, w.b, w.a);
     int pick = 0;
+    float best = v[0], second = -1.0;
     for (int m = 1; m <= 4; m++) {
-        float s = w[m - 1] + u_wobble * (noise(texel, m) - 0.5);
-        if (s > best) { best = s; pick = m; }
+        if (v[m] > best) { second = best; best = v[m]; pick = m; } else { second = max(second, v[m]); }
+    }
+    if (best - second <= u_wobble) {  // (a lead the noise can't overturn needs none worked out: most texels)
+        best = v[0] + u_wobble * (noise(texel, 0) - 0.5);
+        pick = 0;
+        for (int m = 1; m <= 4; m++) {
+            float s = v[m] + u_wobble * (noise(texel, m) - 0.5);
+            if (s > best) { best = s; pick = m; }
+        }
     }
     vec4 own = texture(u_tex, v_uv);
     vec4 mat = textureLod(u_mats, vec2((float(pick - 1 + 4 * u_side) + fract(v_uv.x)) / 8.0, fract(v_uv.y)), 0.0);
