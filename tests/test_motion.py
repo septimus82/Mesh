@@ -104,7 +104,7 @@ def test_plants_lean_with_the_wind_as_the_camera_sees_it() -> None:
     across, depth = m.angle(0.0, 0.0, 3.0, 1.0, 0.0, sideways, on)
     assert across > 0.15 and depth == 0.0
     across, depth = m.angle(0.0, 0.0, 3.0, 1.0, 0.0, toward_camera, on)
-    assert abs(across) < 0.15 and -m.MAX_DEPTH <= depth < -0.1  # (toward the camera: a little, never squashed)
+    assert abs(across) < 0.15 and -m.MAX_DEPTH <= depth < -0.05  # (toward the camera: a little, never squashed)
     # the camera turned a quarter (its right is north): the north wind now leans plants across the picture
     across, depth = m.angle(0.0, 0.0, 3.0, 1.0, 0.0, Wind(9.0, 90.0, 0.0), on, right=(0.0, 1.0))
     assert across > 0.15 and abs(depth) < 1e-9

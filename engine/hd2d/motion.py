@@ -33,9 +33,9 @@ from engine.wind import GLSL as WIND_GLSL
 from engine.wind import PERIOD, Wind, speed_at
 
 MAX_ANGLE = 0.8  # rad (46 degrees): the most a plant leans across the picture
-MAX_DEPTH = 0.35  # rad (20 degrees): toward or away from the camera (its height on screen changes by under 6 %)
-# Both at once: tip height cos 0.8 cos 0.35 (0.65) > its reach sqrt(sin^2 0.8 + sin^2 0.35) (0.80) x tan 35 (0.56): a tip
-# never dips into the steepest slope a plant may stand on
+MAX_DEPTH = 0.12  # rad (7 degrees): toward or away from the camera (measured: its height on screen within 10 %)
+# Both at once: tip height cos 0.8 cos 0.12 (0.69) > its reach sqrt(sin^2 0.8 + sin^2 0.12) (0.73) x tan 35 (0.51): a
+# tip never dips into the steepest slope a plant may stand on
 LOOPS = ("loop", "pingpong")
 
 
@@ -182,53 +182,61 @@ def frame(t: float, seed: float, frames: int, fps: float, phase: float, pingpong
     return m if m < frames else 2 * frames - 2 - m
 
 
-GLSL = WIND_GLSL + """
-uniform float u_time; uniform vec2 u_wind; uniform float u_gust; uniform int u_motion;
-uniform float u_sway; uniform float u_influence; uniform float u_rate; uniform float u_frame_du;
-uniform float u_period;
-uniform vec4 u_slot_a[%(slots)d];  // a part's flex (times its asset's sway), frames, fps, phase variation
-uniform vec4 u_slot_b[%(slots)d];  // its glow, ping-pong (1), moving (1), streaming downwind (1: a banner)
+GLSL = """
+// MOVING (defined 0 or 1 before this): the moving program, or the still one (a room whose decoration doesn't move
+// draws with the still one: Milestone 20D's vertex work exactly, none of the wind's)
+uniform vec4 u_slot_b[%(slots)d];  // a part's glow, ping-pong (1), moving (1), streaming downwind (1: a banner)
 uniform vec4 u_slot_c[%(slots)d];  // its sheet (1: 20E's), nearer the camera by (m), light taken nearer the sun
                                    // by (m), its cell in still air (a banner's, hanging: cells on from its own)
+#if MOVING
+""" + WIND_GLSL + """
+uniform float u_time; uniform vec2 u_wind; uniform float u_gust;
+uniform float u_sway; uniform float u_influence; uniform float u_rate; uniform float u_frame_du;
+uniform float u_period;
+uniform vec4 u_slot_a[%(slots)d];  // its flex (times its asset's sway), frames, fps, phase variation
+#endif
 // Where a vertex of a scattered sprite is now (m), its uv, its glow, its sheet and how far toward the sun its light is
-// taken: turned about its anchor (in_pos) by the wind, its frame chosen by the time. Motion off (or its asset still):
+// taken: turned about its anchor (in_pos) by the wind, its frame chosen by the time. Still (or its asset still):
 // exactly where Milestone 20D drew it (a part drawn nearer the camera, a torch's flame, is moved that much first).
 vec3 placed(out vec2 uv, out float glow, out float sheet, out float lift) {
     int k = int(in_slot + 0.5);
-    vec4 a = u_slot_a[k], b = u_slot_b[k], c = u_slot_c[k];
-    float h = in_seed, hgt = in_corner.y * u_stretch;
+    vec4 b = u_slot_b[k], c = u_slot_c[k];
+    float hgt = in_corner.y * u_stretch;
     uv = in_uv; glow = b.x; sheet = c.x; lift = c.z;
-    vec2 r = normalize(u_right.xy);  // across the picture, and into it, on the ground
-    vec2 f = vec2(-r.y, r.x);
     vec3 base = in_pos;
-    if (c.y != 0.0) { base -= vec3(f * c.y, 0.0); }
-    if (u_motion == 0 || b.z < 0.5) {
-        return base + u_right * in_corner.x + vec3(0.0, 0.0, hgt);
+    if (c.y != 0.0) { vec2 r0 = normalize(u_right.xy); base -= vec3(vec2(-r0.y, r0.x) * c.y, 0.0); }
+#if MOVING
+    if (b.z > 0.5) {
+        vec4 a = u_slot_a[k];
+        float h = in_seed, t = u_time;
+        vec2 r = normalize(u_right.xy);  // across the picture, and into it, on the ground
+        vec2 f = vec2(-r.y, r.x);
+        float s0 = length(u_wind);
+        vec2 d = s0 > 0.0 ? u_wind / s0 : vec2(1.0, 0.0);
+        float side = dot(d, r), depth = dot(d, f);
+        bool limp = c.w > 0.5 && s0 < 1.0;
+        if (limp) {
+            uv.x += c.w * u_frame_du;
+        } else if (a.y > 1.5) {
+            float n = a.y, fr = floor(t * a.z + a.w * h * n), i = min(mod(fr, n), n - 1.0);
+            if (b.y > 0.5) { float m = mod(fr, 2.0 * n - 2.0); i = m < n ? m : 2.0 * n - 2.0 - m; }
+            uv.x += i * u_frame_du;
+        }
+        glow = b.x * (0.8 + 0.2 * sin(6.2832 * (0.35 * t + h)));
+        float lag = 0.2 + 1.2 * (1.0 - clamp(a.x, 0.0, 1.0));
+        float s = s0 * max(0.0, 1.0 + u_gust * gust_wave(in_pos.xy, t - lag, u_wind)) * u_influence;
+        float lean = 0.6 * s * s / (s * s + 40.0);
+        float rate = floor((0.9 + 0.8 * h) * u_rate * u_period) / u_period;
+        float flutter = (0.035 + 0.10 * s / (s + 5.0)) * sin(6.2832 * (rate * t + h));
+        float kf = a.x * u_sway;
+        float ts = clamp(kf * (lean * side + flutter), -%(max)r, %(max)r);
+        float td = c.y > 0.0 ? 0.0 : clamp(kf * lean * depth, -%(depth)r, %(depth)r);  // (a flame: across only)
+        float cx = in_corner.x;
+        if (b.w > 0.5 && !limp) { cx *= (side < 0.0 ? -1.0 : 1.0) * mix(0.45, 1.0, abs(side)); }
+        return base + u_right * cx + vec3(r * (sin(ts) * hgt) + f * (sin(td) * hgt), cos(ts) * cos(td) * hgt);
     }
-    float t = u_time;
-    float s0 = length(u_wind);
-    vec2 d = s0 > 0.0 ? u_wind / s0 : vec2(1.0, 0.0);
-    float side = dot(d, r), depth = dot(d, f);
-    bool limp = c.w > 0.5 && s0 < 1.0;
-    if (limp) {
-        uv.x += c.w * u_frame_du;
-    } else if (a.y > 1.5) {
-        float n = a.y, fr = floor(t * a.z + a.w * h * n), i = min(mod(fr, n), n - 1.0);
-        if (b.y > 0.5) { float m = mod(fr, 2.0 * n - 2.0); i = m < n ? m : 2.0 * n - 2.0 - m; }
-        uv.x += i * u_frame_du;
-    }
-    glow = b.x * (0.8 + 0.2 * sin(6.2832 * (0.35 * t + h)));
-    float lag = 0.2 + 1.2 * (1.0 - clamp(a.x, 0.0, 1.0));
-    float s = s0 * max(0.0, 1.0 + u_gust * gust_wave(in_pos.xy, t - lag, u_wind)) * u_influence;
-    float lean = 0.6 * s * s / (s * s + 40.0);
-    float rate = floor((0.9 + 0.8 * h) * u_rate * u_period) / u_period;
-    float flutter = (0.035 + 0.10 * s / (s + 5.0)) * sin(6.2832 * (rate * t + h));
-    float kf = a.x * u_sway;
-    float ts = clamp(kf * (lean * side + flutter), -%(max)r, %(max)r);
-    float td = c.y > 0.0 ? 0.0 : clamp(kf * lean * depth, -%(depth)r, %(depth)r);  // (a flame: across only)
-    float cx = in_corner.x;
-    if (b.w > 0.5 && !limp) { cx *= (side < 0.0 ? -1.0 : 1.0) * mix(0.45, 1.0, abs(side)); }
-    return base + u_right * cx + vec3(r * (sin(ts) * hgt) + f * (sin(td) * hgt), cos(ts) * cos(td) * hgt);
+#endif
+    return base + u_right * in_corner.x + vec3(0.0, 0.0, hgt);
 }
 """
 
