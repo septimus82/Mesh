@@ -540,8 +540,12 @@ def configure(window: Any, settings: Any, scene: Any = None) -> None:
 
         try:  # (a room wind that can't be used: still air, as its decoration takes it; the rain still falls)
             wind = parse_wind(settings.get("wind"))
-        except WindError:
+        except WindError as exc:
             wind = None
+            window.scene_particles_notice = f"This room's wind is set aside ({exc}): its weather falls in still air."
+            from engine.logging_tools import get_logger  # noqa: PLC0415
+
+            get_logger(__name__).warning("[Mesh][Particles] this room's wind is set aside: %s", exc)
         effects = parse_particles(raw, wind)
         if indoor and any(e.preset in PRECIPITATION for e in effects):
             # Milestone 18B: rain and snow fall outdoors; an indoor room keeps only what else it asks for (leaves)

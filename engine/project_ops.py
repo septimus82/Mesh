@@ -2086,14 +2086,21 @@ def structures(scene: Doc) -> list[Doc]:
 
 # --- the room's wind and its decoration's motion (Milestone 20E) ----------------------------------------------------
 
-def set_wind(scene: Doc, speed: Any = 0.0, direction: Any = 0.0, gust: Any = 0.0) -> Doc:
-    """The room's wind (``settings.wind``; engine.wind): ``speed`` m/s (0-30; 0 calm: the key removed),
-    ``direction`` degrees it blows toward (0 east, 90 north), ``gust`` 0-1 (how much it swells and drops). Its
-    rain, snow and leaves fall in it (an effect with its own ``wind`` keeps that), its plants sway in it."""
+def set_wind(scene: Doc, speed: Any = _UNSET, direction: Any = _UNSET, gust: Any = _UNSET) -> Doc:
+    """The room's wind (``settings.wind``; engine.wind): only what is given changes. ``speed`` m/s (0-30; 0 calm:
+    the key removed), ``direction`` degrees it blows toward (0 east, 90 north), ``gust`` 0-1 (how much it swells
+    and drops). Its rain, snow and leaves fall in it (an effect with its own ``wind`` keeps that), its plants sway in
+    it. (A room's wind that can't be read counts as calm here.)"""
     from engine.wind import WindError, parse_wind, stored  # noqa: PLC0415
 
     try:
-        wind = parse_wind({"speed": speed, "direction": direction, "gust": gust})
+        now = parse_wind((scene.get("settings") or {}).get("wind") if isinstance(scene.get("settings"), dict) else None)
+    except WindError:
+        now = parse_wind(None)
+    given = {"speed": speed, "direction": direction, "gust": gust}
+    try:
+        wind = parse_wind({"speed": now.speed, "direction": now.direction, "gust": now.gust,
+                           **{k: v for k, v in given.items() if v is not _UNSET}})
     except WindError as exc:
         raise OpError(str(exc)) from exc
     out = copy.deepcopy(scene)
@@ -2122,6 +2129,10 @@ def set_motion(scene: Doc, enabled: Any = _UNSET, sway: Any = _UNSET, wind: Any 
         raise OpError("This room isn't an HD-2D room, so it has no decoration to move.")
     hd2d = _hd2d_block(out)
     raw = dict(hd2d["motion"]) if isinstance(hd2d.get("motion"), dict) else {"enabled": False}
+    try:  # (a block that can't be read: start afresh from what is given, so it can be repaired)
+        parse_motion(raw)
+    except MotionError:
+        raw = {"enabled": False}
     for key, value in (("enabled", enabled), ("sway", sway), ("wind", wind), ("speed", speed), ("assets", assets)):
         if value is not _UNSET:
             raw[key] = copy.deepcopy(value)
@@ -2158,7 +2169,7 @@ def _checked_structures(after: Doc) -> Doc:
     w, h = settings.get("world_width"), settings.get("world_height")
     size = (float(w), float(h)) if isinstance(w, (int, float)) and isinstance(h, (int, float)) else None
     try:
-        parsed = parse_hd2d(settings.get("hd2d"), map_size_px=size)
+        parsed = parse_hd2d(settings.get("hd2d"), map_size_px=size, lenient=True)  # (its other parts: set aside)
     except Hd2dSettingsError as err:
         raise OpError(str(err)) from err
     ground = parsed.ground
@@ -2265,8 +2276,11 @@ def _parsed_ground(scene: Doc) -> Any:
     settings = scene.get("settings") or {}
     w, h = settings.get("world_width"), settings.get("world_height")
     size = (float(w), float(h)) if isinstance(w, (int, float)) and isinstance(h, (int, float)) else None
+    raw = settings.get("hd2d")
+    if isinstance(raw, dict):  # (the ground alone: not its scatter, up to 50,000 rows, nor its motion, read each time)
+        raw = {k: v for k, v in raw.items() if k not in ("scatter", "motion")}
     try:
-        ground = parse_hd2d(settings.get("hd2d"), map_size_px=size).ground
+        ground = parse_hd2d(raw, map_size_px=size).ground
     except Hd2dSettingsError as err:
         raise OpError(str(err)) from err
     if ground is None:

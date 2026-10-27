@@ -32,7 +32,10 @@ from PIL import Image
 from engine.hd2d.lighting import LIGHTING_GLSL
 from engine.hd2d.motion import MAX_ANGLE, OFF, Motion, glsl, seed_of, wrap_safe_fps
 from engine.hd2d.scatter import ASSETS, CELL_PX, FIRST_MOTION, MOTION_SHEET, SHEET, SLOTS
+from engine.logging_tools import get_logger
 from engine.wind import CALM, PERIOD, Wind
+
+logger = get_logger(__name__)
 
 PX = 32.0
 CHUNK_PX = 256.0  # 8 m
@@ -106,6 +109,7 @@ class ScatterLayer:
         self.sprite_draws: dict[tuple[int, int], tuple[Any, Any]] = {}  # chunk -> (geometry, buffer)
         self.cast_quads: dict[tuple[int, int], tuple[array, array]] = {}  # chunk -> its casting sprites (canopies)
         self.canopy_blocks: dict[tuple[int, int], tuple[Any, Any]] = {}  # block -> (geometry, buffers): their draw
+        self.unreadable: set[str] = set()  # models that couldn't be read: their instances aren't drawn
         self.motion: Motion = OFF
         self.wind: Wind = CALM
         self.model_draws: dict[tuple[int, int], list[tuple[Any, Any, Any, bool]]] = {}  # -> (geom, buf, texture, cast)
@@ -148,12 +152,17 @@ class ScatterLayer:
         self.chunks = by_chunk
         for key in todo:
             self._build(key)
+        lighting = getattr(self.r, "lighting", None)  # (none yet while the renderer is being made)
+        if lighting is not None:
+            lighting.invalidate()
 
     def apply(self, changes: Iterable[tuple[str, tuple[int, int, int, int], bool]]) -> set[tuple[int, int]]:
         """Instances added (True) or removed (False), as a brush reports them: only their chunks are rebuilt.
         Returns those chunks."""
         touched = set()
+        casting = False  # (a model that casts: the lamps' shadow maps are drawn again)
         for name, row, added in changes:
+            casting = casting or bool(ASSETS[name].model and ASSETS[name].shadow)
             key = _chunk(row[0], row[1])
             rows = self.chunks.setdefault(key, {}).setdefault(name, set())
             every = self.instances.setdefault(name, set())
@@ -168,6 +177,9 @@ class ScatterLayer:
             self.chunks[key] = {k: v for k, v in self.chunks[key].items() if v}
             self._build(key)
         self.instances = {k: v for k, v in self.instances.items() if v}
+        lighting = getattr(self.r, "lighting", None)
+        if casting and lighting is not None:
+            lighting.invalidate()
         return touched
 
     def chunks_of(self, x0: float, y0: float, x1: float, y1: float) -> set[tuple[int, int]]:
@@ -308,13 +320,23 @@ class ScatterLayer:
         """A scatter model, read when first needed (a room only reads the models its scatter uses)."""
         if rel is None:
             return None
+        if rel in self.unreadable:
+            return None
         if rel not in self.r.models:
             from engine.hd2d.glb import load_glb  # noqa: PLC0415
 
             path = model_path(self.r, rel)
             if path is None:
                 return None
-            self.r.models[rel] = load_glb(path)
+            from engine.hd2d.glb import GlbError  # noqa: PLC0415
+
+            try:
+                self.r.models[rel] = load_glb(path)
+            except GlbError as exc:  # (a broken copy in the project: that asset set aside, the room stands; said)
+                self.r.window.hd2d_scatter_error = f"its model {rel} can't be read: {exc}"
+                logger.error("[Mesh][HD-2D] scattered %s set aside: %s", rel, exc)
+                self.unreadable.add(rel)
+                return None
         return self.r.models[rel]
 
     def _frames_box(self, cell: int, frames: int) -> tuple[int, int, int, int] | None:
