@@ -1306,11 +1306,10 @@ def _write_verify_step_speed_advisory(
     artifacts_dir: Path,
     step_durations_payload: dict[str, object],
     budget_payload: dict[str, object],
-) -> None:
-    """Advisory runner-speed check: writes verify_step_speed_advisory.json and prints a comparison to stderr.
-
-    It returns nothing and reads the enforced budget payload without changing it, so it cannot alter the enforced
-    verdict or the exit code; any error in it is logged and skipped.
+) -> dict[str, object] | None:
+    """Advisory runner-speed check: writes verify_step_speed_advisory.json, prints a comparison to stderr and returns
+    the advisory (None if it couldn't be made; any error in it is logged and skipped). It never fails a run by itself:
+    rule f (``_apply_rule_f``) only lets it excuse a fixed-threshold failure it judges within this runner's range.
     """
     try:
         from engine.logging_tools import suppress_stdout
@@ -1327,9 +1326,37 @@ def _write_verify_step_speed_advisory(
         with suppress_stdout():
             write_json_atomic(artifacts_dir / "verify_step_speed_advisory.json", payload, indent=2, sort_keys=True, trailing_newline=True)
         print("\n".join(format_speed_advisory(payload)), file=sys.stderr)
+        return payload
     except _VERIFY_SPEED_ADVISORY_EXCEPTIONS as exc:
         _log_swallow("VFYC-033", "verify step speed advisory skipped", once=False)
         print(f"[Mesh][Verify][advisory] runner-speed check skipped: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return None
+
+
+def _apply_rule_f(
+    budget_code: int, budget_payload: dict[str, object], advisory: dict[str, object] | None
+) -> tuple[int, dict[str, object]]:
+    """Rule f (#373, #400): a budgeted step fails only when it is over its fixed threshold AND the speed-adjusted
+    advisory calls it slow on this runner. Where the advisory can't judge a step (no model, no estimate, not run, an
+    error), the fixed threshold alone decides: the rule never fails open. Returns the budget code to apply and a record
+    of the decision (written into verify_step_budget_check.json).
+
+    Measured on the current code (#400): false failures 50 % -> 0 % (Linux) and 54 % -> 4 % (Windows); an isolated
+    pytest-fast slowdown is still caught at x1.25 on Linux (88 %), but on Windows only from about x1.5 (92 %; x1.25:
+    12 %). Gradual growth is seen only by the rolling check (ci_timing_analysis.py --rolling), not by any per-run rule.
+    """
+    raw_offenders = budget_payload.get("offenders")
+    offenders = [str(o.get("name")) for o in raw_offenders if isinstance(o, dict)] if isinstance(raw_offenders, list) else []
+    raw_steps = advisory.get("steps") if isinstance(advisory, dict) else None
+    verdicts = {str(r.get("name")): str(r.get("advisory_verdict")) for r in raw_steps if isinstance(r, dict)} \
+        if isinstance(raw_steps, list) else {}
+    excused = [name for name in offenders if verdicts.get(name) == "ok"]
+    confirmed = [name for name in offenders if name not in excused]
+    record: dict[str, object] = {"rule": "fixed threshold and speed-adjusted advisory both", "over_fixed": offenders,
+                                 "excused_by_advisory": excused, "failed": confirmed}
+    if budget_code != 0 and offenders and not confirmed:
+        return 0, record
+    return budget_code, record
 
 
 def _verify_all_scene_index_out_paths(repo_root, out_dir: str):
@@ -2123,12 +2150,22 @@ def _build_verify_all_payload(args: argparse.Namespace):
                 sort_keys=True,
                 trailing_newline=True,
             )
-        _write_verify_step_speed_advisory(
+        advisory = _write_verify_step_speed_advisory(
             repo_root=repo_root,
             artifacts_dir=artifacts_dir,
             step_durations_payload=step_durations_payload,
             budget_payload=verify_step_budget_payload,
         )
+        budget_code, rule_f = _apply_rule_f(budget_code, verify_step_budget_payload, advisory)
+        if rule_f["over_fixed"]:
+            verify_step_budget_payload["rule_f"] = rule_f
+            with suppress_stdout():
+                write_json_atomic(artifacts_dir / "verify_step_budget_check.json", verify_step_budget_payload,
+                                  indent=2, sort_keys=True, trailing_newline=True)
+            excused = rule_f["excused_by_advisory"]
+            if isinstance(excused, list) and excused:
+                print(f"[Mesh][Verify] rule f: {', '.join(excused)} over the fixed threshold but within this runner's "
+                      "speed-adjusted range: not failed (verify_step_budget_check.json, rule_f)", file=sys.stderr)
         if budget_code != 0:
             overall_ok, exit_code = _apply_verify_step_budget_exit_state(
                 overall_ok=overall_ok,

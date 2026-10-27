@@ -545,6 +545,39 @@ jobs:
           path: |
             artifacts/
 
+  timing-rolling:
+    # Report-only (#373, #400): the integration branch's recent CI timings against the committed advisory model, so a
+    # gradual slowdown no per-run rule can see stays visible. Never fails: the job summary, and a warning on a finding.
+    name: timing rolling check (report only)
+    if: github.event_name == 'push' && github.ref_name == 'redesign/visual-editor'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Collect recent CI timings
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tooling/ci_timing_collect.py --branch redesign/visual-editor --runs 30 --out ci_timing
+
+      - name: Rolling check
+        run: |
+          python tooling/ci_timing_analysis.py --index ci_timing/index.json --durations-dir ci_timing/durations --write-data ci_timing/data.json
+          python tooling/ci_timing_analysis.py --data ci_timing/data.json --model tooling/metrics/verify_step_speed_model.json --rolling 24 | tee rolling.md
+          cat rolling.md >> "$GITHUB_STEP_SUMMARY"
+          if grep -q "PERSISTENT REGRESSION" rolling.md; then
+            echo "::warning title=CI timing::persistent slowdown against the advisory model (job summary; #373)"
+          fi
+
   ship:
     name: ship (release branches)
     if: >-

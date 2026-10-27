@@ -261,3 +261,34 @@ def test_the_advisory_never_changes_verify_all_outcome(
         assert advisory["status"] == "ok" and advisory["advisory_flagged"], "the advisory flagged steps, and the run outcome did not move"
     else:
         assert advisory["status"] == "no_model"
+
+
+def _over(*names: str) -> dict:
+    return {"ok": False, "offenders": [{"name": n, "delta_ms": 100, "effective_ms": 1000} for n in names]}
+
+
+def _advisory(**verdicts: str) -> dict:
+    return {"steps": [{"name": n.replace("_", "-"), "advisory_verdict": v} for n, v in verdicts.items()]}
+
+
+def test_rule_f_fails_a_step_only_when_the_fixed_threshold_and_the_advisory_agree() -> None:
+    """#400: over the fixed threshold and slow on this runner: fails; over but within this runner's range: excused."""
+    from mesh_cli.verify import _apply_rule_f
+
+    assert _apply_rule_f(2, _over("pytest-fast"), _advisory(pytest_fast="slow"))[0] == 2
+    code, record = _apply_rule_f(2, _over("pytest-fast"), _advisory(pytest_fast="ok"))
+    assert code == 0 and record["excused_by_advisory"] == ["pytest-fast"] and record["failed"] == []
+    code, record = _apply_rule_f(2, _over("pytest-fast", "verify-demo"),
+                                 _advisory(pytest_fast="ok", verify_demo="slow"))
+    assert code == 2 and record["failed"] == ["verify-demo"]  # (one confirmed step is enough)
+    assert _apply_rule_f(0, {"ok": True, "offenders": []}, _advisory(pytest_fast="slow"))[0] == 0  # (never fails by itself)
+
+
+def test_rule_f_never_fails_open_where_the_advisory_cannot_judge() -> None:
+    """No advisory, no estimate, not modelled, not run: the fixed threshold alone decides."""
+    from mesh_cli.verify import _apply_rule_f
+
+    assert _apply_rule_f(2, _over("pytest-fast"), None)[0] == 2
+    for verdict in ("no estimate", "not modelled", "not run"):
+        assert _apply_rule_f(2, _over("pytest-fast"), _advisory(pytest_fast=verdict))[0] == 2
+    assert _apply_rule_f(2, _over("web-smoke"), _advisory(pytest_fast="ok"))[0] == 2  # (a step it didn't judge)

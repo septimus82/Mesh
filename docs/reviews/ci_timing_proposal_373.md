@@ -2,10 +2,10 @@
 
 **Status: proposal for the owner's decision.** This branch changes no budget, ratio or tolerance. Its changes:
 
-- the analysis tool skips runs whose `verify-all` stopped before `pytest-fast`;
-- it adds rule f (below);
+- the analysis tool skips runs whose `verify-all` stopped before `pytest-fast`, and adds rule f to its comparisons;
 - the evidence;
-- one CI trigger change (section 4), kept as its own commit so it can be dropped.
+- one CI trigger change (section 4), kept as its own commit so it can be dropped;
+- after the owner's provisional approval: **rule f in the enforcement gate**, and a report-only rolling check on integration pushes (section 3), in their own commit.
 
 ## 1. What is failing, and why
 
@@ -50,7 +50,17 @@ Full tables: [`report_current_code.md`](ci_timing_373_evidence/report_current_co
 - **The recalibration (c2) cuts false failures to 4 %, but it loosens a lot.** The recalibrated Windows `pytest-fast` limit would be 155 s, against 121.8 s today. The window also had slower runners (median speed 1.11–1.18), so a raw median bakes them in. Its ×1.25 detection falls to 54–67 %.
 - **Rule f** keeps the fixed ceiling as an absolute bound. It fails only when the advisory agrees:
   - Linux: 0 false failures and 88 % detection of ×1.25;
-  - Windows: one false failure in 24 and 92 % detection of ×1.5.
+  - Windows: one false failure in 24 and 92 % detection of ×1.5. **It does not reliably detect an isolated 25 % slowdown on Windows**: 12 % here, 38 % with the committed model (below). Only slowdowns of about 50 % or more are caught reliably there.
+- **These rule-f rows fit the advisory model on the current code** (leave-one-out). The gate as implemented (section 3) judges against the committed model, fitted on 2026-10-25 before the fast tier grew. Measured with that model on the same runs:
+
+  | Committed model (as implemented) | Linux | Windows |
+  |---|---|---|
+  | Fixed threshold alone fails | 12/24 | 13/24 |
+  | Rule f fails | **9/24** (the model correctly sees the +15 % growth as slow) | 2/24 |
+  | pytest-fast ×1.25 detected | 21/24 | 9/24 |
+  | pytest-fast ×1.5 detected | 24/24 | 22/24 |
+
+  Getting to the 0 % / 4 % rows means refitting the model on the current code (`--write-model`). That accepts the growth, so it is a recalibration and needs the owner's decision.
 - **Creep can only be seen across runs.** The rolling check caught today's +14–16 % on both OSes, and its control is clean. No per-run rule (f, A) can see a uniform 16 % growth, by construction.
 
 ## 3. Recommendation
@@ -58,11 +68,16 @@ Full tables: [`report_current_code.md`](ci_timing_373_evidence/report_current_co
 In the order I'd do them; each is independent:
 
 1. **Pay back the growth instead of raising limits.** Part D's test-suite findings trim the fast tier's repeated setup. If the fast tier gets back ~16 %, today's budgets fit again with nothing loosened. This is preferable to recalibrating.
-2. **Enforce rule f** (fixed ceiling and advisory both) instead of the fixed rule alone. It is #373's option 1, now measured on the current code.
-   - Linux: false failures go from 50 % to 0 %, while ×1.25 detection stays at 88 %.
-   - Windows: from 54 % to 4 %; detection there starts at ×1.5 (92 %).
-   - Implementation: in `_evaluate_verify_step_budget_guard`, an over-threshold step counts only when `verify_step_speed_advisory.json` also says "slow". About 20 lines with a unit test. Not done here.
-3. **Make creep visible:** run `ci_timing_analysis.py --rolling 24` on the integration branch's pushes, report-only at first. It is the only rule that detected the real regression.
+2. **Enforce rule f** (fixed ceiling and advisory both) instead of the fixed rule alone. It is #373's option 1, provisionally approved by the owner, and **implemented on this branch** (`mesh_cli/verify.py`, `_apply_rule_f`).
+   - A step over its fixed threshold fails unless the advisory judges it within this runner's range.
+   - Where the advisory can't judge (no model, no estimate, not run, an error), the fixed threshold decides alone, so the rule never fails open.
+   - The decision is written to `verify_step_budget_check.json` (`rule_f`), and an excused step is named on stderr.
+   - With the committed model: Linux 12/24 → 9/24 failing, Windows 13/24 → 2/24 (above). Windows detects an isolated slowdown reliably only from about ×1.5.
+3. **Keep creep visible (implemented on this branch):** a report-only `timing rolling check` job in `ci.yml` runs on every push to `redesign/visual-editor`.
+   - It collects the branch's last 30 runs (`tooling/ci_timing_collect.py`) and writes `--rolling 24` to the job summary.
+   - It raises a warning annotation on a persistent regression, and never fails.
+   - It is the only rule that detected the real regression.
+   - A scheduled workflow would not run here: GitHub fires `schedule` only from the default branch, `main`.
 4. **Recalibrate only through the reviewed path, and only if 1 doesn't happen.** That means `update_ci_baseline.yml`, `pytest-fast` and `exception-policy-scan` only, from speed-normalised medians (the advisory model's `base_ms`, refit with `--write-model`), not raw medians from a slow-runner window.
 5. **Run CI once per commit** (section 4).
 
@@ -83,10 +98,22 @@ Rejected:
 
 The repository is public, so this costs no money. It costs queue time and concurrent-job slots. Each duplicate also doubles a commit's chance of a red timing badge: at a 75 % false-failure rate per workflow run, about 94 % of commits show a red cross somewhere.
 
-**The change on this branch** (its own commit): `push` runs only for `main`, `redesign/visual-editor` and `release/**`. Feature branches run through their PR (the merge result, which is the evidence a merge decision needs); `workflow_dispatch` still runs any branch. Nothing is skipped for a commit that is merged: its PR ran it, and the integration branch's push runs it again after the merge.
+**The change on this branch** (its own commit): `push` runs only for `main`, `redesign/visual-editor` and `release/**`. Feature branches run through their PR; `workflow_dispatch` still runs any branch.
 
-- Expected: about 40 fewer runs per 120.
-- Not covered: a branch pushed without a PR gets no CI until one is opened or a run is dispatched.
+**Coverage, exactly** (from the 120 runs measured above):
+
+| Commits | Before | After |
+|---|---|---|
+| Feature branch with an open PR (40 of the 59 duplicates) | push run (branch head) + PR run (merge with base) | **PR run only** (the merge with base: the evidence a merge decision needs) |
+| `redesign/visual-editor` (19 duplicates, through draft **#344** → `main`) | push run + #344's PR run | **unchanged: still both.** Pushes to the integration branch keep their push run (post-merge evidence). Every such push also updates #344, whose `pull_request` run tests the branch merged into `main`. |
+| A branch pushed with no PR open | push run | **no automatic run** until a PR is opened or a run is dispatched |
+| `main`, `release/**` | push (+ PR if any) | unchanged |
+
+- Removed: about 40 of the 59 duplicate runs (68 %).
+- **Kept: #344's duplication** (19 of 59).
+- The PR run tests the merge result, not the branch head. They differ only when the base has moved, and then the merge result is the one that matters.
+
+**Removing #344's duplicate is possible but not done.** A job-level `if:` would skip `pull_request` runs whose head is `redesign/visual-editor`. #344's merge-into-`main` result would then go untested until `main` is updated. That changes what #344's checks prove, so it is the owner's call.
 
 **In-job duplication.** Medians of 20 green runs, `tests` job:
 
