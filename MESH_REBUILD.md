@@ -649,6 +649,42 @@ All recorded with restore instructions in `MESH_SALVAGE.md`:
 
    Then archive the demo content and its ~62 tests.
 
+## Since Milestone 14 (summary)
+
+Milestones 15–20 are recorded in their review reports under `docs/reviews/` (one per stage, each with its evidence):
+the Studio theme and interface polish (15), the HD-2D preview (16: 3D view, Blender pipeline, starter kit,
+distribution), the cottage and interior door (17), weather particles and precipitation (18), water (19), and the
+environmental toolkit: terrain heights, live sculpting, material painting, foliage scatter and environmental
+animation (20A–20E). The post-M20 repository health checkpoint is `docs/reviews/post_m20_repository_health.md`.
+
+## Engineering cadence (agreed 2026-10-27)
+
+- **A small repository-health review every 2–3 major development stages:** CI on both platforms read from the
+  logs, the fast tier and the GPU suites, ruff and fresh mypy, GPU-object lifetime, and the open issues' status.
+- **A focused audit after any significant renderer or gameplay architecture change:** independent architecture,
+  compatibility and performance QA on that change.
+- **A full technical-debt checkpoint before switching to a major new subsystem:** as `post_m20_repository_health.md`:
+  baseline, prioritised issues, measured performance, a clean wheel install and export, compatibility.
+- **A release-readiness audit before any public distribution:** packaging, licences and provenance, the release
+  pipeline and its replay goldens (#359), exported games on clean machines.
+
+## Carried forward, not scheduled
+
+- **Animated tiles for traditional 2D maps** (torches, water, flowers in a 2D tilemap; Tiled's tile animations).
+  Milestone 20E animated HD-2D decoration only; its shared frame tables would serve a 2D tile layer. Not part of the
+  post-M20 checkpoint.
+- **2D Starter Room presentation polish** (#398): the purple clear colour outside the map, the overflowing
+  controls-hint banner, the interaction prompt's placement, the starter map's framing. A focused UI-polish task.
+
+## Roadmap (proposals: each needs the owner's go-ahead)
+
+1. **Lakeside Village visual acceptance:** one composed scene (cottages, a jetty, the pond, meadows, a tree line,
+   torches and banners, a breeze, dusk) to judge how terrain, water, weather, scatter and motion hold together;
+   terrain work only for a concrete deficiency it shows.
+2. **Audio and atmosphere expansion.**
+3. **Flowing rivers and waterfalls.**
+4. **Further cinematic and environmental toolkit features.**
+
 ## Decisions needing the owner
 
 - **Starter art:** Milestone 11 generated a hero, a villager and a sign (`docs/starter_art.md`). Replace them with commissioned art if wanted: same sheet layout, rerun the template previews.

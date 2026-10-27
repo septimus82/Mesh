@@ -1,0 +1,163 @@
+{
+ "engine_from": "<scratch>\\venv\\Lib\\site-packages\\engine\\__init__.py",
+ "python": "<scratch>\\venv\\Scripts\\python.exe",
+ "game2d": {
+  "new": 0,
+  "new_out": "Created <scratch>\\creator\\game2d\nNext:\n  cd game2d\n  mesh play     walk around (WASD, E to talk)\n  mesh edit     open it in the editor (Shift+F5 for Creator Mode)\n7e\\scratchpad\\health\\creator\\game2d (template=starter)\nINFO:engine.project_templates:Applying template 'starter' to <scratch>\\creator\\game2d\nINFO:engine.project_scaffold:Project created successfully.\n",
+  "doctor": {
+   "code": 0,
+   "tail": "\n[DOCTOR] Errors:\n  - (none)\n[DOCTOR] Warnings:\n  - Scene <scratch>\\creator\\game2d\\packs\\core_regions\\scenes\\start.json: Entity[0] 'None' (prefab 'player') missing encounter_cost\n  - content.lock.json not found. Generate one for reproducibility.\n[DOCTOR] Suggested next commands:\n  - mesh lock-packs\n"
+  },
+  "play": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "colours_on_screen": 673,
+   "player_moved_px": 150.0,
+   "errors": {}
+  },
+  "studio": {
+   "last_message": "wind",
+   "saved_wind": {
+    "direction": 180.0,
+    "gust": 0.3,
+    "speed": 4.0
+   },
+   "saved_motion": null,
+   "saved_scatter": {},
+   "saved_particles": [
+    {
+     "count": 800,
+     "preset": "rain"
+    }
+   ]
+  },
+  "reopened_play": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "colours_on_screen": 1127,
+   "player_moved_px": 150.0,
+   "errors": {}
+  },
+  "export": {
+   "code": 0,
+   "tail": "[Mesh][Export] building bundle from <scratch>\\creator\\game2d...\n[Mesh][Export] OK (1004 files, 9,359,006 bytes)\n[Mesh][Export] wrote bundle to <scratch>\\creator\\game2d_export\n"
+  },
+  "bundle": {
+   "files": 1005,
+   "mb": 9.6,
+   "scatter_assets": [],
+   "mentions_checkout": []
+  },
+  "project_mentions_checkout": [],
+  "bundle_play": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "colours_on_screen": 123,
+   "player_moved_px": 0.0,
+   "errors": {},
+   "engine_from": "<scratch>\\creator\\game2d_export\\engine\\__init__.py"
+  }
+ },
+ "hd2d": {
+  "new": 0,
+  "new_out": "Created <scratch>\\creator\\hd2d\nNext:\n  cd hd2d\n  mesh play     walk around (WASD, E to talk)\n  mesh edit     open it in the editor (Shift+F5 for Creator Mode)\nb67e\\scratchpad\\health\\creator\\hd2d (template=hd2d_rpg)\nINFO:engine.project_templates:Applying template 'hd2d_rpg' to <scratch>\\creator\\hd2d\nINFO:engine.project_scaffold:Project created successfully.\n",
+  "doctor": {
+   "code": 0,
+   "tail": "] 'None' (prefab 'player') missing encounter_cost\n  - Scene <scratch>\\creator\\hd2d\\packs\\core_regions\\scenes\\start.json: Entity[0] 'None' (prefab 'player') missing encounter_cost\n  - content.lock.json not found. Generate one for reproducibility.\n[DOCTOR] Suggested next commands:\n  - mesh lock-packs\n"
+  },
+  "play": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "colours_on_screen": 620,
+   "player_moved_px": 150.0,
+   "errors": {},
+   "hd2d": {
+    "structures": 45,
+    "scatter": 0,
+    "motion_on": false,
+    "wind": [
+     0.0,
+     0.0
+    ],
+    "motion_clock_s": 0.0,
+    "motion_sheet": null,
+    "models_read": []
+   }
+  },
+  "studio": {
+   "last_message": "Banner",
+   "saved_wind": {
+    "direction": 20.0,
+    "gust": 0.6,
+    "speed": 5.0
+   },
+   "saved_motion": {},
+   "saved_scatter": {
+    "flowers_pink": 2,
+    "flowers_yellow": 2,
+    "grass_tall": 17,
+    "grass_tuft": 41,
+    "torch": 1
+   },
+   "saved_particles": null
+  },
+  "reopened_play": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "colours_on_screen": 624,
+   "player_moved_px": 150.0,
+   "errors": {},
+   "hd2d": {
+    "structures": 45,
+    "scatter": 63,
+    "motion_on": true,
+    "wind": [
+     4.698463103929543,
+     1.7101007166283435
+    ],
+    "motion_clock_s": 1.5,
+    "motion_sheet": [
+     1248,
+     48
+    ],
+    "models_read": []
+   }
+  },
+  "export": {
+   "code": 0,
+   "tail": "[Mesh][Export] building bundle from <scratch>\\creator\\hd2d...\n[Mesh][Export] OK (1054 files, 9,924,780 bytes)\n[Mesh][Export] wrote bundle to <scratch>\\creator\\hd2d_export\n"
+  },
+  "bundle": {
+   "files": 1055,
+   "mb": 10.1,
+   "scatter_assets": [
+    "boulder.glb",
+    "fallen_branch.glb",
+    "foliage.png",
+    "foliage_motion.png",
+    "rock_medium.glb",
+    "rock_small.glb",
+    "tree_small.glb"
+   ],
+   "mentions_checkout": []
+  },
+  "project_mentions_checkout": [],
+  "bundle_play": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "colours_on_screen": 123,
+   "player_moved_px": 0.0,
+   "errors": {},
+   "hd2d": {
+    "structures": 45,
+    "scatter": 63,
+    "motion_on": true,
+    "wind": [
+     4.698463103929543,
+     1.7101007166283435
+    ],
+    "motion_clock_s": 1.5,
+    "motion_sheet": [
+     1248,
+     48
+    ],
+    "models_read": []
+   },
+   "engine_from": "<scratch>\\creator\\hd2d_export\\engine\\__init__.py"
+  }
+ }
+}
