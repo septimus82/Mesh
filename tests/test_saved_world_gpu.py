@@ -124,6 +124,98 @@ def test_a_new_save_is_small_and_follows_the_room_after_edits(tmp_path: Path) ->
         game.close()
 
 
+def _runtime(game: Any, entity_id: str) -> Any:
+    return next(s for s in game.window.scene_controller.all_sprites
+                if (getattr(s, "mesh_entity_data", None) or {}).get("id") == entity_id)
+
+
+def _behaviour(sprite: Any, name: str) -> Any:
+    return next((b for b in getattr(sprite, "mesh_behaviours_runtime", []) if type(b).__name__ == name), None)
+
+
+def test_authored_changes_reach_a_save_and_play_s_state_stays(tmp_path: Path) -> None:
+    """After a save, the creator rewrites the Elder's dialogue, repaints a barrel and gives Mara a new behaviour: the
+    save shows all three. What play changed stays: the barrel's damage (its Health), where the barrel and the player
+    stand, the flag."""
+    import saved_world_fixtures as fx
+    from hd2d_demo import HiddenGame
+
+    project = fx.build_project(tmp_path / "hd2d", "hd2d")
+
+    def barrel(scene: dict) -> dict:
+        scene["entities"].append({"id": "start_barrel", "name": "Barrel", "x": 700.0, "y": 300.0, "layer": "entities",
+                                  "sprite": "assets/sprites/starter_sign.png", "behaviours": ["Health"],
+                                  "behaviour_config": {"Health": {"max_hp": 10.0, "hp": 10.0}}})
+        return scene
+
+    _edit_room(project, barrel)
+    game = HiddenGame(project)
+    try:
+        game.load(fx.ROOM)
+        game.step(10)
+        cask = _runtime(game, "start_barrel")
+        _behaviour(cask, "Health").apply_damage(6.0)
+        cask.center_x += 40.0
+        fx.player_of(game).center_x += 64.0
+        game.window.game_state_controller.set_flag("met_the_elder", True)
+        game.step(2)
+        at = (round(cask.center_x), round(cask.center_y), round(fx.player_of(game).center_x))
+        assert game.window.save_manager.save_game("slot1")
+    finally:
+        game.close()
+
+    def since(scene: dict) -> dict:
+        by = {e.get("id"): e for e in scene["entities"]}
+        by["start_elder"]["behaviour_config"]["Dialogue"]["dialogue"]["nodes"]["root"]["text"] = "New words, after the save."
+        by["start_barrel"]["sprite"] = "assets/sprites/hd2d_merchant.png"
+        by["start_mara"]["behaviours"] = [*by["start_mara"]["behaviours"], "Health"]
+        by["start_mara"].setdefault("behaviour_config", {})["Health"] = {"max_hp": 7.0}
+        return scene
+
+    _edit_room(project, since)
+    game = _load(project)
+    try:
+        elder, cask, mara = (_runtime(game, i) for i in ("start_elder", "start_barrel", "start_mara"))
+        talk = _behaviour(elder, "Dialogue")
+        assert "New words, after the save." in repr((talk._script, talk._graph_nodes))  # (what the Elder says: as now)
+        assert cask.mesh_entity_data["sprite"] == "assets/sprites/hd2d_merchant.png"  # (the picture, as authored now)
+        assert _behaviour(mara, "Health") is not None and _behaviour(mara, "Health").max_hp == 7.0  # (a new behaviour)
+        assert _behaviour(cask, "Health").hp == 4.0  # (play's damage: kept)
+        assert (round(cask.center_x), round(cask.center_y), round(fx.player_of(game).center_x)) == at  # (where play left them)
+        assert game.window.game_state_controller.get_flag("met_the_elder")
+    finally:
+        game.close()
+
+
+def test_a_new_save_whose_room_is_missing_is_refused_and_kept(tmp_path: Path) -> None:
+    """A save made since #390 has no copy of its room. With the room gone, loading it is refused clearly, before
+    anything changes: the running game stays as it was and the save file is untouched; with the room back, it loads."""
+    import saved_world_fixtures as fx
+
+    project = fx.build_project(tmp_path / "hd2d", "hd2d")
+    save_path = fx.play_and_save(project, "hd2d")
+    before = save_path.read_bytes()
+    room = project / fx.ROOM
+    game = _load(project)  # (the save loaded once, the room present)
+    try:
+        held = room.with_name("start.json.away")
+        room.rename(held)
+        player = fx.player_of(game)
+        player.center_x += 96.0
+        where = (game.window.scene_controller.current_scene_path, round(player.center_x), round(player.center_y))
+        assert game.window.save_manager.load_game("slot1") is False  # (refused)
+        game.step(4)
+        player = fx.player_of(game)
+        assert (game.window.scene_controller.current_scene_path, round(player.center_x), round(player.center_y)) == where
+        assert save_path.read_bytes() == before  # (the save: kept as it was)
+        held.rename(room)
+        assert game.window.save_manager.load_game("slot1")  # (the room back: it loads)
+        game.step(4)
+        assert game.window.game_state_controller.get_flag("met_the_elder")
+    finally:
+        game.close()
+
+
 def test_a_save_whose_room_is_gone_loads_its_own_copy(tmp_path: Path) -> None:
     import saved_world_fixtures as fx
 

@@ -522,20 +522,25 @@ def build_slot_payload(
     else:
         snapshot["saved_quests"] = {"schema_version": 1, "quests": {}}
 
-    # The room's authored settings aren't saved: loading takes them from the room as it is then (#390)
-    from engine.scene_runtime.saved_world import ROOM_IDS, room_ids, slim
-
-    slim(snapshot)
-
-    # Add save schema version
-    snapshot["save_schema_version"] = SAVE_SCHEMA_VERSION
-    snapshot, _ = normalize_save_payload(snapshot, source="save_runtime/build_slot_payload")
-
     # The room this was saved in. After loading a save the current scene is the save file itself;
     # recording that made the next save point at a save, and its map was then looked for in saves/.
     room = getattr(window.scene_controller, "room_path", None)
     if not isinstance(room, str) or not room:
         room = window.scene_controller.current_scene_path
+    # The room's authored settings aren't saved when the room can be read: loading takes them from the room as it is
+    # then (#390). A scene with no readable room (built in memory) keeps its whole snapshot: such a save is complete.
+    from engine.scene_runtime.saved_world import ROOM_IDS, room_ids, slim
+
+    loader = getattr(window, "scene_loader", None)
+    has_room = (isinstance(room, str) and bool(room) and loader is not None and hasattr(loader, "saved_room")
+                and loader.saved_room(room, warn=False) is not None)
+    if has_room:
+        slim(snapshot)
+
+    # Add save schema version
+    snapshot["save_schema_version"] = SAVE_SCHEMA_VERSION
+    snapshot, _ = normalize_save_payload(snapshot, source="save_runtime/build_slot_payload")
+
     content_to_hash = {
         "data": snapshot,
         "slot": slot_name,
@@ -549,8 +554,9 @@ def build_slot_payload(
         "scene_path": room,
         "timestamp": timestamp,
         "version": constants.SLOT_META_VERSION,
-        ROOM_IDS: room_ids(window.scene_controller),
     }
+    if has_room:
+        snapshot["meta"][ROOM_IDS] = room_ids(window.scene_controller)
     snapshot["save_format_version"] = SAVE_FORMAT_VERSION
 
     spawn_zone_id = None

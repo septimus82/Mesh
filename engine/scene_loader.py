@@ -179,7 +179,13 @@ class SceneLoader:
             # SaveManager before it loads the slot as a scene); keep only the scene part.
             meta = raw_scene.get("meta")
             saved_from = meta.get("scene_path") if isinstance(meta, dict) else None
-            room = self._saved_room(saved_from)
+            room = self.saved_room(saved_from)
+            if room is None and isinstance(raw_scene, dict):
+                from engine.scene_runtime.saved_world import needs_its_room  # noqa: PLC0415
+
+                if needs_its_room(raw_scene):  # (no copy of its room: refused, never loaded half-built)
+                    raise FileNotFoundError(f"The room '{saved_from}' this save was made in is missing; "
+                                            "the save was not loaded")
             if room is not None:  # (#390: the room as it is now, with what play changed: engine.scene_runtime.saved_world)
                 from engine.scene_runtime.saved_world import compose  # noqa: PLC0415
 
@@ -236,9 +242,10 @@ class SceneLoader:
         )
         return scene
 
-    def _saved_room(self, saved_from: Any) -> Dict[str, Any] | None:
+    def saved_room(self, saved_from: Any, *, warn: bool = True) -> Dict[str, Any] | None:
         """The room a save was made in, as it is now (an open document, else its file); None (with a warning) if it
-        can't be read: the save then loads from its own copy of the room, as saves always did."""
+        can't be read (engine.scene_runtime.saved_world: an older save then loads its own copy; a newer one is
+        refused)."""
         if not isinstance(saved_from, str) or not saved_from.strip():
             return None
         path = resolve_path(saved_from)
@@ -248,8 +255,10 @@ class SceneLoader:
         try:
             room = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
+            if not warn:
+                return None
             diag_warn("scene_loader.saved_room_missing", f"The room '{saved_from}' this save was made in can't be read "
-                      f"({exc}); the save loads its own copy of it", "engine.scene_loader", location=str(saved_from))
+                      f"({exc})", "engine.scene_loader", location=str(saved_from))
             return None
         return room if isinstance(room, dict) else None
 

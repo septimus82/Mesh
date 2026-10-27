@@ -42,21 +42,24 @@ The objects are reconciled with the room by `id`:
 
 | Case | Result |
 |---|---|
-| An object in the room and in the save | the save's (as play left it) |
+| An object in the room and in the save | **the room's, as authored now** (dialogue, picture, behaviours), standing where play left it (`x`, `y`, `elevation`); its inner state (health, a quest hook's, a dialogue's progress) from `saved_entities` |
 | In the room, not in the save (added since) | appears, unless room memory says play removed it |
 | In the save, from the room at save time (`meta.room_entity_ids`), no longer in the room (deleted since) | left out |
 | In the save, not from the room (spawned during play) | kept |
 | Without an `id` | kept as saved |
 | A save from before #390 (no `room_entity_ids`) | every saved object kept (as before), plus objects added since |
 
-**A save whose room can't be read** (renamed, deleted) loads from what it has, with a warning:
+**A save whose room can't be read** (renamed, deleted):
 
-- an older save from its own copy of the room;
-- a new save without the room's look.
+- an older save loads from its own copy of the room, as it always did;
+- a new save has no copy: **loading it is refused** before anything is applied (`LOAD_ROOM_MISSING`: a clear error and
+  a toast). Mid-game the player stays where they are; with no game running, the start scene opens. The save file is
+  never changed, so it loads again once the room is back (tested).
 
 ### Saving
 New saves leave out what play doesn't change: the room's settings (only the camera's zoom is kept), its map, lights,
-occluders and backgrounds. They record `meta.room_entity_ids`. The decorated room's save goes from 106 KB to about
+occluders and backgrounds. They record `meta.room_entity_ids`. Only when the room can be read at save time: a scene
+built in memory (no room file) keeps its whole snapshot, a complete save as before #390. The decorated room's save goes from 106 KB to about
 26 KB.
 
 ## Compatibility
@@ -68,15 +71,16 @@ occluders and backgrounds. They record `meta.room_entity_ids`. The decorated roo
 | New saves avoid terrain and scatter copies | `slim` | the new save's settings are `{}`; under half the old size |
 | A terrain edit appears in an older save | the room is authoritative | the old save loaded after a re-sculpt, a cleared scatter and a new wind shows the new ground, no scatter, 12 m/s |
 | Missing and renamed objects | the reconciliation table above | Mara deleted after a new save: gone; a Newcomer added: present |
-| Doors, containers, quest objects | their inner states are `saved_entities`, restored by id, unchanged by this design | `test_save_entity_quest_state.py` and the other 456 save tests pass |
+| Doors, containers, quest objects | their inner states are `saved_entities`, restored by id, unchanged by this design | a barrel's damage (Health) kept while its picture changes; `test_save_entity_quest_state.py`; all 618 save-related tests pass |
+| Authored dialogue, appearance, behaviour edited after a save | the room's object as authored now, where play left it | the Elder's new dialogue, a repainted barrel, Mara's added behaviour all reach an older save |
+| A new save whose room is missing | refused clearly, recoverable, file untouched | the room renamed away: refused, game unchanged, save byte-identical; renamed back: loads |
 
 ## Trade-offs and what is not done (bounded)
 
-- **An object's authored fields edited after a save** (its dialogue, its picture) stay as saved for that save. The
-  saved object mixes authored fields with what play changed (behaviour settings synced from the running object), so
-  separating them needs a per-field split, behaviour by behaviour. This is the next step.
-- **A new save whose room file is gone** loads without the room's look. A pre-#390 save had its own copy; a new one
-  doesn't duplicate the room.
+- **An object the creator moves after a save** stays, in that save, where the save found it: a save can't tell a
+  creator's move from play's. Its dialogue, picture and behaviours do follow the room.
+- **A new save needs its room.** Without it, loading is refused (above), never half-built; an older save still has its
+  own copy.
 - **`DoorLock` has no saved state** (no `saveable_state`). A door unlocked in play is restored only through the flags
   or events that unlocked it. This predates #390 and is unchanged.
 - **Gameplay that changes the world's shape** (terrain dug, tiles changed in play) doesn't exist today. If it is

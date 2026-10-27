@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from engine.scene_runtime.saved_world import ROOM_IDS, compose, slim
+from engine.scene_runtime.saved_world import ROOM_IDS, compose, needs_its_room, slim
 
 pytestmark = pytest.mark.fast
 ROOM_PATH = "packs/core_regions/scenes/start.json"
@@ -66,3 +66,25 @@ def test_slim_leaves_out_what_play_doesnt_change() -> None:
     assert snapshot["settings"] == {"camera": {"zoom": {"initial": 2.5}}}
     assert not {"tilemap", "lights", "background_layers"} & set(snapshot)
     assert snapshot["entities"] and snapshot["state"]
+
+
+def test_an_object_the_room_still_has_is_the_room_s_as_authored_now_where_play_left_it() -> None:
+    """Dialogue, picture and behaviours edited after a save reach it; where play left the object stays the save's."""
+    room = _room("player", "elder")
+    room["entities"][1].update(sprite="new.png", behaviours=["Dialogue", "Wander"],
+                               behaviour_config={"Dialogue": {"text": "new words"}})
+    saved_elder = {"id": "elder", "x": 10.0, "y": 20.0, "elevation": 1.5, "sprite": "old.png",
+                   "behaviours": [{"type": "Dialogue", "params": {"text": "old words"}}]}
+    scene = compose(_save([{"id": "player", "x": 99.0, "y": 50.0}, saved_elder], room_ids=["player", "elder"]),
+                    room, ROOM_PATH)
+    elder = next(e for e in scene["entities"] if e["id"] == "elder")
+    assert elder["sprite"] == "new.png" and elder["behaviours"] == ["Dialogue", "Wander"]
+    assert elder["behaviour_config"] == {"Dialogue": {"text": "new words"}}
+    assert (elder["x"], elder["y"], elder["elevation"]) == (10.0, 20.0, 1.5)
+    spawned = {"id": "dropped_coin_7", "x": 2.0, "y": 2.0, "sprite": "coin.png"}
+    scene = compose(_save([spawned], room_ids=["player"]), _room("player"), ROOM_PATH)
+    assert spawned in scene["entities"]  # (not the room's: kept whole)
+
+
+def test_only_a_save_without_its_own_room_copy_needs_its_room() -> None:
+    assert needs_its_room(_save([], room_ids=["player"])) and not needs_its_room(_save([]))
