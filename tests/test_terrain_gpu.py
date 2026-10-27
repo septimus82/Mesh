@@ -33,7 +33,7 @@ sys.path.insert(0, str(REPO / "tooling"))
 def test_the_player_walks_the_sculpted_ground_and_its_cliff_stops_him(tmp_path: Path) -> None:
     import m20a_terrain_study as study
 
-    r = study.walking(tmp_path)
+    r = study.walking(tmp_path, film=False)  # (the walks, without the report's clips)
     hill = r["over_the_hill"]
     assert hill["reached"] == [True] and 1.4 < hill["highest_m"] <= 1.5 and hill["end_elevation_m"] < 0.1, hill
     ramp = r["up_the_ramp"]

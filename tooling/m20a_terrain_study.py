@@ -242,9 +242,10 @@ def _put(game: HiddenGame, x: float, y: float) -> Any:
     return player
 
 
-def walking(out: Path) -> dict[str, Any]:
+def walking(out: Path, *, film: bool = True) -> dict[str, Any]:
     """The player walks with the game's own key events: over the hill, up the ramp, into the terrace's cliff, along
-    the valley under the bridge, up the stairs and across the bridge, into the pond's basin."""
+    the valley under the bridge, up the stairs and across the bridge, into the pond's basin. ``film=False`` skips the
+    evidence clips (a frame read back every other step, encoded to WebP): the tests check the walks, not the clips."""
     import m18_particles_study as m18
     from hd2d_floors_demo import _feet, hold_key
 
@@ -257,7 +258,7 @@ def walking(out: Path) -> dict[str, Any]:
         hd = game.window.hd2d_renderer
 
         def walk(name: str, start: tuple[float, float], legs: list[tuple[int, int, float]],
-                 film: bool = False) -> dict[str, Any]:
+                 filmed: bool = False) -> dict[str, Any]:
             player = _put(game, *start)
             trace: list[tuple[float, float, float]] = []
             clip: list[Any] = []
@@ -265,7 +266,7 @@ def walking(out: Path) -> dict[str, Any]:
             def each() -> None:
                 fx, fy = _feet(player)
                 trace.append((round(fx, 3), round(fy, 3), round(elevation_of(player), 3)))
-                if film and len(trace) % 2 == 0 and len(clip) < 120:
+                if filmed and film and len(trace) % 2 == 0 and len(clip) < 120:
                     picture = game.draw().convert("RGB")
                     clip.append(m18.crop_at(picture, study.SIZE[0] / 2, study.SIZE[1] / 2, (640, 360)))
 
@@ -285,13 +286,13 @@ def walking(out: Path) -> dict[str, Any]:
             (out / f"walk_{name}.json").write_text(json.dumps(trace) + "\n", encoding="utf-8")
             return row
 
-        report["over_the_hill"] = walk("hill", (HILL[0], 13.0), [(keys.UP, 1, 23.0)], film=True)
-        report["up_the_ramp"] = walk("ramp", (19.5, 19.0), [(keys.RIGHT, 0, 28.0)], film=True)
+        report["over_the_hill"] = walk("hill", (HILL[0], 13.0), [(keys.UP, 1, 23.0)], filmed=True)
+        report["up_the_ramp"] = walk("ramp", (19.5, 19.0), [(keys.RIGHT, 0, 28.0)], filmed=True)
         report["into_the_cliff"] = walk("cliff", (28.0, 12.0), [(keys.UP, 1, 19.0)])
-        report["along_the_valley_under_the_bridge"] = walk("valley", (15.0, 6.0), [(keys.UP, 1, 21.0)], film=True)
+        report["along_the_valley_under_the_bridge"] = walk("valley", (15.0, 6.0), [(keys.UP, 1, 21.0)], filmed=True)
         report["stairs_and_bridge"] = walk("bridge", (11.0, 6.5), [(keys.UP, 1, 15.0), (keys.RIGHT, 0, 19.0)],
-                                           film=True)
-        report["into_the_pond"] = walk("pond", (21.5, 6.0), [(keys.RIGHT, 0, 26.0)], film=True)
+                                           filmed=True)
+        report["into_the_pond"] = walk("pond", (21.5, 6.0), [(keys.RIGHT, 0, 26.0)], filmed=True)
     finally:
         game.close()
     return report
