@@ -1,0 +1,18 @@
+{
+ "compared": 24,
+ "differing_pixels": 0,
+ "views": [
+  "overview",
+  "path",
+  "valley",
+  "pond",
+  "rock",
+  "hill",
+  "bridge",
+  "cottage"
+ ],
+ "cases": {
+  "no motion settings (dry, rain)": "vs 1d2501d",
+  "motion set but off, 6 m/s wind (dry)": "vs 1d2501d"
+ }
+}

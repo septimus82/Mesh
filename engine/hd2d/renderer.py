@@ -598,7 +598,29 @@ class Hd2dRenderer:
             from engine.hd2d.scatter_layer import ScatterLayer  # noqa: PLC0415
 
             self.scatter = ScatterLayer(self, scatter or {}, self.ground_height)
+            self.scatter.set_motion(self.motion, self.wind)
         return self.scatter
+
+    @property
+    def motion(self) -> Any:
+        from engine.hd2d.motion import OFF  # noqa: PLC0415
+
+        return self.settings.motion or OFF
+
+    @property
+    def wind(self) -> Any:
+        from engine.wind import CALM  # noqa: PLC0415
+
+        return self.settings.wind or CALM
+
+    @property
+    def motion_time(self) -> float:
+        """s: the decoration's clock (Milestone 20E). The window's, so it runs on across a room's reloads (Studio
+        reloads on every edit: nothing jumps)."""
+        return float(getattr(self.window, "motion_time", 0.0))
+
+    def advance_motion(self, delta_time: float) -> None:
+        self.window.motion_time = self.motion_time + max(0.0, float(delta_time))
 
     def ensure_terrain(self) -> Any:
         """The ground's heights to sculpt live (Mesh Studio, Milestone 20B): a flat room's plain ground becomes
@@ -998,6 +1020,8 @@ class Hd2dRenderer:
     def update(self, delta_time: float) -> None:
         if self.particles is not None:
             self.particles.update(delta_time)
+        if self.scatter is not None and self.motion.enabled:
+            self.advance_motion(delta_time)
         sprite = self.followed()
         if sprite is None:
             return
@@ -1041,10 +1065,14 @@ class Hd2dRenderer:
         verts, idx, ranges = self._sprite_quads(sprites, shadows=solid is None and not lighting.enabled, right=cam.right())
         geometry_sprites = self._upload_dynamic(verts, idx) if sprites else None
         live = self.live_draws()
+        stretch = 1.0 / max(0.5, math.cos(math.radians(self.camera.pitch)))
         if solid is None:  # the flat ground receives, never casts; sculpted ground's hills cast too
             casters = (self.static + live + (self._terrain_casters() if self.terrain is not None else [])
                        + (self.scatter.casters() if self.scatter is not None else []))
-            lighting.render_shadows(casters, geometry_sprites, ranges)
+            scatter = self.scatter
+            extra = (None if scatter is None or not scatter.cast_quads else  # (trees' canopies, as they sway)
+                     lambda sun_vp: scatter.draw_casters(sun_vp, self.motion_time, cam.right(), stretch))
+            lighting.render_shadows(casters, geometry_sprites, ranges, extra=extra)
         weather = self.particles is not None and solid is None and (camera is None or self.weather_preview)
         maps = self.precipitation_maps() if weather else []  # before the frame's target is in use: cached, mostly
         fbo.use()
@@ -1069,8 +1097,8 @@ class Hd2dRenderer:
             geometry.render(mp)
             self.draw_calls += 1
         if self.scatter is not None and solid is None:  # grass, flowers, bushes, reeds: billboards, a draw a chunk
-            stretch = 1.0 / max(0.5, math.cos(math.radians(self.camera.pitch)))
-            self.scatter.draw_sprites(vp, self.last_vp, cam.target, cam.right(), stretch, lighting, _box_in_view)
+            self.scatter.draw_sprites(vp, self.last_vp, cam.target, cam.right(), stretch, lighting, _box_in_view,
+                                      self.motion_time)
             self.draw_calls += self.scatter.draw_calls
         if solid is not None:  # keep the depth, clear the colour
             fbo.depth_mask = False

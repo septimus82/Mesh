@@ -331,7 +331,10 @@ class Studio(InspectorMixin):
         scatter_error = getattr(self.window, "hd2d_scatter_error", None)
         if scatter_error:
             scatter_error = f"This room's scattered decoration is set aside: {scatter_error}. Clear scatter starts afresh."
-        for text, ok in ((terrain_error, False), (scatter_error, False),
+        motion_error = getattr(self.window, "hd2d_motion_error", None)
+        if motion_error:
+            motion_error = f"This room's motion: {motion_error}. Set it again under Wind and motion."
+        for text, ok in ((terrain_error, False), (scatter_error, False), (motion_error, False),
                          (f"Weather is off in this room: {error}" if error else None, False),
                          (f"Water is off in this room: {water_error}" if water_error else None, False), (notice, True)):
             if text and text not in self._weather_said:
@@ -2521,6 +2524,7 @@ class Studio(InspectorMixin):
         if lighting is not None:
             lighting.update(delta_time)  # flicker shows while editing; nothing else of the game runs
         self.hd2d.advance_weather(delta_time)  # ... nor does the weather, unless it's being previewed
+        self.hd2d.advance_motion(delta_time)  # ... but the room's decoration moves, if its animation is on (20E)
         self.hd2d.tick(delta_time)  # a sculpting stroke held still keeps working; what it changed is drawn
         from engine import water  # noqa: PLC0415
 

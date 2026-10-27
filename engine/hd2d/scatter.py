@@ -32,10 +32,37 @@ from typing import Any, Callable, Iterable
 PX = 32.0  # px a metre
 KIT = "assets/hd2d_starter/scatter"
 SHEET = f"{KIT}/foliage.png"  # the sprites: 48 x 48 px cells (tooling/hd2d_assets/scatter_art.py)
+# Milestone 20E's (animated decoration, a tree's canopy): cells from FIRST_MOTION on, in a sheet of their own, so
+# 20D's sheet and every coordinate into it stay exactly as they were (20D's decoration draws pixel for pixel alike)
+MOTION_SHEET = f"{KIT}/foliage_motion.png"
+FIRST_MOTION = 17
 CELL_PX = 48
 MAX_INSTANCES = 50000  # a room's scatter, all assets (a 128 x 128 m meadow at three a square metre)
 PER_DAB = 1500  # the most one dab adds: a huge dense brush fills as it moves, never freezing on one click
 MATERIALS = ("grass", "earth", "stone", "mud", "sand")  # (engine.hd2d.terrain.MATERIALS)
+
+
+@dataclass(frozen=True)
+class Part:
+    """A sprite attached to an asset (Milestone 20E): a torch's flame, a banner's cloth, a tree's canopy. ``at``: its
+    anchor (m east, north, up of the instance's foot at size 1, turned with it), about which it sways; then how it
+    moves (``Asset``'s fields of the same names); ``cast``: it casts the sun's shadow (a canopy); ``scale``: its
+    size, times the instance's."""
+
+    cell: int
+    at: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    flex: float = 0.0
+    frames: int = 1
+    fps: float = 0.0
+    loop: str = "loop"
+    phase: float = 1.0
+    glow: float = 0.0
+    streams: bool = False
+    cast: bool = False
+    scale: float = 1.0
+    nearer: float = 0.0  # m: drawn this much nearer the camera than its anchor (a flame in its cup, not behind it)
+    lift: float = 0.0  # m: its light taken this far toward the sun (a canopy: its own clusters don't shade it)
+    limp: int | None = None  # its cell in still air (a banner hanging; its frames when the wind blows)
 
 
 @dataclass(frozen=True)
@@ -57,18 +84,52 @@ class Asset:
     shore: float = 0.0
     blocks: bool = False
     shadow: bool = False
+    reach: float = 0.0  # m: how far it spreads above the ground (a tree's canopy): kept that far off structures
+    # How it moves when the room's motion is on (engine.hd2d.motion, Milestone 20E): ``flex`` how much the wind
+    # bends it (0 stiff .. 1 grass and reeds); ``frames`` its sprite's frames (cells after ``cell``), shown at
+    # ``fps``, looping or ``pingpong``, instances out of step by ``phase`` (0-1); ``glow`` how much it shines in
+    # the dark (0-1); ``streams``: points downwind (a banner); ``parts``: sprites attached to it.
+    flex: float = 0.0
+    frames: int = 1
+    fps: float = 0.0
+    loop: str = "loop"
+    phase: float = 1.0
+    glow: float = 0.0
+    streams: bool = False
+    parts: tuple[Part, ...] = ()
+
+    def sprite_parts(self) -> list[tuple[int, Part | None]]:
+        """Its sprites (part number, the part: None for its own ``cell``), in a fixed order."""
+        return ([(0, None)] if self.cell is not None else []) + [(k + 1, p) for k, p in enumerate(self.parts)]
 
 
 ASSETS: dict[str, Asset] = {a.id: a for a in (
-    Asset("grass_tuft", "Grass tuft", cell=(0, 1, 2), spacing=0.16, size=(0.75, 1.15)),
-    Asset("grass_tall", "Tall grass", cell=(3, 4), spacing=0.2),
-    Asset("grass_dry", "Dry grass", cell=(5, 6), spacing=0.35, on=("grass", "earth", "sand")),
-    Asset("flowers_yellow", "Yellow flowers", cell=(7, 8), spacing=0.4),
-    Asset("flowers_pink", "Pink flowers", cell=(9, 10), spacing=0.4),
-    Asset("bush", "Bush", cell=(11, 12), spacing=1.1, size=(0.9, 1.45), slope=30.0),
-    Asset("bush_berries", "Berry bush", cell=(13,), spacing=0.9, size=(0.85, 1.15), slope=30.0),
-    Asset("reeds", "Reeds", cell=(14, 15), spacing=0.3, size=(0.7, 1.2), on=("grass", "mud", "sand"), shore=0.3),
-    Asset("reeds_cattail", "Cattails", cell=(16,), spacing=0.35, on=("grass", "mud", "sand"), shore=0.3),
+    Asset("grass_tuft", "Grass tuft", cell=(0, 1, 2), spacing=0.16, size=(0.75, 1.15), flex=0.85),
+    Asset("grass_tall", "Tall grass", cell=(3, 4), spacing=0.2, flex=1.0),
+    Asset("grass_dry", "Dry grass", cell=(5, 6), spacing=0.35, on=("grass", "earth", "sand"), flex=0.7),
+    Asset("flowers_yellow", "Yellow flowers", cell=(7, 8), spacing=0.4, flex=0.8),
+    Asset("flowers_pink", "Pink flowers", cell=(9, 10), spacing=0.4, flex=0.8),
+    Asset("bush", "Bush", cell=(11, 12), spacing=1.1, size=(0.9, 1.45), slope=30.0, flex=0.12),
+    Asset("bush_berries", "Berry bush", cell=(13,), spacing=0.9, size=(0.85, 1.15), slope=30.0, flex=0.1),
+    Asset("reeds", "Reeds", cell=(14, 15), spacing=0.3, size=(0.7, 1.2), on=("grass", "mud", "sand"), shore=0.3,
+          flex=1.0),
+    Asset("reeds_cattail", "Cattails", cell=(16,), spacing=0.35, on=("grass", "mud", "sand"), shore=0.3, flex=0.9),
+    # Milestone 20E: animated decoration (frames on the GPU, from one shared sheet), and a small tree
+    Asset("bellflowers", "Bellflowers", cell=(36,), spacing=0.4, flex=0.8, frames=3, fps=2.0, loop="pingpong"),
+    Asset("glowcap", "Glowcaps", cell=(34,), spacing=0.5, size=(0.8, 1.2), on=("grass", "earth", "mud"), flex=0.1,
+          frames=2, fps=1.5, glow=0.9),
+    Asset("torch", "Torch", cell=(17,), spacing=1.5, size=(0.95, 1.05), slope=20.0, on=MATERIALS,
+          parts=(Part(18, at=(0.0, 0.0, 0.97), flex=0.45, frames=6, fps=10.0, glow=1.0, nearer=0.05),)),
+    Asset("banner", "Banner", cell=(24,), spacing=1.5, size=(0.95, 1.05), slope=20.0, on=MATERIALS,
+          parts=(Part(25, at=(0.0, 0.0, 0.63), flex=0.2, frames=4, fps=6.0, streams=True, limp=29),)),
+    Asset("dripping_rock", "Dripping rock", cell=(30,), spacing=1.0, size=(0.9, 1.1), slope=30.0, on=MATERIALS,
+          frames=4, fps=3.0, phase=1.0),
+    Asset("tree_small", "Small tree", model=f"{KIT}/tree_small.glb", spacing=3.0, size=(0.85, 1.2), slope=25.0,
+          on=("grass", "earth"), blocks=True, shadow=True, reach=1.1,
+          parts=(Part(40, at=(0.0, 0.05, 1.45), flex=0.45, cast=True, scale=1.5, lift=1.2),
+                 Part(41, at=(-0.45, 0.15, 1.2), flex=0.5, cast=True, scale=1.2, lift=1.2),
+                 Part(42, at=(0.5, 0.1, 1.3), flex=0.5, cast=True, scale=1.2, lift=1.2),
+                 Part(41, at=(0.1, -0.2, 1.95), flex=0.45, cast=True, scale=1.15, lift=1.2))),
     Asset("rock_small", "Small rock", model=f"{KIT}/rock_small.glb", spacing=0.5, size=(0.8, 1.6), slope=40.0,
           on=MATERIALS, shadow=True),
     Asset("rock_medium", "Rock", model=f"{KIT}/rock_medium.glb", spacing=1.0, size=(0.75, 1.3), slope=40.0,
@@ -78,6 +139,9 @@ ASSETS: dict[str, Asset] = {a.id: a for a in (
     Asset("fallen_branch", "Fallen branch", model=f"{KIT}/fallen_branch.glb", spacing=1.6, size=(0.8, 1.2),
           slope=12.0, on=("grass", "earth", "mud"), shadow=True),
 )}
+# A slot a sprite part (asset id, part number): its row in the shader's motion tables (engine.hd2d.motion).
+SLOTS: dict[tuple[str, int], int] = {(a.id, k): n for n, (a, k) in enumerate(
+    (a, k) for a in ASSETS.values() for k, _p in a.sprite_parts())}
 WIDEST = max(a.spacing for a in ASSETS.values())  # m: the most two instances keep apart
 COLLECTIONS: dict[str, dict[str, float]] = {  # name -> asset weights: what a brush scatters together
     "Meadow": {"grass_tuft": 6, "grass_tall": 3, "flowers_yellow": 1, "flowers_pink": 1},
@@ -208,7 +272,11 @@ def allowed(asset: Asset, x: float, y: float, ground: Ground, rules: Rules) -> b
     if level is not None and rules.avoid_water and height < level + 0.05 * PX \
             and not (asset.shore and height >= level - asset.shore * PX):
         return False
-    return not (rules.avoid_structures and ground.structure(x, y))
+    if not rules.avoid_structures:
+        return True
+    r = asset.reach * PX  # (a tree's canopy: clear of walls and doorways all round, not only at its trunk)
+    return not any(ground.structure(x + dx, y + dy) for dx, dy in ((0, 0), (r, 0), (-r, 0), (0, r), (0, -r))
+                   if r or (dx, dy) == (0, 0))
 
 
 # ---------------------------------------------------------------------- the brush

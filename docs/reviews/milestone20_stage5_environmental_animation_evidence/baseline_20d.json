@@ -1,0 +1,34 @@
+{
+ "64m_100": {
+  "room_load_ms": 508.7,
+  "frame_wall_ms": 7.97,
+  "sprite_pass_gpu_ms": 0.0091,
+  "draw_calls": 51,
+  "shadow_draws": 20,
+  "scatter_bytes": 204760
+ },
+ "64m_1000": {
+  "room_load_ms": 494.9,
+  "frame_wall_ms": 4.45,
+  "sprite_pass_gpu_ms": 0.0216,
+  "draw_calls": 74,
+  "shadow_draws": 20,
+  "scatter_bytes": 665384
+ },
+ "64m_10000": {
+  "room_load_ms": 719.7,
+  "frame_wall_ms": 5.95,
+  "sprite_pass_gpu_ms": 0.1522,
+  "draw_calls": 108,
+  "shadow_draws": 20,
+  "scatter_bytes": 5787776
+ },
+ "128m_10000": {
+  "room_load_ms": 1260.9,
+  "frame_wall_ms": 7.64,
+  "sprite_pass_gpu_ms": 0.1658,
+  "draw_calls": 151,
+  "shadow_draws": 32,
+  "scatter_bytes": 5787776
+ }
+}

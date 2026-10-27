@@ -95,8 +95,11 @@ def _pair(value: Any, what: str, lim: float) -> tuple[float, float]:
     return (_number(value[0], what, -lim, lim), _number(value[1], what, -lim, lim))
 
 
-def parse_particles(raw: Any) -> tuple[ParticleEffect, ...]:
-    """A room's ``settings.particles`` (None or a list of effects) checked and completed from each preset."""
+def parse_particles(raw: Any, wind: Any = None) -> tuple[ParticleEffect, ...]:
+    """A room's ``settings.particles`` (None or a list of effects) checked and completed from each preset. ``wind``:
+    the room's (engine.wind.Wind, Milestone 20E): an effect without its own ``wind`` / ``gust`` takes the room's,
+    unless the room is calm (then the preset's, as before the room had a wind)."""
+    room = wind if wind is not None and not wind.calm else None
     if raw is None:
         return ()
     if not isinstance(raw, list):
@@ -128,8 +131,8 @@ def parse_particles(raw: Any) -> tuple[ParticleEffect, ...]:
             raise SceneParticlesError(f"{where}.seed must be a whole number")
         out.append(ParticleEffect(
             preset=str(item["preset"]), count=count, speed=_number(item.get("speed", 1.0), f"{where}.speed", 0.0, 5.0),
-            wind=_pair(item.get("wind", list(preset.wind)), f"{where}.wind", 30.0),
-            gust=_number(item.get("gust", preset.gust), f"{where}.gust", 0.0, 1.0),
+            wind=_pair(item.get("wind", list(room.vector if room else preset.wind)), f"{where}.wind", 30.0),
+            gust=_number(item.get("gust", room.gust if room else preset.gust), f"{where}.gust", 0.0, 1.0),
             lifetime=_number(item.get("lifetime", preset.lifetime or 1.0), f"{where}.lifetime", 0.5, 60.0),
             seed=seed, area=(_number(area[0], f"{where}.area", 4.0, 120.0), _number(area[1], f"{where}.area", 4.0, 120.0),
                              _number(area[2], f"{where}.area", 1.0, 40.0)),
@@ -533,7 +536,13 @@ def configure(window: Any, settings: Any, scene: Any = None) -> None:
         indoor = parse_exposure(settings.get("weather_exposure")) == "indoor"  # checked even without particles
         if raw is None:
             return
-        effects = parse_particles(raw)
+        from engine.wind import WindError, parse_wind  # noqa: PLC0415
+
+        try:  # (a room wind that can't be used: still air, as its decoration takes it; the rain still falls)
+            wind = parse_wind(settings.get("wind"))
+        except WindError:
+            wind = None
+        effects = parse_particles(raw, wind)
         if indoor and any(e.preset in PRECIPITATION for e in effects):
             # Milestone 18B: rain and snow fall outdoors; an indoor room keeps only what else it asks for (leaves)
             gone = sorted({e.preset for e in effects if e.preset in PRECIPITATION}, key=PRECIPITATION.index)

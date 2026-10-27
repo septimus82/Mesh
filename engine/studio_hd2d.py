@@ -782,6 +782,8 @@ class Hd2dView:
             box.add(self._button(f"Preview weather: {'on' if self.weather else 'off'}", self.toggle_weather,
                                  "Rain, snow and leaves in this view, landing where they would in play",
                                  width=width, style=S_ACTIVE if self.weather else S_BUTTON))
+        if renderer is not None and renderer.settings.ground is not None:
+            self._motion_section(box, width)
         box.add(self._button("Models...", self.open_models, "Blender models in this project: import, browse, place "
                              "and reimport", width=width, style=S_ACTIVE if studio.panel == "structures" else S_BUTTON))
         if renderer is not None and renderer.settings.ground is not None:
@@ -1556,6 +1558,119 @@ class Hd2dView:
         box.add(studio._label("Drag to paint (one undo step a stroke). Shift paints grass back, Alt+click picks the "
                               "material under the mouse, [ ] resize, Esc cancels a stroke.", color=C_MUTED, size=10,
                               width=width))
+
+    # ------------------------------------------------------------------ wind and motion (Milestone 20E)
+    WINDS = (("Calm", 0.0, 0.0), ("Breeze", 3.0, 0.3), ("Strong", 9.0, 0.3), ("Gusty", 5.0, 0.9))
+
+    def _motion_section(self, box: Any, width: int) -> None:
+        """The room's wind and how its decoration moves: animation on or off, sway, wind influence, speed; it moves
+        here as it will in play (a live preview while editing). Each change is one undo step."""
+        from engine.hd2d.motion import parse_motion  # noqa: PLC0415
+        from engine.wind import parse_wind  # noqa: PLC0415
+
+        studio = self.studio
+        settings = studio.project.scene().get("settings") or {}
+        hd2d = settings.get("hd2d")
+        try:
+            motion = parse_motion(hd2d.get("motion") if isinstance(hd2d, dict) else None)
+        except ValueError:
+            motion = parse_motion(None)
+        try:
+            wind = parse_wind(settings.get("wind"))
+        except ValueError:
+            wind = parse_wind(None)
+        box.add(studio._label("Wind and motion", bold=True, size=12))
+        quarter = (width - 12) // 4
+        row = _row()
+        for title, speed, gust in self.WINDS:
+            now = abs(wind.speed - speed) < 1e-6 and (speed == 0 or abs(wind.gust - gust) < 1e-6)
+            row.add(self._button(title, lambda s=speed, g=gust, t=title: self.set_wind(t, speed=s, gust=g),
+                                 f"{title}: {speed:g} m/s, gusts {gust:g}" if speed else "No wind",
+                                 width=quarter, style=S_ACTIVE if now else S_BUTTON))
+        box.add(row)
+
+        def number(what: str, lo: float, hi: float, apply: Any) -> Any:
+            def commit(text: str) -> None:
+                try:
+                    value = float(text)
+                except ValueError:
+                    value = math.nan
+                if not math.isfinite(value):
+                    studio._say("Type a number.", ok=False)
+                    studio._rebuild()  # (the field shows the value it keeps)
+                    return
+                apply(min(hi, max(lo, value)))
+            return commit
+
+        def pairs(items: list[tuple[str, tuple[str, str], Any]]) -> None:  # (label, (key, text), commit), two a row
+            for start in range(0, len(items), 2):
+                row = _row()
+                for label, key, commit in items[start:start + 2]:
+                    row.add(studio._label(label, color=C_MUTED, size=10, width=quarter))
+                    row.add(studio._field(key[1], commit, width=quarter, key=key[0]))
+                box.add(row)
+
+        pairs([("m/s", ("wind_speed", f"{wind.speed:g}"),
+                number("m/s", 0.0, 30.0, lambda v: self.set_wind("Wind", speed=v))),
+               ("Toward", ("wind_direction", f"{wind.direction:g}"),
+                number("Toward", 0.0, 359.0, lambda v: self.set_wind("Wind", direction=v))),
+               ("Gusts", ("wind_gust", f"{wind.gust:g}"), number("Gusts", 0.0, 1.0, lambda v: self.set_wind("Wind", gust=v)))])
+        box.add(self._button(f"Animation: {'on' if motion.enabled else 'off'}",
+                             lambda: self.set_motion("Animation on." if not motion.enabled else "Animation off.",
+                                                     enabled=not motion.enabled),
+                             "Plants sway in the wind, torches flicker, banners stream (off: everything stands still, "
+                             "exactly as drawn)", width=width, style=S_ACTIVE if motion.enabled else S_BUTTON))
+        pairs([(label, (f"motion_{key}", f"{value:g}"), number(label, lo, hi, lambda v, k=key, t=label: self.set_motion(
+            f"{t}: {v:g}.", **{k: v}))) for label, key, value, lo, hi in (("Sway", "sway", motion.sway, 0.0, 2.0),
+                                                                          ("Wind", "wind", motion.wind, 0.0, 2.0),
+                                                                          ("Speed", "speed", motion.speed, 0.25, 3.0))])
+        box.add(studio._label("Toward: where the wind blows, degrees (0 east, 90 north). Sway: how far plants bend. "
+                              "Wind: how much the wind moves them. Speed: how fast they flutter and frames turn.",
+                              color=C_MUTED, size=9, width=width))
+
+    def set_wind(self, title: str, **change: float) -> None:
+        from engine.wind import parse_wind  # noqa: PLC0415
+
+        settings = self.studio.project.scene().get("settings") or {}
+        try:
+            wind = parse_wind(settings.get("wind"))
+        except ValueError:
+            wind = parse_wind(None)
+        now = {"speed": wind.speed, "direction": wind.direction, "gust": wind.gust, **change}
+        said = "Calm." if now["speed"] <= 0 else (f"{title}: {now['speed']:g} m/s toward {now['direction']:g} degrees, "
+                                                  f"gusts {now['gust']:g}.")
+        self.studio._edit(lambda s: ops.set_wind(s, **now), said)
+
+    def set_motion(self, said: str, **change: Any) -> None:
+        """One undo step; the view takes the new motion in place (uniforms: nothing rebuilt, no reload), so tuning
+        Sway or Speed doesn't wait on the room loading again. (The wind reloads: the room's rain falls in it too.)"""
+        import dataclasses  # noqa: PLC0415
+
+        from engine.hd2d.motion import parse_motion  # noqa: PLC0415
+
+        studio = self.studio
+        start = time.perf_counter()
+        try:
+            studio.project.edit_scene(lambda s: ops.set_motion(s, **change))
+        except ops.OpError as err:
+            studio._say(str(err), ok=False)
+            return
+        renderer = self.renderer
+        hd2d = (studio.project.scene().get("settings") or {}).get("hd2d")
+        if renderer is not None:
+            renderer.settings = dataclasses.replace(renderer.settings, motion=parse_motion(
+                hd2d.get("motion") if isinstance(hd2d, dict) else None))
+            if renderer.scatter is not None:
+                renderer.scatter.set_motion(renderer.motion, renderer.wind)
+        self.timings["edit_ms"].append((time.perf_counter() - start) * 1000)
+        studio._rebuild()
+        studio._say(said)
+
+    def advance_motion(self, delta_time: float) -> None:
+        """The room's decoration moves while editing, as in play (when its animation is on)."""
+        renderer = self.renderer
+        if renderer is not None and renderer.scatter is not None and renderer.motion.enabled:
+            renderer.advance_motion(delta_time)
 
     def toggle_weather(self) -> None:
         self.weather = not self.weather

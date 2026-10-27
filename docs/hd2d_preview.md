@@ -104,6 +104,22 @@ Each stroke is one change, so one Ctrl+Z undoes it, and Esc cancels a stroke bef
   where the player starts. Less is often more: leave plain ground around paths and buildings.
 - `[` and `]` change the brush's size.
 
+## Wind and moving decoration
+
+Under **Wind and motion** in the 3D view's panel:
+
+- **Calm, Breeze, Strong, Gusty** set the room's wind; **m/s**, **Toward** (degrees the wind blows to: 0 east, 90
+  north) and **Gusts** (0-1) fine-tune it. The rain, snow and leaves of the room fall in the same wind (an effect with
+  its own wind keeps it).
+- **Animation** turns the decoration's movement on or off. Grass, reeds and flowers sway the most, bushes a little,
+  a tree's canopy slowly; gusts roll across the meadow in waves. Torches flicker, banners stream downwind,
+  glowcaps glow in the dark, water drips from the dripping rock. Off, everything stands exactly as drawn.
+- **Sway** (how far plants bend), **Wind** (how much the wind moves them) and **Speed** (how fast they flutter and
+  frames turn). The view moves while you edit, as it will in play. Each change is one undo step.
+- Scatter **Torch**, **Banner**, **Small tree**, **Glowcaps**, **Bellflowers** and **Dripping rock** with the Scatter
+  brush ("One thing at a time..."); a small dense dab places one. The small tree blocks like the boulder. A torch's
+  flame doesn't light its surroundings: put a lamp beside it for that.
+
 ## Seeing through buildings (cutaway)
 
 A building can hide the player who walks behind or into it. Select the building and switch on

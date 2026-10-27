@@ -2084,6 +2084,62 @@ def structures(scene: Doc) -> list[Doc]:
     return items if isinstance(items, list) else []
 
 
+# --- the room's wind and its decoration's motion (Milestone 20E) ----------------------------------------------------
+
+def set_wind(scene: Doc, speed: Any = 0.0, direction: Any = 0.0, gust: Any = 0.0) -> Doc:
+    """The room's wind (``settings.wind``; engine.wind): ``speed`` m/s (0-30; 0 calm: the key removed),
+    ``direction`` degrees it blows toward (0 east, 90 north), ``gust`` 0-1 (how much it swells and drops). Its
+    rain, snow and leaves fall in it (an effect with its own ``wind`` keeps that), its plants sway in it."""
+    from engine.wind import WindError, parse_wind, stored  # noqa: PLC0415
+
+    try:
+        wind = parse_wind({"speed": speed, "direction": direction, "gust": gust})
+    except WindError as exc:
+        raise OpError(str(exc)) from exc
+    out = copy.deepcopy(scene)
+    settings = out.get("settings")
+    if settings is not None and not isinstance(settings, dict):
+        raise OpError("This room's settings aren't readable.")
+    saved = stored(wind)
+    if saved:
+        out.setdefault("settings", {})["wind"] = saved
+    elif settings:
+        settings.pop("wind", None)
+    return _checked(scene, out)
+
+
+def set_motion(scene: Doc, enabled: Any = _UNSET, sway: Any = _UNSET, wind: Any = _UNSET, speed: Any = _UNSET,
+               assets: Any = _UNSET) -> Doc:
+    """How this HD-2D room's scattered decoration moves (``settings.hd2d.motion``; engine.hd2d.motion): only what
+    is given changes. ``enabled`` (animation on or off), ``sway`` (0-2: how far plants bend), ``wind`` (0-2: how
+    much the room's wind moves them), ``speed`` (0.25-3: how fast they flutter and frames turn), ``assets``
+    ({asset id: {"enabled", "sway" 0-3, "fps" 1-30, "loop" "loop"|"pingpong", "phase" 0-1}}, replacing the
+    room's per-asset settings; {} clears them). Off with nothing else set: the key is removed (as older rooms)."""
+    from engine.hd2d.motion import MotionError, parse_motion  # noqa: PLC0415
+
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has no decoration to move.")
+    hd2d = _hd2d_block(out)
+    raw = dict(hd2d["motion"]) if isinstance(hd2d.get("motion"), dict) else {"enabled": False}
+    for key, value in (("enabled", enabled), ("sway", sway), ("wind", wind), ("speed", speed), ("assets", assets)):
+        if value is not _UNSET:
+            raw[key] = copy.deepcopy(value)
+    try:
+        motion = parse_motion(raw)
+    except MotionError as exc:
+        raise OpError(str(exc)) from exc
+    if not raw.get("assets"):
+        raw.pop("assets", None)
+    if motion.enabled:
+        raw.pop("enabled", None)  # (on is what a motion block means)
+    if not motion.enabled and set(raw) <= {"enabled"}:
+        hd2d.pop("motion", None)
+    else:
+        hd2d["motion"] = raw
+    return _checked(scene, out)
+
+
 def find_structure(scene: Doc, structure_id: str) -> Doc | None:
     return next((s for s in structures(scene) if isinstance(s, dict) and s.get("id") == structure_id), None)
 
