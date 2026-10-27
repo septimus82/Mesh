@@ -1,6 +1,6 @@
 # CI timing: a measured proposal (#373)
 
-**Status: proposal for the owner's decision.** This branch changes no budget, ratio or tolerance. Its changes:
+**Status: approved by the owner and merged (#400, `6958a2c`), 2026-10-27.** No budget, ratio or tolerance changed. Its changes:
 
 - the analysis tool skips runs whose `verify-all` stopped before `pytest-fast`, and adds rule f to its comparisons;
 - the evidence;
@@ -41,7 +41,7 @@ Full tables: [`report_current_code.md`](ci_timing_373_evidence/report_current_co
 | | Windows | 4 % | 0 % | 12 % | 96 % | 100 % | 8 % |
 | **c2. Reviewed recalibration** (the committed budgets' own method, refit on the current code) | Linux | 4 % | 75 % | 67 % | 96 % | 100 % | 38 % |
 | | Windows | 4 % | 62 % | 54 % | 71 % | 92 % | 4 % |
-| **f. a and A both** (#373 option 1) | Linux | **0 %** | 4 % | **88 %** | 100 % | 100 % | 8 % |
+| **f. a and A both** (#373 option 1; model refit on the current code, see below) | Linux | **0 %** | 4 % | **88 %** | 100 % | 100 % | 8 % |
 | | Windows | 4 % (1 run) | 0 % | 12 % | **92 %** | 100 % | 8 % |
 
 **Reading it:**
@@ -68,7 +68,7 @@ Full tables: [`report_current_code.md`](ci_timing_373_evidence/report_current_co
 In the order I'd do them; each is independent:
 
 1. **Pay back the growth instead of raising limits.** Part D's test-suite findings trim the fast tier's repeated setup. If the fast tier gets back ~16 %, today's budgets fit again with nothing loosened. This is preferable to recalibrating.
-2. **Enforce rule f** (fixed ceiling and advisory both) instead of the fixed rule alone. It is #373's option 1, provisionally approved by the owner, and **implemented on this branch** (`mesh_cli/verify.py`, `_apply_rule_f`).
+2. **Enforce rule f** (fixed ceiling and advisory both) instead of the fixed rule alone. It is #373's option 1, provisionally approved by the owner, and **implemented and merged** (`6958a2c`; `mesh_cli/verify.py`, `_apply_rule_f`).
    - A step over its fixed threshold fails unless the advisory judges it within this runner's range.
    - Where the advisory can't judge (no model, no estimate, not run, an error), the fixed threshold decides alone, so the rule never fails open.
    - The decision is written to `verify_step_budget_check.json` (`rule_f`), and an excused step is named on stderr.
@@ -77,6 +77,7 @@ In the order I'd do them; each is independent:
    - It collects the branch's last 30 runs (`tooling/ci_timing_collect.py`) and writes `--rolling 24` to the job summary.
    - It raises a warning annotation on a persistent regression, and never fails.
    - It is the only rule that detected the real regression.
+   - **First run on the integration branch** (push `6958a2c`, job 122481850070): it collected 56 tests jobs, published to the job summary and raised its warning. pytest-fast is a persistent regression on both OSes (median observed/expected 1.104 Linux, 1.131 Windows), and so is Windows' exception-policy-scan (1.107).
    - A scheduled workflow would not run here: GitHub fires `schedule` only from the default branch, `main`.
 4. **Recalibrate only through the reviewed path, and only if 1 doesn't happen.** That means `update_ci_baseline.yml`, `pytest-fast` and `exception-policy-scan` only, from speed-normalised medians (the advisory model's `base_ms`, refit with `--write-model`), not raw medians from a slow-runner window.
 5. **Run CI once per commit** (section 4).

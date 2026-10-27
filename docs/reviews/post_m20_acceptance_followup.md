@@ -2,7 +2,45 @@
 
 Follow-up to [`post_m20_repository_health.md`](post_m20_repository_health.md), after the owner's acceptance (CONDITIONAL PASS) on 2026-10-27.
 
-**Status: stopped for the owner's review.** Lakeside Village and Audio & Atmosphere have not begun. #344 is still a draft and `main` is untouched. #402 is merged (after the owner's review); #399, #400, #401 and #403 stay drafts.
+**Status: post-M20 integration closed (2026-10-27).** The next milestone is Lakeside Village. #344 is still a draft and `main` is untouched.
+
+## Final integration
+
+The owner approved #400 at `47eff43` and asked for #399, #401 and this report to be integrated once their conditions were met.
+
+| Order | PR | Approved head (unchanged) | Before merging | Merge commit on `redesign/visual-editor` |
+|---|---|---|---|---|
+| 1 | #402 test-suite performance | `0e2df09` | assertions unchanged; packaging determinism; CI timing-only | `2a7804a` |
+| 2 | #400 CI timing: Rule F, rolling check, one run per commit | `47eff43` | CI green on both OSes; on the merged tree: 38 targeted tests and the analysis self-check | `6958a2c` |
+| 3 | #399 the saved world (#390) | `c87583f` | merges cleanly; on the merged tree: 618 save-related tests, 6/6 saved-world GPU tests (hidden windows), the save-diagnostics contract and the tier ratchet | `4988eb2` |
+| 4 | #401 the release check (#394) | __401_HEAD__ | __401_CHECK__ | __401_MERGE__ |
+| 5 | #403 this report | | documentation only | __403_MERGE__ |
+
+**After the merges:**
+
+- **The rolling check runs and publishes.** On the first integration push (`6958a2c`, job 122481850070) it:
+  - collected 56 tests jobs;
+  - wrote `--rolling 24` to the job summary;
+  - raised its warning annotation: pytest-fast is a persistent regression on both OSes (1.104 Linux, 1.131 Windows), and Windows' exception-policy-scan too (1.107).
+
+  It is report-only, so the job passed.
+- **Stale statistics corrected:**
+  - `_apply_rule_f`'s docstring now quotes the committed-model figures (failing 12 → 9 Linux, 13 → 2 Windows; ×1.25 detected 21/24 and 9/24), not the refit-model 0 % / 4 %;
+  - the proposal's Rule F row says which model it assumes;
+  - the proposal's status is "merged".
+- **#401's diagnostics:**
+  - the environment allow-list now shows only switches, seeds and encodings: `PYTHONPATH`, `PYTHONHOME`, `PYTEST_ADDOPTS` and `MESH_REPO_ROOT` are redacted (tested with a private-looking path);
+  - a failed bundle prints whether release-check failed timing-only (the step-time budget, the pytest-fast duration guard) or functionally;
+  - #394's original CI exit 2 is **not** claimed as explained: it has not recurred since the diagnostics, so there is no evidence of its cause yet.
+
+**Unresolved, carried into Lakeside Village as known limits (not blockers):**
+
+- **The fast tier's growth is not paid back.** Rule F still fails Linux runs where the committed model judges pytest-fast slow, and the rolling check reports it. Paying it back or refitting the model is a later decision.
+- **#394's exit 2:** read the next occurrence from `artifacts/release_bundle_failure/` and the classification line.
+- **#344's duplicate CI runs** remain (19 of 59).
+- **A branch with no PR** gets no automatic CI run.
+
+The sections below are the record as it was written during the review rounds.
 
 ## 0. Owner review round (2026-10-27): corrections and final statuses
 
