@@ -1343,9 +1343,11 @@ def _apply_rule_f(
     ``ok`` becomes the rule's verdict, so the reports that read it (artifacts-diff, the CI baseline) agree with the gate;
     ``offenders`` still lists every step over its fixed threshold.
 
-    Measured on the current code (#400): false failures 50 % -> 0 % (Linux) and 54 % -> 4 % (Windows); an isolated
-    pytest-fast slowdown is still caught at x1.25 on Linux (88 %), but on Windows only from about x1.5 (92 %; x1.25:
-    12 %). Gradual growth is seen only by the rolling check (ci_timing_analysis.py --rolling), not by any per-run rule.
+    Measured with the committed advisory model on 24 current-code CI runs per OS (#400): failing runs 12 -> 9 (Linux:
+    the model sees the fast tier's growth as slow) and 13 -> 2 (Windows); an isolated pytest-fast x1.25 slowdown is
+    caught in 21/24 Linux runs but only 9/24 on Windows, where detection is reliable only from about x1.5 (22/24).
+    Gradual growth is seen only by the rolling check (ci_timing_analysis.py --rolling, a report-only CI job on
+    integration pushes), not by any per-run rule.
     """
     raw_offenders = budget_payload.get("offenders")
     offenders = [str(o.get("name")) for o in raw_offenders if isinstance(o, dict)] if isinstance(raw_offenders, list) else []
