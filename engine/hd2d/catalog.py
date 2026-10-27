@@ -114,14 +114,18 @@ def _asset(root: Path, entry: dict[str, Any]) -> ModelAsset | None:
         missing=not (root / model).is_file())
 
 
+SCATTER_KIT = "assets/hd2d_starter/scatter"  # (engine.hd2d.scatter.KIT)
+
+
 def glb_files(root: str | Path) -> list[str]:
-    """Every .glb in the project (project-relative), outside dot-folders and build output."""
+    """Every .glb in the project (project-relative), outside dot-folders and build output, and not the starter kit's
+    scattered decoration (``assets/hd2d_starter/scatter``: Scatter's own, not structures)."""
     base = Path(root)
     found = []
     for path in sorted(base.rglob("*.glb")):
-        parts = path.relative_to(base).parts
-        if not any(p.startswith(".") or p in _SKIP_DIRS for p in parts):
-            found.append(path.relative_to(base).as_posix())
+        rel = path.relative_to(base)
+        if not any(p.startswith(".") or p in _SKIP_DIRS for p in rel.parts) and                 not rel.as_posix().startswith(SCATTER_KIT + "/"):
+            found.append(rel.as_posix())
     return found
 
 

@@ -44,6 +44,7 @@ from engine import project_ops as ops
 from engine.hd2d.picking import Picker, box, box_edges, ground_point
 from engine.hd2d.renderer import Camera
 from engine.hd2d.settings import PIXELS_PER_METRE
+from engine.logging_tools import get_logger
 from engine.studio_inspector import LazyRow
 from engine.studio_ui import C_ERROR, C_MUTED, C_WARN, S_ACTIVE, S_BUTTON, gui
 
@@ -62,6 +63,8 @@ def _row() -> Any:
 
 def _snap(value_m: float, on: bool) -> float:
     return round(value_m / GRID_M) * GRID_M if on else value_m
+
+logger = get_logger(__name__)
 
 
 def _scatter_note(scene: dict[str, Any], models: Any) -> str:
@@ -1055,6 +1058,8 @@ class Hd2dView:
             try:
                 renderer.ensure_scatter().apply(changes)
             except Exception as exc:  # noqa: BLE001  # REASON: a refused upload stops the stroke; the scatter goes back
+                logger.warning("[Mesh][Studio] scatter stroke stopped: its drawing failed", exc_info=True)
+                stroke["pending"] = changes  # (never drawn: nothing of them to take back)
                 self.cancel_stroke(f"The stroke stopped: the scatter couldn't be drawn ({exc}).")
                 return
             if any(ASSETS[name].blocks for name, _r, _a in changes):  # (a boulder: walked round at once)
@@ -1268,6 +1273,7 @@ class Hd2dView:
                 try:
                     renderer.scatter.apply(undone)
                 except Exception:  # noqa: BLE001  # REASON: the GPU refused: the saved room, drawn afresh, is the truth
+                    logger.warning("[Mesh][Studio] scatter couldn't be put back on screen; reloading", exc_info=True)
                     self.studio._reload(recenter=False)
                 world = getattr(self.studio.window, "hd2d_world", None)
                 if world is not None and renderer.scatter is not None:
