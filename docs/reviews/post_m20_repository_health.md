@@ -1,6 +1,7 @@
 # Post-M20 repository health checkpoint
 
-**Verdict: CONDITIONAL PASS** (details at the end).
+**Verdict: CONDITIONAL PASS** (details at the end). **Accepted by the owner** (2026-10-27): #389 and #395 merged;
+see "Acceptance" at the end.
 
 - **Integrated:** Stage 20E (#388) merged into `redesign/visual-editor` as `49c2769`. The merged tree is identical to
   the PR head `043d7b8`.
@@ -88,6 +89,7 @@ Each issue's status was checked before anything was investigated.
 | Low | Large-terrain undo and loading latency | measured | room load 1.29 s, Studio open 1.16 s, undo 1.90 s (128 m, 8,000 things) | #391 |
 | Low | **#393** a bad `water_reflections`, sky, camera or unknown key turns a room 2D | new | seen in practice: an older engine opened a 20E room 2D ("unknown keys: motion") | bounded follow-up |
 | Low | **#392** maintenance (op registry, module sizes, placement maths, clocks, study helpers) | new | architecture QA | bounded follow-up |
+| Low | **#398** 2D Starter Room presentation (purple clear colour, overflowing controls hint, prompt placement, map framing) | recorded at the owner's request | the clean-install screenshots | future UI-polish task, not in this checkpoint |
 
 ## Part D: Integration and architecture
 
@@ -262,3 +264,22 @@ The conditions, before the Lakeside Village checkpoint:
 Owner decisions also pending: #390 (what a save restores), #359 (replay goldens), #375 (shadow opt-out field).
 
 Stopped for owner review. The Lakeside Village checkpoint has not been started.
+
+## Acceptance (owner, 2026-10-27)
+
+The owner accepted the checkpoint (CONDITIONAL PASS) and the technical direction of #389, #395 and #397. Before each
+merge, the head, the scope, the regression tests and the CI were checked again, each CI job read from its log:
+
+| PR | Head (unchanged) | Scope | CI, full suite | CI failures, and their cause | Merged |
+|---|---|---|---|---|---|
+| #389 | `abdcf1c` | `engine/repo_root.py`, its test | 9,904 passed, 0 failed, all 4 jobs; release bundle built on Windows (twice) and Linux | Linux push: `verify_step_budget` only (`pytest-fast` 81.1 s > 79.0 s) | `798e122` |
+| #395 | `4eb6667` | 6 engine files, 2 test files | 9,925 passed, 0 failed, all 4 jobs; release bundle built on Linux | 3 jobs: `verify_step_budget` only (`pytest-fast` 80.8 / 126.4 / 131.8 s; `exception-policy-scan` once) | `a0c43eb` |
+| #397 | this report | docs and the stress study | 9,919 passed, 0 failed | `verify_step_budget` only | separately, after this update |
+
+In every failed job the only not-ok verify item was `verify_step_budget` (and its two summary records): #373, timing
+only, no functional step failed. No budget was changed and no job was rerun. The merged tree (#389 + #395) was
+verified before pushing: fast tier 4,821 passed; the environment robustness, motion and scatter GPU tests 8 passed.
+
+The remaining conditions and the owner's priorities are being worked as separate draft PRs: the saved world (#390),
+CI timing reliability (#373), the release-check failure (#394) and test-suite performance. The Lakeside Village and
+Audio & Atmosphere work waits for the owner's acceptance of those.

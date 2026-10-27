@@ -673,6 +673,8 @@ animation (20A–20E). The post-M20 repository health checkpoint is `docs/review
 - **Animated tiles for traditional 2D maps** (torches, water, flowers in a 2D tilemap; Tiled's tile animations).
   Milestone 20E animated HD-2D decoration only; its shared frame tables would serve a 2D tile layer. Not part of the
   post-M20 checkpoint.
+- **2D Starter Room presentation polish** (#398): the purple clear colour outside the map, the overflowing
+  controls-hint banner, the interaction prompt's placement, the starter map's framing. A focused UI-polish task.
 
 ## Roadmap (proposals: each needs the owner's go-ahead)
 
