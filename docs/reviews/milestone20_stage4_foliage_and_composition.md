@@ -1,7 +1,7 @@
 # Milestone 20D: foliage and landscape composition
 
 - **Branch:** `feature/m20d-foliage`.
-- **Draft PR:** into `redesign/visual-editor`; see the PR's checks for CI.
+- **Draft PR:** [#387](https://github.com/septimus82/Mesh/pull/387), into `redesign/visual-editor`.
 - **Builds on:** Stage 20C (#386, merged as `ec51e36`).
 - **In scope:** scattering vegetation, rocks and environmental props over the sculpted and painted ground in Mesh
   Studio, the original starter assets, and the composition of the Stage 20C Hills room.
