@@ -1,7 +1,7 @@
 # Milestone 20C: terrain materials
 
 - **Branch:** `feature/m20c-terrain-materials`.
-- **Draft PR:** into `redesign/visual-editor` (link in the PR itself).
+- **Draft PR:** [#386](https://github.com/septimus82/Mesh/pull/386), into `redesign/visual-editor`.
 - **Builds on:** Stage 20B (#385, merged as `8216592`).
 - **In scope:** painting materials onto the sculpted heightfield in Mesh Studio, the material transitions, and
   natural paths.
