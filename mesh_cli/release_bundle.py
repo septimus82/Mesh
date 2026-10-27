@@ -808,6 +808,7 @@ def _handle_bundle(args: argparse.Namespace) -> int:
 
     # Use a temp working directory next to the output zip
     work_dir = zip_path.parent / f"_work_{zip_path.stem}"
+    succeeded = False
     try:
         if work_dir.exists():
             shutil.rmtree(work_dir)
@@ -889,9 +890,12 @@ def _handle_bundle(args: argparse.Namespace) -> int:
                 f"[Mesh][Release-Bundle] OK â€” {zip_path.name} "
                 f"({final_manifest.file_count} files, {size_mb:.1f} MB)"
             )
+        succeeded = True
         return 0
 
     finally:
+        if not succeeded:  # (#394: the failing steps' own reports, kept beside the zip before the work dir goes)
+            _keep_failure_reports(work_dir, zip_path.parent / f"{zip_path.stem}_failure")
         # Clean up work directory
         if work_dir.exists():
             try:
@@ -899,6 +903,66 @@ def _handle_bundle(args: argparse.Namespace) -> int:
             except Exception:
                 _log_swallow("RELE-003", "mesh_cli/release_bundle.py pass-only blanket swallow")
                 pass
+
+
+# The reports a failed bundle keeps (relative to its work folder): what release-check's steps wrote about themselves.
+# Only these known files; never the bundle's payload, test projects, debug bundles or anything else in the folder.
+FAILURE_REPORTS = tuple(f"release/{name}" for name in (
+    "release_report.json", "release_report.txt", "verify_all_summary.json", "verify_summary.json", "verify_summary.txt",
+    "verify_step_budget_check.json", "verify_step_durations.json", "verify_step_speed_advisory.json",
+    "pytest_fast_budget_diagnostic.json", "pytest_fast_budget_diagnostic.txt", "pytest_fast.log",
+    "verify_demo.log", "verify_demo_failure.json", "runtime_smoke.json", "web_smoke.json",
+))
+
+
+TIMING_STEPS = frozenset({"pytest-fast-duration-guard"})  # (verify-all steps that judge time, not behaviour)
+
+
+def classify_failure(work_dir: Path) -> str:
+    """One line on why release-check's verify-all failed, from its own reports: the failing steps, and whether they
+    are timing-only (the step-time budget, a duration guard) or functional. A failure elsewhere in the bundle (export,
+    demo run, audits) is reported as not classified."""
+    release = work_dir / "release"
+    try:
+        summary = json.loads((release / "verify_all_summary.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "failure not classified: release-check's verify-all summary is missing (it failed elsewhere or earlier)"
+    steps = summary.get("steps") if isinstance(summary, dict) else None
+    failed = [str(s.get("name")) for s in steps or [] if isinstance(s, dict) and s.get("code")
+              and not str(s.get("error") or "").startswith("skipped")]
+    try:
+        budget = json.loads((release / "verify_step_budget_check.json").read_text(encoding="utf-8"))
+        over = ([str(o.get("name")) for o in budget.get("offenders") or [] if isinstance(o, dict)]
+                if isinstance(budget, dict) and budget.get("ok") is False else [])
+    except (OSError, ValueError):
+        over = []
+    if failed:
+        kind = "timing-only" if set(failed) <= TIMING_STEPS else "functional"
+        return f"release-check's verify-all failed at {', '.join(failed)} ({kind})"
+    if over:
+        return f"release-check's verify-all failed on the step-time budget only ({', '.join(over)}): timing-only"
+    return "failure not classified: release-check's verify-all reported no failing step"
+
+
+def _keep_failure_reports(work_dir: Path, dest: Path, limit_bytes: int = 2_000_000) -> None:
+    """Copy a failed bundle's known reports (``FAILURE_REPORTS``, each under ``limit_bytes``) to ``dest``, so CI's
+    artifact upload carries them."""
+    if not work_dir.exists():
+        return
+    try:
+        kept = 0
+        for rel in FAILURE_REPORTS:
+            src = work_dir / rel
+            if not src.is_file() or src.stat().st_size > limit_bytes:
+                continue
+            target = dest / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, target)
+            kept += 1
+        print(f"[Mesh][Release-Bundle] the failed steps' reports ({kept}): {dest.as_posix()}")
+        print(f"[Mesh][Release-Bundle] {classify_failure(work_dir)}")
+    except OSError as exc:  # (never hide the original failure behind a copy problem)
+        print(f"[Mesh][Release-Bundle] WARNING: could not keep the failure reports: {exc}", file=sys.stderr)
 
 
 # ---------------------------------------------------------------------------
