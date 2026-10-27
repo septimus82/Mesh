@@ -350,6 +350,7 @@ def summarize(before: Doc, after: Doc) -> list[str]:
         lines += _structure_lines(label, ops.structures(old), ops.structures(room))
         lines += _weather_lines(label, old.get("settings") or {}, room.get("settings") or {})
         lines += _terrain_lines(label, old, room)
+        lines += _scatter_lines(label, old, room)
     if world_b.get("start_scene") != world_a.get("start_scene") and world_b:
         lines.append(f"Start room: {world_b.get('start_scene')} -> {world_a.get('start_scene')}")
     return lines
@@ -432,6 +433,33 @@ def _terrain_lines(label: str, before: Doc, after: Doc) -> list[str]:
                  if not new.is_flat() else f"{label}: ground made flat again")
     lines += [f"{label}: left out of place (not moved): {words}" for words in ops.terrain_anchoring(after, before)]
     return lines
+
+
+def _scatter_lines(label: str, before: Doc, after: Doc) -> list[str]:
+    """A room's scattered decoration changed (Milestone 20D), in words: how many of what were added and removed, and
+    what of it now stands where people need to pass."""
+    from engine.hd2d.scatter import ASSETS  # noqa: PLC0415
+
+    def scatter(scene: Doc) -> Doc:
+        hd2d = (scene.get("settings") or {}).get("hd2d") if isinstance(scene.get("settings"), dict) else None
+        raw = hd2d.get("scatter") if isinstance(hd2d, dict) else None
+        return raw if isinstance(raw, dict) else {}
+
+    old, new = scatter(before), scatter(after)
+    if old == new:
+        return []
+    parts = []
+    for name in sorted(set(old) | set(new)):
+        was = {tuple(r) for r in old.get(name, []) if isinstance(r, list)}
+        now = {tuple(r) for r in new.get(name, []) if isinstance(r, list)}
+        label_ = ASSETS[name].name.lower() if name in ASSETS else name
+        if now - was:
+            parts.append(f"+{len(now - was)} {label_}")
+        if was - now:
+            parts.append(f"-{len(was - now)} {label_}")
+    lines = [f"{label}: scatter {', '.join(parts)}"] if parts else []
+    blocked, _out = ops.scatter_report(after)
+    return lines + [f"{label}: in the way (not moved): {words}" for words in blocked]
 
 
 def _paint_lines(label: str, old: Any, new: Any) -> list[str]:

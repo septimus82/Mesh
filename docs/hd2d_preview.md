@@ -84,17 +84,24 @@ Mesh doesn't watch your Blender files: reimporting is always your choice.
 
 ## Shaping and painting the ground
 
-In the 3D view's panel, **Sculpt ground** and **Paint ground** turn a brush on. Hold the mouse on the ground and drag.
+In the 3D view's panel, **Sculpt**, **Paint** and **Scatter** turn a brush on. Hold the mouse on the ground and drag.
 Each stroke is one change, so one Ctrl+Z undoes it, and Esc cancels a stroke before you let go.
 
 - **Sculpt:** Raise, Lower, Smooth or Flatten. Shift lowers, Ctrl smooths, and Alt+click picks a height to flatten
   to. Sculpting never moves people or buildings: Mesh says what it left floating or buried, and **Settle on the
   ground** stands them back on it.
 - **Paint:** Grass, Earth, Stone, Mud or Sand. Use Earth for paths, Mud for pond banks and Stone for
-  rocky ground and cliffs. Shift paints grass back, and Alt+click picks the material under the mouse. Painting changes how the ground
-  looks, never where anyone can walk.
+  rocky ground and cliffs. Shift paints grass back, and Alt+click picks the material under the mouse. Painting changes
+  how the ground looks, never where anyone can walk.
 - **Edges:** **Soft** borders wander a little, in crisp pixels, and show bare earth along cliff tops. **Hard** keeps
   borders exactly where you painted them.
+- **Scatter:** grass, flowers, bushes, reeds, rocks and fallen branches, alone or in collections (Meadow, Wildflowers,
+  Pond edge, Shrubs, Rocks, Deadfall). A stroke fills the ground it passes over up to the density, in clumps, only
+  where the rules allow: the materials you switch on, no steeper than the slope, out of water (reeds may stand in the
+  shallows) and off buildings. Shift removes what is under the brush, Ctrl thins it. Scattered things stand on the
+  ground and rise and fall with it when you sculpt; Mesh says when some now stand where they wouldn't be put.
+  Everything is walked through except the boulder, and Mesh says when one stands in a doorway, on someone's route or
+  where the player starts. Less is often more: leave plain ground around paths and buildings.
 - `[` and `]` change the brush's size.
 
 ## Seeing through buildings (cutaway)

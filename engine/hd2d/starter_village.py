@@ -36,6 +36,9 @@ KIT = "assets/hd2d_starter"
 GRASS = f"{KIT}/textures/grass.png"
 # the ground and what it may be painted (Milestone 20C)
 GROUND_TEXTURES = tuple(f"{KIT}/textures/{n}.png" for n in ("grass", "dirt", "stone", "mud", "sand"))
+# what may be scattered over it (Milestone 20D: engine.hd2d.scatter)
+SCATTER_KIT = (f"{KIT}/scatter/foliage.png",
+               *(f"{KIT}/scatter/{n}.glb" for n in ("rock_small", "rock_medium", "boulder", "fallen_branch")))
 HD_HERO, HD_VILLAGER, HD_MERCHANT = (f"assets/sprites/hd2d_{name}.png" for name in ("hero", "villager", "merchant"))
 # The game's dialogue and menu sounds: tones synthesised by tooling/generate_sounds.py (Mesh's own).
 HELP = "docs/hd2d_preview.md"  # creator help for the HD-2D RPG (Preview)
@@ -168,7 +171,7 @@ def build(root: Path, bundled: Callable[[str], Path | None], person: dict[str, A
         return found
 
     catalog.install_kit(root, engine_file(f"{KIT}/catalog.json").parent)
-    for rel in (*GROUND_TEXTURES, HD_HERO, HD_VILLAGER, HD_MERCHANT, *UI_SOUNDS):
+    for rel in (*GROUND_TEXTURES, *SCATTER_KIT, HD_HERO, HD_VILLAGER, HD_MERCHANT, *UI_SOUNDS):
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(engine_file(rel), root / rel)
     shutil.copyfile(engine_file(HELP), root / "HD-2D Help.md")  # the creator's help, beside their game

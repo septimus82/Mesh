@@ -1,0 +1,200 @@
+{
+  "64m_0": {
+    "stored_chars": 69209,
+    "room_load_ms": 463.8,
+    "frame_ms": {
+      "median": 5.65,
+      "p95": 6.33,
+      "max": 7.33,
+      "n": 60
+    },
+    "frame_gpu_ms": 0.506,
+    "draw_calls": 40,
+    "shadow_draws": 16,
+    "scatter_sprite_draws": 0,
+    "scatter_bytes": 0,
+    "scatter_instances": 0,
+    "scatter_chunks": 0
+  },
+  "64m_100": {
+    "stored_chars": 71614,
+    "room_load_ms": 449.3,
+    "frame_ms": {
+      "median": 8.79,
+      "p95": 12.36,
+      "max": 15.14,
+      "n": 60
+    },
+    "frame_gpu_ms": 1.47,
+    "draw_calls": 51,
+    "shadow_draws": 20,
+    "scatter_sprite_draws": 8,
+    "scatter_bytes": 204760,
+    "scatter_instances": 100,
+    "scatter_chunks": 53,
+    "frame_gpu_ms_models_cast_no_shadow": 1.468,
+    "zoomed_out_gpu_ms": 1.581,
+    "zoomed_out_sprite_draws": 22,
+    "zoomed_out_gpu_ms_no_distance_culling": 1.581,
+    "zoomed_out_sprite_draws_no_distance_culling": 22,
+    "gl_objects_stable_over_reloads": true,
+    "release_frees_all": true,
+    "studio_room_reload_ms": 363.9,
+    "studio_stroke_frame_ms": {
+      "median": 19.41,
+      "p95": 24.39,
+      "max": 65.14,
+      "n": 81
+    },
+    "studio_scatter_update_ms": {
+      "median": 0.56,
+      "p95": 0.98,
+      "max": 1.42,
+      "n": 65
+    },
+    "studio_commit_ms": 5.3,
+    "studio_release_to_next_frame_ms": 110.2,
+    "studio_undo_ms": 680.3,
+    "save_ms": 1.1
+  },
+  "64m_1000": {
+    "stored_chars": 91599,
+    "room_load_ms": 543.3,
+    "frame_ms": {
+      "median": 10.08,
+      "p95": 14.41,
+      "max": 16.76,
+      "n": 60
+    },
+    "frame_gpu_ms": 1.518,
+    "draw_calls": 74,
+    "shadow_draws": 20,
+    "scatter_sprite_draws": 17,
+    "scatter_bytes": 665384,
+    "scatter_instances": 1000,
+    "scatter_chunks": 64,
+    "frame_gpu_ms_models_cast_no_shadow": 1.511,
+    "zoomed_out_gpu_ms": 1.711,
+    "zoomed_out_sprite_draws": 38,
+    "zoomed_out_gpu_ms_no_distance_culling": 1.728,
+    "zoomed_out_sprite_draws_no_distance_culling": 38,
+    "gl_objects_stable_over_reloads": true,
+    "release_frees_all": true,
+    "studio_room_reload_ms": 390.4,
+    "studio_stroke_frame_ms": {
+      "median": 20.62,
+      "p95": 25.35,
+      "max": 68.23,
+      "n": 81
+    },
+    "studio_scatter_update_ms": {
+      "median": 1.17,
+      "p95": 2.17,
+      "max": 3.11,
+      "n": 58
+    },
+    "studio_commit_ms": 8.9,
+    "studio_release_to_next_frame_ms": 80.3,
+    "studio_undo_ms": 632.5,
+    "save_ms": 1.0
+  },
+  "64m_10000": {
+    "stored_chars": 290906,
+    "room_load_ms": 687.7,
+    "frame_ms": {
+      "median": 7.13,
+      "p95": 13.43,
+      "max": 14.21,
+      "n": 60
+    },
+    "frame_gpu_ms": 2.003,
+    "draw_calls": 108,
+    "shadow_draws": 20,
+    "scatter_sprite_draws": 18,
+    "scatter_bytes": 5787776,
+    "scatter_instances": 10000,
+    "scatter_chunks": 64,
+    "frame_gpu_ms_models_cast_no_shadow": 1.907,
+    "zoomed_out_gpu_ms": 2.234,
+    "zoomed_out_sprite_draws": 40,
+    "zoomed_out_gpu_ms_no_distance_culling": 2.238,
+    "zoomed_out_sprite_draws_no_distance_culling": 40,
+    "gl_objects_stable_over_reloads": true,
+    "release_frees_all": true,
+    "studio_room_reload_ms": 618.6,
+    "studio_stroke_frame_ms": {
+      "median": 18.46,
+      "p95": 25.22,
+      "max": 36.6,
+      "n": 81
+    },
+    "studio_scatter_update_ms": {
+      "median": 3.99,
+      "p95": 7.31,
+      "max": 7.72,
+      "n": 38
+    },
+    "studio_commit_ms": 159.5,
+    "studio_release_to_next_frame_ms": 232.6,
+    "studio_undo_ms": 941.9,
+    "save_ms": 1.0
+  },
+  "128m_0": {
+    "stored_chars": 205636,
+    "room_load_ms": 896.5,
+    "frame_ms": {
+      "median": 5.96,
+      "p95": 11.92,
+      "max": 20.17,
+      "n": 60
+    },
+    "frame_gpu_ms": 1.694,
+    "draw_calls": 66,
+    "shadow_draws": 16,
+    "scatter_sprite_draws": 0,
+    "scatter_bytes": 0,
+    "scatter_instances": 0,
+    "scatter_chunks": 0
+  },
+  "128m_10000": {
+    "stored_chars": 432653,
+    "room_load_ms": 1317.2,
+    "frame_ms": {
+      "median": 9.77,
+      "p95": 13.87,
+      "max": 16.86,
+      "n": 60
+    },
+    "frame_gpu_ms": 2.05,
+    "draw_calls": 151,
+    "shadow_draws": 32,
+    "scatter_sprite_draws": 21,
+    "scatter_bytes": 5787776,
+    "scatter_instances": 10000,
+    "scatter_chunks": 256,
+    "frame_gpu_ms_models_cast_no_shadow": 2.115,
+    "zoomed_out_gpu_ms": 2.564,
+    "zoomed_out_sprite_draws": 40,
+    "zoomed_out_gpu_ms_no_distance_culling": 2.184,
+    "zoomed_out_sprite_draws_no_distance_culling": 40,
+    "gl_objects_stable_over_reloads": true,
+    "release_frees_all": true,
+    "studio_room_reload_ms": 1099.4,
+    "studio_stroke_frame_ms": {
+      "median": 24.24,
+      "p95": 31.77,
+      "max": 43.25,
+      "n": 81
+    },
+    "studio_scatter_update_ms": {
+      "median": 1.64,
+      "p95": 3.09,
+      "max": 4.73,
+      "n": 55
+    },
+    "studio_commit_ms": 228.9,
+    "studio_release_to_next_frame_ms": 314.4,
+    "studio_undo_ms": 1696.9,
+    "save_ms": 1.0
+  }
+}

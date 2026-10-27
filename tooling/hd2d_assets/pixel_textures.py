@@ -238,9 +238,41 @@ def sand() -> Image.Image:
     return img
 
 
+def boulder() -> Image.Image:
+    """Weathered rock seen close: mottled grey-brown with a few dark cracks and lichen, lighter specks on top; the
+    scattered rocks and the boulder (Milestone 20D). No ledges or joints, so a lump of it reads as one stone."""
+    rng = random.Random(63)
+    img = Image.new("RGBA", (SIZE, SIZE), (118, 112, 102, 255))
+    _speckle(img, rng, [(108, 102, 94), (128, 122, 110), (100, 96, 90), (136, 128, 116)], 420)
+    d = ImageDraw.Draw(img)
+    for _ in range(3):  # cracks, drawn wrapped so the tile repeats seamlessly
+        x, y = rng.randrange(SIZE), rng.randrange(SIZE)
+        pts = [(x, y)]
+        for _k in range(4):
+            x, y = x + rng.choice([-2, -1, 1, 2]), y + rng.randint(1, 3)
+            pts.append((x, y))
+        for dx in (-SIZE, 0, SIZE):
+            for dy in (-SIZE, 0, SIZE):
+                d.line([(px + dx, py + dy) for px, py in pts], fill=(76, 72, 68, 255))
+    _speckle(img, rng, [(112, 128, 82), (96, 112, 70)], 22)  # lichen
+    return img
+
+
+def bark() -> Image.Image:
+    """Old bark along a fallen branch: dark vertical fissures over brown-grey (Milestone 20D)."""
+    rng = random.Random(64)
+    img = Image.new("RGBA", (SIZE, SIZE), (96, 76, 58, 255))
+    _speckle(img, rng, [(88, 70, 52), (106, 86, 64), (80, 64, 50)], 300)
+    d = ImageDraw.Draw(img)
+    for x in range(0, SIZE, 4):
+        x0 = x + rng.randint(0, 2)
+        d.line([x0, 0, x0, SIZE - 1], fill=(62, 48, 38, 255))
+    return img
+
+
 TEXTURES = {"timber": timber, "plaster": plaster, "shingles": shingles, "floorboards": floorboards, "cobbles": cobbles,
             "grass": grass, "dirt": dirt, "rock": rock, "crate": crate, "barrel": barrel, "iron": iron, "awning": awning,
-            "lantern": lantern, "stone": stone, "mud": mud, "sand": sand}
+            "lantern": lantern, "stone": stone, "mud": mud, "sand": sand, "boulder": boulder, "bark": bark}
 
 
 def main() -> None:

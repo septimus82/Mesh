@@ -44,6 +44,7 @@ from engine import project_ops as ops
 from engine.hd2d.picking import Picker, box, box_edges, ground_point
 from engine.hd2d.renderer import Camera
 from engine.hd2d.settings import PIXELS_PER_METRE
+from engine.logging_tools import get_logger
 from engine.studio_inspector import LazyRow
 from engine.studio_ui import C_ERROR, C_MUTED, C_WARN, S_ACTIVE, S_BUTTON, gui
 
@@ -62,6 +63,19 @@ def _row() -> Any:
 
 def _snap(value_m: float, on: bool) -> float:
     return round(value_m / GRID_M) * GRID_M if on else value_m
+
+logger = get_logger(__name__)
+
+
+def _scatter_note(scene: dict[str, Any], models: Any) -> str:
+    """After sculpting or painting under scattered decoration: it followed the ground (never moved sideways); how many
+    now stand where their own rules wouldn't put them (too steep, the wrong material, in water), kept and said."""
+    if not (((scene.get("settings") or {}).get("hd2d") or {}).get("scatter")):
+        return ""
+    _blocked, out = ops.scatter_report(scene, models)
+    n = sum(out.values())
+    return (f" {n} scattered thing{'s' if n != 1 else ''} now stand{'s' if n == 1 else ''} where {'they' if n != 1 else 'it'}"
+            " wouldn't be put (kept; Scatter with Ctrl thins, Shift removes)." if n else "")
 
 
 def _steps(stroke: dict[str, Any]) -> str:
@@ -290,6 +304,11 @@ class Hd2dView:
             colour = {"raise": (1.0, 0.85, 0.3, 1.0), "lower": (0.45, 0.75, 1.0, 1.0), "smooth": (0.6, 1.0, 0.6, 1.0),
                       "flatten": (1.0, 0.55, 0.9, 1.0)}.get(self.stroke["tool"] if self.stroke else self.sculpt["tool"],
                                                             (1.0, 0.85, 0.3, 1.0))
+            if self.sculpt["tool"] == "scatter":  # scattering: green adds, amber thins, red removes
+                k = optional_arcade.arcade.key
+                mode = (self.stroke["mode"] if self.stroke else "remove" if self.studio.keys & {k.LSHIFT, k.RSHIFT}
+                        else "thin" if self.studio.keys & {k.LCTRL, k.RCTRL} else "add")
+                colour = {"add": (0.5, 1.0, 0.5, 1.0), "thin": (1.0, 0.8, 0.35, 1.0), "remove": (1.0, 0.45, 0.4, 1.0)}[mode]
             if self.sculpt["tool"] == "paint":  # painting: the material's own colour, light enough to see on it
                 material = self.stroke["material"] if self.stroke else self.sculpt["material"]
                 colour = {"grass": (0.55, 1.0, 0.45, 1.0), "earth": (1.0, 0.75, 0.45, 1.0),
@@ -724,7 +743,7 @@ class Hd2dView:
             self.remove()
         elif symbol in (k.BRACKETLEFT, k.BRACKETRIGHT) and self.sculpt is not None:  # the brush's size
             radius = self.sculpt["radius"] * (1.25 if symbol == k.BRACKETRIGHT else 0.8)
-            biggest = 512.0 if self.sculpt["tool"] == "paint" else 1024.0  # (paint: 16 m, as its field)
+            biggest = 512.0 if self.sculpt["tool"] in ("paint", "scatter") else 1024.0  # (16 m, as their fields)
             self.set_sculpt(radius=round(min(biggest, max(8.0, radius)), 1))
             self.studio._say(f"Brush radius {self.sculpt['radius'] / PIXELS_PER_METRE:.1f} m.")
         elif symbol == k.ESCAPE:
@@ -782,13 +801,17 @@ class Hd2dView:
         return None if at is None else (at[0] / PIXELS_PER_METRE, at[1] / PIXELS_PER_METRE, z)
 
     def toggle_sculpt(self, mode: str = "sculpt") -> None:
-        """Sculpt or Paint (Milestone 20C) on, or off if it was on already: the ground brush."""
+        """Sculpt, Paint (Milestone 20C) or Scatter (20D) on, or off if it was on already: the ground brush."""
         self.cancel_stroke()
-        was = None if self.sculpt is None else ("paint" if self.sculpt["tool"] == "paint" else "sculpt")
+        was = None if self.sculpt is None else (self.sculpt["tool"] if self.sculpt["tool"] in ("paint", "scatter")
+                                                 else "sculpt")
         if was == mode:
             self.sculpt = None
         elif mode == "paint":
             self.sculpt = {"tool": "paint", "material": "earth", "radius": 32.0, "rate": 6.0, "target": None}
+        elif mode == "scatter":
+            self.sculpt = {"tool": "scatter", "radius": 64.0, "rate": 0.0, "target": None, "singles": False}
+            self._choose_collection("Meadow")
         else:
             self.sculpt = {"tool": "raise", "radius": 64.0, "rate": 32.0, "target": None}
         self.sculpt_at = None
@@ -797,7 +820,11 @@ class Hd2dView:
                          if self.sculpt and mode == "sculpt" else
                          "Painting: hold the mouse on the ground and drag (each stroke is one undoable change). "
                          "Shift paints grass back, Alt+click picks the material under the mouse, [ ] resizes, Esc "
-                         "cancels." if self.sculpt else f"{(was or mode).capitalize()}ing off.")
+                         "cancels." if self.sculpt and mode == "paint" else
+                         "Scattering: drag to fill the ground to the density (one undo step a stroke). Shift removes, "
+                         "Ctrl thins, Esc cancels."
+                         if self.sculpt else
+                         {"sculpt": "Sculpting off.", "paint": "Painting off.", "scatter": "Scattering off."}[was or mode])
         self.studio._rebuild()
 
     def set_sculpt(self, **change: Any) -> None:
@@ -808,6 +835,37 @@ class Hd2dView:
             change.setdefault("rate", 2.0 if tool in ("smooth", "flatten") else 32.0)  # a share a second, or px a second
         self.sculpt.update(change)
         self.studio._rebuild()
+
+    def _choose_collection(self, name: str) -> None:
+        """Scatter this collection (or single asset): its density, and the rules its assets go by, as the brush's."""
+        from engine.hd2d.scatter import ASSETS, COLLECTIONS, DENSITY, MATERIALS  # noqa: PLC0415
+
+        if self.sculpt is None or name not in COLLECTIONS:
+            return
+        assets = [ASSETS[a] for a in COLLECTIONS[name]]
+        self.sculpt.update(collection=name, density=DENSITY.get(name, 1.0), mode="add", clumping=0.5,
+                           on=tuple(m for m in MATERIALS if any(m in a.on for a in assets)),
+                           slope=max(a.slope for a in assets), avoid_water=True, avoid_structures=True)
+
+    def set_scatter_rule(self, **change: Any) -> None:
+        if self.sculpt is None or self.sculpt["tool"] != "scatter":
+            return
+        if "collection" in change:
+            self._choose_collection(change.pop("collection"))
+        if "toggle_on" in change:  # a material on or off (one stays on)
+            m = change.pop("toggle_on")
+            on = tuple(x for x in self.sculpt["on"] if x != m) if m in self.sculpt["on"] else (*self.sculpt["on"], m)
+            change["on"] = on or self.sculpt["on"]
+        self.set_sculpt(**change)
+
+    def clear_scatter(self) -> None:
+        """All the room's scattered decoration off: one undoable edit."""
+        self.cancel_stroke()
+        hd2d = ((self.studio.project.scene().get("settings") or {}).get("hd2d") or {})
+        if not hd2d.get("scatter"):
+            self.studio._say("Nothing is scattered here.")
+            return
+        self.studio._edit(ops.clear_scatter, "Cleared the scattered decoration.")
 
     def set_edges(self, edges: str) -> None:
         """The room's material borders, soft or hard: one undoable edit."""
@@ -837,7 +895,7 @@ class Hd2dView:
         held = self.studio.keys
         tool = self.sculpt["tool"]
         rate = float(self.sculpt["rate"])
-        if tool == "paint":  # (Shift: grass back; the material is the stroke's own)
+        if tool in ("paint", "scatter"):  # (their Shift and Ctrl are their strokes' own)
             return tool, rate, None
         if held & {k.LCTRL, k.RCTRL}:
             tool, rate = "smooth", (rate if self.sculpt["tool"] in ("smooth", "flatten") else 2.0)
@@ -855,6 +913,9 @@ class Hd2dView:
             self.studio._say("Point at the ground to sculpt it.", ok=False)
             return
         k = optional_arcade.arcade.key
+        if self.sculpt["tool"] == "scatter":
+            self._begin_scatter(at)
+            return
         painting = self.sculpt["tool"] == "paint"
         if self.sculpt.pop("picking", False) or self.studio.keys & {k.LALT, k.RALT}:  # the eyedropper
             if painting:
@@ -907,6 +968,9 @@ class Hd2dView:
         """One dab of the stroke at (x, y) px worth ``seconds`` of the brush's rate: px for raise and lower, a share
         of the way (1 - e^(-rate t)) for smooth and flatten. Recorded as the saved stroke will replay it."""
         stroke, renderer = self.stroke, self.renderer
+        if stroke is not None and stroke["tool"] == "scatter":
+            self._scatter_dab(round(x, 3), round(y, 3))
+            return
         if stroke is None or renderer is None or renderer.terrain is None:
             return
         x, y = round(x, 3), round(y, 3)  # (as recorded: the shown dab is the saved one, to the last corner)
@@ -956,7 +1020,8 @@ class Hd2dView:
         now = time.perf_counter()
         to = (at[0] * PIXELS_PER_METRE, at[1] * PIXELS_PER_METRE)
         (fx, fy), seconds = stroke["last"], min(0.25, now - stroke["t"])
-        n = max(1, math.ceil(math.hypot(to[0] - fx, to[1] - fy) / max(1.0, stroke["radius"] / 4)))
+        apart = stroke["radius"] / (2 if stroke["tool"] == "scatter" else 4)  # (scatter fills: half its radius do)
+        n = max(1, math.ceil(math.hypot(to[0] - fx, to[1] - fy) / max(1.0, apart)))
         for i in range(1, n + 1):
             self._dab(fx + (to[0] - fx) * i / n, fy + (to[1] - fy) * i / n, seconds / n)
         stroke.update(last=to, t=now, moved=True)
@@ -972,7 +1037,8 @@ class Hd2dView:
         now = time.perf_counter()
         if self.studio.panning:  # (the view is being moved: the brush waits)
             stroke["t"] = now
-        elif not stroke["moved"] and now - stroke["t"] >= 1 / 30:  # (held still: 30 dabs a second at most, so a long
+        elif not stroke["moved"] and now - stroke["t"] >= 1 / 30 and stroke["tool"] != "scatter":  # (held still: 30
+            # dabs a second at most (scatter: none; it fills to its density where it goes), so a long
             # hold isn't thousands of dabs to save; what they do depends on time only)
             x0, y0 = stroke["last"]
             self._dab(x0, y0, min(0.25, now - stroke["t"]))
@@ -985,6 +1051,29 @@ class Hd2dView:
         if stroke is None or renderer is None or not stroke["pending"]:
             return
         start = time.perf_counter()
+        if stroke["tool"] == "scatter":
+            from engine.hd2d.scatter import ASSETS  # noqa: PLC0415
+
+            changes, stroke["pending"] = stroke["pending"], []
+            try:
+                renderer.ensure_scatter().apply(changes)
+            except Exception as exc:  # noqa: BLE001  # REASON: a refused upload stops the stroke; the scatter goes back
+                logger.warning("[Mesh][Studio] scatter stroke stopped: its drawing failed", exc_info=True)
+                stroke["pending"] = changes  # (never drawn: nothing of them to take back)
+                self.cancel_stroke(f"The stroke stopped: the scatter couldn't be drawn ({exc}).")
+                return
+            if any(ASSETS[name].blocks for name, _r, _a in changes):  # (a boulder: walked round at once)
+                world = getattr(self.studio.window, "hd2d_world", None)
+                if world is None:  # (a room that had nothing to collide with has now)
+                    from engine.hd2d.world import World  # noqa: PLC0415
+
+                    world = self.studio.window.hd2d_world = World(renderer.settings, renderer.models)
+                    if renderer.terrain is not None:
+                        world.update_terrain(renderer.terrain)
+                world.set_scatter(renderer.scatter.instances)
+            self.timings["sculpt_ms"].append((time.perf_counter() - start) * 1000)
+            del self.timings["sculpt_ms"][:-240]
+            return
         if stroke["tool"] == "paint":
             pending, stroke["pending"] = stroke["pending"], None
             try:
@@ -1018,6 +1107,8 @@ class Hd2dView:
         if stroke is None:
             return
         self._flush_stroke()
+        if self.stroke is None:  # (the last of it couldn't be drawn: the stroke was cancelled, nothing to save)
+            return
         self.stroke = None
         if stroke["tool"] != "paint":  # (paint moves no grid line)
             self._grid_dirty |= stroke["touched"]
@@ -1025,6 +1116,9 @@ class Hd2dView:
             return
         if stroke["tool"] == "paint":
             self._end_paint(stroke)
+            return
+        if stroke["tool"] == "scatter":
+            self._end_scatter(stroke)
             return
         studio = self.studio
         if self.renderer is not None and self.renderer.terrain is not None \
@@ -1062,7 +1156,81 @@ class Hd2dView:
         words = {"raise": "Raised", "lower": "Lowered", "smooth": "Smoothed", "flatten": "Flattened"}[stroke["tool"]]
         studio._say(f"{words} the ground ({_steps(stroke)})." + (
             " Out of place now (not moved): " + "; ".join(out_of_place[:3]) + (" ..." if len(out_of_place) > 3 else "")
-            if out_of_place else ""), ok=not out_of_place)
+            if out_of_place else "") + _scatter_note(after, self.renderer.models if self.renderer else None), ok=not out_of_place)
+
+    def _begin_scatter(self, at: tuple[float, float, float]) -> None:
+        """A scatter stroke starts: Shift removes what is under the brush, Ctrl thins it, else it adds the chosen
+        collection where the rules allow, up to the density. Studio holds the room's instances while it lasts."""
+        from engine.hd2d.scatter import COLLECTIONS, Rules, Scatter  # noqa: PLC0415
+
+        renderer, brush, studio = self.renderer, self.sculpt, self.studio
+        assert renderer is not None and brush is not None
+        k = optional_arcade.arcade.key
+        mode = ("remove" if studio.keys & {k.LSHIFT, k.RSHIFT} else "thin" if studio.keys & {k.LCTRL, k.RCTRL}
+                else brush["mode"])
+        try:
+            ground, _spots, _routes = ops.scatter_context(studio.project.scene(), renderer.models)
+        except ops.OpError as err:
+            studio._say(str(err), ok=False)
+            return
+        layer = renderer.ensure_scatter()
+        self.stroke = {"tool": "scatter", "mode": mode, "collection": brush["collection"],
+                       "weights": dict(COLLECTIONS[brush["collection"]]) if mode == "add" else {},
+                       "scatter": Scatter({k_: list(v) for k_, v in layer.instances.items()}), "ground": ground,
+                       "rules": Rules(on=tuple(brush["on"]), slope=float(brush["slope"]),
+                                      avoid_water=bool(brush["avoid_water"]),
+                                      avoid_structures=bool(brush["avoid_structures"])),
+                       "radius": float(brush["radius"]), "density": float(brush["density"]),
+                       "clumping": float(brush["clumping"]), "seed": f"{len(studio.project._undo)}:{layer.count()}",
+                       "dabs": [], "changes": [], "pending": [], "touched": set(), "seen": set(), "rate": 0.0,
+                       "target": None,
+                       "was_sculpted": True, "last": (at[0] * PIXELS_PER_METRE, at[1] * PIXELS_PER_METRE),
+                       "t": time.perf_counter(), "moved": False, "started": time.perf_counter()}
+        x0, y0 = self.stroke["last"]
+        self._dab(x0, y0, 0.0)
+        self._flush_stroke()
+
+    def _scatter_dab(self, x: float, y: float) -> None:
+        from engine.hd2d.scatter import brush  # noqa: PLC0415
+
+        stroke = self.stroke
+        assert stroke is not None
+        changes = brush(stroke["scatter"], stroke["mode"], stroke["weights"], x, y, stroke["radius"],
+                        stroke["density"], f"{stroke['seed']}:{len(stroke['dabs'])}", stroke["ground"],
+                        stroke["rules"], stroke["clumping"], 0.35, stroke["seen"])
+        stroke["dabs"].append([x, y])
+        stroke["changes"] += changes
+        stroke["pending"] += changes
+
+    def _end_scatter(self, stroke: dict[str, Any]) -> None:
+        """A scatter stroke let go: the room's scatter as drawn becomes one checked edit (``set_scatter``), no reload;
+        then what blocks where people pass, if anything, is said."""
+        from engine.hd2d.scatter import stored  # noqa: PLC0415
+
+        studio, renderer = self.studio, self.renderer
+        added = sum(1 for _n, _r, a in stroke["changes"] if a)
+        removed = len(stroke["changes"]) - added
+        if not stroke["changes"] or renderer is None or renderer.scatter is None:
+            studio._say("The stroke changed nothing (the rules, or the density already reached, left nothing to do).")
+            return
+        shown = stored(renderer.scatter.instances)
+        start = time.perf_counter()
+        try:
+            studio.project.edit_scene(lambda s: ops.set_scatter(s, shown))
+        except ops.OpError as err:
+            self.stroke = stroke
+            self.cancel_stroke(str(err))
+            return
+        if ((studio.project.scene().get("settings") or {}).get("hd2d") or {}).get("scatter", {}) != shown:
+            studio._reload(recenter=False)  # (never expected; the saved one wins)
+        self.timings["edit_ms"].append((time.perf_counter() - start) * 1000)
+        blocked = ops.scatter_obstructions(studio.project.scene(), renderer.models)
+        studio._refresh_top_bar()
+        what = (f"Scattered {added} ({stroke['collection']})" if stroke["mode"] == "add"
+                else f"{'Removed' if stroke['mode'] == 'remove' else 'Thinned out'} {removed}")
+        studio._say(f"{what}: one undo step." + (" In the way (not moved): " + "; ".join(blocked[:2])
+                                                  + (" ..." if len(blocked) > 2 else "") if blocked else ""),
+                    ok=not blocked)
 
     def _end_paint(self, stroke: dict[str, Any]) -> None:
         """A paint stroke let go: one checked edit, no reload. What is saved is what was shown: the paint of the
@@ -1096,7 +1264,7 @@ class Hd2dView:
             studio._reload(recenter=False)  # (never expected; the saved one wins)
         self.timings["edit_ms"].append((time.perf_counter() - start) * 1000)
         studio._refresh_top_bar()
-        studio._say(f"Painted {stroke['material']} ({_steps(stroke)}).")
+        studio._say(f"Painted {stroke['material']} ({_steps(stroke)})." + _scatter_note(studio.project.scene(), renderer.models if renderer else None))
 
     def cancel_stroke(self, why: str = "Stroke cancelled: the ground is as it was.") -> bool:
         """Esc (or a refused upload): the stroke's changes undone on screen and nothing saved. True if there was
@@ -1105,7 +1273,19 @@ class Hd2dView:
         self.stroke = None
         if stroke is None:
             return False
-        if not stroke["was_sculpted"] and renderer is not None:  # a flat room's first stroke: the plain ground again
+        if stroke["tool"] == "scatter":  # its changes undone, last first
+            if renderer is not None and renderer.scatter is not None:
+                undone = [(name, row, not added) for name, row, added in reversed(stroke["changes"])
+                          if (name, row, added) not in stroke["pending"]]  # (not yet drawn: nothing to undo there)
+                try:
+                    renderer.scatter.apply(undone)
+                except Exception:  # noqa: BLE001  # REASON: the GPU refused: the saved room, drawn afresh, is the truth
+                    logger.warning("[Mesh][Studio] scatter couldn't be put back on screen; reloading", exc_info=True)
+                    self.studio._reload(recenter=False)
+                world = getattr(self.studio.window, "hd2d_world", None)
+                if world is not None and renderer.scatter is not None:
+                    world.set_scatter(renderer.scatter.instances)
+        elif not stroke["was_sculpted"] and renderer is not None:  # a flat room's first stroke: the plain ground again
             self.studio._reload(recenter=False)
         elif stroke["tool"] == "paint" and renderer is not None and renderer.terrain is not None:
             terrain = renderer.terrain
@@ -1178,20 +1358,26 @@ class Hd2dView:
 
     def _sculpt_section(self, box: Any, width: int) -> None:
         studio, brush = self.studio, self.sculpt
-        painting = brush is not None and brush["tool"] == "paint"
-        half = (width - 4) // 2
+        kind = None if brush is None else (brush["tool"] if brush["tool"] in ("paint", "scatter") else "sculpt")
+        third = (width - 8) // 3
         row = _row()
-        row.add(self._button("Sculpt ground", lambda: self.toggle_sculpt("sculpt"),
-                             "Hold the mouse on the ground and drag to raise, lower, smooth or flatten it (click again: "
-                             "off)", width=half, style=S_ACTIVE if brush is not None and not painting else S_BUTTON))
-        row.add(self._button("Paint ground", lambda: self.toggle_sculpt("paint"),
-                             "Hold the mouse on the ground and drag to paint it earth, stone, mud or sand, or grass "
-                             "again (click again: off)", width=half, style=S_ACTIVE if painting else S_BUTTON))
+        row.add(self._button("Sculpt", lambda: self.toggle_sculpt("sculpt"),
+                             "Sculpt ground: hold the mouse on it and drag to raise, lower, smooth or flatten it "
+                             "(click again: off)", width=third, style=S_ACTIVE if kind == "sculpt" else S_BUTTON))
+        row.add(self._button("Paint", lambda: self.toggle_sculpt("paint"),
+                             "Paint ground: drag to paint it earth, stone, mud or sand, or grass again (click again: "
+                             "off)", width=third, style=S_ACTIVE if kind == "paint" else S_BUTTON))
+        row.add(self._button("Scatter", lambda: self.toggle_sculpt("scatter"),
+                             "Scatter grass, flowers, bushes, reeds, rocks and branches over the ground by dragging "
+                             "(click again: off)", width=third, style=S_ACTIVE if kind == "scatter" else S_BUTTON))
         box.add(row)
         if brush is None:
             return
-        if painting:
+        if kind == "paint":
             self._paint_section(box, width)
+            return
+        if kind == "scatter":
+            self._scatter_section(box, width)
             return
         quarter = (width - 12) // 4
         row = _row()
@@ -1212,6 +1398,7 @@ class Hd2dView:
                     value = math.nan
                 if not math.isfinite(value):
                     studio._say("Type a number.", ok=False)
+                    studio._rebuild()  # (the field shows the value it keeps)
                     return
                 self.set_sculpt(**{key: min(hi, max(lo, value)) * scale})
             return commit
@@ -1219,10 +1406,10 @@ class Hd2dView:
         half = (width - 4) // 2
         row = _row()
         row.add(studio._label("Radius (m)", color=C_MUTED, size=10, width=half // 2))
-        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.2g}", number("radius", 0.5, 32.0, PIXELS_PER_METRE),
+        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.3g}", number("radius", 0.5, 32.0, PIXELS_PER_METRE),
                               width=half - half // 2, key="sculpt_radius"))
         row.add(studio._label("Strength" if gentle else "m a second", color=C_MUTED, size=10, width=half // 2))
-        row.add(studio._field(f"{brush['rate']:.2g}" if gentle else f"{brush['rate'] / PIXELS_PER_METRE:.2g}",
+        row.add(studio._field(f"{brush['rate']:.3g}" if gentle else f"{brush['rate'] / PIXELS_PER_METRE:.3g}",
                               number("rate", 0.05, 20.0, 1.0) if gentle else number("rate", 0.05, 8.0, PIXELS_PER_METRE),
                               width=half - half // 2, key="sculpt_rate"))
         box.add(row)
@@ -1242,6 +1429,78 @@ class Hd2dView:
                                  "Stand the objects sculpting left floating or buried back on the ground", width=width))
         box.add(studio._label("Drag to sculpt (one undo step a stroke). Shift lowers, Ctrl smooths, Alt+click picks a "
                               "flatten height, [ ] resize, Esc cancels a stroke.", color=C_MUTED, size=10, width=width))
+
+    def _scatter_section(self, box: Any, width: int) -> None:
+        """Scatter's controls (Milestone 20D): what, how dense, and where it may go."""
+        from engine.hd2d.scatter import ASSETS, COLLECTIONS, MATERIALS  # noqa: PLC0415
+
+        studio, brush = self.studio, self.sculpt
+        assert brush is not None
+        third = (width - 8) // 3
+        groups = [name for name in COLLECTIONS if name not in {a.name for a in ASSETS.values()}]
+        singles = ([a.name for a in ASSETS.values()] if brush.get("singles")
+                   else [brush["collection"]] if brush["collection"] not in groups else [])  # (the one chosen, shown)
+        names = groups + singles
+        for start in range(0, len(names), 3):
+            row = _row()
+            for name in names[start:start + 3]:
+                parts = ", ".join(ASSETS[a].name.lower() for a in COLLECTIONS[name])
+                row.add(self._button(name, lambda n=name: self.set_scatter_rule(collection=n), f"Scatter {parts}",
+                                     width=third, style=S_ACTIVE if brush["collection"] == name else S_BUTTON))
+            box.add(row)
+        box.add(self._button("Fewer things" if brush.get("singles") else "One thing at a time...",
+                             lambda: self.set_sculpt(singles=not brush.get("singles")),
+                             "Show each asset on its own as well as the collections", width=width))
+
+        def number(key: str, lo: float, hi: float, scale: float) -> Any:
+            def commit(text: str) -> None:
+                try:
+                    value = float(text)
+                except ValueError:
+                    value = math.nan
+                if not math.isfinite(value):
+                    studio._say("Type a number.", ok=False)
+                    studio._rebuild()  # (the field shows the value it keeps)
+                    return
+                self.set_sculpt(**{key: min(hi, max(lo, value)) * scale})
+            return commit
+
+        half = (width - 4) // 2
+        row = _row()
+        row.add(studio._label("Radius (m)", color=C_MUTED, size=10, width=half // 2))
+        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.3g}", number("radius", 0.25, 16.0, PIXELS_PER_METRE),
+                              width=half - half // 2, key="scatter_radius"))
+        row.add(studio._label("Per m²", color=C_MUTED, size=10, width=half // 2))
+        row.add(studio._field(f"{brush['density']:.3g}", number("density", 0.01, 20.0, 1.0), width=half - half // 2,
+                              key="scatter_density"))
+        box.add(row)
+        row = _row()
+        row.add(studio._label("Clumps", color=C_MUTED, size=10, width=half // 2))
+        row.add(studio._field(f"{brush['clumping']:.3g}", number("clumping", 0.0, 1.0, 1.0), width=half - half // 2,
+                              key="scatter_clumping"))
+        row.add(studio._label("Slope (°)", color=C_MUTED, size=10, width=half // 2))
+        row.add(studio._field(f"{brush['slope']:.0f}", number("slope", 0.0, 89.0, 1.0), width=half - half // 2,
+                              key="scatter_slope"))
+        box.add(row)
+        fifth = (width - 16) // 5
+        row = _row()
+        for m in MATERIALS:
+            row.add(self._button(m.capitalize(), lambda m=m: self.set_scatter_rule(toggle_on=m),
+                                 f"Scatter on {m}: on or off", width=fifth,
+                                 style=S_ACTIVE if m in brush["on"] else S_BUTTON))
+        box.add(row)
+        row = _row()
+        row.add(self._button("Out of water", lambda: self.set_sculpt(avoid_water=not brush["avoid_water"]),
+                             "Keep out of ponds and puddles (reeds still stand in the shallows)", width=half,
+                             style=S_ACTIVE if brush["avoid_water"] else S_BUTTON))
+        row.add(self._button("Off buildings", lambda: self.set_sculpt(avoid_structures=not brush["avoid_structures"]),
+                             "Keep clear of structures, a little way round them", width=half,
+                             style=S_ACTIVE if brush["avoid_structures"] else S_BUTTON))
+        box.add(row)
+        box.add(self._button("Clear scatter", self.clear_scatter, "Take all the room's scattered decoration away; one "
+                             "undo step", width=width))
+        box.add(studio._label("Drag to scatter (one undo step a stroke). Shift removes, Ctrl thins, [ ] resize, Esc "
+                              "cancels a stroke.", color=C_MUTED, size=10, width=width))
 
     def _paint_section(self, box: Any, width: int) -> None:
         """Paint's controls (Milestone 20C): the material, the brush, the room's edges."""
@@ -1267,6 +1526,7 @@ class Hd2dView:
                     value = math.nan
                 if not math.isfinite(value):
                     studio._say("Type a number.", ok=False)
+                    studio._rebuild()  # (the field shows the value it keeps)
                     return
                 self.set_sculpt(**{key: min(hi, max(lo, value)) * scale})
             return commit
@@ -1274,10 +1534,10 @@ class Hd2dView:
         half = (width - 4) // 2
         row = _row()
         row.add(studio._label("Radius (m)", color=C_MUTED, size=10, width=half // 2))
-        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.2g}", number("radius", 0.25, 16.0, PIXELS_PER_METRE),
+        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.3g}", number("radius", 0.25, 16.0, PIXELS_PER_METRE),
                               width=half - half // 2, key="paint_radius"))  # (a dab's cost grows with its area)
         row.add(studio._label("Strength", color=C_MUTED, size=10, width=half // 2))
-        row.add(studio._field(f"{brush['rate']:.2g}", number("rate", 0.1, 40.0, 1.0), width=half - half // 2,
+        row.add(studio._field(f"{brush['rate']:.3g}", number("rate", 0.1, 40.0, 1.0), width=half - half // 2,
                               key="paint_rate"))
         box.add(row)
         terrain = self.renderer.terrain if self.renderer is not None else None

@@ -2429,6 +2429,248 @@ def _ground_terrain_without(scene: Doc, key: str) -> Doc:
     return _checked_structures(out)
 
 
+# --- scattered decoration (Milestone 20D: engine.hd2d.scatter) ------------------------------------------------------
+
+PX_PER_M = 32.0
+_MODELS_READ: dict[tuple[str, float], Any] = {}
+
+
+def _model_read(model: str) -> Any:
+    """A structure's model (engine.hd2d.glb.Model), read once per file version; None if it can't be read."""
+    from engine.hd2d.glb import GlbError, load_glb  # noqa: PLC0415
+    from engine.paths import resolve_path  # noqa: PLC0415
+
+    try:
+        path = resolve_path(model)
+        key = (str(path), path.stat().st_mtime)
+        if key not in _MODELS_READ:
+            _MODELS_READ[key] = load_glb(path)
+        return _MODELS_READ[key]
+    except (OSError, GlbError, ValueError):
+        return None
+
+
+def scatter_context(scene: Doc, models: Any = None) -> tuple[Any, list[tuple[str, tuple[float, float]]],
+                                                              list[tuple[str, list[tuple[float, float]]]]]:
+    """What scattering needs of an HD-2D room: its ``Ground`` (heights, materials, water, structures' footprints),
+    and where people need to pass: spots (doors, arrivals, the player's start, the feet of walkable structures) and
+    NPC routes (their waypoints). ``models``: already-read models by path (Mesh Studio's), else read from disk."""
+    from engine.hd2d.scatter import ground_for  # noqa: PLC0415
+    from engine.hd2d.terrain import Terrain  # noqa: PLC0415
+    from engine.water import WaterError, parse_water  # noqa: PLC0415
+
+    ground = _parsed_ground(scene)
+    terrain = Terrain.from_ground(ground) if ground.terrain is not None else None
+    flat = None if terrain is not None else (ground.lo, ground.hi, float(ground.elevation))
+    waters, spots, routes = [], [], []
+    for e in entities(scene):
+        if not isinstance(e.get("x"), (int, float)) or not isinstance(e.get("y"), (int, float)):
+            continue
+        at = (float(e["x"]), float(e["y"]))
+        name = str(e.get("name") or e.get("id"))
+        if "WaterSurface" in entity_behaviours(e):
+            config = (e.get("behaviour_config") or {}).get("WaterSurface")
+            try:
+                level = e.get("elevation", 0.0)
+                waters.append((parse_water(config if isinstance(config, dict) else {}), at,
+                               float(level) if isinstance(level, (int, float)) and not isinstance(level, bool) else 0.0))
+            except WaterError:
+                pass
+            continue
+        if "SceneTransition" in entity_behaviours(e):
+            spots.append((f"the door '{name}'", at))
+        elif e.get("tag") == "spawn_point":
+            spots.append((f"the arrival '{name}'", at))
+        elif e.get("prefab_id") == "player" or e.get("tag") == "player":  # (stored, or as editors see it)
+            spots.append(("the player's start", at))
+        for config in (e.get("behaviour_config") or {}).values():
+            for value in (config or {}).values() if isinstance(config, dict) else ():
+                if isinstance(value, list) and len(value) > 1 and all(
+                        isinstance(p, dict) and isinstance(p.get("x"), (int, float)) for p in value):
+                    routes.append((f"{name}'s route", [at] + [(float(p["x"]), float(p.get("y", 0))) for p in value]))
+    footprints = []
+    for s in structures(scene):
+        if not isinstance(s, dict) or not isinstance(s.get("x"), (int, float)) or not isinstance(s.get("y"), (int, float)):
+            continue
+        model = (models or {}).get(s.get("model")) or _model_read(str(s.get("model")))
+        box = model.bounds() if model is not None and model.parts else None
+        scale, turn = float(s.get("scale") or 1.0), float(s.get("rotation") or 0.0)
+        (x0, y0, _z0), (x1, y1, _z1) = box or ((-1.0, -1.0, 0.0), (1.0, 1.0, 0.0))
+        a = math.radians(turn)
+        mx, my = (x0 + x1) / 2 * scale * PX_PER_M, (y0 + y1) / 2 * scale * PX_PER_M
+        cx, cy = float(s["x"]) + mx * math.cos(a) - my * math.sin(a), float(s["y"]) + mx * math.sin(a) + my * math.cos(a)
+        hw, hd = (x1 - x0) / 2 * scale * PX_PER_M, (y1 - y0) / 2 * scale * PX_PER_M
+        footprints.append((cx, cy, hw, hd, turn))
+        for col in model.colliders if model is not None else ():  # where a raised floor comes down to the ground:
+            if col.kind not in ("floor", "solid") or not col.triangles:  # the foot of stairs or a ramp (not every
+                continue  # side of a crate, a wall or a bridge's railing)
+            corners = [p for tri in col.triangles for p in tri]
+            low = [p for p in corners if p[2] < 0.2]
+            if not low or max(p[2] for p in corners) < 0.3:
+                continue
+            fx, fy = sum(p[0] for p in low) / len(low) * scale * PX_PER_M, sum(p[1] for p in low) / len(low) * scale * PX_PER_M
+            spots.append((f"the way onto '{s.get('id')}'",
+                          (float(s["x"]) + fx * math.cos(a) - fy * math.sin(a), float(s["y"]) + fx * math.sin(a) + fy * math.cos(a))))
+    return ground_for(terrain, flat, waters, footprints, spots=[at for _label, at in spots]), spots, routes
+
+
+def _scatter_rules(on: Any, slope: Any, avoid_water: Any, avoid_structures: Any, default_on: tuple[str, ...],
+                   default_slope: float) -> Any:
+    from engine.hd2d.scatter import MATERIALS, Rules  # noqa: PLC0415
+
+    if on is None:
+        on = default_on
+    if not isinstance(on, (list, tuple)) or not on or any(m not in MATERIALS for m in on):
+        raise OpError(f"Scatter on one or more of: {', '.join(MATERIALS)} (got {on!r}).")
+    return Rules(on=tuple(on), slope=_number(default_slope if slope is None else slope, "The steepest slope", 0, 89),
+                 avoid_water=bool(avoid_water), avoid_structures=bool(avoid_structures))
+
+
+def scatter_stroke(scene: Doc, collection: Any, dabs: Any, radius: float = 64.0, density: Any = None,
+                   mode: str = "add", seed: int = 0, clumping: float = 0.5, share: float = 0.5, on: Any = None,
+                   slope: Any = None, avoid_water: bool = True, avoid_structures: bool = True) -> Doc:
+    """One brush stroke of scattered decoration over this HD-2D room's ground (engine.hd2d.scatter): its ``dabs``,
+    ``[[x, y], ...]`` px. ``collection``: a collection's or an asset's name (``engine.hd2d.scatter.COLLECTIONS``),
+    or {asset id: weight}. ``mode`` "add": each dab fills its circle (``radius`` px) up to ``density`` instances a
+    square metre (the collection's default if not given), in clumps (``clumping`` 0-1), where the rules allow (on
+    materials ``on``, no steeper than ``slope`` degrees, out of water and off structures unless told otherwise);
+    "thin": removes ``share`` (0-1) of the collection's instances under each dab; "remove": all of them (all assets,
+    for the collection "all"). ``seed`` makes it repeatable: the same stroke on the same room always gives the same
+    scatter. One edit: one undo step."""
+    from engine.hd2d.scatter import ASSETS, COLLECTIONS, DENSITY, MATERIALS, MAX_INSTANCES, Scatter, ScatterError, brush, parse_scatter, stored  # noqa: PLC0415
+
+    if mode not in ("add", "thin", "remove"):
+        raise OpError(f"A scatter brush adds, thins or removes (got {mode!r}).")
+    if isinstance(collection, str) and collection == "all" and mode != "add":
+        weights: dict[str, float] = {}
+    elif isinstance(collection, str) and collection in COLLECTIONS:
+        weights = dict(COLLECTIONS[collection])
+    elif isinstance(collection, dict) and collection and all(k in ASSETS for k in collection):
+        weights = {k: _number(v, f"The weight of {k}", 0, 1000) for k, v in collection.items()}
+    else:
+        raise OpError(f"Scatter one of: {', '.join(COLLECTIONS)}, or {{asset: weight}} (got {collection!r}).")
+    if not isinstance(dabs, list) or not dabs:
+        raise OpError("A stroke's dabs are a list of [x, y], at least one.")
+    if len(dabs) > STROKE_DABS:
+        raise OpError(f"A stroke holds at most {STROKE_DABS} dabs (got {len(dabs)}).")
+    checked = []
+    for k, dab in enumerate(dabs):
+        if not isinstance(dab, (list, tuple)) or len(dab) != 2:
+            raise OpError(f"Dab {k} must be [x, y] (got {dab!r}).")
+        checked.append((_number(dab[0], f"Dab {k}'s x", -1e6, 1e6), _number(dab[1], f"Dab {k}'s y", -1e6, 1e6)))
+    radius = _number(radius, "The brush radius", 8, 1024)
+    name = collection if isinstance(collection, str) else ""
+    density = _number(DENSITY.get(name, 1.0) if density is None else density, "The density (a square metre)", 0.01, 20)
+    clumping, share = _number(clumping, "The clumping", 0, 1), _number(share, "The share to thin", 0, 1)
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise OpError(f"The seed is a whole number (got {seed!r}).")
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has nothing to scatter on.")
+    hd2d = _hd2d_block(out)
+    try:
+        scatter = Scatter({k: list(v) for k, v in parse_scatter(hd2d.get("scatter") or {}).items()})
+    except ScatterError as err:
+        raise OpError(str(err)) from err
+    ground, _spots, _routes = scatter_context(out)
+    first = [ASSETS[a] for a in weights] or list(ASSETS.values())
+    rules = _scatter_rules(on, slope, avoid_water, avoid_structures,
+                           tuple(m for m in MATERIALS if any(m in a.on for a in first)),
+                           max(a.slope for a in first))
+    seen: set[Any] = set()  # (thinning: each instance once a stroke)
+    try:
+        for k, (x, y) in enumerate(checked):
+            brush(scatter, mode, weights, x, y, radius, density, f"{seed}:{k}", ground, rules, clumping, share, seen)
+    except ScatterError as err:
+        raise OpError(str(err)) from err
+    if scatter.count() > MAX_INSTANCES:
+        raise OpError(f"A room holds at most {MAX_INSTANCES} scattered things; thin some first.")
+    result = stored(scatter.instances)
+    if result:
+        hd2d["scatter"] = result
+    else:
+        hd2d.pop("scatter", None)
+    return out
+
+
+def set_scatter(scene: Doc, scatter: Any) -> Doc:
+    """Set this HD-2D room's scattered decoration exactly (``settings.hd2d.scatter``, checked): what Mesh Studio
+    saves when a scatter stroke ends (what it drew); to scatter, ``scatter_stroke``."""
+    from engine.hd2d.scatter import ScatterError, parse_scatter, stored  # noqa: PLC0415
+
+    if not isinstance((scene.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has nothing to scatter on.")
+    old = scene["settings"]["hd2d"].pop("scatter", None)  # (not copied only to be replaced: thousands of rows)
+    try:
+        out = copy.deepcopy(scene)
+    finally:
+        if old is not None:
+            scene["settings"]["hd2d"]["scatter"] = old
+    hd2d = _hd2d_block(out)
+    try:
+        result = stored(parse_scatter(scatter))
+    except ScatterError as err:
+        raise OpError(str(err)) from err
+    if result:
+        hd2d["scatter"] = result
+    else:
+        hd2d.pop("scatter", None)
+    return out
+
+
+def clear_scatter(scene: Doc, assets: Any = None) -> Doc:
+    """Take this HD-2D room's scattered decoration away: all of it, or only ``assets`` (ids)."""
+    from engine.hd2d.scatter import ASSETS  # noqa: PLC0415
+
+    out = copy.deepcopy(scene)
+    hd2d = _hd2d_block(out)
+    if assets is not None and (not isinstance(assets, list) or any(a not in ASSETS for a in assets)):
+        raise OpError(f"Name assets among: {', '.join(ASSETS)}.")
+    current = hd2d.get("scatter")
+    if isinstance(current, dict) and assets is not None:
+        kept = {k: v for k, v in current.items() if k not in assets}
+        if kept:
+            hd2d["scatter"] = kept
+            return out
+    hd2d.pop("scatter", None)
+    return out
+
+
+def scatter_obstructions(scene: Doc, models: Any = None) -> list[str]:
+    """``scatter_report``'s first half alone, reading only what blocks: what Studio says as a stroke ends."""
+    from engine.hd2d.scatter import ASSETS, ScatterError, obstructions, parse_scatter  # noqa: PLC0415
+
+    hd2d = (scene.get("settings") or {}).get("hd2d")
+    raw = hd2d.get("scatter") if isinstance(hd2d, dict) else None
+    if not isinstance(raw, dict):
+        return []
+    blocking = {k: v for k, v in raw.items() if k in ASSETS and ASSETS[k].blocks}
+    if not blocking:
+        return []
+    try:
+        instances = parse_scatter(blocking)
+        _ground, spots, routes = scatter_context(scene, models)
+    except (ScatterError, OpError):
+        return []
+    return obstructions(instances, spots, routes)
+
+
+def scatter_report(scene: Doc, models: Any = None) -> tuple[list[str], dict[str, int]]:
+    """What this room's scatter means for play: blocking things where people need to pass (in words), and per asset
+    how many stand where their own rules wouldn't put them now (after sculpting, painting, water)."""
+    from engine.hd2d.scatter import ScatterError, obstructions, out_of_rule, parse_scatter  # noqa: PLC0415
+
+    hd2d = (scene.get("settings") or {}).get("hd2d")
+    if not isinstance(hd2d, dict) or not hd2d.get("scatter"):
+        return [], {}
+    try:
+        instances = parse_scatter(hd2d["scatter"])
+        ground, spots, routes = scatter_context(scene, models)
+    except (ScatterError, OpError):
+        return [], {}
+    return obstructions(instances, spots, routes), out_of_rule(instances, ground)
+
+
 def _ground_heights(scene: Doc) -> Any:
     """A function (x, y) px -> the ground's height (px) there, or None off it: the sculpted ground's, else the flat
     ground's elevation. None if the room has no HD-2D ground."""

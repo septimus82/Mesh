@@ -328,7 +328,10 @@ class Studio(InspectorMixin):
             terrain_error = (f"This room's ground is shown unpainted: {terrain_error}. Clear paint starts it afresh."
                              if terrain_error.startswith("its paint") else
                              f"This room's sculpted ground is shown flat: {terrain_error}")
-        for text, ok in ((terrain_error, False),
+        scatter_error = getattr(self.window, "hd2d_scatter_error", None)
+        if scatter_error:
+            scatter_error = f"This room's scattered decoration is set aside: {scatter_error}. Clear scatter starts afresh."
+        for text, ok in ((terrain_error, False), (scatter_error, False),
                          (f"Weather is off in this room: {error}" if error else None, False),
                          (f"Water is off in this room: {water_error}" if water_error else None, False), (notice, True)):
             if text and text not in self._weather_said:

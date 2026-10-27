@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import copy
 import json
+import pickle
 import posixpath
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -29,7 +30,18 @@ Doc = dict[str, Any]
 UNDO_LIMIT = 100
 
 
+
+def _copy(doc: Any) -> Any:
+    """A deep copy of a project document (JSON data): a pickle round trip, several times faster than deepcopy for a
+    room holding thousands of scattered things; deepcopy if something in it won't pickle."""
+    try:
+        return pickle.loads(pickle.dumps(doc, protocol=pickle.HIGHEST_PROTOCOL))
+    except (pickle.PicklingError, TypeError, AttributeError):
+        return copy.deepcopy(doc)
+
+
 @dataclass(frozen=True)
+
 class _State:
     world: Doc
     scenes: dict[str, Doc]
@@ -200,16 +212,16 @@ class Project:
 
     # --- editing ----------------------------------------------------------------------------
     def _snapshot(self) -> _State:
-        return _State(copy.deepcopy(self.world), copy.deepcopy(self.scenes), self.current, frozenset(self.dirty),
-                      self.world_dirty, copy.deepcopy(self.player), self.player_dirty)
+        return _State(_copy(self.world), _copy(self.scenes), self.current, frozenset(self.dirty),
+                      self.world_dirty, _copy(self.player), self.player_dirty)
 
     def _restore(self, state: _State) -> None:
-        self.world = copy.deepcopy(state.world)
-        self.scenes = copy.deepcopy(state.scenes)
+        self.world = _copy(state.world)
+        self.scenes = _copy(state.scenes)
         self.current = state.current
         self.dirty = set(state.dirty)
         self.world_dirty = state.world_dirty
-        self.player = copy.deepcopy(state.player)
+        self.player = _copy(state.player)
         self.player_dirty = state.player_dirty
 
     def _record(self, before: _State) -> None:
