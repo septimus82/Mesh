@@ -58,12 +58,12 @@ class Asset:
 
 
 ASSETS: dict[str, Asset] = {a.id: a for a in (
-    Asset("grass_tuft", "Grass tuft", cell=(0, 1, 2), spacing=0.3, size=(0.75, 1.15)),
-    Asset("grass_tall", "Tall grass", cell=(3, 4), spacing=0.35),
+    Asset("grass_tuft", "Grass tuft", cell=(0, 1, 2), spacing=0.16, size=(0.75, 1.15)),
+    Asset("grass_tall", "Tall grass", cell=(3, 4), spacing=0.2),
     Asset("grass_dry", "Dry grass", cell=(5, 6), spacing=0.35, on=("grass", "earth", "sand")),
     Asset("flowers_yellow", "Yellow flowers", cell=(7, 8), spacing=0.4),
     Asset("flowers_pink", "Pink flowers", cell=(9, 10), spacing=0.4),
-    Asset("bush", "Bush", cell=(11, 12), spacing=1.1, size=(0.85, 1.15), slope=30.0),
+    Asset("bush", "Bush", cell=(11, 12), spacing=1.1, size=(1.1, 1.45), slope=30.0),
     Asset("bush_berries", "Berry bush", cell=(13,), spacing=0.9, size=(0.85, 1.15), slope=30.0),
     Asset("reeds", "Reeds", cell=(14, 15), spacing=0.3, on=("grass", "mud", "sand"), shore=0.3),
     Asset("reeds_cattail", "Cattails", cell=(16,), spacing=0.35, on=("grass", "mud", "sand"), shore=0.3),
@@ -137,15 +137,17 @@ class Ground:
     surface: Callable[[float, float], tuple[float, float] | None]
     material: Callable[[float, float], str] = lambda x, y: "grass"
     water: Callable[[float, float], float | None] = lambda x, y: None
-    structure: Callable[[float, float], bool] = lambda x, y: False
+    structure: Callable[[float, float], bool] = lambda x, y: False  # on a structure, or where people step on and off
 
 
 def ground_for(terrain: Any, flat: tuple[tuple[float, float], tuple[float, float], float] | None,
                waters: list[tuple[Any, tuple[float, float], float]],
-               footprints: list[tuple[float, float, float, float, float]], margin: float = 0.3 * PX) -> Ground:
+               footprints: list[tuple[float, float, float, float, float]], margin: float = 0.3 * PX,
+               spots: Iterable[tuple[float, float]] = (), clear: float = 1.0 * PX) -> Ground:
     """A room's ``Ground``: its sculpted ``terrain`` (engine.hd2d.terrain.Terrain), else the ``flat`` ground (from,
     to, elevation px); ``waters``: (engine.water.Water, centre px, level px); ``footprints``: structures as (x, y,
-    half width, half depth, turn degrees) px, kept ``margin`` px clear."""
+    half width, half depth, turn degrees) px, kept ``margin`` px clear; ``spots``: where people step in and out
+    (doors, arrivals, the player's start, the ends of stairs and bridges), kept ``clear`` px clear."""
     from engine import water as water_mod  # noqa: PLC0415
 
     def surface(x: float, y: float) -> tuple[float, float] | None:
@@ -160,7 +162,11 @@ def ground_for(terrain: Any, flat: tuple[tuple[float, float], tuple[float, float
         levels = [level for w, centre, level in waters if water_mod.inside(w, centre, (x, y))]
         return max(levels) if levels else None
 
+    spot_list = list(spots)
+
     def structure(x: float, y: float) -> bool:
+        if any((x - sx) ** 2 + (y - sy) ** 2 < clear * clear for sx, sy in spot_list):
+            return True
         for cx, cy, hw, hd, turn in footprints:
             a = math.radians(-turn)
             lx = (x - cx) * math.cos(a) - (y - cy) * math.sin(a)

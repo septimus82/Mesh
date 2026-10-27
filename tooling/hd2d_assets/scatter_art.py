@@ -98,7 +98,7 @@ def grass_tuft(seed: int, tall: bool = False, wide: bool = False) -> Image.Image
 def dry_grass(seed: int) -> Image.Image:
     img, d = _cell()
     rng = random.Random(seed)
-    _blades(d, rng, 20, 10, (4, 10), DRY, lean=2.0)
+    _blades(d, rng, 11, 12, (4, 11), DRY, lean=3.2)  # (few, leaning: blades, not a stook)
     return img
 
 
@@ -128,11 +128,17 @@ def bush(seed: int, width: int, height: int, berries: tuple | None = None) -> Im
         d.ellipse([x - rx, y - ry, x + rx, y + ry], fill=(*LEAF[1], 255))
     px: Any = img.load()  # (PixelAccess: its items are RGBA tuples here)
     assert px is not None
-    for y in range(CELL):  # leaf texture: speckle of the four greens, darker towards the bottom
-        for x in range(CELL):
-            if px[x, y][3]:
-                k = rng.random() + (y - (CELL - height)) / height * 0.6
-                px[x, y] = (*LEAF[0 if k > 1.1 else 1 if k > 0.7 else 2 if k > 0.25 else 3], 255)
+    shape = {(x, y) for y in range(CELL) for x in range(CELL) if px[x, y][3]}
+    for x, y in shape:  # the dome's shade: lighter up and to the left, darker low down and to the right
+        k = (y - (CELL - height)) / height * 0.9 + (x - cx) / width * 0.5
+        px[x, y] = (*LEAF[0 if k > 0.75 else 1 if k > 0.35 else 2], 255)
+    for _ in range(18):  # leaf clusters, 3-4 px, lit on top (not a speckle: clumps of leaves read as a bush)
+        x, y = cx + rng.randint(-width // 2 + 2, width // 2 - 2), CELL - 1 - rng.randint(3, height - 2)
+        if (x, y) in shape:
+            lit = LEAF[3] if y < CELL - height * 0.55 else LEAF[2]
+            for dx, dy in ((0, 0), (1, 0), (0, 1), (-1, 1), (1, 1)):
+                if (x + dx, y + dy) in shape:
+                    px[x + dx, y + dy] = (*(lit if dy == 0 else LEAF[1]), 255)
     if berries:
         for _ in range(7):
             x, y = cx + rng.randint(-width // 2 + 3, width // 2 - 3), CELL - 1 - rng.randint(4, height - 3)
@@ -141,12 +147,12 @@ def bush(seed: int, width: int, height: int, berries: tuple | None = None) -> Im
     return _shade(img)
 
 
-def reeds(seed: int) -> Image.Image:
+def reeds(seed: int, heads: int = 3) -> Image.Image:
     img, d = _cell()
     rng = random.Random(seed)
     _blades(d, rng, 15, 8, (16, 32), [(58, 78, 40), *REED, (156, 178, 100)], lean=1.2)
     cx = CELL // 2
-    for _ in range(3):  # cattails: a brown head on a stalk
+    for _ in range(heads):  # cattails: a brown head on a stalk
         x, top = cx + rng.randint(-4, 4), CELL - 1 - rng.randint(28, 38)
         d.line([(x, CELL - 1), (x, top + 5)], fill=(*REED[1], 255))
         d.rectangle([x - 1, top, x, top + 5], fill=(*CATTAIL[0], 255))
@@ -163,7 +169,7 @@ SHEET = [  # cells in the order engine.hd2d.scatter.ASSETS uses them (several va
     lambda: flowers(75, [(230, 150, 170), (238, 232, 226)]), lambda: flowers(85, [(214, 140, 196), (238, 232, 226)]),
     lambda: bush(76, 34, 22), lambda: bush(86, 30, 20),  # 11-12 bush
     lambda: bush(77, 26, 16, berries=(186, 62, 64)),  # 13 berry bush
-    lambda: reeds(78), lambda: reeds(88),  # 14-15 reeds
+    lambda: reeds(78, heads=0), lambda: reeds(88, heads=1),  # 14-15 reeds
     lambda: reeds(79),  # 16 cattails
 ]
 

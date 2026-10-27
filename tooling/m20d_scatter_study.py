@@ -8,13 +8,15 @@
 The room is Stage 20C's painted Hills room (tooling/m20c_material_study.py), decorated only through
 ``project_ops.scatter_stroke`` (as Studio and AI scatter), deliberately and sparingly:
 
-- grass tufts and flowers in drifts along both sides of the winding path, never on it;
+- broken clumps of grass and flowers along both sides of the winding path, never on it, gaps between them;
 - a few meadow patches in the open grass, plenty of it left plain;
-- rocks along the foot and the top edge of the terrace's cliff, breaking its repeated texture, and a boulder at
-  its west end, clear of the ramp;
-- reeds and cattails on the pond's far banks (the path's side left open), tall grass round them;
-- bushes beside the bridge's piers and the cottage's sides, clear of its door;
-- dry grass and a fallen branch on the hill's flank.
+- flowers and grass on the hill's top by the Elder: its focal point;
+- larger stones, unevenly, at the foot of the terrace's cliff (tufts at their bases), and a boulder at its west end,
+  clear of the ramp;
+- reeds and cattails on the pond's far bank only (its near side and the path's left open), tall grass round it;
+- bushes beside the bridge's piers (not a mirrored pair) and the cottage's sides, clear of its door;
+- dry grass and a fallen branch on the hill's flank; bushes and tall grass along the near edge, for depth.
+Doors, arrivals, the player's start and the ends of the stairs and bridge are kept clear by the brush itself.
 """
 
 from __future__ import annotations
@@ -62,27 +64,34 @@ def compose(scene: dict[str, Any]) -> tuple[dict[str, Any], int]:
         n += 1
 
     path = m20c.EARTH_PATH
-    for side, seed in ((1.35, 11), (-1.35, 12)):  # drifts along both sides of the path
-        stroke("Meadow", _beside(path, side, 0.6), 0.7, 1.3, seed, clumping=0.75)
+    for side, seed in ((1.35, 11), (-1.35, 12)):  # broken clumps along both sides of the path, gaps between
+        line = _beside(path, side, 0.6)
+        for i in range(0 if side > 0 else 3, len(line), 6):
+            stroke("Meadow", line[i:i + 2 + (i % 3)], 0.6, 6.0, seed + i, clumping=0.0)
     stroke("Wildflowers", _beside(path[2:7], 1.9, 0.8), 0.6, 0.9, 13, clumping=0.8)
     for (x, y), seed in (((6.0, 12.0), 21), ((22.0, 11.5), 22), ((10.0, 21.5), 23), ((28.5, 11.0), 24)):
         stroke("Meadow", [(x, y), (x + 1.5, y + 0.6)], 1.6, 0.7, seed, clumping=0.8)  # patches in the open grass
-    x0, x1, y0, _y1, _h = m20a.TERRACE  # the cliff: its foot and its top edge
-    stroke("Rocks", [(x0 + 1.2 + 0.6 * k, y0 - 0.6) for k in range(10)], 0.6, 0.8, 31, on=list(("grass", "earth",
-                                                                                                  "stone")))
-    stroke("Rocks", [(x0 + 1.5 + 0.8 * k, y0 + 1.1) for k in range(8)], 0.5, 0.5, 32)
+    hx, hy, _hr, _hh = m20a.HILL  # the hill's top, by the Elder (kept clear of his feet): its focal point
+    stroke("Wildflowers", [(hx - 1.4, hy - 0.6), (hx - 1.0, hy + 0.9)], 0.7, 3.5, 25, clumping=0.3)
+    stroke("Meadow", [(hx + 1.3, hy - 0.4), (hx + 1.6, hy + 0.8)], 0.7, 3.0, 26, clumping=0.3)
+    x0, x1, y0, _y1, _h = m20a.TERRACE  # the cliff's foot: larger stones, unevenly, tufts at their bases
+    foot = [(x0 + 1.0 + d, y0 - 0.55 + j) for d, j in ((0.0, 0.0), (0.9, -0.15), (2.3, 0.1), (2.8, -0.2), (4.4, 0.05),
+                                                        (5.9, -0.1), (6.4, 0.1))]
+    stroke({"rock_medium": 3, "rock_small": 2}, foot, 0.45, 2.2, 31, on=["grass", "earth", "stone"])
+    stroke("Meadow", foot, 0.5, 4.0, 34, clumping=0.2)
     stroke("Boulder", [(x0 + 0.6, y0 - 1.4)], 0.5, 1.5, 33, avoid_structures=True)
-    bx, by, br, _d = m20a.BASIN  # the pond's far banks: reeds; the path's side left open
+    bx, by, br, _d = m20a.BASIN  # the pond's far bank: reeds; its near side and the path's left open
     far_bank = [(bx + br * 0.72 * math.cos(a), by + br * 0.68 * math.sin(a)) for a in
-                [math.radians(d) for d in range(-70, 160, 15)]]
-    stroke("Pond edge", far_bank, 0.55, 2.4, 41, clumping=0.6)
+                [math.radians(d) for d in range(25, 170, 15)]]
+    stroke("Pond edge", far_bank, 0.55, 2.4, 41, clumping=0.6, on=["mud", "sand"])
     stroke({"grass_tall": 3, "flowers_pink": 1}, [(bx + br * 1.05 * math.cos(a), by + br * 1.0 * math.sin(a))
-                                                  for a in [math.radians(d) for d in range(-40, 140, 20)]],
+                                                  for a in [math.radians(d) for d in range(10, 180, 20)]],
            0.6, 1.0, 42, clumping=0.7)
-    stroke("Shrubs", [(12.9, 12.8), (17.1, 12.8)], 0.7, 1.2, 51, avoid_structures=False)  # the bridge's piers
+    stroke("Shrubs", [(12.9, 12.8), (13.4, 13.3), (17.1, 12.6)], 0.7, 1.6, 51, avoid_structures=False)  # the bridge
     stroke("Shrubs", [(2.4, 5.2), (7.7, 6.4)], 0.6, 1.4, 52, avoid_structures=False)  # beside the cottage
-    hx, hy, hr, _hh = m20a.HILL
-    stroke("Deadfall", [(hx + hr * 0.7, hy - hr * 0.5), (hx + hr * 0.85, hy - hr * 0.15)], 0.8, 0.9, 61)
+    stroke("Deadfall", [(hx + 4.0 * 0.7, hy - 4.0 * 0.5), (hx + 4.0 * 0.85, hy - 4.0 * 0.15)], 0.8, 0.9, 61)
+    for x, seed in ((13.0, 71), (21.5, 72), (29.0, 73)):  # the near edge: a little depth in the foreground
+        stroke({"bush": 1, "grass_tall": 4}, [(x, 0.7), (x + 1.4, 0.9)], 0.6, 2.0, seed, clumping=0.4)
     return scene, n
 
 

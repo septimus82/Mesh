@@ -2505,7 +2505,7 @@ def scatter_context(scene: Doc, models: Any = None) -> tuple[Any, list[tuple[str
             for ex, ey in ((hw, 0.0), (-hw, 0.0), (0.0, hd), (0.0, -hd)):  # (its ends and sides: where people step on)
                 spots.append((f"the way onto '{s.get('id')}'",
                               (cx + ex * math.cos(a) - ey * math.sin(a), cy + ex * math.sin(a) + ey * math.cos(a))))
-    return ground_for(terrain, flat, waters, footprints), spots, routes
+    return ground_for(terrain, flat, waters, footprints, spots=[at for _label, at in spots]), spots, routes
 
 
 def _scatter_rules(on: Any, slope: Any, avoid_water: Any, avoid_structures: Any, default_on: tuple[str, ...],
