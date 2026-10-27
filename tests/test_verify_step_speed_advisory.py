@@ -276,8 +276,13 @@ def test_rule_f_fails_a_step_only_when_the_fixed_threshold_and_the_advisory_agre
     from mesh_cli.verify import _apply_rule_f
 
     assert _apply_rule_f(2, _over("pytest-fast"), _advisory(pytest_fast="slow"))[0] == 2
-    code, record = _apply_rule_f(2, _over("pytest-fast"), _advisory(pytest_fast="ok"))
+    payload = _over("pytest-fast")
+    code, record = _apply_rule_f(2, payload, _advisory(pytest_fast="ok"))
     assert code == 0 and record["excused_by_advisory"] == ["pytest-fast"] and record["failed"] == []
+    assert payload["ok"] is True and payload["rule_f"] == record  # (the reports reading ok agree with the gate)
+    assert [o["name"] for o in payload["offenders"]] == ["pytest-fast"]  # (still listed: over its fixed threshold)
+    confirmed = _over("pytest-fast")
+    assert _apply_rule_f(2, confirmed, _advisory(pytest_fast="slow"))[0] == 2 and confirmed["ok"] is False
     code, record = _apply_rule_f(2, _over("pytest-fast", "verify-demo"),
                                  _advisory(pytest_fast="ok", verify_demo="slow"))
     assert code == 2 and record["failed"] == ["verify-demo"]  # (one confirmed step is enough)

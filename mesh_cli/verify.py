@@ -1339,7 +1339,9 @@ def _apply_rule_f(
     """Rule f (#373, #400): a budgeted step fails only when it is over its fixed threshold AND the speed-adjusted
     advisory calls it slow on this runner. Where the advisory can't judge a step (no model, no estimate, not run, an
     error), the fixed threshold alone decides: the rule never fails open. Returns the budget code to apply and a record
-    of the decision (written into verify_step_budget_check.json).
+    of the decision. With a step over its fixed threshold, ``budget_payload`` gets the record (``rule_f``), and its
+    ``ok`` becomes the rule's verdict, so the reports that read it (artifacts-diff, the CI baseline) agree with the gate;
+    ``offenders`` still lists every step over its fixed threshold.
 
     Measured on the current code (#400): false failures 50 % -> 0 % (Linux) and 54 % -> 4 % (Windows); an isolated
     pytest-fast slowdown is still caught at x1.25 on Linux (88 %), but on Windows only from about x1.5 (92 %; x1.25:
@@ -1354,7 +1356,10 @@ def _apply_rule_f(
     confirmed = [name for name in offenders if name not in excused]
     record: dict[str, object] = {"rule": "fixed threshold and speed-adjusted advisory both", "over_fixed": offenders,
                                  "excused_by_advisory": excused, "failed": confirmed}
+    if offenders:
+        budget_payload["rule_f"] = record
     if budget_code != 0 and offenders and not confirmed:
+        budget_payload["ok"] = True
         return 0, record
     return budget_code, record
 
@@ -2158,7 +2163,6 @@ def _build_verify_all_payload(args: argparse.Namespace):
         )
         budget_code, rule_f = _apply_rule_f(budget_code, verify_step_budget_payload, advisory)
         if rule_f["over_fixed"]:
-            verify_step_budget_payload["rule_f"] = rule_f
             with suppress_stdout():
                 write_json_atomic(artifacts_dir / "verify_step_budget_check.json", verify_step_budget_payload,
                                   indent=2, sort_keys=True, trailing_newline=True)
