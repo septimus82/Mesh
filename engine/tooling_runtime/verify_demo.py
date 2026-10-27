@@ -204,11 +204,13 @@ def _diagnostic_artifact_dir(*, log_path: Path | None, scratch_dir: Path | None)
     return scratch_root
 
 
-# Environment variables whose values a failure report may show; any other MESH_/PYTHON/PYTEST variable is listed by
-# name with its value redacted (a CI job's environment can hold tokens and keys).
+# Environment variables whose values a failure report may show: switches, seeds and encodings only. Any other
+# MESH_/PYTHON/PYTEST variable is listed by name with its value redacted: a CI job's environment can hold tokens and
+# keys, and paths or free-form options (PYTHONPATH, PYTHONHOME, PYTEST_ADDOPTS, MESH_REPO_ROOT) can name users,
+# machines or secrets.
 _SHOWN_ENV_VALUES = frozenset({
-    "MESH_CI_SEED", "MESH_REPO_ROOT", "MESH_VERIFY_BUDGET_ENFORCE", "MESH_GL_SMOKE", "PYTHONPATH", "PYTHONHOME",
-    "PYTHONUTF8", "PYTHONIOENCODING", "PYTHONDONTWRITEBYTECODE", "PYTHONHASHSEED", "PYTHONWARNINGS", "PYTEST_ADDOPTS",
+    "MESH_CI_SEED", "MESH_VERIFY_BUDGET_ENFORCE", "MESH_GL_SMOKE",
+    "PYTHONUTF8", "PYTHONIOENCODING", "PYTHONDONTWRITEBYTECODE", "PYTHONHASHSEED",
 })
 
 

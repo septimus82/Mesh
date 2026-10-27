@@ -523,3 +523,28 @@ def test_a_failed_bundle_keeps_only_its_known_reports(tmp_path: Path) -> None:
     kept = sorted(p.relative_to(dest).as_posix() for p in dest.rglob("*") if p.is_file())
     assert kept == ["release/pytest_fast.log", "release/verify_all_summary.json", "release/verify_demo_failure.json"]
     assert set(kept) <= set(FAILURE_REPORTS)
+
+
+@pytest.mark.fast
+def test_a_failed_bundle_says_whether_its_failure_is_timing_only_or_functional(tmp_path: Path) -> None:
+    """#394: CI showed only 'release-check failed (exit=2)'. The kept reports now say which verify-all step failed and
+    whether that is a timing check or behaviour."""
+    from mesh_cli.release_bundle import classify_failure
+
+    release = tmp_path / "release"
+    release.mkdir()
+
+    def summary(*steps: tuple[str, int, str]) -> None:
+        (release / "verify_all_summary.json").write_text(json.dumps(
+            {"steps": [{"name": n, "code": c, "error": e} for n, c, e in steps]}), encoding="utf-8")
+
+    assert "not classified" in classify_failure(tmp_path)  # (no summary: failed elsewhere)
+    summary(("pytest-fast", 0, ""), ("pytest-fast-duration-guard", 2, "pytest-fast durations regressed"),
+            ("runtime-player-smoke", 2, "skipped: previous step failed"))
+    assert classify_failure(tmp_path).endswith("pytest-fast-duration-guard (timing-only)")
+    summary(("verify-demo", 1, "1 failed"), ("verify-replays", 2, "skipped: previous step failed"))
+    assert classify_failure(tmp_path).endswith("verify-demo (functional)")
+    summary(("verify-demo", 0, ""))
+    (release / "verify_step_budget_check.json").write_text(json.dumps(
+        {"ok": False, "offenders": [{"name": "pytest-fast"}]}), encoding="utf-8")
+    assert classify_failure(tmp_path).endswith("(pytest-fast): timing-only")

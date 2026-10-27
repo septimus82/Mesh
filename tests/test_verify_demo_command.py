@@ -203,6 +203,8 @@ def test_verify_demo_failed_run_keeps_its_short_basetemp_and_reports_it_redacted
     monkeypatch.setenv("MESH_FAKE_API_TOKEN", "s3cret-value")
     monkeypatch.setenv("PYTHON_FAKE_PASSWORD", "hunter2-value")
     monkeypatch.setenv("MESH_CI_SEED", "123")
+    for name in ("PYTHONPATH", "PYTHONHOME", "PYTEST_ADDOPTS", "MESH_REPO_ROOT"):  # (paths and free-form options)
+        monkeypatch.setenv(name, f"C:/Users/someone-private/{name}-value")
     monkeypatch.setattr("engine.tooling.verify_demo.subprocess.run",
                         lambda *a, **k: MagicMock(returncode=1, stdout="1 failed", stderr=""))
     artifacts_dir = tmp_path / "artifacts"
@@ -219,5 +221,8 @@ def test_verify_demo_failed_run_keeps_its_short_basetemp_and_reports_it_redacted
         assert env["MESH_FAKE_API_TOKEN"] == "<redacted>" and env["PYTHON_FAKE_PASSWORD"] == "<redacted>"
         assert env["MESH_CI_SEED"] == "123"
         assert "s3cret-value" not in text and "hunter2-value" not in text
+        for name in ("PYTHONPATH", "PYTHONHOME", "PYTEST_ADDOPTS", "MESH_REPO_ROOT"):
+            assert env[name] == "<redacted>"
+        assert "someone-private" not in json.dumps(env)
     finally:
         shutil.rmtree(basetemp.parent, ignore_errors=True)

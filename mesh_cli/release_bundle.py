@@ -907,6 +907,35 @@ FAILURE_REPORTS = tuple(f"release/{name}" for name in (
 ))
 
 
+TIMING_STEPS = frozenset({"pytest-fast-duration-guard"})  # (verify-all steps that judge time, not behaviour)
+
+
+def classify_failure(work_dir: Path) -> str:
+    """One line on why release-check's verify-all failed, from its own reports: the failing steps, and whether they
+    are timing-only (the step-time budget, a duration guard) or functional. A failure elsewhere in the bundle (export,
+    demo run, audits) is reported as not classified."""
+    release = work_dir / "release"
+    try:
+        summary = json.loads((release / "verify_all_summary.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "failure not classified: release-check's verify-all summary is missing (it failed elsewhere or earlier)"
+    steps = summary.get("steps") if isinstance(summary, dict) else None
+    failed = [str(s.get("name")) for s in steps or [] if isinstance(s, dict) and s.get("code")
+              and not str(s.get("error") or "").startswith("skipped")]
+    try:
+        budget = json.loads((release / "verify_step_budget_check.json").read_text(encoding="utf-8"))
+        over = ([str(o.get("name")) for o in budget.get("offenders") or [] if isinstance(o, dict)]
+                if isinstance(budget, dict) and budget.get("ok") is False else [])
+    except (OSError, ValueError):
+        over = []
+    if failed:
+        kind = "timing-only" if set(failed) <= TIMING_STEPS else "functional"
+        return f"release-check's verify-all failed at {', '.join(failed)} ({kind})"
+    if over:
+        return f"release-check's verify-all failed on the step-time budget only ({', '.join(over)}): timing-only"
+    return "failure not classified: release-check's verify-all reported no failing step"
+
+
 def _keep_failure_reports(work_dir: Path, dest: Path, limit_bytes: int = 2_000_000) -> None:
     """Copy a failed bundle's known reports (``FAILURE_REPORTS``, each under ``limit_bytes``) to ``dest``, so CI's
     artifact upload carries them."""
@@ -923,6 +952,7 @@ def _keep_failure_reports(work_dir: Path, dest: Path, limit_bytes: int = 2_000_0
             shutil.copy2(src, target)
             kept += 1
         print(f"[Mesh][Release-Bundle] the failed steps' reports ({kept}): {dest.as_posix()}")
+        print(f"[Mesh][Release-Bundle] {classify_failure(work_dir)}")
     except OSError as exc:  # (never hide the original failure behind a copy problem)
         print(f"[Mesh][Release-Bundle] WARNING: could not keep the failure reports: {exc}", file=sys.stderr)
 
