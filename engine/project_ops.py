@@ -2487,7 +2487,7 @@ def scatter_context(scene: Doc, models: Any = None) -> tuple[Any, list[tuple[str
             for value in (config or {}).values() if isinstance(config, dict) else ():
                 if isinstance(value, list) and len(value) > 1 and all(
                         isinstance(p, dict) and isinstance(p.get("x"), (int, float)) for p in value):
-                    routes.append((f"{name}'s route", [(float(p["x"]), float(p.get("y", 0))) for p in value]))
+                    routes.append((f"{name}'s route", [at] + [(float(p["x"]), float(p.get("y", 0))) for p in value]))
     footprints = []
     for s in structures(scene):
         if not isinstance(s, dict) or not isinstance(s.get("x"), (int, float)) or not isinstance(s.get("y"), (int, float)):
@@ -2501,10 +2501,16 @@ def scatter_context(scene: Doc, models: Any = None) -> tuple[Any, list[tuple[str
         cx, cy = float(s["x"]) + mx * math.cos(a) - my * math.sin(a), float(s["y"]) + mx * math.sin(a) + my * math.cos(a)
         hw, hd = (x1 - x0) / 2 * scale * PX_PER_M, (y1 - y0) / 2 * scale * PX_PER_M
         footprints.append((cx, cy, hw, hd, turn))
-        if model is not None and any(c.kind in ("floor", "solid") for c in model.colliders):  # (walked on)
-            for ex, ey in ((hw, 0.0), (-hw, 0.0), (0.0, hd), (0.0, -hd)):  # (its ends and sides: where people step on)
-                spots.append((f"the way onto '{s.get('id')}'",
-                              (cx + ex * math.cos(a) - ey * math.sin(a), cy + ex * math.sin(a) + ey * math.cos(a))))
+        for col in model.colliders if model is not None else ():  # where a raised floor comes down to the ground:
+            if col.kind not in ("floor", "solid") or not col.triangles:  # the foot of stairs or a ramp (not every
+                continue  # side of a crate, a wall or a bridge's railing)
+            corners = [p for tri in col.triangles for p in tri]
+            low = [p for p in corners if p[2] < 0.2]
+            if not low or max(p[2] for p in corners) < 0.3:
+                continue
+            fx, fy = sum(p[0] for p in low) / len(low) * scale * PX_PER_M, sum(p[1] for p in low) / len(low) * scale * PX_PER_M
+            spots.append((f"the way onto '{s.get('id')}'",
+                          (float(s["x"]) + fx * math.cos(a) - fy * math.sin(a), float(s["y"]) + fx * math.sin(a) + fy * math.cos(a))))
     return ground_for(terrain, flat, waters, footprints, spots=[at for _label, at in spots]), spots, routes
 
 

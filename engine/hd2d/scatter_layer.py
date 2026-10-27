@@ -163,10 +163,13 @@ class ScatterLayer:
                     for n, (a, b) in enumerate(((fx - reach, fx + reach), (fy - reach, fy + reach), (z + z0, z + z1))):
                         lo[n], hi[n] = min(lo[n], a), max(hi[n], b)
                     continue
-                model = self.r.models.get(asset.model)
+                model = self._model(asset.model)
                 if model is None:
                     continue
                 c, s = math.cos(math.radians(turn)), math.sin(math.radians(turn))
+                (mx0, my0, _mz0), (mx1, my1, _mz1) = model.bounds()
+                z = foot_height(self.height, x, y, max(abs(mx0), abs(mx1), abs(my0), abs(my1)) * k * PX * 0.7,
+                                turn) / PX
                 for part in model.parts:
                     texture = self.r._material_texture(asset.model, part, self.r._materials)
                     _t, verts, idx, _cast = merged.setdefault(id(texture), (texture, array("f"), array("I"),
@@ -198,6 +201,19 @@ class ScatterLayer:
         self.model_draws[key] = draws
         self.boxes[key] = ((lo[0], lo[1], lo[2]), (hi[0], hi[1], hi[2])) if lo[0] < math.inf else \
             ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
+
+    def _model(self, rel: str | None) -> Any:
+        """A scatter model, read when first needed (a room only reads the models its scatter uses)."""
+        if rel is None:
+            return None
+        if rel not in self.r.models:
+            from engine.hd2d.glb import load_glb  # noqa: PLC0415
+
+            path = model_path(self.r, rel)
+            if path is None:
+                return None
+            self.r.models[rel] = load_glb(path)
+        return self.r.models[rel]
 
     def _free(self, key: tuple[int, int]) -> None:
         sprite = self.sprite_draws.pop(key, None)
@@ -256,6 +272,14 @@ class ScatterLayer:
         for key in list(self.sprite_draws) + list(self.model_draws):
             self._free(key)
         self.prog.delete()
+
+
+def foot_height(height: Callable[[float, float], float], x: float, y: float, reach: float, turn: float) -> float:
+    """Where a model stands (px): the lowest ground under it (its centre and ``reach`` px round it, along its own
+    length too), so on a slope it is sunk at the high side rather than floating at the low one."""
+    return min([height(x, y)] + [height(x + reach * math.cos(a), y + reach * math.sin(a))
+                                 for a in (0.0, math.pi / 2, math.pi, 3 * math.pi / 2, math.radians(turn),
+                                           math.radians(turn) + math.pi)])
 
 
 def _chunk(x: float, y: float) -> tuple[int, int]:

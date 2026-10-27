@@ -592,16 +592,11 @@ class Hd2dRenderer:
         return float(self.settings.ground.elevation) if self.settings.ground is not None else 0.0
 
     def ensure_scatter(self, scatter: dict[str, Any] | None = None) -> Any:
-        """The room's scatter layer (made, with the models its assets need, if it has none yet)."""
+        """The room's scatter layer (made if it has none yet; the models it uses are read as it needs them, so a
+        room of grass alone reads none: nothing of it collides)."""
         if self.scatter is None:
-            from engine.hd2d.scatter import ASSETS  # noqa: PLC0415
-            from engine.hd2d.scatter_layer import ScatterLayer, model_path  # noqa: PLC0415
+            from engine.hd2d.scatter_layer import ScatterLayer  # noqa: PLC0415
 
-            for asset in ASSETS.values():  # (all of them: a stroke may add any; they are small)
-                if asset.model and asset.model not in self.models:
-                    path = model_path(self, asset.model)
-                    if path is not None:
-                        self.models[asset.model] = load_glb(path)
             self.scatter = ScatterLayer(self, scatter or {}, self.ground_height)
         return self.scatter
 

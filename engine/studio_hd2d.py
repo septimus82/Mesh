@@ -743,7 +743,7 @@ class Hd2dView:
             self.remove()
         elif symbol in (k.BRACKETLEFT, k.BRACKETRIGHT) and self.sculpt is not None:  # the brush's size
             radius = self.sculpt["radius"] * (1.25 if symbol == k.BRACKETRIGHT else 0.8)
-            biggest = 512.0 if self.sculpt["tool"] == "paint" else 1024.0  # (paint: 16 m, as its field)
+            biggest = 512.0 if self.sculpt["tool"] in ("paint", "scatter") else 1024.0  # (16 m, as their fields)
             self.set_sculpt(radius=round(min(biggest, max(8.0, radius)), 1))
             self.studio._say(f"Brush radius {self.sculpt['radius'] / PIXELS_PER_METRE:.1f} m.")
         elif symbol == k.ESCAPE:
@@ -1064,8 +1064,13 @@ class Hd2dView:
                 return
             if any(ASSETS[name].blocks for name, _r, _a in changes):  # (a boulder: walked round at once)
                 world = getattr(self.studio.window, "hd2d_world", None)
-                if world is not None:
-                    world.set_scatter(renderer.scatter.instances)
+                if world is None:  # (a room that had nothing to collide with has now)
+                    from engine.hd2d.world import World  # noqa: PLC0415
+
+                    world = self.studio.window.hd2d_world = World(renderer.settings, renderer.models)
+                    if renderer.terrain is not None:
+                        world.update_terrain(renderer.terrain)
+                world.set_scatter(renderer.scatter.instances)
             self.timings["sculpt_ms"].append((time.perf_counter() - start) * 1000)
             del self.timings["sculpt_ms"][:-240]
             return
@@ -1102,6 +1107,8 @@ class Hd2dView:
         if stroke is None:
             return
         self._flush_stroke()
+        if self.stroke is None:  # (the last of it couldn't be drawn: the stroke was cancelled, nothing to save)
+            return
         self.stroke = None
         if stroke["tool"] != "paint":  # (paint moves no grid line)
             self._grid_dirty |= stroke["touched"]
@@ -1391,6 +1398,7 @@ class Hd2dView:
                     value = math.nan
                 if not math.isfinite(value):
                     studio._say("Type a number.", ok=False)
+                    studio._rebuild()  # (the field shows the value it keeps)
                     return
                 self.set_sculpt(**{key: min(hi, max(lo, value)) * scale})
             return commit
@@ -1398,10 +1406,10 @@ class Hd2dView:
         half = (width - 4) // 2
         row = _row()
         row.add(studio._label("Radius (m)", color=C_MUTED, size=10, width=half // 2))
-        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.2g}", number("radius", 0.5, 32.0, PIXELS_PER_METRE),
+        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.3g}", number("radius", 0.5, 32.0, PIXELS_PER_METRE),
                               width=half - half // 2, key="sculpt_radius"))
         row.add(studio._label("Strength" if gentle else "m a second", color=C_MUTED, size=10, width=half // 2))
-        row.add(studio._field(f"{brush['rate']:.2g}" if gentle else f"{brush['rate'] / PIXELS_PER_METRE:.2g}",
+        row.add(studio._field(f"{brush['rate']:.3g}" if gentle else f"{brush['rate'] / PIXELS_PER_METRE:.3g}",
                               number("rate", 0.05, 20.0, 1.0) if gentle else number("rate", 0.05, 8.0, PIXELS_PER_METRE),
                               width=half - half // 2, key="sculpt_rate"))
         box.add(row)
@@ -1430,7 +1438,8 @@ class Hd2dView:
         assert brush is not None
         third = (width - 8) // 3
         groups = [name for name in COLLECTIONS if name not in {a.name for a in ASSETS.values()}]
-        singles = [a.name for a in ASSETS.values()] if brush.get("singles") else []
+        singles = ([a.name for a in ASSETS.values()] if brush.get("singles")
+                   else [brush["collection"]] if brush["collection"] not in groups else [])  # (the one chosen, shown)
         names = groups + singles
         for start in range(0, len(names), 3):
             row = _row()
@@ -1451,6 +1460,7 @@ class Hd2dView:
                     value = math.nan
                 if not math.isfinite(value):
                     studio._say("Type a number.", ok=False)
+                    studio._rebuild()  # (the field shows the value it keeps)
                     return
                 self.set_sculpt(**{key: min(hi, max(lo, value)) * scale})
             return commit
@@ -1458,15 +1468,15 @@ class Hd2dView:
         half = (width - 4) // 2
         row = _row()
         row.add(studio._label("Radius (m)", color=C_MUTED, size=10, width=half // 2))
-        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.2g}", number("radius", 0.25, 16.0, PIXELS_PER_METRE),
+        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.3g}", number("radius", 0.25, 16.0, PIXELS_PER_METRE),
                               width=half - half // 2, key="scatter_radius"))
         row.add(studio._label("Per m²", color=C_MUTED, size=10, width=half // 2))
-        row.add(studio._field(f"{brush['density']:.2g}", number("density", 0.01, 20.0, 1.0), width=half - half // 2,
+        row.add(studio._field(f"{brush['density']:.3g}", number("density", 0.01, 20.0, 1.0), width=half - half // 2,
                               key="scatter_density"))
         box.add(row)
         row = _row()
         row.add(studio._label("Clumps", color=C_MUTED, size=10, width=half // 2))
-        row.add(studio._field(f"{brush['clumping']:.2g}", number("clumping", 0.0, 1.0, 1.0), width=half - half // 2,
+        row.add(studio._field(f"{brush['clumping']:.3g}", number("clumping", 0.0, 1.0, 1.0), width=half - half // 2,
                               key="scatter_clumping"))
         row.add(studio._label("Slope (°)", color=C_MUTED, size=10, width=half // 2))
         row.add(studio._field(f"{brush['slope']:.0f}", number("slope", 0.0, 89.0, 1.0), width=half - half // 2,
@@ -1516,6 +1526,7 @@ class Hd2dView:
                     value = math.nan
                 if not math.isfinite(value):
                     studio._say("Type a number.", ok=False)
+                    studio._rebuild()  # (the field shows the value it keeps)
                     return
                 self.set_sculpt(**{key: min(hi, max(lo, value)) * scale})
             return commit
@@ -1523,10 +1534,10 @@ class Hd2dView:
         half = (width - 4) // 2
         row = _row()
         row.add(studio._label("Radius (m)", color=C_MUTED, size=10, width=half // 2))
-        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.2g}", number("radius", 0.25, 16.0, PIXELS_PER_METRE),
+        row.add(studio._field(f"{brush['radius'] / PIXELS_PER_METRE:.3g}", number("radius", 0.25, 16.0, PIXELS_PER_METRE),
                               width=half - half // 2, key="paint_radius"))  # (a dab's cost grows with its area)
         row.add(studio._label("Strength", color=C_MUTED, size=10, width=half // 2))
-        row.add(studio._field(f"{brush['rate']:.2g}", number("rate", 0.1, 40.0, 1.0), width=half - half // 2,
+        row.add(studio._field(f"{brush['rate']:.3g}", number("rate", 0.1, 40.0, 1.0), width=half - half // 2,
                               key="paint_rate"))
         box.add(row)
         terrain = self.renderer.terrain if self.renderer is not None else None

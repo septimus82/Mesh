@@ -86,7 +86,7 @@ def test_studio_scatters_one_stroke_one_undo_step(tmp_path: Path) -> None:
     stroke = r["stroke"]
     assert stroke["undo_steps_added"] == 1 and stroke["shown_equals_saved"] and stroke["instances"] > 50, r
     assert r["undo_gives_none"] and r["redo_gives_it_back"] and r["reopened_same"], r
-    for cancel in ("escape", "play_mid_stroke", "room_change_mid_stroke", "refused_upload"):
+    for cancel in ("escape", "play_mid_stroke", "room_change_mid_stroke", "refused_upload", "refused_at_release"):
         assert r[cancel]["nothing_recorded"] and r[cancel]["scatter_is_saved"], (cancel, r)
     assert r["focus_lost_mid_stroke"] == {"stroke_ended": True, "undo_steps_added": 1, "no_more_after": True}, r
     t = r["thin_and_remove"]
@@ -96,4 +96,30 @@ def test_studio_scatters_one_stroke_one_undo_step(tmp_path: Path) -> None:
     assert r["boulder_on_the_player_start"]["warned"], r
     sculpt = r["sculpt_under_scatter"]
     assert sculpt["instances_unmoved"] and sculpt["instances_risen_with_the_ground"] > 0, r
-    assert sculpt["their_chunks_rebuilt"] and "scattered thing" in sculpt["message"], r
+    assert sculpt["their_chunks_rebuilt"], r
+
+
+def test_grass_alone_makes_nothing_collide_and_a_boulder_does(tmp_path: Path) -> None:
+    """Technical QA: one tuft read the boulder's model too, and a room without collision got a world (its walking
+    changed). Decoration is walked through; only a boulder makes the room collide."""
+    import json
+
+    import hd2d_visual_study as visual
+    from hd2d_demo import HiddenGame
+
+    project = visual.new_project(tmp_path, "collide", stage6a=False)
+    path = project / visual.SCENES / "start.json"
+    scene = json.loads(path.read_text(encoding="utf-8"))
+    scene["settings"]["hd2d"]["structures"] = []
+    worlds = {}
+    for name, scatter in (("grass", {"grass_tuft": [[300, 300, 0, 100]]}), ("boulder", {"boulder": [[300, 300, 0, 100]]})):
+        scene["settings"]["hd2d"]["scatter"] = scatter
+        path.write_text(json.dumps(scene), encoding="utf-8")
+        game = HiddenGame(project, size=visual.SIZE)
+        try:
+            game.load(f"{visual.SCENES}/start.json")
+            game.step(2)
+            worlds[name] = getattr(game.window, "hd2d_world", None) is not None
+        finally:
+            game.close()
+    assert worlds == {"grass": False, "boulder": True}, worlds

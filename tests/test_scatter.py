@@ -207,3 +207,50 @@ def test_the_brush_s_index_keeps_up_with_adds_and_removes() -> None:
     assert {a for a, _r in s.near(30, 30, 20)} == {"rock_small"}
     s.remove("grass_tuft", (10, 10, 0, 100))
     assert s.count() == 1 and list(s.near(10, 10, 5)) == []
+
+
+# --- Technical QA's findings (Stage 20D), kept fixed ------------------------------------------------------------------
+def test_an_extreme_dab_stays_quick() -> None:
+    import time
+
+    start = time.perf_counter()
+    room = ops.scatter_stroke(_room((2048, 2048)), "Meadow", [[1024, 1024]], 16 * PX, density=20.0, seed=1)
+    assert time.perf_counter() - start < 2.0, "a 16 m dab at the densest adds a bounded share, then stops"
+    from engine.hd2d.scatter import PER_DAB
+
+    assert len(_all(room)) <= PER_DAB
+
+
+def test_collections_put_each_thing_only_where_it_grows() -> None:
+    room = ops.paint_terrain_stroke(_room(), "stone", [[512, 384, 1.0]] * 3, 240)
+    deadfall = ops.scatter_stroke(room, "Deadfall", [[512, 384]], 200, on=["grass", "earth", "stone"], seed=2)
+    ground, _s, _r = ops.scatter_context(deadfall)
+    assert all(name in ("rock_small",) or ground.material(x, y) in ASSETS[name].on
+               for name, (x, y, _t, _s2) in _all(deadfall))
+    assert ops.scatter_report(deadfall)[1] == {}, "nothing it just placed is out of its own rules"
+
+
+def test_the_way_onto_stairs_is_kept_clear_and_a_patrol_s_whole_round_is_watched() -> None:
+    room = _room()
+    room["settings"]["hd2d"]["structures"] = [
+        {"id": "stairs", "model": "assets/hd2d_starter/models/stairs.glb", "x": 300.0, "y": 300.0},
+        {"id": "crate", "model": "assets/hd2d_starter/models/crate.glb", "x": 700.0, "y": 300.0}]
+    room["entities"] = [{"id": "npc", "name": "Elder", "x": 600, "y": 600, "behaviour_config": {"Patrol": {
+        "waypoints": [{"x": 700, "y": 600}, {"x": 700, "y": 700}, {"x": 600, "y": 700}]}}}]
+    _ground, spots, _routes = ops.scatter_context(room)
+    labels = [label for label, _at in spots]
+    assert any("stairs" in s for s in labels) and not any("crate" in s for s in labels), labels
+    beside_crate = ops.set_scatter(room, {"boulder": [[700, 350, 0, 100]]})
+    assert ops.scatter_report(beside_crate)[0] == [], "a boulder by a crate is in nobody's way"
+    on_the_way_back = ops.set_scatter(room, {"boulder": [[600, 650, 0, 100]]})  # (the leg back to his start)
+    assert ops.scatter_report(on_the_way_back)[0] and "Elder's route" in ops.scatter_report(on_the_way_back)[0][0]
+
+
+def test_a_model_on_a_slope_stands_on_its_lowest_ground() -> None:
+    from engine.hd2d.scatter_layer import foot_height
+
+    def slope(x: float, y: float) -> float:  # (rising 1 px a px eastwards)
+        return x
+
+    assert foot_height(slope, 100.0, 50.0, 20.0, 0.0) == 80.0, "the low side touches: nothing floats"
+    assert foot_height(lambda x, y: 7.0, 100.0, 50.0, 20.0, 33.0) == 7.0

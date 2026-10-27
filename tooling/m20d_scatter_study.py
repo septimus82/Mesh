@@ -79,7 +79,7 @@ def compose(scene: dict[str, Any]) -> tuple[dict[str, Any], int]:
                                                         (5.9, -0.1), (6.4, 0.1))]
     stroke({"rock_medium": 3, "rock_small": 2}, foot, 0.45, 2.2, 31, on=["grass", "earth", "stone"])
     stroke("Meadow", foot, 0.5, 4.0, 34, clumping=0.2)
-    stroke("Boulder", [(x0 + 0.6, y0 - 1.4)], 0.5, 1.5, 33, avoid_structures=True)
+    stroke("Boulder", [(x0 - 0.9, y0 - 1.5)], 0.5, 1.5, 33, avoid_structures=True)
     bx, by, br, _d = m20a.BASIN  # the pond's far bank: reeds; its near side and the path's left open
     far_bank = [(bx + br * 0.72 * math.cos(a), by + br * 0.68 * math.sin(a)) for a in
                 [math.radians(d) for d in range(25, 170, 15)]]
@@ -96,7 +96,7 @@ def compose(scene: dict[str, Any]) -> tuple[dict[str, Any], int]:
 
 
 def make_project(out: Path, name: str, *, rain: bool = False, decorated: bool = True) -> Path:
-    project = m20c.make_project(out, name, rain=rain)
+    project: Path = m20c.make_project(out, name, rain=rain)
     if decorated:
         path = project / SCENES / "hills.json"
         scene, _n = compose(json.loads(path.read_text(encoding="utf-8")))
@@ -284,7 +284,7 @@ def walks(out: Path) -> dict[str, Any]:
     kept = m20a.open_room
     m20a.open_room = lambda o, name, **kw: open_room(o, name)  # (the same walks, this room)
     try:
-        report = m20a.walking(out)
+        report: dict[str, Any] = m20a.walking(out)
     finally:
         m20a.open_room = kept
     game = open_room(out, "boulder")
@@ -414,6 +414,20 @@ def studio(out: Path) -> dict[str, Any]:
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
         d.frame(2)
         report["refused_upload"] = {**unchanged(), "message": s.message}
+        m20b._stroke(d, m20c._on_ground(d, mid, 0.1), release=False)  # refused at the very end: the release's flush
+        layer = view.renderer.ensure_scatter()
+        kept_apply = layer.apply
+        setattr(layer, "apply", refusing)
+        try:  # (one more drag, not yet drawn, then let go: the release's flush draws it, and is refused)
+            pts = m20c._on_ground(d, [mid[-1], (mid[-1][0] + 1.5, mid[-1][1] + 0.5)], 0.5)
+            a_, b_ = d.screen(pts[0]), d.screen(pts[-1])
+            d.window.dispatch_event("on_mouse_drag", b_[0], b_[1], b_[0] - a_[0], b_[1] - a_[1],
+                                    d.arcade.MOUSE_BUTTON_LEFT, 0)
+            d.window.dispatch_event("on_mouse_release", *b_, d.arcade.MOUSE_BUTTON_LEFT, 0)
+            d.frame()
+        finally:
+            setattr(layer, "apply", kept_apply)
+        report["refused_at_release"] = {**unchanged(), "message": s.message}
         m20b._stroke(d, m20c._on_ground(d, mid, 0.1), release=False)
         d.window.dispatch_event("on_deactivate")
         held = _count(view)
@@ -435,8 +449,8 @@ def studio(out: Path) -> dict[str, Any]:
         d.window.dispatch_event("on_key_release", k.LSHIFT, 0)
         report["thin_and_remove"] = {"before": n0, "after_ctrl_thin": n1, "after_shift_remove": _count(view)}
         # rules: grass off (only on earth: the path), so the meadow lands nowhere off the path
-        view.set_scatter_rule(toggle_on="earth")  # (earth on, then grass off: one always stays on)
-        view.set_scatter_rule(toggle_on="grass")
+        view.set_scatter_rule(collection="Deadfall")  # (dry grass, branches and stones: they lie on paths too)
+        view.set_scatter_rule(on=("earth",))  # (the path only)
         before_rows = {(n, tuple(r)) for n, rows in _rows(view).items() for r in rows}
         m20b._stroke(d, m20c._on_ground(d, m20c.EARTH_PATH[2:6], 0.1))  # (along the path)
         new = [r for n, rows in _rows(view).items() for r in rows if (n, tuple(r)) not in before_rows]
@@ -464,10 +478,11 @@ def studio(out: Path) -> dict[str, Any]:
         player = next(e for e in start if e.get("prefab_id") == "player" or e.get("tag") == "player")
         m20c._look_at(d, player["x"] / PX, player["y"] / PX, 14.0)
         spot = (player["x"] / PX + 0.6, player["y"] / PX)
-        d.window.dispatch_event("on_key_press", k.LSHIFT, 0)  # (clear the spot first, as a creator would)
+        view.set_sculpt(radius=56.0)
+        d.window.dispatch_event("on_key_press", k.LSHIFT, 0)  # (clear round the spot first, as a creator would)
         m20b._stroke(d, m20c._on_ground(d, [spot], 0.1))
         d.window.dispatch_event("on_key_release", k.LSHIFT, 0)
-        view.set_sculpt(density=2.0, radius=24.0)
+        view.set_sculpt(density=2.0, radius=24.0, avoid_structures=False)  # (the creator overrides the keep-clear)
         m20b._stroke(d, m20c._on_ground(d, [spot], 0.1))
         report["boulder_on_the_player_start"] = {"message": s.message, "warned": "In the way" in s.message}
         d.picture(out / "scatter_boulder_warning.png")

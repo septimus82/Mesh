@@ -23,6 +23,7 @@ degrees 0-359, hundredths of the asset's size), sorted, so the same scatter alwa
 
 from __future__ import annotations
 
+import functools
 import math
 import random
 from dataclasses import dataclass, field
@@ -33,6 +34,7 @@ KIT = "assets/hd2d_starter/scatter"
 SHEET = f"{KIT}/foliage.png"  # the sprites: 48 x 48 px cells (tooling/hd2d_assets/scatter_art.py)
 CELL_PX = 48
 MAX_INSTANCES = 50000  # a room's scatter, all assets (a 128 x 128 m meadow at three a square metre)
+PER_DAB = 1500  # the most one dab adds: a huge dense brush fills as it moves, never freezing on one click
 MATERIALS = ("grass", "earth", "stone", "mud", "sand")  # (engine.hd2d.terrain.MATERIALS)
 
 
@@ -67,14 +69,14 @@ ASSETS: dict[str, Asset] = {a.id: a for a in (
     Asset("bush_berries", "Berry bush", cell=(13,), spacing=0.9, size=(0.85, 1.15), slope=30.0),
     Asset("reeds", "Reeds", cell=(14, 15), spacing=0.3, on=("grass", "mud", "sand"), shore=0.3),
     Asset("reeds_cattail", "Cattails", cell=(16,), spacing=0.35, on=("grass", "mud", "sand"), shore=0.3),
-    Asset("rock_small", "Small rock", model=f"{KIT}/rock_small.glb", spacing=0.5, size=(0.8, 1.6), slope=60.0,
+    Asset("rock_small", "Small rock", model=f"{KIT}/rock_small.glb", spacing=0.5, size=(0.8, 1.6), slope=40.0,
           on=MATERIALS, shadow=True),
-    Asset("rock_medium", "Rock", model=f"{KIT}/rock_medium.glb", spacing=1.0, size=(0.75, 1.3), slope=60.0,
+    Asset("rock_medium", "Rock", model=f"{KIT}/rock_medium.glb", spacing=1.0, size=(0.75, 1.3), slope=40.0,
           on=MATERIALS, shadow=True),
     Asset("boulder", "Boulder", model=f"{KIT}/boulder.glb", spacing=2.2, size=(0.8, 1.2), slope=45.0,
           on=MATERIALS, blocks=True, shadow=True),
     Asset("fallen_branch", "Fallen branch", model=f"{KIT}/fallen_branch.glb", spacing=1.6, size=(0.8, 1.2),
-          slope=25.0, on=("grass", "earth", "mud"), shadow=True),
+          slope=12.0, on=("grass", "earth", "mud"), shadow=True),
 )}
 WIDEST = max(a.spacing for a in ASSETS.values())  # m: the most two instances keep apart
 COLLECTIONS: dict[str, dict[str, float]] = {  # name -> asset weights: what a brush scatters together
@@ -198,7 +200,8 @@ def allowed(asset: Asset, x: float, y: float, ground: Ground, rules: Rules) -> b
     limit = min(rules.slope, asset.slope)
     if upright < math.cos(math.radians(limit)) - 1e-9:
         return False
-    if ground.material(x, y) not in rules.on:
+    material = ground.material(x, y)
+    if material not in rules.on or material not in asset.on:  # (the brush's choice, and what the thing grows on)
         return False
     level = ground.water(x, y)
     if level is not None and rules.avoid_water and height < level + 0.05 * PX \
@@ -247,6 +250,11 @@ class Scatter:
         return sum(len(rows) for rows in self.instances.values())
 
 
+@functools.lru_cache(maxsize=65536)
+def _lattice(seed: int, a: int, b: int) -> float:
+    return random.Random(f"{seed}:{a}:{b}").random()
+
+
 def _noise(x: float, y: float, seed: int, across: float = 3.0 * PX) -> float:
     """Smooth value noise in [0, 1], ``across`` px between its points: where clumps gather."""
     cx, cy = x / across, y / across
@@ -255,7 +263,7 @@ def _noise(x: float, y: float, seed: int, across: float = 3.0 * PX) -> float:
     fx, fy = fx * fx * (3 - 2 * fx), fy * fy * (3 - 2 * fy)
 
     def h(a: int, b: int) -> float:
-        return random.Random(f"{seed}:{a}:{b}").random()
+        return _lattice(seed, a, b)
 
     top = h(i, j) + (h(i + 1, j) - h(i, j)) * fx
     bottom = h(i, j + 1) + (h(i + 1, j + 1) - h(i, j + 1)) * fx
@@ -290,11 +298,16 @@ def brush(scatter: Scatter, mode: str, weights: dict[str, float], x: float, y: f
     if not names:
         raise ScatterError("choose something to scatter")
     total = sum(weights[a] for a in names)
-    need = round(density * math.pi * (radius / PX) ** 2) - len(mine)
-    placed = 0
+    spacing = sum(ASSETS[a].spacing * weights[a] for a in names) / total
+    area = math.pi * (radius / PX) ** 2
+    wanted = round(density * area)  # (but no more than the spacing lets stand: more is only wasted tries; one
+    fits = max(1 if wanted else 0, round(0.9 / (spacing * spacing) * area))  # asked for is always tried)
+    need = min(PER_DAB, wanted, fits) - len(mine)
+    placed = misses = 0
     for _try in range(max(0, need) * 12):
-        if placed >= need:
+        if placed >= need or misses > 40 + need:  # (the rules or the spacing leave no room: stop looking)
             break
+        misses += 1
         a, d = rng.uniform(0, math.tau), radius * math.sqrt(rng.random())
         px, py = round(x + d * math.cos(a)), round(y + d * math.sin(a))  # (as stored: what is checked is what stands)
         pick, roll = names[-1], rng.uniform(0, total)
@@ -316,7 +329,7 @@ def brush(scatter: Scatter, mode: str, weights: dict[str, float], x: float, y: f
         row = (px, py, turn, round(size * 100))
         scatter.add(pick, row)
         changed.append((pick, row, True))
-        placed += 1
+        placed, misses = placed + 1, 0
     return changed
 
 
@@ -351,8 +364,8 @@ def obstructions(instances: dict[str, list[tuple[int, int, int, int]]],
                     out.append(f"a {asset.name.lower()} at ({x / PX:.1f} m, {y / PX:.1f} m) blocks {label}")
                     break
             else:
-                for label, points in routes:
-                    if any(_segment_distance((x, y), a, b) < r for a, b in zip(points, points[1:])):
+                for label, points in routes:  # (a patrol goes round: the leg back to its first point too)
+                    if any(_segment_distance((x, y), a, b) < r for a, b in zip(points, points[1:] + points[:1])):
                         out.append(f"a {asset.name.lower()} at ({x / PX:.1f} m, {y / PX:.1f} m) is on {label}")
                         break
     return out
