@@ -252,7 +252,10 @@ class SceneLoader:
             return report
 
         scene = self.apply_scene_defaults(raw_scene)
-        return self.validate_scene(scene, strict=strict)
+        report = self.validate_scene(scene, strict=strict)
+        for problem in environment_problems(scene):  # (checked here, not on load: there each is set aside instead)
+            report.add_error(problem)
+        return report
 
     def validate_scene(
         self,
@@ -1182,3 +1185,44 @@ class SceneLoader:
         if raw_type in {dict, "object"}:
             return "object"
         return "string"
+
+
+def environment_problems(scene: Dict[str, Any]) -> list[str]:
+    """What of a room's weather, wind, water and HD-2D settings the game can't use, checked strictly as the
+    operations check them (``mesh validate``, AI validation). A room loading sets each such part aside and plays on
+    (said in Studio and logged), so these are reported here rather than refusing the room."""
+    from engine.hd2d.settings import Hd2dSettingsError, parse_hd2d  # noqa: PLC0415
+    from engine.scene_particles import SceneParticlesError, parse_exposure, parse_particles  # noqa: PLC0415
+    from engine.water import WaterError, parse_water  # noqa: PLC0415
+    from engine.wind import WindError, parse_wind  # noqa: PLC0415
+
+    problems: list[str] = []
+    raw = scene.get("settings")
+    settings: Dict[str, Any] = raw if isinstance(raw, dict) else {}
+    wind = None
+    try:
+        wind = parse_wind(settings.get("wind"))
+    except WindError as exc:
+        problems.append(str(exc))
+    try:
+        parse_particles(settings.get("particles"), wind)
+        parse_exposure(settings.get("weather_exposure"))
+    except SceneParticlesError as exc:
+        problems.append(f"settings.particles: {exc}")
+    if settings.get("hd2d") is not None:
+        w, h = settings.get("world_width"), settings.get("world_height")
+        size = (float(w), float(h)) if isinstance(w, (int, float)) and isinstance(h, (int, float)) else None
+        try:
+            parse_hd2d(settings.get("hd2d"), map_size_px=size)
+        except Hd2dSettingsError as exc:
+            problems.append(str(exc))
+    for k, entity in enumerate(scene.get("entities") or []):
+        behaviours = entity.get("behaviours") if isinstance(entity, dict) else None
+        if not isinstance(behaviours, list) or "WaterSurface" not in behaviours:
+            continue
+        config = (entity.get("behaviour_config") or {}).get("WaterSurface")
+        try:
+            parse_water(config if isinstance(config, dict) else {})
+        except WaterError as exc:
+            problems.append(f"entities[{k}] ({entity.get('name') or entity.get('id')}) water: {exc}")
+    return problems

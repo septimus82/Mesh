@@ -92,4 +92,8 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
     except (Hd2dSettingsError, GlbError) as exc:
         window.hd2d_error = str(exc)
         logger.error("[Mesh][HD-2D] this scene is drawn 2D: %s", exc)
+    except Exception as exc:  # noqa: BLE001  # REASON: a room's 3D build failing (a texture missing, the driver refusing) plays it 2D, said and logged, never takes the game or Studio down
+        window.hd2d_renderer = window.hd2d_world = None
+        window.hd2d_error = f"{type(exc).__name__}: {exc}"
+        logger.error("[Mesh][HD-2D] this scene is drawn 2D: %s", window.hd2d_error, exc_info=True)
 

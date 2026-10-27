@@ -343,6 +343,32 @@ class Hd2dRenderer:
         self._resolve = resolve
         self.arcade = optional_arcade.arcade
         self.ctx = window.ctx
+        try:
+            self._build(settings, resolve, live)
+        except BaseException:  # (a texture missing, the driver refusing a buffer: free what was made, then fail)
+            self._release_partial()
+            raise
+
+    def _release_partial(self) -> None:
+        """Free what a construction that failed part-way made (any of it may not exist yet)."""
+        for name in ("mesh_prog", "sprite_prog", "shadow_prog", "blit_prog", "line_prog", "ground_prog"):
+            program = getattr(self, name, None)
+            if program is not None:
+                program.delete()
+        made = [*getattr(self, "_buffers", []), *getattr(self, "_textures", []),
+                *getattr(self, "_sprite_textures", {}).values(),
+                *(b for buffers in getattr(self, "_terrain_buffers", {}).values() for b in buffers)]
+        if getattr(self, "_caster_buffer", None) is not None:
+            made.append(self._caster_buffer)
+        for obj in made:
+            obj.delete()
+        for name in ("scatter", "precipitation", "water", "particles"):
+            part = getattr(self, name, None)
+            if part is not None:
+                part.release()
+
+    def _build(self, settings: Hd2dSettings, resolve: Callable[[str], Path], live: Iterable[str]) -> None:
+        """Every GPU object of the room (``__init__``'s second half: on failure, ``_release_partial``)."""
         ctx = self.ctx
         self.mesh_prog = ctx.program(vertex_shader=MESH_VS, fragment_shader=MESH_FS)
         self.sprite_prog = ctx.program(vertex_shader=SPRITE_VS, fragment_shader=SPRITE_FS)
