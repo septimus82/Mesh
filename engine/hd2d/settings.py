@@ -111,6 +111,9 @@ class Hd2dSettings:
     terrain_error: str | None = None  # why the ground's sculpted heights were set aside (parse_hd2d(lenient=True))
     scatter: dict[str, Any] = field(default_factory=dict, hash=False)  # scattered decoration (engine.hd2d.scatter, 20D)
     scatter_error: str | None = None  # why it was set aside (lenient)
+    motion: Any = None  # how its decoration moves (engine.hd2d.motion.Motion, 20E); None: still
+    wind: Any = None  # the room's wind (engine.wind.Wind: its settings.wind, set by the runtime); None: calm
+    motion_error: str | None = None  # why its motion (or wind) was set aside (lenient)
 
 
 def asset_path(value: Any, where: str) -> str:
@@ -163,7 +166,7 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None, leni
     if not isinstance(raw, dict):
         raise Hd2dSettingsError(f"settings.hd2d must be an object (got {type(raw).__name__})")
     unknown = set(raw) - {"structures", "ground", "camera", "sun", "ambient", "shadows", "shadow_resolution", "sky",
-                        "water_reflections", "scatter"}
+                        "water_reflections", "scatter", "motion"}
     if unknown:
         raise Hd2dSettingsError(f"settings.hd2d has unknown keys: {', '.join(sorted(unknown))}")
     structures = []
@@ -268,11 +271,21 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None, leni
             if not lenient:
                 raise Hd2dSettingsError(str(exc)) from exc
             scatter_error = str(exc)  # (broken scatter: none drawn, the reason kept; the rest of the room stands)
+    from engine.hd2d.motion import MotionError, parse_motion  # noqa: PLC0415
+
+    motion_error = None
+    try:
+        motion = parse_motion(raw.get("motion"))
+    except MotionError as exc:
+        if not lenient:
+            raise Hd2dSettingsError(str(exc)) from exc
+        motion, motion_error = parse_motion(None), str(exc)  # (still, the reason kept)
     return Hd2dSettings(tuple(structures), ground, camera, (float(sun[0]), float(sun[1]), float(sun[2])),
                         _number(raw, "ambient", "settings.hd2d", 0.55, 0.0, 1.0), sun_color,
                         _number(sun_block, "intensity", "settings.hd2d.sun", 1.0, 0.0, 10.0), shadows=shadows,
                         shadow_resolution=int(resolution), sky=sky, water_reflections=reflections,
-                        terrain_error=terrain_error, scatter=scatter, scatter_error=scatter_error)
+                        terrain_error=terrain_error, scatter=scatter, scatter_error=scatter_error, motion=motion,
+                        motion_error=motion_error)
 
 
 def rgb(value: Any) -> Rgb | None:

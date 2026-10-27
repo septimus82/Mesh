@@ -351,6 +351,7 @@ def summarize(before: Doc, after: Doc) -> list[str]:
         lines += _weather_lines(label, old.get("settings") or {}, room.get("settings") or {})
         lines += _terrain_lines(label, old, room)
         lines += _scatter_lines(label, old, room)
+        lines += _motion_lines(label, old.get("settings") or {}, room.get("settings") or {})
     if world_b.get("start_scene") != world_a.get("start_scene") and world_b:
         lines.append(f"Start room: {world_b.get('start_scene')} -> {world_a.get('start_scene')}")
     return lines
@@ -460,6 +461,37 @@ def _scatter_lines(label: str, before: Doc, after: Doc) -> list[str]:
     lines = [f"{label}: scatter {', '.join(parts)}"] if parts else []
     blocked, _out = ops.scatter_report(after)
     return lines + [f"{label}: in the way (not moved): {words}" for words in blocked]
+
+
+def _motion_lines(label: str, before: Doc, after: Doc) -> list[str]:
+    """The room's wind and its decoration's motion changed (Milestone 20E), in words."""
+    lines = []
+    if before.get("wind") != after.get("wind"):
+        wind = after.get("wind")
+        lines.append(f"{label}: wind {'calm' if not isinstance(wind, dict) else _wind_words(wind)}")
+
+    def motion(settings: Doc) -> Any:
+        hd2d = settings.get("hd2d")
+        return hd2d.get("motion") if isinstance(hd2d, dict) else None
+
+    if motion(before) != motion(after):
+        now = motion(after)
+        if not isinstance(now, dict) or now.get("enabled") is False:
+            lines.append(f"{label}: decoration animation off")
+        else:
+            words = ", ".join(f"{k} {now[k]:g}" for k in ("sway", "wind", "speed") if isinstance(now.get(k), (int, float)))
+            per = sorted(now.get("assets") or {}) if isinstance(now.get("assets"), dict) else []
+            lines.append(f"{label}: decoration animation on" + (f" ({words})" if words else "")
+                         + (f"; own settings for {', '.join(per)}" if per else ""))
+    return lines
+
+
+def _wind_words(wind: Doc) -> str:
+    try:
+        return (f"{float(wind.get('speed', 0)):g} m/s toward {float(wind.get('direction', 0)):g} degrees, "
+                f"gusts {float(wind.get('gust', 0)):g}")
+    except (TypeError, ValueError):
+        return "changed"
 
 
 def _paint_lines(label: str, old: Any, new: Any) -> list[str]:

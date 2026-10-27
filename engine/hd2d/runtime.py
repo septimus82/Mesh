@@ -48,6 +48,7 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
     window.hd2d_error = None
     window.hd2d_terrain_error = None
     window.hd2d_scatter_error = None
+    window.hd2d_motion_error = None
     raw = settings.get("hd2d") if isinstance(settings, dict) else None
     if raw is None:
         return
@@ -69,6 +70,15 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
             logger.error("[Mesh][HD-2D] this room's scattered decoration is set aside: %s", hd2d.scatter_error)
         lights = scene.get("lights") if isinstance(scene, dict) else None
         hd2d = dataclasses.replace(hd2d, **parse_scene_lights(lights, settings))  # the room's own lights
+        from engine.wind import WindError, parse_wind  # noqa: PLC0415
+
+        try:  # the room's wind (Milestone 20E): its plants sway in it, as its rain falls in it
+            hd2d = dataclasses.replace(hd2d, wind=parse_wind(settings.get("wind")))
+        except WindError as exc:  # (still air, the reason kept: the room stands)
+            hd2d = dataclasses.replace(hd2d, motion_error=hd2d.motion_error or str(exc))
+        if hd2d.motion_error:
+            window.hd2d_motion_error = hd2d.motion_error
+            logger.error("[Mesh][HD-2D] this room's decoration stands still: %s", hd2d.motion_error)
         window.hd2d_renderer = Hd2dRenderer(window, hd2d, _contained(resolve_path))
         models = window.hd2d_renderer.models
         sculpted = hd2d.ground is not None and hd2d.ground.terrain is not None  # Milestone 20A

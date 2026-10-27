@@ -11,6 +11,7 @@ cells in order.
 
 from __future__ import annotations
 
+import math
 import random
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,8 @@ from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "assets" / "hd2d_starter" / "scatter" / "foliage.png"
+OUT_MOTION = OUT.with_name("foliage_motion.png")  # Milestone 20E's cells (engine.hd2d.scatter.FIRST_MOTION on)
+FIRST_MOTION = 17
 CELL = 48
 
 # the kit's grass (tooling/hd2d_assets/pixel_textures.py: grass) and its flowers
@@ -168,7 +171,191 @@ def reeds(seed: int, heads: int = 3) -> Image.Image:
     return img
 
 
-SHEET = [  # cells in the order engine.hd2d.scatter.ASSETS uses them (several variants a thing)
+# ---------------------------------------------------------------------- Milestone 20E: animated decoration, a tree
+WOOD = [(70, 48, 32), (96, 66, 42), (124, 88, 56), (150, 112, 72)]
+IRON = [(48, 46, 54), (72, 70, 80), (98, 96, 104)]
+FLAME = [(198, 72, 30), (236, 124, 42), (252, 186, 70), (255, 238, 164)]
+CLOTH = [(104, 28, 36), (140, 40, 48), (172, 58, 62), (214, 176, 84)]
+STONE = [(70, 72, 76), (92, 94, 98), (118, 118, 120), (146, 144, 140)]
+MOSS = [(64, 96, 50), (86, 122, 60)]
+WATER = [(120, 160, 196), (170, 204, 230), (216, 236, 250)]
+GLOW = [(40, 120, 120), (70, 196, 184), (150, 246, 226)]
+BELL = [(88, 76, 168), (120, 110, 210), (170, 160, 236)]
+
+
+def torch_post() -> Image.Image:
+    """A wooden post with an iron cup at the top (0.94 m: the flame, a part of its own, stands in the cup)."""
+    img, d = _cell()
+    cx = CELL // 2
+    d.rectangle([cx - 2, 19, cx + 1, CELL - 1], fill=(*WOOD[2], 255))
+    d.line([(cx - 2, 19), (cx - 2, CELL - 1)], fill=(*WOOD[3], 255))
+    for y in range(22, CELL - 1, 6):  # the grain
+        d.point([(cx, y), (cx - 1, y + 3)], fill=(*WOOD[1], 255))
+    d.rectangle([cx - 4, 16, cx + 3, 19], fill=(*IRON[1], 255))  # the cup
+    d.line([(cx - 4, 16), (cx + 3, 16)], fill=(*IRON[2], 255))
+    d.rectangle([cx - 3, 20, cx + 2, 21], fill=(*IRON[0], 255))  # its band
+    return _shade(img, top=False)
+
+
+def flame(frame: int) -> Image.Image:
+    """A torch's flame (one of four): a tongue of fire standing on the cell's bottom row, its tip and sides moving."""
+    img, d = _cell()
+    cx = CELL // 2
+    rng = random.Random(500 + frame)
+    sway = (0, 1, 0, -1)[frame]
+    height = (13, 15, 12, 14)[frame]
+    for y in range(height):  # widest low down, a flickering tip
+        t = y / height
+        half = max(0.0, 3.6 * (1 - t) ** 0.8 + (0.6 if y < 2 else 0))
+        x0 = cx - 0.5 + sway * t * 1.5
+        for x in range(round(x0 - half), round(x0 + half) + 1):
+            edge = abs(x - x0) / max(0.5, half)
+            tone = 3 if edge < 0.35 and t < 0.55 else 2 if edge < 0.7 else 1 if t < 0.85 else 0
+            img.putpixel((x, CELL - 1 - y), (*FLAME[tone], 255))
+    for _ in range(2):  # sparks above
+        x, y = cx + rng.randint(-3, 3), CELL - 1 - height - rng.randint(1, 4)
+        img.putpixel((x, y), (*FLAME[2], 255))
+    return img
+
+
+def banner_pole() -> Image.Image:
+    """A banner's pole: 1.2 m, a gilt knob on top (the cloth is a part of its own)."""
+    img, d = _cell()
+    cx = CELL // 2
+    d.rectangle([cx - 1, 9, cx, CELL - 1], fill=(*WOOD[1], 255))
+    d.line([(cx - 1, 9), (cx - 1, CELL - 1)], fill=(*WOOD[2], 255))
+    d.rectangle([cx - 2, 6, cx + 1, 8], fill=(*CLOTH[3], 255))
+    return _shade(img, top=False)
+
+
+def banner_cloth(frame: int) -> Image.Image:
+    """The cloth (one of four), fixed to the pole along its left edge (the cell's centre), streaming right: a wave
+    runs along it, larger toward its free end."""
+    img = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
+    cx, length, height = CELL // 2, 17, 17
+    for i in range(length):
+        k = i / length
+        dy = round(2.2 * k * math.sin(i * 0.55 - frame * math.pi / 2))
+        top = CELL - height + dy
+        bottom = CELL - 1 + dy - (1 if i == length - 1 else 0)
+        for y in range(max(0, top), min(CELL, bottom + 1)):
+            stripe = height * 0.45 <= y - top <= height * 0.58
+            shade = 3 if stripe else 2 if math.sin(i * 0.55 - frame * math.pi / 2 + 1.2) > 0.3 else 1
+            img.putpixel((cx + i, y), (*CLOTH[shade], 255))
+        if i % 2 == 0 and i > 2:  # a ragged lower hem
+            img.putpixel((cx + i, min(CELL - 1, bottom + 1)), (*CLOTH[0], 255))
+    px: Any = img.load()
+    for y in range(CELL - height, CELL):
+        if px[cx, y][3]:
+            img.putpixel((cx, y), (*CLOTH[0], 255))
+    return img
+
+
+def dripping_rock(frame: int) -> Image.Image:
+    """A mossy rock with an overhanging lip that water drips from (one of four): a drop forms, falls, splashes."""
+    img, d = _cell()
+    rng = random.Random(610)
+    for _ in range(9):
+        rx, ry = rng.randint(4, 7), rng.randint(4, 7)
+        x, y = 20 + rng.randint(-5, 4), CELL - 1 - ry - rng.randint(0, 9)
+        d.ellipse([x - rx, y - ry, x + rx, y + ry], fill=(*STONE[1], 255))
+    d.polygon([(22, 28), (31, 30), (30, 32), (21, 33)], fill=(*STONE[2], 255))  # the lip
+    px: Any = img.load()
+    for x in range(12, 31):  # moss along its top
+        col = [y for y in range(CELL) if px[x, y][3]]
+        if col and rng.random() < 0.8:
+            img.putpixel((x, col[0]), (*MOSS[rng.randint(0, 1)], 255))
+    for x in range(26, 36):  # a little puddle below the lip
+        img.putpixel((x, CELL - 1), (*WATER[0], 255))
+    out = _shade(img, top=False)
+    o: Any = out.load()
+    drop: list[list[tuple[int, int]]] = [[(30, 33)], [(30, 33), (30, 34)], [(30, 39), (30, 40)], []]
+    for x, y in drop[frame]:
+        o[x, y] = (*WATER[2], 255)
+    if frame == 3:
+        for x, y in ((28, 46), (32, 46), (29, 45), (31, 45)):
+            o[x, y] = (*WATER[1], 255)
+    return out
+
+
+def glowcaps(frame: int) -> Image.Image:
+    """Three small glowing mushrooms (one of two: their spores drifting up). They shine in the dark (Asset.glow)."""
+    img, d = _cell()
+    cx = CELL // 2
+    for x, h, w in ((cx - 5, 7, 3), (cx + 1, 10, 4), (cx + 6, 5, 3)):
+        d.line([(x, CELL - 1), (x, CELL - h)], fill=(200, 210, 190, 255))
+        d.ellipse([x - w, CELL - h - 3, x + w, CELL - h + 1], fill=(*GLOW[1], 255))
+        d.line([(x - w + 1, CELL - h - 2), (x, CELL - h - 3)], fill=(*GLOW[2], 255))
+        d.line([(x - w, CELL - h), (x + w, CELL - h)], fill=(*GLOW[0], 255))
+    rng = random.Random(620 + frame)
+    for _ in range(4):
+        img.putpixel((cx + rng.randint(-7, 7), CELL - 14 - rng.randint(0, 8)), (*GLOW[2], 255))
+    return img
+
+
+def bellflowers(frame: int) -> Image.Image:
+    """Bellflowers on arching stalks (one of three: the bells nodding)."""
+    img, d = _cell()
+    rng = random.Random(630)
+    _blades(d, rng, 9, 12, (3, 7), LEAF, lean=2.2)
+    cx = CELL // 2
+    nod = (0, 1, 2)[frame]
+    for k in range(5):
+        x0, h = cx + (-6, -2, 2, 5, 8)[k] - 1, (12, 15, 11, 14, 10)[k]
+        tip = (x0 + 2 + nod * (1 if k % 2 else 0), CELL - h + nod // 2)
+        d.line([(x0, CELL - 1), (x0, CELL - h + 2), tip], fill=(*LEAF[1], 255))
+        bx, by = tip
+        d.polygon([(bx - 1, by + 1), (bx + 1, by + 1), (bx + 2, by + 4), (bx - 2, by + 4)], fill=(*BELL[1], 255))
+        d.point([(bx - 1, by + 2)], fill=(*BELL[2], 255))
+        d.point([(bx + 1, by + 4), (bx + 2, by + 4)], fill=(*BELL[0], 255))
+    return img
+
+
+def trunk_sprite() -> Image.Image:
+    """A small tree's trunk as a flat sprite (for comparing ways to draw a tree: the starter tree's is a model)."""
+    img, d = _cell()
+    cx = CELL // 2
+    for y in range(4, CELL):
+        half = 1.5 + 1.8 * (y / CELL) ** 2
+        d.line([(round(cx - half), y), (round(cx + half), y)], fill=(*WOOD[1], 255))
+    d.line([(cx, 22), (cx + 7, 12)], fill=(*WOOD[1], 255), width=2)
+    d.line([(cx - 1, 28), (cx - 8, 18)], fill=(*WOOD[1], 255), width=2)
+    return _shade(img, top=False)
+
+
+def canopy(seed: int, width: int, height: int) -> Image.Image:
+    """A cluster of a tree's leaves, attached at its bottom middle (where it sways from): leafy lumps in a rounded
+    crown, lit from the upper left, a few dark gaps, a ragged edge."""
+    img, d = _cell()
+    rng = random.Random(seed)
+    cx = CELL // 2
+    for _ in range(34):
+        rx, ry = rng.randint(3, 7), rng.randint(3, 6)
+        a = rng.uniform(0, 2 * math.pi)
+        r = rng.uniform(0, 1) ** 0.6
+        x = cx + round(math.cos(a) * r * (width / 2 - rx))
+        y = CELL - 1 - height // 2 + round(math.sin(a) * r * (height / 2 - ry))
+        d.ellipse([x - rx, y - ry, x + rx, y + ry], fill=(*LEAF[1], 255))
+    px: Any = img.load()
+    shape = {(x, y) for y in range(CELL) for x in range(CELL) if px[x, y][3]}
+    for x, y in list(shape):  # a ragged edge
+        if any((x + dx, y + dy) not in shape for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) and rng.random() < 0.3:
+            shape.discard((x, y))
+            px[x, y] = (0, 0, 0, 0)
+    top = CELL - height
+    for x, y in shape:  # the crown's shade: lit up and to the left
+        k = (y - top) / height * 0.8 + (x - cx) / width * 0.6
+        px[x, y] = (*LEAF[0 if k > 0.8 else 1 if k > 0.4 else 2], 255)
+    for _ in range(26):  # lit leaf clumps, a few dark gaps
+        x, y = cx + rng.randint(-width // 2 + 2, width // 2 - 2), CELL - 1 - rng.randint(3, height - 2)
+        lit = (y - top) / height < 0.55
+        for dx, dy in ((0, 0), (1, 0), (0, 1)):
+            if (x + dx, y + dy) in shape:
+                px[x + dx, y + dy] = (*((128, 178, 92) if lit else LEAF[0]), 255)
+    return _shade(img, top=False)
+
+
+SHEET = [  # cells in the order engine.hd2d.scatter.ASSETS uses them (several variants a thing; 17 on: 20E's sheet)
     lambda: grass_tuft(71), lambda: grass_tuft(81), lambda: grass_tuft(91, wide=True),  # 0-2 grass tuft
     lambda: grass_tuft(72, tall=True), lambda: grass_tuft(82, tall=True),  # 3-4 tall grass
     lambda: dry_grass(73), lambda: dry_grass(83),  # 5-6 dry grass
@@ -178,20 +365,28 @@ SHEET = [  # cells in the order engine.hd2d.scatter.ASSETS uses them (several va
     lambda: bush(77, 26, 16, berries=(186, 62, 64)),  # 13 berry bush
     lambda: reeds(78, heads=0), lambda: reeds(88, heads=1),  # 14-15 reeds
     lambda: reeds(79),  # 16 cattails
+    torch_post, *(lambda f=f: flame(f) for f in range(4)),  # 17 torch, 18-21 its flame
+    banner_pole, *(lambda f=f: banner_cloth(f) for f in range(4)),  # 22 banner, 23-26 its cloth
+    *(lambda f=f: dripping_rock(f) for f in range(4)),  # 27-30 dripping rock
+    *(lambda f=f: glowcaps(f) for f in range(2)),  # 31-32 glowcaps
+    *(lambda f=f: bellflowers(f) for f in range(3)),  # 33-35 bellflowers
+    trunk_sprite,  # 36 a trunk as a sprite (comparisons only)
+    lambda: canopy(641, 40, 30), lambda: canopy(642, 32, 24), lambda: canopy(643, 36, 28),  # 37-39 canopy clusters
 ]
 
 
-def sheet() -> Image.Image:
-    out = Image.new("RGBA", (CELL * len(SHEET), CELL), (0, 0, 0, 0))
-    for k, make in enumerate(SHEET):
+def sheet(cells: list[Any]) -> Image.Image:
+    out = Image.new("RGBA", (CELL * len(cells), CELL), (0, 0, 0, 0))
+    for k, make in enumerate(cells):
         out.paste(make(), (k * CELL, 0))
     return out
 
 
 def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    sheet().save(OUT)
-    print(f"wrote {OUT}")
+    for path, cells in ((OUT, SHEET[:FIRST_MOTION]), (OUT_MOTION, SHEET[FIRST_MOTION:])):
+        sheet(cells).save(path)
+        print(f"wrote {path}")
 
 
 if __name__ == "__main__":

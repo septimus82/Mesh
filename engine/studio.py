@@ -2521,6 +2521,7 @@ class Studio(InspectorMixin):
         if lighting is not None:
             lighting.update(delta_time)  # flicker shows while editing; nothing else of the game runs
         self.hd2d.advance_weather(delta_time)  # ... nor does the weather, unless it's being previewed
+        self.hd2d.advance_motion(delta_time)  # ... but the room's decoration moves, if its animation is on (20E)
         self.hd2d.tick(delta_time)  # a sculpting stroke held still keeps working; what it changed is drawn
         from engine import water  # noqa: PLC0415
 

@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import math
 from array import array
-from typing import Any
+from typing import Any, Callable
 
 from engine.hd2d.settings import MAX_LIGHTS, MAX_SHADOW_LIGHTS, PIXELS_PER_METRE, Hd2dSettings
 
@@ -319,20 +319,23 @@ class Lighting:
 
     # ------------------------------------------------------------------ shadow passes
     def render_shadows(self, statics: list[tuple[Any, Any, tuple[float, ...]]], sprites: Any | None,
-                       sprite_ranges: list[tuple[Any, int, int]]) -> None:
-        """The sun's map (structures and billboards: every frame) and, once, the lamps' maps (structures)."""
+                       sprite_ranges: list[tuple[Any, int, int]],
+                       extra: Callable[[tuple[float, ...]], int] | None = None) -> None:
+        """The sun's map (structures and billboards: every frame) and, once, the lamps' maps (structures).
+        ``extra(sun_vp)``: draws more into the sun's map (swaying canopies: Milestone 20E), returns how many."""
         self.shadow_draws = 0
         if not self.enabled:
             return
         ctx = self.ctx
         previous = ctx.active_framebuffer
         try:
-            self._render_shadows(statics, sprites, sprite_ranges)
+            self._render_shadows(statics, sprites, sprite_ranges, extra)
         finally:
             previous.use()  # whatever was being drawn into before
 
     def _render_shadows(self, statics: list[tuple[Any, Any, tuple[float, ...]]], sprites: Any | None,
-                        sprite_ranges: list[tuple[Any, int, int]]) -> None:
+                        sprite_ranges: list[tuple[Any, int, int]],
+                        extra: Callable[[tuple[float, ...]], int] | None = None) -> None:
         ctx = self.ctx
         self._maps()
         ctx.enable(ctx.DEPTH_TEST)
@@ -372,6 +375,8 @@ class Lighting:
                 texture.use(0)
                 sprites.render(self.sprite_caster, first=first, vertices=count)
                 self.shadow_draws += 1
+        if extra is not None:
+            self.shadow_draws += extra(vp)
 
     # ------------------------------------------------------------------ measuring
     def probe(self, points: list[tuple[float, float, float, float, float, float, bool]],

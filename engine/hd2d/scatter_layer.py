@@ -12,6 +12,11 @@ chunk:
 Chunks outside the picture are skipped (their boxes, as the ground's), and sprite chunks further than ``SPRITE_FAR``
 m from the camera too (small things far off are a few pixels). A stroke rebuilds only the chunks it touched; a
 sculpted ground rebuilds the chunks over it (instances stand on the ground as it is now).
+
+Milestone 20E: the sprites move (engine.hd2d.motion) without their buffers changing: each vertex carries its part's
+slot in the motion tables (its flex, frames, glow: uniforms, so changing a setting rebuilds nothing) and its
+instance's seed, and the shader turns it about its anchor in the wind and picks its frame by the time. Parts that
+cast (a tree's canopy) are a second buffer a chunk, drawn into the sun's shadow map with the same motion.
 """
 
 from __future__ import annotations
@@ -24,7 +29,9 @@ from typing import Any, Callable, Iterable
 from PIL import Image
 
 from engine.hd2d.lighting import LIGHTING_GLSL
-from engine.hd2d.scatter import ASSETS, CELL_PX, SHEET
+from engine.hd2d.motion import MAX_ANGLE, OFF, Motion, glsl, seed_of
+from engine.hd2d.scatter import ASSETS, CELL_PX, FIRST_MOTION, MOTION_SHEET, SHEET, SLOTS
+from engine.wind import CALM, PERIOD, Wind
 
 PX = 32.0
 CHUNK_PX = 256.0  # 8 m
@@ -32,26 +39,41 @@ BLOCK = 4  # chunks a side of a block of the models' shadow casters (32 m): one 
 SPRITE_FAR = 60.0  # m from where the camera looks (its target): sprite chunks further away aren't drawn
 IDENTITY = (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
 
+VERTEX = "3f 2f 2f 1f 1f"  # anchor (m), corner (m: across, up), uv, motion slot, seed
+VERTEX_NAMES = ["in_pos", "in_corner", "in_uv", "in_slot", "in_seed"]
+FLOATS = 9
 BILLBOARD_VS = """
 #version 330
 uniform mat4 u_vp; uniform vec3 u_right; uniform float u_stretch;
-in vec3 in_pos; in vec2 in_corner; in vec2 in_uv;
-out vec2 v_uv; out vec3 v_world;
+uniform float u_sheet[%d];  // per slot: 1 if its cells are in 20E's sheet
+in vec3 in_pos; in vec2 in_corner; in vec2 in_uv; in float in_slot; in float in_seed;
+out vec2 v_uv; out vec3 v_world; out float v_glow; flat out float v_sheet;
+""" % max(1, len(SLOTS)) + glsl(len(SLOTS)) + """
 void main() {
-    vec3 w = in_pos + u_right * in_corner.x + vec3(0.0, 0.0, in_corner.y * u_stretch);
-    v_uv = in_uv; v_world = w; gl_Position = u_vp * vec4(w, 1.0);
+    vec3 w = placed(v_uv, v_glow);
+    v_sheet = u_sheet[int(in_slot + 0.5)];
+    v_world = w; gl_Position = u_vp * vec4(w, 1.0);
 }
+"""
+SAMPLE = """
+uniform sampler2D u_tex; uniform sampler2D u_tex2;
+vec4 sheet_texel(vec2 uv, float sheet) { return sheet > 0.5 ? texture(u_tex2, uv) : texture(u_tex, uv); }
 """
 BILLBOARD_FS = """
 #version 330
-uniform sampler2D u_tex;
-in vec2 v_uv; in vec3 v_world; out vec4 f_color;
-""" + LIGHTING_GLSL + """
+in vec2 v_uv; in vec3 v_world; in float v_glow; flat in float v_sheet; out vec4 f_color;
+""" + SAMPLE + LIGHTING_GLSL + """
 void main() {
-    vec4 c = texture(u_tex, v_uv);
+    vec4 c = sheet_texel(v_uv, v_sheet);
     if (c.a < 0.5) discard;
-    f_color = vec4(c.rgb * light_at(v_world, vec3(0.0, -1.0, 0.0), true), 1.0);
+    f_color = vec4(c.rgb * max(light_at(v_world, vec3(0.0, -1.0, 0.0), true), vec3(v_glow)), 1.0);
 }
+"""
+CASTER_FS = """
+#version 330
+in vec2 v_uv; in vec3 v_world; in float v_glow; flat in float v_sheet;
+""" + SAMPLE + """
+void main() { if (sheet_texel(v_uv, v_sheet).a < 0.5) discard; }
 """
 
 
@@ -79,6 +101,9 @@ class ScatterLayer:
         self.builds: dict[tuple[int, int], int] = {}  # chunk -> how often it was built (diagnostics, tests)
         self._bounds: dict[str, Any] = {}
         self.sprite_draws: dict[tuple[int, int], tuple[Any, Any]] = {}  # chunk -> (geometry, buffer)
+        self.cast_draws: dict[tuple[int, int], tuple[Any, Any]] = {}  # chunk -> its casting sprites (canopies)
+        self.motion: Motion = OFF
+        self.wind: Wind = CALM
         self.model_draws: dict[tuple[int, int], list[tuple[Any, Any, Any, bool]]] = {}  # -> (geom, buf, texture, cast)
         self.boxes: dict[tuple[int, int], tuple[tuple[float, ...], tuple[float, ...]]] = {}
         self.draw_calls = 0
@@ -86,7 +111,18 @@ class ScatterLayer:
         self.sheet_size = sheet.size if sheet is not None else (CELL_PX, CELL_PX)
         self.cells = _cell_boxes(sheet) if sheet is not None else []
         self.texture = renderer._texture(sheet if sheet is not None else Image.new("RGBA", (CELL_PX, CELL_PX)))
+        motion_sheet = _open(renderer, MOTION_SHEET)  # (20E's cells: a room of 20D's things alone needs none)
+        self.motion_size = motion_sheet.size if motion_sheet is not None else (CELL_PX, CELL_PX)
+        self.cells = (self.cells + [None] * (FIRST_MOTION - len(self.cells)))[:FIRST_MOTION] + \
+            (_cell_boxes(motion_sheet) if motion_sheet is not None else [])
+        self.texture2 = renderer._texture(motion_sheet if motion_sheet is not None
+                                          else Image.new("RGBA", (CELL_PX, CELL_PX)))
         self.prog = self.ctx.program(vertex_shader=BILLBOARD_VS, fragment_shader=BILLBOARD_FS)
+        self.caster = self.ctx.program(vertex_shader=BILLBOARD_VS, fragment_shader=CASTER_FS)
+        self._slots = self._slot_tables()
+        self._sheets = tuple(1.0 if (ASSETS[name].cell or (0,))[0] >= FIRST_MOTION and number == 0
+                             or number > 0 and ASSETS[name].parts[number - 1].cell >= FIRST_MOTION else 0.0
+                             for (name, number), _s in sorted(SLOTS.items(), key=lambda item: item[1]))
         self.set_instances(scatter)
 
     # ------------------------------------------------------------------ building
@@ -146,34 +182,57 @@ class ScatterLayer:
             return
         shadow = array("f")  # (its casting models' triangles)
         sprite_v, sprite_i = array("f"), array("I")
+        cast_v, cast_i = array("f"), array("I")
         merged: dict[int, tuple[Any, array, array, bool]] = {}
         lo, hi = [math.inf] * 3, [-math.inf] * 3
-        sw, sh = self.sheet_size
         for name, rows in sorted(rows_by_asset.items()):
             asset = ASSETS[name]
+            cells = asset.cell or (0,)
+
+            def sprite(cell: int, frames: int, ax: float, ay: float, az: float, k: float, mirror: bool, slot: int,
+                       seed: float, flex: float, cast: bool) -> None:
+                """One quad standing at its anchor (m), its corners round the cell's drawn box (every frame's)."""
+                box = self._frames_box(cell, frames)
+                if box is None:
+                    return
+                left, top, right, bottom = box
+                x0, x1 = (left - CELL_PX / 2) / PX * k, (right - CELL_PX / 2) / PX * k
+                z0, z1 = (CELL_PX - bottom) / PX * k, (CELL_PX - top) / PX * k
+                (sw, sh), at = (self.motion_size, cell - FIRST_MOTION) if cell >= FIRST_MOTION else (self.sheet_size, cell)
+                u0, u1 = (at * CELL_PX + left) / sw, (at * CELL_PX + right) / sw
+                if mirror:  # (mirrored: half of them)
+                    u0, u1, x0, x1 = u1, u0, -x1, -x0
+                v0, v1 = top / sh, bottom / sh
+                for verts, idx in [(sprite_v, sprite_i)] + ([(cast_v, cast_i)] if cast else []):
+                    base = len(verts) // FLOATS
+                    verts.extend((ax, ay, az, x0, z0, u0, v1, slot, seed, ax, ay, az, x1, z0, u1, v1, slot, seed,
+                                  ax, ay, az, x0, z1, u0, v0, slot, seed, ax, ay, az, x1, z1, u1, v0, slot, seed))
+                    idx.extend((base, base + 1, base + 2, base + 1, base + 3, base + 2))
+                reach = max(abs(x0), abs(x1)) + (math.sin(MAX_ANGLE) * z1 if flex > 0 else 0.0)  # (as it sways)
+                for n, (a, b) in enumerate(((ax - reach, ax + reach), (ay - reach, ay + reach), (az + z0, az + z1))):
+                    lo[n], hi[n] = min(lo[n], a), max(hi[n], b)
+
+            def parts(x: int, y: int, turn: int, k: float, z: float) -> None:
+                """The instance's sprites: its own (a variant by where it stands: fixed), then those attached to it."""
+                fx, fy = x / PX, y / PX
+                c, s = math.cos(math.radians(turn)), math.sin(math.radians(turn))
+                for number, part in asset.sprite_parts():
+                    if part is None:
+                        sprite(cells[(x * 7 + y * 13) % len(cells)], asset.frames, fx, fy, z, k,
+                               turn >= 180 and not asset.streams, SLOTS[(asset.id, 0)], seed_of(x, y), asset.flex,
+                               False)
+                        continue
+                    ax, ay, az = part.at
+                    sprite(part.cell, part.frames, fx + (c * ax - s * ay) * k, fy + (s * ax + c * ay) * k, z + az * k,
+                           k * part.scale, turn >= 180 and not part.streams, SLOTS[(asset.id, number)],
+                           seed_of(x, y, number), part.flex, part.cast)
+
             for x, y, turn, size in sorted(rows):  # (in a fixed order: the same scatter, the same buffers)
                 k = size / 100
                 z = self.height(x, y) / PX
                 fx, fy = x / PX, y / PX
                 if asset.cell is not None:
-                    cell = asset.cell[(x * 7 + y * 13) % len(asset.cell)]  # (a variant by where it stands: fixed)
-                    box = self.cells[cell] if cell < len(self.cells) else None
-                    if box is None:
-                        continue
-                    left, top, right, bottom = box
-                    x0, x1 = (left - CELL_PX / 2) / PX * k, (right - CELL_PX / 2) / PX * k
-                    z0, z1 = (CELL_PX - bottom) / PX * k, (CELL_PX - top) / PX * k
-                    u0, u1 = (cell * CELL_PX + left) / sw, (cell * CELL_PX + right) / sw
-                    if turn >= 180:  # (mirrored: half of them)
-                        u0, u1, x0, x1 = u1, u0, -x1, -x0
-                    v0, v1 = top / sh, bottom / sh
-                    base = len(sprite_v) // 7
-                    sprite_v.extend((fx, fy, z, x0, z0, u0, v1, fx, fy, z, x1, z0, u1, v1,
-                                     fx, fy, z, x0, z1, u0, v0, fx, fy, z, x1, z1, u1, v0))
-                    sprite_i.extend((base, base + 1, base + 2, base + 1, base + 3, base + 2))
-                    reach = max(abs(x0), abs(x1))
-                    for n, (a, b) in enumerate(((fx - reach, fx + reach), (fy - reach, fy + reach), (z + z0, z + z1))):
-                        lo[n], hi[n] = min(lo[n], a), max(hi[n], b)
+                    parts(x, y, turn, k, z)
                     continue
                 model = self._model(asset.model)
                 if model is None:
@@ -206,13 +265,16 @@ class ScatterLayer:
                 for n, (a, b) in enumerate(((fx - reach, fx + reach), (fy - reach, fy + reach),
                                             (z + mz0 * k, z + mz1 * k))):
                     lo[n], hi[n] = min(lo[n], a), max(hi[n], b)
+                if asset.parts:
+                    parts(x, y, turn, k, z)
         gl = self.r.arcade.gl
-        if sprite_i:
-            buffer = self.ctx.buffer(data=sprite_v.tobytes())
-            index = self.ctx.buffer(data=sprite_i.tobytes())
-            geometry = self.ctx.geometry([gl.BufferDescription(buffer, "3f 2f 2f", ["in_pos", "in_corner", "in_uv"])],
-                                         index_buffer=index, index_element_size=4)
-            self.sprite_draws[key] = (geometry, (buffer, index))
+        for verts, idx, into in ((sprite_v, sprite_i, self.sprite_draws), (cast_v, cast_i, self.cast_draws)):
+            if idx:
+                buffer = self.ctx.buffer(data=verts.tobytes())
+                index = self.ctx.buffer(data=idx.tobytes())
+                geometry = self.ctx.geometry([gl.BufferDescription(buffer, VERTEX, VERTEX_NAMES)],
+                                             index_buffer=index, index_element_size=4)
+                into[key] = (geometry, (buffer, index))
         draws = []
         for texture, verts, idx, cast in merged.values():
             buffer = self.ctx.buffer(data=verts.tobytes())
@@ -242,12 +304,20 @@ class ScatterLayer:
             self.r.models[rel] = load_glb(path)
         return self.r.models[rel]
 
+    def _frames_box(self, cell: int, frames: int) -> tuple[int, int, int, int] | None:
+        """The drawn box of a sprite's cell and its frames (the cells after it): every frame fits the one quad."""
+        boxes = [b for b in self.cells[cell:cell + max(1, frames)] if b is not None]
+        if cell >= len(self.cells) or self.cells[cell] is None or not boxes:
+            return None
+        return (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes))
+
     def _free(self, key: tuple[int, int]) -> None:
-        sprite = self.sprite_draws.pop(key, None)
-        if sprite is not None:
-            sprite[0].flush()
-            for b in sprite[1]:
-                b.delete()
+        for draws in (self.sprite_draws, self.cast_draws):
+            sprite = draws.pop(key, None)
+            if sprite is not None:
+                sprite[0].flush()
+                for b in sprite[1]:
+                    b.delete()
         for geometry, buffers, _t, _c in self.model_draws.pop(key, []):
             geometry.flush()
             for b in buffers:
@@ -282,17 +352,69 @@ class ScatterLayer:
             old[0].flush()
             old[1].delete()
 
+    # ------------------------------------------------------------------ motion (Milestone 20E)
+    def set_motion(self, motion: Motion, wind: Wind) -> None:
+        """The room's motion settings and wind: uniforms only (nothing is rebuilt)."""
+        self.motion, self.wind = motion, wind
+        self._slots = self._slot_tables()
+
+    def _slot_tables(self) -> tuple[tuple[float, ...], tuple[float, ...]]:
+        """Per motion slot (a sprite part), what the shader reads: (flex, frames, fps, phase) and (glow, ping-pong,
+        moving, streams), with the room's per-asset settings applied."""
+        a: list[float] = []
+        b: list[float] = []
+        motion = self.motion
+        for (name, number), _slot in sorted(SLOTS.items(), key=lambda item: item[1]):
+            asset = ASSETS[name]
+            part: Any = asset if number == 0 else asset.parts[number - 1]
+            own = motion.of(name)
+            fps = own.fps if own.fps is not None and part.frames > 1 else part.fps
+            a.extend((part.flex * own.sway, float(part.frames), fps * motion.speed,
+                      own.phase if own.phase is not None else part.phase))
+            b.extend((part.glow, 1.0 if (own.loop or part.loop) == "pingpong" else 0.0, 1.0 if own.enabled else 0.0,
+                      1.0 if part.streams else 0.0))
+        return tuple(a), tuple(b)
+
+    def bind_motion(self, prog: Any, time: float, right: tuple[float, float, float], stretch: float) -> None:
+        motion, wind = self.motion, self.wind
+        prog["u_right"] = right
+        prog["u_stretch"] = stretch
+        prog["u_motion"] = 1 if motion.enabled else 0
+        prog["u_time"] = time % PERIOD
+        prog["u_period"] = PERIOD
+        prog["u_wind"] = wind.vector
+        prog["u_gust"] = wind.gust
+        prog["u_sway"] = motion.sway
+        prog["u_influence"] = motion.wind
+        prog["u_rate"] = motion.speed
+        prog["u_frame_du"] = CELL_PX / self.motion_size[0]  # (only 20E's cells have frames)
+        prog["u_slot_a"], prog["u_slot_b"] = self._slots
+        prog["u_sheet"] = self._sheets
+        prog["u_tex"], prog["u_tex2"] = 0, 3  # (1 and 2: the shadow maps)
+        self.texture.use(0)
+        self.texture2.use(3)
+
+    def draw_casters(self, vp_cols: tuple[float, ...], time: float, right: tuple[float, float, float],
+                     stretch: float) -> int:
+        """The casting sprites (trees' canopies) into the sun's shadow map, as they sway; returns the draws."""
+        if not self.cast_draws:
+            return 0
+        prog = self.caster
+        prog["u_vp"] = vp_cols
+        self.bind_motion(prog, time, right, stretch)
+        for geometry, _b in self.cast_draws.values():
+            geometry.render(prog)
+        return len(self.cast_draws)
+
     def draw_sprites(self, vp_cols: tuple[float, ...], vp: list[list[float]], focus: tuple[float, float, float],
                      right: tuple[float, float, float], stretch: float, lighting: Any,
-                     in_view: Callable[..., bool]) -> None:
+                     in_view: Callable[..., bool], time: float = 0.0) -> None:
         self.draw_calls = 0
         if not self.sprite_draws:
             return
         prog = self.prog
         prog["u_vp"] = vp_cols
-        prog["u_right"] = right
-        prog["u_stretch"] = stretch
-        prog["u_tex"] = 0
+        self.bind_motion(prog, time, right, stretch)
         lighting.bind(prog)
         self.texture.use(0)
         far = SPRITE_FAR * SPRITE_FAR
@@ -305,22 +427,25 @@ class ScatterLayer:
 
     # ------------------------------------------------------------------ bookkeeping
     def gl_objects(self) -> list[Any]:
-        return ([self.prog] + [b for _g, bs in self.sprite_draws.values() for b in bs]
+        return ([self.prog, self.caster] + [b for _g, bs in self.sprite_draws.values() for b in bs]
+                + [b for _g, bs in self.cast_draws.values() for b in bs]
                 + [b for draws in self.model_draws.values() for _g, bs, _t, _c in draws for b in bs]
                 + [b for _g, b in self.blocks.values()])
 
     def memory_bytes(self) -> int:
-        return int(sum(b.size for b in self.gl_objects()[1:]) + self.texture.width * self.texture.height * 4)
+        return int(sum(b.size for b in self.gl_objects()[2:]) + self.texture.width * self.texture.height * 4
+                   + self.texture2.width * self.texture2.height * 4)
 
     def count(self) -> int:
         return sum(len(rows) for rows in self.instances.values())
 
     def release(self) -> None:
-        for key in list(self.sprite_draws) + list(self.model_draws):
+        for key in list(self.sprite_draws) + list(self.cast_draws) + list(self.model_draws):
             self._free(key)
         for block in list(self.blocks):
             self._free_block(block)
         self.prog.delete()
+        self.caster.delete()
 
 
 def foot_height(height: Callable[[float, float], float], x: float, y: float, reach: float, turn: float) -> float:
