@@ -61,6 +61,7 @@ class Terrain:
     def __post_init__(self) -> None:
         self.nx = max(1, math.ceil(self.size[0] / self.cell))
         self.ny = max(1, math.ceil(self.size[1] / self.cell))
+        self.changed: set[tuple[int, int]] = set()  # stored chunks whose corners changed since loading
         if not self.heights:
             self.heights = [0.0] * ((self.nx + 1) * (self.ny + 1))
 
@@ -99,29 +100,47 @@ class Terrain:
                 if i <= self.nx and j <= self.ny:
                     self.heights[i + j * (self.nx + 1)] = v * QUANTUM
 
-    def chunks(self) -> dict[str, str]:
-        """The heights as stored: non-flat chunks only, sorted, deterministic."""
-        out = {}
-        cx_n, cy_n = self.chunk_count()
-        for cj in range(cy_n):
-            for ci in range(cx_n):
-                values = array("h", [0] * (CHUNK * CHUNK))
-                any_set = False
-                for k in range(CHUNK * CHUNK):
-                    i, j = ci * CHUNK + k % CHUNK, cj * CHUNK + k // CHUNK
-                    if i <= self.nx and j <= self.ny:
-                        q = int(round(self.heights[i + j * (self.nx + 1)] / QUANTUM))
-                        values[k] = q
-                        any_set = any_set or q != 0
-                if any_set:
-                    if sys.byteorder == "big":
-                        values.byteswap()
-                    out[f"{ci},{cj}"] = base64.b64encode(values.tobytes()).decode("ascii")
+    def chunk_text(self, ci: int, cj: int) -> str | None:
+        """One stored chunk (its corners' heights as saved), or None if all of it is level with the base."""
+        values = array("h", [0] * (CHUNK * CHUNK))
+        any_set = False
+        stride = self.nx + 1
+        for k in range(CHUNK * CHUNK):
+            i, j = ci * CHUNK + k % CHUNK, cj * CHUNK + k // CHUNK
+            if i <= self.nx and j <= self.ny:
+                q = int(round(self.heights[i + j * stride] / QUANTUM))
+                values[k] = q
+                any_set = any_set or q != 0
+        if not any_set:
+            return None
+        if sys.byteorder == "big":
+            values.byteswap()
+        return base64.b64encode(values.tobytes()).decode("ascii")
+
+    def chunks(self, previous: dict[str, str] | None = None, changed: set[tuple[int, int]] | None = None) -> dict[str, str]:
+        """The heights as stored: non-flat chunks only, sorted, deterministic. With ``previous`` (the stored form these
+        heights were read from) and ``changed`` (the stored chunks edited since, ``Terrain.changed``), only those
+        are encoded again; the rest of the text is kept as it was."""
+        out: dict[str, str] = {}
+        if previous is not None and changed is not None:
+            out = dict(previous)
+            keys = changed
+        else:
+            cx_n, cy_n = self.chunk_count()
+            keys = {(ci, cj) for cj in range(cy_n) for ci in range(cx_n)}
+        for ci, cj in keys:
+            text = self.chunk_text(ci, cj)
+            if text is None:
+                out.pop(f"{ci},{cj}", None)
+            else:
+                out[f"{ci},{cj}"] = text
         return dict(sorted(out.items(), key=lambda kv: parse_key(kv[0])[::-1]))
 
-    def settings(self) -> dict[str, Any]:
-        """``ground.terrain`` as saved (None when flat: the plain ground)."""
-        chunks = self.chunks()
+    def settings(self, previous: dict[str, Any] | None = None) -> dict[str, Any]:
+        """``ground.terrain`` as saved ({} when flat: the plain ground). ``previous``: the ``ground.terrain`` these
+        heights were read from; only the stored chunks changed since (``changed``) are encoded again."""
+        old = (previous or {}).get("chunks") if isinstance(previous, dict) else None
+        chunks = self.chunks(old, self.changed) if isinstance(old, dict) else self.chunks()
         return {"cell": self.cell, "chunks": chunks} if chunks else {}
 
     # ------------------------------------------------------------------ heights
@@ -174,10 +193,12 @@ class Terrain:
 
     # ------------------------------------------------------------------ edits
     def sculpt(self, tool: str, x: float, y: float, radius: float, strength: float,
-               target: float | None = None) -> set[tuple[int, int]]:
+               target: float | None = None, exact: dict[int, float] | None = None) -> set[tuple[int, int]]:
         """One brush stroke at (x, y) px: ``raise`` / ``lower`` by up to ``strength`` px at its centre; ``smooth``
         towards the neighbours' mean, ``flatten`` towards ``target`` px (the height at the centre if None), by up to
-        ``strength`` (0-1) of the way. ``radius`` px; a cosine falloff to its edge. Returns the chunks to redraw."""
+        ``strength`` (0-1) of the way. ``radius`` px; a cosine falloff to its edge. Returns the chunks to redraw.
+        ``exact``: the heights before rounding to the stored step, carried from dab to dab of one stroke (many small
+        dabs then add up to what one big one would, instead of each rounding away)."""
         if tool not in TOOLS:
             raise TerrainError(f"terrain tool must be one of {', '.join(TOOLS)} (got {tool!r})")
         if target is None and tool == "flatten":
@@ -199,7 +220,7 @@ class Terrain:
                     continue
                 w = 0.5 * (1.0 + math.cos(math.pi * d / radius))
                 k = i + j * (self.nx + 1)
-                h = before[k]
+                h = before[k] if exact is None else exact.get(k, before[k])
                 if tool == "raise":
                     new = h + strength * w
                 elif tool == "lower":
@@ -213,15 +234,25 @@ class Terrain:
                 else:
                     assert target is not None
                     new = h + min(1.0, strength) * w * (target - h)
-                new = round(max(-LIMIT, min(LIMIT, new)) / QUANTUM) * QUANTUM
+                new = max(-LIMIT, min(LIMIT, new))
+                if exact is not None:
+                    exact[k] = new
+                new = round(new / QUANTUM) * QUANTUM
                 if new != self.heights[k]:
                     self.heights[k] = new
                     changed.add((i, j))
+        self.changed |= {(i // CHUNK, j // CHUNK) for i, j in changed}
         return chunks_of(changed)
 
     # ------------------------------------------------------------------ geometry
     def chunk_cells(self, ci: int, cj: int) -> tuple[range, range]:
         return range(ci * CHUNK, min(self.nx, (ci + 1) * CHUNK)), range(cj * CHUNK, min(self.ny, (cj + 1) * CHUNK))
+
+    def _steep(self, i: int, j: int) -> bool:
+        """Whether cell (i, j) is drawn as dirt: either of its faces' normal z below STEEP. (A corner's change can
+        change its neighbours' fringe, two cells out at most: ``chunks_of`` already redraws that far.)"""
+        p0, p1, p2, p3 = self._point(i, j), self._point(i + 1, j), self._point(i + 1, j + 1), self._point(i, j + 1)
+        return min(_face_normal(p0, p1, p2)[2], _face_normal(p0, p2, p3)[2]) < STEEP
 
     def _point(self, i: int, j: int) -> tuple[float, float, float]:
         x, y = self.corner_xy(i, j)
@@ -258,29 +289,65 @@ class Terrain:
         n = math.sqrt(dx * dx + dy * dy + 1.0)
         return -dx / n, -dy / n, 1.0 / n
 
-    def chunk_mesh(self, ci: int, cj: int) -> tuple[array, array]:
-        """The chunk's vertices (x, y, z, nx, ny, nz, u, v; 8 floats each, three per triangle), as two lists: the
-        ground's texture's (gentle cells) and dirt's (a cell either of whose faces is steeper than STEEP: one material
-        a cell, so their boundary follows the cells, not a sawtooth of triangles), and, on the ground's border, a dirt
-        skirt down to below its lowest point, so ground cut by the room's edge isn't a paper shell."""
-        gentle, steep = array("f"), array("f")
+    def chunk_mesh(self, ci: int, cj: int) -> tuple[array, array, array]:
+        """The chunk's vertices (x, y, z, nx, ny, nz, u, v; 8 floats each, three per triangle), as three lists: the
+        ground's texture's (gentle cells), the grass-and-dirt's (gentle cells beside a steep one: a one-cell fringe
+        so dirt doesn't meet grass on a hard line) and dirt's (a cell either of whose faces is steeper than STEEP: one
+        material a cell, so their boundary follows the cells, not a sawtooth of triangles), and, on the ground's
+        border, a dirt skirt where it leaves its base level, so ground cut by the room's edge isn't a paper shell.
+        Each corner's place and normal is worked out once."""
+        gentle, blend, steep = array("f"), array("f"), array("f")
         cells_i, cells_j = self.chunk_cells(ci, cj)
-        for j in cells_j:
-            for i in cells_i:
-                corners = ((i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1))
-                tris = [[self._point(*corners[t]) for t in tri] for tri in ((0, 1, 2), (0, 2, 3))]
-                faces = [_face_normal(*pts) for pts in tris]
-                out = steep if min(f[2] for f in faces) < STEEP else gentle
-                for tri, pts, face in zip(((0, 1, 2), (0, 2, 3)), tris, faces):
-                    for t, p in zip(tri, pts):
-                        n = self._normal_at(*corners[t])
-                        if out is steep:  # box-mapped onto the face's side: texels keep their size on a cliff
-                            uv = (p[1], p[2]) if abs(face[0]) > abs(face[1]) else (p[0], p[2])
+        if not cells_i or not cells_j:
+            return gentle, blend, steep
+        i0, j0 = cells_i.start, cells_j.start
+        w, d = len(cells_i) + 1, len(cells_j) + 1
+        stride, cell, base = self.nx + 1, self.cell, self.base
+        hs = self.heights
+        ox, oy, sx, sy = self.origin[0], self.origin[1], self.size[0], self.size[1]
+        pts: list[tuple[float, float, float]] = []
+        nrm: list[tuple[float, float, float]] = []
+        for j in range(j0, j0 + d):
+            y = (oy + min(j * cell, sy)) / PX
+            jm, jp = max(j - 1, 0), min(j + 1, self.ny)
+            for i in range(i0, i0 + w):
+                im, ip = max(i - 1, 0), min(i + 1, self.nx)
+                h = hs[i + j * stride]
+                pts.append(((ox + min(i * cell, sx)) / PX, y, (base + h) / PX))
+                gx = (hs[ip + j * stride] - hs[im + j * stride]) / (2 * cell)
+                gy = (hs[i + jp * stride] - hs[i + jm * stride]) / (2 * cell)
+                n = math.sqrt(gx * gx + gy * gy + 1.0)
+                nrm.append((-gx / n, -gy / n, 1.0 / n))
+        faces = {}  # the chunk's cells' two faces' normals, from the corners above
+        for jj in range(d - 1):
+            for ii in range(w - 1):
+                k00 = ii + jj * w
+                p0, p2 = pts[k00], pts[k00 + 1 + w]
+                faces[(i0 + ii, j0 + jj)] = (_face_normal(p0, pts[k00 + 1], p2), _face_normal(p0, p2, pts[k00 + w]))
+        steep_cells = {c for c, (fa, fb) in faces.items() if min(fa[2], fb[2]) < STEEP}
+        steep_cells |= {(i, j) for j in range(max(j0 - 1, 0), min(j0 + d, self.ny))  # the ring just outside it
+                        for i in range(max(i0 - 1, 0), min(i0 + w, self.nx)) if (i, j) not in faces and self._steep(i, j)}
+        for jj in range(d - 1):
+            for ii in range(w - 1):
+                k00 = ii + jj * w
+                ks = (k00, k00 + 1, k00 + 1 + w, k00 + w)
+                ci_, cj_ = i0 + ii, j0 + jj
+                fa, fb = faces[(ci_, cj_)]
+                is_steep = (ci_, cj_) in steep_cells
+                fringe = bool(steep_cells) and not is_steep and any(
+                    (ci_ + a, cj_ + b) in steep_cells for a in (-1, 0, 1) for b in (-1, 0, 1))
+                out = steep if is_steep else (blend if fringe else gentle)
+                for tri, face in (((0, 1, 2), fa), ((0, 2, 3), fb)):
+                    for t_ in tri:
+                        k = ks[t_]
+                        p, nv = pts[k], nrm[k]
+                        if is_steep:  # box-mapped onto the face's side: texels keep their size on a cliff
+                            u, v = (p[1], p[2]) if abs(face[0]) > abs(face[1]) else (p[0], p[2])
                         else:
-                            uv = (p[0], p[1])
-                        out.extend((p[0], p[1], p[2], n[0], n[1], n[2], uv[0], uv[1]))
+                            u, v = p[0], p[1]
+                        out.extend((p[0], p[1], p[2], nv[0], nv[1], nv[2], u, v))
         self._skirt(ci, cj, steep)
-        return gentle, steep
+        return gentle, blend, steep
 
     def _skirt(self, ci: int, cj: int, out: array) -> None:
         """The border's side wall within this chunk, where the ground there leaves its base level: between the ground

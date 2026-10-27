@@ -71,6 +71,8 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
             from engine.hd2d.world import World  # noqa: PLC0415
 
             window.hd2d_world = World(hd2d, models)
+            if window.hd2d_renderer.terrain is not None:  # one set of heights: what is drawn is what is walked on
+                window.hd2d_world.update_terrain(window.hd2d_renderer.terrain)
     except (Hd2dSettingsError, GlbError) as exc:
         window.hd2d_error = str(exc)
         logger.error("[Mesh][HD-2D] this scene is drawn 2D: %s", exc)

@@ -1992,9 +1992,12 @@ def shared_player_ids(scene: Doc) -> list[str]:
     return [str(e["id"]) for e in entities(scene) if e.get("prefab_id") == PLAYER_PREFAB and e.get("id")]
 
 
-def thin_player(entity: Doc) -> Doc:
-    """A room's reference to the shared player: where it starts, nothing else."""
+def thin_player(entity: Doc, shared: Doc | None = None) -> Doc:
+    """A room's reference to the shared player: where it starts, nothing else. Its elevation is kept only when it
+    differs from the one the shared definition carries (``shared``), if that carries one."""
     out: Doc = {key: copy.deepcopy(entity[key]) for key in ROOM_PLAYER_FIELDS if key in entity}
+    if isinstance(shared, dict) and "elevation" in shared and out.get("elevation") == shared["elevation"]:
+        out.pop("elevation")
     out["prefab_id"] = PLAYER_PREFAB
     return out
 
@@ -2015,7 +2018,7 @@ def expand_players(scene: Doc, definition: Doc | None) -> Doc:
     return out
 
 
-def split_players(scene: Doc, ids: Iterable[str]) -> tuple[Doc, Doc | None]:
+def split_players(scene: Doc, ids: Iterable[str], shared: Doc | None = None) -> tuple[Doc, Doc | None]:
     """Undo ``expand_players`` after an edit: ``(room with thin references, the player's definition or None)``.
 
     The definition comes back as the edited player has it, so changing the player's picture in any room
@@ -2028,7 +2031,9 @@ def split_players(scene: Doc, ids: Iterable[str]) -> tuple[Doc, Doc | None]:
     for entity in entities(out):
         if entity.get("id") in wanted and entity.get("prefab_id") != PLAYER_PREFAB:
             definition = player_definition(entity)
-            entity = thin_player(entity)
+            if isinstance(shared, dict) and "elevation" in shared:  # (a hand-made definition's: left where it is)
+                definition["elevation"] = copy.deepcopy(shared["elevation"])
+            entity = thin_player(entity, shared)
         rebuilt.append(entity)
     out["entities"] = rebuilt
     return out, definition
@@ -2220,32 +2225,60 @@ def sculpt_terrain(scene: Doc, tool: str, x: float, y: float, radius: float = 96
     the height at the centre if not given), by up to ``strength`` (0-1) of the way; ``radius`` px (8-2048), easing to
     nothing at its edge (32 px = 1 m). Structures, objects and water keep their elevations: sculpting never moves
     them (``terrain_anchoring`` lists any it leaves buried or floating; ``settle_on_ground`` stands objects back on
-    it). Ground made flat again is the plain ground."""
+    it). Ground made flat again is the plain ground. A dragged stroke is ``sculpt_terrain_stroke``."""
+    return sculpt_terrain_stroke(scene, tool, [[x, y, strength]], radius, target)
+
+
+STROKE_DABS = 20000  # the most dabs one stroke may hold
+
+
+def sculpt_terrain_stroke(scene: Doc, tool: str, dabs: Any, radius: float = 96.0, target: Any = _UNSET) -> Doc:
+    """One whole brush stroke over this HD-2D room's ground (what Mesh Studio records while the mouse is held): its
+    ``dabs``, ``[[x, y, strength], ...]`` px in order, each applied as ``sculpt_terrain`` applies one (strength: px
+    for "raise"/"lower", 0-1 of the way for "smooth"/"flatten"), all with the same ``tool``, ``radius`` px and, for
+    flatten, ``target`` px (the height under the first dab if not given). One edit: one undo step. Applying the same
+    dabs to the same ground always gives the same heights, so what Studio showed while sculpting is what is saved."""
     from engine.hd2d.terrain import TOOLS, Terrain, TerrainError  # noqa: PLC0415
 
     if tool not in TOOLS:
         raise OpError(f"The terrain tool is one of {', '.join(TOOLS)} (got {tool!r}).")
-    x, y = _number(x, "x", -1e6, 1e6), _number(y, "y", -1e6, 1e6)
+    if not isinstance(dabs, list) or not dabs:
+        raise OpError("A stroke's dabs are a list of [x, y, strength], at least one.")
+    if len(dabs) > STROKE_DABS:
+        raise OpError(f"A stroke holds at most {STROKE_DABS} dabs (got {len(dabs)}).")
     radius = _number(radius, "The brush radius", 8, 2048)
-    strength = _number(strength, "The strength", 0, 512) if tool in ("raise", "lower") else _number(
-        strength, "The strength (the share of the way, for smooth and flatten)", 0, 1)
+    gentle = tool in ("smooth", "flatten")
+    checked = []
+    for k, dab in enumerate(dabs):
+        if not isinstance(dab, (list, tuple)) or len(dab) != 3:
+            raise OpError(f"Dab {k} must be [x, y, strength] (got {dab!r}).")
+        x, y = _number(dab[0], f"Dab {k}'s x", -1e6, 1e6), _number(dab[1], f"Dab {k}'s y", -1e6, 1e6)
+        strength = (_number(dab[2], f"Dab {k}'s strength (the share of the way, for smooth and flatten)", 0, 1)
+                    if gentle else _number(dab[2], f"Dab {k}'s strength", 0, 512))
+        checked.append((x, y, strength))
     goal = None if target is _UNSET or target is None else _number(target, "The target height", -8192, 8192)
     out = copy.deepcopy(scene)
     if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
         raise OpError("This room isn't an HD-2D room, so it has no ground to sculpt.")
     hd2d = _hd2d_block(out)
     ground = _parsed_ground(out)
-    if not (ground.lo[0] - radius < x < ground.hi[0] + radius and ground.lo[1] - radius < y < ground.hi[1] + radius):
-        raise OpError(f"The brush at ({x / 32:.1f} m, {y / 32:.1f} m) is off the room's ground.")
+    for x, y, _s in checked:
+        if not (ground.lo[0] - radius < x < ground.hi[0] + radius and ground.lo[1] - radius < y < ground.hi[1] + radius):
+            raise OpError(f"The brush at ({x / 32:.1f} m, {y / 32:.1f} m) is off the room's ground.")
     terrain = Terrain.from_ground(ground)
+    if tool == "flatten" and goal is None:  # the height under the stroke's start
+        here = terrain.height(checked[0][0], checked[0][1])
+        goal = here if here is not None else float(ground.elevation)
+    exact: dict[int, float] = {}  # (as Studio carries them: the same dabs give the same heights)
     try:
-        terrain.sculpt(tool, x, y, radius, strength, goal)
+        for x, y, strength in checked:
+            terrain.sculpt(tool, x, y, radius, strength, goal, exact)
     except TerrainError as err:
         raise OpError(str(err)) from err
     raw = hd2d["ground"]
     if not isinstance(raw, dict):
         raw = hd2d["ground"] = {}
-    stored = terrain.settings()
+    stored = terrain.settings(raw.get("terrain"))  # (only the stored chunks the stroke changed are encoded again)
     if stored:
         raw["terrain"] = stored
     else:
@@ -2303,8 +2336,23 @@ def _out_of_place(scene: Doc, tolerance: float) -> dict[str, tuple[str, str, str
         elif z - centre > tolerance:
             out[name] = ("structure", name, f"'{name}' is {(z - centre) / 32:.1f} m above the ground")
     for e in entities(scene):
-        if "WaterSurface" in entity_behaviours(e) or not isinstance(e.get("x"), (int, float)) \
-                or not isinstance(e.get("y"), (int, float)):
+        if "WaterSurface" in entity_behaviours(e) and isinstance(e.get("x"), (int, float)) \
+                and isinstance(e.get("y"), (int, float)):  # water: dry, or standing in the air
+            water = water_of(e) or {}
+            level = e.get("elevation", 0.0)
+            level = float(level) if isinstance(level, (int, float)) and not isinstance(level, bool) else 0.0
+            hw, hh = float(water.get("width", 0)) / 2, float(water.get("height", 0)) / 2
+            under = [h for fx in (-0.6, 0.0, 0.6) for fy in (-0.6, 0.0, 0.6)
+                     if (h := height(float(e["x"]) + fx * hw, float(e["y"]) + fy * hh)) is not None]
+            name = str(e.get("name") or e.get("id"))
+            if under and min(under) > level + tolerance:
+                out[str(e.get("id"))] = ("water", name, f"'{name}' (water) is under the ground: its level is "
+                                         f"{(min(under) - level) / 32:.1f} m below it everywhere")
+            elif under and water.get("shore") != "terrain" and max(under) < level - tolerance:
+                out[str(e.get("id"))] = ("water", name, f"'{name}' (water) stands {(level - max(under)) / 32:.1f} m "
+                                         "above the ground")
+            continue
+        if not isinstance(e.get("x"), (int, float)) or not isinstance(e.get("y"), (int, float)):
             continue
         elevation = e.get("elevation", 0.0)
         z = float(elevation) if isinstance(elevation, (int, float)) and not isinstance(elevation, bool) else 0.0
@@ -2319,41 +2367,59 @@ def _out_of_place(scene: Doc, tolerance: float) -> dict[str, tuple[str, str, str
     return out
 
 
+def left_out_of_place(scene: Doc, before: Any = None, tolerance: float = 8.0) -> dict[str, tuple[str, str, str]]:
+    """``_out_of_place``, less (given ``before``, the room before an edit) what was already out of place then: what
+    the three lists below are made from (one call gives all three, for a caller that wants them all)."""
+    now = _out_of_place(scene, tolerance)
+    if isinstance(before, dict):
+        was = _out_of_place(before, tolerance)
+        now = {k: v for k, v in now.items() if k not in was}
+    return now
+
+
 def terrain_anchoring(scene: Doc, before: Any = None, tolerance: float = 8.0) -> list[str]:
     """What stands out of step with the ground: objects whose elevation is more than ``tolerance`` px from the ground
     under their feet, structures sunk into it or above it ("'Elder' is 1.5 m above the ground"). With ``before`` (the
     room before an edit), only what that edit left out of place: what stood on the ground then and doesn't now (a
     bridge over a valley or someone on a platform was never on the ground). Nothing is moved: ``settle_on_ground``
     does that, when asked."""
-    now = _out_of_place(scene, tolerance)
-    if isinstance(before, dict):
-        was = _out_of_place(before, tolerance)
-        now = {k: v for k, v in now.items() if k not in was}
-    return [words for _kind, _name, words in now.values()]
+    return [words for _kind, _name, words in left_out_of_place(scene, before, tolerance).values()]
 
 
 def anchoring_ids(scene: Doc, before: Any = None, tolerance: float = 8.0) -> list[str]:
     """The objects ``terrain_anchoring`` lists (their ids): what ``settle_on_ground`` would settle."""
-    now = _out_of_place(scene, tolerance)
-    if isinstance(before, dict):
-        was = _out_of_place(before, tolerance)
-        now = {k: v for k, v in now.items() if k not in was}
-    return [k for k, (kind, _name, _words) in now.items() if kind == "object"]
+    return [k for k, (kind, _n, _w) in left_out_of_place(scene, before, tolerance).items() if kind == "object"]
+
+
+def anchoring_structure_ids(scene: Doc, before: Any = None, tolerance: float = 8.0) -> list[str]:
+    """The structures ``terrain_anchoring`` lists (their ids): what ``settle_on_ground`` settles given them."""
+    return [k for k, (kind, _n, _w) in left_out_of_place(scene, before, tolerance).items() if kind == "structure"]
 
 
 def find_entity_or_none(scene: Doc, entity_id: str) -> Doc | None:
     return next((e for e in entities(scene) if e.get("id") == entity_id), None)
 
 
-def settle_on_ground(scene: Doc, entity_ids: list[str]) -> Doc:
-    """Stand these objects on the ground under their feet (their elevation made the ground's height there): the
-    explicit answer to ``terrain_anchoring``'s list after sculpting (it is never done by itself)."""
+def settle_on_ground(scene: Doc, entity_ids: list[str], structure_ids: Any = _UNSET) -> Doc:
+    """Stand these objects on the ground under their feet, and these structures (``structure_ids``) on the ground
+    under their centre (their elevation made the ground's height there): the explicit answer to
+    ``terrain_anchoring``'s list after sculpting (it is never done by itself). Water is never settled: its level is a
+    choice."""
     height = _ground_heights(scene)
     if height is None:
         raise OpError("This room has no HD-2D ground to stand things on.")
-    if not isinstance(entity_ids, list) or not entity_ids:
-        raise OpError("Name the objects to settle (their ids), as a list.")
+    structure_list = [] if structure_ids is _UNSET or structure_ids is None else structure_ids
+    if not isinstance(entity_ids, list) or not isinstance(structure_list, list) or not (entity_ids or structure_list):
+        raise OpError("Name the objects (entity_ids) or structures (structure_ids) to settle, as lists.")
     out = copy.deepcopy(scene)
+    for structure_id in structure_list:
+        st = find_structure(out, str(structure_id))
+        if st is None:
+            raise OpError(f"There is no structure '{structure_id}' in this room.")
+        here = height(float(st.get("x", 0.0)), float(st.get("y", 0.0)))
+        if here is None:
+            raise OpError(f"'{structure_id}' isn't over the room's ground.")
+        st["elevation"] = round(here, 2)
     for entity_id in entity_ids:
         entity = find_entity(out, str(entity_id))
         x, y = entity.get("x"), entity.get("y")
@@ -2363,4 +2429,4 @@ def settle_on_ground(scene: Doc, entity_ids: list[str]) -> Doc:
         if here is None:
             raise OpError(f"'{entity_id}' isn't over the room's ground.")
         entity["elevation"] = round(here, 2)
-    return _checked(scene, out)
+    return _checked_structures(_checked(scene, out)) if structure_list else _checked(scene, out)

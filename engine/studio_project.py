@@ -109,7 +109,7 @@ class Project:
 
     def _store(self, key: str, doc: Doc, player_ids: list[str]) -> None:
         """Keep an edited room, the shared player split back out of it (its definition may have changed)."""
-        stored, definition = ops.split_players(doc, player_ids)
+        stored, definition = ops.split_players(doc, player_ids, self.player)
         self.scenes[key] = stored
         self.dirty.add(key)
         if definition is not None and definition != self.player:
@@ -250,6 +250,7 @@ class Project:
         copy_.dirty, copy_.world_dirty, copy_.current = set(self.dirty), self.world_dirty, self.current
         copy_.player, copy_.player_dirty, copy_._views = copy.deepcopy(self.player), self.player_dirty, {}
         copy_._undo, copy_._redo, copy_.revision, copy_.writes_files, copy_._tx_depth = [], [], self.revision, False, 0
+        copy_._seen_on_disk = dict(self._seen_on_disk)  # (a room loaded first in the copy records when it was read)
         return copy_
 
     def load_documents(self, docs: Doc) -> None:

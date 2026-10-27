@@ -16,6 +16,7 @@ import copy
 import json
 import math
 import os
+import time
 from functools import partial
 from pathlib import Path
 from typing import Any, Callable
@@ -443,7 +444,7 @@ class Studio(InspectorMixin):
 
     # ==================================================================== actions
     def _say(self, text: str, ok: bool = True) -> None:
-        self.message, self.message_ok = text, ok
+        self.message, self.message_ok, self.message_at = text, ok, time.perf_counter()
         self._rebuild_status()
 
     def select(self, entity_id: str | None) -> None:
@@ -493,9 +494,10 @@ class Studio(InspectorMixin):
 
     def undo(self) -> None:
         self._flush_fields()
+        if self.hd2d.cancel_stroke("Stroke cancelled (undo): the ground is as it was."):  # mid-stroke: only that
+            return
         if self.project.undo():
-            self._after_change("Undone.")
-            self._reload(recenter=False)
+            self._after_change("Undone.")  # (it reloads the room: once is enough, 0.9 s at 128 m)
 
     def redo(self) -> None:
         self._flush_fields()
@@ -1004,6 +1006,17 @@ class Studio(InspectorMixin):
         if self._focus_after_build and self._focus_after_build in self._focusable:
             self._focusable[self._focus_after_build].activate()
         self._focus_after_build = None
+
+    def _refresh_top_bar(self) -> None:
+        """The top bar again (Save, Undo, Redo, the title's unsaved mark) without rebuilding the panels: what a live
+        edit (a sculpting stroke) changes. Falls back to a full rebuild if there is no bar to replace."""
+        old = getattr(self, "_top_bar_box", None)
+        root = getattr(old, "parent", None)
+        if old is None or root is None or self.mode != "edit":
+            self._rebuild()
+            return
+        root.remove(old)
+        self._top_bar_box = root.add(self._top_bar(), anchor_x="left", anchor_y="top", align_x=8, align_y=-8)
 
     def _rebuild_status(self) -> None:
         label = getattr(self, "_status_label", None)
@@ -2501,6 +2514,7 @@ class Studio(InspectorMixin):
         if lighting is not None:
             lighting.update(delta_time)  # flicker shows while editing; nothing else of the game runs
         self.hd2d.advance_weather(delta_time)  # ... nor does the weather, unless it's being previewed
+        self.hd2d.tick(delta_time)  # a sculpting stroke held still keeps working; what it changed is drawn
         from engine import water  # noqa: PLC0415
 
         water.advance(self.window, delta_time)  # puddles and ponds move while editing
@@ -2773,12 +2787,19 @@ class Studio(InspectorMixin):
                     sprite.center_x, sprite.center_y = to
         return True
 
+    def on_deactivate(self) -> None:
+        """The window lost the keyboard (Alt+Tab): keys held then are let go unseen, so none stays held here."""
+        self.keys.clear()
+
     def on_mouse_release(self, x: float, y: float, button: int, modifiers: int) -> bool:
         if self.mode == "play":
             return False
         self.panning = False
-        if self.hd2d.dragging:
+        left = button == optional_arcade.arcade.MOUSE_BUTTON_LEFT
+        if self.hd2d.dragging and left:  # (another button let go mid-stroke: the stroke goes on)
             self.hd2d.release()
+            return True
+        if self.hd2d.stroke is not None:
             return True
         if self.sheet_drag is not None:
             cells, self.sheet_drag = self.sheet_drag, None

@@ -14,6 +14,7 @@ shadow maps); a frame is the sun's shadow pass (and, once, the lamps'), then the
 from __future__ import annotations
 
 import math
+import random
 from array import array
 from pathlib import Path
 from typing import Any, Callable, Iterable
@@ -102,6 +103,8 @@ void main() { f_color = u_colour; }
 """
 IDENTITY = (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
 STEEP_TEXTURE = "assets/hd2d_starter/textures/dirt.png"  # sculpted ground's steep faces (Milestone 20A), if present
+CASTER_SLOT = 16 * 16 * 6 + 4 * 16 * 6  # vertices a chunk's slot in the casters' buffer holds (cells; four skirt
+# sides: a ground 16 cells across is one chunk touching both edges)
 
 
 # ---------------------------------------------------------------------- small linear algebra (column-major out)
@@ -133,6 +136,22 @@ def _look_at(eye: tuple[float, float, float], target: tuple[float, float, float]
 
 def _mul(a: list[list[float]], b: list[list[float]]) -> list[list[float]]:
     return [[sum(a[i][k] * b[k][j] for k in range(4)) for j in range(4)] for i in range(4)]
+
+
+def _dithered(ground: Any, resolve: Callable[[str], Path], dirt: Image.Image) -> Image.Image:
+    """The ground's texture with patches of dirt (2 x 2 texel clumps, about two in five, always the same): the
+    fringe of grass beside sculpted ground's dirt, so the two don't meet on a hard line."""
+    try:
+        with Image.open(resolve(ground.texture)) as img:
+            grass = img.convert("RGBA")
+    except (OSError, ValueError, TypeError, AttributeError):  # no ground texture: its plain colour
+        grass = Image.new("RGBA", (1, 1), (86, 132, 72, 255))
+    size = (max(grass.width, dirt.width, 4), max(grass.height, dirt.height, 4))
+    grass, dirt = grass.resize(size, Image.Resampling.NEAREST), dirt.resize(size, Image.Resampling.NEAREST)
+    mask = Image.new("L", size)
+    clumps = random.Random(20).choices((0, 255), weights=(3, 2), k=(size[0] // 2 + 1) * (size[1] // 2 + 1))
+    mask.putdata([clumps[x // 2 + (y // 2) * (size[0] // 2 + 1)] for y in range(size[1]) for x in range(size[0])])
+    return Image.composite(dirt, grass, mask)
 
 
 def _box_in_view(lo: tuple[float, ...], hi: tuple[float, ...], vp: list[list[float]]) -> bool:
@@ -247,6 +266,7 @@ class Hd2dRenderer:
             if structure.model not in self.models:
                 self.models[structure.model] = load_glb(resolve(structure.model))
         self.window, self.settings, self.batched = window, settings, batched
+        self._resolve = resolve
         self.arcade = optional_arcade.arcade
         self.ctx = window.ctx
         ctx = self.ctx
@@ -255,7 +275,7 @@ class Hd2dRenderer:
         self.shadow_prog = ctx.program(vertex_shader=SPRITE_VS, fragment_shader=SHADOW_FS)
         self.blit_prog = ctx.program(vertex_shader=BLIT_VS, fragment_shader=BLIT_FS)
         self.line_prog = ctx.program(vertex_shader=LINE_VS, fragment_shader=LINE_FS)
-        self._lines: tuple[Any, Any] | None = None  # Mesh Studio's overlay lines: (geometry, reused buffer)
+        self._lines: dict[str, list[Any]] = {}  # Mesh Studio's overlay lines: slot -> [geometry, buffer, kept data]
         self.last_vp: list[list[float]] | None = None
         self._buffers: list[Any] = []
         self._textures: list[Any] = []
@@ -293,6 +313,8 @@ class Hd2dRenderer:
         self._terrain_draws: dict[tuple[int, int], list[tuple[Any, Any, tuple[float, ...]]]] = {}  # chunk -> draws
         self._terrain_buffers: dict[tuple[int, int], list[Any]] = {}
         self._terrain_boxes: dict[tuple[int, int], tuple[tuple[float, ...], tuple[float, ...]]] = {}  # (lo, hi) m
+        self._caster_buffer: Any = None  # the ground's shape for shadows and rain: a slot per chunk (Milestone 20B)
+        self._caster_geometry: Any = None
         self.ground = None
         if settings.ground is not None and settings.ground.terrain is not None:
             self._build_terrain(resolve)
@@ -445,23 +467,43 @@ class Hd2dRenderer:
             self._ground_texture = self._texture(Image.new("RGBA", (1, 1), (86, 132, 72, 255)), repeat=True)
         try:
             with Image.open(resolve(STEEP_TEXTURE)) as img:
-                self._steep_texture = self._texture(img, repeat=True)
+                dirt = img.convert("RGBA")
         except (OSError, ValueError):  # a project without the starter kit (or its path refused): plain earth
-            self._steep_texture = self._texture(Image.new("RGBA", (1, 1), (112, 84, 58, 255)), repeat=True)
+            dirt = Image.new("RGBA", (1, 1), (112, 84, 58, 255))
+        self._steep_texture = self._texture(dirt, repeat=True)
+        self._blend_texture = self._texture(_dithered(g, resolve, dirt), repeat=True)
         cx_n, cy_n = self.terrain.chunk_count()
+        # Milestone 20B: every chunk's shape in one buffer (a slot each), so the sun's shadow pass, the lamps' and the
+        # rain's precipitation maps draw the whole ground in one call however many chunks it has
+        self._caster_buffer = self.ctx.buffer(data=bytes(cx_n * cy_n * CASTER_SLOT * 12))
+        self._caster_geometry = self.ctx.geometry([self.arcade.gl.BufferDescription(self._caster_buffer, "3f", ["in_pos"])])
         for cj in range(cy_n):
             for ci in range(cx_n):
                 self._terrain_chunk((ci, cj))
 
+    def ensure_terrain(self) -> Any:
+        """The ground's heights to sculpt live (Mesh Studio, Milestone 20B): a flat room's plain ground becomes
+        sculpted ground in place, level, so a stroke can start on it. None if the room has no ground."""
+        if self.terrain is None and self.settings.ground is not None:
+            self._build_terrain(self._resolve)
+            self.ground = None  # (its quad's buffers stay with the renderer's until it's released)
+            self.terrain_version += 1
+        return self.terrain
+
+    def _terrain_casters(self) -> list[tuple[Any, Any, tuple[float, ...]]]:
+        """The sculpted ground as shadow and rain casters: one draw (positions only)."""
+        return [(self._caster_geometry, None, IDENTITY)] if self._caster_geometry is not None else []
+
     def _terrain_chunk(self, key: tuple[int, int]) -> None:
         """(Re)make one chunk's drawing: its gentle faces with the ground's texture, its steep ones with dirt. The new
         buffers are made first: if the driver refuses one, the chunk keeps its old drawing (and nothing leaks)."""
-        gentle, steep = self.terrain.chunk_mesh(*key)
+        gentle, blend, steep = self.terrain.chunk_mesh(*key)
         draws: list[tuple[Any, Any, tuple[float, ...]]] = []
         buffers: list[Any] = []
         gl = self.arcade.gl
         try:
-            for data, texture in ((gentle, self._ground_texture), (steep, self._steep_texture)):
+            for data, texture in ((gentle, self._ground_texture), (blend, self._blend_texture),
+                                  (steep, self._steep_texture)):
                 if not data:
                     continue
                 buffer = self.ctx.buffer(data=data.tobytes())
@@ -474,12 +516,26 @@ class Hd2dRenderer:
             for buffer in buffers:
                 buffer.delete()
             raise
-        points = [(d[k], d[k + 1], d[k + 2]) for d in (gentle, steep) for k in range(0, len(d), 8)]
+        points = [(d[k], d[k + 1], d[k + 2]) for d in (gentle, blend, steep) for k in range(0, len(d), 8)]
+        if self._caster_buffer is not None:  # its slot in the casters' buffer (unused vertices: zero, drawn as nothing)
+            shape = array("f", [c for p in points[:CASTER_SLOT] for c in p])
+            shape.extend([0.0] * (CASTER_SLOT * 3 - len(shape)))
+            try:
+                self._caster_buffer.write(shape.tobytes(), offset=self._caster_slot(key) * CASTER_SLOT * 12)
+            except BaseException:
+                for geometry, _texture, _matrix in draws:
+                    geometry.flush()
+                for buffer in buffers:
+                    buffer.delete()
+                raise
         self._free_terrain_chunk(key)
         self._terrain_draws[key], self._terrain_buffers[key] = draws, buffers
         self._terrain_boxes[key] = ((min(p[0] for p in points), min(p[1] for p in points), min(p[2] for p in points)),
                                     (max(p[0] for p in points), max(p[1] for p in points), max(p[2] for p in points))) \
             if points else ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
+
+    def _caster_slot(self, key: tuple[int, int]) -> int:
+        return int(key[1] * self.terrain.chunk_count()[0] + key[0])
 
     def _free_terrain_chunk(self, key: tuple[int, int]) -> None:
         for geometry, _texture, _matrix in self._terrain_draws.pop(key, []):
@@ -488,16 +544,34 @@ class Hd2dRenderer:
             buffer.delete()
 
     def update_terrain(self, terrain: Any, chunks: Iterable[tuple[int, int]]) -> None:
-        """The ground was sculpted (``Terrain.sculpt``): only ``chunks`` are drawn anew, and the rain's precipitation
-        maps are made again when next needed. The sun's shadow box and the lamps' maps stay as loaded (a reload, as
-        Studio's edits make, renews them)."""
+        """The ground was sculpted (``Terrain.sculpt``): only ``chunks`` are drawn anew (and their slots in the
+        casters' buffer), the rain's precipitation maps are made again when next needed, the water's copy of the
+        heights follows (``terrain_version``), the room's box grows if the ground rose above it or sank below (the
+        sun's shadow box with it), and lamps whose light reaches a changed chunk draw their shadow maps again."""
         self.terrain = terrain
         self.terrain_version += 1
+        chunks = list(chunks)
         try:
             for key in chunks:
                 self._terrain_chunk(key)
         finally:  # (a refused upload stops here: what was rebuilt stands, and rain looks at the ground afresh)
             self.precipitation.invalidate()
+            self._follow_terrain(chunks)
+
+    def _follow_terrain(self, chunks: list[tuple[int, int]]) -> None:
+        """The room's box and the lamps' shadow maps after an in-place edit of the ground."""
+        box = self._measure_world_box()  # (as a fresh load measures it: it grows and shrinks with the ground)
+        if box != self.world_box():
+            self._world_box = box
+            self.lighting.set_world_box(*box)
+        boxes = [self._terrain_boxes[k] for k in chunks if k in self._terrain_boxes]
+        for lamp, slot in zip(self.lighting.lamps, self.lighting.lamp_slots):
+            if slot < 0:
+                continue
+            p, r = self.lighting._lamp_pos(lamp), lamp.radius / PIXELS_PER_METRE
+            if any(all(b_lo[i] - r <= p[i] <= b_hi[i] + r for i in range(3)) for b_lo, b_hi in boxes):
+                self.lighting.invalidate()  # (its map is drawn again before the next frame)
+                break
 
     def _ground_draws(self, vp: list[list[float]] | None = None) -> list[tuple[Any, Any, tuple[float, ...]]]:
         """The ground: the flat quad, or the sculpted ground's chunks (with ``vp``, only those in the picture)."""
@@ -526,9 +600,9 @@ class Hd2dRenderer:
     def gl_objects(self) -> list[Any]:
         """Every GPU object this renderer holds right now (to check that ``release`` freed them all)."""
         light = self.lighting
-        terrain = [b for bufs in self._terrain_buffers.values() for b in bufs]
+        terrain = [b for bufs in self._terrain_buffers.values() for b in bufs] + [self._caster_buffer]
         objects = (list(self._buffers) + terrain + list(self._textures) + list(self._sprite_textures.values()) + list(self._fbo_parts)
-                   + [self._fbo] + list(self._dynamic[1:] if self._dynamic else []) + list(self._lines[1:] if self._lines else [])
+                   + [self._fbo] + list(self._dynamic[1:] if self._dynamic else []) + [part[1] for part in self._lines.values()]
                    + [self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog]
                    + list(light._targets) + [light.caster, light.lamp_caster, light.sprite_caster, light.probe_prog]
                    + (self.particles.gl_objects() if self.particles is not None else [])
@@ -542,9 +616,9 @@ class Hd2dRenderer:
             for buffer in self._dynamic[1:]:
                 buffer.delete()
             self._dynamic = None
-        if self._lines is not None:
-            self._lines[1].delete()
-            self._lines = None
+        for part in self._lines.values():
+            part[1].delete()
+        self._lines = {}
         for texture in list(self._sprite_textures.values()) + self._textures:
             texture.delete()
         for buffer in self._buffers:
@@ -552,6 +626,10 @@ class Hd2dRenderer:
         self._buffers, self._textures, self._sprite_textures, self.static = [], [], {}, []
         for key in list(self._terrain_draws):
             self._free_terrain_chunk(key)
+        if self._caster_geometry is not None:
+            self._caster_geometry.flush()
+            self._caster_buffer.delete()
+        self._caster_geometry = self._caster_buffer = None
         self.ground = None
         for program in (self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog):
             program.delete()
@@ -597,7 +675,7 @@ class Hd2dRenderer:
 
     def _precipitation_draws(self) -> list[tuple[Any, Any, tuple[float, ...]]]:
         """What a precipitation map is drawn from (only when one is made): the ground and every structure."""
-        return (self._ground_draws() + self.static
+        return ((self._terrain_casters() if self.terrain is not None else self._ground_draws()) + self.static
                 + [d for model, matrix in self.live.values() for d in self._model_draws(model, matrix)])
 
     # ------------------------------------------------------------------ the scene's sprites
@@ -734,25 +812,30 @@ class Hd2dRenderer:
 
     # ------------------------------------------------------------------ overlay lines (Mesh Studio)
     def draw_lines(self, vp: tuple[float, ...], points: list[tuple[float, float, float]],
-                   colour: tuple[float, float, float, float], *, through: bool = False) -> None:
-        """Line segments (pairs of world points, metres) in one colour, depth-tested unless ``through``."""
-        if not points:
+                   colour: tuple[float, float, float, float], *, through: bool = False, packed: Any = None) -> None:
+        """Line segments (pairs of world points, metres) in one colour, depth-tested unless ``through``. ``packed``:
+        the points already as an ``array("f")`` (x, y, z each), for a caller that keeps them between frames."""
+        data = packed if packed is not None else array("f", [c for p in points for c in p])
+        if not data:
             return
         ctx = self.ctx
-        data = array("f", [c for p in points for c in p])
-        if self._lines is None or self._lines[1].size < len(data) * 4:
-            if self._lines is not None:
-                self._lines[1].delete()
-            buffer = ctx.buffer(reserve=12 * max(256, len(points) * 2))
-            self._lines = (ctx.geometry([self.arcade.gl.BufferDescription(buffer, "3f", ["in_pos"])], mode=ctx.LINES),
-                           buffer)
-        self._lines[1].write(data.tobytes())
+        slot = "packed" if packed is not None else "points"  # (a kept grid has its own buffer: uploaded once)
+        part = self._lines.get(slot)
+        if part is None or part[1].size < len(data) * 4:
+            if part is not None:
+                part[1].delete()
+            buffer = ctx.buffer(reserve=12 * max(256, len(data) // 3 * 2))
+            part = self._lines[slot] = [
+                ctx.geometry([self.arcade.gl.BufferDescription(buffer, "3f", ["in_pos"])], mode=ctx.LINES), buffer, None]
+        if part[2] is not data:
+            part[1].write(data.tobytes())
+            part[2] = packed
         self.line_prog["u_vp"] = vp
         self.line_prog["u_colour"] = colour
         if through:
             ctx.disable(ctx.DEPTH_TEST)
         with ctx.enabled(ctx.BLEND):  # faint lines are see-through
-            self._lines[0].render(self.line_prog, vertices=len(points))
+            part[0].render(self.line_prog, vertices=len(data) // 3)
         if through:
             ctx.enable(ctx.DEPTH_TEST)
 
@@ -824,7 +907,7 @@ class Hd2dRenderer:
         geometry_sprites = self._upload_dynamic(verts, idx) if sprites else None
         live = self.live_draws()
         if solid is None:  # the flat ground receives, never casts; sculpted ground's hills cast too
-            casters = self.static + live + (self._ground_draws() if self.terrain is not None else [])
+            casters = self.static + live + (self._terrain_casters() if self.terrain is not None else [])
             lighting.render_shadows(casters, geometry_sprites, ranges)
         weather = self.particles is not None and solid is None and (camera is None or self.weather_preview)
         maps = self.precipitation_maps() if weather else []  # before the frame's target is in use: cached, mostly
@@ -946,7 +1029,8 @@ class Hd2dRenderer:
         texture_bytes = sum(t.width * t.height * 4 for t in self._textures + list(self._sprite_textures.values()))
         target_bytes = sum(p.width * p.height * 4 for p in self._fbo_parts)
         buffer_bytes = sum(b.size for b in self._buffers + list(self._dynamic[1:] if self._dynamic else []))
-        terrain_bytes = sum(b.size for bufs in self._terrain_buffers.values() for b in bufs)
+        terrain_bytes = (sum(b.size for bufs in self._terrain_buffers.values() for b in bufs)
+                         + (self._caster_buffer.size if self._caster_buffer is not None else 0))
         return {"draw_calls": self.draw_calls, "static_draws": len(self.static) + len(self._ground_draws()),
                 "terrain_bytes": terrain_bytes, "terrain_draws": len(self._ground_draws()) if self.terrain else 0,
                 "triangles": self.triangles, "buffer_bytes": buffer_bytes,
