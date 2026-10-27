@@ -318,17 +318,24 @@ class Terrain:
                 gy = (hs[i + jp * stride] - hs[i + jm * stride]) / (2 * cell)
                 n = math.sqrt(gx * gx + gy * gy + 1.0)
                 nrm.append((-gx / n, -gy / n, 1.0 / n))
-        steep_cells = {(i, j) for j in range(max(j0 - 1, 0), min(j0 + d, self.ny))
-                       for i in range(max(i0 - 1, 0), min(i0 + w, self.nx)) if self._steep(i, j)}
+        faces = {}  # the chunk's cells' two faces' normals, from the corners above
+        for jj in range(d - 1):
+            for ii in range(w - 1):
+                k00 = ii + jj * w
+                p0, p2 = pts[k00], pts[k00 + 1 + w]
+                faces[(i0 + ii, j0 + jj)] = (_face_normal(p0, pts[k00 + 1], p2), _face_normal(p0, p2, pts[k00 + w]))
+        steep_cells = {c for c, (fa, fb) in faces.items() if min(fa[2], fb[2]) < STEEP}
+        steep_cells |= {(i, j) for j in range(max(j0 - 1, 0), min(j0 + d, self.ny))  # the ring just outside it
+                        for i in range(max(i0 - 1, 0), min(i0 + w, self.nx)) if (i, j) not in faces and self._steep(i, j)}
         for jj in range(d - 1):
             for ii in range(w - 1):
                 k00 = ii + jj * w
                 ks = (k00, k00 + 1, k00 + 1 + w, k00 + w)
-                p0, p1, p2, p3 = (pts[k] for k in ks)
-                fa, fb = _face_normal(p0, p1, p2), _face_normal(p0, p2, p3)
                 ci_, cj_ = i0 + ii, j0 + jj
+                fa, fb = faces[(ci_, cj_)]
                 is_steep = (ci_, cj_) in steep_cells
-                fringe = not is_steep and any((ci_ + a, cj_ + b) in steep_cells for a in (-1, 0, 1) for b in (-1, 0, 1))
+                fringe = bool(steep_cells) and not is_steep and any(
+                    (ci_ + a, cj_ + b) in steep_cells for a in (-1, 0, 1) for b in (-1, 0, 1))
                 out = steep if is_steep else (blend if fringe else gentle)
                 for tri, face in (((0, 1, 2), fa), ((0, 2, 3), fb)):
                     for t_ in tri:
