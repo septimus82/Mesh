@@ -8,6 +8,8 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from mesh_cli.bundle_verify import MANIFEST_SEAL_NAME, compute_manifest_seal_payload
 from mesh_cli.release_bundle import (
     _ZIP_FIXED_DATE,
@@ -504,6 +506,7 @@ class TestPackageManifestFormat:
         assert "Git:" not in text
 
 
+@pytest.mark.fast
 def test_a_failed_bundle_keeps_only_its_known_reports(tmp_path: Path) -> None:
     """#394: a failed bundle keeps release-check's own reports for CI's artifact upload, and nothing else from its
     work folder (no debug bundle, no test scratch projects, no payload)."""
