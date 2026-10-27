@@ -1,7 +1,10 @@
 ﻿name: CI
 
 on:
+  # One run per commit (#373): feature branches run through their pull request (the merge result);
+  # push runs only where commits land. workflow_dispatch still runs any branch.
   push:
+    branches: [main, redesign/visual-editor, 'release/**']
   pull_request:
   workflow_dispatch:
 
