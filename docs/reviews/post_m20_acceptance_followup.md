@@ -6,15 +6,29 @@ Follow-up to [`post_m20_repository_health.md`](post_m20_repository_health.md), a
 
 ## Final integration
 
-The owner approved #400 at `47eff43` and asked for #399, #401 and this report to be integrated once their conditions were met.
+The owner approved #400 at `47eff43`, then #404 at `8d1c8b4` and #401 at `55a98aa`, and asked for #399 and this report to be integrated once their conditions were met. pytest 9.2.0, released on 2026-10-27, broke three tests on every branch; #404 fixed them.
 
 | Order | PR | Approved head (unchanged) | Before merging | Merge commit on `redesign/visual-editor` |
 |---|---|---|---|---|
 | 1 | #402 test-suite performance | `0e2df09` | assertions unchanged; packaging determinism; CI timing-only | `2a7804a` |
 | 2 | #400 CI timing: Rule F, rolling check, one run per commit | `47eff43` | CI green on both OSes; on the merged tree: 38 targeted tests and the analysis self-check | `6958a2c` |
 | 3 | #399 the saved world (#390) | `c87583f` | merges cleanly; on the merged tree: 618 save-related tests, 6/6 saved-world GPU tests (hidden windows), the save-diagnostics contract and the tier ratchet | `4988eb2` |
-| 4 | #401 the release check (#394) | __401_HEAD__ | __401_CHECK__ | __401_MERGE__ |
-| 5 | #403 this report | | documentation only | __403_MERGE__ |
+| 4 | #404 pytest 9.2 compatibility (test-only) | `8d1c8b4` | owner-approved; 9,934 functional tests passed on both OSes; Linux's red result is a Rule F timing-budget failure (exception below) | `cdd4bc4` |
+| 5 | #401 the release check (#394) | `55a98aa` | owner-approved; latest Windows and Linux CI passed, release bundle verification included; it carries the same test fix as #404 (cherry-picked), merged after #404 with the test file identical to #404's, so the change is neither duplicated nor undone | `005d089` |
+| 6 | #403 this report | | documentation only | the merge of this PR |
+
+**Verification of the final integration (`005d089`)**, without a full-suite rerun:
+
+- **Targeted tests:** 119 tests in the files these merges touch pass under pytest 9.2.0 and under 8.4.2:
+  - duplicate-to-grid and verify-demo;
+  - the release bundle, self-verify and seeded determinism;
+  - Rule F and the saved world;
+  - the tier ratchet, `--help` and the workflow contract.
+- **GPU tests:** 6/6 saved-world tests in hidden windows.
+
+**Documented exception (#404):** its Linux CI job failed only verify-all's step-time budget. Rule F applied and confirmed it: the committed advisory model judges pytest-fast slow, the fast tier's growth (#373). Every functional test passed (9,934). It was not rerun for a green badge.
+
+**#394's original CI exit 2 remains unproven.** It has not recurred since the diagnostics merged, and no root cause is claimed. The leading hypothesis (the pytest-fast duration ratchet) is still a hypothesis. The next occurrence will be classified by the kept reports.
 
 **After the merges:**
 
