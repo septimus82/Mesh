@@ -102,10 +102,19 @@ def launched_project_root_blocks_switch(target: str) -> bool:
     return candidate != _LAUNCHED_PROJECT_ROOT.resolve()
 
 
+# An exported game (``mesh export build``) carries Mesh's engine beside its own files, so its folder is also where the
+# engine's source is; its manifest says it is a game, not Mesh's checkout.
+EXPORTED_GAME_MARKER = "bundle_manifest.json"
+
+
 def is_standalone_project_root(root: Path) -> bool:
-    """Return True when ``root`` is not the engine source checkout."""
+    """Return True when ``root`` is not the engine source checkout (an exported game, with the engine inside it, is a
+    project: it starts its game, not Mesh's project browser)."""
     try:
-        return Path(root).expanduser().resolve() != engine_source_root().resolve()
+        resolved = Path(root).expanduser().resolve()
+        if resolved != engine_source_root().resolve():
+            return True
+        return (resolved / EXPORTED_GAME_MARKER).is_file()
     except Exception:
         _log_swallow("REPO-003", "engine/repo_root.py pass-only blanket swallow")
         return True

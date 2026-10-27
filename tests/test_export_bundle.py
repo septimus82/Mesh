@@ -567,3 +567,28 @@ def test_an_export_never_replaces_a_folder_that_is_not_an_earlier_bundle(tmp_pat
     (keep / "letter.txt").write_text("mine", encoding="utf-8")
     assert build_bundle(project, keep)[0] == 1 and (keep / "letter.txt").read_text(encoding="utf-8") == "mine"
     assert build_bundle(project, tmp_path / "bundle")[0] == 0 and build_bundle(project, tmp_path / "bundle")[0] == 0
+
+
+@pytest.mark.fast
+def test_an_exported_game_starts_its_game_not_meshs_project_browser(tmp_path: Path) -> None:
+    """The bundle carries Mesh's engine beside its own files, so the engine's source folder is the game's folder:
+    it must still count as a project (pinned at launch), or the game opens Mesh's project browser (it did, listing
+    the player's recent Mesh projects) instead of its start room."""
+    import os
+    import subprocess
+    import sys
+
+    from engine.project_scaffold import create_project
+
+    project = tmp_path / "game"
+    create_project(project, "Game", "blank")
+    bundle = tmp_path / "bundle"
+    assert build_bundle(project, bundle)[0] == 0
+    probe = ("import sys; sys.path.insert(0, '.'); from pathlib import Path; import engine.repo_root as r; "
+             "print(r.engine_source_root().resolve() == Path.cwd().resolve(), r.is_standalone_project_root(Path.cwd()))")
+    out = subprocess.run([sys.executable, "-c", probe], cwd=bundle, capture_output=True, text=True, timeout=120,
+                         env={k: v for k, v in os.environ.items() if k not in ("MESH_REPO_ROOT", "PYTHONPATH")})
+    assert out.stdout.split() == ["True", "True"], out.stdout + out.stderr
+    from engine.repo_root import engine_source_root, is_standalone_project_root
+
+    assert not is_standalone_project_root(engine_source_root())  # (Mesh's own checkout: still not a project)
