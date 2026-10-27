@@ -2,7 +2,75 @@
 
 Follow-up to [`post_m20_repository_health.md`](post_m20_repository_health.md), after the owner's acceptance (CONDITIONAL PASS) on 2026-10-27.
 
-**Status: stopped for the owner's review.** Lakeside Village and Audio & Atmosphere have not begun. #344 is still a draft and `main` is untouched. Every new PR is a draft.
+**Status: stopped for the owner's review.** Lakeside Village and Audio & Atmosphere have not begun. #344 is still a draft and `main` is untouched. #402 is merged (after the owner's review); #399, #400, #401 and #403 stay drafts.
+
+## 0. Owner review round (2026-10-27): corrections and final statuses
+
+The owner reviewed #399–#403 against GitHub's code and CI. That review found two genuine Windows test failures in #401 and a compatibility gap in #399, and it set conditions on #400 and #402. What was done:
+
+| PR | Owner's finding or condition | Done | Commits | Status |
+|---|---|---|---|---|
+| **#401** (#394) | **STOP:** two genuine Windows failures in `test_verify_demo_command.py` (artifacts-scoped scratch; distinct paths across runs); redact the environment; collect only known-safe files | see below | `601c0fe`, `9f115e0`, `c794c54` | **CONDITIONAL PASS**: both formerly failing tests pass on Windows CI (`9f115e0`); the ratchet fix's CI (`c794c54`) was still running at writing |
+| **#399** (#390) | saved objects overrode later authored dialogue, appearance and behaviour; a new save without its room loaded half-built | see below | `ea45381`, `c87583f` | **CONDITIONAL PASS**: all tests pass on CI (9,932); 3 jobs budget-only (#373), 1 still running at writing |
+| **#400** (#373) | Rule F provisionally approved: implement it in the gate; keep the rolling check visible; don't overstate Windows detection; confirm the duplicate-run coverage (#344) | see below | `5800b1a`, `790a613`, `457b4a1` | **CONDITIONAL PASS**: owner decisions open (model refit; the trigger commit); CI on `457b4a1` still running at writing |
+| **#402** | accepted in principle: verify head, assertions, packaging determinism and CI cause before merging; no `pytest-xdist`; note it doesn't fix the fast tier's growth | verified, then merged | `048fd3c`, `0e2df09` → **merged `2a7804a`** | merged |
+| **#403** | this report: final statuses, findings, limitations | this section | | draft |
+
+**#401: what the Windows failures were, and the fix.**
+
+- **Cause:** on CI, pytest's `tmp_path` is long (`C:\Users\runneradmin\...\pytest-of-runneradmin\...`), so the 150-character fallback moved basetemp out of the artifacts-scoped scratch. The tests rightly forbid that. The fallback folder (`<temp>/mesh-vd/<pid-run>`) also wasn't unique per run.
+- **Reproduced locally:** on `601c0fe`, with a CI-length tmp root, the same two tests fail. I hadn't hit it before because my local tmp path was shorter.
+- **Fix:**
+  - basetemp stays `<run root>/basetemp` whenever that fits;
+  - past 150 characters it gets a new `mkdtemp` folder for that run alone. The run's root names it (`basetemp_location.txt`). It is removed when the run passes, and kept and reported when it fails.
+- **Tests:** the two original tests keep every assertion and now pin the artifacts-scoped branch explicitly. The too-long branch has its own tests, the same on every machine:
+  - unique per run, short, and removed on a pass;
+  - kept on failure, reported.
+- **Redaction:** the failure report lists `MESH_`/`PYTHON`/`PYTEST` variables by name. Values are shown only for a known-safe list; a fake token's value never reaches the file.
+- **Report collection:** a failed bundle keeps only release-check's known reports (`FAILURE_REPORTS`): no debug bundle, test projects or payload.
+- **A second CI failure (`c794c54`):** my new test lacked a tier marker, so the tier-marker ratchet failed. Fixed.
+
+**#399: authored world, runtime state.**
+
+- **Objects:** an object the room still has is now the room's as authored now (dialogue, picture, behaviours), standing where play left it (`x`, `y`, `elevation`). Its inner state (Health, quest hooks, dialogue progress) stays in `saved_entities`.
+- **GPU test on a real save.** After the save, the creator:
+  - rewrites the Elder's dialogue;
+  - repaints a barrel;
+  - gives Mara a new behaviour.
+
+  All three reach the old save. The barrel's damage, the positions and the flag stay.
+- **A new save without its room** is refused in `SaveManager` before anything is applied (`LOAD_ROOM_MISSING`, a toast). Mid-game the player stays where they are. The save file stays byte-identical and loads once the room is back (tested). The loader refuses too.
+- **Saves are slim only when their room can be read.** A scene built in memory keeps its whole snapshot. Six existing round-trip tests caught this case.
+- **Mutations:** each is caught by a named test.
+  - the save's copy of an object winning again;
+  - empty play-owned fields;
+  - the refusal disabled.
+- **Trade-off:** an object the creator moves after a save stays, in that save, where the save found it.
+
+**#400: Rule F, implemented as a draft.**
+
+- **The gate:** `verify-all` fails a step only when it is over its fixed threshold and the advisory calls it slow. Where the advisory can't judge, the fixed threshold decides (never fails open). The decision is recorded in `verify_step_budget_check.json` (`rule_f`).
+- **Measured with the committed model,** on the 24 current-code runs per OS:
+
+  | | Linux | Windows |
+  |---|---|---|
+  | Failing: fixed rule → Rule F | 12 → **9** | 13 → **2** |
+  | pytest-fast ×1.25 detected | 21/24 | **9/24** |
+  | pytest-fast ×1.5 detected | 24/24 | 22/24 |
+
+  The model, fitted on 2026-10-25, correctly sees the fast tier's +15 % as slow, which is why Linux still fails. The 0 % / 4 % figures in the first proposal assumed a model refit on the current code, a recalibration that is the owner's call.
+- **Windows detection, stated plainly:** an isolated 25 % slowdown on Windows is not reliably detected; reliable detection starts at about ×1.5.
+- **Rolling check:** a report-only CI job runs on pushes to `redesign/visual-editor`. It posts to the job summary and raises a warning annotation, and never fails. A scheduled workflow wouldn't fire, because `schedule` runs only from `main`.
+- **Duplicate runs:** about 40 of the 59 duplicates go. **#344's 19 stay:** each integration push runs, and so does #344's `pull_request` run. A branch with no PR gets no automatic run.
+
+**#402, merged after verification.**
+
+- **Head:** unchanged (`0e2df09`).
+- **Assertions:** none changed (0 assertion lines differ).
+- **Packaging determinism:** both byte-determinism tests pass on both OSes and catch the provenance mutation. The release bundle built and passed `bundle verify --strict` on Windows and Linux.
+- **CI failures:** timing budgets only.
+- **Not in it:** no `pytest-xdist`.
+- **It does not fix the fast tier's timing growth (#373).**
 
 ## 1. Integration: #389, #395, #397
 
@@ -25,10 +93,10 @@ Follow-up to [`post_m20_repository_health.md`](post_m20_repository_health.md), a
 - **Saving:** new saves leave out the room's settings, map, lights and layers. The decorated room's save goes from 106 KB to about 26 KB.
 - **Tests on real saves:** saves written by the engine before the change, in both 2D and HD-2D, still load. A re-sculpt, a cleared scatter and a new wind made after the save all show up. Deleted objects stay gone, added ones appear, and removed ones stay removed.
 - **No destructive migration:** old saves are never rewritten.
-- **Trade-offs reported:**
-  - authored fields of objects edited after a save stay as saved;
-  - a new save whose room was deleted loads without the room's look;
-  - `DoorLock` has no saved state (this predates #399).
+- **Trade-offs, as first reported** (both corrected after the owner's review, section 0):
+  - ~~authored fields of objects edited after a save stay as saved~~: now the room's object as authored now, where play left it;
+  - ~~a new save whose room was deleted loads without the room's look~~: now refused clearly and recoverably;
+  - `DoorLock` has no saved state (this predates #399, unchanged).
 - **CI:** all tests pass; budget-only failures (#373), not rerun. Recorded on #399.
 
 ## 3. CI timing: draft [#400](https://github.com/septimus82/Mesh/pull/400)
@@ -41,7 +109,7 @@ Measured on 200 CI jobs (2026-10-25 to 27); proposal: [`ci_timing_proposal_373.m
   - fixed thresholds;
   - the advisory;
   - a reviewed recalibration;
-  - fixed ceiling and advisory both (rule f): 0 % / 4 % false failures, 88 % detection of ×1.25 on Linux and 92 % of ×1.5 on Windows.
+  - fixed ceiling and advisory both (rule f): 0 % / 4 % false failures with a model refit on the current code (with the committed model: 9/24 and 2/24, section 0); ×1.25 detected on Linux, not reliably on Windows (from about ×1.5).
 - **Recommended order:**
   1. pay the growth back;
   2. rule f;
@@ -55,13 +123,14 @@ Measured on 200 CI jobs (2026-10-25 to 27); proposal: [`ci_timing_proposal_373.m
 - **The local failure:**
   - cause: Windows' 260-character path limit in verify-demo's nested basetemp;
   - fixed, with a regression test;
-  - CI's whole sequence (pytest, then verify-all, then the release bundle) passes on Windows/Python 3.13.
+  - CI's whole sequence (pytest, then verify-all, then the release bundle) passes on Windows/Python 3.13;
+  - the first fix broke two Windows CI tests; corrected in section 0.
 - **CI's exit 2 is a different failure:**
   - CI's verify-demo passed; its inner verify-all stopped between `pytest-fast` and `player-package-gate`;
   - leading candidate: `pytest-fast-duration-guard`, whose baseline the outer verify-all writes in the same job;
   - not reproduced locally; the kept reports will name it next time.
 
-## 5. Test-suite performance: draft [#402](https://github.com/septimus82/Mesh/pull/402)
+## 5. Test-suite performance: [#402](https://github.com/septimus82/Mesh/pull/402), merged `2a7804a`
 
 Findings: [`test_suite_performance.md`](test_suite_performance.md).
 
@@ -106,10 +175,10 @@ Notes:
 
 | Item | State | Impact | Next |
 |---|---|---|---|
-| **#373** CI timing | measured: real fast-tier growth plus runner variance | 50 % of jobs red, all tests passing | owner decision on #400; pay back via #402's next steps |
+| **#373** CI timing | measured: real fast-tier growth plus runner variance; Rule F in the gate (draft #400); rolling check visible on integration pushes | 50 % of jobs red, all tests passing | owner: merge #400; decide on refitting the advisory model; pay the growth back (#402 didn't touch the fast tier) |
 | **#390** saved world | **draft fix #399** | stale worlds in old saves; 4× save size | owner review; then authored-field split per behaviour |
 | **#394** release check | **local cause fixed (#401)**; CI cause narrowed to 3 candidates | Windows release bundle red once | merge #401's diagnostics; read the next failure's report |
-| Test-suite cost | **#402** | GPU tier 19 min; default suite 6.5 min; the fast tier grows each milestone | xdist decision; subprocess and scan sharing |
+| Test-suite cost | **#402 merged** | GPU tier 19 → about 8.5 min; default suite about −85 s; the fast tier unchanged and still growing | subprocess and scan sharing; xdist not yet (owner) |
 | **#391** Studio reloads the whole HD-2D room per edit | open | undo 1.9 s on the stress room | bounded follow-up |
 | **#392** maintenance (op registry, module sizes, study helpers) | open | architecture QA | bounded follow-up |
 | **#393** a bad key turns a room 2D | open | older engines open 20E rooms 2D | bounded follow-up |
@@ -126,7 +195,10 @@ Notes:
 - **The budgets stay as they are until #400 is decided.** Every PR shows red timing badges with all tests passing. Read the logs, not the badges.
 - **CI's #394 exit 2 is not reproduced.** If it is the duration ratchet, it is a timing check comparing two runs on one runner and belongs with #373.
 - **`pytest-xdist` is measured on the fast tier only.** The default suite under it is untested; it has tests that write shared state (#334's class).
-- **#399's composition** keeps saved objects' authored fields; an object's edited dialogue doesn't reach older saves.
+- **Rule F with the committed model** still fails Linux on the fast tier's growth (9/24). Going lower needs the model refit on current code, or the growth paid back. Neither is done.
+- **Windows detects an isolated slowdown only from about ×1.5** under Rule F. A 25 % regression there can pass a single run; the rolling check is what sees sustained ones.
+- **#399:** an object the creator moves after a save stays, in that save, where the save found it. `DoorLock` still has no saved state.
+- **#401's exit 2 on CI** stays undiagnosed until the next occurrence; its kept reports will name the step.
 
 ## Housekeeping
 
