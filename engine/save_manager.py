@@ -21,6 +21,7 @@ from .save_runtime.ux_codes import (
     LOAD_FALLBACK_TO_START_SCENE,
     LOAD_NOT_FOUND,
     LOAD_PARSE_FAILED,
+    LOAD_ROOM_MISSING,
     LOAD_SCHEMA_INVALID,
     SAVE_IO_PERMISSION,
     SAVE_SERIALIZE_FAILED,
@@ -254,6 +255,20 @@ class SaveManager:
                 self._fallback_to_start_scene(slot_name=slot_name, failed_path=path, reason_code=code)
                 return False
             data = cast(dict[str, Any], payload_or_error)
+            missing_room = self._missing_room(data)
+            if missing_room is not None:  # (#390: a newer save has no copy of its room; refused before anything changes)
+                diag_error(
+                    LOAD_ROOM_MISSING,
+                    f"Save slot '{slot_name}' was made in the room '{missing_room}', which this game no longer has.",
+                    _DIAG_SOURCE,
+                    location=path.as_posix(),
+                    context=_diag_context(operation="load", save_path=path, slot_name=slot_name,
+                                          pointer="$.meta.scene_path", extra={"room": missing_room}),
+                    hint="Restore the room (or its old name) and load again; the save file is kept unchanged.",
+                )
+                sys.stderr.write(f"[Mesh][Save] Save '{path}' needs the room '{missing_room}', which is missing\n")
+                self._fallback_to_start_scene(slot_name=slot_name, failed_path=path, reason_code=LOAD_ROOM_MISSING)
+                return False
 
             # 1. Reset global state
             # We need to ensure the state is clean before loading the scene,
@@ -385,6 +400,19 @@ class SaveManager:
             return "This save is incompatible with the current version. Create a new save."
         return "The save data appears corrupted. Restore from a backup or create a new save."
 
+    def _missing_room(self, data: dict[str, Any]) -> str | None:
+        """The room a newer save needs and this game can't read (None if it has it, or the save has its own copy)."""
+        from .scene_runtime.saved_world import needs_its_room
+
+        if not needs_its_room(data):
+            return None
+        meta = data.get("meta")
+        room = str(meta.get("scene_path") or "") if isinstance(meta, dict) else ""
+        loader = getattr(self.window, "scene_loader", None)
+        if not room or loader is None or not hasattr(loader, "saved_room"):
+            return room or "(unnamed)"
+        return None if loader.saved_room(room) is not None else room
+
     def _fallback_to_start_scene(self, *, slot_name: str, failed_path: Path, reason_code: str) -> None:
         # Only a "Continue" with no game running should fall back to the start scene.
         # Mid-game, a failed load must not throw the player back to the beginning.
@@ -393,6 +421,8 @@ class SaveManager:
             hud = getattr(self.window, "player_hud", None)
             if hud is not None and hasattr(hud, "enqueue_toast"):
                 hud.enqueue_toast("No saved game yet: save first (Esc, then Save Game; or F5)" if reason_code == LOAD_NOT_FOUND
+                                  else "Couldn't load that save: its room is missing from the game"
+                                  if reason_code == LOAD_ROOM_MISSING
                                   else "Couldn't load that save: it may be damaged or from another version")
             return
         cfg = getattr(self.window, "engine_config", None)

@@ -70,7 +70,7 @@ def test_the_decorated_room_draws_in_batches_and_leaves_nothing_behind(tmp_path:
 def test_decoration_is_walked_through_and_the_boulder_is_not(tmp_path: Path) -> None:
     import m20d_scatter_study as study
 
-    r = study.walks(tmp_path)
+    r = study.walks(tmp_path, film=False)  # (the walks, without the report's clips)
     assert r["over_the_hill"]["reached"] == [True] and r["up_the_ramp"]["reached"] == [True], r
     assert r["into_the_cliff"]["reached"] == [False], r
     assert r["along_the_valley_under_the_bridge"]["reached"] == [True], r
