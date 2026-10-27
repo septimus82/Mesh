@@ -496,10 +496,10 @@ def studio(out: Path) -> dict[str, Any]:
         rows_before = _paint(s.project)
         layer = view.renderer.scatter
         stood = {(x, y): view.renderer.ground_height(x, y) for rows in _rows(view).values() for x, y, _t, _s in rows}
-        drawn = {key: id(g) for key, (g, _b) in layer.sprite_draws.items()}
+        built = dict(layer.builds)
         m20b._stroke(d, m20c._on_ground(d, [(8.0, 6.2), (11.0, 6.6)], 0.1))
         risen = [xy for xy, h in stood.items() if view.renderer.ground_height(*xy) > h + 1.0]
-        rebuilt = {key for key, (g, _b) in view.renderer.scatter.sprite_draws.items() if drawn.get(key) != id(g)}
+        rebuilt = {key for key, n in view.renderer.scatter.builds.items() if n > built.get(key, 0)}
         report["sculpt_under_scatter"] = {
             "instances_unmoved": _paint(s.project) == rows_before, "instances_risen_with_the_ground": len(risen),
             "their_chunks_rebuilt": all(layer_mod._chunk(*xy) in rebuilt for xy in risen),

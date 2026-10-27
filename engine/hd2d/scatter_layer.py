@@ -76,6 +76,7 @@ class ScatterLayer:
         self.blocks: dict[tuple[int, int], tuple[Any, Any]] = {}  # block -> (geometry, buffer): the casters
         self._dirty_blocks: set[tuple[int, int]] = set()
         self.centres: dict[tuple[int, int], tuple[float, float]] = {}
+        self.builds: dict[tuple[int, int], int] = {}  # chunk -> how often it was built (diagnostics, tests)
         self._bounds: dict[str, Any] = {}
         self.sprite_draws: dict[tuple[int, int], tuple[Any, Any]] = {}  # chunk -> (geometry, buffer)
         self.model_draws: dict[tuple[int, int], list[tuple[Any, Any, Any, bool]]] = {}  # -> (geom, buf, texture, cast)
@@ -136,6 +137,7 @@ class ScatterLayer:
     def _build(self, key: tuple[int, int]) -> None:
         self._free(key)
         rows_by_asset = self.chunks.get(key)
+        self.builds[key] = self.builds.get(key, 0) + 1
         self._dirty_blocks.add((key[0] // BLOCK, key[1] // BLOCK))
         self.cast.pop(key, None)
         if not rows_by_asset:
@@ -177,9 +179,10 @@ class ScatterLayer:
                 if model is None:
                     continue
                 c, s = math.cos(math.radians(turn)), math.sin(math.radians(turn))
-                if asset.model not in self._bounds:
-                    self._bounds[asset.model] = model.bounds()
-                (mx0, my0, mz0), (mx1, my1, mz1) = self._bounds[asset.model]
+                rel = str(asset.model)
+                if rel not in self._bounds:
+                    self._bounds[rel] = model.bounds()
+                (mx0, my0, mz0), (mx1, my1, mz1) = self._bounds[rel]
                 z = foot_height(self.height, x, y, max(abs(mx0), abs(mx1), abs(my0), abs(my1)) * k * PX * 0.7,
                                 turn) / PX
                 for part in model.parts:

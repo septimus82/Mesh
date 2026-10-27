@@ -1,0 +1,26 @@
+{
+  "dry_20c": {
+    "draw_calls": 26,
+    "scatter_instances": 0,
+    "scatter_sprite_draws": 0,
+    "scatter_bytes": 0
+  },
+  "dry_20d": {
+    "draw_calls": 36,
+    "scatter_instances": 244,
+    "scatter_sprite_draws": 8,
+    "scatter_bytes": 231672
+  },
+  "rain_20c": {
+    "draw_calls": 27,
+    "scatter_instances": 0,
+    "scatter_sprite_draws": 0,
+    "scatter_bytes": 0
+  },
+  "rain_20d": {
+    "draw_calls": 37,
+    "scatter_instances": 244,
+    "scatter_sprite_draws": 8,
+    "scatter_bytes": 231672
+  }
+}
