@@ -1,0 +1,129 @@
+{
+ "two_boxes": {
+  "after_ctrl_s": {
+   "message": "Not saved. Full strength within: 3. Correct the box, or click it and press Esc to put back what it was.",
+   "message_ok": false,
+   "unsaved": [
+    "meadow"
+   ],
+   "field_text": "loud",
+   "field_focused": false,
+   "view": [
+    20.0,
+    15.0,
+    0.0,
+    44.0,
+    0.0,
+    40.0
+   ]
+  },
+  "on_disk": {
+   "in_file": true,
+   "name": "Brook",
+   "volume": 0.8
+  },
+  "radius_now": {
+   "sound": "",
+   "volume": 0.8,
+   "radius": 96.0,
+   "distance": 320.0,
+   "stereo": true,
+   "loop": true,
+   "enabled": true,
+   "fade_in": 1.0,
+   "fade_out": 1.0
+  }
+ },
+ "another object": {
+  "before": {
+   "selected": "start_guide_320_128_0_0"
+  },
+  "after": {
+   "room": "start",
+   "panel": "inspect",
+   "selected": "start_sign_224_256_0_0",
+   "message": "A name can't be empty.",
+   "message_ok": false,
+   "unsaved": [],
+   "blank_name_in_its_box": false
+  },
+  "save": {
+   "room": "start",
+   "panel": "inspect",
+   "selected": "start_sign_224_256_0_0",
+   "message": "A name can't be empty.",
+   "message_ok": false,
+   "unsaved": [],
+   "blank_name_in_its_box": false
+  }
+ },
+ "another panel": {
+  "before": {
+   "selected": "start_guide_320_128_0_0"
+  },
+  "after": {
+   "room": "start",
+   "panel": "lighting",
+   "selected": null,
+   "message": "A name can't be empty.",
+   "message_ok": false,
+   "unsaved": [],
+   "blank_name_in_its_box": false
+  },
+  "save": {
+   "room": "start",
+   "panel": "lighting",
+   "selected": null,
+   "message": "A name can't be empty.",
+   "message_ok": false,
+   "unsaved": [],
+   "blank_name_in_its_box": false
+  }
+ },
+ "another room": {
+  "before": {
+   "selected": "start_guide_320_128_0_0"
+  },
+  "after": {
+   "room": "meadow",
+   "panel": "inspect",
+   "selected": null,
+   "message": "Editing Meadow.",
+   "message_ok": true,
+   "unsaved": [],
+   "blank_name_in_its_box": false
+  },
+  "save": {
+   "room": "meadow",
+   "panel": "inspect",
+   "selected": null,
+   "message": "Editing Meadow.",
+   "message_ok": true,
+   "unsaved": [],
+   "blank_name_in_its_box": false
+  }
+ },
+ "undo": {
+  "before": {
+   "selected": "start_guide_320_128_0_0"
+  },
+  "after": {
+   "room": "start",
+   "panel": "inspect",
+   "selected": "start_guide_320_128_0_0",
+   "message": "Undone.",
+   "message_ok": true,
+   "unsaved": [],
+   "blank_name_in_its_box": true
+  },
+  "save": {
+   "room": "start",
+   "panel": "inspect",
+   "selected": "start_guide_320_128_0_0",
+   "message": "Undone.",
+   "message_ok": true,
+   "unsaved": [],
+   "blank_name_in_its_box": true
+  }
+ }
+}

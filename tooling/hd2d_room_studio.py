@@ -39,16 +39,14 @@ def _silent(project: Path) -> None:
 
 
 def _press(d: Any, text: str, where: Callable[[Any], bool] = lambda w: True) -> None:
-    for _ in range(30):
-        for widget in d.studio.ui.walk_widgets():
-            if getattr(widget, "text", None) == text and where(widget) and widget.rect.bottom > 30:
-                r = widget.rect
-                d.click(r.left + r.width / 2, r.bottom + r.height / 2)
-                return
-        x = 100 if where is _left else d.window.width - 100  # the panel it is in, scrolled as a person would
-        d.window.dispatch_event("on_mouse_scroll", x, d.window.height / 2, 0, -1)
-        d.frame()
-    raise AssertionError(f"no button {text!r}")
+    def find() -> Any:
+        return next((w for w in d.studio.ui.walk_widgets() if getattr(w, "text", None) == text and where(w)), None)
+
+    if not d._scroll_panels(find):  # the panel it is in, scrolled as a person would
+        raise AssertionError(f"no button {text!r}")
+    d.frame()
+    r = find().rect
+    d.click(r.left + r.width / 2, r.bottom + r.height / 2)
 
 
 def _left(widget: Any) -> bool:

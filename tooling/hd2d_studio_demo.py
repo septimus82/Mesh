@@ -97,34 +97,46 @@ class StudioDriver:
         self.window.dispatch_event("on_mouse_release", *end, button, 0)
         self.frame()
 
+    def _scroll_panels(self, found: Any) -> bool:
+        """Scroll Mesh Studio's panels with the mouse wheel, as a person would, until ``found()``: the right panel
+        down, then the left one down, then each back up. False if it never was."""
+        for more, x in ((lambda: self.studio._panel_more, self.window.width - 100),
+                        (lambda: self.studio._left_more, 100)):
+            for side, step in ((1, -1), (0, 1)):  # (more below: scroll down; more above: up)
+                for _ in range(60):
+                    if found():
+                        return True
+                    if not more()[side]:
+                        break
+                    self.window.dispatch_event("on_mouse_scroll", x, self.window.height / 2, 0, step)
+                    self.frame()
+        return bool(found())
+
     def button(self, text: str, *, prefix: bool = False) -> None:
         """Click Mesh Studio's button with this text (or, with ``prefix``, starting with it), where it is on screen;
-        if the right panel has more below, scroll it with the mouse wheel first, as a person would."""
-        for _ in range(30):
+        if a panel has it out of view, scroll it in with the mouse wheel first, as a person would."""
+        def find() -> Any:
             for widget in self.studio.ui.walk_widgets():
                 label = getattr(widget, "text", None)
                 if label == text or (prefix and isinstance(label, str) and label.startswith(text)):
-                    r = widget.rect
-                    self.click(r.left + r.width / 2, r.bottom + r.height / 2)
-                    return
-            if not self.studio._panel_more[1]:
-                break
-            self.window.dispatch_event("on_mouse_scroll", self.window.width - 100, self.window.height / 2, 0, -1)
-            self.frame()
-        raise AssertionError(f"no button '{text}' on screen")
+                    return widget
+            return None
+
+        if not self._scroll_panels(find):
+            raise AssertionError(f"no button '{text}' on screen")
+        self.frame()  # (laid out where it is now)
+        r = find().rect
+        self.click(r.left + r.width / 2, r.bottom + r.height / 2)
 
     def type_into(self, key: str, text: str) -> None:
         """Click Mesh Studio's text field ``key``, select what is in it (Ctrl+A), type ``text`` and press Enter, as a
         person types (key and text events into the window)."""
         k = self.arcade.key
-        for _ in range(30):  # scrolled out of the right panel: scroll it in, as a person would
-            field = self.studio._focusable[key]
-            if getattr(field, "parent", None) is not None or not self.studio._panel_more[1]:
-                break
-            self.window.dispatch_event("on_mouse_scroll", self.window.width - 100, self.window.height / 2, 0, -1)
-            self.frame()
+        self._scroll_panels(lambda: key in self.studio._focusable
+                            and getattr(self.studio._focusable[key], "parent", None) is not None)
         field = self.studio._focusable[key]
         assert getattr(field, "parent", None) is not None, f"the field '{key}' isn't on screen"
+        self.frame()
         r = field.rect
         self.click(r.left + r.width / 2, r.bottom + r.height / 2)
         self.window.dispatch_event("on_key_press", k.A, k.MOD_CTRL)
@@ -182,10 +194,11 @@ def check(project: Path, out: Path) -> dict[str, Any]:
         studio, view = d.studio, d.studio.hd2d
         # 1-2. the HD-2D room opens in the 3D view, lit as in Play
         renderer = d.renderer
-        step("open", active=view.active, structures=[st.id for st in view.structures()],
-             lamps=len(renderer.lighting.lamps), shadows=renderer.lighting.enabled,
-             left_panel_3d=d.has_button("Turn left"), models_button=d.has_button("Models..."))
+        left_panel_3d = d.has_button("Turn left")
         d.picture(out / "01_studio_3d_view.png")
+        step("open", active=view.active, structures=[st.id for st in view.structures()],
+             lamps=len(renderer.lighting.lamps), shadows=renderer.lighting.enabled, left_panel_3d=left_panel_3d,
+             models_button=d._scroll_panels(lambda: d.has_button("Models...")))  # (scrolled to, as a person would)
         gl_edit = d.gl_counts()
         original = d.structure("crossing")
 
