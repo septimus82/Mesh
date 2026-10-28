@@ -42,8 +42,8 @@ from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
 from engine import project_ops as ops
 from engine.hd2d.picking import Picker, box, box_edges, ground_point
-from engine.hd2d.renderer import Camera
-from engine.hd2d.settings import PIXELS_PER_METRE
+from engine.hd2d.renderer import Camera, fit_view
+from engine.hd2d.settings import PIXELS_PER_METRE, parse_hd2d
 from engine.logging_tools import get_logger
 from engine.studio_inspector import LazyRow
 from engine.studio_ui import C_ERROR, C_MUTED, C_WARN, S_ACTIVE, S_BUTTON, gui
@@ -84,6 +84,30 @@ def _steps(stroke: dict[str, Any]) -> str:
     return (f"{len(stroke['dabs'])} dabs, one undo step" if parts == 1
             else f"a long stroke, saved in {parts} parts: {parts} undo steps")
 
+
+def game_view(scene: dict[str, Any], aspect: float) -> Camera:
+    """The game's camera at the player's start (the room's middle without one): pitch, lens, distance, flat or not,
+    looking north (it never turns), at the player's head height, and kept inside the camera's bounds by the follow
+    camera's own ``fit_view`` for a picture of ``aspect`` (width / height)."""
+    settings = parse_hd2d((scene.get("settings") or {}).get("hd2d") or {}, lenient=True)
+    cam = settings.camera
+    player = next((e for e in ops.entities(scene) if e.get("tag") == "player"
+                   or e.get("prefab_id") == ops.PLAYER_PREFAB), None)
+    ground = settings.ground
+    if player is not None:
+        x, y = float(player.get("x", 0)) / PIXELS_PER_METRE, float(player.get("y", 0)) / PIXELS_PER_METRE
+    elif ground is not None:
+        x, y = ((ground.lo[0] + ground.hi[0]) / 2 / PIXELS_PER_METRE, (ground.lo[1] + ground.hi[1]) / 2 / PIXELS_PER_METRE)
+    else:
+        x, y = 0.0, 0.0
+    z = float((player or {}).get("elevation", 0.0) or 0.0) / PIXELS_PER_METRE
+    view = Camera(cam.pitch, cam.fov, cam.distance, cam.ortho, 0.0)
+    view.target = (x, y, z + cam.height)
+    if cam.bounds is not None:  # as Hd2dRenderer.update keeps the follow camera inside them
+        floor = ground.elevation / PIXELS_PER_METRE if ground is not None else z
+        x0, y0, x1, y1 = (v / PIXELS_PER_METRE for v in cam.bounds)
+        view.target = fit_view(view, view.target, floor, (x0, y0, x1, y1), aspect)
+    return view
 
 class Hd2dView:
     def __init__(self, studio: Studio) -> None:
@@ -828,6 +852,9 @@ class Hd2dView:
         row.add(self._button("Frame it", self.frame_selected, "Zoom to the selected structure (F)", width=half))
         box.add(row)
         box.add(studio._label("Middle-drag pans, wheel zooms, WASD moves.", color=C_MUTED, size=10, width=width))
+        box.add(self._button("Camera and sun...", self.open_environment, "The game's camera, the sun, the ambient "
+                             "light and the sky", width=width,
+                             style=S_ACTIVE if studio.panel == "environment" else S_BUTTON))
         renderer = self.renderer
         if renderer is not None and renderer.particles is not None:  # the room has weather: show it here, or not
             box.add(self._button(f"Preview weather: {'on' if self.weather else 'off'}", self.toggle_weather,
@@ -1735,6 +1762,109 @@ class Hd2dView:
             renderer.particles.update(delta_time)
 
     # ------------------------------------------------------------------ the model browser (Stage 5B)
+    # ------------------------------------------------------------------ the game's camera, sun and sky (Milestone 22A)
+    def open_environment(self) -> None:
+        studio = self.studio
+        studio._flush_fields()
+        studio.panel = "inspect" if studio.panel == "environment" else "environment"
+        studio.panel_scroll = 0
+        studio._rebuild()
+
+    def environment_panel(self, rows: Any, width: int) -> None:
+        """The room's gameplay camera and its sun, ambient light and sky: presets, then exact values. Each change is
+        one undo step (``project_ops.set_hd2d_camera`` / ``set_hd2d_sun``); the view shows it at once."""
+        studio = self.studio
+        scene = studio.project.scene()
+        cam, sun = ops.hd2d_camera_of(scene), ops.hd2d_sun_of(scene)
+        quarter, half = (width - 12) // 4, (width - 126) // 2
+
+        def number(apply: Any, what: str, lo: float, hi: float) -> Any:
+            def commit(text: str) -> None:
+                try:
+                    value = float(text)
+                except ValueError:
+                    value = math.nan
+                if not math.isfinite(value) or not lo <= value <= hi:
+                    studio._say(f"{what}: a number from {lo:g} to {hi:g}.", ok=False)
+                    studio._rebuild()
+                    return
+                apply(value)
+            return commit
+
+        def field(label: str, key: str, text: str, commit: Any) -> None:
+            row = _row()
+            row.add(studio._label(label, color=C_MUTED, size=10, width=118))
+            row.add(studio._field(text, commit, width=half, key=key))
+            rows.add(row)
+
+        rows.add(studio._label("Game camera", bold=True, size=12))
+        rows.add(studio._label("What the player sees: it follows them, looking down at this angle.", color=C_MUTED,
+                               size=9, width=width))
+        row = _row()
+        for preset in ("outdoor", "indoor", "close", "wide"):
+            row.add(self._button(preset.capitalize(), partial(self.set_camera, f"Camera: {preset}.", preset=preset),
+                                 f"The {preset} camera", width=quarter))
+        rows.add(row)
+        field("View (m, top to bottom)", "cam_view", f"{cam['view']:g}",
+              number(lambda v: self.set_camera(f"View: {v:g} m.", view=v), "View", 2, 200))
+        field("Pitch (degrees down)", "cam_pitch", f"{cam['pitch']:g}",
+              number(lambda v: self.set_camera(f"Pitch: {v:g} degrees.", pitch=v), "Pitch", 5, 89))
+        field("Lens (degrees)", "cam_fov", f"{cam['fov']:g}",
+              number(lambda v: self.set_camera(f"Lens: {v:g} degrees.", fov=v), "Lens", 5, 120))
+        field("Above the player (m)", "cam_height", f"{cam['height']:g}",
+              number(lambda v: self.set_camera(f"Camera {v:g} m above the player.", height=v), "Height", -10, 50))
+        rows.add(studio._toggle("Stay inside the room", bool(cam["bounded"]), lambda on: self.set_camera(
+            "The camera stays inside the room." if on else "The camera follows past the room's edges.", bounded=on),
+            width))
+        rows.add(studio._toggle("Flat (no perspective)", bool(cam["ortho"]), lambda on: self.set_camera(
+            "Flat camera." if on else "Perspective camera.", ortho=on), width))
+        row = _row()
+        row.add(self._button("See it", self.see_game_camera, "This view, as the game's camera shows the room at the "
+                             "player's start", width=(width - 4) // 2))
+        row.add(self._button("Back to editing view", self.reset_view, "The whole room, as the editor shows it",
+                             width=(width - 4) // 2))
+        rows.add(row)
+        rows.add(gui.UISpace(height=6))
+        rows.add(studio._label("Sun and sky", bold=True, size=12))
+        row = _row()
+        for preset in ("morning", "noon", "evening"):
+            row.add(self._button(preset.capitalize(), partial(self.set_sun, f"Sun: {preset}.", preset=preset),
+                                 f"{preset.capitalize()} light", width=(width - 8) // 3))
+        rows.add(row)
+        row = _row()
+        for preset in ("overcast", "night"):
+            row.add(self._button(preset.capitalize(), partial(self.set_sun, f"Sun: {preset}.", preset=preset),
+                                 f"{preset.capitalize()} light", width=(width - 4) // 2))
+        rows.add(row)
+        field("Sun from (compass)", "sun_azimuth", f"{sun['azimuth']:g}",
+              number(lambda v: self.set_sun(f"The sun from {v:g} degrees.", azimuth=v), "Sun from", 0, 360))
+        field("Sun height (degrees)", "sun_elevation", f"{sun['elevation']:g}",
+              number(lambda v: self.set_sun(f"The sun {v:g} degrees up.", elevation=v), "Sun height", 5, 90))
+        field("Sun strength", "sun_intensity", f"{sun['intensity']:g}",
+              number(lambda v: self.set_sun(f"Sun strength {v:g}.", intensity=v), "Sun strength", 0, 10))
+        field("Sun colour", "sun_color", str(sun["color"]), lambda v: self.set_sun("Sun colour changed.", color=v.strip()))
+        field("Ambient light (0-1)", "sun_ambient", f"{sun['ambient']:g}",
+              number(lambda v: self.set_sun(f"Ambient light {v:g}.", ambient=v), "Ambient light", 0, 1))
+        field("Sky colour", "sun_sky", str(sun["sky"]), lambda v: self.set_sun("Sky colour changed.", sky=v.strip()))
+        rows.add(studio._label("Sun from: the compass bearing it shines from (0 north, 90 east, 180 south). Ambient: "
+                               "how bright the shadowed places are.", color=C_MUTED, size=9, width=width))
+        rows.add(self._button("Done", self.open_environment, "Close this panel", width=80))
+
+    def set_camera(self, said: str, **change: Any) -> None:
+        self.studio._edit(lambda s: ops.set_hd2d_camera(s, **change), said)
+
+    def set_sun(self, said: str, **change: Any) -> None:
+        self.studio._edit(lambda s: ops.set_hd2d_sun(s, **change), said)
+
+    def see_game_camera(self) -> None:
+        """The editor's view as the game's camera shows the room at the player's start (``game_view``)."""
+        left, right, bottom, top = self._rect()
+        view = game_view(self.studio.project.scene(), (right - left) / max(1.0, top - bottom))
+        self.camera.yaw, self.camera.pitch, self.camera.fov = view.yaw, view.pitch, view.fov
+        self.camera.distance, self.camera.ortho, self.camera.target = view.distance, view.ortho, view.target
+        self.studio._say("The game's camera at the player's start, kept inside the room as in play. Back to editing "
+                         "view, or turn and zoom, to edit again.")
+
     def open_models(self) -> None:
         studio = self.studio
         studio._flush_fields()

@@ -160,6 +160,7 @@ class Studio(InspectorMixin, SoundMixin):
         self.route_sel: int | None = None  # its selected point
         self.route_drag: dict[str, Any] | None = None  # a point being dragged
         self.pending_door_at: tuple[float, float] | None = None
+        self.new_room_form: dict[str, Any] = {}  # the New room panel's choices (Milestone 22A: 2D or HD-2D, its size)
         self.place_prefab: dict[str, Any] | None = None
         self.drag: dict[str, Any] | None = None
         self.panning = False
@@ -839,11 +840,56 @@ class Studio(InspectorMixin, SoundMixin):
         if target:
             self._edit(lambda s: ops.remove_behaviour(s, target, name), f"Removed: {behaviour_guide.guide(name).label}.")
 
+    def _new_room_kind(self, rows: Rows, width: int, name: Any) -> None:
+        """2D map or HD-2D (Milestone 22A): an HD-2D room's width and depth (m), outdoors or indoors."""
+        form = self.new_room_form
+        half = (width - 4) // 2
+
+        def choose(**change: Any) -> None:
+            form.update(name=name.text, **change)
+            self._rebuild()
+
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for kind, title in (("2d", "2D map"), ("hd2d", "HD-2D (3D)")):
+            row.add(self._button(title, partial(choose, kind=kind), width=half,
+                                 style=S_ACTIVE if form.get("kind", "2d") == kind else S_BUTTON))
+        rows.add(row)
+        if form.get("kind") != "hd2d":
+            rows.add(self._label("A tile map to paint: floor and walls.", color=C_MUTED, size=9, width=width))
+            return
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        row.add(self._label("Width x depth (m)", color=C_MUTED, size=10, width=118))
+        row.add(self._field(str(form.get("width", "32")), lambda v: form.update(width=v), width=(width - 126) // 2,
+                            key="room_width"))
+        row.add(self._field(str(form.get("depth", "24")), lambda v: form.update(depth=v), width=(width - 126) // 2,
+                            key="room_depth"))
+        rows.add(row)
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for outdoor, title in ((True, "Outdoors"), (False, "Indoors")):
+            row.add(self._button(title, partial(choose, outdoor=outdoor), width=half,
+                                 style=S_ACTIVE if form.get("outdoor", True) is outdoor else S_BUTTON))
+        rows.add(row)
+        kind = ("Outdoors: a camera framed for walking about, and daylight." if form.get("outdoor", True) else
+                "Indoors: only a closer, steeper camera, dimmer light and a dark sky. No walls, floor or roof are "
+                "made: the ground is still grass; build the inside with Models... (3D view).")
+        rows.add(self._label("An empty 3D room on flat grass, 8 to 256 m each way (1 m is a tile). " + kind + " The "
+                             "camera and the sun can be changed later (3D view: Camera and sun).",
+                             color=C_MUTED, size=9, width=width))
+
     def create_room(self, label: str) -> None:
+        self._flush_fields()
         door_at, self.pending_door_at = self.pending_door_at, None
         origin = self.project.current
+        form, kit = self.new_room_form, False
         try:
-            key = self.project.add_room(label)
+            if form.get("kind") == "hd2d":
+                try:
+                    width_m, depth_m = float(form.get("width", 32)), float(form.get("depth", 24))
+                except ValueError:
+                    raise ops.OpError("Width and depth: numbers of metres.") from None
+                key, kit = self.project.add_hd2d_room(label, width_m, depth_m, outdoor=bool(form.get("outdoor", True)))
+            else:
+                key = self.project.add_room(label)
             if door_at is not None:
                 # Inside the new room's wall border, with its arrival spot beside the player.
                 self.project.link_rooms(origin, door_at, key, (256.0, 224.0))
@@ -851,13 +897,14 @@ class Studio(InspectorMixin, SoundMixin):
             self.pending_door_at = door_at
             self._say(str(err), ok=False)
             return
-        self.panel = "inspect"
+        self.panel, self.new_room_form = "inspect", {}
+        kit_note = " Mesh's HD-2D starter kit (models, ground textures) was added to this project." if kit else ""
         if door_at is not None:
             self._after_change(f"Created {label}: walk into the new door here to go there. {label} has a door back "
-                               "beside where the player starts in it.")
+                               f"beside where the player starts in it.{kit_note}")
         else:
             self.switch_room(key)
-            self._say(f"Created {label}. Add a door from another room to connect it.")
+            self._say(f"Created {label}. Add a door from another room to connect it.{kit_note}")
 
     def add_door_to(self, key: str, at: tuple[float, float]) -> None:
         target_scene = self.project.scene(key)
@@ -1079,6 +1126,7 @@ class Studio(InspectorMixin, SoundMixin):
         box.add(self._button("+ New room", self._open_new_room, width=width))
         box.add(gui.UISpace(height=10))
         if self.hd2d.active:
+            self._sheet_space = None  # (a 2D room's tile palette, left from before: not drawn over the 3D view's panel)
             self.hd2d.view_section(box, width)
         else:
             box.add(self._map_section(width))
@@ -1532,9 +1580,10 @@ class Studio(InspectorMixin, SoundMixin):
             rows.add(self._label("New room", bold=True, size=12))
             if self.pending_door_at is not None:
                 rows.add(self._label("A door to it will be placed where you right-clicked.", color=C_MUTED, width=width))
-            name = self._field("", lambda v: None, width=width, key="room_name")
+            name = self._field(self.new_room_form.get("name", ""), lambda v: None, width=width, key="room_name")
             rows.add(self._label("Name", color=C_MUTED))
             rows.add(name)
+            self._new_room_kind(rows, width, name)
             row = gui.UIBoxLayout(vertical=False, space_between=6)
             row.add(self._button("Create", lambda: self.create_room(name.text), width=96, style=S_ACTIVE))
             row.add(self._button("Cancel", self._cancel_panel, width=80))
@@ -1563,6 +1612,8 @@ class Studio(InspectorMixin, SoundMixin):
             self._preview_panel(rows, width)
         elif self.panel == "structures" and self.hd2d.active:
             self.hd2d.models_panel(rows, width)
+        elif self.panel == "environment" and self.hd2d.active:
+            self.hd2d.environment_panel(rows, width)
         elif self.panel == "import_model" and self.hd2d.active:
             self.hd2d.import_panel(rows, width)
         elif self.panel == "reimport_model" and self.hd2d.active:
