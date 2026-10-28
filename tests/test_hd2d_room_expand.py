@@ -37,7 +37,7 @@ def _populated() -> dict:
     walls = next(layer for layer in scene["tilemap"]["tile_layers"] if layer["id"] == ops.WALLS)
     walls["tiles"][0] = walls["tiles"][-1] = ops.STARTER_WALL  # the top-left and bottom-right tiles
     ground = next(layer for layer in scene["tilemap"]["tile_layers"] if layer["id"] == ops.GROUND)
-    ground["tiles"][5] = ops.STARTER_FLOOR  # a path tile among the grass
+    ground["tiles"][5 * 40 + 5] = ops.STARTER_FLOOR  # a path tile among the grass
     return scene
 
 
@@ -139,3 +139,31 @@ def test_a_2d_rooms_resize_is_unchanged() -> None:
     grown = ops.resize_map(scene, 24, 18)
     ground = grown["tilemap"]["tile_layers"][0]["tiles"]
     assert ground.count(0) == 24 * 18 - 20 * 15  # 2D Resize: new tiles empty, as before M22A.1
+
+
+def test_new_ground_continues_the_edge_it_grows_from_not_the_most_common_tile() -> None:
+    """A grass-bordered room with a larger paved middle: the most common tile is the paving, the new ground is grass."""
+    scene = _room(10, 10)
+    ground = next(layer for layer in scene["tilemap"]["tile_layers"] if layer["id"] == ops.GROUND)
+    for i in range(100):
+        if i % 10 not in (0, 9) and i // 10 not in (0, 9):
+            ground["tiles"][i] = ops.STARTER_FLOOR
+    assert ground["tiles"].count(ops.STARTER_FLOOR) > ground["tiles"].count(ops.STARTER_GRASS)
+    after = ops.expand_hd2d_room(scene, 12, 12)
+    old, new = _cells(scene, ops.GROUND), _cells(after, ops.GROUND)
+    assert all(new[at] == tile for at, tile in old.items())  # the paving and the border where they were
+    assert {tile for at, tile in new.items() if at not in old} == {ops.STARTER_GRASS}
+
+
+def test_a_mixed_edge_is_refused_not_guessed_and_the_other_way_still_grows() -> None:
+    scene = _room(10, 10)
+    ground = next(layer for layer in scene["tilemap"]["tile_layers"] if layer["id"] == ops.GROUND)
+    ground["tiles"][5 * 10 + 9] = ops.STARTER_FLOOR  # a path running off the east edge
+    before = copy.deepcopy(scene)
+    with pytest.raises(ops.OpError, match=r"east edge aren't all one tile \(tile 1: 9, tile 5: 1\).*nothing was"):
+        ops.expand_hd2d_room(scene, 12, 10)
+    with pytest.raises(ops.OpError, match=r"east and north edges aren't all one tile \(tile 1: 19, tile 5: 1\)"):
+        ops.expand_hd2d_room(scene, 12, 12)
+    assert scene == before
+    north = ops.expand_hd2d_room(scene, 10, 12)  # its north edge is all grass
+    assert {t for at, t in _cells(north, ops.GROUND).items() if at not in _cells(scene, ops.GROUND)} == {ops.STARTER_GRASS}

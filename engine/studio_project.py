@@ -611,7 +611,16 @@ class Project:
         if not isinstance((scene.get("settings") or {}).get("hd2d"), dict) or info is None or rel is None:
             return None
         doc = self._read_json(rel)
-        if doc is None or (doc.get("width"), doc.get("height")) == (info["width"], info["height"]):
+        if doc is None:  # missing or unreadable: never rebuilt (its tilesets are only in it), never passed over
+            saved = self._read_json(self.path(key))  # ... unless the room's size is what was saved with it before
+            saved_info = ops.map_info(saved) if saved is not None else None
+            if saved_info is not None and (saved_info["width"], saved_info["height"]) == (info["width"], info["height"]):
+                return None
+            state = "can't be read" if (self.root / rel).exists() else "is missing"
+            raise ops.OpError(f"{rel} {state}, so it can't be kept at the room's {info['width']} x {info['height']} "
+                              "tiles; nothing was saved. Put the map file back (or undo the change of size) and save "
+                              "again.")
+        if (doc.get("width"), doc.get("height")) == (info["width"], info["height"]):
             return None
         layers = doc.get("layers")
         if doc.get("infinite") or not isinstance(layers, list) or not all(

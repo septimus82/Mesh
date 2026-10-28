@@ -7,7 +7,7 @@ The owner approved this plan on 2026-10-28. It covers only expanding a room's fl
 
 ## Preflight findings
 
-1. **`project_ops.resize_map()`** keeps every existing tile at its world position: rows are added at the top (north) and columns at the right (east). Its new cells are 0, so an expanded HD-2D room's new ground would have had no ground tile. `expand_hd2d_room` fills only the new cells of the `ground` layer with the room's ground tile (the most common one in that layer; grass in a Studio-made room). The `walls` and `overhead` layers get nothing new. 2D Resize is unchanged and its new tiles stay empty, as a test pins.
+1. **`project_ops.resize_map()`** keeps every existing tile at its world position: rows are added at the top (north) and columns at the right (east). Its new cells are 0, so an expanded HD-2D room's new ground would have had no ground tile. `expand_hd2d_room` fills only the new cells of the `ground` layer, with the one tile along the edge(s) it grows from (see the review corrections below; the first version used the layer's most common tile). The `walls` and `overhead` layers get nothing new. 2D Resize is unchanged and its new tiles stay empty, as a test pins.
 2. **The room's tiles and its map file.** A room's map file (`<pack>/maps/<room>.json`) holds the size, the tilesets and empty layers; the tiles live in the room document. At load, the room's own `tilemap.width`/`height` override the file's size (`scene_load_apply` → `tilemap.py`: "the scene's size"). So Play and export already follow the room. Three things still read the file's own size: Tiled, `ai_ops` tile painting and `tooling_runtime.brush_report`. `_write_map_file()` writes the file only when a room is made. So after an expansion, Studio's Save now writes an HD-2D room's map file at the room's size:
    - it's written first, and checked before anything is written;
    - it's resized only if it's Studio's own kind of file (tile layers with nothing drawn in them);
@@ -76,5 +76,22 @@ The owner approved this plan on 2026-10-28. It covers only expanding a room's fl
 - **Export:** the bundle, on its own engine, has the same sizes and the same walk (1535).
 
 **Gates:** ruff gate ok; mypy 73 (baseline); targeted Studio, HD-2D, project-operation, tilemap and contract tests: 691 passed; the GPU tests for Studio and HD-2D: 68 passed. The fast tier only gains the 11 operation tests (about 0.5 s): the two tests that make a project on disk are `integration`.
+
+## Review corrections (independent review: conditional pass)
+
+1. **The new ground's tile.** Reproduced: a 10 × 10 room with a grass border round a paved middle (64 paving, 36 grass) grew east with paving, because the most common tile was used. The new ground now continues the edges it grows from: the old east column when the room gets wider, the old north row when it gets deeper. If those cells are all one tile, the new ground is that tile. If they aren't, the expansion is refused with the counts, and nothing is changed: "The ground tiles along the room's east edge aren't all one tile (tile 1: 9, tile 5: 1), so which tile the new ground should be can't be told; nothing was changed. Grow the room only the other way, or first make that edge of its 2D map one ground tile." Every earlier tile keeps its world position.
+   - Tests: the paved-middle room grows with grass; a path running off the east edge refuses east and east-plus-north growth but allows north growth.
+   - The populated test's path tile had been on the north edge, so it was moved inside.
+   - Lakeside Village's Village (its ground layer all grass) still expands, checked in memory on the original file, which wasn't written.
+2. **A missing or unreadable map file.** Save used to pass over it silently and write the room at its new size. Now, when an HD-2D room's map file is missing or can't be read, Save refuses unless the room's size is still what its saved room file has. The message says which ("is missing" or "can't be read"), and nothing is saved: no room file, no rebuilt map file (its tilesets live only in it), no overwrite. The room stays unsaved.
+   - Tests, for both a deleted and a malformed file: the room file's bytes are unchanged; no map file is invented and the malformed one isn't overwritten; the room is still unsaved. After undoing the size, other edits to that room save normally.
+3. **Undo and redo across saves, two rooms.** A test expands the Meadow, changes the Cave's sun and saves. It then undoes one step and saves, undoes another and saves, redoes both and saves, checking both room files and the Meadow's map file at each step (48 → 48 → 40 → 48 wide, sun evening → noon → noon → evening). After each undo the undone room is unsaved; at the end nothing is.
+
+**Tests after the corrections:**
+- Fast (`test_hd2d_room_expand.py`): 13 passed.
+- Integration (`test_hd2d_room_expand_save.py`): 5 passed.
+- Targeted Studio, HD-2D, project-operation, tilemap and contract tests: 696 passed.
+- GPU tests for expansion and the M22A Studio workflow: 7 passed.
+- Ruff gate ok; mypy 73 (baseline).
 
 Pictures: `m22a1_evidence/01_expanded_48x36.png` (starter room), `02_lakeside_village_expanded.png` (Studio, after Expand), `03_lakeside_village_play.png` (Play).

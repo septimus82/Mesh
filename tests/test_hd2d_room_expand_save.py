@@ -75,3 +75,68 @@ def test_a_map_file_with_tiles_of_its_own_is_never_resized_and_nothing_is_saved(
         project.save()
     assert _map_file(root) == hand_made and (root / project.path(key)).read_bytes() == room_before
     assert key in project.dirty  # still unsaved: nothing lost
+
+
+@pytest.mark.parametrize("broken", ["missing", "malformed"])
+def test_a_missing_or_unreadable_map_file_refuses_the_save_and_changes_nothing(starter: Path, tmp_path: Path,
+                                                                              broken: str) -> None:
+    from engine.studio_project import Project
+
+    root = tmp_path / "game"
+    shutil.copytree(starter, root)
+    project = Project.open(root, "packs/core_regions/worlds/main.json")
+    key, _installed = project.add_hd2d_room("Meadow", 40, 30)
+    project.save()
+    map_file = root / "packs/core_regions/maps/meadow.json"
+    if broken == "missing":
+        map_file.unlink()
+    else:
+        map_file.write_text("{ not json", encoding="utf-8")
+    room_before = (root / project.path(key)).read_bytes()
+    project.edit_scene(lambda s: ops.expand_hd2d_room(s, 48, 36), key)
+    reason = "is missing" if broken == "missing" else "can't be read"
+    with pytest.raises(ops.OpError, match=f"{reason}, so it can't be kept at the room's 48 x 36 tiles; nothing was saved"):
+        project.save()
+    assert (root / project.path(key)).read_bytes() == room_before  # the room file as it was: no sizes claimed
+    assert map_file.exists() == (broken == "malformed")  # nothing made up in its place ...
+    if broken == "malformed":
+        assert map_file.read_text(encoding="utf-8") == "{ not json"  # ... nor written over
+    assert key in project.dirty  # still unsaved: nothing lost
+    project.undo()  # the size as saved: other changes save, the missing file is as it was
+    project.edit_scene(lambda s: ops.set_hd2d_sun(s, preset="evening"), key)
+    assert project.path(key) in project.save()
+
+
+def test_undo_and_redo_across_saves_with_two_edited_rooms(starter: Path, tmp_path: Path) -> None:
+    from engine.studio_project import Project
+
+    root = tmp_path / "game"
+    shutil.copytree(starter, root)
+    project = Project.open(root, "packs/core_regions/worlds/main.json")
+    meadow, _installed = project.add_hd2d_room("Meadow", 40, 30)
+    cave, _again = project.add_hd2d_room("Cave", 16, 12, outdoor=False)
+    project.save()
+
+    def on_disk() -> tuple[list[float], str, int]:
+        m = json.loads((root / project.path(meadow)).read_text(encoding="utf-8"))
+        c = json.loads((root / project.path(cave)).read_text(encoding="utf-8"))
+        return m["settings"]["hd2d"]["ground"]["to"], c["settings"]["hd2d"]["sun"]["color"], _map_file(root)["width"]
+
+    project.edit_scene(lambda s: ops.expand_hd2d_room(s, 48, 36), meadow)
+    project.edit_scene(lambda s: ops.set_hd2d_sun(s, preset="evening"), cave)
+    project.save()
+    assert on_disk() == ([1536.0, 1152.0], "#ffb070", 48)
+    project.undo()  # the cave's sun
+    assert cave in project.dirty
+    project.save()
+    assert on_disk() == ([1536.0, 1152.0], "#fff0d8", 48)
+    project.undo()  # the meadow's size
+    assert meadow in project.dirty
+    project.save()
+    assert on_disk() == ([1280.0, 960.0], "#fff0d8", 40)
+    project.redo()
+    project.redo()
+    assert {meadow, cave} <= project.dirty
+    project.save()
+    assert on_disk() == ([1536.0, 1152.0], "#ffb070", 48)
+    assert not project.dirty

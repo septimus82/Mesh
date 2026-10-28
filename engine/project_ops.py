@@ -2465,9 +2465,10 @@ def hd2d_room_size(scene: Doc) -> Doc:
 
 def expand_hd2d_room(scene: Doc, width_m: Any, depth_m: Any) -> Doc:
     """Grow a flat HD-2D room to ``width_m`` x ``depth_m`` metres (each at least what it is, up to 256), east and
-    north: its south-west corner, and so everything in it, stays where it is. Its ground, map (the new tiles the
-    room's ground tile), world size and, where they were the room's edges, the camera's bounds grow together; bounds
-    set otherwise are kept. Sculpted or painted ground, shrinking and mismatched room data are refused (OpError)."""
+    north: its south-west corner, and so everything in it, stays where it is. Its ground, map (the new ground tiles
+    the one tile along the edges it grows from; mixed edges are refused), world size and, where they were the room's
+    edges, the camera's bounds grow together; bounds set otherwise are kept. Sculpted or painted ground, shrinking
+    and mismatched room data are refused (OpError)."""
     old_w, old_d = _expandable_size(scene)
     size = []
     for name, value, now in (("width", width_m, old_w), ("depth", depth_m, old_d)):
@@ -2483,8 +2484,26 @@ def expand_hd2d_room(scene: Doc, width_m: Any, depth_m: Any) -> Doc:
     if (w, d) == (old_w, old_d):
         raise OpError(f"The room is already {w} x {d} m.")
     layer = next((lay for lay in scene["tilemap"]["tile_layers"] if lay.get("id") == GROUND), None)
-    old_ground = list((layer or {}).get("tiles") or [])
-    tile = max(set(old_ground), key=old_ground.count) if old_ground else 0  # the room's ground tile
+    tile = 0
+    if layer is not None:  # the new ground continues what is along the edges it grows from: one tile, or refused
+        old = list(layer.get("tiles") or [])
+
+        def at(row: int, col: int) -> int:
+            i = row * old_w + col
+            return int(old[i]) if i < len(old) else 0
+
+        edge = ([at(row, old_w - 1) for row in range(old_d)] if w > old_w else []) \
+            + ([at(0, col) for col in range(old_w)] if d > old_d else [])
+        kinds = sorted(set(edge))
+        if len(kinds) > 1:
+            counts = ", ".join(f"tile {k}: {edge.count(k)}" for k in kinds)
+            sides = " and ".join(s for s, grows in (("east", w > old_w), ("north", d > old_d)) if grows)
+            both = " and " in sides
+            raise OpError(f"The ground tiles along the room's {sides} edge{'s' if both else ''} aren't all one tile "
+                          f"({counts}), so which tile the new ground should be can't be told; nothing was changed. Grow "
+                          f"the room only {'one way' if both else 'the other way'}, or first make "
+                          f"{'those edges' if both else 'that edge'} of its 2D map one ground tile.")
+        tile = kinds[0]
     out = resize_map(scene, w, d)  # rows added at the top (north), columns at the right (east): nothing moves
     if layer is not None:
         shift = d - old_d
