@@ -409,6 +409,7 @@ class Hd2dRenderer:
         self.fire_particles: Any = None  # ... and their embers and smoke (engine.scene_particles.FireParticles)
         self.fire_error: str | None = None  # why they're off in this room, if the GPU refused them
         self._fire_rows: Any = None
+        self._fire_z: dict[tuple[int, int], float] = {}  # (x, y) px -> the height (px) a campfire's logs stand at
         self.precipitation = PrecipitationMaps(ctx)  # where they meet the world (Milestone 18B; made when needed)
         self.weather_preview = False  # Mesh Studio's "Preview weather": draw them in its editing view too
         self.water: Any = None  # the room's puddles and ponds on the GPU (engine.water; made when it has any)
@@ -1231,15 +1232,15 @@ class Hd2dRenderer:
         only when one is moved, sized, lit or put out)."""
         from engine import fire as fire_mod  # noqa: PLC0415
 
+        self.lighting.extra_lamps = []  # (a fire not drawn gives no light)
         hearths = fire_mod.fires_of(self.window)
-        fx, fy = focus[0] * PIXELS_PER_METRE, focus[1] * PIXELS_PER_METRE
-        self.lighting.extra_lamps = sorted(fire_mod.lamps(hearths, self.motion_time, self.ground_height),
-                                           key=lambda lamp: (lamp.x - fx) ** 2 + (lamp.y - fy) ** 2)
         if not hearths or self.fire_error is not None:
             return []
         rows: dict[str, list[tuple[int, int, int, int]]] = {"campfire": [], "campfire_flame": []}
+        heights: dict[tuple[int, int], float] = {}
         for h in hearths:
             x, y, _level = h.place()
+            heights[(round(x), round(y))] = fire_mod.base(h, self.ground_height)  # (on a bridge: its deck)
             rows["campfire"].append((round(x), round(y), 0, 100))
             if h.fire.enabled:
                 rows["campfire_flame"].append((round(x), round(y), 0, round(h.fire.size * 100)))
@@ -1248,28 +1249,37 @@ class Hd2dRenderer:
                 from engine.hd2d.motion import Motion  # noqa: PLC0415
                 from engine.hd2d.scatter_layer import ScatterLayer  # noqa: PLC0415
 
-                self.fire_sprites = ScatterLayer(self, {}, self.ground_height)
+                self.fire_sprites = ScatterLayer(self, {}, lambda x, y: self._fire_z.get(
+                    (round(x), round(y)), self.ground_height(x, y)))
                 self.fire_sprites.set_motion(Motion(enabled=True), self.wind)
             if self.fire_sprites.wind is not self.wind:  # (Studio changed the room's wind)
                 self.fire_sprites.set_motion(self.fire_sprites.motion, self.wind)
-            if rows != self._fire_rows:
+            if rows != self._fire_rows or heights != self._fire_z:
+                self._fire_z = heights
                 self.fire_sprites.set_instances(rows)
                 self._fire_rows = rows
         except _gpu_refused() as exc:  # the driver refused them: no fires drawn in this room (its next load tries again)
             self.fire_error = f"campfires: {exc}"
             logger.error("[Mesh][Fire] %s (fires are off in this room)", self.fire_error)
             return []
+        fx, fy = focus[0] * PIXELS_PER_METRE, focus[1] * PIXELS_PER_METRE
+        self.lighting.extra_lamps = sorted(fire_mod.lamps(hearths, self.motion_time, self.ground_height),
+                                           key=lambda lamp: (lamp.x - fx) ** 2 + (lamp.y - fy) ** 2)
         return hearths
 
     def _draw_fire_particles(self, hearths: list[Any], vp: tuple[float, ...], cam: Camera, fbo: Any) -> None:
+        from engine import fire as fire_mod  # noqa: PLC0415
+
         anchors = []
         for h in hearths:
             if not h.fire.enabled:
                 continue
             x, y, _level = h.place()
             size = h.fire.size
-            anchors.append((x / PIXELS_PER_METRE, y / PIXELS_PER_METRE, self.ground_height(x, y) / PIXELS_PER_METRE,
-                            size if h.fire.smoke else -size))
+            anchors.append((x / PIXELS_PER_METRE, y / PIXELS_PER_METRE,
+                            fire_mod.base(h, self.ground_height) / PIXELS_PER_METRE, size if h.fire.smoke else -size))
+        tx, ty = cam.target[0], cam.target[1]  # (more than the shader's anchors: the nearest the camera's)
+        anchors.sort(key=lambda a: (a[0] - tx) ** 2 + (a[1] - ty) ** 2)
         if not anchors or self.fire_error is not None:
             return
         try:

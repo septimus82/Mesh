@@ -796,9 +796,31 @@ class InspectorMixin:
             f"Crackle: {Path(rel).name}.", sound=rel)), width=each))
         row.add(self._button("No sound", partial(change, "No crackle.", sound=""), width=each, disabled=not sound))
         rows.add(row)
+        note = self._fire_lights_note()
+        if note:
+            rows.add(self._label(note, color=C_WARN, size=9, width=width))
         rows.add(self._label("Its flames lean in the room's wind; embers and smoke rise from it and its light flickers "
                              "on what is near. Shown while editing as in the game. HD-2D rooms only.", color=C_MUTED,
                              size=9, width=width))
+
+    def _fire_lights_note(self) -> str:
+        """Why some of the room's fires may light nothing: an HD-2D room shows at most 8 lights, its own lamps first."""
+        from engine.hd2d.settings import MAX_LIGHTS  # noqa: PLC0415
+
+        renderer = getattr(getattr(self, "hd2d", None), "renderer", None)
+        lighting = getattr(renderer, "lighting", None)
+        if lighting is None:
+            return ""
+        free = MAX_LIGHTS - len(lighting.lamps)
+        lit = sum(1 for e in self.project.scene().get("entities") or []
+                  if (ops.campfire_of(e) or {}).get("enabled") and (ops.campfire_of(e) or {}).get("light", 0) > 0)
+        if free <= 0:
+            return (f"This room's lamps already use all {MAX_LIGHTS} lights it can show, so its fires light nothing "
+                    "round them. Remove a lamp to let them.")
+        if lit > free:
+            return (f"This room's lamps leave {free} of its {MAX_LIGHTS} lights for {lit} lit fires: the fires nearest "
+                    "the camera light their surroundings.")
+        return ""
 
     # ---------------------------------------------------------------- Water (Milestones 19A, 19B)
     def _water_look(self, rows: Rows, target: str, water: dict[str, Any], width: int) -> None:

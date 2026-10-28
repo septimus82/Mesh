@@ -8,6 +8,7 @@
     py -3.13 tooling/m23b_fire_study.py compare OUT     # the M20E torch, a static flame, the campfire
     py -3.13 tooling/m23b_fire_study.py studio OUT      # placed and edited in Studio; save, reopen, Play
     py -3.13 tooling/m23b_fire_study.py export OUT      # ``mesh export build`` and the bundle run on its own engine
+    py -3.13 tooling/m23b_fire_study.py edges OUT       # a fire on a bridge, 17 fires, a refused GPU, 8 room lamps
 
 The room is Stage 20E's decorated Hills room (tooling/m20e_motion_study.py: a cottage, small trees, a torch, a
 meadow) made a woodland clearing: more trees where the scatter rules allow one, and campfires placed only through
@@ -31,6 +32,7 @@ from typing import Any, Callable
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tooling"))
+import engine.optional_arcade  # noqa: E402,F401,I001  # (first: DPI-unaware before anything loads pyglet)
 import m20a_terrain_study as m20a  # noqa: E402
 import m20e_motion_study as m20e  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame  # noqa: E402
@@ -506,8 +508,134 @@ print(json.dumps(row))
     return report
 
 
-PHASES: dict[str, Callable[[Path], dict[str, Any]]] = {"look": look, "states": states, "light": light, "occlusion": occlusion, "perf": perf, "compare": compare,
-          "studio": studio, "export": export}
+BRIDGE = (15.0, 15.0)  # m: on the bridge's deck (2 m up, over the valley)
+
+
+def _room(project: Path) -> dict[str, Any]:
+    room: dict[str, Any] = json.loads((project / ROOM).read_text(encoding="utf-8"))
+    return room
+
+
+def _drawn(game: HiddenGame) -> dict[str, Any]:
+    """One frame drawn: the fires' rows, heights, lights and particle anchors (m)."""
+    hd = game.window.hd2d_renderer
+    seen: list[Any] = []
+    fp = hd.fire_particles
+    original = fp.draw if fp is not None else None
+
+    def watched(vp: Any, cam: Any, anchors: list[Any], *a: Any, **k: Any) -> Any:
+        seen.extend(anchors)
+        return original(vp, cam, anchors, *a, **k) if original is not None else None
+
+    if fp is not None:
+        fp.draw = watched
+    try:
+        game.window.dispatch_event("on_draw")
+        if fp is None and hd.fire_particles is not None:  # (made this frame: once more, watched)
+            return _drawn(game)
+    finally:
+        if fp is not None:
+            fp.draw = original
+    rows = hd._fire_rows or {}
+    return {"logs": len(rows.get("campfire", [])), "flames": len(rows.get("campfire_flame", [])),
+            "logs_z_m": sorted({round(z / PX, 3) for z in hd._fire_z.values()}),
+            "lamps": len(hd.lighting.extra_lamps), "lamps_z_m": [round(lt.elevation / PX, 3) for lt in hd.lighting.extra_lamps],
+            "anchors_z_m": [round(a[2], 3) for a in seen], "fire_error": hd.fire_error}
+
+
+def edges(out: Path) -> dict[str, Any]:
+    """The review's edge cases: a fire on the bridge's deck (placed there in Studio, which gives it the deck's
+    height); 17 fires, the first 16 put out; the fires' GPU objects refused (no light without a fire); and a room
+    whose own lamps use all 8 lights (Studio says why its fires light nothing)."""
+    from pyglet.gl import GLException
+
+    import engine.hd2d.scatter_layer as scatter_layer
+    from engine import project_ops as ops
+
+    report: dict[str, Any] = {}
+    project = make_project(out, "bridge", night=True, fires=[])
+    game = HiddenGame(project, size=(1280, 720))
+    try:
+        game.load(ROOM)
+        from engine.hd2d.world import NAV_HALF
+
+        deck = game.window.hd2d_world.stand(BRIDGE[0], BRIDGE[1], 2.0, *NAV_HALF)
+        assert deck is not None, "the bridge's deck"
+        ground = game.window.hd2d_renderer.ground_height(BRIDGE[0] * PX, BRIDGE[1] * PX) / PX
+    finally:
+        game.close()
+    scene = _room(project)
+    scene, eid = ops.place_blank(scene, "hills", "Bridge fire", BRIDGE[0] * PX, BRIDGE[1] * PX)
+    scene = ops.set_entity_fields(ops.set_campfire(scene, eid), eid, elevation=round(deck[0] * PX, 2))
+    (project / ROOM).write_text(json.dumps(scene, indent=2) + "\n", encoding="utf-8")
+    game = open_room_at(project)
+    try:
+        report["bridge"] = {"deck_m": deck[0], "ground_under_m": round(ground, 3), **_drawn(game)}
+        m20a.shot(game, BRIDGE[0], BRIDGE[1], deck[0]).save(out / "edge_bridge_fire.png")
+    finally:
+        game.close()
+
+    grid = [(1.5 + 1.2 * (k % 9), 0.8 + 1.2 * (k // 9)) for k in range(17)]
+    game = open_room(out, "seventeen", night=True, fires=[(p, {"enabled": k == 16}) for k, p in enumerate(grid)])
+    try:
+        report["seventeen"] = {"registered": len(game.window.campfires), **_drawn(game)}
+    finally:
+        game.close()
+
+    original = scatter_layer.ScatterLayer.__init__
+    refused = [0]
+
+    def refuse(layer: Any, renderer: Any, scatter: Any, height: Any) -> None:
+        if not scatter and renderer.scatter is not None and not refused[0]:  # (the fires' layer: not the room's)
+            refused[0] += 1
+            raise GLException("refused (review)")
+        original(layer, renderer, scatter, height)
+
+    setattr(scatter_layer.ScatterLayer, "__init__", refuse)  # noqa: B010  # (the review's refusal)
+    try:
+        game = open_room(out, "refused", night=True)
+        try:
+            frames = [_drawn(game) for _ in range(3)]
+            report["refused"] = {"refusals": refused[0], "frames": frames}
+        finally:
+            game.close()
+    finally:
+        setattr(scatter_layer.ScatterLayer, "__init__", original)  # noqa: B010
+
+    from hd2d_studio_demo import StudioDriver
+
+    project = make_project(out, "eight", night=True)
+    scene = _room(project)
+    scene["lights"] = [lt for lt in scene.get("lights") or [] if lt.get("type") == "ambient"] + [
+        {"id": f"lamp{k}", "type": "point", "x": 64 + 96 * k, "y": 600, "radius": 96, "color": "#ffffff",
+         "intensity": 0.5} for k in range(8)]
+    (project / ROOM).write_text(json.dumps(scene, indent=2) + "\n", encoding="utf-8")
+    d = StudioDriver(project)
+    try:
+        key = next(k for k, _l, path in d.studio.project.rooms() if path.endswith("hills.json"))
+        d.button(d.studio.project.label(key))
+        d.frame(3)
+        d.studio.select(next(e["id"] for e in d.studio.project.scene()["entities"] if ops.campfire_of(e)))
+        d.frame(3)
+        hd = d.studio.hd2d.renderer
+        report["eight_lamps"] = {"room_lamps": len(hd.lighting.lamps), "fire_lamps_made": len(hd.lighting.extra_lamps),
+                                 "note": next((t for t in d.labels() if "lights it can show" in t), "")}
+        d.picture(out / "edge_eight_lamps_inspector.png")
+    finally:
+        d.close()
+    return report
+
+
+def open_room_at(project: Path) -> HiddenGame:
+    game = HiddenGame(project, size=(1280, 720))
+    game.load(ROOM)
+    game.step(30)
+    return game
+
+
+PHASES: dict[str, Callable[[Path], dict[str, Any]]] = {
+    "look": look, "states": states, "light": light, "occlusion": occlusion, "perf": perf, "compare": compare,
+    "studio": studio, "export": export, "edges": edges}
 
 
 def main() -> None:

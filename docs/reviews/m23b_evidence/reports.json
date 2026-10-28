@@ -353,5 +353,77 @@
    "fire_error": null,
    "master_volume": 0.0
   }
+ },
+ "edges": {
+  "bridge": {
+   "deck_m": 2.0,
+   "ground_under_m": -0.539,
+   "logs": 1,
+   "flames": 1,
+   "logs_z_m": [
+    2.0
+   ],
+   "lamps": 1,
+   "lamps_z_m": [
+    2.6
+   ],
+   "anchors_z_m": [
+    2.0
+   ],
+   "fire_error": null
+  },
+  "seventeen": {
+   "registered": 17,
+   "logs": 17,
+   "flames": 1,
+   "logs_z_m": [
+    0.0
+   ],
+   "lamps": 1,
+   "lamps_z_m": [
+    0.6
+   ],
+   "anchors_z_m": [
+    0.0
+   ],
+   "fire_error": null
+  },
+  "refused": {
+   "refusals": 1,
+   "frames": [
+    {
+     "logs": 0,
+     "flames": 0,
+     "logs_z_m": [],
+     "lamps": 0,
+     "lamps_z_m": [],
+     "anchors_z_m": [],
+     "fire_error": "campfires: refused (review)"
+    },
+    {
+     "logs": 0,
+     "flames": 0,
+     "logs_z_m": [],
+     "lamps": 0,
+     "lamps_z_m": [],
+     "anchors_z_m": [],
+     "fire_error": "campfires: refused (review)"
+    },
+    {
+     "logs": 0,
+     "flames": 0,
+     "logs_z_m": [],
+     "lamps": 0,
+     "lamps_z_m": [],
+     "anchors_z_m": [],
+     "fire_error": "campfires: refused (review)"
+    }
+   ]
+  },
+  "eight_lamps": {
+   "room_lamps": 8,
+   "fire_lamps_made": 1,
+   "note": "This room's lamps already use all 8 lights it can show, so\nits fires light nothing round them. Remove a lamp to let\nthem."
+  }
  }
 }

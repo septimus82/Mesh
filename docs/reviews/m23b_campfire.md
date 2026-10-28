@@ -35,8 +35,8 @@ The M20E torch has animated, glowing flames, but no light, no embers or smoke, a
   - Per fire: 28 embers (about 14% sparks: brighter, faster, higher, gone sooner) and 18 smoke puffs (three sizes by age, translucent at 0.32 opacity, lit by the room's light).
   - Carried downwind with the room's gusts.
   - One seed buffer; two draws per frame for all the room's fires.
-  - Each particle's seed comes from its number within its own fire and where the fire stands. Lighting or putting out one fire never changes another's particles. (The first version reshuffled them: the occlusion check found it.)
-- **Light:** one warm point light per lit fire (colour 1.0, 0.56, 0.24; strength 1 = intensity 1.8; the template's lamps use 1.6), 0.6 m up in the flames.
+  - Each particle's seed comes from its number within its own fire and where the fire stands. Embers and smoke are drawn for the 16 lit fires nearest the camera (the shader's anchors); every fire's logs, flames and light are drawn regardless. Lighting or putting out one fire never changes another's particles. (The first version reshuffled them: the occlusion check found it.)
+- **Light:** one warm point light per lit fire (colour 1.0, 0.56, 0.24; strength 1 = intensity 1.8; the template's lamps use 1.6), 0.6 m up in the flames above where the fire stands.
   - It flickers by the time alone (four out-of-step waves, about ±6%), so it is deterministic.
   - No shadow map. With more fires than the 8 lights allow, the nearest the camera are lit.
 - **Off:** cold logs only, with no flames, embers, smoke, light or sound.
@@ -164,23 +164,42 @@ The clearest gain over the M20E torch and the static flame is the light and the 
 - Each additional fire's light adds up (the stress grid), but at normal spacing two or three fires look right.
 - The flame art is the starter kit's style: 48 px cells, pixel-art, no smoothing.
 
+## Review: four edge cases (after `fcfabb9`)
+
+Each was reproduced in a hidden window before any change (`tooling/m23b_fire_study.py edges`), then fixed or documented, with a regression test.
+
+| Case | Before | After |
+|---|---|---|
+| A fire placed on the bridge's deck (Studio gives it the deck's height, 2.0 m) | Logs, flames and particles at −0.54 m (the valley under the bridge), light at 0.06 m | All at 2.0 m, light at 2.6 m. A fire stands at its elevation if it has one, else on the ground: fires without an elevation, as every one in the evidence above, are unchanged |
+| 17 fires, the first 16 put out | `fires_of` kept the first 16 registered, all put out: the lit 17th drew nothing and gave no light | Every fire is kept; the lit one draws its flames, embers, smoke and light. Particles go to the 16 lit fires nearest the camera |
+| The fire's GPU objects refused | Fires turned off, but their light stayed: a light with no fire | A fire that isn't drawn gives no light |
+| A room whose own lamps use all 8 lights | The fire gives no light, silently | **Documented limitation:** room lamps keep their slots, and the lighting framework isn't expanded. The Campfire inspector now says when the room's lamps leave no light, or too few, for its fires |
+
+![edges](m23b_evidence/edge_bridge_fire.png)
+
+**A further limitation, documented:** fire lights have no shadow map, so the light passes through floors. The bridge fire also lights the valley floor under the deck. Giving fire lights shadow maps would mean expanding the lighting framework.
+
 ## Tests and gates
 
-- **New fast tests** (`tests/test_fire.py`, 7):
+- **New fast tests** (`tests/test_fire.py`, 9):
   - settings and refusals;
   - deterministic flicker;
   - only lit fires light, with no shadow map;
   - registration;
   - `set_campfire`, including the crackle following the fire;
   - the hidden assets not offered as brushes;
-  - an older copy of the animated sheet updated and a creator's changed copy kept.
-- **New GPU tests** (`tests/test_fire_gpu.py`, 4; integration, GL-gated):
+  - an older copy of the animated sheet updated and a creator's changed copy kept;
+  - a fire's height (its elevation, else the ground), and every fire kept however many are put out (review).
+- **New GPU tests** (`tests/test_fire_gpu.py`, 5; integration, GL-gated):
   - light on the ground, the tree and the wall, and none put out;
   - the lean in gusts against calm;
   - occlusion behind the cottage;
-  - Studio placing, editing, putting out, saving, reopening and playing, silently.
+  - Studio placing, editing, putting out, saving, reopening and playing, silently;
+  - the review's edge cases (bridge, 17 fires, a refused GPU, 8 room lamps).
 - **GPU tier:** 235 passed, including every existing weather, motion, scatter, lighting and workspace test unchanged (the weather kinds' shader paths are untouched).
 - **Default selection:** 10,074 passed. The two policy tests it failed (an `arcade.gl` import in the renderer) were fixed to use `engine.optional_arcade` and rerun: they pass, with the exception-policy and docs-freshness contracts.
 - **Gates:** ruff gate ok; mypy 73 (baseline); the exception-policy ratchet holds (the fire's GPU guards catch only `ShaderException` and `GLException`). No timing budget or baseline changed.
 
-**Not done (out of scope):** spreading fire, combustion, damage or heat; fires in 2D rooms (the object is HD-2D only); a fire crackle asset.
+**Not done (out of scope):** spreading fire, combustion, damage or heat; fires in 2D rooms (the object is HD-2D only); a fire crackle asset; shadowed fire light.
+
+**Known limitations:** at most 8 lights in an HD-2D room, the room's lamps first (fires then use the slots left, the nearest the camera first); fire light isn't shadowed, so it passes through floors; embers and smoke for the 16 lit fires nearest the camera.

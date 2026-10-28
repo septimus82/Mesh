@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from typing import Any
 
 PX_PER_M = 32.0
-MAX_FIRES = 16  # drawn in a room at once (the particle shader's anchors)
+MAX_FIRES = 16  # whose embers and smoke are drawn at once (the particle shader's anchors: the nearest the camera)
 COLOUR = (1.0, 0.56, 0.24)  # the light's: firelight
 STRENGTH = 1.8  # its intensity at strength 1 (the HD-2D template's lamps: 1.6)
 LIGHT_UP = 0.6  # m: the light stands this far above the logs (in the flames)
@@ -72,7 +72,7 @@ class Hearth:
     fire: Fire
 
     def place(self) -> tuple[float, float, float]:
-        """Where its logs stand: x, y (px) and its elevation (px)."""
+        """Where its logs stand: x, y (px) and its elevation (px; 0: none given)."""
         e = self.entity
         level = (getattr(e, "mesh_entity_data", None) or {}).get("elevation", 0.0)
         level = float(level) if isinstance(level, (int, float)) and not isinstance(level, bool) else 0.0
@@ -92,10 +92,20 @@ def register(window: Any, entity: Any, fire: Fire) -> None:
 
 
 def fires_of(window: Any) -> list[Hearth]:
-    """The room's campfires there now (their "Show when" flags, as water's), at most ``MAX_FIRES``."""
+    """The room's campfires there now (their "Show when" flags, as water's): every one (their logs and flames have
+    no limit; their lights and particles are the nearest the camera's)."""
     from engine.water import active  # noqa: PLC0415
 
-    return [h for h in (getattr(window, "campfires", None) or []) if active(window, h.entity)][:MAX_FIRES]
+    return [h for h in (getattr(window, "campfires", None) or []) if active(window, h.entity)]
+
+
+def base(hearth: Hearth, ground: Any = None) -> float:
+    """The height (px) its logs stand at: its elevation if it has one (Mesh Studio gives an object placed on a floor,
+    a bridge or a hill the height it stands at), else the ground's there (``ground(x, y)``, px), else 0."""
+    x, y, level = hearth.place()
+    if level or ground is None:
+        return level
+    return float(ground(x, y))
 
 
 def flicker(time: float, x: float, y: float) -> float:
@@ -108,8 +118,8 @@ def flicker(time: float, x: float, y: float) -> float:
 
 
 def lamps(hearths: list[Hearth], time: float, ground: Any = None) -> list[Any]:
-    """The lit fires' lights now (``engine.hd2d.settings.PointLight``: no shadow map). ``ground(x, y)``: the ground's
-    height there (px), when it is sculpted."""
+    """The lit fires' lights now (``engine.hd2d.settings.PointLight``: no shadow map), over where each stands
+    (``base``; ``ground(x, y)``: the ground's height there, px)."""
     from engine.hd2d.settings import PointLight  # noqa: PLC0415
 
     out = []
@@ -117,9 +127,8 @@ def lamps(hearths: list[Hearth], time: float, ground: Any = None) -> list[Any]:
         f = h.fire
         if not f.enabled or f.light <= 0:
             continue
-        x, y, level = h.place()
-        base = ground(x, y) if ground is not None else level
+        x, y, _level = h.place()
         k = flicker(time, x, y)
-        out.append(PointLight(x, y, base + LIGHT_UP * PX_PER_M * f.size, f.light_radius * (0.97 + 0.03 * k),
+        out.append(PointLight(x, y, base(h, ground) + LIGHT_UP * PX_PER_M * f.size, f.light_radius * (0.97 + 0.03 * k),
                               COLOUR, f.light * STRENGTH * k, shadows=False))
     return out

@@ -44,6 +44,29 @@ def test_only_burning_fires_light_and_none_casts_a_shadow_map() -> None:
     assert fire.lamps([hearth()], 2.0, ground=lambda x, y: 64.0)[0].elevation == pytest.approx(83.2)
 
 
+def _hearth(x: float = 320.0, elevation: float | None = None, **settings: object) -> fire.Hearth:
+    data = {} if elevation is None else {"elevation": elevation}
+    return fire.Hearth(SimpleNamespace(center_x=x, center_y=96.0, mesh_entity_data=data), fire.parse_fire(settings))
+
+
+def test_a_fire_stands_at_its_elevation_on_a_floor_else_on_the_ground() -> None:
+    ground = lambda x, y: -17.0  # noqa: E731  # (a valley under a bridge)
+    assert fire.base(_hearth(elevation=64.0), ground) == 64.0  # (on the bridge's deck: Studio gives its height)
+    assert fire.base(_hearth(), ground) == -17.0 and fire.base(_hearth(elevation=0.0), ground) == -17.0
+    assert fire.base(_hearth()) == 0.0
+    assert fire.lamps([_hearth(elevation=64.0)], 1.0, ground)[0].elevation == pytest.approx(64.0 + 19.2)
+
+
+def test_every_fire_there_is_kept_however_many_and_however_many_are_out() -> None:
+    window = SimpleNamespace()
+    fire.reset(window)
+    for k in range(17):
+        fire.register(window, SimpleNamespace(center_x=32.0 * k, center_y=0.0), fire.Fire(enabled=k == 16))
+    hearths = fire.fires_of(window)
+    assert len(hearths) == 17 and hearths[16].fire.enabled  # (the seventeenth, the only one lit, is drawn)
+    assert len(fire.lamps(hearths, 1.0)) == 1
+
+
 def test_registration_replaces_an_objects_old_fire() -> None:
     window = SimpleNamespace()
     entity = SimpleNamespace(center_x=0.0, center_y=0.0)

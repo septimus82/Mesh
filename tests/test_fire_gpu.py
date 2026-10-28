@@ -76,3 +76,20 @@ def test_studio_places_edits_saves_reopens_and_plays_a_campfire_silently(tmp_pat
     for cycle in report["play_stop"]:
         assert cycle["mode"] == "play" and cycle["stopped"] == "edit" and cycle["campfires"] == 1
         assert cycle["lamps"] == 1 and cycle["fire_draws"] == 1 and cycle["master_volume"] == 0.0
+
+
+def test_review_edges_a_bridge_fire_seventeen_fires_a_refused_gpu_and_eight_room_lamps(tmp_path: Path) -> None:
+    import m23b_fire_study as study
+
+    report = study.edges(tmp_path)
+    bridge = report["bridge"]  # (on the deck, 2 m over the valley: not on the ground under it)
+    assert bridge["logs_z_m"] == [bridge["deck_m"]] and bridge["anchors_z_m"] == [bridge["deck_m"]]
+    assert bridge["lamps_z_m"] == [round(bridge["deck_m"] + 0.6, 3)] and bridge["ground_under_m"] < 0
+    seventeen = report["seventeen"]  # (the sixteen put out don't crowd out the one lit)
+    assert seventeen["registered"] == seventeen["logs"] == 17 and seventeen["flames"] == 1
+    assert seventeen["lamps"] == 1 and len(seventeen["anchors_z_m"]) == 1
+    refused = report["refused"]  # (no light without its fire)
+    assert refused["refusals"] == 1 and all(f["lamps"] == 0 and f["logs"] == 0 and f["fire_error"]
+                                            for f in refused["frames"])
+    eight = report["eight_lamps"]  # (a documented limit: Studio says why the fire lights nothing)
+    assert eight["room_lamps"] == 8 and "lights it can show" in eight["note"]
