@@ -133,3 +133,19 @@ def test_nothing_under_the_brush_to_thin_and_no_change_when_nothing_is_placed() 
     meadow, _t, _w = _stroke(_room(), "Meadow", [[320, 240]], 96, seed=1)
     out, tally, _words = _stroke(meadow, "Meadow", [[320, 240]], 96, mode="thin", share=0.5)
     assert tally.under == _count(meadow) and _count(out) < _count(meadow)
+
+
+def test_a_warning_about_what_blocks_the_way_comes_before_the_explanation() -> None:
+    """Studio says a stroke's end on one line: what now blocks where people pass must not be pushed out of it by a
+    long explanation of why fewer were added."""
+    room = _room()
+    room["entities"] = [{"id": "p", "prefab_id": "player", "x": 320.0, "y": 240.0}]
+    out, tally, why = _stroke(room, "Boulder", [[320, 240]], 160, seed=0, density=3.0)
+    blocked = ops.scatter_obstructions(out)
+    assert blocked and why and 0 < tally.placed < tally.wanted
+    said = sc.stroke_message(f"Scattered {tally.placed} (Boulder)", why, blocked)
+    assert said.index("In the way (not moved): a boulder at") < said.index("Held back:")
+    assert said.startswith(f"Scattered {tally.placed} (Boulder): one undo step. In the way (not moved): ")
+    long_why = "Held back: " + "the Meadow already there leaves too little room (9,999 of 99,999 tries). " * 3
+    assert sc.stroke_message("Scattered 1 (Boulder)", long_why, blocked).index("blocks the player's start") < 120
+    assert sc.stroke_message("Scattered 5 (Meadow)", "", []) == "Scattered 5 (Meadow): one undo step."

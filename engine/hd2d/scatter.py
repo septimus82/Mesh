@@ -305,10 +305,13 @@ class Scatter:
 
     def __post_init__(self) -> None:
         self.instances = {a: set(rows) for a, rows in self.instances.items()}
-        self._grid: dict[tuple[int, int], set[tuple[str, tuple[int, int, int, int]]]] = {}
+        # Each 1 m cell's instances in the order they came (a dict as an ordered set): ``near`` gives them in the same
+        # order in every process (a set of (asset id, row) would follow the string-hash seed), so what a ``Tally``
+        # says a place stood too near is the same everywhere. (Whether it is too near never depended on the order.)
+        self._grid: dict[tuple[int, int], dict[tuple[str, tuple[int, int, int, int]], None]] = {}
         for asset, rows in self.instances.items():
             for r in rows:
-                self._grid.setdefault(self._key(r[0], r[1]), set()).add((asset, r))
+                self._grid.setdefault(self._key(r[0], r[1]), {})[asset, r] = None
 
     @staticmethod
     def _key(x: float, y: float) -> tuple[int, int]:
@@ -325,13 +328,13 @@ class Scatter:
 
     def add(self, asset: str, row: tuple[int, int, int, int]) -> None:
         self.instances.setdefault(asset, set()).add(row)
-        self._grid.setdefault(self._key(row[0], row[1]), set()).add((asset, row))
+        self._grid.setdefault(self._key(row[0], row[1]), {})[asset, row] = None
 
     def remove(self, asset: str, row: tuple[int, int, int, int]) -> None:
         self.instances[asset].discard(row)
         if not self.instances[asset]:
             del self.instances[asset]
-        self._grid[self._key(row[0], row[1])].discard((asset, row))
+        self._grid[self._key(row[0], row[1])].pop((asset, row), None)
 
     def count(self) -> int:
         return sum(len(rows) for rows in self.instances.values())
@@ -343,7 +346,7 @@ class Tally:
     add (``wanted``) and added (``placed``); dabs whose circle already had the density (``full``), with the room at
     its limit (``at_limit``), or asking for less than one (``tiny``); for each place tried and refused, why
     (``refused``: a ``refusal``, "clump": outside a clump, "spacing": too near something already standing), the
-    asset each "spacing" place stood too near (``crowded_by``), the materials refused (``materials``), the brush's
+    asset each "spacing" place stood too near (``crowded_by``: the first the index gives), the materials refused (``materials``), the brush's
     slope rule where the ground was too steep (``slope_rule``), and per asset tried, each refusal (``by_asset``:
     (asset, why) -> places; a mixed collection's things differ) and placed (``placed_by``); dabs that stopped short
     of what they set out to add
@@ -571,6 +574,16 @@ def explain(tally: Tally, collection: str, weights: dict[str, float]) -> str:
         todo.append(do)
     return ("Held back: " + "; ".join(said) + ". " + todo[0][0].upper() + todo[0][1:]
             + "".join(f"; {t}" for t in todo[1:] if t != todo[0]) + ".")
+
+
+def stroke_message(what: str, why: str, blocked: list[str]) -> str:
+    """What Mesh Studio says when a scatter stroke that changed something ends: ``what`` it did, then what now blocks
+    where people pass (``obstructions``: a warning), then ``why`` fewer were added (``explain``). Studio says it on
+    one line: the warning comes before the explanation, so a long explanation never pushes it out of sight."""
+    said = f"{what}: one undo step."
+    if blocked:
+        said += " In the way (not moved): " + "; ".join(blocked[:2]) + (" ..." if len(blocked) > 2 else "") + "."
+    return said + (f" {why}" if why else "")
 
 
 def _things_plain(materials: Counter[str]) -> str:

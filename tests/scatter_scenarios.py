@@ -65,6 +65,11 @@ STEPS: dict[str, tuple[Callable[[], dict[str, Any]], list[Step]]] = {
 }
 
 
+COLLECTION = {"meadow": "Meadow", "trees": "Small tree", "rocks": "Rock", "meadow_again": "Meadow",
+              "pond_edge": "Pond edge", "rocks_on_path": "Rocks", "trees_on_mound": "Small tree", "shrubs": "Shrubs",
+              "deadfall": "Deadfall", "wildflowers": "Wildflowers", "boulders": "Boulder"}  # step -> what it scatters
+
+
 def run(name: str, *, tally: Callable[[], Any] = lambda: None) -> list[tuple[str, dict[str, Any], Any]]:
     """Each step of a scenario: (step, the room after it, its tally)."""
     make, steps = STEPS[name]

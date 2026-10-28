@@ -28,7 +28,7 @@ Before M22C, Studio said only "The stroke changed nothing (the rules, or the den
   - **detail:** which asset it was too near, which materials were refused, and per asset what was refused and placed (a mixed collection's things differ);
   - **thin and remove:** what was under the brush.
 
-  Counting adds no random numbers and changes no decision. The spacing check finds the first neighbour too near where it used `any()`: the same test, now naming it.
+  Counting adds no random numbers and changes no decision. The spacing check finds the first neighbour too near where it used `any()`: the same test, now naming it. The index's cells keep their instances in the order they came (a dict, not a set), so that first neighbour is the same in every Python process (see the review follow-up).
 - **`explain(tally, collection, weights)`** says the most relevant verified reasons, with their counts, then what to do in Studio's own words (Per m², Clumps, Slope (°), the materials row, Out of water, Off buildings, Ctrl+drag thins). Rules:
   - **Short:** Studio says it on one line.
   - **When it speaks:** only when a stroke added under 90% of what it set out to add.
@@ -81,15 +81,42 @@ That is within run-to-run noise (about 1–3%). Nothing runs per frame; a stroke
 
 ## Tests and gates
 
-- **Fast:** `tests/test_scatter_diagnostics.py`, 10.
-- **Integration:** `tests/test_scatter_placement_unchanged.py`, 7.
+- **Fast:** `tests/test_scatter_diagnostics.py`, 11.
+- **Integration:** `tests/test_scatter_placement_unchanged.py`, 7; `tests/test_scatter_diagnostics_hash_seeds.py`, 1.
 - **GPU:** `tests/test_scatter_diagnostics_gpu.py`, 3 (the Studio strokes above).
 - **Existing scatter tests** (`test_scatter.py`, `test_editor_scatter_selection.py`) pass unchanged.
-- **Gates:**
-  - default selection: 10,067 passed, 212 skipped;
-  - GPU tier: 217 passed, 0 failed (it ran before the final shortening of the words; the 7 scatter GPU tests were rerun after it and pass);
+- **Gates, after the review follow-up:**
+  - default selection: 10,069 passed;
+  - GPU tier: 217 passed, 0 failed;
   - ruff gate ok; mypy 73 (baseline).
-- **The timed fast tier** gains the 10 diagnostics tests (4,953 tests, from 4,943): about 0.02 s each once the scatter modules are imported, as they are in a full run. No timing budget or baseline was changed.
+- **The timed fast tier** gains the 11 diagnostics tests: about 0.02 s each once the scatter modules are imported, as they are in a full run. No timing budget or baseline was changed.
+
+## Review follow-up
+
+1. **Linux CI, `pytest-fast` 82.19 s against 79.05 s** (`f475207`; runner speed 1.13; all 10,065 tests passed).
+   - **Parent line:** each run's own timing table gives the step's time against its expected time. M22C's 82.19 / 69.67 = 1.18 is inside the range of the parent line's runs:
+
+     | Commit | Ratio | Result |
+     |---|---|---|
+     | `6b6066d` (#409) | 1.17 | over |
+     | `cba7a2c` (#410) | 1.26 | over |
+     | `6545bee` (#410) | 1.14 | ok |
+     | `c4d7b4b` (#411) | 1.17 | over |
+     | `92c119a` (#411) | 1.17 | ok |
+
+     Whether it passes follows the runner's speed.
+   - **The same tests, timed by pytest itself:** base (`b3f3275` content) 128.12 s; M22C 127.97 s. No test file differs by more than 0.2 s. The diagnostics tests take 0.06 s together; the 10 new fast tests add nothing measurable.
+   - **The `tooling.pytest_fast` wrapper, timed outside:** base 131.5 and 130.8 s against M22C 134.7 and 133.5 s, with M22C always run second. In reverse order (M22C first), on the final code: M22C 131.6 and 130.5 s against base 130.4 and 133.4 s. The earlier difference was the order, not M22C.
+   - **The failed job rerun** (attempt 2, the same commit): all 10,065 tests passed again, and `pytest-fast` took 82.25 s (expected 69.84, ratio 1.18) on a runner again rated slow (1.12).
+   - **Conclusion:** runner variance at a budget the parent line also crosses on slow runners, not a reproducible regression. No budget or baseline was changed.
+2. **Obstruction warnings.** A stroke's end message used to put the explanation before "In the way (not moved): …", so on Studio's one-line status bar a long explanation could push the warning out of sight.
+   - The warning now comes first (`scatter.stroke_message`, which Studio uses).
+   - Regression test: a real boulder stroke that both blocks the player's start and is held back says "Scattered 9 (Boulder): one undo step. In the way (not moved): a boulder at (9.2 m, 8.8 m) blocks the player's start. Held back: …". The warning stays within the first 120 characters behind any explanation.
+3. **Stable across hash seeds.**
+   - **Reproduced:** the same strokes in processes with `PYTHONHASHSEED` 0 and 1 placed the identical scatter, but credited different neighbours (the meadow stroke: grass tufts 777 against 768). The index's cells were sets of (asset id, row), and string hashing orders them per process.
+   - **Fixed:** the cells are now insertion-ordered dicts, so the first neighbour found is the same everywhere, and decisions and placements are unchanged (the 12 digests).
+   - **An alternative tried and not kept:** crediting the nearest neighbour cost +25–67% on dense strokes. The ordered index costs nothing measurable: three scenarios, median of 5 runs, 477/480, 578/563 and 313/311 ms against the base's 474/471, 564/557 and 309/307.
+   - **Test:** `tests/test_scatter_diagnostics_hash_seeds.py` runs every scenario step in processes with seeds 0, 1 and 4242. Digests, refusals, what crowded each place, per-asset counts and the words are identical.
 
 ## Not changed
 

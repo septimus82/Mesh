@@ -1289,7 +1289,7 @@ class Hd2dView:
         then what blocks where people pass, if anything, is said, and why fewer were added than asked for (what the
         brush counted: ``engine.hd2d.scatter.explain``). A stroke that changed nothing changes nothing: it only says
         why."""
-        from engine.hd2d.scatter import COLLECTIONS, explain, stored  # noqa: PLC0415
+        from engine.hd2d.scatter import COLLECTIONS, explain, stored, stroke_message  # noqa: PLC0415
 
         studio, renderer = self.studio, self.renderer
         added = sum(1 for _n, _r, a in stroke["changes"] if a)
@@ -1318,9 +1318,7 @@ class Hd2dView:
         studio._refresh_top_bar()
         what = (f"Scattered {added} ({stroke['collection']})" if stroke["mode"] == "add"
                 else f"{'Removed' if stroke['mode'] == 'remove' else 'Thinned out'} {removed}")
-        studio._say(f"{what}: one undo step." + (f" {why}" if why else "") + (
-            " In the way (not moved): " + "; ".join(blocked[:2]) + (" ..." if len(blocked) > 2 else "") if blocked
-            else ""), ok=not blocked)
+        studio._say(stroke_message(what, why, blocked), ok=not blocked)
 
     def _end_paint(self, stroke: dict[str, Any]) -> None:
         """A paint stroke let go: one checked edit, no reload. What is saved is what was shown: the paint of the
