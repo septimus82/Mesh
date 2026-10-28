@@ -384,6 +384,16 @@ class AudioManager:
         for track in self._tracks():
             self._set_player_volume(track)
 
+    def _set_pan(self, track: _Track, pan: float | None) -> None:
+        """Pan a player as Arcade does (a position on the listener's left-right axis; a mono sound pans fully)."""
+        if pan is None or (track.pan is not None and abs(pan - track.pan) < 0.005):
+            return
+        track.pan = max(-1.0, min(1.0, float(pan)))
+        try:
+            track.player.position = (track.pan, 0.0, (1.0 - track.pan * track.pan) ** 0.5)
+        except Exception:  # noqa: BLE001  # REASON: audio fallback isolation (a stand-in player in tests)
+            _log_swallow("AUDO-022", "engine.audio blanket exception fallback", once=True)
+
     def _set_player_volume(self, track: _Track) -> None:
         try:
             track.player.volume = track.volume * track.scale * self.bus_gain(track.bus)
@@ -594,22 +604,31 @@ class AudioManager:
     # ------------------------------------------------------------------
     # Ambience (persistent loops; Milestone 21B's emitters build on these)
     # ------------------------------------------------------------------
-    def play_loop(self, key: str, path: str, *, volume: float = 1.0, fade_in_s: float = 0.0) -> bool:
+    def play_loop(self, key: str, path: str, *, volume: float = 1.0, fade_in_s: float = 0.0, pan: float | None = None,
+                  loop: bool = True) -> bool:
         """Keep the ambience loop ``key`` playing ``path`` at ``volume``. Asked again with the same path (a room
-        loaded again), it keeps playing, its volume eased to the new one: never a second copy. Another path
-        crossfades to it. False if the file can't be played."""
+        loaded again, or a sound emitter every frame as the listener moves), it keeps playing: only its volume and
+        ``pan`` change (a fade under way carries on), never a second copy. One still fading out after ``stop_loop``
+        fades back in from where it is. Another path crossfades to it. ``pan``: -1 (left) to 1 (right); None leaves
+        it as it is (centred to start). ``loop`` False: it plays once. False if the file can't be played."""
         level = _clamp01(volume, "AUDO-020")
         current = self._loops.get(key)
         if current is not None and current.path == path:
             current.volume = level
-            current.fade_to(1.0, fade_in_s)
+            self._set_pan(current, pan)
             self._set_player_volume(current)
             return True
-        track = self._start(path, "ambience", level, True)
-        if track is None:
-            return False
-        track.scale = 0.0
+        track = next((t for t in self._fading if t.bus == "ambience" and t.key == key and t.path == path), None)
+        if track is not None:  # back in range before it had faded away
+            self._fading.remove(track)
+            track.volume = level
+        else:
+            track = self._start(path, "ambience", level, loop)
+            if track is None:
+                return False
+            track.key, track.scale = key, 0.0
         track.fade_to(1.0, fade_in_s)
+        self._set_pan(track, pan)
         if current is not None:
             current.fade_to(0.0, fade_in_s)
             self._fading.append(current)
@@ -709,6 +728,8 @@ class _Track:
     player: Any
     volume: float  # its own volume (a room's music_volume), before the bus and master
     loop: bool
+    key: str = ""  # an ambience loop's key
+    pan: float | None = None  # -1 left .. 1 right; None: never set (centred)
     scale: float = 1.0  # where its fade is, 0..1
     start: float = 1.0
     target: float = 1.0

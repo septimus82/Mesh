@@ -290,6 +290,19 @@ def _extract_refs_from_entity(
                         field_path=f"entities[{index}].animations.{anim_name}.sprite",
                     ))
 
+    # A sound emitter's sound (Milestone 21B)
+    emitter = (entity.get("behaviour_config") or {}).get("SoundEmitter") if isinstance(
+        entity.get("behaviour_config"), dict) else None
+    sound = emitter.get("sound") if isinstance(emitter, dict) else None
+    if isinstance(sound, str) and sound:
+        refs.append(AssetReference(
+            asset_id=sound,
+            source_file=source_file,
+            source_type=source_type,
+            entity_name=entity_name,
+            field_path=f"entities[{index}].behaviour_config.SoundEmitter.sound",
+        ))
+
     return refs
 
 
@@ -311,6 +324,17 @@ def _extract_refs_from_scene(
             entity_name=None,
             field_path="settings.music",
         ))
+    weather_sounds = settings.get("weather_sounds") if isinstance(settings, dict) else None
+    for kind in ("rain", "wind"):  # the room's weather sounds (Milestone 21B)
+        path = weather_sounds.get(kind) if isinstance(weather_sounds, dict) else None
+        if isinstance(path, str) and path:
+            refs.append(AssetReference(
+                asset_id=path,
+                source_file=source_file,
+                source_type="scene",
+                entity_name=None,
+                field_path=f"settings.weather_sounds.{kind}",
+            ))
 
     # Background layers
     background_layers = scene_data.get("background_layers") or []

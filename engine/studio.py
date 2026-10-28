@@ -32,6 +32,7 @@ from engine.studio_ai import Proposal, StudioAIHost
 from engine.studio_hd2d import Hd2dView
 from engine.studio_inspector import InspectorMixin, LazyRow, Rows, row_height
 from engine.studio_project import Project
+from engine.studio_sound import SOUND_BUILT_IN, SoundMixin
 from engine.studio_ui import (
     C_BG,
     C_CANVAS,
@@ -77,7 +78,8 @@ LAYER_NAME = {ops.GROUND: "the ground", ops.WALLS: "walls (they block movement)"
 # Always in the Objects list: an object to dress up yourself, and a zone to walk into.
 BUILT_IN_OBJECTS: list[dict[str, Any]] = [{"id": "object", "display_name": "Empty object", "built_in": "blank"},
                                           {"id": "zone", "display_name": "Trigger zone", "built_in": "zone"},
-                                          {"id": "water", "display_name": "Water", "built_in": "water"}]
+                                          {"id": "water", "display_name": "Water", "built_in": "water"},
+                                          SOUND_BUILT_IN]  # Milestone 21B: a sound heard from where it is
 SHAPE_HELP = {"brush": "Click or drag on the map.", "rect": "Drag a rectangle on the map.",
               "fill": "Click an area to fill it."}
 
@@ -142,7 +144,7 @@ def _colour_name(value: Any) -> str:
     return next((name for name, hex_ in ops.LIGHT_COLOURS.items() if ops.rgb(hex_) == rgb), "custom")
 
 
-class Studio(InspectorMixin):
+class Studio(InspectorMixin, SoundMixin):
     def __init__(self, window: Any, project: Project) -> None:
         self.window = window
         self.project = project
@@ -801,12 +803,14 @@ class Studio(InspectorMixin):
         def change(scene: dict[str, Any]) -> dict[str, Any]:
             kind, at = prefab.get("built_in"), ((_snap(wx), _snap(wy)) if snap else (round(wx, 2), round(wy, 2)))
             if kind:
-                name = {"zone": "Zone", "water": "Puddle"}.get(str(kind), "Object")
+                name = {"zone": "Zone", "water": "Puddle", "sound": "Sound"}.get(str(kind), "Object")
                 out, new_id = ops.place_blank(scene, self.project.current, name, *at)
                 if kind == "zone":
                     out = ops.set_trigger_zone(out, new_id, width=96, height=96)
                 elif kind == "water":  # Milestone 19B: a muddy puddle to start with; Look makes it a pond or pool
                     out = ops.set_water(out, new_id, preset="muddy_puddle")
+                elif kind == "sound":  # Milestone 21B: its sound is chosen next, on the right
+                    out = ops.set_sound_emitter(out, new_id)
             else:
                 out, new_id = ops.place_prefab(scene, self.project.current, prefab, *at, elevation=elevation)
             if elevation and kind:
@@ -815,7 +819,8 @@ class Studio(InspectorMixin):
             return out
 
         hint = {"blank": " Give it a picture in Look.", "zone": " Drag its orange corner to size it.",
-                "water": " Puddle or pond, size and look: on the right."}.get(
+                "water": " Puddle or pond, size and look: on the right.",
+                "sound": " Choose its sound and how far it is heard: on the right."}.get(
             str(prefab.get("built_in")), "")
         on = f" on {where}, {elevation / 32:.1f} m up" if where else ""
         if self._edit(change, f"Placed {prefab.get('display_name', prefab['id'])}{on}.{hint}"):
@@ -1055,6 +1060,8 @@ class Studio(InspectorMixin):
         bar.add(self._button("Redo", self.redo, width=64, disabled=not self.project.can_redo()))
         bar.add(self._button("Flags", self.open_flags, width=64, style=S_ACTIVE if self.panel == "flags" else S_BUTTON))
         bar.add(self._button("Lighting", self.open_lighting, width=80, style=S_ACTIVE if self.panel == "lighting" else S_BUTTON))
+        bar.add(self._button("Sound", self.open_sound, width=70, style=S_ACTIVE if self.panel in ("sound", "pick_sound")
+                             else S_BUTTON))
         waiting = len(self.ai.pending())
         bar.add(self._button(f"AI ({waiting})" if waiting else "AI", self.open_ai, width=72,
                              style=S_ACTIVE if waiting or self.panel == "ai" else S_BUTTON))
@@ -1538,6 +1545,10 @@ class Studio(InspectorMixin):
             self._import_panel(rows, width)
         elif self.panel == "pick_image":
             self._picture_picker(rows, width)
+        elif self.panel == "pick_sound":
+            self._sound_picker(rows, width)
+        elif self.panel == "sound":
+            self._sound_panel(rows, width)
         elif self.panel == "flags":
             self._flags_panel(rows, width)
         elif self.panel == "players":
@@ -2303,7 +2314,10 @@ class Studio(InspectorMixin):
             eid = entity.get("id")
             cx, cy, w, h = self._bounds(entity, sprites.get(str(eid)))
             water, zone = self._live_water(entity), self._live_zone(entity)
-            if water is not None:  # drawn by the game itself; here its outline and name, to find and size it
+            sound = ops.sound_emitter_of(entity)
+            if sound is not None:  # heard, never seen: here a speaker and its rings, to find and move it
+                self._draw_sound(entity, sound, cx, cy)
+            elif water is not None:  # drawn by the game itself; here its outline and name, to find and size it
                 from engine import water as water_mod  # noqa: PLC0415
 
                 edge = water_mod.outline_points(_water_settings(water), (cx, cy))

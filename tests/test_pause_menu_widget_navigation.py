@@ -294,12 +294,15 @@ def test_settings_selection_styling_follows_keyboard_and_gamepad_navigation() ->
     assert _selected_setting_actions(menu) == {"pause.settings.sfx_volume"}
 
     assert menu.on_key_press(optional_arcade.arcade.key.DOWN, 0) is True
+    assert _selected_setting_actions(menu) == {"pause.settings.ambience_volume"}  # Milestone 21B
+
+    assert menu.on_key_press(optional_arcade.arcade.key.DOWN, 0) is True
     assert _selected_setting_actions(menu) == {"pause.settings.fog_enabled"}
 
     assert menu.on_key_press(optional_arcade.arcade.key.DOWN, 0) is True
     assert _selected_setting_actions(menu) == {"pause.settings.reduced_flicker"}  # Milestone 12.1
 
-    menu._settings_index = 4
+    menu._settings_index = 5
     menu._invalidate_layout()
     assert _selected_setting_actions(menu) == {"pause.settings.back"}
 
@@ -443,12 +446,14 @@ def test_settings_widgets_click_keyboard_and_gamepad_apply_and_persist() -> None
     widgets = {target.action_id: target.widget for target in layout.hit_targets}
     assert isinstance(widgets["pause.settings.music_volume"], Slider)
     assert isinstance(widgets["pause.settings.sfx_volume"], Slider)
+    assert isinstance(widgets["pause.settings.ambience_volume"], Slider)
     assert isinstance(widgets["pause.settings.fog_enabled"], Toggle)
     assert isinstance(widgets["pause.settings.reduced_flicker"], Toggle)
     assert isinstance(widgets["pause.settings.back"], Button)
     assert [target.action_id for target in layout.hit_targets] == [
         "pause.settings.music_volume",
         "pause.settings.sfx_volume",
+        "pause.settings.ambience_volume",
         "pause.settings.fog_enabled",
         "pause.settings.reduced_flicker",
         "pause.settings.back",
@@ -482,7 +487,12 @@ def test_settings_widgets_click_keyboard_and_gamepad_apply_and_persist() -> None
     menu.update(0.016)
     assert window.runtime_settings.sfx_volume == pytest.approx(0.2)
 
-    menu._settings_index = 2
+    menu._settings_index = 2  # Ambience: its own volume, nothing else's
+    assert menu.on_key_press(optional_arcade.arcade.key.LEFT, optional_arcade.arcade.key.MOD_SHIFT) is True
+    assert window.runtime_settings.ambience_volume == pytest.approx(0.9)
+    assert window.runtime_settings.sfx_volume == pytest.approx(0.2)
+
+    menu._settings_index = 3
     assert menu.on_key_press(optional_arcade.arcade.key.ENTER, 0) is True
     assert window.runtime_settings.fog_enabled is True
     menu.state = "settings"

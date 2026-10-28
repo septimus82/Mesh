@@ -442,6 +442,45 @@ class Project:
         image.save(folder / f"{candidate}.png")
         return f"assets/sprites/{candidate}.png"
 
+    # --- sounds (Milestone 21B: copied in straight away, like pictures; not part of undo) ----------------------------
+    def sounds(self) -> list[str]:
+        """Every sound file under ``assets/`` (.wav, .ogg, .mp3), project-relative, ambience first."""
+        from engine.sound_emitters import SOUND_FILES  # noqa: PLC0415
+
+        assets = self.root / "assets"
+        found = [p for p in assets.rglob("*") if p.suffix.lower() in SOUND_FILES] if assets.is_dir() else []
+        rel = [p.relative_to(self.root).as_posix() for p in found]
+        return sorted(rel, key=lambda r: (not r.startswith("assets/ambience/"), r.lower()))
+
+    def import_sound(self, sound_path: Path | str) -> str:
+        """Copy a sound file into ``assets/ambience/`` and return its project-relative path, after checking this
+        computer can play it (``sound_emitters.sound_problem``). One already in the project is used where it is; one
+        with the same name and the same bytes is not copied again."""
+        import shutil  # noqa: PLC0415
+
+        from engine.sound_emitters import sound_problem  # noqa: PLC0415
+
+        source = Path(str(sound_path).strip().strip('"'))
+        problem = sound_problem(source)
+        if problem:
+            raise ops.OpError(problem)
+        try:
+            inside = source.resolve().relative_to(self.root.resolve())
+        except ValueError:
+            inside = None
+        if inside is not None:
+            return inside.as_posix()
+        folder = self.root / "assets" / "ambience"
+        folder.mkdir(parents=True, exist_ok=True)
+        stem, suffix, n = ops.slug(source.stem) or "sound", source.suffix.lower(), 2
+        candidate = stem
+        while (folder / f"{candidate}{suffix}").exists():
+            if (folder / f"{candidate}{suffix}").read_bytes() == source.read_bytes():
+                return f"assets/ambience/{candidate}{suffix}"  # already copied in
+            candidate, n = f"{stem}_{n}", n + 1
+        shutil.copyfile(source, folder / f"{candidate}{suffix}")
+        return f"assets/ambience/{candidate}{suffix}"
+
     # --- HD-2D models (engine.hd2d.catalog: copied in straight away, like pictures; not part of undo) ----------
     def model_assets(self) -> list[Any]:
         """The project's Blender models: the catalogue's, then any other .glb, as ``ModelAsset``s."""

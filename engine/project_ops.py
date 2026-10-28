@@ -327,6 +327,13 @@ def set_behaviour_param(scene: Doc, entity_id: str, behaviour: str, param: str, 
     if behaviour not in entity_behaviours(entity):
         raise OpError(f"This object doesn't have {behaviour}.")
     entity.setdefault("behaviour_config", {}).setdefault(behaviour, {})[param] = coerce_field(fields[param], value)
+    if behaviour == "SoundEmitter":  # a sound's settings too (Milestone 21B)
+        from engine.sound_emitters import EmitterError, parse_emitter  # noqa: PLC0415
+
+        try:
+            parse_emitter(entity["behaviour_config"][behaviour])
+        except EmitterError as exc:
+            raise OpError(str(exc)) from exc
     if behaviour == "WaterSurface":  # water's settings are checked as the game reads them (Milestone 19A)
         from engine.water import WaterError, parse_water  # noqa: PLC0415
 
@@ -835,6 +842,138 @@ def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = 
     else:
         entity.pop("components", None)
     return _checked(scene, out)
+
+
+# --- sound emitters and weather sounds (Milestone 21B) -----------------------------------------------------------
+
+def _sound_path(value: Any) -> str:
+    return str(value or "").strip().replace(chr(92), "/")
+
+
+def _settings_of(scene: Doc) -> Doc:
+    raw = scene.get("settings")
+    return raw if isinstance(raw, dict) else {}
+
+
+def _particles_of(scene: Doc) -> list[Any]:
+    raw = _settings_of(scene).get("particles")
+    return raw if isinstance(raw, list) else []
+
+
+def sound_emitter_of(entity: Doc) -> Doc | None:
+    """The object's sound (``SoundEmitter``) completed from the defaults (engine.sound_emitters); None if it isn't a
+    sound emitter. A setting the game can't use shows the defaults, with ``error`` saying why."""
+    from engine.sound_emitters import DEFAULT, EmitterError, parse_emitter  # noqa: PLC0415
+
+    if "SoundEmitter" not in entity_behaviours(entity):
+        return None
+    config = (entity.get("behaviour_config") or {}).get("SoundEmitter")
+    error = None
+    try:
+        e = parse_emitter(config if isinstance(config, dict) else {})
+    except EmitterError as exc:
+        error, e = str(exc), DEFAULT
+    out: Doc = {"sound": e.sound, "volume": e.volume, "radius": e.radius, "distance": e.distance, "stereo": e.stereo,
+                "loop": e.loop, "enabled": e.enabled, "fade_in": e.fade_in, "fade_out": e.fade_out}
+    if error:
+        out["error"] = error
+    return out
+
+
+def set_sound_emitter(scene: Doc, entity_id: str, *, sound: Any = _UNSET, volume: Any = _UNSET, radius: Any = _UNSET,
+                      distance: Any = _UNSET, stereo: Any = _UNSET, loop: Any = _UNSET, enabled: Any = _UNSET,
+                      fade_in: Any = _UNSET, fade_out: Any = _UNSET) -> Doc:
+    """Make the object a sound emitter, or change it (engine.sound_emitters): ``sound`` (a project sound file, .wav
+    .ogg or .mp3; "" none yet), ``volume`` (0-1, at full strength), ``radius`` (px: full strength within it),
+    ``distance`` (px: heard up to it; more than ``radius``), ``stereo`` (heard from its side), ``loop`` (plays round;
+    false: once each time the player comes near), ``enabled``, ``fade_in`` / ``fade_out`` (s, 0-30). Only what is
+    given changes. It has no picture in the game; in an HD-2D room its ``elevation`` is its height."""
+    from engine.sound_emitters import EmitterError, parse_emitter  # noqa: PLC0415
+
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    config = _behaviour_config(entity, "SoundEmitter", create=True)
+    assert config is not None
+    given = {"sound": sound, "volume": volume, "radius": radius, "distance": distance, "stereo": stereo, "loop": loop,
+             "enabled": enabled, "fade_in": fade_in, "fade_out": fade_out}
+    for key, value in given.items():
+        if value is _UNSET:
+            continue
+        if key == "sound":
+            value = _sound_path(value)
+        elif key in ("radius", "distance") and isinstance(value, (int, float)) and not isinstance(value, bool):
+            value = round(float(value), 1)
+        elif key in ("volume", "fade_in", "fade_out") and isinstance(value, (int, float)) and not isinstance(value, bool):
+            value = round(float(value), 3)
+        config[key] = value
+    try:
+        parse_emitter(config)
+    except EmitterError as exc:
+        raise OpError(str(exc)) from exc
+    return _checked(scene, out)
+
+
+def weather_sounds_of(scene: Doc) -> Doc:
+    """The room's weather sounds (``settings.weather_sounds``) completed: rain and wind files ("" none) and volumes."""
+    from engine.sound_emitters import EmitterError, WeatherSounds, parse_weather_sounds  # noqa: PLC0415
+
+    try:
+        w = parse_weather_sounds(_settings_of(scene).get("weather_sounds"))
+    except EmitterError:
+        w = WeatherSounds()
+    return {"rain": w.rain, "wind": w.wind, "rain_volume": w.rain_volume, "wind_volume": w.wind_volume}
+
+
+def set_weather_sounds(scene: Doc, *, rain: Any = _UNSET, wind: Any = _UNSET, rain_volume: Any = _UNSET,
+                       wind_volume: Any = _UNSET) -> Doc:
+    """The sounds of the room's weather (``settings.weather_sounds``): ``rain`` and ``wind`` (sound files, "" none)
+    and their volumes (0-1). The rain is heard as loud as the rain falls (its particles), the wind as hard as the
+    room's wind blows where the player is. Only what is given changes; nothing left: the key is removed."""
+    from engine.sound_emitters import EmitterError, parse_weather_sounds  # noqa: PLC0415
+
+    out = copy.deepcopy(scene)
+    settings = out.get("settings")
+    if settings is not None and not isinstance(settings, dict):
+        raise OpError("This room's settings aren't readable.")
+    now = dict(settings.get("weather_sounds") or {}) if isinstance(settings, dict) and isinstance(
+        settings.get("weather_sounds"), dict) else {}
+    for key, value in {"rain": rain, "wind": wind, "rain_volume": rain_volume, "wind_volume": wind_volume}.items():
+        if value is not _UNSET:
+            now[key] = _sound_path(value) if key in ("rain", "wind") else value
+    try:
+        parse_weather_sounds(now)
+    except EmitterError as exc:
+        raise OpError(str(exc)) from exc
+    if any(now.get(k) for k in ("rain", "wind")):
+        out.setdefault("settings", {})["weather_sounds"] = now
+    elif isinstance(settings, dict):
+        settings.pop("weather_sounds", None)
+    return _checked(scene, out)
+
+
+RAIN_STRENGTHS = {"off": 0, "light": 1200, "steady": 3000, "heavy": 6000}  # drops (the rain preset's default: 3000)
+
+
+def rain_strength(scene: Doc) -> str:
+    """The room's rain as ``set_rain`` sets it: "off", "light", "steady" or "heavy" (the nearest, for hand-set rain)."""
+    rain = next((e for e in _particles_of(scene) if isinstance(e, dict) and e.get("preset") == "rain"
+                 and e.get("enabled", True) is not False), None)
+    if rain is None:
+        return "off"
+    count = rain.get("count", 3000)
+    count = float(count) if isinstance(count, (int, float)) and not isinstance(count, bool) else 3000.0
+    return min((k for k in RAIN_STRENGTHS if k != "off"), key=lambda k: abs(RAIN_STRENGTHS[k] - count))
+
+
+def set_rain(scene: Doc, strength: Any) -> Doc:
+    """The room's rain: ``strength`` "off", "light", "steady" or "heavy" (its ``rain`` particle effect; snow and
+    leaves the room has are kept). It falls in the room's wind; its sound is ``set_weather_sounds``' rain."""
+    if strength not in RAIN_STRENGTHS:
+        raise OpError(f"Rain must be one of {', '.join(RAIN_STRENGTHS)} (got {strength!r}).")
+    effects = [copy.deepcopy(e) for e in _particles_of(scene) if not (isinstance(e, dict) and e.get("preset") == "rain")]
+    if strength != "off":
+        effects.insert(0, {"preset": "rain", "count": RAIN_STRENGTHS[strength]})
+    return set_particles(scene, effects)
 
 
 def set_water_reflections(scene: Doc, mode: Any) -> Doc:

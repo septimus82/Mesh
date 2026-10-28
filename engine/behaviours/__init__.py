@@ -74,6 +74,7 @@ _BUILTIN_MODULES: tuple[str, ...] = (
     "engine.behaviours.sequence_player",
     "engine.behaviours.set_game_state_on_event",
     "engine.behaviours.shooter",
+    "engine.behaviours.sound_emitter",
     "engine.behaviours.time_of_day_gate",
     "engine.behaviours.timer",
     "engine.behaviours.toggle_scene_lights",

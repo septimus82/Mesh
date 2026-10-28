@@ -1,0 +1,133 @@
+{
+ "frames": 2781,
+ "marks": {
+  "1 entrance (calm)": {
+   "at": [
+    30.0,
+    2.19
+   ],
+   "room": "lakeside.json",
+   "loops": {
+    "rain": 0.0138,
+    "wind": 0.171
+   }
+  },
+  "2 crossroads": {
+   "at": [
+    30.0,
+    11.56
+   ],
+   "room": "lakeside.json",
+   "loops": {
+    "wind": 0.2614
+   }
+  },
+  "3 at the pond (bridge's north end)": {
+   "at": [
+    35.0,
+    29.61
+   ],
+   "room": "lakeside.json",
+   "loops": {
+    "wind": 0.182,
+    "lakeside_sound_1296_928_0_0": 0.5536,
+    "lakeside_sound_1568_608_0_0": 0.0
+   }
+  },
+  "4 away from the pond": {
+   "at": [
+    22.31,
+    30.89
+   ],
+   "room": "lakeside.json",
+   "loops": {
+    "wind": 0.2178
+   }
+  },
+  "5 by the birds": {
+   "at": [
+    10.78,
+    32.11
+   ],
+   "room": "lakeside.json",
+   "loops": {
+    "wind": 0.2693,
+    "lakeside_sound_272_1072_0_0": 0.6349
+   }
+  },
+  "6 raining": {
+   "at": [
+    10.78,
+    32.11
+   ],
+   "room": "lakeside.json",
+   "loops": {
+    "wind": 0.3075,
+    "lakeside_sound_272_1072_0_0": 0.6508,
+    "rain": 0.5953
+   }
+  },
+  "7 calm again": {
+   "at": [
+    10.78,
+    32.11
+   ],
+   "room": "lakeside.json",
+   "loops": {
+    "wind": 0.2815,
+    "lakeside_sound_272_1072_0_0": 0.6548
+   }
+  },
+  "8 in the Village": {
+   "at": [
+    24.0,
+    5.5
+   ],
+   "room": "start.json",
+   "loops": {}
+  },
+  "9 back in Lakeside": {
+   "at": [
+    30.0,
+    3.44
+   ],
+   "room": "lakeside.json",
+   "loops": {
+    "rain": 0.0732,
+    "wind": 0.2329
+   }
+  },
+  "10 back at the pond": {
+   "at": [
+    39.0,
+    28.19
+   ],
+   "room": "lakeside.json",
+   "loops": {
+    "rain": 0.0075,
+    "wind": 0.2139,
+    "lakeside_sound_1296_928_0_0": 0.8,
+    "lakeside_sound_1568_608_0_0": 0.0475
+   }
+  }
+ },
+ "reached": {
+  "away": true,
+  "birds": true
+ },
+ "village": {
+  "room": "packs/core_regions/scenes/start.json",
+  "loops": {}
+ },
+ "back": {
+  "walked_back_through_the_passage": true,
+  "loops": {
+   "weather:rain": "assets/ambience/rain_loop.wav",
+   "weather:wind": "assets/ambience/wind_loop.wav",
+   "emitter:packs/core_regions/scenes/lakeside.json:lakeside_sound_1296_928_0_0": "assets/ambience/stream_loop.wav",
+   "emitter:packs/core_regions/scenes/lakeside.json:lakeside_sound_1568_608_0_0": "assets/ambience/forest_loop.wav"
+  }
+ },
+ "registered_after_close": 0,
+ "log": "<scratch>\\walk_log.json"
+}
