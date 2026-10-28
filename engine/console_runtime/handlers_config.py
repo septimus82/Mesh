@@ -40,6 +40,14 @@ def handle_set(controller: Any, args: list[str]) -> bool:
             controller.log(f"SFX volume set to {vol:.2f}")
         return True
 
+    if key == "ambience":
+        vol = parse_float(controller, value, "ambience")
+        if vol is not None:
+            controller.window.audio.set_ambience_volume(vol)
+            controller.window.engine_config.ambience_volume = vol
+            controller.log(f"Ambience volume set to {vol:.2f}")
+        return True
+
     if key == "music":
         vol = parse_float(controller, value, "music")
         if vol is not None:

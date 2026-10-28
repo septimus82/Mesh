@@ -39,6 +39,7 @@ class EngineConfig:
     master_volume: float = 1.0
     sfx_volume: float = 1.0
     music_volume: float = 1.0
+    ambience_volume: float = 1.0
 
     profile: str = "release"
 

@@ -45,6 +45,7 @@ from typing import Any
 from engine.scene_runtime.room_memory import room_key
 
 ROOM_IDS = "room_entity_ids"
+MUSIC = "music"  # meta: the music playing when saved ({"path", "volume"}; path None: silence)
 PLAY_OWNED = ("x", "y", "elevation")  # (what play changes on an object the room has; the rest is the room's)
 
 
@@ -120,6 +121,14 @@ def compose(save: dict[str, Any], room: dict[str, Any], room_path: str) -> dict[
     out["entities"] = kept + added
     if "state" in save:
         out["state"] = copy.deepcopy(save["state"])
+    music = meta.get(MUSIC)
+    settings = out.get("settings")
+    if isinstance(music, dict) and isinstance(settings, dict) and "music" not in settings:
+        # A room without its own music played whatever was playing when it was entered: the save recorded that.
+        path = music.get("path")
+        settings["music"] = path if isinstance(path, str) and path else None
+        if isinstance(music.get("volume"), (int, float)) and not isinstance(music.get("volume"), bool):
+            settings["music_volume"] = float(music["volume"])
     zoom = _zoom(save)
     if zoom is not None:
         settings = out.setdefault("settings", {})

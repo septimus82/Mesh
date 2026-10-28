@@ -147,6 +147,7 @@ class Studio(InspectorMixin):
         self.window = window
         self.project = project
         self.mode = "edit"
+        self._editor_audio(True)
         self.selected: str | None = None
         self.panel = "inspect"  # inspect | add_behaviour | new_room
         self.expanded: str | None = None
@@ -872,6 +873,9 @@ class Studio(InspectorMixin):
         self.menu, self.place_prefab, self.drag = None, None, None
         self._install_documents()
         self.mode = "play"
+        audio = getattr(self.window, "audio", None)
+        if audio is not None:
+            audio.scene_music = True  # the play-test's rooms set its music, as in the game
         self.ui.disable()
         self.window.camera.zoom = 1.0
         state = getattr(self.window, "game_state_controller", None)
@@ -884,10 +888,18 @@ class Studio(InspectorMixin):
         self.play_ui.enable()
         self.window.set_caption(f"Mesh Studio - playing {self.project.label(self.project.current)} (F4 to stop)")
 
+    def _editor_audio(self, editing: bool) -> None:
+        """The editor is silent: a room's music plays in play-tests (F4) only, and stops when the play-test does."""
+        audio = getattr(self.window, "audio", None)
+        if audio is not None and editing:
+            audio.scene_music = False
+            audio.shutdown()
+
     def stop(self) -> None:
         self.play_ui.disable()
         self.play_ui.clear()
         self.mode = "edit"
+        self._editor_audio(True)
         self.keys.clear()
         self.ui.enable()
         state = getattr(self.window, "game_state_controller", None)

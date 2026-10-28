@@ -9,6 +9,7 @@ from engine import optional_arcade
 from engine.background_layers import parse_background_layers, parse_foreground_layers
 from engine.depth_tint_model import parse_depth_tint_settings
 from engine.hd2d.runtime import configure_scene as configure_hd2d_scene
+from engine.logging_tools import get_logger
 from engine.parallax_model import parse_background_planes
 from engine.scene_lifecycle_model import SceneLoadInputs, build_scene_load_plan
 from engine.scene_particles import configure as configure_scene_particles
@@ -22,6 +23,8 @@ from engine.ui import (
     maybe_enqueue_shadowmask_enabled_toast,
 )
 from engine.water import reset as reset_water
+
+logger = get_logger(__name__)
 
 
 def _restore_camera(window: Any, pos: tuple[float, float], zoom: float | None) -> None:
@@ -182,6 +185,51 @@ def handle_pending_scene_change(controller: Any) -> bool:
     return True
 
 
+_MUSIC_WARNED: set[str] = set()
+
+
+def _warn_once(message: str) -> None:
+    if message not in _MUSIC_WARNED:
+        _MUSIC_WARNED.add(message)
+        logger.warning("[Mesh][Audio] %s", message)
+
+
+def _number(settings: dict[str, Any], key: str, default: float) -> float:
+    value = settings.get(key, default)
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value != value:
+        if key in settings:
+            _warn_once(f"settings.{key} is not a number ({value!r}): {default} used")
+        return float(default)
+    return float(value)
+
+
+def apply_scene_music(window: Any, settings: Any) -> None:
+    """A room's music, as the room is entered (also a loaded save's room, and a room entered again):
+
+    - no ``music`` setting: the music playing carries on (a track, or silence);
+    - ``"music": null`` or ``""``: silence (the music playing stops, or fades out);
+    - ``"music": "<path>"``: that track at ``music_volume``. The track already playing carries on uninterrupted
+      (only its volume eased to this room's); a track that can't be played leaves the music as it was (logged once);
+    - anything else (a number, an object: never valid): treated as no setting, with a warning.
+
+    Changes crossfade (both tracks playing during the fade) when ``music_crossfade_enabled`` is on in the project's
+    config or the room's settings, over ``music_crossfade_out_s`` / ``music_crossfade_in_s``; otherwise they're
+    immediate. Mesh Studio's editor turns room music off (``audio.scene_music``): it plays in play-tests only."""
+    audio = getattr(window, "audio", None)
+    if audio is None or not getattr(audio, "scene_music", True) or not isinstance(settings, dict) or "music" not in settings:
+        return
+    music = settings["music"]
+    if music is not None and not isinstance(music, str):
+        _warn_once(f"settings.music must be a path or null, not {music!r}: the music playing carries on")
+        return
+    cfg = getattr(window, "engine_config", None)
+    crossfade = bool(settings.get("music_crossfade_enabled", getattr(cfg, "music_crossfade_enabled", False)))
+    fade_out = _number(settings, "music_crossfade_out_s", float(getattr(cfg, "music_crossfade_out_s", 0.25))) if crossfade else 0.0
+    fade_in = _number(settings, "music_crossfade_in_s", float(getattr(cfg, "music_crossfade_in_s", 0.25))) if crossfade else 0.0
+    audio.transition_music(music or "", fade_out_s=fade_out, fade_in_s=fade_in,
+                           volume=_number(settings, "music_volume", 1.0) if music else 0.0)
+
+
 def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     """Load entities from a JSON scene file and build sprites for them."""
     print(f"[Mesh][Scene] Loading scene '{scene_path}'")
@@ -251,43 +299,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     configure_scene_particles(controller.window, controller.scene_settings, scene)  # after the renderer: HD-2D's own them
     reset_water(controller.window)  # its water surfaces register as their objects are made (engine.water)
 
-    # Handle music
-    music_path = controller.scene_settings.get("music")
-    audio = getattr(controller.window, "audio", None)
-    if audio is not None:
-        cfg = getattr(controller.window, "engine_config", None)
-        crossfade_enabled = bool(getattr(cfg, "music_crossfade_enabled", False))
-        if isinstance(controller.scene_settings, dict) and "music_crossfade_enabled" in controller.scene_settings:
-            crossfade_enabled = bool(controller.scene_settings.get("music_crossfade_enabled"))
-        fade_out_s = float(getattr(cfg, "music_crossfade_out_s", 0.25))
-        fade_in_s = float(getattr(cfg, "music_crossfade_in_s", 0.25))
-        if isinstance(controller.scene_settings, dict):
-            if "music_crossfade_out_s" in controller.scene_settings:
-                fade_out_s = float(controller.scene_settings.get("music_crossfade_out_s", fade_out_s))
-            if "music_crossfade_in_s" in controller.scene_settings:
-                fade_in_s = float(controller.scene_settings.get("music_crossfade_in_s", fade_in_s))
-
-        if music_path:
-            volume = float(controller.scene_settings.get("music_volume", 1.0))
-            if crossfade_enabled and hasattr(audio, "transition_music"):
-                audio.transition_music(
-                    music_path,
-                    fade_out_s=fade_out_s,
-                    fade_in_s=fade_in_s,
-                    volume=volume,
-                )
-            else:
-                audio.play_music(music_path, volume=volume)
-        else:
-            # Stop music if scene has none? Or keep playing previous?
-            # Usually we want to stop if explicitly None, but maybe keep if missing?
-            # Let's assume if "music" key is missing, we keep playing.
-            # If "music" is explicitly null/empty, we stop.
-            if "music" in controller.scene_settings and not music_path:
-                if crossfade_enabled and hasattr(audio, "transition_music"):
-                    audio.transition_music("", fade_out_s=fade_out_s, fade_in_s=fade_in_s, volume=0.0)
-                else:
-                    audio.stop_music()
+    apply_scene_music(controller.window, controller.scene_settings)
 
     controller._ensure_layers(scene.get("layers", []))
     controller._clear_layers()
