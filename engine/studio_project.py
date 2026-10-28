@@ -18,7 +18,7 @@ import json
 import pickle
 import posixpath
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
@@ -602,6 +602,28 @@ class Project:
         self._store(key_a, a, ids_a)
         self._store(key_b, b, ids_b)
 
+    def _map_file_at_size(self, key: str) -> tuple[str, Doc] | None:
+        """An HD-2D room grown in Studio (``ops.expand_hd2d_room``): its map file (the map's size, tilesets and empty
+        layers; the tiles live in the room) at the room's size, to be saved with it; None when they already agree.
+        A map file with tiles of its own is never resized: OpError, and nothing is saved."""
+        scene = self.scenes[key]
+        info, rel = ops.map_info(scene), self.map_path(key)
+        if not isinstance((scene.get("settings") or {}).get("hd2d"), dict) or info is None or rel is None:
+            return None
+        doc = self._read_json(rel)
+        if doc is None or (doc.get("width"), doc.get("height")) == (info["width"], info["height"]):
+            return None
+        layers = doc.get("layers")
+        if doc.get("infinite") or not isinstance(layers, list) or not all(
+                isinstance(layer, dict) and layer.get("type") == "tilelayer" and not any(layer.get("data") or [])
+                for layer in layers):
+            raise ops.OpError(f"{rel} has tiles or objects of its own, so it isn't resized to the room's "
+                              f"{info['width']} x {info['height']} tiles; nothing was saved.")
+        w, h = info["width"], info["height"]
+        resized = {**doc, "width": w, "height": h,
+                   "layers": [{**layer, "width": w, "height": h, "data": [0] * (w * h)} for layer in layers]}
+        return rel, resized
+
     def _keep_outside_change(self, rel: str) -> None:
         """Before overwriting a file something else changed since it was opened, keep that version."""
         target = self.root / rel
@@ -631,7 +653,9 @@ class Project:
         """Write every changed room and the world file. Returns the paths written."""
         written: list[str] = []
         self.last_save_backups = []
-        targets: list[tuple[str, Any]] = [(self.path(key), self.scenes[key]) for key in sorted(self.dirty)]
+        # an HD-2D room's map file at the room's size first: checked before anything is written
+        maps = [m for m in (self._map_file_at_size(key) for key in sorted(self.dirty)) if m is not None]
+        targets: list[tuple[str, Any]] = [*maps, *[(self.path(key), self.scenes[key]) for key in sorted(self.dirty)]]
         if self.world_dirty:
             targets.append((self.world_file, self.world))
         if self.player_dirty and self.player is not None:
@@ -643,6 +667,11 @@ class Project:
             write_json_atomic(self.root / rel, doc)
             self._seen_on_disk[rel] = (self.root / rel).stat().st_mtime
             written.append(rel)
+        # Undo or redo past this save comes back to rooms other than what was just written: they are to save again.
+        saved, world, player = frozenset(self.dirty), self.world_dirty, self.player_dirty
+        self._undo, self._redo = [[replace(s, dirty=s.dirty | saved, world_dirty=s.world_dirty or world,
+                                           player_dirty=s.player_dirty or player) for s in stack]
+                                  for stack in (self._undo, self._redo)]
         self.dirty.clear()
         self.world_dirty = False
         self.player_dirty = False

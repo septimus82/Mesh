@@ -20,7 +20,9 @@ These were found while building Lakeside Village ([`lakeside_village.md`](lakesi
 
 - **The left panel doesn't scroll.** In an HD-2D room its sections (3D view, Wind and motion, Models, Sculpt and paint) run past the window's bottom. M22A put its own button high in the panel.
 - ~~See it ignores the camera's room edges~~: fixed in #409's review (it goes through the follow camera's `fit_view`).
-- **Resizing an existing HD-2D room's ground:** approved as M22A.1. It starts with safe expansion of flat, unsculpted rooms; shrinking and resampling sculpted ground wait for review.
+- **Resizing an existing HD-2D room's ground:** M22A.1 expands flat, unpainted rooms east and north (docs/reviews/m22a1_ground_expansion.md). Still waiting for review: sculpted or painted ground, growing west or south, shrinking.
+- **Undo after Save** left the undone rooms marked saved, so their state never reached disk. Fixed in M22A.1 for every edit, not only expansion.
+- **A 2D room's Resize leaves its map file at the old size** (the room's own size wins at runtime; Tiled, `ai_ops` tile painting and `brush_report` read the file). Unchanged by M22A.1, which keeps 2D Resize as it was.
 
 ## Broken or misleading
 

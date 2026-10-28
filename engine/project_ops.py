@@ -2416,6 +2416,96 @@ def set_hd2d_camera(scene: Doc, *, preset: Any = _UNSET, view: Any = _UNSET, pit
     return _checked_structures(_checked(scene, out))
 
 
+def _expandable_size(scene: Doc) -> tuple[int, int]:
+    """An HD-2D room's size in whole metres (= tiles), if its ground can be grown: flat (no sculpted heights, no
+    paint), from the room's south-west corner, and its ground, map and world the same size. OpError says why not."""
+    from engine.hd2d.settings import Hd2dSettingsError, parse_hd2d  # noqa: PLC0415
+
+    settings = scene.get("settings") or {}
+    hd2d = settings.get("hd2d")
+    if not isinstance(hd2d, dict):
+        raise OpError("This room isn't an HD-2D room; a 2D room's map is resized with Map: Resize....")
+    if not isinstance(hd2d.get("ground"), dict):
+        raise OpError("This room has no HD-2D ground to grow (its floor is all models).")
+    try:
+        ground = parse_hd2d({"ground": hd2d["ground"]}).ground
+    except Hd2dSettingsError as err:
+        raise OpError(f"This room's ground can't be read, so it isn't grown: {err}") from err
+    if ground is None or ground.terrain is not None:
+        raise OpError("This room's ground is sculpted or painted; only flat, unpainted ground can be grown for now.")
+    if tuple(ground.lo) != (0.0, 0.0):
+        raise OpError(f"This room's ground starts at {ground.lo[0]:g}, {ground.lo[1]:g} px, not at the room's "
+                      "south-west corner, so it isn't grown.")
+    w_px, d_px = ground.hi
+    if w_px % TILE_SIZE or d_px % TILE_SIZE:
+        raise OpError(f"This room's ground ({w_px / TILE_SIZE:g} x {d_px / TILE_SIZE:g} m) isn't whole metres, so it "
+                      "isn't grown.")
+    w, d = int(w_px // TILE_SIZE), int(d_px // TILE_SIZE)
+    info = map_info(scene)
+    if info is None or (info["width"], info["height"], info["tilewidth"], info["tileheight"]) != (w, d, TILE_SIZE, TILE_SIZE):
+        size = "none" if info is None else f"{info['width']} x {info['height']} tiles"
+        raise OpError(f"This room's map ({size}) doesn't match its ground ({w} x {d} m), so it isn't grown.")
+    if (settings.get("world_width"), settings.get("world_height")) != (w_px, d_px):
+        raise OpError(f"This room's world size ({settings.get('world_width')} x {settings.get('world_height')} px) "
+                      f"doesn't match its ground ({w_px:g} x {d_px:g} px), so it isn't grown.")
+    return w, d
+
+
+def hd2d_room_size(scene: Doc) -> Doc:
+    """``{width, depth}`` (m) of an HD-2D room's ground, and ``expandable`` with ``why`` not (``expand_hd2d_room``)."""
+    try:
+        w, d = _expandable_size(scene)
+        return {"width": w, "depth": d, "expandable": True, "why": None}
+    except OpError as err:
+        hd2d = (scene.get("settings") or {}).get("hd2d") or {}
+        to = (hd2d.get("ground") or {}).get("to") if isinstance(hd2d, dict) else None
+        size = (to[0] / TILE_SIZE, to[1] / TILE_SIZE) if isinstance(to, list) and len(to) == 2 else (None, None)
+        return {"width": size[0], "depth": size[1], "expandable": False, "why": str(err)}
+
+
+def expand_hd2d_room(scene: Doc, width_m: Any, depth_m: Any) -> Doc:
+    """Grow a flat HD-2D room to ``width_m`` x ``depth_m`` metres (each at least what it is, up to 256), east and
+    north: its south-west corner, and so everything in it, stays where it is. Its ground, map (the new tiles the
+    room's ground tile), world size and, where they were the room's edges, the camera's bounds grow together; bounds
+    set otherwise are kept. Sculpted or painted ground, shrinking and mismatched room data are refused (OpError)."""
+    old_w, old_d = _expandable_size(scene)
+    size = []
+    for name, value, now in (("width", width_m, old_w), ("depth", depth_m, old_d)):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) \
+                or float(value) != int(value) or not HD2D_SIZE_M[0] <= float(value) <= HD2D_SIZE_M[1]:
+            raise OpError(f"The room's new {name} must be a whole number of metres, {HD2D_SIZE_M[0]:g} to "
+                          f"{HD2D_SIZE_M[1]:g} (got {value!r}).")
+        if int(value) < now:
+            raise OpError(f"The room's {name} can only grow ({now} m now, {int(value)} m asked): shrinking isn't "
+                          "supported.")
+        size.append(int(value))
+    w, d = size
+    if (w, d) == (old_w, old_d):
+        raise OpError(f"The room is already {w} x {d} m.")
+    layer = next((lay for lay in scene["tilemap"]["tile_layers"] if lay.get("id") == GROUND), None)
+    old_ground = list((layer or {}).get("tiles") or [])
+    tile = max(set(old_ground), key=old_ground.count) if old_ground else 0  # the room's ground tile
+    out = resize_map(scene, w, d)  # rows added at the top (north), columns at the right (east): nothing moves
+    if layer is not None:
+        shift = d - old_d
+        for lay in out["tilemap"]["tile_layers"]:
+            if lay.get("id") == GROUND:
+                tiles = lay["tiles"]
+                for row in range(d):
+                    for col in range(w):
+                        if row < shift or col >= old_w:  # only the new ground
+                            tiles[row * w + col] = tile
+    settings = out["settings"]
+    hd2d = settings["hd2d"]
+    hd2d["ground"]["to"] = [w * float(TILE_SIZE), d * float(TILE_SIZE)]
+    camera = hd2d.get("camera")
+    if isinstance(camera, dict) and isinstance(camera.get("bounds"), list) \
+            and [float(v) for v in camera["bounds"]] == [0.0, 0.0, old_w * float(TILE_SIZE), old_d * float(TILE_SIZE)]:
+        camera["bounds"] = [0.0, 0.0, w * float(TILE_SIZE), d * float(TILE_SIZE)]  # the room's edges: grown with it
+    settings["world_width"], settings["world_height"] = w * float(TILE_SIZE), d * float(TILE_SIZE)
+    return _checked_structures(_checked(scene, out))
+
+
 def _sun_angles(direction: Any) -> tuple[float, float]:
     x, y, z = (float(v) for v in direction)
     length = math.sqrt(x * x + y * y + z * z) or 1.0

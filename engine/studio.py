@@ -496,7 +496,7 @@ class Studio(InspectorMixin, SoundMixin):
             return
         try:
             written = self.project.save()
-        except OSError as err:
+        except (OSError, ops.OpError) as err:
             self._say(f"Couldn't save: {err}", ok=False)
             return
         self._rebuild()
