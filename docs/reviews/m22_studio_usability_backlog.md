@@ -4,8 +4,8 @@ These were found while building Lakeside Village ([`lakeside_village.md`](lakesi
 
 ## High priority (the owner's call after Lakeside Village)
 
-1. **Creating an HD-2D room.** A new room is a 2D tilemap room. Making it HD-2D (ground, size, camera, sun) took a documented edit outside Studio.
-2. **Gameplay camera, sun and sky controls.** These are set by the template or by hand; Studio has no controls for them.
+1. **Creating an HD-2D room.** A new room was always a 2D tilemap room; making it HD-2D took a documented edit outside Studio. **M22A** adds an HD-2D choice, with its size, to New room.
+2. **Gameplay camera, sun and sky controls.** These were set by the template or by hand. **M22A** adds them in the 3D view's **Camera and sun...** panel.
 
 ## Missing
 
@@ -15,6 +15,12 @@ These were found while building Lakeside Village ([`lakeside_village.md`](lakesi
 - **A lamp brightness field.** HD-2D lamps have size and height, but no brightness.
 - **Room music in Studio.** A room's `settings.music` can't be set in Studio. M21A's semantics are documented in `docs/audio.md`, but they're reachable only by hand or by AI tools.
 - **Weather that changes during play.** Weather is per room; within a room only the particle layer's on/off switch changes it. There's no scripted or timed weather (M21B).
+
+## Found in M22A
+
+- **The left panel doesn't scroll.** In an HD-2D room its sections (3D view, Wind and motion, Models, Sculpt and paint) run past the window's bottom. M22A put its own button high in the panel.
+- **See it ignores the camera's room edges** (see the M22A report).
+- **Resizing an existing HD-2D room's ground** (M22A's step 2; refused for sculpted ground until its heights can be resampled).
 
 ## Broken or misleading
 

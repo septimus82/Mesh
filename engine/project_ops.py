@@ -2318,7 +2318,7 @@ SUN_PRESETS: dict[str, Doc] = {  # azimuth: the compass bearing the sun is in (0
 
 
 def make_hd2d_room(scene: Doc, scene_path: str, width_m: Any, depth_m: Any, *, outdoor: bool = True,
-                   tilesets: list[str] | None = None) -> tuple[Doc, str, Doc]:
+                   tilesets: list[tuple[str, int]] | None = None) -> tuple[Doc, str, Doc]:
     """Make the room an HD-2D room ``width_m`` x ``depth_m`` metres (8-256 each), as the HD-2D template makes its
     village (``engine.hd2d.starter_village``): a plain map of that size (Mesh Studio paints on it; HD-2D draws the
     models and the ground), the starter kit's grass over it, a gameplay camera framed for it (outdoor, or indoor:

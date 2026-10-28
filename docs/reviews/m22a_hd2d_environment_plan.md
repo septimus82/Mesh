@@ -78,6 +78,37 @@ Every change is one checked `project_ops` edit: one undo step, saved with the ro
   - screenshots.
 - **Gates:** the default selection, the GPU tier, mypy at 73, the ruff gate.
 
-## The first draft PR
+## The first draft PR: what it does (steps 1, 3 and 4)
 
-It covers **steps 1, 3 and 4** (create an HD-2D room with its size, the gameplay camera, the sun and sky). Step 2, ground size afterwards, follows only if review agrees: creation already takes the size, and Lakeside's need was the creation.
+**Step 2, resizing an existing room's ground, waits for review.** Creation already takes the size, and Lakeside's need was creation.
+
+**Built:**
+- **Operations** (`engine/project_ops.py`):
+  - `make_hd2d_room`: the template's own recipe at any size. Its HD-2D settings equal `starter_village._hd2d(...)` exactly, outdoors and indoors, and are tested so.
+  - `hd2d_camera_of` / `set_hd2d_camera`: in metres of view, with presets.
+  - `hd2d_sun_of` / `set_hd2d_sun`: the sun's compass bearing and height become its direction vector, with presets.
+  - **A new HD-2D room's player starts in its middle.** Found in play: a 2D room's corner start put the player at the picture's edge, because the camera keeps inside the room.
+- **`Project.add_hd2d_room`:** one undo step for the room. A 2D project's first HD-2D room brings in the starter kit (models, ground textures, scatter), as the template does; that's written straight away, never overwriting.
+- **Studio:**
+  - **New room** gains 2D map or HD-2D, Width × depth (m), and Outdoors or Indoors.
+  - **3D view → Camera and sun...** opens a panel with the camera's presets and fields, Stay inside the room, Flat, **See it** (the editor's view becomes the game's camera at the player's start) and **Back to editing view**. The sun and sky have presets (Morning, Noon, Evening, Overcast, Night) and fields.
+  - Every change is one undo step, and the view redraws with it.
+- **A fix found on the way:** a 2D room's tile palette stayed drawn over the 3D view's panel after switching to an HD-2D room. That only happens on going from a 2D room to an HD-2D one, which this workflow does. It's no longer drawn.
+
+**Checked, through Studio's own input events in hidden windows** (`tooling/hd2d_room_studio.py`):
+- **The 2D starter project:** + New room → HD-2D, 40 × 30 m, Outdoors → Create.
+  - The kit came in (it wasn't there before), and the room opens in 3D.
+  - Camera and sun: Wide, then pitch 38, then See it: the editor's camera took the game's pitch, lens and distance.
+  - Evening, then the sun from 260°: Undo gave 250 (the preset's), Redo 260 again. The 3D view's renderer had the new values at once.
+  - Saved, reopened identical, nothing unsaved. **In play** the game's camera and sun were exactly what was set; the player starts centred.
+- **Export:** the bundle, on its own engine, has the same camera and sun, and the grass.
+- **The HD-2D template** still builds the same, deterministic rooms (two fresh projects compared byte for byte).
+- **Lakeside Village, a copy** (the original only read): its camera set to a 14 m view and its sun to Morning at 25° in Studio; saved; reopened the same.
+
+**Tests:**
+- `tests/test_hd2d_environment_ops.py`, 7 fast tests: the template's recipe; sizes and refusals; the camera round trip; the sun round trip and presets; 2D rooms refused; the kit installed once, and both rooms undone; the player's start.
+- `tests/test_hd2d_room_studio_gpu.py`, 3 GPU tests: the Studio workflow above, without export.
+
+**Gates:** the default selection, 10,029 passed; the GPU tier, 198 passed; mypy at 73; the ruff gate, ok.
+
+**Known limit:** **See it** shows the game's camera at the player's start *before* it is kept inside the room. Near an edge the game's view is shifted inward, so See it can show sky past the ground where the game wouldn't. It says so when pressed. Applying the same edge clamp is a small follow-up if wanted.

@@ -74,7 +74,8 @@ def _renderer_state(window: Any) -> dict[str, Any]:
             "sky": [round(v, 3) for v in s.sky]}
 
 
-def studio(out: Path) -> dict[str, Any]:
+def studio(out: Path, *, full: bool = True) -> dict[str, Any]:
+    """``full``: also export it and check the HD-2D template (slower; the GPU test leaves those to this tool)."""
     from hd2d_studio_demo import StudioDriver
 
     from engine import project_ops as ops
@@ -146,8 +147,9 @@ def studio(out: Path) -> dict[str, Any]:
         d.frame(5)
     finally:
         d.close()
-    report["export"] = _export(project, out)
-    report["template_untouched"] = _template_check(out)
+    if full:
+        report["export"] = _export(project, out)
+        report["template_untouched"] = _template_check(out)
     return report
 
 
