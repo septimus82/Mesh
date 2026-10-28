@@ -13,7 +13,7 @@ import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
-from ._settings_data import SETTINGS_ROWS
+from ._settings_data import SETTINGS_ROWS, toast_settings_saved
 from .common import (
     UIElement,
     _draw_rectangle_filled,
@@ -72,17 +72,25 @@ def compute_menu_panel_layout(
 ) -> ProjectBrowserLayout:
     panel_width = min(720.0, max(420.0, float(width) - 96.0))
     panel_height = min(520.0, max(360.0, float(height) - 112.0))
+    row_height = 52.0
+    gap = 10.0
+    first_row = 120.0  # below the title and subtitle
+    rows = max(0, int(item_count))
+    need = first_row + rows * (row_height + gap) - gap + 48.0  # the title, the cards, the footer's room below
+    if rows and need > panel_height:  # more rows than this window shows (Settings at 640 x 480: Milestone 21B.1)
+        panel_height = max(panel_height, min(need, float(height) - 16.0))  # use more of the window first,
+        first_row, gap = 100.0, 6.0  # then close up: the cards just under the subtitle, the rows nearer
+        pitch = (panel_height - first_row - 44.0 + gap) / rows
+        row_height = max(48.0, min(row_height, pitch - gap))  # (48 px: a card's name and its value still fit)
     left = (float(width) - panel_width) / 2.0
     bottom = (float(height) - panel_height) / 2.0
     panel = ProjectBrowserRect(left=left, right=left + panel_width, bottom=bottom, top=bottom + panel_height)
 
     card_left = panel.left + 34.0
     card_width = panel.width - 68.0
-    row_height = 52.0
-    gap = 10.0
     cards: list[ProjectBrowserRect] = []
-    for index in range(max(0, int(item_count))):
-        row_top = panel.top - 120.0 - index * (row_height + gap)
+    for index in range(rows):
+        row_top = panel.top - first_row - index * (row_height + gap)
         cards.append(
             ProjectBrowserRect(
                 left=card_left,
@@ -1197,8 +1205,6 @@ class MainMenuOverlay(UIElement):
             saver()
 
     def _save_runtime_settings(self) -> None:
-        from ..i18n import tr  # noqa: PLC0415
-
         editor = getattr(self.window, "editor", None)
         if editor is not None and hasattr(editor, "workspace"):
             editor.workspace.save_user_settings()
@@ -1208,10 +1214,7 @@ class MainMenuOverlay(UIElement):
             path = getattr(self.window, "runtime_settings_path", None)
             settings = self._runtime_settings()
             save_runtime_settings(path, settings)
-        hud = getattr(self.window, "player_hud", None)
-        enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
-        if callable(enqueue):
-            enqueue(tr("UI_SETTINGS_SAVED"), seconds=2.0)
+        toast_settings_saved(self.window)
 
     def _handle_settings_action(self, action: str, *, large_step: bool = False) -> bool:
         action = str(action)
