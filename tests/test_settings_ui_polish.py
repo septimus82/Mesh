@@ -149,3 +149,22 @@ def test_the_main_menus_settings_cards_fit_above_its_footer(size: tuple[int, int
         assert card.top - card.bottom >= 48.0
     if size[1] >= 720:  # room enough: the layout as it was
         assert [round(c.top - c.bottom) for c in layout.cards] == [52] * len(SETTINGS_ROWS)
+
+
+def test_a_game_with_a_partial_locale_file_keeps_its_own_text_and_the_engines(monkeypatch: pytest.MonkeyPatch,
+                                                                                tmp_path: Path) -> None:
+    """A game's locales/en.json with only some keys (its own messages, one override): the engine's other interface
+    text still shows in words, not as raw keys (#408 review); the game's own keys win where it has them."""
+    from engine import paths
+
+    monkeypatch.setattr(paths, "get_content_roots", lambda: [tmp_path])
+    import engine.i18n as i18n
+
+    (tmp_path / "locales").mkdir()
+    (tmp_path / "locales" / "en.json").write_text('{"QUEST_DONE": "Quest done!", "UI_CANCEL": "Never mind"}',
+                                                   encoding="utf-8")
+    monkeypatch.setattr(i18n, "_LOCALE_CACHE", {})
+    assert i18n.tr("QUEST_DONE") == "Quest done!"  # the game's own
+    assert i18n.tr("UI_CANCEL") == "Never mind"  # the game's override of an engine message (engine: "Cancel")
+    assert i18n.tr("UI_SETTINGS_SAVED") == "Settings saved"  # the engine's, which the game didn't list
+    assert i18n.tr("NO_SUCH_KEY") == "NO_SUCH_KEY"  # unknown everywhere: the key, as before

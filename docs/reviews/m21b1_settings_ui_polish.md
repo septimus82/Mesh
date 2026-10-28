@@ -42,6 +42,7 @@ Where they fitted before, nothing moves: 1280 × 720 is identical.
 **Fix:**
 - `tr` falls back to the engine's own `locales/` (`repo_root.bundled_file`). A game's own `locales/` still wins.
 - `locales/en.json` is on the wheel's allow-list.
+- **Review correction (`5e1a96c`):** the fallback above applied only when a game had *no* locale file. Reproduced: a game whose `locales/en.json` lists only its own keys got `UI_SETTINGS_SAVED` back as a raw key. Now the engine's table is loaded as the defaults, and the game's file is laid over it key by key. The test (`test_a_game_with_a_partial_locale_file_keeps_its_own_text_and_the_engines`) checks four cases: the game's own key; its override of an engine key (`UI_CANCEL`); an engine key it didn't list; and an unknown key, which stays the key. It failed on `5e1a96c` and passes now.
 - Both menus save through one helper (`_settings_data.toast_settings_saved`): "Settings saved", once while it shows. Many quick steps give one message, and a later change gives another.
 - The HUD gains `active_toasts()` for that check.
 - **After:** five presses give one toast: "Settings saved".
