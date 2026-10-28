@@ -293,6 +293,54 @@ class Project:
         self.dirty.add(key)
         return key
 
+    def add_hd2d_room(self, label: str, width_m: Any, depth_m: Any, *, outdoor: bool = True) -> tuple[str, bool]:
+        """A new HD-2D room ``width_m`` x ``depth_m`` m (Milestone 22A: ``project_ops.make_hd2d_room``, the HD-2D
+        template's own recipe): grass ground, a camera framed for it, the default sun. A project without the HD-2D
+        starter kit (a 2D project's first HD-2D room) gets it first, as the HD-2D template installs it: that is
+        written straight away (like importing a model), the room itself is one undo step. Returns ``(key, whether
+        the kit was installed now)``."""
+        world, scene, key, path = ops.new_room(self.world, label, self.scenes_dir(), self.player_template())
+        scene, map_path, skeleton = ops.make_hd2d_room(scene, path, width_m, depth_m, outdoor=outdoor,
+                                                       tilesets=self.project_tilesets())
+        installed = self.ensure_hd2d_kit()
+        before = self._snapshot()
+        self._write_map_file(map_path, skeleton)
+        self._record(before)
+        self.world, self.world_dirty = world, True
+        self.scenes[key] = scene
+        self.dirty.add(key)
+        return key, installed
+
+    def ensure_hd2d_kit(self) -> bool:
+        """The HD-2D starter kit in the project (its models, ground textures and scatter decoration), copied from Mesh
+        as the HD-2D template does; True if anything was copied now. Never overwrites a file the project has."""
+        import shutil  # noqa: PLC0415
+
+        from engine.hd2d import catalog  # noqa: PLC0415
+        from engine.hd2d.starter_village import GROUND_TEXTURES, KIT, SCATTER_KIT  # noqa: PLC0415
+        from engine.repo_root import bundled_dir, bundled_file  # noqa: PLC0415
+
+        if not self.writes_files:
+            return False
+        copied = False
+        kit_ids = {str(m.get("id")) for m in json.loads((bundled_dir(KIT) / "catalog.json").read_text(
+            encoding="utf-8")).get("models", [])}
+        have = {str(m.get("id")) for m in (self._read_json(catalog.CATALOG) or {}).get("models", [])
+                if isinstance(m, dict)}
+        if not kit_ids & have:
+            try:
+                catalog.install_kit(self.root, bundled_dir(KIT))
+                copied = True
+            except catalog.CatalogError as exc:
+                raise ops.OpError(f"Mesh couldn't add its HD-2D starter kit to this project: {exc}") from exc
+        for rel in (*GROUND_TEXTURES, *SCATTER_KIT):
+            target, source = self.root / rel, bundled_file(rel)
+            if not target.is_file() and source is not None:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+                copied = True
+        return copied
+
     def add_map(self, key: str | None = None) -> None:
         """Give a room without a map an empty one that covers its objects."""
         key = key or self.current

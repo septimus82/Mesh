@@ -2294,6 +2294,190 @@ def find_structure(scene: Doc, structure_id: str) -> Doc | None:
     return next((s for s in structures(scene) if isinstance(s, dict) and s.get("id") == structure_id), None)
 
 
+# --- an HD-2D room made in Studio, its camera, sun and sky (Milestone 22A) -------------------------------------
+
+HD2D_SIZE_M = (8.0, 256.0)  # a new HD-2D room's width and depth, metres
+CAMERA_PRESETS: dict[str, Doc] = {  # what the game's camera shows (view: m of the world top to bottom at the player)
+    "outdoor": {"view": 11.25, "pitch": 30.0, "fov": 12.0, "height": 0.8},  # the HD-2D template's village
+    "indoor": {"view": 7.5, "pitch": 55.0, "fov": 12.0, "height": 0.8},  # ... and its cottage
+    "close": {"view": 7.5, "pitch": 35.0, "fov": 12.0, "height": 0.8},
+    "wide": {"view": 18.0, "pitch": 40.0, "fov": 12.0, "height": 0.8},
+}
+SUN_PRESETS: dict[str, Doc] = {  # azimuth: the compass bearing the sun is in (0 north, 90 east); elevation: degrees up
+    "morning": {"azimuth": 110.0, "elevation": 20.0, "color": "#ffd9a8", "intensity": 0.9, "ambient": 0.45,
+                "sky": "#9fb8d8"},
+    "noon": {"azimuth": 219.3, "elevation": 44.6, "color": "#fff0d8", "intensity": 1.0, "ambient": 0.45,
+             "sky": "#76a0d6"},  # Mesh's default sun: high in the south-west
+    "evening": {"azimuth": 250.0, "elevation": 12.0, "color": "#ffb070", "intensity": 0.85, "ambient": 0.38,
+                "sky": "#d8906a"},
+    "overcast": {"azimuth": 200.0, "elevation": 55.0, "color": "#dfe4ea", "intensity": 0.45, "ambient": 0.7,
+                 "sky": "#9aa3ad"},
+    "night": {"azimuth": 160.0, "elevation": 35.0, "color": "#8fa6e0", "intensity": 0.25, "ambient": 0.22,
+              "sky": "#141a2e"},
+}
+
+
+def make_hd2d_room(scene: Doc, scene_path: str, width_m: Any, depth_m: Any, *, outdoor: bool = True,
+                   tilesets: list[str] | None = None) -> tuple[Doc, str, Doc]:
+    """Make the room an HD-2D room ``width_m`` x ``depth_m`` metres (8-256 each), as the HD-2D template makes its
+    village (``engine.hd2d.starter_village``): a plain map of that size (Mesh Studio paints on it; HD-2D draws the
+    models and the ground), the starter kit's grass over it, a gameplay camera framed for it (outdoor, or indoor:
+    steeper and closer, a darker sky), Mesh's default sun; its player starts in its middle. Its 2D map and
+    settings are replaced. Returns ``(scene,
+    map_path, map_skeleton)``; the caller writes the map file (as for ``add_map``). The project needs the starter kit
+    (``engine.hd2d.catalog.install_kit``) for its grass and models."""
+    from engine.hd2d.starter_village import GRASS, INDOOR_VIEW, OUTDOOR_VIEW, SUN  # noqa: PLC0415
+
+    size = []
+    for name, value in (("width", width_m), ("depth", depth_m)):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) \
+                or not HD2D_SIZE_M[0] <= float(value) <= HD2D_SIZE_M[1]:
+            raise OpError(f"An HD-2D room's {name} must be {HD2D_SIZE_M[0]:g} to {HD2D_SIZE_M[1]:g} m (got {value!r}).")
+        size.append(int(round(float(value))))
+    w, d = size
+    out = copy.deepcopy(scene)
+    out.pop("tilemap", None)
+    out, map_path, skeleton = add_map(out, scene_path, width=w, height=d, ground=STARTER_GRASS, tilesets=tilesets)
+    view, pitch = (OUTDOOR_VIEW, 30.0) if outdoor else (INDOOR_VIEW, 55.0)
+    camera = {"pitch": pitch, "fov": 12.0, "distance": round(view / 2 / math.tan(math.radians(12.0 / 2)), 3),
+              "follow": "player", "bounds": [0.0, 0.0, w * 32.0, d * 32.0]}
+    hd2d: Doc = {"structures": [], "camera": camera, "sun": {"direction": list(SUN), "color": "#fff0d8", "intensity": 1.0},
+                 "ambient": 0.45 if outdoor else 0.55,
+                 "ground": {"texture": GRASS, "from": [0, 0], "to": [w * 32.0, d * 32.0]}}
+    if not outdoor:
+        hd2d["sky"] = "#120e0b"  # dark around the room, as the template's cottage
+    settings = out.setdefault("settings", {})
+    settings["hd2d"] = hd2d
+    settings["world_width"], settings["world_height"] = w * 32.0, d * 32.0
+    for entity in entities(out):  # the player starts in the middle (a 2D room's corner start: squeezed into the
+        if entity.get("tag") == "player" or entity.get("prefab_id") == PLAYER_PREFAB:  # picture by the edge)
+            entity["x"], entity["y"] = w * 16.0, d * 16.0
+    return _checked_structures(_checked(scene, out)), map_path, skeleton
+
+
+def hd2d_camera_of(scene: Doc) -> Doc:
+    """The room's gameplay camera as Studio shows it: ``view`` (m of the world top to bottom at the player), ``pitch``
+    and ``fov`` (degrees), ``height`` (m above the player's feet), ``bounded`` (it never shows past the room) and
+    ``ortho`` (flat, no perspective)."""
+    from engine.hd2d.settings import Hd2dSettingsError, parse_hd2d  # noqa: PLC0415
+
+    try:
+        c = parse_hd2d((scene.get("settings") or {}).get("hd2d"), lenient=True).camera
+    except Hd2dSettingsError:
+        from engine.hd2d.settings import CameraSettings  # noqa: PLC0415
+
+        c = CameraSettings()
+    view = 2 * c.distance * math.tan(math.radians(c.fov / 2))
+    return {"view": round(view, 2), "pitch": c.pitch, "fov": c.fov, "height": c.height, "bounded": c.bounds is not None,
+            "ortho": c.ortho, "distance": c.distance}
+
+
+def set_hd2d_camera(scene: Doc, *, preset: Any = _UNSET, view: Any = _UNSET, pitch: Any = _UNSET, fov: Any = _UNSET,
+                    height: Any = _UNSET, bounded: Any = _UNSET, ortho: Any = _UNSET) -> Doc:
+    """The room's gameplay camera (``settings.hd2d.camera``): a ``preset`` ("outdoor", "indoor", "close", "wide"),
+    then only what is given: ``view`` (m of the world top to bottom at the player, 2-200: its distance follows from
+    it and the lens), ``pitch`` (5-89 degrees down), ``fov`` (5-120 degrees), ``height`` (m above the player's feet,
+    -10-50), ``bounded`` (it never shows past the room's ground) and ``ortho`` (flat). Who it follows is kept."""
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has no 3D camera.")
+    hd2d = _hd2d_block(out)
+    now = hd2d_camera_of(scene)
+    if preset is not _UNSET:
+        if preset not in CAMERA_PRESETS:
+            raise OpError(f"Camera preset must be one of {', '.join(CAMERA_PRESETS)} (got {preset!r}).")
+        now.update(CAMERA_PRESETS[str(preset)])
+    for key, value in (("view", view), ("pitch", pitch), ("fov", fov), ("height", height)):
+        if value is not _UNSET:
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise OpError(f"The camera's {key} must be a number (got {value!r}).")
+            now[key] = float(value)
+    for key, value in (("bounded", bounded), ("ortho", ortho)):
+        if value is not _UNSET:
+            if not isinstance(value, bool):
+                raise OpError(f"The camera's {key} must be true or false (got {value!r}).")
+            now[key] = value
+    if not 2.0 <= now["view"] <= 200.0:
+        raise OpError(f"The camera's view must be 2 to 200 m (got {now['view']:g}).")
+    camera = dict(hd2d.get("camera") or {}) if isinstance(hd2d.get("camera"), dict) else {}
+    camera.update(pitch=round(now["pitch"], 2), fov=round(now["fov"], 2), height=round(now["height"], 2),
+                  ortho=bool(now["ortho"]),
+                  distance=round(now["view"] / 2 / math.tan(math.radians(max(1e-3, now["fov"]) / 2)), 3))
+    camera.setdefault("follow", "player")
+    ground = hd2d.get("ground") if isinstance(hd2d.get("ground"), dict) else None
+    if now["bounded"]:
+        if not camera.get("bounds"):
+            if ground is None:
+                raise OpError("This room has no ground for the camera to keep inside; set its edges by hand.")
+            camera["bounds"] = [*map(float, ground.get("from", [0, 0])), *map(float, ground.get("to", [0, 0]))]
+    else:
+        camera.pop("bounds", None)
+    hd2d["camera"] = camera
+    return _checked_structures(_checked(scene, out))
+
+
+def _sun_angles(direction: Any) -> tuple[float, float]:
+    x, y, z = (float(v) for v in direction)
+    length = math.sqrt(x * x + y * y + z * z) or 1.0
+    return (math.degrees(math.atan2(x, y)) % 360.0, math.degrees(math.asin(max(-1.0, min(1.0, z / length)))))
+
+
+def hd2d_sun_of(scene: Doc) -> Doc:
+    """The room's sun and sky as Studio shows them: ``azimuth`` (the compass bearing the sun is in: 0 north, 90
+    east), ``elevation`` (degrees above the horizon), ``color`` ("#rrggbb"), ``intensity``, ``ambient`` (0-1) and
+    ``sky`` ("#rrggbb")."""
+    from engine.hd2d.settings import Hd2dSettings, Hd2dSettingsError, parse_hd2d  # noqa: PLC0415
+
+    try:
+        hd = parse_hd2d((scene.get("settings") or {}).get("hd2d"), lenient=True)
+    except Hd2dSettingsError:
+        hd = Hd2dSettings()
+    azimuth, elevation = _sun_angles(hd.sun)
+
+    def hexed(c: Any) -> str:
+        return "#" + "".join(f"{round(max(0.0, min(1.0, v)) * 255):02x}" for v in c)
+
+    return {"azimuth": round(azimuth, 1), "elevation": round(elevation, 1), "color": hexed(hd.sun_color),
+            "intensity": hd.sun_intensity, "ambient": hd.ambient, "sky": hexed(hd.sky)}
+
+
+def set_hd2d_sun(scene: Doc, *, preset: Any = _UNSET, azimuth: Any = _UNSET, elevation: Any = _UNSET,
+                 color: Any = _UNSET, intensity: Any = _UNSET, ambient: Any = _UNSET, sky: Any = _UNSET) -> Doc:
+    """The room's sun (``settings.hd2d.sun``), ambient light and sky: a ``preset`` ("morning", "noon", "evening",
+    "overcast", "night"), then only what is given: ``azimuth`` (the compass bearing the sun is in, 0-360: 0 north, 90
+    east), ``elevation`` (5-90 degrees above the horizon), ``color`` ("#rrggbb"), ``intensity`` (0-10), ``ambient``
+    (0-1: how bright shadowed places are) and ``sky`` ("#rrggbb": the colour behind everything)."""
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has no sun.")
+    hd2d = _hd2d_block(out)
+    now = hd2d_sun_of(scene)
+    if preset is not _UNSET:
+        if preset not in SUN_PRESETS:
+            raise OpError(f"Sun preset must be one of {', '.join(SUN_PRESETS)} (got {preset!r}).")
+        now.update(SUN_PRESETS[str(preset)])
+    for key, value, lo, hi in (("azimuth", azimuth, -360.0, 720.0), ("elevation", elevation, 5.0, 90.0),
+                               ("intensity", intensity, 0.0, 10.0), ("ambient", ambient, 0.0, 1.0)):
+        if value is not _UNSET:
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) \
+                    or not lo <= float(value) <= hi:
+                raise OpError(f"The sun's {key} must be a number from {max(lo, 0.0):g} to {min(hi, 360.0):g} "
+                              f"(got {value!r}).")
+            now[key] = float(value)
+    for key, value in (("color", color), ("sky", sky)):
+        if value is not _UNSET:
+            if rgb(value) is None:
+                raise OpError(f"The {'sun colour' if key == 'color' else 'sky'} must be a colour like #ffeedd "
+                              f"(got {value!r}).")
+            now[key] = value
+    a, e = math.radians(float(now["azimuth"]) % 360.0), math.radians(float(now["elevation"]))
+    direction = [round(math.cos(e) * math.sin(a), 4), round(math.cos(e) * math.cos(a), 4), round(math.sin(e), 4)]
+    hd2d["sun"] = {"direction": direction, "color": now["color"], "intensity": round(float(now["intensity"]), 3)}
+    hd2d["ambient"] = round(float(now["ambient"]), 3)
+    hd2d["sky"] = now["sky"]
+    return _checked_structures(_checked(scene, out))
+
+
 def _hd2d_block(out: Doc) -> Doc:
     hd2d = (out.get("settings") or {}).get("hd2d")
     if not isinstance(hd2d, dict):
