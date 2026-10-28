@@ -38,8 +38,8 @@ def _tabs_for(entity: dict[str, Any]) -> tuple[tuple[str, str], ...]:
         return ()
     if tag == "door":
         return tuple(t for t in TABS if t[0] in _DOOR_TABS)
-    if "WaterSurface" in ops.entity_behaviours(entity):
-        return tuple(t for t in TABS if t[0] in _WATER_TABS)
+    if "WaterSurface" in ops.entity_behaviours(entity) or "SoundEmitter" in ops.entity_behaviours(entity):
+        return tuple(t for t in TABS if t[0] in _WATER_TABS)  # a sound: its look is its sound (Milestone 21B)
     return TABS
 THUMB = 96  # picture and animation previews, in pixels
 _DOOR_STYLE_HELP = {  # short lines: they must not need wrapping
@@ -150,6 +150,7 @@ class InspectorMixin:
         def reject_ai(self, proposal: Proposal) -> None: ...
         def share_player(self, key: str) -> None: ...
         def keep_separate_players(self) -> None: ...
+        def _sound_look(self, rows: Rows, entity: dict[str, Any], width: int) -> None: ...  # engine.studio_sound
 
     # ---------------------------------------------------------------- shared state
     def _init_inspector(self) -> None:
@@ -275,6 +276,9 @@ class InspectorMixin:
         water = ops.water_of(entity)
         if water is not None:
             self._water_look(rows, target, water, width)
+            return
+        if ops.sound_emitter_of(entity) is not None:  # a sound emitter (Milestone 21B: engine.studio_sound)
+            self._sound_look(rows, entity, width)
             return
         if entity.get("tag") == "door" and "SceneTransition" in ops.entity_behaviours(entity):
             self._door_look(rows, entity, width)

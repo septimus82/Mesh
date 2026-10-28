@@ -319,6 +319,18 @@ class Hd2dView:
             mx, my, mz = self.object_marker
             renderer.draw_lines(vp, box_edges((mx - 0.3, my - 0.3, mz), (mx + 0.3, my + 0.3, mz + 1.6)),
                                 (0.4, 1.0, 0.5, 1.0), through=True)
+        for entity, emitter, (x, y, z) in self._sound_emitters():  # sounds: a post, and their two rings on the ground
+            chosen = entity.get("id") == self.studio.selected
+            on = bool(emitter.get("enabled", True)) and bool(emitter.get("sound"))
+            colour = (0.47, 0.86, 1.0, 1.0) if on else (0.67, 0.67, 0.7, 1.0)
+            renderer.draw_lines(vp, [(x, y, z), (x, y, z + 1.2)], colour, through=True)
+            renderer.draw_lines(vp, box_edges((x - 0.18, y - 0.18, z + 1.2), (x + 0.18, y + 0.18, z + 1.56)), colour,
+                                through=True)
+            for radius, alpha in ((float(emitter.get("radius", 64)), 0.9), (float(emitter.get("distance", 320)), 0.45)):
+                r = radius / PIXELS_PER_METRE
+                ring = [p for k in range(48) for p in ((x + r * math.cos(k * math.tau / 48), y + r * math.sin(k * math.tau / 48), z + 0.05),
+                                                       (x + r * math.cos((k + 1) * math.tau / 48), y + r * math.sin((k + 1) * math.tau / 48), z + 0.05))]
+                renderer.draw_lines(vp, ring, (*colour[:3], alpha if chosen else alpha * 0.55), through=chosen)
         entity_sprite = self._selected_sprite()
         if entity_sprite is not None:
             e = (entity_sprite.mesh_entity_data or {}).get("elevation", 0.0) or 0.0
@@ -412,6 +424,10 @@ class Hd2dView:
         stretch = 1.0 / max(0.5, math.cos(math.radians(self.camera.pitch)))
         hit = self.picker.pick(origin, direction, self.structures(), renderer.models, sprites, self.camera.right(), stretch)
         self.timings["pick_ms"].append((time.perf_counter() - start) * 1000)
+        sound = self._sound_at(origin, direction, hit)
+        if sound is not None:  # a sound emitter (no picture to click): its marker, nearer than what's behind it
+            self._grab_entity(sound[0], sound[1], x, y)
+            return True
         water = self._water_at(origin, direction) if hit is None else None
         if water is not None:  # a puddle or pond (no picture to click): the object it is
             self._grab_entity(water[0], water[1], x, y)
@@ -445,6 +461,41 @@ class Hd2dView:
             self.drag = {"kind": "entity", "id": entity_id, "plane": z, "moved": False,
                          "dx": float(entity.get("x", 0)) - at[0], "dy": float(entity.get("y", 0)) - at[1],
                          "to": (entity.get("x", 0), entity.get("y", 0))}
+
+    def _sound_emitters(self) -> list[tuple[dict[str, Any], dict[str, Any], tuple[float, float, float]]]:
+        """The room's sound emitters (Milestone 21B): entity, settings, and where its marker stands (m)."""
+        out = []
+        for entity in ops.entities(self.studio.project.scene()):
+            emitter = ops.sound_emitter_of(entity)
+            if emitter is None:
+                continue
+            z = entity.get("elevation", 0.0)
+            z = float(z) if isinstance(z, (int, float)) and not isinstance(z, bool) else 0.0
+            out.append((entity, emitter, (float(entity.get("x", 0)) / PIXELS_PER_METRE,
+                                          float(entity.get("y", 0)) / PIXELS_PER_METRE, z / PIXELS_PER_METRE)))
+        return out
+
+    def _sound_at(self, origin: tuple[float, float, float], direction: tuple[float, float, float],
+                  hit: Any) -> tuple[str, float] | None:
+        """The sound emitter whose marker (an upright 1.2 m post) the mouse's ray passes within 0.45 m of, nearest
+        first, if nearer than what else it hit; its id and height (m)."""
+        best: tuple[float, str, float] | None = None
+        length = math.sqrt(sum(c * c for c in direction)) or 1.0
+        d = tuple(c / length for c in direction)
+        for entity, _emitter, (x, y, z) in self._sound_emitters():
+            for k in range(4):  # points up the post
+                px, py, pz = x - origin[0], y - origin[1], z + 0.3 * k - origin[2]
+                t = px * d[0] + py * d[1] + pz * d[2]
+                if t <= 0:
+                    continue
+                miss = math.sqrt(max(0.0, px * px + py * py + pz * pz - t * t))
+                if miss < 0.45 and (best is None or t < best[0]):
+                    best = (t, str(entity["id"]), z)
+        if best is None:
+            return None
+        if hit is not None and getattr(hit, "distance", math.inf) < best[0] * length:
+            return None
+        return best[1], best[2]
 
     def _water_at(self, origin: tuple[float, float, float], direction: tuple[float, float, float]) -> tuple[str, float] | None:
         """The nearest water surface the mouse's ray meets (its object's id and level, m), if any (Milestone 19A)."""

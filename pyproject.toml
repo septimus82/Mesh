@@ -76,6 +76,13 @@ engine = ["schemas/*.json", "py.typed"]
     "assets/data/monster_type_chart.json",
 ]
 "share/mesh-engine/assets/music" = ["assets/music/dungeon_theme.wav"]
+"share/mesh-engine/assets/ambience" = [  # Milestone 21B: Mesh Studio's sound library (CC0; assets/NOTICE.md)
+    "assets/ambience/birds_loop.wav",
+    "assets/ambience/forest_loop.wav",
+    "assets/ambience/rain_loop.wav",
+    "assets/ambience/stream_loop.wav",
+    "assets/ambience/wind_loop.wav",
+]
 "share/mesh-engine/assets/sounds" = [
     "assets/sounds/attack.wav",
     "assets/sounds/die.wav",

@@ -98,6 +98,7 @@ class PauseMenu(UIElement):
             # label_size: the 16 pt label's line (26 px as drawn) (the bar keeps below it: they overlapped until Milestone 21B.1)
             "music_volume": Slider(label="Music Volume", value=1.0, step=0.01, height=50.0, label_size=26.0),
             "sfx_volume": Slider(label="SFX Volume", value=1.0, step=0.01, height=50.0, label_size=26.0),
+            "ambience_volume": Slider(label="Ambience Volume", value=1.0, step=0.01, height=50.0, label_size=26.0),
             "fog_enabled": Toggle(label="Fog", value=False, height=30.0),
             "reduced_flicker": Toggle(label="Calmer Flickering", value=False, height=30.0),
             "back": Button(text="Back", action_id="pause.settings.back", font_size=18, height=34.0),
@@ -367,6 +368,9 @@ class PauseMenu(UIElement):
             music.value = float(settings.music_volume)
         if isinstance(sfx, Slider):
             sfx.value = float(settings.sfx_volume)
+        ambience = self._settings_widgets["ambience_volume"]
+        if isinstance(ambience, Slider):
+            ambience.value = float(getattr(settings, "ambience_volume", 1.0))
         if isinstance(fog, Toggle):
             fog.value = bool(settings.fog_enabled)
         calm = self._settings_widgets["reduced_flicker"]

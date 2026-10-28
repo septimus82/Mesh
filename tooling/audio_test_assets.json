@@ -1,5 +1,5 @@
 {
-  "about": "Third-party audio used to test Mesh's audio (M21A). The files are NOT in the repository: they are kept outside it, by default in D:/Games/Mesh-audio-assets/downloads (set MESH_AUDIO_ASSETS to use another folder), and tooling/audio_smoke.py checks each one's SHA-256 before using it. All CC0 (public domain); the authors are credited here although CC0 doesn't require it.",
+  "about": "Third-party audio Mesh's audio is built and tested with (M21A, M21B). The downloads are NOT in the repository: they are kept outside it, by default in D:/Games/Mesh-audio-assets/downloads (set MESH_AUDIO_ASSETS to use another folder); tooling/audio_smoke.py and tooling/make_ambience_library.py check each one's SHA-256 before using it. All CC0 (public domain); the authors are credited here although CC0 doesn't require it. Only the short WAV loops made from them (\"library\", below) are in the repository.",
   "assets": [
     {
       "id": "town_theme",
@@ -28,6 +28,54 @@
       "bytes": 716670,
       "sha256": "9850aa1d0d5d66bd9c5daf8bb77c6d852e01f2f4de22f283bd5621e8bed13b75",
       "downloaded": "2026-10-28"
+    },
+    {
+      "id": "rain_loopable",
+      "use": "rain: four loopable rain recordings (OGG, 26-45 s, stereo 44.1 kHz)",
+      "file": "rain_loopable/Rain OGG.zip",
+      "original_filename": "Rain OGG.zip",
+      "author": "Ylmir (https://opengameart.org/users/ylmir)",
+      "source": "https://opengameart.org/content/rain-loopable",
+      "download": "https://opengameart.org/sites/default/files/Rain%20OGG.zip",
+      "licence": "CC0 1.0 (http://creativecommons.org/publicdomain/zero/1.0/)",
+      "notes": "The page lists no attribution requirement.",
+      "bytes": 2736596,
+      "sha256": "e68f3e1c77493cf43bec84cebff5043bff6be9ce16d59b24caa988cd460aa75b",
+      "downloaded": "2026-10-28",
+      "members": {
+        "extracted/1.ogg": "4f659f68cf5219007d0bb0969a1862491ceee4057fda4c491c6001e8608fa2cb",
+        "extracted/2.ogg": "204bbdba67bd69f744bbb07d81155d0ee775960b979abd0a9b662b23dbc124fd",
+        "extracted/3.ogg": "73a0f5ef19ed9f64599c0425b1fb52d857acfc42c0fd5eab85c4577ace18f0ed",
+        "extracted/4.ogg": "de24aeefd113daf0d12769c61adb1a262606e7df683e3bb52a27c4d0ff356549"
+      }
+    },
+    {
+      "id": "ambient_bird_sounds",
+      "use": "birdsong (OGG, 31 s, stereo 48 kHz)",
+      "file": "ambient_bird_sounds/birds-isaiah658.ogg",
+      "original_filename": "birds-isaiah658.ogg",
+      "author": "isaiah658 (https://opengameart.org/users/isaiah658)",
+      "source": "https://opengameart.org/content/ambient-bird-sounds",
+      "download": "https://opengameart.org/sites/default/files/birds-isaiah658_0.ogg",
+      "licence": "CC0 1.0 (http://creativecommons.org/publicdomain/zero/1.0/)",
+      "notes": "\"Credit to isaiah658 is not needed but is appreciated.\"",
+      "bytes": 544669,
+      "sha256": "359e4e3f9da9d75aac64cede511c7e3ef8b461f9d9f8c230f8f80e44c4b3e35f",
+      "downloaded": "2026-10-28"
+    },
+    {
+      "id": "sea_and_river",
+      "use": "flowing river water (MP3, 300 s, stereo 44.1 kHz; only 10.5 s are used)",
+      "file": "sea_and_river/VistulaShort.mp3",
+      "original_filename": "VistulaShort.mp3",
+      "author": "RandomMind (https://opengameart.org/users/randommind)",
+      "source": "https://opengameart.org/content/sea-and-river-wave-sounds",
+      "download": "https://opengameart.org/sites/default/files/VistulaShort_0.mp3",
+      "licence": "CC0 1.0 (http://creativecommons.org/publicdomain/zero/1.0/)",
+      "notes": "The page lists no attribution requirement. The 180 MB full-length zip was not downloaded.",
+      "bytes": 12004407,
+      "sha256": "8c24607e41edd6f018ec3582a07e5a8dbc57347276339cb68440951a0fb4cfb1",
+      "downloaded": "2026-10-28"
     }
   ],
   "not_downloaded": [
@@ -42,6 +90,57 @@
       "source": "https://kenney.nl/assets/interface-sounds",
       "licence": "CC0 (stated on the page)",
       "why": "As above: 403 to an automated download."
+    },
+    {
+      "id": "footsteps",
+      "source": "https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud",
+      "licence": "not checked",
+      "why": "Not needed by M21B's features (footstep sounds are not part of it)."
     }
-  ]
+  ],
+  "library": {
+    "about": "Mesh's ambience library (assets/ambience): 10 s mono WAV loops at 22,050 Hz, made by tooling/make_ambience_library.py from the files above (CC0) and, for wind, synthesised. CC0 like their sources.",
+    "files": [
+      {
+        "file": "assets/ambience/rain_loop.wav",
+        "what": "steady rain",
+        "from": "rain_loopable",
+        "member": "extracted/1.ogg",
+        "excerpt_start_s": 0.0,
+        "sha256": "0ccab83001cf3d067904cd7c5104e7676b09711ce96a17e2394cb299005e45f9"
+      },
+      {
+        "file": "assets/ambience/birds_loop.wav",
+        "what": "birdsong",
+        "from": "ambient_bird_sounds",
+        "member": null,
+        "excerpt_start_s": 5.0,
+        "sha256": "f9f4017f7ff28e2433632a4e3af3189931ad4fa58499975c0d69bf2726f312b8"
+      },
+      {
+        "file": "assets/ambience/stream_loop.wav",
+        "what": "flowing river water",
+        "from": "sea_and_river",
+        "member": null,
+        "excerpt_start_s": 2.0,
+        "sha256": "4b4f9ae445683ffb7927998c19e63a2c672067dbada0909a9268cb33b7d7ff71"
+      },
+      {
+        "file": "assets/ambience/forest_loop.wav",
+        "what": "a forest or meadow: birds and leaves",
+        "from": "forest_ambience",
+        "member": null,
+        "excerpt_start_s": 5.0,
+        "sha256": "b7358da08c8ba57cf7b9fcc1b2994da51fd3b172ee6b3465956c0ad7f3dc3936"
+      },
+      {
+        "file": "assets/ambience/wind_loop.wav",
+        "what": "wind (synthesised: brown noise, swelling)",
+        "from": "Mesh (tooling/make_ambience_library.py)",
+        "member": null,
+        "excerpt_start_s": null,
+        "sha256": "b868f12012b9a05009c10e0f773712f43bf8ef1f14f29bede3676e983f41f837"
+      }
+    ]
+  }
 }

@@ -934,10 +934,8 @@ class MainMenuOverlay(UIElement):
     def _settings_value_text(self, key: str, kind: str) -> str:
         settings = self._runtime_settings()
         if kind == "slider":
-            if key == "music_volume":
-                return f"{int(round(settings.music_volume * 100.0))}%"
-            if key == "sfx_volume":
-                return f"{int(round(settings.sfx_volume * 100.0))}%"
+            if key in ("music_volume", "sfx_volume", "ambience_volume"):
+                return f"{int(round(float(getattr(settings, key, 1.0)) * 100.0))}%"
         if kind == "toggle":
             return "ON" if bool(getattr(settings, key, False)) else "OFF"
         return ""
@@ -1236,10 +1234,8 @@ class MainMenuOverlay(UIElement):
         settings = self._runtime_settings()
         if kind != "slider":
             return False
-        if key == "music_volume":
-            settings.music_volume = max(0.0, min(1.0, float(settings.music_volume) + delta))
-        elif key == "sfx_volume":
-            settings.sfx_volume = max(0.0, min(1.0, float(settings.sfx_volume) + delta))
+        if key in ("music_volume", "sfx_volume", "ambience_volume"):
+            setattr(settings, key, max(0.0, min(1.0, float(getattr(settings, key, 1.0)) + delta)))
         else:
             return False
         self._apply_runtime_settings()

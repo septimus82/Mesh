@@ -4,7 +4,7 @@ import os
 from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
-from engine import scene_particles, water
+from engine import scene_particles, sound_emitters, water
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow, record_swallowed
 from engine.ui import maybe_auto_open_quest_log, maybe_enqueue_demo_interior_hint, maybe_enqueue_quest_progress_toast
@@ -215,6 +215,7 @@ def on_update(window: "GameWindow", delta_time: float) -> None:
     if audio is not None:
         try:
             audio.update(delta_time)
+            sound_emitters.update(window, delta_time)  # the room's emitters and weather, from where the player is
         except Exception as exc:  # noqa: BLE001  # REASON: audio update failures should log once without aborting the runtime tick
             _log_swallow("GTCK-003", "engine/game_runtime/tick.py blanket swallow", once=True)
             if not getattr(window, "_mesh_audio_update_error_logged", False):
