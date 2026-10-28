@@ -21,24 +21,32 @@ def set_locale(locale_code: str) -> None:
     _ACTIVE_LOCALE = code
 
 
+def _read_table(path: Any) -> Dict[str, str]:
+    try:
+        if path is not None and Path(path).exists():
+            raw = json.loads(Path(path).read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                return {str(k): str(v) for k, v in raw.items() if isinstance(k, str)}
+    except Exception:  # noqa: BLE001  # REASON: malformed locale files should fall back to an empty translation table
+        return {}
+    return {}
+
+
 def _load_locale(code: str) -> Dict[str, str]:
+    """The engine's interface text for ``code``, with the game's own ``locales/<code>.json`` laid over it key by key:
+    a game's file can add or change messages without listing the engine's (Milestone 21B.1: a game has no
+    ``locales/`` of its own, or only some keys, and menus showed raw keys)."""
     code = str(code or "").strip().lower() or "en"
     cached = _LOCALE_CACHE.get(code)
     if cached is not None:
         return cached
-    path = resolve_path(f"locales/{code}.json")
-    data: Dict[str, str] = {}
-    try:
-        if Path(path).exists():
-            raw = json.loads(Path(path).read_text(encoding="utf-8"))
-            if isinstance(raw, dict):
-                data = {
-                    str(k): str(v)
-                    for k, v in raw.items()
-                    if isinstance(k, str)
-                }
-    except Exception:  # noqa: BLE001  # REASON: malformed locale files should fall back to an empty translation table
-        data = {}
+    from .repo_root import bundled_file  # noqa: PLC0415
+
+    engine_path = bundled_file(f"locales/{code}.json")
+    game_path = resolve_path(f"locales/{code}.json")
+    data = _read_table(engine_path)
+    if engine_path is None or Path(game_path).resolve() != Path(engine_path).resolve():
+        data.update(_read_table(game_path))
     _LOCALE_CACHE[code] = data
     return data
 
