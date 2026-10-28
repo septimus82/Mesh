@@ -1,6 +1,7 @@
 """Milestone 22A.1: an expanded HD-2D room's map file (its size, tilesets and empty layers: the tiles live in the room)
 kept at the room's size when Studio saves (``Project.save``), through undo and redo; a map file with tiles of its own
-never resized. A real starter project on disk (integration: the fast tier stays the operations' own tests)."""
+never resized. Also M22A's first HD-2D room in a 2D project, bringing the starter kit. A real starter project on disk
+(integration: the fast tier stays the operations' own tests)."""
 
 from __future__ import annotations
 
@@ -140,3 +141,24 @@ def test_undo_and_redo_across_saves_with_two_edited_rooms(starter: Path, tmp_pat
     project.save()
     assert on_disk() == ([1536.0, 1152.0], "#ffb070", 48)
     assert not project.dirty
+
+
+def test_a_2d_projects_first_hd2d_room_brings_the_starter_kit_and_undoes(starter: Path, tmp_path: Path) -> None:
+    from engine.studio_project import Project
+
+    root = tmp_path / "game"
+    shutil.copytree(starter, root)
+    assert not (root / "assets/hd2d_starter/textures/grass.png").exists()
+    project = Project.open(root, "packs/core_regions/worlds/main.json")
+    key, installed = project.add_hd2d_room("Meadow", 40, 30)
+    assert installed and (root / "assets/hd2d_starter/textures/grass.png").is_file()
+    models = json.loads((root / "assets/models/catalog.json").read_text(encoding="utf-8"))["models"]
+    assert {"cottage", "bridge_6m"} <= {m["id"] for m in models}
+    hd2d = project.scene(key)["settings"]["hd2d"]
+    assert hd2d["ground"]["to"] == [1280.0, 960.0]
+    assert any(e.get("tag") == "player" for e in project.scene(key)["entities"])  # the shared player, filled in
+    key2, again = project.add_hd2d_room("Cave", 16, 12, outdoor=False)
+    assert not again  # the kit is there now: nothing copied twice
+    project.undo()
+    project.undo()
+    assert key not in project.world["scenes"] and key2 not in project.world["scenes"]

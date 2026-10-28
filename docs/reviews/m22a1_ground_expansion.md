@@ -89,9 +89,20 @@ The owner approved this plan on 2026-10-28. It covers only expanding a room's fl
 
 **Tests after the corrections:**
 - Fast (`test_hd2d_room_expand.py`): 13 passed.
-- Integration (`test_hd2d_room_expand_save.py`): 5 passed.
+- Integration (`test_hd2d_room_expand_save.py`): 5 passed (6 with M22A's starter-kit test, moved there; see below).
 - Targeted Studio, HD-2D, project-operation, tilemap and contract tests: 696 passed.
 - GPU tests for expansion and the M22A Studio workflow: 7 passed.
 - Ruff gate ok; mypy 73 (baseline).
 
 Pictures: `m22a1_evidence/01_expanded_48x36.png` (starter room), `02_lakeside_village_expanded.png` (Studio, after Expand), `03_lakeside_village_play.png` (Play).
+
+### CI on cba7a2c, and the fast tier
+
+- **Windows:** passed.
+- **Linux:** 10,048 passed and none failed. `verify-all` failed only the `pytest-fast` step budget: 83.45 s against 79.05 s (+4.4 s), on a runner rated 1.09 that the advisory check called slow.
+
+Measured locally, part of the overrun was this work's own cost:
+- M22A.1's fast tests took 2.56 s, 1.74 s of it in one test that rebuilt the tile map for every cell (`_cells()` called inside comprehensions). Each map is now built once, and the 13 tests take 0.97 s.
+- M22A's `test_a_2d_projects_first_hd2d_room_brings_the_starter_kit_and_undoes` (#409) made a starter project (3.1 s) in the fast tier. It moved, unchanged, to the `integration` module, which already makes that project once.
+
+No budget or baseline was changed.

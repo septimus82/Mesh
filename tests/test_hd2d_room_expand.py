@@ -70,9 +70,11 @@ def test_a_populated_room_grows_east_and_north_with_everything_where_it_was() ->
     for layer_id in (ops.GROUND, ops.WALLS, ops.OVERHEAD):  # every tile painted before is where it was
         old, new = _cells(before, layer_id), _cells(after, layer_id)
         assert all(new[at] == tile for at, tile in old.items()), layer_id
-    new_ground = [t for at, t in _cells(after, ops.GROUND).items() if at not in _cells(before, ops.GROUND)]
+    old_ground = _cells(before, ops.GROUND)
+    new_ground = [t for at, t in _cells(after, ops.GROUND).items() if at not in old_ground]
     assert len(new_ground) == 48 * 36 - 40 * 30 and set(new_ground) == {ops.STARTER_GRASS}  # the room's ground tile
-    new_walls = [t for at, t in _cells(after, ops.WALLS).items() if at not in _cells(before, ops.WALLS)]
+    old_walls = _cells(before, ops.WALLS)
+    new_walls = [t for at, t in _cells(after, ops.WALLS).items() if at not in old_walls]
     assert set(new_walls) == {0}  # nothing built in the new ground
     parsed = parse_hd2d(settings["hd2d"], map_size_px=(1536.0, 1152.0))
     assert parsed.ground.hi == (1536.0, 1152.0) and parsed.ground.terrain is None
@@ -166,4 +168,5 @@ def test_a_mixed_edge_is_refused_not_guessed_and_the_other_way_still_grows() -> 
         ops.expand_hd2d_room(scene, 12, 12)
     assert scene == before
     north = ops.expand_hd2d_room(scene, 10, 12)  # its north edge is all grass
-    assert {t for at, t in _cells(north, ops.GROUND).items() if at not in _cells(scene, ops.GROUND)} == {ops.STARTER_GRASS}
+    old = _cells(scene, ops.GROUND)
+    assert {t for at, t in _cells(north, ops.GROUND).items() if at not in old} == {ops.STARTER_GRASS}
