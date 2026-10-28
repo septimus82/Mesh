@@ -72,6 +72,20 @@ class Wall:
     name: str
     lo: tuple[float, float, float]
     hi: tuple[float, float, float]
+    turned: tuple[float, float, float, float, float, float] | None = None  # centre x, y, half extents, cos, sin
+
+    def overlaps(self, x: float, y: float, half_w: float, half_h: float) -> bool:
+        """Whether a feet box centred at (x, y) overlaps the wall's footprint: its box, or, turned off the axes,
+        the turned box itself (a separating-axis test on the wall's own two axes)."""
+        if not (self.lo[0] < x + half_w and self.hi[0] > x - half_w and self.lo[1] < y + half_h
+                and self.hi[1] > y - half_h):
+            return False
+        if self.turned is None:
+            return True
+        cx, cy, ex, ey, c, s = self.turned
+        dx, dy = x - cx, y - cy
+        return (abs(dx * c + dy * s) < ex + half_w * abs(c) + half_h * abs(s)
+                and abs(-dx * s + dy * c) < ey + half_w * abs(s) + half_h * abs(c))
 
 
 def _surface(floor: str, solid: bool, corners: tuple[tuple[float, float, float], ...]) -> Surface | None:
@@ -95,6 +109,32 @@ def _place(p: tuple[float, float, float], at: tuple[float, float, float], turn: 
     return (at[0] + (c * p[0] - s * p[1]) * scale, at[1] + (s * p[0] + c * p[1]) * scale, at[2] + p[2] * scale)
 
 
+def _wall(name: str, lo: tuple[float, float, float], hi: tuple[float, float, float], at: tuple[float, float, float],
+          turn: float, scale: float) -> Wall:
+    """A wall collider placed in the room. Turned by a right angle (or not at all) it is one exact box. At any other
+    turn it keeps the turned box itself: the box round its turned corners covers far more than the wall (a bridge
+    turned 74 degrees: its railings' boxes covered the deck between them). One collider however big the wall."""
+    corners = [_place((x, y, z), at, turn, scale) for x in (lo[0], hi[0]) for y in (lo[1], hi[1]) for z in (lo[2], hi[2])]
+    xs, ys, zs = [p[0] for p in corners], [p[1] for p in corners], [p[2] for p in corners]
+    box_lo, box_hi = (min(xs), min(ys), min(zs)), (max(xs), max(ys), max(zs))
+    if math.isclose(turn % 90.0, 0.0, abs_tol=1e-6) or math.isclose(turn % 90.0, 90.0, abs_tol=1e-6):
+        return Wall(name, box_lo, box_hi)
+    cx, cy, _ = _place(((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, 0.0), at, turn, scale)
+    a = math.radians(turn)
+    turned = (cx, cy, (hi[0] - lo[0]) * scale / 2, (hi[1] - lo[1]) * scale / 2, math.cos(a), math.sin(a))
+    return Wall(name, box_lo, box_hi, turned)
+
+
+def _on_level(solid: Any, z: float) -> bool:
+    """Whether a scene 2D solid stands in the way of a character whose feet are at ``z`` m: within a body's height of
+    it. A water surface that blocks (Walk through it: Off) is its level only: a character on a bridge deck a step or
+    more above it walks over it (Lakeside Village: a non-walkable inlet's box blocked its own footbridge)."""
+    e = elevation_of(solid)
+    if "WaterSurface" in (getattr(solid, "mesh_behaviours", None) or ()):
+        return e - BODY < z < e + STEP
+    return abs(e - z) < BODY
+
+
 def elevation_of(sprite: Any) -> float:
     """A sprite's elevation in metres (its entity's ``elevation`` px)."""
     data = getattr(sprite, "mesh_entity_data", None) or {}
@@ -111,10 +151,7 @@ class World:
             for col in models[st.model].colliders:
                 floor = f"{st.id}/{col.node}"
                 if col.kind == "wall":
-                    corners = [_place((x, y, z), at, st.rotation, st.scale)
-                               for x in (col.lo[0], col.hi[0]) for y in (col.lo[1], col.hi[1]) for z in (col.lo[2], col.hi[2])]
-                    xs, ys, zs = [p[0] for p in corners], [p[1] for p in corners], [p[2] for p in corners]
-                    self.walls.append(Wall(floor, (min(xs), min(ys), min(zs)), (max(xs), max(ys), max(zs))))
+                    self.walls.append(_wall(floor, col.lo, col.hi, at, st.rotation, st.scale))
                     continue
                 for a, b, c in col.triangles:
                     placed = (_place(a, at, st.rotation, st.scale), _place(b, at, st.rotation, st.scale),
@@ -221,8 +258,7 @@ class World:
                 if top > h + STEP and (surface.solid or top < h + BODY):
                     return None  # inside a solid, or a floor too low to fit under
         for wall in self.walls:
-            if (wall.lo[0] < x + half_w and wall.hi[0] > x - half_w and wall.lo[1] < y + half_h
-                    and wall.hi[1] > y - half_h and wall.lo[2] < h + BODY and wall.hi[2] > h + STEP):
+            if wall.lo[2] < h + BODY and wall.hi[2] > h + STEP and wall.overlaps(x, y, half_w, half_h):
                 return None
         return h, best[1].floor
 
@@ -257,7 +293,7 @@ class World:
             self._settle(sprite, x, y, z, hw, hh)
             return
         start = (sprite.center_x, sprite.center_y)
-        level = [s for s in solids if s is not sprite and abs(elevation_of(s) - z) < BODY]
+        level = [s for s in solids if s is not sprite and _on_level(s, z)]
         move_entity_with_physics(sprite, (dx, dy), level)  # the scene's 2D solids on this level
         moved = (sprite.center_x - start[0]) / PIXELS_PER_METRE, (sprite.center_y - start[1]) / PIXELS_PER_METRE
         if not self._settle(sprite, x + moved[0], y + moved[1], z, hw, hh):
