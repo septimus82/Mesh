@@ -232,7 +232,8 @@ def test_studio_previews_the_weather_as_play_shows_it(tmp_path: Path) -> None:
     driver = hd2d_studio_demo.StudioDriver(project)
     try:
         hd = driver.renderer
-        assert hd.particles is not None and driver.studio.hd2d.weather and driver.has_button("Preview weather: on")
+        shown = driver._scroll_panels(lambda: driver.has_button("Preview weather: on"))  # (its tools: Environment)
+        assert hd.particles is not None and driver.studio.hd2d.weather and shown
         t0 = hd.particles.time
         wet = driver.frame(3).convert("RGB")
         assert hd.particles.time > t0, "the weather moves while editing"

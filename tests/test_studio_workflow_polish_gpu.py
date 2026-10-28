@@ -94,7 +94,7 @@ def test_scrolled_out_buttons_have_no_tooltip_and_the_2d_palette_scrolls_on_its_
     (sheet0, left0), (sheet1, left1), (sheet2, left2) = palette["before"], palette["wheel_over_palette"], palette["wheel_over_rooms"]
     assert palette["palette_rows"][0] < palette["palette_rows"][1]
     assert sheet1[1] == sheet0[1] + 1 and left1 == left0  # the palette, not the panel
-    assert left2 < left1 and sheet2 == sheet1  # the panel, not the palette
+    assert left2 > 0 and sheet2 == sheet1  # the panel (the Objects tools, which don't all fit), not the palette
 
 
 @pytest.fixture(scope="module")

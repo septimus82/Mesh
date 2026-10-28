@@ -98,8 +98,44 @@ class StudioDriver:
         self.frame()
 
     def _scroll_panels(self, found: Any) -> bool:
-        """Scroll Mesh Studio's panels with the mouse wheel, as a person would, until ``found()``: the right panel
-        down, then the left one down, then each back up. False if it never was."""
+        """Look for something in Mesh Studio's panels as a person would until ``found()``: scroll the right panel
+        down, then the left one, then each back up; then each category of tools in turn (the left panel's tabs,
+        Milestone 23A: the tools panel shown first if a narrow window hid it). False if it never was."""
+        if self._scroll_both(found):
+            return True
+        from engine.studio import LEFT_TABS
+
+        for _key, title in LEFT_TABS:
+            if not self._left_tab_button(title):
+                self._click_text("Tools")  # (a narrow window showed the inspector instead)
+            tab = self._left_tab_button(title)
+            if tab is None:
+                break
+            self.frame()
+            r = tab.rect
+            self.click(r.left + r.width / 2, r.bottom + r.height / 2)
+            if self._scroll_both(found):
+                return True
+        return bool(found())
+
+    def _left_tab_button(self, title: str) -> Any:
+        from engine.studio import LEFT_W
+
+        return next((w for w in self.studio.ui.walk_widgets() if getattr(w, "text", None) == title
+                     and hasattr(w, "on_click") and w.rect.left < LEFT_W and w.rect.top > self.window.height - 130),
+                    None)
+
+    def _click_text(self, text: str) -> bool:
+        widget = next((w for w in self.studio.ui.walk_widgets() if getattr(w, "text", None) == text
+                       and hasattr(w, "on_click")), None)
+        if widget is None:
+            return False
+        self.frame()
+        r = widget.rect
+        self.click(r.left + r.width / 2, r.bottom + r.height / 2)
+        return True
+
+    def _scroll_both(self, found: Any) -> bool:
         for more, x in ((lambda: self.studio._panel_more, self.window.width - 100),
                         (lambda: self.studio._left_more, 100)):
             for side, step in ((1, -1), (0, 1)):  # (more below: scroll down; more above: up)

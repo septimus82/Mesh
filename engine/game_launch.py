@@ -94,6 +94,21 @@ def _run_editor(root: Path, config_path: Path, *, scene_path: str | None, open_t
             print(f"[Mesh][CLI] Mesh Studio failed to start: {type(exc).__name__}: {exc}")
             print("[Mesh][CLI] Set MESH_LEGACY_EDITOR=1 to use the legacy editor meanwhile.")
             return 1
+        # Mesh Studio uses the whole screen (Milestone 23A), still an ordinary window to resize or restore;
+        # MESH_STUDIO_WINDOWED=1 keeps the project's own window size.
+        # Only a window on screen, on the first frame of its own loop: maximising a hidden window shows it (Windows),
+        # and a launch whose loop never runs (a test's) never shows or grows one.
+        import engine.optional_arcade as optional_arcade  # noqa: PLC0415  # the engine's one arcade import route
+
+        maximize, schedule = getattr(window, "maximize", None), getattr(optional_arcade.arcade, "schedule_once", None)
+
+        def _maximize(_dt: float) -> None:
+            if getattr(window, "visible", False) and callable(maximize):
+                maximize()
+
+        if studio is not None and os.environ.get("MESH_STUDIO_WINDOWED") != "1" and callable(schedule) \
+                and getattr(window, "resizable", True):
+            schedule(_maximize, 0.0)
 
     editor = window.editor_controller
     if studio is None:
