@@ -15,6 +15,7 @@ from engine.scene_lifecycle_model import SceneLoadInputs, build_scene_load_plan
 from engine.scene_particles import configure as configure_scene_particles
 from engine.scene_runtime import room_memory
 from engine.scene_runtime.index_build import build_scene_index_from_sprites
+from engine.sound_emitters import reset as reset_sounds
 from engine.sprite_outline_model import parse_outline_settings
 from engine.swallowed_exceptions import _log_swallow
 from engine.ui import (
@@ -298,6 +299,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     configure_hd2d_scene(controller.window, controller.scene_settings, scene)
     configure_scene_particles(controller.window, controller.scene_settings, scene)  # after the renderer: HD-2D's own them
     reset_water(controller.window)  # its water surfaces register as their objects are made (engine.water)
+    reset_sounds(controller.window, str(controller.room_path or scene_path), controller.scene_settings)  # emitters too
 
     apply_scene_music(controller.window, controller.scene_settings)
 

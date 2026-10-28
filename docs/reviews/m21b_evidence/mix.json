@@ -1,0 +1,13 @@
+{
+ "file": "<scratch>\\lakeside_soundscape_mix.wav",
+ "seconds": 46.3,
+ "peak_dbfs": -9.3,
+ "clipped_samples": 0,
+ "loops_mixed": [
+  "emitter:packs/core_regions/scenes/lakeside.json:lakeside_sound_1296_928_0_0",
+  "emitter:packs/core_regions/scenes/lakeside.json:lakeside_sound_1568_608_0_0",
+  "emitter:packs/core_regions/scenes/lakeside.json:lakeside_sound_272_1072_0_0",
+  "weather:rain",
+  "weather:wind"
+ ]
+}

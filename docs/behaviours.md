@@ -1486,6 +1486,35 @@ Example configuration snippet:
 }
 ```
 
+## SoundEmitter
+A sound in the world, louder near it: water, birds, a humming machine (Studio: the Sound object).
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| sound | The sound file (.wav plays everywhere; .ogg, .mp3) | string | - |
+| volume | Volume at full strength (0-1) | float | 0.8 |
+| radius | Full strength within this distance (px) | float | 64.0 |
+| distance | Heard up to this distance (px) | float | 320.0 |
+| stereo | Heard from its side | bool | True |
+| loop | Plays round (off: once each time the listener comes near) | bool | True |
+| enabled | On | bool | True |
+| fade_in | Fade in (s) | float | 1.0 |
+| fade_out | Fade out (s) | float | 1.0 |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["SoundEmitter"],
+  "behaviour_config": {
+    "SoundEmitter": {
+      "sound": "<value>"
+    }
+  }
+}
+```
+
 ## SwitchInteract
 Emits an event when interacted with.
 
