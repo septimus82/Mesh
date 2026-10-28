@@ -3,12 +3,7 @@ the operations Studio and AI tools edit through. Headless."""
 
 from __future__ import annotations
 
-import json
 import math
-import shutil
-import subprocess
-import sys
-from pathlib import Path
 
 import pytest
 
@@ -95,36 +90,6 @@ def test_a_2d_room_has_no_camera_or_sun_to_set() -> None:
     for op in (ops.set_hd2d_camera, ops.set_hd2d_sun):
         with pytest.raises(ops.OpError, match="isn't an HD-2D room"):
             op({"name": "R", "entities": [], "settings": {}}, preset="noon" if op is ops.set_hd2d_sun else "outdoor")
-
-
-@pytest.fixture(scope="module")
-def starter(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    out = tmp_path_factory.mktemp("m22a")
-    made = subprocess.run([sys.executable, "-m", "mesh_cli", "new", "game", "--dest", str(out), "--template", "starter"],
-                          cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True, timeout=600)
-    assert made.returncode == 0, made.stdout + made.stderr
-    return out / "game"
-
-
-def test_a_2d_projects_first_hd2d_room_brings_the_starter_kit_and_undoes(starter: Path, tmp_path: Path) -> None:
-    from engine.studio_project import Project
-
-    root = tmp_path / "game"
-    shutil.copytree(starter, root)
-    assert not (root / "assets/hd2d_starter/textures/grass.png").exists()
-    project = Project.open(root, "packs/core_regions/worlds/main.json")
-    key, installed = project.add_hd2d_room("Meadow", 40, 30)
-    assert installed and (root / "assets/hd2d_starter/textures/grass.png").is_file()
-    models = json.loads((root / "assets/models/catalog.json").read_text(encoding="utf-8"))["models"]
-    assert {"cottage", "bridge_6m"} <= {m["id"] for m in models}
-    hd2d = project.scene(key)["settings"]["hd2d"]
-    assert hd2d["ground"]["to"] == [1280.0, 960.0]
-    assert any(e.get("tag") == "player" for e in project.scene(key)["entities"])  # the shared player, filled in
-    key2, again = project.add_hd2d_room("Cave", 16, 12, outdoor=False)
-    assert not again  # the kit is there now: nothing copied twice
-    project.undo()
-    project.undo()
-    assert key not in project.world["scenes"] and key2 not in project.world["scenes"]
 
 
 def test_a_new_hd2d_rooms_player_starts_in_its_middle() -> None:

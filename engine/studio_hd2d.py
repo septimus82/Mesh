@@ -121,6 +121,7 @@ class Hd2dView:
         self.model_filter = ""
         self.import_form: dict[str, Any] = {"path": "", "name": "", "category": "", "license": "", "sharp": True}
         self.reimport_form: dict[str, Any] = {"id": None, "path": ""}
+        self.grow_form: dict[str, str] = {}  # the room's new size as typed (Camera and sun: Room size)
         self._assets: list[Any] | None = None  # the catalogue as last read (None: read it again)
         self._facts: dict[tuple[str, int, int], tuple[Any | None, str | None]] = {}  # (file, mtime, size) -> (report, problem)
         self.object_marker: tuple[float, float, float] | None = None  # where an object being placed would stand (m)
@@ -1767,7 +1768,7 @@ class Hd2dView:
         studio = self.studio
         studio._flush_fields()
         studio.panel = "inspect" if studio.panel == "environment" else "environment"
-        studio.panel_scroll = 0
+        studio.panel_scroll, self.grow_form = 0, {}
         studio._rebuild()
 
     def environment_panel(self, rows: Any, width: int) -> None:
@@ -1797,6 +1798,26 @@ class Hd2dView:
             row.add(studio._field(text, commit, width=half, key=key))
             rows.add(row)
 
+        size = ops.hd2d_room_size(scene)
+        rows.add(studio._label("Room size", bold=True, size=12))
+        if size["width"] is not None:
+            rows.add(studio._label(f"{size['width']:g} x {size['depth']:g} m (1 m is a tile).", size=10, width=width))
+        if size["expandable"]:
+            form = self.grow_form
+            rows.add(studio._label("Expand grows the ground east and north; everything in the room stays where it "
+                                   "is. Rooms can't shrink here.", color=C_MUTED, size=9, width=width))
+            row = _row()
+            row.add(studio._label("Width x depth (m)", color=C_MUTED, size=10, width=118))
+            row.add(studio._field(str(form.get("width", size["width"])), lambda v: form.update(width=v),
+                                  width=(half - 2), key="grow_width"))
+            row.add(studio._field(str(form.get("depth", size["depth"])), lambda v: form.update(depth=v),
+                                  width=(half - 2), key="grow_depth"))
+            rows.add(row)
+            rows.add(self._button("Expand room", self.expand_room, "Grow the room's ground to this size (one undo "
+                                  "step)", width=width))
+        else:
+            rows.add(studio._label(f"It can't be expanded. {size['why']}", color=C_WARN, size=9, width=width))
+        rows.add(gui.UISpace(height=6))
         rows.add(studio._label("Game camera", bold=True, size=12))
         rows.add(studio._label("What the player sees: it follows them, looking down at this angle.", color=C_MUTED,
                                size=9, width=width))
@@ -1855,6 +1876,26 @@ class Hd2dView:
 
     def set_sun(self, said: str, **change: Any) -> None:
         self.studio._edit(lambda s: ops.set_hd2d_sun(s, **change), said)
+
+    def expand_room(self) -> None:
+        """Grow the room's flat ground to the size typed (``project_ops.expand_hd2d_room``): one undo step."""
+        studio = self.studio
+        studio._flush_fields()
+        before = ops.hd2d_room_size(studio.project.scene())
+        try:
+            w, d = (float(str(self.grow_form.get(k, before[k])).strip()) for k in ("width", "depth"))
+        except ValueError:
+            studio._say("The room's size: whole metres, like 48 and 52.", ok=False)
+            return
+        said = (f"The room is now {w:g} x {d:g} m: {w - before['width']:g} m more to the east, {d - before['depth']:g} m "
+                "more to the north; everything in it stayed where it was. Undo puts it back.")
+        if studio._edit(lambda s: ops.expand_hd2d_room(s, w, d), said):
+            self.grow_form = {}
+            bounds = ((studio.project.scene().get("settings") or {}).get("hd2d") or {}).get("camera", {}).get("bounds")
+            if bounds is not None and [float(v) for v in bounds] != [0.0, 0.0, w * 32.0, d * 32.0]:
+                studio._say(said + " The game camera keeps the edges you set for it (Stay inside the room, off then "
+                            "on, puts them at the room's).")
+            self.reset_view()
 
     def see_game_camera(self) -> None:
         """The editor's view as the game's camera shows the room at the player's start (``game_view``)."""
