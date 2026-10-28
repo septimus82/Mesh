@@ -16,6 +16,12 @@ These were found while building Lakeside Village ([`lakeside_village.md`](lakesi
 - **Room music in Studio.** A room's `settings.music` can't be set in Studio. M21A's semantics are documented in `docs/audio.md`, but they're reachable only by hand or by AI tools.
 - **Weather that changes during play.** Weather is per room; within a room only the particle layer's on/off switch changes it. There's no scripted or timed weather (M21B).
 
+## Found in M23A (the owner's first creator test)
+
+- ~~Sculpt, Paint and Scatter were hard to find~~ (buried at the end of a long left panel): M23A puts the tools in categories (Rooms, Terrain, Objects, Environment, Audio), opens maximised, and lets the panels be hidden (Tools, Inspector, Focus, Tab). See `m23a_responsive_workspace.md`.
+- **Snow and windborne leaves can't be authored in Studio.** They exist as particle presets (`engine/scene_particles.py`: rain, snow, wind), but Studio's weather controls (Environment: Rain and weather sounds...) only set rain. For a later environment milestone.
+- **An empty inspector still takes its 330 px** when nothing is selected. M23A leaves it shown: hiding it automatically with each selection would move the view about. The Inspector button hides it.
+
 ## Found in M22A
 
 - ~~The left panel doesn't scroll~~: fixed in M22B (it scrolls with the mouse wheel, like the right panel).

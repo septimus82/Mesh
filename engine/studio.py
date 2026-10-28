@@ -34,6 +34,7 @@ from engine.studio_inspector import InspectorMixin, LazyRow, Rows, row_height
 from engine.studio_project import Project
 from engine.studio_sound import SOUND_BUILT_IN, SoundMixin
 from engine.studio_ui import (
+    C_ACCENT,
     C_BG,
     C_CANVAS,
     C_ERROR,
@@ -67,6 +68,11 @@ from engine.studio_ui import (
 from engine.world_controller import WorldController
 
 TOP_H, STATUS_H, LEFT_W, RIGHT_W = 44, 26, 230, 330
+MIN_VIEW_W = 400  # the narrowest view both panels may leave; narrower, only the panel last used is shown (M23A)
+TABS_H = 2 * 32 + 8  # the left panel's category tabs: two rows
+# The left panel's categories (Milestone 23A): (key, title). Each shows its own tools, nothing else's.
+LEFT_TABS = (("rooms", "Rooms"), ("terrain", "Terrain"), ("objects", "Objects"), ("environment", "Environment"),
+             ("audio", "Audio"))
 GRID = 16
 PAN_SPEED = 600.0
 MAX_PICKER_ROWS = 10
@@ -178,6 +184,13 @@ class Studio(InspectorMixin, SoundMixin):
         self._held: dict[str, tuple[tuple[Any, ...], str]] = {}
         self._refusals = 0
         self.left_scroll = 0  # the left panel's first row shown (it scrolls apart from the right one)
+        # The workspace (Milestone 23A): the left panel's category, which panels are shown, and in a window too
+        # narrow for both and a usable view, the side last used (the other one is hidden meanwhile).
+        self.left_tab = "rooms"
+        self.show_left, self.show_right = True, True
+        self._compact_side = "left"
+        self._last_context: tuple[Any, ...] | None = None
+        self._bars: dict[str, tuple[float, float, float, int, int, int]] = {}  # scrollbars: side -> geometry, rows
         self._left_more = (0, 0)
         self._built_for = (0, 0)  # the window's size the panels were laid out for
         self._labels: dict[str, optional_arcade.arcade.Text] = {}
@@ -406,7 +419,48 @@ class Studio(InspectorMixin, SoundMixin):
     # ==================================================================== geometry
     def _map_rect(self) -> tuple[float, float, float, float]:
         w, h = self.window.width, self.window.height
-        return LEFT_W, w - RIGHT_W, STATUS_H, h - TOP_H
+        left, right = self._panel_widths()
+        return left, w - right, STATUS_H, h - TOP_H
+
+    def _panel_widths(self) -> tuple[int, int]:
+        """The left and right panels' widths now: 0 when hidden; when both would leave the view narrower than
+        ``MIN_VIEW_W``, only the side last used."""
+        left, right = (LEFT_W if self.show_left else 0), (RIGHT_W if self.show_right else 0)
+        if left and right and self.window.width - left - right < MIN_VIEW_W:
+            return (left, 0) if self._compact_side == "left" else (0, right)
+        return left, right
+
+    def set_left_tab(self, tab: str) -> None:
+        """Show a category of tools in the left panel (and the panel, if it was hidden). Where showing it would hide
+        the inspector (a narrow window), a box there with a refused value makes it wait, as leaving it would."""
+        left, right = self._panel_widths()
+        if right and not left and not self._settle_fields():
+            return
+        if tab != self.left_tab:
+            self.left_tab, self.left_scroll = tab, 0
+        self.show_left, self._compact_side = True, "left"
+        self._rebuild()
+
+    def toggle_panel(self, side: str) -> None:
+        """Hide or show the tools (left) or the inspector (right)."""
+        left, right = self._panel_widths()
+        if side == "left":
+            self.show_left = not left
+            self._compact_side = "left" if self.show_left else "right"
+        else:
+            self.show_right = not right
+            self._compact_side = "right" if self.show_right else "left"
+        self._rebuild()
+
+    def toggle_focus(self) -> None:
+        """The view alone (both panels hidden), or the panels back (Tab)."""
+        if self.show_left or self.show_right:
+            self.show_left = self.show_right = False
+            self._say("The view alone: Tab (or Focus) brings the panels back.")
+        else:
+            self.show_left = self.show_right = True
+            self._say("Panels back.")
+        self._rebuild()
 
     def _in_map(self, x: float, y: float) -> bool:
         left, right, bottom, top = self._map_rect()
@@ -1091,7 +1145,10 @@ class Studio(InspectorMixin, SoundMixin):
 
     # ==================================================================== UI construction
     def _button(self, text: str, action: Callable[[], object], *, width: int = 100, style: dict[str, Any] = S_BUTTON,
-                disabled: bool = False, icon: str | None = None) -> gui.UIFlatButton:
+                disabled: bool = False, icon: str | None = None, settle: bool = True) -> gui.UIFlatButton:
+        """A button. Before its action the boxes being typed in are committed, and a refused value makes it wait
+        (``_settle_fields``); ``settle=False``: committed, but never waiting (it takes Studio nowhere: a category of
+        tools, which says itself when it would hide the inspector)."""
         button = make_button(text, width=width, height=28, style=style, icon=icon)
         button.disabled = disabled
 
@@ -1099,7 +1156,9 @@ class Studio(InspectorMixin, SoundMixin):
             if button.disabled:
                 return
             self.menu = None
-            if action != self.save and not self._settle_fields():  # (Save says "Not saved" itself)
+            if not settle:
+                self._flush_fields()
+            elif action != self.save and not self._settle_fields():  # (Save says "Not saved" itself)
                 return
             action()
 
@@ -1125,11 +1184,19 @@ class Studio(InspectorMixin, SoundMixin):
         self._built_for = (self.window.width, self.window.height)
         self._thumbs, self._anim_space = [], None
         root = self.ui.add(gui.UIAnchorLayout())
+        context = (self.panel, self.selected, self.hd2d.structure)
+        if context != self._last_context and (self.panel != "inspect" or self.selected or self.hd2d.structure):
+            self._compact_side = "right"  # (something to inspect or a panel opened: it's what is shown when narrow)
+        self._last_context = context
+        left, right = self._panel_widths()
+        self._sheet_space, self.hd2d.tips, self._bars = None, [], {}
         self._top_bar_box = root.add(self._top_bar(), anchor_x="left", anchor_y="top", align_x=8, align_y=-8)
-        root.add(self._left_panel(), anchor_x="left", anchor_y="top", align_x=10, align_y=-(TOP_H + 10))
-        root.add(self._right_panel(), anchor_x="right", anchor_y="top", align_x=-10, align_y=-(TOP_H + 10))
+        if left:
+            root.add(self._left_panel(), anchor_x="left", anchor_y="top", align_x=10, align_y=-(TOP_H + 10))
+        if right:
+            root.add(self._right_panel(), anchor_x="right", anchor_y="top", align_x=-10, align_y=-(TOP_H + 10))
         self._status_label = self._label("", size=10)
-        root.add(self._status_label, anchor_x="left", anchor_y="bottom", align_x=LEFT_W + 8, align_y=6)
+        root.add(self._status_label, anchor_x="left", anchor_y="bottom", align_x=8, align_y=6)  # (the window's width)
         if self.menu is not None:
             self._add_menu(root)
         if self.modal == "close":
@@ -1162,46 +1229,97 @@ class Studio(InspectorMixin, SoundMixin):
             label.fit_content()
 
     def _top_bar(self) -> gui.UIBoxLayout:
+        """Play, Save, Undo and Redo, the panels' buttons, and the panels to show. In a narrow window (under
+        960 px) Lighting and Sound are left to the Environment and Audio tools, and the room's name to the title."""
+        narrow = self.window.width < 960
         bar = gui.UIBoxLayout(vertical=False, space_between=6)
-        bar.add(self._button("Play (F4)", self.play, width=96, style=S_PLAY))
-        bar.add(self._button("Save", self.save, width=70, disabled=not self.project.is_dirty))
+        bar.add(self._button("Play" if narrow else "Play (F4)", self.play, width=64 if narrow else 96, style=S_PLAY))
+        bar.add(self._button("Save", self.save, width=64 if narrow else 70, disabled=not self.project.is_dirty))
         bar.add(self._button("Undo", self.undo, width=64, disabled=not self.project.can_undo()))
         bar.add(self._button("Redo", self.redo, width=64, disabled=not self.project.can_redo()))
         bar.add(self._button("Flags", self.open_flags, width=64, style=S_ACTIVE if self.panel == "flags" else S_BUTTON))
-        bar.add(self._button("Lighting", self.open_lighting, width=80, style=S_ACTIVE if self.panel == "lighting" else S_BUTTON))
-        bar.add(self._button("Sound", self.open_sound, width=70, style=S_ACTIVE if self.panel in ("sound", "pick_sound")
-                             else S_BUTTON))
+        if not narrow:
+            bar.add(self._button("Lighting", self.open_lighting, width=80,
+                                 style=S_ACTIVE if self.panel == "lighting" else S_BUTTON))
+            bar.add(self._button("Sound", self.open_sound, width=70,
+                                 style=S_ACTIVE if self.panel in ("sound", "pick_sound") else S_BUTTON))
         waiting = len(self.ai.pending())
-        bar.add(self._button(f"AI ({waiting})" if waiting else "AI", self.open_ai, width=72,
+        bar.add(self._button(f"AI ({waiting})" if waiting else "AI", self.open_ai, width=56 if narrow else 72,
                              style=S_ACTIVE if waiting or self.panel == "ai" else S_BUTTON))
-        title = f"   {self.project.label(self.project.current)}" + ("   - unsaved changes" if self.project.is_dirty else "   - saved")
-        bar.add(self._label(title, size=12, color=C_MUTED))
+        left, right = self._panel_widths()
+        bar.add(self._button("Tools", lambda: self.toggle_panel("left"), width=60 if narrow else 64,
+                             style=S_ACTIVE if left else S_BUTTON))
+        bar.add(self._button("Inspect" if narrow else "Inspector", lambda: self.toggle_panel("right"),
+                             width=68 if narrow else 86, style=S_ACTIVE if right else S_BUTTON))
+        bar.add(self._button("Focus" if narrow else "Focus (Tab)", self.toggle_focus, width=56 if narrow else 96,
+                             style=S_ACTIVE if not (left or right) else S_BUTTON))
+        if not narrow:
+            title = f"   {self.project.label(self.project.current)}" + ("   - unsaved changes" if self.project.is_dirty
+                                                                         else "   - saved")
+            bar.add(self._label(title, size=12, color=C_MUTED))
         return bar
 
     def _left_panel(self) -> gui.UIBoxLayout:
+        """The tools: the category tabs (always in view), then the chosen category's tools, scrolled if they don't
+        fit (Milestone 23A: Rooms, Terrain, Objects, Environment, Audio)."""
         width = LEFT_W - 20
+        outer = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
+        third, half = (width - 8) // 3, (width - 4) // 2
+        for start, cols in ((0, 3), (3, 2)):
+            row = gui.UIBoxLayout(vertical=False, space_between=4)
+            for key, title in LEFT_TABS[start:start + cols]:
+                row.add(self._button(title, partial(self.set_left_tab, key), width=third if cols == 3 else half,
+                                     style=S_ACTIVE if key == self.left_tab else S_BUTTON, settle=False))
+            outer.add(row)
+        outer.add(gui.UISpace(height=4))
         box = Rows()  # (the rows that fit are shown, from ``left_scroll``; the wheel over the panel scrolls it)
-        box.add(self._label("Rooms", bold=True, size=12))
-        for key, label, _path in self.project.rooms():
-            style = S_ACTIVE if key == self.project.current else S_BUTTON
-            box.add(self._button(label, partial(self.switch_room, key), width=width, style=style, icon="map"))
-        box.add(self._button("+ New room", self._open_new_room, width=width))
-        box.add(gui.UISpace(height=10))
-        if self.hd2d.active:
-            self._sheet_space = None  # (a 2D room's tile palette, left from before: not drawn over the 3D view's panel)
-            self.hd2d.view_section(box, width)
+        tab, hd2d = self.left_tab, self.hd2d.active
+        if tab == "rooms":
+            box.add(self._label("Rooms", bold=True, size=12))
+            for key, label, _path in self.project.rooms():
+                style = S_ACTIVE if key == self.project.current else S_BUTTON
+                box.add(self._button(label, partial(self.switch_room, key), width=width, style=style, icon="map"))
+            box.add(self._button("+ New room", self._open_new_room, width=width))
+            if hd2d:
+                box.add(gui.UISpace(height=10))
+                self.hd2d.nav_section(box, width)
+        elif tab == "terrain":
+            if hd2d:
+                self.hd2d.terrain_section(box, width)
+            else:
+                self._map_section(box, width)
+        elif tab == "objects":
+            if hd2d:
+                box.add(self._label("3D models", bold=True, size=12))
+                self.hd2d.models_button(box, width)
+                box.add(gui.UISpace(height=10))
+            box.add(self._label("Objects", bold=True, size=12))
+            if not self.prefabs:
+                box.add(self._label("This project has no objects in assets/prefabs.json.", color=C_MUTED, width=width))
+            for prefab in self.prefabs + BUILT_IN_OBJECTS:
+                style = S_ACTIVE if prefab is self.place_prefab else S_BUTTON
+                text = str(prefab.get("display_name") or prefab["id"])
+                box.add(self._button(text, partial(self.arm_place, prefab), width=width, style=style))
+            box.add(self._label("Click one, then click the map.", color=C_MUTED, size=10))
+        elif tab == "environment":
+            if hd2d:
+                self.hd2d.environment_section(box, width)
+                box.add(gui.UISpace(height=10))
+            box.add(self._label("Light and rain", bold=True, size=12))
+            box.add(self._button("Lighting...", self.open_lighting, width=width,
+                                 style=S_ACTIVE if self.panel == "lighting" else S_BUTTON))
+            box.add(self._button("Rain and weather sounds...", self.open_sound, width=width,
+                                 style=S_ACTIVE if self.panel in ("sound", "pick_sound") else S_BUTTON))
         else:
-            self._map_section(box, width)
-        box.add(gui.UISpace(height=10))
-        box.add(self._label("Objects", bold=True, size=12))
-        if not self.prefabs:
-            box.add(self._label("This project has no objects in assets/prefabs.json.", color=C_MUTED, width=width))
-        for prefab in self.prefabs + BUILT_IN_OBJECTS:
-            style = S_ACTIVE if prefab is self.place_prefab else S_BUTTON
-            text = str(prefab.get("display_name") or prefab["id"])
-            box.add(self._button(text, partial(self.arm_place, prefab), width=width, style=style))
-        box.add(self._label("Click one, then click the map.", color=C_MUTED, size=10))
-        return self._scrolled(box, left=True)
+            box.add(self._label("Audio", bold=True, size=12))
+            box.add(self._button("Room sounds and ambience...", self.open_sound, width=width,
+                                 style=S_ACTIVE if self.panel in ("sound", "pick_sound") else S_BUTTON))
+            box.add(self._button("Place a sound", partial(self.arm_place, SOUND_BUILT_IN), width=width,
+                                 style=S_ACTIVE if self.place_prefab is SOUND_BUILT_IN else S_BUTTON))
+            box.add(self._label("A sound plays from where it is placed: click the map to put it there, then choose "
+                                "its sound on the right.", color=C_MUTED, size=10, width=width))
+        outer.add(self._scrolled(box, left=True, reserve=TABS_H))
+        return outer
 
     # ==================================================================== lighting
     def open_lighting(self) -> None:
@@ -1596,9 +1714,9 @@ class Studio(InspectorMixin, SoundMixin):
             return None
         tileset = self.tilesets[self.sheet]
         px = max(12, min(32, SHEET_W // max(1, tileset["columns"])))
-        others = 18 + 32 * (len(self.project.rooms()) + 1) + 10 + 18 + 5 * 32 + 10 + 18 + 32 * (len(self.prefabs) + len(BUILT_IN_OBJECTS)) + 14
+        others = TABS_H + 18 + 5 * 32 + 18  # (the Terrain tab: its heading, the map's tools above it, its note)
         room = self.window.height - TOP_H - STATUS_H - 30 - others - 14 * 4
-        rows = max(2, min(tileset["rows"], int(min(200, room) // px)))
+        rows = max(2, min(tileset["rows"], int(room // px)))
         return tileset, px, min(tileset["columns"], SHEET_W // px), rows
 
     def _sheet_cell(self, x: float, y: float, *, clamp: bool = False) -> tuple[int, int] | None:
@@ -1710,13 +1828,15 @@ class Studio(InspectorMixin, SoundMixin):
         toasts = getattr(getattr(self.window, "player_hud", None), "_toast_manager", None)
         return list(toasts.get_active_toasts()) if toasts is not None else []
 
-    def _scrolled(self, rows: Rows, *, left: bool = False) -> gui.UIBoxLayout:
+    def _scrolled(self, rows: Rows, *, left: bool = False, reserve: float = 0.0) -> gui.UIBoxLayout:
         """The rows that fit the panel, from its scroll (``panel_scroll``, or ``left_scroll`` for the left panel) on;
-        the mouse wheel over the panel scrolls the rest in. Rows out of view are not made: nothing there is clicked."""
+        the mouse wheel over the panel scrolls the rest in. Rows out of view are not made: nothing there is clicked.
+        ``reserve``: px above the rows the panel keeps (the left panel's tabs). Where they don't all fit, a scrollbar
+        is drawn at the panel's edge (``_draw_scrollbars``)."""
         box = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
         items = rows.items
         heights = [row_height(widget) + 4 for widget in items]
-        room = self.window.height - TOP_H - STATUS_H - 24
+        room = self.window.height - TOP_H - STATUS_H - 24 - reserve
         if not left:
             if self._scroll_to in rows.anchors:
                 self.panel_scroll = max(0, rows.anchors[self._scroll_to] - 1)
@@ -1743,6 +1863,8 @@ class Studio(InspectorMixin, SoundMixin):
             used += heights[index]
         below = len(items) - (shown[-1] + 1 if shown else start)
         self._set_scroll(left, start, (start, below))
+        top = self.window.height - TOP_H - 10 - reserve
+        self._bars["left" if left else "right"] = (top, STATUS_H + 6, 0.0, start, len(shown), len(items))
         if start:
             box.add(self._label(f"^ {start} more above (scroll up)", color=C_MUTED, size=9))
         for index in shown:
@@ -2137,6 +2259,7 @@ class Studio(InspectorMixin, SoundMixin):
         w.camera_controller.use_gui_camera()
         self._draw_panels()
         self.ui.draw()
+        self._draw_scrollbars()
         self._draw_sheet()
         self._draw_import_preview()
         self._draw_previews()
@@ -2622,13 +2745,32 @@ class Studio(InspectorMixin, SoundMixin):
     def _draw_panels(self) -> None:
         a = optional_arcade.arcade
         w, h = self.window.width, self.window.height
+        left, right = self._panel_widths()
         a.draw_lrbt_rectangle_filled(0, w, h - TOP_H, h, C_RAISED)
-        a.draw_lrbt_rectangle_filled(0, LEFT_W, 0, h - TOP_H, C_PANEL)
-        a.draw_lrbt_rectangle_filled(w - RIGHT_W, w, 0, h - TOP_H, C_PANEL)
-        a.draw_lrbt_rectangle_filled(LEFT_W, w - RIGHT_W, 0, STATUS_H, C_BG)
-        a.draw_lines([(0, h - TOP_H), (w, h - TOP_H), (LEFT_W, 0), (LEFT_W, h - TOP_H), (w - RIGHT_W, 0),
-                      (w - RIGHT_W, h - TOP_H), (LEFT_W, STATUS_H), (w - RIGHT_W, STATUS_H)], C_LINE, 1)
+        if left:
+            a.draw_lrbt_rectangle_filled(0, left, STATUS_H, h - TOP_H, C_PANEL)
+        if right:
+            a.draw_lrbt_rectangle_filled(w - right, w, STATUS_H, h - TOP_H, C_PANEL)
+        a.draw_lrbt_rectangle_filled(0, w, 0, STATUS_H, C_BG)  # the status bar: the window's whole width
+        a.draw_lines([(0, h - TOP_H), (w, h - TOP_H), (left, STATUS_H), (left, h - TOP_H), (w - right, STATUS_H),
+                      (w - right, h - TOP_H), (0, STATUS_H), (w, STATUS_H)], C_LINE, 1)
         self._draw_brand(w - 12, h - TOP_H / 2)
+
+    def _draw_scrollbars(self) -> None:
+        """A scrollbar at the edge of a panel whose rows don't all fit: its track, and the shown part in cyan."""
+        a = optional_arcade.arcade
+        left, right = self._panel_widths()
+        for side, (top, bottom, _x, start, shown, total) in self._bars.items():
+            if total <= shown or not shown:
+                continue
+            x = left - 5 if side == "left" else self.window.width - 5
+            if (side == "left" and not left) or (side == "right" and not right):
+                continue
+            a.draw_lrbt_rectangle_filled(x - 2, x + 2, bottom, top, C_LINE)
+            span = top - bottom
+            thumb_top = top - span * start / total
+            thumb_bottom = max(bottom, thumb_top - max(24.0, span * shown / total))
+            a.draw_lrbt_rectangle_filled(x - 2, x + 2, thumb_bottom, thumb_top, C_ACCENT)
 
     def _draw_brand(self, right: float, middle: float) -> None:
         """Mesh Studio's mark and name at the top bar's right end: only where it's clear of the toolbar, which
@@ -2713,6 +2855,9 @@ class Studio(InspectorMixin, SoundMixin):
         self.keys.add(symbol)
         if symbol == k.F4:
             self.play()
+        elif symbol == k.TAB:
+            self.keys.discard(symbol)
+            self.toggle_focus()
         elif ctrl and symbol in (k.S, k.Z, k.Y, k.C, k.V):
             self.keys.discard(symbol)
             if symbol == k.S:
@@ -2809,7 +2954,8 @@ class Studio(InspectorMixin, SoundMixin):
     def on_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool:
         if self.mode == "play":
             return False
-        if x >= self.window.width - RIGHT_W and self.modal is None:
+        left_w, right_w = self._panel_widths()
+        if right_w and x >= self.window.width - right_w and self.modal is None:
             more_above, more_below = self._panel_more
             if (scroll_y > 0 and more_above) or (scroll_y < 0 and more_below):
                 self._flush_fields()
@@ -2825,7 +2971,7 @@ class Studio(InspectorMixin, SoundMixin):
             step = -(scroll_x or scroll_y) if sideways else -scroll_y
             self.sheet_scroll[axis] = int(min(max(self.sheet_scroll[axis] + step, 0), max(0, limit)))
             return True
-        if x < LEFT_W and y < self.window.height - TOP_H and self.modal is None:  # the left panel: never the view
+        if x < left_w and y < self.window.height - TOP_H and self.modal is None:  # the left panel: never the view
             more_above, more_below = self._left_more
             if (scroll_y > 0 and more_above) or (scroll_y < 0 and more_below):
                 self._flush_fields()

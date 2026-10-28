@@ -58,13 +58,13 @@ def _project(out: Path, *, rooms: int = 0, objects: int = 0) -> Path:
     p.add_hd2d_room("Meadow", 40, 30)
     for i in range(rooms):
         p.add_room(f"Room {i + 1:02d}")
-    if rooms:  # a tall tileset (8 x 16 tiles): more than the palette shows, to scroll
+    if rooms:  # a tall tileset (8 x 64 tiles): more than the palette shows, to scroll
         from PIL import Image  # noqa: PLC0415
 
         tall = out / "tall_tiles.png"
-        image = Image.new("RGBA", (256, 512))
-        for i in range(128):
-            image.paste((40 + i, 200 - i, 90 + (i * 7) % 120, 255), (i % 8 * 32, i // 8 * 32, i % 8 * 32 + 32, i // 8 * 32 + 32))
+        image = Image.new("RGBA", (256, 2048))
+        for i in range(512):
+            image.paste(((40 + i) % 256, (200 - i) % 256, 90 + (i * 7) % 120, 255), (i % 8 * 32, i // 8 * 32, i % 8 * 32 + 32, i // 8 * 32 + 32))
         image.save(tall)
         p.import_tileset(tall, 32, "Tall")
     p.save()
@@ -131,6 +131,12 @@ def _press_left(d: Any, text: str) -> None:
             d.frame()
             if getattr(d.studio, "left_scroll", None) == before:
                 break
+    # (Milestone 23A: in another category of tools) the categories in turn, as a person would
+    if d._scroll_panels(lambda: any(w.text == text and w.rect.bottom >= 0 for w in _left_buttons(d))):
+        d.frame()
+        w = next(w for w in _left_buttons(d) if w.text == text and w.rect.bottom >= 0)
+        d.click(w.rect.left + w.rect.width / 2, w.rect.bottom + w.rect.height / 2)
+        return
     raise AssertionError(f"no left-panel button {text!r} reachable")
 
 
@@ -275,11 +281,12 @@ def _tooltip_check(d: Any) -> dict[str, Any]:
     r = turn_left().rect
     at = (r.left + r.width / 2, r.bottom + r.height / 2)
     shown = d.studio.hd2d.tooltip(*at)
-    for _ in range(20):
-        if turn_left() is None:
-            break
-        d.window.dispatch_event("on_mouse_scroll", LEFT_X, d.window.height / 2, 0, -1)
-        d.frame()
+    for step in (-1, 1):  # (down, then up: wherever it is in its category, scrolled out of view)
+        for _ in range(20):
+            if turn_left() is None:
+                break
+            d.window.dispatch_event("on_mouse_scroll", LEFT_X, d.window.height / 2, 0, step)
+            d.frame()
     return {"over_it": shown, "scrolled_out": turn_left() is None, "over_where_it_was": d.studio.hd2d.tooltip(*at)}
 
 
@@ -296,7 +303,8 @@ def _palette_check(d: Any) -> dict[str, Any]:
     d.window.dispatch_event("on_mouse_scroll", space.left + 10, space.top - 10, 0, -1)
     d.frame()
     over_palette = (list(d.studio.sheet_scroll), d.studio.left_scroll)
-    d.window.dispatch_event("on_mouse_scroll", LEFT_X, d.window.height - 80, 0, 1)  # over the rooms: up
+    d._click_text("Objects")  # (Milestone 23A: the panel's own scrolling, where its rows don't all fit: the objects)
+    d.window.dispatch_event("on_mouse_scroll", LEFT_X, d.window.height / 2, 0, -1)
     d.frame()
     return {"palette_rows": [rows, tileset["rows"]], "before": before, "wheel_over_palette": over_palette,
             "wheel_over_rooms": (list(d.studio.sheet_scroll), d.studio.left_scroll)}

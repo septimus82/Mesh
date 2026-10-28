@@ -834,9 +834,11 @@ class Hd2dView:
         self.tips.append((button, tip))
         return button
 
-    def view_section(self, box: Any, width: int) -> None:
-        """The left panel's "3D view" section: the camera's buttons and how to place a structure."""
-        self.tips = []
+    # ------------------------------------------------------------------ the left panel's parts (Milestone 23A: one
+    # a category: Rooms has the view's buttons, Terrain sculpting, painting and scatter, Objects the models,
+    # Environment the camera, sun, weather and wind)
+    def nav_section(self, box: Any, width: int) -> None:
+        """The 3D view's buttons: turning, tilting, resetting and framing the editor's camera."""
         studio = self.studio
         box.add(studio._label("3D view", bold=True, size=12))
         half = (width - 4) // 2
@@ -853,6 +855,11 @@ class Hd2dView:
         row.add(self._button("Frame it", self.frame_selected, "Zoom to the selected structure (F)", width=half))
         box.add(row)
         box.add(studio._label("Middle-drag pans, wheel zooms, WASD moves.", color=C_MUTED, size=10, width=width))
+
+    def environment_section(self, box: Any, width: int) -> None:
+        """The room's game camera, sun and sky (a panel), its weather shown here or not, and its wind."""
+        studio = self.studio
+        box.add(studio._label("Camera, sun and weather", bold=True, size=12))
         box.add(self._button("Camera and sun...", self.open_environment, "The game's camera, the sun, the ambient "
                              "light and the sky", width=width,
                              style=S_ACTIVE if studio.panel == "environment" else S_BUTTON))
@@ -863,10 +870,21 @@ class Hd2dView:
                                  width=width, style=S_ACTIVE if self.weather else S_BUTTON))
         if renderer is not None and renderer.settings.ground is not None:
             self._motion_section(box, width)
+
+    def models_button(self, box: Any, width: int) -> None:
         box.add(self._button("Models...", self.open_models, "Blender models in this project: import, browse, place "
-                             "and reimport", width=width, style=S_ACTIVE if studio.panel == "structures" else S_BUTTON))
-        if renderer is not None and renderer.settings.ground is not None:
-            self._sculpt_section(box, width)
+                             "and reimport", width=width,
+                             style=S_ACTIVE if self.studio.panel == "structures" else S_BUTTON))
+
+    def terrain_section(self, box: Any, width: int) -> None:
+        """Sculpt, Paint and Scatter, and the chosen one's brush."""
+        box.add(self.studio._label("Terrain", bold=True, size=12))
+        renderer = self.renderer
+        if renderer is None or renderer.settings.ground is None:
+            box.add(self.studio._label("This room has no ground of its own (its floor is all models).", color=C_MUTED,
+                                       size=10, width=width))
+            return
+        self._sculpt_section(box, width)
 
     # ------------------------------------------------------------------ sculpting the ground (Milestone 20A prototype)
     def ground_hit(self, x: float, y: float) -> tuple[float, float, float] | None:
@@ -1459,7 +1477,10 @@ class Hd2dView:
                              "Scatter grass, flowers, bushes, reeds, rocks and branches over the ground by dragging "
                              "(click again: off)", width=third, style=S_ACTIVE if kind == "scatter" else S_BUTTON))
         box.add(row)
-        if brush is None:
+        if brush is None:  # (nothing chosen yet: what each one does)
+            box.add(studio._label("Sculpt raises, lowers, smooths or flattens the ground. Paint colours it: earth, "
+                                  "stone, mud, sand or grass. Scatter adds grass, flowers, bushes, trees and rocks. "
+                                  "Choose one, then drag on the view.", color=C_MUTED, size=10, width=width))
             return
         if kind == "paint":
             self._paint_section(box, width)
