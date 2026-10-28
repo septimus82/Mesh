@@ -1,0 +1,332 @@
+{
+ "driver": "XAudio2Driver",
+ "before": 0,
+ "master_volume": 0.0,
+ "entered_dungeon": {
+  "music": "assets/music/dungeon_theme.wav",
+  "registered_players": 1,
+  "live": 1,
+  "player": {
+   "playing": true,
+   "time": 1.34,
+   "level": 1.0,
+   "output_volume": 0.0
+  }
+ },
+ "no_setting_keeps_it": {
+  "music": "assets/music/dungeon_theme.wav",
+  "registered_players": 1,
+  "live": 1,
+  "player": {
+   "playing": true,
+   "time": 2.03,
+   "level": 1.0,
+   "output_volume": 0.0
+  },
+  "same_player": true
+ },
+ "same_track_again": {
+  "music": "assets/music/dungeon_theme.wav",
+  "registered_players": 1,
+  "live": 1,
+  "player": {
+   "playing": true,
+   "time": 3.31,
+   "level": 0.5,
+   "output_volume": 0.0
+  },
+  "same_player": true
+ },
+ "crossfade_wav_to_wav": {
+  "from": "assets/music/dungeon_theme.wav",
+  "to": "assets/music/forest_theme.wav",
+  "overlap": [
+   {
+    "old": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.4
+    },
+    "new": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.2
+    }
+   },
+   {
+    "old": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.3
+    },
+    "new": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.4
+    }
+   },
+   {
+    "old": {
+     "playing": true,
+     "advanced_s": -3.8,
+     "level": 0.2
+    },
+    "new": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.6
+    }
+   },
+   {
+    "old": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.1
+    },
+    "new": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.8
+    }
+   }
+  ],
+  "after": {
+   "music": "assets/music/forest_theme.wav",
+   "registered_players": 1,
+   "live": 1,
+   "player": {
+    "playing": true,
+    "time": 1.49,
+    "level": 1.0,
+    "output_volume": 0.0
+   },
+   "old_still_playing": false
+  }
+ },
+ "crossfade_wav_to_mp3": {
+  "from": "assets/music/forest_theme.wav",
+  "to": "assets/music/TownTheme.mp3",
+  "overlap": [
+   {
+    "old": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.8
+    },
+    "new": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.2
+    }
+   },
+   {
+    "old": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.6
+    },
+    "new": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.4
+    }
+   },
+   {
+    "old": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.4
+    },
+    "new": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.6
+    }
+   },
+   {
+    "old": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.2
+    },
+    "new": {
+     "playing": true,
+     "advanced_s": 0.21,
+     "level": 0.8
+    }
+   }
+  ],
+  "after": {
+   "music": "assets/music/TownTheme.mp3",
+   "registered_players": 1,
+   "live": 1,
+   "player": {
+    "playing": true,
+    "time": 1.49,
+    "level": 1.0,
+    "output_volume": 0.0
+   },
+   "old_still_playing": false
+  }
+ },
+ "mp3_loops": {
+  "before_end_s": 96.99,
+  "after_s": 0.49,
+  "duration_s": 97.49,
+  "playing": true,
+  "same_player": true
+ },
+ "explicit_silence": {
+  "music": null,
+  "registered_players": 0,
+  "live": 0,
+  "player": null
+ },
+ "rapid_room_changes": {
+  "rooms_entered": 60,
+  "peak_registered_players": 3,
+  "music": "assets/music/forest_theme.wav",
+  "registered_players": 1,
+  "live": 1,
+  "player": {
+   "playing": true,
+   "time": 0.52,
+   "level": 1.0,
+   "output_volume": 0.0
+  }
+ },
+ "pause_and_resume": {
+  "paused": {
+   "music": "assets/music/dungeon_theme.wav",
+   "registered_players": 1,
+   "live": 1,
+   "player": {
+    "playing": true,
+    "time": 1.66,
+    "level": 1.0,
+    "output_volume": 0.0
+   }
+  },
+  "resumed": {
+   "music": "assets/music/dungeon_theme.wav",
+   "registered_players": 1,
+   "live": 1,
+   "player": {
+    "playing": true,
+    "time": 2.17,
+    "level": 1.0,
+    "output_volume": 0.0
+   }
+  }
+ },
+ "save_ok": true,
+ "save_meta_music": {
+  "path": "assets/music/dungeon_theme.wav",
+  "volume": 1.0
+ },
+ "silent_before_load": {
+  "music": null,
+  "registered_players": 0,
+  "live": 0,
+  "player": null
+ },
+ "load_ok": true,
+ "after_loading_the_save": {
+  "music": "assets/music/dungeon_theme.wav",
+  "registered_players": 1,
+  "live": 1,
+  "player": {
+   "playing": true,
+   "time": 1.28,
+   "level": 1.0,
+   "output_volume": 0.0
+  }
+ },
+ "broken_files": {
+  "missing": {
+   "music": "assets/music/dungeon_theme.wav",
+   "same_player": true
+  },
+  "broken_empty": {
+   "music": "assets/music/dungeon_theme.wav",
+   "same_player": true
+  },
+  "broken_not_audio": {
+   "music": "assets/music/dungeon_theme.wav",
+   "same_player": true
+  },
+  "unplayable": [
+   "assets/music/broken_empty.wav",
+   "assets/music/broken_text.ogg",
+   "assets/music/not_there.wav"
+  ],
+  "broken_truncated": {
+   "music": "assets/music/broken_truncated.mp3",
+   "registered_players": 1,
+   "live": 1,
+   "player": {
+    "playing": true,
+    "time": 0.28,
+    "level": 1.0,
+    "output_volume": 0.0
+   }
+  }
+ },
+ "ambience_loop": {
+  "registered_after_each_request": [
+   2,
+   2,
+   2
+  ],
+  "playing": true,
+  "time": 1.83,
+  "level": 0.4,
+  "music_level_unchanged": 1.0,
+  "after_stop": {
+   "loops": {},
+   "registered": 1
+  }
+ },
+ "after_sfx": {
+  "music": "assets/music/dungeon_theme.wav",
+  "registered_players": 1,
+  "live": 1,
+  "player": {
+   "playing": true,
+   "time": 0.23,
+   "level": 1.0,
+   "output_volume": 0.0
+  },
+  "same_player": true
+ },
+ "buses": {
+  "music_muted": {
+   "music": "assets/music/dungeon_theme.wav",
+   "registered_players": 1,
+   "live": 1,
+   "player": {
+    "playing": true,
+    "time": 0.23,
+    "level": 0.3,
+    "output_volume": 0.0
+   }
+  },
+  "unmuted": {
+   "music": "assets/music/dungeon_theme.wav",
+   "registered_players": 1,
+   "live": 1,
+   "player": {
+    "playing": true,
+    "time": 0.23,
+    "level": 0.3,
+    "output_volume": 0.0
+   }
+  },
+  "same_player": true
+ },
+ "after_close": {
+  "registered_players": 0,
+  "live": 0,
+  "released_players": 11
+ }
+}

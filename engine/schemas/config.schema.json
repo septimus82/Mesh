@@ -7,6 +7,9 @@
     "ambient_darkness_alpha": {
       "type": "integer"
     },
+    "ambience_volume": {
+      "type": "number"
+    },
     "ambient_light_rgba": {
       "$ref": "#/$defs/rgbaArray"
     },

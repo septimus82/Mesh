@@ -36,6 +36,7 @@ class RuntimeSettings:
 
     music_volume: float = 1.0
     sfx_volume: float = 1.0
+    ambience_volume: float = 1.0
     fog_enabled: bool = False
     text_scale: float = 1.0
     reduced_flicker: bool = False  # calmer flickering lights: gentler, no faulty-lamp stutter (accessibility)
@@ -44,6 +45,7 @@ class RuntimeSettings:
         return {
             "music_volume": float(_clamp01(self.music_volume, 1.0)),
             "sfx_volume": float(_clamp01(self.sfx_volume, 1.0)),
+            "ambience_volume": float(_clamp01(self.ambience_volume, 1.0)),
             "fog_enabled": bool(self.fog_enabled),
             "text_scale": float(_clamp_text_scale(self.text_scale)),
             "reduced_flicker": bool(self.reduced_flicker),
@@ -54,6 +56,7 @@ class RuntimeSettings:
         return cls(
             music_volume=_clamp01(getattr(cfg, "music_volume", 1.0), 1.0),
             sfx_volume=_clamp01(getattr(cfg, "sfx_volume", 1.0), 1.0),
+            ambience_volume=_clamp01(getattr(cfg, "ambience_volume", 1.0), 1.0),
             fog_enabled=bool(getattr(cfg, "fog_enabled", False)),
             text_scale=_clamp_text_scale(getattr(cfg, "text_scale", 1.0)),
             reduced_flicker=bool(getattr(cfg, "reduced_flicker", False)),
@@ -72,6 +75,7 @@ class RuntimeSettings:
             return cls(
                 music_volume=base.music_volume,
                 sfx_volume=base.sfx_volume,
+                ambience_volume=base.ambience_volume,
                 fog_enabled=base.fog_enabled,
                 text_scale=base.text_scale,
                 reduced_flicker=base.reduced_flicker,
@@ -79,6 +83,7 @@ class RuntimeSettings:
         return cls(
             music_volume=_clamp01(payload.get("music_volume", base.music_volume), base.music_volume),
             sfx_volume=_clamp01(payload.get("sfx_volume", base.sfx_volume), base.sfx_volume),
+            ambience_volume=_clamp01(payload.get("ambience_volume", base.ambience_volume), base.ambience_volume),
             fog_enabled=bool(payload.get("fog_enabled", base.fog_enabled)),
             text_scale=_clamp_text_scale(payload.get("text_scale", base.text_scale)),
             reduced_flicker=bool(payload.get("reduced_flicker", base.reduced_flicker)),
@@ -87,6 +92,7 @@ class RuntimeSettings:
     def apply(self, window: Any) -> None:
         self.music_volume = _clamp01(self.music_volume, 1.0)
         self.sfx_volume = _clamp01(self.sfx_volume, 1.0)
+        self.ambience_volume = _clamp01(self.ambience_volume, 1.0)
         self.text_scale = _clamp_text_scale(self.text_scale)
 
         audio = getattr(window, "audio", None)
@@ -97,6 +103,9 @@ class RuntimeSettings:
             setter = getattr(audio, "set_sfx_volume", None)
             if callable(setter):
                 setter(self.sfx_volume)
+            setter = getattr(audio, "set_ambience_volume", None)
+            if callable(setter):
+                setter(self.ambience_volume)
 
         lighting = getattr(window, "lighting", None)
         if lighting is not None:
@@ -111,6 +120,7 @@ class RuntimeSettings:
                 pass
             try:
                 cfg.sfx_volume = float(self.sfx_volume)
+                cfg.ambience_volume = float(self.ambience_volume)
             except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
                 _log_swallow("RUNT-002", "engine/runtime_settings.py pass-only blanket swallow")
                 pass

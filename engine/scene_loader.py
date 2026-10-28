@@ -26,9 +26,10 @@ DEFAULT_LAYERS = [
     {"name": "foreground"},
 ]
 
+# No "music" here: a room without a music setting keeps the music playing, one with "music": null is silent
+# (engine.scene_music). A default of None made the two the same: every room without music stopped it (M21A).
 DEFAULT_SETTINGS = {
     "background_color": "dark_blue_gray",
-    "music": None,
     "music_volume": 1.0,
 }
 

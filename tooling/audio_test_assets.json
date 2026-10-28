@@ -1,0 +1,47 @@
+{
+  "about": "Third-party audio used to test Mesh's audio (M21A). The files are NOT in the repository: they are kept outside it, by default in D:/Games/Mesh-audio-assets/downloads (set MESH_AUDIO_ASSETS to use another folder), and tooling/audio_smoke.py checks each one's SHA-256 before using it. All CC0 (public domain); the authors are credited here although CC0 doesn't require it.",
+  "assets": [
+    {
+      "id": "town_theme",
+      "use": "music: a long looping track (MP3, 97 s, stereo 44.1 kHz)",
+      "file": "town_theme_rpg/TownTheme.mp3",
+      "original_filename": "TownTheme.mp3",
+      "author": "cynicmusic (cynicmusic.com, pixelsphere.org)",
+      "source": "https://opengameart.org/content/town-theme-rpg",
+      "download": "https://opengameart.org/sites/default/files/TownTheme.mp3",
+      "licence": "CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/)",
+      "notes": "The author asks (not as a licence term) to be told when the music is used.",
+      "bytes": 1316581,
+      "sha256": "2657861d5107d4a3c01ef81cb6a4d61ddd5e7a054b6da57e658373d79d0c3466",
+      "downloaded": "2026-10-28"
+    },
+    {
+      "id": "forest_ambience",
+      "use": "ambience: a seamless environmental loop (MP3, 45 s, stereo 48 kHz)",
+      "file": "forest_ambience/Forest_Ambience.mp3",
+      "original_filename": "Forest_Ambience.mp3",
+      "author": "TinyWorlds (https://opengameart.org/users/tinyworlds)",
+      "source": "https://opengameart.org/content/forest-ambience",
+      "download": "https://opengameart.org/sites/default/files/Forest_Ambience.mp3",
+      "licence": "CC0 1.0 (http://creativecommons.org/publicdomain/zero/1.0/)",
+      "notes": "Made for Ludum Dare 29 (The Woods); the page says it loops seamlessly.",
+      "bytes": 716670,
+      "sha256": "9850aa1d0d5d66bd9c5daf8bb77c6d852e01f2f4de22f283bd5621e8bed13b75",
+      "downloaded": "2026-10-28"
+    }
+  ],
+  "not_downloaded": [
+    {
+      "id": "kenney_rpg_audio",
+      "source": "https://kenney.nl/assets/rpg-audio",
+      "licence": "CC0 (stated on the page)",
+      "why": "kenney.nl answered 403 to an automated download of its signed link (it expects its own page's browser session); not worked around, as instructed. Download it from the page in a browser if wanted."
+    },
+    {
+      "id": "kenney_interface_sounds",
+      "source": "https://kenney.nl/assets/interface-sounds",
+      "licence": "CC0 (stated on the page)",
+      "why": "As above: 403 to an automated download."
+    }
+  ]
+}

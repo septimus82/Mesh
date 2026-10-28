@@ -529,7 +529,7 @@ def build_slot_payload(
         room = window.scene_controller.current_scene_path
     # The room's authored settings aren't saved when the room can be read: loading takes them from the room as it is
     # then (#390). A scene with no readable room (built in memory) keeps its whole snapshot: such a save is complete.
-    from engine.scene_runtime.saved_world import ROOM_IDS, room_ids, slim
+    from engine.scene_runtime.saved_world import MUSIC, ROOM_IDS, room_ids, slim
 
     loader = getattr(window, "scene_loader", None)
     has_room = (isinstance(room, str) and bool(room) and loader is not None and hasattr(loader, "saved_room")
@@ -557,6 +557,12 @@ def build_slot_payload(
     }
     if has_room:
         snapshot["meta"][ROOM_IDS] = room_ids(window.scene_controller)
+    from engine.audio import MusicPlaybackSnapshot
+
+    music = getattr(getattr(window, "audio", None), "snapshot_music", None)
+    playing = music() if callable(music) else None
+    if isinstance(playing, MusicPlaybackSnapshot):  # a room without its own music plays it again on loading (M21A)
+        snapshot["meta"][MUSIC] = {"path": playing.path, "volume": playing.volume} if playing.path else {"path": None}
     snapshot["save_format_version"] = SAVE_FORMAT_VERSION
 
     spawn_zone_id = None

@@ -988,6 +988,9 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         if callable(stop_live_bridge):
             stop_live_bridge()
         self._stop_asset_hot_reload_watcher()
+        audio = getattr(self, "audio", None)
+        if audio is not None and callable(getattr(audio, "shutdown", None)):
+            audio.shutdown()  # every music and ambience player stopped and released
         if getattr(self, "hd2d_renderer", None) is not None:  # free its GPU objects while the context still exists
             from engine.hd2d.runtime import release  # noqa: PLC0415
 
