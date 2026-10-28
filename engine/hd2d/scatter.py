@@ -19,6 +19,10 @@ degrees 0-359, hundredths of the asset's size), sorted, so the same scatter alwa
   collection's assets by weight, at random but from a seed (the same dabs give the same scatter), keeping a minimum
   spacing, in clumps (value noise), and only where the rules allow; or thins (removes a share) or removes. Studio,
   the CLI and AI scatter through ``engine.project_ops`` with these.
+- **Why not** (Milestone 22C): a ``Tally`` given to ``brush`` counts, for each place a dab tried and refused, the
+  check that refused it (``refusal``: the same checks, in the same order, as ``allowed``), and which dabs found
+  their circle already full or the room at its limit. Counting changes nothing: the same dabs place the same
+  instances with or without one. ``explain`` says it in words, with what to do about it.
 """
 
 from __future__ import annotations
@@ -26,6 +30,7 @@ from __future__ import annotations
 import functools
 import math
 import random
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable
 
@@ -257,26 +262,37 @@ class Rules:
     avoid_structures: bool = True
 
 
-def allowed(asset: Asset, x: float, y: float, ground: Ground, rules: Rules) -> bool:
+def refusal(asset: Asset, x: float, y: float, ground: Ground, rules: Rules) -> str | None:
+    """Why ``asset`` may not be put at (x, y) px, or None: "off_ground", "slope", "material" (the brush's materials
+    don't include the ground's), "grows" (the asset never grows on it), "water" or "structure", checked in that
+    order (the first that refuses)."""
     here = ground.surface(x, y)
     if here is None:
-        return False
+        return "off_ground"
     height, upright = here
     limit = min(rules.slope, asset.slope)
     if upright < math.cos(math.radians(limit)) - 1e-9:
-        return False
+        return "slope"
     material = ground.material(x, y)
-    if material not in rules.on or material not in asset.on:  # (the brush's choice, and what the thing grows on)
-        return False
+    if material not in rules.on:  # (the brush's choice, then what the thing grows on)
+        return "material"
+    if material not in asset.on:
+        return "grows"
     level = ground.water(x, y)
     if level is not None and rules.avoid_water and height < level + 0.05 * PX \
             and not (asset.shore and height >= level - asset.shore * PX):
-        return False
+        return "water"
     if not rules.avoid_structures:
-        return True
+        return None
     r = asset.reach * PX  # (a tree's canopy: clear of walls and doorways all round, not only at its trunk)
-    return not any(ground.structure(x + dx, y + dy) for dx, dy in ((0, 0), (r, 0), (-r, 0), (0, r), (0, -r))
-                   if r or (dx, dy) == (0, 0))
+    if any(ground.structure(x + dx, y + dy) for dx, dy in ((0, 0), (r, 0), (-r, 0), (0, r), (0, -r))
+           if r or (dx, dy) == (0, 0)):
+        return "structure"
+    return None
+
+
+def allowed(asset: Asset, x: float, y: float, ground: Ground, rules: Rules) -> bool:
+    return refusal(asset, x, y, ground, rules) is None
 
 
 # ---------------------------------------------------------------------- the brush
@@ -321,6 +337,35 @@ class Scatter:
         return sum(len(rows) for rows in self.instances.values())
 
 
+@dataclass
+class Tally:
+    """What a stroke's "add" dabs did, counted as the brush decided (``brush(..., tally=)``): instances it set out to
+    add (``wanted``) and added (``placed``); dabs whose circle already had the density (``full``), with the room at
+    its limit (``at_limit``), or asking for less than one (``tiny``); for each place tried and refused, why
+    (``refused``: a ``refusal``, "clump": outside a clump, "spacing": too near something already standing), the
+    asset each "spacing" place stood too near (``crowded_by``), the materials refused (``materials``), the brush's
+    slope rule where the ground was too steep (``slope_rule``), and per asset tried, each refusal (``by_asset``:
+    (asset, why) -> places; a mixed collection's things differ) and placed (``placed_by``); dabs that stopped short
+    of what they set out to add
+    (``gave_up``: too many refused in a row, or out of tries). "thin" and "remove" dabs count what was under the
+    brush (``under``)."""
+
+    wanted: int = 0
+    placed: int = 0
+    dabs: int = 0
+    full: int = 0
+    at_limit: int = 0
+    tiny: int = 0
+    gave_up: int = 0
+    under: int = 0
+    refused: Counter[str] = field(default_factory=Counter)
+    crowded_by: Counter[str] = field(default_factory=Counter)
+    materials: Counter[str] = field(default_factory=Counter)
+    by_asset: Counter[tuple[str, str]] = field(default_factory=Counter)
+    placed_by: Counter[str] = field(default_factory=Counter)
+    slope_rule: float = 90.0
+
+
 @functools.lru_cache(maxsize=65536)
 def _lattice(seed: int, a: int, b: int) -> float:
     return random.Random(f"{seed}:{a}:{b}").random()
@@ -344,16 +389,21 @@ def _noise(x: float, y: float, seed: int, across: float = 3.0 * PX) -> float:
 def brush(scatter: Scatter, mode: str, weights: dict[str, float], x: float, y: float, radius: float,
           density: float, seed: str, ground: Ground, rules: Rules, clumping: float = 0.5,
           share: float = 1.0, seen: set[tuple[str, tuple[int, int, int, int]]] | None = None,
-          ) -> list[tuple[str, tuple[int, int, int, int], bool]]:
+          tally: Tally | None = None) -> list[tuple[str, tuple[int, int, int, int], bool]]:
     """One dab at (x, y) px, ``radius`` px. ``mode`` "add": fill the circle up to ``density`` instances a square
     metre of the collection's assets (``weights``), in clumps (``clumping`` 0: even, 1: in patches); "thin": remove
     ``share`` of them; "remove": all of them (any asset if ``weights`` is empty). ``seed`` makes it repeatable;
     ``seen``: the instances a stroke's earlier dabs already thinned or spared (each is thinned once a stroke, however
-    many dabs pass over it). Returns what changed: (asset, instance, added)."""
+    many dabs pass over it); ``tally``: counts why places were refused (``Tally``; nothing else changes). Returns
+    what changed: (asset, instance, added)."""
     rng = random.Random(seed)
     names = [a for a in weights if a in ASSETS and weights[a] > 0]
     mine = [(a, r) for a, r in scatter.near(x, y, radius) if not names or a in names]
     changed: list[tuple[str, tuple[int, int, int, int], bool]] = []
+    if tally is not None:
+        tally.dabs += 1
+        if mode in ("thin", "remove"):
+            tally.under += len(mine)
     if mode in ("thin", "remove"):
         for asset, row in sorted(mine, key=lambda ar: (ar[0], ar[1]))[:PER_DAB]:
             if mode == "thin" and seen is not None:
@@ -374,6 +424,14 @@ def brush(scatter: Scatter, mode: str, weights: dict[str, float], x: float, y: f
     wanted = round(density * area)  # (but no more than the spacing lets stand: more is only wasted tries; one
     fits = max(1 if wanted else 0, round(0.9 / (spacing * spacing) * area))  # asked for is always tried)
     need = min(PER_DAB, max(0, min(wanted, fits) - len(mine)), MAX_INSTANCES - scatter.count())
+    if tally is not None:
+        tally.wanted += max(0, need)
+        if MAX_INSTANCES - scatter.count() <= 0:
+            tally.at_limit += 1
+        elif not wanted:
+            tally.tiny += 1
+        elif min(wanted, fits) - len(mine) <= 0:
+            tally.full += 1
     placed = misses = 0
     for _try in range(max(0, need) * 12):
         if placed >= need or misses > 40 + need:  # (the rules or the spacing leave no room: stop looking)
@@ -389,19 +447,135 @@ def brush(scatter: Scatter, mode: str, weights: dict[str, float], x: float, y: f
                 break
         turn, size = rng.randrange(360), rng.uniform(*ASSETS[pick].size)
         if rng.random() > 1 - clumping + clumping * 2 * (_noise(px, py, 7) - 0.25):
+            if tally is not None:
+                tally.refused["clump"] += 1
             continue  # (outside a clump)
         kind = ASSETS[pick]
-        if not allowed(kind, px, py, ground, rules):
+        why = refusal(kind, px, py, ground, rules)
+        if why is not None:
+            if tally is not None:
+                tally.refused[why] += 1
+                tally.by_asset[pick, why] += 1
+                if why in ("material", "grows"):
+                    tally.materials[ground.material(px, py)] += 1
+                elif why == "slope":
+                    tally.slope_rule = rules.slope
             continue
         reach = (kind.spacing + WIDEST) / 2 * PX  # (two things keep apart by the mean of their spacings: a boulder
-        if any((r[0] - px) ** 2 + (r[1] - py) ** 2 < ((kind.spacing + ASSETS[o].spacing) / 2 * PX) ** 2  # may lie by a pebble)
-               for o, r in scatter.near(px, py, reach)):
+        near = next((o for o, r in scatter.near(px, py, reach)  # may lie by a pebble)
+                     if (r[0] - px) ** 2 + (r[1] - py) ** 2 < ((kind.spacing + ASSETS[o].spacing) / 2 * PX) ** 2), None)
+        if near is not None:
+            if tally is not None:
+                tally.refused["spacing"] += 1
+                tally.by_asset[pick, "spacing"] += 1
+                tally.crowded_by[near] += 1
             continue
         row = (px, py, turn, round(size * 100))
         scatter.add(pick, row)
         changed.append((pick, row, True))
         placed, misses = placed + 1, 0
+        if tally is not None:
+            tally.placed_by[pick] += 1
+    if tally is not None:
+        tally.placed += placed
+        tally.gave_up += placed < need  # (stopped looking: too many refused in a row, or out of tries)
     return changed
+
+
+def _things(assets: Iterable[str]) -> str:
+    names = [ASSETS[a].name.lower() for a in assets]
+    return ", ".join(names[:-1]) + " and " + names[-1] if len(names) > 1 else names[0] if names else "them"
+
+
+def _group(assets: list[str]) -> str:
+    """The decoration these are, in words: a collection of more than one thing holding them all ("the Meadow"),
+    else the things themselves."""
+    for name, weights in COLLECTIONS.items():
+        if len(weights) > 1 and all(a in weights for a in assets):
+            return f"the {name} already there"
+    return f"the {_things(assets)} already there"
+
+
+def _reason(reason: str, n: int, tried: int, who: list[str], names: list[str], tally: Tally) -> tuple[str, str]:
+    """One verified reason, in words, and what to do about it: (said, to do). ``who``: the assets it refused. Short:
+    Studio says it on one line."""
+    part = f"{n:,} of {tried:,} tries"
+    if reason == "spacing":
+        others = [a for a, _n in tally.crowded_by.most_common() if a not in names]
+        if others and sum(tally.crowded_by[a] for a in others) * 2 >= tally.refused["spacing"]:
+            return (f"{_group(others[:3])} leaves too little room ({part})",
+                    "thin it first (Ctrl+drag) or scatter these before it")
+        return f"they are as close as their spacing allows ({part})", "brush somewhere emptier"
+    if reason == "slope":
+        steepest = max(ASSETS[a].slope for a in (who or names))
+        return (f"the ground is too steep ({part})",
+                f"raise Slope (°) (up to {steepest:g}° for these) or smooth it" if tally.slope_rule < steepest
+                else "smooth or flatten it (Sculpt)")
+    if reason == "material":
+        ground = _things_plain(tally.materials)
+        return (f"the ground is {ground}, not chosen in the materials row ({part})",
+                f"turn on {ground.split(' and ')[0].capitalize()} there or paint the ground")
+    if reason == "grows":
+        ground = _things_plain(tally.materials)
+        grow = sorted({m for a in (who or names) for m in ASSETS[a].on})
+        return (f"{'these do' if len(who or names) > 1 else 'this does'} not grow on {ground} ({part})",
+                f"paint it {' or '.join(grow)}, or pick something else")
+    if reason == "water":
+        return f"in water ({part})", "brush beside it, turn off Out of water, or use Pond edge"
+    if reason == "structure":
+        return f"on or by a structure or doorway ({part})", "brush away from it or turn off Off buildings"
+    return f"past the edge of the room's ground ({part})", "brush on the ground"
+
+
+def explain(tally: Tally, collection: str, weights: dict[str, float]) -> str:
+    """Why a stroke added fewer than its density asked for (under 90% of it), from its ``tally`` (what the brush
+    counted): the most relevant reasons, then what to do, in Mesh Studio's words (its scatter controls); and in a
+    mixed collection, a thing it never placed and why. "" if nothing held it back. ``weights``: the collection's
+    assets (a mixed collection's things are named when a reason is only theirs)."""
+    if tally.dabs and tally.at_limit == tally.dabs:
+        return f"The room holds the most scattered things it can ({MAX_INSTANCES:,}). Thin or remove some first."
+    if not tally.wanted:
+        if tally.tiny and not tally.full:
+            return "The brush is too small for Per m² to place one. Make it bigger ([ ]) or raise Per m²."
+        if tally.full:
+            return "Already as dense as Per m² asks here. Raise Per m² or brush somewhere sparser."
+        return ""
+    names = [a for a in weights if a in ASSETS]
+    tried = sum(tally.refused.values()) + tally.placed
+    if tally.placed >= 0.9 * tally.wanted or not tally.gave_up:  # (nearly all: only a mixed collection's missing)
+        missing = [a for a in names if len(names) > 1 and not tally.placed_by[a]
+                   and sum(n for (b, _r), n in tally.by_asset.items() if b == a) >= 5]
+        if not missing:
+            return ""
+        said, todo = [], []
+        for a in missing:
+            reason, n = max(((r, n) for (b, r), n in tally.by_asset.items() if b == a), key=lambda rn: rn[1])
+            words, do = _reason(reason, n, tried, [a], names, tally)
+            said.append(f"no {ASSETS[a].name.lower()}: {words}")
+            todo.append(do)
+        return "; ".join(said)[0].upper() + "; ".join(said)[1:] + ". " + todo[0][0].upper() + todo[0][1:] + "."
+    counts = Counter({r: n for r, n in tally.refused.items() if r != "clump"})
+    if not counts or sum(counts.values()) < tally.refused["clump"] * 0.25:
+        if tally.refused["clump"]:
+            return (f"Most tries ({tally.refused['clump']:,} of {tried:,}) fell between the Clumps patches. Lower "
+                    "Clumps or brush more ground.")
+        return ""
+    ranked = counts.most_common()
+    shown = [ranked[0]] + [rn for rn in ranked[1:2] if rn[1] * 3 >= ranked[0][1]]
+    said, todo = [], []
+    for reason, n in shown:
+        who = [a for a, r in sorted(tally.by_asset, key=lambda ar: -tally.by_asset[ar]) if r == reason]
+        only = f"for the {_things(who)}, " if len(names) > 1 and who and set(who) != set(names) else ""
+        words, do = _reason(reason, n, tried, who, names, tally)
+        said.append(only + words)
+        todo.append(do)
+    return ("Held back: " + "; ".join(said) + ". " + todo[0][0].upper() + todo[0][1:]
+            + "".join(f"; {t}" for t in todo[1:] if t != todo[0]) + ".")
+
+
+def _things_plain(materials: Counter[str]) -> str:
+    names = [m for m, _n in materials.most_common()]
+    return " and ".join(names[:2]) if names else "another material"
 
 
 def out_of_rule(instances: dict[str, list[tuple[int, int, int, int]]], ground: Ground,
