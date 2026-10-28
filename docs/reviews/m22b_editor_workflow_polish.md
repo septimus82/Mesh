@@ -77,7 +77,7 @@ Also checked:
 
 ## Tests
 
-- `tests/test_studio_workflow_polish_gpu.py`, 6 GPU tests (`MESH_GL_SMOKE=1`; integration) on the two tool phases:
+- `tests/test_studio_workflow_polish_gpu.py`, 12 GPU tests (`MESH_GL_SMOKE=1`; integration) on the tool's phases. The first 6 cover:
   - Ctrl+S in a camera field (saved once, focus kept, view unmoved, reopened);
   - Ctrl+S in a sound emitter's field;
   - invalid text, then Esc, then undo;
@@ -85,13 +85,48 @@ Also checked:
   - tooltips and the 2D palette.
 - **Ordinary 2D editing, undo and redo, Play and Stop, saving:** the existing Studio GPU suites, run with the changed drivers (see Gates).
 
+## Final review corrections (independent review: conditional pass)
+
+Both reproduced on `c4d7b4b` with Studio's own input events (`tooling/studio_workflow_polish.py navigation`; `m22b_evidence/before_navigation.json`, `after_navigation.json`).
+
+1. **Two boxes waiting, the first refused and the second valid.** A sound emitter's volume was "loud" and its radius 3, then Ctrl+S.
+   - **Before:** "Not saved. Full strength within: 3. …": the radius's own "changed" message had replaced the volume's refusal.
+   - **Now:** `_flush_fields()` keeps the first refusal's reason and says it last, giving "Not saved. Volume: a number from 0 to 100. …". The valid radius is still taken; nothing is written.
+2. **Leaving a refused box.** A blank name (refused: "A name can't be empty.") was typed, then Studio was asked to go elsewhere.
+   - **Before:**
+     - Another object clicked on the map, another panel (Lighting), or another room: Studio went there. The typed text was left out of sight, uncommitted, and a later Save would not have known about it.
+     - Another room: the error was even replaced by "Editing Meadow.".
+     - Undo: the text stayed, but the error was replaced by "Undone.".
+   - **Now:** one shared guard, `_settle_fields()`. It commits the boxes, and if one was refused it says why and adds "Correct the box, or click it and press Esc to put back what it was; until then nothing else is done.". The action then doesn't happen. It guards:
+     - every Studio button (Save keeps its own "Not saved." message);
+     - selecting an object;
+     - switching rooms;
+     - undo and redo;
+     - a left or right click on the map (a middle-drag only looks around, so it isn't stopped);
+     - F4 and the Esc key outside a box. Esc *in* the box still puts the value back.
+   - In each case Studio stayed in the room, panel and selection; the blank name stayed in its box; Save said "Not saved." with the real reason. Clicking the box and pressing Esc said "Put back as it was.".
+   - A *valid* name waiting, then another object clicked: the name was taken ("Renamed."), and the other object was selected, as before.
+   - Regression tests: 6 more in `tests/test_studio_workflow_polish_gpu.py` (the two-box reason; the four ways of leaving; a valid box moving on).
+
+## CI
+
+On `c4d7b4b`:
+
+| Job | Tests | `pytest-fast` | Limit | Runner speed | Result |
+|---|---|---|---|---|---|
+| Windows | 10,048 passed | 135.99 s | 121.82 s | 1.46 (advisory "ok") | Passed |
+| Linux | 10,048 passed, none failed | 81.26 s | 79.05 s (+2.2 s) | 1.11 (advisory "slow") | Failed, timing only |
+| Arcade 3, web smoke | | | | | Passed |
+
+M22B adds nothing to the timed step. It selects 4,943 tests on the base (`c42cec0`) and on this branch alike. The only test file M22B adds is GPU-gated and `integration`. No budget or baseline was changed. Timing on the final commit is recorded with the merge.
+
 ## Gates
 
-- **Default selection:** 10,050 passed, 203 skipped.
-- **GPU tier** (`MESH_GL_SMOKE=1`, every GL-gated test): 207 passed and 1 failed. The failure was `test_hd2d_studio_gpu.py`'s "opened" step, which counted "Models..." as offered only if it was built at once. At 1280 × 720 it is now scrolled out of view, as it was below the window before. The check now scrolls to it, as a person would, and that module passes (8 of 8).
+- **Default selection:** 10,050 passed, 209 skipped (after the corrections).
+- **GPU tier** (`MESH_GL_SMOKE=1`, every GL-gated test): **214 passed, 0 failed**, after the corrections. That is the 208 of the first run plus the 6 new tests.
+  - The first run, on the first commit, had 207 passed and 1 failed. The failure was `test_hd2d_studio_gpu.py`'s "opened" step, which counted "Models..." as offered only if it was built at once. At 1280 × 720 it is now scrolled out of view, as it was below the window before. The check now scrolls to it, as a person would.
 - **Headless Studio, HD-2D, project-operation and contract tests:** 670 passed.
 - **Ruff gate:** ok. **mypy:** 73 (baseline).
-- **Timing:** no timing budget or baseline was changed. The new tests are GPU and `integration` tests, outside the timed `pytest-fast` step.
 
 ## Left alone (recorded in `m22_studio_usability_backlog.md`)
 

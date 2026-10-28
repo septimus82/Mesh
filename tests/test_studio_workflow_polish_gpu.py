@@ -95,3 +95,32 @@ def test_scrolled_out_buttons_have_no_tooltip_and_the_2d_palette_scrolls_on_its_
     assert palette["palette_rows"][0] < palette["palette_rows"][1]
     assert sheet1[1] == sheet0[1] + 1 and left1 == left0  # the palette, not the panel
     assert left2 < left1 and sheet2 == sheet1  # the panel, not the palette
+
+
+@pytest.fixture(scope="module")
+def navigation(tmp_path_factory: pytest.TempPathFactory) -> dict:
+    return _run(tmp_path_factory, "navigation")
+
+
+def test_a_refused_box_keeps_its_own_reason_when_a_later_box_is_taken(navigation: dict) -> None:
+    state = navigation["two_boxes"]["after_ctrl_s"]
+    assert not state["message_ok"]
+    assert state["message"].startswith("Not saved. Volume: a number from 0 to 100.")  # not the radius's "changed"
+    assert state["field_text"] == "loud" and navigation["two_boxes"]["on_disk"]["volume"] == 0.8
+
+
+@pytest.mark.parametrize("leave", ["another object", "another panel", "another room", "undo"])
+def test_a_refused_box_is_not_left_behind(navigation: dict, leave: str) -> None:
+    case = navigation[leave]
+    for state in (case["after"], case["save"]):  # the action, then Save: neither goes on without the box
+        assert state["room"] == "start" and state["panel"] == "inspect"
+        assert state["selected"] == case["before"]["selected"]
+        assert state["blank_name_in_its_box"] and not state["message_ok"]
+        assert "A name can't be empty." in state["message"]
+    assert case["put_back"]["message"] == "Put back as it was." and not case["put_back"]["blank_name_in_its_box"]
+
+
+def test_a_valid_box_is_taken_and_studio_moves_on(navigation: dict) -> None:
+    moved = navigation["valid_then_another_object"]
+    assert moved["name_of_first"] == "Guide Two" and moved["selected"] == "start_sign_224_256_0_0"
+    assert moved["message_ok"]

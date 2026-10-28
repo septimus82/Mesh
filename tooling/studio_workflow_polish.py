@@ -10,6 +10,9 @@ windows with Studio's own input events (clicks, typing, key presses, the mouse w
                                                              room: scrolled with the wheel, every tool reached, what
                                                              is out of view not clickable, the 3D view not zoomed,
                                                              the right panel and the 2D palette scrolled on their own
+    py -3.13 tooling/studio_workflow_polish.py navigation OUT a refused value with another box's valid one waiting,
+                                                             then Ctrl+S; a refused value, then another object
+                                                             clicked on the map, another panel, another room, undo
 
 The player's settings file is OUT's own; nothing is played aloud (the project's master volume is 0)."""
 
@@ -29,6 +32,7 @@ sys.path.insert(1, str(REPO / "tooling"))
 from hd2d_room_studio import SCENES, _silent, _write  # noqa: E402
 
 LEFT_X = 100  # over the left panel
+BLANK = "   "  # a name Studio refuses ("A name can't be empty.")
 
 
 def _project(out: Path, *, rooms: int = 0, objects: int = 0) -> Path:
@@ -298,12 +302,114 @@ def _palette_check(d: Any) -> dict[str, Any]:
             "wheel_over_rooms": (list(d.studio.sheet_scroll), d.studio.left_scroll)}
 
 
+def _put_back(d: Any, key: str) -> None:
+    """Click the box and press Esc: a refused value put back."""
+    d.frame()
+    field = d.studio._focusable[key]
+    r = field.rect
+    d.click(r.left + r.width / 2, r.bottom + r.height / 2)
+    d.window.dispatch_event("on_key_press", d.arcade.key.ESCAPE, 0)
+    d.window.dispatch_event("on_key_release", d.arcade.key.ESCAPE, 0)
+    d.frame()
+
+
+def _click_object(d: Any, entity_id: str) -> None:
+    """Click an object where it is on the 2D map."""
+    entity = next(e for e in d.studio.project.scene()["entities"] if e.get("id") == entity_id)
+    d.studio._apply_camera()
+    x, y, *_ = d.window.camera.project((float(entity["x"]), float(entity["y"])))
+    d.click(float(x), float(y))
+
+
+def _scale_typed(d: Any) -> dict[str, Any]:
+    """Where Studio is, what it says, and whether the refused blank name is still to be seen in its box."""
+    studio = d.studio
+    return {"room": studio.project.current, "panel": studio.panel, "selected": studio.selected,
+            "message": studio.message, "message_ok": studio.message_ok, "unsaved": sorted(studio.project.dirty),
+            "blank_name_in_its_box": any(f.text == BLANK for f, _, _ in studio._fields)}
+
+
+def navigation(out: Path) -> dict[str, Any]:
+    from hd2d_studio_demo import StudioDriver
+
+    from engine import project_ops as ops
+
+    project = _project(out)
+    report: dict[str, Any] = {}
+    d = StudioDriver(project)
+    try:
+        k = d.arcade.key
+        # two boxes waiting: the first refused, the second fine (an HD-2D room's sound emitter)
+        _press_left(d, "Meadow")
+        d.studio._edit(lambda s: ops.paste_entity(s, "meadow", {"name": "Brook"}, 640.0, 480.0)[0], "A brook.")
+        brook = next(e["id"] for e in ops.entities(d.studio.project.scene()) if e.get("name") == "Brook")
+        d.studio._edit(lambda s: ops.set_sound_emitter(s, brook, volume=0.8, radius=64), "A sound.")
+        d.studio.select(brook)
+        d.button("Save")
+        _type_only(d, "sound_volume", "loud")
+        _type_only(d, "sound_radius", "3")
+        _ctrl(d, k.S)
+        on_disk = _on_disk(project, brook)
+        report["two_boxes"] = {"after_ctrl_s": _state(d, "sound_volume"), "on_disk": on_disk,
+                               "radius_now": ops.sound_emitter_of(ops.find_entity(d.studio.project.scene(), brook))}
+        _put_back(d, "sound_volume")
+        d.button("Save")
+        # a refused value, then leaving it: another object, another panel, another room, undo
+        _press_left(d, "Start")
+        _press_left(d, "Sign")  # a second object, placed with the Objects list and a click on the map
+        d.studio._apply_camera()
+        x, y, *_ = d.window.camera.project((224.0, 256.0))
+        d.click(float(x), float(y))
+        others = [e["id"] for e in d.studio.project.scene()["entities"] if e.get("tag") != "player"
+                  and e.get("prefab_id") != "player"]
+        a, b = others[0], others[1]
+        d.button("Save")
+        for leave in ("another object", "another panel", "another room", "undo"):
+            _click_object(d, a)
+            d.frame(2)
+            before = {"selected": d.studio.selected}
+            _type_only(d, "name", BLANK)
+            if leave == "another object":
+                _click_object(d, b)
+            elif leave == "another panel":
+                d.button("Lighting")
+            elif leave == "another room":
+                _press_left(d, "Meadow")
+            else:
+                d.studio._edit(lambda s: ops.rename_entity(s, a, "Renamed"), "Renamed.")  # (something to undo)
+                _type_only(d, "name", BLANK)
+                d.button("Undo")
+            d.frame(2)
+            left = _scale_typed(d)
+            d.button("Save")
+            report[leave] = {"before": before, "after": left, "save": _scale_typed(d)}
+            # the box put back (click it, Esc), then where it was, for the next case
+            if "name" in d.studio._focusable and d.studio._focusable["name"].text == BLANK:
+                _put_back(d, "name")
+                report[leave]["put_back"] = _scale_typed(d)
+            if d.studio.project.current != "start":
+                _press_left(d, "Start")
+            if d.studio.panel != "inspect":
+                d.button("Lighting")  # (toggles back)
+        # a valid value waiting, then another object: taken, and Studio goes there as before
+        _click_object(d, a)
+        d.frame(2)
+        _type_only(d, "name", "Guide Two")
+        _click_object(d, b)
+        d.frame(2)
+        report["valid_then_another_object"] = {**_scale_typed(d),
+                                               "name_of_first": ops.find_entity(d.studio.project.scene(), a).get("name")}
+    finally:
+        d.close()
+    return report
+
+
 def main() -> None:
     phase, out = sys.argv[1], Path(sys.argv[2]).resolve()
     out.mkdir(parents=True, exist_ok=True)
     os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")  # never a checkout's own file
     os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
-    report = {"ctrl_s": lambda: ctrl_s(out), "left": lambda: left(out)}[phase]()
+    report = {"ctrl_s": lambda: ctrl_s(out), "left": lambda: left(out), "navigation": lambda: navigation(out)}[phase]()
     _write(out / f"{phase}.json", report)
     print(json.dumps(report, indent=1, default=str)[:8000])
 

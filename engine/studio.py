@@ -470,7 +470,8 @@ class Studio(InspectorMixin, SoundMixin):
         self._rebuild_status()
 
     def select(self, entity_id: str | None) -> None:
-        self._flush_fields()
+        if not self._settle_fields():
+            return
         if entity_id != self.selected:
             self.expanded, self.dlg_line, self.dlg_choice, self.clip_sel, self.panel_scroll = None, None, None, None, 0
             entity = self._entity(entity_id)
@@ -486,7 +487,8 @@ class Studio(InspectorMixin, SoundMixin):
         self._rebuild()
 
     def switch_room(self, key: str) -> None:
-        self._flush_fields()
+        if not self._settle_fields():
+            return
         self.project.current = key
         self.selected, self.place_prefab, self.stroke, self.light = None, None, None, None
         self.panel = "lighting" if self.panel == "lighting" else "inspect"
@@ -521,14 +523,16 @@ class Studio(InspectorMixin, SoundMixin):
         return True
 
     def undo(self) -> None:
-        self._flush_fields()
+        if not self._settle_fields():
+            return
         if self.hd2d.cancel_stroke("Stroke cancelled (undo): the ground is as it was."):  # mid-stroke: only that
             return
         if self.project.undo():
             self._after_change("Undone.")  # (it reloads the room: once is enough, 0.9 s at 128 m)
 
     def redo(self) -> None:
-        self._flush_fields()
+        if not self._settle_fields():
+            return
         if self.project.redo():
             self._after_change("Redone.")
 
@@ -1050,7 +1054,8 @@ class Studio(InspectorMixin, SoundMixin):
         pending = [(f, f.text, original, commit, keys.get(id(f))) for f, original, commit in self._fields
                    if f.text != original]
         self._fields = [(f, f.text, c) for f, _, c in self._fields]  # (first: a commit that flushes again finds none)
-        ok, rebuild = True, False
+        reason: str | None = None  # the first refusal's own words
+        rebuild = False
         for field, value, original, commit, key in pending:
             refusals = self._refusals
             commit(value)
@@ -1058,7 +1063,7 @@ class Studio(InspectorMixin, SoundMixin):
                 if key:
                     self._held.pop(key, None)
                 continue
-            ok = False
+            reason = reason or self.message
             if key:
                 self._held[key] = (self._field_context(), value)
             if any(f is field for f, _, _ in self._fields):  # still on screen: still to commit
@@ -1067,7 +1072,19 @@ class Studio(InspectorMixin, SoundMixin):
                 rebuild = True
         if rebuild:
             self._rebuild()
-        return ok
+        if reason is not None:  # (a box committed after it said its own "changed")
+            self._say(reason, ok=False)
+        return reason is None
+
+    def _settle_fields(self) -> bool:
+        """``_flush_fields`` before something that may take Studio away from the boxes on screen (another object,
+        panel or room; undo; play): False if a box's value was refused, and the action waits (it says so), so what
+        was typed is never left out of sight, uncommitted."""
+        if self._flush_fields():
+            return True
+        self._say(f"{self.message} Correct the box, or click it and press Esc to put back what it was; until then "
+                  "nothing else is done.", ok=False)
+        return False
 
     def _typing(self) -> bool:
         return any(f.active for f, _, _ in self._fields)
@@ -1082,7 +1099,8 @@ class Studio(InspectorMixin, SoundMixin):
             if button.disabled:
                 return
             self.menu = None
-            self._flush_fields()
+            if action != self.save and not self._settle_fields():  # (Save says "Not saved" itself)
+                return
             action()
 
         button.on_click = on_click
@@ -2690,6 +2708,8 @@ class Studio(InspectorMixin, SoundMixin):
                 for other, _, _ in self._fields:
                     other.deactivate()
             return True
+        if symbol in (k.F4, k.ESCAPE) and not self._settle_fields():
+            return True  # (Esc in the box itself puts a refused value back)
         self.keys.add(symbol)
         if symbol == k.F4:
             self.play()
@@ -2835,7 +2855,8 @@ class Studio(InspectorMixin, SoundMixin):
                 return True
         if not self._in_map(x, y):
             return True
-        self._flush_fields()
+        if button != optional_arcade.arcade.MOUSE_BUTTON_MIDDLE and not self._settle_fields():
+            return True  # (a refused box waits; middle-drag only looks around)
         for field, _, _ in self._fields:
             field.deactivate()
         wx, wy = self._to_world(x, y)
