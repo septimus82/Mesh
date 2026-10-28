@@ -1242,7 +1242,7 @@ class Hd2dView:
     def _begin_scatter(self, at: tuple[float, float, float]) -> None:
         """A scatter stroke starts: Shift removes what is under the brush, Ctrl thins it, else it adds the chosen
         collection where the rules allow, up to the density. Studio holds the room's instances while it lasts."""
-        from engine.hd2d.scatter import COLLECTIONS, Rules, Scatter  # noqa: PLC0415
+        from engine.hd2d.scatter import COLLECTIONS, Rules, Scatter, Tally  # noqa: PLC0415
 
         renderer, brush, studio = self.renderer, self.sculpt, self.studio
         assert renderer is not None and brush is not None
@@ -1264,6 +1264,7 @@ class Hd2dView:
                        "radius": float(brush["radius"]), "density": float(brush["density"]),
                        "clumping": float(brush["clumping"]), "seed": f"{len(studio.project._undo)}:{layer.count()}",
                        "dabs": [], "changes": [], "pending": [], "touched": set(), "seen": set(), "rate": 0.0,
+                       "tally": Tally(),  # (why places were refused: said when the stroke ends)
                        "target": None,
                        "was_sculpted": True, "last": (at[0] * PIXELS_PER_METRE, at[1] * PIXELS_PER_METRE),
                        "t": time.perf_counter(), "moved": False, "started": time.perf_counter()}
@@ -1278,21 +1279,29 @@ class Hd2dView:
         assert stroke is not None
         changes = brush(stroke["scatter"], stroke["mode"], stroke["weights"], x, y, stroke["radius"],
                         stroke["density"], f"{stroke['seed']}:{len(stroke['dabs'])}", stroke["ground"],
-                        stroke["rules"], stroke["clumping"], 0.35, stroke["seen"])
+                        stroke["rules"], stroke["clumping"], 0.35, stroke["seen"], stroke["tally"])
         stroke["dabs"].append([x, y])
         stroke["changes"] += changes
         stroke["pending"] += changes
 
     def _end_scatter(self, stroke: dict[str, Any]) -> None:
         """A scatter stroke let go: the room's scatter as drawn becomes one checked edit (``set_scatter``), no reload;
-        then what blocks where people pass, if anything, is said."""
-        from engine.hd2d.scatter import stored  # noqa: PLC0415
+        then what blocks where people pass, if anything, is said, and why fewer were added than asked for (what the
+        brush counted: ``engine.hd2d.scatter.explain``). A stroke that changed nothing changes nothing: it only says
+        why."""
+        from engine.hd2d.scatter import COLLECTIONS, explain, stored, stroke_message  # noqa: PLC0415
 
         studio, renderer = self.studio, self.renderer
         added = sum(1 for _n, _r, a in stroke["changes"] if a)
         removed = len(stroke["changes"]) - added
+        tally, collection = stroke["tally"], stroke["collection"]
+        why = explain(tally, collection, COLLECTIONS.get(collection, {})) if stroke["mode"] == "add" else ""
         if not stroke["changes"] or renderer is None or renderer.scatter is None:
-            studio._say("The stroke changed nothing (the rules, or the density already reached, left nothing to do).")
+            if stroke["mode"] != "add":
+                studio._say(f"Nothing under the brush to {'remove' if stroke['mode'] == 'remove' else 'thin out'}."
+                            if not tally.under else "The stroke changed nothing.")
+                return
+            studio._say(f"Added nothing ({collection}). " + (why or "The rules left nothing to do."), ok=False)
             return
         shown = stored(renderer.scatter.instances)
         start = time.perf_counter()
@@ -1309,9 +1318,7 @@ class Hd2dView:
         studio._refresh_top_bar()
         what = (f"Scattered {added} ({stroke['collection']})" if stroke["mode"] == "add"
                 else f"{'Removed' if stroke['mode'] == 'remove' else 'Thinned out'} {removed}")
-        studio._say(f"{what}: one undo step." + (" In the way (not moved): " + "; ".join(blocked[:2])
-                                                  + (" ..." if len(blocked) > 2 else "") if blocked else ""),
-                    ok=not blocked)
+        studio._say(stroke_message(what, why, blocked), ok=not blocked)
 
     def _end_paint(self, stroke: dict[str, Any]) -> None:
         """A paint stroke let go: one checked edit, no reload. What is saved is what was shown: the paint of the

@@ -3030,7 +3030,7 @@ def _scatter_rules(on: Any, slope: Any, avoid_water: Any, avoid_structures: Any,
 
 def scatter_stroke(scene: Doc, collection: Any, dabs: Any, radius: float = 64.0, density: Any = None,
                    mode: str = "add", seed: int = 0, clumping: float = 0.5, share: float = 0.5, on: Any = None,
-                   slope: Any = None, avoid_water: bool = True, avoid_structures: bool = True) -> Doc:
+                   slope: Any = None, avoid_water: bool = True, avoid_structures: bool = True, tally: Any = None) -> Doc:
     """One brush stroke of scattered decoration over this HD-2D room's ground (engine.hd2d.scatter): its ``dabs``,
     ``[[x, y], ...]`` px. ``collection``: a collection's or an asset's name (``engine.hd2d.scatter.COLLECTIONS``),
     or {asset id: weight}. ``mode`` "add": each dab fills its circle (``radius`` px) up to ``density`` instances a
@@ -3038,7 +3038,8 @@ def scatter_stroke(scene: Doc, collection: Any, dabs: Any, radius: float = 64.0,
     materials ``on``, no steeper than ``slope`` degrees, out of water and off structures unless told otherwise);
     "thin": removes ``share`` (0-1) of the collection's instances under each dab; "remove": all of them (all assets,
     for the collection "all"). ``seed`` makes it repeatable: the same stroke on the same room always gives the same
-    scatter. One edit: one undo step."""
+    scatter. One edit: one undo step. ``tally``: an ``engine.hd2d.scatter.Tally``, filled in with why places were
+    refused (``engine.hd2d.scatter.explain`` says it in words); the scatter is the same with or without one."""
     from engine.hd2d.scatter import ASSETS, COLLECTIONS, DENSITY, MATERIALS, MAX_INSTANCES, Scatter, ScatterError, brush, parse_scatter, stored  # noqa: PLC0415
 
     if mode not in ("add", "thin", "remove"):
@@ -3082,7 +3083,8 @@ def scatter_stroke(scene: Doc, collection: Any, dabs: Any, radius: float = 64.0,
     seen: set[Any] = set()  # (thinning: each instance once a stroke)
     try:
         for k, (x, y) in enumerate(checked):
-            brush(scatter, mode, weights, x, y, radius, density, f"{seed}:{k}", ground, rules, clumping, share, seen)
+            brush(scatter, mode, weights, x, y, radius, density, f"{seed}:{k}", ground, rules, clumping, share, seen,
+                  tally)
     except ScatterError as err:
         raise OpError(str(err)) from err
     if scatter.count() > MAX_INSTANCES:

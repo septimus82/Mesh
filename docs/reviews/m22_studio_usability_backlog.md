@@ -27,7 +27,8 @@ These were found while building Lakeside Village ([`lakeside_village.md`](lakesi
 
 ## Broken or misleading
 
-- **Scatter is order-dependent, silently.** After a meadow, trees and rocks have no room, and Studio only says "The stroke changed nothing".
+- ~~Scatter is order-dependent, silently~~: no longer silent (M22C). A stroke now says what it added and, when it was held back, the reasons the brush counted, with what to do. The order still matters by design (spacing is kept between all scattered things): trees and rocks go in before a dense meadow, or the meadow is thinned where they should stand.
+- **Thinning one kind under the brush.** Ctrl+drag thins everything under the brush, whatever collection is chosen. Thinning only the meadow where trees should go would make the advice above easier to follow (found in M22C).
 - **Import accepts a canopy-less model** (the scatter tree's trunk) without a warning.
 - **Arrival spots can't be picked or dragged in the 3D view.**
 - **The first light switches 2D lighting to Night** in an HD-2D daylight room. The HD-2D view is unaffected, but the panel says "Night".
