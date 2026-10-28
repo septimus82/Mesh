@@ -869,8 +869,11 @@ class Studio(InspectorMixin, SoundMixin):
             row.add(self._button(title, partial(choose, outdoor=outdoor), width=half,
                                  style=S_ACTIVE if form.get("outdoor", True) is outdoor else S_BUTTON))
         rows.add(row)
-        rows.add(self._label("A 3D room on grass, 8 to 256 m each way (1 m is a tile), with a camera framed for it and "
-                             "daylight; the camera and the sun can be changed later (3D view: Camera and sun).",
+        kind = ("Outdoors: a camera framed for walking about, and daylight." if form.get("outdoor", True) else
+                "Indoors: only a closer, steeper camera, dimmer light and a dark sky. No walls, floor or roof are "
+                "made: the ground is still grass; build the inside with Models... (3D view).")
+        rows.add(self._label("An empty 3D room on flat grass, 8 to 256 m each way (1 m is a tile). " + kind + " The "
+                             "camera and the sun can be changed later (3D view: Camera and sun).",
                              color=C_MUTED, size=9, width=width))
 
     def create_room(self, label: str) -> None:

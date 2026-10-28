@@ -42,8 +42,8 @@ from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
 from engine import project_ops as ops
 from engine.hd2d.picking import Picker, box, box_edges, ground_point
-from engine.hd2d.renderer import Camera
-from engine.hd2d.settings import PIXELS_PER_METRE
+from engine.hd2d.renderer import Camera, fit_view
+from engine.hd2d.settings import PIXELS_PER_METRE, parse_hd2d
 from engine.logging_tools import get_logger
 from engine.studio_inspector import LazyRow
 from engine.studio_ui import C_ERROR, C_MUTED, C_WARN, S_ACTIVE, S_BUTTON, gui
@@ -84,6 +84,30 @@ def _steps(stroke: dict[str, Any]) -> str:
     return (f"{len(stroke['dabs'])} dabs, one undo step" if parts == 1
             else f"a long stroke, saved in {parts} parts: {parts} undo steps")
 
+
+def game_view(scene: dict[str, Any], aspect: float) -> Camera:
+    """The game's camera at the player's start (the room's middle without one): pitch, lens, distance, flat or not,
+    looking north (it never turns), at the player's head height, and kept inside the camera's bounds by the follow
+    camera's own ``fit_view`` for a picture of ``aspect`` (width / height)."""
+    settings = parse_hd2d((scene.get("settings") or {}).get("hd2d") or {}, lenient=True)
+    cam = settings.camera
+    player = next((e for e in ops.entities(scene) if e.get("tag") == "player"
+                   or e.get("prefab_id") == ops.PLAYER_PREFAB), None)
+    ground = settings.ground
+    if player is not None:
+        x, y = float(player.get("x", 0)) / PIXELS_PER_METRE, float(player.get("y", 0)) / PIXELS_PER_METRE
+    elif ground is not None:
+        x, y = ((ground.lo[0] + ground.hi[0]) / 2 / PIXELS_PER_METRE, (ground.lo[1] + ground.hi[1]) / 2 / PIXELS_PER_METRE)
+    else:
+        x, y = 0.0, 0.0
+    z = float((player or {}).get("elevation", 0.0) or 0.0) / PIXELS_PER_METRE
+    view = Camera(cam.pitch, cam.fov, cam.distance, cam.ortho, 0.0)
+    view.target = (x, y, z + cam.height)
+    if cam.bounds is not None:  # as Hd2dRenderer.update keeps the follow camera inside them
+        floor = ground.elevation / PIXELS_PER_METRE if ground is not None else z
+        x0, y0, x1, y1 = (v / PIXELS_PER_METRE for v in cam.bounds)
+        view.target = fit_view(view, view.target, floor, (x0, y0, x1, y1), aspect)
+    return view
 
 class Hd2dView:
     def __init__(self, studio: Studio) -> None:
@@ -1833,21 +1857,13 @@ class Hd2dView:
         self.studio._edit(lambda s: ops.set_hd2d_sun(s, **change), said)
 
     def see_game_camera(self) -> None:
-        """The editor's view as the game's camera shows the room, at the player's start: pitch, lens, distance, flat
-        or not, looking north (the game's camera never turns), at the player's head height."""
-        studio = self.studio
-        cam = ops.hd2d_camera_of(studio.project.scene())
-        player = next((e for e in ops.entities(studio.project.scene()) if e.get("tag") == "player"
-                       or e.get("prefab_id") == ops.PLAYER_PREFAB), None)
-        lo, hi = self.renderer.world_box() if self.renderer is not None else ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
-        x, y = ((float(player.get("x", 0)) / PIXELS_PER_METRE, float(player.get("y", 0)) / PIXELS_PER_METRE)
-                if player else ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2))
-        z = float((player or {}).get("elevation", 0.0) or 0.0) / PIXELS_PER_METRE
-        self.camera.yaw, self.camera.pitch, self.camera.fov = 0.0, float(cam["pitch"]), float(cam["fov"])
-        self.camera.distance, self.camera.ortho = float(cam["distance"]), bool(cam["ortho"])
-        self.camera.target = (x, y, z + float(cam["height"]))
-        studio._say("The game's camera at the player's start (before it is kept inside the room). Back to editing "
-                    "view, or turn and zoom, to edit again.")
+        """The editor's view as the game's camera shows the room at the player's start (``game_view``)."""
+        left, right, bottom, top = self._rect()
+        view = game_view(self.studio.project.scene(), (right - left) / max(1.0, top - bottom))
+        self.camera.yaw, self.camera.pitch, self.camera.fov = view.yaw, view.pitch, view.fov
+        self.camera.distance, self.camera.ortho, self.camera.target = view.distance, view.ortho, view.target
+        self.studio._say("The game's camera at the player's start, kept inside the room as in play. Back to editing "
+                         "view, or turn and zoom, to edit again.")
 
     def open_models(self) -> None:
         studio = self.studio

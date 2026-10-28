@@ -19,8 +19,8 @@ These were found while building Lakeside Village ([`lakeside_village.md`](lakesi
 ## Found in M22A
 
 - **The left panel doesn't scroll.** In an HD-2D room its sections (3D view, Wind and motion, Models, Sculpt and paint) run past the window's bottom. M22A put its own button high in the panel.
-- **See it ignores the camera's room edges** (see the M22A report).
-- **Resizing an existing HD-2D room's ground** (M22A's step 2; refused for sculpted ground until its heights can be resampled).
+- ~~See it ignores the camera's room edges~~: fixed in #409's review (it goes through the follow camera's `fit_view`).
+- **Resizing an existing HD-2D room's ground:** approved as M22A.1. It starts with safe expansion of flat, unsculpted rooms; shrinking and resampling sculpted ground wait for review.
 
 ## Broken or misleading
 

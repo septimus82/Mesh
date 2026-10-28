@@ -60,3 +60,9 @@ def test_it_saves_reopens_and_plays_as_set(run: dict) -> None:
     play = run["in_play"]
     assert play["mode"] == "play" and play["camera"] == run["view_renderer"]["camera"]
     assert play["sun"] == run["view_renderer"]["sun"] and play["ambient"] == run["view_renderer"]["ambient"]
+
+
+def test_see_it_shows_where_the_game_camera_is_in_play(run: dict) -> None:
+    """"See it" and the game's follow camera agree, edges and all, for the same picture shape."""
+    seen = run["play_vs_see_it"]
+    assert seen["see_it"] == pytest.approx(seen["play"], abs=0.02)

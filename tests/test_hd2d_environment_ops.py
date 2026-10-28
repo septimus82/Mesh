@@ -133,3 +133,53 @@ def test_a_new_hd2d_rooms_player_starts_in_its_middle() -> None:
     scene = {"name": "R", "entities": [{"id": "r_player", "prefab_id": "player", "x": 128.0, "y": 128.0}]}
     scene, _path, _skeleton = ops.make_hd2d_room(scene, PATH, 40, 30)
     assert (scene["entities"][0]["x"], scene["entities"][0]["y"]) == (640.0, 480.0)
+
+
+def _floor_seen(view, aspect: float) -> tuple[float, float, float, float]:
+    """Where the picture's four corners meet the floor (z = 0): x0, y0, x1, y1 in m."""
+    xs, ys = [], []
+    for nx, ny in ((-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)):
+        origin, d = view.ray(nx, ny, aspect)
+        t = -origin[2] / d[2]
+        xs.append(origin[0] + d[0] * t)
+        ys.append(origin[1] + d[1] * t)
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def _with_player(scene: dict, x: float, y: float) -> dict:
+    scene["entities"] = [{"id": "r_player", "tag": "player", "x": x, "y": y}]
+    return scene
+
+
+def test_see_it_keeps_the_game_camera_inside_the_room_near_its_edge() -> None:
+    """Studio's "See it" shows what play shows: the follow camera's own ``fit_view`` at the preview's shape."""
+    from engine.studio_hd2d import game_view
+
+    aspect = 1.6
+    scene = _with_player(_room(), 32.0, 32.0)  # 1 m from the room's south-west corner
+    view = game_view(scene, aspect)
+    assert view.target[0] > 1.0 and view.target[1] > 1.0  # moved in from the player
+    x0, y0, x1, y1 = _floor_seen(view, aspect)
+    assert x0 == pytest.approx(0.0, abs=1e-6) and y0 == pytest.approx(0.0, abs=1e-6)  # the edge, not past it
+    assert x1 < 40 and y1 < 30
+    middle = game_view(_with_player(_room(120, 90), 1920.0, 1440.0), aspect)  # far from the edges: on the player
+    assert middle.target[:2] == pytest.approx((60.0, 45.0))
+
+
+def test_see_it_centres_a_room_smaller_than_the_picture() -> None:
+    from engine.studio_hd2d import game_view
+
+    aspect = 1.6
+    scene = ops.set_hd2d_camera(_with_player(_room(8, 8), 40.0, 40.0), preset="wide")  # 18 m view of an 8 m room
+    x0, y0, x1, y1 = _floor_seen(game_view(scene, aspect), aspect)
+    assert x1 - x0 > 8 and (x0 + x1) / 2 == pytest.approx(4.0, abs=1e-6)
+    assert (y0 + y1) / 2 == pytest.approx(4.0, abs=1e-6)
+
+
+def test_see_it_with_an_unbounded_camera_stays_on_the_player() -> None:
+    from engine.studio_hd2d import game_view
+
+    scene = ops.set_hd2d_camera(_with_player(_room(), 32.0, 32.0), bounded=False, height=1.2)
+    view = game_view(scene, 1.6)
+    assert view.target == pytest.approx((1.0, 1.0, 1.2))
+    assert (view.pitch, view.yaw) == (30.0, 0.0)

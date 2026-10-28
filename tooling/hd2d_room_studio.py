@@ -79,6 +79,7 @@ def studio(out: Path, *, full: bool = True) -> dict[str, Any]:
     from hd2d_studio_demo import StudioDriver
 
     from engine import project_ops as ops
+    from engine.studio_hd2d import game_view
 
     pics = out / "pictures"
     pics.mkdir(exist_ok=True)
@@ -142,6 +143,9 @@ def studio(out: Path, *, full: bool = True) -> dict[str, Any]:
             d.frame()
             time.sleep(1 / 60)
         report["in_play"] = {"mode": d.studio.mode, **_renderer_state(d.window)}
+        r = d.window.hd2d_renderer  # the follow camera, kept inside the room, against Studio's "See it" for this shape
+        report["play_vs_see_it"] = {"aspect": round(r._aspect, 4), "play": [round(v, 4) for v in r.camera.target],
+                                    "see_it": [round(v, 4) for v in game_view(d.studio.project.scene(), r._aspect).target]}
         d.picture(pics / "05_play.png")
         d.key(k.F4)
         d.frame(5)

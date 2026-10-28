@@ -106,9 +106,14 @@ Every change is one checked `project_ops` edit: one undo step, saved with the ro
 - **Lakeside Village, a copy** (the original only read): its camera set to a 14 m view and its sun to Morning at 25° in Studio; saved; reopened the same.
 
 **Tests:**
-- `tests/test_hd2d_environment_ops.py`, 7 fast tests: the template's recipe; sizes and refusals; the camera round trip; the sun round trip and presets; 2D rooms refused; the kit installed once, and both rooms undone; the player's start.
-- `tests/test_hd2d_room_studio_gpu.py`, 3 GPU tests: the Studio workflow above, without export.
+- `tests/test_hd2d_environment_ops.py`, 10 fast tests: the template's recipe; sizes and refusals; the camera round trip; the sun round trip and presets; 2D rooms refused; the kit installed once, and both rooms undone; the player's start; See it near an edge, in a small room, and unbounded.
+- `tests/test_hd2d_room_studio_gpu.py`, 4 GPU tests: the Studio workflow above, without export, and See it against the game's follow camera in play.
 
 **Gates:** the default selection, 10,029 passed; the GPU tier, 198 passed; mypy at 73; the ruff gate, ok.
 
-**Known limit:** **See it** shows the game's camera at the player's start *before* it is kept inside the room. Near an edge the game's view is shifted inward, so See it can show sky past the ground where the game wouldn't. It says so when pressed. Applying the same edge clamp is a small follow-up if wanted.
+### Review corrections
+
+- **See it keeps inside the room, as play does.** It used to show the game's camera at the player's start *before* the follow camera kept it inside the room, so near an edge it showed ground the game never would. It now goes through the follow camera's own `engine.hd2d.renderer.fit_view()` (new `studio_hd2d.game_view`), with the preview's aspect ratio, the ground's elevation as the floor and the room's authored `camera.bounds`. Without bounds (Stay inside the room off) it stays on the player, as before.
+  - Fast tests: a player 1 m from a corner (the picture stops exactly at the room's edges, and a player far from the edges is unmoved), a room smaller than the picture (an 8 m room at an 18 m view: centred), and an unbounded camera (on the player).
+  - GPU test, against the real game: in play, the follow camera's target was (20.0, 11.9428, 0.8) for a player at (20, 15) (clamped), and See it's `game_view` for the play picture's shape (1.7778) gave the same.
+- **Indoors is described as what it is.** The New room panel's help now says the room is an empty 3D room on flat grass. Indoors only gives a closer, steeper camera, dimmer light and a dark sky; no walls, floor or roof are made, and the inside is built with Models.... No building generation was added.
