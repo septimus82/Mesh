@@ -187,6 +187,7 @@ class Studio(InspectorMixin, SoundMixin):
         # The workspace (Milestone 23A): the left panel's category, which panels are shown, and in a window too
         # narrow for both and a usable view, the side last used (the other one is hidden meanwhile).
         self.left_tab = "rooms"
+        self._left_keys: set[str] = set()  # the boxes the left panel made (a category switch would hide them)
         self.show_left, self.show_right = True, True
         self._compact_side = "left"
         self._last_context: tuple[Any, ...] | None = None
@@ -435,6 +436,12 @@ class Studio(InspectorMixin, SoundMixin):
         the inspector (a narrow window), a box there with a refused value makes it wait, as leaving it would."""
         left, right = self._panel_widths()
         if right and not left and not self._settle_fields():
+            return
+        hidden = [key for key, (where, _text) in self._held.items() if key in self._left_keys
+                  and where == self._field_context()]  # (refused, in the tools this switch would hide)
+        if hidden and tab != self.left_tab:
+            self._say(f"{self.message} Correct the box, or click it and press Esc to put back what it was; until then "
+                      "nothing else is done.", ok=False)
             return
         if tab != self.left_tab:
             self.left_tab, self.left_scroll = tab, 0
@@ -1098,6 +1105,16 @@ class Studio(InspectorMixin, SoundMixin):
             self._focusable[key] = field
         return field
 
+    def _rebuild_keeping_typed(self) -> None:
+        """Rebuild the panels with what is typed in their boxes and not committed yet still typed there, still to
+        commit (a resize rebuilds them without anyone leaving the boxes)."""
+        keys = {id(f): key for key, f in self._focusable.items()}
+        typed = {keys[id(f)]: f.text for f, original, _c in self._fields if f.text != original and id(f) in keys}
+        self._rebuild()
+        for key, text in typed.items():
+            if key in self._focusable:
+                self._focusable[key].text = text
+
     def _field_context(self) -> tuple[Any, ...]:
         return self.project.current, self.panel, self.selected, self.hd2d.structure
 
@@ -1264,6 +1281,7 @@ class Studio(InspectorMixin, SoundMixin):
         fit (Milestone 23A: Rooms, Terrain, Objects, Environment, Audio)."""
         width = LEFT_W - 20
         outer = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
+        made = set(self._focusable)
         third, half = (width - 8) // 3, (width - 4) // 2
         for start, cols in ((0, 3), (3, 2)):
             row = gui.UIBoxLayout(vertical=False, space_between=4)
@@ -1319,6 +1337,7 @@ class Studio(InspectorMixin, SoundMixin):
             box.add(self._label("A sound plays from where it is placed: click the map to put it there, then choose "
                                 "its sound on the right.", color=C_MUTED, size=10, width=width))
         outer.add(self._scrolled(box, left=True, reserve=TABS_H))
+        self._left_keys = set(self._focusable) - made
         return outer
 
     # ==================================================================== lighting
@@ -2800,7 +2819,7 @@ class Studio(InspectorMixin, SoundMixin):
             return False
         if not self._typing():
             if (self.window.width, self.window.height) != self._built_for:
-                self._rebuild()  # the window was resized: the rows that fit it
+                self._rebuild_keeping_typed()  # the window was resized: the rows that fit it
             k = optional_arcade.arcade.key
             dx = bool(self.keys & {k.RIGHT, k.D}) - bool(self.keys & {k.LEFT, k.A})
             dy = bool(self.keys & {k.UP, k.W}) - bool(self.keys & {k.DOWN, k.S})
@@ -2850,8 +2869,8 @@ class Studio(InspectorMixin, SoundMixin):
                 for other, _, _ in self._fields:
                     other.deactivate()
             return True
-        if symbol in (k.F4, k.ESCAPE) and not self._settle_fields():
-            return True  # (Esc in the box itself puts a refused value back)
+        if symbol in (k.F4, k.ESCAPE, k.TAB) and not self._settle_fields():
+            return True  # (Esc in the box itself puts a refused value back; Tab would hide the panels)
         self.keys.add(symbol)
         if symbol == k.F4:
             self.play()

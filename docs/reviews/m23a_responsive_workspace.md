@@ -95,16 +95,32 @@ At every size nothing is drawn past the window's edges, and no top-bar button ru
 - **M22B's guard and the categories.** M22B made every button wait while a box holds a refused value. That also stopped the category tabs, so with a refused name a person couldn't even switch category. Tabs now commit the boxes and go on; they wait only when showing the tools would hide the inspector (a narrow window). `tests/test_studio_workflow_polish_gpu.py` covers it (another room, reached through the Rooms category, still waits).
 - **A test window on the owner's screen.** The first version maximised the window straight after launching Studio. On Windows, maximising a hidden window shows it. One default-suite test (`test_launch_editor_pins_project_without_using_last_root`) launches Studio through that path with a hidden window and no event loop, so a frozen, maximised window appeared on the owner's screen during a run. The run was stopped at once. The fix maximises only a visible window, on the first frame of its own loop. Checked: that test, with `maximize` replaced by a recorder and the clock ticked afterwards, made no call.
 
+## Review corrections (independent review: conditional pass)
+
+Three input-safety cases, reproduced on `371d152` with Studio's own input events, including the keyboard's Tab (`tooling/studio_workspace.py safety`; `m23a_evidence/before_safety.json`, `after_safety.json`). In each, a box held typed, uncommitted text: typed, then left by clicking blank space in its panel, which doesn't commit it.
+
+1. **Tab (Focus).**
+   - **Before:** a changed name ("Elder Ash") and a refused one (blank) were both lost. The panels went, and came back showing "Elder".
+   - **Now:** Tab waits like F4 and Esc (`_settle_fields`). The valid name is taken first ("Elder Ash", kept when the panels come back). The refused blank keeps its text and the panels, with "A name can't be empty. Correct the box, or click it and press Esc to put back what it was; until then nothing else is done."
+2. **Switching category with an invalid brush box.**
+   - **Before:** Scatter's radius "big" (refused: "Type a number.") was hidden by switching to Objects. Save, with nothing else changed, was greyed out and said nothing more; the text only came back on returning to Terrain.
+   - **Now:** a category switch waits while a box it would hide (one the left panel made) holds a refused value. Terrain stays, with "big" in view and the reason with what to do. A valid radius (3 m) is taken and the switch goes ahead. A refused box in the inspector doesn't stop a switch, since it stays in view.
+3. **Resizing.**
+   - **Before:** a changed name and a refused one were both lost when the window was resized (the panels are rebuilt for the new size).
+   - **Now:** a resize's rebuild keeps what is typed in the boxes, still uncommitted ("Elder Birch" and the blank, in their boxes; the name on record still "Elder").
+
+Regression tests: 5 more in `tests/test_studio_workspace_gpu.py` (Tab with a valid name; Tab with a refused one; a category switch with a refused brush box, then a valid one; a resize with a valid name and with a refused one).
+
 ## Tests and gates
 
-- **New:** `tests/test_studio_workspace_gpu.py`, 9 GPU tests (integration) on the creator phase.
+- **New:** `tests/test_studio_workspace_gpu.py`, 14 GPU tests (integration) on the creator and safety phases.
 - **Updated to find tools by category, as a person would:**
   - `tooling/hd2d_studio_demo.py` (the driver: each category in turn, the Tools button first in a narrow window);
   - `tooling/studio_workflow_polish.py` (the same; a taller test tileset, because the palette now shows 16 rows; the panel's own scrolling checked in the Objects category);
   - `tooling/hd2d_room_studio.py` (unchanged: it uses the driver);
   - `tests/test_weather_collisions_gpu.py` (finds "Preview weather" under Environment).
-- **GPU tier:** 226 passed, 0 failed (before the last two small changes: the Terrain hint and the visible-window guard). After them, the affected GPU modules were rerun: workspace, M22B workflow, HD-2D Studio, weather, scatter diagnostics and terrain, 57 passed. The launch tests: 9 passed.
-- **Default selection:** 10,069 passed.
+- **GPU tier, after the review corrections:** 231 passed, 0 failed.
+- **Default selection, after the review corrections:** 10,069 passed.
 - **Headless Studio, HD-2D and contract tests:** 612 passed.
 - **Ruff gate:** ok. **mypy:** 73 (baseline). No timing budget or baseline was changed; the new tests are GPU and integration tests.
 

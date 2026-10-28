@@ -215,13 +215,121 @@ def creator(out: Path) -> dict[str, Any]:
     return report
 
 
+def _type_and_leave(d: Any, key: str, text: str) -> None:
+    """Type into a box, then click blank space in its panel: the box loses focus, its text not committed."""
+    from studio_workflow_polish import _type_only
+
+    _type_only(d, key, text)
+    field = d.studio._focusable[key]
+    d.click(field.rect.left + 4, 60)  # (the panel's bottom: nothing there)
+    d.frame()
+
+
+def _box(d: Any, key: str) -> dict[str, Any]:
+    studio = d.studio
+    field = studio._focusable.get(key)
+    return {"shown": field is not None, "text": getattr(field, "text", None), "focused": bool(getattr(field, "active", False)),
+            "message": studio.message, "message_ok": studio.message_ok, "left_tab": studio.left_tab,
+            "panels": list(studio._panel_widths())}
+
+
+def safety(out: Path) -> dict[str, Any]:
+    """Typed, uncommitted text in a box, then Studio asked to rebuild its panels: Tab (Focus, from the keyboard), a
+    category switched, the window resized. A valid edit must not be lost; a refused one must keep its text and its
+    reason."""
+    from hd2d_studio_demo import StudioDriver
+
+    from engine import project_ops as ops
+
+    report: dict[str, Any] = {}
+    project = make(out, "ws_safety", "hd2d_rpg")
+    d = StudioDriver(project)
+    try:
+        k = d.arcade.key
+        resize(d, 1280, 720)
+        studio = d.studio
+        npc = next(e["id"] for e in ops.entities(studio.project.scene()) if e.get("tag") == "npc")
+
+        def name_on_record() -> str:
+            return str(ops.find_entity(studio.project.scene(), npc).get("name"))
+
+        def tab_key() -> None:
+            d.window.dispatch_event("on_key_press", k.TAB, 0)
+            d.window.dispatch_event("on_key_release", k.TAB, 0)
+            d.frame(2)
+
+        def put_back(key: str) -> None:  # (the box clicked, Esc: what it was)
+            if key in studio._focusable:
+                field = studio._focusable[key]
+                d.click(field.rect.left + field.rect.width / 2, field.rect.bottom + field.rect.height / 2)
+                d.window.dispatch_event("on_key_press", k.ESCAPE, 0)
+                d.window.dispatch_event("on_key_release", k.ESCAPE, 0)
+                d.frame()
+
+        # 1. Tab with a changed, uncommitted name; then with a refused (blank) one
+        for case, text in (("tab_valid", "Elder Ash"), ("tab_refused", "   ")):
+            studio.select(npc)
+            d.frame(2)
+            _type_and_leave(d, "name", text)
+            before = {**_box(d, "name"), "record": name_on_record()}
+            tab_key()
+            after_tab = {**_box(d, "name"), "record": name_on_record()}
+            tab_key()  # (the panels back, if they went)
+            report[case] = {"before": before, "after_tab": after_tab, "after_tab_again": {**_box(d, "name"),
+                                                                                           "record": name_on_record()}}
+            put_back("name")
+            if studio.project.can_undo() and name_on_record() != "Elder":
+                d.button("Undo")
+        # 2. an invalid Scatter radius, then another category; then Save
+        studio.select(None)
+        d.frame(2)
+        d.button("Terrain")
+        d.button("Scatter")
+        radius_before = (studio.hd2d.sculpt or {}).get("radius")
+        _type_and_leave(d, "scatter_radius", "big")
+        d._click_text("Objects")
+        d.frame(2)
+        switched = _box(d, "scatter_radius")
+        d.button("Save")
+        saved = {"message": studio.message, "message_ok": studio.message_ok}
+        d._click_text("Terrain")
+        d.frame(2)
+        report["category_refused"] = {"after_switch": switched, "after_save": saved,
+                                      "back_on_terrain": _box(d, "scatter_radius"),
+                                      "radius": [radius_before, (studio.hd2d.sculpt or {}).get("radius")]}
+        put_back("scatter_radius")
+        # (a valid one: switching goes on, the value taken)
+        _type_and_leave(d, "scatter_radius", "3")
+        d._click_text("Objects")
+        d.frame(2)
+        report["category_valid"] = {"left_tab": studio.left_tab, "radius": (studio.hd2d.sculpt or {}).get("radius")}
+        d._click_text("Rooms")
+        # 3. the window resized with a changed, uncommitted name; then a refused one
+        for case, text in (("resize_refused", "   "), ("resize_valid", "Elder Birch")):  # (the refused first: Esc
+            # puts it back; the valid one, last, is left typed)
+            studio.select(npc)
+            d.frame(2)
+            _type_and_leave(d, "name", text)
+            resize(d, 1100, 700)
+            d.frame(3)
+            report[case] = {"after_resize": {**_box(d, "name"), "record": name_on_record()}}
+            put_back("name")
+            resize(d, 1280, 720)
+            if name_on_record() != "Elder" and studio.project.can_undo():
+                d.button("Undo")
+    finally:
+        d.close()
+    return report
+
+
 def main() -> None:
     phase, out = sys.argv[1], Path(sys.argv[2]).resolve()
     out.mkdir(parents=True, exist_ok=True)
     os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")  # never a checkout's own file
     os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
     tag = sys.argv[3] if len(sys.argv) > 3 else ""
-    report = {"shots": lambda: shots(out, tag=tag), "creator": lambda: creator(out)}[phase]()
+    report = {"shots": lambda: shots(out, tag=tag), "creator": lambda: creator(out),
+              "safety": lambda: safety(out)}[phase]()
     _write(out / f"{phase}{('_' + tag) if tag else ''}.json", report)
     print(json.dumps(report, indent=1, default=str)[:6000])
 

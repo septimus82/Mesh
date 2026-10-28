@@ -77,3 +77,48 @@ def test_every_size_keeps_a_usable_view_and_nothing_past_the_window(run: dict, s
 def test_a_2d_projects_tiles_are_picked_in_the_terrain_category(run: dict) -> None:
     tiles = run["tiles_2d"]
     assert tiles["tool"] == "paint" and tiles["brush"].startswith("Painting ")
+
+
+@pytest.fixture(scope="module")
+def safety(tmp_path_factory: pytest.TempPathFactory) -> dict:
+    import studio_workspace
+
+    out = tmp_path_factory.mktemp("m23a_safety")
+    os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")
+    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    try:
+        result: dict = studio_workspace.safety(out)
+        return result
+    finally:
+        os.environ.pop("MESH_RUNTIME_SETTINGS_PATH", None)
+        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
+
+
+def test_tab_takes_a_typed_name_before_hiding_the_panels(safety: dict) -> None:
+    case = safety["tab_valid"]
+    assert case["before"]["text"] == "Elder Ash" and not case["before"]["focused"] and case["before"]["record"] == "Elder"
+    assert case["after_tab"]["panels"] == [0, 0] and case["after_tab"]["record"] == "Elder Ash"
+    assert case["after_tab_again"]["text"] == "Elder Ash"
+
+
+def test_tab_waits_on_a_refused_name_and_keeps_it(safety: dict) -> None:
+    case = safety["tab_refused"]
+    for state in (case["after_tab"], case["after_tab_again"]):
+        assert state["panels"] == [230, 330] and state["text"] == "   " and state["record"] == "Elder"
+        assert not state["message_ok"] and state["message"].startswith("A name can't be empty. Correct the box")
+
+
+def test_a_category_switch_waits_on_a_refused_brush_box_and_goes_on_with_a_valid_one(safety: dict) -> None:
+    refused = safety["category_refused"]
+    for state in (refused["after_switch"], refused["back_on_terrain"]):
+        assert state["left_tab"] == "terrain" and state["shown"] and state["text"] == "big"
+        assert not state["message_ok"] and state["message"].startswith("Type a number.")
+    assert refused["after_switch"]["message"].endswith("until then nothing else is done.")
+    assert refused["radius"] == [64.0, 64.0]
+    assert safety["category_valid"] == {"left_tab": "objects", "radius": 96.0}
+
+
+@pytest.mark.parametrize(("case", "text"), [("resize_valid", "Elder Birch"), ("resize_refused", "   ")])
+def test_a_resize_keeps_what_is_typed_uncommitted(safety: dict, case: str, text: str) -> None:
+    state = safety[case]["after_resize"]
+    assert state["shown"] and state["text"] == text and state["record"] == "Elder"  # still to commit
