@@ -38,6 +38,7 @@ def _slider_overlaps(layout: Any) -> list[dict[str, Any]]:
             label = {"label": payload.get("text"), "label_bottom": round(top - float(text.content_height), 1)}
         elif instruction.kind in ("slider_track", "slider_knob") and label is not None:
             rect = payload.get("rect")
+            assert rect is not None, instruction.kind
             label.setdefault("bar_top", round(float(rect.top), 1))
             label["bar_top"] = max(label["bar_top"], round(float(rect.top), 1))
             if instruction.kind == "slider_knob":

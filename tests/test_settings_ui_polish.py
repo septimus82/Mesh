@@ -130,6 +130,22 @@ def test_every_settings_row_fits_its_panel_at_any_window_size(size: tuple[int, i
     menu.window.width, menu.window.height = size
     menu._invalidate_layout()
     layout = menu.layout_current_state()
-    panel = menu._panel_bounds(height_scale=0.66, min_height=350.0, max_height=520.0)
+    panel = menu._panel_bounds(height_scale=0.66, min_height=400.0, max_height=520.0)
     for target in layout.hit_targets:
         assert panel.bottom <= target.rect.bottom and target.rect.top <= panel.top, (size, target.action_id)
+
+
+@pytest.mark.parametrize("size", [(640, 480), (800, 600), (1280, 720), (1920, 1080)])
+def test_the_main_menus_settings_cards_fit_above_its_footer(size: tuple[int, int]) -> None:
+    """Six settings rows at 640 x 480 ran past the panel and under its footer (since before M21B, which made it
+    worse); where they already fitted, nothing moves."""
+    from engine.ui_overlays._settings_data import SETTINGS_ROWS
+    from engine.ui_overlays.main_menu_overlay import compute_menu_panel_layout
+
+    layout = compute_menu_panel_layout(*size, len(SETTINGS_ROWS), 0)
+    assert 0 <= layout.panel.bottom and layout.panel.top <= size[1]
+    for card in layout.cards:
+        assert card.bottom >= layout.panel.bottom + 40.0 and card.top <= layout.subtitle_y - 20.0, (size, card)
+        assert card.top - card.bottom >= 48.0
+    if size[1] >= 720:  # room enough: the layout as it was
+        assert [round(c.top - c.bottom) for c in layout.cards] == [52] * len(SETTINGS_ROWS)

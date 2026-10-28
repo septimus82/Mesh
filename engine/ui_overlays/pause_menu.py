@@ -293,7 +293,7 @@ class PauseMenu(UIElement):
         )
 
     def _layout_settings(self) -> PauseMenuLayout:
-        panel_bounds = self._panel_bounds(height_scale=0.66, min_height=350.0, max_height=520.0)
+        panel_bounds = self._panel_bounds(height_scale=0.66, min_height=400.0, max_height=520.0)  # three sliders
         settings = self._runtime_settings()
         self._sync_settings_widgets(settings)
         title = Label(text="SETTINGS", font_size=28, color_token="white", height=44.0)

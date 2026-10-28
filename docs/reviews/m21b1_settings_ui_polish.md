@@ -16,6 +16,21 @@ These are the two settings-menu defects M21B found, fixed narrowly. Both were re
 - **Pause menu:** its sliders are 50 px high with `label_size` 26.
 - **After:** each bar's top is 4 px below its label's bottom.
 
+**Merging M21B** brought the pause menu a third slider (Ambience), with the same label band. The Settings panel's minimum height went from 350 to 400 px, so every row still fits at 640 × 480.
+
+## 1b. The main menu's Settings ran out of a small window
+
+**Found while checking scaling, with M21B's sixth row in:** at 640 × 480 the cards ran past the panel and under its footer, and Back was off-screen.
+
+**Pre-existing:** at `182a104`, with five rows, Back already overlapped the footer at that size (`before_main_settings_640x480_182a104.webp`). M21B made it worse.
+
+**Fix** (`compute_menu_panel_layout`, only when the rows don't fit):
+1. The panel uses more of the window, up to its height less 16 px.
+2. The cards start just under the subtitle.
+3. The rows close up, down to 48 px with 6 px gaps, so a card's name and value still fit.
+
+Where they fitted before, nothing moves: 1280 × 720 is identical.
+
 ## 2. "UI_SETTINGS_SAVED", once per slider step
 
 **Reproduced:** in both the pause menu and the main menu, five presses of LEFT gave five toasts reading `UI_SETTINGS_SAVED`.
@@ -36,10 +51,10 @@ These are the two settings-menu defects M21B found, fixed narrowly. Both were re
 **What is preserved:**
 - keyboard, mouse and gamepad navigation (the existing pause-menu widget navigation tests pass unchanged);
 - settings persistence (a value set in one run loads in the next);
-- every row inside its panel from 640 × 480 to 1920 × 1080.
+- every row inside its panel from 640 × 480 to 1920 × 1080, in both menus.
 
 **Tests:**
-- `tests/test_settings_ui_polish.py`, fast: the widget with and without a label line; the pause menu's labels clear of their bars; one "Settings saved" from many steps, and again later; `tr` from a game folder, and a game's own text winning; both menus using the helper; rows fitting their panel at four window sizes.
+- `tests/test_settings_ui_polish.py`, fast: the widget with and without a label line; the pause menu's labels clear of their bars; one "Settings saved" from many steps, and again later; `tr` from a game folder, and a game's own text winning; both menus using the helper; rows fitting their panel at four window sizes (pause menu), and cards fitting above the footer, unchanged where they already fitted (main menu).
 - `tests/test_settings_ui_gpu.py`, GPU: the check tool in a hidden window. No overlaps; one "Settings saved" in each menu; the value moved by 25% and kept.
 
 **Pictures:** `m21b1_evidence/`, before and after, for each menu.
