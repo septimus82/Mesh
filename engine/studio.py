@@ -173,6 +173,13 @@ class Studio(InspectorMixin, SoundMixin):
         self._fields: list[tuple[gui.UIInputText, str, Callable[[str], object]]] = []
         self._focus_after_build: str | None = None
         self._focusable: dict[str, gui.UIInputText] = {}
+        # A field whose value was refused keeps its text (shown again after a rebuild, still to commit): key ->
+        # (where it was: room, panel, selection), text. ``_refusals`` counts the error messages said (``_say``).
+        self._held: dict[str, tuple[tuple[Any, ...], str]] = {}
+        self._refusals = 0
+        self.left_scroll = 0  # the left panel's first row shown (it scrolls apart from the right one)
+        self._left_more = (0, 0)
+        self._built_for = (0, 0)  # the window's size the panels were laid out for
         self._labels: dict[str, optional_arcade.arcade.Text] = {}
         self.prefabs = self._load_prefabs()
         self.tool = "select"  # select | paint | erase
@@ -459,6 +466,7 @@ class Studio(InspectorMixin, SoundMixin):
     # ==================================================================== actions
     def _say(self, text: str, ok: bool = True) -> None:
         self.message, self.message_ok, self.message_at = text, ok, time.perf_counter()
+        self._refusals += not ok
         self._rebuild_status()
 
     def select(self, entity_id: str | None) -> None:
@@ -489,22 +497,28 @@ class Studio(InspectorMixin, SoundMixin):
         self._say(f"Editing {self.project.label(key)}.")
         self._weather_message(again=True)
 
-    def save(self) -> None:
-        self._flush_fields()
+    def save(self) -> bool:
+        """Commit the fields being edited, then write what changed. False if a field's value was refused (nothing is
+        written: what was typed is kept, to correct) or the files couldn't be written."""
+        if not self._flush_fields():
+            self._say(f"Not saved. {self.message} Correct the box, or click it and press Esc to put back what it was.",
+                      ok=False)
+            return False
         if not self.project.is_dirty:
             self._say("Nothing to save.")
-            return
+            return True
         try:
             written = self.project.save()
         except (OSError, ops.OpError) as err:
             self._say(f"Couldn't save: {err}", ok=False)
-            return
+            return False
         self._rebuild()
         if self.project.last_save_backups:
             self._say(f"Saved {len(written)} file(s). Something else had changed {', '.join(self.project.last_save_backups)} "
                       "since you opened it; that version is kept beside it (.outside-change.bak).", ok=False)
-            return
+            return True
         self._say(f"Saved {len(written)} file(s).")
+        return True
 
     def undo(self) -> None:
         self._flush_fields()
@@ -1016,19 +1030,44 @@ class Studio(InspectorMixin, SoundMixin):
 
     # ==================================================================== text fields
     def _field(self, text: str, commit: Callable[[str], object], *, width: int, key: str | None = None) -> gui.UIInputText:
-        field = TextField(text=text, width=width, height=26, font_size=11, font_name=FONT, text_color=C_TEXT,
+        held = self._held.get(key) if key else None
+        shown = held[1] if held is not None and held[0] == self._field_context() else text
+        field = TextField(text=shown, width=width, height=26, font_size=11, font_name=FONT, text_color=C_TEXT,
                           caret_color=C_TEXT, border_color=C_FIELD_EDGE, border_width=1)
         field.with_background(color=C_FIELD)
-        self._fields.append((field, text, commit))
+        self._fields.append((field, text, commit))  # (a held text differs from it: still to commit)
         if key:
             self._focusable[key] = field
         return field
 
-    def _flush_fields(self) -> None:
-        pending = [(f.text, original, commit) for f, original, commit in self._fields if f.text != original]
-        self._fields = [(f, f.text, c) for f, _, c in self._fields]
-        for value, _original, commit in pending:
+    def _field_context(self) -> tuple[Any, ...]:
+        return self.project.current, self.panel, self.selected, self.hd2d.structure
+
+    def _flush_fields(self) -> bool:
+        """Commit every field whose text changed; True if every one was taken. One refused (its commit said why,
+        ``_say(ok=False)``) keeps its text and stays to commit: never marked done, nor lost when the panel rebuilds."""
+        keys = {id(f): key for key, f in self._focusable.items()}
+        pending = [(f, f.text, original, commit, keys.get(id(f))) for f, original, commit in self._fields
+                   if f.text != original]
+        self._fields = [(f, f.text, c) for f, _, c in self._fields]  # (first: a commit that flushes again finds none)
+        ok, rebuild = True, False
+        for field, value, original, commit, key in pending:
+            refusals = self._refusals
             commit(value)
+            if self._refusals == refusals:
+                if key:
+                    self._held.pop(key, None)
+                continue
+            ok = False
+            if key:
+                self._held[key] = (self._field_context(), value)
+            if any(f is field for f, _, _ in self._fields):  # still on screen: still to commit
+                self._fields = [(f, original if f is field else o, c) for f, o, c in self._fields]
+            else:  # its commit rebuilt the panel: shown again with its text (``_held``)
+                rebuild = True
+        if rebuild:
+            self._rebuild()
+        return ok
 
     def _typing(self) -> bool:
         return any(f.active for f, _, _ in self._fields)
@@ -1065,6 +1104,7 @@ class Studio(InspectorMixin, SoundMixin):
             return
         self.ui.clear()
         self._fields, self._focusable = [], {}
+        self._built_for = (self.window.width, self.window.height)
         self._thumbs, self._anim_space = [], None
         root = self.ui.add(gui.UIAnchorLayout())
         self._top_bar_box = root.add(self._top_bar(), anchor_x="left", anchor_y="top", align_x=8, align_y=-8)
@@ -1077,6 +1117,10 @@ class Studio(InspectorMixin, SoundMixin):
         if self.modal == "close":
             self._add_close_question(root)
         self._rebuild_status()
+        shown = {id(w) for w in self.ui.walk_widgets()}  # scrolled out of a panel: no tooltip, no palette there
+        self.hd2d.tips = [(w, tip) for w, tip in self.hd2d.tips if id(w) in shown]
+        if self._sheet_space is not None and id(self._sheet_space) not in shown:
+            self._sheet_space = None
         if self._focus_after_build and self._focus_after_build in self._focusable:
             self._focusable[self._focus_after_build].activate()
         self._focus_after_build = None
@@ -1118,7 +1162,7 @@ class Studio(InspectorMixin, SoundMixin):
 
     def _left_panel(self) -> gui.UIBoxLayout:
         width = LEFT_W - 20
-        box = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
+        box = Rows()  # (the rows that fit are shown, from ``left_scroll``; the wheel over the panel scrolls it)
         box.add(self._label("Rooms", bold=True, size=12))
         for key, label, _path in self.project.rooms():
             style = S_ACTIVE if key == self.project.current else S_BUTTON
@@ -1129,7 +1173,7 @@ class Studio(InspectorMixin, SoundMixin):
             self._sheet_space = None  # (a 2D room's tile palette, left from before: not drawn over the 3D view's panel)
             self.hd2d.view_section(box, width)
         else:
-            box.add(self._map_section(width))
+            self._map_section(box, width)
         box.add(gui.UISpace(height=10))
         box.add(self._label("Objects", bold=True, size=12))
         if not self.prefabs:
@@ -1139,7 +1183,7 @@ class Studio(InspectorMixin, SoundMixin):
             text = str(prefab.get("display_name") or prefab["id"])
             box.add(self._button(text, partial(self.arm_place, prefab), width=width, style=style))
         box.add(self._label("Click one, then click the map.", color=C_MUTED, size=10))
-        return box
+        return self._scrolled(box, left=True)
 
     # ==================================================================== lighting
     def open_lighting(self) -> None:
@@ -1487,14 +1531,13 @@ class Studio(InspectorMixin, SoundMixin):
         self.panel, self.panel_scroll = ("inspect" if self.panel == "flags" else "flags"), 0
         self._rebuild()
 
-    def _map_section(self, width: int) -> gui.UIBoxLayout:
-        box = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
+    def _map_section(self, box: Rows, width: int) -> None:
         box.add(self._label("Map", bold=True, size=12))
         self._sheet_space = None
         if ops.map_info(self.project.scene()) is None:
             box.add(self._label("This room has no map yet.", color=C_MUTED, width=width))
             box.add(self._button("Add a map", self.add_map_here, width=width, style=S_ACTIVE))
-            return box
+            return
         third, half = (width - 8) // 3, (width - 6) // 2
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         for layer, title in LAYER_BUTTONS:
@@ -1528,7 +1571,6 @@ class Studio(InspectorMixin, SoundMixin):
             box.add(self._sheet_space)
             if cols < tileset["columns"] or rows < tileset["rows"]:
                 box.add(self._label("Scroll over the tiles for more (Shift: sideways).", color=C_MUTED, size=9))
-        return box
 
     def _sheet_geometry(self) -> tuple[dict[str, Any], int, int, int] | None:
         """``(tileset, tile size on screen, visible columns, visible rows)`` for the palette."""
@@ -1650,17 +1692,20 @@ class Studio(InspectorMixin, SoundMixin):
         toasts = getattr(getattr(self.window, "player_hud", None), "_toast_manager", None)
         return list(toasts.get_active_toasts()) if toasts is not None else []
 
-    def _scrolled(self, rows: Rows) -> gui.UIBoxLayout:
-        """The rows that fit the panel, from ``panel_scroll`` on; the mouse wheel scrolls the rest in."""
+    def _scrolled(self, rows: Rows, *, left: bool = False) -> gui.UIBoxLayout:
+        """The rows that fit the panel, from its scroll (``panel_scroll``, or ``left_scroll`` for the left panel) on;
+        the mouse wheel over the panel scrolls the rest in. Rows out of view are not made: nothing there is clicked."""
         box = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
         items = rows.items
         heights = [row_height(widget) + 4 for widget in items]
         room = self.window.height - TOP_H - STATUS_H - 24
-        if self._scroll_to in rows.anchors:
-            self.panel_scroll = max(0, rows.anchors[self._scroll_to] - 1)
-        self._scroll_to = None
+        if not left:
+            if self._scroll_to in rows.anchors:
+                self.panel_scroll = max(0, rows.anchors[self._scroll_to] - 1)
+            self._scroll_to = None
+        scroll = self.left_scroll if left else self.panel_scroll
         if sum(heights) <= room:
-            self.panel_scroll, self._panel_more = 0, (0, 0)
+            self._set_scroll(left, 0, (0, 0))
             for widget in items:
                 box.add(widget.make() if isinstance(widget, LazyRow) else widget)
             return box
@@ -1670,8 +1715,7 @@ class Studio(InspectorMixin, SoundMixin):
         while last_page > 0 and used + heights[last_page - 1] <= room:
             last_page -= 1
             used += heights[last_page]
-        start = min(max(0, self.panel_scroll), last_page)
-        self.panel_scroll = start
+        start = min(max(0, scroll), last_page)
         shown: list[int] = []
         used = 0.0
         for index in range(start, len(items)):
@@ -1680,7 +1724,7 @@ class Studio(InspectorMixin, SoundMixin):
             shown.append(index)
             used += heights[index]
         below = len(items) - (shown[-1] + 1 if shown else start)
-        self._panel_more = (start, below)
+        self._set_scroll(left, start, (start, below))
         if start:
             box.add(self._label(f"^ {start} more above (scroll up)", color=C_MUTED, size=9))
         for index in shown:
@@ -1688,6 +1732,12 @@ class Studio(InspectorMixin, SoundMixin):
         if below:
             box.add(self._label(f"v {below} more below (scroll down)", color=C_MUTED, size=9))
         return box
+
+    def _set_scroll(self, left: bool, start: int, more: tuple[int, int]) -> None:
+        if left:
+            self.left_scroll, self._left_more = start, more
+        else:
+            self.panel_scroll, self._panel_more = start, more
 
     def _toggle_expand(self, name: str) -> None:
         self.expanded = None if self.expanded == name else name
@@ -1765,12 +1815,12 @@ class Studio(InspectorMixin, SoundMixin):
         elif kind in ("int", "float", "string"):
             text = "" if value is None else str(value)
             row.add(self._field(text, lambda v: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, name, v)),
-                                width=width - 128))
+                                width=width - 128, key=f"param_{behaviour}_{name}"))
         elif kind == "array" and all(isinstance(item, (str, int, float)) for item in value or []):
             # A list of names (flags, tags...) edits as comma-separated text.
             row.add(self._field(", ".join(str(item) for item in value or []),
                                 lambda v: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, name, v)),
-                                width=width - 128))
+                                width=width - 128, key=f"param_{behaviour}_{name}"))
         else:
             # Lists of objects and other structured settings: edited as checked text (JSON).
             row.add(self._field(json.dumps(value) if value is not None else "",
@@ -2589,6 +2639,8 @@ class Studio(InspectorMixin, SoundMixin):
                 self._build_play_ui()  # the game changed a flag: show it
             return False
         if not self._typing():
+            if (self.window.width, self.window.height) != self._built_for:
+                self._rebuild()  # the window was resized: the rows that fit it
             k = optional_arcade.arcade.key
             dx = bool(self.keys & {k.RIGHT, k.D}) - bool(self.keys & {k.LEFT, k.A})
             dy = bool(self.keys & {k.UP, k.W}) - bool(self.keys & {k.DOWN, k.S})
@@ -2621,9 +2673,20 @@ class Studio(InspectorMixin, SoundMixin):
             field = next(f for f, _, _ in self._fields if f.active)
             if ctrl and symbol in (k.A, k.C, k.X, k.V):
                 field_clipboard(self.window, field, symbol)
+            elif ctrl and symbol == k.S:  # what is typed is committed, then saved; the box stays the one typed in
+                key = next((name for name, f in self._focusable.items() if f is field), None)
+                self.save()
+                again = self._focusable.get(key) if key else None
+                if again is not None and not again.active:
+                    again.activate()
             elif symbol in (k.ENTER, k.NUM_ENTER, k.TAB):
                 self._flush_fields()
             elif symbol == k.ESCAPE:
+                key = next((name for name, f in self._focusable.items() if f is field), None)
+                if key in self._held:  # a refused value: Esc puts back what the box had
+                    self._held.pop(key)
+                    field.text = next(o for f, o, _ in self._fields if f is field)
+                    self._say("Put back as it was.")
                 for other, _, _ in self._fields:
                     other.deactivate()
             return True
@@ -2705,9 +2768,8 @@ class Studio(InspectorMixin, SoundMixin):
             self._say("Carry on editing.")
             return
         if choice == "save":
-            self.save()
-            if self.project.is_dirty:
-                return  # saving failed; the message says why, and nothing is lost
+            if not self.save() or self.project.is_dirty:
+                return  # saving failed or a box's value was refused; the message says why, and nothing is lost
         self._closing = True
         self.ai.stop()
         self.window.close()
@@ -2742,6 +2804,13 @@ class Studio(InspectorMixin, SoundMixin):
             axis, limit = (0, tileset["columns"] - cols) if sideways else (1, tileset["rows"] - rows)
             step = -(scroll_x or scroll_y) if sideways else -scroll_y
             self.sheet_scroll[axis] = int(min(max(self.sheet_scroll[axis] + step, 0), max(0, limit)))
+            return True
+        if x < LEFT_W and y < self.window.height - TOP_H and self.modal is None:  # the left panel: never the view
+            more_above, more_below = self._left_more
+            if (scroll_y > 0 and more_above) or (scroll_y < 0 and more_below):
+                self._flush_fields()
+                self.left_scroll = max(0, self.left_scroll - int(scroll_y) * 2)
+                self._rebuild()
             return True
         if self._in_map(x, y):
             if self.hd2d.active:

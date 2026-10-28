@@ -18,7 +18,8 @@ These were found while building Lakeside Village ([`lakeside_village.md`](lakesi
 
 ## Found in M22A
 
-- **The left panel doesn't scroll.** In an HD-2D room its sections (3D view, Wind and motion, Models, Sculpt and paint) run past the window's bottom. M22A put its own button high in the panel.
+- ~~The left panel doesn't scroll~~: fixed in M22B (it scrolls with the mouse wheel, like the right panel).
+- **The 2D tile palette's height** still comes from a guess at how much of the left panel fits on one screen. That guess predates scrolling, so with many rooms or objects the palette is 2 rows tall. It could now take a fixed share of the panel; doing so changes every 2D room's layout, so it was left alone in M22B.
 - ~~See it ignores the camera's room edges~~: fixed in #409's review (it goes through the follow camera's `fit_view`).
 - **Resizing an existing HD-2D room's ground:** M22A.1 expands flat, unpainted rooms east and north (docs/reviews/m22a1_ground_expansion.md). Still waiting for review: sculpted or painted ground, growing west or south, shrinking.
 - **Undo after Save** left the undone rooms marked saved, so their state never reached disk. Fixed in M22A.1 for every edit, not only expansion.
@@ -34,7 +35,7 @@ These were found while building Lakeside Village ([`lakeside_village.md`](lakesi
 ## Awkward
 
 - **A Natural pond can be waded by default**, even 1.5 m deep (Walk through it: On).
-- **Ctrl+S right after typing in a field didn't save**; the Save button did.
+- ~~Ctrl+S right after typing in a field didn't save~~: fixed in M22B (and a refused value is never saved over or lost).
 - **Sculpting is by time held**; there's no "raise to N m" except Flatten.
 - **A brush stroke works only inside the view**; long paths are several strokes.
 - **The kit's bridge is built for cliff tops** (a deck 2 m up); over a stream it needs a typed negative height.
