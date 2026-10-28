@@ -95,6 +95,39 @@ def _place(p: tuple[float, float, float], at: tuple[float, float, float], turn: 
     return (at[0] + (c * p[0] - s * p[1]) * scale, at[1] + (s * p[0] + c * p[1]) * scale, at[2] + p[2] * scale)
 
 
+WALL_SLICE = 0.25  # m: a wall turned off the axes is kept as boxes no wider or longer than this
+
+
+def _walls(name: str, lo: tuple[float, float, float], hi: tuple[float, float, float], at: tuple[float, float, float],
+           turn: float, scale: float) -> list[Wall]:
+    """A wall collider placed in the room, as the axis-aligned boxes movement checks. Turned by a right angle (or not
+    at all) it is one exact box. At any other turn, the box round its turned corners covers far more than the wall
+    (a bridge turned 74 degrees: its railings' boxes covered the deck between them), so it is cut into slices
+    ``WALL_SLICE`` across at most, each boxed on its own: their union hugs the turned wall."""
+    square = math.isclose(turn % 90.0, 0.0, abs_tol=1e-6) or math.isclose(turn % 90.0, 90.0, abs_tol=1e-6)
+    nx = 1 if square else max(1, math.ceil((hi[0] - lo[0]) * scale / WALL_SLICE))
+    ny = 1 if square else max(1, math.ceil((hi[1] - lo[1]) * scale / WALL_SLICE))
+    out = []
+    for i in range(nx):
+        for j in range(ny):
+            x0, x1 = lo[0] + (hi[0] - lo[0]) * i / nx, lo[0] + (hi[0] - lo[0]) * (i + 1) / nx
+            y0, y1 = lo[1] + (hi[1] - lo[1]) * j / ny, lo[1] + (hi[1] - lo[1]) * (j + 1) / ny
+            corners = [_place((x, y, z), at, turn, scale) for x in (x0, x1) for y in (y0, y1) for z in (lo[2], hi[2])]
+            xs, ys, zs = [p[0] for p in corners], [p[1] for p in corners], [p[2] for p in corners]
+            out.append(Wall(name, (min(xs), min(ys), min(zs)), (max(xs), max(ys), max(zs))))
+    return out
+
+
+def _on_level(solid: Any, z: float) -> bool:
+    """Whether a scene 2D solid stands in the way of a character whose feet are at ``z`` m: within a body's height of
+    it. A water surface that blocks (Walk through it: Off) is its level only: a character on a bridge deck a step or
+    more above it walks over it (Lakeside Village: a non-walkable inlet's box blocked its own footbridge)."""
+    e = elevation_of(solid)
+    if "WaterSurface" in (getattr(solid, "mesh_behaviours", None) or ()):
+        return e - BODY < z < e + STEP
+    return abs(e - z) < BODY
+
+
 def elevation_of(sprite: Any) -> float:
     """A sprite's elevation in metres (its entity's ``elevation`` px)."""
     data = getattr(sprite, "mesh_entity_data", None) or {}
@@ -111,10 +144,7 @@ class World:
             for col in models[st.model].colliders:
                 floor = f"{st.id}/{col.node}"
                 if col.kind == "wall":
-                    corners = [_place((x, y, z), at, st.rotation, st.scale)
-                               for x in (col.lo[0], col.hi[0]) for y in (col.lo[1], col.hi[1]) for z in (col.lo[2], col.hi[2])]
-                    xs, ys, zs = [p[0] for p in corners], [p[1] for p in corners], [p[2] for p in corners]
-                    self.walls.append(Wall(floor, (min(xs), min(ys), min(zs)), (max(xs), max(ys), max(zs))))
+                    self.walls.extend(_walls(floor, col.lo, col.hi, at, st.rotation, st.scale))
                     continue
                 for a, b, c in col.triangles:
                     placed = (_place(a, at, st.rotation, st.scale), _place(b, at, st.rotation, st.scale),
@@ -257,7 +287,7 @@ class World:
             self._settle(sprite, x, y, z, hw, hh)
             return
         start = (sprite.center_x, sprite.center_y)
-        level = [s for s in solids if s is not sprite and abs(elevation_of(s) - z) < BODY]
+        level = [s for s in solids if s is not sprite and _on_level(s, z)]
         move_entity_with_physics(sprite, (dx, dy), level)  # the scene's 2D solids on this level
         moved = (sprite.center_x - start[0]) / PIXELS_PER_METRE, (sprite.center_y - start[1]) / PIXELS_PER_METRE
         if not self._settle(sprite, x + moved[0], y + moved[1], z, hw, hh):
