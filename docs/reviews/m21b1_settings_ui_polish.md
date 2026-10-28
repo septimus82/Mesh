@@ -61,3 +61,17 @@ Where they fitted before, nothing moves: 1280 × 720 is identical.
 **Pictures:** `m21b1_evidence/`, before and after, for each menu.
 
 **Out of scope:** no other UI was changed. Other Studio usability findings are in [`m22_studio_usability_backlog.md`](m22_studio_usability_backlog.md).
+
+## CI on the tested head (`0c1e416`)
+
+**Windows:** passed. 10,020 tests passed, 188 skipped. The fast tier took 110.7 s at runner speed 1.11; the limit is 121.8 s.
+
+**Linux:**
+- **Tests:** all passed. 10,020 passed, 188 skipped, none failed.
+- **Job:** it **failed on the timing gate alone**. The fast tier took 84.1 s against its 79.0 s threshold, and the exception scan 3.93 s against 3.56 s. The runner's speed was 1.15, at the top of its calibrated range. Rule F's advisory check also called both steps slow, so the gate failed the job.
+
+**Why this is runner variance, not a regression from this PR:**
+- **Earlier runs:** #407's three Linux runs (speed 0.77–0.80) took 59.5–60.7 s, 1.11 times the speed model's expectation. This run took 1.20 times.
+- **Measured locally, back to back:** `-m fast` took 148.0 s on the base (`d3c4fd1`, cold) and 131.0 s on this head. This PR's new tests take about 2 s.
+
+No budget was loosened, and the job wasn't rerun for a badge. The owner authorised merging once the functional checks pass, and they did.
