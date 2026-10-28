@@ -266,3 +266,34 @@ def test_a_one_shot_emitter_plays_once_each_time_the_player_comes_near(backend: 
     player.center_x = 0  # back: once more
     _run(window, 0.5)
     assert len(backend.players) == 2
+
+
+@pytest.mark.parametrize("kind", ["rain", "wind"])
+def test_a_room_with_another_weather_sound_switches_to_it_at_the_same_loudness(backend: Backend, kind: str) -> None:
+    """Two rooms with the same rain (or wind) but different sound files: the new room's file plays. (#407 review: the
+    weather loop was only asked again when its volume changed, so the last room's file played on.)"""
+    other = f"assets/ambience/other_{kind}.wav"
+    weather = {"rain": [{"preset": "rain"}], "wind": None}[kind]
+    effects = parse_particles(weather) if weather else None
+    room = {"weather_sounds": {kind: RAIN if kind == "rain" else WIND}, "wind": {"speed": 9.0}}
+    window = _window(_sprite(0, 0), room, effects)
+    _run(window, 20.0)  # settled: its loudness no longer changing, so only the file differs in the next room
+    first = window.audio._loops[f"weather:{kind}"]
+    se.reset(window, "next_room", {**room, "weather_sounds": {kind: other}})
+    _run(window, 3.0)
+    now = window.audio._loops[f"weather:{kind}"]
+    assert now.path == other and now is not first
+    assert [p.path for p in backend.live()] == [other]  # the last room's file faded out and was released
+
+
+@pytest.mark.parametrize("kind", ["rain", "wind"])
+def test_a_room_with_the_same_weather_sound_keeps_the_same_player(backend: Backend, kind: str) -> None:
+    weather = {"rain": [{"preset": "rain"}], "wind": None}[kind]
+    effects = parse_particles(weather) if weather else None
+    room = {"weather_sounds": {kind: RAIN if kind == "rain" else WIND}, "wind": {"speed": 9.0}}
+    window = _window(_sprite(0, 0), room, effects)
+    _run(window, 8.0)
+    first = window.audio._loops[f"weather:{kind}"].player
+    se.reset(window, "next_room", room)
+    _run(window, 3.0)
+    assert window.audio._loops[f"weather:{kind}"].player is first and len(backend.players) == 1

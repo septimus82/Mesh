@@ -79,6 +79,14 @@ Within a room, the only runtime control is the particle layer's per-effect switc
 - **Shared headroom:** when ambience adds up past about two full-strength sounds, everything is scaled down together, smoothly.
 - **Music is untouched.**
 
+**Review correction (the weather loop's file).** The independent review of `a095b9d` asked whether a room with a different rain or wind *file*, at the same loudness, would switch to it.
+
+- **Reproduced:** it didn't. The weather loop was asked again only when its volume changed, so the last room's file played on.
+- **Wind:** the steady Strong wind kept the old file every time.
+- **Rain:** the rain did switch, but only because its level happened to still be easing. Once settled, it kept the old file too.
+- **Fix:** the loop now remembers the file it was given as well as the volume, and asks again when either changes.
+- **Tests:** four new ones, rain and wind, changed and unchanged. With a changed file, the new one plays and the old one fades out and is released. With the same file, the same player carries on and nothing restarts. The changed-file tests failed on `a095b9d` and pass now.
+
 ## 4. Ambience volume
 
 An **Ambience Volume** slider, beside Music and SFX:
@@ -103,7 +111,7 @@ Both are worth a small follow-up.
 ## 5. Validation
 
 **Automated tests:**
-- `tests/test_sound_emitters.py`, 18 fast tests: the curve and pan; rising and falling on a walk past, with one player and never a restart; nothing decoded out of reach; HD-2D heights; a crowd of 40 capped, and quiet when standing still; room exit and return; disabled and soundless emitters; the editor silent; rain following the falling rain and fading out; light versus steady rain; wind gusts; the same rain across rooms; headroom; and the `play_loop` extension.
+- `tests/test_sound_emitters.py`, 22 fast tests: the curve and pan; rising and falling on a walk past, with one player and never a restart; nothing decoded out of reach; HD-2D heights; a crowd of 40 capped, and quiet when standing still; room exit and return; disabled and soundless emitters; the editor silent; rain following the falling rain and fading out; light versus steady rain; wind gusts; the same rain across rooms; headroom; and the `play_loop` extension.
 - `tests/test_sound_authoring.py`, 9 fast tests: the ops and their refusals; rain strengths keeping the other weather; weather sounds; the library; broken files; import and listing; export references; the scene loader.
 - `tests/test_soundscape_studio_gpu.py`, 6 GPU tests: the 2D Studio workflow below, end to end, including undo and redo of creating, moving and editing a sound.
 - **Generated docs:** `docs/behaviours.md` gains `SoundEmitter`. `docs/console.md` gains M21A's `set ambience`, which had never been regenerated.

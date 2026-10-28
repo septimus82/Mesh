@@ -231,7 +231,7 @@ class Soundscape:
     weather: WeatherSounds = field(default_factory=WeatherSounds)
     wind: Any = None  # engine.wind.Wind (None: calm)
     levels: dict[str, float] = field(default_factory=dict)  # "rain"/"wind": what they play at now
-    sent: dict[str, float] = field(default_factory=dict)  # "rain"/"wind": the volume their loops were last given
+    sent: dict[str, tuple[float, str]] = field(default_factory=dict)  # "rain"/"wind": the volume and file last given
     headroom: float = 1.0  # the common scale (1: nothing scaled down)
     time: float = 0.0
     room: str = ""
@@ -390,10 +390,11 @@ def update(window: Any, dt: float) -> None:
         playing = key in audio.loops()
         volume = level * scape.headroom
         if path and level > SILENT:
-            if not playing or abs(volume - scape.sent.get(name, -1.0)) > RESEND:
+            sent_volume, sent_path = scape.sent.get(name, (-1.0, ""))
+            if not playing or sent_path != path or abs(volume - sent_volume) > RESEND:  # (a room's own file too)
                 audio.play_loop(key, path, volume=volume)
                 scape.loop_calls += 1
-                scape.sent[name] = volume
+                scape.sent[name] = (volume, path)
         elif playing:
             audio.stop_loop(key, fade_out_s=0.5)
             scape.loop_calls += 1
