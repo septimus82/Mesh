@@ -399,6 +399,88 @@ def canopy(seed: int, width: int, height: int) -> Image.Image:
     return _shade(img, top=False)
 
 
+# ---------------------------------------------------------------------- Milestone 23B: a campfire
+EMBER = [(150, 44, 20), (214, 90, 32), (250, 160, 60), (255, 220, 130)]
+
+
+def campfire_base() -> Image.Image:
+    """A campfire's stones and logs (about a metre across): a ring of stones along the ground, two logs leaning
+    together over a third lying across in front, charred where the fire is. The flames and the embers are parts of
+    their own (they glow; the wood and stones are lit)."""
+    img, d = _cell()
+    cx = CELL // 2
+    rng = random.Random(2301)
+    for x0 in range(cx - 15, cx + 15, 5):  # the stones: rounded, a little uneven
+        h = 3 + rng.randrange(2)
+        d.ellipse([x0, CELL - 1 - h, x0 + 5, CELL - 1], fill=(*STONE[1 + rng.randrange(2)], 255))
+        d.point([(x0 + 1, CELL - h)], fill=(*STONE[3], 255))
+    for (ax, ay), (bx, by) in (((cx - 11, CELL - 5), (cx + 2, CELL - 16)), ((cx + 11, CELL - 5), (cx - 2, CELL - 16))):
+        d.line([(ax, ay), (bx, by)], fill=(*WOOD[1], 255), width=3)  # the leaning logs
+        d.line([(ax, ay - 1), (bx, by - 1)], fill=(*WOOD[2], 255), width=1)
+        d.point([(bx, by)], fill=(48, 36, 30, 255))  # charred tips
+    d.rectangle([cx - 10, CELL - 7, cx + 9, CELL - 5], fill=(*WOOD[2], 255))  # the log lying across, in front
+    d.line([(cx - 10, CELL - 7), (cx + 9, CELL - 7)], fill=(*WOOD[3], 255))
+    for x in (cx - 10, cx + 9):
+        d.point([(x, CELL - 6)], fill=(*WOOD[0], 255))  # its cut ends
+    for x in range(cx - 6, cx + 6, 3):  # charred where it burns
+        d.point([(x, CELL - 6)], fill=(56, 40, 32, 255))
+    return _shade(img, top=False)
+
+
+def campfire_embers(frame: int) -> Image.Image:
+    """The campfire's glowing bed (one of three): embers among the logs, brightening and dimming in turn."""
+    img = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
+    cx = CELL // 2
+    rng = random.Random(2310)
+    spots = [(cx + rng.randrange(-8, 8), CELL - 5 - rng.randrange(0, 6)) for _ in range(18)]
+    for k, (x, y) in enumerate(spots):
+        heat = (k + frame) % 3
+        img.putpixel((x, y), (*EMBER[1 + heat], 255))
+        if heat == 2 and k % 2 == 0:
+            img.putpixel((x + 1, y), (*EMBER[1], 255))
+    return img
+
+
+def campfire_flame(frame: int) -> Image.Image:
+    """A campfire's flames (one of six): three tongues of fire rising from the logs, the middle one tallest, each
+    leaning and forking in its own way frame to frame, bright at the core, a dark red edge round them, and a spark
+    or two above."""
+    img = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
+    cx = CELL // 2
+    tongues = (  # (offset px, height px, lean, half width at the foot, forked)
+        ((0, (22, 25, 20, 26, 23, 21)[frame], (0.0, 1.2, -0.8, 0.6, -1.4, 1.6)[frame], 4.4, frame in (1, 4)),
+         (-6, (14, 11, 16, 12, 15, 13)[frame], (-0.8, -0.2, -1.4, 0.4, -0.6, -1.0)[frame], 3.0, frame == 2),
+         (6, (12, 15, 11, 16, 13, 14)[frame], (0.6, 1.0, 0.2, 1.4, 0.8, 0.0)[frame], 3.0, frame == 5)))
+    shape: dict[tuple[int, int], float] = {}  # pixel -> how far up its tongue (0 foot .. 1 tip)
+    for off, height, lean, foot, fork in tongues:
+        for y in range(height):
+            t = y / height
+            half = foot * (1 - t) ** 0.65 + (0.5 if y < 3 else 0.0)
+            x0 = cx - 0.5 + off + lean * t * t * 3.0
+            for x in range(round(x0 - half), round(x0 + half) + 1):
+                if fork and t > 0.72 and abs(x - x0) < 0.7:
+                    continue
+                q = (x, CELL - 4 - y)  # (its foot among the logs)
+                shape[q] = min(shape.get(q, 1.0), t)
+    for (x, y), t in shape.items():
+        inner = sum((x + dx, y + dy) in shape for dx, dy in ((1, 0), (-1, 0), (0, -1), (0, 1))) == 4
+        tone = 3 if inner and t < 0.4 else 2 if inner or t < 0.3 else 1 if t < 0.8 else 0
+        img.putpixel((x, y), (*FLAME[tone], 255))
+    px: Any = img.load()
+    for x, y in shape:  # the dark red edge, beside and over them (their feet are in the fire)
+        for dx, dy in ((1, 0), (-1, 0), (0, -1)):
+            q = (x + dx, y + dy)
+            if q not in shape and 0 <= q[0] < CELL and 0 <= q[1] < CELL and px[q][3] == 0:
+                px[q] = (*FLAME_EDGE, 255)
+    for k in range(3):  # sparks: each rises a little more each frame
+        rise = (frame * 3 + k * 4) % 11
+        x = cx + (-4, 1, 5)[k] + (rise // 4) * (1 if k == 2 else -1)
+        y = CELL - 4 - 26 - rise
+        if 0 <= y < CELL:
+            img.putpixel((x, y), (*FLAME[2 if rise < 6 else 1], 255))
+    return img
+
+
 SHEET = [  # cells in the order engine.hd2d.scatter.ASSETS uses them (several variants a thing; 17 on: 20E's sheet)
     lambda: grass_tuft(71), lambda: grass_tuft(81), lambda: grass_tuft(91, wide=True),  # 0-2 grass tuft
     lambda: grass_tuft(72, tall=True), lambda: grass_tuft(82, tall=True),  # 3-4 tall grass
@@ -416,6 +498,8 @@ SHEET = [  # cells in the order engine.hd2d.scatter.ASSETS uses them (several va
     *(lambda f=f: bellflowers(f) for f in range(3)),  # 36-38 bellflowers
     trunk_sprite,  # 39 a trunk as a sprite (comparisons only)
     lambda: canopy(641, 40, 30), lambda: canopy(642, 32, 24), lambda: canopy(643, 36, 28),  # 40-42 canopy clusters
+    campfire_base, *(lambda f=f: campfire_embers(f) for f in range(3)),  # 43 campfire (M23B), 44-46 its embers
+    *(lambda f=f: campfire_flame(f) for f in range(6)),  # 47-52 its flames
 ]
 
 

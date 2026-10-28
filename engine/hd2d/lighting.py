@@ -232,6 +232,7 @@ class Lighting:
         self.sun = _unit(settings.sun)
         self.sun_vp = sun_matrix(self.sun, world_lo, world_hi)
         self.lamps = [lamp for lamp in settings.lights][:MAX_LIGHTS]
+        self.extra_lamps: list[Any] = []  # this frame's (campfires: engine.fire), after the room's; no shadow maps
         self.lamp_slots: list[int] = []
         self.face_vps: list[list[list[float]]] = []
         slot = 0
@@ -299,11 +300,13 @@ class Lighting:
         program["u_point_maps"] = 2
         program["u_sun_vp"] = _column_major(self.sun_vp)
         program["u_sun_texel"] = 1.0 / s.shadow_resolution
-        program["u_light_count"] = len(self.lamps)
+        lamps = self.lamps + self.extra_lamps[:MAX_LIGHTS - len(self.lamps)]
+        program["u_light_count"] = len(lamps)
         pos, col = [0.0] * 32, [0.0] * 32
-        for i, lamp in enumerate(self.lamps):
+        for i, lamp in enumerate(lamps):
             pos[i * 4: i * 4 + 4] = [*self._lamp_pos(lamp), lamp.radius / PIXELS_PER_METRE]
-            col[i * 4: i * 4 + 4] = [*(c * lamp.intensity for c in lamp.color), float(self.lamp_slots[i])]
+            slot = self.lamp_slots[i] if i < len(self.lamps) else -1
+            col[i * 4: i * 4 + 4] = [*(c * lamp.intensity for c in lamp.color), float(slot)]
         program["u_light_pos"] = tuple(pos)
         program["u_light_col"] = tuple(col)
         faces = [_column_major(m) for m in self.face_vps] + [_column_major([[1.0 if r == c else 0.0 for c in range(4)]

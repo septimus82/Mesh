@@ -102,6 +102,8 @@ class Asset:
     glow: float = 0.0
     streams: bool = False
     parts: tuple[Part, ...] = ()
+    nearer: float = 0.0  # m: its own sprite drawn this much nearer the camera (Part's: a campfire's embers on its logs)
+    hidden: bool = False  # not a brush's: placed by something else (a campfire: engine.fire, Milestone 23B)
 
     def sprite_parts(self) -> list[tuple[int, Part | None]]:
         """Its sprites (part number, the part: None for its own ``cell``), in a fixed order."""
@@ -143,6 +145,14 @@ ASSETS: dict[str, Asset] = {a.id: a for a in (
           on=MATERIALS, blocks=True, shadow=True),
     Asset("fallen_branch", "Fallen branch", model=f"{KIT}/fallen_branch.glb", spacing=1.6, size=(0.8, 1.2),
           slope=12.0, on=("grass", "earth", "mud"), shadow=True),
+    # Milestone 23B: a campfire's logs, and its fire (sized by the fire alone: engine.fire places both, not a brush)
+    Asset("campfire", "Campfire", cell=(43,), spacing=1.0, size=(1.0, 1.0), slope=20.0, on=MATERIALS, nearer=0.08,
+          hidden=True),  # (nearer than its flames: they burn behind and between the logs)
+    Asset("campfire_flame", "Campfire flames", cell=(44,), spacing=1.0, size=(0.5, 1.5), slope=20.0, on=MATERIALS,
+          frames=3, fps=3.0, glow=1.25, nearer=0.1, hidden=True,
+          parts=(Part(47, flex=0.8, frames=6, fps=10.0, glow=1.25, nearer=0.04),
+                 Part(47, at=(-0.12, 0.02, 0.0), flex=0.9, frames=6, fps=12.5, glow=1.25, scale=0.7, nearer=0.03),
+                 Part(47, at=(0.13, -0.02, 0.0), flex=0.9, frames=6, fps=8.5, glow=1.25, scale=0.6, nearer=0.05))),
 )}
 # A slot a sprite part (asset id, part number): its row in the shader's motion tables (engine.hd2d.motion).
 SLOTS: dict[tuple[str, int], int] = {(a.id, k): n for n, (a, k) in enumerate(
@@ -155,7 +165,7 @@ COLLECTIONS: dict[str, dict[str, float]] = {  # name -> asset weights: what a br
     "Shrubs": {"bush": 3, "bush_berries": 1},
     "Rocks": {"rock_small": 5, "rock_medium": 2},
     "Deadfall": {"grass_dry": 5, "fallen_branch": 1, "rock_small": 1},
-    **{a.name: {a.id: 1.0} for a in ASSETS.values()},
+    **{a.name: {a.id: 1.0} for a in ASSETS.values() if not a.hidden},
 }
 DENSITY = {"Meadow": 2.5, "Wildflowers": 1.5, "Pond edge": 3.0, "Shrubs": 0.25, "Rocks": 0.6, "Deadfall": 0.8}
 

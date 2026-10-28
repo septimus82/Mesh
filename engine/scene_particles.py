@@ -26,6 +26,8 @@ from array import array
 from dataclasses import dataclass
 from typing import Any
 
+from engine.wind import GLSL as WIND_GLSL
+
 PX_PER_M = 32.0
 MAX_EFFECTS = 4
 MAX_COUNT = 20000  # per effect
@@ -69,6 +71,15 @@ class _Preset:
 # A raindrop's splash where it lands (Milestone 18B): three frames in the atlas, (x, y, w, h) px, played over its
 # impact time; a snowflake settles as its own picture, fading.
 SPLASH = ((12, 4, 3, 2), (16, 4, 5, 2), (22, 4, 7, 2))
+# A campfire's particles (Milestone 23B, engine.fire): embers (two) and sparks (two), and smoke puffs growing as they
+# rise (small, middling, large), (x, y, w, h) px in the atlas. Drawn per fire, not in a box about the camera.
+EMBERS = ((26, 8, 1, 1), (28, 8, 2, 2), (26, 11, 1, 2), (29, 11, 1, 3))
+SMOKE = ((4, 8, 4, 4), (9, 8, 6, 5), (16, 8, 8, 7))
+SMOKE_ROWS = ((".##.", "#%##", "##%#", ".##."),
+              (".###..", "##%###", "#%##%#", "###%##", ".####."),
+              ("..###...", ".##%###.", "###%##%#", "#%####%#", "##%#%###", ".###%##.", "..####.."))
+EMBERS_PER_FIRE, SMOKE_PER_FIRE = 28, 18
+SMOKE_OPACITY = 0.32
 EXPOSURES = ("outdoor", "indoor")  # settings.weather_exposure: an indoor room gets no precipitation
 PRECIPITATION = ("rain", "snow")  # what falls from the sky: kept out of indoor rooms (leaves, and later dust or ash, stay)
 
@@ -187,6 +198,15 @@ def atlas_image() -> Any:
             if ch == "#":
                 px[12 + x, 16 + y] = (120, 82, 48, 255) if x % 2 else (96, 64, 38, 255)
     px[17, 16], px[18, 16] = (120, 112, 98, 255), (98, 90, 78, 255)  # debris: a 2 x 1 fleck
+    for (x0, y0, w, h), rows in zip(SMOKE, (SMOKE_ROWS[0], SMOKE_ROWS[1], SMOKE_ROWS[2])):  # smoke (23B): grey puffs
+        for y, row in enumerate(rows):
+            for x, ch in enumerate(row):
+                if ch != ".":
+                    px[x0 + x, y0 + y] = (176, 172, 168, 255) if ch == "#" else (148, 144, 142, 255)
+    px[26, 8] = (255, 150, 52, 255)  # embers (23B): a glowing fleck, a brighter 2 x 2 one; sparks: short streaks
+    px[28, 8], px[29, 8], px[28, 9], px[29, 9] = (255, 214, 120, 255), (255, 170, 64, 255), (255, 170, 64, 255), (230, 110, 40, 255)
+    px[26, 11], px[26, 12] = (255, 246, 200, 255), (255, 200, 96, 255)
+    px[29, 11], px[29, 12], px[29, 13] = (255, 250, 220, 255), (255, 214, 120, 255), (250, 150, 60, 255)
     for (x0, y0, _w, _h), rows in zip(SPLASH, ((".#.", "#.#"), ("#...#", ".#.#."), ("#.....#", ".#...#."))):
         for y, row in enumerate(rows):  # a raindrop's splash: a crown, spreading, falling apart
             for x, ch in enumerate(row):
@@ -243,6 +263,47 @@ uniform int u_clip; uniform vec4 u_bounds; uniform int u_probe;
 in vec2 in_corner; in vec4 in_seed; in vec2 in_var;
 out vec2 v_uv; out float v_alpha; flat out vec4 v_probe;
 float hash(float n) { return fract(sin(n) * 43758.5453); }
+// Milestone 23B: a campfire's embers and sparks (u_kind 3) and smoke (4), rising from the fires: u_anchor (x, y, z m,
+// the flames' size; negative: no smoke), u_per particles each: particle i is fire i / u_per's, its seed made from its
+// number there and where the fire stands (so lighting or putting out one fire never changes another's). Each is born
+// again every lifetime somewhere else over the fire (its seed and its cycle), so nothing is spawned or stepped.
+uniform vec4 u_anchor[16]; uniform int u_per;
+""" + WIND_GLSL + """
+float g_fire_alpha;
+vec4 fire_particle(out vec3 p) {
+    int fi = gl_InstanceID / max(u_per, 1);
+    vec4 a = u_anchor[fi];
+    float key = float(gl_InstanceID - fi * max(u_per, 1)) * 1.618 + fract(a.x * 0.731 + a.y * 0.419) * 97.0;
+    float size = abs(a.w), phase = hash(key * 3.1 + 0.7), sp = 0.8 + 0.4 * hash(key * 5.3 + 1.9);
+    bool smoke = u_kind == 4;
+    float life = (smoke ? 4.6 : 1.5) * (1.6 - sp);  // (its speed factor 0.8-1.2: lifetimes 0.4-0.8 of that)
+    float cyc = u_time / life + phase, k = floor(cyc), age = fract(cyc), secs = age * life;
+    float h1 = hash(k * 12.9898 + phase * 78.233), h2 = hash(k * 39.346 + phase * 11.135);
+    float h3 = hash(k * 5.713 + phase * 31.7);
+    // the wind where the fire is, swelling with the gusts the decoration bends in (engine.wind), as it was mid-way
+    // through the particle's life: the whole plume leans together, smoothly
+    float s0 = length(u_wind);
+    vec2 dir = s0 > 0.0 ? u_wind / s0 : vec2(0.0);
+    float s = s0 * max(0.0, 1.0 + u_gust * gust_wave(a.xy, u_time - secs * 0.5, u_wind));
+    float carried = 1.5 * s / (s + 4.0);  // m/s it is carried downwind (a little, in a breath; up to 1.5 in a gale)
+    vec4 vr;
+    if (smoke) {
+        p = a.xyz + vec3((vec2(h1, h2) - 0.5) * 0.25 * size, 0.5 * size);
+        p += vec3(dir * carried * secs, 0.45 * secs * (1.0 - 0.3 * age));
+        p.xy += vec2(sin(secs * 1.3 + phase * 6.2832), cos(secs * 1.1 + phase * 4.0)) * 0.15 * age;  // spreading
+        vr = u_variants[age < 0.25 ? 0 : (age < 0.6 ? 1 : 2)];
+        g_fire_alpha = a.w < 0.0 ? 0.0 : smoothstep(0.0, 0.12, age) * (1.0 - smoothstep(0.5, 1.0, age));
+    } else {
+        bool spark = h3 < 0.14;  // now and then a spark: brighter, quicker, higher, gone sooner
+        p = a.xyz + vec3((vec2(h1, h2) - 0.5) * 0.35 * size, 0.1 * size);
+        float rise = (spark ? 2.4 : 1.0) * (0.7 + 0.3 * size);
+        p += vec3(dir * carried * 0.7 * secs, rise * secs * (1.0 - 0.35 * age));
+        p.xy += vec2(sin(secs * 5.0 + phase * 6.2832), cos(secs * 4.3 + phase * 3.0)) * (spark ? 0.02 : 0.07) * age;
+        vr = u_variants[spark ? (h2 < 0.5 ? 2 : 3) : (h1 < 0.6 ? 0 : 1)];
+        g_fire_alpha = spark ? 1.0 - smoothstep(0.3, 0.55, age) : 1.0 - smoothstep(0.55, 1.0, age);
+    }
+    return vr;
+}
 float g_alpha, g_flip, g_bob;  // the particle's own fade, flutter and bob (leaves), set by place()
 bool g_sway = true;  // false: a snowflake's path without its sway (where it lands is found from that)
 // Where the particle is at time t (m, before the box's wrap): a pure function of its seed and the time.
@@ -280,6 +341,16 @@ float past_surface(vec3 p) {
     return d >= 1.0 ? -1.0 : (q.z - d) * u_precip_depth_m;
 }
 void main() {
+    if (u_kind >= 3) {  // a campfire's: standing in the world facing the camera (no box, no landing)
+        vec3 fp;
+        vec4 fv = fire_particle(fp);
+        vec3 fw = fp + u_right * (fv.z / 32.0) * in_corner.x + u_up * (fv.w / 32.0) * in_corner.y;
+        v_uv = (fv.xy + vec2(in_corner.x + 0.5, 1.0 - in_corner.y) * fv.zw) / u_atlas;
+        v_alpha = g_fire_alpha;
+        v_probe = vec4(fp, float(gl_InstanceID));
+        gl_Position = g_fire_alpha <= 0.0 ? vec4(2.0, 2.0, 2.0, 1.0) : u_vp * vec4(fw, 1.0);
+        return;
+    }
     float t = u_time, sp = in_var.y;
     vec3 p = wrapped(place(t));
     float alpha = g_alpha, flip = g_flip;
@@ -367,6 +438,88 @@ void main() {
     f_color = u_probe == 1 ? v_probe : vec4(c.rgb * u_light, a);
 }
 """
+
+
+def fire_seeds(count: int) -> array:
+    """A campfire's particles' seeds (as ``seeds``: 6 floats each; their place is the fire's, not a box's), the same
+    every time."""
+    rng = random.Random(2323)
+    data = array("f")
+    for _ in range(count):
+        data.extend((rng.random(), rng.random(), rng.random(), rng.random(), 0.0, 0.8 + 0.4 * rng.random()))
+    return data
+
+
+class FireParticles:
+    """The room's campfires' embers, sparks and smoke (Milestone 23B; ``engine.fire``): the weather's program and
+    atlas, one buffer of seeds, and two draws a frame for every fire together (embers, then smoke), depth-tested
+    against the world and not writing depth. Stateless: where a particle is follows from its seed and the time."""
+
+    def __init__(self, ctx: Any, *, gl: Any, max_fires: int = 16) -> None:
+        self.ctx, self.max_fires, self.draw_calls = ctx, max_fires, 0
+        self.program: Any = None
+        self.texture: Any = None
+        self.quad: Any = None
+        self.buffer: Any = None
+        self.geometry: Any = None
+        try:
+            self.program = ctx.program(vertex_shader=VS, fragment_shader=FS)
+            image = atlas_image()
+            self.texture = ctx.texture(image.size, components=4, data=image.tobytes(), filter=(ctx.NEAREST, ctx.NEAREST))
+            self.quad = ctx.buffer(data=array("f", [-0.5, 0.0, 0.5, 0.0, -0.5, 1.0, 0.5, 1.0]).tobytes())
+            self.buffer = ctx.buffer(data=fire_seeds(max_fires * max(EMBERS_PER_FIRE, SMOKE_PER_FIRE)).tobytes())
+            self.geometry = ctx.geometry([gl.BufferDescription(self.quad, "2f", ["in_corner"]),
+                                          gl.BufferDescription(self.buffer, "4f 2f", ["in_seed", "in_var"],
+                                                               instanced=True)], mode=ctx.TRIANGLE_STRIP)
+        except BaseException:
+            self.release()
+            raise
+
+    def draw(self, vp: tuple[float, ...], camera: Any, anchors: list[tuple[float, float, float, float]], time: float,
+             wind: tuple[float, float], gust: float, light: tuple[float, float, float], fbo: Any) -> None:
+        """``anchors``: per lit fire, (x, y, z m, the flames' size; negative: no smoke). ``light``: the room's light
+        on the smoke (the embers glow)."""
+        self.draw_calls = 0
+        n = min(len(anchors), self.max_fires)
+        if not n:
+            return
+        ctx, prog = self.ctx, self.program
+        eye, target = camera.eye(), camera.target
+        f = [target[i] - eye[i] for i in range(3)]
+        m = math.sqrt(sum(v * v for v in f)) or 1.0
+        f = [v / m for v in f]
+        r = math.hypot(f[1], f[0]) or 1.0
+        right = (f[1] / r, -f[0] / r, 0.0)
+        up = (right[1] * f[2], -right[0] * f[2], right[0] * f[1] - right[1] * f[0])
+        prog["u_vp"], prog["u_time"], prog["u_right"], prog["u_up"] = vp, time, right, up
+        prog["u_flat"], prog["u_atlas"], prog["u_tex"], prog["u_probe"] = 0, (32.0, 24.0), 0, 0
+        prog["u_wind"], prog["u_gust"] = wind, gust
+        prog["u_anchor"] = tuple(v for a in anchors[:n] for v in a) + (0.0,) * (4 * (16 - n))
+        self.texture.use(0)
+        fbo.depth_mask = False
+        try:
+            with ctx.enabled(ctx.BLEND):
+                for kind, per, variants, glow, opacity in (
+                        (3, EMBERS_PER_FIRE, EMBERS, (1.0, 1.0, 1.0), 1.0),
+                        (4, SMOKE_PER_FIRE, SMOKE + ((0, 0, 1, 1),), light, SMOKE_OPACITY)):
+                    if kind == 4 and all(a[3] < 0 for a in anchors[:n]):
+                        continue  # (no fire smokes)
+                    prog["u_kind"], prog["u_light"], prog["u_opacity"], prog["u_per"] = kind, glow, opacity, per
+                    prog["u_variants"] = tuple(float(v) for vr in variants for v in vr)
+                    self.geometry.render(prog, instances=n * per)
+                    self.draw_calls += 1
+        finally:
+            fbo.depth_mask = True
+
+    def gl_objects(self) -> list[Any]:
+        return [o for o in (self.program, self.texture, self.quad, self.buffer) if o is not None]
+
+    def release(self) -> None:
+        if self.geometry is not None:
+            self.geometry.flush()
+        for obj in self.gl_objects():
+            obj.delete()
+        self.program = self.texture = self.quad = self.buffer = self.geometry = None
 
 
 class ParticleLayer:

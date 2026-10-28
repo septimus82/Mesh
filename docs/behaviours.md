@@ -145,6 +145,31 @@ Example configuration snippet:
 }
 ```
 
+## Campfire
+A campfire in an HD-2D room: flames, embers, smoke and a warm light (Studio: the Campfire object).
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| enabled | Burning (off: cold logs) | bool | True |
+| size | The flames' size (0.5-1.5) | float | 1.0 |
+| smoke | Smoke rises from it | bool | True |
+| light | Its light's strength (0-3) | float | 1.0 |
+| light_radius | How far its light reaches (px) | float | 192.0 |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["Campfire"],
+  "behaviour_config": {
+    "Campfire": {
+      "enabled": "<value>"
+    }
+  }
+}
+```
+
 ## ChaseTarget
 Acquires a nearby target and chases it using grid-based pathfinding.
 

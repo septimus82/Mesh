@@ -228,6 +228,15 @@ def _material_tiles(resolve: Callable[[str], Path]) -> Image.Image:
     return atlas
 
 
+def _gpu_refused() -> tuple[type[BaseException], ...]:
+    """What the GPU raises when it refuses a program or a buffer (a campfire's: Milestone 23B)."""
+    from pyglet.gl import GLException  # noqa: PLC0415
+
+    import engine.optional_arcade as optional_arcade  # noqa: PLC0415  # the engine's one arcade import route
+
+    return (optional_arcade.arcade.gl.ShaderException, GLException)
+
+
 def _box_in_view(lo: tuple[float, ...], hi: tuple[float, ...], vp: list[list[float]]) -> bool:
     """Whether a box (m) may be in the picture: its corners' clip-space box overlaps the screen (one behind the
     camera: maybe, drawn)."""
@@ -362,7 +371,7 @@ class Hd2dRenderer:
             made.append(self._caster_buffer)
         for obj in made:
             obj.delete()
-        for name in ("scatter", "precipitation", "water", "particles"):
+        for name in ("scatter", "precipitation", "water", "particles", "fire_sprites", "fire_particles"):
             part = getattr(self, name, None)
             if part is not None:
                 part.release()
@@ -396,6 +405,10 @@ class Hd2dRenderer:
         self._materials: dict[tuple[str, str], Any] = {}
         self.live: dict[str, tuple[str, tuple[float, ...]]] = {}  # id -> (model, matrix)
         self.particles: Any = None  # the room's environmental particles (engine.scene_particles), if it has any
+        self.fire_sprites: Any = None  # its campfires' logs and flames (engine.fire: a scatter layer, always moving)
+        self.fire_particles: Any = None  # ... and their embers and smoke (engine.scene_particles.FireParticles)
+        self.fire_error: str | None = None  # why they're off in this room, if the GPU refused them
+        self._fire_rows: Any = None
         self.precipitation = PrecipitationMaps(ctx)  # where they meet the world (Milestone 18B; made when needed)
         self.weather_preview = False  # Mesh Studio's "Preview weather": draw them in its editing view too
         self.water: Any = None  # the room's puddles and ponds on the GPU (engine.water; made when it has any)
@@ -648,6 +661,11 @@ class Hd2dRenderer:
     def advance_motion(self, delta_time: float) -> None:
         self.window.motion_time = self.motion_time + max(0.0, float(delta_time))
 
+    @property
+    def moving(self) -> bool:
+        """Whether the decoration's clock runs: the room's scatter moves (20E), or it has a campfire (23B)."""
+        return (self.scatter is not None and self.motion.enabled) or bool(getattr(self.window, "campfires", None))
+
     def ensure_terrain(self) -> Any:
         """The ground's heights to sculpt live (Mesh Studio, Milestone 20B): a flat room's plain ground becomes
         sculpted ground in place, level, so a stroke can start on it. None if the room has no ground."""
@@ -724,14 +742,15 @@ class Hd2dRenderer:
         finally:  # (a refused upload stops here: what was rebuilt stands, and rain looks at the ground afresh)
             self.precipitation.invalidate()
             self._follow_terrain(chunks)
-            if self.scatter is not None and chunks:  # scatter stands on the ground as it is now
+            for layer in (self.scatter, self.fire_sprites):  # scatter (and campfires) stand on the ground as it is now
+                if layer is None or not chunks:
+                    continue
                 from engine.hd2d.terrain import CHUNK  # noqa: PLC0415
 
                 span = CHUNK * terrain.cell
                 ox, oy = terrain.origin
-                self.scatter.follow_ground(ox + min(c[0] for c in chunks) * span, oy + min(c[1] for c in chunks) * span,
-                                           ox + (max(c[0] for c in chunks) + 1) * span,
-                                           oy + (max(c[1] for c in chunks) + 1) * span)
+                layer.follow_ground(ox + min(c[0] for c in chunks) * span, oy + min(c[1] for c in chunks) * span,
+                                    ox + (max(c[0] for c in chunks) + 1) * span, oy + (max(c[1] for c in chunks) + 1) * span)
 
     def _follow_terrain(self, chunks: list[tuple[int, int]]) -> None:
         """The room's box and the lamps' shadow maps after an in-place edit of the ground."""
@@ -782,6 +801,8 @@ class Hd2dRenderer:
                    + (self.scatter.gl_objects() if self.scatter is not None else [])
                    + list(light._targets) + [light.caster, light.lamp_caster, light.sprite_caster, light.probe_prog]
                    + (self.particles.gl_objects() if self.particles is not None else [])
+                   + (self.fire_sprites.gl_objects() if self.fire_sprites is not None else [])
+                   + (self.fire_particles.gl_objects() if self.fire_particles is not None else [])
                    + self.precipitation.gl_objects() + (self.water.gl_objects() if self.water is not None else []))
         return [o for o in objects if o is not None]
 
@@ -813,9 +834,11 @@ class Hd2dRenderer:
             self.ground_prog.delete()
             self.ground_prog = None
         self._paint_texture = None  # (deleted with the other textures)
-        if self.scatter is not None:
-            self.scatter.release()
-            self.scatter = None
+        for name in ("scatter", "fire_sprites", "fire_particles"):
+            part = getattr(self, name)
+            if part is not None:
+                part.release()
+                setattr(self, name, None)
         self.lighting.release()
         self.set_particles(())
         self.precipitation.release()
@@ -1046,7 +1069,7 @@ class Hd2dRenderer:
     def update(self, delta_time: float) -> None:
         if self.particles is not None:
             self.particles.update(delta_time)
-        if self.scatter is not None and self.motion.enabled:
+        if self.moving:
             self.advance_motion(delta_time)
         sprite = self.followed()
         if sprite is None:
@@ -1104,6 +1127,7 @@ class Hd2dRenderer:
         fbo.use()
         fbo.clear(color=(*(round(c * 255) for c in self.settings.sky), 255), depth=1.0)
         ctx.enable(ctx.DEPTH_TEST)
+        fires = self._fires(cam.target) if solid is None else []
         mp = self.mesh_prog
         mp["u_vp"] = vp
         mp["u_tex"] = 0
@@ -1126,6 +1150,10 @@ class Hd2dRenderer:
             self.scatter.draw_sprites(vp, self.last_vp, cam.target, cam.right(), stretch, lighting, _box_in_view,
                                       self.motion_time)
             self.draw_calls += self.scatter.draw_calls
+        if fires and self.fire_sprites is not None:  # campfires' logs and flames: depth-tested as the decoration
+            self.fire_sprites.draw_sprites(vp, self.last_vp, cam.target, cam.right(), stretch, lighting, _box_in_view,
+                                           self.motion_time)
+            self.draw_calls += self.fire_sprites.draw_calls
         if solid is not None:  # keep the depth, clear the colour
             fbo.depth_mask = False
             fbo.clear(color=(0, 0, 0, 255))
@@ -1158,6 +1186,8 @@ class Hd2dRenderer:
             self.draw_calls += self.particles.draw_calls
         elif self.particles is not None:
             self.particles.draw_calls = 0  # not drawn in this view (Studio, not previewing)
+        if fires:  # their embers and smoke, in Studio's view too (a fire is part of the room, not its weather)
+            self._draw_fire_particles(fires, vp, cam, fbo)
         if overlay is not None and solid is None:
             overlay(vp)
         ctx.disable(ctx.DEPTH_TEST)
@@ -1194,6 +1224,67 @@ class Hd2dRenderer:
             texture.use(0)
             geometry.render(gp)
             self.draw_calls += 1
+
+    def _fires(self, focus: tuple[float, ...] = (0.0, 0.0)) -> list[Any]:
+        """The room's campfires there now (engine.fire): their lights for this frame (``lighting.extra_lamps``: the
+        nearest ``focus`` (m) first, as the lights a room can have run out) and their logs and flames placed (rebuilt
+        only when one is moved, sized, lit or put out)."""
+        from engine import fire as fire_mod  # noqa: PLC0415
+
+        hearths = fire_mod.fires_of(self.window)
+        fx, fy = focus[0] * PIXELS_PER_METRE, focus[1] * PIXELS_PER_METRE
+        self.lighting.extra_lamps = sorted(fire_mod.lamps(hearths, self.motion_time, self.ground_height),
+                                           key=lambda lamp: (lamp.x - fx) ** 2 + (lamp.y - fy) ** 2)
+        if not hearths or self.fire_error is not None:
+            return []
+        rows: dict[str, list[tuple[int, int, int, int]]] = {"campfire": [], "campfire_flame": []}
+        for h in hearths:
+            x, y, _level = h.place()
+            rows["campfire"].append((round(x), round(y), 0, 100))
+            if h.fire.enabled:
+                rows["campfire_flame"].append((round(x), round(y), 0, round(h.fire.size * 100)))
+        try:
+            if self.fire_sprites is None:
+                from engine.hd2d.motion import Motion  # noqa: PLC0415
+                from engine.hd2d.scatter_layer import ScatterLayer  # noqa: PLC0415
+
+                self.fire_sprites = ScatterLayer(self, {}, self.ground_height)
+                self.fire_sprites.set_motion(Motion(enabled=True), self.wind)
+            if self.fire_sprites.wind is not self.wind:  # (Studio changed the room's wind)
+                self.fire_sprites.set_motion(self.fire_sprites.motion, self.wind)
+            if rows != self._fire_rows:
+                self.fire_sprites.set_instances(rows)
+                self._fire_rows = rows
+        except _gpu_refused() as exc:  # the driver refused them: no fires drawn in this room (its next load tries again)
+            self.fire_error = f"campfires: {exc}"
+            logger.error("[Mesh][Fire] %s (fires are off in this room)", self.fire_error)
+            return []
+        return hearths
+
+    def _draw_fire_particles(self, hearths: list[Any], vp: tuple[float, ...], cam: Camera, fbo: Any) -> None:
+        anchors = []
+        for h in hearths:
+            if not h.fire.enabled:
+                continue
+            x, y, _level = h.place()
+            size = h.fire.size
+            anchors.append((x / PIXELS_PER_METRE, y / PIXELS_PER_METRE, self.ground_height(x, y) / PIXELS_PER_METRE,
+                            size if h.fire.smoke else -size))
+        if not anchors or self.fire_error is not None:
+            return
+        try:
+            if self.fire_particles is None:
+                from engine.scene_particles import FireParticles  # noqa: PLC0415
+
+                self.fire_particles = FireParticles(self.ctx, gl=self.arcade.gl)
+            st, wind = self.settings, self.wind
+            light = tuple(min(1.2, st.ambient * a + st.sun_intensity * 0.55 * max(0.0, st.sun[2]) * c)
+                          for a, c in zip(st.ambient_color, st.sun_color))
+            self.fire_particles.draw(vp, cam, anchors, self.motion_time % 3600.0, wind.vector, wind.gust, light, fbo)
+            self.draw_calls += self.fire_particles.draw_calls
+        except _gpu_refused() as exc:
+            self.fire_error = f"campfires: {exc}"
+            logger.error("[Mesh][Fire] %s (fires are off in this room)", self.fire_error)
 
     def _draw_water(self, vp: tuple[float, ...], cam: Camera, fbo: Any, weather: bool, maps: list[Any],
                     solid: Any) -> None:

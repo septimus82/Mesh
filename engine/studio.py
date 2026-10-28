@@ -86,6 +86,7 @@ BUILT_IN_OBJECTS: list[dict[str, Any]] = [{"id": "object", "display_name": "Empt
                                           {"id": "zone", "display_name": "Trigger zone", "built_in": "zone"},
                                           {"id": "water", "display_name": "Water", "built_in": "water"},
                                           SOUND_BUILT_IN]  # Milestone 21B: a sound heard from where it is
+CAMPFIRE_BUILT_IN: dict[str, Any] = {"id": "campfire", "display_name": "Campfire", "built_in": "campfire"}  # 23B: HD-2D
 SHAPE_HELP = {"brush": "Click or drag on the map.", "rect": "Drag a rectangle on the map.",
               "fill": "Click an area to fill it."}
 
@@ -878,12 +879,19 @@ class Studio(InspectorMixin, SoundMixin):
         prefab, self.place_prefab = self.place_prefab, None
         if prefab is None:
             return
+        if prefab.get("built_in") == "campfire":  # (its logs and flames are the kit's: an older project's copy updated)
+            try:
+                self.project.ensure_hd2d_kit()
+            except ops.OpError as err:
+                self._say(str(err), ok=False)
+                return
         created: list[str] = []
 
         def change(scene: dict[str, Any]) -> dict[str, Any]:
             kind, at = prefab.get("built_in"), ((_snap(wx), _snap(wy)) if snap else (round(wx, 2), round(wy, 2)))
             if kind:
-                name = {"zone": "Zone", "water": "Puddle", "sound": "Sound"}.get(str(kind), "Object")
+                name = {"zone": "Zone", "water": "Puddle", "sound": "Sound", "campfire": "Campfire"}.get(str(kind),
+                                                                                                       "Object")
                 out, new_id = ops.place_blank(scene, self.project.current, name, *at)
                 if kind == "zone":
                     out = ops.set_trigger_zone(out, new_id, width=96, height=96)
@@ -891,6 +899,8 @@ class Studio(InspectorMixin, SoundMixin):
                     out = ops.set_water(out, new_id, preset="muddy_puddle")
                 elif kind == "sound":  # Milestone 21B: its sound is chosen next, on the right
                     out = ops.set_sound_emitter(out, new_id)
+                elif kind == "campfire":  # Milestone 23B: burning, with its settings on the right
+                    out = ops.set_campfire(out, new_id)
             else:
                 out, new_id = ops.place_prefab(scene, self.project.current, prefab, *at, elevation=elevation)
             if elevation and kind:
@@ -900,7 +910,8 @@ class Studio(InspectorMixin, SoundMixin):
 
         hint = {"blank": " Give it a picture in Look.", "zone": " Drag its orange corner to size it.",
                 "water": " Puddle or pond, size and look: on the right.",
-                "sound": " Choose its sound and how far it is heard: on the right."}.get(
+                "sound": " Choose its sound and how far it is heard: on the right.",
+                "campfire": " Its flames, smoke and light: on the right."}.get(
             str(prefab.get("built_in")), "")
         on = f" on {where}, {elevation / 32:.1f} m up" if where else ""
         if self._edit(change, f"Placed {prefab.get('display_name', prefab['id'])}{on}.{hint}"):
@@ -1314,7 +1325,7 @@ class Studio(InspectorMixin, SoundMixin):
             box.add(self._label("Objects", bold=True, size=12))
             if not self.prefabs:
                 box.add(self._label("This project has no objects in assets/prefabs.json.", color=C_MUTED, width=width))
-            for prefab in self.prefabs + BUILT_IN_OBJECTS:
+            for prefab in self.prefabs + BUILT_IN_OBJECTS + ([CAMPFIRE_BUILT_IN] if hd2d else []):
                 style = S_ACTIVE if prefab is self.place_prefab else S_BUTTON
                 text = str(prefab.get("display_name") or prefab["id"])
                 box.add(self._button(text, partial(self.arm_place, prefab), width=width, style=style))
@@ -2215,7 +2226,7 @@ class Studio(InspectorMixin, SoundMixin):
                 if key != self.project.current:
                     items.append((f"Add door to {label}", partial(self.add_door_to, key, at)))
             items.append(("Add door to a new room...", lambda: self._open_new_room(door_at=at)))
-            for prefab in self.prefabs + BUILT_IN_OBJECTS:
+            for prefab in self.prefabs + BUILT_IN_OBJECTS + ([CAMPFIRE_BUILT_IN] if self.hd2d.active else []):
                 items.append((f"Place {prefab.get('display_name', prefab['id'])} here",
                               partial(self._place_here, prefab, at)))
         self.menu = (x, y, items)
