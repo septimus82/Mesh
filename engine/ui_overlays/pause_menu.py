@@ -9,7 +9,7 @@ import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
 
 from ..text_draw import TextCache, draw_text_cached
-from ._settings_data import SETTINGS_ROWS
+from ._settings_data import SETTINGS_ROWS, toast_settings_saved
 from .common import UIElement, _draw_rectangle_filled
 from .widgets import Button, DrawInstruction, Label, Padding, Panel, Rect, ScrollList, Slider, Toggle, VStack
 
@@ -95,8 +95,9 @@ class PauseMenu(UIElement):
         self._save_scroll = ScrollList(items=[], row_height=34, selected_index=0)
         self._load_scroll = ScrollList(items=[], row_height=34, selected_index=0)
         self._settings_widgets: dict[str, Slider | Toggle | Button] = {
-            "music_volume": Slider(label="Music Volume", value=1.0, step=0.01, height=34.0),
-            "sfx_volume": Slider(label="SFX Volume", value=1.0, step=0.01, height=34.0),
+            # label_size: the 16 pt label's line (26 px as drawn) (the bar keeps below it: they overlapped until Milestone 21B.1)
+            "music_volume": Slider(label="Music Volume", value=1.0, step=0.01, height=50.0, label_size=26.0),
+            "sfx_volume": Slider(label="SFX Volume", value=1.0, step=0.01, height=50.0, label_size=26.0),
             "fog_enabled": Toggle(label="Fog", value=False, height=30.0),
             "reduced_flicker": Toggle(label="Calmer Flickering", value=False, height=30.0),
             "back": Button(text="Back", action_id="pause.settings.back", font_size=18, height=34.0),
@@ -142,8 +143,6 @@ class PauseMenu(UIElement):
         self._invalidate_layout()
 
     def _save_runtime_settings(self) -> None:
-        from ..i18n import tr  # noqa: PLC0415
-
         editor = getattr(self.window, "editor", None)
         if editor is not None and hasattr(editor, "workspace"):
             editor.workspace.save_user_settings()
@@ -153,10 +152,7 @@ class PauseMenu(UIElement):
             path = getattr(self.window, "runtime_settings_path", None)
             settings = self._runtime_settings()
             save_runtime_settings(path, settings)
-        hud = getattr(self.window, "player_hud", None)
-        enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
-        if callable(enqueue):
-            enqueue(tr("UI_SETTINGS_SAVED"), seconds=2.0)
+        toast_settings_saved(self.window)
 
     def _window_size(self) -> tuple[int, int]:
         return (int(getattr(self.window, "width", 800) or 800), int(getattr(self.window, "height", 600) or 600))

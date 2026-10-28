@@ -69,6 +69,7 @@ engine = ["schemas/*.json", "py.typed"]
 "share/mesh-engine" = ["config.json"]
 "share/mesh-engine/assets" = ["assets/NOTICE.md"]
 "share/mesh-engine/docs" = ["docs/hd2d_preview.md"]
+"share/mesh-engine/locales" = ["locales/en.json"]  # the game's interface text (engine.i18n)
 "share/mesh-engine/assets/data" = [
     "assets/data/monster_species.json",
     "assets/data/monster_moves.json",

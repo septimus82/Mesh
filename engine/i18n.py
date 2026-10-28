@@ -27,6 +27,10 @@ def _load_locale(code: str) -> Dict[str, str]:
     if cached is not None:
         return cached
     path = resolve_path(f"locales/{code}.json")
+    if not Path(path).exists():  # a game's own folder has none: the engine's (Milestone 21B.1: menus showed raw keys)
+        from .repo_root import bundled_file  # noqa: PLC0415
+
+        path = bundled_file(f"locales/{code}.json") or path
     data: Dict[str, str] = {}
     try:
         if Path(path).exists():

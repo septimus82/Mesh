@@ -717,6 +717,10 @@ class PlayerHUD(UIElement):
     def enqueue_toast(self, message: str, *, seconds: float = 4.0) -> None:
         self._toast_manager.push_toast(message, ttl_s=seconds)
 
+    def active_toasts(self) -> list[str]:
+        """The messages showing now."""
+        return self._toast_manager.get_active_toasts()
+
     def update(self, dt: float) -> None:
         self._hud_frame += 1
         self._toast_manager.tick(float(dt))

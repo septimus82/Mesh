@@ -13,7 +13,7 @@ import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
-from ._settings_data import SETTINGS_ROWS
+from ._settings_data import SETTINGS_ROWS, toast_settings_saved
 from .common import (
     UIElement,
     _draw_rectangle_filled,
@@ -1199,8 +1199,6 @@ class MainMenuOverlay(UIElement):
             saver()
 
     def _save_runtime_settings(self) -> None:
-        from ..i18n import tr  # noqa: PLC0415
-
         editor = getattr(self.window, "editor", None)
         if editor is not None and hasattr(editor, "workspace"):
             editor.workspace.save_user_settings()
@@ -1210,10 +1208,7 @@ class MainMenuOverlay(UIElement):
             path = getattr(self.window, "runtime_settings_path", None)
             settings = self._runtime_settings()
             save_runtime_settings(path, settings)
-        hud = getattr(self.window, "player_hud", None)
-        enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
-        if callable(enqueue):
-            enqueue(tr("UI_SETTINGS_SAVED"), seconds=2.0)
+        toast_settings_saved(self.window)
 
     def _handle_settings_action(self, action: str, *, large_step: bool = False) -> bool:
         action = str(action)
