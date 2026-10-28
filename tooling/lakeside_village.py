@@ -715,10 +715,39 @@ def play(project: Path, out: Path, *, prefix: str = "") -> dict[str, Any]:
     return report
 
 
+BREEZE = {"direction": 0.0, "gust": 0.3, "speed": 3.0}  # Studio's Breeze button, as saved in settings.wind
+
+
+def _as_saved(scene: dict[str, Any], saved: dict[str, Any], shared: dict[str, Any] | None) -> dict[str, Any]:
+    """The room as Studio holds it with its one known difference from the file folded back: Studio holds the shared
+    player filled in from the project's player prefab; the file keeps a reference (``ops.thin_player``, what Studio
+    stores it as)."""
+    from engine import project_ops as ops
+
+    players = set(ops.shared_player_ids(saved))
+    entities = [ops.thin_player(e, shared) if e.get("id") in players else e for e in scene.get("entities") or []]
+    return {**scene, "entities": entities}
+
+
+def _differences(a: Any, b: Any, at: str = "") -> list[str]:
+    """Where two JSON values differ (paths; at most 20)."""
+    if isinstance(a, dict) and isinstance(b, dict):
+        out = [f"{at}.{k}" for k in sorted(set(a) ^ set(b))]
+        for k in sorted(set(a) & set(b)):
+            out += _differences(a[k], b[k], f"{at}.{k}")
+        return out[:20]
+    if isinstance(a, list) and isinstance(b, list) and len(a) == len(b):
+        return [p for i, (x, y) in enumerate(zip(a, b)) for p in _differences(x, y, f"{at}[{i}]")][:20]
+    return [] if a == b else [at or "."]
+
+
 def reopen(project: Path, out: Path) -> dict[str, Any]:
-    """Phase 9: closed and reopened in Studio. The room as saved (structures, water, lights, scatter, wind, doors);
-    nothing unsaved after opening it; Play (F4) and Stop five times with GPU objects unchanged; a picture."""
+    """Phase 9: closed and reopened in Studio. The room as saved (structures, water, lights, scatter, wind, motion,
+    doors: everything but the shared player, which Studio holds filled in, compared with the file); nothing unsaved
+    after opening it; Play (F4) and Stop five times with GPU objects unchanged; a picture."""
     import m20c_material_study as m20c
+
+    from engine import project_ops as ops
 
     saved = json.loads((project / ROOM_FILE).read_text(encoding="utf-8"))
     d = StudioDriver(project)
@@ -728,13 +757,24 @@ def reopen(project: Path, out: Path) -> dict[str, Any]:
         d.frame(5)
         scene = d.studio.project.scene()
         hd = (scene.get("settings") or {}).get("hd2d") or {}
+        renderer = d.studio.hd2d.renderer
+        saved_settings = saved.get("settings") or {}
         report: dict[str, Any] = {
-            "same_as_saved": scene == saved, "unsaved_after_opening": sorted(d.studio.project.dirty),
+            "same_as_saved": scene == saved, "shared_player_filled_in": sorted(ops.shared_player_ids(saved)),
+            "differences_apart_from_the_player": _differences(_as_saved(scene, saved, d.studio.project.player), saved),
+            "unsaved_after_opening": sorted(d.studio.project.dirty),
             "structures": len(hd.get("structures") or []), "scatter": sum(len(v) for v in (hd.get("scatter") or {}).values()),
             "water": sum(1 for e in scene["entities"] if "WaterSurface" in (e.get("behaviours") or [])),
             "lamps": sum(1 for lt in scene.get("lights") or [] if lt.get("type") != "ambient"),
-            "wind": hd.get("wind"), "motion": hd.get("motion"),
-            "drawn": d.studio.hd2d.renderer is not None and d.studio.hd2d.renderer.scatter is not None}
+            # wind is the room's (settings.wind); motion is settings.hd2d.motion, where {} is "on, as the kit sets it"
+            "wind_saved": saved_settings.get("wind"), "wind_reopened": (scene.get("settings") or {}).get("wind"),
+            "wind_drawn": [round(v, 2) for v in renderer.wind.vector] if renderer is not None else None,
+            "motion_saved": (saved_settings.get("hd2d") or {}).get("motion"), "motion_reopened": hd.get("motion"),
+            "motion_drawn_on": bool(renderer.motion.enabled) if renderer is not None else None,
+            "drawn": renderer is not None and renderer.scatter is not None}
+        assert not report["differences_apart_from_the_player"], report["differences_apart_from_the_player"]
+        assert report["wind_saved"] == report["wind_reopened"] == BREEZE, report
+        assert report["motion_saved"] == report["motion_reopened"] is not None and report["motion_drawn_on"], report
         counts, modes = [], []
         for _ in range(5):
             for _press in range(2):

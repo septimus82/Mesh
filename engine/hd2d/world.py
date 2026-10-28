@@ -72,6 +72,20 @@ class Wall:
     name: str
     lo: tuple[float, float, float]
     hi: tuple[float, float, float]
+    turned: tuple[float, float, float, float, float, float] | None = None  # centre x, y, half extents, cos, sin
+
+    def overlaps(self, x: float, y: float, half_w: float, half_h: float) -> bool:
+        """Whether a feet box centred at (x, y) overlaps the wall's footprint: its box, or, turned off the axes,
+        the turned box itself (a separating-axis test on the wall's own two axes)."""
+        if not (self.lo[0] < x + half_w and self.hi[0] > x - half_w and self.lo[1] < y + half_h
+                and self.hi[1] > y - half_h):
+            return False
+        if self.turned is None:
+            return True
+        cx, cy, ex, ey, c, s = self.turned
+        dx, dy = x - cx, y - cy
+        return (abs(dx * c + dy * s) < ex + half_w * abs(c) + half_h * abs(s)
+                and abs(-dx * s + dy * c) < ey + half_w * abs(s) + half_h * abs(c))
 
 
 def _surface(floor: str, solid: bool, corners: tuple[tuple[float, float, float], ...]) -> Surface | None:
@@ -95,27 +109,20 @@ def _place(p: tuple[float, float, float], at: tuple[float, float, float], turn: 
     return (at[0] + (c * p[0] - s * p[1]) * scale, at[1] + (s * p[0] + c * p[1]) * scale, at[2] + p[2] * scale)
 
 
-WALL_SLICE = 0.25  # m: a wall turned off the axes is kept as boxes no wider or longer than this
-
-
-def _walls(name: str, lo: tuple[float, float, float], hi: tuple[float, float, float], at: tuple[float, float, float],
-           turn: float, scale: float) -> list[Wall]:
-    """A wall collider placed in the room, as the axis-aligned boxes movement checks. Turned by a right angle (or not
-    at all) it is one exact box. At any other turn, the box round its turned corners covers far more than the wall
-    (a bridge turned 74 degrees: its railings' boxes covered the deck between them), so it is cut into slices
-    ``WALL_SLICE`` across at most, each boxed on its own: their union hugs the turned wall."""
-    square = math.isclose(turn % 90.0, 0.0, abs_tol=1e-6) or math.isclose(turn % 90.0, 90.0, abs_tol=1e-6)
-    nx = 1 if square else max(1, math.ceil((hi[0] - lo[0]) * scale / WALL_SLICE))
-    ny = 1 if square else max(1, math.ceil((hi[1] - lo[1]) * scale / WALL_SLICE))
-    out = []
-    for i in range(nx):
-        for j in range(ny):
-            x0, x1 = lo[0] + (hi[0] - lo[0]) * i / nx, lo[0] + (hi[0] - lo[0]) * (i + 1) / nx
-            y0, y1 = lo[1] + (hi[1] - lo[1]) * j / ny, lo[1] + (hi[1] - lo[1]) * (j + 1) / ny
-            corners = [_place((x, y, z), at, turn, scale) for x in (x0, x1) for y in (y0, y1) for z in (lo[2], hi[2])]
-            xs, ys, zs = [p[0] for p in corners], [p[1] for p in corners], [p[2] for p in corners]
-            out.append(Wall(name, (min(xs), min(ys), min(zs)), (max(xs), max(ys), max(zs))))
-    return out
+def _wall(name: str, lo: tuple[float, float, float], hi: tuple[float, float, float], at: tuple[float, float, float],
+          turn: float, scale: float) -> Wall:
+    """A wall collider placed in the room. Turned by a right angle (or not at all) it is one exact box. At any other
+    turn it keeps the turned box itself: the box round its turned corners covers far more than the wall (a bridge
+    turned 74 degrees: its railings' boxes covered the deck between them). One collider however big the wall."""
+    corners = [_place((x, y, z), at, turn, scale) for x in (lo[0], hi[0]) for y in (lo[1], hi[1]) for z in (lo[2], hi[2])]
+    xs, ys, zs = [p[0] for p in corners], [p[1] for p in corners], [p[2] for p in corners]
+    box_lo, box_hi = (min(xs), min(ys), min(zs)), (max(xs), max(ys), max(zs))
+    if math.isclose(turn % 90.0, 0.0, abs_tol=1e-6) or math.isclose(turn % 90.0, 90.0, abs_tol=1e-6):
+        return Wall(name, box_lo, box_hi)
+    cx, cy, _ = _place(((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, 0.0), at, turn, scale)
+    a = math.radians(turn)
+    turned = (cx, cy, (hi[0] - lo[0]) * scale / 2, (hi[1] - lo[1]) * scale / 2, math.cos(a), math.sin(a))
+    return Wall(name, box_lo, box_hi, turned)
 
 
 def _on_level(solid: Any, z: float) -> bool:
@@ -144,7 +151,7 @@ class World:
             for col in models[st.model].colliders:
                 floor = f"{st.id}/{col.node}"
                 if col.kind == "wall":
-                    self.walls.extend(_walls(floor, col.lo, col.hi, at, st.rotation, st.scale))
+                    self.walls.append(_wall(floor, col.lo, col.hi, at, st.rotation, st.scale))
                     continue
                 for a, b, c in col.triangles:
                     placed = (_place(a, at, st.rotation, st.scale), _place(b, at, st.rotation, st.scale),
@@ -251,8 +258,7 @@ class World:
                 if top > h + STEP and (surface.solid or top < h + BODY):
                     return None  # inside a solid, or a floor too low to fit under
         for wall in self.walls:
-            if (wall.lo[0] < x + half_w and wall.hi[0] > x - half_w and wall.lo[1] < y + half_h
-                    and wall.hi[1] > y - half_h and wall.lo[2] < h + BODY and wall.hi[2] > h + STEP):
+            if wall.lo[2] < h + BODY and wall.hi[2] > h + STEP and wall.overlaps(x, y, half_w, half_h):
                 return None
         return h, best[1].floor
 

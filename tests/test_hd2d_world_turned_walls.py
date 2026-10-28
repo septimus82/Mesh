@@ -73,3 +73,31 @@ def test_a_footbridge_deck_crosses_water_that_blocks_and_the_bank_does_not() -> 
     for _ in range(20):  # north on the ground beside the deck, into the water
         world.move(on_bank, (0, 8), [water])
     assert _feet_y(on_bank) < 1.5, "walked into water that blocks"
+
+
+def _block(turn: float, half: float, scale: float = 1.0) -> World:
+    """A solid square wall block ``2 * half`` m across (times ``scale``), turned ``turn`` degrees about the origin."""
+    settings = parse_hd2d({"structures": [{"id": "s", "model": "m.glb", "x": 0, "y": 0, "rotation": turn, "scale": scale}],
+                           "ground": {"from": [-960, -960], "to": [960, 960]}})
+    block = [_box_top("block", "wall", -half, -half, half, half, 0, 3)]
+    return World(settings, {"m.glb": Model(Path("m.glb"), [], block)})
+
+
+@pytest.mark.parametrize(("turn", "half", "scale"), [(45.0, 1.0, 1.0), (30.0, 10.0, 1.0), (45.0, 2.0, 2.5)])
+def test_a_broad_turned_wall_is_one_collider_that_fits_its_turned_footprint(turn: float, half: float, scale: float) -> None:
+    """A broad or scaled turned wall stays one collider (it used to be cut into 0.25 m slices both ways: a 20 m block
+    turned 30 degrees was 6,400 boxes and a 40 m route past it took 15 s to plan), and it stops a character exactly
+    at its turned sides: blocked just inside, free just outside, though both are inside the box round its corners."""
+    world = _block(turn, half, scale)
+    assert len(world.walls) == 1
+    a, side = math.radians(turn), half * scale
+    feet = (0.05, 0.05)
+    for along in (-0.8, 0.0, 0.8):  # points along the wall's +x side, in its own frame
+        for out, blocked in ((-0.1, True), (0.1, False)):
+            lx, ly = side + feet[0] + out, along * side  # local: just inside / outside the side, by the feet box
+            x, y = lx * math.cos(a) - ly * math.sin(a), lx * math.sin(a) + ly * math.cos(a)
+            assert (world.stand(x, y, 0.0, *feet) is None) is blocked, f"{(lx, ly)} local, turn {turn}"
+    gap = (0.8 * side, 0.8 * side)  # inside the box round its corners, outside the turned block
+    assert world.walls[0].hi[0] > gap[0] and world.walls[0].hi[1] > gap[1]
+    assert world.stand(*gap, 0.0, *feet) is not None
+

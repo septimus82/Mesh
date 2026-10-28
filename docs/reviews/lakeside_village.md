@@ -72,7 +72,17 @@ Two kinds of step are not Studio input:
 - **Vegetation animation:** standing still, 21,663 of 921,600 (189,584 over 30 frames) pixels change from one frame to the next (plants swaying in the breeze, the water).
 - **GPU objects:** unchanged across room changes.
 
-**Save, close, reopen in Studio:** closed and reopened, nothing unsaved after opening and none at the end. The room Studio opens is the saved file exactly, apart from the player: the file keeps them as the project's player, and Studio shows that player expanded, as it does in every room. The reopened room has 15 structures, 13,395 scattered things, 2 waters, 4 lamps, and the wind and motion. Play (F4) and Stop five times switched mode each time, with GPU objects unchanged.
+**Save, close, reopen in Studio:** closed and reopened, nothing unsaved after opening and none at the end.
+
+- **The whole room matches the saved file**, compared key by key. There is one known difference: the file keeps the player as a reference to the project's shared player, and Studio holds it filled in from that prefab. The check folds it back with `ops.thin_player`, the function Studio itself stores rooms with, and then finds no differences. The raw comparison is still recorded (`same_as_saved: false`) with the player named.
+- **Wind and motion survive**, read from where they are saved:
+  - wind is the room's `settings.wind`: Breeze (speed 3, gust 0.3, direction 0), the same in the file and the reopened room, and drawn as 3 m/s east;
+  - motion is `settings.hd2d.motion`: `{}`, which means animation on with the kit's settings (a room without it stands still). It is the same in both, and the reopened view animates.
+  - The first evidence read wind under `hd2d` (it isn't saved there) and printed motion's `{}` without saying what it means: that is why it showed `wind: null` and `motion: {}`.
+- The reopened room has 15 structures, 13,395 scattered things, 2 waters and 4 lamps.
+- Play (F4) and Stop five times switched mode each time, with GPU objects unchanged.
+
+The reopen phase now asserts all of this. It was rerun after review on a copy of the delivered project (the copy was otherwise unchanged; only Studio's session-state file differed).
 
 **Export:** `mesh export build` gave 1,057 files (11.5 MB). Run outside Studio with the bundle's own engine (a hidden window):
 - it starts in the Village;
@@ -90,7 +100,13 @@ Two kinds of step are not Studio input:
 - fast tier: 4,843 passed;
 - GPU tier (every hidden-window test, the HD-2D and water ones among them, after both engine fixes): 173 passed;
 - ruff and the ruff gate: ok;
-- mypy: at its 73-error baseline.
+- mypy: at its 73-error baseline;
+- CI at `2e97320`: green on Windows and Linux (9,948 tests per platform), release bundles built.
+
+**After review** (the turned-box collider and the stricter reopen phase; targeted runs, not the whole suite again):
+- the HD-2D world, tunnelling, turned-wall, structure-editing and saved-world tests, fast and GPU: 164 passed;
+- the reopen and play phases on a copy of the delivered project: every assertion passed, and play's results are identical to the first run's;
+- ruff, the ruff gate, and mypy (fresh cache, the whole repository): ok, 73.
 
 **Screenshots** (the game's camera, 1280 × 720; [evidence folder](lakeside_village_evidence/)):
 
@@ -114,16 +130,33 @@ Two kinds of step are not Studio input:
 
 **A structure turned off a right angle blocked its own walkway.** A wall collider is kept as an axis-aligned box. Turned 74°, each of the bridge's railings became the box round its turned corners, about 1.75 × 5.8 m, which covered the deck between them, so the bridge couldn't be crossed. Studio's Turn field and +15 button make such turns easy for any creator.
 
-**Fix** (`engine/hd2d/world.py`, `_walls`):
+**Fix** (`engine/hd2d/world.py`, `_wall` and `Wall.overlaps`):
 
 - a wall turned by a right angle (or not at all) stays one exact box;
-- at any other turn, it is cut into slices no more than 0.25 m across, each boxed on its own, so their union hugs the turned wall;
-- movement code is unchanged.
+- at any other turn, the wall keeps its turned box: one collider, with the box round its corners as a quick first check, then an exact separating-axis test on the wall's own two axes;
+- the rest of movement is unchanged.
 
-**Regression tests:** `tests/test_hd2d_world_turned_walls.py` (9 of its 10 tests).
+**Revised after review.** The first version cut a turned wall into slices no more than 0.25 m across, both ways. That was accurate, but the collider count grew with the wall's area, and every movement and navigation check scans all walls. Measured with a solid square wall block on open ground (a route planned across a 48 m room past it):
 
-- A railed walkway turned 74°, 15°, 45° or −30° can be walked along, and its railings still stop a walker crossing them. These fail before the fix (4 of 9) and pass after.
+| Block | Sliced: colliders | Sliced: route | Turned box: colliders | Turned box: route |
+|---|---|---|---|---|
+| 2 m, upright | 1 | 0.17 s | 1 | 0.17 s |
+| 2 m, 45° | 64 | 0.23 s | 1 | 0.14 s |
+| 6 m, 45° | 576 | 1.2 s | 1 | 0.29 s |
+| 10 m (4 m × 2.5 scale), 45° | 1,600 | 4.0 s | 1 | 0.38 s |
+| 20 m, 30° | 6,400 | 15.2 s | 1 | 0.44 s |
+
+- **Movement:** about 1.0 ms a step sliced, beside the 20 m block, against 0.06 ms with the turned box.
+- **Navigation grid:** 3.2 s sliced against 0.09 s.
+- What remains grows with the route's length and detour, not with walls.
+- **Lakeside itself:** 74 wall boxes became 28. The navigation grid takes 0.30 s either way. The turned box is exact rather than stepped, so one more cell beside the bridge's rails is walkable.
+- **The play phase**, rerun on a copy of the delivered project with the turned boxes, gave identical results: every route, navigation check and frame count.
+
+**Regression tests:** `tests/test_hd2d_world_turned_walls.py` (12 of its 13 tests).
+
+- A railed walkway turned 74°, 15°, 45° or −30° can be walked along, and its railings still stop a walker crossing them. These fail before either version of the fix and pass after.
 - A right-angle turn keeps exactly one box per wall.
+- A broad or scaled turned wall (2 m at 45°, 20 m at 30°, 4 m × 2.5 at 45°) is one collider. It stops a character 0.1 m inside each turned side and lets one 0.1 m outside. A point inside the box round its corners but outside the wall is free. These 3 fail against the sliced version (its collider count) and pass after.
 
 **Water that blocks also blocked the bridge over it.** Water with Walk through it: Off becomes a solid box the water's size. A scene's 2D solid counted as on a character's level when within a body's height (1.5 m), so the inlet blocked a player on the footbridge 0.65 m above it.
 
@@ -176,7 +209,7 @@ Two kinds of step are not Studio input:
 
 ## Scope and safety
 
-- Two narrow engine fixes in `engine/hd2d/world.py` (turned walls; water under a bridge), with 10 regression tests. Plus the build script and this report with its evidence (screenshots, the run's report, the project as a zip).
+- Two narrow engine fixes in `engine/hd2d/world.py` (turned walls; water under a bridge), with 13 regression tests. Plus the build script and this report with its evidence (screenshots, the run's report, the project as a zip).
 - No new assets and no paid generation; only the HD-2D starter kit.
 - `main`, #344, the owner's projects, settings, stash and untracked files are untouched.
 - Hidden windows only.
@@ -185,7 +218,7 @@ Two kinds of step are not Studio input:
 
 **The village works:**
 - it was authored through Studio's controls, apart from the approved workarounds;
-- it saves, closes and reopens unchanged;
+- it saves, closes and reopens unchanged: the whole room, its wind and its motion, checked against the file;
 - it plays: every route, the bridge, the water, the elevations, navigation, animation, collisions;
 - it exports and runs outside Studio;
 - existing 2D projects still work;

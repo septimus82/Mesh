@@ -472,13 +472,32 @@
  },
  "reopen": {
   "same_as_saved": false,
+  "shared_player_filled_in": [
+   "lakeside_player_128_128_0_0"
+  ],
+  "differences_apart_from_the_player": [],
   "unsaved_after_opening": [],
   "structures": 15,
   "scatter": 13395,
   "water": 2,
   "lamps": 4,
-  "wind": null,
-  "motion": {},
+  "wind_saved": {
+   "direction": 0.0,
+   "gust": 0.3,
+   "speed": 3.0
+  },
+  "wind_reopened": {
+   "direction": 0.0,
+   "gust": 0.3,
+   "speed": 3.0
+  },
+  "wind_drawn": [
+   3.0,
+   0.0
+  ],
+  "motion_saved": {},
+  "motion_reopened": {},
+  "motion_drawn_on": true,
   "drawn": true,
   "play_stop_modes": [
    "play",
@@ -680,5 +699,9 @@
    ]
   },
   "bundle_files": 1059
+ },
+ "review_corrections": {
+  "reopen": "rerun with the room compared to the saved file (the shared player normalised with ops.thin_player), wind read from settings.wind and motion from settings.hd2d.motion, on a copy of the delivered project",
+  "play": "rerun on a copy of the delivered project with one turned-box collider per wall"
  }
 }
