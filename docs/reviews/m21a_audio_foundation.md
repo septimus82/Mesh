@@ -70,7 +70,7 @@ Each was reproduced on `c386384` first. The probes use the same scratch starter 
 **Buses:**
 - **`music`, `ambience`, `sfx`,** each × master.
 - **Muting:** `set_muted(muted, bus)` for everything or one bus, keeping volumes.
-- **Live changes:** `set_*_volume` applies to what is playing, mid-crossfade included.
+- **Live changes:** `set_*_volume` and muting apply at once to the music and ambience playing, mid-crossfade included. A one-shot sound effect takes the SFX bus's level when it starts: a change is heard from the next one.
 - **Ambience volume** goes in `config.json`, `user_settings.json` and the console (`set ambience`). There's no menu slider until something plays on that bus (M21B).
 
 **Ambience loops:**
@@ -225,7 +225,7 @@ Listen for:
 
 **Technical audio: CONDITIONAL PASS.**
 - Music plays reliably, and tracks crossfade with real overlap (WAV and MP3).
-- Music, ambience and SFX volumes are independent and change live.
+- Music, ambience and SFX volumes are independent. Music and ambience change live; sound effects from the next one played.
 - Room changes, Play/Stop cycles, saves, pauses, missing or broken files and closing leave no duplicated or leaked players, in deterministic tests and on the real backend.
 
 Conditions:

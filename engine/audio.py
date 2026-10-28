@@ -163,7 +163,8 @@ class AudioManager:
 
     Three buses, each scaled by the master volume: ``music`` (the soundtrack), ``ambience`` (persistent
     environmental loops, keyed so a room loaded again doesn't start a second copy) and ``sfx`` (one-shot sounds).
-    Changing a volume or muting applies to what is already playing; nothing restarts.
+    Changing a volume or muting applies at once to the music and ambience playing (nothing restarts); a one-shot
+    sound effect takes its bus's level when it starts.
 
     Music changes are real crossfades: the new track starts while the old one fades out, both advance, and the
     old one's player is released once silent. The same track asked for again keeps playing from where it is."""

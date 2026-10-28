@@ -8,7 +8,11 @@ Mesh plays three kinds of sound, each on its own **bus**, and every bus is scale
 | **Ambience** | persistent loops: wind, water, birds, room tone (Milestone 21B adds emitters that place them in the world) | `ambience_volume` |
 | **SFX** | one-shot sounds: footsteps, hits, interactions, UI | `sfx_volume` |
 
-A sound's loudness is its own volume × its bus's volume × the master volume. Changing a volume, or muting, applies at once to what is already playing: nothing restarts. Muting keeps the volumes, so unmuting restores them.
+A sound's loudness is its own volume × its bus's volume × the master volume. Muting keeps the volumes, so unmuting restores them.
+
+**When a change is heard:**
+- **Music and ambience:** a volume change or a mute applies at once to the tracks and loops already playing, mid-crossfade included; nothing restarts.
+- **Sound effects:** each one-shot takes its bus's level when it starts and keeps it. A change, or a mute, is heard from the next sound effect; any already sounding finish as they began (most last under a second).
 
 **Where the volumes come from:** the project's `config.json` (`master_volume`, `music_volume`, `ambience_volume`, `sfx_volume`); the player's own settings (`user_settings.json`: music, SFX and ambience); the console (`set volume`, `set music`, `set sfx`, `set ambience`).
 
