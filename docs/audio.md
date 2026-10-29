@@ -23,6 +23,8 @@ A sound's loudness is its own volume × its bus's volume × the master volume. M
 
 A room's `settings` decide its music as it is entered: on walking in through a door, on loading a save, and on entering a room again.
 
+In Mesh Studio: Audio > **Room music...** sets these for the room being edited: **Continue previous music** (no `music` setting), **Silence** (`null`) or **Play a track** (a project file; Import music file... copies one into `assets/music/`). Rooms > **Set as starting room** chooses the room a new game starts in (Milestone 23D).
+
 | The room's settings | What plays |
 |---|---|
 | no `music` setting | **the music playing carries on**: a track from an earlier room, or silence |

@@ -393,6 +393,80 @@ def world_rooms(world: Doc) -> list[tuple[str, str, str]]:
     return sorted(rows, key=lambda row: (row[0] != start, row[1].lower()))
 
 
+def start_room(world: Doc) -> str | None:
+    """The room a new game starts in, as the game finds it (``engine.world_controller``): the world's
+    ``start_scene``, else its older ``initial_scene_key``, else its first room tagged "start"; None when that names no
+    room of the world (the game then starts at its ``config.json``'s ``start_scene`` path)."""
+    listed = world.get("scenes")
+    scenes: Doc = listed if isinstance(listed, dict) else {}
+    key = world.get("start_scene") or world.get("initial_scene_key")
+    if not key:
+        key = next((k for k, v in scenes.items() if isinstance(v, dict) and "start" in (v.get("tags") or [])), None)
+    return str(key) if key and isinstance(scenes.get(key), dict) and scenes[key].get("path") else None
+
+
+def set_start_room(world: Doc, key: Any) -> Doc:
+    """The room a new game starts in (Milestone 23D): the world's ``start_scene`` set to ``key``, one of its rooms
+    (``world_rooms``' keys). Nothing else changes: the rooms keep their order, keys and files, and a save made in a
+    game goes on loading the room it was made in."""
+    listed = world.get("scenes")
+    scenes: Doc = listed if isinstance(listed, dict) else {}
+    if not isinstance(key, str) or not isinstance(scenes.get(key), dict) or not scenes[key].get("path"):
+        raise OpError(f"There's no room {key!r} in this world (its rooms: {', '.join(k for k, _l, _p in world_rooms(world))}).")
+    out = copy.deepcopy(world)
+    out["start_scene"] = key
+    return out
+
+
+# --- a room's music (Milestone 23D; M21A's semantics: docs/audio.md) ------------------------------------------------
+
+MUSIC_MODES = ("continue", "silence", "track")
+
+
+def room_music(scene: Doc) -> Doc:
+    """The room's music as Studio shows it: ``mode`` "continue" (no ``settings.music``: the music playing carries
+    on, a track or silence), "silence" (``"music": null`` or ``""``: it stops, or fades out) or "track" (``path``: that
+    file plays, or carries on if it is already playing); "continue" also for a setting the game ignores (``error``)."""
+    raw = scene.get("settings")
+    settings: Doc = raw if isinstance(raw, dict) else {}
+    if "music" not in settings:
+        return {"mode": "continue", "path": ""}
+    music = settings["music"]
+    if music is None or music == "":
+        return {"mode": "silence", "path": ""}
+    if isinstance(music, str):
+        return {"mode": "track", "path": music}
+    return {"mode": "continue", "path": "", "error": f"its music setting {music!r} isn't a file: the game ignores it"}
+
+
+def set_room_music(scene: Doc, mode: Any, path: Any = "") -> Doc:
+    """The room's music as it is entered: ``mode`` "continue" (the ``music`` setting taken away: the music playing
+    carries on), "silence" (``"music": null``) or "track" with ``path``, a project file (.wav, .ogg or .mp3, relative
+    to the project, forward slashes). The same file as the room before keeps playing on entry, uninterrupted."""
+    from engine.sound_emitters import SOUND_FILES  # noqa: PLC0415
+
+    if mode not in MUSIC_MODES:
+        raise OpError(f"A room's music is one of {', '.join(MUSIC_MODES)} (got {mode!r}).")
+    out = copy.deepcopy(scene)
+    settings = out.get("settings")
+    if settings is not None and not isinstance(settings, dict):
+        raise OpError("This room's settings aren't readable.")
+    if mode == "track":
+        rel = str(path or "").strip().replace(chr(92), "/")
+        if not rel:
+            raise OpError("Choose the track this room plays.")
+        if rel.startswith("/") or ":" in rel or ".." in rel.split("/"):
+            raise OpError(f"A room's music is a file inside the project, e.g. assets/music/theme.ogg (got {path!r}).")
+        if posixpath.splitext(rel)[1].lower() not in SOUND_FILES:
+            raise OpError(f"A room's music is a .wav, .ogg or .mp3 file (got {path!r}).")
+        out.setdefault("settings", {})["music"] = rel
+    elif mode == "silence":
+        out.setdefault("settings", {})["music"] = None
+    elif settings:
+        settings.pop("music", None)
+    return _checked(scene, out)
+
+
 def new_room(world: Doc, label: str, scenes_dir: str, player_template: Doc | None) -> tuple[Doc, Doc, str, str]:
     """Create a room document and register it. Returns ``(world, scene, key, path)``."""
     label = str(label).strip()

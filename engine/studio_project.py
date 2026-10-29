@@ -81,7 +81,7 @@ class Project:
         rooms = ops.world_rooms(self.world)
         if not rooms:
             raise ValueError(f"{world_file} lists no rooms")
-        self.current: str = str(self.world.get("start_scene") or rooms[0][0])
+        self.current: str = ops.start_room(self.world) or rooms[0][0]  # (a world naming no room of its own: its first)
         self._undo: list[_State] = []
         self._redo: list[_State] = []
         self.revision = 0  # goes up with every change, undo and redo: what an AI's view is "as of"
@@ -113,7 +113,18 @@ class Project:
         return str(Path(self.path(self.start_key())).parent.as_posix())
 
     def start_key(self) -> str:
-        return str(self.world.get("start_scene") or self.rooms()[0][0])
+        """The room a new game starts in (``ops.start_room``), else the first room (a world naming none of its own)."""
+        return ops.start_room(self.world) or self.rooms()[0][0]
+
+    def set_start_room(self, key: str) -> None:
+        """A new game starts in room ``key`` (Milestone 23D): the world's ``start_scene``, one undo step; the room being
+        edited stays the one being edited. An OpError (no such room) changes nothing."""
+        world = ops.set_start_room(self.world, key)
+        if world == self.world:
+            return
+        before = self._snapshot()
+        self._record(before)
+        self.world, self.world_dirty = world, True
 
     def scene(self, key: str | None = None) -> Doc:
         """A room as editors see it: the shared player filled in (don't change it in place)."""
@@ -516,10 +527,17 @@ class Project:
         rel = [p.relative_to(self.root).as_posix() for p in found]
         return sorted(rel, key=lambda r: (not r.startswith("assets/ambience/"), r.lower()))
 
-    def import_sound(self, sound_path: Path | str) -> str:
-        """Copy a sound file into ``assets/ambience/`` and return its project-relative path, after checking this
-        computer can play it (``sound_emitters.sound_problem``). One already in the project is used where it is; one
-        with the same name and the same bytes is not copied again."""
+    def music_files(self) -> list[str]:
+        """Every sound file under ``assets/`` (.wav, .ogg, .mp3), project-relative, ``assets/music/`` first (Milestone
+        23D: a room's soundtrack; other sounds can be music too)."""
+        return sorted(self.sounds(), key=lambda r: (not r.startswith("assets/music/"), r.lower()))
+
+    def import_sound(self, sound_path: Path | str, folder_name: str = "ambience") -> str:
+        """Copy a sound file into ``assets/ambience/`` (or ``assets/<folder_name>/``: "music" for a room's
+        soundtrack) and return its project-relative path, after checking this computer can play it
+        (``sound_emitters.sound_problem``). One already in the project is used where it is; one with the same name
+        and the same bytes is not copied again; one with the same name and other bytes is copied under a new name
+        (``_2``...): a file already there is never replaced."""
         import shutil  # noqa: PLC0415
 
         from engine.sound_emitters import sound_problem  # noqa: PLC0415
@@ -534,16 +552,18 @@ class Project:
             inside = None
         if inside is not None:
             return inside.as_posix()
-        folder = self.root / "assets" / "ambience"
+        if folder_name not in ("ambience", "music"):
+            raise ValueError(f"sounds are imported into assets/ambience or assets/music, not {folder_name!r}")
+        folder = self.root / "assets" / folder_name
         folder.mkdir(parents=True, exist_ok=True)
         stem, suffix, n = ops.slug(source.stem) or "sound", source.suffix.lower(), 2
         candidate = stem
         while (folder / f"{candidate}{suffix}").exists():
             if (folder / f"{candidate}{suffix}").read_bytes() == source.read_bytes():
-                return f"assets/ambience/{candidate}{suffix}"  # already copied in
+                return f"assets/{folder_name}/{candidate}{suffix}"  # already copied in
             candidate, n = f"{stem}_{n}", n + 1
         shutil.copyfile(source, folder / f"{candidate}{suffix}")
-        return f"assets/ambience/{candidate}{suffix}"
+        return f"assets/{folder_name}/{candidate}{suffix}"
 
     # --- HD-2D models (engine.hd2d.catalog: copied in straight away, like pictures; not part of undo) ----------
     def model_assets(self) -> list[Any]:
