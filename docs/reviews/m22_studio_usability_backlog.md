@@ -19,7 +19,7 @@ These were found while building Lakeside Village ([`lakeside_village.md`](lakesi
 ## Found in M23A (the owner's first creator test)
 
 - ~~Sculpt, Paint and Scatter were hard to find~~ (buried at the end of a long left panel): M23A puts the tools in categories (Rooms, Terrain, Objects, Environment, Audio), opens maximised, and lets the panels be hidden (Tools, Inspector, Focus, Tab). See `m23a_responsive_workspace.md`.
-- **Snow and windborne leaves can't be authored in Studio.** They exist as particle presets (`engine/scene_particles.py`: rain, snow, wind), but Studio's weather controls (Environment: Rain and weather sounds...) only set rain. For a later environment milestone.
+- **Snow and windborne leaves can't be authored in Studio.** They exist as particle presets (`engine/scene_particles.py`: rain, snow, wind), but Studio's weather controls (Environment: Rain and weather sounds...) only set rain. **Done in M23C** (Environment > Weather particles...: `docs/reviews/m23c_weather_authoring.md`).
 - **An empty inspector still takes its 330 px** when nothing is selected. M23A leaves it shown: hiding it automatically with each selection would move the view about. The Inspector button hides it.
 
 ## Found in M22A

@@ -127,6 +127,7 @@ class Hd2dView:
         self.object_marker: tuple[float, float, float] | None = None  # where an object being placed would stand (m)
         self.snap = True
         self.weather = True  # Milestone 18B, "Preview weather": the room's rain, snow or leaves in this view too
+        self.weather_asks: str | None = None  # (M23C) the kind whose None would take away more than one effect: asked
         self.picker = Picker()
         self.tips: list[tuple[Any, str]] = []  # (button, short tooltip) for the 3D view's buttons
         self._room: str | None = None
@@ -164,6 +165,7 @@ class Hd2dView:
         """After every load of the room (opening it, an edit, undo, redo, stopping Play): keep the editor's view,
         drop a selection that no longer exists, and frame the room when it is new to the view."""
         key = self.studio.project.current
+        self.weather_asks = None  # (a question about effects an undo or another room may have changed: not kept)
         if self.stroke is not None:  # the room was loaded again mid-stroke (undo, a room change, Play): it's gone
             self.stroke = None
             self.studio._say("Stroke cancelled: the room was loaded again.", ok=False)
@@ -863,6 +865,9 @@ class Hd2dView:
         box.add(self._button("Camera and sun...", self.open_environment, "The game's camera, the sun, the ambient "
                              "light and the sky", width=width,
                              style=S_ACTIVE if studio.panel == "environment" else S_BUTTON))
+        box.add(self._button("Weather particles...", self.open_weather, "Rain, snow and windborne leaves: how much, "
+                             "shown or not, and the wind they move in", width=width,
+                             style=S_ACTIVE if studio.panel == "weather" else S_BUTTON))
         renderer = self.renderer
         if renderer is not None and renderer.particles is not None:  # the room has weather: show it here, or not
             box.add(self._button(f"Preview weather: {'on' if self.weather else 'off'}", self.toggle_weather,
@@ -1789,6 +1794,143 @@ class Hd2dView:
         renderer = self.renderer
         if self.weather and renderer is not None and renderer.particles is not None:
             renderer.particles.update(delta_time)
+
+    # ------------------------------------------------------------------ weather particles (Milestone 23C)
+    WEATHER_UNITS = {"rain": "drops", "snow": "snowflakes", "wind": "leaves"}
+    DIRECTIONS = (("East", 0.0), ("North", 90.0), ("West", 180.0), ("South", 270.0))  # (the wind blows toward)
+
+    def open_weather(self) -> None:
+        studio = self.studio
+        studio._flush_fields()
+        studio.panel = "inspect" if studio.panel == "weather" else "weather"
+        studio.panel_scroll, self.weather_asks = 0, None
+        studio._rebuild()
+
+    def set_weather(self, preset: str, said: str, **change: Any) -> None:
+        """One checked edit (``project_ops.set_weather``): one undo step; the view shows it at once."""
+        self.weather_asks = None
+        self.studio._edit(lambda s: ops.set_weather(s, preset, **change), said)
+
+    def _weather_none(self, preset: str, effects: int) -> None:
+        """None: that kind taken away. When the room has more than one effect of it (its own, kept by every other
+        change), asked first: Remove all, or Keep them."""
+        name = ops.WEATHER_KINDS[preset]
+        if effects > 1 and self.weather_asks != preset:
+            self.weather_asks = preset
+            self.studio._say(f"None takes away all {effects} {name.lower()} effects, with their own settings: Remove "
+                             f"all {effects} or Keep them, on the right.", ok=False)
+            self.studio._rebuild()
+            return
+        self.set_weather(preset, f"No {name.lower()}." if effects < 2 else
+                         f"No {name.lower()}: all {effects} effects taken away (Ctrl+Z brings them back).", strength="none")
+
+    def _weather_keep(self) -> None:
+        self.weather_asks = None
+        self.studio._say("Kept as they were.")
+        self.studio._rebuild()
+
+    def _show_weather(self, preset: str, name: str, on: bool) -> None:
+        self.set_weather(preset, f"{name} shown." if on else f"{name} hidden (kept: show it again here).", enabled=on)
+
+    def weather_panel(self, rows: Any, width: int) -> None:
+        """Rain, snow and windborne leaves (the room's ``settings.particles``, engine.scene_particles): for each, how
+        much (none, light, steady, heavy) and whether it is shown; the room's wind they all move in, in words; indoors
+        or out; the preview. Their sounds are the Sound panel's (Rain and weather sounds...)."""
+        from engine.scene_particles import MAX_EFFECTS  # noqa: PLC0415
+        from engine.wind import parse_wind  # noqa: PLC0415
+
+        studio = self.studio
+        scene = studio.project.scene()
+        raw = scene.get("settings")
+        settings: dict[str, Any] = raw if isinstance(raw, dict) else {}
+        quarter = (width - 12) // 4
+        rows.add(studio._label("Weather particles", bold=True, size=12))
+        rows.add(studio._label("Rain, snow and windborne leaves, drawn in the room's 3D world. Their sounds are set "
+                               "in Rain and weather sounds.", color=C_MUTED, size=9, width=width))
+        indoor = settings.get("weather_exposure") == "indoor"
+        if indoor:
+            rows.add(studio._label("This room is indoors: its rain and snow aren't shown, here or in play (its leaves "
+                                   "are).", color=C_WARN, size=9, width=width))
+        listed = settings.get("particles")
+        effects: list[Any] = listed if isinstance(listed, list) else []
+        for state in ops.weather_of(scene):
+            preset, name = state["preset"], ops.WEATHER_KINDS[state["preset"]]
+            if state["present"]:
+                shown = "shown" if state["enabled"] else "hidden"
+                status = f"{name}: {state['strength']}, {state['count']:,} {self.WEATHER_UNITS[preset]}, {shown}"
+            else:
+                status = f"{name}: none"
+            rows.add(studio._label(status, bold=True, size=10, width=width))
+            row = _row()
+            mine = 1 + state["extra"] if state["present"] else 0
+            for key in ("none", "light", "steady", "heavy"):
+                active = state["strength"] == key if state["present"] else key == "none"
+                if key == "none":
+                    action, tip = partial(self._weather_none, preset, mine), f"{name}: none" + (
+                        f" (takes away all {mine} {name.lower()} effects)" if mine > 1 else "")
+                else:
+                    action = partial(self.set_weather, preset, f"{name}: {key}.", strength=key)
+                    tip = f"{name}: {key} ({ops.WEATHER_STRENGTHS[preset][key]:,} {self.WEATHER_UNITS[preset]})"
+                row.add(self._button(key.capitalize(), action, tip, width=quarter,
+                                     style=S_ACTIVE if active else S_BUTTON))
+            rows.add(row)
+            if self.weather_asks == preset and mine > 1:
+                rows.add(studio._label(f"None removes all {mine} {name.lower()} effects, with their own settings "
+                                       "(Ctrl+Z brings them back).", color=C_WARN, size=9, width=width))
+                row = _row()
+                row.add(studio._button(f"Remove all {mine}", partial(self._weather_none, preset, mine),
+                                       width=(width - 4) // 2))
+                row.add(studio._button("Keep them", self._weather_keep, width=(width - 4) // 2))
+                rows.add(row)
+            if state["present"]:
+                rows.add(studio._toggle(f"{name} shown", state["enabled"], partial(self._show_weather, preset, name),
+                                        width))
+            kept = [f"its own {', '.join(state['custom'])}"] if state["custom"] else []
+            if state["extra"]:
+                kept.append(f"{state['extra']} more {name.lower()} effect{'s' if state['extra'] > 1 else ''}")
+            if kept:
+                rows.add(studio._label(f"Kept as set: {'; '.join(kept)}.", color=C_MUTED, size=9, width=width))
+        rows.add(studio._label(f"Weather effects in this room: {len(effects)} of {MAX_EFFECTS}.", color=C_MUTED, size=9,
+                               width=width))
+        rows.add(studio._button(f"Preview here: {'on' if self.weather else 'off'}", self.toggle_weather, width=width,
+                                style=S_ACTIVE if self.weather else S_BUTTON))
+        rows.add(studio._toggle("Outdoors (rain and snow fall)", not indoor, lambda on: studio._edit(
+            lambda s: ops.set_weather_exposure(s, "outdoor" if on else "indoor"),
+            "Outdoors: rain and snow fall." if on else "Indoors: no rain or snow here."), width))
+        try:
+            wind = parse_wind(settings.get("wind"))
+        except ValueError:
+            wind = parse_wind(None)
+        rows.add(studio._label("The room's wind", bold=True, size=11))
+        if wind.calm:
+            words = "Calm: rain and snow fall straight down; leaves drift on a light breeze of their own."
+        else:
+            toward = min(self.DIRECTIONS, key=lambda d: abs((wind.direction - d[1] + 180.0) % 360.0 - 180.0))[0]
+            words = (f"{wind.speed:g} m/s toward the {toward.lower()}, gusts {wind.gust:g}: the rain, snow and leaves "
+                     "move in it, and the room's plants sway in it.")
+        rows.add(studio._label(words, color=C_MUTED, size=9, width=width))
+        row = _row()
+        for title, speed, gust in self.WINDS:
+            now = abs(wind.speed - speed) < 1e-6 and (speed == 0 or abs(wind.gust - gust) < 1e-6)
+            row.add(self._button(title, lambda s=speed, g=gust, t=title: self.set_wind(t, speed=s, gust=g),
+                                 f"{title}: {speed:g} m/s, gusts {gust:g}" if speed else "No wind",
+                                 width=quarter, style=S_ACTIVE if now else S_BUTTON))
+        rows.add(row)
+        if not wind.calm:
+            row = _row()
+            for title, degrees in self.DIRECTIONS:
+                now = abs((wind.direction - degrees + 180.0) % 360.0 - 180.0) < 1e-6
+                row.add(self._button(f"To {title}", lambda d=degrees, t=title: self.set_wind(f"Toward the {t.lower()}",
+                                                                                         direction=d),
+                                     f"The wind blows toward the {title.lower()}", width=quarter,
+                                     style=S_ACTIVE if now else S_BUTTON))
+            rows.add(row)
+        rows.add(studio._label("Exact speed, direction and gusts: Wind and motion, in Environment.", color=C_MUTED,
+                               size=9, width=width))
+        row = _row()
+        row.add(studio._button("Rain and weather sounds...", studio.open_sound, width=(width - 4) * 2 // 3))
+        row.add(studio._button("Done", self.open_weather, width=(width - 4) // 3))
+        rows.add(row)
 
     # ------------------------------------------------------------------ the model browser (Stage 5B)
     # ------------------------------------------------------------------ the game's camera, sun and sky (Milestone 22A)
