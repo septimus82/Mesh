@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator
 
 from engine import project_ops as ops
-from engine.json_io import write_json_atomic
+from engine.json_io import read_json, write_json_atomic
 from engine.project_scaffold import ensure_starter_files
 
 Doc = dict[str, Any]
@@ -191,11 +191,38 @@ class Project:
     PREFABS = "assets/prefabs.json"
 
     def _read_prefabs(self) -> list[Doc]:
+        """The prefab list, to read the shared player from: none if the file is missing or can't be read (the project
+        still opens). Saving uses ``_prefab_catalogue``, which never takes an unreadable file for an empty one."""
         try:
-            data = json.loads((self.root / self.PREFABS).read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+            return self._prefab_catalogue()
+        except ops.OpError:
             return []
-        return data if isinstance(data, list) else []
+
+    def _prefab_catalogue(self) -> list[Any]:
+        """``assets/prefabs.json`` as it is, to save the shared player into: [] only when there is no such file (a new
+        or older project starts one). A file that is there but can't be read, isn't JSON or isn't a list is never
+        taken for an empty one (saving would replace every prefab in it): ops.OpError, before anything is written."""
+        path = self.root / self.PREFABS
+        try:
+            path.stat()
+        except FileNotFoundError:
+            return []
+        except OSError as err:
+            raise ops.OpError(self._unreadable_prefabs(f"it can't be read: {err}")) from err
+        try:
+            data = read_json(path)
+        except OSError as err:  # (no permission, locked, a folder...)
+            raise ops.OpError(self._unreadable_prefabs(f"it can't be read: {err}")) from err
+        except ValueError as err:  # (not JSON, or not UTF-8 text)
+            raise ops.OpError(self._unreadable_prefabs(f"it isn't valid JSON: {err}")) from err
+        if not isinstance(data, list):
+            raise ops.OpError(self._unreadable_prefabs(f"it holds {type(data).__name__}, not a list of prefabs"))
+        return data
+
+    def _unreadable_prefabs(self, why: str) -> str:
+        return (f"{self.PREFABS} isn't a prefab list Studio can read ({why}), so the player wasn't saved and nothing "
+                "was written: saving would have replaced the other prefabs in it. Fix or restore that file, then save "
+                "again; your changes are kept until then.")
 
     def _read_player(self) -> Doc | None:
         entry = next((p for p in self._read_prefabs() if isinstance(p, dict) and p.get("id") == ops.PLAYER_PREFAB), None)
@@ -705,7 +732,8 @@ class Project:
             targets.append((self.world_file, self.world))
         if self.player_dirty and self.player is not None:
             # The shared player is one entry of the project's prefab list: every other entry stays as it was.
-            prefabs = [p for p in self._read_prefabs() if not (isinstance(p, dict) and p.get("id") == ops.PLAYER_PREFAB)]
+            # (an unreadable or malformed file refuses the save here, before anything is written: H1-F2)
+            prefabs = [p for p in self._prefab_catalogue() if not (isinstance(p, dict) and p.get("id") == ops.PLAYER_PREFAB)]
             targets.append((self.PREFABS, [ops.player_prefab_entry(self.player), *prefabs]))
         for rel, doc in targets:
             self._keep_outside_change(rel)

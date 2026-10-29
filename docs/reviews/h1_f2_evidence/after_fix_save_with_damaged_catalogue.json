@@ -1,0 +1,74 @@
+[
+ {
+  "case": "malformed_before_open",
+  "damage_when": "before_open",
+  "valid_catalogue_ids": [
+   "player",
+   "person",
+   "sign"
+  ],
+  "player_loaded_at_open": false,
+  "catalogue_before_save": {
+   "sha": "58996f0b4bdda089",
+   "bytes": 6632
+  },
+  "save": {
+   "result": "refused: OpError: assets/prefabs.json isn't a prefab list Studio can read (it can't be read as JSON: Expecting property name enclosed in double quotes: line 253 column 1 (char 6632)), so the player wasn't saved and nothing was written: saving would have replaced the other prefabs in it. Fix or restore that file, then save again; your changes are kept until then."
+  },
+  "catalogue_after_save": {
+   "sha": "58996f0b4bdda089",
+   "unchanged": true,
+   "ids_now": "(not JSON: as damaged)"
+  },
+  "dirty_after_save": true,
+  "backup_files": []
+ },
+ {
+  "case": "malformed_after_open",
+  "damage_when": "after_open",
+  "valid_catalogue_ids": [
+   "player",
+   "person",
+   "sign"
+  ],
+  "player_loaded_at_open": true,
+  "catalogue_before_save": {
+   "sha": "58996f0b4bdda089",
+   "bytes": 6632
+  },
+  "save": {
+   "result": "refused: OpError: assets/prefabs.json isn't a prefab list Studio can read (it can't be read as JSON: Expecting property name enclosed in double quotes: line 253 column 1 (char 6632)), so the player wasn't saved and nothing was written: saving would have replaced the other prefabs in it. Fix or restore that file, then save again; your changes are kept until then."
+  },
+  "catalogue_after_save": {
+   "sha": "58996f0b4bdda089",
+   "unchanged": true,
+   "ids_now": "(not JSON: as damaged)"
+  },
+  "dirty_after_save": true,
+  "backup_files": []
+ },
+ {
+  "case": "wrong_root_before_open",
+  "damage_when": "before_open",
+  "valid_catalogue_ids": [
+   "player",
+   "person",
+   "sign"
+  ],
+  "player_loaded_at_open": false,
+  "catalogue_before_save": {
+   "sha": "6cfdf435b3a98229",
+   "bytes": 7457
+  },
+  "save": {
+   "result": "refused: OpError: assets/prefabs.json isn't a prefab list Studio can read (it holds dict, not a list of prefabs), so the player wasn't saved and nothing was written: saving would have replaced the other prefabs in it. Fix or restore that file, then save again; your changes are kept until then."
+  },
+  "catalogue_after_save": {
+   "sha": "6cfdf435b3a98229",
+   "unchanged": true,
+   "ids_now": "(not a list)"
+  },
+  "dirty_after_save": true,
+  "backup_files": []
+ }
+]
