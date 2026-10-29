@@ -78,7 +78,8 @@ class SoundMixin:
         rows.add(self._label("Sound and weather", bold=True, size=12))
         rows.add(self._label("What this room sounds like. Heard in play (F4); the editor stays silent.", color=C_MUTED,
                              size=9, width=width))
-        rows.add(self._label("Rain", color=C_MUTED, size=10))
+        rows.add(self._label("Rain (snow and windborne leaves: Environment, Weather particles...)" if self.hd2d.active
+                             else "Rain", color=C_MUTED, size=10, width=width))
         rain = ops.rain_strength(scene)
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         for key, title in RAIN_TITLES:

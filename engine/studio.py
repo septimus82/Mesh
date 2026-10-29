@@ -1822,6 +1822,8 @@ class Studio(InspectorMixin, SoundMixin):
             self.hd2d.models_panel(rows, width)
         elif self.panel == "environment" and self.hd2d.active:
             self.hd2d.environment_panel(rows, width)
+        elif self.panel == "weather" and self.hd2d.active:
+            self.hd2d.weather_panel(rows, width)
         elif self.panel == "import_model" and self.hd2d.active:
             self.hd2d.import_panel(rows, width)
         elif self.panel == "reimport_model" and self.hd2d.active:

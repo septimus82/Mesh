@@ -966,13 +966,84 @@ def rain_strength(scene: Doc) -> str:
 
 
 def set_rain(scene: Doc, strength: Any) -> Doc:
-    """The room's rain: ``strength`` "off", "light", "steady" or "heavy" (its ``rain`` particle effect; snow and
-    leaves the room has are kept). It falls in the room's wind; its sound is ``set_weather_sounds``' rain."""
+    """The room's rain: ``strength`` "off", "light", "steady" or "heavy" (its ``rain`` particle effect, shown; snow and
+    leaves the room has are kept, and so are its rain's own settings: ``set_weather``). It falls in the room's wind;
+    its sound is ``set_weather_sounds``' rain."""
     if strength not in RAIN_STRENGTHS:
         raise OpError(f"Rain must be one of {', '.join(RAIN_STRENGTHS)} (got {strength!r}).")
-    effects = [copy.deepcopy(e) for e in _particles_of(scene) if not (isinstance(e, dict) and e.get("preset") == "rain")]
-    if strength != "off":
-        effects.insert(0, {"preset": "rain", "count": RAIN_STRENGTHS[strength]})
+    if strength == "off":
+        return set_weather(scene, "rain", strength="none")
+    return set_weather(scene, "rain", strength=strength, enabled=True, first=True)
+
+
+# --- weather particles in Studio (Milestone 23C): rain, snow and windborne leaves -------------------------------
+
+WEATHER_KINDS = {"rain": "Rain", "snow": "Snow", "wind": "Windborne leaves"}  # preset -> what Studio calls it
+WEATHER_STRENGTHS: dict[str, dict[str, int]] = {  # particles in the box about the camera ("steady": the preset's own)
+    "rain": {k: v for k, v in RAIN_STRENGTHS.items() if k != "off"},
+    "snow": {"light": 800, "steady": 2000, "heavy": 4500},
+    "wind": {"light": 150, "steady": 400, "heavy": 900},
+}
+_PLAIN_WEATHER = {"preset", "count", "enabled"}  # what ``set_weather`` writes; anything else is the room's own
+
+
+def weather_of(scene: Doc) -> list[Doc]:
+    """The room's rain, snow and windborne leaves as Studio shows them, in that order: ``preset``, ``present``,
+    ``enabled``, ``strength`` ("none", or the nearest of "light", "steady", "heavy"), ``count``, ``custom`` (its own
+    settings beyond those, kept by every change: speed, area, seed...) and ``extra`` (more effects of that kind the
+    room has, also kept)."""
+    effects = [e for e in _particles_of(scene) if isinstance(e, dict)]
+    out = []
+    for preset, steps in WEATHER_STRENGTHS.items():
+        mine = [e for e in effects if e.get("preset") == preset]
+        if not mine:
+            out.append({"preset": preset, "present": False, "enabled": False, "strength": "none", "count": 0,
+                        "custom": [], "extra": 0})
+            continue
+        count = mine[0].get("count", steps["steady"])
+        count = int(count) if isinstance(count, (int, float)) and not isinstance(count, bool) else steps["steady"]
+        out.append({"preset": preset, "present": True, "enabled": mine[0].get("enabled", True) is not False,
+                    "strength": min(steps, key=lambda k: abs(steps[k] - count)), "count": count,
+                    "custom": sorted(set(mine[0]) - _PLAIN_WEATHER), "extra": len(mine) - 1})
+    return out
+
+
+def set_weather(scene: Doc, preset: Any, *, strength: Any = _UNSET, enabled: Any = _UNSET, first: bool = False) -> Doc:
+    """The room's rain (``preset`` "rain"), snow ("snow") or windborne leaves ("wind"; not the room's wind itself,
+    ``set_wind``, which they all move in): ``strength`` "none" (taken away: every effect of that kind), or "light",
+    "steady" or "heavy" (added if the room has none: at the end, or ``first``); ``enabled`` (false: kept, but not
+    shown). Only what is given changes, and only the room's first effect of that kind: its other settings (speed,
+    area, seed...), its other effects and its weather sounds are kept. A room has at most 4 effects."""
+    from engine.scene_particles import MAX_EFFECTS  # noqa: PLC0415
+
+    if preset not in WEATHER_STRENGTHS:
+        raise OpError(f"Weather is one of {', '.join(WEATHER_STRENGTHS)} (got {preset!r}).")
+    steps = WEATHER_STRENGTHS[preset]
+    if strength is not _UNSET and strength != "none" and strength not in steps:
+        raise OpError(f"{WEATHER_KINDS[preset]}: none, {', '.join(steps)} (got {strength!r}).")
+    if enabled is not _UNSET and not isinstance(enabled, bool):
+        raise OpError(f"{WEATHER_KINDS[preset]} is shown or not: true or false (got {enabled!r}).")
+    effects = [copy.deepcopy(e) for e in _particles_of(scene)]
+    if strength == "none":
+        return set_particles(scene, [e for e in effects if not (isinstance(e, dict) and e.get("preset") == preset)])
+    mine = next((e for e in effects if isinstance(e, dict) and e.get("preset") == preset), None)
+    if mine is None:
+        if strength is _UNSET:
+            raise OpError(f"This room has no {WEATHER_KINDS[preset].lower()}: choose how much first.")
+        if len(effects) >= MAX_EFFECTS:
+            raise OpError(f"A room has at most {MAX_EFFECTS} weather effects, and this one has {len(effects)}: "
+                          "take one away first.")
+        mine = {"preset": preset}
+        if first:
+            effects.insert(0, mine)
+        else:
+            effects.append(mine)
+    if strength is not _UNSET:
+        mine["count"] = steps[str(strength)]
+    if enabled is True:
+        mine.pop("enabled", None)  # (shown: as an effect is by default)
+    elif enabled is False:
+        mine["enabled"] = False
     return set_particles(scene, effects)
 
 
