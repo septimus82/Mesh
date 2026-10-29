@@ -127,3 +127,17 @@ Rooms written before M23D are read as they are, with no migration. `start_room` 
 - **GPU tier:** 252 passed (the 7 new tests included; every existing audio, soundscape, Studio and HD-2D test unchanged). The Village Play-parity check was added after that run; its module was rerun: 7 passed.
 - **Default selection:** 10,094 passed, 0 failed (247 skipped, 163 deselected).
 - **Gates:** ruff gate ok; mypy 73 (baseline). No timing budget or baseline changed.
+- **Required CI on `f683966`** (run 40849367364): green at the first attempt on every required job.
+  - tests on Ubuntu and on Windows: 10,092 passed each; no verify-all step failed.
+  - web-smoke and arcade3-canary: green.
+
+**The known Ubuntu `pytest-fast` timing pattern (#414, #415), reported separately; it failed nothing here:**
+- **Ubuntu (runner speed 0.93):** `pytest-fast` took 69.96 s and 70.10 s against 60.8 s expected at that speed (ratio 1.15). The advisory check called it "slow" by 0.05–0.10 s; the enforced limit (79.05 s) was ok.
+- **Windows (runner speed 1.19–1.23):** 134.8 s and 127.5 s, over the fixed 121.82 s. Rule F didn't fail it: within that slow runner's speed-adjusted range.
+
+The same ratio (about 1.15) was measured at the base `c5cd06d` before M23B, so it predates these milestones. In #415 an A/B run on one machine showed no fast-tier change from M23C. M23D adds 11 fast tests, about 3 s locally including imports.
+
+## Verdict
+
+**PASS.** In Mesh Studio alone, a creator can choose the opening room and give a three-room game its soundtrack: a track, carry on, silence. They can save, reopen, undo and redo, test with F4, and export, and the new game and the exported game start in the chosen room, with the music behaving as M21A specifies (from the audio manager's own state). Older projects and existing saves are kept as they were. Stopped for independent review before merging.
+
