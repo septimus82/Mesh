@@ -1,0 +1,169 @@
+{
+ "engine": "D:\\Games\\Mesh-m23d",
+ "project": "<scratch>\\r1_old\\project",
+ "bundle": null,
+ "A": {
+  "role": "A",
+  "scene_loads": [
+   "packs/core_regions/scenes/start.json"
+  ],
+  "new_game": {
+   "room": "start",
+   "story_flags": [],
+   "all_flags": [
+    "hint_shown_controls"
+   ],
+   "counters": {}
+  },
+  "opening": [
+   "Traveller! Thank the stars. The watchfire at the Old Crossing has gone dark.",
+   "Without it, anyone on the forest road tonight will lose their way. Will you light it before nightfall?",
+   "[choices: I'll light the watchfire. | Not right now.]",
+   "[chose: I'll light the watchfire.]",
+   "Bless you. Take my flint, and follow the road east, past the lamps, to the crossing."
+  ],
+  "marker": [
+   "The kindling in the firepit is dry, and you carry the steward's flint.",
+   "[choices: Strike the flint | Not yet]",
+   "[chose: Strike the flint]",
+   "Sparks catch. Flames climb the logs, and warm light spills across the crossing."
+  ],
+  "before_save": {
+   "room": "old_crossing",
+   "story_flags": [
+    "task_accepted",
+    "watchfire_lit"
+   ],
+   "fires": [
+    {
+     "name": "Watchfire",
+     "burning": true
+    }
+   ]
+  },
+  "saved": true,
+  "loaded": true,
+  "after_load": {
+   "room": "slot_a",
+   "story_flags": [
+    "task_accepted",
+    "watchfire_lit"
+   ],
+   "fires": [
+    {
+     "name": "Watchfire",
+     "burning": true
+    }
+   ]
+  }
+ },
+ "files_after_A": {
+  "saves": [
+   "slot_a.json"
+  ],
+  "session_last_scene_path": "saves/slot_a.json",
+  "workspace_last_scene_id": null
+ },
+ "B": {
+  "role": "B",
+  "scene_loads": [
+   "saves/slot_a.json",
+   "packs/core_regions/scenes/start.json"
+  ],
+  "new_game": {
+   "room": "start",
+   "story_flags": [
+    "task_accepted",
+    "watchfire_lit"
+   ],
+   "all_flags": [
+    "hint_shown_controls",
+    "task_accepted",
+    "watchfire_lit"
+   ],
+   "counters": {}
+  },
+  "opening": [
+   "I can see its glow from here! The watchfire burns again.",
+   "The forest road is safe tonight, thanks to you.",
+   "[choices: Glad to help.]"
+  ]
+ },
+ "files_after_B": {
+  "saves": [
+   "slot_a.json"
+  ],
+  "session_last_scene_path": "packs/core_regions/scenes/start.json",
+  "workspace_last_scene_id": null
+ },
+ "verdict": {
+  "checks": {
+   "new_game_story_flags_clear": false,
+   "opening_is_fresh_introduction": false,
+   "watchfire_starts_cold": false,
+   "explicit_load_restores_progress": false
+  },
+  "pass": false
+ },
+ "studio": {
+  "role": "studio",
+  "scene_loads": [
+   "packs/core_regions/scenes/start.json",
+   "packs/core_regions/scenes/start.json",
+   "packs/core_regions/scenes/start.json"
+  ],
+  "studio_room": "start",
+  "window_scene": "packs/core_regions/scenes/start.json",
+  "camera": [
+   512.0,
+   396.0
+  ]
+ },
+ "legacy_editor": {
+  "role": "studio",
+  "scene_loads": [
+   "packs/core_regions/scenes/start.json",
+   "packs/core_regions/scenes/start.json"
+  ],
+  "studio_room": null,
+  "window_scene": "packs/core_regions/scenes/start.json",
+  "camera": [
+   512.0,
+   396.0
+  ]
+ },
+ "studio_remembering_crossing": {
+  "role": "studio",
+  "scene_loads": [
+   "packs/core_regions/scenes/old_crossing.json",
+   "packs/core_regions/scenes/start.json",
+   "packs/core_regions/scenes/start.json"
+  ],
+  "studio_room": "start",
+  "window_scene": "packs/core_regions/scenes/start.json",
+  "camera": [
+   640.0,
+   372.0
+  ]
+ },
+ "legacy_editor_remembering_crossing": {
+  "role": "studio",
+  "scene_loads": [
+   "packs/core_regions/scenes/old_crossing.json",
+   "packs/core_regions/scenes/start.json"
+  ],
+  "studio_room": null,
+  "window_scene": "packs/core_regions/scenes/start.json",
+  "camera": [
+   640.0,
+   360.0
+  ]
+ },
+ "files_after_editors": {
+  "saves": [
+   "slot_a.json"
+  ],
+  "session_last_scene_path": "packs/core_regions/scenes/start.json",
+  "workspace_last_scene_id": null
+ }
+}

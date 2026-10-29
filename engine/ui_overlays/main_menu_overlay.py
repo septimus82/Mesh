@@ -688,10 +688,13 @@ class MainMenuOverlay(UIElement):
         return False
 
     def _handle_start_game_impl(self) -> None:
-        state = getattr(getattr(self.window, "game_state_controller", None), "state", None)
-        if state is not None and hasattr(state, "flags"):
+        controller = getattr(self.window, "game_state_controller", None)
+        if controller is not None:  # a new game starts clean: flags, counters, values and quests (Watchfire R1)
             try:
-                state.flags = {}
+                if callable(getattr(controller, "replace_state", None)):
+                    controller.replace_state({})
+                elif hasattr(getattr(controller, "state", None), "flags"):  # (a state holder without the controller's API)
+                    controller.state.flags = {}
             except Exception:
                 _log_swallow("MAIN-001", "engine/ui_overlays/main_menu_overlay.py pass-only blanket swallow")
                 pass

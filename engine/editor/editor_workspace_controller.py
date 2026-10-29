@@ -33,6 +33,7 @@ from engine.logging_tools import get_logger
 from engine.projects import add_recent_project, get_recent_projects, remove_recent_project, set_last_project
 from engine.runtime_settings import ensure_runtime_settings
 from engine.runtime_settings_storage import load_runtime_settings, resolve_runtime_settings_path, save_runtime_settings
+from engine.scene_runtime.room_memory import is_save_slot
 from engine.swallowed_exceptions import _log_swallow
 from engine.workspace_settings import WorkspaceSettings, load_workspace, save_workspace
 
@@ -241,6 +242,8 @@ class EditorWorkspaceController:
         editor.lights_tool_active = False
         editor.occluder_tool_active = False
 
+        if not self._reopens_editor_scene(settings.last_scene_id):
+            return
         if settings.last_scene_id:
             current_key = getattr(editor.window, "current_scene_key", None)
             if current_key != settings.last_scene_id:
@@ -379,6 +382,15 @@ class EditorWorkspaceController:
             _log_swallow("EWSP-003", "engine/editor/editor_workspace_controller.py blanket swallow", once=True)
             return
 
+    def _reopens_editor_scene(self, scene_path: str | None) -> bool:
+        """Whether the editor's remembered scene and camera (workspace.json, .mesh/editor_session_state.json) are
+        reopened: in an editor launch only, and never a save slot. A game's start is the game's own (Watchfire R1):
+        reopening the remembered scene in a game loaded the last save played and handed its progress to a new game."""
+        window = self._editor.window
+        if getattr(getattr(window, "engine_config", None), "_mesh_launch_mode", None) != "editor":
+            return False
+        return not (scene_path and is_save_slot(window, scene_path))
+
     def _load_editor_session_state(self) -> None:
         try:
             from engine.editor.editor_session_state import (  # noqa: PLC0415
@@ -394,7 +406,7 @@ class EditorWorkspaceController:
                 return
             state = load_editor_session_state(path=state_path)
             scene_path = str(state.last_scene_path or "").strip()
-            if not scene_path:
+            if not scene_path or not self._reopens_editor_scene(scene_path):
                 return
             target = Path(scene_path)
             if not target.is_absolute():
