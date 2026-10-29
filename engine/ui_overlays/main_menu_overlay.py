@@ -693,6 +693,9 @@ class MainMenuOverlay(UIElement):
             try:
                 if callable(getattr(controller, "replace_state", None)):
                     controller.replace_state({})
+                    resync = getattr(getattr(controller, "quests", None), "reload_from_state", None)
+                    if callable(resync):  # quests begin as in a fresh game: one without a start event starts now
+                        resync()
                 elif hasattr(getattr(controller, "state", None), "flags"):  # (a state holder without the controller's API)
                     controller.state.flags = {}
             except Exception:

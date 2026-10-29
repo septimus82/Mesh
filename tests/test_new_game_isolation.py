@@ -9,6 +9,7 @@ the game state. (The real two-process check: ``tests/test_new_game_isolation_gpu
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -114,3 +115,31 @@ def test_main_menu_new_game_clears_all_game_state() -> None:
     assert fresh.flags == {} and fresh.counters == {}
     assert "coins" not in fresh.values and not fresh.values.get("quests")
     assert requested == ["scenes/start.json"]
+
+
+class _GameWindow(SimpleNamespace):
+    """What the quest manager needs of a game window: its game state, as GameWindow gives it."""
+
+    @property
+    def game_state(self) -> object:
+        return self.game_state_controller.state
+
+
+def test_main_menu_new_game_starts_quests_as_a_fresh_game_does() -> None:
+    from engine.quests import QuestManager
+
+    window = _GameWindow(engine_config=SimpleNamespace(start_scene="scenes/start.json"), world_controller=None,
+                         editor_controller=SimpleNamespace(active=False), request_scene_change=lambda _path: None,
+                         emit_signal=lambda *_args, **_kwargs: None)
+    window.game_state_controller = GameStateController(window)
+    window.game_state_controller.quests = QuestManager(window)  # one shared manager, as GameWindow sets it up
+    fresh = copy.deepcopy(window.game_state_controller.state.values["quests"])
+    started = next(qid for qid, q in fresh.items() if q["status"] == "active")  # (a quest that starts by itself)
+    window.game_state_controller.state.values["quests"][started] = {  # (the last game finished it)
+        "status": "completed", "current_stage": None, "awaiting_stage": None, "completed_stages": []}
+
+    overlay = MainMenuOverlay.__new__(MainMenuOverlay)
+    overlay.window = window
+    MainMenuOverlay._handle_start_game_impl(overlay)
+
+    assert window.game_state_controller.state.values["quests"] == fresh

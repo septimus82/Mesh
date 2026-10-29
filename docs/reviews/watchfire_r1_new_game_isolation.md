@@ -58,8 +58,10 @@ Kept as before:
 - Safe mode and a scene named on the command line still win as before.
 
 **`engine/ui_overlays/main_menu_overlay.py`.** New Game resets with `game_state_controller.replace_state({})`, the same
-as the `MainMenu` behaviour. A new game starts with no flags, counters or values, and with fresh quest progress (it is
-kept in the state's values).
+as the `MainMenu` behaviour, so a new game starts with no flags, counters or values. Its quests are then re-derived
+from their definitions (`reload_from_state`), so they begin exactly as in a fresh process: a quest whose first stage
+has no start event is active at that stage again, and nothing finished in the last game stays finished. (Added in
+review; see "Quest state on New Game".)
 
 Not changed:
 
@@ -119,15 +121,17 @@ How to rerun:
 
 ## Tests
 
-**`tests/test_new_game_isolation.py`** (fast; 9 tests):
+**`tests/test_new_game_isolation.py`** (fast; 10 tests):
 
 - A game launch reopens neither the session's remembered room nor a remembered save.
 - The editor reopens its room but never a save.
 - `workspace.json`'s scene and camera reopen only in the editor, and never a save.
 - The main menu's New Game clears flags, counters, values and quests.
+- The main menu's New Game leaves quests exactly as a fresh start does (added in review). It uses the canonical
+  manager shared as `GameWindow` shares it, and the repo's own quest definitions.
 
-Against the 2d3f919 files, **7 fail and 2 pass**. The two that pass are the "editor reopens its room" cases, which
-should pass both before and after.
+Against the 2d3f919 files, **8 fail and 2 pass**. The two that pass are the "editor reopens its room" cases, which
+should pass both before and after. The quest test also fails against the overlay as first reviewed (18e3d1a).
 
 **`tests/test_new_game_isolation_gpu.py`** (the real-process check, GL-gated like the other `_gpu` tests): Mesh's starter
 template (`mesh new --template starter`), started by its own generated `main.py` in two processes.
@@ -150,7 +154,7 @@ Local (Windows):
 - Ruff gate: OK.
 - mypy: 73 errors, the baseline.
 - Exception-policy and tier-marker ratchets: pass, with no baseline changed.
-- Full default selection: 10,103 passed, 249 skipped, 163 deselected.
+- Full default selection: 10,104 passed, 249 skipped, 163 deselected (after the review change).
 - GPU tier (`MESH_GL_SMOKE=1`, every GL-gated test): 254 passed, including the real-process test.
 
 The first full run caught three things, all fixed before the PR:
@@ -162,6 +166,40 @@ The first full run caught three things, all fixed before the PR:
 
 Required CI and its timing advisories are reported on the PR, separately. No budget was changed.
 
+## Quest state on New Game (independent review of 18e3d1a)
+
+The first version of this report said the "legacy quest tracker (task #128)" survives New Game. Both parts were wrong:
+
+- **"#128"** was an internal backlog number, not a GitHub item. GitHub #128 is an unrelated closed pull request.
+- **The legacy tracker** (`engine/quest_manager.QuestManager`) is not what games run. `GameWindow.__init__`
+  (`engine/game.py:535`) puts the canonical `engine.quests.QuestManager` into `game_state_controller.quests`. So every
+  launch path shares that one manager: `main.py`, exported builds, `mesh play`, Mesh Studio and its play-tests, and the
+  legacy editor. Its progress is kept in `GameState.values["quests"]`, which saves write and loads restore. The `QuestGiver`
+  behaviour, the saves' `saved_quests` block and the Quest Log all use it. The legacy class exists only where a
+  `GameStateController` is built without a game window: unit tests and headless tools (`engine/tooling/plan_tester.py`,
+  `trace_command.py`). No game launch path builds it.
+
+Checked in a real hidden game window on a scratch starter project with one quest whose first stage has no start event:
+
+| Moment | Quest state |
+|---|---|
+| Fresh process | active, at its first stage |
+| After `replace_state({})`, R1 as reviewed (18e3d1a) | the quest block emptied; the quest comes back **inactive** and stays inactive after the room loads |
+| After the overlay's New Game, fixed | active at its first stage, the same as a fresh process |
+
+What this means:
+
+- **A small regression in the reviewed R1 code.** Before R1, the overlay kept quest progress as it was. That was wrong
+  for a finished quest, but it left an untouched auto-starting quest active. After 18e3d1a, such a quest went inactive
+  instead.
+- **Real content is affected.** The shipped `assets/data/quests.json` and the core_regions quests have first stages
+  with no start event.
+- **The fix:** the overlay asks the quest manager to re-derive its quests after the reset (three lines).
+- **The test:** `test_main_menu_new_game_starts_quests_as_a_fresh_game_does`.
+
+The same gap in the `MainMenu` behaviour's New Game and in Studio's play-test reset predates R1. It is tracked under
+"Out of scope", not changed here.
+
 ## Out of scope (still on the backlog)
 
 - **The creator trial's other findings:**
@@ -171,9 +209,10 @@ Required CI and its timing advisories are reported on the PR, separately. No bud
   - Esc after right-click clears the selection;
   - the Evening preset washes out lamps;
   - export is CLI-only.
-- **The legacy quest tracker** (`engine/quest_manager.QuestManager`, `game_state_controller.quests`) keeps its own
-  `_quests`. `replace_state` doesn't reset it, and a load merges into it. This belongs to the two-QuestManagers
-  reconciliation (task #128). Quest progress in the canonical `engine.quests.QuestManager` lives in the game state and
-  is reset.
+- **A bare `replace_state({})` empties quests rather than restarting them** (pre-existing, not changed here). The
+  `MainMenu` behaviour's New Game and Studio's play-test reset (`engine/studio.py`, F4) call it without the overlay's
+  re-derivation. After them, a quest that starts by itself in a fresh game stays inactive until a quest definition load
+  or a save load re-derives it. The fix would be the same `reload_from_state` call, made once inside `replace_state`. It
+  is left for a separate change because it alters Studio play-tests.
 - **Removing the editor's start-up from game windows entirely**, so that a game never builds editor workspace state.
   That is a larger change. This fix draws the ownership line where the remembered scene is reopened.
