@@ -250,9 +250,11 @@ class SoundMixin:
         self._edit(lambda s: ops.set_entity_fields(s, target, elevation=round(metres * PX, 2)), f"Height: {metres:g} m.")
 
     # ---------------------------------------------------------------- choosing a sound file
-    def _open_sound_picker(self, title: str, choose: Callable[[str], object]) -> None:
+    def _open_sound_picker(self, title: str, choose: Callable[[str], object], music: bool = False) -> None:
+        """Choose a sound file (``music``: a room's soundtrack, Milestone 23D: the project's files with
+        ``assets/music/`` first, imports into ``assets/music/``, no ambience library)."""
         self._flush_fields()
-        self.sound_pick: dict[str, Any] | None = {"title": title, "choose": choose, "back": self.panel}
+        self.sound_pick: dict[str, Any] | None = {"title": title, "choose": choose, "back": self.panel, "music": music}
         self.panel, self.panel_scroll = "pick_sound", 0
         self._rebuild()
 
@@ -260,6 +262,12 @@ class SoundMixin:
         pick = getattr(self, "sound_pick", None) or {}
         rows.add(self._label(pick.get("title", "Choose a sound"), bold=True, size=12))
         row = gui.UIBoxLayout(vertical=False, space_between=6)
+        if pick.get("music"):
+            row.add(self._button("Import music file...", partial(self._import_sound, True), width=150))
+            row.add(self._button("Cancel", self._cancel_sound_pick, width=80))
+            rows.add(row)
+            self._music_picker(rows, width)
+            return
         row.add(self._button("Import sound file...", self._import_sound, width=150))
         row.add(self._button("Cancel", self._cancel_sound_pick, width=80))
         rows.add(row)
@@ -321,11 +329,99 @@ class SoundMixin:
             self._say(str(err), ok=False)
             return None
 
-    def _import_sound(self) -> None:
-        path = ask_path(folder=False, title="Import a sound (WAV, OGG or MP3)", filetypes=SOUND_FILE_TYPES)
+    def _import_sound(self, music: bool = False) -> None:
+        path = ask_path(folder=False, title="Import music (WAV, OGG or MP3)" if music else "Import a sound (WAV, OGG or MP3)",
+                        filetypes=SOUND_FILE_TYPES)
         if not path:
             return
-        self._library_picked(Path(path))
+        try:
+            rel = self.project.import_sound(Path(path), "music" if music else "ambience")
+        except ops.OpError as err:
+            self._say(str(err), ok=False)
+            return
+        self._sound_picked(rel)
+
+    # ---------------------------------------------------------------- a room's music (Milestone 23D)
+    def open_music(self) -> None:
+        self._flush_fields()
+        self.panel, self.panel_scroll = ("inspect" if self.panel == "music" else "music"), 0
+        self._rebuild()
+
+    def set_room_music(self, mode: str, path: str = "") -> None:
+        """One checked edit (``project_ops.set_room_music``): one undo step."""
+        label = self.project.label(self.project.current)
+        said = {"continue": f"{label}: the music playing carries on.", "silence": f"{label}: silence.",
+                "track": f"{label} plays {_short(path)}."}[mode]
+        self._edit(lambda s: ops.set_room_music(s, mode, path), said)
+
+    def choose_room_music(self) -> None:
+        self._open_sound_picker(f"Music for {self.project.label(self.project.current)}",
+                                partial(self.set_room_music, "track"), music=True)
+
+    def _music_picker(self, rows: Any, width: int) -> None:
+        own = self.project.music_files()
+        rows.add(self._label("Sound files in this project (assets/music first)", color=C_MUTED, size=10, width=width))
+        if not own:
+            rows.add(self._label("No sound files in this project yet: import one.", color=C_MUTED, size=9, width=width))
+        for rel in own:
+            rows.add(self._button(_short(rel.removeprefix("assets/"), 40), partial(self._sound_picked, rel), width=width))
+        rows.add(self._label("Import copies the file into assets/music/ at once (a file already there is never "
+                             "replaced: a new name is used). Undo takes back the room's choice, not the file. WAV plays "
+                             "on every computer; OGG and MP3 need the system's decoders.", color=C_MUTED, size=9,
+                             width=width))
+
+    def _music_panel(self, rows: Any, width: int) -> None:
+        scene, key = self.project.scene(), self.project.current
+        now = ops.room_music(scene)
+        rows.add(self._label(f"Room music: {self.project.label(key)}", bold=True, size=12, width=width))
+        rows.add(self._label("What the music does as the player enters this room (through a door, a new game or a "
+                             "loaded save). Heard in play (F4) and the game; the editor stays silent.", color=C_MUTED,
+                             size=9, width=width))
+        if now.get("error"):
+            rows.add(self._label(f"Not used as set: {now['error']}. Choose one below.", color=C_ERROR, size=9,
+                                 width=width))
+        for mode, title, words in (
+                ("continue", "Continue previous music", "Whatever is playing carries on: a track from an earlier room, or "
+                                                        "silence."),
+                ("silence", "Silence", "The music stops (or fades out, with crossfade on)."),
+                ("track", "Play a track", "This room's own track: it starts as the room is entered, or carries on if it "
+                                          "is already playing.")):
+            action = self.choose_room_music if mode == "track" else partial(self.set_room_music, mode)
+            rows.add(self._button(title, action, width=width, style=S_ACTIVE if now["mode"] == mode else S_BUTTON))
+            rows.add(self._label(words, color=C_MUTED, size=9, width=width))
+        if now["mode"] == "track":
+            path = str(now["path"])
+            rows.add(self._label(f"Track: {_short(path, 40)}", color=C_OK, size=10, width=width))
+            problem = self._sound_problem(path)
+            if problem:
+                rows.add(self._label(problem, color=C_ERROR, size=9, width=width))
+            rows.add(self._button("Choose another track...", self.choose_room_music, width=width))
+        rows.add(self._label(self._crossfade_words(), color=C_MUTED, size=9, width=width))
+        rows.add(self._label("Every room", bold=True, size=11))
+        start = ops.start_room(self.project.world)
+        for room, label, _path in self.project.rooms():
+            music = ops.room_music(self.project.scene(room))
+            what = {"continue": "carries on", "silence": "silence"}.get(str(music["mode"])) or \
+                f"plays {_short(str(music['path']).rsplit('/', 1)[-1], 24)}"
+            rows.add(self._label(f"{label}{' (start)' if room == start else ''}: {what}",
+                                 color=C_OK if room == key else C_MUTED, size=10, width=width))
+        rows.add(self._button("Done", self.open_music, width=80))
+
+    def _crossfade_words(self) -> str:
+        """How a change of track sounds: the room's own crossfade setting, else the project's (docs/audio.md)."""
+        import json  # noqa: PLC0415
+
+        try:
+            config = json.loads((self.project.root / "config.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            config = {}
+        settings = self.project.scene().get("settings") or {}
+        on = settings.get("music_crossfade_enabled", (config or {}).get("music_crossfade_enabled", False))
+        if not on:
+            return "Changes of music are immediate (crossfade is off in the project's config)."
+        out = settings.get("music_crossfade_out_s", config.get("music_crossfade_out_s", 0.25))
+        fade_in = settings.get("music_crossfade_in_s", config.get("music_crossfade_in_s", 0.25))
+        return f"Changes of music crossfade: {out:g} s out, {fade_in:g} s in (the project's config)."
 
     def _sound_problem(self, rel: str) -> str | None:
         """Why the project's sound ``rel`` can't be played here (checked once per file and change)."""

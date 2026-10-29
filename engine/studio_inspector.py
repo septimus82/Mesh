@@ -151,7 +151,8 @@ class InspectorMixin:
         def share_player(self, key: str) -> None: ...
         def keep_separate_players(self) -> None: ...
         def _sound_look(self, rows: Rows, entity: dict[str, Any], width: int) -> None: ...  # engine.studio_sound
-        def _open_sound_picker(self, title: str, choose: Callable[[str], object]) -> None: ...  # engine.studio_sound
+        def _open_sound_picker(self, title: str, choose: Callable[[str], object],
+                               music: bool = False) -> None: ...  # engine.studio_sound
 
     # ---------------------------------------------------------------- shared state
     def _init_inspector(self) -> None:

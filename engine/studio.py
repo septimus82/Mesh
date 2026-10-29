@@ -548,6 +548,46 @@ class Studio(InspectorMixin, SoundMixin):
         self.panel = "inspect"
         self._rebuild()
 
+    def _start_room_rows(self, box: Any, width: int, start: str | None) -> None:
+        """Where a new game starts (Milestone 23D): marked in the list (its icon), said in words, and Set as starting
+        room for the room being edited (it stays the one being edited)."""
+        box.add(gui.UISpace(height=6))
+        if start is None:  # (an older world naming no room of its own: the game starts at its config's scene)
+            fallback = str(self._project_config().get("start_scene") or "")
+            names = [label for key, label, path in self.project.rooms() if path == fallback]
+            where = names[0] if names else (fallback or "nowhere")
+            box.add(self._label(f"This world names no starting room: a new game starts in {where} (the project's "
+                                "config).", color=C_WARN, size=10, width=width))
+        else:
+            box.add(self._label(f"New games start in: {self.project.label(start)}", size=10, width=width))
+        if start == self.project.current:
+            box.add(self._label("A new game starts in this room. F4 plays the room you are editing.", color=C_MUTED,
+                                size=9, width=width))
+        else:
+            box.add(self._button("Set as starting room", self.set_start_room, width=width))
+            box.add(self._label(f"Makes {self.project.label(self.project.current)} the room a new game starts in. "
+                                "Saved games still load where they were saved.", color=C_MUTED, size=9, width=width))
+
+    def _project_config(self) -> dict[str, Any]:
+        try:
+            config = json.loads((self.project.root / "config.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        return config if isinstance(config, dict) else {}
+
+    def set_start_room(self) -> None:
+        """The room being edited becomes the one a new game starts in: one undo step; nothing else changes."""
+        if not self._settle_fields():
+            return
+        key = self.project.current
+        try:
+            self.project.set_start_room(key)
+        except ops.OpError as err:
+            self._say(str(err), ok=False)
+            return
+        self._rebuild()
+        self._say(f"New games start in {self.project.label(key)}. Save to keep it (Ctrl+Z undoes it).")
+
     def switch_room(self, key: str) -> None:
         if not self._settle_fields():
             return
@@ -1305,10 +1345,13 @@ class Studio(InspectorMixin, SoundMixin):
         tab, hd2d = self.left_tab, self.hd2d.active
         if tab == "rooms":
             box.add(self._label("Rooms", bold=True, size=12))
+            first = ops.start_room(self.project.world)
             for key, label, _path in self.project.rooms():
                 style = S_ACTIVE if key == self.project.current else S_BUTTON
-                box.add(self._button(label, partial(self.switch_room, key), width=width, style=style, icon="map"))
+                box.add(self._button(label, partial(self.switch_room, key), width=width, style=style,
+                                     icon="play" if key == first else "map"))
             box.add(self._button("+ New room", self._open_new_room, width=width))
+            self._start_room_rows(box, width, first)
             if hd2d:
                 box.add(gui.UISpace(height=10))
                 self.hd2d.nav_section(box, width)
@@ -1341,6 +1384,8 @@ class Studio(InspectorMixin, SoundMixin):
                                  style=S_ACTIVE if self.panel in ("sound", "pick_sound") else S_BUTTON))
         else:
             box.add(self._label("Audio", bold=True, size=12))
+            box.add(self._button("Room music...", self.open_music, width=width,
+                                 style=S_ACTIVE if self.panel == "music" else S_BUTTON))
             box.add(self._button("Room sounds and ambience...", self.open_sound, width=width,
                                  style=S_ACTIVE if self.panel in ("sound", "pick_sound") else S_BUTTON))
             box.add(self._button("Place a sound", partial(self.arm_place, SOUND_BUILT_IN), width=width,
@@ -1806,6 +1851,8 @@ class Studio(InspectorMixin, SoundMixin):
             self._sound_picker(rows, width)
         elif self.panel == "sound":
             self._sound_panel(rows, width)
+        elif self.panel == "music":
+            self._music_panel(rows, width)
         elif self.panel == "flags":
             self._flags_panel(rows, width)
         elif self.panel == "players":
