@@ -60,3 +60,20 @@ def test_the_demo_pipeline_on_its_own_still_runs_its_release_check(tmp_path: Pat
 
     code, _report = run_demo(out_dir=tmp_path / "demo", seed=123, campaign="demo", quiet=True)
     assert code == 0 and len(checks) == 1 and checks[0].endswith("release")
+
+
+def test_links_in_the_release_reports_are_not_copied_as_folders(tmp_path: Path, checks: list[str]) -> None:
+    """pytest leaves "<name>current" links to its temp folders; the bundle's file scan skips them, so the demo copy
+    does too (copied as folders they duplicated their files in the zip: 25 files in CI run 40963872558)."""
+    import os
+
+    from mesh_cli import release_bundle
+
+    release_bundle._step_release_check(tmp_path, 123, "demo")
+    try:
+        os.symlink(tmp_path / "release" / "nested", tmp_path / "release" / "nestedcurrent", target_is_directory=True)
+    except OSError:
+        pytest.skip("this system can't make directory links (Windows without the privilege)")
+    release_bundle._step_demo_run(tmp_path, 123, "demo")
+    copied = sorted(p.relative_to(tmp_path / "demo/release").as_posix() for p in (tmp_path / "demo/release").rglob("*"))
+    assert copied == ["nested", "nested/asset_audit.json", "verify_all_summary.json"]

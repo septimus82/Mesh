@@ -118,14 +118,22 @@ written there. The bundle stops at the first failed step, so this only happens a
 passed. The demo report records the step as `{"dir": "release/", "reused_from": "release/"}`. Every other demo step
 (new game, campaign replay check, debug export, export build) runs as before.
 
+The copy **skips symbolic links**, as the bundle's own file scan does. This was found by comparing archives: the first
+CI run of this change (40963872558, head `daca518`) produced 6,005 files against the base's 5,980. pytest's
+`<name>current` links to its temp folders in `release/verify_demo_pytest/` had been copied as folders, duplicating 25
+files under `demo/release/`. With links skipped, `demo/release/` holds exactly the files the bundle takes from
+`release/`.
+
 `mesh demo pipeline` on its own is unchanged and still runs its own release check. The CI workflow, thresholds,
 markers and branch protection are unchanged.
 
-**Tests:** `tests/test_release_bundle_demo_reuse.py` (fast, 2 tests):
+**Tests:** `tests/test_release_bundle_demo_reuse.py` (fast, 3 tests):
 
 - The bundle runs `release check` **once**, the demo's `release/` holds byte-identical reports, the demo report
   records the reuse, and the demo's later steps still run.
 - The demo pipeline on its own still runs its release check.
+- A directory link in the release reports isn't copied as a folder. This test skips where links can't be created,
+  for example on this Windows machine without the privilege; CI's runners create them.
 
 The first test fails on `b5b1786` ("assert 2 == 1": release check ran twice). The existing release-bundle and demo
 tests pass: 128 in the related set.

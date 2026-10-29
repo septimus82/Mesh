@@ -525,7 +525,10 @@ def _step_demo_run(work_dir: Path, seed: int, campaign: str) -> tuple[int, dict[
     from mesh_cli.demo import PIPELINE, run_demo
 
     def bundle_release_check(out_dir: Path, _seed: int, _campaign: str) -> tuple[int, dict[str, Any]]:
-        shutil.copytree(work_dir / "release", out_dir / "release", dirs_exist_ok=True)
+        # (links skipped, as the bundle's file scan skips them: pytest's "<name>current" links to its temp folders
+        # would otherwise be copied as folders, duplicating those files in the zip)
+        shutil.copytree(work_dir / "release", out_dir / "release", dirs_exist_ok=True,
+                        ignore=lambda folder, names: [n for n in names if (Path(folder) / n).is_symlink()])
         return 0, {"dir": "release/", "reused_from": "release/"}
 
     pipeline = [(name, bundle_release_check if name == "release-check" else step) for name, step in PIPELINE]
