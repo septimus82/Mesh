@@ -128,3 +128,21 @@ def test_picking_uses_the_drawn_triangles_and_tells_structures_from_characters()
     behind = SimpleNamespace(center_x=16 * 32, bottom=12.0 * 32, width=32, height=48, mesh_entity_data={})
     hit = picker.pick((16.0, -10.0, 0.75), (0.0, 1.0, 0.0), [st], {"m.glb": model}, [behind])
     assert hit is not None and hit.kind == "structure", "a character hidden behind the structure isn't picked"
+
+
+def test_pick_all_lists_everything_the_ray_meets_nearest_first_each_once() -> None:
+    """Watchfire R3: what overlaps on screen, in depth order (Mesh Studio's click-again selects the next one behind);
+    ``pick`` stays the nearest of them."""
+    model = load_glb(CROSSING)
+    st = parse_hd2d({"structures": [{"id": "crossing", "model": "m.glb", "x": 512, "y": 384, "rotation": 90}]}).structures[0]
+    picker = Picker()
+    front = SimpleNamespace(center_x=16 * 32, bottom=1.5 * 32, width=32, height=48, mesh_entity_data={"elevation": 0})
+    behind = SimpleNamespace(center_x=16 * 32, bottom=12.0 * 32, width=32, height=48, mesh_entity_data={})
+    ray = ((16.0, -10.0, 0.75), (0.0, 1.0, 0.0))  # looking north along the ground at the platform's south face
+    hits = picker.pick_all(*ray, [st], {"m.glb": model}, [behind, front])
+    assert [h.target for h in hits] == [front, "crossing", behind], "nearest first: the person, the platform, the one behind"
+    assert [h.kind for h in hits] == ["sprite", "structure", "sprite"]
+    assert all(a.distance < b.distance for a, b in zip(hits, hits[1:]))
+    assert hits.count(hits[1]) == 1 and len({id(h.target) for h in hits}) == 3, "the platform once (where the ray meets it first)"
+    assert picker.pick(*ray, [st], {"m.glb": model}, [behind, front]) == hits[0]
+    assert picker.pick_all((16.0, 6.0, 10.0), (0.0, 0.0, 1.0), [st], {"m.glb": model}, [front]) == [], "looking up: nothing"

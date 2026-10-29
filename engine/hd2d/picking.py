@@ -79,20 +79,27 @@ class Picker:
 
     def pick(self, origin: Vec, direction: Vec, structures: Iterable[Structure], models: dict[str, Model],
              sprites: Iterable[Any] = (), right: Vec = (1.0, 0.0, 0.0), stretch: float = 1.0) -> Hit | None:
-        best: Hit | None = None
+        """The nearest thing the ray meets."""
+        hits = self.pick_all(origin, direction, structures, models, sprites, right, stretch)
+        return hits[0] if hits else None
+
+    def pick_all(self, origin: Vec, direction: Vec, structures: Iterable[Structure], models: dict[str, Model],
+                 sprites: Iterable[Any] = (), right: Vec = (1.0, 0.0, 0.0), stretch: float = 1.0) -> list[Hit]:
+        """Everything the ray meets, nearest first: each structure and character once, where the ray first meets it
+        (what overlaps on screen, in depth order: Mesh Studio's click-again picks the next one behind)."""
+        hits: list[Hit] = []
         for st in structures:
             lo, hi, tris = self._triangles(st, models[st.model])
-            if not _slab(origin, direction, best.distance if best else 1e9, lo, hi):
+            if not _slab(origin, direction, 1e9, lo, hi):
                 continue
-            for a, b, c in tris:
-                t = _hit(origin, direction, a, b, c)
-                if t is not None and (best is None or t < best.distance):
-                    best = Hit("structure", st.id, t, _along(origin, direction, t))
+            near = min((t for a, b, c in tris if (t := _hit(origin, direction, a, b, c)) is not None), default=None)
+            if near is not None:
+                hits.append(Hit("structure", st.id, near, _along(origin, direction, near)))
         for sprite in sprites:
             t = _billboard_hit(origin, direction, sprite, right, stretch)
-            if t is not None and (best is None or t < best.distance):
-                best = Hit("sprite", sprite, t, _along(origin, direction, t))
-        return best
+            if t is not None:
+                hits.append(Hit("sprite", sprite, t, _along(origin, direction, t)))
+        return sorted(hits, key=lambda hit: hit.distance)
 
 
 def ground_point(origin: Vec, direction: Vec, height: float = 0.0) -> tuple[float, float] | None:

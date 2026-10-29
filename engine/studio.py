@@ -2252,6 +2252,8 @@ class Studio(InspectorMixin, SoundMixin):
     # ==================================================================== context menu
     def _open_menu(self, x: float, y: float, wx: float, wy: float) -> None:
         entity_id = self._entity_at(wx, wy)
+        if self.hd2d.active and self.selected and self.selected in self.hd2d.ids_under(x, y):
+            entity_id = self.selected  # (the object chosen among those here, not whichever was placed last)
         items: list[tuple[str, Callable[[], object]]] = []
         if entity_id:
             self.select(entity_id)
