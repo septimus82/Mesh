@@ -82,7 +82,9 @@ def _strength(d: Any, kind: str, key: str) -> None:
     ops = _ops()
     name = ops.WEATHER_KINDS[kind]
     if key == "none":
-        _tip(d, f"{name}: none")
+        mine = next(s for s in ops.weather_of(d.studio.project.scene()) if s["preset"] == kind)
+        n = 1 + mine["extra"] if mine["present"] else 0
+        _tip(d, f"{name}: none" + (f" (takes away all {n} {name.lower()} effects)" if n > 1 else ""))
     else:
         unit = d.studio.hd2d.WEATHER_UNITS[kind]
         _tip(d, f"{name}: {key} ({ops.WEATHER_STRENGTHS[kind][key]:,} {unit})")
@@ -413,8 +415,72 @@ def compat(out: Path) -> dict[str, Any]:
     return report
 
 
+def extras(out: Path) -> dict[str, Any]:
+    """Two snow effects of the room's own (and leaves of its own): every ordinary change in the panel (Light, Steady,
+    Heavy, shown) touches only the first snow's count or shown state, the rest exactly as they were; Snow > None, which
+    takes away every snow effect, asks first when there is more than one (Keep them: nothing changes; Remove all:
+    both go), and Undo brings both back exactly, Redo takes them away again."""
+    from hd2d_studio_demo import StudioDriver
+
+    out.mkdir(parents=True, exist_ok=True)
+    project = make_project(out)
+    path = project / ROOM
+    scene = json.loads(path.read_text(encoding="utf-8"))
+    first = {"preset": "snow", "count": 1700, "speed": 1.5, "area": [40, 40, 12], "seed": 9, "opacity": 0.7}
+    second = {"preset": "snow", "count": 300, "seed": 2, "speed": 0.6, "opacity": 0.5}
+    leaves = {"preset": "wind", "count": 120, "gust": 0.4, "lifetime": 8}
+    room = [first, second, leaves]
+    scene.setdefault("settings", {})["particles"] = room  # (as an older project has it: not through Studio)
+    path.write_text(json.dumps(scene, indent=2) + "\n", encoding="utf-8")
+
+    def now() -> list[Any]:
+        return list((d.studio.project.scene().get("settings") or {}).get("particles") or [])
+
+    report: dict[str, Any] = {"ordinary": {}}
+    d = StudioDriver(project)
+    try:
+        k = d.arcade.key
+        _open_room(d)
+        d.studio.set_left_tab("environment")
+        d.frame()
+        d.button("Weather particles...")
+        for key, count in (("light", 800), ("steady", 2000), ("heavy", 4500)):
+            _strength(d, "snow", key)
+            report["ordinary"][key] = now() == [{**first, "count": count}, second, leaves]
+        d.button("Snow shown: On")
+        report["ordinary"]["hidden"] = now() == [{**first, "count": 4500, "enabled": False}, second, leaves]
+        d.button("Snow shown: Off")
+        report["ordinary"]["shown"] = now() == [{**first, "count": 4500}, second, leaves]
+        _strength(d, "wind", "heavy")
+        report["ordinary"]["leaves_heavy"] = now() == [{**first, "count": 4500}, second, {**leaves, "count": 900}]
+        d.key(k.Z, k.MOD_CTRL)  # (back to the leaves as they were)
+        before = now()
+        report["before_none"] = before
+        _strength(d, "snow", "none")
+        report["after_first_none_click"] = {"particles": now(), "message": d.studio.message,
+                                            "asks": [t for t in d.labels() if "removes all" in t],
+                                            "buttons": [t for t in ("Remove all 2", "Keep them") if d.has_button(t)]}
+        _picture(d, out / "extras_snow_none_asks.png")
+        if d.has_button("Keep them"):
+            d.button("Keep them")
+            report["after_keep"] = {"particles": now(), "message": d.studio.message,
+                                    "still_asks": d.has_button("Remove all 2")}
+            _strength(d, "snow", "none")
+            d.button("Remove all 2")
+        report["after_remove"] = {"particles": now(), "message": d.studio.message,
+                                  "described": _state(d.studio.project.scene())["described"]}
+        d.key(k.Z, k.MOD_CTRL)
+        report["after_undo"] = {"particles": now(), "restored_exactly": now() == before}
+        d.key(k.Y, k.MOD_CTRL)
+        report["after_redo"] = {"particles": now(), "leaves_exactly": now() == [leaves]}
+        report["runtime_after_redo"] = _runtime(d.window)
+    finally:
+        d.close()
+    return report
+
+
 PHASES: dict[str, Callable[[Path], dict[str, Any]]] = {"creator": creator, "export": export, "perf": perf,
-                                                     "compat": compat}
+                                                     "compat": compat, "extras": extras}
 
 
 def main() -> None:

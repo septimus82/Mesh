@@ -110,3 +110,17 @@ def test_an_older_rooms_own_weather_is_reopened_and_kept(tmp_path_factory: pytes
     assert report["only_snow_count_changed"], report["after_snow_heavy"]
     assert report["rain_light_kept_hidden"] == {"preset": "rain", "count": 1200, "enabled": False}
     assert any(line.startswith("Kept as set") for line in report["panel_says"])
+
+
+def test_none_asks_before_taking_away_more_than_one_effect_and_ordinary_changes_keep_the_rest(
+        tmp_path_factory: pytest.TempPathFactory) -> None:
+    report = _phase(tmp_path_factory, "extras")
+    assert all(report["ordinary"].values()), report["ordinary"]  # (Light/Steady/Heavy/shown: only their own key)
+    before = report["before_none"]
+    asked = report["after_first_none_click"]
+    assert asked["particles"] == before and asked["buttons"] == ["Remove all 2", "Keep them"]
+    assert asked["asks"] and "all 2 snow effects" in asked["message"]
+    assert report["after_keep"]["particles"] == before and not report["after_keep"]["still_asks"]
+    removed = report["after_remove"]
+    assert [e["preset"] for e in removed["particles"]] == ["wind"] and "all 2 effects" in removed["message"]
+    assert report["after_undo"]["restored_exactly"] and report["after_redo"]["leaves_exactly"]

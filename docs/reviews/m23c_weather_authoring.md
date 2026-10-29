@@ -123,6 +123,29 @@ The clearing, gusty, by day; each kind at each strength alone. The panel's own o
 
 Each effect is one draw. GPU times are timer queries around 20 draws of the pass. A frame's wall time on this PC (4–8 ms) varied with run order more than with weather. Studio's strengths stay far below the engine's limit of 20,000 per effect.
 
+## Review: None with more than one effect of a kind (after `f16a953`)
+
+`set_weather(..., strength="none")` takes away every effect of that kind, while every other control edits only the first and keeps the rest. Reproduced in Studio (`tooling/m23c_weather_studio.py extras`): a room with two snow effects of its own (speed, area, seed, opacity) and leaves of its own.
+- **Before:** one click on Snow > None removed both, with only "No snow." to say so.
+- **Now:** when a room has more than one effect of the kind, None asks first. In that kind's section the panel says "None removes all 2 snow effects, with their own settings (Ctrl+Z brings them back)" and shows **Remove all 2** and **Keep them**.
+  - **Keep them** changes nothing.
+  - **Remove all 2** removes both and says so ("No snow: all 2 effects taken away (Ctrl+Z brings them back)").
+  - A single effect is still removed in one click: None keeps its meaning.
+  - The question is dropped on any reload (another room, an undo).
+
+| Step | Result |
+|---|---|
+| First None click | Nothing removed; the question shown |
+| Keep them | Unchanged; the question gone |
+| Remove all 2 | Both snow effects removed; the custom leaves exactly as they were |
+| Ctrl+Z | Both restored exactly |
+| Ctrl+Y | Removed again; the leaves exact |
+| Light, Steady, Heavy, shown off and on, leaves Heavy | Each changes only its own key; the second snow and the leaves byte-identical |
+
+![asks](m23c_evidence/extras_snow_none_asks.png)
+
+A GPU regression test covers it (`test_none_asks_before_taking_away_more_than_one_effect_and_ordinary_changes_keep_the_rest`).
+
 ## Known limitations
 
 - An effect with its own `wind` vector (written by hand or by the AI) keeps it and ignores the room's wind. The panel says "kept as set: its own wind"; Studio doesn't offer to clear it.
@@ -134,7 +157,7 @@ Each effect is one draw. GPU times are timer queries around 20 draws of the pass
 ## Tests and gates
 
 - **New fast tests** (`tests/test_weather_authoring.py`, 5): adding, sizing, hiding, showing and removing; custom settings and extra effects kept; the Sound panel's rain shown again; the 4-effect limit and refusals; authored effects in the room's wind (no vectors written). The existing `test_sound_authoring.py` and `test_scene_particles.py` pass unchanged (48 with the new tests).
-- **New GPU tests** (`tests/test_weather_authoring_gpu.py`, 8; integration, GL-gated): the creator flow and the compatibility check above. 8 passed.
+- **New GPU tests** (`tests/test_weather_authoring_gpu.py`, 9; integration, GL-gated): the creator flow, the compatibility check and the review's None question above. 9 passed.
 - **GPU tier:** 244 passed, including every existing weather test unchanged: roofs, the bridge's deck and the cottage interior keeping rain and snow off what is under them, impacts staying put, Studio's preview, the 2D room's rain, and room changes keeping GPU objects level.
 - **Default selection:** 10,083 passed, 0 failed (239 skipped, 163 deselected).
 - **Gates:** ruff gate ok; mypy 73 (baseline). No budget, baseline, policy or coverage requirement changed.

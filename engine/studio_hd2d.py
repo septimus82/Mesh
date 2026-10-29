@@ -127,6 +127,7 @@ class Hd2dView:
         self.object_marker: tuple[float, float, float] | None = None  # where an object being placed would stand (m)
         self.snap = True
         self.weather = True  # Milestone 18B, "Preview weather": the room's rain, snow or leaves in this view too
+        self.weather_asks: str | None = None  # (M23C) the kind whose None would take away more than one effect: asked
         self.picker = Picker()
         self.tips: list[tuple[Any, str]] = []  # (button, short tooltip) for the 3D view's buttons
         self._room: str | None = None
@@ -164,6 +165,7 @@ class Hd2dView:
         """After every load of the room (opening it, an edit, undo, redo, stopping Play): keep the editor's view,
         drop a selection that no longer exists, and frame the room when it is new to the view."""
         key = self.studio.project.current
+        self.weather_asks = None  # (a question about effects an undo or another room may have changed: not kept)
         if self.stroke is not None:  # the room was loaded again mid-stroke (undo, a room change, Play): it's gone
             self.stroke = None
             self.studio._say("Stroke cancelled: the room was loaded again.", ok=False)
@@ -1801,12 +1803,31 @@ class Hd2dView:
         studio = self.studio
         studio._flush_fields()
         studio.panel = "inspect" if studio.panel == "weather" else "weather"
-        studio.panel_scroll = 0
+        studio.panel_scroll, self.weather_asks = 0, None
         studio._rebuild()
 
     def set_weather(self, preset: str, said: str, **change: Any) -> None:
         """One checked edit (``project_ops.set_weather``): one undo step; the view shows it at once."""
+        self.weather_asks = None
         self.studio._edit(lambda s: ops.set_weather(s, preset, **change), said)
+
+    def _weather_none(self, preset: str, effects: int) -> None:
+        """None: that kind taken away. When the room has more than one effect of it (its own, kept by every other
+        change), asked first: Remove all, or Keep them."""
+        name = ops.WEATHER_KINDS[preset]
+        if effects > 1 and self.weather_asks != preset:
+            self.weather_asks = preset
+            self.studio._say(f"None takes away all {effects} {name.lower()} effects, with their own settings: Remove "
+                             f"all {effects} or Keep them, on the right.", ok=False)
+            self.studio._rebuild()
+            return
+        self.set_weather(preset, f"No {name.lower()}." if effects < 2 else
+                         f"No {name.lower()}: all {effects} effects taken away (Ctrl+Z brings them back).", strength="none")
+
+    def _weather_keep(self) -> None:
+        self.weather_asks = None
+        self.studio._say("Kept as they were.")
+        self.studio._rebuild()
 
     def _show_weather(self, preset: str, name: str, on: bool) -> None:
         self.set_weather(preset, f"{name} shown." if on else f"{name} hidden (kept: show it again here).", enabled=on)
@@ -1841,15 +1862,26 @@ class Hd2dView:
                 status = f"{name}: none"
             rows.add(studio._label(status, bold=True, size=10, width=width))
             row = _row()
+            mine = 1 + state["extra"] if state["present"] else 0
             for key in ("none", "light", "steady", "heavy"):
                 active = state["strength"] == key if state["present"] else key == "none"
-                said = f"No {name.lower()}." if key == "none" else f"{name}: {key}."
-                row.add(self._button(key.capitalize(), partial(self.set_weather, preset, said, strength=key),
-                                     f"{name}: {key}" + ("" if key == "none" else
-                                                         f" ({ops.WEATHER_STRENGTHS[preset][key]:,} "
-                                                         f"{self.WEATHER_UNITS[preset]})"),
-                                     width=quarter, style=S_ACTIVE if active else S_BUTTON))
+                if key == "none":
+                    action, tip = partial(self._weather_none, preset, mine), f"{name}: none" + (
+                        f" (takes away all {mine} {name.lower()} effects)" if mine > 1 else "")
+                else:
+                    action = partial(self.set_weather, preset, f"{name}: {key}.", strength=key)
+                    tip = f"{name}: {key} ({ops.WEATHER_STRENGTHS[preset][key]:,} {self.WEATHER_UNITS[preset]})"
+                row.add(self._button(key.capitalize(), action, tip, width=quarter,
+                                     style=S_ACTIVE if active else S_BUTTON))
             rows.add(row)
+            if self.weather_asks == preset and mine > 1:
+                rows.add(studio._label(f"None removes all {mine} {name.lower()} effects, with their own settings "
+                                       "(Ctrl+Z brings them back).", color=C_WARN, size=9, width=width))
+                row = _row()
+                row.add(studio._button(f"Remove all {mine}", partial(self._weather_none, preset, mine),
+                                       width=(width - 4) // 2))
+                row.add(studio._button("Keep them", self._weather_keep, width=(width - 4) // 2))
+                rows.add(row)
             if state["present"]:
                 rows.add(studio._toggle(f"{name} shown", state["enabled"], partial(self._show_weather, preset, name),
                                         width))

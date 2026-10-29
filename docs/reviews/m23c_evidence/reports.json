@@ -1032,5 +1032,196 @@
    "particle_pass_gpu_ms": 0.0016,
    "particles": 900
   }
+ },
+ "extras": {
+  "ordinary": {
+   "light": true,
+   "steady": true,
+   "heavy": true,
+   "hidden": true,
+   "shown": true,
+   "leaves_heavy": true
+  },
+  "before_none": [
+   {
+    "preset": "snow",
+    "count": 4500,
+    "speed": 1.5,
+    "area": [
+     40,
+     40,
+     12
+    ],
+    "seed": 9,
+    "opacity": 0.7
+   },
+   {
+    "preset": "snow",
+    "count": 300,
+    "seed": 2,
+    "speed": 0.6,
+    "opacity": 0.5
+   },
+   {
+    "preset": "wind",
+    "count": 120,
+    "gust": 0.4,
+    "lifetime": 8
+   }
+  ],
+  "after_first_none_click": {
+   "particles": [
+    {
+     "preset": "snow",
+     "count": 4500,
+     "speed": 1.5,
+     "area": [
+      40,
+      40,
+      12
+     ],
+     "seed": 9,
+     "opacity": 0.7
+    },
+    {
+     "preset": "snow",
+     "count": 300,
+     "seed": 2,
+     "speed": 0.6,
+     "opacity": 0.5
+    },
+    {
+     "preset": "wind",
+     "count": 120,
+     "gust": 0.4,
+     "lifetime": 8
+    }
+   ],
+   "message": "None takes away all 2 snow effects, with their own settings: Remove all 2 or Keep them, on the right.",
+   "asks": [
+    "None removes all 2 snow effects, with their own settings\n(Ctrl+Z brings them back)."
+   ],
+   "buttons": [
+    "Remove all 2",
+    "Keep them"
+   ]
+  },
+  "after_keep": {
+   "particles": [
+    {
+     "preset": "snow",
+     "count": 4500,
+     "speed": 1.5,
+     "area": [
+      40,
+      40,
+      12
+     ],
+     "seed": 9,
+     "opacity": 0.7
+    },
+    {
+     "preset": "snow",
+     "count": 300,
+     "seed": 2,
+     "speed": 0.6,
+     "opacity": 0.5
+    },
+    {
+     "preset": "wind",
+     "count": 120,
+     "gust": 0.4,
+     "lifetime": 8
+    }
+   ],
+   "message": "Kept as they were.",
+   "still_asks": false
+  },
+  "after_remove": {
+   "particles": [
+    {
+     "preset": "wind",
+     "count": 120,
+     "gust": 0.4,
+     "lifetime": 8
+    }
+   ],
+   "message": "No snow: all 2 effects taken away (Ctrl+Z brings them back).",
+   "described": [
+    [
+     "rain",
+     "none",
+     false
+    ],
+    [
+     "snow",
+     "none",
+     false
+    ],
+    [
+     "wind",
+     "light",
+     true
+    ]
+   ]
+  },
+  "after_undo": {
+   "particles": [
+    {
+     "preset": "snow",
+     "count": 4500,
+     "speed": 1.5,
+     "area": [
+      40,
+      40,
+      12
+     ],
+     "seed": 9,
+     "opacity": 0.7
+    },
+    {
+     "preset": "snow",
+     "count": 300,
+     "seed": 2,
+     "speed": 0.6,
+     "opacity": 0.5
+    },
+    {
+     "preset": "wind",
+     "count": 120,
+     "gust": 0.4,
+     "lifetime": 8
+    }
+   ],
+   "restored_exactly": true
+  },
+  "after_redo": {
+   "particles": [
+    {
+     "preset": "wind",
+     "count": 120,
+     "gust": 0.4,
+     "lifetime": 8
+    }
+   ],
+   "leaves_exactly": true
+  },
+  "runtime_after_redo": {
+   "effects": [
+    [
+     "wind",
+     120,
+     true,
+     [
+      3.2,
+      0.6
+     ],
+     0.4
+    ]
+   ],
+   "draw_calls": 1,
+   "time": 0.017,
+   "notice": null
+  }
  }
 }
