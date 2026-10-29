@@ -1,0 +1,4 @@
+E           AssertionError: assert None == 'The embers are still warm.'
+E            +  where None = _walk_up_and_press_e(<hd2d_demo.HiddenGame object at 0x0000012DBE6C1160>, *(9.6, 2.6))
+E            +    where (9.6, 2.6) = <module 'm23b_fire_study' from 'D:\\Games\\Mesh-r2\\tooling\\m23b_fire_study.py'>.FIRE
+1 failed in 8.93s

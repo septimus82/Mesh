@@ -1,0 +1,70 @@
+{
+ "engine": "D:\\Games\\Mesh-r2",
+ "bundle": false,
+ "run": {
+  "role": "R2",
+  "scene_loads": [
+   "packs/core_regions/scenes/start.json"
+  ],
+  "steward": [
+   "Traveller! Thank the stars. The watchfire at the Old Crossing has gone dark.",
+   "Without it, anyone on the forest road tonight will lose their way. Will you light it before nightfall?",
+   "[choices: I'll light the watchfire. | Not right now.]",
+   "[chose: I'll light the watchfire.]",
+   "Bless you. Take my flint, and follow the road east, past the lamps, to the crossing."
+  ],
+  "at_fire": {
+   "room": "old_crossing",
+   "at": [
+    21.98,
+    13.64
+   ],
+   "flags": [
+    "hint_shown_controls",
+    "task_accepted"
+   ],
+   "fires": [
+    {
+     "name": "Cold watchfire",
+     "burning": false
+    }
+   ],
+   "cold_fire_sprite": {
+    "visible": false,
+    "drawn": false
+   }
+  },
+  "press_e": [
+   "The kindling in the firepit is dry, and you carry the steward's flint.",
+   "[choices: Strike the flint | Not yet]",
+   "[chose: Strike the flint]",
+   "Sparks catch. Flames climb the logs, and warm light spills across the crossing."
+  ],
+  "after": {
+   "flags": [
+    "hint_shown_controls",
+    "task_accepted",
+    "watchfire_lit"
+   ],
+   "fires": [
+    {
+     "name": "Watchfire",
+     "burning": true
+    }
+   ],
+   "dialogue": null
+  },
+  "press_e_by_lit_fire": null,
+  "walk_log": []
+ },
+ "verdict": {
+  "checks": {
+   "the_fire_is_a_picture_less_object": true,
+   "e_at_the_fire_opens_its_conversation": true,
+   "its_choice_sets_its_flag": true,
+   "the_fire_then_burns": true,
+   "the_hidden_cold_fire_and_the_silent_lit_one_say_nothing": true
+  },
+  "pass": true
+ }
+}
