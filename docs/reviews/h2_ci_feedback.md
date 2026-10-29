@@ -144,5 +144,34 @@ way both times. End-to-end evidence therefore comes from CI.
 
 ## 5. Before and after
 
-The before figures are measured from the base CI runs above. The after figures come from this PR's single CI run:
-see the PR description.
+Before: the base runs above. After: this PR's two CI runs, `daca518` (40963872558) and the final head `7fa55e5`
+(40965543846). Each is a single run per head, and runner speed varies a lot between runs (Windows 0.60 in one, about
+1.24 in the other), so whole-job times are noisy. The runner-independent measure is how long the bundle step takes
+compared with the same job's own `verify-all`.
+
+| Metric | Before (base runs) | After (`daca518` / `7fa55e5`) |
+|---|---|---|
+| Required PR wall time (run created → last required check) | 14.4 / 18.1 / 16.6 min | 9.4 min (Windows speed 0.60) / 15.0 min (Windows speed 1.21–1.27) |
+| Ubuntu `tests` job | 10.6 min (speed 1.10) | 9.3 min (speed 1.10: like for like) / 8.0 min (speed 0.87) |
+| Windows `tests` job | 14.3 min (speed 0.89–0.95) | 8.6 min (speed 0.60) / 15.0 min (speed 1.21–1.27, slower than any base run) |
+| Bundle step, Ubuntu | 212 s | 116 s / 91 s |
+| Bundle step, Windows | 291 s | 103 s / 196 s |
+| **Bundle step ÷ same job's `verify-all`** | **1.84 (Ubuntu), 1.88 (Windows)** | **0.97 / 0.97 (Ubuntu); 1.00 / 0.95 (Windows)** |
+| `pytest-fast` executions per job (fast tier incl. full suite) | 3 (4) | **2 (3)** |
+| `verify-all` executions per job | 3 | **2** |
+| Tests (Ubuntu CI) | 10,124 passed / 260 skipped / 163 deselected | 10,127 / 260 / 163 (+3 new tests; the link test runs in CI) |
+| Release bundle archive (Ubuntu) | 5,980 files | **5,980 files; identical file list** (per-run `pid…`/`run…` names normalised) |
+| `bundle verify --strict`, artifact validate/diff | pass | pass |
+| Fast-tier headroom (gating step) | unchanged by this PR | unchanged: the gating `pytest-fast` still runs. In `7fa55e5` Ubuntu had 15.1 s (speed 0.87); Windows was over its fixed threshold on a slow runner (140.06 s; Rule F ok) |
+
+**Measured:** the bundle step dropped from about two `verify-all`s to about one in all four jobs. That's one whole
+`verify-all` (plus an `export build` and a `debug-bundle`) removed per job: **about 95–155 s, depending on the
+runner.**
+
+**Estimated, not proven:** the effect on total wall time. Two single runs can't separate that saving from runner
+variance; at like-for-like speed (Ubuntu, speed 1.10) the job went from 10.6 to 9.3 min.
+
+**Remaining risks:**
+- The fast tier still has almost no fixed headroom on slow runners. This PR doesn't change the gating step; items 2–4
+  above are what would.
+- The 163 `slow`/`e2e` and 257 GPU tests still have no CI lane.
