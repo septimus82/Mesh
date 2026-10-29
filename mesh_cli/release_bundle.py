@@ -516,12 +516,22 @@ def _step_release_check(work_dir: Path, seed: int, campaign: str) -> tuple[int, 
 
 
 def _step_demo_run(work_dir: Path, seed: int, campaign: str) -> tuple[int, dict[str, Any]]:
-    """Run ``demo pipeline`` into work_dir/demo."""
-    from mesh_cli.demo import run_demo
+    """Run ``demo pipeline`` into work_dir/demo, its first step (``release check``) taken from this bundle's own.
 
+    The demo's release check is the bundle's step 1 again: the same checkout, the same arguments, in the same process
+    (it only writes to another folder). The bundle stops at a failed step, so it passed; its reports are copied to
+    demo/release/ rather than run a second time (H2-F13: a whole verify-all, ~2 minutes per CI job). Every other
+    demo step runs as before; ``mesh demo pipeline`` on its own still runs its own release check."""
+    from mesh_cli.demo import PIPELINE, run_demo
+
+    def bundle_release_check(out_dir: Path, _seed: int, _campaign: str) -> tuple[int, dict[str, Any]]:
+        shutil.copytree(work_dir / "release", out_dir / "release", dirs_exist_ok=True)
+        return 0, {"dir": "release/", "reused_from": "release/"}
+
+    pipeline = [(name, bundle_release_check if name == "release-check" else step) for name, step in PIPELINE]
     demo_dir = work_dir / "demo"
     demo_dir.mkdir(parents=True, exist_ok=True)
-    code, _report = run_demo(out_dir=demo_dir, seed=seed, campaign=campaign, quiet=True)
+    code, _report = run_demo(out_dir=demo_dir, seed=seed, campaign=campaign, quiet=True, pipeline=pipeline)
     return code, {"dir": "demo/"}
 
 
