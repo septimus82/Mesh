@@ -446,37 +446,81 @@ class Hd2dView:
             self.begin_stroke(x, y)
             return True
         start = time.perf_counter()
-        origin, direction = self.ray(x, y)
-        sprites = [s for s in renderer._sprites() if (getattr(s, "mesh_entity_data", None) or {}).get("id")]
-        stretch = 1.0 / max(0.5, math.cos(math.radians(self.camera.pitch)))
-        hit = self.picker.pick(origin, direction, self.structures(), renderer.models, sprites, self.camera.right(), stretch)
+        under = self._under(x, y)
         self.timings["pick_ms"].append((time.perf_counter() - start) * 1000)
-        sound = self._sound_at(origin, direction, hit)
-        if sound is not None:  # a sound emitter (no picture to click): its marker, nearer than what's behind it
-            self._grab_entity(sound[0], sound[1], x, y)
-            return True
-        water = self._water_at(origin, direction) if hit is None else None
-        if water is not None:  # a puddle or pond (no picture to click): the object it is
-            self._grab_entity(water[0], water[1], x, y)
-            return True
-        if hit is None:
+        if not under:
             self.select_structure(None)
             self.studio.select(None)
             return True
-        if hit.kind == "sprite":  # a character or object: Studio's ordinary object editing
-            entity_id = hit.target.mesh_entity_data["id"]
-            z = float((hit.target.mesh_entity_data or {}).get("elevation", 0.0) or 0.0) / PIXELS_PER_METRE
-            self._grab_entity(entity_id, z, x, y)
-            return True
-        st = self.find(hit.target)
-        self.select_structure(hit.target)
-        if st is not None:
-            plane = st.elevation / PIXELS_PER_METRE
-            at = self.ground_px(x, y, plane)
-            if at is not None:
-                self.drag = {"kind": "structure", "id": st.id, "plane": plane, "moved": False,
-                             "dx": st.x - at[0], "dy": st.y - at[1], "x": st.x, "y": st.y}
+        # What is selected stays selected while it's under the mouse (a drag moves it, not what's in front of it);
+        # a click there without moving then selects the next thing behind it (``release``). Else: the nearest.
+        chosen = self.structure if self.structure is not None else self.studio.selected
+        ids = [c[1] for c in under]
+        index = ids.index(chosen) if chosen in ids else 0
+        self._grab(under[index], x, y)
+        if self.drag is not None and chosen in ids and len(under) > 1:
+            self.drag["next"] = (under, (index + 1) % len(under))
+        self._say_under(under, index)
         return True
+
+    def _grab(self, candidate: tuple[str, str, float], x: float, y: float) -> None:
+        kind, target, z = candidate
+        if kind == "entity":  # a character or object: Studio's ordinary object editing
+            self._grab_entity(target, z, x, y)
+            return
+        st = self.find(target)
+        self.select_structure(target)
+        if st is not None:
+            at = self.ground_px(x, y, z)
+            if at is not None:
+                self.drag = {"kind": "structure", "id": st.id, "plane": z, "moved": False,
+                             "dx": st.x - at[0], "dy": st.y - at[1], "x": st.x, "y": st.y}
+
+    def _say_under(self, under: list[tuple[str, str, float]], index: int) -> None:
+        """With more than one thing under the mouse, say which this is and how to reach the others."""
+        if len(under) < 2:
+            return
+        kind, target, _z = under[index]
+        name = target if kind == "structure" else (self.studio._entity(target) or {}).get("name") or "Object"
+        then = "the one behind" if index + 1 < len(under) else "the front one again"
+        self.studio._say(f"{name}: {index + 1} of {len(under)} here. Click again (without moving) for {then}.")
+
+    def _under(self, x: float, y: float) -> list[tuple[str, str, float]]:
+        """Everything under the mouse in 3D, nearest first, each once: ``(kind, id, plane)``, kind "structure" or
+        "entity", plane the height (m) it is dragged on. Structures and pictures by their drawn shapes
+        (``engine.hd2d.picking``); sound emitters and campfires (no picture) by their markers; water last (a surface
+        under everything). At the same depth what is drawn comes first (a campfire hidden by its flags after one shown)."""
+        renderer = self.renderer
+        if renderer is None:
+            return []
+        origin, direction = self.ray(x, y)
+        length = math.sqrt(sum(c * c for c in direction)) or 1.0
+        sprites = [s for s in renderer._sprites() if (getattr(s, "mesh_entity_data", None) or {}).get("id")]
+        stretch = 1.0 / max(0.5, math.cos(math.radians(self.camera.pitch)))
+        found: list[tuple[float, int, str, str, float]] = []
+        for hit in self.picker.pick_all(origin, direction, self.structures(), renderer.models, sprites,
+                                        self.camera.right(), stretch):
+            if hit.kind == "sprite":
+                data = hit.target.mesh_entity_data or {}
+                z = float(data.get("elevation", 0.0) or 0.0) / PIXELS_PER_METRE
+                found.append((hit.distance, 0, "entity", str(data["id"]), z))
+            else:
+                st = self.find(hit.target)
+                found.append((hit.distance, 0, "structure", str(hit.target), st.elevation / PIXELS_PER_METRE if st else 0.0))
+        for t, entity_id, z, shown in self._markers_hit(origin, direction):
+            found.append((t / length, 0 if shown else 1, "entity", entity_id, z))
+        out: list[tuple[str, str, float]] = []
+        for _t, _hidden, kind, target, z in sorted(found, key=lambda f: (f[0], f[1])):
+            if all(target != c[1] for c in out):
+                out.append((kind, target, z))
+        water = self._water_at(origin, direction)
+        if water is not None and all(water[0] != c[1] for c in out):
+            out.append(("entity", water[0], water[1]))
+        return out
+
+    def ids_under(self, x: float, y: float) -> list[str]:
+        """The ids of what is under the mouse in 3D, nearest first (``_under``)."""
+        return [c[1] for c in self._under(x, y)]
 
     def _grab_entity(self, entity_id: str, z: float, x: float, y: float) -> None:
         """Select an object and start dragging it on the plane ``z`` m up."""
@@ -502,27 +546,46 @@ class Hd2dView:
                                           float(entity.get("y", 0)) / PIXELS_PER_METRE, z / PIXELS_PER_METRE)))
         return out
 
-    def _sound_at(self, origin: tuple[float, float, float], direction: tuple[float, float, float],
-                  hit: Any) -> tuple[str, float] | None:
-        """The sound emitter whose marker (an upright 1.2 m post) the mouse's ray passes within 0.45 m of, nearest
-        first, if nearer than what else it hit; its id and height (m)."""
-        best: tuple[float, str, float] | None = None
+    def _markers_hit(self, origin: tuple[float, float, float],
+                     direction: tuple[float, float, float]) -> list[tuple[float, str, float, bool]]:
+        """The objects without a picture whose marker the mouse's ray passes through: a sound emitter's upright post
+        (within 0.45 m of it), a campfire's logs and flames (within 0.55 m of its upright, as tall as its flames, sized
+        with it). Each: how far along the ray (m), its id, its height (m), and whether it is drawn now."""
         length = math.sqrt(sum(c * c for c in direction)) or 1.0
         d = tuple(c / length for c in direction)
-        for entity, _emitter, (x, y, z) in self._sound_emitters():
-            for k in range(4):  # points up the post
-                px, py, pz = x - origin[0], y - origin[1], z + 0.3 * k - origin[2]
+
+        def along(x: float, y: float, z: float, heights: list[float], reach: float) -> float | None:
+            best = None
+            for h in heights:  # points up the marker
+                px, py, pz = x - origin[0], y - origin[1], z + h - origin[2]
                 t = px * d[0] + py * d[1] + pz * d[2]
-                if t <= 0:
-                    continue
-                miss = math.sqrt(max(0.0, px * px + py * py + pz * pz - t * t))
-                if miss < 0.45 and (best is None or t < best[0]):
-                    best = (t, str(entity["id"]), z)
-        if best is None:
-            return None
-        if hit is not None and getattr(hit, "distance", math.inf) < best[0] * length:
-            return None
-        return best[1], best[2]
+                if t > 0 and math.sqrt(max(0.0, px * px + py * py + pz * pz - t * t)) < reach and (best is None or t < best):
+                    best = t
+            return best
+
+        out: list[tuple[float, str, float, bool]] = []
+        for entity, _emitter, (x, y, z) in self._sound_emitters():
+            t = along(x, y, z, [0.0, 0.3, 0.6, 0.9], 0.45)
+            if t is not None:
+                out.append((t, str(entity["id"]), z, True))
+        from engine.fire import fires_of  # noqa: PLC0415
+
+        shown = {str((getattr(h.entity, "mesh_entity_data", None) or {}).get("id")) for h in fires_of(self.studio.window)}
+        renderer = self.renderer
+        for entity in ops.entities(self.studio.project.scene()):
+            fire = ops.campfire_of(entity)
+            if fire is None:
+                continue
+            fx, fy = float(entity.get("x", 0)), float(entity.get("y", 0))
+            level = entity.get("elevation")
+            if not isinstance(level, (int, float)) or isinstance(level, bool) or not level:  # (as engine.fire.base)
+                level = renderer.ground_height(fx, fy) if renderer is not None else 0.0
+            size = float(fire.get("size", 1.0))
+            z = float(level) / PIXELS_PER_METRE
+            t = along(fx / PIXELS_PER_METRE, fy / PIXELS_PER_METRE, z, [0.25 * k * size for k in range(5)], 0.55 * size)
+            if t is not None:
+                out.append((t, str(entity["id"]), z, str(entity["id"]) in shown))
+        return out
 
     def _water_at(self, origin: tuple[float, float, float], direction: tuple[float, float, float]) -> tuple[str, float] | None:
         """The nearest water surface the mouse's ray meets (its object's id and level, m), if any (Milestone 19A)."""
@@ -579,7 +642,18 @@ class Hd2dView:
             self.end_stroke()
             return
         drag, self.drag = self.drag, None
-        if drag is None or not drag["moved"]:
+        if drag is None:
+            return
+        if not drag["moved"]:
+            if drag.get("next") is not None:  # clicked again on what was selected, without moving: the next behind it
+                under, index = drag["next"]
+                kind, target, _z = under[index]
+                if kind == "entity":
+                    self.structure = None
+                    self.studio.select(target)
+                else:
+                    self.select_structure(target)
+                self._say_under(under, index)
             return
         if drag["kind"] == "entity":
             target, (nx, ny) = drag["id"], drag["to"]

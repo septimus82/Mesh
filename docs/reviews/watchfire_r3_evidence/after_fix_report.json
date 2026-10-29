@@ -1,0 +1,284 @@
+{
+ "objects": [
+  "Player",
+  "Elder",
+  "Pond",
+  "Campfire 1",
+  "Campfire 2",
+  "Campfire 3",
+  "Campfire 4",
+  "Sign",
+  "Sign_1"
+ ],
+ "signs": [
+  "Sign",
+  "Sign_1"
+ ],
+ "1_click_lone_campfire": {
+  "selected": "Campfire 1",
+  "structure": null,
+  "message": "Placed Sign on the ground, 0.0 m up.",
+  "inspector_name": "Campfire 1",
+  "inspector_burning": [
+   "Burning: On",
+   "Burning: On"
+  ],
+  "campfire_of_selected": {
+   "enabled": true,
+   "size": 1.0,
+   "smoke": true,
+   "light": 1.0,
+   "light_radius": 192.0,
+   "sound": ""
+  },
+  "under": [
+   "Campfire 1"
+  ]
+ },
+ "1b_under_hidden_fire": [
+  "cottage",
+  "Campfire 4"
+ ],
+ "1b_click_where_the_fire_is_hidden": {
+  "selected": null,
+  "structure": "cottage",
+  "message": "cottage: 1 of 2 here. Click again (without moving) for the one behind.",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null
+ },
+ "1c_turn_the_selected_cottage": {
+  "selected": null,
+  "structure": "cottage",
+  "message": "Turned.",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "turned": [
+   null,
+   90.0
+  ],
+  "fire_unmoved": true
+ },
+ "1c_undo_turn": {
+  "rotation": null,
+  "still_selected": "cottage"
+ },
+ "1d_click_again_the_hidden_fire": {
+  "selected": "Campfire 4",
+  "structure": null,
+  "message": "Campfire 4: 2 of 2 here. Click again (without moving) for the front one again.",
+  "inspector_name": "Campfire 4",
+  "inspector_burning": [
+   "Burning: On",
+   "Burning: On"
+  ],
+  "campfire_of_selected": {
+   "enabled": true,
+   "size": 1.0,
+   "smoke": true,
+   "light": 1.0,
+   "light_radius": 192.0,
+   "sound": ""
+  }
+ },
+ "2_signs_click_1": {
+  "selected": "Sign",
+  "structure": null,
+  "message": "Sign: 1 of 2 here. Click again (without moving) for the one behind.",
+  "inspector_name": "Sign",
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "under": [
+   "Sign",
+   "Sign_1"
+  ]
+ },
+ "2_signs_click_2": {
+  "selected": "Sign_1",
+  "structure": null,
+  "message": "Sign_1: 2 of 2 here. Click again (without moving) for the front one again.",
+  "inspector_name": "Sign_1",
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "under": [
+   "Sign",
+   "Sign_1"
+  ]
+ },
+ "2_signs_click_3": {
+  "selected": "Sign",
+  "structure": null,
+  "message": "Sign: 1 of 2 here. Click again (without moving) for the one behind.",
+  "inspector_name": "Sign",
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "under": [
+   "Sign",
+   "Sign_1"
+  ]
+ },
+ "3_drag_selected": {
+  "selected": "Sign",
+  "structure": null,
+  "message": "Sign: 1 of 2 here. Click again (without moving) for the one behind.",
+  "inspector_name": "Sign",
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "selected_before_drag": "Sign",
+  "moved": [
+   "Sign"
+  ]
+ },
+ "3_undo": {
+  "positions_restored": true
+ },
+ "3_redo": {
+  "positions_moved_again": true
+ },
+ "4_stack_click_1": {
+  "selected": "Campfire 2",
+  "structure": null,
+  "message": "Campfire 2: 1 of 2 here. Click again (without moving) for the one behind.",
+  "inspector_name": "Campfire 2",
+  "inspector_burning": [
+   "Burning: On",
+   "Burning: On"
+  ],
+  "campfire_of_selected": {
+   "enabled": true,
+   "size": 1.0,
+   "smoke": true,
+   "light": 1.0,
+   "light_radius": 192.0,
+   "sound": ""
+  },
+  "under": [
+   "Campfire 2",
+   "Campfire 3"
+  ]
+ },
+ "4_stack_click_2": {
+  "selected": "Campfire 3",
+  "structure": null,
+  "message": "Campfire 3: 2 of 2 here. Click again (without moving) for the front one again.",
+  "inspector_name": "Campfire 3",
+  "inspector_burning": [
+   "Burning: Off",
+   "Burning: Off"
+  ],
+  "campfire_of_selected": {
+   "enabled": false,
+   "size": 1.0,
+   "smoke": true,
+   "light": 1.0,
+   "light_radius": 192.0,
+   "sound": ""
+  },
+  "under": [
+   "Campfire 2",
+   "Campfire 3"
+  ]
+ },
+ "4_stack_right_click": {
+  "selected": "Campfire 3",
+  "structure": null,
+  "message": "Campfire 3: 2 of 2 here. Click again (without moving) for the front one again.",
+  "inspector_name": "Campfire 3",
+  "inspector_burning": [
+   "Burning: Off",
+   "Burning: Off"
+  ],
+  "campfire_of_selected": {
+   "enabled": false,
+   "size": 1.0,
+   "smoke": true,
+   "light": 1.0,
+   "light_radius": 192.0,
+   "sound": ""
+  },
+  "kept": true,
+  "menu": [
+   "Rename",
+   "Add behaviour...",
+   "Copy",
+   "Delete"
+  ]
+ },
+ "5_under_empty": [],
+ "5_click_empty_ground": {
+  "selected": null,
+  "structure": null,
+  "message": "Campfire 3: 2 of 2 here. Click again (without moving) for the front one again.",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null
+ },
+ "6_sculpt_click_on_campfire": {
+  "selected": null,
+  "structure": null,
+  "message": "Raised the ground (1 dabs, one undo step).",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "brush_on": true
+ },
+ "6_paint_click_on_campfire": {
+  "selected": null,
+  "structure": null,
+  "message": "Painted earth (1 dabs, one undo step).",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "brush_on": true
+ },
+ "6_scatter_click_on_campfire": {
+  "selected": null,
+  "structure": null,
+  "message": "Scattered 22 (Meadow): one undo step.",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "brush_on": true
+ },
+ "7_saved": {
+  "message": "Saved 1 file(s).",
+  "positions": {
+   "Elder": [
+    144.0,
+    640.0
+   ],
+   "Pond": [
+    832.0,
+    192.0
+   ],
+   "Campfire 1": [
+    307.2,
+    83.2
+   ],
+   "Campfire 2": [
+    448.0,
+    288.0
+   ],
+   "Campfire 3": [
+    448.0,
+    288.0
+   ],
+   "Campfire 4": [
+    192.0,
+    160.0
+   ],
+   "Sign": [
+    416.0,
+    208.0
+   ],
+   "Sign_1": [
+    384.0,
+    220.0
+   ]
+  }
+ },
+ "7_reopened": {
+  "positions_match": true
+ }
+}
