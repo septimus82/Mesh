@@ -942,7 +942,7 @@ class InspectorMixin:
         target = entity["id"]
         talk = ops.conversation(entity)
         nodes = talk["nodes"]
-        order = list(nodes)
+        order = ops.line_order(nodes)  # (the same numbers after saving and reopening: not the file's order)
         number = {node_id: i + 1 for i, node_id in enumerate(order)}
         rows.add(self._label("Conversation", bold=True, size=12))
         self._labeled(rows, "First line says", self._field(ops.dialogue_text(entity), lambda v: self._edit(

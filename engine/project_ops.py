@@ -1691,8 +1691,28 @@ def _graph(entity: Doc) -> tuple[Doc, Doc, Doc]:
     return config, graph, nodes
 
 
+def line_order(nodes: Doc) -> list[str]:
+    """A conversation's lines in the order they were written: "root" (the first line Studio writes) first, then
+    ``line_2``, ``line_3`` ... by their number, then any other names alphabetically. Saving writes a conversation's
+    lines sorted by name (``json_io.dumps_stable``), so the order they were added in isn't kept in the file; this is the
+    same before and after saving, so Studio's line numbers mean the same lines after a room is reopened (Watchfire R4).
+    The name itself breaks any tie (``line_02`` before ``line_2``): the order never depends on the file's."""
+    def key(node_id: str) -> tuple[int, int, str]:
+        number = _line_number(node_id)
+        return (0, 0, node_id) if node_id == "root" else (1, number, node_id) if number is not None else (2, 0, node_id)
+
+    return sorted(nodes, key=key)
+
+
+def _line_number(node_id: str) -> int | None:
+    numbered = re.fullmatch(r"line_(\d+)", node_id)
+    return int(numbered.group(1)) if numbered else None
+
+
 def _new_line_id(nodes: Doc) -> str:
-    n = len(nodes) + 1
+    """The next line's id: numbered after every ``line_N`` there (a number freed by deleting a line is not used
+    again, so a new line is always numbered last), and after the line count (``line_2`` after ``root``)."""
+    n = max([len(nodes)] + [k for k in map(_line_number, nodes) if k is not None]) + 1
     while f"line_{n}" in nodes:
         n += 1
     return f"line_{n}"
@@ -1732,7 +1752,7 @@ def add_line(scene: Doc, entity_id: str, *, after: str | None = None, text: str 
             node["next"] = before["next"]
         before["next"] = node_id
     elif nodes and link:
-        last = next(reversed(nodes))
+        last = line_order(nodes)[-1]  # (the last line as numbered, not the last one in the file)
         if not nodes[last].get("next") and not nodes[last].get("choices"):
             nodes[last]["next"] = node_id
     nodes[node_id] = node
@@ -1788,7 +1808,7 @@ def remove_line(scene: Doc, entity_id: str, node_id: str) -> Doc:
     if not graph["starts"]:
         graph.pop("starts")
     if graph.get("start") == node_id:
-        graph["start"] = follow if follow in nodes else next(iter(nodes))
+        graph["start"] = follow if follow in nodes else line_order(nodes)[0]
     return _checked(scene, out)
 
 
