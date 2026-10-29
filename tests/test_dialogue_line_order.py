@@ -66,3 +66,39 @@ def test_removing_the_first_line_makes_the_first_numbered_line_the_opening() -> 
     scene = ops.remove_line(_saved_and_reopened(scene), eid, "root")
     talk = ops.conversation(ops.find_entity(scene, eid))
     assert talk["start"] == "line_2", "the line now numbered 1, whatever order the file has"
+
+
+def test_a_line_added_after_deleting_middle_lines_is_numbered_last_and_the_others_keep_theirs() -> None:
+    scene, eid = _written()
+    for k in range(3, 10):  # lines 3 to 9 deleted
+        scene = ops.remove_line(_saved_and_reopened(scene), eid, f"line_{k}")
+    scene = _saved_and_reopened(scene)
+    before = ops.line_order(_nodes(scene, eid))
+    assert before == ["root", "line_2", "line_10", "line_11"]
+    scene, new = ops.add_line(scene, eid, text="Appended.")
+    scene = _saved_and_reopened(scene)
+    nodes = _nodes(scene, eid)
+    assert new == "line_12", "a number freed by a deletion isn't used again"
+    assert ops.line_order(nodes) == before + [new], "the others keep their numbers; the new line is last"
+    assert nodes["line_11"]["next"] == new
+    scene, newer = ops.add_line(_saved_and_reopened(scene), eid, text="And another.")
+    assert newer == "line_13" and ops.line_order(_nodes(scene, eid))[-1] == newer
+
+
+def test_new_line_ids_are_sequential_for_new_and_old_conversations() -> None:
+    scene, eid = _written()
+    assert ops.line_order(_nodes(scene, eid)) == ["root"] + [f"line_{k}" for k in range(2, 12)]
+    old = {"name": "Start", "schema_version": 1, "version": 1, "entities": [
+        {"id": "sign", "name": "Sign", "x": 0, "y": 0, "behaviours": ["Dialogue"],
+         "behaviour_config": {"Dialogue": {"dialogue_lines": ["First.", "Second.", "Third."]}}}]}
+    old, added = ops.add_line(old, "sign", text="Fourth.")  # (its one list becomes lines first, then one is added)
+    nodes = _nodes(old, "sign")
+    assert ops.line_order(nodes) == ["line_1", "line_2", "line_3", "line_4"] and added == "line_4"
+    assert [nodes[n]["text"] for n in ops.line_order(nodes)] == ["First.", "Second.", "Third.", "Fourth."]
+
+
+def test_lines_with_the_same_number_are_ordered_by_name_whatever_the_file_order() -> None:
+    names = ["line_2", "line_02", "root", "line_10", "greet"]
+    expected = ["root", "line_02", "line_2", "line_10", "greet"]
+    assert ops.line_order(dict.fromkeys(names)) == expected
+    assert ops.line_order(dict.fromkeys(reversed(names))) == expected

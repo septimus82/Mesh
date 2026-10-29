@@ -59,7 +59,11 @@ Studio already gives lines ids in the order they are written: `root` first (`set
 keeps them in.
 
 - **`project_ops.line_order(nodes)`** returns `root`, then `line_N` by number (so `line_10` comes after `line_9`), then
-  any other names alphabetically. The result is the same before and after saving.
+  any other names alphabetically. The name itself breaks any tie (`line_02` before `line_2`). The result never depends
+  on the file's order, and is the same before and after saving.
+- **`project_ops._new_line_id`** numbers a new line after every existing `line_N` (added after review). Before, it
+  started from the line count, so after middle lines were deleted it could reuse a freed lower number and the new line
+  would be numbered in the middle (see "Review round").
 - **`studio_inspector` numbers lines with `line_order`.**
 - **`project_ops.add_line`** treats the last line as numbered as "the end".
 - **`project_ops.remove_line`**: when the start line is deleted and nothing follows it, the line now numbered 1 becomes
@@ -68,7 +72,7 @@ keeps them in.
 Unchanged:
 
 - the file format;
-- the ids and how new ones are made;
+- existing ids (new ones are numbered as before, except that a freed number isn't reused);
 - every link;
 - the runtime (`Dialogue`);
 - `conversation()`'s and `_graph`'s start fallback for old conversations saved without a `start`. These still take the
@@ -95,17 +99,40 @@ inspector's list as shown and the conversation as stored, at every step.
 
 ## Tests
 
-- **`tests/test_dialogue_line_order.py`** (fast, 4 tests). It uses a real save round trip (`dumps_stable`, then read
-  back). Against the `fc220b4` engine files, all 4 fail.
+- **`tests/test_dialogue_line_order.py`** (fast, 7 tests). It uses a real save round trip (`dumps_stable`, then read
+  back).
   - the written order;
   - saving reorders the file but not the numbers, words or links, and saving again changes nothing;
   - a line added at the end after reopening follows the last line;
   - deleting the first line makes the first numbered line the opening.
+  - (after review) a line added after deleting middle lines is numbered last, the others keep their numbers, and the
+    next one follows;
+  - (after review) new ids stay sequential for new conversations and for an old one-list `dialogue_lines` conversation
+    (`line_1` …);
+  - (after review) names with the same number (`line_2`, `line_02`) are ordered by name, whatever the file order.
+
+  Against the `fc220b4` engine files, the first 4 fail. Against the first-reviewed `f6dbf03`, the two edge cases fail
+  and the compatibility test passes.
 - **`tests/test_dialogue_reopen_gpu.py`** (GL-gated, 5 tests) runs the real-window scenario above. Against the
   `fc220b4` engine files, 4 fail. The fifth, the game and exported-build playthrough, passes both before and after,
   because the runtime was never affected.
 
 The outputs on the base are in `before_tests_on_fc220b4_engine.txt`.
+
+## Review round (`f6dbf03`: functional pass, merge hold)
+
+The review found an edge case, reproduced with real `project_ops` calls and save round trips
+(`watchfire_r4_evidence/review_deleted_lines_reuse.txt`):
+
+- An 11-line conversation had lines 3 to 9 deleted, leaving `root`, `line_2`, `line_10` and `line_11`.
+- `add_line` then made **`line_5`**, because the next id started from the line count. It was correctly linked after
+  `line_11`, but numbered **3 of 5**.
+- `line_10` and `line_11` moved from 3 and 4 down to 4 and 5, and the line numbered last was still `line_11`, which
+  already has a next line. So "+ Next line" would have disappeared again.
+- `line_order` of `line_2` and `line_02` followed the file's order.
+
+With the correction, the new line is `line_12`, numbered 5 of 5. The other lines keep their numbers, the next new line
+is `line_13`, and ties sort by name.
 
 ## Compatibility and limits
 
