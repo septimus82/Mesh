@@ -146,12 +146,19 @@ def _behaviour_can_interact(behaviour: Any, actor: Any) -> bool:
 
 def _present(entity: Any) -> bool:
     """Whether an object is there to interact with. A drawn object: while it's shown (ConditionalActivator hides it).
-    A picture-less object is never ``visible``: a campfire is still there while the world draws it (engine.fire: its
-    logs and flames, its "Show when" flags); any other (an arrival spot, a trigger) is logic only, nothing to use."""
+    A picture-less object is never ``visible``: a campfire is still there while the HD-2D renderer draws it (its logs
+    and flames, engine.fire, its "Show when" flags); any other (an arrival spot, a trigger, a fire in a 2D room or one
+    the renderer can't draw) is nothing to use. An object with a picture, hidden, stays hidden."""
     if getattr(entity, "visible", True) is not False:
         return True
+    data = getattr(entity, "mesh_entity_data", None) or {}
+    if data.get("sprite") or data.get("picture_hidden"):
+        return False  # its picture is hidden (ConditionalActivator, a collected pickup): not there
     window = next((getattr(b, "window", None) for b in _behaviour_list(entity)), None)
-    return window is not None and any(hearth.entity is entity for hearth in fires_of(window))
+    renderer = getattr(window, "hd2d_renderer", None)
+    if renderer is None or getattr(renderer, "fire_error", None):
+        return False  # nothing draws a fire here: a 2D room, or the renderer refused its campfires
+    return any(hearth.entity is entity for hearth in fires_of(window))
 
 
 def _eligible_behaviours(entity: Any, actor: Any) -> tuple[Any, ...]:

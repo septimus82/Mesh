@@ -45,10 +45,18 @@ of `visible`:
 
 - **A drawn object**: exactly as before. It's there while it's `visible`, so `ConditionalActivator` and a collected
   pickup still hide it.
-- **A picture-less object**: it's there only while the world draws it as a campfire. That means it is one of this
-  room's `fire.fires_of(window)`, the same list (with its "Show when" flags) the renderer and the lights use.
-- **Any other picture-less object** (an arrival spot, a trigger, a picture-less object with `ConditionalActivator`
-  hiding it): still nothing there.
+- **An object with a picture whose sprite is hidden** (its data has a `sprite` or `picture_hidden`): exactly as
+  before. Not there.
+- **A genuinely picture-less object** (no `sprite` and no `picture_hidden` in its data): it's there only while the
+  room's HD-2D renderer is drawing it as a campfire. All three must hold:
+  - the room has a renderer (`window.hd2d_renderer`);
+  - the renderer hasn't refused its campfires (`fire_error`);
+  - the object is one of this room's `fire.fires_of(window)`, the same list (with its "Show when" flags) the renderer
+    and the lights use.
+- **Any other picture-less object** stays out: an arrival spot, a trigger, a campfire in a 2D room or after a failed 3D
+  build, or one hidden by its "Show when" flags.
+
+The renderer and picture conditions were added after independent review of `bcca410`.
 
 Nothing else changes:
 
@@ -80,13 +88,27 @@ Screenshots, from the source runs:
 
 ## Tests
 
-**`tests/test_interaction_pick_interactable.py`** gains two fast tests:
+**`tests/test_interaction_pick_interactable.py`** gains four fast tests. Their window carries an HD-2D renderer, as
+an HD-2D room's does:
 
-- A picture-less campfire with a conversation is picked, while a nearer picture-less non-campfire object is not.
-- A campfire that its "Show when" flags hide is not picked, a shown one is, and a campfire not in this room's fires is
-  not.
+1. A picture-less campfire that the HD-2D renderer draws, with a conversation, is picked. A nearer picture-less
+   non-campfire object is not.
+2. A campfire with no renderer drawing it is not an invisible target. This covers a 2D room or failed 3D build
+   (`hd2d_renderer` is `None`) and a renderer that refused campfires (`fire_error`).
+3. A campfire with a picture, hidden (its data has `sprite`, or `sprite` and `picture_hidden`), keeps the hidden rule.
+4. A campfire hidden by its "Show when" flags is not picked, a shown one is, and a campfire that isn't this room's is
+   not.
 
-Against the old `interaction.py`, these 2 fail; the 4 existing tests pass either way (`before_unit_tests.txt`).
+Results against earlier versions of `interaction.py`, where the 4 original tests pass every time:
+
+| Version | Fails | Passes |
+|---|---|---|
+| Base `0f818c1` | 1 and 4 (the defect) | 2 and 3 |
+| Reviewed `bcca410` | 2 and 3 (the review's edge cases) | 1 and 4 |
+| Final | none | all 8 |
+
+The outputs are in `before_unit_tests.txt`, from the first version of these tests, and in
+`unit_tests_on_earlier_versions.txt`.
 
 **`tests/test_campfire_interaction_gpu.py`** is GL-gated, a real hidden window on the M23B clearing:
 
@@ -99,8 +121,10 @@ This test fails against the old code (`before_real_window_test.txt`).
 ## Compatibility
 
 - **What becomes interactable:** only picture-less campfires that carry an interacting behaviour (a conversation,
-  usually) and that their "Show when" flags currently show. Projects that never gave a campfire a conversation see
-  nothing new.
+  usually), in an HD-2D room whose renderer is drawing campfires, that their "Show when" flags currently show.
+  Projects that never gave a campfire a conversation see nothing new.
+- **2D rooms:** a picture-less campfire with a conversation is still not interactable there, as before this change,
+  because no renderer draws it.
 - **The prompt:** a campfire with a conversation now also shows the interaction prompt when the player is near it, as
   every interactable object does.
 - **Rooms with a marker beside the fire** (like the trial game): if both the fire and the marker carry a conversation,
