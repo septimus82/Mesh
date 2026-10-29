@@ -976,6 +976,66 @@ def set_rain(scene: Doc, strength: Any) -> Doc:
     return set_particles(scene, effects)
 
 
+# --- campfires (Milestone 23B) ----------------------------------------------------------------------------------
+
+def campfire_of(entity: Doc) -> Doc | None:
+    """The object's campfire (``Campfire``) completed from the defaults (engine.fire), with ``sound``: its crackle
+    (a ``SoundEmitter`` on the same object; "" none); None if it isn't a campfire. A setting the game can't use shows
+    the defaults, with ``error`` saying why."""
+    from engine.fire import DEFAULTS, FireError, parse_fire  # noqa: PLC0415
+
+    if "Campfire" not in entity_behaviours(entity):
+        return None
+    config = (entity.get("behaviour_config") or {}).get("Campfire")
+    error = None
+    try:
+        f = parse_fire(config if isinstance(config, dict) else {})
+        out: Doc = {"enabled": f.enabled, "size": f.size, "smoke": f.smoke, "light": f.light,
+                    "light_radius": f.light_radius}
+    except FireError as exc:
+        error, out = str(exc), dict(DEFAULTS)
+    emitter = sound_emitter_of(entity)
+    out["sound"] = str(emitter.get("sound") or "") if emitter is not None else ""
+    if error:
+        out["error"] = error
+    return out
+
+
+def set_campfire(scene: Doc, entity_id: str, *, enabled: Any = _UNSET, size: Any = _UNSET, smoke: Any = _UNSET,
+                 light: Any = _UNSET, light_radius: Any = _UNSET, sound: Any = _UNSET) -> Doc:
+    """Make the object a campfire (HD-2D rooms draw it), or change it: ``enabled`` (false: cold logs, no flame, embers,
+    smoke, light or sound), ``size`` (the flames, 0.5-1.5), ``smoke``, ``light`` (its light's strength, 0-3) and
+    ``light_radius`` (px, 32-640); ``sound``: its crackle, a project sound file played from it (a ``SoundEmitter`` on
+    the same object, off while the fire is; "" takes it away). Only what is given changes."""
+    from engine.fire import FireError, parse_fire  # noqa: PLC0415
+
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    config = _behaviour_config(entity, "Campfire", create=True)
+    assert config is not None
+    given = {"enabled": enabled, "size": size, "smoke": smoke, "light": light, "light_radius": light_radius}
+    for key, value in given.items():
+        if value is not _UNSET:
+            config[key] = round(float(value), 3) if isinstance(value, (int, float)) and not isinstance(value, bool) \
+                else value
+    try:
+        fire = parse_fire(config)
+    except FireError as exc:
+        raise OpError(str(exc)) from exc
+    if sound is not _UNSET and not _sound_path(sound):
+        _drop_behaviour(entity, "SoundEmitter")
+    elif sound is not _UNSET:
+        crackle = _behaviour_config(entity, "SoundEmitter", create=True)
+        assert crackle is not None
+        crackle.update({"sound": _sound_path(sound)})
+        for key, value in (("volume", 0.6), ("radius", 48.0), ("distance", 256.0)):
+            crackle.setdefault(key, value)
+    crackle = _behaviour_config(entity, "SoundEmitter", create=False)
+    if crackle is not None:  # (heard only while it burns)
+        crackle["enabled"] = fire.enabled
+    return _checked(scene, out)
+
+
 def set_water_reflections(scene: Doc, mode: Any) -> Doc:
     """How the room's puddles and ponds mirror what stands above them (HD-2D rooms): "full" (a copy of the frame:
     8 bytes a screen pixel), "half" (a half-size copy, a quarter of that memory, for modest hardware) or "sky" (the

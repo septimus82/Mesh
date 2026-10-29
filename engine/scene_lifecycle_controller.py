@@ -8,6 +8,7 @@ from typing import Any, cast
 from engine import optional_arcade
 from engine.background_layers import parse_background_layers, parse_foreground_layers
 from engine.depth_tint_model import parse_depth_tint_settings
+from engine.fire import reset as reset_fires
 from engine.hd2d.runtime import configure_scene as configure_hd2d_scene
 from engine.logging_tools import get_logger
 from engine.parallax_model import parse_background_planes
@@ -299,6 +300,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     configure_hd2d_scene(controller.window, controller.scene_settings, scene)
     configure_scene_particles(controller.window, controller.scene_settings, scene)  # after the renderer: HD-2D's own them
     reset_water(controller.window)  # its water surfaces register as their objects are made (engine.water)
+    reset_fires(controller.window)  # its campfires too (engine.fire)
     reset_sounds(controller.window, str(controller.room_path or scene_path), controller.scene_settings)  # emitters too
 
     apply_scene_music(controller.window, controller.scene_settings)

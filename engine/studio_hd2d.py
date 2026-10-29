@@ -1547,7 +1547,7 @@ class Hd2dView:
         assert brush is not None
         third = (width - 8) // 3
         groups = [name for name in COLLECTIONS if name not in {a.name for a in ASSETS.values()}]
-        singles = ([a.name for a in ASSETS.values()] if brush.get("singles")
+        singles = ([a.name for a in ASSETS.values() if not a.hidden] if brush.get("singles")
                    else [brush["collection"]] if brush["collection"] not in groups else [])  # (the one chosen, shown)
         names = groups + singles
         for start in range(0, len(names), 3):
@@ -1776,7 +1776,7 @@ class Hd2dView:
     def advance_motion(self, delta_time: float) -> None:
         """The room's decoration moves while editing, as in play (when its animation is on)."""
         renderer = self.renderer
-        if renderer is not None and renderer.scatter is not None and renderer.motion.enabled:
+        if renderer is not None and renderer.moving:  # (or a campfire burns: Milestone 23B)
             renderer.advance_motion(delta_time)
 
     def toggle_weather(self) -> None:

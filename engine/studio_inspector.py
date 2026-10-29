@@ -151,6 +151,7 @@ class InspectorMixin:
         def share_player(self, key: str) -> None: ...
         def keep_separate_players(self) -> None: ...
         def _sound_look(self, rows: Rows, entity: dict[str, Any], width: int) -> None: ...  # engine.studio_sound
+        def _open_sound_picker(self, title: str, choose: Callable[[str], object]) -> None: ...  # engine.studio_sound
 
     # ---------------------------------------------------------------- shared state
     def _init_inspector(self) -> None:
@@ -276,6 +277,10 @@ class InspectorMixin:
         water = ops.water_of(entity)
         if water is not None:
             self._water_look(rows, target, water, width)
+            return
+        fire = ops.campfire_of(entity)
+        if fire is not None:  # a campfire (Milestone 23B), its crackle (a sound emitter) with it
+            self._campfire_look(rows, target, fire, width)
             return
         if ops.sound_emitter_of(entity) is not None:  # a sound emitter (Milestone 21B: engine.studio_sound)
             self._sound_look(rows, entity, width)
@@ -747,6 +752,75 @@ class InspectorMixin:
         row.add(self._button("Remove zone", lambda: self._edit(lambda s: ops.remove_trigger_zone(s, target), "Zone removed."),
                              width=(width - 6) // 2, style=S_DANGER))
         rows.add(row)
+
+    # ---------------------------------------------------------------- Campfire (Milestone 23B)
+    def _campfire_look(self, rows: Rows, target: str, fire: dict[str, Any], width: int) -> None:
+        """A campfire's settings: every change one checked edit (``project_ops.set_campfire``)."""
+        half = (width - 126) // 2
+
+        def change(ok: str, **values: Any) -> None:
+            self._edit(lambda s: ops.set_campfire(s, target, **values), ok)
+
+        def number(key: str, scale: float, lo: float, hi: float, what: str) -> Callable[[str], object]:
+            def commit(text: str) -> None:
+                try:
+                    value = float(text)
+                except ValueError:
+                    value = float("nan")
+                if not lo <= value <= hi:  # (nan too)
+                    self._say(f"{what}: a number from {lo:g} to {hi:g}.", ok=False)
+                    return
+                change(f"{what}: {value:g}.", **{key: value * scale})
+            return commit
+
+        rows.add(self._label("Campfire", bold=True, size=12))
+        if fire.get("error"):
+            rows.add(self._label(f"Not used as set: {fire['error']}. Correct it here.", color=C_ERROR, size=9,
+                                 width=width))
+        rows.add(self._toggle("Burning", bool(fire["enabled"]), lambda on: change(
+            "Lit." if on else "Put out: cold logs, no flame, smoke, light or sound.", enabled=on), width))
+        self._labeled(rows, "Flame size (0.5-1.5)", self._field(f"{fire['size']:g}", number(
+            "size", 1.0, 0.5, 1.5, "Flame size"), width=half, key="fire_size"), width)
+        rows.add(self._toggle("Smoke", bool(fire["smoke"]), lambda on: change(
+            "Smoke rises from it." if on else "No smoke.", smoke=on), width))
+        self._labeled(rows, "Light strength (0-3)", self._field(f"{fire['light']:g}", number(
+            "light", 1.0, 0.0, 3.0, "Light strength"), width=half, key="fire_light"), width)
+        self._labeled(rows, "Light reaches (m)", self._field(f"{fire['light_radius'] / 32:g}", number(
+            "light_radius", 32.0, 1.0, 20.0, "Light reaches"), width=half, key="fire_radius"), width)
+        sound = str(fire.get("sound") or "")
+        rows.add(self._label(f"Crackle: {Path(sound).name}" if sound else "No crackle sound.", color=C_MUTED, size=10,
+                             width=width))
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        each = (width - 4) // 2
+        row.add(self._button("Crackle sound...", partial(self._open_sound_picker, "Its crackle", lambda rel: change(
+            f"Crackle: {Path(rel).name}.", sound=rel)), width=each))
+        row.add(self._button("No sound", partial(change, "No crackle.", sound=""), width=each, disabled=not sound))
+        rows.add(row)
+        note = self._fire_lights_note()
+        if note:
+            rows.add(self._label(note, color=C_WARN, size=9, width=width))
+        rows.add(self._label("Its flames lean in the room's wind; embers and smoke rise from it and its light flickers "
+                             "on what is near. Shown while editing as in the game. HD-2D rooms only.", color=C_MUTED,
+                             size=9, width=width))
+
+    def _fire_lights_note(self) -> str:
+        """Why some of the room's fires may light nothing: an HD-2D room shows at most 8 lights, its own lamps first."""
+        from engine.hd2d.settings import MAX_LIGHTS  # noqa: PLC0415
+
+        renderer = getattr(getattr(self, "hd2d", None), "renderer", None)
+        lighting = getattr(renderer, "lighting", None)
+        if lighting is None:
+            return ""
+        free = MAX_LIGHTS - len(lighting.lamps)
+        lit = sum(1 for e in self.project.scene().get("entities") or []
+                  if (ops.campfire_of(e) or {}).get("enabled") and (ops.campfire_of(e) or {}).get("light", 0) > 0)
+        if free <= 0:
+            return (f"This room's lamps already use all {MAX_LIGHTS} lights it can show, so its fires light nothing "
+                    "round them. Remove a lamp to let them.")
+        if lit > free:
+            return (f"This room's lamps leave {free} of its {MAX_LIGHTS} lights for {lit} lit fires: the fires nearest "
+                    "the camera light their surroundings.")
+        return ""
 
     # ---------------------------------------------------------------- Water (Milestones 19A, 19B)
     def _water_look(self, rows: Rows, target: str, water: dict[str, Any], width: int) -> None:

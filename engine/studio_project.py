@@ -40,8 +40,24 @@ def _copy(doc: Any) -> Any:
         return copy.deepcopy(doc)
 
 
-@dataclass(frozen=True)
+def _older_sheet(target: Path, source: Path) -> bool:
+    """Whether the project's ``target`` is an older copy of Mesh's sheet ``source``: narrower, and pixel for pixel
+    Mesh's as far as it goes (Milestone 23B's campfire added cells after 20E's: a sheet a creator changed is kept)."""
+    if target.suffix != ".png":
+        return False
+    from PIL import Image, ImageChops  # noqa: PLC0415
 
+    try:
+        with Image.open(target) as old, Image.open(source) as new:
+            if old.width >= new.width or old.height != new.height:
+                return False
+            box = (0, 0, old.width, old.height)
+            return ImageChops.difference(old.convert("RGBA"), new.convert("RGBA").crop(box)).getbbox() is None
+    except OSError:
+        return False
+
+
+@dataclass(frozen=True)
 class _State:
     world: Doc
     scenes: dict[str, Doc]
@@ -335,7 +351,7 @@ class Project:
                 raise ops.OpError(f"Mesh couldn't add its HD-2D starter kit to this project: {exc}") from exc
         for rel in (*GROUND_TEXTURES, *SCATTER_KIT):
             target, source = self.root / rel, bundled_file(rel)
-            if not target.is_file() and source is not None:
+            if source is not None and (not target.is_file() or _older_sheet(target, source)):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(source, target)
                 copied = True
