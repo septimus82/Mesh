@@ -258,3 +258,10 @@ def test_the_fast_tier_diagnostic_rerun_follows_the_gate_not_the_report_only_thr
     assert verify_mod._is_pytest_fast_budget_offender(payload(ok=False, gate_ok=True, policy="report-only")) is False
     assert verify_mod._is_pytest_fast_budget_offender(payload(ok=False, gate_ok=False, policy="report-only")) is True
     assert verify_mod._is_pytest_fast_budget_offender(payload(ok=False)) is True  # older payloads
+
+
+def test_ci_budget_enforcement_does_not_leak_into_tests() -> None:
+    # CI's verify-all runs this fast tier with MESH_VERIFY_BUDGET_ENFORCE=1 (tests/conftest.py clears it for tests).
+    import os
+
+    assert "MESH_VERIFY_BUDGET_ENFORCE" not in os.environ

@@ -96,6 +96,17 @@ def _undo_launched_project_root_pin():
 
 
 @pytest.fixture(scope="session", autouse=True)
+def _no_ambient_step_budget_enforcement():
+    # CI's verify-all step sets MESH_VERIFY_BUDGET_ENFORCE=1 and the fast tier it runs inherits it. Since #422 F13 an
+    # enforced verify-all fails without budgets or with a budgeted step that didn't run, which every seeded test repo
+    # is; tests that judge the budgets set the variable themselves.
+    saved = os.environ.pop("MESH_VERIFY_BUDGET_ENFORCE", None)
+    yield
+    if saved is not None:
+        os.environ["MESH_VERIFY_BUDGET_ENFORCE"] = saved
+
+
+@pytest.fixture(scope="session", autouse=True)
 def _private_recent_projects(tmp_path_factory):
     # The recent-projects list lives in the user's profile; tests must never touch the real one.
     import os
