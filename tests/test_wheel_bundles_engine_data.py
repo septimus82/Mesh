@@ -196,7 +196,7 @@ def test_an_exported_game_runs_without_mesh_or_the_checkout(built: tuple[Path, P
     assert ipc.export_problems(export) == []
     for step in ("new", "doctor", "export"):  # the installed Mesh used the installation and the project, nothing else
         audit = export["steps"][step]["audit"]
-        assert set(audit["read"]) <= {"environment", "python", "project", "null device"} and audit["modules"].keys() == {"environment"}
+        assert set(audit["read"]) <= {"environment", "python", "project", "system"} and audit["modules"].keys() == {"environment"}
     game = _copy(exported, template, scratch / "played" / template / "game")
     run = ipc.play(player, game, scratch / "played" / template / "evidence")
     start, hd2d = ipc.EXPORTS[template]
@@ -205,7 +205,7 @@ def test_an_exported_game_runs_without_mesh_or_the_checkout(built: tuple[Path, P
     facts, audit = run["game"], run["audit"]
     assert Path(facts["engine"]).resolve().is_relative_to(game.resolve()) and not facts["mesh_installed"]
     assert audit["modules"].keys() == {"game"} and audit["denied"] == [] and audit["elsewhere"] == []
-    assert audit["read"]["game"] > 0 and set(audit["read"]) <= {"game", "environment", "python", "user", "null device"}
+    assert audit["read"]["game"] > 0 and set(audit["read"]) <= {"game", "environment", "python", "user", "system"}
     walk = facts["walk"]
     assert walk[2] - walk[0] > 32 and walk[3] == walk[1], "walked right, a fixed distance at fixed steps"
     assert facts["hd2d"] is hd2d and facts["sprites"] > 1 and facts["colours"] >= 16

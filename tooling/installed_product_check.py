@@ -99,11 +99,11 @@ print("MESH-PROBE " + json.dumps(facts))
 
 
 # H7: the exported game and the export itself, watched. Prepended to the code a child Python runs: every file the child
-# opens is counted by where it lies (the roots named in ROOTS, the child's environment, its base Python, or elsewhere),
-# and the checkout is off limits: opening or listing anything in it raises PermissionError and is recorded, so a file
+# opens is counted by where it lies (the roots named in ROOTS, the child's environment, its base Python, the system's
+# own places - the null device, the temp folder, /etc, /usr... - or elsewhere: a problem), and the checkout is off limits: opening or listing anything in it raises PermissionError and is recorded, so a file
 # the export lost can't be found there. At exit, one MESH-AUDIT line reports it with the origin of every Mesh module.
 AUDIT = r'''
-import atexit, json, os, sys
+import atexit, json, os, sys, tempfile
 def _mesh_audit(checkout, roots):
     def norm(p):
         return os.path.normcase(os.path.realpath(p))
@@ -111,8 +111,10 @@ def _mesh_audit(checkout, roots):
         return p == root or p.startswith(root.rstrip(os.sep) + os.sep)
     checkout = norm(checkout)
     named = sorted([(label, norm(path)) for label, path in roots.items()]
-                   + [("environment", norm(sys.prefix)), ("python", norm(sys.base_prefix)),
-                      ("null device", norm(os.devnull))], key=lambda r: -len(r[1]))
+                   + [("environment", norm(sys.prefix)), ("python", norm(sys.base_prefix))]
+                   + [("system", norm(p)) for p in (os.devnull, tempfile.gettempdir(),  # (ctypes' library lookups)
+                                                   *(() if os.name == "nt" else ("/etc", "/proc", "/sys", "/dev", "/usr")))],
+                   key=lambda r: -len(r[1]))
     def label(p):
         return next((name for name, root in named if inside(p, root)), "elsewhere")
     seen = {"read": {}, "written": {}, "denied": [], "elsewhere": []}
