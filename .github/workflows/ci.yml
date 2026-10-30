@@ -226,6 +226,12 @@ jobs:
         run: |
           python -m compileall -q engine mesh_cli tooling tests
 
+      - name: "H3 diag: snapshot pytest_after_compile (Linux)"
+        if: runner.os != 'Windows'
+        run: |
+          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP/h3diag" | Out-Null
+          python tooling/h3_env_snapshot.py "$env:RUNNER_TEMP/h3diag/pytest_after_compile.json"
+
       - name: Run pytest (Windows)
         if: runner.os == 'Windows'
         run: |
@@ -235,6 +241,30 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           xvfb-run -a python -m pytest -q
+
+      - name: "H3 diag: the gated fast-tier command twice, after the full suite (Linux)"
+        if: runner.os != 'Windows'
+        run: |
+          python tooling/h3_env_snapshot.py "$env:RUNNER_TEMP/h3diag/pytest_before_A1.json"
+          foreach ($n in "A1", "A2") {
+            $t = [Diagnostics.Stopwatch]::StartNew()
+            xvfb-run -a python -m tooling.pytest_fast --durations 0 --write-durations "$env:RUNNER_TEMP/h3diag/$n.durations.json" > "$env:RUNNER_TEMP/h3diag/$n.log"
+            $code = $LASTEXITCODE
+            $line = "{0} wall {1:N2} s exit {2}" -f $n, $t.Elapsed.TotalSeconds, $code
+            $line; Add-Content -Path "$env:RUNNER_TEMP/h3diag/walls.txt" -Value $line
+            Get-Content "$env:RUNNER_TEMP/h3diag/$n.log" | Select-Object -Last 1
+            python tooling/h3_env_snapshot.py "$env:RUNNER_TEMP/h3diag/pytest_after_$n.json"
+          }
+          exit 0
+
+      - name: "H3 diag: upload"
+        if: always() && runner.os != 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: h3-diag-pytest-${{ matrix.os }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/h3diag/
 
       # What the suite's tests write under artifacts/ (replay diagnostics and the like): before the split it went up
       # with mesh-artifacts, which a failed suite still uploaded. Not a mesh-artifacts-* name: release_draft.yml takes
@@ -297,6 +327,12 @@ jobs:
         run: |
           python -m compileall -q engine mesh_cli tooling tests
 
+      - name: "H3 diag: snapshot verify_after_compile (Linux)"
+        if: runner.os != 'Windows'
+        run: |
+          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP/h3diag" | Out-Null
+          python tooling/h3_env_snapshot.py "$env:RUNNER_TEMP/h3diag/verify_after_compile.json"
+
       # Only the summary line is shown, so the exit code is checked here, not left to whatever ran last: a collection
       # that fails is a failed step, with its output.
       - name: Warm pytest's caches (collect only, no test runs)
@@ -306,6 +342,30 @@ jobs:
           $code = $LASTEXITCODE
           if ($code -ne 0) { $out | Select-Object -Last 80; throw "pytest --collect-only failed with exit code $code" }
           $out | Select-Object -Last 1
+
+      - name: "H3 diag: the gated fast-tier command twice, after the warm-up (Linux)"
+        if: runner.os != 'Windows'
+        run: |
+          python tooling/h3_env_snapshot.py "$env:RUNNER_TEMP/h3diag/verify_before_B1.json"
+          foreach ($n in "B1", "B2") {
+            $t = [Diagnostics.Stopwatch]::StartNew()
+            xvfb-run -a python -m tooling.pytest_fast --durations 0 --write-durations "$env:RUNNER_TEMP/h3diag/$n.durations.json" > "$env:RUNNER_TEMP/h3diag/$n.log"
+            $code = $LASTEXITCODE
+            $line = "{0} wall {1:N2} s exit {2}" -f $n, $t.Elapsed.TotalSeconds, $code
+            $line; Add-Content -Path "$env:RUNNER_TEMP/h3diag/walls.txt" -Value $line
+            Get-Content "$env:RUNNER_TEMP/h3diag/$n.log" | Select-Object -Last 1
+            python tooling/h3_env_snapshot.py "$env:RUNNER_TEMP/h3diag/verify_after_$n.json"
+          }
+          exit 0
+
+      - name: "H3 diag: upload"
+        if: always() && runner.os != 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: h3-diag-verify-${{ matrix.os }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/h3diag/
 
       - name: Run verify-all (Windows)
         if: runner.os == 'Windows'
