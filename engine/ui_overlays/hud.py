@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections import deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence
@@ -19,6 +20,60 @@ _HUD_PROVIDER_EXCEPTIONS: tuple[type[Exception], ...] = (
     TypeError,
     ValueError,
 )
+
+# Toasts ("Game saved", the controls hint...): one layout gives the text its lines and the box its size, both from the
+# text's measured width (#422 H8: the box was estimated from the character count and capped at 360 px while the text
+# was drawn unbounded, so the controls hint ran far past its border).
+TOAST_LEFT = 20.0  # from the window's left edge; the box keeps the same margin from its right edge
+TOAST_PAD_X, TOAST_PAD_Y = 12.0, 6.0
+TOAST_MIN_WIDTH, TOAST_MAX_WIDTH = 180.0, 640.0  # (a short message keeps its box; a long one wraps before 640 px)
+TOAST_LINE_HEIGHT = 22.0  # the line pitch at text scale 1, as before; a taller font or text scale gets more
+TOAST_FONT, TOAST_FONT_SIZE = "Consolas", 12.0
+
+
+@dataclass(frozen=True, slots=True)
+class ToastLayout:
+    lines: tuple[str, ...]
+    width: float  # the box, padding included
+    height: float
+    line_height: float
+
+
+def _wrap(text: str, fits: Callable[[str], bool]) -> list[str]:
+    """``text`` in lines that each ``fits``: broken where it has two spaces (between "Q: Quest Log" and "Tab:
+    Inventory"), else between words, else, for a word too long on its own, between letters."""
+    lines: list[str] = []
+
+    def add(piece: str, sep: str) -> None:
+        if lines and fits(f"{lines[-1]}{sep}{piece}"):
+            lines[-1] = f"{lines[-1]}{sep}{piece}"
+        else:
+            lines.append(piece)
+
+    for group in (g.strip() for g in text.split("  ") if g.strip()):
+        if fits(group):
+            add(group, "  ")
+            continue
+        for n, word in enumerate(group.split()):
+            while len(word) > 1 and not fits(word):
+                cut = next((i for i in range(len(word) - 1, 0, -1) if fits(word[:i])), 1)
+                lines.append(word[:cut])
+                word = word[cut:]
+            add(word, "  " if n == 0 else " ")
+    return lines or [text]
+
+
+def layout_toast(text: str, *, measure: Callable[[str], float], line_height: float, max_width: float) -> ToastLayout:
+    """The lines and box of a toast at most ``max_width`` wide (padding included): ``measure`` gives a line's width as
+    the font draws it."""
+    # In whole pixels: a box edge between two pixels smears its outline over both.
+    max_width, line_height = float(math.floor(max_width)), float(math.ceil(line_height))
+    inner = max(1.0, max_width - 2 * TOAST_PAD_X)
+    lines = tuple(_wrap(text, lambda s: measure(s) <= inner))
+    text_width = math.ceil(max(measure(line) for line in lines) + 2 * TOAST_PAD_X)
+    width = min(max_width, max(TOAST_MIN_WIDTH, float(text_width)))
+    return ToastLayout(lines, width, len(lines) * line_height + 2 * TOAST_PAD_Y, line_height)
+
 
 if TYPE_CHECKING:  # pragma: no cover
     from arcade import Sprite
@@ -538,6 +593,7 @@ class PlayerHUD(UIElement):
         from ..ui_toasts import ToastManager  # noqa: PLC0415
 
         self._toast_manager: ToastManager = ToastManager()
+        self._toast_layouts: dict[tuple[str, float, float], ToastLayout] = {}
         self._hud_frame: int = 0
         self._latest_view_model: HudViewModel | None = None
         self._health_text = optional_arcade.arcade.Text(
@@ -743,49 +799,69 @@ class PlayerHUD(UIElement):
         # Toasts ("Game saved", ...) show even for a player without health stats, as in most Studio games.
         self._draw_toasts()
 
+    def toast_layout(self, text: str) -> ToastLayout:
+        """``text``'s toast in this window, now: its lines measured in the font it is drawn in (at the text scale),
+        the box as wide as the widest line plus padding, never wider than the window less a margin each side."""
+        from ..text_draw import get_text_scale  # noqa: PLC0415
+
+        scale = get_text_scale()
+        max_width = min(TOAST_MAX_WIDTH, float(self.window.width) - 2 * TOAST_LEFT)
+        key = (text, max_width, scale)
+        layout = self._toast_layouts.get(key)
+        if layout is None:
+            text_class = getattr(optional_arcade.arcade, "Text", None)
+            if text_class is None:  # (a stand-in arcade, no fonts: the old estimate)
+                def measure(line: str) -> float:
+                    return 7.5 * scale * len(line)
+                pitch = TOAST_LINE_HEIGHT * scale
+            else:
+                probe = text_class("Ag", 0, 0, font_size=TOAST_FONT_SIZE * scale, font_name=TOAST_FONT)
+
+                def measure(line: str) -> float:
+                    probe.text = line
+                    return float(probe.content_width)
+                pitch = max(TOAST_LINE_HEIGHT * scale, float(probe.content_height))
+            if len(self._toast_layouts) > 64:
+                self._toast_layouts.clear()
+            layout = self._toast_layouts[key] = layout_toast(text, measure=measure, line_height=pitch,
+                                                             max_width=max_width)
+        return layout
+
     def _draw_toasts(self) -> None:
         toasts = self._toast_manager.get_active_entries()
         if toasts:
             from ..text_draw import draw_text_cached  # noqa: PLC0415
 
-            start_x = 20.0
-            start_y = self.window.height - 110.0
-            line_height = 22.0
-            padding_x = 12.0
-            padding_y = 6.0
+            top = self.window.height - 110.0
             cache = getattr(self.window, "text_cache", None)
-            for idx, (toast_text, alpha) in enumerate(toasts):
+            for toast_text, alpha in toasts:
                 if not toast_text:
                     continue
                 fade = max(0.0, min(1.0, float(alpha)))
                 if fade <= 0.0:
                     continue
-                width = min(360.0, max(180.0, 24.0 + (len(toast_text) * 7.5)))
-                height = line_height + padding_y * 2
-                left = start_x
-                top = start_y - (idx * (height + 6.0))
-                right = left + width
-                bottom = top - height
-                bg_alpha = int(round(170 * fade))
-                text_alpha = int(round(255 * fade))
+                layout = self.toast_layout(toast_text)
+                left, right, bottom = TOAST_LEFT, TOAST_LEFT + layout.width, top - layout.height
                 _draw_rectangle_filled(
                     center_x=(left + right) / 2.0,
                     center_y=(top + bottom) / 2.0,
-                    width=width,
-                    height=height,
-                    color=(0, 0, 0, bg_alpha),
+                    width=layout.width,
+                    height=layout.height,
+                    color=(0, 0, 0, int(round(170 * fade))),
                 )
                 _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
-                draw_text_cached(
-                    toast_text,
-                    left + padding_x,
-                    top - padding_y,
-                    color=(255, 255, 255, text_alpha),
-                    font_size=12,
-                    anchor_y="top",
-                    font_name="Consolas",
-                    cache=cache,
-                )
+                for n, line in enumerate(layout.lines):
+                    draw_text_cached(
+                        line,
+                        left + TOAST_PAD_X,
+                        top - TOAST_PAD_Y - n * layout.line_height,
+                        color=(255, 255, 255, int(round(255 * fade))),
+                        font_size=TOAST_FONT_SIZE,
+                        anchor_y="top",
+                        font_name=TOAST_FONT,
+                        cache=cache,
+                    )
+                top = bottom - 6.0
 
     def _draw_stats(self) -> None:
         player = getattr(self.window, "player", None)

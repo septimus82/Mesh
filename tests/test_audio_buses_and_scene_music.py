@@ -95,7 +95,7 @@ def test_the_loader_no_longer_turns_a_missing_music_setting_into_silence() -> No
 
 def test_an_explicit_silence_survives_compact_saving() -> None:
     """The compact serializer drops settings equal to their defaults: it used to drop an authored "music": null."""
-    assert compact_scene_payload({"settings": {"music": None, "background_color": "dark_blue_gray"}})["settings"] == {
+    assert compact_scene_payload({"settings": {"music": None, "background_color": "black"}})["settings"] == {
         "music": None}
 
 

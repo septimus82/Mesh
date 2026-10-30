@@ -28,8 +28,10 @@ DEFAULT_LAYERS = [
 
 # No "music" here: a room without a music setting keeps the music playing, one with "music": null is silent
 # (engine.scene_music). A default of None made the two the same: every room without music stopped it (M21A).
+# Black around a room smaller than the window, as HD-2D rooms show their dark sky: it was dark_blue_gray, a purple
+# no room asked for, framing every small 2D room (#422 H8). A room that names a colour keeps it.
 DEFAULT_SETTINGS = {
-    "background_color": "dark_blue_gray",
+    "background_color": "black",
     "music_volume": 1.0,
 }
 
