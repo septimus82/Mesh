@@ -10,6 +10,11 @@ H5 (#422): the check itself is tooling/installed_product_check.py, and CI's ``in
 this file. CI's earlier installed-wheel canary ran ``python -m mesh_cli`` from the checkout, which imports the
 checkout's engine instead of the wheel's; so this file also proves the check fails on broken wheels, including one
 whose missing file the checkout still has, and on that leaky way of running it.
+
+H7 (#422): no test ran a game exported from an installed Mesh (tests/test_export_bundle.py exports with the checkout's
+engine and never plays the result). Here the installed Mesh makes, checks and exports a 2D and an HD-2D project, and
+the export, copied elsewhere, is played by a Python holding only Mesh's declared dependencies, with the checkout off
+limits; broken exports (a lost module, room, config or picture, content or an engine taken from the checkout) fail.
 """
 
 from __future__ import annotations
@@ -19,6 +24,7 @@ import hashlib
 import zipfile
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -150,3 +156,103 @@ def test_the_check_sees_the_old_canary_s_leak(built: tuple[Path, Path, Path]) ->
     assert "engine.project_scaffold was imported from outside the installed environment" in found
     assert any(line.startswith("a checkout path is importable") for line in found)
     assert "No module named 'engine.project_scaffold'" in isolated["error"], "isolated, the same wheel fails"
+
+
+# --------------------------------------------------------------------------- #
+# H7 (#422): a game exported with the installed Mesh runs as its player runs it, without Mesh or the checkout.
+# --------------------------------------------------------------------------- #
+
+@pytest.fixture(scope="module")
+def exported(built: tuple[Path, Path, Path]) -> dict[str, dict[str, Any]]:
+    """Each template of ``ipc.EXPORTS`` made (``mesh new``), checked (``mesh doctor``) and exported (``mesh export
+    build``) by the installed Mesh of this checkout's wheel, run isolated from a scratch folder."""
+    wheel, venv, scratch = built
+    _holding(venv, wheel)
+    return {template: ipc.export_game(venv, scratch / "export" / template, template) for template in ipc.EXPORTS}
+
+
+@pytest.fixture(scope="module")
+def player(built: tuple[Path, Path, Path]) -> Path:
+    """A player's environment: what the wheel declares it needs (Requires-Dist), not Mesh."""
+    wheel, _venv, scratch = built
+    ipc.make_player_env(scratch / "player_env", wheel)
+    return scratch / "player_env"
+
+
+def _copy(exported: dict[str, dict[str, Any]], template: str, dest: Path) -> Path:
+    import shutil
+
+    assert not dest.exists()
+    shutil.copytree(exported[template]["bundle"], dest)
+    return dest
+
+
+@pytest.mark.parametrize("template", sorted(ipc.EXPORTS))
+def test_an_exported_game_runs_without_mesh_or_the_checkout(built: tuple[Path, Path, Path],
+                                                            exported: dict[str, dict[str, Any]], player: Path,
+                                                            template: str) -> None:
+    scratch = built[2]
+    export = exported[template]
+    assert ipc.export_problems(export) == []
+    for step in ("new", "doctor", "export"):  # the installed Mesh used the installation and the project, nothing else
+        audit = export["steps"][step]["audit"]
+        assert set(audit["read"]) <= {"environment", "python", "project"} and audit["modules"].keys() == {"environment"}
+    game = _copy(exported, template, scratch / "played" / template / "game")
+    run = ipc.play(player, game, scratch / "played" / template / "evidence")
+    start, hd2d = ipc.EXPORTS[template]
+    assert ipc.game_problems(game, run, start=start, hd2d=hd2d) == []
+    assert ipc.bundle_problems(game) == [], "the game leaves its folder as exported"
+    facts, audit = run["game"], run["audit"]
+    assert Path(facts["engine"]).resolve().is_relative_to(game.resolve()) and not facts["mesh_installed"]
+    assert audit["modules"].keys() == {"game"} and audit["denied"] == [] and audit["elsewhere"] == []
+    assert audit["read"]["game"] > 0 and set(audit["read"]) <= {"game", "environment", "python", "user"}
+    walk = facts["walk"]
+    assert walk[2] - walk[0] > 32 and walk[3] == walk[1], "walked right, a fixed distance at fixed steps"
+    assert facts["hd2d"] is hd2d and facts["sprites"] > 1 and facts["colours"] >= 16
+
+
+_REMOVED = "engine/scene_loader.py"  # (the game imports it as it starts)
+
+
+@pytest.mark.parametrize(
+    ("defect", "expected"),
+    [
+        ("missing runtime module", f"No module named '{_REMOVED[:-3].replace('/', '.')}'"),
+        ("missing start room", "Scene file not found: packs/core_regions/scenes/start.json"),
+        ("missing config", "Scene file not found: scenes/cellar.json"),  # (the engine's default start room)
+        ("missing picture", "Failed to load sprite sheet 'assets/sprites/starter_hero.png': file not found"),
+        ("content resolved in the checkout", "tried to use the checkout"),
+        ("engine imported from the checkout", "tried to use the checkout"),
+    ],
+)
+def test_a_broken_export_fails_clearly(built: tuple[Path, Path, Path], exported: dict[str, dict[str, Any]],
+                                       player: Path, defect: str, expected: str) -> None:
+    import json
+    import shutil
+
+    scratch = built[2]
+    folder = scratch / "broken" / defect.replace(" ", "_")
+    game = _copy(exported, "adventure", folder / "game")
+    lost = ("config.json", "assets/sprites/starter_hero.png", _REMOVED)
+    assert all((REPO / rel).is_file() for rel in lost), "the checkout has what the export loses: only the guard hides it"
+    if defect == "missing runtime module":
+        (game / _REMOVED).unlink()
+    elif defect == "missing start room":
+        (game / "packs/core_regions/scenes/start.json").unlink()
+    elif defect == "missing config":
+        (game / "config.json").unlink()
+    elif defect == "missing picture":
+        (game / "assets/sprites/starter_hero.png").unlink()
+    elif defect == "content resolved in the checkout":  # a developer's own path left in the game's config
+        config = json.loads((game / "config.json").read_text(encoding="utf-8"))
+        (game / "config.json").write_text(json.dumps({**config, "content_roots": [str(REPO)]}), encoding="utf-8")
+    else:  # an export without its engine, played where the checkout is importable (a developer's own machine)
+        shutil.rmtree(game / "engine")
+    run = ipc.play(player, game, folder / "evidence", leaky=defect == "engine imported from the checkout")
+    start, hd2d = ipc.EXPORTS["adventure"]
+    found = ipc.game_problems(game, run, start=start, hd2d=hd2d)
+    assert any(expected in line for line in found), found
+    if defect == "missing config":
+        assert "No config file at 'config.json'" in run["stdout"], "the game says why"
+    if defect != "missing picture":
+        assert run["code"] != 0, "the game stops: it doesn't carry on half-loaded"

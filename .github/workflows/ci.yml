@@ -570,6 +570,9 @@ jobs:
     # engine file must come from the installation, and `mesh new` / `mesh doctor` must work. The same file proves the
     # check fails on broken wheels, including one whose missing file the checkout still has. Nothing here installs the
     # checkout, so the test runs without the project's conftest (which imports the checkout's engine).
+    # H7: the installed Mesh also exports a 2D and an HD-2D game, and each export is played (hidden window, Mesa's
+    # software GL) by a Python holding only Mesh's declared dependencies, with the checkout off limits; broken exports
+    # must fail. Their frames are uploaded for inspection.
     name: installed (${{ matrix.os }}, py${{ matrix.python }})
     permissions:
       contents: read
@@ -593,19 +596,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Set up Python and a display (the checkout stays uninstalled)
+        uses: ./.github/actions/mesh-ci-setup
         with:
           python-version: ${{ matrix.python }}
-          cache: pip
-          cache-dependency-path: |
-            pyproject.toml
-            pytest.ini
+          install-project: "false"
 
       - name: Installed-product check
         run: |
           python -m pip install -U pip "pytest>=8.0"
-          python -m pytest -o addopts= --noconftest -p no:cacheprovider -q -W error -rA tests/test_wheel_bundles_engine_data.py
+          $test = @("-m", "pytest", "-o", "addopts=", "--noconftest", "-p", "no:cacheprovider", "-q", "-W", "error", "-rA",
+                    "--durations=20", "--basetemp", "$env:RUNNER_TEMP/installed", "tests/test_wheel_bundles_engine_data.py")
+          if ($IsLinux) { xvfb-run -a python @test } else { python @test }
+          if ($LASTEXITCODE -ne 0) { throw "the installed-product check failed (exit $LASTEXITCODE)" }
+
+      - name: Upload the exported games' frames
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installed-exported-frames-${{ matrix.os }}-py${{ matrix.python }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/installed/**/evidence/frame.png
 
   acceptance:
     # Creator-workflow acceptance (H6, #422): save and reopen, new-game isolation, creator field editing and background

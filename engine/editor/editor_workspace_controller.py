@@ -428,6 +428,10 @@ class EditorWorkspaceController:
             return
 
     def _on_recent_scene_recorded(self, scene_path: str) -> None:
+        # Remembered for the editor, the only launch that reopens it (_reopens_editor_scene). A game never writes it:
+        # an exported game wrote .mesh/ into its own folder on every room it loaded (#422 H7).
+        if getattr(getattr(self._editor.window, "engine_config", None), "_mesh_launch_mode", None) != "editor":
+            return
         try:
             from engine.editor.editor_session_state import save_editor_session_state_for_editor  # noqa: PLC0415
 
