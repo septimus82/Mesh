@@ -258,8 +258,9 @@ def pytest_collection_modifyitems(config, items):
 # missed tests/test_background_layers_render_contract.py); it gets the `gl` marker and runs in the gpu lane.
 _GL_OPT_IN = "MESH_GL_SMOKE"
 _GL_MENTION_EXEMPT = ("test_tooling_test_tiers_cli.py", "test_test_lanes_contract.py")  # name the variable, need no GL
-# Skips a lane satisfies: the gpu lane sets MESH_GL_SMOKE=1; CI sets CI=true for the packaging-hygiene checks.
-_LANE_SATISFIED_SKIPS = (_GL_OPT_IN, "run with CI=true")
+# Skips a lane satisfies: the gpu lane sets MESH_GL_SMOKE=1; CI sets CI=true for the packaging-hygiene checks; a
+# platform-only test names the lane that runs it ("... lane runs this on Windows").
+_LANE_SATISFIED_SKIPS = (_GL_OPT_IN, "run with CI=true", "lane runs this on ")
 
 
 def _requires_gl(item) -> bool:

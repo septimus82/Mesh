@@ -126,7 +126,7 @@ class Camera:
     def view_projection(self, aspect: float) -> np.ndarray:
         proj = orthographic(self.distance * math.tan(math.radians(self.fov_deg) / 2), aspect, 0.1, 100.0) \
             if self.ortho else perspective(self.fov_deg, aspect, 0.1, 100.0)
-        return proj @ look_at(self.eye(), np.array(self.target))
+        return np.asarray(proj @ look_at(self.eye(), np.array(self.target)))
 
 
 @dataclass
