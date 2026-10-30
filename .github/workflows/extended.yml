@@ -1,0 +1,100 @@
+name: Extended acceptance
+
+# The tests the required PR run doesn't execute (H6, #422), in the lanes tooling/test_tiers.py defines for local runs
+# and CI alike:
+#   extended  the slow/e2e tests (no GL), which the default run deselects;
+#   gpu       every test that needs a GL context (the `gl` marker, by capability), which the default run skips.
+# Here the GL context is Mesa's llvmpipe SOFTWARE renderer (Xvfb on Linux, Mesa's opengl32 on Windows): a pass is
+# evidence on a software renderer, not of compatibility with physical GPUs (no GitHub-hosted runner has one).
+#
+# When it runs:
+#   - after every merge to the integration branch (push), so a regression shows within one merge;
+#   - nightly (schedule) - but GitHub runs schedules only from the repository's default branch, main, so this fires
+#     once the workflow reaches main;
+#   - on demand (workflow_dispatch: Actions > Extended acceptance > Run workflow, e.g. before a release);
+#   - on a pull request that changes the test-selection policy itself.
+# Every trigger runs the same lanes with the same selection.
+
+on:
+  push:
+    branches: [redesign/visual-editor]
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/extended.yml"
+      - "tooling/test_tiers.py"
+      - "tests/conftest.py"
+      - "pytest.ini"
+      - "tests/baselines/never_runs.txt"
+
+concurrency:
+  group: extended-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lane:
+    name: ${{ matrix.lane }} (${{ matrix.os }}, py3.11)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        lane: [extended, gpu]
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      MESH_CI_SEED: "123"
+      CI: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python, the project and a display
+        uses: ./.github/actions/mesh-ci-setup
+        with:
+          python-version: "3.11"
+
+      - name: Run the ${{ matrix.lane }} lane
+        run: |
+          if ($IsLinux) { xvfb-run -a python -m tooling.test_tiers ${{ matrix.lane }} }
+          else { python -m tooling.test_tiers ${{ matrix.lane }} }
+          if ($LASTEXITCODE -ne 0) { throw "the ${{ matrix.lane }} lane failed (exit $LASTEXITCODE): see the summary above and the artifact" }
+
+      - name: Lane summary
+        if: always()
+        run: |
+          $path = "artifacts/pytest_${{ matrix.lane }}_summary.json"
+          if (Test-Path $path) {
+            $s = Get-Content $path -Raw | ConvertFrom-Json
+            $lines = @("## ${{ matrix.lane }} lane (${{ matrix.os }})", "",
+                       "- selection: ``$($s.selection)`` $($s.paths -join ' ')",
+                       "- selected $($s.selected), passed $($s.passed), failed $($s.failed.Count), errors $($s.errors.Count), skipped $($s.skipped), $($s.seconds) s",
+                       "- GL renderer: $($s.gl_renderer)")
+            foreach ($f in @($s.failed) + @($s.errors)) { if ($f) { $lines += "- FAILED: ``$f``" } }
+            foreach ($p in $s.skip_reasons.PSObject.Properties) { $lines += "- skipped $($p.Value): $($p.Name)" }
+            foreach ($p in $s.problems) { $lines += "- PROBLEM: $p" }
+          } else { $lines = @("## ${{ matrix.lane }} lane (${{ matrix.os }})", "", "- no summary: the lane did not run") }
+          $lines -join "`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload lane reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lane-${{ matrix.lane }}-${{ matrix.os }}-py3.11
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            artifacts/pytest_${{ matrix.lane }}*
+            artifacts/**/*.log

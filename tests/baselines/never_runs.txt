@@ -1,0 +1,3 @@
+# Tests no lane can run (H6, #422): each skipped unconditionally or for a reason no lane satisfies. Adding one here
+# is a decision, with its reason; tests/test_test_lanes_contract.py fails on any test that runs nowhere unlisted.
+tests/test_breeding_live_protocol.py::test_breeding_live_protocol_transcript  # needs the separate monster_minimal_spike checkout beside Mesh
