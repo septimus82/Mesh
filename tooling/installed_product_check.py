@@ -111,7 +111,8 @@ def _mesh_audit(checkout, roots):
         return p == root or p.startswith(root.rstrip(os.sep) + os.sep)
     checkout = norm(checkout)
     named = sorted([(label, norm(path)) for label, path in roots.items()]
-                   + [("environment", norm(sys.prefix)), ("python", norm(sys.base_prefix))], key=lambda r: -len(r[1]))
+                   + [("environment", norm(sys.prefix)), ("python", norm(sys.base_prefix)),
+                      ("null device", norm(os.devnull))], key=lambda r: -len(r[1]))
     def label(p):
         return next((name for name, root in named if inside(p, root)), "elsewhere")
     seen = {"read": {}, "written": {}, "denied": [], "elsewhere": []}
@@ -138,7 +139,7 @@ def _mesh_audit(checkout, roots):
             where = label(p)
             kind = seen["written" if writing else "read"]
             kind[where] = kind.get(where, 0) + 1
-            if where == "elsewhere" and len(seen["elsewhere"]) < 20:
+            if where == "elsewhere" and p not in seen["elsewhere"] and len(seen["elsewhere"]) < 20:
                 seen["elsewhere"].append(p)
     def report():
         modules = {}

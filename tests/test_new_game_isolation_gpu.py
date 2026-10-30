@@ -44,7 +44,9 @@ def test_the_first_session_saves_and_loads_its_progress(sessions: dict) -> None:
     assert "error" not in a, a
     assert a["new_game"]["story_flags"] == [] and a["saved"] and a["loaded"]
     assert a["after_load"]["story_flags"] == ["task_accepted", "watchfire_lit"]
-    assert sessions["files_after_A"]["session_last_scene_path"] == "saves/slot_a.json"  # (what the editor remembers)
+    # A game no longer writes the editor's remembered scene (#422 H7: only editor launches read it); it wrote the save
+    # slot here, which R1's restore must ignore (tests/test_new_game_isolation.py checks that guard with it written).
+    assert sessions["files_after_A"]["session_last_scene_path"] is None
 
 
 def test_a_new_game_after_it_starts_clean_and_the_save_still_loads(sessions: dict) -> None:

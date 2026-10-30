@@ -96,7 +96,14 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     # the job installs the checkout, and the project's conftest (which imports the checkout's engine) stays out.
     assert "tests/test_wheel_bundles_engine_data.py" in installed_job and "--noconftest" in installed_job
     assert "-o addopts=" in installed_job and "-W error" in installed_job
-    assert "pip install -e" not in installed_job and "mesh-ci-setup" not in installed_job
+    # The shared setup only for its display (H7: the exported games open windows), told not to install the checkout,
+    # which it then doesn't.
+    assert "pip install -e" not in installed_job and "mesh-ci-setup" in installed_job
+    assert 'install-project: "false"' in installed_job and "$LASTEXITCODE -ne 0" in installed_job
+    setup = (WORKFLOW.parents[1] / "actions" / "mesh-ci-setup" / "action.yml").read_text(encoding="utf-8")
+    install_step = setup[setup.index("- name: Install dependencies"):].split("\n    - name:", 1)[0]
+    assert "if: inputs.install-project == 'true'" in install_step and "pip install -e" in install_step
+    assert setup.count("pip install -e") == 1
     # Each half does its own work: the full suite in pytest; verify-all, the bundle and the artifacts in verify.
     assert "python -m pytest" in pytest_job
     # verify only collects (to start verify-all as warm as it did after the full run): the suite never runs twice.

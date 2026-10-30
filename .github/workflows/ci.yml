@@ -605,9 +605,10 @@ jobs:
       - name: Installed-product check
         run: |
           python -m pip install -U pip "pytest>=8.0"
-          $test = @("-m", "pytest", "-o", "addopts=", "--noconftest", "-p", "no:cacheprovider", "-q", "-W", "error", "-rA",
-                    "--durations=20", "--basetemp", "$env:RUNNER_TEMP/installed", "tests/test_wheel_bundles_engine_data.py")
-          if ($IsLinux) { xvfb-run -a python @test } else { python @test }
+          # (the exported games open hidden windows: on Linux, in Xvfb)
+          $run, $runArgs = if ($IsLinux) { "xvfb-run", @("-a", "python") } else { "python", @() }
+          & $run @runArgs -m pytest -o addopts= --noconftest -p no:cacheprovider -q -W error -rA --durations=20 `
+            --basetemp "$env:RUNNER_TEMP/installed" tests/test_wheel_bundles_engine_data.py
           if ($LASTEXITCODE -ne 0) { throw "the installed-product check failed (exit $LASTEXITCODE)" }
 
       - name: Upload the exported games' frames
