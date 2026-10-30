@@ -106,19 +106,32 @@ python -m tooling.test_tiers tier1
 python -m tooling.test_tiers tier2
 ```
 
-Tier summary:
+Tier summary (`python -m tooling.test_tiers <tier>`; the same lanes CI runs, #422 H6):
 - **tier0**: compileall + `pytest -m fast`
 - **tier1**: `pytest -m "fast or integration"` + `verify-all`
 - **tier2**: full `pytest -q`
+- **extended**: `-m "(slow or e2e) and not gl"`: the tests the default run deselects (the installed-product tests excepted:
+  CI's required `installed (<os>)` jobs run them)
+- **gpu**: `-m gl` with `MESH_GL_SMOKE=1`: every test that needs a GL context. `tests/conftest.py` gives the `gl` marker to
+  each test whose skipif names `MESH_GL_SMOKE`, whatever its file is called. With `MESH_REQUIRE_GL=1` (set by this lane)
+  a GL test skipped by that gate fails instead of passing quietly.
+- **acceptance**: the creator-workflow GL tests (`ACCEPTANCE` in `tooling/test_tiers.py`), a subset of gpu
+
+Each lane writes `artifacts/pytest_<tier>.xml` and `pytest_<tier>_summary.json` and fails when it selects or runs no test,
+or fewer than its `min_selected`. `.github/workflows/extended.yml` runs the extended and gpu lanes on Linux and Windows
+after every integration merge, nightly (once on main), on demand and on PRs that change the selection policy; its GL is
+Mesa's software renderer, not a physical GPU. `tests/test_test_lanes_contract.py` fails when a test runs in no lane
+(`tests/baselines/never_runs.txt` lists the deliberate exceptions).
 
 Fast vs integration tests (headless contract):
 - **fast**: Must be headless-safe and GL-free. No direct `arcade` imports, no `arcade.gl`, no SpriteList/GL context usage.
 - **integration**: May use Arcade/GL/runtime. Mark with `@pytest.mark.integration` (and `@pytest.mark.slow` if heavy).
 - Any test without an explicit marker defaults to **integration**.
 
-CI runs:
-- **fast-headless**: compileall + `pytest -m fast` with Arcade blocked via `MESH_TEST_BLOCK_ARCADE=1`.
-- **integration-gl**: `python -m tooling.test_tiers tier1` (fast + integration + verify-all).
+CI runs (`.github/workflows/ci.yml`, required on every PR): the default suite (`pytest (<os>)`), verify-all with the
+fast tier, the release bundle (`verify (<os>)`), the installed product (`installed (<os>)`), the Arcade 3 canary and web
+smoke. `extended.yml` (not required on PRs) runs the extended and gpu lanes. The `fast-headless` run with
+`MESH_TEST_BLOCK_ARCADE=1` is local only; no workflow runs it.
 
 > **Windows Note**: If you encounter console buffer crashes or encoding errors when running the full suite (Tier 2) on Windows, use the dedicated hardened runner which redirects output to a file:
 > ```bash

@@ -84,7 +84,7 @@ def _accessor(doc: dict, binary: bytes, index: int) -> np.ndarray:
         if stride != dtype.itemsize * comps else [np.frombuffer(binary, dtype=dtype, count=comps * count, offset=start)]
     out = np.concatenate(rows).reshape(count, comps) if comps > 1 else np.concatenate(rows)
     if acc.get("normalized"):
-        out = out.astype(np.float32) / np.iinfo(dtype).max
+        out = out.astype(np.float32) / np.iinfo(np.dtype(dtype).type).max
     return out
 
 

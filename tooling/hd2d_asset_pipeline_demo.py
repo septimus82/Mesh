@@ -213,7 +213,7 @@ def check(out: Path, blender: Path | None = None) -> dict[str, Any]:
         if view.chosen_model != "cottage":
             d.button("Cottage", prefix=True)
         d.button("Reimport...")
-        plan_text = [t for t in d.labels() if t.startswith(("New ", "Collider", "Size", "Room ", "Same", "Reimport ", "From"))]
+        plan_text = [t for t in d.texts() if t.startswith(("New ", "Collider", "Size", "Room ", "Same", "Reimport ", "From"))]
         d.picture(out / "11_reimport_plan.png")
         d.button("Reimport")
         reimport_message = studio.message

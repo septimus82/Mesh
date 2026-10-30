@@ -133,7 +133,7 @@ def _picture(d: Any, path: Path) -> None:
 
 
 def _start_rows(d: Any) -> list[str]:
-    return [t for t in d.labels() if t.startswith(("New games start in", "A new game starts", "This world names"))]
+    return [t for t in d.texts() if t.startswith(("New games start in", "A new game starts", "This world names"))]
 
 
 # ---------------------------------------------------------------------- phases

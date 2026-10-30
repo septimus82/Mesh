@@ -181,8 +181,17 @@ class StudioDriver:
         self.key(k.ENTER)
 
     def labels(self) -> list[str]:
-        """Every text Mesh Studio shows (labels and buttons), top to bottom."""
+        """Every text Mesh Studio shows (labels and buttons), top to bottom, as laid out: a wrapped label with its
+        line breaks."""
         return [w.text for w in self.studio.ui.walk_widgets() if isinstance(getattr(w, "text", None), str) and w.text]
+
+    def texts(self) -> list[str]:
+        """The same texts as written: a wrapped label's own words, without the line breaks studio.hard_wrap puts in.
+        Where those fall depends on the fonts installed (Ubuntu has none of Studio's), so a phrase is looked for here
+        (#422 H6.1: "lights it can
+show" on Ubuntu's CI, one line on Windows)."""
+        return [getattr(w, "mesh_text", None) or w.text for w in self.studio.ui.walk_widgets()
+                if isinstance(getattr(w, "text", None), str) and w.text]
 
     def has_button(self, text: str) -> bool:
         return any(getattr(w, "text", None) == text for w in self.studio.ui.walk_widgets())

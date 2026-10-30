@@ -2,7 +2,8 @@
 
 Each OS's work runs as parallel jobs: ``pytest (<os>, py3.11)`` (the full default suite), ``verify (<os>, py3.11)``
 (verify-all, the release bundle and its strict verification, the artifacts) and, since H5, ``installed (<os>,
-py3.11)`` (this commit's wheel installed and run outside the checkout). The ``tests (<os>, py3.11)`` job, the check
+py3.11)`` (this commit's wheel installed and run outside the checkout) and, since H6, ``acceptance (<os>, py3.11)``
+(the creator-workflow GL tests). The ``tests (<os>, py3.11)`` job, the check
 reviews and merges look at, runs after them (``if: always()``) and calls this: it reads the run's
 latest jobs from the GitHub API (``filter=latest``, so "re-run failed jobs" counts the jobs carried over from the
 earlier attempt) and fails unless each required job is there and concluded ``success``. Failed, cancelled, skipped,
@@ -23,7 +24,7 @@ import sys
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-COMPONENTS = ("pytest", "verify", "installed")
+COMPONENTS = ("pytest", "verify", "installed", "acceptance")
 
 
 def required_jobs(os_name: str, python: str) -> list[str]:

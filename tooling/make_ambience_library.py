@@ -53,7 +53,7 @@ def _resample(x: np.ndarray, rate: int) -> np.ndarray:
     if rate == RATE:
         return x
     n = int(len(x) * RATE / rate)
-    return np.interp(np.linspace(0, len(x) - 1, n), np.arange(len(x)), x).astype(np.float32)
+    return np.asarray(np.interp(np.linspace(0, len(x) - 1, n), np.arange(len(x)), x), dtype=np.float32)
 
 
 def _steadiest(x: np.ndarray, length: int) -> int:
@@ -88,7 +88,7 @@ def _wind() -> np.ndarray:
     soft = np.convolve(brown, np.ones(6) / 6, mode="same")
     t = np.arange(n) / RATE
     swell = 0.65 + 0.25 * np.sin(2 * np.pi * t / SECONDS) + 0.1 * np.sin(2 * np.pi * 3 * t / SECONDS + 1.3)
-    return (soft * swell / np.max(np.abs(soft))).astype(np.float32)
+    return np.asarray(soft * swell / np.max(np.abs(soft)), dtype=np.float32)
 
 
 def _write(path: Path, y: np.ndarray) -> str:

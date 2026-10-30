@@ -1,5 +1,6 @@
 import fnmatch
 import importlib.abc
+import inspect
 import os
 import sys
 from unittest.mock import MagicMock, patch
@@ -176,6 +177,16 @@ def fast_tests_outside_rule(pytestconfig):
 
 
 @pytest.fixture(scope="session")
+def gl_opt_in_unmarked(pytestconfig):
+    return list(getattr(pytestconfig, "_mesh_gl_opt_in_unmarked", []))
+
+
+@pytest.fixture(scope="session")
+def never_runs_nodeids(pytestconfig):
+    return list(getattr(pytestconfig, "_mesh_never_runs", []))
+
+
+@pytest.fixture(scope="session")
 def exception_policy_scan():
     """One exception-policy scan of the repository, shared by the tests that only read it (a scan takes seconds)."""
     from pathlib import Path
@@ -211,6 +222,9 @@ def pytest_collection_modifyitems(config, items):
     unmarked: list[str] = []
     fast_rule = config.__dict__.setdefault("_mesh_fast_rule", {})
     outside_rule: set[str] = set()
+    gl_unmarked: set[str] = set()
+    never_runs: set[str] = set()
+    sources: dict = {}
     for item in items:
         nodeid = item.nodeid.replace("\\", "/")
         if any(part in nodeid for part in _FAST_TEST_NODEIDS):
@@ -227,8 +241,77 @@ def pytest_collection_modifyitems(config, items):
         )
         if not has_explicit:
             unmarked.append(nodeid)
+        if _requires_gl(item):
+            item.add_marker(pytest.mark.gl)
+        elif _GL_OPT_IN in _test_source(item, sources) and item.path.name not in _GL_MENTION_EXEMPT:
+            gl_unmarked.add(nodeid)
+        if _never_runs(item):
+            never_runs.add(nodeid)
     config._mesh_unmarked_nodeids = sorted(unmarked)
     config._mesh_fast_tests_outside_rule = sorted(outside_rule)
+    config._mesh_gl_opt_in_unmarked = sorted(gl_unmarked)
+    config._mesh_never_runs = sorted(never_runs)
+
+
+# Test lanes (H6, #422): tooling/test_tiers.py runs each test somewhere. A test needs a real GL context when it opts
+# in the one way the suite does, a skipif naming MESH_GL_SMOKE, whatever its file is called (a test_*_gpu.py glob
+# missed tests/test_background_layers_render_contract.py); it gets the `gl` marker and runs in the gpu lane.
+_GL_OPT_IN = "MESH_GL_SMOKE"
+_GL_MENTION_EXEMPT = ("test_tooling_test_tiers_cli.py", "test_test_lanes_contract.py")  # name the variable, need no GL
+# Skips a lane satisfies: the gpu lane sets MESH_GL_SMOKE=1; CI sets CI=true for the packaging-hygiene checks; a
+# platform-only test names the lane that runs it ("... lane runs this on Windows").
+_LANE_SATISFIED_SKIPS = (_GL_OPT_IN, "run with CI=true", "lane runs this on ")
+
+
+def _requires_gl(item) -> bool:
+    return any(_GL_OPT_IN in str(mark.kwargs.get("reason", "")) for mark in item.iter_markers("skipif"))
+
+
+def _test_source(item, sources: dict) -> str:
+    """The test function's own source: a GL gate inside it (say a pytest.skip naming MESH_GL_SMOKE) is one the
+    capability rule can't see. Module-wide gates (pytestmark) reach the rule as skipif marks already."""
+    function = getattr(item, "function", None)
+    if function is None:
+        return ""
+    if function not in sources:
+        try:
+            sources[function] = inspect.getsource(function)
+        except (OSError, TypeError):
+            sources[function] = ""
+    return sources[function]
+
+
+def _never_runs(item) -> bool:
+    """Skipped unconditionally, or for a reason no lane satisfies: such a test runs nowhere (it must be listed)."""
+    if any(True for _ in item.iter_markers("skip")):
+        return True
+    for mark in item.iter_markers("skipif"):
+        condition = mark.args[0] if mark.args else mark.kwargs.get("condition")
+        reason = str(mark.kwargs.get("reason", ""))
+        if condition is True and not any(part in reason for part in _LANE_SATISFIED_SKIPS):
+            return True
+    return False
+
+
+@pytest.fixture(autouse=True)
+def _physical_gpu_only(request):
+    # tooling/test_tiers.py sets MESH_GL_SOFTWARE=1 when the gpu lane's renderer is a software one (CI's Mesa):
+    # a test that needs a physical GPU says so in the lane's skip list instead of failing or passing there.
+    if os.getenv("MESH_GL_SOFTWARE") == "1" and request.node.get_closest_marker("gpu_hardware") is not None:
+        pytest.skip("needs a physical GPU: this lane's GL is a software renderer")
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    # In the gpu lane (MESH_REQUIRE_GL=1) a GL test skipped by its opt-in gate (no MESH_GL_SMOKE, or no arcade) is a
+    # failure, not a quiet pass. Other skips (a renderer without some feature) stay skips, listed by the lane.
+    outcome = yield
+    report = outcome.get_result()
+    if os.getenv("MESH_REQUIRE_GL") == "1" and report.skipped and item.get_closest_marker("gl") is not None:
+        reason = str(report.longrepr[-1]) if isinstance(report.longrepr, tuple) else str(report.longrepr)
+        if _GL_OPT_IN in reason:
+            report.outcome = "failed"
+            report.longrepr = f"GL test skipped by its opt-in gate in the gpu lane (no GL, or no arcade): {reason}"
 
 
 @pytest.fixture

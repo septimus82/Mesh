@@ -619,7 +619,7 @@ def edges(out: Path) -> dict[str, Any]:
         d.frame(3)
         hd = d.studio.hd2d.renderer
         report["eight_lamps"] = {"room_lamps": len(hd.lighting.lamps), "fire_lamps_made": len(hd.lighting.extra_lamps),
-                                 "note": next((t for t in d.labels() if "lights it can show" in t), "")}
+                                 "note": next((t for t in d.texts() if "lights it can show" in t), "")}
         d.picture(out / "edge_eight_lamps_inspector.png")
     finally:
         d.close()

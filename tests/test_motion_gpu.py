@@ -85,7 +85,15 @@ def test_a_plant_turns_about_its_foot(tmp_path: Path) -> None:
             assert len(ys) > 50
             bottom = ys.max()
             rows.append((bottom, tuple(sorted(xs[ys == bottom])), xs[ys == ys.min()].mean()))
-        assert len({(r[0], r[1]) for r in rows}) == 1, rows  # its foot: the same pixels every moment
+        # Its foot: the same row, the same centre and the same core of pixels at every moment. The row's outermost
+        # pixels may come and go as the plant leans: the turned sprite's edges cross that row at a slant, which Mesa's
+        # software rasteriser covers a pixel wider each side than a GPU (#422 H6.1: 637-642 against 638-641 about the
+        # same centre, 639.5, on CI's llvmpipe; 638-641 at every moment on an NVIDIA GPU). A drifting foot moves the
+        # centre and fails.
+        assert len({r[0] for r in rows}) == 1, rows
+        assert len({(min(r[1]) + max(r[1])) / 2 for r in rows}) == 1, rows
+        narrowest = set(min((r[1] for r in rows), key=len))
+        assert narrowest and all(narrowest <= set(r[1]) for r in rows), rows
         assert max(r[2] for r in rows) - min(r[2] for r in rows) > 3  # its top: moving in the wind
     finally:
         game.close()

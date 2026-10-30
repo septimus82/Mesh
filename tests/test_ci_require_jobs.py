@@ -24,15 +24,15 @@ def _jobs(**conclusions: str | None) -> list[dict[str, object]]:
 ALL_OK = {part: "success" for part in COMPONENTS}
 
 
-def test_the_required_jobs_are_this_os_s_pytest_verify_and_installed() -> None:
-    assert COMPONENTS == ("pytest", "verify", "installed")
+def test_the_required_jobs_are_this_os_s_pytest_verify_installed_and_acceptance() -> None:
+    assert COMPONENTS == ("pytest", "verify", "installed", "acceptance")
     assert REQUIRED == ["pytest (windows-latest, py3.11)", "verify (windows-latest, py3.11)",
-                        "installed (windows-latest, py3.11)"]
+                        "installed (windows-latest, py3.11)", "acceptance (windows-latest, py3.11)"]
 
 
 def test_green_only_when_all_succeeded() -> None:
     ok, lines = verdict(_jobs(**ALL_OK), REQUIRED)
-    assert ok and len(lines) == 3
+    assert ok and len(lines) == 4
 
 
 @pytest.mark.parametrize("bad", ["failure", "cancelled", "skipped", "timed_out", "action_required", None])
@@ -70,24 +70,28 @@ def _job_block(text: str, job: str) -> str:
 
 def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     text = WORKFLOW.read_text(encoding="utf-8-sig")
-    pytest_job, verify_job, installed_job, tests_job = (_job_block(text, j) for j in ("pytest", "verify", "installed", "tests"))
+    pytest_job, verify_job, installed_job, acceptance_job, tests_job = (
+        _job_block(text, j) for j in ("pytest", "verify", "installed", "acceptance", "tests"))
     # The component names the fan-in looks for, and the check name reviews look at.
     assert "name: pytest (${{ matrix.os }}, py${{ matrix.python }})" in pytest_job
     assert "name: verify (${{ matrix.os }}, py${{ matrix.python }})" in verify_job
     assert "name: installed (${{ matrix.os }}, py${{ matrix.python }})" in installed_job
+    assert "name: acceptance (${{ matrix.os }}, py${{ matrix.python }})" in acceptance_job
     assert "name: tests (${{ matrix.os }}, py${{ matrix.python }})" in tests_job
     # It always runs after both (never left pending or skipped) and asks the jobs list, not needs.*.result.
-    assert "needs: [pytest, verify, installed]" in tests_job
+    assert "needs: [pytest, verify, installed, acceptance]" in tests_job
     assert "if: ${{ always() }}" in tests_job
     assert "tooling/ci_require_jobs.py --os \"${{ matrix.os }}\"" in tests_job
     assert "actions: read" in tests_job
-    for block in (pytest_job, verify_job, installed_job, tests_job):
+    for block in (pytest_job, verify_job, installed_job, acceptance_job, tests_job):
         assert "os: [ubuntu-latest, windows-latest]" in block
         assert "fail-fast: false" in block
     # Neither component may be skipped by a condition of its own, or soften its result (job-level keys only; verify's
     # PR-comment steps may fail softly, as before the split).
-    for block in (pytest_job, verify_job, installed_job):
+    for block in (pytest_job, verify_job, installed_job, acceptance_job):
         assert not re.search(r"^    (if|continue-on-error):", block, re.M)
+    # acceptance (H6): the canonical creator-workflow lane, failing if it can't run its GL tests.
+    assert "python -m tooling.test_tiers acceptance" in acceptance_job and "$LASTEXITCODE -ne 0" in acceptance_job
     # installed (H5): this commit's wheel, tested by the file that proves the check catches broken wheels; nothing in
     # the job installs the checkout, and the project's conftest (which imports the checkout's engine) stays out.
     assert "tests/test_wheel_bundles_engine_data.py" in installed_job and "--noconftest" in installed_job

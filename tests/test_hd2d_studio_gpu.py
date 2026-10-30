@@ -106,6 +106,7 @@ def test_an_ai_proposal_changes_structures_through_the_review(run: dict) -> None
     assert ai["accepted"]["newly_buried"] == ["Player"] and "Player can't stand there now" in ai["accepted"]["warning"]
 
 
+@pytest.mark.gpu_hardware  # a frame-time budget: a software renderer (CI's Mesa) can't show it (#422 H6)
 def test_the_view_is_responsive(run: dict) -> None:
     perf = run["performance"]
     assert perf["draw_ms_median"] < 16 and perf["pick_ms_median"] < 5
