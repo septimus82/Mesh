@@ -110,6 +110,7 @@ def build_speed_advisory(
         budget = enforced.get(name)
         row["enforced_threshold_ms"] = budget.get("threshold_ms") if budget else None
         row["enforced_verdict"] = ("ok" if budget.get("ok") else "over") if budget else "not budgeted"
+        row["enforced_policy"] = str(budget.get("policy") or "enforced") if budget else None
         steps.append(row)
 
     def names(pred: Any) -> list[str]:
@@ -160,6 +161,7 @@ def format_speed_advisory(payload: dict[str, Any]) -> list[str]:
         lines.append(
             f"  {r['name']:<24}{_sec(r['current_ms']):>8}{spd:>7}{_sec(r.get('expected_ms')):>10}{_sec(r.get('advisory_threshold_ms')):>14}  "
             f"{r['advisory_verdict']:<12}{_sec(r['enforced_threshold_ms']):>13}  {r['enforced_verdict']}"
+            + (" (report-only)" if r.get("enforced_policy") == "report-only" else "")
         )
     disagree = payload["disagreements"]
     agree = "advisory and enforced decisions agree on every step judged by both"
