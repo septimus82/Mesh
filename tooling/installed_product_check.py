@@ -100,8 +100,9 @@ print("MESH-PROBE " + json.dumps(facts))
 
 # H7: the exported game and the export itself, watched. Prepended to the code a child Python runs: every file the child
 # opens is counted by where it lies (the roots named in ROOTS, the child's environment, its base Python, the system's
-# own places - the null device, the temp folder, /etc, /usr... - or elsewhere: a problem), and the checkout is off limits: opening or listing anything in it raises PermissionError and is recorded, so a file
-# the export lost can't be found there. At exit, one MESH-AUDIT line reports it with the origin of every Mesh module.
+# own places - the null device, the temp folder, /etc, /usr... - or elsewhere: a problem), and the checkout is off
+# limits: opening or listing anything in it raises PermissionError and is recorded, so a file the export lost can't be
+# found there. At exit, one MESH-AUDIT line reports it with the origin of every Mesh module.
 AUDIT = r'''
 import atexit, json, os, sys, tempfile
 def _mesh_audit(checkout, roots):
