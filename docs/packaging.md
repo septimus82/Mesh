@@ -86,11 +86,24 @@ scripts.
   those items only where the tools exist, and the HD-2D renderer's desktop shaders are not a web target.
 - developer gates (`mypy_gate`, `ruff_gate` and others).
 
+## What each check proves (H5, #422)
+
+Running Mesh from a checkout, from an installed wheel and as an exported game are different guarantees. A `python`
+started in a checkout imports the checkout's `engine`/`mesh_cli` (the current folder comes first on `sys.path`), even
+inside a virtual environment that has the wheel installed: so only a run outside the checkout, isolated, tests the
+wheel.
+
+| Guarantee | Checks |
+|---|---|
+| The source works | The full default suite (`pytest` jobs), verify-all (`verify` jobs), the Arcade 3 canary's pytest and replay smoke |
+| The installed product works | `installed (<os>, py3.11)`: the wheel test above, both OSes, required. The Arcade 3 canary's installed-wheel replay (Linux, `python -I`, checked to run the wheel's code; its replay content is the checkout's). `tooling/hd2d_install_acceptance.py` (manual) |
+| An exported game works | `tests/test_export_bundle.py` and verify-all's `player-package-gate` (both export with the checkout's engine), the release bundle's strict verification (`bundle verify --strict`). A game exported **from an installed Mesh** is run only by `tooling/hd2d_install_acceptance.py` (manual) |
+
 ## Tests
 
 | Test | What it checks |
 |---|---|
-| `tests/test_wheel_bundles_engine_data.py` (slow; builds a wheel) | The wheel bundles exactly the allow-list, plus the schemas. Installed in a clean environment and run from an empty folder with no repository on `sys.path`, the engine creates a blank and an HD-2D RPG project with nothing missing: the starter files, input bindings, the 14-model kit and no unverified sprite. |
+| `tests/test_wheel_bundles_engine_data.py` (slow; builds a wheel; **required in CI** as `installed (<os>, py3.11)`, H5) | The wheel bundles exactly the allow-list, plus the schemas. Installed with its declared dependencies in a fresh environment and run isolated (`python -I`, no PYTHONPATH or MESH_*) from an empty folder, via `tooling/installed_product_check.py`: every `engine`/`mesh_cli` module and bundled file comes from the installation, `tooling` is absent, a blank and an HD-2D RPG project get everything they use (starter files, input bindings, the 14-model kit, no unverified sprite), and the installed `mesh new` / `mesh doctor` work. It also proves the check fails on a wheel missing a module, with a broken module, or missing an asset the checkout still has, and that the old way of running (from the checkout, not isolated) is caught. |
 | `tests/test_bundled_data_roots.py` (fast) | The source tree comes first, then an install's `share/mesh-engine`, for files and folders |
 | `tests/test_export_bundle.py` (fast) | A project exports as a standalone game; an export never replaces a folder that isn't an earlier bundle |
 | `tooling/hd2d_install_acceptance.py` (manual, hidden windows) | The whole HD-2D workflow from a clean install, including running the exported game with Mesh's dependencies only. Evidence: `docs/reviews/milestone16_stage6b_distribution.md`. |

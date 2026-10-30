@@ -114,7 +114,10 @@ jobs:
           source .venv_arcade3_wheel/bin/activate
           python -m pip install -U pip
           python -m pip install dist/*.whl "arcade>=3,<4"
-          xvfb-run -a python -m mesh_cli replay-hash \
+          # -I: from the checkout, a plain `python -m mesh_cli` imported the checkout's engine instead of the wheel's
+          # (H5, #422). The replay is checkout content; the code must be the installed wheel's, and is checked to be.
+          python -I -c "import sys, engine, mesh_cli; from pathlib import Path; v = Path(sys.prefix).resolve(); bad = [m.__file__ for m in (engine, mesh_cli) if not Path(m.__file__).resolve().is_relative_to(v)]; assert not bad, f'not the installed wheel: {bad}'; print('installed engine:', engine.__file__)"
+          xvfb-run -a python -I -m mesh_cli replay-hash \
             --replay replays/00_smoke_dump_state.json \
             --frames 120 \
             --warmup 20 \
@@ -561,12 +564,55 @@ jobs:
           path: |
             artifacts/
 
+  installed:
+    # The installed product (H5, #422): this commit's wheel, installed with its declared dependencies into a fresh
+    # environment and run from outside the checkout (python -I, no PYTHONPATH or MESH_*): every Mesh module and bundled
+    # engine file must come from the installation, and `mesh new` / `mesh doctor` must work. The same file proves the
+    # check fails on broken wheels, including one whose missing file the checkout still has. Nothing here installs the
+    # checkout, so the test runs without the project's conftest (which imports the checkout's engine).
+    name: installed (${{ matrix.os }}, py${{ matrix.python }})
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11"]
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            pytest.ini
+
+      - name: Installed-product check
+        run: |
+          python -m pip install -U pip "pytest>=8.0"
+          python -m pytest -o addopts= --noconftest -p no:cacheprovider -q -W error -rA tests/test_wheel_bundles_engine_data.py
+
   tests:
-    # The fan-in: one OS's result, green only when its pytest and verify jobs both succeeded (failed, cancelled,
-    # skipped or missing: red). It always runs once they are done, so it never waits forever, and keeps the check name
+    # The fan-in: one OS's result, green only when its pytest, verify and installed jobs all succeeded (failed,
+    # cancelled, skipped or missing: red). It always runs once they are done, so it never waits forever, and keeps the check name
     # reviews and merges have always looked at.
     name: tests (${{ matrix.os }}, py${{ matrix.python }})
-    needs: [pytest, verify]
+    needs: [pytest, verify, installed]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10

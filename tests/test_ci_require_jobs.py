@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from tooling.ci_require_jobs import required_jobs, verdict
+from tooling.ci_require_jobs import COMPONENTS, required_jobs, verdict
 
 pytestmark = [pytest.mark.fast]
 
@@ -21,40 +21,45 @@ def _jobs(**conclusions: str | None) -> list[dict[str, object]]:
             for part, c in conclusions.items()]
 
 
-def test_the_required_jobs_are_this_os_s_pytest_and_verify() -> None:
-    assert REQUIRED == ["pytest (windows-latest, py3.11)", "verify (windows-latest, py3.11)"]
+ALL_OK = {part: "success" for part in COMPONENTS}
 
 
-def test_green_only_when_both_succeeded() -> None:
-    ok, lines = verdict(_jobs(pytest="success", verify="success"), REQUIRED)
-    assert ok and len(lines) == 2
+def test_the_required_jobs_are_this_os_s_pytest_verify_and_installed() -> None:
+    assert COMPONENTS == ("pytest", "verify", "installed")
+    assert REQUIRED == ["pytest (windows-latest, py3.11)", "verify (windows-latest, py3.11)",
+                        "installed (windows-latest, py3.11)"]
+
+
+def test_green_only_when_all_succeeded() -> None:
+    ok, lines = verdict(_jobs(**ALL_OK), REQUIRED)
+    assert ok and len(lines) == 3
 
 
 @pytest.mark.parametrize("bad", ["failure", "cancelled", "skipped", "timed_out", "action_required", None])
-@pytest.mark.parametrize("which", ["pytest", "verify"])
-def test_any_other_conclusion_of_either_job_is_red(which: str, bad: str | None) -> None:
-    conclusions: dict[str, str | None] = {"pytest": "success", "verify": "success", which: bad}
+@pytest.mark.parametrize("which", COMPONENTS)
+def test_any_other_conclusion_of_any_job_is_red(which: str, bad: str | None) -> None:
+    conclusions: dict[str, str | None] = {**ALL_OK, which: bad}
     ok, lines = verdict(_jobs(**conclusions), REQUIRED)
     assert not ok
     assert any(line.startswith("FAILED") and which in line for line in lines)
 
 
-@pytest.mark.parametrize("present", ["pytest", "verify"])
-def test_a_missing_job_is_red(present: str) -> None:
-    ok, lines = verdict(_jobs(**{present: "success"}), REQUIRED)
+@pytest.mark.parametrize("absent", COMPONENTS)
+def test_a_missing_job_is_red(absent: str) -> None:
+    ok, lines = verdict(_jobs(**{k: v for k, v in ALL_OK.items() if k != absent}), REQUIRED)
     assert not ok
-    assert any(line.startswith("MISSING") for line in lines)
+    assert any(line.startswith("MISSING") and absent in line for line in lines)
 
 
 def test_the_other_os_does_not_count() -> None:
-    other = [{"name": f"{part} (ubuntu-latest, py3.11)", "conclusion": "success"} for part in ("pytest", "verify")]
-    assert not verdict(other + _jobs(pytest="failure", verify="success"), REQUIRED)[0]
+    other = [{"name": f"{part} (ubuntu-latest, py3.11)", "conclusion": "success"} for part in COMPONENTS]
+    assert not verdict(other + _jobs(**{**ALL_OK, "installed": "failure"}), REQUIRED)[0]
     assert not verdict(other, REQUIRED)[0]
 
 
 def test_the_latest_entry_of_a_rerun_job_wins() -> None:
-    assert verdict(_jobs(pytest="failure", verify="success") + _jobs(pytest="success"), REQUIRED)[0]
-    assert not verdict(_jobs(pytest="success", verify="success") + _jobs(verify="failure"), REQUIRED)[0]
+    assert verdict(_jobs(**{**ALL_OK, "pytest": "failure"}) + _jobs(pytest="success"), REQUIRED)[0]
+    assert not verdict(_jobs(**ALL_OK) + _jobs(installed="failure"), REQUIRED)[0]
 
 
 def _job_block(text: str, job: str) -> str:
@@ -63,25 +68,31 @@ def _job_block(text: str, job: str) -> str:
     return match.group(1)
 
 
-def test_the_workflow_fans_both_jobs_into_the_tests_check() -> None:
+def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     text = WORKFLOW.read_text(encoding="utf-8-sig")
-    pytest_job, verify_job, tests_job = (_job_block(text, j) for j in ("pytest", "verify", "tests"))
+    pytest_job, verify_job, installed_job, tests_job = (_job_block(text, j) for j in ("pytest", "verify", "installed", "tests"))
     # The component names the fan-in looks for, and the check name reviews look at.
     assert "name: pytest (${{ matrix.os }}, py${{ matrix.python }})" in pytest_job
     assert "name: verify (${{ matrix.os }}, py${{ matrix.python }})" in verify_job
+    assert "name: installed (${{ matrix.os }}, py${{ matrix.python }})" in installed_job
     assert "name: tests (${{ matrix.os }}, py${{ matrix.python }})" in tests_job
     # It always runs after both (never left pending or skipped) and asks the jobs list, not needs.*.result.
-    assert "needs: [pytest, verify]" in tests_job
+    assert "needs: [pytest, verify, installed]" in tests_job
     assert "if: ${{ always() }}" in tests_job
     assert "tooling/ci_require_jobs.py --os \"${{ matrix.os }}\"" in tests_job
     assert "actions: read" in tests_job
-    for block in (pytest_job, verify_job, tests_job):
+    for block in (pytest_job, verify_job, installed_job, tests_job):
         assert "os: [ubuntu-latest, windows-latest]" in block
         assert "fail-fast: false" in block
     # Neither component may be skipped by a condition of its own, or soften its result (job-level keys only; verify's
     # PR-comment steps may fail softly, as before the split).
-    for block in (pytest_job, verify_job):
+    for block in (pytest_job, verify_job, installed_job):
         assert not re.search(r"^    (if|continue-on-error):", block, re.M)
+    # installed (H5): this commit's wheel, tested by the file that proves the check catches broken wheels; nothing in
+    # the job installs the checkout, and the project's conftest (which imports the checkout's engine) stays out.
+    assert "tests/test_wheel_bundles_engine_data.py" in installed_job and "--noconftest" in installed_job
+    assert "-o addopts=" in installed_job and "-W error" in installed_job
+    assert "pip install -e" not in installed_job and "mesh-ci-setup" not in installed_job
     # Each half does its own work: the full suite in pytest; verify-all, the bundle and the artifacts in verify.
     assert "python -m pytest" in pytest_job
     # verify only collects (to start verify-all as warm as it did after the full run): the suite never runs twice.

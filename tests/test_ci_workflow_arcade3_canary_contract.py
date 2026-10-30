@@ -25,6 +25,12 @@ def test_ci_workflow_contains_arcade3_canary_lane() -> None:
     assert "python -m mesh_cli replay-hash" in text
     assert "--replay replays/00_smoke_dump_state.json" in text
     assert "--expect replays/00_smoke_dump_state.hash.json" in text
+    # H5 (#422): the installed-wheel replay runs the wheel's code, not the checkout's (a plain `python -m` from the
+    # checkout imported the checkout's engine), and checks that it does.
+    wheel_step = text[text.index("Arcade 3.x installed wheel replay smoke"):text.index("Upload Arcade 3 canary artifacts")]
+    assert "xvfb-run -a python -I -m mesh_cli replay-hash" in wheel_step
+    assert not [line for line in wheel_step.splitlines() if "python -m mesh_cli" in line and not line.strip().startswith("#")]
+    assert "is_relative_to(v)" in wheel_step and "not the installed wheel" in wheel_step
     assert "Upload Arcade 3 canary artifacts" in text
     assert "name: arcade3-canary-artifacts" in text
     assert "artifacts/arcade3_canary/**" in text

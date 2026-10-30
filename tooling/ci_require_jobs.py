@@ -1,8 +1,9 @@
 """The CI fan-in (H3, #422 F13): one OS's ``tests`` result is green only when every job it is made of succeeded.
 
-Each OS's work runs as two parallel jobs, ``pytest (<os>, py3.11)`` (the full default suite) and ``verify (<os>,
-py3.11)`` (verify-all, the release bundle and its strict verification, the artifacts). The ``tests (<os>, py3.11)``
-job, the check reviews and merges look at, runs after both (``if: always()``) and calls this: it reads the run's
+Each OS's work runs as parallel jobs: ``pytest (<os>, py3.11)`` (the full default suite), ``verify (<os>, py3.11)``
+(verify-all, the release bundle and its strict verification, the artifacts) and, since H5, ``installed (<os>,
+py3.11)`` (this commit's wheel installed and run outside the checkout). The ``tests (<os>, py3.11)`` job, the check
+reviews and merges look at, runs after them (``if: always()``) and calls this: it reads the run's
 latest jobs from the GitHub API (``filter=latest``, so "re-run failed jobs" counts the jobs carried over from the
 earlier attempt) and fails unless each required job is there and concluded ``success``. Failed, cancelled, skipped,
 timed-out or missing jobs fail it, each named. (``needs.<job>.result`` can't tell one OS's leg of a matrix from the
@@ -22,7 +23,7 @@ import sys
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-COMPONENTS = ("pytest", "verify")
+COMPONENTS = ("pytest", "verify", "installed")
 
 
 def required_jobs(os_name: str, python: str) -> list[str]:
