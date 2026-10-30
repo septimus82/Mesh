@@ -236,6 +236,12 @@ def test_an_exported_game_runs_without_mesh_or_the_checkout(built: tuple[Path, P
     assert facts["legacy_dir"] == str(game / "saves") and not (game / "saves").exists()
     saved = json.loads(save.read_text(encoding="utf-8"))
     assert saved["meta"]["scene_path"].endswith("start.json") and facts["after_load"] == walk[2:]
+    # H9.1: the music turned down in the pause menu is kept beside the saves, for this game alone (the other game's
+    # first player starts at the default whatever this one chose).
+    settings = saves.parent / "user_settings.json"
+    assert Path(facts["settings_path"]) == settings and facts["music_at_start"] == 1.0
+    assert facts["music_after"] < 1.0 and facts["settings_toasts"] == [facts["settings_saved_text"]], "said: saved"
+    assert json.loads(settings.read_text(encoding="utf-8"))["music_volume"] == facts["music_after"]
 
     # Started again after the player moved the game (spaces and accents in the new path), holding a save an export
     # made before H9 kept in its installation: both load, the newer one first; neither folder changes.
@@ -244,6 +250,7 @@ def test_an_exported_game_runs_without_mesh_or_the_checkout(built: tuple[Path, P
     shutil.move(str(game), str(moved))
     (moved / "saves").mkdir()
     shutil.copyfile(save, moved / "saves" / "legacy_h9.json")
+    (moved / "user_settings.json").write_text(json.dumps({"version": 1, "music_volume": 0.3}), encoding="utf-8")
     before, kept = ipc.tree_digest(moved), save.read_bytes()
     with ipc.read_only(moved):
         again = ipc.play(player, moved, scratch / "played" / template / "evidence_again", mode="resume",
@@ -255,9 +262,13 @@ def test_an_exported_game_runs_without_mesh_or_the_checkout(built: tuple[Path, P
     assert Path(resumed["save_dir"]) == saves and resumed["slots_at_start"] == ["h7_check", "legacy_h9"]
     assert resumed["loaded_h7_check"] and resumed["at_h7_check"] == walk[2:], "continues where the player saved"
     assert resumed["loaded_legacy_h9"] and resumed["at_legacy_h9"] == walk[2:], "the older export's save loads"
+    assert Path(resumed["settings_path"]) == settings, "the same settings file after the move"
+    assert resumed["music_at_start"] == facts["music_after"], "kept: not the older export's (0.3) in the installation"
     print(f"{template}: rendered by {facts['renderer']}; walked {walk}; saved at {save}; "
           f"corners {facts['corners'][0]}; hint {toast['box']} box, pixels {toast['changed']}; "
-          f"restarted from {moved.name!r}: slots {resumed['slots_at_start']}, at {resumed['at_h7_check']}")  # (-rA)
+          f"restarted from {moved.name!r}: slots {resumed['slots_at_start']}, at {resumed['at_h7_check']}; "
+          f"music {facts['music_at_start']} -> {facts['music_after']} in {settings} ({facts['settings_toasts']}), "
+          f"restarted at {resumed['music_at_start']}")  # (-rA)
 
 
 _REMOVED = "engine/scene_loader.py"  # (the game imports it as it starts)
