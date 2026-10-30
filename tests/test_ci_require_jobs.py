@@ -88,6 +88,11 @@ def test_the_workflow_fans_both_jobs_into_the_tests_check() -> None:
     collects = [line for line in verify_job.splitlines() if "python -m pytest" in line]
     assert collects and all("--collect-only" in line for line in collects)
     assert verify_job.index("--collect-only") < verify_job.index("Run verify-all (Windows)")
+    # Its output is filtered, so a failed collection must fail the step by its own exit code, not pass as a warm-up.
+    assert all(line.split("{", 1)[1].strip().startswith("$out = ") and "|" not in line for line in collects)
+    warm = verify_job[verify_job.index("Warm pytest's caches"):verify_job.index("Run verify-all (Windows)")]
+    assert "$code = $LASTEXITCODE" in warm
+    assert re.search(r"if \(\$code -ne 0\) \{.*throw ", warm)
     for step in ("Run verify-all (Windows)", "Run verify-all (Linux)", "Build release bundle (seeded, Windows)",
                  "Build release bundle (seeded, Linux)", "name: mesh-artifacts-${{ matrix.os }}-py${{ matrix.python }}"):
         assert step in verify_job
