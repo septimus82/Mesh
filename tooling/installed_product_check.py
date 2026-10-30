@@ -197,6 +197,7 @@ def bounded(window):
     facts["sprites"] = len(list(scenes.all_sprites))
     facts["hd2d"] = window.hd2d_renderer is not None
     facts["hd2d_error"] = getattr(window, "hd2d_error", None)
+    facts["renderer"] = f"{window.ctx.info.VENDOR} | {window.ctx.info.RENDERER}"  # (software, e.g. llvmpipe, or a GPU)
     facts["walk"] = walk()
     window.dispatch_event("on_draw")
     picture = arcade.get_image(0, 0, *window.get_framebuffer_size()).convert("RGB")

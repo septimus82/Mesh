@@ -209,6 +209,7 @@ def test_an_exported_game_runs_without_mesh_or_the_checkout(built: tuple[Path, P
     walk = facts["walk"]
     assert walk[2] - walk[0] > 32 and walk[3] == walk[1], "walked right, a fixed distance at fixed steps"
     assert facts["hd2d"] is hd2d and facts["sprites"] > 1 and facts["colours"] >= 16
+    print(f"{template}: rendered by {facts['renderer']}; walked {walk}, saved at {facts['save_file']}")  # (-rA shows it)
 
 
 _REMOVED = "engine/scene_loader.py"  # (the game imports it as it starts)
