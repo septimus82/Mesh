@@ -5,7 +5,8 @@
 
 Uses the GitHub CLI (``gh``; in Actions with ``GH_TOKEN``). For each completed CI run of ``--branch`` (newest first,
 ``--runs`` of them), each ``tests`` job's ``verify_step_durations.json`` is taken from its ``mesh-artifacts-<os>-py3.11``
-artifact (kept 7 days). Jobs whose artifact has expired or whose verify-all didn't run are skipped.
+artifact (kept 7 days). Jobs whose artifact has expired or whose verify-all didn't run are skipped. ``job_s`` is the
+wall time of the OS's ``pytest``, ``verify`` and ``tests`` jobs together (H3 split them).
 """
 
 from __future__ import annotations
@@ -57,7 +58,13 @@ def collect(branch: str, runs: int, out: Path) -> list[dict[str, Any]]:
             entry: dict[str, Any] = {"run_id": run["databaseId"], "os": os_name, "event": run["event"],
                                      "sha": run["headSha"], "date": run["createdAt"], "regime": "post-opt",
                                      "durations": name}
-            job_s = _seconds(job.get("startedAt"), job.get("completedAt"))
+            # Since H3 an OS's ``tests`` job is a fan-in after its parallel ``pytest`` and ``verify`` jobs, so the OS's
+            # time is the span of all three (older runs have only the ``tests`` job, which gives what it always did).
+            suffix = job["name"][len("tests"):]
+            parts = [j for j in jobs if j["name"] in {f"{p}{suffix}" for p in ("tests", "pytest", "verify")}]
+            starts = [j["startedAt"] for j in parts if j.get("startedAt")]
+            ends = [j["completedAt"] for j in parts if j.get("completedAt")]
+            job_s = _seconds(min(starts, default=None), max(ends, default=None))
             if job_s is not None:
                 entry["job_s"] = job_s
             index.append(entry)

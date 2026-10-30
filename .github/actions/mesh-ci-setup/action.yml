@@ -1,0 +1,70 @@
+name: Mesh CI setup
+description: >-
+  What both halves of an OS's tests need (H3, #422 F13): Python with the project installed, and a display with OpenGL 3.3
+  for the window tests (Xvfb on Linux, Mesa's llvmpipe on Windows). Shared so the pytest and verify jobs can't drift
+  apart. Run after actions/checkout.
+
+inputs:
+  python-version:
+    description: Python version for actions/setup-python.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          pytest.ini
+
+    - name: Install dependencies
+      shell: pwsh
+      run: |
+        python -m pip install -U pip
+        python -m pip install -e ".[dev]"
+
+    - name: Install Xvfb (Linux)
+      if: runner.os != 'Windows'
+      shell: pwsh
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb
+
+    # windows-latest has only Microsoft's OpenGL 1.1 driver; the window tests need OpenGL 3.3. Mesa's llvmpipe software
+    # renderer gives Windows what Xvfb + Mesa give Linux. Only this job's Python gets it: Mesa's opengl32.dll and its
+    # driver are copied beside python.exe, which Windows loads before System32's opengl32.dll. Nothing is registered
+    # system-wide and no script from the archive runs.
+    # Source: mesa3d-<version>-release-msvc.7z from https://github.com/pal1000/mesa-dist-win/releases (the build the
+    # Mesa docs point Windows users to). MESA_SHA256 is the SHA-256 GitHub recorded when the maintainer uploaded that
+    # asset, not one computed from a download; the archive is checked against it before anything is extracted.
+    # To update: choose a release, read its digest with
+    #   gh api repos/pal1000/mesa-dist-win/releases/tags/<version> --jq '.assets[] | select(.name | endswith("-release-msvc.7z")) | .digest'
+    # and change MESA_VERSION and MESA_SHA256 together.
+    - name: Install Mesa OpenGL (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        MESA_VERSION: "26.0.3"
+        MESA_SHA256: "de1ec45c906164de2c046288a8969e83cf2d51d031dc8dfd1f9371bb31cd6755"
+      run: |
+        $name = "mesa3d-$env:MESA_VERSION-release-msvc.7z"
+        $archive = Join-Path $env:RUNNER_TEMP $name
+        Invoke-WebRequest -Uri "https://github.com/pal1000/mesa-dist-win/releases/download/$env:MESA_VERSION/$name" -OutFile $archive
+        $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
+        if ($actual -ne $env:MESA_SHA256) { throw "$name has SHA-256 $actual, expected $env:MESA_SHA256" }
+        $unpacked = Join-Path $env:RUNNER_TEMP "mesa"
+        7z x $archive "-o$unpacked" "x64\*" -y | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "7z failed with exit code $LASTEXITCODE" }
+        foreach ($dll in "opengl32.dll", "libgallium_wgl.dll", "libglapi.dll") {
+          $source = Join-Path $unpacked "x64\$dll"
+          if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $env:pythonLocation }
+          elseif ($dll -ne "libglapi.dll") { throw "$dll is not in $name" }
+        }
+        "GALLIUM_DRIVER=llvmpipe" >> $env:GITHUB_ENV
+        $env:GALLIUM_DRIVER = "llvmpipe"
+        python -c "import pyglet; w = pyglet.window.Window(visible=False); from pyglet.gl import gl_info; print('OpenGL', gl_info.get_version_string(), '|', gl_info.get_renderer()); w.close()"
+        if ($LASTEXITCODE -ne 0) { throw "Python cannot open an OpenGL context" }

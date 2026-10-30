@@ -188,13 +188,15 @@ jobs:
             artifacts/web_smoke.json
             artifacts/runtime_smoke_web_gate.json
 
-  tests:
-    name: tests (${{ matrix.os }}, py${{ matrix.python }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 120
+  # Each OS's tests run as two parallel jobs (H3, #422 F13; neither uses the other's results): ``pytest`` (the full
+  # default suite) and ``verify`` (verify-all, the release bundle and its strict verification, the artifacts). The
+  # ``tests (<os>, py3.11)`` job after them is the result to look at: green only when both of that OS's jobs succeeded.
+  pytest:
+    name: pytest (${{ matrix.os }}, py${{ matrix.python }})
     permissions:
       contents: read
-      pull-requests: write
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
     strategy:
       # Each OS reports its own result: with fail-fast a Windows failure cancelled Linux (and vice versa) and hid it.
       fail-fast: false
@@ -215,67 +217,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Set up Python, the project and a display
+        uses: ./.github/actions/mesh-ci-setup
         with:
           python-version: ${{ matrix.python }}
-          cache: pip
-          cache-dependency-path: |
-            pyproject.toml
-            pytest.ini
-
-      - name: Cache mypy cache
-        uses: actions/cache@v4
-        with:
-          path: .mypy_cache
-          key: mypy-${{ runner.os }}-py${{ matrix.python }}-${{ hashFiles('pyproject.toml', 'tooling/mypy_baseline.txt', 'tooling/mypy_island.py') }}
-          restore-keys: |
-            mypy-${{ runner.os }}-py${{ matrix.python }}-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install -U pip
-          python -m pip install -e ".[dev]"
-
-      - name: Install Xvfb (Linux)
-        if: runner.os != 'Windows'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb
-
-      # windows-latest has only Microsoft's OpenGL 1.1 driver; the window tests need OpenGL 3.3. Mesa's llvmpipe software
-      # renderer gives Windows what Xvfb + Mesa give Linux. Only this job's Python gets it: Mesa's opengl32.dll and its
-      # driver are copied beside python.exe, which Windows loads before System32's opengl32.dll. Nothing is registered
-      # system-wide and no script from the archive runs.
-      # Source: mesa3d-<version>-release-msvc.7z from https://github.com/pal1000/mesa-dist-win/releases (the build the
-      # Mesa docs point Windows users to). MESA_SHA256 is the SHA-256 GitHub recorded when the maintainer uploaded that
-      # asset, not one computed from a download; the archive is checked against it before anything is extracted.
-      # To update: choose a release, read its digest with
-      #   gh api repos/pal1000/mesa-dist-win/releases/tags/<version> --jq '.assets[] | select(.name | endswith("-release-msvc.7z")) | .digest'
-      # and change MESA_VERSION and MESA_SHA256 together.
-      - name: Install Mesa OpenGL (Windows)
-        if: runner.os == 'Windows'
-        env:
-          MESA_VERSION: "26.0.3"
-          MESA_SHA256: "de1ec45c906164de2c046288a8969e83cf2d51d031dc8dfd1f9371bb31cd6755"
-        run: |
-          $name = "mesa3d-$env:MESA_VERSION-release-msvc.7z"
-          $archive = Join-Path $env:RUNNER_TEMP $name
-          Invoke-WebRequest -Uri "https://github.com/pal1000/mesa-dist-win/releases/download/$env:MESA_VERSION/$name" -OutFile $archive
-          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
-          if ($actual -ne $env:MESA_SHA256) { throw "$name has SHA-256 $actual, expected $env:MESA_SHA256" }
-          $unpacked = Join-Path $env:RUNNER_TEMP "mesa"
-          7z x $archive "-o$unpacked" "x64\*" -y | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw "7z failed with exit code $LASTEXITCODE" }
-          foreach ($dll in "opengl32.dll", "libgallium_wgl.dll", "libglapi.dll") {
-            $source = Join-Path $unpacked "x64\$dll"
-            if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $env:pythonLocation }
-            elseif ($dll -ne "libglapi.dll") { throw "$dll is not in $name" }
-          }
-          "GALLIUM_DRIVER=llvmpipe" >> $env:GITHUB_ENV
-          $env:GALLIUM_DRIVER = "llvmpipe"
-          python -c "import pyglet; w = pyglet.window.Window(visible=False); from pyglet.gl import gl_info; print('OpenGL', gl_info.get_version_string(), '|', gl_info.get_renderer()); w.close()"
-          if ($LASTEXITCODE -ne 0) { throw "Python cannot open an OpenGL context" }
 
       - name: Compile Python sources
         run: |
@@ -290,6 +235,52 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           xvfb-run -a python -m pytest -q
+
+  verify:
+    name: verify (${{ matrix.os }}, py${{ matrix.python }})
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      # Each OS reports its own result: with fail-fast a Windows failure cancelled Linux (and vice versa) and hid it.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11"]
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      MESH_CI_SEED: "123"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache mypy cache
+        uses: actions/cache@v4
+        with:
+          path: .mypy_cache
+          key: mypy-${{ runner.os }}-py${{ matrix.python }}-${{ hashFiles('pyproject.toml', 'tooling/mypy_baseline.txt', 'tooling/mypy_island.py') }}
+          restore-keys: |
+            mypy-${{ runner.os }}-py${{ matrix.python }}-
+
+      - name: Set up Python, the project and a display
+        uses: ./.github/actions/mesh-ci-setup
+        with:
+          python-version: ${{ matrix.python }}
+
+      # Not a second check (pytest's job has that): before the split verify-all started with compiled sources, so
+      # without this its timed steps would pay for compiling and lose headroom against their thresholds.
+      - name: Compile Python sources
+        run: |
+          python -m compileall -q engine mesh_cli tooling tests
 
       - name: Run verify-all (Windows)
         if: runner.os == 'Windows'
@@ -544,6 +535,32 @@ jobs:
           if-no-files-found: error
           path: |
             artifacts/
+
+  tests:
+    # The fan-in: one OS's result, green only when its pytest and verify jobs both succeeded (failed, cancelled,
+    # skipped or missing: red). It always runs once they are done, so it never waits forever, and keeps the check name
+    # reviews and merges have always looked at.
+    name: tests (${{ matrix.os }}, py${{ matrix.python }})
+    needs: [pytest, verify]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Both of this OS's jobs succeeded
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tooling/ci_require_jobs.py --os "${{ matrix.os }}" --python "${{ matrix.python }}"
 
   timing-rolling:
     # Report-only (#373, #400): the integration branch's recent CI timings against the committed advisory model, so a
