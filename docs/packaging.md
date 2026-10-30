@@ -75,6 +75,28 @@ isn't needed.
 It runs with `python main.py` wherever Mesh's dependencies (arcade, pillow, jsonschema) are installed, without Mesh.
 It replaces only an earlier bundle or an empty folder, never other files.
 
+**Where an exported game saves (H9, #422).** Never in its installation, which may be read-only. Each player's saves
+go to their own application-data folder, under the game's `game_id` (from `config.json`):
+
+| Platform | Saves |
+|---|---|
+| Windows | `%APPDATA%\MeshMind Studios\<game id>\saves` |
+| macOS | `~/Library/Application Support/MeshMind Studios/<game id>/saves` |
+| Linux | `$XDG_DATA_HOME/MeshMind Studios/<game id>/saves` (`~/.local/share/...` when unset) |
+
+- **What counts as an export:** a game counts as exported when its folder holds `bundle_manifest.json`, which only
+  `mesh export build` writes. A project run in Mesh Studio or with `python main.py` keeps saving to its own `saves`
+  folder.
+- **Moving and reinstalling:** the game can be moved or reinstalled and keeps its saves. Two games never share
+  saves, even with the same title.
+- **The game id:** new projects get a `game_id` when they are made. An older project without one gets an id
+  derived from its title, start room and world file. Two such projects that match in all three share a folder;
+  give one a `game_id` (lowercase letters, digits, `.`, `_`, `-`) to separate them.
+- **Saves made before H9:** saves an export kept in `<installation>/saves` are still listed and loaded, and are
+  never changed. Saving that slot again writes the player's folder, whose copy then loads first.
+- **Overrides:** `MESH_SAVE_DIR` names the saves folder (tests, automation). The policy is in
+  `engine.save_runtime.storage`.
+
 The exporter and the asset manifest moved from the repository's `tooling/` into the package
 (`engine.tooling.export_bundle`, `engine.tooling.asset_manifest`). The names in `tooling/` remain for repository
 scripts.
