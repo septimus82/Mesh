@@ -3,12 +3,16 @@ succeeded, and the workflow is wired so that check always reports."""
 
 from __future__ import annotations
 
+import json
 import re
+import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from tooling.ci_require_jobs import COMPONENTS, required_jobs, verdict
+from tooling import ci_require_jobs as fanin
+from tooling.ci_require_jobs import COMPONENTS, FetchError, check, fetch_jobs, required_jobs, verdict
 
 pytestmark = [pytest.mark.fast]
 
@@ -119,3 +123,143 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
                  "Build release bundle (seeded, Linux)", "name: mesh-artifacts-${{ matrix.os }}-py${{ matrix.python }}"):
         assert step in verify_job
     assert "verify-all" not in pytest_job
+
+
+# --------------------------------------------------------------------------- #
+# H7 (#422): the jobs list is read until one read is complete and current; the verdict is always one read's.
+# --------------------------------------------------------------------------- #
+
+ATTEMPT = 2
+
+
+def _read(jobs: dict[str, Any], *, attempt: int = ATTEMPT, total: int | None = None) -> tuple[list[dict[str, Any]], int]:
+    """One read of the jobs list: each job ``name: conclusion`` (finished) or ``name: (status, conclusion)``."""
+    listed = []
+    for part, state in jobs.items():
+        status, conclusion = state if isinstance(state, tuple) else ("completed", state)
+        listed.append({"name": f"{part} (windows-latest, py3.11)", "status": status, "conclusion": conclusion,
+                       "run_attempt": attempt})
+    return listed, len(listed) if total is None else total
+
+
+def _fan_in(*reads: tuple[list[dict[str, Any]], int] | Exception) -> tuple[bool, list[str], list[float], list[str]]:
+    """Run ``check`` over these reads in order (the last one repeats): (passed, lines, sleeps, log)."""
+    queue = list(reads)
+    sleeps: list[float] = []
+    log: list[str] = []
+
+    def fetch() -> tuple[list[dict[str, Any]], int]:
+        item = queue.pop(0) if len(queue) > 1 else queue[0]
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+    ok, lines = check(fetch, REQUIRED, ATTEMPT, sleep=sleeps.append, log=log.append)
+    return ok, lines, sleeps, log
+
+
+def test_a_complete_current_read_decides_at_once() -> None:
+    ok, lines, sleeps, _ = _fan_in(_read(ALL_OK))
+    assert ok and sleeps == [] and all(line.startswith("ok") for line in lines)
+
+
+def test_missing_then_complete_passes() -> None:
+    ok, _, sleeps, log = _fan_in(_read({k: v for k, v in ALL_OK.items() if k != "verify"}), _read(ALL_OK))
+    assert ok and sleeps == [fanin.DELAYS[0]]
+    assert "verify (windows-latest, py3.11) not listed" in log[0]
+
+
+def test_running_then_successful_passes() -> None:
+    ok, _, sleeps, log = _fan_in(_read({**ALL_OK, "pytest": ("in_progress", None)}), _read(ALL_OK))
+    assert ok and len(sleeps) == 1 and "still in_progress" in log[0]
+
+
+def test_a_transient_api_failure_is_read_again() -> None:
+    ok, _, sleeps, log = _fan_in(FetchError("gh api failed (exit 1, page 1): gh: Server Error (HTTP 502)"),
+                                 _read(ALL_OK))
+    assert ok and len(sleeps) == 1 and "HTTP 502" in log[0]
+
+
+def test_an_incomplete_list_is_read_again() -> None:
+    ok, _, sleeps, log = _fan_in(_read(ALL_OK, total=14), _read(ALL_OK))
+    assert ok and "incomplete list: 4 of 14 jobs" in log[0]
+
+
+@pytest.mark.parametrize("persistent", ["api", "missing", "running", "stale"])
+def test_a_persistent_problem_fails_after_bounded_reads_saying_why(persistent: str) -> None:
+    reads: dict[str, tuple[list[dict[str, Any]], int] | Exception] = {
+        "api": FetchError("no answer within 30 s (page 1)"),
+        "missing": _read({k: v for k, v in ALL_OK.items() if k != "acceptance"}),
+        "running": _read({**ALL_OK, "verify": ("queued", None)}),
+        "stale": _read(ALL_OK, attempt=ATTEMPT - 1),
+    }
+    ok, lines, sleeps, log = _fan_in(reads[persistent])
+    assert not ok and sleeps == list(fanin.DELAYS) and len(log) == len(fanin.DELAYS)
+    assert lines[0].startswith(f"no complete, current jobs list after {len(fanin.DELAYS) + 1} reads; the last one:")
+
+
+@pytest.mark.parametrize("bad", ["failure", "cancelled", "timed_out", "skipped"])
+def test_a_finished_component_that_failed_fails_at_once(bad: str) -> None:
+    ok, lines, sleeps, _ = _fan_in(_read({**ALL_OK, "installed": bad}), _read(ALL_OK))
+    assert not ok and sleeps == [], "a genuine failure is not waited out"
+    assert f"FAILED  installed (windows-latest, py3.11): {bad}" in lines
+
+
+def test_successes_from_different_reads_are_never_combined() -> None:
+    first = _read({"pytest": "success", "verify": "success"})
+    second = _read({"installed": "success", "acceptance": "success"})
+    ok, lines, _, _ = _fan_in(first, second, first, second, first, second)
+    assert not ok and "no complete, current jobs list" in lines[0]
+
+
+def test_an_older_success_never_hides_a_newer_failure() -> None:
+    older = _read(ALL_OK, attempt=1)[0]
+    newer = _read({**ALL_OK, "pytest": "failure"})[0]
+    ok, lines, _, _ = _fan_in((older + newer, 8))
+    assert not ok and "FAILED  pytest (windows-latest, py3.11): failure" in lines
+    ok, _, _, _ = _fan_in((newer + older, 8))
+    assert not ok, "whatever the order GitHub lists them in"
+
+
+def test_a_stale_read_of_an_earlier_attempt_is_read_again() -> None:
+    ok, lines, sleeps, log = _fan_in(_read({**ALL_OK, "verify": "failure"}, attempt=1), _read(ALL_OK))
+    assert ok and len(sleeps) == 1 and "listed from attempt 1, not this attempt (2)" in log[0]
+
+
+def _proc(returncode: int, stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(["gh"], returncode, stdout, stderr)
+
+
+def test_fetch_reads_every_page_with_a_timeout() -> None:
+    calls: list[tuple[list[str], object]] = []
+
+    def run(cmd: list[str], **kw: object) -> subprocess.CompletedProcess[str]:
+        calls.append((cmd, kw["timeout"]))
+        page = int(cmd[-1].rsplit("page=", 1)[1])
+        jobs = [{"name": f"j{page}-{i}"} for i in range(100 if page == 1 else 50)]
+        return _proc(0, json.dumps({"total_count": 150, "jobs": jobs}))
+
+    jobs, total = fetch_jobs("o/r", "7", timeout=12, run=run)
+    assert (len(jobs), total) == (150, 150) and len(calls) == 2
+    assert all(t == 12 for _, t in calls) and "filter=latest" in calls[0][0][-1]
+
+
+def test_fetch_errors_are_named_and_sanitized(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GH_TOKEN", "s3cr3t-token-value")
+
+    def failing(cmd: list[str], **kw: object) -> subprocess.CompletedProcess[str]:
+        return _proc(1, stderr="gh: Server Error (HTTP 502) token=s3cr3t-token-value ghs_abcdefghijklmnopqrstuvwxyz0123")
+
+    def slow(cmd: list[str], **kw: object) -> subprocess.CompletedProcess[str]:
+        raise subprocess.TimeoutExpired(cmd, 30)
+
+    def garbled(cmd: list[str], **kw: object) -> subprocess.CompletedProcess[str]:
+        return _proc(0, "<html>502</html>")
+
+    with pytest.raises(FetchError) as err:
+        fetch_jobs("o/r", "7", run=failing)
+    assert "HTTP 502" in str(err.value) and "s3cr3t" not in str(err.value) and "ghs_" not in str(err.value)
+    with pytest.raises(FetchError, match="no answer within 30 s"):
+        fetch_jobs("o/r", "7", run=slow)
+    with pytest.raises(FetchError, match="unreadable answer"):
+        fetch_jobs("o/r", "7", run=garbled)
