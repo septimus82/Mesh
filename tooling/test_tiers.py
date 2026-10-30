@@ -48,10 +48,12 @@ class TierDef:
     min_selected: int = 0
 
 
-# Creator-workflow acceptance: what a person making a game relies on most, in a real (hidden) GL window.
+# Creator-workflow acceptance, required on every PR (CI's acceptance (<os>) jobs): what a person making a game relies
+# on most, in a real (hidden) GL window. Measured on CI's Mesa (#422 H6): about 77 s on Linux, 131 s on Windows.
+# tests/test_dialogue_reopen_gpu.py (dialogue edits persist across reopen) is left to the gpu lane (every merge and
+# nightly): 196 s / 369 s alone, it would lengthen required PR feedback by about two minutes.
 ACCEPTANCE = (
     "tests/test_saved_world_gpu.py",            # save, reopen, play: the saved world comes back
-    "tests/test_dialogue_reopen_gpu.py",        # dialogue edits persist across reopen
     "tests/test_new_game_isolation_gpu.py",     # a new game starts clean, not with the editor's state
     "tests/test_studio_workflow_polish_gpu.py",  # creator field editing in Mesh Studio
     "tests/test_background_layers_render_contract.py",  # background layers reach the screen
@@ -68,7 +70,7 @@ TIERS: dict[str, TierDef] = {
     # Rendering, in hidden windows (nothing shown on the desktop, no input), wherever a GL context exists.
     "gpu": TierDef(pytest_mark="gl", verify_all=False, compileall=False, env=GL_ENV, min_selected=256),
     "acceptance": TierDef(pytest_mark="gl", verify_all=False, compileall=False, paths=ACCEPTANCE, env=GL_ENV,
-                          min_selected=27),
+                          min_selected=22),
 }
 
 
@@ -159,9 +161,14 @@ def _pytest_cmd(
     return [sys.executable, "-m", "pytest", *build_pytest_args(pytest_args)]
 
 
-def _tier_env(tier_cfg: TierDef) -> dict[str, str]:
+SOFTWARE_RENDERERS = ("llvmpipe", "softpipe", "swiftshader", "software")
+
+
+def _tier_env(tier_cfg: TierDef, renderer: str | None = None) -> dict[str, str]:
     env = build_pytest_env()
     env.update(dict(tier_cfg.env))
+    if renderer and any(name in renderer.lower() for name in SOFTWARE_RENDERERS):
+        env["MESH_GL_SOFTWARE"] = "1"  # tests marked gpu_hardware skip, visibly, instead of failing
     return env
 
 
@@ -218,7 +225,7 @@ def main(argv: list[str] | None = None) -> int:
     pytest_cmd += [f"--junitxml={junit}", "-rfEs"]
     gl_tier = dict(tier_cfg.env).get("MESH_GL_SMOKE") == "1"
     renderer = gl_renderer() if gl_tier else None
-    rc = _run(pytest_cmd, cwd=repo_root, env=_tier_env(tier_cfg))
+    rc = _run(pytest_cmd, cwd=repo_root, env=_tier_env(tier_cfg, renderer))
     run = summarize_junit(junit) if junit.is_file() else None
     problems = lane_problems(run, gl_renderer=renderer, gl_tier=gl_tier,
                              min_selected=0 if extra_args else tier_cfg.min_selected)

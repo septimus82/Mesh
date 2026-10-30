@@ -292,6 +292,14 @@ def _never_runs(item) -> bool:
     return False
 
 
+@pytest.fixture(autouse=True)
+def _physical_gpu_only(request):
+    # tooling/test_tiers.py sets MESH_GL_SOFTWARE=1 when the gpu lane's renderer is a software one (CI's Mesa):
+    # a test that needs a physical GPU says so in the lane's skip list instead of failing or passing there.
+    if os.getenv("MESH_GL_SOFTWARE") == "1" and request.node.get_closest_marker("gpu_hardware") is not None:
+        pytest.skip("needs a physical GPU: this lane's GL is a software renderer")
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     # In the gpu lane (MESH_REQUIRE_GL=1) a GL test skipped by its opt-in gate (no MESH_GL_SMOKE, or no arcade) is a

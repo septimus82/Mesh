@@ -22,6 +22,9 @@ dev = [
     "mypy==1.19.1",
     "pygbag==0.9.3",
     "pytest>=8.0",
+    # Tests only (GL pixel checks, the glTF lab); Mesh itself never imports it. Without it CI skipped those modules
+    # whole and failed 32 GL tests (#422 H6).
+    "numpy>=2,<3",
 ]
 # Optional: enables the Mesh MCP server (engine.mcp_server) so MCP-capable
 # AI clients can drive the engine. The engine never hard-requires this; the

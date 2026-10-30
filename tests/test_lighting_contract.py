@@ -58,11 +58,9 @@ def test_lighting_contract_theme_implicit(mock_arcade_lighting, mock_arcade_wind
     # Load the scene file content
     # We use the existing dev_sandbox scene which uses "moss" theme
     scene_path = "packs/dev_sandbox/scenes/encounter_group_test.json"
-    real_path = Path("d:/Games/Mesh") / scene_path
-
-    # Ensure file exists (it should in this workspace)
-    if not real_path.exists():
-        pytest.skip(f"Scene file not found: {real_path}")
+    # The repository's own scene (it was read from d:/Games/Mesh, so the test ran on one machine only; #422 H6).
+    real_path = Path(__file__).resolve().parents[1] / scene_path
+    assert real_path.is_file(), f"Scene file not found: {real_path}"
 
     with open(real_path, "r") as f:
         scene_data = json.load(f)
@@ -204,10 +202,8 @@ def test_lighting_contract_variant_e_occluders(mock_arcade_lighting, mock_arcade
 
     # Load the actual variant E scene file
     scene_path = "packs/core_regions/scenes/Ridge Outpost_dungeon_variant_e.json"
-    real_path = Path("d:/Games/Mesh") / scene_path
-
-    if not real_path.exists():
-        pytest.skip(f"Scene file not found: {real_path}")
+    real_path = Path(__file__).resolve().parents[1] / scene_path  # was d:/Games/Mesh: one machine only (#422 H6)
+    assert real_path.is_file(), f"Scene file not found: {real_path}"
 
     with open(real_path, "r") as f:
         scene_data = json.load(f)

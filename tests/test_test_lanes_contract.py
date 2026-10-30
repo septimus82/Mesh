@@ -90,7 +90,7 @@ def test_an_empty_or_all_skipped_lane_is_not_a_success(tmp_path: Path) -> None:
     assert test_tiers.lane_problems(good, gl_renderer="x", gl_tier=False, min_selected=3) == [
         "the lane selected 2 tests, fewer than the 3 it should"]
     assert {name: tier.min_selected for name, tier in test_tiers.TIERS.items() if tier.min_selected} == {
-        "extended": 162, "gpu": 256, "acceptance": 27}
+        "extended": 162, "gpu": 256, "acceptance": 22}
 
 
 @pytest.mark.fast
@@ -115,3 +115,12 @@ def test_the_extended_workflow_runs_both_lanes_by_the_canonical_selection() -> N
     assert "continue-on-error" not in text and "if: ${{ always() }}" not in text.split("Run the ${{ matrix.lane }} lane")[1][:400]
     assert text.count("if: always()") == 2, "the summary and the reports are kept when a lane fails"
     assert "SOFTWARE renderer" in text, "a Mesa pass is not claimed as physical-GPU evidence"
+
+
+@pytest.mark.fast
+def test_a_software_renderer_is_named_so_physical_gpu_tests_skip_visibly() -> None:
+    gpu = test_tiers.TIERS["gpu"]
+    mesa = test_tiers._tier_env(gpu, "llvmpipe (LLVM 21.1.8, 256 bits) | 4.5 (Core Profile) Mesa 26.0.8")
+    assert mesa["MESH_GL_SOFTWARE"] == "1" and mesa["MESH_GL_SMOKE"] == "1" and mesa["MESH_REQUIRE_GL"] == "1"
+    hardware = test_tiers._tier_env(gpu, "NVIDIA GeForce RTX 4070/PCIe/SSE2 | 4.6.0 NVIDIA 581.57")
+    assert "MESH_GL_SOFTWARE" not in hardware

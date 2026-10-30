@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 
@@ -210,6 +211,8 @@ def test_verify_all_schema_failure_includes_skipped_steps(monkeypatch, tmp_path,
     assert written["artifact_index"] is None
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows path semantics: a backslash separates paths only on Windows (on Linux "
+                    "it is a file-name character, which pathlib keeps); the extended lane runs this on Windows (#422 H6)")
 def test_verify_all_path_normalization_uses_forward_slashes(tmp_path):
     import mesh_cli
 

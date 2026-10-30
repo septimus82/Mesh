@@ -41,7 +41,7 @@ def test_variant_e_boss_reward_clarity() -> None:
     scene_path = "packs/core_regions/scenes/Ridge Outpost_dungeon_variant_e.json"
     real_path = Path(scene_path)
     if not real_path.exists():
-        real_path = Path("d:/Games/Mesh") / scene_path
+        real_path = Path(__file__).resolve().parents[1] / scene_path  # not d:/Games/Mesh (#422 H6)
 
     with open(real_path, "r") as f:
         scene_data = json.load(f)

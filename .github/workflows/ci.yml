@@ -607,12 +607,61 @@ jobs:
           python -m pip install -U pip "pytest>=8.0"
           python -m pytest -o addopts= --noconftest -p no:cacheprovider -q -W error -rA tests/test_wheel_bundles_engine_data.py
 
+  acceptance:
+    # Creator-workflow acceptance (H6, #422): save and reopen, new-game isolation, creator field editing and background
+    # rendering, in hidden GL windows (`python -m tooling.test_tiers acceptance`, a subset of the gpu lane that
+    # extended.yml runs whole). The GL is Mesa's software renderer; the lane fails if any of these GL tests can't run.
+    name: acceptance (${{ matrix.os }}, py${{ matrix.python }})
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11"]
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      MESH_CI_SEED: "123"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python, the project and a display
+        uses: ./.github/actions/mesh-ci-setup
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Creator-workflow acceptance
+        run: |
+          if ($IsLinux) { xvfb-run -a python -m tooling.test_tiers acceptance }
+          else { python -m tooling.test_tiers acceptance }
+          if ($LASTEXITCODE -ne 0) { throw "the acceptance lane failed (exit $LASTEXITCODE): see the summary above and the artifact" }
+
+      - name: Upload acceptance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-${{ matrix.os }}-py${{ matrix.python }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            artifacts/pytest_acceptance*
+
   tests:
-    # The fan-in: one OS's result, green only when its pytest, verify and installed jobs all succeeded (failed,
+    # The fan-in: one OS's result, green only when its pytest, verify, installed and acceptance jobs all succeeded (failed,
     # cancelled, skipped or missing: red). It always runs once they are done, so it never waits forever, and keeps the check name
     # reviews and merges have always looked at.
     name: tests (${{ matrix.os }}, py${{ matrix.python }})
-    needs: [pytest, verify, installed]
+    needs: [pytest, verify, installed, acceptance]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
