@@ -301,3 +301,123 @@ def test_an_older_export_s_quick_snapshot_still_loads(tmp_path: Path, player: Pa
     assert savegame.save_quick_snapshot(window)  # (where an export before H9 put it)
     window.save_manager = SaveManager(window)
     assert savegame.load_quick_snapshot(window) and not (_saves(player) / "quick.json").exists()
+
+
+# --------------------------------------------------------------------------- quick snapshots: older exports' (review)
+
+
+def _snapshot(path: Path, gold: int) -> Path:
+    from engine import savegame
+
+    window = Window(path.parent)
+    window.game_state_controller.state.counters["gold"] = gold
+    assert savegame.save_quick_snapshot(window, path)
+    return path
+
+
+def _player_window(install: Path) -> Window:
+    window = Window(install)
+    window.game_state_controller.state.counters["gold"] = 1
+    window.save_manager = SaveManager(window)
+    return window
+
+
+def _inject(monkeypatch: pytest.MonkeyPatch, outcome: str) -> list[Any]:
+    """The snapshot's application reports a warning (and still applies) or fails, as a real one can."""
+    from engine import savegame
+    from engine.diagnostics import Diagnostic
+
+    applied: list[Any] = []
+
+    def apply(window: Any, payload: Any, *, diagnostics: Any, **_: Any) -> bool:
+        applied.append(payload)
+        level = "warning" if outcome == "warning" else "error"
+        diagnostics.add([Diagnostic(level=level, code="test.injected", message=f"injected {outcome}")])
+        return outcome == "warning"
+
+    monkeypatch.setattr(savegame.save_payloads, "apply_loaded_payload", apply)
+    return applied
+
+
+@pytest.mark.parametrize("outcome", ["warning", "failure"])
+def test_an_older_export_s_quick_snapshot_gets_no_diagnostics_beside_it(
+        tmp_path: Path, player: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+        outcome: str) -> None:
+    """Applying it can warn or fail; what is said about that goes to the log, never into the (read-only) installation."""
+    from engine import savegame
+    from tooling.installed_product_check import read_only
+
+    install = _install(tmp_path / "game")
+    monkeypatch.chdir(install)
+    legacy = _snapshot(install / "saves" / "quick.json", 100)
+    kept = legacy.read_bytes()
+    window = _player_window(install)
+    _inject(monkeypatch, outcome)
+    with read_only(install / "saves"):  # (truly: POSIX permissions, a Windows deny-write entry)
+        loaded = savegame.load_quick_snapshot(window)  # (a PermissionError used to escape from here)
+    assert loaded is (outcome == "warning")
+    assert sorted(p.name for p in legacy.parent.iterdir()) == ["quick.json"] and legacy.read_bytes() == kept
+    if outcome == "failure":
+        assert "[Mesh][Snapshot]" in capsys.readouterr().err, "the failure is still reported"
+
+
+@pytest.mark.parametrize("outcome", ["warning", "failure"])
+def test_a_player_s_own_quick_snapshot_keeps_its_diagnostics(tmp_path: Path, player: Path,
+                                                             monkeypatch: pytest.MonkeyPatch, outcome: str) -> None:
+    from engine import savegame
+
+    install = _install(tmp_path / "game")
+    monkeypatch.chdir(install)
+    own = _snapshot(_saves(player) / "quick.json", 200)
+    window = _player_window(install)
+    _inject(monkeypatch, outcome)
+    assert savegame.load_quick_snapshot(window) is (outcome == "warning")
+    assert (own.parent / "quick.json.diagnostics.json").is_file(), "written beside the player's own snapshot"
+
+
+def _malformed(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('{"version": 1, "game_state": ', encoding="utf-8")
+
+
+def _schema_invalid(path: Path) -> None:
+    payload = json.loads(_snapshot(path, 300).read_text(encoding="utf-8"))
+    payload["game_state"] = "not an object"  # (valid JSON the save validator rejects)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+@pytest.mark.parametrize(("own", "older", "gold"), [
+    ("valid", "valid", 200),          # the player's own wins
+    ("missing", "valid", 100),
+    ("malformed", "valid", 100),      # a broken own copy: the older one, still valid
+    ("schema-invalid", "valid", 100),
+    ("valid", "malformed", 200),
+    ("malformed", "schema-invalid", None),  # neither: it fails, nothing applied
+    ("missing", "malformed", None),
+])
+def test_a_quick_snapshot_loads_the_first_valid_copy(tmp_path: Path, player: Path, monkeypatch: pytest.MonkeyPatch,
+                                                     own: str, older: str, gold: int | None) -> None:
+    from engine import savegame
+    from tooling.installed_product_check import read_only
+
+    install = _install(tmp_path / "game")
+    monkeypatch.chdir(install)
+    for state, path, value in ((own, _saves(player) / "quick.json", 200), (older, install / "saves" / "quick.json", 100)):
+        if state == "valid":
+            _snapshot(path, value)
+        elif state == "malformed":
+            _malformed(path)
+        elif state == "schema-invalid":
+            _schema_invalid(path)
+    files = {p: p.read_bytes() for p in (_saves(player) / "quick.json", install / "saves" / "quick.json") if p.exists()}
+    window = _player_window(install)
+    applied: list[Any] = []
+    original = savegame.save_payloads.apply_loaded_payload
+    monkeypatch.setattr(savegame.save_payloads, "apply_loaded_payload",
+                        lambda *a, **k: applied.append(1) or original(*a, **k))
+    with read_only(install / "saves"):
+        loaded = savegame.load_quick_snapshot(window)
+    assert loaded is (gold is not None) and window.gold == (gold if gold is not None else 1)
+    assert len(applied) == (1 if gold is not None else 0), "validated first: only the chosen copy is applied"
+    assert {p: p.read_bytes() for p in files} == files, "neither copy is changed, repaired or replaced"
+    assert sorted(p.name for p in (install / "saves").iterdir()) == ["quick.json"]

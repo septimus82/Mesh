@@ -133,9 +133,7 @@ class SaveManager:
         if legacy is None or not legacy.is_file():
             return path
         for candidate in (path, legacy):
-            if candidate.is_file() and save_io.load_and_validate_payload(
-                    candidate, source=str(candidate), strict_schema=SLOT_POLICY.strict_schema,
-                    aggregator=SaveDiagnosticsAggregator(), policy=SLOT_POLICY)[0]:
+            if save_io.is_valid_payload_file(candidate, policy=SLOT_POLICY):
                 return candidate
         return path if path.is_file() else legacy
 

@@ -447,6 +447,17 @@ def load_snapshot_payload(
     return False, ""
 
 
+def is_valid_payload_file(path: Path, *, policy: RestorePolicy) -> bool:
+    """Whether ``path`` is a save ``policy`` would load (read and validated only: nothing recorded, nothing written).
+    H9: picks which of a player's save and an older export's copy to load, before either is applied."""
+    if not path.is_file():
+        return False
+    ok, _payload, _diagnostics = load_and_validate_payload(
+        path, source=str(path), strict_schema=policy.strict_schema, aggregator=SaveDiagnosticsAggregator(),
+        policy=policy)
+    return bool(ok)
+
+
 def load_slot_payload(
     path: Path,
     *,

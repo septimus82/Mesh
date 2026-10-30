@@ -629,17 +629,22 @@ def read_snapshot_file(path: Path, *, sidecars: bool = True) -> dict[str, Any] |
 
 
 def _quick_snapshot_path(window: object, *, reading: bool = False) -> Path:
-    """quick.json in the game's save folder (H9: an exported game's is per player, never its installation); when
-    reading and the player has none yet, an older export's copy in its installation."""
+    """quick.json in the game's save folder (H9: an exported game's is per player, never its installation). Reading,
+    as for save slots: the player's copy when it is a valid snapshot, else an older export's copy in its installation
+    when that one is valid, else whichever exists (so the failure names it). Chosen before anything is applied."""
     manager = getattr(window, "save_manager", None)
     save_dir = getattr(manager, "save_dir", None)
     if save_dir is None:
         return QUICK_SNAPSHOT_PATH
     path = Path(save_dir) / QUICK_SNAPSHOT_PATH.name
     legacy_dir = getattr(manager, "legacy_dir", None)
-    if reading and not path.is_file() and legacy_dir is not None and (Path(legacy_dir) / path.name).is_file():
-        return Path(legacy_dir) / path.name
-    return path
+    legacy = Path(legacy_dir) / path.name if legacy_dir is not None else None
+    if not reading or legacy is None or not legacy.is_file():
+        return path
+    for candidate in (path, legacy):
+        if save_io.is_valid_payload_file(candidate, policy=SNAPSHOT_POLICY):
+            return candidate
+    return path if path.is_file() else legacy
 
 
 def save_quick_snapshot(window: object, path: Path | None = None) -> bool:
@@ -687,7 +692,8 @@ def save_quick_snapshot(window: object, path: Path | None = None) -> bool:
 def load_quick_snapshot(window: object, path: Path | None = None) -> bool:
     path = path or _quick_snapshot_path(window, reading=True)
     legacy_dir = getattr(getattr(window, "save_manager", None), "legacy_dir", None)
-    payload = read_snapshot_file(path, sidecars=legacy_dir is None or path.parent != Path(legacy_dir))
+    legacy = legacy_dir is not None and path.parent == Path(legacy_dir)  # (an older export's: nothing written by it)
+    payload = read_snapshot_file(path, sidecars=not legacy)
     if payload is None:
         _fallback_to_start_scene(
             window,
@@ -731,7 +737,7 @@ def load_quick_snapshot(window: object, path: Path | None = None) -> bool:
     )
     counts = apply_diags.counts()
     should_write_sidecars = (
-        SNAPSHOT_POLICY.write_sidecars_on_failure and (
+        SNAPSHOT_POLICY.write_sidecars_on_failure and not legacy and (
             (not applied) or int(counts.get("warnings", 0)) > 0 or int(counts.get("errors", 0)) > 0
         )
     )
