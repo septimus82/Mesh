@@ -276,11 +276,18 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      # Not a second check (pytest's job has that): before the split verify-all started with compiled sources, so
-      # without this its timed steps would pay for compiling and lose headroom against their thresholds.
+      # Before the split verify-all ran after the full suite, so its timed pytest-fast found the sources compiled and
+      # every test module already assertion-rewritten. Cold, that step took ~24 s longer on both OSes (run
+      # 41005921959: Ubuntu 100.77 s at speed 1.10, over its 79.05 s threshold) for work its thresholds never measured.
+      # These two steps give it the same start as before: compile, then the full run's own collection (no test runs).
       - name: Compile Python sources
         run: |
           python -m compileall -q engine mesh_cli tooling tests
+
+      - name: Warm pytest's caches (collect only, no test runs)
+        run: |
+          if ($IsLinux) { xvfb-run -a python -m pytest -q --collect-only | Select-Object -Last 1 }
+          else { python -m pytest -q -p no:cacheprovider --collect-only | Select-Object -Last 1 }
 
       - name: Run verify-all (Windows)
         if: runner.os == 'Windows'

@@ -83,7 +83,11 @@ def test_the_workflow_fans_both_jobs_into_the_tests_check() -> None:
     for block in (pytest_job, verify_job):
         assert not re.search(r"^    (if|continue-on-error):", block, re.M)
     # Each half does its own work: the full suite in pytest; verify-all, the bundle and the artifacts in verify.
-    assert "python -m pytest" in pytest_job and "python -m pytest" not in verify_job
+    assert "python -m pytest" in pytest_job
+    # verify only collects (to start verify-all as warm as it did after the full run): the suite never runs twice.
+    collects = [line for line in verify_job.splitlines() if "python -m pytest" in line]
+    assert collects and all("--collect-only" in line for line in collects)
+    assert verify_job.index("--collect-only") < verify_job.index("Run verify-all (Windows)")
     for step in ("Run verify-all (Windows)", "Run verify-all (Linux)", "Build release bundle (seeded, Windows)",
                  "Build release bundle (seeded, Linux)", "name: mesh-artifacts-${{ matrix.os }}-py${{ matrix.python }}"):
         assert step in verify_job
