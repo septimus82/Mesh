@@ -1,3 +1,4 @@
+import fnmatch
 import importlib.abc
 import os
 import sys
@@ -159,6 +160,11 @@ def unmarked_test_nodeids(pytestconfig):
 
 
 @pytest.fixture(scope="session")
+def fast_tests_outside_rule(pytestconfig):
+    return list(getattr(pytestconfig, "_mesh_fast_tests_outside_rule", []))
+
+
+@pytest.fixture(scope="session")
 def exception_policy_scan():
     """One exception-policy scan of the repository, shared by the tests that only read it (a scan takes seconds)."""
     from pathlib import Path
@@ -168,12 +174,38 @@ def exception_policy_scan():
     return scan(["engine", "mesh_cli", "tooling"], repo_root=Path(__file__).resolve().parent.parent)
 
 
+def _may_hold_fast_tests(path, seen: dict) -> bool:
+    """Whether a test module can contain fast tests: it says "fast" somewhere (any case: marks, aliases, base classes),
+    or it is one of the modules marked fast below. The full run checks this for every test (see the hook below)."""
+    if path not in seen:
+        rel = path.as_posix()
+        seen[path] = any(part in rel for part in _FAST_TEST_NODEIDS) or b"fast" in path.read_bytes().lower()
+    return seen[path]
+
+
+def pytest_ignore_collect(collection_path, config):
+    # The fast tier (``-m fast``, as tooling/pytest_fast.py and verify-all run it) imported all ~1,800 test modules to
+    # deselect over half of their tests (#422 F13): modules that can't hold a fast test aren't collected for it. Only
+    # for exactly ``-m fast``; every other run collects everything.
+    if config.getoption("markexpr") != "fast" or collection_path.suffix != ".py":
+        return None
+    if not any(fnmatch.fnmatch(collection_path.name, pattern) for pattern in config.getini("python_files")):
+        return None
+    if _may_hold_fast_tests(collection_path, config.__dict__.setdefault("_mesh_fast_rule", {})):
+        return None
+    return True
+
+
 def pytest_collection_modifyitems(config, items):
     unmarked: list[str] = []
+    fast_rule = config.__dict__.setdefault("_mesh_fast_rule", {})
+    outside_rule: set[str] = set()
     for item in items:
         nodeid = item.nodeid.replace("\\", "/")
         if any(part in nodeid for part in _FAST_TEST_NODEIDS):
             item.add_marker(pytest.mark.fast)
+        if item.get_closest_marker("fast") is not None and not _may_hold_fast_tests(item.path, fast_rule):
+            outside_rule.add(nodeid)
         if any(part in nodeid for part in _INTEGRATION_NODEID_PARTS):
             item.add_marker(pytest.mark.integration)
         if any(part in nodeid for part in _SLOW_NODEID_PARTS):
@@ -185,6 +217,7 @@ def pytest_collection_modifyitems(config, items):
         if not has_explicit:
             unmarked.append(nodeid)
     config._mesh_unmarked_nodeids = sorted(unmarked)
+    config._mesh_fast_tests_outside_rule = sorted(outside_rule)
 
 
 @pytest.fixture
