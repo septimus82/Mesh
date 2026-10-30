@@ -18,6 +18,13 @@ _MAIN_PY = '''\
 
 
 def main() -> None:
+    # The game runs from its own folder, wherever it was started from: its config, rooms
+    # and saves are found from there (started elsewhere, it looked for config.json from
+    # that folder upward and found none, or another's).
+    import os
+
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
     # The engine is imported here, after the DPI mode is set: pyglet fixes it when it
     # loads, and Mesh draws at a stable scale only when Windows doesn't rescale it.
     from engine.dpi_bootstrap import set_process_dpi_unaware

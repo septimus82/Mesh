@@ -592,3 +592,30 @@ def test_an_exported_game_starts_its_game_not_meshs_project_browser(tmp_path: Pa
     from engine.repo_root import engine_source_root, is_standalone_project_root
 
     assert not is_standalone_project_root(engine_source_root())  # (Mesh's own checkout: still not a project)
+
+
+@pytest.mark.fast
+def test_a_game_runs_from_its_own_folder_wherever_it_is_started(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """#422 H7: `python <game>/main.py` started from another folder looked for config.json from that folder upward, so
+    an exported game found none (and started the engine's default room) or another's (a checkout's). main.py now
+    changes to its own folder before the engine starts."""
+    import runpy
+
+    from engine.project_scaffold import create_project
+
+    project = tmp_path / "game"
+    create_project(project, "Game", "blank")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    class Started(Exception):
+        pass
+
+    def started() -> None:  # (the first thing main() does with the engine)
+        raise Started(Path.cwd())
+
+    monkeypatch.setattr("engine.dpi_bootstrap.set_process_dpi_unaware", started)
+    with pytest.raises(Started) as at:
+        runpy.run_path(str(project / "main.py"), run_name="__main__")
+    assert Path(at.value.args[0]).resolve() == project.resolve()

@@ -91,6 +91,18 @@ def test_workspace_scene_and_camera_reopen_only_in_the_editor(tmp_path: Path, mo
     assert window.camera.position == ((50.0, 50.0) if reopened else (0.0, 0.0))
 
 
+@pytest.mark.parametrize(("launch_mode", "remembered"), [(None, False), ("editor", True)])
+def test_only_the_editor_remembers_the_room_it_loads(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+                                                     launch_mode: str | None, remembered: bool) -> None:
+    """#422 H7: a game (main.py, an exported game) wrote .mesh/editor_session_state.json into its own folder on every
+    room it loaded, though only the editor reads it; the exported game then no longer matched its manifest."""
+    root = _project(tmp_path, monkeypatch)
+    editor = _editor(root, launch_mode=launch_mode)
+    EditorWorkspaceController(editor)
+    editor.window._on_recent_scene_recorded(ROOM)
+    assert (root / ".mesh" / "editor_session_state.json").is_file() == remembered
+
+
 def test_main_menu_new_game_clears_all_game_state() -> None:
     window = SimpleNamespace(
         engine_config=SimpleNamespace(start_scene="scenes/start.json"),

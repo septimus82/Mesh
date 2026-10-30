@@ -8,6 +8,11 @@ inputs:
   python-version:
     description: Python version for actions/setup-python.
     required: true
+  install-project:
+    description: >-
+      "false" leaves the checkout uninstalled (the installed (<os>) jobs test the wheel, built and installed by their
+      test, and must not have the checkout importable); the display is set up either way.
+    default: "true"
 
 runs:
   using: composite
@@ -22,6 +27,7 @@ runs:
           pytest.ini
 
     - name: Install dependencies
+      if: inputs.install-project == 'true'
       shell: pwsh
       run: |
         python -m pip install -U pip
@@ -66,5 +72,7 @@ runs:
         }
         "GALLIUM_DRIVER=llvmpipe" >> $env:GITHUB_ENV
         $env:GALLIUM_DRIVER = "llvmpipe"
-        python -c "import pyglet; w = pyglet.window.Window(visible=False); from pyglet.gl import gl_info; print('OpenGL', gl_info.get_version_string(), '|', gl_info.get_renderer()); w.close()"
-        if ($LASTEXITCODE -ne 0) { throw "Python cannot open an OpenGL context" }
+        if ("${{ inputs.install-project }}" -eq "true") {  # (without the project, there's no pyglet to check with yet)
+          python -c "import pyglet; w = pyglet.window.Window(visible=False); from pyglet.gl import gl_info; print('OpenGL', gl_info.get_version_string(), '|', gl_info.get_renderer()); w.close()"
+          if ($LASTEXITCODE -ne 0) { throw "Python cannot open an OpenGL context" }
+        }
