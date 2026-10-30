@@ -1,0 +1,48 @@
+name: H6.1 diagnostic (temporary)
+
+on:
+  pull_request:
+    paths: [".github/diag/h61_diag.py", ".github/workflows/h61_diag.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    name: diag (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/mesh-ci-setup
+        with:
+          python-version: "3.11"
+      - name: Diagnose (as the gpu lane runs)
+        env:
+          MESH_GL_SMOKE: "1"
+        run: |
+          New-Item -ItemType Directory -Force diag | Out-Null
+          if ($IsLinux) { xvfb-run -a python .github/diag/h61_diag.py diag/h61_${{ matrix.os }}.json }
+          else { python .github/diag/h61_diag.py diag/h61_${{ matrix.os }}.json fonts resize motion }
+      - name: Desktop 1920x1080, then resize again (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          Get-CimInstance Win32_VideoController | Select-Object CurrentHorizontalResolution, CurrentVerticalResolution | Format-List
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          Get-CimInstance Win32_VideoController | Select-Object CurrentHorizontalResolution, CurrentVerticalResolution | Format-List
+          python .github/diag/h61_diag.py diag/h61_${{ matrix.os }}_1080.json resize
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: h61-diag-${{ matrix.os }}
+          path: diag/
