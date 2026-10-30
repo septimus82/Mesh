@@ -203,6 +203,19 @@ def bounded(window):
     picture = arcade.get_image(0, 0, *window.get_framebuffer_size()).convert("RGB")
     picture.save(evidence / "frame.png")
     facts["colours"] = len(picture.getcolors(1 << 20) or [])
+    w, h = picture.size  # (H8: what frames the room, and the controls hint's pixels against its box)
+    facts["corners"] = [list(picture.getpixel(xy)) for xy in ((2, 2), (w - 3, 2), (2, h - 3), (w - 3, h - 3))]
+    hud = window.player_hud
+    toasts = list(hud.active_toasts())
+    if len(toasts) == 1:
+        from PIL import ImageChops
+        layout = hud.toast_layout(toasts[0])
+        hud.clear_toasts()
+        window.dispatch_event("on_draw")
+        without = arcade.get_image(0, 0, *window.get_framebuffer_size()).convert("RGB")
+        changed = ImageChops.difference(picture, without).convert("L").point(lambda v: 255 if v > 24 else 0).getbbox()
+        facts["toast"] = {"text": toasts[0], "lines": len(layout.lines), "changed": list(changed or ()),
+                          "box": [layout.width, layout.height], "window": [w, h]}
     facts["saved"] = window.save_manager.save_game("h7_check")  # (where the player stands now)
     facts["save_file"] = str(window.save_manager.get_save_path("h7_check").resolve())
     window.load_scene(facts["scene"])
@@ -477,6 +490,18 @@ def game_problems(bundle: Path, run: dict[str, Any], *, start: str, hd2d: bool) 
     if not (game["saved"] and game["loaded"]) or game["after_load"] != walk[2:]:
         found.append(f"the save didn't bring the player back to {walk[2:]}: saved {game['saved']}, loaded "
                      f"{game['loaded']}, at {game['after_load']}")
+    # H8: a 2D start room smaller than the window is framed in black (it was a purple no room asked for); the controls
+    # hint's pixels stay inside its box (outline included) and the box inside the window.
+    if not hd2d and game["corners"] != [[0, 0, 0]] * 4:
+        found.append(f"the exported game's room isn't framed in black: corners {game['corners']}")
+    toast = game.get("toast")
+    if toast is None:
+        found.append("the exported game showed no controls hint in its start room")
+    elif toast["changed"]:
+        left, top, right, bottom = toast["changed"]
+        width, height = toast["box"]
+        if left < 18 or right - left > width + 4 or bottom - top > height + 4 or right > toast["window"][0]:
+            found.append(f"the controls hint drew outside its {width} x {height} box: pixels {toast['changed']}")
     if not game.get("closed"):
         found.append("the exported game didn't close its window")
     return found

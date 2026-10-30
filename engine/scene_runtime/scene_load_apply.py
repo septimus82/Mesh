@@ -153,7 +153,7 @@ def apply_scene_settings(controller: Any, settings: Dict[str, Any]) -> None:
     color_name = settings.get("background_color")
     color_value = getattr(optional_arcade.arcade.color, color_name.upper(), None) if isinstance(color_name, str) else None
     # (A named colour used to return here, so a room with one never applied its day/night keys or initial_spawn.)
-    optional_arcade.arcade.set_background_color(color_value or optional_arcade.arcade.color.DARK_BLUE_GRAY)
+    optional_arcade.arcade.set_background_color(color_value or optional_arcade.arcade.color.BLACK)
 
     # Day/night: a room that doesn't say gets the project's setting, not the last room's
     day_night = getattr(controller.window, "day_night", None)

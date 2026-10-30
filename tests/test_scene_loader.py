@@ -14,7 +14,7 @@ def test_apply_scene_defaults():
     assert "settings" in processed
     assert "layers" in processed
     assert "entities" in processed
-    assert processed["settings"]["background_color"] == "dark_blue_gray"
+    assert processed["settings"]["background_color"] == "black"
 
 def test_validate_scene_valid():
     loader = SceneLoader()

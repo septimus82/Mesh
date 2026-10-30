@@ -448,7 +448,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
                 _log_swallow("GAME-000", "engine/game.py set_minimum_size", once=True)
                 logger.warning("[Mesh][GameWindow] WARNING: Failed to set minimum size: %r", exc)
         try:
-            engine.optional_arcade.arcade.set_background_color(engine.optional_arcade.arcade.color.DARK_BLUE_GRAY)
+            engine.optional_arcade.arcade.set_background_color(engine.optional_arcade.arcade.color.BLACK)
         except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
             _log_swallow("GAME-001", "engine/game.py blanket swallow", once=True)
             logger.warning("[Mesh][GameWindow] WARNING: Failed to set background color: %r", exc)
