@@ -66,6 +66,14 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Desktop 1920x1080 (Windows, gpu lane)
+        # The runner's desktop is 1024x768 and Windows caps a window's resize at it: a hidden window resized to
+        # 1280x720 came out 1028x720 (#422 H6.1). The resize contract stays; the desktop is made big enough for it.
+        if: runner.os == 'Windows' && matrix.lane == 'gpu'
+        run: |
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          python -c "import pyglet; s = pyglet.display.get_display().get_default_screen(); print('desktop', s.width, 'x', s.height); assert s.width >= 1280 and s.height >= 720, 'the desktop is still smaller than 1280x720'"
+
       - name: Run the ${{ matrix.lane }} lane
         run: |
           if ($IsLinux) { xvfb-run -a python -m tooling.test_tiers ${{ matrix.lane }} }

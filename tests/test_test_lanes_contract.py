@@ -124,3 +124,12 @@ def test_a_software_renderer_is_named_so_physical_gpu_tests_skip_visibly() -> No
     assert mesa["MESH_GL_SOFTWARE"] == "1" and mesa["MESH_GL_SMOKE"] == "1" and mesa["MESH_REQUIRE_GL"] == "1"
     hardware = test_tiers._tier_env(gpu, "NVIDIA GeForce RTX 4070/PCIe/SSE2 | 4.6.0 NVIDIA 581.57")
     assert "MESH_GL_SOFTWARE" not in hardware
+
+
+@pytest.mark.fast
+def test_the_windows_gpu_lane_gets_a_desktop_big_enough_for_its_window_tests() -> None:
+    # A 1024x768 runner desktop capped a 1280x720 resize at 1028 (#422 H6.1); the resize contract itself stays.
+    text = (REPO / ".github" / "workflows" / "extended.yml").read_text(encoding="utf-8")
+    step = text[text.index("Desktop 1920x1080 (Windows, gpu lane)"):text.index("Run the ${{ matrix.lane }} lane")]
+    assert "if: runner.os == 'Windows' && matrix.lane == 'gpu'" in step
+    assert "Set-DisplayResolution -Width 1920 -Height 1080" in step and "assert s.width >= 1280" in step
