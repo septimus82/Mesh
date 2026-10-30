@@ -47,8 +47,10 @@ def spawned_ids(entities: list[Any]) -> set[str]:
 
 def is_save_slot(window: Any, path: str) -> bool:
     """Whether ``path`` is a save file (loading one replaces the game state, room memory included)."""
-    save_dir = getattr(getattr(window, "save_manager", None), "save_dir", None)
-    return save_dir is not None and Path(path).resolve().parent == Path(save_dir).resolve()
+    manager = getattr(window, "save_manager", None)
+    folders = [getattr(manager, "save_dir", None), getattr(manager, "legacy_dir", None)]  # (H9: an older export's too)
+    parent = Path(path).resolve().parent
+    return any(folder is not None and parent == Path(folder).resolve() for folder in folders)
 
 
 def remember_removed(controller: Any) -> None:

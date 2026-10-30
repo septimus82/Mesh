@@ -187,10 +187,22 @@ def _copy(exported: dict[str, dict[str, Any]], template: str, dest: Path) -> Pat
     return dest
 
 
+@pytest.fixture(scope="module")
+def player_home(built: tuple[Path, Path, Path]) -> Path:
+    """One player's home for both exported games (H9: their saves sit side by side; neither may see the other's)."""
+    return built[2] / "player home"
+
+
 @pytest.mark.parametrize("template", sorted(ipc.EXPORTS))
 def test_an_exported_game_runs_without_mesh_or_the_checkout(built: tuple[Path, Path, Path],
                                                             exported: dict[str, dict[str, Any]], player: Path,
-                                                            template: str) -> None:
+                                                            player_home: Path, template: str) -> None:
+    """Installed read-only (as in Program Files or /opt: truly, not only audited), the game plays, saves in its
+    player's data folder, loads; started again from a moved installation, it continues from that save, and still
+    loads a save an earlier export (before H9) kept in its installation - which no run changes."""
+    import json
+    import shutil
+
     scratch = built[2]
     export = exported[template]
     assert ipc.export_problems(export) == []
@@ -198,21 +210,54 @@ def test_an_exported_game_runs_without_mesh_or_the_checkout(built: tuple[Path, P
         audit = export["steps"][step]["audit"]
         assert set(audit["read"]) <= {"environment", "python", "project", "system"} and audit["modules"].keys() == {"environment"}
     game = _copy(exported, template, scratch / "played" / template / "game")
-    run = ipc.play(player, game, scratch / "played" / template / "evidence")
+    shipped = ipc.tree_digest(game)
+    with ipc.read_only(game):
+        run = ipc.play(player, game, scratch / "played" / template / "evidence", home=player_home)
     start, hd2d = ipc.EXPORTS[template]
     assert ipc.game_problems(game, run, start=start, hd2d=hd2d) == []
-    assert ipc.bundle_problems(game) == [], "the game leaves its folder as exported"
+    assert ipc.bundle_problems(game) == [] and ipc.tree_digest(game) == shipped, "the game leaves its folder as exported"
     facts, audit = run["game"], run["audit"]
     assert Path(facts["engine"]).resolve().is_relative_to(game.resolve()) and not facts["mesh_installed"]
     assert audit["modules"].keys() == {"game"} and audit["denied"] == [] and audit["elsewhere"] == []
-    assert audit["read"]["game"] > 0 and set(audit["read"]) <= {"game", "environment", "python", "user", "system"}
+    assert audit["read"]["game"] > 0 and set(audit["read"]) <= {"game", "environment", "python", "user", "system",
+                                                                  "player data"}
     walk = facts["walk"]
     assert walk[2] - walk[0] > 32 and walk[3] == walk[1], "walked right, a fixed distance at fixed steps"
     assert facts["hd2d"] is hd2d and facts["sprites"] > 1 and facts["colours"] >= 16
     toast = facts["toast"]  # (H8: the controls hint, one line in the game's 1280 x 720 window, inside its box)
     assert toast["text"].startswith("Q: Quest Log") and toast["lines"] == 1 and toast["box"][0] > 360
-    print(f"{template}: rendered by {facts['renderer']}; walked {walk}, saved at {facts['save_file']}; "
-          f"corners {facts['corners'][0]}; hint {toast['box']} box, pixels {toast['changed']}")  # (-rA shows it)
+
+    # H9: the save is in the player's data folder, under this game's own id, and holds where the player stood.
+    game_id = json.loads((game / "config.json").read_text(encoding="utf-8"))["game_id"]
+    saves = (ipc.player_data(player_home) / "MeshMind Studios" / game_id / "saves").resolve()
+    save = Path(facts["save_file"])
+    assert Path(facts["save_dir"]) == saves and save.parent == saves and save.name == "h7_check.json"
+    assert facts["slots_at_start"] == [], "a first player of this game sees no slots, whatever other games saved"
+    assert facts["legacy_dir"] == str(game / "saves") and not (game / "saves").exists()
+    saved = json.loads(save.read_text(encoding="utf-8"))
+    assert saved["meta"]["scene_path"].endswith("start.json") and facts["after_load"] == walk[2:]
+
+    # Started again after the player moved the game (spaces and accents in the new path), holding a save an export
+    # made before H9 kept in its installation: both load, the newer one first; neither folder changes.
+    moved = scratch / "played" / template / "moved here" / "Spiel ü"
+    moved.parent.mkdir(parents=True)
+    shutil.move(str(game), str(moved))
+    (moved / "saves").mkdir()
+    shutil.copyfile(save, moved / "saves" / "legacy_h9.json")
+    before, kept = ipc.tree_digest(moved), save.read_bytes()
+    with ipc.read_only(moved):
+        again = ipc.play(player, moved, scratch / "played" / template / "evidence_again", mode="resume",
+                         home=player_home)
+    resumed = again["game"]
+    assert again["code"] == 0 and resumed is not None, again["stderr"][-2000:]
+    assert ipc.tree_digest(moved) == before and save.read_bytes() == kept, "nothing written, nothing overwritten"
+    assert [line for line in ipc._audit_problems("the restarted game", again["audit"], "game")] == []
+    assert Path(resumed["save_dir"]) == saves and resumed["slots_at_start"] == ["h7_check", "legacy_h9"]
+    assert resumed["loaded_h7_check"] and resumed["at_h7_check"] == walk[2:], "continues where the player saved"
+    assert resumed["loaded_legacy_h9"] and resumed["at_legacy_h9"] == walk[2:], "the older export's save loads"
+    print(f"{template}: rendered by {facts['renderer']}; walked {walk}; saved at {save}; "
+          f"corners {facts['corners'][0]}; hint {toast['box']} box, pixels {toast['changed']}; "
+          f"restarted from {moved.name!r}: slots {resumed['slots_at_start']}, at {resumed['at_h7_check']}")  # (-rA)
 
 
 _REMOVED = "engine/scene_loader.py"  # (the game imports it as it starts)

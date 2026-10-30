@@ -10,6 +10,7 @@ from typing import Any
 from . import json_io
 from .logging_tools import get_logger
 from .repo_root import bundled_file
+from .save_runtime.storage import new_game_id
 
 _LOG = get_logger("engine.project_scaffold")
 
@@ -182,6 +183,8 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
         "width": 1280,
         "height": 720,
         "title": str(name),
+        # Its exported game keeps its players' saves under this (engine.save_runtime.storage): made once, here.
+        "game_id": new_game_id(str(name)),
         "start_scene": "packs/core_regions/scenes/start.json",
         "main_menu_scene": None,
         "world_file": "packs/core_regions/worlds/main.json",

@@ -30,6 +30,8 @@ exported games render in software, not on a GPU).
 from __future__ import annotations
 
 import argparse
+import contextlib
+import getpass
 import hashlib
 import json
 import os
@@ -39,6 +41,7 @@ import sys
 import tempfile
 import tomllib
 import zipfile
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +51,7 @@ PROBE_TEMPLATES = ("blank", "hd2d_rpg")
 
 PROBE = r'''
 import json, logging, sys, traceback
+from collections.abc import Iterator
 from pathlib import Path
 repo, work, allow_list = Path(sys.argv[1]).resolve(), Path(sys.argv[2]), json.loads(sys.argv[3])
 facts = {"prefix": sys.prefix, "missing_assets": []}
@@ -105,7 +109,7 @@ print("MESH-PROBE " + json.dumps(facts))
 # found there. At exit, one MESH-AUDIT line reports it with the origin of every Mesh module.
 AUDIT = r'''
 import atexit, json, os, sys, tempfile
-def _mesh_audit(checkout, roots):
+def _mesh_audit(checkout, roots, readonly):
     def norm(p):
         return os.path.normcase(os.path.realpath(p))
     def inside(p, root):
@@ -118,7 +122,8 @@ def _mesh_audit(checkout, roots):
                    key=lambda r: -len(r[1]))
     def label(p):
         return next((name for name, root in named if inside(p, root)), "elsewhere")
-    seen = {"read": {}, "written": {}, "denied": [], "elsewhere": []}
+    readonly = [norm(r) for r in readonly]  # (H9: the installation, read-only as in Program Files or /opt)
+    seen = {"read": {}, "written": {}, "denied": [], "elsewhere": [], "write_denied": []}
     def hook(event, args):
         if event == "open":
             mode, flags = (list(args[1:3]) + [None, None])[:2]
@@ -128,6 +133,10 @@ def _mesh_audit(checkout, roots):
             paths = [(args[0] if args else ".", None)]
         elif event in ("shutil.copyfile", "shutil.copytree"):  # (a copy may bypass open(): CopyFile2 on Windows)
             paths = [(args[0], False), (args[1], True)]
+        elif event in ("os.mkdir", "os.remove", "os.rmdir"):
+            paths = [(args[0], True)]
+        elif event == "os.rename":  # (os.replace too: an atomic save's last step)
+            paths = [(args[0], True), (args[1], True)]
         else:
             return
         for raw, writing in paths:
@@ -137,6 +146,9 @@ def _mesh_audit(checkout, roots):
             if inside(p, checkout):
                 seen["denied"].append(p)
                 raise PermissionError(f"the checkout is off limits here: {p}")
+            if writing and any(inside(p, root) for root in readonly):
+                seen["write_denied"].append(p)
+                raise PermissionError(f"read-only installation: {p}")
             if writing is None:
                 continue
             where = label(p)
@@ -154,7 +166,7 @@ def _mesh_audit(checkout, roots):
         print("MESH-AUDIT " + json.dumps(seen), flush=True)
     atexit.register(report)
     sys.addaudithook(hook)
-_mesh_audit(@CHECKOUT@, @ROOTS@)
+_mesh_audit(@CHECKOUT@, @ROOTS@, @READONLY@)
 del _mesh_audit
 '''
 
@@ -164,10 +176,11 @@ del _mesh_audit
 # the start room again and walk again (the same steps must give the same walk), load the save (back where it was).
 GAME = r'''
 import json, runpy, sys
+from collections.abc import Iterator
 from pathlib import Path
-evidence, game = Path(sys.argv[1]), Path(sys.argv[2])
+evidence, game, mode = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
 sys.path.insert(0, str(game))  # (as `python <game>/main.py` does: the script's folder first)
-facts = {}
+facts = {"mode": mode}
 import engine.optional_arcade as optional_arcade
 arcade = optional_arcade.arcade
 shown = arcade.Window.__init__
@@ -193,6 +206,20 @@ def bounded(window):
         window.dispatch_event("on_key_release", arcade.key.RIGHT, 0)
         steps(1)
         return start + player()
+    saves = window.save_manager  # (H9: where this game keeps saves, and the ones it can see as it starts)
+    facts["save_dir"] = str(saves.save_dir.resolve())
+    facts["legacy_dir"] = None if saves.legacy_dir is None else str(saves.legacy_dir)
+    facts["slots_at_start"] = saves.list_saves()
+    if mode == "resume":  # (started again: the save made last time, then an older export's save in its installation)
+        for slot in ("h7_check", "legacy_h9"):
+            if slot in facts["slots_at_start"]:
+                facts[f"loaded_{slot}"] = saves.load_game(slot)
+                steps(3)
+                facts[f"at_{slot}"] = player()
+                facts[f"scene_{slot}"] = getattr(scenes, "current_scene_path", None)
+        window.close()
+        facts["closed"] = True
+        return
     facts["scene"] = getattr(scenes, "current_scene_path", None)
     facts["sprites"] = len(list(scenes.all_sprites))
     facts["hd2d"] = window.hd2d_renderer is not None
@@ -234,10 +261,12 @@ print("MESH-GAME " + json.dumps(facts), flush=True)
 '''
 
 
-def audited(code: str, repo: Path, roots: dict[str, Path]) -> str:
-    """``code`` with ``AUDIT`` in front: the checkout ``repo`` off limits, files counted by the named ``roots``."""
+def audited(code: str, repo: Path, roots: dict[str, Path], readonly: tuple[Path, ...] = ()) -> str:
+    """``code`` with ``AUDIT`` in front: the checkout ``repo`` off limits, files counted by the named ``roots``, any
+    write into the ``readonly`` folders refused (PermissionError, as a protected folder gives) and recorded."""
     named = json.dumps({k: str(v) for k, v in roots.items()})
-    return AUDIT.replace("@CHECKOUT@", repr(str(repo))).replace("@ROOTS@", named) + code
+    return (AUDIT.replace("@CHECKOUT@", repr(str(repo))).replace("@ROOTS@", named)
+            .replace("@READONLY@", json.dumps([str(r) for r in readonly])) + code)
 
 
 def _tagged(stdout: str, tag: str) -> dict[str, Any] | None:
@@ -415,32 +444,76 @@ def bundle_problems(bundle: Path) -> list[str]:
             found.append(f"the export lacks a file its manifest lists: {name}")
         elif hashlib.sha256(path.read_bytes()).hexdigest() != digest:
             found.append(f"an exported file differs from its manifest: {name}")
-    on_disk = {p.relative_to(bundle).as_posix() for p in bundle.rglob("*") if p.is_file()
-               and "__pycache__" not in p.parts  # (Python's bytecode, written as it runs)
-               and p.relative_to(bundle).parts[0] != "saves"} - {"bundle_manifest.json"}  # (the game's own saves)
+    on_disk = {p.relative_to(bundle).as_posix() for p in bundle.rglob("*")  # (H9: saves never go in it)
+               if p.is_file() and "__pycache__" not in p.parts} - {"bundle_manifest.json"}  # (bytecode: Python's own)
     found += [f"the export holds a file its manifest doesn't list: {name}" for name in sorted(on_disk - set(listed))]
     return found
 
 
-def play(player: Path, bundle: Path, evidence: Path, *, repo: Path = REPO, leaky: bool = False) -> dict[str, Any]:
+def player_data(home: Path) -> Path:
+    """The per-user application-data folder a player whose home is ``home`` has here (H9: the platform rule runs as
+    for a player; only its base is moved, so no test ever touches the real one)."""
+    return home / "appdata"
+
+
+def play(player: Path, bundle: Path, evidence: Path, *, repo: Path = REPO, leaky: bool = False, mode: str = "play",
+         home: Path | None = None) -> dict[str, Any]:
     """Run the exported game in ``bundle`` with the player's environment (``GAME``, audited), started from another
-    folder, ``evidence`` (which gets its frame). ``leaky`` runs it the careless way (not isolated, the checkout on
-    PYTHONPATH): only to prove that is seen."""
+    folder, ``evidence`` (which gets its frame), the installation read-only (every write into it refused), the player's
+    data under ``home`` (default: in ``evidence``). ``mode`` "resume" loads the save the last run made instead of
+    playing. ``leaky`` runs it the careless way (not isolated, the checkout on PYTHONPATH): only to prove that is seen."""
     evidence.mkdir(parents=True, exist_ok=True)
+    home = home or evidence / "home"
     env = clean_env(evidence)
+    data = player_data(home)
+    env.update({"APPDATA": str(data), "XDG_DATA_HOME": str(data)})  # (Windows, Linux; macOS: ~/Library/...)
     if leaky:
         env["PYTHONPATH"] = str(repo)
-    code = audited(GAME, repo, {"game": bundle, "evidence": evidence, "user": evidence / "user"})
-    result = _run([str(venv_python(player)), *([] if leaky else ["-I"]), "-c", code, str(evidence), str(bundle)],
+    code = audited(GAME, repo, {"game": bundle, "evidence": evidence, "user": evidence / "user", "player data": home},
+                   readonly=(bundle,))
+    result = _run([str(venv_python(player)), *([] if leaky else ["-I"]), "-c", code, str(evidence), str(bundle), mode],
                   evidence, env)
     result["game"] = _tagged(result["stdout"], "MESH-GAME")
     return result
+
+
+@contextlib.contextmanager
+def read_only(folder: Path) -> Iterator[None]:
+    """``folder`` truly read-only for this user while inside (H9): files and folders without write permission on
+    Linux and macOS; a deny-write entry for the user on Windows (whose read-only attribute folders ignore)."""
+    if os.name == "nt":
+        user = os.environ.get("USERNAME") or getpass.getuser()
+        # (the specific write rights: icacls' "W" also denies SYNCHRONIZE, which every read needs)
+        subprocess.run(["icacls", str(folder), "/deny", f"{user}:(OI)(CI)(WD,AD,WEA,WA,DC)"], check=True,
+                       capture_output=True)
+        try:
+            yield
+        finally:
+            subprocess.run(["icacls", str(folder), "/remove:d", user], check=True, capture_output=True)
+        return
+    paths = [folder, *folder.rglob("*")]
+    for path in paths:
+        path.chmod(0o555 if path.is_dir() else 0o444)
+    try:
+        yield
+    finally:
+        for path in paths:
+            path.chmod(0o755 if path.is_dir() else 0o644)
+
+
+def tree_digest(folder: Path) -> dict[str, str]:
+    """Every file under ``folder`` (Python's bytecode caches aside) and its SHA-256: two equal digests, an unchanged
+    folder, whatever a manifest lists."""
+    return {p.relative_to(folder).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(folder.rglob("*")) if p.is_file() and "__pycache__" not in p.parts}
 
 
 def _audit_problems(step: str, audit: dict[str, Any] | None, home: str) -> list[str]:
     if audit is None:
         return [f"{step}: no audit report (the process died before exiting)"]
     found = [f"{step} tried to use the checkout: {p}" for p in audit["denied"][:5]]
+    found += [f"{step} tried to write into its read-only installation: {p}"
+              for p in audit.get("write_denied", []) if "__pycache__" not in p][:5]  # (bytecode: Python skips it)
     found += [f"{step} used a file outside the places it may: {p}" for p in audit["elsewhere"][:5]]
     found += [f"{step} ran {n} Mesh module(s) from {where}, not {home}"
               for where, n in audit["modules"].items() if where != home]
@@ -490,6 +563,11 @@ def game_problems(bundle: Path, run: dict[str, Any], *, start: str, hd2d: bool) 
     if not (game["saved"] and game["loaded"]) or game["after_load"] != walk[2:]:
         found.append(f"the save didn't bring the player back to {walk[2:]}: saved {game['saved']}, loaded "
                      f"{game['loaded']}, at {game['after_load']}")
+    save_file = Path(game["save_file"])  # (H9: a player's save, never in the installation)
+    if save_file.resolve().is_relative_to(bundle.resolve()):
+        found.append(f"the exported game saved into its installation: {save_file}")
+    elif not save_file.is_file():
+        found.append(f"the exported game's save isn't where it says it wrote it: {save_file}")
     # H8: a 2D start room smaller than the window is framed in black (it was a purple no room asked for); the controls
     # hint's pixels stay inside its box (outline included) and the box inside the window.
     if not hd2d and game["corners"] != [[0, 0, 0]] * 4:
@@ -516,7 +594,8 @@ def export_and_play(venv: Path, player: Path, scratch: Path, template: str) -> t
     if not found:
         game = scratch / "player" / "game"
         shutil.copytree(export["bundle"], game)
-        report["play"] = run = play(player, game, scratch / "player" / "evidence")
+        with read_only(game):  # (installed as in Program Files or /opt)
+            report["play"] = run = play(player, game, scratch / "player" / "evidence")
         start, hd2d = EXPORTS[template]
         found = game_problems(game, run, start=start, hd2d=hd2d)
         found += [f"the game changed its own folder: {p}" for p in bundle_problems(game)]

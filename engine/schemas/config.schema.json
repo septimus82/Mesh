@@ -258,6 +258,14 @@
     },
     "xp_per_level": {
       "type": "integer"
+    },
+    "game_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+      "description": "Stable id of the game: an exported game keeps its players' saves under it."
     }
   },
   "additionalProperties": false,

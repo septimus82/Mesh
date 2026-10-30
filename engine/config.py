@@ -27,6 +27,9 @@ class EngineConfig:
     width: int = 1280
     height: int = 720
     title: str = "Mesh Engine - Demo"
+    # The game's stable id (engine.save_runtime.storage): an exported game keeps its players' saves under it. New
+    # projects get one; an older project without it gets one derived from its title, start room and world file.
+    game_id: str | None = None
 
     fullscreen: bool = False
     vsync: bool = True

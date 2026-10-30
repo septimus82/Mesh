@@ -11,9 +11,9 @@ from .diagnostics import add_exception as diag_add_exception
 from .diagnostics import error as diag_error
 from .diagnostics import info as diag_info
 from .diagnostics import warn as diag_warn
-from .save_runtime import constants as save_constants
 from .save_runtime import io as save_io
 from .save_runtime import payloads as save_payloads
+from .save_runtime import storage as save_storage
 from .save_runtime.restore_policy import SLOT_POLICY
 from .save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from .save_runtime.ux_codes import (
@@ -86,19 +86,61 @@ def _diag_context(
     return context
 
 
+def _game_root(window: Any) -> Path | None:
+    """The folder holding the game's config.json (an export's own folder), however the game was started."""
+    base = getattr(getattr(window, "engine_config", None), "_config_base_dir", None)
+    return Path(base).resolve() if isinstance(base, str) and base else None
+
+
+def _config_values(window: Any) -> dict[str, Any]:
+    config = getattr(window, "engine_config", None)
+    return {key: getattr(config, key, None) for key in ("game_id", "title", "start_scene", "world_file")}
+
+
 class SaveManager:
     """Manages saving and loading game state to disk."""
 
-    def __init__(self, window: GameWindow, save_dir: str = save_constants.DEFAULT_SAVE_DIR) -> None:
+    def __init__(self, window: GameWindow, save_dir: str | Path | None = None) -> None:
+        """``save_dir`` given: saves go there. Otherwise where the game keeps them (engine.save_runtime.storage): per
+        player for an exported game, ``saves`` in the folder it runs in for a project."""
         self.window = window
+        self.legacy_dir: Path | None = None  # an older export's saves in its installation: read, never written
+        if save_dir is None:
+            location = save_storage.resolve(_game_root(window), _config_values(window))
+            save_dir, self.legacy_dir = location.save_dir, location.legacy_dir
         self.save_dir = Path(save_dir)
         self._ensure_save_dir()
         self._last_loaded_signature: tuple[str, int] | None = None
         self._last_saved_signature: str | None = None
 
-    def _ensure_save_dir(self) -> None:
-        if not self.save_dir.exists():
+    def _ensure_save_dir(self) -> bool:
+        """Make the save folder; False (said once, the game carries on) when it can't be made."""
+        try:
             self.save_dir.mkdir(parents=True, exist_ok=True)
+            return True
+        except OSError as exc:
+            code, hint = _classify_save_exception(exc)
+            diag_warn(code, f"The save folder '{self.save_dir}' can't be created: {exc}", _DIAG_SOURCE,
+                      location=self.save_dir.as_posix(), hint=hint)
+            sys.stderr.write(f"[Mesh][Save] WARNING: can't create the save folder '{self.save_dir}': {exc}\n")
+            return False
+
+    def _load_path(self, slot_name: str) -> Path:
+        """The file a load of ``slot_name`` reads: the per-user one when it is a valid save, else an older export's
+        copy in its installation when that one is valid, else whichever exists (so the failure names it)."""
+        path = self.get_save_path(slot_name)
+        legacy = self.legacy_dir / path.name if self.legacy_dir is not None else None
+        if legacy is None or not legacy.is_file():
+            return path
+        for candidate in (path, legacy):
+            if candidate.is_file() and save_io.load_and_validate_payload(
+                    candidate, source=str(candidate), strict_schema=SLOT_POLICY.strict_schema,
+                    aggregator=SaveDiagnosticsAggregator(), policy=SLOT_POLICY)[0]:
+                return candidate
+        return path if path.is_file() else legacy
+
+    def _is_legacy(self, path: Path) -> bool:
+        return self.legacy_dir is not None and path.parent == self.legacy_dir
 
     def get_save_path(self, slot_name: str) -> Path:
         """Return the full path for a given save slot."""
@@ -147,6 +189,7 @@ class SaveManager:
                 timestamp=self._get_timestamp(),
             )
 
+            self._ensure_save_dir()  # (it may have been removed while the game ran)
             # Atomic write so partial saves never corrupt the existing slot file.
             # Keep the same JSON formatting (indent=2, sort_keys=True) with standardized trailing newline.
             save_io.write_json_pretty_atomic(path, snapshot)
@@ -195,7 +238,8 @@ class SaveManager:
         return self._load_game_impl(slot_name)
 
     def _load_game_impl(self, slot_name: str) -> bool:
-        path = self.get_save_path(slot_name)
+        path = self._load_path(slot_name)
+        legacy = self._is_legacy(path)  # (an older export's save: nothing is ever written next to it)
         if not path.exists():
             diag_warn(
                 LOAD_NOT_FOUND,
@@ -215,7 +259,7 @@ class SaveManager:
             return False
 
         try:
-            ok, payload_or_error = save_io.load_slot_payload(path, policy=SLOT_POLICY)
+            ok, payload_or_error = save_io.load_slot_payload(path, policy=SLOT_POLICY, sidecars=not legacy)
             if not ok:
                 msg = str(payload_or_error or "")
                 code = self._derive_load_failure_code(msg)
@@ -291,7 +335,7 @@ class SaveManager:
                 aggregator=apply_diags,
             )
             if not applied:
-                if SLOT_POLICY.write_sidecars_on_failure:
+                if SLOT_POLICY.write_sidecars_on_failure and not legacy:
                     save_io.write_diagnostics_sidecars(path, apply_diags)
                 primary = apply_diags.primary()
                 pointer = "$"
@@ -467,10 +511,9 @@ class SaveManager:
             )
 
     def list_saves(self) -> list[str]:
-        """Return a list of available save slots."""
-        if not self.save_dir.exists():
-            return []
-        return sorted([f.stem for f in self.save_dir.glob("*.json")])
+        """Return a list of available save slots (an older export's ones in its installation included)."""
+        folders = [d for d in (self.save_dir, self.legacy_dir) if d is not None and d.is_dir()]
+        return sorted({f.stem for d in folders for f in d.glob("*.json")})
 
     def _get_timestamp(self) -> str:
         import datetime

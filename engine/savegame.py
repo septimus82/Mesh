@@ -570,8 +570,8 @@ def write_snapshot_file(path: Path, payload: dict[str, Any]) -> None:
     save_io.write_snapshot_atomic(path, payload)
 
 
-def read_snapshot_file(path: Path) -> dict[str, Any] | None:
-    ok, payload_or_error = save_io.load_snapshot_payload(path, policy=SNAPSHOT_POLICY)
+def read_snapshot_file(path: Path, *, sidecars: bool = True) -> dict[str, Any] | None:
+    ok, payload_or_error = save_io.load_snapshot_payload(path, policy=SNAPSHOT_POLICY, sidecars=sidecars)
     if ok:
         return cast(dict[str, Any], payload_or_error)
     msg = str(payload_or_error or "")
@@ -628,7 +628,22 @@ def read_snapshot_file(path: Path) -> dict[str, Any] | None:
     return None
 
 
-def save_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> bool:
+def _quick_snapshot_path(window: object, *, reading: bool = False) -> Path:
+    """quick.json in the game's save folder (H9: an exported game's is per player, never its installation); when
+    reading and the player has none yet, an older export's copy in its installation."""
+    manager = getattr(window, "save_manager", None)
+    save_dir = getattr(manager, "save_dir", None)
+    if save_dir is None:
+        return QUICK_SNAPSHOT_PATH
+    path = Path(save_dir) / QUICK_SNAPSHOT_PATH.name
+    legacy_dir = getattr(manager, "legacy_dir", None)
+    if reading and not path.is_file() and legacy_dir is not None and (Path(legacy_dir) / path.name).is_file():
+        return Path(legacy_dir) / path.name
+    return path
+
+
+def save_quick_snapshot(window: object, path: Path | None = None) -> bool:
+    path = path or _quick_snapshot_path(window)
     controller = getattr(window, "game_state_controller", None)
     if controller is None:
         diag_error(
@@ -669,8 +684,10 @@ def save_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> boo
         return False
 
 
-def load_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> bool:
-    payload = read_snapshot_file(path)
+def load_quick_snapshot(window: object, path: Path | None = None) -> bool:
+    path = path or _quick_snapshot_path(window, reading=True)
+    legacy_dir = getattr(getattr(window, "save_manager", None), "legacy_dir", None)
+    payload = read_snapshot_file(path, sidecars=legacy_dir is None or path.parent != Path(legacy_dir))
     if payload is None:
         _fallback_to_start_scene(
             window,

@@ -415,7 +415,9 @@ def load_snapshot_payload(
     path: Path,
     *,
     policy: RestorePolicy = SNAPSHOT_POLICY,
+    sidecars: bool = True,
 ) -> tuple[bool, dict[str, Any] | str]:
+    """``sidecars``: as for load_slot_payload."""
     if not path.exists():
         return False, ""
 
@@ -430,7 +432,7 @@ def load_snapshot_payload(
     _update_last_attempt(slot="load", kind="snapshot", path=path, ok=bool(ok), aggregator=aggregator)
     if ok and payload is not None:
         return True, payload
-    if diagnostics:
+    if diagnostics and sidecars:
         try:
             write_diagnostics_sidecars(path, aggregator)
         except Exception as sidecar_exc:  # noqa: BLE001  # REASON: runtime fallback isolation
@@ -449,7 +451,9 @@ def load_slot_payload(
     path: Path,
     *,
     policy: RestorePolicy = SLOT_POLICY,
+    sidecars: bool = True,
 ) -> tuple[bool, dict[str, Any] | str]:
+    """``sidecars``: on failure, write the diagnostics next to the save (False for a save in a game's installation)."""
     if not path.exists():
         return False, f"[Mesh][Save] Save file '{path}' not found"
 
@@ -464,6 +468,8 @@ def load_slot_payload(
     _update_last_attempt(slot="load", kind="slot", path=path, ok=bool(ok), aggregator=aggregator)
     if ok and payload is not None:
         return True, payload
+    if not sidecars:
+        return False, _diagnostic_message("[Mesh][Save]", aggregator)
     try:
         write_diagnostics_sidecars(path, aggregator)
     except Exception as sidecar_exc:  # noqa: BLE001  # REASON: runtime fallback isolation
