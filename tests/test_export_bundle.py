@@ -619,3 +619,21 @@ def test_a_game_runs_from_its_own_folder_wherever_it_is_started(tmp_path: Path, 
     with pytest.raises(Started) as at:
         runpy.run_path(str(project / "main.py"), run_name="__main__")
     assert Path(at.value.args[0]).resolve() == project.resolve()
+
+
+@pytest.mark.fast
+@pytest.mark.parametrize("template", ["blank", "adventure", "starter"])
+def test_a_new_2d_game_has_the_sounds_its_menus_play(tmp_path: Path, template: str) -> None:
+    """#422 H9.1: every game's pause menu and dialogue play assets/sounds/ui_*.wav; only the HD-2D starter shipped
+    them, so a 2D game's menus were silent and logged "Failed to load sound" at every step (seen exporting the
+    adventure game). A project made before keeps its files as they are."""
+    from engine.project_scaffold import create_project, ensure_starter_files
+
+    project = tmp_path / "game"
+    create_project(project, "Game", template)
+    sounds = {f"assets/sounds/ui_{name}.wav" for name in ("open", "close", "click", "hover")}
+    assert all((project / rel).is_file() for rel in sounds)
+    for rel in sounds:
+        (project / rel).unlink()
+    ensure_starter_files(project)  # (what Mesh Studio does to a project it edits)
+    assert not any((project / rel).exists() for rel in sounds), "an existing project is left as it is"
