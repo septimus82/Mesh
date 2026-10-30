@@ -236,6 +236,19 @@ jobs:
         run: |
           xvfb-run -a python -m pytest -q
 
+      # What the suite's tests write under artifacts/ (replay diagnostics and the like): before the split it went up
+      # with mesh-artifacts, which a failed suite still uploaded. Not a mesh-artifacts-* name: release_draft.yml takes
+      # those.
+      - name: Upload test outputs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-outputs-${{ matrix.os }}-py${{ matrix.python }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            artifacts/
+
   verify:
     name: verify (${{ matrix.os }}, py${{ matrix.python }})
     permissions:
