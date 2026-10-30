@@ -618,7 +618,9 @@ jobs:
           name: installed-exported-frames-${{ matrix.os }}-py${{ matrix.python }}
           retention-days: 14
           if-no-files-found: warn
-          path: ${{ runner.temp }}/installed/**/evidence/frame.png
+          path: |
+            ${{ runner.temp }}/installed/**/evidence/frame.png
+            !${{ runner.temp }}/installed/*current/**
 
   acceptance:
     # Creator-workflow acceptance (H6, #422): save and reopen, new-game isolation, creator field editing and background
