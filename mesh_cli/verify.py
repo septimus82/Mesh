@@ -31,6 +31,9 @@ class _VerifyStepBudgetCheckRow(TypedDict):
     effective_ms: int
     delta_ms: int
     ok: bool
+    policy: str
+    ceiling_ms: int | None
+    gate_ok: bool
 
 
 _VERIFY_STEP_BUDGET_SCHEMA_VERSION = 2
@@ -419,17 +422,20 @@ def _build_verify_step_budget_check_payload(
     checked_steps: list[_VerifyStepBudgetCheckRow],
     candidates_used: list[str],
 ) -> dict[str, object]:
-    offenders = [
-        {
-            "name": row["name"],
-            "delta_ms": int(row["delta_ms"]),
-            "effective_ms": int(row["effective_ms"]),
-        }
-        for row in sorted(
-            (r for r in checked_steps if not bool(r["ok"])),
-            key=lambda row: (-int(row["delta_ms"]), row["name"]),
-        )
-    ]
+    def _rows(failing: Callable[[_VerifyStepBudgetCheckRow], bool]) -> list[dict[str, object]]:
+        return [
+            {
+                "name": row["name"],
+                "delta_ms": int(row["delta_ms"]),
+                "effective_ms": int(row["effective_ms"]),
+                **({"over_ceiling": True} if row.get("ceiling_ms") is not None else {}),
+            }
+            for row in sorted(
+                (r for r in checked_steps if failing(r)),
+                key=lambda row: (-int(row["delta_ms"]), row["name"]),
+            )
+        ]
+
     ordered_checked = sorted(checked_steps, key=lambda row: row["name"])
     return {
         "schema_version": _VERIFY_STEP_BUDGET_SCHEMA_VERSION,
@@ -437,7 +443,10 @@ def _build_verify_step_budget_check_payload(
         "tolerance_ms": max(0, int(tolerance_ms)),
         "candidates_used": sorted(candidates_used),
         "checked_steps": ordered_checked,
-        "offenders": offenders,
+        # Steps that fail the gate: an enforced step over its threshold, or a report-only step over its hard ceiling.
+        "offenders": _rows(lambda r: not bool(r.get("gate_ok", r["ok"]))),
+        # Report-only steps over their threshold but under their ceiling: reported, never failed (#422 F13).
+        "report_only_over": _rows(lambda r: r.get("policy") == "report-only" and not r["ok"] and bool(r.get("gate_ok"))),
     }
 
 
@@ -477,7 +486,8 @@ def _is_pytest_fast_budget_offender(verify_step_budget_payload: dict[str, object
     row = _find_budget_row(verify_step_budget_payload, step_name="pytest-fast")
     if row is None:
         return False
-    return not bool(row.get("ok", True))
+    # The gate's verdict: a report-only step over its threshold but under its ceiling (#422 F13) didn't fail.
+    return not bool(row.get("gate_ok", row.get("ok", True)))
 
 
 def _load_mypy_gate_run_diagnostics() -> dict[str, object]:
@@ -1160,13 +1170,14 @@ def _evaluate_verify_step_budget_guard(
         history_step_maps = [_extract_step_duration_ms(payload) for payload in selected_payloads]
 
     if not baseline_path.exists():
+        # The committed budgets are missing: nothing was judged, which must not read as a pass (#422 F13).
         payload = _build_verify_step_budget_check_payload(
-            ok=True,
+            ok=False,
             tolerance_ms=_VERIFY_STEP_BUDGET_DEFAULT_TOLERANCE_MS,
             checked_steps=[],
             candidates_used=[],
         )
-        return 0, "", payload
+        return 1, f"verify-step-budget baseline missing: {baseline_path}", payload
 
     try:
         baseline_raw = json.loads(baseline_path.read_text(encoding="utf-8"))
@@ -1207,6 +1218,8 @@ def _evaluate_verify_step_budget_guard(
     )
     ratio_limits_raw = baseline_raw.get("ratio_limits")
     ratio_limits_map = ratio_limits_raw if isinstance(ratio_limits_raw, dict) else {}
+    report_only_raw = baseline_raw.get("report_only_ceiling_ratios")
+    report_only_map = report_only_raw if isinstance(report_only_raw, dict) else {}
     # The same steps take very different times on different runners, so `platforms.<name>` overrides the budgets
     # (and ratio limits) on that platform. Other platforms use the top-level values.
     platforms_raw = baseline_raw.get("platforms")
@@ -1215,8 +1228,10 @@ def _evaluate_verify_step_budget_guard(
     if isinstance(platform_raw, dict):
         platform_budgets = platform_raw.get("budgets_ms")
         platform_ratios = platform_raw.get("ratio_limits")
+        platform_report_only = platform_raw.get("report_only_ceiling_ratios")
         budgets_raw = {**budgets_raw, **(platform_budgets if isinstance(platform_budgets, dict) else {})}
         ratio_limits_map = {**ratio_limits_map, **(platform_ratios if isinstance(platform_ratios, dict) else {})}
+        report_only_map = {**report_only_map, **(platform_report_only if isinstance(platform_report_only, dict) else {})}
 
     checked_steps: list[_VerifyStepBudgetCheckRow] = []
     for step_name in sorted(str(name) for name in budgets_raw):
@@ -1252,6 +1267,15 @@ def _evaluate_verify_step_budget_guard(
             threshold_ms += near_miss_margin_ms
         delta_ms = effective_ms - threshold_ms
         step_ok = effective_ms <= threshold_ms
+        # A report-only step (#422 F13) is judged against its threshold for the record, but fails only over its
+        # hard ceiling (threshold x ceiling ratio), which no runner variation in the measured history came near.
+        ceiling_raw = report_only_map.get(step_name)
+        ceiling_ms = (
+            int(threshold_ms * float(ceiling_raw))
+            if isinstance(ceiling_raw, (int, float)) and float(ceiling_raw) >= 1.0
+            else None
+        )
+        gate_ok = step_ok if ceiling_ms is None else effective_ms <= ceiling_ms
         checked_steps.append(
             {
                 "name": step_name,
@@ -1264,11 +1288,14 @@ def _evaluate_verify_step_budget_guard(
                 "effective_ms": effective_ms,
                 "delta_ms": delta_ms,
                 "ok": bool(step_ok),
+                "policy": "enforced" if ceiling_ms is None else "report-only",
+                "ceiling_ms": ceiling_ms,
+                "gate_ok": bool(gate_ok),
             }
         )
 
     offenders = sorted(
-        (row for row in checked_steps if not bool(row["ok"])),
+        (row for row in checked_steps if not bool(row["gate_ok"])),
         key=lambda row: (-int(row["delta_ms"]), row["name"]),
     )
     ok = len(offenders) == 0
@@ -1285,7 +1312,8 @@ def _evaluate_verify_step_budget_guard(
         (
             f"{row['name']}: budget_ms={row['budget_ms']} tolerance_ms={row['tolerance_ms']} "
             f"ratio_limit={row['ratio_limit']:.2f} threshold_ms={row['threshold_ms']} "
-            f"current_ms={row['current_ms']} median_ms={row['median_ms'] if row['median_ms'] is not None else 'n/a'} "
+            + (f"ceiling_ms={row['ceiling_ms']} (report-only step over its hard ceiling) " if row["ceiling_ms"] else "")
+            + f"current_ms={row['current_ms']} median_ms={row['median_ms'] if row['median_ms'] is not None else 'n/a'} "
             f"effective_ms={row['effective_ms']} delta_ms={row['delta_ms']}"
         )
         for row in offenders
@@ -1333,6 +1361,56 @@ def _write_verify_step_speed_advisory(
         return None
 
 
+_TIMING_ONLY_VERIFY_STEPS = frozenset({"pytest-fast-duration-guard"})
+
+
+def _github_annotation(level: str, title: str, message: str) -> None:
+    """A GitHub Actions annotation (shown on the run and the PR); nothing outside Actions."""
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        print(f"::{level} title={title}::{message}", file=sys.stderr)
+
+
+def _report_only_timing_lines(budget_payload: dict[str, object]) -> list[str]:
+    """One line per report-only step over its threshold (#422 F13): reported, never failed below its hard ceiling."""
+    raw_rows = budget_payload.get("checked_steps")
+    rows = {str(r.get("name")): r for r in raw_rows if isinstance(r, dict)} if isinstance(raw_rows, list) else {}
+    raw_over = budget_payload.get("report_only_over")
+    lines = []
+    for over in raw_over if isinstance(raw_over, list) else []:
+        row = rows.get(str(over.get("name")) if isinstance(over, dict) else "", {})
+        try:
+            lines.append(
+                f"{row['name']} took {int(row['effective_ms']) / 1000:.2f} s, over its {int(row['threshold_ms']) / 1000:.2f} s "
+                f"threshold: reported, not failed (report-only, #422 F13); it fails over {int(row['ceiling_ms']) / 1000:.2f} s"
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    return lines
+
+
+def _budgeted_steps_not_measured(budget_payload: dict[str, object], steps: list[dict[str, Any]]) -> list[str]:
+    """Budgeted steps that didn't run (absent, or skipped): their 0 ms is no measurement, so it can't count as a pass."""
+    ran = {str(s.get("name")) for s in steps if isinstance(s, dict) and not str(s.get("error") or "").startswith("skipped")}
+    raw_rows = budget_payload.get("checked_steps")
+    rows = raw_rows if isinstance(raw_rows, list) else []
+    return sorted(str(r.get("name")) for r in rows if isinstance(r, dict) and str(r.get("name")) not in ran)
+
+
+def _verify_all_outcome(steps: list[dict[str, Any]], timing_failures: list[str]) -> str:
+    """verify-all's result in one line, telling functional failures from timing-only ones (#422 F13)."""
+    failed = [
+        str(s.get("name")) for s in steps
+        if isinstance(s, dict) and s.get("code") and not str(s.get("error") or "").startswith("skipped")
+    ]
+    functional = [name for name in failed if name not in _TIMING_ONLY_VERIFY_STEPS]
+    timing = [name for name in failed if name in _TIMING_ONLY_VERIFY_STEPS] + list(timing_failures)
+    if functional:
+        return f"FAILED (functional: {', '.join(functional)}" + (f"; timing: {', '.join(timing)})" if timing else ")")
+    if timing:
+        return f"FAILED (timing only: {', '.join(timing)}; every functional check passed)"
+    return "OK"
+
+
 def _apply_rule_f(
     budget_code: int, budget_payload: dict[str, object], advisory: dict[str, object] | None
 ) -> tuple[int, dict[str, object]]:
@@ -1350,11 +1428,14 @@ def _apply_rule_f(
     integration pushes), not by any per-run rule.
     """
     raw_offenders = budget_payload.get("offenders")
-    offenders = [str(o.get("name")) for o in raw_offenders if isinstance(o, dict)] if isinstance(raw_offenders, list) else []
+    offender_rows = [o for o in raw_offenders if isinstance(o, dict)] if isinstance(raw_offenders, list) else []
+    offenders = [str(o.get("name")) for o in offender_rows]
+    # A report-only step over its hard ceiling (#422 F13) is never excused: the ceiling is set beyond any runner.
+    over_ceiling = {str(o.get("name")) for o in offender_rows if o.get("over_ceiling")}
     raw_steps = advisory.get("steps") if isinstance(advisory, dict) else None
     verdicts = {str(r.get("name")): str(r.get("advisory_verdict")) for r in raw_steps if isinstance(r, dict)} \
         if isinstance(raw_steps, list) else {}
-    excused = [name for name in offenders if verdicts.get(name) == "ok"]
+    excused = [name for name in offenders if verdicts.get(name) == "ok" and name not in over_ceiling]
     confirmed = [name for name in offenders if name not in excused]
     record: dict[str, object] = {"rule": "fixed threshold and speed-adjusted advisory both", "over_fixed": offenders,
                                  "excused_by_advisory": excused, "failed": confirmed}
@@ -1383,7 +1464,19 @@ def _verify_all_scene_index_out_paths(repo_root, out_dir: str):
     return scenes_write, scenes_report, worlds_write, worlds_report
 
 
+PYTEST_FAST_BASELINE_FILE = "pytest_fast_duration_baseline.json"
+# Before #422 F13 the guard wrote these after every passing run, so CI compared each run with itself (a fresh checkout
+# has none) and a local baseline crept up with every pass. They carry no provenance: left alone, never read again.
+LEGACY_PYTEST_FAST_BASELINE_FILES = ("pytest_fast_total_seconds.txt", "pytest_fast_top10_seconds.txt")
+_PYTEST_FAST_BASELINE_HISTORY = 20
+
+
 def _read_pytest_fast_durations(metrics_path):
+    """(entries, sum of the slowest 10, sum of all entries) from tooling/pytest_fast.py's durations file.
+
+    The file is pytest's ``--durations N`` report: the N slowest setup/call/teardown entries, not every test. Its sum
+    is the time of those entries, never the suite's total; the step's wall-clock time is measured separately.
+    """
     import json
 
     raw = metrics_path.read_text(encoding="utf-8")
@@ -1398,57 +1491,108 @@ def _read_pytest_fast_durations(metrics_path):
         if isinstance(seconds, (int, float)):
             durations.append(float(seconds))
     durations.sort(reverse=True)
-    total_seconds = float(sum(durations))
-    top10_seconds = float(sum(durations[:10]))
-    return total_seconds, top10_seconds
+    return len(durations), float(sum(durations[:10])), float(sum(durations))
 
 
-def _evaluate_pytest_fast_duration_guard(metrics_path, total_baseline_path, top10_baseline_path):
-    """Ratchet guard for pytest-fast test execution time (not wall-clock).
+def _pytest_fast_identity() -> dict[str, str]:
+    """What a baseline must share with the run it judges."""
+    return {"platform": sys.platform, "python": f"{sys.version_info.major}.{sys.version_info.minor}"}
 
-    This guards the *sum of individual test durations* from pytest_durations_fast.json.
-    This is NOT the wall-clock time for the pytest-fast verify step.
-    Wall-clock budget is enforced separately by verify_step_budget_check.json.
+
+def _git_head(repo_root: Path) -> str | None:
+    import subprocess
+
+    result = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo_root, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def _evaluate_pytest_fast_duration_guard(metrics_path, baseline_path, *, wall_seconds=None, record=False, now=None):
+    """Compare pytest-fast's slowest test entries with a baseline someone recorded on purpose (#422 F13).
+
+    Returns ``(code, error, metrics)``. Only a baseline recorded with ``record`` (MESH_RECORD_PYTEST_FAST_BASELINE=1)
+    for the same platform, Python and entry count is a comparison; the run never writes its own. So a fresh checkout,
+    and every CI job, has none: the guard is report-only there (``ok`` None, code 0) and the numbers are still
+    reported. Recording keeps the previous baselines in ``history``. ``wall_seconds`` (the step's elapsed time) is
+    reported next to the entry sums and never mixed with them.
     """
-    total_seconds, top10_seconds = _read_pytest_fast_durations(metrics_path)
+    import json
+    from datetime import datetime, timezone
 
-    if total_baseline_path.exists():
-        try:
-            baseline_total = float(total_baseline_path.read_text(encoding="utf-8").strip() or "0")
-        except (OSError, ValueError):
-            _log_swallow("VFYC-009", "pytest-fast total baseline parse fallback", once=False)
-            baseline_total = total_seconds
-    else:
-        baseline_total = total_seconds
+    entries, slowest10, slowest_sum = _read_pytest_fast_durations(metrics_path)
+    metrics: dict[str, Any] = {
+        "ok": None,
+        "baseline": "none",
+        "entries": entries,
+        "slowest_entries_seconds": round(slowest_sum, 2),
+        "slowest10_seconds": round(slowest10, 2),
+        "wall_seconds": None if wall_seconds is None else round(float(wall_seconds), 2),
+        "legacy_baseline_files": sorted(
+            name for name in LEGACY_PYTEST_FAST_BASELINE_FILES if (baseline_path.parent / name).exists()
+        ),
+    }
+    identity = _pytest_fast_identity()
 
-    if top10_baseline_path.exists():
+    previous: dict[str, Any] | None = None
+    if baseline_path.exists():
         try:
-            baseline_top10 = float(top10_baseline_path.read_text(encoding="utf-8").strip() or "0")
-        except (OSError, ValueError):
-            _log_swallow("VFYC-010", "pytest-fast top10 baseline parse fallback", once=False)
-            baseline_top10 = top10_seconds
-    else:
-        baseline_top10 = top10_seconds
+            loaded = json.loads(baseline_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            loaded = None
+            metrics["baseline"] = f"unreadable ({type(exc).__name__}); not used"
+        if isinstance(loaded, dict) and isinstance(loaded.get("slowest_entries_seconds"), (int, float)):
+            previous = loaded
+        elif loaded is not None:
+            metrics["baseline"] = "not a baseline record; not used"
+
+    if record:
+        stamp = (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        history = []
+        if previous is not None:
+            history = [{k: v for k, v in previous.items() if k != "history"}, *previous.get("history", [])]
+        record_payload = {
+            "schema_version": 1,
+            "recorded_at": stamp,
+            "git_sha": _git_head(baseline_path.parents[2]),
+            **identity,
+            "entries": entries,
+            "slowest_entries_seconds": metrics["slowest_entries_seconds"],
+            "slowest10_seconds": metrics["slowest10_seconds"],
+            "wall_seconds": metrics["wall_seconds"],
+            "history": history[:_PYTEST_FAST_BASELINE_HISTORY],
+        }
+        baseline_path.parent.mkdir(parents=True, exist_ok=True)
+        baseline_path.write_text(json.dumps(record_payload, indent=1) + "\n", encoding="utf-8")
+        metrics["baseline"] = f"recorded {stamp} (not compared)"
+        return 0, "", metrics
+
+    if previous is None:
+        return 0, "", metrics
+    mismatch = [key for key in ("platform", "python") if previous.get(key) != identity[key]]
+    if previous.get("entries") != entries:
+        mismatch.append("entries")
+    if mismatch:
+        metrics["baseline"] = f"recorded {previous.get('recorded_at')}, not comparable ({', '.join(mismatch)} differ)"
+        return 0, "", metrics
 
     def _exceeds(current: float, baseline: float) -> bool:
         if baseline <= 0:
             return False
         return current > baseline + 20.0 and current > baseline * 1.15
 
-    total_exceeded = _exceeds(total_seconds, baseline_total)
-    top10_exceeded = _exceeds(top10_seconds, baseline_top10)
-
-    if total_exceeded or top10_exceeded:
-        parts = []
-        if total_exceeded:
-            parts.append(f"total {baseline_total:.2f} -> {total_seconds:.2f}")
-        if top10_exceeded:
-            parts.append(f"top10 {baseline_top10:.2f} -> {top10_seconds:.2f}")
-        return 2, "pytest-fast durations regressed: " + ", ".join(parts), total_seconds, top10_seconds, False
-
-    total_baseline_path.write_text(f"{total_seconds:.2f}\n", encoding="utf-8")
-    top10_baseline_path.write_text(f"{top10_seconds:.2f}\n", encoding="utf-8")
-    return 0, "", total_seconds, top10_seconds, True
+    base_sum = float(previous["slowest_entries_seconds"])
+    base_10 = float(previous.get("slowest10_seconds") or 0.0)
+    metrics["baseline"] = f"recorded {previous.get('recorded_at')} at {previous.get('git_sha') or 'unknown commit'}"
+    parts = []
+    if _exceeds(slowest_sum, base_sum):
+        parts.append(f"slowest {entries} entries {base_sum:.2f} -> {slowest_sum:.2f}")
+    if _exceeds(slowest10, base_10):
+        parts.append(f"slowest 10 {base_10:.2f} -> {slowest10:.2f}")
+    metrics["ok"] = not parts
+    if parts:
+        return 2, "pytest-fast durations regressed: " + ", ".join(parts) + f" (baseline {metrics['baseline']})", metrics
+    return 0, "", metrics
 
 
 _EXCEPTION_BUDGET_FILES: tuple[str, ...] = (
@@ -1942,7 +2086,7 @@ def _build_verify_all_payload(args: argparse.Namespace):
         payload = {
             "ok": False,
             "steps": error_steps,
-            "pytest_fast": {"ok": None, "total": None, "top10": None},
+            "pytest_fast": {"ok": None, "baseline": "none", "entries": None, "slowest_entries_seconds": None, "slowest10_seconds": None, "wall_seconds": None},
             "artifacts": {
                 "dir": None,
                 "written": {
@@ -2111,6 +2255,7 @@ def _build_verify_all_payload(args: argparse.Namespace):
             artifacts_dir / "swallowed_exceptions.json", repo_root=repo_root
         )
 
+    timing_failures: list[str] = []
     if artifacts_dir is not None:
         import sys
 
@@ -2172,6 +2317,27 @@ def _build_verify_all_payload(args: argparse.Namespace):
             if isinstance(excused, list) and excused:
                 print(f"[Mesh][Verify] rule f: {', '.join(excused)} over the fixed threshold but within this runner's "
                       "speed-adjusted range: not failed (verify_step_budget_check.json, rule_f)", file=sys.stderr)
+        for line in _report_only_timing_lines(verify_step_budget_payload):
+            print(f"[Mesh][Verify] timing report-only: {line}", file=sys.stderr)
+            _github_annotation("warning", "CI timing (report-only)", line)
+        not_measured = _budgeted_steps_not_measured(verify_step_budget_payload, steps)
+        if not_measured and overall_ok and budget_code == 0:
+            # Every check passed but a budgeted step never ran: no timing evidence is not a timing pass.
+            budget_code = 1
+            budget_error = f"timing evidence missing: {', '.join(not_measured)} did not run, so its time was not measured"
+            verify_step_budget_payload["ok"] = False
+            verify_step_budget_payload["not_measured"] = not_measured
+            with suppress_stdout():
+                write_json_atomic(artifacts_dir / "verify_step_budget_check.json", verify_step_budget_payload,
+                                  indent=2, sort_keys=True, trailing_newline=True)
+        if budget_code != 0 and _verify_step_budget_enforced():
+            raw_offenders = verify_step_budget_payload.get("offenders")
+            timing_failures = [str(o.get("name")) for o in raw_offenders if isinstance(o, dict)] \
+                if isinstance(raw_offenders, list) else []
+            confirmed = rule_f.get("failed")
+            if isinstance(confirmed, list) and rule_f["over_fixed"]:
+                timing_failures = [str(name) for name in confirmed]
+            timing_failures = timing_failures or ["step-time budget"]
         if budget_code != 0:
             overall_ok, exit_code = _apply_verify_step_budget_exit_state(
                 overall_ok=overall_ok,
@@ -2442,6 +2608,10 @@ def _build_verify_all_payload(args: argparse.Namespace):
             _log_swallow("VFYC-032", "blanket exception fallback", once=False)
             pass  # best-effort; keep exit code unchanged
 
+    outcome = _verify_all_outcome(steps, timing_failures)
+    print(f"[Mesh][Verify] result: {outcome}", file=sys.stderr)
+    if outcome.startswith("FAILED (timing only"):
+        _github_annotation("error", "verify-all failed on timing only", outcome)
     payload = _verify_all_payload(overall_ok, steps, pytest_fast_metrics, artifacts_dir_json, artifacts_written)
 
     if artifacts_dir is not None:

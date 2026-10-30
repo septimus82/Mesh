@@ -47,6 +47,11 @@
     "verify-demo": 1.25,
     "web-smoke": 1.25
   },
+  "report_only_ceiling_ratios": {
+    "exception-policy-scan": 1.85,
+    "pytest-fast": 1.65
+  },
+  "report_only_note": "#422 F13: these steps' cost grows with the repository and their calibration is stale (443 CI runs 2026-10-25..30: 61 Linux and 10 Windows timing-only failures, no regression); over their threshold they are reported, and they fail only over threshold x ceiling ratio (1.25 x the worst ratio seen). docs/reviews/h4_ci_timing_reliability.md",
   "schema_version": 2,
   "tolerance_ms": 50
 }

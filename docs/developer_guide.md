@@ -67,22 +67,34 @@ Arcade 3 migration status, shim ownership (long-term vs temporary), and sign-off
 
 ### pytest-fast durations guard
 
-The `verify-all` pipeline runs `pytest-fast` with `--write-durations` and records per-test timings in:
-`.mesh/metrics/pytest_durations_fast.json`. The `pytest-fast-duration-guard` step compares totals against:
-- `.mesh/metrics/pytest_fast_total_seconds.txt`
-- `.mesh/metrics/pytest_fast_top10_seconds.txt`
+The `verify-all` pipeline runs `pytest-fast` with `--write-durations`, which records pytest's `--durations 25`
+report (the 25 slowest setup/call/teardown entries, not every test) in `.mesh/metrics/pytest_durations_fast.json`.
+The `pytest-fast-duration-guard` step reports their sum (`slowest_entries_seconds`), the slowest 10
+(`slowest10_seconds`) and, separately, the step's wall-clock time (`wall_seconds`) under `pytest_fast` in
+`verify_all_summary.json`.
 
-It fails only if a baseline regresses by **both** +20s and +15%.
-
-To intentionally refresh baselines:
+It judges them only against a baseline someone recorded on purpose, and fails only if either sum regresses by
+**both** +20s and +15% against it. A run never writes its own baseline, so a fresh checkout (and every CI job) has
+none and the step is report-only there (#422 F13). To record one on this machine:
 
 ```bash
-python -m tooling.pytest_fast --write-durations
-python -m mesh_cli verify-all --artifacts artifacts
+MESH_RECORD_PYTEST_FAST_BASELINE=1 python -m mesh_cli verify-all --artifacts artifacts
 ```
 
-Baselines are updated on a passing run. Keep them committed (or persisted in CI workspace) for stable gating.
-Note: the guard is based on the default serial `pytest-fast` run; avoid `--xdist` when updating baselines.
+The baseline (`.mesh/metrics/pytest_fast_duration_baseline.json`) keeps when, at which commit and on which platform
+and Python it was recorded, and the earlier baselines in `history`; a baseline from another platform, Python or entry
+count is not compared. The old `pytest_fast_total_seconds.txt`/`pytest_fast_top10_seconds.txt` files (written by
+every passing run before) are left alone and no longer used.
+Note: the guard is based on the default serial `pytest-fast` run; avoid `--xdist` when recording a baseline.
+
+### Step-time budgets in CI
+
+`tooling/metrics/verify_step_budget.json` sets each slow step's fixed threshold; rule f (`mesh_cli/verify.py`) fails a
+step over it only when the speed advisory also calls it slow. `pytest-fast` and `exception-policy-scan` are
+**report-only** (`report_only_ceiling_ratios`): over their threshold they are reported (and annotated in GitHub
+Actions), and they fail only over threshold x ceiling ratio. A budgeted step that did not run fails an enforced run,
+and verify-all ends with `result: OK`, `FAILED (functional: ...)` or `FAILED (timing only: ...)`. Evidence and the
+way back to enforcement: `docs/reviews/h4_ci_timing_reliability.md`.
 
 ### Local test tiers (Tier 0/1/2)
 

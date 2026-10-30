@@ -37,10 +37,9 @@ def _run_verify_all(
         pytest_fast = normalized_payload.get("pytest_fast")
         if isinstance(pytest_fast, dict):
             pytest_fast_norm = dict(pytest_fast)
-            if "total" in pytest_fast_norm:
-                pytest_fast_norm["total"] = 0.0
-            if "top10" in pytest_fast_norm:
-                pytest_fast_norm["top10"] = 0.0
+            for key in ("slowest_entries_seconds", "slowest10_seconds", "wall_seconds"):
+                if key in pytest_fast_norm:
+                    pytest_fast_norm[key] = 0.0
             normalized_payload["pytest_fast"] = pytest_fast_norm
         payload = normalized_payload
         write_json_atomic(

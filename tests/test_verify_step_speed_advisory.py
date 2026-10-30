@@ -187,7 +187,9 @@ def test_the_two_observed_windows_false_failures_pass_the_advisory(monkeypatch: 
             step_durations_payload=durations, baseline_path=_BUDGET, update_command="noop", artifacts_dir=tmp_path
         )
         payload = build_speed_advisory(step_durations_payload=durations, budget_payload=budget, model=model, platform="windows", enforcement_active=True)
-        assert code == 2 and payload["enforced_flagged"] == [failed_step]
+        # Still over its fixed threshold, but both steps are report-only since #422 F13: reported, not failed.
+        assert code == 0 and [o["name"] for o in budget["report_only_over"]] == [failed_step]
+        assert payload["enforced_flagged"] == [failed_step]
         assert payload["advisory_flagged"] == [] and payload["disagreements"] == [failed_step]
         assert payload["run_speed"] > 1.2, "both were slow runners"
         # The same run with that step doubled is flagged.
