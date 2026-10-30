@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from engine.tooling.replay_script import load_replay_script, run_replay_script
 
 
@@ -122,3 +124,27 @@ def test_replay_script_rejects_both_expect_state_and_expect_state_file(tmp_path)
         assert False, "Expected ValueError"
     except ValueError as exc:
         assert str(exc) == "expect_state and expect_state_file are mutually exclusive"
+
+
+@pytest.mark.fast
+def test_the_replay_window_reads_the_project_s_quests_not_the_engine_s_folder(tmp_path, monkeypatch):
+    """H5 (#422): it read <engine package>/../assets/data/quests.json, the project only in a checkout; an installed
+    engine looked in site-packages and replayed without the project's quests."""
+    from engine.config import EngineConfig
+    from engine.paths import reset_path_caches
+    from engine.tooling.replay_script import ReplayWindow
+
+    repo_quests = json.loads((Path(__file__).resolve().parents[1] / "assets/data/quests.json").read_text(encoding="utf-8"))
+    one = repo_quests["quests"][0] if isinstance(repo_quests["quests"], list) else next(iter(repo_quests["quests"].values()))
+    project = tmp_path / "game"
+    (project / "assets" / "data").mkdir(parents=True)
+    (project / "config.json").write_text("{}", encoding="utf-8")
+    (project / "assets" / "data" / "quests.json").write_text(json.dumps({"quests": [one]}), encoding="utf-8")
+    monkeypatch.chdir(project)
+    reset_path_caches()
+    try:
+        window = ReplayWindow(engine_config=EngineConfig(), scene_controller=type("Scene", (), {"current_scene_path": None})())
+        assert Path(window.quest_manager.data_path).resolve() == (project / "assets" / "data" / "quests.json").resolve()
+        assert list(window.quest_manager._definitions) == [one["id"]]
+    finally:
+        reset_path_caches()

@@ -26,9 +26,10 @@ class ReplayWindow:
     def __post_init__(self) -> None:
         self.game_state_controller = GameStateController(cast(Any, self))
 
-        repo_root = Path(__file__).resolve().parents[2]
-        quests_path = repo_root / "assets" / "data" / "quests.json"
-        self.quest_manager = QuestManager(self, data_path=str(quests_path))
+        # The project's quests, through its content roots. It used to be the engine package's own parent, which is
+        # the project only in a checkout: an installed engine looked in site-packages, found nothing and replayed
+        # without the project's quests (H5, #422).
+        self.quest_manager = QuestManager(self)
 
     # GameWindow-like helpers used by QuestManager rewards.
     @property
