@@ -132,12 +132,18 @@ def test_a_source_file_changed_mid_export_stops_it(repo: Path, previous: tuple[P
 # 4-5: publication, rollback and cleanup
 # --------------------------------------------------------------------------- #
 
+def _label(path: str | Path) -> str:
+    """A folder's name, or ``<working folder>/b`` for the bundle inside one."""
+    path = Path(path)
+    return f"{path.parent.name}/b" if path.name == "b" else path.name
+
+
 def _rename_failing(monkeypatch: pytest.MonkeyPatch, *fail: tuple[str, str], exc: BaseException | None = None) -> None:
-    """``os.rename`` failing for the (source name, destination name) pairs given, each every time."""
+    """``os.rename`` failing for the (source, destination) pairs given (as ``_label`` names them), each every time."""
     real = os.rename
 
     def rename(src: str | Path, dst: str | Path) -> None:
-        if (Path(src).name, Path(dst).name) in fail:
+        if (_label(src), _label(dst)) in fail:
             raise exc if exc is not None else PermissionError(13, "injected: in use", str(src))
         real(src, dst)
 
@@ -149,7 +155,7 @@ def test_moving_the_earlier_export_aside_fails_and_it_stays(repo: Path, previous
                                                            monkeypatch: pytest.MonkeyPatch,
                                                            capsys: pytest.CaptureFixture[str]) -> None:
     out, before = previous
-    _rename_failing(monkeypatch, ("bundle", ".bundle~old"))
+    _rename_failing(monkeypatch, ("bundle", ".bundle~old/b"))
     assert build_bundle(repo, out) == (1, None)
     assert _tree(out) == before and _leftovers(out) == []
     assert "is the game running from" in capsys.readouterr().out
@@ -159,7 +165,7 @@ def test_a_failed_handover_puts_the_earlier_export_back(repo: Path, previous: tu
                                                         monkeypatch: pytest.MonkeyPatch,
                                                         capsys: pytest.CaptureFixture[str]) -> None:
     out, before = previous
-    _rename_failing(monkeypatch, (".bundle~new", "bundle"))
+    _rename_failing(monkeypatch, (".bundle~new/b", "bundle"))
     assert build_bundle(repo, out) == (1, None)
     assert _tree(out) == before and _leftovers(out) == []
     assert f"the earlier export is back in {out}" in capsys.readouterr().out
@@ -169,9 +175,9 @@ def test_when_the_rollback_fails_too_both_copies_are_kept_and_named(
         repo: Path, previous: tuple[Path, dict[str, str]], monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str]) -> None:
     out, before = previous
-    _rename_failing(monkeypatch, (".bundle~new", "bundle"), (".bundle~old", "bundle"))
+    _rename_failing(monkeypatch, (".bundle~new/b", "bundle"), (".bundle~old/b", "bundle"))
     assert build_bundle(repo, out) == (1, None)
-    staging, backup = out.with_name(".bundle~new"), out.with_name(".bundle~old")
+    staging, backup = out.with_name(".bundle~new") / "b", out.with_name(".bundle~old") / "b"
     message = capsys.readouterr().out
     assert f"the earlier export is in {backup}, the new one in {staging}" in message
     assert not out.exists() and _tree(backup) == before, "the earlier export, whole, where the message says"
@@ -197,8 +203,8 @@ def test_a_failed_cleanup_keeps_the_new_export_and_names_the_old_one(
     monkeypatch.setattr(eb, "_remove_tree", remove)
     assert build_bundle(repo, out)[0] == 0
     backup = out.with_name(".bundle~old")
-    assert f"it is in {backup}" in capsys.readouterr().out
-    assert _tree(backup) == before and _tree(out) != before
+    assert f"the next export to this folder deletes it ({backup})" in capsys.readouterr().out
+    assert _tree(backup / "b") == before and _tree(out) != before
     monkeypatch.undo()
     assert build_bundle(repo, out)[0] == 0 and _leftovers(out) == [], "the next export removes the superseded copy"
 
@@ -228,7 +234,7 @@ def test_windows_retries_a_folder_briefly_in_use(repo: Path, previous: tuple[Pat
 def test_an_interrupt_during_the_handover_puts_the_earlier_export_back(
         repo: Path, previous: tuple[Path, dict[str, str]], monkeypatch: pytest.MonkeyPatch) -> None:
     out, before = previous
-    _rename_failing(monkeypatch, (".bundle~new", "bundle"), exc=KeyboardInterrupt())
+    _rename_failing(monkeypatch, (".bundle~new/b", "bundle"), exc=KeyboardInterrupt())
     with pytest.raises(KeyboardInterrupt):
         build_bundle(repo, out)
     assert _tree(out) == before and _leftovers(out) == []
@@ -236,11 +242,11 @@ def test_an_interrupt_during_the_handover_puts_the_earlier_export_back(
 
 def _kill_during_handover(repo: Path, out: Path) -> None:
     """Export in a child process that dies (``os._exit``) between the two renames: what a killed export leaves, no
-    bundle, the earlier one in ``.bundle~old``, the finished new one in ``.bundle~new``, and the journal."""
+    bundle, the earlier one in ``.bundle~old/b``, the finished new one in ``.bundle~new/b``, and the journal."""
     code = ("import os, sys\nfrom pathlib import Path\nfrom engine.tooling import export_bundle as eb\n"
             "real = os.rename\n\n"
             "def rename(src, dst):\n"
-            "    if Path(src).name == '.bundle~new' and Path(dst).name == 'bundle':\n"
+            "    if Path(src).parent.name == '.bundle~new' and Path(dst).name == 'bundle':\n"
             "        os._exit(9)\n"
             "    real(src, dst)\n\n"
             "os.rename = rename\n"
@@ -255,7 +261,7 @@ def test_an_export_killed_between_the_renames_is_recovered_by_the_next(
         repo: Path, previous: tuple[Path, dict[str, str]], capsys: pytest.CaptureFixture[str]) -> None:
     out, before = previous
     _kill_during_handover(repo, out)
-    assert _tree(out.with_name(".bundle~old")) == before, "the earlier export, whole, aside"
+    assert _tree(out.with_name(".bundle~old") / "b") == before, "the earlier export, whole, aside"
     assert build_bundle(repo, out)[0] == 0
     assert "restored the previous export" in capsys.readouterr().out
     assert _leftovers(out) == [] and _tree(out) != before and eb.load_bundle_manifest(out) is not None
@@ -270,7 +276,7 @@ def test_a_kept_earlier_export_is_never_deleted_for_a_folder_that_is_not_a_finis
     if output == "other files":
         (out / "notes.txt").write_text("mine", encoding="utf-8")
     assert build_bundle(repo, out) == (1, None)
-    assert _tree(out.with_name(".bundle~old")) == before, "the only copy of the earlier export stays"
+    assert _tree(out.with_name(".bundle~old") / "b") == before, "the only copy of the earlier export stays"
     assert _tree(out) == ({"notes.txt": hashlib.sha256(b"mine").hexdigest()} if output == "other files" else {})
 
 
@@ -287,7 +293,7 @@ def test_a_changed_backup_is_never_deleted_as_superseded(repo: Path, previous: t
     monkeypatch.setattr(eb, "_remove_tree", remove)
     assert build_bundle(repo, out)[0] == 0  # (the earlier export kept in .bundle~old, recorded in the journal)
     monkeypatch.undo()
-    backup = out.with_name(".bundle~old")
+    backup = out.with_name(".bundle~old") / "b"
     (backup / "scenes" / "scene_b.json").write_text('{"edited": "in the backup"}\n', encoding="utf-8")
     kept = _tree(backup)
     assert build_bundle(repo, out) == (1, None)
@@ -320,11 +326,43 @@ def test_a_folder_put_where_a_killed_exports_was_is_not_its_own(repo: Path, prev
     _kill_during_handover(repo, out)
     staging = out.with_name(".bundle~new")
     shutil.rmtree(staging)
-    staging.mkdir()  # (a new folder of the same name: not the one the journal recorded)
+    staging.mkdir()  # (a new folder of the same name, which on Linux gets the deleted one's inode back)
     (staging / "valuable.txt").write_text("irreplaceable", encoding="utf-8")
     assert build_bundle(repo, out) == (1, None)
     assert (staging / "valuable.txt").read_text(encoding="utf-8") == "irreplaceable"
     assert _tree(out) == before, "the recorded earlier export is put back; the unrecorded folder is not touched"
+
+
+def test_the_same_folder_without_its_owner_file_is_not_the_exports(
+        repo: Path, previous: tuple[Path, dict[str, str]]) -> None:
+    """Ownership is the owner file, not the folder's identity (which Linux hands to a new folder at once)."""
+    out, _ = previous
+    _kill_during_handover(repo, out)
+    staging = out.with_name(".bundle~new")
+    for entry in list(staging.iterdir()):
+        shutil.rmtree(entry) if entry.is_dir() else entry.unlink()
+    (staging / "valuable.txt").write_text("irreplaceable", encoding="utf-8")
+    assert build_bundle(repo, out) == (1, None)
+    assert (staging / "valuable.txt").read_text(encoding="utf-8") == "irreplaceable"
+
+
+def test_a_working_folder_holding_anything_else_is_left_untouched(
+        repo: Path, previous: tuple[Path, dict[str, str]]) -> None:
+    out, before = previous
+    _kill_during_handover(repo, out)
+    staging = out.with_name(".bundle~new")
+    (staging / "valuable.txt").write_text("irreplaceable", encoding="utf-8")
+    assert build_bundle(repo, out) == (1, None)
+    assert (staging / "valuable.txt").read_text(encoding="utf-8") == "irreplaceable" and (staging / "b").is_dir()
+    assert _tree(out) == before
+
+
+def test_an_empty_working_folder_of_an_export_stopped_as_it_began_is_removed(
+        repo: Path, previous: tuple[Path, dict[str, str]]) -> None:
+    out, _ = previous
+    eb._write_journal(out, "ab" * 16)  # (what an export stopped right after making its first folder leaves)
+    out.with_name(".bundle~new").mkdir()
+    assert build_bundle(repo, out)[0] == 0 and _leftovers(out) == []
 
 
 def test_an_unreadable_journal_stops_the_export_and_touches_nothing(

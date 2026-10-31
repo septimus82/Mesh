@@ -10,17 +10,19 @@ game: the project's ``main.py``, ``config.json``, ``packs/``, ``locales/*.json``
 runtime and the engine's interface text (``share/mesh-engine/locales``). It runs with
 ``python main.py`` wherever Mesh's dependencies (arcade, pillow, jsonschema) are installed, without Mesh itself.
 
-Replacing an earlier export (F4, #422): the new bundle is built and checked in ``.<name>~new`` beside the output
-folder, and only then handed over: the earlier bundle is renamed to ``.<name>~old``, the new one to ``<name>``, and the
-old one deleted. If the second rename fails, the first is undone; if that fails too, both folders are kept and named.
-A journal beside them, ``.<name>~export.json``, records each folder the export made or moved aside by its filesystem
-identity (device and file id, which a rename keeps), and is removed once nothing it records is left.
+Replacing an earlier export (F4, #422): the new bundle is built and checked in ``.<name>~new/b`` beside the output
+folder, and only then handed over: the earlier bundle is moved to ``.<name>~old/b``, the new one to ``<name>``, and both
+working folders deleted. If the second move fails, the first is undone; if that fails too, both bundles are kept and
+named. Ownership is proven, never assumed from a name: each export picks a random token, records it in a journal beside
+the output (``.<name>~export.json``) and writes it into each working folder (``.mesh-export-owner``) the moment it makes
+it, before anything of value is in it. (A folder's identity is no proof: a deleted folder's inode is reused at once.)
 
-The two renames are not atomic together. An export stopped part way (killed, power cut) is finished by the next export
-to that folder (``_recover``), which touches only folders the journal records: ``.<name>~old`` is renamed back when
-``<name>`` is absent, deleted only beside a complete, unchanged ``<name>``; ``.<name>~new`` (an unfinished or
-unpublished build) is deleted. A ``.<name>~new`` or ``.<name>~old`` the journal doesn't record (or with no journal) is
-someone else's: it is left untouched and the export stops, naming it.
+The two moves are not atomic together. An export stopped part way (killed, power cut) is finished by the next export
+to that folder (``_recover``), which touches only working folders holding the journal's token, and nothing else: the
+earlier bundle in ``.<name>~old/b`` is moved back when ``<name>`` is absent, and deleted only when it and ``<name>``
+are complete, unchanged bundles; ``.<name>~new`` (an unfinished or unpublished build) is deleted; an empty working
+folder (made just before an export stopped) is removed. Anything else named like a working folder, or a journal that
+can't be read, is someone else's: it is left untouched and the export stops, naming it.
 
 Only an empty folder or one holding exactly an earlier bundle is ever replaced: its manifest well formed (no duplicate
 or malformed entry, no path outside the folder), every listed file there with its size and SHA-256, nothing else but
@@ -41,6 +43,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import shutil
 import stat
 import sys
@@ -484,6 +487,9 @@ JOURNAL_VERSION = 1
 RENAME_RETRIES = (0.05, 0.1, 0.2, 0.4, 0.8)  # (Windows: an indexer or antivirus may hold a just-written file a moment)
 _BYTECODE = re.compile(r"^(?P<dir>(?:.+/)?)__pycache__/(?P<stem>[^/]+?)\.[^/.]+(?:\.opt-\d)?\.pyc$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_TOKEN = re.compile(r"^[0-9a-f]{32}$")
+OWNER_FILE = ".mesh-export-owner"  # (in each working folder: the export's token, written as the folder is made)
+INNER = "b"  # (the bundle inside a working folder; short, for Windows' path-length limit)
 
 
 class ExportError(Exception):
@@ -495,12 +501,13 @@ class ExportKept(ExportError):
 
 
 def _staging_paths(output_dir: Path) -> tuple[Path, Path]:
-    """Where the replacement is built (``.<name>~new``) and the earlier bundle waits (``.<name>~old``)."""
+    """The export's two working folders beside the output: ``.<name>~new`` (the replacement is built in its ``b``)
+    and ``.<name>~old`` (the earlier bundle waits in its ``b``). Each holds an owner file from the moment it exists."""
     return output_dir.with_name(f".{output_dir.name}~new"), output_dir.with_name(f".{output_dir.name}~old")
 
 
 def _journal_path(output_dir: Path) -> Path:
-    """The export's record of the folders it made or moved aside (``.<name>~export.json``, beside the output)."""
+    """The export's record of its owner token (``.<name>~export.json``, beside the output)."""
     return output_dir.with_name(f".{output_dir.name}~export.json")
 
 
@@ -513,53 +520,62 @@ def _is_link(path: Path) -> bool:
     return stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & 0x400)  # REPARSE_POINT
 
 
-def _identity(path: Path) -> list[int] | None:
-    """The folder's identity on its filesystem (device, file id), which a rename keeps; None where it has none."""
-    try:
-        info = os.lstat(path)
-    except OSError:
-        return None
-    return [int(info.st_dev), int(info.st_ino)] if info.st_ino and not _is_link(path) else None
-
-
-def _read_journal(output_dir: Path) -> dict[str, Any] | None:
-    """The journal of an export to ``output_dir`` that didn't finish tidying up, or None. Raises ExportError for a
-    file there that isn't one (it is left alone)."""
+def _read_journal(output_dir: Path) -> str | None:
+    """The owner token of an export to ``output_dir`` that didn't finish tidying up, or None. Raises ExportError for a
+    file there that isn't an export's journal (it is left alone)."""
     path = _journal_path(output_dir)
     if not os.path.lexists(path):
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        if not (isinstance(data, dict) and data.get("version") == JOURNAL_VERSION
-                and all(data.get(k) is None or (isinstance(data[k], list) and len(data[k]) == 2)
-                        for k in ("staging", "backup"))):
+        if not (isinstance(data, dict) and data.get("version") == JOURNAL_VERSION and isinstance(data.get("token"), str)
+                and _TOKEN.match(data["token"])):
             raise ValueError("not an export journal")
     except (OSError, ValueError) as exc:
         raise ExportError(f"{path} is in the way and is not an export's record ({exc}); move it and export again") from exc
-    return data
+    return str(data["token"])
 
 
-def _write_journal(output_dir: Path, journal: dict[str, Any]) -> None:
-    """Record ``journal`` durably (written whole, then renamed over the old record)."""
+def _write_journal(output_dir: Path, token: str) -> None:
+    """Record the export's owner token durably (written whole, then renamed into place)."""
     path = _journal_path(output_dir)
     tmp = path.with_name(path.name + ".tmp")
     with tmp.open("w", encoding="utf-8") as f:
-        json.dump(journal, f)
+        json.dump({"version": JOURNAL_VERSION, "token": token}, f)
         f.flush()
         os.fsync(f.fileno())
     os.replace(tmp, path)
 
 
 def _tidy_journal(output_dir: Path) -> None:
-    """Drop the journal once nothing it records is left."""
+    """Drop the journal once neither working folder is left."""
     if not any(os.path.lexists(p) for p in _staging_paths(output_dir)):
         _journal_path(output_dir).unlink(missing_ok=True)
 
 
-def _owned(path: Path, journal: dict[str, Any] | None, key: str) -> bool:
-    """``path`` is the very folder an export recorded as its ``key`` (the same filesystem identity)."""
-    found = _identity(path)
-    return journal is not None and found is not None and journal.get(key) == found
+def _make_wrapper(path: Path, token: str) -> None:
+    """Create a working folder and, first thing, its owner file."""
+    path.mkdir()
+    (path / OWNER_FILE).write_text(token, encoding="ascii")
+
+
+def _owned(path: Path, token: str | None) -> bool:
+    """``path`` is a working folder this export made: its owner file holds the journal's token, and it holds nothing
+    but that and its ``b``. (A folder's name proves nothing, nor does its identity: a deleted folder's is reused.)"""
+    if token is None or _is_link(path) or not path.is_dir():
+        return False
+    owner = path / OWNER_FILE
+    try:
+        if _is_link(owner) or not owner.is_file() or owner.read_text(encoding="ascii") != token:
+            return False
+    except (OSError, ValueError):
+        return False
+    return {entry.name for entry in path.iterdir()} <= {OWNER_FILE, INNER}
+
+
+def _abandoned(path: Path, token: str | None) -> bool:
+    """An empty working folder an export made just before it stopped (before its owner file): nothing to lose."""
+    return token is not None and not _is_link(path) and path.is_dir() and not any(path.iterdir())
 
 
 def _manifest_entries(folder: Path) -> tuple[dict[str, dict[str, Any]], str | None]:
@@ -648,28 +664,37 @@ def _rename(src: Path, dst: Path) -> None:
 
 
 def _recover(output_dir: Path) -> None:
-    """Finish what an export stopped part way left beside ``output_dir`` (see the module's docstring). A folder the
-    journal doesn't record by its identity is not this exporter's: it is left untouched and stops the export."""
+    """Finish what an export stopped part way left beside ``output_dir`` (see the module's docstring). A working folder
+    without this export's owner file is not its own: it is left untouched and stops the export."""
     staging, backup = _staging_paths(output_dir)
-    journal = _read_journal(output_dir)
+    token = _read_journal(output_dir)
     if os.path.lexists(backup):
-        if not _owned(backup, journal, "backup"):
-            raise ExportError(f"{backup} is in the way and no export of this folder recorded making it; it was left "
-                              "untouched: move it and export again")
-        if not os.path.lexists(output_dir):
-            _rename(backup, output_dir)
-            print(f"[export-bundle] restored the previous export to {output_dir} (an earlier export stopped part way)")
-        elif not _bundle_problems(output_dir, empty_ok=False) and not _bundle_problems(backup):
-            _remove_tree(backup)  # (the export after it finished: it is a superseded, unchanged copy)
+        if _abandoned(backup, token):
+            backup.rmdir()
+        elif not _owned(backup, token):
+            raise ExportError(f"{backup} is in the way and is not a working folder of an export to {output_dir}; it "
+                              "was left untouched: move it and export again")
         else:
-            raise ExportError(f"{backup} holds a previous export and {output_dir} is not a complete, unchanged one; "
-                              "both were left untouched: keep the one you want, move the other away, export again")
+            aside = backup / INNER
+            if os.path.lexists(aside):
+                if not os.path.lexists(output_dir):
+                    _rename(aside, output_dir)
+                    print(f"[export-bundle] restored the previous export to {output_dir} (an earlier export stopped "
+                          "part way)")
+                elif _bundle_problems(output_dir, empty_ok=False) or _bundle_problems(aside):
+                    raise ExportError(f"{aside} holds a previous export and {output_dir} is not a complete, unchanged "
+                                      "one (or that copy was changed); both were left untouched: keep the one you "
+                                      "want, move the other away, export again")
+            _remove_tree(backup)  # (its owner file, and a superseded unchanged copy if any)
     if os.path.lexists(staging):
-        if not _owned(staging, journal, "staging"):
-            raise ExportError(f"{staging} is in the way and no export of this folder recorded making it; it was left "
-                              "untouched: move it and export again")
-        _remove_tree(staging)  # (an unfinished or unpublished build of an export's own: never the only copy)
-    if journal is not None:
+        if _abandoned(staging, token):
+            staging.rmdir()
+        elif _owned(staging, token):
+            _remove_tree(staging)  # (an unfinished or unpublished build: never the only copy of anything)
+        else:
+            raise ExportError(f"{staging} is in the way and is not a working folder of an export to {output_dir}; it "
+                              "was left untouched: move it and export again")
+    if token is not None:
         _tidy_journal(output_dir)
 
 
@@ -707,39 +732,42 @@ def _validate_staged(staging: Path, manifest: BundleManifest) -> None:
         raise ExportError(f"the new bundle holds {found} files, its manifest {len(manifest.files) + 1}")
 
 
-def _publish(staging: Path, output_dir: Path, journal: dict[str, Any]) -> None:
-    """Hand the checked bundle over: the earlier one aside, the new one in, the earlier one deleted. Raises
-    ExportError (the earlier bundle back in place, or both kept and named) when it can't."""
-    _, backup = _staging_paths(output_dir)
+def _publish(output_dir: Path, token: str) -> None:
+    """Hand the checked bundle over: the earlier one aside (into ``.<name>~old/b``), the new one in (from
+    ``.<name>~new/b``), the working folders deleted. Raises ExportError (the earlier bundle back in place, or both
+    kept and named) when it can't."""
+    staging, backup = _staging_paths(output_dir)
+    built, aside = staging / INNER, backup / INNER
     replacing = os.path.lexists(output_dir)
     if replacing:
         try:
-            _write_journal(output_dir, {**journal, "backup": _identity(output_dir)})  # (before it moves: see _recover)
-            _rename(output_dir, backup)
+            _make_wrapper(backup, token)
+            _rename(output_dir, aside)
         except OSError as exc:
             raise ExportError(f"could not move the earlier export aside ({exc}); is the game running from "
                               f"{output_dir}? It is unchanged") from exc
     try:
-        _rename(staging, output_dir)
+        _rename(built, output_dir)
     except BaseException as exc:  # (an interrupt here too: put the earlier bundle back before going)
         if replacing:
             try:
-                _rename(backup, output_dir)
+                _rename(aside, output_dir)
             except OSError as again:
                 raise ExportKept(f"could not put the new export in place ({exc}) nor the earlier one back ({again}): "
-                                 f"the earlier export is in {backup}, the new one in {staging}; the next export to "
+                                 f"the earlier export is in {aside}, the new one in {built}; the next export to "
                                  f"{output_dir} puts the earlier one back") from again
         if not isinstance(exc, Exception):
             raise
         raise ExportError(f"could not put the new export in place ({exc}); "
                           + (f"the earlier export is back in {output_dir}" if replacing else "nothing was changed")) from exc
-    if replacing:
-        try:
+    try:
+        if replacing:
             _remove_tree(backup)
-        except OSError as exc:
-            print(f"[export-bundle] WARNING: the new export is in place, but the earlier one could not be deleted "
-                  f"({exc}); it is in {backup} (the next export to this folder deletes it)")
-            return
+        _remove_tree(staging)
+    except OSError as exc:
+        print(f"[export-bundle] WARNING: the new export is in place, but a working folder could not be deleted ({exc}); "
+              f"the next export to this folder deletes it ({backup if os.path.lexists(backup) else staging})")
+        return
     _tidy_journal(output_dir)
 
 
@@ -785,8 +813,17 @@ def build_bundle(
         return 1, None
 
     # The output folder: only ever an empty one or an earlier bundle, replaced once the new one is complete (F4)
-    staging, _ = _staging_paths(output_dir)
-    made = False
+    staging, backup = _staging_paths(output_dir)
+    token = secrets.token_hex(16)
+    journaled = False
+
+    def tidy() -> None:  # (this export's working folders, whatever they still hold of no value, and its journal)
+        if _owned(staging, token):
+            _remove_tree(staging)
+        if _owned(backup, token) and not os.path.lexists(backup / INNER):
+            _remove_tree(backup)
+        _tidy_journal(output_dir)
+
     try:
         output_dir.parent.mkdir(parents=True, exist_ok=True)
         _recover(output_dir)
@@ -797,36 +834,37 @@ def build_bundle(
                       f"it ({len(problems)} problem(s), e.g. {'; '.join(problems[:3])}); nothing was changed. Choose "
                       "another folder, or move those files out")
                 return 1, None
-        staging.mkdir()
-        made = True
-        journal: dict[str, Any] = {"version": JOURNAL_VERSION, "staging": _identity(staging), "backup": None}
-        _write_journal(output_dir, journal)
+        _write_journal(output_dir, token)
+        journaled = True
+        _make_wrapper(staging, token)
+        (staging / INNER).mkdir()
     except (OSError, ExportError) as exc:
         print(f"[export-bundle] ERROR: {exc}")
-        if made:
-            staging.rmdir()  # (made just now and still empty: its journal could not be written)
+        if journaled:
+            try:
+                tidy()
+            except OSError:
+                pass  # (the next export to this folder recovers it)
         return 1, None
     try:
-        manifest = _stage(plan, repo_root, staging, deterministic=deterministic)
-        _publish(staging, output_dir, journal)
+        manifest = _stage(plan, repo_root, staging / INNER, deterministic=deterministic)
+        _publish(output_dir, token)
     except ExportKept as exc:
         print(f"[export-bundle] ERROR: {exc}")
         return 1, None
     except (OSError, ExportError) as exc:
         print(f"[export-bundle] ERROR: {exc}")
         try:
-            if os.path.lexists(staging):
-                _remove_tree(staging)
-            _tidy_journal(output_dir)
+            tidy()  # (the unfinished build; an emptied ~old: the earlier export is back in place)
         except OSError as again:
             print(f"[export-bundle] WARNING: the unfinished export in {staging} could not be deleted ({again}); the "
                   "next export to this folder removes it")
         return 1, None
-    except BaseException:  # (interrupted: the unfinished build goes; the next export recovers anything else)
-        if os.path.lexists(staging) and not _is_link(staging):
-            shutil.rmtree(staging, ignore_errors=True)
-            if not os.path.lexists(staging):
-                _tidy_journal(output_dir)
+    except BaseException:  # (interrupted: the same tidying; the next export recovers anything left)
+        try:
+            tidy()
+        except OSError:
+            pass
         raise
     return 0, manifest
 

@@ -78,25 +78,28 @@ It replaces only an earlier bundle or an empty folder, never other files.
 
 **Replacing an earlier export (F4, #422).** A failed export never costs the last good one:
 
-- **Built aside first.** The new bundle is built in `.bundle~new` beside the output folder: every file copied and
+- **Built aside first.** The new bundle is built in `.bundle~new/b` beside the output folder: every file copied and
   hashed as it is copied (a file saved mid-export stops it), the manifest written and read back, and the folder checked
   against it. Nothing in `dist/bundle` is touched until all of that has succeeded; any failure deletes `.bundle~new`
   and leaves the earlier export as it was.
-- **Then handed over.** The earlier bundle is renamed to `.bundle~old`, the new one to `bundle`, and `.bundle~old` is
-  deleted. On Windows a folder briefly in use is retried for about 1.5 s; one that stays in use (the game running from
-  it) stops the export with the earlier one unchanged. If the second rename fails, the first is undone. If that fails
-  too, both are kept and the error names them: the earlier export in `.bundle~old`, the new one in `.bundle~new`. If
-  the earlier bundle can't be deleted at the end, the export still succeeds and a warning names `.bundle~old`.
-- **Which folders are the export's own.** A journal beside the output, `.bundle~export.json`, records `.bundle~new`
-  and (before it moves) the earlier bundle by their filesystem identity (device and file id, which a rename keeps). It
-  is written whole and renamed into place, and removed once nothing it records is left. A `.bundle~new` or `.bundle~old`
-  the journal doesn't record, or any with no journal, is someone else's: the export stops and names it, untouched. So
-  does a journal it can't read.
-- **Stopped between the two renames.** The renames aren't atomic together. An export killed between them leaves no
-  `bundle`, the earlier one in `.bundle~old` and the journal; the next export to that folder renames it back before
-  anything else (and says so). A recorded `.bundle~new` left behind is an unfinished or unpublished build and is
-  deleted. A recorded `.bundle~old` beside a complete, unchanged `bundle` is a superseded copy and is deleted, but only
-  if it is unchanged too; beside an empty or foreign `bundle`, or changed, it is kept and the export stops, naming both.
+- **Then handed over.** The earlier bundle is moved to `.bundle~old/b`, the new one to `bundle`, and both working
+  folders are deleted. On Windows a folder briefly in use is retried for about 1.5 s; one that stays in use (the game
+  running from it) stops the export with the earlier one unchanged. If the second move fails, the first is undone. If
+  that fails too, both are kept and the error names them: the earlier export in `.bundle~old/b`, the new one in
+  `.bundle~new/b`. If a working folder can't be deleted at the end, the export still succeeds and a warning names it.
+- **Which folders are the export's own.** Each export picks a random token, records it in a journal beside the output
+  (`.bundle~export.json`, written whole and renamed into place) and writes it into each working folder
+  (`.mesh-export-owner`) the moment it makes it, before anything of value is in it. A working folder is the export's
+  only if its owner file holds the journal's token and it holds nothing else but its `b`. A folder's name proves
+  nothing, and nor does its identity (a deleted folder's inode is handed to the next new folder at once on Linux). A
+  folder named like a working folder that isn't the export's, or a journal it can't read, stops the export and is
+  left untouched.
+- **Stopped between the two moves.** The moves aren't atomic together. An export killed between them leaves no `bundle`,
+  the earlier one in `.bundle~old/b` and the journal; the next export to that folder moves it back before anything else
+  (and says so). The export's own `.bundle~new` left behind is an unfinished or unpublished build and is deleted. Its
+  own `.bundle~old/b` beside a complete, unchanged `bundle` is a superseded copy and is deleted, but only if it is
+  unchanged too; beside an empty or foreign `bundle`, or changed, it is kept and the export stops, naming both. An empty
+  working folder (made just before an export stopped) is removed.
 - **What counts as an earlier bundle.** A folder whose `bundle_manifest.json` is well formed (every entry a path inside
   the folder with its SHA-256 and size, no entry twice) and matches it exactly: every listed file there, of its size and
   SHA-256, and nothing else but the bytecode Python writes beside a listed `.py` when the game runs. A changed, missing
@@ -182,5 +185,5 @@ wheel.
 | `tests/test_wheel_bundles_engine_data.py` (slow; builds a wheel; **required in CI** as `installed (<os>, py3.11)`, H5) | The wheel bundles exactly the allow-list, plus the schemas. Installed with its declared dependencies in a fresh environment and run isolated (`python -I`, no PYTHONPATH or MESH_*) from an empty folder, via `tooling/installed_product_check.py`: every `engine`/`mesh_cli` module and bundled file comes from the installation, `tooling` is absent, a blank and an HD-2D RPG project get everything they use (starter files, input bindings, the 14-model kit, no unverified sprite), and the installed `mesh new` / `mesh doctor` work. It also proves the check fails on a wheel missing a module, with a broken module, or missing an asset the checkout still has, and that the old way of running (from the checkout, not isolated) is caught. |
 | `tests/test_bundled_data_roots.py` (fast) | The source tree comes first, then an install's `share/mesh-engine`, for files and folders |
 | `tests/test_export_bundle.py` (fast) | A project exports as a standalone game; an export never replaces a folder that isn't an earlier bundle |
-| `tests/test_export_bundle_replacement.py` (integration, F4) | A failed copy (first or later file), manifest write or check, a file changed mid-export, a failed handover, a failed rollback (both copies kept and named, then recovered), a failed cleanup, an interrupt, and an export killed between the renames (a real child process): none loses the earlier export. Absent, empty and earlier-export folders are filled or replaced; a changed (same length), missing or truncated file, a malformed or duplicate manifest entry, saves, foreign files, unlisted bytecode and links or junctions are never replaced or followed; folders named like an export's but not recorded by its journal (or put in place of one), and a changed backup, are never deleted; a replacement is byte for byte a fresh export |
+| `tests/test_export_bundle_replacement.py` (integration, F4) | A failed copy (first or later file), manifest write or check, a file changed mid-export, a failed handover, a failed rollback (both copies kept and named, then recovered), a failed cleanup, an interrupt, and an export killed between the renames (a real child process): none loses the earlier export. Absent, empty and earlier-export folders are filled or replaced; a changed (same length), missing or truncated file, a malformed or duplicate manifest entry, saves, foreign files, unlisted bytecode and links or junctions are never replaced or followed; folders named like an export's working folders but without its owner file (or with anything else in them), even the very folder emptied, and a changed backup, are never deleted; a replacement is byte for byte a fresh export |
 | `tooling/hd2d_install_acceptance.py` (manual, hidden windows) | The whole HD-2D workflow from a clean install, including running the exported game with Mesh's dependencies only. Evidence: `docs/reviews/milestone16_stage6b_distribution.md`. |
