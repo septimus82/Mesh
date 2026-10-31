@@ -1817,10 +1817,31 @@ def _handle_verify_all(args: argparse.Namespace) -> int:
         args.report_json_artifact = True
         args.artifact_index = True
 
+    # F13-B: what a later `mesh release bundle --reuse-verify-all` must find unchanged, taken before anything runs.
+    evidence_dir = None
+    artifacts_arg = str(getattr(args, "artifacts", "") or "").strip()
+    if getattr(args, "reuse_evidence", False) and artifacts_arg:
+        from pathlib import Path as _Path
+
+        from engine.repo_root import get_repo_root
+
+        from . import verify_reuse
+
+        evidence_root = get_repo_root(start=_Path.cwd(), strict=False)
+        evidence_dir = _Path(artifacts_arg) if _Path(artifacts_arg).is_absolute() else evidence_root / artifacts_arg
+        evidence_before = verify_reuse.state(evidence_root)
+        evidence_files_before = verify_reuse.snapshot(evidence_dir.resolve())  # (files the run didn't produce)
+
     # Keep verify-all stdout pure JSON by discarding any noisy prints from deeper
     # engine/tooling layers while computing the payload.
     with contextlib.redirect_stdout(io.StringIO()):
         payload, exit_code = _build_verify_all_payload(args)
+
+    if evidence_dir is not None:  # (last: every report is written; the evidence records, it never decides)
+        with contextlib.redirect_stdout(io.StringIO()):
+            verify_reuse.write_evidence(evidence_dir.resolve(), repo_root=evidence_root, before=evidence_before,
+                                        files_before=evidence_files_before, exit_code=exit_code, payload=payload,
+                                        args=args)
 
     sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
 
@@ -2735,6 +2756,16 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         default=False,
         dest="skip_web_smoke",
         help="Skip the web build + web smoke shipping gate",
+    )
+    verify_all_parser.add_argument(
+        "--reuse-evidence",
+        action="store_true",
+        default=False,
+        dest="reuse_evidence",
+        help=(
+            "Write verify_all_evidence.json last to the artifacts directory (exit code, steps, commit, clean tree, "
+            "versions, environment, file hashes), for `mesh release bundle --reuse-verify-all` (F13-B)"
+        ),
     )
     verify_local_parser = subparsers.add_parser(
         "verify-local",

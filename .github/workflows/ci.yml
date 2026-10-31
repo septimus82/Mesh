@@ -315,14 +315,14 @@ jobs:
         env:
           MESH_VERIFY_BUDGET_ENFORCE: "1"
         run: |
-          python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact
+          python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact --reuse-evidence
 
       - name: Run verify-all (Linux)
         if: runner.os != 'Windows'
         env:
           MESH_VERIFY_BUDGET_ENFORCE: "1"
         run: |
-          xvfb-run -a python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact
+          xvfb-run -a python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact --reuse-evidence
 
       - name: Validate artifact bundle
         run: |
@@ -535,12 +535,12 @@ jobs:
       - name: Build release bundle (seeded, Windows)
         if: runner.os == 'Windows'
         run: |
-          python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed $env:MESH_CI_SEED
+          python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed $env:MESH_CI_SEED --reuse-verify-all artifacts
 
       - name: Build release bundle (seeded, Linux)
         if: runner.os != 'Windows'
         run: |
-          xvfb-run -a python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed $env:MESH_CI_SEED
+          xvfb-run -a python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed $env:MESH_CI_SEED --reuse-verify-all artifacts
 
       - name: Verify release bundle (strict, Windows)
         if: runner.os == 'Windows'

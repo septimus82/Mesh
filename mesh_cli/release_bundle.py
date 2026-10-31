@@ -495,8 +495,10 @@ def _write_release_notes_files(
 StepFn = Callable[[Path, int, str], "tuple[int, dict[str, Any]]"]
 
 
-def _step_release_check(work_dir: Path, seed: int, campaign: str) -> tuple[int, dict[str, Any]]:
-    """Run ``release check`` into work_dir/release."""
+def _step_release_check(work_dir: Path, seed: int, campaign: str, *,
+                        reuse_verify_all: str | None = None) -> tuple[int, dict[str, Any]]:
+    """Run ``release check`` into work_dir/release (with ``reuse_verify_all``, its verify-all is the one recorded there
+    when its evidence proves it can be: ``mesh_cli.verify_reuse``, F13-B)."""
     from mesh_cli.release import _handle_check
 
     release_dir = work_dir / "release"
@@ -510,6 +512,7 @@ def _step_release_check(work_dir: Path, seed: int, campaign: str) -> tuple[int, 
         summary=None,
         deterministic=True,
         quiet=True,
+        reuse_verify_all=reuse_verify_all,
     )
     code = _handle_check(args)
     return code, {"dir": "release/"}
@@ -794,6 +797,16 @@ def register_subcommand(release_subparsers: argparse._SubParsersAction) -> None:
         help="Suppress step output; only print final status.",
     )
     bundle_parser.add_argument(
+        "--reuse-verify-all",
+        default=None,
+        metavar="DIR",
+        help=(
+            "CI: let the release check reuse the verify-all that wrote DIR (run with --reuse-evidence), only if its "
+            "evidence proves it passed on this exact clean commit, with the same versions and environment, and its "
+            "reports are unchanged; otherwise the release check runs verify-all itself (F13-B)."
+        ),
+    )
+    bundle_parser.add_argument(
         "--deterministic-timestamp",
         default=None,
         help=(
@@ -828,11 +841,19 @@ def _handle_bundle(args: argparse.Namespace) -> int:
         work_dir.mkdir(parents=True, exist_ok=True)
 
         # Run the pipeline
+        reuse_from = getattr(args, "reuse_verify_all", None)
+        pipeline = None
+        if reuse_from:
+            def release_check(w: Path, s: int, c: str) -> tuple[int, dict[str, Any]]:
+                return _step_release_check(w, s, c, reuse_verify_all=str(reuse_from))
+
+            pipeline = [(name, release_check if name == "release-check" else step) for name, step in BUNDLE_PIPELINE]
         plan = compute_release_bundle_plan(
             work_dir,
             seed=seed,
             campaign=campaign,
             quiet=quiet,
+            pipeline=pipeline,
             notes_since=notes_since,
             notes_until=notes_until,
         )
