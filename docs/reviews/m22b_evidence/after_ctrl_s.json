@@ -1,0 +1,155 @@
+{
+ "camera": {
+  "typed": {
+   "message": "Editing Meadow.",
+   "message_ok": true,
+   "unsaved": [],
+   "field_text": "38",
+   "field_focused": true,
+   "view": [
+    20.0,
+    15.0,
+    0.0,
+    44.0,
+    0.0,
+    40.0
+   ],
+   "project_saves_on_ctrl_s": 1
+  },
+  "after_ctrl_s": {
+   "message": "Saved 1 file(s).",
+   "message_ok": true,
+   "unsaved": [],
+   "field_text": "38",
+   "field_focused": true,
+   "view": [
+    20.0,
+    15.0,
+    0.0,
+    44.0,
+    0.0,
+    40.0
+   ]
+  },
+  "view_before": [
+   20.0,
+   15.0,
+   0.0,
+   44.0,
+   0.0,
+   40.0
+  ],
+  "on_disk_pitch": 38.0,
+  "view_after_frames": [
+   20.0,
+   15.0,
+   0.0,
+   44.0,
+   0.0,
+   40.0
+  ]
+ },
+ "brook_saved": {
+  "in_file": true,
+  "name": "Brook",
+  "volume": 0.8
+ },
+ "sound": {
+  "after_ctrl_s": {
+   "message": "Saved 1 file(s).",
+   "message_ok": true,
+   "unsaved": [],
+   "field_text": "35",
+   "field_focused": true,
+   "view": [
+    20.0,
+    15.0,
+    0.0,
+    44.0,
+    0.0,
+    40.0
+   ]
+  },
+  "on_disk": {
+   "in_file": true,
+   "name": "Brook",
+   "volume": 0.35
+  }
+ },
+ "invalid": {
+  "after_ctrl_s": {
+   "message": "Not saved. Volume: a number from 0 to 100. Correct the box, or click it and press Esc to put back what it was.",
+   "message_ok": false,
+   "unsaved": [
+    "meadow"
+   ],
+   "field_text": "loud",
+   "field_focused": true,
+   "view": [
+    20.0,
+    15.0,
+    0.0,
+    44.0,
+    0.0,
+    40.0
+   ]
+  },
+  "on_disk": {
+   "in_file": true,
+   "name": "Brook",
+   "volume": 0.35
+  }
+ },
+ "after_escape": {
+  "message": "Put back as it was.",
+  "message_ok": true,
+  "unsaved": [
+   "meadow"
+  ],
+  "field_text": "35",
+  "field_focused": false,
+  "view": [
+   20.0,
+   15.0,
+   0.0,
+   44.0,
+   0.0,
+   40.0
+  ]
+ },
+ "saved_after_escape": {
+  "state": {
+   "message": "Saved 1 file(s).",
+   "message_ok": true,
+   "unsaved": [],
+   "field_text": "35",
+   "field_focused": false,
+   "view": [
+    20.0,
+    15.0,
+    0.0,
+    44.0,
+    0.0,
+    40.0
+   ]
+  },
+  "on_disk": {
+   "in_file": true,
+   "name": "Stream",
+   "volume": 0.35
+  }
+ },
+ "undo_after": {
+  "name": "Brook",
+  "unsaved": [
+   "meadow"
+  ]
+ },
+ "reopened": {
+  "pitch": 38.0,
+  "objects": [
+   "Player",
+   "Stream"
+  ]
+ }
+}

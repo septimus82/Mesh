@@ -1,0 +1,162 @@
+{
+ "hd2d 640x480": {
+  "window": [
+   640,
+   480
+  ],
+  "view": [
+   80,
+   410
+  ],
+  "view_share": 0.107,
+  "top_bar_past_edge": [],
+  "left_more": [
+   0,
+   19
+  ],
+  "right_more": [
+   0,
+   0
+  ]
+ },
+ "hd2d 1280x720": {
+  "window": [
+   1280,
+   720
+  ],
+  "view": [
+   720,
+   650
+  ],
+  "view_share": 0.508,
+  "top_bar_past_edge": [],
+  "left_more": [
+   0,
+   12
+  ],
+  "right_more": [
+   0,
+   0
+  ]
+ },
+ "hd2d 1920x1080": {
+  "window": [
+   1920,
+   1080
+  ],
+  "view": [
+   1360,
+   1010
+  ],
+  "view_share": 0.662,
+  "top_bar_past_edge": [],
+  "left_more": [
+   0,
+   0
+  ],
+  "right_more": [
+   0,
+   0
+  ]
+ },
+ "hd2d 2560x1440": {
+  "window": [
+   2560,
+   1165
+  ],
+  "view": [
+   2000,
+   1095
+  ],
+  "view_share": 0.734,
+  "top_bar_past_edge": [],
+  "left_more": [
+   0,
+   0
+  ],
+  "right_more": [
+   0,
+   0
+  ]
+ },
+ "2d 640x480": {
+  "window": [
+   640,
+   480
+  ],
+  "view": [
+   80,
+   410
+  ],
+  "view_share": 0.107,
+  "top_bar_past_edge": [],
+  "left_more": [
+   0,
+   10
+  ],
+  "right_more": [
+   0,
+   0
+  ]
+ },
+ "2d 1280x720": {
+  "window": [
+   1280,
+   720
+  ],
+  "view": [
+   720,
+   650
+  ],
+  "view_share": 0.508,
+  "top_bar_past_edge": [],
+  "left_more": [
+   0,
+   0
+  ],
+  "right_more": [
+   0,
+   0
+  ]
+ },
+ "2d 1920x1080": {
+  "window": [
+   1920,
+   1080
+  ],
+  "view": [
+   1360,
+   1010
+  ],
+  "view_share": 0.662,
+  "top_bar_past_edge": [],
+  "left_more": [
+   0,
+   0
+  ],
+  "right_more": [
+   0,
+   0
+  ]
+ },
+ "2d 2560x1440": {
+  "window": [
+   2560,
+   1165
+  ],
+  "view": [
+   2000,
+   1095
+  ],
+  "view_share": 0.734,
+  "top_bar_past_edge": [],
+  "left_more": [
+   0,
+   0
+  ],
+  "right_more": [
+   0,
+   0
+  ]
+ }
+}

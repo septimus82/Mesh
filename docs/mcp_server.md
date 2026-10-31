@@ -18,6 +18,8 @@ The `mcp` SDK is an *optional* dependency — the engine never requires it:
 pip install -e .[mcp]
 ```
 
+Both `mcp` 1.x and 2.x work (2.x renamed `FastMCP` to `MCPServer`; the server takes either).
+
 ## Quickstart
 
 ```bash
@@ -31,6 +33,58 @@ configuration.
 `mesh mcp install` writes the Claude Desktop config for the current project. It
 backs up any existing config to `claude_desktop_config.json.bak`, preserves other
 servers, and overwrites only the `mcpServers.mesh` entry.
+
+## Editing a project together with Mesh Studio
+
+These tools use **the same operations Mesh Studio uses** (`engine/authoring.py` over
+`engine/project_ops.py`), so a change made by an AI, by a person in the Studio, or with the
+`mesh author` command is validated the same way and produces the same documents. They work the
+same for any MCP client.
+
+| Tool | Purpose |
+| --- | --- |
+| `authoring_operations` | Every operation (`place_prefab`, `rename_entity`, `set_dialogue_text`, `add_line`, `set_choice`, `set_show_when`, `paint_tiles`, `add_room`, `link_rooms`, …) with its settings and what it does. Generated from the engine, so it is never out of date. |
+| `read_project(root)` | Every room with its objects and map. If Mesh Studio has the project open, this is what the person sees now (unsaved edits included), with a `revision`. |
+| `propose_changes(changes, title, base_revision, root)` | Send a batch to the Mesh Studio that has the project open. The person reviews it (top bar **AI**) and accepts or rejects it. Invalid batches are refused at once, with the change and the reason. |
+| `proposal_status(proposal_id, root)` | `pending`, `accepted` (with the ids it created), `rejected` or `conflict`. |
+| `withdraw_proposal(proposal_id, root)` | Take back a proposal that is still waiting. |
+| `apply_changes(changes, root, dry_run)` | Change the project files (all or nothing), or preview with `dry_run`. **If Mesh Studio has the project open, the batch is proposed there instead:** files are never written behind the person's back. |
+
+**When it can't be told whether Studio has the project open (F1):** the project has a session record (`.mesh/live_session.json`) that can't be read or verified. For example, Studio didn't answer, timed out, or answered for another session or folder. In that case these tools write and create nothing, and they don't offer the files as current. They answer `reason: "studio_session_uncertain"`, with `problem` (why), `discovery` (the record's path) and what to do:
+
+- **Studio is open:** make sure it's responding, then try again.
+- **Studio isn't running:** open the project in Mesh Studio once, which replaces its leftover record, or delete the record. Then try again.
+
+**When another editor (not Mesh Studio) has the project open:** the file-writing tools (`apply_changes`, `apply_ops`, `create_scene`) and `read_project` refuse with `reason: "other_editor_open"`. That editor's unsaved edits aren't in the files, and it takes no proposals. To go on, close it, or open the project in Mesh Studio.
+
+Only a project with no session record at all is changed directly. `apply_changes` checks again just before it writes. A proposal that fails is never written to the files instead.
+
+A batch is a list of changes:
+
+```json
+[
+  {"op": "place_prefab", "prefab": "person", "x": 448, "y": 224},
+  {"op": "rename_entity", "entity_id": "@0", "name": "Sexton"},
+  {"op": "set_dialogue_text", "entity_id": "Sexton", "text": "Who goes there?"},
+  {"op": "set_show_when", "entity_id": "Sexton", "require": "lantern_lit", "forbid": ""}
+]
+```
+
+- **`room`**: each change can name a room (room keys come from `read_project`); the default is the current room.
+- **`entity_id`**: takes an object's id or its unique name.
+- **`@N`**: the id of the object made by change `N` of the same batch, counting from 0.
+- **All or nothing:** a batch applies completely or not at all, and is one Undo step in the Studio.
+
+**Revisions and conflicts.** Pass the `revision` you read as `base_revision`:
+- If the person changed other things since you read, both sets of changes survive (they paint the floor while you add an NPC).
+- If you both changed the same property, Studio reports a conflict, applies nothing, and the person's version stands. Read again and propose anew.
+- **Studio keeps only the last 30 revisions it was read at.** If yours is no longer kept, the proposal is refused with `reason: "base_revision_unavailable"` and the current `revision`. Nothing is staged, and it is never compared with a newer revision instead (F6), because that would hide the person's changes since. Read again and propose against the new revision.
+- **A `base_revision` that isn't a revision read_project gave** (not a whole number, `true`/`false`, negative or newer than the project) is refused with `reason: "invalid_base_revision"`.
+- **Without a `base_revision`,** the batch is checked against the project as it is now.
+
+**No MCP?** `mesh author ops | read | apply | propose | status` does the same from a command line, with JSON in and out.
+
+**Older tools.** `apply_ops` still takes its operation types. On a Mesh Studio project, `add_entity_from_prefab`, `delete_entity`, `set_behaviour_params` and `paint_tiles` now go through this same validated path (and become a proposal while Studio is open). The `live_*` tools serve the legacy editor. Against Mesh Studio, `live_accept_proposal` is refused, because only the person accepts.
 
 ## Other MCP Clients
 

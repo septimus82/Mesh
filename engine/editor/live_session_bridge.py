@@ -248,8 +248,13 @@ class EditorLiveSessionBridge:
                             "session_id": bridge.session_id,
                             "workspace_root": str(bridge.workspace_root),
                             "current_scene_path": bridge._current_scene_path(),
+                            "host": str(getattr(bridge.editor, "host_kind", "legacy_editor")),
                         }
                     )
+                    return
+                if path == "/live/proposal" and hasattr(bridge.editor, "proposal_status"):
+                    proposal_id = parse_qs(parsed.query).get("id", [""])[0]
+                    self._send_json(bridge._enqueue(lambda: bridge.editor.proposal_status(proposal_id)))
                     return
                 if path == "/live/read_scene":
                     compact = _truthy(parse_qs(parsed.query).get("compact", ["false"])[0])
@@ -305,12 +310,21 @@ class EditorLiveSessionBridge:
         return work.result or {"ok": False, "mode": "live_editor", "reason": "empty_result"}
 
     def _stage_proposal(self, payload: dict[str, Any]) -> dict[str, Any]:
-        ops = payload.get("ops")
+        ops = payload.get("changes", payload.get("ops"))
         if not isinstance(ops, list):
             return {"ok": False, "mode": "live_editor", "reason": "invalid_request", "message": "ops must be a list"}
-        proposal = self.editor.stage_proposal(ops)
+        # A host that takes the whole request (Mesh Studio: title, base_revision) gets it, and may refuse.
+        stage_payload = getattr(self.editor, "stage_proposal_payload", None)
+        proposal = stage_payload(payload) if callable(stage_payload) else self.editor.stage_proposal(ops)
+        if isinstance(proposal, dict):
+            return proposal
         proposal_id = uuid.uuid4().hex
+        if hasattr(proposal, "proposal_id"):
+            proposal.proposal_id = proposal_id
         self._proposals[proposal_id] = proposal
+        view = getattr(proposal, "view", None)
+        if callable(view):  # Mesh Studio: its own description of the proposal
+            return {"ok": True, "mode": "live_studio", "proposal_id": proposal_id, "proposal": view()}
         return {
             "ok": True,
             "mode": "live_editor",

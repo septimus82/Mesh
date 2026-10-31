@@ -1,0 +1,3 @@
+FAILED tests/test_interaction_pick_interactable.py::test_a_campfire_without_a_picture_can_be_talked_to_but_logic_only_objects_cannot
+FAILED tests/test_interaction_pick_interactable.py::test_a_campfire_its_show_when_flags_hide_cannot_be_talked_to
+2 failed, 4 passed in 3.53s

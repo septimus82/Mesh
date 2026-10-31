@@ -1,0 +1,86 @@
+{
+ "panel_before": [
+  "40 x 30 m (1 m is a tile)."
+ ],
+ "expanded_message": "The room is now 48 x 36 m: 8 m more to the east, 6 m more to the north; everything in it stayed where it was. Undo puts it back.",
+ "content_kept": true,
+ "panel_after": [
+  "48 x 36 m (1 m is a tile)."
+ ],
+ "map_file_before_save": [
+  40,
+  30
+ ],
+ "undone": {
+  "width": 40,
+  "depth": 30,
+  "expandable": true,
+  "why": null
+ },
+ "redone": {
+  "width": 48,
+  "depth": 36,
+  "expandable": true,
+  "why": null
+ },
+ "saved": "Saved 2 file(s).",
+ "on_disk": {
+  "ground_to": [
+   1536.0,
+   1152.0
+  ],
+  "bounds": [
+   0.0,
+   0.0,
+   1536.0,
+   1152.0
+  ],
+  "world": [
+   1536.0,
+   1152.0
+  ],
+  "tilemap": [
+   48,
+   36
+  ],
+  "map_file": [
+   48,
+   36
+  ],
+  "map_file_layers": [
+   [
+    48,
+    36,
+    1728
+   ]
+  ]
+ },
+ "reopened": {
+  "size": {
+   "width": 48,
+   "depth": 36,
+   "expandable": true,
+   "why": null
+  },
+  "unsaved": []
+ },
+ "walk": {
+  "world_bounds_walking": true,
+  "lane_y": 96,
+  "start_x": 1200.0,
+  "end_x": 1535.0,
+  "half_width": 9.5,
+  "ground_east_edge": 1536.0,
+  "tilemap_size": [
+   48,
+   36
+  ],
+  "camera_bounds": [
+   0.0,
+   0.0,
+   1536.0,
+   1152.0
+  ],
+  "camera_target_x": 1133.1
+ }
+}

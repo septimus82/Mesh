@@ -1,0 +1,36 @@
+{
+ "gl": {
+  "version": [
+   3,
+   3
+  ],
+  "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+  "max_texture": 32768
+ },
+ "ortho": false,
+ "occlusion": {
+  "front": {
+   "visible": 3864,
+   "total": 3864,
+   "share": 1.0
+  },
+  "corner": {
+   "visible": 2100,
+   "total": 2440,
+   "share": 0.861
+  },
+  "behind": {
+   "visible": 0,
+   "total": 2236,
+   "share": 0.0
+  }
+ },
+ "villager_on_platform": {
+  "visible": 3531,
+  "total": 3531
+ },
+ "frame_ms": {
+  "lab_scene": 1.819,
+  "25_outposts_300_characters": 12.145
+ }
+}

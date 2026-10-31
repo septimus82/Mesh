@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
 from math import hypot
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import engine.optional_arcade as optional_arcade
 from engine.swallowed_exceptions import _log_swallow
@@ -23,6 +24,8 @@ WORLD_SFX_PROFILES: Dict[str, Dict[str, float | bool]] = {
 WORLD_SFX_OCCLUDED_VOLUME_MUL: float = 0.35
 WORLD_SFX_OCCLUDED_PAN_MUL: float = 0.4
 _HOT_RELOAD_AUDIO_EXTENSIONS: tuple[str, ...] = (".wav", ".ogg", ".mp3")
+BUSES: tuple[str, ...] = ("music", "ambience", "sfx")  # each scaled by the master volume
+MAX_FADING_TRACKS = 3  # tracks still fading out; older ones are cut, so rapid room changes can't pile up players
 
 
 def _as_xy(pos: Any) -> tuple[float, float] | None:
@@ -156,21 +159,32 @@ class MusicPlaybackSnapshot:
 
 
 class AudioManager:
-    """Thin audio facade that caches short sounds and manages music playback."""
+    """Thin audio facade that caches short sounds and manages music and ambience playback.
+
+    Three buses, each scaled by the master volume: ``music`` (the soundtrack), ``ambience`` (persistent
+    environmental loops, keyed so a room loaded again doesn't start a second copy) and ``sfx`` (one-shot sounds).
+    Changing a volume or muting applies at once to the music and ambience playing (nothing restarts); a one-shot
+    sound effect takes its bus's level when it starts.
+
+    Music changes are real crossfades: the new track starts while the old one fades out, both advance, and the
+    old one's player is released once silent. The same track asked for again keeps playing from where it is."""
 
     def __init__(self) -> None:
+        # The last positional sounds and how loud they played: for diagnostics and verification.
+        self.recent_plays: deque[dict[str, Any]] = deque(maxlen=32)
         self._sounds: Dict[str, optional_arcade.arcade.Sound] = {}
         self._muffled_variant_cache: Dict[str, str | None] = {}
-        self._music: Optional[optional_arcade.arcade.Sound] = None
-        self._music_player: Optional[Any] = None
         self.master_volume: float = 1.0
-        self.sfx_volume: float = 1.0
         self.music_volume: float = 1.0
-        self._music_base_volume: float = 1.0
-        self._music_path: str | None = None
-        self._music_loop: bool = True
-        self._music_transition: _MusicTransition | None = None
-        self._music_transition_scale: float = 1.0
+        self.ambience_volume: float = 1.0
+        self.sfx_volume: float = 1.0
+        self._muted: set[str] = set()  # "master" and/or bus names; their volumes are kept for unmuting
+        self._music_track: _Track | None = None  # the music playing (or fading in)
+        self._fading: list[_Track] = []  # tracks fading out (music or ambience), released once silent
+        self._loops: Dict[str, _Track] = {}  # ambience loops by key
+        self._unplayable: set[str] = set()  # paths that failed to load: logged once, not retried until reloaded
+        self.released_players = 0  # players stopped and handed back to the backend (diagnostics)
+        self.scene_music = True  # rooms set the music as they're entered (Mesh Studio's editor turns this off)
 
     # ------------------------------------------------------------------
     # Cache helpers
@@ -180,6 +194,8 @@ class AudioManager:
         sound = self._sounds.get(path)
         if sound is not None:
             return sound
+        if path in self._unplayable:
+            return None  # (logged once: a missing footstep would otherwise log on every step)
 
         try:
             resolved = resolve_path(path)
@@ -189,13 +205,15 @@ class AudioManager:
             return sound
         except Exception as exc:  # noqa: BLE001  # REASON: audio fallback isolation
             _log_swallow("AUDO-003", "engine.audio blanket exception fallback")
-            logger.error("Failed to load sound '%s': %s", path, exc)
+            self._unplayable.add(path)
+            logger.error("Failed to load sound '%s' (not tried again until it changes): %s", path, exc)
             return None
 
     def clear_cache(self) -> None:
         """Clear cached sounds and stop any music."""
         self._sounds.clear()
         self._muffled_variant_cache.clear()
+        self._unplayable.clear()
         self.stop_music()
         logger.info("Cleared audio cache")
 
@@ -298,6 +316,7 @@ class AudioManager:
 
         if not changed_norm:
             return (0, 0)
+        self._unplayable.clear()  # a track that failed to load may load now
 
         reloaded = 0
         failed = 0
@@ -324,50 +343,65 @@ class AudioManager:
     # High-level API
     # ------------------------------------------------------------------
     def set_master_volume(self, volume: float) -> None:
-        """Adjust the global volume scalar for both sounds and music."""
-        try:
-            value = float(volume)
-        except Exception:
-            _log_swallow("AUDO-009", "engine.audio blanket exception fallback")
-            value = 1.0
-        self.master_volume = max(0.0, min(value, 1.0))
-        self._update_music_volume()
+        """Adjust the global volume scalar for every bus."""
+        self.master_volume = _clamp01(volume, "AUDO-009")
+        self._apply_volumes()
 
     def set_sfx_volume(self, volume: float) -> None:
         """Adjust the volume scalar for sound effects."""
-        try:
-            value = float(volume)
-        except Exception:
-            _log_swallow("AUDO-010", "engine.audio blanket exception fallback")
-            value = 1.0
-        self.sfx_volume = max(0.0, min(value, 1.0))
+        self.sfx_volume = _clamp01(volume, "AUDO-010")
 
     def set_music_volume(self, volume: float) -> None:
         """Adjust the volume scalar for music."""
-        try:
-            value = float(volume)
-        except Exception:
-            _log_swallow("AUDO-011", "engine.audio blanket exception fallback")
-            value = 1.0
-        self.music_volume = max(0.0, min(value, 1.0))
-        self._update_music_volume()
+        self.music_volume = _clamp01(volume, "AUDO-011")
+        self._apply_volumes()
 
-    def _update_music_volume(self) -> None:
-        if self._music_player is not None:
-            try:
-                # Final volume = track_base * music_category * master
-                final = (
-                    self._music_base_volume
-                    * self.music_volume
-                    * self.master_volume
-                    * self._music_transition_scale
-                )
-                self._music_player.volume = final
-            except Exception as exc:  # noqa: BLE001  # REASON: audio fallback isolation
-                _log_swallow("AUDO-012", "engine.audio blanket exception fallback")
-                if not getattr(self, "_mesh_music_volume_error_logged", False):
-                    logger.error("Failed to set music volume: %s", exc)
-                    setattr(self, "_mesh_music_volume_error_logged", True)
+    def set_ambience_volume(self, volume: float) -> None:
+        """Adjust the volume scalar for ambience loops."""
+        self.ambience_volume = _clamp01(volume, "AUDO-018")
+        self._apply_volumes()
+
+    def set_muted(self, muted: bool, bus: str = "master") -> None:
+        """Mute or unmute everything (``"master"``) or one bus. Volumes are kept: unmuting restores them."""
+        if bus != "master" and bus not in BUSES:
+            raise ValueError(f"unknown audio bus {bus!r} (one of: master, {', '.join(BUSES)})")
+        if muted:
+            self._muted.add(bus)
+        else:
+            self._muted.discard(bus)
+        self._apply_volumes()
+
+    def is_muted(self, bus: str = "master") -> bool:
+        return bus in self._muted
+
+    def bus_gain(self, bus: str) -> float:
+        """What a bus's sounds are multiplied by: its volume times the master volume, 0 while muted."""
+        if "master" in self._muted or bus in self._muted:
+            return 0.0
+        return self.master_volume * float(getattr(self, f"{bus}_volume"))
+
+    def _apply_volumes(self) -> None:
+        for track in self._tracks():
+            self._set_player_volume(track)
+
+    def _set_pan(self, track: _Track, pan: float | None) -> None:
+        """Pan a player as Arcade does (a position on the listener's left-right axis; a mono sound pans fully)."""
+        if pan is None or (track.pan is not None and abs(pan - track.pan) < 0.005):
+            return
+        track.pan = max(-1.0, min(1.0, float(pan)))
+        try:
+            track.player.position = (track.pan, 0.0, (1.0 - track.pan * track.pan) ** 0.5)
+        except Exception:  # noqa: BLE001  # REASON: audio fallback isolation (a stand-in player in tests)
+            _log_swallow("AUDO-022", "engine.audio blanket exception fallback", once=True)
+
+    def _set_player_volume(self, track: _Track) -> None:
+        try:
+            track.player.volume = track.volume * track.scale * self.bus_gain(track.bus)
+        except Exception as exc:  # noqa: BLE001  # REASON: audio fallback isolation
+            _log_swallow("AUDO-012", "engine.audio blanket exception fallback")
+            if not getattr(self, "_mesh_music_volume_error_logged", False):
+                logger.error("Failed to set %s volume: %s", track.bus, exc)
+                setattr(self, "_mesh_music_volume_error_logged", True)
 
     def play_sound(self, path: str, volume: float = 1.0) -> None:
         sound = self.get_sound(path)
@@ -375,7 +409,7 @@ class AudioManager:
             return
         try:
             base_volume = max(0.0, min(float(volume), 1.0))
-            final_volume = base_volume * self.sfx_volume * self.master_volume
+            final_volume = base_volume * self.bus_gain("sfx")
             if final_volume > 0:
                 optional_arcade.arcade.play_sound(sound, volume=final_volume)
         except Exception as exc:  # noqa: BLE001  # REASON: audio fallback isolation
@@ -401,7 +435,7 @@ class AudioManager:
         base volume semantics without spatial attenuation.
         """
         base = max(0.0, min(float(base_volume), 1.0))
-        final_volume = base * self.sfx_volume * self.master_volume
+        final_volume = base * self.bus_gain("sfx")
 
         world_xy = _as_xy(world_pos)
         listener_xy = _as_xy(listener_pos) if listener_pos is not None else None
@@ -424,6 +458,9 @@ class AudioManager:
                 if is_occluded:
                     pan_value *= float(WORLD_SFX_OCCLUDED_PAN_MUL)
 
+        self.recent_plays.append({"path": path, "volume": round(final_volume, 4), "pan": round(pan_value, 4),
+                                  "distance": round(hypot(dx, dy), 1) if world_xy and listener_xy else None,
+                                  "occluded": is_occluded})
         if final_volume <= 0.0:
             return
         sound_path = self._select_occluded_sound_path(path) if is_occluded else path
@@ -475,28 +512,24 @@ class AudioManager:
             pan=bool(spatial_kwargs.get("pan", True)),
         )
 
+    # ------------------------------------------------------------------
+    # Music
+    # ------------------------------------------------------------------
+    @property
+    def music_path(self) -> str | None:
+        """The track playing or fading in (None: no music, or fading to silence)."""
+        return self._music_track.path if self._music_track is not None else None
+
     def play_music(self, path: str, volume: float = 1.0, loop: bool = True) -> None:
+        """Play ``path`` from its start at once (anything playing stops; no fade)."""
         self.stop_music()
-        self._music_transition = None
-        self._music_transition_scale = 1.0
-        self._play_music_internal(path, volume=volume, loop=loop, start_volume_scale=1.0)
+        self.transition_music(path, fade_out_s=0.0, fade_in_s=0.0, volume=volume, loop=loop)
 
     def snapshot_music(self) -> MusicPlaybackSnapshot:
-        transition = self._music_transition
-        if transition is not None:
-            if transition.phase == "out":
-                if transition.target_path:
-                    return MusicPlaybackSnapshot(
-                        path=str(transition.target_path),
-                        volume=float(transition.target_volume),
-                        loop=bool(transition.loop),
-                    )
-                return MusicPlaybackSnapshot(path=None, volume=0.0, loop=False)
-        return MusicPlaybackSnapshot(
-            path=self._music_path,
-            volume=float(self._music_base_volume),
-            loop=bool(self._music_loop),
-        )
+        track = self._music_track
+        if track is None:
+            return MusicPlaybackSnapshot(path=None, volume=0.0, loop=False)
+        return MusicPlaybackSnapshot(path=track.path, volume=float(track.volume), loop=bool(track.loop))
 
     def restore_music(
         self,
@@ -505,22 +538,8 @@ class AudioManager:
         fade_out_s: float = 0.25,
         fade_in_s: float = 0.25,
     ) -> None:
-        if snapshot.path:
-            self.transition_music(
-                snapshot.path,
-                fade_out_s=fade_out_s,
-                fade_in_s=fade_in_s,
-                volume=snapshot.volume,
-                loop=snapshot.loop,
-            )
-            return
-        self.transition_music(
-            "",
-            fade_out_s=fade_out_s,
-            fade_in_s=fade_in_s,
-            volume=0.0,
-            loop=False,
-        )
+        self.transition_music(snapshot.path or "", fade_out_s=fade_out_s, fade_in_s=fade_in_s,
+                              volume=snapshot.volume if snapshot.path else 0.0, loop=snapshot.loop)
 
     def transition_music(
         self,
@@ -531,145 +550,201 @@ class AudioManager:
         volume: float = 1.0,
         loop: bool = True,
     ) -> None:
-        target_path = str(path or "").strip()
-        fade_out = max(0.0, float(fade_out_s))
-        fade_in = max(0.0, float(fade_in_s))
-        target_volume = max(0.0, min(float(volume), 1.0))
-        if not target_path and self._music_player is None:
-            return
+        """Change the music to ``path`` (empty: silence), crossfading: the playing track fades out over
+        ``fade_out_s`` while the new one starts and fades in over ``fade_in_s``, both playing meanwhile.
 
-        if self._music_player is None:
-            if not target_path:
-                return
-            self._music_transition = _MusicTransition(
-                phase="in",
-                timer=0.0,
-                fade_out=0.0,
-                fade_in=fade_in,
-                target_path=None,
-                target_volume=target_volume,
-                loop=loop,
-            )
-            self._music_transition_scale = 0.0
-            self._play_music_internal(target_path, volume=target_volume, loop=loop, start_volume_scale=0.0)
+        - The track already playing (or fading in): it keeps playing, its volume eased to ``volume``.
+        - A track still fading out (straight back through a door): it fades back in from there, not restarted.
+        - A track that can't be loaded: logged once, and the music playing carries on."""
+        target = str(path or "").strip()
+        level = _clamp01(volume, "AUDO-019")
+        current = self._music_track
+        if target and current is not None and current.path == target:
+            current.volume, current.loop = level, bool(loop)
+            _set_loop(current.player, loop)
+            current.fade_to(1.0, fade_in_s)
+            self._set_player_volume(current)
             return
-
-        self._music_transition = _MusicTransition(
-            phase="out",
-            timer=0.0,
-            fade_out=fade_out,
-            fade_in=fade_in,
-            target_path=target_path or None,
-            target_volume=target_volume,
-            loop=loop,
-        )
+        incoming = next((t for t in self._fading if t.bus == "music" and t.path == target), None) if target else None
+        if incoming is not None:
+            self._fading.remove(incoming)
+            incoming.volume, incoming.loop = level, bool(loop)
+            _set_loop(incoming.player, loop)
+        elif target:
+            incoming = self._start(target, "music", level, loop)
+            if incoming is None:
+                return  # (logged) the music playing carries on
+            incoming.scale = 0.0
+        if current is not None:
+            current.fade_to(0.0, fade_out_s)
+            self._fading.append(current)
+        self._music_track = incoming
+        if incoming is not None:
+            incoming.fade_to(1.0, fade_in_s)
+        self._settle()
 
     def update(self, dt: float) -> None:
-        transition = self._music_transition
-        if transition is None:
+        """Advance fades (call every frame, paused or not) and release tracks that have faded out."""
+        if self._music_track is None and not self._fading and not self._loops:
             return
         dt = max(0.0, float(dt))
-        if transition.phase == "out":
-            if transition.fade_out <= 0.0:
-                done = True
-            else:
-                transition.timer += dt
-                progress = min(1.0, transition.timer / transition.fade_out)
-                self._music_transition_scale = 1.0 - progress
-                self._update_music_volume()
-                done = progress >= 1.0
-            if done:
-                self._stop_music_internal(clear_transition=False)
-                if transition.target_path:
-                    transition.phase = "in"
-                    transition.timer = 0.0
-                    self._music_transition_scale = 0.0
-                    self._play_music_internal(
-                        transition.target_path,
-                        volume=transition.target_volume,
-                        loop=transition.loop,
-                        start_volume_scale=0.0,
-                    )
-                else:
-                    self._music_transition = None
-                    self._music_transition_scale = 1.0
-            return
-
-        if transition.phase == "in":
-            if transition.fade_in <= 0.0:
-                done = True
-            else:
-                transition.timer += dt
-                progress = min(1.0, transition.timer / transition.fade_in)
-                self._music_transition_scale = progress
-                self._update_music_volume()
-                done = progress >= 1.0
-            if done:
-                self._music_transition = None
-                self._music_transition_scale = 1.0
-                self._update_music_volume()
+        for track in self._tracks():
+            track.advance(dt)
+        self._settle()
 
     def stop_music(self) -> None:
-        self._stop_music_internal(clear_transition=True)
+        """Stop all music at once (the playing track and any fading out), releasing their players."""
+        if self._music_track is not None:
+            self._release(self._music_track)
+            self._music_track = None
+        for track in [t for t in self._fading if t.bus == "music"]:
+            self._fading.remove(track)
+            self._release(track)
 
-    def _stop_music_internal(self, *, clear_transition: bool) -> None:
-        if self._music_player is not None:
-            try:
-                self._music_player.pause()
-            except Exception as exc:  # noqa: BLE001  # REASON: audio fallback isolation
-                _log_swallow("AUDO-015", "engine.audio blanket exception fallback")
-                if not getattr(self, "_mesh_music_stop_error_logged", False):
-                    logger.error("Failed to stop music: %s", exc)
-                    setattr(self, "_mesh_music_stop_error_logged", True)
-        if self._music_player is not None or self._music is not None:
-            logger.info("Stopped music")
-        self._music_player = None
-        self._music = None
-        self._music_base_volume = 1.0
-        self._music_path = None
-        self._music_loop = True
-        if clear_transition:
-            self._music_transition = None
-            self._music_transition_scale = 1.0
+    # ------------------------------------------------------------------
+    # Ambience (persistent loops; Milestone 21B's emitters build on these)
+    # ------------------------------------------------------------------
+    def play_loop(self, key: str, path: str, *, volume: float = 1.0, fade_in_s: float = 0.0, pan: float | None = None,
+                  loop: bool = True) -> bool:
+        """Keep the ambience loop ``key`` playing ``path`` at ``volume``. Asked again with the same path (a room
+        loaded again, or a sound emitter every frame as the listener moves), it keeps playing: only its volume and
+        ``pan`` change (a fade under way carries on), never a second copy. One still fading out after ``stop_loop``
+        fades back in from where it is. Another path crossfades to it. ``pan``: -1 (left) to 1 (right); None leaves
+        it as it is (centred to start). ``loop`` False: it plays once. False if the file can't be played."""
+        level = _clamp01(volume, "AUDO-020")
+        current = self._loops.get(key)
+        if current is not None and current.path == path:
+            current.volume = level
+            self._set_pan(current, pan)
+            self._set_player_volume(current)
+            return True
+        track = next((t for t in self._fading if t.bus == "ambience" and t.key == key and t.path == path), None)
+        if track is not None:  # back in range before it had faded away
+            self._fading.remove(track)
+            track.volume = level
+        else:
+            track = self._start(path, "ambience", level, loop)
+            if track is None:
+                return False
+            track.key, track.scale = key, 0.0
+        track.fade_to(1.0, fade_in_s)
+        self._set_pan(track, pan)
+        if current is not None:
+            current.fade_to(0.0, fade_in_s)
+            self._fading.append(current)
+        self._loops[key] = track
+        self._settle()
+        return True
 
-    def _play_music_internal(self, path: str, *, volume: float, loop: bool, start_volume_scale: float) -> None:
+    def stop_loop(self, key: str, *, fade_out_s: float = 0.0) -> None:
+        track = self._loops.pop(key, None)
+        if track is not None:
+            track.fade_to(0.0, fade_out_s)
+            self._fading.append(track)
+            self._settle()
+
+    def loops(self) -> dict[str, str]:
+        """The ambience loops playing: key -> path."""
+        return {key: track.path for key, track in self._loops.items()}
+
+    # ------------------------------------------------------------------
+    # Lifecycle and diagnostics
+    # ------------------------------------------------------------------
+    def shutdown(self) -> None:
+        """Stop everything and release every player (the game is closing)."""
+        self.stop_music()
+        for track in [*self._loops.values(), *self._fading]:
+            self._release(track)
+        self._loops.clear()
+        self._fading.clear()
+
+    def diagnostics(self) -> dict[str, Any]:
+        return {"music": self.music_path, "fading_out": [t.path for t in self._fading], "loops": self.loops(),
+                "live_players": len(self._tracks()), "released_players": self.released_players,
+                "volumes": {"master": self.master_volume, **{b: getattr(self, f"{b}_volume") for b in BUSES}},
+                "muted": sorted(self._muted), "unplayable": sorted(self._unplayable)}
+
+    def _tracks(self) -> list[_Track]:
+        return [*([self._music_track] if self._music_track is not None else []), *self._loops.values(), *self._fading]
+
+    def _settle(self) -> None:
+        """Apply fades to players; release tracks faded out, and the oldest beyond ``MAX_FADING_TRACKS``."""
+        for track in [t for t in self._fading if t.scale <= 0.0]:
+            self._fading.remove(track)
+            self._release(track)
+        while len(self._fading) > MAX_FADING_TRACKS:
+            self._release(self._fading.pop(0))
+        self._apply_volumes()
+
+    def _start(self, path: str, bus: str, volume: float, loop: bool) -> _Track | None:
+        if path in self._unplayable:
+            return None
         try:
-            resolved = resolve_path(path)
-            music = optional_arcade.arcade.Sound(resolved, streaming=True)
+            sound = optional_arcade.arcade.Sound(resolve_path(path), streaming=True)
+            player = sound.play(volume=0.0, loop=loop)
         except Exception as exc:  # noqa: BLE001  # REASON: audio fallback isolation
             _log_swallow("AUDO-016", "engine.audio blanket exception fallback")
-            logger.error("Failed to load music '%s': %s", path, exc)
-            return
+            self._unplayable.add(path)
+            logger.error("Can't play %s '%s' (not tried again until it changes): %s", bus, path, exc)
+            return None
+        logger.info("Playing %s '%s' (loop=%s)", bus, path, loop)
+        return _Track(path=path, bus=bus, player=player, volume=volume, loop=bool(loop))
 
-        self._music = music
-        self._music_base_volume = max(0.0, min(float(volume), 1.0))
-        self._music_loop = bool(loop)
-        self._music_path = str(path)
-        self._music_transition_scale = max(0.0, min(float(start_volume_scale), 1.0))
+    def _release(self, track: _Track) -> None:
         try:
-            final_volume = (
-                self._music_base_volume
-                * self.music_volume
-                * self.master_volume
-                * self._music_transition_scale
-            )
-            self._music_player = music.play(volume=final_volume, loop=loop)
-            logger.info("Playing music '%s' (loop=%s)", path, loop)
-        except Exception as exc:  # noqa: BLE001  # REASON: audio fallback isolation
-            _log_swallow("AUDO-017", "engine.audio blanket exception fallback")
-            logger.error("Failed to play music '%s': %s", path, exc)
-            self._music = None
-            self._music_player = None
-            self._music_path = None
-            self._music_loop = True
+            optional_arcade.arcade.stop_sound(track.player)  # pause, delete, and drop arcade's reference
+        except Exception:  # noqa: BLE001  # REASON: audio fallback isolation (a stand-in player in tests)
+            _log_swallow("AUDO-015", "engine.audio blanket exception fallback", once=True)
+            try:
+                track.player.pause()
+            except Exception:  # noqa: BLE001  # REASON: audio fallback isolation
+                _log_swallow("AUDO-017", "engine.audio blanket exception fallback", once=True)
+        self.released_players += 1
+        logger.debug("Stopped %s '%s'", track.bus, track.path)
+
+
+def _clamp01(value: Any, code: str) -> float:
+    try:
+        number = float(value)
+    except Exception:
+        _log_swallow(code, "engine.audio blanket exception fallback")
+        return 1.0
+    return max(0.0, min(number, 1.0)) if number == number else 1.0
+
+
+def _set_loop(player: Any, loop: bool) -> None:
+    try:
+        player.loop = bool(loop)
+    except Exception:  # noqa: BLE001  # REASON: audio fallback isolation
+        _log_swallow("AUDO-021", "engine.audio blanket exception fallback", once=True)
 
 
 @dataclass
-class _MusicTransition:
-    phase: str
-    timer: float
-    fade_out: float
-    fade_in: float
-    target_path: str | None
-    target_volume: float
+class _Track:
+    """One streamed playback (a music track, an ambience loop): its player, its own volume, and its fade."""
+
+    path: str
+    bus: str
+    player: Any
+    volume: float  # its own volume (a room's music_volume), before the bus and master
     loop: bool
+    key: str = ""  # an ambience loop's key
+    pan: float | None = None  # -1 left .. 1 right; None: never set (centred)
+    scale: float = 1.0  # where its fade is, 0..1
+    start: float = 1.0
+    target: float = 1.0
+    duration: float = 0.0
+    elapsed: float = 0.0
+
+    def fade_to(self, target: float, seconds: float) -> None:
+        self.start, self.target, self.elapsed = self.scale, target, 0.0
+        self.duration = max(0.0, float(seconds))
+        if self.duration <= 0.0:
+            self.scale = target
+
+    def advance(self, dt: float) -> None:
+        if self.scale == self.target:
+            return
+        self.elapsed += dt
+        progress = 1.0 if self.duration <= 0.0 else min(1.0, self.elapsed / self.duration)
+        self.scale = self.start + (self.target - self.start) * progress

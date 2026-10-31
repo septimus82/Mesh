@@ -33,23 +33,7 @@ def _run_verify_all(
 
     payload, exit_code = _run_verify_all_payload(repo_root, args)
     if deterministic and artifacts_dir is not None and isinstance(payload, dict):
-        normalized_payload = dict(payload)
-        pytest_fast = normalized_payload.get("pytest_fast")
-        if isinstance(pytest_fast, dict):
-            pytest_fast_norm = dict(pytest_fast)
-            if "total" in pytest_fast_norm:
-                pytest_fast_norm["total"] = 0.0
-            if "top10" in pytest_fast_norm:
-                pytest_fast_norm["top10"] = 0.0
-            normalized_payload["pytest_fast"] = pytest_fast_norm
-        payload = normalized_payload
-        write_json_atomic(
-            artifacts_dir / "verify_all_summary.json",
-            normalized_payload,
-            indent=2,
-            sort_keys=True,
-            trailing_newline=True,
-        )
+        payload = _write_deterministic_verify_all_summary(artifacts_dir, payload)
     outputs = {
         "verify_all_ok": bool(payload.get("summary", {}).get("ok")) if isinstance(payload, dict) else False,
         "verify_all_summary": (artifacts_dir / "verify_all_summary.json").as_posix()
@@ -57,6 +41,27 @@ def _run_verify_all(
         else None,
     }
     return int(exit_code), outputs
+
+
+def _write_deterministic_verify_all_summary(artifacts_dir: Path, payload: dict) -> dict:
+    """``payload`` with its timings zeroed, written as ``verify_all_summary.json`` in ``artifacts_dir`` (a release
+    check's deterministic summary, whether its verify-all ran here or was reused: F13-B)."""
+    normalized_payload = dict(payload)
+    pytest_fast = normalized_payload.get("pytest_fast")
+    if isinstance(pytest_fast, dict):
+        pytest_fast_norm = dict(pytest_fast)
+        for key in ("slowest_entries_seconds", "slowest10_seconds", "wall_seconds"):
+            if key in pytest_fast_norm:
+                pytest_fast_norm[key] = 0.0
+        normalized_payload["pytest_fast"] = pytest_fast_norm
+    write_json_atomic(
+        artifacts_dir / "verify_all_summary.json",
+        normalized_payload,
+        indent=2,
+        sort_keys=True,
+        trailing_newline=True,
+    )
+    return normalized_payload
 
 
 def _run_verify_all_payload(repo_root: Path, args: argparse.Namespace) -> tuple[dict, int]:
@@ -100,7 +105,7 @@ def _run_assets_audit(repo_root: Path, out_path: Path) -> tuple[int, dict[str, A
 
 
 def _run_export_build(repo_root: Path, out_dir: Path, *, deterministic: bool = False) -> tuple[int, dict[str, Any]]:
-    from tooling.export_bundle import build_bundle
+    from engine.tooling.export_bundle import build_bundle
 
     exit_code, manifest = build_bundle(
         repo_root,

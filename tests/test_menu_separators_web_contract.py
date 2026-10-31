@@ -48,7 +48,7 @@ def test_web_no_double_separators_with_suppressed_gap(monkeypatch: pytest.Monkey
     custom["View"] = (
         "editor.entity_panels.toggle",
         "|",
-        "app.export_web_demo",
+        "app.quit",  # suppressed on the web build
         "|",
         "editor.ghost_originals.toggle",
     )
@@ -63,4 +63,4 @@ def test_non_web_separators_present(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("PYGBAG", raising=False)
     ids = _group_ids(_build_groups(), "File")
     separators = [item_id for item_id in ids if "separator" in item_id]
-    assert len(separators) == 2
+    assert len(separators) == 1  # Save / Scene Browser | Quit (the inert Export Web Demo and its group are gone)

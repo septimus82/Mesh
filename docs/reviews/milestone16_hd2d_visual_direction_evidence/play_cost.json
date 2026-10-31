@@ -1,0 +1,13 @@
+{
+  "studio_driver_frame_ms_median": 12.02,
+  "studio_driver_frame_ms_median_with_tracemalloc": 18.78,
+  "split_in_studio_play": {
+    "update_ms": 1.14,
+    "draw_cpu_ms": 7.72,
+    "hd2d_renderer_cpu_ms": 4.75,
+    "gpu_wait_ms": 1.6,
+    "frame_ms": 10.58,
+    "frame_ms_p95": 15.38,
+    "readback_ms": 5.04
+  }
+}

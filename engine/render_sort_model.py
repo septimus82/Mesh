@@ -3,11 +3,14 @@
 Supports HD-2D rendering with:
 - render_layer: coarse ordering (lower renders first / behind)
 - depth_z: fine-grained depth within a layer (for explicit_z mode)
-- y-sort: automatic depth by y-position (lower y = further back)
+- y-sort: automatic depth by where things stand (higher up the screen = further back)
 
 Sort modes:
-- 'y_sort' (default): order by render_layer, then by -center_y (higher y drawn later)
-- 'explicit_z': order by render_layer, then by depth_z
+- 'y_sort' (default): order by render_layer, then by depth: whatever stands lower on the
+  screen is nearer and drawn later. World y points up (arcade), so depth is -y, and for
+  sprites the y of their bottom edge (their feet), so a tall tree and a short person compare
+  where they touch the ground, not by their centres.
+- 'explicit_z': order by render_layer, then by depth_z (then depth, as above)
 """
 
 from __future__ import annotations
@@ -15,8 +18,9 @@ from __future__ import annotations
 from typing import Any, Tuple, Union
 
 # Type alias for the sort key tuple
-# y_sort: (render_layer, y_pos, entity_id)
-# explicit_z: (render_layer, depth_z, y_pos, entity_id)
+# y_sort: (render_layer, depth, entity_id)
+# explicit_z: (render_layer, depth_z, depth, entity_id)
+# where depth = -y of where the entity stands (lower on screen = nearer = larger)
 RenderSortKey = Union[Tuple[int, float, str], Tuple[int, float, float, str]]
 
 
@@ -43,16 +47,11 @@ def compute_render_sort_key(
 
     if sort_mode == "explicit_z":
         # Use depth_z directly; lower depth_z = further back
-        # y_pos as secondary tie-breaker, then entity_id
+        # depth (as in y_sort) breaks ties, then entity_id
         depth_z = _get_float(entity_dict, "depth_z", default=0.0)
-        y_pos = _get_y_position(entity_dict)
-        return (render_layer, depth_z, y_pos, entity_id)
+        return (render_layer, depth_z, -_get_y_position(entity_dict), entity_id)
 
-    # y_sort mode (default): use y position
-    # Convention: lower y = further back (renders first), higher y = closer (renders last)
-    # This matches typical 2D top-down or isometric games where higher y = foreground
-    y_pos = _get_y_position(entity_dict)
-    return (render_layer, y_pos, entity_id)
+    return (render_layer, -_get_y_position(entity_dict), entity_id)
 
 
 def sort_entities_for_render(
@@ -97,25 +96,11 @@ def compute_sprite_render_sort_key(
     # Extract entity_id
     entity_id = _get_entity_id(entity_data)
 
+    depth = -sprite_feet_y(sprite, entity_data)
     if sort_mode == "explicit_z":
         depth_z = _get_float(entity_data, "depth_z", default=0.0)
-        # Get y position for secondary tie-breaking
-        y_pos = getattr(sprite, "center_y", None)
-        if y_pos is None:
-            y_pos = _get_y_position(entity_data)
-        else:
-            y_pos = float(y_pos)
-        return (render_layer, depth_z, y_pos, entity_id)
-
-    # y_sort mode: use sprite's center_y if available
-    # Lower y = renders first (back), higher y = renders last (front)
-    y_pos = getattr(sprite, "center_y", None)
-    if y_pos is None:
-        y_pos = _get_y_position(entity_data)
-    else:
-        y_pos = float(y_pos)
-
-    return (render_layer, y_pos, entity_id)
+        return (render_layer, depth_z, depth, entity_id)
+    return (render_layer, depth, entity_id)
 
 
 def sort_sprites_for_render(
@@ -173,6 +158,18 @@ def _get_entity_id(data: dict[str, Any]) -> str:
             return value.strip()
     # Fallback to empty string for determinism
     return ""
+
+
+def sprite_feet_y(sprite: Any, entity_data: dict[str, Any]) -> float:
+    """The y where a sprite stands: its bottom edge, else its centre, else its entity's y."""
+    for attribute in ("bottom", "center_y"):
+        value = getattr(sprite, attribute, None)
+        if value is not None:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                pass
+    return _get_y_position(entity_data)
 
 
 def _get_y_position(data: dict[str, Any]) -> float:

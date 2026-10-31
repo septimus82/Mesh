@@ -5,7 +5,7 @@ import json
 import os
 import threading
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 from engine.logging_tools import get_logger
 
@@ -237,23 +237,29 @@ class ToolExecutor:
     def execute(self, name: str, payload: dict[str, Any]) -> dict[str, Any]:
         if name == "read_live_scene":
             compact = bool(payload.get("compact", False)) if isinstance(payload, dict) else False
-            return self._dispatcher.call_sync(lambda: dict(self._editor.read_live_scene(compact=compact)))
+            return self._run(lambda: dict(self._editor.read_live_scene(compact=compact)))
         if name == "list_prefabs":
-            return self._dispatcher.call_sync(lambda: _list_prefabs(self._editor))
+            return self._run(lambda: _list_prefabs(self._editor))
         if name == "list_entities":
             selected_only = bool(payload.get("selected_only", False)) if isinstance(payload, dict) else False
-            return self._dispatcher.call_sync(lambda: _list_entities(self._editor, selected_only=selected_only))
+            return self._run(lambda: _list_entities(self._editor, selected_only=selected_only))
         if name == "stage_proposal":
             ops = payload.get("ops") if isinstance(payload, dict) else None
             if not isinstance(ops, list):
                 return {"ok": False, "reason": "invalid_request", "message": "ops must be a list"}
-            result = self._dispatcher.call_sync(lambda: _stage_into_inbox(self._editor, ops))
-            dry_run = result.get("dry_run") if isinstance(result.get("dry_run"), dict) else {}
+            result = self._run(lambda: _stage_into_inbox(self._editor, ops))
+            raw_dry_run = result.get("dry_run")
+            dry_run: dict[str, Any] = raw_dry_run if isinstance(raw_dry_run, dict) else {}
             if dry_run.get("ok") is False:
                 result = dict(result)
                 result["ok"] = False
             return result
         return {"ok": False, "reason": "unknown_tool", "message": f"Unsupported tool '{name}'"}
+
+    def _run(self, call: Callable[[], Any]) -> dict[str, Any]:
+        """Run on the editor's thread; every tool answers with a dict."""
+        result = self._dispatcher.call_sync(call)
+        return dict(result) if isinstance(result, dict) else {"ok": False, "reason": "bad_result", "message": repr(result)}
 
 
 class ChatSessionController:
@@ -373,7 +379,8 @@ class ChatSessionController:
                     continue
                 tool_id = str(block.get("id") or "")
                 tool_name = str(block.get("name") or "")
-                tool_input = block.get("input") if isinstance(block.get("input"), dict) else {}
+                raw_input = block.get("input")
+                tool_input: dict[str, Any] = raw_input if isinstance(raw_input, dict) else {}
                 parse_error = block.get("parse_error")
                 if parse_error:
                     result = {
@@ -415,7 +422,8 @@ class ChatSessionController:
     def _content_blocks(self, message: Any) -> list[dict[str, Any]]:
         adapter = getattr(self.client_factory, "content_blocks", None)
         if callable(adapter):
-            return adapter(message)
+            blocks: list[dict[str, Any]] = adapter(message)
+            return blocks
         return ClaudeMessageAdapter.content_blocks(message)
 
     def _assistant_content(self, blocks: list[dict[str, Any]]) -> Any:
@@ -519,7 +527,8 @@ def _coerce_number(value: Any) -> float | int | None:
 def anthropic_tools_to_openai_tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
     translated: list[dict[str, Any]] = []
     for tool in tools:
-        parameters = tool.get("input_schema") if isinstance(tool.get("input_schema"), dict) else {"type": "object"}
+        schema = tool.get("input_schema")
+        parameters: dict[str, Any] = schema if isinstance(schema, dict) else {"type": "object"}
         translated.append(
             {
                 "type": "function",

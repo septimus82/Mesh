@@ -27,7 +27,10 @@ def mock_window():
     # But GameWindow code inside __init__ might access engine.optional_arcade.arcade functions.
 
     import engine.optional_arcade
-    with patch('engine.optional_arcade.arcade'): # Mock the whole arcade module
+    with patch('engine.optional_arcade.arcade') as mock_arcade:  # Mock the whole arcade module...
+        # ...except its key constants: input bindings sort and store real key codes. With mock keys this fixture
+        # only worked when an earlier test had left a mock optional_arcade module in place (found in Milestone 9).
+        mock_arcade.key = arcade.key
         with patch('engine.camera_controller.ArcadeCamera'):
             cfg = EngineConfig()
             window = GameWindow(cfg.width, cfg.height, cfg.title)

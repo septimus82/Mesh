@@ -22,6 +22,9 @@ dev = [
     "mypy==1.19.1",
     "pygbag==0.9.3",
     "pytest>=8.0",
+    # Tests only (GL pixel checks, the glTF lab); Mesh itself never imports it. Without it CI skipped those modules
+    # whole and failed 32 GL tests (#422 H6).
+    "numpy>=2,<3",
 ]
 # Optional: enables the Mesh MCP server (engine.mcp_server) so MCP-capable
 # AI clients can drive the engine. The engine never hard-requires this; the
@@ -54,8 +57,240 @@ zip-safe = false
 [tool.setuptools.packages.find]
 include = ["engine*", "mesh_cli*"]
 
-# Runtime data is included via MANIFEST.in + include-package-data = true
-# See MANIFEST.in for the complete list of included assets
+# Data inside the engine package itself: the JSON schemas every scene, prefab, entity, cutscene and config is
+# validated against (engine.schema_validation), and the typing marker.
+[tool.setuptools.package-data]
+engine = ["schemas/*.json", "py.typed"]
+
+# MANIFEST.in lists the source distribution's data. A wheel only carries files inside packages, so the
+# engine's own files a pip-installed Mesh needs (what new projects copy, the HD-2D starter kit, Mesh Studio's
+# branding and icons, the launcher's template pictures, the default config and monster data) are installed under
+# <prefix>/share/mesh-engine and found by engine.repo_root.bundled_file / bundled_dir.
+# An explicit allow-list: only redistributable files, with their licence notices (docs/packaging.md).
+# Never add animated_player.png, sproutling.png or shelltide.png: their provenance is unverified.
+[tool.setuptools.data-files]
+"share/mesh-engine" = ["config.json"]
+"share/mesh-engine/assets" = ["assets/NOTICE.md"]
+"share/mesh-engine/docs" = ["docs/hd2d_preview.md"]
+"share/mesh-engine/locales" = ["locales/en.json"]  # the game's interface text (engine.i18n)
+"share/mesh-engine/assets/data" = [
+    "assets/data/monster_species.json",
+    "assets/data/monster_moves.json",
+    "assets/data/monster_type_chart.json",
+]
+"share/mesh-engine/assets/music" = ["assets/music/dungeon_theme.wav"]
+"share/mesh-engine/assets/ambience" = [  # Milestone 21B: Mesh Studio's sound library (CC0; assets/NOTICE.md)
+    "assets/ambience/birds_loop.wav",
+    "assets/ambience/forest_loop.wav",
+    "assets/ambience/rain_loop.wav",
+    "assets/ambience/stream_loop.wav",
+    "assets/ambience/wind_loop.wav",
+]
+"share/mesh-engine/assets/sounds" = [
+    "assets/sounds/attack.wav",
+    "assets/sounds/die.wav",
+    "assets/sounds/hit.wav",
+    "assets/sounds/ui_click.wav",
+    "assets/sounds/ui_close.wav",
+    "assets/sounds/ui_hover.wav",
+    "assets/sounds/ui_open.wav",
+]
+"share/mesh-engine/assets/sprites" = [
+    "assets/sprites/door.png",
+    "assets/sprites/starter_hero.png",
+    "assets/sprites/starter_villager.png",
+    "assets/sprites/starter_sign.png",
+    "assets/sprites/hd2d_hero.png",
+    "assets/sprites/hd2d_villager.png",
+    "assets/sprites/hd2d_merchant.png",
+]
+"share/mesh-engine/assets/tilesets" = [
+    "assets/tilesets/starter.json",
+    "assets/tilesets/starter.png",
+]
+"share/mesh-engine/assets/templates" = [
+    "assets/templates/blank.png",
+    "assets/templates/adventure.png",
+    "assets/templates/hd2d_rpg.png",
+]
+"share/mesh-engine/assets/hd2d_starter" = [
+    "assets/hd2d_starter/catalog.json",
+    "assets/hd2d_starter/PROVENANCE.md",
+]
+"share/mesh-engine/assets/hd2d_starter/models" = [
+    "assets/hd2d_starter/models/barrel.glb",
+    "assets/hd2d_starter/models/bridge_6m.glb",
+    "assets/hd2d_starter/models/cottage.glb",
+    "assets/hd2d_starter/models/crate.glb",
+    "assets/hd2d_starter/models/fence_2m.glb",
+    "assets/hd2d_starter/models/interior.glb",
+    "assets/hd2d_starter/models/lamp_post.glb",
+    "assets/hd2d_starter/models/path_2m.glb",
+    "assets/hd2d_starter/models/platform_2m.glb",
+    "assets/hd2d_starter/models/platform_4m.glb",
+    "assets/hd2d_starter/models/roof_4m.glb",
+    "assets/hd2d_starter/models/shop.glb",
+    "assets/hd2d_starter/models/stairs.glb",
+    "assets/hd2d_starter/models/wall_2m.glb",
+]
+"share/mesh-engine/assets/hd2d_starter/previews" = [
+    "assets/hd2d_starter/previews/barrel.png",
+    "assets/hd2d_starter/previews/bridge_6m.png",
+    "assets/hd2d_starter/previews/cottage.png",
+    "assets/hd2d_starter/previews/crate.png",
+    "assets/hd2d_starter/previews/fence_2m.png",
+    "assets/hd2d_starter/previews/interior.png",
+    "assets/hd2d_starter/previews/lamp_post.png",
+    "assets/hd2d_starter/previews/path_2m.png",
+    "assets/hd2d_starter/previews/platform_2m.png",
+    "assets/hd2d_starter/previews/platform_4m.png",
+    "assets/hd2d_starter/previews/roof_4m.png",
+    "assets/hd2d_starter/previews/shop.png",
+    "assets/hd2d_starter/previews/stairs.png",
+    "assets/hd2d_starter/previews/wall_2m.png",
+]
+"share/mesh-engine/assets/hd2d_starter/scatter" = [
+    "assets/hd2d_starter/scatter/boulder.glb",
+    "assets/hd2d_starter/scatter/fallen_branch.glb",
+    "assets/hd2d_starter/scatter/foliage.png",
+    "assets/hd2d_starter/scatter/foliage_motion.png",
+    "assets/hd2d_starter/scatter/rock_medium.glb",
+    "assets/hd2d_starter/scatter/rock_small.glb",
+    "assets/hd2d_starter/scatter/tree_small.glb",
+]
+"share/mesh-engine/assets/hd2d_starter/textures" = [
+    "assets/hd2d_starter/textures/dirt.png",
+    "assets/hd2d_starter/textures/grass.png",
+    "assets/hd2d_starter/textures/mud.png",
+    "assets/hd2d_starter/textures/sand.png",
+    "assets/hd2d_starter/textures/stone.png",
+]
+"share/mesh-engine/assets/branding" = [
+    "assets/branding/NOTICE.md",
+    "assets/branding/mesh_studio_icon_16.png",
+    "assets/branding/mesh_studio_icon_24.png",
+    "assets/branding/mesh_studio_icon_256.png",
+    "assets/branding/mesh_studio_icon_32.png",
+    "assets/branding/mesh_studio_icon_48.png",
+    "assets/branding/mesh_studio_icon_64.png",
+    "assets/branding/mesh_studio_mark_128.png",
+    "assets/branding/mesh_studio_mark_64.png",
+    "assets/branding/meshmind_studios_wordmark.png",
+]
+"share/mesh-engine/assets/icons" = [
+    "assets/icons/NOTICE.md",
+    "assets/icons/arrow-left_16.png",
+    "assets/icons/arrow-left_32.png",
+    "assets/icons/box_16.png",
+    "assets/icons/box_32.png",
+    "assets/icons/check_16.png",
+    "assets/icons/check_32.png",
+    "assets/icons/eraser_16.png",
+    "assets/icons/eraser_32.png",
+    "assets/icons/eye_16.png",
+    "assets/icons/eye_32.png",
+    "assets/icons/film_16.png",
+    "assets/icons/film_32.png",
+    "assets/icons/flag_16.png",
+    "assets/icons/flag_32.png",
+    "assets/icons/folder-open_16.png",
+    "assets/icons/folder-open_32.png",
+    "assets/icons/folder-plus_16.png",
+    "assets/icons/folder-plus_32.png",
+    "assets/icons/folder_16.png",
+    "assets/icons/folder_32.png",
+    "assets/icons/history_16.png",
+    "assets/icons/history_32.png",
+    "assets/icons/image-plus_16.png",
+    "assets/icons/image-plus_32.png",
+    "assets/icons/image_16.png",
+    "assets/icons/image_32.png",
+    "assets/icons/layout-grid_16.png",
+    "assets/icons/layout-grid_32.png",
+    "assets/icons/lightbulb_16.png",
+    "assets/icons/lightbulb_32.png",
+    "assets/icons/list-checks_16.png",
+    "assets/icons/list-checks_32.png",
+    "assets/icons/map_16.png",
+    "assets/icons/map_32.png",
+    "assets/icons/menu_16.png",
+    "assets/icons/menu_32.png",
+    "assets/icons/message-square_16.png",
+    "assets/icons/message-square_32.png",
+    "assets/icons/mouse-pointer-2_16.png",
+    "assets/icons/mouse-pointer-2_32.png",
+    "assets/icons/paint-bucket_16.png",
+    "assets/icons/paint-bucket_32.png",
+    "assets/icons/paintbrush_16.png",
+    "assets/icons/paintbrush_32.png",
+    "assets/icons/play_16.png",
+    "assets/icons/play_32.png",
+    "assets/icons/redo-2_16.png",
+    "assets/icons/redo-2_32.png",
+    "assets/icons/save_16.png",
+    "assets/icons/save_32.png",
+    "assets/icons/scaling_16.png",
+    "assets/icons/scaling_32.png",
+    "assets/icons/scan_16.png",
+    "assets/icons/scan_32.png",
+    "assets/icons/signpost_16.png",
+    "assets/icons/signpost_32.png",
+    "assets/icons/sliders-horizontal_16.png",
+    "assets/icons/sliders-horizontal_32.png",
+    "assets/icons/sparkles_16.png",
+    "assets/icons/sparkles_32.png",
+    "assets/icons/square-dashed_16.png",
+    "assets/icons/square-dashed_32.png",
+    "assets/icons/square_16.png",
+    "assets/icons/square_32.png",
+    "assets/icons/trash-2_16.png",
+    "assets/icons/trash-2_32.png",
+    "assets/icons/undo-2_16.png",
+    "assets/icons/undo-2_32.png",
+    "assets/icons/upload_16.png",
+    "assets/icons/upload_32.png",
+    "assets/icons/user_16.png",
+    "assets/icons/user_32.png",
+]
+"share/mesh-engine/assets/icons/lucide" = [
+    "assets/icons/lucide/LICENSE",
+    "assets/icons/lucide/arrow-left.svg",
+    "assets/icons/lucide/box.svg",
+    "assets/icons/lucide/check.svg",
+    "assets/icons/lucide/eraser.svg",
+    "assets/icons/lucide/eye.svg",
+    "assets/icons/lucide/film.svg",
+    "assets/icons/lucide/flag.svg",
+    "assets/icons/lucide/folder-open.svg",
+    "assets/icons/lucide/folder-plus.svg",
+    "assets/icons/lucide/folder.svg",
+    "assets/icons/lucide/history.svg",
+    "assets/icons/lucide/image-plus.svg",
+    "assets/icons/lucide/image.svg",
+    "assets/icons/lucide/layout-grid.svg",
+    "assets/icons/lucide/lightbulb.svg",
+    "assets/icons/lucide/list-checks.svg",
+    "assets/icons/lucide/map.svg",
+    "assets/icons/lucide/menu.svg",
+    "assets/icons/lucide/message-square.svg",
+    "assets/icons/lucide/mouse-pointer-2.svg",
+    "assets/icons/lucide/paint-bucket.svg",
+    "assets/icons/lucide/paintbrush.svg",
+    "assets/icons/lucide/play.svg",
+    "assets/icons/lucide/redo-2.svg",
+    "assets/icons/lucide/save.svg",
+    "assets/icons/lucide/scaling.svg",
+    "assets/icons/lucide/scan.svg",
+    "assets/icons/lucide/signpost.svg",
+    "assets/icons/lucide/sliders-horizontal.svg",
+    "assets/icons/lucide/sparkles.svg",
+    "assets/icons/lucide/square-dashed.svg",
+    "assets/icons/lucide/square.svg",
+    "assets/icons/lucide/trash-2.svg",
+    "assets/icons/lucide/undo-2.svg",
+    "assets/icons/lucide/upload.svg",
+    "assets/icons/lucide/user.svg",
+]
 
 [tool.ruff]
 line-length = 160

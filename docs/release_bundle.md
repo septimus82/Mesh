@@ -43,6 +43,41 @@ The command runs these steps sequentially (fail-fast):
 | `--deterministic-timestamp TS` | `1980-01-01T00:00:00Z` when `--seed` is set | Override manifest/provenance timestamp string |
 | `--format json\|text` | `text` | Output format for final summary |
 | `--quiet` | off | Suppress step output |
+| `--reuse-verify-all DIR` | off | CI: reuse the verify-all that wrote `DIR` with `--reuse-evidence`, only on proof (below) |
+
+## Reusing CI's verify-all (`--reuse-verify-all`, F13-B)
+
+CI's verify job runs an enforced `verify-all --reuse-evidence` just before the bundle, on the same checkout; the
+bundle's release check used to run a whole second verify-all. With `--reuse-verify-all artifacts` it takes that run's
+reports instead, but only when `artifacts/verify_all_evidence.json` (written last by `--reuse-evidence`) proves:
+
+- it exited 0, every step ran and passed (a step skipped after a failure is not a pass), and its own summary agrees;
+- it covered everything (no pytest arguments, no `--skip-web-smoke`);
+- it ran on this commit, with a clean tree before and after, and the tree is still clean;
+- the same tool version, Python and platform, and the same `MESH_*` environment (step-budget enforcement at least as strict);
+- it lists only the files it produced (new or rewritten during the run; whatever was already in the folder and
+  left untouched, such as an older report or an archive, is never copied), each unchanged (SHA-256), and so is
+  each copy;
+- each produced file is a verification output, and every required one is there. `RELEASE_REPORTS` in
+  `mesh_cli/verify_reuse.py` names the reports a fresh release check's verify-all leaves in `release/` (all
+  required). The player package's files are the ones its own `player_pkg/manifest.json` lists (all required),
+  with the bytecode Python wrote for its listed `.py` files when the gate ran the package.
+  verify-demo's pytest folders must match `verify_demo_pytest/pid<N>-run<N>/basetemp|cache/`. A produced file
+  that is none of these (nor a known non-release output) refuses the reuse, even with a correct hash, as does a
+  missing required report. A new verify-all report must be added to `RELEASE_REPORTS`; until it is, CI's bundle
+  runs its own verify-all and says why.
+
+Otherwise the release check says why and runs verify-all itself, as without the option. A copy that fails or is
+left partial is undone (its files and folders) and verify-all runs; if it can't be undone, the release check
+fails rather than package stray files. The asset audit, export build
+and debug bundle always run. `release/verify_all_reuse.json` records which happened and what was checked.
+
+**Documented differences from a bundle that ran its own verify-all:** `release/verify_all_reuse.json` exists;
+`release/release_report.json` notes `verify_all_reused_from`; the reports are that run's (paths in its summary name
+`artifacts/`), with the same deterministic normalisation. Not copied, because a release check's own verify-all
+doesn't leave them in `release/`: CI's extras (`index.json`, `verify_report.json`, `overlay_perf.json`,
+`release_notes.*`), and the files verify-all writes to the repository's `artifacts/` whatever `--artifacts` says
+(`pytest_fast.log`, `pytest_full.log`, `swallow_scan.json`). The policy is in `mesh_cli/verify_reuse.py`.
 
 ## Exit Codes
 

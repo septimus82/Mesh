@@ -1,0 +1,34 @@
+{
+  "start": [
+    9.2,
+    6.2
+  ],
+  "straight_into_doorway_min": [
+    7.95,
+    3.544
+  ],
+  "against_wall_west_of_doorway": [
+    6.466,
+    3.934
+  ],
+  "along_wall_east": {
+    "min_y": 3.934,
+    "max_y": 3.934,
+    "end": [
+      9.825,
+      3.934
+    ]
+  },
+  "diagonal_down_left": {
+    "end": [
+      5.516,
+      3.889
+    ],
+    "min_y": 3.889
+  },
+  "player_sprite_m": {
+    "width": 1.0,
+    "height": 1.5,
+    "bottom_minus_feet": -0.1875
+  }
+}

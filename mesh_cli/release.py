@@ -1269,7 +1269,16 @@ def _handle_check(args: argparse.Namespace) -> int:
         deterministic=deterministic,
     )
 
+    reuse_from = getattr(args, "reuse_verify_all", None)  # (F13-B: CI's bundle, the verify-all its job just ran)
+
     def _run_verify_all_step() -> tuple[int, dict[str, Any]]:
+        if reuse_from:
+            from mesh_cli import verify_reuse
+
+            reused = verify_reuse.reuse(Path(reuse_from).resolve(), verify_artifacts_dir, repo_root=repo_root,
+                                        deterministic=deterministic)
+            if reused is not None:
+                return 0, reused
         try:
             return _run_verify_all(repo_root, verify_artifacts_dir, deterministic=deterministic)
         except TypeError:

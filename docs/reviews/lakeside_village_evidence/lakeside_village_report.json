@@ -1,0 +1,707 @@
+{
+ "room": {
+  "made_room": "lakeside",
+  "rooms": [
+   "start",
+   "cottage",
+   "lakeside"
+  ],
+  "message": "Saved 2 file(s).",
+  "documented_edit": {
+   "edited": "packs/core_regions/scenes/lakeside.json",
+   "settings.hd2d": {
+    "structures": [],
+    "camera": {
+     "pitch": 30.0,
+     "fov": 12.0,
+     "distance": 53.518,
+     "follow": "player",
+     "bounds": [
+      0.0,
+      0.0,
+      2048.0,
+      1536.0
+     ]
+    },
+    "sun": {
+     "direction": [
+      -0.45,
+      -0.55,
+      0.7
+     ],
+     "color": "#fff0d8",
+     "intensity": 1.0
+    },
+    "ambient": 0.45,
+    "ground": {
+     "texture": "assets/hd2d_starter/textures/grass.png",
+     "from": [
+      0,
+      0
+     ],
+     "to": [
+      2048.0,
+      1536.0
+     ]
+    }
+   },
+   "world": [
+    2048.0,
+    1536.0
+   ]
+  },
+  "hd2d_view": true
+ },
+ "ground": {
+  "hills": [
+   {
+    "middle": [
+     12.0,
+     37.0
+    ],
+    "strokes": 4,
+    "height_m": 3.11
+   },
+   {
+    "middle": [
+     24.0,
+     42.0
+    ],
+    "strokes": 5,
+    "height_m": 2.22
+   },
+   {
+    "middle": [
+     56.0,
+     42.0
+    ],
+    "strokes": 5,
+    "height_m": 2.79
+   },
+   {
+    "middle": [
+     57.0,
+     12.0
+    ],
+    "strokes": 4,
+    "height_m": 1.77
+   },
+   {
+    "middle": [
+     6.0,
+     18.0
+    ],
+    "strokes": 4,
+    "height_m": 1.49
+   }
+  ],
+  "paths": 5,
+  "pond": {
+   "strokes": 1,
+   "depth_m": -1.51,
+   "inlet_m": [
+    -0.57,
+    -0.61,
+    -1.02
+   ]
+  },
+  "path_strokes": [
+   2,
+   2,
+   2,
+   8,
+   4
+  ],
+  "shore_strokes": 9,
+  "message": "Saved 1 file(s).",
+  "undo_steps": 62
+ },
+ "water": {
+  "pond": {
+   "id": "lakeside_puddle_1632_992_0_0",
+   "level_m": -0.414,
+   "x_m": 44.0,
+   "y_m": 31.0,
+   "water": null
+  },
+  "inlet": {
+   "id": "lakeside_puddle_2_1152_896_0_0",
+   "level_m": -0.453,
+   "x_m": 36.5,
+   "y_m": 27.5,
+   "water": null
+  },
+  "message": "Saved 1 file(s)."
+ },
+ "build": {
+  "placed": [
+   {
+    "id": "cottage",
+    "model": "Cottage",
+    "x": 608.0,
+    "y": 640.0,
+    "elevation": null,
+    "rotation": null,
+    "scale": null
+   },
+   {
+    "id": "cottage_2",
+    "model": "Cottage",
+    "x": 560.0,
+    "y": 256.0,
+    "elevation": null,
+    "rotation": null,
+    "scale": null
+   },
+   {
+    "id": "shop",
+    "model": "Shop",
+    "x": 1168.0,
+    "y": 560.0,
+    "elevation": null,
+    "rotation": null,
+    "scale": null
+   },
+   {
+    "id": "bridge_6m",
+    "model": "Bridge",
+    "x": 1100.8,
+    "y": 848.0,
+    "elevation": -57.6,
+    "rotation": 74.0,
+    "scale": null
+   },
+   {
+    "id": "barrel",
+    "model": "Barrel",
+    "x": 1241.6,
+    "y": 499.2,
+    "elevation": null,
+    "rotation": null,
+    "scale": null
+   },
+   {
+    "id": "barrel_2",
+    "model": "Barrel",
+    "x": 1267.2,
+    "y": 518.4,
+    "elevation": null,
+    "rotation": 30.0,
+    "scale": null
+   },
+   {
+    "id": "crate",
+    "model": "Crate",
+    "x": 1081.6,
+    "y": 512.0,
+    "elevation": null,
+    "rotation": 15.0,
+    "scale": null
+   },
+   {
+    "id": "fence_2m",
+    "model": "Fence",
+    "x": 480.0,
+    "y": 368.0,
+    "elevation": null,
+    "rotation": 90.0,
+    "scale": null
+   },
+   {
+    "id": "fence_2m_2",
+    "model": "Fence",
+    "x": 480.0,
+    "y": 432.0,
+    "elevation": null,
+    "rotation": 90.0,
+    "scale": null
+   },
+   {
+    "id": "fence_2m_3",
+    "model": "Fence",
+    "x": 688.0,
+    "y": 752.0,
+    "elevation": null,
+    "rotation": null,
+    "scale": null
+   },
+   {
+    "id": "fence_2m_4",
+    "model": "Fence",
+    "x": 752.0,
+    "y": 752.0,
+    "elevation": null,
+    "rotation": null,
+    "scale": null
+   },
+   {
+    "id": "lamp_post",
+    "model": "Lamp post",
+    "x": 800.0,
+    "y": 326.4,
+    "elevation": null,
+    "rotation": null,
+    "scale": null
+   },
+   {
+    "id": "lamp_post_2",
+    "model": "Lamp post",
+    "x": 940.8,
+    "y": 441.6,
+    "elevation": null,
+    "rotation": null,
+    "scale": null
+   },
+   {
+    "id": "lamp_post_3",
+    "model": "Lamp post",
+    "x": 1043.2,
+    "y": 755.2,
+    "elevation": null,
+    "rotation": null,
+    "scale": null
+   },
+   {
+    "id": "lamp_post_4",
+    "model": "Lamp post",
+    "x": 678.4,
+    "y": 585.6,
+    "elevation": null,
+    "rotation": null,
+    "scale": null
+   }
+  ],
+  "doorway_strokes": [
+   1,
+   3,
+   1
+  ],
+  "message": "Saved 1 file(s)."
+ },
+ "nature": {
+  "scatter": [
+   {
+    "collection": "Small tree",
+    "on": [
+     "grass"
+    ],
+    "density": 0.25,
+    "strokes": 34
+   },
+   {
+    "collection": "Rocks",
+    "on": [
+     "grass",
+     "mud",
+     "sand",
+     "stone"
+    ],
+    "density": 0.6,
+    "strokes": 13
+   },
+   {
+    "collection": "Deadfall",
+    "on": [
+     "grass",
+     "mud",
+     "sand",
+     "stone"
+    ],
+    "density": 0.8,
+    "strokes": 7
+   },
+   {
+    "collection": "Shrubs",
+    "on": [
+     "grass"
+    ],
+    "density": 0.25,
+    "strokes": 24
+   },
+   {
+    "collection": "Meadow",
+    "on": [
+     "grass"
+    ],
+    "density": 2.5,
+    "strokes": 68
+   },
+   {
+    "collection": "Wildflowers",
+    "on": [
+     "grass"
+    ],
+    "density": 1.5,
+    "strokes": 16
+   },
+   {
+    "collection": "Pond edge",
+    "on": [
+     "grass",
+     "mud",
+     "sand"
+    ],
+    "density": 3.0,
+    "strokes": 15
+   }
+  ],
+  "message": "Saved 1 file(s).",
+  "instances": 13395,
+  "wind": [
+   3.0,
+   0.0
+  ]
+ },
+ "finish": {
+  "lights_message": "The lamp now hangs 2.4 m up.",
+  "lights": [
+   {
+    "color": "#9aa6d0",
+    "id": "sky",
+    "mode": "soft",
+    "type": "ambient"
+   },
+   {
+    "x": 800.0,
+    "y": 326.0,
+    "radius": 224.0,
+    "color": "#ffcc88",
+    "mode": "soft",
+    "elevation": 76.8
+   },
+   {
+    "x": 941.0,
+    "y": 442.0,
+    "radius": 224.0,
+    "color": "#ffcc88",
+    "mode": "soft",
+    "elevation": 76.8
+   },
+   {
+    "x": 1043.0,
+    "y": 755.0,
+    "radius": 224.0,
+    "color": "#ffcc88",
+    "mode": "soft",
+    "elevation": 76.8
+   },
+   {
+    "x": 678.0,
+    "y": 586.0,
+    "radius": 224.0,
+    "color": "#ffcc88",
+    "mode": "soft",
+    "elevation": 76.8
+   }
+  ],
+  "room_lighting": {
+   "lighting_shadow_softness": "soft",
+   "lighting_ambient_color": [
+    60,
+    70,
+    110,
+    255
+   ]
+  },
+  "player_hops": 6,
+  "player": [
+   30.0,
+   4.0
+  ],
+  "door_message": "Added a door to Village, and one back from it.",
+  "message": "Saved 2 file(s).",
+  "doors": [
+   {
+    "id": "lakeside_door_to_start_960_32_0_0",
+    "tag": "door",
+    "x": 960.0,
+    "y": 32.0,
+    "target_scene": null,
+    "spawn_id": null
+   },
+   {
+    "id": "lakeside_arrival_start_960_128_0_0",
+    "tag": "spawn_point",
+    "x": 960.0,
+    "y": 128.0,
+    "target_scene": null,
+    "spawn_id": "from_start"
+   }
+  ]
+ },
+ "doors": {
+  "village_hops": [
+   3,
+   30
+  ],
+  "village_door": {
+   "x": 1184.0,
+   "y": 224.0,
+   "behaviour_config": {
+    "SceneTransition": {
+     "allow_interact": false,
+     "spawn_id": "from_start",
+     "target_scene": "lakeside",
+     "target_tag": "player",
+     "trigger_on_touch": true,
+     "area_width": 64.0,
+     "area_height": 160.0
+    }
+   }
+  },
+  "village_arrival": {
+   "x": 768.0,
+   "y": 194.0
+  },
+  "lakeside_door": {
+   "x": 960.0,
+   "y": 32.0,
+   "behaviour_config": {
+    "SceneTransition": {
+     "allow_interact": false,
+     "spawn_id": "from_lakeside",
+     "target_scene": "start",
+     "target_tag": "player",
+     "trigger_on_touch": true,
+     "area_width": 160.0,
+     "area_height": 64.0
+    }
+   }
+  },
+  "message": "Saved 1 file(s)."
+ },
+ "reopen": {
+  "same_as_saved": false,
+  "shared_player_filled_in": [
+   "lakeside_player_128_128_0_0"
+  ],
+  "differences_apart_from_the_player": [],
+  "unsaved_after_opening": [],
+  "structures": 15,
+  "scatter": 13395,
+  "water": 2,
+  "lamps": 4,
+  "wind_saved": {
+   "direction": 0.0,
+   "gust": 0.3,
+   "speed": 3.0
+  },
+  "wind_reopened": {
+   "direction": 0.0,
+   "gust": 0.3,
+   "speed": 3.0
+  },
+  "wind_drawn": [
+   3.0,
+   0.0
+  ],
+  "motion_saved": {},
+  "motion_reopened": {},
+  "motion_drawn_on": true,
+  "drawn": true,
+  "play_stop_modes": [
+   "play",
+   "edit",
+   "play",
+   "edit",
+   "play",
+   "edit",
+   "play",
+   "edit",
+   "play",
+   "edit"
+  ],
+  "play_stop_gl_stable": true,
+  "unsaved_at_end": []
+ },
+ "play": {
+  "routes": [
+   {
+    "route": "south road to the crossroads",
+    "reached": [
+     true
+    ],
+    "as_expected": true,
+    "end_m": [
+     29.5,
+     11.53
+    ],
+    "end_elevation_m": 0.0,
+    "highest_m": 0.0,
+    "worst_feet_off_ground_m": 0.0,
+    "lowest_on_bridge_m": null,
+    "steps": 94
+   },
+   {
+    "route": "over the bridge (steering along its deck, as a player does)",
+    "reached": [
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "as_expected": true,
+    "end_m": [
+     34.99,
+     29.61
+    ],
+    "end_elevation_m": 0.0,
+    "highest_m": 0.2,
+    "worst_feet_off_ground_m": 0.0,
+    "lowest_on_bridge_m": 0.2,
+    "steps": 109
+   },
+   {
+    "route": "round the pond's north side",
+    "reached": [
+     true,
+     true,
+     true
+    ],
+    "as_expected": true,
+    "end_m": [
+     53.0,
+     23.97
+    ],
+    "end_elevation_m": 0.0,
+    "highest_m": 1.76,
+    "worst_feet_off_ground_m": 0.0,
+    "lowest_on_bridge_m": null,
+    "steps": 504
+   },
+   {
+    "route": "into the pond (stops at its shore)",
+    "reached": [
+     false
+    ],
+    "as_expected": true,
+    "end_m": [
+     46.5,
+     26.36
+    ],
+    "end_elevation_m": -0.4,
+    "highest_m": 0.0,
+    "worst_feet_off_ground_m": 0.0,
+    "lowest_on_bridge_m": null,
+    "steps": 80
+   },
+   {
+    "route": "up the hill path",
+    "reached": [
+     true
+    ],
+    "as_expected": true,
+    "end_m": [
+     13.0,
+     36.53
+    ],
+    "end_elevation_m": 3.05,
+    "highest_m": 3.05,
+    "worst_feet_off_ground_m": 0.0,
+    "lowest_on_bridge_m": null,
+    "steps": 158
+   },
+   {
+    "route": "into a cottage wall (stops)",
+    "reached": [
+     false
+    ],
+    "as_expected": true,
+    "end_m": [
+     21.0,
+     17.8
+    ],
+    "end_elevation_m": 0.0,
+    "highest_m": 0.0,
+    "worst_feet_off_ground_m": 0.0,
+    "lowest_on_bridge_m": null,
+    "steps": 72
+   },
+   {
+    "route": "up the south-east mound",
+    "reached": [
+     true
+    ],
+    "as_expected": true,
+    "end_m": [
+     56.56,
+     12.69
+    ],
+    "end_elevation_m": 1.7,
+    "highest_m": 1.7,
+    "worst_feet_off_ground_m": 0.0,
+    "lowest_on_bridge_m": null,
+    "steps": 148
+   }
+  ],
+  "start": [
+   30.0,
+   3.44
+  ],
+  "still_frames_changed_pixels": {
+   "1_frame_apart": 21663,
+   "30_frames_apart": 189584,
+   "of": 921600
+  },
+  "motion_on": true,
+  "wind": [
+   3.0,
+   0.0
+  ],
+  "water_bodies": 2,
+  "gl_objects_after_room_changes": [
+   {
+    "buffer": 380,
+    "texture": 43,
+    "framebuffer": 7,
+    "program": 33
+   },
+   {
+    "buffer": 380,
+    "texture": 43,
+    "framebuffer": 7,
+    "program": 33
+   },
+   {
+    "buffer": 380,
+    "texture": 43,
+    "framebuffer": 7,
+    "program": 33
+   }
+  ],
+  "gl_stable": true,
+  "all_routes_as_expected": true,
+  "navigation": {
+   "start -> crossroads": true,
+   "start -> bridge's north end": true,
+   "start -> pond's east bank": true,
+   "start -> hilltop": true,
+   "start -> mound": true,
+   "start -> cottage door": true
+  },
+  "max_feet_off_ground_m": 0.0
+ },
+ "export": {
+  "export_code": 0,
+  "export_tail": "[Mesh][Export] building bundle from D:\\Games\\Lakeside Village...\n[Mesh][Export] OK (1057 files, 11,465,409 bytes)\n[Mesh][Export] wrote bundle to <out>\\export\n",
+  "bundle_run": {
+   "engine_from": "<out>\\export\\engine\\__init__.py",
+   "started_in": "packs/core_regions/scenes/start.json",
+   "after_walking_east": "packs/core_regions/scenes/lakeside.json",
+   "arrived_at_m": [
+    30.0,
+    3.44
+   ],
+   "walked_to_m": [
+    30.0,
+    11.02
+   ]
+  },
+  "bundle_files": 1059
+ },
+ "review_corrections": {
+  "reopen": "rerun with the room compared to the saved file (the shared player normalised with ops.thin_player), wind read from settings.wind and motion from settings.hd2d.motion, on a copy of the delivered project",
+  "play": "rerun on a copy of the delivered project with one turned-box collider per wall"
+ }
+}

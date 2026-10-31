@@ -303,7 +303,7 @@ def parse_background_layers(scene_payload: dict[str, Any]) -> list[BackgroundLay
         anchor_y = 0.0
         if "anchor_x" in entry:
             try:
-                anchor_x = float(entry.get("anchor_x"))
+                anchor_x = float(entry["anchor_x"])
             except (TypeError, ValueError):
                 logger.warning(
                     "background_layers[%d].anchor_x must be a number; defaulting to 0.0", idx
@@ -311,7 +311,7 @@ def parse_background_layers(scene_payload: dict[str, Any]) -> list[BackgroundLay
                 anchor_x = 0.0
         if "anchor_y" in entry:
             try:
-                anchor_y = float(entry.get("anchor_y"))
+                anchor_y = float(entry["anchor_y"])
             except (TypeError, ValueError):
                 logger.warning(
                     "background_layers[%d].anchor_y must be a number; defaulting to 0.0", idx

@@ -71,6 +71,8 @@ See Also:
 from __future__ import annotations
 
 import json
+import os
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Sequence
 
@@ -446,7 +448,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
                 _log_swallow("GAME-000", "engine/game.py set_minimum_size", once=True)
                 logger.warning("[Mesh][GameWindow] WARNING: Failed to set minimum size: %r", exc)
         try:
-            engine.optional_arcade.arcade.set_background_color(engine.optional_arcade.arcade.color.DARK_BLUE_GRAY)
+            engine.optional_arcade.arcade.set_background_color(engine.optional_arcade.arcade.color.BLACK)
         except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
             _log_swallow("GAME-001", "engine/game.py blanket swallow", once=True)
             logger.warning("[Mesh][GameWindow] WARNING: Failed to set background color: %r", exc)
@@ -473,6 +475,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         pin_config(self.engine_config)
         config_base_dir = getattr(self.engine_config, "_config_base_dir", None)
         self.standalone_launch = False
+        self.launched_project_root: str | None
         if config_base_dir:
             launch_root = Path(str(config_base_dir))
             resolved_launch = launch_root.resolve()
@@ -605,6 +608,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             shadows_mode=getattr(self.engine_config, "lighting_shadows_mode", "hard"),
             debug_shadows=getattr(self.engine_config, "lighting_debug_shadows", False),
         )
+        self.lighting.base_ambient_color = getattr(self.lighting, "ambient_color", None)  # the project's; day/night changes ambient_color
         ambient_tint = getattr(self.engine_config, "ambient_light_rgba", None)
         if ambient_tint is not None:
             self.lighting.set_ambient_tint(ambient_tint)
@@ -707,7 +711,20 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def run(self) -> None:
         """Start Arcade's main loop."""
         logger.info("[Mesh][GameWindow] Starting Arcade loop...")
-        engine.optional_arcade.arcade.run()
+        try:
+            engine.optional_arcade.arcade.run()
+        except Exception:
+            crash_log = os.environ.get("MESH_CRASH_LOG")  # started from the launcher, without a console
+            if crash_log:
+                import traceback  # noqa: PLC0415
+
+                from engine.launcher import show_crash  # noqa: PLC0415
+
+                traceback.print_exc()  # into the log now, so it's there while the message is up
+                sys.stderr.flush()
+                show_crash("Mesh Studio", crash_log)
+                raise SystemExit(1) from None
+            raise
 
     def start_monster_battle(self, **kwargs: Any) -> Any:
         """Start the runtime monster battle mode."""
@@ -971,9 +988,35 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         if callable(stop_live_bridge):
             stop_live_bridge()
         self._stop_asset_hot_reload_watcher()
-        base_close = getattr(engine.optional_arcade.arcade.Window, "close", None)
+        audio = getattr(self, "audio", None)
+        if audio is not None and callable(getattr(audio, "shutdown", None)):
+            audio.shutdown()  # every music and ambience player stopped and released
+        if getattr(self, "hd2d_renderer", None) is not None:  # free its GPU objects while the context still exists
+            from engine.hd2d.runtime import release  # noqa: PLC0415
+
+            release(self)
+        if getattr(self, "scene_particles", None) is not None:  # a 2D room's particles: likewise
+            from engine.scene_particles import release as release_particles  # noqa: PLC0415
+
+            release_particles(self)
+        if getattr(self, "scene_water", None) is not None:  # a 2D room's water: likewise
+            from engine.water import release as release_water  # noqa: PLC0415
+
+            release_water(self)
+        arcade = engine.optional_arcade.arcade
+        try:
+            active = arcade.get_window() if callable(getattr(arcade, "get_window", None)) else None
+        except RuntimeError:  # no active window
+            active = None
+        base_close = getattr(arcade.Window, "close", None)
         if callable(base_close):
             base_close(self)
+        # Arcade forgets the active window whenever any window closes, even one that isn't active (pyglet also
+        # closes a window when it is garbage-collected, at an unpredictable moment): the window in use then
+        # lost its context mid-frame ("No window is active"). Closing another window keeps the active one.
+        set_window = getattr(arcade, "set_window", None)
+        if active is not None and active is not self and callable(set_window):
+            set_window(active)
 
     def on_resize(self, width: int, height: int) -> None:
         super().on_resize(width, height)

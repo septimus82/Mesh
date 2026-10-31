@@ -60,7 +60,7 @@ def frame_content_if_offscreen(window: Any, viewport: Rect) -> bool:
     scene = getattr(window, "scene_controller", None)
     sprites = list(getattr(scene, "all_sprites", None) or [])
     position = getattr(camera, "position", None)
-    if not sprites or position is None:
+    if not sprites or camera is None or position is None:
         return False
 
     cam_x, cam_y = float(position[0]), float(position[1])

@@ -826,3 +826,17 @@ class TestComputeSpriteMultiShadow:
         expected_width = DEFAULT_SHADOW_WIDTH * 0.3
         assert result.contact_ellipse is not None
         assert result.contact_ellipse.width == pytest.approx(expected_width, rel=1e-2)
+
+
+@pytest.mark.fast
+def test_shadow_sits_at_the_sprites_feet_not_its_centre() -> None:
+    """Found by the capability lab: anchored to the centre, a 64 px sprite covered its own shadow."""
+    from types import SimpleNamespace
+
+    from engine.sprite_shadow_model import compute_sprite_multi_shadow
+
+    sprite = SimpleNamespace(center_x=480.0, center_y=250.0, bottom=218.0, mesh_entity_data={})
+    shadow = compute_sprite_multi_shadow(sprite, contact_enabled=True, ao_enabled=False)
+    assert shadow is not None
+    assert shadow.base_ellipse.cy + shadow.base_ellipse.height / 2 <= 218.0 + 1e-6  # visible below the feet
+    assert shadow.base_ellipse.cy == 218.0 - 4.0

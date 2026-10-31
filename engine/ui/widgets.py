@@ -355,6 +355,7 @@ class Slider:
     value: float
     step: float = 0.01
     height: float = 24.0
+    label_size: float = 0.0  # px the label's line takes at its top (0: the bar is centred under it, as before)
     _last_rect: Rect | None = field(default=None, init=False, repr=False)
     _dragging: bool = field(default=False, init=False, repr=False)
 
@@ -396,7 +397,12 @@ class Slider:
     def layout(self, bounds: Rect) -> LayoutResult:
         self._last_rect = bounds
         self.value = self._quantize(self.value)
-        track_h = max(4.0, bounds.height * 0.25)
+        # With a label line (``label_size``), the bar keeps to the band below it: label and bar never overlap.
+        band_top = bounds.top - (2.0 + float(self.label_size) + 4.0 if self.label_size > 0 else 0.0)
+        band_h = max(6.0, band_top - bounds.bottom)
+        center_y = bounds.bottom + band_h / 2.0 if self.label_size > 0 else bounds.center_y
+        track_h = max(4.0, min(bounds.height * 0.25, band_h * 0.5) if self.label_size > 0 else bounds.height * 0.25)
+        knob_h = max(6.0, min(bounds.height * 0.6, band_h) if self.label_size > 0 else bounds.height * 0.6)
         knob_w = max(6.0, bounds.height * 0.18)
         track_left = float(bounds.left + (knob_w / 2.0))
         track_width = max(0.0, float(bounds.width - knob_w))
@@ -404,7 +410,7 @@ class Slider:
         knob_center_x = float(track_left + fill_width)
         track_rect = Rect(
             x=track_left,
-            y=(bounds.center_y - (track_h / 2.0)),
+            y=(center_y - (track_h / 2.0)),
             width=track_width,
             height=track_h,
         )
@@ -416,9 +422,9 @@ class Slider:
         )
         knob_rect = Rect(
             x=(knob_center_x - (knob_w / 2.0)),
-            y=(bounds.center_y - (bounds.height * 0.3)),
+            y=(center_y - (knob_h / 2.0)),
             width=knob_w,
-            height=max(6.0, bounds.height * 0.6),
+            height=knob_h,
         )
         value_percent = int(round(float(self.value) * 100.0))
         instructions = [

@@ -67,22 +67,34 @@ Arcade 3 migration status, shim ownership (long-term vs temporary), and sign-off
 
 ### pytest-fast durations guard
 
-The `verify-all` pipeline runs `pytest-fast` with `--write-durations` and records per-test timings in:
-`.mesh/metrics/pytest_durations_fast.json`. The `pytest-fast-duration-guard` step compares totals against:
-- `.mesh/metrics/pytest_fast_total_seconds.txt`
-- `.mesh/metrics/pytest_fast_top10_seconds.txt`
+The `verify-all` pipeline runs `pytest-fast` with `--write-durations`, which records pytest's `--durations 25`
+report (the 25 slowest setup/call/teardown entries, not every test) in `.mesh/metrics/pytest_durations_fast.json`.
+The `pytest-fast-duration-guard` step reports their sum (`slowest_entries_seconds`), the slowest 10
+(`slowest10_seconds`) and, separately, the step's wall-clock time (`wall_seconds`) under `pytest_fast` in
+`verify_all_summary.json`.
 
-It fails only if a baseline regresses by **both** +20s and +15%.
-
-To intentionally refresh baselines:
+It judges them only against a baseline someone recorded on purpose, and fails only if either sum regresses by
+**both** +20s and +15% against it. A run never writes its own baseline, so a fresh checkout (and every CI job) has
+none and the step is report-only there (#422 F13). To record one on this machine:
 
 ```bash
-python -m tooling.pytest_fast --write-durations
-python -m mesh_cli verify-all --artifacts artifacts
+MESH_RECORD_PYTEST_FAST_BASELINE=1 python -m mesh_cli verify-all --artifacts artifacts
 ```
 
-Baselines are updated on a passing run. Keep them committed (or persisted in CI workspace) for stable gating.
-Note: the guard is based on the default serial `pytest-fast` run; avoid `--xdist` when updating baselines.
+The baseline (`.mesh/metrics/pytest_fast_duration_baseline.json`) keeps when, at which commit and on which platform
+and Python it was recorded, and the earlier baselines in `history`; a baseline from another platform, Python or entry
+count is not compared. The old `pytest_fast_total_seconds.txt`/`pytest_fast_top10_seconds.txt` files (written by
+every passing run before) are left alone and no longer used.
+Note: the guard is based on the default serial `pytest-fast` run; avoid `--xdist` when recording a baseline.
+
+### Step-time budgets in CI
+
+`tooling/metrics/verify_step_budget.json` sets each slow step's fixed threshold; rule f (`mesh_cli/verify.py`) fails a
+step over it only when the speed advisory also calls it slow. `pytest-fast` and `exception-policy-scan` are
+**report-only** (`report_only_ceiling_ratios`): over their threshold they are reported (and annotated in GitHub
+Actions), and they fail only over threshold x ceiling ratio. A budgeted step that did not run fails an enforced run,
+and verify-all ends with `result: OK`, `FAILED (functional: ...)` or `FAILED (timing only: ...)`. Evidence and the
+way back to enforcement: `docs/reviews/h4_ci_timing_reliability.md`.
 
 ### Local test tiers (Tier 0/1/2)
 
@@ -94,19 +106,32 @@ python -m tooling.test_tiers tier1
 python -m tooling.test_tiers tier2
 ```
 
-Tier summary:
+Tier summary (`python -m tooling.test_tiers <tier>`; the same lanes CI runs, #422 H6):
 - **tier0**: compileall + `pytest -m fast`
 - **tier1**: `pytest -m "fast or integration"` + `verify-all`
 - **tier2**: full `pytest -q`
+- **extended**: `-m "(slow or e2e) and not gl"`: the tests the default run deselects (the installed-product tests excepted:
+  CI's required `installed (<os>)` jobs run them)
+- **gpu**: `-m gl` with `MESH_GL_SMOKE=1`: every test that needs a GL context. `tests/conftest.py` gives the `gl` marker to
+  each test whose skipif names `MESH_GL_SMOKE`, whatever its file is called. With `MESH_REQUIRE_GL=1` (set by this lane)
+  a GL test skipped by that gate fails instead of passing quietly.
+- **acceptance**: the creator-workflow GL tests (`ACCEPTANCE` in `tooling/test_tiers.py`), a subset of gpu
+
+Each lane writes `artifacts/pytest_<tier>.xml` and `pytest_<tier>_summary.json` and fails when it selects or runs no test,
+or fewer than its `min_selected`. `.github/workflows/extended.yml` runs the extended and gpu lanes on Linux and Windows
+after every integration merge, nightly (once on main), on demand and on PRs that change the selection policy; its GL is
+Mesa's software renderer, not a physical GPU. `tests/test_test_lanes_contract.py` fails when a test runs in no lane
+(`tests/baselines/never_runs.txt` lists the deliberate exceptions).
 
 Fast vs integration tests (headless contract):
 - **fast**: Must be headless-safe and GL-free. No direct `arcade` imports, no `arcade.gl`, no SpriteList/GL context usage.
 - **integration**: May use Arcade/GL/runtime. Mark with `@pytest.mark.integration` (and `@pytest.mark.slow` if heavy).
 - Any test without an explicit marker defaults to **integration**.
 
-CI runs:
-- **fast-headless**: compileall + `pytest -m fast` with Arcade blocked via `MESH_TEST_BLOCK_ARCADE=1`.
-- **integration-gl**: `python -m tooling.test_tiers tier1` (fast + integration + verify-all).
+CI runs (`.github/workflows/ci.yml`, required on every PR): the default suite (`pytest (<os>)`), verify-all with the
+fast tier, the release bundle (`verify (<os>)`), the installed product (`installed (<os>)`), the Arcade 3 canary and web
+smoke. `extended.yml` (not required on PRs) runs the extended and gpu lanes. The `fast-headless` run with
+`MESH_TEST_BLOCK_ARCADE=1` is local only; no workflow runs it.
 
 > **Windows Note**: If you encounter console buffer crashes or encoding errors when running the full suite (Tier 2) on Windows, use the dedicated hardened runner which redirects output to a file:
 > ```bash

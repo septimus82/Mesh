@@ -14,19 +14,21 @@ and point any MCP client (Claude Desktop/Code/Cursor) at that command.
 
 from __future__ import annotations
 
+import importlib
 from typing import Any
 
 from engine.mcp_server import tools
 
 HAS_MCP = False
 FastMCP: Any = None
-try:  # pragma: no cover - exercised only when the optional SDK is installed
-    from mcp.server.fastmcp import FastMCP as _FastMCP
-
-    FastMCP = _FastMCP
-    HAS_MCP = True
-except ImportError:  # pragma: no cover - the import-guard path
-    pass
+# The optional SDK: mcp 1.x has FastMCP; 2.x renamed it MCPServer (tool(), resource() and run() are unchanged).
+for _module, _name in (("mcp.server.fastmcp", "FastMCP"), ("mcp.server.mcpserver", "MCPServer")):
+    try:  # pragma: no cover - exercised only when the optional SDK is installed
+        FastMCP = getattr(importlib.import_module(_module), _name)
+        HAS_MCP = True
+        break
+    except (ImportError, AttributeError):  # pragma: no cover - the import-guard path
+        continue
 
 
 SERVER_NAME = "mesh"
@@ -70,6 +72,14 @@ def build_server() -> Any:
     # Batch action: the full op surface in one call, with validation feedback.
     server.tool()(tools.list_op_types)
     server.tool()(tools.apply_ops)
+
+    # One authoring API, shared with Mesh Studio and the `mesh author` command.
+    server.tool()(tools.authoring_operations)
+    server.tool()(tools.read_project)
+    server.tool()(tools.propose_changes)
+    server.tool()(tools.apply_changes)
+    server.tool()(tools.proposal_status)
+    server.tool()(tools.withdraw_proposal)
 
     # Safety.
     server.tool()(tools.validate_scene)

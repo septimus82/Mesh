@@ -74,6 +74,8 @@ def test_editor_controller_load_apply(tmp_path, monkeypatch):
     window = MagicMock()
     window.current_scene_key = "default"
     window.camera = MagicMock()
+    window.engine_config._mesh_launch_mode = "editor"  # the editor reopens its last scene
+    window.save_manager.save_dir = tmp_path / "saves"
 
     # Create controller with repo_root override
     editor = EditorModeController(window)

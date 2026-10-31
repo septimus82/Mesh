@@ -68,6 +68,7 @@ class DynamicLightHandle:
     color_rgba: tuple[int, int, int, int] | None = None
     flicker_enabled: bool = False
     flicker_seed: int | None = None
+    flicker_settings: dict[str, Any] | None = None  # the owner's flicker settings (preset, strength, custom values)
     flicker_speed: float = 1.0
     flicker_amount: float = 0.0
     flicker_radius_px: float | None = None
@@ -95,6 +96,10 @@ class _FlickerLightState:
     amount: float
     radius_px: float | None
     intensity: float | None
+    # Natural flicker (12.1): what it looks like, its own seed, and the strength multiplier.
+    profile: Any = None
+    seed: int = 0
+    strength: float = 1.0
 
 
 class _LayerContext:

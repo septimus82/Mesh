@@ -1,0 +1,19 @@
+{
+ "before": {
+  "sculpted": false
+ },
+ "after": {
+  "sculpted": true,
+  "frame_ms": {
+   "median": 38.97,
+   "p95": 41.8,
+   "max": 104.68,
+   "n": 16
+  },
+  "walk_world": true,
+  "out_of_place": [
+   "'Elder' is 2.0 m above the ground"
+  ]
+ },
+ "undo_back_to_plain_ground": true
+}

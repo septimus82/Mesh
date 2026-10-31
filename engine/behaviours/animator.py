@@ -146,6 +146,10 @@ class SpriteAnimatorBehaviour(Behaviour):
                             if t:
                                 textures.append(t)
 
+                if definition.get("flip_x") and textures:
+                    # Mirrored frames: one sheet of right-facing frames also gives walk_left.
+                    textures = [texture.flip_left_right() for texture in textures]
+
                 # Store config
                 self.animation_configs[name] = {
                     "fps": float(definition.get("fps", self.config.get("animation_frame_rate", 8.0))),
@@ -184,6 +188,7 @@ class SpriteAnimatorBehaviour(Behaviour):
         self._directional_mode = str(self.config.get("directional_mode", "none") or "none").lower()
         facing_default = str(self.config.get("facing_default", "down") or "down").lower()
         self._facing = facing_default if facing_default in {"up", "down", "left", "right"} else "down"
+        self._last_pos: tuple[float, float] | None = None
 
         self._apply_frame()
 
@@ -214,7 +219,17 @@ class SpriteAnimatorBehaviour(Behaviour):
         if self._auto_state_enabled:
             vx = getattr(self.entity, "mesh_velocity_x", getattr(self.entity, "change_x", 0.0))
             vy = getattr(self.entity, "mesh_velocity_y", getattr(self.entity, "change_y", 0.0))
+            pos = (float(getattr(self.entity, "center_x", 0.0) or 0.0), float(getattr(self.entity, "center_y", 0.0) or 0.0))
+            if not (vx or vy) and self._last_pos is not None and dt > 0:
+                # Moved without a velocity (Patrol, Wander, a schedule set the position): measure it.
+                vx, vy = (pos[0] - self._last_pos[0]) / dt, (pos[1] - self._last_pos[1]) / dt
+            self._last_pos = pos
             speed = (vx * vx + vy * vy) ** 0.5
+            if self._directional_mode == "4-way" and speed > self._speed_threshold:
+                if abs(vx) >= abs(vy):
+                    self._facing = "right" if vx > 0 else "left"
+                else:
+                    self._facing = "up" if vy > 0 else "down"
             target_clip = self._resolve_directional_clip(speed > self._speed_threshold)
             self._set_clip_if_changed(target_clip)
 
@@ -334,4 +349,11 @@ class SpriteAnimatorBehaviour(Behaviour):
             return
 
         idx = max(0, min(self.frame_index, len(textures) - 1))
+        if self.entity.texture is textures[idx]:
+            return
         self.entity.texture = textures[idx]
+        # Arcade keeps the old hit box when the texture changes: a sprite made from the whole sheet kept the
+        # sheet's, so its feet (shadow, depth sorting) sat far below the frame shown. As engine/animation.py.
+        sync_hit_box = getattr(self.entity, "sync_hit_box_to_texture", None)
+        if callable(sync_hit_box):
+            sync_hit_box()

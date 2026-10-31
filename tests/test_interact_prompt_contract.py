@@ -225,3 +225,16 @@ def test_generic_interact_label_without_name_omits_object_label() -> None:
     entity.mesh_name = ""
 
     assert get_interact_prompt(window, entity) == "E: Interact"
+
+
+@pytest.mark.fast
+def test_interact_prompt_box_grows_to_fit_a_long_label(monkeypatch: pytest.MonkeyPatch, prompt_draw_sink: list[str]) -> None:
+    boxes: list[float] = []
+    monkeypatch.setattr(hud, "_draw_rectangle_filled", lambda **kwargs: boxes.append(kwargs["width"]))
+    window = _make_window("keyboard_mouse")
+
+    InteractPromptOverlay(window, provider=lambda _window: _StubEntity(label="Chest")).draw()
+    InteractPromptOverlay(window, provider=lambda _window: _StubEntity(label="Tomas's grave (dug up)")).draw()
+
+    assert boxes[0] == 220.0  # short labels keep the usual box
+    assert boxes[1] >= len(prompt_draw_sink[1]) * 10  # long ones don't spill off the left edge

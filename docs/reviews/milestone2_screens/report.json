@@ -1,0 +1,241 @@
+{
+ "passed": true,
+ "steps": [
+  {
+   "step": "open",
+   "ok": true,
+   "error": null,
+   "seconds": 7.6,
+   "screenshot": "01_open.png"
+  },
+  {
+   "step": "starting_map",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "size": [
+     24,
+     16
+    ],
+    "tile": 32
+   },
+   "seconds": 0.0,
+   "screenshot": "02_starting_map.png"
+  },
+  {
+   "step": "paint_floor",
+   "ok": true,
+   "error": null,
+   "seconds": 8.2,
+   "screenshot": "03_paint_floor.png"
+  },
+  {
+   "step": "walls_and_obstacles",
+   "ok": true,
+   "error": null,
+   "seconds": 6.7,
+   "screenshot": "04_walls_and_obstacles.png"
+  },
+  {
+   "step": "erase_and_repaint",
+   "ok": true,
+   "error": null,
+   "seconds": 3.4,
+   "screenshot": "05_erase_and_repaint.png"
+  },
+  {
+   "step": "undo_redo_stroke",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "stroke_cells": 6
+   },
+   "seconds": 2.6,
+   "screenshot": "06_undo_redo_stroke.png"
+  },
+  {
+   "step": "place_npc",
+   "ok": true,
+   "error": null,
+   "seconds": 3.3,
+   "screenshot": "07_place_npc.png"
+  },
+  {
+   "step": "dialogue_behaviour",
+   "ok": true,
+   "error": null,
+   "seconds": 5.0,
+   "screenshot": "08_dialogue_behaviour.png"
+  },
+  {
+   "step": "second_room",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "size": [
+     20,
+     15
+    ]
+   },
+   "seconds": 1.8,
+   "screenshot": "09_second_room.png"
+  },
+  {
+   "step": "paint_second_room",
+   "ok": true,
+   "error": null,
+   "seconds": 10.2,
+   "screenshot": "10_paint_second_room.png"
+  },
+  {
+   "step": "connect_rooms",
+   "ok": true,
+   "error": null,
+   "seconds": 2.0,
+   "screenshot": "11_connect_rooms.png"
+  },
+  {
+   "step": "save",
+   "ok": true,
+   "error": null,
+   "seconds": 0.4,
+   "screenshot": "12_save.png"
+  },
+  {
+   "step": "close_and_reopen",
+   "ok": true,
+   "error": null,
+   "seconds": 5.1,
+   "screenshot": "13_close_and_reopen.png"
+  },
+  {
+   "step": "persisted",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "objects": [
+     "Arrival from Cabin",
+     "Door to Cabin",
+     "Elder",
+     "Guide",
+     "Player"
+    ]
+   },
+   "seconds": 1.1,
+   "screenshot": "14_persisted.png"
+  },
+  {
+   "step": "play_both_rooms",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "arrived_in_cabin_at": [
+     256.0,
+     128.0
+    ],
+    "back_at": [
+     272.0,
+     272.0
+    ]
+   },
+   "seconds": 9.6,
+   "screenshot": "15_play_both_rooms.png"
+  },
+  {
+   "step": "walls_block",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "from": [
+     272.0,
+     272.0
+    ],
+    "stopped_at_left_wall": [
+     160.0,
+     272.0
+    ],
+    "stopped_at_top_wall": [
+     160.0,
+     384.0
+    ]
+   },
+   "seconds": 3.7,
+   "screenshot": "16_walls_block.png"
+  },
+  {
+   "step": "stop_unchanged",
+   "ok": true,
+   "error": null,
+   "seconds": 0.4,
+   "screenshot": "17_stop_unchanged.png"
+  },
+  {
+   "step": "x_drag_object_paints_nothing",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "from_x": 320.0,
+    "to_x": 432.0
+   },
+   "seconds": 1.6,
+   "screenshot": "18_x_drag_object_paints_nothing.png"
+  },
+  {
+   "step": "x_painting_over_an_object_leaves_it",
+   "ok": true,
+   "error": null,
+   "seconds": 2.4,
+   "screenshot": "19_x_painting_over_an_object_leaves_it.png"
+  },
+  {
+   "step": "x_typing_never_triggers_shortcuts",
+   "ok": true,
+   "error": null,
+   "seconds": 3.7,
+   "screenshot": "20_x_typing_never_triggers_shortcuts.png"
+  },
+  {
+   "step": "x_zoom_pan_then_paint",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "zoom": [
+     [
+      247.99999999999997,
+      123.0,
+      932.0,
+      579.0
+     ],
+     [
+      134.7979999999999,
+      47.53199999999988,
+      1045.2020000000002,
+      654.4680000000001
+     ],
+     [
+      14.797999999999973,
+      107.53199999999987,
+      925.2020000000002,
+      714.4680000000001
+     ]
+    ]
+   },
+   "seconds": 3.1,
+   "screenshot": "21_x_zoom_pan_then_paint.png"
+  },
+  {
+   "step": "x_right_click_with_a_brush_opens_the_menu",
+   "ok": true,
+   "error": null,
+   "seconds": 1.0,
+   "screenshot": "22_x_right_click_with_a_brush_opens_the_menu.png"
+  },
+  {
+   "step": "x_switching_rooms_keeps_unsaved_paint",
+   "ok": true,
+   "error": null,
+   "seconds": 2.6,
+   "screenshot": "23_x_switching_rooms_keeps_unsaved_paint.png"
+  }
+ ]
+}

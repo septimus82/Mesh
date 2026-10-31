@@ -1,0 +1,20 @@
+{
+ "selected_row": "Ambience Volume",
+ "ambience_volume": 0.75,
+ "music_and_sfx_unchanged": [
+  1.0,
+  1.0
+ ],
+ "loops_same_players": true,
+ "levels_before_after": {
+  "rain": [
+   0.486,
+   0.399
+  ],
+  "wind": [
+   0.162,
+   0.146
+  ]
+ },
+ "saved": 0.75
+}

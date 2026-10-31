@@ -11,10 +11,9 @@ browser) using the ``starter`` template: a walkable player and a Guide NPC.
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 from typing import Any
 
-from .blank_project import create_blank_project
+from .blank_project import create_blank_project, default_dest
 
 
 def register(subparsers: Any) -> None:
@@ -35,7 +34,8 @@ def register(subparsers: Any) -> None:
     p.add_argument(
         "--dest",
         default=".",
-        help="Parent directory to create the project in (default: current directory)",
+        help="Parent directory to create the project in (default: the current directory, "
+        "or Documents/Mesh Projects when run inside the engine folder)",
     )
     p.add_argument(
         "--template",
@@ -47,7 +47,7 @@ def register(subparsers: Any) -> None:
 def handle(args: argparse.Namespace) -> int:
     return create_blank_project(
         str(args.name),
-        Path(getattr(args, "dest", ".")).resolve(),
+        default_dest(getattr(args, "dest", ".")),
         template_id=str(getattr(args, "template", "starter")),
         force=bool(getattr(args, "force", False)),
     )

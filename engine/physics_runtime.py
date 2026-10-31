@@ -90,10 +90,45 @@ def _sprite_circle_shape(sprite: Any) -> Circle | None:
     return Circle(cx + ox, cy + oy, radius)
 
 
+def footprint(width: float, height: float) -> dict[str, float]:
+    """A character's feet in a picture this size: the bottom quarter, 60% as wide. Tall pictures then
+    don't block narrow paths with their heads (an "auto" box collider is this, at the current size)."""
+    h = max(8.0, height * 0.25)
+    return {"w": max(4.0, round(width * 0.6)), "h": round(h), "offset_x": 0.0, "offset_y": round(-height / 2 + h / 2)}
+
+
+def _sprite_box_shape(sprite: Any) -> Aabb | None:
+    """A ``{"kind": "box", "w", "h", "offset_x", "offset_y"}`` collider: a footprint, so a tall
+    object (a tree, a headstone) blocks where it stands rather than with its whole picture."""
+    entity_data = getattr(sprite, "mesh_entity_data", None)
+    components = entity_data.get("components") if isinstance(entity_data, dict) else None
+    collider = components.get("collider") if isinstance(components, dict) else None
+    if not isinstance(collider, dict) or str(collider.get("kind", "") or "").strip().lower() != "box":
+        return None
+    if collider.get("auto"):  # a character's feet, whatever its picture and size are now
+        box = footprint(_as_float(getattr(sprite, "width", 0.0), 0.0), _as_float(getattr(sprite, "height", 0.0), 0.0))
+        return Aabb(_as_float(getattr(sprite, "center_x", 0.0), 0.0) + box["offset_x"],
+                    _as_float(getattr(sprite, "center_y", 0.0), 0.0) + box["offset_y"], box["w"], box["h"])
+    w = _as_float(collider.get("w", collider.get("width", 0.0)), 0.0)
+    h = _as_float(collider.get("h", collider.get("height", 0.0)), 0.0)
+    if w <= 0.0 or h <= 0.0:
+        return None
+    cx = _as_float(getattr(sprite, "center_x", 0.0), 0.0)
+    cy = _as_float(getattr(sprite, "center_y", 0.0), 0.0)
+    ox = _as_float(collider.get("offset_x", collider.get("ox", 0.0)), 0.0)
+    oy = _as_float(collider.get("offset_y", collider.get("oy", 0.0)), 0.0)
+    return Aabb(cx + ox, cy + oy, w, h)
+
+
+def _sprite_collider_shape(sprite: Any) -> Aabb | Circle | None:
+    """The shape a ``components.collider`` gives a sprite, or None to use its whole picture."""
+    return _sprite_circle_shape(sprite) or _sprite_box_shape(sprite)
+
+
 def _sprite_to_shape(sprite: Any) -> Aabb | Circle:
-    circle = _sprite_circle_shape(sprite)
-    if circle is not None:
-        return circle
+    shape = _sprite_collider_shape(sprite)
+    if shape is not None:
+        return shape
     cx = _as_float(getattr(sprite, "center_x", 0.0), 0.0)
     cy = _as_float(getattr(sprite, "center_y", 0.0), 0.0)
     w = _as_float(getattr(sprite, "width", 0.0), 0.0)
@@ -532,6 +567,7 @@ def move_entity_with_physics(
     moving_shape = _sprite_to_shape(entity)
     start_aabb = _shape_to_aabb(moving_shape)
     moving_circle_radius = float(moving_shape.radius) if isinstance(moving_shape, Circle) else None
+    moving_box = _sprite_box_shape(entity)
     req = MoveRequest(
         entity_id=getattr(entity, "mesh_id", "unknown"),
         from_pos=(start_aabb.x, start_aabb.y),
@@ -577,14 +613,15 @@ def move_entity_with_physics(
         else:
             proxy_shape = aabb
 
-        any_circle = isinstance(proxy_shape, Circle)
-        if not any_circle:
+        # Arcade's own check uses whole pictures; any collider shape (ours or theirs) needs ours.
+        custom_shapes = isinstance(proxy_shape, Circle) or moving_box is not None
+        if not custom_shapes:
             for candidate in candidates:
-                if _sprite_circle_shape(candidate) is not None:
-                    any_circle = True
+                if _sprite_collider_shape(candidate) is not None:
+                    custom_shapes = True
                     break
 
-        if any_circle:
+        if custom_shapes:
             hits = []
             for s in candidates:
                 try:
@@ -616,8 +653,9 @@ def move_entity_with_physics(
     # 3. Execute Pure Model
     result = sweep_axis_separate(req, query_tiles)
 
-    # 4. Apply Side Effects
-    entity.center_x = result.final_pos[0]
-    entity.center_y = result.final_pos[1]
+    # 4. Apply Side Effects: move the entity by what the shape moved. (Setting its centre to the
+    # shape's would drift an offset collider, e.g. one at the feet, by its offset every frame.)
+    entity.center_x += result.final_pos[0] - start_aabb.x
+    entity.center_y += result.final_pos[1] - start_aabb.y
 
     return result

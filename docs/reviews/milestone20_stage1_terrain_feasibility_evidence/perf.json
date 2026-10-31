@@ -1,0 +1,76 @@
+{
+  "gpu": {
+    "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+  },
+  "terrain": {
+    "cells": 3072,
+    "cell_m": 0.5,
+    "chunks": 20,
+    "chunk_cells": 16,
+    "triangles_drawn": 6186,
+    "collision_surfaces_stored_for_the_ground": 0,
+    "gpu_bytes": 593856,
+    "cpu_heights": 3185,
+    "stored_chars": 8892
+  },
+  "sculpt_op_ms": 4.411,
+  "stroke_dirty_chunks": 4,
+  "rebuild_dirty_chunks_ms": {
+    "draw": 20.354,
+    "collision": 0.004
+  },
+  "rebuild_every_chunk_ms": {
+    "draw": 60.742,
+    "collision": 0.005,
+    "collision_world_from_scratch": 0.779
+  },
+  "one_chunk_mesh_ms": 4.218,
+  "nav_grid_build_ms": 66.295,
+  "stand_query_us": {
+    "sculpted": 15.98,
+    "flat_ground": 8.17
+  },
+  "height_query_us": 1.849,
+  "frame_gpu_ms": {
+    "sculpted": 0.946,
+    "flat": 0.954
+  },
+  "frame_gpu_ms_rounds": {
+    "sculpted": [
+      0.723,
+      0.82,
+      0.946,
+      1.072,
+      1.179
+    ],
+    "flat": [
+      0.743,
+      0.847,
+      0.954,
+      1.085,
+      1.197
+    ]
+  },
+  "draw_calls": 32,
+  "gl_objects": {
+    "start": {
+      "buffer": 113,
+      "texture": 30,
+      "framebuffer": 6,
+      "program": 28
+    },
+    "after_5_rebuilds_of_every_chunk": {
+      "buffer": 113,
+      "texture": 30,
+      "framebuffer": 6,
+      "program": 28
+    },
+    "after_5_room_changes": {
+      "buffer": 113,
+      "texture": 29,
+      "framebuffer": 6,
+      "program": 28
+    }
+  },
+  "room_load_ms": 219.2
+}

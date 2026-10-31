@@ -171,13 +171,15 @@ def register_behaviour(
         BEHAVIOUR_PARAM_DEFS[canonical] = param_defs
 
         parsed_fields: list[dict[str, Any]] = []
-        if config_fields:
-            for entry in config_fields:
-                spec = _normalize_field_spec(entry)
-                if spec is not None:
-                    parsed_fields.append(spec)
-        elif param_defs:
-            for field_name, param in param_defs.items():
+        for entry in config_fields or ():
+            spec = _normalize_field_spec(entry)
+            if spec is not None:
+                parsed_fields.append(spec)
+        # Explicit fields win (richer copy); declared params they don't mention still
+        # appear, so a form built from this list can set every real parameter.
+        listed = {spec["name"] for spec in parsed_fields}
+        for field_name, param in (param_defs or {}).items():
+            if field_name not in listed:
                 parsed_fields.append(_field_spec_from_param(field_name, param))
 
         info = BehaviourInfo(

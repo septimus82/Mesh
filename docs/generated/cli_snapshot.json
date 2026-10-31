@@ -449,7 +449,7 @@
           "choices": null,
           "default": "False",
           "dest": "fail_on_regression",
-          "help": "Exit 2 if any regression detected",
+          "help": "Exit 2 if any regression is detected (informational differences never fail; a broken bundle always exits 2)",
           "nargs": null,
           "option_strings": [
             "--fail-on-regression"
@@ -1201,6 +1201,161 @@
       "description": null,
       "subcommands": {},
       "usage": "usage: __main__.py audit-trend [-h] [--json] locks"
+    },
+    "author": {
+      "arguments": [],
+      "description": null,
+      "subcommands": {
+        "apply": {
+          "arguments": [
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "changes",
+              "help": "JSON file of changes, or - for stdin",
+              "nargs": null,
+              "option_strings": [],
+              "required": true,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "False",
+              "dest": "dry_run",
+              "help": "Only say what would change",
+              "nargs": null,
+              "option_strings": [
+                "--dry-run"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": ".",
+              "dest": "project",
+              "help": "The project folder (default: here)",
+              "nargs": null,
+              "option_strings": [
+                "--project"
+              ],
+              "required": false,
+              "type": null
+            }
+          ],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: __main__.py author apply [-h] [--dry-run] [--project PROJECT] changes"
+        },
+        "ops": {
+          "arguments": [],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: __main__.py author ops [-h]"
+        },
+        "propose": {
+          "arguments": [
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "base_revision",
+              "help": "The revision your changes are based on (from read)",
+              "nargs": null,
+              "option_strings": [
+                "--base-revision"
+              ],
+              "required": false,
+              "type": "<class 'int'>"
+            },
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "changes",
+              "help": "JSON file of changes, or - for stdin",
+              "nargs": null,
+              "option_strings": [],
+              "required": true,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": ".",
+              "dest": "project",
+              "help": "The project folder (default: here)",
+              "nargs": null,
+              "option_strings": [
+                "--project"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "",
+              "dest": "title",
+              "help": "A short title for the person reviewing it",
+              "nargs": null,
+              "option_strings": [
+                "--title"
+              ],
+              "required": false,
+              "type": null
+            }
+          ],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: __main__.py author propose [-h] [--title TITLE] [--base-revision BASE_REVISION] [--project PROJECT] changes"
+        },
+        "read": {
+          "arguments": [
+            {
+              "choices": null,
+              "default": ".",
+              "dest": "project",
+              "help": "The project folder (default: here)",
+              "nargs": null,
+              "option_strings": [
+                "--project"
+              ],
+              "required": false,
+              "type": null
+            }
+          ],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: __main__.py author read [-h] [--project PROJECT]"
+        },
+        "status": {
+          "arguments": [
+            {
+              "choices": null,
+              "default": ".",
+              "dest": "project",
+              "help": "The project folder (default: here)",
+              "nargs": null,
+              "option_strings": [
+                "--project"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "proposal_id",
+              "help": null,
+              "nargs": null,
+              "option_strings": [],
+              "required": true,
+              "type": null
+            }
+          ],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: __main__.py author status [-h] [--project PROJECT] proposal_id"
+        }
+      },
+      "usage": "usage: __main__.py author [-h] {ops,read,apply,propose,status} ..."
     },
     "auto-wire-transitions": {
       "arguments": [
@@ -3954,7 +4109,7 @@
           "choices": null,
           "default": ".",
           "dest": "dest",
-          "help": "Parent directory to create the project in (default: current directory)",
+          "help": "Parent directory to create the project in (default: the current directory, or Documents/Mesh Projects when run inside the engine folder)",
           "nargs": null,
           "option_strings": [
             "--dest"
@@ -10848,5 +11003,5 @@
       "usage": "usage: __main__.py world-graph [-h] world_path output"
     }
   },
-  "usage": "usage: __main__.py [-h] [--help-all] [--version] {play,edit,play-runtime,build-web,web-smoke,package-player,demo,wizard,docs,mcp,dump-state,ship-check,debug,debug-report,health-report,release-preflight,release-notes,verify-report,verify-demo,verify-strict,verify-replays,verify-all,verify-local,pack,fx,new,new_project,release-contract,release,version,version-bump,bundle,artifacts-validate,artifacts-diff,baseline-update,trends-update,trends-report,perf-run,perf-compare,perf-stage-bench,list-worlds,list-encounter-presets,lint-presets,index,doctor-assets,schema-fix-ids,polish,migrate,sprite,assets,new-npc,place-npc,new-quest,new-behaviour,add-puzzle,new-scene,edit-scene,tidy-scene,list-scenes,validate,scene,world,validate-world,auto-wire-transitions,world-graph,room,tilemap,macro,check,validate-all,validate-events,doctor,explain,cli-smoke,selftest,pipeline,recipes,run-preset,preset,triage,assist,plan,apply-plan,undo-last-plan,ai-generate-plan,ai-export-context,ai-bundle,ai-history,ai-audit,encounter-report,drift-check,stamp,brush,capture,new-prefab,place-prefab,prefab,replay-script,replay-suite,trace,replay-hash,cutscene-simulate,cutscene-validate,build-demo,index-content,list-overrides,where,validate-refs,diff-content,changelog,audit-content,audit-trend,content-contract,golden-slice,validate-packs,packs,lock-packs,init-content-pack,release-check,cli-snapshot,dist,replay-goldens,export,campaign,new-game,content,episode,replays} ..."
+  "usage": "usage: __main__.py [-h] [--help-all] [--version] {play,edit,play-runtime,build-web,web-smoke,package-player,demo,wizard,docs,mcp,author,dump-state,ship-check,debug,debug-report,health-report,release-preflight,release-notes,verify-report,verify-demo,verify-strict,verify-replays,verify-all,verify-local,pack,fx,new,new_project,release-contract,release,version,version-bump,bundle,artifacts-validate,artifacts-diff,baseline-update,trends-update,trends-report,perf-run,perf-compare,perf-stage-bench,list-worlds,list-encounter-presets,lint-presets,index,doctor-assets,schema-fix-ids,polish,migrate,sprite,assets,new-npc,place-npc,new-quest,new-behaviour,add-puzzle,new-scene,edit-scene,tidy-scene,list-scenes,validate,scene,world,validate-world,auto-wire-transitions,world-graph,room,tilemap,macro,check,validate-all,validate-events,doctor,explain,cli-smoke,selftest,pipeline,recipes,run-preset,preset,triage,assist,plan,apply-plan,undo-last-plan,ai-generate-plan,ai-export-context,ai-bundle,ai-history,ai-audit,encounter-report,drift-check,stamp,brush,capture,new-prefab,place-prefab,prefab,replay-script,replay-suite,trace,replay-hash,cutscene-simulate,cutscene-validate,build-demo,index-content,list-overrides,where,validate-refs,diff-content,changelog,audit-content,audit-trend,content-contract,golden-slice,validate-packs,packs,lock-packs,init-content-pack,release-check,cli-snapshot,dist,replay-goldens,export,campaign,new-game,content,episode,replays} ..."
 }

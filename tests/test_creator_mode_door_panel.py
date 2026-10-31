@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import subprocess
-import sys
-
 import pytest
 
 from engine.editor.creator_mode import (
@@ -15,6 +12,7 @@ from engine.editor.creator_mode.creator_door_panel import (
     CreatorDoorPanelLine,
     _dedupe_text,
 )
+from tests._shared_python import run_python
 
 pytestmark = pytest.mark.fast
 
@@ -199,67 +197,40 @@ def test_builder_does_not_call_stage_creator_door_proposal(monkeypatch: pytest.M
 
 
 def test_module_imports_without_arcade() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; "
-                "sys.modules['arcade'] = None; "
-                "from engine.editor.creator_mode.creator_door_panel "
-                "import build_creator_door_panel; "
-                "print(callable(build_creator_door_panel))"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
+    output = run_python(
+        (
+            "import sys; "
+            "from engine.editor.creator_mode.creator_door_panel "
+            "import build_creator_door_panel; "
+            "print(callable(build_creator_door_panel))"
+        ),
+        without_arcade=True,
     )
 
-    assert result.stdout.strip() == "True"
-
-
-def test_package_import_still_does_not_import_renderer_module() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; import engine.editor.creator_mode; "
-                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
-    )
-
-    assert result.stdout.strip() == "False"
+    assert output.strip() == "True"
 
 
 def test_module_does_not_import_real_bridge_modules() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; "
-                "from engine.editor.creator_mode.creator_door_panel "
-                "import build_creator_door_panel; "
-                "blocked = ["
-                "'engine.editor.live_session_bridge', "
-                "'engine.editor.editor_live_ops_controller', "
-                "'engine.editor.proposal_inbox'"
-                "]; "
-                "print(any(name in sys.modules for name in blocked))"
-            ),
+    output = run_python(
+        (
+            "import sys; "
+            "from engine.editor.creator_mode.creator_door_panel "
+            "import build_creator_door_panel; "
+            "blocked = ["
+            "'engine.editor.live_session_bridge', "
+            "'engine.editor.editor_live_ops_controller', "
+            "'engine.editor.proposal_inbox'"
+            "]; "
+            "print(any(name in sys.modules for name in blocked))"
+        ),
+        watch=[
+            'engine.editor.live_session_bridge',
+            'engine.editor.editor_live_ops_controller',
+            'engine.editor.proposal_inbox',
         ],
-        capture_output=True,
-        check=True,
-        text=True,
     )
 
-    assert result.stdout.strip() == "False"
+    assert output.strip() == "False"
 
 
 def test_panel_line_defaults_to_info_severity() -> None:

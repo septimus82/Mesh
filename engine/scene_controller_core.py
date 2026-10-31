@@ -30,7 +30,6 @@ from .behaviours.utils import (
 from .constants import EVENT_COLLECTIBLE_PICKED, EVENT_DAMAGE_APPLIED
 from .culling import Rect
 from .depth_tint_model import DEFAULT_DEPTH_TINT_SETTINGS, DepthTintSettings
-from .editor.sprite_outline_model import DEFAULT_OUTLINE_SETTINGS, OutlineSettings
 from .elite_labeling import format_elite_label
 from .encounter_cost import (
     get_effective_encounter_cost,
@@ -118,6 +117,7 @@ from .scene_runtime.spawn import find_spawn_marker as _find_spawn_marker_runtime
 from .scene_runtime.spawn import get_spawn as _get_spawn_runtime
 from .scene_update_controller import SceneUpdateController
 from .sensors_runtime import SensorRuntime
+from .sprite_outline_model import DEFAULT_OUTLINE_SETTINGS, OutlineSettings
 from .tilemap import TilemapDrawLayer, TilemapInstance, compute_parallax_camera_position
 from .tilemap_batch import TilemapBatchState, TilemapBatchStats
 from .tilemap_batch_arcade import TilemapBatcher

@@ -1,0 +1,148 @@
+{
+  "comparisons": {
+    "texel_px": 1.96,
+    "reflection": {
+      "19a": {
+        "water_pixels": 47818,
+        "mean_change": 15.24,
+        "share_changed_over_24": 0.58
+      },
+      "19b": {
+        "water_pixels": 40582,
+        "mean_change": 7.19,
+        "share_changed_over_24": 0.0
+      }
+    }
+  },
+  "renders": {
+    "water_surfaces_dry": 4,
+    "water_surfaces_rain": 4,
+    "reflection_and_pan": {
+      "clip_frames": 48,
+      "mirrored_pixels": {
+        "0.3": 32064,
+        "0.8": 32821
+      }
+    }
+  },
+  "places": {
+    "roof": {
+      "water": "natural_pond",
+      "pixels_drawn": 40915,
+      "pixels_hidden_by_what_stands_in_front": 4986
+    },
+    "cliff": {
+      "water": "cliff_pond",
+      "pixels_drawn": 27159,
+      "pixels_hidden_by_what_stands_in_front": 2778
+    },
+    "elevated_floor": {
+      "at_2m_drawn": 4309,
+      "at_2m_hidden": 1349,
+      "at_0m_drawn": 0,
+      "at_0m_hidden": 9461
+    },
+    "bridge": {
+      "path_puddle": [
+        666,
+        1107,
+        601
+      ],
+      "under_bridge": [
+        70,
+        70,
+        82
+      ],
+      "under_bridge_negative_control_shelter_off": [
+        596,
+        516,
+        662
+      ]
+    }
+  },
+  "gameplay": {
+    "steps": {
+      "through_the_muddy_puddle": 4,
+      "water_step_events": 4
+    },
+    "walkable": {
+      "box_south_edge_m": 16.26,
+      "centre_m": 18.5,
+      "feet_reached_m": 18.54
+    },
+    "blocking": {
+      "box_south_edge_m": 16.26,
+      "centre_m": 18.5,
+      "feet_reached_m": 16.07
+    },
+    "ripple_change_by_strength": {
+      "1.0": 258381,
+      "0.5": 128392,
+      "0.0": 0
+    }
+  },
+  "two_d": {
+    "water_pixels": 53192,
+    "player_pixels_changed_by_water": 0,
+    "error": null
+  },
+  "studio": {
+    "placed": {
+      "preset": "muddy_puddle",
+      "shape": "natural",
+      "shore": "mud"
+    },
+    "adjusted": {
+      "preset": "natural_pond",
+      "width": 200.0,
+      "height": 128.0,
+      "rotation": 30.0,
+      "seed": 8,
+      "shore": "grass"
+    },
+    "stone_bank": {
+      "shore": "stone",
+      "depth": 0.8,
+      "deep_colour": "#16324a"
+    },
+    "room_reflections": "half",
+    "drawn_and_moving": 27034,
+    "undo": {
+      "reflections": "full",
+      "deep_colour": "#1a3842"
+    },
+    "redo": {
+      "reflections": "half",
+      "deep_colour": "#16324a"
+    },
+    "clicked_in_3d_selects_it": true,
+    "saved_dirty_after": false,
+    "expected": {
+      "preset": "natural_pond",
+      "width": 200.0,
+      "height": 128.0,
+      "colour": "#4c7361",
+      "opacity": 0.9,
+      "shape": "natural",
+      "waves": 0.45,
+      "reflection": 0.3,
+      "rain_ripples": true,
+      "walkable": true,
+      "step_sound": "",
+      "rotation": 30.0,
+      "seed": 8,
+      "shore": "stone",
+      "shore_width": 14.0,
+      "deep_colour": "#16324a",
+      "depth": 0.8,
+      "ripples": 1.0
+    },
+    "reopened_same": true,
+    "in_play": {
+      "mode": "play",
+      "water_surfaces": 1,
+      "reflections": "half"
+    },
+    "after_stop_mode": "edit"
+  }
+}

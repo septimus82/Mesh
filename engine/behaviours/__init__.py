@@ -25,7 +25,9 @@ _BUILTIN_MODULES: tuple[str, ...] = (
     "engine.behaviours.animator",
     "engine.behaviours.breeding_shrine_zone",
     "engine.behaviours.camera_follow",
+    "engine.behaviours.campfire",
     "engine.behaviours.patrol_chase",
+    "engine.behaviours.picture_by_flags",
     "engine.behaviours.collectible",
     "engine.behaviours.combat",
     "engine.behaviours.chase_target",
@@ -37,6 +39,7 @@ _BUILTIN_MODULES: tuple[str, ...] = (
     "engine.behaviours.drop_table",
     "engine.behaviours.encounter_cleared",
     "engine.behaviours.emit_event_on_event",
+    "engine.behaviours.floor_route",
     "engine.behaviours.enemy_ai",
     "engine.behaviours.event_logger",
     "engine.behaviours.flee_from_target",
@@ -72,6 +75,7 @@ _BUILTIN_MODULES: tuple[str, ...] = (
     "engine.behaviours.sequence_player",
     "engine.behaviours.set_game_state_on_event",
     "engine.behaviours.shooter",
+    "engine.behaviours.sound_emitter",
     "engine.behaviours.time_of_day_gate",
     "engine.behaviours.timer",
     "engine.behaviours.toggle_scene_lights",
@@ -80,6 +84,7 @@ _BUILTIN_MODULES: tuple[str, ...] = (
     "engine.behaviours.trigger_zone",
     "engine.behaviours.vendor",
     "engine.behaviours.wander",
+    "engine.behaviours.water_surface",
 )
 
 _BUILTINS_LOADED = False

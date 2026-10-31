@@ -1,0 +1,182 @@
+{
+ "calm": {
+  "reed_measured": {
+   "mean_deg": -1.9,
+   "max_deg": 4.1,
+   "height_px_mean": 103.0,
+   "height_px_min": 103,
+   "height_px_max": 103
+  },
+  "grass": {
+   "mean_deg": -0.0,
+   "max_deg": 2.0,
+   "depth_max_deg": 0.0
+  },
+  "bush": {
+   "mean_deg": -0.0,
+   "max_deg": 0.2,
+   "depth_max_deg": 0.0
+  },
+  "tree_canopy": {
+   "mean_deg": -0.0,
+   "max_deg": 0.9,
+   "depth_max_deg": 0.0
+  },
+  "rain_wind": []
+ },
+ "breeze": {
+  "reed_measured": {
+   "mean_deg": 5.2,
+   "max_deg": 11.8,
+   "height_px_mean": 104.0,
+   "height_px_min": 103,
+   "height_px_max": 105
+  },
+  "grass": {
+   "mean_deg": 6.2,
+   "max_deg": 12.7,
+   "depth_max_deg": 2.3
+  },
+  "bush": {
+   "mean_deg": 0.7,
+   "max_deg": 1.6,
+   "depth_max_deg": 0.3
+  },
+  "tree_canopy": {
+   "mean_deg": 2.8,
+   "max_deg": 5.8,
+   "depth_max_deg": 1.0
+  },
+  "rain_wind": []
+ },
+ "strong": {
+  "reed_measured": {
+   "mean_deg": 24.7,
+   "max_deg": 32.0,
+   "height_px_mean": 99.1,
+   "height_px_min": 93,
+   "height_px_max": 104
+  },
+  "grass": {
+   "mean_deg": 24.9,
+   "max_deg": 32.2,
+   "depth_max_deg": 6.9
+  },
+  "bush": {
+   "mean_deg": 3.0,
+   "max_deg": 3.9,
+   "depth_max_deg": 0.8
+  },
+  "tree_canopy": {
+   "mean_deg": 11.2,
+   "max_deg": 14.5,
+   "depth_max_deg": 3.2
+  },
+  "rain_wind": []
+ },
+ "gusts": {
+  "reed_measured": {
+   "mean_deg": 14.9,
+   "max_deg": 25.9,
+   "height_px_mean": 102.7,
+   "height_px_min": 98,
+   "height_px_max": 105
+  },
+  "grass": {
+   "mean_deg": 12.7,
+   "max_deg": 26.9,
+   "depth_max_deg": 6.0
+  },
+  "bush": {
+   "mean_deg": 1.6,
+   "max_deg": 3.3,
+   "depth_max_deg": 0.7
+  },
+  "tree_canopy": {
+   "mean_deg": 5.8,
+   "max_deg": 12.4,
+   "depth_max_deg": 2.7
+  },
+  "rain_wind": []
+ },
+ "rain_wind": {
+  "reed_measured": {
+   "mean_deg": -24.4,
+   "max_deg": 36.1,
+   "height_px_mean": 91.2,
+   "height_px_min": 83,
+   "height_px_max": 97
+  },
+  "grass": {
+   "mean_deg": -20.2,
+   "max_deg": 30.3,
+   "depth_max_deg": 6.6
+  },
+  "bush": {
+   "mean_deg": -2.4,
+   "max_deg": 3.6,
+   "depth_max_deg": 0.8
+  },
+  "tree_canopy": {
+   "mean_deg": -9.1,
+   "max_deg": 13.8,
+   "depth_max_deg": 3.0
+  },
+  "rain_wind": [
+   [
+    -7.7274066103125465,
+    -2.0705523608201664
+   ]
+  ]
+ },
+ "away": {
+  "reed_measured": {
+   "mean_deg": -1.7,
+   "max_deg": 7.7,
+   "height_px_mean": 109.0,
+   "height_px_min": 109,
+   "height_px_max": 109
+  },
+  "grass": {
+   "mean_deg": -0.0,
+   "max_deg": 6.0,
+   "depth_max_deg": 6.9
+  },
+  "bush": {
+   "mean_deg": -0.0,
+   "max_deg": 0.7,
+   "depth_max_deg": 3.1
+  },
+  "tree_canopy": {
+   "mean_deg": -0.0,
+   "max_deg": 2.7,
+   "depth_max_deg": 6.9
+  },
+  "rain_wind": []
+ },
+ "toward": {
+  "reed_measured": {
+   "mean_deg": -2.1,
+   "max_deg": 9.0,
+   "height_px_mean": 95.0,
+   "height_px_min": 95,
+   "height_px_max": 95
+  },
+  "grass": {
+   "mean_deg": -0.0,
+   "max_deg": 6.0,
+   "depth_max_deg": 6.9
+  },
+  "bush": {
+   "mean_deg": -0.0,
+   "max_deg": 0.7,
+   "depth_max_deg": 3.2
+  },
+  "tree_canopy": {
+   "mean_deg": -0.0,
+   "max_deg": 2.7,
+   "depth_max_deg": 6.9
+  },
+  "rain_wind": []
+ }
+}

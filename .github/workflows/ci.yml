@@ -1,7 +1,10 @@
 ﻿name: CI
 
 on:
+  # One run per commit (#373): feature branches run through their pull request (the merge result);
+  # push runs only where commits land. workflow_dispatch still runs any branch.
   push:
+    branches: [main, redesign/visual-editor, 'release/**']
   pull_request:
   workflow_dispatch:
 
@@ -57,8 +60,7 @@ jobs:
             tests/test_shadow_backend_selection_determinism.py \
             tests/test_render_shadow_mask_fbo_use.py \
             tests/test_shadow_mask_fbo_binding.py \
-            tests/test_hard_shadows_composite_activate_fallback.py \
-            tests/test_hard_shadows_composite_draw_signature_fallback.py \
+            tests/test_shadow_shapes.py \
             tests/test_lighting_module_path_resolution.py \
             tests/test_post_processing.py \
             tests/test_mesh_cli_headless_imports.py
@@ -112,7 +114,10 @@ jobs:
           source .venv_arcade3_wheel/bin/activate
           python -m pip install -U pip
           python -m pip install dist/*.whl "arcade>=3,<4"
-          xvfb-run -a python -m mesh_cli replay-hash \
+          # -I: from the checkout, a plain `python -m mesh_cli` imported the checkout's engine instead of the wheel's
+          # (H5, #422). The replay is checkout content; the code must be the installed wheel's, and is checked to be.
+          python -I -c "import sys, engine, mesh_cli; from pathlib import Path; v = Path(sys.prefix).resolve(); bad = [m.__file__ for m in (engine, mesh_cli) if not Path(m.__file__).resolve().is_relative_to(v)]; assert not bad, f'not the installed wheel: {bad}'; print('installed engine:', engine.__file__)"
+          xvfb-run -a python -I -m mesh_cli replay-hash \
             --replay replays/00_smoke_dump_state.json \
             --frames 120 \
             --warmup 20 \
@@ -186,15 +191,95 @@ jobs:
             artifacts/web_smoke.json
             artifacts/runtime_smoke_web_gate.json
 
-  tests:
-    name: tests (${{ matrix.os }}, py${{ matrix.python }})
+  # Each OS's tests run as two parallel jobs (H3, #422 F13; neither uses the other's results): ``pytest`` (the full
+  # default suite) and ``verify`` (verify-all, the release bundle and its strict verification, the artifacts). The
+  # ``tests (<os>, py3.11)`` job after them is the result to look at: green only when both of that OS's jobs succeeded.
+  # Windows' suite, the longest job of a run, runs as two shards of whole modules (F13-C, tooling/ci_shards.py), each a
+  # job of its own: ``pytest (windows-latest, py3.11, shard 1/2)`` and ``2/2``. Each writes a record of what it
+  # collected and ran, and the Windows ``tests`` fan-in refuses unless together they ran every test exactly once.
+  pytest:
+    name: pytest (${{ matrix.os }}, py${{ matrix.python }}${{ matrix.shard && format(', shard {0}', matrix.shard) || '' }})
+    permissions:
+      contents: read
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
+    strategy:
+      # Each OS reports its own result: with fail-fast a Windows failure cancelled Linux (and vice versa) and hid it.
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.11", shard: "", shard_index: 0 }
+          - { os: windows-latest, python: "3.11", shard: "1/2", shard_index: 1 }
+          - { os: windows-latest, python: "3.11", shard: "2/2", shard_index: 2 }
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      MESH_CI_SEED: "123"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python, the project and a display
+        uses: ./.github/actions/mesh-ci-setup
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Compile Python sources
+        run: |
+          python -m compileall -q engine mesh_cli tooling tests
+
+      - name: Run pytest (Windows, one shard)
+        if: runner.os == 'Windows'
+        run: |
+          python -m pytest -q -p no:cacheprovider -p tooling.ci_shards_plugin --mesh-shard ${{ matrix.shard }} --mesh-shard-record artifacts/shards/shard-${{ matrix.shard_index }}.json --junitxml=artifacts/shards/junit-${{ matrix.shard_index }}.xml
+
+      - name: Run pytest (Linux)
+        if: runner.os != 'Windows'
+        run: |
+          xvfb-run -a python -m pytest -q
+
+      # The shard's record and JUnit report, for the fan-in (whatever happened: a missing or incomplete one is refused
+      # there). ``overwrite``: a re-run attempt of the shard replaces its earlier record.
+      - name: Upload the shard's record
+        if: always() && matrix.shard != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-shard-${{ matrix.shard_index }}-${{ matrix.os }}-py${{ matrix.python }}
+          retention-days: 7
+          if-no-files-found: ignore
+          overwrite: true
+          path: |
+            artifacts/shards/
+
+      # What the suite's tests write under artifacts/ (replay diagnostics and the like): before the split it went up
+      # with mesh-artifacts, which a failed suite still uploaded. Not a mesh-artifacts-* name: release_draft.yml takes
+      # those.
+      - name: Upload test outputs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-outputs-${{ matrix.os }}-py${{ matrix.python }}${{ matrix.shard && format('-shard-{0}', matrix.shard_index) || '' }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            artifacts/
+
+  verify:
+    name: verify (${{ matrix.os }}, py${{ matrix.python }})
     permissions:
       contents: read
       pull-requests: write
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
     strategy:
-      fail-fast: true
+      # Each OS reports its own result: with fail-fast a Windows failure cancelled Linux (and vice versa) and hid it.
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         python: ["3.11"]
@@ -212,15 +297,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-          cache: pip
-          cache-dependency-path: |
-            pyproject.toml
-            pytest.ini
-
       - name: Cache mypy cache
         uses: actions/cache@v4
         with:
@@ -229,44 +305,42 @@ jobs:
           restore-keys: |
             mypy-${{ runner.os }}-py${{ matrix.python }}-
 
-      - name: Install dependencies
-        run: |
-          python -m pip install -U pip
-          python -m pip install -e ".[dev]"
+      - name: Set up Python, the project and a display
+        uses: ./.github/actions/mesh-ci-setup
+        with:
+          python-version: ${{ matrix.python }}
 
-      - name: Install Xvfb (Linux)
-        if: runner.os != 'Windows'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb
-
+      # Before the split verify-all ran after the full suite, so its timed pytest-fast found the sources compiled and
+      # every test module already assertion-rewritten. Cold, that step took ~24 s longer on both OSes (run
+      # 41005921959: Ubuntu 100.77 s at speed 1.10, over its 79.05 s threshold) for work its thresholds never measured.
+      # These two steps give it the same start as before: compile, then the full run's own collection (no test runs).
       - name: Compile Python sources
         run: |
           python -m compileall -q engine mesh_cli tooling tests
 
-      - name: Run pytest (Windows)
-        if: runner.os == 'Windows'
+      # Only the summary line is shown, so the exit code is checked here, not left to whatever ran last: a collection
+      # that fails is a failed step, with its output.
+      - name: Warm pytest's caches (collect only, no test runs)
         run: |
-          python -m pytest -q -p no:cacheprovider
-
-      - name: Run pytest (Linux)
-        if: runner.os != 'Windows'
-        run: |
-          xvfb-run -a python -m pytest -q
+          if ($IsLinux) { $out = xvfb-run -a python -m pytest -q --collect-only }
+          else { $out = python -m pytest -q -p no:cacheprovider --collect-only }
+          $code = $LASTEXITCODE
+          if ($code -ne 0) { $out | Select-Object -Last 80; throw "pytest --collect-only failed with exit code $code" }
+          $out | Select-Object -Last 1
 
       - name: Run verify-all (Windows)
         if: runner.os == 'Windows'
         env:
           MESH_VERIFY_BUDGET_ENFORCE: "1"
         run: |
-          python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact
+          python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact --reuse-evidence
 
       - name: Run verify-all (Linux)
         if: runner.os != 'Windows'
         env:
           MESH_VERIFY_BUDGET_ENFORCE: "1"
         run: |
-          xvfb-run -a python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact
+          xvfb-run -a python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact --reuse-evidence
 
       - name: Validate artifact bundle
         run: |
@@ -302,6 +376,7 @@ jobs:
           mode = "none"
           improvements = 0
           changed = 0
+          informational = 0
           regressions = 0
           items: list[dict[str, object]] = []
 
@@ -314,18 +389,17 @@ jobs:
                   regressions = int(counts.get("regressions", 0) or 0)
                   improvements = int(counts.get("improvements", 0) or 0)
                   changed = int(counts.get("changed", 0) or 0)
-                improvements_list = payload.get("improvements", [])
-                changed_list = payload.get("changed", [])
-                if isinstance(improvements_list, list):
-                  items.extend([it for it in improvements_list if isinstance(it, dict)])
-                if isinstance(changed_list, list):
-                  items.extend([it for it in changed_list if isinstance(it, dict)])
+                  informational = int(counts.get("informational", 0) or 0)
+                for key in ("improvements", "changed", "informational"):
+                  listed = payload.get(key, [])
+                  if isinstance(listed, list):
+                    items.extend([it for it in listed if isinstance(it, dict)])
             except Exception:
               pass
 
           if regressions > 0:
             mode = "regression"
-          elif improvements > 0 or changed > 0:
+          elif improvements > 0 or changed > 0 or informational > 0:
             mode = "delta"
           else:
             mode = "none"
@@ -335,7 +409,7 @@ jobs:
           if mode == "delta":
             summary_lines.append("## Mesh CI baseline diff")
             summary_lines.append("")
-            summary_lines.append(f"No regressions. Improvements: {improvements}, Changed: {changed}")
+            summary_lines.append(f"No regressions. Improvements: {improvements}, Changed: {changed}, Informational: {informational}")
             summary_lines.append("")
             summary_lines.append("Top changes:")
             summary_lines.append("")
@@ -348,7 +422,7 @@ jobs:
             comment_lines.append("<!-- mesh-baseline-diff -->")
             comment_lines.append("## Mesh baseline diff (CI)")
             comment_lines.append("")
-            comment_lines.append(f"No regressions. Improvements: {improvements}, Changed: {changed}")
+            comment_lines.append(f"No regressions. Improvements: {improvements}, Changed: {changed}, Informational: {informational}")
             comment_lines.append("")
             comment_lines.append("Top changes:")
             comment_lines.append("")
@@ -369,6 +443,7 @@ jobs:
             fh.write(f"regressions={regressions}\n")
             fh.write(f"improvements={improvements}\n")
             fh.write(f"changed={changed}\n")
+            fh.write(f"informational={informational}\n")
           PY
 
       - name: Baseline diff delta to Step Summary (Linux)
@@ -478,12 +553,12 @@ jobs:
       - name: Build release bundle (seeded, Windows)
         if: runner.os == 'Windows'
         run: |
-          python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed $env:MESH_CI_SEED
+          python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed $env:MESH_CI_SEED --reuse-verify-all artifacts
 
       - name: Build release bundle (seeded, Linux)
         if: runner.os != 'Windows'
         run: |
-          xvfb-run -a python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed $env:MESH_CI_SEED
+          xvfb-run -a python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed $env:MESH_CI_SEED --reuse-verify-all artifacts
 
       - name: Verify release bundle (strict, Windows)
         if: runner.os == 'Windows'
@@ -506,6 +581,184 @@ jobs:
           if-no-files-found: error
           path: |
             artifacts/
+
+  installed:
+    # The installed product (H5, #422): this commit's wheel, installed with its declared dependencies into a fresh
+    # environment and run from outside the checkout (python -I, no PYTHONPATH or MESH_*): every Mesh module and bundled
+    # engine file must come from the installation, and `mesh new` / `mesh doctor` must work. The same file proves the
+    # check fails on broken wheels, including one whose missing file the checkout still has. Nothing here installs the
+    # checkout, so the test runs without the project's conftest (which imports the checkout's engine).
+    # H7: the installed Mesh also exports a 2D and an HD-2D game, and each export is played (hidden window, Mesa's
+    # software GL) by a Python holding only Mesh's declared dependencies, with the checkout off limits; broken exports
+    # must fail. Their frames are uploaded for inspection.
+    name: installed (${{ matrix.os }}, py${{ matrix.python }})
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11"]
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python and a display (the checkout stays uninstalled)
+        uses: ./.github/actions/mesh-ci-setup
+        with:
+          python-version: ${{ matrix.python }}
+          install-project: "false"
+
+      - name: Installed-product check
+        run: |
+          python -m pip install -U pip "pytest>=8.0"
+          # (the exported games open hidden windows: on Linux, in Xvfb)
+          $run, $runArgs = if ($IsLinux) { "xvfb-run", @("-a", "python") } else { "python", @() }
+          & $run @runArgs -m pytest -o addopts= --noconftest -p no:cacheprovider -q -W error -rA --durations=20 `
+            --basetemp "$env:RUNNER_TEMP/installed" tests/test_wheel_bundles_engine_data.py
+          if ($LASTEXITCODE -ne 0) { throw "the installed-product check failed (exit $LASTEXITCODE)" }
+
+      - name: Upload the exported games' frames
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installed-exported-frames-${{ matrix.os }}-py${{ matrix.python }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/installed/**/evidence/frame.png
+            !${{ runner.temp }}/installed/*current/**
+
+  acceptance:
+    # Creator-workflow acceptance (H6, #422): save and reopen, new-game isolation, creator field editing and background
+    # rendering, in hidden GL windows (`python -m tooling.test_tiers acceptance`, a subset of the gpu lane that
+    # extended.yml runs whole). The GL is Mesa's software renderer; the lane fails if any of these GL tests can't run.
+    name: acceptance (${{ matrix.os }}, py${{ matrix.python }})
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11"]
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      MESH_CI_SEED: "123"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python, the project and a display
+        uses: ./.github/actions/mesh-ci-setup
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Creator-workflow acceptance
+        run: |
+          if ($IsLinux) { xvfb-run -a python -m tooling.test_tiers acceptance }
+          else { python -m tooling.test_tiers acceptance }
+          if ($LASTEXITCODE -ne 0) { throw "the acceptance lane failed (exit $LASTEXITCODE): see the summary above and the artifact" }
+
+      - name: Upload acceptance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-${{ matrix.os }}-py${{ matrix.python }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            artifacts/pytest_acceptance*
+
+  tests:
+    # The fan-in: one OS's result, green only when its pytest, verify, installed and acceptance jobs all succeeded (failed,
+    # cancelled, skipped or missing: red). It always runs once they are done, so it never waits forever, and keeps the check name
+    # reviews and merges have always looked at.
+    name: tests (${{ matrix.os }}, py${{ matrix.python }})
+    needs: [pytest, verify, installed, acceptance]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Both of this OS's jobs succeeded
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tooling/ci_require_jobs.py --os "${{ matrix.os }}" --python "${{ matrix.python }}"
+
+      - name: Download the Windows shards' records
+        if: matrix.os == 'windows-latest'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pytest-shard-*-${{ matrix.os }}-py${{ matrix.python }}
+          path: shard-records
+          merge-multiple: true
+
+      - name: The Windows shards together ran the whole suite, each test once
+        if: matrix.os == 'windows-latest'
+        run: python3 tooling/ci_shards.py check shard-records --commit "${{ github.sha }}"
+
+  timing-rolling:
+    # Report-only (#373, #400): the integration branch's recent CI timings against the committed advisory model, so a
+    # gradual slowdown no per-run rule can see stays visible. Never fails: the job summary, and a warning on a finding.
+    name: timing rolling check (report only)
+    if: github.event_name == 'push' && github.ref_name == 'redesign/visual-editor'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Collect recent CI timings
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tooling/ci_timing_collect.py --branch redesign/visual-editor --runs 30 --out ci_timing
+
+      - name: Rolling check
+        run: |
+          python tooling/ci_timing_analysis.py --index ci_timing/index.json --durations-dir ci_timing/durations --write-data ci_timing/data.json
+          python tooling/ci_timing_analysis.py --data ci_timing/data.json --model tooling/metrics/verify_step_speed_model.json --rolling 24 | tee rolling.md
+          cat rolling.md >> "$GITHUB_STEP_SUMMARY"
+          if grep -q "PERSISTENT REGRESSION" rolling.md; then
+            echo "::warning title=CI timing::persistent slowdown against the advisory model (job summary; #373)"
+          fi
 
   ship:
     name: ship (release branches)

@@ -61,8 +61,16 @@ def _create_sprite(self, entity: dict[str, Any]) -> Any | None:
             )
             return None
 
+        if entity.get("flip_x") and hasattr(texture, "flip_left_right"):
+            texture = texture.flip_left_right()  # a mirrored picture (facing the other way)
         sprite = scene_controller_module.optional_arcade.arcade.Sprite()
         sprite.texture = texture
+        # Logic-only entities (arrival spots, triggers) keep the placeholder for their
+        # hitbox but are never drawn: players shouldn't see grey squares. An object with its picture hidden
+        # (a passage, a door over painted map art) is there to touch and use, but never drawn either.
+        hidden_picture = entity.get("picture_hidden") is True
+        sprite.visible = bool(entity.get("sprite")) or hidden_picture
+        cast(Any, sprite).mesh_drawn = bool(entity.get("sprite")) and not hidden_picture
         sprite.center_x = float(entity.get("x", 0))
         sprite.center_y = float(entity.get("y", 0))
         sprite.scale = float(entity.get("scale", 1.0))
@@ -101,6 +109,14 @@ def _create_sprite(self, entity: dict[str, Any]) -> Any | None:
         sprite_any.mesh_behaviour_configs = clean_behaviour_configs
         sprite_any.mesh_behaviours_runtime = []
         sprite_any.mesh_tag = entity_data.get("tag")
+        # Behaviours that filter by target_tags (TriggerVolume, Interactable...) read the list,
+        # and event payloads name the entity by mesh_id; neither was ever set, so they matched nothing.
+        raw_tags = entity_data.get("tags")
+        tags = [t for t in raw_tags if isinstance(t, str) and t] if isinstance(raw_tags, list) else []
+        if isinstance(entity_data.get("tag"), str) and entity_data["tag"] and entity_data["tag"] not in tags:
+            tags.insert(0, entity_data["tag"])
+        sprite_any.mesh_tags = tags
+        sprite_any.mesh_id = entity_data.get("id")
 
         self._apply_collision_poly(sprite, entity_data.get("collision_poly"))
         self._attach_animator(sprite, entity_data)

@@ -25,6 +25,28 @@ def _default_cache_dir(repo_root: Path) -> Path:
     return repo_root / ".mypy_cache" / "mypy_gate"
 
 
+def _untracked_dirs(repo_root: Path) -> list[str]:
+    """Local folders git doesn't track (a game project, scratch work) or ignores (raw generator records and their
+    scripts): not this repository's code.
+
+    A project folder's own main.py made mypy stop with "Duplicate module named 'main'" before checking
+    anything, so the gate (and every verify-all test after it) failed in any checkout holding one.
+    """
+    folders: list[str] = []
+    for extra in ([], ["--ignored"]):
+        try:
+            result = subprocess.run(["git", "ls-files", "--others", *extra, "--directory", "--exclude-standard"],
+                                    cwd=repo_root, capture_output=True, text=True)
+        except OSError:
+            return folders
+        if getattr(result, "returncode", 1) != 0:
+            return folders
+        out = str(getattr(result, "stdout", "") or "")
+        folders += [line.rstrip("/") for line in out.splitlines()
+                    if line.endswith("/") and not line.endswith("__pycache__/")]
+    return folders
+
+
 def _build_mypy_command(repo_root: Path) -> tuple[list[str], Path]:
     cache_dir = _default_cache_dir(repo_root)
     cmd = [
@@ -37,6 +59,8 @@ def _build_mypy_command(repo_root: Path) -> tuple[list[str], Path]:
         "--cache-dir",
         str(cache_dir),
     ]
+    for folder in _untracked_dirs(repo_root):  # the config's own excludes still apply alongside these
+        cmd += ["--exclude", f"^{re.escape(folder)}/"]
     return cmd, cache_dir
 
 
