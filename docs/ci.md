@@ -11,8 +11,8 @@ Each matrix run executes:
 
 1. `python -m compileall -q engine mesh_cli tooling tests`
 2. `python -m pytest -q` (Windows uses `-p no:cacheprovider`)
-3. `python -m mesh_cli verify-all --artifacts artifacts/verify_all`
-4. `python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed 123`
+3. `python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact --reuse-evidence` (step budgets enforced)
+4. `python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed 123 --reuse-verify-all artifacts`: its release check reuses step 3's verify-all only when that run's evidence proves it passed on this exact clean commit with unchanged reports, and otherwise runs verify-all itself (F13-B, `docs/release_bundle.md`)
 5. `python -m mesh_cli bundle verify --zip artifacts/release_bundle.zip --strict`
 
 The workflow uploads artifacts per OS/Python run:
