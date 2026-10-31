@@ -297,7 +297,9 @@ def _package_files(source: Path, files: dict[str, str]) -> tuple[frozenset[str],
 def _package_bytecode(rel: str, package: frozenset[str]) -> bool:
     """Whether ``rel`` is Python's bytecode for a ``.py`` file the package's manifest lists."""
     match = _BYTECODE.fullmatch(rel[len(PACKAGE):]) if rel.startswith(PACKAGE) else None
-    return bool(match) and f"{PACKAGE}{match[1]}{match[2]}.py" in package
+    if match is None:
+        return False
+    return f"{PACKAGE}{match[1]}{match[2]}.py" in package
 
 
 def _undo(copied: list[Path], made: list[Path]) -> list[str]:
