@@ -11,6 +11,11 @@ on Windows) on the same checkout. With ``--reuse-evidence`` verify-all writes ``
 - the files it produced and their SHA-256: only files new or rewritten during the run. Whatever was already in the
   folder and left untouched (an older report, an archive, anything else) is listed apart and never copied.
 
+Which produced files are verification outputs isn't left to "it changed during the run": ``RELEASE_REPORTS`` names
+what a fresh release check's verify-all leaves in ``release/`` (all required), the player package's files are the ones
+its own ``player_pkg/manifest.json`` lists, and verify-demo's pytest folders match ``SCRATCH``. A produced file that is
+none of these (nor a known non-release output, ``NOT_COPIED``) refuses the reuse, as does a missing required report.
+
 ``mesh release bundle --reuse-verify-all <folder>`` reuses that run only if every check in ``check`` holds now; the
 copies are checked against the recorded hashes again. A copy that fails, or is left partial, is undone and verify-all
 runs; a reuse that can't be undone fails the release check rather than leave stray files in ``release/``. Otherwise
@@ -24,6 +29,7 @@ import contextlib
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -41,6 +47,24 @@ SCHEMA = 2  # (2: "files" are only the files the run produced; 1 listed every fi
 #   them, its earlier bundles didn't).
 NOT_COPIED = frozenset({"index.json", "verify_report.json", "overlay_perf.json", "release_notes.json", "release_notes.md",
                         "pytest_fast.log", "pytest_full.log", "swallow_scan.json"})
+# What a fresh release check's verify-all leaves in release/, every one required: the same in every F13-A bundle on Linux
+# and Windows (CI runs 41208533048, 41209640427, 41209645464; release check's own asset audit, export, debug bundle and
+# report aside). A new verify-all report must be added here, or reuse is refused (and verify-all runs) until it is.
+RELEASE_REPORTS = frozenset({
+    "brush_audit.json", "content_audit_report.json", "content_audit_report.txt", "doctor_assets.json",
+    "encounter_audit_compact.json", "encounter_audit_summary.json", "encounter_coverage_matrix.json",
+    "encounter_headroom.json", "exception_budget.json", "exception_policy_scan.json", "macro_audit.json",
+    "perf_compare.json", "perf_run.json", "replays_summary.json", "room_audit.json", "runtime_diagnostics_snapshot.json",
+    "runtime_smoke.json", "scenes_index.json", "shadow_backend.json", "stamp_audit.json", "swallowed_exceptions.json",
+    "verify_all_summary.json", "verify_step_budget_check.json", "verify_step_durations.json",
+    "verify_step_speed_advisory.json", "verify_summary.json", "verify_summary.txt", "web_smoke.json", "worlds_index.json",
+    "web_build/_web_build_stage.apk", "web_build/_web_build_stage.tar.gz", "web_build/favicon.png", "web_build/index.html",
+    # the player-package gate's own records; the package's files are the ones its manifest lists
+    "player_pkg/manifest.json", "player_pkg/package_check.json", "player_pkg/runtime_diagnostics_snapshot.json",
+    "player_pkg/runtime_smoke.json",
+})
+PACKAGE = "player_pkg/"
+SCRATCH = re.compile(r"verify_demo_pytest/pid\d+-run\d+/(?:basetemp|cache)/.+")  # (verify-demo's own pytest folders)
 _BUDGET_ENV = "MESH_VERIFY_BUDGET_ENFORCE"  # (CI enforces the step budgets in its verify step only: stricter, so allowed)
 
 
@@ -168,6 +192,17 @@ def check(source: Path, repo_root: Path) -> tuple[dict[str, Any] | None, str]:
         path = source / rel
         if not path.is_file() or path.is_symlink() or _sha256(path) != digest:
             return None, f"{rel} is missing or changed since that verify-all"
+    package, why = _package_files(source, files)
+    if why:
+        return None, why
+    unexpected = sorted(rel for rel in files
+                        if rel not in RELEASE_REPORTS and rel not in package and rel not in NOT_COPIED
+                        and not SCRATCH.fullmatch(rel))
+    if unexpected:
+        return None, f"files that aren't verification outputs appeared during it: {', '.join(unexpected[:5])}"
+    missing = sorted((RELEASE_REPORTS | package) - set(files))
+    if missing:
+        return None, f"reports a release check needs weren't produced by it: {', '.join(missing[:5])}"
     summary = json.loads((source / "verify_all_summary.json").read_text(encoding="utf-8"))
     summary_steps = summary.get("steps") if isinstance(summary, dict) else None
     if (not isinstance(summary, dict) or summary.get("ok") is not True or not isinstance(summary_steps, list)
@@ -225,6 +260,8 @@ def reuse(source: Path, release_dir: Path, *, repo_root: Path, deterministic: bo
         "checked": ["exit code 0 and ok", "every step ran and passed", "full selection", "same commit before, after, now",
                     "clean tree before, after, now", "same tool version, Python and platform",
                     "only files the run produced (new or rewritten during it)",
+                    "each one a verification output (named report, package manifest, verify-demo scratch)",
+                    "every required report produced",
                     "same MESH_* environment (budget enforcement at least as strict)", "every file's SHA-256",
                     "summary agrees", "copies match the recorded hashes"],
     }, indent=2, sort_keys=True, trailing_newline=True)
@@ -232,6 +269,22 @@ def reuse(source: Path, release_dir: Path, *, repo_root: Path, deterministic: bo
           f"{len(copied)} reports copied and checked", file=sys.stderr)
     return {"verify_all_ok": summary.get("ok") is True, "verify_all_summary": (release_dir / "verify_all_summary.json").as_posix(),
             "verify_all_reused_from": label}
+
+
+def _package_files(source: Path, files: dict[str, str]) -> tuple[frozenset[str], str]:
+    """The player package's files as its own (hash-checked) manifest lists them, or the reason they can't be known."""
+    manifest = f"{PACKAGE}manifest.json"
+    if manifest not in files:
+        return frozenset(), ""  # (then reported as a missing required report)
+    try:
+        listed = json.loads((source / manifest).read_text(encoding="utf-8")).get("included_files")
+    except (OSError, ValueError, AttributeError) as exc:
+        return frozenset(), f"{manifest} can't be read ({exc})"
+    if not isinstance(listed, list) or not all(isinstance(rel, str) for rel in listed):
+        return frozenset(), f"{manifest} lists no included_files"
+    if any(Path(rel).is_absolute() or ".." in Path(rel).parts for rel in listed):
+        return frozenset(), f"{manifest} lists a path outside the package"
+    return frozenset(f"{PACKAGE}{rel}" for rel in listed), ""
 
 
 def _undo(copied: list[Path], made: list[Path]) -> list[str]:

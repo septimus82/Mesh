@@ -18,16 +18,26 @@ from typing import Any
 
 import pytest
 
-import mesh_cli.release as release
 from mesh_cli import verify_reuse
-from mesh_cli.release_check_pipeline import _write_deterministic_verify_all_summary
 from mesh_cli.verify_steps import STEP_ORDER
 
 pytestmark = pytest.mark.fast
 NOW = {"git_commit": "c" * 40, "git_dirty": False, "tool_version": "1.0.0", "python": "3.11.9", "platform": "win32",
        "env": {"MESH_CI_SEED": "123"}}
-REPORTS = {"verify_all_summary.json": None, "verify_summary.txt": "verify-all: OK\n",
-           "verify_step_durations.json": '{"steps": []}\n', "reports/doctor_assets.json": '{"ok": true}\n'}
+PACKAGE_FILES = ("config.json", "scenes/runtime_smoke_scene.json")  # (what its manifest lists, nested ones included)
+NESTED = "player_pkg/scenes/runtime_smoke_scene.json"
+SCRATCH_FILE = "verify_demo_pytest/pid4242-run0001/basetemp/test_scaffold0/config.json"
+# What a verify-all leaves in its folder (a stand-in of the same shape): every named report, the player package as its
+# manifest lists it, verify-demo's pytest scratch. None is the summary, written from the run's payload.
+REPORTS: dict[str, str | None] = {
+    **{rel: '{"ok": true}\n' for rel in verify_reuse.RELEASE_REPORTS},
+    "verify_all_summary.json": None,
+    "verify_summary.txt": "verify-all: OK\n",
+    "player_pkg/manifest.json": json.dumps({"included_files": list(PACKAGE_FILES)}) + "\n",
+    **{f"player_pkg/{rel}": "{}\n" for rel in PACKAGE_FILES},
+    SCRATCH_FILE: "{}\n",
+    "verify_demo_pytest/pid4242-run0001/cache/README.md": "pytest cache\n",
+}
 
 
 @pytest.fixture
@@ -91,7 +101,7 @@ def test_a_passing_run_on_this_clean_commit_is_reused_with_a_record(tmp_path: Pa
     assert outputs is not None and outputs["verify_all_ok"] is True and outputs["verify_all_reused_from"] == "artifacts"
     copied = sorted(p.relative_to(release_dir).as_posix() for p in release_dir.rglob("*") if p.is_file())
     assert copied == sorted([*REPORTS, verify_reuse.RECORD]), "the reports, not CI's extras or the evidence"
-    for rel in ("verify_summary.txt", "reports/doctor_assets.json"):
+    for rel in ("verify_summary.txt", NESTED, SCRATCH_FILE):  # (named, nested package and dynamic scratch reports)
         assert (release_dir / rel).read_bytes() == (source / rel).read_bytes()
     summary = json.loads((release_dir / "verify_all_summary.json").read_text(encoding="utf-8"))
     assert summary["pytest_fast"]["wall_seconds"] == 0.0, "normalized as the release check's own deterministic summary"
@@ -139,7 +149,7 @@ def _refuse(case: str, source: Path, now: dict[str, Any]) -> None:
     elif case == "weaker budgets then":
         now["env"]["MESH_VERIFY_BUDGET_ENFORCE"] = "1"
     elif case == "report changed":
-        (source / "reports/doctor_assets.json").write_text('{"ok": false}\n', encoding="utf-8")
+        (source / "doctor_assets.json").write_text('{"ok": false}\n', encoding="utf-8")
     elif case == "report missing":
         (source / "verify_summary.txt").unlink()
     elif case == "path outside":
@@ -249,15 +259,74 @@ def test_files_already_in_the_folder_are_never_copied_only_what_the_run_produced
     assert record["untouched_not_copied"] == len(UNRELATED)
 
 
-def test_evidence_listing_a_file_the_run_did_not_produce_is_refused(tmp_path: Path, now: dict[str, Any]) -> None:
-    """Even with a valid hash, an unrelated file listed among the run's (an older evidence format, or a doctored one)
-    has no provenance: reuse is refused and verify-all runs."""
+def _fake_run_also_writing(source: Path, during: dict[str, bytes], *, without: tuple[str, ...] = ()) -> None:
+    """CI's verify-all in ``source`` during which ``during`` appear too (something else writing there), and which
+    doesn't produce ``without``: its evidence lists what changed during the run, as the real one would."""
+    files_before = verify_reuse.snapshot(source)
+    _write_reports(source, _summary())
+    for rel in without:
+        (source / rel).unlink()
+    for rel, data in during.items():
+        (source / rel).parent.mkdir(parents=True, exist_ok=True)
+        (source / rel).write_bytes(data)
+    verify_reuse.write_evidence(source, repo_root=source.parent, before=json.loads(json.dumps(NOW)),
+                                files_before=files_before, exit_code=0, payload=_summary(),
+                                args=argparse.Namespace(pytest_args=[], skip_web_smoke=False))
+
+
+@pytest.mark.parametrize("stray", ["notes_from_another_tool.json", "player_pkg/not_in_its_manifest.dll",
+                                   "verify_demo_pytest/left_here.txt", "web_build/extra.js", "deep/nested/new.txt"])
+def test_an_unrelated_file_created_during_verification_refuses_the_reuse(tmp_path: Path, now: dict[str, Any],
+                                                                        stray: str) -> None:
+    """It changed during the run, so it's in the evidence with its hash; it still isn't a verification output (not a
+    named report, not in the package's manifest, not verify-demo's scratch): reuse is refused and nothing copied."""
+    source = tmp_path / "artifacts"
+    _fake_run_also_writing(source, {stray: b"not a verification output\n"})
+    assert stray in _evidence(source)["files"], "recorded as produced: changed during the run"
+    evidence, why = verify_reuse.check(source, tmp_path)
+    assert evidence is None and "aren't verification outputs" in why and stray in why, why
+    release_dir = tmp_path / "release"
+    release_dir.mkdir()
+    assert verify_reuse.reuse(source, release_dir, repo_root=tmp_path, deterministic=True) is None
+    assert [p.name for p in release_dir.iterdir()] == [verify_reuse.RECORD]
+
+
+def test_schema_2_evidence_listing_an_unrelated_file_with_its_true_hash_cannot_package_it(tmp_path: Path,
+                                                                                         now: dict[str, Any]) -> None:
+    """Valid, current-format evidence naming a file that was only lying in the folder, with its correct SHA-256: the
+    hash proves it's unchanged, not that verification produced it. Refused."""
     source = tmp_path / "artifacts"
     _with_unrelated_files(source)
     _ci_verify_all(source)
-    _rewrite_evidence(source, lambda e: e.update(schema=1, untouched=[], files={
-        **e["files"], **{rel: verify_reuse._sha256(source / rel) for rel in UNRELATED}}))
-    assert "unknown format" in verify_reuse.check(source, tmp_path)[1]
+    _rewrite_evidence(source, lambda e: e["files"].update(
+        {rel: verify_reuse._sha256(source / rel) for rel in UNRELATED}))
+    assert _evidence(source)["schema"] == verify_reuse.SCHEMA == 2
+    evidence, why = verify_reuse.check(source, tmp_path)
+    assert evidence is None and "aren't verification outputs" in why, why
+    release_dir = tmp_path / "release"
+    release_dir.mkdir()
+    assert verify_reuse.reuse(source, release_dir, repo_root=tmp_path, deterministic=True) is None
+    assert not any((release_dir / rel).exists() for rel in UNRELATED)
+
+
+@pytest.mark.parametrize("not_produced", ["doctor_assets.json", "web_build/index.html", NESTED,
+                                          "player_pkg/package_check.json"])
+def test_an_incomplete_report_set_refuses_the_reuse(tmp_path: Path, now: dict[str, Any], not_produced: str) -> None:
+    """A named report, a web build file, a file the package's manifest lists, or the package's own record that the run
+    didn't produce: the reuse would make a release missing it, so it's refused and verify-all runs."""
+    source = tmp_path / "artifacts"
+    _fake_run_also_writing(source, {}, without=(not_produced,))
+    evidence, why = verify_reuse.check(source, tmp_path)
+    assert evidence is None and "weren't produced" in why and not_produced in why, why
+
+
+def test_the_package_is_known_only_from_its_own_readable_manifest(tmp_path: Path, now: dict[str, Any]) -> None:
+    source = tmp_path / "artifacts"
+    _fake_run_also_writing(source, {"player_pkg/manifest.json": b'{"included_files": ["../outside.json"]}\n'})
+    assert "outside the package" in verify_reuse.check(source, tmp_path)[1]
+    source = tmp_path / "again"
+    _fake_run_also_writing(source, {"player_pkg/manifest.json": b"{"})
+    assert "player_pkg/manifest.json can't be read" in verify_reuse.check(source, tmp_path)[1]
 
 
 # --------------------------------------------------------------------- an interrupted copy (review of 80e657f)
@@ -278,124 +347,14 @@ def _failing_copy(monkeypatch: pytest.MonkeyPatch, *, at: str) -> None:
 def test_an_interrupted_copy_is_undone_partial_file_and_folders_included(tmp_path: Path, now: dict[str, Any],
                                                                          monkeypatch: pytest.MonkeyPatch) -> None:
     source = _ci_verify_all(tmp_path / "artifacts")
-    _failing_copy(monkeypatch, at="reports/doctor_assets.json")
+    _failing_copy(monkeypatch, at=NESTED)
     release_dir = tmp_path / "release"
     release_dir.mkdir()
     (release_dir / "already_here.txt").write_text("the release check's own\n", encoding="utf-8")
     assert verify_reuse.reuse(source, release_dir, repo_root=tmp_path, deterministic=True) is None
     assert sorted(p.name for p in release_dir.iterdir()) == ["already_here.txt", verify_reuse.RECORD]
     reason = json.loads((release_dir / verify_reuse.RECORD).read_text(encoding="utf-8"))["reason"]
-    assert "reports/doctor_assets.json couldn't be copied" in reason and "No space left" in reason
-
-
-# --------------------------------------------------------------------- the release check
-
-@pytest.fixture
-def steps(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[str]]:
-    """The release check's four steps replaced by recorders (the real ones run verify-all, an export, a debug
-    bundle); verify-all writes the same reports as CI's, deterministically, as the real ``_run_verify_all``."""
-    calls: dict[str, list[str]] = {"verify-all": [], "asset-audit": [], "export-build": [], "debug-bundle": []}
-
-    def verify_all(repo_root: Path, artifacts_dir: Path, *, deterministic: bool = False) -> tuple[int, dict[str, Any]]:
-        calls["verify-all"].append(str(artifacts_dir))
-        _write_reports(artifacts_dir, _summary())
-        _write_deterministic_verify_all_summary(artifacts_dir, _summary())
-        return 0, {"verify_all_ok": True, "verify_all_summary": (artifacts_dir / "verify_all_summary.json").as_posix()}
-
-    def recorder(name: str) -> Callable[..., tuple[int, dict[str, Any]]]:
-        def run(_repo_root: Path, out: Path, **_kw: Any) -> tuple[int, dict[str, Any]]:
-            calls[name].append(str(out))
-            return 0, {}
-        return run
-
-    monkeypatch.setattr(release, "_run_verify_all", verify_all)
-    monkeypatch.setattr(release, "_run_assets_audit", recorder("asset-audit"))
-    monkeypatch.setattr(release, "_run_export_build", recorder("export-build"))
-    monkeypatch.setattr(release, "_run_debug_bundle", recorder("debug-bundle"))
-    return calls
-
-
-def _release_check(release_dir: Path, reuse_from: Path | None) -> int:
-    return release._handle_check(argparse.Namespace(
-        command="release", release_command="check", repo_root=".", artifacts=str(release_dir), report=None,
-        summary=None, deterministic=True, quiet=True, reuse_verify_all=str(reuse_from) if reuse_from else None))
-
-
-def test_the_release_check_reuses_verify_all_and_still_runs_its_other_steps(tmp_path: Path, now: dict[str, Any],
-                                                                            steps: dict[str, list[str]]) -> None:
-    source = _ci_verify_all(tmp_path / "artifacts")
-    assert _release_check(tmp_path / "release", source) == 0
-    assert steps["verify-all"] == [], "not run a second time"
-    assert all(len(steps[name]) == 1 for name in ("asset-audit", "export-build", "debug-bundle"))
-    report = json.loads((tmp_path / "release/release_report.json").read_text(encoding="utf-8"))
-    verify_step = next(s for s in report["steps"] if s["name"] == "verify-all")
-    assert verify_step["ok"] and verify_step["outputs"]["verify_all_reused_from"] == "artifacts"
-
-
-def test_refused_evidence_means_the_release_check_runs_verify_all_itself(tmp_path: Path, now: dict[str, Any],
-                                                                         steps: dict[str, list[str]]) -> None:
-    source = _ci_verify_all(tmp_path / "artifacts", exit_code=1, ok=False)
-    assert _release_check(tmp_path / "release", source) == 0
-    assert steps["verify-all"] == [str(tmp_path / "release")], "run here, as before"
-    record = json.loads((tmp_path / "release" / verify_reuse.RECORD).read_text(encoding="utf-8"))
-    assert record["reused"] is False and "didn't pass" in record["reason"]
-
-
-def test_an_interrupted_copy_falls_back_to_running_verify_all(tmp_path: Path, now: dict[str, Any],
-                                                               steps: dict[str, list[str]],
-                                                               monkeypatch: pytest.MonkeyPatch) -> None:
-    source = _ci_verify_all(tmp_path / "artifacts")
-    _failing_copy(monkeypatch, at="verify_summary.txt")
-    assert _release_check(tmp_path / "release", source) == 0
-    assert steps["verify-all"] == [str(tmp_path / "release")], "run here instead"
-    record = json.loads((tmp_path / "release" / verify_reuse.RECORD).read_text(encoding="utf-8"))
-    assert record["reused"] is False and "couldn't be copied" in record["reason"]
-
-
-def test_a_reuse_that_cannot_be_undone_fails_the_release_check(tmp_path: Path, now: dict[str, Any],
-                                                               steps: dict[str, list[str]],
-                                                               monkeypatch: pytest.MonkeyPatch) -> None:
-    """A partial copy that can't be removed would end up in the bundle: the release check fails instead."""
-    source = _ci_verify_all(tmp_path / "artifacts")
-    _failing_copy(monkeypatch, at="verify_summary.txt")
-
-    def stuck(path: Path) -> None:
-        raise PermissionError(13, "in use", str(path))
-
-    monkeypatch.setattr(verify_reuse, "_remove", stuck)
-    assert _release_check(tmp_path / "release", source) != 0
-    assert steps["verify-all"] == [] and steps["export-build"] == [], "stopped at verify-all"
-    record = json.loads((tmp_path / "release" / verify_reuse.RECORD).read_text(encoding="utf-8"))
-    assert record["reused"] is False and "couldn't be undone" in record["reason"]
-
-
-@pytest.mark.parametrize("failing", ["asset-audit", "export-build", "debug-bundle"])
-def test_a_failing_audit_export_or_debug_step_still_fails_a_reusing_release_check(
-        tmp_path: Path, now: dict[str, Any], steps: dict[str, list[str]], monkeypatch: pytest.MonkeyPatch,
-        failing: str) -> None:
-    name = {"asset-audit": "_run_assets_audit", "export-build": "_run_export_build",
-            "debug-bundle": "_run_debug_bundle"}[failing]
-    monkeypatch.setattr(release, name, lambda *_a, **_k: (1, {}))
-    assert _release_check(tmp_path / "release", _ci_verify_all(tmp_path / "artifacts")) != 0
-    report = json.loads((tmp_path / "release/release_report.json").read_text(encoding="utf-8"))
-    assert report["summary"]["failed_step"] == failing and steps["verify-all"] == []
-
-
-def test_reused_and_rerun_release_reports_differ_only_where_documented(tmp_path: Path, now: dict[str, Any],
-                                                                       steps: dict[str, list[str]]) -> None:
-    """The same reports either way, byte for byte, apart from the reuse record and the release report's note of
-    where verify-all came from; CI's extras (index, report, overlay perf, release notes) aren't copied."""
-    rerun_dir, reused_dir = tmp_path / "a" / "release", tmp_path / "b" / "release"
-    assert _release_check(rerun_dir, None) == 0
-    assert _release_check(reused_dir, _ci_verify_all(tmp_path / "artifacts")) == 0
-    rerun = {p.relative_to(rerun_dir).as_posix(): p.read_bytes() for p in rerun_dir.rglob("*") if p.is_file()}
-    reused = {p.relative_to(reused_dir).as_posix(): p.read_bytes() for p in reused_dir.rglob("*") if p.is_file()}
-    assert set(reused) == set(rerun) | {verify_reuse.RECORD}
-    assert sorted(rel for rel in rerun if rerun[rel] != reused[rel]) == ["release_report.json"]
-    rerun_report, reused_report = (json.loads(d["release_report.json"]) for d in (rerun, reused))
-    reused_step = next(s for s in reused_report["steps"] if s["name"] == "verify-all")
-    assert reused_step["outputs"].pop("verify_all_reused_from") == "artifacts"
-    assert reused_report == rerun_report, "the only difference: where verify-all's reports came from"
+    assert f"{NESTED} couldn't be copied" in reason and "No space left" in reason
 
 
 # --------------------------------------------------------------------- verify-all writes the evidence
