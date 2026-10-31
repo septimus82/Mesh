@@ -59,7 +59,8 @@ def test_two_real_shards_run_the_whole_suite_once(tmp_path: Path) -> None:
     unsharded = json.loads((tmp_path / "whole" / "shard-1.json").read_text(encoding="utf-8"))
     # Each collected the same suite (the slow test deselected, the path in a test id written <repo>) ...
     assert records[0]["collected"] == records[1]["collected"] == unsharded["selected"]
-    assert any(t.startswith("tests/test_m0.py::test_path[<repo>") for t in unsharded["selected"])
+    m0 = [t for t in unsharded["selected"] if t.startswith("tests/test_m0.py")]
+    assert any(t.startswith("tests/test_m0.py::test_path[<repo>") for t in m0), (m0, str(project))
     assert not any(tmp_path.name in t for r in (*records, unsharded) for t in r["collected"] + r["selected"])
     assert not any("slow" in t for t in unsharded["collected"])
     assert records[0]["collection_skips"] == ["tests/test_skipped_module.py"]
