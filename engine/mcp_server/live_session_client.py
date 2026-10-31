@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 from urllib import error, parse, request
@@ -9,6 +10,7 @@ from engine.editor.live_session_bridge import (
     LOOPBACK_HOST,
     SESSION_SCHEMA_VERSION,
     read_live_session_file,
+    session_file_path,
 )
 from engine.repo_root import find_repo_root
 
@@ -114,37 +116,79 @@ def _request_json(
     return loaded if isinstance(loaded, dict) else {}
 
 
-def _load_verified_session(root: str | Path, *, timeout: float = 2.0) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+def _verify_session(
+    root: str | Path, *, timeout: float = 2.0
+) -> tuple[dict[str, Any] | None, dict[str, Any], dict[str, Any] | None, str]:
+    """``(info, health, failure, why)``: the session for ``root`` checked against its discovery record and its own
+    ``/health`` answer; ``why`` says, for a person, what didn't check out."""
     raw_root = Path(root).resolve()
     server_root = _resolve_discovery_root(raw_root)
+    record_root = raw_root
     info = read_live_session_file(raw_root)
     if not isinstance(info, dict) and raw_root != server_root:
-        info = read_live_session_file(server_root)
+        record_root, info = server_root, read_live_session_file(server_root)
     if not isinstance(info, dict):
         failure: dict[str, Any] = _failure("no_live_session")
         if raw_root == server_root:
             failure = _probe_for_other_session(raw_root, server_root) or failure
-        return None, failure
+        return None, {}, failure, "there is no readable session record"
     declared_workspace = _workspace_root(str(info.get("workspace_root") or raw_root))
     if info.get("schema_version") != SESSION_SCHEMA_VERSION:
-        return None, _failure("invalid_live_session", "Unsupported live session schema")
+        return None, {}, _failure("invalid_live_session", "Unsupported live session schema"), "its record has an unknown format"
     if _workspace_root(str(info.get("workspace_root") or "")) != declared_workspace:
-        return None, _failure("workspace_mismatch")
+        return None, {}, _failure("workspace_mismatch"), "its record names no project folder"
+    if os.path.normcase(declared_workspace) != os.path.normcase(_workspace_root(record_root)):
+        # (F1: a record copied with the project, or left by another folder's editor, isn't this project's session)
+        return None, {}, _failure("workspace_mismatch"), f"its record is for another project folder ({declared_workspace})"
     if str(info.get("host") or "") != LOOPBACK_HOST:
-        return None, _failure("invalid_live_session", "Live session host must be 127.0.0.1")
+        return None, {}, _failure("invalid_live_session", "Live session host must be 127.0.0.1"), "its record isn't local"
     if not info.get("session_id") or not info.get("token") or not info.get("port"):
-        return None, _failure("invalid_live_session", "Live session discovery is incomplete")
+        return None, {}, _failure("invalid_live_session", "Live session discovery is incomplete"), "its record is incomplete"
     try:
         health = _request_json(info, "GET", "/health", timeout=timeout)
-    except (OSError, TimeoutError, ValueError, error.URLError):
-        return None, _failure("no_live_session")
+    except (OSError, TimeoutError, ValueError, error.URLError) as exc:
+        return None, {}, _failure("no_live_session"), f"it didn't answer ({exc})"
     if health.get("ok") is not True:
-        return None, _failure("no_live_session")
+        return None, {}, _failure("no_live_session"), "its answer didn't confirm the session"
     if health.get("session_id") != info.get("session_id"):
-        return None, _failure("session_mismatch")
+        return None, {}, _failure("session_mismatch"), "a different session answered"
     if _workspace_root(str(health.get("workspace_root") or "")) != declared_workspace:
-        return None, _failure("workspace_mismatch")
-    return info, None
+        return None, {}, _failure("workspace_mismatch"), "it has another project folder open"
+    return info, health, None, ""
+
+
+def _load_verified_session(root: str | Path, *, timeout: float = 2.0) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    info, _health, failure, _why = _verify_session(root, timeout=timeout)
+    return info, failure
+
+
+def session_state(root: str | Path = ".", *, timeout: float = 2.0) -> dict[str, Any]:
+    """Whether an editor has the project at ``root`` open, for writing its files from outside (F1, #422).
+
+    ``state`` is ``"live"`` once an editor's session for it is verified (``info``, and ``host``: ``mesh_studio`` or
+    another editor); ``"none"`` only when there is no session record for it at all (an editor that closes removes
+    its record); otherwise ``"uncertain"``, with ``problem`` (the reason, ``why``, the record's path). A record that
+    can't be read or verified (malformed, no answer, a timeout, another session or project folder) isn't proof the
+    editor is closed: one that crashed leaves its record until it is opened again or the record is removed.
+    """
+    raw_root = Path(root).resolve()
+    records = [session_file_path(p) for p in dict.fromkeys((raw_root, _resolve_discovery_root(raw_root)))]
+    try:
+        present = [path for path in records if path.exists()]
+    except OSError as exc:
+        return {"state": "uncertain", "problem": {"reason": "unreadable_live_session", "why": f"it can't be checked ({exc})",
+                                                  "discovery": str(records[0])}}
+    if not present:
+        return {"state": "none"}
+    info, health, failure, why = _verify_session(raw_root, timeout=timeout)
+    if info is not None:
+        return {"state": "live", "info": info, "host": str(health.get("host") or "legacy_editor")}
+    reason = str((failure or {}).get("reason") or "")
+    if read_live_session_file(present[0].parent.parent) is None:
+        reason, why = "unreadable_live_session", "its session record can't be read"
+    elif reason == "no_live_session":
+        reason = "unverified_live_session"
+    return {"state": "uncertain", "problem": {"reason": reason, "why": why, "discovery": str(present[0])}}
 
 
 def resolved_discovery_root(root: str | Path = ".") -> str:

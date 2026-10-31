@@ -589,8 +589,10 @@ def apply_ops(
         return _apply_ops_through_authoring(list(operations), changes, root)
     from engine import authoring_session
 
-    _info, host = authoring_session.studio_session(root)
-    if host == authoring_session.STUDIO_HOST:  # these would write files under the open, possibly unsaved, Studio
+    state = authoring_session.studio_state(root)
+    if state["state"] == "uncertain":  # (F1: Studio may have it open, unsaved: nothing is written)
+        return {**authoring_session.uncertain(state), "results": []}
+    if state.get("host") == authoring_session.STUDIO_HOST:  # these would write files under the open, possibly unsaved, Studio
         return {"ok": False, "reason": "studio_open", "results": [], "message": (
             "Mesh Studio has this project open, so apply_ops won't write its files (the person's unsaved work would "
             "be overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
