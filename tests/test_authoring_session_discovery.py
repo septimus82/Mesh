@@ -34,7 +34,7 @@ from engine.project_scaffold import create_project
 from engine.studio_ai import StudioAIHost
 from engine.studio_project import Project
 
-pytestmark = pytest.mark.fast
+pytestmark = pytest.mark.integration  # (F13-A, #422: bridges, exports, subprocesses; every default run has it)
 REPO = Path(__file__).resolve().parents[1]
 ROOM = "packs/core_regions/scenes/start.json"
 ADD_SEXTON = [{"op": "place_prefab", "prefab": "person", "x": 320, "y": 224},

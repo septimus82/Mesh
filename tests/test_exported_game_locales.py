@@ -22,7 +22,7 @@ import pytest
 from engine.tooling.export_bundle import build_bundle
 from tooling.installed_product_check import bundle_problems
 
-pytestmark = pytest.mark.fast
+pytestmark = pytest.mark.integration  # (F13-A, #422: bridges, exports, subprocesses; every default run has it)
 
 REPO = Path(__file__).resolve().parent.parent
 ENGINE_TEXT = "share/mesh-engine/locales/en.json"
