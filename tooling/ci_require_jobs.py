@@ -1,6 +1,7 @@
 """The CI fan-in (H3, #422 F13): one OS's ``tests`` result is green only when every job it is made of succeeded.
 
-Each OS's work runs as parallel jobs: ``pytest (<os>, py3.11)`` (the full default suite), ``verify (<os>, py3.11)``
+Each OS's work runs as parallel jobs: ``pytest (<os>, py3.11)`` (the full default suite; on Windows, since F13-C,
+two shard jobs ``pytest (windows-latest, py3.11, shard 1/2)`` and ``2/2``), ``verify (<os>, py3.11)``
 (verify-all, the release bundle and its strict verification, the artifacts) and, since H5, ``installed (<os>,
 py3.11)`` (this commit's wheel installed and run outside the checkout) and, since H6, ``acceptance (<os>, py3.11)``
 (the creator-workflow GL tests). The ``tests (<os>, py3.11)`` job, the check
@@ -29,10 +30,17 @@ from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
 COMPONENTS = ("pytest", "verify", "installed", "acceptance")
+# F13-C: an OS whose ``pytest`` runs as shards, one job each (``tooling/ci_shards.py`` SHARDS; ci.yml's matrix).
+SHARDED = {"windows-latest": 2}
 
 
 def required_jobs(os_name: str, python: str) -> list[str]:
-    return [f"{part} ({os_name}, py{python})" for part in COMPONENTS]
+    names = []
+    for part in COMPONENTS:
+        shards = SHARDED.get(os_name, 0) if part == "pytest" else 0
+        names += [f"{part} ({os_name}, py{python}, shard {k}/{shards})" for k in range(1, shards + 1)] or [
+            f"{part} ({os_name}, py{python})"]
+    return names
 
 
 def verdict(jobs: Iterable[Mapping[str, Any]], required: Iterable[str]) -> tuple[bool, list[str]]:
