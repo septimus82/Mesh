@@ -123,8 +123,8 @@ def propose(root: str | Path, changes: list[Doc], *, title: str = "", base_revis
     if state["host"] != STUDIO_HOST:
         return other_editor(state["host"])
     payload: Doc = {"changes": changes, "title": title, "source": source or "an AI"}
-    if base_revision is not None:
-        payload["base_revision"] = int(base_revision)
+    if base_revision is not None:  # (as given: Mesh Studio checks it, and never takes another in its place, F6)
+        payload["base_revision"] = base_revision
     result = _call(state["info"], "POST", "/live/stage_proposal", payload)
     if result.get("ok"):
         result["next"] = "The person reviews it in Mesh Studio (top bar: AI). proposal_status tells you what they decided."
