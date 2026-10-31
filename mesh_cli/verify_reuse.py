@@ -13,7 +13,8 @@ on Windows) on the same checkout. With ``--reuse-evidence`` verify-all writes ``
 
 Which produced files are verification outputs isn't left to "it changed during the run": ``RELEASE_REPORTS`` names
 what a fresh release check's verify-all leaves in ``release/`` (all required), the player package's files are the ones
-its own ``player_pkg/manifest.json`` lists, and verify-demo's pytest folders match ``SCRATCH``. A produced file that is
+its own ``player_pkg/manifest.json`` lists (and the bytecode Python wrote for those of them that are ``.py`` files, when
+the gate ran the package), and verify-demo's pytest folders match ``SCRATCH``. A produced file that is
 none of these (nor a known non-release output, ``NOT_COPIED``) refuses the reuse, as does a missing required report.
 
 ``mesh release bundle --reuse-verify-all <folder>`` reuses that run only if every check in ``check`` holds now; the
@@ -64,6 +65,9 @@ RELEASE_REPORTS = frozenset({
     "player_pkg/runtime_smoke.json",
 })
 PACKAGE = "player_pkg/"
+# Python's cache of a module, <dir>/__pycache__/<name>.<tag>.pyc for <dir>/<name>.py: the player-package gate's smoke run
+# writes it for the package's modules (58 such files in every F13-A bundle, each beside its listed .py).
+_BYTECODE = re.compile(r"((?:[^/]+/)*)__pycache__/([^/.]+)\.[^/]+\.pyc")
 SCRATCH = re.compile(r"verify_demo_pytest/pid\d+-run\d+/(?:basetemp|cache)/.+")  # (verify-demo's own pytest folders)
 _BUDGET_ENV = "MESH_VERIFY_BUDGET_ENFORCE"  # (CI enforces the step budgets in its verify step only: stricter, so allowed)
 
@@ -197,9 +201,12 @@ def check(source: Path, repo_root: Path) -> tuple[dict[str, Any] | None, str]:
         return None, why
     unexpected = sorted(rel for rel in files
                         if rel not in RELEASE_REPORTS and rel not in package and rel not in NOT_COPIED
-                        and not SCRATCH.fullmatch(rel))
+                        and not SCRATCH.fullmatch(rel) and not _package_bytecode(rel, package))
     if unexpected:
-        return None, f"files that aren't verification outputs appeared during it: {', '.join(unexpected[:5])}"
+        for rel in unexpected[:50]:  # (all of them in the log, not only the reason's first five)
+            print(f"[Mesh][Release] not a verification output: {rel}", file=sys.stderr)
+        return None, (f"files that aren't verification outputs appeared during it ({len(unexpected)}): "
+                      f"{', '.join(unexpected[:5])}")
     missing = sorted((RELEASE_REPORTS | package) - set(files))
     if missing:
         return None, f"reports a release check needs weren't produced by it: {', '.join(missing[:5])}"
@@ -260,7 +267,7 @@ def reuse(source: Path, release_dir: Path, *, repo_root: Path, deterministic: bo
         "checked": ["exit code 0 and ok", "every step ran and passed", "full selection", "same commit before, after, now",
                     "clean tree before, after, now", "same tool version, Python and platform",
                     "only files the run produced (new or rewritten during it)",
-                    "each one a verification output (named report, package manifest, verify-demo scratch)",
+                    "each one a verification output (named report, package manifest and its bytecode, verify-demo scratch)",
                     "every required report produced",
                     "same MESH_* environment (budget enforcement at least as strict)", "every file's SHA-256",
                     "summary agrees", "copies match the recorded hashes"],
@@ -285,6 +292,12 @@ def _package_files(source: Path, files: dict[str, str]) -> tuple[frozenset[str],
     if any(Path(rel).is_absolute() or ".." in Path(rel).parts for rel in listed):
         return frozenset(), f"{manifest} lists a path outside the package"
     return frozenset(f"{PACKAGE}{rel}" for rel in listed), ""
+
+
+def _package_bytecode(rel: str, package: frozenset[str]) -> bool:
+    """Whether ``rel`` is Python's bytecode for a ``.py`` file the package's manifest lists."""
+    match = _BYTECODE.fullmatch(rel[len(PACKAGE):]) if rel.startswith(PACKAGE) else None
+    return bool(match) and f"{PACKAGE}{match[1]}{match[2]}.py" in package
 
 
 def _undo(copied: list[Path], made: list[Path]) -> list[str]:

@@ -24,7 +24,8 @@ from mesh_cli.verify_steps import STEP_ORDER
 pytestmark = pytest.mark.fast
 NOW = {"git_commit": "c" * 40, "git_dirty": False, "tool_version": "1.0.0", "python": "3.11.9", "platform": "win32",
        "env": {"MESH_CI_SEED": "123"}}
-PACKAGE_FILES = ("config.json", "scenes/runtime_smoke_scene.json")  # (what its manifest lists, nested ones included)
+PACKAGE_FILES = ("config.json", "scenes/runtime_smoke_scene.json", "engine/game.py")  # (its manifest, nested included)
+BYTECODE = "player_pkg/engine/__pycache__/game.cpython-311.pyc"  # (written when the gate runs the package)
 NESTED = "player_pkg/scenes/runtime_smoke_scene.json"
 SCRATCH_FILE = "verify_demo_pytest/pid4242-run0001/basetemp/test_scaffold0/config.json"
 # What a verify-all leaves in its folder (a stand-in of the same shape): every named report, the player package as its
@@ -36,6 +37,7 @@ REPORTS: dict[str, str | None] = {
     "player_pkg/manifest.json": json.dumps({"included_files": list(PACKAGE_FILES)}) + "\n",
     **{f"player_pkg/{rel}": "{}\n" for rel in PACKAGE_FILES},
     SCRATCH_FILE: "{}\n",
+    BYTECODE: "bytecode\n",
     "verify_demo_pytest/pid4242-run0001/cache/README.md": "pytest cache\n",
 }
 
@@ -101,7 +103,7 @@ def test_a_passing_run_on_this_clean_commit_is_reused_with_a_record(tmp_path: Pa
     assert outputs is not None and outputs["verify_all_ok"] is True and outputs["verify_all_reused_from"] == "artifacts"
     copied = sorted(p.relative_to(release_dir).as_posix() for p in release_dir.rglob("*") if p.is_file())
     assert copied == sorted([*REPORTS, verify_reuse.RECORD]), "the reports, not CI's extras or the evidence"
-    for rel in ("verify_summary.txt", NESTED, SCRATCH_FILE):  # (named, nested package and dynamic scratch reports)
+    for rel in ("verify_summary.txt", NESTED, SCRATCH_FILE, BYTECODE):  # (named, nested, scratch, package bytecode)
         assert (release_dir / rel).read_bytes() == (source / rel).read_bytes()
     summary = json.loads((release_dir / "verify_all_summary.json").read_text(encoding="utf-8"))
     assert summary["pytest_fast"]["wall_seconds"] == 0.0, "normalized as the release check's own deterministic summary"
@@ -275,6 +277,7 @@ def _fake_run_also_writing(source: Path, during: dict[str, bytes], *, without: t
 
 
 @pytest.mark.parametrize("stray", ["notes_from_another_tool.json", "player_pkg/not_in_its_manifest.dll",
+                                   "player_pkg/engine/__pycache__/unlisted.cpython-311.pyc",
                                    "verify_demo_pytest/left_here.txt", "web_build/extra.js", "deep/nested/new.txt"])
 def test_an_unrelated_file_created_during_verification_refuses_the_reuse(tmp_path: Path, now: dict[str, Any],
                                                                         stray: str) -> None:

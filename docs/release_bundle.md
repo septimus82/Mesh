@@ -60,7 +60,8 @@ reports instead, but only when `artifacts/verify_all_evidence.json` (written las
   each copy;
 - each produced file is a verification output, and every required one is there. `RELEASE_REPORTS` in
   `mesh_cli/verify_reuse.py` names the reports a fresh release check's verify-all leaves in `release/` (all
-  required). The player package's files are the ones its own `player_pkg/manifest.json` lists (all required).
+  required). The player package's files are the ones its own `player_pkg/manifest.json` lists (all required),
+  with the bytecode Python wrote for its listed `.py` files when the gate ran the package.
   verify-demo's pytest folders must match `verify_demo_pytest/pid<N>-run<N>/basetemp|cache/`. A produced file
   that is none of these (nor a known non-release output) refuses the reuse, even with a correct hash, as does a
   missing required report. A new verify-all report must be added to `RELEASE_REPORTS`; until it is, CI's bundle
