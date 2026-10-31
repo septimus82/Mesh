@@ -12,17 +12,23 @@ from typing import Any
 import pytest
 
 from tooling import ci_require_jobs as fanin
-from tooling.ci_require_jobs import COMPONENTS, FetchError, check, fetch_jobs, required_jobs, verdict
+from tooling.ci_require_jobs import COMPONENTS, SHARDED, FetchError, check, fetch_jobs, required_jobs, verdict
 
 pytestmark = [pytest.mark.fast]
 
 REQUIRED = required_jobs("windows-latest", "3.11")
 WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "ci.yml"
+SHARD_JOBS = ["pytest (windows-latest, py3.11, shard 1/2)", "pytest (windows-latest, py3.11, shard 2/2)"]
+
+
+def _names(part: str) -> list[str]:
+    """A component's Windows job names (F13-C: ``pytest`` is two shard jobs)."""
+    return SHARD_JOBS if part == "pytest" else [f"{part} (windows-latest, py3.11)"]
 
 
 def _jobs(**conclusions: str | None) -> list[dict[str, object]]:
-    return [{"name": f"{part} (windows-latest, py3.11)", "status": "completed", "conclusion": c}
-            for part, c in conclusions.items()]
+    return [{"name": name, "status": "completed", "conclusion": c}
+            for part, c in conclusions.items() for name in _names(part)]
 
 
 ALL_OK = {part: "success" for part in COMPONENTS}
@@ -30,13 +36,39 @@ ALL_OK = {part: "success" for part in COMPONENTS}
 
 def test_the_required_jobs_are_this_os_s_pytest_verify_installed_and_acceptance() -> None:
     assert COMPONENTS == ("pytest", "verify", "installed", "acceptance")
-    assert REQUIRED == ["pytest (windows-latest, py3.11)", "verify (windows-latest, py3.11)",
+    # F13-C: Windows' pytest is two shard jobs, each required; Linux's is one, as before.
+    assert SHARDED == {"windows-latest": 2}
+    assert REQUIRED == [*SHARD_JOBS, "verify (windows-latest, py3.11)",
                         "installed (windows-latest, py3.11)", "acceptance (windows-latest, py3.11)"]
+    assert required_jobs("ubuntu-latest", "3.11") == [
+        "pytest (ubuntu-latest, py3.11)", "verify (ubuntu-latest, py3.11)",
+        "installed (ubuntu-latest, py3.11)", "acceptance (ubuntu-latest, py3.11)"]
+
+
+def test_the_shard_count_is_the_one_the_shards_use() -> None:
+    from tooling import ci_shards
+
+    assert SHARDED["windows-latest"] == ci_shards.SHARDS
 
 
 def test_green_only_when_all_succeeded() -> None:
     ok, lines = verdict(_jobs(**ALL_OK), REQUIRED)
-    assert ok and len(lines) == 4
+    assert ok and len(lines) == 5
+
+
+@pytest.mark.parametrize("bad", ["failure", "cancelled", "skipped", None, "missing"])
+@pytest.mark.parametrize("shard", SHARD_JOBS)
+def test_one_shard_that_did_not_succeed_is_red(shard: str, bad: str | None) -> None:
+    jobs = [job for job in _jobs(**ALL_OK) if job["name"] != shard or bad != "missing"]
+    for job in jobs:
+        if job["name"] == shard:
+            job["conclusion"] = bad
+    ok, lines = verdict(jobs, REQUIRED)
+    assert not ok
+    assert any(line.startswith(("FAILED", "MISSING")) and shard in line for line in lines)
+    # Nor does an unsharded Windows pytest job (an older workflow's) stand in for the shards.
+    stale: list[dict[str, object]] = [{"name": "pytest (windows-latest, py3.11)", "conclusion": "success"}]
+    assert not verdict(jobs + stale, REQUIRED)[0]
 
 
 @pytest.mark.parametrize("bad", ["failure", "cancelled", "skipped", "timed_out", "action_required", None])
@@ -77,7 +109,8 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     pytest_job, verify_job, installed_job, acceptance_job, tests_job = (
         _job_block(text, j) for j in ("pytest", "verify", "installed", "acceptance", "tests"))
     # The component names the fan-in looks for, and the check name reviews look at.
-    assert "name: pytest (${{ matrix.os }}, py${{ matrix.python }})" in pytest_job
+    assert ("name: pytest (${{ matrix.os }}, py${{ matrix.python }}${{ matrix.shard && format(', shard {0}', "
+            "matrix.shard) || '' }})") in pytest_job
     assert "name: verify (${{ matrix.os }}, py${{ matrix.python }})" in verify_job
     assert "name: installed (${{ matrix.os }}, py${{ matrix.python }})" in installed_job
     assert "name: acceptance (${{ matrix.os }}, py${{ matrix.python }})" in acceptance_job
@@ -87,9 +120,28 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     assert "if: ${{ always() }}" in tests_job
     assert "tooling/ci_require_jobs.py --os \"${{ matrix.os }}\"" in tests_job
     assert "actions: read" in tests_job
-    for block in (pytest_job, verify_job, installed_job, acceptance_job, tests_job):
+    for block in (verify_job, installed_job, acceptance_job, tests_job):
         assert "os: [ubuntu-latest, windows-latest]" in block
+    for block in (pytest_job, verify_job, installed_job, acceptance_job, tests_job):
         assert "fail-fast: false" in block
+    # F13-C: pytest's matrix is Linux whole and Windows as the two shards required_jobs names, nothing else.
+    legs = re.findall(r"^          - \{ (.*) \}$", pytest_job, re.M)
+    assert legs == ['os: ubuntu-latest, python: "3.11", shard: "", shard_index: 0',
+                    'os: windows-latest, python: "3.11", shard: "1/2", shard_index: 1',
+                    'os: windows-latest, python: "3.11", shard: "2/2", shard_index: 2']
+    windows_run = pytest_job[pytest_job.index("Run pytest (Windows"):pytest_job.index("Run pytest (Linux)")]
+    assert ("-p tooling.ci_shards_plugin --mesh-shard ${{ matrix.shard }} --mesh-shard-record "
+            "artifacts/shards/shard-${{ matrix.shard_index }}.json --junitxml=artifacts/shards/junit-"
+            "${{ matrix.shard_index }}.xml") in windows_run
+    linux_run = pytest_job[pytest_job.index("Run pytest (Linux)"):]
+    assert "xvfb-run -a python -m pytest -q\n" in linux_run and "mesh-shard" not in linux_run
+    record_upload = pytest_job[pytest_job.index("Upload the shard's record"):]
+    assert "if: always() && matrix.shard != ''" in record_upload and "overwrite: true" in record_upload
+    assert "name: pytest-shard-${{ matrix.shard_index }}-${{ matrix.os }}-py${{ matrix.python }}" in record_upload
+    # The Windows fan-in refuses unless the shards' records prove the whole suite ran once, on this commit.
+    assert "pattern: pytest-shard-*-${{ matrix.os }}-py${{ matrix.python }}" in tests_job
+    assert 'python3 tooling/ci_shards.py check shard-records --commit "${{ github.sha }}"' in tests_job
+    assert tests_job.count("if: matrix.os == 'windows-latest'") == 2
     # Neither component may be skipped by a condition of its own, or soften its result (job-level keys only; verify's
     # PR-comment steps may fail softly, as before the split).
     for block in (pytest_job, verify_job, installed_job, acceptance_job):
@@ -137,8 +189,8 @@ def _read(jobs: dict[str, Any], *, attempt: int = ATTEMPT, total: int | None = N
     listed = []
     for part, state in jobs.items():
         status, conclusion = state if isinstance(state, tuple) else ("completed", state)
-        listed.append({"name": f"{part} (windows-latest, py3.11)", "status": status, "conclusion": conclusion,
-                       "run_attempt": attempt})
+        listed += [{"name": name, "status": status, "conclusion": conclusion, "run_attempt": attempt}
+                   for name in _names(part)]
     return listed, len(listed) if total is None else total
 
 
@@ -182,7 +234,7 @@ def test_a_transient_api_failure_is_read_again() -> None:
 
 def test_an_incomplete_list_is_read_again() -> None:
     ok, _, sleeps, log = _fan_in(_read(ALL_OK, total=14), _read(ALL_OK))
-    assert ok and "incomplete list: 4 of 14 jobs" in log[0]
+    assert ok and "incomplete list: 5 of 14 jobs" in log[0]
 
 
 @pytest.mark.parametrize("persistent", ["api", "missing", "running", "stale"])
@@ -215,9 +267,9 @@ def test_successes_from_different_reads_are_never_combined() -> None:
 def test_an_older_success_never_hides_a_newer_failure() -> None:
     older = _read(ALL_OK, attempt=1)[0]
     newer = _read({**ALL_OK, "pytest": "failure"})[0]
-    ok, lines, _, _ = _fan_in((older + newer, 8))
-    assert not ok and "FAILED  pytest (windows-latest, py3.11): failure" in lines
-    ok, _, _, _ = _fan_in((newer + older, 8))
+    ok, lines, _, _ = _fan_in((older + newer, 10))
+    assert not ok and f"FAILED  {SHARD_JOBS[0]}: failure" in lines and f"FAILED  {SHARD_JOBS[1]}: failure" in lines
+    ok, _, _, _ = _fan_in((newer + older, 10))
     assert not ok, "whatever the order GitHub lists them in"
 
 

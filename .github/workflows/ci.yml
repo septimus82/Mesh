@@ -194,8 +194,11 @@ jobs:
   # Each OS's tests run as two parallel jobs (H3, #422 F13; neither uses the other's results): ``pytest`` (the full
   # default suite) and ``verify`` (verify-all, the release bundle and its strict verification, the artifacts). The
   # ``tests (<os>, py3.11)`` job after them is the result to look at: green only when both of that OS's jobs succeeded.
+  # Windows' suite, the longest job of a run, runs as two shards of whole modules (F13-C, tooling/ci_shards.py), each a
+  # job of its own: ``pytest (windows-latest, py3.11, shard 1/2)`` and ``2/2``. Each writes a record of what it
+  # collected and ran, and the Windows ``tests`` fan-in refuses unless together they ran every test exactly once.
   pytest:
-    name: pytest (${{ matrix.os }}, py${{ matrix.python }})
+    name: pytest (${{ matrix.os }}, py${{ matrix.python }}${{ matrix.shard && format(', shard {0}', matrix.shard) || '' }})
     permissions:
       contents: read
     runs-on: ${{ matrix.os }}
@@ -204,8 +207,10 @@ jobs:
       # Each OS reports its own result: with fail-fast a Windows failure cancelled Linux (and vice versa) and hid it.
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python: ["3.11"]
+        include:
+          - { os: ubuntu-latest, python: "3.11", shard: "", shard_index: 0 }
+          - { os: windows-latest, python: "3.11", shard: "1/2", shard_index: 1 }
+          - { os: windows-latest, python: "3.11", shard: "2/2", shard_index: 2 }
 
     defaults:
       run:
@@ -229,15 +234,28 @@ jobs:
         run: |
           python -m compileall -q engine mesh_cli tooling tests
 
-      - name: Run pytest (Windows)
+      - name: Run pytest (Windows, one shard)
         if: runner.os == 'Windows'
         run: |
-          python -m pytest -q -p no:cacheprovider
+          python -m pytest -q -p no:cacheprovider -p tooling.ci_shards_plugin --mesh-shard ${{ matrix.shard }} --mesh-shard-record artifacts/shards/shard-${{ matrix.shard_index }}.json --junitxml=artifacts/shards/junit-${{ matrix.shard_index }}.xml
 
       - name: Run pytest (Linux)
         if: runner.os != 'Windows'
         run: |
           xvfb-run -a python -m pytest -q
+
+      # The shard's record and JUnit report, for the fan-in (whatever happened: a missing or incomplete one is refused
+      # there). ``overwrite``: a re-run attempt of the shard replaces its earlier record.
+      - name: Upload the shard's record
+        if: always() && matrix.shard != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-shard-${{ matrix.shard_index }}-${{ matrix.os }}-py${{ matrix.python }}
+          retention-days: 7
+          if-no-files-found: ignore
+          overwrite: true
+          path: |
+            artifacts/shards/
 
       # What the suite's tests write under artifacts/ (replay diagnostics and the like): before the split it went up
       # with mesh-artifacts, which a failed suite still uploaded. Not a mesh-artifacts-* name: release_draft.yml takes
@@ -246,7 +264,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-outputs-${{ matrix.os }}-py${{ matrix.python }}
+          name: pytest-outputs-${{ matrix.os }}-py${{ matrix.python }}${{ matrix.shard && format('-shard-{0}', matrix.shard_index) || '' }}
           retention-days: 7
           if-no-files-found: ignore
           path: |
@@ -696,6 +714,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 tooling/ci_require_jobs.py --os "${{ matrix.os }}" --python "${{ matrix.python }}"
+
+      - name: Download the Windows shards' records
+        if: matrix.os == 'windows-latest'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pytest-shard-*-${{ matrix.os }}-py${{ matrix.python }}
+          path: shard-records
+          merge-multiple: true
+
+      - name: The Windows shards together ran the whole suite, each test once
+        if: matrix.os == 'windows-latest'
+        run: python3 tooling/ci_shards.py check shard-records --commit "${{ github.sha }}"
 
   timing-rolling:
     # Report-only (#373, #400): the integration branch's recent CI timings against the committed advisory model, so a

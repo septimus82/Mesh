@@ -60,9 +60,11 @@ def collect(branch: str, runs: int, out: Path) -> list[dict[str, Any]]:
                                      "durations": name}
             # Since H3 an OS's ``tests`` job is a fan-in after its parallel ``pytest`` and ``verify`` jobs (and, through
             # the matrix, after the other OS's too), so the OS's time is the span of those two; older runs have only
-            # the ``tests`` job, which gives what it always did.
+            # the ``tests`` job, which gives what it always did. Since F13-C Windows' ``pytest`` is two shard jobs,
+            # ``pytest (windows-latest, py3.11, shard K/2)``: the span covers both.
             suffix = job["name"][len("tests"):]
-            parts = [j for j in jobs if j["name"] in {f"{p}{suffix}" for p in ("pytest", "verify")}] or [job]
+            parts = [j for j in jobs if j["name"] in {f"{p}{suffix}" for p in ("pytest", "verify")}
+                     or j["name"].startswith(f"pytest{suffix[:-1]}, shard ")] or [job]
             starts = [j["startedAt"] for j in parts if j.get("startedAt")]
             ends = [j["completedAt"] for j in parts if j.get("completedAt")]
             job_s = _seconds(min(starts, default=None), max(ends, default=None))
