@@ -1,0 +1,864 @@
+{
+ "plaster_a.png": {
+  "note": "tiles-pro variation 1 of 16: plain lime plaster with hairline cracks",
+  "endpoint": "https://api.pixellab.ai/v2/create-tiles-pro",
+  "raw_file": "raw/textures/t01_plaster_64/tile_1.png",
+  "request": {
+   "description": "1). weathered lime plaster wall texture, flat front view, hairline cracks, faint damp stains, subtle warm discolouration 2). weathered lime plaster wall, soft patches of darker grime, a few small cracks 3). old whitewashed lime plaster, uneven worn surface, slight staining near cracks",
+   "tile_type": "square_topdown",
+   "tile_view": "top-down",
+   "tile_size": 64,
+   "outline_mode": "segmentation",
+   "seed": 1701,
+   "target_palette": {
+    "colors": [
+     "#d2c6a8",
+     "#c8bc9e",
+     "#beb092",
+     "#ac9e80",
+     "#968a70",
+     "#7e7460",
+     "#403e3c",
+     "#55524c",
+     "#6a6258",
+     "#76726c",
+     "#908c82",
+     "#a6a296",
+     "#7e5432",
+     "#66703e"
+    ],
+    "name": "Mesh cottage",
+    "max_colors": 12
+   }
+  },
+  "request_meta": {},
+  "prompt": "1). weathered lime plaster wall texture, flat front view, hairline cracks, faint damp stains, subtle warm discolouration 2). weathered lime plaster wall, soft patches of darker grime, a few small cracks 3). old whitewashed lime plaster, uneven worn surface, slight staining near cracks",
+  "seed": 1701,
+  "ids": {
+   "tile_id": "cbf0f6d4-a61e-4971-8575-65647cc08433",
+   "background_job_id": "d77565d6-dcd2-49ff-adee-8b8b1c0a7fe2"
+  },
+  "utc_submitted": "see record note",
+  "utc_completed": "2026-10-25T21:04:03+00:00",
+  "generations_used_by_call": 15.0,
+  "call_shared_with": [
+   "moss_plaster",
+   "plaster_b",
+   "plaster_c"
+  ],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "plaster_b.png": {
+  "note": "tiles-pro variation 2 of 16: plaster with branching cracks",
+  "endpoint": "https://api.pixellab.ai/v2/create-tiles-pro",
+  "raw_file": "raw/textures/t01_plaster_64/tile_2.png",
+  "request": {
+   "description": "1). weathered lime plaster wall texture, flat front view, hairline cracks, faint damp stains, subtle warm discolouration 2). weathered lime plaster wall, soft patches of darker grime, a few small cracks 3). old whitewashed lime plaster, uneven worn surface, slight staining near cracks",
+   "tile_type": "square_topdown",
+   "tile_view": "top-down",
+   "tile_size": 64,
+   "outline_mode": "segmentation",
+   "seed": 1701,
+   "target_palette": {
+    "colors": [
+     "#d2c6a8",
+     "#c8bc9e",
+     "#beb092",
+     "#ac9e80",
+     "#968a70",
+     "#7e7460",
+     "#403e3c",
+     "#55524c",
+     "#6a6258",
+     "#76726c",
+     "#908c82",
+     "#a6a296",
+     "#7e5432",
+     "#66703e"
+    ],
+    "name": "Mesh cottage",
+    "max_colors": 12
+   }
+  },
+  "request_meta": {},
+  "prompt": "1). weathered lime plaster wall texture, flat front view, hairline cracks, faint damp stains, subtle warm discolouration 2). weathered lime plaster wall, soft patches of darker grime, a few small cracks 3). old whitewashed lime plaster, uneven worn surface, slight staining near cracks",
+  "seed": 1701,
+  "ids": {
+   "tile_id": "cbf0f6d4-a61e-4971-8575-65647cc08433",
+   "background_job_id": "d77565d6-dcd2-49ff-adee-8b8b1c0a7fe2"
+  },
+  "utc_submitted": "see record note",
+  "utc_completed": "2026-10-25T21:04:03+00:00",
+  "generations_used_by_call": 15.0,
+  "call_shared_with": [
+   "moss_plaster",
+   "plaster_a",
+   "plaster_c"
+  ],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "plaster_c.png": {
+  "note": "tiles-pro variation 7 of 16: stained, streaked plaster",
+  "endpoint": "https://api.pixellab.ai/v2/create-tiles-pro",
+  "raw_file": "raw/textures/t01_plaster_64/tile_7.png",
+  "request": {
+   "description": "1). weathered lime plaster wall texture, flat front view, hairline cracks, faint damp stains, subtle warm discolouration 2). weathered lime plaster wall, soft patches of darker grime, a few small cracks 3). old whitewashed lime plaster, uneven worn surface, slight staining near cracks",
+   "tile_type": "square_topdown",
+   "tile_view": "top-down",
+   "tile_size": 64,
+   "outline_mode": "segmentation",
+   "seed": 1701,
+   "target_palette": {
+    "colors": [
+     "#d2c6a8",
+     "#c8bc9e",
+     "#beb092",
+     "#ac9e80",
+     "#968a70",
+     "#7e7460",
+     "#403e3c",
+     "#55524c",
+     "#6a6258",
+     "#76726c",
+     "#908c82",
+     "#a6a296",
+     "#7e5432",
+     "#66703e"
+    ],
+    "name": "Mesh cottage",
+    "max_colors": 12
+   }
+  },
+  "request_meta": {},
+  "prompt": "1). weathered lime plaster wall texture, flat front view, hairline cracks, faint damp stains, subtle warm discolouration 2). weathered lime plaster wall, soft patches of darker grime, a few small cracks 3). old whitewashed lime plaster, uneven worn surface, slight staining near cracks",
+  "seed": 1701,
+  "ids": {
+   "tile_id": "cbf0f6d4-a61e-4971-8575-65647cc08433",
+   "background_job_id": "d77565d6-dcd2-49ff-adee-8b8b1c0a7fe2"
+  },
+  "utc_submitted": "see record note",
+  "utc_completed": "2026-10-25T21:04:03+00:00",
+  "generations_used_by_call": 15.0,
+  "call_shared_with": [
+   "moss_plaster",
+   "plaster_a",
+   "plaster_b"
+  ],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "stone_a.png": {
+  "note": "pixflux: asked for grey rubble, got pale cream brick-like coursing",
+  "endpoint": "https://api.pixellab.ai/v2/create-image-pixflux",
+  "raw_file": "raw/textures/p02_stone_a/image.png",
+  "request": {
+   "description": "seamless tileable texture of a weathered rubble stone wall, irregular grey fieldstones of mixed sizes set in pale lime mortar, flat front view, soft even light, no shadows, pixel art",
+   "image_size": {
+    "width": 64,
+    "height": 64
+   },
+   "text_guidance_scale": 8,
+   "outline": "lineless",
+   "shading": "basic shading",
+   "detail": "medium detail",
+   "view": "side",
+   "no_background": false,
+   "seed": 2301,
+   "color_image": "<base64 image omitted; see request_meta>"
+  },
+  "request_meta": {
+   "color_image_colors": [
+    "#403e3c",
+    "#55524c",
+    "#6a6258",
+    "#76726c",
+    "#908c82",
+    "#a6a296",
+    "#d2c6a8",
+    "#c8bc9e",
+    "#beb092",
+    "#ac9e80",
+    "#968a70",
+    "#7e7460"
+   ],
+   "color_image_groups": [
+    "stone",
+    "plaster"
+   ]
+  },
+  "prompt": "seamless tileable texture of a weathered rubble stone wall, irregular grey fieldstones of mixed sizes set in pale lime mortar, flat front view, soft even light, no shadows, pixel art",
+  "seed": 2301,
+  "ids": {},
+  "utc_submitted": "2026-10-25T21:06:03+00:00",
+  "utc_completed": "2026-10-25T21:06:22+00:00",
+  "generations_used_by_call": 1.0,
+  "call_shared_with": [],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "stone_b.png": {
+  "note": "pixflux: coursed grey stone blocks (raw, with seam)",
+  "endpoint": "https://api.pixellab.ai/v2/create-image-pixflux",
+  "raw_file": "raw/textures/p03_stone_b/image.png",
+  "request": {
+   "description": "seamless tileable texture of old coursed stone masonry, roughly squared weathered grey stone blocks in uneven rows with worn mortar joints, flat front view, soft even light, no shadows, pixel art",
+   "image_size": {
+    "width": 64,
+    "height": 64
+   },
+   "text_guidance_scale": 8,
+   "outline": "lineless",
+   "shading": "basic shading",
+   "detail": "medium detail",
+   "view": "side",
+   "no_background": false,
+   "seed": 2302,
+   "color_image": "<base64 image omitted; see request_meta>"
+  },
+  "request_meta": {
+   "color_image_colors": [
+    "#403e3c",
+    "#55524c",
+    "#6a6258",
+    "#76726c",
+    "#908c82",
+    "#a6a296",
+    "#d2c6a8",
+    "#c8bc9e",
+    "#beb092",
+    "#ac9e80",
+    "#968a70",
+    "#7e7460"
+   ],
+   "color_image_groups": [
+    "stone",
+    "plaster"
+   ]
+  },
+  "prompt": "seamless tileable texture of old coursed stone masonry, roughly squared weathered grey stone blocks in uneven rows with worn mortar joints, flat front view, soft even light, no shadows, pixel art",
+  "seed": 2302,
+  "ids": {},
+  "utc_submitted": "2026-10-25T21:06:24+00:00",
+  "utc_completed": "2026-10-25T21:06:39+00:00",
+  "generations_used_by_call": 1.0,
+  "call_shared_with": [],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "stone_b_seamfix.png": {
+  "note": "stone_b with its seam repaired by PixelLab inpaint-v3 (see post_processing)",
+  "endpoint": "https://api.pixellab.ai/v2/inpaint-v3",
+  "raw_file": "raw/textures/i11_stone_b_seamfix/image.png",
+  "request": {
+   "description": "old coursed grey stone masonry, roughly squared weathered stone blocks in uneven rows with worn pale mortar joints, continue the existing pattern seamlessly",
+   "inpainting_image": {
+    "size": {
+     "width": 64,
+     "height": 64
+    },
+    "image": "<base64 omitted; see request_meta>"
+   },
+   "mask_image": {
+    "size": {
+     "width": 64,
+     "height": 64
+    },
+    "image": "<base64 omitted; see request_meta>"
+   },
+   "seed": 2801,
+   "no_background": false,
+   "crop_to_mask": true
+  },
+  "request_meta": {
+   "source": "raw/textures/p03_stone_b/image.png",
+   "pre": "source wrapped by (+32,+32) px (lossless ImageChops.offset) so the original tile edges meet in a central cross",
+   "mask": "white cross band 6 px wide centred on x=32 and y=32 (where the original edges now meet); black elsewhere"
+  },
+  "prompt": "old coursed grey stone masonry, roughly squared weathered stone blocks in uneven rows with worn pale mortar joints, continue the existing pattern seamlessly",
+  "seed": 2801,
+  "ids": {
+   "background_job_id": "c4c9bb1e-deff-41a8-88a6-f33c38948fd6",
+   "generation_id": "7e62bc0f-1d3f-4b21-b95a-c192401cbcaf"
+  },
+  "utc_submitted": "2026-10-25T21:10:08+00:00",
+  "utc_completed": "2026-10-25T21:11:43+00:00",
+  "generations_used_by_call": 10.0,
+  "call_shared_with": [],
+  "post_processing": [
+   "PixelLab inpaint-v3 result (its image and quantized_image outputs are identical) wrapped back by (-32,-32) px with PIL ImageChops.offset: a lossless pixel permutation that restores the original orientation. No pixel values were edited by hand."
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "timber_a.png": {
+  "note": "pixflux: dark oak, horizontal grain",
+  "endpoint": "https://api.pixellab.ai/v2/create-image-pixflux",
+  "raw_file": "raw/textures/p04_timber_a/image.png",
+  "request": {
+   "description": "seamless tileable texture of a dark oak timber beam surface, long horizontal wood grain lines, a small knot, slightly weathered, flat front view, soft even light, no shadows, pixel art",
+   "image_size": {
+    "width": 32,
+    "height": 32
+   },
+   "text_guidance_scale": 8,
+   "outline": "lineless",
+   "shading": "basic shading",
+   "detail": "medium detail",
+   "view": "side",
+   "no_background": false,
+   "seed": 2401,
+   "color_image": "<base64 image omitted; see request_meta>"
+  },
+  "request_meta": {
+   "color_image_colors": [
+    "#4c321e",
+    "#5e3e24",
+    "#704a2c",
+    "#7e5432",
+    "#966840",
+    "#ac8050"
+   ],
+   "color_image_groups": [
+    "timber"
+   ]
+  },
+  "prompt": "seamless tileable texture of a dark oak timber beam surface, long horizontal wood grain lines, a small knot, slightly weathered, flat front view, soft even light, no shadows, pixel art",
+  "seed": 2401,
+  "ids": {},
+  "utc_submitted": "2026-10-25T21:07:02+00:00",
+  "utc_completed": "2026-10-25T21:07:21+00:00",
+  "generations_used_by_call": 1.0,
+  "call_shared_with": [],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "timber_b.png": {
+  "note": "pixflux: weathered grey-brown hewn oak",
+  "endpoint": "https://api.pixellab.ai/v2/create-image-pixflux",
+  "raw_file": "raw/textures/p05_timber_b/image.png",
+  "request": {
+   "description": "seamless tileable texture of old hand-hewn dark oak wood, horizontal grain with fine checks and cracks, weathered greyish brown, flat front view, soft even light, no shadows, pixel art",
+   "image_size": {
+    "width": 32,
+    "height": 32
+   },
+   "text_guidance_scale": 8,
+   "outline": "lineless",
+   "shading": "basic shading",
+   "detail": "medium detail",
+   "view": "side",
+   "no_background": false,
+   "seed": 2402,
+   "color_image": "<base64 image omitted; see request_meta>"
+  },
+  "request_meta": {
+   "color_image_colors": [
+    "#4c321e",
+    "#5e3e24",
+    "#704a2c",
+    "#7e5432",
+    "#966840",
+    "#ac8050",
+    "#403e3c",
+    "#55524c",
+    "#6a6258",
+    "#76726c",
+    "#908c82",
+    "#a6a296"
+   ],
+   "color_image_groups": [
+    "timber",
+    "stone"
+   ]
+  },
+  "prompt": "seamless tileable texture of old hand-hewn dark oak wood, horizontal grain with fine checks and cracks, weathered greyish brown, flat front view, soft even light, no shadows, pixel art",
+  "seed": 2402,
+  "ids": {},
+  "utc_submitted": "2026-10-25T21:07:24+00:00",
+  "utc_completed": "2026-10-25T21:07:38+00:00",
+  "generations_used_by_call": 1.0,
+  "call_shared_with": [],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "roof_slate.png": {
+  "note": "pixflux: blue-grey slate in staggered rows",
+  "endpoint": "https://api.pixellab.ai/v2/create-image-pixflux",
+  "raw_file": "raw/textures/p06_roof_slate/image.png",
+  "request": {
+   "description": "seamless tileable texture of a cottage roof covered in overlapping blue-grey slate tiles, slightly irregular staggered rows, a few chipped tiles, flat front view, soft even light, no strong shadows, pixel art",
+   "image_size": {
+    "width": 64,
+    "height": 64
+   },
+   "text_guidance_scale": 8,
+   "outline": "lineless",
+   "shading": "basic shading",
+   "detail": "medium detail",
+   "view": "side",
+   "no_background": false,
+   "seed": 2501,
+   "color_image": "<base64 image omitted; see request_meta>"
+  },
+  "request_meta": {
+   "color_image_colors": [
+    "#363c50",
+    "#465470",
+    "#566482",
+    "#6c7890",
+    "#403e3c",
+    "#55524c",
+    "#6a6258",
+    "#76726c",
+    "#908c82",
+    "#a6a296"
+   ],
+   "color_image_groups": [
+    "slate",
+    "stone"
+   ]
+  },
+  "prompt": "seamless tileable texture of a cottage roof covered in overlapping blue-grey slate tiles, slightly irregular staggered rows, a few chipped tiles, flat front view, soft even light, no strong shadows, pixel art",
+  "seed": 2501,
+  "ids": {},
+  "utc_submitted": "2026-10-25T21:07:41+00:00",
+  "utc_completed": "2026-10-25T21:07:57+00:00",
+  "generations_used_by_call": 1.0,
+  "call_shared_with": [],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "roof_clay.png": {
+  "note": "pixflux: terracotta shingles (reads as a basket-weave grid)",
+  "endpoint": "https://api.pixellab.ai/v2/create-image-pixflux",
+  "raw_file": "raw/textures/p07_roof_clay/image.png",
+  "request": {
+   "description": "seamless tileable texture of a cottage roof covered in weathered terracotta clay shingles, overlapping slightly irregular staggered rows, faded and worn, flat front view, soft even light, no strong shadows, pixel art",
+   "image_size": {
+    "width": 64,
+    "height": 64
+   },
+   "text_guidance_scale": 8,
+   "outline": "lineless",
+   "shading": "basic shading",
+   "detail": "medium detail",
+   "view": "side",
+   "no_background": false,
+   "seed": 2502,
+   "color_image": "<base64 image omitted; see request_meta>"
+  },
+  "request_meta": {
+   "color_image_colors": [
+    "#6a3c2c",
+    "#8a4e36",
+    "#a4644a",
+    "#b87c5c",
+    "#4c321e",
+    "#5e3e24",
+    "#704a2c",
+    "#7e5432",
+    "#966840",
+    "#ac8050"
+   ],
+   "color_image_groups": [
+    "clay",
+    "timber"
+   ]
+  },
+  "prompt": "seamless tileable texture of a cottage roof covered in weathered terracotta clay shingles, overlapping slightly irregular staggered rows, faded and worn, flat front view, soft even light, no strong shadows, pixel art",
+  "seed": 2502,
+  "ids": {},
+  "utc_submitted": "2026-10-25T21:08:00+00:00",
+  "utc_completed": "2026-10-25T21:08:13+00:00",
+  "generations_used_by_call": 1.0,
+  "call_shared_with": [],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "moss_roof_slate.png": {
+  "note": "pixflux from roof_slate as init_image, asked for moss: FAILED, no moss appears",
+  "endpoint": "https://api.pixellab.ai/v2/create-image-pixflux",
+  "raw_file": "raw/textures/p10_roof_slate_moss/image.png",
+  "request": {
+   "description": "seamless tileable texture of an old blue-grey slate tile roof with green moss growing in patches along the tile edges and gaps, slightly irregular staggered rows, flat front view, soft even light, no strong shadows, pixel art",
+   "image_size": {
+    "width": 64,
+    "height": 64
+   },
+   "text_guidance_scale": 8,
+   "outline": "lineless",
+   "shading": "basic shading",
+   "detail": "medium detail",
+   "view": "side",
+   "no_background": false,
+   "seed": 2701,
+   "init_image_strength": 300,
+   "color_image": "<base64 image omitted; see request_meta>",
+   "init_image": "<base64 image omitted; see request_meta>"
+  },
+  "request_meta": {
+   "color_image_colors": [
+    "#363c50",
+    "#465470",
+    "#566482",
+    "#6c7890",
+    "#403e3c",
+    "#55524c",
+    "#6a6258",
+    "#76726c",
+    "#908c82",
+    "#a6a296",
+    "#3c4a2c",
+    "#4e5c34",
+    "#66703e",
+    "#808a52"
+   ],
+   "color_image_groups": [
+    "slate",
+    "stone",
+    "moss"
+   ],
+   "init_image": "raw/textures/p06_roof_slate/image.png"
+  },
+  "prompt": "seamless tileable texture of an old blue-grey slate tile roof with green moss growing in patches along the tile edges and gaps, slightly irregular staggered rows, flat front view, soft even light, no strong shadows, pixel art",
+  "seed": 2701,
+  "ids": {},
+  "utc_submitted": "2026-10-25T21:09:43+00:00",
+  "utc_completed": "2026-10-25T21:09:52+00:00",
+  "generations_used_by_call": 1.0,
+  "call_shared_with": [],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "moss_plaster.png": {
+  "note": "tiles-pro variation 8 of 16: plaster pads with moss in the joints (tile-art look)",
+  "endpoint": "https://api.pixellab.ai/v2/create-tiles-pro",
+  "raw_file": "raw/textures/t01_plaster_64/tile_8.png",
+  "request": {
+   "description": "1). weathered lime plaster wall texture, flat front view, hairline cracks, faint damp stains, subtle warm discolouration 2). weathered lime plaster wall, soft patches of darker grime, a few small cracks 3). old whitewashed lime plaster, uneven worn surface, slight staining near cracks",
+   "tile_type": "square_topdown",
+   "tile_view": "top-down",
+   "tile_size": 64,
+   "outline_mode": "segmentation",
+   "seed": 1701,
+   "target_palette": {
+    "colors": [
+     "#d2c6a8",
+     "#c8bc9e",
+     "#beb092",
+     "#ac9e80",
+     "#968a70",
+     "#7e7460",
+     "#403e3c",
+     "#55524c",
+     "#6a6258",
+     "#76726c",
+     "#908c82",
+     "#a6a296",
+     "#7e5432",
+     "#66703e"
+    ],
+    "name": "Mesh cottage",
+    "max_colors": 12
+   }
+  },
+  "request_meta": {},
+  "prompt": "1). weathered lime plaster wall texture, flat front view, hairline cracks, faint damp stains, subtle warm discolouration 2). weathered lime plaster wall, soft patches of darker grime, a few small cracks 3). old whitewashed lime plaster, uneven worn surface, slight staining near cracks",
+  "seed": 1701,
+  "ids": {
+   "tile_id": "cbf0f6d4-a61e-4971-8575-65647cc08433",
+   "background_job_id": "d77565d6-dcd2-49ff-adee-8b8b1c0a7fe2"
+  },
+  "utc_submitted": "see record note",
+  "utc_completed": "2026-10-25T21:04:03+00:00",
+  "generations_used_by_call": 15.0,
+  "call_shared_with": [
+   "plaster_a",
+   "plaster_b",
+   "plaster_c"
+  ],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "door_a.png": {
+  "note": "pixflux 38x64: plank door, iron strap hinges, ring handle; includes a stone/timber surround",
+  "endpoint": "https://api.pixellab.ai/v2/create-image-pixflux",
+  "raw_file": "raw/textures/p01_door_a/image.png",
+  "request": {
+   "description": "front view of a rustic cottage door, vertical dark oak planks, black wrought iron strap hinges, small iron ring handle, plank door filling the whole image edge to edge, flat even lighting, pixel art texture",
+   "image_size": {
+    "width": 38,
+    "height": 64
+   },
+   "text_guidance_scale": 8,
+   "outline": "selective outline",
+   "shading": "basic shading",
+   "detail": "medium detail",
+   "view": "side",
+   "no_background": false,
+   "seed": 2201,
+   "color_image": "<base64 image omitted; see request_meta>"
+  },
+  "request_meta": {
+   "color_image_colors": [
+    "#4c321e",
+    "#5e3e24",
+    "#704a2c",
+    "#7e5432",
+    "#966840",
+    "#ac8050",
+    "#34363e",
+    "#4a4c56",
+    "#64666e",
+    "#403e3c",
+    "#55524c",
+    "#6a6258",
+    "#76726c",
+    "#908c82",
+    "#a6a296"
+   ],
+   "color_image_groups": [
+    "timber",
+    "iron",
+    "stone"
+   ]
+  },
+  "prompt": "front view of a rustic cottage door, vertical dark oak planks, black wrought iron strap hinges, small iron ring handle, plank door filling the whole image edge to edge, flat even lighting, pixel art texture",
+  "seed": 2201,
+  "ids": {},
+  "utc_submitted": "2026-10-25T21:05:24+00:00",
+  "utc_completed": "2026-10-25T21:05:39+00:00",
+  "generations_used_by_call": 1.0,
+  "call_shared_with": [],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "window_a.png": {
+  "note": "bitforge 26x29: four-pane window, cross mullion",
+  "endpoint": "https://api.pixellab.ai/v2/create-image-bitforge",
+  "raw_file": "raw/textures/b08_window_a/image.png",
+  "request": {
+   "description": "front view of a small cottage window, four small panes divided by a dark oak wooden cross mullion, dark blue-grey glass, plain timber frame filling the whole image, flat even lighting, pixel art",
+   "image_size": {
+    "width": 26,
+    "height": 29
+   },
+   "text_guidance_scale": 8,
+   "outline": "selective outline",
+   "shading": "basic shading",
+   "detail": "medium detail",
+   "view": "side",
+   "no_background": false,
+   "seed": 2601,
+   "color_image": "<base64 image omitted; see request_meta>"
+  },
+  "request_meta": {
+   "color_image_colors": [
+    "#4c321e",
+    "#5e3e24",
+    "#704a2c",
+    "#7e5432",
+    "#966840",
+    "#ac8050",
+    "#3a4a58",
+    "#5a6e7a",
+    "#34363e",
+    "#4a4c56",
+    "#64666e",
+    "#d2c6a8",
+    "#c8bc9e",
+    "#beb092",
+    "#ac9e80",
+    "#968a70",
+    "#7e7460"
+   ],
+   "color_image_groups": [
+    "timber",
+    "glass",
+    "iron",
+    "plaster"
+   ]
+  },
+  "prompt": "front view of a small cottage window, four small panes divided by a dark oak wooden cross mullion, dark blue-grey glass, plain timber frame filling the whole image, flat even lighting, pixel art",
+  "seed": 2601,
+  "ids": {},
+  "utc_submitted": "2026-10-25T21:08:34+00:00",
+  "utc_completed": "2026-10-25T21:08:54+00:00",
+  "generations_used_by_call": 1.0,
+  "call_shared_with": [],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "window_b.png": {
+  "note": "bitforge 26x29: window with open plank shutters",
+  "endpoint": "https://api.pixellab.ai/v2/create-image-bitforge",
+  "raw_file": "raw/textures/b09_window_b/image.png",
+  "request": {
+   "description": "front view of a small cottage window with two open wooden plank shutters on either side, dark glass panes in the middle with a thin wooden mullion, dark oak frame, flat even lighting, image filled edge to edge, pixel art",
+   "image_size": {
+    "width": 26,
+    "height": 29
+   },
+   "text_guidance_scale": 8,
+   "outline": "selective outline",
+   "shading": "basic shading",
+   "detail": "medium detail",
+   "view": "side",
+   "no_background": false,
+   "seed": 2602,
+   "color_image": "<base64 image omitted; see request_meta>"
+  },
+  "request_meta": {
+   "color_image_colors": [
+    "#4c321e",
+    "#5e3e24",
+    "#704a2c",
+    "#7e5432",
+    "#966840",
+    "#ac8050",
+    "#3a4a58",
+    "#5a6e7a",
+    "#34363e",
+    "#4a4c56",
+    "#64666e"
+   ],
+   "color_image_groups": [
+    "timber",
+    "glass",
+    "iron"
+   ]
+  },
+  "prompt": "front view of a small cottage window with two open wooden plank shutters on either side, dark glass panes in the middle with a thin wooden mullion, dark oak frame, flat even lighting, image filled edge to edge, pixel art",
+  "seed": 2602,
+  "ids": {},
+  "utc_submitted": "2026-10-25T21:09:11+00:00",
+  "utc_completed": "2026-10-25T21:09:28+00:00",
+  "generations_used_by_call": 1.0,
+  "call_shared_with": [],
+  "post_processing": [
+   "none: byte-for-byte copy of the PixelLab output, at generated pixel size"
+  ],
+  "licence": "Generated with PixelLab (pixellab.ai) under the Mesh owner's paid subscription (Tier 2: Pixel Artisan) on 2026-10-25. Original output; the only image inputs were palette swatches built from the repo's own textures and the repo's own earlier PixelLab outputs."
+ },
+ "t01_plaster_64 note": "one tiles-pro call returned 16 variations (raw/textures/t01_plaster_64/tile_0..15.png); three plaster and one moss candidate were picked from it, the rest stay in raw/.",
+ "_palette": {
+  "colors": [
+   "#d2c6a8",
+   "#c8bc9e",
+   "#beb092",
+   "#ac9e80",
+   "#968a70",
+   "#7e7460",
+   "#4c321e",
+   "#5e3e24",
+   "#704a2c",
+   "#7e5432",
+   "#966840",
+   "#ac8050",
+   "#403e3c",
+   "#55524c",
+   "#6a6258",
+   "#76726c",
+   "#908c82",
+   "#a6a296",
+   "#363c50",
+   "#465470",
+   "#566482",
+   "#6c7890",
+   "#6a3c2c",
+   "#8a4e36",
+   "#a4644a",
+   "#b87c5c",
+   "#3c4a2c",
+   "#4e5c34",
+   "#66703e",
+   "#808a52",
+   "#34363e",
+   "#4a4c56",
+   "#64666e",
+   "#3a4a58",
+   "#5a6e7a"
+  ],
+  "groups": {
+   "plaster": [
+    "#d2c6a8",
+    "#c8bc9e",
+    "#beb092",
+    "#ac9e80",
+    "#968a70",
+    "#7e7460"
+   ],
+   "timber": [
+    "#4c321e",
+    "#5e3e24",
+    "#704a2c",
+    "#7e5432",
+    "#966840",
+    "#ac8050"
+   ],
+   "stone": [
+    "#403e3c",
+    "#55524c",
+    "#6a6258",
+    "#76726c",
+    "#908c82",
+    "#a6a296"
+   ],
+   "slate": [
+    "#363c50",
+    "#465470",
+    "#566482",
+    "#6c7890"
+   ],
+   "clay": [
+    "#6a3c2c",
+    "#8a4e36",
+    "#a4644a",
+    "#b87c5c"
+   ],
+   "moss": [
+    "#3c4a2c",
+    "#4e5c34",
+    "#66703e",
+    "#808a52"
+   ],
+   "iron": [
+    "#34363e",
+    "#4a4c56",
+    "#64666e"
+   ],
+   "glass": [
+    "#3a4a58",
+    "#5a6e7a"
+   ]
+  },
+  "derivation": "ramps sampled from tooling/hd2d_assets/textures (plaster, timber, shingles, cobbles, rock, floorboards, iron), clamped to saturation <= 0.45 and lightness 0.2-0.75, plus new ramps for clay, moss and glass. Each call used a subset of these groups (target_palette, or color_image swatches listed in request_meta) so every texture draws from one master palette."
+ }
+}
