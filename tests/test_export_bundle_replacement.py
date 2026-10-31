@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -25,6 +26,7 @@ from engine.tooling.export_bundle import build_bundle
 pytestmark = [pytest.mark.integration]
 
 FIXTURE = Path(__file__).parent / "fixtures" / "export_bundle"
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _tree(folder: Path) -> dict[str, str]:
@@ -53,7 +55,7 @@ def previous(repo: Path, tmp_path: Path) -> tuple[Path, dict[str, str]]:
 
 
 def _leftovers(out: Path) -> list[str]:
-    """What an export left beside ``out`` (its ``.<name>~new`` / ``.<name>~old``)."""
+    """What an export left beside ``out`` (its ``.<name>~new``, ``.<name>~old``, ``.<name>~export.json``)."""
     return sorted(p.name for p in out.parent.iterdir() if p.name.startswith(f".{out.name}~"))
 
 
@@ -232,13 +234,28 @@ def test_an_interrupt_during_the_handover_puts_the_earlier_export_back(
     assert _tree(out) == before and _leftovers(out) == []
 
 
+def _kill_during_handover(repo: Path, out: Path) -> None:
+    """Export in a child process that dies (``os._exit``) between the two renames: what a killed export leaves, no
+    bundle, the earlier one in ``.bundle~old``, the finished new one in ``.bundle~new``, and the journal."""
+    code = ("import os, sys\nfrom pathlib import Path\nfrom engine.tooling import export_bundle as eb\n"
+            "real = os.rename\n\n"
+            "def rename(src, dst):\n"
+            "    if Path(src).name == '.bundle~new' and Path(dst).name == 'bundle':\n"
+            "        os._exit(9)\n"
+            "    real(src, dst)\n\n"
+            "os.rename = rename\n"
+            "eb.build_bundle(Path(sys.argv[1]), Path(sys.argv[2]))\n")
+    proc = subprocess.run([sys.executable, "-c", code, str(repo), str(out)], cwd=ROOT, capture_output=True, text=True,
+                          timeout=120, check=False)
+    assert proc.returncode == 9, proc.stdout + proc.stderr
+    assert not out.exists() and _leftovers(out) == [".bundle~export.json", ".bundle~new", ".bundle~old"]
+
+
 def test_an_export_killed_between_the_renames_is_recovered_by_the_next(
         repo: Path, previous: tuple[Path, dict[str, str]], capsys: pytest.CaptureFixture[str]) -> None:
     out, before = previous
-    # What a process killed after the first rename leaves: no bundle, the earlier one aside, a finished new one.
-    staging, backup = out.with_name(".bundle~new"), out.with_name(".bundle~old")
-    os.rename(out, backup)
-    shutil.copytree(backup, staging)
+    _kill_during_handover(repo, out)
+    assert _tree(out.with_name(".bundle~old")) == before, "the earlier export, whole, aside"
     assert build_bundle(repo, out)[0] == 0
     assert "restored the previous export" in capsys.readouterr().out
     assert _leftovers(out) == [] and _tree(out) != before and eb.load_bundle_manifest(out) is not None
@@ -248,13 +265,78 @@ def test_an_export_killed_between_the_renames_is_recovered_by_the_next(
 def test_a_kept_earlier_export_is_never_deleted_for_a_folder_that_is_not_a_finished_one(
         repo: Path, previous: tuple[Path, dict[str, str]], output: str) -> None:
     out, before = previous
-    backup = out.with_name(".bundle~old")
-    os.rename(out, backup)
+    _kill_during_handover(repo, out)
     out.mkdir()
     if output == "other files":
         (out / "notes.txt").write_text("mine", encoding="utf-8")
     assert build_bundle(repo, out) == (1, None)
-    assert _tree(backup) == before, "the only copy of the earlier export stays"
+    assert _tree(out.with_name(".bundle~old")) == before, "the only copy of the earlier export stays"
+    assert _tree(out) == ({"notes.txt": hashlib.sha256(b"mine").hexdigest()} if output == "other files" else {})
+
+
+def test_a_changed_backup_is_never_deleted_as_superseded(repo: Path, previous: tuple[Path, dict[str, str]],
+                                                         monkeypatch: pytest.MonkeyPatch) -> None:
+    out, _ = previous
+    real = eb._remove_tree
+
+    def remove(path: Path) -> None:
+        if path.name == ".bundle~old":
+            raise PermissionError(13, "injected: in use", str(path))
+        real(path)
+
+    monkeypatch.setattr(eb, "_remove_tree", remove)
+    assert build_bundle(repo, out)[0] == 0  # (the earlier export kept in .bundle~old, recorded in the journal)
+    monkeypatch.undo()
+    backup = out.with_name(".bundle~old")
+    (backup / "scenes" / "scene_b.json").write_text('{"edited": "in the backup"}\n', encoding="utf-8")
+    kept = _tree(backup)
+    assert build_bundle(repo, out) == (1, None)
+    assert _tree(backup) == kept
+
+
+# --------------------------------------------------------------------------- #
+# Folders no export of this output recorded making are never deleted
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize("name", [".bundle~new", ".bundle~old"])
+@pytest.mark.parametrize("bundle", ["present", "absent"])
+def test_a_folder_named_like_an_exports_but_not_recorded_is_left_untouched(
+        repo: Path, previous: tuple[Path, dict[str, str]], name: str, bundle: str,
+        capsys: pytest.CaptureFixture[str]) -> None:
+    out, before = previous
+    if bundle == "absent":
+        shutil.rmtree(out)
+    other = out.with_name(name)
+    other.mkdir()
+    (other / "valuable.txt").write_text("irreplaceable", encoding="utf-8")
+    assert build_bundle(repo, out) == (1, None)
+    assert (other / "valuable.txt").read_text(encoding="utf-8") == "irreplaceable" and len(list(other.iterdir())) == 1
+    assert (_tree(out) == before) if bundle == "present" else not out.exists()
+    assert "left untouched" in capsys.readouterr().out
+
+
+def test_a_folder_put_where_a_killed_exports_was_is_not_its_own(repo: Path, previous: tuple[Path, dict[str, str]]) -> None:
+    out, before = previous
+    _kill_during_handover(repo, out)
+    staging = out.with_name(".bundle~new")
+    shutil.rmtree(staging)
+    staging.mkdir()  # (a new folder of the same name: not the one the journal recorded)
+    (staging / "valuable.txt").write_text("irreplaceable", encoding="utf-8")
+    assert build_bundle(repo, out) == (1, None)
+    assert (staging / "valuable.txt").read_text(encoding="utf-8") == "irreplaceable"
+    assert _tree(out) == before, "the recorded earlier export is put back; the unrecorded folder is not touched"
+
+
+def test_an_unreadable_journal_stops_the_export_and_touches_nothing(
+        repo: Path, previous: tuple[Path, dict[str, str]]) -> None:
+    out, before = previous
+    _kill_during_handover(repo, out)
+    journal = out.with_name(".bundle~export.json")
+    journal.write_text("{garbled", encoding="utf-8")
+    kept = {name: _tree(out.with_name(name)) for name in (".bundle~new", ".bundle~old")}
+    assert build_bundle(repo, out) == (1, None)
+    assert {name: _tree(out.with_name(name)) for name in kept} == kept and not out.exists()
+    assert journal.read_text(encoding="utf-8") == "{garbled"
 
 
 # --------------------------------------------------------------------------- #
@@ -308,6 +390,45 @@ def test_a_folder_with_anything_but_an_earlier_bundle_is_never_replaced(
     assert build_bundle(repo, out) == (1, None)
     assert _tree(out) == before and _leftovers(out) == []
     assert "is not an earlier bundle" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("change", [
+    "a listed file's contents (same length)",
+    "a listed file missing",
+    "a listed file truncated",
+    "a malformed manifest entry",
+    "a duplicate manifest entry",
+    "a manifest entry without a hash",
+])
+def test_an_earlier_export_that_was_changed_is_never_replaced(
+        repo: Path, previous: tuple[Path, dict[str, str]], change: str, capsys: pytest.CaptureFixture[str]) -> None:
+    out, _ = previous
+    scene = out / "scenes" / "scene_b.json"
+    manifest_path = out / "bundle_manifest.json"
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if change == "a listed file's contents (same length)":
+        text = scene.read_bytes()
+        scene.write_bytes(text[:-2] + (b"X" if text[-2:-1] != b"X" else b"Y") + text[-1:])
+        assert len(scene.read_bytes()) == len(text)
+    elif change == "a listed file missing":
+        scene.unlink()
+    elif change == "a listed file truncated":
+        scene.write_bytes(scene.read_bytes()[:3])
+    elif change == "a malformed manifest entry":
+        data["files"][0]["size"] = "12"
+    elif change == "a duplicate manifest entry":
+        data["files"].append(dict(data["files"][0]))
+    else:
+        del data["files"][0]["sha256"]
+    if "manifest" in change:
+        manifest_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    before = _tree(out)
+    assert build_bundle(repo, out) == (1, None)
+    assert _tree(out) == before and _leftovers(out) == []
+    message = capsys.readouterr().out
+    assert "is not an earlier bundle as Mesh exported it" in message and "nothing was changed" in message
+    if "listed file" in change:
+        assert "scenes/scene_b.json" in message
 
 
 def test_bytecode_python_wrote_beside_the_bundles_source_does_not_stop_a_replacement(
