@@ -17,6 +17,9 @@ in both places loads from the per-user folder.
 The game id is ``game_id`` from config.json (new projects get one when created). A project made before H9 has none:
 its id is derived from its title, start room and world file, so the same game keeps the same folder; two such games
 that share all three share it too (give one a ``game_id`` to separate them).
+
+H9.1: the player's settings sit beside the saves, in ``<the same game folder>/user_settings.json``
+(engine.runtime_settings_storage).
 """
 
 from __future__ import annotations
@@ -94,4 +97,10 @@ def resolve(game_root: Path | None, config: Mapping[str, Any]) -> SaveLocation:
     if not exported:
         return SaveLocation(Path(DEFAULT_SAVE_DIR), None, False, None)
     game_id = game_identity(config)
-    return SaveLocation(user_data_home() / PUBLISHER_DIR / game_id / "saves", legacy, True, game_id)
+    return SaveLocation(game_data_dir(config) / "saves", legacy, True, game_id)
+
+
+def game_data_dir(config: Mapping[str, Any]) -> Path:
+    """An exported game's own per-player folder: its saves (``saves``) and, H9.1, its settings
+    (``user_settings.json``) live in it."""
+    return user_data_home() / PUBLISHER_DIR / game_identity(config)

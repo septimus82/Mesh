@@ -9,7 +9,7 @@ import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
 
 from ..text_draw import TextCache, draw_text_cached
-from ._settings_data import SETTINGS_ROWS, toast_settings_saved
+from ._settings_data import SETTINGS_ROWS, toast_settings_not_saved, toast_settings_saved
 from .common import UIElement, _draw_rectangle_filled
 from .widgets import Button, DrawInstruction, Label, Padding, Panel, Rect, ScrollList, Slider, Toggle, VStack
 
@@ -146,14 +146,17 @@ class PauseMenu(UIElement):
     def _save_runtime_settings(self) -> None:
         editor = getattr(self.window, "editor", None)
         if editor is not None and hasattr(editor, "workspace"):
-            editor.workspace.save_user_settings()
+            saved = editor.workspace.save_user_settings() is not False
         else:
             from ..runtime_settings_storage import save_runtime_settings  # noqa: PLC0415
 
             path = getattr(self.window, "runtime_settings_path", None)
             settings = self._runtime_settings()
-            save_runtime_settings(path, settings)
-        toast_settings_saved(self.window)
+            saved = save_runtime_settings(path, settings)
+        if saved:
+            toast_settings_saved(self.window)
+        else:
+            toast_settings_not_saved(self.window)
 
     def _window_size(self) -> tuple[int, int]:
         return (int(getattr(self.window, "width", 800) or 800), int(getattr(self.window, "height", 600) or 600))

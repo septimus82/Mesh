@@ -16,6 +16,7 @@
   "UI_SAVE": "Save",
   "UI_SAVED_PRESET": "Saved: {slot}",
   "UI_SCENE_SAVED": "Scene saved",
+  "UI_SETTINGS_NOT_SAVED": "Settings not saved",
   "UI_SETTINGS_SAVED": "Settings saved",
   "UI_UNSAVED_CHANGES": "Unsaved changes"
 }

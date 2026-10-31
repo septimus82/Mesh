@@ -70,6 +70,11 @@ _STARTER_FILES = (
     "assets/tilesets/starter.json",
 )
 
+# The menus' and dialogue's sounds, which every game plays (pause menu, dialogue box): only the HD-2D starter had them,
+# so a 2D game's menus were silent and logged "Failed to load sound" at every step (#422 H9.1). New projects get them;
+# existing ones are left as they are (ensure_starter_files doesn't add them).
+_UI_SOUNDS = tuple(f"assets/sounds/ui_{name}.wav" for name in ("open", "close", "click", "hover"))
+
 
 # The placeholder sheet of projects made before Milestone 11 (provenance unverified): only those projects need it,
 # so a project that never names it (an HD-2D starter) never gets it.
@@ -223,6 +228,8 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
     for rel_path in _STARTER_FILES:
         if rel_path == _LEGACY_PLACEHOLDER and not _names_legacy_placeholder(root):
             continue  # no template uses it: new projects get only Mesh's own art (and pip installs don't ship it)
+        _copy_engine_asset(rel_path, root)
+    for rel_path in _UI_SOUNDS:
         _copy_engine_asset(rel_path, root)
     # The monster game was a test project; only its own template ships its data.
     if template_id == "monster":

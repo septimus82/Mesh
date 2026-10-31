@@ -210,6 +210,8 @@ def bounded(window):
     facts["save_dir"] = str(saves.save_dir.resolve())
     facts["legacy_dir"] = None if saves.legacy_dir is None else str(saves.legacy_dir)
     facts["slots_at_start"] = saves.list_saves()
+    facts["settings_path"] = str(window.runtime_settings_path)  # (H9.1: the player's settings, and as they start)
+    facts["music_at_start"] = window.runtime_settings.music_volume
     if mode == "resume":  # (started again: the save made last time, then an older export's save in its installation)
         for slot in ("h7_check", "legacy_h9"):
             if slot in facts["slots_at_start"]:
@@ -250,6 +252,25 @@ def bounded(window):
     facts["loaded"] = window.save_manager.load_game("h7_check")
     steps(2)
     facts["after_load"] = player()
+    # H9.1: the player turns the music down in the pause menu, as with the keyboard: Esc, Down to Settings, Enter,
+    # Left three times on Music Volume, Esc back, Esc to close.
+    def key(symbol):
+        window.dispatch_event("on_key_press", symbol, 0)
+        window.dispatch_event("on_key_release", symbol, 0)
+        steps(1)
+    window.player_hud.clear_toasts()  # (the earlier messages gone, so the menu's own shows)
+    for symbol in (arcade.key.ESCAPE, arcade.key.DOWN, arcade.key.ENTER):
+        key(symbol)
+    facts["menu"] = [window.pause_menu.state, window.pause_menu._settings_index]
+    for _ in range(3):
+        key(arcade.key.LEFT)
+    facts["settings_toasts"] = list(window.player_hud.active_toasts())
+    from engine.i18n import tr  # (what this game says for "saved", whatever its interface text resolves to)
+    facts["settings_saved_text"] = tr("UI_SETTINGS_SAVED")
+    key(arcade.key.ESCAPE)
+    key(arcade.key.ESCAPE)
+    facts["menu_closed"] = not window.pause_menu.visible
+    facts["music_after"] = window.runtime_settings.music_volume
     window.close()
     facts["closed"] = True
 GameWindow.run = bounded
@@ -467,6 +488,7 @@ def play(player: Path, bundle: Path, evidence: Path, *, repo: Path = REPO, leaky
     env = clean_env(evidence)
     data = player_data(home)
     env.update({"APPDATA": str(data), "XDG_DATA_HOME": str(data)})  # (Windows, Linux; macOS: ~/Library/...)
+    env.pop("MESH_RUNTIME_SETTINGS_PATH", None)  # (H9.1: a player's own rule for its settings, as for its saves)
     if leaky:
         env["PYTHONPATH"] = str(repo)
     code = audited(GAME, repo, {"game": bundle, "evidence": evidence, "user": evidence / "user", "player data": home},
@@ -568,6 +590,16 @@ def game_problems(bundle: Path, run: dict[str, Any], *, start: str, hd2d: bool) 
         found.append(f"the exported game saved into its installation: {save_file}")
     elif not save_file.is_file():
         found.append(f"the exported game's save isn't where it says it wrote it: {save_file}")
+    settings = Path(game["settings_path"])  # (H9.1: the player's settings, changed in the pause menu)
+    if game["menu"] != ["settings", 0] or not game["menu_closed"]:
+        found.append(f"the pause menu didn't reach Music Volume and close: {game['menu']}, closed {game['menu_closed']}")
+    elif not game["music_after"] < game["music_at_start"] or game["settings_toasts"] != [game["settings_saved_text"]]:
+        found.append(f"the music volume change wasn't kept: {game['music_at_start']} -> {game['music_after']}, "
+                     f"{game['settings_toasts']}")
+    elif settings.resolve().is_relative_to(bundle.resolve()):
+        found.append(f"the exported game keeps its player's settings in its installation: {settings}")
+    elif json.loads(settings.read_text(encoding="utf-8")).get("music_volume") != game["music_after"]:
+        found.append(f"the player's settings file doesn't hold the change: {settings}")
     # H8: a 2D start room smaller than the window is framed in black (it was a purple no room asked for); the controls
     # hint's pixels stay inside its box (outline included) and the box inside the window.
     if not hd2d and game["corners"] != [[0, 0, 0]] * 4:

@@ -97,6 +97,19 @@ go to their own application-data folder, under the game's `game_id` (from `confi
 - **Overrides:** `MESH_SAVE_DIR` names the saves folder (tests, automation). The policy is in
   `engine.save_runtime.storage`.
 
+**Where an exported game keeps its player's settings (H9.1).** The settings are music, effects and ambience
+volumes, fog and calmer flickering. They go in `user_settings.json`, beside `saves` in the same per-player game
+folder (`%APPDATA%\MeshMind Studios\<game id>\user_settings.json` and so on).
+
+- **Precedence:** a path given in code, then `MESH_RUNTIME_SETTINGS_PATH`, then this file. `MESH_SAVE_DIR` doesn't
+  move it. A project keeps `user_settings.json` in its own folder, as before.
+- **Settings from older exports:** a `user_settings.json` an export made before H9.1 kept in its installation is
+  read only when the player has no valid settings of their own. It is never changed.
+- **Unreadable files:** a player's own file that can't be read is not written over. The next change first sets it
+  aside as `user_settings.json.invalid`.
+- **Failed saves:** when the settings can't be written, the menu says *Settings not saved*, the change stays in
+  effect until the game closes, and the diagnostics say why. The policy is in `engine.runtime_settings_storage`.
+
 The exporter and the asset manifest moved from the repository's `tooling/` into the package
 (`engine.tooling.export_bundle`, `engine.tooling.asset_manifest`). The names in `tooling/` remain for repository
 scripts.

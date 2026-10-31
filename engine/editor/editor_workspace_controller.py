@@ -173,15 +173,16 @@ class EditorWorkspaceController:
         window.runtime_settings = loaded
         loaded.apply(window)
 
-    def save_user_settings(self) -> None:
+    def save_user_settings(self) -> bool:
+        """Write the runtime settings; False (reported by save_runtime_settings) when they could not be."""
         if self._is_web_runtime():
-            return
+            return True
         window = self._editor.window
         settings = ensure_runtime_settings(window)
         path = getattr(window, "runtime_settings_path", None)
         if path is None:
             path = resolve_runtime_settings_path(path)
-        save_runtime_settings(path, settings)
+        return save_runtime_settings(path, settings)
 
     def save_hd2d_batch_radius(self, radius: int) -> None:
         editor = self._editor
