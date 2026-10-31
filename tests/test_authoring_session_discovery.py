@@ -117,6 +117,7 @@ def _every_entry_point(root: Path) -> dict[str, dict[str, Any]]:
         "mcp apply_ops (authoring)": tools.apply_ops([{"type": "add_light", "scene_path": ROOM,
                                                        "light": {"x": 1, "y": 1}}], root=str(root)),
         "mcp apply_ops (files)": tools.apply_ops([{"type": "create_scene", "name": "cellar"}], root=str(root)),
+        "mcp create_scene": tools.create_scene("cellar", root=str(root)),
     }
 
 
@@ -154,6 +155,7 @@ def test_a_verified_studio_session_gets_proposals_and_its_unsaved_work_is_kept(r
     assert result["ok"] and result["mode"] == "live_studio" and len(host.pending()) == 1
     read = authoring_session.read_project(root)
     assert read["source"] == "mesh_studio" and read["unsaved"] is True  # (what the person sees, unsaved included)
+    assert tools.create_scene("cellar", root=str(root))["reason"] == "studio_open"  # (it wrote a file regardless)
     assert _files(root) == before
     _unsaved_work_intact(root, person)
 

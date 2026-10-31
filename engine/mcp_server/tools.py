@@ -470,10 +470,29 @@ def _result_to_dict(result: Any) -> dict[str, Any]:
     }
 
 
+def _files_blocked(root: str, tool: str) -> dict[str, Any] | None:
+    """Why ``tool`` mustn't write the project's files directly (Mesh Studio has it open, possibly unsaved, or that
+    can't be told: F1), or None when nothing has it open."""
+    from engine import authoring_session
+
+    state = authoring_session.studio_state(root)
+    if state["state"] == "uncertain":
+        return authoring_session.uncertain(state)
+    if state.get("host") == authoring_session.STUDIO_HOST:
+        return {"ok": False, "reason": "studio_open", "message": (
+            f"Mesh Studio has this project open, so {tool} won't write its files (the person's unsaved work would "
+            "be overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
+    return None
+
+
 def create_scene(name: str, template: str = "empty", root: str = ".") -> dict[str, Any]:
-    """Create a new scene from a template. Wraps ``AIOps.create_scene``."""
+    """Create a new scene from a template. Wraps ``AIOps.create_scene``; refused, writing nothing, while Mesh Studio
+    has the project open or that can't be told (F1)."""
     from engine.ai_ops import AIOps
 
+    blocked = _files_blocked(root, "create_scene")
+    if blocked is not None:
+        return {**blocked, "data": None}
     return _result_to_dict(AIOps(base_dir=root).create_scene(name, template))
 
 
@@ -587,15 +606,9 @@ def apply_ops(
     changes = _studio_changes(list(operations), root)
     if changes is not None:  # a Studio project: the shared, validated authoring path
         return _apply_ops_through_authoring(list(operations), changes, root)
-    from engine import authoring_session
-
-    state = authoring_session.studio_state(root)
-    if state["state"] == "uncertain":  # (F1: Studio may have it open, unsaved: nothing is written)
-        return {**authoring_session.uncertain(state), "results": []}
-    if state.get("host") == authoring_session.STUDIO_HOST:  # these would write files under the open, possibly unsaved, Studio
-        return {"ok": False, "reason": "studio_open", "results": [], "message": (
-            "Mesh Studio has this project open, so apply_ops won't write its files (the person's unsaved work would "
-            "be overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
+    blocked = _files_blocked(root, "apply_ops")
+    if blocked is not None:
+        return {**blocked, "results": []}
 
     from engine.ai_ops import AIOps
 
