@@ -78,6 +78,9 @@ A batch is a list of changes:
 **Revisions and conflicts.** Pass the `revision` you read as `base_revision`:
 - If the person changed other things since you read, both sets of changes survive (they paint the floor while you add an NPC).
 - If you both changed the same property, Studio reports a conflict, applies nothing, and the person's version stands. Read again and propose anew.
+- **Studio keeps only the last 30 revisions it was read at.** If yours is no longer kept, the proposal is refused with `reason: "base_revision_unavailable"` and the current `revision`. Nothing is staged, and it is never compared with a newer revision instead (F6), because that would hide the person's changes since. Read again and propose against the new revision.
+- **A `base_revision` that isn't a revision read_project gave** (not a whole number, `true`/`false`, negative or newer than the project) is refused with `reason: "invalid_base_revision"`.
+- **Without a `base_revision`,** the batch is checked against the project as it is now.
 
 **No MCP?** `mesh author ops | read | apply | propose | status` does the same from a command line, with JSON in and out.
 

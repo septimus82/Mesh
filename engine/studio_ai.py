@@ -6,7 +6,11 @@ Studio never applies them on its own:
 
 - **Staging** checks the batch on a copy of the project, as of the revision the tool read
   (``base_revision``), and lists what it would change. A batch that can't apply is refused
-  straight back to the tool with the reason.
+  straight back to the tool with the reason. So is a ``base_revision`` Studio can't compare
+  with (F6, #422): one it no longer keeps (it keeps the last ``SNAPSHOTS_KEPT`` it was read
+  at), or one that isn't a revision. Comparing with today's project instead would hide the
+  person's changes since, and the proposal could overwrite them without a conflict. Without
+  a ``base_revision`` the batch is checked against the project as it is now.
 - **Accept** (a person, in Studio) applies the batch to the open documents as one undo step.
   If the person changed the project since the tool read it, both sets of changes are compared
   property by property: separate edits (a painted floor, a new NPC) both survive; the same
@@ -104,10 +108,10 @@ class StudioAIHost:
                     "message": "A proposal needs its changes as a list."}
         title = str(payload.get("title") or "Changes from an AI").strip()[:80]
         source = str(payload.get("source") or "an AI").strip()[:60]
-        revision = payload.get("base_revision")
-        current = self.project.revision
-        base_revision = int(revision) if isinstance(revision, int) and revision in self._snapshots else current
-        base = self._snapshots[base_revision] if base_revision != current else copy.deepcopy(self.project.all_documents())
+        found = self._base(payload.get("base_revision"))
+        if isinstance(found, dict):  # (refused: nothing staged, nothing in the person's inbox)
+            return found
+        base_revision, base = found
         try:
             before, after = authoring.dry_run(self.project, changes, base=base)
         except authoring.ChangeError as err:
@@ -118,6 +122,30 @@ class StudioAIHost:
         self.proposals.append(proposal)
         self.studio.on_ai_proposal(proposal)
         return proposal
+
+    def _base(self, revision: Any) -> tuple[int, Doc] | Doc:
+        """``(revision, documents)`` a proposal based on ``revision`` is checked against, or the refusal (F6):
+        none given, or the current one, is the project as it is now; an older one is what the tool read then, if
+        Studio still keeps it. Never another revision in its place."""
+        current = self.project.revision
+        if revision is None:
+            return current, copy.deepcopy(self.project.all_documents())
+        if isinstance(revision, bool) or not isinstance(revision, int) or not 0 <= revision <= current:
+            return {"ok": False, "mode": "live_studio", "reason": "invalid_base_revision", "base_revision": revision,
+                    "revision": current, "message": (
+                        f"base_revision must be a revision read_project gave (a whole number from 0 to {current}), "
+                        f"not {revision!r}, so nothing was staged. Read the project again and propose against its "
+                        "revision, or leave base_revision out to propose against the project as it is now.")}
+        if revision == current:
+            return current, copy.deepcopy(self.project.all_documents())
+        if revision in self._snapshots:
+            return revision, self._snapshots[revision]
+        return {"ok": False, "mode": "live_studio", "reason": "base_revision_unavailable", "base_revision": revision,
+                "revision": current, "message": (
+                    f"Mesh Studio no longer keeps revision {revision}, which these changes are based on (it keeps the "
+                    f"last {SNAPSHOTS_KEPT} it was read at), so nothing was staged: checked against the project as it is "
+                    "now, they could overwrite what the person changed since without a conflict. Read the project "
+                    f"again (it is at revision {current}) and propose against that.")}
 
     def stage_proposal(self, ops: list[Doc]) -> Proposal | Doc:
         """The legacy editor's signature: stage a bare list of changes."""
