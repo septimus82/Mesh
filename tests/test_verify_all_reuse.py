@@ -26,7 +26,7 @@ from mesh_cli.verify_steps import STEP_ORDER
 pytestmark = pytest.mark.fast
 NOW = {"git_commit": "c" * 40, "git_dirty": False, "tool_version": "1.0.0", "python": "3.11.9", "platform": "win32",
        "env": {"MESH_CI_SEED": "123"}}
-REPORTS = {"verify_all_summary.json": None, "pytest_fast.log": "12 passed in 93.2s\n",
+REPORTS = {"verify_all_summary.json": None, "verify_summary.txt": "verify-all: OK\n",
            "verify_step_durations.json": '{"steps": []}\n', "reports/doctor_assets.json": '{"ok": true}\n'}
 
 
@@ -57,7 +57,7 @@ def _ci_verify_all(source: Path, **evidence: Any) -> Path:
     then its evidence; ``evidence`` overrides what it records (exit_code, ok, steps, selection...)."""
     summary = _summary()
     _write_reports(source, summary)
-    for extra in verify_reuse.CI_EXTRAS:
+    for extra in verify_reuse.NOT_COPIED:
         (source / extra).write_text("{}\n", encoding="utf-8")
     args = argparse.Namespace(ci_bundle=True, release_notes_artifact=True, pytest_args=[], skip_web_smoke=False)
     verify_reuse.write_evidence(source, repo_root=source.parent, before=json.loads(json.dumps(NOW)),
@@ -89,13 +89,13 @@ def test_a_passing_run_on_this_clean_commit_is_reused_with_a_record(tmp_path: Pa
     assert outputs is not None and outputs["verify_all_ok"] is True and outputs["verify_all_reused_from"] == "artifacts"
     copied = sorted(p.relative_to(release_dir).as_posix() for p in release_dir.rglob("*") if p.is_file())
     assert copied == sorted([*REPORTS, verify_reuse.RECORD]), "the reports, not CI's extras or the evidence"
-    for rel in ("pytest_fast.log", "reports/doctor_assets.json"):
+    for rel in ("verify_summary.txt", "reports/doctor_assets.json"):
         assert (release_dir / rel).read_bytes() == (source / rel).read_bytes()
     summary = json.loads((release_dir / "verify_all_summary.json").read_text(encoding="utf-8"))
     assert summary["pytest_fast"]["wall_seconds"] == 0.0, "normalized as the release check's own deterministic summary"
     record = json.loads((release_dir / verify_reuse.RECORD).read_text(encoding="utf-8"))
     assert record["reused"] is True and record["commit"] == NOW["git_commit"] and record["files_copied"] == len(REPORTS)
-    assert record["not_copied"] == sorted(verify_reuse.CI_EXTRAS) and "every file's SHA-256" in record["checked"]
+    assert record["not_copied"] == sorted(verify_reuse.NOT_COPIED) and "every file's SHA-256" in record["checked"]
 
 
 def _refuse(case: str, source: Path, now: dict[str, Any]) -> None:
@@ -139,7 +139,7 @@ def _refuse(case: str, source: Path, now: dict[str, Any]) -> None:
     elif case == "report changed":
         (source / "reports/doctor_assets.json").write_text('{"ok": false}\n', encoding="utf-8")
     elif case == "report missing":
-        (source / "pytest_fast.log").unlink()
+        (source / "verify_summary.txt").unlink()
     elif case == "path outside":
         _rewrite_evidence(source, lambda e: e["files"].update({"../elsewhere.json": "0" * 64}))
     elif case == "summary disagrees":
@@ -161,7 +161,7 @@ REFUSALS = {
     "dirty now": "clean", "unknown git state": "this is None", "another tool version": "tool_version differs",
     "another python": "python differs", "another environment": "MESH_GL_SOFTWARE",
     "weaker budgets then": "weaker", "report changed": "doctor_assets.json is missing or changed",
-    "report missing": "pytest_fast.log is missing or changed", "path outside": "outside its folder",
+    "report missing": "verify_summary.txt is missing or changed", "path outside": "outside its folder",
     "summary disagrees": "same passing run",
 }
 
@@ -188,7 +188,7 @@ def test_a_report_changing_while_it_is_copied_is_refused_and_the_copies_removed(
 
     def copy_then_tamper(src: Any, dst: Any) -> Any:
         result = real_copy(src, dst)
-        if Path(dst).name == "pytest_fast.log":
+        if Path(dst).name == "verify_summary.txt":
             Path(dst).write_text("tampered\n", encoding="utf-8")
         return result
 

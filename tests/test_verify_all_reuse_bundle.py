@@ -37,7 +37,7 @@ def test_a_bundle_reusing_verify_all_passes_strict_verification_and_tampering_fa
     with zipfile.ZipFile(zip_path) as bundle:
         names = bundle.namelist()
         record = json.loads(bundle.read(f"release/{verify_reuse.RECORD}"))
-    assert "release/pytest_fast.log" in names and record["reused"] is True
+    assert "release/verify_summary.txt" in names and "release/pytest_fast.log" not in names and record["reused"] is True
     assert verify_zip(str(zip_path))["ok"] is True
     tampered = tmp_path / "tampered.zip"
     with zipfile.ZipFile(zip_path) as src, zipfile.ZipFile(tampered, "w") as dst:

@@ -62,8 +62,10 @@ and debug bundle always run. `release/verify_all_reuse.json` records which happe
 
 **Documented differences from a bundle that ran its own verify-all:** `release/verify_all_reuse.json` exists;
 `release/release_report.json` notes `verify_all_reused_from`; the reports are that run's (paths in its summary name
-`artifacts/`), with the same deterministic normalisation. CI's extras (`index.json`, `verify_report.json`,
-`overlay_perf.json`, `release_notes.*`) aren't copied. The policy is in `mesh_cli/verify_reuse.py`.
+`artifacts/`), with the same deterministic normalisation. Not copied, because a release check's own verify-all
+doesn't leave them in `release/`: CI's extras (`index.json`, `verify_report.json`, `overlay_perf.json`,
+`release_notes.*`), and the files verify-all writes to the repository's `artifacts/` whatever `--artifacts` says
+(`pytest_fast.log`, `pytest_full.log`, `swallow_scan.json`). The policy is in `mesh_cli/verify_reuse.py`.
 
 ## Exit Codes
 

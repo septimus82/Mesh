@@ -32,9 +32,13 @@ from engine.persistence_io import write_json_atomic
 EVIDENCE = "verify_all_evidence.json"
 RECORD = "verify_all_reuse.json"
 SCHEMA = 1
-# Written only for CI's options (--ci-bundle: index, report, overlay perf; --release-notes-artifact: the notes): not part
-# of what the release check's own verify-all writes, so not copied into the bundle.
-CI_EXTRAS = frozenset({"index.json", "verify_report.json", "overlay_perf.json", "release_notes.json", "release_notes.md"})
+# Not part of what the release check's own verify-all leaves in release/, so not copied into the bundle:
+# - written only for CI's options (--ci-bundle: index, report, overlay perf; --release-notes-artifact: the notes);
+# - written to the repository's artifacts/ whatever --artifacts says (tooling/pytest_fast.py, tooling/pytest_full.py,
+#   the swallow scan): CI's --artifacts is that folder, a release check's is release/ (CI run 41215383144's bundle had
+#   them, its earlier bundles didn't).
+NOT_COPIED = frozenset({"index.json", "verify_report.json", "overlay_perf.json", "release_notes.json", "release_notes.md",
+                        "pytest_fast.log", "pytest_full.log", "swallow_scan.json"})
 _BUDGET_ENV = "MESH_VERIFY_BUDGET_ENFORCE"  # (CI enforces the step budgets in its verify step only: stricter, so allowed)
 
 
@@ -160,7 +164,7 @@ def reuse(source: Path, release_dir: Path, *, repo_root: Path, deterministic: bo
     copied: list[Path] = []
     if evidence is not None:
         for rel, digest in sorted(evidence["files"].items()):
-            if rel in CI_EXTRAS:
+            if rel in NOT_COPIED:
                 continue
             dest = release_dir / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -170,8 +174,12 @@ def reuse(source: Path, release_dir: Path, *, repo_root: Path, deterministic: bo
                 why = f"{rel} changed while it was being copied"
                 break
     if why or evidence is None:
-        for path in copied:
+        for path in copied:  # (release/ left as it was: the copies, and the folders made for them)
             path.unlink(missing_ok=True)
+            for folder in path.parents:
+                if folder == release_dir or not folder.is_relative_to(release_dir) or any(folder.iterdir()):
+                    break
+                folder.rmdir()
         write_json_atomic(release_dir / RECORD, {"reused": False, "source": label, "reason": why},
                           indent=2, sort_keys=True, trailing_newline=True)
         print(f"[Mesh][Release] verify-all not reused ({why}): running it here", file=sys.stderr)
@@ -182,7 +190,7 @@ def reuse(source: Path, release_dir: Path, *, repo_root: Path, deterministic: bo
     commit = evidence["before"]["git_commit"]
     write_json_atomic(release_dir / RECORD, {
         "reused": True, "source": label, "commit": commit, "evidence_sha256": _sha256(source / EVIDENCE),
-        "files_copied": len(copied), "not_copied": sorted(rel for rel in evidence["files"] if rel in CI_EXTRAS),
+        "files_copied": len(copied), "not_copied": sorted(rel for rel in evidence["files"] if rel in NOT_COPIED),
         "checked": ["exit code 0 and ok", "every step ran and passed", "full selection", "same commit before, after, now",
                     "clean tree before, after, now", "same tool version, Python and platform",
                     "same MESH_* environment (budget enforcement at least as strict)", "every file's SHA-256",
