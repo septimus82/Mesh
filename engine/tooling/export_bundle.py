@@ -5,8 +5,9 @@ graph. It copies only required assets + runtime code/config and writes a
 bundle_manifest.json with hashes of shipped files.
 
 Given a creator's project (``config.json`` and ``packs/``, no ``engine/`` of its own), the bundle is a standalone
-game: the project's ``main.py``, ``config.json``, ``packs/`` and every file in its ``assets/`` (Mesh plays some of
-them by name, such as the interface sounds), with the installed Mesh engine package as its runtime. It runs with
+game: the project's ``main.py``, ``config.json``, ``packs/``, ``locales/*.json`` and every file in its ``assets/``
+(Mesh plays some of them by name, such as the interface sounds), with the installed Mesh engine package as its
+runtime and the engine's interface text (``share/mesh-engine/locales``). It runs with
 ``python main.py`` wherever Mesh's dependencies (arcade, pillow, jsonschema) are installed, without Mesh itself.
 
 Usage:
@@ -323,6 +324,25 @@ def _collect_runtime_files(repo_root: Path) -> list[ExportFile]:
                 except OSError:
                     continue
 
+    if project:
+        files += _project_locale_files(repo_root)
+    return files
+
+
+def _project_locale_files(repo_root: Path) -> list[ExportFile]:
+    """A project's interface text (H9.2): the engine's own ``locales/*.json`` from the running Mesh (an install's
+    ``share/mesh-engine``, the wheel's allow-list) at the same place in the bundle, and the project's own
+    ``locales/*.json``, which ``engine.i18n`` lays over them, at ``locales/``. Before, exports had neither and
+    their players saw keys such as ``UI_SETTINGS_SAVED``."""
+    from engine.repo_root import BUNDLED_SHARE, bundled_dir  # noqa: PLC0415
+
+    files: list[ExportFile] = []
+    for folder, dest, category in ((bundled_dir("locales"), "/".join((*BUNDLED_SHARE, "locales")), "runtime"),
+                                   (repo_root / "locales", "locales", "content")):
+        for src in sorted(folder.glob("*.json")) if folder.is_dir() else ():
+            if src.is_file():
+                files.append(ExportFile(rel_path=f"{dest}/{src.name}", src_path=str(src.resolve()),
+                                        sha256=compute_sha256(src), size=src.stat().st_size, category=category))
     return files
 
 

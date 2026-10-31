@@ -240,8 +240,12 @@ def test_an_exported_game_runs_without_mesh_or_the_checkout(built: tuple[Path, P
     # first player starts at the default whatever this one chose).
     settings = saves.parent / "user_settings.json"
     assert Path(facts["settings_path"]) == settings and facts["music_at_start"] == 1.0
-    assert facts["music_after"] < 1.0 and facts["settings_toasts"] == [facts["settings_saved_text"]], "said: saved"
-    assert json.loads(settings.read_text(encoding="utf-8"))["music_volume"] == facts["music_after"]
+    assert facts["music_after"] < 1.0 and json.loads(settings.read_text(encoding="utf-8"))["music_volume"] == facts["music_after"]
+    # H9.2: the menu says so in words (it showed "UI_SETTINGS_SAVED"), and says when a change couldn't be kept; the
+    # words come with the export, from the installed Mesh's own copy (the player's Python holds no Mesh).
+    assert facts["settings_toasts"] == ["Settings saved"] and facts["unsaved_toasts"] == ["Settings not saved"]
+    shipped_text = "share/mesh-engine/locales/en.json"
+    assert shipped[shipped_text] == hashlib.sha256((REPO / "locales" / "en.json").read_bytes()).hexdigest()
 
     # Started again after the player moved the game (spaces and accents in the new path), holding a save an export
     # made before H9 kept in its installation: both load, the newer one first; neither folder changes.
@@ -267,7 +271,8 @@ def test_an_exported_game_runs_without_mesh_or_the_checkout(built: tuple[Path, P
     print(f"{template}: rendered by {facts['renderer']}; walked {walk}; saved at {save}; "
           f"corners {facts['corners'][0]}; hint {toast['box']} box, pixels {toast['changed']}; "
           f"restarted from {moved.name!r}: slots {resumed['slots_at_start']}, at {resumed['at_h7_check']}; "
-          f"music {facts['music_at_start']} -> {facts['music_after']} in {settings} ({facts['settings_toasts']}), "
+          f"music {facts['music_at_start']} -> {facts['music_after']} in {settings} ({facts['settings_toasts']}, "
+          f"then {facts['unsaved_toasts']}), "
           f"restarted at {resumed['music_at_start']}")  # (-rA)
 
 

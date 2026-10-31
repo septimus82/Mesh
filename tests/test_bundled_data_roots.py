@@ -37,3 +37,18 @@ def test_folders_are_found_the_same_way(tmp_path: Path, monkeypatch: pytest.Monk
     monkeypatch.setattr(repo_root.sysconfig, "get_path", lambda name, scheme=None: str(tmp_path))
     assert repo_root.bundled_dir("assets/icons") == icons
     assert repo_root.bundled_dir("assets/nothing") == tmp_path / "site-packages" / "assets" / "nothing"
+
+
+def test_an_exported_games_own_copy_comes_before_the_players_mesh(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """H9.2: an exported game (its engine in its own folder) carries the engine's text in share/mesh-engine beside
+    it; a Mesh the player's Python happens to hold, maybe another version, comes after it."""
+    game, player = tmp_path / "game", tmp_path / "python"
+    for root, text in ((game, "the game's copy"), (player, "the player's Mesh")):
+        locale = root.joinpath(*repo_root.BUNDLED_SHARE, "locales", "en.json")
+        locale.parent.mkdir(parents=True)
+        locale.write_text(text, encoding="utf-8")
+    monkeypatch.setattr(repo_root, "engine_source_root", lambda: game)
+    monkeypatch.setattr(repo_root.sysconfig, "get_path", lambda name, scheme=None: str(player))
+    assert repo_root.bundled_data_roots()[:2] == [game, game.joinpath(*repo_root.BUNDLED_SHARE)]
+    found = repo_root.bundled_file("locales/en.json")
+    assert found is not None and found.read_text(encoding="utf-8") == "the game's copy"

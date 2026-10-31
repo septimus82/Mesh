@@ -26,9 +26,11 @@ BUNDLED_SHARE: tuple[str, ...] = ("share", "mesh-engine")
 
 
 def bundled_data_roots() -> list[Path]:
-    """Where the engine's bundled files are: the source tree (a checkout or an editable install), then
-    ``<prefix>/share/mesh-engine`` of a pip install (a venv or system Python, or ``--user``)."""
-    roots = [engine_source_root()]
+    """Where the engine's bundled files are: the source tree (a checkout or an editable install), then the same
+    ``share/mesh-engine`` beside it (an exported game's own copy of the engine files it reads, H9.2: before any
+    Mesh the player's Python may hold), then ``<prefix>/share/mesh-engine`` of a pip install (a venv or system
+    Python, or ``--user``)."""
+    roots = [engine_source_root(), engine_source_root().joinpath(*BUNDLED_SHARE)]
     prefixes = [sysconfig.get_path("data")]
     try:
         prefixes.append(sysconfig.get_path("data", sysconfig.get_preferred_scheme("user")))
