@@ -471,18 +471,20 @@ def _result_to_dict(result: Any) -> dict[str, Any]:
 
 
 def _files_blocked(root: str, tool: str) -> dict[str, Any] | None:
-    """Why ``tool`` mustn't write the project's files directly (Mesh Studio has it open, possibly unsaved, or that
-    can't be told: F1), or None when nothing has it open."""
+    """Why ``tool`` mustn't write the project's files directly, or None only when nothing has the project open (F1):
+    Mesh Studio or another editor has it open (possibly unsaved), or that can't be told."""
     from engine import authoring_session
 
     state = authoring_session.studio_state(root)
+    if state["state"] == "none":
+        return None
     if state["state"] == "uncertain":
         return authoring_session.uncertain(state)
-    if state.get("host") == authoring_session.STUDIO_HOST:
-        return {"ok": False, "reason": "studio_open", "message": (
-            f"Mesh Studio has this project open, so {tool} won't write its files (the person's unsaved work would "
-            "be overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
-    return None
+    if state["host"] != authoring_session.STUDIO_HOST:
+        return authoring_session.other_editor(state["host"])
+    return {"ok": False, "reason": "studio_open", "message": (
+        f"Mesh Studio has this project open, so {tool} won't write its files (the person's unsaved work would "
+        "be overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
 
 
 def create_scene(name: str, template: str = "empty", root: str = ".") -> dict[str, Any]:

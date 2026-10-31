@@ -292,21 +292,81 @@ def test_a_proposal_that_fails_is_never_written_to_the_files_instead(root: Path,
     _unsaved_work_intact(root, person)
 
 
-@pytest.mark.parametrize("meanwhile", ["live", "uncertain"])
-def test_studio_opening_between_the_check_and_the_write_stops_the_write(root: Path, meanwhile: str,
-                                                                        monkeypatch: pytest.MonkeyPatch) -> None:
-    """apply checks again just before it writes (after working the changes out): Studio opened, or a record that
-    can't be verified appeared, meanwhile: nothing written, a new room's files included."""
-    states = iter([{"state": "none"},
-                   {"state": "live", "host": "mesh_studio", "info": {}} if meanwhile == "live" else
-                   {"state": "uncertain", "problem": {"reason": "unverified_live_session", "why": "it didn't answer",
-                                                      "discovery": str(session_file_path(root))}}])
+@pytest.mark.parametrize(("meanwhile", "reason"), [
+    ({"state": "live", "host": "mesh_studio", "info": {}}, "studio_open"),
+    ({"state": "live", "host": "legacy_editor", "info": {}}, "other_editor_open"),
+    ({"state": "uncertain", "problem": {"reason": "unverified_live_session", "why": "it didn't answer",
+                                        "discovery": "x"}}, "studio_session_uncertain"),
+], ids=["studio", "another editor", "uncertain"])
+def test_an_editor_opening_between_the_check_and_the_write_stops_the_write(root: Path, meanwhile: dict[str, Any],
+                                                                           reason: str,
+                                                                           monkeypatch: pytest.MonkeyPatch) -> None:
+    """apply checks again just before it writes (after working the changes out): Studio or another editor opened,
+    or a record that can't be verified appeared, meanwhile: nothing written, a new room's files included."""
+    states = iter([{"state": "none"}, meanwhile])
     monkeypatch.setattr(authoring_session, "studio_state", lambda _root, **_kw: next(states))
     before = _files(root)
     answer = authoring_session.apply(root, [*ADD_SEXTON, *ADD_CELLAR])
-    assert answer["ok"] is False and answer["reason"] == ("studio_open" if meanwhile == "live" else
-                                                          "studio_session_uncertain")
+    assert answer["ok"] is False and answer["reason"] == reason
     assert _files(root) == before
+
+
+# --------------------------------------------------------------------- another editor (not Mesh Studio)
+
+@pytest.fixture
+def legacy_editor(root: Path) -> Iterator[Any]:
+    """The legacy editor with the project open on its own live session (a real, verified bridge), holding an object
+    only it has (an unsaved edit, made through its live tools)."""
+    from engine.editor.live_session_bridge import EditorLiveSessionBridge
+    from tests.test_cocreative_live_ops import _make_controller
+
+    controller = _make_controller()
+    bridge = EditorLiveSessionBridge(controller, root)
+    bridge.start(write_discovery=True)
+    added: dict[str, Any] = {}
+    worker = threading.Thread(target=lambda: added.update(tools.live_add_entity_from_prefab(
+        "crate", 64, 80, name="unsaved_crate", root=str(root))))
+    worker.start()
+    while worker.is_alive():  # (the editor's own update loop, which applies live work)
+        controller.drain_live_bridge()
+        time.sleep(0.01)
+    assert added["ok"] is True
+    yield controller
+    bridge.stop()
+
+
+def _legacy_unsaved_work_intact(root: Path, controller: Any) -> None:
+    held = controller.window.scene_controller._loaded_scene_data["entities"]
+    assert [e.get("name") for e in held].count("unsaved_crate") == 1
+    assert not any("unsaved_crate" in path.read_text(encoding="utf-8", errors="replace")
+                   for path in root.rglob("*.json"))
+
+
+def test_another_open_editor_is_never_written_behind_or_read_past(root: Path, legacy_editor: Any) -> None:
+    """A verified session that isn't Mesh Studio's blocks every direct-file path, as Studio's does: create_scene and
+    apply_ops wrote files under it (F1 review), and read_project offered the files as current although the editor
+    held unsaved edits. Each now says another editor has it open, and what to do; nothing is written or created."""
+    state = authoring_session.studio_state(root)
+    assert state["state"] == "live" and state["host"] == "legacy_editor"
+    before = _files(root)
+    answers = _every_entry_point(root)
+    for name in ("status", "withdraw"):  # (proposals are Mesh Studio's: none to ask about)
+        assert answers.pop(name)["reason"] == "studio_not_open"
+    said = {name: (answer["ok"], answer.get("authoring", answer).get("reason")) for name, answer in answers.items()}
+    assert said == {name: (False, "other_editor_open") for name in answers}
+    for name, answer in answers.items():
+        found = answer.get("authoring", answer)
+        assert found["host"] == "legacy_editor" and "Close it" in found["message"], (name, found)
+    assert "source" not in answers["read"] and "rooms" not in answers["read"]  # (no disk copy passed off as current)
+    assert _files(root) == before, "nothing written, nothing created"
+    _legacy_unsaved_work_intact(root, legacy_editor)
+
+
+def test_with_the_other_editor_closed_the_files_are_changed_again(root: Path, legacy_editor: Any) -> None:
+    legacy_editor.live_bridge.stop()  # (closed properly: its record removed)
+    assert authoring_session.studio_state(root) == {"state": "none"}
+    assert tools.create_scene("cellar", root=str(root))["ok"] and (root / "cellar.json").is_file()
+    assert authoring_session.read_project(root)["source"] == "files"
 
 
 # --------------------------------------------------------------------- the CLI says so too

@@ -55,6 +55,8 @@ same for any MCP client.
 - **Studio is open:** make sure it's responding, then try again.
 - **Studio isn't running:** open the project in Mesh Studio once, which replaces its leftover record, or delete the record. Then try again.
 
+**When another editor (not Mesh Studio) has the project open:** the file-writing tools (`apply_changes`, `apply_ops`, `create_scene`) and `read_project` refuse with `reason: "other_editor_open"`. That editor's unsaved edits aren't in the files, and it takes no proposals. To go on, close it, or open the project in Mesh Studio.
+
 Only a project with no session record at all is changed directly. `apply_changes` checks again just before it writes. A proposal that fails is never written to the files instead.
 
 A batch is a list of changes:

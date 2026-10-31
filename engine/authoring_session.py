@@ -67,6 +67,16 @@ def uncertain(state: Doc) -> Doc:
                  problem=problem.get("reason"), discovery=discovery)
 
 
+def other_editor(host: str) -> Doc:
+    """The refusal when another editor (not Mesh Studio) has the project open: its unsaved edits aren't in the files,
+    and it takes no proposals, so nothing was read as current or written."""
+    return _fail("other_editor_open",
+                 f"Another editor ({host or 'not Mesh Studio'}) has this project open, so nothing was read or written: "
+                 "its unsaved edits aren't in the files and would be overwritten, or would overwrite these changes. "
+                 "Close it (saving or discarding its work), or open the project in Mesh Studio instead, where changes "
+                 "are proposed for the person to review; then try again.", host=host)
+
+
 def _call(info: Doc, method: str, path: str, payload: Doc | None = None, *, timeout: float = 6.0) -> Doc:
     try:
         return _request_json(info, method, path, payload, timeout=timeout)
@@ -84,7 +94,9 @@ def read_project(root: str | Path = ".") -> Doc:
     state = studio_state(root)
     if state["state"] == "uncertain":  # (the files may be behind what the person sees: don't offer them as current)
         return uncertain(state)
-    if state["state"] == "live" and state["host"] == STUDIO_HOST:
+    if state["state"] == "live" and state["host"] != STUDIO_HOST:  # (its unsaved edits aren't in the files either)
+        return other_editor(state["host"])
+    if state["state"] == "live":
         result = _call(state["info"], "GET", "/live/read_scene")
         result["source"] = "mesh_studio"
         return result
@@ -109,8 +121,7 @@ def propose(root: str | Path, changes: list[Doc], *, title: str = "", base_revis
         return _fail("studio_not_open", "Mesh Studio doesn't have this project open. Open it there, or use "
                                         "apply_changes to change the files directly.")
     if state["host"] != STUDIO_HOST:
-        return _fail("other_editor_open", "Another editor has this project open; close it or open the project in "
-                                          "Mesh Studio.")
+        return other_editor(state["host"])
     payload: Doc = {"changes": changes, "title": title, "source": source or "an AI"}
     if base_revision is not None:
         payload["base_revision"] = int(base_revision)
@@ -146,6 +157,8 @@ def apply(root: str | Path, changes: list[Doc], *, dry_run: bool = False, title:
     state = studio_state(root)
     if state["state"] == "uncertain":
         return uncertain(state)
+    if state["state"] == "live" and state["host"] != STUDIO_HOST:
+        return other_editor(state["host"])
     if state["state"] == "live":
         if dry_run:
             return _fail("studio_open", "Mesh Studio has this project open: propose the changes there instead.")
@@ -162,6 +175,8 @@ def apply(root: str | Path, changes: list[Doc], *, dry_run: bool = False, title:
         recheck = studio_state(root)  # (just before the first write: Studio may have opened it meanwhile)
         if recheck["state"] == "uncertain":
             return uncertain(recheck)
+        if recheck["state"] == "live" and recheck["host"] != STUDIO_HOST:
+            return other_editor(recheck["host"])
         if recheck["state"] == "live":
             return _fail("studio_open", "Mesh Studio opened this project just now, so nothing was written: apply the "
                                         "changes again to propose them there.")
