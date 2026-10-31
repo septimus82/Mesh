@@ -167,8 +167,11 @@ def check(records: list[dict[str, Any]], *, shards: int = SHARDS, commit: str | 
         if junit is not None:
             counts = junit.get(k)
             skips = len(_ids(record, "collection_skips"))
-            expected_counts = {"tests": len(outcomes) + skips, "failures": 0, "errors": 0,
-                               "skipped": sum(1 for o in outcomes.values() if o in ("skipped", "xfailed")) + skips}
+            raw = record.get("subtests")
+            sub: dict[str, int] = {str(k): int(n) for k, n in raw.items()} if isinstance(raw, dict) else {}
+            expected_counts = {"tests": len(outcomes) + skips + sum(sub.values()), "failures": 0, "errors": 0,
+                               "skipped": sum(1 for o in outcomes.values() if o in ("skipped", "xfailed"))
+                               + skips + sub.get("skipped", 0)}
             if counts is None:
                 problems.append(f"{label}: no JUnit report")
             elif counts != expected_counts:

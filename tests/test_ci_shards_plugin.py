@@ -21,6 +21,8 @@ SUITE = {
     **{f"tests/test_m{i}.py": "def test_a():\n    pass\n\ndef test_b():\n    pass\n" for i in range(6)},
     "tests/test_m0.py": "import pathlib, pytest\n\n@pytest.mark.parametrize('p', [str(pathlib.Path(__file__).parent)])\n"
                         "def test_path(p):\n    pass\n\ndef test_skip():\n    pytest.skip('skipped')\n",
+    "tests/test_m3.py": "import pytest\n\ndef test_a(subtests):\n    for i in range(3):\n        with subtests.test(i=i):\n"
+                        "            if i == 2:\n                pytest.skip('one skipped subtest')\n",
     "tests/test_skipped_module.py": "import pytest\npytest.skip('whole module', allow_module_level=True)\n",
     "tests/test_slow.py": "import pytest\n\n@pytest.mark.slow\ndef test_slow():\n    pass\n",
 }
@@ -61,6 +63,8 @@ def test_two_real_shards_run_the_whole_suite_once(tmp_path: Path) -> None:
     assert not any(tmp_path.name in t for r in (*records, unsharded) for t in r["collected"] + r["selected"])
     assert not any("slow" in t for t in unsharded["collected"])
     assert records[0]["collection_skips"] == ["tests/test_skipped_module.py"]
+    # (JUnit counts subtests as tests: the check's cross-check counts them too)
+    assert records[0]["subtests"] == unsharded["subtests"] == {"passed": 2, "skipped": 1}
     # ... ran disjoint halves that add up to it, with the same outcomes as one whole run.
     one, two = (set(r["selected"]) for r in records)
     assert one and two and not one & two and one | two == set(unsharded["selected"])

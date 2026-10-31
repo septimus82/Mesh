@@ -39,7 +39,7 @@ Windows' full default suite (`not slow and not e2e`) was the longest job of ever
   shared between them.
 - **Evidence.** Each shard collects the whole suite and keeps its own modules (`-p tooling.ci_shards_plugin
   --mesh-shard K/2`), and writes a record (`artifacts/shards/shard-K.json`): the commit, the collected test ids and
-  their digest, the scheme's digest, the selected ids, every test's outcome and seconds, the modules skipped at
+  their digest, the scheme's digest, the selected ids, every test's outcome and seconds, its subtests' outcome counts, the modules skipped at
   collection and pytest's exit status, with `complete: true` only once the session finished. Its JUnit report sits
   beside it. Both go up as `pytest-shard-K-windows-latest-py3.11`, whatever the job's result.
 - **The fan-in.** `tests (windows-latest, py3.11)` requires both shard jobs (`tooling/ci_require_jobs.py`), downloads

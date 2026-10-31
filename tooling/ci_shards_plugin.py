@@ -39,7 +39,7 @@ class _Shard:
             "schema": ci_shards.RECORD_SCHEMA, "complete": False, "shard": shard, "shards": shards,
             "commit": commit, "scheme_digest": ci_shards.scheme_digest(shards),
             "collected": [], "collected_digest": "", "collection_skips": [], "selected": [],
-            "outcomes": {}, "durations": {}, "exitstatus": None,
+            "outcomes": {}, "durations": {}, "subtests": {}, "exitstatus": None,
         }
 
     def _id(self, nodeid: str) -> str:
@@ -70,6 +70,12 @@ class _Shard:
     def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
         nodeid = self._id(report.nodeid)
         durations, outcomes = self.record["durations"], self.record["outcomes"]
+        if hasattr(report, "context"):  # (a subtest's report: counted, as JUnit counts it; its test's own reports follow)
+            subtests = self.record["subtests"]
+            subtests[report.outcome] = subtests.get(report.outcome, 0) + 1
+            if report.failed:
+                outcomes[nodeid] = "failed"
+            return
         durations[nodeid] = round(durations.get(nodeid, 0.0) + report.duration, 4)
         if report.failed:
             outcomes[nodeid] = "failed" if report.when == "call" else "error"
