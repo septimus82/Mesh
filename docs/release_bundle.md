@@ -55,9 +55,13 @@ reports instead, but only when `artifacts/verify_all_evidence.json` (written las
 - it covered everything (no pytest arguments, no `--skip-web-smoke`);
 - it ran on this commit, with a clean tree before and after, and the tree is still clean;
 - the same tool version, Python and platform, and the same `MESH_*` environment (step-budget enforcement at least as strict);
-- every report it left is unchanged (SHA-256), and so is each copy.
+- it lists only the files it produced (new or rewritten during the run; whatever was already in the folder and
+  left untouched, such as an older report or an archive, is never copied), each unchanged (SHA-256), and so is
+  each copy.
 
-Otherwise the release check says why and runs verify-all itself, as without the option. The asset audit, export build
+Otherwise the release check says why and runs verify-all itself, as without the option. A copy that fails or is
+left partial is undone (its files and folders) and verify-all runs; if it can't be undone, the release check
+fails rather than package stray files. The asset audit, export build
 and debug bundle always run. `release/verify_all_reuse.json` records which happened and what was checked.
 
 **Documented differences from a bundle that ran its own verify-all:** `release/verify_all_reuse.json` exists;

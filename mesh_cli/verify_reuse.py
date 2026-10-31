@@ -8,12 +8,14 @@ on Windows) on the same checkout. With ``--reuse-evidence`` verify-all writes ``
 - what it covered (pytest passthrough arguments, ``--skip-web-smoke``) and its CI-only options;
 - the git commit and whether the tree was clean, before and after; the tool version, Python, platform and
   ``MESH_*`` environment it started with;
-- the SHA-256 of every file it left in its folder.
+- the files it produced and their SHA-256: only files new or rewritten during the run. Whatever was already in the
+  folder and left untouched (an older report, an archive, anything else) is listed apart and never copied.
 
 ``mesh release bundle --reuse-verify-all <folder>`` reuses that run only if every check in ``check`` holds now; the
-copies are checked against the recorded hashes again. Otherwise it says why, records it, and runs verify-all itself as
-it always did. ``verify_all_reuse.json`` in the bundle's ``release/`` says which happened and on what evidence.
-Without the option nothing changes.
+copies are checked against the recorded hashes again. A copy that fails, or is left partial, is undone and verify-all
+runs; a reuse that can't be undone fails the release check rather than leave stray files in ``release/``. Otherwise
+it says why, records it, and runs verify-all itself as it always did. ``verify_all_reuse.json`` in the bundle's
+``release/`` says which happened and on what evidence. Without the option nothing changes.
 """
 
 from __future__ import annotations
@@ -31,7 +33,7 @@ from engine.persistence_io import write_json_atomic
 
 EVIDENCE = "verify_all_evidence.json"
 RECORD = "verify_all_reuse.json"
-SCHEMA = 1
+SCHEMA = 2  # (2: "files" are only the files the run produced; 1 listed every file in its folder, so it is refused)
 # Not part of what the release check's own verify-all leaves in release/, so not copied into the bundle:
 # - written only for CI's options (--ci-bundle: index, report, overlay perf; --release-notes-artifact: the notes);
 # - written to the repository's artifacts/ whatever --artifacts says (tooling/pytest_fast.py, tooling/pytest_full.py,
@@ -61,22 +63,42 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _files(folder: Path) -> dict[str, str]:
-    """Every regular file under ``folder`` (links not followed or listed, as the bundle's file scan) and its hash."""
-    found: dict[str, str] = {}
+def _walk(folder: Path) -> list[tuple[str, Path]]:
+    """Every regular file under ``folder`` but the evidence (links not followed or listed, as the bundle's file scan)."""
+    found: list[tuple[str, Path]] = []
     for root, dirs, names in os.walk(folder, followlinks=False):
         dirs[:] = sorted(d for d in dirs if not os.path.islink(os.path.join(root, d)))
         for name in sorted(names):
             path = Path(root) / name
             rel = path.relative_to(folder).as_posix()
             if rel != EVIDENCE and not path.is_symlink() and path.is_file():
-                found[rel] = _sha256(path)
+                found.append((rel, path))
     return found
 
 
-def write_evidence(artifacts_dir: Path, *, repo_root: Path, before: dict[str, Any], exit_code: int,
-                   payload: dict[str, Any], args: Any) -> None:
-    """Record, last, what this verify-all did and on what (it never decides anything: ``check`` does)."""
+def _identity(path: Path) -> list[Any]:
+    stat = path.stat()
+    return [stat.st_size, stat.st_mtime_ns, _sha256(path)]
+
+
+def snapshot(folder: Path) -> dict[str, list[Any]]:
+    """What ``folder`` holds before a verify-all runs (each file's size, modification time and hash): files still the
+    same afterwards weren't produced by it."""
+    return {rel: _identity(path) for rel, path in _walk(folder)} if folder.is_dir() else {}
+
+
+def write_evidence(artifacts_dir: Path, *, repo_root: Path, before: dict[str, Any], files_before: dict[str, list[Any]],
+                   exit_code: int, payload: dict[str, Any], args: Any) -> None:
+    """Record, last, what this verify-all did and on what (it never decides anything: ``check`` does). Its files are
+    the ones it produced: new, or rewritten, since ``files_before`` (``snapshot`` before the run)."""
+    produced: dict[str, str] = {}
+    untouched: list[str] = []
+    for rel, path in _walk(artifacts_dir):
+        identity = _identity(path)
+        if files_before.get(rel) == identity:
+            untouched.append(rel)
+        else:
+            produced[rel] = identity[2]
     steps = payload.get("steps") if isinstance(payload, dict) else None
     evidence = {
         "schema": SCHEMA,
@@ -90,7 +112,8 @@ def write_evidence(artifacts_dir: Path, *, repo_root: Path, before: dict[str, An
                     "release_notes_artifact": bool(getattr(args, "release_notes_artifact", False))},
         "before": before,
         "after": state(repo_root),
-        "files": _files(artifacts_dir),
+        "files": produced,
+        "untouched": untouched,
     }
     write_json_atomic(artifacts_dir / EVIDENCE, evidence, indent=2, sort_keys=True, trailing_newline=True)
 
@@ -162,26 +185,33 @@ def reuse(source: Path, release_dir: Path, *, repo_root: Path, deterministic: bo
     label = _label(source, repo_root)
     evidence, why = check(source, repo_root)
     copied: list[Path] = []
+    made: list[Path] = []
     if evidence is not None:
         for rel, digest in sorted(evidence["files"].items()):
             if rel in NOT_COPIED:
                 continue
             dest = release_dir / rel
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source / rel, dest)
-            copied.append(dest)
-            if _sha256(dest) != digest:  # (copied as recorded, or not at all)
+            try:
+                missing = [d for d in (dest.parent, *dest.parent.parents) if d.is_relative_to(release_dir)
+                           and d != release_dir and not d.exists()]
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                made.extend(missing)
+                copied.append(dest)  # (before copying: a partial file is undone too)
+                shutil.copyfile(source / rel, dest)
+                intact = _sha256(dest) == digest  # (copied as recorded, or not at all)
+            except OSError as exc:
+                why = f"{rel} couldn't be copied ({exc})"
+                break
+            if not intact:
                 why = f"{rel} changed while it was being copied"
                 break
     if why or evidence is None:
-        for path in copied:  # (release/ left as it was: the copies, and the folders made for them)
-            path.unlink(missing_ok=True)
-            for folder in path.parents:
-                if folder == release_dir or not folder.is_relative_to(release_dir) or any(folder.iterdir()):
-                    break
-                folder.rmdir()
-        write_json_atomic(release_dir / RECORD, {"reused": False, "source": label, "reason": why},
+        left = _undo(copied, made)
+        reason = why if not left else f"{why}; and the attempt couldn't be undone ({'; '.join(left)})"
+        write_json_atomic(release_dir / RECORD, {"reused": False, "source": label, "reason": reason},
                           indent=2, sort_keys=True, trailing_newline=True)
+        if left:  # (fail rather than package a release/ with stray copies in it)
+            raise OSError(f"verify-all reuse couldn't be undone in {release_dir.as_posix()}: {'; '.join(left)}")
         print(f"[Mesh][Release] verify-all not reused ({why}): running it here", file=sys.stderr)
         return None
     summary = json.loads((release_dir / "verify_all_summary.json").read_text(encoding="utf-8"))
@@ -191,8 +221,10 @@ def reuse(source: Path, release_dir: Path, *, repo_root: Path, deterministic: bo
     write_json_atomic(release_dir / RECORD, {
         "reused": True, "source": label, "commit": commit, "evidence_sha256": _sha256(source / EVIDENCE),
         "files_copied": len(copied), "not_copied": sorted(rel for rel in evidence["files"] if rel in NOT_COPIED),
+        "untouched_not_copied": len(evidence.get("untouched") or []),
         "checked": ["exit code 0 and ok", "every step ran and passed", "full selection", "same commit before, after, now",
                     "clean tree before, after, now", "same tool version, Python and platform",
+                    "only files the run produced (new or rewritten during it)",
                     "same MESH_* environment (budget enforcement at least as strict)", "every file's SHA-256",
                     "summary agrees", "copies match the recorded hashes"],
     }, indent=2, sort_keys=True, trailing_newline=True)
@@ -200,6 +232,30 @@ def reuse(source: Path, release_dir: Path, *, repo_root: Path, deterministic: bo
           f"{len(copied)} reports copied and checked", file=sys.stderr)
     return {"verify_all_ok": summary.get("ok") is True, "verify_all_summary": (release_dir / "verify_all_summary.json").as_posix(),
             "verify_all_reused_from": label}
+
+
+def _undo(copied: list[Path], made: list[Path]) -> list[str]:
+    """Remove an abandoned reuse's copies (partial ones too) and the folders made for them; what couldn't be removed."""
+    left: list[str] = []
+    for path in copied:
+        try:
+            _remove(path)
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            left.append(f"{path.name}: {exc}")
+    for folder in sorted(set(made), key=lambda d: len(d.parts), reverse=True):
+        try:
+            folder.rmdir()
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            left.append(f"{folder.name}/: {exc}")
+    return left
+
+
+def _remove(path: Path) -> None:
+    path.unlink()
 
 
 def _part(evidence: dict[str, Any], key: str, kind: type) -> Any:

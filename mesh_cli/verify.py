@@ -1830,6 +1830,7 @@ def _handle_verify_all(args: argparse.Namespace) -> int:
         evidence_root = get_repo_root(start=_Path.cwd(), strict=False)
         evidence_dir = _Path(artifacts_arg) if _Path(artifacts_arg).is_absolute() else evidence_root / artifacts_arg
         evidence_before = verify_reuse.state(evidence_root)
+        evidence_files_before = verify_reuse.snapshot(evidence_dir.resolve())  # (files the run didn't produce)
 
     # Keep verify-all stdout pure JSON by discarding any noisy prints from deeper
     # engine/tooling layers while computing the payload.
@@ -1839,7 +1840,8 @@ def _handle_verify_all(args: argparse.Namespace) -> int:
     if evidence_dir is not None:  # (last: every report is written; the evidence records, it never decides)
         with contextlib.redirect_stdout(io.StringIO()):
             verify_reuse.write_evidence(evidence_dir.resolve(), repo_root=evidence_root, before=evidence_before,
-                                        exit_code=exit_code, payload=payload, args=args)
+                                        files_before=evidence_files_before, exit_code=exit_code, payload=payload,
+                                        args=args)
 
     sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
 

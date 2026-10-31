@@ -53,15 +53,17 @@ def _write_reports(folder: Path, summary: dict[str, Any]) -> None:
 
 
 def _ci_verify_all(source: Path, **evidence: Any) -> Path:
-    """CI's verify-all (--ci-bundle --release-notes-artifact --reuse-evidence) in ``source``: its reports, CI's extras,
-    then its evidence; ``evidence`` overrides what it records (exit_code, ok, steps, selection...)."""
+    """CI's verify-all (--ci-bundle --release-notes-artifact --reuse-evidence) in ``source``: the folder as it was
+    (``snapshot``), its reports, CI's extras, then its evidence; ``evidence`` overrides what it records."""
+    files_before = verify_reuse.snapshot(source)
     summary = _summary()
     _write_reports(source, summary)
     for extra in verify_reuse.NOT_COPIED:
         (source / extra).write_text("{}\n", encoding="utf-8")
     args = argparse.Namespace(ci_bundle=True, release_notes_artifact=True, pytest_args=[], skip_web_smoke=False)
     verify_reuse.write_evidence(source, repo_root=source.parent, before=json.loads(json.dumps(NOW)),
-                                exit_code=evidence.pop("exit_code", 0), payload=summary, args=args)
+                                files_before=files_before, exit_code=evidence.pop("exit_code", 0), payload=summary,
+                                args=args)
     if evidence:
         path = source / verify_reuse.EVIDENCE
         path.write_text(json.dumps({**json.loads(path.read_text(encoding="utf-8")), **evidence}), encoding="utf-8")
@@ -105,7 +107,7 @@ def _refuse(case: str, source: Path, now: dict[str, Any]) -> None:
     elif case == "unreadable evidence":
         (source / verify_reuse.EVIDENCE).write_text("{", encoding="utf-8")
     elif case == "unknown format":
-        _rewrite_evidence(source, lambda e: e.update(schema=2))
+        _rewrite_evidence(source, lambda e: e.update(schema=1))  # (1 listed every file in the folder)
     elif case == "failed":
         _rewrite_evidence(source, lambda e: e.update(exit_code=1, ok=False))
     elif case == "a step failed":
@@ -206,12 +208,84 @@ def test_the_evidence_records_what_ran_and_never_decides(tmp_path: Path, now: di
     summary = _summary() | {"ok": False}
     summary["steps"][2] = {**summary["steps"][2], "ok": False, "code": 1, "error": "boom"}
     _write_reports(source, summary)
-    verify_reuse.write_evidence(source, repo_root=tmp_path, before=json.loads(json.dumps(NOW)), exit_code=1,
+    verify_reuse.write_evidence(source, repo_root=tmp_path, before=json.loads(json.dumps(NOW)), files_before={}, exit_code=1,
                                 payload=summary, args=argparse.Namespace())
     evidence = _evidence(source)
     assert evidence["exit_code"] == 1 and evidence["ok"] is False and evidence["steps"][2]["code"] == 1
     assert set(evidence["files"]) == set(REPORTS) and verify_reuse.EVIDENCE not in evidence["files"]
     assert "didn't pass" in verify_reuse.check(source, tmp_path)[1]
+
+
+# --------------------------------------------------------------------- only what the run produced (review of 80e657f)
+
+UNRELATED = {"old_release_notes.json": b'{"from": "an earlier run"}\n', "previous_bundle.zip": b"PK\x03\x04 old archive",
+             "deep/nested/unexpected.txt": b"left here by something else\n"}
+
+
+def _with_unrelated_files(source: Path) -> None:
+    """``source`` already holding files before verify-all runs: unrelated ones, and a stale summary it will rewrite."""
+    for rel, data in UNRELATED.items():
+        (source / rel).parent.mkdir(parents=True, exist_ok=True)
+        (source / rel).write_bytes(data)
+    (source / "verify_all_summary.json").write_text('{"ok": false, "stale": true}\n', encoding="utf-8")
+
+
+def test_files_already_in_the_folder_are_never_copied_only_what_the_run_produced(tmp_path: Path,
+                                                                                  now: dict[str, Any]) -> None:
+    source = tmp_path / "artifacts"
+    _with_unrelated_files(source)
+    _ci_verify_all(source)
+    evidence = _evidence(source)
+    assert sorted(evidence["untouched"]) == sorted(UNRELATED), "listed apart, never as the run's"
+    assert not set(UNRELATED) & set(evidence["files"])
+    assert set(REPORTS) <= set(evidence["files"]), "nested reports and the rewritten summary are the run's"
+    release_dir = tmp_path / "release"
+    release_dir.mkdir()
+    assert verify_reuse.reuse(source, release_dir, repo_root=tmp_path, deterministic=True) is not None
+    copied = sorted(p.relative_to(release_dir).as_posix() for p in release_dir.rglob("*") if p.is_file())
+    assert copied == sorted([*REPORTS, verify_reuse.RECORD]), copied
+    assert json.loads((release_dir / "verify_all_summary.json").read_text(encoding="utf-8"))["ok"] is True
+    record = json.loads((release_dir / verify_reuse.RECORD).read_text(encoding="utf-8"))
+    assert record["untouched_not_copied"] == len(UNRELATED)
+
+
+def test_evidence_listing_a_file_the_run_did_not_produce_is_refused(tmp_path: Path, now: dict[str, Any]) -> None:
+    """Even with a valid hash, an unrelated file listed among the run's (an older evidence format, or a doctored one)
+    has no provenance: reuse is refused and verify-all runs."""
+    source = tmp_path / "artifacts"
+    _with_unrelated_files(source)
+    _ci_verify_all(source)
+    _rewrite_evidence(source, lambda e: e.update(schema=1, untouched=[], files={
+        **e["files"], **{rel: verify_reuse._sha256(source / rel) for rel in UNRELATED}}))
+    assert "unknown format" in verify_reuse.check(source, tmp_path)[1]
+
+
+# --------------------------------------------------------------------- an interrupted copy (review of 80e657f)
+
+def _failing_copy(monkeypatch: pytest.MonkeyPatch, *, at: str) -> None:
+    """Copying ``at`` writes part of it, then fails (a full disk, a lost handle)."""
+    real_copy = verify_reuse.shutil.copyfile
+
+    def copy(src: Any, dst: Any) -> Any:
+        if Path(dst).as_posix().endswith(at):
+            Path(dst).write_bytes(Path(src).read_bytes()[:3])
+            raise OSError(28, "No space left on device")
+        return real_copy(src, dst)
+
+    monkeypatch.setattr(verify_reuse.shutil, "copyfile", copy)
+
+
+def test_an_interrupted_copy_is_undone_partial_file_and_folders_included(tmp_path: Path, now: dict[str, Any],
+                                                                         monkeypatch: pytest.MonkeyPatch) -> None:
+    source = _ci_verify_all(tmp_path / "artifacts")
+    _failing_copy(monkeypatch, at="reports/doctor_assets.json")
+    release_dir = tmp_path / "release"
+    release_dir.mkdir()
+    (release_dir / "already_here.txt").write_text("the release check's own\n", encoding="utf-8")
+    assert verify_reuse.reuse(source, release_dir, repo_root=tmp_path, deterministic=True) is None
+    assert sorted(p.name for p in release_dir.iterdir()) == ["already_here.txt", verify_reuse.RECORD]
+    reason = json.loads((release_dir / verify_reuse.RECORD).read_text(encoding="utf-8"))["reason"]
+    assert "reports/doctor_assets.json couldn't be copied" in reason and "No space left" in reason
 
 
 # --------------------------------------------------------------------- the release check
@@ -265,6 +339,34 @@ def test_refused_evidence_means_the_release_check_runs_verify_all_itself(tmp_pat
     assert steps["verify-all"] == [str(tmp_path / "release")], "run here, as before"
     record = json.loads((tmp_path / "release" / verify_reuse.RECORD).read_text(encoding="utf-8"))
     assert record["reused"] is False and "didn't pass" in record["reason"]
+
+
+def test_an_interrupted_copy_falls_back_to_running_verify_all(tmp_path: Path, now: dict[str, Any],
+                                                               steps: dict[str, list[str]],
+                                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    source = _ci_verify_all(tmp_path / "artifacts")
+    _failing_copy(monkeypatch, at="verify_summary.txt")
+    assert _release_check(tmp_path / "release", source) == 0
+    assert steps["verify-all"] == [str(tmp_path / "release")], "run here instead"
+    record = json.loads((tmp_path / "release" / verify_reuse.RECORD).read_text(encoding="utf-8"))
+    assert record["reused"] is False and "couldn't be copied" in record["reason"]
+
+
+def test_a_reuse_that_cannot_be_undone_fails_the_release_check(tmp_path: Path, now: dict[str, Any],
+                                                               steps: dict[str, list[str]],
+                                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    """A partial copy that can't be removed would end up in the bundle: the release check fails instead."""
+    source = _ci_verify_all(tmp_path / "artifacts")
+    _failing_copy(monkeypatch, at="verify_summary.txt")
+
+    def stuck(path: Path) -> None:
+        raise PermissionError(13, "in use", str(path))
+
+    monkeypatch.setattr(verify_reuse, "_remove", stuck)
+    assert _release_check(tmp_path / "release", source) != 0
+    assert steps["verify-all"] == [] and steps["export-build"] == [], "stopped at verify-all"
+    record = json.loads((tmp_path / "release" / verify_reuse.RECORD).read_text(encoding="utf-8"))
+    assert record["reused"] is False and "couldn't be undone" in record["reason"]
 
 
 @pytest.mark.parametrize("failing", ["asset-audit", "export-build", "debug-bundle"])

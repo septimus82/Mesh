@@ -19,6 +19,7 @@ from mesh_cli.bundle_verify import verify_zip
 
 pytestmark = pytest.mark.integration
 now, steps, _ci_verify_all = shared.now, shared.steps, shared._ci_verify_all  # (the fast file's fixtures)
+UNRELATED, _with_unrelated_files = shared.UNRELATED, shared._with_unrelated_files
 
 
 
@@ -32,12 +33,17 @@ def test_a_bundle_reusing_verify_all_passes_strict_verification_and_tampering_fa
         tmp_path: Path, now: dict[str, Any], steps: dict[str, list[str]], monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(release_bundle, "BUNDLE_PIPELINE", [("release-check", release_bundle._step_release_check)])
     zip_path = tmp_path / "out" / "release_bundle.zip"
-    assert release_bundle.handle(_bundle_args(zip_path, _ci_verify_all(tmp_path / "artifacts"))) == 0
+    source = tmp_path / "artifacts"
+    _with_unrelated_files(source)  # (an older summary, notes, an archive, a nested stray file)
+    assert release_bundle.handle(_bundle_args(zip_path, _ci_verify_all(source))) == 0
     assert steps["verify-all"] == [] and len(steps["export-build"]) == 1
     with zipfile.ZipFile(zip_path) as bundle:
         names = bundle.namelist()
         record = json.loads(bundle.read(f"release/{verify_reuse.RECORD}"))
     assert "release/verify_summary.txt" in names and "release/pytest_fast.log" not in names and record["reused"] is True
+    assert "release/reports/doctor_assets.json" in names, "the run's nested reports are kept"
+    strays = [n for n in names if any(n.endswith(rel) for rel in UNRELATED)]
+    assert strays == [], f"files the run didn't produce reached the bundle: {strays}"
     assert verify_zip(str(zip_path))["ok"] is True
     tampered = tmp_path / "tampered.zip"
     with zipfile.ZipFile(zip_path) as src, zipfile.ZipFile(tampered, "w") as dst:
