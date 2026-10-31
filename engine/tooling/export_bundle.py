@@ -16,6 +16,9 @@ working folders deleted. If the second move fails, the first is undone; if that 
 named. Ownership is proven, never assumed from a name: each export picks a random token, records it in a journal beside
 the output (``.<name>~export.json``) and writes it into each working folder (``.mesh-export-owner``) the moment it makes
 it, before anything of value is in it. (A folder's identity is no proof: a deleted folder's inode is reused at once.)
+The earlier bundle may change meanwhile (the game running from it writes a save): it is checked again just before it
+is moved aside (changed: nothing is replaced) and just before it is deleted (changed: it is kept in ``.<name>~old/b``,
+and named), and it is deleted file by file, only what its manifest lists, so nothing written in between is lost.
 
 The two moves are not atomic together. An export stopped part way (killed, power cut) is finished by the next export
 to that folder (``_recover``), which touches only working folders holding the journal's token, and nothing else: the
@@ -39,6 +42,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
 import os
@@ -602,10 +606,20 @@ def _manifest_entries(folder: Path) -> tuple[dict[str, dict[str, Any]], str | No
     return entries, None
 
 
+def _generated(rel: str, listed: dict[str, dict[str, Any]], *, folder: bool = False) -> bool:
+    """``rel`` is what Python makes beside a listed ``.py`` when the game runs: its ``__pycache__`` folder, or bytecode
+    in it."""
+    if folder:
+        parent, _, name = rel.rpartition("/")
+        return name == "__pycache__" and any(p.rpartition("/")[0] == parent for p in listed if p.endswith(".py"))
+    byte = _BYTECODE.match(rel)
+    return bool(byte and f"{byte['dir']}{byte['stem']}.py" in listed)
+
+
 def _bundle_problems(folder: Path, *, empty_ok: bool = True) -> list[str]:
     """Why ``folder`` isn't an empty folder (when ``empty_ok``) or an earlier bundle exactly as this exporter wrote it
-    ([] when it is one): every listed file there with its size and SHA-256, nothing unlisted but the bytecode Python
-    writes beside a listed ``.py``, no link or junction."""
+    ([] when it is one): every listed file there with its size and SHA-256; no file or folder but those, the folders
+    holding them and what Python generates beside a listed ``.py``; no link or junction."""
     if _is_link(folder):
         return [f"{folder} is a link or junction"]
     if not folder.is_dir():
@@ -615,6 +629,7 @@ def _bundle_problems(folder: Path, *, empty_ok: bool = True) -> list[str]:
     listed, broken = _manifest_entries(folder)
     if broken:
         return [broken]
+    holders = {"/".join(parts[:i]) for parts in (p.split("/") for p in listed) for i in range(1, len(parts))}
     problems: list[str] = []
     for root, dirs, files in os.walk(folder):
         here = Path(root)
@@ -623,10 +638,10 @@ def _bundle_problems(folder: Path, *, empty_ok: bool = True) -> list[str]:
             rel = path.relative_to(folder).as_posix()
             if _is_link(path):
                 problems.append(f"{rel} is a link or junction")
-            elif name in files and rel != MANIFEST_NAME and rel not in listed:
-                byte = _BYTECODE.match(rel)
-                if not (byte and f"{byte['dir']}{byte['stem']}.py" in listed):
-                    problems.append(rel)
+            elif name in files and rel != MANIFEST_NAME and rel not in listed and not _generated(rel, listed):
+                problems.append(rel)
+            elif name in dirs and rel not in holders and not _generated(rel, listed, folder=True):
+                problems.append(f"{rel}/ (a folder the bundle doesn't have)")
         dirs[:] = [d for d in dirs if not _is_link(here / d)]
     sized = []
     for rel, entry in sorted(listed.items()):
@@ -647,6 +662,40 @@ def _remove_tree(path: Path) -> None:
     if _is_link(path):
         raise OSError(f"{path} is a link or junction; not removed")
     shutil.rmtree(path)  # (since Python 3.8 it removes junctions inside without entering them)
+
+
+def _delete_bundle(folder: Path) -> None:
+    """Delete a bundle just found unchanged, file by file: only its manifest's files, the manifest and the bytecode
+    Python made beside them, then each folder only if that left it empty. Anything that appeared since (a save the game
+    wrote a moment ago) is not deleted: ExportError names the folder it is kept in."""
+    if not any(folder.iterdir()):  # (an empty folder the export replaced)
+        folder.rmdir()
+        return
+    listed, broken = _manifest_entries(folder)
+    if broken:
+        raise ExportError(f"{folder} is no longer a bundle ({broken}); it was left as it is")
+    for root, dirs, files in os.walk(folder, topdown=False):
+        here = Path(root)
+        for name in files:
+            rel = (here / name).relative_to(folder).as_posix()
+            if (rel in listed or rel == MANIFEST_NAME or _generated(rel, listed)) and not _is_link(here / name):
+                (here / name).unlink()
+        for name in dirs:
+            with contextlib.suppress(OSError):  # (not empty: something new is in it, and stays)
+                os.rmdir(here / name)
+    try:
+        folder.rmdir()
+    except OSError as exc:
+        raise ExportError(f"files that appeared in the earlier export while it was replaced were kept: they are in "
+                          f"{folder}") from exc
+
+
+def _discard_backup(backup: Path) -> None:
+    """Delete ``.<name>~old`` (the export's own): its bundle, if any, by ``_delete_bundle``, then its owner file."""
+    if os.path.lexists(backup / INNER):
+        _delete_bundle(backup / INNER)
+    (backup / OWNER_FILE).unlink()
+    backup.rmdir()
 
 
 def _rename(src: Path, dst: Path) -> None:
@@ -685,7 +734,7 @@ def _recover(output_dir: Path) -> None:
                     raise ExportError(f"{aside} holds a previous export and {output_dir} is not a complete, unchanged "
                                       "one (or that copy was changed); both were left untouched: keep the one you "
                                       "want, move the other away, export again")
-            _remove_tree(backup)  # (its owner file, and a superseded unchanged copy if any)
+            _discard_backup(backup)  # (its owner file, and a superseded unchanged copy if any)
     if os.path.lexists(staging):
         if _abandoned(staging, token):
             staging.rmdir()
@@ -740,6 +789,10 @@ def _publish(output_dir: Path, token: str) -> None:
     built, aside = staging / INNER, backup / INNER
     replacing = os.path.lexists(output_dir)
     if replacing:
+        changed = _bundle_problems(output_dir)  # (again: the game may have written to it while the new one was built)
+        if changed:
+            raise ExportError(f"{output_dir} changed while the new export was built ({'; '.join(changed[:3])}); "
+                              "nothing was replaced and it is as it was")
         try:
             _make_wrapper(backup, token)
             _rename(output_dir, aside)
@@ -761,13 +814,25 @@ def _publish(output_dir: Path, token: str) -> None:
         raise ExportError(f"could not put the new export in place ({exc}); "
                           + (f"the earlier export is back in {output_dir}" if replacing else "nothing was changed")) from exc
     try:
-        if replacing:
-            _remove_tree(backup)
-        _remove_tree(staging)
+        _remove_tree(staging)  # (its owner file: the new bundle has moved out)
     except OSError as exc:
-        print(f"[export-bundle] WARNING: the new export is in place, but a working folder could not be deleted ({exc}); "
-              f"the next export to this folder deletes it ({backup if os.path.lexists(backup) else staging})")
-        return
+        print(f"[export-bundle] WARNING: the new export is in place, but {staging} could not be deleted ({exc}); the "
+              "next export to this folder deletes it")
+    if replacing:
+        changed = _bundle_problems(aside)  # (the earlier one, checked once more just before it is deleted)
+        if changed:
+            raise ExportKept(f"the new export is in place in {output_dir}, but the earlier one changed while it was "
+                             f"replaced ({'; '.join(changed[:3])}): it was kept, as it is, in {aside}. Take what you "
+                             f"need from it, then delete {backup}")
+        try:
+            _discard_backup(backup)
+        except ExportError as exc:
+            raise ExportKept(f"the new export is in place in {output_dir}, but {exc}. Take what you need from them, "
+                             f"then delete {backup}") from exc
+        except OSError as exc:
+            print(f"[export-bundle] WARNING: the new export is in place, but the earlier one could not be deleted "
+                  f"({exc}); the next export to this folder deletes it ({backup})")
+            return
     _tidy_journal(output_dir)
 
 

@@ -87,6 +87,12 @@ It replaces only an earlier bundle or an empty folder, never other files.
   running from it) stops the export with the earlier one unchanged. If the second move fails, the first is undone. If
   that fails too, both are kept and the error names them: the earlier export in `.bundle~old/b`, the new one in
   `.bundle~new/b`. If a working folder can't be deleted at the end, the export still succeeds and a warning names it.
+- **The earlier export may change meanwhile** (the game running from it writes a save). It is checked again just
+  before it is moved aside: changed, the export stops and nothing is replaced. It is checked once more just before it
+  is deleted: changed, it is kept, as it is, in `.bundle~old/b`, the export reports that (with the new export already
+  in place) and later exports leave it alone until it is moved away. The deletion itself removes only its manifest's
+  files, the manifest and the bytecode beside listed sources, then each folder only if that left it empty, so a save
+  written while it runs is kept there too, and named.
 - **Which folders are the export's own.** Each export picks a random token, records it in a journal beside the output
   (`.bundle~export.json`, written whole and renamed into place) and writes it into each working folder
   (`.mesh-export-owner`) the moment it makes it, before anything of value is in it. A working folder is the export's
@@ -102,9 +108,10 @@ It replaces only an earlier bundle or an empty folder, never other files.
   working folder (made just before an export stopped) is removed.
 - **What counts as an earlier bundle.** A folder whose `bundle_manifest.json` is well formed (every entry a path inside
   the folder with its SHA-256 and size, no entry twice) and matches it exactly: every listed file there, of its size and
-  SHA-256, and nothing else but the bytecode Python writes beside a listed `.py` when the game runs. A changed, missing
-  or truncated file, an older game's `saves/`, or a user's files beside a copied manifest stop the export with the
-  problems named and nothing changed; so does a link or junction anywhere in it, or as the output folder: they are
+  SHA-256, and nothing else: no other file and no other folder (even an empty one), apart from the folders holding
+  listed files and the `__pycache__` bytecode Python writes beside a listed `.py` when the game runs. A changed,
+  missing or truncated file, an older game's `saves/` (even empty), or a user's files beside a copied manifest stop the
+  export with the problems named and nothing changed; so does a link or junction anywhere in it, or as the output folder: they are
   never followed or emptied.
 - One export at a time per output folder.
 
@@ -185,5 +192,5 @@ wheel.
 | `tests/test_wheel_bundles_engine_data.py` (slow; builds a wheel; **required in CI** as `installed (<os>, py3.11)`, H5) | The wheel bundles exactly the allow-list, plus the schemas. Installed with its declared dependencies in a fresh environment and run isolated (`python -I`, no PYTHONPATH or MESH_*) from an empty folder, via `tooling/installed_product_check.py`: every `engine`/`mesh_cli` module and bundled file comes from the installation, `tooling` is absent, a blank and an HD-2D RPG project get everything they use (starter files, input bindings, the 14-model kit, no unverified sprite), and the installed `mesh new` / `mesh doctor` work. It also proves the check fails on a wheel missing a module, with a broken module, or missing an asset the checkout still has, and that the old way of running (from the checkout, not isolated) is caught. |
 | `tests/test_bundled_data_roots.py` (fast) | The source tree comes first, then an install's `share/mesh-engine`, for files and folders |
 | `tests/test_export_bundle.py` (fast) | A project exports as a standalone game; an export never replaces a folder that isn't an earlier bundle |
-| `tests/test_export_bundle_replacement.py` (integration, F4) | A failed copy (first or later file), manifest write or check, a file changed mid-export, a failed handover, a failed rollback (both copies kept and named, then recovered), a failed cleanup, an interrupt, and an export killed between the renames (a real child process): none loses the earlier export. Absent, empty and earlier-export folders are filled or replaced; a changed (same length), missing or truncated file, a malformed or duplicate manifest entry, saves, foreign files, unlisted bytecode and links or junctions are never replaced or followed; folders named like an export's working folders but without its owner file (or with anything else in them), even the very folder emptied, and a changed backup, are never deleted; a replacement is byte for byte a fresh export |
+| `tests/test_export_bundle_replacement.py` (integration, F4) | A failed copy (first or later file), manifest write or check, a file changed mid-export, a failed handover, a failed rollback (both copies kept and named, then recovered), a failed cleanup, an interrupt, and an export killed between the renames (a real child process): none loses the earlier export. Absent, empty and earlier-export folders are filled or replaced; a changed (same length), missing or truncated file, a malformed or duplicate manifest entry, saves, foreign files, unlisted bytecode and links or junctions are never replaced or followed; folders named like an export's working folders but without its owner file (or with anything else in them), even the very folder emptied, and a changed backup, are never deleted; an extra empty folder stops a replacement; a save or a same-length edit made while the export runs (during the build, after the earlier one is moved aside, or during its deletion) is never lost; a replacement is byte for byte a fresh export |
 | `tooling/hd2d_install_acceptance.py` (manual, hidden windows) | The whole HD-2D workflow from a clean install, including running the exported game with Mesh's dependencies only. Evidence: `docs/reviews/milestone16_stage6b_distribution.md`. |

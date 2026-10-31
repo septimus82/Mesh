@@ -193,14 +193,10 @@ def test_a_failed_cleanup_keeps_the_new_export_and_names_the_old_one(
         repo: Path, previous: tuple[Path, dict[str, str]], monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str]) -> None:
     out, before = previous
-    real = eb._remove_tree
+    def in_use(path: Path) -> None:
+        raise PermissionError(13, "injected: in use", str(path))
 
-    def remove(path: Path) -> None:
-        if path.name == ".bundle~old":
-            raise PermissionError(13, "injected: in use", str(path))
-        real(path)
-
-    monkeypatch.setattr(eb, "_remove_tree", remove)
+    monkeypatch.setattr(eb, "_discard_backup", in_use)
     assert build_bundle(repo, out)[0] == 0
     backup = out.with_name(".bundle~old")
     assert f"the next export to this folder deletes it ({backup})" in capsys.readouterr().out
@@ -283,14 +279,10 @@ def test_a_kept_earlier_export_is_never_deleted_for_a_folder_that_is_not_a_finis
 def test_a_changed_backup_is_never_deleted_as_superseded(repo: Path, previous: tuple[Path, dict[str, str]],
                                                          monkeypatch: pytest.MonkeyPatch) -> None:
     out, _ = previous
-    real = eb._remove_tree
+    def in_use(path: Path) -> None:
+        raise PermissionError(13, "injected: in use", str(path))
 
-    def remove(path: Path) -> None:
-        if path.name == ".bundle~old":
-            raise PermissionError(13, "injected: in use", str(path))
-        real(path)
-
-    monkeypatch.setattr(eb, "_remove_tree", remove)
+    monkeypatch.setattr(eb, "_discard_backup", in_use)
     assert build_bundle(repo, out)[0] == 0  # (the earlier export kept in .bundle~old, recorded in the journal)
     monkeypatch.undo()
     backup = out.with_name(".bundle~old") / "b"
@@ -526,3 +518,114 @@ def test_copies_keep_the_source_files_times_as_before(repo: Path, tmp_path: Path
     out = tmp_path / "b"
     assert build_bundle(repo, out)[0] == 0
     assert int((out / "scenes" / "scene_b.json").stat().st_mtime) == 1_000_000_000
+
+
+# --------------------------------------------------------------------------- #
+# Re-review: the earlier export changing while it is replaced (the game writing a save meanwhile)
+# --------------------------------------------------------------------------- #
+
+def _game_writes(folder: Path, change: str) -> None:
+    """What a running game might do to its folder: write a new save, or rewrite a file at the same length."""
+    if change == "a new save":
+        (folder / "saves").mkdir(exist_ok=True)
+        (folder / "saves" / "slot_1.json").write_text('{"hp": 3, "gold": 40}', encoding="utf-8")
+    else:
+        scene = folder / "scenes" / "scene_b.json"
+        data = scene.read_bytes()
+        scene.write_bytes(data[:-2] + (b"X" if data[-2:-1] != b"X" else b"Y") + data[-1:])
+
+
+CHANGES_MEANWHILE = ["a new save", "a listed file rewritten at the same length"]
+
+
+@pytest.mark.parametrize("change", CHANGES_MEANWHILE)
+def test_an_earlier_export_changed_while_the_new_one_was_built_is_not_replaced(
+        repo: Path, previous: tuple[Path, dict[str, str]], monkeypatch: pytest.MonkeyPatch, change: str,
+        capsys: pytest.CaptureFixture[str]) -> None:
+    out, _ = previous
+    real = eb._stage
+
+    def stage_while_the_game_runs(*args: Any, **kwargs: Any) -> eb.BundleManifest:
+        manifest = real(*args, **kwargs)  # (after the first check of the earlier export)
+        _game_writes(out, change)
+        return manifest
+
+    monkeypatch.setattr(eb, "_stage", stage_while_the_game_runs)
+    assert build_bundle(repo, out) == (1, None)
+    expected = dict(previous[1])
+    if change == "a new save":
+        assert (out / "saves" / "slot_1.json").read_text(encoding="utf-8") == '{"hp": 3, "gold": 40}'
+        expected["saves/slot_1.json"] = _tree(out)["saves/slot_1.json"]
+    else:
+        expected["scenes/scene_b.json"] = _tree(out)["scenes/scene_b.json"]
+        assert expected["scenes/scene_b.json"] != previous[1]["scenes/scene_b.json"]
+    assert _tree(out) == expected and _leftovers(out) == []
+    assert "changed while the new export was built" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("change", CHANGES_MEANWHILE)
+def test_an_earlier_export_changed_after_it_was_moved_aside_is_kept_not_deleted(
+        repo: Path, previous: tuple[Path, dict[str, str]], monkeypatch: pytest.MonkeyPatch, change: str,
+        capsys: pytest.CaptureFixture[str]) -> None:
+    out, _ = previous
+    aside = out.with_name(".bundle~old") / "b"
+    real = os.rename
+
+    def rename(src: str | Path, dst: str | Path) -> None:
+        real(src, dst)
+        if _label(src) == ".bundle~new/b":  # (the new export is in; the earlier one waits to be deleted)
+            _game_writes(aside, change)
+
+    monkeypatch.setattr(os, "rename", rename)
+    assert build_bundle(repo, out) == (1, None)
+    kept = _tree(aside)
+    assert set(previous[1]) <= set(kept), "every file of the earlier export is still there"
+    assert ("saves/slot_1.json" in kept) if change == "a new save" else (
+        kept["scenes/scene_b.json"] != previous[1]["scenes/scene_b.json"])
+    message = capsys.readouterr().out
+    assert f"it was kept, as it is, in {aside}" in message
+    assert not eb._bundle_problems(out, empty_ok=False), "the new export is in place, complete"
+    monkeypatch.undo()
+    assert build_bundle(repo, out) == (1, None) and _tree(aside) == kept, "and later exports leave it alone"
+
+
+def test_a_save_written_while_the_earlier_export_is_being_deleted_is_kept(
+        repo: Path, previous: tuple[Path, dict[str, str]], monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str]) -> None:
+    out, _ = previous
+    aside = out.with_name(".bundle~old") / "b"
+    real = eb._bundle_problems
+
+    def check_then_the_game_saves(folder: Path, **kwargs: Any) -> list[str]:
+        problems = real(folder, **kwargs)
+        if folder == aside:  # (the last check passed; the game saves before the deletion reaches its folder)
+            _game_writes(aside, "a new save")
+        return problems
+
+    monkeypatch.setattr(eb, "_bundle_problems", check_then_the_game_saves)
+    assert build_bundle(repo, out) == (1, None)
+    assert (aside / "saves" / "slot_1.json").read_text(encoding="utf-8") == '{"hp": 3, "gold": 40}'
+    assert _tree(aside) == {"saves/slot_1.json": _tree(aside)["saves/slot_1.json"]}, "only the bundle's own files went"
+    assert f"they are in {aside}" in capsys.readouterr().out
+    assert not eb._bundle_problems(out, empty_ok=False)
+
+
+# --------------------------------------------------------------------------- #
+# Re-review: folders an earlier bundle doesn't have
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize("folder", ["saves", "assets/sprites/empty", "assets/new/deeper"])
+def test_an_earlier_export_with_an_extra_empty_folder_is_not_replaced(
+        repo: Path, previous: tuple[Path, dict[str, str]], folder: str, capsys: pytest.CaptureFixture[str]) -> None:
+    out, before = previous
+    (out / folder).mkdir(parents=True)
+    assert build_bundle(repo, out) == (1, None)
+    assert (out / folder).is_dir() and _tree(out) == before and _leftovers(out) == []
+    assert "a folder the bundle doesn't have" in capsys.readouterr().out
+
+
+def test_an_empty_bytecode_folder_beside_listed_source_does_not_stop_a_replacement(
+        repo: Path, previous: tuple[Path, dict[str, str]]) -> None:
+    out, _ = previous
+    (out / "__pycache__").mkdir()  # (beside the listed main.py)
+    assert build_bundle(repo, out)[0] == 0 and _leftovers(out) == []
