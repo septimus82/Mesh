@@ -19,7 +19,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SUITE = {
     # (test_m0..m5 land on both shards: see test_ci_shards' golden assignment)
     **{f"tests/test_m{i}.py": "def test_a():\n    pass\n\ndef test_b():\n    pass\n" for i in range(6)},
-    "tests/test_m0.py": "import pathlib, pytest\n\n@pytest.mark.parametrize('p', [str(pathlib.Path(__file__).parent)])\n"
+    # (an explicit id: pytest 9.2 no longer makes a path-like string its own id, and older pytests did)
+    "tests/test_m0.py": "import pathlib, pytest\n\nHERE = str(pathlib.Path(__file__).parent)\n\n"
+                        "@pytest.mark.parametrize('p', [pytest.param(HERE, id=HERE)])\n"
                         "def test_path(p):\n    pass\n\ndef test_skip():\n    pytest.skip('skipped')\n",
     "tests/test_m3.py": "import pytest\n\ndef test_a(subtests):\n    for i in range(3):\n        with subtests.test(i=i):\n"
                         "            if i == 2:\n                pytest.skip('one skipped subtest')\n",
