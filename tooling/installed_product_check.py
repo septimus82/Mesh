@@ -264,13 +264,16 @@ def bounded(window):
     facts["menu"] = [window.pause_menu.state, window.pause_menu._settings_index]
     for _ in range(3):
         key(arcade.key.LEFT)
-    facts["settings_toasts"] = list(window.player_hud.active_toasts())
-    from engine.i18n import tr  # (what this game says for "saved", whatever its interface text resolves to)
-    facts["settings_saved_text"] = tr("UI_SETTINGS_SAVED")
+    facts["settings_toasts"] = list(window.player_hud.active_toasts())  # (the words the player is shown)
+    facts["music_after"] = window.runtime_settings.music_volume
+    # H9.2: one more step that can't be kept (its file asked for under a file, so writing it fails): the menu says so.
+    window.player_hud.clear_toasts()
+    window.runtime_settings_path = evidence / "frame.png" / "user_settings.json"
+    key(arcade.key.LEFT)
+    facts["unsaved_toasts"] = list(window.player_hud.active_toasts())
     key(arcade.key.ESCAPE)
     key(arcade.key.ESCAPE)
     facts["menu_closed"] = not window.pause_menu.visible
-    facts["music_after"] = window.runtime_settings.music_volume
     window.close()
     facts["closed"] = True
 GameWindow.run = bounded
@@ -560,6 +563,12 @@ def export_problems(export: dict[str, Any]) -> list[str]:
     return found or bundle_problems(export["bundle"])
 
 
+def words(key: str, repo: Path = REPO) -> str:
+    """What the player should read for interface text ``key``: the English the wheel ships (H9.2: an exported game
+    showed keys such as ``UI_SETTINGS_SAVED``, so a check against the game's own ``tr`` saw nothing wrong)."""
+    return str(json.loads((repo / "locales" / "en.json").read_text(encoding="utf-8"))[key])
+
+
 def game_problems(bundle: Path, run: dict[str, Any], *, start: str, hd2d: bool) -> list[str]:
     """Everything wrong with a run of the exported game in ``bundle`` (``play``), one line each (empty: it passes)."""
     game = run["game"]
@@ -593,9 +602,11 @@ def game_problems(bundle: Path, run: dict[str, Any], *, start: str, hd2d: bool) 
     settings = Path(game["settings_path"])  # (H9.1: the player's settings, changed in the pause menu)
     if game["menu"] != ["settings", 0] or not game["menu_closed"]:
         found.append(f"the pause menu didn't reach Music Volume and close: {game['menu']}, closed {game['menu_closed']}")
-    elif not game["music_after"] < game["music_at_start"] or game["settings_toasts"] != [game["settings_saved_text"]]:
+    elif not game["music_after"] < game["music_at_start"] or game["settings_toasts"] != [words("UI_SETTINGS_SAVED")]:
         found.append(f"the music volume change wasn't kept: {game['music_at_start']} -> {game['music_after']}, "
                      f"{game['settings_toasts']}")
+    elif game["unsaved_toasts"] != [words("UI_SETTINGS_NOT_SAVED")]:  # (H9.2: in words, not as their keys)
+        found.append(f"a change that couldn't be kept said {game['unsaved_toasts']}")
     elif settings.resolve().is_relative_to(bundle.resolve()):
         found.append(f"the exported game keeps its player's settings in its installation: {settings}")
     elif json.loads(settings.read_text(encoding="utf-8")).get("music_volume") != game["music_after"]:

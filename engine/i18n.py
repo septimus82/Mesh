@@ -35,18 +35,22 @@ def _read_table(path: Any) -> Dict[str, str]:
 def _load_locale(code: str) -> Dict[str, str]:
     """The engine's interface text for ``code``, with the game's own ``locales/<code>.json`` laid over it key by key:
     a game's file can add or change messages without listing the engine's (Milestone 21B.1: a game has no
-    ``locales/`` of its own, or only some keys, and menus showed raw keys)."""
+    ``locales/`` of its own, or only some keys, and menus showed raw keys).
+
+    The engine's text is its first bundled copy that isn't the game's own file (H9.2: an exported game's folder is
+    both the game's and the engine's, so its ``locales/`` are the game's and the engine's copy is in
+    ``share/mesh-engine/locales``; before, exports had neither and showed raw keys)."""
     code = str(code or "").strip().lower() or "en"
     cached = _LOCALE_CACHE.get(code)
     if cached is not None:
         return cached
-    from .repo_root import bundled_file  # noqa: PLC0415
+    from .repo_root import bundled_data_roots  # noqa: PLC0415
 
-    engine_path = bundled_file(f"locales/{code}.json")
-    game_path = resolve_path(f"locales/{code}.json")
+    game_path = Path(resolve_path(f"locales/{code}.json")).resolve()
+    engine_path = next((p for p in (root / "locales" / f"{code}.json" for root in bundled_data_roots())
+                        if p.is_file() and p.resolve() != game_path), None)
     data = _read_table(engine_path)
-    if engine_path is None or Path(game_path).resolve() != Path(engine_path).resolve():
-        data.update(_read_table(game_path))
+    data.update(_read_table(game_path))
     _LOCALE_CACHE[code] = data
     return data
 

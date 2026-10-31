@@ -68,8 +68,9 @@ isn't needed.
 
 `mesh export build`, run in a project folder, writes a standalone game to `dist/bundle`:
 
-- the project's `main.py`, `config.json`, `packs/` and every file in its `assets/`;
+- the project's `main.py`, `config.json`, `packs/`, `locales/*.json` and every file in its `assets/`;
 - the installed `engine` package as its runtime;
+- the engine's interface text, `share/mesh-engine/locales/*.json` (the installed Mesh's allow-listed copy);
 - `bundle_manifest.json`, with each file's hash and no path of the maker's machine.
 
 It runs with `python main.py` wherever Mesh's dependencies (arcade, pillow, jsonschema) are installed, without Mesh.
@@ -109,6 +110,17 @@ folder (`%APPDATA%\MeshMind Studios\<game id>\user_settings.json` and so on).
   aside as `user_settings.json.invalid`.
 - **Failed saves:** when the settings can't be written, the menu says *Settings not saved*, the change stays in
   effect until the game closes, and the diagnostics say why. The policy is in `engine.runtime_settings_storage`.
+
+**An exported game's interface text (H9.2).** Before H9.2, exports carried neither the engine's
+`locales/en.json` (an installed Mesh keeps it in `share/mesh-engine`, outside the `engine` package) nor the project's
+`locales/`, so their players read keys such as `UI_SETTINGS_SAVED`.
+
+- **Where it is now:** the export ships the engine's text at `share/mesh-engine/locales/` in the game's folder, the
+  same layout as an install. It is found before any Mesh the player's Python may hold.
+- **The game's own text:** a project's `locales/<code>.json` ship at `locales/` and are laid over the engine's key
+  by key, as in Mesh Studio. A language without a message falls back to English.
+- **Broken files:** a translation of the game's that can't be read is ignored, and the engine's text shows.
+- **Integrity:** the bundle's manifest lists every one of these files with its hash.
 
 The exporter and the asset manifest moved from the repository's `tooling/` into the package
 (`engine.tooling.export_bundle`, `engine.tooling.asset_manifest`). The names in `tooling/` remain for repository
