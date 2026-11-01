@@ -79,6 +79,18 @@ It is used in two places:
   passed, and the scene was written through the link, reported as "Created". CI's link-capable runners caught this.
   Now only the folder is resolved, which still keeps the scene inside the workspace. The link itself is the target,
   and it is refused as `already_exists`.
+- **A new room's map skeleton** (final review correction). `Project._write_map_file` wrote it with
+  `write_json_atomic` after an `is_file()` check, so a file or a broken link put at the map path after
+  `_claim_room_files` was replaced. For a new room (`add_room`, `add_hd2d_room`) it is now always published with
+  `write_json_new`. If anything is there by then, it is left exactly as it is, and `ops.OpError` names the map path:
+  "There is now a file at … (it appeared while the map was being made), so it was left as it is and the room '…'
+  wasn't added". This happens before the room is registered, so the world, the rooms, the dirty flags, undo and the
+  revision are unchanged. Studio shows the message, and AI authoring gets it as `invalid_change`, both directly and
+  through a Studio proposal.
+  - **`add_map` for an existing room** still keeps that room's own map file when one is already there. Anything else
+    at the path (a link, a folder) is refused the same way instead of being replaced.
+  - **Eager file creation is unchanged (F11):** the starter files, and for HD-2D the starter kit, are still installed
+    before the map, so a refused HD-2D room can leave a kit it just installed.
 
 ## What remains
 
@@ -108,7 +120,10 @@ It is used in two places:
     - `publish_new` against each kind of occupant;
     - a broken link inside the project (AIOps and the scaffold both refuse it; nothing is made where it points);
     - a scene put there while it is being created;
-    - `force=True` still overwrites.
+    - `force=True` still overwrites;
+    - a file or a broken link (pointing inside the project) put at a new room's map path inside the map's publication (after `_claim_room_files`), for 2D and HD-2D rooms: the occupant survives with its bytes and timestamp, no room is registered, and nothing else is written or left. Once the occupant is moved away, the room is added and saves;
+    - the same race through AI authoring, both directly to the files and through an accepted Studio proposal;
+    - `add_map` still keeps an existing room's own map file.
 - **Mutation check:** each guard removed in turn:
 
   | Guard removed | Tests that fail |
@@ -121,3 +136,4 @@ It is used in two places:
   | fresh room files replaced instead of published (review) | 4 |
   | the scaffold replacing when not forced (review) | 2 |
   | `publish_new` replacing on Windows (review) | 5 |
+  | a new room's map written with `write_json_atomic` again (final review) | 5 |

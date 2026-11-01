@@ -406,3 +406,78 @@ def test_scaffold_force_still_overwrites_for_the_callers_that_ask(root: Path) ->
     assert scaffold.create_scene(str(root / CELLAR)) is False and (root / CELLAR).read_bytes() == MINE
     assert scaffold.create_scene(str(root / CELLAR), force=True) is True
     assert (root / CELLAR).read_bytes() != MINE
+
+
+# --- a new room's map skeleton is published the same way: never over anything put there after the room was checked -
+def _race_the_map(monkeypatch, kind: str, map_rel: str, put: dict[str, Any]) -> None:
+    """Put ``kind`` at the map path inside the map's publication (after ``_claim_room_files``, before the move)."""
+    from engine import json_io
+
+    real = json_io.publish_new
+
+    def raced(src: Any, dst: Any) -> None:
+        if Path(dst).as_posix().endswith(map_rel):
+            put["it"] = _competitor(kind, Path(dst))
+            put["stamp"] = os.lstat(dst).st_mtime_ns
+        real(src, dst)
+
+    monkeypatch.setattr(json_io, "publish_new", raced)
+
+
+@pytest.mark.parametrize("room", ["2d", "hd2d"])
+@pytest.mark.parametrize("kind", ["a_file", "a_broken_link"])
+def test_a_map_put_there_while_the_room_is_being_added_survives(root: Path, monkeypatch, kind: str, room: str) -> None:
+    project = _open(root)
+    map_rel = _new_room_map(project, "Cellar", hd2d=room == "hd2d")
+    if room == "hd2d":
+        project.ensure_hd2d_kit()  # (installed before the map, as ever: F11 keeps eager file creation as it is)
+    (root / map_rel).parent.mkdir(parents=True, exist_ok=True)
+    disk, memory, put = _tree(root), _memory(project), {}
+    _race_the_map(monkeypatch, kind, map_rel, put)
+    what = "a file" if kind == "a_file" else "a link"
+    with pytest.raises(ops.OpError, match=rf"There is now {what} at {map_rel} \(it appeared while the map was being "
+                                          r"made\), so it was left as it is and the room 'Cellar' wasn't added"):
+        project.add_hd2d_room("Cellar", 32, 24) if room == "hd2d" else project.add_room("Cellar")
+    assert _still(kind, root / map_rel, put["it"]) and os.lstat(root / map_rel).st_mtime_ns == put["stamp"]
+    assert {k: v for k, v in _tree(root).items() if k != map_rel} == disk, "nothing else written, no temporary file"
+    assert _memory(project) == memory and "cellar" not in project.world["scenes"] and not project.can_undo()
+    monkeypatch.undo()
+    (root / map_rel).unlink()
+    key = project.add_hd2d_room("Cellar", 32, 24)[0] if room == "hd2d" else project.add_room("Cellar")
+    assert (root / map_rel).is_file() and project.path(key) in project.save(), "moved out of the way: it works"
+
+
+def test_ai_authoring_is_told_when_a_map_appears_while_its_room_is_added(root: Path, monkeypatch) -> None:
+    from engine.studio_ai import StudioAIHost
+
+    map_rel = _new_room_map(_open(root), "Cellar")
+    (root / map_rel).parent.mkdir(parents=True, exist_ok=True)
+    disk, put = _tree(root), {}
+    _race_the_map(monkeypatch, "a_file", map_rel, put)
+    result = authoring_session.apply(root, [{"op": "add_room", "label": "Cellar"}])  # (nothing open: to the files)
+    assert (result["ok"], result["reason"], result["op"]) == (False, "invalid_change", "add_room")
+    assert f"There is now a file at {map_rel}" in result["message"]
+    assert (root / map_rel).read_bytes() == MINE
+    assert {k: v for k, v in _tree(root).items() if k != map_rel} == disk, "the world file not written: no room"
+
+    (root / map_rel).unlink()  # (a Studio proposal, accepted as the map appears)
+    project = _open(root)
+    host = StudioAIHost(_FakeStudio(project))
+    proposal = host.stage_proposal_payload({"changes": [{"op": "add_room", "label": "Cellar"}], "source": "test"})
+    assert getattr(proposal, "status", None) == "pending"
+    memory = _memory(project)
+    decided = host.accept(proposal)
+    assert decided["ok"] is False and f"There is now a file at {map_rel}" in json.dumps(decided)
+    assert (root / map_rel).read_bytes() == MINE and _memory(project) == memory
+
+
+def test_an_existing_rooms_own_map_is_still_kept_by_add_map(root: Path) -> None:
+    project = _open(root)
+    key = project.add_room("Cellar")
+    project.save()
+    map_rel = project.map_path(key)
+    assert map_rel is not None
+    mine = (root / map_rel).read_bytes()
+    project.edit_scene(lambda s: {k: v for k, v in s.items() if k != "tilemap"}, key)
+    project.add_map(key)  # (the room's map file from before, at the same path: kept, not written again)
+    assert (root / map_rel).read_bytes() == mine and project.map_path(key) == map_rel

@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator
 
 from engine import project_ops as ops
-from engine.json_io import read_json, write_json_atomic
+from engine.json_io import read_json, write_json_atomic, write_json_new
 from engine.project_save import SaveError, refused, save_documents
 from engine.project_scaffold import ensure_starter_files
 
@@ -349,7 +349,7 @@ class Project:
         scene, map_path, skeleton = ops.add_map(scene, path, width=20, height=15, ground=ops.STARTER_FLOOR,
                                                 border=ops.STARTER_WALL, tilesets=self.project_tilesets())
         self._claim_room_files(label, path, map_path)
-        self._write_map_file(map_path, skeleton)
+        self._write_map_file(map_path, skeleton, new_room=label)
         self._record(before)
         self.world, self.world_dirty = world, True
         self.scenes[key] = scene
@@ -368,7 +368,7 @@ class Project:
         self._claim_room_files(label, path, map_path)  # (before the kit: a refused room installs nothing)
         installed = self.ensure_hd2d_kit()
         before = self._snapshot()
-        self._write_map_file(map_path, skeleton)
+        self._write_map_file(map_path, skeleton, new_room=label)
         self._record(before)
         self.world, self.world_dirty = world, True
         self.scenes[key] = scene
@@ -436,7 +436,7 @@ class Project:
         self._record(before)
         self._store(key, scene, player_ids)
 
-    def _write_map_file(self, map_path: str, skeleton: Doc) -> None:
+    def _write_map_file(self, map_path: str, skeleton: Doc, *, new_room: str | None = None) -> None:
         # The map file holds only the size, tileset and empty layers (the painted tiles live
         # in the room document), so it is written straight away: the Studio and play-tests
         # load it from disk even before the room is saved.
@@ -444,8 +444,16 @@ class Project:
             return
         ensure_starter_files(self.root)
         target = self.root / map_path
-        if not target.is_file():
-            write_json_atomic(target, skeleton)
+        if new_room is None and target.is_file():
+            return  # (a room's own map, made before: kept as it is)
+        try:  # F15: published only where nothing is, so never over anything that appeared since the room's paths were checked
+            write_json_new(target, skeleton)
+        except FileExistsError as exc:
+            what = "a link" if target.is_symlink() else "a folder" if target.is_dir() else "a file"
+            room = f"the room '{new_room}' wasn't added" if new_room is not None else "the map wasn't made"
+            raise ops.OpError(f"There is now {what} at {map_path} (it appeared while the map was being made), so it "
+                              f"was left as it is and {room}: Mesh never takes over a file it didn't make. Move "
+                              f"{map_path} out of the way, then try again.") from exc
 
     # --- tilesets -------------------------------------------------------------------------
     def map_path(self, key: str | None = None) -> str | None:
