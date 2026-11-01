@@ -138,9 +138,6 @@ def handle_pending_scene_load(controller: Any) -> bool:
     path = controller._pending_scene_path
     controller._pending_scene_path = None
 
-    if hasattr(controller.window, "_mesh_event_queue"):
-        controller.window._mesh_event_queue = []
-
     inputs = SceneLoadInputs(
         scene_path=path,
         current_scene_path=controller.current_scene_path,
@@ -161,6 +158,21 @@ def handle_pending_scene_load(controller: Any) -> bool:
     # Prefer explicitly preserved state (from request_scene_reload), fallback to current
     controller._preserved_camera_state = None
 
+    # A queued reload checks the scene before anything is cleared (F7): refused, the running scene stays as it was.
+    from engine.scene_runtime import reload_check  # noqa: PLC0415
+
+    scene = None
+    if plan.is_reload:
+        scene, refusal = reload_check.check(controller, path, "queued")
+        if refusal is not None:
+            controller._clear_assets_on_next_load = False
+            print(f"[Mesh][Scene] {refusal['message']}")
+            reload_check.publish(controller, refusal)
+            return True
+
+    if hasattr(controller.window, "_mesh_event_queue"):
+        controller.window._mesh_event_queue = []
+
     if plan.should_clear_assets:
         print("[Mesh][Assets] Clearing texture cache before reload")
         controller.window.assets.clear()
@@ -169,11 +181,26 @@ def handle_pending_scene_load(controller: Any) -> bool:
     controller._clear_assets_on_next_load = False
 
     print(f"[Mesh][Scene] Loading pending scene '{path}'")
-    controller.load_scene(path)
+    try:
+        reload_check.hand_over(controller, path, scene)
+        controller.load_scene(path)
+    except Exception as exc:
+        if plan.is_reload:
+            reload_check.publish(controller, reload_check.result(
+                ok=False, scene_path=path, route="queued", reason="construction_failed", stage="construction",
+                message=(f"Scene reload failed while it was being built ({type(exc).__name__}: {exc}); the scene that "
+                         "was running had already been cleared. Fix it and reload again."),
+                preserved=False, errors=[f"{type(exc).__name__}: {exc}"]))
+        raise
+    finally:
+        reload_check.take(controller, path)
 
     if plan.is_reload and plan.saved_camera_pos is not None:
         print(f"[Mesh][Scene] Restoring camera to {plan.saved_camera_pos}")
         _restore_camera(controller.window, plan.saved_camera_pos, plan.saved_zoom)
+    if plan.is_reload:
+        reload_check.publish(controller, reload_check.result(ok=True, scene_path=path, route="queued",
+                                                             message="Scene reloaded."))
 
     return True
 
@@ -247,7 +274,10 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
         _log_swallow("SCEN-001", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
         pass
-    scene = controller.window.scene_loader.load_scene(scene_path)
+    from engine.scene_runtime.reload_check import take  # noqa: PLC0415
+
+    checked = take(controller, scene_path)  # (a reload checked this scene before clearing anything: built from that)
+    scene = checked if checked is not None else controller.window.scene_loader.load_scene(scene_path)
     controller.current_scene_path = scene_path
     # The room this is, also when it comes from a save slot (which records the room it was made in).
     controller.room_path = room_memory.room_key(getattr(controller.window.scene_loader, "last_saved_from", None) or scene_path)

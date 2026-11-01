@@ -932,6 +932,7 @@ class EditorModeController:
             "current_scene_path": str(getattr(scene_controller, "current_scene_path", "") or ""),
             "dirty": bool(self.scene_dirty),
             "revision": int(getattr(self, "content_revision", 0)),
+            "last_reload": getattr(scene_controller, "last_reload_result", None),  # (F7: a refused hot reload, why)
             "selected_entity_ids": selected_entity_ids(self),
         }
 

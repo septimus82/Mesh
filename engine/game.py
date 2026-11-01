@@ -983,6 +983,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             base_on_close(self)
 
     def close(self) -> None:
+        if getattr(self, "closed", False):
+            return  # (pyglet closes a window again when it is collected: nothing to release, no active window to keep)
         editor = getattr(self, "editor_controller", None)
         stop_live_bridge = getattr(editor, "stop_live_bridge", None) if editor is not None else None
         if callable(stop_live_bridge):

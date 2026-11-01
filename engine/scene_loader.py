@@ -133,6 +133,14 @@ SCENE_TOP_LEVEL_KEYS = frozenset({
 })
 
 
+class SceneValidationFailed(ValueError):
+    """``load_scene(..., strict=True)``: the scene failed validation (where a plain load gives the empty fallback)."""
+
+    def __init__(self, scene_path: str, errors: List[str]) -> None:
+        super().__init__(f"Scene '{scene_path}' failed validation: {'; '.join(errors[:3])}")
+        self.errors = list(errors)
+
+
 def document_key(path: Path | str) -> str:
     """Normalised key for an open scene document (case- and separator-insensitive on Windows)."""
     return str(Path(path).resolve()).replace("\\", "/").lower()
@@ -160,8 +168,10 @@ class SceneLoader:
 
         return self._apply_entity_defaults(raw_entity)
 
-    def load_scene(self, scene_path: str) -> Dict[str, Any]:
-        """Return the full scene dictionary from an open document or a JSON file."""
+    def load_scene(self, scene_path: str, *, strict: bool = False) -> Dict[str, Any]:
+        """Return the full scene dictionary from an open document or a JSON file. ``strict``: a scene that fails
+        validation raises SceneValidationFailed instead of giving the empty fallback (F7: a hot reload checks the
+        scene this way before it takes the running one down)."""
         full_path = resolve_path(scene_path)
         document = self.documents.get(document_key(full_path))
         if document is not None:
@@ -202,6 +212,8 @@ class SceneLoader:
         scene_report = self.validate_scene(scene, validate_entities=False)
         self._log_validation_report(scene_report, context=f"Scene '{scene.get('name', '<unnamed>')}'")
         if not scene_report.ok:
+            if strict:
+                raise SceneValidationFailed(scene_path, scene_report.errors)
             print(
                 f"[Mesh][SceneLoader] ERROR: Scene '{scene.get('name', '<unnamed>')}' failed validation; "
                 "loading empty fallback",
