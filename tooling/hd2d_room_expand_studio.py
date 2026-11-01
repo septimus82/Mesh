@@ -60,7 +60,7 @@ def _expand(d: Any, width: int, depth: int) -> str:
     d.type_into("grow_width", str(width))
     d.type_into("grow_depth", str(depth))
     _press(d, "Expand room", _right)
-    d.frame(3)
+    d.advance(3)
     return str(d.studio.message)
 
 
@@ -128,7 +128,7 @@ def studio(out: Path) -> dict[str, Any]:
         d.type_into("room_width", "40")
         d.type_into("room_depth", "30")
         _press(d, "Create", _right)
-        d.frame(5)
+        d.advance(5)
         d.studio._edit(lambda s: ops.place_structure(s, "assets/models/cottage.glb", 1000.0, 600.0)[0], "A cottage.")  # (Studio's
         d.studio._edit(lambda s: ops.paste_entity(s, "meadow", {"name": "Villager"}, 1150.0, 820.0)[0], "A villager.")
         _press(d, "Save")  # own edit path: its Models browser and Objects list are M20/M21's, checked there)
@@ -211,14 +211,14 @@ def lakeside(out: Path, original: str) -> dict[str, Any]:
                               "same_content": _content(d.studio.project.scene()) == _content(after)}
         k = d.arcade.key
         d.key(k.F4)
-        d.frame(30)
+        d.advance(30)
         r = d.window.hd2d_renderer
         report["studio_play"] = {"mode": d.studio.mode, "ground_hi": list(r.settings.ground.hi),
                                  "bounds": list(r.settings.camera.bounds or ()),
                                  "tilemap_size": list(d.window.scene_controller.tilemap_instance.map_size)}
         d.picture(pics / "03_lakeside_village_play.png")
         d.key(k.F4)
-        d.frame(3)
+        d.advance(3)
     finally:
         d.close()
     report["walk_unexpanded"] = walk_east(control, "start", start_x=1200.0)

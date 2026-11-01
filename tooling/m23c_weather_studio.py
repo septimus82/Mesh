@@ -72,10 +72,10 @@ def _tip(d: Any, tip: str) -> None:
 
     if not d._scroll_panels(find):
         raise AssertionError(f"no button with the tip {tip!r}")
-    d.frame()
+    d.advance()
     r = find().rect
     d.click(r.left + r.width / 2, r.bottom + r.height / 2)
-    d.frame(2)
+    d.advance(2)
 
 
 def _strength(d: Any, kind: str, key: str) -> None:
@@ -112,7 +112,7 @@ def _drift(d: Any, at: tuple[float, float], seconds: float = 0.5) -> dict[str, A
     """The leaves' movement in the preview: the same particles probed ``seconds`` apart (the preview's clock run by
     Studio's own frames); their median displacement (m/s, east, north)."""
     a = _probe(d, at)
-    d.frame(round(seconds * 60))
+    d.advance(round(seconds * 60))
     b = _probe(d, at)
     np = a["_np"]
     common, ia, ib = np.intersect1d(a["ids"], b["ids"], return_indices=True)
@@ -126,7 +126,7 @@ def _drift(d: Any, at: tuple[float, float], seconds: float = 0.5) -> dict[str, A
 def _picture(d: Any, path: Path) -> None:
     """A picture with the mouse resting over the view (no button's tooltip showing)."""
     d.window.dispatch_event("on_mouse_motion", d.window.width // 3, d.window.height // 2, 0, 0)
-    d.frame(2)
+    d.advance(2)
     d.picture(path)
 
 
@@ -136,7 +136,7 @@ def _open_room(d: Any) -> None:
     key = next(k for k, _l, path in d.studio.project.rooms() if path.endswith("hills.json"))
     if d.studio.project.current != key:
         d.button(d.studio.project.label(key))
-        d.frame(3)
+        d.advance(3)
     m20c._look_at(d, VIEW[0], VIEW[1], 20.0)
 
 
@@ -168,7 +168,7 @@ def creator(out: Path) -> dict[str, Any]:
         report["before"] = {"state": _state(d.studio.project.scene()), "runtime": _runtime(d.window),
                             "left_environment_has_button": None}
         d.studio.set_left_tab("environment")
-        d.frame()
+        d.advance()
         report["before"]["left_environment_has_button"] = d.has_button("Weather particles...")
         d.button("Weather particles...")
         report["panel_open"] = d.studio.panel
@@ -176,7 +176,7 @@ def creator(out: Path) -> dict[str, Any]:
 
         # 2. rain, previewed
         _strength(d, "rain", "steady")
-        d.frame(40)
+        d.advance(40)
         report["rain"] = {"state": _state(d.studio.project.scene()), "runtime": _runtime(d.window),
                           "probe": {k2: v for k2, v in _probe(d, VIEW).items() if not k2.startswith(("_", "ids", "pos"))}}
         _picture(d, pics / "c02_rain_day.png")
@@ -184,7 +184,7 @@ def creator(out: Path) -> dict[str, Any]:
         # 3. snow instead: flakes falling and settled on the ground
         _strength(d, "rain", "none")
         _strength(d, "snow", "heavy")
-        d.frame(120)
+        d.advance(120)
         report["snow"] = {"state": _state(d.studio.project.scene()), "runtime": _runtime(d.window),
                           "probe": {k2: v for k2, v in _probe(d, VIEW).items() if not k2.startswith(("_", "ids", "pos"))}}
         _picture(d, pics / "c03_snow_day.png")
@@ -193,13 +193,13 @@ def creator(out: Path) -> dict[str, Any]:
         _strength(d, "wind", "heavy")
         d.button("Gusty")
         d.button("To North")
-        d.frame(30)
+        d.advance(30)
         report["leaves"] = {"state": _state(d.studio.project.scene()), "runtime": _runtime(d.window)}
         _picture(d, pics / "c04_snow_and_leaves_gusty_day.png")
 
         # 6. snow hidden, the leaves kept
         d.button("Snow shown: On")
-        d.frame(30)
+        d.advance(30)
         report["snow_hidden"] = {"state": _state(d.studio.project.scene()), "runtime": _runtime(d.window),
                                  "leaves_drift": _drift(d, VIEW)}
         _picture(d, pics / "c05_leaves_only_day.png")
@@ -209,12 +209,12 @@ def creator(out: Path) -> dict[str, Any]:
         d.button("Camera and sun...")
         d.button("Night")
         d.button("Weather particles...")
-        d.frame(60)
+        d.advance(60)
         _picture(d, pics / "c06_snow_and_leaves_night.png")
         import m20c_material_study as m20c
 
         m20c._look_at(d, 5.0, 6.0, 26.0)  # (the whole cottage: snow in front of it drawn, behind it hidden by it)
-        d.frame(30)
+        d.advance(30)
         _picture(d, pics / "c07_snow_by_the_cottage_night.png")
         m20c._look_at(d, VIEW[0], VIEW[1], 20.0)
 
@@ -231,11 +231,11 @@ def creator(out: Path) -> dict[str, Any]:
 
         # indoors: no rain or snow (the leaves stay); then outdoors again
         d.button("Outdoors (rain and snow fall): On")
-        d.frame(5)
+        d.advance(5)
         report["indoors"] = {"state": _state(d.studio.project.scene()), "runtime": _runtime(d.window),
                              "message": d.studio.message}
         d.button("Outdoors (rain and snow fall): Off")
-        d.frame(5)
+        d.advance(5)
 
         # 7. save
         d.key(k.S, k.MOD_CTRL)
@@ -252,7 +252,7 @@ def creator(out: Path) -> dict[str, Any]:
     try:
         k = d.arcade.key
         _open_room(d)
-        d.frame(20)
+        d.advance(20)
         report["reopened"] = {"state": _state(d.studio.project.scene()), "runtime": _runtime(d.window),
                               "unsaved": sorted(d.studio.project.dirty)}
         _picture(d, pics / "c08_reopened_night.png")
@@ -260,23 +260,23 @@ def creator(out: Path) -> dict[str, Any]:
         cycles = []
         for n in range(2):
             d.key(k.F4)
-            d.frame(40)
+            d.advance(40)
             cycles.append({"mode": d.studio.mode, "runtime": _runtime(d.window),
                            "master_volume": d.window.audio.master_volume})
             if n == 0:
                 _picture(d, pics / "c09_play_night.png")
             d.key(k.F4)
-            d.frame(10)
+            d.advance(10)
             cycles[-1]["after_stop"] = {"mode": d.studio.mode, "runtime": _runtime(d.window)}
         report["play_stop"] = cycles
         # another room: no weather leaks into it; and back
         start = next(k2 for k2, _l, path in d.studio.project.rooms() if path.endswith("start.json"))
         d.button(d.studio.project.label(start))
-        d.frame(10)
+        d.advance(10)
         report["other_room"] = {"room": d.studio.project.current, "runtime": _runtime(d.window),
                                 "particles": (d.studio.project.scene().get("settings") or {}).get("particles")}
         _open_room(d)
-        d.frame(10)
+        d.advance(10)
         report["back"] = _runtime(d.window)
     finally:
         d.close()
@@ -399,7 +399,7 @@ def compat(out: Path) -> dict[str, Any]:
         report["unsaved_on_open"] = sorted(d.studio.project.dirty)
         report["runtime"] = _runtime(d.window)
         d.studio.set_left_tab("environment")
-        d.frame()
+        d.advance()
         d.button("Weather particles...")
         report["panel_says"] = [t for t in d.labels() if t.startswith(("Rain:", "Snow:", "Windborne", "Kept as set",
                                                                        "Weather effects"))]
@@ -442,7 +442,7 @@ def extras(out: Path) -> dict[str, Any]:
         k = d.arcade.key
         _open_room(d)
         d.studio.set_left_tab("environment")
-        d.frame()
+        d.advance()
         d.button("Weather particles...")
         for key, count in (("light", 800), ("steady", 2000), ("heavy", 4500)):
             _strength(d, "snow", key)

@@ -78,7 +78,7 @@ def _press(d: Any, text: str, where: Callable[[Any], bool] = lambda w: True) -> 
             d.click(r.left + r.width / 2, r.bottom + r.height / 2)
             return
         d.window.dispatch_event("on_mouse_scroll", d.window.width - 100, d.window.height / 2, 0, -1)
-        d.frame()
+        d.advance()
     raise AssertionError(f"no button {text!r}")
 
 
@@ -200,7 +200,7 @@ def studio2d(out: Path) -> dict[str, Any]:
         for i in range(5):
             d.key(k.F4)
             for _ in range(20):
-                d.frame()
+                d.advance()
                 time.sleep(1 / 60)
             audio = d.window.audio
             row: dict[str, Any] = {"mode": d.studio.mode, "loops": _loops(audio), "registered": _registered()}
@@ -217,7 +217,7 @@ def studio2d(out: Path) -> dict[str, Any]:
                 row["walk"] = walk
                 d.picture(pics / "2d_04_play.png")
             d.key(k.F4)
-            d.frame(5)
+            d.advance(5)
             row["after_stop"] = {"mode": d.studio.mode, "loops": d.window.audio.loops(), "registered": _registered()}
             cycles.append(row)
         report["play_stop"] = cycles
@@ -320,17 +320,17 @@ def studiolake(out: Path) -> dict[str, Any]:
         report["reopened"] = {"same_emitters": again == saved, "unsaved": sorted(d.studio.project.dirty)}
         m20c._look_at(d, 40.0, 29.0, 26.0)
         d.studio.select(next(e["id"] for e in _emitters(_scene(d)) if e["name"] == "Pond water"))
-        d.frame(3)
+        d.advance(3)
         d.picture(pics / "lake_03_reopened_pond_selected.png")
         k = d.arcade.key
         cycles = []
         for _ in range(5):
             d.key(k.F4)
             for _f in range(20):
-                d.frame()
+                d.advance()
             cycles.append({"play": {"mode": d.studio.mode, "loops": d.window.audio.loops(), "registered": _registered()}})
             d.key(k.F4)
-            d.frame(5)
+            d.advance(5)
             cycles[-1]["stop"] = {"mode": d.studio.mode, "loops": d.window.audio.loops(), "registered": _registered()}
         report["play_stop"] = cycles
     finally:

@@ -28,6 +28,7 @@ from typing import Any, Callable
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tooling"))
+import review_media  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame, _total_pixels  # noqa: E402  # the Stage 2 hidden-window harness
 from hd2d_floors_demo import _feet, hold_key  # noqa: E402
 
@@ -409,7 +410,7 @@ def cameras(out: Path) -> dict[str, Any]:
     length = min(len(c) for c in clips)
     frames = [grid([c[i] for c in clips], [LABELS[n] for n in names], (SIZE[0] // 4, SIZE[1] // 4))
               for i in range(length)]
-    frames[0].save(out / "walk.webp", save_all=True, append_images=frames[1:], duration=67, loop=0, quality=80)
+    review_media.save_clip(frames, out / "walk.webp", duration=67, quality=80)
     return {"size": list(SIZE), "view_m": VIEW_M, "treatments": results}
 
 
@@ -554,14 +555,14 @@ def play_cost(out: Path) -> dict[str, Any]:
     project = new_project(out, "project_play")
     d = StudioDriver(project)
     try:
-        d.frame(10)
+        d.advance(10)
         d.key(d.arcade.key.F4)  # Play
-        d.frame(30)
+        d.advance(30)
         def driver_frames() -> float:
             whole = []
             for _ in range(60):
                 t = time.perf_counter()
-                d.frame()
+                d.frame()  # (timed: the frame as it was measured, read-back included)
                 whole.append((time.perf_counter() - t) * 1000)
             return round(statistics.median(whole), 2)
 
@@ -615,7 +616,7 @@ def recommended(out: Path) -> dict[str, Any]:
     before = _keep_spots(out, "before", session(new_project(out, "project_before"), out, "before"))
     after = session(new_project(out, "project_after", stage6a=False), out, "after")
     clip = after.pop("_clip")
-    clip[0].save(out / "after_walk.webp", save_all=True, append_images=clip[1:], duration=67, loop=0, quality=80)
+    review_media.save_clip(clip, out / "after_walk.webp", duration=67, quality=80)
     _keep_spots(out, "after", after)
     labels = ("Stage 6A template", "Recommended HD-2D standard")
     pair(out, "before", "after", labels, SHOTS, "recommended")
