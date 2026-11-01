@@ -149,7 +149,7 @@ def check(out: Path, blender: Path | None = None) -> dict[str, Any]:
             left, right, bottom, top = view._rect()
             assert left < spot[0] < right and bottom < spot[1] < top, f"{at} m is off the 3D view ({spot})"
             d.window.dispatch_event("on_mouse_motion", spot[0], spot[1], 0, 0)
-            d.frame()
+            d.advance()
             if picture:
                 d.picture(out / picture)
             d.click(*spot)
@@ -181,7 +181,7 @@ def check(out: Path, blender: Path | None = None) -> dict[str, Any]:
             {"op": "place_structure", "model": "tower", "x": 100, "y": 100}]})
         listing = studio.ai.read_live_scene().get("models", [])
         studio.open_ai()
-        d.frame()
+        d.advance()
         d.picture(out / "09_ai_proposal.png")
         d.button("Accept")
         structures_now = [dict(st) for st in (studio.project.scene().get("settings") or {})["hd2d"]["structures"]]
@@ -342,14 +342,14 @@ def _performance(d: StudioDriver, project: Path, art: Path) -> dict[str, Any]:
     def reopen() -> None:
         view._assets = None  # the browser reads the catalogue again, as when it is opened
         studio._rebuild()
-        d.frame()
+        d.frame()  # (timed: the frame as it was measured, read-back included)
 
     open_ms = timed(reopen)
 
     def ordinary() -> None:
         studio.panel = "inspect"  # Mesh Studio's ordinary right panel, measured the same way (rebuild and draw)
         studio._rebuild()
-        d.frame()
+        d.frame()  # (timed: the frame as it was measured, read-back included)
 
     ordinary_ms = timed(ordinary)
     studio.panel = "structures"

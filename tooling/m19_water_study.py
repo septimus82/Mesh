@@ -22,6 +22,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tooling"))
 import hd2d_visual_study as study  # noqa: E402
+import review_media  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame, _gl_counts  # noqa: E402
 
 PX = 32.0
@@ -272,8 +273,7 @@ def footsteps(out: Path) -> dict[str, Any]:
         report["water_step_events_seen"] = sum(1 for n in names if n == "water_step")
         report["ripples_alive_after"] = len(game.window.water_steps)
         if clip:
-            clip[0].save(out / "puddle_walk.webp", save_all=True, append_images=clip[1::2], duration=66, loop=0,
-                         quality=85, method=6)
+            review_media.save_clip([clip[0], *clip[1::2]], out / "puddle_walk.webp", duration=66, quality=85, method=6)
         report["clip_frames"] = len(clip[::2])
     finally:
         game.close()
@@ -373,7 +373,7 @@ def studio_workflow(out: Path) -> dict[str, Any]:
         d.button("Water")
         at = d.screen(spot)
         d.window.dispatch_event("on_mouse_motion", *at, 0, 0)
-        d.frame()
+        d.advance()
         d.click(*at)
         new_id = studio.selected
         entity = ops.find_entity(studio.project.scene(), new_id) if new_id else {}
@@ -410,10 +410,10 @@ def studio_workflow(out: Path) -> dict[str, Any]:
         entity = ops.find_entity(d.studio.project.scene(), new_id)
         report["reopened"] = ops.water_of(entity)
         d.key(d.arcade.key.F4)
-        d.frame(20)
+        d.advance(20)
         report["in_play"] = {"mode": d.studio.mode, "water_surfaces": len(getattr(d.window, "water_bodies", []))}
         d.key(d.arcade.key.F4)
-        d.frame(3)
+        d.advance(3)
         report["after_stop_mode"] = d.studio.mode
     finally:
         d.close()
@@ -576,14 +576,14 @@ def _studio_lifecycle(out: Path) -> dict[str, Any]:
         pond = next(e["id"] for e in ops.entities(driver.studio.project.scene()) if e.get("name") == "Pond")
         for i in range(10):
             driver.studio._edit(lambda s, i=i: ops.set_water(s, pond, width=200 + 4 * i), "")
-            driver.frame(2)
+            driver.advance(2)
         rows["after_10_edits"] = driver.gl_counts()
         f4 = driver.arcade.key.F4
         for _ in range(5):
             driver.key(f4)
-            driver.frame(10)
+            driver.advance(10)
             driver.key(f4)
-            driver.frame(3)
+            driver.advance(3)
         rows["after_5_play_stop"] = driver.gl_counts()
     finally:
         driver.close()

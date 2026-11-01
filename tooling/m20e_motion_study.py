@@ -23,6 +23,7 @@ sys.path.insert(0, str(REPO / "tooling"))
 import hd2d_visual_study as study  # noqa: E402
 import m20a_terrain_study as m20a  # noqa: E402
 import m20d_scatter_study as m20d  # noqa: E402
+import review_media  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame  # noqa: E402
 
 PX = 32.0
@@ -145,8 +146,7 @@ def _game_frame(game: HiddenGame) -> Any:
 
 
 def _save_clip(frames: list[Any], path: Path, fps: float = 10) -> None:
-    frames[0].save(path, save_all=True, append_images=frames[1:], duration=round(1000 / fps), loop=0, quality=65,
-                   method=6)
+    review_media.save_clip(frames, path, duration=round(1000 / fps), quality=65, method=6)
 
 
 def _film_still_camera(game: HiddenGame, x: float, y: float, seconds: float, fps: int = 10,
@@ -405,7 +405,7 @@ def studio(out: Path) -> dict[str, Any]:
         s, k = d.studio, d.arcade.key
         m20c._look_at(d, *WIND_VIEW, 18.0)
         d.picture(out / "studio_panel_before.png")
-        report["still_while_off"] = bool(np.array_equal(canvas(), (d.frame(20), canvas())[1]))
+        report["still_while_off"] = bool(np.array_equal(canvas(), (d.advance(20), canvas())[1]))
         undo0 = len(s.project._undo)
         t = time.perf_counter()
         d.button("Breeze")
@@ -442,7 +442,7 @@ def studio(out: Path) -> dict[str, Any]:
         d.button("Animation: on")
         m20c._look_at(d, *WIND_VIEW, 18.0)
         report["animation_off"] = {"message": s.message, **settings(),
-                                   "still": bool(np.array_equal(canvas(), (d.frame(20), canvas())[1]))}
+                                   "still": bool(np.array_equal(canvas(), (d.advance(20), canvas())[1]))}
     finally:
         d.close()
     return report

@@ -20,6 +20,10 @@ if os.getenv("MESH_TEST_REAL_AUDIO") != "1" and os.getenv("MESH_TEST_BLOCK_ARCAD
 
 from engine.behaviours import load_builtin_behaviours  # noqa: E402
 
+# The studies' animated WebP clips are for a person to look at and nothing asserts on them; encoding them was a large
+# part of the GPU lane (#422). Their frames are still drawn. MESH_REVIEW_MEDIA=1 writes them (tooling/review_media.py).
+os.environ.setdefault("MESH_REVIEW_MEDIA", "0")
+
 
 class _ArcadeBlocker(importlib.abc.MetaPathFinder):
     """Block arcade imports for headless-fast enforcement."""
