@@ -13,6 +13,11 @@ Both ends of a change go through ``engine.authoring``. What differs is where the
   what to do. Only "no session record at all" counts as closed, and ``apply`` checks it again
   just before it writes.
 
+Writing the files is ``Project.save`` (F3, ``engine.project_save``): every changed file or none. A save
+that fails returns ``reason: "save_failed"`` with its report as ``save``: the stage and reason code,
+what happened to each file, and, if putting files back failed too, ``recovery_required`` and where
+each previous version is kept. The changes themselves are not kept anywhere: apply them again.
+
 Every result is a plain dict with ``ok``, and on failure a ``reason`` and a ``message`` a person
 or an AI can act on.
 """
@@ -26,6 +31,7 @@ from urllib import error
 
 from engine import authoring
 from engine.mcp_server.live_session_client import _request_json, session_state
+from engine.project_save import SaveError
 from engine.studio_project import Project
 
 Doc = dict[str, Any]
@@ -184,5 +190,10 @@ def apply(root: str | Path, changes: list[Doc], *, dry_run: bool = False, title:
         written = project.save()
     except authoring.ChangeError as err:
         return _fail("invalid_change", str(err), index=err.index, op=err.op)
+    except SaveError as err:
+        again = ("Apply the changes again once the files are put back." if err.report["recovery_required"]
+                 else "Apply them again once the problem is fixed.")
+        return _fail("save_failed", f"The changes were checked but not saved: {err} {again}",
+                     save={**err.report, "unsaved_edits_kept": False})
     return {"ok": True, "source": "files", "summary": authoring.summarize(before, after),
             "created": {str(k): v for k, v in result["created"].items()}, "written": written}

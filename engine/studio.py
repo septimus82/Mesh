@@ -614,7 +614,9 @@ class Studio(InspectorMixin, SoundMixin):
         try:
             written = self.project.save()
         except (OSError, ops.OpError) as err:
-            self._say(f"Couldn't save: {err}", ok=False)
+            report = getattr(err, "report", None)  # (engine.project_save.SaveError: the edits are still here, unsaved)
+            kept = " Your changes are still here, unsaved." if report and report["stage"] != "validate" else ""
+            self._say(f"Couldn't save: {err}{kept}", ok=False)
             return False
         self._rebuild()
         if self.project.last_save_backups:
