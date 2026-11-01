@@ -4,16 +4,20 @@ A save changes several files: an HD-2D room's map file, the changed rooms, the w
 holding the shared player. Each used to be written in turn, so a failure part way left some new and some old. Now:
 
 1. **Serialised first.** Every document is turned into its bytes before any file is touched.
-2. **Staged beside each file.** The new bytes go to ``<name>.save-<id>.new``; a file already there is copied (its
-   time kept) to ``<name>.save-<id>.original``, the copy checked against it. A file something else changed since
-   Studio read it is also kept as ``<name>.outside-change.bak`` (never replacing an earlier, different one). A failure
-   here deletes what was staged: no project file was changed.
+2. **Staged beside each file.** The new bytes go to ``<name>.save-<id>.new``; a file already there is kept as
+   ``<name>.save-<id>.original`` (a hard link, or a copy with its time where there are none), checked against it. A file something else changed since
+   Studio read it is also kept as ``<name>.outside-change.bak`` (never replacing an earlier, different one). Every
+   one of these is created exclusively, never over an existing file (``<id>`` is 128 random bits, but a name already
+   taken stops the save, ``temporary_file_exists``, and that file is left alone), and only files this save created
+   are ever moved or deleted. A failure here deletes what was staged: no project file was changed.
 3. **Committed in order.** Each staged file replaces its target (``os.replace``), after checking the target is still
    the file that was copied (or still absent). If one fails, the ones already replaced are put back from their
    ``.original`` copies (a file that wasn't there before is deleted), and the save fails: the project on disk is as
    it was.
 4. **Rollback that can't finish** keeps the ``.original`` copy of each document it couldn't put back and the save
-   fails, naming each: ``needs_recovery`` in the report.
+   fails, naming each: ``needs_recovery`` in the report. A file something else changed after this save wrote it
+   (its bytes no longer what was written) is never put back over or deleted: it stays as that program wrote it, its
+   ``.original`` is kept, and it is a ``needs_recovery`` with ``problem: "changed_after_save"``.
 
 Only once every document is committed is the save a success; then the copies are deleted. Every outcome is a report
 (``SaveError.report`` on failure): stage, reason code, message, and what happened to each document.
@@ -25,12 +29,13 @@ a killed process: files are replaced one at a time and nothing is fsynced, so a 
 
 from __future__ import annotations
 
+import contextlib
 import os
 import secrets
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO, Callable
 
 from engine import project_ops as ops
 from engine.json_io import dumps_stable
@@ -53,9 +58,10 @@ class _Target:
     data: bytes = b""
     existed: bool = False
     stamp: tuple[int, int] | None = None  # (mtime_ns, size) of the file copied to ``original``
-    staged: Path | None = None
-    original: Path | None = None
+    staged: Path | None = None  # (set only once this save has created it, cleared once it is moved: never another's)
+    original: Path | None = None  # (likewise)
     result: str = "not_written"  # not_written | saved | restored | needs_recovery
+    problem: str | None = None  # needs_recovery: put_back_failed | changed_after_save
     made_dirs: list[Path] = field(default_factory=list)
 
 
@@ -65,16 +71,23 @@ def report(stage: str | None, reason: str | None, message: str, targets: list[_T
     def rel(path: Path) -> str:
         return path.relative_to(root).as_posix()
 
-    recovery = [{"path": t.rel, "original": rel(t.original) if t.existed and t.original else None,
-                 "action": (f"copy {rel(t.original)} back over {t.rel}" if t.existed and t.original
-                            else f"delete {t.rel} (it didn't exist before)")}
+    recovery = [{"path": t.rel, "problem": t.problem, "original": rel(t.original) if t.existed and t.original else None,
+                 "action": _action(t, rel(t.original) if t.existed and t.original else None)}
                 for t in targets if t.result == "needs_recovery"]
     return {"ok": stage is None, "stage": stage, "reason": reason, "message": message,
             "documents": [{"path": t.rel, "kind": t.kind, "existed": t.existed, "result": t.result} for t in targets],
-            "committed": [t.rel for t in targets if t.result in ("saved", "needs_recovery")],
+            "committed": [t.rel for t in targets if t.result == "saved" or t.problem == "put_back_failed"],
             "restored": [t.rel for t in targets if t.result == "restored"],
             "needs_recovery": recovery, "recovery_required": bool(recovery),
             "outside_change_backups": list(backups or []), "leftovers": list(leftovers or []), "unsaved_edits_kept": True}
+
+
+def _action(t: _Target, original: str | None) -> str:
+    if t.problem == "changed_after_save":
+        before = f"the version before this save is in {original}" if original else "it didn't exist before this save"
+        return (f"{t.rel} was changed by something else after Mesh wrote it, so it was left as that program wrote "
+                f"it; {before}. Keep the one you want")
+    return f"copy {original} back over {t.rel}" if original else f"delete {t.rel} (it didn't exist before)"
 
 
 def refused(reason: str, message: str, documents: list[tuple[str, str]], root: Path) -> SaveError:
@@ -84,13 +97,37 @@ def refused(reason: str, message: str, documents: list[tuple[str, str]], root: P
 
 
 # --- the file steps (one function each, so tests can make any of them fail) ----------------------------------------
+def _create(path: Path, write: Callable[[BinaryIO], object]) -> None:
+    """Make ``path``, which must not exist (FileExistsError: someone else's file, untouched), and fill it; a failure
+    part way deletes what this call made, and only that."""
+    handle = path.open("xb")
+    try:
+        with handle:
+            write(handle)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            path.unlink()
+        raise
+
+
 def _write_new(path: Path, data: bytes) -> None:
-    with path.open("xb") as handle:
-        handle.write(data)
+    _create(path, lambda handle: handle.write(data))
 
 
 def _preserve(src: Path, dst: Path) -> None:
-    shutil.copy2(src, dst)  # (its time too: put back, it is the file Studio last saw)
+    """Keep ``src`` as a new ``dst`` (never over one), with its time: put back, it is the file Studio last saw. A hard
+    link (the same file under a second name: nothing copied, and replacing ``src`` leaves it as it is), or on a file
+    system without them a copy."""
+    try:
+        os.link(src, dst)
+        return
+    except FileExistsError:
+        raise
+    except OSError:
+        pass
+    with src.open("rb") as source:
+        _create(dst, lambda handle: shutil.copyfileobj(source, handle, 1 << 20))
+    shutil.copystat(src, dst)
 
 
 def _replace(src: Path, dst: Path) -> None:
@@ -114,11 +151,12 @@ def _keep_outside_change(target: Path, seen: float | None) -> Path | None:
     data, n = target.read_bytes(), 1
     while True:
         backup = target.with_name(f"{target.name}.outside-change{'' if n == 1 else f'-{n}'}.bak")
-        if not backup.exists():
-            backup.write_bytes(data)
+        try:
+            _create(backup, lambda handle: handle.write(data))  # (never over an earlier one)
             return backup
-        if backup.is_file() and backup.read_bytes() == data:
-            return backup  # (kept already, by a save that didn't finish)
+        except FileExistsError:
+            if backup.is_file() and not backup.is_symlink() and backup.read_bytes() == data:
+                return backup  # (kept already, by a save that didn't finish)
         n += 1
 
 
@@ -149,7 +187,10 @@ def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict
                        "was written.") from err
         target.data = (text if text.endswith("\n") else text + "\n").encode("utf-8")
 
-    token = secrets.token_hex(4)
+    # Working files are named with 128 random bits, but that isn't what makes them this save's: each is created
+    # exclusively (a file already at that name is someone else's, and stops the save untouched) and recorded only
+    # once created. Only recorded files are ever moved or deleted.
+    token = secrets.token_hex(16)
     leftovers: list[str] = []
     try:
         for target in targets:
@@ -158,24 +199,31 @@ def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict
             for folder in reversed(missing):
                 folder.mkdir()
                 target.made_dirs.append(folder)
-            target.staged = path.with_name(f"{path.name}.save-{token}.new")
             if os.path.lexists(path):
                 target.existed, target.stamp = True, _stamp(path)
                 backup = _keep_outside_change(path, seen.get(target.rel))
                 if backup is not None:
                     backups.append(backup.relative_to(root).as_posix())
-                target.original = path.with_name(f"{path.name}.save-{token}.original")
-                _preserve(path, target.original)
-                if target.original.stat().st_size != target.stamp[1] or _stamp(path) != target.stamp:
+                original = path.with_name(f"{path.name}.save-{token}.original")
+                _preserve(path, original)
+                target.original = original
+                if original.stat().st_size != target.stamp[1] or _stamp(path) != target.stamp:
                     raise OSError(f"{target.rel} changed while it was being copied")
-            _write_new(target.staged, target.data)
-    except BaseException as err:  # (an interrupt too: what was staged is deleted)
+            staged = path.with_name(f"{path.name}.save-{token}.new")
+            _write_new(staged, target.data)
+            target.staged = staged
+    except BaseException as err:  # (an interrupt too: what this save made is deleted)
         for each in targets:
             _discard(each.staged, leftovers, root)
             _discard(each.original, leftovers, root)
         _remove_made_dirs(targets)
         if not isinstance(err, Exception):
             raise
+        if isinstance(err, FileExistsError):
+            taken = err.filename2 or err.filename  # (os.link names the source first)
+            raise fail("stage", "temporary_file_exists", f"Preparing {target.rel} failed: {taken} is already "
+                       "there and isn't this save's, so it was left as it is; no project file was changed.",
+                       leftovers) from err
         raise fail("stage", "stage_failed", f"Preparing {target.rel} failed ({err}); no project file was changed.",
                    leftovers) from err
 
@@ -189,11 +237,11 @@ def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict
                 raise _Changed(f"{target.rel} was changed by something else during the save")
             assert target.staged is not None
             _replace(target.staged, path)
-            target.result = "saved"
+            target.result, target.staged = "saved", None
     except BaseException as err:  # (an interrupt too: never leave a mix behind silently)
         assert failed is not None
         if failed.result == "not_written" and failed.staged and not os.path.lexists(failed.staged):
-            failed.result = "saved"  # (it was replaced before the error arrived: it is put back too)
+            failed.result, failed.staged = "saved", None  # (replaced before the error arrived: put back too)
         _rollback(root, targets, seen)
         for target in targets:
             _discard(target.staged, leftovers, root)
@@ -205,8 +253,9 @@ def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict
         reason = "changed_during_save" if isinstance(err, _Changed) else "commit_failed"
         stuck = [t for t in targets if t.result == "needs_recovery"]
         if stuck:
-            raise fail("rollback", "rollback_incomplete", _stuck_message(failed.rel, err, targets, stuck, root),
-                       leftovers) from err
+            conflict = any(t.problem == "changed_after_save" for t in stuck)
+            raise fail("rollback", "rollback_conflict" if conflict else "rollback_incomplete",
+                       _stuck_message(failed.rel, err, targets, stuck, root), leftovers) from err
         done = sum(t.result == "restored" for t in targets)
         raise fail("commit", reason, f"Writing {failed.rel} failed ({err}). Nothing was saved: "
                    + (f"the {done} file(s) already written were put back as they were, so " if done else "")
@@ -222,22 +271,38 @@ class _Changed(OSError):
     pass
 
 
+def _holds(path: Path, data: bytes) -> bool:
+    """Whether ``path`` is still exactly what this save wrote to it."""
+    try:
+        return path.is_file() and not path.is_symlink() and path.read_bytes() == data
+    except OSError:
+        return False
+
+
 def _rollback(root: Path, targets: list[_Target], seen: dict[str, float]) -> None:
-    """Put back each committed document, last first: its ``.original`` copy, or no file if there wasn't one. One
-    that can't be is left as written, its copy kept (``needs_recovery``)."""
+    """Put back each committed document, last first: its ``.original`` copy, or no file if there wasn't one. One that
+    something else changed (or removed) after this save wrote it is left as it is, with its ``.original`` kept
+    (``changed_after_save``); one that can't be put back is left as written, its copy kept (``put_back_failed``)."""
     for target in reversed(targets):
         if target.result != "saved":
             continue
         path = root / target.rel
+        if not _holds(path, target.data):
+            if not target.existed and not os.path.lexists(path):
+                target.result = "restored"  # (gone again, as it was before this save)
+            else:
+                target.result, target.problem = "needs_recovery", "changed_after_save"
+            continue
         try:
             if target.existed:
                 assert target.original is not None
                 _replace(target.original, path)
+                target.original = None
             else:
                 _unlink(path)
             target.result = "restored"
         except OSError:
-            target.result = "needs_recovery"
+            target.result, target.problem = "needs_recovery", "put_back_failed"
             if path.is_file():
                 seen[target.rel] = path.stat().st_mtime  # (what is there is Studio's own: not an outside change)
 
@@ -253,10 +318,17 @@ def _remove_made_dirs(targets: list[_Target]) -> None:
 
 def _stuck_message(rel: str, err: BaseException, targets: list[_Target], stuck: list[_Target], root: Path) -> str:
     restored = [t.rel for t in targets if t.result == "restored"]
-    steps = "; ".join(
-        f"{t.rel} holds the new version, its previous version is in {t.original.relative_to(root).as_posix()}"
-        if t.existed and t.original else f"{t.rel} is new (delete it to go back)" for t in stuck)
-    return (f"Writing {rel} failed ({err}), and putting the files already written back failed too, so the project on "
+
+    def step(t: _Target) -> str:
+        original = t.original.relative_to(root).as_posix() if t.existed and t.original else None
+        if t.problem == "changed_after_save":
+            return (f"{t.rel} was changed by something else after Mesh wrote it and was left as it is ("
+                    + (f"its version before this save is in {original})" if original else "it didn't exist before)"))
+        return (f"{t.rel} holds the new version, its previous version is in {original}" if original
+                else f"{t.rel} is new (delete it to go back)")
+
+    steps = "; ".join(step(t) for t in stuck)
+    return (f"Writing {rel} failed ({err}), and not every file already written could be put back, so the project on "
             f"disk is a mix of old and new files. RECOVERY NEEDED: {steps}."
             + (f" Put back as they were: {', '.join(restored)}." if restored else "")
             + " Saving again once the problem is fixed writes everything.")

@@ -216,7 +216,8 @@ def test_a_new_file_that_cant_be_taken_back_is_named_for_deletion(root: Path, mo
     with pytest.raises(SaveError) as caught:
         project.save()
     [stuck] = caught.value.report["needs_recovery"]
-    assert stuck == {"path": rel, "original": None, "action": f"delete {rel} (it didn't exist before)"}
+    assert stuck == {"path": rel, "problem": "put_back_failed", "original": None,
+                     "action": f"delete {rel} (it didn't exist before)"}
     assert [d["existed"] for d in caught.value.report["documents"] if d["path"] == rel] == [False]
 
 
@@ -232,6 +233,153 @@ def test_a_new_room_is_taken_away_again_and_an_existing_one_put_back(root: Path,
     existed = {d["path"]: d["existed"] for d in caught.value.report["documents"]}
     assert existed[rel] is False and existed[START] is True
     assert not (root / rel).exists() and _tree(root) == disk
+
+
+# --- working files: only this save's own are ever written over, moved or deleted ------------------------------------
+TOKEN = "0123456789abcdef0123456789abcdef"
+
+
+@pytest.mark.parametrize("taken", [CELLAR + ".save-{t}.new", CELLAR + ".save-{t}.original",
+                                   WORLD + ".save-{t}.new", WORLD + ".save-{t}.original"],
+                         ids=["first-new", "first-original", "later-new", "later-original"])
+def test_a_working_file_name_already_taken_is_left_alone_and_the_save_refused(root: Path, monkeypatch,
+                                                                             taken: str) -> None:
+    project = _open(root)
+    _edit_everything(project)
+    monkeypatch.setattr(project_save.secrets, "token_hex", lambda _n: TOKEN)
+    foreign = root / taken.format(t=TOKEN)
+    foreign.write_bytes(b"someone else's file\n")
+    disk, memory = _tree(root), _memory(project)
+    with pytest.raises(SaveError) as caught:
+        project.save()
+    report = caught.value.report
+    assert (report["stage"], report["reason"]) == ("stage", "temporary_file_exists")
+    assert foreign.name in report["message"] and "isn't this save's" in report["message"]
+    assert foreign.read_bytes() == b"someone else's file\n"
+    assert _tree(root) == disk, "that file and every other as they were; this save's own working files deleted"
+    assert _memory(project) == memory
+
+
+def _without_hard_links(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A file system without hard links (FAT, some network shares): originals are kept as exclusive copies."""
+    def no_link(src: Any, dst: Any) -> None:
+        raise OSError(1, "Operation not permitted", str(src))
+
+    monkeypatch.setattr(project_save.os, "link", no_link)
+
+
+@pytest.mark.parametrize("taken", [CELLAR + ".save-{t}.original", WORLD + ".save-{t}.original"], ids=["first", "later"])
+def test_without_hard_links_an_original_name_already_taken_is_left_alone_too(root: Path, monkeypatch,
+                                                                            taken: str) -> None:
+    _without_hard_links(monkeypatch)
+    project = _open(root)
+    _edit_everything(project)
+    monkeypatch.setattr(project_save.secrets, "token_hex", lambda _n: TOKEN)
+    foreign = root / taken.format(t=TOKEN)
+    foreign.write_bytes(b"someone else's file\n")
+    disk = _tree(root)
+    with pytest.raises(SaveError) as caught:
+        project.save()
+    assert caught.value.report["reason"] == "temporary_file_exists" and foreign.name in str(caught.value)
+    assert _tree(root) == disk
+
+
+def test_without_hard_links_a_failed_save_is_still_put_back_to_the_byte_and_time(root: Path, monkeypatch) -> None:
+    _without_hard_links(monkeypatch)
+    project = _open(root)
+    _edit_everything(project)
+    disk = _tree(root)
+    _failing(monkeypatch, "_replace", lambda n, _a: n == 4)
+    with pytest.raises(SaveError) as caught:
+        project.save()
+    assert caught.value.report["restored"] == ORDER[:3] and _tree(root) == disk
+    monkeypatch.undo()
+    _without_hard_links(monkeypatch)
+    assert project.save() == ORDER and not project.is_dirty
+    _no_save_files(root)
+
+
+def test_the_working_file_names_are_unpredictable(root: Path) -> None:
+    names: list[str] = []
+    real = project_save._write_new
+
+    def spy(path: Path, data: bytes) -> None:
+        names.append(path.name)
+        real(path, data)
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(project_save, "_write_new", spy)
+        project = _open(root)
+        project.edit_scene(_mark, "start")
+        project.save()
+    [name] = names
+    assert len(name.removeprefix("start.json.save-").removesuffix(".new")) == 32  # (128 bits)
+
+
+# --- another program writing a file after this save wrote it -----------------------------------------------------------
+def _then_written_by_another(monkeypatch: pytest.MonkeyPatch, rel: str, fails: str, other: bytes | None) -> None:
+    """Just after this save replaces ``rel``, another program writes ``other`` to it (None: deletes it); then the
+    replace of the file named ``fails`` fails."""
+    real = project_save._replace
+
+    def replace(src: Path, dst: Path) -> None:
+        if Path(dst).name == fails and not Path(src).name.endswith(".original"):
+            raise OSError(28, "injected: no space left on device", str(dst))
+        real(src, dst)
+        if Path(dst).as_posix().endswith(rel) and Path(src).name.endswith(".new"):
+            target = Path(dst)
+            if other is None:
+                target.unlink()
+            else:
+                target.write_bytes(other)
+
+    monkeypatch.setattr(project_save, "_replace", replace)
+
+
+@pytest.mark.parametrize("other", [b'{"edited": "by another program"}\n', None], ids=["rewritten", "removed"])
+def test_a_file_changed_after_this_save_wrote_it_is_never_put_back_over(root: Path, monkeypatch,
+                                                                         other: bytes | None) -> None:
+    project = _open(root)
+    _edit_everything(project)
+    old = {rel: (root / rel).read_bytes() for rel in ORDER}
+    _then_written_by_another(monkeypatch, CELLAR, "start.json", other)
+    with pytest.raises(SaveError) as caught:
+        project.save()
+    report = caught.value.report
+    assert (report["stage"], report["reason"], report["recovery_required"]) == ("rollback", "rollback_conflict", True)
+    [stuck] = report["needs_recovery"]
+    assert (stuck["path"], stuck["problem"]) == (CELLAR, "changed_after_save")
+    assert stuck["original"].startswith(CELLAR + ".save-") and stuck["original"].endswith(".original")
+    assert "Keep the one you want" in stuck["action"] and stuck["original"] in stuck["action"]
+    if other is None:
+        assert not (root / CELLAR).exists(), "the other program's deletion stands"
+    else:
+        assert (root / CELLAR).read_bytes() == other, "the other program's version, exactly"
+    assert (root / stuck["original"]).read_bytes() == old[CELLAR], "and the version before the save, kept"
+    assert report["committed"] == [] and CELLAR not in report["restored"]
+    assert all((root / rel).read_bytes() == old[rel] for rel in ORDER[1:]), "the rest as they were"
+    assert "RECOVERY NEEDED" in str(caught.value) and "changed by something else after Mesh wrote it" in str(caught.value)
+    assert project.is_dirty and "cellar" in project.dirty
+    monkeypatch.undo()
+    project.save()  # (saving again: the other program's version is an outside change, kept beside it first)
+    if other is not None:
+        assert project.last_save_backups == [CELLAR + ".outside-change.bak"]
+        assert (root / (CELLAR + ".outside-change.bak")).read_bytes() == other
+    assert (root / stuck["original"]).read_bytes() == old[CELLAR]
+
+
+def test_a_new_file_changed_after_this_save_wrote_it_is_never_deleted(root: Path, monkeypatch) -> None:
+    project = _open(root)
+    key = project.add_room("Attic")
+    rel = project.path(key)
+    _then_written_by_another(monkeypatch, rel, "main.json", b'{"made": "by another program"}\n')
+    with pytest.raises(SaveError) as caught:
+        project.save()
+    [stuck] = caught.value.report["needs_recovery"]
+    assert (stuck["path"], stuck["problem"], stuck["original"]) == (rel, "changed_after_save", None)
+    assert "it didn't exist before this save" in stuck["action"]
+    assert (root / rel).read_bytes() == b'{"made": "by another program"}\n'
+    _no_save_files(root)
 
 
 # --- HD-2D: a map file resized with its room --------------------------------------------------------------------------
@@ -444,3 +592,31 @@ def test_mesh_author_apply_prints_the_report_and_exits_1(root: Path, tmp_path: P
     assert code == 1 and printed["reason"] == "save_failed"
     assert printed["save"]["recovery_required"] is True and printed["save"]["needs_recovery"][0]["path"] == CELLAR
     assert "Apply the changes again once the files are put back." in printed["message"]
+
+
+@pytest.mark.parametrize("via", ["api", "mcp", "cli"])
+def test_an_agent_is_told_when_another_program_changed_a_file_mid_save(root: Path, tmp_path: Path, monkeypatch,
+                                                                        capsys, via: str) -> None:
+    from engine.mcp_server import tools
+    from mesh_cli import author
+
+    other = b'{"edited": "by another program"}\n'
+    old_cellar = (root / CELLAR).read_bytes()
+    _then_written_by_another(monkeypatch, CELLAR, "start.json", other)
+    if via == "cli":
+        changes = tmp_path / "changes.json"
+        changes.write_text(json.dumps(CHANGES), encoding="utf-8")
+        args = SimpleNamespace(author_command="apply", project=str(root), changes=str(changes), dry_run=False)
+        assert author.handle(args) == 1
+        result = json.loads(capsys.readouterr().out)
+    else:
+        result = (authoring_session.apply(root, CHANGES) if via == "api"
+                  else tools.apply_changes(CHANGES, root=str(root)))
+    assert result["ok"] is False and result["reason"] == "save_failed"
+    save = result["save"]
+    assert (save["stage"], save["reason"], save["recovery_required"]) == ("rollback", "rollback_conflict", True)
+    assert save["unsaved_edits_kept"] is False and save["committed"] == []
+    [stuck] = save["needs_recovery"]
+    assert (stuck["path"], stuck["problem"]) == (CELLAR, "changed_after_save")
+    assert (root / CELLAR).read_bytes() == other and (root / stuck["original"]).read_bytes() == old_cellar
+    assert "Apply the changes again once the files are put back." in result["message"]

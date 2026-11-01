@@ -65,7 +65,11 @@ Only a project with no session record at all is changed directly. `apply_changes
 - `documents`, each with its `path`, `kind`, whether it `existed` and its `result` (`saved`, `restored`, `not_written` or `needs_recovery`);
 - `committed`, `restored` and `outside_change_backups`.
 
-If putting a file back failed too, `recovery_required` is true and `needs_recovery` lists each file with its previous version's path (`original`) and what to do. The reason codes are listed in [docs/reviews/f3_recoverable_saves.md](reviews/f3_recoverable_saves.md). `read_project` on an open Studio includes `last_save`, the report of the person's last save, so an AI can see that a save failed.
+If a file couldn't be put back, `recovery_required` is true and `needs_recovery` lists each such file with:
+
+- its `problem`: `put_back_failed`, or `changed_after_save` when another program changed it after Mesh wrote it, in which case it is left as that program wrote it;
+- its previous version's path (`original`);
+- what to do (`action`). The reason codes are listed in [docs/reviews/f3_recoverable_saves.md](reviews/f3_recoverable_saves.md). `read_project` on an open Studio includes `last_save`, the report of the person's last save, so an AI can see that a save failed.
 
 A batch is a list of changes:
 
