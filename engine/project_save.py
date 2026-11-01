@@ -35,7 +35,7 @@ import secrets
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, BinaryIO, Callable
+from typing import Any, BinaryIO, Callable, Collection
 
 from engine import project_ops as ops
 from engine.json_io import dumps_stable
@@ -169,10 +169,13 @@ def _discard(path: Path | None, leftovers: list[str], root: Path) -> None:
         leftovers.append(path.relative_to(root).as_posix())
 
 
-def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict[str, float]) -> Doc:
+def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict[str, float],
+                   fresh: Collection[str] = ()) -> Doc:
     """Write ``documents`` (``(project-relative path, kind, JSON data)``) as one save; ``seen`` (path -> the mtime Studio
-    last read or wrote) is updated for what ends up written. Returns the report; raises SaveError (nothing written,
-    or everything put back, or ``recovery_required``)."""
+    last read or wrote) is updated for what ends up written. ``fresh``: paths the project has never read or written (a
+    new room's): anything there now (a file, folder or link another tool made since) is never replaced, and the save
+    is refused (``path_taken``, F15). Returns the report; raises SaveError (nothing written, or everything put back,
+    or ``recovery_required``)."""
     targets = [_Target(rel, kind) for rel, kind, _doc in documents]
     backups: list[str] = []
 
@@ -195,6 +198,9 @@ def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict
     try:
         for target in targets:
             path = root / target.rel
+            if target.rel in fresh and os.path.lexists(path):
+                target.existed = True
+                raise _Taken(target.rel)
             missing = [p for p in [path.parent, *path.parent.parents] if not p.exists()]
             for folder in reversed(missing):
                 folder.mkdir()
@@ -219,6 +225,11 @@ def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict
         _remove_made_dirs(targets)
         if not isinstance(err, Exception):
             raise
+        if isinstance(err, _Taken):
+            raise fail("stage", "path_taken", f"{target.rel} is on disk now, but this project never read or wrote it "
+                       "(another program or tool made it after the room was added), so nothing was saved: Mesh never "
+                       f"replaces a file it didn't make. Move {target.rel} out of the way, then save again.",
+                       leftovers) from err
         if isinstance(err, FileExistsError):
             taken = err.filename2 or err.filename  # (os.link names the source first)
             raise fail("stage", "temporary_file_exists", f"Preparing {target.rel} failed: {taken} is already "
@@ -269,6 +280,10 @@ def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict
 
 class _Changed(OSError):
     pass
+
+
+class _Taken(OSError):
+    """A path the project never read or wrote has something on it now (``fresh``)."""
 
 
 def _holds(path: Path, data: bytes) -> bool:

@@ -92,6 +92,7 @@ Every outcome is the same report: `SaveError.report` on failure, and `Project.la
 | `serialize` | `serialize_failed` | A document isn't JSON. Nothing was written. |
 | `stage` | `stage_failed` | Staging or copying a file failed. No project file changed. |
 | `stage` | `temporary_file_exists` | A working file's name was already taken. That file was left alone, and no project file changed. |
+| `stage` | `path_taken` | F15: a room file the project never read or wrote (a new room's) has a file, folder or link on it that appeared after the room was made. It was left alone, and nothing was saved. |
 | `commit` | `commit_failed` | Replacing a file failed. Every file already written was put back. |
 | `commit` | `changed_during_save` | Something else changed a file during the save. That file wasn't replaced, and the others were put back. |
 | `rollback` | `rollback_incomplete` | A file couldn't be put back. Recovery is needed: see `needs_recovery`. |

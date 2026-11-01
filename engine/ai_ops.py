@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -187,7 +188,20 @@ class AIOps:
 
         scene_name = name if name.endswith(".json") else f"{name}.json"
         path = self._scene_path(scene_name)
-        scaffold.create_scene(str(path), template_name=template)
+        if os.path.lexists(path):  # (F14: never taken for a scene just made, and never replaced)
+            what = "a link" if path.is_symlink() else "a folder" if path.is_dir() else "a scene file"
+            return AIOpsResult(False, f"Scene '{scene_name}' wasn't created: there is already {what} at {path}, "
+                                      "left as it is. Choose another name (or read and edit that scene instead).",
+                               {"path": str(path), "reason": "already_exists"})
+        templates = scaffold.list_scene_template_names()
+        if template not in templates:
+            return AIOpsResult(False, f"Scene '{scene_name}' wasn't created: there is no scene template '{template}' "
+                                      f"(templates: {', '.join(templates)}).",
+                               {"path": str(path), "reason": "unknown_template"})
+        if not scaffold.create_scene(str(path), template_name=template):
+            return AIOpsResult(False, f"Scene '{scene_name}' wasn't created: writing {path} failed (or something was "
+                                      "put there meanwhile); see the log. Nothing else was changed.",
+                               {"path": str(path), "reason": "write_failed"})
         return AIOpsResult(True, f"Created scene '{scene_name}'")
 
     def add_entity_from_prefab(

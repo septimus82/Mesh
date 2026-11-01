@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import pickle
 import posixpath
 from contextlib import contextmanager
@@ -39,6 +40,11 @@ def _copy(doc: Any) -> Any:
         return pickle.loads(pickle.dumps(doc, protocol=pickle.HIGHEST_PROTOCOL))
     except (pickle.PicklingError, TypeError, AttributeError):
         return copy.deepcopy(doc)
+
+
+def _norm(rel: str) -> str:
+    """A project-relative path compared as the file system does (Windows: case-insensitive, either slash)."""
+    return posixpath.normpath(str(rel).replace("\\", "/")).casefold()
 
 
 def _older_sheet(target: Path, source: Path) -> bool:
@@ -342,6 +348,7 @@ class Project:
         world, scene, key, path = ops.new_room(self.world, label, self.scenes_dir(), self.player_template())
         scene, map_path, skeleton = ops.add_map(scene, path, width=20, height=15, ground=ops.STARTER_FLOOR,
                                                 border=ops.STARTER_WALL, tilesets=self.project_tilesets())
+        self._claim_room_files(label, path, map_path)
         self._write_map_file(map_path, skeleton)
         self._record(before)
         self.world, self.world_dirty = world, True
@@ -358,6 +365,7 @@ class Project:
         world, scene, key, path = ops.new_room(self.world, label, self.scenes_dir(), self.player_template())
         scene, map_path, skeleton = ops.make_hd2d_room(scene, path, width_m, depth_m, outdoor=outdoor,
                                                        tilesets=self.project_tilesets())
+        self._claim_room_files(label, path, map_path)  # (before the kit: a refused room installs nothing)
         installed = self.ensure_hd2d_kit()
         before = self._snapshot()
         self._write_map_file(map_path, skeleton)
@@ -366,6 +374,25 @@ class Project:
         self.scenes[key] = scene
         self.dirty.add(key)
         return key, installed
+
+    def _claim_room_files(self, label: str, *paths: str) -> None:
+        """F15: a new room's files (its scene and map) must be its own: nothing on disk there yet (a file, a folder or a
+        link this project's rooms don't list, made by hand or by another tool) and no other room's. Mesh never takes
+        one over: OpError naming it, before anything is changed or written. ``save`` checks the scene again."""
+        listed = {_norm(p): lbl for _k, lbl, p in self.rooms()}
+        for rel in paths:
+            other = listed.get(_norm(rel))
+            target = self.root / rel
+            if other is None and not os.path.lexists(target):
+                continue
+            if other is not None:
+                taken = f"{rel} is already the file of the room '{other}'"
+            else:
+                what = "a link" if target.is_symlink() else "a folder" if target.is_dir() else "a file"
+                taken = f"There is already {what} at {rel} that isn't one of this project's rooms"
+            raise ops.OpError(f"{taken}, so the room '{label}' wasn't added and nothing was changed: Mesh never takes "
+                              f"over a file it didn't make. Give the room another name, or move {rel} out of the way "
+                              "first.")
 
     def ensure_hd2d_kit(self) -> bool:
         """The HD-2D starter kit in the project (its models, ground textures and scatter decoration), copied from Mesh
@@ -743,7 +770,10 @@ class Project:
             prefabs = [p for p in catalogue if not (isinstance(p, dict) and p.get("id") == ops.PLAYER_PREFAB)]
             documents.append((self.PREFABS, "prefabs", [ops.player_prefab_entry(self.player), *prefabs]))
         try:
-            outcome = save_documents(self.root, documents, self._seen_on_disk)
+            # A room file this project never read or wrote (a new room's, or a listed room's missing file) is created by
+            # this save: never over something another tool put there meanwhile (F15).
+            fresh = {self.path(key) for key in rooms if self.path(key) not in self._seen_on_disk}
+            outcome = save_documents(self.root, documents, self._seen_on_disk, fresh)
         except SaveError as err:
             self._refused(err)
             raise
