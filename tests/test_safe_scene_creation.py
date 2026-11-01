@@ -272,7 +272,137 @@ def test_create_scene_reports_an_unknown_template_and_a_failed_write(root: Path,
     def disk_full(*_args: Any, **_kwargs: Any) -> None:
         raise OSError(28, "No space left on device")
 
-    monkeypatch.setattr(scaffold.json_io, "write_json_atomic", disk_full)
+    monkeypatch.setattr(scaffold.json_io, "write_json_new", disk_full)  # (the write a new scene uses)
     failed = tools.create_scene(f"{SCENES}/attic", root=str(root))  # (the MCP tool: the same result)
     assert failed["ok"] is False and failed["data"]["reason"] == "write_failed"
     assert not (root / f"{SCENES}/attic.json").exists()
+
+
+# --- publication itself never replaces: something put there at the very last moment survives ----------------------
+ZOO = f"{SCENES}/zoo.json"  # (a new room saved after the start room: one file is already written when it fails)
+
+
+def _competitor(kind: str, path: Path) -> Any:
+    if kind == "a_file":
+        path.write_bytes(MINE)
+        return MINE
+    if kind == "a_folder":
+        path.mkdir()
+        return "folder"
+    _symlink(path, path.with_name("nowhere.json"))  # (a broken link, pointing inside the project)
+    return "link"
+
+
+def _still(kind: str, path: Path, expected: Any) -> bool:
+    if kind == "a_file":
+        return path.read_bytes() == expected and not path.is_symlink()
+    if kind == "a_folder":
+        return path.is_dir() and not any(path.iterdir())
+    return path.is_symlink() and not path.with_name("nowhere.json").exists()
+
+
+@pytest.mark.parametrize("kind", ["a_file", "a_folder", "a_broken_link"])
+def test_something_put_there_at_the_moment_of_publication_survives(root: Path, monkeypatch, kind: str) -> None:
+    from engine import project_save
+
+    project = _open(root)
+    key = project.add_room("Zoo")
+    project.edit_scene(lambda s: {**s, "name": "Start (edited)"}, "start")
+    disk, memory = _tree(root), _memory(project)
+    real, put = project_save._publish_new, {}
+
+    def raced(src: Path, dst: Path) -> None:
+        put["it"] = _competitor(kind, Path(dst))  # (after every check: right before the publication itself)
+        real(src, dst)
+
+    monkeypatch.setattr(project_save, "_publish_new", raced)
+    with pytest.raises(SaveError) as caught:
+        project.save()
+    report = caught.value.report
+    assert (report["stage"], report["reason"]) == ("commit", "path_taken")
+    assert "something was put at packs/core_regions/scenes/zoo.json just as it was saved" in report["message"]
+    assert report["restored"] == [f"{SCENES}/start.json"] and not report["committed"] and not report["recovery_required"]
+    assert _still(kind, root / ZOO, put["it"]), "the newcomer exactly as it was put there"
+    after = {k: v for k, v in _tree(root).items() if not k.startswith(ZOO)}
+    assert after == disk, "the start room put back to the byte and the time; nothing else written or left"
+    assert _memory(project) == memory and key in project.dirty
+    monkeypatch.undo()
+    if kind == "a_folder":
+        (root / ZOO).rmdir()
+    else:
+        (root / ZOO).unlink()
+    assert ZOO in project.save() and not project.is_dirty
+
+
+def test_a_file_system_that_cant_publish_without_replacing_fails_closed(root: Path, monkeypatch) -> None:
+    import errno
+
+    from engine import project_save
+
+    project = _open(root)
+    project.add_room("Zoo")
+    project.edit_scene(lambda s: {**s, "name": "Start (edited)"}, "start")
+    disk = _tree(root)
+
+    def unsupported(_src: Path, dst: Path) -> None:  # (no hard links here: publish_new refuses rather than replace)
+        raise OSError(errno.EPERM, "Operation not permitted", str(dst))
+
+    monkeypatch.setattr(project_save, "_publish_new", unsupported)
+    with pytest.raises(SaveError) as caught:
+        project.save()
+    assert (caught.value.report["stage"], caught.value.report["reason"]) == ("commit", "commit_failed")
+    assert _tree(root) == disk and not (root / ZOO).exists() and project.is_dirty
+
+
+@pytest.mark.parametrize("kind", ["a_file", "a_folder", "a_broken_link"])
+def test_publish_new_never_replaces_anything(tmp_path: Path, kind: str) -> None:
+    from engine.json_io import publish_new
+
+    src, dst = tmp_path / "staged.json", tmp_path / "scene.json"
+    src.write_bytes(b"new\n")
+    it = _competitor(kind, dst)
+    with pytest.raises(FileExistsError):
+        publish_new(src, dst)
+    assert _still(kind, dst, it) and src.read_bytes() == b"new\n"
+    free = tmp_path / "free.json"
+    publish_new(src, free)
+    assert free.read_bytes() == b"new\n" and not src.exists()
+
+
+# --- F14: scaffolding never replaces either -----------------------------------------------------------------------
+def test_create_scene_over_a_broken_link_inside_the_project_is_refused(root: Path) -> None:
+    from engine.tooling import scaffold
+
+    link = root / CELLAR
+    _competitor("a_broken_link", link)
+    destination = link.with_name("nowhere.json")
+    result = AIOps(base_dir=root).create_scene(f"{SCENES}/cellar")
+    assert result.ok is False and result.data["reason"] == "already_exists" and "a link" in result.message
+    assert scaffold.create_scene(str(link)) is False, "the scaffold itself refuses it too (no AIOps check needed)"
+    assert link.is_symlink() and not destination.exists(), "the link untouched, nothing made where it points"
+
+
+def test_a_scene_put_there_while_it_is_being_created_survives(root: Path, monkeypatch) -> None:
+    from engine import json_io
+
+    target = root / f"{SCENES}/attic.json"
+    real = json_io.publish_new
+
+    def raced(src: Any, dst: Any) -> None:
+        Path(dst).write_bytes(MINE)  # (after AIOps' and the scaffold's checks: right before the publication)
+        real(src, dst)
+
+    monkeypatch.setattr(json_io, "publish_new", raced)
+    result = AIOps(base_dir=root).create_scene(f"{SCENES}/attic")
+    assert result.ok is False and result.data["reason"] == "already_exists" and "while it was being created" in result.message
+    assert target.read_bytes() == MINE
+    assert not [p for p in target.parent.iterdir() if p.name.startswith(".attic.json.")], "no temporary file left"
+
+
+def test_scaffold_force_still_overwrites_for_the_callers_that_ask(root: Path) -> None:
+    from engine.tooling import scaffold
+
+    (root / CELLAR).write_bytes(MINE)
+    assert scaffold.create_scene(str(root / CELLAR)) is False and (root / CELLAR).read_bytes() == MINE
+    assert scaffold.create_scene(str(root / CELLAR), force=True) is True
+    assert (root / CELLAR).read_bytes() != MINE

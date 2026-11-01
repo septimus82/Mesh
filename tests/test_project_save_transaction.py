@@ -318,22 +318,24 @@ def test_the_working_file_names_are_unpredictable(root: Path) -> None:
 
 # --- another program writing a file after this save wrote it -----------------------------------------------------------
 def _then_written_by_another(monkeypatch: pytest.MonkeyPatch, rel: str, fails: str, other: bytes | None) -> None:
-    """Just after this save replaces ``rel``, another program writes ``other`` to it (None: deletes it); then the
-    replace of the file named ``fails`` fails."""
-    real = project_save._replace
+    """Just after this save writes ``rel`` (replaced, or published as a new file: F15), another program writes ``other``
+    to it (None: deletes it); then the replace of the file named ``fails`` fails."""
 
-    def replace(src: Path, dst: Path) -> None:
-        if Path(dst).name == fails and not Path(src).name.endswith(".original"):
-            raise OSError(28, "injected: no space left on device", str(dst))
-        real(src, dst)
-        if Path(dst).as_posix().endswith(rel) and Path(src).name.endswith(".new"):
-            target = Path(dst)
-            if other is None:
-                target.unlink()
-            else:
-                target.write_bytes(other)
+    def wrapping(real: Any) -> Any:
+        def write(src: Path, dst: Path) -> None:
+            if Path(dst).name == fails and not Path(src).name.endswith(".original"):
+                raise OSError(28, "injected: no space left on device", str(dst))
+            real(src, dst)
+            if Path(dst).as_posix().endswith(rel) and Path(src).name.endswith(".new"):
+                target = Path(dst)
+                if other is None:
+                    target.unlink()
+                else:
+                    target.write_bytes(other)
+        return write
 
-    monkeypatch.setattr(project_save, "_replace", replace)
+    monkeypatch.setattr(project_save, "_replace", wrapping(project_save._replace))
+    monkeypatch.setattr(project_save, "_publish_new", wrapping(project_save._publish_new))
 
 
 @pytest.mark.parametrize("other", [b'{"edited": "by another program"}\n', None], ids=["rewritten", "removed"])

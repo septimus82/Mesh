@@ -53,13 +53,34 @@ name, or move packs/core_regions/scenes/cellar.json out of the way first."
 then uses the scaffold's own result. It answers `ok: false` with `data.reason` `already_exists`, `unknown_template` or
 `write_failed` and the path. On success it returns the same "Created scene '…'" as before.
 
+## Publication never replaces (review correction)
+
+The checks above give clear early messages, but a check followed by a write always leaves a window. So the writes of
+new files themselves never replace anything. `json_io.publish_new(src, dst)` moves a fully written file into place
+only if nothing is at `dst` (a file, a folder or a link, even a broken one), atomically:
+
+- **On Windows** it is a rename, which fails when the target exists (`MoveFileEx` without `MOVEFILE_REPLACE_EXISTING`).
+- **Elsewhere** it is a hard link, which fails when the target exists, followed by removing the temporary name.
+- **A file system that can do neither** raises an error and publishes nothing. There is no fallback that could
+  replace.
+
+It is used in two places:
+
+- **Project saves:** for `fresh` room files (a new room's, or a listed room whose file was missing), in place of
+  `os.replace`. Something put there at the very moment of publication stays exactly as it is, and the save fails as
+  `commit`/`path_taken`. F3's rollback puts back every file already written. An error just after a hard link is
+  recognised with `os.path.samefile` and put back too. Existing room files are still replaced as before.
+- **`scaffold.create_scene` with `force=False`** (AI scene creation): `json_io.write_json_new` writes a temporary file
+  of its own beside the target, then calls `publish_new`. A target that appears after the checks, or a broken link
+  (even one pointing inside the project), is refused and never written through. `AIOps` answers `already_exists`.
+  `force=True` keeps replacing, for the callers that ask for it; AI scene creation never passes it.
+
 ## What remains
 
-- **The checks aren't atomic with the writes.** A file created in the microseconds between the save's check and its
-  `os.replace` is still caught: F3's commit-time check (`changed_during_save`) refuses to replace a path that was
-  absent when staged. `create_scene` has a similar window between its check and the scaffold's own check and write.
 - **Orphan map skeletons (F11).** A room made and then undone, or never saved, still leaves its map file. F11 is
   unchanged: those are files Mesh made, and they are never replaced.
+- **Existing files are still replaced under F3's rules.** That is ordinary saving of a room the project owns, with its
+  outside-change backup and commit-time check.
 
 ## Evidence
 
@@ -76,6 +97,13 @@ then uses the scaffold's own result. It answers `ok: false` with `data.reason` `
     at acceptance.
   - **`create_scene`:** success, an existing file or folder, an unknown template, and a failed write through the MCP
     tool.
+  - **Review corrections:**
+    - a file, folder or broken link put at a new room's path inside the publication call itself (after every check), with the start room already written: the newcomer survives exactly, and the start room is put back to the byte and the time;
+    - a file system that can't publish without replacing fails closed;
+    - `publish_new` against each kind of occupant;
+    - a broken link inside the project (AIOps and the scaffold both refuse it; nothing is made where it points);
+    - a scene put there while it is being created;
+    - `force=True` still overwrites.
 - **Mutation check:** each guard removed in turn:
 
   | Guard removed | Tests that fail |
@@ -85,3 +113,6 @@ then uses the scaffold's own result. It answers `ok: false` with `data.reason` `
   | the save-time check | 2 |
   | `create_scene`'s existing-target check | 2 |
   | ignoring the scaffold's result | 1 |
+  | fresh room files replaced instead of published (review) | 4 |
+  | the scaffold replacing when not forced (review) | 2 |
+  | `publish_new` replacing on Windows (review) | 5 |

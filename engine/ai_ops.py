@@ -199,8 +199,12 @@ class AIOps:
                                       f"(templates: {', '.join(templates)}).",
                                {"path": str(path), "reason": "unknown_template"})
         if not scaffold.create_scene(str(path), template_name=template):
-            return AIOpsResult(False, f"Scene '{scene_name}' wasn't created: writing {path} failed (or something was "
-                                      "put there meanwhile); see the log. Nothing else was changed.",
+            if os.path.lexists(path):  # (something was put there meanwhile: left as it is, never taken as created)
+                return AIOpsResult(False, f"Scene '{scene_name}' wasn't created: something appeared at {path} while "
+                                          "it was being created, and was left as it is. Choose another name.",
+                                   {"path": str(path), "reason": "already_exists"})
+            return AIOpsResult(False, f"Scene '{scene_name}' wasn't created: writing {path} failed; see the log. "
+                                      "Nothing else was changed.",
                                {"path": str(path), "reason": "write_failed"})
         return AIOpsResult(True, f"Created scene '{scene_name}'")
 
