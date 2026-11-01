@@ -59,6 +59,14 @@ same for any MCP client.
 
 Only a project with no session record at all is changed directly. `apply_changes` checks again just before it writes. A proposal that fails is never written to the files instead.
 
+**When writing the files fails (F3):** the files a batch changes are saved together: every one or none. If writing one fails (a full disk, a locked file), the ones already written are put back. `apply_changes`, `apply_ops` and `mesh author apply` then answer `reason: "save_failed"`, and the batch is not kept anywhere: apply it again. Its `save` report gives:
+
+- `stage` (`validate`, `serialize`, `stage`, `commit` or `rollback`) and `reason`;
+- `documents`, each with its `path`, `kind`, whether it `existed` and its `result` (`saved`, `restored`, `not_written` or `needs_recovery`);
+- `committed`, `restored` and `outside_change_backups`.
+
+If putting a file back failed too, `recovery_required` is true and `needs_recovery` lists each file with its previous version's path (`original`) and what to do. The reason codes are listed in [docs/reviews/f3_recoverable_saves.md](reviews/f3_recoverable_saves.md). `read_project` on an open Studio includes `last_save`, the report of the person's last save, so an AI can see that a save failed.
+
 A batch is a list of changes:
 
 ```json

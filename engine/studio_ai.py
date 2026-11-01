@@ -87,12 +87,14 @@ class StudioAIHost:
 
     # ------------------------------------------------------------------ what the tool reads
     def read_live_scene(self, *, compact: bool = False) -> Doc:  # noqa: ARG002 - the bridge's read endpoint
-        """The whole open project (unsaved edits included) and its revision, to base changes on."""
+        """The whole open project (unsaved edits included) and its revision, to base changes on; ``last_save``: how the
+        person's last save went (``engine.project_save`` report, None before one), e.g. a save that needs recovery."""
         docs = copy.deepcopy(self.project.all_documents())
         self._remember(self.project.revision, docs)
         rooms = {key: {"label": label, "path": path, "room": docs["rooms"][key]} for key, label, path in self.project.rooms()}
         return {"ok": True, "mode": "live_studio", "revision": self.project.revision, "current_room": self.project.current,
-                "unsaved": self.project.is_dirty, "world": docs["world"], "rooms": rooms,
+                "unsaved": self.project.is_dirty, "last_save": self.project.last_save_report, "world": docs["world"],
+                "rooms": rooms,
                 "models": authoring.models(self.project)}
 
     def _remember(self, revision: int, docs: Doc) -> None:

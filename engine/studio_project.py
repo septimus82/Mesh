@@ -24,6 +24,7 @@ from typing import Any, Callable, Iterator
 
 from engine import project_ops as ops
 from engine.json_io import read_json, write_json_atomic
+from engine.project_save import SaveError, refused, save_documents
 from engine.project_scaffold import ensure_starter_files
 
 Doc = dict[str, Any]
@@ -75,6 +76,7 @@ class Project:
         self.world: Doc = json.loads((self.root / world_file).read_text(encoding="utf-8"))
         self._seen_on_disk: dict[str, float] = {world_file: (self.root / world_file).stat().st_mtime}
         self.last_save_backups: list[str] = []
+        self.last_save_report: Doc | None = None  # (the last save's outcome: engine.project_save.report)
         self.scenes: dict[str, Doc] = {}
         self.dirty: set[str] = set()
         self.world_dirty = False
@@ -696,15 +698,6 @@ class Project:
                    "layers": [{**layer, "width": w, "height": h, "data": [0] * (w * h)} for layer in layers]}
         return rel, resized
 
-    def _keep_outside_change(self, rel: str) -> None:
-        """Before overwriting a file something else changed since it was opened, keep that version."""
-        target = self.root / rel
-        seen = self._seen_on_disk.get(rel)
-        if seen is not None and target.is_file() and target.stat().st_mtime != seen:
-            backup = target.with_name(target.name + ".outside-change.bak")
-            backup.write_bytes(target.read_bytes())
-            self.last_save_backups.append(backup.relative_to(self.root).as_posix())
-
     def undo(self) -> bool:
         if not self._undo:
             return False
@@ -722,24 +715,39 @@ class Project:
         return True
 
     def save(self) -> list[str]:
-        """Write every changed room and the world file. Returns the paths written."""
-        written: list[str] = []
-        self.last_save_backups = []
-        # an HD-2D room's map file at the room's size first: checked before anything is written
-        maps = [m for m in (self._map_file_at_size(key) for key in sorted(self.dirty)) if m is not None]
-        targets: list[tuple[str, Any]] = [*maps, *[(self.path(key), self.scenes[key]) for key in sorted(self.dirty)]]
+        """Write every changed room, the world file and the shared player as one save (``engine.project_save``): all
+        of them or none. Returns the paths written. A save that fails raises SaveError (an ops.OpError) with a report
+        of what happened to each file; nothing here changes then (the edits stay unsaved, undo as it was).
+        ``last_save_report`` holds the outcome either way, ``last_save_backups`` outside changes kept beside files."""
+        self.last_save_backups, self.last_save_report = [], None
+        rooms = sorted(self.dirty)
+        planned = [(self.path(key), "room") for key in rooms]
         if self.world_dirty:
-            targets.append((self.world_file, self.world))
+            planned.append((self.world_file, "world"))
+        try:  # an HD-2D room's map file at the room's size first: checked before anything is written
+            maps = [m for m in (self._map_file_at_size(key) for key in rooms) if m is not None]
+        except ops.OpError as err:
+            raise self._refused(refused("map_file_conflict", str(err), planned, self.root)) from err
+        documents: list[tuple[str, str, Any]] = [(rel, "map", doc) for rel, doc in maps]
+        documents += [(self.path(key), "room", self.scenes[key]) for key in rooms]
+        if self.world_dirty:
+            documents.append((self.world_file, "world", self.world))
         if self.player_dirty and self.player is not None:
             # The shared player is one entry of the project's prefab list: every other entry stays as it was.
             # (an unreadable or malformed file refuses the save here, before anything is written: H1-F2)
-            prefabs = [p for p in self._prefab_catalogue() if not (isinstance(p, dict) and p.get("id") == ops.PLAYER_PREFAB)]
-            targets.append((self.PREFABS, [ops.player_prefab_entry(self.player), *prefabs]))
-        for rel, doc in targets:
-            self._keep_outside_change(rel)
-            write_json_atomic(self.root / rel, doc)
-            self._seen_on_disk[rel] = (self.root / rel).stat().st_mtime
-            written.append(rel)
+            try:
+                catalogue = self._prefab_catalogue()
+            except ops.OpError as err:
+                involved = [(rel, kind) for rel, kind, _doc in documents] + [(self.PREFABS, "prefabs")]
+                raise self._refused(refused("prefab_catalogue_unreadable", str(err), involved, self.root)) from err
+            prefabs = [p for p in catalogue if not (isinstance(p, dict) and p.get("id") == ops.PLAYER_PREFAB)]
+            documents.append((self.PREFABS, "prefabs", [ops.player_prefab_entry(self.player), *prefabs]))
+        try:
+            outcome = save_documents(self.root, documents, self._seen_on_disk)
+        except SaveError as err:
+            self._refused(err)
+            raise
+        self.last_save_report, self.last_save_backups = outcome, list(outcome["outside_change_backups"])
         # Undo or redo past this save comes back to rooms other than what was just written: they are to save again.
         saved, world, player = frozenset(self.dirty), self.world_dirty, self.player_dirty
         self._undo, self._redo = [[replace(s, dirty=s.dirty | saved, world_dirty=s.world_dirty or world,
@@ -748,4 +756,9 @@ class Project:
         self.dirty.clear()
         self.world_dirty = False
         self.player_dirty = False
-        return written
+        return [doc["path"] for doc in outcome["documents"]]
+
+    def _refused(self, err: SaveError) -> SaveError:
+        """A failed save, recorded: the edits stay as they are, unsaved (dirty, undo and revision untouched)."""
+        self.last_save_report, self.last_save_backups = err.report, list(err.report["outside_change_backups"])
+        return err

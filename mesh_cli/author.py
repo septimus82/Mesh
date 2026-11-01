@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 from typing import Any
 
 
@@ -40,7 +41,7 @@ def add_parser(subparsers: Any) -> None:
 
 
 def _changes(source: str) -> Any:
-    text = sys.stdin.read() if source == "-" else open(source, encoding="utf-8").read()  # noqa: SIM115
+    text = sys.stdin.read() if source == "-" else Path(source).read_text(encoding="utf-8")
     data = json.loads(text)
     return data.get("changes") if isinstance(data, dict) else data
 
