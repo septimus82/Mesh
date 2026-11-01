@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -16,8 +17,12 @@ pytestmark = pytest.mark.integration
 FRAMES = [Image.new("RGB", (8, 8), (40 * i, 0, 0)) for i in range(3)]
 
 
-def test_a_test_run_leaves_review_clips_off_by_default() -> None:
-    assert not review_media.wanted(), "tests/conftest.py sets MESH_REVIEW_MEDIA=0 unless it is set already"
+def test_a_test_run_has_review_clips_off_unless_asked_for() -> None:
+    """tests/conftest.py sets MESH_REVIEW_MEDIA=0 unless the run set it already: off by default, on with the documented
+    opt-in MESH_REVIEW_MEDIA=1."""
+    setting = os.environ.get("MESH_REVIEW_MEDIA")
+    assert setting is not None, "a test run always has a setting (tests/conftest.py's default is 0)"
+    assert review_media.wanted() is (setting != "0"), setting
 
 
 def test_off_writes_nothing_and_on_writes_the_animation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
