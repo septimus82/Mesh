@@ -1,0 +1,155 @@
+{
+  "hd2d_active": true,
+  "error": null,
+  "keeper_elevation_px": 32.0,
+  "walk_right_distinct_frames": 4,
+  "walk": [
+    {
+      "after": "start",
+      "player": [
+        384.0,
+        120.0
+      ],
+      "animation": "idle_down",
+      "camera_target_m": [
+        12.0,
+        3.03,
+        0.8
+      ],
+      "visible_px": 2672,
+      "total_px": 2672
+    },
+    {
+      "after": "right x40",
+      "player": [
+        484.0,
+        120.0
+      ],
+      "animation": "idle_right",
+      "camera_target_m": [
+        14.71,
+        3.03,
+        0.8
+      ],
+      "visible_px": 1947,
+      "total_px": 1947
+    },
+    {
+      "after": "up x50 (beside the platform, east)",
+      "player": [
+        484.0,
+        245.0
+      ],
+      "animation": "idle_up",
+      "camera_target_m": [
+        15.12,
+        6.52,
+        0.8
+      ],
+      "visible_px": 2592,
+      "total_px": 2592
+    },
+    {
+      "after": "up x46, left x40 (north of it: behind the building)",
+      "player": [
+        384.0,
+        360.0
+      ],
+      "animation": "idle_left",
+      "camera_target_m": [
+        12.42,
+        10.53,
+        0.8
+      ],
+      "visible_px": 0,
+      "total_px": 1947
+    },
+    {
+      "after": "down x20 (against its north wall)",
+      "player": [
+        384.0,
+        344.0
+      ],
+      "animation": "idle_down",
+      "camera_target_m": [
+        12.02,
+        10.07,
+        0.8
+      ],
+      "visible_px": 0,
+      "total_px": 2697
+    },
+    {
+      "after": "round the west side, back in front",
+      "player": [
+        234.0,
+        44.0
+      ],
+      "animation": "idle_right",
+      "camera_target_m": [
+        6.89,
+        0.66,
+        0.8
+      ],
+      "visible_px": 1936,
+      "total_px": 1936
+    }
+  ],
+  "saved": true,
+  "loaded": true,
+  "save_load": {
+    "saved_at": [
+      234.0,
+      44.0
+    ],
+    "after_load": [
+      234.0,
+      44.0
+    ],
+    "renderer_rebuilt": true,
+    "keeper_elevation_px": 32.0
+  },
+  "ortho_player_visible_px": 2712,
+  "keeper_visible_px": 1761,
+  "keeper_total_px": 1761,
+  "target_after_resize": [
+    1280,
+    720
+  ],
+  "stats": {
+    "draw_calls": 7,
+    "static_draws": 4,
+    "triangles": 66,
+    "buffer_bytes": 11984,
+    "texture_bytes": 28672,
+    "target_bytes": 7372800,
+    "batched": true
+  },
+  "gl_objects": {
+    "before": {
+      "buffer": 86,
+      "texture": 5,
+      "framebuffer": 3,
+      "program": 18
+    },
+    "hd2d_loaded": {
+      "buffer": 87,
+      "texture": 13,
+      "framebuffer": 4,
+      "program": 22
+    },
+    "after_2d_room": {
+      "buffer": 96,
+      "texture": 5,
+      "framebuffer": 3,
+      "program": 18
+    },
+    "after_another_2d_load": {
+      "buffer": 106,
+      "texture": 5,
+      "framebuffer": 3,
+      "program": 18
+    }
+  },
+  "renderer_after_2d_room": null
+}

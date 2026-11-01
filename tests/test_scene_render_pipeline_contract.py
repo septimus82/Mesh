@@ -132,17 +132,14 @@ def test_compute_draw_plan_sorting():
     plan = compute_draw_plan(ctx)
 
 # Sort uses render_sort_model.
-    # Current implementation in render_sort_model uses +y as sort key.
-    # So Low Y (Bottom) -> First -> Back
-    # High Y (Top) -> Last -> Front
-    # (Matches side-scroller or specific layering, but confusing for top-down).
-    # We assert what the model DOES, not what it hypothetically should do.
+    # World y points up (arcade), so the highest sprite stands furthest back:
+    # High Y (top of the screen) -> first -> back; Low Y (bottom) -> last -> front.
 
     assert len(plan.sprite_ops) == 3
-    # Expect order: s2 (0), s1 (100), s3 (200)
-    assert plan.sprite_ops[0].sprite == s2
+    # Expect order: s3 (200), s1 (100), s2 (0)
+    assert plan.sprite_ops[0].sprite == s3
     assert plan.sprite_ops[1].sprite == s1
-    assert plan.sprite_ops[2].sprite == s3
+    assert plan.sprite_ops[2].sprite == s2
 
 
 def test_compute_draw_plan_culling_accepts_tuple_sprite_scale():

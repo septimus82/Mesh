@@ -1,0 +1,707 @@
+{
+  "results": [
+    {
+      "check": "4. NPC follows a path around an obstacle (FollowPath, A*)",
+      "status": "PASS",
+      "detail": {
+        "start": [
+          303.72611134945134,
+          209.72410947863904
+        ],
+        "end": [
+          463.9993845773255,
+          236.3989505628466
+        ],
+        "goal": [
+          464.0,
+          240.0
+        ],
+        "points_inside_wall": 0,
+        "went_around": true
+      },
+      "screenshot": "nav_walker.png"
+    },
+    {
+      "check": "5. Line of sight affects a behaviour (ChaseTarget los_required)",
+      "status": "PASS",
+      "detail": {
+        "seer_moved": true,
+        "seer_at": [
+          159.24670799839078,
+          112.0
+        ],
+        "blind_moved": false,
+        "blind_at": [
+          528.0,
+          112.0
+        ]
+      },
+      "screenshot": "los.png"
+    },
+    {
+      "check": "12. Save and load restore runtime state (F5/F9)",
+      "status": "PASS",
+      "detail": {
+        "player_saved": [
+          128.0,
+          128.0
+        ],
+        "player_moved_to": [
+          233.11630999681074,
+          128.0
+        ],
+        "player_after_load": [
+          128.0,
+          128.0
+        ],
+        "seer_saved": [
+          159.24670799839078,
+          112.0
+        ],
+        "seer_after_load": [
+          159.24670799839078,
+          112.0
+        ],
+        "scene_after_load": "saves\\quicksave.json"
+      },
+      "screenshot": "save_load.png"
+    },
+    {
+      "check": "1. A flickering light illuminates the scene",
+      "status": "PASS",
+      "detail": {
+        "lighting": {
+          "available": true,
+          "enabled": true,
+          "shadows_mode": "hard",
+          "clock": 24.86,
+          "ambient": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "ambient_tint": [
+            25,
+            25,
+            35,
+            255
+          ],
+          "static_lights": 1,
+          "occluders": 1,
+          "dynamic": []
+        },
+        "brightness_at_light": [
+          98,
+          99,
+          98,
+          99,
+          99,
+          99,
+          99,
+          99
+        ],
+        "brightness_near_edge": [
+          11,
+          39,
+          12,
+          43,
+          21,
+          46,
+          24,
+          43
+        ],
+        "dark_far_away": 12,
+        "flicker_range_at_edge": 34.7
+      },
+      "screenshot": "lights.png"
+    },
+    {
+      "check": "2. An occluder casts a visible shadow (hard shadows)",
+      "status": "PASS",
+      "detail": {
+        "behind_pillar": [
+          29,
+          15,
+          20,
+          16,
+          11,
+          17,
+          12,
+          16
+        ],
+        "open_same_distance": [
+          29,
+          52,
+          31,
+          55,
+          38,
+          58,
+          40,
+          55
+        ],
+        "occluders": 1,
+        "mode": "hard"
+      },
+      "screenshot": "lights.png"
+    },
+    {
+      "check": "Scene transitions, and lights over repeated room changes (3 round trips)",
+      "status": "PASS",
+      "detail": {
+        "visits": [
+          {
+            "room": "Paths",
+            "static": 0,
+            "occluders": 0,
+            "dynamic": [
+              [
+                303.9597880732648,
+                169.51334826374318
+              ]
+            ],
+            "walker": [
+              303.9597880732648,
+              169.51334826374318
+            ]
+          },
+          {
+            "room": "Lights",
+            "static": 1,
+            "occluders": 1,
+            "dynamic": [],
+            "ambient_tint": [
+              25,
+              25,
+              35,
+              255
+            ]
+          },
+          {
+            "room": "Paths",
+            "static": 0,
+            "occluders": 0,
+            "dynamic": [
+              [
+                303.85584524416265,
+                183.0611922609087
+              ]
+            ],
+            "walker": [
+              303.85584524416265,
+              183.0611922609087
+            ]
+          },
+          {
+            "room": "Lights",
+            "static": 1,
+            "occluders": 1,
+            "dynamic": [],
+            "ambient_tint": [
+              25,
+              25,
+              35,
+              255
+            ]
+          },
+          {
+            "room": "Paths",
+            "static": 0,
+            "occluders": 0,
+            "dynamic": [
+              [
+                303.9238848392577,
+                179.9475920463821
+              ]
+            ],
+            "walker": [
+              303.9238848392577,
+              179.9475920463821
+            ]
+          },
+          {
+            "room": "Lights",
+            "static": 1,
+            "occluders": 1,
+            "dynamic": [],
+            "ambient_tint": [
+              25,
+              25,
+              35,
+              255
+            ]
+          }
+        ]
+      },
+      "screenshot": "transition.png"
+    },
+    {
+      "check": "3. A moving entity carries a dynamic light (LightSource)",
+      "status": "PASS",
+      "detail": {
+        "samples": [
+          {
+            "light": [
+              360.8920689999941,
+              272.0
+            ],
+            "npc": [
+              360.8920689999941,
+              272.0
+            ],
+            "lights": 1
+          },
+          {
+            "light": [
+              407.6210240002838,
+              272.0
+            ],
+            "npc": [
+              407.6210240002838,
+              272.0
+            ],
+            "lights": 1
+          },
+          {
+            "light": [
+              454.4227440005052,
+              272.0
+            ],
+            "npc": [
+              454.4227440005052,
+              272.0
+            ],
+            "lights": 1
+          },
+          {
+            "light": [
+              474.27930800028844,
+              272.0
+            ],
+            "npc": [
+              474.27930800028844,
+              272.0
+            ],
+            "lights": 1
+          },
+          {
+            "light": [
+              427.5098930015811,
+              272.0
+            ],
+            "npc": [
+              427.5098930015811,
+              272.0
+            ],
+            "lights": 1
+          },
+          {
+            "light": [
+              380.75968600041233,
+              272.0
+            ],
+            "npc": [
+              380.75968600041233,
+              272.0
+            ],
+            "lights": 1
+          }
+        ]
+      },
+      "screenshot": "torch.png"
+    },
+    {
+      "check": "6. A sequence moves an object, waits and starts dialogue (SequencePlayer + Dialogue)",
+      "status": "PASS",
+      "detail": {
+        "moved_to": [
+          368.0,
+          176.0
+        ],
+        "dialogue": "Moved, waited, now talking.",
+        "wait_between_s": 3.11,
+        "herald_trail": [
+          [
+            368,
+            176
+          ],
+          [
+            368,
+            176
+          ]
+        ]
+      },
+      "screenshot": "sequence.png"
+    },
+    {
+      "check": "A sequence runs to its end and triggers what follows (signal -> SetGameStateOnEvent)",
+      "status": "PASS",
+      "detail": {
+        "flags": {
+          "herald_done": true,
+          "quest_step_done": true
+        }
+      },
+      "screenshot": null
+    },
+    {
+      "check": "A quest step counts a live game event (QuestHook)",
+      "status": "PASS",
+      "detail": {
+        "flags": {
+          "herald_done": true,
+          "quest_step_done": true
+        }
+      },
+      "screenshot": null
+    },
+    {
+      "check": "10. A particle effect appears (ParticleEmitter)",
+      "status": "PASS",
+      "detail": {
+        "sprites": 13,
+        "alive": 13
+      },
+      "screenshot": "particles.png"
+    },
+    {
+      "check": "Prefab reuse (a prefab reference and a copy)",
+      "status": "PASS",
+      "detail": {
+        "reference_spawned_as": "Person",
+        "copy": "Twin (copy)"
+      },
+      "screenshot": "particles.png"
+    },
+    {
+      "check": "Custom behaviour from a plugin (mods/, LabSpinner)",
+      "status": "PASS",
+      "detail": {
+        "angles": [
+          203.96703599923057,
+          309.2209470004309
+        ],
+        "plugin_logged": true
+      },
+      "screenshot": "particles.png"
+    },
+    {
+      "check": "8. A background uses parallax (background_layers, parallax 0.5)",
+      "status": "PASS",
+      "detail": {
+        "stripe_screen_x": [
+          314.0,
+          95.0
+        ],
+        "camera_x": [
+          652.0,
+          1090.1365867396614
+        ],
+        "expected_shift": 219.1
+      },
+      "screenshot": "parallax_after.png"
+    },
+    {
+      "check": "7. Camera zoom (a camera area zooms in)",
+      "status": "PASS",
+      "detail": {
+        "before": 1.0,
+        "in_area": {
+          "zoom": 1.8,
+          "zoom_target": 1.8,
+          "trauma": 0.0,
+          "center": [
+            400.0,
+            160.0
+          ],
+          "area": "close-up"
+        }
+      },
+      "screenshot": "zoom_area.png"
+    },
+    {
+      "check": "9. HD-2D draw order (y-sort) with sprites sharing a texture",
+      "status": "PASS",
+      "detail": {
+        "front_red_over_blue_pixel": [
+          220,
+          50,
+          50
+        ],
+        "blue_over_back_red_pixel": [
+          50,
+          90,
+          230
+        ],
+        "expected": "front overlap red, back overlap blue",
+        "lighting": {
+          "available": true,
+          "enabled": true,
+          "shadows_mode": "hard",
+          "clock": 83.33,
+          "ambient": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "ambient_tint": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "static_lights": 0,
+          "occluders": 0,
+          "dynamic": []
+        }
+      },
+      "screenshot": "depth.png"
+    },
+    {
+      "check": "Sprite shadows (on by default)",
+      "status": "PASS",
+      "detail": {
+        "under_sprite": 69,
+        "plain_floor": 108
+      },
+      "screenshot": "depth.png"
+    },
+    {
+      "check": "11. A positional sound changes with distance",
+      "status": "PASS",
+      "detail": {
+        "far": {
+          "path": "assets/sounds/hit.wav",
+          "volume": 0.0,
+          "pan": 1.0,
+          "distance": 900.0,
+          "occluded": false
+        },
+        "near": {
+          "path": "assets/sounds/hit.wav",
+          "volume": 0.4107,
+          "pan": 0.3156,
+          "distance": 284.0,
+          "occluded": false
+        }
+      },
+      "screenshot": "audio.png"
+    },
+    {
+      "check": "Occluder shadow lines up at camera zoom 1.8",
+      "status": "PASS",
+      "detail": {
+        "zoom": 1.7989855223998976,
+        "behind_pillar": 14,
+        "in_front_of_pillar": 73,
+        "open_same_distance": 52
+      },
+      "screenshot": "zoomed_shadow.png"
+    },
+    {
+      "check": "Day/night progresses over time (scene day_night_enabled)",
+      "status": "PASS",
+      "detail": {
+        "hours": [
+          7.34,
+          8.01,
+          8.68,
+          9.51,
+          10.18,
+          10.85,
+          11.51
+        ],
+        "distinct_ambients": 7,
+        "first": {
+          "t": 0.2,
+          "hour": 7.34,
+          "ambient": [
+            109,
+            95,
+            131,
+            255
+          ],
+          "shopkeeper": [
+            176.0,
+            304.0
+          ],
+          "early_bird": [
+            176.0,
+            208.0
+          ]
+        },
+        "last": {
+          "t": 4.5,
+          "hour": 11.51,
+          "ambient": [
+            177,
+            175,
+            201,
+            255
+          ],
+          "shopkeeper": [
+            384.3044659992447,
+            304.0
+          ],
+          "early_bird": [
+            385.30463599972427,
+            208.0
+          ]
+        }
+      },
+      "screenshot": "day.png"
+    },
+    {
+      "check": "NPC schedule: stands until 08:00, then walks its route (shopkeeper)",
+      "status": "PASS",
+      "detail": {
+        "at_start": [
+          176.0,
+          304.0
+        ],
+        "at_end": [
+          384.3044659992447,
+          304.0
+        ],
+        "hour_at_end": 11.51
+      },
+      "screenshot": "day.png"
+    },
+    {
+      "check": "NPC schedule: stands until 08:00, then walks its route (early_bird)",
+      "status": "PASS",
+      "detail": {
+        "at_start": [
+          176.0,
+          208.0
+        ],
+        "at_end": [
+          385.30463599972427,
+          208.0
+        ],
+        "hour_at_end": 11.51
+      },
+      "screenshot": "day.png"
+    },
+    {
+      "check": "Outlines are drawn round sprites (outline_enabled)",
+      "status": "PASS",
+      "detail": {
+        "pixel_just_outside": [
+          235,
+          0,
+          235
+        ],
+        "outline_colour": [
+          255,
+          0,
+          255
+        ]
+      },
+      "screenshot": "look.png"
+    },
+    {
+      "check": "Depth tint colours near and far sprites differently (depth_tint_enabled)",
+      "status": "PASS",
+      "detail": {
+        "near_pixel": [
+          235,
+          235,
+          235
+        ],
+        "far_pixel": [
+          37,
+          37,
+          147
+        ],
+        "far_colour": [
+          40,
+          40,
+          160
+        ]
+      },
+      "screenshot": "look.png"
+    },
+    {
+      "check": "A room can switch lighting off (settings.lighting_enabled false)",
+      "status": "PASS",
+      "detail": {
+        "lighting": {
+          "available": true,
+          "enabled": false,
+          "shadows_mode": "hard",
+          "clock": 115.72,
+          "ambient": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "ambient_tint": [
+            20,
+            20,
+            20,
+            255
+          ],
+          "static_lights": 0,
+          "occluders": 0,
+          "dynamic": []
+        },
+        "floor_brightness": 109
+      },
+      "screenshot": "unlit.png"
+    },
+    {
+      "check": "Lighting comes back on in the next lit room",
+      "status": "PASS",
+      "detail": {
+        "lighting": {
+          "available": true,
+          "enabled": true,
+          "shadows_mode": "hard",
+          "clock": 116.99,
+          "ambient": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "ambient_tint": [
+            25,
+            25,
+            35,
+            255
+          ],
+          "static_lights": 1,
+          "occluders": 1,
+          "dynamic": []
+        }
+      },
+      "screenshot": null
+    },
+    {
+      "check": "EnemyAI chases at its speed (100 px/s)",
+      "status": "PASS",
+      "detail": {
+        "measured_px_per_s": 93.4,
+        "from": [
+          340.207075314032,
+          117.89490117552224
+        ],
+        "to": [
+          166.69895514454288,
+          126.15719261216461
+        ],
+        "seconds": 1.86
+      },
+      "screenshot": "enemy.png"
+    },
+    {
+      "check": "background_planes load from a scene file (headless)",
+      "status": "KNOWN",
+      "detail": "SchemaValidationError: 'background_planes' was unexpected",
+      "screenshot": null
+    }
+  ]
+}

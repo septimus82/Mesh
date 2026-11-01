@@ -1,0 +1,155 @@
+[
+  {
+    "suite": "first_workflow",
+    "about": "Milestone 1: first creation workflow",
+    "ok": true,
+    "flaky": true,
+    "attempts": [
+      {
+        "passed": 2,
+        "total": 3,
+        "ok": false,
+        "failures": [
+          "[FAIL] place_person - RuntimeError: could not place the cursor at (-1658, 644): it stays at (0, 644); not clicking elsewhere"
+        ],
+        "minutes": 0.2
+      },
+      {
+        "passed": 15,
+        "total": 15,
+        "ok": true,
+        "failures": [],
+        "minutes": 0.7
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "map_building",
+    "about": "Milestone 2: visual map building",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 23,
+        "total": 23,
+        "ok": true,
+        "failures": [],
+        "minutes": 1.5
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "map_tools",
+    "about": "Milestone 3: map tools",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 15,
+        "total": 15,
+        "ok": true,
+        "failures": [],
+        "minutes": 1.1
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "launcher",
+    "about": "Milestone 4: launcher and templates",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 20,
+        "total": 20,
+        "ok": true,
+        "failures": [],
+        "minutes": 2.6
+      }
+    ],
+    "note": "given with --old"
+  },
+  {
+    "suite": "event_authoring",
+    "about": "Milestone 5: visual event authoring",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 17,
+        "total": 17,
+        "ok": true,
+        "failures": [],
+        "minutes": 4.9
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "ai_coauthoring",
+    "about": "Milestone 6: human and AI co-authoring",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 14,
+        "total": 14,
+        "ok": true,
+        "failures": [],
+        "minutes": 0.9
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "persistence",
+    "about": "Milestone 8: game state across rooms, saves and a restart",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 12,
+        "total": 12,
+        "ok": true,
+        "failures": [],
+        "minutes": 1.1
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "lighting",
+    "about": "Milestone 10: lighting a game in Mesh Studio",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 15,
+        "total": 15,
+        "ok": true,
+        "failures": [],
+        "minutes": 1.7
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "capability_lab",
+    "about": "Milestone 7+: engine capabilities, measured",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 36,
+        "total": 36,
+        "ok": true,
+        "failures": [],
+        "minutes": 2.9
+      }
+    ],
+    "note": ""
+  }
+]

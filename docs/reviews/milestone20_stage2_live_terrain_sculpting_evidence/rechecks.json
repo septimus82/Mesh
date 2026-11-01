@@ -1,0 +1,24 @@
+{
+ "held_still": {
+  "held_s": 1.01,
+  "raised_m": 0.992
+ },
+ "keys_after_focus_lost": [],
+ "right_release_keeps_the_stroke": true,
+ "ctrl_z_mid_stroke": {
+  "stroke": false,
+  "undo_steps": 0,
+  "shown_is_saved": true
+ },
+ "box_top_m": {
+  "before": 6.299999952316284,
+  "mid_stroke": 12.0859375,
+  "after_esc": 6.299999952316284
+ },
+ "settle_list_in_another_room": [],
+ "flat_room": {
+  "plain_after_esc": true,
+  "plain_after_noop": true,
+  "noop_undo_steps": 0
+ }
+}

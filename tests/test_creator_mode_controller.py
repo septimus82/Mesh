@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import subprocess
-import sys
 from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -24,6 +22,7 @@ from engine.editor.creator_mode.creator_overlay_renderer import (
 from engine.editor.creator_mode.creator_terms import classify_entity_snapshot, friendly_engine_term
 from engine.editor_controller import EditorModeController
 from engine.game_runtime import input_dispatch
+from tests._shared_python import run_python
 
 pytestmark = pytest.mark.fast
 
@@ -36,21 +35,15 @@ def test_controller_starts_inactive() -> None:
 
 
 def test_creator_mode_package_import_does_not_import_renderer() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; import engine.editor.creator_mode; "
-                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
+    output = run_python(
+        (
+            "import sys; import engine.editor.creator_mode; "
+            "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
+        ),
+        watch=['engine.editor.creator_mode.creator_overlay_renderer'],
     )
 
-    assert result.stdout.strip() == "False"
+    assert output.strip() == "False"
 
 
 def test_toggle_show_hide_change_active_state() -> None:

@@ -1,0 +1,146 @@
+{
+ "passed": true,
+ "steps": [
+  {
+   "step": "open",
+   "ok": true,
+   "error": null,
+   "seconds": 6.7,
+   "screenshot": "01_open.png"
+  },
+  {
+   "step": "import_tileset",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "tilesets": [
+     "Starter",
+     "Meadow"
+    ]
+   },
+   "seconds": 9.6,
+   "screenshot": "02_import_tileset.png"
+  },
+  {
+   "step": "rect_ground_undo_redo",
+   "ok": true,
+   "error": null,
+   "seconds": 3.7,
+   "screenshot": "03_rect_ground_undo_redo.png"
+  },
+  {
+   "step": "rect_walls",
+   "ok": true,
+   "error": null,
+   "seconds": 2.3,
+   "screenshot": "04_rect_walls.png"
+  },
+  {
+   "step": "eraser_doorway",
+   "ok": true,
+   "error": null,
+   "seconds": 1.6,
+   "screenshot": "05_eraser_doorway.png"
+  },
+  {
+   "step": "fill_yard_undo_redo",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "message": "Painted 49 tile(s).",
+    "filled": 49
+   },
+   "seconds": 2.9,
+   "screenshot": "06_fill_yard_undo_redo.png"
+  },
+  {
+   "step": "stamp_above",
+   "ok": true,
+   "error": null,
+   "seconds": 2.4,
+   "screenshot": "07_stamp_above.png"
+  },
+  {
+   "step": "copy_paste_object",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "pasted_at": [
+     592.0,
+     112.0
+    ]
+   },
+   "seconds": 2.2,
+   "screenshot": "08_copy_paste_object.png"
+  },
+  {
+   "step": "text_clipboard",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "says": "Guide 2"
+   },
+   "seconds": 5.8,
+   "screenshot": "09_text_clipboard.png"
+  },
+  {
+   "step": "save",
+   "ok": true,
+   "error": null,
+   "seconds": 0.4,
+   "screenshot": "10_save.png"
+  },
+  {
+   "step": "close_and_reopen",
+   "ok": true,
+   "error": null,
+   "seconds": 4.6,
+   "screenshot": "11_close_and_reopen.png"
+  },
+  {
+   "step": "persisted",
+   "ok": true,
+   "error": null,
+   "seconds": 0.0,
+   "screenshot": "12_persisted.png"
+  },
+  {
+   "step": "play_under_the_canopy",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "under_canopy_pixel": [
+     20,
+     200,
+     90
+    ],
+    "walked_to": [
+     458.5354700059979,
+     408.2515400064294
+    ]
+   },
+   "seconds": 9.3,
+   "screenshot": "13_play_under_the_canopy.png"
+  },
+  {
+   "step": "imported_walls_block",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "stopped_at": [
+     175.39037000836106,
+     288.0
+    ]
+   },
+   "seconds": 7.4,
+   "screenshot": "14_imported_walls_block.png"
+  },
+  {
+   "step": "stop_unchanged",
+   "ok": true,
+   "error": null,
+   "seconds": 0.4,
+   "screenshot": "15_stop_unchanged.png"
+  }
+ ]
+}

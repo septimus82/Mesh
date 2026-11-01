@@ -179,14 +179,15 @@ class TestRegressionDetection:
         reg = [it for it in items if it.category == "regression"]
         assert any(it.field == "swallowed_exceptions.ok" for it in reg)
 
-    def test_timing_total_ms_regression(self) -> None:
+    def test_slower_total_time_is_reported_as_informational_not_a_regression(self) -> None:
         from mesh_cli.artifacts_diff import compute_diff
 
         base = _make_report(total_ms=100)
         curr = _make_report(total_ms=200)
         items = compute_diff(base, curr, timing_threshold_ms=50)
-        reg = [it for it in items if it.category == "regression"]
-        assert any(it.field == "timing.total_ms" for it in reg)
+        timing = [it for it in items if it.field == "timing.total_ms"]
+        assert [(it.category, it.base_val, it.curr_val) for it in timing] == [("informational", 100, 200)]
+        assert not any(it.category == "regression" for it in items)
 
 
 class TestImprovementDetection:
@@ -210,14 +211,13 @@ class TestImprovementDetection:
         imp = [it for it in items if it.category == "improvement"]
         assert any(it.field == "swallowed_exceptions.total" for it in imp)
 
-    def test_timing_total_ms_improvement(self) -> None:
+    def test_faster_total_time_is_reported_as_informational(self) -> None:
         from mesh_cli.artifacts_diff import compute_diff
 
         base = _make_report(total_ms=200)
         curr = _make_report(total_ms=100)
         items = compute_diff(base, curr, timing_threshold_ms=50)
-        imp = [it for it in items if it.category == "improvement"]
-        assert any(it.field == "timing.total_ms" for it in imp)
+        assert [(it.field, it.category) for it in items] == [("timing.total_ms", "informational")]
 
     def test_exception_budget_ok_improvement(self) -> None:
         from mesh_cli.artifacts_diff import compute_diff
@@ -450,15 +450,14 @@ class TestDiffArtifactsIntegration:
         assert "Baseline: commit=" not in output
 
     def test_missing_report_error(self, tmp_path: Path) -> None:
-        from mesh_cli.artifacts_diff import diff_artifacts
+        from mesh_cli.artifacts_diff import ArtifactsDiffError, diff_artifacts
 
         base_dir = tmp_path / "base"
         curr_dir = tmp_path / "curr"
         base_dir.mkdir()
         curr_dir.mkdir()
-        output, has_reg = diff_artifacts(base_dir, curr_dir)
-        assert "error" in output.lower()
-        assert has_reg is False
+        with pytest.raises(ArtifactsDiffError, match="missing or not valid JSON in base.*missing or not valid JSON in curr"):
+            diff_artifacts(base_dir, curr_dir)
 
     def test_fallback_without_index(self, tmp_path: Path) -> None:
         """Reads verify_report.json directly when index.json is absent."""
@@ -806,3 +805,114 @@ class TestUpdateBaseline:
             update_baseline=True,
         )
         assert _handle_artifacts_diff(args) == 2
+
+
+# ---------------------------------------------------------------------------
+# Issue #360: total time is informational; real regressions and broken bundles still fail
+# ---------------------------------------------------------------------------
+
+
+def _run_gate(base_dir: Path, curr_dir: Path, *, fmt: str = "text", out: Path | None = None,
+              fail_on_regression: bool = True) -> int:
+    import argparse
+
+    from mesh_cli.artifacts_diff import _handle_artifacts_diff
+
+    return _handle_artifacts_diff(argparse.Namespace(
+        base=str(base_dir), curr=str(curr_dir), format=fmt, fail_on_regression=fail_on_regression,
+        out=str(out) if out else "",
+    ))
+
+
+class TestTotalTimeIsInformational:
+    def test_the_committed_baseline_passes_a_slow_but_healthy_run(self, tmp_path: Path, capsys) -> None:
+        baseline = Path(__file__).resolve().parents[1] / "tooling" / "metrics" / "ci_baseline_artifacts"
+        curr_dir = tmp_path / "curr"
+        _make_bundle(curr_dir, _make_report(total_ms=115419))  # what CI measured against the 36,470 ms baseline
+
+        assert _run_gate(baseline, curr_dir) == 0
+        text = capsys.readouterr().out
+        assert "INFORMATIONAL (does not fail):\n  timing.total_ms: 36470 -> 115419" in text
+        assert "0 regression(s)" in text and "1 informational" in text
+
+    def test_markdown_and_json_keep_the_total_time(self, tmp_path: Path) -> None:
+        base_dir, curr_dir = tmp_path / "base", tmp_path / "curr"
+        _make_bundle(base_dir, _make_report(total_ms=36470))
+        _make_bundle(curr_dir, _make_report(total_ms=115419))
+
+        assert _run_gate(base_dir, curr_dir, fmt="markdown", out=tmp_path / "diff.md") == 0
+        assert "## Informational (does not fail)\n\n| Field | Base | Current |\n|-------|------|---------|\n" \
+               "| `timing.total_ms` | 36470 | 115419 |" in (tmp_path / "diff.md").read_text(encoding="utf-8")
+        assert _run_gate(base_dir, curr_dir, fmt="json", out=tmp_path / "diff.json") == 0
+        payload = json.loads((tmp_path / "diff.json").read_text(encoding="utf-8"))
+        assert payload["ok"] is True
+        assert payload["informational"] == [{"field": "timing.total_ms", "base": 36470, "current": 115419}]
+        assert payload["counts"] == {"changed": 0, "improvements": 0, "informational": 1, "regressions": 0}
+
+
+class TestRealRegressionsStillFail:
+    @pytest.mark.parametrize(
+        ("base", "curr", "field"),
+        [
+            ({"ok": True}, {"ok": False}, "verify_summary.ok"),
+            ({"step_budget_ok": True}, {"step_budget_ok": False}, "budgets.verify_step_budget.ok"),
+            ({"exception_budget_ok": True}, {"exception_budget_ok": False}, "budgets.exception_budget.ok"),
+            ({"swallowed_total": 3}, {"swallowed_total": 4}, "swallowed_exceptions.total"),
+            ({"swallowed_distinct": 1}, {"swallowed_distinct": 2}, "swallowed_exceptions.distinct"),
+        ],
+    )
+    def test_fails_the_gate_even_when_total_time_also_changed(
+        self, tmp_path: Path, capsys, base: dict, curr: dict, field: str
+    ) -> None:
+        base_dir, curr_dir = tmp_path / "base", tmp_path / "curr"
+        _make_bundle(base_dir, _make_report(total_ms=1000, **base))
+        _make_bundle(curr_dir, _make_report(total_ms=900, **curr))
+
+        assert _run_gate(base_dir, curr_dir) == 2
+        regressions = capsys.readouterr().out.split("REGRESSIONS:\n", 1)[1].split("\n\n", 1)[0]
+        assert regressions.strip().startswith(field)
+
+
+class TestBrokenBundlesNeverPass:
+    @pytest.mark.parametrize("fail_on_regression", [True, False])
+    @pytest.mark.parametrize(
+        ("breakage", "message"),
+        [
+            ("missing", "missing or not valid JSON in curr"),
+            ("corrupt", "missing or not valid JSON in curr"),
+            ("not_an_object", "missing or not valid JSON in curr"),
+            ("no_outcome", "has no verify outcome"),  # what #360 found: the report was built before the summary
+            ("index_to_nowhere", "missing or not valid JSON in curr"),
+        ],
+    )
+    def test_is_an_error_with_exit_2(
+        self, tmp_path: Path, capsys, breakage: str, message: str, fail_on_regression: bool
+    ) -> None:
+        base_dir, curr_dir = tmp_path / "base", tmp_path / "curr"
+        _make_bundle(base_dir, _make_report())
+        curr_dir.mkdir()
+        if breakage == "corrupt":
+            (curr_dir / "verify_report.json").write_text('{"verify_summary": {"ok": tr', encoding="utf-8")
+        elif breakage == "not_an_object":
+            _write(curr_dir / "verify_report.json", [1, 2])
+        elif breakage == "no_outcome":
+            report = _make_report()
+            report["verify_summary"]["ok"] = None
+            _make_bundle(curr_dir, report)
+        elif breakage == "index_to_nowhere":
+            _make_bundle(curr_dir, _make_report())
+            (curr_dir / "verify_report.json").unlink()
+
+        out = tmp_path / "diff.json"
+        assert _run_gate(base_dir, curr_dir, fmt="json", out=out, fail_on_regression=fail_on_regression) == 2
+        assert message in capsys.readouterr().err
+        assert message in out.read_text(encoding="utf-8"), "the written diff says why, too"
+
+    def test_a_broken_baseline_is_an_error_too(self, tmp_path: Path, capsys) -> None:
+        base_dir, curr_dir = tmp_path / "base", tmp_path / "curr"
+        base_dir.mkdir()
+        (base_dir / "verify_report.json").write_text("not json", encoding="utf-8")
+        _make_bundle(curr_dir, _make_report())
+
+        assert _run_gate(base_dir, curr_dir) == 2
+        assert "missing or not valid JSON in base" in capsys.readouterr().err

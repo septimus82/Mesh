@@ -49,7 +49,9 @@ def test_create_project(tmp_path: Path) -> None:
     assert config["title"] == "My Game"
     assert config["start_scene"] == "packs/core_regions/scenes/start.json"
     assert (target / "main.py").exists()
-    assert (target / "assets/data/monster_species.json").exists()
+    assert (target / "assets/sprites/door.png").exists()  # used when the Studio links rooms
+    # The monster game was a test project: its data only comes with its own template.
+    assert not (target / "assets/data/monster_species.json").exists()
 
     # Check scene content
     scene = json.loads((target / "packs/core_regions/scenes/start.json").read_text(encoding="utf-8"))
@@ -68,7 +70,7 @@ def test_create_project_copies_default_battle_audio_assets(tmp_path: Path) -> No
     from engine.monster.battle_audio import default_battle_audio_asset_paths
 
     target = tmp_path / "battle_audio_project"
-    create_project(target, "Battle Audio Game")
+    create_project(target, "Battle Audio Game", template_id="monster")
 
     for rel_path in default_battle_audio_asset_paths():
         copied = target / rel_path
@@ -89,7 +91,7 @@ def test_scaffold_battle_audio_paths_track_mapping_contract(tmp_path: Path) -> N
     assert set(default_battle_audio_asset_paths()) == expected
 
     target = tmp_path / "mapping_contract_project"
-    create_project(target, "Mapping Contract")
+    create_project(target, "Mapping Contract", template_id="monster")
     for rel_path in default_battle_audio_asset_paths():
         assert (target / rel_path).is_file()
 
@@ -97,7 +99,7 @@ def test_scaffold_battle_audio_paths_track_mapping_contract(tmp_path: Path) -> N
 @pytest.mark.integration
 def test_create_project_keeps_monster_starter_json_and_sprites(tmp_path: Path) -> None:
     target = tmp_path / "monster_starter_project"
-    create_project(target, "Monster Starter")
+    create_project(target, "Monster Starter", template_id="monster")
 
     for rel_path in (
         "assets/data/monster_species.json",

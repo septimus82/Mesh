@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import sys
 from dataclasses import dataclass
@@ -12,7 +13,7 @@ import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
-from ._settings_data import SETTINGS_ROWS
+from ._settings_data import SETTINGS_ROWS, toast_settings_not_saved, toast_settings_saved
 from .common import (
     UIElement,
     _draw_rectangle_filled,
@@ -71,17 +72,25 @@ def compute_menu_panel_layout(
 ) -> ProjectBrowserLayout:
     panel_width = min(720.0, max(420.0, float(width) - 96.0))
     panel_height = min(520.0, max(360.0, float(height) - 112.0))
+    row_height = 52.0
+    gap = 10.0
+    first_row = 120.0  # below the title and subtitle
+    rows = max(0, int(item_count))
+    need = first_row + rows * (row_height + gap) - gap + 48.0  # the title, the cards, the footer's room below
+    if rows and need > panel_height:  # more rows than this window shows (Settings at 640 x 480: Milestone 21B.1)
+        panel_height = max(panel_height, min(need, float(height) - 16.0))  # use more of the window first,
+        first_row, gap = 100.0, 6.0  # then close up: the cards just under the subtitle, the rows nearer
+        pitch = (panel_height - first_row - 44.0 + gap) / rows
+        row_height = max(48.0, min(row_height, pitch - gap))  # (48 px: a card's name and its value still fit)
     left = (float(width) - panel_width) / 2.0
     bottom = (float(height) - panel_height) / 2.0
     panel = ProjectBrowserRect(left=left, right=left + panel_width, bottom=bottom, top=bottom + panel_height)
 
     card_left = panel.left + 34.0
     card_width = panel.width - 68.0
-    row_height = 52.0
-    gap = 10.0
     cards: list[ProjectBrowserRect] = []
-    for index in range(max(0, int(item_count))):
-        row_top = panel.top - 120.0 - index * (row_height + gap)
+    for index in range(rows):
+        row_top = panel.top - first_row - index * (row_height + gap)
         cards.append(
             ProjectBrowserRect(
                 left=card_left,
@@ -116,6 +125,14 @@ def compute_project_browser_menu_layout(
 
 def _is_web_runtime() -> bool:
     return sys.platform == "emscripten" or os.environ.get("PYGBAG") == "1"
+
+
+def _tool_available(module: str) -> bool:
+    """Whether a developer tool (a ``tooling`` module of the engine checkout) can be imported here."""
+    try:
+        return importlib.util.find_spec(module) is not None
+    except (ImportError, ValueError):
+        return False
 
 
 def get_menu_legend(input_source: str) -> str:
@@ -385,8 +402,12 @@ class MainMenuOverlay(UIElement):
             ]
         )
         if not _is_web_runtime():
-            items.append(("Run Web Demo (Local Preview)", "run_web_preview"))
-            items.append(("Export Web Demo (.zip)", "export_web"))
+            # Developer tools from the engine checkout's tooling/: shown only where they can run. In a creator's
+            # own game (or a pip install) they weren't there, and the items did nothing.
+            if _tool_available("tooling.web_preview"):
+                items.append(("Run Web Demo (Local Preview)", "run_web_preview"))
+            if _tool_available("tooling.release_web_demo"):
+                items.append(("Export Web Demo (.zip)", "export_web"))
             items.append(("Quit", "quit"))
         return items
 
@@ -667,10 +688,16 @@ class MainMenuOverlay(UIElement):
         return False
 
     def _handle_start_game_impl(self) -> None:
-        state = getattr(getattr(self.window, "game_state_controller", None), "state", None)
-        if state is not None and hasattr(state, "flags"):
+        controller = getattr(self.window, "game_state_controller", None)
+        if controller is not None:  # a new game starts clean: flags, counters, values and quests (Watchfire R1)
             try:
-                state.flags = {}
+                if callable(getattr(controller, "replace_state", None)):
+                    controller.replace_state({})
+                    resync = getattr(getattr(controller, "quests", None), "reload_from_state", None)
+                    if callable(resync):  # quests begin as in a fresh game: one without a start event starts now
+                        resync()
+                elif hasattr(getattr(controller, "state", None), "flags"):  # (a state holder without the controller's API)
+                    controller.state.flags = {}
             except Exception:
                 _log_swallow("MAIN-001", "engine/ui_overlays/main_menu_overlay.py pass-only blanket swallow")
                 pass
@@ -921,10 +948,8 @@ class MainMenuOverlay(UIElement):
     def _settings_value_text(self, key: str, kind: str) -> str:
         settings = self._runtime_settings()
         if kind == "slider":
-            if key == "music_volume":
-                return f"{int(round(settings.music_volume * 100.0))}%"
-            if key == "sfx_volume":
-                return f"{int(round(settings.sfx_volume * 100.0))}%"
+            if key in ("music_volume", "sfx_volume", "ambience_volume"):
+                return f"{int(round(float(getattr(settings, key, 1.0)) * 100.0))}%"
         if kind == "toggle":
             return "ON" if bool(getattr(settings, key, False)) else "OFF"
         return ""
@@ -1186,21 +1211,19 @@ class MainMenuOverlay(UIElement):
             saver()
 
     def _save_runtime_settings(self) -> None:
-        from ..i18n import tr  # noqa: PLC0415
-
         editor = getattr(self.window, "editor", None)
         if editor is not None and hasattr(editor, "workspace"):
-            editor.workspace.save_user_settings()
+            saved = editor.workspace.save_user_settings() is not False
         else:
             from ..runtime_settings_storage import save_runtime_settings  # noqa: PLC0415
 
             path = getattr(self.window, "runtime_settings_path", None)
             settings = self._runtime_settings()
-            save_runtime_settings(path, settings)
-        hud = getattr(self.window, "player_hud", None)
-        enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
-        if callable(enqueue):
-            enqueue(tr("UI_SETTINGS_SAVED"), seconds=2.0)
+            saved = save_runtime_settings(path, settings)
+        if saved:
+            toast_settings_saved(self.window)
+        else:
+            toast_settings_not_saved(self.window)
 
     def _handle_settings_action(self, action: str, *, large_step: bool = False) -> bool:
         action = str(action)
@@ -1228,10 +1251,8 @@ class MainMenuOverlay(UIElement):
         settings = self._runtime_settings()
         if kind != "slider":
             return False
-        if key == "music_volume":
-            settings.music_volume = max(0.0, min(1.0, float(settings.music_volume) + delta))
-        elif key == "sfx_volume":
-            settings.sfx_volume = max(0.0, min(1.0, float(settings.sfx_volume) + delta))
+        if key in ("music_volume", "sfx_volume", "ambience_volume"):
+            setattr(settings, key, max(0.0, min(1.0, float(getattr(settings, key, 1.0)) + delta)))
         else:
             return False
         self._apply_runtime_settings()

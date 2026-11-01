@@ -495,7 +495,7 @@ def _handle_assets_build_manifest(args: argparse.Namespace) -> int:
     if not out_path.is_absolute():
         out_path = repo_root / out_path
 
-    from tooling.asset_manifest import build_manifest
+    from engine.tooling.asset_manifest import build_manifest
 
     manifest = build_manifest(repo_root)
 
@@ -517,7 +517,7 @@ def _handle_assets_audit_deps(args: argparse.Namespace) -> int:
         out_path = repo_root / out_path
     strict = bool(getattr(args, "strict", False))
 
-    from tooling.asset_manifest import audit_dependencies, build_manifest
+    from engine.tooling.asset_manifest import audit_dependencies, build_manifest
 
     manifest = build_manifest(repo_root)
     report = audit_dependencies(repo_root, manifest=manifest)

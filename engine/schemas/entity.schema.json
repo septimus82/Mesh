@@ -36,6 +36,108 @@
         "$ref": "#/$defs/behaviourEntry"
       }
     },
+    "cast_shadow": {
+      "description": "Shadow cast from lamps: true/false, or settings (height px, strength 0-1, length multiplier)",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "height": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 4,
+              "maximum": 1000
+            },
+            "strength": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "length": {
+              "type": "number",
+              "minimum": 0.2,
+              "maximum": 3
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "flip_x": {
+      "type": "boolean",
+      "description": "Show the sprite mirrored left-to-right."
+    },
+    "components": {
+      "type": "object",
+      "description": "Runtime components. 'collider' replaces the sprite-sized box in movement collision: a circle (r) or a box footprint (w, h), each with an optional offset from the sprite's centre.",
+      "properties": {
+        "collider": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "circle",
+                "box"
+              ]
+            },
+            "r": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "radius": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "offset_x": {
+              "type": "number"
+            },
+            "offset_y": {
+              "type": "number"
+            },
+            "ox": {
+              "type": "number"
+            },
+            "oy": {
+              "type": "number"
+            },
+            "w": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "h": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "width": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "height": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "auto": {
+              "type": "boolean",
+              "description": "A box that follows the picture: the bottom quarter, 60% as wide (a character's feet)."
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    },
     "collision_poly": {
       "type": "array",
       "items": {
@@ -128,6 +230,19 @@
     "scale": {
       "type": "number"
     },
+    "shadow_enabled": {
+      "type": "boolean",
+      "description": "The small ground shadow under the object's feet"
+    },
+    "picture_hidden": {
+      "type": "boolean",
+      "description": "The picture is not drawn in the game; the object still works (a passage, a door over map art)"
+    },
+    "door_style": {
+      "type": "string",
+      "enum": ["passage", "map_art"],
+      "description": "How a door shows: an invisible passage, or an area over a door painted on the map (none: a door picture)"
+    },
     "solid": {
       "type": "boolean"
     },
@@ -168,6 +283,10 @@
     },
     "depth_z": {
       "type": "number"
+    },
+    "elevation": {
+      "type": "number",
+      "description": "HD-2D scenes only: height above the ground in pixels (32 px = 1 m). 2D scenes ignore it. Not depth_z, which is draw order."
     },
     "trigger_radius": {
       "type": [

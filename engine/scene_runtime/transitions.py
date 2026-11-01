@@ -153,7 +153,10 @@ def perform_scene_change(controller: SceneController, scene_path: str, spawn_id:
 
 
 def reload_scene(controller: SceneController, new_path: str | None = None) -> bool:
-    """Hot reload the current (or provided) scene immediately."""
+    """Hot reload the current (or provided) scene immediately. The scene is checked first (F7,
+    ``reload_check``): one that can't be loaded is refused and the running scene is left exactly as it was.
+    ``controller.last_reload_result`` says what happened either way."""
+    from . import reload_check
     from .persistence import (
         restore_camera_state,
         restore_player_state,
@@ -166,26 +169,20 @@ def reload_scene(controller: SceneController, new_path: str | None = None) -> bo
     def _log(msg: str) -> None:
         controller.window.console_log(f"[HotReload] {msg}")
 
-    def _set_error(msg: str) -> None:
-        controller._last_hot_reload_error_message = str(msg or "").strip()
-        controller._last_hot_reload_error_scene = scene_path
-        setter = getattr(controller.window, "set_hot_reload_error", None)
-        if callable(setter):
-            setter(controller._last_hot_reload_error_message, scene_path)
-
-    def _clear_error() -> None:
-        controller._last_hot_reload_error_message = ""
-        controller._last_hot_reload_error_scene = ""
-        clearer = getattr(controller.window, "clear_hot_reload_error", None)
-        if callable(clearer):
-            clearer()
-
     if not scene_path:
         _log("No active scene to reload")
-        _set_error("No active scene to reload")
+        reload_check.publish(controller, reload_check.result(
+            ok=False, scene_path="", route="immediate", reason="no_scene", stage="preflight",
+            message="No active scene to reload", preserved=True))
         return False
 
     controller._pending_scene_path = None
+
+    scene, refusal = reload_check.check(controller, scene_path, "immediate")
+    if refusal is not None:
+        _log(refusal["message"])
+        reload_check.publish(controller, refusal)
+        return False
 
     gs_controller = getattr(controller.window, "game_state_controller", None)
     state_snapshot = gs_controller.export_state() if gs_controller is not None else None
@@ -197,19 +194,26 @@ def reload_scene(controller: SceneController, new_path: str | None = None) -> bo
     _log(f"Reloading scene: {scene_path}")
     _log(f"Clearing {entity_count} entities...")
 
-    controller._clear_layers()
-    controller._clear_scene_event_subscriptions()
+    # load_scene clears the layers and the scene's subscriptions itself, after noting what the player removed from
+    # the room. Clearing them here first made every object look removed, so a reload came back empty (F7).
     if hasattr(controller.window, "_mesh_event_queue"):
         controller.window._mesh_event_queue = []
 
     _log("Rebuilding layers...")
     try:
+        reload_check.hand_over(controller, scene_path, scene)
         controller.load_scene(scene_path)
     except Exception as exc:
         _log(f"Scene reload failed: {exc}")
         logger.exception("Scene reload failed for path: %s", scene_path)
-        _set_error(f"{type(exc).__name__}: {exc}")
+        reload_check.publish(controller, reload_check.result(
+            ok=False, scene_path=scene_path, route="immediate", reason="construction_failed", stage="construction",
+            message=(f"Scene reload failed while it was being built ({type(exc).__name__}: {exc}); the scene that "
+                     "was running had already been cleared. Fix it and reload again."),
+            preserved=False, errors=[f"{type(exc).__name__}: {exc}"]))
         return False
+    finally:
+        reload_check.take(controller, scene_path)  # (not taken by a stand-in loader: dropped)
 
     if gs_controller is not None and state_snapshot is not None:
         gs_controller.import_state(state_snapshot)
@@ -226,5 +230,6 @@ def reload_scene(controller: SceneController, new_path: str | None = None) -> bo
         _log("  <no behaviours>")
 
     _log("Scene reload complete.")
-    _clear_error()
+    reload_check.publish(controller, reload_check.result(ok=True, scene_path=scene_path, route="immediate",
+                                                         message="Scene reloaded."))
     return True

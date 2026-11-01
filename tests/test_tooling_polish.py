@@ -23,7 +23,7 @@ class TestToolingPolish(unittest.TestCase):
         data = {
             "name": "Messy",
             "version": 1,
-            "settings": {"background_color": "dark_blue_gray"}, # Default value
+            "settings": {"background_color": "black"}, # Default value
             "entities": [],
             "layers": []
         }
@@ -46,7 +46,7 @@ class TestToolingPolish(unittest.TestCase):
         scene_data = {
             "name": "Scene",
             "version": 1,
-            "settings": {"background_color": "dark_blue_gray"},
+            "settings": {"background_color": "black"},
             "entities": [],
             "layers": []
         }

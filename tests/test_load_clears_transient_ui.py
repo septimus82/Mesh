@@ -61,7 +61,7 @@ class TestLoadClearsTransientUI(unittest.TestCase):
 
         # Verify Toasts were cleared and "Loaded" enqueued
         self.mock_player_hud.clear_toasts.assert_called_once()
-        self.mock_player_hud.enqueue_toast.assert_called_with("Loaded")
+        self.mock_player_hud.enqueue_toast.assert_called_with("Game loaded")
 
         # Verify scene change requested
         self.mock_window.request_scene_change.assert_called_with(str(save_path))
@@ -76,7 +76,9 @@ class TestLoadClearsTransientUI(unittest.TestCase):
         # Verify UI reset was NOT called
         self.mock_ui_controller.reset_transient_state.assert_not_called()
         self.mock_player_hud.clear_toasts.assert_not_called()
-        self.mock_player_hud.enqueue_toast.assert_not_called()
+        # A failed load explains itself, but must never claim success.
+        toasts = [c.args[0] for c in self.mock_player_hud.enqueue_toast.call_args_list]
+        self.assertNotIn("Loaded", toasts)
 
     def test_toast_queue_clear_implementation(self):
         # Test the actual implementation of clear() in ToastQueue

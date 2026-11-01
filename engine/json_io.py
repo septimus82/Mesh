@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -97,6 +99,35 @@ def write_json_atomic(
     if trailing_newline and not text.endswith("\n"):
         text += "\n"
     write_text_atomic(path, text, encoding="utf-8", durable=durable)
+
+
+def publish_new(src: str | Path, dst: str | Path) -> None:
+    """Move the file ``src`` to ``dst`` only if nothing is at ``dst`` (a file, a folder, a link, even a broken one):
+    atomic, never replacing; FileExistsError, nothing changed, if something is. Windows: a rename (MoveFileEx without
+    MOVEFILE_REPLACE_EXISTING). Elsewhere: a hard link, then ``src`` removed. A file system that can do neither raises
+    OSError and publishes nothing (no fallback that could replace)."""
+    if os.name == "nt":
+        os.rename(src, dst)
+        return
+    os.link(src, dst, follow_symlinks=False)
+    with contextlib.suppress(OSError):  # (published; a leftover ``src`` is the caller's own temporary file)
+        os.unlink(src)
+
+
+def write_json_new(path: str | Path, payload: Any) -> None:
+    """``write_json_atomic`` for a file that must not exist yet: written whole to a temporary file of its own beside it,
+    then published with ``publish_new`` (FileExistsError, nothing changed, if anything is at ``path`` by then)."""
+    target = _coerce_path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    text = dumps_stable(payload)
+    fd, tmp = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=".new")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text if text.endswith("\n") else text + "\n")
+        publish_new(tmp, target)
+    finally:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(tmp)
 
 
 def read_json(path: str | Path) -> Any:

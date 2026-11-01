@@ -1,0 +1,108 @@
+{
+  "places": {
+    "cottage_front": "in front of the cottage, the player beside its door",
+    "behind_cottage": "behind the cottage (its cutaway open), the player north of it",
+    "by_the_player": "passing by the player, close",
+    "hills": "the hills' cliff: particles behind it hidden, above it seen",
+    "bridge_front": "in front of the bridge, the player under it",
+    "bridge_behind": "behind the bridge, looking at its deck"
+  },
+  "presets": {
+    "rain": {
+      "cottage_front": {
+        "drawn_px": 30045,
+        "hidden_by_depth_px": 633
+      },
+      "behind_cottage": {
+        "drawn_px": 30984,
+        "hidden_by_depth_px": 1351
+      },
+      "by_the_player": {
+        "drawn_px": 28928,
+        "hidden_by_depth_px": 780
+      },
+      "hills": {
+        "drawn_px": 30159,
+        "hidden_by_depth_px": 1527
+      },
+      "bridge_front": {
+        "drawn_px": 30892,
+        "hidden_by_depth_px": 2076
+      },
+      "bridge_behind": {
+        "drawn_px": 33474,
+        "hidden_by_depth_px": 1681
+      },
+      "walk_frames": 35,
+      "anchoring": {
+        "world_shift_px": -10,
+        "found_where_the_world_moved": 0.846,
+        "found_where_they_were_on_screen": 0.104
+      }
+    },
+    "snow": {
+      "cottage_front": {
+        "drawn_px": 9884,
+        "hidden_by_depth_px": 284
+      },
+      "behind_cottage": {
+        "drawn_px": 8682,
+        "hidden_by_depth_px": 363
+      },
+      "by_the_player": {
+        "drawn_px": 9505,
+        "hidden_by_depth_px": 336
+      },
+      "hills": {
+        "drawn_px": 9304,
+        "hidden_by_depth_px": 525
+      },
+      "bridge_front": {
+        "drawn_px": 10017,
+        "hidden_by_depth_px": 616
+      },
+      "bridge_behind": {
+        "drawn_px": 9372,
+        "hidden_by_depth_px": 448
+      },
+      "walk_frames": 35,
+      "anchoring": {
+        "world_shift_px": -10,
+        "found_where_the_world_moved": 0.955,
+        "found_where_they_were_on_screen": 0.033
+      }
+    },
+    "wind": {
+      "cottage_front": {
+        "drawn_px": 5344,
+        "hidden_by_depth_px": 364
+      },
+      "behind_cottage": {
+        "drawn_px": 5265,
+        "hidden_by_depth_px": 889
+      },
+      "by_the_player": {
+        "drawn_px": 4997,
+        "hidden_by_depth_px": 609
+      },
+      "hills": {
+        "drawn_px": 4255,
+        "hidden_by_depth_px": 1049
+      },
+      "bridge_front": {
+        "drawn_px": 5011,
+        "hidden_by_depth_px": 863
+      },
+      "bridge_behind": {
+        "drawn_px": 4723,
+        "hidden_by_depth_px": 1163
+      },
+      "walk_frames": 35,
+      "anchoring": {
+        "world_shift_px": -10,
+        "found_where_the_world_moved": 1.0,
+        "found_where_they_were_on_screen": 0.132
+      }
+    }
+  }
+}

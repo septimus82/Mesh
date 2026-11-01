@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import engine.optional_arcade as optional_arcade
 
 
@@ -93,7 +95,8 @@ def test_authoring_copy_coords_hotkey_hover_pos_missing_entity(capsys) -> None:
     assert capsys.readouterr().out.strip() == "HOVER_POS (no hovered entity)"
 
 
-def test_authoring_copy_coords_hotkey_does_not_break_pause_when_debug_off(capsys) -> None:
+@pytest.mark.fast
+def test_f9_quick_loads_when_debug_off(capsys) -> None:
     from engine.input_runtime import capture as input_capture
 
     class _Console:
@@ -124,10 +127,20 @@ def test_authoring_copy_coords_hotkey_does_not_break_pause_when_debug_off(capsys
         def console_log(self, message: str) -> None:
             self._logs.append(str(message))
 
+    class _SaveManager:
+        def __init__(self) -> None:
+            self.loaded: list[str] = []
+
+        def load_game(self, slot: str) -> bool:
+            self.loaded.append(slot)
+            return True
+
     window = _Window()
+    window.save_manager = _SaveManager()
     controller = type("C", (), {"window": window})()
 
     assert input_capture.handle_key_press(controller, optional_arcade.arcade.key.F9, 0) is True
-    assert capsys.readouterr().out.strip() == ""
-    assert any("Paused = True" in entry for entry in window._logs)
+    assert capsys.readouterr().out.strip() == ""  # no coordinates copied outside debugging
+    assert window.save_manager.loaded == ["quicksave"]  # F5 saves this slot, F9 loads it
+    assert window._paused is False
 

@@ -1,0 +1,1227 @@
+{
+ "creator": {
+  "before": {
+   "state": {
+    "particles": null,
+    "wind": null,
+    "exposure": "outdoor",
+    "sounds": {
+     "rain": "",
+     "wind": "",
+     "rain_volume": 0.6,
+     "wind_volume": 0.5
+    },
+    "described": [
+     [
+      "rain",
+      "none",
+      false
+     ],
+     [
+      "snow",
+      "none",
+      false
+     ],
+     [
+      "wind",
+      "none",
+      false
+     ]
+    ]
+   },
+   "runtime": {
+    "effects": [],
+    "draw_calls": 0
+   },
+   "left_environment_has_button": true
+  },
+  "panel_open": "weather",
+  "rain": {
+   "state": {
+    "particles": [
+     {
+      "preset": "rain",
+      "count": 3000
+     }
+    ],
+    "wind": null,
+    "exposure": "outdoor",
+    "sounds": {
+     "rain": "",
+     "wind": "",
+     "rain_volume": 0.6,
+     "wind_volume": 0.5
+    },
+    "described": [
+     [
+      "rain",
+      "steady",
+      true
+     ],
+     [
+      "snow",
+      "none",
+      false
+     ],
+     [
+      "wind",
+      "none",
+      false
+     ]
+    ]
+   },
+   "runtime": {
+    "effects": [
+     [
+      "rain",
+      3000,
+      true,
+      [
+       0.8,
+       0.0
+      ],
+      0.2
+     ]
+    ],
+    "draw_calls": 1,
+    "time": 0.717,
+    "notice": null
+   },
+   "probe": {
+    "falling": 770,
+    "landed": 93,
+    "landed_within_15cm_of_the_ground": 81,
+    "landed_sampled": 93
+   }
+  },
+  "snow": {
+   "state": {
+    "particles": [
+     {
+      "preset": "snow",
+      "count": 4500
+     }
+    ],
+    "wind": null,
+    "exposure": "outdoor",
+    "sounds": {
+     "rain": "",
+     "wind": "",
+     "rain_volume": 0.6,
+     "wind_volume": 0.5
+    },
+    "described": [
+     [
+      "rain",
+      "none",
+      false
+     ],
+     [
+      "snow",
+      "heavy",
+      true
+     ],
+     [
+      "wind",
+      "none",
+      false
+     ]
+    ]
+   },
+   "runtime": {
+    "effects": [
+     [
+      "snow",
+      4500,
+      true,
+      [
+       0.3,
+       0.0
+      ],
+      0.3
+     ]
+    ],
+    "draw_calls": 1,
+    "time": 2.05,
+    "notice": null
+   },
+   "probe": {
+    "falling": 1154,
+    "landed": 181,
+    "landed_within_15cm_of_the_ground": 151,
+    "landed_sampled": 181
+   }
+  },
+  "leaves": {
+   "state": {
+    "particles": [
+     {
+      "preset": "snow",
+      "count": 4500
+     },
+     {
+      "preset": "wind",
+      "count": 900
+     }
+    ],
+    "wind": {
+     "speed": 5.0,
+     "direction": 90.0,
+     "gust": 0.9
+    },
+    "exposure": "outdoor",
+    "sounds": {
+     "rain": "",
+     "wind": "",
+     "rain_volume": 0.6,
+     "wind_volume": 0.5
+    },
+    "described": [
+     [
+      "rain",
+      "none",
+      false
+     ],
+     [
+      "snow",
+      "heavy",
+      true
+     ],
+     [
+      "wind",
+      "heavy",
+      true
+     ]
+    ]
+   },
+   "runtime": {
+    "effects": [
+     [
+      "snow",
+      4500,
+      true,
+      [
+       0.0,
+       5.0
+      ],
+      0.9
+     ],
+     [
+      "wind",
+      900,
+      true,
+      [
+       0.0,
+       5.0
+      ],
+      0.9
+     ]
+    ],
+    "draw_calls": 2,
+    "time": 0.517,
+    "notice": null
+   }
+  },
+  "snow_hidden": {
+   "state": {
+    "particles": [
+     {
+      "preset": "snow",
+      "count": 4500,
+      "enabled": false
+     },
+     {
+      "preset": "wind",
+      "count": 900
+     }
+    ],
+    "wind": {
+     "speed": 5.0,
+     "direction": 90.0,
+     "gust": 0.9
+    },
+    "exposure": "outdoor",
+    "sounds": {
+     "rain": "",
+     "wind": "",
+     "rain_volume": 0.6,
+     "wind_volume": 0.5
+    },
+    "described": [
+     [
+      "rain",
+      "none",
+      false
+     ],
+     [
+      "snow",
+      "heavy",
+      false
+     ],
+     [
+      "wind",
+      "heavy",
+      true
+     ]
+    ]
+   },
+   "runtime": {
+    "effects": [
+     [
+      "snow",
+      4500,
+      false,
+      [
+       0.0,
+       5.0
+      ],
+      0.9
+     ],
+     [
+      "wind",
+      900,
+      true,
+      [
+       0.0,
+       5.0
+      ],
+      0.9
+     ]
+    ],
+    "draw_calls": 1,
+    "time": 0.517,
+    "notice": null
+   },
+   "leaves_drift": {
+    "matched": 283,
+    "median_m_s": [
+     0.0,
+     4.54
+    ]
+   }
+  },
+  "undo_redo": {
+   "before": [
+    [
+     "rain",
+     "none",
+     false
+    ],
+    [
+     "snow",
+     "heavy",
+     true
+    ],
+    [
+     "wind",
+     "heavy",
+     true
+    ]
+   ],
+   "changed": [
+    [
+     "rain",
+     "none",
+     false
+    ],
+    [
+     "snow",
+     "light",
+     true
+    ],
+    [
+     "wind",
+     "heavy",
+     true
+    ]
+   ],
+   "undone": [
+    [
+     "rain",
+     "none",
+     false
+    ],
+    [
+     "snow",
+     "heavy",
+     true
+    ],
+    [
+     "wind",
+     "heavy",
+     true
+    ]
+   ],
+   "redone": [
+    [
+     "rain",
+     "none",
+     false
+    ],
+    [
+     "snow",
+     "light",
+     true
+    ],
+    [
+     "wind",
+     "heavy",
+     true
+    ]
+   ],
+   "runtime_after_redo": {
+    "effects": [
+     [
+      "snow",
+      800,
+      true,
+      [
+       0.0,
+       5.0
+      ],
+      0.9
+     ],
+     [
+      "wind",
+      900,
+      true,
+      [
+       0.0,
+       5.0
+      ],
+      0.9
+     ]
+    ],
+    "draw_calls": 2,
+    "time": 0.017,
+    "notice": null
+   }
+  },
+  "indoors": {
+   "state": {
+    "particles": [
+     {
+      "preset": "snow",
+      "count": 800
+     },
+     {
+      "preset": "wind",
+      "count": 900
+     }
+    ],
+    "wind": {
+     "speed": 5.0,
+     "direction": 90.0,
+     "gust": 0.9
+    },
+    "exposure": "indoor",
+    "sounds": {
+     "rain": "",
+     "wind": "",
+     "rain_volume": 0.6,
+     "wind_volume": 0.5
+    },
+    "described": [
+     [
+      "rain",
+      "none",
+      false
+     ],
+     [
+      "snow",
+      "light",
+      true
+     ],
+     [
+      "wind",
+      "heavy",
+      true
+     ]
+    ]
+   },
+   "runtime": {
+    "effects": [
+     [
+      "wind",
+      900,
+      true,
+      [
+       0.0,
+       5.0
+      ],
+      0.9
+     ]
+    ],
+    "draw_calls": 1,
+    "time": 0.1,
+    "notice": "This room is indoors (weather_exposure), so its snow is not shown."
+   },
+   "message": "Indoors: no rain or snow here."
+  },
+  "saved_message": "Saved 1 file(s).",
+  "configured": {
+   "particles": [
+    {
+     "preset": "snow",
+     "count": 800
+    },
+    {
+     "preset": "wind",
+     "count": 900
+    }
+   ],
+   "wind": {
+    "speed": 5.0,
+    "direction": 90.0,
+    "gust": 0.9
+   },
+   "exposure": "outdoor",
+   "sounds": {
+    "rain": "",
+    "wind": "",
+    "rain_volume": 0.6,
+    "wind_volume": 0.5
+   },
+   "described": [
+    [
+     "rain",
+     "none",
+     false
+    ],
+    [
+     "snow",
+     "light",
+     true
+    ],
+    [
+     "wind",
+     "heavy",
+     true
+    ]
+   ]
+  },
+  "configured_runtime": {
+   "effects": [
+    [
+     "snow",
+     800,
+     true,
+     [
+      0.0,
+      5.0
+     ],
+     0.9
+    ],
+    [
+     "wind",
+     900,
+     true,
+     [
+      0.0,
+      5.0
+     ],
+     0.9
+    ]
+   ],
+   "draw_calls": 2,
+   "time": 0.117,
+   "notice": null
+  },
+  "in_the_saved_file": {
+   "particles": [
+    {
+     "count": 800,
+     "preset": "snow"
+    },
+    {
+     "count": 900,
+     "preset": "wind"
+    }
+   ],
+   "wind": {
+    "direction": 90.0,
+    "gust": 0.9,
+    "speed": 5.0
+   },
+   "exposure": "outdoor",
+   "sounds": {
+    "rain": "",
+    "wind": "",
+    "rain_volume": 0.6,
+    "wind_volume": 0.5
+   },
+   "described": [
+    [
+     "rain",
+     "none",
+     false
+    ],
+    [
+     "snow",
+     "light",
+     true
+    ],
+    [
+     "wind",
+     "heavy",
+     true
+    ]
+   ]
+  },
+  "reopened": {
+   "state": {
+    "particles": [
+     {
+      "count": 800,
+      "preset": "snow"
+     },
+     {
+      "count": 900,
+      "preset": "wind"
+     }
+    ],
+    "wind": {
+     "direction": 90.0,
+     "gust": 0.9,
+     "speed": 5.0
+    },
+    "exposure": "outdoor",
+    "sounds": {
+     "rain": "",
+     "wind": "",
+     "rain_volume": 0.6,
+     "wind_volume": 0.5
+    },
+    "described": [
+     [
+      "rain",
+      "none",
+      false
+     ],
+     [
+      "snow",
+      "light",
+      true
+     ],
+     [
+      "wind",
+      "heavy",
+      true
+     ]
+    ]
+   },
+   "runtime": {
+    "effects": [
+     [
+      "snow",
+      800,
+      true,
+      [
+       0.0,
+       5.0
+      ],
+      0.9
+     ],
+     [
+      "wind",
+      900,
+      true,
+      [
+       0.0,
+       5.0
+      ],
+      0.9
+     ]
+    ],
+    "draw_calls": 2,
+    "time": 0.433,
+    "notice": null
+   },
+   "unsaved": []
+  },
+  "play_stop": [
+   {
+    "mode": "play",
+    "runtime": {
+     "effects": [
+      [
+       "snow",
+       800,
+       true,
+       [
+        0.0,
+        5.0
+       ],
+       0.9
+      ],
+      [
+       "wind",
+       900,
+       true,
+       [
+        0.0,
+        5.0
+       ],
+       0.9
+      ]
+     ],
+     "draw_calls": 2,
+     "time": 0.683,
+     "notice": null
+    },
+    "master_volume": 0.0,
+    "after_stop": {
+     "mode": "edit",
+     "runtime": {
+      "effects": [
+       [
+        "snow",
+        800,
+        true,
+        [
+         0.0,
+         5.0
+        ],
+        0.9
+       ],
+       [
+        "wind",
+        900,
+        true,
+        [
+         0.0,
+         5.0
+        ],
+        0.9
+       ]
+      ],
+      "draw_calls": 2,
+      "time": 0.183,
+      "notice": null
+     }
+    }
+   },
+   {
+    "mode": "play",
+    "runtime": {
+     "effects": [
+      [
+       "snow",
+       800,
+       true,
+       [
+        0.0,
+        5.0
+       ],
+       0.9
+      ],
+      [
+       "wind",
+       900,
+       true,
+       [
+        0.0,
+        5.0
+       ],
+       0.9
+      ]
+     ],
+     "draw_calls": 2,
+     "time": 0.683,
+     "notice": null
+    },
+    "master_volume": 0.0,
+    "after_stop": {
+     "mode": "edit",
+     "runtime": {
+      "effects": [
+       [
+        "snow",
+        800,
+        true,
+        [
+         0.0,
+         5.0
+        ],
+        0.9
+       ],
+       [
+        "wind",
+        900,
+        true,
+        [
+         0.0,
+         5.0
+        ],
+        0.9
+       ]
+      ],
+      "draw_calls": 2,
+      "time": 0.183,
+      "notice": null
+     }
+    }
+   }
+  ],
+  "other_room": {
+   "room": "start",
+   "runtime": {
+    "effects": [],
+    "draw_calls": 0
+   },
+   "particles": null
+  },
+  "back": {
+   "effects": [
+    [
+     "snow",
+     800,
+     true,
+     [
+      0.0,
+      5.0
+     ],
+     0.9
+    ],
+    [
+     "wind",
+     900,
+     true,
+     [
+      0.0,
+      5.0
+     ],
+     0.9
+    ]
+   ],
+   "draw_calls": 2,
+   "time": 0.267,
+   "notice": null
+  }
+ },
+ "compat": {
+  "reopened_unchanged": true,
+  "unsaved_on_open": [],
+  "runtime": {
+   "effects": [
+    [
+     "snow",
+     1700,
+     true,
+     [
+      0.3,
+      0.0
+     ],
+     0.3
+    ],
+    [
+     "wind",
+     120,
+     true,
+     [
+      2.0,
+      1.0
+     ],
+     0.4
+    ],
+    [
+     "rain",
+     500,
+     false,
+     [
+      0.8,
+      0.0
+     ],
+     0.2
+    ],
+    [
+     "snow",
+     300,
+     true,
+     [
+      0.3,
+      0.0
+     ],
+     0.3
+    ]
+   ],
+   "draw_calls": 3,
+   "time": 0.1,
+   "notice": null
+  },
+  "panel_says": [
+   "Weather effects in this room: 4 of 4.",
+   "Kept as set: its own gust, lifetime, wind.",
+   "Windborne leaves shown: On",
+   "Windborne leaves shown: On",
+   "Windborne leaves: light, 120 leaves, shown",
+   "Kept as set: its own area, opacity, seed, speed; 1 more\nsnow effect.",
+   "Snow: steady, 1,700 snowflakes, shown",
+   "Rain: light, 500 drops, hidden"
+  ],
+  "after_snow_heavy": [
+   {
+    "preset": "snow",
+    "count": 4500,
+    "speed": 1.5,
+    "area": [
+     40,
+     40,
+     12
+    ],
+    "seed": 9,
+    "opacity": 0.7
+   },
+   {
+    "preset": "wind",
+    "count": 120,
+    "gust": 0.4,
+    "wind": [
+     2.0,
+     1.0
+    ],
+    "lifetime": 8
+   },
+   {
+    "preset": "rain",
+    "count": 500,
+    "enabled": false
+   },
+   {
+    "preset": "snow",
+    "count": 300,
+    "seed": 2
+   }
+  ],
+  "only_snow_count_changed": true,
+  "rain_light_kept_hidden": {
+   "preset": "rain",
+   "count": 1200,
+   "enabled": false
+  }
+ },
+ "export": {
+  "export_code": 0,
+  "bundle_run": {
+   "engine_in_bundle": true,
+   "effects": [
+    [
+     "snow",
+     800,
+     true,
+     [
+      0.0,
+      5.0
+     ],
+     0.9
+    ],
+    [
+     "wind",
+     900,
+     true,
+     [
+      0.0,
+      5.0
+     ],
+     0.9
+    ]
+   ],
+   "draw_calls": 2,
+   "time": 1.5,
+   "master_volume": 0.0,
+   "error": null
+  },
+  "configured": {
+   "particles": [
+    {
+     "count": 800,
+     "preset": "snow"
+    },
+    {
+     "count": 900,
+     "preset": "wind"
+    }
+   ],
+   "wind": {
+    "direction": 90.0,
+    "gust": 0.9,
+    "speed": 5.0
+   },
+   "exposure": "outdoor",
+   "sounds": {
+    "rain": "",
+    "wind": "",
+    "rain_volume": 0.6,
+    "wind_volume": 0.5
+   },
+   "described": [
+    [
+     "rain",
+     "none",
+     false
+    ],
+    [
+     "snow",
+     "light",
+     true
+    ],
+    [
+     "wind",
+     "heavy",
+     true
+    ]
+   ]
+  }
+ },
+ "perf": {
+  "none": {
+   "wall_ms_best_of_3": 7.08,
+   "draw_calls": 45
+  },
+  "rain_light": {
+   "wall_ms_best_of_3": 8.02,
+   "draw_calls": 46,
+   "particle_pass_gpu_ms": 0.0036,
+   "particles": 1200
+  },
+  "rain_steady": {
+   "wall_ms_best_of_3": 8.03,
+   "draw_calls": 46,
+   "particle_pass_gpu_ms": 0.005,
+   "particles": 3000
+  },
+  "rain_heavy": {
+   "wall_ms_best_of_3": 8.15,
+   "draw_calls": 46,
+   "particle_pass_gpu_ms": 0.0082,
+   "particles": 6000
+  },
+  "snow_light": {
+   "wall_ms_best_of_3": 4.39,
+   "draw_calls": 46,
+   "particle_pass_gpu_ms": 0.0015,
+   "particles": 800
+  },
+  "snow_steady": {
+   "wall_ms_best_of_3": 4.2,
+   "draw_calls": 46,
+   "particle_pass_gpu_ms": 0.0023,
+   "particles": 2000
+  },
+  "snow_heavy": {
+   "wall_ms_best_of_3": 4.28,
+   "draw_calls": 46,
+   "particle_pass_gpu_ms": 0.0041,
+   "particles": 4500
+  },
+  "wind_light": {
+   "wall_ms_best_of_3": 4.17,
+   "draw_calls": 46,
+   "particle_pass_gpu_ms": 0.0007,
+   "particles": 150
+  },
+  "wind_steady": {
+   "wall_ms_best_of_3": 4.18,
+   "draw_calls": 46,
+   "particle_pass_gpu_ms": 0.0012,
+   "particles": 400
+  },
+  "wind_heavy": {
+   "wall_ms_best_of_3": 4.09,
+   "draw_calls": 46,
+   "particle_pass_gpu_ms": 0.0016,
+   "particles": 900
+  }
+ },
+ "extras": {
+  "ordinary": {
+   "light": true,
+   "steady": true,
+   "heavy": true,
+   "hidden": true,
+   "shown": true,
+   "leaves_heavy": true
+  },
+  "before_none": [
+   {
+    "preset": "snow",
+    "count": 4500,
+    "speed": 1.5,
+    "area": [
+     40,
+     40,
+     12
+    ],
+    "seed": 9,
+    "opacity": 0.7
+   },
+   {
+    "preset": "snow",
+    "count": 300,
+    "seed": 2,
+    "speed": 0.6,
+    "opacity": 0.5
+   },
+   {
+    "preset": "wind",
+    "count": 120,
+    "gust": 0.4,
+    "lifetime": 8
+   }
+  ],
+  "after_first_none_click": {
+   "particles": [
+    {
+     "preset": "snow",
+     "count": 4500,
+     "speed": 1.5,
+     "area": [
+      40,
+      40,
+      12
+     ],
+     "seed": 9,
+     "opacity": 0.7
+    },
+    {
+     "preset": "snow",
+     "count": 300,
+     "seed": 2,
+     "speed": 0.6,
+     "opacity": 0.5
+    },
+    {
+     "preset": "wind",
+     "count": 120,
+     "gust": 0.4,
+     "lifetime": 8
+    }
+   ],
+   "message": "None takes away all 2 snow effects, with their own settings: Remove all 2 or Keep them, on the right.",
+   "asks": [
+    "None removes all 2 snow effects, with their own settings\n(Ctrl+Z brings them back)."
+   ],
+   "buttons": [
+    "Remove all 2",
+    "Keep them"
+   ]
+  },
+  "after_keep": {
+   "particles": [
+    {
+     "preset": "snow",
+     "count": 4500,
+     "speed": 1.5,
+     "area": [
+      40,
+      40,
+      12
+     ],
+     "seed": 9,
+     "opacity": 0.7
+    },
+    {
+     "preset": "snow",
+     "count": 300,
+     "seed": 2,
+     "speed": 0.6,
+     "opacity": 0.5
+    },
+    {
+     "preset": "wind",
+     "count": 120,
+     "gust": 0.4,
+     "lifetime": 8
+    }
+   ],
+   "message": "Kept as they were.",
+   "still_asks": false
+  },
+  "after_remove": {
+   "particles": [
+    {
+     "preset": "wind",
+     "count": 120,
+     "gust": 0.4,
+     "lifetime": 8
+    }
+   ],
+   "message": "No snow: all 2 effects taken away (Ctrl+Z brings them back).",
+   "described": [
+    [
+     "rain",
+     "none",
+     false
+    ],
+    [
+     "snow",
+     "none",
+     false
+    ],
+    [
+     "wind",
+     "light",
+     true
+    ]
+   ]
+  },
+  "after_undo": {
+   "particles": [
+    {
+     "preset": "snow",
+     "count": 4500,
+     "speed": 1.5,
+     "area": [
+      40,
+      40,
+      12
+     ],
+     "seed": 9,
+     "opacity": 0.7
+    },
+    {
+     "preset": "snow",
+     "count": 300,
+     "seed": 2,
+     "speed": 0.6,
+     "opacity": 0.5
+    },
+    {
+     "preset": "wind",
+     "count": 120,
+     "gust": 0.4,
+     "lifetime": 8
+    }
+   ],
+   "restored_exactly": true
+  },
+  "after_redo": {
+   "particles": [
+    {
+     "preset": "wind",
+     "count": 120,
+     "gust": 0.4,
+     "lifetime": 8
+    }
+   ],
+   "leaves_exactly": true
+  },
+  "runtime_after_redo": {
+   "effects": [
+    [
+     "wind",
+     120,
+     true,
+     [
+      3.2,
+      0.6
+     ],
+     0.4
+    ]
+   ],
+   "draw_calls": 1,
+   "time": 0.017,
+   "notice": null
+  }
+ }
+}

@@ -470,10 +470,31 @@ def _result_to_dict(result: Any) -> dict[str, Any]:
     }
 
 
+def _files_blocked(root: str, tool: str) -> dict[str, Any] | None:
+    """Why ``tool`` mustn't write the project's files directly, or None only when nothing has the project open (F1):
+    Mesh Studio or another editor has it open (possibly unsaved), or that can't be told."""
+    from engine import authoring_session
+
+    state = authoring_session.studio_state(root)
+    if state["state"] == "none":
+        return None
+    if state["state"] == "uncertain":
+        return authoring_session.uncertain(state)
+    if state["host"] != authoring_session.STUDIO_HOST:
+        return authoring_session.other_editor(state["host"])
+    return {"ok": False, "reason": "studio_open", "message": (
+        f"Mesh Studio has this project open, so {tool} won't write its files (the person's unsaved work would "
+        "be overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
+
+
 def create_scene(name: str, template: str = "empty", root: str = ".") -> dict[str, Any]:
-    """Create a new scene from a template. Wraps ``AIOps.create_scene``."""
+    """Create a new scene from a template. Wraps ``AIOps.create_scene``; refused, writing nothing, while Mesh Studio
+    has the project open or that can't be told (F1)."""
     from engine.ai_ops import AIOps
 
+    blocked = _files_blocked(root, "create_scene")
+    if blocked is not None:
+        return {**blocked, "data": None}
     return _result_to_dict(AIOps(base_dir=root).create_scene(name, template))
 
 
@@ -492,12 +513,13 @@ def add_entity_from_prefab(
     from (e.g. ``assets/prefabs.json``); when omitted the engine's default
     palette is used.
     """
-    from engine.ai_ops import AIOps
-
-    result = AIOps(base_dir=root).add_entity_from_prefab(
-        scene_path, prefab_name, float(x), float(y), prefab_path=prefab_path
-    )
-    return _result_to_dict(result)
+    op: dict[str, Any] = {"type": "add_entity_from_prefab", "scene_path": scene_path, "prefab_name": prefab_name,
+                          "x": float(x), "y": float(y)}
+    if prefab_path:
+        op["prefab_path"] = prefab_path
+    outcome = apply_ops([op], root=root, validate=False)  # as apply_ops: a Studio project goes the shared authoring path
+    result = (outcome.get("results") or [{"ok": False, "message": outcome.get("message", "")}])[0]
+    return {"ok": bool(result.get("ok")), "message": result.get("message", ""), "data": result.get("data") or {}}
 
 
 def live_add_entity_from_prefab(
@@ -583,6 +605,13 @@ def apply_ops(
     failures are isolated (one bad op does not abort the rest); ``ok`` is the
     AND of every operation's success.
     """
+    changes = _studio_changes(list(operations), root)
+    if changes is not None:  # a Studio project: the shared, validated authoring path
+        return _apply_ops_through_authoring(list(operations), changes, root)
+    blocked = _files_blocked(root, "apply_ops")
+    if blocked is not None:
+        return {**blocked, "results": []}
+
     from engine.ai_ops import AIOps
 
     ops_runner = AIOps(base_dir=root)
@@ -808,3 +837,147 @@ def engine_overview(root: str = ".") -> dict[str, Any]:
 def engine_overview_json(root: str = ".") -> str:
     """``engine_overview`` rendered as a JSON string (for MCP resource bodies)."""
     return json.dumps(engine_overview(root), indent=2, sort_keys=True)
+
+
+# ---------------------------------------------------------------- authoring (one API for Studio, AI and CLI)
+#
+# The same validated operations Mesh Studio uses (engine.authoring over engine.project_ops). When Mesh
+# Studio has the project open, changes become a proposal the person reviews there; otherwise they
+# apply to the files. Works the same for any MCP client: nothing here is specific to one AI.
+
+
+def authoring_operations() -> dict[str, Any]:
+    """Every change you can make to a Mesh project, with its settings and what it does.
+
+    Generated from the engine's own operations, so it is always current. Use the names with
+    propose_changes or apply_changes, e.g. {"op": "place_prefab", "prefab": "person", "x": 320, "y": 224}.
+    """
+    from engine import authoring_session
+
+    return authoring_session.operations()
+
+
+def read_project(root: str = ".") -> dict[str, Any]:
+    """Every room of the project with its objects and map, and its Blender ``models`` (HD-2D structures).
+
+    If Mesh Studio has it open, this is what the person sees right now (unsaved edits included)
+    plus a ``revision`` to pass to propose_changes as ``base_revision``. Place a model with
+    {"op": "place_structure", "model": "<its id>", "x": ..., "y": ...}; models are imported by the person.
+    """
+    from engine import authoring_session
+
+    return authoring_session.read_project(root)
+
+
+def propose_changes(changes: list[dict[str, Any]], title: str = "", base_revision: int | None = None,
+                    root: str = ".") -> dict[str, Any]:
+    """Propose changes to the project open in Mesh Studio; the person there accepts or rejects them.
+
+    ``changes`` is a list of operations (see authoring_operations). Give ``base_revision`` from
+    read_project so Studio can tell your changes from the person's since then: separate edits both
+    survive, the same property changed both ways is reported as a conflict. Invalid changes are
+    refused at once with the reason. A ``base_revision`` Studio no longer keeps is refused
+    (``base_revision_unavailable``, with the current ``revision``: read again), as is one that isn't
+    a revision (``invalid_base_revision``); neither is replaced by another revision.
+    Returns ``{ok, proposal_id, proposal{summary, status}}``.
+    """
+    from engine import authoring_session
+
+    return authoring_session.propose(root, changes, title=title, base_revision=base_revision, source="an MCP client")
+
+
+def apply_changes(changes: list[dict[str, Any]], root: str = ".", dry_run: bool = False) -> dict[str, Any]:
+    """Apply changes to the project files (all or nothing), or preview them with ``dry_run``.
+
+    If Mesh Studio has the project open, the changes are proposed there instead: files are never
+    written behind the person's back. Returns ``{ok, summary, created, written}`` or a refusal.
+    """
+    from engine import authoring_session
+
+    return authoring_session.apply(root, changes, dry_run=dry_run, source="an MCP client")
+
+
+def proposal_status(proposal_id: str, root: str = ".") -> dict[str, Any]:
+    """What happened to a proposal: pending, accepted (with the ids it created), rejected or conflict."""
+    from engine import authoring_session
+
+    return authoring_session.proposal_status(root, proposal_id)
+
+
+def withdraw_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
+    """Take back a proposal that is still waiting in Mesh Studio."""
+    from engine import authoring_session
+
+    return authoring_session.withdraw(root, proposal_id)
+
+
+# The everyday apply_ops operations, on a Mesh Studio project, run through the same validated
+# authoring path (and so never overwrite an open Studio's unsaved work). Others keep using AIOps.
+_ADAPTED_OPS = {"add_entity_from_prefab", "delete_entity", "set_behaviour_params", "paint_tiles",
+                "add_light", "update_light", "delete_light"}
+
+
+def _studio_changes(operations: list[dict[str, Any]], root: str) -> list[dict[str, Any]] | None:
+    """apply_ops operations as authoring changes, if they all target rooms of a Studio project."""
+    if not operations or not all(isinstance(op, dict) and op.get("type") in _ADAPTED_OPS for op in operations):
+        return None
+    from engine import authoring, authoring_session
+    from engine import project_ops as ops_
+
+    try:
+        project = authoring_session.open_project(root)
+    except authoring.ChangeError:
+        return None
+    rooms = {path.replace("\\", "/").lstrip("./"): key for key, _label, path in project.rooms()}
+    changes: list[dict[str, Any]] = []
+    for op in operations:
+        room = rooms.get(str(op.get("scene_path") or "").replace("\\", "/").lstrip("./"))
+        if room is None:
+            return None
+        kind = op["type"]
+        if kind == "add_entity_from_prefab":
+            changes.append({"op": "place_prefab", "room": room, "prefab": op.get("prefab_name"),
+                            "x": op.get("x", 0), "y": op.get("y", 0)})
+        elif kind == "delete_entity":
+            changes.append({"op": "remove_entity", "room": room, "entity_id": op.get("entity_id")})
+        elif kind == "set_behaviour_params":
+            entity_ref, behaviour = op.get("entity_id"), op.get("behaviour_name")
+            scene = project.scene(room)
+            entity = next((e for e in ops_.entities(scene) if entity_ref in (e.get("id"), e.get("name"))), None)
+            if entity is not None and behaviour not in ops_.entity_behaviours(entity):
+                changes.append({"op": "add_behaviour", "room": room, "entity_id": entity_ref, "behaviour": behaviour})
+            for param, value in (op.get("params") or {}).items():
+                changes.append({"op": "set_behaviour_param", "room": room, "entity_id": entity_ref,
+                                "behaviour": behaviour, "param": param, "value": value})
+        elif kind == "add_light":
+            light = dict(op.get("light") or {})
+            changes.append({"op": "add_light", "room": room, "x": light.pop("x", 0.0), "y": light.pop("y", 0.0),
+                            "color": light.pop("color", "#ffddaa"), "radius": light.pop("radius", 160.0)})
+            if light:  # the rest as update_light takes it, on the light just added
+                changes.append({"op": "set_light", "room": room, "index": len(ops_.lights(project.scene(room))), **light})
+        elif kind == "update_light":
+            changes.append({"op": "set_light", "room": room, "index": int(op.get("index", 0)), **(op.get("patch") or {})})
+        elif kind == "delete_light":
+            changes.append({"op": "remove_light", "room": room, "index": int(op.get("index", 0))})
+        else:  # paint_tiles: one change per (layer, tile)
+            groups: dict[tuple[str, int], list[list[int]]] = {}
+            for cell in op.get("ops") or []:
+                groups.setdefault((str(cell.get("layer")), int(cell.get("gid", 0))), []).append(
+                    [int(cell.get("col", 0)), int(cell.get("row", 0))])
+            for (layer, gid), cells in groups.items():
+                changes.append({"op": "paint_tiles", "room": room, "layer": layer, "cells": cells, "tile": gid})
+    return changes
+
+
+def _apply_ops_through_authoring(operations: list[dict[str, Any]], changes: list[dict[str, Any]],
+                                 root: str) -> dict[str, Any]:
+    from engine import authoring_session
+
+    outcome = authoring_session.apply(root, changes, source="an MCP client (apply_ops)")
+    message = outcome.get("message") or "; ".join(outcome.get("summary") or []) or "applied"
+    results: list[dict[str, Any]] = [{"type": op.get("type"), "ok": bool(outcome.get("ok")), "message": message, "data": {}}
+                                     for op in operations]
+    payload = {"ok": bool(outcome.get("ok")), "results": results, "mode": outcome.get("source") or outcome.get("mode"),
+               "authoring": outcome}
+    payload["validation"] = {"ok": bool(outcome.get("ok")), "message": "checked by each operation (scene schema)"}
+    return payload

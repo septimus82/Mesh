@@ -21,6 +21,8 @@ import ast
 import json
 import os
 import re
+from collections import deque
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -87,12 +89,20 @@ def _handler_kind(handler: ast.ExceptHandler) -> str:
     return "except-other"
 
 
+def _statements(root: ast.AST) -> Iterator[ast.AST]:
+    """``ast.walk`` limited to statements, except handlers and match cases, in the same order. Handlers and ``raise``
+    only occur there and expressions never contain statements, so skipping expressions (most of a tree) loses nothing."""
+    todo: deque[ast.AST] = deque([root])
+    while todo:
+        node = todo.popleft()
+        yield node
+        todo.extend(child for child in ast.iter_child_nodes(node)
+                    if isinstance(child, (ast.stmt, ast.ExceptHandler, ast.match_case)))
+
+
 def _body_has_raise(body: list[ast.stmt]) -> bool:
     """Check whether the handler body contains a ``raise`` statement."""
-    for node in ast.walk(ast.Module(body=body, type_ignores=[])):
-        if isinstance(node, ast.Raise):
-            return True
-    return False
+    return any(isinstance(node, ast.Raise) for node in _statements(ast.Module(body=body, type_ignores=[])))
 
 
 def _body_lines(source_lines: list[str], handler: ast.ExceptHandler) -> str:
@@ -166,7 +176,7 @@ def _scan_file(
             "silent": [],
         }
 
-    for node in ast.walk(tree):
+    for node in _statements(tree):
         if not isinstance(node, ast.ExceptHandler):
             continue
         if not _handler_is_broad(node):

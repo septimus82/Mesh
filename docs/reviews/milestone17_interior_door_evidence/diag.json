@@ -1,0 +1,51 @@
+{
+  "room_m": [
+    8.0,
+    6.0
+  ],
+  "door": {
+    "center_m": [
+      5.6,
+      7.6
+    ],
+    "bottom_m": 6.6,
+    "elevation_m": 0.1,
+    "hit_box_m": [
+      4.85,
+      6.6,
+      6.35,
+      8.537
+    ]
+  },
+  "player": {
+    "center_m": [
+      8.0,
+      6.1625
+    ],
+    "hit_box_m": [
+      7.719,
+      5.412,
+      8.281,
+      6.694
+    ]
+  },
+  "walls_m": {
+    "west_inner_x": 5.2,
+    "west_outer_x": 5.0,
+    "south_outer_y": 3.5,
+    "south_inner_y": 3.7,
+    "doorway_x": [
+      7.4,
+      8.6
+    ]
+  },
+  "camera": {
+    "pitch": 55.0,
+    "distance": 35.679,
+    "target": [
+      8.0,
+      5.091815833349058,
+      0.9
+    ]
+  }
+}

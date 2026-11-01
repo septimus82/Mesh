@@ -1,0 +1,225 @@
+{
+  "sculpting": {
+    "flat": {
+      "sculpted_ground": false,
+      "terrain_draws": 0
+    },
+    "hill": {
+      "sculpted_ground": true,
+      "terrain_draws": 12
+    },
+    "hill + terrace": {
+      "sculpted_ground": true,
+      "terrain_draws": 15
+    },
+    "hill + terrace + valley": {
+      "sculpted_ground": true,
+      "terrain_draws": 16
+    },
+    "hill + terrace + valley + basin": {
+      "sculpted_ground": true,
+      "terrain_draws": 16
+    },
+    "strokes": 336,
+    "strokes_ms_each": 3.51,
+    "stored": {
+      "cell_px": 16,
+      "chunks": 13,
+      "chars": 8892
+    },
+    "the_same_strokes_store_the_same_text": true
+  },
+  "walking": {
+    "over_the_hill": {
+      "reached": [
+        true
+      ],
+      "end_feet_m": [
+        4.5,
+        23.03
+      ],
+      "end_elevation_m": 0.044,
+      "ground_there_m": 0.044,
+      "lowest_m": 0.0,
+      "highest_m": 1.475,
+      "floor": "ground",
+      "clip_frames": 63
+    },
+    "up_the_ramp": {
+      "reached": [
+        true
+      ],
+      "end_feet_m": [
+        28.02,
+        19.19
+      ],
+      "end_elevation_m": 1.5,
+      "ground_there_m": 1.5,
+      "lowest_m": 0.001,
+      "highest_m": 1.5,
+      "floor": "ground",
+      "clip_frames": 54
+    },
+    "into_the_cliff": {
+      "reached": [
+        false
+      ],
+      "end_feet_m": [
+        28.0,
+        15.47
+      ],
+      "end_elevation_m": 0.374,
+      "ground_there_m": 0.374,
+      "lowest_m": 0.0,
+      "highest_m": 0.374,
+      "floor": "ground"
+    },
+    "along_the_valley_under_the_bridge": {
+      "reached": [
+        true
+      ],
+      "end_feet_m": [
+        15.0,
+        21.03
+      ],
+      "end_elevation_m": -0.547,
+      "ground_there_m": -0.547,
+      "lowest_m": -0.547,
+      "highest_m": -0.539,
+      "floor": "ground",
+      "clip_frames": 95
+    },
+    "stairs_and_bridge": {
+      "reached": [
+        true,
+        true
+      ],
+      "end_feet_m": [
+        19.05,
+        15.05
+      ],
+      "end_elevation_m": 2.0,
+      "ground_there_m": 0.0,
+      "lowest_m": 0.0,
+      "highest_m": 2.0,
+      "floor": "platform_e/col_platform",
+      "clip_frames": 105
+    },
+    "into_the_pond": {
+      "reached": [
+        true
+      ],
+      "end_feet_m": [
+        26.03,
+        6.19
+      ],
+      "end_elevation_m": -1.185,
+      "ground_there_m": -1.185,
+      "lowest_m": -1.185,
+      "highest_m": 0.0,
+      "floor": "ground",
+      "clip_frames": 29
+    }
+  },
+  "anchoring": {
+    "out_of_place_before": [
+      "'bridge' is 0.5 m above the ground"
+    ],
+    "moved": {
+      "cottage": false,
+      "Elder": false
+    },
+    "out_of_place_after": [
+      "'bridge' is 0.5 m above the ground",
+      "'cottage' is 0.6 m into the ground",
+      "'Elder' is 1.5 m above the ground"
+    ],
+    "left_out_of_place_by_the_edits": [
+      "'cottage' is 0.6 m into the ground",
+      "'Elder' is 1.5 m above the ground"
+    ],
+    "settle_would_stand": [
+      "start_elder"
+    ],
+    "elder_can_stand_where_he_is": false
+  },
+  "water": {
+    "water_pixels_by_level_m": {
+      "-0.9": 10874,
+      "-0.6": 20572,
+      "-0.3": 34979
+    },
+    "drawn": 20572,
+    "drawn_with_its_depth_test_off": 20572,
+    "rain_ring_pixels": 5674,
+    "player_feet_m": -1.043,
+    "pixels_round_the_player_changed_by_water": 2332,
+    "mirrored_pixels_at_0_8": 20551
+  },
+  "environment": {
+    "pixels_darkened_by_the_ground_s_own_shadows": 2398,
+    "rain_surface": [
+      {
+        "where": "hill top",
+        "rain_stops_at_m": 1.473,
+        "ground_m": 1.477
+      },
+      {
+        "where": "terrace",
+        "rain_stops_at_m": 1.511,
+        "ground_m": 1.5
+      },
+      {
+        "where": "ramp",
+        "rain_stops_at_m": 0.874,
+        "ground_m": 0.898
+      },
+      {
+        "where": "valley",
+        "rain_stops_at_m": -0.544,
+        "ground_m": -0.547
+      },
+      {
+        "where": "basin floor",
+        "rain_stops_at_m": -1.199,
+        "ground_m": -1.195
+      },
+      {
+        "where": "under the bridge's deck",
+        "rain_stops_at_m": 2.016,
+        "ground_m": -0.539
+      },
+      {
+        "where": "flat ground",
+        "rain_stops_at_m": 0.0,
+        "ground_m": 0.0
+      }
+    ],
+    "picking_height_error_m_max": 0.0,
+    "picking_rays": 19
+  },
+  "studio": {
+    "cursor_on_the_ground_m": [
+      20.0,
+      6.0,
+      -0.0
+    ],
+    "raised_m": 0.914,
+    "sculpt_click_ms": [
+      378.2,
+      499.7,
+      379.0,
+      380.6,
+      380.6
+    ],
+    "undone_to_before": true,
+    "redone_to_raised": true,
+    "saved_dirty_after": false,
+    "reopened_same": true,
+    "play": {
+      "mode": "play",
+      "sculpted_ground": true
+    },
+    "after_stop": "edit"
+  }
+}

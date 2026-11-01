@@ -9,39 +9,33 @@ from typing import Any
 
 from . import json_io
 from .logging_tools import get_logger
+from .repo_root import bundled_file
+from .save_runtime.storage import new_game_id
 
 _LOG = get_logger("engine.project_scaffold")
 
 _MAIN_PY = '''\
-"""Entry point for {name}."""
-
-import sys
-import warnings
-from collections import deque
-
-warnings.filterwarnings("ignore", message=".*draw_text is an extremely slow function.*")
-
-try:
-    import pyglet
-    if sys.platform == "win32":
-        import pyglet.window.win32
-        _old_init = pyglet.window.win32.Win32Window.__init__
-
-        def _new_init(self, *args, **kwargs):
-            _old_init(self, *args, **kwargs)
-            if hasattr(self, "_event_queue") and not isinstance(self._event_queue, deque):
-                self._event_queue = deque(self._event_queue)
-
-        pyglet.window.win32.Win32Window.__init__ = _new_init
-except (ImportError, AttributeError):
-    pass
-
-from engine.config import load_config
-from engine.game import GameWindow
-from engine.game_runtime.scene_flow import resolve_game_start_scene
+"""{name}: run the game with `python main.py` (or press Play in Mesh Studio)."""
 
 
 def main() -> None:
+    # The game runs from its own folder, wherever it was started from: its config, rooms
+    # and saves are found from there (started elsewhere, it looked for config.json from
+    # that folder upward and found none, or another's).
+    import os
+
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+    # The engine is imported here, after the DPI mode is set: pyglet fixes it when it
+    # loads, and Mesh draws at a stable scale only when Windows doesn't rescale it.
+    from engine.dpi_bootstrap import set_process_dpi_unaware
+
+    set_process_dpi_unaware()
+
+    from engine.config import load_config
+    from engine.game import GameWindow
+    from engine.game_runtime.scene_flow import resolve_game_start_scene
+
     config = load_config()
     window = GameWindow(
         width=config.width,
@@ -52,21 +46,53 @@ def main() -> None:
         config=config,
         config_path="config.json",
     )
-    if config.main_menu_scene:
-        initial_scene = config.main_menu_scene
-    else:
-        wc = getattr(window, "world_controller", None)
-        initial_scene = resolve_game_start_scene(
-            engine_config=config,
-            world_controller=wc,
-        ) or config.start_scene
-    window.load_scene(initial_scene)
-    __import__("arcade").run()
+    start = config.main_menu_scene or resolve_game_start_scene(
+        engine_config=config, world_controller=getattr(window, "world_controller", None)
+    ) or config.start_scene
+    window.load_scene(start)
+    window.run()
 
 
 if __name__ == "__main__":
     main()
 '''
+
+# Every new project gets these: the starter art (tooling/make_starter_art.py), the older
+# placeholder sheet earlier projects use (only a project that names it), and the door the editor
+# uses when it links two rooms (engine.project_ops.DOOR_SPRITE).
+_STARTER_FILES = (
+    "assets/sprites/starter_hero.png",
+    "assets/sprites/starter_villager.png",
+    "assets/sprites/starter_sign.png",
+    "assets/sprites/animated_player.png",
+    "assets/sprites/door.png",
+    "assets/tilesets/starter.png",  # project_ops.TILESET_SOURCE and its image
+    "assets/tilesets/starter.json",
+)
+
+# The menus' and dialogue's sounds, which every game plays (pause menu, dialogue box): only the HD-2D starter had them,
+# so a 2D game's menus were silent and logged "Failed to load sound" at every step (#422 H9.1). New projects get them;
+# existing ones are left as they are (ensure_starter_files doesn't add them).
+_UI_SOUNDS = tuple(f"assets/sounds/ui_{name}.wav" for name in ("open", "close", "click", "hover"))
+
+
+# The placeholder sheet of projects made before Milestone 11 (provenance unverified): only those projects need it,
+# so a project that never names it (an HD-2D starter) never gets it.
+_LEGACY_PLACEHOLDER = "assets/sprites/animated_player.png"
+
+
+def _names_legacy_placeholder(root: Path) -> bool:
+    return any(_LEGACY_PLACEHOLDER.rsplit("/", 1)[1] in path.read_text(encoding="utf-8", errors="replace")
+               for folder in ("packs", "assets") for path in (Path(root) / folder).rglob("*.json"))
+
+
+def ensure_starter_files(root: Path) -> None:
+    """Copy any missing starter file into an existing project (e.g. one made before maps)."""
+    for rel_path in _STARTER_FILES:
+        if not (Path(root) / rel_path).is_file():
+            if rel_path == _LEGACY_PLACEHOLDER and not _names_legacy_placeholder(Path(root)):
+                continue
+            _copy_engine_asset(rel_path, Path(root))
 
 _MONSTER_STARTER_FILES = (
     "assets/data/monster_species.json",
@@ -98,23 +124,22 @@ def validate_new_project_target(root: Path) -> tuple[bool, str]:
     return True, ""
 
 
-def _engine_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
 def _copy_engine_asset(rel_path: str, dest_root: Path) -> None:
-    src = _engine_root() / rel_path
+    src = bundled_file(rel_path)  # the source tree, or a pip install's share/mesh-engine
     dest = dest_root / rel_path
-    if not src.is_file():
-        _LOG.warning("Engine starter asset missing: %s", src)
+    if src is None:
+        _LOG.warning("Engine starter asset missing: %s (not bundled with this install)", rel_path)
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dest)
 
 
 def _engine_input_bindings() -> dict[str, Any]:
+    config = bundled_file("config.json")
     try:
-        data = json.loads((_engine_root() / "config.json").read_text(encoding="utf-8"))
+        if config is None:
+            raise OSError("config.json is not bundled with this install")
+        data = json.loads(config.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         _LOG.warning("Engine config.json unreadable; new project gets no input_bindings")
         return {}
@@ -163,6 +188,8 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
         "width": 1280,
         "height": 720,
         "title": str(name),
+        # Its exported game keeps its players' saves under this (engine.save_runtime.storage): made once, here.
+        "game_id": new_game_id(str(name)),
         "start_scene": "packs/core_regions/scenes/start.json",
         "main_menu_scene": None,
         "world_file": "packs/core_regions/worlds/main.json",
@@ -177,7 +204,8 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
         config["input_bindings"] = engine_bindings
 
     json_io.write_json_atomic(root / "config.json", config)
-    (root / "main.py").write_text(_MAIN_PY.replace("{name}", str(name)), encoding="utf-8")
+    safe_name = " ".join(str(name).replace("\\", "/").replace('"', "'").split())  # it goes into a docstring
+    (root / "main.py").write_text(_MAIN_PY.replace("{name}", safe_name), encoding="utf-8")
 
     world = {
         "id": "main",
@@ -197,6 +225,14 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
     json_io.write_json_atomic(root / "assets/data/events.json", {"events": []})
 
     apply_template(root, template_id)
-    _copy_monster_starter_pack(root)
+    for rel_path in _STARTER_FILES:
+        if rel_path == _LEGACY_PLACEHOLDER and not _names_legacy_placeholder(root):
+            continue  # no template uses it: new projects get only Mesh's own art (and pip installs don't ship it)
+        _copy_engine_asset(rel_path, root)
+    for rel_path in _UI_SOUNDS:
+        _copy_engine_asset(rel_path, root)
+    # The monster game was a test project; only its own template ships its data.
+    if template_id == "monster":
+        _copy_monster_starter_pack(root)
 
     _LOG.info("Project created successfully.")
