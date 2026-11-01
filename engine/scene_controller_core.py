@@ -297,6 +297,7 @@ class SceneController:
         self._preserved_camera_state: Dict[str, Any] | None = None
         self._last_hot_reload_error_message: str = ""
         self._last_hot_reload_error_scene: str = ""
+        self.last_reload_result: Dict[str, Any] | None = None  # the last hot reload's outcome (scene_runtime.reload_check)
 
         # Tilemap state
         self.tilemap_instance: TilemapInstance | None = None

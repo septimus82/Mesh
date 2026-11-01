@@ -44,7 +44,7 @@ same for any MCP client.
 | Tool | Purpose |
 | --- | --- |
 | `authoring_operations` | Every operation (`place_prefab`, `rename_entity`, `set_dialogue_text`, `add_line`, `set_choice`, `set_show_when`, `paint_tiles`, `add_room`, `link_rooms`, …) with its settings and what it does. Generated from the engine, so it is never out of date. |
-| `read_project(root)` | Every room with its objects and map. If Mesh Studio has the project open, this is what the person sees now (unsaved edits included), with a `revision`. |
+| `read_project(root)` | Every room with its objects and map. If Mesh Studio has the project open, this is what the person sees now (unsaved edits included), with a `revision`. It also includes `last_save`, the person's last save (F3), and `last_reload`, the last hot reload of the room (F7: a refused scene and why, `null` before one; see [debug_diagnostics.md](debug_diagnostics.md#scene-hot-reload-f7)). |
 | `propose_changes(changes, title, base_revision, root)` | Send a batch to the Mesh Studio that has the project open. The person reviews it (top bar **AI**) and accepts or rejects it. Invalid batches are refused at once, with the change and the reason. |
 | `proposal_status(proposal_id, root)` | `pending`, `accepted` (with the ids it created), `rejected` or `conflict`. |
 | `withdraw_proposal(proposal_id, root)` | Take back a proposal that is still waiting. |

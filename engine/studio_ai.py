@@ -88,12 +88,16 @@ class StudioAIHost:
     # ------------------------------------------------------------------ what the tool reads
     def read_live_scene(self, *, compact: bool = False) -> Doc:  # noqa: ARG002 - the bridge's read endpoint
         """The whole open project (unsaved edits included) and its revision, to base changes on; ``last_save``: how the
-        person's last save went (``engine.project_save`` report, None before one), e.g. a save that needs recovery."""
+        person's last save went (``engine.project_save`` report, None before one), e.g. a save that needs recovery;
+        ``last_reload``: how the last hot reload of the room went (``engine.scene_runtime.reload_check`` result, None
+        before one), e.g. a scene refused and the running one kept."""
         docs = copy.deepcopy(self.project.all_documents())
         self._remember(self.project.revision, docs)
         rooms = {key: {"label": label, "path": path, "room": docs["rooms"][key]} for key, label, path in self.project.rooms()}
+        scene_controller = getattr(self.window, "scene_controller", None)
         return {"ok": True, "mode": "live_studio", "revision": self.project.revision, "current_room": self.project.current,
-                "unsaved": self.project.is_dirty, "last_save": self.project.last_save_report, "world": docs["world"],
+                "unsaved": self.project.is_dirty, "last_save": self.project.last_save_report,
+                "last_reload": getattr(scene_controller, "last_reload_result", None), "world": docs["world"],
                 "rooms": rooms,
                 "models": authoring.models(self.project)}
 

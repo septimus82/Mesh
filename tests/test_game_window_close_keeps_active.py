@@ -34,3 +34,19 @@ def test_closing_a_window_that_isnt_active_keeps_the_active_one() -> None:
         assert optional_arcade.arcade.get_window() is second
     finally:
         dispose_game_window(second)
+
+
+def test_closing_a_closed_window_again_changes_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """pyglet closes a window again when it is garbage-collected, at any moment. That second close handed arcade's
+    active window to whatever ``arcade.get_window()`` returned: inside a test that patches it (a mock window), the
+    mock became the active window for every test after it (found in F7, #422)."""
+    first = _window()
+    first.close()
+    second = _window()  # the active window now
+    try:
+        monkeypatch.setattr(optional_arcade.arcade, "get_window", lambda: "a stand-in window")
+        first.close()  # (as pyglet's __del__ does)
+        monkeypatch.undo()
+        assert optional_arcade.arcade.get_window() is second
+    finally:
+        dispose_game_window(second)
