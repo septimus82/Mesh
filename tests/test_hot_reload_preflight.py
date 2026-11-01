@@ -248,3 +248,64 @@ def test_validation_errors_are_bounded() -> None:
     result = reload_check.result(ok=False, scene_path="s.json", route="immediate", reason="scene_invalid",
                                  stage="preflight", message="m", preserved=True, errors=errors)
     assert result["errors"] == errors[:reload_check.MAX_ERRORS] and result["errors_total"] == 25
+
+
+def test_an_agent_reading_an_open_mesh_studio_sees_the_same_reload_result(tmp_path: Path) -> None:
+    """Mesh Studio's own AI host (``StudioAIHost.read_live_scene``, behind the live bridge that ``mesh author read`` and
+    MCP ``read_project`` call) carries the reload result as ``last_reload``, beside ``last_save``: None before a reload,
+    then the refusal. Revisions, proposals and the person's approval are as they were."""
+    import threading
+    import time
+    from types import SimpleNamespace
+
+    from engine import authoring_session
+    from engine.game import GameWindow
+    from engine.mcp_server import tools
+    from engine.project_scaffold import create_project
+    from engine.studio_ai import StudioAIHost
+    from engine.studio_project import Project
+
+    root = tmp_path / "game"
+    create_project(root, "Game", template_id="blank")
+    project = Project(root, json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"])
+    room = root / project.path(project.current)
+    cfg = EngineConfig(width=320, height=200, title="F7 Studio read", vsync=False, start_scene="", world_file=None,
+                       main_menu_scene=None)
+    window = GameWindow(width=320, height=200, title=cfg.title, vsync=False, config=cfg)  # (as Studio's own window)
+    host = StudioAIHost(SimpleNamespace(project=project, window=window, on_ai_proposal=lambda _p: None,
+                                        on_ai_decided=lambda _p: None))
+    stop = threading.Event()
+
+    def pump() -> None:  # (Studio drains the bridge on its update; here on a thread)
+        while not stop.is_set():
+            host.drain()
+            time.sleep(0.01)
+
+    thread = threading.Thread(target=pump, daemon=True)
+    try:
+        window.scene_controller.load_scene(str(room))
+        host.start()
+        thread.start()
+        before = authoring_session.read_project(root)
+        assert before["source"] == "mesh_studio" and before["last_reload"] is None and before["revision"] == 0
+
+        good = room.read_bytes()
+        room.write_text("{", encoding="utf-8")  # (the room file broken outside Studio)
+        assert window.reload_scene() is False
+        seen = authoring_session.read_project(root)
+        assert seen["last_reload"] == window.scene_controller.last_reload_result
+        assert (seen["last_reload"]["reason"], seen["last_reload"]["stage"]) == ("invalid_json", "preflight")
+        assert seen["last_reload"]["previous_scene_preserved"] is True and seen["last_reload"]["can_retry"] is True
+        assert tools.read_project(root=str(root))["last_reload"] == seen["last_reload"]  # (MCP: the same)
+        assert seen["revision"] == before["revision"] and seen["unsaved"] is False
+
+        room.write_bytes(good)  # (an agent's change is still a proposal the person decides on)
+        proposed = authoring_session.apply(root, [{"op": "place_prefab", "prefab": "person", "x": 96, "y": 96}])
+        assert proposed["ok"] and proposed["mode"] == "live_studio" and room.read_bytes() == good
+        assert tools.live_accept_proposal(proposed["proposal_id"], root=str(root))["reason"] == "needs_person"
+        assert host.proposals[-1].status == "pending" and project.revision == before["revision"]
+    finally:
+        stop.set()
+        thread.join(timeout=2)
+        host.stop()
+        dispose_game_window(window)

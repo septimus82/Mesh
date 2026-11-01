@@ -59,8 +59,12 @@ reload keeps every object.
   `reload_scene_from_disk`) now shows the message, for example: "Scene not reloaded: yard.json isn't valid JSON
   (line 1, column 31: Expecting value). The scene that was running is still running, unchanged; fix it and reload
   again."
-- **AI agents:** the editor's existing live read (`read_live_scene`, `/live/read_scene`) returns it as
-  `last_reload`. There is no new protocol and no new permission; proposals and revisions are unchanged.
+- **AI agents:** the existing live read returns it as `last_reload` (`null` before a reload). There is no new
+  protocol and no new permission; proposals, revisions and the person's approval are unchanged. Two hosts serve it:
+  - **Mesh Studio** (the authoring interface): `StudioAIHost.read_live_scene`, beside `last_save`. Agents read it
+    with `mesh author read` or MCP `read_project` while Studio has the project open.
+  - **The legacy editor** (the in-game editor overlay): `EditorModeController.read_live_scene`, through the same live
+    bridge when that editor hosts the session.
 
 **Queued route on refusal:** the request is consumed, nothing is raised, and the asset caches are not cleared.
 
@@ -95,7 +99,7 @@ without the guard.
 
 ## Evidence
 
-- **Tests:** `tests/test_hot_reload_preflight.py` (integration, 22 tests, real hidden `GameWindow`s and real scene
+- **Tests:** `tests/test_hot_reload_preflight.py` (integration, 23 tests, real hidden `GameWindow`s and real scene
   files).
   - **Refusals:** six ways a scene can't be loaded × both routes: missing, invalid JSON, schema, empty fallback, not
     UTF-8, a folder. Each checks that everything is as it was (objects and layers by identity, scene data, scene
@@ -107,12 +111,15 @@ without the guard.
   - **Unsaved Studio document:** checked instead of the file; an invalid one is refused, a valid one reloads while
     the file is broken.
   - **Construction failure:** reported as such, then reloaded once fixed.
-  - **AI read:** the editor's live read returns the same result.
+  - **AI read:** the legacy editor's live read returns the same result.
+  - **Mesh Studio read:** the real live bridge is called the way `mesh author read` and MCP `read_project` call it.
+    `last_reload` is `null`, then the refusal, identical to `last_reload_result`. Revision, proposal and "needs the
+    person" behaviour are unchanged. Without the field, the test fails.
   - **Ordinary scene change:** not treated as a reload.
   - **Bounded errors:** at most 10 validation errors are kept.
 - **Mutation check:** each guard was removed in turn:
 
-  | Guard removed | Tests that fail (of 22) |
+  | Guard removed | Tests that fail (of 22; before the Studio read test) |
   | --- | --- |
   | the immediate route's check | 8 |
   | the queued route's check | 7 |

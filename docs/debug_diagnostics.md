@@ -145,8 +145,16 @@ replace with an empty one is refused.
 player, camera, game state, room memory and asset caches are untouched. The hot-reload error says why: "Scene not
 reloaded: …". Fix the scene and reload again.
 
-**The result:** every attempt leaves one result in `SceneController.last_reload_result`. The editor's live read
-(`read_live_scene`) returns it as `last_reload`, so an AI sees the same diagnosis. Its fields:
+**The result:** every attempt leaves one result in `SceneController.last_reload_result`. Two hosts expose it to an
+AI, each as `last_reload`, and both read that same object:
+
+- **Mesh Studio**, the authoring interface: `StudioAIHost.read_live_scene`, beside `last_save`. An agent reaches it
+  through `mesh author read` or MCP `read_project` while Studio has the project open.
+- **The legacy editor** (the in-game editor overlay): `EditorModeController.read_live_scene`, through the same live
+  bridge when that editor hosts the session.
+
+Both are read-only. A refused reload changes no revision and no proposal, and an AI's changes still go to the person
+as proposals. Before any reload, `last_reload` is `null`. Its fields:
 
 | Field | Values |
 | --- | --- |
