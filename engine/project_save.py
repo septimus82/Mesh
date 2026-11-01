@@ -11,7 +11,9 @@ holding the shared player. Each used to be written in turn, so a failure part wa
    taken stops the save, ``temporary_file_exists``, and that file is left alone), and only files this save created
    are ever moved or deleted. A failure here deletes what was staged: no project file was changed.
 3. **Committed in order.** Each staged file replaces its target (``os.replace``), after checking the target is still
-   the file that was copied (or still absent). If one fails, the ones already replaced are put back from their
+   the file that was copied (or still absent). A file the project never read or wrote (``fresh``: a new room's) is
+   published with ``json_io.publish_new`` instead, which never replaces: whatever is there at that very moment stays
+   and the save fails (``path_taken``, F15). If one fails, the ones already replaced are put back from their
    ``.original`` copies (a file that wasn't there before is deleted), and the save fails: the project on disk is as
    it was.
 4. **Rollback that can't finish** keeps the ``.original`` copy of each document it couldn't put back and the save
@@ -35,10 +37,10 @@ import secrets
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, BinaryIO, Callable
+from typing import Any, BinaryIO, Callable, Collection
 
 from engine import project_ops as ops
-from engine.json_io import dumps_stable
+from engine.json_io import dumps_stable, publish_new
 
 Doc = dict[str, Any]
 
@@ -134,6 +136,22 @@ def _replace(src: Path, dst: Path) -> None:
     os.replace(src, dst)
 
 
+def _publish_new(src: Path, dst: Path) -> None:
+    publish_new(src, dst)  # (atomic, never replacing: FileExistsError if anything is at ``dst``)
+
+
+def _published(target: _Target, path: Path) -> bool:
+    """Whether ``target``'s staged file reached ``path`` (moved there, or hard-linked to it) before an error."""
+    if target.staged is None:
+        return False
+    if not os.path.lexists(target.staged):
+        return True
+    try:
+        return os.path.samefile(target.staged, path)
+    except OSError:
+        return False
+
+
 def _unlink(path: Path) -> None:
     path.unlink()
 
@@ -169,10 +187,13 @@ def _discard(path: Path | None, leftovers: list[str], root: Path) -> None:
         leftovers.append(path.relative_to(root).as_posix())
 
 
-def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict[str, float]) -> Doc:
+def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict[str, float],
+                   fresh: Collection[str] = ()) -> Doc:
     """Write ``documents`` (``(project-relative path, kind, JSON data)``) as one save; ``seen`` (path -> the mtime Studio
-    last read or wrote) is updated for what ends up written. Returns the report; raises SaveError (nothing written,
-    or everything put back, or ``recovery_required``)."""
+    last read or wrote) is updated for what ends up written. ``fresh``: paths the project has never read or written (a
+    new room's): anything there now (a file, folder or link another tool made since) is never replaced, and the save
+    is refused (``path_taken``, F15). Returns the report; raises SaveError (nothing written, or everything put back,
+    or ``recovery_required``)."""
     targets = [_Target(rel, kind) for rel, kind, _doc in documents]
     backups: list[str] = []
 
@@ -195,6 +216,9 @@ def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict
     try:
         for target in targets:
             path = root / target.rel
+            if target.rel in fresh and os.path.lexists(path):
+                target.existed = True
+                raise _Taken(target.rel)
             missing = [p for p in [path.parent, *path.parent.parents] if not p.exists()]
             for folder in reversed(missing):
                 folder.mkdir()
@@ -219,6 +243,11 @@ def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict
         _remove_made_dirs(targets)
         if not isinstance(err, Exception):
             raise
+        if isinstance(err, _Taken):
+            raise fail("stage", "path_taken", f"{target.rel} is on disk now, but this project never read or wrote it "
+                       "(another program or tool made it after the room was added), so nothing was saved: Mesh never "
+                       f"replaces a file it didn't make. Move {target.rel} out of the way, then save again.",
+                       leftovers) from err
         if isinstance(err, FileExistsError):
             taken = err.filename2 or err.filename  # (os.link names the source first)
             raise fail("stage", "temporary_file_exists", f"Preparing {target.rel} failed: {taken} is already "
@@ -236,12 +265,19 @@ def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict
             if now != target.stamp:
                 raise _Changed(f"{target.rel} was changed by something else during the save")
             assert target.staged is not None
-            _replace(target.staged, path)
-            target.result, target.staged = "saved", None
+            if target.rel in fresh:  # (F15: never over whatever is there at the very moment it is published)
+                _publish_new(target.staged, path)
+            else:
+                _replace(target.staged, path)
+            target.result = "saved"
+            if not os.path.lexists(target.staged):
+                target.staged = None  # (moved; one left behind beside a published hard link is deleted below)
     except BaseException as err:  # (an interrupt too: never leave a mix behind silently)
         assert failed is not None
-        if failed.result == "not_written" and failed.staged and not os.path.lexists(failed.staged):
-            failed.result, failed.staged = "saved", None  # (replaced before the error arrived: put back too)
+        if failed.result == "not_written" and _published(failed, root / failed.rel):
+            failed.result = "saved"  # (published before the error arrived: put back too)
+            if failed.staged and not os.path.lexists(failed.staged):
+                failed.staged = None
         _rollback(root, targets, seen)
         for target in targets:
             _discard(target.staged, leftovers, root)
@@ -250,25 +286,33 @@ def save_documents(root: Path, documents: list[tuple[str, str, Any]], seen: dict
         _remove_made_dirs([t for t in targets if t.result in ("not_written", "restored")])
         if not isinstance(err, Exception):
             raise
-        reason = "changed_during_save" if isinstance(err, _Changed) else "commit_failed"
+        reason = ("path_taken" if isinstance(err, FileExistsError) and failed.rel in fresh
+                  else "changed_during_save" if isinstance(err, _Changed) else "commit_failed")
         stuck = [t for t in targets if t.result == "needs_recovery"]
         if stuck:
             conflict = any(t.problem == "changed_after_save" for t in stuck)
             raise fail("rollback", "rollback_conflict" if conflict else "rollback_incomplete",
                        _stuck_message(failed.rel, err, targets, stuck, root), leftovers) from err
         done = sum(t.result == "restored" for t in targets)
-        raise fail("commit", reason, f"Writing {failed.rel} failed ({err}). Nothing was saved: "
+        what = (f"something was put at {failed.rel} just as it was saved, and was left as it is (Mesh never replaces "
+                "a file it didn't make)" if reason == "path_taken" else str(err))
+        raise fail("commit", reason, f"Writing {failed.rel} failed ({what}). Nothing was saved: "
                    + (f"the {done} file(s) already written were put back as they were, so " if done else "")
                    + "the project on disk is as it was before this save.", leftovers) from err
 
     for target in targets:
         seen[target.rel] = (root / target.rel).stat().st_mtime
+        _discard(target.staged, leftovers, root)  # (this save's own, left beside a published link)
         _discard(target.original, leftovers, root)
     return report(None, None, f"Saved {len(targets)} file(s).", targets, root, backups=backups, leftovers=leftovers)
 
 
 class _Changed(OSError):
     pass
+
+
+class _Taken(OSError):
+    """A path the project never read or wrote has something on it now (``fresh``)."""
 
 
 def _holds(path: Path, data: bytes) -> bool:

@@ -161,7 +161,7 @@ Action (the AI's hands), wrapping `engine.ai_ops.AIOps`:
 
 | Tool | Purpose |
 | --- | --- |
-| `create_scene` | Create a scene from a template. |
+| `create_scene` | Create a scene from a template. It never replaces anything: a name already taken (a file, folder or link), an unknown template or a failed write answers `ok: false` naming the path, with `data.reason` `already_exists`, `unknown_template` or `write_failed` (F14). |
 | `add_entity_from_prefab` | Place a prefab instance into a scene. |
 | `list_op_types` | List every batch operation with its required/optional fields. |
 | `apply_ops` | Run a batch of operations (the full 23-op surface) in one call, then validate. |
