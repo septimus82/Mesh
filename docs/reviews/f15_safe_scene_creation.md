@@ -74,6 +74,11 @@ It is used in two places:
   of its own beside the target, then calls `publish_new`. A target that appears after the checks, or a broken link
   (even one pointing inside the project), is refused and never written through. `AIOps` answers `already_exists`.
   `force=True` keeps replacing, for the callers that ask for it; AI scene creation never passes it.
+- **`AIOps.create_scene` looks at the requested entry itself, not where a link there points.** It used to resolve the
+  whole path. For a broken link, the link's destination (which didn't exist) became the target: the existence check
+  passed, and the scene was written through the link, reported as "Created". CI's link-capable runners caught this.
+  Now only the folder is resolved, which still keeps the scene inside the workspace. The link itself is the target,
+  and it is refused as `already_exists`.
 
 ## What remains
 

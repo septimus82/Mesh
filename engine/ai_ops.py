@@ -187,7 +187,10 @@ class AIOps:
         from .tooling_runtime import scaffold
 
         scene_name = name if name.endswith(".json") else f"{name}.json"
-        path = self._scene_path(scene_name)
+        requested = Path(scene_name) if Path(scene_name).is_absolute() else self.base_dir / scene_name
+        # The requested entry itself, in its folder inside the workspace: never where a link there points (resolving
+        # the whole path made a broken link's destination the target, and the scene was written through the link).
+        path = self._contain(requested.parent, scene_name) / requested.name
         if os.path.lexists(path):  # (F14: never taken for a scene just made, and never replaced)
             what = "a link" if path.is_symlink() else "a folder" if path.is_dir() else "a scene file"
             return AIOpsResult(False, f"Scene '{scene_name}' wasn't created: there is already {what} at {path}, "
