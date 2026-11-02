@@ -204,13 +204,66 @@ def test_a_move_holds_its_key_for_exactly_its_frames(studio: _Studio) -> None:
     assert result["frames"] == 7 + runtime_play.SETTLE_FRAMES + 1 and studio.window.down == set()
 
 
+def _presses(studio: _Studio) -> list[int]:
+    return [k for name, k in studio.window.log if name == "on_key_press"]
+
+
 def test_a_choice_moves_the_cursor_then_confirms_where_it_was_meant(studio: _Studio) -> None:
     box = studio.window.box
-    box.open, box.choices = True, [{"text": "Yes"}, {"text": "No"}, {"text": "Later"}]
+    box.open, box.choices = True, [{"text": "Yes"}, {"text": "No"}, {"text": "Later"}, {"text": "Never"}]
     result = _until_done(studio, studio.ai.debug_act({"action": "choose", "choice": "Later"}))
     assert result["status"] == "done" and result["action"] == {"action": "choose", "choice": 2, "text": "Later"}
     assert [k for name, k in studio.window.log if name == "on_key_press"] == [DOWN, DOWN, E]
     assert box.chosen == ["Later"]
+
+
+def test_an_available_choice_after_a_disabled_one_is_reached(studio: _Studio) -> None:
+    """The game's cursor skips a choice that can't be made: one press, not two, reaches the one after it."""
+    box = studio.window.box
+    box.open, box.choices = True, [{"text": "Yes"}, {"text": "No", "disabled": True}, {"text": "Later"}]
+    result = _until_done(studio, studio.ai.debug_act({"action": "choose", "choice": "Later"}))
+    assert result["status"] == "done" and _presses(studio) == [DOWN, E] and box.chosen == ["Later"]
+
+
+def test_the_cursor_goes_the_shorter_way_round(studio: _Studio) -> None:
+    box = studio.window.box
+    box.open, box.choices = True, [{"text": "A"}, {"text": "B"}, {"text": "C"}, {"text": "D"}]
+    result = _until_done(studio, studio.ai.debug_act({"action": "choose", "choice": 3}))
+    assert result["status"] == "done" and _presses(studio) == [UP, E] and box.chosen == ["D"]
+    box.open, box.cursor, box.choices = True, 2, [{"text": "A"}, {"text": "B", "disabled": True}, {"text": "C"}]
+    studio.window.log.clear()
+    result = _until_done(studio, studio.ai.debug_act({"action": "choose", "choice": "A"}))
+    assert result["status"] == "done" and _presses(studio) == [DOWN, E] and box.chosen == ["D", "A"]
+
+
+@pytest.mark.parametrize("change", ["renamed", "made unavailable", "a choice put in front", "the cursor moved"])
+def test_choices_that_change_before_confirming_confirm_nothing(studio: _Studio, change: str) -> None:
+    box = studio.window.box
+    box.open, box.choices = True, [{"text": "Yes"}, {"text": "No"}, {"text": "Later"}, {"text": "Never"}]
+    started = studio.ai.debug_act({"action": "choose", "choice": "No"})  # (planned: one press down, then confirm)
+    assert started["ok"]
+    if change == "renamed":
+        box.choices[1]["text"] = "Not now"
+    elif change == "made unavailable":
+        box.choices[1]["disabled"] = True
+    elif change == "a choice put in front":
+        box.choices.insert(0, {"text": "Wait"})
+    else:
+        box.cursor = 3  # (the person moved it)
+    result = _until_done(studio, started)
+    assert result["status"] == "cancelled" and "nothing was chosen" in result["message"]
+    assert E not in _presses(studio) and box.chosen == []
+
+
+def test_the_choice_under_the_cursor_is_checked_too(studio: _Studio) -> None:
+    """No presses needed (the cursor is already there): it is still the asked-for choice, and still available."""
+    box = studio.window.box
+    box.open, box.choices = True, [{"text": "Yes"}, {"text": "No"}]
+    started = studio.ai.debug_act({"action": "choose", "choice": "Yes"})
+    box.choices[0]["disabled"] = True
+    result = _until_done(studio, started)
+    assert result["status"] == "cancelled" and "can no longer be chosen" in result["message"]
+    assert _presses(studio) == [] and box.chosen == []
 
 
 def test_a_cursor_that_lands_elsewhere_confirms_nothing(studio: _Studio) -> None:

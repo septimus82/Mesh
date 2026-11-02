@@ -68,6 +68,37 @@ def dialogue_view(window: Any) -> Doc:
             "selected": box.get_choice_cursor() if choices else None}
 
 
+def _presses(choices: list[Doc], selected: int | None, target: int, step: int) -> int | None:
+    """How many presses (``step`` +1: down, -1: up) take the choice cursor from ``selected`` to ``target``, moving as
+    the game's dialogue box moves it (``DialogueBox.move_choice_cursor``): round the list, past choices that can't
+    be made. None if it never gets there."""
+    if selected == target:
+        return 0
+    count, at = len(choices), selected if selected is not None and selected >= 0 else 0
+    for presses in range(1, count + 1):
+        for _ in range(count):  # (one press: on to the next choice that can be made)
+            at = (at + step) % count
+            if choices[at]["available"]:
+                break
+        if at == target:
+            return presses
+    return None
+
+
+def _not_the_choice(dialogue: Doc, target: int, text: str) -> str:
+    """Why the cursor isn't on the choice that was asked for (it moved elsewhere, or the choices changed), or ""."""
+    choices = dialogue.get("choices") or []
+    if not dialogue.get("open") or not choices:
+        return "the choice is no longer on screen"
+    if dialogue.get("selected") != target:
+        return f"the choice cursor is on {dialogue.get('selected')}, not {target}"
+    if target >= len(choices) or choices[target]["text"] != text:
+        return f"the choices changed: {target} is no longer {text!r}"
+    if not choices[target]["available"]:
+        return f"{text!r} can no longer be chosen"
+    return ""
+
+
 def _player(window: Any) -> Any:
     finder = getattr(getattr(window, "scene_controller", None), "_find_player_sprite", None)
     return finder() if callable(finder) else None
@@ -117,7 +148,8 @@ class PlayDriver:
         action_id = f"a{self._count}"
         self.running = {"id": action_id, "request": planned["request"], "steps": planned["steps"], "step": 0,
                         "left": None, "held": None, "frames": 0, "before": _where(self.window),
-                        "target": planned.get("target"), "started_at": round(time.time(), 3)}
+                        "target": planned.get("target"), "target_text": planned.get("target_text"),
+                        "started_at": round(time.time(), 3)}
         return {"ok": True, "mode": "live_studio", "action_id": action_id, "status": "running",
                 "action": planned["request"]}
 
@@ -170,17 +202,22 @@ class PlayDriver:
         if target is None or not target["available"]:
             return _refused("choice_not_available", f"{wanted!r} isn't one of the choices that can be made now.",
                             dialogue=dialogue)
-        selected = dialogue.get("selected") or 0
-        steps: list[tuple[str, Any, int]] = []
-        delta = target["index"] - selected
-        key = self._key("move_down" if delta > 0 else "move_up")
-        if delta and key is None:
+        selected = dialogue.get("selected")
+        routes = [(n, action) for action, step in (("move_down", 1), ("move_up", -1))
+                  if (n := _presses(choices, selected, target["index"], step)) is not None]
+        presses, action_name = min(routes, default=(None, ""))  # (the shorter way round; down when equal)
+        if presses is None:
+            return _refused("choice_not_available", f"{wanted!r} can't be reached with the choice cursor.",
+                            dialogue=dialogue)
+        key = self._key(action_name) if presses else None
+        if presses and key is None:
             return _refused("no_key", "The game binds no key to move the choice cursor.")
-        for _ in range(abs(delta)):  # (the cursor skips choices that can't be made, so check where it ends)
+        steps: list[tuple[str, Any, int]] = []
+        for _ in range(presses):
             steps += [("press", key, TAP_FRAMES), ("wait", None, TAP_FRAMES)]
         steps += [("check", None, 0)] + tap
         return {"request": {"action": "choose", "choice": target["index"], "text": target["text"]},
-                "steps": steps, "target": target["index"]}
+                "steps": steps, "target": target["index"], "target_text": target["text"]}
 
     # ------------------------------------------------------------------ running it, a frame at a time
     def tick(self) -> None:
@@ -209,10 +246,10 @@ class PlayDriver:
                 self._finish("done")
                 return
             kind, key, frames = steps[run["step"]]
-            if kind == "check":  # (the cursor skips choices that can't be made: confirm only where it was meant)
-                selected = dialogue_view(self.window).get("selected")
-                if selected != run["target"]:
-                    self.cancel(f"the choice cursor is on {selected}, not {run['target']}: nothing was chosen")
+            if kind == "check":  # (confirm only the choice that was asked for, still there and still available)
+                wrong = _not_the_choice(dialogue_view(self.window), run["target"], run["target_text"])
+                if wrong:
+                    self.cancel(f"{wrong}: nothing was chosen")
                     return
                 run["step"] += 1
                 continue
