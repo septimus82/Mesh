@@ -14,13 +14,13 @@ refusals as the D1 tools.
 | Field | Meaning |
 | --- | --- |
 | `how` | `interact` (the interact key) or `touch` (a door with `trigger_on_touch`: walk into it). |
-| `available` | Whether the player can use it now that way. |
+| `available` | Whether the player can use it **now** that way. For a touch door: the player is in its doorway now (the next frame takes them through); `touch.on_contact` says whether walking into it would. |
 | `blocking` | The first condition that fails: `code` and `message`. |
 | `observed` | Every condition checked, in the engine's order: `code`, `ok` (`true` met, `false` fails, `null` not analysed), `message`, and `detail` with the actual values. |
 | `flags` | The current value of every flag involved. |
 | `flag_sources` | Where the project sets each of those flags, from what is `searched`: dialogue choices' `set_flags` / `clear_flags` and `SetGameStateOnEvent` in every room, and quest rewards. |
-| `dialogue` | For a conversation: each choice, whether it can be picked now, and the flags it needs. |
-| `touch` | For a touch door: its rules and whether the player is in its doorway now. |
+| `dialogue` | For a conversation: `conversation_open`, the node showing (`current_node`), and each choice with `conditions_met` (its flags and `once`, as `Dialogue` checks them) apart from `selectable_now` (also needs its node showing in the open conversation, as the game requires to take it), and the flags it needs. |
+| `touch` | For a touch door: its rules, including `triggered_by` (only something tagged its `target_tag` sets it off, `player` unless authored otherwise) and `overlapping` (the player is in its doorway now), and `on_contact` (every rule but overlapping is met: walking into it would use it). |
 | `not_analysed` | Behaviours that take an interaction by a rule of their own, not explained. |
 | `possible_causes` | Hypotheses, kept apart from what was observed. |
 | `notes` | Facts worth knowing that aren't a failure, e.g. `hidden_but_touch_works`. |
@@ -106,9 +106,9 @@ project sets it:
  ],
  "ok": true,
  "playtest": {
-  "id": "9c2484c27508",
+  "id": "1f58d246e664",
   "number": 1,
-  "started_at": 1793651040.509,
+  "started_at": 1793654474.794,
   "started_by": "person",
   "stopped_at": null
  },
@@ -131,34 +131,38 @@ project sets it:
  "dialogue": {
   "choices": [
    {
-    "available": true,
     "choice": "I'll light it.",
+    "conditions_met": true,
     "id": "help",
     "node": "root",
+    "selectable_now": false,
     "used_up": false
    },
    {
-    "available": true,
     "choice": "Not now.",
+    "conditions_met": true,
     "id": "later",
     "node": "root",
+    "selectable_now": false,
     "used_up": false
    },
    {
-    "available": false,
     "choice": "Where is the cellar?",
+    "conditions_met": false,
     "forbid_flags": [],
     "id": "where",
     "node": "root",
     "require_flags": [
      "agreed_to_help"
     ],
+    "selectable_now": false,
     "unmet": [
      "agreed_to_help"
     ],
     "used_up": false
    }
   ],
+  "conversation_open": false,
   "current_node": null
  },
  "flags": {
@@ -307,5 +311,7 @@ before and after.
 - **A touch door hidden by "Show when" still works by touch.** Verified on the engine: `SceneTransition`'s touch
   trigger doesn't check whether the door is shown, while the interact path skips hidden objects. The diagnosis
   reports this as `hidden_but_touch_works`. It is a gameplay defect, not fixed here.
+- **A choice's `conditions_met` isn't "can be picked now".** Only `selectable_now` is: the game takes a choice only from
+  the node showing in an open conversation. Which later node a conversation reaches isn't predicted.
 - **One object at a time, during a play-test only.** While editing, the answer is `not_playing`, with the rooms the
   object is written in.

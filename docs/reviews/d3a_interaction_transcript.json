@@ -78,9 +78,9 @@
    ],
    "ok": true,
    "playtest": {
-    "id": "9c2484c27508",
+    "id": "1f58d246e664",
     "number": 1,
-    "started_at": 1793651040.509,
+    "started_at": 1793654474.794,
     "started_by": "person",
     "stopped_at": null
    },
@@ -108,34 +108,38 @@
    "dialogue": {
     "choices": [
      {
-      "available": true,
       "choice": "I'll light it.",
+      "conditions_met": true,
       "id": "help",
       "node": "root",
+      "selectable_now": false,
       "used_up": false
      },
      {
-      "available": true,
       "choice": "Not now.",
+      "conditions_met": true,
       "id": "later",
       "node": "root",
+      "selectable_now": false,
       "used_up": false
      },
      {
-      "available": false,
       "choice": "Where is the cellar?",
+      "conditions_met": false,
       "forbid_flags": [],
       "id": "where",
       "node": "root",
       "require_flags": [
        "agreed_to_help"
       ],
+      "selectable_now": false,
       "unmet": [
        "agreed_to_help"
       ],
       "used_up": false
      }
     ],
+    "conversation_open": false,
     "current_node": null
    },
    "entity": {
@@ -247,9 +251,9 @@
    ],
    "ok": true,
    "playtest": {
-    "id": "9c2484c27508",
+    "id": "1f58d246e664",
     "number": 1,
-    "started_at": 1793651040.509,
+    "started_at": 1793654474.794,
     "started_by": "person",
     "stopped_at": null
    },
@@ -315,9 +319,9 @@
    ],
    "ok": true,
    "playtest": {
-    "id": "9c2484c27508",
+    "id": "1f58d246e664",
     "number": 1,
-    "started_at": 1793651040.509,
+    "started_at": 1793654474.794,
     "started_by": "person",
     "stopped_at": null
    },
@@ -347,32 +351,36 @@
    "dialogue": {
     "choices": [
      {
-      "available": true,
       "choice": "I'll light it.",
+      "conditions_met": true,
       "id": "help",
       "node": "root",
+      "selectable_now": false,
       "used_up": false
      },
      {
-      "available": true,
       "choice": "Not now.",
+      "conditions_met": true,
       "id": "later",
       "node": "root",
+      "selectable_now": false,
       "used_up": false
      },
      {
-      "available": true,
       "choice": "Where is the cellar?",
+      "conditions_met": true,
       "forbid_flags": [],
       "id": "where",
       "node": "root",
       "require_flags": [
        "agreed_to_help"
       ],
+      "selectable_now": false,
       "unmet": [],
       "used_up": false
      }
     ],
+    "conversation_open": false,
     "current_node": null
    },
    "entity": {
@@ -511,9 +519,9 @@
    ],
    "ok": true,
    "playtest": {
-    "id": "9c2484c27508",
+    "id": "1f58d246e664",
     "number": 1,
-    "started_at": 1793651040.509,
+    "started_at": 1793654474.794,
     "started_by": "person",
     "stopped_at": null
    },
@@ -654,9 +662,9 @@
    ],
    "ok": true,
    "playtest": {
-    "id": "9c2484c27508",
+    "id": "1f58d246e664",
     "number": 1,
-    "started_at": 1793651040.509,
+    "started_at": 1793654474.794,
     "started_by": "person",
     "stopped_at": null
    },
@@ -831,9 +839,9 @@
    ],
    "ok": true,
    "playtest": {
-    "id": "9c2484c27508",
+    "id": "1f58d246e664",
     "number": 1,
-    "started_at": 1793651040.509,
+    "started_at": 1793654474.794,
     "started_by": "person",
     "stopped_at": null
    },
@@ -998,9 +1006,9 @@
    ],
    "ok": true,
    "playtest": {
-    "id": "9c2484c27508",
+    "id": "1f58d246e664",
     "number": 1,
-    "started_at": 1793651040.509,
+    "started_at": 1793654474.794,
     "started_by": "person",
     "stopped_at": null
    },

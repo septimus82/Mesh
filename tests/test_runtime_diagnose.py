@@ -5,9 +5,11 @@ A Studio project's room, loaded into a real game window, with real behaviours (`
 it, and where the game decides something itself (which object pressing interact uses), against the game:
 - kept out of the room by its flags, the flag's value, and the dialogue choice that sets it; its flags met later
   (a possible cause, not a fact); not in the project; in another room; collected earlier;
-- its own flags; hidden by "Show when"; a door used up; a conversation's flags and its choices;
+- its own flags; hidden by "Show when"; a door used up; a conversation's flags and its choices, a later node's
+  choice met but not selectable yet;
 - too far; behind the player; another object chosen instead; available (and the game's own pick agrees);
-- a door used by walking into it, hidden by "Show when" yet still working by touch;
+- a door used by walking into it: hidden by "Show when" yet still working by touch, usable on contact against
+  usable now, and one set off only by something else (its ``target_tag``);
 - a behaviour whose rule isn't analysed;
 - reading changes nothing; answers are bounded; and the way in over MCP, with its refusals.
 """
@@ -178,13 +180,32 @@ def test_a_conversations_flags_and_its_choices(made: Any) -> None:
     rules = _observed(out, "behaviours")["detail"]["behaviours"][0]["rules"]
     assert next(r for r in rules if r["code"] == "flags")["detail"]["unmet"] == ["met"]
     choices = {c["id"]: c for c in out["dialogue"]["choices"]}
-    assert choices["key"]["available"] is True and choices["secret"]["available"] is False
+    assert choices["key"]["conditions_met"] is True and choices["secret"]["conditions_met"] is False
     assert choices["secret"]["unmet"] == ["trusted"] and out["flags"]["trusted"] is False
+    assert out["dialogue"]["conversation_open"] is False and not any(c["selectable_now"] for c in choices.values())
     studio.window.set_flag("met", True)
     studio.window.set_flag("trusted", True)
     after = _diag(studio, "guide")
-    assert after["available"] is True and {c["id"]: c["available"] for c in after["dialogue"]["choices"]} == {
+    assert after["available"] is True and {c["id"]: c["conditions_met"] for c in after["dialogue"]["choices"]} == {
         "key": True, "secret": True}
+
+
+def test_a_choice_in_a_later_node_has_its_conditions_met_but_cant_be_picked_yet(made: Any) -> None:
+    nodes = copy.deepcopy(GUIDE["behaviour_config"]["Dialogue"]["dialogue"]["nodes"])
+    nodes["root"]["choices"][0]["next"] = "later"
+    nodes["later"] = {"text": "Here.", "choices": [{"id": "thanks", "text": "Thanks.", "next": "bye"}]}
+    dialogue = copy.deepcopy(GUIDE["behaviour_config"]["Dialogue"])
+    dialogue["dialogue"]["nodes"] = nodes
+    studio = made(HERO, dict(GUIDE, x=150, y=100, behaviour_config={"Dialogue": dialogue}))
+    hero, guide = _sprite(studio, "hero"), _sprite(studio, "guide")
+    next(iter(interaction._eligible_behaviours(guide, hero))).on_interact(studio.window, hero)  # (the player talks)
+    out = _diag(studio, "guide")["dialogue"]
+    assert out["conversation_open"] is True and out["current_node"] == "root"
+    choices = {c["id"]: c for c in out["choices"]}
+    assert (choices["key"]["conditions_met"], choices["key"]["selectable_now"]) == (True, True)
+    assert (choices["secret"]["conditions_met"], choices["secret"]["selectable_now"]) == (False, False)
+    assert (choices["thanks"]["node"], choices["thanks"]["conditions_met"], choices["thanks"]["selectable_now"]) == (
+        "later", True, False)  # (its node isn't showing: the game wouldn't take it now)
 
 
 # --------------------------------------------------------------------- reach and selection
@@ -222,12 +243,28 @@ def test_a_touch_door_hidden_by_show_when_still_works_by_touch_and_says_so(made:
     studio = made(dict(HERO, x=400), touch)  # (well away: the game updates here, and touching would use the door)
     studio.window.on_update(1 / 60)
     out = _diag(studio, "door")
-    assert out["how"] == "touch" and out["available"] is True and out["blocking"] is None
+    assert out["how"] == "touch" and out["available"] is False and out["blocking"]["code"] == "overlapping"
+    assert "walk into it" in out["blocking"]["message"] and out["touch"]["on_contact"] is True
     assert [n["code"] for n in out["notes"]] == ["hidden_but_touch_works"] and out["touch"]["checks_show_when"] is False
-    overlapping = next(r for r in out["touch"]["rules"] if r["code"] == "overlapping")
-    assert overlapping["ok"] is False and "walk into it" in overlapping["message"]
-    _place(studio, 150, 100)
-    assert next(r for r in _diag(studio, "door")["touch"]["rules"] if r["code"] == "overlapping")["ok"] is True
+    _place(studio, 150, 100)  # (in the doorway: the next frame would use it; no frame runs here)
+    now = _diag(studio, "door")
+    assert now["available"] is True and now["blocking"] is None and now["touch"]["on_contact"] is True
+    assert next(r for r in now["touch"]["rules"] if r["code"] == "overlapping")["ok"] is True
+
+
+def test_a_touch_door_for_something_else_isnt_set_off_by_the_player(made: Any) -> None:
+    touch = dict(DOOR, behaviour_config={"SceneTransition": {"target_scene": "cellar", "allow_interact": False,
+                                                             "trigger_on_touch": True, "target_tag": "npc"}})
+    studio = made(dict(HERO, x=150), touch)  # (standing in its doorway)
+    studio.window.on_update(1 / 60)
+    door = next(b for b in _sprite(studio, "door").mesh_behaviours_runtime if type(b).__name__ == "SceneTransition")
+    assert door._triggered is False  # (the game agrees: a frame with the player in its doorway didn't use it)
+    out = _diag(studio, "door")
+    assert out["how"] == "touch" and out["available"] is False and out["blocking"]["code"] == "triggered_by"
+    assert out["touch"]["on_contact"] is False and "'npc'" in out["blocking"]["message"]
+    rule = next(r for r in out["touch"]["rules"] if r["code"] == "triggered_by")
+    assert rule["detail"] == {"target_tag": "npc", "player_tag": "player"}
+    assert next(r for r in out["touch"]["rules"] if r["code"] == "overlapping")["ok"] is True
 
 
 def test_a_behaviour_with_its_own_rule_is_not_analysed(made: Any) -> None:

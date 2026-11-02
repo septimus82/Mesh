@@ -938,11 +938,13 @@ def debug_interaction(entity_id: str, root: str = ".") -> dict[str, Any]:
     """Why the player can or can't use one object in Mesh Studio's running play-test, from the running game.
 
     ``entity_id``: the object's id (a snapshot's ``nearby`` lists them). Returns ``how`` it is used
-    (``interact`` or ``touch``), ``available``, ``blocking`` (the first condition that fails: ``in_room``,
-    ``flag_gate``, ``shown``, ``behaviours``, ``distance``, ``facing``, ``selection``, or a touch door's own
-    rules), ``observed`` (every condition checked, with its values), ``flags`` (their current values),
-    ``flag_sources`` (where the project sets them: dialogue choices, SetGameStateOnEvent, quest rewards),
-    ``dialogue`` (a conversation's choices and their conditions), ``not_analysed`` (behaviours whose own
+    (``interact`` or ``touch``), ``available`` (usable now; a touch door: the player is in its doorway, while
+    ``touch.on_contact`` says whether walking into it would use it), ``blocking`` (the first condition that
+    fails: ``in_room``, ``flag_gate``, ``shown``, ``behaviours``, ``distance``, ``facing``, ``selection``, or a
+    touch door's own rules, such as ``triggered_by`` and ``overlapping``), ``observed`` (every condition checked,
+    with its values), ``flags`` (their current values), ``flag_sources`` (where the project sets them: dialogue
+    choices, SetGameStateOnEvent, quest rewards), ``dialogue`` (a conversation's choices: ``conditions_met`` apart
+    from ``selectable_now``, which also needs the choice's node showing), ``not_analysed`` (behaviours whose own
     rules aren't explained) and ``possible_causes`` (hypotheses, kept apart from what was observed).
     Reading changes nothing and needs no permission.
     """

@@ -16,7 +16,10 @@ the engine checks them (``engine.interaction``: the same helpers, so the explana
    (``select_interaction_candidate``, called as the game calls it), and why it wins.
 
 A door with ``trigger_on_touch`` is used by walking into it, not with the interact key: ``touch`` reports its rules
-and whether the player overlaps it now. A ``Dialogue`` also lists its choices' conditions (``dialogue``).
+(including that only something tagged its ``target_tag`` sets it off) and whether the player overlaps it now.
+``available`` means usable now (for a touch door: the player is in its doorway); ``touch.on_contact`` says whether
+walking into it would use it. A ``Dialogue`` also lists its choices: ``conditions_met`` (flags and ``once``) apart
+from ``selectable_now``, which also needs the choice's node showing in an open conversation (``dialogue``).
 
 ``blocking`` is the first condition that fails; ``flags`` are the current values of every flag involved, and
 ``flag_sources`` the authored places that set them (dialogue choices, ``SetGameStateOnEvent``, quest rewards: what
@@ -227,9 +230,12 @@ def _behaviour_rules(behaviour: Any, actor: Any, flag: Any) -> tuple[Doc, set[st
 
 
 def _dialogue_choices(behaviour: Any, flag: Any) -> tuple[Doc, set[str]]:
-    """Every choice of a conversation (``CHOICES_MAX``), with whether it can be picked now, and why not."""
+    """Every choice of a conversation (``CHOICES_MAX``): whether its conditions are met (``Dialogue._choice_is_available``:
+    flags and ``once``), and whether it can be picked now, which also needs its node showing in an open conversation
+    (``Dialogue._handle_submitted_choice``)."""
     choices: list[Doc] = []
     flags: set[str] = set()
+    showing = behaviour._current_node_id if behaviour._graph_active else None
     for node_id, node in list((behaviour._graph_nodes or {}).items()):
         for choice in node.get("choices", []) if isinstance(node, dict) else []:
             require, forbid = list(choice.get("require_flags") or []), list(choice.get("forbid_flags") or [])
@@ -237,10 +243,11 @@ def _dialogue_choices(behaviour: Any, flag: Any) -> tuple[Doc, set[str]]:
             used = bool(choice.get("once") and choice.get("id") in behaviour._choice_history)
             flags |= set(detail["values"])
             if len(choices) < CHOICES_MAX:
+                met = bool(behaviour._choice_is_available(choice))
                 choices.append({"node": node_id, "choice": choice.get("text"), "id": choice.get("id"),
-                                "available": bool(behaviour._choice_is_available(choice)), "used_up": used,
+                                "conditions_met": met, "selectable_now": met and node_id == showing, "used_up": used,
                                 **({k: v for k, v in detail.items() if k != "values"} if require or forbid else {})})
-    return {"choices": plain(choices), "current_node": plain(behaviour._current_node_id)}, flags
+    return {"choices": plain(choices), "conversation_open": showing is not None, "current_node": plain(showing)}, flags
 
 
 def _touch(sprite: Any, actor: Any, transition: Any, flag: Any) -> Doc:
@@ -256,12 +263,16 @@ def _touch(sprite: Any, actor: Any, transition: Any, flag: Any) -> Doc:
         overlapping = (actor.left < x + hw and actor.right > x - hw and actor.bottom < y + hh and actor.top > y - hh)
     else:
         overlapping = bool(optional_arcade.arcade.check_for_collision(sprite, actor))
+    tag, target = str(getattr(actor, "mesh_tag", "") or ""), transition.target_tag
     return {"by_touch": True, "rules": [
         _cond("has_target", bool(transition.target_scene), "It leads somewhere." if transition.target_scene else
               "It leads nowhere (no target scene)."),
         _cond("not_used_up", not (transition.once and transition._triggered), "It isn't used up." if not
               (transition.once and transition._triggered) else "It works only once and has been used."),
         _cond("flags", ok, "Its flags are met." if ok else "Its flags aren't met.", **detail),
+        _cond("triggered_by", tag == target, f"The player sets it off (it reacts to '{target}')." if tag == target else
+              f"Only something tagged '{target}' sets it off; the player is tagged '{tag}'.", target_tag=target,
+              player_tag=tag),
         _cond("overlapping", overlapping, "The player is in its doorway now." if overlapping else
               "The player isn't in its doorway: walk into it.")],
         # (verified: SceneTransition's touch trigger doesn't check "Show when"; a hidden door still works by touch)
@@ -357,11 +368,12 @@ def _diagnose_playing(out: Doc, studio: Any, window: Any, project: Any, entity_i
     if touch is not None and not by_interact:  # (a door used by walking into it: its own rules decide)
         out["how"] = "touch"
         fails = [c for c in observed if c["code"] == "in_room" and c["ok"] is False]
-        fails += [r for r in touch["rules"] if r["ok"] is False and r["code"] != "overlapping"]
+        fails += [r for r in touch["rules"] if r["ok"] is False]
         first = fails[0] if fails else None
-        out["available"] = first is None
+        out["available"] = first is None  # (now: the player is in its doorway, so the next frame uses it)
+        touch["on_contact"] = all(r["code"] == "overlapping" for r in fails)  # (walking into it would use it)
         hidden = next((c for c in observed if c["code"] == "shown"), None)
-        if first is None and hidden is not None and hidden["ok"] is False:
+        if touch["on_contact"] and hidden is not None and hidden["ok"] is False:
             out["notes"] = [{"code": "hidden_but_touch_works", "message": (
                 "It is hidden, yet walking into it still takes the player through: its touch trigger "
                 "(SceneTransition) doesn't check whether it is shown.")}]

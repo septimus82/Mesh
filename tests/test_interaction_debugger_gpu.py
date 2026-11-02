@@ -54,9 +54,10 @@ def test_the_door_kept_out_by_its_flag_and_where_the_flag_comes_from(run: dict) 
 
 def test_a_dialogue_choice_waits_for_its_flag(run: dict) -> None:
     before = {c["id"]: c for c in run["2_guide"]["dialogue"]["choices"]}
-    assert before["where"]["available"] is False and before["where"]["unmet"] == ["agreed_to_help"]
+    assert before["where"]["conditions_met"] is False and before["where"]["unmet"] == ["agreed_to_help"]
+    assert run["2_guide"]["dialogue"]["conversation_open"] is False and not before["where"]["selectable_now"]
     after = {c["id"]: c for c in run["3_guide"]["dialogue"]["choices"]}
-    assert after["where"]["available"] is True and after["where"]["unmet"] == []
+    assert after["where"]["conditions_met"] is True and after["where"]["unmet"] == []
 
 
 def test_after_talking_the_flag_is_met_but_the_room_loaded_first(run: dict) -> None:
