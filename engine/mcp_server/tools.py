@@ -11,6 +11,9 @@ Three families:
 * **action** tools (the AI's hands): ``create_scene``,
   ``add_entity_from_prefab`` — thin wrappers over :class:`engine.ai_ops.AIOps`.
 * **safety**: ``validate_scene`` so writes can be checked.
+* **runtime debugging** (D1): ``debug_runtime_snapshot`` reads the game running in a
+  Mesh Studio play-test; ``debug_start_playtest`` / ``debug_stop_playtest`` start and
+  stop one, once the person allows it in Studio.
 * **context**: ``engine_overview`` — instant expertise as a resource.
 
 All functions take a ``root`` base directory (default ``"."``) so they can be
@@ -909,6 +912,45 @@ def withdraw_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
     from engine import authoring_session
 
     return authoring_session.withdraw(root, proposal_id)
+
+
+def debug_runtime_snapshot(events: int = 20, root: str = ".") -> dict[str, Any]:
+    """What the game running in Mesh Studio's play-test is doing now, read from the running game (not the files).
+
+    ``status`` is ``"playing"`` or ``"not_playing"`` (Studio is editing: nothing runs). While playing:
+    ``scene`` (the room running), ``player`` (its position, pixels), ``game_state`` (flags, counters
+    and the game's other values: its variables), ``quests`` (each quest's status and stages), ``events`` (the play-test's
+    events in order: ``seq``, ``type``, ``entity``, ``payload``; the last ``events``, at most 50) and
+    ``diagnostics`` (errors the engine caught since the play-test started). ``studio`` is what the
+    person has open in the editor, which play-testing never changes. A part the game doesn't have reads
+    ``{"available": false, "reason": ...}``. Reading changes nothing. Compare ``events.last_seq`` and
+    ``sequence`` between calls to see what happened in between.
+    """
+    from engine import runtime_debug
+
+    return runtime_debug.request_snapshot(root, events)
+
+
+def debug_start_playtest(root: str = ".") -> dict[str, Any]:
+    """Start a play-test in Mesh Studio (as its Play button), if the person allowed AI play-test control.
+
+    Refused with ``playtest_control_off`` until the person turns it on (Studio: AI panel), and with
+    ``studio_busy`` while they are typing, dragging or answering a question. Never saves or changes the
+    project. Already playing: ``status: "already_playing"``.
+    """
+    from engine import runtime_debug
+
+    return runtime_debug.request_play(root)
+
+
+def debug_stop_playtest(root: str = ".") -> dict[str, Any]:
+    """Stop Mesh Studio's play-test (as its Stop button): back to editing, the project as the person left it.
+
+    Needs the same permission as debug_start_playtest. Not playing: ``status: "not_playing"``.
+    """
+    from engine import runtime_debug
+
+    return runtime_debug.request_stop(root)
 
 
 # The everyday apply_ops operations, on a Mesh Studio project, run through the same validated

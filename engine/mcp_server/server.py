@@ -81,6 +81,11 @@ def build_server() -> Any:
     server.tool()(tools.proposal_status)
     server.tool()(tools.withdraw_proposal)
 
+    # Runtime debugging: the game running in a Mesh Studio play-test (D1).
+    server.tool()(tools.debug_runtime_snapshot)
+    server.tool()(tools.debug_start_playtest)
+    server.tool()(tools.debug_stop_playtest)
+
     # Safety.
     server.tool()(tools.validate_scene)
     server.tool()(tools.playability_check)

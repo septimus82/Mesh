@@ -100,6 +100,8 @@ class MeshEventBus:
 
     Attributes:
         _history_limit: Maximum events retained in history (default: 50).
+        emitted: Events emitted so far (never reset): the history's last one is event number ``emitted``, so
+            ``engine.runtime_debug`` numbers the history and tells which events a play-test made.
 
     Example::
 
@@ -124,6 +126,7 @@ class MeshEventBus:
         self._wildcard_subscribers: List[EventCallback] = []
         self._history: List[Dict[str, Any]] = []
         self._history_limit: int = 50
+        self.emitted: int = 0
         self._recorder: Optional[Callable[[Dict[str, Any]], None]] = None
 
     def set_recorder(self, recorder: Optional[Callable[[Dict[str, Any]], None]]) -> None:
@@ -252,6 +255,7 @@ class MeshEventBus:
 
         # Add to history
         self._history.append(event_dict)
+        self.emitted += 1
         if len(self._history) > self._history_limit:
             self._history.pop(0)
 

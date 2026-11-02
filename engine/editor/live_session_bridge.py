@@ -260,6 +260,10 @@ class EditorLiveSessionBridge:
                     compact = _truthy(parse_qs(parsed.query).get("compact", ["false"])[0])
                     self._send_json(bridge._enqueue(lambda: bridge._read_scene(compact=compact)))
                     return
+                if path == "/live/debug/snapshot" and hasattr(bridge.editor, "debug_snapshot"):  # (Mesh Studio, D1)
+                    events = _count(parse_qs(parsed.query).get("events", [""])[0])
+                    self._send_json(bridge._enqueue(lambda: bridge.editor.debug_snapshot(events)))
+                    return
                 self._send_json({"ok": False, "reason": "not_found"}, status=404)
 
             def do_POST(self) -> None:  # noqa: N802
@@ -276,6 +280,12 @@ class EditorLiveSessionBridge:
                     return
                 if path == "/live/reject_proposal":
                     self._send_json(bridge._enqueue(lambda: bridge._reject_proposal(payload)))
+                    return
+                if path == "/live/debug/play" and hasattr(bridge.editor, "debug_start_playtest"):
+                    self._send_json(bridge._enqueue(bridge.editor.debug_start_playtest))
+                    return
+                if path == "/live/debug/stop" and hasattr(bridge.editor, "debug_stop_playtest"):
+                    self._send_json(bridge._enqueue(bridge.editor.debug_stop_playtest))
                     return
                 self._send_json({"ok": False, "reason": "not_found"}, status=404)
 
@@ -376,3 +386,11 @@ class EditorLiveSessionBridge:
 
 def _truthy(value: str) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _count(value: str, default: int = 20, most: int = 50) -> int:
+    """A count from a query (how many events a snapshot lists): a whole number, 0 to ``most``; else ``default``."""
+    try:
+        return max(0, min(int(value), most))
+    except ValueError:
+        return default

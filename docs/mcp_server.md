@@ -98,6 +98,18 @@ A batch is a list of changes:
 
 **Older tools.** `apply_ops` still takes its operation types. On a Mesh Studio project, `add_entity_from_prefab`, `delete_entity`, `set_behaviour_params` and `paint_tiles` now go through this same validated path (and become a proposal while Studio is open). The `live_*` tools serve the legacy editor. Against Mesh Studio, `live_accept_proposal` is refused, because only the person accepts.
 
+## Debugging a running play-test
+
+Three tools let an AI see the game running in a Mesh Studio play-test, read from the running game itself rather
+than the files. Details, the refusals and a whole recorded session are in
+[runtime_debugger.md](runtime_debugger.md).
+
+| Tool | Purpose |
+| --- | --- |
+| `debug_runtime_snapshot(events, root)` | The room running, the player's position, flags, counters, quests, this play-test's events in order, and errors the engine caught. While Studio is editing, `status: "not_playing"`. Changes nothing; needs no permission. |
+| `debug_start_playtest(root)` | Play, as Studio's Play (F4) does. It is refused (`playtest_control_off`) until the person allows AI play-test control in Studio's AI panel, for that session. It is also refused (`studio_busy`) while they are typing, dragging or answering a question. Never saves. |
+| `debug_stop_playtest(root)` | Stop, back to editing the project as the person left it. Needs the same permission. |
+
 ## Other MCP Clients
 
 The server speaks MCP over **stdio**, so any MCP client can launch it directly.
@@ -194,6 +206,9 @@ the player); it also advises when the only chaser uses `ChaseTarget` in a
 tilemap-less scene (no nav grid, so the chase is inert — prefer `EnemyAI`).
 Returns `{ok, scene_path, warnings, summary{has_player, player_has_camera,
 enemies_targeting_player}}` where `ok` is simply "no warnings" (not an error).
+
+Runtime debugging: `debug_runtime_snapshot`, `debug_start_playtest` and `debug_stop_playtest`; see
+[Debugging a running play-test](#debugging-a-running-play-test).
 
 ## Resource
 
