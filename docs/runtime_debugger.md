@@ -118,7 +118,9 @@ off. While it is on, the play-test's own bar shows **AI may stop this**; clickin
 
 The scenario opens the project in Mesh Studio in a hidden window, with the live session on as it is for a person.
 Every MCP call below is the real tool function, called on another thread as the MCP server would call it, while the
-window keeps running. The responses are verbatim from that run (`docs/reviews/d1_runtime_debugger_transcript.json`).
+window keeps running. The responses below are verbatim from a run on the engine as it is now, after #446
+(`docs/reviews/d1_runtime_debugger_transcript_after_446.json`). D1's own run, before #446, is kept as evidence in
+`docs/reviews/d1_runtime_debugger_transcript.json`; see [What the scenario found](#what-the-scenario-found).
 `tests/test_runtime_debugger_gpu.py` runs the same scenario in the GPU lane.
 
 **1. Studio is editing.** Nothing is running, so the snapshot says so. The person then adds a Sign and doesn't save.
@@ -140,7 +142,7 @@ window keeps running. The responses are verbatim from that run (`docs/reviews/d1
   "revision": 0,
   "unsaved_changes": false
  },
- "time": 1793605744.873
+ "time": 1793615047.599
 }
 ```
 
@@ -179,9 +181,9 @@ changing anything.
 {
  "ok": true,
  "playtest": {
-  "id": "ca6ecf2a7972",
+  "id": "b4bfc0d8cdf5",
   "number": 1,
-  "started_at": 1793605746.287,
+  "started_at": 1793615048.966,
   "started_by": "ai",
   "stopped_at": null
  },
@@ -196,9 +198,9 @@ changing anything.
 {
  "ok": true,
  "playtest": {
-  "id": "ca6ecf2a7972",
+  "id": "b4bfc0d8cdf5",
   "number": 1,
-  "started_at": 1793605746.287,
+  "started_at": 1793615048.966,
   "started_by": "ai",
   "stopped_at": null
  },
@@ -206,8 +208,10 @@ changing anything.
 }
 ```
 
-The running game's room and player. `studio.unsaved_changes` is the person's Sign: it belongs to Studio's document,
-not to the game.
+The running game's room and player. The quest started with the play-test: it is `active` in stage `agree`, and its
+`quest_stage_started` event is the only one so far. `hint_shown_quest_log` is the game's own flag: the HUD sets it
+when it shows "Press Q to open Quest Log" for an active quest. `studio.unsaved_changes` is the person's Sign: it
+belongs to Studio's document, not to the game.
 
 `debug_runtime_snapshot {}`
 
@@ -221,19 +225,43 @@ not to the game.
  },
  "events": {
   "available": true,
-  "items": [],
-  "last_seq": 1,
+  "items": [
+   {
+    "entity": null,
+    "payload": {
+     "quest_id": "light_the_lantern",
+     "quest_title": "Light the cellar lantern",
+     "source": "auto",
+     "stage_id": "agree",
+     "stage_title": "Talk to the Guide",
+     "text": "Talk to the Guide"
+    },
+    "scene": null,
+    "seq": 2,
+    "time": 1793615048.966,
+    "type": "quest_stage_started"
+   }
+  ],
+  "last_seq": 2,
   "limit": 20,
-  "made_this_playtest": 0,
+  "made_this_playtest": 1,
   "no_longer_kept": 0
  },
  "game_state": {
   "available": true,
   "chapter": 1,
   "counters": {},
-  "flags": {},
+  "flags": {
+   "hint_shown_quest_log": true
+  },
   "playtime_seconds": 0.567,
   "values": {
+   "hud_last_quest_progress": {
+    "light_the_lantern": {
+     "completed": false,
+     "stage_id": "agree"
+    }
+   },
    "time_of_day_hours": 21.0
   }
  },
@@ -249,9 +277,9 @@ not to the game.
   "y": 128.0
  },
  "playtest": {
-  "id": "ca6ecf2a7972",
+  "id": "b4bfc0d8cdf5",
   "number": 1,
-  "started_at": 1793605746.287,
+  "started_at": 1793615048.966,
   "started_by": "ai",
   "stopped_at": null
  },
@@ -265,9 +293,9 @@ not to the game.
     "awaiting_stage": null,
     "completed_stages": [],
     "completed_stages_total": 0,
-    "current_stage": null,
+    "current_stage": "agree",
     "id": "light_the_lantern",
-    "status": "inactive",
+    "status": "active",
     "title": "Light the cellar lantern",
     "total_stages": 2
    }
@@ -290,7 +318,7 @@ not to the game.
   "revision": 1,
   "unsaved_changes": true
  },
- "time": 1793605747.697
+ "time": 1793615050.334
 }
 ```
 
@@ -311,6 +339,21 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
   "available": true,
   "items": [
    {
+    "entity": null,
+    "payload": {
+     "quest_id": "light_the_lantern",
+     "quest_title": "Light the cellar lantern",
+     "source": "auto",
+     "stage_id": "agree",
+     "stage_title": "Talk to the Guide",
+     "text": "Talk to the Guide"
+    },
+    "scene": null,
+    "seq": 2,
+    "time": 1793615048.966,
+    "type": "quest_stage_started"
+   },
+   {
     "entity": "Guide",
     "payload": {
      "actor": "Player",
@@ -319,8 +362,8 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
      "trigger": "interact"
     },
     "scene": null,
-    "seq": 2,
-    "time": 1793605748.331,
+    "seq": 3,
+    "time": 1793615050.998,
     "type": "dialogue_started"
    },
    {
@@ -336,8 +379,8 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
      "text": "The cellar lantern has gone out. Will you light it?"
     },
     "scene": null,
-    "seq": 3,
-    "time": 1793605748.331,
+    "seq": 4,
+    "time": 1793615050.998,
     "type": "dialogue_line"
    },
    {
@@ -352,8 +395,8 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
      "owner": "dialogue::Guide"
     },
     "scene": null,
-    "seq": 4,
-    "time": 1793605748.489,
+    "seq": 5,
+    "time": 1793615051.158,
     "type": "dialogue_choice"
    },
    {
@@ -369,9 +412,39 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
      "text": "Thank you! The cellar door is just north of here."
     },
     "scene": null,
-    "seq": 5,
-    "time": 1793605748.489,
+    "seq": 6,
+    "time": 1793615051.158,
     "type": "dialogue_line"
+   },
+   {
+    "entity": null,
+    "payload": {
+     "quest_id": "light_the_lantern",
+     "quest_title": "Light the cellar lantern",
+     "source": "requirements",
+     "stage_id": "agree",
+     "stage_title": "Talk to the Guide",
+     "text": "Talk to the Guide"
+    },
+    "scene": null,
+    "seq": 7,
+    "time": 1793615051.158,
+    "type": "quest_stage_completed"
+   },
+   {
+    "entity": null,
+    "payload": {
+     "quest_id": "light_the_lantern",
+     "quest_title": "Light the cellar lantern",
+     "source": "auto",
+     "stage_id": "cellar",
+     "stage_title": "Go down to the cellar",
+     "text": "Go down to the cellar"
+    },
+    "scene": null,
+    "seq": 8,
+    "time": 1793615051.158,
+    "type": "quest_stage_started"
    },
    {
     "entity": "Guide",
@@ -382,14 +455,14 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
      "reason": "advance_complete"
     },
     "scene": null,
-    "seq": 6,
-    "time": 1793605748.561,
+    "seq": 9,
+    "time": 1793615051.238,
     "type": "dialogue_finished"
    }
   ],
-  "last_seq": 6,
+  "last_seq": 9,
   "limit": 12,
-  "made_this_playtest": 5,
+  "made_this_playtest": 8,
   "no_longer_kept": 0
  },
  "game_state": {
@@ -397,10 +470,17 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
   "chapter": 1,
   "counters": {},
   "flags": {
-   "agreed_to_help": true
+   "agreed_to_help": true,
+   "hint_shown_quest_log": true
   },
   "playtime_seconds": 2.133,
   "values": {
+   "hud_last_quest_progress": {
+    "light_the_lantern": {
+     "completed": false,
+     "stage_id": "cellar"
+    }
+   },
    "monster_egg_walk_accumulator": 1.0,
    "time_of_day_hours": 21.0
   }
@@ -417,9 +497,9 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
   "y": 128.0
  },
  "playtest": {
-  "id": "ca6ecf2a7972",
+  "id": "b4bfc0d8cdf5",
   "number": 1,
-  "started_at": 1793605746.287,
+  "started_at": 1793615048.966,
   "started_by": "ai",
   "stopped_at": null
  },
@@ -431,11 +511,13 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
    {
     "auto_start": true,
     "awaiting_stage": null,
-    "completed_stages": [],
-    "completed_stages_total": 0,
-    "current_stage": null,
+    "completed_stages": [
+     "agree"
+    ],
+    "completed_stages_total": 1,
+    "current_stage": "cellar",
     "id": "light_the_lantern",
-    "status": "inactive",
+    "status": "active",
     "title": "Light the cellar lantern",
     "total_stages": 2
    }
@@ -458,13 +540,16 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
   "revision": 1,
   "unsaved_changes": true
  },
- "time": 1793605748.727
+ "time": 1793615051.407
 }
 ```
 
-**What the AI can conclude from this:** `agreed_to_help` is set, and `dialogue_choice` (seq 4, `choice_id: "help"`)
-is what set it. Yet the quest whose first stage needs that flag is still `inactive`, with no current or awaiting
-stage, even though it is `auto_start`. See [What the scenario found](#what-the-scenario-found).
+**What the AI can conclude from this:**
+
+- `agreed_to_help` is set, and `dialogue_choice` (`choice_id: "help"`) is what set it.
+- The quest's `agree` stage completed (`quest_stage_completed`) right after the choice, and the quest moved on to
+  `cellar` (`quest_stage_started`).
+- The quest record agrees: `completed_stages: ["agree"]`, `current_stage: "cellar"`.
 
 **7. The player walks through the door.** The snapshot follows the running game into the Cellar. The latest event
 is the `scene_transition` that took it there, and `studio.edited_room` is still the room the person is editing.
@@ -486,36 +571,6 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     "entity": "Guide",
     "payload": {
      "actor": "Player",
-     "entity": "Guide",
-     "owner": "dialogue::Guide",
-     "trigger": "interact"
-    },
-    "scene": null,
-    "seq": 2,
-    "time": 1793605748.331,
-    "type": "dialogue_started"
-   },
-   {
-    "entity": "Guide",
-    "payload": {
-     "actor": "Player",
-     "entity": "Guide",
-     "has_choices": true,
-     "node": "root",
-     "owner": "dialogue::Guide",
-     "speaker": "Guide",
-     "stage": "start",
-     "text": "The cellar lantern has gone out. Will you light it?"
-    },
-    "scene": null,
-    "seq": 3,
-    "time": 1793605748.331,
-    "type": "dialogue_line"
-   },
-   {
-    "entity": "Guide",
-    "payload": {
-     "actor": "Player",
      "choice_id": "help",
      "choice_text": "I'll light it.",
      "entity": "Guide",
@@ -524,8 +579,8 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
      "owner": "dialogue::Guide"
     },
     "scene": null,
-    "seq": 4,
-    "time": 1793605748.489,
+    "seq": 5,
+    "time": 1793615051.158,
     "type": "dialogue_choice"
    },
    {
@@ -541,9 +596,39 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
      "text": "Thank you! The cellar door is just north of here."
     },
     "scene": null,
-    "seq": 5,
-    "time": 1793605748.489,
+    "seq": 6,
+    "time": 1793615051.158,
     "type": "dialogue_line"
+   },
+   {
+    "entity": null,
+    "payload": {
+     "quest_id": "light_the_lantern",
+     "quest_title": "Light the cellar lantern",
+     "source": "requirements",
+     "stage_id": "agree",
+     "stage_title": "Talk to the Guide",
+     "text": "Talk to the Guide"
+    },
+    "scene": null,
+    "seq": 7,
+    "time": 1793615051.158,
+    "type": "quest_stage_completed"
+   },
+   {
+    "entity": null,
+    "payload": {
+     "quest_id": "light_the_lantern",
+     "quest_title": "Light the cellar lantern",
+     "source": "auto",
+     "stage_id": "cellar",
+     "stage_title": "Go down to the cellar",
+     "text": "Go down to the cellar"
+    },
+    "scene": null,
+    "seq": 8,
+    "time": 1793615051.158,
+    "type": "quest_stage_started"
    },
    {
     "entity": "Guide",
@@ -554,8 +639,8 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
      "reason": "advance_complete"
     },
     "scene": null,
-    "seq": 6,
-    "time": 1793605748.561,
+    "seq": 9,
+    "time": 1793615051.238,
     "type": "dialogue_finished"
    },
    {
@@ -568,14 +653,14 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
      "target_scene": "cellar"
     },
     "scene": null,
-    "seq": 7,
-    "time": 1793605748.796,
+    "seq": 10,
+    "time": 1793615051.48,
     "type": "scene_transition"
    }
   ],
-  "last_seq": 7,
+  "last_seq": 10,
   "limit": 6,
-  "made_this_playtest": 6,
+  "made_this_playtest": 9,
   "no_longer_kept": 0
  },
  "game_state": {
@@ -583,10 +668,17 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
   "chapter": 1,
   "counters": {},
   "flags": {
-   "agreed_to_help": true
+   "agreed_to_help": true,
+   "hint_shown_quest_log": true
   },
   "playtime_seconds": 2.65,
   "values": {
+   "hud_last_quest_progress": {
+    "light_the_lantern": {
+     "completed": false,
+     "stage_id": "cellar"
+    }
+   },
    "monster_egg_walk_accumulator": 16.0,
    "time_of_day_hours": 21.0
   }
@@ -603,9 +695,9 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
   "y": 128.0
  },
  "playtest": {
-  "id": "ca6ecf2a7972",
+  "id": "b4bfc0d8cdf5",
   "number": 1,
-  "started_at": 1793605746.287,
+  "started_at": 1793615048.966,
   "started_by": "ai",
   "stopped_at": null
  },
@@ -617,11 +709,13 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
    {
     "auto_start": true,
     "awaiting_stage": null,
-    "completed_stages": [],
-    "completed_stages_total": 0,
-    "current_stage": null,
+    "completed_stages": [
+     "agree"
+    ],
+    "completed_stages_total": 1,
+    "current_stage": "cellar",
     "id": "light_the_lantern",
-    "status": "inactive",
+    "status": "active",
     "title": "Light the cellar lantern",
     "total_stages": 2
    }
@@ -644,7 +738,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
   "revision": 1,
   "unsaved_changes": true
  },
- "time": 1793605749.017
+ "time": 1793615051.711
 }
 ```
 
@@ -661,11 +755,11 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
  },
  "ok": true,
  "playtest": {
-  "id": "ca6ecf2a7972",
+  "id": "b4bfc0d8cdf5",
   "number": 1,
-  "started_at": 1793605746.287,
+  "started_at": 1793615048.966,
   "started_by": "ai",
-  "stopped_at": 1793605749.034
+  "stopped_at": 1793615051.729
  },
  "status": "stopped"
 }
@@ -676,11 +770,11 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
 ```json
 {
  "last_playtest": {
-  "id": "ca6ecf2a7972",
+  "id": "b4bfc0d8cdf5",
   "number": 1,
-  "started_at": 1793605746.287,
+  "started_at": 1793615048.966,
   "started_by": "ai",
-  "stopped_at": 1793605749.034
+  "stopped_at": 1793615051.729
  },
  "ok": true,
  "status": "not_playing"
@@ -692,11 +786,11 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
 ```json
 {
  "last_playtest": {
-  "id": "ca6ecf2a7972",
+  "id": "b4bfc0d8cdf5",
   "number": 1,
-  "started_at": 1793605746.287,
+  "started_at": 1793615048.966,
   "started_by": "ai",
-  "stopped_at": 1793605749.034
+  "stopped_at": 1793615051.729
  },
  "message": "Mesh Studio is editing, not play-testing: no game is running to inspect. debug_start_playtest starts one (if the person allowed it), or ask the person to press Play (F4).",
  "mode": "live_studio",
@@ -710,7 +804,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
   "revision": 1,
   "unsaved_changes": true
  },
- "time": 1793605749.343
+ "time": 1793615052.016
 }
 ```
 
@@ -729,19 +823,53 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
 
 ## What the scenario found
 
-The quest's state in the snapshot above is accurate. It is a real engine bug, and D1 found it on its first run.
+**History: D1's first run found an engine bug, fixed in #446.** The walkthrough above is the corrected behaviour.
 
-- **The cause:** a play-test starts from `GameStateController.replace_state({})`, a fresh `GameState`. That never
-  re-syncs the quest manager: only `load_from_dict` calls `reload_from_state`, and `import_state` calls it only when
-  the data has a `quests` block. So an `auto_start` quest never starts, no stage is awaiting, and a flag its stage
-  needs moves nothing.
+In D1's own run (before #446), the snapshot after the conversation showed the flag set and the quest never started:
+
+```json
+{
+ "game_state": {
+  "flags": {
+   "agreed_to_help": true
+  }
+ },
+ "quests": {
+  "available": true,
+  "defined": 1,
+  "listed": 1,
+  "quests": [
+   {
+    "auto_start": true,
+    "awaiting_stage": null,
+    "completed_stages": [],
+    "completed_stages_total": 0,
+    "current_stage": null,
+    "id": "light_the_lantern",
+    "status": "inactive",
+    "title": "Light the cellar lantern",
+    "total_stages": 2
+   }
+  ]
+ }
+}
+```
+
+That report was accurate. It was a real engine bug:
+
+- **The cause (then):** a play-test starts from `GameStateController.replace_state({})`, a fresh `GameState`. That
+  didn't re-sync the quest manager: `import_state` calls `load_from_dict` (and so `reload_from_state`) only when the
+  data has a `quests` block. So an `auto_start` quest never started, no stage was awaiting, and a flag its stage
+  needed moved nothing.
 - **Shown directly** in a plain game window (no Studio):
-  - At launch the quest is `active` in stage `agree`, and setting the flag completes `agree`.
-  - After `replace_state({})`, it is `inactive` and stays there when the flag is set again.
-- **Who else it affects:** the main menu's New Game resets the same way (`behaviours/main_menu.py`,
-  `ui_overlays/main_menu_overlay.py`), so players are affected too. Loading a save isn't: its quests block is
-  re-synced.
-- **Not fixed here:** it is out of D1's scope, and it is tracked in #422.
+  - At launch, the quest was `active` in stage `agree`, and setting the flag completed `agree`.
+  - After `replace_state({})`, it was `inactive` and stayed that way when the flag was set again.
+- **Who it affected:** Studio's Play and Stop, and `behaviours/main_menu.py`'s New Game. The main-menu overlay's New
+  Game already re-synced quests itself, and loading a save was unaffected.
+- **The fix (#446):** `replace_state` now runs `reload_from_state` after importing the new state, for every caller
+  (the overlay's own re-sync went with it).
+  - The GPU scenario checks that the quest starts with the play-test and moves from `agree` to `cellar` on the flag.
+  - It also checks that the debugger's report matches the running game's quest record.
 
 ## Limitations
 

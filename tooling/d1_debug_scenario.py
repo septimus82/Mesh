@@ -3,10 +3,12 @@
 A disposable project (``build``): Mesh's starter room with its Guide, whose conversation asks the player to light the
 cellar lantern ("I'll light it." sets the flag ``agreed_to_help``); a second room, the Cellar, through a door in the
 starter room; and a quest, "Light the cellar lantern" (``auto_start``), whose first stage completes when that flag is
-set. (Its first run found a bug that way: a play-test starts from ``GameStateController.replace_state({})``, which
-leaves the quests' records unsynced, so an ``auto_start`` quest never starts and the flag moves nothing: the snapshot
-shows the flag set and the quest still "inactive" with no stage. Tracked in #422; the main menu's New Game resets the
-same way.)
+set. The quest starts with the play-test, and agreeing moves it from "agree" to "cellar".
+
+(History: D1's first run, before #446, found that the quest never started. A play-test starts from
+``GameStateController.replace_state({})``, which then left the quests' records unsynced, so the snapshot showed the
+flag set and the quest still "inactive" with no stage. #446 made ``replace_state`` re-sync them. The D1 evidence is
+in docs/reviews/d1_runtime_debugger_transcript.json.)
 
 ``run`` opens it in Mesh Studio (its live session on, as for a person) and plays the scenario. Every MCP call is the
 real tool function (engine/mcp_server/tools.py) called on another thread, as the MCP server would, while the window
@@ -158,6 +160,7 @@ def run(out: Path, *, keep: bool = False) -> dict[str, Any]:
         report["4_again"] = ask("debug_start_playtest")
         d.advance(30)
         report["4_snapshot"] = ask("debug_runtime_snapshot")
+        report["4_runtime_quests"] = copy.deepcopy(d.window.game_state_controller.state.values.get("quests"))
 
         # 5. The player talks to the Guide and agrees, with the game's own keys.
         report["5_talk"] = _talk(d, "I'll light it.")
