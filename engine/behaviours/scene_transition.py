@@ -180,10 +180,9 @@ class SceneTransition(Behaviour):
     def hidden_by_show_when(self) -> bool:
         """Whether its "Show when" (a ConditionalActivator on the door) keeps it hidden now, by the flags as they are
         now: a hidden door isn't there to walk through, as one isn't there to use with the interact key
-        (``engine.interaction``)."""
-        from .conditional_activator import ConditionalActivator  # noqa: PLC0415
-
-        return any(isinstance(b, ConditionalActivator) and not b._requirements_met()
+        (``engine.interaction``). By the behaviour's name, as ``water.active`` does: a module imported again (the
+        headless import sweep test) registers a new class, which ``isinstance`` against the old one misses."""
+        return any(type(b).__name__ == "ConditionalActivator" and not b._requirements_met()
                    for b in getattr(self.entity, "mesh_behaviours_runtime", None) or ())
 
     def on_interact(self, window: Any, actor: Any) -> None:  # noqa: D401
