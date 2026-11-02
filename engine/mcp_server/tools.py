@@ -882,7 +882,8 @@ def propose_changes(changes: list[dict[str, Any]], title: str = "", base_revisio
     survive, the same property changed both ways is reported as a conflict. Invalid changes are
     refused at once with the reason. A ``base_revision`` Studio no longer keeps is refused
     (``base_revision_unavailable``, with the current ``revision``: read again), as is one that isn't
-    a revision (``invalid_base_revision``); neither is replaced by another revision.
+    a revision (``invalid_base_revision``); neither is replaced by another revision. At most 20
+    proposals wait for the person at once: more are refused (``too_many_pending``) until some are decided.
     Returns ``{ok, proposal_id, proposal{summary, status}}``.
     """
     from engine import authoring_session
