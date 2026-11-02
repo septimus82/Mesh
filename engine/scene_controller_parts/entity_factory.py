@@ -1,6 +1,7 @@
 # mypy: ignore-errors
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import Any, cast
 
 from engine.swallowed_exceptions import _log_swallow
@@ -162,6 +163,23 @@ def _rebuild_behaviours_for_sprite(self, sprite: Any) -> None:
     entity_data = self._ensure_entity_data_dict(sprite)
     config_root = scene_controller_module.ensure_behaviour_config_root(entity_data)
 
+    # The event-bus subscriptions its behaviours make belong to this scene: the next scene load ends them (they
+    # used to outlive the room, so every visit added another listener to each event). Rebuilt: the old ones end now.
+    for unsubscribe in getattr(sprite, "mesh_behaviour_unsubscribes", None) or ():
+        unsubscribe()
+    bus = getattr(self.window, "event_bus", None)
+    record = getattr(bus, "record_subscriptions", None)
+    with record() if callable(record) else nullcontext([]) as made:
+        runtime_instances = _create_behaviour_instances(self, sprite, names, config_root)
+    cast(Any, sprite).mesh_behaviour_unsubscribes = list(made)
+    for unsubscribe in made:
+        self.track_scene_subscription(unsubscribe)
+    cast(Any, sprite).mesh_behaviours_runtime = runtime_instances
+
+
+def _create_behaviour_instances(self, sprite: Any, names: list[str], config_root: dict[str, Any]) -> list[Any]:
+    import engine.scene_controller_core as scene_controller_module
+
     runtime_instances: list[Any] = []
     for index, behaviour_name in enumerate(names):
         config_for_behaviour = dict(config_root.get(behaviour_name, {}) or {})
@@ -181,8 +199,7 @@ def _rebuild_behaviours_for_sprite(self, sprite: Any) -> None:
         else:
             setattr(behaviour, "config", dict(config_for_behaviour))
         runtime_instances.append(behaviour)
-
-    cast(Any, sprite).mesh_behaviours_runtime = runtime_instances
+    return runtime_instances
 
 
 def _attach_animator(self, sprite: Any, entity_data: dict[str, Any]) -> None:
