@@ -348,6 +348,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     gone = room_memory.removed_ids(controller.window, controller.room_path)  # collected or defeated earlier
     entities_payload = [e for e in entities_payload if not (isinstance(e, dict) and e.get("id") in gone)]
     controller._room_spawned_ids = room_memory.spawned_ids(entities_payload)
+    controller._room_session = room_memory.session(controller.window)  # (what it records belongs to this game)
     for entity in entities_payload:
         sprite = controller._create_sprite(entity)
         if not sprite:

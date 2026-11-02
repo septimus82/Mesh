@@ -53,12 +53,24 @@ def is_save_slot(window: Any, path: str) -> bool:
     return any(folder is not None and parent == Path(folder).resolve() for folder in folders)
 
 
+def session(window: Any) -> Any:
+    """The game session now: its ``GameState``, which ``GameStateController.replace_state`` replaces for a new game
+    (New Game, Studio's Play and Stop)."""
+    return getattr(_state(window), "state", None)
+
+
 def remember_removed(controller: Any) -> None:
-    """Record which of this room's authored objects are gone (call before leaving the room or saving)."""
+    """Record which of this room's authored objects are gone (call before leaving the room or saving).
+
+    Only into the game session that loaded the room: after a new game began (New Game, Studio's Play or Stop), what
+    was collected in the room the old game was in isn't the new game's."""
     room = room_key(getattr(controller, "room_path", None))
     spawned = getattr(controller, "_room_spawned_ids", None)
     state = _state(getattr(controller, "window", None))
     if not room or not spawned or state is None:
+        return
+    loaded_in = getattr(controller, "_room_session", None)
+    if loaded_in is not None and loaded_in is not session(controller.window):
         return
     alive = set()
     for sprite in controller.all_sprites:
