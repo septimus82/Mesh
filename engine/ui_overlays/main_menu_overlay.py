@@ -692,10 +692,7 @@ class MainMenuOverlay(UIElement):
         if controller is not None:  # a new game starts clean: flags, counters, values and quests (Watchfire R1)
             try:
                 if callable(getattr(controller, "replace_state", None)):
-                    controller.replace_state({})
-                    resync = getattr(getattr(controller, "quests", None), "reload_from_state", None)
-                    if callable(resync):  # quests begin as in a fresh game: one without a start event starts now
-                        resync()
+                    controller.replace_state({})  # (which also starts quests as in a fresh game)
                 elif hasattr(getattr(controller, "state", None), "flags"):  # (a state holder without the controller's API)
                     controller.state.flags = {}
             except Exception:

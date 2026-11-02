@@ -596,6 +596,11 @@ class GameStateController:
         """Completely replace the current game state with the provided data."""
         self.state = GameState()  # Reset to clean state
         self.import_state(state_data)
+        # Quests begin as in a fresh game: auto_start quests start, pending stages sync with the new flags.
+        # (The full manager GameWindow installs has this; the windowless lightweight one does not.)
+        resync = getattr(self.quests, "reload_from_state", None)
+        if callable(resync):
+            resync()
 
     def handle_event(self, event: Any) -> None:
         """Centralized event handler for game state updates."""
