@@ -85,6 +85,7 @@ def build_server() -> Any:
     server.tool()(tools.debug_runtime_snapshot)
     server.tool()(tools.debug_start_playtest)
     server.tool()(tools.debug_stop_playtest)
+    server.tool()(tools.debug_play_action)  # (D2: playing it, with the player's own controls)
 
     # Safety.
     server.tool()(tools.validate_scene)

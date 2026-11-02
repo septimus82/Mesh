@@ -109,6 +109,7 @@ than the files. Details, the refusals and a whole recorded session are in
 | `debug_runtime_snapshot(events, root)` | The room running, the player's position, flags, counters, quests, this play-test's events in order, and errors the engine caught. While Studio is editing, `status: "not_playing"`. Changes nothing; needs no permission. |
 | `debug_start_playtest(root)` | Play, as Studio's Play (F4) does. It is refused (`playtest_control_off`) until the person allows AI play-test control in Studio's AI panel, for that session. It is also refused (`studio_busy`) while they are typing, dragging or answering a question. Never saves. |
 | `debug_stop_playtest(root)` | Stop, back to editing the project as the person left it. Needs the same permission. |
+| `debug_play_action(action, direction, frames, choice, root)` | Play the running play-test with the player's own controls, one bounded action at a time: `move` (a direction for 1 to 120 frames), `interact`, `advance` (a conversation's next line) or `choose` (one of its choices). Returns where the player went, the conversation, and a snapshot. A separate permission, off until the person allows AI play in the AI panel. See [ai_playtesting.md](ai_playtesting.md). |
 
 ## Other MCP Clients
 
@@ -207,7 +208,8 @@ tilemap-less scene (no nav grid, so the chase is inert — prefer `EnemyAI`).
 Returns `{ok, scene_path, warnings, summary{has_player, player_has_camera,
 enemies_targeting_player}}` where `ok` is simply "no warnings" (not an error).
 
-Runtime debugging: `debug_runtime_snapshot`, `debug_start_playtest` and `debug_stop_playtest`; see
+Runtime debugging: `debug_runtime_snapshot`, `debug_start_playtest`, `debug_stop_playtest` and
+`debug_play_action`; see
 [Debugging a running play-test](#debugging-a-running-play-test).
 
 ## Resource

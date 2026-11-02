@@ -9,13 +9,14 @@
    "sequence": 1,
    "status": "not_playing",
    "studio": {
+    "ai_gameplay_control": false,
     "ai_playtest_control": false,
     "edited_room": "start",
     "mode": "editing",
     "revision": 0,
     "unsaved_changes": false
    },
-   "time": 1793615047.599
+   "time": 1793622091.966
   },
   "tool": "debug_runtime_snapshot"
  },
@@ -43,9 +44,9 @@
   "response": {
    "ok": true,
    "playtest": {
-    "id": "b4bfc0d8cdf5",
+    "id": "1b5402cf73a1",
     "number": 1,
-    "started_at": 1793615048.966,
+    "started_at": 1793622093.34,
     "started_by": "ai",
     "stopped_at": null
    },
@@ -59,9 +60,9 @@
   "response": {
    "ok": true,
    "playtest": {
-    "id": "b4bfc0d8cdf5",
+    "id": "1b5402cf73a1",
     "number": 1,
-    "started_at": 1793615048.966,
+    "started_at": 1793622093.34,
     "started_by": "ai",
     "stopped_at": null
    },
@@ -78,6 +79,10 @@
     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
     "sites": 0
    },
+   "dialogue": {
+    "available": true,
+    "open": false
+   },
    "events": {
     "available": true,
     "items": [
@@ -93,7 +98,7 @@
       },
       "scene": null,
       "seq": 2,
-      "time": 1793615048.966,
+      "time": 1793622093.34,
       "type": "quest_stage_started"
      }
     ],
@@ -121,6 +126,43 @@
     }
    },
    "mode": "live_studio",
+   "nearby": {
+    "available": true,
+    "entities": [
+     {
+      "distance": 128.0,
+      "dx": 0.0,
+      "dy": 128.0,
+      "id": "start_arrival_cellar_128_256_0_0",
+      "name": "Arrival from Cellar",
+      "tag": "spawn_point",
+      "x": 128.0,
+      "y": 256.0
+     },
+     {
+      "distance": 192.0,
+      "dx": 192.0,
+      "dy": 0.0,
+      "id": "start_guide_320_128_0_0",
+      "name": "Guide",
+      "tag": "npc",
+      "x": 320.0,
+      "y": 128.0
+     },
+     {
+      "distance": 224.0,
+      "dx": 0.0,
+      "dy": 224.0,
+      "id": "start_door_to_cellar_128_352_0_0",
+      "name": "Door to Cellar",
+      "tag": "door",
+      "x": 128.0,
+      "y": 352.0
+     }
+    ],
+    "radius": 320.0,
+    "within": 3
+   },
    "ok": true,
    "player": {
     "available": true,
@@ -132,9 +174,9 @@
     "y": 128.0
    },
    "playtest": {
-    "id": "b4bfc0d8cdf5",
+    "id": "1b5402cf73a1",
     "number": 1,
-    "started_at": 1793615048.966,
+    "started_at": 1793622093.34,
     "started_by": "ai",
     "stopped_at": null
    },
@@ -167,13 +209,14 @@
    "sequence": 2,
    "status": "playing",
    "studio": {
+    "ai_gameplay_control": false,
     "ai_playtest_control": true,
     "edited_room": "start",
     "mode": "playing",
     "revision": 1,
     "unsaved_changes": true
    },
-   "time": 1793615050.334
+   "time": 1793622094.745
   },
   "tool": "debug_runtime_snapshot"
  },
@@ -187,6 +230,10 @@
     "items": [],
     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
     "sites": 0
+   },
+   "dialogue": {
+    "available": true,
+    "open": false
    },
    "events": {
     "available": true,
@@ -203,7 +250,7 @@
       },
       "scene": null,
       "seq": 2,
-      "time": 1793615048.966,
+      "time": 1793622093.34,
       "type": "quest_stage_started"
      },
      {
@@ -216,7 +263,7 @@
       },
       "scene": null,
       "seq": 3,
-      "time": 1793615050.998,
+      "time": 1793622095.395,
       "type": "dialogue_started"
      },
      {
@@ -233,7 +280,7 @@
       },
       "scene": null,
       "seq": 4,
-      "time": 1793615050.998,
+      "time": 1793622095.395,
       "type": "dialogue_line"
      },
      {
@@ -249,7 +296,7 @@
       },
       "scene": null,
       "seq": 5,
-      "time": 1793615051.158,
+      "time": 1793622095.559,
       "type": "dialogue_choice"
      },
      {
@@ -266,7 +313,7 @@
       },
       "scene": null,
       "seq": 6,
-      "time": 1793615051.158,
+      "time": 1793622095.559,
       "type": "dialogue_line"
      },
      {
@@ -281,7 +328,7 @@
       },
       "scene": null,
       "seq": 7,
-      "time": 1793615051.158,
+      "time": 1793622095.559,
       "type": "quest_stage_completed"
      },
      {
@@ -296,7 +343,7 @@
       },
       "scene": null,
       "seq": 8,
-      "time": 1793615051.158,
+      "time": 1793622095.559,
       "type": "quest_stage_started"
      },
      {
@@ -309,7 +356,7 @@
       },
       "scene": null,
       "seq": 9,
-      "time": 1793615051.238,
+      "time": 1793622095.638,
       "type": "dialogue_finished"
      }
     ],
@@ -339,6 +386,53 @@
     }
    },
    "mode": "live_studio",
+   "nearby": {
+    "available": true,
+    "entities": [
+     {
+      "distance": 47.0,
+      "dx": 47.0,
+      "dy": 0.0,
+      "id": "start_guide_320_128_0_0",
+      "name": "Guide",
+      "tag": "npc",
+      "x": 320.0,
+      "y": 128.0
+     },
+     {
+      "distance": 193.4,
+      "dx": -145.0,
+      "dy": 128.0,
+      "id": "start_arrival_cellar_128_256_0_0",
+      "name": "Arrival from Cellar",
+      "tag": "spawn_point",
+      "x": 128.0,
+      "y": 256.0
+     },
+     {
+      "distance": 209.5,
+      "dx": 207.0,
+      "dy": 32.0,
+      "id": "start_sign_480_160_0_0",
+      "name": "Sign",
+      "tag": "sign",
+      "x": 480.0,
+      "y": 160.0
+     },
+     {
+      "distance": 266.8,
+      "dx": -145.0,
+      "dy": 224.0,
+      "id": "start_door_to_cellar_128_352_0_0",
+      "name": "Door to Cellar",
+      "tag": "door",
+      "x": 128.0,
+      "y": 352.0
+     }
+    ],
+    "radius": 320.0,
+    "within": 4
+   },
    "ok": true,
    "player": {
     "available": true,
@@ -350,9 +444,9 @@
     "y": 128.0
    },
    "playtest": {
-    "id": "b4bfc0d8cdf5",
+    "id": "1b5402cf73a1",
     "number": 1,
-    "started_at": 1793615048.966,
+    "started_at": 1793622093.34,
     "started_by": "ai",
     "stopped_at": null
    },
@@ -387,13 +481,14 @@
    "sequence": 4,
    "status": "playing",
    "studio": {
+    "ai_gameplay_control": false,
     "ai_playtest_control": true,
     "edited_room": "start",
     "mode": "playing",
     "revision": 1,
     "unsaved_changes": true
    },
-   "time": 1793615051.407
+   "time": 1793622095.809
   },
   "tool": "debug_runtime_snapshot"
  },
@@ -407,6 +502,10 @@
     "items": [],
     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
     "sites": 0
+   },
+   "dialogue": {
+    "available": true,
+    "open": false
    },
    "events": {
     "available": true,
@@ -424,7 +523,7 @@
       },
       "scene": null,
       "seq": 5,
-      "time": 1793615051.158,
+      "time": 1793622095.559,
       "type": "dialogue_choice"
      },
      {
@@ -441,7 +540,7 @@
       },
       "scene": null,
       "seq": 6,
-      "time": 1793615051.158,
+      "time": 1793622095.559,
       "type": "dialogue_line"
      },
      {
@@ -456,7 +555,7 @@
       },
       "scene": null,
       "seq": 7,
-      "time": 1793615051.158,
+      "time": 1793622095.559,
       "type": "quest_stage_completed"
      },
      {
@@ -471,7 +570,7 @@
       },
       "scene": null,
       "seq": 8,
-      "time": 1793615051.158,
+      "time": 1793622095.559,
       "type": "quest_stage_started"
      },
      {
@@ -484,7 +583,7 @@
       },
       "scene": null,
       "seq": 9,
-      "time": 1793615051.238,
+      "time": 1793622095.638,
       "type": "dialogue_finished"
      },
      {
@@ -498,7 +597,7 @@
       },
       "scene": null,
       "seq": 10,
-      "time": 1793615051.48,
+      "time": 1793622095.886,
       "type": "scene_transition"
      }
     ],
@@ -528,6 +627,33 @@
     }
    },
    "mode": "live_studio",
+   "nearby": {
+    "available": true,
+    "entities": [
+     {
+      "distance": 0.0,
+      "dx": 0.0,
+      "dy": 0.0,
+      "id": "cellar_arrival_start_256_128_0_0",
+      "name": "Arrival from Start",
+      "tag": "spawn_point",
+      "x": 256.0,
+      "y": 128.0
+     },
+     {
+      "distance": 96.0,
+      "dx": 0.0,
+      "dy": 96.0,
+      "id": "cellar_door_to_start_256_224_0_0",
+      "name": "Door to Start",
+      "tag": "door",
+      "x": 256.0,
+      "y": 224.0
+     }
+    ],
+    "radius": 320.0,
+    "within": 2
+   },
    "ok": true,
    "player": {
     "available": true,
@@ -539,9 +665,9 @@
     "y": 128.0
    },
    "playtest": {
-    "id": "b4bfc0d8cdf5",
+    "id": "1b5402cf73a1",
     "number": 1,
-    "started_at": 1793615048.966,
+    "started_at": 1793622093.34,
     "started_by": "ai",
     "stopped_at": null
    },
@@ -576,13 +702,14 @@
    "sequence": 5,
    "status": "playing",
    "studio": {
+    "ai_gameplay_control": false,
     "ai_playtest_control": true,
     "edited_room": "start",
     "mode": "playing",
     "revision": 1,
     "unsaved_changes": true
    },
-   "time": 1793615051.711
+   "time": 1793622096.139
   },
   "tool": "debug_runtime_snapshot"
  },
@@ -596,11 +723,11 @@
    },
    "ok": true,
    "playtest": {
-    "id": "b4bfc0d8cdf5",
+    "id": "1b5402cf73a1",
     "number": 1,
-    "started_at": 1793615048.966,
+    "started_at": 1793622093.34,
     "started_by": "ai",
-    "stopped_at": 1793615051.729
+    "stopped_at": 1793622096.156
    },
    "status": "stopped"
   },
@@ -610,11 +737,11 @@
   "arguments": {},
   "response": {
    "last_playtest": {
-    "id": "b4bfc0d8cdf5",
+    "id": "1b5402cf73a1",
     "number": 1,
-    "started_at": 1793615048.966,
+    "started_at": 1793622093.34,
     "started_by": "ai",
-    "stopped_at": 1793615051.729
+    "stopped_at": 1793622096.156
    },
    "ok": true,
    "status": "not_playing"
@@ -625,11 +752,11 @@
   "arguments": {},
   "response": {
    "last_playtest": {
-    "id": "b4bfc0d8cdf5",
+    "id": "1b5402cf73a1",
     "number": 1,
-    "started_at": 1793615048.966,
+    "started_at": 1793622093.34,
     "started_by": "ai",
-    "stopped_at": 1793615051.729
+    "stopped_at": 1793622096.156
    },
    "message": "Mesh Studio is editing, not play-testing: no game is running to inspect. debug_start_playtest starts one (if the person allowed it), or ask the person to press Play (F4).",
    "mode": "live_studio",
@@ -637,13 +764,14 @@
    "sequence": 6,
    "status": "not_playing",
    "studio": {
+    "ai_gameplay_control": false,
     "ai_playtest_control": true,
     "edited_room": "start",
     "mode": "editing",
     "revision": 1,
     "unsaved_changes": true
    },
-   "time": 1793615052.016
+   "time": 1793622096.439
   },
   "tool": "debug_runtime_snapshot"
  },

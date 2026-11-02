@@ -260,6 +260,10 @@ class EditorLiveSessionBridge:
                     compact = _truthy(parse_qs(parsed.query).get("compact", ["false"])[0])
                     self._send_json(bridge._enqueue(lambda: bridge._read_scene(compact=compact)))
                     return
+                if path == "/live/debug/act" and hasattr(bridge.editor, "debug_act_status"):  # (Mesh Studio, D2)
+                    action_id = parse_qs(parsed.query).get("id", [""])[0]
+                    self._send_json(bridge._enqueue(lambda: bridge.editor.debug_act_status(action_id)))
+                    return
                 if path == "/live/debug/snapshot" and hasattr(bridge.editor, "debug_snapshot"):  # (Mesh Studio, D1)
                     events = _count(parse_qs(parsed.query).get("events", [""])[0])
                     self._send_json(bridge._enqueue(lambda: bridge.editor.debug_snapshot(events)))
@@ -286,6 +290,13 @@ class EditorLiveSessionBridge:
                     return
                 if path == "/live/debug/stop" and hasattr(bridge.editor, "debug_stop_playtest"):
                     self._send_json(bridge._enqueue(bridge.editor.debug_stop_playtest))
+                    return
+                if path == "/live/debug/act" and hasattr(bridge.editor, "debug_act"):
+                    self._send_json(bridge._enqueue(lambda: bridge.editor.debug_act(payload)))
+                    return
+                if path == "/live/debug/act/cancel" and hasattr(bridge.editor, "debug_act_cancel"):
+                    action_id = str(payload.get("action_id") or "")
+                    self._send_json(bridge._enqueue(lambda: bridge.editor.debug_act_cancel(action_id)))
                     return
                 self._send_json({"ok": False, "reason": "not_found"}, status=404)
 
