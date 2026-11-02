@@ -13,7 +13,8 @@ Three families:
 * **safety**: ``validate_scene`` so writes can be checked.
 * **runtime debugging** (D1): ``debug_runtime_snapshot`` reads the game running in a
   Mesh Studio play-test; ``debug_start_playtest`` / ``debug_stop_playtest`` start and
-  stop one, once the person allows it in Studio.
+  stop one, once the person allows it in Studio; ``debug_play_action`` (D2) plays it
+  with the player's own controls, once the person allows that too.
 * **context**: ``engine_overview`` — instant expertise as a resource.
 
 All functions take a ``root`` base directory (default ``"."``) so they can be
@@ -951,6 +952,33 @@ def debug_stop_playtest(root: str = ".") -> dict[str, Any]:
     from engine import runtime_debug
 
     return runtime_debug.request_stop(root)
+
+
+def debug_play_action(action: str, direction: str = "", frames: int = 30, choice: int | str | None = None,
+                      root: str = ".") -> dict[str, Any]:
+    """Play the running Mesh Studio play-test with the player's own controls, one bounded action at a time.
+
+    ``action``: ``"move"`` (hold ``direction`` up/down/left/right for ``frames``, 1 to 120), ``"interact"``
+    (press the interact key: talk to or use what's in front of the player), ``"advance"`` (the next line of a
+    conversation) or ``"choose"`` (a conversation's choice: its ``index`` or its exact words, as listed in a
+    snapshot's ``dialogue.choices``). The game's rules apply, as for a player.
+
+    Returns ``{ok, action{status, before, after, dialogue}, snapshot}``: where the player was and is, the
+    conversation now, and a snapshot of the game (``nearby`` lists what's around the player). Refused with
+    ``gameplay_control_off`` until the person allows AI play in Studio's AI panel (separate from starting
+    play-tests), and with a reason when it doesn't fit (``not_playing``, ``dialogue_open``, ``no_dialogue``,
+    ``choice_needed``, ``no_choices``, ``choice_not_available``, ``game_paused``, ``input_locked``,
+    ``person_using_controls``, ``action_running``, ``invalid_action``). An action the person interrupts
+    (taking back the permission, stopping, pausing) comes back ``cancelled``.
+    """
+    from engine import runtime_play
+
+    request: dict[str, Any] = {"action": action}
+    if action == "move":
+        request.update(direction=direction, frames=frames)
+    if action == "choose":
+        request["choice"] = choice
+    return runtime_play.request_action(root, request)
 
 
 # The everyday apply_ops operations, on a Mesh Studio project, run through the same validated

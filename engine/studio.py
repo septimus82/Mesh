@@ -1131,6 +1131,17 @@ class Studio(InspectorMixin, SoundMixin):
                   "An AI can no longer start or stop play-tests.")
         self._build_play_ui() if self.mode == "play" else self._rebuild()
 
+    def toggle_ai_gameplay_control(self) -> None:
+        """The person allows (or stops allowing) an AI to play play-tests (move, talk, choose), this session only;
+        stopping it cancels what the AI is doing."""
+        self.ai.gameplay_control = not self.ai.gameplay_control
+        if not self.ai.gameplay_control:
+            self.ai.play.cancel("the person took back the permission to play")
+        self._say("An AI connected to this project may now play your play-tests: move the player, talk and choose, "
+                  "with the game's own controls." if self.ai.gameplay_control else
+                  "An AI can no longer play your play-tests.")
+        self._build_play_ui() if self.mode == "play" else self._rebuild()
+
     def _editor_audio(self, editing: bool) -> None:
         """The editor is silent: a room's music plays in play-tests (F4) only, and stops when the play-test does."""
         audio = getattr(self.window, "audio", None)
@@ -1139,6 +1150,7 @@ class Studio(InspectorMixin, SoundMixin):
             audio.shutdown()
 
     def stop(self) -> None:
+        self.ai.play.cancel("the play-test stopped")
         if self.playtest is not None:
             self.last_playtest = {**self.playtest, "stopped_at": round(time.time(), 3)}
         self.playtest = None
@@ -1172,6 +1184,10 @@ class Studio(InspectorMixin, SoundMixin):
             allowed = make_button("AI may stop this", width=150, height=30, style=S_ACTIVE)
             allowed.on_click = lambda _e: self.toggle_ai_playtest_control()
             bar.add(allowed)
+        if self.ai.gameplay_control:
+            playing = make_button("AI may play", width=110, height=30, style=S_ACTIVE)
+            playing.on_click = lambda _e: self.toggle_ai_gameplay_control()
+            bar.add(playing)
         root.add(bar, anchor_x="center", anchor_y="top", align_y=-6)
         if not self.play_flags_open:
             return
@@ -2944,6 +2960,7 @@ class Studio(InspectorMixin, SoundMixin):
     def on_update(self, delta_time: float) -> bool:
         self.ai.drain()  # proposals arrive on the bridge's thread; they're handled here, on this one
         if self.mode == "play":
+            self.ai.play.tick()  # an AI's game action (D2): its keys for this frame, before the game updates
             if self.play_flags_open and self._play_flags_changed():
                 self._build_play_ui()  # the game changed a flag: show it
             return False

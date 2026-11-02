@@ -134,7 +134,8 @@ def test_while_editing_it_says_not_playing_and_reads_no_game(studio: _Studio) ->
     out = _snap(studio)
     assert out["ok"] and out["status"] == "not_playing" and out["sequence"] == 1
     assert out["studio"] == {"mode": "editing", "edited_room": studio.project.current, "unsaved_changes": False,
-                             "revision": studio.project.revision, "ai_playtest_control": False}
+                             "revision": studio.project.revision, "ai_playtest_control": False,
+                             "ai_gameplay_control": False}
     assert not {"scene", "player", "game_state", "quests", "events"} & set(out) and out["last_playtest"] is None
     assert "Play (F4)" in out["message"]
     assert _snap(studio)["sequence"] == 2  # (each read counted)

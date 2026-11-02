@@ -20,7 +20,9 @@ Studio never applies them on its own:
 The same tools may also look at a play-test while it runs (D1, ``engine.runtime_debug``): a snapshot of the running
 game, read on Studio's main thread, changing nothing. Starting and stopping a play-test for them is off until the
 person allows it in Studio's AI panel, for this session only (``playtest_control``); it never saves or changes the
-project, and Studio refuses while the person is in the middle of something.
+project, and Studio refuses while the person is in the middle of something. Playing the game for them (D2,
+``engine.runtime_play``: moving the player, talking, choosing in conversations) is a separate permission
+(``gameplay_control``), off until the person allows that too; the allowance to start play-tests doesn't include it.
 """
 
 from __future__ import annotations
@@ -70,7 +72,11 @@ class StudioAIHost:
         self._snapshots: dict[int, Doc] = {}
         self.bridge: Any = None
         self.playtest_control = False  # the person lets an AI start and stop play-tests (AI panel): this session only
+        self.gameplay_control = False  # ... and, separately, play them: move, talk, choose (D2)
         self._debug_reads = 0
+        from engine.runtime_play import PlayDriver  # noqa: PLC0415
+
+        self.play = PlayDriver(studio)
 
     @property
     def project(self) -> Any:
@@ -84,6 +90,7 @@ class StudioAIHost:
         self.bridge.start()
 
     def stop(self) -> None:
+        self.play.cancel("Mesh Studio is closing")
         if self.bridge is not None:
             self.bridge.stop()
             self.bridge = None
@@ -221,6 +228,24 @@ class StudioAIHost:
 
     def debug_stop_playtest(self) -> Doc:
         return self.studio.ai_stop_playtest() if self.playtest_control else self._control_off("stop")
+
+    def debug_act(self, request: Doc) -> Doc:
+        """Start one bounded game action (``runtime_play``), if the person allowed AI play."""
+        if not self.gameplay_control:
+            return {"ok": False, "mode": "live_studio", "reason": "gameplay_control_off", "message": (
+                "Mesh Studio hasn't allowed an AI to play (move, talk, choose), so nothing was pressed. The person can "
+                "allow it in Studio (top bar: AI, then \"Let an AI play\"), for this session. Starting play-tests "
+                "is a separate permission and doesn't include this.")}
+        return self.play.start(request)
+
+    def debug_act_status(self, action_id: str) -> Doc:
+        return self.play.status(action_id)
+
+    def debug_act_cancel(self, action_id: str) -> Doc:
+        """Cancel an action (always allowed: it only lets go of the keys)."""
+        if self.play.running is not None and self.play.running["id"] == action_id:
+            self.play.cancel("the AI cancelled it")
+        return self.play.status(action_id)
 
     @staticmethod
     def _control_off(what: str) -> Doc:

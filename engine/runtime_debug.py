@@ -53,6 +53,8 @@ QUESTS_MAX = 100
 STAGES_MAX = 50  # completed stages listed per quest (``completed_stages_total`` counts them all)
 BYTES_MAX = 200_000  # a whole snapshot, as sent (JSON, sorted keys, UTF-8)
 EVENTS_KEPT = 10  # the newest events, left out for size only after quests, flags and counters
+NEARBY_RADIUS = 320.0  # px around the player: the entities a snapshot lists (D2: where to walk, what to talk to)
+NEARBY_MAX = 12
 
 # An absolute path inside text: file:// URLs; Windows drive and UNC paths (to their last separator, spaces included,
 # then the file name); POSIX paths of two or more parts starting a word (not "and/or", "3/5", "/help" or a web URL).
@@ -167,6 +169,36 @@ def _player(window: Any) -> Doc:
             "x": plain(x), "y": plain(y), "units": "pixels"}
 
 
+def _nearby(window: Any) -> Doc:
+    """The entities nearest the running player (``NEARBY_RADIUS`` px), nearest first: where to walk, what to talk to."""
+    controller = getattr(window, "scene_controller", None)
+    finder = getattr(controller, "_find_player_sprite", None)
+    player = finder() if callable(finder) else None
+    if player is None:
+        return _unavailable("the running room has no player")
+    px, py = float(player.center_x), float(player.center_y)
+    found = []
+    for sprite in list(getattr(controller, "all_sprites", None) or []):
+        if sprite is player or not (getattr(sprite, "mesh_name", None) or getattr(sprite, "mesh_id", None)):
+            continue
+        dx, dy = float(sprite.center_x) - px, float(sprite.center_y) - py
+        distance = math.hypot(dx, dy)
+        if distance <= NEARBY_RADIUS:
+            found.append((round(distance, 1), str(getattr(sprite, "mesh_id", "") or ""), sprite, dx, dy))
+    found.sort(key=lambda row: (row[0], row[1]))
+    return {"available": True, "radius": NEARBY_RADIUS, "within": len(found),
+            "entities": [{"id": plain(getattr(s, "mesh_id", None)), "name": plain(getattr(s, "mesh_name", None)),
+                          "tag": plain(getattr(s, "mesh_tag", None)), "x": plain(float(s.center_x)),
+                          "y": plain(float(s.center_y)), "dx": round(dx, 1), "dy": round(dy, 1), "distance": d}
+                         for d, _, s, dx, dy in found[:NEARBY_MAX]]}
+
+
+def _dialogue(window: Any) -> Doc:
+    from engine.runtime_play import dialogue_view  # noqa: PLC0415
+
+    return dialogue_view(window)
+
+
 def _game_state(window: Any) -> Doc:
     controller = getattr(window, "game_state_controller", None)
     state = getattr(controller, "state", None)
@@ -263,7 +295,8 @@ def snapshot(studio: Any, *, sequence: int, events: int = EVENTS_DEFAULT) -> Doc
                 "studio": {"mode": "playing" if studio.mode == "play" else "editing",
                            "edited_room": project.current, "unsaved_changes": bool(project.is_dirty),
                            "revision": project.revision,
-                           "ai_playtest_control": bool(getattr(studio.ai, "playtest_control", False))}}
+                           "ai_playtest_control": bool(getattr(studio.ai, "playtest_control", False)),
+                           "ai_gameplay_control": bool(getattr(studio.ai, "gameplay_control", False))}}
     playtest = getattr(studio, "playtest", None)
     if studio.mode != "play" or not isinstance(playtest, dict):
         last = getattr(studio, "last_playtest", None)
@@ -277,7 +310,8 @@ def snapshot(studio: Any, *, sequence: int, events: int = EVENTS_DEFAULT) -> Doc
     token = _ROOTS.set((str(Path(root).resolve()), str(root)) if root else ())
     try:
         out.update(status="playing", playtest=playtest_view(playtest), scene=_scene(window, project),
-                   player=_player(window), game_state=_game_state(window), quests=_quests(window),
+                   player=_player(window), nearby=_nearby(window), dialogue=_dialogue(window),
+                   game_state=_game_state(window), quests=_quests(window),
                    events=_events(window, playtest.get("events_before"), limit), diagnostics=_diagnostics(playtest))
     finally:
         _ROOTS.reset(token)

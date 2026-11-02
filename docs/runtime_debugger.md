@@ -44,11 +44,13 @@ When there is no Studio to ask, the tools refuse the same way the other Studio t
 | --- | --- |
 | `scene` | `path` (relative to the project) and `room` (`key`, `label`) of the room that is running. `room` is `null` for a scene that isn't one of the project's rooms. |
 | `player` | `id`, `name` and `tag`, and `x`, `y` in pixels: the actual sprite, found the way the game finds its player. |
+| `nearby` | The entities nearest the player, within `radius` (320 px), nearest first (at most 12): `id`, `name`, `tag`, `x`, `y`, the offset `dx` / `dy` and `distance` (D2: where to walk, what to talk to). |
+| `dialogue` | The conversation on screen: `open`, and while open the `speaker`, the line's `text`, its `choices` (`index`, `text`, `available`) and which one is `selected`. |
 | `game_state` | `flags`, `counters`, `values` (the game's variables; `GameState` keeps `values` and `variables` as one mapping), `chapter` and `playtime_seconds`. |
 | `quests` | Each defined quest (`defined`; the first 100 are `listed`): `status`, `current_stage`, `awaiting_stage`, `completed_stages` (the first 50) with `completed_stages_total` (all of them), `total_stages` and `auto_start`. These come from the quest records the game keeps. A quest the game hasn't touched reads `inactive`, which is what the quest manager would create. Reading never creates the record. |
 | `events` | This play-test's events, oldest first: `seq`, `type`, `entity`, `scene`, `time` and `payload`. `seq` numbers every event the game has emitted, in order. `made_this_playtest`, `no_longer_kept` (the game keeps its last 50) and `last_seq` let you see what happened between two snapshots. `events` (0–50) caps how many are listed. |
 | `diagnostics` | Errors the engine caught and carried on from since the play-test started, newest first: `site`, `count` and `last_seen`. They come from `engine/swallowed_exceptions`, which every catch site counts. The log has the details. |
-| `studio` | What Studio has open, not what the game is doing: `mode` (`editing` or `playing`), `edited_room`, `unsaved_changes`, `revision` and `ai_playtest_control`. Play-testing never changes it. |
+| `studio` | What Studio has open, not what the game is doing: `mode` (`editing` or `playing`), `edited_room`, `unsaved_changes`, `revision`, and the person's permissions: `ai_playtest_control` (start and stop) and `ai_gameplay_control` (play, D2). Play-testing never changes it. |
 | `playtest` | `id`, `number`, `started_at`, `started_by` (`person` or `ai`) and `stopped_at`. |
 | `sequence`, `time` | The snapshot's own number (each read is counted) and when it was taken. |
 
@@ -136,13 +138,14 @@ window keeps running. The responses below are verbatim from a run on the engine 
  "sequence": 1,
  "status": "not_playing",
  "studio": {
+  "ai_gameplay_control": false,
   "ai_playtest_control": false,
   "edited_room": "start",
   "mode": "editing",
   "revision": 0,
   "unsaved_changes": false
  },
- "time": 1793615047.599
+ "time": 1793622091.966
 }
 ```
 
@@ -181,9 +184,9 @@ changing anything.
 {
  "ok": true,
  "playtest": {
-  "id": "b4bfc0d8cdf5",
+  "id": "1b5402cf73a1",
   "number": 1,
-  "started_at": 1793615048.966,
+  "started_at": 1793622093.34,
   "started_by": "ai",
   "stopped_at": null
  },
@@ -198,9 +201,9 @@ changing anything.
 {
  "ok": true,
  "playtest": {
-  "id": "b4bfc0d8cdf5",
+  "id": "1b5402cf73a1",
   "number": 1,
-  "started_at": 1793615048.966,
+  "started_at": 1793622093.34,
   "started_by": "ai",
   "stopped_at": null
  },
@@ -223,6 +226,10 @@ belongs to Studio's document, not to the game.
   "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
   "sites": 0
  },
+ "dialogue": {
+  "available": true,
+  "open": false
+ },
  "events": {
   "available": true,
   "items": [
@@ -238,7 +245,7 @@ belongs to Studio's document, not to the game.
     },
     "scene": null,
     "seq": 2,
-    "time": 1793615048.966,
+    "time": 1793622093.34,
     "type": "quest_stage_started"
    }
   ],
@@ -266,6 +273,43 @@ belongs to Studio's document, not to the game.
   }
  },
  "mode": "live_studio",
+ "nearby": {
+  "available": true,
+  "entities": [
+   {
+    "distance": 128.0,
+    "dx": 0.0,
+    "dy": 128.0,
+    "id": "start_arrival_cellar_128_256_0_0",
+    "name": "Arrival from Cellar",
+    "tag": "spawn_point",
+    "x": 128.0,
+    "y": 256.0
+   },
+   {
+    "distance": 192.0,
+    "dx": 192.0,
+    "dy": 0.0,
+    "id": "start_guide_320_128_0_0",
+    "name": "Guide",
+    "tag": "npc",
+    "x": 320.0,
+    "y": 128.0
+   },
+   {
+    "distance": 224.0,
+    "dx": 0.0,
+    "dy": 224.0,
+    "id": "start_door_to_cellar_128_352_0_0",
+    "name": "Door to Cellar",
+    "tag": "door",
+    "x": 128.0,
+    "y": 352.0
+   }
+  ],
+  "radius": 320.0,
+  "within": 3
+ },
  "ok": true,
  "player": {
   "available": true,
@@ -277,9 +321,9 @@ belongs to Studio's document, not to the game.
   "y": 128.0
  },
  "playtest": {
-  "id": "b4bfc0d8cdf5",
+  "id": "1b5402cf73a1",
   "number": 1,
-  "started_at": 1793615048.966,
+  "started_at": 1793622093.34,
   "started_by": "ai",
   "stopped_at": null
  },
@@ -312,13 +356,14 @@ belongs to Studio's document, not to the game.
  "sequence": 2,
  "status": "playing",
  "studio": {
+  "ai_gameplay_control": false,
   "ai_playtest_control": true,
   "edited_room": "start",
   "mode": "playing",
   "revision": 1,
   "unsaved_changes": true
  },
- "time": 1793615050.334
+ "time": 1793622094.745
 }
 ```
 
@@ -335,6 +380,10 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
   "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
   "sites": 0
  },
+ "dialogue": {
+  "available": true,
+  "open": false
+ },
  "events": {
   "available": true,
   "items": [
@@ -350,7 +399,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 2,
-    "time": 1793615048.966,
+    "time": 1793622093.34,
     "type": "quest_stage_started"
    },
    {
@@ -363,7 +412,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 3,
-    "time": 1793615050.998,
+    "time": 1793622095.395,
     "type": "dialogue_started"
    },
    {
@@ -380,7 +429,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 4,
-    "time": 1793615050.998,
+    "time": 1793622095.395,
     "type": "dialogue_line"
    },
    {
@@ -396,7 +445,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 5,
-    "time": 1793615051.158,
+    "time": 1793622095.559,
     "type": "dialogue_choice"
    },
    {
@@ -413,7 +462,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 6,
-    "time": 1793615051.158,
+    "time": 1793622095.559,
     "type": "dialogue_line"
    },
    {
@@ -428,7 +477,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 7,
-    "time": 1793615051.158,
+    "time": 1793622095.559,
     "type": "quest_stage_completed"
    },
    {
@@ -443,7 +492,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 8,
-    "time": 1793615051.158,
+    "time": 1793622095.559,
     "type": "quest_stage_started"
    },
    {
@@ -456,7 +505,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 9,
-    "time": 1793615051.238,
+    "time": 1793622095.638,
     "type": "dialogue_finished"
    }
   ],
@@ -486,6 +535,53 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
   }
  },
  "mode": "live_studio",
+ "nearby": {
+  "available": true,
+  "entities": [
+   {
+    "distance": 47.0,
+    "dx": 47.0,
+    "dy": 0.0,
+    "id": "start_guide_320_128_0_0",
+    "name": "Guide",
+    "tag": "npc",
+    "x": 320.0,
+    "y": 128.0
+   },
+   {
+    "distance": 193.4,
+    "dx": -145.0,
+    "dy": 128.0,
+    "id": "start_arrival_cellar_128_256_0_0",
+    "name": "Arrival from Cellar",
+    "tag": "spawn_point",
+    "x": 128.0,
+    "y": 256.0
+   },
+   {
+    "distance": 209.5,
+    "dx": 207.0,
+    "dy": 32.0,
+    "id": "start_sign_480_160_0_0",
+    "name": "Sign",
+    "tag": "sign",
+    "x": 480.0,
+    "y": 160.0
+   },
+   {
+    "distance": 266.8,
+    "dx": -145.0,
+    "dy": 224.0,
+    "id": "start_door_to_cellar_128_352_0_0",
+    "name": "Door to Cellar",
+    "tag": "door",
+    "x": 128.0,
+    "y": 352.0
+   }
+  ],
+  "radius": 320.0,
+  "within": 4
+ },
  "ok": true,
  "player": {
   "available": true,
@@ -497,9 +593,9 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
   "y": 128.0
  },
  "playtest": {
-  "id": "b4bfc0d8cdf5",
+  "id": "1b5402cf73a1",
   "number": 1,
-  "started_at": 1793615048.966,
+  "started_at": 1793622093.34,
   "started_by": "ai",
   "stopped_at": null
  },
@@ -534,13 +630,14 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
  "sequence": 4,
  "status": "playing",
  "studio": {
+  "ai_gameplay_control": false,
   "ai_playtest_control": true,
   "edited_room": "start",
   "mode": "playing",
   "revision": 1,
   "unsaved_changes": true
  },
- "time": 1793615051.407
+ "time": 1793622095.809
 }
 ```
 
@@ -564,6 +661,10 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
   "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
   "sites": 0
  },
+ "dialogue": {
+  "available": true,
+  "open": false
+ },
  "events": {
   "available": true,
   "items": [
@@ -580,7 +681,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     },
     "scene": null,
     "seq": 5,
-    "time": 1793615051.158,
+    "time": 1793622095.559,
     "type": "dialogue_choice"
    },
    {
@@ -597,7 +698,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     },
     "scene": null,
     "seq": 6,
-    "time": 1793615051.158,
+    "time": 1793622095.559,
     "type": "dialogue_line"
    },
    {
@@ -612,7 +713,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     },
     "scene": null,
     "seq": 7,
-    "time": 1793615051.158,
+    "time": 1793622095.559,
     "type": "quest_stage_completed"
    },
    {
@@ -627,7 +728,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     },
     "scene": null,
     "seq": 8,
-    "time": 1793615051.158,
+    "time": 1793622095.559,
     "type": "quest_stage_started"
    },
    {
@@ -640,7 +741,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     },
     "scene": null,
     "seq": 9,
-    "time": 1793615051.238,
+    "time": 1793622095.638,
     "type": "dialogue_finished"
    },
    {
@@ -654,7 +755,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     },
     "scene": null,
     "seq": 10,
-    "time": 1793615051.48,
+    "time": 1793622095.886,
     "type": "scene_transition"
    }
   ],
@@ -684,6 +785,33 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
   }
  },
  "mode": "live_studio",
+ "nearby": {
+  "available": true,
+  "entities": [
+   {
+    "distance": 0.0,
+    "dx": 0.0,
+    "dy": 0.0,
+    "id": "cellar_arrival_start_256_128_0_0",
+    "name": "Arrival from Start",
+    "tag": "spawn_point",
+    "x": 256.0,
+    "y": 128.0
+   },
+   {
+    "distance": 96.0,
+    "dx": 0.0,
+    "dy": 96.0,
+    "id": "cellar_door_to_start_256_224_0_0",
+    "name": "Door to Start",
+    "tag": "door",
+    "x": 256.0,
+    "y": 224.0
+   }
+  ],
+  "radius": 320.0,
+  "within": 2
+ },
  "ok": true,
  "player": {
   "available": true,
@@ -695,9 +823,9 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
   "y": 128.0
  },
  "playtest": {
-  "id": "b4bfc0d8cdf5",
+  "id": "1b5402cf73a1",
   "number": 1,
-  "started_at": 1793615048.966,
+  "started_at": 1793622093.34,
   "started_by": "ai",
   "stopped_at": null
  },
@@ -732,13 +860,14 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
  "sequence": 5,
  "status": "playing",
  "studio": {
+  "ai_gameplay_control": false,
   "ai_playtest_control": true,
   "edited_room": "start",
   "mode": "playing",
   "revision": 1,
   "unsaved_changes": true
  },
- "time": 1793615051.711
+ "time": 1793622096.139
 }
 ```
 
@@ -755,11 +884,11 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
  },
  "ok": true,
  "playtest": {
-  "id": "b4bfc0d8cdf5",
+  "id": "1b5402cf73a1",
   "number": 1,
-  "started_at": 1793615048.966,
+  "started_at": 1793622093.34,
   "started_by": "ai",
-  "stopped_at": 1793615051.729
+  "stopped_at": 1793622096.156
  },
  "status": "stopped"
 }
@@ -770,11 +899,11 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
 ```json
 {
  "last_playtest": {
-  "id": "b4bfc0d8cdf5",
+  "id": "1b5402cf73a1",
   "number": 1,
-  "started_at": 1793615048.966,
+  "started_at": 1793622093.34,
   "started_by": "ai",
-  "stopped_at": 1793615051.729
+  "stopped_at": 1793622096.156
  },
  "ok": true,
  "status": "not_playing"
@@ -786,11 +915,11 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
 ```json
 {
  "last_playtest": {
-  "id": "b4bfc0d8cdf5",
+  "id": "1b5402cf73a1",
   "number": 1,
-  "started_at": 1793615048.966,
+  "started_at": 1793622093.34,
   "started_by": "ai",
-  "stopped_at": 1793615051.729
+  "stopped_at": 1793622096.156
  },
  "message": "Mesh Studio is editing, not play-testing: no game is running to inspect. debug_start_playtest starts one (if the person allowed it), or ask the person to press Play (F4).",
  "mode": "live_studio",
@@ -798,13 +927,14 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
  "sequence": 6,
  "status": "not_playing",
  "studio": {
+  "ai_gameplay_control": false,
   "ai_playtest_control": true,
   "edited_room": "start",
   "mode": "editing",
   "revision": 1,
   "unsaved_changes": true
  },
- "time": 1793615052.016
+ "time": 1793622096.439
 }
 ```
 

@@ -149,6 +149,7 @@ class InspectorMixin:
         def accept_ai(self, proposal: Proposal) -> None: ...
         def reject_ai(self, proposal: Proposal) -> None: ...
         def toggle_ai_playtest_control(self) -> None: ...
+        def toggle_ai_gameplay_control(self) -> None: ...
         def share_player(self, key: str) -> None: ...
         def keep_separate_players(self) -> None: ...
         def _sound_look(self, rows: Rows, entity: dict[str, Any], width: int) -> None: ...  # engine.studio_sound
@@ -1276,6 +1277,12 @@ class InspectorMixin:
                               self.toggle_ai_playtest_control, width=width, style=S_ACTIVE if allowed else S_BUTTON))
         rows.add(self._label("Off until you turn it on, and only until Mesh Studio closes. It can look at a running "
                              "play-test either way; it never saves or changes your project.", color=C_MUTED, size=9,
+                             width=width))
+        playing = self.ai.gameplay_control
+        rows.add(self._button("Let an AI play: " + ("On" if playing else "Off"), self.toggle_ai_gameplay_control,
+                              width=width, style=S_ACTIVE if playing else S_BUTTON))
+        rows.add(self._label("Move the player, talk and choose in a running play-test, with the game's own controls. "
+                             "Separate from starting play-tests; off until you turn it on.", color=C_MUTED, size=9,
                              width=width))
         rows.add(gui.UISpace(height=4))
         pending, done = self.ai.pending(), [p for p in self.ai.proposals if p.status not in ("pending", "conflict")]
