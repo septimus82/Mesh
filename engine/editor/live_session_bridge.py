@@ -224,6 +224,10 @@ class EditorLiveSessionBridge:
         """Reject a staged proposal from the editor main thread."""
         return self._reject_proposal({"proposal_id": proposal_id})
 
+    def forget_proposal(self, proposal_id: str) -> None:
+        """Let go of a proposal the editor no longer remembers (Mesh Studio's history is bounded: F10)."""
+        self._proposals.pop(proposal_id, None)
+
     def stage_pending_proposal(self, ops: list[dict[str, Any]]) -> dict[str, Any]:
         """Stage a proposal in the same store read by ProposalInbox."""
         return self._stage_proposal({"ops": ops})

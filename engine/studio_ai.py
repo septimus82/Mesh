@@ -17,6 +17,13 @@ Studio never applies them on its own:
   property changed both ways is a conflict, reported, and nothing is applied.
 - **Reject** leaves the project as it was.
 
+Memory (F10, #422): a waiting proposal keeps two whole-project copies, what the tool read (``base``) and the result
+of its changes (``after``), for comparing with the person's edits when it is accepted. Once decided (accepted,
+rejected or failed: ``Proposal.settle``) it needs neither, nor its changes: they are let go, and what the person and
+the tool see stays (its id, status, summary, message, conflicts, the ids it created). A proposal in conflict is still
+waiting and keeps them. At most ``PENDING_MAX`` wait at once (more are refused, ``too_many_pending``), and Studio
+remembers the last ``HISTORY_KEPT`` decided ones (older ones are forgotten by it and by the bridge alike).
+
 The same tools may also look at a play-test while it runs (D1, ``engine.runtime_debug``): a snapshot of the running
 game, read on Studio's main thread, changing nothing. Starting and stopping a play-test for them is off until the
 person allows it in Studio's AI panel, for this session only (``playtest_control``); it never saves or changes the
@@ -36,6 +43,9 @@ from engine import authoring
 
 Doc = dict[str, Any]
 SNAPSHOTS_KEPT = 30
+PENDING_MAX = 20  # proposals waiting for the person (pending or in conflict); more are refused until some are decided
+HISTORY_KEPT = 100  # decided proposals remembered (for proposal_status and Studio's AI panel), each without documents
+DECIDED = ("accepted", "rejected", "failed")
 
 
 @dataclass
@@ -53,6 +63,12 @@ class Proposal:
     conflicts: list[Doc] = field(default_factory=list)
     created: dict[int, str] = field(default_factory=dict)
     staged_at: float = field(default_factory=time.time)
+
+    def settle(self, status: str, message: str) -> None:
+        """Decided (``DECIDED``): its documents and changes are let go: replaced, never emptied in place, so nothing
+        else holding the same objects (a revision snapshot, F6; the caller's changes) loses them."""
+        self.status, self.message = status, message
+        self.changes, self.base, self.after = [], {}, {}
 
     def view(self) -> Doc:
         return {"proposal_id": self.proposal_id, "title": self.title, "source": self.source, "status": self.status,
@@ -128,6 +144,13 @@ class StudioAIHost:
                     "message": "A proposal needs its changes as a list."}
         title = str(payload.get("title") or "Changes from an AI").strip()[:80]
         source = str(payload.get("source") or "an AI").strip()[:60]
+        waiting = len(self.pending())
+        if waiting >= PENDING_MAX:  # (each one waiting keeps two copies of the project: F10)
+            return {"ok": False, "mode": "live_studio", "reason": "too_many_pending", "pending": waiting,
+                    "limit": PENDING_MAX, "message": (
+                        f"{waiting} proposals are already waiting for the person in Mesh Studio (at most {PENDING_MAX} "
+                        "can), so this one wasn't staged. Wait for them to be accepted or rejected (proposal_status "
+                        "says), or withdraw ones that are no longer wanted, then propose again.")}
         found = self._base(payload.get("base_revision"))
         if isinstance(found, dict):  # (refused: nothing staged, nothing in the person's inbox)
             return found
@@ -180,14 +203,16 @@ class StudioAIHost:
     def reject_proposal(self, proposal: Proposal) -> Doc:
         """Withdraw a proposal (the tool that made it may do this too)."""
         if proposal.status in ("pending", "conflict"):
-            proposal.status, proposal.message = "rejected", "Rejected: nothing changed."
+            proposal.settle("rejected", "Rejected: nothing changed.")
+            self._forget_old()
             self.studio.on_ai_decided(proposal)
         return {"ok": True, "mode": "live_studio", "status": proposal.status}
 
     def proposal_status(self, proposal_id: str) -> Doc:
         found = next((p for p in self.proposals if p.proposal_id == proposal_id), None)
         if found is None:
-            return {"ok": False, "mode": "live_studio", "reason": "proposal_not_found"}
+            return {"ok": False, "mode": "live_studio", "reason": "proposal_not_found", "message": (
+                f"Mesh Studio has no proposal {proposal_id!r} (it remembers the last {HISTORY_KEPT} decided ones).")}
         return {"ok": True, "mode": "live_studio", "proposal": found.view(), "revision": self.project.revision}
 
     def accept(self, proposal: Proposal) -> Doc:
@@ -206,11 +231,21 @@ class StudioAIHost:
         try:
             result = authoring.apply(self.project, proposal.changes)
         except authoring.ChangeError as err:
-            proposal.status, proposal.message = "failed", f"Not applied: {err}"
+            proposal.settle("failed", f"Not applied: {err}")
+            self._forget_old()
             return {"ok": False, "reason": "invalid_change", "message": str(err)}
-        proposal.status, proposal.created = "accepted", dict(result["created"])
-        proposal.message = f"Accepted: {len(proposal.summary)} change(s). Undo takes them back."
+        proposal.created = dict(result["created"])
+        proposal.settle("accepted", f"Accepted: {len(proposal.summary)} change(s). Undo takes them back.")
+        self._forget_old()
         return {"ok": True, "created": proposal.created, "revision": self.project.revision}
+
+    def _forget_old(self) -> None:
+        """Only the last ``HISTORY_KEPT`` decided proposals are remembered, here and by the bridge."""
+        decided = [p for p in self.proposals if p.status in DECIDED]
+        for old in decided[:-HISTORY_KEPT]:
+            self.proposals.remove(old)
+            if self.bridge is not None:
+                self.bridge.forget_proposal(old.proposal_id)
 
     def pending(self) -> list[Proposal]:
         return [p for p in self.proposals if p.status in ("pending", "conflict")]
