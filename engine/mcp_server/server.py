@@ -86,6 +86,7 @@ def build_server() -> Any:
     server.tool()(tools.debug_start_playtest)
     server.tool()(tools.debug_stop_playtest)
     server.tool()(tools.debug_play_action)  # (D2: playing it, with the player's own controls)
+    server.tool()(tools.debug_interaction)  # (D3A: why an object can or can't be used)
 
     # Safety.
     server.tool()(tools.validate_scene)
