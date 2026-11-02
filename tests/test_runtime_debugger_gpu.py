@@ -47,15 +47,34 @@ def test_editing_is_not_playing_and_play_needs_the_persons_permission(run: dict)
     assert run["3_box_kept"]["text"].endswith(" the Elder") and run["3_box_kept"]["mode"] == "edit"
 
 
+def _quest(snap: dict) -> dict:
+    return next(q for q in snap["quests"]["quests"] if q["id"] == "light_the_lantern")
+
+
+def _agrees(reported: dict, runtime_quests: dict) -> bool:
+    """The debugger's quest is the running game's own record of it, field for field."""
+    runtime = runtime_quests["light_the_lantern"]
+    return {k: reported[k] for k in runtime} == runtime and reported["auto_start"] is True
+
+
 def test_play_starts_once_and_the_snapshot_shows_the_running_room_and_player(run: dict) -> None:
+    import d1_debug_scenario as scenario
+
     started, again, snap = run["4_started"], run["4_again"], run["4_snapshot"]
     assert started["status"] == "playing" and started["playtest"]["started_by"] == "ai"
     assert again["status"] == "already_playing" and again["playtest"]["id"] == started["playtest"]["id"]
     assert snap["status"] == "playing" and snap["playtest"]["id"] == started["playtest"]["id"]
     assert snap["scene"]["room"]["key"] == "start" and snap["scene"]["path"] == "packs/core_regions/scenes/start.json"
     assert snap["player"]["available"] and (snap["player"]["x"], snap["player"]["y"]) == (128.0, 128.0)
-    assert snap["game_state"]["flags"] == {} and snap["events"]["made_this_playtest"] == 0
+    # Not agreed yet; other flags the engine sets itself (the HUD's "hint_shown_quest_log") don't matter here.
+    assert not snap["game_state"]["flags"].get(scenario.FLAG)
     assert snap["studio"]["unsaved_changes"] is True  # (the person's Sign: Studio's, not the game's)
+    # The auto_start quest started with the play-test (#446), and that is the only event so far.
+    reported = _quest(snap)
+    assert (reported["status"], reported["current_stage"], reported["completed_stages"]) == ("active", "agree", [])
+    assert _agrees(reported, run["4_runtime_quests"])
+    assert [(e["type"], e["payload"]["stage_id"]) for e in snap["events"]["items"]] == [("quest_stage_started", "agree")]
+    assert snap["events"]["made_this_playtest"] == 1
 
 
 def test_a_conversation_sets_the_flag_and_the_next_snapshot_shows_it_and_why(run: dict) -> None:
@@ -63,18 +82,24 @@ def test_a_conversation_sets_the_flag_and_the_next_snapshot_shows_it_and_why(run
 
     assert run["5_talk"]["said"][-1].startswith("Thank you!")
     snap = run["6_snapshot"]
-    assert snap["game_state"]["flags"] == {scenario.FLAG: True}
+    assert snap["game_state"]["flags"].get(scenario.FLAG) is True  # (other engine flags may be set too)
     assert snap["player"]["x"] > run["4_snapshot"]["player"]["x"]  # (it walked to the Guide)
     events = snap["events"]["items"]
     assert [e["seq"] for e in events] == sorted(e["seq"] for e in events)
     choice = next(e for e in events if e["type"] == "dialogue_choice")
     assert choice["entity"] == "Guide" and choice["payload"]["choice_id"] == "help"
-    assert [e["type"] for e in events][:2] == ["dialogue_started", "dialogue_line"]
+    assert [e["type"] for e in events if e["type"].startswith("dialogue_")][:2] == ["dialogue_started", "dialogue_line"]
     assert snap["sequence"] > run["4_snapshot"]["sequence"] and snap["diagnostics"]["available"]
-    # The quest is reported as the running game has it (whatever that is: see the scenario's note on auto_start).
-    runtime = run["6_runtime_quests"]["light_the_lantern"]
-    reported = next(q for q in snap["quests"]["quests"] if q["id"] == "light_the_lantern")
-    assert {k: reported[k] for k in runtime} == runtime and reported["auto_start"] is True
+    # Agreeing completed the quest's "agree" stage and moved it on to "cellar" (#446), right after the choice.
+    reported = _quest(snap)
+    assert (reported["status"], reported["current_stage"], reported["completed_stages"]) == ("active", "cellar",
+                                                                                              ["agree"])
+    assert _agrees(reported, run["6_runtime_quests"])
+    stages = [(e["type"], e["payload"].get("stage_id")) for e in events if e["type"].startswith("quest_")]
+    assert stages == [("quest_stage_started", "agree"), ("quest_stage_completed", "agree"),
+                      ("quest_stage_started", "cellar")]
+    after_choice = [e["type"] for e in events if e["seq"] > choice["seq"]]
+    assert after_choice.index("quest_stage_completed") < after_choice.index("quest_stage_started")
 
 
 def test_a_door_moves_the_play_test_to_the_other_room(run: dict) -> None:
