@@ -17,12 +17,13 @@ import json
 import math
 import os
 import time
+import uuid
 from functools import partial
 from pathlib import Path
 from typing import Any, Callable
 
 import engine.optional_arcade as optional_arcade
-from engine import behaviour_guide
+from engine import behaviour_guide, runtime_debug
 from engine import project_ops as ops
 from engine.action_runtime.registry import dispatch_action
 from engine.prefabs import get_prefab_manager
@@ -214,6 +215,9 @@ class Studio(InspectorMixin, SoundMixin):
         self.light: int | None = None  # the selected light (Lighting panel); lights are not objects
         self.play_flags_open = False
         self._play_flags_seen: Any = None
+        self.playtest: dict[str, Any] | None = None  # the play-test running (D1: engine.runtime_debug), and the last
+        self.last_playtest: dict[str, Any] | None = None
+        self.playtests_run = 0
         self._init_inspector()
         self.hd2d = Hd2dView(self)  # the 3D view, used only while the open room is HD-2D
         self.ai = StudioAIHost(self)  # outside tools (AI over MCP, scripts) propose; the person decides
@@ -1052,11 +1056,12 @@ class Studio(InspectorMixin, SoundMixin):
         self._after_change(f"Added a door to {self.project.label(key)}, and one back from it.")
 
     # ==================================================================== play-test
-    def play(self) -> None:
+    def play(self, *, by: str = "person") -> None:
         self._flush_fields()
         self.menu, self.place_prefab, self.drag = None, None, None
         self._install_documents()
         self.mode = "play"
+        self._note_playtest(by)
         audio = getattr(self.window, "audio", None)
         if audio is not None:
             audio.scene_music = True  # the play-test's rooms set its music, as in the game
@@ -1070,7 +1075,62 @@ class Studio(InspectorMixin, SoundMixin):
         self._fade_overhead()
         self._build_play_ui()
         self.play_ui.enable()
-        self.window.set_caption(f"Mesh Studio - playing {self.project.label(self.project.current)} (F4 to stop)")
+        started = " - started by an AI" if by == "ai" else ""
+        self.window.set_caption(f"Mesh Studio - playing {self.project.label(self.project.current)} (F4 to stop){started}")
+
+    def _note_playtest(self, by: str) -> None:
+        """This play-test, for ``engine.runtime_debug``: which one it is, who started it, and where the game's
+        event count and the engine's caught-error counts stood (what the play-test makes is what comes after)."""
+        from engine import swallowed_exceptions  # noqa: PLC0415
+
+        bus = getattr(self.window, "event_bus", None)
+        self.playtests_run += 1
+        self.playtest = {"id": uuid.uuid4().hex[:12], "number": self.playtests_run, "started_at": round(time.time(), 3),
+                         "started_by": by, "events_before": getattr(bus, "emitted", None),
+                         "caught_before": swallowed_exceptions.read_counts()}
+
+    def ai_start_playtest(self) -> dict[str, Any]:
+        """D1: an AI asks to play-test (``StudioAIHost`` has checked the person allowed it). As Play (F4), from
+        editing only, and never over the person's work in progress: a question on screen, a drag or a stroke, or a
+        box whose text isn't committed (it is neither committed for them nor lost). Nothing is saved."""
+        if self.mode == "play":
+            return {"ok": True, "status": "already_playing", "playtest": runtime_debug._playtest_view(self.playtest)}
+        busy = self._busy_for_ai()
+        if busy:
+            return {"ok": False, "reason": "studio_busy", "message": busy + " Nothing was started; try again once "
+                                                                          "the person has finished."}
+        self.play(by="ai")
+        return {"ok": True, "status": "playing", "playtest": runtime_debug._playtest_view(self.playtest),
+                "room": self.project.current}
+
+    def ai_stop_playtest(self) -> dict[str, Any]:
+        """D1: an AI asks to stop the play-test: Stop (F4), back to the edited rooms as they were."""
+        if self.mode != "play":
+            last = self.last_playtest
+            return {"ok": True, "status": "not_playing", "last_playtest": runtime_debug._playtest_view(last) if last else None}
+        self.stop()
+        return {"ok": True, "status": "stopped", "playtest": runtime_debug._playtest_view(self.last_playtest or {}),
+                "editing": {"room": self.project.current, "unsaved_changes": self.project.is_dirty,
+                            "revision": self.project.revision}}
+
+    def _busy_for_ai(self) -> str:
+        """Why Studio can't start a play-test for an AI now (the person is in the middle of something), or ""."""
+        if self._closing or self.modal is not None:
+            return "Mesh Studio is asking the person a question."
+        if self._typing() or self._held or any(f.text != original for f, original, _ in self._fields):
+            return "The person is typing in a box and hasn't finished."
+        if any(x is not None for x in (self.drag, self.stroke, self.handle_drag, self.route_drag, self.sheet_drag,
+                                       self.hd2d.drag, self.hd2d.stroke)) or self.panning:
+            return "The person is in the middle of dragging or painting."
+        return ""
+
+    def toggle_ai_playtest_control(self) -> None:
+        """The person allows (or stops allowing) an AI to start and stop play-tests, for this session only."""
+        self.ai.playtest_control = not self.ai.playtest_control
+        self._say("An AI connected to this project may now start and stop play-tests (nothing else: it still can't "
+                  "change the project without you)." if self.ai.playtest_control else
+                  "An AI can no longer start or stop play-tests.")
+        self._build_play_ui() if self.mode == "play" else self._rebuild()
 
     def _editor_audio(self, editing: bool) -> None:
         """The editor is silent: a room's music plays in play-tests (F4) only, and stops when the play-test does."""
@@ -1080,6 +1140,9 @@ class Studio(InspectorMixin, SoundMixin):
             audio.shutdown()
 
     def stop(self) -> None:
+        if self.playtest is not None:
+            self.last_playtest = {**self.playtest, "stopped_at": round(time.time(), 3)}
+        self.playtest = None
         self.play_ui.disable()
         self.play_ui.clear()
         self.mode = "edit"
@@ -1106,6 +1169,10 @@ class Studio(InspectorMixin, SoundMixin):
         menu = make_button("Menu (Esc)", width=110, height=30, style=S_BUTTON)  # save, load, exit
         menu.on_click = lambda _e: dispatch_action(self.window, "pause_menu")
         bar.add(menu)
+        if self.ai.playtest_control:  # (allowed in the AI panel; click to stop allowing it)
+            allowed = make_button("AI may stop this", width=150, height=30, style=S_ACTIVE)
+            allowed.on_click = lambda _e: self.toggle_ai_playtest_control()
+            bar.add(allowed)
         root.add(bar, anchor_x="center", anchor_y="top", align_y=-6)
         if not self.play_flags_open:
             return

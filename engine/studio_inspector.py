@@ -1270,6 +1270,13 @@ class InspectorMixin:
         rows.add(self._label("Changes proposed from outside", bold=True, size=12))
         rows.add(self._label("An AI (or a script) connected to this project can propose changes. Nothing changes "
                              "until you accept; accepted changes are one Undo away.", color=C_MUTED, size=9, width=width))
+        allowed = self.ai.playtest_control
+        rows.add(self._button("Let an AI start and stop play-tests: " + ("On" if allowed else "Off"),
+                              self.toggle_ai_playtest_control, width=width, style=S_ACTIVE if allowed else S_BUTTON))
+        rows.add(self._label("Off until you turn it on, and only until Mesh Studio closes. It can look at a running "
+                             "play-test either way; it never saves or changes your project.", color=C_MUTED, size=9,
+                             width=width))
+        rows.add(gui.UISpace(height=4))
         pending, done = self.ai.pending(), [p for p in self.ai.proposals if p.status not in ("pending", "conflict")]
         if not pending:
             rows.add(self._label("Nothing waiting.", color=C_MUTED))

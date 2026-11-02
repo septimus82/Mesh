@@ -1,0 +1,567 @@
+[
+ {
+  "arguments": {},
+  "response": {
+   "last_playtest": null,
+   "message": "Mesh Studio is editing, not play-testing: no game is running to inspect. debug_start_playtest starts one (if the person allowed it), or ask the person to press Play (F4).",
+   "mode": "live_studio",
+   "ok": true,
+   "sequence": 1,
+   "status": "not_playing",
+   "studio": {
+    "ai_playtest_control": false,
+    "edited_room": "start",
+    "mode": "editing",
+    "revision": 0,
+    "unsaved_changes": false
+   },
+   "time": 1793603738.735
+  },
+  "tool": "debug_runtime_snapshot"
+ },
+ {
+  "arguments": {},
+  "response": {
+   "message": "Mesh Studio hasn't allowed an AI to start play-tests, so nothing was done. The person can allow it in Studio (top bar: AI, then \"Let an AI start and stop play-tests\"), for this session; or ask them to press Play (F4) or Stop. debug_runtime_snapshot needs no permission.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "playtest_control_off"
+  },
+  "tool": "debug_start_playtest"
+ },
+ {
+  "arguments": {},
+  "response": {
+   "message": "The person is typing in a box and hasn't finished. Nothing was started; try again once the person has finished.",
+   "ok": false,
+   "reason": "studio_busy"
+  },
+  "tool": "debug_start_playtest"
+ },
+ {
+  "arguments": {},
+  "response": {
+   "ok": true,
+   "playtest": {
+    "id": "2e7e8ebc44c0",
+    "number": 1,
+    "started_at": 1793603740.113,
+    "started_by": "ai",
+    "stopped_at": null
+   },
+   "room": "start",
+   "status": "playing"
+  },
+  "tool": "debug_start_playtest"
+ },
+ {
+  "arguments": {},
+  "response": {
+   "ok": true,
+   "playtest": {
+    "id": "2e7e8ebc44c0",
+    "number": 1,
+    "started_at": 1793603740.113,
+    "started_by": "ai",
+    "stopped_at": null
+   },
+   "status": "already_playing"
+  },
+  "tool": "debug_start_playtest"
+ },
+ {
+  "arguments": {},
+  "response": {
+   "diagnostics": {
+    "available": true,
+    "items": [],
+    "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+    "sites": 0
+   },
+   "events": {
+    "available": true,
+    "items": [],
+    "last_seq": 1,
+    "limit": 20,
+    "made_this_playtest": 0,
+    "no_longer_kept": 0
+   },
+   "game_state": {
+    "available": true,
+    "chapter": 1,
+    "counters": {},
+    "flags": {},
+    "playtime_seconds": 0.567,
+    "values": {
+     "time_of_day_hours": 21.0
+    }
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "player": {
+    "available": true,
+    "id": "start_player_128_128_0_0",
+    "name": "Player",
+    "tag": "player",
+    "units": "pixels",
+    "x": 128.0,
+    "y": 128.0
+   },
+   "playtest": {
+    "id": "2e7e8ebc44c0",
+    "number": 1,
+    "started_at": 1793603740.113,
+    "started_by": "ai",
+    "stopped_at": null
+   },
+   "quests": {
+    "available": true,
+    "defined": 1,
+    "quests": [
+     {
+      "auto_start": true,
+      "awaiting_stage": null,
+      "completed_stages": [],
+      "current_stage": null,
+      "id": "light_the_lantern",
+      "status": "inactive",
+      "title": "Light the cellar lantern",
+      "total_stages": 2
+     }
+    ]
+   },
+   "scene": {
+    "available": true,
+    "path": "packs/core_regions/scenes/start.json",
+    "room": {
+     "key": "start",
+     "label": "Start"
+    }
+   },
+   "sequence": 2,
+   "status": "playing",
+   "studio": {
+    "ai_playtest_control": true,
+    "edited_room": "start",
+    "mode": "playing",
+    "revision": 1,
+    "unsaved_changes": true
+   },
+   "time": 1793603741.433
+  },
+  "tool": "debug_runtime_snapshot"
+ },
+ {
+  "arguments": {
+   "events": 12
+  },
+  "response": {
+   "diagnostics": {
+    "available": true,
+    "items": [],
+    "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+    "sites": 0
+   },
+   "events": {
+    "available": true,
+    "items": [
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "owner": "dialogue::Guide",
+       "trigger": "interact"
+      },
+      "scene": null,
+      "seq": 2,
+      "time": 1793603742.056,
+      "type": "dialogue_started"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "has_choices": true,
+       "node": "root",
+       "owner": "dialogue::Guide",
+       "speaker": "Guide",
+       "stage": "start",
+       "text": "The cellar lantern has gone out. Will you light it?"
+      },
+      "scene": null,
+      "seq": 3,
+      "time": 1793603742.056,
+      "type": "dialogue_line"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "choice_id": "help",
+       "choice_text": "I'll light it.",
+       "entity": "Guide",
+       "next": "thanks",
+       "node": "root",
+       "owner": "dialogue::Guide"
+      },
+      "scene": null,
+      "seq": 4,
+      "time": 1793603742.218,
+      "type": "dialogue_choice"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "has_choices": false,
+       "node": "thanks",
+       "owner": "dialogue::Guide",
+       "speaker": "Guide",
+       "stage": "choice",
+       "text": "Thank you! The cellar door is just north of here."
+      },
+      "scene": null,
+      "seq": 5,
+      "time": 1793603742.218,
+      "type": "dialogue_line"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "owner": "dialogue::Guide",
+       "reason": "advance_complete"
+      },
+      "scene": null,
+      "seq": 6,
+      "time": 1793603742.285,
+      "type": "dialogue_finished"
+     }
+    ],
+    "last_seq": 6,
+    "limit": 12,
+    "made_this_playtest": 5,
+    "no_longer_kept": 0
+   },
+   "game_state": {
+    "available": true,
+    "chapter": 1,
+    "counters": {},
+    "flags": {
+     "agreed_to_help": true
+    },
+    "playtime_seconds": 2.133,
+    "values": {
+     "monster_egg_walk_accumulator": 1.0,
+     "time_of_day_hours": 21.0
+    }
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "player": {
+    "available": true,
+    "id": "start_player_128_128_0_0",
+    "name": "Player",
+    "tag": "player",
+    "units": "pixels",
+    "x": 273.0,
+    "y": 128.0
+   },
+   "playtest": {
+    "id": "2e7e8ebc44c0",
+    "number": 1,
+    "started_at": 1793603740.113,
+    "started_by": "ai",
+    "stopped_at": null
+   },
+   "quests": {
+    "available": true,
+    "defined": 1,
+    "quests": [
+     {
+      "auto_start": true,
+      "awaiting_stage": null,
+      "completed_stages": [],
+      "current_stage": null,
+      "id": "light_the_lantern",
+      "status": "inactive",
+      "title": "Light the cellar lantern",
+      "total_stages": 2
+     }
+    ]
+   },
+   "scene": {
+    "available": true,
+    "path": "packs/core_regions/scenes/start.json",
+    "room": {
+     "key": "start",
+     "label": "Start"
+    }
+   },
+   "sequence": 4,
+   "status": "playing",
+   "studio": {
+    "ai_playtest_control": true,
+    "edited_room": "start",
+    "mode": "playing",
+    "revision": 1,
+    "unsaved_changes": true
+   },
+   "time": 1793603742.438
+  },
+  "tool": "debug_runtime_snapshot"
+ },
+ {
+  "arguments": {
+   "events": 6
+  },
+  "response": {
+   "diagnostics": {
+    "available": true,
+    "items": [],
+    "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+    "sites": 0
+   },
+   "events": {
+    "available": true,
+    "items": [
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "owner": "dialogue::Guide",
+       "trigger": "interact"
+      },
+      "scene": null,
+      "seq": 2,
+      "time": 1793603742.056,
+      "type": "dialogue_started"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "has_choices": true,
+       "node": "root",
+       "owner": "dialogue::Guide",
+       "speaker": "Guide",
+       "stage": "start",
+       "text": "The cellar lantern has gone out. Will you light it?"
+      },
+      "scene": null,
+      "seq": 3,
+      "time": 1793603742.056,
+      "type": "dialogue_line"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "choice_id": "help",
+       "choice_text": "I'll light it.",
+       "entity": "Guide",
+       "next": "thanks",
+       "node": "root",
+       "owner": "dialogue::Guide"
+      },
+      "scene": null,
+      "seq": 4,
+      "time": 1793603742.218,
+      "type": "dialogue_choice"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "has_choices": false,
+       "node": "thanks",
+       "owner": "dialogue::Guide",
+       "speaker": "Guide",
+       "stage": "choice",
+       "text": "Thank you! The cellar door is just north of here."
+      },
+      "scene": null,
+      "seq": 5,
+      "time": 1793603742.218,
+      "type": "dialogue_line"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "owner": "dialogue::Guide",
+       "reason": "advance_complete"
+      },
+      "scene": null,
+      "seq": 6,
+      "time": 1793603742.285,
+      "type": "dialogue_finished"
+     },
+     {
+      "entity": "Door to Cellar",
+      "payload": {
+       "actor": "Player",
+       "entity": "Door to Cellar",
+       "reason": "collision",
+       "spawn_id": "from_start",
+       "target_scene": "cellar"
+      },
+      "scene": null,
+      "seq": 7,
+      "time": 1793603742.503,
+      "type": "scene_transition"
+     }
+    ],
+    "last_seq": 7,
+    "limit": 6,
+    "made_this_playtest": 6,
+    "no_longer_kept": 0
+   },
+   "game_state": {
+    "available": true,
+    "chapter": 1,
+    "counters": {},
+    "flags": {
+     "agreed_to_help": true
+    },
+    "playtime_seconds": 2.65,
+    "values": {
+     "monster_egg_walk_accumulator": 16.0,
+     "time_of_day_hours": 21.0
+    }
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "player": {
+    "available": true,
+    "id": "cellar_player_128_128_0_0",
+    "name": "Player",
+    "tag": "player",
+    "units": "pixels",
+    "x": 256.0,
+    "y": 128.0
+   },
+   "playtest": {
+    "id": "2e7e8ebc44c0",
+    "number": 1,
+    "started_at": 1793603740.113,
+    "started_by": "ai",
+    "stopped_at": null
+   },
+   "quests": {
+    "available": true,
+    "defined": 1,
+    "quests": [
+     {
+      "auto_start": true,
+      "awaiting_stage": null,
+      "completed_stages": [],
+      "current_stage": null,
+      "id": "light_the_lantern",
+      "status": "inactive",
+      "title": "Light the cellar lantern",
+      "total_stages": 2
+     }
+    ]
+   },
+   "scene": {
+    "available": true,
+    "path": "packs/core_regions/scenes/cellar.json",
+    "room": {
+     "key": "cellar",
+     "label": "Cellar"
+    }
+   },
+   "sequence": 5,
+   "status": "playing",
+   "studio": {
+    "ai_playtest_control": true,
+    "edited_room": "start",
+    "mode": "playing",
+    "revision": 1,
+    "unsaved_changes": true
+   },
+   "time": 1793603742.711
+  },
+  "tool": "debug_runtime_snapshot"
+ },
+ {
+  "arguments": {},
+  "response": {
+   "editing": {
+    "revision": 1,
+    "room": "start",
+    "unsaved_changes": true
+   },
+   "ok": true,
+   "playtest": {
+    "id": "2e7e8ebc44c0",
+    "number": 1,
+    "started_at": 1793603740.113,
+    "started_by": "ai",
+    "stopped_at": 1793603742.726
+   },
+   "status": "stopped"
+  },
+  "tool": "debug_stop_playtest"
+ },
+ {
+  "arguments": {},
+  "response": {
+   "last_playtest": {
+    "id": "2e7e8ebc44c0",
+    "number": 1,
+    "started_at": 1793603740.113,
+    "started_by": "ai",
+    "stopped_at": 1793603742.726
+   },
+   "ok": true,
+   "status": "not_playing"
+  },
+  "tool": "debug_stop_playtest"
+ },
+ {
+  "arguments": {},
+  "response": {
+   "last_playtest": {
+    "id": "2e7e8ebc44c0",
+    "number": 1,
+    "started_at": 1793603740.113,
+    "started_by": "ai",
+    "stopped_at": 1793603742.726
+   },
+   "message": "Mesh Studio is editing, not play-testing: no game is running to inspect. debug_start_playtest starts one (if the person allowed it), or ask the person to press Play (F4).",
+   "mode": "live_studio",
+   "ok": true,
+   "sequence": 6,
+   "status": "not_playing",
+   "studio": {
+    "ai_playtest_control": true,
+    "edited_room": "start",
+    "mode": "editing",
+    "revision": 1,
+    "unsaved_changes": true
+   },
+   "time": 1793603743.016
+  },
+  "tool": "debug_runtime_snapshot"
+ },
+ {
+  "arguments": {},
+  "note": "after Studio closed",
+  "response": {
+   "message": "Mesh Studio doesn't have this project open.",
+   "ok": false,
+   "reason": "studio_not_open"
+  },
+  "tool": "debug_runtime_snapshot"
+ }
+]

@@ -16,6 +16,11 @@ Studio never applies them on its own:
   property by property: separate edits (a painted floor, a new NPC) both survive; the same
   property changed both ways is a conflict, reported, and nothing is applied.
 - **Reject** leaves the project as it was.
+
+The same tools may also look at a play-test while it runs (D1, ``engine.runtime_debug``): a snapshot of the running
+game, read on Studio's main thread, changing nothing. Starting and stopping a play-test for them is off until the
+person allows it in Studio's AI panel, for this session only (``playtest_control``); it never saves or changes the
+project, and Studio refuses while the person is in the middle of something.
 """
 
 from __future__ import annotations
@@ -64,6 +69,8 @@ class StudioAIHost:
         self.proposals: list[Proposal] = []
         self._snapshots: dict[int, Doc] = {}
         self.bridge: Any = None
+        self.playtest_control = False  # the person lets an AI start and stop play-tests (AI panel): this session only
+        self._debug_reads = 0
 
     @property
     def project(self) -> Any:
@@ -200,3 +207,24 @@ class StudioAIHost:
 
     def pending(self) -> list[Proposal]:
         return [p for p in self.proposals if p.status in ("pending", "conflict")]
+
+    # ------------------------------------------------------------------ runtime debugging (D1)
+    def debug_snapshot(self, events: int) -> Doc:
+        """What the running play-test is doing (``engine.runtime_debug.snapshot``); ``sequence`` counts the reads."""
+        from engine import runtime_debug  # noqa: PLC0415
+
+        self._debug_reads += 1
+        return runtime_debug.snapshot(self.studio, sequence=self._debug_reads, events=events)
+
+    def debug_start_playtest(self) -> Doc:
+        return self.studio.ai_start_playtest() if self.playtest_control else self._control_off("start")
+
+    def debug_stop_playtest(self) -> Doc:
+        return self.studio.ai_stop_playtest() if self.playtest_control else self._control_off("stop")
+
+    @staticmethod
+    def _control_off(what: str) -> Doc:
+        return {"ok": False, "mode": "live_studio", "reason": "playtest_control_off", "message": (
+            f"Mesh Studio hasn't allowed an AI to {what} play-tests, so nothing was done. The person can allow it in "
+            "Studio (top bar: AI, then \"Let an AI start and stop play-tests\"), for this session; or ask them to "
+            "press Play (F4) or Stop. debug_runtime_snapshot needs no permission.")}
