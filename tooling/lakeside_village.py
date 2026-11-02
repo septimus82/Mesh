@@ -65,7 +65,7 @@ def room(project: Path, out: Path) -> dict[str, Any]:
         d.button("+ New room")
         d.type_into("room_name", ROOM)
         d.button("Create")
-        d.frame(2)
+        d.advance(2)
         made = d.studio.project.current
         _save(d)
         report: dict[str, Any] = {"made_room": made, "rooms": [r[0] for r in d.studio.project.rooms()],
@@ -76,7 +76,7 @@ def room(project: Path, out: Path) -> dict[str, Any]:
     d = StudioDriver(project)
     try:
         d.button(ROOM)
-        d.frame(5)
+        d.advance(5)
         report["hd2d_view"] = d.studio.hd2d.renderer is not None
         d.picture(out / "01_room_empty.png")
     finally:
@@ -163,7 +163,7 @@ def ground(project: Path, out: Path) -> dict[str, Any]:
     report: dict[str, Any] = {"hills": [], "paths": len(PATHS)}
     try:
         d.button(ROOM)
-        d.frame(3)
+        d.advance(3)
         d.button("Sculpt")
         d.button("Raise")
         for middle, radius, height in HILLS:
@@ -258,7 +258,7 @@ def water(project: Path, out: Path) -> dict[str, Any]:
     d = StudioDriver(project)
     try:
         d.button(ROOM)
-        d.frame(3)
+        d.advance(3)
         # Walk through it: Off: the Natural pond preset can be waded, out to the basin's 1.5 m middle (the player sinks
         # 1.1 m under the surface); deep water stops a player here, and the bridge is the way over the inlet.
         pond = _water(d, _contour(d, POND, (POND[0] + 9.0, POND[1]), LEVEL), POND,
@@ -350,7 +350,7 @@ def build(project: Path, out: Path) -> dict[str, Any]:
     report: dict[str, Any] = {"placed": []}
     try:
         d.button(ROOM)
-        d.frame(3)
+        d.advance(3)
         for name, x, y, turn in BUILDINGS:
             placed = _place_model(d, name, x, y, turn=turn)
             _right_button(d, "See-through in play: Off")
@@ -414,7 +414,7 @@ def nature(project: Path, out: Path) -> dict[str, Any]:
     report: dict[str, Any] = {"scatter": []}
     try:
         d.button(ROOM)
-        d.frame(3)
+        d.advance(3)
         d.button("Scatter")
         sc = report["scatter"]
         # Big things first: two scattered things keep apart by the mean of their spacings, so after a meadow a
@@ -466,7 +466,7 @@ def _panel_to_top(d: Any) -> None:
         if not d.studio.panel_scroll:
             return
         d.window.dispatch_event("on_mouse_scroll", d.window.width - 100, d.window.height / 2, 0, 1)
-        d.frame()
+        d.advance()
 
 
 def _save(d: Any) -> None:
@@ -522,7 +522,7 @@ def finish(project: Path, out: Path) -> dict[str, Any]:
     report: dict[str, Any] = {}
     try:
         d.button(ROOM)
-        d.frame(3)
+        d.advance(3)
         d.button("Lighting")
         for i, (x, y) in enumerate(LAMPS):
             m20c._look_at(d, x, y, 16.0)
@@ -573,7 +573,7 @@ def doors(project: Path, out: Path) -> dict[str, Any]:
     report: dict[str, Any] = {}
     try:
         d.button("Village")
-        d.frame(3)
+        d.advance(3)
         scene = d.studio.project.scene()
         door = next(e["id"] for e in scene["entities"] if e.get("tag") == "door" and "lakeside" in e["id"])
         arrival = next(e["id"] for e in scene["entities"] if e.get("tag") == "spawn_point" and "lakeside" in e["id"])
@@ -589,7 +589,7 @@ def doors(project: Path, out: Path) -> dict[str, Any]:
         report["village_arrival"] = {k2: _entity(d, arrival).get(k2) for k2 in ("x", "y")}
         _save(d)
         d.button(ROOM)
-        d.frame(3)
+        d.advance(3)
         scene = d.studio.project.scene()
         door = next(e["id"] for e in scene["entities"] if e.get("tag") == "door")
         e = _entity(d, door)
@@ -754,7 +754,7 @@ def reopen(project: Path, out: Path) -> dict[str, Any]:
     k = d.arcade.key
     try:
         d.button(ROOM)
-        d.frame(5)
+        d.advance(5)
         scene = d.studio.project.scene()
         hd = (scene.get("settings") or {}).get("hd2d") or {}
         renderer = d.studio.hd2d.renderer
@@ -779,7 +779,7 @@ def reopen(project: Path, out: Path) -> dict[str, Any]:
         for _ in range(5):
             for _press in range(2):
                 d.key(k.F4)
-                d.frame(10)
+                d.advance(10)
                 modes.append(d.studio.mode)
             counts.append(d.gl_counts())
         report["play_stop_modes"] = modes

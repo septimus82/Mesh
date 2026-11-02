@@ -36,6 +36,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tooling"))
 import hd2d_visual_study as study  # noqa: E402
 import m18_particles_study as m18  # noqa: E402
+import review_media  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame, _gl_counts  # noqa: E402
 
 PROBE_PX = 2048
@@ -545,8 +546,7 @@ def pictures(out: Path) -> dict[str, Any]:
                     hd.particles.time = 8.0 + i / 30
                     picture = Image.frombytes("RGB", study.SIZE, hd.draw(read=True)).transpose(Image.Transpose.FLIP_TOP_BOTTOM)
                     clip.append(m18.crop_at(picture, study.SIZE[0] / 2, study.SIZE[1] / 2, (640, 360)))
-                clip[0].save(out / "rain_camera_pan.webp", save_all=True, append_images=clip[1:], duration=33, loop=0,
-                             quality=82, method=6)
+                review_media.save_clip(clip, out / "rain_camera_pan.webp", duration=33, quality=82, method=6)
                 made["pan_frames"] = len(clip)
         finally:
             game.close()
@@ -684,9 +684,9 @@ def _play_stop(out: Path) -> dict[str, Any]:
         rows = [driver.gl_counts()]
         for _ in range(5):
             driver.key(f4)
-            driver.frame(10)
+            driver.advance(10)
             driver.key(f4)
-            driver.frame(3)
+            driver.advance(3)
             rows.append(driver.gl_counts())
     finally:
         driver.close()

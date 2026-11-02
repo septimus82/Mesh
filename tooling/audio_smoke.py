@@ -284,13 +284,13 @@ def studio(project_root: Path, out: Path) -> dict[str, Any]:
         for _ in range(10):
             d.key(k.F4)
             for _f in range(30):
-                d.frame()
+                d.advance()
                 time.sleep(1 / 60)
             track = audio._music_track
             playing = {"mode": d.studio.mode, "music": audio.music_path, "registered_players": _registered(),
                        "player_playing": bool(track.player.playing) if track else False}
             d.key(k.F4)
-            d.frame(5)
+            d.advance(5)
             cycles.append({"play": playing, "stop": {"mode": d.studio.mode, "music": audio.music_path,
                                                      "registered_players": _registered()}})
         d.studio._reload()  # an edit's reload in the editor: still silent

@@ -32,6 +32,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tooling"))
 import hd2d_visual_study as study  # noqa: E402
+import review_media  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame, _gl_counts  # noqa: E402
 from hd2d_floors_demo import _feet, hold_key  # noqa: E402
 
@@ -195,8 +196,7 @@ def proof(out: Path) -> dict[str, Any]:
                 walk.track.append(1)
 
             hold_key(game, game.player(), game.arcade.key.RIGHT, 0, 17.0, 600, each_frame=film)
-            clip[0].save(out / f"{preset}_walk.webp", save_all=True, append_images=clip[1:], duration=50, loop=0,
-                         quality=90)
+            review_media.save_clip(clip, out / f"{preset}_walk.webp", duration=50, quality=90)
             result["walk_frames"] = len(clip)
             result["anchoring"] = anchoring(game)
             # pixel art: the player and the cottage close up, 4x without filtering

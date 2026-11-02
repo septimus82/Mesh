@@ -27,6 +27,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 REPO = Path(__file__).resolve().parents[1]
 
+WHEEL_LIMIT = 100  # notches (two rows each): the most any scroll through the inspector may take before it fails
 WARDEN = (8.0, 9.0)  # m: where the Warden is placed (open ground in the clearing)
 LINES = {  # the conversation, as written (each line's words are unique: the driver finds lines by their words)
     "root": "Traveller! The watchfire at the crossing has gone dark.",
@@ -69,7 +70,7 @@ def run(out: Path) -> dict[str, Any]:
     def open_room(key_suffix: str = "hills.json") -> None:
         key = next(k for k, _l, path in d().studio.project.rooms() if path.endswith(key_suffix))
         d().button(d().studio.project.label(key))
-        d().frame(3)
+        d().advance(3)
 
     def ground(x: float, y: float, up: float = 0.0) -> tuple[float, float]:
         z = d().renderer.ground_height(x * study.PX, y * study.PX) / study.PX
@@ -83,10 +84,10 @@ def run(out: Path) -> dict[str, Any]:
         m20c._look_at(d(), WARDEN[0], WARDEN[1] + 1.0, 10.0)
         if d().studio.selected != warden()["id"]:
             d().click(*ground(*WARDEN, up=0.75))
-            d().frame(2)
+            d().advance(2)
         assert d().studio.selected == warden()["id"], "the Warden selected by clicking it"
         d().button("Dialogue")
-        d().frame()
+        d().advance()
 
     def visible_lines() -> list[str]:
         return [t for t in d().labels() if re.match(r"^\d+\. ", t)]
@@ -95,18 +96,40 @@ def run(out: Path) -> dict[str, Any]:
         x, y = d().window.width - 160, d().window.height // 2
         for _ in range(times):
             d().window.dispatch_event("on_mouse_scroll", x, y, 0, notches)
-            d().frame()
+            d().advance()
+
+    def more(below: bool) -> int:  # how many rows Studio says are out of view that way ("v 3 more below")
+        return int(d().studio._panel_more[1 if below else 0])
+
+    def to_top() -> None:
+        """The mouse wheel up over the inspector until nothing more is above (boundary-aware: no notches wasted at the
+        top, where Studio ignores them)."""
+        for _ in range(WHEEL_LIMIT):
+            if not more(below=False):
+                return
+            wheel(1, 1)
+        raise AssertionError(f"the inspector never reached its top in {WHEEL_LIMIT} notches: {d().studio._panel_more}")
+
+    def down_until(found: Any) -> Any:
+        """From the inspector's top, a notch down at a time until ``found()`` gives something (returned) or nothing
+        more is below (None). Fails if the bottom isn't reached in WHEEL_LIMIT notches."""
+        to_top()
+        for _ in range(WHEEL_LIMIT):
+            hit = found()
+            if hit or not more(below=True):
+                return hit or None
+            wheel(-1, 1)
+        raise AssertionError(f"the inspector never reached its bottom in {WHEEL_LIMIT} notches: {d().studio._panel_more}")
 
     def all_labels() -> list[str]:
         """Everything in the panels, read with the mouse wheel from top to bottom (it shows part at a time)."""
-        wheel(1, 40)
         seen: list[str] = []
-        for _ in range(40):
-            for t in d().labels():
-                if t not in seen:
-                    seen.append(t)
-            wheel(-1, 1)
-        wheel(1, 40)
+
+        def read() -> None:
+            seen.extend(t for t in d().labels() if t not in seen)
+
+        down_until(read)
+        to_top()
         return seen
 
     def all_lines() -> list[str]:
@@ -138,7 +161,7 @@ def run(out: Path) -> dict[str, Any]:
         if current is not None and (warden_nodes().get(current) or {}).get("text") == words:
             return
         d().button(label_of(words))
-        d().frame()
+        d().advance()
 
     def warden_nodes() -> dict[str, Any]:
         nodes: dict[str, Any] = ops.conversation(warden())["nodes"]
@@ -146,25 +169,23 @@ def run(out: Path) -> dict[str, Any]:
 
     def label_of(words: str) -> str:
         """The line list's button for the line with these words (scrolled to, as a person would)."""
-        def match() -> list[str]:
-            return [t for t in visible_lines() if t.split(". ", 1)[1].startswith(words[:20])]
-        wheel(1, 40)
-        for _ in range(40):
-            if match():
-                return match()[0]
-            wheel(-1, 1)
-        raise AssertionError((words, all_lines()))
+        def match() -> str | None:
+            return next((t for t in visible_lines() if t.split(". ", 1)[1].startswith(words[:20])), None)
+        found = down_until(match)
+        if found is None:
+            raise AssertionError((words, all_lines()))
+        return str(found)
 
     def number_of(words: str) -> str:
         return label_of(words).split(".", 1)[0]
 
     def type_line(text: str) -> None:
         d().type_into("line_text", text)
-        d().frame()
+        d().advance()
 
     def save() -> str:
         d().key(d().arcade.key.S, d().arcade.key.MOD_CTRL)
-        d().frame()
+        d().advance()
         return str(d().studio.message)
 
     def reopen() -> None:
@@ -178,21 +199,21 @@ def run(out: Path) -> dict[str, Any]:
         # the Warden: Objects > Person, a click on the ground; renamed
         m20c._look_at(d(), WARDEN[0], WARDEN[1] + 1.0, 10.0)
         d().studio.set_left_tab("objects")
-        d().frame()
+        d().advance()
         d().button("Person")
         d().click(*ground(*WARDEN))
-        d().frame(2)
+        d().advance(2)
         d().key(d().arcade.key.ESCAPE)
-        d().frame()
+        d().advance()
         d().click(*ground(*WARDEN, up=0.75))
-        d().frame(2)
+        d().advance(2)
         d().type_into("name", "Warden")
-        d().frame()
+        d().advance()
         select_warden()
 
         # write the conversation
         d().type_into("says", LINES["root"])
-        d().frame()
+        d().advance()
         d().button("+ Next line", prefix=True)  # (after 1)
         type_line(LINES["ask"])
         for key in ("yes", "no", "road"):  # branch targets and the road on: separate lines
@@ -206,7 +227,7 @@ def run(out: Path) -> dict[str, Any]:
         type_line(LINES["again"])
         line(LINES["yes"])  # "Bless you" runs on to the road
         d().type_into("line_next", number_of(LINES["road"]))
-        d().frame()
+        d().advance()
         line(LINES["ask"])  # its two choices
         for text, goes, sets in (("I'll light the watchfire.", "yes", "task_accepted"), ("Not right now.", "no", "")):
             d().button("+ Choice")
@@ -214,12 +235,12 @@ def run(out: Path) -> dict[str, Any]:
             d().type_into("choice_next", number_of(LINES[goes]))
             if sets:
                 d().type_into("choice_sets", sets)
-            d().frame()
+            d().advance()
             line(LINES["ask"])
         d().button("+ Opening")  # once the task is accepted, the Warden opens with "Back already?"
         d().type_into("open_node_0", number_of(LINES["again"]))
         d().type_into("open_req_0", "task_accepted")
-        d().frame()
+        d().advance()
         report["A_written"] = {"shown": shown(), "stored": stored()}
         report["A_saved"] = save()
         report["A_file"] = room_file.read_text(encoding="utf-8")
@@ -241,16 +262,16 @@ def run(out: Path) -> dict[str, Any]:
         line(LINES["ask"])
         d().button(f"  b) {'Not right now.'}", prefix=True)
         d().type_into("choice_next", number_of(LINES["bye"]))
-        d().frame()
+        d().advance()
         line(LINES["flint"])
         d().button("Delete line")
-        d().frame()
+        d().advance()
         before_undo = stored()
         d().key(d().arcade.key.Z, d().arcade.key.MOD_CTRL)
-        d().frame(2)
+        d().advance(2)
         undone = stored()
         d().key(d().arcade.key.Y, d().arcade.key.MOD_CTRL)
-        d().frame(2)
+        d().advance(2)
         report["C_edited"] = {"shown": shown(), "stored": stored(), "undo_restored_the_line": LINES["flint"] in
                               [n["text"] for n in undone["nodes"].values()], "redo_same": stored() == before_undo}
         # the "+ Next line" button: where does a new line go now?
@@ -259,7 +280,7 @@ def run(out: Path) -> dict[str, Any]:
         # D: another room and back
         other = next(k for k, _l, path in d().studio.project.rooms() if not path.endswith("hills.json"))
         d().button(d().studio.project.label(other))
-        d().frame(3)
+        d().advance(3)
         open_room()
         select_warden()
         report["D_room_and_back"] = {"shown": shown(), "stored": stored()}

@@ -39,7 +39,7 @@ def make(out: Path, name: str, template: str) -> Path:
 def resize(d: Any, w: int, h: int) -> None:
     d.window.set_size(w, h)
     d.window.dispatch_event("on_resize", d.window.width, d.window.height)  # (as big as the desktop allows)
-    d.frame(3)
+    d.advance(3)
 
 
 def layout(d: Any) -> dict[str, Any]:
@@ -77,7 +77,7 @@ def shots(out: Path, *, tag: str = "") -> dict[str, Any]:
 
 def _click(d: Any, text: str) -> None:
     """Click a button in view (no scrolling, no switching): a person's click on what they see."""
-    d.frame()
+    d.advance()
     w = next(x for x in d.studio.ui.walk_widgets() if getattr(x, "text", None) == text and hasattr(x, "on_click"))
     r = w.rect
     d.click(r.left + r.width / 2, r.bottom + r.height / 2)
@@ -129,7 +129,7 @@ def creator(out: Path) -> dict[str, Any]:
         # an object's inspector, kept through the categories and the panels hidden and shown
         npc = next(e["id"] for e in ops.entities(studio.project.scene()) if e.get("tag") == "npc")
         studio.select(npc)
-        d.frame(2)
+        d.advance(2)
         name = ops.find_entity(studio.project.scene(), npc).get("name")
         kept = {}
         for title in ("Rooms", "Terrain", "Objects"):
@@ -158,27 +158,27 @@ def creator(out: Path) -> dict[str, Any]:
         _click(d, "Tools")
         d.window.dispatch_event("on_key_press", k.TAB, 0)
         d.window.dispatch_event("on_key_release", k.TAB, 0)
-        d.frame(2)
+        d.advance(2)
         focus = studio._map_rect()
         focus_clean = not _shown(d, "Rooms") and studio._focusable.get("name") is None
         d.picture(pics / "creator_focus_1280x720.png")
         d.window.dispatch_event("on_key_press", k.TAB, 0)
         d.window.dispatch_event("on_key_release", k.TAB, 0)
-        d.frame(2)
+        d.advance(2)
         cam = studio.hd2d.camera.distance
         d.window.dispatch_event("on_mouse_scroll", 100, 300, 0, -3)
         d.window.dispatch_event("on_mouse_scroll", d.window.width - 100, 300, 0, -3)
-        d.frame()
+        d.advance()
         report["panels"] = {"view": [round(view0[1] - view0[0])], "view_tools_hidden": round(view_no_left[1] - view_no_left[0]),
                             "tools_hidden": tools_hidden, "view_focus": [round(focus[1] - focus[0]), round(focus[3] - focus[2])],
                             "focus_clean": focus_clean, "back": round(studio._map_rect()[1] - studio._map_rect()[0]),
                             "wheel_over_panels_kept_the_view": studio.hd2d.camera.distance == cam}
         # Play and Stop
         d.key(k.F4)
-        d.frame(20)
+        d.advance(20)
         mode = studio.mode
         d.key(k.F4)
-        d.frame(5)
+        d.advance(5)
         report["play_stop"] = [mode, studio.mode, studio.selected == npc]
         # every size in turn, with the inspector open: what is shown, the view, nothing past the window
         sizes = {}
@@ -200,7 +200,7 @@ def creator(out: Path) -> dict[str, Any]:
         resize(d, 1280, 720)
         studio = d.studio
         _click(d, "Terrain")
-        d.frame(2)
+        d.advance(2)
         space = studio._sheet_space
         geometry = studio._sheet_geometry()
         assert space is not None and geometry is not None
@@ -222,7 +222,7 @@ def _type_and_leave(d: Any, key: str, text: str) -> None:
     _type_only(d, key, text)
     field = d.studio._focusable[key]
     d.click(field.rect.left + 4, 60)  # (the panel's bottom: nothing there)
-    d.frame()
+    d.advance()
 
 
 def _box(d: Any, key: str) -> dict[str, Any]:
@@ -256,7 +256,7 @@ def safety(out: Path) -> dict[str, Any]:
         def tab_key() -> None:
             d.window.dispatch_event("on_key_press", k.TAB, 0)
             d.window.dispatch_event("on_key_release", k.TAB, 0)
-            d.frame(2)
+            d.advance(2)
 
         def put_back(key: str) -> None:  # (the box clicked, Esc: what it was)
             if key in studio._focusable:
@@ -264,12 +264,12 @@ def safety(out: Path) -> dict[str, Any]:
                 d.click(field.rect.left + field.rect.width / 2, field.rect.bottom + field.rect.height / 2)
                 d.window.dispatch_event("on_key_press", k.ESCAPE, 0)
                 d.window.dispatch_event("on_key_release", k.ESCAPE, 0)
-                d.frame()
+                d.advance()
 
         # 1. Tab with a changed, uncommitted name; then with a refused (blank) one
         for case, text in (("tab_valid", "Elder Ash"), ("tab_refused", "   ")):
             studio.select(npc)
-            d.frame(2)
+            d.advance(2)
             _type_and_leave(d, "name", text)
             before = {**_box(d, "name"), "record": name_on_record()}
             tab_key()
@@ -282,18 +282,18 @@ def safety(out: Path) -> dict[str, Any]:
                 d.button("Undo")
         # 2. an invalid Scatter radius, then another category; then Save
         studio.select(None)
-        d.frame(2)
+        d.advance(2)
         d.button("Terrain")
         d.button("Scatter")
         radius_before = (studio.hd2d.sculpt or {}).get("radius")
         _type_and_leave(d, "scatter_radius", "big")
         d._click_text("Objects")
-        d.frame(2)
+        d.advance(2)
         switched = _box(d, "scatter_radius")
         d.button("Save")
         saved = {"message": studio.message, "message_ok": studio.message_ok}
         d._click_text("Terrain")
-        d.frame(2)
+        d.advance(2)
         report["category_refused"] = {"after_switch": switched, "after_save": saved,
                                       "back_on_terrain": _box(d, "scatter_radius"),
                                       "radius": [radius_before, (studio.hd2d.sculpt or {}).get("radius")]}
@@ -301,17 +301,17 @@ def safety(out: Path) -> dict[str, Any]:
         # (a valid one: switching goes on, the value taken)
         _type_and_leave(d, "scatter_radius", "3")
         d._click_text("Objects")
-        d.frame(2)
+        d.advance(2)
         report["category_valid"] = {"left_tab": studio.left_tab, "radius": (studio.hd2d.sculpt or {}).get("radius")}
         d._click_text("Rooms")
         # 3. the window resized with a changed, uncommitted name; then a refused one
         for case, text in (("resize_refused", "   "), ("resize_valid", "Elder Birch")):  # (the refused first: Esc
             # puts it back; the valid one, last, is left typed)
             studio.select(npc)
-            d.frame(2)
+            d.advance(2)
             _type_and_leave(d, "name", text)
             resize(d, 1100, 700)
-            d.frame(3)
+            d.advance(3)
             report[case] = {"after_resize": {**_box(d, "name"), "record": name_on_record()}}
             put_back("name")
             resize(d, 1280, 720)

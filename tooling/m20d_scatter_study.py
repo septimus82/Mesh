@@ -34,6 +34,7 @@ sys.path.insert(0, str(REPO / "tooling"))
 import hd2d_visual_study as study  # noqa: E402
 import m20a_terrain_study as m20a  # noqa: E402
 import m20c_material_study as m20c  # noqa: E402
+import review_media  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame  # noqa: E402
 
 PX = 32.0
@@ -358,8 +359,7 @@ def studio(out: Path) -> dict[str, Any]:
                                                    for a, v in shown.items()} == saved,
                             "message": s.message}
         if clip:
-            clip[0].save(out / "scatter_stroke.webp", save_all=True, append_images=clip[1:], duration=100, loop=0,
-                         quality=80, method=6)
+            review_media.save_clip(clip, out / "scatter_stroke.webp", duration=100, quality=80, method=6)
         d.picture(out / "scatter_after.png")
         d.key(k.Z, k.MOD_CTRL)
         report["undo_gives_none"] = _paint(s.project) == {} and _count(view) == 0
@@ -378,20 +378,20 @@ def studio(out: Path) -> dict[str, Any]:
         added_live = _count(view) - n_saved
         d.key(k.ESCAPE)
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
-        d.frame()
+        d.advance()
         report["escape"] = {"stroke_had_added": added_live, **unchanged(), "message": s.message}
         m20b._stroke(d, m20c._on_ground(d, mid, 0.1), release=False)
         d.key(k.F4)
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
         d.key(k.F4)
-        d.frame(3)
+        d.advance(3)
         report["play_mid_stroke"] = unchanged()
         m20b._stroke(d, m20c._on_ground(d, mid, 0.1), release=False)
         d.button("Village")
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
-        d.frame(2)
+        d.advance(2)
         d.button("Hills")
-        d.frame(2)
+        d.advance(2)
         if view.sculpt is None:
             d.button("Scatter")
         m20c._look_at(d, 13.0, 5.5, 27.0)
@@ -411,12 +411,12 @@ def studio(out: Path) -> dict[str, Any]:
                 s_ = d.screen(p)
                 d.window.dispatch_event("on_mouse_drag", s_[0], s_[1], s_[0] - last[0], s_[1] - last[1],
                                         d.arcade.MOUSE_BUTTON_LEFT, 0)
-                d.frame()
+                d.advance()
                 last = s_
         finally:
             setattr(layer, "apply", kept_apply)
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
-        d.frame(2)
+        d.advance(2)
         report["refused_upload"] = {**unchanged(), "message": s.message}
         m20b._stroke(d, m20c._on_ground(d, mid, 0.1), release=False)  # refused at the very end: the release's flush
         layer = view.renderer.ensure_scatter()
@@ -428,14 +428,14 @@ def studio(out: Path) -> dict[str, Any]:
             d.window.dispatch_event("on_mouse_drag", b_[0], b_[1], b_[0] - a_[0], b_[1] - a_[1],
                                     d.arcade.MOUSE_BUTTON_LEFT, 0)
             d.window.dispatch_event("on_mouse_release", *b_, d.arcade.MOUSE_BUTTON_LEFT, 0)
-            d.frame()
+            d.advance()
         finally:
             setattr(layer, "apply", kept_apply)
         report["refused_at_release"] = {**unchanged(), "message": s.message}
         m20b._stroke(d, m20c._on_ground(d, mid, 0.1), release=False)
         d.window.dispatch_event("on_deactivate")
         held = _count(view)
-        d.frame(10)
+        d.advance(10)
         report["focus_lost_mid_stroke"] = {"stroke_ended": view.stroke is None,
                                            "undo_steps_added": len(s.project._undo) - undo_n,
                                            "no_more_after": _count(view) == held}

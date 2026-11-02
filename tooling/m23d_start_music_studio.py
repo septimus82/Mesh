@@ -113,22 +113,22 @@ def _studio(project: Path) -> Any:
 def _room(d: Any, key: str) -> None:
     if d.studio.project.current != key:
         d.studio.set_left_tab("rooms")
-        d.frame()
+        d.advance()
         d.button(d.studio.project.label(key))
-        d.frame(2)
+        d.advance(2)
 
 
 def _music(d: Any) -> None:
     if d.studio.panel != "music":
         d.studio.set_left_tab("audio")
-        d.frame()
+        d.advance()
         d.button("Room music...")
-        d.frame()
+        d.advance()
 
 
 def _picture(d: Any, path: Path) -> None:
     d.window.dispatch_event("on_mouse_motion", d.window.width // 3, d.window.height // 2, 0, 0)
-    d.frame(2)
+    d.advance(2)
     d.picture(path)
 
 
@@ -153,7 +153,7 @@ def creator(out: Path) -> dict[str, Any]:
             k = d.arcade.key
             report["opened_in"] = d.studio.project.current
             d.studio.set_left_tab("rooms")
-            d.frame()
+            d.advance()
             report["before"] = {"start_rows": _start_rows(d), "audio": _audio(d.window)}
             _room(d, "village")
             report["village_offered"] = d.has_button("Set as starting room")
@@ -188,11 +188,11 @@ def creator(out: Path) -> dict[str, Any]:
             report["editing_audio"] = _audio(d.window)  # (the editor: nothing plays)
             # Play (F4) tests the room being edited; Stop: silent again
             d.key(k.F4)
-            d.frame(30)
+            d.advance(30)
             report["play_ruins"] = {"mode": d.studio.mode, "room": d.window.scene_controller.current_scene_path,
                                     "audio": _audio(d.window)}
             d.key(k.F4)
-            d.frame(5)
+            d.advance(5)
             report["after_stop_audio"] = _audio(d.window)
             # 4. save, close
             d.key(k.S, k.MOD_CTRL)
@@ -214,16 +214,16 @@ def creator(out: Path) -> dict[str, Any]:
             # Play (F4) in Village: Studio's play-test plays its track, as the game does; Stop: silent again
             _room(d, "village")
             d.key(k.F4)
-            d.frame(30)
+            d.advance(30)
             report["play_village"] = {"mode": d.studio.mode, "room": d.window.scene_controller.current_scene_path,
                                       "audio": _audio(d.window)}
             d.key(k.F4)
-            d.frame(5)
+            d.advance(5)
             report["play_village"]["after_stop"] = _audio(d.window)
             # 6. Woodland as the start room: undo, redo, save, reopen
             _room(d, "woodland")
             d.studio.set_left_tab("rooms")
-            d.frame()
+            d.advance()
             d.button("Set as starting room")
             steps = {"set": (d.studio.project.start_key(), d.studio.project.current)}
             d.key(k.Z, k.MOD_CTRL)
@@ -247,7 +247,7 @@ def creator(out: Path) -> dict[str, Any]:
             # 7. Village again
             _room(d, "village")
             d.studio.set_left_tab("rooms")
-            d.frame()
+            d.advance()
             d.button("Set as starting room")
             d.key(d.arcade.key.S, d.arcade.key.MOD_CTRL)
             report["restored_village"] = {"start": d.studio.project.start_key(), "rows": _start_rows(d)}
@@ -379,7 +379,7 @@ def saves(out: Path) -> dict[str, Any]:
         try:
             _room(d, "ruins")
             d.studio.set_left_tab("rooms")
-            d.frame()
+            d.advance()
             d.button("Set as starting room")
             d.key(d.arcade.key.S, d.arcade.key.MOD_CTRL)
             report["studio_start"] = d.studio.project.start_key()
@@ -405,7 +405,7 @@ def saves(out: Path) -> dict[str, Any]:
         try:
             _room(d, "village")
             d.studio.set_left_tab("rooms")
-            d.frame()
+            d.advance()
             d.button("Set as starting room")
             d.key(d.arcade.key.S, d.arcade.key.MOD_CTRL)
             report["start_back"] = d.studio.project.start_key()
@@ -471,7 +471,7 @@ def older(out: Path) -> dict[str, Any]:
     d = _studio(project)
     try:
         d.studio.set_left_tab("rooms")
-        d.frame()
+        d.advance()
         report["rows"] = _start_rows(d)
         report["opened_in"] = d.studio.project.current
         report["dirty_on_open"] = d.studio.project.is_dirty

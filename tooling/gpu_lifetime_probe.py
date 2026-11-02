@@ -65,11 +65,11 @@ def _run(project: Path, rounds: int) -> dict[str, Any]:
             start = _counts(ctx)
             for _ in range(rounds):
                 d.studio._reload()  # what every Studio edit, undo or room switch does
-                d.frame()
+                d.advance()
             reloads = _counts(ctx)
             for _ in range(rounds):
                 d.key(k.F4)
-                d.frame(2)
+                d.advance(2)
                 d.key(k.F4)
             plays = _counts(ctx)
         finally:

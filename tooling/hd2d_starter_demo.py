@@ -65,7 +65,7 @@ def check(out: Path, project: Path | None = None) -> dict[str, Any]:
         studio, view = d.studio, d.studio.hd2d
         k = d.arcade.key
         ctrl = k.MOD_CTRL
-        d.frame(30)
+        d.advance(30)
         d.picture(out / "01_studio_opened.png")
         gl_open = d.gl_counts()
         step("open", room=studio.project.current, hd2d=view.active, structures=len(view.structures()),
@@ -101,7 +101,7 @@ def check(out: Path, project: Path | None = None) -> dict[str, Any]:
         refused = studio.message
         spot = d.screen((*WEST_PLATEAU_SPOT, 2.0))
         d.window.dispatch_event("on_mouse_motion", *spot, 0, 0)
-        d.frame()
+        d.advance()
         marker = view.object_marker
         d.picture(out / "03_placing_person_on_plateau.png")
         d.click(*spot)
@@ -151,7 +151,7 @@ def check(out: Path, project: Path | None = None) -> dict[str, Any]:
         left, right, bottom, top = view._rect()
         assert left < spot[0] < right and bottom < spot[1] < top, f"the lamp post's spot is off the 3D view ({spot})"
         d.window.dispatch_event("on_mouse_motion", *spot, 0, 0)
-        d.frame()
+        d.advance()
         d.click(*spot)
         post_id = view.structure
         post = d.structure(post_id) if post_id else None
@@ -163,7 +163,7 @@ def check(out: Path, project: Path | None = None) -> dict[str, Any]:
         proposal = studio.ai.stage_proposal_payload({"title": "A sign for the hill", "source": "a test AI", "changes": [
             {"op": "place_prefab", "prefab": "sign", "x": 31.0 * PX, "y": 24.5 * PX + 12.0, "elevation": 64}]})
         studio.open_ai()
-        d.frame()
+        d.advance()
         d.picture(out / "06_ai_proposal.png")
         d.button("Accept")
         ai_sign = next((e for e in studio.project.scene()["entities"] if e.get("tag") == "sign"
@@ -181,7 +181,7 @@ def check(out: Path, project: Path | None = None) -> dict[str, Any]:
     try:
         studio, view = d.studio, d.studio.hd2d
         k = d.arcade.key
-        d.frame(10)
+        d.advance(10)
         reopened = {"shop": d.structure("shop"), "person": next((dict(e) for e in studio.project.scene()["entities"]
                                                                  if e.get("id") == new_id), None),
                     "lamp": dict(studio.project.scene()["lights"][1]), "crate": d.structure("crate_1"),
@@ -191,7 +191,7 @@ def check(out: Path, project: Path | None = None) -> dict[str, Any]:
         studio_frames = []
         for _ in range(40):
             t = time.perf_counter()
-            d.frame()
+            d.frame()  # (timed: the frame as it was measured, read-back included)
             studio_frames.append((time.perf_counter() - t) * 1000)
         gl_edit = d.gl_counts()
         tracemalloc.start()
@@ -209,9 +209,9 @@ def check(out: Path, project: Path | None = None) -> dict[str, Any]:
 
         def press(key: int) -> None:  # held for a few frames, as a person's key press is
             d.window.dispatch_event("on_key_press", key, 0)
-            d.frame(3)
+            d.advance(3)
             d.window.dispatch_event("on_key_release", key, 0)
-            d.frame(3)
+            d.advance(3)
 
         def talk(label: str) -> None:
             prompt = None
@@ -238,7 +238,7 @@ def check(out: Path, project: Path | None = None) -> dict[str, Any]:
         game_frames = []
         for _ in range(30):
             t = time.perf_counter()
-            d.frame()
+            d.frame()  # (timed: the frame as it was measured, read-back included)
             game_frames.append((time.perf_counter() - t) * 1000)
         note("start")
         hold_key(game, player, k.LEFT, 0, 15.0, 600)
@@ -266,7 +266,7 @@ def check(out: Path, project: Path | None = None) -> dict[str, Any]:
         d.picture(out / "10_play_at_the_cottage.png")
         hold_key(game, player, k.UP, 1, 10.5, 300)
         for _ in range(30):
-            d.frame()
+            d.advance()
         player = game.player()
         note("through the cottage door")
         d.picture(out / "11_play_inside_the_cottage.png")
@@ -276,20 +276,20 @@ def check(out: Path, project: Path | None = None) -> dict[str, Any]:
         moved_to = _feet(player)
         d.key(k.F9)  # quick load
         for _ in range(20):
-            d.frame()
+            d.advance()
         player = game.player()
         note("quick-saved, moved, quick-loaded", saved_at=[round(v, 2) for v in saved_at],
              moved_to=[round(v, 2) for v in moved_to])
         gl_play = d.gl_counts()
         mem_play = tracemalloc.get_traced_memory()[1] // 1024
         d.key(k.F4)
-        d.frame(10)
+        d.advance(10)
         d.picture(out / "12_back_in_edit.png")
         gl_back = d.gl_counts()
         d.key(k.F4)  # a second Play / Stop: nothing may grow
-        d.frame(20)
+        d.advance(20)
         d.key(k.F4)
-        d.frame(10)
+        d.advance(10)
         gl_back2 = d.gl_counts()
         tracemalloc.stop()
         step("play", walk=walk, mode_after_stop=studio.mode)
@@ -297,7 +297,7 @@ def check(out: Path, project: Path | None = None) -> dict[str, Any]:
         # the model browser with the kit, and importing one more model through Studio
         t = time.perf_counter()
         d.button("Models...")
-        d.frame()
+        d.frame()  # (timed: the frame as it was measured, read-back included)
         open_ms = (time.perf_counter() - t) * 1000
         d.picture(out / "13_model_browser_with_kit.png")
         listed = [t_ for t_ in d.labels() if t_.startswith(("Cottage", "Shop", "Staircase", "Bridge", "Platform"))]

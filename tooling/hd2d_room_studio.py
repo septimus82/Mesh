@@ -44,7 +44,7 @@ def _press(d: Any, text: str, where: Callable[[Any], bool] = lambda w: True) -> 
 
     if not d._scroll_panels(find):  # the panel it is in, scrolled as a person would
         raise AssertionError(f"no button {text!r}")
-    d.frame()
+    d.advance()
     r = find().rect
     d.click(r.left + r.width / 2, r.bottom + r.height / 2)
 
@@ -99,7 +99,7 @@ def studio(out: Path, *, full: bool = True) -> dict[str, Any]:
         _press(d, "Outdoors", _right)
         d.picture(pics / "01_new_room_panel.png")
         _press(d, "Create", _right)
-        d.frame(10)
+        d.advance(10)
         report["created"] = {"room": d.studio.project.current, "hd2d_view": bool(d.studio.hd2d.active),
                              "message": d.studio.message, "ground_to": _hd2d(d).get("ground", {}).get("to"),
                              "kit_now": (project / "assets/hd2d_starter/textures/grass.png").is_file()}
@@ -109,7 +109,7 @@ def studio(out: Path, *, full: bool = True) -> dict[str, Any]:
         _press(d, "Wide", _right)
         d.type_into("cam_pitch", "38")
         _press(d, "See it", _right)
-        d.frame(3)
+        d.advance(3)
         d.picture(pics / "03_see_it_game_camera.png")
         report["see_it_editor_camera"] = {"pitch": d.studio.hd2d.camera.pitch, "fov": d.studio.hd2d.camera.fov,
                                           "distance": round(d.studio.hd2d.camera.distance, 3)}
@@ -138,7 +138,7 @@ def studio(out: Path, *, full: bool = True) -> dict[str, Any]:
         k = d.arcade.key
         d.key(k.F4)
         for _ in range(30):
-            d.frame()
+            d.advance()
             time.sleep(1 / 60)
         report["in_play"] = {"mode": d.studio.mode, **_renderer_state(d.window)}
         r = d.window.hd2d_renderer  # the follow camera, kept inside the room, against Studio's "See it" for this shape
@@ -146,7 +146,7 @@ def studio(out: Path, *, full: bool = True) -> dict[str, Any]:
                                     "see_it": [round(v, 4) for v in game_view(d.studio.project.scene(), r._aspect).target]}
         d.picture(pics / "05_play.png")
         d.key(k.F4)
-        d.frame(5)
+        d.advance(5)
     finally:
         d.close()
     if full:
@@ -224,7 +224,7 @@ def lakeside(out: Path, original: str) -> dict[str, Any]:
         _press(d, "Morning", _right)
         d.type_into("sun_elevation", "25")
         _press(d, "See it", _right)
-        d.frame(3)
+        d.advance(3)
         d.picture(pics / "06_lakeside_morning_see_it.png")
         report["after"] = {"camera": ops.hd2d_camera_of(d.studio.project.scene()), "sun": ops.hd2d_sun_of(d.studio.project.scene())}
         _press(d, "Save")

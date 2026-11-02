@@ -277,7 +277,7 @@ def test_studio_says_what_is_wrong_with_a_room_s_weather(tmp_path: Path) -> None
     project = m18.make_project(tmp_path, "bad", [{"preset": "hail"}])
     driver = hd2d_studio_demo.StudioDriver(project)
     try:
-        driver.frame(2)
+        driver.advance(2)
         assert not driver.studio.message_ok and "preset must be one of" in driver.studio.message
         assert "preset must be one of" in driver.studio._status_label.text
     finally:

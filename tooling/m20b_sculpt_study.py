@@ -27,6 +27,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tooling"))
 import hd2d_visual_study as study  # noqa: E402
 import m20a_terrain_study as m20a  # noqa: E402
+import review_media  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame, _gl_counts  # noqa: E402
 
 PX = 32.0
@@ -54,7 +55,7 @@ def _driver(project: Path) -> Any:
     os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
     d = hd2d_studio_demo.StudioDriver(project)
     d.button("Hills")
-    d.frame(3)
+    d.advance(3)
     return d
 
 
@@ -74,7 +75,7 @@ def _stroke(d: Any, points: list[tuple[float, float, float]], *, hold: Callable[
     for i, s in enumerate(screen[1:]):
         start = time.perf_counter()
         d.window.dispatch_event("on_mouse_drag", s[0], s[1], s[0] - last[0], s[1] - last[1], left, 0)
-        d.frame()
+        d.frame()  # (timed: the frame as it was measured, read-back included)
         times.append((time.perf_counter() - start) * 1000)
         last = s
         if each is not None:
@@ -82,7 +83,7 @@ def _stroke(d: Any, points: list[tuple[float, float, float]], *, hold: Callable[
     if release:
         start = time.perf_counter()
         d.window.dispatch_event("on_mouse_release", *screen[-1], left, 0)
-        d.frame()
+        d.frame()  # (timed: the frame as it was measured, read-back included)
         RELEASES.append((time.perf_counter() - start) * 1000)
     return times
 
@@ -128,8 +129,7 @@ def studio(out: Path) -> dict[str, Any]:
                             "raised_max_m": round(max(b - a for a, b in zip(before, saved)) / PX, 3),
                             "message": s.message}
         if clip:
-            clip[0].save(out / "stroke.webp", save_all=True, append_images=clip[1:], duration=100, loop=0, quality=80,
-                         method=6)
+            review_media.save_clip(clip, out / "stroke.webp", duration=100, quality=80, method=6)
         d.picture(out / "stroke_after.png")
         # 2. undo and redo the whole stroke; save; reopen
         d.key(k.Z, k.MOD_CTRL)
@@ -144,7 +144,7 @@ def studio(out: Path) -> dict[str, Any]:
         moved = view.renderer.terrain.heights != saved
         d.key(k.ESCAPE)
         d.window.dispatch_event("on_mouse_release", *d.screen((24.0, 8.0, 0.0)), d.arcade.MOUSE_BUTTON_LEFT, 0)
-        d.frame()
+        d.advance()
         report["escape"] = {"stroke_had_changed_the_ground": moved, "ground_back": view.renderer.terrain.heights == saved,
                             "nothing_recorded": len(s.project._undo) == undo_n and _heights(s.project) == saved,
                             "message": s.message}
@@ -154,16 +154,16 @@ def studio(out: Path) -> dict[str, Any]:
         played = s.mode
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
         d.key(k.F4)
-        d.frame(3)
+        d.advance(3)
         report["play_mid_stroke"] = {"mode": played, "after_stop": s.mode, "nothing_recorded": len(s.project._undo) == undo_n,
                                      "ground_is_saved": view.renderer.terrain.heights == saved}
         # 5. a room change mid-stroke
         _stroke(d, _path((20.0, 6.0), (24.0, 8.0), 8), release=False)
         d.button("Village")
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
-        d.frame(2)
+        d.advance(2)
         d.button("Hills")
-        d.frame(2)
+        d.advance(2)
         if view.sculpt is None:
             d.button("Sculpt")
         report["room_change_mid_stroke"] = {"nothing_recorded": len(s.project._undo) == undo_n,
@@ -187,13 +187,13 @@ def studio(out: Path) -> dict[str, Any]:
                 s_ = d.screen(p)
                 d.window.dispatch_event("on_mouse_drag", s_[0], s_[1], s_[0] - last[0], s_[1] - last[1],
                                         d.arcade.MOUSE_BUTTON_LEFT, 0)
-                d.frame()
+                d.advance()
                 last = s_
         finally:
             renderer.ctx.buffer = original
-        d.frame(2)  # (the drawing catches up once the GPU takes buffers again)
+        d.advance(2)  # (the drawing catches up once the GPU takes buffers again)
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
-        d.frame(2)
+        d.advance(2)
         report["refused_upload"] = {"ground_back": view.renderer.terrain.heights == saved,
                                     "nothing_recorded": len(s.project._undo) == undo_n, "message": s.message}
         # 7. Shift lowers; [ ] resize; Alt+click picks a flatten height, then a flatten stroke
@@ -239,7 +239,7 @@ def first_stroke_on_flat(out: Path) -> dict[str, Any]:
     try:
         s, view, k = d.studio, d.studio.hd2d, d.arcade.key
         d.button("Village")
-        d.frame(3)
+        d.advance(3)
         terrain_key = lambda: ((s.project.scene().get("settings") or {}).get("hd2d") or {}).get("ground", {}).get("terrain")  # noqa: E731
         report["before"] = {"sculpted": terrain_key() is not None}
         d.button("Sculpt")
@@ -272,10 +272,10 @@ def rechecks(out: Path) -> dict[str, Any]:
         d.window.dispatch_event("on_mouse_motion", *p, 0, 0)
         d.window.dispatch_event("on_mouse_press", *p, left, 0)
         while time.perf_counter() - view.stroke["started"] < 1.0:
-            d.frame()
+            d.advance()
         held = time.perf_counter() - view.stroke["started"]
         d.window.dispatch_event("on_mouse_release", *p, left, 0)
-        d.frame()
+        d.advance()
         moved = max(a - b for a, b in zip(view.renderer.terrain.heights, before)) / PX
         report["held_still"] = {"held_s": round(held, 2), "raised_m": round(moved, 3)}
         # modifiers let go when the window loses the keyboard (Alt+Tab)
@@ -296,18 +296,18 @@ def rechecks(out: Path) -> dict[str, Any]:
         _stroke(d, [(16.0, 12.0, 0.0)] * 90, release=False)  # (taller than the bridge: about 5 m)
         grown = view.renderer.world_box()
         d.key(k.ESCAPE)
-        d.frame()
+        d.advance()
         report["box_top_m"] = {"before": box[1][2], "mid_stroke": grown[1][2], "after_esc": view.renderer.world_box()[1][2]}
         # the Settle list belongs to its room
         view.unsettled, view._unsettled_room = ["structure:bridge"], s.project.current
         d.button("Village")
-        d.frame(3)
+        d.advance(3)
         report["settle_list_in_another_room"] = list(view.unsettled)
         # a flat room: Esc of the first stroke, and a stroke that changes nothing (smooth on level ground)
         d.type_into("sculpt_rate", "1")
         _stroke(d, _path((14.0, 13.0), (16.0, 13.0), 6), release=False)
         d.key(k.ESCAPE)
-        d.frame()
+        d.advance()
         plain_after_esc = view.renderer.terrain is None
         undo = len(s.project._undo)
         d.button("Smooth")
@@ -541,7 +541,7 @@ def scale(out: Path) -> dict[str, Any]:
             idle = []
             for _ in range(20):
                 t1 = time.perf_counter()
-                d.frame()
+                d.frame()  # (timed: the frame as it was measured, read-back included)
                 idle.append((time.perf_counter() - t1) * 1000)
             row["studio_idle_frame_ms"] = _stats(idle)
             t1 = time.perf_counter()

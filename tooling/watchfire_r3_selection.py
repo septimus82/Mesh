@@ -53,7 +53,7 @@ def run(out: Path) -> dict[str, Any]:
     def open_room(driver: Any) -> None:
         key = next(k for k, _l, path in driver.studio.project.rooms() if path.endswith("hills.json"))
         driver.button(driver.studio.project.label(key))
-        driver.frame(3)
+        driver.advance(3)
 
     def ground(driver: Any, x: float, y: float, up: float = 0.0) -> tuple[float, float]:
         z = driver.renderer.ground_height(x * study.PX, y * study.PX) / study.PX
@@ -87,24 +87,24 @@ def run(out: Path) -> dict[str, Any]:
         for spot in (FRONT, BACK):
             m20c._look_at(d, spot[0], spot[1], 14.0)
             d.studio.set_left_tab("objects")
-            d.frame()
+            d.advance()
             d.button("Sign")
             d.click(*ground(d, *spot))
-            d.frame(2)
+            d.advance(2)
             d.key(arcade.key.ESCAPE)  # (done placing)
-            d.frame()
+            d.advance()
         names = [str(e.get("name")) for e in ops.entities(d.studio.project.scene())]
         report["objects"] = names
         signs = [n for n in names if n.lower().startswith("sign")]
         report["signs"] = signs
         d.click(*ground(d, 2.0, 9.0))  # (nothing selected to start)
-        d.frame()
+        d.advance()
 
         # 1. a lone campfire: click it (on its logs, a little above the ground)
         m20c._look_at(d, LONE[0], LONE[1] + 1.0, 12.0)
         lone_at = ground(d, *LONE, up=0.3)
         d.click(*lone_at)
-        d.frame(2)
+        d.advance(2)
         seen("1_click_lone_campfire", under=[name_of(i) or i for i in under_at(*lone_at)])
         d.picture(out / "1_click_lone_campfire.png")
         # 1b. a campfire hidden behind the cottage: a click there selects the cottage (in front); turned with its
@@ -113,7 +113,7 @@ def run(out: Path) -> dict[str, Any]:
         hidden_at = ground(d, *HIDDEN, up=0.3)
         report["1b_under_hidden_fire"] = [name_of(i) or i for i in under_at(*hidden_at)]
         d.click(*hidden_at)
-        d.frame(2)
+        d.advance(2)
         seen("1b_click_where_the_fire_is_hidden")
         d.picture(out / "1b_click_where_the_fire_is_hidden.png")
         sid = d.studio.hd2d.structure
@@ -121,15 +121,15 @@ def run(out: Path) -> dict[str, Any]:
         fire_before = where().get("Campfire 4")
         if sid:
             d.button("Turn +90")
-            d.frame(2)
+            d.advance(2)
         seen("1c_turn_the_selected_cottage", turned=(turned_from, (d.structure(sid) or {}).get("rotation") if sid else None),
              fire_unmoved=where().get("Campfire 4") == fire_before)
         d.key(arcade.key.Z, arcade.key.MOD_CTRL)  # (the cottage as it was)
-        d.frame(2)
+        d.advance(2)
         report["1c_undo_turn"] = {"rotation": (d.structure(sid) or {}).get("rotation") if sid else None,
                                   "still_selected": d.studio.hd2d.structure}
         d.click(*hidden_at)
-        d.frame(2)
+        d.advance(2)
         seen("1d_click_again_the_hidden_fire")
         d.picture(out / "1d_click_again_the_hidden_fire.png")
 
@@ -138,22 +138,22 @@ def run(out: Path) -> dict[str, Any]:
         at = ground(d, FRONT[0], FRONT[1], up=0.75)
         for k in range(3):
             d.click(*at)
-            d.frame(2)
+            d.advance(2)
             seen(f"2_signs_click_{k + 1}", under=[name_of(i) or i for i in under_at(*at)])
             d.picture(out / f"2_signs_click_{k + 1}.png")
         # 3. what is selected now, dragged a metre east: only it moves
         before = where()
         selected_before = name_of(d.studio.selected)
         d.drag(at, ground(d, FRONT[0] + 1.0, FRONT[1], up=0.75))
-        d.frame(2)
+        d.advance(2)
         after = where()
         seen("3_drag_selected", selected_before_drag=selected_before,
              moved=sorted(n for n in after if after[n] != before.get(n)))
         d.key(arcade.key.Z, arcade.key.MOD_CTRL)
-        d.frame(2)
+        d.advance(2)
         report["3_undo"] = {"positions_restored": where() == before}
         d.key(arcade.key.Y, arcade.key.MOD_CTRL)
-        d.frame(2)
+        d.advance(2)
         report["3_redo"] = {"positions_moved_again": where() == after}
 
         # 4. the stacked campfires: click, click again; the inspector each time; right-click keeps the choice
@@ -161,43 +161,43 @@ def run(out: Path) -> dict[str, Any]:
         stack_at = ground(d, *STACK, up=0.3)
         for k in range(2):
             d.click(*stack_at)
-            d.frame(2)
+            d.advance(2)
             seen(f"4_stack_click_{k + 1}", under=[name_of(i) or i for i in under_at(*stack_at)])
             d.picture(out / f"4_stack_click_{k + 1}.png")
         chosen = d.studio.selected
         d.click(*stack_at, button=arcade.MOUSE_BUTTON_RIGHT)
-        d.frame(2)
+        d.advance(2)
         seen("4_stack_right_click", kept=d.studio.selected == chosen, menu=[t for t, _ in (d.studio.menu or (0, 0, []))[2]])
         d.key(arcade.key.ESCAPE)
-        d.frame()
+        d.advance()
 
         # 5. empty ground deselects
         m20c._look_at(d, EMPTY[0], EMPTY[1] + 1.0, 12.0)
         report["5_under_empty"] = under_at(*ground(d, *EMPTY))
         d.click(*ground(d, *EMPTY))
-        d.frame(2)
+        d.advance(2)
         seen("5_click_empty_ground")
 
         # 6. Terrain > Sculpt, Paint, Scatter on: a click on the lone campfire uses the brush, never selects (undone after)
         m20c._look_at(d, LONE[0], LONE[1] + 1.0, 12.0)
         d.studio.set_left_tab("terrain")
-        d.frame()
+        d.advance()
         for tool in ("Sculpt", "Paint", "Scatter"):
             d.button(tool)
-            d.frame()
+            d.advance()
             active = d.studio.hd2d.sculpt is not None
             d.click(*ground(d, *LONE, up=0.3))
-            d.frame(2)
+            d.advance(2)
             seen(f"6_{tool.lower()}_click_on_campfire", brush_on=active)
             d.key(arcade.key.Z, arcade.key.MOD_CTRL)  # (the ground as it was)
-            d.frame()
+            d.advance()
             d.button(tool)  # (off again)
-            d.frame()
+            d.advance()
 
         # 7. save, close, reopen: where everything stands
         saved = where()
         d.key(arcade.key.S, arcade.key.MOD_CTRL)
-        d.frame()
+        d.advance()
         report["7_saved"] = {"message": d.studio.message, "positions": saved}
     finally:
         d.close()

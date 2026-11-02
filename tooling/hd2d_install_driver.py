@@ -109,7 +109,7 @@ def two_d_project(project: Path, evidence: Path, name: str) -> dict[str, Any]:
         game.close()
     d = StudioDriver(project)
     try:
-        d.frame(20)
+        d.advance(20)
         d.picture(evidence / f"{name}_in_studio.png")
         studio_room = d.studio.project.current
         hd2d_in_studio = d.studio.hd2d.active

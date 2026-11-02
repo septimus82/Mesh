@@ -31,6 +31,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tooling"))
 import hd2d_visual_study as study  # noqa: E402
+import review_media  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame, _gl_counts  # noqa: E402
 
 PX = 32.0
@@ -280,8 +281,7 @@ def walking(out: Path, *, film: bool = True) -> dict[str, Any]:
                    "highest_m": max(t[2] for t in trace) if trace else None,
                    "floor": getattr(player, "mesh_hd2d_floor", None)}
             if clip:
-                clip[0].save(out / f"walk_{name}.webp", save_all=True, append_images=clip[1:], duration=66, loop=0,
-                             quality=85, method=6)
+                review_media.save_clip(clip, out / f"walk_{name}.webp", duration=66, quality=85, method=6)
                 row["clip_frames"] = len(clip)
             (out / f"walk_{name}.json").write_text(json.dumps(trace) + "\n", encoding="utf-8")
             return row
@@ -524,13 +524,13 @@ def studio(out: Path) -> dict[str, Any]:
     try:
         s, k = d.studio, d.arcade.key
         d.button("Hills")
-        d.frame(3)
+        d.advance(3)
         before = heights(s)
         d.button("Sculpt")
         spot = (20.0, 6.0, 0.0)
         at = d.screen(spot)
         d.window.dispatch_event("on_mouse_motion", *at, 0, 0)
-        d.frame(2)
+        d.advance(2)
         view = d.studio.hd2d
         report["cursor_on_the_ground_m"] = [round(v, 2) for v in view.sculpt_at] if view.sculpt_at else None
         d.picture(out / "studio_1_brush.png")
@@ -542,7 +542,7 @@ def studio(out: Path) -> dict[str, Any]:
         d.button("Flatten")
         d.key(d.arcade.key.BRACKETRIGHT)  # (a bigger brush: the ] key, Stage 20B)
         d.drag(d.screen((18.0, 6.0, 0.0)), d.screen((18.0, 6.0, 0.0)), steps=10)
-        d.frame(2)
+        d.advance(2)
         d.picture(out / "studio_2_sculpted.png")
         report["sculpt_click_ms"] = [round(v, 1) for v in view.timings["sculpt_ms"]]
         for _ in range(5):
@@ -559,13 +559,13 @@ def studio(out: Path) -> dict[str, Any]:
     d = hd2d_studio_demo.StudioDriver(project)
     try:
         d.button("Hills")
-        d.frame(3)
+        d.advance(3)
         report["reopened_same"] = heights(d.studio) == expected
         d.key(d.arcade.key.F4)
-        d.frame(20)
+        d.advance(20)
         report["play"] = {"mode": d.studio.mode, "sculpted_ground": d.renderer.terrain is not None if d.renderer else None}
         d.key(d.arcade.key.F4)
-        d.frame(3)
+        d.advance(3)
         report["after_stop"] = d.studio.mode
     finally:
         d.close()

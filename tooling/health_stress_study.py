@@ -179,7 +179,7 @@ def studio(project: Path) -> dict[str, Any]:
         t0 = time.perf_counter()
         s._reload()
         row["room_open_ms"] = round((time.perf_counter() - t0) * 1000, 1)
-        d.frame(5)
+        d.advance(5)
         d.button("Scatter")
         m20c._look_at(d, SIDE / 2, SIDE / 2, 18.0)
         m20b.RELEASES.clear()
@@ -196,9 +196,9 @@ def studio(project: Path) -> dict[str, Any]:
         counts, memory = [], []
         for _ in range(5):
             d.key(k.F4)  # Play
-            d.frame(20)
+            d.advance(20)
             d.key(k.F4)  # Stop
-            d.frame(5)
+            d.advance(5)
             d.window.ctx.gc()
             counts.append(_gl_counts(d.window.ctx))
             memory.append(process_mb())

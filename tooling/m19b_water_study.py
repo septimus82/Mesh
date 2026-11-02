@@ -23,6 +23,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tooling"))
 import hd2d_visual_study as study  # noqa: E402
 import m19_water_study as m19  # noqa: E402
+import review_media  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame, _gl_counts  # noqa: E402
 
 PX = 32.0
@@ -210,8 +211,7 @@ def pan(out: Path) -> dict[str, Any]:
             at_moment(game, 2.0 + i / 15)
             x = 22.5 + 4.0 * i / 47
             frames.append(m18.crop_at(shot_at(game, x, 18.6), study.SIZE[0] / 2, study.SIZE[1] / 2, (640, 360)))
-        frames[0].save(out / "pond_pan.webp", save_all=True, append_images=frames[1:], duration=66, loop=0,
-                       quality=88, method=6)
+        review_media.save_clip(frames, out / "pond_pan.webp", duration=66, quality=88, method=6)
         at_moment(game, 3.0)
         bodies = game.window.water_bodies
         kept = [b.water for b in bodies]
@@ -385,7 +385,7 @@ def studio_workflow(out: Path) -> dict[str, Any]:
         d.button("Water")
         at = d.screen(spot)
         d.window.dispatch_event("on_mouse_motion", *at, 0, 0)
-        d.frame()
+        d.advance()
         d.click(*at)
         wid = studio.selected
 
@@ -432,11 +432,11 @@ def studio_workflow(out: Path) -> dict[str, Any]:
     try:
         report["reopened_same"] = ops.water_of(ops.find_entity(d.studio.project.scene(), wid)) == report["expected"]
         d.key(d.arcade.key.F4)
-        d.frame(20)
+        d.advance(20)
         report["in_play"] = {"mode": d.studio.mode, "water_surfaces": len(getattr(d.window, "water_bodies", [])),
                              "reflections": d.renderer.settings.water_reflections if d.renderer else None}
         d.key(d.arcade.key.F4)
-        d.frame(3)
+        d.advance(3)
         report["after_stop_mode"] = d.studio.mode
     finally:
         d.close()
@@ -604,19 +604,19 @@ def lifecycle(out: Path) -> dict[str, Any]:
         pond = next(e["id"] for e in ops.entities(driver.studio.project.scene()) if e.get("name") == "Natural Pond")
         for i in range(10):
             driver.studio._edit(lambda s, i=i: ops.set_water(s, pond, rotation=10 * i, seed=i + 1), "")
-            driver.frame(2)
+            driver.advance(2)
         rows["after_10_edits"] = driver.gl_counts()
         for mode in ("half", "sky", "full"):
             driver.studio._edit(lambda s, mode=mode: ops.set_water_reflections(s, mode), "")
-            driver.frame(2)
+            driver.advance(2)
         rows["after_3_reflection_changes"] = driver.gl_counts()
         f4 = driver.arcade.key.F4
         for cycles in (5, 5):  # the first Play makes the game's own objects once (as in Stage 19A): then level
             for _ in range(cycles):
                 driver.key(f4)
-                driver.frame(10)
+                driver.advance(10)
                 driver.key(f4)
-                driver.frame(3)
+                driver.advance(3)
             rows["after_5_play_stop" if "after_5_play_stop" not in rows else "after_10_play_stop"] = driver.gl_counts()
         report["studio"] = rows
     finally:

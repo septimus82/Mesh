@@ -80,19 +80,19 @@ def _ctrl(d: Any, symbol: int) -> None:
     k = d.arcade.key
     d.window.dispatch_event("on_key_press", symbol, k.MOD_CTRL)
     d.window.dispatch_event("on_key_release", symbol, k.MOD_CTRL)
-    d.frame()
+    d.advance()
 
 
 def _type_only(d: Any, key: str, text: str) -> None:
     """Click the field, select what is in it and type: no Enter, the field stays focused."""
-    d.frame()  # (laid out: a panel just rebuilt has its fields at 0, 0 until drawn)
+    d.advance()  # (laid out: a panel just rebuilt has its fields at 0, 0 until drawn)
     field = d.studio._focusable[key]
     r = field.rect
     assert field.parent is not None and r.bottom > 0, f"the field {key!r} isn't on screen ({r})"
     d.click(r.left + r.width / 2, r.bottom + r.height / 2)
     _ctrl(d, d.arcade.key.A)
     d.window.dispatch_event("on_text", text)
-    d.frame()
+    d.advance()
 
 
 def _state(d: Any, key: str | None = None) -> dict[str, Any]:
@@ -128,12 +128,12 @@ def _press_left(d: Any, text: str) -> None:
                     return
             before = getattr(d.studio, "left_scroll", None)
             d.window.dispatch_event("on_mouse_scroll", LEFT_X, d.window.height / 2, 0, direction)
-            d.frame()
+            d.advance()
             if getattr(d.studio, "left_scroll", None) == before:
                 break
     # (Milestone 23A: in another category of tools) the categories in turn, as a person would
     if d._scroll_panels(lambda: any(w.text == text and w.rect.bottom >= 0 for w in _left_buttons(d))):
-        d.frame()
+        d.advance()
         w = next(w for w in _left_buttons(d) if w.text == text and w.rect.bottom >= 0)
         d.click(w.rect.left + w.rect.width / 2, w.rect.bottom + w.rect.height / 2)
         return
@@ -170,14 +170,14 @@ def ctrl_s(out: Path) -> dict[str, Any]:
         typed["project_saves_on_ctrl_s"] = len(saves)
         report["camera"] = {"typed": typed, "after_ctrl_s": _state(d, "cam_pitch"), "view_before": view_before,
                             "on_disk_pitch": _room_file(project, "meadow")["settings"]["hd2d"]["camera"]["pitch"]}
-        d.frame(20)  # time for any held key to move the view
+        d.advance(20)  # time for any held key to move the view
         report["camera"]["view_after_frames"] = _state(d)["view"]
         # a sound emitter (set up through Studio's own edit path), then its inspector field
         d.studio._edit(lambda s: ops.paste_entity(s, "meadow", {"name": "Brook"}, 640.0, 480.0)[0], "A brook.")
         brook = next(e["id"] for e in ops.entities(d.studio.project.scene()) if e.get("name") == "Brook")
         d.studio._edit(lambda s: ops.set_sound_emitter(s, brook, volume=0.8), "A sound.")
         d.studio.select(brook)
-        d.frame(2)
+        d.advance(2)
         d.button("Save")
         report["brook_saved"] = _on_disk(project, brook)
         _type_only(d, "sound_volume", "35")
@@ -190,7 +190,7 @@ def ctrl_s(out: Path) -> dict[str, Any]:
         report["invalid"] = {"after_ctrl_s": _state(d, "sound_volume"), "on_disk": _on_disk(project, brook)}
         d.window.dispatch_event("on_key_press", k.ESCAPE, 0)
         d.window.dispatch_event("on_key_release", k.ESCAPE, 0)
-        d.frame()
+        d.advance()
         report["after_escape"] = _state(d, "sound_volume")
         _ctrl(d, k.S)
         report["saved_after_escape"] = {"state": _state(d, "sound_volume"), "on_disk": _on_disk(project, brook)}
@@ -212,7 +212,7 @@ def ctrl_s(out: Path) -> dict[str, Any]:
 def _resize(d: Any, w: int, h: int) -> None:
     d.window.set_size(w, h)
     d.window.dispatch_event("on_resize", w, h)
-    d.frame(3)
+    d.advance(3)
 
 
 def left(out: Path) -> dict[str, Any]:
@@ -241,14 +241,14 @@ def left(out: Path) -> dict[str, Any]:
                 entry["clicked_below_the_window"] = (armed or {}).get("id") if isinstance(armed, dict) else armed
                 d.window.dispatch_event("on_key_press", d.arcade.key.ESCAPE, 0)
                 d.window.dispatch_event("on_key_release", d.arcade.key.ESCAPE, 0)
-                d.frame()
+                d.advance()
             entry["last_object_in_ui_before_scrolling"] = d.has_button(last)
             d.click(LEFT_X, -20)  # below the window, where it would be if it were laid out there
             armed = d.studio.place_prefab
             entry["click_below_the_window_armed"] = (armed or {}).get("id") if isinstance(armed, dict) else armed
             view, right = _state(d)["view"], d.studio.panel_scroll
             d.window.dispatch_event("on_mouse_scroll", LEFT_X, d.window.height / 2, 0, -3)
-            d.frame()
+            d.advance()
             entry["wheel_over_left"] = {"left_scroll": getattr(d.studio, "left_scroll", None),
                                         "view_unchanged": _state(d)["view"] == view,
                                         "right_scroll_unchanged": d.studio.panel_scroll == right}
@@ -259,7 +259,7 @@ def left(out: Path) -> dict[str, Any]:
                 d.picture(pics / f"left_{name}_scrolled.png")
                 d.window.dispatch_event("on_key_press", d.arcade.key.ESCAPE, 0)
                 d.window.dispatch_event("on_key_release", d.arcade.key.ESCAPE, 0)
-                d.frame()
+                d.advance()
             except AssertionError as err:
                 entry["reached_last_object"] = f"not reachable: {err}"
             report[name] = entry
@@ -277,7 +277,7 @@ def _tooltip_check(d: Any) -> dict[str, Any]:
         return next((w for w in d.studio.ui.walk_widgets() if getattr(w, "text", None) == "Turn left"), None)
 
     assert d._scroll_panels(turn_left), "Turn left"
-    d.frame()
+    d.advance()
     r = turn_left().rect
     at = (r.left + r.width / 2, r.bottom + r.height / 2)
     shown = d.studio.hd2d.tooltip(*at)
@@ -286,7 +286,7 @@ def _tooltip_check(d: Any) -> dict[str, Any]:
             if turn_left() is None:
                 break
             d.window.dispatch_event("on_mouse_scroll", LEFT_X, d.window.height / 2, 0, step)
-            d.frame()
+            d.advance()
     return {"over_it": shown, "scrolled_out": turn_left() is None, "over_where_it_was": d.studio.hd2d.tooltip(*at)}
 
 
@@ -296,29 +296,29 @@ def _palette_check(d: Any) -> dict[str, Any]:
     while d.studio.tilesets[d.studio.sheet]["name"] != "Tall":
         d.button(d.studio.tilesets[d.studio.sheet]["name"], prefix=True)  # the tileset button: the next tileset
     assert d._scroll_panels(lambda: d.studio._sheet_space is not None), "the palette"
-    d.frame()
+    d.advance()
     tileset, _px, cols, rows = d.studio._sheet_geometry()
     space = d.studio._sheet_space.rect
     before = (list(d.studio.sheet_scroll), d.studio.left_scroll)
     d.window.dispatch_event("on_mouse_scroll", space.left + 10, space.top - 10, 0, -1)
-    d.frame()
+    d.advance()
     over_palette = (list(d.studio.sheet_scroll), d.studio.left_scroll)
     d._click_text("Objects")  # (Milestone 23A: the panel's own scrolling, where its rows don't all fit: the objects)
     d.window.dispatch_event("on_mouse_scroll", LEFT_X, d.window.height / 2, 0, -1)
-    d.frame()
+    d.advance()
     return {"palette_rows": [rows, tileset["rows"]], "before": before, "wheel_over_palette": over_palette,
             "wheel_over_rooms": (list(d.studio.sheet_scroll), d.studio.left_scroll)}
 
 
 def _put_back(d: Any, key: str) -> None:
     """Click the box and press Esc: a refused value put back."""
-    d.frame()
+    d.advance()
     field = d.studio._focusable[key]
     r = field.rect
     d.click(r.left + r.width / 2, r.bottom + r.height / 2)
     d.window.dispatch_event("on_key_press", d.arcade.key.ESCAPE, 0)
     d.window.dispatch_event("on_key_release", d.arcade.key.ESCAPE, 0)
-    d.frame()
+    d.advance()
 
 
 def _click_object(d: Any, entity_id: str) -> None:
@@ -374,7 +374,7 @@ def navigation(out: Path) -> dict[str, Any]:
         d.button("Save")
         for leave in ("another object", "another panel", "another room", "undo"):
             _click_object(d, a)
-            d.frame(2)
+            d.advance(2)
             before = {"selected": d.studio.selected}
             _type_only(d, "name", BLANK)
             if leave == "another object":
@@ -387,7 +387,7 @@ def navigation(out: Path) -> dict[str, Any]:
                 d.studio._edit(lambda s: ops.rename_entity(s, a, "Renamed"), "Renamed.")  # (something to undo)
                 _type_only(d, "name", BLANK)
                 d.button("Undo")
-            d.frame(2)
+            d.advance(2)
             left = _scale_typed(d)
             d.button("Save")
             report[leave] = {"before": before, "after": left, "save": _scale_typed(d)}
@@ -401,10 +401,10 @@ def navigation(out: Path) -> dict[str, Any]:
                 d.button("Lighting")  # (toggles back)
         # a valid value waiting, then another object: taken, and Studio goes there as before
         _click_object(d, a)
-        d.frame(2)
+        d.advance(2)
         _type_only(d, "name", "Guide Two")
         _click_object(d, b)
-        d.frame(2)
+        d.advance(2)
         report["valid_then_another_object"] = {**_scale_typed(d),
                                                "name_of_first": ops.find_entity(d.studio.project.scene(), a).get("name")}
     finally:

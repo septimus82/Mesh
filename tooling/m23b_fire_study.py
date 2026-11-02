@@ -391,18 +391,18 @@ def studio(out: Path) -> dict[str, Any]:
     try:
         key = next(k for k, _l, path in d.studio.project.rooms() if path.endswith("hills.json"))
         d.button(d.studio.project.label(key))  # (the Rooms list)
-        d.frame(3)
+        d.advance(3)
         report["room"] = d.studio.project.current
         import m20c_material_study as m20c
 
         m20c._look_at(d, FIRE[0], FIRE[1] + 1.0, 18.0)
         d.studio.set_left_tab("objects")
-        d.frame()
+        d.advance()
         report["objects_list_has_campfire"] = d.has_button("Campfire")
         d.button("Campfire")
         ground = d.renderer.ground_height(FIRE[0] * PX, FIRE[1] * PX) / PX
         d.click(*d.screen((FIRE[0], FIRE[1], ground)))
-        d.frame(3)
+        d.advance(3)
         eid = d.studio.selected
         report["placed"] = ops.campfire_of(d.studio._entity(eid) or {})
         report["editing_preview"] = state(d)
@@ -414,20 +414,20 @@ def studio(out: Path) -> dict[str, Any]:
         d.button("Smoke: Off")
         d.button("Crackle sound...")
         d.button("Forest or meadow  (forest_loop.wav)")
-        d.frame(3)
+        d.advance(3)
         report["edited"] = ops.campfire_of(d.studio._entity(eid) or {})
         d.picture(out / "studio_02_edited.png")
         d.button("Burning: On")
-        d.frame(3)
+        d.advance(3)
         report["put_out"] = {**state(d), "settings": ops.campfire_of(d.studio._entity(eid) or {}),
                              "crackle_enabled": ((d.studio._entity(eid) or {}).get("behaviour_config") or {})
                              .get("SoundEmitter", {}).get("enabled")}
         d.picture(out / "studio_03_put_out.png")
         d.button("Burning: Off")
-        d.frame(3)
+        d.advance(3)
         report["lit_again"] = state(d)
         d.key(d.arcade.key.S, d.arcade.key.MOD_CTRL)
-        d.frame()
+        d.advance()
         report["saved_message"] = d.studio.message
     finally:
         d.close()
@@ -438,7 +438,7 @@ def studio(out: Path) -> dict[str, Any]:
     try:
         key = next(k for k, _l, path in d.studio.project.rooms() if path.endswith("hills.json"))
         d.button(d.studio.project.label(key))  # (the Rooms list)
-        d.frame(3)
+        d.advance(3)
         import m20c_material_study as m20c
 
         m20c._look_at(d, FIRE[0], FIRE[1] + 1.0, 18.0)
@@ -449,7 +449,7 @@ def studio(out: Path) -> dict[str, Any]:
         cycles = []
         for _ in range(3):
             d.key(k.F4)
-            d.frame(20)
+            d.advance(20)
             hd = d.window.hd2d_renderer
             cycles.append({"mode": d.studio.mode, "campfires": len(d.window.campfires),
                            "lamps": len(hd.lighting.extra_lamps), "fire_draws": hd.fire_sprites.draw_calls,
@@ -457,7 +457,7 @@ def studio(out: Path) -> dict[str, Any]:
             if len(cycles) == 1:
                 d.picture(out / "studio_05_play.png")
             d.key(k.F4)
-            d.frame(5)
+            d.advance(5)
             cycles[-1]["stopped"] = d.studio.mode
         report["play_stop"] = cycles
     finally:
@@ -614,9 +614,9 @@ def edges(out: Path) -> dict[str, Any]:
     try:
         key = next(k for k, _l, path in d.studio.project.rooms() if path.endswith("hills.json"))
         d.button(d.studio.project.label(key))
-        d.frame(3)
+        d.advance(3)
         d.studio.select(next(e["id"] for e in d.studio.project.scene()["entities"] if ops.campfire_of(e)))
-        d.frame(3)
+        d.advance(3)
         hd = d.studio.hd2d.renderer
         report["eight_lamps"] = {"room_lamps": len(hd.lighting.lamps), "fire_lamps_made": len(hd.lighting.extra_lamps),
                                  "note": next((t for t in d.texts() if "lights it can show" in t), "")}

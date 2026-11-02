@@ -47,7 +47,7 @@ class StudioDriver:
         assert studio is not None, "a Studio project"
         self.studio = studio
         self.arcade = self.game.arcade
-        self.frame()
+        self.advance()
 
     @property
     def renderer(self) -> Any:
@@ -59,13 +59,17 @@ class StudioDriver:
     def window(self) -> Any:
         return self.game.window
 
-    def frame(self, n: int = 1) -> Any:
-        image = None
+    def advance(self, n: int = 1) -> None:
+        """``n`` frames, each updated and drawn, without reading the picture back (#422 GPU lane: a read-back is a
+        full-window copy and a GPU sync, wasted where nothing looks at it)."""
         for _ in range(n):
             self.window.dispatch_event("on_update", 1 / 60)
             self.window.dispatch_event("on_draw")
-        image = self.arcade.get_image(0, 0, *self.window.get_framebuffer_size())
-        return image
+
+    def frame(self, n: int = 1) -> Any:
+        """``advance(n)``, then the picture drawn, read back from the window: for whatever looks at it."""
+        self.advance(n)
+        return self.arcade.get_image(0, 0, *self.window.get_framebuffer_size())
 
     def picture(self, path: Path) -> None:
         self.frame().convert("RGB").save(path)
@@ -74,14 +78,14 @@ class StudioDriver:
     def key(self, symbol: int, modifiers: int = 0) -> None:
         self.window.dispatch_event("on_key_press", symbol, modifiers)
         self.window.dispatch_event("on_key_release", symbol, modifiers)
-        self.frame()
+        self.advance()
 
     def click(self, x: float, y: float, button: int | None = None) -> None:
         button = self.arcade.MOUSE_BUTTON_LEFT if button is None else button
         self.window.dispatch_event("on_mouse_motion", x, y, 0, 0)
         self.window.dispatch_event("on_mouse_press", x, y, button, 0)
         self.window.dispatch_event("on_mouse_release", x, y, button, 0)
-        self.frame()
+        self.advance()
 
     def drag(self, start: tuple[float, float], end: tuple[float, float], steps: int = 12,
              button: int | None = None) -> None:
@@ -93,9 +97,9 @@ class StudioDriver:
             p = (start[0] + (end[0] - start[0]) * i / steps, start[1] + (end[1] - start[1]) * i / steps)
             self.window.dispatch_event("on_mouse_drag", p[0], p[1], p[0] - last[0], p[1] - last[1], button, 0)
             last = p
-            self.frame()
+            self.advance()
         self.window.dispatch_event("on_mouse_release", *end, button, 0)
-        self.frame()
+        self.advance()
 
     def _scroll_panels(self, found: Any) -> bool:
         """Look for something in Mesh Studio's panels as a person would until ``found()``: scroll the right panel
@@ -111,7 +115,7 @@ class StudioDriver:
             tab = self._left_tab_button(title)
             if tab is None:
                 break
-            self.frame()
+            self.advance()
             r = tab.rect
             self.click(r.left + r.width / 2, r.bottom + r.height / 2)
             if self._scroll_both(found):
@@ -130,7 +134,7 @@ class StudioDriver:
                        and hasattr(w, "on_click")), None)
         if widget is None:
             return False
-        self.frame()
+        self.advance()
         r = widget.rect
         self.click(r.left + r.width / 2, r.bottom + r.height / 2)
         return True
@@ -145,7 +149,7 @@ class StudioDriver:
                     if not more()[side]:
                         break
                     self.window.dispatch_event("on_mouse_scroll", x, self.window.height / 2, 0, step)
-                    self.frame()
+                    self.advance()
         return bool(found())
 
     def button(self, text: str, *, prefix: bool = False) -> None:
@@ -160,7 +164,7 @@ class StudioDriver:
 
         if not self._scroll_panels(find):
             raise AssertionError(f"no button '{text}' on screen")
-        self.frame()  # (laid out where it is now)
+        self.advance()  # (laid out where it is now)
         r = find().rect
         self.click(r.left + r.width / 2, r.bottom + r.height / 2)
 
@@ -172,7 +176,7 @@ class StudioDriver:
                             and getattr(self.studio._focusable[key], "parent", None) is not None)
         field = self.studio._focusable[key]
         assert getattr(field, "parent", None) is not None, f"the field '{key}' isn't on screen"
-        self.frame()
+        self.advance()
         r = field.rect
         self.click(r.left + r.width / 2, r.bottom + r.height / 2)
         self.window.dispatch_event("on_key_press", k.A, k.MOD_CTRL)
@@ -342,7 +346,7 @@ def check(project: Path, out: Path) -> dict[str, Any]:
                        and getattr(getattr(o, "_glo", None), "value", 1) not in (None, 0)]
         report["edit_renderer_objects"] = {"held_before_play": len(edit_objects), "still_alive_after_stop": still_alive}
         d.key(k.F4)  # a second round: what a first Play sets up once is there now; nothing may grow
-        d.frame(5)
+        d.advance(5)
         d.key(k.F4)
         gl_back2 = d.gl_counts()
         step("stop", mode=studio.mode, active=view.active, gl_objects_after_edit_play_edit=gl_back,
@@ -378,7 +382,7 @@ def check(project: Path, out: Path) -> dict[str, Any]:
         refused = studio.ai.stage_proposal_payload({"changes": [
             {"op": "place_structure", "model": "assets/models/missing.glb", "x": 100, "y": 100}]})
         studio.open_ai()
-        d.frame()
+        d.advance()
         d.button("Accept")
         accepted = {"copy": d.structure(new_id or ""), "third": [dict(s) for s in ops_structures(studio)][-1],
                     "selected_structure": view.structure, "warning": studio.message if not studio.message_ok else None,
@@ -389,7 +393,7 @@ def check(project: Path, out: Path) -> dict[str, Any]:
 
         # the view's costs
         for _ in range(60):
-            d.frame()
+            d.advance()
         t = time.perf_counter()
         for _ in range(20):
             d.click(*d.screen((cx, cy, 2.0)))  # the moved platform's top
@@ -408,7 +412,7 @@ def check(project: Path, out: Path) -> dict[str, Any]:
         for _ in range(3):
             d.key(k.Z, ctrl)
         t = time.perf_counter()
-        d.frame()
+        d.frame()  # (timed: the frame as it was measured, read-back included)
         frame_ms = (time.perf_counter() - t) * 1000
         times = view.timings
         report["performance"] = {

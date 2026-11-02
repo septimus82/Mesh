@@ -41,11 +41,11 @@ def _drag_rows(d: Any, rows: list[float], x0: float = 12.0, x1: float = 28.0, *,
             p = (a[0] + (b[0] - a[0]) * i / 24, a[1] + (b[1] - a[1]) * i / 24)
             d.window.dispatch_event("on_mouse_drag", p[0], p[1], p[0] - last[0], p[1] - last[1], left, 0)
             last = p
-            d.frame()
+            d.advance()
     d.window.dispatch_event("on_mouse_release", *last, left, 0)
     if held is not None:
         d.window.dispatch_event("on_key_release", held, 0)
-    d.frame()
+    d.advance()
 
 
 def _step(d: Any, undo_before: int, rows_before: int) -> dict[str, Any]:

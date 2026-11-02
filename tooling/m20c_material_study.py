@@ -31,6 +31,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tooling"))
 import hd2d_visual_study as study  # noqa: E402
 import m20a_terrain_study as m20a  # noqa: E402
+import review_media  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame  # noqa: E402
 
 PX = 32.0
@@ -154,7 +155,7 @@ def _look_at(d: Any, x: float, y: float, distance: float = 16.0) -> None:
     """Studio's view on (x, y) m from ``distance`` m: where a creator would pan and zoom to before painting there."""
     camera = d.studio.hd2d.camera
     camera.target, camera.distance = (x, y, 0.0), distance
-    d.frame(2)
+    d.advance(2)
 
 
 def studio(out: Path) -> dict[str, Any]:
@@ -205,8 +206,7 @@ def studio(out: Path) -> dict[str, Any]:
                                                  .get("materials", {})),
                             "message": s.message}
         if clip:
-            clip[0].save(out / "paint_stroke.webp", save_all=True, append_images=clip[1:], duration=100, loop=0,
-                         quality=80, method=6)
+            review_media.save_clip(clip, out / "paint_stroke.webp", duration=100, quality=80, method=6)
         d.picture(out / "paint_after.png")
         # undo and redo the whole stroke; save; reopen (below)
         d.key(k.Z, k.MOD_CTRL)
@@ -229,7 +229,7 @@ def studio(out: Path) -> dict[str, Any]:
         moved = _whole(view.renderer.terrain.paint, view.renderer.terrain) != saved
         d.key(k.ESCAPE)
         d.window.dispatch_event("on_mouse_release", *d.screen((19.5, 9.5, 0.0)), d.arcade.MOUSE_BUTTON_LEFT, 0)
-        d.frame()
+        d.advance()
         report["escape"] = {"stroke_had_painted": moved, **unchanged(), "message": s.message}
         # Play (F4) mid-stroke, then Stop
         m20b._stroke(d, _on_ground(d, mid), release=False)
@@ -237,15 +237,15 @@ def studio(out: Path) -> dict[str, Any]:
         played = s.mode
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
         d.key(k.F4)
-        d.frame(3)
+        d.advance(3)
         report["play_mid_stroke"] = {"mode": played, "after_stop": s.mode, **unchanged()}
         # a room change mid-stroke
         m20b._stroke(d, _on_ground(d, mid), release=False)
         d.button("Village")
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
-        d.frame(2)
+        d.advance(2)
         d.button("Hills")
-        d.frame(2)
+        d.advance(2)
         if view.sculpt is None:
             d.button("Paint")
         _look_at(d, 12.0, 6.0, 30.0)
@@ -265,19 +265,19 @@ def studio(out: Path) -> dict[str, Any]:
                 s_ = d.screen(p)
                 d.window.dispatch_event("on_mouse_drag", s_[0], s_[1], s_[0] - last[0], s_[1] - last[1],
                                         d.arcade.MOUSE_BUTTON_LEFT, 0)
-                d.frame()
+                d.advance()
                 last = s_
         finally:
             renderer.update_paint = original
-        d.frame(2)
+        d.advance(2)
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
-        d.frame(2)
+        d.advance(2)
         report["refused_upload"] = {**unchanged(), "message": s.message}
         # focus lost mid-stroke (Alt+Tab): the stroke ends there, as one undo step, and paints no more
         m20b._stroke(d, _on_ground(d, mid), release=False)
         d.window.dispatch_event("on_deactivate")
         held = _paint(s.project)
-        d.frame(20)
+        d.advance(20)
         report["focus_lost_mid_stroke"] = {"stroke_ended": view.stroke is None,
                                            "undo_steps_added": len(s.project._undo) - undo_n,
                                            "paints_no_more": _paint(s.project) == held and _whole(
@@ -325,7 +325,7 @@ def studio(out: Path) -> dict[str, Any]:
         ring = [(bx + br * 0.75 * math.cos(a / 16 * math.tau), by + br * 0.7 * math.sin(a / 16 * math.tau))
                 for a in range(17)]
         m20b._stroke(d, _on_ground(d, ring))
-        d.frame(2)
+        d.advance(2)
         d.picture(out / "studio_painted_pond.png")
         _look_at(d, 16.0, 11.0, 34.0)
         d.picture(out / "studio_painted.png")
@@ -371,7 +371,7 @@ def first_paint_on_flat(out: Path) -> dict[str, Any]:
     try:
         s, view, k = d.studio, d.studio.hd2d, d.arcade.key
         d.button("Village")
-        d.frame(3)
+        d.advance(3)
 
         def terrain_key() -> Any:
             return ((s.project.scene().get("settings") or {}).get("hd2d") or {}).get("ground", {}).get("terrain")
@@ -389,7 +389,7 @@ def first_paint_on_flat(out: Path) -> dict[str, Any]:
         m20b._stroke(d, _on_ground(d, [(14.0, 13.0), (18.0, 13.5)]), release=False)
         d.key(k.ESCAPE)
         d.window.dispatch_event("on_mouse_release", 600, 300, d.arcade.MOUSE_BUTTON_LEFT, 0)
-        d.frame(2)
+        d.advance(2)
         report["escape_back_to_plain_ground"] = terrain_key() is None and view.renderer.terrain is None
     finally:
         d.close()
@@ -499,7 +499,7 @@ def scale(out: Path) -> dict[str, Any]:
                 idle = []
                 for _ in range(20):
                     t1 = time.perf_counter()
-                    d.frame()
+                    d.frame()  # (timed: the frame as it was measured, read-back included)
                     idle.append((time.perf_counter() - t1) * 1000)
                 row["studio_idle_frame_ms"] = m20b._stats(idle)
                 # the widest brush (16 m) held still for 3 s, then let go: what it costs live, and the release
@@ -521,7 +521,7 @@ def scale(out: Path) -> dict[str, Any]:
                     end = time.perf_counter() + 3.0
                     while time.perf_counter() < end:
                         t2 = time.perf_counter()
-                        d.frame()
+                        d.frame()  # (timed: the frame as it was measured, read-back included)
                         held.append((time.perf_counter() - t2) * 1000)
 
                 m20b._stroke(d, [point, point], hold=None, each=lambda i: hold())
