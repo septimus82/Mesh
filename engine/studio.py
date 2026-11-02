@@ -1094,22 +1094,21 @@ class Studio(InspectorMixin, SoundMixin):
         editing only, and never over the person's work in progress: a question on screen, a drag or a stroke, or a
         box whose text isn't committed (it is neither committed for them nor lost). Nothing is saved."""
         if self.mode == "play":
-            return {"ok": True, "status": "already_playing", "playtest": runtime_debug._playtest_view(self.playtest)}
+            return {"ok": True, "status": "already_playing", "playtest": runtime_debug.playtest_view(self.playtest)}
         busy = self._busy_for_ai()
         if busy:
             return {"ok": False, "reason": "studio_busy", "message": busy + " Nothing was started; try again once "
                                                                           "the person has finished."}
         self.play(by="ai")
-        return {"ok": True, "status": "playing", "playtest": runtime_debug._playtest_view(self.playtest),
+        return {"ok": True, "status": "playing", "playtest": runtime_debug.playtest_view(self.playtest),
                 "room": self.project.current}
 
     def ai_stop_playtest(self) -> dict[str, Any]:
         """D1: an AI asks to stop the play-test: Stop (F4), back to the edited rooms as they were."""
         if self.mode != "play":
-            last = self.last_playtest
-            return {"ok": True, "status": "not_playing", "last_playtest": runtime_debug._playtest_view(last) if last else None}
+            return {"ok": True, "status": "not_playing", "last_playtest": runtime_debug.playtest_view(self.last_playtest)}
         self.stop()
-        return {"ok": True, "status": "stopped", "playtest": runtime_debug._playtest_view(self.last_playtest or {}),
+        return {"ok": True, "status": "stopped", "playtest": runtime_debug.playtest_view(self.last_playtest),
                 "editing": {"room": self.project.current, "unsaved_changes": self.project.is_dirty,
                             "revision": self.project.revision}}
 

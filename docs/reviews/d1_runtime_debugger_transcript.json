@@ -15,7 +15,7 @@
     "revision": 0,
     "unsaved_changes": false
    },
-   "time": 1793603738.735
+   "time": 1793605744.873
   },
   "tool": "debug_runtime_snapshot"
  },
@@ -43,9 +43,9 @@
   "response": {
    "ok": true,
    "playtest": {
-    "id": "2e7e8ebc44c0",
+    "id": "ca6ecf2a7972",
     "number": 1,
-    "started_at": 1793603740.113,
+    "started_at": 1793605746.287,
     "started_by": "ai",
     "stopped_at": null
    },
@@ -59,9 +59,9 @@
   "response": {
    "ok": true,
    "playtest": {
-    "id": "2e7e8ebc44c0",
+    "id": "ca6ecf2a7972",
     "number": 1,
-    "started_at": 1793603740.113,
+    "started_at": 1793605746.287,
     "started_by": "ai",
     "stopped_at": null
    },
@@ -108,20 +108,22 @@
     "y": 128.0
    },
    "playtest": {
-    "id": "2e7e8ebc44c0",
+    "id": "ca6ecf2a7972",
     "number": 1,
-    "started_at": 1793603740.113,
+    "started_at": 1793605746.287,
     "started_by": "ai",
     "stopped_at": null
    },
    "quests": {
     "available": true,
     "defined": 1,
+    "listed": 1,
     "quests": [
      {
       "auto_start": true,
       "awaiting_stage": null,
       "completed_stages": [],
+      "completed_stages_total": 0,
       "current_stage": null,
       "id": "light_the_lantern",
       "status": "inactive",
@@ -147,7 +149,7 @@
     "revision": 1,
     "unsaved_changes": true
    },
-   "time": 1793603741.433
+   "time": 1793605747.697
   },
   "tool": "debug_runtime_snapshot"
  },
@@ -175,7 +177,7 @@
       },
       "scene": null,
       "seq": 2,
-      "time": 1793603742.056,
+      "time": 1793605748.331,
       "type": "dialogue_started"
      },
      {
@@ -192,7 +194,7 @@
       },
       "scene": null,
       "seq": 3,
-      "time": 1793603742.056,
+      "time": 1793605748.331,
       "type": "dialogue_line"
      },
      {
@@ -208,7 +210,7 @@
       },
       "scene": null,
       "seq": 4,
-      "time": 1793603742.218,
+      "time": 1793605748.489,
       "type": "dialogue_choice"
      },
      {
@@ -225,7 +227,7 @@
       },
       "scene": null,
       "seq": 5,
-      "time": 1793603742.218,
+      "time": 1793605748.489,
       "type": "dialogue_line"
      },
      {
@@ -238,7 +240,7 @@
       },
       "scene": null,
       "seq": 6,
-      "time": 1793603742.285,
+      "time": 1793605748.561,
       "type": "dialogue_finished"
      }
     ],
@@ -272,20 +274,22 @@
     "y": 128.0
    },
    "playtest": {
-    "id": "2e7e8ebc44c0",
+    "id": "ca6ecf2a7972",
     "number": 1,
-    "started_at": 1793603740.113,
+    "started_at": 1793605746.287,
     "started_by": "ai",
     "stopped_at": null
    },
    "quests": {
     "available": true,
     "defined": 1,
+    "listed": 1,
     "quests": [
      {
       "auto_start": true,
       "awaiting_stage": null,
       "completed_stages": [],
+      "completed_stages_total": 0,
       "current_stage": null,
       "id": "light_the_lantern",
       "status": "inactive",
@@ -311,7 +315,7 @@
     "revision": 1,
     "unsaved_changes": true
    },
-   "time": 1793603742.438
+   "time": 1793605748.727
   },
   "tool": "debug_runtime_snapshot"
  },
@@ -339,7 +343,7 @@
       },
       "scene": null,
       "seq": 2,
-      "time": 1793603742.056,
+      "time": 1793605748.331,
       "type": "dialogue_started"
      },
      {
@@ -356,7 +360,7 @@
       },
       "scene": null,
       "seq": 3,
-      "time": 1793603742.056,
+      "time": 1793605748.331,
       "type": "dialogue_line"
      },
      {
@@ -372,7 +376,7 @@
       },
       "scene": null,
       "seq": 4,
-      "time": 1793603742.218,
+      "time": 1793605748.489,
       "type": "dialogue_choice"
      },
      {
@@ -389,7 +393,7 @@
       },
       "scene": null,
       "seq": 5,
-      "time": 1793603742.218,
+      "time": 1793605748.489,
       "type": "dialogue_line"
      },
      {
@@ -402,7 +406,7 @@
       },
       "scene": null,
       "seq": 6,
-      "time": 1793603742.285,
+      "time": 1793605748.561,
       "type": "dialogue_finished"
      },
      {
@@ -416,7 +420,7 @@
       },
       "scene": null,
       "seq": 7,
-      "time": 1793603742.503,
+      "time": 1793605748.796,
       "type": "scene_transition"
      }
     ],
@@ -450,20 +454,22 @@
     "y": 128.0
    },
    "playtest": {
-    "id": "2e7e8ebc44c0",
+    "id": "ca6ecf2a7972",
     "number": 1,
-    "started_at": 1793603740.113,
+    "started_at": 1793605746.287,
     "started_by": "ai",
     "stopped_at": null
    },
    "quests": {
     "available": true,
     "defined": 1,
+    "listed": 1,
     "quests": [
      {
       "auto_start": true,
       "awaiting_stage": null,
       "completed_stages": [],
+      "completed_stages_total": 0,
       "current_stage": null,
       "id": "light_the_lantern",
       "status": "inactive",
@@ -489,7 +495,7 @@
     "revision": 1,
     "unsaved_changes": true
    },
-   "time": 1793603742.711
+   "time": 1793605749.017
   },
   "tool": "debug_runtime_snapshot"
  },
@@ -503,11 +509,11 @@
    },
    "ok": true,
    "playtest": {
-    "id": "2e7e8ebc44c0",
+    "id": "ca6ecf2a7972",
     "number": 1,
-    "started_at": 1793603740.113,
+    "started_at": 1793605746.287,
     "started_by": "ai",
-    "stopped_at": 1793603742.726
+    "stopped_at": 1793605749.034
    },
    "status": "stopped"
   },
@@ -517,11 +523,11 @@
   "arguments": {},
   "response": {
    "last_playtest": {
-    "id": "2e7e8ebc44c0",
+    "id": "ca6ecf2a7972",
     "number": 1,
-    "started_at": 1793603740.113,
+    "started_at": 1793605746.287,
     "started_by": "ai",
-    "stopped_at": 1793603742.726
+    "stopped_at": 1793605749.034
    },
    "ok": true,
    "status": "not_playing"
@@ -532,11 +538,11 @@
   "arguments": {},
   "response": {
    "last_playtest": {
-    "id": "2e7e8ebc44c0",
+    "id": "ca6ecf2a7972",
     "number": 1,
-    "started_at": 1793603740.113,
+    "started_at": 1793605746.287,
     "started_by": "ai",
-    "stopped_at": 1793603742.726
+    "stopped_at": 1793605749.034
    },
    "message": "Mesh Studio is editing, not play-testing: no game is running to inspect. debug_start_playtest starts one (if the person allowed it), or ask the person to press Play (F4).",
    "mode": "live_studio",
@@ -550,7 +556,7 @@
     "revision": 1,
     "unsaved_changes": true
    },
-   "time": 1793603743.016
+   "time": 1793605749.343
   },
   "tool": "debug_runtime_snapshot"
  },

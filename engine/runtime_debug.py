@@ -14,8 +14,15 @@ open (the room being edited, unsaved changes), which play-testing never changes.
 reads ``{"available": false, "reason": ...}``, never an empty success.
 
 Every value is made plain JSON (``plain``): numbers, text, lists and objects, bounded in depth, length and count;
-anything else (a sprite in an event, say) is named by its entity or type, never written out. The bridge's token, the
-project's absolute folder and files' contents are never part of a snapshot.
+anything else (a sprite in an event, say) is named by its entity or type, never written out. An absolute filesystem
+path inside any text (a Windows drive or UNC path, a POSIX path, a file:// URL) is never passed on: one inside the
+project becomes project-relative, any other becomes ``<path>/`` and its file name (``scrub_paths``). The bridge's
+token and files' contents are never part of a snapshot.
+
+A whole snapshot, as sent, is at most ``BYTES_MAX`` bytes (``_fit``). Beyond that, parts are left out in a fixed
+order, least useful first, each replaced by ``{"omitted": "size_limit", "count": N}`` (never by an empty value, which
+would read as "there is none") and named in ``truncated``; the oldest events go before the newest. If even that
+can't fit, the answer is a refusal, ``snapshot_too_large``, never a larger snapshot.
 
 The other half, at the bottom, is what the MCP tools call: ``request_snapshot``, ``request_play`` and
 ``request_stop`` find the Mesh Studio that has the project open (the same verified session proposals use, and the
@@ -27,7 +34,9 @@ from __future__ import annotations
 import json
 import math
 import numbers
+import re
 import time
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
@@ -40,13 +49,48 @@ TEXT_MAX = 200  # characters of any one text
 ITEMS_MAX = 100  # entries of any one list or object (flags and counters: FLAGS_MAX)
 FLAGS_MAX = 200
 DEPTH_MAX = 4
-BYTES_MAX = 200_000  # a whole snapshot, as JSON
+QUESTS_MAX = 100
+STAGES_MAX = 50  # completed stages listed per quest (``completed_stages_total`` counts them all)
+BYTES_MAX = 200_000  # a whole snapshot, as sent (JSON, sorted keys, UTF-8)
+EVENTS_KEPT = 10  # the newest events, left out for size only after quests, flags and counters
+
+# An absolute path inside text: file:// URLs; Windows drive and UNC paths (to their last separator, spaces included,
+# then the file name); POSIX paths of two or more parts starting a word (not "and/or", "3/5", "/help" or a web URL).
+_ABSOLUTE_PATH = re.compile(r"""
+    file://[^\s"'<>]*
+  | (?<![A-Za-z0-9])[A-Za-z]:[\\/](?:[^"'<>|*?\r\n]*[\\/])?[^\s"'<>|*?\\/]*
+  | (?<![\w\\])\\\\[^\s\\/"'<>|]+[\\/](?:[^"'<>|*?\r\n]*[\\/])?[^\s"'<>|*?\\/]*
+  | (?<![\w.~:/\\-])/[^\s/\\"'<>|]+/(?:[^"'<>|\r\n]*/)?[^\s/"'<>|]*
+""", re.VERBOSE)
+_ROOTS: ContextVar[tuple[str, ...]] = ContextVar("runtime_debug_roots", default=())  # the project's folder, as text
+
+
+def scrub_paths(text: str, roots: tuple[str, ...] | None = None) -> str:
+    """``text`` with every absolute filesystem path in it replaced: one inside a folder of ``roots`` (default: the
+    project being read) by its path relative to that folder, any other by ``<path>/`` and its file name."""
+    if "/" not in text and "\\" not in text:
+        return text
+    folders = [r.replace("\\", "/").rstrip("/").lower() for r in (_ROOTS.get() if roots is None else roots) if r]
+
+    def replace(found: re.Match[str]) -> str:
+        bare = re.sub(r"^file://", "", found.group(0)).replace("\\", "/")
+        for folder in folders:
+            at = bare.lower().find(folder + "/")
+            if at in (0, 1):  # ("/C:/..." from a file:/// URL)
+                return bare[at + len(folder) + 1:]
+        name = "" if bare.endswith("/") else bare.rsplit("/", 1)[-1]
+        return "<path>/" + name if name else "<path>"
+
+    return _ABSOLUTE_PATH.sub(replace, text)
 
 
 def plain(value: Any, depth: int = 0, items: int = ITEMS_MAX) -> Any:
     """``value`` as bounded plain JSON: deterministic (object keys sorted), never raising, never repr-ing objects."""
-    if value is None or isinstance(value, (bool, str)):
-        return value if not isinstance(value, str) or len(value) <= TEXT_MAX else value[:TEXT_MAX] + "..."
+    if value is None or isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        text = scrub_paths(value)
+        return text if len(text) <= TEXT_MAX else text[:TEXT_MAX] + "..."
     if isinstance(value, numbers.Integral):
         return int(value)
     if isinstance(value, numbers.Real):
@@ -56,7 +100,7 @@ def plain(value: Any, depth: int = 0, items: int = ITEMS_MAX) -> Any:
         if depth >= DEPTH_MAX:
             return {"...": f"{len(value)} entries"}
         keys = sorted(value, key=str)
-        out = {str(key)[:TEXT_MAX]: plain(value[key], depth + 1) for key in keys[:items]}
+        out = {scrub_paths(str(key))[:TEXT_MAX]: plain(value[key], depth + 1) for key in keys[:items]}
         if len(keys) > items:
             out["..."] = f"{len(keys) - items} more"
         return out
@@ -70,7 +114,7 @@ def plain(value: Any, depth: int = 0, items: int = ITEMS_MAX) -> Any:
         return out_list
     name = getattr(value, "mesh_name", None) or getattr(value, "mesh_id", None)
     if isinstance(name, str) and name:
-        return {"entity": name[:TEXT_MAX]}
+        return {"entity": scrub_paths(name)[:TEXT_MAX]}
     return f"<{type(value).__name__}>"
 
 
@@ -149,18 +193,20 @@ def _quests(window: Any) -> Doc:
     records = values.get("quests") if isinstance(values, dict) else None
     records = records if isinstance(records, dict) else {}  # (read as it is: never created here)
     quests = []
-    for quest_id, quest in list(definitions.items())[:ITEMS_MAX]:
+    for quest_id, quest in list(definitions.items())[:QUESTS_MAX]:
         record = records.get(quest_id)
         record = record if isinstance(record, dict) else {}
+        done = record.get("completed_stages")
+        done = list(done) if isinstance(done, list) else []
         stages = quest.get("stages") if isinstance(quest, dict) else None
         quests.append({"id": plain(quest_id), "title": plain(quest.get("title") if isinstance(quest, dict) else None),
                        "auto_start": bool(quest.get("auto_start")) if isinstance(quest, dict) else False,
                        "status": plain(record.get("status", "inactive")),
                        "current_stage": plain(record.get("current_stage")),
                        "awaiting_stage": plain(record.get("awaiting_stage")),
-                       "completed_stages": plain(list(record.get("completed_stages") or [])),
+                       "completed_stages": plain(done[:STAGES_MAX]), "completed_stages_total": len(done),
                        "total_stages": len(stages) if isinstance(stages, list) else None})
-    return {"available": True, "quests": quests, "defined": len(definitions)}
+    return {"available": True, "quests": quests, "defined": len(definitions), "listed": len(quests)}
 
 
 def _events(window: Any, since: int | None, limit: int) -> Doc:
@@ -221,25 +267,103 @@ def snapshot(studio: Any, *, sequence: int, events: int = EVENTS_DEFAULT) -> Doc
     playtest = getattr(studio, "playtest", None)
     if studio.mode != "play" or not isinstance(playtest, dict):
         last = getattr(studio, "last_playtest", None)
-        out.update(status="not_playing", last_playtest=_playtest_view(last) if isinstance(last, dict) else None,
+        out.update(status="not_playing", last_playtest=playtest_view(last if isinstance(last, dict) else None),
                    message="Mesh Studio is editing, not play-testing: no game is running to inspect. "
                            "debug_start_playtest starts one (if the person allowed it), or ask the person to press "
                            "Play (F4).")
         return out
     window = studio.window
-    out.update(status="playing", playtest=_playtest_view(playtest), scene=_scene(window, project),
-               player=_player(window), game_state=_game_state(window), quests=_quests(window),
-               events=_events(window, playtest.get("events_before"), limit), diagnostics=_diagnostics(playtest))
-    if len(json.dumps(out)) > BYTES_MAX:  # (each part is bounded; together they still may not be)
-        for item in out["events"].get("items", []):
-            item["payload"] = "..."
-        if out["game_state"].get("available"):
-            out["game_state"]["values"] = "..."
-        out["truncated"] = True
-    return out
+    root = getattr(project, "root", None)
+    token = _ROOTS.set((str(Path(root).resolve()), str(root)) if root else ())
+    try:
+        out.update(status="playing", playtest=playtest_view(playtest), scene=_scene(window, project),
+                   player=_player(window), game_state=_game_state(window), quests=_quests(window),
+                   events=_events(window, playtest.get("events_before"), limit), diagnostics=_diagnostics(playtest))
+    finally:
+        _ROOTS.reset(token)
+    return _fit(out)
 
 
-def _playtest_view(playtest: Doc) -> Doc:
+def _size(doc: Doc) -> int:
+    """Bytes of ``doc`` as the bridge sends it."""
+    return len(json.dumps(doc, sort_keys=True).encode("utf-8"))
+
+
+def _entries(value: Any) -> int:
+    """How many entries ``value`` (from ``plain``) stands for, counting those its "... N more" left out."""
+    if isinstance(value, dict):
+        more = re.match(r"(\d+) more$", str(value.get("...", "")))
+        return len(value) - 1 + int(more.group(1)) if more else len(value)
+    if isinstance(value, list):
+        more = re.match(r"\.\.\. (\d+) more$", str(value[-1])) if value else None
+        return len(value) - 1 + int(more.group(1)) if more else len(value)
+    return 1
+
+
+def _omitted(value: Any, total: int | None = None) -> Doc:
+    """What stands in for a part left out for size: that it was, and how many entries it has (never an empty value)."""
+    return {"omitted": "size_limit", "count": _entries(value) if total is None else total}
+
+
+def _fit(out: Doc) -> Doc:
+    """``out`` within BYTES_MAX: the parts least useful to debugging left out first, until it fits."""
+    if _size(out) <= BYTES_MAX:
+        return out
+    events, state, quests, diagnostics = out["events"], out["game_state"], out["quests"], out["diagnostics"]
+
+    def payloads() -> bool:
+        full = [item for item in events.get("items", []) if item["payload"]]
+        for item in full:
+            item["payload"] = _omitted(item["payload"])
+        return bool(full)
+
+    def stages() -> bool:
+        full = [quest for quest in quests.get("quests", []) if quest["completed_stages"]]
+        for quest in full:
+            quest["completed_stages"] = _omitted(quest["completed_stages"], quest["completed_stages_total"])
+        return bool(full)
+
+    def oldest_events(keep: int) -> Any:
+        def leave_out() -> bool:
+            items: list[Doc] = events.get("items", [])
+            left: int = events.get("items_left_out", 0)
+            before = left
+            while len(items) > keep and _size(out) > BYTES_MAX:
+                items.pop(0)  # (the newest stay, in order)
+                left += 1
+                events["items_left_out"] = left
+            return left > before
+        return leave_out
+
+    def part(holder: Doc, key: str, total: str = "") -> Any:
+        def leave_out() -> bool:
+            if not holder.get(key):  # (an unavailable part has none; an empty one stays empty: there is none)
+                return False
+            holder[key] = _omitted(holder[key], holder.get(total) if total else None)
+            return True
+        return leave_out
+
+    steps = [("events.items[].payload", payloads), ("game_state.values", part(state, "values")),
+             ("quests.quests[].completed_stages", stages), ("diagnostics.items", part(diagnostics, "items", "sites")),
+             (f"events.items (oldest first, to the newest {EVENTS_KEPT})", oldest_events(EVENTS_KEPT)),
+             ("quests.quests", part(quests, "quests", "defined")), ("game_state.flags", part(state, "flags")),
+             ("game_state.counters", part(state, "counters")), ("events.items (oldest first)", oldest_events(0))]
+    left_out: list[str] = []
+    for name, step in steps:
+        if step():
+            left_out.append(name)
+            out["truncated"] = {"limit_bytes": BYTES_MAX, "omitted": list(left_out)}
+        if _size(out) <= BYTES_MAX:
+            return out
+    return {"ok": False, "mode": "live_studio", "reason": "snapshot_too_large", "status": out["status"],
+            "sequence": out["sequence"], "limit_bytes": BYTES_MAX,
+            "message": "The play-test's state doesn't fit in a snapshot even with its details left out."}
+
+
+def playtest_view(playtest: Doc | None) -> Doc | None:
+    """What a play-test record (``Studio.playtest``, ``last_playtest``) says about itself; None when there is none."""
+    if playtest is None:
+        return None
     return {key: playtest.get(key) for key in ("id", "number", "started_at", "started_by", "stopped_at")}
 
 

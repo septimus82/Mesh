@@ -117,8 +117,9 @@ def run(out: Path, *, keep: bool = False) -> dict[str, Any]:
                 d.advance()
                 frames += 1
                 assert frames < 600, f"{tool} didn't come back"
-            transcript.append({"tool": tool, "arguments": arguments, "response": box["answer"]})
-            return box["answer"]
+            answer: dict[str, Any] = box["answer"]
+            transcript.append({"tool": tool, "arguments": arguments, "response": answer})
+            return answer
 
         files_before = _files(project)
         home = studio.project.current

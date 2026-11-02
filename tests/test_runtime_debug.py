@@ -161,9 +161,9 @@ def test_while_playing_it_reads_the_running_game(studio: _Studio) -> None:
     assert state["values"] == {"gold": 7} and "variables" not in state  # (one mapping; quests under "quests")
     assert out["quests"]["quests"] == [
         {"id": "help", "title": "Help the Guide", "auto_start": False, "status": "active", "current_stage": "cellar", "awaiting_stage": None,
-         "completed_stages": ["agree"], "total_stages": 2},
+         "completed_stages": ["agree"], "completed_stages_total": 1, "total_stages": 2},
         {"id": "later", "title": "Later", "auto_start": False, "status": "inactive", "current_stage": None, "awaiting_stage": None,
-         "completed_stages": [], "total_stages": 1}]
+         "completed_stages": [], "completed_stages_total": 0, "total_stages": 1}]
     events = out["events"]
     assert [(e["seq"], e["type"], e["entity"]) for e in events["items"]] == [(2, "dialogue_choice", "Guide"),
                                                                             (3, "quest_stage_completed", None)]
@@ -239,7 +239,107 @@ def test_values_are_bounded_plain_json(studio: _Studio) -> None:
         studio.window.event_bus.emit("big", blob=["x" * 199] * 100, n=i)
     snap = _snap(studio, events=50)
     assert len(snap["game_state"]["flags"]) == runtime_debug.FLAGS_MAX + 1  # (and "...": how many more)
-    assert len(json.dumps(snap)) <= runtime_debug.BYTES_MAX and snap["truncated"] is True
+    assert _sent(snap) <= runtime_debug.BYTES_MAX
+    assert snap["truncated"] == {"limit_bytes": runtime_debug.BYTES_MAX, "omitted": ["events.items[].payload"]}
+    assert snap["events"]["items"][0]["payload"] == {"omitted": "size_limit", "count": 2}
+
+
+def _sent(snap: dict[str, Any]) -> int:
+    """A snapshot's size as the bridge sends it."""
+    return len(json.dumps(snap, sort_keys=True).encode("utf-8"))
+
+
+def test_an_oversized_play_test_is_cut_to_the_ceiling_in_a_fixed_order(studio: _Studio) -> None:
+    window = studio.window
+    window.quest_manager._definitions = {f"q{i:03}": {"id": f"q{i:03}", "title": "T" * 150,
+                                                      "stages": [{"id": "s"}] * 3} for i in range(150)}
+    studio.begin()
+    state = window.game_state_controller.state
+    state.values["quests"] = {f"q{i:03}": {"status": "active", "current_stage": "s", "awaiting_stage": None,
+                                           "completed_stages": [f"stage_{j:04}_" + "x" * 180 for j in range(400)]}
+                              for i in range(150)}
+    state.values["q000_none"] = None
+    state.values.update({f"value_{i:03}": "v" * 190 for i in range(150)})
+    state.flags.update({f"flag_{i:04}_" + "f" * 150: True for i in range(400)})
+    for i in range(50):
+        window.event_bus.emit("big", blob=["x" * 199] * 100, n=i)
+    snap = _snap(studio, events=50)
+    assert _sent(snap) <= runtime_debug.BYTES_MAX  # (truncation metadata included)
+    omitted = snap["truncated"]["omitted"]
+    order = ["events.items[].payload", "game_state.values", "quests.quests[].completed_stages", "diagnostics.items",
+             "events.items (oldest first, to the newest 10)", "quests.quests", "game_state.flags", "game_state.counters",
+             "events.items (oldest first)"]
+    assert omitted == [step for step in order if step in omitted] and omitted[:3] == order[:3]
+    quests = snap["quests"]
+    assert quests["defined"] == 150 and quests["listed"] == runtime_debug.QUESTS_MAX
+    listed = quests["quests"] if isinstance(quests["quests"], list) else []
+    for quest in listed:  # (left out, and how many: never an empty list that would read as "none done")
+        assert quest["completed_stages"] == {"omitted": "size_limit", "count": 400}
+        assert quest["completed_stages_total"] == 400
+    events = snap["events"]
+    seqs = [e["seq"] for e in events["items"]]
+    assert seqs == sorted(seqs) and (not seqs or seqs[-1] == events["last_seq"])  # (in order; the newest kept)
+    assert len(seqs) + events.get("items_left_out", 0) == 50
+    assert snap["game_state"]["values"] == {"omitted": "size_limit", "count": 151}  # (all of them, not those listed)
+    again = _snap(studio, events=50)
+    assert {k: v for k, v in again.items() if k not in ("sequence", "time")} == {
+        k: v for k, v in snap.items() if k not in ("sequence", "time")}  # (deterministic)
+
+
+def test_an_empty_part_stays_empty_when_others_are_cut(studio: _Studio) -> None:
+    studio.begin()
+    window = studio.window
+    window.game_state_controller.state.values["quests"] = {"help": {"status": "active", "completed_stages": []}}
+    for i in range(50):
+        window.event_bus.emit("big", blob=["x" * 199] * 100, n=i)
+    snap = _snap(studio, events=50)
+    assert snap["truncated"]["omitted"] == ["events.items[].payload"]
+    assert snap["game_state"]["values"] == {} and snap["game_state"]["flags"] == {}  # (none: not left out)
+    assert snap["quests"]["quests"][0]["completed_stages"] == []
+
+
+def test_a_snapshot_that_cannot_fit_is_refused_not_sent_larger(studio: _Studio,
+                                                              monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(runtime_debug, "BYTES_MAX", 600)
+    studio.begin()
+    snap = _snap(studio)
+    assert snap["ok"] is False and snap["reason"] == "snapshot_too_large" and snap["limit_bytes"] == 600
+    assert _sent(snap) <= 600
+
+
+PATHS = {
+    "windows": "C:\\Users\\ann\\AppData\\Local\\Mesh\\save1.json",
+    "windows_spaces": "Failed: C:\\Users\\Ann Lee\\My Games\\slot.sav (locked)",
+    "unc": "\\\\fileserver\\share\\mesh\\log.txt",
+    "posix": "/home/runner/work/Mesh/packs/x.json",
+    "posix_in_text": "wrote /Users/ann/Library/Mesh/x.sav, ok",
+    "url": "file:///var/tmp/mesh/crash.dmp",
+}
+
+
+def test_absolute_paths_never_leave_in_values_and_payloads(studio: _Studio, root: Path) -> None:
+    nested = {"deep": [{"where": PATHS["windows"]}, (PATHS["posix"],)], PATHS["unc"]: "a key that is a path"}
+    out = runtime_debug.plain({**PATHS, "nested": nested})
+    said = json.dumps(out)
+    for secret in ("ann", "Ann Lee", "fileserver", "runner", "AppData", "/var/tmp"):
+        assert secret not in said, (secret, said)
+    assert out["windows"] == "<path>/save1.json" and out["windows_spaces"] == "Failed: <path>/slot.sav (locked)"
+    assert out["unc"] == "<path>/log.txt" and out["posix"] == "<path>/x.json" and out["url"] == "<path>/crash.dmp"
+    assert out["posix_in_text"] == "wrote <path>/x.sav, ok" and "<path>/log.txt" in out["nested"]
+    kept = ["The cellar door is just north of here.", "and/or 3/5 HP, type /help", "agreed_to_help", "dialogue::Guide",
+            "packs/core_regions/scenes/start.json", "https://example.com/a/b", "start_player_128_128_0_0"]
+    assert runtime_debug.plain(kept) == kept
+    # In a snapshot: a path inside the project becomes project-relative; any other is hidden.
+    studio.begin()
+    inside = str((root / ROOM).resolve())
+    studio.window.game_state_controller.state.values["last_file"] = inside
+    studio.window.event_bus.emit("saved", file=PATHS["windows"], scene_file=inside, note=PATHS["posix_in_text"])
+    snap = _snap(studio)
+    payload = snap["events"]["items"][0]["payload"]
+    assert payload == {"file": "<path>/save1.json", "note": "wrote <path>/x.sav, ok", "scene_file": ROOM}
+    assert snap["game_state"]["values"]["last_file"] == ROOM
+    sent = json.dumps(snap)
+    assert str(root.resolve()) not in sent and json.dumps(str(root.resolve()))[1:-1] not in sent
 
 
 def test_the_count_of_events_asked_for_is_bounded() -> None:
@@ -362,3 +462,27 @@ def test_starting_play_never_saves_or_changes_the_project(root: Path, live: _Stu
     tools.debug_stop_playtest(root=str(root))
     assert live.project.is_dirty and live.project.revision == revision
     assert {p: p.read_bytes() for p in root.rglob("*.json") if ".mesh" not in p.parts} == on_disk
+
+
+@pytest.mark.parametrize("limit", [60_000, 25_000, 8_000, 3_000])
+def test_every_step_keeps_the_limit_and_the_newest_events_in_order(studio: _Studio, monkeypatch: pytest.MonkeyPatch,
+                                                                    limit: int) -> None:
+    monkeypatch.setattr(runtime_debug, "BYTES_MAX", limit)
+    window = studio.window
+    window.quest_manager._definitions = {f"q{i:03}": {"id": f"q{i:03}", "title": "T" * 150, "stages": []}
+                                         for i in range(120)}
+    studio.begin()
+    window.game_state_controller.state.flags.update({f"flag_{i:04}_" + "f" * 150: True for i in range(300)})
+    for i in range(50):
+        window.event_bus.emit("tick_" + "e" * 150, n=i)
+    snap = _snap(studio, events=50)
+    assert _sent(snap) <= limit
+    if snap["ok"] is False:
+        assert snap["reason"] == "snapshot_too_large"
+        return
+    seqs = [e["seq"] for e in snap["events"]["items"]]
+    assert seqs == list(range(snap["events"]["last_seq"] - len(seqs) + 1, snap["events"]["last_seq"] + 1))
+    assert len(seqs) + snap["events"].get("items_left_out", 0) == 50
+    assert snap["truncated"]["limit_bytes"] == limit
+    if limit >= 8_000:  # (the newest events outlast the quest list and the flags)
+        assert len(seqs) == runtime_debug.EVENTS_KEPT and "quests.quests" in snap["truncated"]["omitted"]

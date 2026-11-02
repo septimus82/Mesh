@@ -45,7 +45,7 @@ When there is no Studio to ask, the tools refuse the same way the other Studio t
 | `scene` | `path` (relative to the project) and `room` (`key`, `label`) of the room that is running. `room` is `null` for a scene that isn't one of the project's rooms. |
 | `player` | `id`, `name` and `tag`, and `x`, `y` in pixels: the actual sprite, found the way the game finds its player. |
 | `game_state` | `flags`, `counters`, `values` (the game's variables; `GameState` keeps `values` and `variables` as one mapping), `chapter` and `playtime_seconds`. |
-| `quests` | Each defined quest: `status`, `current_stage`, `awaiting_stage`, `completed_stages`, `total_stages` and `auto_start`. These come from the quest records the game keeps. A quest the game hasn't touched reads `inactive`, which is what the quest manager would create. Reading never creates the record. |
+| `quests` | Each defined quest (`defined`; the first 100 are `listed`): `status`, `current_stage`, `awaiting_stage`, `completed_stages` (the first 50) with `completed_stages_total` (all of them), `total_stages` and `auto_start`. These come from the quest records the game keeps. A quest the game hasn't touched reads `inactive`, which is what the quest manager would create. Reading never creates the record. |
 | `events` | This play-test's events, oldest first: `seq`, `type`, `entity`, `scene`, `time` and `payload`. `seq` numbers every event the game has emitted, in order. `made_this_playtest`, `no_longer_kept` (the game keeps its last 50) and `last_seq` let you see what happened between two snapshots. `events` (0–50) caps how many are listed. |
 | `diagnostics` | Errors the engine caught and carried on from since the play-test started, newest first: `site`, `count` and `last_seen`. They come from `engine/swallowed_exceptions`, which every catch site counts. The log has the details. |
 | `studio` | What Studio has open, not what the game is doing: `mode` (`editing` or `playing`), `edited_room`, `unsaved_changes`, `revision` and `ai_playtest_control`. Play-testing never changes it. |
@@ -54,11 +54,34 @@ When there is no Studio to ask, the tools refuse the same way the other Studio t
 
 - **Missing systems:** a part the game doesn't have reads `{"available": false, "reason": "..."}`, for example
   `"the running room has no player"`. It never reads as an empty success.
-- **Plain JSON only:** values are bounded in depth (4), text (200 characters), entries (100 per list or object, 200
-  flags or counters) and size (200 KB for the whole snapshot; beyond that, payloads and values become `"..."` and
-  `truncated` is set). An object in an event, such as a sprite, is named by its entity (`"actor": "Player"`) and
-  never written out.
-- **No secrets:** the bridge's token, the project's absolute folder and file contents never appear in a snapshot.
+- **Plain JSON only:** values are bounded in depth (4), text (200 characters) and entries (100 per list or object,
+  200 flags or counters). A list or object cut short ends with `"... N more"`. An object in an event, such as a
+  sprite, is named by its entity (`"actor": "Player"`) and never written out.
+- **200 KB at most, enforced** (`BYTES_MAX`, measured as the bridge sends it, truncation details included).
+  - **When a snapshot is bigger:** parts are left out in a fixed order until it fits:
+    1. event payloads;
+    2. `game_state.values`;
+    3. quests' completed stages;
+    4. diagnostics;
+    5. the oldest events, down to the newest 10;
+    6. the quest list;
+    7. flags;
+    8. counters;
+    9. the last events, oldest first.
+  - **What a left-out part reads:** each becomes `{"omitted": "size_limit", "count": N}`, with the part's real total.
+    It never becomes an empty value, so "left out" can't be mistaken for "there is none"; an empty part stays empty.
+    `truncated` lists the parts left out, and `events.items_left_out` counts the events left out.
+  - **The events that stay** are always the newest, in order.
+  - **If even that can't fit,** the answer is a refusal, `{"ok": false, "reason": "snapshot_too_large",
+    "limit_bytes": ...}`, never a bigger snapshot. The same snapshot is always cut the same way.
+- **No filesystem paths:** an absolute path inside any text (a value, an event payload, an object key, at any
+  depth) is never passed on.
+  - **Which paths:** Windows drive and UNC paths (spaces included), POSIX paths of two or more parts, and `file://`
+    URLs.
+  - **Inside the project:** the path becomes project-relative (`packs/core_regions/scenes/start.json`).
+  - **Anywhere else:** it becomes `<path>/` and its file name (`<path>/save1.json`).
+  - **Left as they are:** dialogue, entity ids, flags, relative paths, web URLs, `and/or`, `3/5` and `/help`.
+- **No secrets:** the bridge's token and file contents never appear in a snapshot.
 
 **Reading changes nothing.** It advances no frame and takes no event off the game's queue. It creates nothing (not
 even a quest record), saves nothing, and leaves Studio's selection and mode alone. The tests compare the whole game
@@ -117,7 +140,7 @@ window keeps running. The responses are verbatim from that run (`docs/reviews/d1
   "revision": 0,
   "unsaved_changes": false
  },
- "time": 1793603738.735
+ "time": 1793605744.873
 }
 ```
 
@@ -156,9 +179,9 @@ changing anything.
 {
  "ok": true,
  "playtest": {
-  "id": "2e7e8ebc44c0",
+  "id": "ca6ecf2a7972",
   "number": 1,
-  "started_at": 1793603740.113,
+  "started_at": 1793605746.287,
   "started_by": "ai",
   "stopped_at": null
  },
@@ -173,9 +196,9 @@ changing anything.
 {
  "ok": true,
  "playtest": {
-  "id": "2e7e8ebc44c0",
+  "id": "ca6ecf2a7972",
   "number": 1,
-  "started_at": 1793603740.113,
+  "started_at": 1793605746.287,
   "started_by": "ai",
   "stopped_at": null
  },
@@ -226,20 +249,22 @@ not to the game.
   "y": 128.0
  },
  "playtest": {
-  "id": "2e7e8ebc44c0",
+  "id": "ca6ecf2a7972",
   "number": 1,
-  "started_at": 1793603740.113,
+  "started_at": 1793605746.287,
   "started_by": "ai",
   "stopped_at": null
  },
  "quests": {
   "available": true,
   "defined": 1,
+  "listed": 1,
   "quests": [
    {
     "auto_start": true,
     "awaiting_stage": null,
     "completed_stages": [],
+    "completed_stages_total": 0,
     "current_stage": null,
     "id": "light_the_lantern",
     "status": "inactive",
@@ -265,7 +290,7 @@ not to the game.
   "revision": 1,
   "unsaved_changes": true
  },
- "time": 1793603741.433
+ "time": 1793605747.697
 }
 ```
 
@@ -295,7 +320,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 2,
-    "time": 1793603742.056,
+    "time": 1793605748.331,
     "type": "dialogue_started"
    },
    {
@@ -312,7 +337,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 3,
-    "time": 1793603742.056,
+    "time": 1793605748.331,
     "type": "dialogue_line"
    },
    {
@@ -328,7 +353,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 4,
-    "time": 1793603742.218,
+    "time": 1793605748.489,
     "type": "dialogue_choice"
    },
    {
@@ -345,7 +370,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 5,
-    "time": 1793603742.218,
+    "time": 1793605748.489,
     "type": "dialogue_line"
    },
    {
@@ -358,7 +383,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
     },
     "scene": null,
     "seq": 6,
-    "time": 1793603742.285,
+    "time": 1793605748.561,
     "type": "dialogue_finished"
    }
   ],
@@ -392,20 +417,22 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
   "y": 128.0
  },
  "playtest": {
-  "id": "2e7e8ebc44c0",
+  "id": "ca6ecf2a7972",
   "number": 1,
-  "started_at": 1793603740.113,
+  "started_at": 1793605746.287,
   "started_by": "ai",
   "stopped_at": null
  },
  "quests": {
   "available": true,
   "defined": 1,
+  "listed": 1,
   "quests": [
    {
     "auto_start": true,
     "awaiting_stage": null,
     "completed_stages": [],
+    "completed_stages_total": 0,
     "current_stage": null,
     "id": "light_the_lantern",
     "status": "inactive",
@@ -431,7 +458,7 @@ talk, Down and E to choose "I'll light it." The next snapshot shows the flag and
   "revision": 1,
   "unsaved_changes": true
  },
- "time": 1793603742.438
+ "time": 1793605748.727
 }
 ```
 
@@ -465,7 +492,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     },
     "scene": null,
     "seq": 2,
-    "time": 1793603742.056,
+    "time": 1793605748.331,
     "type": "dialogue_started"
    },
    {
@@ -482,7 +509,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     },
     "scene": null,
     "seq": 3,
-    "time": 1793603742.056,
+    "time": 1793605748.331,
     "type": "dialogue_line"
    },
    {
@@ -498,7 +525,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     },
     "scene": null,
     "seq": 4,
-    "time": 1793603742.218,
+    "time": 1793605748.489,
     "type": "dialogue_choice"
    },
    {
@@ -515,7 +542,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     },
     "scene": null,
     "seq": 5,
-    "time": 1793603742.218,
+    "time": 1793605748.489,
     "type": "dialogue_line"
    },
    {
@@ -528,7 +555,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     },
     "scene": null,
     "seq": 6,
-    "time": 1793603742.285,
+    "time": 1793605748.561,
     "type": "dialogue_finished"
    },
    {
@@ -542,7 +569,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
     },
     "scene": null,
     "seq": 7,
-    "time": 1793603742.503,
+    "time": 1793605748.796,
     "type": "scene_transition"
    }
   ],
@@ -576,20 +603,22 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
   "y": 128.0
  },
  "playtest": {
-  "id": "2e7e8ebc44c0",
+  "id": "ca6ecf2a7972",
   "number": 1,
-  "started_at": 1793603740.113,
+  "started_at": 1793605746.287,
   "started_by": "ai",
   "stopped_at": null
  },
  "quests": {
   "available": true,
   "defined": 1,
+  "listed": 1,
   "quests": [
    {
     "auto_start": true,
     "awaiting_stage": null,
     "completed_stages": [],
+    "completed_stages_total": 0,
     "current_stage": null,
     "id": "light_the_lantern",
     "status": "inactive",
@@ -615,7 +644,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
   "revision": 1,
   "unsaved_changes": true
  },
- "time": 1793603742.711
+ "time": 1793605749.017
 }
 ```
 
@@ -632,11 +661,11 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
  },
  "ok": true,
  "playtest": {
-  "id": "2e7e8ebc44c0",
+  "id": "ca6ecf2a7972",
   "number": 1,
-  "started_at": 1793603740.113,
+  "started_at": 1793605746.287,
   "started_by": "ai",
-  "stopped_at": 1793603742.726
+  "stopped_at": 1793605749.034
  },
  "status": "stopped"
 }
@@ -647,11 +676,11 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
 ```json
 {
  "last_playtest": {
-  "id": "2e7e8ebc44c0",
+  "id": "ca6ecf2a7972",
   "number": 1,
-  "started_at": 1793603740.113,
+  "started_at": 1793605746.287,
   "started_by": "ai",
-  "stopped_at": 1793603742.726
+  "stopped_at": 1793605749.034
  },
  "ok": true,
  "status": "not_playing"
@@ -663,11 +692,11 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
 ```json
 {
  "last_playtest": {
-  "id": "2e7e8ebc44c0",
+  "id": "ca6ecf2a7972",
   "number": 1,
-  "started_at": 1793603740.113,
+  "started_at": 1793605746.287,
   "started_by": "ai",
-  "stopped_at": 1793603742.726
+  "stopped_at": 1793605749.034
  },
  "message": "Mesh Studio is editing, not play-testing: no game is running to inspect. debug_start_playtest starts one (if the person allowed it), or ask the person to press Play (F4).",
  "mode": "live_studio",
@@ -681,7 +710,7 @@ is the `scene_transition` that took it there, and `studio.edited_room` is still 
   "revision": 1,
   "unsaved_changes": true
  },
- "time": 1793603743.016
+ "time": 1793605749.343
 }
 ```
 
@@ -729,6 +758,9 @@ The quest's state in the snapshot above is accurate. It is a real engine bug, an
   ground position.
 - **Watching means polling:** a snapshot is one moment. To follow a change, compare `events.last_seq` and
   `sequence` between snapshots. There is no subscription.
+- **Path hiding works on text patterns:** it can't recognise a path written without a leading drive, `\\` or `/`,
+  such as a bare `Users\ann\x`. It errs on the side of hiding: in text that also contains a later `/`, a Windows
+  path's match can run on to it and hide the words between.
 - **Reading only:** no breakpoints, stepping or time travel, no changing state, and no keyboard or mouse input
   through MCP.
 
