@@ -264,7 +264,10 @@ def _touch(sprite: Any, actor: Any, transition: Any, flag: Any) -> Doc:
     else:
         overlapping = bool(optional_arcade.arcade.check_for_collision(sprite, actor))
     tag, target = str(getattr(actor, "mesh_tag", "") or ""), transition.target_tag
+    hidden = transition.hidden_by_show_when()
     return {"by_touch": True, "rules": [
+        _cond("shown", not hidden, "Its \"Show when\" is met." if not hidden else
+              "It is hidden by its \"Show when\": walking into it does nothing until it shows."),
         _cond("has_target", bool(transition.target_scene), "It leads somewhere." if transition.target_scene else
               "It leads nowhere (no target scene)."),
         _cond("not_used_up", not (transition.once and transition._triggered), "It isn't used up." if not
@@ -274,9 +277,7 @@ def _touch(sprite: Any, actor: Any, transition: Any, flag: Any) -> Doc:
               f"Only something tagged '{target}' sets it off; the player is tagged '{tag}'.", target_tag=target,
               player_tag=tag),
         _cond("overlapping", overlapping, "The player is in its doorway now." if overlapping else
-              "The player isn't in its doorway: walk into it.")],
-        # (verified: SceneTransition's touch trigger doesn't check "Show when"; a hidden door still works by touch)
-        "checks_show_when": False}
+              "The player isn't in its doorway: walk into it.")]}
 
 
 def diagnose(studio: Any, entity_id: str) -> Doc:
@@ -372,11 +373,6 @@ def _diagnose_playing(out: Doc, studio: Any, window: Any, project: Any, entity_i
         first = fails[0] if fails else None
         out["available"] = first is None  # (now: the player is in its doorway, so the next frame uses it)
         touch["on_contact"] = all(r["code"] == "overlapping" for r in fails)  # (walking into it would use it)
-        hidden = next((c for c in observed if c["code"] == "shown"), None)
-        if touch["on_contact"] and hidden is not None and hidden["ok"] is False:
-            out["notes"] = [{"code": "hidden_but_touch_works", "message": (
-                "It is hidden, yet walking into it still takes the player through: its touch trigger "
-                "(SceneTransition) doesn't check whether it is shown.")}]
     else:
         out["how"] = "interact"
         first = next((c for c in observed if c["ok"] is False), None)
