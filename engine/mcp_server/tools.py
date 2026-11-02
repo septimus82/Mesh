@@ -11,10 +11,11 @@ Three families:
 * **action** tools (the AI's hands): ``create_scene``,
   ``add_entity_from_prefab`` — thin wrappers over :class:`engine.ai_ops.AIOps`.
 * **safety**: ``validate_scene`` so writes can be checked.
-* **runtime debugging** (D1): ``debug_runtime_snapshot`` reads the game running in a
+* **runtime debugging** (D1, D3A): ``debug_runtime_snapshot`` reads the game running in a
   Mesh Studio play-test; ``debug_start_playtest`` / ``debug_stop_playtest`` start and
   stop one, once the person allows it in Studio; ``debug_play_action`` (D2) plays it
-  with the player's own controls, once the person allows that too.
+  with the player's own controls, once the person allows that too; ``debug_interaction``
+  (D3A) explains why the player can or can't use one object.
 * **context**: ``engine_overview`` — instant expertise as a resource.
 
 All functions take a ``root`` base directory (default ``"."``) so they can be
@@ -931,6 +932,23 @@ def debug_runtime_snapshot(events: int = 20, root: str = ".") -> dict[str, Any]:
     from engine import runtime_debug
 
     return runtime_debug.request_snapshot(root, events)
+
+
+def debug_interaction(entity_id: str, root: str = ".") -> dict[str, Any]:
+    """Why the player can or can't use one object in Mesh Studio's running play-test, from the running game.
+
+    ``entity_id``: the object's id (a snapshot's ``nearby`` lists them). Returns ``how`` it is used
+    (``interact`` or ``touch``), ``available``, ``blocking`` (the first condition that fails: ``in_room``,
+    ``flag_gate``, ``shown``, ``behaviours``, ``distance``, ``facing``, ``selection``, or a touch door's own
+    rules), ``observed`` (every condition checked, with its values), ``flags`` (their current values),
+    ``flag_sources`` (where the project sets them: dialogue choices, SetGameStateOnEvent, quest rewards),
+    ``dialogue`` (a conversation's choices and their conditions), ``not_analysed`` (behaviours whose own
+    rules aren't explained) and ``possible_causes`` (hypotheses, kept apart from what was observed).
+    Reading changes nothing and needs no permission.
+    """
+    from engine import runtime_diagnose
+
+    return runtime_diagnose.request(root, entity_id)
 
 
 def debug_start_playtest(root: str = ".") -> dict[str, Any]:

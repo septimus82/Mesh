@@ -258,6 +258,12 @@ class StudioAIHost:
         self._debug_reads += 1
         return runtime_debug.snapshot(self.studio, sequence=self._debug_reads, events=events)
 
+    def debug_interaction(self, entity_id: str) -> Doc:
+        """Why the player can or can't use ``entity_id`` now (``engine.runtime_diagnose``): read only, like a snapshot."""
+        from engine import runtime_diagnose  # noqa: PLC0415
+
+        return runtime_diagnose.diagnose(self.studio, entity_id)
+
     def debug_start_playtest(self) -> Doc:
         return self.studio.ai_start_playtest() if self.playtest_control else self._control_off("start")
 

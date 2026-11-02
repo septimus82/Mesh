@@ -268,6 +268,10 @@ class EditorLiveSessionBridge:
                     action_id = parse_qs(parsed.query).get("id", [""])[0]
                     self._send_json(bridge._enqueue(lambda: bridge.editor.debug_act_status(action_id)))
                     return
+                if path == "/live/debug/interaction" and hasattr(bridge.editor, "debug_interaction"):  # (D3A)
+                    entity_id = parse_qs(parsed.query).get("entity", [""])[0][:200]
+                    self._send_json(bridge._enqueue(lambda: bridge.editor.debug_interaction(entity_id)))
+                    return
                 if path == "/live/debug/snapshot" and hasattr(bridge.editor, "debug_snapshot"):  # (Mesh Studio, D1)
                     events = _count(parse_qs(parsed.query).get("events", [""])[0])
                     self._send_json(bridge._enqueue(lambda: bridge.editor.debug_snapshot(events)))
