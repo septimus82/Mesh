@@ -8,8 +8,8 @@ it, and where the game decides something itself (which object pressing interact 
 - its own flags; hidden by "Show when"; a door used up; a conversation's flags and its choices, a later node's
   choice met but not selectable yet;
 - too far; behind the player; another object chosen instead; available (and the game's own pick agrees);
-- a door used by walking into it: hidden by "Show when" yet still working by touch, usable on contact against
-  usable now, and one set off only by something else (its ``target_tag``);
+- a door used by walking into it: hidden by "Show when", so not set off until it shows (and the game agrees),
+  usable on contact against usable now, and one set off only by something else (its ``target_tag``);
 - a behaviour whose rule isn't analysed;
 - reading changes nothing; answers are bounded; and the way in over MCP, with its refusals.
 """
@@ -235,21 +235,28 @@ def test_too_far_behind_the_player_another_chosen_then_available_as_the_game_pic
 
 # --------------------------------------------------------------------- a door used by walking into it
 
-def test_a_touch_door_hidden_by_show_when_still_works_by_touch_and_says_so(made: Any) -> None:
+def test_a_touch_door_hidden_by_show_when_isnt_set_off_until_it_shows(made: Any, monkeypatch: Any) -> None:
     touch = dict(DOOR, behaviours=["SceneTransition", "ConditionalActivator"])
     touch["behaviour_config"] = {"SceneTransition": {"target_scene": "cellar", "allow_interact": False,
                                                      "trigger_on_touch": True},
                                  "ConditionalActivator": {"require_flags": ["has_key"]}}
-    studio = made(dict(HERO, x=400), touch)  # (well away: the game updates here, and touching would use the door)
+    studio = made(dict(HERO, x=150), touch)  # (standing in its doorway)
+    requested: list[str] = []
+    monkeypatch.setattr(studio.window, "request_scene_change", requested.append)
     studio.window.on_update(1 / 60)
+    assert requested == []  # (the game: hidden, walking into it does nothing)
     out = _diag(studio, "door")
-    assert out["how"] == "touch" and out["available"] is False and out["blocking"]["code"] == "overlapping"
-    assert "walk into it" in out["blocking"]["message"] and out["touch"]["on_contact"] is True
-    assert [n["code"] for n in out["notes"]] == ["hidden_but_touch_works"] and out["touch"]["checks_show_when"] is False
-    _place(studio, 150, 100)  # (in the doorway: the next frame would use it; no frame runs here)
+    assert out["how"] == "touch" and out["available"] is False and out["blocking"]["code"] == "shown"
+    assert out["touch"]["on_contact"] is False and "Show when" in out["blocking"]["message"]
+    studio.window.set_flag("has_key", True)
+    _place(studio, 400, 100)  # (shown now; away from it)
+    away = _diag(studio, "door")
+    assert away["available"] is False and away["blocking"]["code"] == "overlapping" and away["touch"]["on_contact"]
+    _place(studio, 150, 100)  # (in its doorway: the next frame uses it)
     now = _diag(studio, "door")
-    assert now["available"] is True and now["blocking"] is None and now["touch"]["on_contact"] is True
-    assert next(r for r in now["touch"]["rules"] if r["code"] == "overlapping")["ok"] is True
+    assert now["available"] is True and now["blocking"] is None
+    studio.window.on_update(1 / 60)
+    assert requested == ["cellar"]  # (and the game agrees)
 
 
 def test_a_touch_door_for_something_else_isnt_set_off_by_the_player(made: Any) -> None:

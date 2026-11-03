@@ -144,7 +144,7 @@ class SceneTransition(Behaviour):
         return data
 
     def update(self, dt: float) -> None:
-        if not self.trigger_on_touch or self._triggered:
+        if not self.trigger_on_touch or self._triggered or self.hidden_by_show_when():
             return
 
         # Find entities with target_tag
@@ -176,6 +176,14 @@ class SceneTransition(Behaviour):
             if check(self.entity, candidate):
                 self._trigger_transition(reason="collision", actor=candidate)
                 return
+
+    def hidden_by_show_when(self) -> bool:
+        """Whether its "Show when" (a ConditionalActivator on the door) keeps it hidden now, by the flags as they are
+        now: a hidden door isn't there to walk through, as one isn't there to use with the interact key
+        (``engine.interaction``). By the behaviour's name, as ``water.active`` does: a module imported again (the
+        headless import sweep test) registers a new class, which ``isinstance`` against the old one misses."""
+        return any(type(b).__name__ == "ConditionalActivator" and not b._requirements_met()
+                   for b in getattr(self.entity, "mesh_behaviours_runtime", None) or ())
 
     def on_interact(self, window: Any, actor: Any) -> None:  # noqa: D401
         if not self.allow_interact:

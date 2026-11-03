@@ -20,10 +20,9 @@ refusals as the D1 tools.
 | `flags` | The current value of every flag involved. |
 | `flag_sources` | Where the project sets each of those flags, from what is `searched`: dialogue choices' `set_flags` / `clear_flags` and `SetGameStateOnEvent` in every room, and quest rewards. |
 | `dialogue` | For a conversation: `conversation_open`, the node showing (`current_node`), and each choice with `conditions_met` (its flags and `once`, as `Dialogue` checks them) apart from `selectable_now` (also needs its node showing in the open conversation, as the game requires to take it), and the flags it needs. |
-| `touch` | For a touch door: its rules, including `triggered_by` (only something tagged its `target_tag` sets it off, `player` unless authored otherwise) and `overlapping` (the player is in its doorway now), and `on_contact` (every rule but overlapping is met: walking into it would use it). |
+| `touch` | For a touch door: its rules, including `shown` (a door hidden by "Show when" isn't set off by walking into it), `triggered_by` (only something tagged its `target_tag` sets it off, `player` unless authored otherwise) and `overlapping` (the player is in its doorway now), and `on_contact` (every rule but overlapping is met: walking into it would use it). |
 | `not_analysed` | Behaviours that take an interaction by a rule of their own, not explained. |
 | `possible_causes` | Hypotheses, kept apart from what was observed. |
-| `notes` | Facts worth knowing that aren't a failure, e.g. `hidden_but_touch_works`. |
 
 ## Conditions, in the order the engine checks them (`engine/interaction.py`)
 
@@ -308,9 +307,6 @@ before and after.
   history lacks it.
 - **Interaction priority isn't authorable in scenes:** the schema rejects it on entities, and no behaviour sets it. In
   practice selection is decided by facing and distance.
-- **A touch door hidden by "Show when" still works by touch.** Verified on the engine: `SceneTransition`'s touch
-  trigger doesn't check whether the door is shown, while the interact path skips hidden objects. The diagnosis
-  reports this as `hidden_but_touch_works`. It is a gameplay defect, not fixed here.
 - **A choice's `conditions_met` isn't "can be picked now".** Only `selectable_now` is: the game takes a choice only from
   the node showing in an open conversation. Which later node a conversation reaches isn't predicted.
 - **One object at a time, during a play-test only.** While editing, the answer is `not_playing`, with the rooms the
