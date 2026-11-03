@@ -3,8 +3,8 @@
     python tooling/ci_timing_collect.py --branch redesign/visual-editor --runs 30 --out ci_timing
     python tooling/ci_timing_analysis.py --index ci_timing/index.json --durations-dir ci_timing/durations --write-data d.json
 
-Uses the GitHub CLI (``gh``; in Actions with ``GH_TOKEN``). For each completed CI run of ``--branch`` (newest first,
-``--runs`` of them), each ``tests`` job's ``verify_step_durations.json`` is taken from its ``mesh-artifacts-<os>-py3.11``
+Uses the GitHub CLI (``gh``; in Actions with ``GH_TOKEN``). For each completed CI push run of ``--branch`` (newest
+first, ``--runs`` of them), each ``tests`` job's ``verify_step_durations.json`` is taken from its ``mesh-artifacts-<os>-py3.11``
 artifact (kept 7 days). Jobs whose artifact has expired or whose verify-all didn't run are skipped. ``job_s`` is the
 wall time of the OS's ``pytest`` and ``verify`` jobs together (H3 split them; before that, of its ``tests`` job).
 """
@@ -35,8 +35,10 @@ def _seconds(start: str | None, end: str | None) -> int | None:
 def collect(branch: str, runs: int, out: Path) -> list[dict[str, Any]]:
     durations = out / "durations"
     durations.mkdir(parents=True, exist_ok=True)
-    listed = json.loads(_gh("run", "list", "--workflow", "ci.yml", "--branch", branch, "--limit", str(runs * 2),
-                            "--json", "databaseId,event,headSha,createdAt,status") or "[]")
+    # Push runs only (#422): #344's pull-request runs of the same branch leave their jobs out as duplicates of the push
+    # run, so they would fill half the window with runs that have no timings.
+    listed = json.loads(_gh("run", "list", "--workflow", "ci.yml", "--branch", branch, "--event", "push",
+                            "--limit", str(runs * 2), "--json", "databaseId,event,headSha,createdAt,status") or "[]")
     index: list[dict[str, Any]] = []
     for run in [r for r in listed if r["status"] == "completed"][:runs]:
         jobs = json.loads(_gh("run", "view", str(run["databaseId"]), "--json", "jobs") or "{}").get("jobs", [])

@@ -122,7 +122,9 @@ or fewer than its `min_selected`. `.github/workflows/extended.yml` runs the exte
 after every integration merge, nightly (once on main), on demand and on PRs that change the selection policy; its GL is
 Mesa's software renderer, not a physical GPU. A pull request from the integration branch itself (#344) leaves its lanes
 out when `tooling/extended_dedup.py` finds it would test the same tree as that commit's push run, and links the push run
-as the evidence; any doubt runs them. `tests/test_test_lanes_contract.py` fails when a test runs in no lane
+as the evidence; any doubt runs them. Required CI (`ci.yml`) does the same with the same check: #344's duplicate run
+leaves every test job and both `tests (<os>, py3.11)` fan-ins out, and the integration push run is the result that
+counts. `tests/test_test_lanes_contract.py` fails when a test runs in no lane
 (`tests/baselines/never_runs.txt` lists the deliberate exceptions).
 
 Fast vs integration tests (headless contract):

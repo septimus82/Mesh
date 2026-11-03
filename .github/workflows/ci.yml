@@ -12,10 +12,44 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# #422: a pull request from the integration branch itself (#344, into main) whose tested tree is the push-tested head's
+# leaves its jobs out, since the push run of that same commit tests the same tree - only after
+# tooling/extended_dedup.py (shared with extended.yml) has checked that positively, and the push run is linked as the
+# evidence; any doubt, and every job runs. The push run is the result that counts. Each job below that needs `dedup`
+# runs unless the check positively said skip; a skipped check (push, dispatch) or a failed one runs them. Each of
+# those jobs is a matrix job, so a left-out one reports no check name of its own: a job-level `if` is evaluated
+# before the matrix expands, and the job shows as its unexpanded name, never as a skipped `tests (<os>, py3.11)`.
 jobs:
-  arcade3-canary:
-    name: arcade3-canary (required, py3.11)
+  dedup:
+    name: duplicate check (pull request)
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      skip: ${{ steps.decide.outputs.skip }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: tooling
+
+      - name: Would this run only repeat the push run?
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m tooling.extended_dedup --push-branch redesign/visual-editor --workflow ci.yml
+
+  arcade3-canary:
+    name: arcade3-canary (required, py${{ matrix.python }})
+    needs: dedup
+    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11"]
     timeout-minutes: 45
     permissions:
       contents: read
@@ -135,8 +169,13 @@ jobs:
             artifacts/arcade3_canary/**
 
   web-smoke:
-    name: web-smoke (required, py3.11)
+    name: web-smoke (required, py${{ matrix.python }})
+    needs: dedup
+    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11"]
     timeout-minutes: 60
     permissions:
       contents: read
@@ -199,6 +238,8 @@ jobs:
   # collected and ran, and the Windows ``tests`` fan-in refuses unless together they ran every test exactly once.
   pytest:
     name: pytest (${{ matrix.os }}, py${{ matrix.python }}${{ matrix.shard && format(', shard {0}', matrix.shard) || '' }})
+    needs: dedup
+    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}
     permissions:
       contents: read
     runs-on: ${{ matrix.os }}
@@ -272,6 +313,8 @@ jobs:
 
   verify:
     name: verify (${{ matrix.os }}, py${{ matrix.python }})
+    needs: dedup
+    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}
     permissions:
       contents: read
       pull-requests: write
@@ -592,6 +635,8 @@ jobs:
     # software GL) by a Python holding only Mesh's declared dependencies, with the checkout off limits; broken exports
     # must fail. Their frames are uploaded for inspection.
     name: installed (${{ matrix.os }}, py${{ matrix.python }})
+    needs: dedup
+    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}
     permissions:
       contents: read
     runs-on: ${{ matrix.os }}
@@ -645,6 +690,8 @@ jobs:
     # rendering, in hidden GL windows (`python -m tooling.test_tiers acceptance`, a subset of the gpu lane that
     # extended.yml runs whole). The GL is Mesa's software renderer; the lane fails if any of these GL tests can't run.
     name: acceptance (${{ matrix.os }}, py${{ matrix.python }})
+    needs: dedup
+    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}
     permissions:
       contents: read
     runs-on: ${{ matrix.os }}
@@ -692,10 +739,11 @@ jobs:
   tests:
     # The fan-in: one OS's result, green only when its pytest, verify, installed and acceptance jobs all succeeded (failed,
     # cancelled, skipped or missing: red). It always runs once they are done, so it never waits forever, and keeps the check name
-    # reviews and merges have always looked at.
+    # reviews and merges have always looked at. The one exception: a run the duplicate check positively left out (`dedup`),
+    # where there is nothing to fan in and the push run of the same tree is the result.
     name: tests (${{ matrix.os }}, py${{ matrix.python }})
-    needs: [pytest, verify, installed, acceptance]
-    if: ${{ always() }}
+    needs: [dedup, pytest, verify, installed, acceptance]
+    if: ${{ always() && needs.dedup.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

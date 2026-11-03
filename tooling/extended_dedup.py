@@ -1,22 +1,23 @@
-"""Extended's duplicate pull-request run (#422): whether a pull request's Extended lanes would only repeat the push run.
+"""#344's duplicate pull-request runs (#422): whether a pull request's run of a workflow would only repeat its push run.
 
 #344 (``redesign/visual-editor`` into ``main``) is open for good, and ``main`` is an ancestor of the integration
-branch, so every merge started Extended twice on the same tree: the push run and #344's pull-request run (~71 runner
-minutes each, 22 of 22 merges). This decides, for one pull-request run, whether its lanes may be left out: only when
-every one of these holds, each checked positively, and otherwise they run as before.
+branch, so every merge started each workflow twice on the same tree: the push run and #344's pull-request run
+(Extended ~71 runner minutes, 22 of 22 merges; CI ~39, 13 of 13). Both extended.yml and ci.yml ask this, each
+about itself (``--workflow``): for one pull-request run, whether its test jobs may be left out. Only when every one of
+these holds, each checked positively; otherwise they run as before.
 
   1. the pull request comes from this repository, not a fork;
-  2. its head branch is the push-tested integration branch (the one ``on.push`` in extended.yml names);
+  2. its head branch is the push-tested integration branch (the one the workflow's ``on.push`` names);
   3. the commit tested here (the pull request's merge commit, ``GITHUB_SHA``) has the pull request's base and head as
-     its parents, and the same tree as the head: the lanes would test exactly what the push run tests;
+     its parents, and the same tree as the head: the jobs would test exactly what the push run tests;
   4. the base is an ancestor of the head (GitHub's compare: the head is ``ahead`` of it or ``identical``);
-  5. Extended has a push run for that head commit on that branch, and its newest one is queued, running or succeeded.
-     A failed, cancelled or timed-out push run, or none, means the lanes run here.
+  5. the workflow has a push run for that head commit on that branch, and its newest one is queued, running or
+     succeeded. A failed, cancelled or timed-out push run, or none, means the jobs run here.
 
-Any read that fails or answers something unexpected means the lanes run. Leaving them out is not a pass: the summary
+Any read that fails or answers something unexpected means the jobs run. Leaving them out is not a pass: the summary
 says so and links the push run, which is the evidence, and may still be running.
 
-    python3 -m tooling.extended_dedup --push-branch redesign/visual-editor --workflow extended.yml
+    python3 -m tooling.extended_dedup --push-branch redesign/visual-editor --workflow extended.yml   (or ci.yml)
 """
 
 from __future__ import annotations
@@ -51,7 +52,7 @@ def gh_get(path: str, *, run: Callable[..., subprocess.CompletedProcess[str]] = 
 
 def decide(event: Mapping[str, Any], *, repo: str, sha: str, push_branch: str, workflow: str,
            get: Callable[[str], Any]) -> tuple[bool, list[str], dict[str, str]]:
-    """(skip the lanes?, one line per check, the facts the summary shows). The first check that doesn't hold, or a
+    """(skip the test jobs?, one line per check, the facts the summary shows). The first check that doesn't hold, or a
     read that fails or answers something unexpected, decides "run"."""
     lines: list[str] = []
     facts: dict[str, str] = {"tested": sha}
@@ -119,11 +120,11 @@ def decide(event: Mapping[str, Any], *, repo: str, sha: str, push_branch: str, w
 def summary(skip: bool, lines: list[str], facts: Mapping[str, str]) -> str:
     out = ["## Duplicate check (#422)", ""]
     if skip:
-        out += ["**The lanes did NOT run in this pull-request run.** It would test the same tree as the push run "
+        out += ["**The test jobs did NOT run in this pull-request run.** It would test the same tree as the push run "
                 "below, which is the evidence. This is not a test result: the push run may still be running, and "
                 "only its outcome counts.", ""]
     else:
-        out += ["**The lanes run in this pull-request run.**", ""]
+        out += ["**The test jobs run in this pull-request run.**", ""]
     out += [f"- {k}: `{v}`" for k, v in facts.items()]
     out += ["", "```", *lines, "```"]
     return "\n".join(out) + "\n"
