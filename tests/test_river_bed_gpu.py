@@ -145,6 +145,22 @@ def test_the_player_wades_the_ford_stops_at_deep_water_and_crosses_the_bridge(tm
         out = study.walk(game, (middle, study.DEEP_Y, bed), game.arcade.key.D, 150)
         assert out["x"] > study.EAST_BANK_X - 16 and out["deepest"] <= 0.8 + 0.02, ("waded out", out)
 
+        # re-review of c96e3e8: tiny steps (a slow stick, a slow NPC, a fast frame) never ratchet into deep water
+        player = game.player()
+        player.center_x = study.EAST_BANK_X
+        player.center_y = study.DEEP_Y + (player.center_y - player.bottom)
+        player.mesh_entity_data["elevation"] = 0.0
+        solids = getattr(game.window.scene_controller, "solid_sprites", None)
+        for _ in range(1200):  # 0.25 px a step, 300 px west: across the river if nothing stopped it
+            world.move(player, (-0.25, 0.0), solids)
+        assert player.center_x > middle, ("tiny steps stopped at the deep water", player.center_x, middle)
+        from engine.hd2d.world import DEEP_SLACK, elevation_of
+        from engine.physics_runtime import _sprite_to_aabb  # (its feet box, as the world moves it by)
+
+        box = _sprite_to_aabb(player)
+        depth = world.deepest(box.x / 32, box.y / 32, elevation_of(player), box.w / 64, box.h / 64)
+        assert depth <= DEEP + DEEP_SLACK + 1e-9, depth
+
         bridge = study.walk(game, study.DECK, left, 150)
         assert bridge["x"] < 600.0 and abs(bridge["z"] - study.DECK[2]) < 0.05, ("across on the deck", bridge)
         assert bridge["deepest"] == 0.0, "dry on the deck"

@@ -281,3 +281,15 @@ def test_one_broken_river_doesn_t_hide_another_s_water_from_scatter() -> None:
     good = river.RiverIndex(tuple(river.parse_rivers(carved["settings"]["hd2d"]["rivers"][:1])))
     rows = parse_scatter(fresh["settings"]["hd2d"]["scatter"])
     assert rows and not [r for rs in rows.values() for r in rs if good.level_at(r[0] / P, r[1] / P)]
+
+
+def test_a_river_beside_a_carved_one_carves_once() -> None:
+    """Re-review of c96e3e8: sinking measured on the neighbour's lowered bank re-sank at each carve; water already at
+    or under the ground beside it isn't sunk again, so a second carve is refused."""
+    a = [[4.0, 600.0, 96.0, -16.0], [1596.0, 600.0, 96.0, -16.0]]
+    b = [[4.0, 708.0, 96.0, 8.0], [1596.0, 708.0, 96.0, 8.0]]  # 0.375 m apart, bank to bank, drawn over the ground
+    scene = ops.add_river(_scene(a), "b", b)
+    scene = ops.carve_river_bed(scene, "stream", depths=[1.2, 1.2])
+    once = ops.carve_river_bed(scene, "b")
+    with pytest.raises(ops.OpError, match="already carved"):
+        ops.carve_river_bed(once, "b")

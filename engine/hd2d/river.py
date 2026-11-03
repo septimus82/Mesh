@@ -523,9 +523,11 @@ def bed_depths(river: River, depths: Any = None) -> list[float]:
 def sunk(terrain: Any, river: River) -> River:
     """The river with its water lowered, where it stands above the ground beside it (half a metre out from each
     bank, at each control point: the lower side), to SINK_M under that ground; the level still falling downstream
-    (each point no higher than the one before). Water already under the ground beside it is kept as it is, so a
-    carved river (its banks rising from the water) is kept: sinking twice is sinking once. (Studio draws new rivers
-    a little over the ground clicked, so they show before their bed is carved: carved, they lie in it.)"""
+    (each point no higher than the one before). Water at or under the ground beside it is kept as it is, so a
+    carved river (its banks rising from the water) is kept, and so is one sunk already, though carving nearby
+    lowers that ground a little: sinking twice is sinking once. (Studio draws new rivers a little over the ground
+    clicked, so they show before their bed is carved: carved, they lie in it.) Only the control points are
+    measured: between them, on uneven ground, water may still stand over a low bank."""
     rib = ribbon(river)
     levels: list[float] = []
     for i, p in enumerate(river.points):
@@ -533,7 +535,7 @@ def sunk(terrain: Any, river: River) -> River:
         (cx, cy), (tx, ty), out = rib.centre[k], rib.tangent[k], rib.half[k] + 0.5
         grounds = [terrain.height((cx + side * -ty * out) * PX, (cy + side * tx * out) * PX) for side in (1, -1)]
         known = [g for g in grounds if g is not None]
-        level = p[3] if not known else min(p[3], min(known) - SINK_M * PX)
+        level = min(known) - SINK_M * PX if known and p[3] > min(known) else p[3]  # (standing over it: sunk)
         levels.append(min(level, levels[-1]) if levels else level)
     if all(abs(a - p[3]) < 1e-9 for a, p in zip(levels, river.points)):
         return river

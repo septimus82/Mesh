@@ -256,7 +256,7 @@ class World:
         return out
 
     def stand(self, x: float, y: float, z: float, half_w: float, half_h: float,
-              deep: float = DEEP) -> tuple[float, str] | None:
+              deep: float = DEEP + DEEP_SLACK) -> tuple[float, str] | None:
         """Where a character whose feet box is centred at (x, y) and who stands at ``z`` stands: (elevation,
         floor), or None if it can't be there. ``deep``: the most water it may stand in (``_step``: more for a
         character already in deeper water, so it can walk out of it)."""
@@ -275,7 +275,7 @@ class World:
         for wall in self.walls:
             if wall.lo[2] < h + BODY and wall.hi[2] > h + STEP and wall.overlaps(x, y, half_w, half_h):
                 return None
-        if self.rivers and self.deepest(x, y, h, half_w, half_h) > deep + DEEP_SLACK:
+        if self.rivers and self.deepest(x, y, h, half_w, half_h) > deep:
             return None  # deep water somewhere under its feet: it can't stand there
         return h, best[1].floor
 
@@ -339,9 +339,15 @@ class World:
         hw, hh = box.w / 2 / PIXELS_PER_METRE, box.h / 2 / PIXELS_PER_METRE
         x, y, z = box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE, elevation_of(sprite)
         dx, dy = delta
-        deep = DEEP  # (already in deeper water, put there or a river carved under it: anywhere no deeper, to wade out)
-        if self.rivers:
-            deep = max(DEEP, self.deepest(x, y, z, hw, hh))
+        deep = DEEP + DEEP_SLACK
+        if self.rivers:  # already in deeper water (put there, or a river carved under it): it may wade out of it
+            here = self.deepest(x, y, z, hw, hh)
+            if here > deep:  # (to no deeper than where it was first found in it, give or take a slack once: its cap
+                cap = getattr(sprite, "mesh_hd2d_deep_cap", None)  # is set then and never grows, so however small
+                deep = cap if cap is not None else here + DEEP_SLACK  # its steps it never edges deeper; held until
+                sprite.mesh_hd2d_deep_cap = deep  # it is back in water it can wade: the deepest under its feet rises
+            else:  # and falls as its corners pass the channel's middle on the way out)
+                sprite.mesh_hd2d_deep_cap = None
         if dx and self.stand(x + dx / PIXELS_PER_METRE, y, z, hw, hh, deep) is None:
             dx = 0.0
         if dy and self.stand(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE, z, hw, hh, deep) is None:
@@ -356,7 +362,8 @@ class World:
         if not self._settle(sprite, x + moved[0], y + moved[1], z, hw, hh, deep):
             sprite.center_x, sprite.center_y = start  # (never expected: each axis was checked)
 
-    def _settle(self, sprite: Any, x: float, y: float, z: float, hw: float, hh: float, deep: float = DEEP) -> bool:
+    def _settle(self, sprite: Any, x: float, y: float, z: float, hw: float, hh: float,
+                deep: float = DEEP + DEEP_SLACK) -> bool:
         where = self.stand(x, y, z, hw, hh, deep)
         if where is None:
             return False
