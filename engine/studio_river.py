@@ -45,6 +45,8 @@ NEW_WIDTH_PX = 64.0  # a new river's width: 2 m
 ABOVE_PX = 8.0  # a new point's water stands this far above the ground clicked: 0.25 m
 NEW_FLOW = 1.0  # m/s
 POST_M = 0.6  # a control point's post: this tall over the water
+IN_FRONT_M = 0.05  # something drawn this much nearer than the water, along the view, stands in front of it (the
+# rivers' own centre lines, drawn 2 cm over the water, don't)
 
 
 class RiverTool:
@@ -181,13 +183,66 @@ class RiverTool:
                 break  # (the selected river's own points win)
         return None if best is None else (best[1], best[2])
 
-    def _river_under(self, at: tuple[float, float, float] | None) -> str | None:
-        from engine.hd2d.river import inside, ribbon  # noqa: PLC0415
+    def _river_under(self, x: float, y: float) -> str | None:
+        """The river whose water is drawn under the mouse: where the view's ray meets each river's surface (each quad
+        of its ribbon at its height, as drawn: its level and the lift), the nearest such place, unless the ground
+        rises over the water there (none is drawn) or something drawn solid stands in front of it along the ray (a
+        bank, a bridge's deck: the last frame's depth at that pixel). Not the ground under the mouse: the water
+        stands above it, so with the view at an angle the ground hit lies beyond the water, outside a narrow river."""
+        from engine.hd2d.river import ribbon  # noqa: PLC0415
+        from engine.water import LIFT_M  # noqa: PLC0415
 
-        renderer = self.renderer
-        if at is None or renderer is None:
+        renderer, view = self.renderer, self.view
+        if renderer is None:
             return None
-        return next((r.id for r in renderer.settings.rivers if inside(ribbon(r), (at[0], at[1]))), None)
+        origin, direction = view.ray(x, y)
+        if abs(direction[2]) < 1e-9:
+            return None
+        terrain = renderer.terrain
+        best: tuple[float, str] | None = None
+        for river in renderer.settings.rivers:
+            rib = ribbon(river)
+            for k in range(len(rib.centre) - 1):
+                z = (rib.level[k] + rib.level[k + 1]) / 2 + LIFT_M
+                t = (z - origin[2]) / direction[2]
+                if t <= 0 or (best is not None and t >= best[0]):
+                    continue
+                p = (origin[0] + direction[0] * t, origin[1] + direction[1] * t)
+                if not _in_quad((rib.left[k], rib.left[k + 1], rib.right[k + 1], rib.right[k]), p):
+                    continue
+                ground = None if terrain is None else terrain.height(p[0] * PX, p[1] * PX)
+                if ground is not None and ground / PX >= z - LIFT_M:
+                    continue  # (the ground rises over the water here: none is drawn)
+                best = (t, river.id)
+        if best is None:
+            return None
+        solid = self._solid_along(x, y, origin, direction)
+        if solid is not None and solid < best[0] - IN_FRONT_M / math.sqrt(sum(c * c for c in direction)):
+            return None
+        return best[1]
+
+    def _solid_along(self, x: float, y: float, origin: tuple[float, float, float],
+                     direction: tuple[float, float, float]) -> float | None:
+        """How far along the view's ray (in its own steps) the nearest thing drawn solid is at the mouse, from the
+        last frame's depth there; None if nothing is (or there's no frame)."""
+        renderer, view = self.renderer, self.view
+        if renderer is None:
+            return None
+        vx, vy, _vw, _vh = view.viewport()
+        window = self.studio.window
+        k = window.get_framebuffer_size()[0] / max(1, window.width)
+        depth = renderer.depth_at(int(x * k) - vx, int(y * k) - vy)
+        vp = renderer.last_vp
+        if depth is None or vp is None or depth >= 1.0:
+            return None
+        # where along the ray the projected depth is the depth drawn: ndc z = (a + b s) / (c + d s)
+        a = sum(vp[2][i] * v for i, v in enumerate((*origin, 1.0)))
+        b = sum(vp[2][i] * v for i, v in enumerate(direction))
+        c = sum(vp[3][i] * v for i, v in enumerate((*origin, 1.0)))
+        d = sum(vp[3][i] * v for i, v in enumerate(direction))
+        ndc = depth * 2.0 - 1.0
+        under = ndc * d - b
+        return None if abs(under) < 1e-12 else (a - ndc * c) / under
 
     def press(self, x: float, y: float) -> None:
         studio, view = self.studio, self.view
@@ -210,7 +265,7 @@ class RiverTool:
             if not same:  # (the panel shows the selected point's fields: again only when it's another one)
                 studio._rebuild()
             return
-        rid = self._river_under(at)
+        rid = self._river_under(x, y)
         if rid is not None:
             self.selected, self.point = rid, None
             studio._say(f"River '{rid}' selected: drag its posts to move points; Delete removes it.")
@@ -586,6 +641,17 @@ def _row() -> Any:
     from engine.studio_ui import gui  # noqa: PLC0415
 
     return gui.UIBoxLayout(vertical=False, space_between=4)
+
+
+def _in_quad(quad: tuple[tuple[float, float], ...], p: tuple[float, float]) -> bool:
+    """Whether ``p`` lies in the convex quad (its corners in order, either way round)."""
+    signs = set()
+    for i in range(4):
+        (ax, ay), (bx, by) = quad[i], quad[(i + 1) % 4]
+        c = (bx - ax) * (p[1] - ay) - (by - ay) * (p[0] - ax)
+        if c != 0.0:
+            signs.add(c > 0)
+    return len(signs) < 2
 
 
 def _box(lo: tuple[float, float, float], hi: tuple[float, float, float]) -> list[tuple[float, float, float]]:

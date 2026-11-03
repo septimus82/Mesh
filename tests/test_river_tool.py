@@ -22,6 +22,7 @@ pytestmark = pytest.mark.fast
 class _Studio:
     def __init__(self, project: Any) -> None:
         self.project, self.message, self.ok, self.rebuilt = project, "", True, 0
+        self.window: Any = None
 
     def _say(self, text: str, ok: bool = True) -> None:
         self.message, self.ok = text, ok
@@ -43,9 +44,13 @@ def tool(tmp_path: Path) -> RiverTool:
     project = Project(root, json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"])
     studio = _Studio(project)
     raw = project.scene()["settings"]["hd2d"]
-    view = SimpleNamespace(studio=studio, renderer=SimpleNamespace(settings=parse_hd2d(raw)),
+    renderer = SimpleNamespace(settings=parse_hd2d(raw), terrain=None, last_vp=None, depth_at=lambda x, y: None)
+    studio.window = SimpleNamespace(width=1280, get_framebuffer_size=lambda: (1280, 720))
+    view = SimpleNamespace(studio=studio, renderer=renderer, viewport=lambda: (0, 0, 1280, 720),
                            sculpt=None, sculpt_at=None, cancel_stroke=lambda: False,
-                           ground_hit=lambda x, y: (x / 32, y / 32, 0.0))
+                           ground_hit=lambda x, y: (x / 32, y / 32, 0.0),  # (looking straight down: the same place)
+                           ray=lambda x, y: ((x / 32, y / 32, 50.0), (0.0, 0.0, -1.0)),
+                           camera=SimpleNamespace(pitch=90.0))
     t = RiverTool(cast(Any, view))
     t.__dict__["_to_screen"] = lambda p: (p[0] * 32, p[1] * 32)  # (a post's screen place: its ground px)
     t.on = True

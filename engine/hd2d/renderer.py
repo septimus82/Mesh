@@ -1356,6 +1356,24 @@ class Hd2dRenderer:
                            light=light, sky=tuple(st.sky), reflections=st.water_reflections, lighting=self.lighting)
         self.draw_calls += self.water.draw_calls
 
+    def depth_at(self, x: int, y: int) -> float | None:
+        """The last frame's depth (0 near .. 1 far, what its depth test kept: everything drawn solid, not water) at
+        pixel (x, y) of its picture (bottom-left origin), or None outside it or before a frame. One pixel read back (a
+        click's worth: Mesh Studio's River tool, what the mouse points at as drawn)."""
+        if self._fbo is None:
+            return None
+        w, h = (int(v) for v in self._fbo.size)
+        if not (0 <= x < w and 0 <= y < h):
+            return None
+        from pyglet import gl as raw  # noqa: PLC0415  # (arcade reads colour only: the depth, one pixel, directly)
+
+        previous = self.ctx.active_framebuffer
+        value = (raw.GLfloat * 1)()
+        raw.glBindFramebuffer(raw.GL_READ_FRAMEBUFFER, self._fbo.glo)
+        raw.glReadPixels(x, y, 1, 1, raw.GL_DEPTH_COMPONENT, raw.GL_FLOAT, value)
+        previous.use(force=True)  # (arcade's record of what is bound, made true again)
+        return float(value[0])
+
     def visible_pixels(self, sprite: Any) -> int:
         """How many of ``sprite``'s pixels pass the depth test against the world (for tests and diagnostics)."""
         data = self.draw(solid=sprite, read=True)

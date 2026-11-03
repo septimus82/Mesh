@@ -265,3 +265,92 @@ def test_losing_focus_drops_a_river_being_drawn_or_a_point_being_dragged(tmp_pat
         assert tool.gesture is None and state() == saved and shown() == saved_shown
     finally:
         d.close()
+
+
+def test_a_narrow_raised_river_is_selected_by_its_water_not_the_ground_behind_it(tmp_path: Path) -> None:
+    """Studio's ordinary angled camera, 0.5 m rivers standing 0.31 m over their beds: a click on a visible water pixel
+    (away from every post) of one running across the view selects it, though the ground under that pixel lies
+    beyond the river; a click on dry ground beside it doesn't; a click where the bridge's deck hides the other one
+    doesn't either. Which pixels show a river is measured: the frame with the rivers against the frame without."""
+    import dataclasses
+    import math
+
+    import r1_river_study as r1
+    from hd2d_studio_demo import StudioDriver
+
+    from engine import project_ops as ops
+    from engine.hd2d.river import ribbon
+    from engine.studio_river import PICK_PX
+    from engine.water import LIFT_M
+
+    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    project = r1.make_project(tmp_path, "narrow", rivers=False)  # the beds: floors 17-22 px below the ground
+    path = project / "packs" / "core_regions" / "scenes" / "start.json"
+    scene = json.loads(path.read_text(encoding="utf-8"))
+    # 0.5 m wide, 10 px (0.31 m) over the floor
+    narrow = {rid: [[x, y, 16.0, level - 2.0] for x, y, _w, level in course]
+              for rid, course in (("across", r1.EAST), ("under", r1.NORTH))}
+    for rid, points in narrow.items():
+        scene = ops.add_river(scene, rid, points)
+    path.write_text(json.dumps(scene, indent=2) + "\n", encoding="utf-8")
+    d = StudioDriver(project)
+    try:
+        k, studio = d.arcade.key, d.studio
+        view, tool = studio.hd2d, studio.hd2d.river
+        d.button("Terrain")
+        d.button("River")
+        renderer = d.renderer
+        shown = renderer.settings.rivers
+
+        def look_at(target: tuple[float, float, float]) -> None:  # (Studio's own pitch and lens: its angled view)
+            view.camera.target = target
+            d.advance(2)
+
+        def pixel(at: tuple[float, float], rivers: tuple[Any, ...]) -> Any:
+            renderer.settings = dataclasses.replace(renderer.settings, rivers=rivers)
+            try:
+                return d.frame().convert("RGB").getpixel((int(at[0]), d.window.height - 1 - int(at[1])))
+            finally:  # (the rivers drawn again, as saved: what the clicks below pick from)
+                renderer.settings = dataclasses.replace(renderer.settings, rivers=shown)
+
+        def surface(rid: str, near_px: tuple[float, float]) -> tuple[float, float, float]:
+            rib = ribbon(next(r for r in shown if r.id == rid))
+            i = min(range(len(rib.centre)), key=lambda j: math.dist(rib.centre[j], (near_px[0] / 32, near_px[1] / 32)))
+            return (rib.centre[i][0], rib.centre[i][1], rib.level[i] + LIFT_M)
+
+        # across the view: a water pixel halfway between two posts, and dry floor 1 m nearer the camera
+        look_at((11.0, 1.0, 0.0))
+        water = surface("across", (365.0, 95.0))
+        floor = renderer.terrain.surface_at(water[0] * 32, water[1] * 32)[0] / 32
+        assert water[2] - floor >= 0.25, (water, floor)
+        water_at = d.screen(water)
+        posts = [d.screen((p[0] / 32, p[1] / 32, p[3] / 32 + z)) for p in narrow["across"] for z in (0.0, 0.6)]
+        assert min(math.dist(water_at, s) for s in posts) > 3 * PICK_PX, "away from every post"
+        assert pixel(water_at, shown) != pixel(water_at, ()), "a pixel the river is drawn on"
+        behind = view.ground_hit(*water_at)
+        rib = ribbon(next(r for r in shown if r.id == "across"))
+        assert behind is not None and min(math.dist(behind[:2], c) for c in rib.centre) > 0.25, \
+            "(the ground under that pixel lies beyond the narrow river: picking by it would miss it)"
+        dry = (water[0], water[1] - 1.0, renderer.terrain.surface_at(water[0] * 32, (water[1] - 1.0) * 32)[0] / 32)
+        dry_at = d.screen(dry)
+        assert pixel(dry_at, shown) == pixel(dry_at, ()), "a dry-floor pixel: no river drawn there"
+        d.click(*dry_at)
+        assert tool.selected is None, "dry ground beside it: not the river"
+        d.key(k.ESCAPE)  # (that click started a river there: dropped)
+        d.click(*water_at)
+        assert tool.selected == "across" and tool.draft is None and tool.point is None, (tool.selected, studio.message)
+        d.key(k.ESCAPE)  # (let go of it)
+
+        # behind the bridge's deck (y 768 px; from this camera the deck hides the water a little north of it): the
+        # first place along the other river's course, going north, that the frames show hidden
+        look_at((20.0, 21.0, 0.0))
+        candidates = [d.screen(surface("under", (640.0, y))) for y in range(776, 1000, 8)]
+        hidden_at = next((at for at in candidates if pixel(at, shown) == pixel(at, ())), None)
+        assert hidden_at is not None, "the deck stands in front of the water somewhere behind the bridge"
+        d.click(*hidden_at)
+        assert tool.selected is None, "hidden behind the bridge's deck: not the river"
+        d.key(k.ESCAPE)
+        assert ops.rivers(studio.project.scene()) == [{"id": rid, "points": pts} for rid, pts in narrow.items()], \
+            "nothing changed"
+    finally:
+        d.close()
