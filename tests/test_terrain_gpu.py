@@ -9,9 +9,11 @@ changes leave no GPU objects behind."""
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -128,11 +130,13 @@ def test_rebuilding_in_place_and_room_changes_leave_nothing_behind(tmp_path: Pat
 
 # --- Milestone 20B: live strokes in Mesh Studio (tooling/m20b_sculpt_study.py) ---------------------------------------
 
-def test_studio_sculpts_live_one_stroke_one_undo_step(tmp_path: Path) -> None:
+def test_studio_sculpts_live_one_stroke_one_undo_step(tmp_path: Path, record_testsuite_property: Any) -> None:
     import m20b_sculpt_study as study
 
     r = study.studio(tmp_path)
     s = r["stroke"]
+    # Every run's timings, passing or not, in the lane's JUnit and summary (#422): reporting only, before any assert.
+    record_testsuite_property("measure.terrain_stroke", json.dumps({k: v for k, v in s.items() if k.endswith("_ms")}))
     assert s["undo_steps_added"] == 1 and s["shown_equals_saved"] and s["raised_max_m"] > 0.1, s
     assert s["frame_ms"]["median"] < 60 and s["commit_ms"] < 200, s  # no room reload per click
     assert r["undo_gives_before"] and r["redo_gives_after"] and r["saved_dirty_after"] is False and r["reopened_same"], r

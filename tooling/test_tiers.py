@@ -13,6 +13,12 @@
 
 Every lane writes a JUnit report and ``pytest_<tier>_summary.json`` under artifacts/, and fails when it selects or
 runs no test, besides failing on any failed test (pytest's own exit code).
+
+Reporting only (#422), so a run's speed can be read: a summary's ``measurements`` are the values tests recorded with
+``record_testsuite_property("measure.<name>", <json>)`` (the terrain stroke's frame times, on passing runs too), and
+the gpu lane's ``runner`` is ``tooling/runner_calibration.py`` run before and after its tests (CPU, vCPUs, a fixed
+CPU loop and a fixed llvmpipe frame) and ``runner.host``, where that ran: the runner OS and image, the GL strings and
+the Mesa/LLVM versions in them, and the Mesa settings in ``MESA_ENV`` that are set. Nothing is judged against them.
 """
 
 from __future__ import annotations
@@ -20,12 +26,16 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
+import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import Any
 
 from tooling.pytest_runner_common import (
     build_pytest_args,
@@ -46,6 +56,7 @@ class TierDef:
     # The lane fails when it selects fewer: a marker or rule change that drops tests is caught, not reported as green.
     # Lower it only on purpose, when tests are removed.
     min_selected: int = 0
+    calibrate: bool = False  # measure the runner before and after (tooling/runner_calibration.py), reporting only
 
 
 # Creator-workflow acceptance, required on every PR (CI's acceptance (<os>) jobs): what a person making a game relies
@@ -68,7 +79,8 @@ TIERS: dict[str, TierDef] = {
     "extended": TierDef(pytest_mark="(slow or e2e) and not gl", verify_all=False, compileall=False,
                         pytest_args=("--ignore=tests/test_wheel_bundles_engine_data.py",), min_selected=162),
     # Rendering, in hidden windows (nothing shown on the desktop, no input), wherever a GL context exists.
-    "gpu": TierDef(pytest_mark="gl", verify_all=False, compileall=False, env=GL_ENV, min_selected=256),
+    "gpu": TierDef(pytest_mark="gl", verify_all=False, compileall=False, env=GL_ENV, min_selected=256,
+                   calibrate=True),
     "acceptance": TierDef(pytest_mark="gl", verify_all=False, compileall=False, paths=ACCEPTANCE, env=GL_ENV,
                           min_selected=22),
 }
@@ -85,6 +97,7 @@ class LaneRun:
     skipped: int = 0
     skip_reasons: dict[str, int] = field(default_factory=dict)
     seconds: float = 0.0
+    measurements: dict[str, Any] = field(default_factory=dict)  # "measure.<name>" suite properties, by <name>
 
 
 def summarize_junit(path: Path) -> LaneRun:
@@ -98,6 +111,14 @@ def summarize_junit(path: Path) -> LaneRun:
     errors = [c for c in cases if c.find("error") is not None]
     skips = [s for s in (c.find("skipped") for c in cases) if s is not None]
     suites = [root] if root.tag == "testsuite" else list(root.iter("testsuite"))
+    measurements: dict[str, Any] = {}
+    for prop in root.iter("property"):
+        key, value = prop.get("name") or "", prop.get("value") or ""
+        if key.startswith("measure."):
+            try:
+                measurements[key[len("measure."):]] = json.loads(value)
+            except ValueError:
+                measurements[key[len("measure."):]] = value
     return LaneRun(
         selected=len(cases),
         passed=len(cases) - len(failed) - len(errors) - len(skips),
@@ -106,6 +127,7 @@ def summarize_junit(path: Path) -> LaneRun:
         skipped=len(skips),
         skip_reasons=dict(Counter((s.get("message") or "").strip()[:160] for s in skips).most_common()),
         seconds=round(sum(float(s.get("time") or 0) for s in suites), 1),
+        measurements=measurements,
     )
 
 
@@ -130,6 +152,62 @@ def gl_renderer() -> str | None:
              "print(gl_info.get_renderer(), '|', gl_info.get_version_string()); w.close()")
     proc = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True)
     return proc.stdout.strip().splitlines()[-1] if proc.returncode == 0 and proc.stdout.strip() else None
+
+
+def runner_calibration() -> dict[str, Any]:
+    """``tooling/runner_calibration.py`` in its own process (like ``gl_renderer``): what it measured, ``complete``
+    (it measured a llvmpipe frame), and ``error`` saying why not (a missing or invalid ``gl_frame_ms``, and its last
+    stderr line). Whatever valid it measured is kept. Reporting only: it never fails the lane."""
+    try:
+        proc = subprocess.run([sys.executable, "-m", "tooling.runner_calibration"], capture_output=True, text=True,
+                              timeout=120, cwd=Path(__file__).resolve().parents[1])
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"complete": False, "error": f"{type(exc).__name__}: {exc}"[:300]}
+    out: dict[str, Any] = {}
+    for line in proc.stdout.splitlines():
+        try:
+            out.update(json.loads(line))
+        except (ValueError, TypeError):
+            continue
+    why = []
+    frame = out.get("gl_frame_ms")
+    if "gl_frame_ms" not in out:
+        why.append("no gl_frame_ms")
+    elif isinstance(frame, bool) or not isinstance(frame, (int, float)) or not frame > 0:
+        why.append(f"invalid gl_frame_ms {out.pop('gl_frame_ms')!r}"[:100])
+    if proc.returncode != 0:
+        why.append(((proc.stderr or "").strip().splitlines() or [f"exit code {proc.returncode}"])[-1][:300])
+    out["complete"] = not why
+    if why:
+        out["error"] = "; ".join(why)
+    return out
+
+
+# The Mesa/llvmpipe settings that change what the gpu lane measures, recorded in ``runner.host`` when set (#422):
+# which driver, forced software GL, llvmpipe's thread count, overridden GL/GLSL versions. Nothing else from the
+# environment is recorded.
+MESA_ENV = ("GALLIUM_DRIVER", "LIBGL_ALWAYS_SOFTWARE", "LP_NUM_THREADS", "MESA_GL_VERSION_OVERRIDE",
+            "MESA_GLSL_VERSION_OVERRIDE", "MESA_LOADER_DRIVER_OVERRIDE")
+UNAVAILABLE = "unavailable"
+
+
+def runner_host(calibration: Mapping[str, Any], env: Mapping[str, str] | None = None) -> dict[str, Any]:
+    """Where a gpu lane ran: GitHub's ``RUNNER_OS``/``ImageOS``/``ImageVersion`` (``unavailable`` elsewhere), the
+    calibration context's GL strings and the Mesa and LLVM versions they name, and the ``MESA_ENV`` settings that are
+    set. Anything missing or malformed is ``unavailable``: reporting only."""
+    env = os.environ if env is None else env
+
+    def text(value: object) -> str:
+        return value.strip()[:200] if isinstance(value, str) and value.strip() else UNAVAILABLE
+
+    renderer, version = text(calibration.get("gl_renderer")), text(calibration.get("gl_version"))
+    mesa = re.search(r"\bMesa (\d[\w.+~-]*)", version)
+    llvm = re.search(r"\bLLVM (\d[\w.]*)", renderer)
+    return {"runner_os": text(env.get("RUNNER_OS")), "image_os": text(env.get("ImageOS")),
+            "image_version": text(env.get("ImageVersion")), "gl_vendor": text(calibration.get("gl_vendor")),
+            "gl_renderer": renderer, "gl_version": version,
+            "mesa_version": mesa.group(1) if mesa else UNAVAILABLE, "llvm_version": llvm.group(1) if llvm else UNAVAILABLE,
+            "mesa_env": {name: text(env.get(name)) for name in MESA_ENV if env.get(name)}}
 
 
 def _xdist_available() -> bool:
@@ -225,12 +303,17 @@ def main(argv: list[str] | None = None) -> int:
     pytest_cmd += [f"--junitxml={junit}", "-rfEs"]
     gl_tier = dict(tier_cfg.env).get("MESH_GL_SMOKE") == "1"
     renderer = gl_renderer() if gl_tier else None
+    runner = {"before": runner_calibration()} if tier_cfg.calibrate else None
     rc = _run(pytest_cmd, cwd=repo_root, env=_tier_env(tier_cfg, renderer))
+    if runner is not None:
+        runner["after"] = runner_calibration()
+        runner["host"] = runner_host({**runner["after"], **runner["before"]})  # the GL strings either run got
     run = summarize_junit(junit) if junit.is_file() else None
     problems = lane_problems(run, gl_renderer=renderer, gl_tier=gl_tier,
                              min_selected=0 if extra_args else tier_cfg.min_selected)
     summary = {"tier": args.tier, "pytest_exit": rc, "selection": tier_cfg.pytest_mark, "paths": list(tier_cfg.paths),
-               "gl_renderer": renderer, **(asdict(run) if run else {}), "problems": problems}
+               "gl_renderer": renderer, **({"runner": runner} if runner else {}), **(asdict(run) if run else {}),
+               "problems": problems}
     (repo_root / "artifacts" / f"pytest_{args.tier}_summary.json").write_text(json.dumps(summary, indent=1) + "\n",
                                                                                encoding="utf-8")
     if run is not None:
@@ -238,6 +321,10 @@ def main(argv: list[str] | None = None) -> int:
               f"errors {len(run.errors)}, skipped {run.skipped}" + (f"; GL renderer: {renderer}" if gl_tier else ""))
         for reason, count in run.skip_reasons.items():
             print(f"test-tiers:   skipped {count}: {reason}")
+        for name, value in run.measurements.items():
+            print(f"test-tiers:   measured {name}: {json.dumps(value)}")
+    if runner is not None:
+        print(f"test-tiers:   runner: {json.dumps(runner)}")
     for problem in problems:
         print(f"test-tiers: FAILED: {problem}")
     if rc != 0:
