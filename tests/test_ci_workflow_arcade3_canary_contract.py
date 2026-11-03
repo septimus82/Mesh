@@ -14,7 +14,8 @@ def test_ci_workflow_contains_arcade3_canary_lane() -> None:
 
     text = workflow.read_text(encoding="utf-8")
     assert "arcade3-canary" in text
-    assert "arcade3-canary (required, py3.11)" in text
+    # A one-leg matrix (#422 duplicate check): it expands to "arcade3-canary (required, py3.11)".
+    assert "name: arcade3-canary (required, py${{ matrix.python }})" in text
     assert "python -m pip install \"arcade>=3,<4\"" in text
     assert "tests/test_shadow_backend_selection_determinism.py" in text
     # The live shadow path (Milestone 12's per-light compositor) replaced the composite path whose two tests
