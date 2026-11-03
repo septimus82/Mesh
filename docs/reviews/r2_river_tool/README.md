@@ -32,7 +32,7 @@ Each row is a drag of 30 moves, one frame each, then a release.
 | Studio frame while dragging (median / max) | 17.3 / 90.5 ms | 48.4 / 119.6 ms |
 | idle frame after (median) | 12.9 ms | 20.3 ms |
 | release: the checked save + top bar | 416 ms, of which 315 ms is the checked edit | 153 ms, of which 44 ms is the checked edit |
-| river buffers made during the drag | 0 | 0 |
+| river buffers made during the drag (these scenes) | 0 | 0 |
 | shader programs before → after | unchanged | unchanged |
 
 The Lakeside checked edit varied from 152 to 334 ms between runs. It is R1's `set_river`, which copies and
@@ -45,6 +45,15 @@ validates the whole Lakeside scene; the brook itself is small.
   release from 284 to 153 ms.
 - **No thresholds.** None were added. CI's GPU lane records `measure.river_tool` (the test's own timings) on
   llvmpipe.
+
+**Scope of the buffer figures.** A drag writes into the river buffers while the river fits their reserve (1.5×
+when made). A river that grows past it gets bigger buffers. The zeros above are what these two scenes measured,
+not a guarantee for every drag; the GPU test allows at most one new buffer.
+
+**Review fix (`75c0264`).**
+- Losing window focus now drops a river being drawn as well as a dragged point, with a real-window regression.
+- Reverse flow says it relevels the water (a sloping river's surface rises at its old mouth).
+- No pictures above changed.
 
 ## Not in R2
 
