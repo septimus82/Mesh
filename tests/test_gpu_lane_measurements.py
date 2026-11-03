@@ -4,12 +4,13 @@ lane, and the terrain frame-time assertion they explain unchanged."""
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from tooling import runner_calibration, test_tiers
+from tooling import test_tiers
 
 pytestmark = [pytest.mark.fast]
 
@@ -62,14 +63,21 @@ def test_a_calibration_that_fails_is_reported_never_raised(monkeypatch: pytest.M
     assert set(result) == {"error"} and result["error"]
 
 
-def test_the_calibration_measures_the_cpu_even_when_it_cant_draw(monkeypatch: pytest.MonkeyPatch) -> None:
-    def no_gl() -> float:
-        raise RuntimeError("no GL context")
+def test_a_runner_that_cant_draw_still_reports_its_cpu(monkeypatch: pytest.MonkeyPatch) -> None:
+    cpu = '{"cpu": "AMD EPYC 7763 64-Core Processor", "vcpus": 4, "cpu_ms": 24.5}'
+    stderr = "Traceback (most recent call last):\n  ...\npyglet.window.NoSuchConfigException: no GL config"
+    monkeypatch.setattr(test_tiers.subprocess, "run",
+                        lambda *_a, **_k: subprocess.CompletedProcess([], 1, cpu + "\n", stderr))
+    result = test_tiers.runner_calibration()
+    assert result == {"cpu": "AMD EPYC 7763 64-Core Processor", "vcpus": 4, "cpu_ms": 24.5,
+                      "error": "pyglet.window.NoSuchConfigException: no GL config"}
 
-    monkeypatch.setattr(runner_calibration, "gl_frame_ms", no_gl)
-    result = runner_calibration.calibrate()
-    assert result["gl_error"] == "RuntimeError: no GL context" and "gl_frame_ms" not in result
-    assert isinstance(result["cpu"], str) and result["cpu"] and int(result["vcpus"]) >= 1 and result["cpu_ms"] > 0
+
+def test_the_calibration_measures_this_runner() -> None:
+    proc = subprocess.run([sys.executable, "-c", "from tooling import runner_calibration as c; "
+                           "print(c.cpu_model(), c.cpu_ms())"], capture_output=True, text=True, cwd=REPO, check=True)
+    model, ms = proc.stdout.strip().rsplit(" ", 1)
+    assert model and float(ms) > 0
 
 
 def test_the_terrain_stroke_is_recorded_before_its_unchanged_assertions() -> None:
@@ -87,5 +95,6 @@ def test_the_lane_summary_shows_the_runner_and_the_measurements() -> None:
     text = (REPO / ".github" / "workflows" / "extended.yml").read_text(encoding="utf-8")
     step = text[text.index("- name: Lane summary"):text.index("- name: Upload lane reports")]
     assert 'foreach ($when in "before", "after")' in step and "$s.runner.$when" in step
-    assert "llvmpipe frame $($c.gl_frame_ms) ms $($c.gl_error)" in step and "no calibration: $($c.error)" in step
+    assert "llvmpipe frame $frame" in step and 'else { "none ($($c.error))" }' in step
+    assert "no calibration: $($c.error)" in step
     assert "$s.measurements.PSObject.Properties" in step

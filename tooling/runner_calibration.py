@@ -10,7 +10,9 @@ measures the runner with fixed work, so a slow run can be told from a slower eng
   frames after 3 warm-up frames, in a hidden window: what llvmpipe's rasterising costs on this runner.
 
 Reporting only: nothing is judged against these numbers. ``python -m tooling.test_tiers gpu`` runs this before and
-after its tests and puts both in the lane summary; it also runs alone and prints the JSON:
+after its tests and puts both in the lane summary. It prints one JSON line for the CPU, then one for the frame: a
+runner that can't draw still gives the first, and the frame's failure exits non-zero with its traceback (test_tiers
+records the last line). It also runs alone:
 
     python -m tooling.runner_calibration
 """
@@ -23,7 +25,6 @@ import platform
 import statistics
 import sys
 import time
-from typing import Any
 
 FRAME = (960, 540)
 VS = """#version 330
@@ -71,10 +72,10 @@ def cpu_ms() -> float:
 
 
 def gl_frame_ms() -> float:
-    import arcade
-    from arcade.gl import geometry
+    from engine import optional_arcade
 
-    window = arcade.Window(64, 64, visible=False)
+    geometry = optional_arcade.arcade_gl.geometry
+    window = optional_arcade.arcade.Window(64, 64, visible=False)
     try:
         ctx = window.ctx
         program = ctx.program(vertex_shader=VS, fragment_shader=FS)
@@ -94,14 +95,6 @@ def gl_frame_ms() -> float:
         window.close()
 
 
-def calibrate() -> dict[str, Any]:
-    out: dict[str, Any] = {"cpu": cpu_model(), "vcpus": os.cpu_count(), "cpu_ms": cpu_ms()}
-    try:
-        out["gl_frame_ms"] = gl_frame_ms()
-    except Exception as exc:  # noqa: BLE001 - reporting only: a calibration that can't draw says why, never fails
-        out["gl_error"] = f"{type(exc).__name__}: {exc}"[:300]
-    return out
-
-
 if __name__ == "__main__":
-    print(json.dumps(calibrate()))
+    print(json.dumps({"cpu": cpu_model(), "vcpus": os.cpu_count(), "cpu_ms": cpu_ms()}), flush=True)
+    print(json.dumps({"gl_frame_ms": gl_frame_ms()}))

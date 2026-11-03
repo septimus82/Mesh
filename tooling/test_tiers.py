@@ -151,14 +151,22 @@ def gl_renderer() -> str | None:
 
 
 def runner_calibration() -> dict[str, Any]:
-    """``tooling/runner_calibration.py`` in its own process (like ``gl_renderer``), or why it gave nothing. Never
-    raises: reporting only."""
+    """``tooling/runner_calibration.py`` in its own process (like ``gl_renderer``): what it measured, and ``error``
+    (its last stderr line) when it stopped short. Reporting only: it never fails the lane."""
     try:
         proc = subprocess.run([sys.executable, "-m", "tooling.runner_calibration"], capture_output=True, text=True,
                               timeout=120, cwd=Path(__file__).resolve().parents[1])
-        return dict(json.loads(proc.stdout.strip().splitlines()[-1]))
-    except Exception as exc:  # noqa: BLE001 - a calibration that fails is reported, never fails the lane
+    except (OSError, subprocess.SubprocessError) as exc:
         return {"error": f"{type(exc).__name__}: {exc}"[:300]}
+    out: dict[str, Any] = {}
+    for line in proc.stdout.splitlines():
+        try:
+            out.update(json.loads(line))
+        except (ValueError, TypeError):
+            continue
+    if proc.returncode != 0 or not out:
+        out["error"] = ((proc.stderr or "").strip().splitlines() or [f"exit code {proc.returncode}"])[-1][:300]
+    return out
 
 
 def _xdist_available() -> bool:
