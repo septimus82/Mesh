@@ -124,6 +124,13 @@ jobs:
             foreach ($f in @($s.failed) + @($s.errors)) { if ($f) { $lines += "- FAILED: ``$f``" } }
             foreach ($p in $s.skip_reasons.PSObject.Properties) { $lines += "- skipped $($p.Value): $($p.Name)" }
             foreach ($p in $s.problems) { $lines += "- PROBLEM: $p" }
+            # Reporting only (#422): the runner's calibration and the values tests recorded, on passing runs too.
+            foreach ($when in "before", "after") {
+              $c = $s.runner.$when
+              if ($c.error) { $lines += "- runner ${when}: no calibration: $($c.error)" }
+              elseif ($c) { $lines += "- runner ${when}: $($c.cpu), $($c.vcpus) vCPU; cpu loop $($c.cpu_ms) ms; llvmpipe frame $($c.gl_frame_ms) ms $($c.gl_error)" }
+            }
+            foreach ($p in $s.measurements.PSObject.Properties) { $lines += "- measured $($p.Name): ``$($p.Value | ConvertTo-Json -Compress -Depth 5)``" }
           } else { $lines = @("## ${{ matrix.lane }} lane (${{ matrix.os }})", "", "- no summary: the lane did not run") }
           $lines -join "`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
 

@@ -13,6 +13,11 @@
 
 Every lane writes a JUnit report and ``pytest_<tier>_summary.json`` under artifacts/, and fails when it selects or
 runs no test, besides failing on any failed test (pytest's own exit code).
+
+Reporting only (#422), so a run's speed can be read: a summary's ``measurements`` are the values tests recorded with
+``record_testsuite_property("measure.<name>", <json>)`` (the terrain stroke's frame times, on passing runs too), and
+the gpu lane's ``runner`` is ``tooling/runner_calibration.py`` run before and after its tests (CPU, vCPUs, a fixed
+CPU loop and a fixed llvmpipe frame). Nothing is judged against them.
 """
 
 from __future__ import annotations
@@ -26,6 +31,7 @@ import xml.etree.ElementTree as ET
 from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import Any
 
 from tooling.pytest_runner_common import (
     build_pytest_args,
@@ -46,6 +52,7 @@ class TierDef:
     # The lane fails when it selects fewer: a marker or rule change that drops tests is caught, not reported as green.
     # Lower it only on purpose, when tests are removed.
     min_selected: int = 0
+    calibrate: bool = False  # measure the runner before and after (tooling/runner_calibration.py), reporting only
 
 
 # Creator-workflow acceptance, required on every PR (CI's acceptance (<os>) jobs): what a person making a game relies
@@ -68,7 +75,8 @@ TIERS: dict[str, TierDef] = {
     "extended": TierDef(pytest_mark="(slow or e2e) and not gl", verify_all=False, compileall=False,
                         pytest_args=("--ignore=tests/test_wheel_bundles_engine_data.py",), min_selected=162),
     # Rendering, in hidden windows (nothing shown on the desktop, no input), wherever a GL context exists.
-    "gpu": TierDef(pytest_mark="gl", verify_all=False, compileall=False, env=GL_ENV, min_selected=256),
+    "gpu": TierDef(pytest_mark="gl", verify_all=False, compileall=False, env=GL_ENV, min_selected=256,
+                   calibrate=True),
     "acceptance": TierDef(pytest_mark="gl", verify_all=False, compileall=False, paths=ACCEPTANCE, env=GL_ENV,
                           min_selected=22),
 }
@@ -85,6 +93,7 @@ class LaneRun:
     skipped: int = 0
     skip_reasons: dict[str, int] = field(default_factory=dict)
     seconds: float = 0.0
+    measurements: dict[str, Any] = field(default_factory=dict)  # "measure.<name>" suite properties, by <name>
 
 
 def summarize_junit(path: Path) -> LaneRun:
@@ -98,6 +107,14 @@ def summarize_junit(path: Path) -> LaneRun:
     errors = [c for c in cases if c.find("error") is not None]
     skips = [s for s in (c.find("skipped") for c in cases) if s is not None]
     suites = [root] if root.tag == "testsuite" else list(root.iter("testsuite"))
+    measurements: dict[str, Any] = {}
+    for prop in root.iter("property"):
+        key, value = prop.get("name") or "", prop.get("value") or ""
+        if key.startswith("measure."):
+            try:
+                measurements[key[len("measure."):]] = json.loads(value)
+            except ValueError:
+                measurements[key[len("measure."):]] = value
     return LaneRun(
         selected=len(cases),
         passed=len(cases) - len(failed) - len(errors) - len(skips),
@@ -106,6 +123,7 @@ def summarize_junit(path: Path) -> LaneRun:
         skipped=len(skips),
         skip_reasons=dict(Counter((s.get("message") or "").strip()[:160] for s in skips).most_common()),
         seconds=round(sum(float(s.get("time") or 0) for s in suites), 1),
+        measurements=measurements,
     )
 
 
@@ -130,6 +148,17 @@ def gl_renderer() -> str | None:
              "print(gl_info.get_renderer(), '|', gl_info.get_version_string()); w.close()")
     proc = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True)
     return proc.stdout.strip().splitlines()[-1] if proc.returncode == 0 and proc.stdout.strip() else None
+
+
+def runner_calibration() -> dict[str, Any]:
+    """``tooling/runner_calibration.py`` in its own process (like ``gl_renderer``), or why it gave nothing. Never
+    raises: reporting only."""
+    try:
+        proc = subprocess.run([sys.executable, "-m", "tooling.runner_calibration"], capture_output=True, text=True,
+                              timeout=120, cwd=Path(__file__).resolve().parents[1])
+        return dict(json.loads(proc.stdout.strip().splitlines()[-1]))
+    except Exception as exc:  # noqa: BLE001 - a calibration that fails is reported, never fails the lane
+        return {"error": f"{type(exc).__name__}: {exc}"[:300]}
 
 
 def _xdist_available() -> bool:
@@ -225,12 +254,16 @@ def main(argv: list[str] | None = None) -> int:
     pytest_cmd += [f"--junitxml={junit}", "-rfEs"]
     gl_tier = dict(tier_cfg.env).get("MESH_GL_SMOKE") == "1"
     renderer = gl_renderer() if gl_tier else None
+    runner = {"before": runner_calibration()} if tier_cfg.calibrate else None
     rc = _run(pytest_cmd, cwd=repo_root, env=_tier_env(tier_cfg, renderer))
+    if runner is not None:
+        runner["after"] = runner_calibration()
     run = summarize_junit(junit) if junit.is_file() else None
     problems = lane_problems(run, gl_renderer=renderer, gl_tier=gl_tier,
                              min_selected=0 if extra_args else tier_cfg.min_selected)
     summary = {"tier": args.tier, "pytest_exit": rc, "selection": tier_cfg.pytest_mark, "paths": list(tier_cfg.paths),
-               "gl_renderer": renderer, **(asdict(run) if run else {}), "problems": problems}
+               "gl_renderer": renderer, **({"runner": runner} if runner else {}), **(asdict(run) if run else {}),
+               "problems": problems}
     (repo_root / "artifacts" / f"pytest_{args.tier}_summary.json").write_text(json.dumps(summary, indent=1) + "\n",
                                                                                encoding="utf-8")
     if run is not None:
@@ -238,6 +271,10 @@ def main(argv: list[str] | None = None) -> int:
               f"errors {len(run.errors)}, skipped {run.skipped}" + (f"; GL renderer: {renderer}" if gl_tier else ""))
         for reason, count in run.skip_reasons.items():
             print(f"test-tiers:   skipped {count}: {reason}")
+        for name, value in run.measurements.items():
+            print(f"test-tiers:   measured {name}: {json.dumps(value)}")
+    if runner is not None:
+        print(f"test-tiers:   runner: {json.dumps(runner)}")
     for problem in problems:
         print(f"test-tiers: FAILED: {problem}")
     if rc != 0:
