@@ -37,6 +37,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from tooling import ci_shards
 from tooling.pytest_runner_common import (
     build_pytest_args,
     build_pytest_env,
@@ -250,8 +251,24 @@ def _tier_env(tier_cfg: TierDef, renderer: str | None = None) -> dict[str, str]:
     return env
 
 
+def _shard_spec(value: str) -> str:
+    """``K/N``, as ``--shard`` takes it."""
+    try:
+        shard, shards = (int(part) for part in value.split("/"))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value}: expected K/N, e.g. 1/2") from None
+    if not 1 <= shard <= shards:
+        raise argparse.ArgumentTypeError(f"{value}: K must be 1..N")
+    return value
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
+    # Shard K of N of the lane (#422 F13, CI's Windows gpu lane): whole modules, by the lane's plan in
+    # tooling/ci_shards.py (only a lane with one can be sharded). The shard writes artifacts/shards/shard-K.json and
+    # junit-K.xml for the fan-in (``ci_shards.py check --plan <lane>``), which applies the lane's min_selected to the
+    # whole selection; a shard alone isn't held to it. Give it before the lane: ``--shard 1/2 gpu``.
+    parser.add_argument("--shard", type=_shard_spec, default=None, help="Run shard K/N of the lane (e.g. 1/2)")
     parser.add_argument("tier", choices=sorted(TIERS.keys()))
     parser.add_argument("--xdist", action="store_true", help="Use pytest-xdist if available")
     parser.add_argument(
@@ -263,6 +280,8 @@ def main(argv: list[str] | None = None) -> int:
 
     repo_root = Path(__file__).resolve().parents[1]
     tier_cfg = TIERS[args.tier]
+    if args.shard and args.tier not in ci_shards.PLANS:
+        parser.error(f"--shard: the {args.tier} lane has no shard plan in tooling/ci_shards.py")
 
     extra_args = args.pytest_args
     if extra_args and extra_args[0] == "--":
@@ -280,9 +299,13 @@ def main(argv: list[str] | None = None) -> int:
         if rc != 0:
             return rc
 
+    shard_dir = repo_root / "artifacts" / "shards"
+    shard_args = [] if not args.shard else [
+        "-p", "tooling.ci_shards_plugin", "--mesh-shard", args.shard, "--mesh-shard-plan", args.tier,
+        "--mesh-shard-record", str(shard_dir / f"shard-{args.shard.split('/')[0]}.json")]
     pytest_cmd = _pytest_cmd(
         mark_expr=tier_cfg.pytest_mark,
-        extra_args=[*tier_cfg.pytest_args, *tier_cfg.paths, *extra_args],
+        extra_args=[*tier_cfg.pytest_args, *tier_cfg.paths, *shard_args, *extra_args],
         xdist_jobs=xdist_jobs,
     )
     log_path = repo_root / "artifacts" / f"pytest_{args.tier}.log"
@@ -295,11 +318,13 @@ def main(argv: list[str] | None = None) -> int:
             "PYTEST_ADDOPTS": "cleared",
             "xdist": format_xdist(xdist_jobs is not None, xdist_jobs),
             "tier": args.tier,
+            "shard": args.shard or "none",
         },
         pytest_cmd,
     )
     print(f"test-tiers: wrote log: {log_path}")
-    junit = repo_root / "artifacts" / f"pytest_{args.tier}.xml"
+    junit = (shard_dir / f"junit-{args.shard.split('/')[0]}.xml" if args.shard
+             else repo_root / "artifacts" / f"pytest_{args.tier}.xml")
     pytest_cmd += [f"--junitxml={junit}", "-rfEs"]
     gl_tier = dict(tier_cfg.env).get("MESH_GL_SMOKE") == "1"
     renderer = gl_renderer() if gl_tier else None
@@ -310,14 +335,14 @@ def main(argv: list[str] | None = None) -> int:
         runner["host"] = runner_host({**runner["after"], **runner["before"]})  # the GL strings either run got
     run = summarize_junit(junit) if junit.is_file() else None
     problems = lane_problems(run, gl_renderer=renderer, gl_tier=gl_tier,
-                             min_selected=0 if extra_args else tier_cfg.min_selected)
-    summary = {"tier": args.tier, "pytest_exit": rc, "selection": tier_cfg.pytest_mark, "paths": list(tier_cfg.paths),
+                             min_selected=0 if extra_args or args.shard else tier_cfg.min_selected)
+    summary = {"tier": args.tier, "shard": args.shard, "pytest_exit": rc, "selection": tier_cfg.pytest_mark, "paths": list(tier_cfg.paths),
                "gl_renderer": renderer, **({"runner": runner} if runner else {}), **(asdict(run) if run else {}),
                "problems": problems}
     (repo_root / "artifacts" / f"pytest_{args.tier}_summary.json").write_text(json.dumps(summary, indent=1) + "\n",
                                                                                encoding="utf-8")
     if run is not None:
-        print(f"test-tiers: {args.tier}: selected {run.selected}, passed {run.passed}, failed {len(run.failed)}, "
+        print(f"test-tiers: {args.tier}{f' shard {args.shard}' if args.shard else ''}: selected {run.selected}, passed {run.passed}, failed {len(run.failed)}, "
               f"errors {len(run.errors)}, skipped {run.skipped}" + (f"; GL renderer: {renderer}" if gl_tier else ""))
         for reason, count in run.skip_reasons.items():
             print(f"test-tiers:   skipped {count}: {reason}")

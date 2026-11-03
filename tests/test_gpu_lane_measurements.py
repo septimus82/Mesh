@@ -206,7 +206,8 @@ def test_the_job_summary_renders_a_real_gpu_summary(tmp_path: Path, monkeypatch:
     summary = _gpu_summary(tmp_path, monkeypatch, incomplete)
     body = _summary_step().split("run: |", 1)[1]
     script = "\n".join(line[10:] for line in body.splitlines()).replace("${{ matrix.lane }}", "gpu").replace(
-        "${{ matrix.os }}", "windows-latest")
+        "${{ matrix.os }}", "windows-latest").replace(
+        "${{ matrix.shard && format(', shard {0}', matrix.shard) || '' }}", ", shard 2/2")
     (tmp_path / "step.ps1").write_text(script, encoding="utf-8")
     out = tmp_path / "summary.md"
     shell = shutil.which("pwsh") or shutil.which("powershell")

@@ -24,12 +24,15 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     group = parser.getgroup("mesh-shard")
     group.addoption("--mesh-shard", default=None, help="Run shard K/N of the collected suite (whole modules).")
     group.addoption("--mesh-shard-record", default=None, help="Where to write the shard's record (JSON).")
+    group.addoption("--mesh-shard-plan", default="default",
+                    help="Whose split (tooling/ci_shards.py PLANS): default (ci.yml's suite) or gpu (the gpu lane).")
 
 
 class _Shard:
-    def __init__(self, config: pytest.Config, shard: int, shards: int, path: Path) -> None:
+    def __init__(self, config: pytest.Config, shard: int, shards: int, path: Path, plan: str = "default") -> None:
         self.root = str(config.rootpath)
         self.path = path
+        self.plan = plan
         try:
             commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=self.root, capture_output=True, text=True,
                                     check=False).stdout.strip()
@@ -37,7 +40,7 @@ class _Shard:
             commit = ""
         self.record: dict[str, Any] = {
             "schema": ci_shards.RECORD_SCHEMA, "complete": False, "shard": shard, "shards": shards,
-            "commit": commit, "scheme_digest": ci_shards.scheme_digest(shards),
+            "commit": commit, "plan": plan, "scheme_digest": ci_shards.scheme_digest(shards, plan),
             "collected": [], "collected_digest": "", "collection_skips": [], "selected": [],
             "outcomes": {}, "durations": {}, "subtests": {}, "exitstatus": None,
         }
@@ -56,8 +59,10 @@ class _Shard:
     @pytest.hookimpl(trylast=True)  # (after -m and every other plugin has chosen the suite)
     def pytest_collection_modifyitems(self, config: pytest.Config, items: list[pytest.Item]) -> None:
         shard, shards = self.record["shard"], self.record["shards"]
-        keep = [item for item in items if ci_shards.shard_of(ci_shards.module_of(item.nodeid), shards) == shard]
-        drop = [item for item in items if ci_shards.shard_of(ci_shards.module_of(item.nodeid), shards) != shard]
+        keep = [item for item in items
+                if ci_shards.shard_of(ci_shards.module_of(item.nodeid), shards, self.plan) == shard]
+        drop = [item for item in items
+                if ci_shards.shard_of(ci_shards.module_of(item.nodeid), shards, self.plan) != shard]
         collected = [self._id(item.nodeid) for item in items]
         self.record.update(collected=sorted(collected), collected_digest=ci_shards.ids_digest(collected),
                            selected=sorted(self._id(item.nodeid) for item in keep))
@@ -106,4 +111,7 @@ def pytest_configure(config: pytest.Config) -> None:
     record = config.getoption("--mesh-shard-record")
     if not record:
         raise pytest.UsageError("--mesh-shard needs --mesh-shard-record PATH")
-    config.pluginmanager.register(_Shard(config, shard, shards, Path(record)), "mesh-shard")
+    plan = str(config.getoption("--mesh-shard-plan"))
+    if plan not in ci_shards.PLANS:
+        raise pytest.UsageError(f"--mesh-shard-plan {plan}: expected one of {', '.join(sorted(ci_shards.PLANS))}")
+    config.pluginmanager.register(_Shard(config, shard, shards, Path(record), plan), "mesh-shard")

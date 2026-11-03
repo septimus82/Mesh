@@ -110,10 +110,15 @@ def test_the_extended_workflow_runs_both_lanes_by_the_canonical_selection() -> N
         assert trigger in text
     for policy_file in ("tooling/test_tiers.py", "tests/conftest.py", "pytest.ini"):
         assert f'"{policy_file}"' in text
-    assert "os: [ubuntu-latest, windows-latest]" in text and "lane: [extended, gpu]" in text
-    assert "python -m tooling.test_tiers ${{ matrix.lane }}" in text
+    # Each OS x lane; Windows' gpu lane as two shards (#422 F13; their fan-in: tests/test_gpu_shards.py).
+    lane = text[text.index("\n  lane:"):text.index("\n  gpu-shards:")]
+    for leg in ("{ os: ubuntu-latest, lane: extended }", "{ os: windows-latest, lane: extended }",
+                "{ os: ubuntu-latest, lane: gpu }", '{ os: windows-latest, lane: gpu, shard: "1/2", shard_index: 1 }',
+                '{ os: windows-latest, lane: gpu, shard: "2/2", shard_index: 2 }'):
+        assert f"          - {leg}\n" in lane, leg
+    assert "python -m tooling.test_tiers @shard ${{ matrix.lane }}" in text  # (@shard: none, or --shard K/2)
     assert "continue-on-error" not in text and "if: ${{ always() }}" not in text.split("Run the ${{ matrix.lane }} lane")[1][:400]
-    assert text.count("if: always()") == 2, "the summary and the reports are kept when a lane fails"
+    assert lane.count("if: always()") == 2, "the summary and the reports are kept when a lane fails"
     assert "SOFTWARE renderer" in text, "a Mesa pass is not claimed as physical-GPU evidence"
 
 
