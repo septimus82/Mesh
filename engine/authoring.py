@@ -348,6 +348,7 @@ def summarize(before: Doc, after: Doc) -> list[str]:
         if tiles:
             lines.append(f"{label}: repaints {len(tiles)} tile(s)")
         lines += _structure_lines(label, ops.structures(old), ops.structures(room))
+        lines += _river_lines(label, ops.rivers(old), ops.rivers(room))
         lines += _weather_lines(label, old.get("settings") or {}, room.get("settings") or {})
         lines += _terrain_lines(label, old, room)
         lines += _scatter_lines(label, old, room)
@@ -374,6 +375,20 @@ def _structure_lines(label: str, before: list[Doc], after: list[Doc]) -> list[st
     lines += [f"{label}: moves structure '{sid}' {where(olds[sid])} -> {where(s)}" for sid, s in news.items()
               if sid in olds and olds[sid] != s]
     lines += [f"{label}: removes structure '{sid}'" for sid in olds if sid not in news]
+    return lines
+
+
+def _river_lines(label: str, before: list[Doc], after: list[Doc]) -> list[str]:
+    """Rivers (``settings.hd2d.rivers``, #461) in words: what was added, changed or removed."""
+    olds = {r.get("id"): r for r in before}
+    news = {r.get("id"): r for r in after}
+    lines = [f"{label}: adds river '{rid}' ({len(r.get('points') or [])} points, flowing {r.get('flow', 1.0):g} m/s)"
+             for rid, r in news.items() if rid not in olds]
+    for rid, r in news.items():
+        if rid in olds and olds[rid] != r:
+            what = sorted(k for k in olds[rid].keys() | r.keys() if olds[rid].get(k) != r.get(k))
+            lines.append(f"{label}: changes river '{rid}' ({', '.join(what)})")
+    lines += [f"{label}: removes river '{rid}'" for rid in olds if rid not in news]
     return lines
 
 

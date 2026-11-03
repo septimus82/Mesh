@@ -49,6 +49,7 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
     window.hd2d_terrain_error = None
     window.hd2d_scatter_error = None
     window.hd2d_motion_error = None
+    window.hd2d_rivers_error = None
     raw = settings.get("hd2d") if isinstance(settings, dict) else None
     if raw is None:
         return
@@ -68,6 +69,9 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
         if hd2d.scatter_error:  # broken scatter: none drawn, the rest of the room stands; the reason logged and shown
             window.hd2d_scatter_error = hd2d.scatter_error
             logger.error("[Mesh][HD-2D] this room's scattered decoration is set aside: %s", hd2d.scatter_error)
+        if hd2d.rivers_error:  # broken rivers: none drawn, the rest of the room stands
+            window.hd2d_rivers_error = hd2d.rivers_error
+            logger.error("[Mesh][HD-2D] this room's rivers are set aside: %s", hd2d.rivers_error)
         lights = scene.get("lights") if isinstance(scene, dict) else None
         hd2d = dataclasses.replace(hd2d, **parse_scene_lights(lights, settings))  # the room's own lights
         from engine.wind import WindError, parse_wind  # noqa: PLC0415
