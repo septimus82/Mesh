@@ -9,7 +9,11 @@ its height, and its head and feet can differ (half under a bridge, half in the s
   re-drawn every frame so moving characters cast shadows too (it holds the batched structures and the billboards);
 - each shadow-casting lamp's (at most ``MAX_SHADOW_LIGHTS``): six 90-degree faces of distance-to-the-lamp, packed
   in one atlas (``POINT_FACE`` px a face; a row per such lamp). Lamps and structures don't move, so these are drawn once, when the room's
-  first frame is drawn, and only again when asked (``invalidate``). Characters don't cast lamp shadows.
+  first frame is drawn, and only again when asked (``invalidate``). Characters don't cast lamp shadows. A lamp's own
+  fixture (``lamp_fixtures``: the lamp post whose lantern it hangs in) is left out of that lamp's map, and only
+  that lamp's: its light starts inside the lantern's closed box, so the box's six faces, 0.1-0.35 m away, would
+  otherwise be the first thing it meets in every direction and it would light nothing (#458). Every other
+  structure, however close to the light, still casts that lamp's shadows.
 
 Depth maps are read with a plain ``sampler2D`` and compared in the shader (arcade 3.3 can't bind
 ``sampler2DShadow``), filtered over 1, 3 x 3 or 5 x 5 texels by the room's shadow softness (sharp / soft / softer,
@@ -28,6 +32,11 @@ from engine.hd2d.settings import MAX_LIGHTS, MAX_SHADOW_LIGHTS, PIXELS_PER_METRE
 
 POINT_FACE = 512  # px: one face of a lamp's shadow map
 POINT_NEAR = 0.05  # m
+# A lamp's own fixture: a structure one of whose drawn parts (a glTF node) has a box holding the lamp, and whose model
+# is at most this wide across the ground (scaled): a lantern on its post (the starter kit's is 0.52 m), a sconce, a
+# brazier; never a wall or a building, whatever the lamp is inside. FIXTURE_EPS: the box's edges, inclusive.
+FIXTURE_MAX_M = 1.0
+FIXTURE_EPS_M = 0.01
 SOFTNESS_PCF = {"sharp": 0, "soft": 1, "softer": 2}  # filter radius in texels (1, 3 x 3, 5 x 5 samples)
 
 LIGHTING_GLSL = """
@@ -215,6 +224,58 @@ def sun_matrix(direction: tuple[float, float, float], lo: tuple[float, float, fl
     return _mul(_ortho(x0, x1, y0, y1, max(0.01, near), far), view)
 
 
+def _node_boxes(model: Any) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
+    """Each drawn node's box in the model's own space (Z-up metres): its parts' vertices, all materials."""
+    boxes: dict[str, tuple[list[float], list[float]]] = {}
+    for part in model.parts:
+        lo, hi = boxes.setdefault(part.node, ([math.inf] * 3, [-math.inf] * 3))
+        v = part.vertices
+        for i in range(0, len(v), 8):
+            for k in range(3):
+                lo[k], hi[k] = min(lo[k], v[i + k]), max(hi[k], v[i + k])
+    return [((lo[0], lo[1], lo[2]), (hi[0], hi[1], hi[2])) for lo, hi in boxes.values() if lo[0] <= hi[0]]
+
+
+def lamp_fixtures(lamp: tuple[float, float, float], structures: Any, models: dict[str, Any]) -> frozenset[str]:
+    """The ids of the structures that are the lamp's own fixture (lamp: metres): each holds the lamp inside one of
+    its drawn parts' boxes, and its whole model is at most FIXTURE_MAX_M across the ground. Its light starts there
+    (Mesh lights a lamp post with a lamp at its lantern), so that lamp's shadow map leaves it out; nothing else does.
+    A wall or a building is never one (wider), nor anything the lamp is merely near: those still cast its shadows."""
+    out = set()
+    for st in structures:
+        model = models.get(st.model)
+        if model is None or not model.parts or st.scale <= 0:
+            continue
+        lo, hi = model.bounds()
+        if max(hi[0] - lo[0], hi[1] - lo[1]) * st.scale > FIXTURE_MAX_M:
+            continue
+        # the lamp in the model's own space: undo the placement (move, turn about Z, scale; renderer._placement)
+        dx, dy, dz = (lamp[0] - st.x / PIXELS_PER_METRE, lamp[1] - st.y / PIXELS_PER_METRE,
+                      lamp[2] - st.elevation / PIXELS_PER_METRE)
+        c, s = math.cos(math.radians(st.rotation)), math.sin(math.radians(st.rotation))
+        local = ((c * dx + s * dy) / st.scale, (-s * dx + c * dy) / st.scale, dz / st.scale)
+        eps = FIXTURE_EPS_M / st.scale
+        if any(all(b_lo[k] - eps <= local[k] <= b_hi[k] + eps for k in range(3)) for b_lo, b_hi in _node_boxes(model)):
+            out.add(st.id)
+    return frozenset(out)
+
+
+def _kept_ranges(spans: Any, skip: frozenset[str]) -> list[tuple[int, int]] | None:
+    """The index ranges (first, count) of a draw to keep when the structures in ``skip`` are left out, given its
+    spans (structure id, first, count) in index order; None: draw it whole (no spans, or none of them skipped)."""
+    if not spans or not skip or not any(sid in skip for sid, _, _ in spans):
+        return None
+    ranges: list[tuple[int, int]] = []
+    for sid, first, count in spans:
+        if sid in skip:
+            continue
+        if ranges and ranges[-1][0] + ranges[-1][1] == first:
+            ranges[-1] = (ranges[-1][0], ranges[-1][1] + count)
+        else:
+            ranges.append((first, count))
+    return ranges
+
+
 def face_matrices(lamp: tuple[float, float, float], radius: float) -> list[list[list[float]]]:
     proj = _perspective90(POINT_NEAR, radius)
     return [_mul(proj, _view(lamp, f, u)) for f, u in FACES]
@@ -254,6 +315,7 @@ class Lighting:
         self.sprite_caster = ctx.program(vertex_shader=SPRITE_CASTER_VS, fragment_shader=SPRITE_CASTER_FS)
         self.probe_prog = ctx.program(vertex_shader=PROBE_VS, fragment_shader=PROBE_FS)
         self._lamp_maps_ready = False
+        self.fixtures: list[frozenset[str]] = [frozenset()] * len(self.lamps)  # per lamp: its own fixture's ids
         self.shadow_draws = 0  # last frame's draw calls into shadow maps
         self.lamp_map_renders = 0  # how many times the lamps' maps were drawn
 
@@ -282,6 +344,12 @@ class Lighting:
     def invalidate(self) -> None:
         """Draw the lamps' shadow maps again before the next frame (after structures or lamps change)."""
         self._lamp_maps_ready = False
+
+    def set_fixtures(self, structures: Any, models: dict[str, Any]) -> None:
+        """Find each shadow-casting lamp's own fixture among the room's structures (``lamp_fixtures``)."""
+        self.fixtures = [lamp_fixtures(self._lamp_pos(lamp), structures, models) if self.lamp_slots[i] >= 0
+                         else frozenset() for i, lamp in enumerate(self.lamps)]
+        self.invalidate()
 
     def set_world_box(self, world_lo: tuple[float, float, float], world_hi: tuple[float, float, float]) -> None:
         """The room grew (sculpted ground raised above it or sunk below, Milestone 20B): the sun's map covers it."""
@@ -323,22 +391,24 @@ class Lighting:
     # ------------------------------------------------------------------ shadow passes
     def render_shadows(self, statics: list[tuple[Any, Any, tuple[float, ...]]], sprites: Any | None,
                        sprite_ranges: list[tuple[Any, int, int]],
-                       extra: Callable[[tuple[float, ...]], int] | None = None) -> None:
+                       extra: Callable[[tuple[float, ...]], int] | None = None, spans: Any = None) -> None:
         """The sun's map (structures and billboards: every frame) and, once, the lamps' maps (structures).
-        ``extra(sun_vp)``: draws more into the sun's map (swaying canopies: Milestone 20E), returns how many."""
+        ``extra(sun_vp)``: draws more into the sun's map (swaying canopies: Milestone 20E), returns how many.
+        ``spans``: id(draw) -> its structures' index spans (structure id, first, count), so a lamp's map can leave
+        out its own fixture (the renderer's ``static_spans``); a draw without them is drawn whole."""
         self.shadow_draws = 0
         if not self.enabled:
             return
         ctx = self.ctx
         previous = ctx.active_framebuffer
         try:
-            self._render_shadows(statics, sprites, sprite_ranges, extra)
+            self._render_shadows(statics, sprites, sprite_ranges, extra, spans or {})
         finally:
             previous.use()  # whatever was being drawn into before
 
     def _render_shadows(self, statics: list[tuple[Any, Any, tuple[float, ...]]], sprites: Any | None,
                         sprite_ranges: list[tuple[Any, int, int]],
-                        extra: Callable[[tuple[float, ...]], int] | None = None) -> None:
+                        extra: Callable[[tuple[float, ...]], int] | None, spans: Any) -> None:
         ctx = self.ctx
         self._maps()
         ctx.enable(ctx.DEPTH_TEST)
@@ -351,13 +421,20 @@ class Lighting:
                 if slot < 0:
                     continue
                 prog["u_lamp"] = (*self._lamp_pos(lamp), lamp.radius / PIXELS_PER_METRE)
+                skip = self.fixtures[i]
+                kept = [(draw, _kept_ranges(spans.get(id(draw)), skip)) for draw in statics]
                 for face in range(6):
                     self.point_fbo.viewport = (face * POINT_FACE, slot * POINT_FACE, POINT_FACE, POINT_FACE)
                     prog["u_vp"] = _column_major(self.face_vps[slot * 6 + face])
-                    for geometry, _texture, matrix in statics:
+                    for (geometry, _texture, matrix), ranges in kept:
                         prog["u_model"] = matrix
-                        geometry.render(prog)
-                        self.shadow_draws += 1
+                        if ranges is None:
+                            geometry.render(prog)
+                            self.shadow_draws += 1
+                            continue
+                        for first, count in ranges:  # this lamp's own fixture left out (lamp_fixtures)
+                            geometry.render(prog, first=first, vertices=count)
+                            self.shadow_draws += 1
             self.point_fbo.viewport = (0, 0, *self.point_map.size)
             self._lamp_maps_ready = True
             self.lamp_map_renders += 1

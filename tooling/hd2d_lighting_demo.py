@@ -45,12 +45,13 @@ def _write(path: Path, data: Any) -> None:
 
 # ---------------------------------------------------------------------- CPU rays through the real triangles
 class Triangles:
-    """The room's structures' drawn triangles (world metres), grouped per part with a bounding box."""
+    """The room's structures' drawn triangles (world metres), grouped per part with a bounding box and the id of the
+    structure it belongs to."""
 
     def __init__(self, renderer: Any) -> None:
         from engine.hd2d.renderer import _placement
 
-        self.parts: list[tuple[Vec, Vec, list[tuple[Vec, Vec, Vec]]]] = []
+        self.parts: list[tuple[Vec, Vec, list[tuple[Vec, Vec, Vec]], str]] = []
         for st in renderer.settings.structures:
             m = _placement(st.x / PX, st.y / PX, st.elevation / PX, st.rotation, st.scale)
             for part in renderer.models[st.model].parts:
@@ -65,11 +66,12 @@ class Triangles:
                         for i in range(0, len(part.indices), 3)]
                 lo = (min(p[0] for p in pts), min(p[1] for p in pts), min(p[2] for p in pts))
                 hi = (max(p[0] for p in pts), max(p[1] for p in pts), max(p[2] for p in pts))
-                self.parts.append((lo, hi, tris))
+                self.parts.append((lo, hi, tris, st.id))
 
-    def blocked(self, origin: Vec, direction: Vec, length: float) -> bool:
-        for lo, hi, tris in self.parts:
-            if not _slab(origin, direction, length, lo, hi):
+    def blocked(self, origin: Vec, direction: Vec, length: float, skip: frozenset[str] = frozenset()) -> bool:
+        """Whether any triangle crosses the segment; ``skip``: structures left out (a lamp's own fixture)."""
+        for lo, hi, tris, sid in self.parts:
+            if sid in skip or not _slab(origin, direction, length, lo, hi):
                 continue
             for a, b, c in tris:
                 if _hit(origin, direction, length, a, b, c):
@@ -121,13 +123,16 @@ def _cpu_sun(tris: Triangles, p: Vec, sun: Vec) -> bool | None:
     return seen.pop() if len(seen) == 1 else None
 
 
-def _cpu_lamp(tris: Triangles, p: Vec, lamp: Vec) -> bool | None:
+def _cpu_lamp(tris: Triangles, p: Vec, lamp: Vec, skip: frozenset[str] = frozenset()) -> bool | None:
+    """True: the lamp's light reaches p; False: blocked; None: near a shadow's edge. ``skip``: the lamp's own fixture
+    (engine.hd2d.lighting.lamp_fixtures, the lantern its light starts in), left out as the lamp's shadow map leaves it
+    out; every other triangle is a ray test as before."""
     seen = set()
     for dx, dy in JITTER:
         o = (p[0] + dx, p[1] + dy, p[2] + 0.05)
         d = (lamp[0] - o[0], lamp[1] - o[1], lamp[2] - o[2])
         n = math.sqrt(sum(c * c for c in d))
-        seen.add(not tris.blocked(o, (d[0] / n, d[1] / n, d[2] / n), n - 0.05))
+        seen.add(not tris.blocked(o, (d[0] / n, d[1] / n, d[2] / n), n - 0.05, skip))
     return seen.pop() if len(seen) == 1 else None
 
 
@@ -202,7 +207,7 @@ def check(project: Path, out: Path) -> dict[str, Any]:
                 lit_off = _lum(off_lamps[i])
                 if d > r * 0.9 or lit_off < 0.02 or lp[2] <= sz + 0.05:
                     continue  # out of reach, too faint to judge, or the lamp below the surface
-                cpu = _cpu_lamp(tris, (sx, sy, sz), lp)
+                cpu = _cpu_lamp(tris, (sx, sy, sz), lp, light.fixtures[li])
                 if cpu is None:
                     st["edge_skipped"] += 1
                     continue
@@ -313,6 +318,114 @@ def check(project: Path, out: Path) -> dict[str, Any]:
         game.close()
     _write(out / "check.json", report)
     return report
+
+
+# ---------------------------------------------------------------------- a lamp in its own lantern (#458)
+# Two lamp posts from the starter kit, each lit by a lamp at its lantern (the starter village's way). Lamp A has a
+# separate 2 m wall north of it, its near face 0.25 m from the light, and west of it a panel (the kit's wall at half
+# size, 1 m wide and 0.1 m thick, raised to 1.5-2.75 m, against the lantern's side) lying wholly within 0.35 m of the
+# light: faces 0.20 and 0.30 m away. Lamp B has a wall 2.9 m away. The lamp post is each lamp's own fixture (left out of its shadow map);
+# the walls and the panel never are (the panel is fixture-sized, but the lamp isn't in it), and must still block.
+FIXTURE_LAMPS = {"lamp_a": (8.0, 8.0, 2.4), "lamp_b": (20.0, 8.0, 2.5)}  # m: Lakeside's height and the template's
+FIXTURE_WALLS = {  # wall_2m placements: centre (m), turn (degrees), scale, height of its base (m)
+    "near_wall": (8.0, 8.35, 0.0, 1.0, 0.0), "near_panel": (7.75, 8.0, 90.0, 0.5, 1.5),
+    "far_wall": (20.0, 11.0, 0.0, 1.0, 0.0)}
+FIXTURE_SAMPLES: dict[str, tuple[Any, ...]] = {  # (lamp, x, y[, z, normal]): ground points unless given
+    "a_open_1m": ("lamp_a", 8.0, 7.0), "a_open_2m": ("lamp_a", 8.0, 6.0), "a_open_3m": ("lamp_a", 8.0, 5.0),
+    "a_side_2m": ("lamp_a", 10.0, 8.0), "a_behind_near_wall_1.5m": ("lamp_a", 8.0, 9.5),
+    "a_behind_near_wall_2.5m": ("lamp_a", 8.0, 10.5), "a_behind_near_wall_skew": ("lamp_a", 8.6, 10.0),
+    "a_behind_near_wall_4m": ("lamp_a", 8.0, 12.0),
+    # a surface 3.5-4 m west, facing the lamp at 1.8-2 m up (a house front, say): its rays cross the panel 0.30-0.31 m
+    # from the light, so a clearance round the lamp (rather than its own fixture left out) would let them through
+    "a_behind_panel_3.5m": ("lamp_a", 3.5, 8.0, 2.0, (1.0, 0.0, 0.0)),
+    "a_behind_panel_4m": ("lamp_a", 4.0, 8.0, 1.8, (1.0, 0.0, 0.0)),
+    "a_behind_panel_skew": ("lamp_a", 4.0, 8.3, 1.9, (1.0, 0.0, 0.0)),
+    "b_open_2m": ("lamp_b", 20.0, 6.0), "b_before_far_wall": ("lamp_b", 20.0, 10.0),
+    "b_behind_far_wall_1.5m": ("lamp_b", 20.0, 12.5), "b_behind_far_wall_2.5m": ("lamp_b", 20.0, 13.5),
+}
+
+
+def fixture_room(project: Path) -> str:
+    """Write the scene into ``project`` (an HD-2D RPG project: the starter kit's models in assets/models) and return
+    its path: the template's village settings (ground, sun, camera), these structures and lamps, the player alone."""
+    scenes = project / SCENES
+    village = json.loads((scenes / "start.json").read_text(encoding="utf-8"))
+    hd2d = village["settings"]["hd2d"]
+    hd2d["structures"] = ([{"id": name, "model": "assets/models/lamp_post.glb", "x": x * PX, "y": y * PX}
+                           for name, (x, y, _z) in FIXTURE_LAMPS.items()]
+                          + [{"id": name, "model": "assets/models/wall_2m.glb", "x": x * PX, "y": y * PX,
+                              "rotation": turn, "scale": scale, "elevation": base * PX}
+                             for name, (x, y, turn, scale, base) in FIXTURE_WALLS.items()])
+    village["lights"] = [{"id": name, "x": x * PX, "y": y * PX, "elevation": z * PX, "radius": 224.0,
+                          "color": "#ffcc88", "mode": "soft"} for name, (x, y, z) in FIXTURE_LAMPS.items()]
+    village["entities"] = [e for e in village.get("entities", []) if e.get("tag") == "player"]
+    for e in village["entities"]:
+        e["x"], e["y"] = 14.0 * PX, 3.0 * PX
+    path = f"{SCENES}/lamp_fixtures.json"
+    (project / path).write_text(json.dumps(village), encoding="utf-8")
+    return path
+
+
+def fixture_check(project: Path) -> dict[str, Any]:
+    """The lamps in their lanterns, in the real game (hidden window): each lamp's own fixture as the renderer found
+    it, the walls' (never a fixture), and per sample and on a 0.5 m grid round each lamp the GPU's answer (the lamp's
+    term with shadows on over off, Lighting.probe) beside the CPU's rays through the room's triangles."""
+    game = HiddenGame(project)
+    try:
+        game.load(fixture_room(project))
+        game.step(30)
+        hd = game.window.hd2d_renderer
+        light = hd.lighting
+        game.draw()  # the lamps' maps drawn
+        names = [lamp_name for lamp_name in FIXTURE_LAMPS]
+        fixtures = {names[i]: sorted(light.fixtures[i]) for i in range(len(names))}
+        tris = Triangles(hd)
+        lamps = {names[i]: (light._lamp_pos(light.lamps[i]), light.lamps[i].radius / PX, light.fixtures[i])
+                 for i in range(len(names))}
+        grid = [(lamp, x0 + dx * 0.5, y0 + dy * 0.5) for lamp, (x0, y0, _z) in FIXTURE_LAMPS.items()
+                for dx in range(-10, 11) for dy in range(-10, 11) if 0.75 <= math.hypot(dx * 0.5, dy * 0.5) <= 5.0]
+        samples = ([(name, (s + (0.0, (0.0, 0.0, 1.0)))[:5]) for name, s in FIXTURE_SAMPLES.items()]
+                   + [(f"grid_{i}", (*g, 0.0, (0.0, 0.0, 1.0))) for i, g in enumerate(grid)])
+        points = [(x, y, z, *normal, False) for _, (_lamp, x, y, z, normal) in samples]
+        on = light.probe(points, (0.0, 0.0, 1.0))
+        light.enabled = False
+        off = light.probe(points, (0.0, 0.0, 1.0))
+        light.enabled = True
+        out: dict[str, Any] = {"fixtures": fixtures, "named": {}, "agreement": {"agree": 0, "disagree": 0,
+                                                                                "edge_skipped": 0, "faint": 0,
+                                                                                "reached": 0, "blocked": 0,
+                                                                                "mismatches": []},
+                               "lamp_map_renders": light.lamp_map_renders, "shadow_lamps": light.point_rows}
+        for i, (name, (lamp, x, y, z, _normal)) in enumerate(samples):
+            lp, _r, skip = lamps[lamp]
+            # (the lamps' term holds both lamps, but they are 12 m apart with a 7 m reach: only this one gets here)
+            lit_off, lit_on = _lum(off[i]), _lum(on[i])
+            cpu = _cpu_lamp(tris, (x, y, z), lp, skip)
+            if not name.startswith("grid_"):
+                out["named"][name] = {"on": round(lit_on, 4), "off": round(lit_off, 4), "cpu": cpu}
+                continue
+            agreement = out["agreement"]
+            if lit_off < 0.02:
+                agreement["faint"] += 1
+                continue
+            if cpu is None:
+                agreement["edge_skipped"] += 1
+                continue
+            ratio = lit_on / lit_off
+            gpu = True if ratio > 0.7 else False if ratio < 0.3 else None
+            agreement["reached" if cpu else "blocked"] += 1
+            if gpu == cpu:
+                agreement["agree"] += 1
+            else:
+                agreement["disagree"] += 1
+                agreement["mismatches"].append([lamp, x, y, round(ratio, 3), cpu])
+        out["agreement"]["mismatches"] = out["agreement"]["mismatches"][:10]
+        game.draw()
+        game.draw()
+        out["lamp_map_renders_after_3_frames"] = light.lamp_map_renders
+        return out
+    finally:
+        game.close()
 
 
 def _off_probe(light: Any, p: Vec, terms: tuple[float, float, float]) -> tuple[float, float, float]:
