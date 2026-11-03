@@ -1313,15 +1313,15 @@ class Hd2dRenderer:
 
     def _draw_water(self, vp: tuple[float, ...], cam: Camera, fbo: Any, weather: bool, maps: list[Any],
                     solid: Any) -> None:
-        """The room's puddles and ponds (engine.water), after its structures and characters: rippled by its rain when
-        that is drawn (and not kept off them by something above: the rain's precipitation map)."""
+        """The room's puddles, ponds and rivers (engine.water), after its structures and characters: rippled by its rain
+        when that is drawn (and not kept off them by something above: the rain's precipitation map)."""
         from engine import water as water_mod  # noqa: PLC0415
 
         bodies = water_mod.bodies_of(self.window)
-        if not bodies or solid is not None or self.water_error is not None:
+        if not (bodies or self.settings.rivers) or solid is not None or self.water_error is not None:
             if self.water is not None:
                 self.water.draw_calls = 0
-                if not bodies:  # none there now (their "Show when" flags): the frame copy isn't kept for them
+                if not (bodies or self.settings.rivers):  # none there now (their "Show when" flags): no frame copy kept
                     self.water._free_copy()
             return
         try:
@@ -1339,6 +1339,7 @@ class Hd2dRenderer:
         if self.water is None:
             self.water = water_mod.WaterLayer(self.ctx, gl=self.arcade.gl)
         self.water.set_bodies(bodies)
+        self.water.set_rivers(self.settings.rivers)
         self.water.set_terrain(self.terrain, self.terrain_version)
         if self.last_vp is not None and not self.water.in_view(self.last_vp):
             self.water.draw_calls = 0
@@ -1382,6 +1383,7 @@ class Hd2dRenderer:
                 "precipitation_builds": self.precipitation.builds,
                 "precipitation_error": self.precipitation.error,
                 "water_surfaces": self.water.count if self.water is not None else 0,
+                "rivers": len(self.water.rivers) if self.water is not None else 0,
                 "water_bytes": self.water.memory_bytes() if self.water is not None else 0,
                 "scatter_instances": self.scatter.count() if self.scatter is not None else 0,
                 "scatter_bytes": self.scatter.memory_bytes() if self.scatter is not None else 0,

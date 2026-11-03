@@ -1216,6 +1216,83 @@ def remove_water(scene: Doc, entity_id: str) -> Doc:
     return _checked(scene, out)
 
 
+# --- rivers (#461, R1) ----------------------------------------------------------------------------
+# settings.hd2d.rivers (engine.hd2d.river): each checked whole (its banks sound, its level falling downstream, no two
+# rivers crossing) before anything is written; stored as river.to_json writes it, so the same river saves the same.
+def rivers(scene: Doc) -> list[Doc]:
+    """The room's rivers as stored (``settings.hd2d.rivers``)."""
+    hd2d = (scene.get("settings") or {}).get("hd2d") if isinstance(scene.get("settings"), dict) else None
+    found = hd2d.get("rivers") if isinstance(hd2d, dict) else None
+    return [r for r in found if isinstance(r, dict)] if isinstance(found, list) else []
+
+
+def _with_rivers(scene: Doc, edit: Any) -> Doc:
+    from engine.hd2d.river import RiverError, parse_rivers, to_json  # noqa: PLC0415
+
+    out = copy.deepcopy(scene)
+    hd2d = (out.get("settings") or {}).get("hd2d") if isinstance(out.get("settings"), dict) else None
+    if not isinstance(hd2d, dict):
+        raise OpError("Rivers belong to HD-2D rooms; this room isn't HD-2D.")
+    raw = edit(rivers(out))
+    try:
+        parsed = parse_rivers(raw)
+    except RiverError as err:
+        raise OpError(str(err)) from err
+    if parsed:
+        hd2d["rivers"] = [to_json(r) for r in parsed]
+    else:
+        hd2d.pop("rivers", None)  # none: no key, as older rooms have
+    return _checked(scene, out)
+
+
+_RIVER_LOOK = ("flow", "colour", "deep_colour", "opacity", "depth", "waves", "reflection", "rain_ripples")
+
+
+def add_river(scene: Doc, river_id: str, points: Any, *, flow: Any = _UNSET, colour: Any = _UNSET,
+              deep_colour: Any = _UNSET, opacity: Any = _UNSET, depth: Any = _UNSET, waves: Any = _UNSET,
+              reflection: Any = _UNSET, rain_ripples: Any = _UNSET) -> Doc:
+    """Add a river to this HD-2D room: ``points`` ``[[x, y, width, level], ...]`` px, upstream to downstream (2-64;
+    ``level`` its surface, as an object's elevation, never rising downstream; width 16-512 px). Its course curves
+    smoothly through every point; it flows at ``flow`` m/s (0-8, default 1; 0: still). Its look: ``colour`` and
+    ``deep_colour`` ("#rrggbb"), ``opacity``, ``depth``, ``waves``, ``reflection`` (0-1) and ``rain_ripples``, as a
+    pond's. Refused, naming where, if its banks would fold, cross or touch, it would run uphill, or it would meet
+    another river. It is drawn where its level lies above the ground: sculpt its bed first (it doesn't carve one)."""
+    look = {k: v for k, v in zip(_RIVER_LOOK, (flow, colour, deep_colour, opacity, depth, waves, reflection,
+                                               rain_ripples)) if v is not _UNSET}
+
+    def edit(found: list[Doc]) -> list[Doc]:
+        if any(r.get("id") == river_id for r in found):
+            raise OpError(f"This room already has a river '{river_id}'.")
+        return [*found, {"id": river_id, "points": points, **look}]
+
+    return _with_rivers(scene, edit)
+
+
+def set_river(scene: Doc, river_id: str, *, points: Any = _UNSET, flow: Any = _UNSET, colour: Any = _UNSET,
+              deep_colour: Any = _UNSET, opacity: Any = _UNSET, depth: Any = _UNSET, waves: Any = _UNSET,
+              reflection: Any = _UNSET, rain_ripples: Any = _UNSET) -> Doc:
+    """Change a river of this room: its ``points`` (all of them, as ``add_river`` takes them) or its look; what isn't
+    given stays. Checked as ``add_river`` checks a new one."""
+    given = {k: v for k, v in zip(("points", *_RIVER_LOOK), (points, flow, colour, deep_colour, opacity, depth, waves,
+                                                              reflection, rain_ripples)) if v is not _UNSET}
+
+    def edit(found: list[Doc]) -> list[Doc]:
+        if not any(r.get("id") == river_id for r in found):
+            raise OpError(f"This room has no river '{river_id}'.")
+        return [{**r, **given} if r.get("id") == river_id else r for r in found]
+
+    return _with_rivers(scene, edit)
+
+
+def remove_river(scene: Doc, river_id: str) -> Doc:
+    """Remove a river from this room."""
+    def edit(found: list[Doc]) -> list[Doc]:
+        if not any(r.get("id") == river_id for r in found):
+            raise OpError(f"This room has no river '{river_id}'.")
+        return [r for r in found if r.get("id") != river_id]
+
+    return _with_rivers(scene, edit)
+
 # --- how a door shows (Milestone 12.2) ------------------------------------------------------------
 # One door behaviour (SceneTransition); three ways to show it. A door picture; an invisible passage (an area the
 # player walks into, outlined only in Studio); or an area over a door, stairs or opening painted on the map. The

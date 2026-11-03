@@ -325,8 +325,9 @@ void main() {
                               : u_vp * vec4(world, 1.0);
 }
 """
-FS = """
-#version 330
+# What ponds and rivers share (#461): their uniforms (WaterLayer._uniforms sets them on either program), helpers, the
+# rain's and footsteps' rings and the reflection march into the one copy of the frame
+SHARED_GLSL = """
 uniform float u_time; uniform int u_flat; uniform mat4 u_vp; uniform vec3 u_eye; uniform vec3 u_sky; uniform vec3 u_light;
 uniform float u_rain; uniform int u_shelter; uniform sampler2D u_precip; uniform mat4 u_precip_vp;
 uniform vec4 u_steps[8]; uniform int u_steps_n;
@@ -334,8 +335,6 @@ uniform int u_reflect; uniform sampler2D u_scene; uniform sampler2D u_scene_dept
 uniform int u_lit;  // 1: lit by the room's sun, lamps and shadows (HD-2D: engine.hd2d.lighting), else u_light
 // Milestone 20A: the sculpted ground's heights (m) at its corners, for water whose shore is the ground ("terrain")
 uniform int u_has_terrain; uniform sampler2D u_terrain; uniform vec4 u_terrain_box;  // origin x, y (m), cell (m), -
-in vec3 v_world; flat in vec4 v_rect; flat in vec4 v_info; flat in vec4 v_colour; flat in vec4 v_look;
-flat in vec4 v_deep; flat in vec4 v_shore; flat in vec4 v_amp; flat in vec4 v_phase;
 out vec4 f_color;
 """ + LIGHTING_GLSL + """
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -344,6 +343,79 @@ float ring(vec2 q, vec2 c, float r, float age) {
     float d = abs(length(q - c) - r);
     return (1.0 - smoothstep(0.0, 0.045, d)) * (1.0 - age);
 }
+// the sculpted ground's height (m) at p: its corners' heights, read between them
+float ground_at(vec2 p) {
+    vec2 n = vec2(textureSize(u_terrain, 0));
+    return texture(u_terrain, ((p - u_terrain_box.xy) / u_terrain_box.z + 0.5) / n).r;
+}
+vec3 shade(vec3 c) { return floor(c * 24.0 + 0.5) / 24.0; }  // a few flat shades: pixel art, not a gradient
+const float LIFT = """ + repr(LIFT_M) + """;  // the surface stands this far above its level (LIFT_M)
+// rain: in cells of 0.5 m each starts rings at hashed places and moments, as often as the rain is heavy; none where
+// something above (a roof, the deck) keeps it off the water at q, height z
+float rain_rings(vec2 q, float z, float t, float seed) {
+    float rings = 0.0;
+    bool rained = true;
+    if (u_shelter == 1) {
+        vec3 mp = (u_precip_vp * vec4(q, z + 0.05, 1.0)).xyz * 0.5 + 0.5;
+        if (mp.x >= 0.0 && mp.x <= 1.0 && mp.y >= 0.0 && mp.y <= 1.0 && texture(u_precip, mp.xy).r < mp.z - 0.002) rained = false;
+    }
+    if (rained) {
+        vec2 cell0 = floor(q / 0.5);
+        for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) {
+            vec2 cell = cell0 + vec2(i, j);
+            for (int k = 0; k < 2; k++) {
+                float h = hash(cell * 1.31 + float(k) * 7.7 + seed);
+                float period = 1.6 / max(u_rain, 0.05);  // a cell's ring comes round this often (s)
+                float phase = t / period + h;
+                float age = fract(phase);
+                vec2 c = (cell + vec2(hash(cell + floor(phase) * 3.1 + float(k)), hash(cell * 2.7 + floor(phase) * 5.3 + float(k)))) * 0.5;
+                if (age < 0.6) rings += ring(q, c, age / 0.6 * 0.28, age / 0.6);
+            }
+        }
+    }
+    return rings;
+}
+// footsteps: a ring from each (added to rings), and a few splash pixels at first (added to splash)
+void step_rings(vec2 q, float t, inout float rings, inout float splash) {
+    for (int i = 0; i < u_steps_n; i++) {
+        float age = (t - u_steps[i].z) / 1.0;
+        if (age < 0.0 || age > 1.0) continue;
+        rings += 1.4 * ring(q, u_steps[i].xy, 0.06 + age * 0.55, age);
+        vec2 off = q - u_steps[i].xy;
+        if (age < 0.25 && length(off) < 0.12 + age * 0.4 && hash(floor(q * 32.0) + floor(t * 12.0)) > 0.86) splash += 1.0;
+    }
+}
+// what the surface at p mirrors along r: what's on screen there (the copy of the frame), else the sky; ``fade``:
+// what stands far away fades to the sky (Stage 19B's material)
+vec3 mirror(vec3 p0, vec3 r, bool fade) {
+    vec3 refl = u_sky;
+    for (int s = 1; s <= 10; s++) {
+        vec3 p = p0 + r * (0.18 * float(s * s) * 0.5);
+        vec4 c = u_vp * vec4(p, 1.0);
+        vec3 ndc = c.xyz / c.w;
+        vec2 uv = ndc.xy * 0.5 + 0.5;
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) break;
+        float scene_d = texture(u_scene_depth, uv).r;
+        // something on screen in front of the ray here, standing above the water (the ground beside it, met at a
+        // grazing angle, would mirror as dark blotches)
+        if (scene_d < ndc.z * 0.5 + 0.5 - 0.000002 && p.z - p0.z > 0.3) {
+            // towards the picture's edges it gives way to the sky (what's off screen can't be mirrored)
+            float edge = smoothstep(0.0, 0.14, min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)));
+            // Stage 19B: what stands near the water is mirrored, what's far away fades to the sky (a few far
+            // hits read as noise, not a reflection)
+            float near = fade ? 1.0 - smoothstep(1.2, 3.5, 0.09 * float(s * s)) : 1.0;
+            refl = mix(u_sky, texture(u_scene, (floor(uv * u_screen) + 0.5) / u_screen).rgb, edge * near);
+            break;
+        }
+    }
+    return refl;
+}
+"""
+FS = """
+#version 330
+in vec3 v_world; flat in vec4 v_rect; flat in vec4 v_info; flat in vec4 v_colour; flat in vec4 v_look;
+flat in vec4 v_deep; flat in vec4 v_shore; flat in vec4 v_amp; flat in vec4 v_phase;
+""" + SHARED_GLSL + """
 // a point (m) in the water's own frame: about its centre, its rotation undone
 vec2 to_local(vec2 p) {
     vec2 d = p - v_rect.xy;
@@ -434,13 +506,6 @@ vec4 bank(vec2 q, float b, int shore) {
     }
     return vec4(0.0);  // stone: its stones only (stone())
 }
-// the sculpted ground's height (m) at p: its corners' heights, read between them
-float ground_at(vec2 p) {
-    vec2 n = vec2(textureSize(u_terrain, 0));
-    return texture(u_terrain, ((p - u_terrain_box.xy) / u_terrain_box.z + 0.5) / n).r;
-}
-vec3 shade(vec3 c) { return floor(c * 24.0 + 0.5) / 24.0; }  // a few flat shades: pixel art, not a gradient
-const float LIFT = """ + repr(LIFT_M) + """;  // the surface stands this far above its level (LIFT_M)
 const float STONE_OVER = 0.16;  // an outer stone may reach this far past its bank's width (drawn whole)
 void main() {
     // the pixel grid: everything is worked out at the centre of this fragment's texel (32 per metre)
@@ -509,35 +574,9 @@ void main() {
     float w = v_look.x * (material ? 0.045 : (kind > 0.5 ? 0.06 : 0.025));
     vec2 slope = w * vec2(cos(q.x * 5.1 + q.y * 1.7 + t * 1.3 + seed) * 5.1 + cos(q.x * -2.3 + q.y * 4.6 + t * 0.9) * -2.3,
                           cos(q.x * 5.1 + q.y * 1.7 + t * 1.3 + seed) * 1.7 + cos(q.x * -2.3 + q.y * 4.6 + t * 0.9) * 4.6);
-    float rings = 0.0, splash = 0.0;
-    // rain: in cells of 0.5 m each starts rings at hashed places and moments, as often as the rain is heavy
-    bool rained = u_rain > 0.0 && v_info.w > 0.5;
-    if (rained && u_shelter == 1) {  // something above (a roof, the deck): the rain doesn't reach this water
-        vec3 mp = (u_precip_vp * vec4(q, v_world.z + 0.05, 1.0)).xyz * 0.5 + 0.5;
-        if (mp.x >= 0.0 && mp.x <= 1.0 && mp.y >= 0.0 && mp.y <= 1.0 && texture(u_precip, mp.xy).r < mp.z - 0.002) rained = false;
-    }
-    if (rained) {
-        vec2 cell0 = floor(q / 0.5);
-        for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) {
-            vec2 cell = cell0 + vec2(i, j);
-            for (int k = 0; k < 2; k++) {
-                float h = hash(cell * 1.31 + float(k) * 7.7 + seed);
-                float period = 1.6 / max(u_rain, 0.05);  // a cell's ring comes round this often (s)
-                float phase = t / period + h;
-                float age = fract(phase);
-                vec2 c = (cell + vec2(hash(cell + floor(phase) * 3.1 + float(k)), hash(cell * 2.7 + floor(phase) * 5.3 + float(k)))) * 0.5;
-                if (age < 0.6) rings += ring(q, c, age / 0.6 * 0.28, age / 0.6);
-            }
-        }
-    }
-    // footsteps: a ring from each, and a few splash pixels at first
-    for (int i = 0; i < u_steps_n; i++) {
-        float age = (t - u_steps[i].z) / 1.0;
-        if (age < 0.0 || age > 1.0) continue;
-        rings += 1.4 * ring(q, u_steps[i].xy, 0.06 + age * 0.55, age);
-        vec2 off = q - u_steps[i].xy;
-        if (age < 0.25 && length(off) < 0.12 + age * 0.4 && hash(floor(q * 32.0) + floor(t * 12.0)) > 0.86) splash += 1.0;
-    }
+    float splash = 0.0;
+    float rings = u_rain > 0.0 && v_info.w > 0.5 ? rain_rings(q, v_world.z, t, seed) : 0.0;
+    step_rings(q, t, rings, splash);
     rings *= v_look.w;
     vec3 n = normalize(vec3(-slope + rings * 0.35 * normalize(local + 0.001), 1.0));
     // the water's own colour. Stage 19A: a pond darker towards its middle, lighter at its rim. Stage 19B: from its
@@ -558,28 +597,7 @@ void main() {
     // what it mirrors: the sky, or (HD-2D) what's on screen along the mirrored view ray
     // the mirror is calmer than the surface: a quarter of the waves' slope (the full slope scattered it to blotches)
     vec3 r = reflect(view, normalize(vec3(-slope * 0.25, 1.0)));
-    vec3 refl = u_sky;
-    if (u_reflect == 1) {
-        for (int s = 1; s <= 10; s++) {
-            vec3 p = vec3(q, v_world.z) + r * (0.18 * float(s * s) * 0.5);
-            vec4 c = u_vp * vec4(p, 1.0);
-            vec3 ndc = c.xyz / c.w;
-            vec2 uv = ndc.xy * 0.5 + 0.5;
-            if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) break;
-            float scene_d = texture(u_scene_depth, uv).r;
-            // something on screen in front of the ray here, standing above the water (the ground beside it, met at a
-            // grazing angle, would mirror as dark blotches)
-            if (scene_d < ndc.z * 0.5 + 0.5 - 0.000002 && p.z - v_world.z > 0.3) {
-                // towards the picture's edges it gives way to the sky (what's off screen can't be mirrored)
-                float edge = smoothstep(0.0, 0.14, min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)));
-                // Stage 19B: what stands near the water is mirrored, what's far away fades to the sky (a few far
-                // hits read as noise, not a reflection)
-                float near = material ? 1.0 - smoothstep(1.2, 3.5, 0.09 * float(s * s)) : 1.0;
-                refl = mix(u_sky, texture(u_scene, (floor(uv * u_screen) + 0.5) / u_screen).rgb, edge * near);
-                break;
-            }
-        }
-    }
+    vec3 refl = u_reflect == 1 ? mirror(vec3(q, v_world.z), r, material) : u_sky;
     float facing = clamp(-view.z, 0.0, 1.0);
     vec3 lit;
     if (material) {
@@ -611,6 +629,82 @@ void main() {
 }
 """
 
+# Rivers (#461, engine.hd2d.river): one continuous ribbon each, its vertices carrying the flow's frame (the tangent
+# downstream, u metres downstream, v -1 left bank .. 1 right bank). Its own look (no bank or stones drawn: R1's
+# rivers lie in a bed sculpted for them, the ground their shore), with the pond's lighting, rain, footsteps and
+# reflection march (SHARED_GLSL) into the same copy of the frame
+RIVER_VS = """
+#version 330
+uniform mat4 u_vp;
+in vec3 in_pos; in vec2 in_tangent; in vec4 in_flow; in vec4 in_colour; in vec4 in_deep; in vec4 in_look;
+out vec3 v_world; out vec2 v_tangent; out vec3 v_flow; flat out float v_speed;
+flat out vec4 v_colour; flat out vec4 v_deep; flat out vec4 v_look;
+void main() {
+    // in_flow: u (m downstream), v (-1 left .. 1 right), half width (m), flow (m/s); in_look: waves, reflection,
+    // seed, rain ripples (0/1)
+    v_world = in_pos; v_tangent = in_tangent; v_flow = in_flow.xyz; v_speed = in_flow.w;
+    v_colour = in_colour; v_deep = in_deep; v_look = in_look;
+    gl_Position = u_vp * vec4(in_pos, 1.0);
+}
+"""
+RIVER_FS = """
+#version 330
+in vec3 v_world; in vec2 v_tangent; in vec3 v_flow; flat in float v_speed;
+flat in vec4 v_colour; flat in vec4 v_deep; flat in vec4 v_look;
+""" + SHARED_GLSL + """
+void main() {
+    // the pixel grid: everything at the centre of this fragment's texel (32 per metre), in the river's own frame there
+    vec2 q = (floor(v_world.xy * 32.0) + 0.5) / 32.0;
+    vec2 down = normalize(v_tangent), left = vec2(-down.y, down.x);
+    vec2 to_q = q - v_world.xy;
+    float u = v_flow.x + dot(to_q, down);  // metres downstream
+    float across = v_flow.y * v_flow.z - dot(to_q, left);  // metres right of the middle
+    float half_w = v_flow.z, edge_m = max(0.0, half_w - abs(across)), water_depth = -1.0;
+    if (u_has_terrain == 1) {  // the sculpted ground is the shore: water only where it lies above it
+        water_depth = v_world.z - LIFT - ground_at(q);
+        if (water_depth <= 0.0) discard;
+    }
+    float t = u_time, seed = v_look.z, drift = v_speed * t;  // drift: how far the water has moved (still: none)
+    vec3 view = normalize(vec3(q, v_world.z) - u_eye);
+    vec3 light = u_lit == 1 ? light_at(vec3(q, v_world.z), vec3(0.0, 0.0, 1.0), false) : u_light;
+    // waves carried downstream: long along the flow, short across it; their slope (in the river's frame) bends the
+    // surface's normal
+    float w = v_look.x * 0.045, a = u - drift;
+    vec2 s = w * vec2(cos(a * 4.3 + across * 1.1 + seed) * 4.3 + cos(a * 2.2 - across * 3.7) * 2.2,
+                      cos(a * 4.3 + across * 1.1 + seed) * 1.1 - cos(a * 2.2 - across * 3.7) * 3.7);
+    vec2 slope = down * s.x - left * s.y;
+    float splash = 0.0;
+    float rings = u_rain > 0.0 && v_look.w > 0.5 ? rain_rings(q, v_world.z, t, seed) : 0.0;
+    step_rings(q, t, rings, splash);
+    vec3 n = normalize(vec3(-slope + rings * 0.35 * left * sign(across + 1e-4), 1.0));
+    // its colour: from its shallow colour at the banks (or where the bed is near) to its deep colour
+    float deep = water_depth >= 0.0 ? smoothstep(0.0, 0.05 + 1.2 * (1.0 - v_deep.w), water_depth)
+                                    : smoothstep(0.02, 0.1 + 1.5 * (1.0 - v_deep.w), edge_m);
+    vec3 col = mix(v_colour.rgb, v_deep.rgb, deep);
+    float alpha_water = v_colour.a * mix(0.45, 1.0, deep);
+    vec3 r = reflect(view, normalize(vec3(-slope * 0.25, 1.0)));
+    vec3 refl = u_reflect == 1 ? mirror(vec3(q, v_world.z), r, true) : u_sky;
+    vec3 hue = col / max(max(col.r, col.g), max(col.b, 0.05));
+    refl = mix(refl, refl * hue, 0.35);
+    float facing = clamp(-view.z, 0.0, 1.0);
+    vec3 lit = mix(col * light, refl, v_look.y * mix(0.6, 0.15, facing) * mix(0.55, 1.0, deep));
+    // the current: short light streaks in lanes along the flow, drifting downstream (fastest mid-stream); still
+    // water keeps them where they are
+    float lane = floor(across / 0.125);  // lanes 4 texels wide
+    float h = hash(vec2(lane, seed));
+    float pace = mix(0.6, 1.0, 1.0 - pow(clamp(abs(across) / max(half_w, 1e-3), 0.0, 1.0), 2.0));
+    float dash = fract((u - drift * pace * (0.85 + 0.3 * h)) / (1.2 + 1.6 * h) + h);
+    if (h > 0.5 && dash < 0.2 && deep > 0.25)
+        lit = mix(lit, vec3(0.80, 0.90, 0.93) * light, 0.25 * min(1.0, v_look.x * 2.0));
+    lit += vec3(0.85, 0.92, 1.0) * clamp(rings, 0.0, 1.0) * 0.35 * light;  // rings catch the light
+    // the waterline where it meets its bed (a texel wide, crisp)
+    bool waterline = water_depth >= 0.0 ? water_depth < 0.025 : edge_m < 0.045;
+    lit = mix(lit, vec3(0.80, 0.86, 0.86) * light, (waterline ? 0.45 : 0.0) + clamp(splash, 0.0, 1.0) * 0.8);
+    float alpha = clamp((waterline ? max(alpha_water, 0.85) : alpha_water) + clamp(rings, 0.0, 1.0) * 0.2 + splash * 0.6, 0.0, 1.0);
+    f_color = vec4(shade(lit), alpha);
+}
+"""
+
 
 class WaterLayer:
     """A room's water surfaces on the GPU: one program, one quad, one instance buffer (rewritten when the bodies
@@ -630,6 +724,11 @@ class WaterLayer:
         self._key: Any = None
         self.terrain: Any = None  # the sculpted ground's heights as a texture (set_terrain), if the room has any
         self._terrain_key: Any = None
+        self.river_program: Any = None  # the room's rivers (set_rivers; made when it has any)
+        self.river_buffers: tuple[Any, Any] | None = None  # (vertices, indices)
+        self.river_geometry: Any = None
+        self.river_box: tuple[float, ...] | None = None  # min x, y, z, max x, y, z (m)
+        self.rivers: Any = ()
         try:
             self.program = ctx.program(vertex_shader=VS, fragment_shader=FS)
             self.quad = ctx.buffer(data=array("f", [-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0]).tobytes())
@@ -675,14 +774,54 @@ class WaterLayer:
             mode=self.ctx.TRIANGLE_STRIP)
         self._key, self.count = key, len(rows)
 
+    def set_rivers(self, rivers: tuple[Any, ...]) -> None:
+        """The room's rivers (engine.hd2d.river.River, already checked): their ribbons made again only when they
+        change (none: their buffers freed)."""
+        if rivers == self.rivers:
+            return
+        from engine.hd2d import river as river_mod  # noqa: PLC0415
+
+        self._free_rivers()
+        if not rivers:
+            self.rivers = ()
+            return
+        data, idx = river_mod.vertices(rivers, LIFT_M)
+        if self.river_program is None:
+            self.river_program = self.ctx.program(vertex_shader=RIVER_VS, fragment_shader=RIVER_FS)
+        vbo = self.ctx.buffer(data=data.tobytes())
+        ibo = self.ctx.buffer(data=idx.tobytes())
+        self.river_buffers = (vbo, ibo)
+        self.river_geometry = self.ctx.geometry(
+            [self.gl.BufferDescription(vbo, "3f 2f 4f 4f 4f 4f",
+                                       ["in_pos", "in_tangent", "in_flow", "in_colour", "in_deep", "in_look"])],
+            index_buffer=ibo, index_element_size=4, mode=self.ctx.TRIANGLES)
+        f = river_mod.FLOATS_PER_VERTEX
+        xs, ys, zs = data[0::f], data[1::f], data[2::f]
+        half = max(data[7::f])  # (a bank is within a half width of its sample: the box needs no more)
+        self.river_box = (min(xs) - half, min(ys) - half, min(zs), max(xs) + half, max(ys) + half, max(zs))
+        self.rivers = rivers  # recorded only once made (a failure tries again)
+
+    def _free_rivers(self) -> None:
+        if self.river_geometry is not None:
+            self.river_geometry.flush()
+        for obj in self.river_buffers or ():
+            obj.delete()
+        self.river_geometry = self.river_buffers = self.river_box = None
+        self.rivers = ()
+
     def in_view(self, vp: list[list[float]]) -> bool:
         """Whether any water surface is in the picture (its corners' clip-space box overlaps the screen): with none,
         the pass (and its frame copy) is skipped."""
+        boxes: list[tuple[float, ...]] = []
         for row in self._key or ():
             reach = math.hypot(row[2], row[3]) + row[21] + 0.16  # turned, with its bank: within this of its centre
-            x, y, hw, hh, z = row[0], row[1], reach, reach, row[4]
+            boxes.append((row[0] - reach, row[1] - reach, row[4], row[0] + reach, row[1] + reach, row[4]))
+        if self.river_box is not None:
+            boxes.append(self.river_box)
+        for x0, y0, z0, x1, y1, z1 in boxes:
             pts = []
-            for cx, cy in ((x - hw, y - hh), (x + hw, y - hh), (x - hw, y + hh), (x + hw, y + hh)):
+            for cx, cy, z in ((x0, y0, z0), (x1, y0, z0), (x0, y1, z0), (x1, y1, z0),
+                              (x0, y0, z1), (x1, y0, z1), (x0, y1, z1), (x1, y1, z1)):
                 c = [vp[r][0] * cx + vp[r][1] * cy + vp[r][2] * z + vp[r][3] for r in (0, 1, 3)]
                 if c[2] <= 1e-6:
                     return True  # a corner behind the camera: can't tell cheaply, draw it
@@ -763,9 +902,8 @@ class WaterLayer:
             self.terrain[0].delete()
         self.terrain = None
 
-    def _uniforms(self, time: float, steps: list[tuple[float, float, float]], rain: float, shelter: Any,
+    def _uniforms(self, prog: Any, time: float, steps: list[tuple[float, float, float]], rain: float, shelter: Any,
                   light: tuple[float, float, float], sky: tuple[float, float, float]) -> None:
-        prog = self.program
         prog["u_time"] = time
         live = [s for s in steps if 0.0 <= time - s[2] <= STEP_RIPPLE_S][-8:]
         prog["u_steps"] = tuple(v for s in live for v in (s[0], s[1], s[2], 1.0)) + (0.0,) * (4 * (8 - len(live)))
@@ -793,23 +931,33 @@ class WaterLayer:
         (``REFLECTIONS``): what's on screen mirrored from a full- or half-size copy of the frame, or the sky only (no
         copy kept)."""
         self.draw_calls = 0
-        if self.geometry is None or not self.count:
+        ponds = self.geometry is not None and self.count > 0
+        if not ponds and self.river_geometry is None:
             return
-        ctx, prog = self.ctx, self.program
+        ctx = self.ctx
         reflect = reflections != "sky"
-        if reflect:
+        screen = (1.0, 1.0)
+        if reflect:  # one copy of the frame, for ponds and rivers alike
             _frame, colour, depth = self._copy_of(fbo, 2 if reflections == "half" else 1)
             colour.use(5)
             depth.use(6)
-            prog["u_screen"] = tuple(float(v) for v in colour.size)
+            screen = (float(colour.size[0]), float(colour.size[1]))
         else:
             self._free_copy()
-        prog["u_reflect"] = 1 if reflect else 0
-        prog["u_lit"] = 1 if lighting is not None else 0
-        if lighting is not None:
-            lighting.bind(prog)
-        prog["u_vp"], prog["u_eye"], prog["u_flat"] = vp, eye, 0
-        self._uniforms(time, steps, rain, shelter, light, sky)
+        passes = [(self.program, self.geometry, self.count)] if ponds else []
+        if self.river_geometry is not None:
+            passes.append((self.river_program, self.river_geometry, 0))
+        for prog, _geometry, _count in passes:
+            if reflect:
+                prog["u_screen"] = screen
+            prog["u_reflect"] = 1 if reflect else 0
+            prog["u_lit"] = 1 if lighting is not None else 0
+            if lighting is not None:
+                lighting.bind(prog)
+            prog["u_vp"], prog["u_eye"] = vp, eye
+            if prog is self.program:
+                prog["u_flat"] = 0  # (rivers are HD-2D only: theirs has no flat view)
+            self._uniforms(prog, time, steps, rain, shelter, light, sky)
         fbo.use(force=True)  # copy_framebuffer left the copy bound for drawing, unknown to arcade's own record
         fbo.depth_mask = False
         try:
@@ -818,11 +966,15 @@ class WaterLayer:
                     ctx.enable(ctx.DEPTH_TEST)
                 else:
                     ctx.disable(ctx.DEPTH_TEST)
-                self.geometry.render(prog, instances=self.count)
+                for prog, geometry, count in passes:
+                    if count:
+                        geometry.render(prog, instances=count)
+                    else:
+                        geometry.render(prog)
+                    self.draw_calls += 1
         finally:
             ctx.enable(ctx.DEPTH_TEST)
             fbo.depth_mask = True
-        self.draw_calls = 1
 
     def draw_2d(self, vp: tuple[float, ...], *, time: float, steps: list[tuple[float, float, float]], rain: float,
                 sky: tuple[float, float, float]) -> None:
@@ -833,14 +985,15 @@ class WaterLayer:
         prog = self.program
         prog["u_vp"], prog["u_eye"], prog["u_flat"], prog["u_reflect"], prog["u_lit"] = vp, (0.0, 0.0, 0.0), 1, 0, 0
         prog["u_screen"] = (1.0, 1.0)
-        self._uniforms(time, steps, rain, None, (1.0, 1.0, 1.0), sky)
+        self._uniforms(prog, time, steps, rain, None, (1.0, 1.0, 1.0), sky)
         with self.ctx.enabled(self.ctx.BLEND):
             self.geometry.render(prog, instances=self.count)
         self.draw_calls = 1
 
     def gl_objects(self) -> list[Any]:
         return [o for o in (self.program, self.quad, self.instances, *(self.copy or ()),
-                            self.terrain[0] if self.terrain else None) if o is not None]
+                            self.terrain[0] if self.terrain else None, self.river_program,
+                            *(self.river_buffers or ())) if o is not None]
 
     def memory_bytes(self) -> int:
         size = (self.instances.size if self.instances is not None else 0) + (self.quad.size if self.quad else 0)
@@ -850,6 +1003,7 @@ class WaterLayer:
         if self.terrain is not None:
             w, h = self.terrain[0].size
             size += w * h * 4
+        size += sum(b.size for b in self.river_buffers or ())
         return int(size)
 
     def release(self) -> None:
@@ -858,10 +1012,11 @@ class WaterLayer:
         self._free_copy()
         self._free_terrain()
         self._terrain_key = None
-        for obj in (self.quad, self.program):
+        self._free_rivers()
+        for obj in (self.quad, self.program, self.river_program):
             if obj is not None:
                 obj.delete()
-        self.quad = self.program = None
+        self.quad = self.program = self.river_program = None
         self._key, self.count = None, 0
 
 

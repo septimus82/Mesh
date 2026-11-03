@@ -1,0 +1,405 @@
+"""Rivers and streams in HD-2D rooms (#461, R1): ``settings.hd2d.rivers``, a list of watercourses, each drawn as one
+continuous ribbon of water whose surface flows downstream.
+
+A river is control points ``[x, y, width, level]`` (px, as the room's other positions; ``level`` the water's surface,
+as an entity's ``elevation``), listed upstream to downstream: their order is the flow's direction. Its course in plan
+is a centripetal Catmull-Rom spline through every point (no cusp or loop within a span); its width and level are
+interpolated linearly along the course's length between the points, so they never overshoot what the points say and
+the level never rises between two points that fall. The course is sampled every ``STEP_M`` (a quarter metre: 8 px of
+the world's 32 px/m grid); the ribbon is the two banks at half the width either side, with ``u`` (metres downstream:
+what the water's pattern flows along) and ``v`` (-1 left bank .. 1 right bank) on its vertices.
+
+A river is refused, with a reason naming where, before anything is written (``parse_rivers``, which the ops and the
+strict loader call), unless its generated banks are sound: each bank advances downstream at every step (at least
+``MIN_ADVANCE`` of the course's own step: a bank that stalls or turns back is a fold or a cusp, where the width would
+pinch to nothing), no step turns more than ``MAX_TURN_DEG``, the two banks and the ends never cross themselves or
+each other, and parts of the ribbon that aren't neighbours along it stay ``CLEARANCE_M`` apart (no overlap, no
+near-touching bends). The level, sampled, never rises downstream (beyond ``LEVEL_TOLERANCE_PX``, storage rounding).
+Rivers don't cross or overlap one another (joining rivers comes later).
+
+R1 draws rivers (engine.water.WaterLayer: in the same pass as ponds, sharing its copy of the frame for reflections);
+it doesn't edit them in Mesh Studio yet, carve their bed, block characters or blend into lakes.
+"""
+
+from __future__ import annotations
+
+import math
+import re
+from array import array
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
+
+from engine import water as water_mod
+
+PX = 32.0  # px a metre
+STEP_M = 0.25  # the course is sampled this often (m)
+SPAN_SAMPLES = 64  # how finely each span of the spline is walked before it's resampled by length
+MIN_POINTS, MAX_POINTS = 2, 64
+WIDTH_PX = (16.0, 512.0)  # 0.5 m .. 16 m
+COORD_PX = 65536.0  # positions and levels within +-2 km
+FLOW_MAX = 8.0  # m/s
+MIN_SPACING_PX = 8.0  # control points at least a quarter metre apart
+LEVEL_TOLERANCE_PX = 0.25  # a quarter pixel: what storage rounds to (the terrain's own height step)
+MIN_ADVANCE = 0.25  # each bank moves downstream by at least this share of the course's step
+MAX_TURN_DEG = 30.0  # the most the course turns in one step (a quarter metre): radius >= ~0.48 m
+CLEARANCE_M = 0.25  # parts of a ribbon (or two ribbons) that aren't neighbours along it stay this far apart
+ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
+KEYS = {"id", "points", "flow", "colour", "deep_colour", "opacity", "depth", "waves", "reflection", "rain_ripples"}
+# A stream's look, unless the river says otherwise (engine.water's vocabulary: the same meanings as a pond's)
+DEFAULTS: dict[str, Any] = {"flow": 1.0, "colour": "#4a8f8c", "deep_colour": "#1f4d5a", "opacity": 0.86,
+                            "depth": 0.6, "waves": 0.5, "reflection": 0.35, "rain_ripples": True}
+FLOATS_PER_VERTEX = 21
+# a bank segment or an end of a ribbon (_segments): river tag, line, index, from, to, along (s0, s1)
+Seg = tuple[int, int, int, tuple[float, float], tuple[float, float], float, float]
+
+
+class RiverError(ValueError):
+    """A river that can't be: the message says which and where."""
+
+
+@dataclass(frozen=True)
+class River:
+    id: str
+    points: tuple[tuple[float, float, float, float], ...]  # (x, y, width, level) px, upstream to downstream
+    flow: float  # m/s; 0: still
+    colour: tuple[float, float, float]
+    deep_colour: tuple[float, float, float]
+    opacity: float
+    depth: float  # how soon it looks deep (0..1, as a pond's)
+    waves: float
+    reflection: float
+    rain_ripples: bool
+
+
+@dataclass(frozen=True)
+class Ribbon:
+    """A river's geometry in metres: per sample the centre (x, y), level z, ``u`` (metres downstream), half width,
+    the unit tangent downstream, and the left and right bank points."""
+
+    centre: tuple[tuple[float, float], ...]
+    level: tuple[float, ...]
+    u: tuple[float, ...]
+    half: tuple[float, ...]
+    tangent: tuple[tuple[float, float], ...]
+    left: tuple[tuple[float, float], ...]
+    right: tuple[tuple[float, float], ...]
+
+    @property
+    def length_m(self) -> float:
+        return self.u[-1]
+
+
+# ---------------------------------------------------------------------- parsing
+def _num(value: Any, where: str, lo: float, hi: float) -> float:
+    try:
+        return water_mod._number(value, where, lo, hi)
+    except water_mod.WaterError as exc:
+        raise RiverError(str(exc)) from exc
+
+
+def _colour(value: Any, where: str) -> tuple[float, float, float]:
+    try:
+        return water_mod._hex(value, where)
+    except water_mod.WaterError as exc:
+        raise RiverError(str(exc)) from exc
+
+
+def parse_river(raw: Any, where: str = "river") -> River:
+    """One river's data, checked field by field (not its geometry: ``ribbon``)."""
+    if not isinstance(raw, dict):
+        raise RiverError(f"{where} must be an object")
+    extra = set(raw) - KEYS
+    if extra:
+        raise RiverError(f"{where} has unknown keys: {', '.join(sorted(extra))}")
+    rid = raw.get("id")
+    if not isinstance(rid, str) or not ID_RE.match(rid):
+        raise RiverError(f"{where}.id must be a short name of lowercase letters, digits, '-' or '_' (got {rid!r})")
+    points = raw.get("points")
+    if not isinstance(points, list) or not MIN_POINTS <= len(points) <= MAX_POINTS:
+        raise RiverError(f"{where}.points must be a list of {MIN_POINTS} to {MAX_POINTS} points [x, y, width, level]")
+    out = []
+    for i, p in enumerate(points):
+        w = f"{where}.points[{i}]"
+        if not isinstance(p, list) or len(p) != 4:
+            raise RiverError(f"{w} must be [x, y, width, level] (px)")
+        out.append((_num(p[0], f"{w} x", -COORD_PX, COORD_PX), _num(p[1], f"{w} y", -COORD_PX, COORD_PX),
+                    _num(p[2], f"{w} width", *WIDTH_PX), _num(p[3], f"{w} level", -COORD_PX, COORD_PX)))
+    look = {**DEFAULTS, **{k: v for k, v in raw.items() if k in DEFAULTS}}
+    rain = look["rain_ripples"]
+    if not isinstance(rain, bool):
+        raise RiverError(f"{where}.rain_ripples must be true or false (got {rain!r})")
+    return River(rid, tuple(out), _num(look["flow"], f"{where}.flow", 0.0, FLOW_MAX),
+                 _colour(look["colour"], f"{where}.colour"), _colour(look["deep_colour"], f"{where}.deep_colour"),
+                 _num(look["opacity"], f"{where}.opacity", 0.05, 1.0), _num(look["depth"], f"{where}.depth", 0.0, 1.0),
+                 _num(look["waves"], f"{where}.waves", 0.0, 1.0), _num(look["reflection"], f"{where}.reflection", 0.0, 1.0),
+                 rain)
+
+
+def parse_rivers(raw: Any) -> tuple[River, ...]:
+    """``settings.hd2d.rivers``: each river parsed and its geometry checked (``ribbon``), ids unique, no two rivers
+    crossing or overlapping. Raises RiverError naming the river and where."""
+    if not isinstance(raw, list):
+        raise RiverError("settings.hd2d.rivers must be a list")
+    rivers, ribbons, seen = [], [], set()
+    for i, item in enumerate(raw):
+        river = parse_river(item, f"settings.hd2d.rivers[{i}]")
+        if river.id in seen:
+            raise RiverError(f"settings.hd2d.rivers[{i}].id '{river.id}' is used twice; river ids must be unique")
+        seen.add(river.id)
+        ribbons.append(ribbon(river))
+        rivers.append(river)
+    for a in range(len(rivers)):
+        for b in range(a + 1, len(rivers)):
+            near = _ribbons_meet(ribbons[a], ribbons[b])
+            if near is not None:
+                raise RiverError(f"Rivers '{rivers[a].id}' and '{rivers[b].id}' cross or overlap near "
+                                 f"({near[0] * PX:.0f}, {near[1] * PX:.0f}) px: joining rivers comes later")
+    return tuple(rivers)
+
+
+def to_json(river: River) -> dict[str, Any]:
+    """The river as ``settings.hd2d.rivers`` stores it: points rounded to a hundredth of a pixel, the look's fields
+    only where they differ from a stream's defaults (so a plain river reads plainly)."""
+    out: dict[str, Any] = {"id": river.id, "points": [[round(v, 2) for v in p] for p in river.points]}
+    look = {"flow": river.flow, "colour": water_mod.colour_hex(river.colour),
+            "deep_colour": water_mod.colour_hex(river.deep_colour), "opacity": river.opacity, "depth": river.depth,
+            "waves": river.waves, "reflection": river.reflection, "rain_ripples": river.rain_ripples}
+    for key, value in look.items():
+        if value != DEFAULTS[key]:
+            out[key] = round(value, 3) if isinstance(value, float) else value
+    return out
+
+
+# ---------------------------------------------------------------------- geometry
+def _spline(points: list[tuple[float, float]]) -> tuple[list[tuple[float, float]], list[int]]:
+    """Centripetal Catmull-Rom through every point (the ends repeated), walked ``SPAN_SAMPLES`` steps a span; and
+    the index in that walk of each control point."""
+    pts = [points[0], *points, points[-1]]
+    walk: list[tuple[float, float]] = []
+    marks: list[int] = []
+    for i in range(1, len(pts) - 2):
+        p0, p1, p2, p3 = pts[i - 1], pts[i], pts[i + 1], pts[i + 2]
+        t1 = max(1e-9, math.dist(p0, p1)) ** 0.5
+        t2 = t1 + max(1e-9, math.dist(p1, p2)) ** 0.5
+        t3 = t2 + max(1e-9, math.dist(p2, p3)) ** 0.5
+        marks.append(len(walk))
+        for s in range(SPAN_SAMPLES):
+            t = t1 + (t2 - t1) * s / SPAN_SAMPLES
+
+            def lerp(a: tuple[float, float], b: tuple[float, float], ta: float, tb: float) -> tuple[float, float]:
+                k = (t - ta) / (tb - ta) if tb - ta > 1e-12 else 0.0
+                return (a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k)
+
+            a1, a2, a3 = lerp(p0, p1, 0.0, t1), lerp(p1, p2, t1, t2), lerp(p2, p3, t2, t3)
+            b1, b2 = lerp(a1, a2, 0.0, t2), lerp(a2, a3, t1, t3)
+            walk.append(lerp(b1, b2, t1, t2))
+    marks.append(len(walk))
+    walk.append(points[-1])
+    return walk, marks
+
+
+def ribbon(river: River) -> Ribbon:
+    """The river's sampled course and banks (metres), checked: raises RiverError at the first unsound place."""
+    pts = river.points
+    name = f"River '{river.id}'"
+    for i in range(len(pts) - 1):
+        if math.dist(pts[i][:2], pts[i + 1][:2]) < MIN_SPACING_PX:
+            raise RiverError(f"{name}: points {i + 1} and {i + 2} are closer than a quarter metre")
+        if pts[i + 1][3] > pts[i][3] + LEVEL_TOLERANCE_PX:
+            raise RiverError(f"{name} would run uphill between points {i + 1} and {i + 2} (its level rises "
+                             f"{(pts[i + 1][3] - pts[i][3]) / PX:.2f} m): a river's level only falls downstream")
+    walk, marks = _spline([(p[0] / PX, p[1] / PX) for p in pts])
+    # the length along the walk, and each control point's place on it
+    along = [0.0]
+    for a, b in zip(walk, walk[1:]):
+        along.append(along[-1] + math.dist(a, b))
+    at_point = [along[m] for m in marks]
+    total = along[-1]
+    count = max(2, round(total / STEP_M) + 1)
+    centre, u = [], []
+    j = 0
+    for k in range(count):
+        target = total * k / (count - 1)
+        while j < len(walk) - 2 and along[j + 1] < target:
+            j += 1
+        seg = along[j + 1] - along[j]
+        f = (target - along[j]) / seg if seg > 1e-12 else 0.0
+        centre.append((walk[j][0] + (walk[j + 1][0] - walk[j][0]) * f, walk[j][1] + (walk[j + 1][1] - walk[j][1]) * f))
+        u.append(target)
+    half, level = [], []
+    span = 0
+    for s in u:  # width and level: linear between the control points along the length (no overshoot)
+        while span < len(pts) - 2 and at_point[span + 1] < s:
+            span += 1
+        lo, hi = at_point[span], at_point[span + 1]
+        f = min(1.0, max(0.0, (s - lo) / (hi - lo))) if hi - lo > 1e-12 else 0.0
+        half.append((pts[span][2] + (pts[span + 1][2] - pts[span][2]) * f) / PX / 2)
+        level.append((pts[span][3] + (pts[span + 1][3] - pts[span][3]) * f) / PX)
+    for k in range(1, count):
+        if level[k] > level[k - 1] + LEVEL_TOLERANCE_PX / PX / 100:
+            raise RiverError(f"{name} would run uphill near ({centre[k][0] * PX:.0f}, {centre[k][1] * PX:.0f}) px")
+    tangent, left, right = [], [], []
+    for k in range(count):
+        a, b = centre[max(0, k - 1)], centre[min(count - 1, k + 1)]
+        tx, ty = b[0] - a[0], b[1] - a[1]
+        n = math.hypot(tx, ty) or 1.0
+        tx, ty = tx / n, ty / n
+        tangent.append((tx, ty))
+        left.append((centre[k][0] - ty * half[k], centre[k][1] + tx * half[k]))
+        right.append((centre[k][0] + ty * half[k], centre[k][1] - tx * half[k]))
+    rib = Ribbon(tuple(centre), tuple(level), tuple(u), tuple(half), tuple(tangent), tuple(left), tuple(right))
+    problem = _check(rib)
+    if problem is not None:
+        what, at = problem
+        raise RiverError(f"{name}: {what} near ({at[0] * PX:.0f}, {at[1] * PX:.0f}) px")
+    return rib
+
+
+def _check(r: Ribbon) -> tuple[str, tuple[float, float]] | None:
+    """The first unsound place in a ribbon: (what, where in metres), or None."""
+    n = len(r.centre)
+    for k in range(n - 1):
+        cx, cy = r.centre[k + 1][0] - r.centre[k][0], r.centre[k + 1][1] - r.centre[k][1]
+        step2 = cx * cx + cy * cy
+        if step2 < 1e-12:
+            continue
+        if k > 0:  # the course's turn at this step
+            t0, t1 = r.tangent[k - 1], r.tangent[k + 1]
+            turn = math.degrees(abs(math.atan2(t0[0] * t1[1] - t0[1] * t1[0], t0[0] * t1[0] + t0[1] * t1[1]))) / 2
+            if turn > MAX_TURN_DEG:
+                return "a bend too sharp for any river", r.centre[k]
+        for bank in (r.left, r.right):  # each bank must keep moving downstream: else it folds or pinches to nothing
+            bx, by = bank[k + 1][0] - bank[k][0], bank[k + 1][1] - bank[k][1]
+            if bx * cx + by * cy < MIN_ADVANCE * step2:
+                return "a bend too tight for a river this wide (its inner bank folds over itself)", r.centre[k]
+        # each quad of the ribbon turns the same way: left of the course on the left
+        for a, b, c in ((r.left[k], r.left[k + 1], r.right[k]), (r.left[k + 1], r.right[k + 1], r.right[k])):
+            if (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]) >= 0.0:
+                return "a bend where the river turns inside out", r.centre[k]
+    segs = _segments(r, 0)
+    hit = _crossing(segs, _neighbours)
+    if hit is not None:
+        return "a place where the river's banks cross or touch (it overlaps itself)", hit
+    return None
+
+
+def _segments(r: Ribbon, tag: int) -> list[Seg]:
+    """Every bank segment and the two ends: (river tag, line (0 left, 1 right, 2 start, 3 end), index, a, b, s0, s1)
+    with s0..s1 where a bank segment lies along its own bank (m); an end's s0 and s1: where it meets the left and
+    the right bank, along each."""
+    n = len(r.centre)
+    out: list[Seg] = []
+    ends = []
+    for li, line in enumerate((r.left, r.right)):
+        s = 0.0
+        for k in range(n - 1):
+            step = math.dist(line[k], line[k + 1])
+            out.append((tag, li, k, line[k], line[k + 1], s, s + step))
+            s += step
+        ends.append(s)
+    out += [(tag, 2, 0, r.left[0], r.right[0], 0.0, 0.0), (tag, 3, n - 2, r.left[-1], r.right[-1], ends[0], ends[1])]
+    return out
+
+
+def _neighbours(a: Seg, b: Seg) -> bool:
+    """Two segments of one river allowed to come close: along the same bank, within 3 x CLEARANCE_M of each other
+    along it (a smooth bank's nearby points; one that comes back to touch itself is far along it but near in the
+    plane); an end and a bank segment within that distance of where the end meets that bank. The left and right
+    banks never (they are a river's width apart, at least half a metre), nor the two ends."""
+    la, lb = a[1], b[1]
+    if la == lb and la < 2:
+        return max(0.0, max(a[5], b[5]) - min(a[6], b[6])) <= 3 * CLEARANCE_M
+    if la >= 2 and lb >= 2:
+        return False
+    end, seg = (a, b) if la >= 2 else (b, a)
+    at = end[5] if seg[1] == 0 else end[6]  # where the end meets this segment's bank
+    return max(0.0, max(at, seg[5]) - min(at, seg[6])) <= 3 * CLEARANCE_M
+
+
+def _crossing(segs: list[Seg], allowed: Callable[[Seg, Seg], bool]) -> tuple[float, float] | None:
+    """The first pair of segments (not ``allowed`` to touch) that cross or come within CLEARANCE_M of each other."""
+    cell = 1.0
+    buckets: dict[tuple[int, int], list[int]] = {}
+    for i, s in enumerate(segs):
+        x0, x1 = sorted((s[3][0], s[4][0]))
+        y0, y1 = sorted((s[3][1], s[4][1]))
+        for gx in range(math.floor((x0 - CLEARANCE_M) / cell), math.floor((x1 + CLEARANCE_M) / cell) + 1):
+            for gy in range(math.floor((y0 - CLEARANCE_M) / cell), math.floor((y1 + CLEARANCE_M) / cell) + 1):
+                for j in buckets.get((gx, gy), ()):
+                    t = segs[j]
+                    if allowed(s, t):
+                        continue
+                    if _segment_distance(s[3], s[4], t[3], t[4]) < CLEARANCE_M:
+                        return s[3]
+                buckets.setdefault((gx, gy), []).append(i)
+    return None
+
+
+def _segment_distance(p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float],
+                      p4: tuple[float, float]) -> float:
+    def orient(a: tuple[float, float], b: tuple[float, float], c: tuple[float, float]) -> float:
+        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+
+    d1, d2, d3, d4 = orient(p3, p4, p1), orient(p3, p4, p2), orient(p1, p2, p3), orient(p1, p2, p4)
+    if ((d1 > 0) != (d2 > 0)) and ((d3 > 0) != (d4 > 0)):
+        return 0.0
+
+    def to_seg(p: tuple[float, float], a: tuple[float, float], b: tuple[float, float]) -> float:
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        length2 = dx * dx + dy * dy
+        t = 0.0 if length2 < 1e-18 else max(0.0, min(1.0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length2))
+        return math.dist(p, (a[0] + dx * t, a[1] + dy * t))
+
+    return min(to_seg(p1, p3, p4), to_seg(p2, p3, p4), to_seg(p3, p1, p2), to_seg(p4, p1, p2))
+
+
+def _ribbons_meet(a: Ribbon, b: Ribbon) -> tuple[float, float] | None:
+    """Where two rivers' ribbons cross, come within CLEARANCE_M, or one lies inside the other; else None."""
+    hit = _crossing(_segments(a, 0) + _segments(b, 1), lambda s, t: s[0] == t[0])
+    if hit is not None:
+        return hit
+    for inner, outer in ((a, b), (b, a)):  # wholly inside the other (no bank crossing): its middle in the other's quads
+        mid = inner.centre[len(inner.centre) // 2]
+        if inside(outer, mid):
+            return mid
+    return None
+
+
+def inside(r: Ribbon, p: tuple[float, float]) -> bool:
+    """Whether p (metres) lies on the ribbon's water (its quads)."""
+    for k in range(len(r.centre) - 1):
+        quad = (r.left[k], r.left[k + 1], r.right[k + 1], r.right[k])
+        sign = 0
+        for i in range(4):
+            a, b = quad[i], quad[(i + 1) % 4]
+            c = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])
+            if c != 0.0:
+                s = 1 if c > 0 else -1
+                if sign and s != sign:
+                    break
+                sign = s
+        else:
+            return True
+    return False
+
+
+# ---------------------------------------------------------------------- for the GPU
+def vertices(rivers: tuple[River, ...], lift: float) -> tuple[array, array]:
+    """Every river's ribbon as one interleaved vertex array (FLOATS_PER_VERTEX a vertex: position x, y, z (m: the
+    level plus ``lift``), the tangent downstream (2), u (m), v (-1 left .. 1 right), half width (m), flow (m/s), the
+    colour and opacity (4), the deep colour and depth (4), waves, reflection, seed, rain ripples) and its triangles'
+    indices (two a step). The same rivers give the same arrays, byte for byte."""
+    data, idx = array("f"), array("I")
+    for i, river in enumerate(rivers):
+        r = ribbon(river)
+        base = len(data) // FLOATS_PER_VERTEX
+        look = (*river.colour, river.opacity, *river.deep_colour, river.depth, river.waves, river.reflection,
+                1.7 * (i + 1), 1.0 if river.rain_ripples else 0.0)
+        for k in range(len(r.centre)):
+            for (x, y), v in ((r.left[k], -1.0), (r.right[k], 1.0)):
+                data.extend((x, y, r.level[k] + lift, *r.tangent[k], r.u[k], v, r.half[k], river.flow, *look))
+        for k in range(len(r.centre) - 1):
+            a, b, c, d = base + 2 * k, base + 2 * k + 1, base + 2 * k + 2, base + 2 * k + 3
+            idx.extend((a, c, b, b, c, d))
+    return data, idx

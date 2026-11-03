@@ -104,6 +104,29 @@ Each stroke is one change, so one Ctrl+Z undoes it, and Esc cancels a stroke bef
   where the player starts. Less is often more: leave plain ground around paths and buildings.
 - `[` and `]` change the brush's size.
 
+## Rivers and streams (early: R1)
+
+A river is one continuous ribbon of water that flows downstream. R1 draws rivers; it is **not yet a creator tool**:
+there is no River tool in Studio. Rivers are added through Mesh's checked edits (`add_river`, `set_river`,
+`remove_river`), as the AI assistant and `mesh author` make them, and Studio and the game show them.
+
+- **Points:** `[x, y, width, level]` in pixels (32 px = 1 m), listed from upstream to downstream. Their order is the
+  way the water flows. The course curves smoothly through every point. Width and level change evenly between points.
+  `level` is the water's surface, like an object's elevation, and it may stay level or fall downstream, never rise.
+- **Look:** `flow` (m/s; 0 is still water), plus `colour`, `deep_colour`, `opacity`, `depth`, `waves`, `reflection`
+  and `rain_ripples`, as for a pond. Rivers mirror what stands above them through the same frame copy as ponds, take
+  the room's sun, lamps and shadows, and ring with its rain, though not under a roof or bridge.
+- **The bed comes first.** The water shows only where its level is above the ground, so sculpt the riverbed with
+  **Sculpt** (Lower or Flatten) before adding the river. A river doesn't carve its own bed. Where the bed is wider
+  than the river, the river's straight edge shows.
+- **Refused, with the reason and where:** a bend too tight for the river's width (its inner bank would fold), banks
+  that cross or come within a quarter metre of each other, water that would run uphill, points closer than a
+  quarter metre, and two rivers that cross or overlap.
+
+Not in R1: a River tool in Studio, carving the bed, clearing scatter under the water (use the Scatter brush's
+remove), stopping or slowing characters, rivers flowing into lakes or joining each other, waterfalls, and rivers in
+2D rooms. A river's two ends are cut square.
+
 ## Wind and moving decoration
 
 Under **Wind and motion** in the 3D view's panel:
