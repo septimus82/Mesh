@@ -634,8 +634,8 @@ void main() {
 # Rivers (#461, engine.hd2d.river): one continuous ribbon each, its vertices carrying the flow's frame (the tangent
 # downstream, u metres downstream, v -1 left bank .. 1 right bank). Its own look (no bank or stones drawn: R1's
 # rivers lie in a bed sculpted for them, the ground their shore), with the pond's lighting, rain and reflection march
-# (SHARED_GLSL) into the same copy of the frame. It draws the footstep rings in window.water_steps, but only ponds and
-# puddles add steps: wading through a river makes none yet
+# (SHARED_GLSL) into the same copy of the frame. It draws the footstep rings in window.water_steps: ponds and
+# puddles add them (engine.behaviours.water_surface), and so does wading in a river's shallows (engine.hd2d.world)
 RIVER_VS = """
 #version 330
 uniform mat4 u_vp;

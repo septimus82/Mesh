@@ -22,8 +22,9 @@ river costs about 0.1 ms a metre each. Its GPU data: 21 floats (84 bytes) for ea
 samples a metre, plus six 4-byte indices a sample: about 0.75 KiB a metre, 1.5 MiB for the room's 2,048 m.
 
 Rivers are drawn by engine.water.WaterLayer (in the same pass as ponds, sharing its copy of the frame for
-reflections) and edited in Mesh Studio with its River tool (engine.studio_river, R2). They don't carve their bed, block
-characters or blend into lakes yet.
+reflections) and edited in Mesh Studio with its River tool (engine.studio_river, R2). R3: ``carve`` lowers the ground
+into a river's bed (project_ops.carve_river_bed), ``RiverIndex`` says where its water lies and how high, for
+collision and wading (engine.hd2d.world) and scatter (engine.hd2d.scatter). They don't blend into lakes yet.
 """
 
 from __future__ import annotations
@@ -94,6 +95,7 @@ class Ribbon:
     tangent: tuple[tuple[float, float], ...]
     left: tuple[tuple[float, float], ...]
     right: tuple[tuple[float, float], ...]
+    marks: tuple[float, ...] = ()  # each control point's place along it (``u``, m)
 
     @property
     def length_m(self) -> float:
@@ -298,7 +300,8 @@ def ribbon(river: River) -> Ribbon:
         tangent.append((tx, ty))
         left.append((centre[k][0] - ty * half[k], centre[k][1] + tx * half[k]))
         right.append((centre[k][0] + ty * half[k], centre[k][1] - tx * half[k]))
-    rib = Ribbon(tuple(centre), tuple(level), tuple(u), tuple(half), tuple(tangent), tuple(left), tuple(right))
+    rib = Ribbon(tuple(centre), tuple(level), tuple(u), tuple(half), tuple(tangent), tuple(left), tuple(right),
+                 tuple(at_point))
     problem = _check(rib)
     if problem is not None:
         what, at = problem
@@ -453,3 +456,137 @@ def vertices(rivers: tuple[River, ...], lift: float) -> tuple[array, array]:
             a, b, c, d = base + 2 * k, base + 2 * k + 1, base + 2 * k + 2, base + 2 * k + 3
             idx.extend((a, c, b, b, c, d))
     return data, idx
+
+
+# ---------------------------------------------------------------------- the water where it stands (R3)
+class RiverIndex:
+    """The rooms' rivers as their water lies in the plane: which river's ribbon covers a point, and its surface
+    there (each quad of the ribbon at its two samples' mean level: as drawn, less the lift). Quads are kept in 1 m
+    buckets, so a lookup reads a handful of them. Collision (engine.hd2d.world), scatter and its clearing ask it."""
+
+    def __init__(self, rivers: tuple[River, ...]) -> None:
+        self._quads: list[tuple[tuple[tuple[float, float], ...], float, str]] = []
+        self._buckets: dict[tuple[int, int], list[int]] = {}
+        for river in rivers:
+            r = ribbon(river)
+            for k in range(len(r.centre) - 1):
+                quad = (r.left[k], r.left[k + 1], r.right[k + 1], r.right[k])
+                index = len(self._quads)
+                self._quads.append((quad, (r.level[k] + r.level[k + 1]) / 2, river.id))
+                xs, ys = [q[0] for q in quad], [q[1] for q in quad]
+                for i in range(math.floor(min(xs)), math.floor(max(xs)) + 1):
+                    for j in range(math.floor(min(ys)), math.floor(max(ys)) + 1):
+                        self._buckets.setdefault((i, j), []).append(index)
+
+    def __bool__(self) -> bool:
+        return bool(self._quads)
+
+    def level_at(self, x: float, y: float) -> tuple[float, str] | None:
+        """The water's surface (m) at (x, y) m and its river's id, or None where no river's water lies."""
+        best: tuple[float, str] | None = None
+        for index in self._buckets.get((math.floor(x), math.floor(y)), ()):
+            quad, level, rid = self._quads[index]
+            if _in_quad(quad, (x, y)) and (best is None or level > best[0]):
+                best = (level, rid)
+        return best
+
+
+def _in_quad(quad: tuple[tuple[float, float], ...], p: tuple[float, float]) -> bool:
+    signs = set()
+    for i in range(4):
+        (ax, ay), (bx, by) = quad[i], quad[(i + 1) % 4]
+        c = (bx - ax) * (p[1] - ay) - (by - ay) * (p[0] - ax)
+        if c != 0.0:
+            signs.add(c > 0)
+    return len(signs) < 2
+
+
+# ---------------------------------------------------------------------- carving its bed (R3)
+DEPTH_PER_WIDTH = 0.25  # a bed's depth at its middle, unless given: a quarter of the river's width ...
+DEPTH_M = (0.2, 1.2)  # ... kept within these (m)
+BANK_SLOPE = 0.6  # the bank rises this much a metre from the water's edge (31 degrees: walkable, MAX_SLOPE 0.7)
+BANK_REACH_M = 4.0  # ... for at most this far (2.4 m up): past it the ground is left as it is
+
+
+def bed_depths(river: River, depths: Any = None) -> list[float]:
+    """Each control point's bed depth (m): ``depths`` (one a point, m) if given, else a quarter of its width (within
+    DEPTH_M). Raises RiverError for a wrong list."""
+    if depths is None:
+        return [min(DEPTH_M[1], max(DEPTH_M[0], DEPTH_PER_WIDTH * p[2] / PX)) for p in river.points]
+    if not isinstance(depths, list) or len(depths) != len(river.points):
+        raise RiverError(f"River '{river.id}': give one bed depth a point ({len(river.points)}), in metres")
+    return [_num(d, f"River '{river.id}' bed depth {i + 1}", 0.0, 8.0) for i, d in enumerate(depths)]
+
+
+def carve(terrain: Any, river: River, depths: list[float]) -> set[tuple[int, int]]:
+    """Lower ``terrain`` (engine.hd2d.terrain.Terrain) into the river's bed: under its water the ground goes down to
+    ``level - depth * (1 - (d / half) ** 2)`` (d: from the middle; the depth there ``depths``, by control point,
+    linear between them along the river), meeting the water's surface exactly at its edge; past the edge a bank
+    rises from the water at BANK_SLOPE for up to BANK_REACH_M. Past either end the bank rises from the end's water
+    level the same way. Ground only ever goes down (each corner to the lowest any part of the bed or bank asks of
+    it), so carving twice is carving once, and ground already lower is kept. Returns the corner chunks changed (as
+    ``Terrain.sculpt`` does); ``terrain.changed`` notes the stored chunks."""
+    from engine.hd2d.terrain import CHUNK, LIMIT, QUANTUM, chunks_of  # noqa: PLC0415
+
+    r = ribbon(river)
+    n = len(r.centre)
+    marks = r.marks
+    depth = []
+    span = 0
+    for s in r.u:  # each sample's depth: linear between the control points along the river, as its width and level
+        while span < len(marks) - 2 and marks[span + 1] < s:
+            span += 1
+        a, b = marks[span], marks[span + 1]
+        f = min(1.0, max(0.0, (s - a) / (b - a))) if b - a > 1e-12 else 0.0
+        depth.append(depths[span] + (depths[span + 1] - depths[span]) * f)
+    cell = terrain.cell / PX
+    lowest: dict[int, float] = {}  # corner -> the lowest height (m) asked of it
+    for k in range(n - 1):
+        (ax, ay), (bx, by) = r.centre[k], r.centre[k + 1]
+        dx, dy = bx - ax, by - ay
+        length2 = dx * dx + dy * dy
+        if length2 < 1e-12:
+            continue
+        length = math.sqrt(length2)
+        reach = max(r.half[k], r.half[k + 1]) + BANK_REACH_M
+        i0 = max(0, math.floor((min(ax, bx) - reach - terrain.origin[0] / PX) / cell))
+        i1 = min(terrain.nx, math.ceil((max(ax, bx) + reach - terrain.origin[0] / PX) / cell))
+        j0 = max(0, math.floor((min(ay, by) - reach - terrain.origin[1] / PX) / cell))
+        j1 = min(terrain.ny, math.ceil((max(ay, by) + reach - terrain.origin[1] / PX) / cell))
+        for j in range(j0, j1 + 1):
+            for i in range(i0, i1 + 1):
+                cx, cy = (v / PX for v in terrain.corner_xy(i, j))
+                t_raw = ((cx - ax) * dx + (cy - ay) * dy) / length2
+                t = min(1.0, max(0.0, t_raw))
+                # from the course (the nearest point of this piece of it: round the outside of a bend, its end)
+                across = math.hypot(cx - (ax + dx * t), cy - (ay + dy * t))
+                half = r.half[k] + (r.half[k + 1] - r.half[k]) * t
+                level = r.level[k] + (r.level[k + 1] - r.level[k]) * t
+                beyond = 0.0  # (how far past an end of the river: its first piece's start, its last's end)
+                if k == 0 and t_raw < 0:
+                    beyond = -t_raw * length
+                elif k == n - 2 and t_raw > 1:
+                    beyond = (t_raw - 1) * length
+                if beyond > 0.0:  # past an end: a bank from that end's water all round
+                    rise = math.hypot(beyond, max(0.0, across - half))
+                    if rise > BANK_REACH_M:
+                        continue
+                    target = level + BANK_SLOPE * rise
+                elif across <= half:
+                    d = depth[k] + (depth[k + 1] - depth[k]) * t
+                    target = level - d * (1.0 - (across / half) ** 2)
+                elif across - half <= BANK_REACH_M:
+                    target = level + BANK_SLOPE * (across - half)
+                else:
+                    continue
+                key = i + j * (terrain.nx + 1)
+                if target < lowest.get(key, math.inf):
+                    lowest[key] = target
+    changed: set[tuple[int, int]] = set()
+    for key, target in lowest.items():
+        new = round(max(-LIMIT, min(LIMIT, target * PX - terrain.base)) / QUANTUM) * QUANTUM
+        if new < terrain.heights[key]:
+            terrain.heights[key] = new
+            changed.add((key % (terrain.nx + 1), key // (terrain.nx + 1)))
+    terrain.changed |= {(i // CHUNK, j // CHUNK) for i, j in changed}
+    return chunks_of(changed)

@@ -1292,6 +1292,82 @@ def set_river(scene: Doc, river_id: str, *, points: Any = _UNSET, flow: Any = _U
     return _with_rivers(scene, edit)
 
 
+def carve_river_bed(scene: Doc, river_id: str, depths: Any = None) -> Doc:
+    """Carve a river's bed into this HD-2D room's ground (#461 R3), so its water lies in a channel instead of on
+    the ground: under the water the ground goes down to the river's level less its depth (deepest in the middle,
+    rising to meet the water at its edge), and a bank climbs from the water's edge at a walkable slope (31 degrees)
+    until it meets the ground (up to 4 m out). ``depths``: the bed's depth at each control point (m, one a point;
+    linear between them: a shallow point is a ford); if not given, a quarter of the river's width there (0.2 to
+    1.2 m). Water deeper than half a metre can't be waded. The ground only ever goes down: carving again changes
+    nothing, other sculpting is kept wherever it is already lower, and nothing else moves (structures, objects and
+    scatter keep their places: ``terrain_anchoring`` and ``clear_scatter_in_rivers``). One edit: one undo step."""
+    from engine.hd2d.river import RiverError, bed_depths, carve  # noqa: PLC0415
+    from engine.hd2d.terrain import Terrain  # noqa: PLC0415
+
+    river = next((r for r in _parsed_rivers(scene, strict=True) if r.id == river_id), None)
+    if river is None:
+        raise OpError(f"This room has no river '{river_id}'.")
+    try:
+        wanted = bed_depths(river, depths)
+    except RiverError as err:
+        raise OpError(str(err)) from err
+    old = scene["settings"]["hd2d"].pop("scatter", None)  # (not copied: thousands of rows, untouched)
+    try:
+        out = copy.deepcopy(scene)
+    finally:
+        if old is not None:
+            scene["settings"]["hd2d"]["scatter"] = old
+            out["settings"]["hd2d"]["scatter"] = old
+    hd2d = _hd2d_block(out)
+    ground = _parsed_ground(out)
+    terrain = Terrain.from_ground(ground)
+    if not carve(terrain, river, wanted):
+        raise OpError(f"River '{river_id}''s bed is already carved: the ground under it is as low as asked, or lower.")
+    raw = hd2d["ground"]
+    if not isinstance(raw, dict):
+        raw = hd2d["ground"] = {}
+    raw["terrain"] = terrain.settings(raw.get("terrain"))  # (only the stored chunks it changed are encoded again)
+    return _checked_structures(out)
+
+
+def clear_scatter_in_rivers(scene: Doc, river_id: Any = None) -> Doc:
+    """Take away the scattered decoration (grass, flowers, bushes, rocks, ...) standing in a river's water (#461
+    R3): what a scatter stroke wouldn't put there now (``engine.hd2d.scatter.submerged``: reeds may stand in its
+    shallows). ``river_id``: that river's water only, else every river's. Objects, characters and structures are
+    never touched, nor scatter anywhere else. One edit: one undo step."""
+    from engine.hd2d.river import RiverIndex  # noqa: PLC0415
+    from engine.hd2d.scatter import ASSETS, ScatterError, parse_scatter, stored, submerged  # noqa: PLC0415
+    from engine.hd2d.terrain import Terrain  # noqa: PLC0415
+
+    chosen = [r for r in _parsed_rivers(scene, strict=True) if river_id is None or r.id == river_id]
+    if not chosen:
+        raise OpError(f"This room has no river '{river_id}'." if river_id is not None else "This room has no rivers.")
+    hd2d = _hd2d_block(scene)
+    try:
+        instances = parse_scatter(hd2d.get("scatter") or {})
+    except ScatterError as err:
+        raise OpError(str(err)) from err
+    ground = _parsed_ground(scene)
+    terrain = Terrain.from_ground(ground) if ground.terrain is not None else None
+    water = RiverIndex(tuple(chosen))
+    kept: dict[str, list[tuple[int, int, int, int]]] = {}
+    removed = 0
+    for name, rows in instances.items():
+        asset = ASSETS[name]
+        for row in rows:
+            x, y = row[0], row[1]
+            level = water.level_at(x / PX_PER_M, y / PX_PER_M)
+            height = (terrain.height(x, y) if terrain is not None else float(ground.elevation)) if level else None
+            if level is not None and height is not None and submerged(asset, height, level[0] * PX_PER_M):
+                removed += 1
+            else:
+                kept.setdefault(name, []).append(row)
+    if not removed:
+        raise OpError("Nothing scattered stands in " + (f"river '{river_id}''s" if river_id else "the rivers'")
+                      + " water.")
+    return set_scatter(scene, stored(kept))
+
+
 def remove_river(scene: Doc, river_id: str) -> Doc:
     """Remove a river from this room."""
     def edit(found: list[Doc]) -> list[Doc]:
@@ -3323,7 +3399,21 @@ def scatter_context(scene: Doc, models: Any = None) -> tuple[Any, list[tuple[str
             fx, fy = sum(p[0] for p in low) / len(low) * scale * PX_PER_M, sum(p[1] for p in low) / len(low) * scale * PX_PER_M
             spots.append((f"the way onto '{s.get('id')}'",
                           (float(s["x"]) + fx * math.cos(a) - fy * math.sin(a), float(s["y"]) + fx * math.sin(a) + fy * math.cos(a))))
-    return ground_for(terrain, flat, waters, footprints, spots=[at for _label, at in spots]), spots, routes
+    return ground_for(terrain, flat, waters, footprints, spots=[at for _label, at in spots],
+                      rivers=_parsed_rivers(scene)), spots, routes
+
+
+def _parsed_rivers(scene: Doc, strict: bool = False) -> tuple[Any, ...]:
+    """The room's rivers (engine.hd2d.river.River). Broken ones: none (as a load sets them aside), or, ``strict``,
+    an OpError saying why."""
+    from engine.hd2d.river import RiverError, parse_rivers  # noqa: PLC0415
+
+    try:
+        return parse_rivers(rivers(scene))
+    except RiverError as err:
+        if strict:
+            raise OpError(str(err)) from err
+        return ()
 
 
 def _scatter_rules(on: Any, slope: Any, avoid_water: Any, avoid_structures: Any, default_on: tuple[str, ...],

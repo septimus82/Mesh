@@ -135,18 +135,38 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
 - **Look:** `flow` (m/s; 0 is still water), plus `colour`, `deep_colour`, `opacity`, `depth`, `waves`, `reflection`
   and `rain_ripples`, as for a pond. Rivers mirror what stands above them through the same frame copy as ponds, take
   the room's sun, lamps and shadows, and ring with its rain, though not under a roof or bridge. Walking through a
-  river makes no ripples yet (ponds and puddles do).
-- **The bed comes first.** The water shows only where its level is above the ground, so sculpt the riverbed with
-  **Sculpt** (Lower or Flatten) before adding the river. A river doesn't carve its own bed. Where the bed is wider
-  than the river, the river's straight edge shows.
+  river's shallows ripples it (below).
+- **Its bed.** The water shows only where its level is above the ground. With the river selected, **Carve the
+  bed** lowers the ground under it into a channel:
+  - deepest in the middle, rising to meet the water at its edge;
+  - a bank climbing from the water at a walkable slope until it meets the ground (up to 4 m out);
+  - **Bed depth** (m): empty for a quarter of the river's width (0.2 to 1.2 m), or one depth for the whole river.
+    The AI can give a depth for each point; a shallow point makes a ford.
+  - Carving only ever lowers the ground: carving again changes nothing, and ground already lower is kept. It is one
+    undo step.
+  - You can also sculpt the bed yourself with **Sculpt**. Where the bed is wider than the river, the river's
+    straight edge shows.
+- **Plants in the water.** Scatter strokes keep out of rivers' water (reeds may stand in the shallows). **Clear
+  plants** takes away the scattered grass, flowers, bushes and rocks already standing in the selected river's water,
+  as one undo step. Objects, characters and structures are never touched, and editing or removing a river never
+  touches scatter.
+- **Wading and deep water.** Characters wade through water up to half a metre deep: their steps ripple it and
+  send a `water_step` event, as in a pond, with no change of speed. Deeper water stops them at its edge, as a ledge
+  does. Depth is the water over the ground or floor under their feet, so a bridge's deck above the water stays
+  dry and walkable.
 - **Refused, with the reason and where:** a bend too tight for the river's width (its inner bank would fold), banks
   that cross or come within a quarter metre of each other, water that would run uphill, points closer than a
   quarter metre, two rivers that cross or overlap, and a bank off the room's ground.
 - **Limits:** at most 16 rivers in a room, each at most 1,024 m long and 2,048 m together.
 
-Not yet: carving the bed, clearing scatter under the water (use the Scatter brush's
-remove), ripples where someone wades through it, stopping or slowing characters, rivers flowing into lakes or joining each other, waterfalls, and rivers in
-2D rooms. A river's two ends are cut square.
+Not yet:
+- rivers flowing into lakes or joining each other;
+- waterfalls;
+- swimming, or any way to cross deep water other than a bridge or a ford;
+- wading sounds or slowing down;
+- rivers in 2D rooms.
+
+A river's two ends are cut square. Its bed ends there too: past an end, a bank climbs from the water's level.
 
 ## Wind and moving decoration
 
