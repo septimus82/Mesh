@@ -1,7 +1,7 @@
 # Rivers R1: evidence (#461) — not for merge
 
-All pictures are real 1280×720 hidden-window frames from the R1 renderer (`feature/rivers-r1`, d95fbf6). There are
-no diagrams. Projects are scratch copies: the owner's Lakeside originals were not touched.
+All pictures are real 1280×720 hidden-window frames from the R1 renderer (`feature/rivers-r1`, d95fbf6; the review
+fixes in 0b41158 change no picture here except the new bend capture). There are no diagrams. Projects are scratch copies: the owner's Lakeside originals were not touched.
 
 **R1 is not creator-complete.** There is no River tool in Studio. Rivers are made through the checked ops
 (`add_river`, `set_river`, `remove_river`; MCP / `mesh author`).
@@ -50,6 +50,31 @@ The tests check:
   changes.
 
 **Mutation:** reversing the drift in the shader (`u + drift`) fails the test (−10 texels on the north river).
+
+## Review fixes (0b41158)
+
+**River-only rooms flow in real play.** The first head's water clock ran only for ponds, so a room with only rivers
+stayed frozen; the earlier GPU tests had set the clock themselves. A new test drives a room with rivers and no
+ponds through the game's own update ticks. After 30 ticks the clock reads 0.5 s, both rivers drift 8–12 texels per
+0.25 s at 1.2 m/s, and they stand still at flow 0. With the old clock the test fails (clock 0.0).
+
+**Bank to bank, round a bend** (`bend_widening_top_down.png`, `tools/bend_probe.py`). A right-angle bend widening
+from 1.25 m to 3 m, seen from straight above:
+- inside the banks: 23,108 of 23,108 texels drawn (more than 3 texels inside);
+- outside the banks: 0 of 92,688 texels drawn (more than 3 texels outside).
+
+Mutations that punch holes along the banks (2,839 found) or draw the banks 10% wide (391 found) fail it.
+
+**On the ground and bounded.**
+- Both banks must lie on the room's ground.
+- At most 16 rivers per room, each up to 1,024 m, 2,048 m together. The lengths are checked from the course before
+  any sampling.
+
+**Footsteps.** Rivers make no ripples where someone wades through them yet (deferred). The shader only draws rings
+that ponds and puddles add.
+
+**Scratch-output guard** (`tools/scratch_guard.py`). Every evidence script refuses to write outside the session
+scratchpad before writing anything. A `/c/...` path resolves to `D:\c\...`, and the guard refuses it.
 
 ## Rain (`rain_crop_x2.png`)
 

@@ -13,6 +13,10 @@ from pathlib import Path
 
 REPO = Path(os.environ.get("M17_REPO", r"D:\Games\Mesh-rivers"))
 M17 = Path(r"C:\Users\slebb\AppData\Local\Temp\claude\D--Games-Mesh\bff3a484-a7b8-4c6b-bf14-a015c42db67e\scratchpad\m17")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from scratch_guard import inside_scratch  # noqa: E402
+
+M17 = inside_scratch(M17)  # (never a mis-converted path such as D:\c\...)
 sys.path[:0] = [str(REPO)]
 PROJECT = M17 / "projects" / "lakeside"
 SCENES = PROJECT / "packs" / "core_regions" / "scenes"

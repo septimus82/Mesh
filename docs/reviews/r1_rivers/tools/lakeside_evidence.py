@@ -8,6 +8,10 @@ from pathlib import Path
 REPO = Path(r"D:\Games\Mesh-rivers")
 M17 = Path(r"C:\Users\slebb\AppData\Local\Temp\claude\D--Games-Mesh\bff3a484-a7b8-4c6b-bf14-a015c42db67e\scratchpad\m17")
 OUT = Path(r"C:\Users\slebb\AppData\Local\Temp\claude\D--Games-Mesh\bff3a484-a7b8-4c6b-bf14-a015c42db67e\scratchpad\river\evidence")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from scratch_guard import inside_scratch  # noqa: E402
+
+OUT = inside_scratch(OUT)  # (never a mis-converted path such as D:\c\...)
 sys.path[:0] = [str(REPO), str(REPO / "tooling")]
 os.environ.update({"MESH_USER_DIR": str(M17 / "user"), "MESH_PROJECTS_DIR": str(M17 / "userprojects"),
                    "APPDATA": str(M17 / "appdata"), "XDG_DATA_HOME": str(M17 / "xdg")})
