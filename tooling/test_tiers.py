@@ -17,7 +17,8 @@ runs no test, besides failing on any failed test (pytest's own exit code).
 Reporting only (#422), so a run's speed can be read: a summary's ``measurements`` are the values tests recorded with
 ``record_testsuite_property("measure.<name>", <json>)`` (the terrain stroke's frame times, on passing runs too), and
 the gpu lane's ``runner`` is ``tooling/runner_calibration.py`` run before and after its tests (CPU, vCPUs, a fixed
-CPU loop and a fixed llvmpipe frame). Nothing is judged against them.
+CPU loop and a fixed llvmpipe frame) and ``runner.host``, where that ran: the runner OS and image, the GL strings and
+the Mesa/LLVM versions in them, and the Mesa settings in ``MESA_ENV`` that are set. Nothing is judged against them.
 """
 
 from __future__ import annotations
@@ -25,10 +26,13 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
+import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -151,22 +155,59 @@ def gl_renderer() -> str | None:
 
 
 def runner_calibration() -> dict[str, Any]:
-    """``tooling/runner_calibration.py`` in its own process (like ``gl_renderer``): what it measured, and ``error``
-    (its last stderr line) when it stopped short. Reporting only: it never fails the lane."""
+    """``tooling/runner_calibration.py`` in its own process (like ``gl_renderer``): what it measured, ``complete``
+    (it measured a llvmpipe frame), and ``error`` saying why not (a missing or invalid ``gl_frame_ms``, and its last
+    stderr line). Whatever valid it measured is kept. Reporting only: it never fails the lane."""
     try:
         proc = subprocess.run([sys.executable, "-m", "tooling.runner_calibration"], capture_output=True, text=True,
                               timeout=120, cwd=Path(__file__).resolve().parents[1])
     except (OSError, subprocess.SubprocessError) as exc:
-        return {"error": f"{type(exc).__name__}: {exc}"[:300]}
+        return {"complete": False, "error": f"{type(exc).__name__}: {exc}"[:300]}
     out: dict[str, Any] = {}
     for line in proc.stdout.splitlines():
         try:
             out.update(json.loads(line))
         except (ValueError, TypeError):
             continue
-    if proc.returncode != 0 or not out:
-        out["error"] = ((proc.stderr or "").strip().splitlines() or [f"exit code {proc.returncode}"])[-1][:300]
+    why = []
+    frame = out.get("gl_frame_ms")
+    if "gl_frame_ms" not in out:
+        why.append("no gl_frame_ms")
+    elif isinstance(frame, bool) or not isinstance(frame, (int, float)) or not frame > 0:
+        why.append(f"invalid gl_frame_ms {out.pop('gl_frame_ms')!r}"[:100])
+    if proc.returncode != 0:
+        why.append(((proc.stderr or "").strip().splitlines() or [f"exit code {proc.returncode}"])[-1][:300])
+    out["complete"] = not why
+    if why:
+        out["error"] = "; ".join(why)
     return out
+
+
+# The Mesa/llvmpipe settings that change what the gpu lane measures, recorded in ``runner.host`` when set (#422):
+# which driver, forced software GL, llvmpipe's thread count, overridden GL/GLSL versions. Nothing else from the
+# environment is recorded.
+MESA_ENV = ("GALLIUM_DRIVER", "LIBGL_ALWAYS_SOFTWARE", "LP_NUM_THREADS", "MESA_GL_VERSION_OVERRIDE",
+            "MESA_GLSL_VERSION_OVERRIDE", "MESA_LOADER_DRIVER_OVERRIDE")
+UNAVAILABLE = "unavailable"
+
+
+def runner_host(calibration: Mapping[str, Any], env: Mapping[str, str] | None = None) -> dict[str, Any]:
+    """Where a gpu lane ran: GitHub's ``RUNNER_OS``/``ImageOS``/``ImageVersion`` (``unavailable`` elsewhere), the
+    calibration context's GL strings and the Mesa and LLVM versions they name, and the ``MESA_ENV`` settings that are
+    set. Anything missing or malformed is ``unavailable``: reporting only."""
+    env = os.environ if env is None else env
+
+    def text(value: object) -> str:
+        return value.strip()[:200] if isinstance(value, str) and value.strip() else UNAVAILABLE
+
+    renderer, version = text(calibration.get("gl_renderer")), text(calibration.get("gl_version"))
+    mesa = re.search(r"\bMesa (\d[\w.+~-]*)", version)
+    llvm = re.search(r"\bLLVM (\d[\w.]*)", renderer)
+    return {"runner_os": text(env.get("RUNNER_OS")), "image_os": text(env.get("ImageOS")),
+            "image_version": text(env.get("ImageVersion")), "gl_vendor": text(calibration.get("gl_vendor")),
+            "gl_renderer": renderer, "gl_version": version,
+            "mesa_version": mesa.group(1) if mesa else UNAVAILABLE, "llvm_version": llvm.group(1) if llvm else UNAVAILABLE,
+            "mesa_env": {name: text(env.get(name)) for name in MESA_ENV if env.get(name)}}
 
 
 def _xdist_available() -> bool:
@@ -266,6 +307,7 @@ def main(argv: list[str] | None = None) -> int:
     rc = _run(pytest_cmd, cwd=repo_root, env=_tier_env(tier_cfg, renderer))
     if runner is not None:
         runner["after"] = runner_calibration()
+        runner["host"] = runner_host({**runner["after"], **runner["before"]})  # the GL strings either run got
     run = summarize_junit(junit) if junit.is_file() else None
     problems = lane_problems(run, gl_renderer=renderer, gl_tier=gl_tier,
                              min_selected=0 if extra_args else tier_cfg.min_selected)

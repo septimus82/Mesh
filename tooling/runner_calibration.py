@@ -7,7 +7,9 @@ measures the runner with fixed work, so a slow run can be told from a slower eng
 * ``cpu``, ``vcpus``: the processor and how many logical CPUs the runner has;
 * ``cpu_ms``: a fixed pure-Python loop (one core), median of 5;
 * ``gl_frame_ms``: a fixed full-screen fragment shader drawn into a 960x540 framebuffer and finished, median of 15
-  frames after 3 warm-up frames, in a hidden window: what llvmpipe's rasterising costs on this runner.
+  frames after 3 warm-up frames, in a hidden window: what llvmpipe's rasterising costs on this runner;
+* ``gl_vendor``, ``gl_renderer``, ``gl_version``: that context's OpenGL strings (pyglet's ``gl_info``, as
+  ``test_tiers.gl_renderer`` reads them), read after the timed frames.
 
 Reporting only: nothing is judged against these numbers. ``python -m tooling.test_tiers gpu`` runs this before and
 after its tests and puts both in the lane summary. It prints one JSON line for the CPU, then one for the frame: a
@@ -71,7 +73,9 @@ def cpu_ms() -> float:
     return round(statistics.median(times), 2)
 
 
-def gl_frame_ms() -> float:
+def gl_frame() -> dict[str, object]:
+    from pyglet.gl import gl_info
+
     from engine import optional_arcade
 
     geometry = optional_arcade.arcade_gl.geometry
@@ -90,11 +94,12 @@ def gl_frame_ms() -> float:
             ctx.finish()
             if frame >= 3:
                 times.append((time.perf_counter() - start) * 1000)
-        return round(statistics.median(times), 2)
+        return {"gl_frame_ms": round(statistics.median(times), 2), "gl_vendor": gl_info.get_vendor(),
+                "gl_renderer": gl_info.get_renderer(), "gl_version": gl_info.get_version_string()}
     finally:
         window.close()
 
 
 if __name__ == "__main__":
     print(json.dumps({"cpu": cpu_model(), "vcpus": os.cpu_count(), "cpu_ms": cpu_ms()}), flush=True)
-    print(json.dumps({"gl_frame_ms": gl_frame_ms()}))
+    print(json.dumps(gl_frame()))

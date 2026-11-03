@@ -125,6 +125,11 @@ jobs:
             foreach ($p in $s.skip_reasons.PSObject.Properties) { $lines += "- skipped $($p.Value): $($p.Name)" }
             foreach ($p in $s.problems) { $lines += "- PROBLEM: $p" }
             # Reporting only (#422): the runner's calibration and the values tests recorded, on passing runs too.
+            $h = $s.runner.host
+            if ($h) {
+              $mesa = @($h.mesa_env.PSObject.Properties | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join ", "
+              $lines += "- host: $($h.runner_os), image $($h.image_os) $($h.image_version); GL $($h.gl_vendor) | $($h.gl_renderer) | $($h.gl_version); Mesa $($h.mesa_version), LLVM $($h.llvm_version); Mesa settings: $(if ($mesa) { $mesa } else { 'none set' })"
+            }
             foreach ($when in "before", "after") {
               $c = $s.runner.$when
               if ($c.cpu) {
