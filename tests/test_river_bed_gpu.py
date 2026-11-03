@@ -140,10 +140,19 @@ def test_the_player_wades_the_ford_stops_at_deep_water_and_crosses_the_bridge(tm
         assert deep["x"] > middle, ("stopped before the deep middle", deep, middle)
         assert deep["deepest"] <= DEEP, ("never stood in deep water", deep)
 
-        # put in the deep middle (a river carved under it, a start point there): it can wade out, never deeper
+        # put in the deep middle (a river carved under it, a start point there): it wades out, never deeper than
+        # where it was put, so out the shallower way (towards the bank on the side the bed rises from where it stands)
         bed = min(h for h, _s in world.heights_at(middle / 32, study.DEEP_Y / 32))
-        out = study.walk(game, (middle, study.DEEP_Y, bed), game.arcade.key.D, 150)
-        assert out["x"] > study.EAST_BANK_X - 16 and out["deepest"] <= 0.8 + 0.02, ("waded out", out)
+
+        def deepest_at(x_px: float) -> float:
+            floor = min(h for h, _s in world.heights_at(x_px / 32, study.DEEP_Y / 32))
+            return world.deepest(x_px / 32, study.DEEP_Y / 32, floor, 0.3, 0.19)
+
+        east = deepest_at(middle + 2) < deepest_at(middle - 2)  # (the way the bed rises from where it stands)
+        key, bank = (game.arcade.key.D, study.EAST_BANK_X) if east else (left, study.WEST_BANK_X)
+        out = study.walk(game, (middle, study.DEEP_Y, bed), key, 150)
+        reached = out["x"] > bank - 16 if east else out["x"] < bank + 16
+        assert reached and out["deepest"] <= 0.8 + 0.02, ("waded out onto the bank", out, bank)
 
         # re-review of c96e3e8: tiny steps (a slow stick, a slow NPC, a fast frame) never ratchet into deep water
         player = game.player()
@@ -160,6 +169,23 @@ def test_the_player_wades_the_ford_stops_at_deep_water_and_crosses_the_bridge(tm
         box = _sprite_to_aabb(player)
         depth = world.deepest(box.x / 32, box.y / 32, elevation_of(player), box.w / 64, box.h / 64)
         assert depth <= DEEP + DEEP_SLACK + 1e-9, depth
+
+        # re-review of afc674c: a cap set in shallower deep water, then moved deeper by a teleport (a transfer, an
+        # event): it can still wade out
+        for x in range(int(middle) + 4, int(study.EAST_BANK_X), 2):
+            box_bed = min(h for h, _s in world.heights_at(x / 32, study.DEEP_Y / 32))
+            if world.deepest(x / 32, study.DEEP_Y / 32, box_bed, 0.3, 0.19) < 0.65:
+                break
+        study.walk(game, (float(x), study.DEEP_Y, box_bed), game.arcade.key.D, 2)  # (a step there: its cap set)
+        assert getattr(game.player(), "mesh_hd2d_deep_cap", None) is not None
+        game.player().center_x = middle  # teleported into the deep middle, its old cap kept
+        game.player().mesh_entity_data["elevation"] = bed * 32
+        game.player().center_y = study.DEEP_Y + (game.player().center_y - game.player().bottom)
+        solids = getattr(game.window.scene_controller, "solid_sprites", None)
+        for _ in range(400):  # (the shallower way out, as above)
+            world.move(game.player(), (1.0 if east else -1.0, 0.0), solids)
+        x_out = game.player().center_x
+        assert x_out > bank - 16 if east else x_out < bank + 16, ("waded out after a teleport", x_out, bank)
 
         bridge = study.walk(game, study.DECK, left, 150)
         assert bridge["x"] < 600.0 and abs(bridge["z"] - study.DECK[2]) < 0.05, ("across on the deck", bridge)

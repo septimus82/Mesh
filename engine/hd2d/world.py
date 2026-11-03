@@ -46,6 +46,8 @@ STEP = 0.35  # m: the highest a character steps up or down without stairs
 BODY = 1.5  # m: a character's standing height (a 48 px sprite)
 DEEP = BODY / 3  # m: water deeper than a third of a character's height can't be waded (0.5 m) ...
 DEEP_SLACK = 0.01  # m: ... give or take the ground's stored rounding (a quarter pixel), so 0.5 m stays wadeable
+ESCAPE_SLACK = 0.05  # m: one found in deeper water may wade out through water this much deeper than around it (the
+# carved bed's triangles between the samples taken; set once, so it never adds up)
 WADE_STEP = 14.0 / PIXELS_PER_METRE  # m: a wading step every this far (as engine.behaviours.water_surface)
 NAV_CELL = 0.5  # m: the navigation grid's cell
 NAV_HALF = (0.3, 0.19)  # m: half the footprint the navigation grid plans for (a character's feet box)
@@ -340,14 +342,19 @@ class World:
         x, y, z = box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE, elevation_of(sprite)
         dx, dy = delta
         deep = DEEP + DEEP_SLACK
-        if self.rivers:  # already in deeper water (put there, or a river carved under it): it may wade out of it
+        if self.rivers:  # already in deeper water (put there, a river carved under it, a teleport): it wades out
             here = self.deepest(x, y, z, hw, hh)
-            if here > deep:  # (to no deeper than where it was first found in it, give or take a slack once: its cap
-                cap = getattr(sprite, "mesh_hd2d_deep_cap", None)  # is set then and never grows, so however small
-                deep = cap if cap is not None else here + DEEP_SLACK  # its steps it never edges deeper; held until
-                sprite.mesh_hd2d_deep_cap = deep  # it is back in water it can wade: the deepest under its feet rises
-            else:  # and falls as its corners pass the channel's middle on the way out)
+            cap = getattr(sprite, "mesh_hd2d_deep_cap", None)
+            if here <= deep:
                 sprite.mesh_hd2d_deep_cap = None
+            else:
+                if cap is None or here > cap:  # (found there: no deeper than the water within a footprint all round,
+                    # which its corners cross on the way out; set once, held until it can wade again, so however
+                    # small its steps it never edges deeper)
+                    cap = max(self.deepest(x + i * hw, y + j * hh, z, hw, hh) for i in (-1, 0, 1)
+                              for j in (-1, 0, 1)) + ESCAPE_SLACK
+                    sprite.mesh_hd2d_deep_cap = cap
+                deep = cap
         if dx and self.stand(x + dx / PIXELS_PER_METRE, y, z, hw, hh, deep) is None:
             dx = 0.0
         if dy and self.stand(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE, z, hw, hh, deep) is None:
