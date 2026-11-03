@@ -120,7 +120,9 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
   - **Insert** adds a point after the selected one, halfway along the course.
   - **Delete** removes the selected point (a river keeps two at least) or, with no point selected, the river.
   - The panel sets the point's **Width** and **Water level**, and the river's **Flow**, **Waves** and **Reflection**.
-  - **Reverse flow** turns the river round.
+  - **Reverse flow** turns the river round. Its water levels still fall from the new first point, so the water
+    is relevelled where it stands: on a sloping river it rises at the old mouth and drops at the old source.
+    Sculpt the bed to match, or set the points' water levels again.
 - **One undo step each:** finishing a river, one drag, an insert, a removal and each value typed are one undo step
   each. Undo, room changes and **Play** drop a drag or a river still being drawn.
 - **Refused edits change nothing:** a point, drag or value that the checks below refuse leaves the river as it was,

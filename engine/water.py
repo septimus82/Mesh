@@ -782,7 +782,8 @@ class WaterLayer:
     def set_rivers(self, rivers: tuple[Any, ...]) -> None:
         """The room's rivers (engine.hd2d.river.River, already checked): their ribbons made again only when they
         change (none: their buffers freed). A change that fits the buffers is written into them (Studio's River tool
-        drags a point: no allocation a move); one that doesn't gets new buffers with half as much again to spare."""
+        drags a point: no allocation a move while the river fits); one that doesn't gets new buffers with half as much
+        again to spare."""
         if rivers == self.rivers:
             return
         from engine.hd2d import river as river_mod  # noqa: PLC0415

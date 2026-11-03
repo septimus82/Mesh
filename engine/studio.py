@@ -3293,8 +3293,8 @@ class Studio(InspectorMixin, SoundMixin):
         self.panning = False
         if self.hd2d.stroke is not None:
             self.hd2d.end_stroke()
-        if self.hd2d.river.gesture is not None:  # (a river point being dragged: dropped, nothing saved)
-            self.hd2d.river.cancel_edit()
+        if self.hd2d.river.cancel_edit("River edit cancelled: the window lost focus (nothing was saved)."):
+            self._rebuild()  # (a river point being dragged, or one being drawn: dropped, the saved rivers drawn)
 
     def on_mouse_release(self, x: float, y: float, button: int, modifiers: int) -> bool:
         if self.mode == "play":

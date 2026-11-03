@@ -199,3 +199,69 @@ def test_a_creator_draws_edits_and_plays_a_river_in_studio(tmp_path: Path, recor
     finally:
         record_testsuite_property("measure.river_tool", json.dumps(measures))  # reporting only
         d.close()
+
+
+def test_losing_focus_drops_a_river_being_drawn_or_a_point_being_dragged(tmp_path: Path) -> None:
+    """The window loses the keyboard (Alt+Tab) mid-gesture: a river still being drawn and a point being dragged are
+    both dropped. Nothing is saved, the undo history and unsaved state are as they were, the saved rivers are
+    drawn again, and nothing of the gesture resumes when the person comes back."""
+    import r1_river_study as r1
+    from hd2d_studio_demo import StudioDriver
+
+    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    project = r1.make_project(tmp_path, "focus", rivers=False)
+    d = StudioDriver(project)
+    try:
+        k, left, studio = d.arcade.key, d.arcade.MOUSE_BUTTON_LEFT, d.studio
+        tool, terrain = studio.hd2d.river, d.renderer.terrain
+
+        def ground(px: float, py: float) -> tuple[float, float, float]:
+            return (px / 32, py / 32, terrain.surface_at(px, py)[0] / 32)
+
+        def state() -> tuple[Any, ...]:
+            p = studio.project
+            return (json.dumps(_rivers(d)), len(p._undo), len(p._redo), p.revision, sorted(p.dirty))
+
+        def shown() -> list[list[list[float]]]:
+            return [[list(p) for p in r.points] for r in d.renderer.settings.rivers]
+
+        d.button("Terrain")
+        d.button("River")
+        studio.hd2d.camera.target = (20.0, 24.0, 0.0)
+        d.advance(2)
+
+        # (a) a river being drawn: two points, not saved
+        before = state()
+        for x, y, _w, _l in r1.NORTH[:2]:
+            d.click(*d.screen(ground(x, y)))
+        assert tool.draft is not None and len(tool.draft) == 2 and len(shown()) == 1, "drawn, shown, not saved"
+        d.window.dispatch_event("on_deactivate")
+        d.advance()
+        assert tool.draft is None and tool.gesture is None and state() == before and shown() == []
+        assert "lost focus" in studio.message, studio.message
+        d.click(*d.screen(ground(*r1.NORTH[2][:2])))  # back: a click starts afresh, nothing resumed
+        assert tool.draft is not None and len(tool.draft) == 1
+        d.key(k.ESCAPE)
+        assert tool.draft is None and state() == before
+
+        # (b) a point being dragged: the river saved first, then a drag that loses focus before it's let go
+        for x, y, _w, _l in r1.NORTH:
+            d.click(*d.screen(ground(x, y)))
+        d.key(k.ENTER)
+        saved, saved_shown = state(), shown()
+        x, y, _w, level = _rivers(d)[0]["points"][2]
+        start, to = d.screen((x / 32, y / 32, level / 32)), d.screen(ground(x + 24, y))
+        d.window.dispatch_event("on_mouse_press", *start, left, 0)
+        d.window.dispatch_event("on_mouse_drag", *to, to[0] - start[0], to[1] - start[1], left, 0)
+        d.advance()
+        assert tool.gesture is not None and shown() != saved_shown, "dragged, shown where it is dragged"
+        d.window.dispatch_event("on_deactivate")
+        d.advance()
+        assert tool.gesture is None and state() == saved and shown() == saved_shown, "dropped: as saved"
+        # the release that comes when the person is back (or a stray drag) does nothing
+        d.window.dispatch_event("on_mouse_drag", *start, 0, 0, left, 0)
+        d.window.dispatch_event("on_mouse_release", *start, left, 0)
+        d.advance()
+        assert tool.gesture is None and state() == saved and shown() == saved_shown
+    finally:
+        d.close()

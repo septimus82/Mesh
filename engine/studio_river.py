@@ -12,14 +12,18 @@ settings, never in the scene, and goes when the gesture is cancelled (Esc, undo,
 - **Edit:** click a river to select it, a control point (its post) to select that; drag a point to move it (one
   undo step when let go, its width and water level kept); Insert puts a point after the selected one (on the
   course, halfway), Delete removes the selected point (a river keeps at least two) or, with no point selected, the
-  river. The panel sets the point's width and water level, the river's flow and look, and turns it round.
+  river. The panel sets the point's width and water level, the river's flow and look, and turns it round: Reverse
+  flow puts the points in the opposite order and gives them the levels in their old order (the highest first), so
+  it relevels the water where it stands: a sloping river's surface rises at its old mouth and falls at its old
+  source, and may need its bed sculpted again.
 - **Refused edits:** a point, drag or field the checks refuse (a bank folding, banks touching, uphill, off the
   ground, too long) changes nothing: the last valid river stays drawn and saved, and the reason is said. While a
   drag goes somewhere refused the river stays as it last was valid and a red post marks the mouse.
 
 Checking a candidate costs about 0.1 ms a metre of river (R1's measure); a drag checks at most once a frame (the
-mouse's latest position: ``tick``), and the drawn ribbon is rebuilt only when what is shown changes, into the water
-layer's existing buffers when they are big enough (engine.water.WaterLayer.set_rivers).
+mouse's latest position: ``tick``), and the drawn ribbon is rebuilt only when what is shown changes, written into the
+water layer's buffers while it fits their reserve (half as much again as when they were made); a river that grows
+past it gets bigger buffers (engine.water.WaterLayer.set_rivers).
 """
 
 from __future__ import annotations
@@ -385,13 +389,18 @@ class RiverTool:
         self._commit(lambda s: ops.set_river(s, rid, **change), f"River '{rid}': {words}.")
 
     def reverse(self) -> None:
-        """Flow the other way: the points in the opposite order, the water levels kept highest first."""
+        """Flow the other way: the points in the opposite order, given the levels in their old order (the highest
+        first, as a river must fall). This relevels the water where it stands: a sloping river's surface rises at
+        its old mouth and falls at its old source (its bed may need sculpting again)."""
         points = self._points(self.selected)
         if len(points) < 2:
             return
         turned = [[x, y, w, level] for (x, y, w, _l), level in zip(reversed(points), [p[3] for p in points])]
-        self.set_points(turned, "The river flows the other way now.")
-        self.point = None
+        sloped = points[0][3] != points[-1][3]
+        if self.set_points(turned, "The river flows the other way now." + (
+                f" Its water was relevelled: {turned[0][3] / PX:+.2f} m at its new source, {turned[-1][3] / PX:+.2f} m "
+                "at its new mouth (check it against the bed)." if sloped else "")):
+            self.point = None
 
     def remove_river(self) -> None:
         rid = self.selected
@@ -539,8 +548,9 @@ class RiverTool:
             else:
                 box.add(studio._label("Click a post to select its point.", color=C_MUTED, size=10, width=width))
             row = _row()
-            row.add(view._button("Reverse flow", self.reverse, "Turn the river round: its points in the "
-                                 "opposite order, its water still falling downstream", width=half))
+            row.add(view._button("Reverse flow", self.reverse, "Turn the river round: its points in the opposite "
+                                 "order, its water levels moved so they still fall downstream. This relevels the "
+                                 "water: where it ran low it now stands high (sculpt the bed to match)", width=half))
             row.add(view._button("Remove river", self.remove_river, "Remove the whole river (Delete with no point "
                                  "selected)", width=half))
             box.add(row)

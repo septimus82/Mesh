@@ -180,3 +180,28 @@ def test_insert_remove_width_level_flow_reverse_and_remove_the_river(tool: River
     tool.remove_river()
     assert ops.rivers(tool.studio.project.scene()) == [] and tool.selected is None
     assert tool.renderer.settings.rivers == ()
+
+
+def test_reverse_flow_relevels_a_sloping_river_where_it_stands(tool: RiverTool) -> None:
+    """Reverse flow keeps the levels falling from the (new) first point, so on a sloping river the water at each
+    place changes: high where the old mouth was, low where the old source was. Mesh says so."""
+    _draw(tool, COURSE)
+    tool.finish()
+    sloping = [[x, y, 64.0, level] for (x, y), level in zip(COURSE, (16.0, 8.0, 0.0, -8.0))]
+    assert tool.set_points(sloping, "sloped")
+    undo0 = _steps(tool)
+    tool.reverse()
+    turned = ops.rivers(tool.studio.project.scene())[0]["points"]
+    assert _steps(tool) == undo0 + 1
+    assert [p[:2] for p in turned] == [list(xy) for xy in reversed(COURSE)], "its course turned round"
+    assert [p[3] for p in turned] == [16.0, 8.0, 0.0, -8.0], "still falling from its (new) first point"
+    level_at = {tuple(p[:2]): p[3] for p in turned}
+    assert level_at[COURSE[-1]] == 16.0 and level_at[COURSE[0]] == -8.0, "relevelled: 0.75 m up at the old mouth"
+    assert "relevelled" in tool.studio.message and "+0.50 m at its new source" in tool.studio.message, \
+        tool.studio.message
+    tool.reverse()  # back again: the original river
+    assert ops.rivers(tool.studio.project.scene())[0]["points"] == sloping
+    flat = [[x, y, 64.0, 4.0] for x, y in COURSE]
+    assert tool.set_points(flat, "flat")
+    tool.reverse()
+    assert "relevelled" not in tool.studio.message, "a level river: only its direction changes"
