@@ -6,7 +6,7 @@
   "A4_studio_drawn_over_the_ground": "River 'river' added (3 points). Drag its posts to shape it.",
   "A5_studio_drawn_river_carved_lies_in_its_bed": "River 'river': its bed carved, a quarter of its width deep in the middle. Undo puts the ground back."
  },
- "carve_click_to_reloaded_ms": 650.2,
+ "carve_click_to_reloaded_ms": 653.4,
  "drawn_levels_px": [
   8.0,
   8.0,
@@ -66,9 +66,9 @@
    "wading": null
   }
  },
- "play_frame_ms_with_river": 15.36,
- "lakeside_carve_ms": 179.2,
- "lakeside_clear_ms": 35.5,
+ "play_frame_ms_with_river": 15.03,
+ "lakeside_carve_ms": 172.9,
+ "lakeside_clear_ms": 35.1,
  "lakeside_walk_north_into_the_brook": {
   "x": 900.0,
   "y": 1020.0,

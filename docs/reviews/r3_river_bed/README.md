@@ -1,6 +1,6 @@
 # Rivers R3: the bed, scatter, wading and deep water (#461) — evidence, not for merge
 
-These are real 1280×720 hidden-window frames from `feature/rivers-r3` at `c96e3e8` (the review fixes on top of
+These are real 1280×720 hidden-window frames from `feature/rivers-r3` at `afc674c` (two review rounds on top of
 `4b2b060`), made by `tools/r3_evidence.py` through Studio's buttons and the game's own key events (no OS desktop
 automation). Only scratch copies were used; the owner's Lakeside originals were not touched, and the scripts refuse
 to write outside the scratchpad (`tools/scratch_guard.py`). `report.json` holds the numbers below.
@@ -22,7 +22,7 @@ shows at once.
 |---|---|
 | ![](A4_studio_drawn_over_the_ground.png) **A4** drawn: its water (+8 px) over the grass | ![](A5_studio_drawn_river_carved_lies_in_its_bed.png) **A5** **Carve the bed**: its water lowered to just under the ground beside it (−1.6 px), lying in a channel |
 
-**Carve the bed** took 650 ms from click to the reloaded room. Each button is one undo step. The GPU test checks
+**Carve the bed** took 653 ms from click to the reloaded room. Each button is one undo step. The GPU test checks
 that undo puts the ground back exactly and redo carves it again.
 
 ## B. Play there (carved: 0.8 m deep, but 0.3 m at its second point, a ford)
@@ -48,9 +48,9 @@ In the GPU test, a player put mid-channel in 0.8 m of water wades out to the ban
 | ![](C1_lakeside_studio_before_carving.png) **C1** before: the brook's water under the meadow | ![](C2_lakeside_studio_carved_and_cleared.png) **C2** carved and cleared: a channel to the footbridge and the lake |
 | ![](C3_lakeside_play_by_the_bridge.png) **C3** Play, by the bridge | ![](C4_lakeside_play_wading_the_brook.png) **C4** walked north across the 2 m brook: by default a quarter of its width deep, 0.47 m at most, so it is wadeable; ripples behind |
 
-- Carving Lakeside's brook took **179 ms** (its banks now reach the higher ground beside it), and clearing its
-  scatter **36 ms**.
-- While walking through the river, play frames had a median of **15.4 ms** locally.
+- Carving Lakeside's brook took **173 ms** (its banks now reach the higher ground beside it), and clearing its
+  scatter **35 ms**.
+- While walking through the river, play frames had a median of **15.0 ms** locally.
 
 ## Independent review
 
@@ -68,7 +68,15 @@ in `c96e3e8`, each with a test:
 - **Broken rivers.** One broken river hid the other rivers' water from scatter. While fixing this, I also found
   that a broken river blocked all sculpting in its room.
 
-The reviewer then re-checked the fix commit (see PR #465).
+**Re-review of `c96e3e8`.** The reviewer confirmed those fixes and found two new defects, both fixed in `afc674c`
+with tests and mutation checks:
+
+- **Ratchet into deep water.** Tiny steps (0.25 px or less) could edge across deep water, because the escape
+  allowance added its slack at every step. The cap is now set once and never grows.
+- **Neighbouring rivers.** A river beside a carved one sank again at every carve. It is now sunk only where it
+  stands *above* the ground beside it.
+
+The final verification is on PR #465.
 
 ## Limitations
 
