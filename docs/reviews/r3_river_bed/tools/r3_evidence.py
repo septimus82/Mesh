@@ -64,6 +64,34 @@ def village_studio() -> None:
         d.close()
 
 
+def drawn_then_carved() -> None:
+    """Studio's own flow: a river drawn by clicking flat ground (its water 0.25 m over the ground clicked, shown at
+    once), then Carve the bed: the water lowered to just under the ground beside it, lying in its channel."""
+    import r1_river_study as r1  # noqa: PLC0415
+
+    project = r1.study.new_project(OUT, "drawn", stage6a=False)
+    d = StudioDriver(project)
+    try:
+        d.button("Terrain")
+        d.button("River")
+        v = d.studio.hd2d
+        v.camera.target, v.camera.distance = (11.0, 3.5, 0.0), 18.0
+        d.advance(2)
+        for x, y in ((5.0, 3.2), (8.5, 2.4), (12.0, 3.4), (16.0, 2.8)):
+            d.click(*d.screen((x, y, 0.0)))
+        d.key(d.arcade.key.ENTER)
+        d.advance(2)
+        shot_studio(d, "A4_studio_drawn_over_the_ground")
+        report["drawn_levels_px"] = [p[3] for p in ops.rivers(d.studio.project.scene())[0]["points"]]
+        d.button("Carve the bed")
+        v.camera.target, v.camera.distance = (11.0, 3.5, 0.0), 18.0
+        d.advance(2)
+        shot_studio(d, "A5_studio_drawn_river_carved_lies_in_its_bed")
+        report["carved_levels_px"] = [p[3] for p in ops.rivers(d.studio.project.scene())[0]["points"]]
+    finally:
+        d.close()
+
+
 def village_play() -> None:
     game = HiddenGame(study.make_project(OUT, "play", carved=True), size=(1280, 720))
     left = game.arcade.key.A
@@ -163,6 +191,7 @@ def lakeside() -> None:
 
 
 village_studio()
+drawn_then_carved()
 village_play()
 lakeside()
 (OUT / "report.json").write_text(json.dumps(report, indent=1, default=str), encoding="utf-8")

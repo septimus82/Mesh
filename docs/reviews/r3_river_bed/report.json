@@ -2,25 +2,37 @@
  "studio": {
   "A1_studio_before_carving_water_under_the_ground": "River: click the ground to start a river, upstream first; each click adds a point downstream; Enter finishes. Click a river to select it, drag its posts to move points. Insert adds a point, Delete removes one, Esc cancels.",
   "A2_studio_bed_carved": "River 'brook': its bed carved, a quarter of its width deep in the middle. Undo puts the ground back.",
-  "A3_studio_plants_cleared": "River 'brook': the scattered plants and rocks in its water taken away."
+  "A3_studio_plants_cleared": "River 'brook': the scattered plants and rocks in its water taken away.",
+  "A4_studio_drawn_over_the_ground": "River 'river' added (3 points). Drag its posts to shape it.",
+  "A5_studio_drawn_river_carved_lies_in_its_bed": "River 'river': its bed carved, a quarter of its width deep in the middle. Undo puts the ground back."
  },
- "carve_click_to_reloaded_ms": 685.5,
+ "carve_click_to_reloaded_ms": 650.2,
+ "drawn_levels_px": [
+  8.0,
+  8.0,
+  8.0
+ ],
+ "carved_levels_px": [
+  -1.6,
+  -1.6,
+  -1.6
+ ],
  "walks": {
   "ford": {
    "x": 526.0,
    "y": 600.0,
    "z": 0.0,
-   "lowest": -0.61621875,
-   "deepest": 0.3347713374617465,
+   "lowest": -0.6015625,
+   "deepest": 0.32011508746174644,
    "wading_steps": 7
   },
   "deep": {
-   "x": 633.5,
+   "x": 643.5,
    "y": 1000.0,
-   "z": -0.8310625,
-   "lowest": -0.8310625,
-   "deepest": 0.4734716649274619,
-   "wading_steps": 2
+   "z": -0.61278125,
+   "lowest": -0.61278125,
+   "deepest": 0.2551904149274619,
+   "wading_steps": 1
   },
   "bridge": {
    "x": 345.0,
@@ -34,17 +46,17 @@
  "pictures": {
   "B1_play_wading_the_ford": {
    "x": 656.0,
-   "elevation_m": -0.616,
+   "elevation_m": -0.602,
    "wading": [
-    0.3347713374617465,
+    0.32011508746174644,
     "brook"
    ]
   },
   "B2_play_stopped_at_deep_water": {
-   "x": 633.5,
-   "elevation_m": -0.831,
+   "x": 643.5,
+   "elevation_m": -0.613,
    "wading": [
-    0.4734716649274619,
+    0.2551904149274619,
     "brook"
    ]
   },
@@ -54,9 +66,9 @@
    "wading": null
   }
  },
- "play_frame_ms_with_river": 15.29,
- "lakeside_carve_ms": 60.6,
- "lakeside_clear_ms": 36.1,
+ "play_frame_ms_with_river": 15.36,
+ "lakeside_carve_ms": 179.2,
+ "lakeside_clear_ms": 35.5,
  "lakeside_walk_north_into_the_brook": {
   "x": 900.0,
   "y": 1020.0,
