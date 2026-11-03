@@ -55,7 +55,6 @@ def walk(game: HiddenGame, start: tuple[float, float, float], key: int, frames: 
     player.center_x = start[0]
     player.center_y = start[1] + (player.center_y - player.bottom)
     player.mesh_entity_data["elevation"] = start[2] * PX
-    steps = len(getattr(game.window, "water_steps", None) or [])
     game.window.water_steps = []
     game.step(2)
     lowest, deepest, waded = start[2], 0.0, 0
@@ -69,6 +68,6 @@ def walk(game: HiddenGame, start: tuple[float, float, float], key: int, frames: 
         waded = max(waded, len(game.window.water_steps or []))
     game.window.dispatch_event("on_key_release", key, 0)
     game.step(2)
-    del steps
-    return {"x": float(player.center_x), "y": float(player.bottom), "z": float(player.mesh_entity_data["elevation"]) / PX,
-            "lowest": lowest, "deepest": deepest, "wading_steps": waded}
+    return {"x": float(player.center_x), "y": float(player.bottom),
+            "z": float(player.mesh_entity_data["elevation"]) / PX, "lowest": lowest, "deepest": deepest,
+            "wading_steps": waded}

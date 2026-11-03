@@ -218,3 +218,66 @@ def test_ai_carves_and_clears_and_reviews_it_saved_and_undone(tmp_path: Path) ->
     again = ops.carve_river_bed(before, "brook")
     assert again["settings"]["hd2d"]["ground"] == carved["settings"]["hd2d"]["ground"]
     assert math.isclose(len(json.dumps(again)), len(json.dumps(carved)))
+
+
+# --- review of 4b2b060 (#465): the shapes the first tests missed --------------------------------------------------
+
+def test_no_bed_carries_on_past_a_river_s_end() -> None:
+    """A river ending inside the room: past its end the ground rises from the end's water level all round (no dry
+    pit where the bed would go on)."""
+    points = [[300.0, 600.0, 128.0, -16.0], [700.0, 600.0, 128.0, -16.0], [1200.0, 600.0, 128.0, -16.0]]
+    t = _terrain(ops.carve_river_bed(_scene(points), "stream", depths=[1.0, 1.0, 1.0]))
+    # (the corners from a cell past each end: the 0.5 m grid slopes across the cell holding the bed's end)
+    for x in range(1216, 1300, 16):  # along its line, past its last point: a bank from its level (-16 px), rising
+        assert t.height(x, 600) >= min(0.0, -16.0 + 0.6 * (x - 1200)) - 0.5, (x, t.height(x, 600))
+    for x in range(208, 285, 16):  # and before its first
+        assert t.height(x, 600) >= min(0.0, -16.0 + 0.6 * (300 - x)) - 0.5, (x, t.height(x, 600))
+    assert t.height(1248, 600) == 0.0 and t.height(256, 600) == 0.0, "1.5 m past either end: the ground as it was"
+
+
+def test_a_river_drawn_over_the_ground_lies_in_its_bed_once_carved() -> None:
+    """Studio draws a new river a little over the ground clicked (shown before its bed is carved). Carving lowers
+    its water to just under the ground beside it first, so it lies in a channel instead of a sheet over the grass;
+    its level still falls downstream; carving again changes nothing."""
+    proud = [[160.0, 600.0, 96.0, 8.0], [640.0, 620.0, 96.0, 7.0], [1120.0, 600.0, 96.0, 6.0]]
+    carved = ops.carve_river_bed(_scene(proud), "stream")
+    levels = [p[3] for p in ops.rivers(carved)[0]["points"]]
+    assert all(level <= -1.6 + 1e-6 for level in levels) and levels == sorted(levels, reverse=True), levels
+    t = _terrain(carved)
+    for y in (620 + 48 + 16, 620 - 48 - 16):  # half a metre out from either bank: the ground at or over the water
+        assert t.height(640, y) >= levels[1] - 0.5, (y, t.height(640, y), levels[1])
+    assert t.height(640, 620) < levels[1] - 16, "a channel under it"
+    with pytest.raises(ops.OpError, match="already carved"):
+        ops.carve_river_bed(carved, "stream")
+
+
+def test_a_river_far_below_the_ground_gets_a_walkable_bank_all_the_way_up() -> None:
+    """Water 3 m under the ground: its bank climbs at the walkable slope until it meets the ground (no cliff)."""
+    deep = [[4.0, 600.0, 96.0, -96.0], [800.0, 600.0, 96.0, -96.0], [1596.0, 600.0, 96.0, -96.0]]
+    t = _terrain(ops.carve_river_bed(_scene(deep), "stream"))
+    for y in range(600 + 52, 600 + 48 + 6 * 32, 4):  # from the water's edge out past where the bank meets the ground
+        here = t.surface_at(800, y)
+        assert here is not None and here[1] >= MAX_SLOPE, (y, here)
+    assert t.height(800, 600 + 48 + 6 * 32) == 0.0, "the bank reached the ground"
+
+
+def test_two_metre_streams_are_wadeable_whatever_the_rounding() -> None:
+    """A 2 m stream's default bed is half a metre deep: wadeable, whether its level stores a hair up or down."""
+    for level in (-16.4, -16.3, -16.0):
+        points = [[4.0, 600.0, 64.0, level], [800.0, 600.0, 64.0, level], [1596.0, 600.0, 64.0, level]]
+        world = _world(ops.carve_river_bed(_scene(points), "stream"))
+        bed = min(h for h, _s in world.heights_at(25.0, 18.75))
+        assert world.stand(25.0, 18.75, bed, 0.3, 0.19) is not None, level
+        assert world.path((25.0, 22.0, 0.0), (25.0, 15.0, 0.0)), (level, "across")
+
+
+def test_one_broken_river_doesn_t_hide_another_s_water_from_scatter() -> None:
+    from engine.hd2d.scatter import parse_scatter
+
+    carved = ops.carve_river_bed(_scene(), "stream")
+    carved["settings"]["hd2d"]["rivers"].append({"id": "broken", "points": [[100, 100, 64, 0], [110, 100, 64, 9]]})
+    dabs = [[x, y] for x in range(400, 900, 40) for y in (560, 620, 680)]
+    fresh = ops.scatter_stroke(carved, "Meadow", dabs, radius=64, seed=3)
+    good = river.RiverIndex(tuple(river.parse_rivers(carved["settings"]["hd2d"]["rivers"][:1])))
+    rows = parse_scatter(fresh["settings"]["hd2d"]["scatter"])
+    assert rows and not [r for rs in rows.values() for r in rs if good.level_at(r[0] / P, r[1] / P)]

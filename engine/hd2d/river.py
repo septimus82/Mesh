@@ -505,7 +505,9 @@ def _in_quad(quad: tuple[tuple[float, float], ...], p: tuple[float, float]) -> b
 DEPTH_PER_WIDTH = 0.25  # a bed's depth at its middle, unless given: a quarter of the river's width ...
 DEPTH_M = (0.2, 1.2)  # ... kept within these (m)
 BANK_SLOPE = 0.6  # the bank rises this much a metre from the water's edge (31 degrees: walkable, MAX_SLOPE 0.7)
-BANK_REACH_M = 4.0  # ... for at most this far (2.4 m up): past it the ground is left as it is
+BANK_REACH_M = 12.0  # ... until it meets the ground, for at most this far (7.2 m up): past it the ground is kept
+SINK_M = 0.05  # carving lowers water standing proud of the ground beside it to this far under that ground
+_BLOCK = 8  # corners a side of the coarse grid of highest ground (how far a stretch's bank may need to reach)
 
 
 def bed_depths(river: River, depths: Any = None) -> list[float]:
@@ -518,13 +520,36 @@ def bed_depths(river: River, depths: Any = None) -> list[float]:
     return [_num(d, f"River '{river.id}' bed depth {i + 1}", 0.0, 8.0) for i, d in enumerate(depths)]
 
 
+def sunk(terrain: Any, river: River) -> River:
+    """The river with its water lowered, where it stands above the ground beside it (half a metre out from each
+    bank, at each control point: the lower side), to SINK_M under that ground; the level still falling downstream
+    (each point no higher than the one before). Water already under the ground beside it is kept as it is, so a
+    carved river (its banks rising from the water) is kept: sinking twice is sinking once. (Studio draws new rivers
+    a little over the ground clicked, so they show before their bed is carved: carved, they lie in it.)"""
+    rib = ribbon(river)
+    levels: list[float] = []
+    for i, p in enumerate(river.points):
+        k = min(range(len(rib.u)), key=lambda j: abs(rib.u[j] - rib.marks[i]))
+        (cx, cy), (tx, ty), out = rib.centre[k], rib.tangent[k], rib.half[k] + 0.5
+        grounds = [terrain.height((cx + side * -ty * out) * PX, (cy + side * tx * out) * PX) for side in (1, -1)]
+        known = [g for g in grounds if g is not None]
+        level = p[3] if not known else min(p[3], min(known) - SINK_M * PX)
+        levels.append(min(level, levels[-1]) if levels else level)
+    if all(abs(a - p[3]) < 1e-9 for a, p in zip(levels, river.points)):
+        return river
+    points = tuple((p[0], p[1], p[2], round(level, 2)) for p, level in zip(river.points, levels))
+    return River(river.id, points, river.flow, river.colour, river.deep_colour, river.opacity, river.depth,
+                 river.waves, river.reflection, river.rain_ripples)
+
+
 def carve(terrain: Any, river: River, depths: list[float]) -> set[tuple[int, int]]:
-    """Lower ``terrain`` (engine.hd2d.terrain.Terrain) into the river's bed: under its water the ground goes down to
-    ``level - depth * (1 - (d / half) ** 2)`` (d: from the middle; the depth there ``depths``, by control point,
-    linear between them along the river), meeting the water's surface exactly at its edge; past the edge a bank
-    rises from the water at BANK_SLOPE for up to BANK_REACH_M. Past either end the bank rises from the end's water
-    level the same way. Ground only ever goes down (each corner to the lowest any part of the bed or bank asks of
-    it), so carving twice is carving once, and ground already lower is kept. Returns the corner chunks changed (as
+    """Lower ``terrain`` (engine.hd2d.terrain.Terrain) into the river's bed. Each corner is measured from the nearest
+    point of the river's course: under its water the ground goes down to ``level - depth * (1 - (d / half) ** 2)``
+    (d: from the middle; the depth there ``depths``, by control point, linear between them along the river),
+    meeting the water's surface exactly at its edge; past the edge a bank rises from the water at BANK_SLOPE until
+    it meets the ground (up to BANK_REACH_M out). Where the nearest point is one of its two ends, past it, the bank
+    rises from that end's water level all round (no bed carries on past the water). Ground only ever goes down, so
+    carving twice is carving once, and ground already lower is kept. Returns the corner chunks changed (as
     ``Terrain.sculpt`` does); ``terrain.changed`` notes the stored chunks."""
     from engine.hd2d.terrain import CHUNK, LIMIT, QUANTUM, chunks_of  # noqa: PLC0415
 
@@ -540,53 +565,63 @@ def carve(terrain: Any, river: River, depths: list[float]) -> set[tuple[int, int
         f = min(1.0, max(0.0, (s - a) / (b - a))) if b - a > 1e-12 else 0.0
         depth.append(depths[span] + (depths[span + 1] - depths[span]) * f)
     cell = terrain.cell / PX
-    lowest: dict[int, float] = {}  # corner -> the lowest height (m) asked of it
+    ox, oy = terrain.origin[0] / PX, terrain.origin[1] / PX
+    stride = terrain.nx + 1
+    # the highest ground in each block of _BLOCK x _BLOCK corners: how far a stretch's bank may need to reach
+    high: dict[tuple[int, int], float] = {}
+    for key, h in enumerate(terrain.heights):
+        block = (key % stride // _BLOCK, key // stride // _BLOCK)
+        if h > high.get(block, -math.inf):
+            high[block] = h
+    nearest: dict[int, tuple[float, int, float, float]] = {}  # corner -> (distance m, segment, t, t unclamped)
     for k in range(n - 1):
         (ax, ay), (bx, by) = r.centre[k], r.centre[k + 1]
         dx, dy = bx - ax, by - ay
         length2 = dx * dx + dy * dy
         if length2 < 1e-12:
             continue
-        length = math.sqrt(length2)
-        reach = max(r.half[k], r.half[k + 1]) + BANK_REACH_M
-        i0 = max(0, math.floor((min(ax, bx) - reach - terrain.origin[0] / PX) / cell))
-        i1 = min(terrain.nx, math.ceil((max(ax, bx) + reach - terrain.origin[0] / PX) / cell))
-        j0 = max(0, math.floor((min(ay, by) - reach - terrain.origin[1] / PX) / cell))
-        j1 = min(terrain.ny, math.ceil((max(ay, by) + reach - terrain.origin[1] / PX) / cell))
+        lo_level = min(r.level[k], r.level[k + 1])
+        span_m = max(r.half[k], r.half[k + 1]) + BANK_REACH_M
+        b0 = (max(0, math.floor((min(ax, bx) - span_m - ox) / cell)) // _BLOCK,
+              max(0, math.floor((min(ay, by) - span_m - oy) / cell)) // _BLOCK)
+        b1 = (min(terrain.nx, math.ceil((max(ax, bx) + span_m - ox) / cell)) // _BLOCK,
+              min(terrain.ny, math.ceil((max(ay, by) + span_m - oy) / cell)) // _BLOCK)
+        top = max((high.get((bi, bj), -math.inf) for bi in range(b0[0], b1[0] + 1) for bj in range(b0[1], b1[1] + 1)),
+                  default=-math.inf)
+        rise = (terrain.base + top) / PX - lo_level  # (the most this stretch's bank might climb to meet the ground)
+        reach = max(r.half[k], r.half[k + 1]) + min(BANK_REACH_M, max(0.0, rise) / BANK_SLOPE + cell)
+        i0 = max(0, math.floor((min(ax, bx) - reach - ox) / cell))
+        i1 = min(terrain.nx, math.ceil((max(ax, bx) + reach - ox) / cell))
+        j0 = max(0, math.floor((min(ay, by) - reach - oy) / cell))
+        j1 = min(terrain.ny, math.ceil((max(ay, by) + reach - oy) / cell))
         for j in range(j0, j1 + 1):
             for i in range(i0, i1 + 1):
                 cx, cy = (v / PX for v in terrain.corner_xy(i, j))
                 t_raw = ((cx - ax) * dx + (cy - ay) * dy) / length2
-                t = min(1.0, max(0.0, t_raw))
-                # from the course (the nearest point of this piece of it: round the outside of a bend, its end)
-                across = math.hypot(cx - (ax + dx * t), cy - (ay + dy * t))
-                half = r.half[k] + (r.half[k + 1] - r.half[k]) * t
-                level = r.level[k] + (r.level[k + 1] - r.level[k]) * t
-                beyond = 0.0  # (how far past an end of the river: its first piece's start, its last's end)
-                if k == 0 and t_raw < 0:
-                    beyond = -t_raw * length
-                elif k == n - 2 and t_raw > 1:
-                    beyond = (t_raw - 1) * length
-                if beyond > 0.0:  # past an end: a bank from that end's water all round
-                    rise = math.hypot(beyond, max(0.0, across - half))
-                    if rise > BANK_REACH_M:
-                        continue
-                    target = level + BANK_SLOPE * rise
-                elif across <= half:
-                    d = depth[k] + (depth[k + 1] - depth[k]) * t
-                    target = level - d * (1.0 - (across / half) ** 2)
-                elif across - half <= BANK_REACH_M:
-                    target = level + BANK_SLOPE * (across - half)
-                else:
-                    continue
-                key = i + j * (terrain.nx + 1)
-                if target < lowest.get(key, math.inf):
-                    lowest[key] = target
+                tc = min(1.0, max(0.0, t_raw))
+                dist = math.hypot(cx - (ax + dx * tc), cy - (ay + dy * tc))
+                key = i + j * stride
+                if dist < nearest.get(key, (math.inf,))[0]:
+                    nearest[key] = (dist, k, tc, t_raw)
     changed: set[tuple[int, int]] = set()
-    for key, target in lowest.items():
+    for key, (dist, k, tc, t_raw) in nearest.items():
+        half = r.half[k] + (r.half[k + 1] - r.half[k]) * tc
+        level = r.level[k] + (r.level[k + 1] - r.level[k]) * tc
+        start_end, last_end = k == 0 and t_raw < 0.0, k == n - 2 and t_raw > 1.0
+        if start_end or last_end:  # past one of its ends: a bank from that end's water all round
+            (ax, ay), (bx, by) = r.centre[k], r.centre[k + 1]
+            length = math.hypot(bx - ax, by - ay)
+            beyond = (-t_raw if start_end else t_raw - 1.0) * length
+            across = math.sqrt(max(0.0, dist * dist - beyond * beyond))
+            target = level + BANK_SLOPE * math.hypot(beyond, max(0.0, across - half))
+        elif dist <= half:
+            d = depth[k] + (depth[k + 1] - depth[k]) * tc
+            target = level - d * (1.0 - (dist / half) ** 2)
+        else:
+            target = level + BANK_SLOPE * (dist - half)
         new = round(max(-LIMIT, min(LIMIT, target * PX - terrain.base)) / QUANTUM) * QUANTUM
         if new < terrain.heights[key]:
             terrain.heights[key] = new
-            changed.add((key % (terrain.nx + 1), key // (terrain.nx + 1)))
+            changed.add((key % stride, key // stride))
     terrain.changed |= {(i // CHUNK, j // CHUNK) for i, j in changed}
     return chunks_of(changed)

@@ -1296,12 +1296,14 @@ def carve_river_bed(scene: Doc, river_id: str, depths: Any = None) -> Doc:
     """Carve a river's bed into this HD-2D room's ground (#461 R3), so its water lies in a channel instead of on
     the ground: under the water the ground goes down to the river's level less its depth (deepest in the middle,
     rising to meet the water at its edge), and a bank climbs from the water's edge at a walkable slope (31 degrees)
-    until it meets the ground (up to 4 m out). ``depths``: the bed's depth at each control point (m, one a point;
+    until it meets the ground (up to 12 m out). Where its water stands above the ground beside it (as Studio draws
+    a new river: over the ground clicked), the water is first lowered to just under that ground (5 cm; its level
+    still falling downstream), so it lies in its bed. ``depths``: the bed's depth at each control point (m, one a point;
     linear between them: a shallow point is a ford); if not given, a quarter of the river's width there (0.2 to
     1.2 m). Water deeper than half a metre can't be waded. The ground only ever goes down: carving again changes
     nothing, other sculpting is kept wherever it is already lower, and nothing else moves (structures, objects and
     scatter keep their places: ``terrain_anchoring`` and ``clear_scatter_in_rivers``). One edit: one undo step."""
-    from engine.hd2d.river import RiverError, bed_depths, carve  # noqa: PLC0415
+    from engine.hd2d.river import RiverError, bed_depths, carve, sunk, to_json  # noqa: PLC0415
     from engine.hd2d.terrain import Terrain  # noqa: PLC0415
 
     river = next((r for r in _parsed_rivers(scene, strict=True) if r.id == river_id), None)
@@ -1311,23 +1313,20 @@ def carve_river_bed(scene: Doc, river_id: str, depths: Any = None) -> Doc:
         wanted = bed_depths(river, depths)
     except RiverError as err:
         raise OpError(str(err)) from err
-    old = scene["settings"]["hd2d"].pop("scatter", None)  # (not copied: thousands of rows, untouched)
-    try:
-        out = copy.deepcopy(scene)
-    finally:
-        if old is not None:
-            scene["settings"]["hd2d"]["scatter"] = old
-            out["settings"]["hd2d"]["scatter"] = old
+    out = copy.deepcopy(scene)  # (as sculpting does: the whole room, its scatter too)
     hd2d = _hd2d_block(out)
     ground = _parsed_ground(out)
     terrain = Terrain.from_ground(ground)
-    if not carve(terrain, river, wanted):
+    lowered = sunk(terrain, river)
+    if lowered is not river:  # its water stood over the ground beside it: lowered into the bed (the same edit)
+        hd2d["rivers"] = [to_json(lowered) if r.get("id") == river_id else r for r in rivers(out)]
+    if not carve(terrain, lowered, wanted) and lowered is river:
         raise OpError(f"River '{river_id}''s bed is already carved: the ground under it is as low as asked, or lower.")
     raw = hd2d["ground"]
     if not isinstance(raw, dict):
         raw = hd2d["ground"] = {}
     raw["terrain"] = terrain.settings(raw.get("terrain"))  # (only the stored chunks it changed are encoded again)
-    return _checked_structures(out)
+    return _checked(scene, _checked_structures(out)) if lowered is not river else _checked_structures(out)
 
 
 def clear_scatter_in_rivers(scene: Doc, river_id: Any = None) -> Doc:
@@ -3095,8 +3094,9 @@ def _parsed_ground(scene: Doc) -> Any:
     w, h = settings.get("world_width"), settings.get("world_height")
     size = (float(w), float(h)) if isinstance(w, (int, float)) and isinstance(h, (int, float)) else None
     raw = settings.get("hd2d")
-    if isinstance(raw, dict):  # (the ground alone: not its scatter, up to 50,000 rows, nor its motion, read each time)
-        raw = {k: v for k, v in raw.items() if k not in ("scatter", "motion")}
+    if isinstance(raw, dict):  # (the ground alone: not its scatter, up to 50,000 rows, nor its motion, read each time,
+        raw = {k: v for k, v in raw.items() if k not in ("scatter", "motion", "rivers")}  # nor its rivers: one broken
+        # river doesn't stop the ground being sculpted, painted or scattered on)
     try:
         ground = parse_hd2d(raw, map_size_px=size).ground
     except Hd2dSettingsError as err:
@@ -3404,8 +3404,8 @@ def scatter_context(scene: Doc, models: Any = None) -> tuple[Any, list[tuple[str
 
 
 def _parsed_rivers(scene: Doc, strict: bool = False) -> tuple[Any, ...]:
-    """The room's rivers (engine.hd2d.river.River). Broken ones: none (as a load sets them aside), or, ``strict``,
-    an OpError saying why."""
+    """The room's rivers (engine.hd2d.river.River). ``strict``: all of them, or an OpError saying why one can't
+    be; else those that can be, each on its own (one broken river doesn't hide the others' water from scatter)."""
     from engine.hd2d.river import RiverError, parse_rivers  # noqa: PLC0415
 
     try:
@@ -3413,7 +3413,13 @@ def _parsed_rivers(scene: Doc, strict: bool = False) -> tuple[Any, ...]:
     except RiverError as err:
         if strict:
             raise OpError(str(err)) from err
-        return ()
+    kept: list[Any] = []
+    for raw in rivers(scene):
+        try:
+            kept.extend(parse_rivers([raw]))
+        except RiverError:
+            continue  # (this one set aside, as a load would set them all aside)
+    return tuple(kept)
 
 
 def _scatter_rules(on: Any, slope: Any, avoid_water: Any, avoid_structures: Any, default_on: tuple[str, ...],

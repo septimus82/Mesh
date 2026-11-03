@@ -140,6 +140,11 @@ def test_the_player_wades_the_ford_stops_at_deep_water_and_crosses_the_bridge(tm
         assert deep["x"] > middle, ("stopped before the deep middle", deep, middle)
         assert deep["deepest"] <= DEEP, ("never stood in deep water", deep)
 
+        # put in the deep middle (a river carved under it, a start point there): it can wade out, never deeper
+        bed = min(h for h, _s in world.heights_at(middle / 32, study.DEEP_Y / 32))
+        out = study.walk(game, (middle, study.DEEP_Y, bed), game.arcade.key.D, 150)
+        assert out["x"] > study.EAST_BANK_X - 16 and out["deepest"] <= 0.8 + 0.02, ("waded out", out)
+
         bridge = study.walk(game, study.DECK, left, 150)
         assert bridge["x"] < 600.0 and abs(bridge["z"] - study.DECK[2]) < 0.05, ("across on the deck", bridge)
         assert bridge["deepest"] == 0.0, "dry on the deck"

@@ -139,7 +139,9 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
 - **Its bed.** The water shows only where its level is above the ground. With the river selected, **Carve the
   bed** lowers the ground under it into a channel:
   - deepest in the middle, rising to meet the water at its edge;
-  - a bank climbing from the water at a walkable slope until it meets the ground (up to 4 m out);
+  - a bank climbing from the water at a walkable slope until it meets the ground (up to 12 m out);
+  - where its water stood above the ground beside it (a new river is drawn a little over the ground clicked), the
+    water is lowered to just under that ground first, so it lies in its bed;
   - **Bed depth** (m): empty for a quarter of the river's width (0.2 to 1.2 m), or one depth for the whole river.
     The AI can give a depth for each point; a shallow point makes a ford.
   - Carving only ever lowers the ground: carving again changes nothing, and ground already lower is kept. It is one
