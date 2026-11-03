@@ -1,0 +1,10 @@
+OK  lakeside: 15.69 m, 64 samples, 3.3 ms
+OK  gentle_s: 39.10 m, 157 samples, 5.9 ms
+OK  hairpin_narrow_roomy: 24.19 m, 98 samples, 6.6 ms
+REF hairpin_wide: River 's': a bend too tight for a river this wide (its inner bank folds over itself) near (312, 157) px (0.5 ms)
+REF loop: River 's': a bend too tight for a river this wide (its inner bank folds over itself) near (130, 258) px (0.6 ms)
+REF uphill_points: River 's' would run uphill between points 1 and 2 (its level rises 0.50 m): a river's level only falls downstream (0.0 ms)
+REF near_touch_parallel: River 's': a bend too tight for a river this wide (its inner bank folds over itself) near (515, 46) px (0.7 ms)
+REF wide_s: River 's': a bend too tight for a river this wide (its inner bank folds over itself) near (364, 129) px (0.6 ms)
+long 245.2 m 1964 verts 1962 tris 65.1 ms (parse+check twice + pack)
+REF crossing rivers: Rivers 'a' and 'b' cross or overlap near (288, -40) px: joining rivers comes later

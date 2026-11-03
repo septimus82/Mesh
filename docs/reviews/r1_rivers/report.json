@@ -1,0 +1,38 @@
+{
+  "lakeside_river": {
+    "drift_texels_per_0.25s": [
+      10,
+      0.7259488388357029
+    ],
+    "frames_identical": false,
+    "rivers_error": null,
+    "stats": {
+      "water_surfaces": 1,
+      "rivers": 1,
+      "water_bytes": 7437388,
+      "water_error": null
+    },
+    "frame_ms": {
+      "median": 12.39,
+      "p90": 13.04
+    }
+  },
+  "lakeside_river_still": {
+    "drift_texels_per_0.25s": [
+      -24,
+      0.0
+    ],
+    "frames_identical": false,
+    "rivers_error": null,
+    "stats": {
+      "water_surfaces": 1,
+      "rivers": 1,
+      "water_bytes": 7437388,
+      "water_error": null
+    },
+    "frame_ms": {
+      "median": 13.84,
+      "p90": 15.77
+    }
+  }
+}
