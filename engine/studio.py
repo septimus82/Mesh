@@ -638,6 +638,9 @@ class Studio(InspectorMixin, SoundMixin):
             return
         if self.hd2d.cancel_stroke("Stroke cancelled (undo): the ground is as it was."):  # mid-stroke: only that
             return
+        if self.hd2d.river.cancel_edit("River edit cancelled (undo): the river is as it was."):
+            self._rebuild()
+            return
         if self.project.undo():
             self._after_change("Undone.")  # (it reloads the room: once is enough, 0.9 s at 128 m)
 
@@ -1061,6 +1064,7 @@ class Studio(InspectorMixin, SoundMixin):
     # ==================================================================== play-test
     def play(self, *, by: str = "person") -> None:
         self._flush_fields()
+        self.hd2d.river.cancel_edit("River edit cancelled: Play shows the rivers as saved.")
         self.menu, self.place_prefab, self.drag = None, None, None
         self._install_documents()
         self.mode = "play"
@@ -1122,7 +1126,8 @@ class Studio(InspectorMixin, SoundMixin):
         if self._typing() or self._held or any(f.text != original for f, original, _ in self._fields):
             return "The person is typing in a box and hasn't finished."
         if any(x is not None for x in (self.drag, self.stroke, self.handle_drag, self.route_drag, self.sheet_drag,
-                                       self.hd2d.drag, self.hd2d.stroke)) or self.panning:
+                                       self.hd2d.drag, self.hd2d.stroke, self.hd2d.river.gesture,
+                                       self.hd2d.river.draft)) or self.panning:
             return "The person is in the middle of dragging or painting."
         return ""
 
@@ -2984,6 +2989,7 @@ class Studio(InspectorMixin, SoundMixin):
         self.hd2d.advance_weather(delta_time)  # ... nor does the weather, unless it's being previewed
         self.hd2d.advance_motion(delta_time)  # ... but the room's decoration moves, if its animation is on (20E)
         self.hd2d.tick(delta_time)  # a sculpting stroke held still keeps working; what it changed is drawn
+        self.hd2d.river.tick()  # a river point being dragged: checked and drawn once a frame, at the mouse's latest
         from engine import water  # noqa: PLC0415
 
         water.advance(self.window, delta_time)  # puddles and ponds move while editing
@@ -3287,6 +3293,8 @@ class Studio(InspectorMixin, SoundMixin):
         self.panning = False
         if self.hd2d.stroke is not None:
             self.hd2d.end_stroke()
+        if self.hd2d.river.cancel_edit("River edit cancelled: the window lost focus (nothing was saved)."):
+            self._rebuild()  # (a river point being dragged, or one being drawn: dropped, the saved rivers drawn)
 
     def on_mouse_release(self, x: float, y: float, button: int, modifiers: int) -> bool:
         if self.mode == "play":

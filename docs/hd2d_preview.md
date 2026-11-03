@@ -104,11 +104,30 @@ Each stroke is one change, so one Ctrl+Z undoes it, and Esc cancels a stroke bef
   where the player starts. Less is often more: leave plain ground around paths and buildings.
 - `[` and `]` change the brush's size.
 
-## Rivers and streams (early: R1)
+## Rivers and streams
 
-A river is one continuous ribbon of water that flows downstream. R1 draws rivers; it is **not yet a creator tool**:
-there is no River tool in Studio. Rivers are added through Mesh's checked edits (`add_river`, `set_river`,
-`remove_river`), as the AI assistant and `mesh author` make them, and Studio and the game show them.
+A river is one continuous ribbon of water that flows downstream. Draw and edit rivers with **River**, under the
+**Sculpt**, **Paint** and **Scatter** buttons in the 3D view's panel. The AI assistant and `mesh author` make the
+same checked edits (`add_river`, `set_river`, `remove_river`).
+
+- **Draw:** with River on and no river selected, click the ground where the river starts (upstream), then click
+  downstream, one point at a time. The river is shown as you go, but nothing is saved until **Enter** (or
+  **Finish**), which needs two points at least. **Esc** drops it.
+- **New points:** a new point's water stands 0.25 m above the ground you click, never higher than the point before.
+  New rivers are 2 m wide and flow at 1 m/s. Change these defaults under the River panel before you draw.
+- **Edit:** click a river to select it, or a point's post to select that point.
+  - Drag a post to move its point; its width and water level stay.
+  - **Insert** adds a point after the selected one, halfway along the course.
+  - **Delete** removes the selected point (a river keeps two at least) or, with no point selected, the river.
+  - The panel sets the point's **Width** and **Water level**, and the river's **Flow**, **Waves** and **Reflection**.
+  - **Reverse flow** turns the river round. Its water levels still fall from the new first point, so the water
+    is relevelled where it stands: on a sloping river it rises at the old mouth and drops at the old source.
+    Sculpt the bed to match, or set the points' water levels again.
+- **One undo step each:** finishing a river, one drag, an insert, a removal and each value typed are one undo step
+  each. Undo, room changes and **Play** drop a drag or a river still being drawn.
+- **Refused edits change nothing:** a point, drag or value that the checks below refuse leaves the river as it was,
+  and Mesh says why. While a drag is somewhere refused, the river stays at its last valid shape and a red post
+  marks the mouse.
 
 - **Points:** `[x, y, width, level]` in pixels (32 px = 1 m), listed from upstream to downstream. Their order is the
   way the water flows. The course curves smoothly through every point. Width and level change evenly between points.
@@ -125,7 +144,7 @@ there is no River tool in Studio. Rivers are added through Mesh's checked edits 
   quarter metre, two rivers that cross or overlap, and a bank off the room's ground.
 - **Limits:** at most 16 rivers in a room, each at most 1,024 m long and 2,048 m together.
 
-Not in R1: a River tool in Studio, carving the bed, clearing scatter under the water (use the Scatter brush's
+Not yet: carving the bed, clearing scatter under the water (use the Scatter brush's
 remove), ripples where someone wades through it, stopping or slowing characters, rivers flowing into lakes or joining each other, waterfalls, and rivers in
 2D rooms. A river's two ends are cut square.
 

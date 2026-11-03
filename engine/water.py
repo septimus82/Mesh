@@ -731,6 +731,8 @@ class WaterLayer:
         self.river_buffers: tuple[Any, Any] | None = None  # (vertices, indices)
         self.river_geometry: Any = None
         self.river_box: tuple[float, ...] | None = None  # min x, y, z, max x, y, z (m)
+        self.river_count = 0  # indices drawn (the buffers may hold more: room to grow)
+        self.river_allocations = 0  # river buffers made (diagnostics: a drag writes into them)
         self.rivers: Any = ()
         try:
             self.program = ctx.program(vertex_shader=VS, fragment_shader=FS)
@@ -779,25 +781,35 @@ class WaterLayer:
 
     def set_rivers(self, rivers: tuple[Any, ...]) -> None:
         """The room's rivers (engine.hd2d.river.River, already checked): their ribbons made again only when they
-        change (none: their buffers freed)."""
+        change (none: their buffers freed). A change that fits the buffers is written into them (Studio's River tool
+        drags a point: no allocation a move while the river fits); one that doesn't gets new buffers with half as much
+        again to spare."""
         if rivers == self.rivers:
             return
         from engine.hd2d import river as river_mod  # noqa: PLC0415
 
-        self._free_rivers()
         if not rivers:
-            self.rivers = ()
+            self._free_rivers()
             return
         data, idx = river_mod.vertices(rivers, LIFT_M)
+        vertices, indices = data.tobytes(), idx.tobytes()
         if self.river_program is None:
             self.river_program = self.ctx.program(vertex_shader=RIVER_VS, fragment_shader=RIVER_FS)
-        vbo = self.ctx.buffer(data=data.tobytes())
-        ibo = self.ctx.buffer(data=idx.tobytes())
-        self.river_buffers = (vbo, ibo)
-        self.river_geometry = self.ctx.geometry(
-            [self.gl.BufferDescription(vbo, "3f 2f 4f 4f 4f 4f",
-                                       ["in_pos", "in_tangent", "in_flow", "in_colour", "in_deep", "in_look"])],
-            index_buffer=ibo, index_element_size=4, mode=self.ctx.TRIANGLES)
+        buffers = self.river_buffers
+        if buffers is None or buffers[0].size < len(vertices) or buffers[1].size < len(indices):
+            self._free_rivers()
+            vbo = self.ctx.buffer(reserve=len(vertices) * 3 // 2)
+            ibo = self.ctx.buffer(reserve=len(indices) * 3 // 2)
+            self.river_buffers = (vbo, ibo)
+            self.river_geometry = self.ctx.geometry(
+                [self.gl.BufferDescription(vbo, "3f 2f 4f 4f 4f 4f",
+                                           ["in_pos", "in_tangent", "in_flow", "in_colour", "in_deep", "in_look"])],
+                index_buffer=ibo, index_element_size=4, mode=self.ctx.TRIANGLES)
+            self.river_allocations += 1
+            buffers = self.river_buffers
+        buffers[0].write(vertices)
+        buffers[1].write(indices)
+        self.river_count = len(idx)
         f = river_mod.FLOATS_PER_VERTEX
         xs, ys, zs = data[0::f], data[1::f], data[2::f]
         half = max(data[7::f])  # (a bank is within a half width of its sample: the box needs no more)
@@ -810,7 +822,7 @@ class WaterLayer:
         for obj in self.river_buffers or ():
             obj.delete()
         self.river_geometry = self.river_buffers = self.river_box = None
-        self.rivers = ()
+        self.rivers, self.river_count = (), 0
 
     def in_view(self, vp: list[list[float]]) -> bool:
         """Whether any water surface is in the picture (its corners' clip-space box overlaps the screen): with none,
@@ -947,9 +959,11 @@ class WaterLayer:
             screen = (float(colour.size[0]), float(colour.size[1]))
         else:
             self._free_copy()
-        passes = [(self.program, self.geometry, self.count)] if ponds else []
+        passes: list[tuple[Any, Any, dict[str, int]]] = []
+        if ponds:
+            passes.append((self.program, self.geometry, {"instances": self.count}))
         if self.river_geometry is not None:
-            passes.append((self.river_program, self.river_geometry, 0))
+            passes.append((self.river_program, self.river_geometry, {"vertices": self.river_count}))  # (indices used)
         for prog, _geometry, _count in passes:
             if reflect:
                 prog["u_screen"] = screen
@@ -969,11 +983,8 @@ class WaterLayer:
                     ctx.enable(ctx.DEPTH_TEST)
                 else:
                     ctx.disable(ctx.DEPTH_TEST)
-                for prog, geometry, count in passes:
-                    if count:
-                        geometry.render(prog, instances=count)
-                    else:
-                        geometry.render(prog)
+                for prog, geometry, counts in passes:
+                    geometry.render(prog, **counts)
                     self.draw_calls += 1
         finally:
             ctx.enable(ctx.DEPTH_TEST)
