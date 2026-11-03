@@ -120,7 +120,9 @@ Tier summary (`python -m tooling.test_tiers <tier>`; the same lanes CI runs, #42
 Each lane writes `artifacts/pytest_<tier>.xml` and `pytest_<tier>_summary.json` and fails when it selects or runs no test,
 or fewer than its `min_selected`. `.github/workflows/extended.yml` runs the extended and gpu lanes on Linux and Windows
 after every integration merge, nightly (once on main), on demand and on PRs that change the selection policy; its GL is
-Mesa's software renderer, not a physical GPU. `tests/test_test_lanes_contract.py` fails when a test runs in no lane
+Mesa's software renderer, not a physical GPU. A pull request from the integration branch itself (#344) leaves its lanes
+out when `tooling/extended_dedup.py` finds it would test the same tree as that commit's push run, and links the push run
+as the evidence; any doubt runs them. `tests/test_test_lanes_contract.py` fails when a test runs in no lane
 (`tests/baselines/never_runs.txt` lists the deliberate exceptions).
 
 Fast vs integration tests (headless contract):

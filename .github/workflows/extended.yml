@@ -13,7 +13,10 @@ name: Extended acceptance
 #     once the workflow reaches main;
 #   - on demand (workflow_dispatch: Actions > Extended acceptance > Run workflow, e.g. before a release);
 #   - on a pull request that changes the test-selection policy itself.
-# Every trigger runs the same lanes with the same selection.
+# Every trigger runs the same lanes with the same selection. One exception (#422): a pull request from the integration
+# branch itself (#344, into main) whose tested tree is the push-tested head's leaves its lanes out, since the push run
+# of that same commit tests the same tree - only after tooling/extended_dedup.py has checked that positively, and
+# the push run is linked as the evidence. Any doubt, and they run.
 
 on:
   push:
@@ -37,8 +40,36 @@ permissions:
   contents: read
 
 jobs:
+  dedup:
+    # Pull requests only: whether this run would only repeat the push run (tooling/extended_dedup.py). It never fails
+    # the lanes' way: a failed or cancelled check, or any doubt, leaves skip unset and the lanes run.
+    name: duplicate check (pull request)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      skip: ${{ steps.decide.outputs.skip }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: tooling
+
+      - name: Would this run only repeat the push run?
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m tooling.extended_dedup --push-branch redesign/visual-editor --workflow extended.yml
+
   lane:
     name: ${{ matrix.lane }} (${{ matrix.os }}, py3.11)
+    needs: dedup
+    # A skipped duplicate check (push, schedule, dispatch) or a failed one runs the lanes; only a positive skip leaves
+    # them out. (A job-level if is evaluated before the matrix expands, so a left-out run reports no lane check names.)
+    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
