@@ -1,7 +1,8 @@
 # Rivers R3: the bed, scatter, wading and deep water (#461) — evidence, not for merge
 
 These are real 1280×720 hidden-window frames from `feature/rivers-r3` at `afc674c` (two review rounds on top of
-`4b2b060`), made by `tools/r3_evidence.py` through Studio's buttons and the game's own key events (no OS desktop
+`4b2b060`; the final head `573fe16` changes only how a character already in deep water wades out, which none of
+these frames show), made by `tools/r3_evidence.py` through Studio's buttons and the game's own key events (no OS desktop
 automation). Only scratch copies were used; the owner's Lakeside originals were not touched, and the scripts refuse
 to write outside the scratchpad (`tools/scratch_guard.py`). `report.json` holds the numbers below.
 
@@ -76,7 +77,9 @@ with tests and mutation checks:
 - **Neighbouring rivers.** A river beside a carved one sank again at every carve. It is now sunk only where it
   stands *above* the ground beside it.
 
-The final verification is on PR #465.
+**Round 3**, on `afc674c`: the reviewer verified both fixes. One minor case remained: a character teleported
+deeper than its cap was stuck. It is fixed in `573fe16`, where the cap is re-set from the water within a
+footprint all round, +5 cm. The reviewer's probe passes. The details are on PR #465.
 
 ## Limitations
 
