@@ -151,6 +151,10 @@ sounds, plus Mesh's engine.
   - a building's wall nearest the camera can still hide part of a small room.
 - **Character lighting.** Characters take light from the sun and lamps, but their shading is drawn into the art; a
   lamp doesn't light them from one side.
+- **Lamps in lamp posts.** A lamp placed in a lamp post's lantern lights the ground round it; that lamp post doesn't
+  shadow it. A small model, at most 1 m across, that holds the lamp counts as its own fixture. Walls, buildings and
+  everything else, however close, still cast its shadows. A light inside a larger model, such as a lantern built into a
+  house model, is still blocked by that model: make the lantern a model of its own.
 - **The world's edges.** The village's ground stops at the room's edge, and there is no distant scenery.
 - **Not supported:** weather, particles, depth of field and other post-processing effects.
 - **Not a web target.** HD-2D games are not exported to the web.

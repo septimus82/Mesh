@@ -400,6 +400,9 @@ class Hd2dRenderer:
         self._camera_ready = False
         self.draw_calls = 0
         self.static: list[tuple[Any, Any, tuple[float, ...]]] = []  # (geometry, texture, model matrix)
+        # id(static draw) -> its structures' index spans (structure id, first, count), in index order: what lets a
+        # lamp's shadow map leave out that lamp's own fixture (engine.hd2d.lighting.lamp_fixtures)
+        self.static_spans: dict[int, list[tuple[str, int, int]]] = {}
         self._cutaway: set[int] = set()  # ids of the static draws drawn with the cutaway (_build_batches)
         self._parts: dict[tuple[str, int], Any] = {}  # (model, part) -> its geometry in its own space (live drawing)
         self._materials: dict[tuple[str, str], Any] = {}
@@ -440,6 +443,7 @@ class Hd2dRenderer:
         if settings.scatter:
             self.ensure_scatter(settings.scatter)
         self.lighting = Lighting(ctx, self.arcade, settings, *self.world_box())
+        self.lighting.set_fixtures(settings.structures, self.models)  # each lamp's own lantern (lamp_fixtures)
 
     def world_box(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
         """The room's extent in metres (structures and ground, with headroom for characters): what the sun's
@@ -526,17 +530,25 @@ class Hd2dRenderer:
                         shared[(st.model, i)] = self._geometry(part.vertices, "3f 3f 2f", ["in_pos", "in_nrm", "in_uv"],
                                                                part.indices)
                     self.static.append((shared[(st.model, i)], self._material_texture(st.model, part, textures), matrix))
+                    self.static_spans[id(self.static[-1])] = [(st.id, 0, len(part.indices))]
                     if st.cutaway:
                         self._cutaway.add(id(self.static[-1]))
                     self.triangles += len(part.indices) // 3
             return
         merged: dict[tuple[int, bool], tuple[Any, array, array]] = {}  # (texture id, cutaway) -> (texture, vertices, indices)
+        spans: dict[tuple[int, bool], list[tuple[str, int, int]]] = {}  # ... -> (structure id, first index, count)
         for st in structures:
             m = _placement(st.x / PIXELS_PER_METRE, st.y / PIXELS_PER_METRE, st.elevation / PIXELS_PER_METRE,
                            st.rotation, st.scale)
             for part in self.models[st.model].parts:
                 texture = self._material_texture(st.model, part, textures)
-                _, verts, idx = merged.setdefault((id(texture), st.cutaway), (texture, array("f"), array("I")))
+                key = (id(texture), st.cutaway)
+                _, verts, idx = merged.setdefault(key, (texture, array("f"), array("I")))
+                batch_spans = spans.setdefault(key, [])
+                if batch_spans and batch_spans[-1][0] == st.id:  # (this structure's earlier part with this texture)
+                    batch_spans[-1] = (st.id, batch_spans[-1][1], batch_spans[-1][2] + len(part.indices))
+                else:
+                    batch_spans.append((st.id, len(idx), len(part.indices)))
                 base = len(verts) // 8
                 v = part.vertices
                 for i in range(0, len(v), 8):
@@ -548,12 +560,14 @@ class Hd2dRenderer:
                                   v[i + 6], v[i + 7]))
                 idx.extend(j + base for j in part.indices)
                 self.triangles += len(part.indices) // 3
-        for (_, cutaway), (texture, verts, idx) in merged.items():
+        for key, (texture, verts, idx) in merged.items():
+            cutaway = key[1]
             # normals were rotated (and scaled uniformly): renormalise
             for i in range(0, len(verts), 8):
                 length = math.sqrt(verts[i + 3] ** 2 + verts[i + 4] ** 2 + verts[i + 5] ** 2) or 1.0
                 verts[i + 3], verts[i + 4], verts[i + 5] = verts[i + 3] / length, verts[i + 4] / length, verts[i + 5] / length
             self.static.append((self._geometry(verts, "3f 3f 2f", ["in_pos", "in_nrm", "in_uv"], idx), texture, IDENTITY))
+            self.static_spans[id(self.static[-1])] = spans[key]
             if cutaway:
                 self._cutaway.add(id(self.static[-1]))
 
@@ -822,6 +836,7 @@ class Hd2dRenderer:
         for buffer in self._buffers:
             buffer.delete()
         self._buffers, self._textures, self._sprite_textures, self.static = [], [], {}, []
+        self.static_spans = {}
         for key in list(self._terrain_draws):
             self._free_terrain_chunk(key)
         if self._caster_geometry is not None:
@@ -994,7 +1009,7 @@ class Hd2dRenderer:
             buffer.delete()
         gone = {id(b) for b in self._static_buffers}
         self._buffers = [b for b in self._buffers if id(b) not in gone]
-        self.static, self.triangles = [], 0
+        self.static, self.static_spans, self.triangles = [], {}, 0
         self.live = {st.id: (st.model, _column_major(_placement(st.x / PIXELS_PER_METRE, st.y / PIXELS_PER_METRE,
                                                                 st.elevation / PIXELS_PER_METRE, st.rotation, st.scale)))
                      for st in self.settings.structures if st.id in ids}
@@ -1122,7 +1137,7 @@ class Hd2dRenderer:
             scatter = self.scatter
             extra = (None if scatter is None or not scatter.cast_quads else  # (trees' canopies, as they sway)
                      lambda sun_vp: scatter.draw_casters(sun_vp, self.motion_time, cam.right(), stretch))
-            lighting.render_shadows(casters, geometry_sprites, ranges, extra=extra)
+            lighting.render_shadows(casters, geometry_sprites, ranges, extra=extra, spans=self.static_spans)
         weather = self.particles is not None and solid is None and (camera is None or self.weather_preview)
         maps = self.precipitation_maps() if weather else []  # before the frame's target is in use: cached, mostly
         fbo.use()
