@@ -15,6 +15,10 @@ number of times, until one read is complete and current (see ``check``): a singl
 incident (H7).
 
     python tooling/ci_require_jobs.py --os ubuntu-latest --python 3.11
+
+Another fan-in names its jobs itself (extended.yml's Windows gpu shards, #422 F13):
+
+    python tooling/ci_require_jobs.py --job "gpu (windows-latest, py3.11, shard 1/2)" --job "..." --name "gpu (...)"
 """
 
 from __future__ import annotations
@@ -163,14 +167,21 @@ def check(fetch: Callable[[], tuple[list[dict[str, Any]], int]], required: list[
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--os", required=True, dest="os_name")
-    parser.add_argument("--python", required=True)
+    parser.add_argument("--os", dest="os_name")
+    parser.add_argument("--python")
+    parser.add_argument("--job", action="append", default=[], help="A required job by name (instead of --os/--python)")
+    parser.add_argument("--name", default=None, help="This fan-in's name, for its verdict line (with --job)")
     args = parser.parse_args(argv)
-    required = required_jobs(args.os_name, args.python)
+    if args.job and (args.os_name or args.python):
+        parser.error("give --job, or --os and --python, not both")
+    if not args.job and not (args.os_name and args.python):
+        parser.error("--os and --python are required (or --job)")
+    required = list(args.job) or required_jobs(args.os_name, args.python)
+    name = args.name or (f"tests ({args.os_name}, py{args.python})" if not args.job else "the fan-in")
     repo, run_id = os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_RUN_ID"]
     ok, lines = check(lambda: fetch_jobs(repo, run_id), required, int(os.environ.get("GITHUB_RUN_ATTEMPT") or 0))
     print("\n".join(lines))
-    print(f"tests ({args.os_name}, py{args.python}): {'all required jobs succeeded' if ok else 'NOT all required jobs succeeded'}")
+    print(f"{name}: {'all required jobs succeeded' if ok else 'NOT all required jobs succeeded'}")
     return 0 if ok else 1
 
 

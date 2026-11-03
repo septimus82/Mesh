@@ -13,6 +13,11 @@ check in ``check`` holds: both shards finished and passed, on the same commit, t
 each ran exactly its modules' tests, no test twice, none missing, every selected test with an outcome. Linux runs the
 whole suite unsharded, as before.
 
+The gpu lane (``extended.yml``) is split the same way on Windows, by its own plan (``--plan gpu``: its own pins, so the
+default suite's balance and the gpu lane's never move each other): ``gpu (windows-latest, py3.11, shard 1/2)`` and
+``2/2``, each collecting the whole ``gl`` selection, and a fan-in named ``gpu (windows-latest, py3.11)`` that runs
+``check --plan gpu --min-selected N``: the same checks, plus the lane's ``min_selected`` applied to the whole selection.
+
 Standard library only: the fan-in runs it with the runner's own ``python3``.
 """
 
@@ -58,23 +63,48 @@ PINNED: dict[str, int] = {
 }
 
 
+# The gpu lane's (``python -m tooling.test_tiers --shard K/2 gpu``): its 12 heaviest modules, pinned to balance the two
+# given where the hash puts the rest. Measured on CI's Windows gpu lane (Mesa llvmpipe), the mean of #456's ad51026 and
+# baba1e7 runs (setup + call + teardown): 1,956-2,107 s in all, 45 modules; the hash alone gave the rest 207/267 s,
+# with the pins 1,012/1,020 s. Re-measure and re-pin (bumping SCHEME) when the shards drift far apart.
+GPU_PINNED: dict[str, int] = {
+    "tests/test_dialogue_reopen_gpu.py": 1,  # 295.2 s
+    "tests/test_terrain_gpu.py": 2,  # 285.2 s
+    "tests/test_water_gpu.py": 1,  # 190.7 s
+    "tests/test_fire_gpu.py": 2,  # 183.1 s
+    "tests/test_weather_authoring_gpu.py": 1,  # 149.8 s
+    "tests/test_scatter_gpu.py": 2,  # 111.8 s
+    "tests/test_studio_workflow_polish_gpu.py": 1,  # 104.3 s
+    "tests/test_hd2d_asset_pipeline_gpu.py": 2,  # 90.5 s
+    "tests/test_hd2d_starter_gpu.py": 2,  # 82.4 s
+    "tests/test_weather_collisions_gpu.py": 1,  # 65.3 s
+    "tests/test_studio_3d_selection_gpu.py": 1,  # 57.4 s
+    "tests/test_hd2d_studio_gpu.py": 2,  # 57.3 s
+}
+# Each split's pins, by plan name: ``default`` is the default suite's (ci.yml), ``gpu`` the gpu lane's (extended.yml).
+PLANS: dict[str, dict[str, int]] = {"default": PINNED, "gpu": GPU_PINNED}
+
+
 def module_of(nodeid: str) -> str:
     """The test module a test (or collected node) belongs to, as a repository-relative path."""
     return nodeid.split("::", 1)[0].replace("\\", "/")
 
 
-def shard_of(module: str, shards: int = SHARDS) -> int:
-    """The shard (1-based) that runs ``module``: its pinned shard, else one fixed by its path's SHA-256."""
+def shard_of(module: str, shards: int = SHARDS, plan: str = "default") -> int:
+    """The shard (1-based) that runs ``module``: its pinned shard in ``plan``, else one fixed by its path's SHA-256."""
     if shards == 1:
         return 1
-    if shards == SHARDS and module in PINNED:
-        return PINNED[module]
+    pinned = PLANS[plan]
+    if shards == SHARDS and module in pinned:
+        return pinned[module]
     return int(hashlib.sha256(module.encode("utf-8")).hexdigest(), 16) % shards + 1
 
 
-def scheme_digest(shards: int) -> str:
-    """What decides the assignment, as one digest: two records agree on it, or they weren't split the same way."""
-    scheme = {"scheme": SCHEME, "shards": shards, "pinned": dict(sorted(PINNED.items())) if shards == SHARDS else {}}
+def scheme_digest(shards: int, plan: str = "default") -> str:
+    """What decides the assignment, as one digest: two records agree on it, or they weren't split the same way. (The
+    plans' pins differ, so their digests do; the default plan's is what it was before plans.)"""
+    scheme = {"scheme": SCHEME, "shards": shards,
+              "pinned": dict(sorted(PLANS[plan].items())) if shards == SHARDS else {}}
     return hashlib.sha256(json.dumps(scheme, sort_keys=True).encode("utf-8")).hexdigest()
 
 
@@ -104,11 +134,15 @@ def _outcomes(record: dict[str, Any]) -> dict[str, str]:
 
 
 def check(records: list[dict[str, Any]], *, shards: int = SHARDS, commit: str | None = None,
-          junit: dict[int, dict[str, int] | None] | None = None) -> tuple[list[str], dict[str, Any]]:
+          junit: dict[int, dict[str, int] | None] | None = None, plan: str = "default",
+          min_selected: int = 0) -> tuple[list[str], dict[str, Any]]:
     """``(problems, summary)`` for the records of one run's shards: no problems only when, together, they ran the
     whole collected suite exactly once, every test with an outcome a whole run would pass with, on one commit and
-    scheme. With ``junit`` (each shard's JUnit counts, ``junit_counts``), each shard's report must agree with its
-    record."""
+    ``plan``'s scheme, and the suite holds at least ``min_selected`` tests (a lane's floor, for the whole of it). With
+    ``junit`` (each shard's JUnit counts, ``junit_counts``), each shard's report must agree with its record. Skipped
+    tests pass, as in an unsharded run, and the summary lists each."""
+    if plan not in PLANS:
+        return [f"no shard plan named {plan!r}"], {}
     problems: list[str] = []
     by_shard: dict[int, dict[str, Any]] = {}
     for record in records:
@@ -125,7 +159,7 @@ def check(records: list[dict[str, Any]], *, shards: int = SHARDS, commit: str | 
                         "or stopped before it finished")
     if problems:
         return problems, {}
-    expected_scheme = scheme_digest(shards)
+    expected_scheme = scheme_digest(shards, plan)
     first = by_shard[1]
     collected = _ids(first, "collected")
     for k, record in sorted(by_shard.items()):
@@ -151,7 +185,7 @@ def check(records: list[dict[str, Any]], *, shards: int = SHARDS, commit: str | 
         selected = _ids(record, "selected")
         if len(set(selected)) != len(selected):
             problems.append(f"{label}: selected a test twice")
-        expected = sorted(nodeid for nodeid in collected if shard_of(module_of(nodeid), shards) == k)
+        expected = sorted(nodeid for nodeid in collected if shard_of(module_of(nodeid), shards, plan) == k)
         if sorted(selected) != expected:
             problems.append(f"{label}: ran {len(selected)} tests, its modules hold {len(expected)}")
         outcomes = _outcomes(record)
@@ -183,14 +217,17 @@ def check(records: list[dict[str, Any]], *, shards: int = SHARDS, commit: str | 
     absent = sorted(set(collected) - set(selected_all))
     if absent:
         problems.append(f"{len(absent)} collected test(s) ran in no shard, e.g. {absent[0]}")
+    if len(collected) < min_selected:
+        problems.append(f"the shards' suite holds {len(collected)} tests, fewer than the {min_selected} it should")
     outcomes_all: dict[str, str] = {}
     for record in by_shard.values():
         outcomes_all.update(_outcomes(record))
     summary = {
-        "commit": first.get("commit"), "collected": len(collected), "selected": len(selected_all),
+        "plan": plan, "commit": first.get("commit"), "collected": len(collected), "selected": len(selected_all),
         "passed": sum(1 for o in outcomes_all.values() if o == "passed"),
         "skipped": sum(1 for o in outcomes_all.values() if o == "skipped"),
         "collection_skips": len(_ids(first, "collection_skips")),  # (each shard collects them: counted once)
+        "skipped_tests": sorted(n for n, o in outcomes_all.items() if o in ("skipped", "xfailed")),
         "shards": {f"{k}/{shards}": {"tests": len(_ids(r, "selected")),
                                       "seconds": round(sum((r.get("durations") or {}).values()), 1)}
                    for k, r in sorted(by_shard.items())},
@@ -234,12 +271,15 @@ def main(argv: list[str] | None = None) -> int:
     run_check.add_argument("folder", type=Path)
     run_check.add_argument("--shards", type=int, default=SHARDS)
     run_check.add_argument("--commit", default=None, help="The commit this run tested (GITHUB_SHA).")
+    run_check.add_argument("--plan", default="default", choices=sorted(PLANS), help="Whose split: default or gpu.")
+    run_check.add_argument("--min-selected", type=int, default=0, help="The lane's floor, for the whole suite.")
     args = parser.parse_args(argv)
     records, problems = load_records(args.folder)
     reports = {path.stem.removeprefix("junit-"): path for path in args.folder.rglob("junit-*.xml")}
     junit = {r["shard"]: junit_counts(reports[str(r["shard"])]) if str(r.get("shard")) in reports else None
              for r in records if isinstance(r.get("shard"), int)}
-    found, summary = check(records, shards=args.shards, commit=args.commit, junit=junit)
+    found, summary = check(records, shards=args.shards, commit=args.commit, junit=junit, plan=args.plan,
+                           min_selected=args.min_selected)
     problems += found
     for line in problems:
         print(f"FAILED  {line}")

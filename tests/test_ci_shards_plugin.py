@@ -104,3 +104,21 @@ def test_a_bad_shard_option_is_a_usage_error(tmp_path: Path, spec: str) -> None:
     else:
         proc = _run(project, tmp_path / "records", spec)
     assert proc.returncode == 4, proc.stdout + proc.stderr
+
+
+def test_the_gpu_plan_runs_real_shards_by_its_own_pins(tmp_path: Path) -> None:
+    # #422 F13: --mesh-shard-plan gpu (extended.yml's Windows gpu shards). A module pinned in the gpu plan goes to its
+    # pinned shard; the records pass `check --plan gpu` and are refused as the default plan's.
+    project, out = _project(tmp_path), tmp_path / "records"
+    pinned = "tests/test_water_gpu.py"
+    assert ci_shards.shard_of(pinned) != ci_shards.GPU_PINNED[pinned], "the example needs a pin that moves it"
+    (project / pinned).write_text("def test_a():\n    pass\n", encoding="utf-8")
+    for shard in ("1/2", "2/2"):
+        proc = _run(project, out, shard, "--mesh-shard-plan", "gpu")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+    records = {k: json.loads((out / f"shard-{k}.json").read_text(encoding="utf-8")) for k in (1, 2)}
+    home = ci_shards.GPU_PINNED[pinned]
+    assert f"{pinned}::test_a" in records[home]["selected"] and records[home]["plan"] == "gpu"
+    assert ci_shards.main(["check", str(out), "--plan", "gpu"]) == 0
+    assert ci_shards.main(["check", str(out)]) == 1
+    assert _run(project, tmp_path / "bad", "1/2", "--mesh-shard-plan", "nope").returncode == 4

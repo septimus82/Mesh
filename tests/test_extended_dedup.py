@@ -155,7 +155,7 @@ def test_main_writes_the_step_output_only_skip_true_on_a_positive_decision(tmp_p
 
 def test_the_workflow_gates_only_pull_requests_and_runs_the_lanes_on_any_doubt() -> None:
     text = EXTENDED.read_text(encoding="utf-8")
-    dedup, lane = text[text.index("\n  dedup:"):text.index("\n  lane:")], text[text.index("\n  lane:"):]
+    dedup, lane = text[text.index("\n  dedup:"):text.index("\n  lane:")], text[text.index("\n  lane:"):text.index("\n  gpu-shards:")]
     # The push-tested branch the check names is the one push runs on; the workflow it reads is this file.
     assert f"push:\n    branches: [{BRANCH}]" in text
     assert f"python3 -m tooling.extended_dedup --push-branch {BRANCH} --workflow {EXTENDED.name}" in dedup
@@ -166,7 +166,10 @@ def test_the_workflow_gates_only_pull_requests_and_runs_the_lanes_on_any_doubt()
     assert "needs: dedup\n" in lane
     assert "if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}" in lane
     assert lane.count("\n    if:") == 1, "the lane job has exactly one condition"
-    assert "os: [ubuntu-latest, windows-latest]" in lane and "lane: [extended, gpu]" in lane
+    assert "{ os: ubuntu-latest, lane: gpu }" in lane and '{ os: windows-latest, lane: gpu, shard: "2/2"' in lane
+    # The gpu shards' fan-in is left out with them on a duplicate #344 run, and runs (red if need be) otherwise.
+    fanin = text[text.index("\n  gpu-shards:"):]
+    assert "needs: [dedup, lane]" in fanin and "if: ${{ always() && needs.dedup.outputs.skip != 'true' }}" in fanin
 
 
 def test_the_timing_window_counts_push_runs_so_skipped_344_runs_dont_shrink_it(tmp_path: Path,
