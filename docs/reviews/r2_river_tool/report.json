@@ -1,0 +1,716 @@
+{
+ "shots": [
+  {
+   "name": "01_river_tool_on_the_bed",
+   "message": "River: click the ground to start a river, upstream first; each click adds a point downstream; Enter finishes. Click a river to select it, drag its posts to move points. Insert adds a point, Delete removes one, Esc cancels.",
+   "rivers": []
+  },
+  {
+   "name": "02_drawing_4_points_preview",
+   "message": "New river: 4 points. Click to add the next one downstream; Enter finishes it, Esc drops it.",
+   "rivers": []
+  },
+  {
+   "name": "03_drawn_8_points_before_enter",
+   "message": "New river: 8 points. Click to add the next one downstream; Enter finishes it, Esc drops it.",
+   "rivers": []
+  },
+  {
+   "name": "04_finished_one_undo_step",
+   "message": "River 'river' added (8 points). Drag its posts to shape it.",
+   "rivers": [
+    {
+     "id": "river",
+     "points": [
+      [
+       700.0,
+       960.0,
+       64.0,
+       -10.0
+      ],
+      [
+       800.0,
+       930.0,
+       64.0,
+       -11.91
+      ],
+      [
+       900.0,
+       905.0,
+       64.0,
+       -13.44
+      ],
+      [
+       990.0,
+       870.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1060.0,
+       852.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1130.0,
+       860.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1190.0,
+       890.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1250.0,
+       935.0,
+       64.0,
+       -23.92
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "05_dragging_point_3",
+   "message": "River 'river', point 3 of 8: drag to move it.",
+   "rivers": [
+    {
+     "id": "river",
+     "points": [
+      [
+       700.0,
+       960.0,
+       64.0,
+       -10.0
+      ],
+      [
+       800.0,
+       930.0,
+       64.0,
+       -11.91
+      ],
+      [
+       900.0,
+       905.0,
+       64.0,
+       -13.44
+      ],
+      [
+       990.0,
+       870.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1060.0,
+       852.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1130.0,
+       860.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1190.0,
+       890.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1250.0,
+       935.0,
+       64.0,
+       -23.92
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "06_dragged_saved",
+   "message": "Moved point 3 of river 'river'.",
+   "rivers": [
+    {
+     "id": "river",
+     "points": [
+      [
+       700.0,
+       960.0,
+       64.0,
+       -10.0
+      ],
+      [
+       800.0,
+       930.0,
+       64.0,
+       -11.91
+      ],
+      [
+       904.0,
+       918.0,
+       64.0,
+       -13.44
+      ],
+      [
+       990.0,
+       870.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1060.0,
+       852.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1130.0,
+       860.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1190.0,
+       890.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1250.0,
+       935.0,
+       64.0,
+       -23.92
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "07_refused_mid_drag_last_valid_kept_red_post",
+   "message": "River 'river', point 3 of 8: drag to move it.",
+   "rivers": [
+    {
+     "id": "river",
+     "points": [
+      [
+       700.0,
+       960.0,
+       64.0,
+       -10.0
+      ],
+      [
+       800.0,
+       930.0,
+       64.0,
+       -11.91
+      ],
+      [
+       904.0,
+       918.0,
+       64.0,
+       -13.44
+      ],
+      [
+       990.0,
+       870.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1060.0,
+       852.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1130.0,
+       860.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1190.0,
+       890.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1250.0,
+       935.0,
+       64.0,
+       -23.92
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "08_refused_on_release_unchanged",
+   "message": "Refused: River 'river': a bend too tight for a river this wide (its inner bank folds over itself) near (792, 932) px. The river is as it was.",
+   "rivers": [
+    {
+     "id": "river",
+     "points": [
+      [
+       700.0,
+       960.0,
+       64.0,
+       -10.0
+      ],
+      [
+       800.0,
+       930.0,
+       64.0,
+       -11.91
+      ],
+      [
+       904.0,
+       918.0,
+       64.0,
+       -13.44
+      ],
+      [
+       990.0,
+       870.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1060.0,
+       852.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1130.0,
+       860.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1190.0,
+       890.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1250.0,
+       935.0,
+       64.0,
+       -23.92
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "09_inserted_after_point_5",
+   "message": "Point added between points 5 and 6.",
+   "rivers": [
+    {
+     "id": "river",
+     "points": [
+      [
+       700.0,
+       960.0,
+       64.0,
+       -10.0
+      ],
+      [
+       800.0,
+       930.0,
+       64.0,
+       -11.91
+      ],
+      [
+       904.0,
+       918.0,
+       64.0,
+       -13.44
+      ],
+      [
+       990.0,
+       870.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1060.0,
+       852.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1095.48,
+       852.96,
+       64.0,
+       -14.81
+      ],
+      [
+       1130.0,
+       860.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1190.0,
+       890.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1250.0,
+       935.0,
+       64.0,
+       -23.92
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "10_undo_brings_the_inserted_point_back",
+   "message": "Undone.",
+   "rivers": [
+    {
+     "id": "river",
+     "points": [
+      [
+       700.0,
+       960.0,
+       64.0,
+       -10.0
+      ],
+      [
+       800.0,
+       930.0,
+       64.0,
+       -11.91
+      ],
+      [
+       904.0,
+       918.0,
+       64.0,
+       -13.44
+      ],
+      [
+       990.0,
+       870.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1060.0,
+       852.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1095.48,
+       852.96,
+       64.0,
+       -14.81
+      ],
+      [
+       1130.0,
+       860.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1190.0,
+       890.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1250.0,
+       935.0,
+       64.0,
+       -23.92
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "11_redo_removes_it_again",
+   "message": "Redone.",
+   "rivers": [
+    {
+     "id": "river",
+     "points": [
+      [
+       700.0,
+       960.0,
+       64.0,
+       -10.0
+      ],
+      [
+       800.0,
+       930.0,
+       64.0,
+       -11.91
+      ],
+      [
+       904.0,
+       918.0,
+       64.0,
+       -13.44
+      ],
+      [
+       990.0,
+       870.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1060.0,
+       852.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1130.0,
+       860.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1190.0,
+       890.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1250.0,
+       935.0,
+       64.0,
+       -23.92
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "12_reopened_in_a_new_studio",
+   "message": "River: click the ground to start a river, upstream first; each click adds a point downstream; Enter finishes. Click a river to select it, drag its posts to move points. Insert adds a point, Delete removes one, Esc cancels.",
+   "rivers": [
+    {
+     "id": "river",
+     "points": [
+      [
+       700.0,
+       960.0,
+       64.0,
+       -10.0
+      ],
+      [
+       800.0,
+       930.0,
+       64.0,
+       -11.91
+      ],
+      [
+       904.0,
+       918.0,
+       64.0,
+       -13.44
+      ],
+      [
+       990.0,
+       870.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1060.0,
+       852.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1130.0,
+       860.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1190.0,
+       890.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1250.0,
+       935.0,
+       64.0,
+       -23.92
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "13_play_the_saved_river",
+   "message": "River: click the ground to start a river, upstream first; each click adds a point downstream; Enter finishes. Click a river to select it, drag its posts to move points. Insert adds a point, Delete removes one, Esc cancels.",
+   "rivers": [
+    {
+     "id": "river",
+     "points": [
+      [
+       700.0,
+       960.0,
+       64.0,
+       -10.0
+      ],
+      [
+       800.0,
+       930.0,
+       64.0,
+       -11.91
+      ],
+      [
+       904.0,
+       918.0,
+       64.0,
+       -13.44
+      ],
+      [
+       990.0,
+       870.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1060.0,
+       852.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1130.0,
+       860.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1190.0,
+       890.0,
+       64.0,
+       -14.81
+      ],
+      [
+       1250.0,
+       935.0,
+       64.0,
+       -23.92
+      ]
+     ]
+    }
+   ]
+  }
+ ],
+ "saved": [
+  {
+   "id": "river",
+   "points": [
+    [
+     700.0,
+     960.0,
+     64.0,
+     -10.0
+    ],
+    [
+     800.0,
+     930.0,
+     64.0,
+     -11.91
+    ],
+    [
+     904.0,
+     918.0,
+     64.0,
+     -13.44
+    ],
+    [
+     990.0,
+     870.0,
+     64.0,
+     -14.81
+    ],
+    [
+     1060.0,
+     852.0,
+     64.0,
+     -14.81
+    ],
+    [
+     1130.0,
+     860.0,
+     64.0,
+     -14.81
+    ],
+    [
+     1190.0,
+     890.0,
+     64.0,
+     -14.81
+    ],
+    [
+     1250.0,
+     935.0,
+     64.0,
+     -23.92
+    ]
+   ]
+  }
+ ],
+ "reopened_from_disk_same": true,
+ "reopened_shown_same": true,
+ "play_rivers_same": true,
+ "play_water_time_s": 1.033,
+ "cost_short_lakeside": {
+  "river_m": 18.7,
+  "moves": 30,
+  "checks": 31,
+  "check_ms_median": 2.72,
+  "check_ms_max": 5.47,
+  "drag_frame_ms_median": 17.28,
+  "drag_frame_ms_max": 90.54,
+  "release_commit_frame_ms": 415.9,
+  "of_which_checked_edit_ms": 314.5,
+  "idle_frame_ms_median": 12.92,
+  "river_buffers_made_during_drag": 0,
+  "shader_programs_before_after": [
+   35,
+   35
+  ],
+  "saved_moved": true
+ },
+ "cost_long_village": {
+  "river_m": 189.9,
+  "moves": 30,
+  "checks": 31,
+  "check_ms_median": 24.0,
+  "check_ms_max": 26.98,
+  "drag_frame_ms_median": 48.42,
+  "drag_frame_ms_max": 119.63,
+  "release_commit_frame_ms": 152.6,
+  "of_which_checked_edit_ms": 43.6,
+  "idle_frame_ms_median": 20.3,
+  "river_buffers_made_during_drag": 0,
+  "shader_programs_before_after": [
+   31,
+   31
+  ],
+  "saved_moved": true
+ }
+}
