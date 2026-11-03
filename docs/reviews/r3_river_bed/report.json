@@ -1,0 +1,68 @@
+{
+ "studio": {
+  "A1_studio_before_carving_water_under_the_ground": "River: click the ground to start a river, upstream first; each click adds a point downstream; Enter finishes. Click a river to select it, drag its posts to move points. Insert adds a point, Delete removes one, Esc cancels.",
+  "A2_studio_bed_carved": "River 'brook': its bed carved, a quarter of its width deep in the middle. Undo puts the ground back.",
+  "A3_studio_plants_cleared": "River 'brook': the scattered plants and rocks in its water taken away."
+ },
+ "carve_click_to_reloaded_ms": 685.5,
+ "walks": {
+  "ford": {
+   "x": 526.0,
+   "y": 600.0,
+   "z": 0.0,
+   "lowest": -0.61621875,
+   "deepest": 0.3347713374617465,
+   "wading_steps": 7
+  },
+  "deep": {
+   "x": 633.5,
+   "y": 1000.0,
+   "z": -0.8310625,
+   "lowest": -0.8310625,
+   "deepest": 0.4734716649274619,
+   "wading_steps": 2
+  },
+  "bridge": {
+   "x": 345.0,
+   "y": 768.0,
+   "z": 2.0,
+   "lowest": 2.0,
+   "deepest": 0.0,
+   "wading_steps": 0
+  }
+ },
+ "pictures": {
+  "B1_play_wading_the_ford": {
+   "x": 656.0,
+   "elevation_m": -0.616,
+   "wading": [
+    0.3347713374617465,
+    "brook"
+   ]
+  },
+  "B2_play_stopped_at_deep_water": {
+   "x": 633.5,
+   "elevation_m": -0.831,
+   "wading": [
+    0.4734716649274619,
+    "brook"
+   ]
+  },
+  "B3_play_on_the_bridge_over_deep_water": {
+   "x": 620.0,
+   "elevation_m": 2.0,
+   "wading": null
+  }
+ },
+ "play_frame_ms_with_river": 15.29,
+ "lakeside_carve_ms": 60.6,
+ "lakeside_clear_ms": 36.1,
+ "lakeside_walk_north_into_the_brook": {
+  "x": 900.0,
+  "y": 1020.0,
+  "z": 0.0,
+  "lowest": -0.662125,
+  "deepest": 0.47281211241861354,
+  "wading_steps": 5
+ }
+}
