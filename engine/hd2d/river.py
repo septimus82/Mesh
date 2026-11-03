@@ -18,14 +18,17 @@ near-touching bends). The level, sampled, never rises downstream (beyond ``LEVEL
 Rivers don't cross or overlap one another (joining rivers comes later). Both banks stay on the room's ground
 (``bounds``). What a room's rivers cost is bounded: at most ``MAX_RIVERS``, each at most ``MAX_LENGTH_M`` long and
 ``MAX_TOTAL_M`` together, checked from the course's length before it is sampled. Measured: checking or building a
-river costs about 0.1 ms a metre each, and its vertices 0.34 KB a metre.
+river costs about 0.1 ms a metre each. Its GPU data: 21 floats (84 bytes) for each bank's vertex, two a sample, four
+samples a metre, plus six 4-byte indices a sample: about 0.75 KiB a metre, 1.5 MiB for the room's 2,048 m.
 
-R1 draws rivers (engine.water.WaterLayer: in the same pass as ponds, sharing its copy of the frame for reflections);
-it doesn't edit them in Mesh Studio yet, carve their bed, block characters or blend into lakes.
+Rivers are drawn by engine.water.WaterLayer (in the same pass as ponds, sharing its copy of the frame for
+reflections) and edited in Mesh Studio with its River tool (engine.studio_river, R2). They don't carve their bed, block
+characters or blend into lakes yet.
 """
 
 from __future__ import annotations
 
+import functools
 import math
 import re
 from array import array
@@ -49,7 +52,7 @@ MAX_TURN_DEG = 30.0  # the most the course turns in one step (a quarter metre): 
 CLEARANCE_M = 0.25  # parts of a ribbon (or two ribbons) that aren't neighbours along it stay this far apart
 MAX_RIVERS = 16
 MAX_LENGTH_M = 1024.0  # a river's course: four times the widest room (256 m), room to wind across it
-MAX_TOTAL_M = 2048.0  # all of a room's rivers together: ~0.2 s to check, ~0.7 MB of vertices
+MAX_TOTAL_M = 2048.0  # all of a room's rivers together: ~0.2 s to check, ~1.5 MiB of GPU data
 BOUNDS_TOLERANCE_PX = 0.5  # (a bank exactly on the ground's edge, stored rounded, is on it)
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
 KEYS = {"id", "points", "flow", "colour", "deep_colour", "opacity", "depth", "waves", "reflection", "rain_ripples"}
@@ -229,12 +232,21 @@ def _spline(points: list[tuple[float, float]]) -> tuple[list[tuple[float, float]
     return walk, marks
 
 
+def halfway(points: list[list[float]], i: int) -> tuple[float, float]:
+    """Where the course is halfway between control points ``i`` and ``i + 1`` (px): on the curve, not the straight
+    line between them (Studio's Insert point)."""
+    walk, marks = _spline([(p[0] / PX, p[1] / PX) for p in points])
+    x, y = walk[(marks[i] + marks[i + 1]) // 2]
+    return (x * PX, y * PX)
+
+
 def course_length(river: River) -> float:
     """How long the river's course is (m), from its spline walk alone (cheap: no samples, no banks)."""
     walk, _marks = _spline([(p[0] / PX, p[1] / PX) for p in river.points])
     return sum(math.dist(a, b) for a, b in zip(walk, walk[1:]))
 
 
+@functools.lru_cache(maxsize=64)  # (the same river: the same ribbon; checked, drawn and picked from once)
 def ribbon(river: River) -> Ribbon:
     """The river's sampled course and banks (metres), checked: raises RiverError at the first unsound place."""
     pts = river.points

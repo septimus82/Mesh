@@ -143,6 +143,9 @@ class Hd2dView:
         self._grid: tuple[Any, Any] = (None, None)  # the 1 m grid over sculpted ground: (key, packed points)
         self._grid_chunks: dict[tuple[int, int], Any] = {}  # ... per chunk
         self._grid_dirty: set[tuple[int, int]] = set()  # chunks a stroke changed since the grid was worked out
+        from engine.studio_river import RiverTool  # noqa: PLC0415
+
+        self.river = RiverTool(self)  # #461 R2: drawing and editing the room's rivers
 
     # ------------------------------------------------------------------ state
     @property
@@ -169,6 +172,7 @@ class Hd2dView:
         if self.stroke is not None:  # the room was loaded again mid-stroke (undo, a room change, Play): it's gone
             self.stroke = None
             self.studio._say("Stroke cancelled: the room was loaded again.", ok=False)
+        self.river.room_loaded()
         if self.renderer is None:  # a 2D room: nothing of the 3D view carries over
             self.structure, self.placing, self.drag = None, None, None
             self._buried, self.newly_buried = set(), []
@@ -342,6 +346,7 @@ class Hd2dView:
                           "stone": (0.85, 0.85, 0.9, 1.0), "mud": (0.8, 0.6, 0.45, 1.0),
                           "sand": (1.0, 0.92, 0.6, 1.0)}[material]
             renderer.draw_lines(vp, ring, colour, through=True)
+        self.river.overlay(vp)
         if self.object_marker is not None and self.studio.place_prefab is not None:  # where it would stand: green
             mx, my, mz = self.object_marker
             renderer.draw_lines(vp, box_edges((mx - 0.3, my - 0.3, mz), (mx + 0.3, my + 0.3, mz + 1.6)),
@@ -444,6 +449,9 @@ class Hd2dView:
             return True
         if self.sculpt is not None:
             self.begin_stroke(x, y)
+            return True
+        if self.river.on:
+            self.river.press(x, y)
             return True
         start = time.perf_counter()
         under = self._under(x, y)
@@ -607,6 +615,9 @@ class Hd2dView:
         return None if best is None else (best[1], best[2])
 
     def drag_to(self, x: float, y: float) -> None:
+        if self.river.gesture is not None:
+            self.river.drag_to(x, y)
+            return
         if self.stroke is not None:
             self.stroke_to(x, y)
             self.sculpt_at = self.ground_hit(x, y)
@@ -638,6 +649,9 @@ class Hd2dView:
             renderer.set_live(st.id, nx, ny, st.elevation, st.rotation, st.scale)
 
     def release(self) -> None:
+        if self.river.gesture is not None:
+            self.river.release()
+            return
         if self.stroke is not None:
             self.end_stroke()
             return
@@ -663,7 +677,7 @@ class Hd2dView:
 
     @property
     def dragging(self) -> bool:
-        return self.drag is not None or self.stroke is not None
+        return self.drag is not None or self.stroke is not None or self.river.gesture is not None
 
     # ------------------------------------------------------------------ edits (one op each: one undo step)
     def select_structure(self, structure_id: str | None) -> None:
@@ -868,6 +882,8 @@ class Hd2dView:
         cancel."""
         if self.cancel_stroke():
             return True
+        if self.river.on and self.river.cancel():
+            return True
         if self.placing is not None:
             self.placing = None
             if self.renderer is not None:
@@ -883,6 +899,8 @@ class Hd2dView:
     # ------------------------------------------------------------------ keys (only while no field is being typed in)
     def key(self, symbol: int) -> bool:
         k = optional_arcade.arcade.key
+        if self.river.on and symbol != k.ESCAPE and self.river.key(symbol):
+            return True
         if symbol == k.Q:
             self.turn(-TURN_DEG)
         elif symbol == k.E:
@@ -981,6 +999,8 @@ class Hd2dView:
     def toggle_sculpt(self, mode: str = "sculpt") -> None:
         """Sculpt, Paint (Milestone 20C) or Scatter (20D) on, or off if it was on already: the ground brush."""
         self.cancel_stroke()
+        if self.river.on:
+            self.river.leave()
         was = None if self.sculpt is None else (self.sculpt["tool"] if self.sculpt["tool"] in ("paint", "scatter")
                                                  else "sculpt")
         if was == mode:
@@ -1556,6 +1576,13 @@ class Hd2dView:
                              "Scatter grass, flowers, bushes, reeds, rocks and branches over the ground by dragging "
                              "(click again: off)", width=third, style=S_ACTIVE if kind == "scatter" else S_BUTTON))
         box.add(row)
+        box.add(self._button("River", self.river.toggle,
+                             "Draw and edit rivers: click the ground to place points from upstream to downstream, "
+                             "drag a point's post to move it (click again: off)", width=width,
+                             style=S_ACTIVE if self.river.on else S_BUTTON))
+        if self.river.on:
+            self.river.section(box, width)
+            return
         if brush is None:  # (nothing chosen yet: what each one does)
             box.add(studio._label("Sculpt raises, lowers, smooths or flattens the ground. Paint colours it: earth, "
                                   "stone, mud, sand or grass. Scatter adds grass, flowers, bushes, trees and rocks. "

@@ -1,0 +1,201 @@
+"""#461 R2: Mesh Studio's River tool, in a hidden Studio window driven by its own input events (GL-gated:
+MESH_GL_SMOKE=1).
+
+The starter village with a stream bed already sculpted under its bridge (tooling/r1_river_study.py, beds only):
+River beside Sculpt, Paint and Scatter; a river drawn by clicking the ground from upstream to downstream and
+finished with Enter; a point dragged; a drag the checks refuse (the river as it was); insert and remove a point;
+width, water level and flow typed in (an uphill level refused); undo and redo; Esc mid-drag and a room change
+mid-draw cancel without saving; save and reopen; Play shows the saved river flowing. Each saved change is one undo
+step; a drag allocates no new GPU buffers and builds no new shader while it moves."""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from engine import optional_arcade
+
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(os.environ.get("MESH_GL_SMOKE") != "1" or not optional_arcade.has_arcade(),
+                       reason="real-GPU render test is opt-in (set MESH_GL_SMOKE=1 with a display/GL context)"),
+    pytest.mark.filterwarnings("ignore:draw_text is an extremely slow function"),
+    pytest.mark.filterwarnings("ignore:UIInputText is now a UIStyledWidget:DeprecationWarning"),
+    pytest.mark.filterwarnings("ignore:.*style dict.*:DeprecationWarning"),
+]
+
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tooling"))
+
+
+def _rivers(d: Any) -> list[dict[str, Any]]:
+    from engine import project_ops as ops
+
+    return ops.rivers(d.studio.project.scene())
+
+
+def test_a_creator_draws_edits_and_plays_a_river_in_studio(tmp_path: Path, record_testsuite_property: Any) -> None:
+    import r1_river_study as r1
+    from hd2d_studio_demo import StudioDriver
+
+    from engine.studio_project import Project
+
+    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    project = r1.make_project(tmp_path, "tool", rivers=False)  # the beds, sculpted; no river yet
+    d = StudioDriver(project)
+    measures: dict[str, Any] = {}
+    try:
+        k, studio, view = d.arcade.key, d.studio, d.studio.hd2d
+        tool = view.river
+        terrain = d.renderer.terrain
+
+        def ground(px: float, py: float) -> tuple[float, float, float]:
+            return (px / 32, py / 32, terrain.surface_at(px, py)[0] / 32)
+
+        def post(index: int) -> tuple[float, float]:
+            x, y, _w, level = _rivers(d)[0]["points"][index]
+            return d.screen((x / 32, y / 32, level / 32))
+
+        def steps() -> int:
+            return len(studio.project._undo)
+
+        d.button("Terrain")
+        assert d.has_button("Sculpt") and d.has_button("Paint") and d.has_button("Scatter") and d.has_button("River")
+        d.button("River")
+        assert tool.on and view.sculpt is None
+        view.camera.target = (20.0, 24.0, 0.0)
+        d.advance(2)
+
+        # draw: a click a point, upstream to downstream, on the bed's ground (the real terrain hit); Enter finishes
+        undo0 = steps()
+        for x, y, _w, _l in r1.NORTH:
+            d.click(*d.screen(ground(x, y)))
+        assert tool.draft is not None and len(tool.draft) == 5 and _rivers(d) == [], "drawn, not saved yet"
+        assert steps() == undo0, "drawing saves nothing until it's finished"
+        d.key(k.ENTER)
+        (river,) = _rivers(d)
+        assert steps() == undo0 + 1, "the new river: one undo step"
+        pts = river["points"]
+        assert len(pts) == 5 and all(b[3] <= a[3] for a, b in zip(pts, pts[1:])), "falling downstream"
+        for (x, y, _w, level), (cx, cy, _cw, _cl) in zip(pts, r1.NORTH):
+            assert abs(x - cx) < 2 and abs(y - cy) < 2, (x, y, cx, cy)  # where it was clicked
+            assert level > terrain.surface_at(x, y)[0], "its water stands over the bed it was drawn on"
+        assert [r.id for r in d.renderer.settings.rivers] == ["river"]
+        d.frame()
+        assert d.renderer.water is not None and d.renderer.water.rivers, "drawn"
+
+        # drag a point: one undo step when let go; it moves, the others stay, its width and water level kept
+        before = [list(p) for p in pts]
+        water = d.renderer.water
+        allocations, programs = water.river_allocations, d.gl_counts()["program"]
+        target = ground(before[2][0] + 24, before[2][1])
+        start = time.perf_counter()
+        d.drag(post(2), d.screen(target), steps=12)
+        measures["drag_12_moves_ms"] = round((time.perf_counter() - start) * 1000, 1)
+        after = _rivers(d)[0]["points"]
+        assert steps() == undo0 + 2 and abs(after[2][0] - (before[2][0] + 24)) < 2, (after[2], before[2])
+        assert after[2][2:] == before[2][2:] and [p for i, p in enumerate(after) if i != 2] == \
+            [p for i, p in enumerate(before) if i != 2]
+        assert water.river_allocations - allocations <= 1, "a drag writes into the buffers it has"
+        assert d.gl_counts()["program"] == programs, "no shader built for a drag"
+
+        # a drag the checks refuse: dragged back past the first point (the course would fold); nothing changes
+        good = [list(p) for p in after]
+        d.window.dispatch_event("on_mouse_motion", *post(1), 0, 0)
+        d.window.dispatch_event("on_mouse_press", *post(1), d.arcade.MOUSE_BUTTON_LEFT, 0)
+        bad = d.screen(ground(good[0][0] + 40, good[0][1] - 140))
+        d.window.dispatch_event("on_mouse_drag", *bad, 0, 0, d.arcade.MOUSE_BUTTON_LEFT, 0)
+        d.advance()
+        assert tool.gesture is not None and tool.gesture["bad"], "refused while it's dragged there"
+        assert [list(p) for p in d.renderer.settings.rivers[0].points] == good, "the last valid river stays drawn"
+        d.window.dispatch_event("on_mouse_release", *bad, d.arcade.MOUSE_BUTTON_LEFT, 0)
+        d.advance()
+        assert _rivers(d)[0]["points"] == good and steps() == undo0 + 2, "refused: nothing saved"
+        assert "Refused" in studio.message and tool.error, studio.message
+        d.picture(tmp_path / "refused.png")
+
+        # Esc mid-drag: cancelled, nothing saved, the saved river drawn
+        d.window.dispatch_event("on_mouse_press", *post(3), d.arcade.MOUSE_BUTTON_LEFT, 0)
+        moved = d.screen(ground(good[3][0] + 20, good[3][1]))
+        d.window.dispatch_event("on_mouse_drag", *moved, 0, 0, d.arcade.MOUSE_BUTTON_LEFT, 0)
+        d.advance()
+        d.key(k.ESCAPE)
+        d.window.dispatch_event("on_mouse_release", *moved, d.arcade.MOUSE_BUTTON_LEFT, 0)
+        d.advance()
+        assert tool.gesture is None and _rivers(d)[0]["points"] == good and steps() == undo0 + 2
+        assert [list(p) for p in d.renderer.settings.rivers[0].points] == good
+
+        # insert after point 1, then remove it again: one undo step each
+        d.click(*post(0))
+        assert tool.point == 0
+        d.key(k.INSERT)
+        assert len(_rivers(d)[0]["points"]) == 6 and tool.point == 1 and steps() == undo0 + 3
+        d.key(k.DELETE)
+        assert _rivers(d)[0]["points"] == good and steps() == undo0 + 4
+
+        # width and water level typed in; a level above the point upstream is refused (the river as it was)
+        d.click(*post(2))
+        d.type_into("river_width", "2.5")
+        assert _rivers(d)[0]["points"][2][2] == 80.0 and steps() == undo0 + 5
+        uphill = good[1][3] / 32 + 0.5
+        d.type_into("river_level", f"{uphill:.2f}")
+        assert _rivers(d)[0]["points"][2][3] == good[2][3] and steps() == undo0 + 5, "uphill: refused"
+        assert "uphill" in studio.message, studio.message
+        assert "river_level" in studio._held, "Studio holds the refused value in its box, as for any field"
+        box = studio._focusable["river_level"].rect
+        d.click(box.left + box.width / 2, box.bottom + box.height / 2)
+        d.key(k.ESCAPE)  # (in the box: put back as it was)
+        assert "river_level" not in studio._held
+        d.type_into("river_flow", "0.5")
+        assert _rivers(d)[0]["flow"] == 0.5 and steps() == undo0 + 6
+
+        # undo, redo: a step at a time, drawn as saved (Esc first: out of the box typed in, as a person would)
+        d.key(k.ESCAPE)
+        d.key(k.Z, k.MOD_CTRL)
+        assert "flow" not in _rivers(d)[0] and steps() == undo0 + 5
+        d.key(k.Y, k.MOD_CTRL)
+        assert _rivers(d)[0]["flow"] == 0.5
+        assert [list(p) for p in d.renderer.settings.rivers[0].points] == _rivers(d)[0]["points"]
+
+        # a room change mid-draw: the unfinished river is dropped, nothing saved
+        d.key(k.ESCAPE)  # (let go of the point)
+        d.key(k.ESCAPE)  # (... and of the river)
+        d.click(*d.screen(ground(800, 520)))
+        d.click(*d.screen(ground(900, 520)))
+        assert tool.draft is not None and len(tool.draft) == 2
+        d.button("Rooms")
+        d.button("Cottage", prefix=True)
+        d.button("Village", prefix=True)
+        assert tool.draft is None and len(_rivers(d)) == 1
+
+        # save, reopen: the same river
+        saved = _rivers(d)
+        d.key(k.S, k.MOD_CTRL)
+        world = json.loads((project / "config.json").read_text(encoding="utf-8"))["world_file"]
+        reopened = Project(project, world)
+        from engine import project_ops as ops
+
+        assert ops.rivers(reopened.scene(studio.project.current)) == saved
+
+        # Play: the saved river, flowing on the game's own clock; Stop: back to editing it
+        d.key(k.F4)
+        assert studio.mode == "play"
+        game_renderer = d.window.hd2d_renderer
+        d.advance(30)
+        assert [r.id for r in game_renderer.settings.rivers] == ["river"]
+        assert [list(p) for p in game_renderer.settings.rivers[0].points] == saved[0]["points"]
+        assert d.window.water_time > 0.4 and game_renderer.water is not None and game_renderer.water.rivers
+        d.key(k.F4)
+        assert studio.mode == "edit" and _rivers(d) == saved
+
+        measures.update({k2: {"median": round(sorted(v)[len(v) // 2], 2), "max": round(max(v), 2), "n": len(v)}
+                         for k2, v in tool.timings.items() if v})
+    finally:
+        record_testsuite_property("measure.river_tool", json.dumps(measures))  # reporting only
+        d.close()
