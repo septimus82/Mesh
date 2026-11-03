@@ -179,3 +179,69 @@ def test_ai_adds_reviews_and_saves_a_river(tmp_path: Path) -> None:
     raw = reopened.scene(room)["settings"]["hd2d"]
     assert raw["rivers"] == [{"id": "brook", "points": [[float(v) for v in p] for p in points], "flow": 0.8}]
     assert [r.id for r in parse_hd2d(raw).rivers] == ["brook"]
+
+
+def test_a_river_stays_on_its_room_s_ground_strictly_leniently_and_through_the_ops() -> None:
+    ground = {"ground": {"texture": "assets/textures/grass.png", "from": [0, 0], "to": [1600, 1200]}}
+    edge = [[0, 32, 64, 0], [400, 32, 64, 0]]  # its right bank exactly on the ground's south edge (y 0)
+    off = [[0, 20, 64, 0], [400, 20, 64, 0]]  # 12 px off it
+    assert [r.id for r in parse_hd2d({**ground, "rivers": [{"id": "edge", "points": edge}]}).rivers] == ["edge"]
+    with pytest.raises(Hd2dSettingsError, match=r"River 'off' reaches off the room's ground near \(\d+, -12\) px"):
+        parse_hd2d({**ground, "rivers": [{"id": "off", "points": off}]})
+    lenient = parse_hd2d({**ground, "rivers": [{"id": "off", "points": off}]}, lenient=True)
+    assert lenient.rivers == () and "reaches off the room's ground" in (lenient.rivers_error or "")
+    # no ground block: the room's map is its extent
+    assert "reaches off" in (parse_hd2d({"rivers": [{"id": "off", "points": off}]}, map_size_px=(1600, 1200),
+                                        lenient=True).rivers_error or "")
+    scene = _hd2d_scene()
+    with pytest.raises(ops.OpError, match="reaches off the room's ground"):
+        ops.add_river(scene, "off", off)
+    with pytest.raises(ops.OpError, match="reaches off the room's ground"):
+        ops.add_river(scene, "far", [[5000, 5000, 64, 0], [5400, 5000, 64, 0]])  # wholly elsewhere
+    saved = ops.add_river(scene, "edge", [[0.004, 32.004, 64, 0], [400, 32.004, 64, 0]])  # stored rounded
+    reopened = json.loads(json.dumps(saved))
+    assert [r.id for r in parse_hd2d(reopened["settings"]["hd2d"]).rivers] == ["edge"], "saved, reopened: still on it"
+
+
+def _long(rid: str, y: float, metres: float) -> dict[str, Any]:
+    """A straight river ``metres`` long, east along y (m)."""
+    return _r([(1, y, 2, 0), (1 + metres, y, 2, 0)], rid)
+
+
+def test_a_room_s_rivers_have_a_bounded_cost_checked_before_they_are_sampled() -> None:
+    assert river.MAX_LENGTH_M == 1024 and river.MAX_TOTAL_M == 2048 and river.MAX_RIVERS == 16
+    river.parse_rivers([_long("long", 4, 1000)])  # a kilometre: allowed
+    assert "is 1100 m long: a river may be at most 1024 m" in _refused([_long("long", 4, 1100)])
+    assert "rivers are 2100 m long together: at most 2048 m" in _refused(
+        [_long("a", 4, 700), _long("b", 12, 700), _long("c", 20, 700)])
+    assert "at most 16 rivers (got 17)" in _refused([_long(f"r{i}", 4 + 8 * i, 10) for i in range(17)])
+    big = {"ground": {"texture": "assets/textures/grass.png", "from": [0, 0], "to": [65536, 4096]}}
+    with pytest.raises(Hd2dSettingsError, match="at most 1024 m"):
+        parse_hd2d({**big, "rivers": [_long("long", 4, 1100)]})
+    lenient = parse_hd2d({**big, "rivers": [_long("long", 4, 1100)]}, lenient=True)
+    assert lenient.rivers == () and "at most 1024 m" in (lenient.rivers_error or "")
+    # a zigzag of 64 points, each span the room's diagonal: refused from its course's length alone, quickly
+    import time
+
+    zigzag = {"id": "zig", "points": [[0 if i % 2 else 8000, 8000 * (i % 3 == 1), 64, 0] for i in range(64)]}
+    start = time.perf_counter()
+    assert "a river may be at most 1024 m" in _refused([zigzag])
+    assert time.perf_counter() - start < 1.0, "no ribbon sampled for it"
+
+
+def test_the_water_s_clock_runs_for_a_room_with_rivers_and_no_ponds() -> None:
+    from types import SimpleNamespace
+
+    from engine import water
+
+    (brook,) = river.parse_rivers([GENTLE_S])
+    with_river = SimpleNamespace(water_bodies=[], water_time=0.0,
+                                 hd2d_renderer=SimpleNamespace(settings=SimpleNamespace(rivers=(brook,))))
+    water.advance(with_river, 0.25)
+    assert with_river.water_time == 0.25
+    dry = SimpleNamespace(water_bodies=[], water_time=0.0, hd2d_renderer=SimpleNamespace(settings=SimpleNamespace(rivers=())))
+    water.advance(dry, 0.25)
+    assert dry.water_time == 0.0, "no water: the clock stays"
+    flat_2d = SimpleNamespace(water_bodies=["pond"], water_time=0.0, hd2d_renderer=None)
+    water.advance(flat_2d, 0.25)
+    assert flat_2d.water_time == 0.25, "a 2D room's ponds as before"

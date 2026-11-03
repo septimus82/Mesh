@@ -119,3 +119,66 @@ def test_still_water_stands_still_and_its_gpu_objects_are_made_once(tmp_path: Pa
         assert counts[1:] == counts[:-1], counts
     finally:
         game.close()
+
+
+def test_a_river_only_room_flows_on_the_game_s_own_ticks(tmp_path: Path) -> None:
+    """No pond or puddle in the room: the river alone keeps the water's clock running, and the game's own update
+    ticks (not a clock set by the test) carry its surface downstream, or leave it still at flow 0."""
+    import r1_river_study as study
+    from hd2d_demo import SCENES, HiddenGame
+
+    for flow, name in ((1.2, "ticked"), (0.0, "ticked_still"), (None, "ticked_beds")):
+        game = HiddenGame(study.make_project(tmp_path, name, flow=flow or 0.0, rivers=flow is not None),
+                          size=study.study.SIZE)
+        try:
+            game.load(f"{SCENES}/start.json")
+            assert not game.window.water_bodies, "a room without ponds or puddles"
+            game.step(30)
+            clock = game.window.water_time
+            if flow is None:  # no water at all: the clock stays where loading left it
+                assert clock == 0.0
+                continue
+            assert abs(clock - 0.5) < 1e-6, clock  # 30 ticks of 1/60 s
+            for rid, points in (("north", study.NORTH), ("east", study.EAST)):
+                moved, corr = study.drift(game, rid, study.centre_of(points), None)
+                if flow:
+                    assert 8 <= moved <= 12 and corr > 0.3, (rid, moved, corr)
+                else:  # still: along the river nothing changed between the ticks
+                    assert corr <= 0.0, (rid, moved, corr)
+        finally:
+            game.close()
+
+
+def test_a_bend_that_widens_is_drawn_bank_to_bank_and_nowhere_else(tmp_path: Path) -> None:
+    """Seen from straight above: every texel inside the banks (by more than 3 texels) is drawn, none outside them
+    (by more than 3 texels), round a right-angle bend while the river widens from 1.25 m to 3 m."""
+    import r1_river_study as study
+    from hd2d_demo import SCENES, HiddenGame
+
+    target = (300 / 32, 140 / 32, 0.0)
+    frames, spots = {}, {}
+    for name, river in (("plain", False), ("bend", True)):
+        game = HiddenGame(study.make_bend_project(tmp_path, name, river=river), size=study.study.SIZE)
+        try:
+            game.load(f"{SCENES}/start.json")
+            game.step(3)
+            game.window.hd2d_renderer.camera.pitch = 89.0
+            frames[name] = study.frame(game, target, 10.0)
+            if river:
+                inside, outside = study.bank_to_bank(game, "bend")
+                spots = {k: [study.to_screen(game, p) for p in v] for k, v in (("inside", inside), ("outside", outside))}
+        finally:
+            game.close()
+
+    def drawn(at: tuple[float, float]) -> bool:
+        xy = (int(at[0]), int(at[1]))
+        return bool(frames["bend"].getpixel(xy) != frames["plain"].getpixel(xy))
+
+    inside = [at for at in spots["inside"] if at is not None]
+    outside = [at for at in spots["outside"] if at is not None]
+    assert len(inside) > 15000 and len(outside) > 50000, (len(inside), len(outside))
+    assert len(inside) == len(spots["inside"]) and len(outside) == len(spots["outside"]), "all of it in the picture"
+    holes = [at for at in inside if not drawn(at)]
+    spill = [at for at in outside if drawn(at)]
+    assert not holes, (len(holes), holes[:5])
+    assert not spill, (len(spill), spill[:5])

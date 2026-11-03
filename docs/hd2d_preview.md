@@ -115,16 +115,18 @@ there is no River tool in Studio. Rivers are added through Mesh's checked edits 
   `level` is the water's surface, like an object's elevation, and it may stay level or fall downstream, never rise.
 - **Look:** `flow` (m/s; 0 is still water), plus `colour`, `deep_colour`, `opacity`, `depth`, `waves`, `reflection`
   and `rain_ripples`, as for a pond. Rivers mirror what stands above them through the same frame copy as ponds, take
-  the room's sun, lamps and shadows, and ring with its rain, though not under a roof or bridge.
+  the room's sun, lamps and shadows, and ring with its rain, though not under a roof or bridge. Walking through a
+  river makes no ripples yet (ponds and puddles do).
 - **The bed comes first.** The water shows only where its level is above the ground, so sculpt the riverbed with
   **Sculpt** (Lower or Flatten) before adding the river. A river doesn't carve its own bed. Where the bed is wider
   than the river, the river's straight edge shows.
 - **Refused, with the reason and where:** a bend too tight for the river's width (its inner bank would fold), banks
   that cross or come within a quarter metre of each other, water that would run uphill, points closer than a
-  quarter metre, and two rivers that cross or overlap.
+  quarter metre, two rivers that cross or overlap, and a bank off the room's ground.
+- **Limits:** at most 16 rivers in a room, each at most 1,024 m long and 2,048 m together.
 
 Not in R1: a River tool in Studio, carving the bed, clearing scatter under the water (use the Scatter brush's
-remove), stopping or slowing characters, rivers flowing into lakes or joining each other, waterfalls, and rivers in
+remove), ripples where someone wades through it, stopping or slowing characters, rivers flowing into lakes or joining each other, waterfalls, and rivers in
 2D rooms. A river's two ends are cut square.
 
 ## Wind and moving decoration

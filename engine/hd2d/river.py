@@ -15,7 +15,10 @@ strict loader call), unless its generated banks are sound: each bank advances do
 pinch to nothing), no step turns more than ``MAX_TURN_DEG``, the two banks and the ends never cross themselves or
 each other, and parts of the ribbon that aren't neighbours along it stay ``CLEARANCE_M`` apart (no overlap, no
 near-touching bends). The level, sampled, never rises downstream (beyond ``LEVEL_TOLERANCE_PX``, storage rounding).
-Rivers don't cross or overlap one another (joining rivers comes later).
+Rivers don't cross or overlap one another (joining rivers comes later). Both banks stay on the room's ground
+(``bounds``). What a room's rivers cost is bounded: at most ``MAX_RIVERS``, each at most ``MAX_LENGTH_M`` long and
+``MAX_TOTAL_M`` together, checked from the course's length before it is sampled. Measured: checking or building a
+river costs about 0.1 ms a metre each, and its vertices 0.34 KB a metre.
 
 R1 draws rivers (engine.water.WaterLayer: in the same pass as ponds, sharing its copy of the frame for reflections);
 it doesn't edit them in Mesh Studio yet, carve their bed, block characters or blend into lakes.
@@ -44,6 +47,10 @@ LEVEL_TOLERANCE_PX = 0.25  # a quarter pixel: what storage rounds to (the terrai
 MIN_ADVANCE = 0.25  # each bank moves downstream by at least this share of the course's step
 MAX_TURN_DEG = 30.0  # the most the course turns in one step (a quarter metre): radius >= ~0.48 m
 CLEARANCE_M = 0.25  # parts of a ribbon (or two ribbons) that aren't neighbours along it stay this far apart
+MAX_RIVERS = 16
+MAX_LENGTH_M = 1024.0  # a river's course: four times the widest room (256 m), room to wind across it
+MAX_TOTAL_M = 2048.0  # all of a room's rivers together: ~0.2 s to check, ~0.7 MB of vertices
+BOUNDS_TOLERANCE_PX = 0.5  # (a bank exactly on the ground's edge, stored rounded, is on it)
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
 KEYS = {"id", "points", "flow", "colour", "deep_colour", "opacity", "depth", "waves", "reflection", "rain_ripples"}
 # A stream's look, unless the river says otherwise (engine.water's vocabulary: the same meanings as a pond's)
@@ -136,19 +143,33 @@ def parse_river(raw: Any, where: str = "river") -> River:
                  rain)
 
 
-def parse_rivers(raw: Any) -> tuple[River, ...]:
+def parse_rivers(raw: Any, bounds: tuple[float, float, float, float] | None = None) -> tuple[River, ...]:
     """``settings.hd2d.rivers``: each river parsed and its geometry checked (``ribbon``), ids unique, no two rivers
-    crossing or overlapping. Raises RiverError naming the river and where."""
+    crossing or overlapping, the room's allowance kept (count, length), and with ``bounds`` (x0, y0, x1, y1 px: the
+    room's ground) both banks on it. Raises RiverError naming the river and where."""
     if not isinstance(raw, list):
         raise RiverError("settings.hd2d.rivers must be a list")
+    if len(raw) > MAX_RIVERS:
+        raise RiverError(f"A room may have at most {MAX_RIVERS} rivers (got {len(raw)})")
     rivers, ribbons, seen = [], [], set()
+    total = 0.0
     for i, item in enumerate(raw):
         river = parse_river(item, f"settings.hd2d.rivers[{i}]")
         if river.id in seen:
             raise RiverError(f"settings.hd2d.rivers[{i}].id '{river.id}' is used twice; river ids must be unique")
         seen.add(river.id)
-        ribbons.append(ribbon(river))
+        length = course_length(river)  # (before any is sampled: what they would cost)
+        if length > MAX_LENGTH_M:
+            raise RiverError(f"River '{river.id}' is {length:.0f} m long: a river may be at most {MAX_LENGTH_M:.0f} m")
+        total += length
         rivers.append(river)
+    if total > MAX_TOTAL_M:
+        raise RiverError(f"This room's rivers are {total:.0f} m long together: at most {MAX_TOTAL_M:.0f} m")
+    for river in rivers:
+        rib = ribbon(river)
+        if bounds is not None:
+            _on_ground(river, rib, bounds)
+        ribbons.append(rib)
     for a in range(len(rivers)):
         for b in range(a + 1, len(rivers)):
             near = _ribbons_meet(ribbons[a], ribbons[b])
@@ -156,6 +177,15 @@ def parse_rivers(raw: Any) -> tuple[River, ...]:
                 raise RiverError(f"Rivers '{rivers[a].id}' and '{rivers[b].id}' cross or overlap near "
                                  f"({near[0] * PX:.0f}, {near[1] * PX:.0f}) px: joining rivers comes later")
     return tuple(rivers)
+
+
+def _on_ground(river: River, rib: Ribbon, bounds: tuple[float, float, float, float]) -> None:
+    x0, y0 = bounds[0] - BOUNDS_TOLERANCE_PX, bounds[1] - BOUNDS_TOLERANCE_PX
+    x1, y1 = bounds[2] + BOUNDS_TOLERANCE_PX, bounds[3] + BOUNDS_TOLERANCE_PX
+    for x, y in (*rib.left, *rib.right):
+        if not (x0 <= x * PX <= x1 and y0 <= y * PX <= y1):
+            raise RiverError(f"River '{river.id}' reaches off the room's ground near ({x * PX:.0f}, {y * PX:.0f}) px "
+                             f"(its ground is {bounds[0]:g}..{bounds[2]:g} by {bounds[1]:g}..{bounds[3]:g} px)")
 
 
 def to_json(river: River) -> dict[str, Any]:
@@ -199,6 +229,12 @@ def _spline(points: list[tuple[float, float]]) -> tuple[list[tuple[float, float]
     return walk, marks
 
 
+def course_length(river: River) -> float:
+    """How long the river's course is (m), from its spline walk alone (cheap: no samples, no banks)."""
+    walk, _marks = _spline([(p[0] / PX, p[1] / PX) for p in river.points])
+    return sum(math.dist(a, b) for a, b in zip(walk, walk[1:]))
+
+
 def ribbon(river: River) -> Ribbon:
     """The river's sampled course and banks (metres), checked: raises RiverError at the first unsound place."""
     pts = river.points
@@ -216,6 +252,8 @@ def ribbon(river: River) -> Ribbon:
         along.append(along[-1] + math.dist(a, b))
     at_point = [along[m] for m in marks]
     total = along[-1]
+    if total > MAX_LENGTH_M:  # (before it is sampled)
+        raise RiverError(f"{name} is {total:.0f} m long: a river may be at most {MAX_LENGTH_M:.0f} m")
     count = max(2, round(total / STEP_M) + 1)
     centre, u = [], []
     j = 0

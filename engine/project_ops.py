@@ -1227,17 +1227,25 @@ def rivers(scene: Doc) -> list[Doc]:
 
 
 def _with_rivers(scene: Doc, edit: Any) -> Doc:
-    from engine.hd2d.river import RiverError, parse_rivers, to_json  # noqa: PLC0415
+    from engine.hd2d.river import to_json  # noqa: PLC0415
+    from engine.hd2d.settings import Hd2dSettingsError, parse_hd2d  # noqa: PLC0415
 
     out = copy.deepcopy(scene)
-    hd2d = (out.get("settings") or {}).get("hd2d") if isinstance(out.get("settings"), dict) else None
+    settings: Doc = out["settings"] if isinstance(out.get("settings"), dict) else {}
+    hd2d = settings.get("hd2d")
     if not isinstance(hd2d, dict):
         raise OpError("Rivers belong to HD-2D rooms; this room isn't HD-2D.")
     raw = edit(rivers(out))
-    try:
-        parsed = parse_rivers(raw)
-    except RiverError as err:
+    w, h = settings.get("world_width"), settings.get("world_height")
+    size = (float(w), float(h)) if isinstance(w, (int, float)) and isinstance(h, (int, float)) else None
+    try:  # checked as the room loads them: against its ground (its scatter and motion aren't read again here)
+        found = parse_hd2d({**{k: v for k, v in hd2d.items() if k not in ("scatter", "motion")}, "rivers": raw},
+                           map_size_px=size, lenient=True)
+    except Hd2dSettingsError as err:
         raise OpError(str(err)) from err
+    if found.rivers_error:
+        raise OpError(found.rivers_error)
+    parsed = found.rivers
     if parsed:
         hd2d["rivers"] = [to_json(r) for r in parsed]
     else:

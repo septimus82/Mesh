@@ -289,8 +289,10 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None, leni
     if raw.get("rivers") is not None:
         from engine.hd2d.river import RiverError, parse_rivers  # noqa: PLC0415
 
+        bounds = ((ground.lo[0], ground.lo[1], ground.hi[0], ground.hi[1]) if ground is not None else
+                  (0.0, 0.0, map_size_px[0], map_size_px[1]) if map_size_px is not None else None)
         try:
-            rivers = parse_rivers(raw["rivers"])
+            rivers = parse_rivers(raw["rivers"], bounds)
         except RiverError as exc:
             if not lenient:
                 raise Hd2dSettingsError(str(exc)) from exc

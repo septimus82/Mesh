@@ -30,6 +30,9 @@ PX = 32.0
 NORTH = [[640, 430, 72, -6.0], [652, 600, 72, -7.0], [640, 768, 72, -8.0], [610, 930, 76, -9.0], [600, 1080, 80, -10.0]]
 EAST = [[150, 110, 64, -5.0], [300, 80, 64, -6.0], [430, 105, 68, -7.0], [560, 90, 72, -8.0]]
 BED_BELOW = 12.0  # px the flattened bed lies under the water
+# a stream turning a right angle while it widens from 1.25 m to 3 m, standing just above the plain ground (no bed: the
+# whole ribbon shows), south of the village road
+BEND = [[100, 70, 40, 4.0], [260, 70, 48, 4.0], [360, 90, 64, 4.0], [420, 150, 80, 4.0], [440, 230, 96, 4.0]]
 
 
 def _dabs(points: list[list[float]], step: float = 6.0) -> list[list[float]]:
@@ -60,14 +63,29 @@ def make_project(out: Path, name: str, *, flow: float = 1.2, rivers: bool = True
     return project
 
 
-def frame(game: HiddenGame, target: tuple[float, float, float], water_time: float) -> Any:
-    """The renderer's frame (an RGB image) looking at ``target`` (m) with the water's clock at ``water_time``."""
+def make_bend_project(out: Path, name: str, *, river: bool = True) -> Path:
+    """The village (its north path kept) with, if ``river``, the BEND stream on its plain ground."""
+    from engine import project_ops as ops
+
+    project: Path = study.new_project(out, name, stage6a=False)
+    path = project / SCENES / "start.json"
+    scene = json.loads(path.read_text(encoding="utf-8"))
+    if river:
+        scene = ops.add_river(scene, "bend", BEND, flow=0.0)
+    path.write_text(json.dumps(scene, indent=2) + "\n", encoding="utf-8")
+    return project
+
+
+def frame(game: HiddenGame, target: tuple[float, float, float], water_time: float | None) -> Any:
+    """The renderer's frame (an RGB image) looking at ``target`` (m), the water's clock set to ``water_time`` (None:
+    left as the game's own ticks have it)."""
     from PIL import Image
 
     hd = game.window.hd2d_renderer
     hd.camera.target = target
     hd._camera_ready = True
-    game.window.water_time = water_time
+    if water_time is not None:
+        game.window.water_time = water_time
     return Image.frombytes("RGB", study.SIZE, hd.draw(read=True)).transpose(Image.Transpose.FLIP_TOP_BOTTOM)
 
 
@@ -129,12 +147,20 @@ def shift(lanes: list[tuple[list[float | None], list[float | None]]], reach: int
     return best
 
 
-def drift(game: HiddenGame, river_id: str, target: tuple[float, float, float], at: float,
+def drift(game: HiddenGame, river_id: str, target: tuple[float, float, float], at: float | None,
           dt: float = 0.25) -> tuple[int, float]:
     """How far the river's surface moved downstream (texels) in ``dt`` seconds at ``at``: what changed from at - dt
     to at against what changed from at to at + dt, along lanes across its middle (what stands still, the mirror of
-    a bridge or the bed's light, changes not at all and drops out)."""
-    frames = [frame(game, target, at + k * dt) for k in (-1, 0, 1)]
+    a bridge or the bed's light, changes not at all and drops out). ``at`` None: the game plays on (its own update
+    ticks, 1/60 s each) between the three frames, its water clock left to the game."""
+    if at is None:
+        frames = []
+        for k in range(3):
+            if k:
+                game.step(round(dt * 60))
+            frames.append(frame(game, target, None))
+    else:
+        frames = [frame(game, target, at + k * dt) for k in (-1, 0, 1)]
     lanes = []
     for offset in (-0.5, -0.375, -0.25, -0.125, 0.0, 0.125, 0.25, 0.375, 0.5):
         line = course(game, river_id, offset)
@@ -151,6 +177,34 @@ def _detail(values: list[float | None], reach: int = 16) -> list[float | None]:
         near = [w for w in values[max(0, i - reach):i + reach + 1] if w is not None]
         out.append(None if v is None else v - sum(near) / len(near))
     return out
+
+
+def bank_to_bank(game: HiddenGame, river_id: str, margin_m: float = 3 / 32) -> tuple[list[Any], list[Any]]:
+    """Every texel (world point, m) of the river's surroundings, sorted: those inside its banks by more than
+    ``margin_m`` and those outside them by more than it (by the nearest sample of its course; its two ends left
+    out, where the nearest sample is an end)."""
+    from engine.hd2d.river import ribbon
+
+    rib = ribbon(next(r for r in game.window.hd2d_renderer.settings.rivers if r.id == river_id))
+    reach = max(rib.half) + 0.5
+    xs = [x for x, _ in rib.left + rib.right]
+    ys = [y for _, y in rib.left + rib.right]
+    inside, outside = [], []
+    gx = math.floor((min(xs) - reach) * 32)
+    while gx <= (max(xs) + reach) * 32:
+        gy = math.floor((min(ys) - reach) * 32)
+        while gy <= (max(ys) + reach) * 32:
+            p = ((gx + 0.5) / 32, (gy + 0.5) / 32)
+            k = min(range(len(rib.centre)), key=lambda i: (rib.centre[i][0] - p[0]) ** 2 + (rib.centre[i][1] - p[1]) ** 2)
+            if 0 < k < len(rib.centre) - 1:
+                d = math.dist(p, rib.centre[k])
+                if d < rib.half[k] - margin_m:
+                    inside.append((*p, rib.level[k]))
+                elif d > rib.half[k] + margin_m:
+                    outside.append((*p, rib.level[k]))
+            gy += 1
+        gx += 1
+    return inside, outside
 
 
 def centre_of(points: list[list[float]]) -> tuple[float, float, float]:

@@ -281,7 +281,9 @@ def reset(window: Any) -> None:
 
 
 def advance(window: Any, delta_time: float) -> None:
-    if getattr(window, "water_bodies", None):
+    """The water's clock: it runs while the room has water, puddles and ponds or (HD-2D) rivers."""
+    renderer = getattr(window, "hd2d_renderer", None)
+    if getattr(window, "water_bodies", None) or (renderer is not None and renderer.settings.rivers):
         window.water_time = float(getattr(window, "water_time", 0.0)) + max(0.0, float(delta_time))
 
 
@@ -631,8 +633,9 @@ void main() {
 
 # Rivers (#461, engine.hd2d.river): one continuous ribbon each, its vertices carrying the flow's frame (the tangent
 # downstream, u metres downstream, v -1 left bank .. 1 right bank). Its own look (no bank or stones drawn: R1's
-# rivers lie in a bed sculpted for them, the ground their shore), with the pond's lighting, rain, footsteps and
-# reflection march (SHARED_GLSL) into the same copy of the frame
+# rivers lie in a bed sculpted for them, the ground their shore), with the pond's lighting, rain and reflection march
+# (SHARED_GLSL) into the same copy of the frame. It draws the footstep rings in window.water_steps, but only ponds and
+# puddles add steps: wading through a river makes none yet
 RIVER_VS = """
 #version 330
 uniform mat4 u_vp;
