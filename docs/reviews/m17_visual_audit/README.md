@@ -95,7 +95,7 @@
 
 ## 3. Creator experience (Studio)
 
-The full inventory, with `file:line` for every claim, is in the evidence folder's notes. Below, **Studio** means a visual control and **ops** means `project_ops`, which `mesh author` and MCP `apply_changes` can do.
+From a code inventory of Studio against `project_ops`. The key `file:line` references are cited inline; the full list is available on request. Below, **Studio** means a visual control and **ops** means `project_ops`, which `mesh author` and MCP `apply_changes` can do.
 
 **Good**
 - **Camera:** presets (outdoor/indoor/close/wide), View, Pitch, Lens, Above-player.
