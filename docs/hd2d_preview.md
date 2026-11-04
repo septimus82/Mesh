@@ -141,10 +141,13 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
   - deepest in the middle, rising to meet the water at its edge;
   - a bank climbing from the water at a walkable slope until it meets the ground (up to 12 m out);
   - where its water stood above the ground beside it (a new river is drawn a little over the ground clicked), the
-    water is lowered to just under that ground first, so it lies in its bed. The ground is checked on both sides
-    every quarter metre along the river, not only at its points, so a dip between two points is found too. Ground
-    in a pond's or another river's water isn't its bank and isn't checked, and a river flowing into a pond is never
-    lowered below the pond's level;
+    water is lowered to just under that ground first, so it lies in its bed. The ground is checked on both sides,
+    half a metre out, every quarter metre along the river, not only at its points, so a dip between two points is
+    found too. Ground nearer a pond's or another river's water than its own isn't its bank and isn't checked, and a
+    river flowing into a pond is never lowered below the pond's level. Carving again changes nothing; a neighbour
+    carved afterwards can lower the ground the two share, and then the first sinks once more;
+  - flowing into a pond, its bed eases over its last 1.5 m to the pond's own depth just inside the shore, and
+    nothing is dug in the pond past its shore's edge: the pond's ground stays as it is;
   - **Bed depth** (m): empty for a quarter of the river's width (0.2 to 1.2 m), or one depth for the whole river.
     The AI can give a depth for each point; a shallow point makes a ford.
   - Carving only ever lowers the ground: carving again changes nothing, and ground already lower is kept. It is one

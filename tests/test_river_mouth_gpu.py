@@ -85,7 +85,9 @@ def test_studio_draws_one_water_surface_where_the_stream_enters_the_pond(tmp_pat
             frame(rivers)
         assert renderer.water.river_allocations == allocations, "drawing again makes no river buffers"
         joined, alone = frame(rivers), frame(())
-        free = frame((dataclasses.replace(brook, mouth="none"),))
+        # (the control: with its mouth off and its water 2 cm over the pond's, as a river drawn over a lake is)
+        lifted = tuple((x, y, w, level + 0.64) for x, y, w, level in brook.points)
+        free = frame((dataclasses.replace(brook, mouth="none", points=lifted),))
 
         def in_pond(p: tuple[float, float], margin_px: float) -> bool:
             return inside(pond.water, pond.centre, (p[0] * P, p[1] * P), margin_px)
@@ -136,9 +138,8 @@ def test_studio_draws_one_water_surface_where_the_stream_enters_the_pond(tmp_pat
         # drawn = water (RiverIndex), around the source and the mouth: away from every edge by 3 px
         index = RiverIndex(rivers, ponds)
 
-        def water(p: tuple[float, float]) -> bool | None:  # (the river's own water: not its channel in the pond)
-            near = [index.level_at(p[0] + dx / P, p[1] + dy / P, in_ponds=False) is not None
-                    for dx in (-3, 0, 3) for dy in (-3, 0, 3)]
+        def water(p: tuple[float, float]) -> bool | None:
+            near = [index.level_at(p[0] + dx / P, p[1] + dy / P) is not None for dx in (-3, 0, 3) for dy in (-3, 0, 3)]
             return near[4] if all(n == near[4] for n in near) else None  # (None: an edge)
 
         checked = 0

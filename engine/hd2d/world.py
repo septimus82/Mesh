@@ -297,7 +297,7 @@ class World:
     def water_at(self, x: float, y: float, z: float) -> tuple[float, str] | None:
         """How deep a river's water stands over feet at (x, y, z) m, and which river: (depth m, id), or None on
         dry ground (no river there, or feet at or above its surface: a bridge's deck)."""
-        water = self.rivers.level_at(x, y, in_ponds=False) if self.rivers else None  # (a pond ripples itself)
+        water = self.rivers.level_at(x, y) if self.rivers else None
         if water is None or water[0] <= z:
             return None
         return water[0] - z, water[1]

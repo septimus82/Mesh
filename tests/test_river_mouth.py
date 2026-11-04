@@ -115,8 +115,7 @@ def test_the_water_is_where_it_is_drawn_none_of_it_in_the_pond_none_past_a_round
     joined = _index(ops.set_river(_room(ends="round"), "stream", mouth="auto"))
     deep_in_pond = (1100.0 / P, 600.0 / P)
     assert free.level_at(*deep_in_pond) is not None, "a free river's water lies over the pond's (two layers)"
-    assert joined.level_at(*deep_in_pond, in_ponds=False) is None, "joined: the pond's water is there, not the river's"
-    assert joined.level_at(*deep_in_pond) == (0.0, "stream"), "(its channel still water, at the pond's level)"
+    assert joined.level_at(*deep_in_pond) is None, "joined: the pond's water is there, not the river's"
     assert joined.level_at(940.0 / P, 600.0 / P) is not None, "short of the shore: the river's"
     # its source rounded: the middle of its end is water, the square end's corners aren't
     assert joined.level_at(5.0 / P, 600.0 / P) is not None
@@ -181,7 +180,9 @@ def test_carving_beside_a_pond_or_another_river_measures_their_shore_not_their_b
     scene = ops.carve_river_bed(scene, "a", depths=[1.2, 1.2])
     once = ops.carve_river_bed(scene, "b")
     (_a, b_sunk) = _rivers(once)
-    assert b_sunk.points[0][3] == pytest.approx(-river.SINK_M * P, abs=0.01), "sunk under its own bank, not a's bed"
+    # (the ground between them, nearer it than a's water, is a's carved bank: lower than its water, so it sinks under
+    # that, not under a's bed: R3, measuring at its points half a metre out, in a's water, left it floating at -1.6)
+    assert -16.0 < b_sunk.points[0][3] < -8.0, b_sunk.points
     with pytest.raises(ops.OpError, match="already carved"):
         ops.carve_river_bed(once, "b")
 
@@ -233,19 +234,31 @@ def test_carving_a_river_twice_is_carving_once_even_at_the_ground_s_level() -> N
     b = [[4.0, 724.0, 96.0, 8.0], [1596.0, 724.0, 96.0, 8.0]]  # 0.88 m from it, bank to bank, over the ground
     scene = ops.carve_river_bed(ops.add_river(_flat(a), "b", b), "b", depths=[0.6, 0.6])
     scene = ops.carve_river_bed(scene, "stream", depths=[0.6, 0.6])
+    # (the stream carved after it lowered the ground they share: it may sink once more, as R3's could; never again)
+    scene = ops.carve_river_bed(scene, "b", depths=[0.6, 0.6])
     with pytest.raises(ops.OpError, match="already carved"):
         ops.carve_river_bed(scene, "b", depths=[0.6, 0.6])
+    with pytest.raises(ops.OpError, match="already carved"):
+        ops.carve_river_bed(scene, "stream", depths=[0.6, 0.6])
 
 
-def test_its_channel_in_the_pond_stays_water_deep_water_stops_characters_there() -> None:
-    """With a mouth the carved bed ran on into the pond as dry ground: walked and navigated 0.7 m down."""
+def test_flowing_into_a_pond_its_bed_eases_out_and_nothing_is_dug_in_the_pond() -> None:
+    """Review of 51fb208: the carved bed ran on into the pond, a trench walked 0.7 m down (the pond's water is walked
+    by the pond's rule). Re-review of de04f50: making that trench deep river water put an unseen barrier strip in a
+    walkable pond. Now there is no trench: the bed eases out over the last 1.5 m before the shore."""
     scene = ops.carve_river_bed(_room(mouth="auto"), "stream")  # (a quarter of its width: 0.75 m)
+    t = Terrain.from_ground(parse_hd2d(scene["settings"]["hd2d"]).ground)
+    mouth = river.join(_rivers(scene)[0], river.ponds_of(scene["entities"]))
+    shore_x = mouth.at[0] * P
+    assert t.height(shore_x + 64, 600) == 0.0 and t.height(1100, 600) == 0.0, "the pond's ground: as it was"
+    assert t.height(shore_x - 3 * P, 600) < -16.0, "3 m upstream: its full bed"
+    assert -4.0 < t.height(shore_x - 2, 600) < -1.0, "at the shore: eased to the pond's depth there (5 cm at least)"
     world = World(parse_hd2d(scene["settings"]["hd2d"]), {}, river.ponds_of(scene["entities"]))
-    x, y = 1050.0 / P, 600.0 / P  # in the pond, over the channel
-    bed = min(h for h, _s in world.heights_at(x, y))
-    assert bed < -0.6 and world.stand(x, y, bed, 0.3, 0.19) is None, "deep: can't stand there"
-    assert world.water_at(x, y, bed) is None, "the pond ripples itself there (no wading step twice)"
-    assert world.path((1300.0 / P, 700.0 / P, 0.0), (x, y, bed)) == [], "no way down into it"
+    x, y = 1050.0 / P, 600.0 / P  # in the pond, on the river's course
+    assert world.rivers.level_at(x, y) is None and world.stand(x, y, 0.0, 0.3, 0.19) is not None, "the pond's rule"
+    deep = (shore_x - 4 * P) / P
+    bed = min(h for h, _s in world.heights_at(deep, y))
+    assert world.stand(deep, y, bed, 0.3, 0.19) is None, "upstream: deep river water, as R3 says"
 
 
 def test_review_refusals_classic_ponds_banks_in_the_pond_a_drop_by_the_shore_and_flagged_ponds() -> None:
@@ -288,3 +301,21 @@ def test_ponds_are_read_as_their_behaviour_reads_them() -> None:
     broken = copy.deepcopy(scene)
     ops.entities(broken)[0]["behaviour_config"] = ["not", "a", "dict"]
     assert river.ponds_of(broken["entities"]) == (), "unreadable: left out, no crash"
+
+
+def test_show_when_in_either_form_and_overlapping_ponds_pick_the_same_pond_for_drawing_and_walking() -> None:
+    """Re-review of de04f50: "Show when" stored as {"type": "ConditionalActivator"} wasn't seen; two ponds at the
+    same level under the river's end were told apart by id (list places for the renderer, object ids for collision)."""
+    scene = _room()
+    flagged = copy.deepcopy(scene)
+    entity = ops.entities(flagged)[0]
+    entity["behaviours"] = [*entity.get("behaviours", []), {"type": "ConditionalActivator", "params": {}}]
+    with pytest.raises(ops.OpError, match="shows only when flags say"):
+        ops.set_river(flagged, "stream", mouth="auto")
+    two, second = ops.place_blank(copy.deepcopy(scene), "start", "Another lake", POND["x"], POND["y"])
+    two = ops.set_water(two, second, preset="natural_pond", shape="ellipse", width=400.0, height=300.0)
+    first = ops.entities(two)[0]["id"]
+    ponds = river.ponds_of(two["entities"])
+    (r,) = _rivers(ops.set_river(two, "stream", mouth="auto"))
+    by_place = tuple(river.Pond(str(i), p.centre, p.level, p.water) for i, p in enumerate(ponds))  # (the renderer's)
+    assert river.join(r, ponds).pond.id == first and river.join(r, by_place).pond.id == "0", "the first, both ways"

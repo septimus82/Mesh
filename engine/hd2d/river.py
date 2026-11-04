@@ -462,6 +462,7 @@ def inside(r: Ribbon, p: tuple[float, float]) -> bool:
 
 # ---------------------------------------------------------------------- into a pond, and its ends (R4)
 MOUTH_LEVEL_PX = 1.6  # where it enters a pond its water is within 5 cm of the pond's (one waterline)
+SHORE_DEPTH_M = 0.05  # a mouth's bed at the shore is at least this deep (shallower, the water isn't drawn)
 BLEND_M = water_mod.MOUTH_BLEND_M  # over its last 1.5 m before the pond's shore it takes on the pond's look
 
 
@@ -496,9 +497,10 @@ def _in_pond(pond: Pond, p: tuple[float, float]) -> bool:
 
 
 def _mouth_pond(river: River, ponds: tuple[Pond, ...]) -> Pond | None:
-    """The pond the river's last point lies in (of several, the one whose level is nearest its own), or None."""
-    found = [p for p in ponds if _in_pond(p, ribbon(river).centre[-1])]
-    return min(found, key=lambda p: (abs(p.level - river.points[-1][3]), p.id)) if found else None
+    """The pond the river's last point lies in (of several, the one whose level is nearest its own, then the first
+    in the room's order: the renderer's and collision's lists alike), or None."""
+    found = [(i, p) for i, p in enumerate(ponds) if _in_pond(p, ribbon(river).centre[-1])]
+    return min(found, key=lambda f: (abs(f[1].level - river.points[-1][3]), f[0]))[1] if found else None
 
 
 def join(river: River, ponds: tuple[Pond, ...]) -> Mouth:
@@ -591,8 +593,8 @@ def gated(payload: Any) -> bool:
     if not isinstance(payload, dict):
         return False
     behaviours = payload.get("behaviours")
-    return bool(payload.get("require_flags") or payload.get("forbid_flags")
-                or (isinstance(behaviours, list) and "ConditionalActivator" in behaviours))
+    names = [b.get("type") if isinstance(b, dict) else b for b in behaviours] if isinstance(behaviours, list) else []
+    return bool(payload.get("require_flags") or payload.get("forbid_flags") or "ConditionalActivator" in names)
 
 
 def ponds_of(entities: Any) -> tuple[Pond, ...]:
@@ -694,34 +696,28 @@ class RiverIndex:
     def __bool__(self) -> bool:
         return bool(self._quads)
 
-    def level_at(self, x: float, y: float, in_ponds: bool = True) -> tuple[float, str] | None:
-        """The water's surface (m) at (x, y) m and its river's id, or None where no river's water lies. Where a river
-        flows into a pond, over its course in the pond the water is the pond's (its level: as drawn there), so its
-        channel stays water (deep water stops characters there too); ``in_ponds`` False: None there (the pond's own
-        water, which ripples itself: no wading step twice)."""
+    def level_at(self, x: float, y: float) -> tuple[float, str] | None:
+        """The water's surface (m) at (x, y) m and its river's id, or None where no river's water lies (a river
+        flowing into a pond has none in the pond: the pond's water is there, walked by the pond's rule)."""
         best: tuple[float, str] | None = None
         for index in self._buckets.get((math.floor(x), math.floor(y)), ()):
             quad, level, rid = self._quads[index]
-            if not _in_quad(quad, (x, y)):
-                continue
-            here = self._past_end(index, (x, y), level)
-            if here is not None and (in_ponds or not here[1]) and (best is None or here[0] > best[0]):
-                best = (here[0], rid)
+            if _in_quad(quad, (x, y)) and (best is None or level > best[0]) and not self._past_end(index, (x, y)):
+                best = (level, rid)
         return best
 
-    def _past_end(self, index: int, p: tuple[float, float], level: float) -> tuple[float, bool] | None:
-        """The water at p on the quad ``index``: (its own ``level``, False), or (the level of the pond the river flows
-        into, True) where p is in it, or None past a round cap (as the river's shader works it out: along and across
-        the course from the quad's sample)."""
+    def _past_end(self, index: int, p: tuple[float, float]) -> bool:
+        """Whether p, on the quad ``index``, is where the drawn water isn't: in the pond the river flows into, or past
+        a round cap (as the river's shader works it out: along and across the course from the quad's sample)."""
         found = self._ends.get(index)
         if found is None:
-            return level, False
+            return False
         r, k, caps, pond = found
         if pond is not None and _in_pond(pond, p):
-            return pond.level / PX, True
+            return True
         (cx, cy), (tx, ty) = r.centre[k], r.tangent[k]
         dx, dy = p[0] - cx, p[1] - cy
-        return None if _off_cap(r, caps, r.u[k] + dx * tx + dy * ty, dy * tx - dx * ty) else (level, False)
+        return _off_cap(r, caps, r.u[k] + dx * tx + dy * ty, dy * tx - dx * ty)
 
 
 def _in_quad(quad: tuple[tuple[float, float], ...], p: tuple[float, float]) -> bool:
@@ -754,20 +750,22 @@ def bed_depths(river: River, depths: Any = None) -> list[float]:
 
 
 def sunk(terrain: Any, river: River, ponds: tuple["Pond", ...] = (), others: tuple[River, ...] = ()) -> River:
-    """The river with its water lowered, where it stands above the ground beside it (half a metre and a terrain cell out
-    from each bank, the lower side, at every sample along it: every quarter metre), to SINK_M under that ground. A sample
+    """The river with its water lowered, where it stands above the ground beside it (half a metre out from each bank,
+    the lower side, at every sample along it: every quarter metre; the ground there read at the corners of its terrain
+    cell that lie outside the river's own water, the lowest of them: its own carved bank, rising from its water, is
+    never a dip, a real dip by it is), to SINK_M under that ground. A sample
     standing over it lowers both control points of its stretch by as much (so the level between them, linear, is
     under it there too); the level still falls downstream (each point no higher than the one before). Water at or
     under the ground beside it is kept as it is, so a carved river (its banks rising from the water) is kept, and so
-    is one sunk already, though carving nearby lowers that ground a little: sinking twice is sinking once. Where the
-    place beside it is in a pond's water (``ponds``) or another river's (``others``), the ground there is that water's
-    bed, not this river's bank: it isn't measured (so carving a neighbour never sinks this one again). A river flowing
+    is one sunk already, though carving nearby lowers that ground a little: sinking twice is sinking once. Ground
+    nearer a pond's water (``ponds``) or another river's (``others``) than its own is that water's bed or bank, not
+    this river's: it isn't measured (a neighbour carved afterwards, its bank lowering the ground they share, may sink
+    it once more, as R3's control points could; never again and again). A river flowing
     into a pond (``mouth: "auto"``) is never sunk below that pond's level: it must meet the pond's water (``join``).
     (Studio draws new rivers a little over the ground clicked, so they show before their bed is carved: carved, they
     lie in it.)"""
     rib = ribbon(river)
     pond = _mouth_pond(river, ponds) if river.mouth == "auto" else None
-    cell = terrain.cell / PX  # (measured a cell further out: past every corner its own carve lowers into its bed)
     near = RiverIndex(tuple(o for o in others if o.id != river.id))
     pts = river.points
     need = [0.0] * len(pts)  # how far each control point comes down (px)
@@ -775,14 +773,20 @@ def sunk(terrain: Any, river: River, ponds: tuple["Pond", ...] = (), others: tup
     for k in range(len(rib.u)):
         while span < len(pts) - 2 and rib.marks[span + 1] < rib.u[k]:
             span += 1
-        (cx, cy), (tx, ty), out = rib.centre[k], rib.tangent[k], rib.half[k] + 0.5 + cell
+        (cx, cy), (tx, ty), out = rib.centre[k], rib.tangent[k], rib.half[k] + 0.5
         known = []
         for side in (1, -1):
-            x, y = (cx + side * -ty * out) * PX, (cy + side * tx * out) * PX
-            g = terrain.height(x, y)
-            beside_water = near.level_at(x / PX, y / PX) is not None or any(
-                water_mod.inside(p.water, p.centre, (x, y)) for p in ponds)
-            if g is not None and not beside_water:
+            nx, ny = side * -ty, side * tx  # (outwards, this side)
+            for x, y, g in _cell_corners(terrain, (cx + nx * out) * PX, (cy + ny * out) * PX):
+                beyond = (x / PX - cx) * nx + (y / PX - cy) * ny - rib.half[k]  # how far out of its water
+                if beyond <= 0.0:
+                    continue  # (in its own water: its bed)
+                # nearer another's water (a pond's, another river's) than its own: that water's bed or bank, not
+                # this river's (so carving a neighbour doesn't sink it again and again)
+                if any(near.level_at(x / PX + nx * beyond * f, y / PX + ny * beyond * f) is not None
+                       or any(water_mod.inside(p.water, p.centre, (x + nx * beyond * f * PX, y + ny * beyond * f * PX))
+                              for p in ponds) for f in (0.0, 0.5, 1.0)):
+                    continue
                 known.append(g)
         level = rib.level[k] * PX
         if known and level > min(known):  # (standing over it: its stretch sunk)
@@ -798,6 +802,15 @@ def sunk(terrain: Any, river: River, ponds: tuple["Pond", ...] = (), others: tup
     return dataclasses.replace(river, points=points)
 
 
+def _cell_corners(terrain: Any, x: float, y: float) -> list[tuple[float, float, float]]:
+    """The corners (x, y px, height px) of the terrain cell holding (x, y) px; none off the ground."""
+    if terrain.height(x, y) is None:
+        return []
+    i = min(int((x - terrain.origin[0]) / terrain.cell), terrain.nx - 1)
+    j = min(int((y - terrain.origin[1]) / terrain.cell), terrain.ny - 1)
+    return [(*terrain.corner_xy(a, b), terrain.base + terrain.corner(a, b)) for a in (i, i + 1) for b in (j, j + 1)]
+
+
 def carve(terrain: Any, river: River, depths: list[float], mouth: Mouth | None = None) -> set[tuple[int, int]]:
     """Lower ``terrain`` (engine.hd2d.terrain.Terrain) into the river's bed. Each corner is measured from the nearest
     point of the river's course: under its water the ground goes down to ``level - depth * (1 - (d / half) ** 2)``
@@ -807,7 +820,11 @@ def carve(terrain: Any, river: River, depths: list[float], mouth: Mouth | None =
     rises from that end's water level all round (no bed carries on past the water). A round end (``ends``, R4; not a
     mouth into a pond, ``mouth``) is a bowl: within a half width of that end, the bed and its bank are
     measured from the middle of the course a half width in from it, so the water there (drawn the same way) ends in
-    a half circle and no bed lies past it. Ground only ever goes down, so
+    a half circle and no bed lies past it. Flowing into a pond (``mouth``), over its last BLEND_M before the shore its
+    bed eases to the pond's own depth just inside it (at least SHORE_DEPTH_M, so its water still shows), and nothing
+    is dug in the pond past the terrain cell along its shore: the pond's water and its own ground are the pond's
+    (walked by its rule). Ground only ever goes
+    down, so
     carving twice is carving once, and ground already lower is kept. Returns the corner chunks changed (as
     ``Terrain.sculpt`` does); ``terrain.changed`` notes the stored chunks."""
     from engine.hd2d.terrain import CHUNK, LIMIT, QUANTUM, chunks_of  # noqa: PLC0415
@@ -817,12 +834,21 @@ def carve(terrain: Any, river: River, depths: list[float], mouth: Mouth | None =
     marks = r.marks
     depth = []
     span = 0
+    shore = 0.0
+    if mouth is not None:  # the pond's depth just inside its shore (at least SHORE_DEPTH_M: the water still shows)
+        inside_px = ((mouth.at[0] + mouth.tangent[0] * STEP_M) * PX, (mouth.at[1] + mouth.tangent[1] * STEP_M) * PX)
+        floor = terrain.height(*inside_px)
+        shore = max(SHORE_DEPTH_M, mouth.pond.level / PX - floor / PX if floor is not None else 0.0)
     for s in r.u:  # each sample's depth: linear between the control points along the river, as its width and level
         while span < len(marks) - 2 and marks[span + 1] < s:
             span += 1
         a, b = marks[span], marks[span + 1]
         f = min(1.0, max(0.0, (s - a) / (b - a))) if b - a > 1e-12 else 0.0
-        depth.append(depths[span] + (depths[span + 1] - depths[span]) * f)
+        full = depths[span] + (depths[span + 1] - depths[span]) * f
+        if mouth is not None:  # (towards the shore, to the pond's own depth there: one depth across it)
+            ease = min(1.0, max(0.0, (mouth.u - s) / BLEND_M))
+            full = shore + (full - shore) * ease * ease * (3.0 - 2.0 * ease)
+        depth.append(full)
     cell = terrain.cell / PX
     ox, oy = terrain.origin[0] / PX, terrain.origin[1] / PX
     stride = terrain.nx + 1
@@ -899,6 +925,9 @@ def carve(terrain: Any, river: River, depths: list[float], mouth: Mouth | None =
         else:
             target = level + BANK_SLOPE * (dist - half)
         new = round(max(-LIMIT, min(LIMIT, target * PX - terrain.base)) / QUANTUM) * QUANTUM
+        if mouth is not None and water_mod.inside(mouth.pond.water, mouth.pond.centre,
+                                                  terrain.corner_xy(key % stride, key // stride), terrain.cell):
+            continue  # (the pond's ground, but for a cell in from its shore: what the shore's cells are read from)
         if new < terrain.heights[key]:
             terrain.heights[key] = new
             changed.add((key % stride, key // stride))
