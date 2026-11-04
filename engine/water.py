@@ -63,7 +63,14 @@ MOUTH_BLEND_M = 1.5  # a river takes on the look of the pond it flows into over 
 MAX_MOUTHS = 8  # rivers flowing into ponds a room's shaders hold (engine.hd2d.river.MAX_MOUTHS)
 STEP_RIPPLE_S = 1.0  # how long a footstep's ring lasts
 _KEYS = {"preset", "width", "height", "colour", "opacity", "shape", "waves", "rain_ripples", "walkable", "step_sound",
-         "reflection", "rotation", "seed", "shore", "shore_width", "deep_colour", "depth", "ripples"}
+         "reflection", "rotation", "seed", "shore", "shore_width", "deep_colour", "depth", "ripples", "passable",
+         "wade_depth"}
+# R4B (#461): how characters may go into water (ponds and rivers alike), whatever it looks like or how deep its bed is
+# carved: "auto" as before (a pond by its ``walkable``; a river waded up to half a metre deep), "wade" waded up to
+# ``wade_depth`` m over the floor, "block" not entered at all (a bridge's deck above it stays dry)
+PASSABLE = ("auto", "wade", "block")
+WADE_DEPTH_M = (0.1, 1.5)  # a wade's depth limit: a tenth of a metre to a character's height (no swimming)
+WADE_DEPTH_DEFAULT = 1.0
 SHAPES = ("ellipse", "rect", "natural")
 SHORES = ("none", "mud", "grass", "stone", "terrain")  # terrain: the sculpted ground is its shore (Milestone 20A)
 CLASSIC = ("puddle", "pond")  # Stage 19A's look, kept exactly (older rooms; the negative controls)
@@ -96,6 +103,8 @@ class Water:
     deep_colour: tuple[float, float, float] = (0.0, 0.0, 0.0)  # its colour where deepest (colour: in the shallows)
     depth: float = 0.0  # 0..1: how soon it gets deep (and opaque) away from the edge
     ripples: float = 1.0  # 0..1: how strongly rain and footsteps ring it
+    passable: str = "auto"  # PASSABLE (R4B): "auto" by ``walkable``
+    wade_depth: float = WADE_DEPTH_DEFAULT  # m: the deepest it is waded, if passable is "wade"
 
 
 PRESETS: dict[str, Water] = {
@@ -131,7 +140,13 @@ def _number(value: Any, where: str, lo: float, hi: float) -> float:
 
 # What a setting holds to mean "the preset's" (the behaviour's declared defaults: what adding it plainly writes).
 UNSET = {"width": 0, "height": 0, "colour": "", "opacity": 0, "shape": "", "waves": -1, "reflection": -1, "rotation": 0,
-         "seed": 0, "shore": "", "shore_width": -1, "deep_colour": "", "depth": -1, "ripples": -1}
+         "seed": 0, "shore": "", "shore_width": -1, "deep_colour": "", "depth": -1, "ripples": -1, "passable": "",
+         "wade_depth": -1}
+
+
+def blocks(water: Water) -> bool:
+    """Whether characters can't go into this water: passable "block", or "auto" and not ``walkable`` (as before)."""
+    return water.passable == "block" or (water.passable == "auto" and not water.walkable)
 
 
 def parse_water(raw: Any) -> Water:
@@ -167,6 +182,9 @@ def parse_water(raw: Any) -> Water:
     seed = raw.get("seed", base.seed)
     if isinstance(seed, bool) or not isinstance(seed, int) or not 1 <= seed <= 9999:
         raise WaterError(f"water seed must be a whole number from 1 to 9999 (got {seed!r})")
+    passable = raw.get("passable", "auto")
+    if passable not in PASSABLE:
+        raise WaterError(f"water passable must be one of {', '.join(PASSABLE)} (got {passable!r})")
     return replace(
         base, width=_number(raw.get("width", base.width), "water width", 8, 8192),
         height=_number(raw.get("height", base.height), "water height", 8, 8192),
@@ -179,7 +197,8 @@ def parse_water(raw: Any) -> Water:
         seed=seed, shore=shore, shore_width=_number(raw.get("shore_width", base.shore_width), "water shore_width", 0, 64),
         deep_colour=_hex(raw["deep_colour"], "water deep_colour") if "deep_colour" in raw else base.deep_colour,
         depth=_number(raw.get("depth", base.depth), "water depth", 0.0, 1.0),
-        ripples=_number(raw.get("ripples", base.ripples), "water ripples", 0.0, 1.0))
+        ripples=_number(raw.get("ripples", base.ripples), "water ripples", 0.0, 1.0), passable=passable,
+        wade_depth=_number(raw.get("wade_depth", WADE_DEPTH_DEFAULT), "water wade_depth", *WADE_DEPTH_M))
 
 
 def outline(water: Water) -> tuple[float, tuple[float, ...], tuple[float, ...]]:
@@ -252,6 +271,21 @@ def inside(water: Water, centre: tuple[float, float], point: tuple[float, float]
         return abs(dx) <= 1.0 and abs(dy) <= 1.0
     r = _radius(*outline(water), math.atan2(dy, dx))
     return dx * dx + dy * dy <= r * r
+
+
+def inset(water: Water, centre: tuple[float, float], point: tuple[float, float]) -> float:
+    """About how far (px) ``point`` lies in from the water's edge (negative outside): along the line from its centre
+    for a round or natural outline, to the nearer side for a rectangle. It grows steadily inwards (R4B: blocking
+    water is more over its limit the further in, so one put in it can only walk out)."""
+    hw, hh = water.width / 2, water.height / 2
+    lx, ly = _local(water, centre, point)
+    if water.shape == "rect":
+        return min(hw - abs(lx), hh - abs(ly))
+    dx, dy = lx / hw, ly / hh
+    th = math.atan2(dy, dx)
+    r = _radius(*outline(water), th)
+    edge = r * math.hypot(math.cos(th) * hw, math.sin(th) * hh)  # its centre to its edge, this way (px)
+    return edge * (1.0 - math.hypot(dx, dy) / max(r, 1e-9))
 
 
 # --- a room's water: registry, clock, footsteps (window attributes; reset on every room load) ----------------------

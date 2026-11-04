@@ -905,8 +905,24 @@ class InspectorMixin:
         pair("Waves / reflection", self._field(f"{water.get('waves', 0):g}", number("waves"), width=half, key="water_waves"),
              self._field(f"{water.get('reflection', 0):g}", number("reflection"), width=half, key="water_reflect"))
         rows.add(self._toggle("Rippled by rain", bool(water.get("rain_ripples")), lambda on: change(rain_ripples=on), width))
-        rows.add(self._toggle("Walk through it", bool(water.get("walkable")), lambda on: change(
-            "Characters walk through it." if on else "It blocks movement now.", walkable=on), width))
+        # R4B: how characters may go into it (whatever it looks like): Auto (by Walk through it, as before), Wade (to
+        # a depth over the floor) or Block (not entered; in an HD-2D room exactly where its water is)
+        passable = str(water.get("passable") or "auto")
+        rows.add(self._label("Walking into it", color=C_MUTED, size=10, width=width))
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for kind, title, said in (("auto", "Auto", "Walking into it: by Walk through it."),
+                                  ("wade", "Wade", "Walking into it: waded up to its wade depth."),
+                                  ("block", "Block", "Walking into it: never (a bridge over it stays dry).")):
+            row.add(self._button(title, partial(change, said, passable=kind), width=(width - 8) // 3,
+                                 style=S_ACTIVE if passable == kind else S_BUTTON))
+        rows.add(row)
+        if passable == "auto":
+            rows.add(self._toggle("Walk through it", bool(water.get("walkable")), lambda on: change(
+                "Characters walk through it." if on else "It blocks movement now.", walkable=on), width))
+        elif passable == "wade":
+            self._labeled(rows, "Wade depth (m)", self._field(f"{float(water.get('wade_depth') or 1.0):g}",
+                                                              number("wade_depth"), width=width - 122,
+                                                              key="water_wade_depth"), width)
         self._labeled(rows, "Step sound", self._field(str(water.get("step_sound") or ""), lambda v: change(step_sound=v.strip()),
                                                       width=width - 122, key="water_sound"), width)
         hd2d = (self.project.scene().get("settings") or {}).get("hd2d")

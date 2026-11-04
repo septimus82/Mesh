@@ -162,6 +162,35 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
   send a `water_step` event, as in a pond, with no change of speed. Deeper water stops them at its edge, as a ledge
   does. Depth is the water over the ground or floor under their feet, so a bridge's deck above the water stays
   dry and walkable.
+- **Walking into it** (the River panel; the AI: `passable`, `wade_depth`). This decides where characters may go,
+  whatever the water looks like or however deep its bed is carved:
+  - **Auto** (the default, as before): waded up to half a metre deep;
+  - **Wade**: waded up to the **Wade depth** you give (0.1 to 1.5 m, 1 m unless set);
+  - **Block**: not entered at all.
+
+  In every case a bridge's deck over the water stays dry. A character put somewhere it can't stand (a start point
+  in deep water, a teleport) can still walk out the shallower way, never deeper: in blocked water, only outwards
+  towards its nearest edge (never across it, nor along it), and never into water beyond it deeper than they may
+  wade. Characters on a **FloorRoute** walk out: from blocked water the quickest way, towards its nearest edge; from
+  deep water to the nearest place they can stand, trying the nearest in each direction. If there's no way out they
+  stay put, and the log and a `stranded` event say so once; they look again every few seconds. A route point they can't reach
+  is tried again after a second. A character whose feet box is too wide for the places it could stand (the
+  template's person picture is 2.4 m wide) may be stranded where a narrower one would get out, and a sculpted hole
+  too steep to climb holds anyone, water or not.
+- **Ponds** have the same choice in their inspector, under **Walking into it**. **Auto** keeps their **Walk through
+  it** setting. In a 3D room that walks its floors in 3D (one with sculpted ground, rivers, or models with
+  floors), a pond that blocks (Block, or Auto with Walk through it off) blocks exactly where its water is drawn.
+  With the sculpted ground as its shore, that is where water stands over the ground. Its outline is used, not the
+  box round it, so there's no invisible wall around a lake, at its corners, or where a river flows in. The player
+  and characters on a **FloorRoute** walk that way; other moving characters still meet the box.
+  - These keep blocking by the box round the pond: a 2D room's pond, a pond in a flat 3D room with none of those,
+    and a pond shown only when flags say (its flags hide the box).
+  - A pond on a raised floor doesn't block the ground under it. A pond whose shore is the sculpted ground is the
+    exception, as it is drawn: its water reaches down to that ground wherever its level is above it, however deep,
+    so whatever lies under its level there is in its water. In a room without sculpted ground it is drawn, and
+    walked, like any other pond.
+  - **Wade** depth needs the sculpted ground as the pond's shore. On flat ground, or in a 2D room, there is no
+    depth, so a Wade pond is simply walked through.
 - **Refused, with the reason and where:** a bend too tight for the river's width (its inner bank would fold), banks
   that cross or come within a quarter metre of each other, water that would run uphill, points closer than a
   quarter metre, two rivers that cross or overlap, and a bank off the room's ground.
