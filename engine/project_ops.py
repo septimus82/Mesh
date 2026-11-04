@@ -1226,8 +1226,8 @@ def rivers(scene: Doc) -> list[Doc]:
     return [r for r in found if isinstance(r, dict)] if isinstance(found, list) else []
 
 
-def _with_rivers(scene: Doc, edit: Any) -> Doc:
-    from engine.hd2d.river import to_json  # noqa: PLC0415
+def _with_rivers(scene: Doc, edit: Any, river_id: str | None = None) -> Doc:
+    from engine.hd2d.river import RiverError, join, ponds_of, to_json  # noqa: PLC0415
     from engine.hd2d.settings import Hd2dSettingsError, parse_hd2d  # noqa: PLC0415
 
     out = copy.deepcopy(scene)
@@ -1246,6 +1246,12 @@ def _with_rivers(scene: Doc, edit: Any) -> Doc:
     if found.rivers_error:
         raise OpError(found.rivers_error)
     parsed = found.rivers
+    edited = next((r for r in parsed if r.id == river_id), None)
+    if edited is not None and edited.mouth == "auto":  # (R4: the river edited only; others' joins are their own)
+        try:
+            join(edited, ponds_of(entities(out)))
+        except RiverError as err:
+            raise OpError(str(err)) from err
     if parsed:
         hd2d["rivers"] = [to_json(r) for r in parsed]
     else:
@@ -1253,43 +1259,52 @@ def _with_rivers(scene: Doc, edit: Any) -> Doc:
     return _checked(scene, out)
 
 
-_RIVER_LOOK = ("flow", "colour", "deep_colour", "opacity", "depth", "waves", "reflection", "rain_ripples")
+_RIVER_LOOK = ("flow", "colour", "deep_colour", "opacity", "depth", "waves", "reflection", "rain_ripples", "mouth",
+               "ends")
 
 
 def add_river(scene: Doc, river_id: str, points: Any, *, flow: Any = _UNSET, colour: Any = _UNSET,
               deep_colour: Any = _UNSET, opacity: Any = _UNSET, depth: Any = _UNSET, waves: Any = _UNSET,
-              reflection: Any = _UNSET, rain_ripples: Any = _UNSET) -> Doc:
+              reflection: Any = _UNSET, rain_ripples: Any = _UNSET, mouth: Any = _UNSET,
+              ends: Any = _UNSET) -> Doc:
     """Add a river to this HD-2D room: ``points`` ``[[x, y, width, level], ...]`` px, upstream to downstream (2-64;
     ``level`` its surface, as an object's elevation, never rising downstream; width 16-512 px). Its course curves
     smoothly through every point; it flows at ``flow`` m/s (0-8, default 1; 0: still). Its look: ``colour`` and
     ``deep_colour`` ("#rrggbb"), ``opacity``, ``depth``, ``waves``, ``reflection`` (0-1) and ``rain_ripples``, as a
-    pond's. Refused, naming where, if its banks would fold, cross or touch, it would run uphill, or it would meet
-    another river. It is drawn where its level lies above the ground: sculpt its bed first (it doesn't carve one)."""
+    pond's. ``mouth`` (R4): "auto", it flows into the pond (a WaterSurface object) its last point lies in, one
+    water surface there; refused, saying what to change, unless its end lies wholly in the pond, it crosses the
+    pond's shore once, and where it enters its level is within 5 cm of the pond's (nothing is moved to fit); "none"
+    (the default) a free end. ``ends``: which free ends finish in a half circle, its carved bed in a bowl to match:
+    "round" (both), "round_source" (where it rises), "round_end" (its last point, if it flows into no pond), or
+    "square" (the default, as rivers before R4; right for an end running off the room's edge). Refused, naming where, if its banks would
+    fold, cross or touch, it would run uphill, or it would meet another river. It is drawn where its level lies
+    above the ground: sculpt its bed first (it doesn't carve one)."""
     look = {k: v for k, v in zip(_RIVER_LOOK, (flow, colour, deep_colour, opacity, depth, waves, reflection,
-                                               rain_ripples)) if v is not _UNSET}
+                                               rain_ripples, mouth, ends)) if v is not _UNSET}
 
     def edit(found: list[Doc]) -> list[Doc]:
         if any(r.get("id") == river_id for r in found):
             raise OpError(f"This room already has a river '{river_id}'.")
         return [*found, {"id": river_id, "points": points, **look}]
 
-    return _with_rivers(scene, edit)
+    return _with_rivers(scene, edit, river_id)
 
 
 def set_river(scene: Doc, river_id: str, *, points: Any = _UNSET, flow: Any = _UNSET, colour: Any = _UNSET,
               deep_colour: Any = _UNSET, opacity: Any = _UNSET, depth: Any = _UNSET, waves: Any = _UNSET,
-              reflection: Any = _UNSET, rain_ripples: Any = _UNSET) -> Doc:
-    """Change a river of this room: its ``points`` (all of them, as ``add_river`` takes them) or its look; what isn't
-    given stays. Checked as ``add_river`` checks a new one."""
+              reflection: Any = _UNSET, rain_ripples: Any = _UNSET, mouth: Any = _UNSET, ends: Any = _UNSET) -> Doc:
+    """Change a river of this room: its ``points`` (all of them, as ``add_river`` takes them), its look, its
+    ``mouth`` or its ``ends``; what isn't given stays. Checked as ``add_river`` checks a new one (a river flowing into
+    a pond: its join, whatever changed)."""
     given = {k: v for k, v in zip(("points", *_RIVER_LOOK), (points, flow, colour, deep_colour, opacity, depth, waves,
-                                                              reflection, rain_ripples)) if v is not _UNSET}
+                                                              reflection, rain_ripples, mouth, ends)) if v is not _UNSET}
 
     def edit(found: list[Doc]) -> list[Doc]:
         if not any(r.get("id") == river_id for r in found):
             raise OpError(f"This room has no river '{river_id}'.")
         return [{**r, **given} if r.get("id") == river_id else r for r in found]
 
-    return _with_rivers(scene, edit)
+    return _with_rivers(scene, edit, river_id)
 
 
 def carve_river_bed(scene: Doc, river_id: str, depths: Any = None) -> Doc:
@@ -1303,7 +1318,7 @@ def carve_river_bed(scene: Doc, river_id: str, depths: Any = None) -> Doc:
     1.2 m). Water deeper than half a metre can't be waded. The ground only ever goes down: carving again changes
     nothing, other sculpting is kept wherever it is already lower, and nothing else moves (structures, objects and
     scatter keep their places: ``terrain_anchoring`` and ``clear_scatter_in_rivers``). One edit: one undo step."""
-    from engine.hd2d.river import RiverError, bed_depths, carve, sunk, to_json  # noqa: PLC0415
+    from engine.hd2d.river import RiverError, bed_depths, carve, join, ponds_of, sunk, to_json  # noqa: PLC0415
     from engine.hd2d.terrain import Terrain  # noqa: PLC0415
 
     river = next((r for r in _parsed_rivers(scene, strict=True) if r.id == river_id), None)
@@ -1317,10 +1332,15 @@ def carve_river_bed(scene: Doc, river_id: str, depths: Any = None) -> Doc:
     hd2d = _hd2d_block(out)
     ground = _parsed_ground(out)
     terrain = Terrain.from_ground(ground)
-    lowered = sunk(terrain, river)
+    ponds = ponds_of(entities(out))
+    lowered = sunk(terrain, river, ponds, _parsed_rivers(out))
     if lowered is not river:  # its water stood over the ground beside it: lowered into the bed (the same edit)
         hd2d["rivers"] = [to_json(lowered) if r.get("id") == river_id else r for r in rivers(out)]
-    if not carve(terrain, lowered, wanted) and lowered is river:
+    try:  # R4: flowing into a pond, its bed runs on into it (no bowl at that end)
+        mouth = join(lowered, ponds) if lowered.mouth == "auto" else None
+    except RiverError as err:
+        raise OpError(f"{err} (so its bed isn't carved yet)") from err
+    if not carve(terrain, lowered, wanted, mouth) and lowered is river:
         raise OpError(f"River '{river_id}''s bed is already carved: the ground under it is as low as asked, or lower.")
     raw = hd2d["ground"]
     if not isinstance(raw, dict):
@@ -1348,7 +1368,9 @@ def clear_scatter_in_rivers(scene: Doc, river_id: Any = None) -> Doc:
         raise OpError(str(err)) from err
     ground = _parsed_ground(scene)
     terrain = Terrain.from_ground(ground) if ground.terrain is not None else None
-    water = RiverIndex(tuple(chosen))
+    from engine.hd2d.river import ponds_of  # noqa: PLC0415
+
+    water = RiverIndex(tuple(chosen), ponds_of(entities(scene)))
     kept: dict[str, list[tuple[int, int, int, int]]] = {}
     removed = 0
     for name, rows in instances.items():
@@ -3399,8 +3421,10 @@ def scatter_context(scene: Doc, models: Any = None) -> tuple[Any, list[tuple[str
             fx, fy = sum(p[0] for p in low) / len(low) * scale * PX_PER_M, sum(p[1] for p in low) / len(low) * scale * PX_PER_M
             spots.append((f"the way onto '{s.get('id')}'",
                           (float(s["x"]) + fx * math.cos(a) - fy * math.sin(a), float(s["y"]) + fx * math.sin(a) + fy * math.cos(a))))
+    from engine.hd2d.river import ponds_of  # noqa: PLC0415
+
     return ground_for(terrain, flat, waters, footprints, spots=[at for _label, at in spots],
-                      rivers=_parsed_rivers(scene)), spots, routes
+                      rivers=_parsed_rivers(scene), ponds=ponds_of(entities(scene))), spots, routes
 
 
 def _parsed_rivers(scene: Doc, strict: bool = False) -> tuple[Any, ...]:

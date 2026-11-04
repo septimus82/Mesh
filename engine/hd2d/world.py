@@ -154,7 +154,7 @@ def elevation_of(sprite: Any) -> float:
 
 
 class World:
-    def __init__(self, settings: Hd2dSettings, models: dict[str, Model]) -> None:
+    def __init__(self, settings: Hd2dSettings, models: dict[str, Model], ponds: tuple[Any, ...] = ()) -> None:
         self.surfaces: list[Surface] = []
         self.walls: list[Wall] = []
         for st in settings.structures:
@@ -189,7 +189,8 @@ class World:
         self._flat_z = g.elevation / PIXELS_PER_METRE if g is not None else 0.0
         from engine.hd2d.river import RiverIndex  # noqa: PLC0415
 
-        self.rivers = RiverIndex(settings.rivers)  # (none: nothing to ask)
+        # (none: nothing to ask; ``ponds``, engine.hd2d.river.Pond: a river flowing into one has no water in it, R4)
+        self.rivers = RiverIndex(settings.rivers, ponds)
         self.on_wade: Any = None  # called (sprite, (x, y) px, river id) for each wading step (engine.hd2d.runtime)
         self._models = models
         self.set_scatter(settings.scatter)

@@ -101,9 +101,11 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
         models = window.hd2d_renderer.models
         sculpted = hd2d.ground is not None and hd2d.ground.terrain is not None  # Milestone 20A
         if sculpted or hd2d.rivers or any(model.colliders for model in models.values()):  # (floors and walls
-            from engine.hd2d.world import World  # noqa: PLC0415  # authored in the GLBs; rivers' deep water, #461 R3)
+            from engine.hd2d.river import ponds_of  # noqa: PLC0415  # authored in the GLBs; rivers' deep water,
+            from engine.hd2d.world import World  # noqa: PLC0415  # #461 R3; the ponds rivers flow into, R4)
 
-            window.hd2d_world = World(hd2d, models)
+            entities = scene.get("entities") if isinstance(scene, dict) else None
+            window.hd2d_world = World(hd2d, models, ponds_of(entities) if hd2d.rivers else ())
             window.hd2d_world.on_wade = partial(_wade, window)
             if window.hd2d_renderer.terrain is not None:  # one set of heights: what is drawn is what is walked on
                 window.hd2d_world.update_terrain(window.hd2d_renderer.terrain)
