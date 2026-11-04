@@ -59,7 +59,7 @@
  },
  "lakeside_after": {
   "phase": "after",
-  "carve_ms": 187.2,
+  "carve_ms": 203.6,
   "brook": {
    "id": "brook",
    "points": [
@@ -85,19 +85,19 @@
      990.0,
      870.0,
      66.0,
-     -7.5
+     -13.25
     ],
     [
      1060.0,
      852.0,
      68.0,
-     -9.0
+     -13.25
     ],
     [
      1130.0,
      860.0,
      70.0,
-     -10.5
+     -13.25
     ],
     [
      1190.0,
@@ -115,7 +115,7 @@
    "mouth": "auto",
    "ends": "round_source"
   },
-  "play_frame_ms_median": 18.62
+  "play_frame_ms_median": 18.66
  },
  "shoreline_before": {
   "levels_px": [
@@ -126,14 +126,15 @@
  },
  "shoreline_after": {
   "levels_px": [
-   -14.17,
-   -14.17,
-   -14.17
+   -15.6,
+   -15.6,
+   -15.6
   ]
  },
  "flow_changed_share_between_frames": {
-  "brook_upstream": 0.263,
-  "lake": 0.035,
-  "bridge_still": 0.042
- }
+  "brook_upstream": 0.244,
+  "lake": 0.034,
+  "bridge_still": 0.047
+ },
+ "captured_at": "c25b650 (final 277ea54 removes a refusal only)"
 }
