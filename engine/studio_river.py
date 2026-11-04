@@ -712,7 +712,9 @@ class RiverTool:
             return
         rid = str(self.selected)
         now = str(found.get("ends", "square"))
-        new = ENDS[(ENDS.index(now) + 1) % len(ENDS)] if now in ENDS else "square"
+        # (flowing into a pond its last point has no free end: square or round at its source only)
+        choices = ("square", "round_source") if found.get("mouth") == "auto" else ENDS
+        new = choices[(choices.index(now) + 1) % len(choices)] if now in choices else "square"
         self._commit(lambda s: ops.set_river(s, rid, ends=new), f"River '{rid}': ends {ENDS_SHOWN[new].lower()}.")
 
     def mouth_status(self) -> str:

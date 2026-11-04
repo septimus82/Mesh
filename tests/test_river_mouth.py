@@ -36,7 +36,8 @@ def _room(points: list[list[float]] = STREAM, *, level: float = 0.0, **river_arg
                                           "hd2d": {"ground": {"texture": "assets/textures/grass.png",
                                                               "from": [0, 0], "to": [1600, 1200]}}}}
     scene, pond = ops.place_blank(scene, "start", "Lake", POND["x"], POND["y"])
-    scene = ops.set_water(scene, pond, preset="pond", width=POND["width"], height=POND["height"])
+    scene = ops.set_water(scene, pond, preset="natural_pond", shape="ellipse", width=POND["width"],
+                          height=POND["height"])
     ops.find_entity(scene, pond)["elevation"] = level
     return ops.add_river(scene, "stream", points, **river_args)
 
@@ -101,7 +102,7 @@ def test_an_angled_join_and_two_ponds_at_their_own_levels() -> None:
     mouth = river.join(_rivers(scene)[0], river.ponds_of(scene["entities"]))
     assert 0.3 < -mouth.tangent[1] < 0.95, "it enters at a slant"
     scene, high = ops.place_blank(scene, "start", "High pool", 300.0, 300.0)
-    scene = ops.set_water(scene, high, preset="pond", width=320.0, height=240.0)
+    scene = ops.set_water(scene, high, preset="natural_pond", shape="ellipse", width=320.0, height=240.0)
     ops.find_entity(scene, high)["elevation"] = 40.0
     hill = [[1560.0, 100.0, 64.0, 60.0], [800.0, 200.0, 64.0, 40.0], [330.0, 300.0, 64.0, 40.0]]
     scene = ops.add_river(scene, "hill_stream", hill, mouth="auto")
@@ -114,7 +115,8 @@ def test_the_water_is_where_it_is_drawn_none_of_it_in_the_pond_none_past_a_round
     joined = _index(ops.set_river(_room(ends="round"), "stream", mouth="auto"))
     deep_in_pond = (1100.0 / P, 600.0 / P)
     assert free.level_at(*deep_in_pond) is not None, "a free river's water lies over the pond's (two layers)"
-    assert joined.level_at(*deep_in_pond) is None, "joined: the pond's water is there, not the river's"
+    assert joined.level_at(*deep_in_pond, in_ponds=False) is None, "joined: the pond's water is there, not the river's"
+    assert joined.level_at(*deep_in_pond) == (0.0, "stream"), "(its channel still water, at the pond's level)"
     assert joined.level_at(940.0 / P, 600.0 / P) is not None, "short of the shore: the river's"
     # its source rounded: the middle of its end is water, the square end's corners aren't
     assert joined.level_at(5.0 / P, 600.0 / P) is not None
@@ -150,12 +152,14 @@ def test_carving_a_round_end_makes_a_bowl_and_no_trough_past_it() -> None:
 def test_sinking_finds_a_dip_between_points_and_keeps_a_mouth_at_its_pond() -> None:
     # water drawn over flat ground (0.25 m above), with a dip beside it halfway between two points
     over = [[4.0, 600.0, 96.0, 8.0], [800.0, 600.0, 96.0, 8.0], [1590.0, 600.0, 96.0, 8.0]]
-    scene = ops.sculpt_terrain_stroke(_room(over), "lower", [[400, 670, 24], [400, 530, 24]], radius=40)
+    scene = ops.sculpt_terrain_stroke(_room(over), "lower", [[400, 680, 24], [400, 520, 24]], radius=40)
     t = Terrain.from_ground(parse_hd2d(scene["settings"]["hd2d"]).ground)
     (r,) = _rivers(scene)
     sunk = river.sunk(t, r, river.ponds_of(scene["entities"]))
-    rib = river.ribbon(r)  # (half a metre out from each bank, at each sample: every quarter metre)
-    dip = min(min(t.height(c[0] * P, 664), t.height(c[0] * P, 536)) for c in rib.centre if 350 < c[0] * P < 450)
+    rib = river.ribbon(r)  # (half a metre and a terrain cell out from each bank, at each sample: every quarter metre)
+    out = 48.0 + 16.0 + t.cell
+    dip = min(min(t.height(c[0] * P, 600 + out), t.height(c[0] * P, 600 - out)) for c in rib.centre
+              if 350 < c[0] * P < 450)
     assert dip < -16.0, "the dip, between its points: R3 measured only at the points (flat ground there)"
     assert max(p[3] for p in sunk.points) <= dip - river.SINK_M * P + 0.01, "under the dip, all along that stretch"
     assert river.sunk(t, sunk, river.ponds_of(scene["entities"])) is sunk, "sinking twice is sinking once"
@@ -204,3 +208,83 @@ def test_a_pond_moved_away_leaves_the_river_drawn_free_and_says_why() -> None:
     assert joined == {} and "isn't in one" in problems["stream"]
     assert _index(moved).level_at(1100.0 / P, 600.0 / P) is not None, "drawn whole, as a free end"
     assert ops.rivers(moved) == ops.rivers(scene), "never reshaped"
+
+
+# --- independent review round 1 (51fb208) ----------------------------------------------------------------------
+
+
+def _flat(points: list[list[float]]) -> dict[str, Any]:
+    scene = {"entities": [], "settings": {"world_width": 1600, "world_height": 1200,
+                                          "hd2d": {"ground": {"texture": "assets/textures/grass.png",
+                                                              "from": [0, 0], "to": [1600, 1200]}}}}
+    return ops.add_river(scene, "stream", points)
+
+
+def test_carving_a_river_twice_is_carving_once_even_at_the_ground_s_level() -> None:
+    """Measured beside it every quarter metre, its own fresh bed under the corners read there sank it again."""
+    for cell in (16, 32):
+        for level in (8.0, 0.0, -4.0):
+            scene = _flat([[4.0, 600.0, 96.0, level], [700.0, 640.0, 96.0, level], [1596.0, 600.0, 96.0, level]])
+            scene["settings"]["hd2d"]["ground"]["cell"] = cell
+            once = ops.carve_river_bed(scene, "stream", depths=[0.6, 0.6, 0.6])
+            with pytest.raises(ops.OpError, match="already carved"):
+                ops.carve_river_bed(once, "stream", depths=[0.6, 0.6, 0.6])
+    a = [[4.0, 600.0, 96.0, -16.0], [1596.0, 600.0, 96.0, -16.0]]
+    b = [[4.0, 724.0, 96.0, 8.0], [1596.0, 724.0, 96.0, 8.0]]  # 0.88 m from it, bank to bank, over the ground
+    scene = ops.carve_river_bed(ops.add_river(_flat(a), "b", b), "b", depths=[0.6, 0.6])
+    scene = ops.carve_river_bed(scene, "stream", depths=[0.6, 0.6])
+    with pytest.raises(ops.OpError, match="already carved"):
+        ops.carve_river_bed(scene, "b", depths=[0.6, 0.6])
+
+
+def test_its_channel_in_the_pond_stays_water_deep_water_stops_characters_there() -> None:
+    """With a mouth the carved bed ran on into the pond as dry ground: walked and navigated 0.7 m down."""
+    scene = ops.carve_river_bed(_room(mouth="auto"), "stream")  # (a quarter of its width: 0.75 m)
+    world = World(parse_hd2d(scene["settings"]["hd2d"]), {}, river.ponds_of(scene["entities"]))
+    x, y = 1050.0 / P, 600.0 / P  # in the pond, over the channel
+    bed = min(h for h, _s in world.heights_at(x, y))
+    assert bed < -0.6 and world.stand(x, y, bed, 0.3, 0.19) is None, "deep: can't stand there"
+    assert world.water_at(x, y, bed) is None, "the pond ripples itself there (no wading step twice)"
+    assert world.path((1300.0 / P, 700.0 / P, 0.0), (x, y, bed)) == [], "no way down into it"
+
+
+def test_review_refusals_classic_ponds_banks_in_the_pond_a_drop_by_the_shore_and_flagged_ponds() -> None:
+    scene = _room()
+    pond = ops.entities(scene)[0]["id"]
+    classic = ops.set_water(scene, pond, preset="pond")
+    with pytest.raises(ops.OpError, match="older simple look"):
+        ops.set_river(classic, "stream", mouth="auto")
+    drop = [[1200.0, 40.0, 96.0, 12.8], [1200.0, 380.0, 96.0, 12.8], [1200.0, 420.0, 96.0, 0.0],
+            [1200.0, 600.0, 96.0, 0.0]]  # 0.4 m down over the metre and a half before the shore (the surface eases)
+    with pytest.raises(ops.OpError, match=r"0\.36 m above .*over its last 1\.5 m.*points 2 to 4"):
+        ops.set_river(scene, "stream", points=drop, mouth="auto")
+    flagged = copy.deepcopy(scene)
+    ops.find_entity(flagged, pond)["require_flags"] = ["rained"]
+    with pytest.raises(ops.OpError, match="shows only when flags say"):
+        ops.set_river(flagged, "stream", mouth="auto")
+    lake = {"entities": [], "settings": copy.deepcopy(scene["settings"])}
+    lake["settings"]["hd2d"].pop("rivers")
+    lake, big = ops.place_blank(lake, "start", "Lake", 800.0, 600.0)
+    lake = ops.set_water(lake, big, preset="natural_pond", shape="ellipse", width=896.0, height=576.0)
+    along = [[300.0, 295.0, 64.0, 0.0], [800.0, 295.0, 64.0, 0.0], [1050.0, 320.0, 64.0, 0.0],
+             [1200.0, 420.0, 64.0, 0.0], [1180.0, 600.0, 64.0, 0.0]]  # its south bank in the lake for ~10 m
+    with pytest.raises(ops.OpError, match="runs with a bank in the pond"):
+        ops.add_river(lake, "stream", along, mouth="auto")
+    # the level refusal names the points to change, and doing so is accepted
+    low = _room(level=-8.0)
+    with pytest.raises(ops.OpError, match="points 2 to 3"):
+        ops.set_river(low, "stream", mouth="auto")
+    lowered = [list(p) for p in STREAM]
+    lowered[1][3] = lowered[2][3] = -8.0
+    assert ops.rivers(ops.set_river(low, "stream", points=lowered, mouth="auto"))[0]["mouth"] == "auto"
+
+
+def test_ponds_are_read_as_their_behaviour_reads_them() -> None:
+    scene = _room()
+    entity = ops.entities(scene)[0]
+    odd = copy.deepcopy(scene)
+    ops.entities(odd)[0]["behaviour_config"]["WaterSurface"]["note"] = "a stray key"
+    assert [p.id for p in river.ponds_of(odd["entities"])] == [entity["id"]], "unknown keys left aside"
+    broken = copy.deepcopy(scene)
+    ops.entities(broken)[0]["behaviour_config"] = ["not", "a", "dict"]
+    assert river.ponds_of(broken["entities"]) == (), "unreadable: left out, no crash"

@@ -169,13 +169,21 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
   - over its last 1.5 m before the shore, the river takes on the pond's colour, waves and glints, and its current
     eases out.
 
-  The panel names the pond it joins. It is refused, with what to change, if no pond lies under its last point,
-  its end isn't wholly in the pond, it crosses the pond's shore more than once, or where it enters its water isn't
-  within 5 cm of the pond's. Nothing is moved or relevelled to make it fit. If a pond is moved later so the join no
-  longer holds, the river is drawn with a free end and the panel says why. Walking, wading and plants follow what
-  is drawn: in the pond it is the pond's water.
+  The panel names the pond it joins. It is refused, with what to change, if:
+  - no pond lies under its last point, or that pond has the older Simple pond or Simple puddle look (choose Natural
+    pond, Stone pool or Muddy puddle), or it shows only when flags say;
+  - its end isn't wholly in the pond, it crosses the pond's shore more than once, or it runs with a bank in the
+    pond's water well before it turns in;
+  - over its last 1.5 m before the shore and in the pond, its water isn't within 5 cm of the pond's. The refusal
+    names the points to change.
+
+  Nothing is moved or relevelled to make it fit. If a pond is moved later so the join no longer holds, the river
+  is drawn with a free end and the panel says why. Walking, wading and plants follow what is drawn. In the pond it
+  is the pond's water, and the pond's own steps ripple it. The river's carved channel stays deep water there, so
+  characters can't walk down into it.
 - **Its ends.** **Ends** sets how its free ends finish: **Square** (rivers made before this, and right where a river
-  runs off the room's edge), **Round** (half circles at both ends), **Round at source** or **Round at end**. A
+  runs off the room's edge), **Round** (half circles at both ends), **Round at source** or **Round at end** (a river
+  flowing into a pond has no free end there: Square or Round at source). A
   round end is drawn as a half circle, walked and wading as drawn, and **Carve the bed** makes a bowl to match. Carving
   only lowers, so a bed carved square before stays square at its corners: those corners stay as a shallow, dry
   edge of the bed.

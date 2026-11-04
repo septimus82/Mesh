@@ -473,6 +473,7 @@ class Pond:
     centre: tuple[float, float]  # px
     level: float  # px: its surface (the object's elevation)
     water: Any  # engine.water.Water
+    gated: bool = False  # it shows only when flags say ("Show when", or its own require/forbid flags)
 
 
 @dataclass(frozen=True)
@@ -502,8 +503,12 @@ def _mouth_pond(river: River, ponds: tuple[Pond, ...]) -> Pond | None:
 
 def join(river: River, ponds: tuple[Pond, ...]) -> Mouth:
     """Where ``river`` flows into one of ``ponds``: the pond its last point lies in. Raises RiverError, saying what to
-    change, if none does, if its end isn't wholly in it, if it crosses the pond's shore more than once, or if where
-    it meets the pond its water isn't within 5 cm of the pond's (nothing is moved or relevelled to make it fit)."""
+    change, if none does; if that pond has the older look (a simple pond or puddle, CLASSIC: drawn another way, so its
+    water couldn't meet the river's as one) or shows only when flags say (it may not be there); if the river's end
+    isn't wholly in it; if it crosses the pond's shore more than once, or runs with a bank in the pond's water before
+    its mouth (more than its own width and BLEND_M short of where it enters: an angled mouth's near bank enters
+    first); or if over its last BLEND_M before the shore (where its surface eases to the pond's) and in the pond its
+    water isn't within 5 cm of the pond's. Nothing is moved or relevelled to make it fit."""
     rib = ribbon(river)
     name = f"River '{river.id}'"
     pond = _mouth_pond(river, ponds)
@@ -511,6 +516,13 @@ def join(river: River, ponds: tuple[Pond, ...]) -> Mouth:
         end = rib.centre[-1]
         raise RiverError(f"{name} flows into a pond (mouth \"auto\") but its last point, ({end[0] * PX:.0f}, "
                          f"{end[1] * PX:.0f}) px, isn't in one: move it into a pond's water, or set its mouth to none")
+    if pond.water.preset in water_mod.CLASSIC:
+        raise RiverError(f"{name} can't flow into the pond '{pond.id}': it has the older simple look "
+                         f"(\"{pond.water.preset}\"); give it a natural pond, stone pool or muddy puddle look, "
+                         "or set the river's mouth to none")
+    if pond.gated:
+        raise RiverError(f"{name} can't flow into the pond '{pond.id}': it shows only when flags say, so it may not "
+                         "be there; take its \"Show when\" off, or set the river's mouth to none")
     if not (_in_pond(pond, rib.left[-1]) and _in_pond(pond, rib.right[-1])):
         raise RiverError(f"{name}'s end isn't wholly in the pond '{pond.id}' (a bank of it is on the shore): move its "
                          "last point further into the water, or narrow it there")
@@ -526,15 +538,6 @@ def join(river: River, ponds: tuple[Pond, ...]) -> Mouth:
         raise RiverError(f"{name} crosses the pond '{pond.id}''s shore more than once (it is in the water near "
                          f"({x * PX:.0f}, {y * PX:.0f}) px, then out again): keep its course out of the pond until "
                          "its mouth")
-    worst = max(range(entry - 1, len(rib.level)), key=lambda k: abs(rib.level[k] * PX - pond.level))
-    gap = rib.level[worst] * PX - pond.level
-    if abs(gap) > MOUTH_LEVEL_PX:
-        first = next(i for i, m in enumerate(rib.marks) if m >= rib.u[entry - 1] - 1e-9)
-        x, y = rib.centre[worst]
-        raise RiverError(f"{name} meets the pond '{pond.id}' {abs(gap) / PX:.2f} m {'above' if gap > 0 else 'below'} "
-                         f"its water near ({x * PX:.0f}, {y * PX:.0f}) px: where it enters, its level must be within "
-                         f"5 cm of the pond's, {pond.level:g} px (points {first + 1} to {len(river.points)}; "
-                         "or carve the bed, which sinks water standing over the ground)")
     (ax, ay), (bx, by) = rib.centre[entry - 1], rib.centre[entry]
     lo, hi = 0.0, 1.0  # where between the last sample out and the first in it crosses the shore
     for _ in range(12):
@@ -546,9 +549,27 @@ def join(river: River, ponds: tuple[Pond, ...]) -> Mouth:
     f = (lo + hi) / 2
     tx, ty = bx - ax, by - ay
     n = math.hypot(tx, ty) or 1.0
-    return Mouth(river.id, pond, entry, (ax + tx * f, ay + ty * f), (tx / n, ty / n),
-                 rib.half[entry - 1] + (rib.half[entry] - rib.half[entry - 1]) * f,
-                 rib.u[entry - 1] + (rib.u[entry] - rib.u[entry - 1]) * f)
+    half = rib.half[entry - 1] + (rib.half[entry] - rib.half[entry - 1]) * f
+    u = rib.u[entry - 1] + (rib.u[entry] - rib.u[entry - 1]) * f
+    near = u - BLEND_M - 2.0 * half  # (the shaders blend from here on: engine.water's near_mouth)
+    banked = next((k for k in range(entry) if rib.u[k] < near
+                   and (_in_pond(pond, rib.left[k]) or _in_pond(pond, rib.right[k]))), None)
+    if banked is not None:
+        x, y = rib.centre[banked]
+        raise RiverError(f"{name} runs with a bank in the pond '{pond.id}''s water near ({x * PX:.0f}, {y * PX:.0f}) "
+                         "px, before its mouth: keep its course a little further from the shore until it turns in")
+    window = [k for k in range(len(rib.level)) if rib.u[k] >= u - BLEND_M - STEP_M]
+    worst = max(window, key=lambda k: abs(rib.level[k] * PX - pond.level))
+    gap = rib.level[worst] * PX - pond.level
+    if abs(gap) > MOUTH_LEVEL_PX:
+        first = max(i for i, m in enumerate(rib.marks) if m <= rib.u[window[0]] + 1e-9)
+        x, y = rib.centre[worst]
+        hint = "; or carve its bed, which sinks water standing over the ground beside it" if gap > 0 else ""
+        raise RiverError(f"{name} meets the pond '{pond.id}' {abs(gap) / PX:.2f} m {'above' if gap > 0 else 'below'} "
+                         f"its water near ({x * PX:.0f}, {y * PX:.0f}) px: over its last {BLEND_M:g} m before the "
+                         f"shore and in the pond, its level must be within 5 cm of the pond's, {pond.level:g} px "
+                         f"(points {first + 1} to {len(river.points)}{hint})")
+    return Mouth(river.id, pond, entry, (ax + tx * f, ay + ty * f), (tx / n, ty / n), half, u)
 
 
 def mouths(rivers: tuple[River, ...], ponds: tuple[Pond, ...]) -> tuple[dict[str, Mouth], dict[str, str]]:
@@ -564,20 +585,33 @@ def mouths(rivers: tuple[River, ...], ponds: tuple[Pond, ...]) -> tuple[dict[str
     return joined, problems
 
 
+def gated(payload: Any) -> bool:
+    """Whether an object (a scene document's entry, or the data a sprite was made from) shows only when flags say:
+    Studio's "Show when" (a ConditionalActivator) or its own require/forbid flags (engine.water.active)."""
+    if not isinstance(payload, dict):
+        return False
+    behaviours = payload.get("behaviours")
+    return bool(payload.get("require_flags") or payload.get("forbid_flags")
+                or (isinstance(behaviours, list) and "ConditionalActivator" in behaviours))
+
+
 def ponds_of(entities: Any) -> tuple[Pond, ...]:
-    """The ponds among a scene document's objects (``WaterSurface``; one whose settings can't be read is left out)."""
+    """The ponds among a scene document's objects (``WaterSurface``, read as its behaviour reads it: unknown keys
+    left aside; one whose settings can't be read is left out)."""
     out = []
     for e in entities if isinstance(entities, list) else ():
-        config = ((e.get("behaviour_config") or {}).get("WaterSurface") if isinstance(e, dict) else None)
-        if not isinstance(config, dict) or not all(isinstance(e.get(k), (int, float)) for k in ("x", "y")):
+        configs = e.get("behaviour_config") if isinstance(e, dict) else None
+        config = configs.get("WaterSurface") if isinstance(configs, dict) else None
+        if not isinstance(config, dict) or not all(
+                isinstance(e.get(k), (int, float)) and not isinstance(e.get(k), bool) for k in ("x", "y")):
             continue
         try:
-            water = water_mod.parse_water(config)
+            water = water_mod.parse_water({k: v for k, v in config.items() if k in water_mod._KEYS})
         except water_mod.WaterError:
             continue
         level = e.get("elevation", 0.0)
         level = float(level) if isinstance(level, (int, float)) and not isinstance(level, bool) else 0.0
-        out.append(Pond(str(e.get("id")), (float(e["x"]), float(e["y"])), level, water))
+        out.append(Pond(str(e.get("id")), (float(e["x"]), float(e["y"])), level, water, gated(e)))
     return tuple(out)
 
 
@@ -660,27 +694,34 @@ class RiverIndex:
     def __bool__(self) -> bool:
         return bool(self._quads)
 
-    def level_at(self, x: float, y: float) -> tuple[float, str] | None:
-        """The water's surface (m) at (x, y) m and its river's id, or None where no river's water lies."""
+    def level_at(self, x: float, y: float, in_ponds: bool = True) -> tuple[float, str] | None:
+        """The water's surface (m) at (x, y) m and its river's id, or None where no river's water lies. Where a river
+        flows into a pond, over its course in the pond the water is the pond's (its level: as drawn there), so its
+        channel stays water (deep water stops characters there too); ``in_ponds`` False: None there (the pond's own
+        water, which ripples itself: no wading step twice)."""
         best: tuple[float, str] | None = None
         for index in self._buckets.get((math.floor(x), math.floor(y)), ()):
             quad, level, rid = self._quads[index]
-            if _in_quad(quad, (x, y)) and (best is None or level > best[0]) and not self._past_end(index, (x, y)):
-                best = (level, rid)
+            if not _in_quad(quad, (x, y)):
+                continue
+            here = self._past_end(index, (x, y), level)
+            if here is not None and (in_ponds or not here[1]) and (best is None or here[0] > best[0]):
+                best = (here[0], rid)
         return best
 
-    def _past_end(self, index: int, p: tuple[float, float]) -> bool:
-        """Whether p, on the quad ``index``, is where the drawn water isn't: in the pond the river flows into, or past
-        a round cap (as the river's shader works it out: along and across the course from the quad's sample)."""
+    def _past_end(self, index: int, p: tuple[float, float], level: float) -> tuple[float, bool] | None:
+        """The water at p on the quad ``index``: (its own ``level``, False), or (the level of the pond the river flows
+        into, True) where p is in it, or None past a round cap (as the river's shader works it out: along and across
+        the course from the quad's sample)."""
         found = self._ends.get(index)
         if found is None:
-            return False
+            return level, False
         r, k, caps, pond = found
         if pond is not None and _in_pond(pond, p):
-            return True
+            return pond.level / PX, True
         (cx, cy), (tx, ty) = r.centre[k], r.tangent[k]
         dx, dy = p[0] - cx, p[1] - cy
-        return _off_cap(r, caps, r.u[k] + dx * tx + dy * ty, dy * tx - dx * ty)
+        return None if _off_cap(r, caps, r.u[k] + dx * tx + dy * ty, dy * tx - dx * ty) else (level, False)
 
 
 def _in_quad(quad: tuple[tuple[float, float], ...], p: tuple[float, float]) -> bool:
@@ -713,8 +754,8 @@ def bed_depths(river: River, depths: Any = None) -> list[float]:
 
 
 def sunk(terrain: Any, river: River, ponds: tuple["Pond", ...] = (), others: tuple[River, ...] = ()) -> River:
-    """The river with its water lowered, where it stands above the ground beside it (half a metre out from each
-    bank, the lower side, at every sample along it: every quarter metre), to SINK_M under that ground. A sample
+    """The river with its water lowered, where it stands above the ground beside it (half a metre and a terrain cell out
+    from each bank, the lower side, at every sample along it: every quarter metre), to SINK_M under that ground. A sample
     standing over it lowers both control points of its stretch by as much (so the level between them, linear, is
     under it there too); the level still falls downstream (each point no higher than the one before). Water at or
     under the ground beside it is kept as it is, so a carved river (its banks rising from the water) is kept, and so
@@ -726,6 +767,7 @@ def sunk(terrain: Any, river: River, ponds: tuple["Pond", ...] = (), others: tup
     lie in it.)"""
     rib = ribbon(river)
     pond = _mouth_pond(river, ponds) if river.mouth == "auto" else None
+    cell = terrain.cell / PX  # (measured a cell further out: past every corner its own carve lowers into its bed)
     near = RiverIndex(tuple(o for o in others if o.id != river.id))
     pts = river.points
     need = [0.0] * len(pts)  # how far each control point comes down (px)
@@ -733,7 +775,7 @@ def sunk(terrain: Any, river: River, ponds: tuple["Pond", ...] = (), others: tup
     for k in range(len(rib.u)):
         while span < len(pts) - 2 and rib.marks[span + 1] < rib.u[k]:
             span += 1
-        (cx, cy), (tx, ty), out = rib.centre[k], rib.tangent[k], rib.half[k] + 0.5
+        (cx, cy), (tx, ty), out = rib.centre[k], rib.tangent[k], rib.half[k] + 0.5 + cell
         known = []
         for side in (1, -1):
             x, y = (cx + side * -ty * out) * PX, (cy + side * tx * out) * PX

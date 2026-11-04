@@ -103,7 +103,7 @@ def test_studio_draws_one_water_surface_where_the_stream_enters_the_pond(tmp_pat
         # alone, the stream's own water left out of the frame: the ground shows, where the pond alone draws its bank)
         (tx, ty), h = mouth.tangent, mouth.half
         lip = [(mouth.at[0] - tx * out + -ty * a * h, mouth.at[1] - ty * out + tx * a * h)
-               for a in (-0.6, -0.45, -0.3, -0.15, 0.0, 0.15, 0.3, 0.45, 0.6) for out in (0.03, 0.05)]
+               for a in (i / 10 for i in range(-7, 8)) for out in (0.03, 0.06, 0.09)]
         lip = [p for p in lip if not in_pond(p, 0.0)]  # (its earth lip, at the water's edge: drawn all along it)
         frame(rivers)  # (its mouth set)
         geometry, renderer.water.river_geometry = renderer.water.river_geometry, None  # (its pass left out)
@@ -112,8 +112,16 @@ def test_studio_draws_one_water_surface_where_the_stream_enters_the_pond(tmp_pat
         finally:
             renderer.water.river_geometry = geometry
         assert renderer.water.mouths, "(the mouth still set: only the stream's water left out)"
-        bare = sum(opening[at(p):at(p) + 3] != alone[at(p):at(p) + 3] for p in lip) / max(1, len(lip))
-        assert len(lip) >= 9 and bare >= 0.7, ("no bank over the stream", len(lip), bare)
+        bodies, d.window.water_bodies = d.window.water_bodies, []  # (no water at all: the ground)
+        try:
+            ground = frame(())
+        finally:
+            d.window.water_bodies = bodies
+        # where the pond alone draws its bank (its ragged lip leaves some texels bare): with the stream's mouth, the
+        # ground shows there
+        banked = [p for p in lip if alone[at(p):at(p) + 3] != ground[at(p):at(p) + 3]]
+        bare = sum(opening[at(p):at(p) + 3] == ground[at(p):at(p) + 3] for p in banked) / max(1, len(banked))
+        assert len(banked) >= 10 and bare >= 0.9, ("no bank over the stream", len(lip), len(banked), bare)
 
         # the round source: the middle of its end is water, its square end's corners aren't
         (sx, sy), (ux, uy), h0 = rib.centre[0], rib.tangent[0], rib.half[0]
@@ -128,8 +136,9 @@ def test_studio_draws_one_water_surface_where_the_stream_enters_the_pond(tmp_pat
         # drawn = water (RiverIndex), around the source and the mouth: away from every edge by 3 px
         index = RiverIndex(rivers, ponds)
 
-        def water(p: tuple[float, float]) -> bool | None:
-            near = [index.level_at(p[0] + dx / P, p[1] + dy / P) is not None for dx in (-3, 0, 3) for dy in (-3, 0, 3)]
+        def water(p: tuple[float, float]) -> bool | None:  # (the river's own water: not its channel in the pond)
+            near = [index.level_at(p[0] + dx / P, p[1] + dy / P, in_ponds=False) is not None
+                    for dx in (-3, 0, 3) for dy in (-3, 0, 3)]
             return near[4] if all(n == near[4] for n in near) else None  # (None: an edge)
 
         checked = 0
@@ -141,7 +150,7 @@ def test_studio_draws_one_water_surface_where_the_stream_enters_the_pond(tmp_pat
                 for j in range(-12, 13):
                     p = (cx + i * 0.2, cy + j * 0.2)
                     expect = water(p)
-                    if expect is None or in_pond(p, -6.0):
+                    if expect is None or in_pond(p, -2.0):  # (outside the pond, up to its shore)
                         continue
                     drawn = joined[at(p):at(p) + 3] != alone[at(p):at(p) + 3]
                     assert drawn == expect, (p, drawn, expect)
@@ -155,12 +164,54 @@ def test_studio_draws_one_water_surface_where_the_stream_enters_the_pond(tmp_pat
         assert len(studio.project._undo) == undo0 + 1
         d.key(k.Z, k.MOD_CTRL)
         assert studio.project.scene()["settings"]["hd2d"]["rivers"][0]["mouth"] == "auto"
-        d.button("Ends: Round at source")
-        assert studio.project.scene()["settings"]["hd2d"]["rivers"][0].get("ends") == "round_end"
+        d.button("Ends: Round at source")  # (flowing into the pond: square or round at its source only)
+        assert studio.project.scene()["settings"]["hd2d"]["rivers"][0].get("ends") is None, "square: not stored"
         d.key(k.Z, k.MOD_CTRL)
         assert studio.project.scene()["settings"]["hd2d"]["rivers"][0]["ends"] == "round_source"
         d.key(k.Y, k.MOD_CTRL)
-        assert studio.project.scene()["settings"]["hd2d"]["rivers"][0]["ends"] == "round_end"
+        assert studio.project.scene()["settings"]["hd2d"]["rivers"][0].get("ends") is None
+    finally:
+        d.close()
+
+
+def test_no_seam_where_the_shore_crosses_the_stream_at_a_slant(tmp_path: Path) -> None:
+    """Review of 51fb208: the pond's opening faded along the river while the river blended by distance from the
+    shore, so a slanted shore showed a step in colour. Across the stream, a few texels either side of the shore (each
+    side's middle colour: a single glint or grid line doesn't count) are the same water."""
+    import r4_river_mouth_study as study
+    from hd2d_studio_demo import StudioDriver
+
+    from engine.hd2d.river import join, ponds_of
+    from engine.water import LIFT_M, inside
+
+    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    d = StudioDriver(study.make_project(tmp_path, "slant", carved=True, course=study.SLANT))
+    try:
+        view, renderer = d.studio.hd2d, d.renderer
+        (brook,) = renderer.settings.rivers
+        mouth = join(brook, ponds_of(d.studio.project.scene()["entities"]))
+        assert 0.4 < abs(mouth.tangent[0]) < 0.8, "it enters at a slant"
+        view.camera.target, view.camera.distance, view.camera.pitch = (mouth.at[0], mouth.at[1], 0.0), 8.0, 89.0
+        d.advance(2)
+        vx, vy, vw, vh = view.viewport()
+        scale = d.window.get_framebuffer_size()[0] / d.window.width
+        frame = bytes(renderer.draw(camera=view.camera, viewport=view.viewport(), read=True))
+
+        def colour(p: tuple[float, float]) -> tuple[int, ...]:
+            s = d.screen((p[0], p[1], mouth.pond.level / P + LIFT_M))
+            i = ((int(s[1] * scale) - vy) * vw + int(s[0] * scale) - vx) * 3
+            return tuple(frame[i:i + 3])
+
+        (tx, ty), h = mouth.tangent, mouth.half
+        steps = []
+        for a in (-0.6, -0.3, 0.0, 0.3, 0.6):
+            line = [(mouth.at[0] + tx * s / P - ty * a * h, mouth.at[1] + ty * s / P + tx * a * h) for s in range(-40, 41)]
+            wet = [inside(mouth.pond.water, mouth.pond.centre, (p[0] * P, p[1] * P)) for p in line]
+            k = wet.index(True)  # the first texel in the pond along this line
+            out = sorted(sum(colour(p)) for p in line[k - 4:k - 1])[1]
+            into = sorted(sum(colour(p)) for p in line[k + 1:k + 4])[1]
+            steps.append(abs(out - into))
+        assert max(steps) <= 20, ("one water surface across the shore", steps)
     finally:
         d.close()
 

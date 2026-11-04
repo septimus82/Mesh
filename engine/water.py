@@ -345,11 +345,13 @@ uniform int u_has_terrain; uniform sampler2D u_terrain; uniform vec4 u_terrain_b
 // place in the ponds' instances), the pond's level (m, as drawn). For the river's side, the pond's outline and look:
 // centre x, y and half size (m); shape, rotation (rad), the outline's c0, its waves' strength; its harmonics; its
 // shallow colour and opacity, deep colour and depth; waves, reflection, seed, ripple strength
+const int MAX_MOUTHS = """ + str(MAX_MOUTHS) + """;
 uniform int u_mouths_n;
-uniform vec4 u_mouth_at[8]; uniform vec4 u_mouth_info[8];
-uniform vec4 u_mouth_rect[8]; uniform vec4 u_mouth_shape[8]; uniform vec4 u_mouth_amp[8]; uniform vec4 u_mouth_phase[8];
-uniform vec4 u_mouth_colour[8]; uniform vec4 u_mouth_deep[8]; uniform vec4 u_mouth_look[8];
-uniform vec4 u_mouth_kind[8];  // 1 if its shore is the sculpted ground (how deep it looks: its real depth), else 0; -
+uniform vec4 u_mouth_at[MAX_MOUTHS]; uniform vec4 u_mouth_info[MAX_MOUTHS]; uniform vec4 u_mouth_rect[MAX_MOUTHS];
+uniform vec4 u_mouth_shape[MAX_MOUTHS]; uniform vec4 u_mouth_amp[MAX_MOUTHS]; uniform vec4 u_mouth_phase[MAX_MOUTHS];
+uniform vec4 u_mouth_colour[MAX_MOUTHS]; uniform vec4 u_mouth_deep[MAX_MOUTHS]; uniform vec4 u_mouth_look[MAX_MOUTHS];
+// 1 if its shore is the sculpted ground (how deep it looks: its real depth), else 0; 1 if the room's rain rings it
+uniform vec4 u_mouth_kind[MAX_MOUTHS];
 const float MOUTH_BLEND = """ + repr(MOUTH_BLEND_M) + """;  // the river takes on the pond's look over this (m)
 out vec4 f_color;
 """ + LIGHTING_GLSL + """
@@ -478,17 +480,19 @@ float inside_at(vec2 m) {
 // how far outside the edge (m; negative: in from it)
 float sd_at(vec2 m) { return outline_sd(m, v_rect.zw, v_info.y, v_shore.w, v_amp, v_phase); }
 // R4: where a river flows into this pond, how far in from that river's banks (m) a point is, fading over
-// MOUTH_BLEND into the pond (its shore is open there: no bank, no edge drawn across the river); -1 elsewhere.
-// reach: how far out its shore goes (none of it is drawn over the river's water)
-float mouth_open(vec2 q, float reach) {
+// MOUTH_BLEND in from the shore (sd: how far outside it the point is; the river blends by the same distance), so its
+// shore is open there: no bank, no edge drawn across the river; -1 elsewhere. reach: how far out its shore goes (its
+// bank isn't drawn over the river's water, near where it enters only: not a small pond's far bank)
+float mouth_open(vec2 q, float reach, float sd) {
     float open = -1.0;
     for (int i = 0; i < u_mouths_n; i++) {
         if (int(u_mouth_info[i].z + 0.5) != v_index) continue;
         vec2 d = q - u_mouth_at[i].xy, tng = u_mouth_at[i].zw;
         float along = dot(d, tng), across = abs(tng.x * d.y - tng.y * d.x), h = u_mouth_info[i].x;
         // (from a half width upstream of where its middle crosses: the shore may cross it at a slant)
-        if (across < h && along > -(reach + 0.4 + h) && along < MOUTH_BLEND)
-            open = max(open, (h - across) * (1.0 - smoothstep(0.0, MOUTH_BLEND, max(along, 0.0))));
+        float ahead = sd >= 0.0 ? h + reach + 0.4 : MOUTH_BLEND + 2.0 * h;
+        if (across < h && along > -(reach + 0.4 + h) && along < ahead)
+            open = max(open, (h - across) * (1.0 - smoothstep(0.0, MOUTH_BLEND, max(-sd, 0.0))));
     }
     return open;
 }
@@ -552,10 +556,11 @@ void main() {
     vec2 sun = u_lit == 1 ? u_sun_dir.xy : vec2(-0.45, -0.55);
     int shore = int(v_shore.x + 0.5);
     float reach = v_shore.y, inside = 0.0, edge_m = 0.0, shadow = 1.0, water_depth = -1.0;
-    float open = u_mouths_n > 0 ? mouth_open(q, reach + STONE_OVER) : -1.0;  // R4: a river's mouth (its water here)
+    float open = -1.0;  // R4: a river's mouth (its water here: mouth_open)
     if (material) {
         float sd = sd_at(m);
         if (sd > reach + (shore == 3 ? STONE_OVER : 0.0) || (sd > 0.0 && (shore == 0 || shore == 4))) discard;
+        if (u_mouths_n > 0) open = mouth_open(q, reach + STONE_OVER, sd);
         if (open >= 0.0 && sd >= 0.0) discard;  // the river's water, not this pond's bank
         if (shore == 4 && u_has_terrain == 1) {  // the sculpted ground is the shore: water only where it lies above it
             water_depth = v_world.z - LIFT - ground_at(q);
@@ -603,8 +608,7 @@ void main() {
         edge_m = open >= 0.0 ? max(-sd, open) + kink * kink * 0.075 : -sd;
     } else {
         inside = inside_at(m);
-        if (inside < 0.0) discard;
-        if (open >= 0.0) inside = max(inside, open / min(v_rect.z, v_rect.w));
+        if (inside < 0.0) discard;  // (rivers flow only into the newer looks: no mouth here)
         edge_m = inside * min(v_rect.z, v_rect.w);  // roughly how far in from the edge (m)
     }
     float t = u_time, seed = v_look.z;
@@ -676,7 +680,7 @@ void main() {
 RIVER_VS = """
 #version 330
 uniform mat4 u_vp;
-uniform vec4 u_mouth_info[8];
+uniform vec4 u_mouth_info[""" + str(MAX_MOUTHS) + """];
 const float MOUTH_BLEND = """ + repr(MOUTH_BLEND_M) + """;
 in vec3 in_pos; in vec2 in_tangent; in vec4 in_flow; in vec4 in_colour; in vec4 in_deep; in vec4 in_look;
 in vec4 in_ends;
@@ -755,9 +759,9 @@ void main() {
     }
     float splash = 0.0;
     float rings = 0.0;
-    if (u_rain > 0.0 && v_look.w > 0.5) {  // (the pond's own rain rings towards it)
-        rings = blend < 1.0 ? rain_rings(q, v_world.z, t, seed) * (1.0 - blend) : 0.0;
-        if (blend > 0.0) rings += rain_rings(q, v_world.z, t, pond_look.z) * blend;
+    if (u_rain > 0.0) {  // (towards the pond, the pond's own rain rings, if the rain rings it)
+        if (blend < 1.0 && v_look.w > 0.5) rings = rain_rings(q, v_world.z, t, seed) * (1.0 - blend);
+        if (blend > 0.0 && u_mouth_kind[slot].y > 0.5) rings += rain_rings(q, v_world.z, t, pond_look.z) * blend;
     }
     step_rings(q, t, rings, splash);
     rings *= mix(1.0, pond_look.w, blend);
@@ -827,6 +831,7 @@ class WaterLayer:
         self.ponds: tuple[Any, ...] = ()  # the ponds as rivers' mouths see them (engine.hd2d.river.Pond)
         self.mouths: list[Any] = []  # R4: the rivers flowing into ponds, by slot (engine.hd2d.river.Mouth)
         self.mouth_problems: dict[str, str] = {}  # rivers with mouth "auto" that can't join a pond now, and why
+        self._mouth_columns: dict[str, list[float]] = {}  # their uniforms (_columns), set on both programs each draw
         try:
             self.program = ctx.program(vertex_shader=VS, fragment_shader=FS)
             self.quad = ctx.buffer(data=array("f", [-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0]).tobytes())
@@ -850,11 +855,12 @@ class WaterLayer:
                          math.radians(w.rotation), c0, *amp, *phase))
         key = tuple(rows)
         if key != self._key:  # (as rivers' mouths see them: the same numbers)
-            from engine.hd2d.river import Pond  # noqa: PLC0415
+            from engine.hd2d.river import Pond, gated  # noqa: PLC0415
 
             self._rows = rows
             self.ponds = tuple(Pond(str(i), (row[0] * PX_PER_M, row[1] * PX_PER_M), (row[4] - LIFT_M) * PX_PER_M,
-                                    body.water) for i, (row, body) in enumerate(zip(rows, bodies)))
+                                    body.water, gated(getattr(body.entity, "mesh_entity_data", None)))
+                               for i, (row, body) in enumerate(zip(rows, bodies)))
         if key == self._key:
             return
         data = array("f", [v for row in rows for v in row]).tobytes() if rows else b""
@@ -916,6 +922,7 @@ class WaterLayer:
         half = max(data[7::f])  # (a bank is within a half width of its sample: the box needs no more)
         self.river_box = (min(xs) - half, min(ys) - half, min(zs), max(xs) + half, max(ys) + half, max(zs))
         self.mouths, self.mouth_problems = list(joined.values()), problems
+        self._mouth_columns = self._columns()
         self.rivers, self._river_key = rivers, (rivers, self.ponds)  # recorded only once made (a failure tries again)
 
     def _free_rivers(self) -> None:
@@ -925,7 +932,7 @@ class WaterLayer:
             obj.delete()
         self.river_geometry = self.river_buffers = self.river_box = None
         self.rivers, self.river_count, self._river_key = (), 0, None
-        self.mouths, self.mouth_problems = [], {}
+        self.mouths, self.mouth_problems, self._mouth_columns = [], {}, {}
 
     def in_view(self, vp: list[list[float]]) -> bool:
         """Whether any water surface is in the picture (its corners' clip-space box overlaps the screen): with none,
@@ -1045,8 +1052,13 @@ class WaterLayer:
         """R4: the rivers flowing into ponds (``self.mouths``), for both programs (the GLSL compiler may leave out
         what one of them doesn't read: set safely)."""
         prog.set_uniform_safe("u_mouths_n", len(self.mouths))
+        for name, flat in self._mouth_columns.items():
+            prog.set_uniform_array_safe(f"u_mouth_{name}", flat)
+
+    def _columns(self) -> dict[str, list[float]]:
+        """The mouths' uniform arrays (MAX_MOUTHS vec4s each, padded), from their ponds' instance rows."""
         if not self.mouths:
-            return
+            return {}
         columns: dict[str, list[float]] = {name: [] for name in ("at", "info", "rect", "shape", "amp", "phase", "colour",
                                                                   "deep", "look", "kind")}
         for mouth in self.mouths:
@@ -1058,10 +1070,9 @@ class WaterLayer:
                                  ("phase", row[28:32]), ("colour", row[8:12]), ("deep", row[16:20]),
                                  ("look", row[12:16]),
                                  ("kind", (1.0 if row[6] > 1.5 and row[20] == SHORES.index("terrain") else 0.0,
-                                           0.0, 0.0, 0.0))):
+                                           row[7], 0.0, 0.0))):
                 columns[name].extend(values)
-        for name, flat in columns.items():
-            prog.set_uniform_array_safe(f"u_mouth_{name}", flat + [0.0] * (4 * MAX_MOUTHS - len(flat)))
+        return {name: flat + [0.0] * (4 * MAX_MOUTHS - len(flat)) for name, flat in columns.items()}
 
     def draw_3d(self, vp: tuple[float, ...], eye: tuple[float, float, float], fbo: Any, *, time: float,
                 steps: list[tuple[float, float, float]], rain: float, shelter: Any,

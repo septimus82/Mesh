@@ -28,8 +28,13 @@ POND = {"x": 620.0, "y": 1240.0, "width": 448.0, "height": 288.0}  # px: a natur
 DEPTH_M = 0.3  # the carved bed: wadeable all along
 
 
+# a course entering the pond at a slant (from the north-east: about 34 degrees off the shore's normal)
+SLANT = [[1000.0, 700.0, 96.0, 0.0], [880.0, 900.0, 96.0, 0.0], [740.0, 1080.0, 96.0, 0.0],
+         [640.0, 1230.0, 96.0, 0.0]]
+
+
 def make_project(out: Path, name: str, *, mouth: bool = True, carved: bool = False,
-                 ends: str = "round_source") -> Path:
+                 ends: str = "round_source", course: list[list[float]] | None = None) -> Path:
     from engine import project_ops as ops
 
     project: Path = study.new_project(out, name, stage6a=False)
@@ -39,9 +44,10 @@ def make_project(out: Path, name: str, *, mouth: bool = True, carved: bool = Fal
     hd2d["structures"] = [s for s in hd2d["structures"] if not s["id"].startswith("path_north")]
     scene, pond = ops.place_blank(scene, "start", "Pond", POND["x"], POND["y"])
     scene = ops.set_water(scene, pond, preset="natural_pond", width=POND["width"], height=POND["height"])
-    scene = ops.add_river(scene, "brook", COURSE, ends=ends, **({"mouth": "auto"} if mouth else {}))
+    course = course or COURSE
+    scene = ops.add_river(scene, "brook", course, ends=ends, **({"mouth": "auto"} if mouth else {}))
     if carved:
-        scene = ops.carve_river_bed(scene, "brook", depths=[DEPTH_M] * len(COURSE))
+        scene = ops.carve_river_bed(scene, "brook", depths=[DEPTH_M] * len(course))
     path.write_text(json.dumps(scene, indent=2) + "\n", encoding="utf-8")
     return project
 
