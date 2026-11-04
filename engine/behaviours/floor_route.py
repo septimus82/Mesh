@@ -69,6 +69,7 @@ class FloorRouteBehaviour(Behaviour):
         self._ways: list[tuple[float, float, float]] | None = None  # out of deep water: where to, nearest first
         self._best = math.inf  # the nearest it has come to the way out it is making for (m)
         self._retry = 0.0  # stranded: until it looks for a way out again (s)
+        self._low = math.inf  # the least far into blocking water it has come, walking out (``World.blocked``)
         self._replans = 0  # routes planned again in a row without reaching a point
         self._said_stuck = False  # (said once)
 
@@ -99,7 +100,7 @@ class FloorRouteBehaviour(Behaviour):
                     self._ways, self._best, self._stuck = world.ways_out(fx / PX, fy / PX, z), math.inf, 0.0
                 self._walk_out(world, fx, fy, z, dt)
                 return
-            self._ways, sprite.mesh_hd2d_stranded = None, None  # out: on with its route
+            self._ways, sprite.mesh_hd2d_stranded, self._low = None, None, math.inf  # out: on with its route
         if not self.path:
             goal = self.route[self.index]
             self.path = world.path((fx / PX, fy / PX, z), (goal[0] / PX, goal[1] / PX, goal[2] / PX))
@@ -107,8 +108,9 @@ class FloorRouteBehaviour(Behaviour):
                 self._ways, self._best, self._stuck = world.ways_out(fx / PX, fy / PX, z), math.inf, 0.0
                 self._walk_out(world, fx, fy, z, dt)  # (it can't stand here: deep or blocking water)
                 return
-            if not self.path:  # unreachable from here: try the next point after a pause
-                self._arrive()
+            if not self.path:  # unreachable from here: try the next point after a pause (a second at least: never
+                self._arrive()  # planning every frame)
+                self._waiting = max(self._waiting, 1.0)
                 return
         tx, ty = self.path[0][0] * PX, self.path[0][1] * PX
         dist = math.hypot(tx - fx, ty - fy)
@@ -146,7 +148,8 @@ class FloorRouteBehaviour(Behaviour):
         return max(NAV_HALF[0], box.w / 2 / PX), max(NAV_HALF[1], box.h / 2 / PX)
 
     def _walk_out(self, world: Hd2dWorld, fx: float, fy: float, z: float, dt: float) -> None:
-        """A step towards the nearest way out of the water it can't stand in; stranded when none is left."""
+        """A step out of the water it can't stand in: in blocking water down its steepest fall, else towards the
+        nearest way out (``World.ways_out``) still left; stranded when none is (or it makes no headway out)."""
         sprite: Any = self.entity
         if not self._ways:
             if not getattr(sprite, "mesh_hd2d_stranded", None):
@@ -161,6 +164,33 @@ class FloorRouteBehaviour(Behaviour):
                                     source_entity_id=None, source_behaviour="FloorRoute")
             self._ways, self._retry = None, RETRY_S
             return
+        solids = getattr(getattr(self.window, "scene_controller", None), "solid_sprites", None)
+        held = world.blocked(fx / PX, fy / PX, z)
+        if held > 0.0:
+            # (in blocking water: whichever way its ways out lie, down the water's steepest fall, the quickest way
+            # out of it, as the world lets it go (of sixteen ways, the steepest first). Headway only while that takes
+            # it further out than it has yet been, by a twentieth of each step at least: never back and forth over
+            # its edge, and stranded if that stops for STUCK_S)
+            r = self.speed * dt / PX
+            before = (sprite.center_x, sprite.center_y)
+            falls = sorted((world.blocked(fx / PX + math.cos(i * math.tau / 16) * r,
+                                          fy / PX + math.sin(i * math.tau / 16) * r, z), i) for i in range(16))
+            headway = False
+            for fall, i in falls:
+                if fall >= held:
+                    break
+                a = i * math.tau / 16
+                world.move(sprite, (math.cos(a) * self.speed * dt, math.sin(a) * self.speed * dt), solids)
+                if (sprite.center_x, sprite.center_y) != before:
+                    nx, ny = self._feet()
+                    after = world.blocked(nx / PX, ny / PX, z)
+                    if after < min(held, self._low) - 0.05 * r:
+                        self._low, headway = after, True
+                    break
+            self._stuck = 0.0 if headway else self._stuck + dt
+            if self._stuck > STUCK_S:
+                self._ways, self._stuck = [], 0.0  # (stranded: said next frame)
+            return
         tx, ty, _tz = self._ways[0]
         dist = math.hypot(tx * PX - fx, ty * PX - fy)
         if dist + 0.5 < self._best:
@@ -172,9 +202,7 @@ class FloorRouteBehaviour(Behaviour):
             self._best, self._stuck = math.inf, 0.0
             return
         step = min(self.speed * dt, dist)
-        scene = getattr(self.window, "scene_controller", None)
-        world.move(sprite, ((tx * PX - fx) / dist * step, (ty * PX - fy) / dist * step),
-                   getattr(scene, "solid_sprites", None))
+        world.move(sprite, ((tx * PX - fx) / dist * step, (ty * PX - fy) / dist * step), solids)
 
     def _arrive(self) -> None:
         self.path = []

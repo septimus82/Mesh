@@ -170,10 +170,12 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
 
   In every case a bridge's deck over the water stays dry. A character put somewhere it can't stand (a start point
   in deep water, a teleport) can still walk out the shallower way, never deeper: in blocked water, only outwards
-  (never across it, nor along it). Characters on a **FloorRoute** walk out to the nearest place they can stand, trying the nearest in
-  each direction. If there's none they stay put, and the log and a `stranded` event say so once; they look again
-  every few seconds. A character whose feet box is too wide for the places it could stand (the template's person
-  picture is 2.4 m wide) may be stranded where a narrower one would get out.
+  towards its nearest edge (never across it, nor along it). Characters on a **FloorRoute**
+  walk out to the nearest place they can stand, trying the nearest in each direction. If there's none they stay put,
+  and the log and a `stranded` event say so once; they look again every few seconds. A route point they can't reach
+  is tried again after a second. A character whose feet box is too wide for the places it could stand (the
+  template's person picture is 2.4 m wide) may be stranded where a narrower one would get out, and a sculpted hole
+  too steep to climb holds anyone, water or not.
 - **Ponds** have the same choice in their inspector, under **Walking into it**. **Auto** keeps their **Walk through
   it** setting. In a 3D room that walks its floors in 3D (one with sculpted ground, rivers, or models with
   floors), a pond that blocks (Block, or Auto with Walk through it off) blocks exactly where its water is drawn.

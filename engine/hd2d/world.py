@@ -430,22 +430,44 @@ class World:
                               for j in (-1, 0, 1)) + ESCAPE_SLACK
                     sprite.mesh_hd2d_deep_cap = cap
                 deep = cap
+        wanted = (dx, dy)
+        held = self.blocked(x, y, z) if self._wet else -1e9
+        if held > 0.0:  # in blocking water: only steps that take it out (not along it, nor round it), by this rule
+            deep = 1e9  # alone (its footprint's corners over the water's ridge, or over a deep hole, don't hold it)
         if dx and self.stand(x + dx / PIXELS_PER_METRE, y, z, hw, hh, deep) is None:
             dx = 0.0
         if dy and self.stand(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE, z, hw, hh, deep) is None:
             dy = 0.0
-        if self._wet and (dx or dy):  # in blocking water: only steps that take it out (not along it, nor round it)
-            held = self.blocked(x, y, z)
-            if held > 0.0:
-                def outwards(nx: float, ny: float, moved: float) -> bool:
-                    there = self.blocked(nx, ny, z)
-                    return there <= 0.0 or there < held - BLOCK_OUT * moved
+        if held > 0.0 and any(wanted):
+            # (a step must take it out by BLOCK_OUT of its length, or half the steepest fall there is here where
+            # that is gentler, or at all where that is gentler than BLOCK_OUT: where two blocking waters meet, the
+            # way out of both may fall slowly, and small steps more slowly still, so it is never held there)
+            probe = max(0.1, math.hypot(dx, dy) / PIXELS_PER_METRE)
+            fall, best = max(((held - self.blocked(x + math.cos(a) * probe, y + math.sin(a) * probe, z)) / probe, a)
+                             for a in (i * math.tau / 16 for i in range(16)))
+            need = min(BLOCK_OUT, 0.5 * fall) if fall >= BLOCK_OUT else 0.0
 
-                if dx and not outwards(x + dx / PIXELS_PER_METRE, y, abs(dx) / PIXELS_PER_METRE):
-                    dx = 0.0
-                if dy and not outwards(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE,
-                                       math.hypot(dx, dy) / PIXELS_PER_METRE):
+            def outwards(nx: float, ny: float, moved: float) -> bool:
+                there = self.blocked(nx, ny, z)
+                return there <= 0.0 or there < held - max(need * moved, 1e-6)
+
+            # (the whole step first: a diagonal way out, along a crease, may take it out where neither axis alone
+            # does; else as much of it, one axis, as does)
+            if not outwards(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE,
+                            math.hypot(dx, dy) / PIXELS_PER_METRE):
+                if dx and outwards(x + dx / PIXELS_PER_METRE, y, abs(dx) / PIXELS_PER_METRE):
                     dy = 0.0
+                elif dy and outwards(x, y + dy / PIXELS_PER_METRE, abs(dy) / PIXELS_PER_METRE):
+                    dx = 0.0
+                else:  # (pushed within 60 degrees of its steepest way out, along a crease: slid down that)
+                    along = wanted[0] * math.cos(best) + wanted[1] * math.sin(best)
+                    sx, sy = math.cos(best) * along, math.sin(best) * along
+                    dx = dy = 0.0
+                    if (fall > 0.0 and along > 0.5 * math.hypot(*wanted)
+                            and outwards(x + sx / PIXELS_PER_METRE, y + sy / PIXELS_PER_METRE, along / PIXELS_PER_METRE)
+                            and self.stand(x + sx / PIXELS_PER_METRE, y + sy / PIXELS_PER_METRE, z, hw, hh, deep)
+                            is not None):
+                        dx, dy = sx, sy
         if not dx and not dy:
             self._settle(sprite, x, y, z, hw, hh, deep)
             return

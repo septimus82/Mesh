@@ -395,3 +395,154 @@ def test_an_npc_put_just_inside_a_blocking_pond_walks_out_and_on() -> None:
             route.update(1 / 60)
         assert world.blocked(npc.center_x / P, (npc.center_y - 24) / P, 0.0) <= 0.0, ("out", x, y)
         assert not getattr(npc, "mesh_hd2d_stranded", None), ("not stranded", x, y)
+
+
+def test_where_two_blocking_ponds_meet_no_one_is_held_and_an_npc_past_a_river_s_middle_walks_out() -> None:
+    """Re-review of 1eb0144: where the larger of two blocking waters falls too gently for BLOCK_OUT (Lakeside's lake
+    and its inlet), someone put there couldn't move; an NPC just past a blocked river's middle tried only the four
+    nearest ways out, all across its middle."""
+    import math
+
+    from engine.physics_runtime import _sprite_to_aabb
+
+    scene = _flat_room(passable="block")
+    scene, second = ops.place_blank(scene, "start", "Inlet", 1060.0, 520.0)
+    scene = ops.set_water(scene, second, preset="natural_pond", shape="ellipse", width=420.0, height=120.0,
+                          rotation=25.0, passable="block")
+    ops.find_entity(scene, second)["elevation"] = -8.0  # (its own level: the two waters' terms differ)
+    world = _world(scene)
+    held = []
+    for sx in range(860, 1200, 20):
+        for sy in range(440, 620, 20):
+            if world.blocked(sx / P, sy / P, 0.0) <= 0.0:
+                continue
+            w = _Walker(center_x=float(sx), center_y=sy + 18.0, width=32.0, height=48.0, scale_x=1.0,
+                        mesh_entity_data={"elevation": 0.0, "components": {"collider": {"kind": "box", "auto": True}}})
+            for _ in range(400):  # (each frame the way its water falls fastest, as a player would find it)
+                box = _sprite_to_aabb(w)  # (its feet box's middle: where the world measures it)
+                x, y = box.x / P, box.y / P
+                best = min((world.blocked(x + math.cos(a) * 0.06, y + math.sin(a) * 0.06, 0.0), a)
+                           for a in (i * math.tau / 16 for i in range(16)))[1]
+                world.move(w, (2.0 * math.cos(best), 2.0 * math.sin(best)), [])
+                box = _sprite_to_aabb(w)
+                if world.blocked(box.x / P, box.y / P, 0.0) <= 0.0:
+                    break
+            else:
+                held.append((sx, sy))
+    assert not held, ("held where the two waters meet", held[:5], len(held))
+    river_world = _world(_room(river_args={"passable": "block"}))
+    npc, route = _npc(river_world, 200.0, 599.0, [[200.0, 800.0, 0.0], [300.0, 800.0, 0.0]])
+    for _ in range(60 * 20):
+        route.update(1 / 60)
+    assert not getattr(npc, "mesh_hd2d_stranded", None), "it walks out (the near bank, behind it)"
+    box = _sprite_to_aabb(npc)
+    assert river_world.blocked(box.x / P, box.y / P, npc.mesh_entity_data["elevation"] / P) <= 0
+
+
+def _gets_out(world: World, x_px: float, y_px: float, frames: int = 500) -> bool:
+    """Whether some one of eight steady directions (as a player holds one) takes one put at (x, y) out."""
+    import math
+
+    from engine.physics_runtime import _sprite_to_aabb
+
+    z = _floor(world, x_px, y_px)
+    for k in range(8):
+        d = (2.0 * math.cos(k * math.pi / 4), 2.0 * math.sin(k * math.pi / 4))
+        w = _Walker(center_x=float(x_px), center_y=y_px + 18.0, width=32.0, height=48.0, scale_x=1.0,
+                    mesh_entity_data={"elevation": z * P,
+                                      "components": {"collider": {"kind": "box", "auto": True}}})
+        last = None
+        for frame in range(frames):
+            world.move(w, d, [])
+            if frame % 10 == 9:  # (out, or stalled: no need to push on)
+                box = _sprite_to_aabb(w)
+                if world.blocked(box.x / P, box.y / P, w.mesh_entity_data["elevation"] / P) <= 0.0:
+                    return True
+                if (box.x, box.y) == last:
+                    break
+                last = (box.x, box.y)
+    return False
+
+
+def test_out_of_carved_narrow_and_uneven_blocking_water_some_way_always_leads() -> None:
+    """Re-review of 1eb0144: in a carved blocked river, a narrow curved one and a terrain-shored pond with holes in
+    its bed, the depth cap held one put past the river's middle (or over a hole) where only stepping out was
+    allowed: no direction got them out. Here, from each of the starts that were held, one does."""
+    carved = _world(_room(river_args={"passable": "block"}))
+    scene: dict[str, Any] = {"entities": [], "settings": {"world_width": 1600, "world_height": 1200, "hd2d": {
+        "ground": {"texture": "assets/textures/grass.png", "from": [0, 0], "to": [1600, 1200]}}}}
+    scene = ops.add_river(scene, "n", [[4.0, 600.0, 24.0, -8.0], [700.0, 640.0, 24.0, -8.0],
+                                       [1596.0, 560.0, 24.0, -8.0]], passable="block")
+    narrow = _world(ops.carve_river_bed(scene, "n", depths=[0.3, 0.3, 0.3]))
+    s = _room(pond={"walkable": False, "shore": "terrain"})
+    ops.find_entity(s, ops.entities(s)[0]["id"])["elevation"] = -4.0
+    s = ops.sculpt_terrain_stroke(s, "flatten", [[1200, 300, 1.0]], radius=80, target=-12.0)
+    s = ops.sculpt_terrain_stroke(s, "flatten", [[1080, 300, 1.0]] * 4, radius=24, target=-40.0)  # (holes, an islet)
+    s = ops.sculpt_terrain_stroke(s, "flatten", [[1250, 320, 1.0]] * 4, radius=20, target=-2.0)
+    s = ops.sculpt_terrain_stroke(s, "flatten", [[1300, 260, 1.0]] * 4, radius=30, target=-30.0)
+    uneven = _world(s)
+    held = []
+    for name, world, starts in (("carved", carved, ((160, 600), (200, 600), (200, 606), (520, 606))),
+                                ("narrow", narrow, ((100, 606), (550, 636), (580, 642), (610, 636))),
+                                ("uneven", uneven, ((1198, 296), (1198, 304), (1206, 296)))):  # (not the west hole: a pit too
+                                # steep to climb out of with no water at all)
+        for sx, sy in starts:
+            assert world.blocked(sx / P, sy / P, _floor(world, sx, sy)) > 0.0, (name, sx, sy, "starts in it")
+            if not _gets_out(world, sx, sy):
+                held.append((name, sx, sy))
+    assert not held, held
+
+
+def test_an_npc_whose_route_point_can_t_be_reached_plans_again_once_a_second_not_every_frame(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Re-review of 1eb0144: with no wait set, a point it can't reach (in blocking water) was planned for again every
+    frame."""
+    scene = _room()
+    scene, pid = ops.place_blank(scene, "start", "Big lake", 800.0, 300.0)
+    scene = ops.set_water(scene, pid, preset="natural_pond", shape="ellipse", width=900.0, height=560.0,
+                          passable="block")
+    world = _world(scene)
+    npc, route = _npc(world, 200.0, 800.0, [[800.0, 300.0, 0.0]])  # (dry where it stands; its point in the lake)
+    calls = {"path": 0}
+    real = world.path
+
+    def counted(*args: Any, **kwargs: Any) -> Any:
+        calls["path"] += 1
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(world, "path", counted)
+    for _ in range(600):
+        route.update(1 / 60)
+    assert 1 <= calls["path"] <= 11, ("about once a second over 10 s", calls["path"])
+    assert not getattr(npc, "mesh_hd2d_stranded", None), "it can stand: it isn't stranded, its point is just out of reach"
+
+
+def test_where_a_lake_and_its_inlet_overlap_players_and_npcs_get_out_down_the_crease() -> None:
+    """Re-review of 1eb0144 (Lakeside's lake and inlet, as built there): where two blocking waters overlap with their
+    edges facing nearly opposite ways, the way out of both is a narrow crease. A player pushing roughly that way was
+    held (each step slightly off it refused), and an NPC making for its listed ways out crept, gave each up and was
+    reported stranded though out was there."""
+    from engine.physics_runtime import _sprite_to_aabb
+
+    scene: dict[str, Any] = {"entities": [], "settings": {"world_width": 2000, "world_height": 1400, "hd2d": {
+        "ground": {"texture": "assets/textures/grass.png", "from": [0, 0], "to": [2000, 1400]}}}}
+    scene, lake = ops.place_blank(scene, "start", "Lake", 1408.0, 992.0)
+    scene = ops.set_water(scene, lake, preset="natural_pond", shape="natural", width=460.0, height=330.0,
+                          passable="block")
+    scene, inlet = ops.place_blank(scene, "start", "Inlet", 1168.0, 880.0)
+    scene = ops.set_water(scene, inlet, preset="natural_pond", shape="natural", width=330.0, height=96.0,
+                          rotation=25.0, passable="block")
+    world = _world(scene)
+    starts = ((1256, 922), (1262, 928), (1268, 934), (1250, 916))
+    for sx, sy in starts:
+        assert world.blocked(sx / P, sy / P, 0.0) > 0.0, (sx, sy, "starts in both")
+    assert [s for s in starts if not _gets_out(world, *s)] == [], "a player gets out"
+    stranded = []
+    for sx, sy in starts:
+        npc, route = _npc(world, float(sx), float(sy), [[300.0, 300.0, 0.0], [400.0, 300.0, 0.0]])
+        for _ in range(60 * 12):
+            route.update(1 / 60)
+        box = _sprite_to_aabb(npc)
+        if getattr(npc, "mesh_hd2d_stranded", None) or world.blocked(box.x / P, box.y / P, 0.0) > 0.0:
+            stranded.append((sx, sy))
+    assert stranded == [], "an NPC walks out"
