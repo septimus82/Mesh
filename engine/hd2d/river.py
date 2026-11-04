@@ -62,7 +62,7 @@ MAX_TOTAL_M = 2048.0  # all of a room's rivers together: ~0.2 s to check, ~1.75 
 BOUNDS_TOLERANCE_PX = 0.5  # (a bank exactly on the ground's edge, stored rounded, is on it)
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
 KEYS = {"id", "points", "flow", "colour", "deep_colour", "opacity", "depth", "waves", "reflection", "rain_ripples",
-        "mouth", "ends"}
+        "mouth", "ends", "passable", "wade_depth"}
 MOUTHS = ("none", "auto")  # R4: "auto": its last point lies in a pond, which it flows into (``join``)
 # R4: which of its free ends (its source; its last point, unless it flows into a pond) finish in a half circle (a
 # river running off the room's edge keeps that end square: no gap of dry ground beside it there). Older: square
@@ -93,6 +93,8 @@ class River:
     rain_ripples: bool
     mouth: str = "none"  # MOUTHS
     ends: str = "square"  # ENDS
+    passable: str = "auto"  # R4B (engine.water.PASSABLE): "auto" waded up to half a metre deep, as before
+    wade_depth: float = water_mod.WADE_DEPTH_DEFAULT  # m: the deepest it is waded, if passable is "wade"
 
 
 @dataclass(frozen=True)
@@ -158,11 +160,15 @@ def parse_river(raw: Any, where: str = "river") -> River:
         raise RiverError(f"{where}.mouth must be one of {', '.join(MOUTHS)} (got {mouth!r})")
     if ends not in ENDS:
         raise RiverError(f"{where}.ends must be one of {', '.join(ENDS)} (got {ends!r})")
+    passable = raw.get("passable", "auto")
+    if passable not in water_mod.PASSABLE:
+        raise RiverError(f"{where}.passable must be one of {', '.join(water_mod.PASSABLE)} (got {passable!r})")
+    wade = _num(raw.get("wade_depth", water_mod.WADE_DEPTH_DEFAULT), f"{where}.wade_depth", *water_mod.WADE_DEPTH_M)
     return River(rid, tuple(out), _num(look["flow"], f"{where}.flow", 0.0, FLOW_MAX),
                  _colour(look["colour"], f"{where}.colour"), _colour(look["deep_colour"], f"{where}.deep_colour"),
                  _num(look["opacity"], f"{where}.opacity", 0.05, 1.0), _num(look["depth"], f"{where}.depth", 0.0, 1.0),
                  _num(look["waves"], f"{where}.waves", 0.0, 1.0), _num(look["reflection"], f"{where}.reflection", 0.0, 1.0),
-                 rain, mouth, ends)
+                 rain, mouth, ends, passable, wade)
 
 
 def parse_rivers(raw: Any, bounds: tuple[float, float, float, float] | None = None) -> tuple[River, ...]:
@@ -226,6 +232,10 @@ def to_json(river: River) -> dict[str, Any]:
         out["mouth"] = river.mouth
     if river.ends != "square":
         out["ends"] = river.ends
+    if river.passable != "auto":
+        out["passable"] = river.passable
+    if river.wade_depth != water_mod.WADE_DEPTH_DEFAULT:
+        out["wade_depth"] = round(river.wade_depth, 3)
     return out
 
 

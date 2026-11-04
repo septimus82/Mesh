@@ -50,6 +50,10 @@ class WaterSurface(Behaviour):
         "reflection": ParamDef(float, default=-1.0, description="How much it mirrors (0-1; -1: the preset's)"),
         "rain_ripples": ParamDef(bool, default=True, description="The room's rain rings it"),
         "walkable": ParamDef(bool, default=True, description="Characters walk through it (false: it blocks)"),
+        "passable": ParamDef(str, default="", description="How characters go into it: auto (by walkable), wade (up to "
+                             "wade_depth), block (empty: auto)"),
+        "wade_depth": ParamDef(float, default=-1.0, description="The deepest it is waded, m (0.1-1.5), if passable is "
+                               "wade (-1: 1 m)"),
         "step_sound": ParamDef(str, default="", description="A sound played on each step through it"),
         "target_tags": ParamDef(list, default=[], description="Tags of the characters whose steps splash (player)"),
     }

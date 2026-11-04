@@ -4,20 +4,29 @@ bridges (Milestone 16 Stage 3).
 Each leg is planned on the scene's navigation grid (``engine.hd2d.world.World.path``) and walked with the same
 height-aware movement as the player, so it climbs only where floors connect and never walks through a wall. In a
 2D scene (no HD-2D floors) it does nothing.
+
+Put somewhere it can't stand (deep or blocking water: a start point there, a river carved under it, a teleport;
+#461 R4B), it first walks out: towards the nearest places it could stand (``World.ways_out``, nearest first, the
+same each time), with the same movement, which never takes it deeper. A way out it makes no headway towards for
+STUCK_S is given up for the next; with none left it stays where it is, stranded: said once in the log and as a
+``stranded`` gameplay event (``mesh_hd2d_stranded`` on the character), until it can stand again (moved by an event).
 """
 
 from __future__ import annotations
 
+import logging
 import math
 from typing import Any
 
+from engine.hd2d.world import NAV_HALF, elevation_of
 from engine.hd2d.world import World as Hd2dWorld
-from engine.hd2d.world import elevation_of
 
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
 PX = 32.0  # px per metre (engine.hd2d.settings.PIXELS_PER_METRE)
+STUCK_S = 1.0  # s: no headway towards a way out for this long: the next one
+logger = logging.getLogger(__name__)
 
 
 @register_behaviour(
@@ -52,6 +61,8 @@ class FloorRouteBehaviour(Behaviour):
         self.path: list[tuple[float, float, float]] = []  # this leg's waypoints (metres)
         self._waiting = 0.0
         self._stuck = 0.0
+        self._ways: list[tuple[float, float, float]] | None = None  # out of deep water: where to, nearest first
+        self._best = math.inf  # the nearest it has come to the way out it is making for (m)
 
     def _feet(self) -> tuple[float, float]:
         from engine.physics_runtime import _sprite_to_aabb  # noqa: PLC0415
@@ -69,9 +80,19 @@ class FloorRouteBehaviour(Behaviour):
             self._waiting -= dt
             return
         fx, fy = self._feet()
+        z = elevation_of(sprite)
+        if self._ways is not None or getattr(sprite, "mesh_hd2d_stranded", None):
+            if world.stand(fx / PX, fy / PX, z, *NAV_HALF) is None:
+                self._walk_out(world, fx, fy, z, dt)
+                return
+            self._ways, sprite.mesh_hd2d_stranded = None, None  # out: on with its route
         if not self.path:
             goal = self.route[self.index]
-            self.path = world.path((fx / PX, fy / PX, elevation_of(sprite)), (goal[0] / PX, goal[1] / PX, goal[2] / PX))
+            self.path = world.path((fx / PX, fy / PX, z), (goal[0] / PX, goal[1] / PX, goal[2] / PX))
+            if not self.path and world.stand(fx / PX, fy / PX, z, *NAV_HALF) is None:
+                self._ways, self._best, self._stuck = world.ways_out(fx / PX, fy / PX, z), math.inf, 0.0
+                self._walk_out(world, fx, fy, z, dt)  # (it can't stand here: deep or blocking water)
+                return
             if not self.path:  # unreachable from here: try the next point after a pause
                 self._arrive()
                 return
@@ -92,6 +113,37 @@ class FloorRouteBehaviour(Behaviour):
         self._stuck = self._stuck + dt if moved < step * 0.25 else 0.0
         if self._stuck > 0.75:  # blocked (someone in the way): plan again
             self.path, self._stuck = [], 0.0
+
+    def _walk_out(self, world: Hd2dWorld, fx: float, fy: float, z: float, dt: float) -> None:
+        """A step towards the nearest way out of the water it can't stand in; stranded when none is left."""
+        sprite: Any = self.entity
+        if not self._ways:
+            if not getattr(sprite, "mesh_hd2d_stranded", None):
+                where = f"({fx:.0f}, {fy:.0f}) px"
+                sprite.mesh_hd2d_stranded = f"can't walk out of the water at {where}"
+                logger.warning("[Mesh][HD-2D] %s is stranded: it can't walk out of the water at %s",
+                               getattr(sprite, "mesh_name", "") or "a character", where)
+                from engine.event_emit import emit_gameplay_event  # noqa: PLC0415
+
+                emit_gameplay_event(self.window, "stranded", {"who": str(getattr(sprite, "mesh_name", "") or ""),
+                                                              "x": round(fx, 1), "y": round(fy, 1)},
+                                    source_entity_id=None, source_behaviour="FloorRoute")
+            self._ways = None
+            return
+        tx, ty, _tz = self._ways[0]
+        dist = math.hypot(tx * PX - fx, ty * PX - fy)
+        if dist + 0.5 < self._best:
+            self._best, self._stuck = dist, 0.0
+        else:
+            self._stuck += dt
+        if self._stuck > STUCK_S or dist <= 1.0:  # (no headway: the next way out; reached: try standing again)
+            self._ways.pop(0)
+            self._best, self._stuck = math.inf, 0.0
+            return
+        step = min(self.speed * dt, dist)
+        scene = getattr(self.window, "scene_controller", None)
+        world.move(sprite, ((tx * PX - fx) / dist * step, (ty * PX - fy) / dist * step),
+                   getattr(scene, "solid_sprites", None))
 
     def _arrive(self) -> None:
         self.path = []

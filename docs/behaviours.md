@@ -1797,6 +1797,8 @@ A puddle or pond: drawn as water, rippled by rain and footsteps (Studio: the Wat
 | reflection | How much it mirrors (0-1; -1: the preset's) | float | -1.0 |
 | rain_ripples | The room's rain rings it | bool | True |
 | walkable | Characters walk through it (false: it blocks) | bool | True |
+| passable | How characters go into it: auto (by walkable), wade (up to wade_depth), block (empty: auto) | string | - |
+| wade_depth | The deepest it is waded, m (0.1-1.5), if passable is wade (-1: 1 m) | float | -1.0 |
 | step_sound | A sound played on each step through it | string | - |
 | target_tags | Tags of the characters whose steps splash (player) | array | [] |
 

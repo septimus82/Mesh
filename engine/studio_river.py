@@ -621,6 +621,18 @@ class RiverTool:
                                  "square (right where it runs off the room), or round (a half circle; carving makes "
                                  "a bowl to match) at its source, its end or both", width=half))
             box.add(row)
+            passable = str(found.get("passable", "auto"))
+            row = _row()  # R4B: how characters may go into its water (whatever it looks like or how deep it's carved)
+            for kind, title, tip in (("auto", "Auto", "Waded up to half a metre deep; deeper stops them (as before)"),
+                                     ("wade", "Wade", "Waded up to the depth below, however deep it looks or is carved"),
+                                     ("block", "Block", "Not entered at all (a bridge over it stays dry)")):
+                row.add(view._button(title, lambda kind=kind: self.set_look(passable=kind), tip,
+                                     width=(width - 8) // 3, style=S_ACTIVE if passable == kind else S_BUTTON))
+            box.add(studio._label("Walking into it", color=C_MUTED, size=10, width=width))
+            box.add(row)
+            if passable == "wade":
+                field_row("Wade depth (m)", f"{float(found.get('wade_depth', 1.0)):g}",
+                          metres(lambda v: self.set_look(wade_depth=v), 0.1, 1.5), "river_wade_depth")
             if into:
                 joined = self.mouth_status()
                 box.add(studio._label(joined, color=C_ERROR if joined.startswith("Not joined") else C_MUTED, size=10,

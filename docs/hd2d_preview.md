@@ -162,6 +162,22 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
   send a `water_step` event, as in a pond, with no change of speed. Deeper water stops them at its edge, as a ledge
   does. Depth is the water over the ground or floor under their feet, so a bridge's deck above the water stays
   dry and walkable.
+- **Walking into it** (the River panel; the AI: `passable`, `wade_depth`). This decides where characters may go,
+  whatever the water looks like or however deep its bed is carved:
+  - **Auto** (the default, as before): waded up to half a metre deep;
+  - **Wade**: waded up to the **Wade depth** you give (0.1 to 1.5 m, 1 m unless set);
+  - **Block**: not entered at all.
+
+  In every case a bridge's deck over the water stays dry. A character put somewhere it can't stand (a start point
+  in deep water, a teleport) can still walk out the shallower way, never deeper. Characters on a **FloorRoute**
+  walk out to the nearest place they can stand. If there's none they stay put, and the log and a `stranded` event
+  say so once.
+- **Ponds** have the same choice in their inspector, under **Walking into it**. **Auto** keeps their **Walk through
+  it** setting. In a 3D room, a pond that blocks (Block, or Auto with Walk through it off) blocks exactly where its
+  water is drawn. With the sculpted ground as its shore, that is where water stands over the ground. Its outline
+  is used, not the box round it, so there's no invisible wall around a lake, at its corners, or where a river
+  flows in. A 2D room's pond still blocks by its box. A pond shown only when flags say keeps blocking by its box,
+  which its flags hide.
 - **Refused, with the reason and where:** a bend too tight for the river's width (its inner bank would fold), banks
   that cross or come within a quarter metre of each other, water that would run uphill, points closer than a
   quarter metre, two rivers that cross or overlap, and a bank off the room's ground.
