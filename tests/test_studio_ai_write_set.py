@@ -253,10 +253,10 @@ def test_a_failure_part_way_through_applying_changes_nothing(root: Path, studio:
     before, revision = copy.deepcopy(person.project.all_documents()), person.project.revision
     real = authoring._apply_one
 
-    def failing(project: Any, index: int, change: Any, created: Any) -> Any:
+    def failing(project: Any, index: int, change: Any, created: Any, *rest: Any) -> Any:
         if project is person.project and index == 1:
             raise authoring.ChangeError(index, "move_entity", "injected failure")
-        return real(project, index, change, created)
+        return real(project, index, change, created, *rest)
 
     monkeypatch.setattr(authoring, "_apply_one", failing)
     result = host.accept(proposal)
@@ -312,3 +312,41 @@ def test_overwrites_finds_the_same_path_and_one_inside_the_other_but_not_neighbo
     assert [c["path"] for c in authoring.overwrites({e + ("x",): (0, 100)}, {e: ({}, None)}, base)] == \
         ["rooms/r/entities/#e"]
     assert authoring.overwrites({}, writes, base) == [] and authoring.overwrites(ours, {}, base) == []
+
+
+# --------------------------------------------------------------------- where its preview wrote (independent review)
+
+def test_a_proposal_naming_an_object_moves_the_one_it_named_not_whoever_took_the_name_since(root: Path,
+                                                                                         studio: Any) -> None:
+    """The AI moves "Warden" by name; the person then renames the Warden and gives that name to someone else. The
+    proposal was reviewed as moving the Warden: accepting it moves the Warden, never the newcomer."""
+    person, host, warden = studio
+    farmer = _place(person.project, "Farmer", 200, 200)
+    read = authoring_session.read_project(root)
+    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": "Warden", "x": 0, "y": 100}], read["revision"])
+    person.project.edit_scene(lambda room: authoring.ops.rename_entity(room, warden, "Captain"))
+    person.project.edit_scene(lambda room: authoring.ops.rename_entity(room, farmer, "Warden"))
+
+    assert host.accept(proposal)["ok"] is True
+    assert _at(person.project, warden) == (0.0, 100.0), "the object the preview showed"
+    assert _at(person.project, farmer) == (200.0, 200.0), "the newcomer with the name stays put"
+
+
+def test_a_proposal_writes_in_the_room_its_preview_showed_whichever_room_is_open_when_accepted(root: Path,
+                                                                                             studio: Any) -> None:
+    """Changes without a "room" go to the room open when proposed (as previewed), not the one open when accepted:
+    switching rooms doesn't change the revision, so nothing else would notice."""
+    person, host, warden = studio
+    start = person.project.current
+    cellar = person.project.add_room("Cellar")
+    person.project.current = cellar
+    in_cellar = _place(person.project, "Warden", 0, 0)
+    person.project.current = start
+    read = authoring_session.read_project(root)
+    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": "Warden", "x": 0, "y": 100}], read["revision"])
+    person.project.current = cellar  # the person looks at the cellar (as Studio's room switch does)
+
+    assert host.accept(proposal)["ok"] is True
+    assert _at(person.project, in_cellar) == (0.0, 0.0), "the cellar's Warden untouched"
+    person.project.current = start
+    assert _at(person.project, warden) == (0.0, 100.0), "the start room's Warden moved, as previewed"

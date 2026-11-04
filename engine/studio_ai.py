@@ -10,7 +10,10 @@ Studio never applies them on its own:
   with (F6, #422): one it no longer keeps (it keeps the last ``SNAPSHOTS_KEPT`` it was read
   at), or one that isn't a revision. Comparing with today's project instead would hide the
   person's changes since, and the proposal could overwrite them without a conflict. Without
-  a ``base_revision`` the batch is checked against the project as it is now.
+  a ``base_revision`` the batch is checked against the project as it is now. Its changes are kept
+  as they were resolved there (#462 S1): each in the room it was previewed in and an object it
+  named as the id that name had, so accepting it later writes where the preview did, not in the
+  room open by then nor on another object that took the name.
 - **Accept** (a person, in Studio) applies the batch to the open documents as one undo step.
   If the person changed the project since the tool read it, both sets of changes are compared
   property by property: separate edits (a painted floor, a new NPC) both survive; the same
@@ -160,12 +163,13 @@ class StudioAIHost:
         if isinstance(found, dict):  # (refused: nothing staged, nothing in the person's inbox)
             return found
         base_revision, base = found
+        pinned: list[Doc] = []  # (#462 S1: as resolved here, so accepting it writes where this preview does)
         try:
-            before, after = authoring.dry_run(self.project, changes, base=base)
+            before, after = authoring.dry_run(self.project, changes, base=base, pins=pinned)
         except authoring.ChangeError as err:
             return {"ok": False, "mode": "live_studio", "reason": "invalid_change", "index": err.index, "op": err.op,
                     "message": str(err)}
-        proposal = Proposal(changes=copy.deepcopy(changes), title=title, source=source, base_revision=base_revision,
+        proposal = Proposal(changes=pinned, title=title, source=source, base_revision=base_revision,
                             base=before, after=after, summary=authoring.summarize(before, after) or ["(no visible change)"])
         self.proposals.append(proposal)
         self.studio.on_ai_proposal(proposal)
@@ -234,7 +238,8 @@ class StudioAIHost:
                 except authoring.ChangeError as err:
                     proposal.settle("failed", f"Not applied: {err}")
                     self._forget_old()
-                    return {"ok": False, "reason": "invalid_change", "message": str(err)}
+                    return {"ok": False, "reason": "invalid_change", "index": err.index, "op": err.op,
+                            "message": str(err)}
                 clashes = authoring.overwrites(ours, authoring.changes_between(now, replayed), proposal.base)
             if clashes:
                 proposal.status, proposal.conflicts = "conflict", clashes
