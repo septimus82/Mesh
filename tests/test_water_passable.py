@@ -188,6 +188,15 @@ def _npc(world: World, x_px: float, y_px: float, route: list[list[float]]) -> tu
     return npc, FloorRouteBehaviour(npc, window, route=route, speed=60.0, wait=0.0)
 
 
+def _said(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """What FloorRoute says in the log (its logger doesn't propagate to pytest's capture)."""
+    from engine.behaviours import floor_route
+
+    said: list[str] = []
+    monkeypatch.setattr(floor_route.logger, "warning", lambda msg, *args: said.append(msg % args))
+    return said
+
+
 def test_an_npc_put_in_deep_water_walks_out_never_deeper_and_then_keeps_its_route() -> None:
     from engine.physics_runtime import _sprite_to_aabb
 
@@ -210,8 +219,7 @@ def test_an_npc_put_in_deep_water_walks_out_never_deeper_and_then_keeps_its_rout
     assert getattr(npc, "mesh_hd2d_stranded", None) is None and npc.center_y > 700, "and it walks on its route"
 
 
-def test_an_npc_with_no_way_out_is_stranded_said_once_and_doesn_t_loop(caplog: pytest.LogCaptureFixture,
-                                                                      monkeypatch: pytest.MonkeyPatch) -> None:
+def test_an_npc_with_no_way_out_is_stranded_said_once_and_doesn_t_loop(monkeypatch: pytest.MonkeyPatch) -> None:
     scene = _room()
     scene, pid = ops.place_blank(scene, "start", "Big lake", 800.0, 300.0)
     scene = ops.set_water(scene, pid, preset="natural_pond", shape="ellipse", width=900.0, height=560.0,
@@ -226,11 +234,11 @@ def test_an_npc_with_no_way_out_is_stranded_said_once_and_doesn_t_loop(caplog: p
         return real(*args, **kwargs)
 
     monkeypatch.setattr(world, "ways_out", counted)
-    with caplog.at_level("WARNING"):
-        for _ in range(600):
-            route.update(1 / 60)
+    said = _said(monkeypatch)
+    for _ in range(600):
+        route.update(1 / 60)
     assert npc.mesh_hd2d_stranded and "can't walk out of the water" in npc.mesh_hd2d_stranded
-    assert sum("is stranded" in r.message for r in caplog.records) == 1, "said once"
+    assert sum("is stranded" in s for s in said) == 1, ("said once", said)
     assert calls["ways"] == 2, "looked for a way out at first and again after RETRY_S (10 s here), not every frame"
     assert (npc.center_x, npc.center_y) == (800.0, 318.0), "stayed where it was"
 
@@ -279,7 +287,7 @@ def test_a_pond_on_a_raised_floor_doesn_t_block_the_ground_under_it() -> None:
 
 
 def test_a_wide_npc_judged_by_its_own_feet_plans_a_bounded_number_of_times_and_says_so_once(
-        monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+        monkeypatch: pytest.MonkeyPatch) -> None:
     """Review of 6c0288b: judged by the navigation grid's footprint, an NPC with a wide feet box froze in the water
     and planned again and again, never saying so."""
     world = _world(_room())
@@ -293,10 +301,10 @@ def test_a_wide_npc_judged_by_its_own_feet_plans_a_bounded_number_of_times_and_s
         return real(*args)
 
     monkeypatch.setattr(world, "path", counted)
-    with caplog.at_level("WARNING"):
-        for _ in range(60 * 30):
-            route.update(1 / 60)
-    said = [r.message for r in caplog.records if "is stranded" in r.message or "can't get through" in r.message]
+    said = _said(monkeypatch)
+    for _ in range(60 * 30):
+        route.update(1 / 60)
+    said = [s for s in said if "is stranded" in s or "can't get through" in s]
     assert len(said) == 1, ("said once, not frozen silently", said)
     # (REPLANS tries, then BACK_OFF_S: about 3 every 7 s; before the review, 34 in 30 s and never said)
     assert planned["n"] <= 16, ("planned a bounded number of times in 30 s", planned["n"])

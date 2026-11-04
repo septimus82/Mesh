@@ -16,12 +16,12 @@ row) gives that point up for BACK_OFF_S, said once.
 
 from __future__ import annotations
 
-import logging
 import math
 from typing import Any
 
 from engine.hd2d.world import NAV_HALF, elevation_of
 from engine.hd2d.world import World as Hd2dWorld
+from engine.log_utils import get_logger
 
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -31,7 +31,7 @@ STUCK_S = 1.0  # s: no headway towards a way out for this long: the next one
 RETRY_S = 5.0  # s: stranded, it looks for a way out again this often (the ground may have changed)
 REPLANS = 3  # routes planned again in a row without reaching a point: it gives that point up for a while
 BACK_OFF_S = 5.0  # s: ... this long before the next
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @register_behaviour(
