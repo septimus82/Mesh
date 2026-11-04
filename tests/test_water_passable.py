@@ -660,3 +660,47 @@ def test_npcs_that_walk_out_of_a_blocking_pond_go_on_with_their_route() -> None:
         if getattr(npc, "mesh_hd2d_stranded", None) or nearest > 8.0 or world.blocked(box.x / P, box.y / P, 0.0) > 0.0:
             stuck.append((sx, sy, round(box.x), round(box.y)))
     assert stuck == [], "each walked out and reached its route's first point"
+
+
+def _platform(world: World, h_m: float, box: tuple[float, float, float, float], solid: bool = True) -> None:
+    """A floor ``h_m`` up over ``box`` (px: x0, y0, x1, y1): a platform (solid) or a deck (open under)."""
+    x0, y0, x1, y1 = (v / P for v in box)
+    for tri in (((x0, y0, h_m), (x1, y0, h_m), (x1, y1, h_m)), ((x0, y0, h_m), (x1, y1, h_m), (x0, y1, h_m))):
+        surface = _surface("raised/floor", solid, tri)
+        assert surface is not None
+        world.surfaces.append(surface)
+        world._add_to_index(surface)
+
+
+def test_a_terrain_shored_pond_s_water_is_where_it_is_drawn_raised_carved_deep_or_under_a_deck() -> None:
+    """Owner's pre-merge review of ddff3ce: a terrain-shored pond's water is drawn where its level lies over the
+    sculpted ground, and only in a room that has one (water.py: shore 4 with u_has_terrain); without one it is drawn
+    as a plain sheet at its level, like any pond. Its water is walked the same way."""
+    # (1) no sculpted ground: raised 2 m, a sheet over the floor under it, which is walked (as under any raised pond);
+    # at its own level it still blocks
+    raised = _flat_room(passable="block", shore="terrain")
+    ops.entities(raised)[0]["elevation"] = 64.0
+    sheet = _world(raised)
+    assert sheet.terrain is None and sheet.ponds, "no sculpted ground; the pond is met by its outline"
+    assert _stands(sheet, 800, 600, 0.0), "the floor under a raised pond: walked"
+    _platform(sheet, 2.0, (700, 500, 900, 700))  # (its roof, at its level)
+    assert not _stands(sheet, 800, 600, 2.0), "at its own level: its water blocks"
+    # (2) sculpted ground: the water is bound to it, down to it; a carved lake 1.9 m deep (more than BODY) is not
+    # walked at its bottom, nor is ground 2 m under a pond raised over it, nor a floor under its level in it
+    s = _room(pond={"walkable": False, "shore": "terrain"})
+    ops.find_entity(s, ops.entities(s)[0]["id"])["elevation"] = -4.0
+    s = ops.sculpt_terrain_stroke(s, "flatten", [[1200, 300, 1.0]] * 4, radius=60, target=-64.0)
+    deep = _world(s)
+    assert deep.terrain is not None
+    bottom = _floor(deep, 1200, 300)
+    assert (-4.0 / P) - bottom > 1.5, "deeper than a character is tall"
+    assert deep.blocked(1200 / P, 300 / P, bottom) > 0.0 and not _stands(deep, 1200, 300), "its bottom: not walked"
+    up = _room(pond={"walkable": False, "shore": "terrain"})
+    ops.find_entity(up, ops.entities(up)[0]["id"])["elevation"] = 64.0  # (its level 2 m over the sculpted ground)
+    bound = _world(up)
+    assert not _stands(bound, 1200, 300), "the ground under it: under its water, as drawn"
+    _platform(bound, 1.0, (1160, 260, 1240, 340))
+    assert not _stands(bound, 1200, 300, 1.0), "a floor under its level, in it: under its water too"
+    # (3) a deck over it, above its level: dry, walked
+    _platform(deep, 0.3, (1150, 250, 1250, 350), solid=False)
+    assert _stands(deep, 1200, 300, 0.3), "on a deck over it: dry"

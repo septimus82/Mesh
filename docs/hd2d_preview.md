@@ -185,7 +185,10 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
   and characters on a **FloorRoute** walk that way; other moving characters still meet the box.
   - These keep blocking by the box round the pond: a 2D room's pond, a pond in a flat 3D room with none of those,
     and a pond shown only when flags say (its flags hide the box).
-  - A pond on a raised floor doesn't block the ground under it.
+  - A pond on a raised floor doesn't block the ground under it. A pond whose shore is the sculpted ground is the
+    exception, as it is drawn: its water reaches down to that ground wherever its level is above it, however deep,
+    so whatever lies under its level there is in its water. In a room without sculpted ground it is drawn, and
+    walked, like any other pond.
   - **Wade** depth needs the sculpted ground as the pond's shore. On flat ground, or in a 2D room, there is no
     depth, so a Wade pond is simply walked through.
 - **Refused, with the reason and where:** a bend too tight for the river's width (its inner bank would fold), banks

@@ -353,7 +353,9 @@ class World:
                 floors = [top for top, _s in self.heights_at(px, py) if abs(top - h) <= STEP]
                 floor = max(floors) if floors else h
             depth = pond.level / PIXELS_PER_METRE - floor
-            if depth > 0.0 if pond.water.shore == "terrain" else -POND_DRY < depth < BODY:
+            # (the sculpted ground its shore: water wherever its level is over that ground, as drawn, however deep;
+            # without sculpted ground it is drawn as a sheet at its level, as any pond is: water.py, shore 4)
+            if depth > 0.0 if pond.water.shore == "terrain" and self.terrain is not None else -POND_DRY < depth < BODY:
                 if pond.water.passable == "wade":
                     if part != "blocking":
                         most = max(most, max(depth, 0.0) - pond.water.wade_depth)
