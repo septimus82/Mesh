@@ -169,8 +169,8 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
   - **Block**: not entered at all.
 
   In every case a bridge's deck over the water stays dry. A character put somewhere it can't stand (a start point
-  in deep water, a teleport) can still walk out the shallower way, never deeper: into blocked water, only outwards,
-  never across. Characters on a **FloorRoute** walk out to the nearest place they can stand, trying the nearest in
+  in deep water, a teleport) can still walk out the shallower way, never deeper: in blocked water, only outwards
+  (never across it, nor along it). Characters on a **FloorRoute** walk out to the nearest place they can stand, trying the nearest in
   each direction. If there's none they stay put, and the log and a `stranded` event say so once; they look again
   every few seconds. A character whose feet box is too wide for the places it could stand (the template's person
   picture is 2.4 m wide) may be stranded where a narrower one would get out.

@@ -48,6 +48,7 @@ DEEP = BODY / 3  # m: water deeper than a third of a character's height can't be
 DEEP_SLACK = 0.01  # m: ... give or take the ground's stored rounding (a quarter pixel), so 0.5 m stays wadeable
 BLOCK_EXCESS = 0.02  # m: water that blocks (passable "block") is over its limit by its depth and this, wherever it is
 POND_DRY = 0.05  # m: a pond drawn whatever the ground (not the sculpted ground's shore) is dry this far over its level
+BLOCK_OUT = 0.25  # in blocking water, a step must take it out by at least this share of its length (``blocked``)
 ESCAPE_SLACK = 0.05  # m: one found in deeper water may wade out through water this much deeper than around it (the
 # carved bed's triangles between the samples taken; set once, so it never adds up)
 WADE_STEP = 14.0 / PIXELS_PER_METRE  # m: a wading step every this far (as engine.behaviours.water_surface)
@@ -310,37 +311,49 @@ class World:
         (its shore the sculpted ground: water over it; else a floor from POND_DRY over its level, so a deck above it
         is dry, to a character's height under it, so a floor under a raised pond isn't its bed), the same way (a
         blocking pond's by how far in from its edge too). Depth is measured to the floor under each point."""
-        from engine.water import inset, inside  # noqa: PLC0415
-
         most = -1e9
         for px, py in ((x, y), (x - half_w, y - half_h), (x + half_w, y - half_h), (x - half_w, y + half_h),
                        (x + half_w, y + half_h)):
-            floor: float | None = None
-            water = self.rivers.level_at(px, py) if self.rivers else None
-            if water is not None:
+            most = max(most, self._point_excess(px, py, h, False))
+        return most
+
+    def blocked(self, x: float, y: float, h: float) -> float:
+        """How far over its limit the blocking water (passable "block", or a pond that blocks) at (x, y) on a floor
+        at ``h`` m is (``excess``, at that point only; -1e9 where none is): it falls towards its edge, and only steps
+        that make it fall take a character in it out (``_step``)."""
+        return self._point_excess(x, y, h, True)
+
+    def _point_excess(self, px: float, py: float, h: float, blocking_only: bool) -> float:
+        from engine.water import inset, inside  # noqa: PLC0415
+
+        most = -1e9
+        floor: float | None = None
+        water = self.rivers.level_at(px, py) if self.rivers else None
+        if water is not None:
+            floors = [top for top, _s in self.heights_at(px, py) if abs(top - h) <= STEP]
+            floor = max(floors) if floors else h
+            depth = water[0] - floor
+            if depth > 0.0:
+                kind, wade = self._river_rules.get(water[1], ("auto", DEEP))
+                if kind == "block":
+                    most = max(most, depth + BLOCK_EXCESS + self.rivers.inset_at(px, py))
+                elif not blocking_only:
+                    most = max(most, depth - (DEEP if kind == "auto" else wade))
+        for pond, box in self.ponds:
+            if not (box[0] <= px <= box[2] and box[1] <= py <= box[3]) or not inside(
+                    pond.water, pond.centre, (px * PIXELS_PER_METRE, py * PIXELS_PER_METRE)):
+                continue
+            if floor is None:
                 floors = [top for top, _s in self.heights_at(px, py) if abs(top - h) <= STEP]
                 floor = max(floors) if floors else h
-                depth = water[0] - floor
-                if depth > 0.0:
-                    kind, wade = self._river_rules.get(water[1], ("auto", DEEP))
-                    if kind == "block":
-                        most = max(most, depth + BLOCK_EXCESS + self.rivers.inset_at(px, py))
-                    else:
-                        most = max(most, depth - (DEEP if kind == "auto" else wade))
-            for pond, box in self.ponds:
-                if not (box[0] <= px <= box[2] and box[1] <= py <= box[3]) or not inside(
-                        pond.water, pond.centre, (px * PIXELS_PER_METRE, py * PIXELS_PER_METRE)):
-                    continue
-                if floor is None:
-                    floors = [top for top, _s in self.heights_at(px, py) if abs(top - h) <= STEP]
-                    floor = max(floors) if floors else h
-                depth = pond.level / PIXELS_PER_METRE - floor
-                if depth > 0.0 if pond.water.shore == "terrain" else -POND_DRY < depth < BODY:
-                    if pond.water.passable == "wade":
+            depth = pond.level / PIXELS_PER_METRE - floor
+            if depth > 0.0 if pond.water.shore == "terrain" else -POND_DRY < depth < BODY:
+                if pond.water.passable == "wade":
+                    if not blocking_only:
                         most = max(most, max(depth, 0.0) - pond.water.wade_depth)
-                    else:
-                        within = inset(pond.water, pond.centre, (px * PIXELS_PER_METRE, py * PIXELS_PER_METRE))
-                        most = max(most, max(depth, 0.0) + BLOCK_EXCESS + within / PIXELS_PER_METRE)
+                else:
+                    within = inset(pond.water, pond.centre, (px * PIXELS_PER_METRE, py * PIXELS_PER_METRE))
+                    most = max(most, max(depth, 0.0) + BLOCK_EXCESS + within / PIXELS_PER_METRE)
         return most
 
     def deepest(self, x: float, y: float, h: float, half_w: float, half_h: float) -> float:
@@ -421,6 +434,18 @@ class World:
             dx = 0.0
         if dy and self.stand(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE, z, hw, hh, deep) is None:
             dy = 0.0
+        if self._wet and (dx or dy):  # in blocking water: only steps that take it out (not along it, nor round it)
+            held = self.blocked(x, y, z)
+            if held > 0.0:
+                def outwards(nx: float, ny: float, moved: float) -> bool:
+                    there = self.blocked(nx, ny, z)
+                    return there <= 0.0 or there < held - BLOCK_OUT * moved
+
+                if dx and not outwards(x + dx / PIXELS_PER_METRE, y, abs(dx) / PIXELS_PER_METRE):
+                    dx = 0.0
+                if dy and not outwards(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE,
+                                       math.hypot(dx, dy) / PIXELS_PER_METRE):
+                    dy = 0.0
         if not dx and not dy:
             self._settle(sprite, x, y, z, hw, hh, deep)
             return

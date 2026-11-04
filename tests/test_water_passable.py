@@ -277,6 +277,9 @@ def test_one_put_in_blocking_water_can_only_walk_out_never_across() -> None:
     for _ in range(300):
         world.move(walker, (0.0, 2.0), [])
     assert walker.center_y - 18 < 560.0, ("not on across it", walker.center_y)
+    for _ in range(100):
+        world.move(walker, (0.0, -2.0), [])
+    assert walker.center_y - 18 < 495.0, ("out by its near bank", walker.center_y)
 
 
 def test_a_pond_on_a_raised_floor_doesn_t_block_the_ground_under_it() -> None:
@@ -334,3 +337,61 @@ def test_a_waded_pond_s_deep_basin_outside_its_outline_isn_t_its_water() -> None
     world = _world(scene)
     assert not _stands(world, 1200, 300), "in it: 0.75 m, deeper than its 0.3 m"
     assert _stands(world, 1060, 220), "its box's corner, outside its outline: no water there (however deep the ground)"
+
+
+def test_in_blocking_water_only_steps_out_along_a_canal_a_river_or_round_a_rim() -> None:
+    """Re-review of 82018f8: how far in it is, unchanged along a canal or a blocked river and nearly so round a
+    pond's rim, let one put in it travel along it (and out somewhere far away). Each step must take it out."""
+    def walker(x: float, y: float) -> _Walker:
+        return _Walker(center_x=x, center_y=y + 18, width=32.0, height=48.0, scale_x=1.0,
+                       mesh_entity_data={"elevation": 0.0, "components": {"collider": {"kind": "box", "auto": True}}})
+
+    scene = {"entities": [], "settings": {"world_width": 1600, "world_height": 1200,
+                                          "hd2d": {"ground": {"texture": "assets/textures/grass.png",
+                                                              "from": [0, 0], "to": [1600, 1200]}}}}
+    canal, pid = ops.place_blank(copy.deepcopy(scene), "start", "Canal", 800.0, 600.0)
+    canal = ops.set_water(canal, pid, preset="natural_pond", shape="rect", width=1200.0, height=96.0, passable="block")
+    world = _world(canal)
+    w = walker(300.0, 600.0)  # (100 px in from its west end)
+    for _ in range(600):
+        world.move(w, (2.0, 0.0), [])
+    assert w.center_x < 330.0, ("not along the canal", w.center_x)
+    for _ in range(60):
+        world.move(w, (0.0, 2.0), [])
+    assert world.blocked(w.center_x / P, (w.center_y - 24) / P, 0.0) <= 0.0, "out by its near side"
+    river_room = ops.add_river(copy.deepcopy(scene), "stream", [[4.0, 600.0, 192.0, 8.0], [1596.0, 600.0, 192.0, 8.0]],
+                               passable="block")
+    world = _world(river_room)
+    w = walker(800.0, 640.0)
+    for _ in range(600):
+        world.move(w, (2.0, 0.0), [])
+    assert w.center_x < 830.0, ("not along the blocked river", w.center_x)
+    rim, pid = ops.place_blank(copy.deepcopy(scene), "start", "Lake", 800.0, 600.0)
+    rim = ops.set_water(rim, pid, preset="natural_pond", shape="natural", seed=1, width=700.0, height=500.0,
+                        passable="block")
+    world = _world(rim)
+    import math
+    for deg in (240.0, 255.0, 300.0):
+        w = walker(800.0, 600.0)
+        # (just inside its rim on that bearing, pushed towards its middle and round it)
+        for r in range(400, 0, -2):
+            x, y = 800.0 + r * math.cos(math.radians(deg)), 600.0 + r * math.sin(math.radians(deg))
+            if world.blocked(x / P, y / P, 0.0) > 0.0:
+                break
+        w.center_x, w.center_y = x, y + 24
+        start = (w.center_x, w.center_y)
+        for _ in range(300):
+            world.move(w, (-2.0 * math.cos(math.radians(deg)), -2.0 * math.sin(math.radians(deg)) + 1.0), [])
+        travelled = math.hypot(w.center_x - start[0], w.center_y - start[1])
+        assert travelled < 40.0, ("not round its rim", deg, travelled)
+
+
+def test_an_npc_put_just_inside_a_blocking_pond_walks_out_and_on() -> None:
+    world = _world(_flat_room(passable="block"))
+    for x, y in ((520.0, 600.0), (800.0, 430.0), (1060.0, 700.0)):  # (inside its west, north and south-east shores)
+        npc, route = _npc(world, x, y, [[200.0, 1000.0, 0.0], [300.0, 1000.0, 0.0]])
+        assert world.blocked(x / P, y / P, 0.0) > 0.0
+        for _ in range(60 * 20):
+            route.update(1 / 60)
+        assert world.blocked(npc.center_x / P, (npc.center_y - 24) / P, 0.0) <= 0.0, ("out", x, y)
+        assert not getattr(npc, "mesh_hd2d_stranded", None), ("not stranded", x, y)
