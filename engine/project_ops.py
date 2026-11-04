@@ -326,6 +326,7 @@ def set_behaviour_param(scene: Doc, entity_id: str, behaviour: str, param: str, 
     entity = find_entity(out, entity_id)
     if behaviour not in entity_behaviours(entity):
         raise OpError(f"This object doesn't have {behaviour}.")
+    was_blocking = behaviour == "WaterSurface" and _water_blocks((entity.get("behaviour_config") or {}).get(behaviour))
     entity.setdefault("behaviour_config", {}).setdefault(behaviour, {})[param] = coerce_field(fields[param], value)
     if behaviour == "SoundEmitter":  # a sound's settings too (Milestone 21B)
         from engine.sound_emitters import EmitterError, parse_emitter  # noqa: PLC0415
@@ -338,9 +339,10 @@ def set_behaviour_param(scene: Doc, entity_id: str, behaviour: str, param: str, 
         from engine.water import WaterError, parse_water  # noqa: PLC0415
 
         try:
-            parse_water(entity["behaviour_config"][behaviour])
+            water = parse_water(entity["behaviour_config"][behaviour])
         except WaterError as exc:
             raise OpError(str(exc)) from exc
+        _sync_water_solid(entity, water, was_blocking)  # (R4B: blocking or not, as set_water makes it)
     return _checked(scene, out)
 
 
@@ -845,7 +847,7 @@ def water_of(entity: Doc) -> Doc | None:
     out: Doc = {"preset": w.preset, "width": w.width, "height": w.height, "colour": colour_hex(w.colour),
                 "opacity": w.opacity, "shape": w.shape, "waves": w.waves, "reflection": w.reflection,
                 "rain_ripples": w.rain_ripples, "walkable": w.walkable, "step_sound": w.step_sound,
-                "rotation": w.rotation, "seed": w.seed}
+                "rotation": w.rotation, "seed": w.seed, "passable": w.passable, "wade_depth": w.wade_depth}
     if w.preset not in CLASSIC:  # Stage 19B's material
         out.update(shore=w.shore, shore_width=w.shore_width, deep_colour=colour_hex(w.deep_colour), depth=w.depth,
                    ripples=w.ripples)
@@ -858,7 +860,8 @@ def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = 
               colour: Any = _UNSET, opacity: Any = _UNSET, shape: Any = _UNSET, waves: Any = _UNSET,
               reflection: Any = _UNSET, rain_ripples: Any = _UNSET, walkable: Any = _UNSET,
               step_sound: Any = _UNSET, rotation: Any = _UNSET, seed: Any = _UNSET, shore: Any = _UNSET,
-              shore_width: Any = _UNSET, deep_colour: Any = _UNSET, depth: Any = _UNSET, ripples: Any = _UNSET) -> Doc:
+              shore_width: Any = _UNSET, deep_colour: Any = _UNSET, depth: Any = _UNSET, ripples: Any = _UNSET,
+              passable: Any = _UNSET, wade_depth: Any = _UNSET) -> Doc:
     """Make the object a water surface, or change it: ``preset`` "muddy_puddle" (shallow and brown, a ring of wet mud),
     "natural_pond" (an irregular pond, a grassy earth bank, clear shallows and a deep middle), "stone_pool" (lined with
     stones) or Stage 19A's simple "puddle" and "pond" (no bank); ``width``/``height`` (px, 8-8192); ``shape``
@@ -868,16 +871,21 @@ def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = 
     ``step_sound`` (a sound file played on each step through it, "" none); and, for the three new presets only,
     ``shore`` ("none", "mud", "grass" or "stone"), ``shore_width`` (px, 0-64), ``deep_colour`` ("#rrggbb"), ``depth``
     (0-1: how soon it gets deep away from its edge) and ``ripples`` (0-1: how strongly rain and footsteps ring it).
+    ``passable`` (R4B: how characters may go into it, whatever it looks like): "auto" (by ``walkable``, as before),
+    "wade" (waded up to ``wade_depth`` m over the floor, 0.1-1.5: with the sculpted ground as its shore, the depth of
+    its water there; on flat ground, or in a 2D room, which has no depth, simply walked) or "block" (not entered: in
+    an HD-2D room that walks its floors in 3D, exactly where its water is, a bridge over it dry; elsewhere, and for
+    other movers, by the box round it).
     Only what is given changes; a preset given anew starts from that preset's look (its size kept unless given). In
     an HD-2D room the object's elevation is the water's level; ``set_water_reflections`` sets how the room's water
     mirrors."""
-    from engine.water import LOOK_19B, WaterError, extent, parse_water  # noqa: PLC0415
+    from engine.water import LOOK_19B, WaterError, parse_water  # noqa: PLC0415
 
     out = copy.deepcopy(scene)
     entity = find_entity(out, entity_id)
     config = _behaviour_config(entity, "WaterSurface", create=True)
     assert config is not None
-    was_blocking = config.get("walkable") is False
+    was_blocking = _water_blocks(config)
     if preset is not _UNSET and preset != config.get("preset"):
         from engine.water import PRESETS  # noqa: PLC0415
 
@@ -890,7 +898,8 @@ def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = 
     given = {"preset": preset, "width": width, "height": height, "colour": colour, "opacity": opacity, "shape": shape,
              "waves": waves, "reflection": reflection, "rain_ripples": rain_ripples, "walkable": walkable,
              "step_sound": step_sound, "rotation": rotation, "seed": seed, "shore": shore, "shore_width": shore_width,
-             "deep_colour": deep_colour, "depth": depth, "ripples": ripples}
+             "deep_colour": deep_colour, "depth": depth, "ripples": ripples, "passable": passable,
+             "wade_depth": wade_depth}
     for key, value in given.items():
         if value is not _UNSET:
             config[key] = round(float(value), 2) if key in ("width", "height", "rotation", "shore_width") \
@@ -902,20 +911,42 @@ def set_water(scene: Doc, entity_id: str, *, preset: Any = _UNSET, width: Any = 
         raise OpError(str(exc)) from exc
     config.setdefault("width", water.width)
     config.setdefault("height", water.height)
+    _sync_water_solid(entity, water, was_blocking)
+    return _checked(scene, out)
+
+
+def _water_blocks(config: Any) -> bool:
+    """Whether a WaterSurface config blocks characters (engine.water.blocks), as its behaviour reads it; one that
+    can't be read: as before R4B, by its ``walkable``."""
+    from engine.water import WaterError, blocks, parse_water  # noqa: PLC0415
+
+    if not isinstance(config, dict):
+        return False
+    try:
+        return blocks(parse_water(config))
+    except WaterError:
+        return config.get("walkable") is False
+
+
+def _sync_water_solid(entity: Doc, water: Any, was_blocking: bool) -> None:
+    """A pond characters can't walk into is solid, with the box round its outline as it is turned (what a 2D room,
+    and any mover that doesn't walk an HD-2D room's floors, meets); one that stops blocking loses what blocking
+    added (a solid the creator set by hand on water that never blocked is kept)."""
+    from engine.water import blocks, extent  # noqa: PLC0415
+
     components = dict(entity.get("components") or {}) if isinstance(entity.get("components"), dict) else {}
-    if water.walkable:
+    if not blocks(water):
         if was_blocking:  # it blocked because it was water that couldn't be walked through: not any more
             entity.pop("solid", None)
             components.pop("collider", None)
-    else:  # a pond characters can't walk into: solid, with a box the water's size
+    else:
         entity["solid"] = True
-        w, h = extent(water)  # the box round it as it is turned
+        w, h = extent(water)
         components["collider"] = {"kind": "box", "offset_x": 0.0, "offset_y": 0.0, "w": w, "h": h}
     if components:
         entity["components"] = components
     else:
         entity.pop("components", None)
-    return _checked(scene, out)
 
 
 # --- sound emitters and weather sounds (Milestone 21B) -----------------------------------------------------------
@@ -1204,7 +1235,7 @@ def remove_water(scene: Doc, entity_id: str) -> Doc:
     """Stop the object being water (and blocking movement because of it)."""
     out = copy.deepcopy(scene)
     entity = find_entity(out, entity_id)
-    blocking = ((entity.get("behaviour_config") or {}).get("WaterSurface") or {}).get("walkable") is False
+    blocking = _water_blocks((entity.get("behaviour_config") or {}).get("WaterSurface"))
     _drop_behaviour(entity, "WaterSurface")
     found = entity.get("components")
     components: Doc = found if isinstance(found, dict) else {}
@@ -1260,13 +1291,13 @@ def _with_rivers(scene: Doc, edit: Any, river_id: str | None = None) -> Doc:
 
 
 _RIVER_LOOK = ("flow", "colour", "deep_colour", "opacity", "depth", "waves", "reflection", "rain_ripples", "mouth",
-               "ends")
+               "ends", "passable", "wade_depth")
 
 
 def add_river(scene: Doc, river_id: str, points: Any, *, flow: Any = _UNSET, colour: Any = _UNSET,
               deep_colour: Any = _UNSET, opacity: Any = _UNSET, depth: Any = _UNSET, waves: Any = _UNSET,
               reflection: Any = _UNSET, rain_ripples: Any = _UNSET, mouth: Any = _UNSET,
-              ends: Any = _UNSET) -> Doc:
+              ends: Any = _UNSET, passable: Any = _UNSET, wade_depth: Any = _UNSET) -> Doc:
     """Add a river to this HD-2D room: ``points`` ``[[x, y, width, level], ...]`` px, upstream to downstream (2-64;
     ``level`` its surface, as an object's elevation, never rising downstream; width 16-512 px). Its course curves
     smoothly through every point; it flows at ``flow`` m/s (0-8, default 1; 0: still). Its look: ``colour`` and
@@ -1278,9 +1309,12 @@ def add_river(scene: Doc, river_id: str, points: Any, *, flow: Any = _UNSET, col
     "round" (both), "round_source" (where it rises), "round_end" (its last point, if it flows into no pond), or
     "square" (the default, as rivers before R4; right for an end running off the room's edge). Refused, naming where, if its banks would
     fold, cross or touch, it would run uphill, or it would meet another river. It is drawn where its level lies
-    above the ground: sculpt its bed first (it doesn't carve one)."""
+    above the ground: sculpt its bed first (it doesn't carve one). ``passable`` (R4B: how characters may go into its
+    water, whatever it looks like or how deep its bed is carved): "auto" (waded up to half a metre deep; the
+    default, as before), "wade" (waded up to ``wade_depth`` m, 0.1-1.5) or "block" (not entered at all; a bridge's
+    deck over it stays dry)."""
     look = {k: v for k, v in zip(_RIVER_LOOK, (flow, colour, deep_colour, opacity, depth, waves, reflection,
-                                               rain_ripples, mouth, ends)) if v is not _UNSET}
+                                               rain_ripples, mouth, ends, passable, wade_depth)) if v is not _UNSET}
 
     def edit(found: list[Doc]) -> list[Doc]:
         if any(r.get("id") == river_id for r in found):
@@ -1292,12 +1326,15 @@ def add_river(scene: Doc, river_id: str, points: Any, *, flow: Any = _UNSET, col
 
 def set_river(scene: Doc, river_id: str, *, points: Any = _UNSET, flow: Any = _UNSET, colour: Any = _UNSET,
               deep_colour: Any = _UNSET, opacity: Any = _UNSET, depth: Any = _UNSET, waves: Any = _UNSET,
-              reflection: Any = _UNSET, rain_ripples: Any = _UNSET, mouth: Any = _UNSET, ends: Any = _UNSET) -> Doc:
+              reflection: Any = _UNSET, rain_ripples: Any = _UNSET, mouth: Any = _UNSET, ends: Any = _UNSET,
+              passable: Any = _UNSET, wade_depth: Any = _UNSET) -> Doc:
     """Change a river of this room: its ``points`` (all of them, as ``add_river`` takes them), its look, its
-    ``mouth`` or its ``ends``; what isn't given stays. Checked as ``add_river`` checks a new one (a river flowing into
+    ``mouth``, its ``ends`` or how characters may go into it (``passable``: "auto", "wade" up to ``wade_depth`` m,
+    or "block", as ``add_river`` describes); what isn't given stays. Checked as ``add_river`` checks a new one (a river flowing into
     a pond: its join, whatever changed)."""
     given = {k: v for k, v in zip(("points", *_RIVER_LOOK), (points, flow, colour, deep_colour, opacity, depth, waves,
-                                                              reflection, rain_ripples, mouth, ends)) if v is not _UNSET}
+                                                              reflection, rain_ripples, mouth, ends, passable,
+                                                              wade_depth)) if v is not _UNSET}
 
     def edit(found: list[Doc]) -> list[Doc]:
         if not any(r.get("id") == river_id for r in found):

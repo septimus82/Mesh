@@ -46,6 +46,9 @@ STEP = 0.35  # m: the highest a character steps up or down without stairs
 BODY = 1.5  # m: a character's standing height (a 48 px sprite)
 DEEP = BODY / 3  # m: water deeper than a third of a character's height can't be waded (0.5 m) ...
 DEEP_SLACK = 0.01  # m: ... give or take the ground's stored rounding (a quarter pixel), so 0.5 m stays wadeable
+BLOCK_EXCESS = 0.02  # m: water that blocks (passable "block") is over its limit by its depth and this, wherever it is
+POND_DRY = 0.05  # m: a pond drawn whatever the ground (not the sculpted ground's shore) is dry this far over its level
+BLOCK_OUT = 0.25  # in blocking water, a step must take it out by at least this share of its length (``blocked``)
 ESCAPE_SLACK = 0.05  # m: one found in deeper water may wade out through water this much deeper than around it (the
 # carved bed's triangles between the samples taken; set once, so it never adds up)
 WADE_STEP = 14.0 / PIXELS_PER_METRE  # m: a wading step every this far (as engine.behaviours.water_surface)
@@ -191,6 +194,23 @@ class World:
 
         # (none: nothing to ask; ``ponds``, engine.hd2d.river.Pond: a river flowing into one has no water in it, R4)
         self.rivers = RiverIndex(settings.rivers, ponds)
+        # R4B: how far into each river's water characters may go (engine.water.PASSABLE), and the ponds that limit it
+        # (blocking or waded to a depth; not one shown only when flags say: its own 2D box, which its flags hide, as
+        # before), by their outline: where their water is drawn. Their 2D boxes are then not met here (``_step``)
+        self._river_rules = {r.id: (r.passable, r.wade_depth) for r in settings.rivers}
+        from engine.water import blocks, extent  # noqa: PLC0415
+
+        self.ponds = []
+        for pond in ponds:
+            if pond.gated or not (blocks(pond.water) or pond.water.passable == "wade"):
+                continue
+            w, h = extent(pond.water)
+            cx, cy = pond.centre[0] / PIXELS_PER_METRE, pond.centre[1] / PIXELS_PER_METRE
+            box = (cx - w / 2 / PIXELS_PER_METRE, cy - h / 2 / PIXELS_PER_METRE,
+                   cx + w / 2 / PIXELS_PER_METRE, cy + h / 2 / PIXELS_PER_METRE)
+            self.ponds.append((pond, box))
+        self._pond_ids = {pond.id for pond, _box in self.ponds}
+        self._wet = bool(self.rivers) or bool(self.ponds)  # (any water with a limit: else nothing to ask)
         self.on_wade: Any = None  # called (sprite, (x, y) px, river id) for each wading step (engine.hd2d.runtime)
         self._models = models
         self.set_scatter(settings.scatter)
@@ -259,10 +279,12 @@ class World:
         return out
 
     def stand(self, x: float, y: float, z: float, half_w: float, half_h: float,
-              deep: float = DEEP + DEEP_SLACK) -> tuple[float, str] | None:
+              allow: float = DEEP_SLACK, block: float | None = None) -> tuple[float, str] | None:
         """Where a character whose feet box is centred at (x, y) and who stands at ``z`` stands: (elevation,
-        floor), or None if it can't be there. ``deep``: the most water it may stand in (``_step``: more for a
-        character already in deeper water, so it can walk out of it)."""
+        floor), or None if it can't be there. ``allow``: how far over its limit the water under its feet may be
+        (``excess``; ``_step``: more for a character already in deeper water, so it can walk out of it). ``block``
+        (``_step``, for one in or at the edge of blocking water): the blocking water is held to this instead, and
+        ``allow`` is for the water it may wade only."""
         best: tuple[float, Surface] | None = None
         for h, surface in self.heights_at(x, y):
             if abs(h - z) <= STEP and (best is None or h > best[0]):
@@ -278,9 +300,69 @@ class World:
         for wall in self.walls:
             if wall.lo[2] < h + BODY and wall.hi[2] > h + STEP and wall.overlaps(x, y, half_w, half_h):
                 return None
-        if self.rivers and self.deepest(x, y, h, half_w, half_h) > deep:
-            return None  # deep water somewhere under its feet: it can't stand there
+        if self._wet and (self.excess(x, y, h, half_w, half_h) > allow if block is None else
+                          self.excess(x, y, h, half_w, half_h, "wading") > allow
+                          or self.excess(x, y, h, half_w, half_h, "blocking") > block):
+            return None  # water too deep for it (or blocking) somewhere under its feet: it can't stand there
         return h, best[1].floor
+
+    def excess(self, x: float, y: float, h: float, half_w: float, half_h: float, part: str = "all") -> float:
+        """How far the water under a feet box centred at (x, y) on a floor at ``h`` m is over the depth it may be
+        waded to (m; at its middle and corners, the most; negative within it, -1e9 where no water with a limit is).
+        A river's by its ``passable``: "auto" DEEP (as R3), "wade" its ``wade_depth``, "block" any (its depth,
+        BLOCK_EXCESS, and how far in from its bank it is: so one put in it can only walk out, never across). A pond
+        that blocks or is waded to a depth (``self.ponds``): within its outline, where its water stands over the floor
+        (its shore the sculpted ground: water over it; else a floor from POND_DRY over its level, so a deck above it
+        is dry, to a character's height under it, so a floor under a raised pond isn't its bed), the same way (a
+        blocking pond's by how far in from its edge too). Depth is measured to the floor under each point. ``part``:
+        "all", "blocking" (the blocking water's alone) or "wading" (the rest's)."""
+        most = -1e9
+        for px, py in ((x, y), (x - half_w, y - half_h), (x + half_w, y - half_h), (x - half_w, y + half_h),
+                       (x + half_w, y + half_h)):
+            most = max(most, self._point_excess(px, py, h, part))
+        return most
+
+    def blocked(self, x: float, y: float, h: float) -> float:
+        """How far over its limit the blocking water (passable "block", or a pond that blocks) at (x, y) on a floor
+        at ``h`` m is (``excess``, at that point only; -1e9 where none is): it falls towards its edge, and only steps
+        that make it fall take a character in it out (``_step``)."""
+        return self._point_excess(x, y, h, "blocking")
+
+    def _point_excess(self, px: float, py: float, h: float, part: str) -> float:
+        from engine.water import inset, inside  # noqa: PLC0415
+
+        most = -1e9
+        floor: float | None = None
+        water = self.rivers.level_at(px, py) if self.rivers else None
+        if water is not None:
+            floors = [top for top, _s in self.heights_at(px, py) if abs(top - h) <= STEP]
+            floor = max(floors) if floors else h
+            depth = water[0] - floor
+            if depth > 0.0:
+                kind, wade = self._river_rules.get(water[1], ("auto", DEEP))
+                if kind == "block":
+                    if part != "wading":
+                        most = max(most, depth + BLOCK_EXCESS + self.rivers.inset_at(px, py))
+                elif part != "blocking":
+                    most = max(most, depth - (DEEP if kind == "auto" else wade))
+        for pond, box in self.ponds:
+            if not (box[0] <= px <= box[2] and box[1] <= py <= box[3]) or not inside(
+                    pond.water, pond.centre, (px * PIXELS_PER_METRE, py * PIXELS_PER_METRE)):
+                continue
+            if floor is None:
+                floors = [top for top, _s in self.heights_at(px, py) if abs(top - h) <= STEP]
+                floor = max(floors) if floors else h
+            depth = pond.level / PIXELS_PER_METRE - floor
+            # (the sculpted ground its shore: water wherever its level is over that ground, as drawn, however deep;
+            # without sculpted ground it is drawn as a sheet at its level, as any pond is: water.py, shore 4)
+            if depth > 0.0 if pond.water.shore == "terrain" and self.terrain is not None else -POND_DRY < depth < BODY:
+                if pond.water.passable == "wade":
+                    if part != "blocking":
+                        most = max(most, max(depth, 0.0) - pond.water.wade_depth)
+                elif part != "wading":
+                    within = inset(pond.water, pond.centre, (px * PIXELS_PER_METRE, py * PIXELS_PER_METRE))
+                    most = max(most, max(depth, 0.0) + BLOCK_EXCESS + within / PIXELS_PER_METRE)
+        return most
 
     def deepest(self, x: float, y: float, h: float, half_w: float, half_h: float) -> float:
         """The deepest a river's water stands over the floor under a feet box centred at (x, y) on a floor at
@@ -342,37 +424,76 @@ class World:
         hw, hh = box.w / 2 / PIXELS_PER_METRE, box.h / 2 / PIXELS_PER_METRE
         x, y, z = box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE, elevation_of(sprite)
         dx, dy = delta
-        deep = DEEP + DEEP_SLACK
-        if self.rivers:  # already in deeper water (put there, a river carved under it, a teleport): it wades out
-            here = self.deepest(x, y, z, hw, hh)
+        deep, block, held = DEEP_SLACK, DEEP_SLACK, -1e9
+        if self._wet:  # already in deeper water (put there, a river carved under it, a teleport): it wades out
+            held = self.blocked(x, y, z)
+            inb = self.excess(x, y, z, hw, hh, "blocking")
+            if held > 0.0:  # in blocking water the rule below governs it alone (its footprint's corners over the
+                block = 1e9  # water's ridge don't hold it)
+            elif inb > DEEP_SLACK:  # out of it but for its feet's edge: each step takes that further out (never
+                block = inb - 1e-6  # along a shore, nor through a gap narrower than its feet)
+            here = self.excess(x, y, z, hw, hh, "wading")  # (the water it may wade: blocking water never lends
+            # one leaving it a deeper allowance through the water beyond it)
             cap = getattr(sprite, "mesh_hd2d_deep_cap", None)
             if here <= deep:
                 sprite.mesh_hd2d_deep_cap = None
             else:
-                if cap is None or here > cap:  # (found there: no deeper than the water within a footprint all round,
-                    # which its corners cross on the way out; set once, held until it can wade again, so however
-                    # small its steps it never edges deeper)
-                    cap = max(self.deepest(x + i * hw, y + j * hh, z, hw, hh) for i in (-1, 0, 1)
+                if cap is None or here > cap:  # (found there: no further over its limit than the water within a
+                    # footprint all round, which its corners cross on the way out; set once, held until it is within
+                    # its limit again, so however small its steps it never edges deeper)
+                    cap = max(self.excess(x + i * hw, y + j * hh, z, hw, hh, "wading") for i in (-1, 0, 1)
                               for j in (-1, 0, 1)) + ESCAPE_SLACK
                     sprite.mesh_hd2d_deep_cap = cap
                 deep = cap
-        if dx and self.stand(x + dx / PIXELS_PER_METRE, y, z, hw, hh, deep) is None:
+        wanted = (dx, dy)
+        if dx and self.stand(x + dx / PIXELS_PER_METRE, y, z, hw, hh, deep, block) is None:
             dx = 0.0
-        if dy and self.stand(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE, z, hw, hh, deep) is None:
+        if dy and self.stand(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE, z, hw, hh, deep, block) is None:
             dy = 0.0
+        if held > 0.0 and any(wanted):  # in blocking water: only steps that take it out (not along it, nor round it)
+            # (a step must take it out by BLOCK_OUT of its length, or half the steepest fall there is here where
+            # that is gentler, or at all where that is gentler than BLOCK_OUT: where two blocking waters meet, the
+            # way out of both may fall slowly, and small steps more slowly still, so it is never held there)
+            probe = max(0.1, math.hypot(dx, dy) / PIXELS_PER_METRE)
+            fall, best = max(((held - self.blocked(x + math.cos(a) * probe, y + math.sin(a) * probe, z)) / probe, a)
+                             for a in (i * math.tau / 16 for i in range(16)))
+            need = min(BLOCK_OUT, 0.5 * fall) if fall >= BLOCK_OUT else 0.0
+
+            def outwards(nx: float, ny: float, moved: float) -> bool:
+                there = self.blocked(nx, ny, z)
+                return there <= 0.0 or there < held - max(need * moved, 1e-6)
+
+            # (the whole step first: a diagonal way out, along a crease, may take it out where neither axis alone
+            # does; else as much of it, one axis, as does)
+            if not outwards(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE,
+                            math.hypot(dx, dy) / PIXELS_PER_METRE):
+                if dx and outwards(x + dx / PIXELS_PER_METRE, y, abs(dx) / PIXELS_PER_METRE):
+                    dy = 0.0
+                elif dy and outwards(x, y + dy / PIXELS_PER_METRE, abs(dy) / PIXELS_PER_METRE):
+                    dx = 0.0
+                else:  # (pushed within 60 degrees of its steepest way out, along a crease: slid down that)
+                    along = wanted[0] * math.cos(best) + wanted[1] * math.sin(best)
+                    sx, sy = math.cos(best) * along, math.sin(best) * along
+                    dx = dy = 0.0
+                    if (fall > 0.0 and along > 0.5 * math.hypot(*wanted)
+                            and outwards(x + sx / PIXELS_PER_METRE, y + sy / PIXELS_PER_METRE, along / PIXELS_PER_METRE)
+                            and self.stand(x + sx / PIXELS_PER_METRE, y + sy / PIXELS_PER_METRE, z, hw, hh, deep,
+                                           block) is not None):
+                        dx, dy = sx, sy
         if not dx and not dy:
-            self._settle(sprite, x, y, z, hw, hh, deep)
+            self._settle(sprite, x, y, z, hw, hh, deep, block)
             return
         start = (sprite.center_x, sprite.center_y)
-        level = [s for s in solids if s is not sprite and _on_level(s, z)]
+        level = [s for s in solids if s is not sprite and _on_level(s, z)
+                 and (getattr(s, "mesh_entity_data", None) or {}).get("id") not in self._pond_ids]  # (R4B: by outline)
         move_entity_with_physics(sprite, (dx, dy), level)  # the scene's 2D solids on this level
         moved = (sprite.center_x - start[0]) / PIXELS_PER_METRE, (sprite.center_y - start[1]) / PIXELS_PER_METRE
-        if not self._settle(sprite, x + moved[0], y + moved[1], z, hw, hh, deep):
+        if not self._settle(sprite, x + moved[0], y + moved[1], z, hw, hh, deep, block):
             sprite.center_x, sprite.center_y = start  # (never expected: each axis was checked)
 
     def _settle(self, sprite: Any, x: float, y: float, z: float, hw: float, hh: float,
-                deep: float = DEEP + DEEP_SLACK) -> bool:
-        where = self.stand(x, y, z, hw, hh, deep)
+                deep: float = DEEP_SLACK, block: float | None = None) -> bool:
+        where = self.stand(x, y, z, hw, hh, deep, block)
         if where is None:
             return False
         data = getattr(sprite, "mesh_entity_data", None)
@@ -423,6 +544,35 @@ class World:
                     best = (t, hit, "ground")
         return None if best is None else (best[1], best[2])
 
+    def ways_out(self, x: float, y: float, z: float, radius: float = 6.0,
+                 limit: int = 4) -> list[tuple[float, float, float]]:
+        """Where a character that can't stand where it is (put in deep or blocking water) might walk out to: the
+        nearest navigation cell (m) within ``radius`` it could stand on in each of eight directions, each at the height
+        nearest its own (a bank rising from the water), the closest first and the same every time (ties by cell); at
+        most ``limit``."""
+        grid = self._nav_grid()
+        i0, j0 = self._cell(x, y)
+        reach = math.ceil(radius / NAV_CELL)
+        found = []
+        for i in range(i0 - reach, i0 + reach + 1):
+            for j in range(j0 - reach, j0 + reach + 1):
+                heights = grid.get((i, j))
+                if not heights:
+                    continue
+                cx, cy = self._centre(i, j)
+                d = math.hypot(cx - x, cy - y)
+                if d <= radius:
+                    found.append((d, i, j, (cx, cy, min(heights, key=lambda v: abs(v - z)))))
+        found.sort(key=lambda f: f[:3])
+        ways: list[tuple[float, float, float]] = []
+        sectors: set[int] = set()  # (the nearest each way round: not four cells side by side, behind one obstacle)
+        for d, _i, _j, at in found:
+            sector = int((math.atan2(at[1] - y, at[0] - x) + math.pi) / (math.tau / 8)) % 8
+            if sector not in sectors:
+                sectors.add(sector)
+                ways.append(at)
+        return ways[:limit]
+
     def walkable(self) -> int:
         """How many places (navigation cells, counting each floor of a stack) a character can stand."""
         return sum(len(heights) for heights in self._nav_grid().values())
@@ -445,7 +595,19 @@ class World:
             h = min(heights, key=lambda v: abs(v - p[2]))
             return (*self._cell(p[0], p[1]), h) if abs(h - p[2]) <= STEP else None
 
-        a, b = node(start), node(goal)
+        def near(p: tuple[float, float, float]) -> tuple[int, int, float] | None:
+            """Its own cell not walkable (its feet on a shore whose cell's middle is water): the nearest neighbouring
+            one that is (the same every time)."""
+            i0, j0 = self._cell(p[0], p[1])
+            around = sorted((math.hypot(self._centre(i, j)[0] - p[0], self._centre(i, j)[1] - p[1]), i, j)
+                            for i in (i0 - 1, i0, i0 + 1) for j in (j0 - 1, j0, j0 + 1) if (i, j) != (i0, j0))
+            for _d, i, j in around:
+                heights = [v for v in grid.get((i, j), ()) if abs(v - p[2]) <= STEP]
+                if heights:
+                    return i, j, min(heights, key=lambda v: abs(v - p[2]))
+            return None
+
+        a, b = node(start) or near(start), node(goal)
         if a is None or b is None:
             return []
         frontier: list[tuple[float, int, tuple[int, int, float]]] = [(0.0, 0, a)]
