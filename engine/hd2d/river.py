@@ -718,6 +718,16 @@ class RiverIndex:
                 best = (level, rid)
         return best
 
+    def inset_at(self, x: float, y: float) -> float:
+        """How far (m) in from its nearer bank a point on a river's water is (0 where none is): the distance to the
+        edges along the quad it lies on (R4B: blocking water is more over its limit the further in)."""
+        best = 0.0
+        for index in self._buckets.get((math.floor(x), math.floor(y)), ()):
+            quad = self._quads[index][0]
+            if _in_quad(quad, (x, y)):
+                best = max(best, min(_to_segment((x, y), quad[0], quad[1]), _to_segment((x, y), quad[3], quad[2])))
+        return best
+
     def samples_at(self, x: float, y: float) -> list[tuple[str, int]]:
         """The (river id, sample) of every quad whose ribbon covers (x, y) m, past ends and ponds or not."""
         return [(self._quads[i][2], self._samples[i]) for i in self._buckets.get((math.floor(x), math.floor(y)), ())
@@ -735,6 +745,13 @@ class RiverIndex:
         (cx, cy), (tx, ty) = r.centre[k], r.tangent[k]
         dx, dy = p[0] - cx, p[1] - cy
         return _off_cap(r, caps, r.u[k] + dx * tx + dy * ty, dy * tx - dx * ty)
+
+
+def _to_segment(p: tuple[float, float], a: tuple[float, float], b: tuple[float, float]) -> float:
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    length2 = dx * dx + dy * dy
+    t = 0.0 if length2 < 1e-18 else max(0.0, min(1.0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length2))
+    return math.hypot(p[0] - (a[0] + dx * t), p[1] - (a[1] + dy * t))
 
 
 def _in_quad(quad: tuple[tuple[float, float], ...], p: tuple[float, float]) -> bool:

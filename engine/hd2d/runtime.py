@@ -100,15 +100,13 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
         window.hd2d_renderer = Hd2dRenderer(window, hd2d, _contained(resolve_path))
         models = window.hd2d_renderer.models
         sculpted = hd2d.ground is not None and hd2d.ground.terrain is not None  # Milestone 20A
-        from engine.hd2d.river import ponds_of  # noqa: PLC0415
-        from engine.water import blocks  # noqa: PLC0415
+        if sculpted or hd2d.rivers or any(model.colliders for model in models.values()):  # (floors and walls
+            from engine.hd2d.river import ponds_of  # noqa: PLC0415  # authored in the GLBs; rivers' deep water,
+            from engine.hd2d.world import World  # noqa: PLC0415  # #461 R3; the ponds rivers flow into, R4
 
-        ponds = ponds_of(scene.get("entities") if isinstance(scene, dict) else None)
-        ruled = any(not p.gated and (blocks(p.water) or p.water.passable == "wade") for p in ponds)
-        if sculpted or hd2d.rivers or ruled or any(model.colliders for model in models.values()):  # (floors and
-            from engine.hd2d.world import World  # noqa: PLC0415  # walls authored in the GLBs; rivers' deep water,
-            # #461 R3; the ponds rivers flow into, R4; ponds that block or are waded to a depth, by outline, R4B)
-            window.hd2d_world = World(hd2d, models, ponds)
+            # (R4B: its ponds that block or are waded to a depth do so by their outline here; a room without a World
+            # keeps their 2D box, as before)
+            window.hd2d_world = World(hd2d, models, ponds_of(scene.get("entities") if isinstance(scene, dict) else None))
             window.hd2d_world.on_wade = partial(_wade, window)
             if window.hd2d_renderer.terrain is not None:  # one set of heights: what is drawn is what is walked on
                 window.hd2d_world.update_terrain(window.hd2d_renderer.terrain)

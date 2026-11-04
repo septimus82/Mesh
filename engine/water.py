@@ -273,6 +273,21 @@ def inside(water: Water, centre: tuple[float, float], point: tuple[float, float]
     return dx * dx + dy * dy <= r * r
 
 
+def inset(water: Water, centre: tuple[float, float], point: tuple[float, float]) -> float:
+    """About how far (px) ``point`` lies in from the water's edge (negative outside): along the line from its centre
+    for a round or natural outline, to the nearer side for a rectangle. It grows steadily inwards (R4B: blocking
+    water is more over its limit the further in, so one put in it can only walk out)."""
+    hw, hh = water.width / 2, water.height / 2
+    lx, ly = _local(water, centre, point)
+    if water.shape == "rect":
+        return min(hw - abs(lx), hh - abs(ly))
+    dx, dy = lx / hw, ly / hh
+    th = math.atan2(dy, dx)
+    r = _radius(*outline(water), th)
+    edge = r * math.hypot(math.cos(th) * hw, math.sin(th) * hh)  # its centre to its edge, this way (px)
+    return edge * (1.0 - math.hypot(dx, dy) / max(r, 1e-9))
+
+
 # --- a room's water: registry, clock, footsteps (window attributes; reset on every room load) ----------------------
 
 @dataclass

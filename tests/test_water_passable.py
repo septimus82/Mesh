@@ -231,5 +231,98 @@ def test_an_npc_with_no_way_out_is_stranded_said_once_and_doesn_t_loop(caplog: p
             route.update(1 / 60)
     assert npc.mesh_hd2d_stranded and "can't walk out of the water" in npc.mesh_hd2d_stranded
     assert sum("is stranded" in r.message for r in caplog.records) == 1, "said once"
-    assert calls["ways"] == 1, "looked for a way out once, not every frame"
+    assert calls["ways"] == 2, "looked for a way out at first and again after RETRY_S (10 s here), not every frame"
     assert (npc.center_x, npc.center_y) == (800.0, 318.0), "stayed where it was"
+
+
+# --- independent review of 6c0288b -----------------------------------------------------------------------------
+
+
+def _flat_room(**pond: Any) -> dict[str, Any]:
+    scene = {"entities": [], "settings": {"world_width": 1600, "world_height": 1200,
+                                          "hd2d": {"ground": {"texture": "assets/textures/grass.png",
+                                                              "from": [0, 0], "to": [1600, 1200]}}}}
+    scene, pid = ops.place_blank(scene, "start", "Lake", 800.0, 600.0)
+    return ops.set_water(scene, pid, preset="natural_pond", shape="ellipse", width=640.0, height=400.0, **pond)
+
+
+def test_one_put_in_blocking_water_can_only_walk_out_never_across() -> None:
+    """Pond water drawn over flat ground is as deep everywhere: one put just inside walked straight across it."""
+    for pond in ({"passable": "block"}, {"walkable": False}):
+        world = _world(_flat_room(**pond))
+        walker = _Walker(center_x=500.0, center_y=600.0 + 18, width=32.0, height=48.0, scale_x=1.0,
+                         mesh_entity_data={"elevation": 0.0, "components": {"collider": {"kind": "box", "auto": True}}})
+        for _ in range(400):
+            world.move(walker, (2.0, 0.0), [])
+        assert walker.center_x < 520.0, ("not on across it", pond, walker.center_x)
+        for _ in range(100):
+            world.move(walker, (-2.0, 0.0), [])
+        assert walker.center_x < 470.0, ("out, the near way", pond, walker.center_x)
+    # a blocked river standing over flat ground (uncarved: as deep everywhere): out to a bank, never across
+    scene = {"entities": [], "settings": {"world_width": 1600, "world_height": 1200,
+                                          "hd2d": {"ground": {"texture": "assets/textures/grass.png",
+                                                              "from": [0, 0], "to": [1600, 1200]}}}}
+    scene = ops.add_river(scene, "stream", [[4.0, 600.0, 192.0, 8.0], [1596.0, 600.0, 192.0, 8.0]], passable="block")
+    world = _world(scene)
+    walker = _Walker(center_x=800.0, center_y=520.0 + 18, width=32.0, height=48.0, scale_x=1.0,
+                     mesh_entity_data={"elevation": 0.0, "components": {"collider": {"kind": "box", "auto": True}}})
+    for _ in range(300):
+        world.move(walker, (0.0, 2.0), [])
+    assert walker.center_y - 18 < 560.0, ("not on across it", walker.center_y)
+
+
+def test_a_pond_on_a_raised_floor_doesn_t_block_the_ground_under_it() -> None:
+    scene = _flat_room(passable="block")
+    ops.entities(scene)[0]["elevation"] = 64.0  # (a roof pool, 2 m up)
+    world = _world(scene)
+    assert world.stand(800 / P, 600 / P, 0.0, 0.3, 0.19) is not None, "the ground under it: walked"
+
+
+def test_a_wide_npc_judged_by_its_own_feet_plans_a_bounded_number_of_times_and_says_so_once(
+        monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    """Review of 6c0288b: judged by the navigation grid's footprint, an NPC with a wide feet box froze in the water
+    and planned again and again, never saying so."""
+    world = _world(_room())
+    npc, route = _npc(world, 200.0, 600.0, [[200.0, 800.0, 0.0], [300.0, 800.0, 0.0]])
+    npc.width = 128.0  # (a 4 m picture: its own feet box 2.4 m wide fits nowhere in the 3 m channel)
+    planned = {"n": 0}
+    real = world.path
+
+    def counted(*args: Any) -> Any:
+        planned["n"] += 1
+        return real(*args)
+
+    monkeypatch.setattr(world, "path", counted)
+    with caplog.at_level("WARNING"):
+        for _ in range(60 * 30):
+            route.update(1 / 60)
+    said = [r.message for r in caplog.records if "is stranded" in r.message or "can't get through" in r.message]
+    assert len(said) == 1, ("said once, not frozen silently", said)
+    # (REPLANS tries, then BACK_OFF_S: about 3 every 7 s; before the review, 34 in 30 s and never said)
+    assert planned["n"] <= 16, ("planned a bounded number of times in 30 s", planned["n"])
+
+
+def test_blocking_set_and_cleared_through_every_path() -> None:
+    scene = _flat_room()
+    pid = ops.entities(scene)[0]["id"]
+    blocked = ops.set_water(scene, pid, passable="block")
+    gone = ops.find_entity(ops.remove_water(blocked, pid), pid)
+    assert "solid" not in gone and "components" not in gone, "removed water leaves no wall"
+    hand = copy.deepcopy(ops.set_water(scene, pid, passable="wade", walkable=False))
+    ops.find_entity(hand, pid)["solid"] = True  # (set by hand: not the water's)
+    assert ops.find_entity(ops.set_water(hand, pid, opacity=0.5), pid)["solid"] is True, "kept"
+    via_param = ops.find_entity(ops.set_behaviour_param(scene, pid, "WaterSurface", "passable", "block"), pid)
+    assert via_param["solid"] is True and via_param["components"]["collider"]["kind"] == "box", "as set_water"
+    back = ops.set_behaviour_param(ops.set_water(scene, pid, passable="block"), pid, "WaterSurface", "passable", "auto")
+    assert "solid" not in ops.find_entity(back, pid)
+
+
+def test_a_waded_pond_s_deep_basin_outside_its_outline_isn_t_its_water() -> None:
+    """Only within its outline is it the pond's water: its box's corner, its basin dug deep past its edge, is dry."""
+    scene = _room(pond={"passable": "wade", "wade_depth": 0.3, "shore": "terrain"})
+    pid = ops.entities(scene)[0]["id"]
+    ops.find_entity(scene, pid)["elevation"] = 0.0
+    scene = ops.sculpt_terrain_stroke(scene, "flatten", [[1200, 300, 1.0]] * 6, radius=260, target=-24.0)
+    world = _world(scene)
+    assert not _stands(world, 1200, 300), "in it: 0.75 m, deeper than its 0.3 m"
+    assert _stands(world, 1060, 220), "its box's corner, outside its outline: no water there (however deep the ground)"

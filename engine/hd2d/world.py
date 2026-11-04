@@ -304,11 +304,13 @@ class World:
     def excess(self, x: float, y: float, h: float, half_w: float, half_h: float) -> float:
         """How far the water under a feet box centred at (x, y) on a floor at ``h`` m is over the depth it may be
         waded to (m; at its middle and corners, the most; negative within it, -1e9 where no water with a limit is).
-        A river's by its ``passable``: "auto" DEEP (as R3), "wade" its ``wade_depth``, "block" any (its depth and
-        BLOCK_EXCESS). A pond that blocks or is waded to a depth (``self.ponds``): within its outline, where its water
-        stands over the floor (its shore the sculpted ground: water over it; else a floor up to POND_DRY over its
-        level, so a deck above it is dry), the same way. Depth is measured to the floor under each point."""
-        from engine.water import inside  # noqa: PLC0415
+        A river's by its ``passable``: "auto" DEEP (as R3), "wade" its ``wade_depth``, "block" any (its depth,
+        BLOCK_EXCESS, and how far in from its bank it is: so one put in it can only walk out, never across). A pond
+        that blocks or is waded to a depth (``self.ponds``): within its outline, where its water stands over the floor
+        (its shore the sculpted ground: water over it; else a floor from POND_DRY over its level, so a deck above it
+        is dry, to a character's height under it, so a floor under a raised pond isn't its bed), the same way (a
+        blocking pond's by how far in from its edge too). Depth is measured to the floor under each point."""
+        from engine.water import inset, inside  # noqa: PLC0415
 
         most = -1e9
         for px, py in ((x, y), (x - half_w, y - half_h), (x + half_w, y - half_h), (x - half_w, y + half_h),
@@ -321,7 +323,10 @@ class World:
                 depth = water[0] - floor
                 if depth > 0.0:
                     kind, wade = self._river_rules.get(water[1], ("auto", DEEP))
-                    most = max(most, depth - (DEEP if kind == "auto" else wade if kind == "wade" else -BLOCK_EXCESS))
+                    if kind == "block":
+                        most = max(most, depth + BLOCK_EXCESS + self.rivers.inset_at(px, py))
+                    else:
+                        most = max(most, depth - (DEEP if kind == "auto" else wade))
             for pond, box in self.ponds:
                 if not (box[0] <= px <= box[2] and box[1] <= py <= box[3]) or not inside(
                         pond.water, pond.centre, (px * PIXELS_PER_METRE, py * PIXELS_PER_METRE)):
@@ -330,9 +335,12 @@ class World:
                     floors = [top for top, _s in self.heights_at(px, py) if abs(top - h) <= STEP]
                     floor = max(floors) if floors else h
                 depth = pond.level / PIXELS_PER_METRE - floor
-                if depth > (0.0 if pond.water.shore == "terrain" else -POND_DRY):
-                    wade = pond.water.wade_depth if pond.water.passable == "wade" else -BLOCK_EXCESS
-                    most = max(most, max(depth, 0.0) - wade)
+                if depth > 0.0 if pond.water.shore == "terrain" else -POND_DRY < depth < BODY:
+                    if pond.water.passable == "wade":
+                        most = max(most, max(depth, 0.0) - pond.water.wade_depth)
+                    else:
+                        within = inset(pond.water, pond.centre, (px * PIXELS_PER_METRE, py * PIXELS_PER_METRE))
+                        most = max(most, max(depth, 0.0) + BLOCK_EXCESS + within / PIXELS_PER_METRE)
         return most
 
     def deepest(self, x: float, y: float, h: float, half_w: float, half_h: float) -> float:
@@ -480,8 +488,9 @@ class World:
     def ways_out(self, x: float, y: float, z: float, radius: float = 6.0,
                  limit: int = 4) -> list[tuple[float, float, float]]:
         """Where a character that can't stand where it is (put in deep or blocking water) might walk out to: the
-        nearest navigation cells (m) within ``radius`` it could stand on, each at the height nearest its own (a bank
-        rising from the water), the closest first and the same every time (ties by cell); at most ``limit``."""
+        nearest navigation cell (m) within ``radius`` it could stand on in each of eight directions, each at the height
+        nearest its own (a bank rising from the water), the closest first and the same every time (ties by cell); at
+        most ``limit``."""
         grid = self._nav_grid()
         i0, j0 = self._cell(x, y)
         reach = math.ceil(radius / NAV_CELL)
@@ -496,7 +505,14 @@ class World:
                 if d <= radius:
                     found.append((d, i, j, (cx, cy, min(heights, key=lambda v: abs(v - z)))))
         found.sort(key=lambda f: f[:3])
-        return [f[3] for f in found[:limit]]
+        ways: list[tuple[float, float, float]] = []
+        sectors: set[int] = set()  # (the nearest each way round: not four cells side by side, behind one obstacle)
+        for d, _i, _j, at in found:
+            sector = int((math.atan2(at[1] - y, at[0] - x) + math.pi) / (math.tau / 8)) % 8
+            if sector not in sectors:
+                sectors.add(sector)
+                ways.append(at)
+        return ways[:limit]
 
     def walkable(self) -> int:
         """How many places (navigation cells, counting each floor of a stack) a character can stand."""
