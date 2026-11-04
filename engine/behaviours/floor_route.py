@@ -178,6 +178,9 @@ class FloorRouteBehaviour(Behaviour):
             if self._stuck > STUCK_S:
                 self._strand(fx, fy)
             return
+        if self._low <= -1e8:  # (just walked out of blocking water down its fall: where it might stand now is
+            self._low = -math.inf  # looked for again from here, once, not from where it started)
+            self._ways, self._best, self._stuck = world.ways_out(fx / PX, fy / PX, z), math.inf, 0.0
         if not self._ways:
             self._strand(fx, fy)
             return

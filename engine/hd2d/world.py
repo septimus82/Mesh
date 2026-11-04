@@ -426,12 +426,10 @@ class World:
         if self._wet:  # already in deeper water (put there, a river carved under it, a teleport): it wades out
             held = self.blocked(x, y, z)
             inb = self.excess(x, y, z, hw, hh, "blocking")
-            if held > 0.0 or inb <= DEEP_SLACK:  # (in blocking water the rule below governs it alone: its
-                sprite.mesh_hd2d_block_cap = None  # footprint's corners over the water's ridge don't hold it)
-                block = 1e9 if held > 0.0 else DEEP_SLACK
-            else:  # (out of it but for its corners: never further into it; held until all of it is out)
-                block = max(inb, getattr(sprite, "mesh_hd2d_block_cap", None) or 0.0)
-                sprite.mesh_hd2d_block_cap = block
+            if held > 0.0:  # in blocking water the rule below governs it alone (its footprint's corners over the
+                block = 1e9  # water's ridge don't hold it)
+            elif inb > DEEP_SLACK:  # out of it but for its feet's edge: each step takes that further out (never
+                block = inb - 1e-6  # along a shore, nor through a gap narrower than its feet)
             here = self.excess(x, y, z, hw, hh, "wading")  # (the water it may wade: blocking water never lends
             # one leaving it a deeper allowance through the water beyond it)
             cap = getattr(sprite, "mesh_hd2d_deep_cap", None)
@@ -595,7 +593,19 @@ class World:
             h = min(heights, key=lambda v: abs(v - p[2]))
             return (*self._cell(p[0], p[1]), h) if abs(h - p[2]) <= STEP else None
 
-        a, b = node(start), node(goal)
+        def near(p: tuple[float, float, float]) -> tuple[int, int, float] | None:
+            """Its own cell not walkable (its feet on a shore whose cell's middle is water): the nearest neighbouring
+            one that is (the same every time)."""
+            i0, j0 = self._cell(p[0], p[1])
+            around = sorted((math.hypot(self._centre(i, j)[0] - p[0], self._centre(i, j)[1] - p[1]), i, j)
+                            for i in (i0 - 1, i0, i0 + 1) for j in (j0 - 1, j0, j0 + 1) if (i, j) != (i0, j0))
+            for _d, i, j in around:
+                heights = [v for v in grid.get((i, j), ()) if abs(v - p[2]) <= STEP]
+                if heights:
+                    return i, j, min(heights, key=lambda v: abs(v - p[2]))
+            return None
+
+        a, b = node(start) or near(start), node(goal)
         if a is None or b is None:
             return []
         frontier: list[tuple[float, int, tuple[int, int, float]]] = [(0.0, 0, a)]

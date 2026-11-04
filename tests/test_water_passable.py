@@ -251,7 +251,8 @@ def test_an_npc_with_no_way_out_is_stranded_said_once_and_doesn_t_loop(monkeypat
     assert abs(npc.center_x - 1082.0) < 24 and abs(npc.center_y - 310.0) < 24, "stayed in the pit (no teleport)"
 
 
-def test_an_npc_far_out_in_blocking_water_walks_out_though_no_way_out_is_within_reach() -> None:
+def test_an_npc_far_out_in_blocking_water_walks_out_though_no_way_out_is_within_reach(
+        monkeypatch: pytest.MonkeyPatch) -> None:
     """Re-review of bb320df: 8.75 m from the shore, no standing place within ways_out's 6 m: it still walks down the
     water's fall and out."""
     from engine.physics_runtime import _sprite_to_aabb
@@ -262,11 +263,13 @@ def test_an_npc_far_out_in_blocking_water_walks_out_though_no_way_out_is_within_
                           passable="block")
     world = _world(scene)
     assert world.ways_out(800 / P, 300 / P, 0.0) == [], "no way out within reach"
+    said = _said(monkeypatch)
     npc, route = _npc(world, 800.0, 300.0, [[200.0, 800.0, 0.0]])
     for _ in range(60 * 20):
         route.update(1 / 60)
     box = _sprite_to_aabb(npc)
     assert not getattr(npc, "mesh_hd2d_stranded", None)
+    assert said == [], "never said stranded on its way out (once ashore it looks for ways out from there)"
     assert world.blocked(box.x / P, box.y / P, npc.mesh_entity_data["elevation"] / P) <= 0.0, "out"
 
 
@@ -482,8 +485,8 @@ def test_where_two_blocking_ponds_meet_no_one_is_held_and_an_npc_past_a_river_s_
                 held.append((sx, sy))
     assert not held, ("held where the two waters meet", held[:5], len(held))
     river_world = _world(_room(river_args={"passable": "block"}))
-    npc, route = _npc(river_world, 200.0, 599.0, [[200.0, 800.0, 0.0], [300.0, 800.0, 0.0]])
-    for _ in range(60 * 20):
+    npc, route = _npc(river_world, 200.0, 599.0, [[200.0, 400.0, 0.0], [300.0, 400.0, 0.0]])  # (its route ashore)
+    for _ in range(60 * 10):
         route.update(1 / 60)
     assert not getattr(npc, "mesh_hd2d_stranded", None), "it walks out (the near bank, behind it)"
     box = _sprite_to_aabb(npc)
@@ -613,3 +616,47 @@ def test_with_only_its_feet_s_edge_in_blocking_water_it_goes_no_further_in() -> 
         box = _sprite_to_aabb(w)
         assert world.blocked(box.x / P, box.y / P, 0.0) <= 0.0, "its middle never in"
         assert world.excess(box.x / P, box.y / P, 0.0, *half, "blocking") <= start + 1e-9, "never further in"
+
+
+def test_no_squeezing_along_a_gap_narrower_than_its_feet_between_blocking_ponds() -> None:
+    """Re-review of 3f218ca: with only its feet's edge in blocking water, one put in a pond walked the length of a
+    12 px gap between two blocking ponds (its feet 19 px wide), held to the edge it first had in."""
+    from engine.physics_runtime import _sprite_to_aabb
+
+    scene: dict[str, Any] = {"entities": [], "settings": {"world_width": 1600, "world_height": 1200, "hd2d": {
+        "ground": {"texture": "assets/textures/grass.png", "from": [0, 0], "to": [1600, 1200]}}}}
+    for name, cx in (("West", 600.0), ("East", 1000.0)):
+        scene, pid = ops.place_blank(scene, "start", name, cx, 600.0)
+        scene = ops.set_water(scene, pid, preset="natural_pond", shape="rect", width=388.0, height=400.0,
+                              passable="block")  # (a dry gap x 794..806, y 400..800 between them)
+    world = _world(scene)
+    for sx in (790.0, 793.0):
+        w = _Walker(center_x=sx, center_y=618.0, width=32.0, height=48.0, scale_x=1.0,
+                    mesh_entity_data={"elevation": 0.0, "components": {"collider": {"kind": "box", "auto": True}}})
+        for _ in range(6):
+            world.move(w, (1.0, 0.0), [])  # (its middle out into the gap, its edges in both ponds)
+        box = _sprite_to_aabb(w)
+        assert 794 < box.x < 806 and world.blocked(box.x / P, box.y / P, 0.0) <= 0.0, ("in the gap", sx, box.x)
+        for _ in range(300):
+            world.move(w, (0.0, 2.0), [])  # (along the gap)
+        box = _sprite_to_aabb(w)
+        assert box.y < 640, ("not along the gap", sx, box.x, box.y)
+
+
+def test_npcs_that_walk_out_of_a_blocking_pond_go_on_with_their_route() -> None:
+    """Re-review of 3f218ca: an NPC walked out to the first place it could stand, a shore whose navigation cell's
+    middle was water, and from there found no route ever (planning once a second, unreported)."""
+    from engine.physics_runtime import _sprite_to_aabb
+
+    world = _world(_flat_room(passable="block"))
+    stuck = []
+    for sx, sy in ((600, 600), (680, 600), (840, 600), (1000, 440), (1000, 760)):
+        npc, route = _npc(world, float(sx), float(sy), [[200.0, 200.0, 0.0], [300.0, 200.0, 0.0]])
+        nearest = 1e9  # (how near it came to its first point: skipping an unreachable one isn't arriving)
+        for _ in range(60 * 30):  # (round a 20 m lake at 60 px/s)
+            route.update(1 / 60)
+            box = _sprite_to_aabb(npc)
+            nearest = min(nearest, ((box.x - 200.0) ** 2 + (box.y - 200.0) ** 2) ** 0.5)
+        if getattr(npc, "mesh_hd2d_stranded", None) or nearest > 8.0 or world.blocked(box.x / P, box.y / P, 0.0) > 0.0:
+            stuck.append((sx, sy, round(box.x), round(box.y)))
+    assert stuck == [], "each walked out and reached its route's first point"
