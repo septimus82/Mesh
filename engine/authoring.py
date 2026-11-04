@@ -96,24 +96,26 @@ def describe() -> list[Doc]:
 
 
 # --------------------------------------------------------------------------------------- apply
-def apply(project: Project, changes: list[Doc]) -> Doc:
+def apply(project: Project, changes: list[Doc], *, pins: list[Doc] | None = None) -> Doc:
     """Run ``changes`` on ``project`` as one transaction (one undo step).
 
     Returns ``{"ok": True, "applied": n, "created": {index: id}}``; raises ChangeError (and
-    changes nothing) if any change is refused.
+    changes nothing) if any change is refused. ``pins``: given a list, each change is added to it as
+    it was resolved here (``_pinned``).
     """
     if not isinstance(changes, list) or not all(isinstance(c, dict) for c in changes):
         raise ChangeError(0, "?", "changes must be a list of objects like {\"op\": ..., ...}.")
     created: dict[int, str | int] = {}
     with project.transaction():
         for index, change in enumerate(changes):
-            made = _apply_one(project, index, change, created)
+            made = _apply_one(project, index, change, created, pins)
             if made is not None:
                 created[index] = made
     return {"ok": True, "applied": len(changes), "created": created}
 
 
-def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str | int]) -> str | int | None:
+def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str | int],
+               pins: list[Doc] | None = None) -> str | int | None:
     name = str(change.get("op") or change.get("type") or "")  # "type": how older Mesh tools spell it
     func = operations().get(name)
     if func is None:
@@ -121,12 +123,16 @@ def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str
     args = {k: _deref(v, created, index, name) for k, v in change.items() if k not in ("op", "type", "room")}
     try:
         if name in _PROJECT_OPS:
+            if pins is not None:
+                pins.append(copy.deepcopy(change))
             return _call_project_op(project, func, args, index, name)
         room = str(change.get("room") or project.current)
         if room not in {key for key, _label, _path in project.rooms()}:
             raise ChangeError(index, name, f"there is no room '{room}'. Rooms: {', '.join(k for k, _, _ in project.rooms())}.")
         scene = project.scene(room)
         bound = _bind(func, args, scene, room, project, index, name)
+        if pins is not None:
+            pins.append(_pinned(change, room, bound))
         result = func(**bound)
         new_scene, made = (result if isinstance(result, tuple) else (result, None))
         project.edit_scene(lambda _s: new_scene, room)
@@ -137,6 +143,19 @@ def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str
         if isinstance(err, ChangeError):
             raise
         raise ChangeError(index, name, str(err)) from err
+
+
+def _pinned(change: Doc, room: str, bound: Doc) -> Doc:
+    """``change`` as it was resolved (#462 S1): its room, and an object named (not an id) as the id it named then.
+    A proposal keeps its changes this way, so accepting it later writes where its preview did: not in whatever room
+    is open by then, nor on another object that took the name since. Objects the batch itself makes ("@0") stay so."""
+    pin = copy.deepcopy(change)
+    pin["room"] = room
+    for key in ("entity_id", "entity"):
+        given = change.get(key)
+        if isinstance(given, str) and not given.startswith("@") and key in bound:
+            pin[key] = bound[key]["id"] if isinstance(bound[key], dict) else bound[key]
+    return pin
 
 
 def _call_project_op(project: Project, func: Callable[..., Any], args: Doc, index: int, name: str) -> str | None:
@@ -239,13 +258,15 @@ def _resolve_prefab(project: Project, value: Any, index: int, name: str) -> Doc:
     raise ChangeError(index, name, f"there is no object type '{text}'. This project has: {known}.")
 
 
-def dry_run(project: Project, changes: list[Doc], *, base: Doc | None = None) -> tuple[Doc, Doc]:
-    """``(before, after)`` documents for ``changes`` tried on a copy (``base``: start from these)."""
+def dry_run(project: Project, changes: list[Doc], *, base: Doc | None = None,
+            pins: list[Doc] | None = None) -> tuple[Doc, Doc]:
+    """``(before, after)`` documents for ``changes`` tried on a copy (``base``: start from these; ``pins``: as
+    ``apply``)."""
     trial = project.clone()
     if base is not None:
         trial.load_documents(base)
     before = copy.deepcopy(trial.all_documents())
-    apply(trial, changes)
+    apply(trial, changes, pins=pins)
     return before, copy.deepcopy(trial.all_documents())
 
 
@@ -301,6 +322,38 @@ def conflicts(ours: dict[tuple[Any, ...], tuple[Any, Any]], theirs: dict[tuple[A
                 deeper = p if len(p) > len(q) else q
                 found.append({"path": _path_text(deeper), "what": _conflict_words(deeper), "studio": mine, "ai": other})
     return found
+
+
+def overwrites(ours: dict[tuple[Any, ...], tuple[Any, Any]], writes: dict[tuple[Any, ...], tuple[Any, Any]],
+               base: Doc) -> list[Doc]:
+    """Where applying a proposal now would write over what the person changed since the AI read the project (#462
+    S1): each path the replay writes (``writes``: ``changes_between(now, replayed)``) that the person changed (``ours``:
+    ``changes_between(base, now)``), the same path or one inside the other; with what the AI read there (``base``),
+    what is there now and what it would write. Its write set, not its preview: an operation also writes values it
+    was given that equal what the AI read (``move_entity(x=0, y=100)`` from (0, 0) writes x), which its preview
+    doesn't show. Separate edits (paths only one side writes) aren't conflicts."""
+    mine = set(ours)
+    around = {q[:i] for q in ours for i in range(1, len(q) + 1)}  # the person's paths and every path holding one
+    found = []
+    for p, (now, new) in writes.items():
+        if p in around or any(p[:i] in mine for i in range(1, len(p))):
+            found.append({"path": _path_text(p), "what": _conflict_words(p), "base": _value_at(base, p),
+                          "studio": now, "ai": new})
+    return found
+
+
+def _value_at(doc: Any, path: tuple[Any, ...]) -> Any:
+    """The value at ``path`` (as ``changes_between`` spells it: "#id" for an object in a list with ids), or None."""
+    for part in path:
+        if isinstance(doc, dict):
+            doc = doc.get(part)
+        elif isinstance(doc, list) and isinstance(part, str) and part.startswith("#"):
+            doc = next((x for x in doc if isinstance(x, dict) and x.get("id") == part[1:]), None)
+        elif isinstance(doc, list) and isinstance(part, int) and 0 <= part < len(doc):
+            doc = doc[part]
+        else:
+            return None
+    return doc
 
 
 def _conflict_words(path: tuple[Any, ...]) -> str:

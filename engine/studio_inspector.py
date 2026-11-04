@@ -11,6 +11,7 @@ _label), its edit path (_edit) and its state (project, selected).
 
 from __future__ import annotations
 
+import reprlib
 import time
 from functools import partial
 from pathlib import Path
@@ -1316,8 +1317,9 @@ class InspectorMixin:
             if proposal.status == "conflict":
                 rows.add(self._label(proposal.message, color=C_WARN, size=9, width=width))
                 for clash in proposal.conflicts[:8]:
-                    rows.add(self._label(f"  {clash.get('what') or clash['path']}: here {clash['studio']!r}, proposed {clash['ai']!r}",
-                                         color=C_WARN, size=9, width=width))
+                    was = f" (the AI read {reprlib.repr(clash['base'])})" if "base" in clash else ""  # (#462 S1)
+                    rows.add(self._label(f"  {clash.get('what') or clash['path']}: here {reprlib.repr(clash['studio'])}, "
+                                         f"proposed {reprlib.repr(clash['ai'])}{was}", color=C_WARN, size=9, width=width))
             row = gui.UIBoxLayout(vertical=False, space_between=6)
             row.add(self._button("Accept", partial(self.accept_ai, proposal), width=half, style=S_ACTIVE,
                                  disabled=proposal.status == "conflict"))
