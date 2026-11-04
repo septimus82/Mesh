@@ -32,6 +32,9 @@ Doc = dict[str, Any]
 UNDO_LIMIT = 100
 
 
+def _ids(room: Doc) -> set[str]:
+    return {str(e["id"]) for e in ops.entities(room) if e.get("id")}
+
 
 def _copy(doc: Any) -> Any:
     """A deep copy of a project document (JSON data): a pickle round trip, several times faster than deepcopy for a
@@ -98,6 +101,7 @@ class Project:
         self._views: dict[str, tuple[Doc, Doc | None, Doc]] = {}  # room -> (stored, player, expanded) cache
         self.player: Doc | None = self._read_player()  # the shared player's definition (None: rooms have their own)
         self.player_dirty = False
+        self.ids_seen: set[str] = set()  # every object id this session (#462 S1-ID): a new object never gets one
         self.scene(self.current)
 
     @classmethod
@@ -152,12 +156,14 @@ class Project:
             if path.is_file():
                 self._seen_on_disk[self.path(key)] = path.stat().st_mtime
             self.scenes[key] = ops.ensure_entity_ids(raw, key)
+            self.ids_seen.update(_ids(self.scenes[key]))
         return self.scenes[key]
 
     def _store(self, key: str, doc: Doc, player_ids: list[str]) -> None:
         """Keep an edited room, the shared player split back out of it (its definition may have changed)."""
         stored, definition = ops.split_players(doc, player_ids, self.player)
         self.scenes[key] = stored
+        self.ids_seen.update(_ids(stored))  # (#462 S1-ID: what it made, never given to another object)
         self.dirty.add(key)
         if definition is not None and definition != self.player:
             self.player, self.player_dirty = definition, True
@@ -300,7 +306,8 @@ class Project:
         before = self._snapshot()
         self._tx_depth += 1
         try:
-            yield
+            with ops.retired_ids(self.ids_seen):
+                yield
         except BaseException:
             self._tx_depth -= 1
             self._restore(before)
@@ -325,6 +332,7 @@ class Project:
         copy_.player, copy_.player_dirty, copy_._views = copy.deepcopy(self.player), self.player_dirty, {}
         copy_._undo, copy_._redo, copy_.revision, copy_.writes_files, copy_._tx_depth = [], [], self.revision, False, 0
         copy_._seen_on_disk = dict(self._seen_on_disk)  # (a room loaded first in the copy records when it was read)
+        copy_.ids_seen = set(self.ids_seen)  # (so a dry run gives new objects the ids the real edit will)
         return copy_
 
     def load_documents(self, docs: Doc) -> None:
@@ -338,7 +346,8 @@ class Project:
         key = key or self.current
         before = self._snapshot()
         player_ids = ops.shared_player_ids(self._room(key))
-        updated = change(self.scene(key))
+        with ops.retired_ids(self.ids_seen):
+            updated = change(self.scene(key))
         self._record(before)
         self._store(key, updated, player_ids)
 
