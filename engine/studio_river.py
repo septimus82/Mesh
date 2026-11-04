@@ -60,6 +60,7 @@ class RiverTool:
         self.gesture: dict[str, Any] | None = None  # a control point being dragged
         self.error: str | None = None  # why the last thing tried was refused (shown in the panel)
         self.width_px, self.above_px = NEW_WIDTH_PX, ABOVE_PX
+        self.bed_depth: float | None = None  # Carve the bed: one depth (m) for every point, or None: by its width
         self._centres: dict[Any, list[tuple[float, float, float]]] = {}  # shown river -> its course (m), for drawing
         self.timings: dict[str, list[float]] = {"check_ms": [], "commit_ms": []}
 
@@ -609,6 +610,18 @@ class RiverTool:
             row.add(view._button("Remove river", self.remove_river, "Remove the whole river (Delete with no point "
                                  "selected)", width=half))
             box.add(row)
+            box.add(studio._label("Its bed: carving lowers the ground under the water into a channel with "
+                                  "walkable banks. Water deeper than 0.5 m can't be waded.", color=C_MUTED, size=10,
+                                  width=width))
+            field_row("Bed depth (m)", "by width" if self.bed_depth is None else f"{self.bed_depth:.2f}",
+                      self._set_bed_depth, "river_bed_depth")
+            row = _row()
+            row.add(view._button("Carve the bed", self.carve_bed, "Lower the ground under the river into its bed and "
+                                 "banks (one undo step; ground already lower is kept)", width=half))
+            row.add(view._button("Clear plants", self.clear_scatter, "Take away the scattered grass, flowers, bushes "
+                                 "and rocks standing in its water (reeds may stay in the shallows; nothing else is "
+                                 "touched)", width=half))
+            box.add(row)
         elif self.draft is None:
             box.add(studio._label("Click the ground to start a river (its first point is upstream), or click a river "
                                   "to select it.", size=10, width=width))
@@ -621,11 +634,49 @@ class RiverTool:
                       metres(lambda v: self._set_new(width_px=v * PX), 0.5, 16.0), "river_new_width")
             field_row("Water above ground (m)", f"{self.above_px / PX:.2f}",
                       metres(lambda v: self._set_new(above_px=v * PX), -4.0, 4.0), "river_new_above")
-        box.add(studio._label("A river doesn't carve its bed: its water shows where it stands above the ground, so "
-                              "sculpt a bed first (Sculpt, Lower or Flatten) or it lies on the ground. A point's water "
-                              "is never above the one before.", color=C_MUTED, size=10, width=width))
+        box.add(studio._label("Its water shows where it stands above the ground: carve its bed (select it, then Carve "
+                              "the bed) or sculpt one. A point's water is never above the one before.", color=C_MUTED,
+                              size=10, width=width))
         if self.error:
             box.add(studio._label(f"Last refused: {self.error}", color=C_ERROR, size=10, width=width))
+
+    def _set_bed_depth(self, text: str) -> None:
+        """The Bed depth box: a depth in metres (0 to 8), or empty / "by width" for a quarter of the river's width."""
+        text = text.strip().lower()
+        if text in ("", "by width", "auto"):
+            self.bed_depth = None
+        else:
+            try:
+                value = float(text)
+            except ValueError:
+                value = math.nan
+            if not math.isfinite(value) or not 0.0 <= value <= 8.0:
+                self.studio._say("Type a depth from 0 to 8 m, or leave it empty: a quarter of the river's width.",
+                                 ok=False)
+                self.studio._rebuild()
+                return
+            self.bed_depth = value
+        self.studio._rebuild()
+
+    def carve_bed(self) -> None:
+        """Carve the selected river's bed into the ground (project_ops.carve_river_bed, one undo step; the room is
+        loaded again: its ground and what is walked on change)."""
+        rid = self.selected
+        if rid is None or self.gesture is not None or self.draft is not None:
+            return
+        n = len(self._points(rid))
+        depths = None if self.bed_depth is None else [self.bed_depth] * n
+        how = "a quarter of its width deep" if depths is None else f"{self.bed_depth:.2f} m deep"
+        self.studio._edit(lambda s: ops.carve_river_bed(s, rid, depths),
+                          f"River '{rid}': its bed carved, {how} in the middle. Undo puts the ground back.")
+
+    def clear_scatter(self) -> None:
+        """Take away the scattered decoration standing in the selected river's water (one undo step)."""
+        rid = self.selected
+        if rid is None or self.gesture is not None or self.draft is not None:
+            return
+        self.studio._edit(lambda s: ops.clear_scatter_in_rivers(s, rid),
+                          f"River '{rid}': the scattered plants and rocks in its water taken away.")
 
     def _select(self, river_id: str) -> None:
         self.selected, self.point = river_id, None

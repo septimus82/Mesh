@@ -224,12 +224,16 @@ class Ground:
 def ground_for(terrain: Any, flat: tuple[tuple[float, float], tuple[float, float], float] | None,
                waters: list[tuple[Any, tuple[float, float], float]],
                footprints: list[tuple[float, float, float, float, float]], margin: float = 0.3 * PX,
-               spots: Iterable[tuple[float, float]] = (), clear: float = 1.0 * PX) -> Ground:
+               spots: Iterable[tuple[float, float]] = (), clear: float = 1.0 * PX, rivers: Any = ()) -> Ground:
     """A room's ``Ground``: its sculpted ``terrain`` (engine.hd2d.terrain.Terrain), else the ``flat`` ground (from,
     to, elevation px); ``waters``: (engine.water.Water, centre px, level px); ``footprints``: structures as (x, y,
     half width, half depth, turn degrees) px, kept ``margin`` px clear; ``spots``: where people step in and out
-    (doors, arrivals, the player's start, the ends of stairs and bridges), kept ``clear`` px clear."""
+    (doors, arrivals, the player's start, the ends of stairs and bridges), kept ``clear`` px clear; ``rivers``: the
+    room's rivers (engine.hd2d.river.River), their water where their ribbons lie (#461 R3)."""
     from engine import water as water_mod  # noqa: PLC0415
+    from engine.hd2d.river import RiverIndex  # noqa: PLC0415
+
+    flowing = RiverIndex(tuple(rivers))
 
     def surface(x: float, y: float) -> tuple[float, float] | None:
         if terrain is not None:
@@ -241,6 +245,9 @@ def ground_for(terrain: Any, flat: tuple[tuple[float, float], tuple[float, float
 
     def water(x: float, y: float) -> float | None:
         levels = [level for w, centre, level in waters if water_mod.inside(w, centre, (x, y))]
+        river = flowing.level_at(x / PX, y / PX) if flowing else None
+        if river is not None:
+            levels.append(river[0] * PX)
         return max(levels) if levels else None
 
     spot_list = list(spots)
@@ -289,8 +296,7 @@ def refusal(asset: Asset, x: float, y: float, ground: Ground, rules: Rules) -> s
     if material not in asset.on:
         return "grows"
     level = ground.water(x, y)
-    if level is not None and rules.avoid_water and height < level + 0.05 * PX \
-            and not (asset.shore and height >= level - asset.shore * PX):
+    if level is not None and rules.avoid_water and submerged(asset, height, level):
         return "water"
     if not rules.avoid_structures:
         return None
@@ -299,6 +305,13 @@ def refusal(asset: Asset, x: float, y: float, ground: Ground, rules: Rules) -> s
            if r or (dx, dy) == (0, 0)):
         return "structure"
     return None
+
+
+def submerged(asset: Asset, height: float, level: float) -> bool:
+    """Whether ground ``height`` px under water at ``level`` px is too wet for ``asset`` (at or under the water;
+    a shore plant, reeds, may stand in its shallows): where scattering won't put it, and what clearing a river's
+    water (``project_ops.clear_scatter_in_rivers``) takes away."""
+    return height < level + 0.05 * PX and not (asset.shore and height >= level - asset.shore * PX)
 
 
 def allowed(asset: Asset, x: float, y: float, ground: Ground, rules: Rules) -> bool:

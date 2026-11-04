@@ -17,6 +17,12 @@ all use it:
 Movement is axis-separated like the 2D sweep, so characters slide along walls. The scene's 2D solids (wall tiles,
 solid objects) still apply, to characters on their level. 2D scenes never build a world.
 
+Rivers (#461 R3, ``settings.hd2d.rivers``): where a river's water stands more than ``DEEP`` m over a character's
+feet, it can't stand there (deep water, like a ledge: walked up to, not into); shallower water is waded through,
+its steps rippling the surface (``on_wade``). The water's surface is the river's own level where its ribbon lies
+(``engine.hd2d.river.RiverIndex``: what is drawn), the feet the ground or floor under them: a bridge's deck above the
+water is dry, the river's carved bed under it is as deep as the water over it.
+
 Sculpted ground (Milestone 20A, ``engine.hd2d.terrain``) is the ground (solid, floor "ground"), read straight from
 its heights where asked (``Terrain.surface_at``: the drawn triangle under the point), not stored as triangles; faces
 too steep to stand on (``MAX_SLOPE``) are left out, so they stop characters like a ledge does. Walking up a gentle slope
@@ -38,6 +44,11 @@ if TYPE_CHECKING:  # the reader is only needed where models are loaded (engine.h
 
 STEP = 0.35  # m: the highest a character steps up or down without stairs
 BODY = 1.5  # m: a character's standing height (a 48 px sprite)
+DEEP = BODY / 3  # m: water deeper than a third of a character's height can't be waded (0.5 m) ...
+DEEP_SLACK = 0.01  # m: ... give or take the ground's stored rounding (a quarter pixel), so 0.5 m stays wadeable
+ESCAPE_SLACK = 0.05  # m: one found in deeper water may wade out through water this much deeper than around it (the
+# carved bed's triangles between the samples taken; set once, so it never adds up)
+WADE_STEP = 14.0 / PIXELS_PER_METRE  # m: a wading step every this far (as engine.behaviours.water_surface)
 NAV_CELL = 0.5  # m: the navigation grid's cell
 NAV_HALF = (0.3, 0.19)  # m: half the footprint the navigation grid plans for (a character's feet box)
 _BUCKET = 2.0  # m: the spatial index's cell
@@ -176,6 +187,10 @@ class World:
         for surface in self.surfaces:
             self._add_to_index(surface)
         self._flat_z = g.elevation / PIXELS_PER_METRE if g is not None else 0.0
+        from engine.hd2d.river import RiverIndex  # noqa: PLC0415
+
+        self.rivers = RiverIndex(settings.rivers)  # (none: nothing to ask)
+        self.on_wade: Any = None  # called (sprite, (x, y) px, river id) for each wading step (engine.hd2d.runtime)
         self._models = models
         self.set_scatter(settings.scatter)
         self._measure()
@@ -242,9 +257,11 @@ class World:
                 out.append((here[0] / PIXELS_PER_METRE, _GROUND))
         return out
 
-    def stand(self, x: float, y: float, z: float, half_w: float, half_h: float) -> tuple[float, str] | None:
+    def stand(self, x: float, y: float, z: float, half_w: float, half_h: float,
+              deep: float = DEEP + DEEP_SLACK) -> tuple[float, str] | None:
         """Where a character whose feet box is centred at (x, y) and who stands at ``z`` stands: (elevation,
-        floor), or None if it can't be there."""
+        floor), or None if it can't be there. ``deep``: the most water it may stand in (``_step``: more for a
+        character already in deeper water, so it can walk out of it)."""
         best: tuple[float, Surface] | None = None
         for h, surface in self.heights_at(x, y):
             if abs(h - z) <= STEP and (best is None or h > best[0]):
@@ -260,7 +277,29 @@ class World:
         for wall in self.walls:
             if wall.lo[2] < h + BODY and wall.hi[2] > h + STEP and wall.overlaps(x, y, half_w, half_h):
                 return None
+        if self.rivers and self.deepest(x, y, h, half_w, half_h) > deep:
+            return None  # deep water somewhere under its feet: it can't stand there
         return h, best[1].floor
+
+    def deepest(self, x: float, y: float, h: float, half_w: float, half_h: float) -> float:
+        """The deepest a river's water stands over the floor under a feet box centred at (x, y) on a floor at
+        ``h`` m (at its middle and corners; 0 where no water is)."""
+        most = 0.0
+        for px, py in ((x, y), (x - half_w, y - half_h), (x + half_w, y - half_h), (x - half_w, y + half_h),
+                       (x + half_w, y + half_h)):
+            water = self.rivers.level_at(px, py)
+            if water is not None:
+                floors = [top for top, _s in self.heights_at(px, py) if abs(top - h) <= STEP]
+                most = max(most, water[0] - (max(floors) if floors else h))
+        return most
+
+    def water_at(self, x: float, y: float, z: float) -> tuple[float, str] | None:
+        """How deep a river's water stands over feet at (x, y, z) m, and which river: (depth m, id), or None on
+        dry ground (no river there, or feet at or above its surface: a bridge's deck)."""
+        water = self.rivers.level_at(x, y) if self.rivers else None
+        if water is None or water[0] <= z:
+            return None
+        return water[0] - z, water[1]
 
     # ------------------------------------------------------------------ moving a sprite
     def move(self, sprite: Any, delta: tuple[float, float], solids: Iterable[Any] | None) -> None:
@@ -277,6 +316,23 @@ class World:
         solids = list(solids or ())
         for _ in range(steps):
             self._step(sprite, (delta[0] / steps, delta[1] / steps), solids)
+        if self.rivers:
+            self._wade(sprite)
+
+    def _wade(self, sprite: Any) -> None:
+        """A character in a river's shallow water: a step every WADE_STEP m it moves through it (``on_wade``)."""
+        x, y = sprite.center_x / PIXELS_PER_METRE, sprite.bottom / PIXELS_PER_METRE
+        water = self.water_at(x, y, elevation_of(sprite))
+        sprite.mesh_hd2d_wading = water  # (depth m, river id), or None on dry ground
+        if water is None:
+            sprite.mesh_hd2d_waded = None
+            return
+        last = getattr(sprite, "mesh_hd2d_waded", None)  # where its last wading step was (m)
+        if last is not None and (x - last[0]) ** 2 + (y - last[1]) ** 2 < WADE_STEP ** 2:
+            return
+        sprite.mesh_hd2d_waded = (x, y)
+        if self.on_wade is not None:
+            self.on_wade(sprite, (sprite.center_x, sprite.bottom), water[1])
 
     def _step(self, sprite: Any, delta: tuple[float, float], solids: list[Any]) -> None:
         from engine.physics_runtime import _sprite_to_aabb, move_entity_with_physics  # noqa: PLC0415
@@ -285,22 +341,37 @@ class World:
         hw, hh = box.w / 2 / PIXELS_PER_METRE, box.h / 2 / PIXELS_PER_METRE
         x, y, z = box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE, elevation_of(sprite)
         dx, dy = delta
-        if dx and self.stand(x + dx / PIXELS_PER_METRE, y, z, hw, hh) is None:
+        deep = DEEP + DEEP_SLACK
+        if self.rivers:  # already in deeper water (put there, a river carved under it, a teleport): it wades out
+            here = self.deepest(x, y, z, hw, hh)
+            cap = getattr(sprite, "mesh_hd2d_deep_cap", None)
+            if here <= deep:
+                sprite.mesh_hd2d_deep_cap = None
+            else:
+                if cap is None or here > cap:  # (found there: no deeper than the water within a footprint all round,
+                    # which its corners cross on the way out; set once, held until it can wade again, so however
+                    # small its steps it never edges deeper)
+                    cap = max(self.deepest(x + i * hw, y + j * hh, z, hw, hh) for i in (-1, 0, 1)
+                              for j in (-1, 0, 1)) + ESCAPE_SLACK
+                    sprite.mesh_hd2d_deep_cap = cap
+                deep = cap
+        if dx and self.stand(x + dx / PIXELS_PER_METRE, y, z, hw, hh, deep) is None:
             dx = 0.0
-        if dy and self.stand(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE, z, hw, hh) is None:
+        if dy and self.stand(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE, z, hw, hh, deep) is None:
             dy = 0.0
         if not dx and not dy:
-            self._settle(sprite, x, y, z, hw, hh)
+            self._settle(sprite, x, y, z, hw, hh, deep)
             return
         start = (sprite.center_x, sprite.center_y)
         level = [s for s in solids if s is not sprite and _on_level(s, z)]
         move_entity_with_physics(sprite, (dx, dy), level)  # the scene's 2D solids on this level
         moved = (sprite.center_x - start[0]) / PIXELS_PER_METRE, (sprite.center_y - start[1]) / PIXELS_PER_METRE
-        if not self._settle(sprite, x + moved[0], y + moved[1], z, hw, hh):
+        if not self._settle(sprite, x + moved[0], y + moved[1], z, hw, hh, deep):
             sprite.center_x, sprite.center_y = start  # (never expected: each axis was checked)
 
-    def _settle(self, sprite: Any, x: float, y: float, z: float, hw: float, hh: float) -> bool:
-        where = self.stand(x, y, z, hw, hh)
+    def _settle(self, sprite: Any, x: float, y: float, z: float, hw: float, hh: float,
+                deep: float = DEEP + DEEP_SLACK) -> bool:
+        where = self.stand(x, y, z, hw, hh, deep)
         if where is None:
             return False
         data = getattr(sprite, "mesh_entity_data", None)

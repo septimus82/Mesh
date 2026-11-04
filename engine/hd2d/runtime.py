@@ -10,6 +10,7 @@ A scene whose HD-2D settings or models are broken still loads (drawn 2D) and the
 from __future__ import annotations
 
 import dataclasses
+from functools import partial
 from typing import Any
 
 from engine.logging_tools import get_logger
@@ -40,6 +41,18 @@ def _contained(resolve: Any) -> Any:
         return path
 
     return resolve_inside
+
+
+def _wade(window: Any, sprite: Any, feet: tuple[float, float], river: str) -> None:
+    """A step through a river's shallow water (#461 R3): a ripple where it lands and a ``water_step`` event, as a
+    step through a pond (engine.behaviours.water_surface)."""
+    from engine import water as water_mod  # noqa: PLC0415
+    from engine.event_emit import emit_gameplay_event  # noqa: PLC0415
+
+    water_mod.add_step(window, feet[0] / water_mod.PX_PER_M, feet[1] / water_mod.PX_PER_M)
+    emit_gameplay_event(window, "water_step", {"who": str(getattr(sprite, "mesh_name", "") or ""), "water": river,
+                                              "x": round(feet[0], 1), "y": round(feet[1], 1)},
+                        source_entity_id=None, source_behaviour="River")
 
 
 def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
@@ -87,10 +100,11 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
         window.hd2d_renderer = Hd2dRenderer(window, hd2d, _contained(resolve_path))
         models = window.hd2d_renderer.models
         sculpted = hd2d.ground is not None and hd2d.ground.terrain is not None  # Milestone 20A
-        if sculpted or any(model.colliders for model in models.values()):  # floors and walls authored in the GLBs
-            from engine.hd2d.world import World  # noqa: PLC0415
+        if sculpted or hd2d.rivers or any(model.colliders for model in models.values()):  # (floors and walls
+            from engine.hd2d.world import World  # noqa: PLC0415  # authored in the GLBs; rivers' deep water, #461 R3)
 
             window.hd2d_world = World(hd2d, models)
+            window.hd2d_world.on_wade = partial(_wade, window)
             if window.hd2d_renderer.terrain is not None:  # one set of heights: what is drawn is what is walked on
                 window.hd2d_world.update_terrain(window.hd2d_renderer.terrain)
     except (Hd2dSettingsError, GlbError) as exc:
