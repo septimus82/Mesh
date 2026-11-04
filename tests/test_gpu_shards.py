@@ -253,8 +253,8 @@ def test_the_fan_in_needs_both_shard_jobs_to_have_succeeded(monkeypatch: pytest.
     monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
     monkeypatch.setattr(ci_require_jobs, "fetch_jobs", lambda *_a, **_k: (copy.deepcopy(jobs), len(jobs)))
     real = ci_require_jobs.check
-    monkeypatch.setattr(ci_require_jobs, "check", lambda fetch, required, attempt: real(fetch, required, attempt,
-                                                                                         delays=(), sleep=lambda _s: None))
+    monkeypatch.delenv("NEEDS_RESULTS", raising=False)  # (only the jobs list decides here)
+    monkeypatch.setattr(ci_require_jobs, "check", lambda *a, **k: real(*a, **k, delays=(), sleep=lambda _s: None))
     argv = ["--name", "gpu (windows-latest, py3.11)", *(a for n in SHARD_JOBS for a in ("--job", n))]
     assert ci_require_jobs.main(argv) == (0 if ok else 1)
 
@@ -315,6 +315,10 @@ def test_the_fan_in_keeps_the_lanes_check_name_and_fails_closed() -> None:
     assert (f'python3 tooling/ci_shards.py check gpu-shards --plan gpu --min-selected {floor} '
             '--commit "${{ github.sha }}"') in fanin
     assert "exit $code" in fanin and "shell: bash" in fanin
+    # The engine's needs: results stand in for a stale jobs list (ci_require_jobs.observe): "success" for lane must mean
+    # every leg succeeded, so no leg may fail softly.
+    assert "NEEDS_RESULTS: ${{ toJSON(needs.*.result) }}" in fanin
+    assert "continue-on-error" not in _jobs()["lane"]
     names = re.findall(r'--job "([^"]+)"', fanin)
     assert names == [n.replace("windows-latest", "${{ matrix.os }}") for n in SHARD_JOBS]
     assert len(names) == ci_shards.SHARDS
