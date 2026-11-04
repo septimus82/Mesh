@@ -1,0 +1,48 @@
+{
+ "before": {
+  "phase": "before",
+  "load_ms": 864.4,
+  "nav_cells": 11725,
+  "nav_grid_ms": 462.2,
+  "walks": {
+   "from_the_east": {
+    "stopped_at": 1621.5,
+    "visible_shore_at": 1592,
+    "box_edge_at": 1612.0,
+    "short_of_the_shore_px": 29.5
+   },
+   "from_the_north_by_the_mouth": {
+    "stopped_at": 837.6,
+    "visible_shore_at": 887,
+    "box_edge_at": 849.6,
+    "short_of_the_shore_px": 49.4
+   }
+  },
+  "stand_us": 36.75,
+  "play_frame_ms_median": 17.53,
+  "commit": "b5ef725"
+ },
+ "after": {
+  "phase": "after",
+  "load_ms": 830.7,
+  "nav_cells": 11349,
+  "nav_grid_ms": 500.6,
+  "walks": {
+   "from_the_east": {
+    "stopped_at": 1602.5,
+    "visible_shore_at": 1592,
+    "box_edge_at": 1612.0,
+    "short_of_the_shore_px": 10.5
+   },
+   "from_the_north_by_the_mouth": {
+    "stopped_at": 872.5,
+    "visible_shore_at": 887,
+    "box_edge_at": 849.6,
+    "short_of_the_shore_px": 14.5
+   }
+  },
+  "stand_us": 57.57,
+  "play_frame_ms_median": 17.61,
+  "commit": "ddff3ce"
+ }
+}
