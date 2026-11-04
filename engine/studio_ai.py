@@ -14,7 +14,12 @@ Studio never applies them on its own:
 - **Accept** (a person, in Studio) applies the batch to the open documents as one undo step.
   If the person changed the project since the tool read it, both sets of changes are compared
   property by property: separate edits (a painted floor, a new NPC) both survive; the same
-  property changed both ways is a conflict, reported, and nothing is applied.
+  property changed both ways is a conflict, reported, and nothing is applied. Then (#462 S1) the
+  batch is replayed on a copy of the project as it is now, and every value it would actually write
+  is checked against what the person changed: an operation also writes values it was given that
+  equal what the tool read (``move_entity(x=0, y=100)`` from (0, 0) writes x as well as y), which
+  the first comparison can't see. Any of those over the person's change is a conflict too (with
+  what the tool read there, what is there now and what it would write), and nothing is applied.
 - **Reject** leaves the project as it was.
 
 Memory (F10, #422): a waiting proposal keeps two whole-project copies, what the tool read (``base``) and the result
@@ -223,6 +228,14 @@ class StudioAIHost:
             ours = authoring.changes_between(proposal.base, self.project.all_documents())
             theirs = authoring.changes_between(proposal.base, proposal.after)
             clashes = authoring.conflicts(ours, theirs)
+            if not clashes:  # (#462 S1: what replaying it now would write, not only what its preview showed)
+                try:
+                    now, replayed = authoring.dry_run(self.project, proposal.changes)
+                except authoring.ChangeError as err:
+                    proposal.settle("failed", f"Not applied: {err}")
+                    self._forget_old()
+                    return {"ok": False, "reason": "invalid_change", "message": str(err)}
+                clashes = authoring.overwrites(ours, authoring.changes_between(now, replayed), proposal.base)
             if clashes:
                 proposal.status, proposal.conflicts = "conflict", clashes
                 proposal.message = (f"Not applied: {len(clashes)} place(s) were changed both here and by the proposal. "

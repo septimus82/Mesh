@@ -303,6 +303,38 @@ def conflicts(ours: dict[tuple[Any, ...], tuple[Any, Any]], theirs: dict[tuple[A
     return found
 
 
+def overwrites(ours: dict[tuple[Any, ...], tuple[Any, Any]], writes: dict[tuple[Any, ...], tuple[Any, Any]],
+               base: Doc) -> list[Doc]:
+    """Where applying a proposal now would write over what the person changed since the AI read the project (#462
+    S1): each path the replay writes (``writes``: ``changes_between(now, replayed)``) that the person changed (``ours``:
+    ``changes_between(base, now)``), the same path or one inside the other; with what the AI read there (``base``),
+    what is there now and what it would write. Its write set, not its preview: an operation also writes values it
+    was given that equal what the AI read (``move_entity(x=0, y=100)`` from (0, 0) writes x), which its preview
+    doesn't show. Separate edits (paths only one side writes) aren't conflicts."""
+    mine = set(ours)
+    around = {q[:i] for q in ours for i in range(1, len(q) + 1)}  # the person's paths and every path holding one
+    found = []
+    for p, (now, new) in writes.items():
+        if p in around or any(p[:i] in mine for i in range(1, len(p))):
+            found.append({"path": _path_text(p), "what": _conflict_words(p), "base": _value_at(base, p),
+                          "studio": now, "ai": new})
+    return found
+
+
+def _value_at(doc: Any, path: tuple[Any, ...]) -> Any:
+    """The value at ``path`` (as ``changes_between`` spells it: "#id" for an object in a list with ids), or None."""
+    for part in path:
+        if isinstance(doc, dict):
+            doc = doc.get(part)
+        elif isinstance(doc, list) and isinstance(part, str) and part.startswith("#"):
+            doc = next((x for x in doc if isinstance(x, dict) and x.get("id") == part[1:]), None)
+        elif isinstance(doc, list) and isinstance(part, int) and 0 <= part < len(doc):
+            doc = doc[part]
+        else:
+            return None
+    return doc
+
+
 def _conflict_words(path: tuple[Any, ...]) -> str:
     if len(path) >= 4 and path[0] == "rooms" and path[2] == "entities":
         return f"{path[1]}: object {str(path[3]).lstrip('#')} {_friendly(path[4:]) if len(path) > 4 else '(the whole object)'}"
