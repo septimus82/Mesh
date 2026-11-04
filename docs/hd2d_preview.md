@@ -141,7 +141,10 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
   - deepest in the middle, rising to meet the water at its edge;
   - a bank climbing from the water at a walkable slope until it meets the ground (up to 12 m out);
   - where its water stood above the ground beside it (a new river is drawn a little over the ground clicked), the
-    water is lowered to just under that ground first, so it lies in its bed;
+    water is lowered to just under that ground first, so it lies in its bed. The ground is checked on both sides
+    every quarter metre along the river, not only at its points, so a dip between two points is found too. Ground
+    in a pond's or another river's water isn't its bank and isn't checked, and a river flowing into a pond is never
+    lowered below the pond's level;
   - **Bed depth** (m): empty for a quarter of the river's width (0.2 to 1.2 m), or one depth for the whole river.
     The AI can give a depth for each point; a shallow point makes a ford.
   - Carving only ever lowers the ground: carving again changes nothing, and ground already lower is kept. It is one
@@ -159,16 +162,34 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
 - **Refused, with the reason and where:** a bend too tight for the river's width (its inner bank would fold), banks
   that cross or come within a quarter metre of each other, water that would run uphill, points closer than a
   quarter metre, two rivers that cross or overlap, and a bank off the room's ground.
-- **Limits:** at most 16 rivers in a room, each at most 1,024 m long and 2,048 m together.
+- **Into a pond or lake.** Put the river's last point in a pond's water, then turn on **Into the pond** (the AI:
+  `mouth: "auto"`). The river and the pond then show as one water surface:
+  - none of the river's water is drawn inside the pond, so there's no second layer;
+  - the pond's bank, reeds and stones stop where the river comes in, and so does its edge across the river;
+  - over its last 1.5 m before the shore, the river takes on the pond's colour, waves and glints, and its current
+    eases out.
+
+  The panel names the pond it joins. It is refused, with what to change, if no pond lies under its last point,
+  its end isn't wholly in the pond, it crosses the pond's shore more than once, or where it enters its water isn't
+  within 5 cm of the pond's. Nothing is moved or relevelled to make it fit. If a pond is moved later so the join no
+  longer holds, the river is drawn with a free end and the panel says why. Walking, wading and plants follow what
+  is drawn: in the pond it is the pond's water.
+- **Its ends.** **Ends** sets how its free ends finish: **Square** (rivers made before this, and right where a river
+  runs off the room's edge), **Round** (half circles at both ends), **Round at source** or **Round at end**. A
+  round end is drawn as a half circle, walked and wading as drawn, and **Carve the bed** makes a bowl to match. Carving
+  only lowers, so a bed carved square before stays square at its corners: those corners stay as a shallow, dry
+  edge of the bed.
+- **Limits:** at most 16 rivers in a room, each at most 1,024 m long and 2,048 m together, and at most 8 flowing
+  into ponds.
 
 Not yet:
-- rivers flowing into lakes or joining each other;
+- rivers joining each other;
 - waterfalls;
 - swimming, or any way to cross deep water other than a bridge or a ford;
 - wading sounds or slowing down;
 - rivers in 2D rooms.
 
-A river's two ends are cut square. Its bed ends there too: past an end, a bank climbs from the water's level.
+A square end is cut square. Its bed ends there too: past it, a bank climbs from the water's level.
 
 ## Wind and moving decoration
 

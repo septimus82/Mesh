@@ -610,6 +610,21 @@ class RiverTool:
             row.add(view._button("Remove river", self.remove_river, "Remove the whole river (Delete with no point "
                                  "selected)", width=half))
             box.add(row)
+            into = found.get("mouth") == "auto"
+            ends = str(found.get("ends", "square"))
+            row = _row()
+            row.add(view._button("Into the pond: on" if into else "Into the pond: off", self.toggle_mouth,
+                                 "Flow into the pond its last point lies in: one water surface there, its look and "
+                                 "current easing into the pond's. Its end must lie in the pond, and its water meet the "
+                                 "pond's within 5 cm", width=half, style=S_ACTIVE if into else S_BUTTON))
+            row.add(view._button(f"Ends: {ENDS_SHOWN.get(ends, ends)}", self.cycle_ends, "How its free ends finish: "
+                                 "square (right where it runs off the room), or round (a half circle; carving makes "
+                                 "a bowl to match) at its source, its end or both", width=half))
+            box.add(row)
+            if into:
+                joined = self.mouth_status()
+                box.add(studio._label(joined, color=C_ERROR if joined.startswith("Not joined") else C_MUTED, size=10,
+                                      width=width))
             box.add(studio._label("Its bed: carving lowers the ground under the water into a channel with "
                                   "walkable banks. Water deeper than 0.5 m can't be waded.", color=C_MUTED, size=10,
                                   width=width))
@@ -678,6 +693,41 @@ class RiverTool:
         self.studio._edit(lambda s: ops.clear_scatter_in_rivers(s, rid),
                           f"River '{rid}': the scattered plants and rocks in its water taken away.")
 
+    def toggle_mouth(self) -> None:
+        """Flow into the pond under its last point, or not (R4; refused, saying what to change, if it can't join)."""
+        found = self.find(self.selected)
+        if found is None or self.gesture is not None or self.draft is not None:
+            return
+        rid, into = str(self.selected), found.get("mouth") != "auto"
+        self._commit(lambda s: ops.set_river(s, rid, mouth="auto" if into else "none"),
+                     f"River '{rid}' flows into its pond now: one water surface there." if into
+                     else f"River '{rid}' ends on its own now (not joined to a pond).")
+
+    def cycle_ends(self) -> None:
+        """Its ends: square, round, round at its source, round at its end, then square again."""
+        from engine.hd2d.river import ENDS  # noqa: PLC0415
+
+        found = self.find(self.selected)
+        if found is None or self.gesture is not None or self.draft is not None:
+            return
+        rid = str(self.selected)
+        now = str(found.get("ends", "square"))
+        new = ENDS[(ENDS.index(now) + 1) % len(ENDS)] if now in ENDS else "square"
+        self._commit(lambda s: ops.set_river(s, rid, ends=new), f"River '{rid}': ends {ENDS_SHOWN[new].lower()}.")
+
+    def mouth_status(self) -> str:
+        """Which pond the selected river flows into, or why it can't (a pond moved since, say: drawn as a free end)."""
+        from engine.hd2d.river import RiverError, join, parse_river, ponds_of  # noqa: PLC0415
+
+        found = self.find(self.selected)
+        if found is None:
+            return ""
+        try:
+            mouth = join(parse_river(found), ponds_of(ops.entities(self.studio.project.scene())))
+        except RiverError as err:
+            return f"Not joined: {err}"
+        return f"Flows into the pond '{mouth.pond.id}': one water surface where it enters."
+
     def _select(self, river_id: str) -> None:
         self.selected, self.point = river_id, None
         self.studio._rebuild()
@@ -686,6 +736,9 @@ class RiverTool:
         for key, value in change.items():
             setattr(self, key, value)
         self.studio._rebuild()
+
+
+ENDS_SHOWN = {"square": "Square", "round": "Round", "round_source": "Round at source", "round_end": "Round at end"}
 
 
 def _row() -> Any:

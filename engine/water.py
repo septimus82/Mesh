@@ -59,6 +59,8 @@ from engine.hd2d.lighting import LIGHTING_GLSL
 PX_PER_M = 32.0
 LIFT_M = 0.035  # the surface stands this far above its level: over the ground and paths (2 cm tall), not z-fighting
 MAX_STEPS = 8  # footstep ripples alive at once (the oldest gives way)
+MOUTH_BLEND_M = 1.5  # a river takes on the look of the pond it flows into over this (engine.hd2d.river.BLEND_M)
+MAX_MOUTHS = 8  # rivers flowing into ponds a room's shaders hold (engine.hd2d.river.MAX_MOUTHS)
 STEP_RIPPLE_S = 1.0  # how long a footstep's ring lasts
 _KEYS = {"preset", "width", "height", "colour", "opacity", "shape", "waves", "rain_ripples", "walkable", "step_sound",
          "reflection", "rotation", "seed", "shore", "shore_width", "deep_colour", "depth", "ripples"}
@@ -311,8 +313,9 @@ uniform mat4 u_vp; uniform int u_flat;
 in vec2 in_corner; in vec4 in_rect; in vec4 in_info; in vec4 in_colour; in vec4 in_look;
 in vec4 in_deep; in vec4 in_shore; in vec4 in_amp; in vec4 in_phase;
 out vec3 v_world; flat out vec4 v_rect; flat out vec4 v_info; flat out vec4 v_colour; flat out vec4 v_look;
-flat out vec4 v_deep; flat out vec4 v_shore; flat out vec4 v_amp; flat out vec4 v_phase;
+flat out vec4 v_deep; flat out vec4 v_shore; flat out vec4 v_amp; flat out vec4 v_phase; flat out int v_index;
 void main() {
+    v_index = gl_InstanceID;  // (R4: rivers flowing into it name it so)
     // in_rect: centre x, y (m), half width, half height (m); in_info: level z (m), shape (0 ellipse, 1 rect,
     // 2 natural), kind (0 puddle, 1 pond: Stage 19A's look; 2 Stage 19B's material), rain ripples (0/1); in_look:
     // waves, reflection, seed, ripple strength; in_deep: deep colour, depth; in_shore: shore (0 none, 1 mud, 2 grass,
@@ -337,6 +340,17 @@ uniform int u_reflect; uniform sampler2D u_scene; uniform sampler2D u_scene_dept
 uniform int u_lit;  // 1: lit by the room's sun, lamps and shadows (HD-2D: engine.hd2d.lighting), else u_light
 // Milestone 20A: the sculpted ground's heights (m) at its corners, for water whose shore is the ground ("terrain")
 uniform int u_has_terrain; uniform sampler2D u_terrain; uniform vec4 u_terrain_box;  // origin x, y (m), cell (m), -
+// R4 (#461): rivers flowing into ponds (engine.hd2d.river.Mouth), MAX_MOUTHS of them. Where each crosses its pond's
+// shore: x, y (m), the tangent downstream; its half width there (m), how far along the river (m), which pond (its
+// place in the ponds' instances), the pond's level (m, as drawn). For the river's side, the pond's outline and look:
+// centre x, y and half size (m); shape, rotation (rad), the outline's c0, its waves' strength; its harmonics; its
+// shallow colour and opacity, deep colour and depth; waves, reflection, seed, ripple strength
+uniform int u_mouths_n;
+uniform vec4 u_mouth_at[8]; uniform vec4 u_mouth_info[8];
+uniform vec4 u_mouth_rect[8]; uniform vec4 u_mouth_shape[8]; uniform vec4 u_mouth_amp[8]; uniform vec4 u_mouth_phase[8];
+uniform vec4 u_mouth_colour[8]; uniform vec4 u_mouth_deep[8]; uniform vec4 u_mouth_look[8];
+uniform vec4 u_mouth_kind[8];  // 1 if its shore is the sculpted ground (how deep it looks: its real depth), else 0; -
+const float MOUTH_BLEND = """ + repr(MOUTH_BLEND_M) + """;  // the river takes on the pond's look over this (m)
 out vec4 f_color;
 """ + LIGHTING_GLSL + """
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -351,6 +365,31 @@ float ground_at(vec2 p) {
     return texture(u_terrain, ((p - u_terrain_box.xy) / u_terrain_box.z + 0.5) / n).r;
 }
 vec3 shade(vec3 c) { return floor(c * 24.0 + 0.5) / 24.0; }  // a few flat shades: pixel art, not a gradient
+// how far outside a pond's edge m is (m; negative: in from it), m in the pond's own frame, b its half size, shape
+// (0 ellipse, 1 rect, 2 natural) and the natural outline's numbers (outline())
+float outline_sd(vec2 m, vec2 b, float shape, float c0, vec4 amp, vec4 phase) {
+    if (shape > 0.5 && shape < 1.5) {  // a rectangle, its corners rounded
+        float rad = min(0.5, 0.3 * min(b.x, b.y));
+        vec2 d = abs(m) - b + rad;
+        return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - rad;
+    }
+    // the ellipse or natural outline: f = rho - r(theta) in the size's frame, over its gradient in metres (so long,
+    // narrow water keeps an even bank); inside, no further than the short half-axis allows
+    vec2 l = m / b;
+    float rho = length(l);
+    vec4 k = vec4(2.0, 3.0, 4.0, 5.0);
+    float th = atan(l.y, l.x), r = 1.0, dr = 0.0;
+    if (shape > 1.5) {
+        r = c0 + dot(amp, cos(k * th + phase));
+        dr = -dot(amp * k, sin(k * th + phase));
+    }
+    if (rho < 1e-4) return -min(b.x, b.y) * r;
+    float f = rho - r;
+    // (the outline's turn, r'/rho, only matters near the edge: bounded, it doesn't swamp the middle)
+    vec2 g = (l / rho - dr * vec2(-l.y, l.x) / (rho * max(rho, 0.5))) / b;
+    float d = f / max(length(g), 1e-4);
+    return f < 0.0 ? max(d, -min(b.x, b.y) * (r - rho)) : d;
+}
 const float LIFT = """ + repr(LIFT_M) + """;  // the surface stands this far above its level (LIFT_M)
 // rain: in cells of 0.5 m each starts rings at hashed places and moments, as often as the rain is heavy; none where
 // something above (a roof, the deck) keeps it off the water at q, height z
@@ -416,7 +455,7 @@ vec3 mirror(vec3 p0, vec3 r, bool fade) {
 FS = """
 #version 330
 in vec3 v_world; flat in vec4 v_rect; flat in vec4 v_info; flat in vec4 v_colour; flat in vec4 v_look;
-flat in vec4 v_deep; flat in vec4 v_shore; flat in vec4 v_amp; flat in vec4 v_phase;
+flat in vec4 v_deep; flat in vec4 v_shore; flat in vec4 v_amp; flat in vec4 v_phase; flat in int v_index;
 """ + SHARED_GLSL + """
 // a point (m) in the water's own frame: about its centre, its rotation undone
 vec2 to_local(vec2 p) {
@@ -437,29 +476,21 @@ float inside_at(vec2 m) {
     return 1.0 - length(l) / radius_at(l);
 }
 // how far outside the edge (m; negative: in from it)
-float sd_at(vec2 m) {
-    vec2 b = v_rect.zw;
-    if (v_info.y > 0.5 && v_info.y < 1.5) {  // a rectangle, its corners rounded
-        float rad = min(0.5, 0.3 * min(b.x, b.y));
-        vec2 d = abs(m) - b + rad;
-        return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - rad;
+float sd_at(vec2 m) { return outline_sd(m, v_rect.zw, v_info.y, v_shore.w, v_amp, v_phase); }
+// R4: where a river flows into this pond, how far in from that river's banks (m) a point is, fading over
+// MOUTH_BLEND into the pond (its shore is open there: no bank, no edge drawn across the river); -1 elsewhere.
+// reach: how far out its shore goes (none of it is drawn over the river's water)
+float mouth_open(vec2 q, float reach) {
+    float open = -1.0;
+    for (int i = 0; i < u_mouths_n; i++) {
+        if (int(u_mouth_info[i].z + 0.5) != v_index) continue;
+        vec2 d = q - u_mouth_at[i].xy, tng = u_mouth_at[i].zw;
+        float along = dot(d, tng), across = abs(tng.x * d.y - tng.y * d.x), h = u_mouth_info[i].x;
+        // (from a half width upstream of where its middle crosses: the shore may cross it at a slant)
+        if (across < h && along > -(reach + 0.4 + h) && along < MOUTH_BLEND)
+            open = max(open, (h - across) * (1.0 - smoothstep(0.0, MOUTH_BLEND, max(along, 0.0))));
     }
-    // the ellipse or natural outline: f = rho - r(theta) in the size's frame, over its gradient in metres (so long,
-    // narrow water keeps an even bank); inside, no further than the short half-axis allows
-    vec2 l = m / b;
-    float rho = length(l);
-    vec4 k = vec4(2.0, 3.0, 4.0, 5.0);
-    float th = atan(l.y, l.x), r = 1.0, dr = 0.0;
-    if (v_info.y > 1.5) {
-        r = v_shore.w + dot(v_amp, cos(k * th + v_phase));
-        dr = -dot(v_amp * k, sin(k * th + v_phase));
-    }
-    if (rho < 1e-4) return -min(b.x, b.y) * r;
-    float f = rho - r;
-    // (the outline's turn, r'/rho, only matters near the edge: bounded, it doesn't swamp the middle)
-    vec2 g = (l / rho - dr * vec2(-l.y, l.x) / (rho * max(rho, 0.5))) / b;
-    float d = f / max(length(g), 1e-4);
-    return f < 0.0 ? max(d, -min(b.x, b.y) * (r - rho)) : d;
+    return open;
 }
 // a stone rim: cells of about 0.26 m, a stone in each whose centre lies on the bank (or just over the water's edge),
 // drawn whole with its mortar round it and lit on its sunward side; (rgb, 1) where one is, else 0
@@ -521,14 +552,16 @@ void main() {
     vec2 sun = u_lit == 1 ? u_sun_dir.xy : vec2(-0.45, -0.55);
     int shore = int(v_shore.x + 0.5);
     float reach = v_shore.y, inside = 0.0, edge_m = 0.0, shadow = 1.0, water_depth = -1.0;
+    float open = u_mouths_n > 0 ? mouth_open(q, reach + STONE_OVER) : -1.0;  // R4: a river's mouth (its water here)
     if (material) {
         float sd = sd_at(m);
         if (sd > reach + (shore == 3 ? STONE_OVER : 0.0) || (sd > 0.0 && (shore == 0 || shore == 4))) discard;
+        if (open >= 0.0 && sd >= 0.0) discard;  // the river's water, not this pond's bank
         if (shore == 4 && u_has_terrain == 1) {  // the sculpted ground is the shore: water only where it lies above it
             water_depth = v_world.z - LIFT - ground_at(q);
             if (water_depth <= 0.0) discard;
         }
-        if (shore == 3 && sd > -0.4) {  // (deeper in, no stone reaches)
+        if (shore == 3 && sd > -0.4 && open < 0.0) {  // (deeper in, no stone reaches)
             vec4 s = stone(q, reach, sun);
             if (s.a > 0.0) { f_color = vec4(shade(s.rgb * light), 1.0); return; }
         }
@@ -541,7 +574,7 @@ void main() {
         }
         // the water lies a little below the ground, so near its far edge the view ray meets the bank's side before
         // it reaches the water: that side is seen there (and its shadow on the water just short of it)
-        float drop = shore == 1 ? 0.03 : (shore == 2 ? 0.09 : (shore == 3 ? 0.14 : 0.0));
+        float drop = open >= 0.0 ? 0.0 : (shore == 1 ? 0.03 : (shore == 2 ? 0.09 : (shore == 3 ? 0.14 : 0.0)));
         vec2 down = view.xy * (drop / max(0.2, -view.z));
         if (drop > 0.0 && sd_at(to_local(q + down)) > 0.0) {
             float lo = 0.0, hi = 1.0;  // where along the way down the ray meets the side: how far below the ground
@@ -565,10 +598,13 @@ void main() {
             return;
         }
         if (drop > 0.0 && sd_at(to_local(q + down * 1.8)) > 0.0) shadow = 0.7;
-        edge_m = -sd;
+        // (at a river's mouth: from the river's banks, as the river measures it; met smoothly, no corner)
+        float kink = max(0.3 - abs(open + sd), 0.0) / 0.3;
+        edge_m = open >= 0.0 ? max(-sd, open) + kink * kink * 0.075 : -sd;
     } else {
         inside = inside_at(m);
         if (inside < 0.0) discard;
+        if (open >= 0.0) inside = max(inside, open / min(v_rect.z, v_rect.w));
         edge_m = inside * min(v_rect.z, v_rect.w);  // roughly how far in from the edge (m)
     }
     float t = u_time, seed = v_look.z;
@@ -620,7 +656,8 @@ void main() {
     if (material) {
         // the near edge's waterline catches the light (a texel wide, crisp: no soft rim all round)
         bool waterline = water_depth >= 0.0 ? water_depth < 0.025  // (all round, where it meets the ground)
-                                            : edge_m < 0.045 && sd_at(to_local(q - normalize(view.xy + 1e-4) * 0.05)) > 0.0;
+                                            : edge_m < 0.045 && sd_at(to_local(q - normalize(view.xy + 1e-4) * 0.05)) > 0.0
+                                              && open < 0.0;
         lit = mix(lit, vec3(0.80, 0.86, 0.86) * light, (waterline ? 0.45 : 0.0) + clamp(splash, 0.0, 1.0) * 0.8);
         alpha = clamp((waterline ? max(alpha_water, 0.85) : alpha_water) + clamp(rings, 0.0, 1.0) * 0.2 + splash * 0.6, 0.0, 1.0);
     } else {
@@ -639,21 +676,31 @@ void main() {
 RIVER_VS = """
 #version 330
 uniform mat4 u_vp;
+uniform vec4 u_mouth_info[8];
+const float MOUTH_BLEND = """ + repr(MOUTH_BLEND_M) + """;
 in vec3 in_pos; in vec2 in_tangent; in vec4 in_flow; in vec4 in_colour; in vec4 in_deep; in vec4 in_look;
+in vec4 in_ends;
 out vec3 v_world; out vec2 v_tangent; out vec3 v_flow; flat out float v_speed;
-flat out vec4 v_colour; flat out vec4 v_deep; flat out vec4 v_look;
+flat out vec4 v_colour; flat out vec4 v_deep; flat out vec4 v_look; flat out vec4 v_ends;
 void main() {
     // in_flow: u (m downstream), v (-1 left .. 1 right), half width (m), flow (m/s); in_look: waves, reflection,
-    // seed, rain ripples (0/1)
-    v_world = in_pos; v_tangent = in_tangent; v_flow = in_flow.xyz; v_speed = in_flow.w;
-    v_colour = in_colour; v_deep = in_deep; v_look = in_look;
-    gl_Position = u_vp * vec4(in_pos, 1.0);
+    // seed, rain ripples (0/1); in_ends (R4): its round caps' radii at its source and last point (m; 0 square), its
+    // length (m), the mouth it flows into (-1 none)
+    vec3 pos = in_pos;
+    int slot = int(floor(in_ends.w + 0.5));
+    if (slot >= 0) {  // over its last stretch before the pond's shore, its surface eases to the pond's level
+        vec4 info = u_mouth_info[slot];
+        pos.z = mix(pos.z, info.w, smoothstep(info.y - MOUTH_BLEND, info.y, in_flow.x));
+    }
+    v_world = pos; v_tangent = in_tangent; v_flow = in_flow.xyz; v_speed = in_flow.w;
+    v_colour = in_colour; v_deep = in_deep; v_look = in_look; v_ends = in_ends;
+    gl_Position = u_vp * vec4(pos, 1.0);
 }
 """
 RIVER_FS = """
 #version 330
 in vec3 v_world; in vec2 v_tangent; in vec3 v_flow; flat in float v_speed;
-flat in vec4 v_colour; flat in vec4 v_deep; flat in vec4 v_look;
+flat in vec4 v_colour; flat in vec4 v_deep; flat in vec4 v_look; flat in vec4 v_ends;
 """ + SHARED_GLSL + """
 void main() {
     // the pixel grid: everything at the centre of this fragment's texel (32 per metre), in the river's own frame there
@@ -663,6 +710,31 @@ void main() {
     float u = v_flow.x + dot(to_q, down);  // metres downstream
     float across = v_flow.y * v_flow.z - dot(to_q, left);  // metres right of the middle
     float half_w = v_flow.z, edge_m = max(0.0, half_w - abs(across)), water_depth = -1.0;
+    // R4: a round end is a half circle (engine.hd2d.river.capped: the same as its RiverIndex and its carved bowl)
+    float cap0 = v_ends.x, cap1 = v_ends.y, length_m = v_ends.z;
+    if (cap0 > 0.0 && u < cap0 && length(vec2(cap0 - u, across)) > cap0) discard;
+    if (cap1 > 0.0 && u > length_m - cap1 && length(vec2(u - (length_m - cap1), across)) > cap1) discard;
+    // R4: flowing into a pond: none of it in the pond's water (the pond's is drawn there: one surface), and over its
+    // last MOUTH_BLEND before the shore it takes on the pond's look (blend 0 .. 1 at the shore), its current eased
+    int slot = int(floor(v_ends.w + 0.5));
+    float blend = 0.0;
+    vec4 colour = v_colour, deep_look = v_deep, pond_look = v_look, pond_shape = vec4(0.0, 0.0, 0.0, 0.045);
+    if (slot >= 0) {
+        vec4 rect = u_mouth_rect[slot];
+        pond_shape = u_mouth_shape[slot];
+        vec2 d = q - rect.xy;
+        float a = pond_shape.y;
+        vec2 m = vec2(cos(a) * d.x + sin(a) * d.y, -sin(a) * d.x + cos(a) * d.y);
+        float sd = outline_sd(m, rect.zw, pond_shape.x, pond_shape.z, u_mouth_amp[slot], u_mouth_phase[slot]);
+        if (sd < 0.0) discard;
+        // by how near the shore it is (its whole width at the shore, which may cross it at a slant), over its last
+        // stretch only (not where it passed the pond upstream)
+        float near_mouth = u_mouth_info[slot].y - MOUTH_BLEND - 2.0 * u_mouth_info[slot].x;
+        blend = (1.0 - smoothstep(0.0, MOUTH_BLEND, sd)) * smoothstep(near_mouth - 1.0, near_mouth, u);
+        colour = mix(v_colour, u_mouth_colour[slot], blend);
+        deep_look = mix(v_deep, u_mouth_deep[slot], blend);
+        pond_look = u_mouth_look[slot];
+    }
     if (u_has_terrain == 1) {  // the sculpted ground is the shore: water only where it lies above it
         water_depth = v_world.z - LIFT - ground_at(q);
         if (water_depth <= 0.0) discard;
@@ -672,25 +744,37 @@ void main() {
     vec3 light = u_lit == 1 ? light_at(vec3(q, v_world.z), vec3(0.0, 0.0, 1.0), false) : u_light;
     // waves carried downstream: long along the flow, short across it; their slope (in the river's frame) bends the
     // surface's normal
-    float w = v_look.x * 0.045, a = u - drift;
+    float w = v_look.x * 0.045 * (1.0 - blend), a = u - drift;
     vec2 s = w * vec2(cos(a * 4.3 + across * 1.1 + seed) * 4.3 + cos(a * 2.2 - across * 3.7) * 2.2,
                       cos(a * 4.3 + across * 1.1 + seed) * 1.1 - cos(a * 2.2 - across * 3.7) * 3.7);
     vec2 slope = down * s.x - left * s.y;
+    if (blend > 0.0) {  // towards the pond: the pond's own still waves (as its shader makes them), the current gone
+        float pw = pond_look.x * pond_shape.w * blend, ps = pond_look.z;
+        slope += pw * vec2(cos(q.x * 5.1 + q.y * 1.7 + t * 1.3 + ps) * 5.1 + cos(q.x * -2.3 + q.y * 4.6 + t * 0.9) * -2.3,
+                           cos(q.x * 5.1 + q.y * 1.7 + t * 1.3 + ps) * 1.7 + cos(q.x * -2.3 + q.y * 4.6 + t * 0.9) * 4.6);
+    }
     float splash = 0.0;
-    float rings = u_rain > 0.0 && v_look.w > 0.5 ? rain_rings(q, v_world.z, t, seed) : 0.0;
+    float rings = 0.0;
+    if (u_rain > 0.0 && v_look.w > 0.5) {  // (the pond's own rain rings towards it)
+        rings = blend < 1.0 ? rain_rings(q, v_world.z, t, seed) * (1.0 - blend) : 0.0;
+        if (blend > 0.0) rings += rain_rings(q, v_world.z, t, pond_look.z) * blend;
+    }
     step_rings(q, t, rings, splash);
+    rings *= mix(1.0, pond_look.w, blend);
     vec3 n = normalize(vec3(-slope + rings * 0.35 * left * sign(across + 1e-4), 1.0));
     // its colour: from its shallow colour at the banks (or where the bed is near) to its deep colour
-    float deep = water_depth >= 0.0 ? smoothstep(0.0, 0.05 + 1.2 * (1.0 - v_deep.w), water_depth)
-                                    : smoothstep(0.02, 0.1 + 1.5 * (1.0 - v_deep.w), edge_m);
-    vec3 col = mix(v_colour.rgb, v_deep.rgb, deep);
-    float alpha_water = v_colour.a * mix(0.45, 1.0, deep);
+    float by_edge = smoothstep(0.02, 0.1 + 1.5 * (1.0 - deep_look.w), edge_m);
+    float deep = water_depth >= 0.0 ? smoothstep(0.0, 0.05 + 1.2 * (1.0 - deep_look.w), water_depth) : by_edge;
+    if (slot >= 0 && u_mouth_kind[slot].x < 0.5) deep = mix(deep, by_edge, blend);  // (as such a pond measures it)
+    vec3 col = mix(colour.rgb, deep_look.rgb, deep);
+    float alpha_water = colour.a * mix(0.45, 1.0, deep);
     vec3 r = reflect(view, normalize(vec3(-slope * 0.25, 1.0)));
     vec3 refl = u_reflect == 1 ? mirror(vec3(q, v_world.z), r, true) : u_sky;
     vec3 hue = col / max(max(col.r, col.g), max(col.b, 0.05));
     refl = mix(refl, refl * hue, 0.35);
     float facing = clamp(-view.z, 0.0, 1.0);
-    vec3 lit = mix(col * light, refl, v_look.y * mix(0.6, 0.15, facing) * mix(0.55, 1.0, deep));
+    float reflection = mix(v_look.y, pond_look.y, blend);
+    vec3 lit = mix(col * light, refl, reflection * mix(0.6, 0.15, facing) * mix(0.55, 1.0, deep));
     // the current: short light streaks in lanes along the flow, drifting downstream (fastest mid-stream); still
     // water keeps them where they are
     float lane = floor(across / 0.125);  // lanes 4 texels wide
@@ -698,7 +782,11 @@ void main() {
     float pace = mix(0.6, 1.0, 1.0 - pow(clamp(abs(across) / max(half_w, 1e-3), 0.0, 1.0), 2.0));
     float dash = fract((u - drift * pace * (0.85 + 0.3 * h)) / (1.2 + 1.6 * h) + h);
     if (h > 0.5 && dash < 0.2 && deep > 0.25)
-        lit = mix(lit, vec3(0.80, 0.90, 0.93) * light, 0.25 * min(1.0, v_look.x * 2.0));
+        lit = mix(lit, vec3(0.80, 0.90, 0.93) * light, 0.25 * min(1.0, v_look.x * 2.0) * (1.0 - blend));
+    if (blend > 0.0) {  // the pond's slow glints, as its shader draws them
+        float g = sin(q.y * 26.0 + t * 1.1 + sin(q.x * 2.7 + pond_look.z) * 2.5) * sin(q.x * 3.7 - t * 0.4 + q.y * 0.9);
+        if (g > 0.95 && deep > 0.25) lit = mix(lit, vec3(0.78, 0.88, 0.92) * light, 0.35 * min(1.0, pond_look.x * 2.5) * blend);
+    }
     lit += vec3(0.85, 0.92, 1.0) * clamp(rings, 0.0, 1.0) * 0.35 * light;  // rings catch the light
     // the waterline where it meets its bed (a texel wide, crisp)
     bool waterline = water_depth >= 0.0 ? water_depth < 0.025 : edge_m < 0.045;
@@ -734,6 +822,11 @@ class WaterLayer:
         self.river_count = 0  # indices drawn (the buffers may hold more: room to grow)
         self.river_allocations = 0  # river buffers made (diagnostics: a drag writes into them)
         self.rivers: Any = ()
+        self._river_key: Any = None  # (rivers, ponds) their buffers were made for
+        self._rows: list[tuple[float, ...]] = []  # each pond's instance row (set_bodies)
+        self.ponds: tuple[Any, ...] = ()  # the ponds as rivers' mouths see them (engine.hd2d.river.Pond)
+        self.mouths: list[Any] = []  # R4: the rivers flowing into ponds, by slot (engine.hd2d.river.Mouth)
+        self.mouth_problems: dict[str, str] = {}  # rivers with mouth "auto" that can't join a pond now, and why
         try:
             self.program = ctx.program(vertex_shader=VS, fragment_shader=FS)
             self.quad = ctx.buffer(data=array("f", [-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0]).tobytes())
@@ -756,6 +849,12 @@ class WaterLayer:
                          float(SHORES.index(w.shore)), 0.0 if classic else w.shore_width / PX_PER_M,
                          math.radians(w.rotation), c0, *amp, *phase))
         key = tuple(rows)
+        if key != self._key:  # (as rivers' mouths see them: the same numbers)
+            from engine.hd2d.river import Pond  # noqa: PLC0415
+
+            self._rows = rows
+            self.ponds = tuple(Pond(str(i), (row[0] * PX_PER_M, row[1] * PX_PER_M), (row[4] - LIFT_M) * PX_PER_M,
+                                    body.water) for i, (row, body) in enumerate(zip(rows, bodies)))
         if key == self._key:
             return
         data = array("f", [v for row in rows for v in row]).tobytes() if rows else b""
@@ -784,14 +883,16 @@ class WaterLayer:
         change (none: their buffers freed). A change that fits the buffers is written into them (Studio's River tool
         drags a point: no allocation a move while the river fits); one that doesn't gets new buffers with half as much
         again to spare."""
-        if rivers == self.rivers:
+        if (rivers, self.ponds) == self._river_key:
             return
         from engine.hd2d import river as river_mod  # noqa: PLC0415
 
         if not rivers:
             self._free_rivers()
             return
-        data, idx = river_mod.vertices(rivers, LIFT_M)
+        joined, problems = river_mod.mouths(rivers, self.ponds)  # R4: which flow into a pond (set_bodies' ponds)
+        slots = {rid: (slot, mouth) for slot, (rid, mouth) in enumerate(joined.items())}
+        data, idx = river_mod.vertices(rivers, LIFT_M, slots)
         vertices, indices = data.tobytes(), idx.tobytes()
         if self.river_program is None:
             self.river_program = self.ctx.program(vertex_shader=RIVER_VS, fragment_shader=RIVER_FS)
@@ -802,8 +903,8 @@ class WaterLayer:
             ibo = self.ctx.buffer(reserve=len(indices) * 3 // 2)
             self.river_buffers = (vbo, ibo)
             self.river_geometry = self.ctx.geometry(
-                [self.gl.BufferDescription(vbo, "3f 2f 4f 4f 4f 4f",
-                                           ["in_pos", "in_tangent", "in_flow", "in_colour", "in_deep", "in_look"])],
+                [self.gl.BufferDescription(vbo, "3f 2f 4f 4f 4f 4f 4f", ["in_pos", "in_tangent", "in_flow", "in_colour",
+                                                                         "in_deep", "in_look", "in_ends"])],
                 index_buffer=ibo, index_element_size=4, mode=self.ctx.TRIANGLES)
             self.river_allocations += 1
             buffers = self.river_buffers
@@ -814,7 +915,8 @@ class WaterLayer:
         xs, ys, zs = data[0::f], data[1::f], data[2::f]
         half = max(data[7::f])  # (a bank is within a half width of its sample: the box needs no more)
         self.river_box = (min(xs) - half, min(ys) - half, min(zs), max(xs) + half, max(ys) + half, max(zs))
-        self.rivers = rivers  # recorded only once made (a failure tries again)
+        self.mouths, self.mouth_problems = list(joined.values()), problems
+        self.rivers, self._river_key = rivers, (rivers, self.ponds)  # recorded only once made (a failure tries again)
 
     def _free_rivers(self) -> None:
         if self.river_geometry is not None:
@@ -822,7 +924,8 @@ class WaterLayer:
         for obj in self.river_buffers or ():
             obj.delete()
         self.river_geometry = self.river_buffers = self.river_box = None
-        self.rivers, self.river_count = (), 0
+        self.rivers, self.river_count, self._river_key = (), 0, None
+        self.mouths, self.mouth_problems = [], {}
 
     def in_view(self, vp: list[list[float]]) -> bool:
         """Whether any water surface is in the picture (its corners' clip-space box overlaps the screen): with none,
@@ -936,6 +1039,29 @@ class WaterLayer:
         if self.terrain is not None:
             self.terrain[0].use(7)
             prog["u_terrain_box"] = self.terrain[1]
+        self._mouth_uniforms(prog)
+
+    def _mouth_uniforms(self, prog: Any) -> None:
+        """R4: the rivers flowing into ponds (``self.mouths``), for both programs (the GLSL compiler may leave out
+        what one of them doesn't read: set safely)."""
+        prog.set_uniform_safe("u_mouths_n", len(self.mouths))
+        if not self.mouths:
+            return
+        columns: dict[str, list[float]] = {name: [] for name in ("at", "info", "rect", "shape", "amp", "phase", "colour",
+                                                                  "deep", "look", "kind")}
+        for mouth in self.mouths:
+            index = int(mouth.pond.id)
+            row = self._rows[index]
+            waves = 0.045 if row[6] > 1.5 else (0.06 if row[6] > 0.5 else 0.025)  # (the pond shader's, by kind)
+            for name, values in (("at", (*mouth.at, *mouth.tangent)), ("info", (mouth.half, mouth.u, float(index), row[4])),
+                                 ("rect", row[0:4]), ("shape", (row[5], row[22], row[23], waves)), ("amp", row[24:28]),
+                                 ("phase", row[28:32]), ("colour", row[8:12]), ("deep", row[16:20]),
+                                 ("look", row[12:16]),
+                                 ("kind", (1.0 if row[6] > 1.5 and row[20] == SHORES.index("terrain") else 0.0,
+                                           0.0, 0.0, 0.0))):
+                columns[name].extend(values)
+        for name, flat in columns.items():
+            prog.set_uniform_array_safe(f"u_mouth_{name}", flat + [0.0] * (4 * MAX_MOUTHS - len(flat)))
 
     def draw_3d(self, vp: tuple[float, ...], eye: tuple[float, float, float], fbo: Any, *, time: float,
                 steps: list[tuple[float, float, float]], rain: float, shelter: Any,

@@ -224,16 +224,18 @@ class Ground:
 def ground_for(terrain: Any, flat: tuple[tuple[float, float], tuple[float, float], float] | None,
                waters: list[tuple[Any, tuple[float, float], float]],
                footprints: list[tuple[float, float, float, float, float]], margin: float = 0.3 * PX,
-               spots: Iterable[tuple[float, float]] = (), clear: float = 1.0 * PX, rivers: Any = ()) -> Ground:
+               spots: Iterable[tuple[float, float]] = (), clear: float = 1.0 * PX, rivers: Any = (),
+               ponds: Any = ()) -> Ground:
     """A room's ``Ground``: its sculpted ``terrain`` (engine.hd2d.terrain.Terrain), else the ``flat`` ground (from,
     to, elevation px); ``waters``: (engine.water.Water, centre px, level px); ``footprints``: structures as (x, y,
     half width, half depth, turn degrees) px, kept ``margin`` px clear; ``spots``: where people step in and out
     (doors, arrivals, the player's start, the ends of stairs and bridges), kept ``clear`` px clear; ``rivers``: the
-    room's rivers (engine.hd2d.river.River), their water where their ribbons lie (#461 R3)."""
+    room's rivers (engine.hd2d.river.River), their water where their ribbons lie (#461 R3), not in the ponds
+    (``ponds``, engine.hd2d.river.Pond) they flow into (R4)."""
     from engine import water as water_mod  # noqa: PLC0415
     from engine.hd2d.river import RiverIndex  # noqa: PLC0415
 
-    flowing = RiverIndex(tuple(rivers))
+    flowing = RiverIndex(tuple(rivers), tuple(ponds))
 
     def surface(x: float, y: float) -> tuple[float, float] | None:
         if terrain is not None:
