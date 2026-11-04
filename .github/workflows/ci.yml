@@ -761,6 +761,7 @@ jobs:
       - name: Both of this OS's jobs succeeded
         env:
           GH_TOKEN: ${{ github.token }}
+          NEEDS_RESULTS: ${{ toJSON(needs.*.result) }}  # (the engine's word when the jobs list lags)
         run: python3 tooling/ci_require_jobs.py --os "${{ matrix.os }}" --python "${{ matrix.python }}"
 
       - name: Download the Windows shards' records

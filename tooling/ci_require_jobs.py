@@ -13,6 +13,12 @@ other's; the jobs list can.) ``always()`` rather than ``!cancelled()`` on purpos
 ``tests``, never a skipped one, which branch protection would count as passing. The list is read again, a bounded
 number of times, until one read is complete and current (see ``check``): a single read was wrong during a GitHub
 incident (H7).
+One read can stay stale for minutes, though: GitHub listed both of extended.yml's Windows gpu shards as "in_progress" for
+over 4 minutes after they had finished, while the fan-in was already running because of them (#468's Extended run
+41875533588). So the fan-in also reads the workflow engine's own word, ``NEEDS_RESULTS`` (``toJSON(needs.*.result)``):
+when every job it ``needs:`` succeeded, every leg of those matrices did, so a required job the list names, from this
+attempt, but still calls queued or running is taken as succeeded (see ``observe``). Nothing else changes: a missing job,
+a finished one that didn't succeed, an older attempt's entry or an incomplete list still waits or fails as before.
 
     python tooling/ci_require_jobs.py --os ubuntu-latest --python 3.11
 
@@ -120,9 +126,33 @@ def fetch_jobs(repo: str, run_id: str, *, timeout: float = TIMEOUT,
     return jobs, total
 
 
-def observe(jobs: list[dict[str, Any]], total: int, required: list[str], attempt: int) -> tuple[str, list[str]]:
+def needs_succeeded(raw: str | None) -> bool:
+    """Whether ``NEEDS_RESULTS`` (a JSON list, ``toJSON(needs.*.result)``) says every needed job succeeded. Anything
+    else, absent or unreadable included, is False: then only the jobs list decides, as before."""
+    try:
+        results = json.loads(raw or "")
+    except ValueError:
+        return False
+    return isinstance(results, list) and bool(results) and all(r == "success" for r in results)
+
+
+def _vouched(jobs: list[dict[str, Any]], required: list[str]) -> list[dict[str, Any]]:
+    """The snapshot with each required job listed but not yet ``completed`` taken as succeeded: only for when every
+    ``needs:`` job succeeded, so the list is stale (see the docstring). An entry from an earlier attempt keeps its
+    ``run_attempt``, so ``observe`` still reads again for it."""
+    return [{**job, "status": "completed", "conclusion": "success",
+             "html_url": f"(listed as {job.get('status')}; needs: says it succeeded) {job.get('html_url', '')}".rstrip()}
+            if str(job.get("name")) in required and job.get("status") != "completed" else job
+            for job in jobs]
+
+
+def observe(jobs: list[dict[str, Any]], total: int, required: list[str], attempt: int,
+            needs_ok: bool = False) -> tuple[str, list[str]]:
     """What one snapshot says: ("pass" | "fail" | "retry", lines). It decides ("pass"/"fail") only when it is complete
-    and current; a finished required job that didn't succeed fails it then and there."""
+    and current; a finished required job that didn't succeed fails it then and there. ``needs_ok``: every ``needs:``
+    job succeeded, so a required job still listed as running from this attempt did succeed."""
+    if needs_ok:
+        jobs = _vouched(jobs, required)
     waiting: list[str] = []
     if len(jobs) != total:
         waiting.append(f"incomplete list: {len(jobs)} of {total} jobs")
@@ -146,14 +176,14 @@ def observe(jobs: list[dict[str, Any]], total: int, required: list[str], attempt
 
 
 def check(fetch: Callable[[], tuple[list[dict[str, Any]], int]], required: list[str], attempt: int, *,
-          delays: tuple[float, ...] = DELAYS, sleep: Callable[[float], None] = time.sleep,
+          needs_ok: bool = False, delays: tuple[float, ...] = DELAYS, sleep: Callable[[float], None] = time.sleep,
           log: Callable[[str], None] = lambda line: print(line, flush=True)) -> tuple[bool, list[str]]:
     """Read snapshots until one decides, at most ``len(delays) + 1`` reads: (passed, the deciding lines or why none
     decided)."""
     reason: list[str] = []
     for read in range(len(delays) + 1):
         try:
-            state, lines = observe(*fetch(), required, attempt)
+            state, lines = observe(*fetch(), required, attempt, needs_ok)
         except FetchError as exc:
             state, lines = "retry", [f"read failed: {exc}"]
         if state != "retry":
@@ -179,7 +209,8 @@ def main(argv: list[str] | None = None) -> int:
     required = list(args.job) or required_jobs(args.os_name, args.python)
     name = args.name or (f"tests ({args.os_name}, py{args.python})" if not args.job else "the fan-in")
     repo, run_id = os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_RUN_ID"]
-    ok, lines = check(lambda: fetch_jobs(repo, run_id), required, int(os.environ.get("GITHUB_RUN_ATTEMPT") or 0))
+    ok, lines = check(lambda: fetch_jobs(repo, run_id), required, int(os.environ.get("GITHUB_RUN_ATTEMPT") or 0),
+                      needs_ok=needs_succeeded(os.environ.get("NEEDS_RESULTS")))
     print("\n".join(lines))
     print(f"{name}: {'all required jobs succeeded' if ok else 'NOT all required jobs succeeded'}")
     return 0 if ok else 1

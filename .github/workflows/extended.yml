@@ -209,6 +209,7 @@ jobs:
         if: always()  # (also when the download failed or the run was cancelled: then it refuses, red)
         env:
           GH_TOKEN: ${{ github.token }}
+          NEEDS_RESULTS: ${{ toJSON(needs.*.result) }}  # (the engine's word when the jobs list lags)
         run: >-
           python3 tooling/ci_require_jobs.py --name "gpu (${{ matrix.os }}, py3.11)"
           --job "gpu (${{ matrix.os }}, py3.11, shard 1/2)" --job "gpu (${{ matrix.os }}, py3.11, shard 2/2)"

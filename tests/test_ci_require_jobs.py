@@ -115,11 +115,13 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     assert "name: installed (${{ matrix.os }}, py${{ matrix.python }})" in installed_job
     assert "name: acceptance (${{ matrix.os }}, py${{ matrix.python }})" in acceptance_job
     assert "name: tests (${{ matrix.os }}, py${{ matrix.python }})" in tests_job
-    # It always runs after both (never left pending or skipped) and asks the jobs list, not needs.*.result; the one
-    # exception is a run #422's duplicate check positively left out (tests/test_extended_dedup.py).
+    # It always runs after both (never left pending or skipped) and asks the jobs list (needs.*.result only settles a
+    # stale "running" entry: ci_require_jobs.observe); the one exception is a run #422's duplicate check positively left
+    # out (tests/test_extended_dedup.py).
     assert "needs: [dedup, pytest, verify, installed, acceptance]" in tests_job
     assert "if: ${{ always() && needs.dedup.outputs.skip != 'true' }}" in tests_job
     assert "tooling/ci_require_jobs.py --os \"${{ matrix.os }}\"" in tests_job
+    assert "NEEDS_RESULTS: ${{ toJSON(needs.*.result) }}" in tests_job
     assert "actions: read" in tests_job
     for block in (verify_job, installed_job, acceptance_job, tests_job):
         assert "os: [ubuntu-latest, windows-latest]" in block
@@ -197,7 +199,8 @@ def _read(jobs: dict[str, Any], *, attempt: int = ATTEMPT, total: int | None = N
     return listed, len(listed) if total is None else total
 
 
-def _fan_in(*reads: tuple[list[dict[str, Any]], int] | Exception) -> tuple[bool, list[str], list[float], list[str]]:
+def _fan_in(*reads: tuple[list[dict[str, Any]], int] | Exception,
+            needs_ok: bool = False) -> tuple[bool, list[str], list[float], list[str]]:
     """Run ``check`` over these reads in order (the last one repeats): (passed, lines, sleeps, log)."""
     queue = list(reads)
     sleeps: list[float] = []
@@ -209,7 +212,7 @@ def _fan_in(*reads: tuple[list[dict[str, Any]], int] | Exception) -> tuple[bool,
             raise item
         return item
 
-    ok, lines = check(fetch, REQUIRED, ATTEMPT, sleep=sleeps.append, log=log.append)
+    ok, lines = check(fetch, REQUIRED, ATTEMPT, needs_ok=needs_ok, sleep=sleeps.append, log=log.append)
     return ok, lines, sleeps, log
 
 
@@ -279,6 +282,65 @@ def test_an_older_success_never_hides_a_newer_failure() -> None:
 def test_a_stale_read_of_an_earlier_attempt_is_read_again() -> None:
     ok, lines, sleeps, log = _fan_in(_read({**ALL_OK, "verify": "failure"}, attempt=1), _read(ALL_OK))
     assert ok and len(sleeps) == 1 and "listed from attempt 1, not this attempt (2)" in log[0]
+
+
+# Run 41875533588 (#468): the list called both Windows gpu shards "in_progress" on all 6 reads, minutes after they had
+# finished and the fan-in had started because of them. The engine's needs: results settle that, and nothing else.
+
+STALE = {**ALL_OK, "pytest": ("in_progress", None), "verify": ("queued", None)}
+
+
+def test_a_stale_running_read_passes_when_every_needed_job_succeeded() -> None:
+    ok, lines, sleeps, _ = _fan_in(_read(STALE), needs_ok=True)
+    assert ok and sleeps == []
+    assert f"ok      {SHARD_JOBS[0]}: success  (listed as in_progress; needs: says it succeeded)" in lines
+    assert "ok      verify (windows-latest, py3.11): success  (listed as queued; needs: says it succeeded)" in lines
+
+
+def test_a_stale_running_read_still_waits_out_and_fails_without_the_needs_word() -> None:
+    ok, lines, sleeps, _ = _fan_in(_read(STALE))
+    assert not ok and sleeps == list(fanin.DELAYS) and "still in_progress" in lines[0]
+
+
+@pytest.mark.parametrize("bad", ["failure", "cancelled", "timed_out", "skipped"])
+def test_the_needs_word_never_hides_a_finished_failure(bad: str) -> None:
+    ok, lines, sleeps, _ = _fan_in(_read({**STALE, "installed": bad}), needs_ok=True)
+    assert not ok and sleeps == [] and f"FAILED  installed (windows-latest, py3.11): {bad}" in lines
+
+
+@pytest.mark.parametrize("problem", ["missing", "older attempt", "incomplete"])
+def test_the_needs_word_never_stands_in_for_a_job_the_list_does_not_show_from_this_attempt(problem: str) -> None:
+    reads = {
+        "missing": _read({k: v for k, v in STALE.items() if k != "acceptance"}),
+        "older attempt": _read(STALE, attempt=ATTEMPT - 1),
+        "incomplete": _read(STALE, total=14),
+    }
+    ok, lines, sleeps, _ = _fan_in(reads[problem], needs_ok=True)
+    assert not ok and sleeps == list(fanin.DELAYS), "bounded: it still gives up, red"
+    assert lines[0].startswith("no complete, current jobs list")
+
+
+@pytest.mark.parametrize(("raw", "ok"), [
+    ('["success", "success"]', True), ('[\n  "success",\n  "success"\n]', True), ('["success", "failure"]', False),
+    ('["success", "cancelled"]', False), ('["success", "skipped"]', False), ("[]", False), ('"success"', False),
+    ('{"lane": "success"}', False), ("", False), (None, False), ("not json", False)])
+def test_only_an_all_success_needs_list_counts(raw: str | None, ok: bool) -> None:
+    assert fanin.needs_succeeded(raw) is ok
+
+
+def test_main_reads_the_needs_word(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GITHUB_REPOSITORY", "o/r")
+    monkeypatch.setenv("GITHUB_RUN_ID", "1")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", str(ATTEMPT))
+    monkeypatch.setattr(fanin, "fetch_jobs", lambda *_a, **_k: _read(STALE))
+    real = fanin.check
+    monkeypatch.setattr(fanin, "check", lambda *a, **k: real(*a, **k, delays=(), sleep=lambda _s: None))
+    monkeypatch.setenv("NEEDS_RESULTS", '["success", "success", "success", "success", "success"]')
+    assert fanin.main(["--os", "windows-latest", "--python", "3.11"]) == 0
+    monkeypatch.setenv("NEEDS_RESULTS", '["success", "failure", "success", "success", "success"]')
+    assert fanin.main(["--os", "windows-latest", "--python", "3.11"]) == 1
+    monkeypatch.delenv("NEEDS_RESULTS")
+    assert fanin.main(["--os", "windows-latest", "--python", "3.11"]) == 1
 
 
 def _proc(returncode: int, stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess[str]:
