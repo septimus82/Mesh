@@ -721,7 +721,7 @@ void main() {
     // R4: flowing into a pond: none of it in the pond's water (the pond's is drawn there: one surface), and over its
     // last MOUTH_BLEND before the shore it takes on the pond's look (blend 0 .. 1 at the shore), its current eased
     int slot = int(floor(v_ends.w + 0.5));
-    float blend = 0.0;
+    float blend = 0.0, near_mouth = 1.0e9;
     vec4 colour = v_colour, deep_look = v_deep, pond_look = v_look, pond_shape = vec4(0.0, 0.0, 0.0, 0.045);
     if (slot >= 0) {
         vec4 rect = u_mouth_rect[slot];
@@ -733,7 +733,7 @@ void main() {
         if (sd < 0.0) discard;
         // by how near the shore it is (its whole width at the shore, which may cross it at a slant), over its last
         // stretch only (not where it passed the pond upstream)
-        float near_mouth = u_mouth_info[slot].y - MOUTH_BLEND - 2.0 * u_mouth_info[slot].x;
+        near_mouth = u_mouth_info[slot].y - MOUTH_BLEND - 2.0 * u_mouth_info[slot].x;
         blend = (1.0 - smoothstep(0.0, MOUTH_BLEND, sd)) * smoothstep(near_mouth - 1.0, near_mouth, u);
         colour = mix(v_colour, u_mouth_colour[slot], blend);
         deep_look = mix(v_deep, u_mouth_deep[slot], blend);
@@ -793,7 +793,9 @@ void main() {
     }
     lit += vec3(0.85, 0.92, 1.0) * clamp(rings, 0.0, 1.0) * 0.35 * light;  // rings catch the light
     // the waterline where it meets its bed (a texel wide, crisp)
-    bool waterline = water_depth >= 0.0 ? water_depth < 0.025 : edge_m < 0.045;
+    // (not over its last stretch into a pond: its bed eases to the pond's depth there, its shallow banks no waterline,
+    // as the pond draws none across its opening)
+    bool waterline = (water_depth >= 0.0 ? water_depth < 0.025 : edge_m < 0.045) && u < near_mouth;
     lit = mix(lit, vec3(0.80, 0.86, 0.86) * light, (waterline ? 0.45 : 0.0) + clamp(splash, 0.0, 1.0) * 0.8);
     float alpha = clamp((waterline ? max(alpha_water, 0.85) : alpha_water) + clamp(rings, 0.0, 1.0) * 0.2 + splash * 0.6, 0.0, 1.0);
     f_color = vec4(shade(lit), alpha);

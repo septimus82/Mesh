@@ -1249,9 +1249,19 @@ def _with_rivers(scene: Doc, edit: Any, river_id: str | None = None) -> Doc:
     edited = next((r for r in parsed if r.id == river_id), None)
     if edited is not None and edited.mouth == "auto":  # (R4: the river edited only; others' joins are their own)
         try:
-            join(edited, ponds_of(entities(out)))
+            mouth = join(edited, ponds_of(entities(out)))
         except RiverError as err:
             raise OpError(str(err)) from err
+        ground = _parsed_ground(out)
+        if ground.terrain is not None:
+            from engine.hd2d.river import dug_in  # noqa: PLC0415
+            from engine.hd2d.terrain import Terrain  # noqa: PLC0415
+
+            trench = dug_in(Terrain.from_ground(ground), edited, mouth)
+            if trench is not None:
+                raise OpError(f"River '{river_id}''s bed was carved into the pond '{mouth.pond.id}' before it flowed into "
+                              f"it (a trench near ({trench[0]:.0f}, {trench[1]:.0f}) px): undo that carve, or sculpt "
+                              "the pond's bed back, then let it flow into the pond and carve it again")
     if parsed:
         hd2d["rivers"] = [to_json(r) for r in parsed]
     else:

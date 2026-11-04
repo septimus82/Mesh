@@ -319,3 +319,19 @@ def test_show_when_in_either_form_and_overlapping_ponds_pick_the_same_pond_for_d
     (r,) = _rivers(ops.set_river(two, "stream", mouth="auto"))
     by_place = tuple(river.Pond(str(i), p.centre, p.level, p.water) for i, p in enumerate(ponds))  # (the renderer's)
     assert river.join(r, ponds).pond.id == first and river.join(r, by_place).pond.id == "0", "the first, both ways"
+
+
+def test_a_meander_s_close_limbs_carve_once_and_a_trench_carved_before_its_mouth_is_refused() -> None:
+    """Re-review of adddade: a meander whose limbs run 1 m apart read its other limb's fresh bed as a dip beside it
+    and sank again at every carve; carving first and then letting it flow into the pond left a trench in the pond."""
+    w, y1, y2 = 64.0, 600.0 - 48.0, 600.0 + 48.0  # (two 2 m limbs, their middles 3 m apart: 1 m bank to bank)
+    loop = [[100.0, y1, w, 8.0], [400.0, y1, w, 8.0], [700.0, y1, w, 8.0], [950.0, 430.0, w, 8.0], [1200.0, 300.0, w, 8.0],
+            [1450.0, 600.0, w, 8.0], [1200.0, 900.0, w, 8.0], [950.0, 770.0, w, 8.0], [700.0, y2, w, 8.0],
+            [400.0, y2, w, 8.0], [100.0, y2, w, 8.0]]
+    once = ops.carve_river_bed(_flat(loop), "stream")
+    with pytest.raises(ops.OpError, match="already carved"):
+        ops.carve_river_bed(once, "stream")
+    carved = ops.carve_river_bed(_room(), "stream")  # (no mouth: its bed runs on into the pond, 0.75 m down)
+    with pytest.raises(ops.OpError, match="carved into the pond .* before it flowed into it"):
+        ops.set_river(carved, "stream", mouth="auto")
+    assert ops.rivers(ops.carve_river_bed(_room(mouth="auto"), "stream"))[0]["mouth"] == "auto", "the other way round"

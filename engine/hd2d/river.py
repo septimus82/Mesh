@@ -462,6 +462,7 @@ def inside(r: Ribbon, p: tuple[float, float]) -> bool:
 
 # ---------------------------------------------------------------------- into a pond, and its ends (R4)
 MOUTH_LEVEL_PX = 1.6  # where it enters a pond its water is within 5 cm of the pond's (one waterline)
+TRENCH_M = 0.25  # a course in a pond this much under the pond's ground beside it: a trench carved into it
 SHORE_DEPTH_M = 0.05  # a mouth's bed at the shore is at least this deep (shallower, the water isn't drawn)
 BLEND_M = water_mod.MOUTH_BLEND_M  # over its last 1.5 m before the pond's shore it takes on the pond's look
 
@@ -574,6 +575,25 @@ def join(river: River, ponds: tuple[Pond, ...]) -> Mouth:
     return Mouth(river.id, pond, entry, (ax + tx * f, ay + ty * f), (tx / n, ty / n), half, u)
 
 
+def dug_in(terrain: Any, river: River, mouth: Mouth) -> tuple[float, float] | None:
+    """Where (px) its course in the pond runs in a trench (its bed carved into the pond before it flowed into it:
+    carving only lowers, so joining can't take that back): a sample a terrain cell or more in from the shore whose
+    ground is more than TRENCH_M under the pond's ground either side of it (a half width and a metre out); or None."""
+    rib = ribbon(river)
+    for k in range(mouth.entry, len(rib.centre)):
+        (cx, cy), (tx, ty) = rib.centre[k], rib.tangent[k]
+        if not water_mod.inside(mouth.pond.water, mouth.pond.centre, (cx * PX, cy * PX), terrain.cell):
+            continue
+        middle = terrain.height(cx * PX, cy * PX)
+        out = rib.half[k] + 1.0
+        sides = [terrain.height((cx + s * -ty * out) * PX, (cy + s * tx * out) * PX) for s in (1, -1)]
+        sides = [g for g, s in zip(sides, (1, -1)) if g is not None and water_mod.inside(
+            mouth.pond.water, mouth.pond.centre, ((cx + s * -ty * out) * PX, (cy + s * tx * out) * PX))]
+        if middle is not None and sides and middle < min(sides) - TRENCH_M * PX:
+            return (cx * PX, cy * PX)
+    return None
+
+
 def mouths(rivers: tuple[River, ...], ponds: tuple[Pond, ...]) -> tuple[dict[str, Mouth], dict[str, str]]:
     """Each river with ``mouth: "auto"``'s join (``join``), and for those that can't join, why (as a room plays: a
     pond moved since, say; such a river is drawn as if its mouth were none, never reshaped)."""
@@ -671,6 +691,7 @@ class RiverIndex:
 
     def __init__(self, rivers: tuple[River, ...], ponds: tuple[Pond, ...] = ()) -> None:
         self._quads: list[tuple[tuple[tuple[float, float], ...], float, str]] = []
+        self._samples: list[int] = []  # each quad's first sample along its river
         self._buckets: dict[tuple[int, int], list[int]] = {}
         # R4: what is drawn: a river flowing into a pond has none of its water in the pond (the pond's is there), and
         # its round ends have none past their caps. Per quad, if either applies: (ribbon, sample, caps, pond or None)
@@ -684,6 +705,7 @@ class RiverIndex:
                 quad = (r.left[k], r.left[k + 1], r.right[k + 1], r.right[k])
                 index = len(self._quads)
                 self._quads.append((quad, (r.level[k] + r.level[k + 1]) / 2, river.id))
+                self._samples.append(k)
                 in_pond = mouth is not None and (k >= mouth.entry - 1 or any(_in_pond(mouth.pond, c) for c in quad))
                 if in_pond or (caps[0] and r.u[k] < caps[0] + STEP_M) \
                         or (caps[1] and r.u[k + 1] > r.u[-1] - caps[1] - STEP_M):
@@ -705,6 +727,11 @@ class RiverIndex:
             if _in_quad(quad, (x, y)) and (best is None or level > best[0]) and not self._past_end(index, (x, y)):
                 best = (level, rid)
         return best
+
+    def samples_at(self, x: float, y: float) -> list[tuple[str, int]]:
+        """The (river id, sample) of every quad whose ribbon covers (x, y) m, past ends and ponds or not."""
+        return [(self._quads[i][2], self._samples[i]) for i in self._buckets.get((math.floor(x), math.floor(y)), ())
+                if _in_quad(self._quads[i][0], (x, y))]
 
     def _past_end(self, index: int, p: tuple[float, float]) -> bool:
         """Whether p, on the quad ``index``, is where the drawn water isn't: in the pond the river flows into, or past
@@ -758,15 +785,16 @@ def sunk(terrain: Any, river: River, ponds: tuple["Pond", ...] = (), others: tup
     under it there too); the level still falls downstream (each point no higher than the one before). Water at or
     under the ground beside it is kept as it is, so a carved river (its banks rising from the water) is kept, and so
     is one sunk already, though carving nearby lowers that ground a little: sinking twice is sinking once. Ground
-    nearer a pond's water (``ponds``) or another river's (``others``) than its own is that water's bed or bank, not
-    this river's: it isn't measured (a neighbour carved afterwards, its bank lowering the ground they share, may sink
-    it once more, as R3's control points could; never again and again). A river flowing
-    into a pond (``mouth: "auto"``) is never sunk below that pond's level: it must meet the pond's water (``join``).
-    (Studio draws new rivers a little over the ground clicked, so they show before their bed is carved: carved, they
-    lie in it.)"""
+    nearer a pond's water (``ponds``), another river's (``others``) or its own further along its course (a meander's
+    other limb) than its own here is that water's bed or bank, not this river's: it isn't measured (a neighbour
+    carved afterwards, its bank lowering the ground they share, may sink it once more, as R3's control points could;
+    never again and again). A river flowing into a pond (``mouth: "auto"``) is never sunk below that pond's level:
+    it must meet the pond's water (``join``). (Studio draws new rivers a little over the ground clicked, so they
+    show before their bed is carved: carved, they lie in it.)"""
     rib = ribbon(river)
     pond = _mouth_pond(river, ponds) if river.mouth == "auto" else None
     near = RiverIndex(tuple(o for o in others if o.id != river.id))
+    own = RiverIndex((river,))  # (its own other stretches: a meander's limbs close together)
     pts = river.points
     need = [0.0] * len(pts)  # how far each control point comes down (px)
     span = 0
@@ -783,7 +811,10 @@ def sunk(terrain: Any, river: River, ponds: tuple["Pond", ...] = (), others: tup
                     continue  # (in its own water: its bed)
                 # nearer another's water (a pond's, another river's) than its own: that water's bed or bank, not
                 # this river's (so carving a neighbour doesn't sink it again and again)
+                far = 2.0 * rib.half[k] + 1.0  # (along its course: not this stretch's own bed)
                 if any(near.level_at(x / PX + nx * beyond * f, y / PX + ny * beyond * f) is not None
+                       or any(abs(rib.u[s] - rib.u[k]) > far
+                              for _rid, s in own.samples_at(x / PX + nx * beyond * f, y / PX + ny * beyond * f))
                        or any(water_mod.inside(p.water, p.centre, (x + nx * beyond * f * PX, y + ny * beyond * f * PX))
                               for p in ponds) for f in (0.0, 0.5, 1.0)):
                     continue
