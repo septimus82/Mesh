@@ -294,14 +294,14 @@ class Project:
         self.player_dirty = state.player_dirty
 
     def _record(self, before: _State) -> None:
+        for room in before.scenes.values():  # (#462 S1-ID: every state an edit leaves, whatever wrote it, even each
+            self.ids_seen.update(_ids(room))  # step of a batch: none of its ids is given to another object)
         if self._tx_depth:
             return  # the transaction records once, at its end
         self._undo.append(before)
         del self._undo[:-UNDO_LIMIT]
         self._redo.clear()
         self.revision += 1
-        for room in before.scenes.values():  # (#462 S1-ID: every state undo can bring back, whatever wrote it)
-            self.ids_seen.update(_ids(room))
 
     @contextmanager
     def transaction(self) -> Iterator[None]:

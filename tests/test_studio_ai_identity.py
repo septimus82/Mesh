@@ -331,3 +331,48 @@ def test_an_object_in_a_room_first_read_mid_batch_keeps_its_id_from_a_newcomer_i
     made = authoring.apply(reopened, [{"op": "remove_entity", "entity_id": old, "room": cellar},
                                       {"op": "place_prefab", "prefab": "person", "x": 64, "y": 64, "room": cellar}])
     assert made["created"][1] != old, (old, made)
+
+
+def test_a_new_rooms_player_deleted_by_an_ai_batch_keeps_its_id_from_the_player_that_batch_places(root: Path,
+                                                                                                studio: Any) -> None:
+    """Second review: the AI proposes moving a new room's player (A), and in another proposal (B) deletes that
+    player and places one on its spot. Accepting B, then A: A must not move B's new player."""
+    person, host, _warden = studio
+    cellar = person.project.add_room("Cellar")
+    player = next(e["id"] for e in person.project.scene(cellar)["entities"] if e.get("tag") == "player")
+    read = authoring_session.read_project(root)
+    move = _propose(root, host, [{"op": "move_entity", "entity_id": player, "x": 128, "y": 160, "room": cellar}],
+                    read["revision"])
+    replace = _propose(root, host, [{"op": "remove_entity", "entity_id": player, "room": cellar},
+                                    {"op": "place_prefab", "prefab": "player", "x": 128, "y": 128, "room": cellar}],
+                       read["revision"])
+    assert host.accept(replace)["ok"] is True
+    newcomer = str(replace.created[1])
+
+    result = host.accept(move)
+
+    assert newcomer != player and result["ok"] is False, (player, newcomer, result)
+    assert float(next(e for e in person.project.scene(cellar)["entities"] if e["id"] == newcomer)["y"]) == 128.0
+
+
+def test_an_object_in_a_room_first_read_by_an_edit_keeps_its_id_from_a_newcomer_that_edit_places(root: Path) -> None:
+    """Project.edit_scene on a room not read yet (it is read after the edit's undo state is taken): its object,
+    removed and replaced on its spot in that one edit, still keeps its id."""
+    config = json.loads((root / "config.json").read_text(encoding="utf-8"))
+    project = Project(root, config["world_file"])
+    cellar = project.add_room("Cellar")
+    old = str(authoring.apply(project, [{"op": "place_prefab", "prefab": "person", "x": 64, "y": 64,
+                                         "room": cellar}])["created"][0])
+    project.save()
+    reopened = Project(root, config["world_file"])
+    assert cellar not in reopened.scenes
+    prefab = next(p for p in authoring.prefabs(reopened) if p["id"] == "person")
+    made: list[str] = []
+
+    def replace(room: dict[str, Any]) -> dict[str, Any]:
+        new_room, new_id = authoring.ops.place_prefab(authoring.ops.remove_entity(room, old), cellar, prefab, 64, 64)
+        made.append(new_id)
+        return new_room
+
+    reopened.edit_scene(replace, cellar)
+    assert made[0] != old, (old, made)
