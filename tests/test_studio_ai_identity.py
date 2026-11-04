@@ -233,3 +233,101 @@ def test_an_older_room_without_ids_still_gets_the_same_ids_as_before(root: Path)
     ids = _ids(Project(root, config["world_file"]))
     expected = authoring.ops.make_entity_id(project.current, "Old Sign", 64, 96)
     assert expected in ids and "kept_id" in ids
+
+
+# --------------------------------------------------------------------- independent review of 58c8d97
+
+def test_studios_door_tool_never_gives_a_deleted_doors_id_to_the_new_door(root: Path, studio: Any) -> None:
+    """The AI proposes renaming a door; the person deletes it (and its arrival spot) and links the rooms again from
+    the same spot with Studio's door tool. The new door is a different object: the rename doesn't land on it."""
+    person, host, _warden = studio
+    start = person.project.current
+    house = person.project.add_room("House")
+    person.project.link_rooms(start, (320, 320), house, (160, 160))
+    door = next(e["id"] for e in person.project.scene(start)["entities"] if str(e["id"]).startswith("start_door_to"))
+    read = authoring_session.read_project(root)
+    proposal = _propose(root, host, [{"op": "rename_entity", "entity_id": door, "name": "Secret Door"}],
+                        read["revision"])
+    for entity in [e for e in person.project.scene(start)["entities"] if e["id"] != _warden and
+                   (e["id"] == door or e.get("spawn_id") or e.get("tag") == "spawn_point")]:
+        person.project.edit_scene(lambda room, gone=entity["id"]: authoring.ops.remove_entity(room, gone), start)
+    person.project.link_rooms(start, (320, 320), house, (160, 160))
+    new_door = next(e["id"] for e in person.project.scene(start)["entities"]
+                    if str(e["id"]).startswith("start_door_to"))
+
+    result = host.accept(proposal)
+
+    assert new_door != door, (door, new_door)
+    assert result["ok"] is False, result
+    assert _entity(person.project, new_door)["name"] != "Secret Door"
+
+
+def test_a_new_rooms_player_id_is_never_given_to_a_player_placed_after_it_is_deleted(root: Path,
+                                                                                    studio: Any) -> None:
+    """A new room comes with its own player. The AI proposes moving it; the person deletes it and places a player
+    on the same spot: a different object, not moved."""
+    person, host, _warden = studio
+    cellar = person.project.add_room("Cellar")
+    player = next(e["id"] for e in person.project.scene(cellar)["entities"] if e.get("tag") == "player")
+    read = authoring_session.read_project(root)
+    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": player, "x": 128, "y": 160,
+                                      "room": cellar}], read["revision"])
+    person.project.edit_scene(lambda room: authoring.ops.remove_entity(room, player), cellar)
+    made = authoring.apply(person.project, [{"op": "place_prefab", "prefab": "player", "x": 128, "y": 128,
+                                             "room": cellar}])
+    newcomer = str(made["created"][0])
+
+    result = host.accept(proposal)
+
+    assert newcomer != player and result["ok"] is False, (player, newcomer, result)
+    moved = next(e for e in person.project.scene(cellar)["entities"] if e["id"] == newcomer)
+    assert float(moved["y"]) == 128.0
+
+
+def test_within_one_batch_an_object_deleted_and_another_placed_on_its_spot_get_different_ids(root: Path,
+                                                                                            studio: Any) -> None:
+    person, _host, _warden = studio
+    made = authoring.apply(person.project, [{"op": "place_prefab", "prefab": "person", "x": 64, "y": 64},
+                                            {"op": "remove_entity", "entity_id": "@0"},
+                                            {"op": "place_prefab", "prefab": "person", "x": 64, "y": 64}])
+    assert made["created"][0] != made["created"][2], made
+    with pytest.raises(authoring.ChangeError):  # (so a later "@0" can't land on the second object)
+        authoring.apply(person.project, [{"op": "place_prefab", "prefab": "person", "x": 96, "y": 96},
+                                         {"op": "remove_entity", "entity_id": "@0"},
+                                         {"op": "place_prefab", "prefab": "person", "x": 96, "y": 96},
+                                         {"op": "rename_entity", "entity_id": "@0", "name": "Wrong one"}])
+
+
+def test_an_older_room_read_first_during_an_edit_still_gets_its_usual_ids(root: Path) -> None:
+    """Filling in an older room's missing ids doesn't depend on what this session retired: read inside an edit or
+    not, it gets the ids it always got (independent review)."""
+    config = json.loads((root / "config.json").read_text(encoding="utf-8"))
+    project = Project(root, config["world_file"])
+    cellar = project.add_room("Cellar")
+    project.save()
+    path = root / project.path(cellar)
+    room = json.loads(path.read_text(encoding="utf-8"))
+    room["entities"].append({"name": "Old Sign", "x": 64, "y": 96})
+    path.write_text(json.dumps(room), encoding="utf-8")
+    reopened = Project(root, config["world_file"])
+    expected = authoring.ops.make_entity_id(cellar, "Old Sign", 64, 96)
+    reopened.ids_seen.add(expected)  # (as if an object with that id had been placed and deleted this session)
+    with authoring.ops.retired_ids(reopened.ids_seen):
+        ids = [str(e["id"]) for e in reopened.scene(cellar)["entities"]]
+    assert expected in ids, ids
+
+
+def test_an_object_in_a_room_first_read_mid_batch_keeps_its_id_from_a_newcomer_in_that_batch(root: Path) -> None:
+    """A room first read by a batch (rooms are read when first needed): its object, deleted in that batch, still
+    keeps its id from an object the batch then places on its spot."""
+    config = json.loads((root / "config.json").read_text(encoding="utf-8"))
+    project = Project(root, config["world_file"])
+    cellar = project.add_room("Cellar")
+    old = str(authoring.apply(project, [{"op": "place_prefab", "prefab": "person", "x": 64, "y": 64,
+                                         "room": cellar}])["created"][0])
+    project.save()
+    reopened = Project(root, config["world_file"])  # (only the start room read so far)
+    assert cellar not in reopened.scenes
+    made = authoring.apply(reopened, [{"op": "remove_entity", "entity_id": old, "room": cellar},
+                                      {"op": "place_prefab", "prefab": "person", "x": 64, "y": 64, "room": cellar}])
+    assert made["created"][1] != old, (old, made)

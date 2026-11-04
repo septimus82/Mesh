@@ -155,7 +155,8 @@ class Project:
             raw = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {"name": self.label(key), "entities": []}
             if path.is_file():
                 self._seen_on_disk[self.path(key)] = path.stat().st_mtime
-            self.scenes[key] = ops.ensure_entity_ids(raw, key)
+            with ops.retired_ids(()):  # (an older room's missing ids are filled in as always, whenever it is read)
+                self.scenes[key] = ops.ensure_entity_ids(raw, key)
             self.ids_seen.update(_ids(self.scenes[key]))
         return self.scenes[key]
 
@@ -299,6 +300,8 @@ class Project:
         del self._undo[:-UNDO_LIMIT]
         self._redo.clear()
         self.revision += 1
+        for room in before.scenes.values():  # (#462 S1-ID: every state undo can bring back, whatever wrote it)
+            self.ids_seen.update(_ids(room))
 
     @contextmanager
     def transaction(self) -> Iterator[None]:
@@ -332,7 +335,7 @@ class Project:
         copy_.player, copy_.player_dirty, copy_._views = copy.deepcopy(self.player), self.player_dirty, {}
         copy_._undo, copy_._redo, copy_.revision, copy_.writes_files, copy_._tx_depth = [], [], self.revision, False, 0
         copy_._seen_on_disk = dict(self._seen_on_disk)  # (a room loaded first in the copy records when it was read)
-        copy_.ids_seen = set(self.ids_seen)  # (so a dry run gives new objects the ids the real edit will)
+        copy_.ids_seen = set(self.ids_seen)  # (a dry run's new objects get the ids the real edit would, then)
         return copy_
 
     def load_documents(self, docs: Doc) -> None:
@@ -706,7 +709,9 @@ class Project:
         """Connect two rooms with a door in each (at ``at_a`` in room ``key_a``, ``at_b`` in ``key_b``), each with its arrival spot."""
         before = self._snapshot()
         ids_a, ids_b = ops.shared_player_ids(self._room(key_a)), ops.shared_player_ids(self._room(key_b))
-        a, b = ops.link_rooms(self.scene(key_a), key_a, self.label(key_a), at_a, self.scene(key_b), key_b, self.label(key_b), at_b)
+        with ops.retired_ids(self.ids_seen):  # (Studio's door tool: its doors' ids never given back either)
+            a, b = ops.link_rooms(self.scene(key_a), key_a, self.label(key_a), at_a, self.scene(key_b), key_b,
+                                  self.label(key_b), at_b)
         self._record(before)
         self._store(key_a, a, ids_a)
         self._store(key_b, b, ids_b)

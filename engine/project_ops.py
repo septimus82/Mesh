@@ -16,7 +16,7 @@ import posixpath
 import re
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any, Iterable, Iterator
+from typing import Any, Collection, Iterable, Iterator
 
 from engine.ai_ops import build_prefab_entity_definition
 from engine.behaviours import load_builtin_behaviours
@@ -78,15 +78,15 @@ def entity_ref(scene: Doc, ref: Any) -> str:
     raise OpError(f"There is no object '{text}' in this room.")
 
 
-_RETIRED: ContextVar[frozenset[str]] = ContextVar("mesh_retired_entity_ids", default=frozenset())
+_RETIRED: ContextVar[Collection[str]] = ContextVar("mesh_retired_entity_ids", default=frozenset())
 
 
 @contextmanager
-def retired_ids(ids: Iterable[str]) -> Iterator[None]:
+def retired_ids(ids: Collection[str]) -> Iterator[None]:
     """While editing, new objects' ids avoid ``ids`` too (#462 S1-ID): Mesh Studio passes every id an object has had
-    this session, so an object deleted and another placed on its spot never share an id, and an AI's proposal about
-    the first can't land on the second."""
-    token = _RETIRED.set(frozenset(ids))
+    this session (its live set: ids an edit makes count at once, even later in the same batch), so an object deleted
+    and another placed on its spot never share an id, and an AI's proposal about the first can't land on the second."""
+    token = _RETIRED.set(ids)
     try:
         yield
     finally:
@@ -96,9 +96,9 @@ def retired_ids(ids: Iterable[str]) -> Iterator[None]:
 def unique_entity_id(scene: Doc, base: str) -> str:
     """``base`` (an id made from the room, type and spot), or ``base_2``, ``base_3``...: the first no object here has,
     nor any id ``retired_ids`` names."""
-    taken = {e.get("id") for e in entities(scene)} | _RETIRED.get()
+    taken, retired = {e.get("id") for e in entities(scene)}, _RETIRED.get()
     candidate, n = base, 2
-    while candidate in taken:
+    while candidate in taken or candidate in retired:
         candidate = f"{base}_{n}"
         n += 1
     return candidate
