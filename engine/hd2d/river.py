@@ -462,7 +462,6 @@ def inside(r: Ribbon, p: tuple[float, float]) -> bool:
 
 # ---------------------------------------------------------------------- into a pond, and its ends (R4)
 MOUTH_LEVEL_PX = 1.6  # where it enters a pond its water is within 5 cm of the pond's (one waterline)
-TRENCH_M = 0.25  # a course in a pond this much under the pond's ground beside it: a trench carved into it
 SHORE_DEPTH_M = 0.05  # a mouth's bed at the shore is at least this deep (shallower, the water isn't drawn)
 BLEND_M = water_mod.MOUTH_BLEND_M  # over its last 1.5 m before the pond's shore it takes on the pond's look
 
@@ -573,25 +572,6 @@ def join(river: River, ponds: tuple[Pond, ...]) -> Mouth:
                          f"shore and in the pond, its level must be within 5 cm of the pond's, {pond.level:g} px "
                          f"(points {first + 1} to {len(river.points)}{hint})")
     return Mouth(river.id, pond, entry, (ax + tx * f, ay + ty * f), (tx / n, ty / n), half, u)
-
-
-def dug_in(terrain: Any, river: River, mouth: Mouth) -> tuple[float, float] | None:
-    """Where (px) its course in the pond runs in a trench (its bed carved into the pond before it flowed into it:
-    carving only lowers, so joining can't take that back): a sample a terrain cell or more in from the shore whose
-    ground is more than TRENCH_M under the pond's ground either side of it (a half width and a metre out); or None."""
-    rib = ribbon(river)
-    for k in range(mouth.entry, len(rib.centre)):
-        (cx, cy), (tx, ty) = rib.centre[k], rib.tangent[k]
-        if not water_mod.inside(mouth.pond.water, mouth.pond.centre, (cx * PX, cy * PX), terrain.cell):
-            continue
-        middle = terrain.height(cx * PX, cy * PX)
-        out = rib.half[k] + 1.0
-        sides = [terrain.height((cx + s * -ty * out) * PX, (cy + s * tx * out) * PX) for s in (1, -1)]
-        sides = [g for g, s in zip(sides, (1, -1)) if g is not None and water_mod.inside(
-            mouth.pond.water, mouth.pond.centre, ((cx + s * -ty * out) * PX, (cy + s * tx * out) * PX))]
-        if middle is not None and sides and middle < min(sides) - TRENCH_M * PX:
-            return (cx * PX, cy * PX)
-    return None
 
 
 def mouths(rivers: tuple[River, ...], ponds: tuple[Pond, ...]) -> tuple[dict[str, Mouth], dict[str, str]]:

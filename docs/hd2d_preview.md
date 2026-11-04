@@ -178,9 +178,10 @@ same checked edits (`add_river`, `set_river`, `remove_river`).
   - its end isn't wholly in the pond, it crosses the pond's shore more than once, or it runs with a bank in the
     pond's water well before it turns in;
   - over its last 1.5 m before the shore and in the pond, its water isn't within 5 cm of the pond's. The refusal
-    names the points to change;
-  - its bed was already carved into the pond before you turned this on (carving only lowers, so that trench would
-    stay): undo that carve or sculpt the pond's bed back, turn **Into the pond** on, then carve it.
+    names the points to change.
+
+  Turn **Into the pond** on before carving its bed: carved first, its bed runs on into the pond, and carving only
+  lowers, so that channel stays (as deeper pond water, walked as the rest of the pond is).
 
   Nothing is moved or relevelled to make it fit. If a pond is moved later so the join no longer holds, the river
   is drawn with a free end and the panel says why. Walking, wading and plants follow what is drawn. In the pond it

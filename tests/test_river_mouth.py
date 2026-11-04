@@ -321,9 +321,10 @@ def test_show_when_in_either_form_and_overlapping_ponds_pick_the_same_pond_for_d
     assert river.join(r, ponds).pond.id == first and river.join(r, by_place).pond.id == "0", "the first, both ways"
 
 
-def test_a_meander_s_close_limbs_carve_once_and_a_trench_carved_before_its_mouth_is_refused() -> None:
+def test_a_meander_s_close_limbs_carve_once_and_a_bed_carved_before_its_mouth_stays_pond_water() -> None:
     """Re-review of adddade: a meander whose limbs run 1 m apart read its other limb's fresh bed as a dip beside it
-    and sank again at every carve; carving first and then letting it flow into the pond left a trench in the pond."""
+    and sank again at every carve. (Carving first and then letting it flow into the pond keeps that channel in the
+    pond; a check refusing it read a pond's own sculpted bowl as a trench: re-review of c25b650.)"""
     w, y1, y2 = 64.0, 600.0 - 48.0, 600.0 + 48.0  # (two 2 m limbs, their middles 3 m apart: 1 m bank to bank)
     loop = [[100.0, y1, w, 8.0], [400.0, y1, w, 8.0], [700.0, y1, w, 8.0], [950.0, 430.0, w, 8.0], [1200.0, 300.0, w, 8.0],
             [1450.0, 600.0, w, 8.0], [1200.0, 900.0, w, 8.0], [950.0, 770.0, w, 8.0], [700.0, y2, w, 8.0],
@@ -331,7 +332,10 @@ def test_a_meander_s_close_limbs_carve_once_and_a_trench_carved_before_its_mouth
     once = ops.carve_river_bed(_flat(loop), "stream")
     with pytest.raises(ops.OpError, match="already carved"):
         ops.carve_river_bed(once, "stream")
-    carved = ops.carve_river_bed(_room(), "stream")  # (no mouth: its bed runs on into the pond, 0.75 m down)
-    with pytest.raises(ops.OpError, match="carved into the pond .* before it flowed into it"):
-        ops.set_river(carved, "stream", mouth="auto")
-    assert ops.rivers(ops.carve_river_bed(_room(mouth="auto"), "stream"))[0]["mouth"] == "auto", "the other way round"
+    # carved first (its bed on into the pond, 0.75 m down), then let into the pond: accepted, the channel kept as the
+    # pond's deeper water, walked by the pond's rule (no trench check: a pond's own sculpted bowl reads the same)
+    carved = ops.set_river(ops.carve_river_bed(_room(), "stream"), "stream", mouth="auto")
+    world = World(parse_hd2d(carved["settings"]["hd2d"]), {}, river.ponds_of(carved["entities"]))
+    x, y = 1050.0 / P, 600.0 / P
+    bed = min(h for h, _s in world.heights_at(x, y))
+    assert bed < -0.6 and world.rivers.level_at(x, y) is None and world.stand(x, y, bed, 0.3, 0.19) is not None
