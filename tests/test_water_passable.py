@@ -20,7 +20,7 @@ from engine import project_ops as ops
 from engine import water
 from engine.hd2d import river
 from engine.hd2d.settings import parse_hd2d
-from engine.hd2d.world import DEEP, World, _surface
+from engine.hd2d.world import DEEP, DEEP_SLACK, World, _surface
 
 pytestmark = pytest.mark.fast
 
@@ -219,13 +219,21 @@ def test_an_npc_put_in_deep_water_walks_out_never_deeper_and_then_keeps_its_rout
     assert getattr(npc, "mesh_hd2d_stranded", None) is None and npc.center_y > 700, "and it walks on its route"
 
 
+def _uneven() -> dict[str, Any]:
+    """A blocking pond shored by the sculpted ground, its bed uneven: two holes (the west one a pit too steep to climb
+    out of, water or not) and an islet."""
+    s = _room(pond={"walkable": False, "shore": "terrain"})
+    ops.find_entity(s, ops.entities(s)[0]["id"])["elevation"] = -4.0
+    s = ops.sculpt_terrain_stroke(s, "flatten", [[1200, 300, 1.0]], radius=80, target=-12.0)
+    s = ops.sculpt_terrain_stroke(s, "flatten", [[1080, 300, 1.0]] * 4, radius=24, target=-40.0)
+    s = ops.sculpt_terrain_stroke(s, "flatten", [[1250, 320, 1.0]] * 4, radius=20, target=-2.0)
+    return ops.sculpt_terrain_stroke(s, "flatten", [[1300, 260, 1.0]] * 4, radius=30, target=-30.0)
+
+
 def test_an_npc_with_no_way_out_is_stranded_said_once_and_doesn_t_loop(monkeypatch: pytest.MonkeyPatch) -> None:
-    scene = _room()
-    scene, pid = ops.place_blank(scene, "start", "Big lake", 800.0, 300.0)
-    scene = ops.set_water(scene, pid, preset="natural_pond", shape="ellipse", width=900.0, height=560.0,
-                          passable="block")  # (8.75 m to its shore from its middle: further than a way out is looked for)
-    world = _world(scene)
-    npc, route = _npc(world, 800.0, 300.0, [[200.0, 800.0, 0.0]])
+    """In blocking water at the bottom of a pit too steep to climb: no way out at all."""
+    world = _world(_uneven())
+    npc, route = _npc(world, 1082.0, 292.0, [[200.0, 800.0, 0.0]])
     calls = {"ways": 0}
     real = world.ways_out
 
@@ -235,12 +243,55 @@ def test_an_npc_with_no_way_out_is_stranded_said_once_and_doesn_t_loop(monkeypat
 
     monkeypatch.setattr(world, "ways_out", counted)
     said = _said(monkeypatch)
-    for _ in range(600):
+    for _ in range(60 * 12):
         route.update(1 / 60)
     assert npc.mesh_hd2d_stranded and "can't walk out of the water" in npc.mesh_hd2d_stranded
     assert sum("is stranded" in s for s in said) == 1, ("said once", said)
-    assert calls["ways"] == 2, "looked for a way out at first and again after RETRY_S (10 s here), not every frame"
-    assert (npc.center_x, npc.center_y) == (800.0, 318.0), "stayed where it was"
+    assert calls["ways"] <= 3, ("looked for a way out at first and after each RETRY_S, not every frame", calls)
+    assert abs(npc.center_x - 1082.0) < 24 and abs(npc.center_y - 310.0) < 24, "stayed in the pit (no teleport)"
+
+
+def test_an_npc_far_out_in_blocking_water_walks_out_though_no_way_out_is_within_reach() -> None:
+    """Re-review of bb320df: 8.75 m from the shore, no standing place within ways_out's 6 m: it still walks down the
+    water's fall and out."""
+    from engine.physics_runtime import _sprite_to_aabb
+
+    scene = _room()
+    scene, pid = ops.place_blank(scene, "start", "Big lake", 800.0, 300.0)
+    scene = ops.set_water(scene, pid, preset="natural_pond", shape="ellipse", width=900.0, height=560.0,
+                          passable="block")
+    world = _world(scene)
+    assert world.ways_out(800 / P, 300 / P, 0.0) == [], "no way out within reach"
+    npc, route = _npc(world, 800.0, 300.0, [[200.0, 800.0, 0.0]])
+    for _ in range(60 * 20):
+        route.update(1 / 60)
+    box = _sprite_to_aabb(npc)
+    assert not getattr(npc, "mesh_hd2d_stranded", None)
+    assert world.blocked(box.x / P, box.y / P, npc.mesh_entity_data["elevation"] / P) <= 0.0, "out"
+
+
+def test_leaving_blocking_water_lends_no_deeper_wading_through_the_water_beyond() -> None:
+    """Re-review of bb320df: one put in a blocking pond over a deep (auto) river's bank, pushed towards the river,
+    took the pond's large values as its allowance and waded right across 0.8 m of water (auto's limit 0.5 m)."""
+    from engine.physics_runtime import _sprite_to_aabb
+
+    scene = _room()
+    scene, pid = ops.place_blank(scene, "start", "Pond", 300.0, 720.0)
+    scene = ops.set_water(scene, pid, preset="natural_pond", shape="ellipse", width=320.0, height=192.0,
+                          passable="block")
+    world = _world(scene)
+    w = _Walker(center_x=300.0, center_y=718.0, width=32.0, height=48.0, scale_x=1.0,
+                mesh_entity_data={"elevation": 0.0, "components": {"collider": {"kind": "box", "auto": True}}})
+    assert world.blocked(300 / P, 700 / P, 0.0) > 0.0, "it starts in the pond"
+    deepest = -1e9
+    for _ in range(600):
+        world.move(w, (0.0, -2.0), [])
+        box = _sprite_to_aabb(w)
+        z = w.mesh_entity_data["elevation"] / P
+        deepest = max(deepest, world.excess(box.x / P, box.y / P, z, box.w / 2 / P, box.h / 2 / P, "wading"))
+    box = _sprite_to_aabb(w)
+    assert box.y > 560, ("never across the river", box.y)
+    assert deepest <= DEEP_SLACK + 1e-9, ("never in water deeper than it may wade", deepest)
 
 
 # --- independent review of 6c0288b -----------------------------------------------------------------------------
@@ -474,13 +525,7 @@ def test_out_of_carved_narrow_and_uneven_blocking_water_some_way_always_leads() 
     scene = ops.add_river(scene, "n", [[4.0, 600.0, 24.0, -8.0], [700.0, 640.0, 24.0, -8.0],
                                        [1596.0, 560.0, 24.0, -8.0]], passable="block")
     narrow = _world(ops.carve_river_bed(scene, "n", depths=[0.3, 0.3, 0.3]))
-    s = _room(pond={"walkable": False, "shore": "terrain"})
-    ops.find_entity(s, ops.entities(s)[0]["id"])["elevation"] = -4.0
-    s = ops.sculpt_terrain_stroke(s, "flatten", [[1200, 300, 1.0]], radius=80, target=-12.0)
-    s = ops.sculpt_terrain_stroke(s, "flatten", [[1080, 300, 1.0]] * 4, radius=24, target=-40.0)  # (holes, an islet)
-    s = ops.sculpt_terrain_stroke(s, "flatten", [[1250, 320, 1.0]] * 4, radius=20, target=-2.0)
-    s = ops.sculpt_terrain_stroke(s, "flatten", [[1300, 260, 1.0]] * 4, radius=30, target=-30.0)
-    uneven = _world(s)
+    uneven = _world(_uneven())
     held = []
     for name, world, starts in (("carved", carved, ((160, 600), (200, 600), (200, 606), (520, 606))),
                                 ("narrow", narrow, ((100, 606), (550, 636), (580, 642), (610, 636))),
@@ -546,3 +591,25 @@ def test_where_a_lake_and_its_inlet_overlap_players_and_npcs_get_out_down_the_cr
         if getattr(npc, "mesh_hd2d_stranded", None) or world.blocked(box.x / P, box.y / P, 0.0) > 0.0:
             stranded.append((sx, sy))
     assert stranded == [], "an NPC walks out"
+
+
+def test_with_only_its_feet_s_edge_in_blocking_water_it_goes_no_further_in() -> None:
+    """Re-review of bb320df: once its middle is out of blocking water, the rest of its feet may only come out."""
+    from engine.physics_runtime import _sprite_to_aabb
+
+    scene = _room()
+    scene, pid = ops.place_blank(scene, "start", "Pond", 300.0, 720.0)
+    scene = ops.set_water(scene, pid, preset="natural_pond", shape="ellipse", width=320.0, height=192.0,
+                          passable="block")  # (its south edge at y 816)
+    world = _world(scene)
+    w = _Walker(center_x=300.0, center_y=820.0 + 18.0, width=32.0, height=48.0, scale_x=1.0,
+                mesh_entity_data={"elevation": 0.0, "components": {"collider": {"kind": "box", "auto": True}}})
+    box = _sprite_to_aabb(w)
+    half = (box.w / 2 / P, box.h / 2 / P)
+    start = world.excess(box.x / P, box.y / P, 0.0, *half, "blocking")
+    assert world.blocked(box.x / P, box.y / P, 0.0) <= 0.0 < start, "its middle out, its edge in"
+    for _ in range(120):
+        world.move(w, (0.0, -2.0), [])  # (pushing into the pond)
+        box = _sprite_to_aabb(w)
+        assert world.blocked(box.x / P, box.y / P, 0.0) <= 0.0, "its middle never in"
+        assert world.excess(box.x / P, box.y / P, 0.0, *half, "blocking") <= start + 1e-9, "never further in"

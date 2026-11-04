@@ -279,10 +279,12 @@ class World:
         return out
 
     def stand(self, x: float, y: float, z: float, half_w: float, half_h: float,
-              allow: float = DEEP_SLACK) -> tuple[float, str] | None:
+              allow: float = DEEP_SLACK, block: float | None = None) -> tuple[float, str] | None:
         """Where a character whose feet box is centred at (x, y) and who stands at ``z`` stands: (elevation,
         floor), or None if it can't be there. ``allow``: how far over its limit the water under its feet may be
-        (``excess``; ``_step``: more for a character already in deeper water, so it can walk out of it)."""
+        (``excess``; ``_step``: more for a character already in deeper water, so it can walk out of it). ``block``
+        (``_step``, for one in or at the edge of blocking water): the blocking water is held to this instead, and
+        ``allow`` is for the water it may wade only."""
         best: tuple[float, Surface] | None = None
         for h, surface in self.heights_at(x, y):
             if abs(h - z) <= STEP and (best is None or h > best[0]):
@@ -298,11 +300,13 @@ class World:
         for wall in self.walls:
             if wall.lo[2] < h + BODY and wall.hi[2] > h + STEP and wall.overlaps(x, y, half_w, half_h):
                 return None
-        if self._wet and self.excess(x, y, h, half_w, half_h) > allow:
+        if self._wet and (self.excess(x, y, h, half_w, half_h) > allow if block is None else
+                          self.excess(x, y, h, half_w, half_h, "wading") > allow
+                          or self.excess(x, y, h, half_w, half_h, "blocking") > block):
             return None  # water too deep for it (or blocking) somewhere under its feet: it can't stand there
         return h, best[1].floor
 
-    def excess(self, x: float, y: float, h: float, half_w: float, half_h: float) -> float:
+    def excess(self, x: float, y: float, h: float, half_w: float, half_h: float, part: str = "all") -> float:
         """How far the water under a feet box centred at (x, y) on a floor at ``h`` m is over the depth it may be
         waded to (m; at its middle and corners, the most; negative within it, -1e9 where no water with a limit is).
         A river's by its ``passable``: "auto" DEEP (as R3), "wade" its ``wade_depth``, "block" any (its depth,
@@ -310,20 +314,21 @@ class World:
         that blocks or is waded to a depth (``self.ponds``): within its outline, where its water stands over the floor
         (its shore the sculpted ground: water over it; else a floor from POND_DRY over its level, so a deck above it
         is dry, to a character's height under it, so a floor under a raised pond isn't its bed), the same way (a
-        blocking pond's by how far in from its edge too). Depth is measured to the floor under each point."""
+        blocking pond's by how far in from its edge too). Depth is measured to the floor under each point. ``part``:
+        "all", "blocking" (the blocking water's alone) or "wading" (the rest's)."""
         most = -1e9
         for px, py in ((x, y), (x - half_w, y - half_h), (x + half_w, y - half_h), (x - half_w, y + half_h),
                        (x + half_w, y + half_h)):
-            most = max(most, self._point_excess(px, py, h, False))
+            most = max(most, self._point_excess(px, py, h, part))
         return most
 
     def blocked(self, x: float, y: float, h: float) -> float:
         """How far over its limit the blocking water (passable "block", or a pond that blocks) at (x, y) on a floor
         at ``h`` m is (``excess``, at that point only; -1e9 where none is): it falls towards its edge, and only steps
         that make it fall take a character in it out (``_step``)."""
-        return self._point_excess(x, y, h, True)
+        return self._point_excess(x, y, h, "blocking")
 
-    def _point_excess(self, px: float, py: float, h: float, blocking_only: bool) -> float:
+    def _point_excess(self, px: float, py: float, h: float, part: str) -> float:
         from engine.water import inset, inside  # noqa: PLC0415
 
         most = -1e9
@@ -336,8 +341,9 @@ class World:
             if depth > 0.0:
                 kind, wade = self._river_rules.get(water[1], ("auto", DEEP))
                 if kind == "block":
-                    most = max(most, depth + BLOCK_EXCESS + self.rivers.inset_at(px, py))
-                elif not blocking_only:
+                    if part != "wading":
+                        most = max(most, depth + BLOCK_EXCESS + self.rivers.inset_at(px, py))
+                elif part != "blocking":
                     most = max(most, depth - (DEEP if kind == "auto" else wade))
         for pond, box in self.ponds:
             if not (box[0] <= px <= box[2] and box[1] <= py <= box[3]) or not inside(
@@ -349,9 +355,9 @@ class World:
             depth = pond.level / PIXELS_PER_METRE - floor
             if depth > 0.0 if pond.water.shore == "terrain" else -POND_DRY < depth < BODY:
                 if pond.water.passable == "wade":
-                    if not blocking_only:
+                    if part != "blocking":
                         most = max(most, max(depth, 0.0) - pond.water.wade_depth)
-                else:
+                elif part != "wading":
                     within = inset(pond.water, pond.centre, (px * PIXELS_PER_METRE, py * PIXELS_PER_METRE))
                     most = max(most, max(depth, 0.0) + BLOCK_EXCESS + within / PIXELS_PER_METRE)
         return most
@@ -416,9 +422,18 @@ class World:
         hw, hh = box.w / 2 / PIXELS_PER_METRE, box.h / 2 / PIXELS_PER_METRE
         x, y, z = box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE, elevation_of(sprite)
         dx, dy = delta
-        deep = DEEP_SLACK
+        deep, block, held = DEEP_SLACK, DEEP_SLACK, -1e9
         if self._wet:  # already in deeper water (put there, a river carved under it, a teleport): it wades out
-            here = self.excess(x, y, z, hw, hh)
+            held = self.blocked(x, y, z)
+            inb = self.excess(x, y, z, hw, hh, "blocking")
+            if held > 0.0 or inb <= DEEP_SLACK:  # (in blocking water the rule below governs it alone: its
+                sprite.mesh_hd2d_block_cap = None  # footprint's corners over the water's ridge don't hold it)
+                block = 1e9 if held > 0.0 else DEEP_SLACK
+            else:  # (out of it but for its corners: never further into it; held until all of it is out)
+                block = max(inb, getattr(sprite, "mesh_hd2d_block_cap", None) or 0.0)
+                sprite.mesh_hd2d_block_cap = block
+            here = self.excess(x, y, z, hw, hh, "wading")  # (the water it may wade: blocking water never lends
+            # one leaving it a deeper allowance through the water beyond it)
             cap = getattr(sprite, "mesh_hd2d_deep_cap", None)
             if here <= deep:
                 sprite.mesh_hd2d_deep_cap = None
@@ -426,19 +441,16 @@ class World:
                 if cap is None or here > cap:  # (found there: no further over its limit than the water within a
                     # footprint all round, which its corners cross on the way out; set once, held until it is within
                     # its limit again, so however small its steps it never edges deeper)
-                    cap = max(self.excess(x + i * hw, y + j * hh, z, hw, hh) for i in (-1, 0, 1)
+                    cap = max(self.excess(x + i * hw, y + j * hh, z, hw, hh, "wading") for i in (-1, 0, 1)
                               for j in (-1, 0, 1)) + ESCAPE_SLACK
                     sprite.mesh_hd2d_deep_cap = cap
                 deep = cap
         wanted = (dx, dy)
-        held = self.blocked(x, y, z) if self._wet else -1e9
-        if held > 0.0:  # in blocking water: only steps that take it out (not along it, nor round it), by this rule
-            deep = 1e9  # alone (its footprint's corners over the water's ridge, or over a deep hole, don't hold it)
-        if dx and self.stand(x + dx / PIXELS_PER_METRE, y, z, hw, hh, deep) is None:
+        if dx and self.stand(x + dx / PIXELS_PER_METRE, y, z, hw, hh, deep, block) is None:
             dx = 0.0
-        if dy and self.stand(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE, z, hw, hh, deep) is None:
+        if dy and self.stand(x + dx / PIXELS_PER_METRE, y + dy / PIXELS_PER_METRE, z, hw, hh, deep, block) is None:
             dy = 0.0
-        if held > 0.0 and any(wanted):
+        if held > 0.0 and any(wanted):  # in blocking water: only steps that take it out (not along it, nor round it)
             # (a step must take it out by BLOCK_OUT of its length, or half the steepest fall there is here where
             # that is gentler, or at all where that is gentler than BLOCK_OUT: where two blocking waters meet, the
             # way out of both may fall slowly, and small steps more slowly still, so it is never held there)
@@ -465,23 +477,23 @@ class World:
                     dx = dy = 0.0
                     if (fall > 0.0 and along > 0.5 * math.hypot(*wanted)
                             and outwards(x + sx / PIXELS_PER_METRE, y + sy / PIXELS_PER_METRE, along / PIXELS_PER_METRE)
-                            and self.stand(x + sx / PIXELS_PER_METRE, y + sy / PIXELS_PER_METRE, z, hw, hh, deep)
-                            is not None):
+                            and self.stand(x + sx / PIXELS_PER_METRE, y + sy / PIXELS_PER_METRE, z, hw, hh, deep,
+                                           block) is not None):
                         dx, dy = sx, sy
         if not dx and not dy:
-            self._settle(sprite, x, y, z, hw, hh, deep)
+            self._settle(sprite, x, y, z, hw, hh, deep, block)
             return
         start = (sprite.center_x, sprite.center_y)
         level = [s for s in solids if s is not sprite and _on_level(s, z)
                  and (getattr(s, "mesh_entity_data", None) or {}).get("id") not in self._pond_ids]  # (R4B: by outline)
         move_entity_with_physics(sprite, (dx, dy), level)  # the scene's 2D solids on this level
         moved = (sprite.center_x - start[0]) / PIXELS_PER_METRE, (sprite.center_y - start[1]) / PIXELS_PER_METRE
-        if not self._settle(sprite, x + moved[0], y + moved[1], z, hw, hh, deep):
+        if not self._settle(sprite, x + moved[0], y + moved[1], z, hw, hh, deep, block):
             sprite.center_x, sprite.center_y = start  # (never expected: each axis was checked)
 
     def _settle(self, sprite: Any, x: float, y: float, z: float, hw: float, hh: float,
-                deep: float = DEEP_SLACK) -> bool:
-        where = self.stand(x, y, z, hw, hh, deep)
+                deep: float = DEEP_SLACK, block: float | None = None) -> bool:
+        where = self.stand(x, y, z, hw, hh, deep, block)
         if where is None:
             return False
         data = getattr(sprite, "mesh_entity_data", None)

@@ -151,26 +151,13 @@ class FloorRouteBehaviour(Behaviour):
         """A step out of the water it can't stand in: in blocking water down its steepest fall, else towards the
         nearest way out (``World.ways_out``) still left; stranded when none is (or it makes no headway out)."""
         sprite: Any = self.entity
-        if not self._ways:
-            if not getattr(sprite, "mesh_hd2d_stranded", None):
-                where = f"({fx:.0f}, {fy:.0f}) px"
-                sprite.mesh_hd2d_stranded = f"can't walk out of the water at {where}"
-                logger.warning("[Mesh][HD-2D] %s is stranded: it can't walk out of the water at %s",
-                               getattr(sprite, "mesh_name", "") or "a character", where)
-                from engine.event_emit import emit_gameplay_event  # noqa: PLC0415
-
-                emit_gameplay_event(self.window, "stranded", {"who": str(getattr(sprite, "mesh_name", "") or ""),
-                                                              "x": round(fx, 1), "y": round(fy, 1)},
-                                    source_entity_id=None, source_behaviour="FloorRoute")
-            self._ways, self._retry = None, RETRY_S
-            return
         solids = getattr(getattr(self.window, "scene_controller", None), "solid_sprites", None)
         held = world.blocked(fx / PX, fy / PX, z)
         if held > 0.0:
-            # (in blocking water: whichever way its ways out lie, down the water's steepest fall, the quickest way
-            # out of it, as the world lets it go (of sixteen ways, the steepest first). Headway only while that takes
-            # it further out than it has yet been, by a twentieth of each step at least: never back and forth over
-            # its edge, and stranded if that stops for STUCK_S)
+            # (in blocking water: whichever way its ways out lie (if any are near), down the water's steepest fall,
+            # the quickest way out of it, as the world lets it go (of sixteen ways, the steepest first). Headway
+            # only while that takes it further out than it has yet been, by a twentieth of each step at least: never
+            # back and forth over its edge, and stranded if that stops for STUCK_S)
             r = self.speed * dt / PX
             before = (sprite.center_x, sprite.center_y)
             falls = sorted((world.blocked(fx / PX + math.cos(i * math.tau / 16) * r,
@@ -189,7 +176,10 @@ class FloorRouteBehaviour(Behaviour):
                     break
             self._stuck = 0.0 if headway else self._stuck + dt
             if self._stuck > STUCK_S:
-                self._ways, self._stuck = [], 0.0  # (stranded: said next frame)
+                self._strand(fx, fy)
+            return
+        if not self._ways:
+            self._strand(fx, fy)
             return
         tx, ty, _tz = self._ways[0]
         dist = math.hypot(tx * PX - fx, ty * PX - fy)
@@ -203,6 +193,21 @@ class FloorRouteBehaviour(Behaviour):
             return
         step = min(self.speed * dt, dist)
         world.move(sprite, ((tx * PX - fx) / dist * step, (ty * PX - fy) / dist * step), solids)
+
+    def _strand(self, fx: float, fy: float) -> None:
+        """No way out: it stays put, said once (log and a ``stranded`` event), and looks again after RETRY_S."""
+        sprite: Any = self.entity
+        if not getattr(sprite, "mesh_hd2d_stranded", None):
+            where = f"({fx:.0f}, {fy:.0f}) px"
+            sprite.mesh_hd2d_stranded = f"can't walk out of the water at {where}"
+            logger.warning("[Mesh][HD-2D] %s is stranded: it can't walk out of the water at %s",
+                           getattr(sprite, "mesh_name", "") or "a character", where)
+            from engine.event_emit import emit_gameplay_event  # noqa: PLC0415
+
+            emit_gameplay_event(self.window, "stranded", {"who": str(getattr(sprite, "mesh_name", "") or ""),
+                                                          "x": round(fx, 1), "y": round(fy, 1)},
+                                source_entity_id=None, source_behaviour="FloorRoute")
+        self._ways, self._retry, self._stuck = None, RETRY_S, 0.0
 
     def _arrive(self) -> None:
         self.path = []
