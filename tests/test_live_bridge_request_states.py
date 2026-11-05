@@ -233,7 +233,7 @@ def test_the_deadline_taking_it_first_while_the_drain_holds_it_cancels_it(root: 
     documents, revision = person.project.all_documents(), person.project.revision
     gate = _GateLock()
     monkeypatch.setattr(bridge, "_lock", gate)
-    drain_at_lock, drain_go = gate.at("drain", 1)  # (taken off the queue, about to start it)
+    drain_at_lock, drain_go = gate.at("drain", 1)  # (about to take it off the queue and start it)
     ran: list[bool] = []
     thread, out = _in_thread(lambda: bridge._enqueue(lambda: ran.append(True) or {"ok": True}, request_id="r2",
                                                      fingerprint="f", wait=0.3))
@@ -420,6 +420,44 @@ def test_stopping_wakes_waiters_cancels_only_what_hadnt_started(root: Path, stud
     assert bridge.drain_pending() == 0 and host.proposals == [] and person.inbox == []
     late = bridge._enqueue(lambda: {"ok": True}, request_id="after", fingerprint="f")  # (a handler still running)
     assert late["reason"] == "editor_stopped" and bridge.drain_pending() == 0
+
+
+@pytest.mark.parametrize("first", ["stop", "drain"])
+def test_stopping_as_the_drain_takes_a_request_either_cancels_it_or_lets_it_finish(
+        root: Path, studio: Any, monkeypatch: pytest.MonkeyPatch, first: str) -> None:
+    """The main thread is taking a request as Studio closes: stop first, it never runs (it used to run after stop,
+    taken off the queue before the lock where stop couldn't see it); drain first, it runs and is never called
+    cancelled."""
+    person, host = studio
+    bridge = host.bridge
+    bridge.request_timeout = 30.0
+    documents, revision = person.project.all_documents(), person.project.revision
+    gate = _GateLock()
+    monkeypatch.setattr(bridge, "_lock", gate)
+    # (drain's 1st take: about to take the request and start it; its 2nd: about to end it, having run it)
+    drain_at_lock, drain_go = gate.at("drain", 1 if first == "stop" else 2)
+    waiter, out = _in_thread(lambda: authoring_session.propose(root, BARREL, title="Barrel", request_id="race-1"))
+    _until(lambda: bridge.pending_count() == 1)
+    drainer, drained = _in_thread(bridge.drain_pending, name="drain")
+    assert drain_at_lock.wait(WAIT)
+    stopper, _ = _in_thread(host.stop, name="stopper")
+    stopper.join(WAIT)
+    assert not stopper.is_alive()  # (never waits for the drain)
+    if first == "drain":
+        assert bridge.request_status("race-1")["state"] == "started"  # (stopping didn't call it cancelled)
+    drain_go.set()
+    drainer.join(WAIT)
+    waiter.join(WAIT)
+    status = bridge.request_status("race-1")
+    if first == "stop":
+        assert drained == [0] and host.proposals == [] and person.inbox == []  # never ran, not even after stop
+        _unchanged(person, documents, revision)
+        assert out[0]["reason"] == "editor_stopped" and out[0]["request_state"] == "cancelled"  # woken by stop
+        assert status["state"] == "cancelled" and status["result"]["reason"] == "editor_stopped"
+    else:
+        assert drained == [1] and person.inbox == ["Barrel"]
+        assert [p.proposal_id for p in host.proposals] == [out[0]["proposal_id"]]
+        assert out[0]["ok"] is True and out[0]["request_state"] == "finished" and status["state"] == "finished"
 
 
 # --------------------------------------------------------------------- what a timeout or retry may never bypass

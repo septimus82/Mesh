@@ -19,8 +19,9 @@ cancelled the deadline passed, or the bridge stopped, while it   ``reason: "time
 Only ``queued`` can become ``started`` or ``cancelled``, and whichever happens first under the lock is final: a
 cancelled request is skipped when the queue is drained, and a started one is never reported cancelled or failed (its
 deadline can't tell whether it changed anything: ``outcome_unknown`` says so, and ``GET /live/request?id=`` gives its
-result once it has finished). The deadline is the bridge's ``request_timeout``, or the client's ``X-Mesh-Wait`` (in
-seconds) when shorter, so that the bridge answers before the client stops listening.
+result once it has finished). The main thread takes a request off the queue and starts it in one step under the
+lock, so stopping the bridge can't miss one between the two. The deadline is the bridge's ``request_timeout``, or
+the client's ``X-Mesh-Wait`` (in seconds) when shorter, so that the bridge answers before the client stops listening.
 
 The same id sent again with the same method, path and body is the same request: it waits for (or gives) the first
 one's outcome, and the work never runs twice. With anything different it is refused (``request_id_conflict``). A
@@ -240,11 +241,11 @@ class EditorLiveSessionBridge:
     def drain_pending(self, *, limit: int = 50) -> int:
         drained = 0
         while drained < max(0, int(limit)):  # (cancelled requests skipped don't count against the limit)
-            try:
-                job = self._work.get_nowait()
-            except queue.Empty:
-                break
-            with self._lock:  # the one way out of "queued" here: a request already cancelled is skipped, never run
+            with self._lock:  # the one way out of "queued" here: a request already cancelled is skipped, never run.
+                try:  # (taken off the queue under the lock too, so stop() can't miss one between the two)
+                    job = self._work.get_nowait()
+                except queue.Empty:
+                    break
                 if job.state != "queued" or job.func is None:
                     continue
                 job.state, func = "started", job.func
