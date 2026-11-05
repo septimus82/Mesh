@@ -595,8 +595,9 @@ class Project:
     def _ready_maps(self, state: _State) -> None:
         """Before undo or redo makes ``state`` the project: each map file this session made that a room of it uses and
         that has gone from disk is written again, as made (#462 S4: an undone room comes back whole, or not at all).
-        If one can't be, the ones written now are removed again and OpError says so: nothing changed. One changed or
-        replaced since is left as it is, the room using it as it is now (no longer counted as Mesh's: ``kept_files``)."""
+        If one can't be, the ones written now are removed again and OpError says so: the project and its history are as
+        they were. One changed or replaced since is left as it is, the room using it as it is now (no longer counted as
+        Mesh's: ``kept_files``)."""
         if not self._made or not self.writes_files:
             return
         written: list[tuple[str, bytes]] = []
@@ -606,18 +607,28 @@ class Project:
                 if os.path.lexists(self.root / rel):
                     raise FileExistsError(rel)
                 write_bytes_new(self.root / rel, data)
-            except FileExistsError:
+            except FileExistsError as exc:
+                if not os.path.lexists(self.root / rel):  # (not the map: a file where its folder should be)
+                    self._undo_ready(written)
+                    raise self._cant_ready(rel, exc) from exc
                 if not self._holds(rel, data):
                     del self._made[norm]
                     self._kept(rel, "it was changed after Mesh made it, so the room uses it as it is now")
                 continue
             except OSError as exc:
-                for done, done_data in written:
-                    self._kept(done, _remove_if_unchanged(self.root, done, done_data))
-                raise ops.OpError(f"{rel} has gone from disk and Mesh couldn't write it again ({exc}), so nothing was "
-                                  "undone or redone: a room needs that map file. Make sure its folder can be written "
-                                  "to, then try again.") from exc
+                self._undo_ready(written)
+                raise self._cant_ready(rel, exc) from exc
             written.append((rel, data))
+
+    def _undo_ready(self, written: list[tuple[str, bytes]]) -> None:
+        for rel, data in written:  # (the maps ``_ready_maps`` wrote for an undo or redo that isn't happening)
+            self._kept(rel, _remove_if_unchanged(self.root, rel, data))
+
+    @staticmethod
+    def _cant_ready(rel: str, exc: OSError) -> ops.OpError:
+        return ops.OpError(f"{rel} has gone from disk and Mesh couldn't write it again ({exc}), so nothing was undone "
+                           "or redone: a room needs that map file. Make sure its folder can be written to, then try "
+                           "again.")
 
     def discard_unsaved_files(self) -> None:
         """The project is closed (or its edits dropped) without saving them: the map files this session made that no

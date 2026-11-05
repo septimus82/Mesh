@@ -565,11 +565,13 @@ def test_redo_whose_map_cant_be_written_again_is_refused_and_changes_nothing(roo
     _every_listed_room_loads(root)
 
 
+@pytest.mark.parametrize("kind", ["2d", "hd2d"])
 def test_when_one_of_several_maps_cant_be_written_again_the_others_written_go_too(
-        root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        root: Path, monkeypatch: pytest.MonkeyPatch, kind: str) -> None:
     project = _open(root)
+    _add(project, "Kit", kind)  # (an HD-2D project's kit in place first: not part of this)
     with project.transaction():
-        maps = [project.map_path(project.add_room(label)) for label in ("Attic", "Cellar")]
+        maps = [project.map_path(_add(project, label, kind)) for label in ("Attic", "Cellar")]
     project.undo()
     for rel in maps:
         (root / rel).unlink()
@@ -594,3 +596,39 @@ def test_a_map_replaced_while_its_room_was_undone_still_lets_redo_happen(root: P
     (root / map_rel).write_bytes(THEIRS)
     _blocked(monkeypatch, "cellar.json")  # (never tried: nothing to write)
     assert project.redo() is True and (root / map_rel).read_bytes() == THEIRS
+
+
+def test_undo_whose_map_cant_be_written_again_is_refused_too(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Undo of an unrelated edit puts back the room as it was, map and all: the same check."""
+    project = _open(root)
+    key = project.add_room("Cellar")
+    map_rel = project.map_path(key)
+    project.edit_scene(lambda s: {**s, "name": "Start (edited)"}, "start")
+    (root / map_rel).unlink()
+    _blocked(monkeypatch, "cellar.json")
+    before, disk = _state(project), _tree(root)
+    with pytest.raises(ops.OpError, match=r"cellar\.json has gone from disk"):
+        project.undo()
+    assert _state(project) == before and _tree(root) == disk
+    monkeypatch.undo()
+    assert project.undo() is True and (root / map_rel).is_file() and key in project.world["scenes"]
+
+
+def test_a_file_where_the_maps_folder_was_refuses_redo(root: Path) -> None:
+    """Not an outside map at the path (that would be used as it is): its folder is a file now, so the map can't be."""
+    project = _open(root)
+    key = project.add_room("Cellar")
+    map_rel = project.map_path(key)
+    project.undo()
+    maps = root / MAPS
+    held = root / "maps_moved_away"
+    shutil.move(str(maps), held)
+    maps.write_bytes(b"not a folder\n")
+    before = _state(project)
+    with pytest.raises(ops.OpError, match=r"cellar\.json has gone from disk"):
+        project.redo()  # (was: redone, the room listed with no map, "changed after Mesh made it")
+    assert _state(project) == before and project.kept_files == []
+    maps.unlink()
+    shutil.move(str(held), maps)
+    (root / map_rel).unlink()
+    assert project.redo() is True and (root / map_rel).is_file()
