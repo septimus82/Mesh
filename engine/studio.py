@@ -641,13 +641,23 @@ class Studio(InspectorMixin, SoundMixin):
         if self.hd2d.river.cancel_edit("River edit cancelled (undo): the river is as it was."):
             self._rebuild()
             return
-        if self.project.undo():
+        try:
+            undone = self.project.undo()
+        except ops.OpError as err:  # (#462 S4: a room's map file couldn't be written again: nothing undone)
+            self._say(str(err), ok=False)
+            return
+        if undone:
             self._after_change("Undone.")  # (it reloads the room: once is enough, 0.9 s at 128 m)
 
     def redo(self) -> None:
         if not self._settle_fields():
             return
-        if self.project.redo():
+        try:
+            redone = self.project.redo()
+        except ops.OpError as err:  # (#462 S4: a room's map file couldn't be written again: nothing redone)
+            self._say(str(err), ok=False)
+            return
+        if redone:
             self._after_change("Redone.")
 
     def delete_selected(self) -> None:

@@ -135,3 +135,35 @@ def test_discarding_unsaved_changes_on_close_removes_the_new_rooms_map_file(driv
     assert studio.project.is_dirty and studio.on_close() is True, "unsaved: Studio asks first"
     studio._close_choice("discard")
     assert not (root / unsaved_map).exists() and (root / saved_map).is_file()
+
+
+@pytest.mark.parametrize("kind", ["2d", "hd2d"])
+def test_redo_whose_map_cant_be_written_again_is_refused_in_studio(driver: Any, kind: str,
+                                                                  monkeypatch: pytest.MonkeyPatch) -> None:
+    from engine import studio_project
+
+    d, studio = driver, driver.studio
+    k, ctrl = d.arcade.key, d.arcade.key.MOD_CTRL
+    root = studio.project.root
+    key = _make(d, kind, "Cellar")
+    map_rel = studio.project.map_path(key)
+    made = (root / map_rel).read_bytes()
+    d.key(k.Z, ctrl)
+    origin = studio.project.current
+    (root / map_rel).unlink()
+
+    def blocked(path: Any, data: bytes) -> None:
+        raise PermissionError(13, "Permission denied", str(path))
+
+    monkeypatch.setattr(studio_project, "write_bytes_new", blocked)
+    d.key(k.Y, ctrl)
+    d.advance(2)
+    assert "couldn't write it again" in studio.message and "nothing was undone or redone" in studio.message
+    assert key not in studio.project.world["scenes"] and studio.project.current == origin, "not shown, not listed"
+    monkeypatch.undo()
+    d.key(k.Y, ctrl)
+    assert studio.message == "Redone." and key in studio.project.world["scenes"]
+    assert (root / map_rel).read_bytes() == made
+    studio.switch_room(key)
+    d.advance(3)
+    _play_a_little(d)

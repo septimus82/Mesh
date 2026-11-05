@@ -216,19 +216,21 @@ def test_a_transaction_whose_map_file_was_replaced_before_it_failed_keeps_that_f
     assert project.kept_files == [{"path": map_rel, "reason": "it was changed after Mesh made it"}]
 
 
-def test_direct_ai_authoring_whose_save_fails_leaves_no_map_file(root: Path) -> None:
-    world_file = json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"]
+def test_direct_ai_authoring_whose_save_fails_leaves_no_map_file(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The save refused at F3's boundary, nothing written (as a refused save is): no map file left either. (Was a
+    read-only world file, which Linux replaces atomically anyway: the save succeeded there.)"""
+    def refuses(root_: Path, documents: Any, *_args: Any) -> Any:
+        raise refused("disk_full", "The disk is full.", [(rel, kind) for rel, kind, _doc in documents], root_)
+
     disk = _tree(root)
-    os.chmod(root / world_file, 0o444)
-    try:
-        result = authoring_session.apply(root, [{"op": "add_room", "label": "Vault"}])
-    finally:
-        os.chmod(root / world_file, 0o644)
+    monkeypatch.setattr(studio_project, "save_documents", refuses)
+    result = authoring_session.apply(root, [{"op": "add_room", "label": "Vault"}])
     assert (result["ok"], result["reason"]) == (False, "save_failed")
-    assert not (root / f"{MAPS}/vault.json").exists()
-    assert {k for k in _tree(root) if ".save-" not in k} == set(disk)  # (F3 keeps its own record of the save)
+    assert result["save"]["recovery_required"] is False
+    assert _tree(root) == disk, "the map file made for the room is gone again, nothing else written"
+    monkeypatch.undo()
     again = authoring_session.apply(root, [{"op": "add_room", "label": "Vault"}])
-    assert again["ok"] is True and (root / f"{MAPS}/vault.json").is_file()
+    assert again["ok"] is True and again["created"] == {"0": "vault"} and (root / f"{MAPS}/vault.json").is_file()
 
 
 def test_a_save_that_needs_recovery_leaves_the_map_file(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -521,3 +523,74 @@ def test_after_a_save_that_needs_recovery_no_map_file_goes_in_that_session(root:
     project.discard_unsaved_files()
     assert (root / vault).is_file()
     _every_listed_room_loads(root)
+
+
+# --- a room's map that can't be written again: undo/redo refused, nothing changed (owner review of 76e9e43) ----------
+def _blocked(monkeypatch: pytest.MonkeyPatch, *names: str) -> None:
+    """Writing a map file again fails for these file names (a folder made read-only, a full disk)."""
+    real = studio_project.write_bytes_new
+
+    def write(path: Any, data: bytes) -> None:
+        if Path(path).name in names:
+            raise PermissionError(13, "Permission denied", str(path))
+        real(path, data)
+
+    monkeypatch.setattr(studio_project, "write_bytes_new", write)
+
+
+def _state(project: Project) -> tuple[Any, ...]:
+    return (json.dumps(project.world, sort_keys=True), json.dumps(project.scenes, sort_keys=True, default=str),
+            project.current, project.revision, len(project._undo), len(project._redo), sorted(project.dirty))
+
+
+@pytest.mark.parametrize("kind", ["2d", "hd2d"])
+def test_redo_whose_map_cant_be_written_again_is_refused_and_changes_nothing(root: Path, kind: str,
+                                                                            monkeypatch: pytest.MonkeyPatch) -> None:
+    project = _open(root)
+    key = _add(project, "Cellar", kind)
+    map_rel, player = project.map_path(key), _players(project, key)
+    made = (root / map_rel).read_bytes()
+    project.undo()
+    (root / map_rel).unlink()
+    _blocked(monkeypatch, "cellar.json")
+    before, disk = _state(project), _tree(root)
+    with pytest.raises(ops.OpError, match=r"cellar\.json has gone from disk and Mesh couldn't write it again .*nothing "
+                                          r"was undone or redone"):
+        project.redo()  # (was: redone, the room listed with its map missing)
+    assert _state(project) == before and _tree(root) == disk and key not in project.world["scenes"]
+    monkeypatch.undo()  # (the folder can be written again)
+    assert project.redo() is True
+    assert _players(project, key) == player and (root / map_rel).read_bytes() == made, "the same room, the same map"
+    project.save()
+    _every_listed_room_loads(root)
+
+
+def test_when_one_of_several_maps_cant_be_written_again_the_others_written_go_too(
+        root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project = _open(root)
+    with project.transaction():
+        maps = [project.map_path(project.add_room(label)) for label in ("Attic", "Cellar")]
+    project.undo()
+    for rel in maps:
+        (root / rel).unlink()
+    _blocked(monkeypatch, "cellar.json")  # (attic.json is written first, then cellar.json fails)
+    before, disk = _state(project), _tree(root)
+    with pytest.raises(ops.OpError, match=r"cellar\.json"):
+        project.redo()
+    assert _state(project) == before and _tree(root) == disk, "attic.json written for the redo is removed again"
+    assert project.kept_files == []
+    monkeypatch.undo()
+    assert project.redo() is True and all((root / rel).is_file() for rel in maps)
+    project.save()
+    _every_listed_room_loads(root)
+
+
+def test_a_map_replaced_while_its_room_was_undone_still_lets_redo_happen(root: Path,
+                                                                        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Not written again over someone's file (F15), and that is no reason to refuse: the room uses it as it is."""
+    project = _open(root)
+    map_rel = project.map_path(project.add_room("Cellar"))
+    project.undo()
+    (root / map_rel).write_bytes(THEIRS)
+    _blocked(monkeypatch, "cellar.json")  # (never tried: nothing to write)
+    assert project.redo() is True and (root / map_rel).read_bytes() == THEIRS
