@@ -54,7 +54,7 @@ SESSION_RELATIVE_PATH = Path(".mesh") / "live_session.json"
 LOOPBACK_HOST = "127.0.0.1"
 REQUESTS_KEPT = 200  # ended POST requests remembered, for status and repeats (#462 S3)
 REQUESTS_KEPT_SECONDS = 600.0
-_REQUEST_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
+REQUEST_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
 logger = get_logger(__name__)
 
 
@@ -88,9 +88,11 @@ class LiveSessionInfo:
 class _Job:
     """One request's work. ``state`` (the module's table) changes only under the bridge's ``_lock``."""
 
-    func: Callable[[], dict[str, Any]]
+    func: Callable[[], dict[str, Any]] | None  # let go once it has ended (its payload with it)
     request_id: str = ""  # "" for a GET: not remembered
     fingerprint: str = ""  # method, path and body: what a repeat of this id must match
+    seconds: float = 0.0  # its deadline, as its first sender gave it ...
+    deadline: float = 0.0  # ... and when that is (time.monotonic): only then is it cancelled, whoever else waits
     state: str = "queued"  # queued | started | finished | cancelled
     result: dict[str, Any] | None = None
     ended_at: float = 0.0
@@ -237,30 +239,32 @@ class EditorLiveSessionBridge:
 
     def drain_pending(self, *, limit: int = 50) -> int:
         drained = 0
-        for _ in range(max(0, int(limit))):
+        while drained < max(0, int(limit)):  # (cancelled requests skipped don't count against the limit)
             try:
                 job = self._work.get_nowait()
             except queue.Empty:
                 break
             with self._lock:  # the one way out of "queued" here: a request already cancelled is skipped, never run
-                if job.state != "queued":
+                if job.state != "queued" or job.func is None:
                     continue
-                job.state = "started"
+                job.state, func = "started", job.func
+            result: Any = _failure("exception", "The editor was interrupted while doing this.")
             try:
-                result = job.func()
+                result = func()
             except Exception as exc:  # noqa: BLE001  # REASON: live bridge work items return structured errors to MCP callers
                 result = {"ok": False, "mode": "live_editor", "reason": "exception", "message": str(exc)}
-            if not isinstance(result, dict) or not result:
-                result = {"ok": False, "mode": "live_editor", "reason": "empty_result"}
-            with self._lock:
-                self._end(job, "finished", result)
+            finally:  # (also when interrupted: a started request always ends, so nothing waits on it for ever)
+                if not isinstance(result, dict) or not result:
+                    result = {"ok": False, "mode": "live_editor", "reason": "empty_result"}
+                with self._lock:
+                    self._end(job, "finished", result)
             drained += 1
         return drained
 
     def pending_count(self) -> int:
         """Requests waiting for the editor's main thread (not those cancelled meanwhile)."""
-        with self._lock:
-            return sum(1 for job in list(self._work.queue) if job.state == "queued")
+        with self._lock, self._work.mutex:  # (the order every path takes them in: _lock, then the queue's)
+            return sum(1 for job in self._work.queue if job.state == "queued")
 
     def request_status(self, request_id: str) -> dict[str, Any]:
         """What became of a POST request (``GET /live/request?id=``), answered at once from any thread: its ``state``,
@@ -269,9 +273,12 @@ class EditorLiveSessionBridge:
             self._forget_ended()
             job = self._requests.get(request_id)
             if job is None:
-                return {"ok": False, "mode": "live_editor", "reason": "request_not_found", "request_id": request_id,
-                        "message": f"No request {request_id!r} here: it never arrived, or it ended more than "
-                                   f"{REQUESTS_KEPT_SECONDS:g} s or {REQUESTS_KEPT} requests ago."}
+                shown = request_id if REQUEST_ID.fullmatch(request_id) else ""  # (never echo what isn't an id)
+                return {"ok": False, "mode": "live_editor", "reason": "request_not_found", "request_id": shown,
+                        "message": f"No request {shown!r} in this editor session: it never arrived, it ended more "
+                                   f"than {REQUESTS_KEPT_SECONDS:g} s or {REQUESTS_KEPT} requests ago, or it was sent "
+                                   "to an editor that has closed since (one that closed never ran what it hadn't "
+                                   "started)."}
             status: dict[str, Any] = {"ok": True, "mode": "live_editor", "request_id": request_id, "state": job.state}
             if job.result is not None:
                 status["result"] = dict(job.result)
@@ -321,6 +328,7 @@ class EditorLiveSessionBridge:
                 return
 
             def do_GET(self) -> None:  # noqa: N802
+                self._identity = {}  # (a GET is no request to remember, even after a POST on the same handler)
                 parsed = urlsplit(self.path)
                 path = parsed.path
                 if not self._authorized():
@@ -338,7 +346,7 @@ class EditorLiveSessionBridge:
                     )
                     return
                 if path == "/live/request":  # (#462 S3: answered here, never queued behind the editor's main thread)
-                    self._send_json(bridge.request_status(parse_qs(parsed.query).get("id", [""])[0][:64]))
+                    self._send_json(bridge.request_status(parse_qs(parsed.query).get("id", [""])[0]))
                     return
                 if path == "/live/proposal" and hasattr(bridge.editor, "proposal_status"):
                     proposal_id = parse_qs(parsed.query).get("id", [""])[0]
@@ -370,7 +378,7 @@ class EditorLiveSessionBridge:
                 body = self._read_body()
                 payload = _json_object(body)
                 request_id = self.headers.get("X-Mesh-Request-Id") or uuid.uuid4().hex
-                if not _REQUEST_ID.fullmatch(request_id):
+                if not REQUEST_ID.fullmatch(request_id):
                     self._send_json({"ok": False, "mode": "live_editor", "reason": "invalid_request_id", "message": (
                         "X-Mesh-Request-Id must be 1-64 letters, digits, '-' or '_'; nothing was done.")}, status=400)
                     return
@@ -439,8 +447,10 @@ class EditorLiveSessionBridge:
                 return {"ok": False, "mode": "live_editor", "reason": "request_id_conflict", "request_id": request_id,
                         "message": f"Request {request_id!r} was already sent with another method, path or body, so "
                                    "this one was refused and nothing was done. Use a new request id."}
+            deadline = self.request_timeout if wait is None else min(self.request_timeout, wait)
+            first = job is None
             if job is None:
-                job = _Job(func, request_id, fingerprint)
+                job = _Job(func, request_id, fingerprint, deadline, time.monotonic() + deadline)
                 if self._closed:
                     self._end(job, "cancelled", _failure("editor_stopped", "The editor is closing, so this was "
                                                          "never started and nothing changed."))
@@ -449,16 +459,20 @@ class EditorLiveSessionBridge:
                 if request_id:
                     self._forget_ended()
                     self._requests[request_id] = job
-        deadline = self.request_timeout if wait is None else min(self.request_timeout, wait)
         if not job.done.wait(timeout=deadline):
-            with self._lock:  # (still queued: cancelled, and the drain skips it; started meanwhile: left to finish)
-                if job.state == "queued":
+            with self._lock:  # (still queued at its own deadline: cancelled, and the drain skips it; started
+                # meanwhile: left to finish. A repeat waiting less long doesn't cut its first sender's wait short.)
+                if job.state == "queued" and (first or time.monotonic() >= job.deadline):
                     self._end(job, "cancelled", _failure("timeout", (
-                        f"The editor was busy and didn't start this within {deadline:g} s, so it was cancelled: it "
-                        "never ran and won't, and nothing changed. Try again.")))
+                        f"The editor was busy and didn't start this within {job.seconds:g} s, so it was cancelled: "
+                        "it never ran and won't, and nothing changed. Try again.")))
         with self._lock:
             if job.result is not None:
                 answer = dict(job.result)
+            elif job.state == "queued":  # (a repeat that waited less long than the first)
+                answer = _failure("outcome_unknown", (
+                    f"This request is still waiting for the editor, which may start it within {job.seconds:g} s of "
+                    "when it was first sent. Ask what became of it (request_status) before trying again."))
             else:  # started, not finished
                 answer = _failure("outcome_unknown", (
                     f"The editor started this but hadn't finished it within {deadline:g} s, so it isn't known yet "
@@ -473,6 +487,7 @@ class EditorLiveSessionBridge:
     def _end(self, job: _Job, state: str, result: dict[str, Any]) -> None:
         """``job`` has ended (``finished`` or ``cancelled``): wake whoever waits. Call with ``_lock`` held."""
         job.state, job.result, job.ended_at = state, result, time.monotonic()
+        job.func = None  # (its closure and payload: not kept while the outcome is remembered)
         job.done.set()
 
     def _forget_ended(self) -> None:

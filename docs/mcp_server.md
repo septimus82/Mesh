@@ -65,7 +65,9 @@ Only a project with no session record at all is changed directly. `apply_changes
 - **`reason: "timeout"`:** Studio hadn't started the change. It was cancelled: it never ran and never will, and nothing changed. It's safe to send again.
 - **`reason: "outcome_unknown"`:** Studio started the change but hadn't finished it, or its answer was lost. It may still change the project. Ask `request_status` with the `request_id` before sending it again. Studio remembers ended requests for 10 minutes (at most 200).
 
-A request sent again with the same `X-Mesh-Request-Id` is the same request, and never runs twice. The states and the rules for them are in `engine/editor/live_session_bridge.py`.
+**Retrying safely:** `propose_changes`, `apply_changes`, `withdraw_proposal`, `debug_start_playtest`, `debug_stop_playtest`, `debug_play_action` and the legacy `live_*` tools take an optional `request_id` (1-64 letters, digits, `-` or `_`). Sending the same one again is the same request, so it is done at most once, and the retry gets the first one's answer. Over HTTP the header is `X-Mesh-Request-Id`. A cancelled request stays cancelled, so retry it with a new id. The states and the rules for them are in `engine/editor/live_session_bridge.py`.
+
+On Windows, a refused connection can take about 2 s to report. A client that waits only 2 s (the legacy `live_*` tools) may then answer `outcome_unknown` when no editor is listening. That errs on the safe side: `request_status` answers `request_not_found`.
 
 **When writing the files fails (F3):** the files a batch changes are saved together: every one or none. If writing one fails (a full disk, a locked file), the ones already written are put back. `apply_changes`, `apply_ops` and `mesh author apply` then answer `reason: "save_failed"`, and the batch is not kept anywhere: apply it again. Its `save` report gives:
 

@@ -474,3 +474,103 @@ def test_ended_requests_are_forgotten_by_count_and_age_but_live_ones_are_kept(ro
     assert bridge.request_status("live-1")["state"] == "queued" and list(bridge._requests) == ["live-1"]
     assert bridge.drain_pending() == 1
     waiting.join(WAIT)
+
+
+# --------------------------------------------------------------------- review follow-ups
+
+def test_an_mcp_retry_with_the_same_request_id_is_done_once(root: Path, studio: Any) -> None:
+    person, host = studio
+    with _pumping(host):
+        first = tools.propose_changes(BARREL, title="Barrel", root=str(root), request_id="ai-try-1")
+        again = tools.propose_changes(BARREL, title="Barrel", root=str(root), request_id="ai-try-1")
+        both = [live_session_client.live_stage_and_accept_add_entity(BARREL[0], root=root, request_id="legacy-1")
+                for _ in range(2)]  # (legacy: stage, then accept or withdraw; each step repeated by its derived id)
+        withdrawn = [tools.withdraw_proposal(first["proposal_id"], root=str(root), request_id="wd-1") for _ in range(2)]
+    assert first["proposal_id"] == again["proposal_id"] and first["request_id"] == "ai-try-1"
+    assert both[0] == both[1] and both[0]["proposal_id"] == host.proposals[1].proposal_id
+    assert person.inbox == ["Barrel", "Changes from an AI"] and len(host.proposals) == 2
+    assert withdrawn[0] == withdrawn[1] and host.proposals[0].status == "rejected"
+    bad = tools.propose_changes(BARREL, root=str(root), request_id="not an id!")
+    assert bad["reason"] == "invalid_request_id" and len(host.proposals) == 2
+
+
+def test_an_mcp_retry_after_outcome_unknown_never_stages_twice(root: Path, studio: Any) -> None:
+    person, host = studio
+    host.bridge.request_timeout = 0.2
+    entered, release = threading.Event(), threading.Event()
+    real = authoring.dry_run
+
+    def slow(*args: Any, **kwargs: Any) -> Any:
+        entered.set()
+        assert release.wait(WAIT)
+        return real(*args, **kwargs)
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(authoring, "dry_run", slow)
+        drainer, _ = _in_thread(lambda: (_until(lambda: host.bridge.pending_count() == 1), host.bridge.drain_pending()),
+                                name="drain")
+        unknown = tools.propose_changes(BARREL, title="Slow", root=str(root), request_id="ai-slow")
+        assert entered.wait(WAIT) and unknown["reason"] == "outcome_unknown"
+        retry = tools.propose_changes(BARREL, title="Slow", root=str(root), request_id="ai-slow")  # (the AI retries)
+        assert retry["reason"] == "outcome_unknown"
+        release.set()
+        drainer.join(WAIT)
+    final = tools.propose_changes(BARREL, title="Slow", root=str(root), request_id="ai-slow")
+    assert final["ok"] is True and person.inbox == ["Slow"] and len(host.proposals) == 1
+
+
+def test_ended_requests_let_go_of_their_work(root: Path, studio: Any) -> None:
+    _, host = studio
+    bridge = host.bridge
+    bridge.request_timeout = 0.1
+    assert _post(host, "/live/stage_proposal", {"changes": BARREL}, "freed-1")["request_state"] == "cancelled"
+    assert bridge._requests["freed-1"].func is None and [job.func for job in bridge._work.queue] == [None]
+    with _pumping(host):
+        bridge.request_timeout = 30.0
+        assert _post(host, "/live/stage_proposal", {"changes": BARREL}, "freed-2")["ok"] is True
+    assert bridge._requests["freed-2"].func is None
+
+
+def test_a_repeat_waiting_less_long_doesnt_cut_the_first_senders_wait_short(root: Path, studio: Any) -> None:
+    person, host = studio
+    bridge = host.bridge
+    payload = {"changes": BARREL, "title": "Patient"}
+    first, out = _in_thread(lambda: _post(host, "/live/stage_proposal", payload, "patient-1"))  # (waits 4.5 s)
+    _until(lambda: bridge.pending_count() == 1)
+    hasty = _post(host, "/live/stage_proposal", payload, "patient-1", timeout=0.2)  # (waits 0.15 s)
+    assert hasty["reason"] == "outcome_unknown" and hasty["request_state"] == "queued"
+    assert bridge.pending_count() == 1 and bridge.drain_pending() == 1
+    first.join(WAIT)
+    assert out[0]["ok"] is True and person.inbox == ["Patient"]
+
+
+def test_cancelled_requests_dont_use_up_the_drain_limit(root: Path, studio: Any) -> None:
+    _, host = studio
+    bridge = host.bridge
+    ran: list[int] = []
+    for n in range(60):
+        bridge._enqueue(lambda: {"ok": True}, request_id=f"dead-{n}", fingerprint="f", wait=0.001)
+    live, out = _in_thread(lambda: bridge._enqueue(lambda: ran.append(1) or {"ok": True}, request_id="alive",
+                                                   fingerprint="f", wait=30.0))
+    _until(lambda: bridge.pending_count() == 1)
+    assert bridge.drain_pending(limit=50) == 1 and ran == [1]
+    live.join(WAIT)
+    assert out[0]["request_state"] == "finished"
+
+
+def test_status_ids_are_never_cut_short_and_an_interrupted_request_still_ends(root: Path, studio: Any) -> None:
+    _, host = studio
+    bridge = host.bridge
+    with _pumping(host):
+        assert _post(host, "/live/reject_proposal", {"proposal_id": "x"}, "a" * 64)["request_state"] == "finished"
+    assert tools.request_status("a" * 64 + "ZZZ", root=str(root))["reason"] == "request_not_found"
+
+    def interrupted() -> dict[str, Any]:
+        raise SystemExit(1)
+
+    waiter, out = _in_thread(lambda: bridge._enqueue(interrupted, request_id="cut-1", fingerprint="f", wait=30.0))
+    _until(lambda: bridge.pending_count() == 1)
+    with pytest.raises(SystemExit):
+        bridge.drain_pending()
+    waiter.join(WAIT)
+    assert out[0]["reason"] == "exception" and bridge.request_status("cut-1")["state"] == "finished"

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import uuid
@@ -9,6 +10,7 @@ from urllib import error, parse, request
 
 from engine.editor.live_session_bridge import (
     LOOPBACK_HOST,
+    REQUEST_ID,
     SESSION_SCHEMA_VERSION,
     read_live_session_file,
     session_file_path,
@@ -117,9 +119,22 @@ def _request_json(
     return loaded if isinstance(loaded, dict) else {}
 
 
-def new_request_id(method: str) -> str:
-    """An id for a POST (it may change something: #462 S3), "" for a GET (only reads)."""
-    return uuid.uuid4().hex if method == "POST" else ""
+def new_request_id(method: str, given: str = "") -> str:
+    """The id of a POST (it may change something: #462 S3): ``given`` (the caller's, for retrying safely) or a new one;
+    "" for a GET (it only reads)."""
+    return (given or uuid.uuid4().hex) if method == "POST" else ""
+
+
+def bad_request_id(given: str) -> dict[str, Any] | None:
+    """The refusal for a caller's request id the editor wouldn't take, before anything is sent; None if it's fine."""
+    if not given or REQUEST_ID.fullmatch(given):
+        return None
+    return _failure("invalid_request_id", "request_id must be 1-64 letters, digits, '-' or '_'; nothing was sent.")
+
+
+def step_request_id(request_id: str, step: str) -> str:
+    """The id of one step of a call made of several requests: the same each time the call is retried with its id."""
+    return hashlib.sha256(f"{request_id}:{step}".encode()).hexdigest()[:32] if request_id else ""
 
 
 def unknown_outcome(exc: BaseException, request_id: str) -> dict[str, Any] | None:
@@ -212,8 +227,12 @@ def resolved_discovery_root(root: str | Path = ".") -> str:
     return str(_resolve_discovery_root(root))
 
 
-def _post(info: dict[str, Any], path: str, payload: dict[str, Any], *, timeout: float) -> dict[str, Any]:
-    request_id = new_request_id("POST")
+def _post(info: dict[str, Any], path: str, payload: dict[str, Any], *, timeout: float,
+          request_id: str = "") -> dict[str, Any]:
+    bad = bad_request_id(request_id)
+    if bad is not None:
+        return bad
+    request_id = new_request_id("POST", request_id)
     try:
         result = _request_json(info, "POST", path, payload, timeout=timeout, request_id=request_id)
     except (OSError, TimeoutError, ValueError, error.URLError) as exc:
@@ -222,25 +241,30 @@ def _post(info: dict[str, Any], path: str, payload: dict[str, Any], *, timeout: 
     return result
 
 
-def live_stage_proposal(ops: list[dict[str, Any]], *, root: str = ".", timeout: float = 2.0) -> dict[str, Any]:
+def live_stage_proposal(ops: list[dict[str, Any]], *, root: str = ".", timeout: float = 2.0,
+                        request_id: str = "") -> dict[str, Any]:
     info, failure = _load_verified_session(root, timeout=timeout)
     if failure is not None or info is None:
         return failure or _failure("no_live_session")
-    return _post(info, "/live/stage_proposal", {"ops": list(ops)}, timeout=timeout)
+    return _post(info, "/live/stage_proposal", {"ops": list(ops)}, timeout=timeout, request_id=request_id)
 
 
-def live_accept_proposal(proposal_id: str, *, root: str = ".", timeout: float = 2.0) -> dict[str, Any]:
+def live_accept_proposal(proposal_id: str, *, root: str = ".", timeout: float = 2.0,
+                         request_id: str = "") -> dict[str, Any]:
     info, failure = _load_verified_session(root, timeout=timeout)
     if failure is not None or info is None:
         return failure or _failure("no_live_session")
-    return _post(info, "/live/accept_proposal", {"proposal_id": proposal_id}, timeout=timeout)
+    return _post(info, "/live/accept_proposal", {"proposal_id": proposal_id}, timeout=timeout,
+                 request_id=request_id)
 
 
-def live_reject_proposal(proposal_id: str, *, root: str = ".", timeout: float = 2.0) -> dict[str, Any]:
+def live_reject_proposal(proposal_id: str, *, root: str = ".", timeout: float = 2.0,
+                         request_id: str = "") -> dict[str, Any]:
     info, failure = _load_verified_session(root, timeout=timeout)
     if failure is not None or info is None:
         return failure or _failure("no_live_session")
-    return _post(info, "/live/reject_proposal", {"proposal_id": proposal_id}, timeout=timeout)
+    return _post(info, "/live/reject_proposal", {"proposal_id": proposal_id}, timeout=timeout,
+                 request_id=request_id)
 
 
 def live_read_scene(*, compact: bool = False, root: str = ".", timeout: float = 2.0) -> dict[str, Any]:
@@ -256,8 +280,14 @@ def live_read_scene(*, compact: bool = False, root: str = ".", timeout: float = 
     return result
 
 
-def live_stage_and_accept_add_entity(op: dict[str, Any], *, root: str = ".", timeout: float = 2.0) -> dict[str, Any]:
-    stage = live_stage_proposal([op], root=root, timeout=timeout)
+def live_stage_and_accept_add_entity(op: dict[str, Any], *, root: str = ".", timeout: float = 2.0,
+                                     request_id: str = "") -> dict[str, Any]:
+    """Stage ``op`` and accept it: two requests. With ``request_id``, retrying the call repeats both (each by its own
+    derived id), so the entity is never added twice (#462 S3)."""
+    bad = bad_request_id(request_id)
+    if bad is not None:
+        return bad
+    stage = live_stage_proposal([op], root=root, timeout=timeout, request_id=step_request_id(request_id, "stage"))
     if stage.get("ok") is not True:
         return stage
     proposal = stage.get("proposal")
@@ -266,11 +296,13 @@ def live_stage_and_accept_add_entity(op: dict[str, Any], *, root: str = ".", tim
     if not isinstance(dry_run, dict) or dry_run.get("ok") is not True:
         # It can't apply: say so (staging itself "succeeded"), and don't leave it in the editor's inbox.
         if proposal_id:
-            live_reject_proposal(proposal_id, root=root, timeout=timeout)
+            live_reject_proposal(proposal_id, root=root, timeout=timeout,
+                                 request_id=step_request_id(request_id, "reject"))
         return {**stage, "ok": False, "reason": "dry_run_failed",
                 "message": str((dry_run or {}).get("message") or "The change can't be applied to the live scene.")}
     if not proposal_id:
         return _failure("invalid_live_session", "Bridge did not return a proposal id")
-    accepted = live_accept_proposal(proposal_id, root=root, timeout=timeout)
+    accepted = live_accept_proposal(proposal_id, root=root, timeout=timeout,
+                                    request_id=step_request_id(request_id, "accept"))
     accepted.setdefault("proposal_id", proposal_id)  # if the editor wants a person to accept, it's waiting there
     return accepted
