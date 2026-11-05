@@ -282,14 +282,27 @@ def live_read_scene(*, compact: bool = False, root: str = ".", timeout: float = 
 
 def live_stage_and_accept_add_entity(op: dict[str, Any], *, root: str = ".", timeout: float = 2.0,
                                      request_id: str = "") -> dict[str, Any]:
-    """Stage ``op`` and accept it: two requests. With ``request_id``, retrying the call repeats both (each by its own
-    derived id), so the entity is never added twice (#462 S3)."""
+    """Stage ``op`` and accept it: two requests, each by an id derived from this call's ``request_id`` (given, or made
+    here). The answer's ``request_id`` is the call's: retrying the call with it repeats each step, so the entity is
+    never added twice; ``step_request_id`` is the step that answered, for ``request_status`` (#462 S3)."""
     bad = bad_request_id(request_id)
     if bad is not None:
         return bad
-    stage = live_stage_proposal([op], root=root, timeout=timeout, request_id=step_request_id(request_id, "stage"))
+    call_id = request_id or uuid.uuid4().hex
+
+    def answer(result: dict[str, Any]) -> dict[str, Any]:
+        result = dict(result)
+        if not result.get("request_id"):  # (nothing was sent: no call to retry or ask about)
+            return result
+        result["step_request_id"], result["request_id"] = result["request_id"], call_id
+        if result.get("reason") == "outcome_unknown":
+            result["message"] = (f"{result.get('message', '')} Retry this call with request_id {call_id!r}: it repeats "
+                                 "each step and never adds the entity twice. request_status takes step_request_id.")
+        return result
+
+    stage = live_stage_proposal([op], root=root, timeout=timeout, request_id=step_request_id(call_id, "stage"))
     if stage.get("ok") is not True:
-        return stage
+        return answer(stage)
     proposal = stage.get("proposal")
     dry_run = proposal.get("dry_run") if isinstance(proposal, dict) else None
     proposal_id = str(stage.get("proposal_id") or "")
@@ -297,12 +310,14 @@ def live_stage_and_accept_add_entity(op: dict[str, Any], *, root: str = ".", tim
         # It can't apply: say so (staging itself "succeeded"), and don't leave it in the editor's inbox.
         if proposal_id:
             live_reject_proposal(proposal_id, root=root, timeout=timeout,
-                                 request_id=step_request_id(request_id, "reject"))
-        return {**stage, "ok": False, "reason": "dry_run_failed",
-                "message": str((dry_run or {}).get("message") or "The change can't be applied to the live scene.")}
+                                 request_id=step_request_id(call_id, "reject"))
+        return answer({**stage, "ok": False, "reason": "dry_run_failed",
+                       "message": str((dry_run or {}).get("message") or "The change can't be applied to the live scene.")})
     if not proposal_id:
-        return _failure("invalid_live_session", "Bridge did not return a proposal id")
+        return answer(_failure("invalid_live_session", "Bridge did not return a proposal id"))
     accepted = live_accept_proposal(proposal_id, root=root, timeout=timeout,
-                                    request_id=step_request_id(request_id, "accept"))
+                                    request_id=step_request_id(call_id, "accept"))
     accepted.setdefault("proposal_id", proposal_id)  # if the editor wants a person to accept, it's waiting there
-    return accepted
+    if accepted.get("request_state") == "cancelled":  # (never accepted: don't leave it staged for someone to accept)
+        live_reject_proposal(proposal_id, root=root, timeout=timeout, request_id=step_request_id(call_id, "withdraw"))
+    return answer(accepted)

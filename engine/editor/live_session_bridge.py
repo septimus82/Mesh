@@ -248,7 +248,8 @@ class EditorLiveSessionBridge:
                 if job.state != "queued" or job.func is None:
                     continue
                 job.state, func = "started", job.func
-            result: Any = _failure("exception", "The editor was interrupted while doing this.")
+            result: Any = _failure("interrupted", "The editor was interrupted while doing this: it may have done "
+                                   "part of it.")
             try:
                 result = func()
             except Exception as exc:  # noqa: BLE001  # REASON: live bridge work items return structured errors to MCP callers

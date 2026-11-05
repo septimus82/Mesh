@@ -573,4 +573,56 @@ def test_status_ids_are_never_cut_short_and_an_interrupted_request_still_ends(ro
     with pytest.raises(SystemExit):
         bridge.drain_pending()
     waiter.join(WAIT)
-    assert out[0]["reason"] == "exception" and bridge.request_status("cut-1")["state"] == "finished"
+    assert out[0]["reason"] == "interrupted" and bridge.request_status("cut-1")["state"] == "finished"
+
+
+class _LegacyEditor:
+    """The legacy editor's bridge host: its accept applies the change (counted), here only once ``release`` is set."""
+
+    host_kind = "legacy_editor"
+
+    def __init__(self) -> None:
+        self.applied = 0
+        self.entered, self.release = threading.Event(), threading.Event()
+
+    def stage_proposal(self, ops: list[dict[str, Any]]) -> Any:
+        return SimpleNamespace(proposal_id="", ops=ops, base_revision=0, preview_summary="add", dry_run={"ok": True})
+
+    def accept_proposal(self, _proposal: Any) -> dict[str, Any]:
+        self.applied += 1
+        self.entered.set()
+        assert self.release.wait(WAIT)
+        return {"ok": True}
+
+    def reject_proposal(self, _proposal: Any) -> dict[str, Any]:
+        return {"ok": True}
+
+
+@pytest.mark.parametrize("given", ["ai-call-1", ""], ids=["caller's id", "no id given"])
+def test_retrying_the_legacy_add_with_the_id_it_answered_adds_once(tmp_path: Path, given: str) -> None:
+    editor = _LegacyEditor()
+    bridge = live_session_bridge.EditorLiveSessionBridge(editor, tmp_path)
+    bridge.start()
+    stop = threading.Event()
+
+    def drain() -> None:  # (the legacy editor's update)
+        while not stop.is_set():
+            bridge.drain_pending()
+            stop.wait(0.005)
+
+    pump = threading.Thread(target=drain, name="drain", daemon=True)
+    pump.start()
+    try:
+        first = tools.live_add_entity_from_prefab("person", 1, 1, root=str(tmp_path), request_id=given)
+        assert editor.entered.is_set() and first["reason"] == "outcome_unknown"  # (accept outlasts the 1.5 s wait)
+        assert first["request_id"] == (given or first["request_id"]) and first["step_request_id"] != first["request_id"]
+        assert bridge.request_status(first["step_request_id"])["state"] == "started"
+        editor.release.set()
+        _until(lambda: bridge.request_status(first["step_request_id"])["state"] == "finished")
+        again = tools.live_add_entity_from_prefab("person", 1, 1, root=str(tmp_path), request_id=first["request_id"])
+        assert again["ok"] is True and editor.applied == 1  # (was: added a second time)
+    finally:
+        editor.release.set()
+        stop.set()
+        pump.join(WAIT)
+        bridge.stop()
