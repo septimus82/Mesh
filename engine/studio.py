@@ -3080,6 +3080,7 @@ class Studio(InspectorMixin, SoundMixin):
         """Closing with unsaved changes asks: Save, Discard or Cancel."""
         if self._closing or not self.project.is_dirty:
             self.ai.stop()
+            self.project.discard_unsaved_files()  # (#462 S4: a map file only an unsaved room or redo used)
             return False
         if self.mode == "play":
             self.stop()
@@ -3112,6 +3113,7 @@ class Studio(InspectorMixin, SoundMixin):
                 return  # saving failed or a box's value was refused; the message says why, and nothing is lost
         self._closing = True
         self.ai.stop()
+        self.project.discard_unsaved_files()  # (#462 S4: a map file only an unsaved room or redo used)
         self.window.close()
 
     def on_text(self, text: str) -> bool:

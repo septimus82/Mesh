@@ -488,8 +488,11 @@ def set_room_music(scene: Doc, mode: Any, path: Any = "") -> Doc:
     return _checked(scene, out)
 
 
-def new_room(world: Doc, label: str, scenes_dir: str, player_template: Doc | None) -> tuple[Doc, Doc, str, str]:
-    """Create a room document and register it. Returns ``(world, scene, key, path)``."""
+def new_room(world: Doc, label: str, scenes_dir: str, player_template: Doc | None,
+             retired: Collection[str] = ()) -> tuple[Doc, Doc, str, str]:
+    """Create a room document and register it. Returns ``(world, scene, key, path)``. Its key is none of the world's
+    and none of ``retired`` (keys a room had before, which an undo could bring back or a stale proposal still name:
+    #462 S4), so a new room is never mistaken for an earlier one with the same name."""
     label = str(label).strip()
     if not label:
         raise OpError("A room needs a name.")
@@ -497,7 +500,7 @@ def new_room(world: Doc, label: str, scenes_dir: str, player_template: Doc | Non
     if any(str(v.get("label", "")).lower() == label.lower() for v in existing.values() if isinstance(v, dict)):
         raise OpError(f"There is already a room called '{label}'.")
     key, n = slug(label), 2
-    while key in existing:
+    while key in existing or key in retired:
         key, n = f"{slug(label)}_{n}", n + 1
     path = f"{scenes_dir.rstrip('/')}/{key}.json"
     scene: Doc = {"name": label, "schema_version": 1, "version": 1, "entities": []}
