@@ -626,3 +626,30 @@ def test_retrying_the_legacy_add_with_the_id_it_answered_adds_once(tmp_path: Pat
         stop.set()
         pump.join(WAIT)
         bridge.stop()
+
+
+def test_a_legacy_add_whose_accept_was_cancelled_says_whether_its_proposal_was_withdrawn(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    editor = _LegacyEditor()
+    bridge = live_session_bridge.EditorLiveSessionBridge(editor, tmp_path)
+    bridge.start()
+    staged = threading.Event()
+    real_stage = bridge._stage_proposal
+
+    def stage_then_freeze(payload: dict[str, Any]) -> dict[str, Any]:  # (the editor freezes right after staging)
+        result = real_stage(payload)
+        staged.set()
+        return result
+
+    monkeypatch.setattr(bridge, "_stage_proposal", stage_then_freeze)
+    drainer, _ = _in_thread(lambda: (_until(lambda: bridge.pending_count() == 1), bridge.drain_pending(limit=1)),
+                            name="drain")
+    try:
+        answer = live_session_client.live_stage_and_accept_add_entity({"type": "add"}, root=tmp_path,
+                                                                      request_id="frozen-1")
+        assert staged.is_set() and answer["reason"] == "timeout" and answer["request_state"] == "cancelled"
+        assert answer["withdrawn"] is False and answer["proposal_id"] in answer["message"]
+        assert editor.applied == 0 and list(bridge._proposals) == [answer["proposal_id"]]  # (said, not hidden)
+    finally:
+        drainer.join(WAIT)
+        bridge.stop()

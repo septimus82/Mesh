@@ -319,5 +319,10 @@ def live_stage_and_accept_add_entity(op: dict[str, Any], *, root: str = ".", tim
                                     request_id=step_request_id(call_id, "accept"))
     accepted.setdefault("proposal_id", proposal_id)  # if the editor wants a person to accept, it's waiting there
     if accepted.get("request_state") == "cancelled":  # (never accepted: don't leave it staged for someone to accept)
-        live_reject_proposal(proposal_id, root=root, timeout=timeout, request_id=step_request_id(call_id, "withdraw"))
+        withdrawn = live_reject_proposal(proposal_id, root=root, timeout=timeout,
+                                         request_id=step_request_id(call_id, "withdraw"))
+        accepted = {**accepted, "withdrawn": withdrawn.get("ok") is True}
+        if not accepted["withdrawn"]:  # (the editor is still busy: say what is left behind)
+            accepted["message"] = (f"{accepted.get('message', '')} Proposal {proposal_id} is still staged in the editor: "
+                                   "withdraw it with live_reject_proposal before adding the entity again.")
     return answer(accepted)
