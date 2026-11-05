@@ -102,6 +102,7 @@ class Project:
         self.player: Doc | None = self._read_player()  # the shared player's definition (None: rooms have their own)
         self.player_dirty = False
         self.ids_seen: set[str] = set()  # every object id this session (#462 S1-ID): a new object never gets one
+        self._as_read: dict[str, Doc] = {}  # each room as first read (#462 S2): what every state before that holds
         self.scene(self.current)
 
     @classmethod
@@ -158,6 +159,7 @@ class Project:
             with ops.retired_ids(()):  # (an older room's missing ids are filled in as always, whenever it is read)
                 self.scenes[key] = ops.ensure_entity_ids(raw, key)
             self.ids_seen.update(_ids(self.scenes[key]))
+            self._as_read.setdefault(key, _copy(self.scenes[key]))
         return self.scenes[key]
 
     def _store(self, key: str, doc: Doc, player_ids: list[str]) -> None:
@@ -287,6 +289,9 @@ class Project:
     def _restore(self, state: _State) -> None:
         self.world = _copy(state.world)
         self.scenes = _copy(state.scenes)
+        for key in state.world.get("scenes") or {}:  # a room first read since (by an edit, a batch, the door tool):
+            if key not in self.scenes and key in self._as_read:  # as read then, never read again from disk, where a
+                self.scenes[key] = _copy(self._as_read[key])  # save since may have written the edit undone (#462 S2)
         self.current = state.current
         self.dirty = set(state.dirty)
         self.world_dirty = state.world_dirty
@@ -336,6 +341,7 @@ class Project:
         copy_._undo, copy_._redo, copy_.revision, copy_.writes_files, copy_._tx_depth = [], [], self.revision, False, 0
         copy_._seen_on_disk = dict(self._seen_on_disk)  # (a room loaded first in the copy records when it was read)
         copy_.ids_seen = set(self.ids_seen)  # (a dry run's new objects get the ids the real edit would, then)
+        copy_._as_read = dict(self._as_read)
         return copy_
 
     def load_documents(self, docs: Doc) -> None:
@@ -800,9 +806,11 @@ class Project:
             self._refused(err)
             raise
         self.last_save_report, self.last_save_backups = outcome, list(outcome["outside_change_backups"])
-        # Undo or redo past this save comes back to rooms other than what was just written: they are to save again.
+        # Undo or redo past this save comes back to rooms other than what was just written: they are to save again,
+        # in the states that have them (#462 S2: not in one from before a new room was added, or after it was undone).
         saved, world, player = frozenset(self.dirty), self.world_dirty, self.player_dirty
-        self._undo, self._redo = [[replace(s, dirty=s.dirty | saved, world_dirty=s.world_dirty or world,
+        self._undo, self._redo = [[replace(s, dirty=(s.dirty | saved).intersection(s.world.get("scenes") or {}),
+                                           world_dirty=s.world_dirty or world,
                                            player_dirty=s.player_dirty or player) for s in stack]
                                   for stack in (self._undo, self._redo)]
         self.dirty.clear()
