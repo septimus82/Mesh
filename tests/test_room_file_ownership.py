@@ -488,3 +488,36 @@ def test_closing_after_a_save_that_needs_recovery_removes_nothing(root: Path, mo
         project.save()
     project.discard_unsaved_files()  # (Studio: Discard)
     assert (root / map_rel).is_file(), "the files on disk may use it now"
+
+
+@pytest.mark.parametrize("then", ["undo_and_edit", "failed_batch"])
+def test_after_a_save_that_needs_recovery_no_map_file_goes_in_that_session(root: Path, then: str,
+                                                                                  monkeypatch: pytest.MonkeyPatch) -> None:
+    real = studio_project.save_documents
+
+    def all_written_then_unsure(root_: Path, documents: Any, *args: Any) -> Any:
+        real(root_, documents, *args)  # (every file written, then the save can't tell: the world on disk lists Vault)
+        err = refused("disk_full", "Half written.", [(rel, kind) for rel, kind, _doc in documents], root_)
+        err.report["recovery_required"] = True
+        raise err
+
+    project = _open(root)
+    vault = project.map_path(project.add_room("Vault"))
+    monkeypatch.setattr(studio_project, "save_documents", all_written_then_unsure)
+    with pytest.raises(ops.OpError):
+        project.save()
+    monkeypatch.undo()
+    if then == "undo_and_edit":
+        project.undo()
+        project.edit_scene(lambda s: {**s, "name": "Start (edited)"}, "start")  # (the redo step with Vault goes)
+    else:
+        with pytest.raises(RuntimeError), project.transaction():
+            loft = project.map_path(project.add_room("Loft"))
+            raise RuntimeError("a later change fails")
+        assert (root / loft).is_file(), "kept too"
+    assert (root / vault).is_file()
+    _every_listed_room_loads(root)
+    project.save()  # (writes what changed since: the world on disk may still list Vault)
+    project.discard_unsaved_files()
+    assert (root / vault).is_file()
+    _every_listed_room_loads(root)

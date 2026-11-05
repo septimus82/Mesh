@@ -143,6 +143,8 @@ class Project:
         self.keys_seen: set[str] = set(self.world.get("scenes") or {})
         self._made: dict[str, tuple[str, bytes]] = {}
         self._saved_maps: set[str] = set()
+        self._disk_uncertain = False  # a save needed recovery: what the files on disk use isn't known, so this
+        # session removes nothing from then on (a later save writes only what changed since, not the whole world)
         self.kept_files: list[Doc] = []
         self.scene(self.current)
 
@@ -392,7 +394,7 @@ class Project:
         copy_.ids_seen = set(self.ids_seen)  # (a dry run's new objects get the ids the real edit would, then)
         copy_._as_read = dict(self._as_read)
         copy_.keys_seen = set(self.keys_seen)  # (a dry run's new room gets the key the real edit would)
-        copy_._made, copy_._saved_maps, copy_.kept_files = {}, set(), []
+        copy_._made, copy_._saved_maps, copy_.kept_files, copy_._disk_uncertain = {}, set(), [], False
         return copy_
 
     def load_documents(self, docs: Doc) -> None:
@@ -570,8 +572,8 @@ class Project:
         Each only if it is still exactly as made (``_remove_if_unchanged``, checked as it is removed); one changed or
         replaced since is kept, and said so in ``kept_files``. Never raises: a file left is only said so."""
         left = {c for c in candidates if c in self._made} - self._saved_maps
-        if not left or not self.writes_files:
-            return
+        if not left or not self.writes_files or self._disk_uncertain:
+            return  # (after a save that needed recovery the files on disk may use any of them)
         if history:
             states = [(self.world, self.scenes), *((s.world, s.scenes) for s in (*self._undo, *self._redo))]
             for world, scenes in states:  # (rooms as held here first: most candidates are used by the room now)
@@ -609,10 +611,8 @@ class Project:
 
     def discard_unsaved_files(self) -> None:
         """The project is closed (or its edits dropped) without saving them: the map files this session made that no
-        save has used are removed, if unchanged (#462 S4). Undo and redo end with the session. Not after a save that
-        needs recovery: the files on disk may use any of them then."""
-        if (self.last_save_report or {}).get("recovery_required"):
-            return
+        save has used are removed, if unchanged (#462 S4). Undo and redo end with the session. (Nothing after a save
+        that needs recovery: ``_release``.)"""
         self._release(set(self._made) - self._saved_maps, history=False)
 
     # --- tilesets -------------------------------------------------------------------------
@@ -977,4 +977,5 @@ class Project:
     def _refused(self, err: SaveError) -> SaveError:
         """A failed save, recorded: the edits stay as they are, unsaved (dirty, undo and revision untouched)."""
         self.last_save_report, self.last_save_backups = err.report, list(err.report["outside_change_backups"])
+        self._disk_uncertain = self._disk_uncertain or bool(err.report.get("recovery_required"))  # (#462 S4)
         return err
