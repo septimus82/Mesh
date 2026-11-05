@@ -807,9 +807,12 @@ class Project:
             raise
         self.last_save_report, self.last_save_backups = outcome, list(outcome["outside_change_backups"])
         # Undo or redo past this save comes back to rooms other than what was just written: they are to save again,
-        # in the states that have them (#462 S2: not in one from before a new room was added, or after it was undone).
+        # in the states that have them (#462 S2: not in one from before a new room was added, or after it was undone),
+        # and so is a room the world just written doesn't list (its file may be gone by then: it is no room's now).
         saved, world, player = frozenset(self.dirty), self.world_dirty, self.player_dirty
-        self._undo, self._redo = [[replace(s, dirty=(s.dirty | saved).intersection(s.world.get("scenes") or {}),
+        listed = set(self.world.get("scenes") or {})
+        self._undo, self._redo = [[replace(s, dirty=(s.dirty | saved | (set(s.world.get("scenes") or {}) - listed))
+                                           .intersection(s.world.get("scenes") or {}),
                                            world_dirty=s.world_dirty or world,
                                            player_dirty=s.player_dirty or player) for s in stack]
                                   for stack in (self._undo, self._redo)]

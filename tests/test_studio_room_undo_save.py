@@ -106,15 +106,31 @@ def test_a_saved_new_room_undone_saves_and_comes_back_on_redo(root: Path, hd2d: 
     assert project.save() == [] and _tree(root) == after_undo  # saving again writes nothing
 
     assert project.redo() and project.redo()
-    assert project.is_dirty and project.dirty == set()  # the world is to save; the room's file already holds it
+    # the world is to save, and the room again (no room's file since the last save: it may have gone meanwhile)
+    assert project.is_dirty and project.dirty == {key} and project.world_dirty
     _consistent(project)
-    assert project.save() == [WORLD]
-    assert _changed(after_undo, _tree(root)) == [WORLD] and _world_rooms(root) == ["cellar", "start"]
-    assert _tree(root)[CELLAR] == saved[CELLAR] and _tree(root)[map_rel] == saved[map_rel]
+    assert sorted(project.save()) == sorted([CELLAR, WORLD])
+    assert _world_rooms(root) == ["cellar", "start"]
+    assert (root / CELLAR).read_bytes() == saved[CELLAR][0] and _tree(root)[map_rel] == saved[map_rel]
 
     reopened = _open(root)
     assert [e.get("name") for e in ops.entities(reopened.scene(key))].count("Barrel") == 1
     assert reopened.map_path(key) == map_rel
+
+
+def test_a_saved_room_undone_whose_file_is_removed_meanwhile_is_written_again_on_redo(root: Path) -> None:
+    """Found in review: its file, no room's once the room was undone and saved, removed by hand (or a later cleanup);
+    redo and save must write the room again, never a world naming a room with no file."""
+    project = _open(root)
+    key = project.add_room("Cellar")
+    project.edit_scene(_barrel(key), key)
+    project.save()
+    assert project.undo() and project.undo()
+    project.save()
+    (root / CELLAR).unlink()
+    assert project.redo() and project.redo()
+    assert sorted(project.save()) == sorted([CELLAR, WORLD])
+    assert [e.get("name") for e in ops.entities(_open(root).scene(key))].count("Barrel") == 1
 
 
 @pytest.mark.parametrize("hd2d", [False, True], ids=["2d", "hd2d"])
@@ -240,8 +256,8 @@ def test_a_room_made_by_an_ai_batch_undone_after_save_and_redone(root: Path) -> 
     saved = _tree(root)
     assert project.undo()
     assert project.save() == [WORLD] and _world_rooms(root) == ["start"]
-    assert project.redo() and project.save() == [WORLD]
-    assert _tree(root)[CELLAR] == saved[CELLAR]
+    assert project.redo() and sorted(project.save()) == sorted([CELLAR, WORLD])
+    assert (root / CELLAR).read_bytes() == saved[CELLAR][0]
     assert "Crate" in [e.get("name") for e in ops.entities(_open(root).scene("cellar"))]
 
 
