@@ -534,8 +534,13 @@ def live_add_entity_from_prefab(
     name: str | None = None,
     scene_path: str | None = None,
     root: str = ".",
+    request_id: str = "",
 ) -> dict[str, Any]:
-    """Stage and accept one add-entity op in a running live editor session."""
+    """Stage and accept one add-entity op in a running live editor session.
+
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
     from engine.mcp_server.live_session_client import live_stage_and_accept_add_entity
 
     op: dict[str, Any] = {
@@ -548,7 +553,7 @@ def live_add_entity_from_prefab(
         op["name"] = name
     if scene_path:
         op["scene_path"] = scene_path
-    return live_stage_and_accept_add_entity(op, root=root)
+    return live_stage_and_accept_add_entity(op, root=root, request_id=request_id)
 
 
 def live_read_scene(compact: bool = False, root: str = ".") -> dict[str, Any]:
@@ -558,25 +563,25 @@ def live_read_scene(compact: bool = False, root: str = ".") -> dict[str, Any]:
     return _live_read_scene(compact=compact, root=root)
 
 
-def live_stage_proposal(ops: list[dict[str, Any]], root: str = ".") -> dict[str, Any]:
+def live_stage_proposal(ops: list[dict[str, Any]], root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Stage an AI live-op proposal in the running editor without mutating it."""
     from engine.mcp_server.live_session_client import live_stage_proposal as _live_stage_proposal
 
-    return _live_stage_proposal(ops, root=root)
+    return _live_stage_proposal(ops, root=root, request_id=request_id)
 
 
-def live_accept_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
+def live_accept_proposal(proposal_id: str, root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Accept a staged live proposal by id if it is still revision-current."""
     from engine.mcp_server.live_session_client import live_accept_proposal as _live_accept_proposal
 
-    return _live_accept_proposal(proposal_id, root=root)
+    return _live_accept_proposal(proposal_id, root=root, request_id=request_id)
 
 
-def live_reject_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
+def live_reject_proposal(proposal_id: str, root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Reject and drop a staged live proposal by id."""
     from engine.mcp_server.live_session_client import live_reject_proposal as _live_reject_proposal
 
-    return _live_reject_proposal(proposal_id, root=root)
+    return _live_reject_proposal(proposal_id, root=root, request_id=request_id)
 
 
 # -------------------------------------------------------------- batch action
@@ -875,7 +880,7 @@ def read_project(root: str = ".") -> dict[str, Any]:
 
 
 def propose_changes(changes: list[dict[str, Any]], title: str = "", base_revision: int | None = None,
-                    root: str = ".") -> dict[str, Any]:
+                    root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Propose changes to the project open in Mesh Studio; the person there accepts or rejects them.
 
     ``changes`` is a list of operations (see authoring_operations). Give ``base_revision`` from
@@ -888,21 +893,27 @@ def propose_changes(changes: list[dict[str, Any]], title: str = "", base_revisio
     a revision (``invalid_base_revision``); neither is replaced by another revision. At most 20
     proposals wait for the person at once: more are refused (``too_many_pending``) until some are decided.
     Returns ``{ok, proposal_id, proposal{summary, status}}``.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
     """
     from engine import authoring_session
 
-    return authoring_session.propose(root, changes, title=title, base_revision=base_revision, source="an MCP client")
+    return authoring_session.propose(root, changes, title=title, base_revision=base_revision, source="an MCP client",
+                                     request_id=request_id)
 
 
-def apply_changes(changes: list[dict[str, Any]], root: str = ".", dry_run: bool = False) -> dict[str, Any]:
+def apply_changes(changes: list[dict[str, Any]], root: str = ".", dry_run: bool = False,
+                  request_id: str = "") -> dict[str, Any]:
     """Apply changes to the project files (all or nothing), or preview them with ``dry_run``.
 
     If Mesh Studio has the project open, the changes are proposed there instead: files are never
     written behind the person's back. Returns ``{ok, summary, created, written}`` or a refusal.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): for a proposal, send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
     """
     from engine import authoring_session
 
-    return authoring_session.apply(root, changes, dry_run=dry_run, source="an MCP client")
+    return authoring_session.apply(root, changes, dry_run=dry_run, source="an MCP client", request_id=request_id)
 
 
 def proposal_status(proposal_id: str, root: str = ".") -> dict[str, Any]:
@@ -912,11 +923,28 @@ def proposal_status(proposal_id: str, root: str = ".") -> dict[str, Any]:
     return authoring_session.proposal_status(root, proposal_id)
 
 
-def withdraw_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
-    """Take back a proposal that is still waiting in Mesh Studio."""
+def withdraw_proposal(proposal_id: str, root: str = ".", request_id: str = "") -> dict[str, Any]:
+    """Take back a proposal that is still waiting in Mesh Studio.
+
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
     from engine import authoring_session
 
-    return authoring_session.withdraw(root, proposal_id)
+    return authoring_session.withdraw(root, proposal_id, request_id=request_id)
+
+
+def request_status(request_id: str, root: str = ".") -> dict[str, Any]:
+    """What became of a change sent to Mesh Studio that answered ``reason: "outcome_unknown"`` (with a ``request_id``).
+
+    ``state``: ``"queued"`` (not started yet), ``"started"`` (running now), ``"finished"`` (``result`` is its answer,
+    e.g. a proposal's id) or ``"cancelled"`` (it never ran and never will; nothing changed). Ask this before sending
+    the change again, so it isn't done twice. A change Studio answered ``reason: "timeout"`` was cancelled, and is
+    safe to send again. Studio remembers ended requests for 10 minutes.
+    """
+    from engine import authoring_session
+
+    return authoring_session.request_status(root, request_id)
 
 
 def debug_runtime_snapshot(events: int = 20, root: str = ".") -> dict[str, Any]:
@@ -955,30 +983,34 @@ def debug_interaction(entity_id: str, root: str = ".") -> dict[str, Any]:
     return runtime_diagnose.request(root, entity_id)
 
 
-def debug_start_playtest(root: str = ".") -> dict[str, Any]:
+def debug_start_playtest(root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Start a play-test in Mesh Studio (as its Play button), if the person allowed AI play-test control.
 
     Refused with ``playtest_control_off`` until the person turns it on (Studio: AI panel), and with
     ``studio_busy`` while they are typing, dragging or answering a question. Never saves or changes the
     project. Already playing: ``status: "already_playing"``.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
     """
     from engine import runtime_debug
 
-    return runtime_debug.request_play(root)
+    return runtime_debug.request_play(root, request_id)
 
 
-def debug_stop_playtest(root: str = ".") -> dict[str, Any]:
+def debug_stop_playtest(root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Stop Mesh Studio's play-test (as its Stop button): back to editing, the project as the person left it.
 
     Needs the same permission as debug_start_playtest. Not playing: ``status: "not_playing"``.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
     """
     from engine import runtime_debug
 
-    return runtime_debug.request_stop(root)
+    return runtime_debug.request_stop(root, request_id)
 
 
 def debug_play_action(action: str, direction: str = "", frames: int = 30, choice: int | str | None = None,
-                      root: str = ".") -> dict[str, Any]:
+                      root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Play the running Mesh Studio play-test with the player's own controls, one bounded action at a time.
 
     ``action``: ``"move"`` (hold ``direction`` up/down/left/right for ``frames``, 1 to 120), ``"interact"``
@@ -993,6 +1025,8 @@ def debug_play_action(action: str, direction: str = "", frames: int = 30, choice
     ``choice_needed``, ``no_choices``, ``choice_not_available``, ``game_paused``, ``input_locked``,
     ``person_using_controls``, ``action_running``, ``invalid_action``). An action the person interrupts
     (taking back the permission, stopping, pausing) comes back ``cancelled``.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): starting the action: send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
     """
     from engine import runtime_play
 
@@ -1001,7 +1035,7 @@ def debug_play_action(action: str, direction: str = "", frames: int = 30, choice
         request.update(direction=direction, frames=frames)
     if action == "choose":
         request["choice"] = choice
-    return runtime_play.request_action(root, request)
+    return runtime_play.request_action(root, request, request_id=request_id)
 
 
 # The everyday apply_ops operations, on a Mesh Studio project, run through the same validated

@@ -35,7 +35,8 @@ When there is no Studio to ask, the tools refuse the same way the other Studio t
 | --- | --- |
 | `studio_not_open` | No Mesh Studio has the project open. That includes one that has closed, because closing removes its record. |
 | `studio_session_uncertain` | A session record exists but can't be trusted. `problem` says why: `unverified_live_session` (no answer, or a record left behind by a crash), `session_mismatch`, `workspace_mismatch`, `invalid_live_session` or `unreadable_live_session`. |
-| `timeout` | Studio's main thread didn't take the request within 5 s, for example because Studio is frozen. |
+| `timeout` | Studio's main thread didn't take the request within 5 s, for example because Studio is frozen. The request was cancelled and never runs: a play-test it would have started never starts later (#462 S3). |
+| `outcome_unknown` | Studio started the request but hadn't finished it in time, or its answer was lost. Ask `request_status` with its `request_id` before trying again. |
 | `studio_unreachable` | The bridge answered with an HTTP error. A request without the session's token gets 401. |
 
 ## What a snapshot says

@@ -27,10 +27,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
-from urllib import error
+from urllib import error, parse
 
 from engine import authoring
-from engine.mcp_server.live_session_client import _request_json, session_state
+from engine.mcp_server.live_session_client import (
+    _request_json,
+    bad_request_id,
+    new_request_id,
+    session_state,
+    unknown_outcome,
+)
 from engine.project_save import SaveError
 from engine.studio_project import Project
 
@@ -83,11 +89,19 @@ def other_editor(host: str) -> Doc:
                  "are proposed for the person to review; then try again.", host=host)
 
 
-def _call(info: Doc, method: str, path: str, payload: Doc | None = None, *, timeout: float = 6.0) -> Doc:
+def _call(info: Doc, method: str, path: str, payload: Doc | None = None, *, timeout: float = 6.0,
+          request_id: str = "") -> Doc:
+    """One request to Mesh Studio. A POST that gets no answer may have run there: ``outcome_unknown`` with its
+    ``request_id`` for ``request_status``, never a failure (#462 S3). The caller's ``request_id`` makes a retry the same
+    request: never done twice."""
+    bad = bad_request_id(request_id)
+    if bad is not None:
+        return bad
+    request_id = new_request_id(method, request_id)
     try:
-        return _request_json(info, method, path, payload, timeout=timeout)
+        return _request_json(info, method, path, payload, timeout=timeout, request_id=request_id)
     except (OSError, TimeoutError, ValueError, error.URLError) as exc:
-        return _fail("studio_unreachable", f"Mesh Studio didn't answer: {exc}")
+        return unknown_outcome(exc, request_id) or _fail("studio_unreachable", f"Mesh Studio didn't answer: {exc}")
 
 
 def operations() -> Doc:
@@ -118,7 +132,7 @@ def read_project(root: str | Path = ".") -> Doc:
 
 
 def propose(root: str | Path, changes: list[Doc], *, title: str = "", base_revision: int | None = None,
-            source: str = "") -> Doc:
+            source: str = "", request_id: str = "") -> Doc:
     """Send changes to the Mesh Studio that has this project open, for the person to review."""
     state = studio_state(root)
     if state["state"] == "uncertain":
@@ -131,7 +145,7 @@ def propose(root: str | Path, changes: list[Doc], *, title: str = "", base_revis
     payload: Doc = {"changes": changes, "title": title, "source": source or "an AI"}
     if base_revision is not None:  # (as given: Mesh Studio checks it, and never takes another in its place, F6)
         payload["base_revision"] = base_revision
-    result = _call(state["info"], "POST", "/live/stage_proposal", payload)
+    result = _call(state["info"], "POST", "/live/stage_proposal", payload, request_id=request_id)
     if result.get("ok"):
         result["next"] = "The person reviews it in Mesh Studio (top bar: AI). proposal_status tells you what they decided."
     return result
@@ -152,12 +166,24 @@ def proposal_status(root: str | Path, proposal_id: str) -> Doc:
     return failure or _call(info, "GET", f"/live/proposal?id={proposal_id}")
 
 
-def withdraw(root: str | Path, proposal_id: str) -> Doc:
+def withdraw(root: str | Path, proposal_id: str, *, request_id: str = "") -> Doc:
     info, failure = _studio(root)
-    return failure or _call(info, "POST", "/live/reject_proposal", {"proposal_id": proposal_id})
+    return failure or _call(info, "POST", "/live/reject_proposal", {"proposal_id": proposal_id}, request_id=request_id)
 
 
-def apply(root: str | Path, changes: list[Doc], *, dry_run: bool = False, title: str = "", source: str = "") -> Doc:
+def request_status(root: str | Path, request_id: str) -> Doc:
+    """What became of a request the editor open on this project was sent (#462 S3; ``live_session_bridge``)."""
+    state = studio_state(root)
+    if state["state"] == "uncertain":
+        return uncertain(state)
+    if state["state"] != "live":
+        return _fail("studio_not_open", "No editor has this project open now. One that closed never ran what it "
+                                        "hadn't started; read the project to see what it holds.")
+    return _call(state["info"], "GET", "/live/request?" + parse.urlencode({"id": request_id}))
+
+
+def apply(root: str | Path, changes: list[Doc], *, dry_run: bool = False, title: str = "", source: str = "",
+          request_id: str = "") -> Doc:
     """Change the project: as a proposal if Studio has it open, straight to its files if nothing has it open, and
     not at all if that can't be told. A proposal that fails is never written to the files instead."""
     state = studio_state(root)
@@ -168,7 +194,7 @@ def apply(root: str | Path, changes: list[Doc], *, dry_run: bool = False, title:
     if state["state"] == "live":
         if dry_run:
             return _fail("studio_open", "Mesh Studio has this project open: propose the changes there instead.")
-        result = propose(root, changes, title=title, source=source)
+        result = propose(root, changes, title=title, source=source, request_id=request_id)
         if result.get("ok"):
             result["note"] = ("Mesh Studio has this project open, so the changes were proposed there instead of "
                               "written to the files (that would overwrite the person's unsaved work).")

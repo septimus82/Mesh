@@ -80,6 +80,7 @@ def build_server() -> Any:
     server.tool()(tools.apply_changes)
     server.tool()(tools.proposal_status)
     server.tool()(tools.withdraw_proposal)
+    server.tool()(tools.request_status)  # (#462 S3: a change whose outcome wasn't known when it was answered)
 
     # Runtime debugging: the game running in a Mesh Studio play-test (D1).
     server.tool()(tools.debug_runtime_snapshot)

@@ -403,11 +403,11 @@ def playtest_view(playtest: Doc | None) -> Doc | None:
 
 # --------------------------------------------------------------------- from outside (the MCP tools)
 
-def _ask(root: str | Path, method: str, path: str) -> Doc:
+def _ask(root: str | Path, method: str, path: str, request_id: str = "") -> Doc:
     from engine import authoring_session  # noqa: PLC0415  # (it imports the project model: only when asked)
 
     info, failure = authoring_session._studio(root)
-    return failure or authoring_session._call(info, method, path)
+    return failure or authoring_session._call(info, method, path, request_id=request_id)
 
 
 def request_snapshot(root: str | Path = ".", events: int = EVENTS_DEFAULT) -> Doc:
@@ -418,9 +418,9 @@ def request_snapshot(root: str | Path = ".", events: int = EVENTS_DEFAULT) -> Do
     return _ask(root, "GET", f"/live/debug/snapshot?events={count}")
 
 
-def request_play(root: str | Path = ".") -> Doc:
-    return _ask(root, "POST", "/live/debug/play")
+def request_play(root: str | Path = ".", request_id: str = "") -> Doc:
+    return _ask(root, "POST", "/live/debug/play", request_id)
 
 
-def request_stop(root: str | Path = ".") -> Doc:
-    return _ask(root, "POST", "/live/debug/stop")
+def request_stop(root: str | Path = ".", request_id: str = "") -> Doc:
+    return _ask(root, "POST", "/live/debug/stop", request_id)

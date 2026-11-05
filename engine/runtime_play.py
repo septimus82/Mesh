@@ -331,7 +331,7 @@ class PlayDriver:
 # --------------------------------------------------------------------- from outside (the MCP tool)
 
 def request_action(root: str | Path = ".", request: Doc | None = None, *, wait: float = WAIT_SECONDS,
-                   poll: float = 0.05) -> Doc:
+                   poll: float = 0.05, request_id: str = "") -> Doc:
     """Start ``request`` in the Mesh Studio that has the project open, wait for it, and add a snapshot of the game
     afterwards (``runtime_debug``): ``{"ok", "action": <its result>, "snapshot": ...}``, or the refusal."""
     from engine import authoring_session  # noqa: PLC0415
@@ -339,7 +339,7 @@ def request_action(root: str | Path = ".", request: Doc | None = None, *, wait: 
     info, failure = authoring_session._studio(root)
     if failure:
         return failure
-    started = authoring_session._call(info, "POST", "/live/debug/act", dict(request or {}))
+    started = authoring_session._call(info, "POST", "/live/debug/act", dict(request or {}), request_id=request_id)
     if started.get("ok") is not True:
         return started
     action_id = str(started["action_id"])
