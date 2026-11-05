@@ -432,3 +432,59 @@ def test_an_ai_dry_run_after_undo_names_the_room_as_accepting_will(root: Path) -
     assert host.accept(proposal)["ok"] is True
     assert set(project.world["scenes"]) == predicted
     assert (root / f"{MAPS}/cellar_2.json").is_file() and not (root / f"{MAPS}/cellar.json").exists()
+
+
+# --- from review ------------------------------------------------------------------------------------------------------
+def test_add_map_undo_add_map_keeps_the_file_the_room_uses_again(root: Path) -> None:
+    project = _bare_room(root)
+    project.add_map("bare")
+    map_rel = project.map_path("bare")
+    made = (root / map_rel).read_bytes()
+    project.undo()
+    project.add_map("bare")  # (the file only the redo step used: this room's again, so never released)
+    assert project.map_path("bare") == map_rel and (root / map_rel).read_bytes() == made
+    project.save()
+    _every_listed_room_loads(root)
+    assert _open(root).map_path("bare") == map_rel
+
+
+def test_undo_history_trimming_keeps_a_map_still_used_and_reads_no_rooms(root: Path,
+                                                                         monkeypatch: pytest.MonkeyPatch) -> None:
+    project = _bare_room(root)  # (a room never opened here: "bare")
+    map_rel = project.map_path(project.add_room("Cellar"))
+    reads: list[str] = []
+    real = project._read_json
+    monkeypatch.setattr(project, "_read_json", lambda rel: reads.append(rel) or real(rel))
+    for n in range(studio_project.UNDO_LIMIT + 5):  # (the step from before Cellar is dropped, then later ones)
+        project.edit_scene(lambda s, n=n: {**s, "name": f"Start {n}"}, "start")
+    assert (root / map_rel).is_file() and len(project._undo) == studio_project.UNDO_LIMIT
+    assert f"{SCENES}/bare.json" not in reads, "no room read from disk per edit"
+
+
+def test_nested_transactions_remove_only_what_the_failed_one_made(root: Path) -> None:
+    project = _open(root)
+    with project.transaction():
+        outer = project.map_path(project.add_room("Attic"))
+        with pytest.raises(RuntimeError), project.transaction():
+            inner = project.map_path(project.add_room("Vault"))
+            raise RuntimeError("the inner batch fails")
+    assert (root / outer).is_file() and not (root / inner).exists() and "attic" in project.world["scenes"]
+    with pytest.raises(RuntimeError), project.transaction():
+        both = [project.map_path(project.add_room(label)) for label in ("Cellar", "Loft")]
+        raise RuntimeError("the outer batch fails")
+    assert not any((root / rel).exists() for rel in both) and (root / outer).is_file()
+
+
+def test_closing_after_a_save_that_needs_recovery_removes_nothing(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def half_done(root_: Path, documents: Any, *_args: Any) -> Any:
+        err = refused("disk_full", "Half written.", [(rel, kind) for rel, kind, _doc in documents], root_)
+        err.report["recovery_required"] = True
+        raise err
+
+    project = _open(root)
+    map_rel = project.map_path(project.add_room("Vault"))
+    monkeypatch.setattr(studio_project, "save_documents", half_done)
+    with pytest.raises(ops.OpError):
+        project.save()
+    project.discard_unsaved_files()  # (Studio: Discard)
+    assert (root / map_rel).is_file(), "the files on disk may use it now"

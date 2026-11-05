@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import copy
 import json
-import logging
 import os
 import pickle
 import posixpath
@@ -27,12 +26,13 @@ from typing import Any, Callable, Iterable, Iterator
 
 from engine import project_ops as ops
 from engine.json_io import json_bytes, publish_new, read_json, write_bytes_new, write_json_atomic, write_json_new
+from engine.log_utils import get_logger
 from engine.project_save import SaveError, refused, save_documents
 from engine.project_scaffold import ensure_starter_files
 
 Doc = dict[str, Any]
 UNDO_LIMIT = 100
-_LOG = logging.getLogger(__name__)
+_LOG = get_logger(__name__)
 
 
 def _ids(room: Doc) -> set[str]:
@@ -339,7 +339,9 @@ class Project:
         self.player = _copy(state.player)
         self.player_dirty = state.player_dirty
 
-    def _record(self, before: _State) -> None:
+    def _record(self, before: _State, uses: str | None = None) -> None:
+        """``before`` is an undo step now (outside a transaction). ``uses``: a map file the edit being made uses (its
+        room isn't stored yet), never released here as unused (#462 S4)."""
         for room in before.scenes.values():  # (#462 S1-ID: every state an edit leaves, whatever wrote it, even each
             self.ids_seen.update(_ids(room))  # step of a batch: none of its ids is given to another object)
         if self._tx_depth:
@@ -351,7 +353,7 @@ class Project:
         self._redo.clear()
         self.revision += 1
         if dropped and self._made:  # (#462 S4: a room only they had can't come back: the map file made for it goes)
-            self._release(set().union(*(self._maps(s.world, s.scenes) for s in dropped)))
+            self._release(set().union(*(self._maps(s.world, s.scenes) for s in dropped)) - {_norm(uses or "")})
 
     @contextmanager
     def transaction(self) -> Iterator[None]:
@@ -418,7 +420,7 @@ class Project:
                                                 border=ops.STARTER_WALL, tilesets=self.project_tilesets())
         self._claim_room_files(label, path, map_path)
         self._write_map_file(map_path, skeleton, new_room=label)
-        self._record(before)
+        self._record(before, uses=map_path)
         self.world, self.world_dirty = world, True
         self.scenes[key] = scene
         self.dirty.add(key)
@@ -438,7 +440,7 @@ class Project:
         installed = self.ensure_hd2d_kit()
         before = self._snapshot()
         self._write_map_file(map_path, skeleton, new_room=label)
-        self._record(before)
+        self._record(before, uses=map_path)
         self.world, self.world_dirty = world, True
         self.scenes[key] = scene
         self.dirty.add(key)
@@ -502,7 +504,7 @@ class Project:
         scene, map_path, skeleton = ops.add_map(self.scene(key), self.path(key), width=width, height=height,
                                                 tilesets=self.project_tilesets())
         self._write_map_file(map_path, skeleton)
-        self._record(before)
+        self._record(before, uses=map_path)  # (it may be the file only a redo step used: this room's again now)
         self._store(key, scene, player_ids)
 
     def _write_map_file(self, map_path: str, skeleton: Doc, *, new_room: str | None = None) -> None:
@@ -567,17 +569,21 @@ class Project:
         saved with a room, nor used, with ``history``, by a room of the project now or of an undo or redo step.
         Each only if it is still exactly as made (``_remove_if_unchanged``, checked as it is removed); one changed or
         replaced since is kept, and said so in ``kept_files``. Never raises: a file left is only said so."""
-        mine = [c for c in candidates if c in self._made]
-        if not mine or not self.writes_files:
+        left = {c for c in candidates if c in self._made} - self._saved_maps
+        if not left or not self.writes_files:
             return
-        used, disk = set(self._saved_maps), dict[str, Doc | None]()
         if history:
-            for world, scenes in [(self.world, self.scenes), *((s.world, s.scenes) for s in (*self._undo, *self._redo))]:
-                used |= self._maps(world, scenes, disk)
-        for norm in mine:
-            if norm not in used:
-                rel, data = self._made.pop(norm)
-                self._kept(rel, _remove_if_unchanged(self.root, rel, data))
+            states = [(self.world, self.scenes), *((s.world, s.scenes) for s in (*self._undo, *self._redo))]
+            for world, scenes in states:  # (rooms as held here first: most candidates are used by the room now)
+                left -= self._maps(world, scenes)
+                if not left:
+                    return
+            disk = dict[str, Doc | None]()  # (then a room never read here, as its file on disk says: read once)
+            for world, scenes in states:
+                left -= self._maps(world, scenes, disk)
+        for norm in sorted(left):
+            rel, data = self._made.pop(norm)
+            self._kept(rel, _remove_if_unchanged(self.root, rel, data))
 
     def _kept(self, rel: str, reason: str | None) -> None:
         if reason is not None:
@@ -603,7 +609,10 @@ class Project:
 
     def discard_unsaved_files(self) -> None:
         """The project is closed (or its edits dropped) without saving them: the map files this session made that no
-        save has used are removed, if unchanged (#462 S4). Undo and redo end with the session."""
+        save has used are removed, if unchanged (#462 S4). Undo and redo end with the session. Not after a save that
+        needs recovery: the files on disk may use any of them then."""
+        if (self.last_save_report or {}).get("recovery_required"):
+            return
         self._release(set(self._made) - self._saved_maps, history=False)
 
     # --- tilesets -------------------------------------------------------------------------

@@ -123,3 +123,15 @@ def test_closing_studio_removes_a_map_file_only_an_undone_room_used(driver: Any)
     assert not studio.project.is_dirty and (root / undone_map).is_file()
     assert studio.on_close() is False, "nothing unsaved: Studio closes without asking"
     assert not (root / undone_map).exists() and (root / saved_map).is_file()
+
+
+def test_discarding_unsaved_changes_on_close_removes_the_new_rooms_map_file(driver: Any) -> None:
+    d, studio = driver, driver.studio
+    k, ctrl = d.arcade.key, d.arcade.key.MOD_CTRL
+    root = studio.project.root
+    saved_map = studio.project.map_path(_make(d, "hd2d", "Attic"))
+    d.key(k.S, ctrl)
+    unsaved_map = studio.project.map_path(_make(d, "2d", "Cellar"))
+    assert studio.project.is_dirty and studio.on_close() is True, "unsaved: Studio asks first"
+    studio._close_choice("discard")
+    assert not (root / unsaved_map).exists() and (root / saved_map).is_file()

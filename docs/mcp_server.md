@@ -92,7 +92,7 @@ A batch is a list of changes:
 ]
 ```
 
-- **`room`**: each change can name a room (room keys come from `read_project`); the default is the current room.
+- **`room`**: each change can name a room (room keys come from `read_project`); the default is the current room. A room key names one room for the whole Studio session. A room made again after an undo, with the same name, gets a new key (`cellar_2`), so a proposal for the old room never changes the new one (#462 S4). Read the project again for the new key.
 - **`entity_id`**: takes an object's id or its unique name.
 - **`@N`**: the id of the object made by change `N` of the same batch, counting from 0.
 - **All or nothing:** a batch applies completely or not at all, and is one Undo step in the Studio.
