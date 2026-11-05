@@ -273,21 +273,27 @@ def test_a_studio_that_stopped_answering_is_not_taken_for_closed_and_recovers(ro
 
 # --------------------------------------------------------------------- no file writes after a live failure
 
+@pytest.mark.parametrize(("failure", "reason"), [
+    (ConnectionRefusedError(10061, "refused"), "studio_unreachable"),  # (never sent: it surely didn't run)
+    (ConnectionResetError(10054, "reset"), "outcome_unknown"),  # (sent, no answer: it may have run, #462 S3)
+], ids=["refused", "reset"])
 def test_a_proposal_that_fails_is_never_written_to_the_files_instead(root: Path, studio: Any,
-                                                                     monkeypatch: pytest.MonkeyPatch) -> None:
+                                                                     monkeypatch: pytest.MonkeyPatch,
+                                                                     failure: OSError, reason: str) -> None:
     person, host = studio
     real = authoring_session._request_json
 
     def request(info: dict[str, Any], method: str, path: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
         if path == "/live/stage_proposal":
-            raise error.URLError(ConnectionResetError(10054, "reset"))
+            raise error.URLError(failure)
         return real(info, method, path, *args, **kwargs)
 
     monkeypatch.setattr(authoring_session, "_request_json", request)
     before = _files(root)
     for answer in (authoring_session.apply(root, ADD_SEXTON), authoring_session.apply(root, ADD_CELLAR),
                    tools.apply_changes(ADD_SEXTON, root=str(root))):
-        assert answer["ok"] is False and answer["reason"] == "studio_unreachable", answer
+        assert answer["ok"] is False and answer["reason"] == reason, answer
+        assert bool(answer.get("request_id")) is (reason == "outcome_unknown"), answer
     assert _files(root) == before and host.pending() == []
     _unsaved_work_intact(root, person)
 

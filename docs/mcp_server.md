@@ -48,6 +48,7 @@ same for any MCP client.
 | `propose_changes(changes, title, base_revision, root)` | Send a batch to the Mesh Studio that has the project open. The person reviews it (top bar **AI**) and accepts or rejects it. Invalid batches are refused at once, with the change and the reason. At most 20 proposals wait for the person at once; more are refused (`too_many_pending`) until some are decided (F10, [reviews/f10_proposal_memory.md](reviews/f10_proposal_memory.md)). |
 | `proposal_status(proposal_id, root)` | `pending`, `accepted` (with the ids it created), `rejected` or `conflict`. |
 | `withdraw_proposal(proposal_id, root)` | Take back a proposal that is still waiting. |
+| `request_status(request_id, root)` | What became of a request that answered `outcome_unknown`: `queued`, `started`, `finished` (with its `result`) or `cancelled` (#462 S3, below). |
 | `apply_changes(changes, root, dry_run)` | Change the project files (all or nothing), or preview with `dry_run`. **If Mesh Studio has the project open, the batch is proposed there instead:** files are never written behind the person's back. |
 
 **When it can't be told whether Studio has the project open (F1):** the project has a session record (`.mesh/live_session.json`) that can't be read or verified. For example, Studio didn't answer, timed out, or answered for another session or folder. In that case these tools write and create nothing, and they don't offer the files as current. They answer `reason: "studio_session_uncertain"`, with `problem` (why), `discovery` (the record's path) and what to do:
@@ -58,6 +59,13 @@ same for any MCP client.
 **When another editor (not Mesh Studio) has the project open:** the file-writing tools (`apply_changes`, `apply_ops`, `create_scene`) and `read_project` refuse with `reason: "other_editor_open"`. That editor's unsaved edits aren't in the files, and it takes no proposals. To go on, close it, or open the project in Mesh Studio.
 
 Only a project with no session record at all is changed directly. `apply_changes` checks again just before it writes. A proposal that fails is never written to the files instead.
+
+**When Studio is busy (#462 S3):** each request waits for Studio's main thread, up to about 5 s. Every change has a `request_id` in its answer. Two answers mean the deadline passed, and they mean different things:
+
+- **`reason: "timeout"`:** Studio hadn't started the change. It was cancelled: it never ran and never will, and nothing changed. It's safe to send again.
+- **`reason: "outcome_unknown"`:** Studio started the change but hadn't finished it, or its answer was lost. It may still change the project. Ask `request_status` with the `request_id` before sending it again. Studio remembers ended requests for 10 minutes (at most 200).
+
+A request sent again with the same `X-Mesh-Request-Id` is the same request, and never runs twice. The states and the rules for them are in `engine/editor/live_session_bridge.py`.
 
 **When writing the files fails (F3):** the files a batch changes are saved together: every one or none. If writing one fails (a full disk, a locked file), the ones already written are put back. `apply_changes`, `apply_ops` and `mesh author apply` then answer `reason: "save_failed"`, and the batch is not kept anywhere: apply it again. Its `save` report gives:
 

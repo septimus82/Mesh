@@ -919,6 +919,19 @@ def withdraw_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
     return authoring_session.withdraw(root, proposal_id)
 
 
+def request_status(request_id: str, root: str = ".") -> dict[str, Any]:
+    """What became of a change sent to Mesh Studio that answered ``reason: "outcome_unknown"`` (with a ``request_id``).
+
+    ``state``: ``"queued"`` (not started yet), ``"started"`` (running now), ``"finished"`` (``result`` is its answer,
+    e.g. a proposal's id) or ``"cancelled"`` (it never ran and never will; nothing changed). Ask this before sending
+    the change again, so it isn't done twice. A change Studio answered ``reason: "timeout"`` was cancelled, and is
+    safe to send again. Studio remembers ended requests for 10 minutes.
+    """
+    from engine import authoring_session
+
+    return authoring_session.request_status(root, request_id)
+
+
 def debug_runtime_snapshot(events: int = 20, root: str = ".") -> dict[str, Any]:
     """What the game running in Mesh Studio's play-test is doing now, read from the running game (not the files).
 

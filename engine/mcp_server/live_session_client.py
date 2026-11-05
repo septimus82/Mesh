@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 from pathlib import Path
 from typing import Any
 from urllib import error, parse, request
@@ -95,25 +96,41 @@ def _request_json(
     payload: dict[str, Any] | None = None,
     *,
     timeout: float = 2.0,
+    request_id: str = "",
 ) -> dict[str, Any]:
     host = str(info.get("host") or "")
     port = int(info.get("port") or 0)
     token = str(info.get("token") or "")
     url = f"http://{host}:{port}{path}"
     body = json.dumps(payload or {}).encode("utf-8") if method != "GET" else None
-    req = request.Request(
-        url,
-        data=body,
-        method=method,
-        headers={
-            "Accept": "application/json",
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        },
-    )
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "X-Mesh-Wait": f"{timeout * 0.75:.3f}",  # (the editor answers, even "cancelled", before this stops listening)
+    }
+    if request_id:
+        headers["X-Mesh-Request-Id"] = request_id
+    req = request.Request(url, data=body, method=method, headers=headers)
     with request.urlopen(req, timeout=timeout) as response:  # noqa: S310 - validated loopback host only.
         loaded = json.loads(response.read().decode("utf-8"))
     return loaded if isinstance(loaded, dict) else {}
+
+
+def new_request_id(method: str) -> str:
+    """An id for a POST (it may change something: #462 S3), "" for a GET (only reads)."""
+    return uuid.uuid4().hex if method == "POST" else ""
+
+
+def unknown_outcome(exc: BaseException, request_id: str) -> dict[str, Any] | None:
+    """The answer when a POST got no reply (``exc``): the editor may have run it, so it can't be called failed. None
+    when it surely didn't run: a GET, an error status from the editor, or a connection refused before sending."""
+    refused = isinstance(getattr(exc, "reason", None), ConnectionRefusedError) or isinstance(exc, ConnectionRefusedError)
+    if not request_id or refused or isinstance(exc, error.HTTPError):
+        return None
+    return _failure("outcome_unknown", (
+        f"The editor didn't answer ({exc}), so it isn't known whether it did this. Ask request_status with this "
+        "request_id what became of it before trying again."), request_id=request_id)
 
 
 def _verify_session(
@@ -195,40 +212,35 @@ def resolved_discovery_root(root: str | Path = ".") -> str:
     return str(_resolve_discovery_root(root))
 
 
+def _post(info: dict[str, Any], path: str, payload: dict[str, Any], *, timeout: float) -> dict[str, Any]:
+    request_id = new_request_id("POST")
+    try:
+        result = _request_json(info, "POST", path, payload, timeout=timeout, request_id=request_id)
+    except (OSError, TimeoutError, ValueError, error.URLError) as exc:
+        return unknown_outcome(exc, request_id) or _failure("forward_failed", str(exc))
+    result.setdefault("mode", "live_editor")
+    return result
+
+
 def live_stage_proposal(ops: list[dict[str, Any]], *, root: str = ".", timeout: float = 2.0) -> dict[str, Any]:
     info, failure = _load_verified_session(root, timeout=timeout)
     if failure is not None or info is None:
         return failure or _failure("no_live_session")
-    try:
-        result = _request_json(info, "POST", "/live/stage_proposal", {"ops": list(ops)}, timeout=timeout)
-    except (OSError, TimeoutError, ValueError, error.URLError) as exc:
-        return _failure("forward_failed", str(exc))
-    result.setdefault("mode", "live_editor")
-    return result
+    return _post(info, "/live/stage_proposal", {"ops": list(ops)}, timeout=timeout)
 
 
 def live_accept_proposal(proposal_id: str, *, root: str = ".", timeout: float = 2.0) -> dict[str, Any]:
     info, failure = _load_verified_session(root, timeout=timeout)
     if failure is not None or info is None:
         return failure or _failure("no_live_session")
-    try:
-        result = _request_json(info, "POST", "/live/accept_proposal", {"proposal_id": proposal_id}, timeout=timeout)
-    except (OSError, TimeoutError, ValueError, error.URLError) as exc:
-        return _failure("forward_failed", str(exc))
-    result.setdefault("mode", "live_editor")
-    return result
+    return _post(info, "/live/accept_proposal", {"proposal_id": proposal_id}, timeout=timeout)
 
 
 def live_reject_proposal(proposal_id: str, *, root: str = ".", timeout: float = 2.0) -> dict[str, Any]:
     info, failure = _load_verified_session(root, timeout=timeout)
     if failure is not None or info is None:
         return failure or _failure("no_live_session")
-    try:
-        result = _request_json(info, "POST", "/live/reject_proposal", {"proposal_id": proposal_id}, timeout=timeout)
-    except (OSError, TimeoutError, ValueError, error.URLError) as exc:
-        return _failure("forward_failed", str(exc))
-    result.setdefault("mode", "live_editor")
-    return result
+    return _post(info, "/live/reject_proposal", {"proposal_id": proposal_id}, timeout=timeout)
 
 
 def live_read_scene(*, compact: bool = False, root: str = ".", timeout: float = 2.0) -> dict[str, Any]:
