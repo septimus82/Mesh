@@ -32,6 +32,9 @@ Doc = dict[str, Any]
 UNDO_LIMIT = 100
 
 
+def _ids(room: Doc) -> set[str]:
+    return {str(e["id"]) for e in ops.entities(room) if e.get("id")}
+
 
 def _copy(doc: Any) -> Any:
     """A deep copy of a project document (JSON data): a pickle round trip, several times faster than deepcopy for a
@@ -98,6 +101,7 @@ class Project:
         self._views: dict[str, tuple[Doc, Doc | None, Doc]] = {}  # room -> (stored, player, expanded) cache
         self.player: Doc | None = self._read_player()  # the shared player's definition (None: rooms have their own)
         self.player_dirty = False
+        self.ids_seen: set[str] = set()  # every object id this session (#462 S1-ID): a new object never gets one
         self.scene(self.current)
 
     @classmethod
@@ -151,13 +155,16 @@ class Project:
             raw = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {"name": self.label(key), "entities": []}
             if path.is_file():
                 self._seen_on_disk[self.path(key)] = path.stat().st_mtime
-            self.scenes[key] = ops.ensure_entity_ids(raw, key)
+            with ops.retired_ids(()):  # (an older room's missing ids are filled in as always, whenever it is read)
+                self.scenes[key] = ops.ensure_entity_ids(raw, key)
+            self.ids_seen.update(_ids(self.scenes[key]))
         return self.scenes[key]
 
     def _store(self, key: str, doc: Doc, player_ids: list[str]) -> None:
         """Keep an edited room, the shared player split back out of it (its definition may have changed)."""
         stored, definition = ops.split_players(doc, player_ids, self.player)
         self.scenes[key] = stored
+        self.ids_seen.update(_ids(stored))  # (#462 S1-ID: what it made, never given to another object)
         self.dirty.add(key)
         if definition is not None and definition != self.player:
             self.player, self.player_dirty = definition, True
@@ -287,6 +294,8 @@ class Project:
         self.player_dirty = state.player_dirty
 
     def _record(self, before: _State) -> None:
+        for room in before.scenes.values():  # (#462 S1-ID: every state an edit leaves, whatever wrote it, even each
+            self.ids_seen.update(_ids(room))  # step of a batch: none of its ids is given to another object)
         if self._tx_depth:
             return  # the transaction records once, at its end
         self._undo.append(before)
@@ -300,7 +309,8 @@ class Project:
         before = self._snapshot()
         self._tx_depth += 1
         try:
-            yield
+            with ops.retired_ids(self.ids_seen):
+                yield
         except BaseException:
             self._tx_depth -= 1
             self._restore(before)
@@ -325,6 +335,7 @@ class Project:
         copy_.player, copy_.player_dirty, copy_._views = copy.deepcopy(self.player), self.player_dirty, {}
         copy_._undo, copy_._redo, copy_.revision, copy_.writes_files, copy_._tx_depth = [], [], self.revision, False, 0
         copy_._seen_on_disk = dict(self._seen_on_disk)  # (a room loaded first in the copy records when it was read)
+        copy_.ids_seen = set(self.ids_seen)  # (a dry run's new objects get the ids the real edit would, then)
         return copy_
 
     def load_documents(self, docs: Doc) -> None:
@@ -338,7 +349,8 @@ class Project:
         key = key or self.current
         before = self._snapshot()
         player_ids = ops.shared_player_ids(self._room(key))
-        updated = change(self.scene(key))
+        with ops.retired_ids(self.ids_seen):
+            updated = change(self.scene(key))
         self._record(before)
         self._store(key, updated, player_ids)
 
@@ -697,7 +709,9 @@ class Project:
         """Connect two rooms with a door in each (at ``at_a`` in room ``key_a``, ``at_b`` in ``key_b``), each with its arrival spot."""
         before = self._snapshot()
         ids_a, ids_b = ops.shared_player_ids(self._room(key_a)), ops.shared_player_ids(self._room(key_b))
-        a, b = ops.link_rooms(self.scene(key_a), key_a, self.label(key_a), at_a, self.scene(key_b), key_b, self.label(key_b), at_b)
+        with ops.retired_ids(self.ids_seen):  # (Studio's door tool: its doors' ids never given back either)
+            a, b = ops.link_rooms(self.scene(key_a), key_a, self.label(key_a), at_a, self.scene(key_b), key_b,
+                                  self.label(key_b), at_b)
         self._record(before)
         self._store(key_a, a, ids_a)
         self._store(key_b, b, ids_b)
