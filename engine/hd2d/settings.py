@@ -18,6 +18,7 @@ with an optional HD-2D ``elevation``; a light of ``"type": "ambient"`` tints the
 shape 2D ones. ``sky`` is the colour behind everything (an interior's darkness, say). ``water_reflections`` is how its
 puddles and ponds mirror what stands above them: ``"full"`` (a copy of the frame, 8 bytes a pixel), ``"half"`` (a
 half-size copy: a quarter of the memory, coarser mirror images) or ``"sky"`` (the sky's colour only, no copy).
+``depth_of_field`` is its lens blur (engine.hd2d.dof; no key: off).
 ``rivers`` are its streams (engine.hd2d.river: a list of ``{"id", "points": [[x, y, width, level], ...]}``, upstream
 to downstream).
 """
@@ -118,6 +119,8 @@ class Hd2dSettings:
     motion_error: str | None = None  # why its motion (or wind) was set aside (lenient)
     rivers: tuple[Any, ...] = ()  # its streams (engine.hd2d.river.River, #461)
     rivers_error: str | None = None  # why they were set aside (lenient)
+    depth_of_field: Any = None  # its depth of field (engine.hd2d.dof.DepthOfField, #460); None: off
+    dof_error: str | None = None  # why it was set aside (lenient: off, the reason kept)
 
 
 def asset_path(value: Any, where: str) -> str:
@@ -170,7 +173,7 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None, leni
     if not isinstance(raw, dict):
         raise Hd2dSettingsError(f"settings.hd2d must be an object (got {type(raw).__name__})")
     unknown = set(raw) - {"structures", "ground", "camera", "sun", "ambient", "shadows", "shadow_resolution", "sky",
-                        "water_reflections", "scatter", "motion", "rivers"}
+                        "water_reflections", "scatter", "motion", "rivers", "depth_of_field"}
     if unknown:
         raise Hd2dSettingsError(f"settings.hd2d has unknown keys: {', '.join(sorted(unknown))}")
     structures = []
@@ -297,12 +300,22 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None, leni
             if not lenient:
                 raise Hd2dSettingsError(str(exc)) from exc
             rivers_error = str(exc)  # (broken rivers: none drawn, the reason kept; the rest of the room stands)
+    from engine.hd2d.dof import OFF, DofError, parse_dof  # noqa: PLC0415
+
+    dof_error = None
+    try:
+        dof = parse_dof(raw.get("depth_of_field"))
+    except DofError as exc:
+        if not lenient:
+            raise Hd2dSettingsError(str(exc)) from exc
+        dof, dof_error = OFF, str(exc)  # (off, the reason kept; the rest of the room stands)
     return Hd2dSettings(tuple(structures), ground, camera, (float(sun[0]), float(sun[1]), float(sun[2])),
                         _number(raw, "ambient", "settings.hd2d", 0.55, 0.0, 1.0), sun_color,
                         _number(sun_block, "intensity", "settings.hd2d.sun", 1.0, 0.0, 10.0), shadows=shadows,
                         shadow_resolution=int(resolution), sky=sky, water_reflections=reflections,
                         terrain_error=terrain_error, scatter=scatter, scatter_error=scatter_error, motion=motion,
-                        motion_error=motion_error, rivers=rivers, rivers_error=rivers_error)
+                        motion_error=motion_error, rivers=rivers, rivers_error=rivers_error, depth_of_field=dof,
+                        dof_error=dof_error)
 
 
 def rgb(value: Any) -> Rgb | None:

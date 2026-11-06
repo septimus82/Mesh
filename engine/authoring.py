@@ -41,7 +41,8 @@ _PROJECT_OPS: dict[str, Callable[..., Any]] = {
 # Settings the API fills in itself, never the caller.
 _IMPLICIT = {"scene", "scene_key", "self"}
 # ``project_ops`` functions that look like edits but only read or prepare.
-_NOT_EDITS = {"ensure_entity_ids", "find_entity", "expand_players", "casts_shadow", "flicker_name"}
+_NOT_EDITS = {"ensure_entity_ids", "find_entity", "expand_players", "casts_shadow", "flicker_name",
+              "depth_of_field_of"}
 
 
 class ChangeError(ValueError):
@@ -406,6 +407,7 @@ def summarize(before: Doc, after: Doc) -> list[str]:
         lines += _terrain_lines(label, old, room)
         lines += _scatter_lines(label, old, room)
         lines += _motion_lines(label, old.get("settings") or {}, room.get("settings") or {})
+        lines += _dof_lines(label, old.get("settings") or {}, room.get("settings") or {})
     if world_b.get("start_scene") != world_a.get("start_scene") and world_b:
         lines.append(f"Start room: {world_b.get('start_scene')} -> {world_a.get('start_scene')}")
     return lines
@@ -552,6 +554,23 @@ def _motion_lines(label: str, before: Doc, after: Doc) -> list[str]:
             lines.append(f"{label}: decoration animation on" + (f" ({words})" if words else "")
                          + (f"; own settings for {', '.join(per)}" if per else ""))
     return lines
+
+
+def _dof_lines(label: str, before: Doc, after: Doc) -> list[str]:
+    """The room's depth of field changed (#460), in words."""
+    def dof(settings: Doc) -> Any:
+        hd2d = settings.get("hd2d")
+        return hd2d.get("depth_of_field") if isinstance(hd2d, dict) else None
+
+    if dof(before) == dof(after):
+        return []
+    now = dof(after)
+    if not isinstance(now, dict) or now.get("enabled") is False:
+        return [f"{label}: depth of field off"]
+    words = ", ".join(f"{k.replace('_', ' ')} {now[k]:g}" for k in ("focus_range", "near_falloff", "far_falloff",
+                                                                   "max_blur", "strength")
+                      if isinstance(now.get(k), (int, float)) and not isinstance(now.get(k), bool))
+    return [f"{label}: depth of field on" + (f" ({words})" if words else " (Subtle)")]
 
 
 def _wind_words(wind: Doc) -> str:

@@ -63,6 +63,7 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
     window.hd2d_scatter_error = None
     window.hd2d_motion_error = None
     window.hd2d_rivers_error = None
+    window.hd2d_dof_message = None  # (#460) why this room's depth of field isn't shown, if it is set but isn't
     raw = settings.get("hd2d") if isinstance(settings, dict) else None
     if raw is None:
         return
@@ -98,6 +99,12 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
             window.hd2d_motion_error = window.hd2d_motion_error or f"its wind is set aside (still air): {exc}"
             logger.error("[Mesh][HD-2D] this room's wind is set aside (still air): %s", exc)
         window.hd2d_renderer = Hd2dRenderer(window, hd2d, _contained(resolve_path))
+        if hd2d.dof_error:  # (a block that can't be read: off, the rest of the room stands)
+            window.hd2d_dof_message = f"its depth of field is set aside (off): {hd2d.dof_error}"
+            logger.error("[Mesh][HD-2D] this room's depth of field is set aside (off): %s", hd2d.dof_error)
+        elif window.hd2d_renderer.dof_status()[0] == "unavailable":  # (software rendering: bypassed, said, never
+            window.hd2d_dof_message = window.hd2d_renderer.dof_unavailable  # pretended)
+            logger.warning("[Mesh][HD-2D] %s", window.hd2d_dof_message)
         models = window.hd2d_renderer.models
         sculpted = hd2d.ground is not None and hd2d.ground.terrain is not None  # Milestone 20A
         if sculpted or hd2d.rivers or any(model.colliders for model in models.values()):  # (floors and walls
