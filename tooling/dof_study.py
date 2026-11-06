@@ -22,6 +22,7 @@ import os
 import statistics
 import sys
 import time
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -276,9 +277,18 @@ def _write_room_dof(project: Path, scene: str, dof: dict[str, Any] | None) -> No
     path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
 
 
-def run(project: Path, out: Path, *, which: str = "template", size: tuple[int, int] = (1280, 720), frames: int = 120,
-        baseline_only: bool = False, walk: int = 30, loops: int = 120, dof: Any = None,
-        allow_software: bool = False, resizes: tuple[tuple[int, int], ...] = ((960, 540), (1920, 1080))) -> dict[str, Any]:
+def run(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """The study (see `_run`). The game's interact prompt (engine/ui_overlays/hud.py, not this study's code) draws
+    with arcade's slow draw_text, which warns every frame the player stands by an NPC, and pytest's -W error would end
+    the run on it: only that one message is set aside, only while the study runs."""
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="draw_text is an extremely slow function")
+        return _run(*args, **kwargs)
+
+
+def _run(project: Path, out: Path, *, which: str = "template", size: tuple[int, int] = (1280, 720), frames: int = 120,
+         baseline_only: bool = False, walk: int = 30, loops: int = 120, dof: Any = None,
+         allow_software: bool = False, resizes: tuple[tuple[int, int], ...] = ((960, 540), (1920, 1080))) -> dict[str, Any]:
     """The whole study (see the module). ``dof``: the depth of field measured (Subtle when None)."""
     import numpy as np  # noqa: PLC0415
     from PIL import Image  # noqa: PLC0415

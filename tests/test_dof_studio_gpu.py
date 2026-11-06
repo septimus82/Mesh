@@ -43,7 +43,11 @@ def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
 def test_it_is_off_until_turned_on_and_then_subtle(run: dict) -> None:
     assert run["before"]["enabled"] is False and run["before"]["error"] is None
     on = run["turned_on"]
-    assert on["stored"] == {"enabled": True} and on["renderer_active"] and on["message"] == "Depth of field on."
+    assert on["stored"] == {"enabled": True} and on["renderer_active"]
+    if run["software_renderer"]:  # (CI's Mesa: turning it on says why it isn't shown here)
+        assert on["message"].startswith("Depth of field is off on this computer: it is drawing with software"), on
+    else:
+        assert on["message"] == "Depth of field on.", on
     assert run["max_blur_set_undo_redo"] == [3.0, 2.5, 3.0]
 
 
