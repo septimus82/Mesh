@@ -18,18 +18,21 @@ import json
 import os
 import pickle
 import posixpath
+import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable, Iterator
+from typing import Any, Callable, Iterable, Iterator
 
 from engine import project_ops as ops
-from engine.json_io import read_json, write_json_atomic, write_json_new
+from engine.json_io import json_bytes, publish_new, read_json, write_bytes_new, write_json_atomic, write_json_new
+from engine.log_utils import get_logger
 from engine.project_save import SaveError, refused, save_documents
 from engine.project_scaffold import ensure_starter_files
 
 Doc = dict[str, Any]
 UNDO_LIMIT = 100
+_LOG = get_logger(__name__)
 
 
 def _ids(room: Doc) -> set[str]:
@@ -48,6 +51,36 @@ def _copy(doc: Any) -> Any:
 def _norm(rel: str) -> str:
     """A project-relative path compared as the file system does (Windows: case-insensitive, either slash)."""
     return posixpath.normpath(str(rel).replace("\\", "/")).casefold()
+
+
+def _remove_if_unchanged(root: Path, rel: str, data: bytes) -> str | None:
+    """Remove the project's file ``rel`` if it is still the plain file Mesh wrote, ``data`` (#462 S4); else leave it
+    and say why. It is moved aside first and checked there, so whatever another tool puts at ``rel`` meanwhile is never
+    what is removed: anything that isn't Mesh's file is put back, or left beside ``rel`` if something new is there by
+    then. A file reached through a link to outside its folder is never touched."""
+    target = root / rel
+    try:
+        if not os.path.lexists(target):
+            return None  # (gone already)
+        if target.parent.resolve() != (root.resolve() / rel).parent:
+            return "it is reached through a link, so Mesh leaves it alone"
+        if target.is_symlink() or not target.is_file():
+            return "it is a link or a folder now, not the file Mesh made"
+        aside = target.with_name(f".{target.name}.mesh-release-{uuid.uuid4().hex}")
+        os.rename(target, aside)
+    except OSError as exc:
+        return f"it couldn't be removed ({exc})"
+    try:
+        if not aside.is_symlink() and aside.is_file() and aside.read_bytes() == data:
+            aside.unlink()
+            return None
+    except OSError:
+        pass  # (unreadable: not known to be Mesh's, so put back)
+    try:
+        publish_new(aside, target)
+    except OSError:
+        return f"it was changed after Mesh made it, and something new is at {rel} now: it is kept as {aside.name}"
+    return "it was changed after Mesh made it"
 
 
 def _older_sheet(target: Path, source: Path) -> bool:
@@ -103,6 +136,16 @@ class Project:
         self.player_dirty = False
         self.ids_seen: set[str] = set()  # every object id this session (#462 S1-ID): a new object never gets one
         self._as_read: dict[str, Doc] = {}  # each room as first read (#462 S2): what every state before that holds
+        # #462 S4: every room key this session (a new room never gets one: a stale proposal or redo may name it), the
+        # map files it made (_norm -> (path, bytes as made): the only files it ever removes, and only unchanged) and
+        # those of them a save has used (part of the person's saved project then: never removed). Map files Mesh made
+        # but left alone: kept_files.
+        self.keys_seen: set[str] = set(self.world.get("scenes") or {})
+        self._made: dict[str, tuple[str, bytes]] = {}
+        self._saved_maps: set[str] = set()
+        self._disk_uncertain = False  # a save needed recovery: what the files on disk use isn't known, so this
+        # session removes nothing from then on (a later save writes only what changed since, not the whole world)
+        self.kept_files: list[Doc] = []
         self.scene(self.current)
 
     @classmethod
@@ -298,20 +341,27 @@ class Project:
         self.player = _copy(state.player)
         self.player_dirty = state.player_dirty
 
-    def _record(self, before: _State) -> None:
+    def _record(self, before: _State, uses: str | None = None) -> None:
+        """``before`` is an undo step now (outside a transaction). ``uses``: a map file the edit being made uses (its
+        room isn't stored yet), never released here as unused (#462 S4)."""
         for room in before.scenes.values():  # (#462 S1-ID: every state an edit leaves, whatever wrote it, even each
             self.ids_seen.update(_ids(room))  # step of a batch: none of its ids is given to another object)
         if self._tx_depth:
             return  # the transaction records once, at its end
         self._undo.append(before)
+        self.keys_seen.update(before.world.get("scenes") or {})
+        dropped = [*self._redo, *self._undo[:-UNDO_LIMIT]]
         del self._undo[:-UNDO_LIMIT]
         self._redo.clear()
         self.revision += 1
+        if dropped and self._made:  # (#462 S4: a room only they had can't come back: the map file made for it goes)
+            self._release(set().union(*(self._maps(s.world, s.scenes) for s in dropped)) - {_norm(uses or "")})
 
     @contextmanager
     def transaction(self) -> Iterator[None]:
         """Group several edits into one undo step; any exception puts everything back."""
         before = self._snapshot()
+        made = set(self._made)
         self._tx_depth += 1
         try:
             with ops.retired_ids(self.ids_seen):
@@ -319,6 +369,7 @@ class Project:
         except BaseException:
             self._tx_depth -= 1
             self._restore(before)
+            self._release(set(self._made) - made)  # (#462 S4: no map file it made is left behind)
             raise
         self._tx_depth -= 1
         if not self._tx_depth and (self.scenes != before.scenes or self.world != before.world
@@ -342,6 +393,8 @@ class Project:
         copy_._seen_on_disk = dict(self._seen_on_disk)  # (a room loaded first in the copy records when it was read)
         copy_.ids_seen = set(self.ids_seen)  # (a dry run's new objects get the ids the real edit would, then)
         copy_._as_read = dict(self._as_read)
+        copy_.keys_seen = set(self.keys_seen)  # (a dry run's new room gets the key the real edit would)
+        copy_._made, copy_._saved_maps, copy_.kept_files, copy_._disk_uncertain = {}, set(), [], False
         return copy_
 
     def load_documents(self, docs: Doc) -> None:
@@ -363,12 +416,13 @@ class Project:
     def add_room(self, label: str) -> str:
         """A new room with its own player and a ready-to-paint map: wood floor, stone-wall border."""
         before = self._snapshot()
-        world, scene, key, path = ops.new_room(self.world, label, self.scenes_dir(), self.player_template())
+        world, scene, key, path = ops.new_room(self.world, label, self.scenes_dir(), self.player_template(),
+                                               self.keys_seen)
         scene, map_path, skeleton = ops.add_map(scene, path, width=20, height=15, ground=ops.STARTER_FLOOR,
                                                 border=ops.STARTER_WALL, tilesets=self.project_tilesets())
         self._claim_room_files(label, path, map_path)
         self._write_map_file(map_path, skeleton, new_room=label)
-        self._record(before)
+        self._record(before, uses=map_path)
         self.world, self.world_dirty = world, True
         self.scenes[key] = scene
         self.dirty.add(key)
@@ -380,14 +434,15 @@ class Project:
         starter kit (a 2D project's first HD-2D room) gets it first, as the HD-2D template installs it: that is
         written straight away (like importing a model), the room itself is one undo step. Returns ``(key, whether
         the kit was installed now)``."""
-        world, scene, key, path = ops.new_room(self.world, label, self.scenes_dir(), self.player_template())
+        world, scene, key, path = ops.new_room(self.world, label, self.scenes_dir(), self.player_template(),
+                                               self.keys_seen)
         scene, map_path, skeleton = ops.make_hd2d_room(scene, path, width_m, depth_m, outdoor=outdoor,
                                                        tilesets=self.project_tilesets())
         self._claim_room_files(label, path, map_path)  # (before the kit: a refused room installs nothing)
         installed = self.ensure_hd2d_kit()
         before = self._snapshot()
         self._write_map_file(map_path, skeleton, new_room=label)
-        self._record(before)
+        self._record(before, uses=map_path)
         self.world, self.world_dirty = world, True
         self.scenes[key] = scene
         self.dirty.add(key)
@@ -451,27 +506,135 @@ class Project:
         scene, map_path, skeleton = ops.add_map(self.scene(key), self.path(key), width=width, height=height,
                                                 tilesets=self.project_tilesets())
         self._write_map_file(map_path, skeleton)
-        self._record(before)
+        self._record(before, uses=map_path)  # (it may be the file only a redo step used: this room's again now)
         self._store(key, scene, player_ids)
 
     def _write_map_file(self, map_path: str, skeleton: Doc, *, new_room: str | None = None) -> None:
         # The map file holds only the size, tileset and empty layers (the painted tiles live
         # in the room document), so it is written straight away: the Studio and play-tests
-        # load it from disk even before the room is saved.
+        # load it from disk even before the room is saved. #462 S4: Mesh remembers it as made, so
+        # undo, a failed batch or closing can take it away again (_release) and redo put it back.
         if not self.writes_files:
             return
         ensure_starter_files(self.root)
         target = self.root / map_path
-        if new_room is None and target.is_file():
-            return  # (a room's own map, made before: kept as it is)
+        if new_room is None and os.path.lexists(target):
+            if self._unchanged(map_path) or self._holds(map_path, json_bytes(skeleton)):
+                return  # (this room's map as Mesh made it, or just what it would write: kept as it is)
+            what = "a link" if target.is_symlink() else "a folder" if target.is_dir() else "a file"
+            raise ops.OpError(f"There is already {what} at {map_path}, where this room's map would go, and it isn't a "
+                              "map Mesh made for it, so the map wasn't made: Mesh never takes over a file it didn't "
+                              f"make. Move {map_path} out of the way, then try again.")
         try:  # F15: published only where nothing is, so never over anything that appeared since the room's paths were checked
-            write_json_new(target, skeleton)
+            self._made[_norm(map_path)] = (map_path, write_json_new(target, skeleton))
         except FileExistsError as exc:
             what = "a link" if target.is_symlink() else "a folder" if target.is_dir() else "a file"
             room = f"the room '{new_room}' wasn't added" if new_room is not None else "the map wasn't made"
             raise ops.OpError(f"There is now {what} at {map_path} (it appeared while the map was being made), so it "
                               f"was left as it is and {room}: Mesh never takes over a file it didn't make. Move "
                               f"{map_path} out of the way, then try again.") from exc
+
+    # --- files this session made (#462 S4) --------------------------------------------------------
+    def _holds(self, rel: str, data: bytes) -> bool:
+        """Whether the project's ``rel`` is a plain file (not a link) holding exactly ``data``."""
+        target = self.root / rel
+        try:
+            return not target.is_symlink() and target.is_file() and target.read_bytes() == data
+        except OSError:
+            return False
+
+    def _unchanged(self, rel: str) -> bool:
+        """Whether ``rel`` is a map file this session made, still exactly as made."""
+        made = self._made.get(_norm(rel))
+        return made is not None and self._holds(made[0], made[1])
+
+    def _maps(self, world: Doc, scenes: dict[str, Doc], disk: dict[str, Doc | None] | None = None) -> set[str]:
+        """The map files (``_norm``) the rooms of ``world`` use: as in ``scenes``, else as first read; given ``disk``
+        (a cache), a room never read here as its file on disk says."""
+        found = set()
+        for key, entry in (world.get("scenes") or {}).items():
+            if not isinstance(entry, dict) or not entry.get("path"):
+                continue
+            room = scenes.get(key) or self._as_read.get(key)
+            if room is None and disk is not None:
+                if key not in disk:
+                    disk[key] = self._read_json(str(entry["path"]))
+                room = disk[key]
+            tilemap = room.get("tilemap") if isinstance(room, dict) else None
+            if isinstance(tilemap, dict) and tilemap.get("path"):
+                scene_dir = posixpath.dirname(str(entry["path"]).replace("\\", "/"))
+                found.add(_norm(posixpath.join(scene_dir, str(tilemap["path"]).replace("\\", "/"))))
+        return found
+
+    def _release(self, candidates: Iterable[str], *, history: bool = True) -> None:
+        """Remove the map files among ``candidates`` (``_norm``) this session made that nothing uses any more: never
+        saved with a room, nor used, with ``history``, by a room of the project now or of an undo or redo step.
+        Each only if it is still exactly as made (``_remove_if_unchanged``, checked as it is removed); one changed or
+        replaced since is kept, and said so in ``kept_files``. Never raises: a file left is only said so."""
+        left = {c for c in candidates if c in self._made} - self._saved_maps
+        if not left or not self.writes_files or self._disk_uncertain:
+            return  # (after a save that needed recovery the files on disk may use any of them)
+        if history:
+            states = [(self.world, self.scenes), *((s.world, s.scenes) for s in (*self._undo, *self._redo))]
+            for world, scenes in states:  # (rooms as held here first: most candidates are used by the room now)
+                left -= self._maps(world, scenes)
+                if not left:
+                    return
+            disk = dict[str, Doc | None]()  # (then a room never read here, as its file on disk says: read once)
+            for world, scenes in states:
+                left -= self._maps(world, scenes, disk)
+        for norm in sorted(left):
+            rel, data = self._made.pop(norm)
+            self._kept(rel, _remove_if_unchanged(self.root, rel, data))
+
+    def _kept(self, rel: str, reason: str | None) -> None:
+        if reason is not None:
+            self.kept_files.append({"path": rel, "reason": reason})
+            _LOG.warning("Mesh made %s and no longer needs it, but left it in place: %s", rel, reason)
+
+    def _ready_maps(self, state: _State) -> None:
+        """Before undo or redo makes ``state`` the project: each map file this session made that a room of it uses and
+        that has gone from disk is written again, as made (#462 S4: an undone room comes back whole, or not at all).
+        If one can't be, the ones written now are removed again and OpError says so: the project and its history are as
+        they were. One changed or replaced since is left as it is, the room using it as it is now (no longer counted as
+        Mesh's: ``kept_files``)."""
+        if not self._made or not self.writes_files:
+            return
+        written: list[tuple[str, bytes]] = []
+        for norm in sorted(self._maps(state.world, state.scenes) & set(self._made)):
+            rel, data = self._made[norm]
+            try:
+                if os.path.lexists(self.root / rel):
+                    raise FileExistsError(rel)
+                write_bytes_new(self.root / rel, data)
+            except FileExistsError as exc:
+                if not os.path.lexists(self.root / rel):  # (not the map: a file where its folder should be)
+                    self._undo_ready(written)
+                    raise self._cant_ready(rel, exc) from exc
+                if not self._holds(rel, data):
+                    del self._made[norm]
+                    self._kept(rel, "it was changed after Mesh made it, so the room uses it as it is now")
+                continue
+            except OSError as exc:
+                self._undo_ready(written)
+                raise self._cant_ready(rel, exc) from exc
+            written.append((rel, data))
+
+    def _undo_ready(self, written: list[tuple[str, bytes]]) -> None:
+        for rel, data in written:  # (the maps ``_ready_maps`` wrote for an undo or redo that isn't happening)
+            self._kept(rel, _remove_if_unchanged(self.root, rel, data))
+
+    @staticmethod
+    def _cant_ready(rel: str, exc: OSError) -> ops.OpError:
+        return ops.OpError(f"{rel} has gone from disk and Mesh couldn't write it again ({exc}), so nothing was undone "
+                           "or redone: a room needs that map file. Make sure its folder can be written to, then try "
+                           "again.")
+
+    def discard_unsaved_files(self) -> None:
+        """The project is closed (or its edits dropped) without saving them: the map files this session made that no
+        save has used are removed, if unchanged (#462 S4). Undo and redo end with the session. (Nothing after a save
+        that needs recovery: ``_release``.)"""
+        self._release(set(self._made) - self._saved_maps, history=False)
 
     # --- tilesets -------------------------------------------------------------------------
     def map_path(self, key: str | None = None) -> str | None:
@@ -756,7 +919,9 @@ class Project:
     def undo(self) -> bool:
         if not self._undo:
             return False
+        self._ready_maps(self._undo[-1])  # (#462 S4: OpError, and nothing changed, if a room's map can't be)
         self._redo.append(self._snapshot())
+        self.keys_seen.update(self.world.get("scenes") or {})
         self._restore(self._undo.pop())
         self.revision += 1
         return True
@@ -764,7 +929,9 @@ class Project:
     def redo(self) -> bool:
         if not self._redo:
             return False
+        self._ready_maps(self._redo[-1])  # (#462 S4: OpError, and nothing changed, if a room's map can't be)
         self._undo.append(self._snapshot())
+        self.keys_seen.update(self.world.get("scenes") or {})
         self._restore(self._redo.pop())
         self.revision += 1
         return True
@@ -819,9 +986,17 @@ class Project:
         self.dirty.clear()
         self.world_dirty = False
         self.player_dirty = False
+        for rel, _doc in maps:  # (#462 S4: an HD-2D map Mesh made, saved at the room's size, is still Mesh's)
+            if _norm(rel) in self._made:
+                try:
+                    self._made[_norm(rel)] = (rel, (self.root / rel).read_bytes())
+                except OSError:
+                    del self._made[_norm(rel)]
+        self._saved_maps |= self._maps(self.world, self.scenes) & set(self._made)  # (saved: the person's now, kept)
         return [doc["path"] for doc in outcome["documents"]]
 
     def _refused(self, err: SaveError) -> SaveError:
         """A failed save, recorded: the edits stay as they are, unsaved (dirty, undo and revision untouched)."""
         self.last_save_report, self.last_save_backups = err.report, list(err.report["outside_change_backups"])
+        self._disk_uncertain = self._disk_uncertain or bool(err.report.get("recovery_required"))  # (#462 S4)
         return err

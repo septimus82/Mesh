@@ -217,6 +217,7 @@ def apply(root: str | Path, changes: list[Doc], *, dry_run: bool = False, title:
     except authoring.ChangeError as err:
         return _fail("invalid_change", str(err), index=err.index, op=err.op)
     except SaveError as err:
+        project.discard_unsaved_files()  # (#462 S4: nothing saved, so a new room's map file goes, unless it needs recovery)
         again = ("Apply the changes again once the files are put back." if err.report["recovery_required"]
                  else "Apply them again once the problem is fixed.")
         return _fail("save_failed", f"The changes were checked but not saved: {err} {again}",
