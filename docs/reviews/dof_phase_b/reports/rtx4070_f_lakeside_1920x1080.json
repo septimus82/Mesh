@@ -1,0 +1,567 @@
+{
+ "size": [
+  1920,
+  1080
+ ],
+ "set": "lakeside",
+ "views": {
+  "lakeside_start": {
+   "scene": "packs/core_regions/scenes/lakeside.json",
+   "camera": {
+    "pitch": 30.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false
+   },
+   "status": [
+    "on",
+    null
+   ],
+   "focus": {
+    "focus": 49.0109,
+    "band": 2.5,
+    "radius": 3.75,
+    "taps": 24.0
+   },
+   "depth_span_m": [
+    46.38,
+    67.5
+   ],
+   "player": {
+    "pixels": 6194,
+    "depth_m": [
+     48.721,
+     49.066,
+     49.421
+    ],
+    "changed_share": 0.0,
+    "max_delta": 0
+   },
+   "sharp_band": {
+    "pixels": 657700,
+    "changed_share": 0.0
+   },
+   "blurred_share": 0.5996,
+   "same_row": {
+    "rows": 0,
+    "examples": []
+   },
+   "timing": {
+    "frames": 120,
+    "draw_gpu_ms_off": {
+     "median": 2.1658,
+     "p95": 2.686
+    },
+    "draw_gpu_ms_on": {
+     "median": 2.8652,
+     "p95": 3.3382
+    },
+    "incremental_gpu_ms": {
+     "median": 0.6636,
+     "p95": 2.0644,
+     "max": 3.1785
+    },
+    "frame_wall_ms": {
+     "off": 10.878,
+     "on": 11.695,
+     "paired_difference_median": 0.0634
+    },
+    "pass_alone_gpu_ms": {
+     "median": 0.6431,
+     "p95": 0.7434
+    }
+   }
+  },
+  "lakeside_shop": {
+   "scene": "packs/core_regions/scenes/lakeside.json",
+   "camera": {
+    "pitch": 30.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false
+   },
+   "status": [
+    "on",
+    null
+   ],
+   "focus": {
+    "focus": 53.485,
+    "band": 2.5,
+    "radius": 3.75,
+    "taps": 24.0
+   },
+   "depth_span_m": [
+    45.63,
+    71.11
+   ],
+   "player": {
+    "pixels": 5376,
+    "depth_m": [
+     53.115,
+     53.501,
+     53.827
+    ],
+    "changed_share": 0.0,
+    "max_delta": 0
+   },
+   "sharp_band": {
+    "pixels": 686463,
+    "changed_share": 0.0039
+   },
+   "blurred_share": 0.5314,
+   "same_row": {
+    "rows": 22,
+    "examples": [
+     {
+      "row": 246,
+      "sharp_col": 1346,
+      "far_col": 626,
+      "far_coc_px": 1.71,
+      "sharp_kept": 1.0,
+      "far_kept": 0.295
+     },
+     {
+      "row": 162,
+      "sharp_col": 1122,
+      "far_col": 18,
+      "far_coc_px": 2.39,
+      "sharp_kept": 1.0,
+      "far_kept": 0.382
+     },
+     {
+      "row": 240,
+      "sharp_col": 1326,
+      "far_col": 118,
+      "far_coc_px": 1.79,
+      "sharp_kept": 1.0,
+      "far_kept": 0.4
+     },
+     {
+      "row": 174,
+      "sharp_col": 810,
+      "far_col": 750,
+      "far_coc_px": 2.29,
+      "sharp_kept": 1.0,
+      "far_kept": 0.401
+     }
+    ]
+   },
+   "timing": {
+    "frames": 120,
+    "draw_gpu_ms_off": {
+     "median": 2.2118,
+     "p95": 2.6173
+    },
+    "draw_gpu_ms_on": {
+     "median": 2.6153,
+     "p95": 3.1908
+    },
+    "incremental_gpu_ms": {
+     "median": 0.6093,
+     "p95": 1.9835,
+     "max": 2.1883
+    },
+    "frame_wall_ms": {
+     "off": 11.167,
+     "on": 11.41,
+     "paired_difference_median": -0.2039
+    },
+    "pass_alone_gpu_ms": {
+     "median": 0.6431,
+     "p95": 0.6707
+    }
+   }
+  },
+  "lakeside_bridge": {
+   "scene": "packs/core_regions/scenes/lakeside.json",
+   "camera": {
+    "pitch": 30.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false
+   },
+   "status": [
+    "on",
+    null
+   ],
+   "focus": {
+    "focus": 53.4851,
+    "band": 2.5,
+    "radius": 3.75,
+    "taps": 24.0
+   },
+   "depth_span_m": [
+    42.67,
+    67.23
+   ],
+   "player": {
+    "pixels": 2771,
+    "depth_m": [
+     53.18,
+     53.37,
+     53.853
+    ],
+    "changed_share": 0.0447,
+    "max_delta": 46
+   },
+   "sharp_band": {
+    "pixels": 512848,
+    "changed_share": 0.0088
+   },
+   "blurred_share": 0.6253,
+   "same_row": {
+    "rows": 19,
+    "examples": [
+     {
+      "row": 288,
+      "sharp_col": 466,
+      "far_col": 1834,
+      "far_coc_px": 1.96,
+      "sharp_kept": 1.0,
+      "far_kept": 0.278
+     },
+     {
+      "row": 180,
+      "sharp_col": 490,
+      "far_col": 1246,
+      "far_coc_px": 2.25,
+      "sharp_kept": 1.0,
+      "far_kept": 0.282
+     },
+     {
+      "row": 222,
+      "sharp_col": 202,
+      "far_col": 1642,
+      "far_coc_px": 2.37,
+      "sharp_kept": 1.0,
+      "far_kept": 0.285
+     },
+     {
+      "row": 186,
+      "sharp_col": 490,
+      "far_col": 1250,
+      "far_coc_px": 2.19,
+      "sharp_kept": 1.0,
+      "far_kept": 0.298
+     }
+    ]
+   },
+   "timing": {
+    "frames": 120,
+    "draw_gpu_ms_off": {
+     "median": 2.2323,
+     "p95": 2.6788
+    },
+    "draw_gpu_ms_on": {
+     "median": 2.7658,
+     "p95": 3.3382
+    },
+    "incremental_gpu_ms": {
+     "median": 0.6472,
+     "p95": 2.1412,
+     "max": 2.7259
+    },
+    "frame_wall_ms": {
+     "off": 11.484,
+     "on": 12.052,
+     "paired_difference_median": 0.0895
+    },
+    "pass_alone_gpu_ms": {
+     "median": 0.6523,
+     "p95": 0.6881
+    }
+   }
+  },
+  "cottage_interior": {
+   "scene": "packs/core_regions/scenes/cottage.json",
+   "camera": {
+    "pitch": 55.0,
+    "fov": 12.0,
+    "distance": 35.679,
+    "ortho": false
+   },
+   "status": [
+    "on",
+    null
+   ],
+   "focus": {
+    "focus": 35.7913,
+    "band": 2.5,
+    "radius": 3.75,
+    "taps": 24.0
+   },
+   "depth_span_m": [
+    32.65,
+    38.17
+   ],
+   "player": {
+    "pixels": 12399,
+    "depth_m": [
+     35.075,
+     35.911,
+     36.818
+    ],
+    "changed_share": 0.0,
+    "max_delta": 0
+   },
+   "sharp_band": {
+    "pixels": 653578,
+    "changed_share": 0.0005
+   },
+   "blurred_share": 0.6768,
+   "same_row": {
+    "rows": 0,
+    "examples": []
+   },
+   "timing": {
+    "frames": 120,
+    "draw_gpu_ms_off": {
+     "median": 0.3174,
+     "p95": 0.3277
+    },
+    "draw_gpu_ms_on": {
+     "median": 0.9574,
+     "p95": 0.9871
+    },
+    "incremental_gpu_ms": {
+     "median": 0.64,
+     "p95": 0.6615,
+     "max": 0.7219
+    },
+    "frame_wall_ms": {
+     "off": 4.037,
+     "on": 4.741,
+     "paired_difference_median": 0.5435
+    },
+    "pass_alone_gpu_ms": {
+     "median": 0.6769,
+     "p95": 0.6994
+    }
+   }
+  }
+ },
+ "gl": {
+  "vendor": "NVIDIA Corporation",
+  "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+  "version": [
+   4,
+   6
+  ]
+ },
+ "measured": {
+  "enabled": true,
+  "focus_range": 2.5,
+  "near_falloff": 10.0,
+  "far_falloff": 10.0,
+  "max_blur": 2.5,
+  "strength": 1.0
+ },
+ "software_renderer": null,
+ "checks": {
+  "zero_strength_drawn": false,
+  "zero_strength_identical_to_off": true,
+  "disabled_identical_to_off": true,
+  "software_bypass": {
+   "status": [
+    "unavailable",
+    "depth of field is off on this computer (simulated software rendering)"
+   ],
+   "identical_to_off": true,
+   "drawn": false,
+   "real": false,
+   "room_message": null
+  },
+  "hud": {
+   "glyph_pixels": 457,
+   "glyph_pixels_changed": 36,
+   "glyph_max_delta": 2
+  },
+  "walking": {
+   "away": {
+    "player_changed_share_max": 0.0,
+    "focus_m_first_last": [
+     49.079,
+     51.041
+    ],
+    "frame_to_frame_change": {
+     "off": 0.881,
+     "on": 0.835
+    },
+    "on_over_off": 0.948
+   },
+   "toward": {
+    "player_changed_share_max": 0.0,
+    "focus_m_first_last": [
+     50.973,
+     49.011
+    ],
+    "frame_to_frame_change": {
+     "off": 0.889,
+     "on": 0.841
+    },
+    "on_over_off": 0.945
+   }
+  },
+  "still_frames_identical": true,
+  "gl_objects": {
+   "off_before": {
+    "texture": 51,
+    "framebuffer": 7,
+    "program": 34,
+    "buffer": 380,
+    "geometry": 211
+   },
+   "off_after": {
+    "texture": 51,
+    "framebuffer": 7,
+    "program": 34,
+    "buffer": 380,
+    "geometry": 211
+   },
+   "on_before": {
+    "texture": 51,
+    "framebuffer": 7,
+    "program": 34,
+    "buffer": 380,
+    "geometry": 211
+   },
+   "on_after": {
+    "texture": 51,
+    "framebuffer": 7,
+    "program": 34,
+    "buffer": 380,
+    "geometry": 211
+   }
+  },
+  "room_changes": [
+   {
+    "scene": "packs/core_regions/scenes/lakeside.json",
+    "status": [
+     "on",
+     null
+    ],
+    "load_message": null,
+    "drawn": true,
+    "objects": {
+     "texture": 43,
+     "framebuffer": 7,
+     "program": 34,
+     "buffer": 380,
+     "geometry": 212
+    }
+   },
+   {
+    "scene": "packs/core_regions/scenes/cottage.json",
+    "status": [
+     "off",
+     null
+    ],
+    "load_message": null,
+    "drawn": false,
+    "objects": {
+     "texture": 18,
+     "framebuffer": 6,
+     "program": 27,
+     "buffer": 77,
+     "geometry": 29
+    }
+   },
+   {
+    "scene": "packs/core_regions/scenes/lakeside.json",
+    "status": [
+     "on",
+     null
+    ],
+    "load_message": null,
+    "drawn": true,
+    "objects": {
+     "texture": 43,
+     "framebuffer": 7,
+     "program": 34,
+     "buffer": 380,
+     "geometry": 210
+    }
+   },
+   {
+    "scene": "packs/core_regions/scenes/cottage.json",
+    "status": [
+     "off",
+     null
+    ],
+    "load_message": null,
+    "drawn": false,
+    "objects": {
+     "texture": 18,
+     "framebuffer": 6,
+     "program": 27,
+     "buffer": 77,
+     "geometry": 27
+    }
+   },
+   {
+    "scene": "packs/core_regions/scenes/lakeside.json",
+    "status": [
+     "on",
+     null
+    ],
+    "load_message": null,
+    "drawn": true,
+    "objects": {
+     "texture": 43,
+     "framebuffer": 7,
+     "program": 34,
+     "buffer": 380,
+     "geometry": 210
+    }
+   }
+  ],
+  "resizes": {
+   "960x540": {
+    "frame": [
+     960,
+     540
+    ],
+    "fbo": [
+     960,
+     540
+    ],
+    "radius_px": 1.875,
+    "taps": 14,
+    "objects": {
+     "texture": 43,
+     "framebuffer": 7,
+     "program": 34,
+     "buffer": 380,
+     "geometry": 209
+    }
+   },
+   "1920x1080": {
+    "frame": [
+     1920,
+     1080
+    ],
+    "fbo": [
+     1920,
+     1080
+    ],
+    "radius_px": 3.75,
+    "taps": 24,
+    "objects": {
+     "texture": 43,
+     "framebuffer": 7,
+     "program": 34,
+     "buffer": 380,
+     "geometry": 209
+    }
+   }
+  },
+  "ortho_drawn": {
+   "status": [
+    "on",
+    null
+   ],
+   "drawn": true,
+   "non_black": true
+  }
+ }
+}

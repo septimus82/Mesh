@@ -1,0 +1,595 @@
+{
+ "size": [
+  1280,
+  720
+ ],
+ "set": "template",
+ "views": {
+  "village_start": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "camera": {
+    "pitch": 30.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false
+   },
+   "status": [
+    "on",
+    null
+   ],
+   "focus": {
+    "focus": 50.7971,
+    "band": 2.5,
+    "radius": 2.5,
+    "taps": 24.0
+   },
+   "depth_span_m": [
+    46.64,
+    67.36
+   ],
+   "player": {
+    "pixels": 2620,
+    "depth_m": [
+     50.509,
+     50.845,
+     51.196
+    ],
+    "changed_share": 0.0,
+    "max_delta": 0
+   },
+   "sharp_band": {
+    "pixels": 275510,
+    "changed_share": 0.0
+   },
+   "blurred_share": 0.3841,
+   "same_row": {
+    "rows": 4,
+    "examples": [
+     {
+      "row": 240,
+      "sharp_col": 470,
+      "far_col": 198,
+      "far_coc_px": 1.22,
+      "sharp_kept": 1.0,
+      "far_kept": 0.271
+     },
+     {
+      "row": 252,
+      "sharp_col": 486,
+      "far_col": 198,
+      "far_coc_px": 1.22,
+      "sharp_kept": 1.0,
+      "far_kept": 0.303
+     },
+     {
+      "row": 246,
+      "sharp_col": 486,
+      "far_col": 198,
+      "far_coc_px": 1.22,
+      "sharp_kept": 1.0,
+      "far_kept": 0.306
+     },
+     {
+      "row": 258,
+      "sharp_col": 470,
+      "far_col": 554,
+      "far_coc_px": 1.2,
+      "sharp_kept": 1.0,
+      "far_kept": 0.423
+     }
+    ]
+   },
+   "timing": {
+    "frames": 120,
+    "draw_gpu_ms_off": {
+     "median": 0.3482,
+     "p95": 0.4076
+    },
+    "draw_gpu_ms_on": {
+     "median": 0.6072,
+     "p95": 0.7178
+    },
+    "incremental_gpu_ms": {
+     "median": 0.2652,
+     "p95": 0.3154,
+     "max": 0.4035
+    },
+    "frame_wall_ms": {
+     "off": 5.919,
+     "on": 7.657,
+     "paired_difference_median": 1.7171
+    },
+    "pass_alone_gpu_ms": {
+     "median": 0.2826,
+     "p95": 0.3348
+    }
+   }
+  },
+  "village_shop": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "camera": {
+    "pitch": 30.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false
+   },
+   "status": [
+    "on",
+    null
+   ],
+   "focus": {
+    "focus": 53.3951,
+    "band": 2.5,
+    "radius": 2.5,
+    "taps": 24.0
+   },
+   "depth_span_m": [
+    46.64,
+    67.36
+   ],
+   "player": {
+    "pixels": 2396,
+    "depth_m": [
+     53.109,
+     53.448,
+     53.802
+    ],
+    "changed_share": 0.0,
+    "max_delta": 0
+   },
+   "sharp_band": {
+    "pixels": 304870,
+    "changed_share": 0.0
+   },
+   "blurred_share": 0.4711,
+   "same_row": {
+    "rows": 9,
+    "examples": [
+     {
+      "row": 126,
+      "sharp_col": 578,
+      "far_col": 430,
+      "far_coc_px": 1.65,
+      "sharp_kept": 1.0,
+      "far_kept": 0.222
+     },
+     {
+      "row": 144,
+      "sharp_col": 754,
+      "far_col": 286,
+      "far_coc_px": 1.49,
+      "sharp_kept": 1.0,
+      "far_kept": 0.317
+     },
+     {
+      "row": 132,
+      "sharp_col": 578,
+      "far_col": 10,
+      "far_coc_px": 1.38,
+      "sharp_kept": 1.0,
+      "far_kept": 0.341
+     },
+     {
+      "row": 138,
+      "sharp_col": 582,
+      "far_col": 286,
+      "far_coc_px": 1.54,
+      "sharp_kept": 1.0,
+      "far_kept": 0.347
+     }
+    ]
+   },
+   "timing": {
+    "frames": 120,
+    "draw_gpu_ms_off": {
+     "median": 0.3236,
+     "p95": 0.3645
+    },
+    "draw_gpu_ms_on": {
+     "median": 0.6001,
+     "p95": 0.6779
+    },
+    "incremental_gpu_ms": {
+     "median": 0.2755,
+     "p95": 0.3133,
+     "max": 0.3328
+    },
+    "frame_wall_ms": {
+     "off": 5.48,
+     "on": 7.127,
+     "paired_difference_median": 1.3657
+    },
+    "pass_alone_gpu_ms": {
+     "median": 0.2949,
+     "p95": 0.3338
+    }
+   }
+  },
+  "village_bridge": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "camera": {
+    "pitch": 30.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false
+   },
+   "status": [
+    "on",
+    null
+   ],
+   "focus": {
+    "focus": 53.485,
+    "band": 2.5,
+    "radius": 2.5,
+    "taps": 24.0
+   },
+   "depth_span_m": [
+    42.85,
+    67.36
+   ],
+   "player": {
+    "pixels": 2368,
+    "depth_m": [
+     53.193,
+     53.536,
+     53.891
+    ],
+    "changed_share": 0.0,
+    "max_delta": 0
+   },
+   "sharp_band": {
+    "pixels": 381007,
+    "changed_share": 0.0016
+   },
+   "blurred_share": 0.3927,
+   "same_row": {
+    "rows": 1,
+    "examples": [
+     {
+      "row": 114,
+      "sharp_col": 1138,
+      "far_col": 1050,
+      "far_coc_px": 1.74,
+      "sharp_kept": 1.0,
+      "far_kept": 0.248
+     }
+    ]
+   },
+   "timing": {
+    "frames": 120,
+    "draw_gpu_ms_off": {
+     "median": 0.3584,
+     "p95": 0.3707
+    },
+    "draw_gpu_ms_on": {
+     "median": 0.642,
+     "p95": 0.6636
+    },
+    "incremental_gpu_ms": {
+     "median": 0.2806,
+     "p95": 0.2949,
+     "max": 0.3328
+    },
+    "frame_wall_ms": {
+     "off": 5.498,
+     "on": 7.139,
+     "paired_difference_median": 1.5026
+    },
+    "pass_alone_gpu_ms": {
+     "median": 0.3021,
+     "p95": 0.3144
+    }
+   }
+  },
+  "cottage_interior": {
+   "scene": "packs/core_regions/scenes/cottage.json",
+   "camera": {
+    "pitch": 55.0,
+    "fov": 12.0,
+    "distance": 35.679,
+    "ortho": false
+   },
+   "status": [
+    "on",
+    null
+   ],
+   "focus": {
+    "focus": 35.7913,
+    "band": 2.5,
+    "radius": 2.5,
+    "taps": 24.0
+   },
+   "depth_span_m": [
+    32.64,
+    38.17
+   ],
+   "player": {
+    "pixels": 5527,
+    "depth_m": [
+     35.076,
+     35.913,
+     36.816
+    ],
+    "changed_share": 0.0,
+    "max_delta": 0
+   },
+   "sharp_band": {
+    "pixels": 290734,
+    "changed_share": 0.0007
+   },
+   "blurred_share": 0.6766,
+   "same_row": {
+    "rows": 0,
+    "examples": []
+   },
+   "timing": {
+    "frames": 120,
+    "draw_gpu_ms_off": {
+     "median": 0.1802,
+     "p95": 0.2744
+    },
+    "draw_gpu_ms_on": {
+     "median": 0.4024,
+     "p95": 0.6195
+    },
+    "incremental_gpu_ms": {
+     "median": 0.2243,
+     "p95": 0.3471,
+     "max": 0.4229
+    },
+    "frame_wall_ms": {
+     "off": 3.719,
+     "on": 4.222,
+     "paired_difference_median": 0.1749
+    },
+    "pass_alone_gpu_ms": {
+     "median": 0.2376,
+     "p95": 0.3686
+    }
+   }
+  }
+ },
+ "gl": {
+  "vendor": "NVIDIA Corporation",
+  "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+  "version": [
+   4,
+   6
+  ]
+ },
+ "measured": {
+  "enabled": true,
+  "focus_range": 2.5,
+  "near_falloff": 10.0,
+  "far_falloff": 10.0,
+  "max_blur": 2.5,
+  "strength": 1.0
+ },
+ "software_renderer": null,
+ "checks": {
+  "zero_strength_drawn": false,
+  "zero_strength_identical_to_off": true,
+  "disabled_identical_to_off": true,
+  "software_bypass": {
+   "status": [
+    "unavailable",
+    "depth of field is off on this computer (simulated software rendering)"
+   ],
+   "identical_to_off": true,
+   "drawn": false,
+   "real": false,
+   "room_message": null
+  },
+  "hud": {
+   "glyph_pixels": 457,
+   "glyph_pixels_changed": 16,
+   "glyph_max_delta": 1
+  },
+  "walking": {
+   "away": {
+    "player_changed_share_max": 0.0,
+    "focus_m_first_last": [
+     50.865,
+     52.827
+    ],
+    "frame_to_frame_change": {
+     "off": 0.086,
+     "on": 0.115
+    },
+    "on_over_off": 1.333
+   },
+   "toward": {
+    "player_changed_share_max": 0.0,
+    "focus_m_first_last": [
+     52.759,
+     50.797
+    ],
+    "frame_to_frame_change": {
+     "off": 0.074,
+     "on": 0.103
+    },
+    "on_over_off": 1.393
+   }
+  },
+  "still_frames_identical": true,
+  "gl_objects": {
+   "off_before": {
+    "texture": 50,
+    "framebuffer": 6,
+    "program": 28,
+    "buffer": 121,
+    "geometry": 52
+   },
+   "off_after": {
+    "texture": 50,
+    "framebuffer": 6,
+    "program": 28,
+    "buffer": 121,
+    "geometry": 52
+   },
+   "on_before": {
+    "texture": 50,
+    "framebuffer": 6,
+    "program": 28,
+    "buffer": 121,
+    "geometry": 52
+   },
+   "on_after": {
+    "texture": 50,
+    "framebuffer": 6,
+    "program": 28,
+    "buffer": 121,
+    "geometry": 52
+   }
+  },
+  "room_changes": [
+   {
+    "scene": "packs/core_regions/scenes/start.json",
+    "status": [
+     "on",
+     null
+    ],
+    "load_message": null,
+    "drawn": true,
+    "objects": {
+     "texture": 42,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 121,
+     "geometry": 53
+    }
+   },
+   {
+    "scene": "packs/core_regions/scenes/cottage.json",
+    "status": [
+     "off",
+     null
+    ],
+    "load_message": null,
+    "drawn": false,
+    "objects": {
+     "texture": 18,
+     "framebuffer": 6,
+     "program": 27,
+     "buffer": 77,
+     "geometry": 31
+    }
+   },
+   {
+    "scene": "packs/core_regions/scenes/start.json",
+    "status": [
+     "on",
+     null
+    ],
+    "load_message": null,
+    "drawn": true,
+    "objects": {
+     "texture": 42,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 121,
+     "geometry": 53
+    }
+   },
+   {
+    "scene": "packs/core_regions/scenes/cottage.json",
+    "status": [
+     "off",
+     null
+    ],
+    "load_message": null,
+    "drawn": false,
+    "objects": {
+     "texture": 18,
+     "framebuffer": 6,
+     "program": 27,
+     "buffer": 77,
+     "geometry": 31
+    }
+   },
+   {
+    "scene": "packs/core_regions/scenes/start.json",
+    "status": [
+     "on",
+     null
+    ],
+    "load_message": null,
+    "drawn": true,
+    "objects": {
+     "texture": 42,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 121,
+     "geometry": 53
+    }
+   }
+  ],
+  "resizes": {
+   "960x540": {
+    "frame": [
+     960,
+     540
+    ],
+    "fbo": [
+     960,
+     540
+    ],
+    "radius_px": 1.875,
+    "taps": 14,
+    "objects": {
+     "texture": 42,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 121,
+     "geometry": 52
+    }
+   },
+   "1920x1080": {
+    "frame": [
+     1920,
+     1080
+    ],
+    "fbo": [
+     1920,
+     1080
+    ],
+    "radius_px": 3.75,
+    "taps": 24,
+    "objects": {
+     "texture": 42,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 121,
+     "geometry": 52
+    }
+   },
+   "1280x720": {
+    "frame": [
+     1280,
+     720
+    ],
+    "fbo": [
+     1280,
+     720
+    ],
+    "radius_px": 2.5,
+    "taps": 24,
+    "objects": {
+     "texture": 42,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 121,
+     "geometry": 52
+    }
+   }
+  },
+  "ortho_drawn": {
+   "status": [
+    "on",
+    null
+   ],
+   "drawn": true,
+   "non_black": true
+  }
+ }
+}
