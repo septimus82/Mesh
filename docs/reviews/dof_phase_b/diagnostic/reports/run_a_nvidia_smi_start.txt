@@ -1,0 +1,64 @@
+Sat Nov  7 00:42:58 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.88                 KMD Version: 610.88        CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                  Driver-Model | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 4070      WDDM  |   00000000:0B:00.0  On |                  N/A |
+| 30%   33C    P8             16W /  180W |    3521MiB /  12282MiB |      7%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A            2656    C+G   ...SpotifyXboxGamebarWebView.exe      N/A      |
+|    0   N/A  N/A            4784    C+G   ...2txyewy\CrossDeviceResume.exe      N/A      |
+|    0   N/A  N/A            5164    C+G   ...5atnkzcwy\mcafee-security.exe      N/A      |
+|    0   N/A  N/A            8700    C+G   ...mba6cd70vzyy\ArmouryCrate.exe      N/A      |
+|    0   N/A  N/A           12528    C+G   ...s\Win64\EpicGamesLauncher.exe      N/A      |
+|    0   N/A  N/A           12852    C+G   C:\Windows\explorer.exe               N/A      |
+|    0   N/A  N/A           14840    C+G   ...ion\Untapped.gg Companion.exe      N/A      |
+|    0   N/A  N/A           15604    C+G   ...IA app\CEF\NVIDIA Overlay.exe      N/A      |
+|    0   N/A  N/A           15728    C+G   ...IA app\CEF\NVIDIA Overlay.exe      N/A      |
+|    0   N/A  N/A           16716    C+G   ...em32\ApplicationFrameHost.exe      N/A      |
+|    0   N/A  N/A           16744    C+G   ..._cw5n1h2txyewy\SearchHost.exe      N/A      |
+|    0   N/A  N/A           16884    C+G   ...yb3d8bbwe\Microsoft.Notes.exe      N/A      |
+|    0   N/A  N/A           16912    C+G   ...y\StartMenuExperienceHost.exe      N/A      |
+|    0   N/A  N/A           20188    C+G   ....0.4314.50\msedgewebview2.exe      N/A      |
+|    0   N/A  N/A           21964    C+G   ...8bbwe\PhoneExperienceHost.exe      N/A      |
+|    0   N/A  N/A           23480    C+G   ...5n1h2txyewy\TextInputHost.exe      N/A      |
+|    0   N/A  N/A           23708    C+G   ...86)\Battle.net\Battle.net.exe      N/A      |
+|    0   N/A  N/A           24640    C+G   ...CUE5 Software\QmlRenderer.exe      N/A      |
+|    0   N/A  N/A           26988    C+G   ...lpaper_engine\wallpaper32.exe      N/A      |
+|    0   N/A  N/A           27500    C+G   ...rsair iCUE5 Software\iCUE.exe      N/A      |
+|    0   N/A  N/A           27556    C+G   ...CUE5 Software\QmlRenderer.exe      N/A      |
+|    0   N/A  N/A           27880    C+G   ...em_tray\lghub_system_tray.exe      N/A      |
+|    0   N/A  N/A           28020    C+G   ...aries\Win64\EpicWebHelper.exe      N/A      |
+|    0   N/A  N/A           29036    C+G   ....0.4314.50\msedgewebview2.exe      N/A      |
+|    0   N/A  N/A           31156    C+G   ...t\Edge\Application\msedge.exe      N/A      |
+|    0   N/A  N/A           32640    C+G   ...t\Edge\Application\msedge.exe      N/A      |
+|    0   N/A  N/A           32716    C+G   ...ntrolPanel\SystemSettings.exe      N/A      |
+|    0   N/A  N/A           35352    C+G   ...xyewy\ShellExperienceHost.exe      N/A      |
+|    0   N/A  N/A           37012    C+G   ...Browser\Application\brave.exe      N/A      |
+|    0   N/A  N/A           37224    C+G   ...ed_copilot\copilotapphost.exe      N/A      |
+|    0   N/A  N/A           38680    C+G   ....0.4314.58\msedgewebview2.exe      N/A      |
+|    0   N/A  N/A           38776    C+G   ...Browser\Application\brave.exe      N/A      |
+|    0   N/A  N/A           38992    C+G   ....0.4314.50\msedgewebview2.exe      N/A      |
+|    0   N/A  N/A           43652    C+G   ...2p2nqsd0c76g0\app\ChatGPT.exe      N/A      |
+|    0   N/A  N/A           46292    C+G   ...cord\app-1.0.9266\Discord.exe      N/A      |
+|    0   N/A  N/A           47852    C+G   ...\codex-computer-use-swift.exe      N/A      |
+|    0   N/A  N/A           47904    C+G   ..._pzs8sxrjxfjjc\app\claude.exe      N/A      |
+|    0   N/A  N/A           49564    C+G   ....0.4314.58\msedgewebview2.exe      N/A      |
+|    0   N/A  N/A           52376    C+G   ...2p2nqsd0c76g0\app\ChatGPT.exe      N/A      |
+|    0   N/A  N/A           55548    C+G   ..._pzs8sxrjxfjjc\app\claude.exe      N/A      |
+|    0   N/A  N/A           55608    C+G   ...ot\Application\copilotapp.exe      N/A      |
+|    0   N/A  N/A           57500    C+G   ....0.4314.58\msedgewebview2.exe      N/A      |
+|    0   N/A  N/A           57768    C+G   ...ayRenderer-Win64-Shipping.exe      N/A      |
+|    0   N/A  N/A           57864    C+G   ...kyb3d8bbwe\EdgeGameAssist.exe      N/A      |
+|    0   N/A  N/A           62632    C+G   ...indows\System32\ShellHost.exe      N/A      |
++-----------------------------------------------------------------------------------------+
