@@ -71,7 +71,7 @@ class Study:
         self.window.audio.set_muted(True)  # (never plays aloud)
         self.ctx = self.window.ctx
         self._query = self.ctx.query(samples=False, time=True, primitives=False)
-        self.pass_ns: list[int] = []
+        self.draw_ns: list[int] = []
         self._timing = False
 
     @property
@@ -90,36 +90,29 @@ class Study:
 
         return np.asarray(self.game.draw().convert("RGB")).copy()
 
-    def _timed_composite(self) -> None:
-        """Time the pass on the GPU: the renderer's own composite, wrapped (this window's renderer only)."""
+    def _timed_draw(self) -> None:
+        """Time the renderer's whole draw on the GPU (the world, then the blit or the depth of field in its place):
+        this window's renderer only, wrapped."""
         hd = self.hd
         if getattr(hd, "_dof_study", False):
             return
-        original = hd._composite_dof
+        original = hd.draw
         study = self
 
-        def composite(*args: Any, **kwargs: Any) -> None:
-            if not study._timing:
-                original(*args, **kwargs)
-                return
+        def draw(*args: Any, **kwargs: Any) -> Any:
+            if not study._timing or kwargs.get("solid") is not None:
+                return original(*args, **kwargs)
             with study._query:
-                original(*args, **kwargs)
-            study.pass_ns.append(study._query.time_elapsed)
+                result = original(*args, **kwargs)
+            study.draw_ns.append(study._query.time_elapsed)
+            return result
 
-        hd._composite_dof = composite
+        hd.draw = draw
         hd._dof_study = True
 
-    def blit_ns(self) -> int:
-        """The original blit's GPU time (what the pass replaces), drawn over the last frame."""
-        hd, ctx = self.hd, self.ctx
-        hd._fbo_parts[0].use(0)
-        with self._query, ctx.enabled_only():
-            hd._blit.render(hd.blit_prog)
-        return int(self._query.time_elapsed)
-
     def alone_ns(self) -> int | None:
-        """The pass's GPU time on its own: the last frame's composite drawn again over it, the GPU idle first. (In
-        the frame its timer can start while the world's last draws still run, which reads as rare spikes.)"""
+        """The pass's GPU time on its own: the last frame's composite drawn again over it, the GPU idle first (its
+        inputs already resolved: a lower bound; the paired whole-draw difference is the cost in the frame)."""
         hd, ctx = self.hd, self.ctx
         if hd.last_dof is None:
             return None
@@ -129,44 +122,47 @@ class Study:
         return int(self._query.time_elapsed)
 
     def timed(self, dof: Any, frames: int) -> dict[str, Any]:
-        """GPU time of the pass in the frame and alone, of the blit it replaces (alone), and the frame's wall time."""
-        self.set_dof(dof)
-        self._timed_composite()
-        self.pass_ns, walls, blits, alone = [], [], [], []
+        """Off and on in alternate frames (so GPU clock changes fall on both): the renderer's whole draw's GPU time
+        each way, and their paired difference (the depth of field's cost in the frame, all included); each frame's
+        wall time (update + draw + GPU finished); and the pass alone (a lower bound)."""
+        self._timed_draw()
+        draws: dict[str, list[float]] = {"off": [], "on": []}
+        walls: dict[str, list[float]] = {"off": [], "on": []}
+        alone: list[float] = []
         self._timing = True
         try:
             for _ in range(frames):
                 self.game.step(1)
-                start = time.perf_counter()
-                self.window.dispatch_event("on_draw")
-                self.ctx.finish()
-                walls.append((time.perf_counter() - start) * 1000)
+                for label, setting in (("off", None), ("on", dof)):
+                    self.set_dof(setting)
+                    self.draw_ns = []
+                    self.ctx.finish()
+                    start = time.perf_counter()
+                    self.window.dispatch_event("on_draw")
+                    self.ctx.finish()
+                    walls[label].append((time.perf_counter() - start) * 1000)
+                    draws[label].append(float(self.draw_ns[-1]) if self.draw_ns else float("nan"))
                 one = self.alone_ns()
                 if one is not None:
                     alone.append(float(one))
-                self.ctx.finish()
-                blits.append(self.blit_ns())
         finally:
             self._timing = False
 
         def ms(xs: list[float], q: float) -> float | None:
+            xs = sorted(x for x in xs if x == x)
             if not xs:
                 return None
-            xs = sorted(xs)
             return round(xs[min(len(xs) - 1, int(q * len(xs)))] / 1e6, 4)
-        out = {"frames": frames, "blit_gpu_ms_median": ms([float(b) for b in blits], 0.5),
-               "frame_wall_ms_median": round(statistics.median(walls), 3)}
-        if self.pass_ns:
-            ns = [float(v) for v in self.pass_ns]
-            out.update({"in_frame_pass_gpu_ms_median": ms(ns, 0.5), "in_frame_pass_gpu_ms_p95": ms(ns, 0.95),
-                        "in_frame_pass_gpu_ms_max": ms(ns, 1.0)})
-        if alone:
-            out.update({"pass_gpu_ms_median": ms(alone, 0.5), "pass_gpu_ms_p95": ms(alone, 0.95),
-                        "pass_gpu_ms_max": ms(alone, 1.0)})
-            blit = out["blit_gpu_ms_median"] or 0.0
-            out["incremental_gpu_ms_median"] = round((out["pass_gpu_ms_median"] or 0.0) - blit, 4)
-            out["incremental_gpu_ms_p95"] = round((out["pass_gpu_ms_p95"] or 0.0) - blit, 4)
-        return out
+        diff = [b - a for a, b in zip(draws["off"], draws["on"])]
+        wall_diff = [(b - a) * 1e6 for a, b in zip(walls["off"], walls["on"])]
+        return {"frames": frames,
+                "draw_gpu_ms_off": {"median": ms(draws["off"], 0.5), "p95": ms(draws["off"], 0.95)},
+                "draw_gpu_ms_on": {"median": ms(draws["on"], 0.5), "p95": ms(draws["on"], 0.95)},
+                "incremental_gpu_ms": {"median": ms(diff, 0.5), "p95": ms(diff, 0.95), "max": ms(diff, 1.0)},
+                "frame_wall_ms": {"off": round(statistics.median(walls["off"]), 3),
+                                  "on": round(statistics.median(walls["on"]), 3),
+                                  "paired_difference_median": ms(wall_diff, 0.5)},
+                "pass_alone_gpu_ms": {"median": ms(alone, 0.5), "p95": ms(alone, 0.95)}}
 
     def depth_m(self) -> Any:
         """The world's last depth buffer as metres along the view axis, top row first (as pictures)."""
@@ -235,7 +231,6 @@ class Study:
                            "max_delta": int(diff[mask].max()) if mask.any() else None}
         if not state:
             facts["note"] = "depth of field not drawn"
-            facts["timing"] = {"off": self.timed(None, frames)}
             return facts
         radius, band, focus = state["radius"], state["band"], state["focus"]
         cocs = np.vectorize(lambda d: coc(d, focus, band, subtle.near_falloff, subtle.far_falloff, radius))(z)
@@ -244,7 +239,7 @@ class Study:
                                "changed_share": round(float((diff[sharp_px] > 2).mean()), 4) if sharp_px.any() else None}
         facts["blurred_share"] = round(float((np.abs(cocs) >= 0.5).mean()), 4)
         facts["same_row"] = self._same_row(off, on, sharp_px, far_px, cocs)
-        facts["timing"] = {"off": self.timed(None, frames), "subtle": self.timed(subtle, frames)}
+        facts["timing"] = self.timed(subtle, frames)
         return facts
 
     def _same_row(self, off: Any, on: Any, sharp_px: Any, far_px: Any, cocs: Any) -> dict[str, Any]:

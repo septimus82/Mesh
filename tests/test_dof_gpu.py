@@ -47,7 +47,7 @@ def report(tmp_path_factory: pytest.TempPathFactory, record_testsuite_property) 
     (keep / f"report_{sys.platform}.json.log").write_text(json.dumps(found, indent=1, default=str), encoding="utf-8")
     record_testsuite_property("measure.dof_phase_b", json.dumps({
         "gl": found["gl"], "size": found["size"], "software_renderer": found["software_renderer"],
-        "timing": {k: v["timing"] for k, v in found["views"].items()}}))
+        "timing": {k: v.get("timing") for k, v in found["views"].items()}}))
     return found
 
 
