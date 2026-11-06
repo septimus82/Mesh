@@ -20,6 +20,7 @@ from typing import Any, Callable, Iterable
 
 from PIL import Image
 
+from engine.hd2d.dof import DofPass, blur_radius, character_band, dof_unavailable_reason, taps_for, view_depth
 from engine.hd2d.glb import Model, load_glb
 from engine.hd2d.lighting import LIGHTING_GLSL, Lighting
 from engine.hd2d.precipitation import PrecipitationMaps, key_for
@@ -371,7 +372,7 @@ class Hd2dRenderer:
             made.append(self._caster_buffer)
         for obj in made:
             obj.delete()
-        for name in ("scatter", "precipitation", "water", "particles", "fire_sprites", "fire_particles"):
+        for name in ("scatter", "precipitation", "water", "particles", "fire_sprites", "fire_particles", "_dof_pass"):
             part = getattr(self, name, None)
             if part is not None:
                 part.release()
@@ -415,6 +416,15 @@ class Hd2dRenderer:
         self._fire_z: dict[tuple[int, int], float] = {}  # (x, y) px -> the height (px) a campfire's logs stand at
         self.precipitation = PrecipitationMaps(ctx)  # where they meet the world (Milestone 18B; made when needed)
         self.weather_preview = False  # Mesh Studio's "Preview weather": draw them in its editing view too
+        # The room's depth of field (engine.hd2d.dof, #460): drawn in place of the final blit when on. Its program is
+        # made the first time a frame needs it. Mesh Studio's editing view shows it only while previewing
+        # (``dof_preview``). A software rasteriser can't afford it: bypassed, ``dof_unavailable`` says why (a test
+        # of the pass itself may set ``dof_allow_software``).
+        self._dof_pass: Any = None
+        self.dof_preview = False
+        self.dof_allow_software = False
+        self.dof_unavailable = dof_unavailable_reason(ctx)
+        self.last_dof: dict[str, Any] | None = None  # the last frame's focus, band and blur (None: not drawn)
         self.water: Any = None  # the room's puddles and ponds on the GPU (engine.water; made when it has any)
         self.water_error: str | None = None  # why they're off in this room, if the GPU refused them
         self.preview: tuple[str, tuple[float, ...]] | None = None  # a model about to be placed (Mesh Studio)
@@ -795,6 +805,7 @@ class Hd2dRenderer:
         self._release_fbo()
         ctx = self.ctx
         colour, depth = ctx.texture(size, components=4), ctx.depth_texture(size)
+        depth.compare_func = None  # the depth of field reads it as depth (arcade turns comparison on); tests unchanged
         self._fbo_parts = [colour, depth]
         self._fbo = ctx.framebuffer(color_attachments=[colour], depth_attachment=depth)
         return self._fbo
@@ -818,7 +829,8 @@ class Hd2dRenderer:
                    + (self.particles.gl_objects() if self.particles is not None else [])
                    + (self.fire_sprites.gl_objects() if self.fire_sprites is not None else [])
                    + (self.fire_particles.gl_objects() if self.fire_particles is not None else [])
-                   + self.precipitation.gl_objects() + (self.water.gl_objects() if self.water is not None else []))
+                   + self.precipitation.gl_objects() + (self.water.gl_objects() if self.water is not None else [])
+                   + (self._dof_pass.gl_objects() if self._dof_pass is not None else []))
         return [o for o in objects if o is not None]
 
     def release(self) -> None:
@@ -846,6 +858,9 @@ class Hd2dRenderer:
         self.ground = None
         for program in (self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog):
             program.delete()
+        if self._dof_pass is not None:
+            self._dof_pass.release()
+            self._dof_pass = None
         if self.ground_prog is not None:
             self.ground_prog.delete()
             self.ground_prog = None
@@ -1109,8 +1124,10 @@ class Hd2dRenderer:
         """Draw the world into the active framebuffer. ``solid``: draw only that sprite, flat red, against the
         world's depth (for measuring what of it is visible); ``read``: return the rendered pixels (RGB bytes).
         Mesh Studio's editing view passes its own ``camera``, the ``viewport`` (x, y, w, h) of its canvas, and an
-        ``overlay`` drawn in the world with its depth (selection boxes, the grid); the game's camera is untouched."""
+        ``overlay`` drawn in the world with its depth (selection boxes, the grid); the game's camera is untouched.
+        (``read`` returns the world as drawn, before the room's depth of field.)"""
         ctx = self.ctx
+        self.last_dof = None
         previous = ctx.active_framebuffer
         size = (int(viewport[2]), int(viewport[3])) if viewport else (int(previous.size[0]), int(previous.size[1]))
         fbo = self._target_fbo(size)
@@ -1204,12 +1221,18 @@ class Hd2dRenderer:
             self.particles.draw_calls = 0  # not drawn in this view (Studio, not previewing)
         if fires:  # their embers and smoke, in Studio's view too (a fire is part of the room, not its weather)
             self._draw_fire_particles(fires, vp, cam, fbo)
-        if overlay is not None and solid is None:
+        dof = self._dof_frame(cam, camera is None, size) if solid is None else None
+        if overlay is not None and solid is None and dof is None:
             overlay(vp)
         ctx.disable(ctx.DEPTH_TEST)
         pixels = fbo.read(components=3) if read else None
         previous.use()
         self._fbo_parts[0].use(0)
+        if dof is not None:  # in place of the blit; Studio's lines over it, sharp (_overlay_after)
+            self._composite_dof(dof, cam, viewport)
+            if overlay is not None:
+                self._overlay_after(fbo, previous, overlay, vp, viewport)
+            return pixels
         with ctx.enabled_only():
             if viewport:
                 full = ctx.viewport
@@ -1219,6 +1242,93 @@ class Hd2dRenderer:
             else:
                 self._blit.render(self.blit_prog)
         return pixels
+
+    # ------------------------------------------------------------------ depth of field (#460)
+    def dof_status(self) -> tuple[str, str | None]:
+        """("off" | "on" | "unavailable", why): the room's depth of field in play on this machine."""
+        dof = self.settings.depth_of_field
+        if dof is None or not dof.active:
+            return "off", None
+        if self.dof_unavailable and not self.dof_allow_software:
+            return "unavailable", self.dof_unavailable
+        return "on", None
+
+    def dof_focus(self, cam: Camera, game: bool) -> tuple[float, float]:
+        """(focus distance, half the sharp band the focus itself needs), metres along the view axis. In play: the
+        followed character, at the middle of its upright picture (as _sprite_quads stands it), the band covering
+        that picture's own depth. Otherwise (Mesh Studio's view, or nobody followed): the point the camera looks at."""
+        eye, target = cam.eye(), cam.target
+        sprite = self.followed() if game else None
+        if sprite is None:
+            return view_depth(eye, target, target), 0.0
+        stretch = 1.0 / max(0.5, math.cos(math.radians(self.camera.pitch)))
+        h = abs(sprite.height) / PIXELS_PER_METRE * stretch
+        mid = (sprite.center_x / PIXELS_PER_METRE, sprite.bottom / PIXELS_PER_METRE,
+               self.elevation_of(sprite) / PIXELS_PER_METRE + h / 2)
+        return view_depth(eye, target, mid), character_band(h, cam.pitch)
+
+    def _dof_frame(self, cam: Camera, game: bool, size: tuple[int, int]) -> dict[str, Any] | None:
+        """This frame's depth of field (focus, band, blur radius), or None: the original blit."""
+        dof = self.settings.depth_of_field
+        if dof is None or not dof.active or (not game and not self.dof_preview) or self.dof_status()[0] != "on":
+            return None
+        radius = blur_radius(dof, size[1])
+        if radius < 0.5:  # (too little to move a pixel)
+            return None
+        if self._dof_pass is None:
+            try:
+                self._dof_pass = DofPass(self.ctx, BLIT_VS)
+            except _gpu_refused() as exc:  # (a driver refusing the program: off on this computer, said, the blit)
+                self.dof_unavailable = f"depth of field is off on this computer: the graphics driver refused it ({exc})"
+                logger.error("[Mesh][HD-2D] %s", self.dof_unavailable)
+                return None
+        focus, need = self.dof_focus(cam, game)
+        self.last_dof = {"focus": focus, "band": max(dof.focus_range, need), "radius": radius,
+                         "taps": taps_for(radius), "settings": dof}
+        return self.last_dof
+
+    def _composite_dof(self, frame: dict[str, Any], cam: Camera, viewport: tuple[int, int, int, int] | None) -> None:
+        """The world's picture, blurred by depth, into the active framebuffer (the blit's place and viewport)."""
+        ctx = self.ctx
+        with ctx.enabled_only():
+            full = ctx.viewport
+            if viewport:
+                ctx.viewport = viewport
+            self._dof_pass.render(self._blit, self._fbo_parts[0], self._fbo_parts[1], ortho=cam.ortho,
+                                  focus=frame["focus"], band=frame["band"], dof=frame["settings"],
+                                  radius=frame["radius"])
+            if viewport:
+                ctx.viewport = full
+
+    def _overlay_after(self, fbo: Any, previous: Any, overlay: Callable[[tuple[float, ...]], None],
+                       vp: tuple[float, ...], viewport: tuple[int, int, int, int] | None) -> None:
+        """Mesh Studio's lines (grid, selection, handles) over the blurred picture, sharp: drawn alone into the
+        world's colour (cleared; its depth kept, so they hide behind things as ever), premultiplied, then laid over
+        the picture: the same picture as drawing them into the world, as the plain view does."""
+        ctx = self.ctx
+        fbo.use()
+        fbo.depth_mask = False
+        fbo.clear(color=(0, 0, 0, 0))
+        fbo.depth_mask = True
+        saved = ctx.blend_func
+        ctx.enable(ctx.DEPTH_TEST)
+        ctx.blend_func = (ctx.SRC_ALPHA, ctx.ONE_MINUS_SRC_ALPHA, ctx.ONE, ctx.ONE_MINUS_SRC_ALPHA)
+        try:
+            overlay(vp)
+        finally:
+            ctx.disable(ctx.DEPTH_TEST)
+            ctx.blend_func = saved
+        previous.use()
+        self._fbo_parts[0].use(0)
+        with ctx.enabled_only(ctx.BLEND):
+            full = ctx.viewport
+            if viewport:
+                ctx.viewport = viewport
+            ctx.blend_func = (ctx.ONE, ctx.ONE_MINUS_SRC_ALPHA)
+            self._blit.render(self.blit_prog)
+            ctx.blend_func = saved
+            if viewport:
+                ctx.viewport = full
 
     def _draw_terrain(self, draws: list[tuple[Any, Any, tuple[float, ...]]], vp: tuple[float, ...]) -> None:
         """The sculpted ground's chunks in the picture, each texel the material painted there (GROUND_FS)."""

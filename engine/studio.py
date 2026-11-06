@@ -367,7 +367,11 @@ class Studio(InspectorMixin, SoundMixin):
         motion_error = getattr(self.window, "hd2d_motion_error", None)
         if motion_error:
             motion_error = f"This room's motion: {motion_error}. Set it again under Wind and motion."
+        dof_message = getattr(self.window, "hd2d_dof_message", None)
+        if dof_message:  # (#460: a block that can't be read, or software rendering bypassing it)
+            dof_message = f"This room's {dof_message[4:]}" if dof_message.startswith("its ") else dof_message[:1].upper() + dof_message[1:]
         for text, ok in ((terrain_error, False), (scatter_error, False), (rivers_error, False), (motion_error, False),
+                         (dof_message, False),
                          (f"Weather is off in this room: {error}" if error else None, False),
                          (f"Water is off in this room: {water_error}" if water_error else None, False), (notice, True)):
             if text and text not in self._weather_said:

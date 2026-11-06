@@ -2756,6 +2756,68 @@ def set_motion(scene: Doc, enabled: Any = _UNSET, sway: Any = _UNSET, wind: Any 
     return _checked(scene, out)
 
 
+def depth_of_field_of(scene: Doc) -> Doc:
+    """The room's depth of field as Studio shows it (engine.hd2d.dof): ``enabled``, ``focus_range``,
+    ``near_falloff``, ``far_falloff``, ``max_blur``, ``strength``, plus ``error`` (why a block that can't be read is
+    set aside: off) and ``indoor`` (a steep, close camera, like the indoor preset's, or a room out of the weather: little
+    depth to blur)."""
+    from engine.hd2d.dof import FIELDS, OFF, DofError, parse_dof  # noqa: PLC0415
+
+    hd2d = (scene.get("settings") or {}).get("hd2d")
+    error = None
+    try:
+        dof = parse_dof(hd2d.get("depth_of_field") if isinstance(hd2d, dict) else None)
+    except DofError as exc:
+        dof, error = OFF, str(exc)
+    camera = hd2d.get("camera") if isinstance(hd2d, dict) else None
+    pitch = camera.get("pitch") if isinstance(camera, dict) else None
+    indoor = (isinstance(pitch, (int, float)) and not isinstance(pitch, bool) and pitch >= INDOOR_PITCH) \
+        or (scene.get("settings") or {}).get("weather_exposure") == "indoor"
+    return {"enabled": dof.enabled, **{k: getattr(dof, k) for k in FIELDS}, "error": error, "indoor": indoor}
+
+
+INDOOR_PITCH = 50.0  # degrees: a camera this steep (the indoor preset's 55) sees only a few metres of depth
+
+
+def set_depth_of_field(scene: Doc, enabled: Any = _UNSET, focus_range: Any = _UNSET, near_falloff: Any = _UNSET,
+                       far_falloff: Any = _UNSET, max_blur: Any = _UNSET, strength: Any = _UNSET,
+                       preset: Any = _UNSET) -> Doc:
+    """This HD-2D room's depth of field (``settings.hd2d.depth_of_field``; engine.hd2d.dof): what the camera
+    follows stays sharp, nearer and farther things soften with their distance from it. Only what is given changes.
+    ``preset`` "subtle" (the conservative look for outdoor rooms; every value reset to it), ``enabled`` (on or off;
+    turning it on keeps the room's own values, Subtle's if it has none), ``focus_range`` (0.5-20 m: kept fully sharp
+    in front of and behind the focus), ``near_falloff`` (1-60 m) and ``far_falloff`` (1-120 m: how far it takes to
+    reach the most blur), ``max_blur`` (0.5-4: px of a 720-line picture, scaled with the window), ``strength``
+    (0-1). Off with Subtle's values: the key is removed (as older rooms). Off by default in every room."""
+    from engine.hd2d.dof import OFF, SUBTLE, DofError, parse_dof, stored, with_changes  # noqa: PLC0415
+
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has no camera depth to blur.")
+    hd2d = _hd2d_block(out)
+    try:  # (a block that can't be read: start afresh, so it can be repaired)
+        now = parse_dof(hd2d.get("depth_of_field"))
+    except DofError:
+        now = OFF
+    if preset is not _UNSET:
+        if preset != "subtle":
+            raise OpError(f"Depth of field preset must be \"subtle\" (got {preset!r}).")
+        now = SUBTLE  # (on, every value Subtle's; what else is given still applies)
+    change = {k: copy.deepcopy(v) for k, v in (("enabled", enabled), ("focus_range", focus_range),
+                                                ("near_falloff", near_falloff), ("far_falloff", far_falloff),
+                                                ("max_blur", max_blur), ("strength", strength)) if v is not _UNSET}
+    try:
+        dof = with_changes(now, **change)
+    except DofError as exc:
+        raise OpError(str(exc)) from exc
+    saved = stored(dof)
+    if saved is None:
+        hd2d.pop("depth_of_field", None)
+    else:
+        hd2d["depth_of_field"] = saved
+    return _checked(scene, out)
+
+
 def find_structure(scene: Doc, structure_id: str) -> Doc | None:
     return next((s for s in structures(scene) if isinstance(s, dict) and s.get("id") == structure_id), None)
 

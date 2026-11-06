@@ -127,6 +127,7 @@ class Hd2dView:
         self.object_marker: tuple[float, float, float] | None = None  # where an object being placed would stand (m)
         self.snap = True
         self.weather = True  # Milestone 18B, "Preview weather": the room's rain, snow or leaves in this view too
+        self.dof_preview = False  # #460: the room's depth of field in this view too (off: the editing view is sharp)
         self.weather_asks: str | None = None  # (M23C) the kind whose None would take away more than one effect: asked
         self.picker = Picker()
         self.tips: list[tuple[Any, str]] = []  # (button, short tooltip) for the 3D view's buttons
@@ -285,6 +286,7 @@ class Hd2dView:
             return
         start = time.perf_counter()
         renderer.weather_preview = self.weather
+        renderer.dof_preview = self.dof_preview
         renderer.draw(camera=self.camera, viewport=self.viewport(), overlay=self._overlay)
         self.timings["draw_ms"].append((time.perf_counter() - start) * 1000)
         del self.timings["draw_ms"][:-240]
@@ -2117,6 +2119,8 @@ class Hd2dView:
                              width=(width - 4) // 2))
         rows.add(row)
         rows.add(gui.UISpace(height=6))
+        self._dof_section(rows, width, field, number)
+        rows.add(gui.UISpace(height=6))
         rows.add(studio._label("Sun and sky", bold=True, size=12))
         row = _row()
         for preset in ("morning", "noon", "evening"):
@@ -2144,6 +2148,85 @@ class Hd2dView:
 
     def set_camera(self, said: str, **change: Any) -> None:
         self.studio._edit(lambda s: ops.set_hd2d_camera(s, **change), said)
+
+    # ------------------------------------------------------------------ depth of field (#460)
+    def _dof_section(self, rows: Any, width: int, field: Any, number: Any) -> None:
+        """The room's depth of field: on or off (off in every room until the creator turns it on), Subtle, the exact
+        values, a preview in this view, and why it isn't shown where it can't be (a setting that can't be read,
+        software rendering). Each change is one undo step (``project_ops.set_depth_of_field``)."""
+        studio = self.studio
+        dof = ops.depth_of_field_of(studio.project.scene())
+        rows.add(studio._label("Depth of field", bold=True, size=12))
+        rows.add(studio._label("What the camera follows stays sharp; nearer and farther things soften with their "
+                               "distance from it, as through a lens. Off in every room until you turn it on.",
+                               color=C_MUTED, size=9, width=width))
+        renderer = self.renderer
+        status = renderer.dof_status() if renderer is not None else ("off", None)
+        if dof["error"]:
+            rows.add(studio._label(f"Its setting can't be read, so it is off: {dof['error']}. Turning it on or "
+                                   "choosing Subtle starts it afresh.", color=C_WARN, size=9, width=width))
+        elif status[0] == "unavailable":
+            rows.add(studio._label(f"Not shown on this computer: {status[1]}", color=C_WARN, size=9, width=width))
+        row = _row()
+        row.add(self._button(f"Depth of field: {'on' if dof['enabled'] else 'off'}",
+                             lambda: self.set_dof("Depth of field off." if dof["enabled"] else "Depth of field on.",
+                                                  enabled=not dof["enabled"]),
+                             "Turn this room's depth of field on or off (on: its own values, Subtle's if it has none)",
+                             width=(width - 4) // 2, style=S_ACTIVE if dof["enabled"] else S_BUTTON))
+        row.add(self._button("Subtle", lambda: self.set_dof("Depth of field: Subtle.", preset="subtle"),
+                             "A gentle blur for outdoor rooms: on, every value reset to Subtle's",
+                             width=(width - 4) // 2))
+        rows.add(row)
+        if dof["indoor"]:
+            rows.add(studio._label("This room's camera is steep and close, like an interior's: it sees only a few "
+                                   "metres of depth, so the effect is slight here.", color=C_MUTED, size=9, width=width))
+        field("Sharp range (m)", "dof_focus_range", f"{dof['focus_range']:g}",
+              number(lambda v: self.set_dof(f"Sharp range {v:g} m.", focus_range=v), "Sharp range", 0.5, 20))
+        field("Near falloff (m)", "dof_near_falloff", f"{dof['near_falloff']:g}",
+              number(lambda v: self.set_dof(f"Near falloff {v:g} m.", near_falloff=v), "Near falloff", 1, 60))
+        field("Far falloff (m)", "dof_far_falloff", f"{dof['far_falloff']:g}",
+              number(lambda v: self.set_dof(f"Far falloff {v:g} m.", far_falloff=v), "Far falloff", 1, 120))
+        field("Most blur (px)", "dof_max_blur", f"{dof['max_blur']:g}",
+              number(lambda v: self.set_dof(f"Most blur {v:g} px.", max_blur=v), "Most blur", 0.5, 4))
+        field("Strength (0-1)", "dof_strength", f"{dof['strength']:g}",
+              number(lambda v: self.set_dof(f"Depth of field strength {v:g}.", strength=v), "Strength", 0, 1))
+        rows.add(studio._button(f"Preview here: {'on' if self.dof_preview else 'off'}", self.toggle_dof_preview,
+                                width=width, style=S_ACTIVE if self.dof_preview else S_BUTTON))
+        rows.add(studio._label("Sharp range: how far in front of and behind the focus stays fully sharp. Falloff: how "
+                               "far it takes to reach the most blur. Most blur: in pixels of a 720-line picture (it "
+                               "scales with the window). In play it focuses on the player; the preview focuses on the "
+                               "middle of this view. Menus, the HUD and dialogue are never blurred.",
+                               color=C_MUTED, size=9, width=width))
+
+    def set_dof(self, said: str, **change: Any) -> None:
+        """One undo step; the view takes the new depth of field in place (uniforms: nothing rebuilt, no reload)."""
+        import dataclasses  # noqa: PLC0415
+
+        from engine.hd2d.dof import OFF, DofError, parse_dof  # noqa: PLC0415
+
+        studio = self.studio
+        try:
+            studio.project.edit_scene(lambda s: ops.set_depth_of_field(s, **change))
+        except ops.OpError as err:
+            studio._say(str(err), ok=False)
+            return
+        renderer = self.renderer
+        if renderer is not None:
+            hd2d = (studio.project.scene().get("settings") or {}).get("hd2d")
+            try:
+                dof = parse_dof(hd2d.get("depth_of_field") if isinstance(hd2d, dict) else None)
+            except DofError:  # (the op only writes what reads back: off, as a load would set it aside)
+                dof = OFF
+            renderer.settings = dataclasses.replace(renderer.settings, depth_of_field=dof, dof_error=None)
+            unavailable = renderer.dof_status()[0] == "unavailable"
+            studio.window.hd2d_dof_message = renderer.dof_unavailable if unavailable else None
+        studio._rebuild()
+        studio._say(said)
+
+    def toggle_dof_preview(self) -> None:
+        self.dof_preview = not self.dof_preview
+        self.studio._say(f"Depth of field preview {'on' if self.dof_preview else 'off'}.")
+        self.studio._rebuild()
 
     def set_sun(self, said: str, **change: Any) -> None:
         self.studio._edit(lambda s: ops.set_hd2d_sun(s, **change), said)
