@@ -1,0 +1,84 @@
+{
+ "software_renderer": null,
+ "before": {
+  "enabled": false,
+  "focus_range": 2.5,
+  "near_falloff": 10.0,
+  "far_falloff": 10.0,
+  "max_blur": 2.5,
+  "strength": 1.0,
+  "error": null,
+  "indoor": false
+ },
+ "panel_labels": [
+  "Depth of field",
+  "Width x depth (m)"
+ ],
+ "editing_view_still": true,
+ "turned_on": {
+  "stored": {
+   "enabled": true
+  },
+  "renderer_active": true,
+  "status": [
+   "on",
+   null
+  ],
+  "message": "Depth of field on."
+ },
+ "editing_view_unchanged_without_preview": true,
+ "editing_view_changed_box": null,
+ "editing_view_drawn": false,
+ "max_blur_set_undo_redo": [
+  3.0,
+  2.5,
+  3.0
+ ],
+ "preview": {
+  "drawn": true,
+  "line_pixels": [
+   22868,
+   22868
+  ],
+  "line_pixels_same_share": 1.0,
+  "world_changed_share": 0.296
+ },
+ "software_label": [
+  "Not shown on this computer: depth of field is off on this computer (simulated software rendering)"
+ ],
+ "software_drawn": false,
+ "saved": "Saved 1 file(s).",
+ "in_the_saved_file": {
+  "enabled": true,
+  "max_blur": 3.0
+ },
+ "reopened": {
+  "same": true,
+  "unsaved": []
+ },
+ "in_play": {
+  "mode": "play",
+  "status": [
+   "on",
+   null
+  ],
+  "load_message": null,
+  "drawn": true,
+  "radius": 3.0,
+  "max_blur": 3.0
+ },
+ "indoor": {
+  "room": "cottage",
+  "enabled": false,
+  "focus_range": 2.5,
+  "near_falloff": 10.0,
+  "far_falloff": 10.0,
+  "max_blur": 2.5,
+  "strength": 1.0,
+  "error": null,
+  "indoor": true,
+  "note": [
+   "This room's camera is steep and close, like an interior's: it sees only a few metres of depth, so the effect is slight here."
+  ]
+ }
+}

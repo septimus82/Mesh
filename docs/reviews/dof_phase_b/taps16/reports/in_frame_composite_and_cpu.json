@@ -1,0 +1,78 @@
+{
+ "lakeside_shop/taps16": {
+  "A_whole_draw_gpu_incremental_ms": {
+   "p50": 0.3359,
+   "p95": 1.836,
+   "over_1ms": 58
+  },
+  "A_whole_draw_cpu_ms": {
+   "off_p50": 7.3467,
+   "on_p50": 7.4164,
+   "incremental_p50": 0.0998,
+   "incremental_p95": 1.353
+  },
+  "B_composite_gpu_in_frame_ms": {
+   "p50": 0.4721,
+   "p95": 1.7142,
+   "max": 2.006
+  },
+  "B_cpu_from_draw_start_to_composite_ms_p50": 7.219
+ },
+ "lakeside_shop/taps24": {
+  "A_whole_draw_gpu_incremental_ms": {
+   "p50": 0.727,
+   "p95": 2.046,
+   "over_1ms": 76
+  },
+  "A_whole_draw_cpu_ms": {
+   "off_p50": 7.3215,
+   "on_p50": 7.3525,
+   "incremental_p50": 0.0566,
+   "incremental_p95": 1.4671
+  },
+  "B_composite_gpu_in_frame_ms": {
+   "p50": 1.9026,
+   "p95": 2.2067,
+   "max": 2.4084
+  },
+  "B_cpu_from_draw_start_to_composite_ms_p50": 3.164
+ },
+ "lakeside_bridge/taps16": {
+  "A_whole_draw_gpu_incremental_ms": {
+   "p50": 1.6261,
+   "p95": 2.0449,
+   "over_1ms": 131
+  },
+  "A_whole_draw_cpu_ms": {
+   "off_p50": 3.1658,
+   "on_p50": 3.2362,
+   "incremental_p50": 0.0398,
+   "incremental_p95": 0.8538
+  },
+  "B_composite_gpu_in_frame_ms": {
+   "p50": 1.6691,
+   "p95": 2.1187,
+   "max": 2.3296
+  },
+  "B_cpu_from_draw_start_to_composite_ms_p50": 3.1333
+ },
+ "lakeside_bridge/taps24": {
+  "A_whole_draw_gpu_incremental_ms": {
+   "p50": 1.8493,
+   "p95": 2.1535,
+   "over_1ms": 143
+  },
+  "A_whole_draw_cpu_ms": {
+   "off_p50": 3.1831,
+   "on_p50": 3.2495,
+   "incremental_p50": 0.071,
+   "incremental_p95": 0.8948
+  },
+  "B_composite_gpu_in_frame_ms": {
+   "p50": 1.8852,
+   "p95": 2.3675,
+   "max": 2.6255
+  },
+  "B_cpu_from_draw_start_to_composite_ms_p50": 3.1478
+ }
+}
