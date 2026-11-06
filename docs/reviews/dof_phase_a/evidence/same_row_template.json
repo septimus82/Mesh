@@ -1,0 +1,72 @@
+{
+ "template_cottage_interior": {
+  "rows_with_a_pair": 0,
+  "examples": []
+ },
+ "village_bridge": {
+  "rows_with_a_pair": 1,
+  "examples": [
+   {
+    "row": 270,
+    "sharp_col": 1206,
+    "far_col": 732,
+    "subtle_kept": [
+     1.0,
+     0.534
+    ],
+    "miniature_kept": [
+     1.0,
+     0.277
+    ]
+   }
+  ]
+ },
+ "village_shop": {
+  "rows_with_a_pair": 3,
+  "examples": [
+   {
+    "row": 252,
+    "sharp_col": 6,
+    "far_col": 192,
+    "subtle_kept": [
+     1.0,
+     0.41
+    ],
+    "miniature_kept": [
+     1.0,
+     0.153
+    ]
+   },
+   {
+    "row": 234,
+    "sharp_col": 582,
+    "far_col": 123,
+    "subtle_kept": [
+     1.0,
+     0.488
+    ],
+    "miniature_kept": [
+     1.0,
+     0.154
+    ]
+   },
+   {
+    "row": 258,
+    "sharp_col": 333,
+    "far_col": 60,
+    "subtle_kept": [
+     1.0,
+     0.491
+    ],
+    "miniature_kept": [
+     1.0,
+     0.161
+    ]
+   }
+  ]
+ },
+ "village_start": {
+  "rows_with_a_pair": 0,
+  "examples": []
+ }
+}

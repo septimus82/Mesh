@@ -1,0 +1,137 @@
+{
+ "lakeside_bridge": {
+  "rows_with_a_pair": 4,
+  "examples": [
+   {
+    "row": 210,
+    "sharp_col": 90,
+    "far_col": 15,
+    "subtle_kept": [
+     1.0,
+     0.631
+    ],
+    "miniature_kept": [
+     1.0,
+     0.154
+    ]
+   },
+   {
+    "row": 180,
+    "sharp_col": 102,
+    "far_col": 390,
+    "subtle_kept": [
+     1.0,
+     0.452
+    ],
+    "miniature_kept": [
+     1.0,
+     0.172
+    ]
+   },
+   {
+    "row": 150,
+    "sharp_col": 132,
+    "far_col": 654,
+    "subtle_kept": [
+     1.0,
+     0.374
+    ],
+    "miniature_kept": [
+     1.0,
+     0.178
+    ]
+   },
+   {
+    "row": 192,
+    "sharp_col": 192,
+    "far_col": 9,
+    "subtle_kept": [
+     1.0,
+     0.56
+    ],
+    "miniature_kept": [
+     1.0,
+     0.187
+    ]
+   }
+  ]
+ },
+ "lakeside_cottage_interior": {
+  "rows_with_a_pair": 0,
+  "examples": []
+ },
+ "lakeside_shop": {
+  "rows_with_a_pair": 7,
+  "examples": [
+   {
+    "row": 246,
+    "sharp_col": 189,
+    "far_col": 6,
+    "subtle_kept": [
+     1.0,
+     0.732
+    ],
+    "miniature_kept": [
+     1.0,
+     0.212
+    ]
+   },
+   {
+    "row": 240,
+    "sharp_col": 591,
+    "far_col": 6,
+    "subtle_kept": [
+     1.0,
+     0.673
+    ],
+    "miniature_kept": [
+     1.0,
+     0.223
+    ]
+   },
+   {
+    "row": 258,
+    "sharp_col": 189,
+    "far_col": 93,
+    "subtle_kept": [
+     1.0,
+     0.824
+    ],
+    "miniature_kept": [
+     1.0,
+     0.232
+    ]
+   },
+   {
+    "row": 228,
+    "sharp_col": 537,
+    "far_col": 6,
+    "subtle_kept": [
+     1.0,
+     0.59
+    ],
+    "miniature_kept": [
+     1.0,
+     0.237
+    ]
+   },
+   {
+    "row": 264,
+    "sharp_col": 189,
+    "far_col": 360,
+    "subtle_kept": [
+     1.0,
+     0.709
+    ],
+    "miniature_kept": [
+     1.0,
+     0.238
+    ]
+   }
+  ]
+ },
+ "lakeside_start": {
+  "rows_with_a_pair": 0,
+  "examples": []
+ }
+}

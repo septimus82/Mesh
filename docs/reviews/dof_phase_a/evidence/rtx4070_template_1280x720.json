@@ -1,0 +1,414 @@
+{
+ "size": [
+  1280,
+  720
+ ],
+ "frames_timed": 120,
+ "set": "template",
+ "views": {
+  "village_start": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "camera": {
+    "pitch": 30.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false
+   },
+   "player_screen": [
+    640,
+    441
+   ],
+   "focus_m": 50.797,
+   "camera_distance_m": 53.518,
+   "player_depth_m": 50.625,
+   "depth_span_m": [
+    46.64,
+    67.36
+   ],
+   "player_pixels": 2620,
+   "player_depth_from_pixels_m": [
+    50.509,
+    50.845,
+    51.196
+   ],
+   "player_billboard_mid_and_half_span_m": [
+    50.797,
+    0.433
+   ],
+   "player_pixels_diff": {
+    "subtle": {
+     "mean": 0.0,
+     "max": 0,
+     "changed_share": 0.0
+    },
+    "miniature": {
+     "mean": 0.0,
+     "max": 0,
+     "changed_share": 0.0
+    }
+   },
+   "in_focus_band": {
+    "subtle": {
+     "pixels": 275510,
+     "changed_share": 0.0
+    },
+    "miniature": {
+     "pixels": 109768,
+     "changed_share": 0.0
+    }
+   },
+   "same_row_comparisons": [],
+   "same_row_found": 0,
+   "timing": {
+    "off": {
+     "dof_gpu_ms_median": null,
+     "dof_gpu_ms_p95": null,
+     "world_gpu_ms_median": 0.409,
+     "frame_wall_ms_median": 13.425
+    },
+    "subtle": {
+     "dof_gpu_ms_median": 0.349,
+     "dof_gpu_ms_p95": 0.356,
+     "world_gpu_ms_median": 0.402,
+     "frame_wall_ms_median": 14.598
+    },
+    "miniature": {
+     "dof_gpu_ms_median": 0.696,
+     "dof_gpu_ms_p95": 0.738,
+     "world_gpu_ms_median": 0.386,
+     "frame_wall_ms_median": 14.711
+    }
+   }
+  },
+  "village_shop": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "camera": {
+    "pitch": 30.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false
+   },
+   "player_screen": [
+    677,
+    342
+   ],
+   "focus_m": 53.395,
+   "camera_distance_m": 53.518,
+   "player_depth_m": 53.239,
+   "depth_span_m": [
+    46.64,
+    67.36
+   ],
+   "player_pixels": 2396,
+   "player_depth_from_pixels_m": [
+    53.109,
+    53.448,
+    53.802
+   ],
+   "player_billboard_mid_and_half_span_m": [
+    53.395,
+    0.433
+   ],
+   "player_pixels_diff": {
+    "subtle": {
+     "mean": 0.0,
+     "max": 0,
+     "changed_share": 0.0
+    },
+    "miniature": {
+     "mean": 0.0,
+     "max": 0,
+     "changed_share": 0.0
+    }
+   },
+   "in_focus_band": {
+    "subtle": {
+     "pixels": 304870,
+     "changed_share": 0.0
+    },
+    "miniature": {
+     "pixels": 125215,
+     "changed_share": 0.0
+    }
+   },
+   "same_row_comparisons": [],
+   "same_row_found": 0,
+   "timing": {
+    "off": {
+     "dof_gpu_ms_median": null,
+     "dof_gpu_ms_p95": null,
+     "world_gpu_ms_median": 0.373,
+     "frame_wall_ms_median": 12.932
+    },
+    "subtle": {
+     "dof_gpu_ms_median": 0.342,
+     "dof_gpu_ms_p95": 0.367,
+     "world_gpu_ms_median": 0.356,
+     "frame_wall_ms_median": 14.38
+    },
+    "miniature": {
+     "dof_gpu_ms_median": 0.705,
+     "dof_gpu_ms_p95": 0.75,
+     "world_gpu_ms_median": 0.348,
+     "frame_wall_ms_median": 14.687
+    }
+   }
+  },
+  "village_bridge": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "camera": {
+    "pitch": 30.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false
+   },
+   "player_screen": [
+    640,
+    339
+   ],
+   "focus_m": 53.485,
+   "camera_distance_m": 53.518,
+   "player_depth_m": 53.328,
+   "depth_span_m": [
+    42.85,
+    67.36
+   ],
+   "player_pixels": 2368,
+   "player_depth_from_pixels_m": [
+    53.193,
+    53.536,
+    53.891
+   ],
+   "player_billboard_mid_and_half_span_m": [
+    53.485,
+    0.433
+   ],
+   "player_pixels_diff": {
+    "subtle": {
+     "mean": 0.0,
+     "max": 0,
+     "changed_share": 0.0
+    },
+    "miniature": {
+     "mean": 0.0,
+     "max": 0,
+     "changed_share": 0.0
+    }
+   },
+   "in_focus_band": {
+    "subtle": {
+     "pixels": 381007,
+     "changed_share": 0.0016
+    },
+    "miniature": {
+     "pixels": 112052,
+     "changed_share": 0.0124
+    }
+   },
+   "same_row_comparisons": [],
+   "same_row_found": 0,
+   "timing": {
+    "off": {
+     "dof_gpu_ms_median": null,
+     "dof_gpu_ms_p95": null,
+     "world_gpu_ms_median": 0.381,
+     "frame_wall_ms_median": 12.855
+    },
+    "subtle": {
+     "dof_gpu_ms_median": 0.332,
+     "dof_gpu_ms_p95": 0.344,
+     "world_gpu_ms_median": 0.374,
+     "frame_wall_ms_median": 14.477
+    },
+    "miniature": {
+     "dof_gpu_ms_median": 0.695,
+     "dof_gpu_ms_p95": 0.751,
+     "world_gpu_ms_median": 0.366,
+     "frame_wall_ms_median": 15.257
+    }
+   }
+  },
+  "template_cottage_interior": {
+   "scene": "packs/core_regions/scenes/cottage.json",
+   "camera": {
+    "pitch": 55.0,
+    "fov": 12.0,
+    "distance": 35.679,
+    "ortho": false
+   },
+   "player_screen": [
+    752,
+    235
+   ],
+   "focus_m": 35.791,
+   "camera_distance_m": 35.679,
+   "player_depth_m": 35.437,
+   "depth_span_m": [
+    32.64,
+    38.17
+   ],
+   "player_pixels": 5527,
+   "player_depth_from_pixels_m": [
+    35.076,
+    35.913,
+    36.816
+   ],
+   "player_billboard_mid_and_half_span_m": [
+    35.791,
+    1.071
+   ],
+   "player_pixels_diff": {
+    "subtle": {
+     "mean": 0.0,
+     "max": 0,
+     "changed_share": 0.0
+    },
+    "miniature": {
+     "mean": 0.0,
+     "max": 0,
+     "changed_share": 0.0
+    }
+   },
+   "in_focus_band": {
+    "subtle": {
+     "pixels": 290734,
+     "changed_share": 0.0007
+    },
+    "miniature": {
+     "pixels": 156134,
+     "changed_share": 0.0075
+    }
+   },
+   "same_row_comparisons": [],
+   "same_row_found": 0,
+   "timing": {
+    "off": {
+     "dof_gpu_ms_median": null,
+     "dof_gpu_ms_p95": null,
+     "world_gpu_ms_median": 0.244,
+     "frame_wall_ms_median": 10.531
+    },
+    "subtle": {
+     "dof_gpu_ms_median": 0.324,
+     "dof_gpu_ms_p95": 0.354,
+     "world_gpu_ms_median": 0.232,
+     "frame_wall_ms_median": 11.974
+    },
+    "miniature": {
+     "dof_gpu_ms_median": 0.695,
+     "dof_gpu_ms_p95": 0.719,
+     "world_gpu_ms_median": 0.238,
+     "frame_wall_ms_median": 13.071
+    }
+   }
+  }
+ },
+ "gl": {
+  "vendor": "NVIDIA Corporation",
+  "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+  "version": [
+   4,
+   6
+  ]
+ },
+ "zero_strength_bit_identical_to_off": true,
+ "hud": {
+  "glyph_pixels": 457,
+  "glyph_pixels_changed_by_dof": 37,
+  "glyph_max_delta": 1
+ },
+ "motion": {
+  "mean_frame_to_frame_change": {
+   "off": 5.236,
+   "miniature": 3.151
+  },
+  "dof_over_off": 0.602
+ },
+ "still_frames_identical_with_dof": true,
+ "gl_objects": {
+  "off_before_300_frames": {
+   "texture": 46,
+   "framebuffer": 6,
+   "program": 28,
+   "buffer": 122,
+   "geometry": 52
+  },
+  "off_after_300_frames": {
+   "texture": 47,
+   "framebuffer": 6,
+   "program": 28,
+   "buffer": 122,
+   "geometry": 52
+  },
+  "before_300_frames": {
+   "texture": 47,
+   "framebuffer": 6,
+   "program": 28,
+   "buffer": 122,
+   "geometry": 52
+  },
+  "after_300_frames": {
+   "texture": 47,
+   "framebuffer": 6,
+   "program": 28,
+   "buffer": 122,
+   "geometry": 52
+  },
+  "after_resizes": {
+   "960x540": {
+    "frame": [
+     960,
+     540
+    ],
+    "fbo": [
+     960,
+     540
+    ],
+    "dof_ms": 0.411,
+    "objects": {
+     "texture": 47,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 122,
+     "geometry": 52
+    }
+   },
+   "1600x900": {
+    "frame": [
+     1600,
+     900
+    ],
+    "fbo": [
+     1600,
+     900
+    ],
+    "dof_ms": 1.105,
+    "objects": {
+     "texture": 47,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 122,
+     "geometry": 52
+    }
+   },
+   "1280x720": {
+    "frame": [
+     1280,
+     720
+    ],
+    "fbo": [
+     1280,
+     720
+    ],
+    "dof_ms": 0.719,
+    "objects": {
+     "texture": 47,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 122,
+     "geometry": 52
+    }
+   }
+  }
+ }
+}
