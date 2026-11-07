@@ -1,0 +1,58 @@
+{
+ "scene": "packs/core_regions/scenes/lakeside__l3_night.json",
+ "lamp": 3,
+ "lamp_m": [
+  21.1875,
+  18.3125,
+  2.4
+ ],
+ "parts_whose_box_holds_the_lamp": [
+  [
+   "lamp_post_4",
+   "lantern",
+   "lantern",
+   [
+    21.0,
+    18.1,
+    2.3
+   ],
+   [
+    21.4,
+    18.5,
+    2.75
+   ]
+  ]
+ ],
+ "fixtures_found": [],
+ "ray_blockers": {
+  "cottage/wall_south_e_high/plaster + lamp_post_4/lantern/lantern": 138,
+  "cottage/wall_east_high/plaster + lamp_post_4/lantern/lantern": 129,
+  "cottage/frame_post_se/timber + cottage/wall_east_high/plaster + cottage/wall_south_e_high/plaster + lamp_post_4/lantern/lantern": 69,
+  "cottage/floor/floorboards + lamp_post_4/lantern/lantern": 64,
+  "cottage/wall_north_low/cobbles + lamp_post_4/lantern/lantern": 31,
+  "cottage/wall_west_low/cobbles + lamp_post_4/lantern/lantern": 25,
+  "cottage/floor/floorboards + lamp_post_4/lantern/lantern + lamp_post_4/post/iron": 16,
+  "cottage/wall_east_high/plaster + lamp_post_4/lantern/lantern + lamp_post_4/post/iron": 14,
+  "cottage/wall_south_e_high/plaster + lamp_post_4/lantern/lantern + lamp_post_4/post/iron": 13,
+  "cottage/frame_post_se/timber + cottage/wall_east_high/plaster + cottage/wall_south_e_high/plaster + lamp_post_4/lantern/lantern + lamp_post_4/post/iron": 11,
+  "cottage/wall_north_high/plaster + cottage/wall_north_low/cobbles + lamp_post_4/lantern/lantern": 9,
+  "cottage/frame_sill/timber + cottage/wall_east_high/plaster + lamp_post_4/lantern/lantern": 8,
+  "cottage/frame_sill/timber + cottage/wall_north_high/plaster + lamp_post_4/lantern/lantern": 6,
+  "cottage/frame_sill/timber + cottage/wall_south_e_high/plaster + cottage/wall_south_w_high/plaster + lamp_post_4/lantern/lantern": 4,
+  "cottage/frame_sill/timber + cottage/wall_south_e_high/plaster + lamp_post_4/lantern/lantern + lamp_post_4/post/iron": 4,
+  "cottage/frame_sill/timber + cottage/wall_east_high/plaster + lamp_post_4/lantern/lantern + lamp_post_4/post/iron": 4,
+  "cottage/wall_east_high/plaster + cottage/wall_south_e_high/plaster + lamp_post_4/lantern/lantern": 4,
+  "cottage/wall_east_high/plaster + fence_2m_4/rail_0.35/timber.005 + lamp_post_4/lantern/lantern": 4,
+  "cottage/frame_sill/timber + cottage/wall_north_high/plaster + fence_2m_3/rail_0.35/timber.005 + lamp_post_4/lantern/lantern": 2,
+  "cottage/wall_north_low/cobbles + cottage/wall_west_low/cobbles + lamp_post_4/lantern/lantern": 1,
+  "cottage/wall_south_e_high/plaster + cottage/window_e_pane/glass + cottage/window_e_stile_l/timber + lamp_post_4/lantern/lantern": 1,
+  "cottage/wall_south_e_high/plaster + cottage/window_e_pane/glass + lamp_post_4/lantern/lantern": 1,
+  "cottage/frame_sill/timber + cottage/wall_south_e_high/plaster + lamp_post_4/lantern/lantern": 1,
+  "cottage/wall_south_e_high/plaster + cottage/window_e_pane/glass + lamp_post_4/lantern/lantern + lamp_post_4/post/iron": 1,
+  "cottage/frame_sill/timber + cottage/wall_east_high/plaster + cottage/wall_south_e_high/plaster + lamp_post_4/lantern/lantern + lamp_post_4/post/iron": 1,
+  "cottage/frame_sill/timber + cottage/wall_east_high/plaster + cottage/wall_north_high/plaster + fence_2m_3/rail_0.35/timber.005 + lamp_post_4/lantern/lantern": 1,
+  "cottage/wall_east_high/plaster + fence_2m_3/rail_0.35/timber.005 + lamp_post_4/lantern/lantern": 1,
+  "cottage/wall_east_high/plaster + fence_2m_3/post_+1/timber.005 + fence_2m_3/rail_0.35/timber.005 + lamp_post_4/lantern/lantern": 1,
+  "cottage/wall_east_high/plaster + fence_2m_4/post_+1/timber.005 + lamp_post_4/lantern/lantern": 1
+ }
+}

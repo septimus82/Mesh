@@ -1,0 +1,666 @@
+{
+ "scene": "packs/core_regions/scenes/start__l3_night_r448.json",
+ "patch": null,
+ "pcf": 1,
+ "lamps": [
+  {
+   "lamp": 0,
+   "pos_m": [
+    17.5,
+    9.0,
+    2.5
+   ],
+   "radius_m": 14.0,
+   "fixtures": [
+    "lamp_west"
+   ],
+   "lit_surface_points": 1021,
+   "false_shadow": 17,
+   "by_material": {
+    "awning": {
+     "points": 1,
+     "false": 0
+    },
+    "cobbles": {
+     "points": 38,
+     "false": 1
+    },
+    "crate": {
+     "points": 20,
+     "false": 0
+    },
+    "dirt": {
+     "points": 723,
+     "false": 5
+    },
+    "floorboards.001": {
+     "points": 1,
+     "false": 0
+    },
+    "floorboards.002": {
+     "points": 4,
+     "false": 0
+    },
+    "iron": {
+     "points": 6,
+     "false": 0
+    },
+    "lantern": {
+     "points": 4,
+     "false": 0
+    },
+    "plaster": {
+     "points": 109,
+     "false": 4
+    },
+    "plaster.001": {
+     "points": 31,
+     "false": 0
+    },
+    "rock": {
+     "points": 4,
+     "false": 0
+    },
+    "shingles": {
+     "points": 3,
+     "false": 1
+    },
+    "shingles.001": {
+     "points": 2,
+     "false": 2
+    },
+    "timber": {
+     "points": 22,
+     "false": 1
+    },
+    "timber.001": {
+     "points": 17,
+     "false": 0
+    },
+    "timber.003": {
+     "points": 36,
+     "false": 3
+    }
+   },
+   "by_incidence_deg": {
+    "0-15": {
+     "points": 36,
+     "false": 2
+    },
+    "15-30": {
+     "points": 176,
+     "false": 1
+    },
+    "30-45": {
+     "points": 307,
+     "false": 1
+    },
+    "45-60": {
+     "points": 309,
+     "false": 0
+    },
+    "60-75": {
+     "points": 148,
+     "false": 0
+    },
+    "75-90": {
+     "points": 45,
+     "false": 13
+    }
+   },
+   "by_distance_m": {
+    "2": {
+     "points": 77,
+     "false": 0
+    },
+    "3": {
+     "points": 349,
+     "false": 0
+    },
+    "4": {
+     "points": 163,
+     "false": 0
+    },
+    "5": {
+     "points": 180,
+     "false": 1
+    },
+    "6": {
+     "points": 95,
+     "false": 2
+    },
+    "7": {
+     "points": 21,
+     "false": 0
+    },
+    "8": {
+     "points": 51,
+     "false": 2
+    },
+    "9": {
+     "points": 52,
+     "false": 2
+    },
+    "10": {
+     "points": 17,
+     "false": 7
+    },
+    "11": {
+     "points": 10,
+     "false": 3
+    },
+    "12": {
+     "points": 2,
+     "false": 0
+    },
+    "13": {
+     "points": 4,
+     "false": 0
+    }
+   },
+   "worst_false": [
+    [
+     0.333,
+     "plaster",
+     8.29,
+     12.3
+    ],
+    [
+     0.667,
+     "dirt",
+     11.16,
+     77.2
+    ],
+    [
+     0.667,
+     "dirt",
+     11.69,
+     77.8
+    ],
+    [
+     0.667,
+     "plaster",
+     5.99,
+     80.4
+    ],
+    [
+     0.667,
+     "plaster",
+     6.74,
+     42.1
+    ],
+    [
+     0.667,
+     "plaster",
+     9.59,
+     84.0
+    ],
+    [
+     0.667,
+     "timber",
+     10.16,
+     84.7
+    ],
+    [
+     0.667,
+     "timber.003",
+     10.17,
+     82.2
+    ],
+    [
+     0.667,
+     "timber.003",
+     10.33,
+     14.6
+    ],
+    [
+     0.667,
+     "timber.003",
+     10.85,
+     82.7
+    ],
+    [
+     0.778,
+     "dirt",
+     11.65,
+     77.7
+    ],
+    [
+     0.778,
+     "shingles.001",
+     9.22,
+     85.7
+    ],
+    [
+     0.778,
+     "shingles.001",
+     10.17,
+     86.1
+    ],
+    [
+     0.889,
+     "cobbles",
+     8.41,
+     15.6
+    ],
+    [
+     0.889,
+     "dirt",
+     10.62,
+     76.5
+    ]
+   ],
+   "shadowed_points": 185,
+   "leak": 30,
+   "leaks_by_gap_m": {
+    "5cm+": 16,
+    "50cm+": 4,
+    "25cm+": 2,
+    "40cm+": 1,
+    "10cm+": 4,
+    "45cm+": 1,
+    "20cm+": 1,
+    "35cm+": 1
+   },
+   "worst_leaks": [
+    [
+     1.0,
+     "plaster",
+     7.22,
+     0.072
+    ],
+    [
+     1.0,
+     "plaster",
+     7.07,
+     0.051
+    ],
+    [
+     1.0,
+     "plaster",
+     7.02,
+     0.06
+    ],
+    [
+     1.0,
+     "plaster",
+     6.71,
+     0.067
+    ],
+    [
+     1.0,
+     "plaster",
+     6.32,
+     0.063
+    ],
+    [
+     1.0,
+     "plaster",
+     6.01,
+     0.06
+    ],
+    [
+     1.0,
+     "plaster",
+     5.77,
+     0.058
+    ],
+    [
+     1.0,
+     "plaster",
+     5.58,
+     0.056
+    ],
+    [
+     1.0,
+     "plaster",
+     5.45,
+     0.054
+    ],
+    [
+     1.0,
+     "plaster",
+     5.35,
+     0.054
+    ],
+    [
+     1.0,
+     "plaster",
+     5.25,
+     0.074
+    ],
+    [
+     1.0,
+     "plaster",
+     5.19,
+     0.073
+    ],
+    [
+     1.0,
+     "plaster",
+     5.13,
+     0.072
+    ],
+    [
+     1.0,
+     "plaster",
+     5.12,
+     0.072
+    ],
+    [
+     0.778,
+     "cobbles",
+     9.1,
+     0.455
+    ]
+   ]
+  },
+  {
+   "lamp": 1,
+   "pos_m": [
+    22.5,
+    9.0,
+    2.5
+   ],
+   "radius_m": 14.0,
+   "fixtures": [
+    "lamp_east"
+   ],
+   "lit_surface_points": 1131,
+   "false_shadow": 9,
+   "by_material": {
+    "awning": {
+     "points": 11,
+     "false": 0
+    },
+    "barrel": {
+     "points": 7,
+     "false": 2
+    },
+    "cobbles": {
+     "points": 14,
+     "false": 0
+    },
+    "crate": {
+     "points": 170,
+     "false": 0
+    },
+    "dirt": {
+     "points": 632,
+     "false": 3
+    },
+    "floorboards.001": {
+     "points": 4,
+     "false": 0
+    },
+    "floorboards.002": {
+     "points": 1,
+     "false": 0
+    },
+    "iron": {
+     "points": 7,
+     "false": 0
+    },
+    "lantern": {
+     "points": 4,
+     "false": 0
+    },
+    "plaster": {
+     "points": 36,
+     "false": 1
+    },
+    "plaster.001": {
+     "points": 101,
+     "false": 2
+    },
+    "rock": {
+     "points": 5,
+     "false": 0
+    },
+    "shingles.001": {
+     "points": 17,
+     "false": 0
+    },
+    "timber": {
+     "points": 6,
+     "false": 0
+    },
+    "timber.001": {
+     "points": 72,
+     "false": 1
+    },
+    "timber.003": {
+     "points": 44,
+     "false": 0
+    }
+   },
+   "by_incidence_deg": {
+    "0-15": {
+     "points": 35,
+     "false": 1
+    },
+    "15-30": {
+     "points": 110,
+     "false": 3
+    },
+    "30-45": {
+     "points": 271,
+     "false": 0
+    },
+    "45-60": {
+     "points": 494,
+     "false": 1
+    },
+    "60-75": {
+     "points": 173,
+     "false": 1
+    },
+    "75-90": {
+     "points": 48,
+     "false": 3
+    }
+   },
+   "by_distance_m": {
+    "2": {
+     "points": 226,
+     "false": 0
+    },
+    "3": {
+     "points": 303,
+     "false": 1
+    },
+    "4": {
+     "points": 248,
+     "false": 0
+    },
+    "5": {
+     "points": 126,
+     "false": 0
+    },
+    "6": {
+     "points": 44,
+     "false": 0
+    },
+    "7": {
+     "points": 36,
+     "false": 1
+    },
+    "8": {
+     "points": 16,
+     "false": 1
+    },
+    "9": {
+     "points": 17,
+     "false": 2
+    },
+    "10": {
+     "points": 64,
+     "false": 2
+    },
+    "11": {
+     "points": 31,
+     "false": 2
+    },
+    "12": {
+     "points": 15,
+     "false": 0
+    },
+    "13": {
+     "points": 5,
+     "false": 0
+    }
+   },
+   "worst_false": [
+    [
+     0.333,
+     "barrel",
+     9.95,
+     20.5
+    ],
+    [
+     0.333,
+     "plaster.001",
+     3.96,
+     67.7
+    ],
+    [
+     0.667,
+     "barrel",
+     9.88,
+     52.8
+    ],
+    [
+     0.667,
+     "dirt",
+     11.16,
+     77.2
+    ],
+    [
+     0.667,
+     "dirt",
+     11.69,
+     77.8
+    ],
+    [
+     0.667,
+     "plaster",
+     10.14,
+     9.6
+    ],
+    [
+     0.667,
+     "plaster.001",
+     7.96,
+     23.5
+    ],
+    [
+     0.889,
+     "dirt",
+     10.62,
+     76.5
+    ],
+    [
+     0.889,
+     "timber.001",
+     8.01,
+     24.2
+    ]
+   ],
+   "shadowed_points": 180,
+   "leak": 14,
+   "leaks_by_gap_m": {
+    "30cm+": 2,
+    "5cm+": 6,
+    "20cm+": 1,
+    "50cm+": 4,
+    "10cm+": 1
+   },
+   "worst_leaks": [
+    [
+     1.0,
+     "plaster",
+     11.18,
+     0.056
+    ],
+    [
+     1.0,
+     "plaster",
+     11.16,
+     0.078
+    ],
+    [
+     1.0,
+     "plaster",
+     10.37,
+     0.052
+    ],
+    [
+     1.0,
+     "plaster",
+     10.23,
+     0.051
+    ],
+    [
+     1.0,
+     "plaster",
+     10.07,
+     0.071
+    ],
+    [
+     0.889,
+     "timber.001",
+     5.4,
+     0.076
+    ],
+    [
+     0.667,
+     "plaster.001",
+     5.45,
+     0.311
+    ],
+    [
+     0.333,
+     "timber",
+     10.7,
+     0.546
+    ],
+    [
+     0.333,
+     "plaster.001",
+     7.62,
+     4.174
+    ],
+    [
+     0.333,
+     "barrel",
+     9.79,
+     2.144
+    ],
+    [
+     0.222,
+     "floorboards.001",
+     6.58,
+     0.127
+    ],
+    [
+     0.111,
+     "timber.003",
+     12.44,
+     0.23
+    ],
+    [
+     0.111,
+     "timber.003",
+     11.93,
+     0.306
+    ],
+    [
+     0.111,
+     "timber.001",
+     8.17,
+     2.816
+    ]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,1145 @@
+{
+ "lk_shadow_lamps__noon": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_noon.json",
+  "note": "lamps 0 + 1: the two that cast shadows",
+  "frame_mean_lum": 86.71,
+  "pools": [
+   {
+    "lamp_head_lum": 28.08,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     503,
+     378
+    ],
+    "pool_mean_lum": 120.18,
+    "pixels": 14038
+   },
+   {
+    "lamp_head_lum": 29.29,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     772,
+     270
+    ],
+    "pool_mean_lum": 117.24,
+    "pixels": 11862
+   },
+   {
+    "lamp_head_lum": 54.57,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     307,
+     150
+    ],
+    "pool_mean_lum": 90.99,
+    "pixels": 9777
+   }
+  ]
+ },
+ "lk_shadow_lamps__noon__noshadow": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_noon_noshadow.json",
+  "note": "lamps 0 + 1: the two that cast shadows",
+  "frame_mean_lum": 86.71,
+  "pools": [
+   {
+    "lamp_head_lum": 28.08,
+    "lamp": 0,
+    "shadow_slot": -1,
+    "px": [
+     503,
+     378
+    ],
+    "pool_mean_lum": 120.18,
+    "pixels": 14038
+   },
+   {
+    "lamp_head_lum": 29.29,
+    "lamp": 1,
+    "shadow_slot": -1,
+    "px": [
+     772,
+     270
+    ],
+    "pool_mean_lum": 117.24,
+    "pixels": 11862
+   },
+   {
+    "lamp_head_lum": 54.57,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     307,
+     150
+    ],
+    "pool_mean_lum": 90.99,
+    "pixels": 9777
+   }
+  ]
+ },
+ "lk_shadow_lamps__noon__roomoff": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_noon_roomoff.json",
+  "note": "lamps 0 + 1: the two that cast shadows",
+  "frame_mean_lum": 89.97,
+  "pools": [
+   {
+    "lamp_head_lum": 28.08,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     503,
+     378
+    ],
+    "pool_mean_lum": 122.16,
+    "pixels": 14038
+   },
+   {
+    "lamp_head_lum": 29.29,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     772,
+     270
+    ],
+    "pool_mean_lum": 118.75,
+    "pixels": 11862
+   },
+   {
+    "lamp_head_lum": 54.57,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     307,
+     150
+    ],
+    "pool_mean_lum": 95.12,
+    "pixels": 9777
+   }
+  ]
+ },
+ "lk_shadow_lamps__evening": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_evening.json",
+  "note": "lamps 0 + 1: the two that cast shadows",
+  "frame_mean_lum": 55.77,
+  "pools": [
+   {
+    "lamp_head_lum": 12.15,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     503,
+     378
+    ],
+    "pool_mean_lum": 68.77,
+    "pixels": 14038
+   },
+   {
+    "lamp_head_lum": 19.43,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     772,
+     270
+    ],
+    "pool_mean_lum": 73.74,
+    "pixels": 11862
+   },
+   {
+    "lamp_head_lum": 27.55,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     307,
+     150
+    ],
+    "pool_mean_lum": 62.8,
+    "pixels": 9777
+   }
+  ]
+ },
+ "lk_shadow_lamps__evening__noshadow": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_evening_noshadow.json",
+  "note": "lamps 0 + 1: the two that cast shadows",
+  "frame_mean_lum": 55.77,
+  "pools": [
+   {
+    "lamp_head_lum": 12.15,
+    "lamp": 0,
+    "shadow_slot": -1,
+    "px": [
+     503,
+     378
+    ],
+    "pool_mean_lum": 68.77,
+    "pixels": 14038
+   },
+   {
+    "lamp_head_lum": 19.43,
+    "lamp": 1,
+    "shadow_slot": -1,
+    "px": [
+     772,
+     270
+    ],
+    "pool_mean_lum": 73.74,
+    "pixels": 11862
+   },
+   {
+    "lamp_head_lum": 27.55,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     307,
+     150
+    ],
+    "pool_mean_lum": 62.8,
+    "pixels": 9777
+   }
+  ]
+ },
+ "lk_shadow_lamps__evening__roomoff": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_evening_roomoff.json",
+  "note": "lamps 0 + 1: the two that cast shadows",
+  "frame_mean_lum": 62.16,
+  "pools": [
+   {
+    "lamp_head_lum": 18.5,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     503,
+     378
+    ],
+    "pool_mean_lum": 93.6,
+    "pixels": 14038
+   },
+   {
+    "lamp_head_lum": 19.43,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     772,
+     270
+    ],
+    "pool_mean_lum": 87.51,
+    "pixels": 11862
+   },
+   {
+    "lamp_head_lum": 27.55,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     307,
+     150
+    ],
+    "pool_mean_lum": 69.51,
+    "pixels": 9777
+   }
+  ]
+ },
+ "lk_shadow_lamps__night": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_night.json",
+  "note": "lamps 0 + 1: the two that cast shadows",
+  "frame_mean_lum": 35.44,
+  "pools": [
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     503,
+     378
+    ],
+    "pool_mean_lum": 66.06,
+    "pixels": 14038
+   },
+   {
+    "lamp_head_lum": 12.73,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     772,
+     270
+    ],
+    "pool_mean_lum": 64.59,
+    "pixels": 11862
+   },
+   {
+    "lamp_head_lum": 18.52,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     307,
+     150
+    ],
+    "pool_mean_lum": 48.51,
+    "pixels": 9777
+   }
+  ]
+ },
+ "lk_shadow_lamps__night__noshadow": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_night_noshadow.json",
+  "note": "lamps 0 + 1: the two that cast shadows",
+  "frame_mean_lum": 35.44,
+  "pools": [
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 0,
+    "shadow_slot": -1,
+    "px": [
+     503,
+     378
+    ],
+    "pool_mean_lum": 66.06,
+    "pixels": 14038
+   },
+   {
+    "lamp_head_lum": 12.73,
+    "lamp": 1,
+    "shadow_slot": -1,
+    "px": [
+     772,
+     270
+    ],
+    "pool_mean_lum": 64.6,
+    "pixels": 11862
+   },
+   {
+    "lamp_head_lum": 18.52,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     307,
+     150
+    ],
+    "pool_mean_lum": 48.51,
+    "pixels": 9777
+   }
+  ]
+ },
+ "lk_shadow_lamps__night__roomoff": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_night_roomoff.json",
+  "note": "lamps 0 + 1: the two that cast shadows",
+  "frame_mean_lum": 35.78,
+  "pools": [
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     503,
+     378
+    ],
+    "pool_mean_lum": 66.37,
+    "pixels": 14038
+   },
+   {
+    "lamp_head_lum": 12.73,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     772,
+     270
+    ],
+    "pool_mean_lum": 64.78,
+    "pixels": 11862
+   },
+   {
+    "lamp_head_lum": 18.52,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     307,
+     150
+    ],
+    "pool_mean_lum": 48.53,
+    "pixels": 9777
+   }
+  ]
+ },
+ "lk_plain_lamps__noon": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_noon.json",
+  "note": "lamps 2 + 3: no shadow maps (MAX_SHADOW_LIGHTS = 2)",
+  "frame_mean_lum": 86.58,
+  "pools": [
+   {
+    "lamp_head_lum": 29.29,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     819,
+     627
+    ],
+    "pool_mean_lum": 116.18,
+    "pixels": 19985
+   },
+   {
+    "lamp_head_lum": 28.08,
+    "lamp": 2,
+    "shadow_slot": -1,
+    "px": [
+     983,
+     294
+    ],
+    "pool_mean_lum": 110.98,
+    "pixels": 12362
+   },
+   {
+    "lamp_head_lum": 61.36,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     269,
+     460
+    ],
+    "pool_mean_lum": 90.45,
+    "pixels": 15894
+   }
+  ]
+ },
+ "lk_plain_lamps__noon__noshadow": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_noon_noshadow.json",
+  "note": "lamps 2 + 3: no shadow maps (MAX_SHADOW_LIGHTS = 2)",
+  "frame_mean_lum": 86.58,
+  "pools": [
+   {
+    "lamp_head_lum": 29.29,
+    "lamp": 1,
+    "shadow_slot": -1,
+    "px": [
+     819,
+     627
+    ],
+    "pool_mean_lum": 116.18,
+    "pixels": 19985
+   },
+   {
+    "lamp_head_lum": 28.08,
+    "lamp": 2,
+    "shadow_slot": -1,
+    "px": [
+     983,
+     294
+    ],
+    "pool_mean_lum": 110.98,
+    "pixels": 12362
+   },
+   {
+    "lamp_head_lum": 61.36,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     269,
+     460
+    ],
+    "pool_mean_lum": 90.45,
+    "pixels": 15894
+   }
+  ]
+ },
+ "lk_plain_lamps__noon__roomoff": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_noon_roomoff.json",
+  "note": "lamps 2 + 3: no shadow maps (MAX_SHADOW_LIGHTS = 2)",
+  "frame_mean_lum": 89.74,
+  "pools": [
+   {
+    "lamp_head_lum": 29.29,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     819,
+     627
+    ],
+    "pool_mean_lum": 117.73,
+    "pixels": 19985
+   },
+   {
+    "lamp_head_lum": 28.08,
+    "lamp": 2,
+    "shadow_slot": -1,
+    "px": [
+     983,
+     294
+    ],
+    "pool_mean_lum": 113.37,
+    "pixels": 12362
+   },
+   {
+    "lamp_head_lum": 61.36,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     269,
+     460
+    ],
+    "pool_mean_lum": 94.71,
+    "pixels": 15894
+   }
+  ]
+ },
+ "lk_plain_lamps__evening": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_evening.json",
+  "note": "lamps 2 + 3: no shadow maps (MAX_SHADOW_LIGHTS = 2)",
+  "frame_mean_lum": 53.61,
+  "pools": [
+   {
+    "lamp_head_lum": 19.43,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     819,
+     627
+    ],
+    "pool_mean_lum": 73.62,
+    "pixels": 19985
+   },
+   {
+    "lamp_head_lum": 18.5,
+    "lamp": 2,
+    "shadow_slot": -1,
+    "px": [
+     983,
+     294
+    ],
+    "pool_mean_lum": 64.31,
+    "pixels": 12362
+   },
+   {
+    "lamp_head_lum": 30.94,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     269,
+     460
+    ],
+    "pool_mean_lum": 61.37,
+    "pixels": 15894
+   }
+  ]
+ },
+ "lk_plain_lamps__evening__noshadow": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_evening_noshadow.json",
+  "note": "lamps 2 + 3: no shadow maps (MAX_SHADOW_LIGHTS = 2)",
+  "frame_mean_lum": 53.61,
+  "pools": [
+   {
+    "lamp_head_lum": 19.43,
+    "lamp": 1,
+    "shadow_slot": -1,
+    "px": [
+     819,
+     627
+    ],
+    "pool_mean_lum": 73.63,
+    "pixels": 19985
+   },
+   {
+    "lamp_head_lum": 18.5,
+    "lamp": 2,
+    "shadow_slot": -1,
+    "px": [
+     983,
+     294
+    ],
+    "pool_mean_lum": 64.31,
+    "pixels": 12362
+   },
+   {
+    "lamp_head_lum": 30.94,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     269,
+     460
+    ],
+    "pool_mean_lum": 61.37,
+    "pixels": 15894
+   }
+  ]
+ },
+ "lk_plain_lamps__evening__roomoff": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_evening_roomoff.json",
+  "note": "lamps 2 + 3: no shadow maps (MAX_SHADOW_LIGHTS = 2)",
+  "frame_mean_lum": 61.07,
+  "pools": [
+   {
+    "lamp_head_lum": 19.43,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     819,
+     627
+    ],
+    "pool_mean_lum": 85.5,
+    "pixels": 19985
+   },
+   {
+    "lamp_head_lum": 18.5,
+    "lamp": 2,
+    "shadow_slot": -1,
+    "px": [
+     983,
+     294
+    ],
+    "pool_mean_lum": 81.82,
+    "pixels": 12362
+   },
+   {
+    "lamp_head_lum": 30.94,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     269,
+     460
+    ],
+    "pool_mean_lum": 67.79,
+    "pixels": 15894
+   }
+  ]
+ },
+ "lk_plain_lamps__night": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_night.json",
+  "note": "lamps 2 + 3: no shadow maps (MAX_SHADOW_LIGHTS = 2)",
+  "frame_mean_lum": 36.02,
+  "pools": [
+   {
+    "lamp_head_lum": 12.83,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     819,
+     627
+    ],
+    "pool_mean_lum": 63.88,
+    "pixels": 19985
+   },
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 2,
+    "shadow_slot": -1,
+    "px": [
+     983,
+     294
+    ],
+    "pool_mean_lum": 60.3,
+    "pixels": 12362
+   },
+   {
+    "lamp_head_lum": 20.77,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     269,
+     460
+    ],
+    "pool_mean_lum": 48.25,
+    "pixels": 15894
+   }
+  ]
+ },
+ "lk_plain_lamps__night__noshadow": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_night_noshadow.json",
+  "note": "lamps 2 + 3: no shadow maps (MAX_SHADOW_LIGHTS = 2)",
+  "frame_mean_lum": 36.02,
+  "pools": [
+   {
+    "lamp_head_lum": 12.83,
+    "lamp": 1,
+    "shadow_slot": -1,
+    "px": [
+     819,
+     627
+    ],
+    "pool_mean_lum": 63.88,
+    "pixels": 19985
+   },
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 2,
+    "shadow_slot": -1,
+    "px": [
+     983,
+     294
+    ],
+    "pool_mean_lum": 60.3,
+    "pixels": 12362
+   },
+   {
+    "lamp_head_lum": 20.77,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     269,
+     460
+    ],
+    "pool_mean_lum": 48.25,
+    "pixels": 15894
+   }
+  ]
+ },
+ "lk_plain_lamps__night__roomoff": {
+  "scene": "packs/core_regions/scenes/lakeside__l3_night_roomoff.json",
+  "note": "lamps 2 + 3: no shadow maps (MAX_SHADOW_LIGHTS = 2)",
+  "frame_mean_lum": 36.62,
+  "pools": [
+   {
+    "lamp_head_lum": 12.83,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     819,
+     627
+    ],
+    "pool_mean_lum": 64.1,
+    "pixels": 19985
+   },
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 2,
+    "shadow_slot": -1,
+    "px": [
+     983,
+     294
+    ],
+    "pool_mean_lum": 60.88,
+    "pixels": 12362
+   },
+   {
+    "lamp_head_lum": 20.77,
+    "lamp": 3,
+    "shadow_slot": -1,
+    "px": [
+     269,
+     460
+    ],
+    "pool_mean_lum": 48.27,
+    "pixels": 15894
+   }
+  ]
+ },
+ "village_lamps__noon": {
+  "scene": "packs/core_regions/scenes/start__l3_noon.json",
+  "note": "the village's two lamp posts (both cast shadows)",
+  "frame_mean_lum": 79.01,
+  "pools": [
+   {
+    "lamp_head_lum": 27.86,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     483,
+     385
+    ],
+    "pool_mean_lum": 127.57,
+    "pixels": 14192
+   },
+   {
+    "lamp_head_lum": 28.01,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 123.69,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_lamps__noon__noshadow": {
+  "scene": "packs/core_regions/scenes/start__l3_noon_noshadow.json",
+  "note": "the village's two lamp posts (both cast shadows)",
+  "frame_mean_lum": 79.14,
+  "pools": [
+   {
+    "lamp_head_lum": 27.86,
+    "lamp": 0,
+    "shadow_slot": -1,
+    "px": [
+     483,
+     385
+    ],
+    "pool_mean_lum": 127.59,
+    "pixels": 14192
+   },
+   {
+    "lamp_head_lum": 28.01,
+    "lamp": 1,
+    "shadow_slot": -1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 123.72,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_lamps__noon__roomoff": {
+  "scene": "packs/core_regions/scenes/start__l3_noon_roomoff.json",
+  "note": "the village's two lamp posts (both cast shadows)",
+  "frame_mean_lum": 82.18,
+  "pools": [
+   {
+    "lamp_head_lum": 28.08,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     483,
+     385
+    ],
+    "pool_mean_lum": 129.48,
+    "pixels": 14192
+   },
+   {
+    "lamp_head_lum": 28.08,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 126.82,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_lamps__evening": {
+  "scene": "packs/core_regions/scenes/start__l3_evening.json",
+  "note": "the village's two lamp posts (both cast shadows)",
+  "frame_mean_lum": 42.71,
+  "pools": [
+   {
+    "lamp_head_lum": 18.5,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     483,
+     385
+    ],
+    "pool_mean_lum": 89.64,
+    "pixels": 14192
+   },
+   {
+    "lamp_head_lum": 18.5,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 90.31,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_lamps__evening__noshadow": {
+  "scene": "packs/core_regions/scenes/start__l3_evening_noshadow.json",
+  "note": "the village's two lamp posts (both cast shadows)",
+  "frame_mean_lum": 42.85,
+  "pools": [
+   {
+    "lamp_head_lum": 18.5,
+    "lamp": 0,
+    "shadow_slot": -1,
+    "px": [
+     483,
+     385
+    ],
+    "pool_mean_lum": 89.67,
+    "pixels": 14192
+   },
+   {
+    "lamp_head_lum": 18.5,
+    "lamp": 1,
+    "shadow_slot": -1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 90.34,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_lamps__evening__roomoff": {
+  "scene": "packs/core_regions/scenes/start__l3_evening_roomoff.json",
+  "note": "the village's two lamp posts (both cast shadows)",
+  "frame_mean_lum": 45.49,
+  "pools": [
+   {
+    "lamp_head_lum": 18.5,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     483,
+     385
+    ],
+    "pool_mean_lum": 90.08,
+    "pixels": 14192
+   },
+   {
+    "lamp_head_lum": 18.5,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 91.27,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_lamps__night": {
+  "scene": "packs/core_regions/scenes/start__l3_night.json",
+  "note": "the village's two lamp posts (both cast shadows)",
+  "frame_mean_lum": 30.82,
+  "pools": [
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     483,
+     385
+    ],
+    "pool_mean_lum": 76.31,
+    "pixels": 14192
+   },
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 75.7,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_lamps__night__noshadow": {
+  "scene": "packs/core_regions/scenes/start__l3_night_noshadow.json",
+  "note": "the village's two lamp posts (both cast shadows)",
+  "frame_mean_lum": 30.96,
+  "pools": [
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 0,
+    "shadow_slot": -1,
+    "px": [
+     483,
+     385
+    ],
+    "pool_mean_lum": 76.34,
+    "pixels": 14192
+   },
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 1,
+    "shadow_slot": -1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 75.73,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_lamps__night__roomoff": {
+  "scene": "packs/core_regions/scenes/start__l3_night_roomoff.json",
+  "note": "the village's two lamp posts (both cast shadows)",
+  "frame_mean_lum": 31.41,
+  "pools": [
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     483,
+     385
+    ],
+    "pool_mean_lum": 76.63,
+    "pixels": 14192
+   },
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 75.94,
+    "pixels": 14192
+   }
+  ]
+ },
+ "cottage__noon": {
+  "scene": "packs/core_regions/scenes/cottage__l3_noon.json",
+  "note": "the interior's one lamp (casts shadows; walls round it)",
+  "frame_mean_lum": 142.55,
+  "pools": [
+   {
+    "lamp_head_lum": 101.49,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     640,
+     264
+    ],
+    "pool_mean_lum": 125.7,
+    "pixels": 47348
+   }
+  ]
+ },
+ "cottage__noon__noshadow": {
+  "scene": "packs/core_regions/scenes/cottage__l3_noon_noshadow.json",
+  "note": "the interior's one lamp (casts shadows; walls round it)",
+  "frame_mean_lum": 143.24,
+  "pools": [
+   {
+    "lamp_head_lum": 101.49,
+    "lamp": 0,
+    "shadow_slot": -1,
+    "px": [
+     640,
+     264
+    ],
+    "pool_mean_lum": 137.47,
+    "pixels": 47348
+   }
+  ]
+ },
+ "cottage__noon__roomoff": {
+  "scene": "packs/core_regions/scenes/cottage__l3_noon_roomoff.json",
+  "note": "the interior's one lamp (casts shadows; walls round it)",
+  "frame_mean_lum": 145.54,
+  "pools": [
+   {
+    "lamp_head_lum": 101.49,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     640,
+     264
+    ],
+    "pool_mean_lum": 139.55,
+    "pixels": 47348
+   }
+  ]
+ },
+ "cottage__evening": {
+  "scene": "packs/core_regions/scenes/cottage__l3_evening.json",
+  "note": "the interior's one lamp (casts shadows; walls round it)",
+  "frame_mean_lum": 133.2,
+  "pools": [
+   {
+    "lamp_head_lum": 68.97,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     640,
+     264
+    ],
+    "pool_mean_lum": 86.49,
+    "pixels": 47348
+   }
+  ]
+ },
+ "cottage__evening__noshadow": {
+  "scene": "packs/core_regions/scenes/cottage__l3_evening_noshadow.json",
+  "note": "the interior's one lamp (casts shadows; walls round it)",
+  "frame_mean_lum": 133.88,
+  "pools": [
+   {
+    "lamp_head_lum": 68.97,
+    "lamp": 0,
+    "shadow_slot": -1,
+    "px": [
+     640,
+     264
+    ],
+    "pool_mean_lum": 98.26,
+    "pixels": 47348
+   }
+  ]
+ },
+ "cottage__evening__roomoff": {
+  "scene": "packs/core_regions/scenes/cottage__l3_evening_roomoff.json",
+  "note": "the interior's one lamp (casts shadows; walls round it)",
+  "frame_mean_lum": 135.86,
+  "pools": [
+   {
+    "lamp_head_lum": 81.25,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     640,
+     264
+    ],
+    "pool_mean_lum": 107.23,
+    "pixels": 47348
+   }
+  ]
+ },
+ "cottage__night": {
+  "scene": "packs/core_regions/scenes/cottage__l3_night.json",
+  "note": "the interior's one lamp (casts shadows; walls round it)",
+  "frame_mean_lum": 38.78,
+  "pools": [
+   {
+    "lamp_head_lum": 63.05,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     640,
+     264
+    ],
+    "pool_mean_lum": 69.66,
+    "pixels": 47348
+   }
+  ]
+ },
+ "cottage__night__noshadow": {
+  "scene": "packs/core_regions/scenes/cottage__l3_night_noshadow.json",
+  "note": "the interior's one lamp (casts shadows; walls round it)",
+  "frame_mean_lum": 39.46,
+  "pools": [
+   {
+    "lamp_head_lum": 63.05,
+    "lamp": 0,
+    "shadow_slot": -1,
+    "px": [
+     640,
+     264
+    ],
+    "pool_mean_lum": 81.46,
+    "pixels": 47348
+   }
+  ]
+ },
+ "cottage__night__roomoff": {
+  "scene": "packs/core_regions/scenes/cottage__l3_night_roomoff.json",
+  "note": "the interior's one lamp (casts shadows; walls round it)",
+  "frame_mean_lum": 40.21,
+  "pools": [
+   {
+    "lamp_head_lum": 63.05,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     640,
+     264
+    ],
+    "pool_mean_lum": 85.9,
+    "pixels": 47348
+   }
+  ]
+ }
+}

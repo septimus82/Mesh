@@ -1,0 +1,58 @@
+{
+ "patch": "glow",
+ "suffix": "",
+ "shots": {
+  "village": {
+   "n": 600,
+   "p50_ms": 0.3308,
+   "p10_ms": 0.3021,
+   "p95_ms": 0.3953,
+   "camera_target": [
+    20.0,
+    8.416,
+    0.8
+   ],
+   "shadow_lamps": 2,
+   "shadow_map_mb": 35.0
+  },
+  "lk_shadow": {
+   "n": 600,
+   "p50_ms": 2.0239,
+   "p10_ms": 1.7009,
+   "p95_ms": 3.2635,
+   "camera_target": [
+    27.188,
+    9.375,
+    0.8
+   ],
+   "shadow_lamps": 2,
+   "shadow_map_mb": 35.0
+  },
+  "lk_plain": {
+   "n": 600,
+   "p50_ms": 1.8278,
+   "p10_ms": 1.1868,
+   "p95_ms": 3.1498,
+   "camera_target": [
+    26.875,
+    20.0,
+    0.8
+   ],
+   "shadow_lamps": 2,
+   "shadow_map_mb": 35.0
+  },
+  "cottage": {
+   "n": 600,
+   "p50_ms": 0.1812,
+   "p10_ms": 0.1157,
+   "p95_ms": 0.254,
+   "camera_target": [
+    8.0,
+    5.092,
+    0.9
+   ],
+   "shadow_lamps": 1,
+   "shadow_map_mb": 27.5
+  }
+ }
+}

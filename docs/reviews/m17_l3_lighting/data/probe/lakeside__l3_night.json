@@ -1,0 +1,162 @@
+{
+ "scene": "packs/core_regions/scenes/lakeside__l3_night.json",
+ "patch": null,
+ "softness": "soft",
+ "pcf": 1,
+ "strength": 1.0,
+ "room_shadows": true,
+ "lamps": [
+  {
+   "index": 0,
+   "pos_m": [
+    25.0,
+    10.188,
+    2.4
+   ],
+   "radius_m": 7.0,
+   "shadow_slot": 0,
+   "fixtures": [
+    "lamp_post"
+   ],
+   "open_points": 2304,
+   "energy_on": 128.877,
+   "energy_off": 128.879,
+   "energy_ratio": 1.0,
+   "coverage_on_m2": 71.5,
+   "coverage_off_m2": 71.5,
+   "cpu_visible": 344,
+   "cpu_blocked": 0,
+   "cpu_ambiguous": 0,
+   "false_shadow": 0,
+   "false_shadow_frac": 0.0,
+   "leak": 0,
+   "leak_frac": null,
+   "visible_mean_on_over_off": 1.0,
+   "by_distance_m": {
+    "0": {
+     "visible": 8,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "1": {
+     "visible": 36,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "2": {
+     "visible": 64,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "3": {
+     "visible": 84,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "4": {
+     "visible": 112,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "5": {
+     "visible": 40,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    }
+   }
+  },
+  {
+   "index": 1,
+   "pos_m": [
+    29.406,
+    13.812,
+    2.4
+   ],
+   "radius_m": 7.0,
+   "shadow_slot": 1,
+   "fixtures": [
+    "lamp_post_2"
+   ],
+   "open_points": 2383,
+   "energy_on": 129.218,
+   "energy_off": 129.262,
+   "energy_ratio": 0.9997,
+   "coverage_on_m2": 71.6875,
+   "coverage_off_m2": 71.6875,
+   "cpu_visible": 346,
+   "cpu_blocked": 0,
+   "cpu_ambiguous": 1,
+   "false_shadow": 0,
+   "false_shadow_frac": 0.0,
+   "leak": 0,
+   "leak_frac": null,
+   "visible_mean_on_over_off": 1.0,
+   "by_distance_m": {
+    "0": {
+     "visible": 8,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "1": {
+     "visible": 36,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "2": {
+     "visible": 64,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "3": {
+     "visible": 84,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "4": {
+     "visible": 112,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "5": {
+     "visible": 42,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    }
+   }
+  },
+  {
+   "index": 2,
+   "pos_m": [
+    32.594,
+    23.594,
+    2.4
+   ],
+   "radius_m": 7.0,
+   "shadow_slot": -1,
+   "fixtures": [],
+   "open_points": 2347,
+   "energy_on": 128.419,
+   "energy_off": 128.419,
+   "energy_ratio": 1.0,
+   "coverage_on_m2": 71.4375,
+   "coverage_off_m2": 71.4375
+  },
+  {
+   "index": 3,
+   "pos_m": [
+    21.188,
+    18.312,
+    2.4
+   ],
+   "radius_m": 7.0,
+   "shadow_slot": -1,
+   "fixtures": [],
+   "open_points": 2053,
+   "energy_on": 82.4,
+   "energy_off": 82.4,
+   "energy_ratio": 1.0,
+   "coverage_on_m2": 49.9375,
+   "coverage_off_m2": 49.9375
+  }
+ ]
+}

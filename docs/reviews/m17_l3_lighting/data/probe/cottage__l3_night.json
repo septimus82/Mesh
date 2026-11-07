@@ -1,0 +1,62 @@
+{
+ "scene": "packs/core_regions/scenes/cottage__l3_night.json",
+ "patch": null,
+ "softness": "sharp",
+ "pcf": 0,
+ "strength": 1.0,
+ "room_shadows": true,
+ "lamps": [
+  {
+   "index": 0,
+   "pos_m": [
+    8.0,
+    7.0,
+    2.0
+   ],
+   "radius_m": 6.25,
+   "shadow_slot": 0,
+   "fixtures": [],
+   "open_points": 1858,
+   "energy_on": 113.464,
+   "energy_off": 172.671,
+   "energy_ratio": 0.6571,
+   "coverage_on_m2": 26.8125,
+   "coverage_off_m2": 62.625,
+   "cpu_visible": 89,
+   "cpu_blocked": 162,
+   "cpu_ambiguous": 13,
+   "false_shadow": 0,
+   "false_shadow_frac": 0.0,
+   "leak": 0,
+   "leak_frac": 0.0,
+   "visible_mean_on_over_off": 1.0,
+   "by_distance_m": {
+    "0": {
+     "visible": 3,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "1": {
+     "visible": 22,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "2": {
+     "visible": 40,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "3": {
+     "visible": 18,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "4": {
+     "visible": 6,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    }
+   }
+  }
+ ]
+}

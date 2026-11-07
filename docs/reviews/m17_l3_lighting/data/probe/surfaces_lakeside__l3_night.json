@@ -1,0 +1,262 @@
+{
+ "scene": "packs/core_regions/scenes/lakeside__l3_night.json",
+ "patch": null,
+ "pcf": 1,
+ "lamps": [
+  {
+   "lamp": 0,
+   "pos_m": [
+    25.0,
+    10.188,
+    2.4
+   ],
+   "radius_m": 7.0,
+   "fixtures": [
+    "lamp_post"
+   ],
+   "lit_surface_points": 187,
+   "false_shadow": 2,
+   "by_material": {
+    "cobbles": {
+     "points": 36,
+     "false": 0
+    },
+    "iron": {
+     "points": 10,
+     "false": 0
+    },
+    "lantern": {
+     "points": 4,
+     "false": 0
+    },
+    "plaster": {
+     "points": 123,
+     "false": 2
+    },
+    "timber": {
+     "points": 14,
+     "false": 0
+    }
+   },
+   "by_incidence_deg": {
+    "0-15": {
+     "points": 36,
+     "false": 2
+    },
+    "15-30": {
+     "points": 89,
+     "false": 0
+    },
+    "30-45": {
+     "points": 53,
+     "false": 0
+    },
+    "45-60": {
+     "points": 7,
+     "false": 0
+    },
+    "60-75": {
+     "points": 2,
+     "false": 0
+    }
+   },
+   "by_distance_m": {
+    "4": {
+     "points": 20,
+     "false": 0
+    },
+    "5": {
+     "points": 146,
+     "false": 2
+    },
+    "6": {
+     "points": 21,
+     "false": 0
+    }
+   },
+   "worst_false": [
+    [
+     0.667,
+     "plaster",
+     5.14,
+     13.4
+    ],
+    [
+     0.778,
+     "plaster",
+     5.08,
+     10.2
+    ]
+   ],
+   "shadowed_points": 17,
+   "leak": 11,
+   "leaks_by_gap_m": {
+    "5cm+": 11
+   },
+   "worst_leaks": [
+    [
+     1.0,
+     "plaster",
+     5.94,
+     0.059
+    ],
+    [
+     1.0,
+     "plaster",
+     5.58,
+     0.056
+    ],
+    [
+     1.0,
+     "plaster",
+     5.5,
+     0.055
+    ],
+    [
+     1.0,
+     "plaster",
+     5.32,
+     0.053
+    ],
+    [
+     1.0,
+     "plaster",
+     5.23,
+     0.052
+    ],
+    [
+     1.0,
+     "plaster",
+     5.01,
+     0.07
+    ],
+    [
+     1.0,
+     "cobbles",
+     5.81,
+     0.058
+    ],
+    [
+     0.889,
+     "plaster",
+     5.03,
+     0.07
+    ],
+    [
+     0.667,
+     "plaster",
+     5.05,
+     0.071
+    ],
+    [
+     0.556,
+     "plaster",
+     5.12,
+     0.072
+    ],
+    [
+     0.333,
+     "floorboards",
+     5.55,
+     0.051
+    ]
+   ]
+  },
+  {
+   "lamp": 1,
+   "pos_m": [
+    29.406,
+    13.812,
+    2.4
+   ],
+   "radius_m": 7.0,
+   "fixtures": [
+    "lamp_post_2"
+   ],
+   "lit_surface_points": 82,
+   "false_shadow": 1,
+   "by_material": {
+    "awning": {
+     "points": 2,
+     "false": 0
+    },
+    "crate": {
+     "points": 24,
+     "false": 0
+    },
+    "iron": {
+     "points": 8,
+     "false": 1
+    },
+    "lantern": {
+     "points": 3,
+     "false": 0
+    },
+    "plaster.001": {
+     "points": 34,
+     "false": 0
+    },
+    "shingles.001": {
+     "points": 1,
+     "false": 0
+    },
+    "timber.001": {
+     "points": 10,
+     "false": 0
+    }
+   },
+   "by_incidence_deg": {
+    "0-15": {
+     "points": 1,
+     "false": 0
+    },
+    "15-30": {
+     "points": 35,
+     "false": 0
+    },
+    "30-45": {
+     "points": 33,
+     "false": 1
+    },
+    "45-60": {
+     "points": 4,
+     "false": 0
+    },
+    "60-75": {
+     "points": 6,
+     "false": 0
+    },
+    "75-90": {
+     "points": 3,
+     "false": 0
+    }
+   },
+   "by_distance_m": {
+    "4": {
+     "points": 21,
+     "false": 0
+    },
+    "5": {
+     "points": 44,
+     "false": 1
+    },
+    "6": {
+     "points": 17,
+     "false": 0
+    }
+   },
+   "worst_false": [
+    [
+     0.667,
+     "iron",
+     5.65,
+     40.0
+    ]
+   ],
+   "shadowed_points": 10,
+   "leak": 0,
+   "leaks_by_gap_m": {},
+   "worst_leaks": []
+  }
+ ]
+}

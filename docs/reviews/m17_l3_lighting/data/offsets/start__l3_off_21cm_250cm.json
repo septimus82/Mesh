@@ -1,0 +1,128 @@
+{
+ "scene": "packs/core_regions/scenes/start__l3_off_21cm_250cm.json",
+ "patch": null,
+ "softness": "soft",
+ "pcf": 1,
+ "strength": 1.0,
+ "room_shadows": true,
+ "lamps": [
+  {
+   "index": 0,
+   "pos_m": [
+    17.71,
+    9.0,
+    2.5
+   ],
+   "radius_m": 7.0,
+   "shadow_slot": 0,
+   "fixtures": [
+    "lamp_west"
+   ],
+   "open_points": 2341,
+   "energy_on": 179.84,
+   "energy_off": 179.872,
+   "energy_ratio": 0.9998,
+   "coverage_on_m2": 79.3125,
+   "coverage_off_m2": 79.3125,
+   "cpu_visible": 368,
+   "cpu_blocked": 0,
+   "cpu_ambiguous": 0,
+   "false_shadow": 0,
+   "false_shadow_frac": 0.0,
+   "leak": 0,
+   "leak_frac": null,
+   "visible_mean_on_over_off": 1.0,
+   "by_distance_m": {
+    "0": {
+     "visible": 8,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "1": {
+     "visible": 36,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "2": {
+     "visible": 64,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "3": {
+     "visible": 84,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "4": {
+     "visible": 112,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "5": {
+     "visible": 64,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    }
+   }
+  },
+  {
+   "index": 1,
+   "pos_m": [
+    22.5,
+    9.0,
+    2.5
+   ],
+   "radius_m": 7.0,
+   "shadow_slot": 1,
+   "fixtures": [
+    "lamp_east"
+   ],
+   "open_points": 2282,
+   "energy_on": 167.695,
+   "energy_off": 176.379,
+   "energy_ratio": 0.9508,
+   "coverage_on_m2": 71.3125,
+   "coverage_off_m2": 75.6875,
+   "cpu_visible": 333,
+   "cpu_blocked": 10,
+   "cpu_ambiguous": 7,
+   "false_shadow": 0,
+   "false_shadow_frac": 0.0,
+   "leak": 0,
+   "leak_frac": 0.0,
+   "visible_mean_on_over_off": 1.0,
+   "by_distance_m": {
+    "0": {
+     "visible": 8,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "1": {
+     "visible": 35,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "2": {
+     "visible": 61,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "3": {
+     "visible": 72,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "4": {
+     "visible": 99,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    },
+    "5": {
+     "visible": 58,
+     "false_frac": 0.0,
+     "mean_ratio": 1.0
+    }
+   }
+  }
+ ]
+}

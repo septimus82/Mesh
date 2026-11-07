@@ -1,0 +1,42 @@
+{
+ "scene": "packs/core_regions/scenes/cottage__l3_night.json",
+ "lamp": 0,
+ "lamp_m": [
+  8.0,
+  7.0,
+  2.0
+ ],
+ "parts_whose_box_holds_the_lamp": [],
+ "fixtures_found": [],
+ "ray_blockers": {
+  "room/floor/floorboards.005": 80,
+  "room/wall_north_high/plaster.004": 69,
+  "room/wall_west_low/timber.006": 64,
+  "room/wall_east_low/timber.006": 59,
+  "room/wall_north_low/timber.006": 55,
+  "room/wall_south_w_low/timber.006": 22,
+  "room/wall_south_e_low/timber.006": 22,
+  "room/wall_north_high/plaster.004 + room/wall_north_low/timber.006": 21,
+  "(clear)": 17,
+  "room/floor/floorboards.005 + room/table/floorboards.005 + room/table/timber.006": 15,
+  "room/floor/floorboards.005 + room/wall_west_low/timber.006": 9,
+  "room/floor/floorboards.005 + room/wall_north_low/timber.006": 9,
+  "room/floor/floorboards.005 + room/wall_east_low/timber.006": 5,
+  "room/bed/awning.001 + room/bed/timber.006 + room/wall_east_low/timber.006": 5,
+  "room/wall_north_low/timber.006 + room/wall_west_low/timber.006": 4,
+  "room/floor/floorboards.005 + room/wall_south_w_low/timber.006": 4,
+  "room/floor/floorboards.005 + room/wall_south_e_low/timber.006": 4,
+  "room/bed/awning.001 + room/bed/timber.006 + room/floor/floorboards.005": 4,
+  "room/bed/awning.001 + room/bed/timber.006 + room/floor/floorboards.005 + room/wall_east_low/timber.006": 4,
+  "room/wall_east_low/timber.006 + room/wall_north_low/timber.006": 4,
+  "room/bed/timber.006 + room/floor/floorboards.005": 3,
+  "room/wall_south_w_low/timber.006 + room/wall_west_low/timber.006": 2,
+  "room/wall_east_low/timber.006 + room/wall_south_e_low/timber.006": 2,
+  "room/floor/floorboards.005 + room/wall_south_w_low/timber.006 + room/wall_west_low/timber.006": 1,
+  "room/floor/floorboards.005 + room/wall_north_low/timber.006 + room/wall_west_low/timber.006": 1,
+  "room/bed/timber.006 + room/floor/floorboards.005 + room/wall_north_low/timber.006": 1,
+  "room/bed/awning.001 + room/bed/timber.006 + room/floor/floorboards.005 + room/wall_north_low/timber.006": 1,
+  "room/floor/floorboards.005 + room/wall_east_low/timber.006 + room/wall_south_e_low/timber.006": 1,
+  "room/bed/awning.001 + room/bed/timber.006 + room/floor/floorboards.005 + room/wall_east_low/timber.006 + room/wall_north_low/timber.006": 1
+ }
+}

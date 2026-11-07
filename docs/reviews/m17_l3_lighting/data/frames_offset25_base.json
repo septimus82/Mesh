@@ -1,0 +1,176 @@
+{
+ "village_offset25__noon": {
+  "scene": "packs/core_regions/scenes/start25__l3_noon.json",
+  "note": "the village's west lamp 25 cm off its lantern centre (C1)",
+  "frame_mean_lum": 77.86,
+  "pools": [
+   {
+    "lamp_head_lum": 85.91,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     498,
+     385
+    ],
+    "pool_mean_lum": 116.01,
+    "pixels": 14189
+   },
+   {
+    "lamp_head_lum": 28.01,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 124.68,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_offset25__noon__noshadow": {
+  "scene": "packs/core_regions/scenes/start25__l3_noon_noshadow.json",
+  "note": "the village's west lamp 25 cm off its lantern centre (C1)",
+  "frame_mean_lum": 79.14,
+  "pools": [
+   {
+    "lamp_head_lum": 85.91,
+    "lamp": 0,
+    "shadow_slot": -1,
+    "px": [
+     498,
+     385
+    ],
+    "pool_mean_lum": 128.52,
+    "pixels": 14189
+   },
+   {
+    "lamp_head_lum": 28.01,
+    "lamp": 1,
+    "shadow_slot": -1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 124.72,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_offset25__evening": {
+  "scene": "packs/core_regions/scenes/start25__l3_evening.json",
+  "note": "the village's west lamp 25 cm off its lantern centre (C1)",
+  "frame_mean_lum": 41.55,
+  "pools": [
+   {
+    "lamp_head_lum": 38.11,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     498,
+     385
+    ],
+    "pool_mean_lum": 78.24,
+    "pixels": 14189
+   },
+   {
+    "lamp_head_lum": 18.5,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 91.34,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_offset25__evening__noshadow": {
+  "scene": "packs/core_regions/scenes/start25__l3_evening_noshadow.json",
+  "note": "the village's west lamp 25 cm off its lantern centre (C1)",
+  "frame_mean_lum": 42.84,
+  "pools": [
+   {
+    "lamp_head_lum": 38.11,
+    "lamp": 0,
+    "shadow_slot": -1,
+    "px": [
+     498,
+     385
+    ],
+    "pool_mean_lum": 90.77,
+    "pixels": 14189
+   },
+   {
+    "lamp_head_lum": 18.5,
+    "lamp": 1,
+    "shadow_slot": -1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 91.38,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_offset25__night": {
+  "scene": "packs/core_regions/scenes/start25__l3_night.json",
+  "note": "the village's west lamp 25 cm off its lantern centre (C1)",
+  "frame_mean_lum": 29.65,
+  "pools": [
+   {
+    "lamp_head_lum": 33.46,
+    "lamp": 0,
+    "shadow_slot": 0,
+    "px": [
+     498,
+     385
+    ],
+    "pool_mean_lum": 64.97,
+    "pixels": 14189
+   },
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 1,
+    "shadow_slot": 1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 76.76,
+    "pixels": 14192
+   }
+  ]
+ },
+ "village_offset25__night__noshadow": {
+  "scene": "packs/core_regions/scenes/start25__l3_night_noshadow.json",
+  "note": "the village's west lamp 25 cm off its lantern centre (C1)",
+  "frame_mean_lum": 30.95,
+  "pools": [
+   {
+    "lamp_head_lum": 33.46,
+    "lamp": 0,
+    "shadow_slot": -1,
+    "px": [
+     498,
+     385
+    ],
+    "pool_mean_lum": 77.49,
+    "pixels": 14189
+   },
+   {
+    "lamp_head_lum": 11.94,
+    "lamp": 1,
+    "shadow_slot": -1,
+    "px": [
+     797,
+     385
+    ],
+    "pool_mean_lum": 76.8,
+    "pixels": 14192
+   }
+  ]
+ }
+}

@@ -1,0 +1,974 @@
+[
+ {
+  "shot": "lk_shadow_lamps__noon",
+  "lamp": 0,
+  "head": [
+   28.08,
+   59.14,
+   67.28
+  ],
+  "pool": [
+   120.18,
+   120.18,
+   120.18
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__noon",
+  "lamp": 1,
+  "head": [
+   29.29,
+   60.19,
+   68.42
+  ],
+  "pool": [
+   117.24,
+   117.24,
+   117.24
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__noon",
+  "lamp": 3,
+  "head": [
+   54.57,
+   54.57,
+   54.57
+  ],
+  "pool": [
+   90.99,
+   90.99,
+   90.99
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__noon__noshadow",
+  "lamp": 0,
+  "head": [
+   28.08,
+   59.14,
+   67.28
+  ],
+  "pool": [
+   120.18,
+   120.18,
+   120.18
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__noon__noshadow",
+  "lamp": 1,
+  "head": [
+   29.29,
+   60.19,
+   68.42
+  ],
+  "pool": [
+   117.24,
+   117.24,
+   117.24
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__noon__noshadow",
+  "lamp": 3,
+  "head": [
+   54.57,
+   54.57,
+   54.57
+  ],
+  "pool": [
+   90.99,
+   90.99,
+   90.99
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__evening",
+  "lamp": 0,
+  "head": [
+   12.15,
+   43.71,
+   51.34
+  ],
+  "pool": [
+   68.77,
+   68.77,
+   68.77
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__evening",
+  "lamp": 1,
+  "head": [
+   19.43,
+   50.48,
+   58.62
+  ],
+  "pool": [
+   73.74,
+   73.74,
+   73.74
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__evening",
+  "lamp": 3,
+  "head": [
+   27.55,
+   27.55,
+   27.55
+  ],
+  "pool": [
+   62.8,
+   62.8,
+   62.8
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__evening__noshadow",
+  "lamp": 0,
+  "head": [
+   12.15,
+   43.71,
+   51.34
+  ],
+  "pool": [
+   68.77,
+   68.77,
+   68.77
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__evening__noshadow",
+  "lamp": 1,
+  "head": [
+   19.43,
+   50.48,
+   58.62
+  ],
+  "pool": [
+   73.74,
+   73.74,
+   73.74
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__evening__noshadow",
+  "lamp": 3,
+  "head": [
+   27.55,
+   27.55,
+   27.55
+  ],
+  "pool": [
+   62.8,
+   62.8,
+   62.8
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__night",
+  "lamp": 0,
+  "head": [
+   11.94,
+   42.99,
+   51.13
+  ],
+  "pool": [
+   66.06,
+   66.06,
+   66.06
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__night",
+  "lamp": 1,
+  "head": [
+   12.73,
+   43.99,
+   52.13
+  ],
+  "pool": [
+   64.59,
+   64.59,
+   64.59
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__night",
+  "lamp": 3,
+  "head": [
+   18.52,
+   18.52,
+   18.52
+  ],
+  "pool": [
+   48.51,
+   48.51,
+   48.51
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__night__noshadow",
+  "lamp": 0,
+  "head": [
+   11.94,
+   42.99,
+   51.13
+  ],
+  "pool": [
+   66.06,
+   66.06,
+   66.06
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__night__noshadow",
+  "lamp": 1,
+  "head": [
+   12.73,
+   43.99,
+   52.13
+  ],
+  "pool": [
+   64.6,
+   64.6,
+   64.6
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_shadow_lamps__night__noshadow",
+  "lamp": 3,
+  "head": [
+   18.52,
+   18.52,
+   18.52
+  ],
+  "pool": [
+   48.51,
+   48.51,
+   48.51
+  ],
+  "changed_px": [
+   1192,
+   1192
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__noon",
+  "lamp": 1,
+  "head": [
+   29.29,
+   60.14,
+   68.42
+  ],
+  "pool": [
+   116.18,
+   116.18,
+   116.18
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__noon",
+  "lamp": 2,
+  "head": [
+   28.08,
+   59.14,
+   67.28
+  ],
+  "pool": [
+   110.98,
+   110.98,
+   110.98
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__noon",
+  "lamp": 3,
+  "head": [
+   61.36,
+   61.36,
+   61.36
+  ],
+  "pool": [
+   90.45,
+   90.45,
+   90.45
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__noon__noshadow",
+  "lamp": 1,
+  "head": [
+   29.29,
+   60.14,
+   68.42
+  ],
+  "pool": [
+   116.18,
+   116.18,
+   116.18
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__noon__noshadow",
+  "lamp": 2,
+  "head": [
+   28.08,
+   59.14,
+   67.28
+  ],
+  "pool": [
+   110.98,
+   110.98,
+   110.98
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__noon__noshadow",
+  "lamp": 3,
+  "head": [
+   61.36,
+   61.36,
+   61.36
+  ],
+  "pool": [
+   90.45,
+   90.45,
+   90.45
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__evening",
+  "lamp": 1,
+  "head": [
+   19.43,
+   50.48,
+   58.62
+  ],
+  "pool": [
+   73.62,
+   73.62,
+   73.62
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__evening",
+  "lamp": 2,
+  "head": [
+   18.5,
+   49.34,
+   57.62
+  ],
+  "pool": [
+   64.31,
+   64.31,
+   64.31
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__evening",
+  "lamp": 3,
+  "head": [
+   30.94,
+   30.94,
+   30.94
+  ],
+  "pool": [
+   61.37,
+   61.37,
+   61.37
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__evening__noshadow",
+  "lamp": 1,
+  "head": [
+   19.43,
+   50.48,
+   58.62
+  ],
+  "pool": [
+   73.63,
+   73.63,
+   73.63
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__evening__noshadow",
+  "lamp": 2,
+  "head": [
+   18.5,
+   49.34,
+   57.62
+  ],
+  "pool": [
+   64.31,
+   64.31,
+   64.31
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__evening__noshadow",
+  "lamp": 3,
+  "head": [
+   30.94,
+   30.94,
+   30.94
+  ],
+  "pool": [
+   61.37,
+   61.37,
+   61.37
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__night",
+  "lamp": 1,
+  "head": [
+   12.83,
+   43.99,
+   52.13
+  ],
+  "pool": [
+   63.88,
+   63.88,
+   63.88
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__night",
+  "lamp": 2,
+  "head": [
+   11.94,
+   42.99,
+   51.13
+  ],
+  "pool": [
+   60.3,
+   60.3,
+   60.3
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__night",
+  "lamp": 3,
+  "head": [
+   20.77,
+   20.77,
+   20.77
+  ],
+  "pool": [
+   48.25,
+   48.25,
+   48.25
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__night__noshadow",
+  "lamp": 1,
+  "head": [
+   12.83,
+   43.99,
+   52.13
+  ],
+  "pool": [
+   63.88,
+   63.88,
+   63.88
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__night__noshadow",
+  "lamp": 2,
+  "head": [
+   11.94,
+   42.99,
+   51.13
+  ],
+  "pool": [
+   60.3,
+   60.3,
+   60.3
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "lk_plain_lamps__night__noshadow",
+  "lamp": 3,
+  "head": [
+   20.77,
+   20.77,
+   20.77
+  ],
+  "pool": [
+   48.25,
+   48.25,
+   48.25
+  ],
+  "changed_px": [
+   2332,
+   2302
+  ]
+ },
+ {
+  "shot": "village_lamps__noon",
+  "lamp": 0,
+  "head": [
+   27.86,
+   72.48,
+   67.14
+  ],
+  "pool": [
+   127.57,
+   127.57,
+   127.57
+  ],
+  "changed_px": [
+   1284,
+   1284
+  ]
+ },
+ {
+  "shot": "village_lamps__noon",
+  "lamp": 1,
+  "head": [
+   28.01,
+   72.57,
+   67.23
+  ],
+  "pool": [
+   123.69,
+   123.69,
+   123.69
+  ],
+  "changed_px": [
+   1284,
+   1284
+  ]
+ },
+ {
+  "shot": "village_lamps__noon__noshadow",
+  "lamp": 0,
+  "head": [
+   27.86,
+   72.48,
+   67.14
+  ],
+  "pool": [
+   127.59,
+   127.59,
+   127.59
+  ],
+  "changed_px": [
+   1284,
+   1284
+  ]
+ },
+ {
+  "shot": "village_lamps__noon__noshadow",
+  "lamp": 1,
+  "head": [
+   28.01,
+   72.57,
+   67.23
+  ],
+  "pool": [
+   123.72,
+   123.72,
+   123.72
+  ],
+  "changed_px": [
+   1284,
+   1284
+  ]
+ },
+ {
+  "shot": "village_lamps__evening",
+  "lamp": 0,
+  "head": [
+   18.5,
+   63.03,
+   57.62
+  ],
+  "pool": [
+   89.64,
+   89.64,
+   89.64
+  ],
+  "changed_px": [
+   1284,
+   1284
+  ]
+ },
+ {
+  "shot": "village_lamps__evening",
+  "lamp": 1,
+  "head": [
+   18.5,
+   63.03,
+   57.62
+  ],
+  "pool": [
+   90.31,
+   90.31,
+   90.31
+  ],
+  "changed_px": [
+   1284,
+   1284
+  ]
+ },
+ {
+  "shot": "village_lamps__evening__noshadow",
+  "lamp": 0,
+  "head": [
+   18.5,
+   63.03,
+   57.62
+  ],
+  "pool": [
+   89.67,
+   89.67,
+   89.67
+  ],
+  "changed_px": [
+   1284,
+   1284
+  ]
+ },
+ {
+  "shot": "village_lamps__evening__noshadow",
+  "lamp": 1,
+  "head": [
+   18.5,
+   63.03,
+   57.62
+  ],
+  "pool": [
+   90.34,
+   90.34,
+   90.34
+  ],
+  "changed_px": [
+   1284,
+   1284
+  ]
+ },
+ {
+  "shot": "village_lamps__night",
+  "lamp": 0,
+  "head": [
+   11.94,
+   56.47,
+   51.13
+  ],
+  "pool": [
+   76.31,
+   76.31,
+   76.31
+  ],
+  "changed_px": [
+   1284,
+   1284
+  ]
+ },
+ {
+  "shot": "village_lamps__night",
+  "lamp": 1,
+  "head": [
+   11.94,
+   56.47,
+   51.13
+  ],
+  "pool": [
+   75.7,
+   75.7,
+   75.7
+  ],
+  "changed_px": [
+   1284,
+   1284
+  ]
+ },
+ {
+  "shot": "village_lamps__night__noshadow",
+  "lamp": 0,
+  "head": [
+   11.94,
+   56.47,
+   51.13
+  ],
+  "pool": [
+   76.34,
+   76.34,
+   76.34
+  ],
+  "changed_px": [
+   1284,
+   1284
+  ]
+ },
+ {
+  "shot": "village_lamps__night__noshadow",
+  "lamp": 1,
+  "head": [
+   11.94,
+   56.47,
+   51.13
+  ],
+  "pool": [
+   75.73,
+   75.73,
+   75.73
+  ],
+  "changed_px": [
+   1284,
+   1284
+  ]
+ },
+ {
+  "shot": "cottage__noon",
+  "lamp": 0,
+  "head": [
+   101.49,
+   101.49,
+   101.49
+  ],
+  "pool": [
+   125.7,
+   125.7,
+   125.7
+  ],
+  "changed_px": [
+   0,
+   0
+  ]
+ },
+ {
+  "shot": "cottage__noon__noshadow",
+  "lamp": 0,
+  "head": [
+   101.49,
+   101.49,
+   101.49
+  ],
+  "pool": [
+   137.47,
+   137.47,
+   137.47
+  ],
+  "changed_px": [
+   0,
+   0
+  ]
+ },
+ {
+  "shot": "cottage__evening",
+  "lamp": 0,
+  "head": [
+   68.97,
+   68.97,
+   68.97
+  ],
+  "pool": [
+   86.49,
+   86.49,
+   86.49
+  ],
+  "changed_px": [
+   0,
+   0
+  ]
+ },
+ {
+  "shot": "cottage__evening__noshadow",
+  "lamp": 0,
+  "head": [
+   68.97,
+   68.97,
+   68.97
+  ],
+  "pool": [
+   98.26,
+   98.26,
+   98.26
+  ],
+  "changed_px": [
+   0,
+   0
+  ]
+ },
+ {
+  "shot": "cottage__night",
+  "lamp": 0,
+  "head": [
+   63.05,
+   63.05,
+   63.05
+  ],
+  "pool": [
+   69.66,
+   69.66,
+   69.66
+  ],
+  "changed_px": [
+   0,
+   0
+  ]
+ },
+ {
+  "shot": "cottage__night__noshadow",
+  "lamp": 0,
+  "head": [
+   63.05,
+   63.05,
+   63.05
+  ],
+  "pool": [
+   81.46,
+   81.46,
+   81.46
+  ],
+  "changed_px": [
+   0,
+   0
+  ]
+ }
+]

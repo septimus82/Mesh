@@ -1,0 +1,304 @@
+{
+ "scene": "packs/core_regions/scenes/start__l3_night.json",
+ "patch": null,
+ "pcf": 1,
+ "lamps": [
+  {
+   "lamp": 0,
+   "pos_m": [
+    17.5,
+    9.0,
+    2.5
+   ],
+   "radius_m": 7.0,
+   "fixtures": [
+    "lamp_west"
+   ],
+   "lit_surface_points": 804,
+   "false_shadow": 0,
+   "by_material": {
+    "cobbles": {
+     "points": 26,
+     "false": 0
+    },
+    "dirt": {
+     "points": 663,
+     "false": 0
+    },
+    "iron": {
+     "points": 6,
+     "false": 0
+    },
+    "lantern": {
+     "points": 4,
+     "false": 0
+    },
+    "plaster": {
+     "points": 92,
+     "false": 0
+    },
+    "timber": {
+     "points": 13,
+     "false": 0
+    }
+   },
+   "by_incidence_deg": {
+    "0-15": {
+     "points": 14,
+     "false": 0
+    },
+    "15-30": {
+     "points": 108,
+     "false": 0
+    },
+    "30-45": {
+     "points": 287,
+     "false": 0
+    },
+    "45-60": {
+     "points": 302,
+     "false": 0
+    },
+    "60-75": {
+     "points": 90,
+     "false": 0
+    },
+    "75-90": {
+     "points": 3,
+     "false": 0
+    }
+   },
+   "by_distance_m": {
+    "2": {
+     "points": 77,
+     "false": 0
+    },
+    "3": {
+     "points": 349,
+     "false": 0
+    },
+    "4": {
+     "points": 163,
+     "false": 0
+    },
+    "5": {
+     "points": 177,
+     "false": 0
+    },
+    "6": {
+     "points": 38,
+     "false": 0
+    }
+   },
+   "worst_false": [],
+   "shadowed_points": 16,
+   "leak": 12,
+   "leaks_by_gap_m": {
+    "5cm+": 10,
+    "20cm+": 1,
+    "35cm+": 1
+   },
+   "worst_leaks": [
+    [
+     1.0,
+     "plaster",
+     6.32,
+     0.063
+    ],
+    [
+     1.0,
+     "plaster",
+     5.77,
+     0.058
+    ],
+    [
+     1.0,
+     "plaster",
+     5.58,
+     0.056
+    ],
+    [
+     1.0,
+     "plaster",
+     5.45,
+     0.054
+    ],
+    [
+     1.0,
+     "plaster",
+     5.35,
+     0.054
+    ],
+    [
+     0.889,
+     "plaster",
+     6.01,
+     0.06
+    ],
+    [
+     0.778,
+     "plaster",
+     5.13,
+     0.072
+    ],
+    [
+     0.667,
+     "plaster",
+     5.69,
+     0.398
+    ],
+    [
+     0.667,
+     "plaster",
+     5.25,
+     0.074
+    ],
+    [
+     0.667,
+     "plaster",
+     5.19,
+     0.073
+    ],
+    [
+     0.667,
+     "plaster",
+     5.12,
+     0.072
+    ],
+    [
+     0.333,
+     "timber",
+     6.13,
+     0.219
+    ]
+   ]
+  },
+  {
+   "lamp": 1,
+   "pos_m": [
+    22.5,
+    9.0,
+    2.5
+   ],
+   "radius_m": 7.0,
+   "fixtures": [
+    "lamp_east"
+   ],
+   "lit_surface_points": 915,
+   "false_shadow": 2,
+   "by_material": {
+    "awning": {
+     "points": 9,
+     "false": 0
+    },
+    "crate": {
+     "points": 170,
+     "false": 0
+    },
+    "dirt": {
+     "points": 555,
+     "false": 0
+    },
+    "floorboards.001": {
+     "points": 3,
+     "false": 0
+    },
+    "iron": {
+     "points": 7,
+     "false": 0
+    },
+    "lantern": {
+     "points": 4,
+     "false": 0
+    },
+    "plaster.001": {
+     "points": 94,
+     "false": 1
+    },
+    "shingles.001": {
+     "points": 13,
+     "false": 0
+    },
+    "timber.001": {
+     "points": 60,
+     "false": 1
+    }
+   },
+   "by_incidence_deg": {
+    "0-15": {
+     "points": 11,
+     "false": 1
+    },
+    "15-30": {
+     "points": 54,
+     "false": 0
+    },
+    "30-45": {
+     "points": 266,
+     "false": 0
+    },
+    "45-60": {
+     "points": 453,
+     "false": 0
+    },
+    "60-75": {
+     "points": 110,
+     "false": 1
+    },
+    "75-90": {
+     "points": 21,
+     "false": 0
+    }
+   },
+   "by_distance_m": {
+    "2": {
+     "points": 226,
+     "false": 0
+    },
+    "3": {
+     "points": 303,
+     "false": 2
+    },
+    "4": {
+     "points": 248,
+     "false": 0
+    },
+    "5": {
+     "points": 123,
+     "false": 0
+    },
+    "6": {
+     "points": 15,
+     "false": 0
+    }
+   },
+   "worst_false": [
+    [
+     0.333,
+     "plaster.001",
+     3.96,
+     67.7
+    ],
+    [
+     0.667,
+     "timber.001",
+     3.46,
+     10.3
+    ]
+   ],
+   "shadowed_points": 62,
+   "leak": 1,
+   "leaks_by_gap_m": {
+    "30cm+": 1
+   },
+   "worst_leaks": [
+    [
+     0.667,
+     "plaster.001",
+     5.45,
+     0.311
+    ]
+   ]
+  }
+ ]
+}

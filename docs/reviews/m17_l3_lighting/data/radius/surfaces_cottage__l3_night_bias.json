@@ -1,0 +1,151 @@
+{
+ "scene": "packs/core_regions/scenes/cottage__l3_night.json",
+ "patch": "bias",
+ "pcf": 0,
+ "lamps": [
+  {
+   "lamp": 0,
+   "pos_m": [
+    8.0,
+    7.0,
+    2.0
+   ],
+   "radius_m": 6.25,
+   "fixtures": [],
+   "lit_surface_points": 3164,
+   "false_shadow": 1,
+   "by_material": {
+    "awning.001": {
+     "points": 67,
+     "false": 0
+    },
+    "floorboards.005": {
+     "points": 1154,
+     "false": 0
+    },
+    "plaster.004": {
+     "points": 1139,
+     "false": 0
+    },
+    "timber.006": {
+     "points": 804,
+     "false": 1
+    }
+   },
+   "by_incidence_deg": {
+    "0-15": {
+     "points": 345,
+     "false": 0
+    },
+    "15-30": {
+     "points": 904,
+     "false": 0
+    },
+    "30-45": {
+     "points": 1008,
+     "false": 0
+    },
+    "45-60": {
+     "points": 768,
+     "false": 0
+    },
+    "60-75": {
+     "points": 134,
+     "false": 1
+    },
+    "75-90": {
+     "points": 5,
+     "false": 0
+    }
+   },
+   "by_distance_m": {
+    "1": {
+     "points": 928,
+     "false": 0
+    },
+    "2": {
+     "points": 1266,
+     "false": 1
+    },
+    "3": {
+     "points": 830,
+     "false": 0
+    },
+    "4": {
+     "points": 140,
+     "false": 0
+    }
+   },
+   "worst_false": [
+    [
+     0.0,
+     "timber.006",
+     2.83,
+     62.6
+    ]
+   ],
+   "shadowed_points": 581,
+   "leak": 9,
+   "leaks_by_gap_m": {
+    "5cm+": 2,
+    "50cm+": 7
+   },
+   "worst_leaks": [
+    [
+     1.0,
+     "timber.006",
+     4.58,
+     0.055
+    ],
+    [
+     1.0,
+     "timber.006",
+     4.49,
+     0.055
+    ],
+    [
+     1.0,
+     "floorboards.005",
+     2.16,
+     0.853
+    ],
+    [
+     1.0,
+     "floorboards.005",
+     2.15,
+     0.851
+    ],
+    [
+     1.0,
+     "floorboards.005",
+     2.15,
+     0.85
+    ],
+    [
+     1.0,
+     "floorboards.005",
+     2.14,
+     0.847
+    ],
+    [
+     1.0,
+     "floorboards.005",
+     2.14,
+     0.845
+    ],
+    [
+     1.0,
+     "floorboards.005",
+     2.05,
+     0.809
+    ],
+    [
+     1.0,
+     "floorboards.005",
+     2.02,
+     0.795
+    ]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,107 @@
+{
+ "fixtures": {
+  "lamp_a": [
+   "lamp_a"
+  ],
+  "lamp_b": [
+   "lamp_b"
+  ]
+ },
+ "named": {
+  "a_open_1m": {
+   "on": 0.3003,
+   "off": 0.3003,
+   "cpu": true
+  },
+  "a_open_2m": {
+   "on": 0.1939,
+   "off": 0.1939,
+   "cpu": true
+  },
+  "a_open_3m": {
+   "on": 0.1047,
+   "off": 0.1047,
+   "cpu": true
+  },
+  "a_side_2m": {
+   "on": 0.1939,
+   "off": 0.1939,
+   "cpu": true
+  },
+  "a_behind_near_wall_1.5m": {
+   "on": 0.0,
+   "off": 0.2477,
+   "cpu": false
+  },
+  "a_behind_near_wall_2.5m": {
+   "on": 0.0,
+   "off": 0.1454,
+   "cpu": false
+  },
+  "a_behind_near_wall_skew": {
+   "on": 0.0,
+   "off": 0.1849,
+   "cpu": false
+  },
+  "a_behind_near_wall_4m": {
+   "on": 0.0,
+   "off": 0.0471,
+   "cpu": false
+  },
+  "a_behind_panel_3.5m": {
+   "on": 0.0,
+   "off": 0.1031,
+   "cpu": false
+  },
+  "a_behind_panel_4m": {
+   "on": 0.0,
+   "off": 0.1451,
+   "cpu": false
+  },
+  "a_behind_panel_skew": {
+   "on": 0.0,
+   "off": 0.1454,
+   "cpu": false
+  },
+  "b_open_2m": {
+   "on": 0.1893,
+   "off": 0.1893,
+   "cpu": true
+  },
+  "b_before_far_wall": {
+   "on": 0.1893,
+   "off": 0.1893,
+   "cpu": true
+  },
+  "b_behind_far_wall_1.5m": {
+   "on": 0.0,
+   "off": 0.028,
+   "cpu": false
+  },
+  "b_behind_far_wall_2.5m": {
+   "on": 0.0,
+   "off": 0.0064,
+   "cpu": false
+  }
+ },
+ "agreement": {
+  "agree": 554,
+  "disagree": 0,
+  "edge_skipped": 14,
+  "faint": 48,
+  "reached": 358,
+  "blocked": 196,
+  "mismatches": []
+ },
+ "lamp_map_renders": 1,
+ "shadow_lamps": 2,
+ "lamp_map_renders_after_3_frames": 1,
+ "checks": {
+  "fixtures": true,
+  "open_ground_lit": true,
+  "near_wall_blocks": true,
+  "panel_blocks": true,
+  "far_wall_blocks": true,
+  "gpu_cpu_agree": true
+ }
+}
