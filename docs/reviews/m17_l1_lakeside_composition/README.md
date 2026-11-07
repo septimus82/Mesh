@@ -187,6 +187,9 @@ wood. Rocks kept, trees off paths and the chunk rule thin it further: 53 trees.
 **If accepted:** replacing `D:\Games\Lakeside Village\packs\core_regions\scenes\lakeside.json` with
 `candidate/lakeside.json` needs your separate authorisation.
 
+Use the committed bytes: the raw GitHub file, or `git show`. Then check the sha256 is `52e7d306…5d30`, because a
+Windows checkout with `core.autocrlf` writes CRLF.
+
 ## 6. Files
 
 - `candidate/`: the candidate scene.
