@@ -1,0 +1,1969 @@
+{
+ "v1_village__default": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player": [
+   1100,
+   650
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    34.375,
+    19.562,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 65,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v2_shore__default": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player": [
+   1400,
+   780
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    43.75,
+    23.625,
+    0.757
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 72,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v3_cottage__default": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player": [
+   600,
+   540
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    18.75,
+    16.125,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 72,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v4_paths__default": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player": [
+   960,
+   250
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    30.0,
+    8.416,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 61,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v4b_north__default": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player": [
+   1000,
+   1300
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    31.25,
+    32.177,
+    0.921
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 67,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v5_npcs__default": {
+  "scene": "packs/core_regions/scenes/start.json",
+  "player": [
+   840,
+   300
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    26.25,
+    8.625,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 2,
+  "draw_calls": 31,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v6_interior__default": {
+  "scene": "packs/core_regions/scenes/cottage.json",
+  "player": null,
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 55.0,
+   "fov": 12.0,
+   "distance": 35.679,
+   "ortho": false,
+   "target_m": [
+    8.0,
+    5.092,
+    0.9
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.55,
+  "ambient_color": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "sky": [
+   0.071,
+   0.055,
+   0.043
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 1,
+  "draw_calls": 7,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v6b_interior_tomas__default": {
+  "scene": "packs/core_regions/scenes/cottage.json",
+  "player": [
+   300,
+   200
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 55.0,
+   "fov": 12.0,
+   "distance": 35.679,
+   "ortho": false,
+   "target_m": [
+    8.0,
+    5.092,
+    0.9
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.55,
+  "ambient_color": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "sky": [
+   0.071,
+   0.055,
+   0.043
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 1,
+  "draw_calls": 7,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v0_overview_wide": {
+  "scene": "packs/core_regions/scenes/lakeside__wide.json",
+  "player": [
+   1000,
+   650
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 40.0,
+   "fov": 12.0,
+   "distance": 85.629,
+   "ortho": false,
+   "target_m": [
+    31.25,
+    19.562,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 96,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v0b_village_wide": {
+  "scene": "packs/core_regions/scenes/start__wide.json",
+  "player": [
+   640,
+   420
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 40.0,
+   "fov": 12.0,
+   "distance": 85.629,
+   "ortho": false,
+   "target_m": [
+    20.0,
+    12.375,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 2,
+  "draw_calls": 31,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v1_village__morning": {
+  "scene": "packs/core_regions/scenes/lakeside__morning.json",
+  "player": [
+   1100,
+   650
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    34.375,
+    19.562,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    0.883,
+    -0.321,
+    0.342
+   ],
+   "color": [
+    1.0,
+    0.851,
+    0.659
+   ],
+   "intensity": 0.9
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.624,
+   0.722,
+   0.847
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 65,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v1_village__evening": {
+  "scene": "packs/core_regions/scenes/lakeside__evening.json",
+  "player": [
+   1100,
+   650
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    34.375,
+    19.562,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.919,
+    -0.335,
+    0.208
+   ],
+   "color": [
+    1.0,
+    0.69,
+    0.439
+   ],
+   "intensity": 0.85
+  },
+  "ambient": 0.38,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.847,
+   0.565,
+   0.416
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 65,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v1_village__overcast": {
+  "scene": "packs/core_regions/scenes/lakeside__overcast.json",
+  "player": [
+   1100,
+   650
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    34.375,
+    19.562,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.196,
+    -0.539,
+    0.819
+   ],
+   "color": [
+    0.875,
+    0.894,
+    0.918
+   ],
+   "intensity": 0.45
+  },
+  "ambient": 0.7,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.604,
+   0.639,
+   0.678
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 65,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v2_shore__morning": {
+  "scene": "packs/core_regions/scenes/lakeside__morning.json",
+  "player": [
+   1400,
+   780
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    43.75,
+    23.625,
+    0.757
+   ]
+  },
+  "sun": {
+   "direction": [
+    0.883,
+    -0.321,
+    0.342
+   ],
+   "color": [
+    1.0,
+    0.851,
+    0.659
+   ],
+   "intensity": 0.9
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.624,
+   0.722,
+   0.847
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 72,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v2_shore__evening": {
+  "scene": "packs/core_regions/scenes/lakeside__evening.json",
+  "player": [
+   1400,
+   780
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    43.75,
+    23.625,
+    0.757
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.919,
+    -0.335,
+    0.208
+   ],
+   "color": [
+    1.0,
+    0.69,
+    0.439
+   ],
+   "intensity": 0.85
+  },
+  "ambient": 0.38,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.847,
+   0.565,
+   0.416
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 72,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v2_shore__overcast": {
+  "scene": "packs/core_regions/scenes/lakeside__overcast.json",
+  "player": [
+   1400,
+   780
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    43.75,
+    23.625,
+    0.757
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.196,
+    -0.539,
+    0.819
+   ],
+   "color": [
+    0.875,
+    0.894,
+    0.918
+   ],
+   "intensity": 0.45
+  },
+  "ambient": 0.7,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.604,
+   0.639,
+   0.678
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 72,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v3_cottage__morning": {
+  "scene": "packs/core_regions/scenes/lakeside__morning.json",
+  "player": [
+   600,
+   540
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    18.75,
+    16.125,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    0.883,
+    -0.321,
+    0.342
+   ],
+   "color": [
+    1.0,
+    0.851,
+    0.659
+   ],
+   "intensity": 0.9
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.624,
+   0.722,
+   0.847
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 72,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v3_cottage__evening": {
+  "scene": "packs/core_regions/scenes/lakeside__evening.json",
+  "player": [
+   600,
+   540
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    18.75,
+    16.125,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.919,
+    -0.335,
+    0.208
+   ],
+   "color": [
+    1.0,
+    0.69,
+    0.439
+   ],
+   "intensity": 0.85
+  },
+  "ambient": 0.38,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.847,
+   0.565,
+   0.416
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 72,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v3_cottage__overcast": {
+  "scene": "packs/core_regions/scenes/lakeside__overcast.json",
+  "player": [
+   600,
+   540
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    18.75,
+    16.125,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.196,
+    -0.539,
+    0.819
+   ],
+   "color": [
+    0.875,
+    0.894,
+    0.918
+   ],
+   "intensity": 0.45
+  },
+  "ambient": 0.7,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.604,
+   0.639,
+   0.678
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 72,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v5_npcs__morning": {
+  "scene": "packs/core_regions/scenes/start__morning.json",
+  "player": [
+   840,
+   300
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    26.25,
+    8.625,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    0.883,
+    -0.321,
+    0.342
+   ],
+   "color": [
+    1.0,
+    0.851,
+    0.659
+   ],
+   "intensity": 0.9
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.624,
+   0.722,
+   0.847
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 2,
+  "draw_calls": 31,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v5_npcs__evening": {
+  "scene": "packs/core_regions/scenes/start__evening.json",
+  "player": [
+   840,
+   300
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    26.25,
+    8.625,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.919,
+    -0.335,
+    0.208
+   ],
+   "color": [
+    1.0,
+    0.69,
+    0.439
+   ],
+   "intensity": 0.85
+  },
+  "ambient": 0.38,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.847,
+   0.565,
+   0.416
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 2,
+  "draw_calls": 31,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v5_npcs__overcast": {
+  "scene": "packs/core_regions/scenes/start__overcast.json",
+  "player": [
+   840,
+   300
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    26.25,
+    8.625,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.196,
+    -0.539,
+    0.819
+   ],
+   "color": [
+    0.875,
+    0.894,
+    0.918
+   ],
+   "intensity": 0.45
+  },
+  "ambient": 0.7,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.604,
+   0.639,
+   0.678
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 2,
+  "draw_calls": 31,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v1_village__night": {
+  "scene": "packs/core_regions/scenes/lakeside__night.json",
+  "player": [
+   1100,
+   650
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    34.375,
+    19.562,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    0.28,
+    -0.77,
+    0.574
+   ],
+   "color": [
+    0.561,
+    0.651,
+    0.878
+   ],
+   "intensity": 0.25
+  },
+  "ambient": 0.22,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.078,
+   0.102,
+   0.18
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 65,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v4_paths__night": {
+  "scene": "packs/core_regions/scenes/lakeside__night.json",
+  "player": [
+   960,
+   250
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    30.0,
+    8.416,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    0.28,
+    -0.77,
+    0.574
+   ],
+   "color": [
+    0.561,
+    0.651,
+    0.878
+   ],
+   "intensity": 0.25
+  },
+  "ambient": 0.22,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.078,
+   0.102,
+   0.18
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 61,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v5_npcs__night": {
+  "scene": "packs/core_regions/scenes/start__night.json",
+  "player": [
+   840,
+   300
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    26.25,
+    8.625,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    0.28,
+    -0.77,
+    0.574
+   ],
+   "color": [
+    0.561,
+    0.651,
+    0.878
+   ],
+   "intensity": 0.25
+  },
+  "ambient": 0.22,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.078,
+   0.102,
+   0.18
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 2,
+  "draw_calls": 31,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v1_village__grade": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player": [
+   1100,
+   650
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [
+   {
+    "kind": "grade",
+    "contrast": 1.06,
+    "saturation": 0.9
+   },
+   {
+    "kind": "vignette",
+    "strength": 0.25,
+    "radius": 0.85
+   }
+  ],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    34.375,
+    19.562,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 65,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v1_village__dof": {
+  "scene": "packs/core_regions/scenes/lakeside__dof.json",
+  "player": [
+   1100,
+   650
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    34.375,
+    19.562,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "on",
+  "dof_frame": {
+   "focus": 53.48498731800399,
+   "band": 2.5,
+   "radius": 2.5,
+   "taps": 24
+  },
+  "lamps": 4,
+  "draw_calls": 65,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v2_shore__grade": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player": [
+   1400,
+   780
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [
+   {
+    "kind": "grade",
+    "contrast": 1.06,
+    "saturation": 0.9
+   },
+   {
+    "kind": "vignette",
+    "strength": 0.25,
+    "radius": 0.85
+   }
+  ],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    43.75,
+    23.625,
+    0.757
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 72,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v2_shore__dof": {
+  "scene": "packs/core_regions/scenes/lakeside__dof.json",
+  "player": [
+   1400,
+   780
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    43.75,
+    23.625,
+    0.757
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "on",
+  "dof_frame": {
+   "focus": 53.484987325299876,
+   "band": 2.5,
+   "radius": 2.5,
+   "taps": 24
+  },
+  "lamps": 4,
+  "draw_calls": 72,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v5_npcs__grade": {
+  "scene": "packs/core_regions/scenes/start.json",
+  "player": [
+   840,
+   300
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [
+   {
+    "kind": "grade",
+    "contrast": 1.06,
+    "saturation": 0.9
+   },
+   {
+    "kind": "vignette",
+    "strength": 0.25,
+    "radius": 0.85
+   }
+  ],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    26.25,
+    8.625,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 2,
+  "draw_calls": 31,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v5_npcs__dof": {
+  "scene": "packs/core_regions/scenes/start__dof.json",
+  "player": [
+   840,
+   300
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    26.25,
+    8.625,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "ambient": 0.45,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.463,
+   0.627,
+   0.839
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "on",
+  "dof_frame": {
+   "focus": 53.48498729848043,
+   "band": 2.5,
+   "radius": 2.5,
+   "taps": 24
+  },
+  "lamps": 2,
+  "draw_calls": 31,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v1_village__evening_grade": {
+  "scene": "packs/core_regions/scenes/lakeside__evening.json",
+  "player": [
+   1100,
+   650
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [
+   {
+    "kind": "grade",
+    "contrast": 1.06,
+    "saturation": 0.9
+   },
+   {
+    "kind": "vignette",
+    "strength": 0.25,
+    "radius": 0.85
+   }
+  ],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    34.375,
+    19.562,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.919,
+    -0.335,
+    0.208
+   ],
+   "color": [
+    1.0,
+    0.69,
+    0.439
+   ],
+   "intensity": 0.85
+  },
+  "ambient": 0.38,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.847,
+   0.565,
+   0.416
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 65,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v1_village__evening_dof": {
+  "scene": "packs/core_regions/scenes/lakeside__evening_dof.json",
+  "player": [
+   1100,
+   650
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    34.375,
+    19.562,
+    0.8
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.919,
+    -0.335,
+    0.208
+   ],
+   "color": [
+    1.0,
+    0.69,
+    0.439
+   ],
+   "intensity": 0.85
+  },
+  "ambient": 0.38,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.847,
+   0.565,
+   0.416
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "on",
+  "dof_frame": {
+   "focus": 53.48498731800399,
+   "band": 2.5,
+   "radius": 2.5,
+   "taps": 24
+  },
+  "lamps": 4,
+  "draw_calls": 65,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v2_shore__evening_grade": {
+  "scene": "packs/core_regions/scenes/lakeside__evening.json",
+  "player": [
+   1400,
+   780
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [
+   {
+    "kind": "grade",
+    "contrast": 1.06,
+    "saturation": 0.9
+   },
+   {
+    "kind": "vignette",
+    "strength": 0.25,
+    "radius": 0.85
+   }
+  ],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    43.75,
+    23.625,
+    0.757
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.919,
+    -0.335,
+    0.208
+   ],
+   "color": [
+    1.0,
+    0.69,
+    0.439
+   ],
+   "intensity": 0.85
+  },
+  "ambient": 0.38,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.847,
+   0.565,
+   0.416
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "off",
+  "dof_frame": null,
+  "lamps": 4,
+  "draw_calls": 72,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "v2_shore__evening_dof": {
+  "scene": "packs/core_regions/scenes/lakeside__evening_dof.json",
+  "player": [
+   1400,
+   780
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "post": [],
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    43.75,
+    23.625,
+    0.757
+   ]
+  },
+  "sun": {
+   "direction": [
+    -0.919,
+    -0.335,
+    0.208
+   ],
+   "color": [
+    1.0,
+    0.69,
+    0.439
+   ],
+   "intensity": 0.85
+  },
+  "ambient": 0.38,
+  "ambient_color": [
+   0.604,
+   0.651,
+   0.816
+  ],
+  "sky": [
+   0.847,
+   0.565,
+   0.416
+  ],
+  "shadows": true,
+  "shadow_resolution": 2048,
+  "dof": "on",
+  "dof_frame": {
+   "focus": 53.484987325299876,
+   "band": 2.5,
+   "radius": 2.5,
+   "taps": 24
+  },
+  "lamps": 4,
+  "draw_calls": 72,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ }
+}

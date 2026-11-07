@@ -1,0 +1,72 @@
+{
+ "v0_overview_wide": {
+  "fine_detail": [
+   32.61,
+   28.93
+  ],
+  "green_share": [
+   0.748,
+   0.752
+  ],
+  "large_scale_tone_std_64px": [
+   16.77,
+   16.18
+  ]
+ },
+ "v1_village__default": {
+  "fine_detail": [
+   25.26,
+   21.96
+  ],
+  "green_share": [
+   0.746,
+   0.755
+  ],
+  "large_scale_tone_std_64px": [
+   18.29,
+   17.45
+  ]
+ },
+ "v3_cottage__default": {
+  "fine_detail": [
+   26.35,
+   22.95
+  ],
+  "green_share": [
+   0.712,
+   0.723
+  ],
+  "large_scale_tone_std_64px": [
+   17.16,
+   16.49
+  ]
+ },
+ "v4_paths__default": {
+  "fine_detail": [
+   28.35,
+   24.7
+  ],
+  "green_share": [
+   0.815,
+   0.814
+  ],
+  "large_scale_tone_std_64px": [
+   16.69,
+   16.04
+  ]
+ },
+ "v4b_north__default": {
+  "fine_detail": [
+   23.93,
+   21.4
+  ],
+  "green_share": [
+   0.848,
+   0.86
+  ],
+  "large_scale_tone_std_64px": [
+   12.23,
+   11.75
+  ]
+ }
+}

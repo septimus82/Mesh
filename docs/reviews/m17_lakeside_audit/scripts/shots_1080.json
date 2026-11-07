@@ -1,0 +1,26 @@
+[
+{
+"name": "hd_v1_village__default",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "hd_v2_shore__default",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1400,
+780
+]
+},
+{
+"name": "hd_v1_village__evening",
+"scene": "packs/core_regions/scenes/lakeside__evening.json",
+"player": [
+1100,
+650
+]
+}
+]

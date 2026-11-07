@@ -1,0 +1,120 @@
+{
+ "lakeside__morning.json": {
+  "base": "lakeside.json",
+  "op": "morning",
+  "hd2d_changed": [
+   "sky",
+   "sun"
+  ]
+ },
+ "lakeside__evening.json": {
+  "base": "lakeside.json",
+  "op": "evening",
+  "hd2d_changed": [
+   "ambient",
+   "sky",
+   "sun"
+  ]
+ },
+ "lakeside__night.json": {
+  "base": "lakeside.json",
+  "op": "night",
+  "hd2d_changed": [
+   "ambient",
+   "sky",
+   "sun"
+  ]
+ },
+ "lakeside__overcast.json": {
+  "base": "lakeside.json",
+  "op": "overcast",
+  "hd2d_changed": [
+   "ambient",
+   "sky",
+   "sun"
+  ]
+ },
+ "lakeside__dof.json": {
+  "base": "lakeside.json",
+  "op": "dof",
+  "hd2d_changed": [
+   "depth_of_field"
+  ]
+ },
+ "lakeside__evening_dof.json": {
+  "base": "lakeside.json",
+  "op": "evening_dof",
+  "hd2d_changed": [
+   "ambient",
+   "depth_of_field",
+   "sky",
+   "sun"
+  ]
+ },
+ "lakeside__wide.json": {
+  "base": "lakeside.json",
+  "op": "wide",
+  "hd2d_changed": [
+   "camera"
+  ]
+ },
+ "start__morning.json": {
+  "base": "start.json",
+  "op": "morning",
+  "hd2d_changed": [
+   "sky",
+   "sun"
+  ]
+ },
+ "start__evening.json": {
+  "base": "start.json",
+  "op": "evening",
+  "hd2d_changed": [
+   "ambient",
+   "sky",
+   "sun"
+  ]
+ },
+ "start__night.json": {
+  "base": "start.json",
+  "op": "night",
+  "hd2d_changed": [
+   "ambient",
+   "sky",
+   "sun"
+  ]
+ },
+ "start__overcast.json": {
+  "base": "start.json",
+  "op": "overcast",
+  "hd2d_changed": [
+   "ambient",
+   "sky",
+   "sun"
+  ]
+ },
+ "start__dof.json": {
+  "base": "start.json",
+  "op": "dof",
+  "hd2d_changed": [
+   "depth_of_field"
+  ]
+ },
+ "start__evening_dof.json": {
+  "base": "start.json",
+  "op": "evening_dof",
+  "hd2d_changed": [
+   "ambient",
+   "depth_of_field",
+   "sky",
+   "sun"
+  ]
+ },
+ "start__wide.json": {
+  "base": "start.json",
+  "op": "wide",
+  "hd2d_changed": [
+   "camera"
+  ]
+ }
+}

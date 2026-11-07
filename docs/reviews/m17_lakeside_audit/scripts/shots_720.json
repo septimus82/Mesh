@@ -1,0 +1,338 @@
+[
+{
+"name": "v1_village__default",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "v2_shore__default",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1400,
+780
+]
+},
+{
+"name": "v3_cottage__default",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+600,
+540
+]
+},
+{
+"name": "v4_paths__default",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+960,
+250
+]
+},
+{
+"name": "v4b_north__default",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1000,
+1300
+]
+},
+{
+"name": "v5_npcs__default",
+"scene": "packs/core_regions/scenes/start.json",
+"player": [
+840,
+300
+]
+},
+{
+"name": "v6_interior__default",
+"scene": "packs/core_regions/scenes/cottage.json"
+},
+{
+"name": "v6b_interior_tomas__default",
+"scene": "packs/core_regions/scenes/cottage.json",
+"player": [
+300,
+200
+]
+},
+{
+"name": "v0_overview_wide",
+"scene": "packs/core_regions/scenes/lakeside__wide.json",
+"player": [
+1000,
+650
+]
+},
+{
+"name": "v0b_village_wide",
+"scene": "packs/core_regions/scenes/start__wide.json",
+"player": [
+640,
+420
+]
+},
+{
+"name": "v1_village__morning",
+"scene": "packs/core_regions/scenes/lakeside__morning.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "v1_village__evening",
+"scene": "packs/core_regions/scenes/lakeside__evening.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "v1_village__overcast",
+"scene": "packs/core_regions/scenes/lakeside__overcast.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "v2_shore__morning",
+"scene": "packs/core_regions/scenes/lakeside__morning.json",
+"player": [
+1400,
+780
+]
+},
+{
+"name": "v2_shore__evening",
+"scene": "packs/core_regions/scenes/lakeside__evening.json",
+"player": [
+1400,
+780
+]
+},
+{
+"name": "v2_shore__overcast",
+"scene": "packs/core_regions/scenes/lakeside__overcast.json",
+"player": [
+1400,
+780
+]
+},
+{
+"name": "v3_cottage__morning",
+"scene": "packs/core_regions/scenes/lakeside__morning.json",
+"player": [
+600,
+540
+]
+},
+{
+"name": "v3_cottage__evening",
+"scene": "packs/core_regions/scenes/lakeside__evening.json",
+"player": [
+600,
+540
+]
+},
+{
+"name": "v3_cottage__overcast",
+"scene": "packs/core_regions/scenes/lakeside__overcast.json",
+"player": [
+600,
+540
+]
+},
+{
+"name": "v5_npcs__morning",
+"scene": "packs/core_regions/scenes/start__morning.json",
+"player": [
+840,
+300
+]
+},
+{
+"name": "v5_npcs__evening",
+"scene": "packs/core_regions/scenes/start__evening.json",
+"player": [
+840,
+300
+]
+},
+{
+"name": "v5_npcs__overcast",
+"scene": "packs/core_regions/scenes/start__overcast.json",
+"player": [
+840,
+300
+]
+},
+{
+"name": "v1_village__night",
+"scene": "packs/core_regions/scenes/lakeside__night.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "v4_paths__night",
+"scene": "packs/core_regions/scenes/lakeside__night.json",
+"player": [
+960,
+250
+]
+},
+{
+"name": "v5_npcs__night",
+"scene": "packs/core_regions/scenes/start__night.json",
+"player": [
+840,
+300
+]
+},
+{
+"name": "v1_village__grade",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1100,
+650
+],
+"post": [
+{
+"kind": "grade",
+"contrast": 1.06,
+"saturation": 0.9
+},
+{
+"kind": "vignette",
+"strength": 0.25,
+"radius": 0.85
+}
+]
+},
+{
+"name": "v1_village__dof",
+"scene": "packs/core_regions/scenes/lakeside__dof.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "v2_shore__grade",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1400,
+780
+],
+"post": [
+{
+"kind": "grade",
+"contrast": 1.06,
+"saturation": 0.9
+},
+{
+"kind": "vignette",
+"strength": 0.25,
+"radius": 0.85
+}
+]
+},
+{
+"name": "v2_shore__dof",
+"scene": "packs/core_regions/scenes/lakeside__dof.json",
+"player": [
+1400,
+780
+]
+},
+{
+"name": "v5_npcs__grade",
+"scene": "packs/core_regions/scenes/start.json",
+"player": [
+840,
+300
+],
+"post": [
+{
+"kind": "grade",
+"contrast": 1.06,
+"saturation": 0.9
+},
+{
+"kind": "vignette",
+"strength": 0.25,
+"radius": 0.85
+}
+]
+},
+{
+"name": "v5_npcs__dof",
+"scene": "packs/core_regions/scenes/start__dof.json",
+"player": [
+840,
+300
+]
+},
+{
+"name": "v1_village__evening_grade",
+"scene": "packs/core_regions/scenes/lakeside__evening.json",
+"player": [
+1100,
+650
+],
+"post": [
+{
+"kind": "grade",
+"contrast": 1.06,
+"saturation": 0.9
+},
+{
+"kind": "vignette",
+"strength": 0.25,
+"radius": 0.85
+}
+]
+},
+{
+"name": "v1_village__evening_dof",
+"scene": "packs/core_regions/scenes/lakeside__evening_dof.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "v2_shore__evening_grade",
+"scene": "packs/core_regions/scenes/lakeside__evening.json",
+"player": [
+1400,
+780
+],
+"post": [
+{
+"kind": "grade",
+"contrast": 1.06,
+"saturation": 0.9
+},
+{
+"kind": "vignette",
+"strength": 0.25,
+"radius": 0.85
+}
+]
+},
+{
+"name": "v2_shore__evening_dof",
+"scene": "packs/core_regions/scenes/lakeside__evening_dof.json",
+"player": [
+1400,
+780
+]
+}
+]

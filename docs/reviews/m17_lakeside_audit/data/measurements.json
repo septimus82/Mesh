@@ -1,0 +1,233 @@
+{
+ "views": {
+  "v1_village__default": {
+   "green_share": 0.746,
+   "mean_saturation": 0.506,
+   "luma_p5_p50_p95": [
+    35.1,
+    82.6,
+    134.1
+   ],
+   "fine_detail_mean_abs_laplacian": 25.26
+  },
+  "v2_shore__default": {
+   "green_share": 0.715,
+   "mean_saturation": 0.49,
+   "luma_p5_p50_p95": [
+    35.1,
+    81.0,
+    114.5
+   ],
+   "fine_detail_mean_abs_laplacian": 21.61
+  },
+  "v3_cottage__default": {
+   "green_share": 0.712,
+   "mean_saturation": 0.483,
+   "luma_p5_p50_p95": [
+    34.3,
+    81.7,
+    131.6
+   ],
+   "fine_detail_mean_abs_laplacian": 26.35
+  },
+  "v4_paths__default": {
+   "green_share": 0.815,
+   "mean_saturation": 0.506,
+   "luma_p5_p50_p95": [
+    38.5,
+    82.7,
+    141.1
+   ],
+   "fine_detail_mean_abs_laplacian": 28.35
+  },
+  "v4b_north__default": {
+   "green_share": 0.848,
+   "mean_saturation": 0.501,
+   "luma_p5_p50_p95": [
+    35.9,
+    81.7,
+    115.5
+   ],
+   "fine_detail_mean_abs_laplacian": 23.93
+  },
+  "v5_npcs__default": {
+   "green_share": 0.683,
+   "mean_saturation": 0.506,
+   "luma_p5_p50_p95": [
+    32.2,
+    81.0,
+    123.4
+   ],
+   "fine_detail_mean_abs_laplacian": 12.72
+  },
+  "v6_interior__default": {
+   "green_share": 0.001,
+   "mean_saturation": 0.431,
+   "luma_p5_p50_p95": [
+    14.6,
+    14.6,
+    180.2
+   ],
+   "fine_detail_mean_abs_laplacian": 6.96
+  },
+  "v0_overview_wide": {
+   "green_share": 0.748,
+   "mean_saturation": 0.501,
+   "luma_p5_p50_p95": [
+    35.9,
+    81.7,
+    125.6
+   ],
+   "fine_detail_mean_abs_laplacian": 32.61
+  }
+ },
+ "water_v2": {
+  "default": {
+   "water_luma": 52.2,
+   "meadow_luma": 86.3,
+   "water_over_meadow": 0.61,
+   "water_rgb": [
+    27,
+    59,
+    62
+   ]
+  },
+  "morning": {
+   "water_luma": 42.1,
+   "meadow_luma": 66.6,
+   "water_over_meadow": 0.63,
+   "water_rgb": [
+    25,
+    46,
+    51
+   ]
+  },
+  "evening": {
+   "water_luma": 32.7,
+   "meadow_luma": 53.7,
+   "water_over_meadow": 0.61,
+   "water_rgb": [
+    31,
+    33,
+    31
+   ]
+  },
+  "overcast": {
+   "water_luma": 43.4,
+   "meadow_luma": 70.5,
+   "water_over_meadow": 0.62,
+   "water_rgb": [
+    25,
+    47,
+    62
+   ]
+  }
+ },
+ "lamps_v4": {
+  "default": {
+   "lamp_left": 124.3,
+   "lamp_mid": 126.3,
+   "head_left": 48.9,
+   "head_mid": 52.1,
+   "far_meadow": 89.5
+  },
+  "night": {
+   "lamp_left": 66.8,
+   "lamp_mid": 69.0,
+   "head_left": 19.9,
+   "head_mid": 21.2,
+   "far_meadow": 30.6
+  }
+ },
+ "dof": {
+  "v1_village": {
+   "detail_kept_on_over_off": {
+    "top_third": 0.306,
+    "middle": 0.869,
+    "bottom_third": 0.516
+   },
+   "player_box_max_delta": 12,
+   "changed_share_gt8": 0.201
+  },
+  "v2_shore": {
+   "detail_kept_on_over_off": {
+    "top_third": 0.227,
+    "middle": 0.886,
+    "bottom_third": 0.476
+   },
+   "player_box_max_delta": 34,
+   "changed_share_gt8": 0.209
+  },
+  "v5_npcs": {
+   "detail_kept_on_over_off": {
+    "top_third": 0.272,
+    "middle": 0.891,
+    "bottom_third": 0.567
+   },
+   "player_box_max_delta": 5,
+   "changed_share_gt8": 0.067
+  }
+ },
+ "grade": {
+  "v1_village": {
+   "saturation": [
+    0.506,
+    0.506
+   ],
+   "luma_p5_p95": [
+    [
+     35.1,
+     134.1
+    ],
+    [
+     28.5,
+     132.9
+    ]
+   ],
+   "corner_luma": [
+    76.7,
+    64.5
+   ]
+  },
+  "v2_shore": {
+   "saturation": [
+    0.49,
+    0.492
+   ],
+   "luma_p5_p95": [
+    [
+     35.1,
+     114.5
+    ],
+    [
+     29.4,
+     111.1
+    ]
+   ],
+   "corner_luma": [
+    83.8,
+    71.4
+   ]
+  },
+  "v5_npcs": {
+   "saturation": [
+    0.506,
+    0.507
+   ],
+   "luma_p5_p95": [
+    [
+     32.2,
+     123.4
+    ],
+    [
+     28.5,
+     120.5
+    ]
+   ],
+   "corner_luma": [
+    37.9,
+    28.3
+   ]
+  }
+ }
+}
