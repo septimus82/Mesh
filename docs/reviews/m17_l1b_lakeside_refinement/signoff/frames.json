@@ -1,0 +1,182 @@
+{
+ "1_village_overview": {
+  "view": "v0_overview_wide",
+  "camera": {
+   "pitch": 40.0,
+   "fov": 12.0,
+   "distance": 85.629,
+   "ortho": false,
+   "target_m": [
+    31.25,
+    19.562,
+    0.8
+   ]
+  },
+  "player_px": [
+   1000,
+   650
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "frames": {
+   "l1": {
+    "path": "docs/reviews/m17_l1b_lakeside_refinement/captures/720/v0_overview_wide__l1.png",
+    "sha256": "c4aa30d0ad9bf9bb4f2a687bc854003ef0f7af8059b2d70c53572555ff748d44"
+   },
+   "l1b": {
+    "path": "docs/reviews/m17_l1b_lakeside_refinement/captures/720/v0_overview_wide__l1b.png",
+    "sha256": "4fc49e0d9e976f9da2a10d3512807ab54ff61fb173bf7dff750936b5b983063a"
+   }
+  }
+ },
+ "2_village_green": {
+  "view": "v1_village",
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    34.375,
+    19.562,
+    0.8
+   ]
+  },
+  "player_px": [
+   1100,
+   650
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "frames": {
+   "l1": {
+    "path": "docs/reviews/m17_l1b_lakeside_refinement/captures/720/v1_village__l1.png",
+    "sha256": "92543bd8036557541a3eb90953d45a77b21fa478112b637a0ff031f64914373c"
+   },
+   "l1b": {
+    "path": "docs/reviews/m17_l1b_lakeside_refinement/captures/720/v1_village__l1b.png",
+    "sha256": "f832aeccb361adedcadb2f569276420748ca929104bb5b3cd5f0082772e647ae"
+   }
+  }
+ },
+ "3_crossroads": {
+  "view": "v4_paths",
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    30.0,
+    8.416,
+    0.8
+   ]
+  },
+  "player_px": [
+   960,
+   250
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "frames": {
+   "l1": {
+    "path": "docs/reviews/m17_l1b_lakeside_refinement/captures/720/v4_paths__l1.png",
+    "sha256": "93a6d23ec58cb7cf7decac161c1c98cad8e46f30c12c28ad13c943bf94fad388"
+   },
+   "l1b": {
+    "path": "docs/reviews/m17_l1b_lakeside_refinement/captures/720/v4_paths__l1b.png",
+    "sha256": "5c1cf5150233b8b4ee69b88cb7970708d61e1cbafc18872da711758344829ed4"
+   }
+  }
+ },
+ "4_north_meadow": {
+  "view": "v4b_north",
+  "camera": {
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "target_m": [
+    31.25,
+    32.177,
+    0.921
+   ]
+  },
+  "player_px": [
+   1000,
+   1300
+  ],
+  "size": [
+   1280,
+   720
+  ],
+  "sun": {
+   "direction": [
+    -0.45,
+    -0.55,
+    0.7
+   ],
+   "color": [
+    1.0,
+    0.941,
+    0.847
+   ],
+   "intensity": 1.0
+  },
+  "frames": {
+   "l1": {
+    "path": "docs/reviews/m17_l1b_lakeside_refinement/captures/720/v4b_north__l1.png",
+    "sha256": "72a234166d907407411957aa7d912a6be8f55ca47819746334e4f050eb1d7618"
+   },
+   "l1b": {
+    "path": "docs/reviews/m17_l1b_lakeside_refinement/captures/720/v4b_north__l1b.png",
+    "sha256": "ab0ec9f7124f4e81748c822aa0faf12eb6ff0b174c0d47d51fc181140b1c3428"
+   }
+  }
+ }
+}
