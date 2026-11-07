@@ -11,8 +11,8 @@ cutaway or water change.
 |---|---|
 | Engine | `redesign/visual-editor` at **`f9f1f81`** |
 | Source | the shipped `lakeside.json`, sha256 `18a7ee94…7f3901` |
-| Candidate | [`candidate/lakeside.json`](candidate/lakeside.json), sha256 `040068d0d76c983826801d3f1f1bb6bd278b712acae36756c0cb820b643b3ee9`, made by [`scripts/l1_compose.py`](scripts/l1_compose.py) |
-| Reproducible | the script only calls `engine.project_ops`: `set_light`, `scatter_stroke`, `set_scatter`, `clear_scatter` and `paint_terrain_stroke`, the operations Studio's Light, Scatter and Paint controls record. It uses fixed seeds; two runs give the same sha256. It writes JSON exactly as Studio saves a scene (sorted keys, indent 2). |
+| Candidate | [`candidate/lakeside.json`](candidate/lakeside.json), sha256 `52e7d3067c8c345bfb52fb0d4445c01a95fdecb517dcd42c861afd8efb5d5d30`, made by [`scripts/l1_compose.py`](scripts/l1_compose.py) |
+| Reproducible | the script only calls `engine.project_ops`: `set_light`, `scatter_stroke`, `set_scatter`, `clear_scatter` and `paint_terrain_stroke`, the operations Studio's Light, Scatter and Paint controls record. It uses fixed seeds; two runs give the same sha256. It writes bytes exactly as Studio saves a scene: sorted keys, indent 2, LF endings, like the shipped file (checked). |
 | Machine | RTX 4070, GL 4.6, Windows 11, Python 3.13; hidden windows only |
 
 ## 1. What the candidate changes
@@ -101,7 +101,20 @@ shipped and candidate frames were captured interleaved in one process.
 | Noon lamp ground within ±5% of a no-light control | **0.0%** at all four lamp feet measured, in v1 and v4. The candidate's frames are pixel-identical to the same scene with the point lights removed. Lamp feet were 112–126 before and 72–85 after. |
 | Scatter total ≤ 13,395 | **9,656** |
 | No increase in draw calls | **Met:** v0 96→94, v1 65→65, v3 72→70, v4 61→60, v4b 67→66, v2 72→70, v1 1080p 65→65 |
-| No increase in GPU cost | **Met.** Renderer draw GPU time, p50 / p95 ms, 480 frames each over 4 alternating rounds (clocks not locked, so it's a comparison): v1 1.95/4.97 → 1.83/4.51, v4b 1.81/2.96 → 1.74/2.81, v4 1.83/4.06 → 1.73/3.37 (`data/gpu_cost.json`). |
+| No increase in GPU cost | **p50 met, p95 noisy.** See the table below. |
+
+**Renderer draw GPU time**, p50 / p95 ms, 480 frames per cell over 4 alternating rounds, two separate runs
+(`data/gpu_cost_run_a.json`, `data/gpu_cost_run_b.json`). Clocks were not locked.
+
+| View | Run A: before → after | Run B: before → after |
+|---|---|---|
+| v1 | 1.95 / 4.97 → 1.83 / 4.51 | 1.95 / 4.61 → 1.83 / 4.88 |
+| v4b | 1.81 / 2.96 → 1.74 / 2.81 | 1.81 / 2.78 → 1.72 / 2.90 |
+| v4 | 1.83 / 4.06 → 1.73 / 3.37 | 1.85 / 4.19 → 1.70 / 3.91 |
+
+- **p50:** lower in every view in both runs (−4% to −8%), consistent with fewer billboards and no new passes.
+- **p95:** lower in run A, but higher for v1 and v4b in run B. This is the unlocked-clock variance seen in the #475
+  work, not a consistent cost.
 
 ## 4. Validation (`validation/before` and `validation/after`; identical results for both scenes)
 

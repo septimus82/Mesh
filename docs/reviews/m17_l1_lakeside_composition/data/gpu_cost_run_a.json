@@ -1,0 +1,9 @@
+{
+ "note": "run A (before the candidate's line endings were corrected to LF; identical scene content), copied from that run's gpu_cost.json",
+ "v1_village/before": {"n": 480, "p50_ms": 1.953, "p95_ms": 4.965},
+ "v1_village/after": {"n": 480, "p50_ms": 1.825, "p95_ms": 4.514},
+ "v4b_north/before": {"n": 480, "p50_ms": 1.809, "p95_ms": 2.955},
+ "v4b_north/after": {"n": 480, "p50_ms": 1.74, "p95_ms": 2.807},
+ "v4_paths/before": {"n": 480, "p50_ms": 1.83, "p95_ms": 4.063},
+ "v4_paths/after": {"n": 480, "p50_ms": 1.732, "p95_ms": 3.369}
+}

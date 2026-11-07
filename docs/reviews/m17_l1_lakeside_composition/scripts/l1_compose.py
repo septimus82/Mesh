@@ -196,5 +196,6 @@ assert strip(doc) == strip(shipped), "something besides scatter, paint and the l
 for kind in ("rock_small", "rock_medium", "reeds", "reeds_cattail"):  # (only ground cover and trees were recomposed)
     assert doc["settings"]["hd2d"]["scatter"][kind] == shipped["settings"]["hd2d"]["scatter"][kind], kind
 assert doc["settings"]["hd2d"]["ground"]["terrain"]["chunks"] == shipped["settings"]["hd2d"]["ground"]["terrain"]["chunks"]
-dst.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")  # (as Studio saves a scene)
+text = json.dumps(doc, indent=2, sort_keys=True) + "\n"  # as Studio saves a scene: sorted keys, indent 2, LF endings
+dst.write_bytes(text.encode("utf-8"))  # (bytes: Windows' text mode would turn every LF into CRLF)
 print(json.dumps(log, indent=1))
