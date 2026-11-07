@@ -42,18 +42,30 @@ void main() {
 MESH_FS = """
 #version 330
 uniform sampler2D u_tex;
-// Cutaway (structures marked "cutaway", in play): not drawn within u_cut_at.w metres of the line from the camera
-// (u_cut_eye) to the followed character's chest (u_cut_at.xyz), in front of the character and above u_cut_floor.
+// Cutaway (structures marked "cutaway", in play; u_cut_at.w > 0): not drawn when in front of the followed character
+// (more than 0.2 m nearer the camera than its middle, u_cut_at.xyz) and above u_cut_floor, inside the cone from the
+// camera (u_cut_eye) through the character's box: offsets across (u_cut_right) and up from the line of sight, scaled to
+// the character's distance (what the picture shows; an orthographic camera, u_cut_fwd.w > 0, looks along u_cut_fwd.xyz
+// and scales nothing), within u_cut_half with corners rounded by u_cut_round. The CPU twin: renderer.cutaway_cuts.
 uniform int u_cut; uniform vec4 u_cut_at; uniform vec3 u_cut_eye; uniform float u_cut_floor;
+uniform vec3 u_cut_right; uniform vec2 u_cut_half; uniform float u_cut_round; uniform vec4 u_cut_fwd;
 in vec3 v_nrm; in vec2 v_uv; in vec3 v_world; out vec4 f_color;
 """ + LIGHTING_GLSL + """
 void main() {
     if (u_cut == 1 && u_cut_at.w > 0.0 && v_world.z > u_cut_floor) {
         vec3 sight = u_cut_at.xyz - u_cut_eye;
         float reach = length(sight);
-        vec3 dir = sight / reach;
-        float along = dot(v_world - u_cut_eye, dir);
-        if (along < reach - 0.2 && distance(v_world, u_cut_eye + dir * along) < u_cut_at.w) discard;
+        bool ortho = u_cut_fwd.w > 0.0;
+        vec3 dir = ortho ? u_cut_fwd.xyz : sight / reach;
+        vec3 rel = v_world - u_cut_at.xyz;
+        float behind = dot(rel, dir);
+        if (behind < -0.2 && (ortho || reach + behind > 0.0)) {
+            vec3 off = rel - dir * behind;
+            vec3 up = cross(u_cut_right, dir);
+            float scale = ortho ? 1.0 : reach / (reach + behind);
+            vec2 q = abs(vec2(dot(off, u_cut_right), dot(off, up)) * scale) - u_cut_half + u_cut_round;
+            if (length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - u_cut_round < 0.0) discard;
+        }
     }
     vec4 c = texture(u_tex, v_uv);
     f_color = vec4(c.rgb * light_at(v_world, normalize(v_nrm), false), 1.0);
@@ -263,8 +275,49 @@ def _placement(x: float, y: float, z: float, rotation_deg: float, scale: float) 
     return [[c * scale, -s * scale, 0.0, x], [s * scale, c * scale, 0.0, y], [0.0, 0.0, scale, z], [0.0, 0.0, 0.0, 1.0]]
 
 
-CUTAWAY_RADIUS = 1.3  # m: how wide the opening is that cutaway structures leave around the line to the player
-CUTAWAY_HEIGHT = 0.9  # m above the player's feet: where that line ends (about the chest)
+# Cutaway (structures marked "cutaway", in play): a fragment of one is not drawn when it is in front of the followed
+# character and inside the cone from the camera through that character's own picture, its box grown by
+# CUTAWAY_MARGIN with corners rounded by CUTAWAY_CORNER, so a roof is only opened where it would hide the character.
+CUTAWAY_MARGIN = 0.25  # m round the character's box
+CUTAWAY_CORNER = 0.3  # m: the opening's corner radius
+CUTAWAY_FRONT = 0.2  # m: only what is at least this much nearer the camera than the character's middle is cut
+CUTAWAY_FLOOR = 0.05  # m: only what is at least this much above the character's floor is cut
+
+
+def cutaway_box(sprite: Any, floor_m: float, pitch: float) -> tuple[tuple[float, float, float], tuple[float, float]]:
+    """The followed character's box as the picture shows it: its middle (m; the upright billboard ``_sprite_quads``
+    stands at its feet, stretched by 1 / cos(pitch)) and the half width and half height of the opening (m, the margin
+    included). Seen along the camera's line of sight, the stretched billboard is exactly the sprite's own height."""
+    stretch = 1.0 / max(0.5, math.cos(math.radians(pitch)))
+    w, h = abs(sprite.width) / PIXELS_PER_METRE, abs(sprite.height) / PIXELS_PER_METRE
+    middle = (sprite.center_x / PIXELS_PER_METRE, sprite.bottom / PIXELS_PER_METRE, floor_m + h * stretch / 2)
+    return middle, (w / 2 + CUTAWAY_MARGIN, h / 2 + CUTAWAY_MARGIN)
+
+
+def cutaway_cuts(point: tuple[float, float, float], *, eye: tuple[float, float, float],
+                 middle: tuple[float, float, float], right: tuple[float, float, float], half: tuple[float, float],
+                 floor_m: float, ortho: bool = False, forward: tuple[float, float, float] | None = None) -> bool:
+    """Whether MESH_FS leaves the fragment at ``point`` (m) of a cutaway structure undrawn: the CPU twin of its rule
+    (tests check the shader against it). ``eye`` and ``right`` (unit, horizontal): the camera's; ``middle`` and
+    ``half``: cutaway_box's; ``forward`` (unit): the orthographic camera's view direction."""
+    if point[2] <= floor_m + CUTAWAY_FLOOR:
+        return False
+    sight = [middle[i] - eye[i] for i in range(3)]
+    reach = math.sqrt(sum(v * v for v in sight))
+    if reach <= 0.0:
+        return False
+    d = list(forward) if ortho and forward is not None else [v / reach for v in sight]
+    rel = [point[i] - middle[i] for i in range(3)]
+    behind = sum(rel[i] * d[i] for i in range(3))  # (along the line of sight from the character's middle)
+    if behind >= -CUTAWAY_FRONT or (not ortho and reach + behind <= 0.0):
+        return False
+    off = [rel[i] - d[i] * behind for i in range(3)]
+    up = (right[1] * d[2] - right[2] * d[1], right[2] * d[0] - right[0] * d[2], right[0] * d[1] - right[1] * d[0])
+    scale = 1.0 if ortho else reach / (reach + behind)  # (to the character's distance: what the picture shows)
+    qx = abs(sum(off[i] * right[i] for i in range(3)) * scale) - half[0] + CUTAWAY_CORNER
+    qy = abs(sum(off[i] * up[i] for i in range(3)) * scale) - half[1] + CUTAWAY_CORNER
+    outside = math.hypot(max(qx, 0.0), max(qy, 0.0)) + min(max(qx, qy), 0.0) - CUTAWAY_CORNER
+    return outside < 0.0
 
 
 class Camera:
@@ -1092,10 +1145,20 @@ class Hd2dRenderer:
             program["u_cut_at"] = (0.0, 0.0, 0.0, 0.0)
             return
         floor = self.elevation_of(sprite) / PIXELS_PER_METRE
-        program["u_cut_at"] = (sprite.center_x / PIXELS_PER_METRE, sprite.bottom / PIXELS_PER_METRE,
-                               floor + CUTAWAY_HEIGHT, CUTAWAY_RADIUS)
-        program["u_cut_eye"] = game_camera.eye()
-        program["u_cut_floor"] = floor + 0.05
+        middle, half = cutaway_box(sprite, floor, game_camera.pitch)
+        eye = game_camera.eye()
+        program["u_cut_at"] = (*middle, 1.0)  # (w: on)
+        program["u_cut_eye"] = eye
+        program["u_cut_floor"] = floor + CUTAWAY_FLOOR
+        program["u_cut_right"] = game_camera.right()
+        program["u_cut_half"] = half
+        program["u_cut_round"] = CUTAWAY_CORNER
+        if game_camera.ortho:  # (looking along the line from its eye to its target, every ray parallel)
+            look = [game_camera.target[i] - eye[i] for i in range(3)]
+            n = math.sqrt(sum(v * v for v in look)) or 1.0
+            program["u_cut_fwd"] = (look[0] / n, look[1] / n, look[2] / n, 1.0)
+        else:
+            program["u_cut_fwd"] = (0.0, 0.0, 0.0, 0.0)
 
     def update(self, delta_time: float) -> None:
         if self.particles is not None:

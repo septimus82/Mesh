@@ -48,7 +48,8 @@ class Structure:
     scale: float = 1.0
     id: str = ""  # stable within the scene ("structure<index>" when not given): names its floors ("outpost/deck")
     # In play, the part of it between the camera and the followed character (above that character's floor) is not
-    # drawn, so a house never hides the player behind or inside it (renderer.CUTAWAY_RADIUS). Opt-in, per structure.
+    # drawn, so a house never hides the player behind or inside it (renderer.cutaway_cuts: only where it covers the
+    # character's picture). Opt-in, per structure.
     cutaway: bool = False
 
 
