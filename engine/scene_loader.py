@@ -26,9 +26,12 @@ DEFAULT_LAYERS = [
     {"name": "foreground"},
 ]
 
+# No "music" here: a room without a music setting keeps the music playing, one with "music": null is silent
+# (engine.scene_music). A default of None made the two the same: every room without music stopped it (M21A).
+# Black around a room smaller than the window, as HD-2D rooms show their dark sky: it was dark_blue_gray, a purple
+# no room asked for, framing every small 2D room (#422 H8). A room that names a colour keeps it.
 DEFAULT_SETTINGS = {
-    "background_color": "dark_blue_gray",
-    "music": None,
+    "background_color": "black",
     "music_volume": 1.0,
 }
 
@@ -58,6 +61,10 @@ DEFAULT_ENTITY: dict[str, Any] = {
 }
 
 KNOWN_EXTRA_FIELDS = {
+    "cast_shadow",
+    "shadow_enabled",
+    "picture_hidden",
+    "door_style",
     "name",
     "mesh_name",
     "tag",
@@ -76,6 +83,8 @@ KNOWN_EXTRA_FIELDS = {
     "forbid_flags",
     "collision_poly",
     "occluder_poly",
+    "components",  # the movement collider (schema-documented; Studio's Footprint and Circle write it)
+    "elevation",  # HD-2D scenes only: height above the ground (engine.hd2d); 2D ignores it
 }
 KNOWN_ENTITY_FIELDS: Set[str] = set(DEFAULT_ENTITY.keys()) | KNOWN_EXTRA_FIELDS
 
@@ -117,8 +126,37 @@ class ValidationReport:
         return not self.errors
 
 
+SCENE_TOP_LEVEL_KEYS = frozenset({
+    "name", "version", "schema_version", "description", "settings", "state", "layers",
+    "collision_rules", "entities", "tilemap", "background_layers", "foreground_layers",
+    "lights", "occluders",
+})
+
+
+class SceneValidationFailed(ValueError):
+    """``load_scene(..., strict=True)``: the scene failed validation (where a plain load gives the empty fallback)."""
+
+    def __init__(self, scene_path: str, errors: List[str]) -> None:
+        super().__init__(f"Scene '{scene_path}' failed validation: {'; '.join(errors[:3])}")
+        self.errors = list(errors)
+
+
+def document_key(path: Path | str) -> str:
+    """Normalised key for an open scene document (case- and separator-insensitive on Windows)."""
+    return str(Path(path).resolve()).replace("\\", "/").lower()
+
+
 class SceneLoader:
-    """Loads JSON scene files and validates minimal entity data."""
+    """Loads JSON scene files and validates minimal entity data.
+
+    ``documents`` maps :func:`document_key` paths to scene dicts the editor has open.
+    They take precedence over the file on disk, so play-testing and scene transitions
+    see unsaved edits (including rooms that exist only in the editor so far).
+    """
+
+    def __init__(self) -> None:
+        self.documents: Dict[str, Dict[str, Any]] = {}
+        self.last_saved_from: str | None = None  # the room the last loaded save slot was made in
 
     def apply_scene_defaults(self, raw_scene: Dict[str, Any]) -> Dict[str, Any]:
         """Public wrapper so tooling can reuse the defaulting logic."""
@@ -130,10 +168,15 @@ class SceneLoader:
 
         return self._apply_entity_defaults(raw_entity)
 
-    def load_scene(self, scene_path: str) -> Dict[str, Any]:
-        """Return the full scene dictionary from a JSON file."""
+    def load_scene(self, scene_path: str, *, strict: bool = False) -> Dict[str, Any]:
+        """Return the full scene dictionary from an open document or a JSON file. ``strict``: a scene that fails
+        validation raises SceneValidationFailed instead of giving the empty fallback (F7: a hot reload checks the
+        scene this way before it takes the running one down)."""
         full_path = resolve_path(scene_path)
-        if not full_path.exists():
+        document = self.documents.get(document_key(full_path))
+        if document is not None:
+            raw_scene: Dict[str, Any] = copy.deepcopy(document)
+        elif not full_path.exists():
             diag_warn(
                 "scene_loader.scene_missing",
                 f"Missing scene file '{scene_path}'",
@@ -141,8 +184,27 @@ class SceneLoader:
                 location=str(scene_path),
             )
             raise FileNotFoundError(f"Scene file not found: {scene_path}")
+        else:
+            raw_scene = json.loads(full_path.read_text(encoding="utf-8"))
+        saved_from: str | None = None  # the room a save slot was made in
+        if isinstance(raw_scene, dict) and "save_format_version" in raw_scene:
+            # A save slot is a scene snapshot plus save metadata (restored separately by
+            # SaveManager before it loads the slot as a scene); keep only the scene part.
+            meta = raw_scene.get("meta")
+            saved_from = meta.get("scene_path") if isinstance(meta, dict) else None
+            room = self.saved_room(saved_from)
+            if room is None and isinstance(raw_scene, dict):
+                from engine.scene_runtime.saved_world import needs_its_room  # noqa: PLC0415
 
-        raw_scene: Dict[str, Any] = json.loads(full_path.read_text(encoding="utf-8"))
+                if needs_its_room(raw_scene):  # (no copy of its room: refused, never loaded half-built)
+                    raise FileNotFoundError(f"The room '{saved_from}' this save was made in is missing; "
+                                            "the save was not loaded")
+            if room is not None:  # (#390: the room as it is now, with what play changed: engine.scene_runtime.saved_world)
+                from engine.scene_runtime.saved_world import compose  # noqa: PLC0415
+
+                raw_scene = compose(raw_scene, room, str(saved_from))
+            raw_scene = {k: v for k, v in raw_scene.items() if k in SCENE_TOP_LEVEL_KEYS}
+        self.last_saved_from = saved_from if isinstance(saved_from, str) and saved_from.strip() else None
         migrated_scene = migrate_payload("scene", raw_scene)
         validate(migrated_scene, "scene.schema.json", full_path)
         scene = self._apply_scene_defaults(migrated_scene, migrated=True)
@@ -150,6 +212,8 @@ class SceneLoader:
         scene_report = self.validate_scene(scene, validate_entities=False)
         self._log_validation_report(scene_report, context=f"Scene '{scene.get('name', '<unnamed>')}'")
         if not scene_report.ok:
+            if strict:
+                raise SceneValidationFailed(scene_path, scene_report.errors)
             print(
                 f"[Mesh][SceneLoader] ERROR: Scene '{scene.get('name', '<unnamed>')}' failed validation; "
                 "loading empty fallback",
@@ -177,7 +241,11 @@ class SceneLoader:
 
         scene["entities"] = normalized_entities
 
-        normalized_tilemap = self._normalize_tilemap_section(scene.get("tilemap"), base_path=full_path.parent)
+        # A save slot lives in saves/, but its map path is relative to the room it was saved
+        # from; resolving it from saves/ lost the map on every load.
+        has_origin = isinstance(saved_from, str) and saved_from.strip()
+        tilemap_base = resolve_path(str(saved_from)).parent if has_origin else full_path.parent
+        normalized_tilemap = self._normalize_tilemap_section(scene.get("tilemap"), base_path=tilemap_base)
         if normalized_tilemap is not None:
             scene["tilemap"] = normalized_tilemap
         else:
@@ -188,6 +256,26 @@ class SceneLoader:
             f"'{scene.get('name', '<unnamed>')}' with {len(normalized_entities)} entities",
         )
         return scene
+
+    def saved_room(self, saved_from: Any, *, warn: bool = True) -> Dict[str, Any] | None:
+        """The room a save was made in, as it is now (an open document, else its file); None (with a warning) if it
+        can't be read (engine.scene_runtime.saved_world: an older save then loads its own copy; a newer one is
+        refused)."""
+        if not isinstance(saved_from, str) or not saved_from.strip():
+            return None
+        path = resolve_path(saved_from)
+        document = self.documents.get(document_key(path))
+        if document is not None:
+            return copy.deepcopy(document)
+        try:
+            room = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            if not warn:
+                return None
+            diag_warn("scene_loader.saved_room_missing", f"The room '{saved_from}' this save was made in can't be read "
+                      f"({exc})", "engine.scene_loader", location=str(saved_from))
+            return None
+        return room if isinstance(room, dict) else None
 
     def validate_scene_file(self, scene_path: str, strict: bool = False) -> ValidationReport:
         """Validate a scene JSON file without loading it into the engine."""
@@ -210,7 +298,10 @@ class SceneLoader:
             return report
 
         scene = self.apply_scene_defaults(raw_scene)
-        return self.validate_scene(scene, strict=strict)
+        report = self.validate_scene(scene, strict=strict)
+        for problem in environment_problems(scene):  # (checked here, not on load: there each is set aside instead)
+            report.add_error(problem)
+        return report
 
     def validate_scene(
         self,
@@ -226,24 +317,8 @@ class SceneLoader:
             report.add_error("Scene root must be a JSON object (dictionary)")
             return report
 
-        allowed_keys = {
-            "name",
-            "version",
-            "schema_version",
-            "description",
-            "settings",
-            "state",
-            "layers",
-            "collision_rules",
-            "entities",
-            "tilemap",
-            "background_layers",
-            "foreground_layers",
-            "lights",
-            "occluders",
-        }
         for key in scene.keys():
-            if key not in allowed_keys:
+            if key not in SCENE_TOP_LEVEL_KEYS:
                 report.add_warning(f"Unknown top-level key '{key}' will be ignored")
 
         settings = scene.get("settings")
@@ -289,6 +364,9 @@ class SceneLoader:
         if not isinstance(entities, list):
             report.add_error("Scene 'entities' must be an array of entity objects")
         elif validate_entities:
+            # Behaviour names are checked against the registry; an unloaded registry
+            # would reject every valid scene (it did for every mesh_cli validator).
+            load_builtin_behaviours()
             for index, entity in enumerate(entities):
                 entity_report = self.validate_entity(entity, index=index, strict=strict)
                 report.extend(entity_report)
@@ -1153,3 +1231,44 @@ class SceneLoader:
         if raw_type in {dict, "object"}:
             return "object"
         return "string"
+
+
+def environment_problems(scene: Dict[str, Any]) -> list[str]:
+    """What of a room's weather, wind, water and HD-2D settings the game can't use, checked strictly as the
+    operations check them (``mesh validate``, AI validation). A room loading sets each such part aside and plays on
+    (said in Studio and logged), so these are reported here rather than refusing the room."""
+    from engine.hd2d.settings import Hd2dSettingsError, parse_hd2d  # noqa: PLC0415
+    from engine.scene_particles import SceneParticlesError, parse_exposure, parse_particles  # noqa: PLC0415
+    from engine.water import WaterError, parse_water  # noqa: PLC0415
+    from engine.wind import WindError, parse_wind  # noqa: PLC0415
+
+    problems: list[str] = []
+    raw = scene.get("settings")
+    settings: Dict[str, Any] = raw if isinstance(raw, dict) else {}
+    wind = None
+    try:
+        wind = parse_wind(settings.get("wind"))
+    except WindError as exc:
+        problems.append(str(exc))
+    try:
+        parse_particles(settings.get("particles"), wind)
+        parse_exposure(settings.get("weather_exposure"))
+    except SceneParticlesError as exc:
+        problems.append(f"settings.particles: {exc}")
+    if settings.get("hd2d") is not None:
+        w, h = settings.get("world_width"), settings.get("world_height")
+        size = (float(w), float(h)) if isinstance(w, (int, float)) and isinstance(h, (int, float)) else None
+        try:
+            parse_hd2d(settings.get("hd2d"), map_size_px=size)
+        except Hd2dSettingsError as exc:
+            problems.append(str(exc))
+    for k, entity in enumerate(scene.get("entities") or []):
+        behaviours = entity.get("behaviours") if isinstance(entity, dict) else None
+        if not isinstance(behaviours, list) or "WaterSurface" not in behaviours:
+            continue
+        config = (entity.get("behaviour_config") or {}).get("WaterSurface")
+        try:
+            parse_water(config if isinstance(config, dict) else {})
+        except WaterError as exc:
+            problems.append(f"entities[{k}] ({entity.get('name') or entity.get('id')}) water: {exc}")
+    return problems

@@ -1,1 +1,0 @@
-{"entities": [{"behaviours": [{"type": "IncrementCounterOnEvent", "params": {"quest_id": "q1"}}]}]}

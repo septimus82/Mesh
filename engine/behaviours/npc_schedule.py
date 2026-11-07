@@ -231,6 +231,13 @@ class NpcSchedule(Behaviour):
 
     # ------------------------------------------------------------------
     def update(self, delta_time: float) -> None:  # noqa: ARG002
+        if self._patrol_behaviour is None:
+            # An object's behaviours are attached together after all of them are built, so the constructor
+            # never found the Patrol and schedules could not move anyone. Find it now and apply the current block.
+            self._patrol_behaviour = self._find_patrol_behaviour()
+            if self._patrol_behaviour is not None and self._active_index is not None:
+                block = self._schedules[self._active_index]
+                (self._apply_patrol_schedule if block.get("mode") == "patrol" else self._apply_stand_schedule)(block)
         t = self._get_time_of_day_hours()
         idx = self._find_active_schedule_index(t)
         if idx != self._active_index:

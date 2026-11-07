@@ -230,6 +230,7 @@ def _coerce_prefab_palette_rows(value: object) -> list[dict[str, Any]] | None:
     return rows
 
 class EditorModeController:
+    tile_layer_index: int  # set by editor_controller_bootstrap
     _file_ops_ctl: EditorFileOpsController
     _ui_flow_ctl: EditorUIFlowController
     _selection_ctl: EditorSelectionController
@@ -931,6 +932,7 @@ class EditorModeController:
             "current_scene_path": str(getattr(scene_controller, "current_scene_path", "") or ""),
             "dirty": bool(self.scene_dirty),
             "revision": int(getattr(self, "content_revision", 0)),
+            "last_reload": getattr(scene_controller, "last_reload_result", None),  # (F7: a refused hot reload, why)
             "selected_entity_ids": selected_entity_ids(self),
         }
 

@@ -14,7 +14,7 @@ class TestAuditTrend(unittest.TestCase):
         temp_root = Path("artifacts/test_tmp")
         temp_root.mkdir(parents=True, exist_ok=True)
         self._temp_dir = tempfile.TemporaryDirectory(dir=temp_root)
-        self.test_dir = Path(self._temp_dir.name)
+        self.test_dir = Path(self._temp_dir.name).resolve()  # absolute: the test changes into it (3.11 gives relative)
         self._old_cwd = Path.cwd()
         os.chdir(self.test_dir)
 

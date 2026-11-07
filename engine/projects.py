@@ -6,10 +6,31 @@ from pathlib import Path
 from typing import Any
 
 from . import json_io
-from .repo_root import get_repo_root
 
 MAX_RECENTS = 8
 _PROJECTS_ENV = "MESH_PROJECTS_PATH"
+
+
+def user_data_dir() -> Path:
+    """Where Mesh keeps per-user data (recent projects, logs): never inside the engine folder.
+
+    ``MESH_USER_DIR`` overrides it (tests use a temporary one).
+    """
+    if os.environ.get("MESH_USER_DIR"):
+        return Path(os.environ["MESH_USER_DIR"])
+    base = os.environ.get("APPDATA") if sys.platform == "win32" else os.environ.get("XDG_CONFIG_HOME")
+    return Path(base) / "Mesh" if base else Path.home() / ".mesh"
+
+
+def default_projects_dir() -> Path:
+    """The folder new games go in unless the user picks another: Documents/Mesh Projects.
+
+    ``MESH_PROJECTS_DIR`` overrides it (tests use a temporary one).
+    """
+    if os.environ.get("MESH_PROJECTS_DIR"):
+        return Path(os.environ["MESH_PROJECTS_DIR"])
+    documents = Path.home() / "Documents"
+    return (documents if documents.is_dir() else Path.home()) / "Mesh Projects"
 
 
 def _is_web_runtime() -> bool:
@@ -37,8 +58,9 @@ def _resolve_projects_path(path: str | Path | None = None) -> Path | None:
     env = (os.environ.get(_PROJECTS_ENV) or "").strip()
     if env:
         return Path(env)
-    root = get_repo_root()
-    return root / "projects.json"
+    # Per user, not per checkout: the old repo-root projects.json meant the engine folder
+    # changed whenever someone opened a project.
+    return user_data_dir() / "projects.json"
 
 
 def _read_payload(path: Path) -> dict[str, Any] | None:

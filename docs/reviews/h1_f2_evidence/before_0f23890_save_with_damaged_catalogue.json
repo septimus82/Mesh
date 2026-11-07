@@ -1,0 +1,96 @@
+[
+ {
+  "case": "malformed_before_open",
+  "damage_when": "before_open",
+  "valid_catalogue_ids": [
+   "player",
+   "person",
+   "sign"
+  ],
+  "player_loaded_at_open": false,
+  "catalogue_before_save": {
+   "sha": "58996f0b4bdda089",
+   "bytes": 6632
+  },
+  "save": {
+   "result": "saved",
+   "written": [
+    "assets/prefabs.json"
+   ],
+   "backups": []
+  },
+  "catalogue_after_save": {
+   "sha": "f2a793c9b262956f",
+   "unchanged": false,
+   "ids_now": [
+    "player"
+   ]
+  },
+  "dirty_after_save": false,
+  "backup_files": []
+ },
+ {
+  "case": "malformed_after_open",
+  "damage_when": "after_open",
+  "valid_catalogue_ids": [
+   "player",
+   "person",
+   "sign"
+  ],
+  "player_loaded_at_open": true,
+  "catalogue_before_save": {
+   "sha": "58996f0b4bdda089",
+   "bytes": 6632
+  },
+  "save": {
+   "result": "saved",
+   "written": [
+    "assets/prefabs.json"
+   ],
+   "backups": [
+    "assets/prefabs.json.outside-change.bak"
+   ]
+  },
+  "catalogue_after_save": {
+   "sha": "6ce68b16a5ee8431",
+   "unchanged": false,
+   "ids_now": [
+    "player"
+   ]
+  },
+  "dirty_after_save": false,
+  "backup_files": [
+   "prefabs.json.outside-change.bak"
+  ]
+ },
+ {
+  "case": "wrong_root_before_open",
+  "damage_when": "before_open",
+  "valid_catalogue_ids": [
+   "player",
+   "person",
+   "sign"
+  ],
+  "player_loaded_at_open": false,
+  "catalogue_before_save": {
+   "sha": "6cfdf435b3a98229",
+   "bytes": 7457
+  },
+  "save": {
+   "result": "saved",
+   "written": [
+    "assets/prefabs.json"
+   ],
+   "backups": []
+  },
+  "catalogue_after_save": {
+   "sha": "f2a793c9b262956f",
+   "unchanged": false,
+   "ids_now": [
+    "player"
+   ]
+  },
+  "dirty_after_save": false,
+  "backup_files": []
+ }
+]

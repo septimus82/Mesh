@@ -1,6 +1,9 @@
-"""Fast CI gate: fail if forbidden paths exist in workspace (even if untracked).
+"""Fast CI gate: fail if caches, venvs or build output could reach a commit or a package.
 
-This test catches accidental packaging of caches, venv, or build artifacts.
+This test catches accidental packaging of caches, venv, or build artifacts. CI itself makes some of them before
+the tests run (``pip install -e .`` writes ``*.egg-info``, ``compileall`` writes ``__pycache__``, the mypy cache is
+restored), so one merely existing is not the hazard: one git would take in is (tracked, or present and not
+ignored). Where git can't tell (no checkout, no git), existing at all fails, as before.
 
 By default these tests are skipped unless:
 - Running with pytest -m packaging_hygiene
@@ -13,6 +16,7 @@ This allows local dev machines to have caches while still catching issues in CI.
 from __future__ import annotations
 
 import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -67,6 +71,23 @@ def _get_repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+def _git_would_take(repo_root: Path, rel_paths: list[str]) -> list[str]:
+    """Those of ``rel_paths`` (existing, relative to the repo) git would commit: tracked, or not ignored.
+    Where git can't tell (no checkout, no git), all of them."""
+    exposed: list[str] = []
+    for rel in rel_paths:
+        try:
+            tracked = subprocess.run(["git", "ls-files", "--", rel], cwd=repo_root, capture_output=True, text=True)
+            ignored = subprocess.run(["git", "check-ignore", "-q", rel], cwd=repo_root, capture_output=True)
+        except OSError:
+            return list(rel_paths)
+        if tracked.returncode != 0 or ignored.returncode not in (0, 1):  # not a git checkout
+            return list(rel_paths)
+        if tracked.stdout.strip() or ignored.returncode != 0:
+            exposed.append(rel)
+    return exposed
+
+
 @pytest.mark.fast
 @pytest.mark.packaging_hygiene
 @_skip_unless_ci
@@ -82,6 +103,7 @@ def test_no_forbidden_directories_in_workspace() -> None:
         path = repo_root / dirname
         if path.exists():
             found.append(dirname)
+    found = _git_would_take(repo_root, found)
 
     if found:
         msg = (
@@ -131,6 +153,7 @@ def test_no_pycache_dirs_in_source_tree() -> None:
                 found.append(rel_path.as_posix())
                 # Don't recurse into __pycache__
                 dirs.remove("__pycache__")
+    found = _git_would_take(repo_root, found)
 
     # Limit output to first 10 to avoid huge failure messages
     if found:
@@ -156,6 +179,7 @@ def test_no_egg_info_directories() -> None:
     for item in repo_root.iterdir():
         if item.is_dir() and item.name.endswith(".egg-info"):
             found.append(item.name)
+    found = _git_would_take(repo_root, found)
 
     if found:
         msg = (

@@ -49,7 +49,7 @@ Any additional top-level keys are ignored but reported as warnings by the valida
 
 | Field | Type | Default | Notes |
 | ----- | ---- | ------- | ----- |
-| `background_color` | string | `dark_blue_gray` | Must match a name from `arcade.color`. |
+| `background_color` | string | `black` | Must match a name from `arcade.color`. Shown around a room smaller than the window. |
 | `world_width` | number | unset | Optional virtual bounds for the world. When omitted and a tilemap is present, the loader derives it from `tilemap.width * tilemap.tilewidth`. |
 | `world_height` | number | unset | Optional virtual bounds for the world. When omitted and a tilemap is present, the loader derives it from `tilemap.height * tilemap.tileheight`. |
 | `render_sort_mode` | string | `"y_sort"` | Controls entity draw ordering: `"y_sort"` (default) or `"explicit_z"`. See _HD-2D Render Sorting_ below. |

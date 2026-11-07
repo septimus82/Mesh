@@ -1,0 +1,35 @@
+{
+ "water": {
+  "pixels_before": 20572,
+  "pixels_after": 17106
+ },
+ "shadow": {
+  "pixels_darkened_west_of_the_mound": 15359,
+  "mound_top_m": 2.0
+ },
+ "room_box_top_m": {
+  "before": 6.3,
+  "after": 50.5,
+  "spike_m": 48.0
+ },
+ "rain_stops_on_the_mound_m": 1.921,
+ "walked_onto_the_mound": {
+  "feet_m": [
+   20.5,
+   4.56
+  ],
+  "elevation_m": 0.993,
+  "ground_m": 0.993
+ },
+ "route_over_or_round_the_mound": {
+  "points": 16,
+  "highest_m": 0.938
+ },
+ "chunk_edges_not_meeting": 0,
+ "gl_objects": {
+  "buffer": 123,
+  "texture": 31,
+  "framebuffer": 6,
+  "program": 30
+ }
+}

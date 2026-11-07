@@ -4,6 +4,7 @@ import os
 from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
+from engine import scene_particles, sound_emitters, water
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow, record_swallowed
 from engine.ui import maybe_auto_open_quest_log, maybe_enqueue_demo_interior_hint, maybe_enqueue_quest_progress_toast
@@ -141,11 +142,16 @@ def on_draw(window: "GameWindow") -> None:
 
     try:
         lighting = getattr(window, "lighting", None)
-        if lighting is not None and lighting.enabled:
+        hd2d = getattr(window, "hd2d_renderer", None)
+        if hd2d is not None:  # an HD-2D scene: its 3D world replaces the 2D world drawing (engine.hd2d)
+            if not menu_visible:
+                hd2d.draw()
+        elif lighting is not None and lighting.enabled:
             with lighting.begin():
                 if not menu_visible:
                     window.scene_controller.draw()
                     window.particle_manager.draw()
+                    scene_particles.draw_2d(window)
                     window.editor_controller.draw_world()
             # LightLayer draws/composites in screen space; ensure we are on the GUI camera
             # before calling lighting.end() so the lighting output isn't transformed by the
@@ -155,6 +161,7 @@ def on_draw(window: "GameWindow") -> None:
         elif not menu_visible:
             window.scene_controller.draw()
             window.particle_manager.draw()
+            scene_particles.draw_2d(window)
             window.editor_controller.draw_world()
     finally:
         # Always restore ghosted sprites even if an exception occurs
@@ -208,6 +215,7 @@ def on_update(window: "GameWindow", delta_time: float) -> None:
     if audio is not None:
         try:
             audio.update(delta_time)
+            sound_emitters.update(window, delta_time)  # the room's emitters and weather, from where the player is
         except Exception as exc:  # noqa: BLE001  # REASON: audio update failures should log once without aborting the runtime tick
             _log_swallow("GTCK-003", "engine/game_runtime/tick.py blanket swallow", once=True)
             if not getattr(window, "_mesh_audio_update_error_logged", False):
@@ -231,6 +239,11 @@ def on_update(window: "GameWindow", delta_time: float) -> None:
         window.cutscene_controller.update(delta_time)
 
     window.scene_controller.update(delta_time)
+    hd2d = getattr(window, "hd2d_renderer", None)
+    if hd2d is not None:
+        hd2d.update(delta_time)
+    scene_particles.update(window, delta_time)  # a 2D room's environmental particles (an HD-2D room's: its renderer)
+    water.advance(window, delta_time)  # its puddles and ponds move
     window.particle_manager.update()
     lighting = getattr(window, "lighting", None)
     if lighting is not None:

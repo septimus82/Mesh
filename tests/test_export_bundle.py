@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from tooling.export_bundle import (
+from engine.tooling.export_bundle import (
     BundleDiff,
     BundleManifest,
     ExportFile,
@@ -529,3 +529,111 @@ class TestEndToEndWorkflow:
         assert loaded is not None
         assert loaded.version == 1
         assert loaded.file_count > 0
+
+
+# --------------------------------------------------------------------------- #
+# A creator's project (Milestone 16 Stage 6B: mesh export from a pip install)
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.fast
+def test_a_project_exports_as_a_standalone_game(tmp_path: Path) -> None:
+    import engine
+    from engine.project_scaffold import create_project
+    from engine.tooling.export_bundle import is_project
+
+    project = tmp_path / "game"
+    create_project(project, "Game", "blank")
+    assert is_project(project) and not is_project(Path(engine.__file__).resolve().parent.parent)
+    code, manifest = build_bundle(project, project / "dist" / "bundle")
+    assert code == 0 and manifest is not None
+    bundle = project / "dist" / "bundle"
+    shipped = {f["path"] for f in manifest.files}
+    assert {"main.py", "config.json", "engine/__init__.py", "engine/self_test.py", "engine/schemas/scene.schema.json",
+            "packs/core_regions/worlds/main.json", "packs/core_regions/scenes/start.json"} <= shipped
+    assert {p.relative_to(project).as_posix() for p in (project / "assets").rglob("*") if p.is_file()} <= shipped, \
+        "every file of the project's own assets"
+    assert not any("__pycache__" in f or f.endswith(".pyc") for f in shipped)
+    assert manifest.repo_root == "." and (bundle / "engine" / "hd2d" / "renderer.py").is_file()
+
+
+@pytest.mark.fast
+def test_an_export_never_replaces_a_folder_that_is_not_an_earlier_bundle(tmp_path: Path) -> None:
+    from engine.project_scaffold import create_project
+
+    project = tmp_path / "game"
+    create_project(project, "Game", "blank")
+    keep = tmp_path / "my documents"
+    keep.mkdir()
+    (keep / "letter.txt").write_text("mine", encoding="utf-8")
+    assert build_bundle(project, keep)[0] == 1 and (keep / "letter.txt").read_text(encoding="utf-8") == "mine"
+    assert build_bundle(project, tmp_path / "bundle")[0] == 0 and build_bundle(project, tmp_path / "bundle")[0] == 0
+
+
+@pytest.mark.fast
+def test_an_exported_game_starts_its_game_not_meshs_project_browser(tmp_path: Path) -> None:
+    """The bundle carries Mesh's engine beside its own files, so the engine's source folder is the game's folder:
+    it must still count as a project (pinned at launch), or the game opens Mesh's project browser (it did, listing
+    the player's recent Mesh projects) instead of its start room."""
+    import os
+    import subprocess
+    import sys
+
+    from engine.project_scaffold import create_project
+
+    project = tmp_path / "game"
+    create_project(project, "Game", "blank")
+    bundle = tmp_path / "bundle"
+    assert build_bundle(project, bundle)[0] == 0
+    probe = ("import sys; sys.path.insert(0, '.'); from pathlib import Path; import engine.repo_root as r; "
+             "print(r.engine_source_root().resolve() == Path.cwd().resolve(), r.is_standalone_project_root(Path.cwd()))")
+    out = subprocess.run([sys.executable, "-c", probe], cwd=bundle, capture_output=True, text=True, timeout=120,
+                         env={k: v for k, v in os.environ.items() if k not in ("MESH_REPO_ROOT", "PYTHONPATH")})
+    assert out.stdout.split() == ["True", "True"], out.stdout + out.stderr
+    from engine.repo_root import engine_source_root, is_standalone_project_root
+
+    assert not is_standalone_project_root(engine_source_root())  # (Mesh's own checkout: still not a project)
+
+
+@pytest.mark.fast
+def test_a_game_runs_from_its_own_folder_wherever_it_is_started(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """#422 H7: `python <game>/main.py` started from another folder looked for config.json from that folder upward, so
+    an exported game found none (and started the engine's default room) or another's (a checkout's). main.py now
+    changes to its own folder before the engine starts."""
+    import runpy
+
+    from engine.project_scaffold import create_project
+
+    project = tmp_path / "game"
+    create_project(project, "Game", "blank")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    class Started(Exception):
+        pass
+
+    def started() -> None:  # (the first thing main() does with the engine)
+        raise Started(Path.cwd())
+
+    monkeypatch.setattr("engine.dpi_bootstrap.set_process_dpi_unaware", started)
+    with pytest.raises(Started) as at:
+        runpy.run_path(str(project / "main.py"), run_name="__main__")
+    assert Path(at.value.args[0]).resolve() == project.resolve()
+
+
+@pytest.mark.fast
+@pytest.mark.parametrize("template", ["blank", "adventure", "starter"])
+def test_a_new_2d_game_has_the_sounds_its_menus_play(tmp_path: Path, template: str) -> None:
+    """#422 H9.1: every game's pause menu and dialogue play assets/sounds/ui_*.wav; only the HD-2D starter shipped
+    them, so a 2D game's menus were silent and logged "Failed to load sound" at every step (seen exporting the
+    adventure game). A project made before keeps its files as they are."""
+    from engine.project_scaffold import create_project, ensure_starter_files
+
+    project = tmp_path / "game"
+    create_project(project, "Game", template)
+    sounds = {f"assets/sounds/ui_{name}.wav" for name in ("open", "close", "click", "hover")}
+    assert all((project / rel).is_file() for rel in sounds)
+    for rel in sounds:
+        (project / rel).unlink()
+    ensure_starter_files(project)  # (what Mesh Studio does to a project it edits)
+    assert not any((project / rel).exists() for rel in sounds), "an existing project is left as it is"

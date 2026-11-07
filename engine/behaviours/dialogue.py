@@ -70,6 +70,18 @@ from .registry import register_behaviour
             "type": "object",
             "default": {},
         },
+        {
+            "name": "require_flags",
+            "description": "Flags that must all be set before this dialogue can start (by talking, an event or auto_start)",
+            "type": "array",
+            "default": [],
+        },
+        {
+            "name": "forbid_flags",
+            "description": "Flags that must all be clear before this dialogue can start",
+            "type": "array",
+            "default": [],
+        },
     ],
 )
 class Dialogue(Behaviour):
@@ -84,6 +96,8 @@ class Dialogue(Behaviour):
         "dialogue": ParamDef(dict, default={}, description="Inline dialogue object"),
         "dialogue_lines": ParamDef(list, default=[], description="Legacy array of dialogue line entries"),
         "dialogue_nodes": ParamDef(dict, default={}, description="Graph-based dialogue nodes map"),
+        "require_flags": ParamDef(list, default=[], description="Flags that must all be set before this dialogue can start"),
+        "forbid_flags": ParamDef(list, default=[], description="Flags that must all be clear before this dialogue can start"),
     }
 
     def __init__(self, entity: Any, window: Any, **config: Any) -> None:
@@ -101,8 +115,10 @@ class Dialogue(Behaviour):
         self.config["event_value"] = self.event_value
         self.config["auto_start"] = self.auto_start
         self.config["once"] = self.once
+        self._read_flag_conditions(merged)
         self._script = self._build_script(merged)
         self._graph_nodes, self._graph_start = self._build_graph(merged)
+        self._graph_starts = self._build_starts(merged)
         self._owner_id = f"dialogue::{self.entity_name}"
         self._pending_auto = self.auto_start
         self._active = False
@@ -119,13 +135,37 @@ class Dialogue(Behaviour):
     def on_config_updated(self, param_name: str, value: Any) -> None:
         """Editor hook (inspector edits, live-op proposals): re-parse lines so the next talk uses them."""
         del value  # already written into self.config by the editor
+        if param_name in {"require_flags", "forbid_flags"}:
+            self._read_flag_conditions(self.config)
+            return
         if param_name not in {"dialogue", "dialogue_lines", "dialogue_speaker"}:
             return
         merged = self._merge_entity_data(self.entity, self.config)
         self._script = self._build_script(merged)
         self._graph_nodes, self._graph_start = self._build_graph(merged)
+        self._graph_starts = self._build_starts(merged)
         if not self._active:
             self._has_played = False  # an edited "once" line should be hearable again
+
+    def _read_flag_conditions(self, source: Dict[str, Any]) -> None:
+        self.require_flags = self._normalize_flag_list(source.get("require_flags"))
+        self.forbid_flags = self._normalize_flag_list(source.get("forbid_flags"))
+        self.config["require_flags"] = list(self.require_flags)
+        self.config["forbid_flags"] = list(self.forbid_flags)
+
+    def _flags_allow(self) -> bool:
+        """Whether the game state lets this dialogue start (its require_flags / forbid_flags).
+
+        A pending auto_start keeps waiting until they do, so ``auto_start`` with
+        ``require_flags`` means "start as soon as these flags are set".
+        """
+        return self._flags_ok(self.require_flags, self.forbid_flags)
+
+    def _flags_ok(self, require: list[str], forbid: list[str]) -> bool:
+        getter = getattr(self.window, "get_flag", None)
+        if not callable(getter):
+            return not require
+        return all(getter(flag) for flag in require) and not any(getter(flag) for flag in forbid)
 
     @staticmethod
     def _merge_entity_data(entity: Sprite, config: Dict[str, Any] | None) -> Dict[str, Any]:
@@ -208,6 +248,22 @@ class Dialogue(Behaviour):
         if not start_node:
             start_node = fallback_start
         return (normalized, start_node)
+
+    def _build_starts(self, data: Dict[str, Any]) -> list[dict[str, Any]]:
+        """Conditional first lines: ``dialogue.starts = [{node, require_flags, forbid_flags}]``.
+
+        Like an RPG Maker event's pages: the first rule whose flags allow it picks the line the
+        conversation opens with ("the grave is already open"); otherwise it opens at ``start``.
+        """
+        root = data.get("dialogue")
+        rules = root.get("starts") if isinstance(root, dict) else None
+        out: list[dict[str, Any]] = []
+        for rule in rules if isinstance(rules, list) else []:
+            node = str(rule.get("node", "")).strip() if isinstance(rule, dict) else ""
+            if node:
+                out.append({"node": node, "require_flags": self._normalize_flag_list(rule.get("require_flags")),
+                            "forbid_flags": self._normalize_flag_list(rule.get("forbid_flags"))})
+        return out
 
     def _iter_nodes(self, nodes_root: Any) -> Iterable[tuple[str, dict[str, Any]]]:
         if isinstance(nodes_root, dict):
@@ -345,7 +401,7 @@ class Dialogue(Behaviour):
     # --- behaviour lifecycle -----------------------------------------------
 
     def update(self, dt: float) -> None:  # noqa: D401 ARG002
-        if self._pending_auto and (self._script or self._graph_nodes):
+        if self._pending_auto and (self._script or self._graph_nodes) and not self._box_busy_elsewhere():
             if self._start_dialogue(trigger="auto"):
                 self._pending_auto = False
                 self._emit_line_event(stage="auto", actor_name=self._last_actor)
@@ -365,6 +421,7 @@ class Dialogue(Behaviour):
         if self._is_box_active():
             if self._graph_active:
                 progressed = self._advance_graph_dialogue()
+                self._ignore_interact_press_once = True  # don't let this press also pick a choice on the next line
                 if progressed:
                     self._emit_line_event(stage="advance", actor_name=self._last_actor)
             else:
@@ -384,6 +441,8 @@ class Dialogue(Behaviour):
         if self._is_box_active():
             return True
         if not self._script and not self._graph_nodes:
+            return False
+        if not self._flags_allow():
             return False
         return not bool(self.once and self._has_played)
 
@@ -422,6 +481,8 @@ class Dialogue(Behaviour):
             return False
         if self.once and self._has_played and not self._is_box_active():
             return False
+        if not self._flags_allow():
+            return False
         box = self._get_box()
         if box is None:
             print("[Mesh][Dialogue] WARNING: DialogueBox unavailable")
@@ -435,8 +496,8 @@ class Dialogue(Behaviour):
         self._has_played = True
         self._active = True
         self._last_actor = actor_name
-        if trigger == "interact":
-            self._ignore_interact_press_once = True
+        # The press that opened this (or closed the previous speaker's box) must not skip its first line.
+        self._ignore_interact_press_once = True
         self.window.emit_signal(
             "dialogue_started",
             entity=self.entity_name,
@@ -473,6 +534,8 @@ class Dialogue(Behaviour):
         if not callable(pressed) or not pressed("interact"):
             return
         advanced = self._advance_dialogue()
+        # This press is used up: if the next line offers choices, it must not also pick one.
+        self._ignore_interact_press_once = True
         if advanced:
             self._emit_line_event(stage="advance", actor_name=self._last_actor)
         else:
@@ -484,6 +547,10 @@ class Dialogue(Behaviour):
         if not self._graph_nodes:
             return False
         start_id = self._graph_start or next(iter(self._graph_nodes))
+        for rule in self._graph_starts:
+            if rule["node"] in self._graph_nodes and self._flags_ok(rule["require_flags"], rule["forbid_flags"]):
+                start_id = rule["node"]
+                break
         self._graph_active = True
         self._current_node_id = start_id
         return self._show_node(start_id)
@@ -693,6 +760,12 @@ class Dialogue(Behaviour):
     def _is_box_active(self) -> bool:
         box = self._get_box()
         return bool(box and box.is_active_for(self._owner_id))
+
+    def _box_busy_elsewhere(self) -> bool:
+        """Another speaker has the box: an auto-start waits rather than cutting them off."""
+        box = self._get_box()
+        active = getattr(box, "is_active", False)
+        return bool(box and (active() if callable(active) else active) and not box.is_active_for(self._owner_id))
 
     def _get_box(self):
         box = getattr(self.window, "dialogue_box", None)

@@ -488,7 +488,7 @@ def _weighted_random_choice(scores: Mapping[BehaviorId, float], rng: RandomLike)
         cumulative += max(0.0, float(weight))
         if threshold < cumulative:
             return behavior_id
-    return next(reversed(scores))
+    return next(reversed(list(scores)))
 
 
 def companion_mind_to_dict(mind: CompanionMind) -> dict[str, Any]:

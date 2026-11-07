@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, TypedDict
 
 from engine import json_io
+from engine.path_norm import normalize_scene_path
 from engine.swallowed_exceptions import _log_swallow
 from engine.tooling import plan_history, polish, scaffold
 from engine.tooling.plan_types import Action, Plan
@@ -432,7 +433,7 @@ class PlanExecutor:
             world = json.load(f)
 
         scene_id = args["scene_id"]
-        scene_path = args["scene_path"]
+        scene_path = normalize_scene_path(args["scene_path"])  # a world names scenes with '/', whatever the plan wrote
 
         # Add scene
         if "scenes" not in world:

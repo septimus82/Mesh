@@ -18,6 +18,13 @@ from typing import Any
 
 import pytest
 
+
+def _assert_positions(positions: list[tuple[float, float]], expected: list[tuple[float, float]]) -> None:
+    """Each (x, y) as pytest.approx compares it (pytest 9.2 refuses approx on a list of tuples)."""
+    assert len(positions) == len(expected), (positions, expected)
+    for got, want in zip(positions, expected):
+        assert got == pytest.approx(want), (positions, expected)
+
 pytestmark = [pytest.mark.fast]
 
 
@@ -121,7 +128,7 @@ class TestDuplicateToGridBasic:
             (10.0, 20.0 + 32.0),         # r=1,c=0
             (10.0 + 32.0, 20.0 + 32.0),  # r=1,c=1
         ])
-        assert positions == pytest.approx(expected)
+        _assert_positions(positions, expected)
 
     def test_3x1_vertical_strip(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _patch_authoring(monkeypatch)
@@ -188,7 +195,7 @@ class TestIncludeOriginalFalse:
             (10.0, 20.0 + 32.0),          # r=1,c=0
             (10.0 + 32.0, 20.0 + 32.0),   # r=1,c=1
         ])
-        assert positions == pytest.approx(expected)
+        _assert_positions(positions, expected)
 
 
 # ---------------------------------------------------------------------------
@@ -215,7 +222,7 @@ class TestPlacementOrder:
             (10.0, 20.0),  # (1,1)
             (20.0, 20.0),  # (1,2)
         ])
-        assert positions == pytest.approx(expected)
+        _assert_positions(positions, expected)
 
 
 # ---------------------------------------------------------------------------

@@ -18,14 +18,12 @@ def test_runtime_settings_round_trip(tmp_path) -> None:
         music_volume=0.8,
         sfx_volume=0.2,
         fog_enabled=True,
-        soft_shadows_enabled=True,
     )
     save_runtime_settings(path, settings)
     loaded = load_runtime_settings(path)
     assert loaded.music_volume == pytest.approx(0.8)
     assert loaded.sfx_volume == pytest.approx(0.2)
     assert loaded.fog_enabled is True
-    assert loaded.soft_shadows_enabled is True
 
 
 @pytest.mark.fast

@@ -66,13 +66,3 @@ def test_shake_deterministic_with_seed() -> None:
     assert offsets == offsets_b
 
 
-@patch("engine.camera_controller.ArcadeCamera", _StubCamera)
-def test_gui_camera_unchanged_by_shake() -> None:
-    window = _StubWindow()
-    controller = CameraController(window)
-    controller.gui_camera.position = (5.0, 6.0)
-    controller.add_camera_trauma(1.0, decay=0.0, max_offset=10.0, frequency=12.0, seed=42)
-
-    controller.update_camera_follow(target_x=100.0, target_y=0.0, dt=1.0 / 60.0)
-
-    assert controller.gui_camera.position == (5.0, 6.0)

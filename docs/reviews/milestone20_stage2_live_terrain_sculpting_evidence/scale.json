@@ -1,0 +1,116 @@
+{
+ "32x24": {
+  "stored_chars": 84853,
+  "game_room_load_ms": 311.2,
+  "frame_ms_playing": {
+   "median": 4.65,
+   "p95": 4.98,
+   "max": 5.04,
+   "n": 60
+  },
+  "frame_gpu_ms": 0.133,
+  "draw_calls": 36,
+  "shadow_draws": 16,
+  "terrain_gpu_bytes": 1060032,
+  "chunks": 20,
+  "nav_grid_ms": 67.4,
+  "live_dab_rebuild_ms": {
+   "median": 3.41,
+   "p95": 6.44,
+   "max": 6.69,
+   "n": 30
+  },
+  "studio_room_reload_ms": 199.9,
+  "studio_stroke_frame_ms": {
+   "median": 21.87,
+   "p95": 26.18,
+   "max": 67.2,
+   "n": 30
+  },
+  "studio_commit_ms": 12.7,
+  "studio_release_to_next_frame_ms": 162.3,
+  "studio_idle_frame_ms": {
+   "median": 14.7,
+   "p95": 19.91,
+   "max": 47.2,
+   "n": 20
+  },
+  "save_ms": 146.6
+ },
+ "64x64": {
+  "stored_chars": 125155,
+  "game_room_load_ms": 452.9,
+  "frame_ms_playing": {
+   "median": 7.81,
+   "p95": 11.28,
+   "max": 28.79,
+   "n": 60
+  },
+  "frame_gpu_ms": 1.397,
+  "draw_calls": 47,
+  "shadow_draws": 16,
+  "terrain_gpu_bytes": 5042688,
+  "chunks": 81,
+  "nav_grid_ms": 316.8,
+  "live_dab_rebuild_ms": {
+   "median": 6.75,
+   "p95": 11.97,
+   "max": 12.59,
+   "n": 30
+  },
+  "studio_room_reload_ms": 357.4,
+  "studio_stroke_frame_ms": {
+   "median": 32.24,
+   "p95": 35.68,
+   "max": 73.99,
+   "n": 30
+  },
+  "studio_commit_ms": 27.2,
+  "studio_release_to_next_frame_ms": 210.1,
+  "studio_idle_frame_ms": {
+   "median": 18.54,
+   "p95": 22.18,
+   "max": 50.49,
+   "n": 20
+  },
+  "save_ms": 146.4
+ },
+ "128x128": {
+  "stored_chars": 263934,
+  "game_room_load_ms": 1007.3,
+  "frame_ms_playing": {
+   "median": 10.43,
+   "p95": 15.33,
+   "max": 20.34,
+   "n": 60
+  },
+  "frame_gpu_ms": 1.746,
+  "draw_calls": 72,
+  "shadow_draws": 16,
+  "terrain_gpu_bytes": 19321152,
+  "chunks": 289,
+  "nav_grid_ms": 1362.5,
+  "live_dab_rebuild_ms": {
+   "median": 7.12,
+   "p95": 12.53,
+   "max": 14.77,
+   "n": 30
+  },
+  "studio_room_reload_ms": 1064.1,
+  "studio_stroke_frame_ms": {
+   "median": 36.9,
+   "p95": 39.27,
+   "max": 80.75,
+   "n": 30
+  },
+  "studio_commit_ms": 78.7,
+  "studio_release_to_next_frame_ms": 548.1,
+  "studio_idle_frame_ms": {
+   "median": 21.86,
+   "p95": 27.62,
+   "max": 53.63,
+   "n": 20
+  },
+  "save_ms": 161.5
+ }
+}

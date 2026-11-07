@@ -1,0 +1,962 @@
+[
+ {
+  "run": 40509204836,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "1d2501d",
+  "at": "2026-10-27T13:06",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40509204836,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "1d2501d",
+  "at": "2026-10-27T13:06",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=870"
+ },
+ {
+  "run": 40509194015,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "1d2501d",
+  "at": "2026-10-27T13:06",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=6646"
+ },
+ {
+  "run": 40509194015,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "1d2501d",
+  "at": "2026-10-27T13:06",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=20717"
+ },
+ {
+  "run": 40502056355,
+  "branch": "feature/m20d-foliage",
+  "event": "pull_request",
+  "sha": "bf8bbd3",
+  "at": "2026-10-27T12:13",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=2937"
+ },
+ {
+  "run": 40502056355,
+  "branch": "feature/m20d-foliage",
+  "event": "pull_request",
+  "sha": "bf8bbd3",
+  "at": "2026-10-27T12:13",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=875"
+ },
+ {
+  "run": 40502049562,
+  "branch": "feature/m20d-foliage",
+  "event": "push",
+  "sha": "bf8bbd3",
+  "at": "2026-10-27T12:13",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40502049562,
+  "branch": "feature/m20d-foliage",
+  "event": "push",
+  "sha": "bf8bbd3",
+  "at": "2026-10-27T12:13",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=7953"
+ },
+ {
+  "run": 40482662005,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "ec51e36",
+  "at": "2026-10-27T09:41",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=1335"
+ },
+ {
+  "run": 40482662005,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "ec51e36",
+  "at": "2026-10-27T09:41",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40482657756,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "ec51e36",
+  "at": "2026-10-27T09:41",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=2741"
+ },
+ {
+  "run": 40482657756,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "ec51e36",
+  "at": "2026-10-27T09:41",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40480510061,
+  "branch": "feature/m20c-terrain-materials",
+  "event": "pull_request",
+  "sha": "75b8d8e",
+  "at": "2026-10-27T09:24",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40480510061,
+  "branch": "feature/m20c-terrain-materials",
+  "event": "pull_request",
+  "sha": "75b8d8e",
+  "at": "2026-10-27T09:24",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40480507815,
+  "branch": "feature/m20c-terrain-materials",
+  "event": "push",
+  "sha": "75b8d8e",
+  "at": "2026-10-27T09:24",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=1967"
+ },
+ {
+  "run": 40480507815,
+  "branch": "feature/m20c-terrain-materials",
+  "event": "push",
+  "sha": "75b8d8e",
+  "at": "2026-10-27T09:24",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40478853833,
+  "branch": "feature/m20c-terrain-materials",
+  "event": "pull_request",
+  "sha": "bb8b10b",
+  "at": "2026-10-27T09:11",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=true worst=none delta_ms=?"
+ },
+ {
+  "run": 40478853833,
+  "branch": "feature/m20c-terrain-materials",
+  "event": "pull_request",
+  "sha": "bb8b10b",
+  "at": "2026-10-27T09:11",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=true worst=none delta_ms=?"
+ },
+ {
+  "run": 40478847956,
+  "branch": "feature/m20c-terrain-materials",
+  "event": "push",
+  "sha": "bb8b10b",
+  "at": "2026-10-27T09:11",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=true worst=none delta_ms=?"
+ },
+ {
+  "run": 40478847956,
+  "branch": "feature/m20c-terrain-materials",
+  "event": "push",
+  "sha": "bb8b10b",
+  "at": "2026-10-27T09:11",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=true worst=none delta_ms=?"
+ },
+ {
+  "run": 40465951252,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "8216592",
+  "at": "2026-10-27T07:14",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40465951252,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "8216592",
+  "at": "2026-10-27T07:14",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40465949215,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "8216592",
+  "at": "2026-10-27T07:14",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=13170"
+ },
+ {
+  "run": 40465949215,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "8216592",
+  "at": "2026-10-27T07:14",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40425087366,
+  "branch": "feature/m20b-live-sculpting",
+  "event": "pull_request",
+  "sha": "3c49a3c",
+  "at": "2026-10-27T00:14",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40425087366,
+  "branch": "feature/m20b-live-sculpting",
+  "event": "pull_request",
+  "sha": "3c49a3c",
+  "at": "2026-10-27T00:14",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40425085742,
+  "branch": "feature/m20b-live-sculpting",
+  "event": "push",
+  "sha": "3c49a3c",
+  "at": "2026-10-27T00:14",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=2964"
+ },
+ {
+  "run": 40425085742,
+  "branch": "feature/m20b-live-sculpting",
+  "event": "push",
+  "sha": "3c49a3c",
+  "at": "2026-10-27T00:14",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40417455790,
+  "branch": "feature/m20b-live-sculpting",
+  "event": "pull_request",
+  "sha": "3be6e30",
+  "at": "2026-10-26T23:06",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40417455790,
+  "branch": "feature/m20b-live-sculpting",
+  "event": "pull_request",
+  "sha": "3be6e30",
+  "at": "2026-10-26T23:06",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40417426812,
+  "branch": "feature/m20b-live-sculpting",
+  "event": "push",
+  "sha": "3be6e30",
+  "at": "2026-10-26T23:06",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40417426812,
+  "branch": "feature/m20b-live-sculpting",
+  "event": "push",
+  "sha": "3be6e30",
+  "at": "2026-10-26T23:06",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40412500906,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "d008247",
+  "at": "2026-10-26T22:26",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40412500906,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "d008247",
+  "at": "2026-10-26T22:26",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40412490727,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "d008247",
+  "at": "2026-10-26T22:26",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40412490727,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "d008247",
+  "at": "2026-10-26T22:26",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40408473597,
+  "branch": "feature/m20a-terrain",
+  "event": "pull_request",
+  "sha": "40a7e5a",
+  "at": "2026-10-26T21:56",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=8165"
+ },
+ {
+  "run": 40408473597,
+  "branch": "feature/m20a-terrain",
+  "event": "pull_request",
+  "sha": "40a7e5a",
+  "at": "2026-10-26T21:56",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40408469431,
+  "branch": "feature/m20a-terrain",
+  "event": "push",
+  "sha": "40a7e5a",
+  "at": "2026-10-26T21:56",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40408469431,
+  "branch": "feature/m20a-terrain",
+  "event": "push",
+  "sha": "40a7e5a",
+  "at": "2026-10-26T21:56",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40403641491,
+  "branch": "feature/m20a-terrain",
+  "event": "pull_request",
+  "sha": "0c57e1e",
+  "at": "2026-10-26T21:21",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40403641491,
+  "branch": "feature/m20a-terrain",
+  "event": "pull_request",
+  "sha": "0c57e1e",
+  "at": "2026-10-26T21:21",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40403636776,
+  "branch": "feature/m20a-terrain",
+  "event": "push",
+  "sha": "0c57e1e",
+  "at": "2026-10-26T21:21",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40403636776,
+  "branch": "feature/m20a-terrain",
+  "event": "push",
+  "sha": "0c57e1e",
+  "at": "2026-10-26T21:21",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40397905657,
+  "branch": "feature/m20a-terrain",
+  "event": "pull_request",
+  "sha": "6975d48",
+  "at": "2026-10-26T20:41",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40397905657,
+  "branch": "feature/m20a-terrain",
+  "event": "pull_request",
+  "sha": "6975d48",
+  "at": "2026-10-26T20:41",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40397880802,
+  "branch": "feature/m20a-terrain",
+  "event": "push",
+  "sha": "6975d48",
+  "at": "2026-10-26T20:41",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40397880802,
+  "branch": "feature/m20a-terrain",
+  "event": "push",
+  "sha": "6975d48",
+  "at": "2026-10-26T20:41",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=6664"
+ },
+ {
+  "run": 40391727903,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "4cffa32",
+  "at": "2026-10-26T20:00",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40391727903,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "4cffa32",
+  "at": "2026-10-26T20:00",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40391715391,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "4cffa32",
+  "at": "2026-10-26T20:00",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40391715391,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "4cffa32",
+  "at": "2026-10-26T20:00",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=exception-policy-scan delta_ms=284"
+ },
+ {
+  "run": 40388611941,
+  "branch": "feature/m19b-water-presentation",
+  "event": "pull_request",
+  "sha": "607a59f",
+  "at": "2026-10-26T19:38",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40388611941,
+  "branch": "feature/m19b-water-presentation",
+  "event": "pull_request",
+  "sha": "607a59f",
+  "at": "2026-10-26T19:38",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40388608595,
+  "branch": "feature/m19b-water-presentation",
+  "event": "push",
+  "sha": "607a59f",
+  "at": "2026-10-26T19:38",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=15012"
+ },
+ {
+  "run": 40388608595,
+  "branch": "feature/m19b-water-presentation",
+  "event": "push",
+  "sha": "607a59f",
+  "at": "2026-10-26T19:38",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40382338095,
+  "branch": "feature/m19b-water-presentation",
+  "event": "pull_request",
+  "sha": "3d89435",
+  "at": "2026-10-26T18:57",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=2073"
+ },
+ {
+  "run": 40382338095,
+  "branch": "feature/m19b-water-presentation",
+  "event": "pull_request",
+  "sha": "3d89435",
+  "at": "2026-10-26T18:57",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40382311172,
+  "branch": "feature/m19b-water-presentation",
+  "event": "push",
+  "sha": "3d89435",
+  "at": "2026-10-26T18:57",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=exception-policy-scan delta_ms=262"
+ },
+ {
+  "run": 40382311172,
+  "branch": "feature/m19b-water-presentation",
+  "event": "push",
+  "sha": "3d89435",
+  "at": "2026-10-26T18:57",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40376695206,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "438b509",
+  "at": "2026-10-26T18:19",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40376695206,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "438b509",
+  "at": "2026-10-26T18:19",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40376683378,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "438b509",
+  "at": "2026-10-26T18:19",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40376683378,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "438b509",
+  "at": "2026-10-26T18:19",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40359127626,
+  "branch": "feature/m19a-water",
+  "event": "pull_request",
+  "sha": "f20904d",
+  "at": "2026-10-26T16:26",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40359127626,
+  "branch": "feature/m19a-water",
+  "event": "pull_request",
+  "sha": "f20904d",
+  "at": "2026-10-26T16:26",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=exception-policy-scan delta_ms=136"
+ },
+ {
+  "run": 40359118783,
+  "branch": "feature/m19a-water",
+  "event": "push",
+  "sha": "f20904d",
+  "at": "2026-10-26T16:26",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40359118783,
+  "branch": "feature/m19a-water",
+  "event": "push",
+  "sha": "f20904d",
+  "at": "2026-10-26T16:26",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40353088605,
+  "branch": "feature/m19a-water",
+  "event": "pull_request",
+  "sha": "cd1240e",
+  "at": "2026-10-26T15:49",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=11728"
+ },
+ {
+  "run": 40353088605,
+  "branch": "feature/m19a-water",
+  "event": "pull_request",
+  "sha": "cd1240e",
+  "at": "2026-10-26T15:49",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40353081635,
+  "branch": "feature/m19a-water",
+  "event": "push",
+  "sha": "cd1240e",
+  "at": "2026-10-26T15:49",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40353081635,
+  "branch": "feature/m19a-water",
+  "event": "push",
+  "sha": "cd1240e",
+  "at": "2026-10-26T15:49",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40348047019,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "dc8604d",
+  "at": "2026-10-26T15:18",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=9059"
+ },
+ {
+  "run": 40348047019,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "dc8604d",
+  "at": "2026-10-26T15:18",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40348040248,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "dc8604d",
+  "at": "2026-10-26T15:18",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40348040248,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "dc8604d",
+  "at": "2026-10-26T15:18",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40345331072,
+  "branch": "feature/m18b-weather",
+  "event": "pull_request",
+  "sha": "28c6714",
+  "at": "2026-10-26T15:02",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40345331072,
+  "branch": "feature/m18b-weather",
+  "event": "pull_request",
+  "sha": "28c6714",
+  "at": "2026-10-26T15:02",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=15565"
+ },
+ {
+  "run": 40345325730,
+  "branch": "feature/m18b-weather",
+  "event": "push",
+  "sha": "28c6714",
+  "at": "2026-10-26T15:02",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40345325730,
+  "branch": "feature/m18b-weather",
+  "event": "push",
+  "sha": "28c6714",
+  "at": "2026-10-26T15:02",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40338637127,
+  "branch": "feature/m18b-weather",
+  "event": "pull_request",
+  "sha": "fb0e9be",
+  "at": "2026-10-26T14:19",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40338637127,
+  "branch": "feature/m18b-weather",
+  "event": "pull_request",
+  "sha": "fb0e9be",
+  "at": "2026-10-26T14:19",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40338632674,
+  "branch": "feature/m18b-weather",
+  "event": "push",
+  "sha": "fb0e9be",
+  "at": "2026-10-26T14:19",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40338632674,
+  "branch": "feature/m18b-weather",
+  "event": "push",
+  "sha": "fb0e9be",
+  "at": "2026-10-26T14:19",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40333050707,
+  "branch": "feature/m18b-weather",
+  "event": "pull_request",
+  "sha": "9dfee46",
+  "at": "2026-10-26T13:43",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40333050707,
+  "branch": "feature/m18b-weather",
+  "event": "pull_request",
+  "sha": "9dfee46",
+  "at": "2026-10-26T13:43",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40332890591,
+  "branch": "feature/m18b-weather",
+  "event": "push",
+  "sha": "9dfee46",
+  "at": "2026-10-26T13:42",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=exception-policy-scan delta_ms=44"
+ },
+ {
+  "run": 40332890591,
+  "branch": "feature/m18b-weather",
+  "event": "push",
+  "sha": "9dfee46",
+  "at": "2026-10-26T13:42",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40331232655,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "b36fea7",
+  "at": "2026-10-26T13:30",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40331232655,
+  "branch": "redesign/visual-editor",
+  "event": "pull_request",
+  "sha": "b36fea7",
+  "at": "2026-10-26T13:30",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40331227091,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "b36fea7",
+  "at": "2026-10-26T13:30",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40331227091,
+  "branch": "redesign/visual-editor",
+  "event": "push",
+  "sha": "b36fea7",
+  "at": "2026-10-26T13:30",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40327658818,
+  "branch": "docs/m18b-plan",
+  "event": "pull_request",
+  "sha": "2b18d25",
+  "at": "2026-10-26T13:05",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40327658818,
+  "branch": "docs/m18b-plan",
+  "event": "pull_request",
+  "sha": "2b18d25",
+  "at": "2026-10-26T13:05",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "failure",
+  "budget": "budget: ok=false worst=pytest-fast delta_ms=3337"
+ },
+ {
+  "run": 40327650723,
+  "branch": "docs/m18b-plan",
+  "event": "push",
+  "sha": "2b18d25",
+  "at": "2026-10-26T13:05",
+  "job": "tests (windows-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ },
+ {
+  "run": 40327650723,
+  "branch": "docs/m18b-plan",
+  "event": "push",
+  "sha": "2b18d25",
+  "at": "2026-10-26T13:05",
+  "job": "tests (ubuntu-latest, py3.11)",
+  "conclusion": "success",
+  "budget": null
+ }
+]

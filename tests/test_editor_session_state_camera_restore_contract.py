@@ -27,6 +27,7 @@ def _make_editor(repo_root: Path, *, center: tuple[float, float], zoom: float) -
         recent_scenes=[],
         load_scene=MagicMock(),
         scene_controller=SimpleNamespace(current_scene_path=None),
+        engine_config=SimpleNamespace(_mesh_launch_mode="editor"),  # the editor reopens its last scene
         camera=camera,
         camera_controller=SimpleNamespace(zoom_state=SimpleNamespace(current=float(zoom))),
         get_camera_center=lambda: center,

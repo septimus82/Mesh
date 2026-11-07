@@ -136,18 +136,22 @@ def _resolve_event_type_expr(node: ast.AST, constants: dict[str, str]) -> str | 
 
 def _find_legacy_emit_tokens(path: Path, tree: ast.AST) -> list[tuple[str, str | None, str]]:
     rel_path = _rel(path)
+    calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr in {"emit", "publish"}
+        and _is_legacy_event_bus_target(node.func.value)
+    ]
+    if not calls:
+        return []
+    # (the file's event-type constants matter only to its legacy emit calls: mapped only when it has one)
     constants = _imported_constant_map(path, tree)
     tokens: list[tuple[str, str | None, str]] = []
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
+    for node in calls:
         func = node.func
-        if not isinstance(func, ast.Attribute):
-            continue
-        if func.attr not in {"emit", "publish"}:
-            continue
-        if not _is_legacy_event_bus_target(func.value):
-            continue
+        assert isinstance(func, ast.Attribute)  # (narrowing: the filter above)
         event_type: str | None = None
         if node.args:
             event_type = _resolve_event_type_expr(node.args[0], constants)
@@ -189,12 +193,28 @@ def _find_unallowlisted_mesh_event_bus_imports(path: Path, tree: ast.AST) -> lis
     return violations
 
 
-def test_no_new_legacy_event_bus_emits_in_gameplay_scopes() -> None:
-    catalog = _load_cataloged_event_types()
-    violations: list[str] = []
+FileFindings = tuple[tuple[tuple[str, str | None, str], ...], tuple[str, ...]]
+
+
+@pytest.fixture(scope="module")
+def scoped_file_findings() -> tuple[FileFindings, ...]:
+    """Every scoped file read and parsed once for both repository scans below: its legacy emit tokens and its
+    unallowlisted MeshEventBus imports, found by the same finders the synthetic tests exercise. Only these small
+    results are kept (each file's tree is released before the next file is parsed)."""
+    findings: list[FileFindings] = []
     for path in _iter_scoped_files():
         tree = ast.parse(_read_source(path), filename=_rel(path))
-        for token, event_type, call_form in _find_legacy_emit_tokens(path, tree):
+        findings.append(
+            (tuple(_find_legacy_emit_tokens(path, tree)), tuple(_find_unallowlisted_mesh_event_bus_imports(path, tree)))
+        )
+    return tuple(findings)
+
+
+def test_no_new_legacy_event_bus_emits_in_gameplay_scopes(scoped_file_findings: tuple[FileFindings, ...]) -> None:
+    catalog = _load_cataloged_event_types()
+    violations: list[str] = []
+    for emit_tokens, _imports in scoped_file_findings:
+        for token, event_type, call_form in emit_tokens:
             if event_type is not None and event_type in catalog:
                 violations.append(
                     f"{token} [{call_form}] event_type={event_type} (cataloged gameplay event)"
@@ -211,11 +231,10 @@ def test_no_new_legacy_event_bus_emits_in_gameplay_scopes() -> None:
     )
 
 
-def test_no_new_mesh_event_bus_imports_in_gameplay_scopes() -> None:
+def test_no_new_mesh_event_bus_imports_in_gameplay_scopes(scoped_file_findings: tuple[FileFindings, ...]) -> None:
     violations: list[str] = []
-    for path in _iter_scoped_files():
-        tree = ast.parse(_read_source(path), filename=_rel(path))
-        violations.extend(_find_unallowlisted_mesh_event_bus_imports(path, tree))
+    for _emits, import_violations in scoped_file_findings:
+        violations.extend(import_violations)
     assert not sorted(violations), (
         "Gameplay import policy violation. New gameplay modules must route via GameplayEventBus/"
         "engine.event_emit instead of importing MeshEventBus directly. "

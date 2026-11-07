@@ -1,0 +1,208 @@
+{
+  "passed": 14,
+  "total": 14,
+  "steps": [
+    {
+      "step": "paint_unsaved",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "wall_tiles": 7,
+        "mcp_tools": [
+          "add_entity_from_prefab",
+          "apply_changes",
+          "apply_ops",
+          "authoring_operations",
+          "create_scene",
+          "inspect_entity",
+          "inspect_quest",
+          "list_behaviours",
+          "list_entities",
+          "list_lights",
+          "list_op_types",
+          "list_prefabs",
+          "list_quests",
+          "list_scenes",
+          "live_accept_proposal",
+          "live_add_entity_from_prefab",
+          "live_read_scene",
+          "live_reject_proposal",
+          "live_stage_proposal",
+          "playability_check",
+          "proposal_status",
+          "propose_changes",
+          "read_dialogue",
+          "read_project",
+          "read_scene",
+          "read_tilemap",
+          "read_world",
+          "validate_scene",
+          "withdraw_proposal"
+        ]
+      },
+      "seconds": 12.6,
+      "screenshot": "01_paint_unsaved.png"
+    },
+    {
+      "step": "ai_proposes_npc",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "summary": [
+          "Start: adds 'Sexton' (a picture) at 448, 224"
+        ],
+        "revision_seen": 1
+      },
+      "seconds": 2.6,
+      "screenshot": "02_ai_proposes_npc.png"
+    },
+    {
+      "step": "review_and_accept",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "status": "accepted",
+        "created": {
+          "0": "start_person_448_224_0_0"
+        }
+      },
+      "seconds": 1.6,
+      "screenshot": "03_review_and_accept.png"
+    },
+    {
+      "step": "npc_appears",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "sexton": "start_person_448_224_0_0"
+      },
+      "seconds": 0.3,
+      "screenshot": "04_npc_appears.png"
+    },
+    {
+      "step": "painting_kept",
+      "ok": true,
+      "error": null,
+      "detail": null,
+      "seconds": 0.2,
+      "screenshot": "05_painting_kept.png"
+    },
+    {
+      "step": "undo_npc_only",
+      "ok": true,
+      "error": null,
+      "detail": null,
+      "seconds": 0.8,
+      "screenshot": "06_undo_npc_only.png"
+    },
+    {
+      "step": "redo_npc",
+      "ok": true,
+      "error": null,
+      "detail": null,
+      "seconds": 0.6,
+      "screenshot": "07_redo_npc.png"
+    },
+    {
+      "step": "ai_adds_dialogue_and_condition",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "summary": [
+          "Start: 'Sexton' conversation line 'root' says: 'Hello!' -> 'Who goes there, so late?'",
+          "Start: 'Sexton' conversation line 'root' then goes to: (none) -> 'line_2'",
+          "Start: 'Sexton' conversation line 'line_2': (none) -> {\"text\": \"Mind the open graves.\"}",
+          "Start: 'Sexton' conversation only once: (none) -> false",
+          "Start: 'Sexton' shows only when (flags): (none) -> {\"require_flags\": [\"lantern_lit\"], \"forbid_flag\u2026",
+          "Start: 'Sexton' behaviours: [\"Dialogue\"] -> [\"Dialogue\", \"ConditionalActivator\"]",
+          "Start: adds 'Lantern' (no picture) at 288, 128"
+        ]
+      },
+      "seconds": 2.2,
+      "screenshot": "08_ai_adds_dialogue_and_condition.png"
+    },
+    {
+      "step": "reject_changes_nothing",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "rejected": "rejected",
+        "invalid": "Change 0 (move_entity): there is no object 'Ghost' in this room."
+      },
+      "seconds": 2.3,
+      "screenshot": "09_reject_changes_nothing.png"
+    },
+    {
+      "step": "conflicting_edits",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "proposal": "d3dab9adfe3c4292ac649a33994ce03f"
+      },
+      "seconds": 5.0,
+      "screenshot": "10_conflicting_edits.png"
+    },
+    {
+      "step": "conflict_reported_nothing_lost",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "conflicts": [
+          {
+            "path": "rooms/start/entities/#start_person_448_224_0_0/behaviour_config/Dialogue/dialogue/speaker",
+            "what": "start: object start_person_448_224_0_0 conversation speaker",
+            "studio": "Warden",
+            "ai": "Gravedigger"
+          },
+          {
+            "path": "rooms/start/entities/#start_person_448_224_0_0/name",
+            "what": "start: object start_person_448_224_0_0 name",
+            "studio": "Warden",
+            "ai": "Gravedigger"
+          }
+        ]
+      },
+      "seconds": 1.0,
+      "screenshot": "11_conflict_reported_nothing_lost.png"
+    },
+    {
+      "step": "save_close_reopen",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "objects": [
+          "Lantern",
+          "Player",
+          "Warden"
+        ]
+      },
+      "seconds": 6.7,
+      "screenshot": "12_save_close_reopen.png"
+    },
+    {
+      "step": "play",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "hidden_until_lit": true
+      },
+      "seconds": 10.9,
+      "screenshot": "13_play.png"
+    },
+    {
+      "step": "cli_gives_the_same_room",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "changes": 10,
+        "cli": [
+          "Start: adds 'Warden' (a picture) at 448, 224",
+          "Start: adds 'Lantern' (no picture) at 288, 128",
+          "Start: repaints 14 tile(s)"
+        ]
+      },
+      "seconds": 4.1,
+      "screenshot": "14_cli_gives_the_same_room.png"
+    }
+  ]
+}

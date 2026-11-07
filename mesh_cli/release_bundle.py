@@ -402,7 +402,9 @@ def _build_manifest_with_seal(
         file_map[MANIFEST_SEAL_NAME] = FileEntry(archive_path=MANIFEST_SEAL_NAME, disk_path=seal_path)
 
     files = [file_map[path] for path in sorted(file_map.keys())]
+    # Once per bundle, not per manifest pass: each costs git subprocesses, and the passes must agree to converge.
     seal_provenance = provenance_to_dict(get_provenance(deterministic=timestamp is not None))
+    git_hash = _git_hash()
 
     stable = False
     for _ in range(5):
@@ -412,7 +414,8 @@ def _build_manifest_with_seal(
             work_dir=work_dir,
             files=files,
         )
-        iter_manifest = build_package_manifest(iter_plan, timestamp=timestamp)
+        iter_manifest = build_package_manifest(iter_plan, timestamp=timestamp, provenance=seal_provenance,
+                                               git_hash=git_hash)
         _write_json_atomic(manifest_json_path, iter_manifest.to_dict(), indent=2, sort_keys=True, trailing_newline=True)
         _write_text_atomic(manifest_txt_path, iter_manifest.to_text(), encoding="utf-8")
 
@@ -434,7 +437,8 @@ def _build_manifest_with_seal(
         work_dir=work_dir,
         files=files,
     )
-    final_manifest = build_package_manifest(final_plan, timestamp=timestamp)
+    final_manifest = build_package_manifest(final_plan, timestamp=timestamp, provenance=seal_provenance,
+                                            git_hash=git_hash)
     _write_json_atomic(manifest_json_path, final_manifest.to_dict(), indent=2, sort_keys=True, trailing_newline=True)
     _write_text_atomic(manifest_txt_path, final_manifest.to_text(), encoding="utf-8")
 
@@ -448,7 +452,8 @@ def _build_manifest_with_seal(
     current_text = seal_path.read_text(encoding="utf-8")
     if current_text != verify_text:
         _write_text_atomic(seal_path, verify_text, encoding="utf-8")
-        final_manifest = build_package_manifest(final_plan, timestamp=timestamp)
+        final_manifest = build_package_manifest(final_plan, timestamp=timestamp, provenance=seal_provenance,
+                                                git_hash=git_hash)
         _write_json_atomic(manifest_json_path, final_manifest.to_dict(), indent=2, sort_keys=True, trailing_newline=True)
         _write_text_atomic(manifest_txt_path, final_manifest.to_text(), encoding="utf-8")
 
@@ -490,8 +495,10 @@ def _write_release_notes_files(
 StepFn = Callable[[Path, int, str], "tuple[int, dict[str, Any]]"]
 
 
-def _step_release_check(work_dir: Path, seed: int, campaign: str) -> tuple[int, dict[str, Any]]:
-    """Run ``release check`` into work_dir/release."""
+def _step_release_check(work_dir: Path, seed: int, campaign: str, *,
+                        reuse_verify_all: str | None = None) -> tuple[int, dict[str, Any]]:
+    """Run ``release check`` into work_dir/release (with ``reuse_verify_all``, its verify-all is the one recorded there
+    when its evidence proves it can be: ``mesh_cli.verify_reuse``, F13-B)."""
     from mesh_cli.release import _handle_check
 
     release_dir = work_dir / "release"
@@ -505,18 +512,32 @@ def _step_release_check(work_dir: Path, seed: int, campaign: str) -> tuple[int, 
         summary=None,
         deterministic=True,
         quiet=True,
+        reuse_verify_all=reuse_verify_all,
     )
     code = _handle_check(args)
     return code, {"dir": "release/"}
 
 
 def _step_demo_run(work_dir: Path, seed: int, campaign: str) -> tuple[int, dict[str, Any]]:
-    """Run ``demo pipeline`` into work_dir/demo."""
-    from mesh_cli.demo import run_demo
+    """Run ``demo pipeline`` into work_dir/demo, its first step (``release check``) taken from this bundle's own.
 
+    The demo's release check is the bundle's step 1 again: the same checkout, the same arguments, in the same process
+    (it only writes to another folder). The bundle stops at a failed step, so it passed; its reports are copied to
+    demo/release/ rather than run a second time (H2-F13: a whole verify-all, ~2 minutes per CI job). Every other
+    demo step runs as before; ``mesh demo pipeline`` on its own still runs its own release check."""
+    from mesh_cli.demo import PIPELINE, run_demo
+
+    def bundle_release_check(out_dir: Path, _seed: int, _campaign: str) -> tuple[int, dict[str, Any]]:
+        # (links skipped, as the bundle's file scan skips them: pytest's "<name>current" links to its temp folders
+        # would otherwise be copied as folders, duplicating those files in the zip)
+        shutil.copytree(work_dir / "release", out_dir / "release", dirs_exist_ok=True,
+                        ignore=lambda folder, names: [n for n in names if (Path(folder) / n).is_symlink()])
+        return 0, {"dir": "release/", "reused_from": "release/"}
+
+    pipeline = [(name, bundle_release_check if name == "release-check" else step) for name, step in PIPELINE]
     demo_dir = work_dir / "demo"
     demo_dir.mkdir(parents=True, exist_ok=True)
-    code, _report = run_demo(out_dir=demo_dir, seed=seed, campaign=campaign, quiet=True)
+    code, _report = run_demo(out_dir=demo_dir, seed=seed, campaign=campaign, quiet=True, pipeline=pipeline)
     return code, {"dir": "demo/"}
 
 
@@ -636,23 +657,26 @@ def build_package_manifest(
     plan: ReleaseBundlePlan,
     *,
     timestamp: str | None = None,
+    provenance: dict[str, Any] | None = None,
+    git_hash: str | None = None,
 ) -> PackageManifest:
     """Build a PackageManifest from a completed plan.
 
     When *timestamp* is supplied the provenance block is built in
     deterministic mode (no volatile ``build_timestamp_utc``) so that
     repeated calls with the same inputs produce identical output.
+    *provenance* and *git_hash*, when given, are used as they are (computed once by the caller).
     """
     deterministic = timestamp is not None
     manifest = PackageManifest(
         seed=plan.seed,
         campaign=plan.campaign,
         engine_version=_engine_version(),
-        git_hash=_git_hash(),
+        git_hash=git_hash or _git_hash(),
         python_version=platform.python_version(),
         platform_tag=platform.platform(),
         created_utc=timestamp or _utc_iso(),
-        provenance=provenance_to_dict(get_provenance(deterministic=deterministic)),
+        provenance=provenance or provenance_to_dict(get_provenance(deterministic=deterministic)),
     )
 
     total_size = 0
@@ -773,6 +797,16 @@ def register_subcommand(release_subparsers: argparse._SubParsersAction) -> None:
         help="Suppress step output; only print final status.",
     )
     bundle_parser.add_argument(
+        "--reuse-verify-all",
+        default=None,
+        metavar="DIR",
+        help=(
+            "CI: let the release check reuse the verify-all that wrote DIR (run with --reuse-evidence), only if its "
+            "evidence proves it passed on this exact clean commit, with the same versions and environment, and its "
+            "reports are unchanged; otherwise the release check runs verify-all itself (F13-B)."
+        ),
+    )
+    bundle_parser.add_argument(
         "--deterministic-timestamp",
         default=None,
         help=(
@@ -800,17 +834,26 @@ def _handle_bundle(args: argparse.Namespace) -> int:
 
     # Use a temp working directory next to the output zip
     work_dir = zip_path.parent / f"_work_{zip_path.stem}"
+    succeeded = False
     try:
         if work_dir.exists():
             shutil.rmtree(work_dir)
         work_dir.mkdir(parents=True, exist_ok=True)
 
         # Run the pipeline
+        reuse_from = getattr(args, "reuse_verify_all", None)
+        pipeline = None
+        if reuse_from:
+            def release_check(w: Path, s: int, c: str) -> tuple[int, dict[str, Any]]:
+                return _step_release_check(w, s, c, reuse_verify_all=str(reuse_from))
+
+            pipeline = [(name, release_check if name == "release-check" else step) for name, step in BUNDLE_PIPELINE]
         plan = compute_release_bundle_plan(
             work_dir,
             seed=seed,
             campaign=campaign,
             quiet=quiet,
+            pipeline=pipeline,
             notes_since=notes_since,
             notes_until=notes_until,
         )
@@ -881,9 +924,12 @@ def _handle_bundle(args: argparse.Namespace) -> int:
                 f"[Mesh][Release-Bundle] OK â€” {zip_path.name} "
                 f"({final_manifest.file_count} files, {size_mb:.1f} MB)"
             )
+        succeeded = True
         return 0
 
     finally:
+        if not succeeded:  # (#394: the failing steps' own reports, kept beside the zip before the work dir goes)
+            _keep_failure_reports(work_dir, zip_path.parent / f"{zip_path.stem}_failure")
         # Clean up work directory
         if work_dir.exists():
             try:
@@ -891,6 +937,66 @@ def _handle_bundle(args: argparse.Namespace) -> int:
             except Exception:
                 _log_swallow("RELE-003", "mesh_cli/release_bundle.py pass-only blanket swallow")
                 pass
+
+
+# The reports a failed bundle keeps (relative to its work folder): what release-check's steps wrote about themselves.
+# Only these known files; never the bundle's payload, test projects, debug bundles or anything else in the folder.
+FAILURE_REPORTS = tuple(f"release/{name}" for name in (
+    "release_report.json", "release_report.txt", "verify_all_summary.json", "verify_summary.json", "verify_summary.txt",
+    "verify_step_budget_check.json", "verify_step_durations.json", "verify_step_speed_advisory.json",
+    "pytest_fast_budget_diagnostic.json", "pytest_fast_budget_diagnostic.txt", "pytest_fast.log",
+    "verify_demo.log", "verify_demo_failure.json", "runtime_smoke.json", "web_smoke.json",
+))
+
+
+TIMING_STEPS = frozenset({"pytest-fast-duration-guard"})  # (verify-all steps that judge time, not behaviour)
+
+
+def classify_failure(work_dir: Path) -> str:
+    """One line on why release-check's verify-all failed, from its own reports: the failing steps, and whether they
+    are timing-only (the step-time budget, a duration guard) or functional. A failure elsewhere in the bundle (export,
+    demo run, audits) is reported as not classified."""
+    release = work_dir / "release"
+    try:
+        summary = json.loads((release / "verify_all_summary.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "failure not classified: release-check's verify-all summary is missing (it failed elsewhere or earlier)"
+    steps = summary.get("steps") if isinstance(summary, dict) else None
+    failed = [str(s.get("name")) for s in steps or [] if isinstance(s, dict) and s.get("code")
+              and not str(s.get("error") or "").startswith("skipped")]
+    try:
+        budget = json.loads((release / "verify_step_budget_check.json").read_text(encoding="utf-8"))
+        over = ([str(o.get("name")) for o in budget.get("offenders") or [] if isinstance(o, dict)]
+                if isinstance(budget, dict) and budget.get("ok") is False else [])
+    except (OSError, ValueError):
+        over = []
+    if failed:
+        kind = "timing-only" if set(failed) <= TIMING_STEPS else "functional"
+        return f"release-check's verify-all failed at {', '.join(failed)} ({kind})"
+    if over:
+        return f"release-check's verify-all failed on the step-time budget only ({', '.join(over)}): timing-only"
+    return "failure not classified: release-check's verify-all reported no failing step"
+
+
+def _keep_failure_reports(work_dir: Path, dest: Path, limit_bytes: int = 2_000_000) -> None:
+    """Copy a failed bundle's known reports (``FAILURE_REPORTS``, each under ``limit_bytes``) to ``dest``, so CI's
+    artifact upload carries them."""
+    if not work_dir.exists():
+        return
+    try:
+        kept = 0
+        for rel in FAILURE_REPORTS:
+            src = work_dir / rel
+            if not src.is_file() or src.stat().st_size > limit_bytes:
+                continue
+            target = dest / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, target)
+            kept += 1
+        print(f"[Mesh][Release-Bundle] the failed steps' reports ({kept}): {dest.as_posix()}")
+        print(f"[Mesh][Release-Bundle] {classify_failure(work_dir)}")
+    except OSError as exc:  # (never hide the original failure behind a copy problem)
+        print(f"[Mesh][Release-Bundle] WARNING: could not keep the failure reports: {exc}", file=sys.stderr)
 
 
 # ---------------------------------------------------------------------------

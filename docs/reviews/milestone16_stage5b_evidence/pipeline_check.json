@@ -1,0 +1,363 @@
+{
+  "steps": [
+    {
+      "step": "import",
+      "exports": "Blender (headless)",
+      "cottage_report": [
+        "Collision: 1 solid, 6 wall.",
+        "Textures: floorboards (32x32), timber (32x32), shingles\n(32x32), plaster (32x32).",
+        "5.6 x 4.6 m, 3.8 m high; 152 triangles in 26 part(s)."
+      ],
+      "cottage_message": "Imported Cottage as assets/models/cottage.glb. Place in scene puts a copy in the room.",
+      "cottage_page_after_import": [
+        "Reimport...",
+        "Reimport...",
+        "Place in scene",
+        "Place in scene"
+      ],
+      "stairs_report": [
+        "Collision: 2 solid, 2 wall.",
+        "Made sharp: cobbles, timber, floorboards."
+      ],
+      "catalog": [
+        {
+          "id": "cottage",
+          "model": "assets/models/cottage.glb",
+          "category": "Buildings",
+          "collision": {
+            "solid": 1,
+            "floor": 0,
+            "wall": 6
+          },
+          "floors": [
+            "col_floor"
+          ],
+          "license": "Original (Stage 5B demo; tooling/hd2d_assets)",
+          "pixels": "sharp"
+        },
+        {
+          "id": "stairs",
+          "model": "assets/models/stairs.glb",
+          "category": "Stairs and bridges",
+          "collision": {
+            "solid": 2,
+            "floor": 0,
+            "wall": 2
+          },
+          "floors": [
+            "col_landing",
+            "col_stairs"
+          ],
+          "license": "",
+          "pixels": "sharp"
+        }
+      ],
+      "files": [
+        "assets/models/catalog.json",
+        "assets/models/cottage.glb",
+        "assets/models/previews/cottage.png",
+        "assets/models/previews/stairs.png",
+        "assets/models/stairs.glb",
+        "assets/models/stone_crossing.glb"
+      ]
+    },
+    {
+      "step": "browse",
+      "listed": [
+        "Stone Crossing  x1",
+        "Stone Crossing  x1",
+        "Stairs",
+        "Stairs",
+        "Stairs and bridges",
+        "Cottage",
+        "Cottage"
+      ],
+      "search_stair": [
+        "Stairs",
+        "Stairs",
+        "Stairs and bridges"
+      ],
+      "details": [
+        "Imported Stairs as assets/models/stairs.glb. Place in scene puts a copy in the room.",
+        "Imported 2026-10-25 from\nC:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\s5b_evidence\\blender_exports\\cottage.glb",
+        "0 copies in this room. File: assets/models/cottage.glb"
+      ]
+    },
+    {
+      "step": "place_move_turn",
+      "ids": [
+        "cottage",
+        "cottage_2",
+        "stairs"
+      ],
+      "placed": {
+        "cottage": {
+          "id": "cottage",
+          "model": "assets/models/cottage.glb",
+          "x": 160.0,
+          "y": 640.0
+        },
+        "cottage_2": {
+          "id": "cottage_2",
+          "model": "assets/models/cottage.glb",
+          "x": 864.0,
+          "y": 640.0
+        },
+        "stairs": {
+          "id": "stairs",
+          "model": "assets/models/stairs.glb",
+          "x": 448.0,
+          "y": 112.0
+        }
+      },
+      "picked_by_clicking_its_roof": "cottage_2",
+      "moved_turned": {
+        "id": "cottage_2",
+        "model": "assets/models/cottage.glb",
+        "x": 832.0,
+        "y": 608.0,
+        "rotation": 90.0
+      },
+      "stairs_texture_filters_in_edit": [
+        [
+          9728,
+          9728
+        ]
+      ],
+      "one_file_for_both_cottages": true
+    },
+    {
+      "step": "ai",
+      "summary": [
+        "Start: adds 'Person' (a picture) at 220.8, 640",
+        "Start: places structure 'stairs_2' (assets/models/stairs.glb) at (3.0 m, 3.0 m)"
+      ],
+      "refused": {
+        "ok": false,
+        "mode": "live_studio",
+        "reason": "invalid_change",
+        "index": 0,
+        "op": "place_structure",
+        "message": "Change 0 (place_structure): There is no model 'tower' in the project (a .glb file, as Blender exports it)."
+      },
+      "models_listed_for_ai": [
+        [
+          "cottage",
+          "Buildings"
+        ],
+        [
+          "stairs",
+          "Stairs and bridges"
+        ],
+        [
+          "stone_crossing",
+          "Uncatalogued"
+        ]
+      ],
+      "accepted_structures": 5,
+      "baker": {
+        "id": "start_person_220p8_640_0_0",
+        "name": "Person",
+        "x": 220.8,
+        "y": 640.0
+      }
+    },
+    {
+      "step": "save_reopen",
+      "saved_message": "Saved 1 file(s).",
+      "same_structures": true,
+      "browser": [
+        "Stone Crossing  x1",
+        "Stone Crossing  x1",
+        "Stairs  x2",
+        "Stairs  x2",
+        "Stairs and bridges",
+        "Cottage  x2",
+        "Cottage  x2"
+      ]
+    },
+    {
+      "step": "reimport",
+      "plan": [
+        "New solid collider 'col_porch'.",
+        "New wall collider 'col_hearth'.",
+        "Size 5.6 x 4.6 x 3.8 m -> 5.6 x 5.5 x 4.4 m.",
+        "Room 'start': walkable ground around cottage,\ncottage_2 shrinks (2774 -> 2766 spots of 0.5 m);\ncheck characters' routes.",
+        "Room 'start': Person at (6.9 m, 20.0 m) would have\nnowhere to stand (inside a wall now, or off a floor);\nmove it after reimporting.",
+        "From file (Enter to check)",
+        "Reimport Cottage"
+      ],
+      "message": "Reimported Cottage: Size 5.6 x 4.6 x 3.8 m -> 5.6 x 5.5 x 4.4 m; 152 -> 188 triangles. Check: Room 'start': Person at (6.9 m, 20.0 m) would have nowhere to stand (inside a wall now, or off a floor); move it after reimporting.",
+      "porch_floors": [
+        "cottage/col_porch",
+        "cottage_2/col_porch"
+      ],
+      "ids_and_places_kept": true,
+      "stand_on_new_porch": [
+        0.15000000596046448,
+        "cottage/col_porch"
+      ],
+      "stand_in_new_hearth": null,
+      "gl_before": {
+        "texture": 25,
+        "framebuffer": 7,
+        "program": 28
+      },
+      "gl_after": {
+        "texture": 26,
+        "framebuffer": 7,
+        "program": 28
+      },
+      "preview_changed": "e45b6adf9affb392d08e479997311dee46abec1be9c032fb814b664dc7948884"
+    },
+    {
+      "step": "failure_and_undo",
+      "refusal": [
+        "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\s5b_evidence\\blender_exports\\cottage.glb:\nits glTF description is damaged (a cut-off or\ncorrupted file?)"
+      ],
+      "reimport_button_disabled": true,
+      "project_files_unchanged": true,
+      "stairs_before": {
+        "id": "stairs",
+        "model": "assets/models/stairs.glb",
+        "x": 448.0,
+        "y": 112.0
+      },
+      "stairs_dragged": {
+        "id": "stairs",
+        "model": "assets/models/stairs.glb",
+        "x": 480.0,
+        "y": 112.0
+      },
+      "stairs_after_undo": {
+        "id": "stairs",
+        "model": "assets/models/stairs.glb",
+        "x": 448.0,
+        "y": 112.0
+      }
+    },
+    {
+      "step": "repeated_reimport",
+      "gl_after_each": [
+        {
+          "texture": 25,
+          "framebuffer": 7,
+          "program": 28
+        },
+        {
+          "texture": 26,
+          "framebuffer": 7,
+          "program": 28
+        },
+        {
+          "texture": 25,
+          "framebuffer": 7,
+          "program": 28
+        },
+        {
+          "texture": 26,
+          "framebuffer": 7,
+          "program": 28
+        },
+        {
+          "texture": 25,
+          "framebuffer": 7,
+          "program": 28
+        },
+        {
+          "texture": 26,
+          "framebuffer": 7,
+          "program": 28
+        }
+      ],
+      "floors_now": [
+        "cottage/col_floor",
+        "cottage/col_porch",
+        "cottage_2/col_floor",
+        "cottage_2/col_porch"
+      ]
+    },
+    {
+      "step": "play",
+      "walk": [
+        {
+          "after": "start",
+          "feet_m": [
+            16.0,
+            3.0
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground"
+        },
+        {
+          "after": "south, below the staircase",
+          "feet_m": [
+            16.0,
+            0.58
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground"
+        },
+        {
+          "after": "west, to the foot of the staircase",
+          "feet_m": [
+            13.97,
+            0.58
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground"
+        },
+        {
+          "after": "north, up the steps onto the landing",
+          "feet_m": [
+            13.97,
+            6.52
+          ],
+          "elevation_m": 2.0,
+          "floor": "stairs/col_landing"
+        }
+      ],
+      "mode_after_stop": "edit",
+      "stairs_texture_filters_in_play": [
+        [
+          9728,
+          9728
+        ]
+      ]
+    }
+  ],
+  "exports": "Blender (headless)",
+  "performance": {
+    "models_in_catalogue": 41,
+    "structures_in_room": 30,
+    "browser_open_ms": 267.4,
+    "ordinary_panel_ms": 187.2,
+    "browser_frame_ms": 15.0,
+    "search_ms": 131.1,
+    "choose_model_ms": 201.6,
+    "room_frame_ms": 14.0,
+    "edit_commit_ms": 273.7
+  },
+  "gl": {
+    "start": {
+      "texture": 18,
+      "framebuffer": 7,
+      "program": 28
+    },
+    "before_reimport": {
+      "texture": 25,
+      "framebuffer": 7,
+      "program": 28
+    },
+    "after_reimport": {
+      "texture": 26,
+      "framebuffer": 7,
+      "program": 28
+    },
+    "end": {
+      "texture": 19,
+      "framebuffer": 5,
+      "program": 29
+    }
+  }
+}

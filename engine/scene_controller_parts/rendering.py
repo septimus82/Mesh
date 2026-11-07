@@ -39,7 +39,10 @@ def draw(self) -> None:
 
     all_sprites: list[Any] = []
     for layer in self._layer_draw_order():
-        all_sprites.extend(layer)
+        # The draw plan renders sprites itself, bypassing SpriteList's handling of
+        # ``visible``, so hidden sprites (e.g. arrival markers) must be left out here.
+        all_sprites.extend(sprite for sprite in layer
+                           if getattr(sprite, "visible", True) and getattr(sprite, "mesh_drawn", True))
     self._set_world_entities_counter(len(all_sprites))
 
     ctx = scene_controller_module.build_render_context(
@@ -80,6 +83,9 @@ def draw(self) -> None:
     else:
         for layer in self._tilemap_background_layers:
             layer.draw()
+    from engine import water  # noqa: PLC0415
+
+    water.draw_2d(self.window)  # puddles and ponds: on the ground, under the characters
 
     scene_controller_module.execute_scene_plan(
         plan,

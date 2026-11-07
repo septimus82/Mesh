@@ -1,0 +1,37 @@
+{
+ "meadow": {
+  "message": "Scattered 1055 (Meadow): one undo step.",
+  "message_ok": true,
+  "rows": 1055,
+  "rows_changed": true,
+  "undo_steps_added": 1
+ },
+ "trees_over_meadow": {
+  "message": "The stroke changed nothing (the rules, or the density already reached, left nothing to do).",
+  "message_ok": true,
+  "rows": 1055,
+  "rows_changed": false,
+  "undo_steps_added": 0
+ },
+ "rocks_over_meadow": {
+  "message": "Scattered 118 (Rocks): one undo step.",
+  "message_ok": true,
+  "rows": 1173,
+  "rows_changed": true,
+  "undo_steps_added": 1
+ },
+ "meadow_again": {
+  "message": "The stroke changed nothing (the rules, or the density already reached, left nothing to do).",
+  "message_ok": true,
+  "rows": 1173,
+  "rows_changed": false,
+  "undo_steps_added": 0
+ },
+ "thin_where_nothing_is": {
+  "message": "The stroke changed nothing (the rules, or the density already reached, left nothing to do).",
+  "message_ok": true,
+  "rows": 1173,
+  "rows_changed": false,
+  "undo_steps_added": 0
+ }
+}

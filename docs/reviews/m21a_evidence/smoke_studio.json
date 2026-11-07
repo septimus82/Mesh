@@ -1,0 +1,147 @@
+{
+ "master_volume": 0.0,
+ "editing": {
+  "music": null,
+  "registered_players": 0
+ },
+ "edit_reload": {
+  "music": null,
+  "registered_players": 0
+ },
+ "play_stop": [
+  {
+   "play": {
+    "mode": "play",
+    "music": "assets/music/TownTheme.mp3",
+    "registered_players": 1,
+    "player_playing": true
+   },
+   "stop": {
+    "mode": "edit",
+    "music": null,
+    "registered_players": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "music": "assets/music/TownTheme.mp3",
+    "registered_players": 1,
+    "player_playing": true
+   },
+   "stop": {
+    "mode": "edit",
+    "music": null,
+    "registered_players": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "music": "assets/music/TownTheme.mp3",
+    "registered_players": 1,
+    "player_playing": true
+   },
+   "stop": {
+    "mode": "edit",
+    "music": null,
+    "registered_players": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "music": "assets/music/TownTheme.mp3",
+    "registered_players": 1,
+    "player_playing": true
+   },
+   "stop": {
+    "mode": "edit",
+    "music": null,
+    "registered_players": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "music": "assets/music/TownTheme.mp3",
+    "registered_players": 1,
+    "player_playing": true
+   },
+   "stop": {
+    "mode": "edit",
+    "music": null,
+    "registered_players": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "music": "assets/music/TownTheme.mp3",
+    "registered_players": 1,
+    "player_playing": true
+   },
+   "stop": {
+    "mode": "edit",
+    "music": null,
+    "registered_players": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "music": "assets/music/TownTheme.mp3",
+    "registered_players": 1,
+    "player_playing": true
+   },
+   "stop": {
+    "mode": "edit",
+    "music": null,
+    "registered_players": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "music": "assets/music/TownTheme.mp3",
+    "registered_players": 1,
+    "player_playing": true
+   },
+   "stop": {
+    "mode": "edit",
+    "music": null,
+    "registered_players": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "music": "assets/music/TownTheme.mp3",
+    "registered_players": 1,
+    "player_playing": true
+   },
+   "stop": {
+    "mode": "edit",
+    "music": null,
+    "registered_players": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "music": "assets/music/TownTheme.mp3",
+    "registered_players": 1,
+    "player_playing": true
+   },
+   "stop": {
+    "mode": "edit",
+    "music": null,
+    "registered_players": 0
+   }
+  }
+ ],
+ "released_players": 12,
+ "after_close": {
+  "registered_players": 0
+ }
+}

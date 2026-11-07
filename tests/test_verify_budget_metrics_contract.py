@@ -90,10 +90,24 @@ def test_budget_check_schema_shape() -> None:
 
     assert list(baseline.keys()) == [
         "budgets_ms",
+        "platforms",
         "ratio_limits",
+        "report_only_ceiling_ratios",
+        "report_only_note",
         "schema_version",
         "tolerance_ms",
     ]
+    # Report-only steps (#422 F13): budgeted steps, each with a hard ceiling at or above its threshold.
+    assert set(baseline["report_only_ceiling_ratios"]) <= set(baseline["budgets_ms"])
+    assert all(ratio >= 1.0 for ratio in baseline["report_only_ceiling_ratios"].values())
+    # Per-platform budgets (CI runners differ): each platform budgets the same steps as the top level.
+    assert list(baseline["platforms"]) == ["linux", "windows"]
+    for section in baseline["platforms"].values():
+        assert list(section) == ["budgets_ms", "ratio_limits"]
+        assert list(section["budgets_ms"]) == sorted(baseline["budgets_ms"])
+        assert list(section["ratio_limits"]) == sorted(baseline["budgets_ms"])
+        assert all(isinstance(ms, int) and ms > 0 for ms in section["budgets_ms"].values())
+        assert all(isinstance(r, (int, float)) and r >= 1.0 for r in section["ratio_limits"].values())
     assert isinstance(baseline["budgets_ms"], dict)
     assert isinstance(baseline["ratio_limits"], dict)
     assert baseline["schema_version"] == 2
@@ -238,12 +252,15 @@ def test_budget_baseline_shape_matches_budget_check_artifact(tmp_path: Path) -> 
     assert pytest_fast_row is not None
     assert set(pytest_fast_row) == {
         "budget_ms",
+        "ceiling_ms",
         "current_ms",
         "delta_ms",
         "effective_ms",
+        "gate_ok",
         "median_ms",
         "name",
         "ok",
+        "policy",
         "ratio_limit",
         "threshold_ms",
         "tolerance_ms",

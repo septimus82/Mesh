@@ -205,7 +205,7 @@ class BreedingShrineZoneBehaviour(Behaviour):
         if hasattr(injected, "random"):
             return injected
         seed = raw_config.get("seed", raw_config.get("breeding_seed"))
-        return random.Random(int(seed)) if seed not in (None, "") else random.Random()
+        return random.Random() if seed is None or seed == "" else random.Random(int(seed))
 
     def saveable_state(self) -> dict[str, Any]:
         state = {

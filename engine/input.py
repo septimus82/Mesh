@@ -173,6 +173,10 @@ class InputManager:
         """Mark the provided key as no longer pressed."""
         self._keys_down.discard(key)
 
+    def release_all(self) -> None:
+        """Forget every held key; it counts as held again only once pressed again."""
+        self._keys_down.clear()
+
     def is_key_down(self, key: int) -> bool:
         """Return True when the provided key is currently pressed."""
         return key in self._keys_down

@@ -111,7 +111,7 @@ def test_doctor_assets_prefab_paths(tmp_path, monkeypatch, capsys) -> None:
 
     code = mesh_main(["doctor-assets", "--json"])
     output = capsys.readouterr().out.strip()
-    assert code == 0
+    assert code == 0, output  # the report says why when it isn't
     payload = json.loads(output)
     assert payload["ok"] is True
     warnings = payload["warnings"]

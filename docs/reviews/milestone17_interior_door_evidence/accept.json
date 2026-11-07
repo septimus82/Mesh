@@ -1,0 +1,102 @@
+{
+  "before": {
+    "enter": {
+      "from": "start.json",
+      "to": "cottage.json",
+      "frames": 5,
+      "last_feet_m": [
+        10.0,
+        8.86
+      ]
+    },
+    "arrived_inside_feet_m": [
+      8.0,
+      5.41
+    ],
+    "stays_inside_idle": true,
+    "inside_door": {
+      "center_m": [
+        5.6,
+        7.6
+      ],
+      "bottom_m": 6.6
+    },
+    "walk_west_past_door": {
+      "room": "cottage.json",
+      "feet_m": [
+        5.97,
+        5.41
+      ]
+    },
+    "tomas": {
+      "opened": true,
+      "speaker": "Tomas",
+      "text": ""
+    },
+    "exit": {
+      "from": "cottage.json",
+      "to": "start.json",
+      "frames": 3,
+      "last_feet_m": [
+        5.58,
+        5.57
+      ]
+    },
+    "arrived_outside_feet_m": [
+      10.0,
+      7.38
+    ],
+    "stays_outside_idle": true,
+    "walk_along_front_outside": "start.json"
+  },
+  "after": {
+    "enter": {
+      "from": "start.json",
+      "to": "cottage.json",
+      "frames": 5,
+      "last_feet_m": [
+        10.0,
+        8.86
+      ]
+    },
+    "arrived_inside_feet_m": [
+      9.2,
+      6.01
+    ],
+    "stays_inside_idle": true,
+    "inside_door": {
+      "center_m": [
+        8.0,
+        4.48
+      ],
+      "bottom_m": 3.4800000000000004
+    },
+    "walk_west_past_door": {
+      "room": "cottage.json",
+      "feet_m": [
+        6.0,
+        6.01
+      ]
+    },
+    "tomas": {
+      "opened": true,
+      "speaker": "Tomas",
+      "text": ""
+    },
+    "exit": {
+      "from": "cottage.json",
+      "to": "start.json",
+      "frames": 7,
+      "last_feet_m": [
+        7.95,
+        5.54
+      ]
+    },
+    "arrived_outside_feet_m": [
+      10.0,
+      7.38
+    ],
+    "stays_outside_idle": true,
+    "walk_along_front_outside": "start.json"
+  }
+}

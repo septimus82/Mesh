@@ -1,0 +1,531 @@
+{
+ "creator": {
+  "made": {
+   "start_scene": "start",
+   "village": "(none)",
+   "woodland": "(none)",
+   "ruins": "(none)"
+  },
+  "opened_in": "start",
+  "before": {
+   "start_rows": [
+    "A new game starts in this room. F4\nplays the room you are editing.",
+    "New games start in: Start"
+   ],
+   "audio": {
+    "music": null,
+    "fading_out": [],
+    "live_players": 0,
+    "released_players": 0,
+    "master": 0.0,
+    "track_id": null,
+    "player_id": null,
+    "played_s": 0.0,
+    "scene_music": false
+   }
+  },
+  "village_offered": true,
+  "set_village": {
+   "start": "village",
+   "editing": "village",
+   "dirty": true,
+   "rows": [
+    "New games start in Village. Save to keep it (Ctrl+Z undoes it).",
+    "A new game starts in this room. F4\nplays the room you are editing.",
+    "New games start in: Village"
+   ],
+   "message": "New games start in Village. Save to keep it (Ctrl+Z undoes it)."
+  },
+  "picker": {
+   "panel": "pick_sound",
+   "has_import": true
+  },
+  "village_music": {
+   "panel_after": "music",
+   "room": {
+    "mode": "track",
+    "path": "assets/music/forest_theme.wav"
+   },
+   "imported_file": true,
+   "message": "Village plays music/forest_theme.wav."
+  },
+  "woodland_music": {
+   "after_silence": {
+    "mode": "silence",
+    "path": ""
+   },
+   "after_continue": {
+    "mode": "continue",
+    "path": ""
+   }
+  },
+  "ruins_music": {
+   "mode": "silence",
+   "path": ""
+  },
+  "editing_audio": {
+   "music": null,
+   "fading_out": [],
+   "live_players": 0,
+   "released_players": 0,
+   "master": 0.0,
+   "track_id": null,
+   "player_id": null,
+   "played_s": 0.0,
+   "scene_music": false
+  },
+  "play_ruins": {
+   "mode": "play",
+   "room": "packs/core_regions/scenes/ruins.json",
+   "audio": {
+    "music": null,
+    "fading_out": [],
+    "live_players": 0,
+    "released_players": 0,
+    "master": 0.0,
+    "track_id": null,
+    "player_id": null,
+    "played_s": 0.0,
+    "scene_music": true
+   }
+  },
+  "after_stop_audio": {
+   "music": null,
+   "fading_out": [],
+   "live_players": 0,
+   "released_players": 0,
+   "master": 0.0,
+   "track_id": null,
+   "player_id": null,
+   "played_s": 0.0,
+   "scene_music": false
+  },
+  "saved_message": "Saved 4 file(s).",
+  "saved": {
+   "start_scene": "village",
+   "village": "assets/music/forest_theme.wav",
+   "woodland": "(none)",
+   "ruins": null
+  },
+  "reopened": {
+   "opened_in": "start",
+   "rooms": {
+    "village": {
+     "mode": "track",
+     "path": "assets/music/forest_theme.wav"
+    },
+    "woodland": {
+     "mode": "continue",
+     "path": ""
+    },
+    "ruins": {
+     "mode": "silence",
+     "path": ""
+    }
+   },
+   "unsaved": false,
+   "every_room": [
+    "Woodland: carries on",
+    "Start: carries on",
+    "Ruins: silence",
+    "Village (start): plays forest_theme.wav"
+   ]
+  },
+  "play_village": {
+   "mode": "play",
+   "room": "packs/core_regions/scenes/village.json",
+   "audio": {
+    "music": "assets/music/forest_theme.wav",
+    "fading_out": [],
+    "live_players": 1,
+    "released_players": 0,
+    "master": 0.0,
+    "track_id": 1330878770752,
+    "player_id": 1330878771424,
+    "played_s": 0.315,
+    "scene_music": true
+   },
+   "after_stop": {
+    "music": null,
+    "fading_out": [],
+    "live_players": 0,
+    "released_players": 1,
+    "master": 0.0,
+    "track_id": null,
+    "player_id": null,
+    "played_s": 0.0,
+    "scene_music": false
+   }
+  },
+  "woodland_start": {
+   "set": [
+    "woodland",
+    "woodland"
+   ],
+   "undo": [
+    "village",
+    "woodland"
+   ],
+   "redo": [
+    "woodland",
+    "woodland"
+   ],
+   "saved": "woodland",
+   "undo_after_save": [
+    "village",
+    true
+   ],
+   "saved_again": "woodland"
+  },
+  "reopened_woodland": {
+   "start": "woodland",
+   "opened_in": "start"
+  },
+  "restored_village": {
+   "start": "village",
+   "rows": [
+    "A new game starts in this room. F4\nplays the room you are editing.",
+    "New games start in: Village"
+   ]
+  },
+  "final": {
+   "start_scene": "village",
+   "village": "assets/music/forest_theme.wav",
+   "woodland": "(none)",
+   "ruins": null
+  }
+ },
+ "game": {
+  "start_path": "packs/core_regions/scenes/village.json",
+  "start_key": "village",
+  "room": "packs/core_regions/scenes/village.json",
+  "route": {
+   "village": {
+    "music": "assets/music/forest_theme.wav",
+    "fading_out": [],
+    "live_players": 1,
+    "released_players": 0,
+    "master": 0.0,
+    "track_id": 1389418857200,
+    "player_id": 1389419002384,
+    "played_s": 1.474,
+    "scene_music": true
+   },
+   "village_1s_later": {
+    "music": "assets/music/forest_theme.wav",
+    "fading_out": [],
+    "live_players": 1,
+    "released_players": 0,
+    "master": 0.0,
+    "track_id": 1389418857200,
+    "player_id": 1389419002384,
+    "played_s": 1.5,
+    "scene_music": true
+   },
+   "woodland_arrived": true,
+   "woodland": {
+    "music": "assets/music/forest_theme.wav",
+    "fading_out": [],
+    "live_players": 1,
+    "released_players": 0,
+    "master": 0.0,
+    "track_id": 1389418857200,
+    "player_id": 1389419002384,
+    "played_s": 1.616,
+    "scene_music": true
+   },
+   "woodland_1s_later": {
+    "music": "assets/music/forest_theme.wav",
+    "fading_out": [],
+    "live_players": 1,
+    "released_players": 0,
+    "master": 0.0,
+    "track_id": 1389418857200,
+    "player_id": 1389419002384,
+    "played_s": 1.644,
+    "scene_music": true
+   },
+   "ruins_arrived": true,
+   "ruins": {
+    "music": null,
+    "fading_out": [],
+    "live_players": 0,
+    "released_players": 1,
+    "master": 0.0,
+    "track_id": null,
+    "player_id": null,
+    "played_s": 0.0,
+    "scene_music": true
+   },
+   "ruins_1s_later": {
+    "music": null,
+    "fading_out": [],
+    "live_players": 0,
+    "released_players": 1,
+    "master": 0.0,
+    "track_id": null,
+    "player_id": null,
+    "played_s": 0.0,
+    "scene_music": true
+   },
+   "village_again_arrived": true,
+   "village_again": {
+    "music": "assets/music/forest_theme.wav",
+    "fading_out": [],
+    "live_players": 1,
+    "released_players": 1,
+    "master": 0.0,
+    "track_id": 1388468421008,
+    "player_id": 1389420134480,
+    "played_s": 0.093,
+    "scene_music": true
+   },
+   "village_again_1s_later": {
+    "music": "assets/music/forest_theme.wav",
+    "fading_out": [],
+    "live_players": 1,
+    "released_players": 1,
+    "master": 0.0,
+    "track_id": 1388468421008,
+    "player_id": 1389420134480,
+    "played_s": 0.12,
+    "scene_music": true
+   }
+  }
+ },
+ "crossfade": {
+  "start_path": "packs/core_regions/scenes/village.json",
+  "start_key": "village",
+  "route": {
+   "village": {
+    "music": "assets/music/forest_theme.wav",
+    "fading_out": [],
+    "live_players": 1,
+    "released_players": 0,
+    "master": 0.0,
+    "track_id": 3160267178736,
+    "player_id": 3160267323920,
+    "played_s": 1.449,
+    "scene_music": true
+   },
+   "woodland_arrived": true,
+   "woodland": {
+    "music": "assets/music/forest_theme.wav",
+    "fading_out": [],
+    "live_players": 1,
+    "released_players": 0,
+    "master": 0.0,
+    "track_id": 3160267178736,
+    "player_id": 3160267323920,
+    "played_s": 1.578,
+    "scene_music": true
+   },
+   "ruins_arrived": true,
+   "ruins_at_once": {
+    "music": null,
+    "fading_out": [
+     "assets/music/forest_theme.wav"
+    ],
+    "live_players": 1,
+    "released_players": 0,
+    "master": 0.0,
+    "track_id": null,
+    "player_id": null,
+    "played_s": 0.0,
+    "scene_music": true
+   },
+   "ruins_0.5s": {
+    "music": null,
+    "fading_out": [
+     "assets/music/forest_theme.wav"
+    ],
+    "live_players": 1,
+    "released_players": 0,
+    "master": 0.0,
+    "track_id": null,
+    "player_id": null,
+    "played_s": 0.0,
+    "scene_music": true
+   },
+   "ruins_1.5s": {
+    "music": null,
+    "fading_out": [],
+    "live_players": 0,
+    "released_players": 1,
+    "master": 0.0,
+    "track_id": null,
+    "player_id": null,
+    "played_s": 0.0,
+    "scene_music": true
+   }
+  }
+ },
+ "saves": {
+  "travelled": true,
+  "saved_in": "packs/core_regions/scenes/woodland.json",
+  "save_ok": true,
+  "studio_start": "ruins",
+  "slot_untouched_by_studio": true,
+  "new_game_starts_in": "ruins",
+  "new_game_room": "packs/core_regions/scenes/ruins.json",
+  "loaded": true,
+  "slot_records": "packs/core_regions/scenes/woodland.json",
+  "loaded_room_objects": [
+   "woodland_arrival_ruins_256_256_0_0",
+   "woodland_arrival_village_512_256_0_0",
+   "woodland_door_to_ruins_256_352_0_0",
+   "woodland_door_to_village_512_352_0_0",
+   "woodland_player_128_128_0_0"
+  ],
+  "loaded_is_hd2d": true,
+  "save_music": {
+   "music": "assets/music/forest_theme.wav",
+   "fading_out": [],
+   "live_players": 1,
+   "released_players": 0,
+   "master": 0.0,
+   "track_id": 2034554597968,
+   "player_id": 2034554596688,
+   "played_s": 0.047,
+   "scene_music": true
+  },
+  "start_back": "village"
+ },
+ "export": {
+  "export_code": 0,
+  "music_in_bundle": true,
+  "bundle_run": {
+   "engine_in_bundle": true,
+   "start_path": "packs/core_regions/scenes/village.json",
+   "start_key": "village",
+   "route": {
+    "village": {
+     "music": "assets/music/forest_theme.wav",
+     "fading_out": [],
+     "live_players": 1,
+     "released_players": 0,
+     "master": 0.0,
+     "track_id": 2232391185952,
+     "player_id": 2232391183936,
+     "played_s": 1.026,
+     "scene_music": true
+    },
+    "village_1s_later": {
+     "music": "assets/music/forest_theme.wav",
+     "fading_out": [],
+     "live_players": 1,
+     "released_players": 0,
+     "master": 0.0,
+     "track_id": 2232391185952,
+     "player_id": 2232391183936,
+     "played_s": 1.053,
+     "scene_music": true
+    },
+    "woodland_arrived": true,
+    "woodland": {
+     "music": "assets/music/forest_theme.wav",
+     "fading_out": [],
+     "live_players": 1,
+     "released_players": 0,
+     "master": 0.0,
+     "track_id": 2232391185952,
+     "player_id": 2232391183936,
+     "played_s": 1.216,
+     "scene_music": true
+    },
+    "woodland_1s_later": {
+     "music": "assets/music/forest_theme.wav",
+     "fading_out": [],
+     "live_players": 1,
+     "released_players": 0,
+     "master": 0.0,
+     "track_id": 2232391185952,
+     "player_id": 2232391183936,
+     "played_s": 1.245,
+     "scene_music": true
+    },
+    "ruins_arrived": true,
+    "ruins": {
+     "music": null,
+     "fading_out": [],
+     "live_players": 0,
+     "released_players": 1,
+     "master": 0.0,
+     "track_id": null,
+     "player_id": null,
+     "played_s": 0.0,
+     "scene_music": true
+    },
+    "ruins_1s_later": {
+     "music": null,
+     "fading_out": [],
+     "live_players": 0,
+     "released_players": 1,
+     "master": 0.0,
+     "track_id": null,
+     "player_id": null,
+     "played_s": 0.0,
+     "scene_music": true
+    },
+    "village_again_arrived": true,
+    "village_again": {
+     "music": "assets/music/forest_theme.wav",
+     "fading_out": [],
+     "live_players": 1,
+     "released_players": 1,
+     "master": 0.0,
+     "track_id": 2232394671568,
+     "player_id": 2232394670288,
+     "played_s": 0.035,
+     "scene_music": true
+    },
+    "village_again_1s_later": {
+     "music": "assets/music/forest_theme.wav",
+     "fading_out": [],
+     "live_players": 1,
+     "released_players": 1,
+     "master": 0.0,
+     "track_id": 2232394671568,
+     "player_id": 2232394670288,
+     "played_s": 0.061,
+     "scene_music": true
+    }
+   }
+  }
+ },
+ "older": {
+  "before": {
+   "start_scene": "(none)",
+   "village": "(none)",
+   "woodland": "(none)",
+   "ruins": null
+  },
+  "rows": [
+   "This world names no starting room:\na new game starts in Start (the\nproject's config)."
+  ],
+  "opened_in": "start",
+  "dirty_on_open": false,
+  "saved_message": "Saved 1 file(s).",
+  "after": {
+   "start_scene": "(none)",
+   "village": "assets/music/forest_theme.wav",
+   "woodland": "(none)",
+   "ruins": null
+  },
+  "reopened": {
+   "village": {
+    "mode": "track",
+    "path": "assets/music/forest_theme.wav"
+   },
+   "woodland": {
+    "mode": "continue",
+    "path": ""
+   },
+   "ruins": {
+    "mode": "silence",
+    "path": ""
+   }
+  },
+  "reopened_start": "ruins"
+ }
+}

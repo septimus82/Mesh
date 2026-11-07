@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from engine import savegame
 from engine.action_runtime.constants import ActionHandler
 from engine.constants import (
@@ -16,10 +18,23 @@ def _noop(_window: object) -> None:
     return
 
 
+def legacy_editor_allowed(window: object) -> bool:
+    """Whether F4 may open the legacy editor in this window. Mesh Studio is the editor: a game launch (``mesh play``,
+    a standalone game) doesn't drop into the legacy editor unless asked for with ``MESH_LEGACY_EDITOR=1``. An editor
+    launch (``mesh edit`` on a project without a world) keeps it, and an open editor can always be left."""
+    editor = getattr(window, "editor_controller", None)
+    if editor is not None and (bool(getattr(editor, "active", False))
+                               or bool(getattr(getattr(editor, "play_session", None), "is_playing", False))):
+        return True
+    if os.environ.get("MESH_LEGACY_EDITOR") == "1":
+        return True
+    return getattr(getattr(window, "engine_config", None), "_mesh_launch_mode", None) == "editor"
+
+
 def _toggle_editor(window: object) -> None:
     editor = getattr(window, "editor_controller", None)
     toggle = getattr(editor, "toggle", None) if editor is not None else None
-    if callable(toggle):
+    if callable(toggle) and legacy_editor_allowed(window):
         toggle()
 
 

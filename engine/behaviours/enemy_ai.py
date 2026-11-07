@@ -123,6 +123,7 @@ class EnemyAI(Behaviour):
         self._target: Sprite | None = None
         self._attack_cooldown_timer: float = 0.0
         self._repath_timer: float = 0.0
+        self._chase_dir: tuple[float, float] = (0.0, 0.0)
         self._facing: str = "down"
 
         self.IDLE = "idle"
@@ -225,11 +226,12 @@ class EnemyAI(Behaviour):
     def _update_chase(self, dt: float, dx: float, dy: float, dist: float) -> None:
         if dist == 0:
             return
-        if self._repath_timer > 0:
-            return
-        self._repath_timer = self.repath_interval
-        nx = dx / dist
-        ny = dy / dist
+        # Steer every repath_interval, move every frame. (It used to move only when it steered: one frame's
+        # step per interval, about a twelfth of its speed.)
+        if self._repath_timer <= 0:
+            self._repath_timer = self.repath_interval
+            self._chase_dir = (dx / dist, dy / dist)
+        nx, ny = self._chase_dir
         move_x = nx * self.speed * dt
         move_y = ny * self.speed * dt
         scene_controller = getattr(self.window, "scene_controller", None)

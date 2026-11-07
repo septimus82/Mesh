@@ -1,0 +1,185 @@
+{
+ "village_before": {
+  "structures": 45,
+  "objects": 8,
+  "lights": 3,
+  "size": {
+   "width": 40,
+   "depth": 44,
+   "expandable": true,
+   "why": null
+  }
+ },
+ "panel_before": [
+  "40 x 44 m (1 m is a tile)."
+ ],
+ "shrink_refused": "The room's depth can only grow (44 m now, 40 m asked): shrinking isn't supported.",
+ "unchanged_after_refusal": true,
+ "expanded_message": "The room is now 48 x 52 m: 8 m more to the east, 8 m more to the north; everything in it stayed where it was. Undo puts it back.",
+ "content_kept": true,
+ "panel_after": [
+  "48 x 52 m (1 m is a tile)."
+ ],
+ "undone_equal_before": true,
+ "redone_equal_after": true,
+ "lakeside_panel": [
+  "It can't be expanded: This room's ground is sculpted or\npainted; only flat, unpainted ground can be grown for\nnow.",
+  "64 x 48 m (1 m is a tile)."
+ ],
+ "lakeside_has_expand": false,
+ "cottage_panel": [
+  "It can't be expanded: This room has no HD-2D ground to\ngrow (its floor is all models)."
+ ],
+ "cottage_has_expand": false,
+ "saved": "Saved 2 file(s).",
+ "on_disk": {
+  "ground_to": [
+   1536.0,
+   1664.0
+  ],
+  "bounds": [
+   0.0,
+   0.0,
+   1536.0,
+   1664.0
+  ],
+  "world": [
+   1536.0,
+   1664.0
+  ],
+  "tilemap": [
+   48,
+   52
+  ],
+  "map_file": [
+   48,
+   52
+  ],
+  "map_file_layers": [
+   [
+    48,
+    52,
+    2496
+   ]
+  ]
+ },
+ "reopened": {
+  "size": {
+   "width": 48,
+   "depth": 52,
+   "expandable": true,
+   "why": null
+  },
+  "unsaved": [],
+  "same_content": true
+ },
+ "studio_play": {
+  "mode": "play",
+  "ground_hi": [
+   1536.0,
+   1664.0
+  ],
+  "bounds": [
+   0.0,
+   0.0,
+   1536.0,
+   1664.0
+  ],
+  "tilemap_size": [
+   48,
+   52
+  ]
+ },
+ "walk_unexpanded": {
+  "world_bounds_walking": true,
+  "lane_y": 96,
+  "start_x": 1200.0,
+  "end_x": 1280.0,
+  "half_width": 9.5,
+  "ground_east_edge": 1280.0,
+  "tilemap_size": [
+   40,
+   44
+  ],
+  "camera_bounds": [
+   0.0,
+   0.0,
+   1280.0,
+   1408.0
+  ],
+  "camera_target_x": 877.1
+ },
+ "walk_expanded": {
+  "world_bounds_walking": true,
+  "lane_y": 96,
+  "start_x": 1200.0,
+  "end_x": 1535.0,
+  "half_width": 9.5,
+  "ground_east_edge": 1536.0,
+  "tilemap_size": [
+   48,
+   52
+  ],
+  "camera_bounds": [
+   0.0,
+   0.0,
+   1536.0,
+   1664.0
+  ],
+  "camera_target_x": 1133.1
+ },
+ "export": {
+  "code": 0,
+  "bundle_sizes": {
+   "ground_to": [
+    1536.0,
+    1664.0
+   ],
+   "bounds": [
+    0.0,
+    0.0,
+    1536.0,
+    1664.0
+   ],
+   "world": [
+    1536.0,
+    1664.0
+   ],
+   "tilemap": [
+    48,
+    52
+   ],
+   "map_file": [
+    48,
+    52
+   ],
+   "map_file_layers": [
+    [
+     48,
+     52,
+     2496
+    ]
+   ]
+  },
+  "bundle_walk": {
+   "engine_from": "<OUT>/export/engine/__init__.py (the bundle's own engine)",
+   "world_bounds_walking": true,
+   "lane_y": 96,
+   "start_x": 1200.0,
+   "end_x": 1535.0,
+   "half_width": 9.5,
+   "ground_east_edge": 1536.0,
+   "tilemap_size": [
+    48,
+    52
+   ],
+   "camera_bounds": [
+    0.0,
+    0.0,
+    1536.0,
+    1664.0
+   ],
+   "camera_target_x": 1133.1
+  }
+ }
+}

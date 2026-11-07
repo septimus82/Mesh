@@ -238,8 +238,6 @@ engine/editor/components_ops.py: W293 Blank line contains whitespace
 engine/editor/components_ops.py: W293 Blank line contains whitespace
 engine/editor/components_ops.py: W293 Blank line contains whitespace
 engine/editor/components_ops.py: W293 Blank line contains whitespace
-engine/editor/confirm_modal_preview_model.py: W293 Blank line contains whitespace
-engine/editor/confirm_modal_preview_model.py: W293 Blank line contains whitespace
 engine/editor/debug/editor_debug_panels_controller.py: F841 Local variable `search` is assigned to but never used
 engine/editor/editor_actions_parts/hd2d_actions.py: F841 Local variable `field_count` is assigned to but never used
 engine/editor/editor_actions_parts/project_explorer_actions.py: W293 Blank line contains whitespace
@@ -374,12 +372,6 @@ engine/editor_hover_highlight_overlay.py: W293 Blank line contains whitespace
 engine/editor_hover_highlight_overlay.py: W293 Blank line contains whitespace
 engine/editor_tooltips_model.py: F841 Local variable `field_kind` is assigned to but never used
 engine/encounter_report.py: F841 Local variable `settings` is assigned to but never used
-engine/entity_view.py: W293 Blank line contains whitespace
-engine/entity_view.py: W293 Blank line contains whitespace
-engine/entity_view.py: W293 Blank line contains whitespace
-engine/entity_view.py: W293 Blank line contains whitespace
-engine/entity_view.py: W293 Blank line contains whitespace
-engine/entity_view.py: W293 Blank line contains whitespace
 engine/gameplay_event_bus.py: W293 Blank line contains whitespace
 engine/gameplay_event_bus.py: W293 Blank line contains whitespace
 engine/gameplay_event_bus.py: W293 Blank line contains whitespace
@@ -838,10 +830,6 @@ tests/test_encounter_audit_compact_golden.py: E402 Module level import not at to
 tests/test_encounter_coverage_matrix_artifact.py: E402 Module level import not at top of file
 tests/test_encounter_headroom_artifact.py: E402 Module level import not at top of file
 tests/test_encounter_headroom_golden.py: E402 Module level import not at top of file
-tests/test_entity_view_policy_contract.py: W293 Blank line contains whitespace
-tests/test_entity_view_policy_contract.py: W293 Blank line contains whitespace
-tests/test_entity_view_policy_contract.py: W293 Blank line contains whitespace
-tests/test_entity_view_policy_contract.py: W293 Blank line contains whitespace
 tests/test_experience.py: F841 Local variable `behaviour` is assigned to but never used
 tests/test_export_bundle.py: W293 Blank line contains whitespace
 tests/test_find_everything_integration_contract.py: E402 Module level import not at top of file

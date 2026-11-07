@@ -166,8 +166,8 @@ def test_failing_dry_run_is_refused_and_leaves_no_pending_proposal(starter, tmp_
 def test_second_project_in_same_process_does_not_inherit_prefabs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # A starter project (has a person prefab) opened first must not leak into an empty-prefab project.
     with headless_editor(tmp_path / "first", monkeypatch, template_id="starter") as first:
-        assert [entry["id"] for entry in first.editor_controller.prefab_palette] == ["person"]
-    with headless_editor(tmp_path / "second", monkeypatch, template_id="blank") as second:
+        assert [entry["id"] for entry in first.editor_controller.prefab_palette] == ["person", "sign"]
+    with headless_editor(tmp_path / "second", monkeypatch, template_id="blank", prefabs=[]) as second:
         editor, creator = _creator(second, tmp_path / "second")
         assert editor.prefab_palette == []
         panel = creator.build_snapshot().add_person_panel
@@ -175,7 +175,7 @@ def test_second_project_in_same_process_does_not_inherit_prefabs(tmp_path: Path,
 
 
 def test_project_without_person_prefab_disables_add_with_reason(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    with headless_editor(tmp_path, monkeypatch, template_id="blank") as window:
+    with headless_editor(tmp_path, monkeypatch, template_id="blank", prefabs=[]) as window:
         editor, creator = _creator(window, tmp_path)
         panel = creator.build_snapshot().add_person_panel
         assert panel.enabled is False

@@ -11,6 +11,11 @@ Three families:
 * **action** tools (the AI's hands): ``create_scene``,
   ``add_entity_from_prefab`` — thin wrappers over :class:`engine.ai_ops.AIOps`.
 * **safety**: ``validate_scene`` so writes can be checked.
+* **runtime debugging** (D1, D3A): ``debug_runtime_snapshot`` reads the game running in a
+  Mesh Studio play-test; ``debug_start_playtest`` / ``debug_stop_playtest`` start and
+  stop one, once the person allows it in Studio; ``debug_play_action`` (D2) plays it
+  with the player's own controls, once the person allows that too; ``debug_interaction``
+  (D3A) explains why the player can or can't use one object.
 * **context**: ``engine_overview`` — instant expertise as a resource.
 
 All functions take a ``root`` base directory (default ``"."``) so they can be
@@ -470,10 +475,31 @@ def _result_to_dict(result: Any) -> dict[str, Any]:
     }
 
 
+def _files_blocked(root: str, tool: str) -> dict[str, Any] | None:
+    """Why ``tool`` mustn't write the project's files directly, or None only when nothing has the project open (F1):
+    Mesh Studio or another editor has it open (possibly unsaved), or that can't be told."""
+    from engine import authoring_session
+
+    state = authoring_session.studio_state(root)
+    if state["state"] == "none":
+        return None
+    if state["state"] == "uncertain":
+        return authoring_session.uncertain(state)
+    if state["host"] != authoring_session.STUDIO_HOST:
+        return authoring_session.other_editor(state["host"])
+    return {"ok": False, "reason": "studio_open", "message": (
+        f"Mesh Studio has this project open, so {tool} won't write its files (the person's unsaved work would "
+        "be overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
+
+
 def create_scene(name: str, template: str = "empty", root: str = ".") -> dict[str, Any]:
-    """Create a new scene from a template. Wraps ``AIOps.create_scene``."""
+    """Create a new scene from a template. Wraps ``AIOps.create_scene``; refused, writing nothing, while Mesh Studio
+    has the project open or that can't be told (F1)."""
     from engine.ai_ops import AIOps
 
+    blocked = _files_blocked(root, "create_scene")
+    if blocked is not None:
+        return {**blocked, "data": None}
     return _result_to_dict(AIOps(base_dir=root).create_scene(name, template))
 
 
@@ -492,12 +518,13 @@ def add_entity_from_prefab(
     from (e.g. ``assets/prefabs.json``); when omitted the engine's default
     palette is used.
     """
-    from engine.ai_ops import AIOps
-
-    result = AIOps(base_dir=root).add_entity_from_prefab(
-        scene_path, prefab_name, float(x), float(y), prefab_path=prefab_path
-    )
-    return _result_to_dict(result)
+    op: dict[str, Any] = {"type": "add_entity_from_prefab", "scene_path": scene_path, "prefab_name": prefab_name,
+                          "x": float(x), "y": float(y)}
+    if prefab_path:
+        op["prefab_path"] = prefab_path
+    outcome = apply_ops([op], root=root, validate=False)  # as apply_ops: a Studio project goes the shared authoring path
+    result = (outcome.get("results") or [{"ok": False, "message": outcome.get("message", "")}])[0]
+    return {"ok": bool(result.get("ok")), "message": result.get("message", ""), "data": result.get("data") or {}}
 
 
 def live_add_entity_from_prefab(
@@ -507,8 +534,13 @@ def live_add_entity_from_prefab(
     name: str | None = None,
     scene_path: str | None = None,
     root: str = ".",
+    request_id: str = "",
 ) -> dict[str, Any]:
-    """Stage and accept one add-entity op in a running live editor session."""
+    """Stage and accept one add-entity op in a running live editor session.
+
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
     from engine.mcp_server.live_session_client import live_stage_and_accept_add_entity
 
     op: dict[str, Any] = {
@@ -521,7 +553,7 @@ def live_add_entity_from_prefab(
         op["name"] = name
     if scene_path:
         op["scene_path"] = scene_path
-    return live_stage_and_accept_add_entity(op, root=root)
+    return live_stage_and_accept_add_entity(op, root=root, request_id=request_id)
 
 
 def live_read_scene(compact: bool = False, root: str = ".") -> dict[str, Any]:
@@ -531,25 +563,25 @@ def live_read_scene(compact: bool = False, root: str = ".") -> dict[str, Any]:
     return _live_read_scene(compact=compact, root=root)
 
 
-def live_stage_proposal(ops: list[dict[str, Any]], root: str = ".") -> dict[str, Any]:
+def live_stage_proposal(ops: list[dict[str, Any]], root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Stage an AI live-op proposal in the running editor without mutating it."""
     from engine.mcp_server.live_session_client import live_stage_proposal as _live_stage_proposal
 
-    return _live_stage_proposal(ops, root=root)
+    return _live_stage_proposal(ops, root=root, request_id=request_id)
 
 
-def live_accept_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
+def live_accept_proposal(proposal_id: str, root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Accept a staged live proposal by id if it is still revision-current."""
     from engine.mcp_server.live_session_client import live_accept_proposal as _live_accept_proposal
 
-    return _live_accept_proposal(proposal_id, root=root)
+    return _live_accept_proposal(proposal_id, root=root, request_id=request_id)
 
 
-def live_reject_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
+def live_reject_proposal(proposal_id: str, root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Reject and drop a staged live proposal by id."""
     from engine.mcp_server.live_session_client import live_reject_proposal as _live_reject_proposal
 
-    return _live_reject_proposal(proposal_id, root=root)
+    return _live_reject_proposal(proposal_id, root=root, request_id=request_id)
 
 
 # -------------------------------------------------------------- batch action
@@ -583,6 +615,13 @@ def apply_ops(
     failures are isolated (one bad op does not abort the rest); ``ok`` is the
     AND of every operation's success.
     """
+    changes = _studio_changes(list(operations), root)
+    if changes is not None:  # a Studio project: the shared, validated authoring path
+        return _apply_ops_through_authoring(list(operations), changes, root)
+    blocked = _files_blocked(root, "apply_ops")
+    if blocked is not None:
+        return {**blocked, "results": []}
+
     from engine.ai_ops import AIOps
 
     ops_runner = AIOps(base_dir=root)
@@ -808,3 +847,264 @@ def engine_overview(root: str = ".") -> dict[str, Any]:
 def engine_overview_json(root: str = ".") -> str:
     """``engine_overview`` rendered as a JSON string (for MCP resource bodies)."""
     return json.dumps(engine_overview(root), indent=2, sort_keys=True)
+
+
+# ---------------------------------------------------------------- authoring (one API for Studio, AI and CLI)
+#
+# The same validated operations Mesh Studio uses (engine.authoring over engine.project_ops). When Mesh
+# Studio has the project open, changes become a proposal the person reviews there; otherwise they
+# apply to the files. Works the same for any MCP client: nothing here is specific to one AI.
+
+
+def authoring_operations() -> dict[str, Any]:
+    """Every change you can make to a Mesh project, with its settings and what it does.
+
+    Generated from the engine's own operations, so it is always current. Use the names with
+    propose_changes or apply_changes, e.g. {"op": "place_prefab", "prefab": "person", "x": 320, "y": 224}.
+    """
+    from engine import authoring_session
+
+    return authoring_session.operations()
+
+
+def read_project(root: str = ".") -> dict[str, Any]:
+    """Every room of the project with its objects and map, and its Blender ``models`` (HD-2D structures).
+
+    If Mesh Studio has it open, this is what the person sees right now (unsaved edits included)
+    plus a ``revision`` to pass to propose_changes as ``base_revision``. Place a model with
+    {"op": "place_structure", "model": "<its id>", "x": ..., "y": ...}; models are imported by the person.
+    """
+    from engine import authoring_session
+
+    return authoring_session.read_project(root)
+
+
+def propose_changes(changes: list[dict[str, Any]], title: str = "", base_revision: int | None = None,
+                    root: str = ".", request_id: str = "") -> dict[str, Any]:
+    """Propose changes to the project open in Mesh Studio; the person there accepts or rejects them.
+
+    ``changes`` is a list of operations (see authoring_operations). Give ``base_revision`` from
+    read_project so Studio can tell your changes from the person's since then: separate edits both
+    survive; anything your changes would write over what the person changed since is reported as a
+    conflict and nothing is applied, including a value you give that equals what you read (both x
+    and y of a move_entity, say). Invalid changes are
+    refused at once with the reason. A ``base_revision`` Studio no longer keeps is refused
+    (``base_revision_unavailable``, with the current ``revision``: read again), as is one that isn't
+    a revision (``invalid_base_revision``); neither is replaced by another revision. At most 20
+    proposals wait for the person at once: more are refused (``too_many_pending``) until some are decided.
+    Returns ``{ok, proposal_id, proposal{summary, status}}``.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
+    from engine import authoring_session
+
+    return authoring_session.propose(root, changes, title=title, base_revision=base_revision, source="an MCP client",
+                                     request_id=request_id)
+
+
+def apply_changes(changes: list[dict[str, Any]], root: str = ".", dry_run: bool = False,
+                  request_id: str = "") -> dict[str, Any]:
+    """Apply changes to the project files (all or nothing), or preview them with ``dry_run``.
+
+    If Mesh Studio has the project open, the changes are proposed there instead: files are never
+    written behind the person's back. Returns ``{ok, summary, created, written}`` or a refusal.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): for a proposal, send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
+    from engine import authoring_session
+
+    return authoring_session.apply(root, changes, dry_run=dry_run, source="an MCP client", request_id=request_id)
+
+
+def proposal_status(proposal_id: str, root: str = ".") -> dict[str, Any]:
+    """What happened to a proposal: pending, accepted (with the ids it created), rejected or conflict."""
+    from engine import authoring_session
+
+    return authoring_session.proposal_status(root, proposal_id)
+
+
+def withdraw_proposal(proposal_id: str, root: str = ".", request_id: str = "") -> dict[str, Any]:
+    """Take back a proposal that is still waiting in Mesh Studio.
+
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
+    from engine import authoring_session
+
+    return authoring_session.withdraw(root, proposal_id, request_id=request_id)
+
+
+def request_status(request_id: str, root: str = ".") -> dict[str, Any]:
+    """What became of a change sent to Mesh Studio that answered ``reason: "outcome_unknown"`` (with a ``request_id``).
+
+    ``state``: ``"queued"`` (not started yet), ``"started"`` (running now), ``"finished"`` (``result`` is its answer,
+    e.g. a proposal's id) or ``"cancelled"`` (it never ran and never will; nothing changed). Ask this before sending
+    the change again, so it isn't done twice. A change Studio answered ``reason: "timeout"`` was cancelled, and is
+    safe to send again. Studio remembers ended requests for 10 minutes.
+    """
+    from engine import authoring_session
+
+    return authoring_session.request_status(root, request_id)
+
+
+def debug_runtime_snapshot(events: int = 20, root: str = ".") -> dict[str, Any]:
+    """What the game running in Mesh Studio's play-test is doing now, read from the running game (not the files).
+
+    ``status`` is ``"playing"`` or ``"not_playing"`` (Studio is editing: nothing runs). While playing:
+    ``scene`` (the room running), ``player`` (its position, pixels), ``game_state`` (flags, counters
+    and the game's other values: its variables), ``quests`` (each quest's status and stages), ``events`` (the play-test's
+    events in order: ``seq``, ``type``, ``entity``, ``payload``; the last ``events``, at most 50) and
+    ``diagnostics`` (errors the engine caught since the play-test started). ``studio`` is what the
+    person has open in the editor, which play-testing never changes. A part the game doesn't have reads
+    ``{"available": false, "reason": ...}``. Reading changes nothing. Compare ``events.last_seq`` and
+    ``sequence`` between calls to see what happened in between.
+    """
+    from engine import runtime_debug
+
+    return runtime_debug.request_snapshot(root, events)
+
+
+def debug_interaction(entity_id: str, root: str = ".") -> dict[str, Any]:
+    """Why the player can or can't use one object in Mesh Studio's running play-test, from the running game.
+
+    ``entity_id``: the object's id (a snapshot's ``nearby`` lists them). Returns ``how`` it is used
+    (``interact`` or ``touch``), ``available`` (usable now; a touch door: the player is in its doorway, while
+    ``touch.on_contact`` says whether walking into it would use it), ``blocking`` (the first condition that
+    fails: ``in_room``, ``flag_gate``, ``shown``, ``behaviours``, ``distance``, ``facing``, ``selection``, or a
+    touch door's own rules, such as ``triggered_by`` and ``overlapping``), ``observed`` (every condition checked,
+    with its values), ``flags`` (their current values), ``flag_sources`` (where the project sets them: dialogue
+    choices, SetGameStateOnEvent, quest rewards), ``dialogue`` (a conversation's choices: ``conditions_met`` apart
+    from ``selectable_now``, which also needs the choice's node showing), ``not_analysed`` (behaviours whose own
+    rules aren't explained) and ``possible_causes`` (hypotheses, kept apart from what was observed).
+    Reading changes nothing and needs no permission.
+    """
+    from engine import runtime_diagnose
+
+    return runtime_diagnose.request(root, entity_id)
+
+
+def debug_start_playtest(root: str = ".", request_id: str = "") -> dict[str, Any]:
+    """Start a play-test in Mesh Studio (as its Play button), if the person allowed AI play-test control.
+
+    Refused with ``playtest_control_off`` until the person turns it on (Studio: AI panel), and with
+    ``studio_busy`` while they are typing, dragging or answering a question. Never saves or changes the
+    project. Already playing: ``status: "already_playing"``.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
+    from engine import runtime_debug
+
+    return runtime_debug.request_play(root, request_id)
+
+
+def debug_stop_playtest(root: str = ".", request_id: str = "") -> dict[str, Any]:
+    """Stop Mesh Studio's play-test (as its Stop button): back to editing, the project as the person left it.
+
+    Needs the same permission as debug_start_playtest. Not playing: ``status: "not_playing"``.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
+    from engine import runtime_debug
+
+    return runtime_debug.request_stop(root, request_id)
+
+
+def debug_play_action(action: str, direction: str = "", frames: int = 30, choice: int | str | None = None,
+                      root: str = ".", request_id: str = "") -> dict[str, Any]:
+    """Play the running Mesh Studio play-test with the player's own controls, one bounded action at a time.
+
+    ``action``: ``"move"`` (hold ``direction`` up/down/left/right for ``frames``, 1 to 120), ``"interact"``
+    (press the interact key: talk to or use what's in front of the player), ``"advance"`` (the next line of a
+    conversation) or ``"choose"`` (a conversation's choice: its ``index`` or its exact words, as listed in a
+    snapshot's ``dialogue.choices``). The game's rules apply, as for a player.
+
+    Returns ``{ok, action{status, before, after, dialogue}, snapshot}``: where the player was and is, the
+    conversation now, and a snapshot of the game (``nearby`` lists what's around the player). Refused with
+    ``gameplay_control_off`` until the person allows AI play in Studio's AI panel (separate from starting
+    play-tests), and with a reason when it doesn't fit (``not_playing``, ``dialogue_open``, ``no_dialogue``,
+    ``choice_needed``, ``no_choices``, ``choice_not_available``, ``game_paused``, ``input_locked``,
+    ``person_using_controls``, ``action_running``, ``invalid_action``). An action the person interrupts
+    (taking back the permission, stopping, pausing) comes back ``cancelled``.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): starting the action: send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
+    from engine import runtime_play
+
+    request: dict[str, Any] = {"action": action}
+    if action == "move":
+        request.update(direction=direction, frames=frames)
+    if action == "choose":
+        request["choice"] = choice
+    return runtime_play.request_action(root, request, request_id=request_id)
+
+
+# The everyday apply_ops operations, on a Mesh Studio project, run through the same validated
+# authoring path (and so never overwrite an open Studio's unsaved work). Others keep using AIOps.
+_ADAPTED_OPS = {"add_entity_from_prefab", "delete_entity", "set_behaviour_params", "paint_tiles",
+                "add_light", "update_light", "delete_light"}
+
+
+def _studio_changes(operations: list[dict[str, Any]], root: str) -> list[dict[str, Any]] | None:
+    """apply_ops operations as authoring changes, if they all target rooms of a Studio project."""
+    if not operations or not all(isinstance(op, dict) and op.get("type") in _ADAPTED_OPS for op in operations):
+        return None
+    from engine import authoring, authoring_session
+    from engine import project_ops as ops_
+
+    try:
+        project = authoring_session.open_project(root)
+    except authoring.ChangeError:
+        return None
+    rooms = {path.replace("\\", "/").lstrip("./"): key for key, _label, path in project.rooms()}
+    changes: list[dict[str, Any]] = []
+    for op in operations:
+        room = rooms.get(str(op.get("scene_path") or "").replace("\\", "/").lstrip("./"))
+        if room is None:
+            return None
+        kind = op["type"]
+        if kind == "add_entity_from_prefab":
+            changes.append({"op": "place_prefab", "room": room, "prefab": op.get("prefab_name"),
+                            "x": op.get("x", 0), "y": op.get("y", 0)})
+        elif kind == "delete_entity":
+            changes.append({"op": "remove_entity", "room": room, "entity_id": op.get("entity_id")})
+        elif kind == "set_behaviour_params":
+            entity_ref, behaviour = op.get("entity_id"), op.get("behaviour_name")
+            scene = project.scene(room)
+            entity = next((e for e in ops_.entities(scene) if entity_ref in (e.get("id"), e.get("name"))), None)
+            if entity is not None and behaviour not in ops_.entity_behaviours(entity):
+                changes.append({"op": "add_behaviour", "room": room, "entity_id": entity_ref, "behaviour": behaviour})
+            for param, value in (op.get("params") or {}).items():
+                changes.append({"op": "set_behaviour_param", "room": room, "entity_id": entity_ref,
+                                "behaviour": behaviour, "param": param, "value": value})
+        elif kind == "add_light":
+            light = dict(op.get("light") or {})
+            changes.append({"op": "add_light", "room": room, "x": light.pop("x", 0.0), "y": light.pop("y", 0.0),
+                            "color": light.pop("color", "#ffddaa"), "radius": light.pop("radius", 160.0)})
+            if light:  # the rest as update_light takes it, on the light just added
+                changes.append({"op": "set_light", "room": room, "index": len(ops_.lights(project.scene(room))), **light})
+        elif kind == "update_light":
+            changes.append({"op": "set_light", "room": room, "index": int(op.get("index", 0)), **(op.get("patch") or {})})
+        elif kind == "delete_light":
+            changes.append({"op": "remove_light", "room": room, "index": int(op.get("index", 0))})
+        else:  # paint_tiles: one change per (layer, tile)
+            groups: dict[tuple[str, int], list[list[int]]] = {}
+            for cell in op.get("ops") or []:
+                groups.setdefault((str(cell.get("layer")), int(cell.get("gid", 0))), []).append(
+                    [int(cell.get("col", 0)), int(cell.get("row", 0))])
+            for (layer, gid), cells in groups.items():
+                changes.append({"op": "paint_tiles", "room": room, "layer": layer, "cells": cells, "tile": gid})
+    return changes
+
+
+def _apply_ops_through_authoring(operations: list[dict[str, Any]], changes: list[dict[str, Any]],
+                                 root: str) -> dict[str, Any]:
+    from engine import authoring_session
+
+    outcome = authoring_session.apply(root, changes, source="an MCP client (apply_ops)")
+    message = outcome.get("message") or "; ".join(outcome.get("summary") or []) or "applied"
+    results: list[dict[str, Any]] = [{"type": op.get("type"), "ok": bool(outcome.get("ok")), "message": message, "data": {}}
+                                     for op in operations]
+    payload = {"ok": bool(outcome.get("ok")), "results": results, "mode": outcome.get("source") or outcome.get("mode"),
+               "authoring": outcome}
+    payload["validation"] = {"ok": bool(outcome.get("ok")), "message": "checked by each operation (scene schema)"}
+    return payload

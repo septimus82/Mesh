@@ -15,8 +15,36 @@ import sys
 from pathlib import Path
 
 
+def _engine_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def _inside_engine(path: Path) -> bool:
+    root = _engine_root().resolve()
+    return path == root or root in path.parents
+
+
+def default_dest(dest: str | Path) -> Path:
+    """Where to create a project when the user gave ``dest`` (``"."`` unless they chose one).
+
+    New games stay out of the engine folder: run from inside it without a destination,
+    they go to Documents/Mesh Projects instead.
+    """
+    chosen = Path(dest).resolve()
+    if str(dest) == "." and _inside_engine(chosen):
+        from engine.projects import default_projects_dir  # noqa: PLC0415
+
+        return default_projects_dir()
+    return chosen
+
+
 def create_blank_project(name: str, dest: Path, *, template_id: str = "blank", force: bool = False) -> int:
     project_dir = (dest / name).resolve()
+    if _inside_engine(project_dir):
+        print(f"[mesh] Error: '{project_dir}' is inside the Mesh engine folder. Keep games separate: "
+              "pass --dest with a folder outside it (or run without --dest to use Documents/Mesh Projects).",
+              file=sys.stderr)
+        return 1
 
     if project_dir.exists():
         if any(project_dir.iterdir()):
@@ -80,7 +108,7 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
 
 
 def handle(args: argparse.Namespace) -> int:
-    dest = Path(getattr(args, "dest", ".")).resolve()
+    dest = default_dest(getattr(args, "dest", "."))
     return create_blank_project(
         str(args.name),
         dest,

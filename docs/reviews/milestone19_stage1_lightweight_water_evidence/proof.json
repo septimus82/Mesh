@@ -1,0 +1,88 @@
+{
+  "depth_and_anchoring": {
+    "pond_pixels_drawn": 47818,
+    "pond_pixels_hidden_by_structures": 3254,
+    "world_shift_px": -31,
+    "water_pixels_found_where_the_world_moved": 0.998,
+    "water_pixels_found_where_they_were_on_screen": 0.903
+  },
+  "ripples": {
+    "puddle": {
+      "size_m": [
+        2.75,
+        1.62
+      ],
+      "ripple_pixels_per_frame": [
+        1095,
+        1527,
+        2204
+      ]
+    },
+    "pond": {
+      "size_m": [
+        7.0,
+        4.69
+      ],
+      "ripple_pixels_per_frame": [
+        14798,
+        15644,
+        12308
+      ]
+    },
+    "sheltered": {
+      "size_m": [
+        1.5,
+        1.25
+      ],
+      "ripple_pixels_per_frame": [
+        72,
+        56,
+        132
+      ]
+    },
+    "sheltered_negative_control_shelter_off": {
+      "size_m": [
+        1.5,
+        1.25
+      ],
+      "ripple_pixels_per_frame": [
+        436,
+        819,
+        912
+      ]
+    },
+    "rings_follow_the_world": {
+      "best_shift_px": -31,
+      "overlap_at_best": 0.926,
+      "overlap_unshifted": 0.25
+    }
+  },
+  "footsteps": {
+    "steps_through_the_puddle": 6,
+    "water_step_events_seen": 6,
+    "ripples_alive_after": 0,
+    "clip_frames": 38
+  },
+  "blocking": {
+    "walkable": {
+      "pond_south_edge_m": 16.16,
+      "pond_centre_m": 18.5,
+      "feet_reached_m": 18.52
+    },
+    "blocking": {
+      "pond_south_edge_m": 16.16,
+      "pond_centre_m": 18.5,
+      "feet_reached_m": 15.97
+    }
+  },
+  "two_d": {
+    "water_pixels": 24020,
+    "player_pixels_changed_by_water": 0,
+    "player_box": [
+      119,
+      393,
+      137,
+      435
+    ]
+  }
+}

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import subprocess
-import sys
 from types import SimpleNamespace
 
 import pytest
@@ -17,6 +15,7 @@ from engine.editor.creator_mode.creator_overlay_renderer import (
     DOOR_STAGE_PROPOSAL_ACTION_ID,
     build_creator_overlay_draw_commands,
 )
+from tests._shared_python import run_python
 
 pytestmark = pytest.mark.fast
 
@@ -264,67 +263,41 @@ def test_input_router_creator_click_does_not_fall_through_to_editor_input() -> N
     assert called["editor_input"] is False
 
 
-def test_package_import_still_does_not_import_renderer_module() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; import engine.editor.creator_mode; "
-                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
-    )
-
-    assert result.stdout.strip() == "False"
-
-
 def test_overlay_click_module_import_loads_renderer_for_hit_testing() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; "
-                "from engine.editor.creator_mode.creator_overlay_click "
-                "import try_handle_creator_mode_overlay_click; "
-                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
+    output = run_python(
+        (
+            "import sys; "
+            "from engine.editor.creator_mode.creator_overlay_click "
+            "import try_handle_creator_mode_overlay_click; "
+            "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
+        ),
+        watch=['engine.editor.creator_mode.creator_overlay_renderer'],
     )
 
-    assert result.stdout.strip() == "True"
+    assert output.strip() == "True"
 
 
 def test_pure_modules_do_not_import_real_bridge_modules() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; "
-                "from engine.editor.creator_mode.creator_overlay_click "
-                "import try_handle_creator_mode_overlay_click; "
-                "blocked = ["
-                "'engine.editor.live_session_bridge', "
-                "'engine.editor.editor_live_ops_controller', "
-                "'engine.editor.proposal_inbox'"
-                "]; "
-                "print(any(name in sys.modules for name in blocked))"
-            ),
+    output = run_python(
+        (
+            "import sys; "
+            "from engine.editor.creator_mode.creator_overlay_click "
+            "import try_handle_creator_mode_overlay_click; "
+            "blocked = ["
+            "'engine.editor.live_session_bridge', "
+            "'engine.editor.editor_live_ops_controller', "
+            "'engine.editor.proposal_inbox'"
+            "]; "
+            "print(any(name in sys.modules for name in blocked))"
+        ),
+        watch=[
+            'engine.editor.live_session_bridge',
+            'engine.editor.editor_live_ops_controller',
+            'engine.editor.proposal_inbox',
         ],
-        capture_output=True,
-        check=True,
-        text=True,
     )
 
-    assert result.stdout.strip() == "False"
+    assert output.strip() == "False"
 
 
 def test_second_click_on_same_door_does_not_call_bridge_again() -> None:

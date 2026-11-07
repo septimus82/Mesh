@@ -1,0 +1,54 @@
+"""The engine finds its own bundled files in the source tree first (a checkout, or an editable install), then in a
+pip install's <prefix>/share/mesh-engine."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from engine import repo_root
+
+pytestmark = pytest.mark.fast
+
+
+def test_a_checkout_finds_bundled_files_in_its_own_tree_first() -> None:
+    roots = repo_root.bundled_data_roots()
+    assert roots[0] == repo_root.engine_source_root()
+    assert all(r.parts[-2:] == repo_root.BUNDLED_SHARE for r in roots[1:]), roots
+    assert repo_root.bundled_file("config.json") == repo_root.engine_source_root() / "config.json"
+    assert repo_root.bundled_file("assets/no/such/file.json") is None
+
+
+def test_an_install_finds_them_under_share_mesh_engine(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    share = tmp_path.joinpath(*repo_root.BUNDLED_SHARE, "assets", "data")
+    share.mkdir(parents=True)
+    (share / "monster_moves.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(repo_root, "engine_source_root", lambda: tmp_path / "site-packages")  # no data beside it
+    monkeypatch.setattr(repo_root.sysconfig, "get_path", lambda name, scheme=None: str(tmp_path))
+    assert repo_root.bundled_file("assets/data/monster_moves.json") == share / "monster_moves.json"
+
+
+def test_folders_are_found_the_same_way(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    assert repo_root.bundled_dir("assets/icons") == repo_root.engine_source_root() / "assets" / "icons"
+    icons = tmp_path.joinpath(*repo_root.BUNDLED_SHARE, "assets", "icons")
+    icons.mkdir(parents=True)
+    monkeypatch.setattr(repo_root, "engine_source_root", lambda: tmp_path / "site-packages")
+    monkeypatch.setattr(repo_root.sysconfig, "get_path", lambda name, scheme=None: str(tmp_path))
+    assert repo_root.bundled_dir("assets/icons") == icons
+    assert repo_root.bundled_dir("assets/nothing") == tmp_path / "site-packages" / "assets" / "nothing"
+
+
+def test_an_exported_games_own_copy_comes_before_the_players_mesh(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """H9.2: an exported game (its engine in its own folder) carries the engine's text in share/mesh-engine beside
+    it; a Mesh the player's Python happens to hold, maybe another version, comes after it."""
+    game, player = tmp_path / "game", tmp_path / "python"
+    for root, text in ((game, "the game's copy"), (player, "the player's Mesh")):
+        locale = root.joinpath(*repo_root.BUNDLED_SHARE, "locales", "en.json")
+        locale.parent.mkdir(parents=True)
+        locale.write_text(text, encoding="utf-8")
+    monkeypatch.setattr(repo_root, "engine_source_root", lambda: game)
+    monkeypatch.setattr(repo_root.sysconfig, "get_path", lambda name, scheme=None: str(player))
+    assert repo_root.bundled_data_roots()[:2] == [game, game.joinpath(*repo_root.BUNDLED_SHARE)]
+    found = repo_root.bundled_file("locales/en.json")
+    assert found is not None and found.read_text(encoding="utf-8") == "the game's copy"

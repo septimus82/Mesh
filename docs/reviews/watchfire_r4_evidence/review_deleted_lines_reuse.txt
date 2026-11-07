@@ -1,0 +1,17 @@
+# Review edge case: a line added after deleting middle lines (real project_ops calls, dumps_stable round trips)
+## on f6dbf03 (before the correction)
+after deleting 3..9: ['root', 'line_2', 'line_10', 'line_11']
+new id: line_5 | follows: ['line_11']
+numbered: {'root': 1, 'line_2': 2, 'line_5': 3, 'line_10': 4, 'line_11': 5}
+new line shown as number 3 of 5 | last numbered: line_11
+tie: line_order of {line_2, line_02} both insertion orders: ['line_2', 'line_02'] ['line_02', 'line_2']
+## with the correction
+after deleting 3..9: ['root', 'line_2', 'line_10', 'line_11']
+new id: line_12 | follows: ['line_11']
+numbered: {'root': 1, 'line_2': 2, 'line_10': 3, 'line_11': 4, 'line_12': 5}
+new line shown as number 5 of 5 | last numbered: line_12
+tie: line_order of {line_2, line_02} both insertion orders: ['line_02', 'line_2'] ['line_02', 'line_2']
+## the new tests against f6dbf03's project_ops.py
+FAILED test_a_line_added_after_deleting_middle_lines_is_numbered_last_and_the_others_keep_theirs
+FAILED test_lines_with_the_same_number_are_ordered_by_name_whatever_the_file_order
+2 failed, 5 passed in 3.47s

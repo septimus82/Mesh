@@ -1,0 +1,325 @@
+{
+  "renderer": "legacy",
+  "passed": false,
+  "steps": [
+    {
+      "step": "open_the_lab",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "renderer": "legacy",
+        "lighting": {
+          "shadows_mode": "hard",
+          "ambient": [
+            60,
+            70,
+            110,
+            255
+          ],
+          "occluders": 6,
+          "stats": {
+            "shadows_mode": "hard",
+            "occluder_count": 6,
+            "culled_occluder_count": 4,
+            "shadow_poly_count": 4,
+            "mask_rendered": true,
+            "mask_backend": "overlay",
+            "composite_ok": true,
+            "fallback_drawn": true,
+            "selected_shadow_light_type": "static",
+            "selected_shadow_light_pos": [
+              176.0,
+              336.0
+            ],
+            "selected_shadow_light_radius": 260.0
+          }
+        }
+      },
+      "seconds": 8.4,
+      "screenshot": "01_open_the_lab.png"
+    },
+    {
+      "step": "1_one_light_no_walls",
+      "ok": false,
+      "error": "RuntimeError: could not place the cursor at (-1777, 317): it stays at (-1601, 319) (confined to (-1920, 0, 2560, 1440)); not clicking elsewhere",
+      "detail": "Traceback (most recent call last):\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 186, in step\n    detail, ok, error = action(), True, None\n                        ~~~~~~^^\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 342, in s01_one_light_no_walls\n    room(\"open\")\n    ~~~~^^^^^^^^\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 224, in room\n    p().button(label)\n    ~~~~~~~~~~^^^^^^^\n  File \"D:\\Games\\Mesh\\tooling\\acceptance_first_workflow.py\", line 68, in button\n    self.d.click(*self._xy(matches[nth][\"rect\"]))\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: could not place the cursor at (-1777, 317): it stays at (-1601, 319) (confined to (-1920, 0, 2560, 1440)); not clicking elsewhere\n",
+      "seconds": 3.7,
+      "screenshot": "02_1_one_light_no_walls.png"
+    },
+    {
+      "step": "2_to_7_two_lamps_two_walls",
+      "ok": false,
+      "error": "AssertionError: {'checks': {'2_wall_casts_a_shadow': True, '3_room_light_stays_in_it': False, '4_both_lamps_light_one_place': True, '5_wall_W1_blocks_only_lamp_A': False, '6_wall_W2_blocks_only_lamp_B': False, '7_lamp_A_off_leaves_lamp_B_as_it_was': True}, 'pixels': {'both': {'R': (38.2, 30.6, 22.8), 'S': (182.1, 134.6, 87.8), 'near_A': (169.4, 127.6, 89.6), 'both': (143.1, 116.4, 87.6)}, 'a_only': {'R': (27.7, 20.2, 14.8), 'S': (145.6, 105.3, 71.3), 'near_A': (152.8, 111.7, 77.0), 'both': (93.7, 69.3, 50.2)}, 'none': {'R': (35.6, 29.0, 26.2), 'S': (35.8, 29.2, 26.2), 'near_A': (40.3, 33.6, 30.8), 'both': (35.8, 29.2, 26.2)}, 'b_only': {'R': (72.2, 63.6, 54.1), 'S': (21.2, 18.8, 15.8), 'near_A': (20.2, 18.2, 16.6), 'both': (85.0, 76.1, 64.2)}}}",
+      "detail": "Traceback (most recent call last):\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 186, in step\n    detail, ok, error = action(), True, None\n                        ~~~~~~^^\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 399, in s02_to_07_two_lamps\n    assert all(checks.values()), {\"checks\": checks, \"pixels\": v}\n           ~~~^^^^^^^^^^^^^^^^^\nAssertionError: {'checks': {'2_wall_casts_a_shadow': True, '3_room_light_stays_in_it': False, '4_both_lamps_light_one_place': True, '5_wall_W1_blocks_only_lamp_A': False, '6_wall_W2_blocks_only_lamp_B': False, '7_lamp_A_off_leaves_lamp_B_as_it_was': True}, 'pixels': {'both': {'R': (38.2, 30.6, 22.8), 'S': (182.1, 134.6, 87.8), 'near_A': (169.4, 127.6, 89.6), 'both': (143.1, 116.4, 87.6)}, 'a_only': {'R': (27.7, 20.2, 14.8), 'S': (145.6, 105.3, 71.3), 'near_A': (152.8, 111.7, 77.0), 'both': (93.7, 69.3, 50.2)}, 'none': {'R': (35.6, 29.0, 26.2), 'S': (35.8, 29.2, 26.2), 'near_A': (40.3, 33.6, 30.8), 'both': (35.8, 29.2, 26.2)}, 'b_only': {'R': (72.2, 63.6, 54.1), 'S': (21.2, 18.8, 15.8), 'near_A': (20.2, 18.2, 16.6), 'both': (85.0, 76.1, 64.2)}}}\n",
+      "seconds": 26.8,
+      "screenshot": "03_2_to_7_two_lamps_two_walls.png"
+    },
+    {
+      "step": "8_move_a_light",
+      "ok": false,
+      "error": "AssertionError: {'checked': 242, 'wrong': 21, 'examples': [{'at': (41.0, 393.0), 'should_be': 'blocked', 'got': (13.7, 10.6, 9.0), 'want': (34.7, 27.7, 25.3)}, {'at': (55.0, 375.0), 'should_be': 'blocked', 'got': (17.4, 13.4, 10.7), 'want': (36.7, 29.7, 27.0)}, {'at': (41.0, 329.0), 'should_be': 'blocked', 'got': (15.0, 12.0, 9.8), 'want': (35.3, 28.7, 25.7)}, {'at': (55.0, 343.0), 'should_be': 'blocked', 'got': (18.0, 13.6, 10.9), 'want': (36.0, 29.3, 26.7)}, {'at': (41.0, 297.0), 'should_be': 'blocked', 'got': (14.4, 11.0, 9.0), 'want': (34.7, 27.7, 25.3)}]}",
+      "detail": "Traceback (most recent call last):\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 186, in step\n    detail, ok, error = action(), True, None\n                        ~~~~~~^^\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 422, in s08_move_a_light\n    assert result[\"wrong\"] == 0 and result[\"checked\"] > 80, result\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: {'checked': 242, 'wrong': 21, 'examples': [{'at': (41.0, 393.0), 'should_be': 'blocked', 'got': (13.7, 10.6, 9.0), 'want': (34.7, 27.7, 25.3)}, {'at': (55.0, 375.0), 'should_be': 'blocked', 'got': (17.4, 13.4, 10.7), 'want': (36.7, 29.7, 27.0)}, {'at': (41.0, 329.0), 'should_be': 'blocked', 'got': (15.0, 12.0, 9.8), 'want': (35.3, 28.7, 25.7)}, {'at': (55.0, 343.0), 'should_be': 'blocked', 'got': (18.0, 13.6, 10.9), 'want': (36.0, 29.3, 26.7)}, {'at': (41.0, 297.0), 'should_be': 'blocked', 'got': (14.4, 11.0, 9.0), 'want': (34.7, 27.7, 25.3)}]}\n",
+      "seconds": 27.8,
+      "screenshot": "04_8_move_a_light.png"
+    },
+    {
+      "step": "9_flicker_keeps_the_shadow",
+      "ok": false,
+      "error": "AssertionError: a flickering lamp's light got behind the wall: (28.8, 22.2, 18.1) vs (35.6, 29.0, 26.2)",
+      "detail": "Traceback (most recent call last):\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 186, in step\n    detail, ok, error = action(), True, None\n                        ~~~~~~^^\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 446, in s09_flicker_keeps_the_shadow\n    assert same(sample[\"R\"], none_r, 5), f\"a flickering lamp's light got behind the wall: {sample['R']} vs {none_r}\"\n           ~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: a flickering lamp's light got behind the wall: (28.8, 22.2, 18.1) vs (35.6, 29.0, 26.2)\n",
+      "seconds": 11.6,
+      "screenshot": "05_9_flicker_keeps_the_shadow.png"
+    },
+    {
+      "step": "10_to_12_corner_reach_slant",
+      "ok": false,
+      "error": "AssertionError: shadow or light beyond the reach: [(48.0, 48.0), (80.0, 48.0), (112.0, 48.0), (144.0, 48.0), (176.0, 48.0), (208.0, 48.0), (240.0, 48.0), (272.0, 48.0), (304.0, 48.0), (336.0, 48.0), (368.0, 48.0), (400.0, 48.0), (432.0, 48.0), (464.0, 48.0), (496.0, 48.0), (528.0, 48.0)]",
+      "detail": "Traceback (most recent call last):\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 186, in step\n    detail, ok, error = action(), True, None\n                        ~~~~~~^^\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 472, in s10_to_12_shapes\n    assert not beams, f\"shadow or light beyond the reach: {beams}\"\n           ^^^^^^^^^\nAssertionError: shadow or light beyond the reach: [(48.0, 48.0), (80.0, 48.0), (112.0, 48.0), (144.0, 48.0), (176.0, 48.0), (208.0, 48.0), (240.0, 48.0), (272.0, 48.0), (304.0, 48.0), (336.0, 48.0), (368.0, 48.0), (400.0, 48.0), (432.0, 48.0), (464.0, 48.0), (496.0, 48.0), (528.0, 48.0)]\n",
+      "seconds": 16.5,
+      "screenshot": "06_10_to_12_corner_reach_slant.png"
+    },
+    {
+      "step": "14_zoom_in_studio",
+      "ok": false,
+      "error": "AssertionError: ({'R': 44.8, 'S': 141.8, 'near_A': 132.0}, {'R': 58.6, 'S': 140.8, 'near_A': 131.2})",
+      "detail": "Traceback (most recent call last):\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 186, in step\n    detail, ok, error = action(), True, None\n                        ~~~~~~^^\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 496, in s14_zoom_in_studio\n    assert close_enough(after, before), (before, after)\n           ~~~~~~~~~~~~^^^^^^^^^^^^^^^\nAssertionError: ({'R': 44.8, 'S': 141.8, 'near_A': 132.0}, {'R': 58.6, 'S': 140.8, 'near_A': 131.2})\n",
+      "seconds": 10.5,
+      "screenshot": "07_14_zoom_in_studio.png"
+    },
+    {
+      "step": "16_lighting_off_and_on",
+      "ok": false,
+      "error": "AssertionError: lighting back on: the same as before",
+      "detail": "Traceback (most recent call last):\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 186, in step\n    detail, ok, error = action(), True, None\n                        ~~~~~~^^\n  File \"D:\\Games\\Mesh\\tooling\\shadow_lab.py\", line 516, in s16_lighting_off_and_on\n    assert same(rgb(on, world(R)), rgb(memo[\"two_shots\"][\"both\"], world(R))), \"lighting back on: the same as before\"\n           ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: lighting back on: the same as before\n",
+      "seconds": 7.5,
+      "screenshot": "08_16_lighting_off_and_on.png"
+    },
+    {
+      "step": "19_no_lamps_no_darkening",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "points": 24,
+        "largest_difference": 0.0
+      },
+      "seconds": 8.0,
+      "screenshot": "09_19_no_lamps_no_darkening.png"
+    },
+    {
+      "step": "18_13_play_matches_studio_and_scrolls",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "edit": {
+          "R": 44.8,
+          "S": 141.8,
+          "near_A": 132.0
+        },
+        "play": {
+          "R": 44.6,
+          "S": 141.9,
+          "near_A": 131.5
+        },
+        "scrolled": {
+          "R": 44.6,
+          "S": 141.9,
+          "near_A": 131.5
+        },
+        "player": [
+          [
+            128.0,
+            128.0
+          ],
+          [
+            214.12905499976478,
+            72.91590499983431
+          ]
+        ]
+      },
+      "seconds": 8.1,
+      "screenshot": "10_18_13_play_matches_studio_and_scrolls.png"
+    },
+    {
+      "step": "15_room_change_and_back",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "open_room": {
+          "lamps": 1,
+          "stats": {
+            "shadows_mode": "hard",
+            "occluder_count": 4,
+            "culled_occluder_count": 2,
+            "shadow_poly_count": 2,
+            "mask_rendered": true,
+            "mask_backend": "overlay",
+            "composite_ok": true,
+            "fallback_drawn": true,
+            "selected_shadow_light_type": "static",
+            "selected_shadow_light_pos": [
+              336.0,
+              240.0
+            ],
+            "selected_shadow_light_radius": 260.0
+          }
+        },
+        "back": {
+          "R": 44.6,
+          "S": 141.9,
+          "near_A": 131.5
+        },
+        "before": {
+          "R": 44.6,
+          "S": 141.9,
+          "near_A": 131.5
+        }
+      },
+      "seconds": 23.6,
+      "screenshot": "11_15_room_change_and_back.png"
+    },
+    {
+      "step": "17_soft_save_and_reopen",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "lights_saved": {
+          "two": [
+            {
+              "color": "#ffffff",
+              "enabled": true,
+              "flicker_amount": 0.2,
+              "flicker_enabled": false,
+              "flicker_speed": 5.0,
+              "mode": "soft",
+              "radius": 260.0,
+              "x": 272.0,
+              "y": 336.0
+            },
+            {
+              "color": "#88bbff",
+              "enabled": true,
+              "mode": "soft",
+              "radius": 260.0,
+              "x": 176.0,
+              "y": 176.0
+            }
+          ],
+          "shapes": [
+            {
+              "color": "#ffffff",
+              "enabled": true,
+              "mode": "soft",
+              "radius": 260.0,
+              "x": 272.0,
+              "y": 240.0
+            }
+          ]
+        },
+        "largest_difference": 0.0
+      },
+      "seconds": 13.6,
+      "screenshot": "12_17_soft_save_and_reopen.png"
+    },
+    {
+      "step": "20_performance",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "renderer": "legacy",
+        "lighting_pass": {
+          "two": {
+            "profile": {
+              "frames": 240,
+              "cpu_ms": 1.64,
+              "gpu_ms": 0.114
+            },
+            "stats": {
+              "shadows_mode": "hard",
+              "occluder_count": 6,
+              "culled_occluder_count": 4,
+              "shadow_poly_count": 4,
+              "mask_rendered": true,
+              "mask_backend": "overlay",
+              "composite_ok": true,
+              "fallback_drawn": true,
+              "selected_shadow_light_type": "static",
+              "selected_shadow_light_pos": [
+                272.0,
+                336.0
+              ],
+              "selected_shadow_light_radius": 260.0
+            }
+          },
+          "shapes": {
+            "profile": {
+              "frames": 240,
+              "cpu_ms": 2.498,
+              "gpu_ms": 0.164
+            },
+            "stats": {
+              "shadows_mode": "hard",
+              "occluder_count": 9,
+              "culled_occluder_count": 8,
+              "shadow_poly_count": 10,
+              "mask_rendered": true,
+              "mask_backend": "overlay",
+              "composite_ok": true,
+              "fallback_drawn": true,
+              "selected_shadow_light_type": "static",
+              "selected_shadow_light_pos": [
+                272.0,
+                240.0
+              ],
+              "selected_shadow_light_radius": 260.0
+            }
+          },
+          "open": {
+            "profile": {
+              "frames": 240,
+              "cpu_ms": 2.487,
+              "gpu_ms": 0.213
+            },
+            "stats": {
+              "shadows_mode": "hard",
+              "occluder_count": 4,
+              "culled_occluder_count": 2,
+              "shadow_poly_count": 2,
+              "mask_rendered": true,
+              "mask_backend": "overlay",
+              "composite_ok": true,
+              "fallback_drawn": true,
+              "selected_shadow_light_type": "static",
+              "selected_shadow_light_pos": [
+                336.0,
+                240.0
+              ],
+              "selected_shadow_light_radius": 260.0
+            }
+          },
+          "dark": {
+            "profile": {
+              "frames": 240,
+              "cpu_ms": 1.79,
+              "gpu_ms": 0.164
+            },
+            "stats": {
+              "shadows_mode": "hard",
+              "occluder_count": 4,
+              "culled_occluder_count": 0,
+              "shadow_poly_count": 0,
+              "mask_rendered": false,
+              "mask_backend": "overlay",
+              "composite_ok": true,
+              "fallback_drawn": false,
+              "selected_shadow_light_type": null,
+              "selected_shadow_light_pos": null,
+              "selected_shadow_light_radius": null
+            }
+          }
+        }
+      },
+      "seconds": 23.1,
+      "screenshot": "13_20_performance.png"
+    }
+  ]
+}
