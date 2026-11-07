@@ -1,0 +1,259 @@
+[
+ {
+  "scene": "start__l3_off_00cm_250cm.json",
+  "before": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9999,
+   "lit_m2": 78.875
+  },
+  "after": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9999,
+   "lit_m2": 78.875,
+   "off_m2": 78.875,
+   "cpu_blocked": 0,
+   "false": 0,
+   "leak": 0
+  }
+ },
+ {
+  "scene": "start__l3_off_10cm_250cm.json",
+  "before": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9998,
+   "lit_m2": 79.3125
+  },
+  "after": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9998,
+   "lit_m2": 79.3125,
+   "off_m2": 79.3125,
+   "cpu_blocked": 0,
+   "false": 0,
+   "leak": 0
+  }
+ },
+ {
+  "scene": "start__l3_off_15cm_250cm.json",
+  "before": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9998,
+   "lit_m2": 79.3125
+  },
+  "after": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9998,
+   "lit_m2": 79.3125,
+   "off_m2": 79.3125,
+   "cpu_blocked": 0,
+   "false": 0,
+   "leak": 0
+  }
+ },
+ {
+  "scene": "start__l3_off_19cm_250cm.json",
+  "before": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9998,
+   "lit_m2": 79.3125
+  },
+  "after": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9998,
+   "lit_m2": 79.3125,
+   "off_m2": 79.3125,
+   "cpu_blocked": 0,
+   "false": 0,
+   "leak": 0
+  }
+ },
+ {
+  "scene": "start__l3_off_21cm_250cm.json",
+  "before": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9998,
+   "lit_m2": 79.3125
+  },
+  "after": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9998,
+   "lit_m2": 79.3125,
+   "off_m2": 79.3125,
+   "cpu_blocked": 0,
+   "false": 0,
+   "leak": 0
+  }
+ },
+ {
+  "scene": "start__l3_off_25cm_250cm.json",
+  "before": {
+   "fixtures": [],
+   "energy": 0.6253,
+   "lit_m2": 46.75
+  },
+  "after": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9998,
+   "lit_m2": 78.9375,
+   "off_m2": 78.9375,
+   "cpu_blocked": 0,
+   "false": 0,
+   "leak": 0
+  }
+ },
+ {
+  "scene": "start__l3_off_30cm_250cm.json",
+  "before": {
+   "fixtures": [],
+   "energy": 0.7163,
+   "lit_m2": 53.3125
+  },
+  "after": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9997,
+   "lit_m2": 79.25,
+   "off_m2": 79.3125,
+   "cpu_blocked": 0,
+   "false": 0,
+   "leak": 0
+  }
+ },
+ {
+  "scene": "start__l3_off_40cm_250cm.json",
+  "before": {
+   "fixtures": [],
+   "energy": 0.8561,
+   "lit_m2": 63.375
+  },
+  "after": {
+   "fixtures": [],
+   "energy": 0.8561,
+   "lit_m2": 63.375,
+   "off_m2": 79.3125,
+   "cpu_blocked": 67,
+   "false": 0,
+   "leak": 0
+  }
+ },
+ {
+  "scene": "start__l3_off_00cm_220cm.json",
+  "before": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9999,
+   "lit_m2": 80.25
+  },
+  "after": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9999,
+   "lit_m2": 80.25,
+   "off_m2": 80.25,
+   "cpu_blocked": 0,
+   "false": 0,
+   "leak": 0
+  }
+ },
+ {
+  "scene": "start__l3_off_00cm_285cm.json",
+  "before": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9999,
+   "lit_m2": 75.75
+  },
+  "after": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9999,
+   "lit_m2": 75.75,
+   "off_m2": 75.75,
+   "cpu_blocked": 0,
+   "false": 0,
+   "leak": 0
+  }
+ },
+ {
+  "scene": "start__l3_off_00cm_300cm.json",
+  "before": {
+   "fixtures": [],
+   "energy": 0.0076,
+   "lit_m2": 0.0
+  },
+  "after": {
+   "fixtures": [],
+   "energy": 0.0076,
+   "lit_m2": 0.0,
+   "off_m2": 74.1875,
+   "cpu_blocked": 320,
+   "false": 0,
+   "leak": 0
+  }
+ },
+ {
+  "scene": "start__l3_off_00cm_150cm.json",
+  "before": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9999,
+   "lit_m2": 80.25
+  },
+  "after": {
+   "fixtures": [
+    "lamp_west"
+   ],
+   "energy": 0.9999,
+   "lit_m2": 80.25,
+   "off_m2": 80.25,
+   "cpu_blocked": 0,
+   "false": 0,
+   "leak": 0
+  }
+ },
+ {
+  "scene": "start__l3_off_60cm_250cm.json",
+  "before": {
+   "fixtures": [],
+   "energy": 0.9546,
+   "lit_m2": 75.5
+  },
+  "after": {
+   "fixtures": [],
+   "energy": 0.9546,
+   "lit_m2": 75.5,
+   "off_m2": 79.3125,
+   "cpu_blocked": 16,
+   "false": 0,
+   "leak": 0
+  }
+ }
+]

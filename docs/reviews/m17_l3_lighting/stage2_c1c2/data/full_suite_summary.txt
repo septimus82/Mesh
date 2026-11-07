@@ -1,0 +1,4 @@
+E            +  where 1 = CompletedProcess(args=['C:\\Users\\slebb\\AppData\\Local\\Programs\\Python\\Python313\\python.exe', '-m', 'pytest', '-...===================\nERROR tests/test_m3.py::test_a\n3 passed, 1 skipped, 9 deselected, 1 error in 0.11s\n", stderr='').returncode
+FAILED tests/test_ci_shards_plugin.py::test_two_real_shards_run_the_whole_suite_once
+FAILED tests/test_ci_shards_plugin.py::test_the_gpu_plan_runs_real_shards_by_its_own_pins
+2 failed, 11042 passed, 365 skipped, 176 deselected in 757.81s (0:12:37)

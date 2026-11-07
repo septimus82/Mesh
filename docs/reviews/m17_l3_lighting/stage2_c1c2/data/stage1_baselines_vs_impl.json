@@ -1,0 +1,150 @@
+{
+ "compared": 36,
+ "identical": 36,
+ "frames": [
+  {
+   "frame": "cottage__evening.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "cottage__evening__noshadow.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "cottage__evening__roomoff.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "cottage__night.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "cottage__night__noshadow.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "cottage__night__roomoff.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "cottage__noon.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "cottage__noon__noshadow.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "cottage__noon__roomoff.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_plain_lamps__evening.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_plain_lamps__evening__noshadow.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_plain_lamps__evening__roomoff.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_plain_lamps__night.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_plain_lamps__night__noshadow.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_plain_lamps__night__roomoff.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_plain_lamps__noon.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_plain_lamps__noon__noshadow.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_plain_lamps__noon__roomoff.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_shadow_lamps__evening.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_shadow_lamps__evening__noshadow.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_shadow_lamps__evening__roomoff.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_shadow_lamps__night.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_shadow_lamps__night__noshadow.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_shadow_lamps__night__roomoff.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_shadow_lamps__noon.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_shadow_lamps__noon__noshadow.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "lk_shadow_lamps__noon__roomoff.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "village_lamps__evening.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "village_lamps__evening__noshadow.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "village_lamps__evening__roomoff.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "village_lamps__night.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "village_lamps__night__noshadow.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "village_lamps__night__roomoff.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "village_lamps__noon.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "village_lamps__noon__noshadow.png",
+   "changed_px": 0
+  },
+  {
+   "frame": "village_lamps__noon__roomoff.png",
+   "changed_px": 0
+  }
+ ]
+}
