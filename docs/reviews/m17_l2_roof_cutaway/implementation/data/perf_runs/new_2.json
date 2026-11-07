@@ -1,0 +1,46 @@
+{
+ "engine": "D:\\Games\\Mesh-cut\\engine\\hd2d\\renderer.py",
+ "has_new_rule": true,
+ "shots": {
+  "a1_front_of_cottage": {
+   "n": 240,
+   "p50_ms": 1.8586,
+   "p95_ms": 3.2799
+  },
+  "a2_beside_shop": {
+   "n": 240,
+   "p50_ms": 1.815,
+   "p95_ms": 2.8928
+  },
+  "b3_behind_cottage_x608": {
+   "n": 240,
+   "p50_ms": 1.8678,
+   "p95_ms": 3.1642
+  },
+  "c1_partly_hidden": {
+   "n": 240,
+   "p50_ms": 2.6557,
+   "p95_ms": 4.2066
+  },
+  "d3_inside_shop": {
+   "n": 240,
+   "p50_ms": 1.0409,
+   "p95_ms": 2.2948
+  },
+  "e_close_behind_cottage": {
+   "n": 240,
+   "p50_ms": 0.4116,
+   "p95_ms": 1.9886
+  },
+  "e_indoor_behind_cottage": {
+   "n": 240,
+   "p50_ms": 0.382,
+   "p95_ms": 0.3912
+  },
+  "v2_village_behind_cottage": {
+   "n": 240,
+   "p50_ms": 0.3523,
+   "p95_ms": 0.3564
+  }
+ }
+}

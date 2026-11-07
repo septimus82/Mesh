@@ -1,0 +1,339 @@
+{
+ "summary": {
+  "impl_frames_identical_to_prototype": "27/27",
+  "cutaway_off_frames_identical": "27/27",
+  "visibility_unchanged_in_every_shot": true,
+  "nothing_hidden_cut_px_before_after": {
+   "a1_front_of_cottage": [
+    0,
+    0
+   ],
+   "a3_beside_cottage_east": [
+    1151,
+    0
+   ],
+   "b1_behind_cottage_x480": [
+    497,
+    0
+   ],
+   "b5_behind_cottage_x736": [
+    483,
+    0
+   ],
+   "d1_shop_front": [
+    0,
+    0
+   ],
+   "d2_shop_doorway": [
+    4642,
+    1899
+   ],
+   "d4_out_again": [
+    0,
+    0
+   ],
+   "e_indoor_partly_hidden": [
+    6472,
+    0
+   ],
+   "v1_village_front_of_cottage": [
+    0,
+    0
+   ],
+   "v4_village_beside_shop": [
+    3352,
+    0
+   ]
+  },
+  "needed_cuts_hole_smaller_pct": [
+   43,
+   64
+  ],
+  "needed_cuts_outside_box_less_pct": [
+   65,
+   93
+  ],
+  "all_27_cut_px": [
+   379410,
+   173102,
+   -54
+  ],
+  "all_27_outside_box_px": [
+   272457,
+   66914,
+   -75
+  ]
+ },
+ "shots": {
+  "a1_front_of_cottage": {
+   "visible_without_cut": 1.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 0,
+   "cut_px_after": 0,
+   "outside_box_px_before": 0,
+   "outside_box_px_after": 0,
+   "note": "in front of the cottage: nothing in the way"
+  },
+  "a2_beside_shop": {
+   "visible_without_cut": 0.329,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 11288,
+   "cut_px_after": 6023,
+   "outside_box_px_before": 6842,
+   "outside_box_px_after": 1577,
+   "note": "beside the shop, north-west of it (the audit's v1 over-cut)"
+  },
+  "a3_beside_cottage_east": {
+   "visible_without_cut": 1.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 1151,
+   "cut_px_after": 0,
+   "outside_box_px_before": 1151,
+   "outside_box_px_after": 0,
+   "note": "east of the cottage, level with its roof"
+  },
+  "b1_behind_cottage_x480": {
+   "visible_without_cut": 1.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 497,
+   "cut_px_after": 0,
+   "outside_box_px_before": 497,
+   "outside_box_px_after": 0,
+   "note": "walking west to east just north of the cottage"
+  },
+  "b2_behind_cottage_x544": {
+   "visible_without_cut": 0.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 21106,
+   "cut_px_after": 11984,
+   "outside_box_px_before": 13354,
+   "outside_box_px_after": 4232,
+   "note": "walking west to east just north of the cottage"
+  },
+  "b3_behind_cottage_x608": {
+   "visible_without_cut": 0.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 24616,
+   "cut_px_after": 11984,
+   "outside_box_px_before": 16864,
+   "outside_box_px_after": 4232,
+   "note": "walking west to east just north of the cottage"
+  },
+  "b4_behind_cottage_x672": {
+   "visible_without_cut": 0.0,
+   "visible_with_cut_before": 0.913,
+   "visible_with_cut_after": 0.913,
+   "cut_px_before": 20514,
+   "cut_px_after": 11392,
+   "outside_box_px_before": 13354,
+   "outside_box_px_after": 4232,
+   "note": "walking west to east just north of the cottage"
+  },
+  "b5_behind_cottage_x736": {
+   "visible_without_cut": 1.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 483,
+   "cut_px_after": 0,
+   "outside_box_px_before": 483,
+   "outside_box_px_after": 0,
+   "note": "walking west to east just north of the cottage"
+  },
+  "c1_partly_hidden": {
+   "visible_without_cut": 0.149,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 17418,
+   "cut_px_after": 8020,
+   "outside_box_px_before": 11638,
+   "outside_box_px_after": 2240,
+   "note": "north of the cottage: the roof hides the legs, not the head"
+  },
+  "c2_mostly_hidden": {
+   "visible_without_cut": 0.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 21562,
+   "cut_px_after": 10516,
+   "outside_box_px_before": 14014,
+   "outside_box_px_after": 2968,
+   "note": "closer behind: the roof hides most of the player"
+  },
+  "d1_shop_front": {
+   "visible_without_cut": 1.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 0,
+   "cut_px_after": 0,
+   "outside_box_px_before": 0,
+   "outside_box_px_after": 0,
+   "note": "in front of the shop"
+  },
+  "d2_shop_doorway": {
+   "visible_without_cut": 1.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 4642,
+   "cut_px_after": 1899,
+   "outside_box_px_before": 4370,
+   "outside_box_px_after": 1627,
+   "note": "in the shop's open front"
+  },
+  "d3_inside_shop": {
+   "visible_without_cut": 0.259,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 15504,
+   "cut_px_after": 8769,
+   "outside_box_px_before": 10435,
+   "outside_box_px_after": 3700,
+   "note": "inside the shop"
+  },
+  "d4_out_again": {
+   "visible_without_cut": 1.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 0,
+   "cut_px_after": 0,
+   "outside_box_px_before": 0,
+   "outside_box_px_after": 0,
+   "note": "out again, in front"
+  },
+  "e_close_beside_shop": {
+   "visible_without_cut": 0.317,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 25526,
+   "cut_px_after": 12228,
+   "outside_box_px_before": 18080,
+   "outside_box_px_after": 4782,
+   "note": "close camera preset"
+  },
+  "e_close_partly_hidden": {
+   "visible_without_cut": 0.364,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 36158,
+   "cut_px_after": 14200,
+   "outside_box_px_before": 28246,
+   "outside_box_px_after": 6288,
+   "note": "close camera preset"
+  },
+  "e_close_behind_cottage": {
+   "visible_without_cut": 0.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 56554,
+   "cut_px_after": 26296,
+   "outside_box_px_before": 43224,
+   "outside_box_px_after": 12966,
+   "note": "close camera preset"
+  },
+  "e_wide_beside_shop": {
+   "visible_without_cut": 0.411,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 3509,
+   "cut_px_after": 1812,
+   "outside_box_px_before": 1679,
+   "outside_box_px_after": 147,
+   "note": "wide camera preset"
+  },
+  "e_wide_partly_hidden": {
+   "visible_without_cut": 0.675,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 3922,
+   "cut_px_after": 1728,
+   "outside_box_px_before": 2032,
+   "outside_box_px_after": 138,
+   "note": "wide camera preset"
+  },
+  "e_wide_behind_cottage": {
+   "visible_without_cut": 0.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 7998,
+   "cut_px_after": 4128,
+   "outside_box_px_before": 3948,
+   "outside_box_px_after": 378,
+   "note": "wide camera preset"
+  },
+  "e_indoor_beside_shop": {
+   "visible_without_cut": 0.781,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 15306,
+   "cut_px_after": 5479,
+   "outside_box_px_before": 12246,
+   "outside_box_px_after": 2419,
+   "note": "indoor camera preset"
+  },
+  "e_indoor_partly_hidden": {
+   "visible_without_cut": 1.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 6472,
+   "cut_px_after": 0,
+   "outside_box_px_before": 6472,
+   "outside_box_px_after": 0,
+   "note": "indoor camera preset"
+  },
+  "e_indoor_behind_cottage": {
+   "visible_without_cut": 0.317,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 40118,
+   "cut_px_after": 15678,
+   "outside_box_px_before": 31518,
+   "outside_box_px_after": 7078,
+   "note": "indoor camera preset"
+  },
+  "v1_village_front_of_cottage": {
+   "visible_without_cut": 1.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 0,
+   "cut_px_after": 0,
+   "outside_box_px_before": 0,
+   "outside_box_px_after": 0,
+   "note": "template village: in front of the cottage, clear of its door trigger"
+  },
+  "v2_village_behind_cottage": {
+   "visible_without_cut": 0.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 25089,
+   "cut_px_after": 11990,
+   "outside_box_px_before": 17223,
+   "outside_box_px_after": 4124,
+   "note": "template village: behind the cottage (the GPU test's spot)"
+  },
+  "v3_village_inside_shop": {
+   "visible_without_cut": 0.259,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 16625,
+   "cut_px_after": 8976,
+   "outside_box_px_before": 11435,
+   "outside_box_px_after": 3786,
+   "note": "template village: inside the shop (the GPU test's spot)"
+  },
+  "v4_village_beside_shop": {
+   "visible_without_cut": 1.0,
+   "visible_with_cut_before": 1.0,
+   "visible_with_cut_after": 1.0,
+   "cut_px_before": 3352,
+   "cut_px_after": 0,
+   "outside_box_px_before": 3352,
+   "outside_box_px_after": 0,
+   "note": "template village: north-west of the shop"
+  }
+ }
+}

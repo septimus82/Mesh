@@ -1,0 +1,8 @@
+INFO:engine.project_templates:Applying template 'blank' to C:\Users\slebb\AppData\Local\Temp\claude\c18a071c64bbe7a7\bff3a484-a7b8-4c6b-bf14-a015c42db67e\scratchpad\lva\l2\fullenv\bt\test_a_project_exports_as_a_st0\game
+INFO:engine.project_scaffold:Project created successfully.
+=========================== short test summary info ===========================
+FAILED tests/test_ci_shards_plugin.py::test_two_real_shards_run_the_whole_suite_once
+FAILED tests/test_ci_shards_plugin.py::test_the_gpu_plan_runs_real_shards_by_its_own_pins
+FAILED tests/test_export_bundle.py::test_a_project_exports_as_a_standalone_game
+3 failed, 11024 passed, 358 skipped, 176 deselected in 772.53s (0:12:52)
+exit 1
