@@ -1,0 +1,812 @@
+{
+ "a1_front_of_cottage": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   600,
+   540
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "in front of the cottage: nothing in the way",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 1.0,
+  "cut_changed_px": 0,
+  "cut_changed_outside_player_box_px": 0,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "a2_beside_shop": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   1100,
+   650
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "beside the shop, north-west of it (the audit's v1 over-cut)",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.329,
+  "cut_changed_px": 11288,
+  "cut_changed_outside_player_box_px": 6842,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "a3_beside_cottage_east": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   730,
+   672
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "east of the cottage, level with its roof",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 1.0,
+  "cut_changed_px": 1151,
+  "cut_changed_outside_player_box_px": 1151,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "b1_behind_cottage_x480": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   480,
+   736
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "walking west to east just north of the cottage",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 1.0,
+  "cut_changed_px": 497,
+  "cut_changed_outside_player_box_px": 497,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "b2_behind_cottage_x544": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   544,
+   736
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "walking west to east just north of the cottage",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.0,
+  "cut_changed_px": 21106,
+  "cut_changed_outside_player_box_px": 13354,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "b3_behind_cottage_x608": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   608,
+   736
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "walking west to east just north of the cottage",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.0,
+  "cut_changed_px": 24616,
+  "cut_changed_outside_player_box_px": 16864,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "b4_behind_cottage_x672": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   672,
+   736
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "walking west to east just north of the cottage",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 0.913,
+  "visible_without_cut": 0.0,
+  "cut_changed_px": 20514,
+  "cut_changed_outside_player_box_px": 13354,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "b5_behind_cottage_x736": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   736,
+   736
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "walking west to east just north of the cottage",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 1.0,
+  "cut_changed_px": 483,
+  "cut_changed_outside_player_box_px": 483,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "c1_partly_hidden": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   608,
+   784
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "north of the cottage: the roof hides the legs, not the head",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.149,
+  "cut_changed_px": 17418,
+  "cut_changed_outside_player_box_px": 11638,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "c2_mostly_hidden": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   608,
+   760
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "closer behind: the roof hides most of the player",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.0,
+  "cut_changed_px": 21562,
+  "cut_changed_outside_player_box_px": 14014,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "d1_shop_front": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   1210,
+   448
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "in front of the shop",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 1.0,
+  "cut_changed_px": 0,
+  "cut_changed_outside_player_box_px": 0,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "d2_shop_doorway": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   1210,
+   500
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "in the shop's open front",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 1.0,
+  "cut_changed_px": 4642,
+  "cut_changed_outside_player_box_px": 4370,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "d3_inside_shop": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   1210,
+   566
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "inside the shop",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "shop/col_floor",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.259,
+  "cut_changed_px": 15504,
+  "cut_changed_outside_player_box_px": 10435,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "d4_out_again": {
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "player_feet_px": [
+   1250,
+   455
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "out again, in front",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 1.0,
+  "cut_changed_px": 0,
+  "cut_changed_outside_player_box_px": 0,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "e_close_beside_shop": {
+  "scene": "packs/core_regions/scenes/lakeside__close.json",
+  "player_feet_px": [
+   1100,
+   650
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "close camera preset",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside__close.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 35.0,
+   "distance": 35.68,
+   "fov": 12.0
+  },
+  "player_pixels": 5388,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.317,
+  "cut_changed_px": 25526,
+  "cut_changed_outside_player_box_px": 18080,
+  "player_box_grown_16px": [
+   597,
+   283,
+   682,
+   437
+  ]
+ },
+ "e_close_partly_hidden": {
+  "scene": "packs/core_regions/scenes/lakeside__close.json",
+  "player_feet_px": [
+   608,
+   784
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "close camera preset",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside__close.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 35.0,
+   "distance": 35.68,
+   "fov": 12.0
+  },
+  "player_pixels": 5388,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.364,
+  "cut_changed_px": 36158,
+  "cut_changed_outside_player_box_px": 28246,
+  "player_box_grown_16px": [
+   597,
+   283,
+   682,
+   437
+  ]
+ },
+ "e_close_behind_cottage": {
+  "scene": "packs/core_regions/scenes/lakeside__close.json",
+  "player_feet_px": [
+   608,
+   736
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "close camera preset",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside__close.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 35.0,
+   "distance": 35.68,
+   "fov": 12.0
+  },
+  "player_pixels": 5388,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.0,
+  "cut_changed_px": 56554,
+  "cut_changed_outside_player_box_px": 43224,
+  "player_box_grown_16px": [
+   597,
+   283,
+   682,
+   437
+  ]
+ },
+ "e_wide_beside_shop": {
+  "scene": "packs/core_regions/scenes/lakeside__wide.json",
+  "player_feet_px": [
+   1100,
+   650
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "wide camera preset",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside__wide.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 40.0,
+   "distance": 85.63,
+   "fov": 12.0
+  },
+  "player_pixels": 924,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.411,
+  "cut_changed_px": 3509,
+  "cut_changed_outside_player_box_px": 1679,
+  "player_box_grown_16px": [
+   613,
+   317,
+   666,
+   399
+  ]
+ },
+ "e_wide_partly_hidden": {
+  "scene": "packs/core_regions/scenes/lakeside__wide.json",
+  "player_feet_px": [
+   608,
+   784
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "wide camera preset",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside__wide.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 40.0,
+   "distance": 85.63,
+   "fov": 12.0
+  },
+  "player_pixels": 924,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.675,
+  "cut_changed_px": 3922,
+  "cut_changed_outside_player_box_px": 2032,
+  "player_box_grown_16px": [
+   613,
+   317,
+   666,
+   399
+  ]
+ },
+ "e_wide_behind_cottage": {
+  "scene": "packs/core_regions/scenes/lakeside__wide.json",
+  "player_feet_px": [
+   608,
+   736
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "wide camera preset",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside__wide.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 40.0,
+   "distance": 85.63,
+   "fov": 12.0
+  },
+  "player_pixels": 924,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.0,
+  "cut_changed_px": 7998,
+  "cut_changed_outside_player_box_px": 3948,
+  "player_box_grown_16px": [
+   613,
+   317,
+   666,
+   399
+  ]
+ },
+ "e_indoor_beside_shop": {
+  "scene": "packs/core_regions/scenes/lakeside__indoor.json",
+  "player_feet_px": [
+   1100,
+   650
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "indoor camera preset",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside__indoor.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 55.0,
+   "distance": 35.68,
+   "fov": 12.0
+  },
+  "player_pixels": 5516,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.781,
+  "cut_changed_px": 15306,
+  "cut_changed_outside_player_box_px": 12246,
+  "player_box_grown_16px": [
+   597,
+   262,
+   682,
+   418
+  ]
+ },
+ "e_indoor_partly_hidden": {
+  "scene": "packs/core_regions/scenes/lakeside__indoor.json",
+  "player_feet_px": [
+   608,
+   784
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "indoor camera preset",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside__indoor.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 55.0,
+   "distance": 35.68,
+   "fov": 12.0
+  },
+  "player_pixels": 5516,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 1.0,
+  "cut_changed_px": 6472,
+  "cut_changed_outside_player_box_px": 6472,
+  "player_box_grown_16px": [
+   597,
+   262,
+   682,
+   418
+  ]
+ },
+ "e_indoor_behind_cottage": {
+  "scene": "packs/core_regions/scenes/lakeside__indoor.json",
+  "player_feet_px": [
+   608,
+   736
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "indoor camera preset",
+  "scene_after_settling": "packs/core_regions/scenes/lakeside__indoor.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 55.0,
+   "distance": 35.68,
+   "fov": 12.0
+  },
+  "player_pixels": 5516,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.317,
+  "cut_changed_px": 40118,
+  "cut_changed_outside_player_box_px": 31518,
+  "player_box_grown_16px": [
+   597,
+   262,
+   682,
+   418
+  ]
+ },
+ "v1_village_front_of_cottage": {
+  "scene": "packs/core_regions/scenes/start.json",
+  "player_feet_px": [
+   410,
+   290
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "template village: in front of the cottage, clear of its door trigger",
+  "scene_after_settling": "packs/core_regions/scenes/start.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 1.0,
+  "cut_changed_px": 0,
+  "cut_changed_outside_player_box_px": 0,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ },
+ "v2_village_behind_cottage": {
+  "scene": "packs/core_regions/scenes/start.json",
+  "player_feet_px": [
+   320,
+   474
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "template village: behind the cottage (the GPU test's spot)",
+  "scene_after_settling": "packs/core_regions/scenes/start.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2394,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.0,
+  "cut_changed_px": 25089,
+  "cut_changed_outside_player_box_px": 17223,
+  "player_box_grown_16px": [
+   440,
+   306,
+   508,
+   419
+  ]
+ },
+ "v3_village_inside_shop": {
+  "scene": "packs/core_regions/scenes/start.json",
+  "player_feet_px": [
+   938,
+   390
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "template village: inside the shop (the GPU test's spot)",
+  "scene_after_settling": "packs/core_regions/scenes/start.json",
+  "floor": "shop/col_floor",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2394,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 0.259,
+  "cut_changed_px": 16625,
+  "cut_changed_outside_player_box_px": 11435,
+  "player_box_grown_16px": [
+   730,
+   306,
+   798,
+   419
+  ]
+ },
+ "v4_village_beside_shop": {
+  "scene": "packs/core_regions/scenes/start.json",
+  "player_feet_px": [
+   800,
+   470
+  ],
+  "player_size_px": [
+   32.0,
+   48.0
+  ],
+  "note": "template village: north-west of the shop",
+  "scene_after_settling": "packs/core_regions/scenes/start.json",
+  "floor": "ground",
+  "camera": {
+   "pitch": 30.0,
+   "distance": 53.52,
+   "fov": 12.0
+  },
+  "player_pixels": 2392,
+  "visible_with_cut": 1.0,
+  "visible_without_cut": 1.0,
+  "cut_changed_px": 3352,
+  "cut_changed_outside_player_box_px": 3352,
+  "player_box_grown_16px": [
+   606,
+   306,
+   673,
+   419
+  ]
+ }
+}

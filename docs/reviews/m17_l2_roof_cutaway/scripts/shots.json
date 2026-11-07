@@ -1,0 +1,245 @@
+[
+{
+"name": "a1_front_of_cottage",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+600,
+540
+],
+"note": "in front of the cottage: nothing in the way"
+},
+{
+"name": "a2_beside_shop",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1100,
+650
+],
+"note": "beside the shop, north-west of it (the audit's v1 over-cut)"
+},
+{
+"name": "a3_beside_cottage_east",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+730,
+672
+],
+"note": "east of the cottage, level with its roof"
+},
+{
+"name": "b1_behind_cottage_x480",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+480,
+736
+],
+"note": "walking west to east just north of the cottage"
+},
+{
+"name": "b2_behind_cottage_x544",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+544,
+736
+],
+"note": "walking west to east just north of the cottage"
+},
+{
+"name": "b3_behind_cottage_x608",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+608,
+736
+],
+"note": "walking west to east just north of the cottage"
+},
+{
+"name": "b4_behind_cottage_x672",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+672,
+736
+],
+"note": "walking west to east just north of the cottage"
+},
+{
+"name": "b5_behind_cottage_x736",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+736,
+736
+],
+"note": "walking west to east just north of the cottage"
+},
+{
+"name": "c1_partly_hidden",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+608,
+784
+],
+"note": "north of the cottage: the roof hides the legs, not the head"
+},
+{
+"name": "c2_mostly_hidden",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+608,
+760
+],
+"note": "closer behind: the roof hides most of the player"
+},
+{
+"name": "d1_shop_front",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1210,
+448
+],
+"note": "in front of the shop"
+},
+{
+"name": "d2_shop_doorway",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1210,
+500
+],
+"note": "in the shop's open front"
+},
+{
+"name": "d3_inside_shop",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1210,
+566
+],
+"note": "inside the shop"
+},
+{
+"name": "d4_out_again",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1250,
+455
+],
+"note": "out again, in front"
+},
+{
+"name": "e_close_beside_shop",
+"scene": "packs/core_regions/scenes/lakeside__close.json",
+"player": [
+1100,
+650
+],
+"note": "close camera preset"
+},
+{
+"name": "e_close_partly_hidden",
+"scene": "packs/core_regions/scenes/lakeside__close.json",
+"player": [
+608,
+784
+],
+"note": "close camera preset"
+},
+{
+"name": "e_close_behind_cottage",
+"scene": "packs/core_regions/scenes/lakeside__close.json",
+"player": [
+608,
+736
+],
+"note": "close camera preset"
+},
+{
+"name": "e_wide_beside_shop",
+"scene": "packs/core_regions/scenes/lakeside__wide.json",
+"player": [
+1100,
+650
+],
+"note": "wide camera preset"
+},
+{
+"name": "e_wide_partly_hidden",
+"scene": "packs/core_regions/scenes/lakeside__wide.json",
+"player": [
+608,
+784
+],
+"note": "wide camera preset"
+},
+{
+"name": "e_wide_behind_cottage",
+"scene": "packs/core_regions/scenes/lakeside__wide.json",
+"player": [
+608,
+736
+],
+"note": "wide camera preset"
+},
+{
+"name": "e_indoor_beside_shop",
+"scene": "packs/core_regions/scenes/lakeside__indoor.json",
+"player": [
+1100,
+650
+],
+"note": "indoor camera preset"
+},
+{
+"name": "e_indoor_partly_hidden",
+"scene": "packs/core_regions/scenes/lakeside__indoor.json",
+"player": [
+608,
+784
+],
+"note": "indoor camera preset"
+},
+{
+"name": "e_indoor_behind_cottage",
+"scene": "packs/core_regions/scenes/lakeside__indoor.json",
+"player": [
+608,
+736
+],
+"note": "indoor camera preset"
+},
+{
+"name": "v1_village_front_of_cottage",
+"scene": "packs/core_regions/scenes/start.json",
+"player": [
+410,
+290
+],
+"note": "template village: in front of the cottage, clear of its door trigger"
+},
+{
+"name": "v2_village_behind_cottage",
+"scene": "packs/core_regions/scenes/start.json",
+"player": [
+320,
+474
+],
+"note": "template village: behind the cottage (the GPU test's spot)"
+},
+{
+"name": "v3_village_inside_shop",
+"scene": "packs/core_regions/scenes/start.json",
+"player": [
+938,
+390
+],
+"note": "template village: inside the shop (the GPU test's spot)"
+},
+{
+"name": "v4_village_beside_shop",
+"scene": "packs/core_regions/scenes/start.json",
+"player": [
+800,
+470
+],
+"note": "template village: north-west of the shop"
+}
+]
