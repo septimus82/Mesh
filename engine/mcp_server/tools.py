@@ -276,29 +276,46 @@ def list_lights(scene_path: str, root: str = ".") -> dict[str, Any]:
 
     ``index`` is the identifier the light action ops (``update_light``,
     ``delete_light``) key on, so the AI can list then refine a specific light.
+    In an HD-2D room each row also has ``hd2d_shadow``: what the room does with it
+    (``engine.hd2d.settings.shadow_allocation``: ``shadow_map``, ``no_shadows``,
+    ``over_shadow_limit`` (asks for shadows, but the room's shadow maps are taken:
+    it shines through walls), ``over_light_limit``, ``off``, ``ambient``, ``unusable``).
     """
     loaded = read_scene(scene_path, root)
     if not loaded.get("ok"):
         return {"ok": False, "message": loaded.get("message", "Scene not found")}
     scene = loaded.get("scene")
     lights = scene.get("lights") if isinstance(scene, dict) else None
+    settings = scene.get("settings") if isinstance(scene, dict) else None
+    hd2d = isinstance(settings, dict) and isinstance(settings.get("hd2d"), dict)
+    allocation: list[str] = []
+    if hd2d:
+        from engine.hd2d.settings import shadow_allocation  # noqa: PLC0415  # (only HD-2D rooms need it)
+
+        allocation = shadow_allocation(lights)
     rows: list[dict[str, Any]] = []
     for index, light in enumerate(lights or []):
         if not isinstance(light, dict):
             continue
-        rows.append(
-            {
-                "index": index,
-                "id": light.get("id"),
-                "type": light.get("type"),
-                "x": light.get("x"),
-                "y": light.get("y"),
-                "radius": light.get("radius"),
-                "color": light.get("color"),
-                "enabled": light.get("enabled"),
-            }
-        )
-    return {"ok": True, "scene_path": scene_path, "count": len(rows), "lights": rows}
+        row = {
+            "index": index,
+            "id": light.get("id"),
+            "type": light.get("type"),
+            "x": light.get("x"),
+            "y": light.get("y"),
+            "radius": light.get("radius"),
+            "color": light.get("color"),
+            "enabled": light.get("enabled"),
+        }
+        if hd2d:
+            row["hd2d_shadow"] = allocation[index]
+        rows.append(row)
+    result: dict[str, Any] = {"ok": True, "scene_path": scene_path, "count": len(rows), "lights": rows}
+    if hd2d:
+        from engine.hd2d.settings import MAX_SHADOW_LIGHTS  # noqa: PLC0415
+
+        result["hd2d_shadow_maps"] = MAX_SHADOW_LIGHTS
+    return result
 
 
 def read_dialogue(scene_path: str, entity_id: str, root: str = ".") -> dict[str, Any]:

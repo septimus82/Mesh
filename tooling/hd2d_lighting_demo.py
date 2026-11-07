@@ -325,7 +325,8 @@ def check(project: Path, out: Path) -> dict[str, Any]:
 # separate 2 m wall north of it, its near face 0.25 m from the light, and west of it a panel (the kit's wall at half
 # size, 1 m wide and 0.1 m thick, raised to 1.5-2.75 m, against the lantern's side) lying wholly within 0.35 m of the
 # light: faces 0.20 and 0.30 m away. Lamp B has a wall 2.9 m away. The lamp post is each lamp's own fixture (left out of its shadow map);
-# the walls and the panel never are (the panel is fixture-sized, but the lamp isn't in it), and must still block.
+# the walls and the panel never are (the panel is fixture-sized, but farther from the lamp than lighting.FIXTURE_REACH_M),
+# and must still block.
 FIXTURE_LAMPS = {"lamp_a": (8.0, 8.0, 2.4), "lamp_b": (20.0, 8.0, 2.5)}  # m: Lakeside's height and the template's
 FIXTURE_WALLS = {  # wall_2m placements: centre (m), turn (degrees), scale, height of its base (m)
     "near_wall": (8.0, 8.35, 0.0, 1.0, 0.0), "near_panel": (7.75, 8.0, 90.0, 0.5, 1.5),
@@ -344,47 +345,80 @@ FIXTURE_SAMPLES: dict[str, tuple[Any, ...]] = {  # (lamp, x, y[, z, normal]): gr
     "b_behind_far_wall_1.5m": ("lamp_b", 20.0, 12.5), "b_behind_far_wall_2.5m": ("lamp_b", 20.0, 13.5),
 }
 
+# ---------------------------------------------------------------------- a lamp just off its own lantern (M17-L3)
+# The same lamp posts, their lamps placed as a creator types them in: lamp C 27 cm east of its lantern's centre (7 cm
+# outside the lantern's box; its pool lost 28-38 % to its own lamp head before), lamp D 10 cm above the cap (all of it).
+# Each is within lighting.FIXTURE_REACH_M of its post, so the post is its own fixture. Independent occluders still
+# block: a 2 m wall 1.5 m north of C, a 1 m crate 1 m north of D.
+OFFSET_POSTS = {"post_c": (8.0, 8.0), "post_d": (20.0, 8.0)}
+OFFSET_LAMPS = {"lamp_c": (8.27, 8.0, 2.5), "lamp_d": (20.0, 8.0, 2.95)}
+OFFSET_WALLS = {"c_wall": (8.0, 9.6, 0.0, 1.0, 0.0)}
+OFFSET_CRATES = {"d_crate": (20.0, 9.5)}
+OFFSET_SAMPLES: dict[str, tuple[Any, ...]] = {
+    # lamp C: west of it lies its own lantern, which used to shadow these
+    "c_open_west_1.5m": ("lamp_c", 6.5, 8.0), "c_open_west_skew": ("lamp_c", 6.8, 7.0),
+    "c_open_south_2m": ("lamp_c", 8.27, 6.0), "c_open_east_2m": ("lamp_c", 10.3, 8.0),
+    "c_behind_wall_1m": ("lamp_c", 8.0, 10.6), "c_behind_wall_2m": ("lamp_c", 8.0, 11.6),
+    # lamp D: its cap used to roof it over
+    "d_open_south_2m": ("lamp_d", 20.0, 6.0), "d_open_west_2m": ("lamp_d", 18.0, 8.0),
+    "d_open_east_2m": ("lamp_d", 22.0, 8.0), "d_behind_crate": ("lamp_d", 20.0, 10.5),
+}
 
-def fixture_room(project: Path) -> str:
+
+def fixture_room(project: Path, lamps: dict[str, Vec] = FIXTURE_LAMPS,
+                 walls: dict[str, tuple[float, float, float, float, float]] = FIXTURE_WALLS, posts: dict[str, tuple[float, float]] | None = None,
+                 crates: dict[str, tuple[float, float]] | None = None, name: str = "lamp_fixtures") -> str:
     """Write the scene into ``project`` (an HD-2D RPG project: the starter kit's models in assets/models) and return
-    its path: the template's village settings (ground, sun, camera), these structures and lamps, the player alone."""
+    its path: the template's village settings (ground, sun, camera), these structures and lamps, the player alone.
+    ``posts``: where the lamp posts stand (m), if not under the lamps; ``crates``: kit crates (m)."""
     scenes = project / SCENES
     village = json.loads((scenes / "start.json").read_text(encoding="utf-8"))
     hd2d = village["settings"]["hd2d"]
-    hd2d["structures"] = ([{"id": name, "model": "assets/models/lamp_post.glb", "x": x * PX, "y": y * PX}
-                           for name, (x, y, _z) in FIXTURE_LAMPS.items()]
-                          + [{"id": name, "model": "assets/models/wall_2m.glb", "x": x * PX, "y": y * PX,
+    posts = posts if posts is not None else {key: (x, y) for key, (x, y, _z) in lamps.items()}
+    hd2d["structures"] = ([{"id": key, "model": "assets/models/lamp_post.glb", "x": x * PX, "y": y * PX}
+                           for key, (x, y) in posts.items()]
+                          + [{"id": key, "model": "assets/models/wall_2m.glb", "x": x * PX, "y": y * PX,
                               "rotation": turn, "scale": scale, "elevation": base * PX}
-                             for name, (x, y, turn, scale, base) in FIXTURE_WALLS.items()])
-    village["lights"] = [{"id": name, "x": x * PX, "y": y * PX, "elevation": z * PX, "radius": 224.0,
-                          "color": "#ffcc88", "mode": "soft"} for name, (x, y, z) in FIXTURE_LAMPS.items()]
+                             for key, (x, y, turn, scale, base) in walls.items()]
+                          + [{"id": key, "model": "assets/models/crate.glb", "x": x * PX, "y": y * PX}
+                             for key, (x, y) in (crates or {}).items()])
+    village["lights"] = [{"id": key, "x": x * PX, "y": y * PX, "elevation": z * PX, "radius": 224.0,
+                          "color": "#ffcc88", "mode": "soft"} for key, (x, y, z) in lamps.items()]
     village["entities"] = [e for e in village.get("entities", []) if e.get("tag") == "player"]
     for e in village["entities"]:
         e["x"], e["y"] = 14.0 * PX, 3.0 * PX
-    path = f"{SCENES}/lamp_fixtures.json"
+    path = f"{SCENES}/{name}.json"
     (project / path).write_text(json.dumps(village), encoding="utf-8")
     return path
 
 
-def fixture_check(project: Path) -> dict[str, Any]:
+def offset_check(project: Path) -> dict[str, Any]:
+    """``fixture_check`` on the lamps placed just off their lanterns (OFFSET_*, M17-L3)."""
+    room = fixture_room(project, OFFSET_LAMPS, OFFSET_WALLS, OFFSET_POSTS, OFFSET_CRATES, name="lamp_offsets")
+    return fixture_check(project, room, OFFSET_LAMPS, OFFSET_SAMPLES)
+
+
+def fixture_check(project: Path, room: str | None = None, lamp_spots: dict[str, Vec] = FIXTURE_LAMPS,
+                  named_samples: dict[str, tuple[Any, ...]] = FIXTURE_SAMPLES) -> dict[str, Any]:
     """The lamps in their lanterns, in the real game (hidden window): each lamp's own fixture as the renderer found
     it, the walls' (never a fixture), and per sample and on a 0.5 m grid round each lamp the GPU's answer (the lamp's
-    term with shadows on over off, Lighting.probe) beside the CPU's rays through the room's triangles."""
+    term with shadows on over off, Lighting.probe) beside the CPU's rays through the room's triangles. ``room``: a
+    scene from ``fixture_room`` (its lamps ``lamp_spots``, its samples ``named_samples``); by default #458's."""
     game = HiddenGame(project)
     try:
-        game.load(fixture_room(project))
+        game.load(room or fixture_room(project))
         game.step(30)
         hd = game.window.hd2d_renderer
         light = hd.lighting
         game.draw()  # the lamps' maps drawn
-        names = [lamp_name for lamp_name in FIXTURE_LAMPS]
+        names = list(lamp_spots)
         fixtures = {names[i]: sorted(light.fixtures[i]) for i in range(len(names))}
         tris = Triangles(hd)
         lamps = {names[i]: (light._lamp_pos(light.lamps[i]), light.lamps[i].radius / PX, light.fixtures[i])
                  for i in range(len(names))}
-        grid = [(lamp, x0 + dx * 0.5, y0 + dy * 0.5) for lamp, (x0, y0, _z) in FIXTURE_LAMPS.items()
+        grid = [(lamp, x0 + dx * 0.5, y0 + dy * 0.5) for lamp, (x0, y0, _z) in lamp_spots.items()
                 for dx in range(-10, 11) for dy in range(-10, 11) if 0.75 <= math.hypot(dx * 0.5, dy * 0.5) <= 5.0]
-        samples = ([(name, (s + (0.0, (0.0, 0.0, 1.0)))[:5]) for name, s in FIXTURE_SAMPLES.items()]
+        samples = ([(name, (s + (0.0, (0.0, 0.0, 1.0)))[:5]) for name, s in named_samples.items()]
                    + [(f"grid_{i}", (*g, 0.0, (0.0, 0.0, 1.0))) for i, g in enumerate(grid)])
         points = [(x, y, z, *normal, False) for _, (_lamp, x, y, z, normal) in samples]
         on = light.probe(points, (0.0, 0.0, 1.0))

@@ -10,10 +10,11 @@ its height, and its head and feet can differ (half under a bridge, half in the s
 - each shadow-casting lamp's (at most ``MAX_SHADOW_LIGHTS``): six 90-degree faces of distance-to-the-lamp, packed
   in one atlas (``POINT_FACE`` px a face; a row per such lamp). Lamps and structures don't move, so these are drawn once, when the room's
   first frame is drawn, and only again when asked (``invalidate``). Characters don't cast lamp shadows. A lamp's own
-  fixture (``lamp_fixtures``: the lamp post whose lantern it hangs in) is left out of that lamp's map, and only
-  that lamp's: its light starts inside the lantern's closed box, so the box's six faces, 0.1-0.35 m away, would
-  otherwise be the first thing it meets in every direction and it would light nothing (#458). Every other
-  structure, however close to the light, still casts that lamp's shadows.
+  fixture (``lamp_fixtures``: the lamp post whose lantern it hangs in, or within 0.15 m of) is left out of that
+  lamp's map, and only that lamp's: its light starts inside the lantern's closed box, so the box's six faces,
+  0.1-0.35 m away, would otherwise be the first thing it meets in every direction and it would light nothing
+  (#458); a light a few centimetres off the lantern, or just above the cap, would lose most of its pool to them
+  (M17-L3). Every other structure, however close to the light, still casts that lamp's shadows.
 
 Depth maps are read with a plain ``sampler2D`` and compared in the shader (arcade 3.3 can't bind
 ``sampler2DShadow``), filtered over 1, 3 x 3 or 5 x 5 texels by the room's shadow softness (sharp / soft / softer,
@@ -32,11 +33,13 @@ from engine.hd2d.settings import MAX_LIGHTS, MAX_SHADOW_LIGHTS, PIXELS_PER_METRE
 
 POINT_FACE = 512  # px: one face of a lamp's shadow map
 POINT_NEAR = 0.05  # m
-# A lamp's own fixture: a structure one of whose drawn parts (a glTF node) has a box holding the lamp, and whose model
-# is at most this wide across the ground (scaled): a lantern on its post (the starter kit's is 0.52 m), a sconce, a
-# brazier; never a wall or a building, whatever the lamp is inside. FIXTURE_EPS: the box's edges, inclusive.
+# A lamp's own fixture: a structure one of whose drawn parts (a glTF node) has a box within FIXTURE_REACH_M of the
+# lamp (holding it, or as near as a light that misses its lantern by a few centimetres, or hangs just under or over
+# its cap), and whose model is at most FIXTURE_MAX_M wide across the ground (scaled): a lantern on its post (the
+# starter kit's is 0.52 m), a sconce, a brazier; never a wall or a building, whatever the lamp is inside or beside.
+# The reach stays under the 0.23 m at which an independent panel must still cast the lamp's shadow (#458's test).
 FIXTURE_MAX_M = 1.0
-FIXTURE_EPS_M = 0.01
+FIXTURE_REACH_M = 0.15
 SOFTNESS_PCF = {"sharp": 0, "soft": 1, "softer": 2}  # filter radius in texels (1, 3 x 3, 5 x 5 samples)
 
 LIGHTING_GLSL = """
@@ -236,11 +239,17 @@ def _node_boxes(model: Any) -> list[tuple[tuple[float, float, float], tuple[floa
     return [((lo[0], lo[1], lo[2]), (hi[0], hi[1], hi[2])) for lo, hi in boxes.values() if lo[0] <= hi[0]]
 
 
+def _box_distance(p: tuple[float, float, float], lo: tuple[float, float, float], hi: tuple[float, float, float]) -> float:
+    """How far the point is from the box (0 inside it)."""
+    return math.sqrt(sum(max(lo[k] - p[k], 0.0, p[k] - hi[k]) ** 2 for k in range(3)))
+
+
 def lamp_fixtures(lamp: tuple[float, float, float], structures: Any, models: dict[str, Any]) -> frozenset[str]:
-    """The ids of the structures that are the lamp's own fixture (lamp: metres): each holds the lamp inside one of
-    its drawn parts' boxes, and its whole model is at most FIXTURE_MAX_M across the ground. Its light starts there
-    (Mesh lights a lamp post with a lamp at its lantern), so that lamp's shadow map leaves it out; nothing else does.
-    A wall or a building is never one (wider), nor anything the lamp is merely near: those still cast its shadows."""
+    """The ids of the structures that are the lamp's own fixture (lamp: metres): one of its drawn parts' boxes is
+    within FIXTURE_REACH_M of the lamp (holding it, or as near as a light placed a few centimetres off its lantern),
+    and its whole model is at most FIXTURE_MAX_M across the ground. Its light starts there (Mesh lights a lamp post
+    with a lamp at its lantern), so that lamp's shadow map leaves it out; nothing else does. A wall or a building is
+    never one (wider), nor a fixture-sized thing farther than the reach: those still cast its shadows (#458, M17-L3)."""
     out = set()
     for st in structures:
         model = models.get(st.model)
@@ -254,8 +263,8 @@ def lamp_fixtures(lamp: tuple[float, float, float], structures: Any, models: dic
                       lamp[2] - st.elevation / PIXELS_PER_METRE)
         c, s = math.cos(math.radians(st.rotation)), math.sin(math.radians(st.rotation))
         local = ((c * dx + s * dy) / st.scale, (-s * dx + c * dy) / st.scale, dz / st.scale)
-        eps = FIXTURE_EPS_M / st.scale
-        if any(all(b_lo[k] - eps <= local[k] <= b_hi[k] + eps for k in range(3)) for b_lo, b_hi in _node_boxes(model)):
+        reach = FIXTURE_REACH_M / st.scale  # (in the model's own space)
+        if any(_box_distance(local, b_lo, b_hi) <= reach for b_lo, b_hi in _node_boxes(model)):
             out.add(st.id)
     return frozenset(out)
 

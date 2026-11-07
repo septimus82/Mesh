@@ -331,30 +331,70 @@ def rgb(value: Any) -> Rgb | None:
     return None
 
 
-def parse_scene_lights(lights: Any, room: Any) -> dict[str, Any]:
-    """The scene's ordinary ``lights`` and the room's shadow settings, as Hd2dSettings fields. Read as leniently
-    as the 2D lighting reads them (a light it can't use is skipped, as there), keeping the first MAX_LIGHTS
-    enabled lamps and letting the first MAX_SHADOW_LIGHTS that ask for shadows (the 2D default) cast them."""
-    out: dict[str, Any] = {}
+# What HD-2D does with each of a scene's ``lights`` (``shadow_allocation``), for Studio and the AI tools to show:
+SHADOW_MAP = "shadow_map"  # lit, and casts shadows (one of the room's MAX_SHADOW_LIGHTS shadow maps)
+NO_SHADOWS = "no_shadows"  # lit, and set not to cast shadows
+OVER_SHADOW_LIMIT = "over_shadow_limit"  # lit, set to cast shadows, but the maps are taken: it shines through walls
+OVER_LIGHT_LIMIT = "over_light_limit"  # not lit: the room already has MAX_LIGHTS lamps
+LIGHT_OFF = "off"  # turned off
+AMBIENT = "ambient"  # the room light's colour, not a lamp
+UNUSABLE = "unusable"  # can't be read (no size, or a value that isn't a number): skipped, as the 2D lighting skips it
+
+
+def _read_scene_lights(lights: Any) -> tuple[list[PointLight], Rgb | None, list[str]]:
+    """The lamps HD-2D lights, the ambient colour, and what happens to each entry of ``lights`` (in order)."""
     lamps: list[PointLight] = []
+    ambient: Rgb | None = None
+    status: list[str] = []
     shadowed = 0
     for cfg in lights if isinstance(lights, list) else []:
-        if not isinstance(cfg, dict) or cfg.get("enabled", True) is False:
+        if not isinstance(cfg, dict):
+            status.append(UNUSABLE)
+            continue
+        if cfg.get("enabled", True) is False:
+            status.append(LIGHT_OFF)
             continue
         colour = rgb(cfg.get("color_rgba", cfg.get("color", (255, 255, 255)))) or (1.0, 1.0, 1.0)
         if cfg.get("type") == "ambient":
-            out["ambient_color"] = colour
+            ambient = colour
+            status.append(AMBIENT)
             continue
         try:
             x, y, radius = float(cfg.get("x", 0.0)), float(cfg.get("y", 0.0)), float(cfg.get("radius", 100.0))
             elevation, intensity = float(cfg.get("elevation", LAMP_HEIGHT_PX)), float(cfg.get("intensity", 1.0))
         except (TypeError, ValueError):
+            status.append(UNUSABLE)
             continue
-        if radius <= 0 or len(lamps) >= MAX_LIGHTS:
+        if radius <= 0:
+            status.append(UNUSABLE)
             continue
-        casts = cfg.get("shadows", True) is not False and shadowed < MAX_SHADOW_LIGHTS
+        if len(lamps) >= MAX_LIGHTS:
+            status.append(OVER_LIGHT_LIMIT)
+            continue
+        asks = cfg.get("shadows", True) is not False
+        casts = asks and shadowed < MAX_SHADOW_LIGHTS
         shadowed += casts
         lamps.append(PointLight(x, y, elevation, radius, colour, max(0.0, intensity), casts))
+        status.append(SHADOW_MAP if casts else OVER_SHADOW_LIMIT if asks else NO_SHADOWS)
+    return lamps, ambient, status
+
+
+def shadow_allocation(lights: Any) -> list[str]:
+    """For each entry of a scene's ``lights``, in order, what an HD-2D room does with it (SHADOW_MAP, NO_SHADOWS,
+    OVER_SHADOW_LIMIT, OVER_LIGHT_LIMIT, LIGHT_OFF, AMBIENT or UNUSABLE): the same reading ``parse_scene_lights``
+    gives the renderer, so what Studio shows is what the room draws."""
+    return _read_scene_lights(lights)[2]
+
+
+def parse_scene_lights(lights: Any, room: Any) -> dict[str, Any]:
+    """The scene's ordinary ``lights`` and the room's shadow settings, as Hd2dSettings fields. Read as leniently
+    as the 2D lighting reads them (a light it can't use is skipped, as there), keeping the first MAX_LIGHTS
+    enabled lamps and letting the first MAX_SHADOW_LIGHTS that ask for shadows (the 2D default) cast them
+    (``shadow_allocation`` says which, per light)."""
+    out: dict[str, Any] = {}
+    lamps, ambient, _status = _read_scene_lights(lights)
+    if ambient is not None:
+        out["ambient_color"] = ambient
     out["lights"] = tuple(lamps)
     room = room if isinstance(room, dict) else {}
     softness = room.get("lighting_shadow_softness", "sharp")
