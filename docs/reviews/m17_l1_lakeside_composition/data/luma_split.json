@@ -1,0 +1,30 @@
+{
+ "v0_overview_wide": {
+  "before": 82.9,
+  "before_lights_removed": 77.4,
+  "after": 76.9,
+  "from_lamps": 5.5,
+  "from_composition": 0.6
+ },
+ "v1_village": {
+  "before": 85.0,
+  "before_lights_removed": 78.4,
+  "after": 78.1,
+  "from_lamps": 6.6,
+  "from_composition": 0.3
+ },
+ "v3_cottage": {
+  "before": 84.9,
+  "before_lights_removed": 78.6,
+  "after": 76.3,
+  "from_lamps": 6.3,
+  "from_composition": 2.3
+ },
+ "v4_paths": {
+  "before": 89.3,
+  "before_lights_removed": 82.2,
+  "after": 80.4,
+  "from_lamps": 7.1,
+  "from_composition": 1.7
+ }
+}

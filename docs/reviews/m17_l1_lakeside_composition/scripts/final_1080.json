@@ -1,0 +1,18 @@
+[
+{
+"name": "hd_v1_village__before",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "hd_v1_village__after",
+"scene": "packs/core_regions/scenes/lakeside__l1.json",
+"player": [
+1100,
+650
+]
+}
+]

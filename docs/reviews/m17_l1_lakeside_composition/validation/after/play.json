@@ -1,0 +1,168 @@
+{
+  "routes": [
+    {
+      "route": "south road to the crossroads",
+      "reached": [
+        true
+      ],
+      "as_expected": true,
+      "end_m": [
+        29.5,
+        11.53
+      ],
+      "end_elevation_m": 0.0,
+      "highest_m": 0.0,
+      "worst_feet_off_ground_m": 0.0,
+      "lowest_on_bridge_m": null,
+      "steps": 94
+    },
+    {
+      "route": "over the bridge (steering along its deck, as a player does)",
+      "reached": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "as_expected": true,
+      "end_m": [
+        34.99,
+        29.61
+      ],
+      "end_elevation_m": 0.0,
+      "highest_m": 0.2,
+      "worst_feet_off_ground_m": 0.0,
+      "lowest_on_bridge_m": 0.2,
+      "steps": 109
+    },
+    {
+      "route": "round the pond's north side",
+      "reached": [
+        true,
+        true,
+        true
+      ],
+      "as_expected": true,
+      "end_m": [
+        53.0,
+        23.97
+      ],
+      "end_elevation_m": 0.0,
+      "highest_m": 1.76,
+      "worst_feet_off_ground_m": 0.0,
+      "lowest_on_bridge_m": null,
+      "steps": 504
+    },
+    {
+      "route": "into the pond (stops at its shore)",
+      "reached": [
+        false
+      ],
+      "as_expected": true,
+      "end_m": [
+        46.5,
+        26.34
+      ],
+      "end_elevation_m": -0.39,
+      "highest_m": 0.0,
+      "worst_feet_off_ground_m": 0.0,
+      "lowest_on_bridge_m": null,
+      "steps": 79
+    },
+    {
+      "route": "up the hill path",
+      "reached": [
+        true
+      ],
+      "as_expected": true,
+      "end_m": [
+        13.0,
+        36.53
+      ],
+      "end_elevation_m": 3.05,
+      "highest_m": 3.05,
+      "worst_feet_off_ground_m": 0.0,
+      "lowest_on_bridge_m": null,
+      "steps": 158
+    },
+    {
+      "route": "into a cottage wall (stops)",
+      "reached": [
+        false
+      ],
+      "as_expected": true,
+      "end_m": [
+        21.0,
+        17.8
+      ],
+      "end_elevation_m": 0.0,
+      "highest_m": 0.0,
+      "worst_feet_off_ground_m": 0.0,
+      "lowest_on_bridge_m": null,
+      "steps": 72
+    },
+    {
+      "route": "up the south-east mound",
+      "reached": [
+        true
+      ],
+      "as_expected": true,
+      "end_m": [
+        56.56,
+        12.69
+      ],
+      "end_elevation_m": 1.7,
+      "highest_m": 1.7,
+      "worst_feet_off_ground_m": 0.0,
+      "lowest_on_bridge_m": null,
+      "steps": 148
+    }
+  ],
+  "start": [
+    30.0,
+    3.44
+  ],
+  "still_frames_changed_pixels": {
+    "1_frame_apart": 17418,
+    "30_frames_apart": 151823,
+    "of": 921600
+  },
+  "motion_on": true,
+  "wind": [
+    3.0,
+    0.0
+  ],
+  "water_bodies": 2,
+  "gl_objects_after_room_changes": [
+    {
+      "buffer": 368,
+      "texture": 41,
+      "framebuffer": 6,
+      "program": 33
+    },
+    {
+      "buffer": 368,
+      "texture": 41,
+      "framebuffer": 6,
+      "program": 33
+    },
+    {
+      "buffer": 368,
+      "texture": 41,
+      "framebuffer": 6,
+      "program": 33
+    }
+  ],
+  "gl_stable": true,
+  "all_routes_as_expected": true,
+  "navigation": {
+    "start -> crossroads": true,
+    "start -> bridge's north end": true,
+    "start -> pond's east bank": true,
+    "start -> hilltop": true,
+    "start -> mound": true,
+    "start -> cottage door": true
+  },
+  "max_feet_off_ground_m": 0.0
+}
