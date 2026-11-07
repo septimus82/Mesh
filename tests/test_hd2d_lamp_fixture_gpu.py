@@ -79,3 +79,44 @@ def test_gpu_and_cpu_agree_round_both_lamps(room: dict) -> None:
 def test_the_lamps_maps_are_drawn_once(room: dict) -> None:
     assert room["shadow_lamps"] == 2 and room["lamp_map_renders"] == 1
     assert room["lamp_map_renders_after_3_frames"] == 1
+
+
+# ---------------------------------------------------------------------- M17-L3: lamps placed just off their lanterns
+@pytest.fixture(scope="module")
+def offset(tmp_path_factory: pytest.TempPathFactory) -> dict:
+    import hd2d_lighting_demo
+
+    from engine.project_scaffold import create_project
+
+    project = tmp_path_factory.mktemp("offsets") / "Lamp offsets"
+    create_project(project, "Lamp offsets", "hd2d_rpg")
+    return dict(hd2d_lighting_demo.offset_check(project))
+
+
+def test_a_lamp_just_off_its_lantern_or_over_its_cap_has_its_post_as_its_fixture(offset: dict) -> None:
+    # 27 cm off the lantern's centre, 10 cm above the cap: each within 0.15 m of its own post; the wall and the crate
+    # (1-1.5 m away) are nobody's fixture
+    assert offset["fixtures"] == {"lamp_c": ["post_c"], "lamp_d": ["post_d"]}
+
+
+def test_a_lamp_just_off_its_lantern_lights_the_ground_its_lamp_head_used_to_shadow(offset: dict) -> None:
+    # M17-L3: before, lamp C's own lantern shadowed the ground west of it (pool 0.62-0.72 of shadows off) and lamp D's
+    # cap roofed it over (0.01); now exactly what they give with shadows off, and the CPU's rays agree
+    for name in ("c_open_west_1.5m", "c_open_west_skew", "c_open_south_2m", "c_open_east_2m", "d_open_south_2m",
+                 "d_open_west_2m", "d_open_east_2m"):
+        sample = offset["named"][name]
+        assert sample["off"] > 0.05 and sample["on"] == pytest.approx(sample["off"], abs=1e-3), (name, sample)
+        assert sample["cpu"] is True, (name, sample)
+
+
+def test_independent_occluders_near_an_offset_lamp_still_cast_its_shadows(offset: dict) -> None:
+    for name in ("c_behind_wall_1m", "c_behind_wall_2m", "d_behind_crate"):
+        sample = offset["named"][name]
+        assert sample["off"] > 0.02 and sample["on"] == 0.0, (name, sample)
+        assert sample["cpu"] is False, (name, sample)
+
+
+def test_gpu_and_cpu_agree_round_both_offset_lamps(offset: dict) -> None:
+    agreement = offset["agreement"]
+    assert agreement["disagree"] == 0, agreement["mismatches"]
+    assert agreement["agree"] >= 400 and agreement["blocked"] >= 20, agreement

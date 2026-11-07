@@ -26,6 +26,7 @@ import engine.optional_arcade as optional_arcade
 from engine import behaviour_guide, runtime_debug
 from engine import project_ops as ops
 from engine.action_runtime.registry import dispatch_action
+from engine.hd2d import settings as hd2d_settings
 from engine.prefabs import get_prefab_manager
 from engine.route_check import route_problems
 from engine.scene_loader import document_key
@@ -150,6 +151,36 @@ def hard_wrap(label: Any) -> None:
 def _colour_name(value: Any) -> str:
     rgb = ops.rgb(value)
     return next((name for name, hex_ in ops.LIGHT_COLOURS.items() if ops.rgb(hex_) == rgb), "custom")
+
+
+# What an HD-2D room does with each light (engine.hd2d.settings.shadow_allocation), in Studio's words: a tag on the
+# light's row in the list, and a note under its "Casts shadows" switch.
+HD2D_SHADOW_TAGS = {hd2d_settings.SHADOW_MAP: " - shadows", hd2d_settings.OVER_SHADOW_LIMIT: " - no shadow map",
+                    hd2d_settings.OVER_LIGHT_LIMIT: " - not lit", hd2d_settings.LIGHT_OFF: " - off"}
+HD2D_SHADOW_NOTES = {
+    hd2d_settings.SHADOW_MAP: (f"It casts shadows: one of the room's {hd2d_settings.MAX_SHADOW_LIGHTS} shadow maps "
+                               "is its."),
+    hd2d_settings.NO_SHADOWS: "It shines through walls (its shadows are off).",
+    hd2d_settings.OVER_SHADOW_LIMIT: (f"It is set to cast shadows, but a room has {hd2d_settings.MAX_SHADOW_LIGHTS} "
+                                      "shadow maps and lights earlier in the list have them: this one shines through "
+                                      "walls. Turn shadows off on one of those to give it one."),
+    hd2d_settings.OVER_LIGHT_LIMIT: (f"It gives no light: a room lights its first {hd2d_settings.MAX_LIGHTS} lamps "
+                                     "and this one comes after them."),
+}
+
+
+def hd2d_shadow_summary(allocation: list[str]) -> str:
+    """One line for an HD-2D room's lights: how many of its shadow maps are in use, and who asks without getting one."""
+    used = allocation.count(hd2d_settings.SHADOW_MAP)
+    left_out = allocation.count(hd2d_settings.OVER_SHADOW_LIMIT)
+    text = f"Shadow maps: {used} of {hd2d_settings.MAX_SHADOW_LIGHTS} in use."
+    if left_out:
+        text += (f" {left_out} more light{'s' if left_out > 1 else ''} set to cast shadows "
+                 f"{'get' if left_out > 1 else 'gets'} none and {'shine' if left_out > 1 else 'shines'} through walls.")
+    unlit = allocation.count(hd2d_settings.OVER_LIGHT_LIMIT)
+    if unlit:
+        text += f" {unlit} light{'s' if unlit > 1 else ''} past the first {hd2d_settings.MAX_LIGHTS} give no light."
+    return text
 
 
 class Studio(InspectorMixin, SoundMixin):
@@ -1671,13 +1702,20 @@ class Studio(InspectorMixin, SoundMixin):
         row.add(self._label(f"Lights ({len(items)})", bold=True, size=11, width=width - 110))
         row.add(self._button("+ Add light", self.arm_light, width=104, style=S_ACTIVE if self.tool == "light" else S_BUTTON))
         rows.add(row)
+        allocation = self._hd2d_shadow_allocation(items)
+        if allocation:
+            summary = hd2d_shadow_summary(allocation)
+            rows.add(self._label(summary, color=C_WARN if hd2d_settings.OVER_SHADOW_LIMIT in allocation else C_MUTED,
+                                 size=9, width=width))
         for i, light in enumerate(items):
             if isinstance(light, dict):
                 text = f"Light {i + 1}: {_colour_name(light.get('color'))}, size {float(light.get('radius', 0)):g}"
+                if allocation:
+                    text += HD2D_SHADOW_TAGS.get(allocation[i], "")
                 rows.add(self._button(text, partial(self._select_light, i), width=width,
                                       style=S_ACTIVE if i == self.light else S_BUTTON))
         if self.light is not None and self.light < len(items):
-            self._light_inspector(rows, items[self.light], width)
+            self._light_inspector(rows, items[self.light], width, allocation[self.light] if allocation else None)
         rows.add(self._label("While this panel is open, clicks on the map work on lights.", color=C_MUTED, size=9, width=width))
         rows.add(self._button("Done", self.open_lighting, width=80))
 
@@ -1750,7 +1788,12 @@ class Studio(InspectorMixin, SoundMixin):
         self.light = None if self.light == index else index
         self._rebuild()
 
-    def _light_inspector(self, rows: Rows, light: dict[str, Any], width: int) -> None:
+    def _hd2d_shadow_allocation(self, items: list[Any]) -> list[str]:
+        """In an HD-2D room, what the room does with each light (engine.hd2d.settings.shadow_allocation: the reading
+        the renderer gets); in a 2D room, nothing (its lighting has its own rules)."""
+        return hd2d_settings.shadow_allocation(items) if self.hd2d.active else []
+
+    def _light_inspector(self, rows: Rows, light: dict[str, Any], width: int, allocation: str | None = None) -> None:
         third = (width - 8) // 3
         rows.add(gui.UISpace(height=4))
         rows.add(self._label(f"Light {(self.light or 0) + 1}", bold=True, size=12))
@@ -1776,6 +1819,9 @@ class Studio(InspectorMixin, SoundMixin):
         row.add(self._toggle("Casts shadows", light.get("shadows", True) is not False,
                              lambda on: self.set_light("Walls block it." if on else "It shines through walls.", shadows=on), half))
         rows.add(row)
+        if allocation in HD2D_SHADOW_NOTES:  # (an HD-2D room: what the renderer actually does with this light)
+            warn = allocation in (hd2d_settings.OVER_SHADOW_LIMIT, hd2d_settings.OVER_LIGHT_LIMIT)
+            rows.add(self._label(HD2D_SHADOW_NOTES[allocation], color=C_WARN if warn else C_MUTED, size=9, width=width))
         row = gui.UIBoxLayout(vertical=False, space_between=6)
         row.add(self._button("Duplicate", self.duplicate_light, width=(width - 6) // 2))
         row.add(self._button("Delete", self.delete_light, width=(width - 6) // 2))

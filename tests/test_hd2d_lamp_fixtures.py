@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from engine.hd2d.glb import load_glb
-from engine.hd2d.lighting import FIXTURE_MAX_M, _kept_ranges, lamp_fixtures
+from engine.hd2d.lighting import FIXTURE_MAX_M, FIXTURE_REACH_M, _kept_ranges, lamp_fixtures
 from engine.hd2d.settings import PIXELS_PER_METRE as PX
 from engine.hd2d.settings import Structure
 
@@ -43,10 +43,40 @@ def test_a_lamp_at_the_lantern_has_the_lamp_post_as_its_fixture(height: float) -
     assert lamp_fixtures((8.0 + 0.0125, 8.0, height), [post], MODELS) == {"post"}
 
 
-@pytest.mark.parametrize("lamp", [(8.0, 8.0, 2.9), (8.0, 8.4, 2.4), (9.0, 8.0, 2.4), (8.3, 8.0, 1.5)])
+@pytest.mark.parametrize("lamp", [(8.0, 8.0, 3.05), (8.0, 8.4, 2.4), (8.4, 8.0, 2.5), (9.0, 8.0, 2.4),
+                                  (8.3, 8.0, 1.5)])
 def test_a_lamp_merely_near_a_lamp_post_has_no_fixture(lamp: tuple[float, float, float]) -> None:
-    # 5 cm above the cap, 0.2 m beside the lantern, 1 m away, beside the post: outside every part's box
+    # 20 cm above the cap, 0.2 m beside the lantern (twice), 1 m away, 0.22 m beside the post: each farther than
+    # FIXTURE_REACH_M (0.15 m) from every part's box, so the lamp post still casts this lamp's shadows
     assert lamp_fixtures(lamp, [_at("lamp_post", 8.0, 8.0, "post")], MODELS) == set()
+
+
+@pytest.mark.parametrize(("dx", "height"), [(0.25, 2.5), (0.27, 2.5), (0.30, 2.5), (0.0, 2.95), (0.15, 2.2),
+                                            (0.21, 2.4)])
+def test_a_lamp_a_few_centimetres_off_its_lantern_still_has_it_as_its_fixture(dx: float, height: float) -> None:
+    # M17-L3: a light placed 25-30 cm off the lantern's centre (5-10 cm outside its box), 10 cm above the cap or just
+    # under the lantern lost 28-99 % of its pool to its own lamp head; within FIXTURE_REACH_M it is that lamp's head
+    post = _at("lamp_post", 8.0, 8.0, "post")
+    assert FIXTURE_REACH_M == 0.15
+    assert lamp_fixtures((8.0 + dx, 8.0, height), [post], MODELS) == {"post"}
+    assert lamp_fixtures((8.0, 8.0 - dx, height), [post], MODELS) == {"post"}  # (any side)
+
+
+def test_an_independent_panel_beside_the_light_is_never_its_fixture() -> None:
+    # The panel #458's GPU test keeps casting: a wall_2m scaled to 1 m (fixture-sized), turned, 0.23-0.33 m from a
+    # lamp in its lantern: farther than the reach, so it isn't left out; the lamp post is
+    post, panel = _at("lamp_post", 8.0, 8.0, "post"), _at("wall_2m", 7.75, 8.0, "panel", rotation=90.0, scale=0.5,
+                                                            elevation=1.5)
+    assert lamp_fixtures((8.0, 8.0, 2.4), [post, panel], MODELS) == {"post"}
+    assert lamp_fixtures((8.1, 8.0, 2.4), [panel], MODELS) == set()  # (0.25 m+ from the panel's face)
+
+
+def test_a_small_prop_within_the_reach_is_left_out_and_one_beyond_it_is_not() -> None:
+    # The rule's documented edge: a light within 0.15 m of a fixture-sized prop's box (a candle on a barrel) is that
+    # prop's own; 0.2 m beside it, the barrel still casts its shadow
+    barrel = _at("barrel", 8.0, 8.0, "barrel")
+    assert lamp_fixtures((8.0, 8.0, 1.1), [barrel], MODELS) == {"barrel"}
+    assert lamp_fixtures((8.6, 8.0, 0.5), [barrel], MODELS) == set()
 
 
 def test_a_lamp_inside_any_part_of_a_fixture_sized_model_counts() -> None:
