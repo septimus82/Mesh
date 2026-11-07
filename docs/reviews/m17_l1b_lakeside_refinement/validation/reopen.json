@@ -1,0 +1,44 @@
+{
+  "same_as_saved": false,
+  "shared_player_filled_in": [
+    "lakeside_player_128_128_0_0"
+  ],
+  "differences_apart_from_the_player": [],
+  "unsaved_after_opening": [],
+  "structures": 15,
+  "scatter": 9494,
+  "water": 2,
+  "lamps": 4,
+  "wind_saved": {
+    "direction": 0.0,
+    "gust": 0.3,
+    "speed": 3.0
+  },
+  "wind_reopened": {
+    "direction": 0.0,
+    "gust": 0.3,
+    "speed": 3.0
+  },
+  "wind_drawn": [
+    3.0,
+    0.0
+  ],
+  "motion_saved": {},
+  "motion_reopened": {},
+  "motion_drawn_on": true,
+  "drawn": true,
+  "play_stop_modes": [
+    "play",
+    "edit",
+    "play",
+    "edit",
+    "play",
+    "edit",
+    "play",
+    "edit",
+    "play",
+    "edit"
+  ],
+  "play_stop_gl_stable": true,
+  "unsaved_at_end": []
+}

@@ -1,0 +1,170 @@
+[
+{
+"name": "v0_overview_wide__before",
+"scene": "packs/core_regions/scenes/lakeside__wide.json",
+"player": [
+1000,
+650
+]
+},
+{
+"name": "v0_overview_wide__l1",
+"scene": "packs/core_regions/scenes/lakeside__l1__wide.json",
+"player": [
+1000,
+650
+]
+},
+{
+"name": "v0_overview_wide__l1b",
+"scene": "packs/core_regions/scenes/lakeside__l1b__wide.json",
+"player": [
+1000,
+650
+]
+},
+{
+"name": "v1_village__before",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "v1_village__l1",
+"scene": "packs/core_regions/scenes/lakeside__l1.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "v1_village__l1b",
+"scene": "packs/core_regions/scenes/lakeside__l1b.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "v3_cottage__before",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+600,
+540
+]
+},
+{
+"name": "v3_cottage__l1",
+"scene": "packs/core_regions/scenes/lakeside__l1.json",
+"player": [
+600,
+540
+]
+},
+{
+"name": "v3_cottage__l1b",
+"scene": "packs/core_regions/scenes/lakeside__l1b.json",
+"player": [
+600,
+540
+]
+},
+{
+"name": "v4_paths__before",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+960,
+250
+]
+},
+{
+"name": "v4_paths__l1",
+"scene": "packs/core_regions/scenes/lakeside__l1.json",
+"player": [
+960,
+250
+]
+},
+{
+"name": "v4_paths__l1b",
+"scene": "packs/core_regions/scenes/lakeside__l1b.json",
+"player": [
+960,
+250
+]
+},
+{
+"name": "v4b_north__before",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1000,
+1300
+]
+},
+{
+"name": "v4b_north__l1",
+"scene": "packs/core_regions/scenes/lakeside__l1.json",
+"player": [
+1000,
+1300
+]
+},
+{
+"name": "v4b_north__l1b",
+"scene": "packs/core_regions/scenes/lakeside__l1b.json",
+"player": [
+1000,
+1300
+]
+},
+{
+"name": "v2_shore__before",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1400,
+780
+]
+},
+{
+"name": "v2_shore__l1",
+"scene": "packs/core_regions/scenes/lakeside__l1.json",
+"player": [
+1400,
+780
+]
+},
+{
+"name": "v2_shore__l1b",
+"scene": "packs/core_regions/scenes/lakeside__l1b.json",
+"player": [
+1400,
+780
+]
+},
+{
+"name": "v1_village__l1b_lights_removed",
+"scene": "packs/core_regions/scenes/lakeside__l1b__nolights.json",
+"player": [
+1100,
+650
+]
+},
+{
+"name": "v4_paths__l1b_lights_removed",
+"scene": "packs/core_regions/scenes/lakeside__l1b__nolights.json",
+"player": [
+960,
+250
+]
+},
+{
+"name": "v1_village__before_again",
+"scene": "packs/core_regions/scenes/lakeside.json",
+"player": [
+1100,
+650
+]
+}
+]

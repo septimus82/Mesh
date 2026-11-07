@@ -1,0 +1,175 @@
+{
+ "scatter": {
+  "bush": {
+   "before": 109,
+   "after": 134,
+   "kept": 64,
+   "identical": false
+  },
+  "bush_berries": {
+   "before": 43,
+   "after": 56,
+   "kept": 18,
+   "identical": false
+  },
+  "flowers_pink": {
+   "before": 572,
+   "after": 190,
+   "kept": 0,
+   "identical": false
+  },
+  "flowers_yellow": {
+   "before": 506,
+   "after": 241,
+   "kept": 0,
+   "identical": false
+  },
+  "grass_dry": {
+   "before": 140,
+   "after": 34,
+   "kept": 34,
+   "identical": false
+  },
+  "grass_tall": {
+   "before": 3431,
+   "after": 2498,
+   "kept": 2255,
+   "identical": false
+  },
+  "grass_tuft": {
+   "before": 7996,
+   "after": 5779,
+   "kept": 5215,
+   "identical": false
+  },
+  "reeds": {
+   "before": 242,
+   "after": 242,
+   "kept": 242,
+   "identical": true
+  },
+  "reeds_cattail": {
+   "before": 116,
+   "after": 116,
+   "kept": 116,
+   "identical": true
+  },
+  "rock_medium": {
+   "before": 13,
+   "after": 13,
+   "kept": 13,
+   "identical": true
+  },
+  "rock_small": {
+   "before": 134,
+   "after": 134,
+   "kept": 134,
+   "identical": true
+  },
+  "tree_small": {
+   "before": 93,
+   "after": 57,
+   "kept": 6,
+   "identical": false
+  }
+ },
+ "terrain_paint": {
+  "chunks_changed": [
+   "2,0",
+   "2,2",
+   "3,1",
+   "4,1",
+   "4,2"
+  ],
+  "corners_changed": 221,
+  "heights_identical": true
+ },
+ "lights": [
+  {
+   "index": 1,
+   "before": {
+    "color": "#ffcc88",
+    "elevation": 76.8,
+    "mode": "soft",
+    "radius": 224.0,
+    "x": 800.0,
+    "y": 326.0
+   },
+   "after": {
+    "color": "#ffcc88",
+    "elevation": 76.8,
+    "enabled": false,
+    "mode": "soft",
+    "radius": 224.0,
+    "x": 800.0,
+    "y": 326.0
+   }
+  },
+  {
+   "index": 2,
+   "before": {
+    "color": "#ffcc88",
+    "elevation": 76.8,
+    "mode": "soft",
+    "radius": 224.0,
+    "x": 941.0,
+    "y": 442.0
+   },
+   "after": {
+    "color": "#ffcc88",
+    "elevation": 76.8,
+    "enabled": false,
+    "mode": "soft",
+    "radius": 224.0,
+    "x": 941.0,
+    "y": 442.0
+   }
+  },
+  {
+   "index": 3,
+   "before": {
+    "color": "#ffcc88",
+    "elevation": 76.8,
+    "mode": "soft",
+    "radius": 224.0,
+    "x": 1043.0,
+    "y": 755.0
+   },
+   "after": {
+    "color": "#ffcc88",
+    "elevation": 76.8,
+    "enabled": false,
+    "mode": "soft",
+    "radius": 224.0,
+    "x": 1043.0,
+    "y": 755.0
+   }
+  },
+  {
+   "index": 4,
+   "before": {
+    "color": "#ffcc88",
+    "elevation": 76.8,
+    "mode": "soft",
+    "radius": 224.0,
+    "x": 678.0,
+    "y": 586.0
+   },
+   "after": {
+    "color": "#ffcc88",
+    "elevation": 76.8,
+    "enabled": false,
+    "mode": "soft",
+    "radius": 224.0,
+    "x": 678.0,
+    "y": 586.0
+   }
+  }
+ ],
+ "structures_identical": true,
+ "entities_identical": true,
+ "other_settings_identical": true,
+ "hd2d_keys_other_than_scatter_ground_identical": true,
+ "ground_apart_from_paint_identical": true,
+ "top_level_apart_from_settings_lights_entities_identical": true
+}

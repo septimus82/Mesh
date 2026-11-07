@@ -1,0 +1,212 @@
+{
+ "determinism_v1_shipped_repeat_max_diff": 0,
+ "views": {
+  "v0_overview_wide": {
+   "fine_detail": {
+    "before": 32.61,
+    "l1": 25.94,
+    "l1b": 26.23
+   },
+   "l1b_vs_shipped_pct": -19.6,
+   "l1_vs_shipped_pct": -20.4,
+   "mean_luma": {
+    "before": 82.9,
+    "l1": 76.9,
+    "l1b": 76.6
+   }
+  },
+  "v1_village": {
+   "fine_detail": {
+    "before": 25.26,
+    "l1": 20.05,
+    "l1b": 20.38
+   },
+   "l1b_vs_shipped_pct": -19.3,
+   "l1_vs_shipped_pct": -20.6,
+   "mean_luma": {
+    "before": 85.0,
+    "l1": 78.1,
+    "l1b": 77.9
+   }
+  },
+  "v3_cottage": {
+   "fine_detail": {
+    "before": 26.35,
+    "l1": 19.92,
+    "l1b": 20.34
+   },
+   "l1b_vs_shipped_pct": -22.8,
+   "l1_vs_shipped_pct": -24.4,
+   "mean_luma": {
+    "before": 84.9,
+    "l1": 76.3,
+    "l1b": 76.4
+   }
+  },
+  "v4_paths": {
+   "fine_detail": {
+    "before": 28.35,
+    "l1": 21.18,
+    "l1b": 22.2
+   },
+   "l1b_vs_shipped_pct": -21.7,
+   "l1_vs_shipped_pct": -25.3,
+   "mean_luma": {
+    "before": 89.3,
+    "l1": 80.4,
+    "l1b": 80.8
+   }
+  },
+  "v4b_north": {
+   "fine_detail": {
+    "before": 23.93,
+    "l1": 21.24,
+    "l1b": 20.04
+   },
+   "l1b_vs_shipped_pct": -16.3,
+   "l1_vs_shipped_pct": -11.2,
+   "mean_luma": {
+    "before": 82.7,
+    "l1": 81.4,
+    "l1b": 79.6
+   }
+  },
+  "v2_shore": {
+   "fine_detail": {
+    "before": 21.61,
+    "l1": 19.34,
+    "l1b": 19.2
+   },
+   "l1b_vs_shipped_pct": -11.1,
+   "l1_vs_shipped_pct": -10.5,
+   "mean_luma": {
+    "before": 78.3,
+    "l1": 77.3,
+    "l1b": 77.1
+   }
+  },
+  "v1_village_1080": {
+   "fine_detail": {
+    "before": 17.98,
+    "l1": 14.28,
+    "l1b": 14.53
+   },
+   "l1b_vs_shipped_pct": -19.2
+  }
+ },
+ "noon_lamp_ground": {
+  "v4_paths/lamp_left_foot": {
+   "l1b": 88.8,
+   "l1b_lights_removed": 88.8,
+   "diff_pct": 0.0
+  },
+  "v4_paths/lamp_mid_foot": {
+   "l1b": 84.2,
+   "l1b_lights_removed": 84.2,
+   "diff_pct": 0.0
+  },
+  "v4_paths/whole_frame_identical_to_lights_removed": true,
+  "v1_village/lamp_left_foot": {
+   "l1b": 75.8,
+   "l1b_lights_removed": 75.8,
+   "diff_pct": 0.0
+  },
+  "v1_village/lamp_bridge_foot": {
+   "l1b": 72.3,
+   "l1b_lights_removed": 72.3,
+   "diff_pct": 0.0
+  },
+  "v1_village/whole_frame_identical_to_lights_removed": true
+ },
+ "scatter": {
+  "shipped": {
+   "total": 13395,
+   "by_asset": {
+    "bush": 109,
+    "bush_berries": 43,
+    "flowers_pink": 572,
+    "flowers_yellow": 506,
+    "grass_dry": 140,
+    "grass_tall": 3431,
+    "grass_tuft": 7996,
+    "reeds": 242,
+    "reeds_cattail": 116,
+    "rock_medium": 13,
+    "rock_small": 134,
+    "tree_small": 93
+   },
+   "flowers": 1078,
+   "flowers_clumped_share": 0.27,
+   "flower_median_neighbours_1p5m": 3.0,
+   "bytes": 1418146
+  },
+  "l1": {
+   "total": 9656,
+   "by_asset": {
+    "bush": 133,
+    "bush_berries": 55,
+    "flowers_pink": 156,
+    "flowers_yellow": 210,
+    "grass_dry": 34,
+    "grass_tall": 2577,
+    "grass_tuft": 5933,
+    "reeds": 242,
+    "reeds_cattail": 116,
+    "rock_medium": 13,
+    "rock_small": 134,
+    "tree_small": 53
+   },
+   "flowers": 366,
+   "flowers_clumped_share": 0.915,
+   "flower_median_neighbours_1p5m": 10.0,
+   "bytes": 1075086
+  },
+  "l1b": {
+   "total": 9494,
+   "by_asset": {
+    "bush": 134,
+    "bush_berries": 56,
+    "flowers_pink": 190,
+    "flowers_yellow": 241,
+    "grass_dry": 34,
+    "grass_tall": 2498,
+    "grass_tuft": 5779,
+    "reeds": 242,
+    "reeds_cattail": 116,
+    "rock_medium": 13,
+    "rock_small": 134,
+    "tree_small": 57
+   },
+   "flowers": 431,
+   "flowers_clumped_share": 0.921,
+   "flower_median_neighbours_1p5m": 10.0,
+   "bytes": 1060164
+  }
+ },
+ "draw_calls": {
+  "v0_overview_wide__before": 96,
+  "v0_overview_wide__l1": 94,
+  "v0_overview_wide__l1b": 94,
+  "v1_village__before": 65,
+  "v1_village__l1": 65,
+  "v1_village__l1b": 65,
+  "v3_cottage__before": 72,
+  "v3_cottage__l1": 70,
+  "v3_cottage__l1b": 71,
+  "v4_paths__before": 61,
+  "v4_paths__l1": 60,
+  "v4_paths__l1b": 60,
+  "v4b_north__before": 67,
+  "v4b_north__l1": 66,
+  "v4b_north__l1b": 66,
+  "v2_shore__before": 72,
+  "v2_shore__l1": 70,
+  "v2_shore__l1b": 70,
+  "v1_village__l1b_lights_removed": 65,
+  "v4_paths__l1b_lights_removed": 60,
+  "v1_village__before_again": 65,
+  "hd_v1_village__before": 65,
+  "hd_v1_village__l1": 65,
+  "hd_v1_village__l1b": 65
+ }
+}

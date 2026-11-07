@@ -1,0 +1,18 @@
+{
+  "export_code": 0,
+  "export_tail": "[Mesh][Export] building bundle from C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\c18a071c64bbe7a7\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\lva\\l1\\candb...\n[Mesh][Export] OK (1072 files, 11,772,386 bytes)\n[Mesh][Export] wrote bundle to C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\c18a071c64bbe7a7\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\lva\\l1\\validate\\candb\\export\n",
+  "bundle_run": {
+    "engine_from": "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\c18a071c64bbe7a7\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\lva\\l1\\validate\\candb\\export\\engine\\__init__.py",
+    "started_in": "packs/core_regions/scenes/start.json",
+    "after_walking_east": "packs/core_regions/scenes/lakeside.json",
+    "arrived_at_m": [
+      30.0,
+      3.44
+    ],
+    "walked_to_m": [
+      30.0,
+      11.02
+    ]
+  },
+  "bundle_files": 1073
+}
