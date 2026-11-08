@@ -1765,9 +1765,9 @@ class Studio(InspectorMixin, SoundMixin):
             softness = softness if softness in ops.SHADOW_SOFTNESS else "sharp"  # (as the renderer reads it)
             rows.add(self._label("Shadow edges", color=C_MUTED, size=10))
             row = gui.UIBoxLayout(vertical=False, space_between=4)
-            for text, value in (("Sharp", "sharp"), ("Soft", "soft"), ("Softer", "softer")):
-                row.add(self._button(text, partial(self.set_room_lighting, f"Shadow edges: {text.lower()}.", softness=value),
-                                     width=third, style=S_ACTIVE if softness == value else S_BUTTON))
+            for text, preset in (("Sharp", "sharp"), ("Soft", "soft"), ("Softer", "softer")):
+                row.add(self._button(text, partial(self.set_room_lighting, f"Shadow edges: {text.lower()}.", softness=preset),
+                                     width=third, style=S_ACTIVE if softness == preset else S_BUTTON))
             rows.add(row)
             rows.add(self._label({"sharp": "Sharp: crisp edges.", "soft": "Soft: feathered edges.",
                                   "softer": "Softer: the sun's shadows broader still; lamps' as Soft."}[softness],

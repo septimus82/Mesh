@@ -323,7 +323,8 @@ def list_lights(scene_path: str, root: str = ".") -> dict[str, Any]:
     if hd2d:
         result["hd2d_shadow_maps"] = hd2d_settings.MAX_SHADOW_LIGHTS
         result["hd2d_room_shadows"] = hd2d_settings.room_shadows(scene)
-        result["hd2d_ignored_settings"] = [k for k in hd2d_settings.IGNORED_ROOM_SETTINGS if k in settings]
+        result["hd2d_ignored_settings"] = [k for k in hd2d_settings.IGNORED_ROOM_SETTINGS
+                                           if isinstance(settings, dict) and k in settings]
     return result
 
 
