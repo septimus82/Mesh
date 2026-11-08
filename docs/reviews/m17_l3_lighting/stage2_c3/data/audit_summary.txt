@@ -1,0 +1,81 @@
+===== base 6f9f4c8 (tree of 089cbfe)
+'Delete'                                   light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Duplicate'                                light2: drawn | light4: drawn | light5: drawn | room_light: allocation only
+'Casts shadows: On'                        light2: drawn | light4: allocation only | light5: allocation only | room_light: INERT: writes lights[0].shadows
+'On: On'                                   light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Custom'                                   light2: INERT: writes lights[1].flicker_enabled, lights[1].flicker_preset | light4: INERT: writes lights[3].flicker_enabled, lights[3].flicker_preset | light5: INERT: writes lights[4].flicker_brightness, lights[4].flicker_irregularity, lights[4].flicker_preset, lights[4].flicker_reach, lights[4].flicker_speed | room_light: INERT: writes lights[0].flicker_enabled, lights[0].flicker_preset
+'Faulty lamp'                              light2: INERT: writes lights[1].flicker_enabled, lights[1].flicker_preset | light4: INERT: writes lights[3].flicker_enabled, lights[3].flicker_preset | light5: INERT: writes lights[4].flicker_preset | room_light: INERT: writes lights[0].flicker_enabled, lights[0].flicker_preset
+'Fire'                                     light2: INERT: writes lights[1].flicker_enabled, lights[1].flicker_preset | light4: INERT: writes lights[3].flicker_enabled, lights[3].flicker_preset | light5: INERT: writes lights[4].flicker_preset | room_light: INERT: writes lights[0].flicker_enabled, lights[0].flicker_preset
+'Torch'                                    light2: INERT: writes lights[1].flicker_enabled, lights[1].flicker_preset | light4: INERT: writes lights[3].flicker_enabled, lights[3].flicker_preset | light5: current choice | room_light: INERT: writes lights[0].flicker_enabled, lights[0].flicker_preset
+'Candle'                                   light2: INERT: writes lights[1].flicker_enabled, lights[1].flicker_preset | light4: INERT: writes lights[3].flicker_enabled, lights[3].flicker_preset | light5: INERT: writes lights[4].flicker_preset | room_light: INERT: writes lights[0].flicker_enabled, lights[0].flicker_preset
+'Steady'                                   light2: INERT: writes lights[1].flicker_enabled | light4: INERT: writes lights[3].flicker_enabled | light5: INERT: writes lights[4].flicker_enabled | room_light: INERT: writes lights[0].flicker_enabled
+'Bigger'                                   light2: drawn | light4: drawn | light5: drawn | room_light: INERT: writes lights[0].radius
+'Smaller'                                  light2: drawn | light4: drawn | light5: drawn | room_light: INERT: writes lights[0].radius
+'Purple'                                   light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Green'                                    light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Red'                                      light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Cold'                                     light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'White'                                    light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Warm'                                     light2: drawn | light4: current choice | light5: current choice | room_light: drawn
+'Softer'                                   light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Soft'                                     light2: current choice | light4: current choice | light5: current choice | room_light: current choice
+'Sharp'                                    light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+"Project's"                                light2: current choice | light4: current choice | light5: current choice | room_light: current choice
+'Shadows off'                              light2: INERT: writes settings.lighting_shadows_mode | light4: INERT: writes settings.lighting_shadows_mode | light5: INERT: writes settings.lighting_shadows_mode | room_light: INERT: writes settings.lighting_shadows_mode
+'Shadows on'                               light2: INERT: writes settings.lighting_shadows_mode | light4: INERT: writes settings.lighting_shadows_mode | light5: INERT: writes settings.lighting_shadows_mode | room_light: INERT: writes settings.lighting_shadows_mode
+'Brighter'                                 light2: INERT: writes settings.lighting_ambient_color | light4: INERT: writes settings.lighting_ambient_color | light5: INERT: writes settings.lighting_ambient_color | room_light: INERT: writes settings.lighting_ambient_color
+'Darker'                                   light2: INERT: writes settings.lighting_ambient_color | light4: INERT: writes settings.lighting_ambient_color | light5: INERT: writes settings.lighting_ambient_color | room_light: INERT: writes settings.lighting_ambient_color
+'Black'                                    light2: INERT: writes settings.lighting_ambient_color | light4: INERT: writes settings.lighting_ambient_color | light5: INERT: writes settings.lighting_ambient_color | room_light: INERT: writes settings.lighting_ambient_color
+'Cave'                                     light2: current choice | light4: current choice | light5: current choice | room_light: current choice
+'Night'                                    light2: INERT: writes settings.lighting_ambient_color | light4: INERT: writes settings.lighting_ambient_color | light5: INERT: writes settings.lighting_ambient_color | room_light: INERT: writes settings.lighting_ambient_color
+'Dusk'                                     light2: INERT: writes settings.lighting_ambient_color | light4: INERT: writes settings.lighting_ambient_color | light5: INERT: writes settings.lighting_ambient_color | room_light: INERT: writes settings.lighting_ambient_color
+'Day'                                      light2: INERT: writes settings.lighting_ambient_color | light4: INERT: writes settings.lighting_ambient_color | light5: INERT: writes settings.lighting_ambient_color | room_light: INERT: writes settings.lighting_ambient_color
+'As project'                               light2: INERT: writes settings.lighting_enabled | light4: INERT: writes settings.lighting_enabled | light5: INERT: writes settings.lighting_enabled | room_light: INERT: writes settings.lighting_enabled
+'Off'                                      light2: current choice | light4: current choice | light5: current choice | room_light: current choice
+'On'                                       light2: INERT: writes settings.lighting_enabled | light4: INERT: writes settings.lighting_enabled | light5: INERT: writes settings.lighting_enabled | room_light: INERT: writes settings.lighting_enabled
+'box:light_x'                              light2: drawn | light4: drawn | light5: drawn | room_light: INERT: writes lights[0].x
+'box:light_y'                              light2: drawn | light4: drawn | light5: drawn | room_light: INERT: writes lights[0].y
+'box:light_radius'                         light2: drawn | light4: drawn | light5: drawn | room_light: INERT: writes lights[0].radius
+'box:light_height'                         light2: drawn | light4: drawn | light5: drawn | room_light: INERT: writes lights[0].elevation
+'box:light_rgb'                            light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Characters cast shadows: On'              light2: INERT: writes settings.lighting_character_shadows | light4: INERT: writes settings.lighting_character_shadows | light5: INERT: writes settings.lighting_character_shadows | room_light: INERT: writes settings.lighting_character_shadows
+'High'                                     light2: current choice | light4: current choice | light5: current choice | room_light: current choice
+'Normal'                                   light2: INERT: writes settings.lighting_shadow_quality | light4: INERT: writes settings.lighting_shadow_quality | light5: INERT: writes settings.lighting_shadow_quality | room_light: INERT: writes settings.lighting_shadow_quality
+'Low'                                      light2: INERT: writes settings.lighting_shadow_quality | light4: INERT: writes settings.lighting_shadow_quality | light5: INERT: writes settings.lighting_shadow_quality | room_light: INERT: writes settings.lighting_shadow_quality
+'box:shadow_edge'                          light2: INERT: writes settings.lighting_shadow_edge | light4: INERT: writes settings.lighting_shadow_edge | light5: INERT: writes settings.lighting_shadow_edge | room_light: INERT: writes settings.lighting_shadow_edge
+'box:shadow_strength_room'                 light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Livelier'                                 light5: INERT: writes lights[4].flicker_strength
+'Calmer'                                   light5: INERT: writes lights[4].flicker_strength
+'box:light_flicker_speed'                  light5: INERT: writes lights[4].flicker_brightness, lights[4].flicker_irregularity, lights[4].flicker_preset, lights[4].flicker_reach, lights[4].flicker_speed
+'box:light_flicker_brightness'             light5: INERT: writes lights[4].flicker_brightness, lights[4].flicker_irregularity, lights[4].flicker_preset, lights[4].flicker_reach, lights[4].flicker_speed
+'box:light_flicker_reach'                  light5: INERT: writes lights[4].flicker_brightness, lights[4].flicker_irregularity, lights[4].flicker_preset, lights[4].flicker_reach, lights[4].flicker_speed
+'box:light_flicker_irregularity'           light5: INERT: writes lights[4].flicker_brightness, lights[4].flicker_irregularity, lights[4].flicker_preset, lights[4].flicker_reach, lights[4].flicker_speed
+===== branch
+'Delete'                                   light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Duplicate'                                light2: drawn | light4: drawn | light5: drawn
+'Casts shadows: On'                        light2: drawn | light4: allocation only | light5: allocation only
+'On: On'                                   light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Brighter'                                 light2: drawn | light4: drawn | light5: drawn
+'Dimmer'                                   light2: drawn | light4: drawn | light5: drawn
+'Bigger'                                   light2: drawn | light4: drawn | light5: drawn
+'Smaller'                                  light2: drawn | light4: drawn | light5: drawn
+'Purple'                                   light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Green'                                    light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Red'                                      light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Cold'                                     light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'White'                                    light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Warm'                                     light2: drawn | light4: current choice | light5: current choice | room_light: drawn
+'Softer'                                   light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Soft'                                     light2: current choice | light4: current choice | light5: current choice | room_light: current choice
+'Sharp'                                    light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Shadows off'                              light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'Shadows on'                               light2: current choice | light4: current choice | light5: current choice | room_light: current choice
+'box:light_x'                              light2: drawn | light4: drawn | light5: drawn
+'box:light_y'                              light2: drawn | light4: drawn | light5: drawn
+'box:light_radius'                         light2: drawn | light4: drawn | light5: drawn
+'box:light_height'                         light2: drawn | light4: drawn | light5: drawn
+'box:light_intensity'                      light2: drawn | light4: drawn | light5: drawn
+'box:light_rgb'                            light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+'box:shadow_strength_room'                 light2: drawn | light4: drawn | light5: drawn | room_light: drawn
+2D panel identical (buttons, labels, boxes): True
+2D sweep identical (keys written, messages): True

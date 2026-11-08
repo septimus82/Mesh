@@ -1,0 +1,3946 @@
+{
+ "worktree": "D:\\Games\\Mesh-l3c",
+ "hd2d_panel": [
+  [
+   "Light 5: Warm, size 200 - no shadow map",
+   "Light 4: Warm, size 200 - no shadow map",
+   "Light 3: custom, size 224 - shadows",
+   "Light 2: custom, size 224 - shadows",
+   "Light 1: custom, size 0",
+   "+ Add light",
+   "> Fine-tune shadows",
+   "Softer",
+   "Soft",
+   "Sharp",
+   "Project's",
+   "Shadows off",
+   "Shadows on",
+   "Brighter",
+   "Darker",
+   "Black",
+   "Cave",
+   "Night",
+   "Dusk",
+   "Day",
+   "As project",
+   "Off",
+   "On",
+   "Light 6: Warm, size 200 - off",
+   "Done"
+  ],
+  [
+   "v 3 more below (scroll down)",
+   "Light 5: Warm, size 200 - no shadow map",
+   "Light 4: Warm, size 200 - no shadow map",
+   "Light 3: custom, size 224 - shadows",
+   "Light 2: custom, size 224 - shadows",
+   "Light 1: custom, size 0",
+   "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+   "+ Add light",
+   "Lights (6)",
+   "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+   "> Fine-tune shadows",
+   "Soft: gently feathered boundaries.",
+   "Softer",
+   "Soft",
+   "Sharp",
+   "Shadow edges",
+   "Project's",
+   "Shadows off",
+   "Shadows on",
+   "Brighter",
+   "Darker",
+   "Black",
+   "Cave",
+   "Night",
+   "Dusk",
+   "Day",
+   "Room light (away from lamps)",
+   "As project",
+   "Off",
+   "On",
+   "Off: everything is fully lit.",
+   "Lighting",
+   "v 1 more below (scroll down)",
+   "While this panel is open, clicks on the map work on lights.",
+   "Light 6: Warm, size 200 - off",
+   "^ 2 more above (scroll up)",
+   "Done",
+   "^ 3 more above (scroll up)",
+   "v 2 more below (scroll down)",
+   "^ 1 more above (scroll up)"
+  ],
+  []
+ ],
+ "hd2d_light2": {
+  "_surveys": {
+   "More settings": {
+    "buttons": [
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Casts shadows: On",
+     "On: On",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "Done",
+     "+ Add light",
+     "> Fine-tune shadows",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "As project",
+     "Off",
+     "On"
+    ],
+    "labels": [
+     "v 7 more below (scroll down)",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "It casts shadows: one of the room's 2 shadow maps is its.",
+     "Casts shadows: On",
+     "On: On",
+     "No flicker: a lamp, a magic light.",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Flicker",
+     "Bigger",
+     "size 224",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 2",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "^ 14 more above (scroll up)",
+     "v 5 more below (scroll down)",
+     "288",
+     "Y",
+     "560",
+     "X",
+     "^ 16 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "2.5",
+     "Height (m)",
+     "224",
+     "Size",
+     "^ 18 more above (scroll up)",
+     "v 1 more below (scroll down)",
+     "While this panel is open, clicks on the map work on lights.",
+     "255, 176, 96",
+     "Colour (R, G, B)",
+     "^ 20 more above (scroll up)",
+     "Done",
+     "^ 21 more above (scroll up)",
+     "v 2 more below (scroll down)",
+     "^ 19 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "^ 17 more above (scroll up)",
+     "v 6 more below (scroll down)",
+     "^ 15 more above (scroll up)",
+     "v 8 more below (scroll down)",
+     "+ Add light",
+     "Lights (6)",
+     "^ 13 more above (scroll up)",
+     "v 10 more below (scroll down)",
+     "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+     "^ 11 more above (scroll up)",
+     "v 12 more below (scroll down)",
+     "> Fine-tune shadows",
+     "Soft: gently feathered boundaries.",
+     "^ 9 more above (scroll up)",
+     "v 14 more below (scroll down)",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "^ 7 more above (scroll up)",
+     "v 16 more below (scroll down)",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "^ 5 more above (scroll up)",
+     "v 18 more below (scroll down)",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "Room light (away from lamps)",
+     "^ 3 more above (scroll up)",
+     "v 20 more below (scroll down)",
+     "As project",
+     "Off",
+     "On",
+     "Off: everything is fully lit.",
+     "^ 1 more above (scroll up)",
+     "v 21 more below (scroll down)",
+     "Lighting"
+    ],
+    "boxes": [
+     "light_x",
+     "light_y",
+     "light_radius",
+     "light_height",
+     "light_rgb"
+    ]
+   },
+   "Fine-tune shadows": {
+    "buttons": [
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "+ Add light",
+     "Characters cast shadows: On",
+     "High",
+     "Normal",
+     "Low",
+     "v Fine-tune shadows",
+     "Cold",
+     "White",
+     "Warm",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Casts shadows: On",
+     "On: On",
+     "> More settings",
+     "Delete",
+     "Duplicate",
+     "Done",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "As project",
+     "Off",
+     "On"
+    ],
+    "labels": [
+     "v 13 more below (scroll down)",
+     "Light 2",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+     "Characters cast shadows: On",
+     "Quality: smoother soft edges cost a little more each frame.",
+     "High",
+     "Normal",
+     "Low",
+     "1",
+     "Strength (0-1, 1: walls block all)",
+     "Edge width (px, empty: as the preset)",
+     "v Fine-tune shadows",
+     "Soft: gently feathered boundaries.",
+     "^ 9 more above (scroll up)",
+     "v 12 more below (scroll down)",
+     "Cold",
+     "White",
+     "Warm",
+     "^ 11 more above (scroll up)",
+     "v 8 more below (scroll down)",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Flicker",
+     "Bigger",
+     "size 224",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "^ 13 more above (scroll up)",
+     "v 6 more below (scroll down)",
+     "No flicker: a lamp, a magic light.",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "^ 15 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "It casts shadows: one of the room's 2 shadow maps is its.",
+     "Casts shadows: On",
+     "On: On",
+     "^ 17 more above (scroll up)",
+     "v 2 more below (scroll down)",
+     "> More settings",
+     "Delete",
+     "Duplicate",
+     "^ 19 more above (scroll up)",
+     "Done",
+     "While this panel is open, clicks on the map work on lights.",
+     "^ 21 more above (scroll up)",
+     "v 16 more below (scroll down)",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "^ 7 more above (scroll up)",
+     "v 18 more below (scroll down)",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "^ 5 more above (scroll up)",
+     "v 20 more below (scroll down)",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "Room light (away from lamps)",
+     "^ 3 more above (scroll up)",
+     "v 21 more below (scroll down)",
+     "As project",
+     "Off",
+     "On",
+     "Off: everything is fully lit.",
+     "^ 1 more above (scroll up)",
+     "v 22 more below (scroll down)",
+     "Lighting"
+    ],
+    "boxes": [
+     "shadow_edge",
+     "shadow_strength_room"
+    ]
+   }
+  },
+  "Delete": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 5"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light deleted.",
+   "undone": true
+  },
+  "Duplicate": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 7"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light duplicated.",
+   "undone": true
+  },
+  "Casts shadows: On": {
+   "edit": true,
+   "keys": [
+    "lights[1].shadows"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "It shines through walls.",
+   "undone": true
+  },
+  "On: On": {
+   "edit": true,
+   "keys": [
+    "lights[1].enabled"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light off (kept, not deleted).",
+   "undone": true
+  },
+  "Custom": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_enabled",
+    "lights[1].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: custom.",
+   "undone": true
+  },
+  "Faulty lamp": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_enabled",
+    "lights[1].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: faulty lamp.",
+   "undone": true
+  },
+  "Fire": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_enabled",
+    "lights[1].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: fire.",
+   "undone": true
+  },
+  "Torch": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_enabled",
+    "lights[1].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: torch.",
+   "undone": true
+  },
+  "Candle": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_enabled",
+    "lights[1].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: candle.",
+   "undone": true
+  },
+  "Steady": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: steady.",
+   "undone": true
+  },
+  "Bigger": {
+   "edit": true,
+   "keys": [
+    "lights[1].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Bigger.",
+   "undone": true
+  },
+  "Smaller": {
+   "edit": true,
+   "keys": [
+    "lights[1].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Smaller.",
+   "undone": true
+  },
+  "Purple": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Purple light.",
+   "undone": true
+  },
+  "Green": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Green light.",
+   "undone": true
+  },
+  "Red": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Red light.",
+   "undone": true
+  },
+  "Cold": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Cold light.",
+   "undone": true
+  },
+  "White": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "White light.",
+   "undone": true
+  },
+  "Warm": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Warm light.",
+   "undone": true
+  },
+  "Softer": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: softer.",
+   "undone": true
+  },
+  "Soft": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadow edges: soft."
+  },
+  "Sharp": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: sharp.",
+   "undone": true
+  },
+  "Project's": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadows follow the project."
+  },
+  "Shadows off": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadows_mode"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows off.",
+   "undone": true
+  },
+  "Shadows on": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadows_mode"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows on.",
+   "undone": true
+  },
+  "Brighter": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light changed.",
+   "undone": true
+  },
+  "Darker": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light changed.",
+   "undone": true
+  },
+  "Black": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Black.",
+   "undone": true
+  },
+  "Cave": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Room light: Cave."
+  },
+  "Night": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Night.",
+   "undone": true
+  },
+  "Dusk": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Dusk.",
+   "undone": true
+  },
+  "Day": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Day.",
+   "undone": true
+  },
+  "As project": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting follows the project.",
+   "undone": true
+  },
+  "Off": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Lighting off in this room."
+  },
+  "On": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting on in this room.",
+   "undone": true
+  },
+  "box:light_x": {
+   "edit": true,
+   "keys": [
+    "lights[1].x"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_y": {
+   "edit": true,
+   "keys": [
+    "lights[1].y"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_radius": {
+   "edit": true,
+   "keys": [
+    "lights[1].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_height": {
+   "edit": true,
+   "keys": [
+    "lights[1].elevation"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "The lamp now hangs 3 m up.",
+   "undone": true
+  },
+  "box:light_rgb": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Colour changed.",
+   "undone": true
+  },
+  "Characters cast shadows: On": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_character_shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "No character shadows here.",
+   "undone": true
+  },
+  "High": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadow quality: high."
+  },
+  "Normal": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_quality"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: normal.",
+   "undone": true
+  },
+  "Low": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_quality"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: low.",
+   "undone": true
+  },
+  "box:shadow_edge": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_edge"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow edge changed.",
+   "undone": true
+  },
+  "box:shadow_strength_room": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_strength"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow strength changed.",
+   "undone": true
+  }
+ },
+ "hd2d_light4": {
+  "_surveys": {
+   "More settings": {
+    "buttons": [
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Casts shadows: On",
+     "On: On",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Done",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "+ Add light",
+     "> Fine-tune shadows",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "As project",
+     "Off",
+     "On"
+    ],
+    "labels": [
+     "v 1 more below (scroll down)",
+     "While this panel is open, clicks on the map work on lights.",
+     "255, 204, 136",
+     "Colour (R, G, B)",
+     "1.5",
+     "Height (m)",
+     "200",
+     "Size",
+     "800",
+     "Y",
+     "400",
+     "X",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "It is set to cast shadows, but a room has 2 shadow maps and lights earlier in the list have them: this one shines through walls. Turn shadows off on one of those to give it one.",
+     "Casts shadows: On",
+     "On: On",
+     "No flicker: a lamp, a magic light.",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Flicker",
+     "Bigger",
+     "size 200",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 4",
+     "^ 22 more above (scroll up)",
+     "Done",
+     "^ 23 more above (scroll up)",
+     "^ 21 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "^ 19 more above (scroll up)",
+     "v 6 more below (scroll down)",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "^ 17 more above (scroll up)",
+     "v 8 more below (scroll down)",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "^ 15 more above (scroll up)",
+     "v 10 more below (scroll down)",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "^ 13 more above (scroll up)",
+     "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+     "^ 11 more above (scroll up)",
+     "v 12 more below (scroll down)",
+     "> Fine-tune shadows",
+     "Soft: gently feathered boundaries.",
+     "^ 9 more above (scroll up)",
+     "v 14 more below (scroll down)",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "^ 7 more above (scroll up)",
+     "v 16 more below (scroll down)",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "^ 5 more above (scroll up)",
+     "v 18 more below (scroll down)",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "Room light (away from lamps)",
+     "^ 3 more above (scroll up)",
+     "v 20 more below (scroll down)",
+     "As project",
+     "Off",
+     "On",
+     "Off: everything is fully lit.",
+     "^ 1 more above (scroll up)",
+     "v 21 more below (scroll down)",
+     "Lighting"
+    ],
+    "boxes": [
+     "light_x",
+     "light_y",
+     "light_radius",
+     "light_height",
+     "light_rgb"
+    ]
+   },
+   "Fine-tune shadows": {
+    "buttons": [
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "+ Add light",
+     "Characters cast shadows: On",
+     "High",
+     "Normal",
+     "Low",
+     "v Fine-tune shadows",
+     "Cold",
+     "White",
+     "Warm",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Casts shadows: On",
+     "On: On",
+     "> More settings",
+     "Delete",
+     "Duplicate",
+     "Done",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "As project",
+     "Off",
+     "On"
+    ],
+    "labels": [
+     "v 13 more below (scroll down)",
+     "Light 4",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+     "Characters cast shadows: On",
+     "Quality: smoother soft edges cost a little more each frame.",
+     "High",
+     "Normal",
+     "Low",
+     "1",
+     "Strength (0-1, 1: walls block all)",
+     "Edge width (px, empty: as the preset)",
+     "v Fine-tune shadows",
+     "Soft: gently feathered boundaries.",
+     "^ 9 more above (scroll up)",
+     "v 12 more below (scroll down)",
+     "Cold",
+     "White",
+     "Warm",
+     "^ 11 more above (scroll up)",
+     "v 8 more below (scroll down)",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Flicker",
+     "Bigger",
+     "size 200",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "^ 13 more above (scroll up)",
+     "v 6 more below (scroll down)",
+     "No flicker: a lamp, a magic light.",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "^ 15 more above (scroll up)",
+     "v 5 more below (scroll down)",
+     "Casts shadows: On",
+     "On: On",
+     "^ 17 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "It is set to cast shadows, but a room has 2 shadow maps and lights earlier in the list have them: this one shines through walls. Turn shadows off on one of those to give it one.",
+     "^ 19 more above (scroll up)",
+     "v 1 more below (scroll down)",
+     "While this panel is open, clicks on the map work on lights.",
+     "> More settings",
+     "Delete",
+     "Duplicate",
+     "^ 21 more above (scroll up)",
+     "Done",
+     "^ 22 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "^ 20 more above (scroll up)",
+     "^ 18 more above (scroll up)",
+     "^ 16 more above (scroll up)",
+     "v 7 more below (scroll down)",
+     "^ 14 more above (scroll up)",
+     "v 9 more below (scroll down)",
+     "^ 12 more above (scroll up)",
+     "^ 10 more above (scroll up)",
+     "v 14 more below (scroll down)",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "^ 8 more above (scroll up)",
+     "v 17 more below (scroll down)",
+     "Shadow edges",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "^ 6 more above (scroll up)",
+     "v 19 more below (scroll down)",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "^ 4 more above (scroll up)",
+     "v 21 more below (scroll down)",
+     "Room light (away from lamps)",
+     "As project",
+     "Off",
+     "On",
+     "^ 2 more above (scroll up)",
+     "v 22 more below (scroll down)",
+     "Off: everything is fully lit.",
+     "Lighting"
+    ],
+    "boxes": [
+     "shadow_edge",
+     "shadow_strength_room"
+    ]
+   }
+  },
+  "Delete": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 5"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light deleted.",
+   "undone": true
+  },
+  "Duplicate": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 7"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light duplicated.",
+   "undone": true
+  },
+  "Casts shadows: On": {
+   "edit": true,
+   "keys": [
+    "lights[3].shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "It shines through walls.",
+   "undone": true
+  },
+  "On: On": {
+   "edit": true,
+   "keys": [
+    "lights[3].enabled"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light off (kept, not deleted).",
+   "undone": true
+  },
+  "Custom": {
+   "edit": true,
+   "keys": [
+    "lights[3].flicker_enabled",
+    "lights[3].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: custom.",
+   "undone": true
+  },
+  "Faulty lamp": {
+   "edit": true,
+   "keys": [
+    "lights[3].flicker_enabled",
+    "lights[3].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: faulty lamp.",
+   "undone": true
+  },
+  "Fire": {
+   "edit": true,
+   "keys": [
+    "lights[3].flicker_enabled",
+    "lights[3].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: fire.",
+   "undone": true
+  },
+  "Torch": {
+   "edit": true,
+   "keys": [
+    "lights[3].flicker_enabled",
+    "lights[3].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: torch.",
+   "undone": true
+  },
+  "Candle": {
+   "edit": true,
+   "keys": [
+    "lights[3].flicker_enabled",
+    "lights[3].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: candle.",
+   "undone": true
+  },
+  "Steady": {
+   "edit": true,
+   "keys": [
+    "lights[3].flicker_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: steady.",
+   "undone": true
+  },
+  "Bigger": {
+   "edit": true,
+   "keys": [
+    "lights[3].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Bigger.",
+   "undone": true
+  },
+  "Smaller": {
+   "edit": true,
+   "keys": [
+    "lights[3].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Smaller.",
+   "undone": true
+  },
+  "Purple": {
+   "edit": true,
+   "keys": [
+    "lights[3].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Purple light.",
+   "undone": true
+  },
+  "Green": {
+   "edit": true,
+   "keys": [
+    "lights[3].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Green light.",
+   "undone": true
+  },
+  "Red": {
+   "edit": true,
+   "keys": [
+    "lights[3].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Red light.",
+   "undone": true
+  },
+  "Cold": {
+   "edit": true,
+   "keys": [
+    "lights[3].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Cold light.",
+   "undone": true
+  },
+  "White": {
+   "edit": true,
+   "keys": [
+    "lights[3].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "White light.",
+   "undone": true
+  },
+  "Warm": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Warm light."
+  },
+  "Softer": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: softer.",
+   "undone": true
+  },
+  "Soft": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadow edges: soft."
+  },
+  "Sharp": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: sharp.",
+   "undone": true
+  },
+  "Project's": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadows follow the project."
+  },
+  "Shadows off": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadows_mode"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows off.",
+   "undone": true
+  },
+  "Shadows on": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadows_mode"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows on.",
+   "undone": true
+  },
+  "Brighter": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light changed.",
+   "undone": true
+  },
+  "Darker": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light changed.",
+   "undone": true
+  },
+  "Black": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Black.",
+   "undone": true
+  },
+  "Cave": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Room light: Cave."
+  },
+  "Night": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Night.",
+   "undone": true
+  },
+  "Dusk": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Dusk.",
+   "undone": true
+  },
+  "Day": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Day.",
+   "undone": true
+  },
+  "As project": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting follows the project.",
+   "undone": true
+  },
+  "Off": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Lighting off in this room."
+  },
+  "On": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting on in this room.",
+   "undone": true
+  },
+  "box:light_x": {
+   "edit": true,
+   "keys": [
+    "lights[3].x"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_y": {
+   "edit": true,
+   "keys": [
+    "lights[3].y"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_radius": {
+   "edit": true,
+   "keys": [
+    "lights[3].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_height": {
+   "edit": true,
+   "keys": [
+    "lights[3].elevation"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "The lamp now hangs 3 m up.",
+   "undone": true
+  },
+  "box:light_rgb": {
+   "edit": true,
+   "keys": [
+    "lights[3].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Colour changed.",
+   "undone": true
+  },
+  "Characters cast shadows: On": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_character_shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "No character shadows here.",
+   "undone": true
+  },
+  "High": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadow quality: high."
+  },
+  "Normal": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_quality"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: normal.",
+   "undone": true
+  },
+  "Low": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_quality"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: low.",
+   "undone": true
+  },
+  "box:shadow_edge": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_edge"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow edge changed.",
+   "undone": true
+  },
+  "box:shadow_strength_room": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_strength"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow strength changed.",
+   "undone": true
+  }
+ },
+ "hd2d_light5": {
+  "_surveys": {
+   "More settings": {
+    "buttons": [
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Casts shadows: On",
+     "On: On",
+     "Livelier",
+     "Calmer",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Done",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "+ Add light",
+     "> Fine-tune shadows",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "As project",
+     "Off",
+     "On"
+    ],
+    "labels": [
+     "v 7 more below (scroll down)",
+     "Flicker (changing one makes a custom flicker)",
+     "1.5",
+     "Height (m)",
+     "200",
+     "Size",
+     "800",
+     "Y",
+     "880",
+     "X",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "It is set to cast shadows, but a room has 2 shadow maps and lights earlier in the list have them: this one shines through walls. Turn shadows off on one of those to give it one.",
+     "Casts shadows: On",
+     "On: On",
+     "Livelier",
+     "strength 1x",
+     "Calmer",
+     "A lively flame with now and then a brighter moment.",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Flicker",
+     "Bigger",
+     "size 200",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 5",
+     "^ 22 more above (scroll up)",
+     "v 5 more below (scroll down)",
+     "0.2",
+     "Brightness (0-1)",
+     "2.4",
+     "Speed (wavers/s)",
+     "^ 24 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "0.6",
+     "Irregularity (0-1)",
+     "0.04",
+     "Reach (0-0.5)",
+     "^ 26 more above (scroll up)",
+     "v 1 more below (scroll down)",
+     "While this panel is open, clicks on the map work on lights.",
+     "255, 204, 136",
+     "Colour (R, G, B)",
+     "^ 28 more above (scroll up)",
+     "Done",
+     "^ 29 more above (scroll up)",
+     "v 2 more below (scroll down)",
+     "^ 27 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "^ 25 more above (scroll up)",
+     "v 6 more below (scroll down)",
+     "^ 23 more above (scroll up)",
+     "^ 21 more above (scroll up)",
+     "v 10 more below (scroll down)",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "^ 19 more above (scroll up)",
+     "v 12 more below (scroll down)",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "^ 17 more above (scroll up)",
+     "v 14 more below (scroll down)",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "^ 15 more above (scroll up)",
+     "v 15 more below (scroll down)",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "^ 13 more above (scroll up)",
+     "v 16 more below (scroll down)",
+     "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+     "^ 11 more above (scroll up)",
+     "v 18 more below (scroll down)",
+     "> Fine-tune shadows",
+     "Soft: gently feathered boundaries.",
+     "^ 9 more above (scroll up)",
+     "v 20 more below (scroll down)",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "^ 7 more above (scroll up)",
+     "v 22 more below (scroll down)",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "^ 5 more above (scroll up)",
+     "v 24 more below (scroll down)",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "Room light (away from lamps)",
+     "^ 3 more above (scroll up)",
+     "v 26 more below (scroll down)",
+     "As project",
+     "Off",
+     "On",
+     "Off: everything is fully lit.",
+     "^ 1 more above (scroll up)",
+     "v 27 more below (scroll down)",
+     "Lighting"
+    ],
+    "boxes": [
+     "light_x",
+     "light_y",
+     "light_radius",
+     "light_height",
+     "light_flicker_speed",
+     "light_flicker_brightness",
+     "light_flicker_reach",
+     "light_flicker_irregularity",
+     "light_rgb"
+    ]
+   },
+   "Fine-tune shadows": {
+    "buttons": [
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "+ Add light",
+     "Characters cast shadows: On",
+     "High",
+     "Normal",
+     "Low",
+     "v Fine-tune shadows",
+     "Cold",
+     "White",
+     "Warm",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Casts shadows: On",
+     "On: On",
+     "Livelier",
+     "Calmer",
+     "Delete",
+     "Duplicate",
+     "Done",
+     "> More settings",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "As project",
+     "Off",
+     "On"
+    ],
+    "labels": [
+     "v 14 more below (scroll down)",
+     "Light 5",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+     "Characters cast shadows: On",
+     "Quality: smoother soft edges cost a little more each frame.",
+     "High",
+     "Normal",
+     "Low",
+     "1",
+     "Strength (0-1, 1: walls block all)",
+     "Edge width (px, empty: as the preset)",
+     "v Fine-tune shadows",
+     "Soft: gently feathered boundaries.",
+     "^ 9 more above (scroll up)",
+     "v 13 more below (scroll down)",
+     "Cold",
+     "White",
+     "Warm",
+     "^ 11 more above (scroll up)",
+     "v 9 more below (scroll down)",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Flicker",
+     "Bigger",
+     "size 200",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "^ 13 more above (scroll up)",
+     "v 7 more below (scroll down)",
+     "A lively flame with now and then a brighter moment.",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "^ 15 more above (scroll up)",
+     "v 5 more below (scroll down)",
+     "Casts shadows: On",
+     "On: On",
+     "Livelier",
+     "strength 1x",
+     "Calmer",
+     "^ 17 more above (scroll up)",
+     "^ 19 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "Delete",
+     "Duplicate",
+     "It is set to cast shadows, but a room has 2 shadow maps and lights earlier in the list have them: this one shines through walls. Turn shadows off on one of those to give it one.",
+     "^ 21 more above (scroll up)",
+     "Done",
+     "While this panel is open, clicks on the map work on lights.",
+     "> More settings",
+     "^ 23 more above (scroll up)",
+     "v 17 more below (scroll down)",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "^ 7 more above (scroll up)",
+     "v 19 more below (scroll down)",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "^ 5 more above (scroll up)",
+     "v 21 more below (scroll down)",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "Room light (away from lamps)",
+     "^ 3 more above (scroll up)",
+     "v 22 more below (scroll down)",
+     "As project",
+     "Off",
+     "On",
+     "Off: everything is fully lit.",
+     "^ 1 more above (scroll up)",
+     "v 23 more below (scroll down)",
+     "Lighting"
+    ],
+    "boxes": [
+     "shadow_edge",
+     "shadow_strength_room"
+    ]
+   }
+  },
+  "Delete": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 5"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light deleted.",
+   "undone": true
+  },
+  "Duplicate": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 7"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light duplicated.",
+   "undone": true
+  },
+  "Casts shadows: On": {
+   "edit": true,
+   "keys": [
+    "lights[4].shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "It shines through walls.",
+   "undone": true
+  },
+  "On: On": {
+   "edit": true,
+   "keys": [
+    "lights[4].enabled"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light off (kept, not deleted).",
+   "undone": true
+  },
+  "Livelier": {
+   "edit": true,
+   "keys": [
+    "lights[4].flicker_strength"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Livelier.",
+   "undone": true
+  },
+  "Calmer": {
+   "edit": true,
+   "keys": [
+    "lights[4].flicker_strength"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Calmer.",
+   "undone": true
+  },
+  "Custom": {
+   "edit": true,
+   "keys": [
+    "lights[4].flicker_brightness",
+    "lights[4].flicker_irregularity",
+    "lights[4].flicker_preset",
+    "lights[4].flicker_reach",
+    "lights[4].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: custom.",
+   "undone": true
+  },
+  "Faulty lamp": {
+   "edit": true,
+   "keys": [
+    "lights[4].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: faulty lamp.",
+   "undone": true
+  },
+  "Fire": {
+   "edit": true,
+   "keys": [
+    "lights[4].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: fire.",
+   "undone": true
+  },
+  "Torch": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Flicker: torch."
+  },
+  "Candle": {
+   "edit": true,
+   "keys": [
+    "lights[4].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: candle.",
+   "undone": true
+  },
+  "Steady": {
+   "edit": true,
+   "keys": [
+    "lights[4].flicker_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: steady.",
+   "undone": true
+  },
+  "Bigger": {
+   "edit": true,
+   "keys": [
+    "lights[4].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Bigger.",
+   "undone": true
+  },
+  "Smaller": {
+   "edit": true,
+   "keys": [
+    "lights[4].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Smaller.",
+   "undone": true
+  },
+  "Purple": {
+   "edit": true,
+   "keys": [
+    "lights[4].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Purple light.",
+   "undone": true
+  },
+  "Green": {
+   "edit": true,
+   "keys": [
+    "lights[4].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Green light.",
+   "undone": true
+  },
+  "Red": {
+   "edit": true,
+   "keys": [
+    "lights[4].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Red light.",
+   "undone": true
+  },
+  "Cold": {
+   "edit": true,
+   "keys": [
+    "lights[4].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Cold light.",
+   "undone": true
+  },
+  "White": {
+   "edit": true,
+   "keys": [
+    "lights[4].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "White light.",
+   "undone": true
+  },
+  "Warm": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Warm light."
+  },
+  "Softer": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: softer.",
+   "undone": true
+  },
+  "Soft": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadow edges: soft."
+  },
+  "Sharp": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: sharp.",
+   "undone": true
+  },
+  "Project's": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadows follow the project."
+  },
+  "Shadows off": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadows_mode"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows off.",
+   "undone": true
+  },
+  "Shadows on": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadows_mode"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows on.",
+   "undone": true
+  },
+  "Brighter": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light changed.",
+   "undone": true
+  },
+  "Darker": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light changed.",
+   "undone": true
+  },
+  "Black": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Black.",
+   "undone": true
+  },
+  "Cave": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Room light: Cave."
+  },
+  "Night": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Night.",
+   "undone": true
+  },
+  "Dusk": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Dusk.",
+   "undone": true
+  },
+  "Day": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Day.",
+   "undone": true
+  },
+  "As project": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting follows the project.",
+   "undone": true
+  },
+  "Off": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Lighting off in this room."
+  },
+  "On": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting on in this room.",
+   "undone": true
+  },
+  "box:light_x": {
+   "edit": true,
+   "keys": [
+    "lights[4].x"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_y": {
+   "edit": true,
+   "keys": [
+    "lights[4].y"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_radius": {
+   "edit": true,
+   "keys": [
+    "lights[4].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_height": {
+   "edit": true,
+   "keys": [
+    "lights[4].elevation"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "The lamp now hangs 3 m up.",
+   "undone": true
+  },
+  "box:light_flicker_speed": {
+   "edit": true,
+   "keys": [
+    "lights[4].flicker_brightness",
+    "lights[4].flicker_irregularity",
+    "lights[4].flicker_preset",
+    "lights[4].flicker_reach",
+    "lights[4].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_flicker_brightness": {
+   "edit": true,
+   "keys": [
+    "lights[4].flicker_brightness",
+    "lights[4].flicker_irregularity",
+    "lights[4].flicker_preset",
+    "lights[4].flicker_reach",
+    "lights[4].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_flicker_reach": {
+   "edit": true,
+   "keys": [
+    "lights[4].flicker_brightness",
+    "lights[4].flicker_irregularity",
+    "lights[4].flicker_preset",
+    "lights[4].flicker_reach",
+    "lights[4].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_flicker_irregularity": {
+   "edit": true,
+   "keys": [
+    "lights[4].flicker_brightness",
+    "lights[4].flicker_irregularity",
+    "lights[4].flicker_preset",
+    "lights[4].flicker_reach",
+    "lights[4].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_rgb": {
+   "edit": true,
+   "keys": [
+    "lights[4].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Colour changed.",
+   "undone": true
+  },
+  "Characters cast shadows: On": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_character_shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "No character shadows here.",
+   "undone": true
+  },
+  "High": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadow quality: high."
+  },
+  "Normal": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_quality"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: normal.",
+   "undone": true
+  },
+  "Low": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_quality"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: low.",
+   "undone": true
+  },
+  "box:shadow_edge": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_edge"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow edge changed.",
+   "undone": true
+  },
+  "box:shadow_strength_room": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_strength"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow strength changed.",
+   "undone": true
+  }
+ },
+ "hd2d_room_light": {
+  "_surveys": {
+   "More settings": {
+    "buttons": [
+     "Done",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Casts shadows: On",
+     "On: On",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "+ Add light",
+     "> Fine-tune shadows",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "As project",
+     "Off",
+     "On"
+    ],
+    "labels": [
+     "Done",
+     "While this panel is open, clicks on the map work on lights.",
+     "154, 166, 208",
+     "Colour (R, G, B)",
+     "1.5",
+     "Height (m)",
+     "0",
+     "Size",
+     "Y",
+     "X",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Casts shadows: On",
+     "On: On",
+     "No flicker: a lamp, a magic light.",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Flicker",
+     "Bigger",
+     "size 100",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 1",
+     "Light 6: Warm, size 200 - off",
+     "^ 20 more above (scroll up)",
+     "v 2 more below (scroll down)",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "^ 18 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "^ 16 more above (scroll up)",
+     "v 7 more below (scroll down)",
+     "Light 1: custom, size 0",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "^ 14 more above (scroll up)",
+     "v 8 more below (scroll down)",
+     "+ Add light",
+     "Lights (6)",
+     "^ 12 more above (scroll up)",
+     "v 10 more below (scroll down)",
+     "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+     "> Fine-tune shadows",
+     "^ 10 more above (scroll up)",
+     "v 12 more below (scroll down)",
+     "Soft: gently feathered boundaries.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "^ 8 more above (scroll up)",
+     "v 14 more below (scroll down)",
+     "Shadow edges",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "^ 6 more above (scroll up)",
+     "v 16 more below (scroll down)",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "^ 4 more above (scroll up)",
+     "v 18 more below (scroll down)",
+     "Room light (away from lamps)",
+     "As project",
+     "Off",
+     "On",
+     "^ 2 more above (scroll up)",
+     "v 20 more below (scroll down)",
+     "Off: everything is fully lit.",
+     "Lighting"
+    ],
+    "boxes": [
+     "light_x",
+     "light_y",
+     "light_radius",
+     "light_height",
+     "light_rgb"
+    ]
+   },
+   "Fine-tune shadows": {
+    "buttons": [
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "+ Add light",
+     "Characters cast shadows: On",
+     "High",
+     "Normal",
+     "Low",
+     "v Fine-tune shadows",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Casts shadows: On",
+     "On: On",
+     "Delete",
+     "Duplicate",
+     "Done",
+     "> More settings",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "As project",
+     "Off",
+     "On"
+    ],
+    "labels": [
+     "v 12 more below (scroll down)",
+     "Light 1",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: custom, size 0",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+     "Characters cast shadows: On",
+     "Quality: smoother soft edges cost a little more each frame.",
+     "High",
+     "Normal",
+     "Low",
+     "1",
+     "Strength (0-1, 1: walls block all)",
+     "Edge width (px, empty: as the preset)",
+     "v Fine-tune shadows",
+     "^ 10 more above (scroll up)",
+     "v 8 more below (scroll down)",
+     "Flicker",
+     "Bigger",
+     "size 100",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "^ 12 more above (scroll up)",
+     "v 6 more below (scroll down)",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "^ 14 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "Casts shadows: On",
+     "On: On",
+     "No flicker: a lamp, a magic light.",
+     "^ 16 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "Delete",
+     "Duplicate",
+     "^ 18 more above (scroll up)",
+     "Done",
+     "While this panel is open, clicks on the map work on lights.",
+     "> More settings",
+     "^ 20 more above (scroll up)",
+     "v 13 more below (scroll down)",
+     "Soft: gently feathered boundaries.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "^ 8 more above (scroll up)",
+     "v 16 more below (scroll down)",
+     "Shadow edges",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "^ 6 more above (scroll up)",
+     "v 18 more below (scroll down)",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "^ 4 more above (scroll up)",
+     "v 20 more below (scroll down)",
+     "Room light (away from lamps)",
+     "As project",
+     "Off",
+     "On",
+     "^ 2 more above (scroll up)",
+     "v 21 more below (scroll down)",
+     "Off: everything is fully lit.",
+     "Lighting"
+    ],
+    "boxes": [
+     "shadow_edge",
+     "shadow_strength_room"
+    ]
+   }
+  },
+  "Delete": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 5"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light deleted.",
+   "undone": true
+  },
+  "Duplicate": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 7"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "Light duplicated.",
+   "undone": true
+  },
+  "Casts shadows: On": {
+   "edit": true,
+   "keys": [
+    "lights[0].shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "It shines through walls.",
+   "undone": true
+  },
+  "On: On": {
+   "edit": true,
+   "keys": [
+    "lights[0].enabled"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light off (kept, not deleted).",
+   "undone": true
+  },
+  "Custom": {
+   "edit": true,
+   "keys": [
+    "lights[0].flicker_enabled",
+    "lights[0].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: custom.",
+   "undone": true
+  },
+  "Faulty lamp": {
+   "edit": true,
+   "keys": [
+    "lights[0].flicker_enabled",
+    "lights[0].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: faulty lamp.",
+   "undone": true
+  },
+  "Fire": {
+   "edit": true,
+   "keys": [
+    "lights[0].flicker_enabled",
+    "lights[0].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: fire.",
+   "undone": true
+  },
+  "Torch": {
+   "edit": true,
+   "keys": [
+    "lights[0].flicker_enabled",
+    "lights[0].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: torch.",
+   "undone": true
+  },
+  "Candle": {
+   "edit": true,
+   "keys": [
+    "lights[0].flicker_enabled",
+    "lights[0].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: candle.",
+   "undone": true
+  },
+  "Steady": {
+   "edit": true,
+   "keys": [
+    "lights[0].flicker_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: steady.",
+   "undone": true
+  },
+  "Bigger": {
+   "edit": true,
+   "keys": [
+    "lights[0].radius"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Bigger.",
+   "undone": true
+  },
+  "Smaller": {
+   "edit": true,
+   "keys": [
+    "lights[0].radius"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Smaller.",
+   "undone": true
+  },
+  "Purple": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Purple light.",
+   "undone": true
+  },
+  "Green": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Green light.",
+   "undone": true
+  },
+  "Red": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Red light.",
+   "undone": true
+  },
+  "Cold": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Cold light.",
+   "undone": true
+  },
+  "White": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "White light.",
+   "undone": true
+  },
+  "Warm": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Warm light.",
+   "undone": true
+  },
+  "Softer": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: softer.",
+   "undone": true
+  },
+  "Soft": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadow edges: soft."
+  },
+  "Sharp": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: sharp.",
+   "undone": true
+  },
+  "Project's": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadows follow the project."
+  },
+  "Shadows off": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadows_mode"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows off.",
+   "undone": true
+  },
+  "Shadows on": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadows_mode"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows on.",
+   "undone": true
+  },
+  "Brighter": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light changed.",
+   "undone": true
+  },
+  "Darker": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light changed.",
+   "undone": true
+  },
+  "Black": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Black.",
+   "undone": true
+  },
+  "Cave": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Room light: Cave."
+  },
+  "Night": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Night.",
+   "undone": true
+  },
+  "Dusk": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Dusk.",
+   "undone": true
+  },
+  "Day": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Day.",
+   "undone": true
+  },
+  "As project": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting follows the project.",
+   "undone": true
+  },
+  "Off": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Lighting off in this room."
+  },
+  "On": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting on in this room.",
+   "undone": true
+  },
+  "box:light_x": {
+   "edit": true,
+   "keys": [
+    "lights[0].x"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_y": {
+   "edit": true,
+   "keys": [
+    "lights[0].y"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_radius": {
+   "edit": true,
+   "keys": [
+    "lights[0].radius"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_height": {
+   "edit": true,
+   "keys": [
+    "lights[0].elevation"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "The lamp now hangs 3 m up.",
+   "undone": true
+  },
+  "box:light_rgb": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Colour changed.",
+   "undone": true
+  },
+  "Characters cast shadows: On": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_character_shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "No character shadows here.",
+   "undone": true
+  },
+  "High": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadow quality: high."
+  },
+  "Normal": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_quality"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: normal.",
+   "undone": true
+  },
+  "Low": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_quality"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: low.",
+   "undone": true
+  },
+  "box:shadow_edge": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_edge"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow edge changed.",
+   "undone": true
+  },
+  "box:shadow_strength_room": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_strength"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow strength changed.",
+   "undone": true
+  }
+ },
+ "2d_panel": [
+  [
+   "Done",
+   "Light 2: Warm, size 160",
+   "Light 1: Warm, size 160",
+   "+ Add light",
+   "> Fine-tune shadows",
+   "Softer",
+   "Soft",
+   "Sharp",
+   "Project's",
+   "Shadows off",
+   "Shadows on",
+   "Brighter",
+   "Darker",
+   "Black",
+   "Cave",
+   "Night",
+   "Dusk",
+   "Day",
+   "As project",
+   "Off",
+   "On"
+  ],
+  [
+   "Done",
+   "While this panel is open, clicks on the map work on lights.",
+   "Light 2: Warm, size 160",
+   "Light 1: Warm, size 160",
+   "+ Add light",
+   "Lights (2)",
+   "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+   "> Fine-tune shadows",
+   "Sharp: crisp boundaries.",
+   "Softer",
+   "Soft",
+   "Sharp",
+   "Shadow edges",
+   "Project's",
+   "Shadows off",
+   "Shadows on",
+   "Brighter",
+   "Darker",
+   "Black",
+   "Cave",
+   "Night",
+   "Dusk",
+   "Day",
+   "Room light (away from lamps)",
+   "As project",
+   "Off",
+   "On",
+   "Off: everything is fully lit. (the project's setting)",
+   "Lighting"
+  ],
+  []
+ ],
+ "2d_light2": {
+  "_surveys": {
+   "More settings": {
+    "buttons": [
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Casts shadows: On",
+     "On: On",
+     "Livelier",
+     "Calmer",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 2: Warm, size 160",
+     "Light 1: Warm, size 160",
+     "+ Add light",
+     "> Fine-tune shadows",
+     "Done",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "As project",
+     "Off",
+     "On"
+    ],
+    "labels": [
+     "v 10 more below (scroll down)",
+     "400",
+     "X",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Casts shadows: On",
+     "On: On",
+     "Livelier",
+     "strength 1x",
+     "Calmer",
+     "A lively flame with now and then a brighter moment.",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Flicker",
+     "Bigger",
+     "size 160",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 2",
+     "Light 2: Warm, size 160",
+     "Light 1: Warm, size 160",
+     "+ Add light",
+     "Lights (2)",
+     "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+     "> Fine-tune shadows",
+     "^ 10 more above (scroll up)",
+     "v 7 more below (scroll down)",
+     "Flicker (changing one makes a custom flicker)",
+     "160",
+     "Size",
+     "200",
+     "Y",
+     "^ 12 more above (scroll up)",
+     "v 6 more below (scroll down)",
+     "2.4",
+     "Speed (wavers/s)",
+     "^ 14 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "0.04",
+     "Reach (0-0.5)",
+     "0.2",
+     "Brightness (0-1)",
+     "^ 16 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "0.6",
+     "Irregularity (0-1)",
+     "^ 18 more above (scroll up)",
+     "Done",
+     "While this panel is open, clicks on the map work on lights.",
+     "255, 204, 136",
+     "Colour (R, G, B)",
+     "^ 20 more above (scroll up)",
+     "v 12 more below (scroll down)",
+     "Sharp: crisp boundaries.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "^ 8 more above (scroll up)",
+     "v 13 more below (scroll down)",
+     "Shadow edges",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "^ 6 more above (scroll up)",
+     "v 15 more below (scroll down)",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "^ 4 more above (scroll up)",
+     "v 17 more below (scroll down)",
+     "Room light (away from lamps)",
+     "As project",
+     "Off",
+     "On",
+     "^ 2 more above (scroll up)",
+     "v 19 more below (scroll down)",
+     "Off: everything is fully lit. (the project's setting)",
+     "Lighting"
+    ],
+    "boxes": [
+     "light_x",
+     "light_y",
+     "light_radius",
+     "light_flicker_speed",
+     "light_flicker_brightness",
+     "light_flicker_reach",
+     "light_flicker_irregularity",
+     "light_rgb"
+    ]
+   },
+   "Fine-tune shadows": {
+    "buttons": [
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 2: Warm, size 160",
+     "Light 1: Warm, size 160",
+     "+ Add light",
+     "Characters cast shadows: On",
+     "High",
+     "Normal",
+     "Low",
+     "v Fine-tune shadows",
+     "Casts shadows: On",
+     "On: On",
+     "Livelier",
+     "Calmer",
+     "> More settings",
+     "Delete",
+     "Duplicate",
+     "Done",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "As project",
+     "Off",
+     "On"
+    ],
+    "labels": [
+     "v 7 more below (scroll down)",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Flicker",
+     "Bigger",
+     "size 160",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 2",
+     "Light 2: Warm, size 160",
+     "Light 1: Warm, size 160",
+     "+ Add light",
+     "Lights (2)",
+     "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+     "Characters cast shadows: On",
+     "Quality: smoother soft edges cost a little more each frame.",
+     "High",
+     "Normal",
+     "Low",
+     "1",
+     "Strength (0-1, 1: walls block all)",
+     "Edge width (px, empty: as the preset)",
+     "v Fine-tune shadows",
+     "^ 10 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "Casts shadows: On",
+     "On: On",
+     "Livelier",
+     "strength 1x",
+     "Calmer",
+     "A lively flame with now and then a brighter moment.",
+     "^ 12 more above (scroll up)",
+     "v 1 more below (scroll down)",
+     "While this panel is open, clicks on the map work on lights.",
+     "> More settings",
+     "Delete",
+     "Duplicate",
+     "^ 14 more above (scroll up)",
+     "Done",
+     "^ 16 more above (scroll up)",
+     "v 9 more below (scroll down)",
+     "Sharp: crisp boundaries.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "^ 8 more above (scroll up)",
+     "v 11 more below (scroll down)",
+     "Shadow edges",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "^ 6 more above (scroll up)",
+     "v 13 more below (scroll down)",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "^ 4 more above (scroll up)",
+     "v 15 more below (scroll down)",
+     "Room light (away from lamps)",
+     "As project",
+     "Off",
+     "On",
+     "^ 2 more above (scroll up)",
+     "v 17 more below (scroll down)",
+     "Off: everything is fully lit. (the project's setting)",
+     "Lighting"
+    ],
+    "boxes": [
+     "shadow_edge",
+     "shadow_strength_room"
+    ]
+   }
+  },
+  "Delete": {
+   "edit": true,
+   "keys": [
+    "lights: 2 -> 1"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "Light deleted.",
+   "undone": true
+  },
+  "Duplicate": {
+   "edit": true,
+   "keys": [
+    "lights: 2 -> 3"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "Light duplicated.",
+   "undone": true
+  },
+  "Casts shadows: On": {
+   "edit": true,
+   "keys": [
+    "lights[1].shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "It shines through walls.",
+   "undone": true
+  },
+  "On: On": {
+   "edit": true,
+   "keys": [
+    "lights[1].enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "Light off (kept, not deleted).",
+   "undone": true
+  },
+  "Livelier": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_strength"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Livelier.",
+   "undone": true
+  },
+  "Calmer": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_strength"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Calmer.",
+   "undone": true
+  },
+  "Custom": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_brightness",
+    "lights[1].flicker_irregularity",
+    "lights[1].flicker_preset",
+    "lights[1].flicker_reach",
+    "lights[1].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: custom.",
+   "undone": true
+  },
+  "Faulty lamp": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: faulty lamp.",
+   "undone": true
+  },
+  "Fire": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: fire.",
+   "undone": true
+  },
+  "Torch": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Flicker: torch."
+  },
+  "Candle": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: candle.",
+   "undone": true
+  },
+  "Steady": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: steady.",
+   "undone": true
+  },
+  "Bigger": {
+   "edit": true,
+   "keys": [
+    "lights[1].radius"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Bigger.",
+   "undone": true
+  },
+  "Smaller": {
+   "edit": true,
+   "keys": [
+    "lights[1].radius"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Smaller.",
+   "undone": true
+  },
+  "Purple": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Purple light.",
+   "undone": true
+  },
+  "Green": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Green light.",
+   "undone": true
+  },
+  "Red": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Red light.",
+   "undone": true
+  },
+  "Cold": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Cold light.",
+   "undone": true
+  },
+  "White": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "White light.",
+   "undone": true
+  },
+  "Warm": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Warm light."
+  },
+  "Softer": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow edges: softer.",
+   "undone": true
+  },
+  "Soft": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow edges: soft.",
+   "undone": true
+  },
+  "Sharp": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow edges: sharp.",
+   "undone": true
+  },
+  "Project's": {
+   "edit": true,
+   "keys": [],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows follow the project.",
+   "undone": true
+  },
+  "Shadows off": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadows_mode"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows off.",
+   "undone": true
+  },
+  "Shadows on": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadows_mode"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows on.",
+   "undone": true
+  },
+  "Brighter": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light changed.",
+   "undone": true
+  },
+  "Darker": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light changed.",
+   "undone": true
+  },
+  "Black": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Black.",
+   "undone": true
+  },
+  "Cave": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Cave.",
+   "undone": true
+  },
+  "Night": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Night.",
+   "undone": true
+  },
+  "Dusk": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Dusk.",
+   "undone": true
+  },
+  "Day": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Day.",
+   "undone": true
+  },
+  "As project": {
+   "edit": true,
+   "keys": [],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting follows the project.",
+   "undone": true
+  },
+  "Off": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting off in this room.",
+   "undone": true
+  },
+  "On": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color",
+    "settings.lighting_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting on in this room.",
+   "undone": true
+  },
+  "box:light_x": {
+   "edit": true,
+   "keys": [
+    "lights[1].x"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_y": {
+   "edit": true,
+   "keys": [
+    "lights[1].y"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_radius": {
+   "edit": true,
+   "keys": [
+    "lights[1].radius"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_flicker_speed": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_brightness",
+    "lights[1].flicker_irregularity",
+    "lights[1].flicker_preset",
+    "lights[1].flicker_reach",
+    "lights[1].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_flicker_brightness": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_brightness",
+    "lights[1].flicker_irregularity",
+    "lights[1].flicker_preset",
+    "lights[1].flicker_reach",
+    "lights[1].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_flicker_reach": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_brightness",
+    "lights[1].flicker_irregularity",
+    "lights[1].flicker_preset",
+    "lights[1].flicker_reach",
+    "lights[1].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_flicker_irregularity": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_brightness",
+    "lights[1].flicker_irregularity",
+    "lights[1].flicker_preset",
+    "lights[1].flicker_reach",
+    "lights[1].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_rgb": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Colour changed.",
+   "undone": true
+  },
+  "Characters cast shadows: On": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_character_shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "No character shadows here.",
+   "undone": true
+  },
+  "High": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_quality"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: high.",
+   "undone": true
+  },
+  "Normal": {
+   "edit": true,
+   "keys": [],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: normal.",
+   "undone": true
+  },
+  "Low": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_quality"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: low.",
+   "undone": true
+  },
+  "box:shadow_edge": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_edge"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow edge changed.",
+   "undone": true
+  },
+  "box:shadow_strength_room": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_strength"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow strength changed.",
+   "undone": true
+  }
+ }
+}

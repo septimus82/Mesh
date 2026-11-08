@@ -1,0 +1,2687 @@
+{
+ "worktree": "D:\\Games\\Mesh-l3s",
+ "hd2d_panel": [
+  [
+   "Light 5: Warm, size 200 - no shadow map",
+   "Light 4: Warm, size 200 - no shadow map",
+   "Light 3: custom, size 224 - shadows",
+   "Light 2: custom, size 224 - shadows",
+   "Light 1: room light colour (custom)",
+   "+ Add light",
+   "Softer",
+   "Soft",
+   "Sharp",
+   "Shadows off",
+   "Shadows on",
+   "Done",
+   "Light 6: Warm, size 200 - off"
+  ],
+  [
+   "v 3 more below (scroll down)",
+   "Light 5: Warm, size 200 - no shadow map",
+   "Light 4: Warm, size 200 - no shadow map",
+   "Light 3: custom, size 224 - shadows",
+   "Light 2: custom, size 224 - shadows",
+   "Light 1: room light colour (custom)",
+   "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+   "+ Add light",
+   "Lights (6)",
+   "Not in HD-2D rooms: lighting on/off, room light presets, shadow edge width and quality, characters' lamp shadows, flicker. This room keeps its 2D lighting on/off, room light, shadow quality for 2D lighting; unused here.",
+   "The room's structures block the sun and each lamp that has a shadow map; characters cast the sun's shadows only.",
+   "1",
+   "Strength (0-1, 1: full)",
+   "Soft: feathered edges.",
+   "Softer",
+   "Soft",
+   "Sharp",
+   "Shadow edges",
+   "Shadows off",
+   "Shadows on",
+   "An HD-2D room's lights are always lit (each light has its own On switch). Its daylight and the light away from lamps are set in Environment > Sun and sky.",
+   "Lighting",
+   "Done",
+   "While this panel is open, clicks on the map work on lights.",
+   "Light 6: Warm, size 200 - off",
+   "^ 2 more above (scroll up)"
+  ],
+  [
+   "shadow_strength_room"
+  ]
+ ],
+ "hd2d_light2": {
+  "_surveys": {
+   "More settings": {
+    "buttons": [
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Casts shadows: On",
+     "On: On",
+     "Brighter",
+     "Dimmer",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "+ Add light",
+     "Done",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadows off",
+     "Shadows on"
+    ],
+    "labels": [
+     "v 8 more below (scroll down)",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "It casts shadows: one of the room's 2 shadow maps is its.",
+     "Casts shadows: On",
+     "On: On",
+     "Flicker: none in HD-2D rooms, lamps shine steadily.",
+     "Brighter",
+     "brightness 1.6x",
+     "Dimmer",
+     "Bigger",
+     "size 224",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 2",
+     "Light 6: Warm, size 200 - off",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "^ 10 more above (scroll up)",
+     "v 5 more below (scroll down)",
+     "224",
+     "Size",
+     "288",
+     "Y",
+     "560",
+     "X",
+     "^ 12 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "1.6",
+     "Brightness (0-10)",
+     "2.5",
+     "Height (m)",
+     "^ 14 more above (scroll up)",
+     "v 1 more below (scroll down)",
+     "While this panel is open, clicks on the map work on lights.",
+     "255, 176, 96",
+     "Colour (R, G, B)",
+     "^ 16 more above (scroll up)",
+     "Done",
+     "^ 17 more above (scroll up)",
+     "v 2 more below (scroll down)",
+     "^ 15 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "^ 13 more above (scroll up)",
+     "v 7 more below (scroll down)",
+     "^ 11 more above (scroll up)",
+     "^ 9 more above (scroll up)",
+     "v 12 more below (scroll down)",
+     "Not in HD-2D rooms: lighting on/off, room light presets, shadow edge width and quality, characters' lamp shadows, flicker. This room keeps its 2D lighting on/off, room light, shadow quality for 2D lighting; unused here.",
+     "The room's structures block the sun and each lamp that has a shadow map; characters cast the sun's shadows only.",
+     "^ 7 more above (scroll up)",
+     "v 14 more below (scroll down)",
+     "1",
+     "Strength (0-1, 1: full)",
+     "Soft: feathered edges.",
+     "^ 5 more above (scroll up)",
+     "v 15 more below (scroll down)",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "^ 3 more above (scroll up)",
+     "v 18 more below (scroll down)",
+     "Shadows off",
+     "Shadows on",
+     "An HD-2D room's lights are always lit (each light has its own On switch). Its daylight and the light away from lamps are set in Environment > Sun and sky.",
+     "^ 1 more above (scroll up)",
+     "v 20 more below (scroll down)",
+     "Lighting"
+    ],
+    "boxes": [
+     "light_x",
+     "light_y",
+     "light_radius",
+     "light_height",
+     "light_intensity",
+     "light_rgb",
+     "shadow_strength_room"
+    ]
+   },
+   "Fine-tune shadows": {
+    "buttons": [
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "+ Add light",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadows off",
+     "Shadows on",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 6: Warm, size 200 - off",
+     "Purple",
+     "Green",
+     "Red",
+     "Brighter",
+     "Dimmer",
+     "Bigger",
+     "Smaller",
+     "Casts shadows: On",
+     "On: On",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Done"
+    ],
+    "labels": [
+     "v 20 more below (scroll down)",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "Not in HD-2D rooms: lighting on/off, room light presets, shadow edge width and quality, characters' lamp shadows, flicker. This room keeps its 2D lighting on/off, room light, shadow quality for 2D lighting; unused here.",
+     "The room's structures block the sun and each lamp that has a shadow map; characters cast the sun's shadows only.",
+     "1",
+     "Strength (0-1, 1: full)",
+     "Soft: feathered edges.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "Shadows off",
+     "Shadows on",
+     "An HD-2D room's lights are always lit (each light has its own On switch). Its daylight and the light away from lamps are set in Environment > Sun and sky.",
+     "Lighting",
+     "v 16 more below (scroll down)",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 2",
+     "Light 6: Warm, size 200 - off",
+     "^ 2 more above (scroll up)",
+     "v 15 more below (scroll down)",
+     "Purple",
+     "Green",
+     "Red",
+     "^ 4 more above (scroll up)",
+     "v 13 more below (scroll down)",
+     "Brighter",
+     "brightness 1.6x",
+     "Dimmer",
+     "Bigger",
+     "size 224",
+     "Smaller",
+     "^ 6 more above (scroll up)",
+     "v 10 more below (scroll down)",
+     "It casts shadows: one of the room's 2 shadow maps is its.",
+     "Casts shadows: On",
+     "On: On",
+     "Flicker: none in HD-2D rooms, lamps shine steadily.",
+     "^ 8 more above (scroll up)",
+     "v 8 more below (scroll down)",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "^ 10 more above (scroll up)",
+     "v 5 more below (scroll down)",
+     "224",
+     "Size",
+     "288",
+     "Y",
+     "560",
+     "X",
+     "^ 12 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "1.6",
+     "Brightness (0-10)",
+     "2.5",
+     "Height (m)",
+     "^ 14 more above (scroll up)",
+     "v 1 more below (scroll down)",
+     "While this panel is open, clicks on the map work on lights.",
+     "255, 176, 96",
+     "Colour (R, G, B)",
+     "^ 16 more above (scroll up)",
+     "Done",
+     "^ 17 more above (scroll up)",
+     "v 2 more below (scroll down)",
+     "^ 15 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "^ 13 more above (scroll up)",
+     "v 7 more below (scroll down)",
+     "^ 11 more above (scroll up)",
+     "^ 9 more above (scroll up)",
+     "v 12 more below (scroll down)",
+     "^ 7 more above (scroll up)",
+     "v 14 more below (scroll down)",
+     "^ 5 more above (scroll up)",
+     "^ 3 more above (scroll up)",
+     "v 18 more below (scroll down)",
+     "^ 1 more above (scroll up)"
+    ],
+    "boxes": [
+     "shadow_strength_room",
+     "light_x",
+     "light_y",
+     "light_radius",
+     "light_height",
+     "light_intensity",
+     "light_rgb"
+    ]
+   }
+  },
+  "Delete": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 5"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light deleted.",
+   "undone": true
+  },
+  "Duplicate": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 7"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light duplicated.",
+   "undone": true
+  },
+  "Casts shadows: On": {
+   "edit": true,
+   "keys": [
+    "lights[1].shadows"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Set not to cast shadows: it shines through walls.",
+   "undone": true
+  },
+  "On: On": {
+   "edit": true,
+   "keys": [
+    "lights[1].enabled"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light off (kept, not deleted).",
+   "undone": true
+  },
+  "Brighter": {
+   "edit": true,
+   "keys": [
+    "lights[1].intensity"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Brightness 2x.",
+   "undone": true
+  },
+  "Dimmer": {
+   "edit": true,
+   "keys": [
+    "lights[1].intensity"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Brightness 1.28x.",
+   "undone": true
+  },
+  "Bigger": {
+   "edit": true,
+   "keys": [
+    "lights[1].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Bigger.",
+   "undone": true
+  },
+  "Smaller": {
+   "edit": true,
+   "keys": [
+    "lights[1].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Smaller.",
+   "undone": true
+  },
+  "Purple": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Purple light.",
+   "undone": true
+  },
+  "Green": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Green light.",
+   "undone": true
+  },
+  "Red": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Red light.",
+   "undone": true
+  },
+  "Cold": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Cold light.",
+   "undone": true
+  },
+  "White": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "White light.",
+   "undone": true
+  },
+  "Warm": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Warm light.",
+   "undone": true
+  },
+  "Softer": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: softer.",
+   "undone": true
+  },
+  "Soft": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadow edges: soft."
+  },
+  "Sharp": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: sharp.",
+   "undone": true
+  },
+  "Shadows off": {
+   "edit": true,
+   "keys": [
+    "settings.hd2d.shadows"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Shadows off: no shadows in this room, from the sun or any lamp.",
+   "undone": true
+  },
+  "Shadows on": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadows on: the sun and the lamps with shadow maps cast them."
+  },
+  "box:light_x": {
+   "edit": true,
+   "keys": [
+    "lights[1].x"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_y": {
+   "edit": true,
+   "keys": [
+    "lights[1].y"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_radius": {
+   "edit": true,
+   "keys": [
+    "lights[1].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_height": {
+   "edit": true,
+   "keys": [
+    "lights[1].elevation"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "The lamp now hangs 3 m up.",
+   "undone": true
+  },
+  "box:light_intensity": {
+   "edit": true,
+   "keys": [
+    "lights[1].intensity"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Brightness 3x.",
+   "undone": true
+  },
+  "box:light_rgb": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Colour changed.",
+   "undone": true
+  },
+  "box:shadow_strength_room": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_strength"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow strength changed.",
+   "undone": true
+  }
+ },
+ "hd2d_light4": {
+  "_surveys": {
+   "More settings": {
+    "buttons": [
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "+ Add light",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadows off",
+     "Shadows on",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 6: Warm, size 200 - off",
+     "Purple",
+     "Green",
+     "Red",
+     "Brighter",
+     "Dimmer",
+     "Bigger",
+     "Smaller",
+     "Casts shadows: On",
+     "On: On",
+     "Delete",
+     "Duplicate",
+     "v More settings",
+     "Done"
+    ],
+    "labels": [
+     "v 20 more below (scroll down)",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "Not in HD-2D rooms: lighting on/off, room light presets, shadow edge width and quality, characters' lamp shadows, flicker. This room keeps its 2D lighting on/off, room light, shadow quality for 2D lighting; unused here.",
+     "The room's structures block the sun and each lamp that has a shadow map; characters cast the sun's shadows only.",
+     "1",
+     "Strength (0-1, 1: full)",
+     "Soft: feathered edges.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "Shadows off",
+     "Shadows on",
+     "An HD-2D room's lights are always lit (each light has its own On switch). Its daylight and the light away from lamps are set in Environment > Sun and sky.",
+     "Lighting",
+     "v 16 more below (scroll down)",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 4",
+     "Light 6: Warm, size 200 - off",
+     "^ 2 more above (scroll up)",
+     "v 15 more below (scroll down)",
+     "Purple",
+     "Green",
+     "Red",
+     "^ 4 more above (scroll up)",
+     "v 13 more below (scroll down)",
+     "Brighter",
+     "brightness 1x",
+     "Dimmer",
+     "Bigger",
+     "size 200",
+     "Smaller",
+     "^ 6 more above (scroll up)",
+     "v 11 more below (scroll down)",
+     "Casts shadows: On",
+     "On: On",
+     "Flicker: none in HD-2D rooms, lamps shine steadily.",
+     "^ 8 more above (scroll up)",
+     "v 9 more below (scroll down)",
+     "Delete",
+     "Duplicate",
+     "It is set to cast shadows, but a room has 2 shadow maps and lights earlier in the list have them: this one shines through walls. Turn shadows off on one of those to give it one.",
+     "^ 10 more above (scroll up)",
+     "v 7 more below (scroll down)",
+     "400",
+     "X",
+     "v More settings",
+     "^ 12 more above (scroll up)",
+     "v 5 more below (scroll down)",
+     "200",
+     "Size",
+     "800",
+     "Y",
+     "^ 14 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "Brightness (0-10)",
+     "1.5",
+     "Height (m)",
+     "^ 16 more above (scroll up)",
+     "Done",
+     "While this panel is open, clicks on the map work on lights.",
+     "255, 204, 136",
+     "Colour (R, G, B)",
+     "^ 18 more above (scroll up)"
+    ],
+    "boxes": [
+     "shadow_strength_room",
+     "light_x",
+     "light_y",
+     "light_radius",
+     "light_height",
+     "light_intensity",
+     "light_rgb"
+    ]
+   },
+   "Fine-tune shadows": {
+    "buttons": [
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "+ Add light",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadows off",
+     "Shadows on",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 6: Warm, size 200 - off",
+     "Purple",
+     "Green",
+     "Red",
+     "Brighter",
+     "Dimmer",
+     "Bigger",
+     "Smaller",
+     "Casts shadows: On",
+     "On: On",
+     "Delete",
+     "Duplicate",
+     "v More settings",
+     "Done"
+    ],
+    "labels": [
+     "v 20 more below (scroll down)",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "Not in HD-2D rooms: lighting on/off, room light presets, shadow edge width and quality, characters' lamp shadows, flicker. This room keeps its 2D lighting on/off, room light, shadow quality for 2D lighting; unused here.",
+     "The room's structures block the sun and each lamp that has a shadow map; characters cast the sun's shadows only.",
+     "1",
+     "Strength (0-1, 1: full)",
+     "Soft: feathered edges.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "Shadows off",
+     "Shadows on",
+     "An HD-2D room's lights are always lit (each light has its own On switch). Its daylight and the light away from lamps are set in Environment > Sun and sky.",
+     "Lighting",
+     "v 16 more below (scroll down)",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 4",
+     "Light 6: Warm, size 200 - off",
+     "^ 2 more above (scroll up)",
+     "v 15 more below (scroll down)",
+     "Purple",
+     "Green",
+     "Red",
+     "^ 4 more above (scroll up)",
+     "v 13 more below (scroll down)",
+     "Brighter",
+     "brightness 1x",
+     "Dimmer",
+     "Bigger",
+     "size 200",
+     "Smaller",
+     "^ 6 more above (scroll up)",
+     "v 11 more below (scroll down)",
+     "Casts shadows: On",
+     "On: On",
+     "Flicker: none in HD-2D rooms, lamps shine steadily.",
+     "^ 8 more above (scroll up)",
+     "v 9 more below (scroll down)",
+     "Delete",
+     "Duplicate",
+     "It is set to cast shadows, but a room has 2 shadow maps and lights earlier in the list have them: this one shines through walls. Turn shadows off on one of those to give it one.",
+     "^ 10 more above (scroll up)",
+     "v 7 more below (scroll down)",
+     "400",
+     "X",
+     "v More settings",
+     "^ 12 more above (scroll up)",
+     "v 5 more below (scroll down)",
+     "200",
+     "Size",
+     "800",
+     "Y",
+     "^ 14 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "Brightness (0-10)",
+     "1.5",
+     "Height (m)",
+     "^ 16 more above (scroll up)",
+     "Done",
+     "While this panel is open, clicks on the map work on lights.",
+     "255, 204, 136",
+     "Colour (R, G, B)",
+     "^ 18 more above (scroll up)"
+    ],
+    "boxes": [
+     "shadow_strength_room",
+     "light_x",
+     "light_y",
+     "light_radius",
+     "light_height",
+     "light_intensity",
+     "light_rgb"
+    ]
+   }
+  },
+  "Softer": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: softer.",
+   "undone": true
+  },
+  "Soft": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadow edges: soft."
+  },
+  "Sharp": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: sharp.",
+   "undone": true
+  },
+  "Shadows off": {
+   "edit": true,
+   "keys": [
+    "settings.hd2d.shadows"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Shadows off: no shadows in this room, from the sun or any lamp.",
+   "undone": true
+  },
+  "Shadows on": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadows on: the sun and the lamps with shadow maps cast them."
+  },
+  "Cold": {
+   "edit": true,
+   "keys": [
+    "lights[3].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Cold light.",
+   "undone": true
+  },
+  "White": {
+   "edit": true,
+   "keys": [
+    "lights[3].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "White light.",
+   "undone": true
+  },
+  "Warm": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Warm light."
+  },
+  "Purple": {
+   "edit": true,
+   "keys": [
+    "lights[3].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Purple light.",
+   "undone": true
+  },
+  "Green": {
+   "edit": true,
+   "keys": [
+    "lights[3].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Green light.",
+   "undone": true
+  },
+  "Red": {
+   "edit": true,
+   "keys": [
+    "lights[3].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Red light.",
+   "undone": true
+  },
+  "Brighter": {
+   "edit": true,
+   "keys": [
+    "lights[3].intensity"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Brightness 1.25x.",
+   "undone": true
+  },
+  "Dimmer": {
+   "edit": true,
+   "keys": [
+    "lights[3].intensity"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Brightness 0.8x.",
+   "undone": true
+  },
+  "Bigger": {
+   "edit": true,
+   "keys": [
+    "lights[3].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Bigger.",
+   "undone": true
+  },
+  "Smaller": {
+   "edit": true,
+   "keys": [
+    "lights[3].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Smaller.",
+   "undone": true
+  },
+  "Casts shadows: On": {
+   "edit": true,
+   "keys": [
+    "lights[3].shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "Set not to cast shadows: it shines through walls.",
+   "undone": true
+  },
+  "On: On": {
+   "edit": true,
+   "keys": [
+    "lights[3].enabled"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light off (kept, not deleted).",
+   "undone": true
+  },
+  "Delete": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 5"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light deleted.",
+   "undone": true
+  },
+  "Duplicate": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 7"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light duplicated.",
+   "undone": true
+  },
+  "box:shadow_strength_room": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_strength"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow strength changed.",
+   "undone": true
+  },
+  "box:light_x": {
+   "edit": true,
+   "keys": [
+    "lights[3].x"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_y": {
+   "edit": true,
+   "keys": [
+    "lights[3].y"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_radius": {
+   "edit": true,
+   "keys": [
+    "lights[3].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_height": {
+   "edit": true,
+   "keys": [
+    "lights[3].elevation"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "The lamp now hangs 3 m up.",
+   "undone": true
+  },
+  "box:light_intensity": {
+   "edit": true,
+   "keys": [
+    "lights[3].intensity"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Brightness 3x.",
+   "undone": true
+  },
+  "box:light_rgb": {
+   "edit": true,
+   "keys": [
+    "lights[3].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Colour changed.",
+   "undone": true
+  }
+ },
+ "hd2d_light5": {
+  "_surveys": {
+   "More settings": {
+    "buttons": [
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "+ Add light",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadows off",
+     "Shadows on",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 6: Warm, size 200 - off",
+     "Purple",
+     "Green",
+     "Red",
+     "Brighter",
+     "Dimmer",
+     "Bigger",
+     "Smaller",
+     "Casts shadows: On",
+     "On: On",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Done"
+    ],
+    "labels": [
+     "v 20 more below (scroll down)",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "Not in HD-2D rooms: lighting on/off, room light presets, shadow edge width and quality, characters' lamp shadows, flicker. This room keeps its 2D lighting on/off, room light, shadow quality for 2D lighting; unused here.",
+     "The room's structures block the sun and each lamp that has a shadow map; characters cast the sun's shadows only.",
+     "1",
+     "Strength (0-1, 1: full)",
+     "Soft: feathered edges.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "Shadows off",
+     "Shadows on",
+     "An HD-2D room's lights are always lit (each light has its own On switch). Its daylight and the light away from lamps are set in Environment > Sun and sky.",
+     "Lighting",
+     "v 16 more below (scroll down)",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 5",
+     "Light 6: Warm, size 200 - off",
+     "^ 2 more above (scroll up)",
+     "v 15 more below (scroll down)",
+     "Purple",
+     "Green",
+     "Red",
+     "^ 4 more above (scroll up)",
+     "v 13 more below (scroll down)",
+     "Brighter",
+     "brightness 1x",
+     "Dimmer",
+     "Bigger",
+     "size 200",
+     "Smaller",
+     "^ 6 more above (scroll up)",
+     "v 11 more below (scroll down)",
+     "Casts shadows: On",
+     "On: On",
+     "Flicker: none in HD-2D rooms, lamps shine steadily. This light keeps its torch flicker for 2D.",
+     "^ 8 more above (scroll up)",
+     "v 10 more below (scroll down)",
+     "It is set to cast shadows, but a room has 2 shadow maps and lights earlier in the list have them: this one shines through walls. Turn shadows off on one of those to give it one.",
+     "^ 10 more above (scroll up)",
+     "v 8 more below (scroll down)",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "^ 12 more above (scroll up)",
+     "v 5 more below (scroll down)",
+     "200",
+     "Size",
+     "800",
+     "Y",
+     "880",
+     "X",
+     "^ 14 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "Brightness (0-10)",
+     "1.5",
+     "Height (m)",
+     "^ 16 more above (scroll up)",
+     "v 1 more below (scroll down)",
+     "While this panel is open, clicks on the map work on lights.",
+     "255, 204, 136",
+     "Colour (R, G, B)",
+     "^ 18 more above (scroll up)",
+     "Done",
+     "^ 20 more above (scroll up)"
+    ],
+    "boxes": [
+     "shadow_strength_room",
+     "light_x",
+     "light_y",
+     "light_radius",
+     "light_height",
+     "light_intensity",
+     "light_rgb"
+    ]
+   },
+   "Fine-tune shadows": {
+    "buttons": [
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "+ Add light",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadows off",
+     "Shadows on",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 6: Warm, size 200 - off",
+     "Purple",
+     "Green",
+     "Red",
+     "Brighter",
+     "Dimmer",
+     "Bigger",
+     "Smaller",
+     "Casts shadows: On",
+     "On: On",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Done"
+    ],
+    "labels": [
+     "v 20 more below (scroll down)",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "Not in HD-2D rooms: lighting on/off, room light presets, shadow edge width and quality, characters' lamp shadows, flicker. This room keeps its 2D lighting on/off, room light, shadow quality for 2D lighting; unused here.",
+     "The room's structures block the sun and each lamp that has a shadow map; characters cast the sun's shadows only.",
+     "1",
+     "Strength (0-1, 1: full)",
+     "Soft: feathered edges.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "Shadows off",
+     "Shadows on",
+     "An HD-2D room's lights are always lit (each light has its own On switch). Its daylight and the light away from lamps are set in Environment > Sun and sky.",
+     "Lighting",
+     "v 16 more below (scroll down)",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 5",
+     "Light 6: Warm, size 200 - off",
+     "^ 2 more above (scroll up)",
+     "v 15 more below (scroll down)",
+     "Purple",
+     "Green",
+     "Red",
+     "^ 4 more above (scroll up)",
+     "v 13 more below (scroll down)",
+     "Brighter",
+     "brightness 1x",
+     "Dimmer",
+     "Bigger",
+     "size 200",
+     "Smaller",
+     "^ 6 more above (scroll up)",
+     "v 11 more below (scroll down)",
+     "Casts shadows: On",
+     "On: On",
+     "Flicker: none in HD-2D rooms, lamps shine steadily. This light keeps its torch flicker for 2D.",
+     "^ 8 more above (scroll up)",
+     "v 10 more below (scroll down)",
+     "It is set to cast shadows, but a room has 2 shadow maps and lights earlier in the list have them: this one shines through walls. Turn shadows off on one of those to give it one.",
+     "^ 10 more above (scroll up)",
+     "v 8 more below (scroll down)",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "^ 12 more above (scroll up)",
+     "v 5 more below (scroll down)",
+     "200",
+     "Size",
+     "800",
+     "Y",
+     "880",
+     "X",
+     "^ 14 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "Brightness (0-10)",
+     "1.5",
+     "Height (m)",
+     "^ 16 more above (scroll up)",
+     "v 1 more below (scroll down)",
+     "While this panel is open, clicks on the map work on lights.",
+     "255, 204, 136",
+     "Colour (R, G, B)",
+     "^ 18 more above (scroll up)",
+     "Done",
+     "^ 20 more above (scroll up)"
+    ],
+    "boxes": [
+     "shadow_strength_room",
+     "light_x",
+     "light_y",
+     "light_radius",
+     "light_height",
+     "light_intensity",
+     "light_rgb"
+    ]
+   }
+  },
+  "Softer": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: softer.",
+   "undone": true
+  },
+  "Soft": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadow edges: soft."
+  },
+  "Sharp": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: sharp.",
+   "undone": true
+  },
+  "Shadows off": {
+   "edit": true,
+   "keys": [
+    "settings.hd2d.shadows"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Shadows off: no shadows in this room, from the sun or any lamp.",
+   "undone": true
+  },
+  "Shadows on": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadows on: the sun and the lamps with shadow maps cast them."
+  },
+  "Cold": {
+   "edit": true,
+   "keys": [
+    "lights[4].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Cold light.",
+   "undone": true
+  },
+  "White": {
+   "edit": true,
+   "keys": [
+    "lights[4].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "White light.",
+   "undone": true
+  },
+  "Warm": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Warm light."
+  },
+  "Purple": {
+   "edit": true,
+   "keys": [
+    "lights[4].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Purple light.",
+   "undone": true
+  },
+  "Green": {
+   "edit": true,
+   "keys": [
+    "lights[4].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Green light.",
+   "undone": true
+  },
+  "Red": {
+   "edit": true,
+   "keys": [
+    "lights[4].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Red light.",
+   "undone": true
+  },
+  "Brighter": {
+   "edit": true,
+   "keys": [
+    "lights[4].intensity"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Brightness 1.25x.",
+   "undone": true
+  },
+  "Dimmer": {
+   "edit": true,
+   "keys": [
+    "lights[4].intensity"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Brightness 0.8x.",
+   "undone": true
+  },
+  "Bigger": {
+   "edit": true,
+   "keys": [
+    "lights[4].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Bigger.",
+   "undone": true
+  },
+  "Smaller": {
+   "edit": true,
+   "keys": [
+    "lights[4].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Smaller.",
+   "undone": true
+  },
+  "Casts shadows: On": {
+   "edit": true,
+   "keys": [
+    "lights[4].shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "Set not to cast shadows: it shines through walls.",
+   "undone": true
+  },
+  "On: On": {
+   "edit": true,
+   "keys": [
+    "lights[4].enabled"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light off (kept, not deleted).",
+   "undone": true
+  },
+  "Delete": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 5"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light deleted.",
+   "undone": true
+  },
+  "Duplicate": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 7"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light duplicated.",
+   "undone": true
+  },
+  "box:shadow_strength_room": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_strength"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow strength changed.",
+   "undone": true
+  },
+  "box:light_x": {
+   "edit": true,
+   "keys": [
+    "lights[4].x"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_y": {
+   "edit": true,
+   "keys": [
+    "lights[4].y"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_radius": {
+   "edit": true,
+   "keys": [
+    "lights[4].radius"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_height": {
+   "edit": true,
+   "keys": [
+    "lights[4].elevation"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "The lamp now hangs 3 m up.",
+   "undone": true
+  },
+  "box:light_intensity": {
+   "edit": true,
+   "keys": [
+    "lights[4].intensity"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Brightness 3x.",
+   "undone": true
+  },
+  "box:light_rgb": {
+   "edit": true,
+   "keys": [
+    "lights[4].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Colour changed.",
+   "undone": true
+  }
+ },
+ "hd2d_room_light": {
+  "_surveys": {
+   "More settings": {
+    "buttons": [
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "+ Add light",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadows off",
+     "Shadows on",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 6: Warm, size 200 - off",
+     "Purple",
+     "Green",
+     "Red",
+     "Delete",
+     "On: On",
+     "Done"
+    ],
+    "labels": [
+     "v 11 more below (scroll down)",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "Not in HD-2D rooms: lighting on/off, room light presets, shadow edge width and quality, characters' lamp shadows, flicker. This room keeps its 2D lighting on/off, room light, shadow quality for 2D lighting; unused here.",
+     "The room's structures block the sun and each lamp that has a shadow map; characters cast the sun's shadows only.",
+     "1",
+     "Strength (0-1, 1: full)",
+     "Soft: feathered edges.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "Shadows off",
+     "Shadows on",
+     "An HD-2D room's lights are always lit (each light has its own On switch). Its daylight and the light away from lamps are set in Environment > Sun and sky.",
+     "Lighting",
+     "v 7 more below (scroll down)",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 1",
+     "Light 6: Warm, size 200 - off",
+     "^ 2 more above (scroll up)",
+     "v 6 more below (scroll down)",
+     "Purple",
+     "Green",
+     "Red",
+     "^ 4 more above (scroll up)",
+     "v 5 more below (scroll down)",
+     "The room light's colour: it tints the light away from lamps. How bright that is: Environment > Sun and sky > Ambient light.",
+     "^ 6 more above (scroll up)",
+     "v 2 more below (scroll down)",
+     "154, 166, 208",
+     "Colour (R, G, B)",
+     "Delete",
+     "On: On",
+     "^ 8 more above (scroll up)",
+     "Done",
+     "While this panel is open, clicks on the map work on lights.",
+     "^ 9 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "^ 7 more above (scroll up)",
+     "^ 5 more above (scroll up)",
+     "^ 3 more above (scroll up)",
+     "v 9 more below (scroll down)",
+     "^ 1 more above (scroll up)"
+    ],
+    "boxes": [
+     "shadow_strength_room",
+     "light_rgb"
+    ]
+   },
+   "Fine-tune shadows": {
+    "buttons": [
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "+ Add light",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadows off",
+     "Shadows on",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 6: Warm, size 200 - off",
+     "Purple",
+     "Green",
+     "Red",
+     "Delete",
+     "On: On",
+     "Done"
+    ],
+    "labels": [
+     "v 11 more below (scroll down)",
+     "Light 5: Warm, size 200 - no shadow map",
+     "Light 4: Warm, size 200 - no shadow map",
+     "Light 3: custom, size 224 - shadows",
+     "Light 2: custom, size 224 - shadows",
+     "Light 1: room light colour (custom)",
+     "Shadow maps: 2 of 2 in use. 2 more lights set to cast shadows get none and shine through walls.",
+     "+ Add light",
+     "Lights (6)",
+     "Not in HD-2D rooms: lighting on/off, room light presets, shadow edge width and quality, characters' lamp shadows, flicker. This room keeps its 2D lighting on/off, room light, shadow quality for 2D lighting; unused here.",
+     "The room's structures block the sun and each lamp that has a shadow map; characters cast the sun's shadows only.",
+     "1",
+     "Strength (0-1, 1: full)",
+     "Soft: feathered edges.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Shadow edges",
+     "Shadows off",
+     "Shadows on",
+     "An HD-2D room's lights are always lit (each light has its own On switch). Its daylight and the light away from lamps are set in Environment > Sun and sky.",
+     "Lighting",
+     "v 7 more below (scroll down)",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 1",
+     "Light 6: Warm, size 200 - off",
+     "^ 2 more above (scroll up)",
+     "v 6 more below (scroll down)",
+     "Purple",
+     "Green",
+     "Red",
+     "^ 4 more above (scroll up)",
+     "v 5 more below (scroll down)",
+     "The room light's colour: it tints the light away from lamps. How bright that is: Environment > Sun and sky > Ambient light.",
+     "^ 6 more above (scroll up)",
+     "v 2 more below (scroll down)",
+     "154, 166, 208",
+     "Colour (R, G, B)",
+     "Delete",
+     "On: On",
+     "^ 8 more above (scroll up)",
+     "Done",
+     "While this panel is open, clicks on the map work on lights.",
+     "^ 9 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "^ 7 more above (scroll up)",
+     "^ 5 more above (scroll up)",
+     "^ 3 more above (scroll up)",
+     "v 9 more below (scroll down)",
+     "^ 1 more above (scroll up)"
+    ],
+    "boxes": [
+     "shadow_strength_room",
+     "light_rgb"
+    ]
+   }
+  },
+  "Softer": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: softer.",
+   "undone": true
+  },
+  "Soft": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadow edges: soft."
+  },
+  "Sharp": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow edges: sharp.",
+   "undone": true
+  },
+  "Shadows off": {
+   "edit": true,
+   "keys": [
+    "settings.hd2d.shadows"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Shadows off: no shadows in this room, from the sun or any lamp.",
+   "undone": true
+  },
+  "Shadows on": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Shadows on: the sun and the lamps with shadow maps cast them."
+  },
+  "Cold": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Cold light.",
+   "undone": true
+  },
+  "White": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "White light.",
+   "undone": true
+  },
+  "Warm": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Warm light.",
+   "undone": true
+  },
+  "Purple": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Purple light.",
+   "undone": true
+  },
+  "Green": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Green light.",
+   "undone": true
+  },
+  "Red": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Red light.",
+   "undone": true
+  },
+  "Delete": {
+   "edit": true,
+   "keys": [
+    "lights: 6 -> 5"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Light deleted.",
+   "undone": true
+  },
+  "On: On": {
+   "edit": true,
+   "keys": [
+    "lights[0].enabled"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": true,
+   "said": "Room light colour off (kept, not deleted).",
+   "undone": true
+  },
+  "box:shadow_strength_room": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_strength"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Shadow strength changed.",
+   "undone": true
+  },
+  "box:light_rgb": {
+   "edit": true,
+   "keys": [
+    "lights[0].color"
+   ],
+   "drawn_changed": true,
+   "allocation_changed": false,
+   "said": "Colour changed.",
+   "undone": true
+  }
+ },
+ "2d_panel": [
+  [
+   "Done",
+   "Light 2: Warm, size 160",
+   "Light 1: Warm, size 160",
+   "+ Add light",
+   "> Fine-tune shadows",
+   "Softer",
+   "Soft",
+   "Sharp",
+   "Project's",
+   "Shadows off",
+   "Shadows on",
+   "Brighter",
+   "Darker",
+   "Black",
+   "Cave",
+   "Night",
+   "Dusk",
+   "Day",
+   "As project",
+   "Off",
+   "On"
+  ],
+  [
+   "Done",
+   "While this panel is open, clicks on the map work on lights.",
+   "Light 2: Warm, size 160",
+   "Light 1: Warm, size 160",
+   "+ Add light",
+   "Lights (2)",
+   "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+   "> Fine-tune shadows",
+   "Sharp: crisp boundaries.",
+   "Softer",
+   "Soft",
+   "Sharp",
+   "Shadow edges",
+   "Project's",
+   "Shadows off",
+   "Shadows on",
+   "Brighter",
+   "Darker",
+   "Black",
+   "Cave",
+   "Night",
+   "Dusk",
+   "Day",
+   "Room light (away from lamps)",
+   "As project",
+   "Off",
+   "On",
+   "Off: everything is fully lit. (the project's setting)",
+   "Lighting"
+  ],
+  []
+ ],
+ "2d_light2": {
+  "_surveys": {
+   "More settings": {
+    "buttons": [
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Casts shadows: On",
+     "On: On",
+     "Livelier",
+     "Calmer",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 2: Warm, size 160",
+     "Light 1: Warm, size 160",
+     "+ Add light",
+     "> Fine-tune shadows",
+     "Done",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "As project",
+     "Off",
+     "On"
+    ],
+    "labels": [
+     "v 10 more below (scroll down)",
+     "400",
+     "X",
+     "v More settings",
+     "Delete",
+     "Duplicate",
+     "Casts shadows: On",
+     "On: On",
+     "Livelier",
+     "strength 1x",
+     "Calmer",
+     "A lively flame with now and then a brighter moment.",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Flicker",
+     "Bigger",
+     "size 160",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 2",
+     "Light 2: Warm, size 160",
+     "Light 1: Warm, size 160",
+     "+ Add light",
+     "Lights (2)",
+     "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+     "> Fine-tune shadows",
+     "^ 10 more above (scroll up)",
+     "v 7 more below (scroll down)",
+     "Flicker (changing one makes a custom flicker)",
+     "160",
+     "Size",
+     "200",
+     "Y",
+     "^ 12 more above (scroll up)",
+     "v 6 more below (scroll down)",
+     "2.4",
+     "Speed (wavers/s)",
+     "^ 14 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "0.04",
+     "Reach (0-0.5)",
+     "0.2",
+     "Brightness (0-1)",
+     "^ 16 more above (scroll up)",
+     "v 3 more below (scroll down)",
+     "0.6",
+     "Irregularity (0-1)",
+     "^ 18 more above (scroll up)",
+     "Done",
+     "While this panel is open, clicks on the map work on lights.",
+     "255, 204, 136",
+     "Colour (R, G, B)",
+     "^ 20 more above (scroll up)",
+     "v 12 more below (scroll down)",
+     "Sharp: crisp boundaries.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "^ 8 more above (scroll up)",
+     "v 13 more below (scroll down)",
+     "Shadow edges",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "^ 6 more above (scroll up)",
+     "v 15 more below (scroll down)",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "^ 4 more above (scroll up)",
+     "v 17 more below (scroll down)",
+     "Room light (away from lamps)",
+     "As project",
+     "Off",
+     "On",
+     "^ 2 more above (scroll up)",
+     "v 19 more below (scroll down)",
+     "Off: everything is fully lit. (the project's setting)",
+     "Lighting"
+    ],
+    "boxes": [
+     "light_x",
+     "light_y",
+     "light_radius",
+     "light_flicker_speed",
+     "light_flicker_brightness",
+     "light_flicker_reach",
+     "light_flicker_irregularity",
+     "light_rgb"
+    ]
+   },
+   "Fine-tune shadows": {
+    "buttons": [
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Bigger",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 2: Warm, size 160",
+     "Light 1: Warm, size 160",
+     "+ Add light",
+     "Characters cast shadows: On",
+     "High",
+     "Normal",
+     "Low",
+     "v Fine-tune shadows",
+     "Casts shadows: On",
+     "On: On",
+     "Livelier",
+     "Calmer",
+     "> More settings",
+     "Delete",
+     "Duplicate",
+     "Done",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "As project",
+     "Off",
+     "On"
+    ],
+    "labels": [
+     "v 7 more below (scroll down)",
+     "Custom",
+     "Faulty lamp",
+     "Fire",
+     "Torch",
+     "Candle",
+     "Steady",
+     "Flicker",
+     "Bigger",
+     "size 160",
+     "Smaller",
+     "Purple",
+     "Green",
+     "Red",
+     "Cold",
+     "White",
+     "Warm",
+     "Light 2",
+     "Light 2: Warm, size 160",
+     "Light 1: Warm, size 160",
+     "+ Add light",
+     "Lights (2)",
+     "Walls on the map block each light: a wall's shadow takes away only that light, never the room light.",
+     "Characters cast shadows: On",
+     "Quality: smoother soft edges cost a little more each frame.",
+     "High",
+     "Normal",
+     "Low",
+     "1",
+     "Strength (0-1, 1: walls block all)",
+     "Edge width (px, empty: as the preset)",
+     "v Fine-tune shadows",
+     "^ 10 more above (scroll up)",
+     "v 4 more below (scroll down)",
+     "Casts shadows: On",
+     "On: On",
+     "Livelier",
+     "strength 1x",
+     "Calmer",
+     "A lively flame with now and then a brighter moment.",
+     "^ 12 more above (scroll up)",
+     "v 1 more below (scroll down)",
+     "While this panel is open, clicks on the map work on lights.",
+     "> More settings",
+     "Delete",
+     "Duplicate",
+     "^ 14 more above (scroll up)",
+     "Done",
+     "^ 16 more above (scroll up)",
+     "v 9 more below (scroll down)",
+     "Sharp: crisp boundaries.",
+     "Softer",
+     "Soft",
+     "Sharp",
+     "^ 8 more above (scroll up)",
+     "v 11 more below (scroll down)",
+     "Shadow edges",
+     "Project's",
+     "Shadows off",
+     "Shadows on",
+     "^ 6 more above (scroll up)",
+     "v 13 more below (scroll down)",
+     "Brighter",
+     "Darker",
+     "Black",
+     "Cave",
+     "Night",
+     "Dusk",
+     "Day",
+     "^ 4 more above (scroll up)",
+     "v 15 more below (scroll down)",
+     "Room light (away from lamps)",
+     "As project",
+     "Off",
+     "On",
+     "^ 2 more above (scroll up)",
+     "v 17 more below (scroll down)",
+     "Off: everything is fully lit. (the project's setting)",
+     "Lighting"
+    ],
+    "boxes": [
+     "shadow_edge",
+     "shadow_strength_room"
+    ]
+   }
+  },
+  "Delete": {
+   "edit": true,
+   "keys": [
+    "lights: 2 -> 1"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "Light deleted.",
+   "undone": true
+  },
+  "Duplicate": {
+   "edit": true,
+   "keys": [
+    "lights: 2 -> 3"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "Light duplicated.",
+   "undone": true
+  },
+  "Casts shadows: On": {
+   "edit": true,
+   "keys": [
+    "lights[1].shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "It shines through walls.",
+   "undone": true
+  },
+  "On: On": {
+   "edit": true,
+   "keys": [
+    "lights[1].enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": true,
+   "said": "Light off (kept, not deleted).",
+   "undone": true
+  },
+  "Livelier": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_strength"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Livelier.",
+   "undone": true
+  },
+  "Calmer": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_strength"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Calmer.",
+   "undone": true
+  },
+  "Custom": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_brightness",
+    "lights[1].flicker_irregularity",
+    "lights[1].flicker_preset",
+    "lights[1].flicker_reach",
+    "lights[1].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: custom.",
+   "undone": true
+  },
+  "Faulty lamp": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: faulty lamp.",
+   "undone": true
+  },
+  "Fire": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: fire.",
+   "undone": true
+  },
+  "Torch": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Flicker: torch."
+  },
+  "Candle": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_preset"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: candle.",
+   "undone": true
+  },
+  "Steady": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Flicker: steady.",
+   "undone": true
+  },
+  "Bigger": {
+   "edit": true,
+   "keys": [
+    "lights[1].radius"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Bigger.",
+   "undone": true
+  },
+  "Smaller": {
+   "edit": true,
+   "keys": [
+    "lights[1].radius"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Smaller.",
+   "undone": true
+  },
+  "Purple": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Purple light.",
+   "undone": true
+  },
+  "Green": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Green light.",
+   "undone": true
+  },
+  "Red": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Red light.",
+   "undone": true
+  },
+  "Cold": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Cold light.",
+   "undone": true
+  },
+  "White": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "White light.",
+   "undone": true
+  },
+  "Warm": {
+   "edit": false,
+   "active_choice": true,
+   "said": "Warm light."
+  },
+  "Softer": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow edges: softer.",
+   "undone": true
+  },
+  "Soft": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow edges: soft.",
+   "undone": true
+  },
+  "Sharp": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_softness"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow edges: sharp.",
+   "undone": true
+  },
+  "Project's": {
+   "edit": true,
+   "keys": [],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows follow the project.",
+   "undone": true
+  },
+  "Shadows off": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadows_mode"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows off.",
+   "undone": true
+  },
+  "Shadows on": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadows_mode"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadows on.",
+   "undone": true
+  },
+  "Brighter": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light changed.",
+   "undone": true
+  },
+  "Darker": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light changed.",
+   "undone": true
+  },
+  "Black": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Black.",
+   "undone": true
+  },
+  "Cave": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Cave.",
+   "undone": true
+  },
+  "Night": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Night.",
+   "undone": true
+  },
+  "Dusk": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Dusk.",
+   "undone": true
+  },
+  "Day": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Room light: Day.",
+   "undone": true
+  },
+  "As project": {
+   "edit": true,
+   "keys": [],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting follows the project.",
+   "undone": true
+  },
+  "Off": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting off in this room.",
+   "undone": true
+  },
+  "On": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_ambient_color",
+    "settings.lighting_enabled"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Lighting on in this room.",
+   "undone": true
+  },
+  "box:light_x": {
+   "edit": true,
+   "keys": [
+    "lights[1].x"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_y": {
+   "edit": true,
+   "keys": [
+    "lights[1].y"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_radius": {
+   "edit": true,
+   "keys": [
+    "lights[1].radius"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_flicker_speed": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_brightness",
+    "lights[1].flicker_irregularity",
+    "lights[1].flicker_preset",
+    "lights[1].flicker_reach",
+    "lights[1].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_flicker_brightness": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_brightness",
+    "lights[1].flicker_irregularity",
+    "lights[1].flicker_preset",
+    "lights[1].flicker_reach",
+    "lights[1].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_flicker_reach": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_brightness",
+    "lights[1].flicker_irregularity",
+    "lights[1].flicker_preset",
+    "lights[1].flicker_reach",
+    "lights[1].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_flicker_irregularity": {
+   "edit": true,
+   "keys": [
+    "lights[1].flicker_brightness",
+    "lights[1].flicker_irregularity",
+    "lights[1].flicker_preset",
+    "lights[1].flicker_reach",
+    "lights[1].flicker_speed"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Changed.",
+   "undone": true
+  },
+  "box:light_rgb": {
+   "edit": true,
+   "keys": [
+    "lights[1].color"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Colour changed.",
+   "undone": true
+  },
+  "Characters cast shadows: On": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_character_shadows"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "No character shadows here.",
+   "undone": true
+  },
+  "High": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_quality"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: high.",
+   "undone": true
+  },
+  "Normal": {
+   "edit": true,
+   "keys": [],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: normal.",
+   "undone": true
+  },
+  "Low": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_quality"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow quality: low.",
+   "undone": true
+  },
+  "box:shadow_edge": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_edge"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow edge changed.",
+   "undone": true
+  },
+  "box:shadow_strength_room": {
+   "edit": true,
+   "keys": [
+    "settings.lighting_shadow_strength"
+   ],
+   "drawn_changed": false,
+   "allocation_changed": false,
+   "said": "Shadow strength changed.",
+   "undone": true
+  }
+ }
+}

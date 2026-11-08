@@ -1,0 +1,439 @@
+{
+ "base": {
+  "Delete": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Duplicate": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "allocation only"
+  },
+  "Casts shadows: On": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "allocation only",
+   "hd2d_light5": "allocation only",
+   "hd2d_room_light": "INERT: writes lights[0].shadows"
+  },
+  "On: On": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Custom": {
+   "hd2d_light2": "INERT: writes lights[1].flicker_enabled, lights[1].flicker_preset",
+   "hd2d_light4": "INERT: writes lights[3].flicker_enabled, lights[3].flicker_preset",
+   "hd2d_light5": "INERT: writes lights[4].flicker_brightness, lights[4].flicker_irregularity, lights[4].flicker_preset, lights[4].flicker_reach, lights[4].flicker_speed",
+   "hd2d_room_light": "INERT: writes lights[0].flicker_enabled, lights[0].flicker_preset"
+  },
+  "Faulty lamp": {
+   "hd2d_light2": "INERT: writes lights[1].flicker_enabled, lights[1].flicker_preset",
+   "hd2d_light4": "INERT: writes lights[3].flicker_enabled, lights[3].flicker_preset",
+   "hd2d_light5": "INERT: writes lights[4].flicker_preset",
+   "hd2d_room_light": "INERT: writes lights[0].flicker_enabled, lights[0].flicker_preset"
+  },
+  "Fire": {
+   "hd2d_light2": "INERT: writes lights[1].flicker_enabled, lights[1].flicker_preset",
+   "hd2d_light4": "INERT: writes lights[3].flicker_enabled, lights[3].flicker_preset",
+   "hd2d_light5": "INERT: writes lights[4].flicker_preset",
+   "hd2d_room_light": "INERT: writes lights[0].flicker_enabled, lights[0].flicker_preset"
+  },
+  "Torch": {
+   "hd2d_light2": "INERT: writes lights[1].flicker_enabled, lights[1].flicker_preset",
+   "hd2d_light4": "INERT: writes lights[3].flicker_enabled, lights[3].flicker_preset",
+   "hd2d_light5": "current choice",
+   "hd2d_room_light": "INERT: writes lights[0].flicker_enabled, lights[0].flicker_preset"
+  },
+  "Candle": {
+   "hd2d_light2": "INERT: writes lights[1].flicker_enabled, lights[1].flicker_preset",
+   "hd2d_light4": "INERT: writes lights[3].flicker_enabled, lights[3].flicker_preset",
+   "hd2d_light5": "INERT: writes lights[4].flicker_preset",
+   "hd2d_room_light": "INERT: writes lights[0].flicker_enabled, lights[0].flicker_preset"
+  },
+  "Steady": {
+   "hd2d_light2": "INERT: writes lights[1].flicker_enabled",
+   "hd2d_light4": "INERT: writes lights[3].flicker_enabled",
+   "hd2d_light5": "INERT: writes lights[4].flicker_enabled",
+   "hd2d_room_light": "INERT: writes lights[0].flicker_enabled"
+  },
+  "Bigger": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "INERT: writes lights[0].radius"
+  },
+  "Smaller": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "INERT: writes lights[0].radius"
+  },
+  "Purple": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Green": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Red": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Cold": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "White": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Warm": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "current choice",
+   "hd2d_light5": "current choice",
+   "hd2d_room_light": "drawn"
+  },
+  "Softer": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Soft": {
+   "hd2d_light2": "current choice",
+   "hd2d_light4": "current choice",
+   "hd2d_light5": "current choice",
+   "hd2d_room_light": "current choice"
+  },
+  "Sharp": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Project's": {
+   "hd2d_light2": "current choice",
+   "hd2d_light4": "current choice",
+   "hd2d_light5": "current choice",
+   "hd2d_room_light": "current choice"
+  },
+  "Shadows off": {
+   "hd2d_light2": "INERT: writes settings.lighting_shadows_mode",
+   "hd2d_light4": "INERT: writes settings.lighting_shadows_mode",
+   "hd2d_light5": "INERT: writes settings.lighting_shadows_mode",
+   "hd2d_room_light": "INERT: writes settings.lighting_shadows_mode"
+  },
+  "Shadows on": {
+   "hd2d_light2": "INERT: writes settings.lighting_shadows_mode",
+   "hd2d_light4": "INERT: writes settings.lighting_shadows_mode",
+   "hd2d_light5": "INERT: writes settings.lighting_shadows_mode",
+   "hd2d_room_light": "INERT: writes settings.lighting_shadows_mode"
+  },
+  "Brighter": {
+   "hd2d_light2": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_light4": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_light5": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_room_light": "INERT: writes settings.lighting_ambient_color"
+  },
+  "Darker": {
+   "hd2d_light2": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_light4": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_light5": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_room_light": "INERT: writes settings.lighting_ambient_color"
+  },
+  "Black": {
+   "hd2d_light2": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_light4": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_light5": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_room_light": "INERT: writes settings.lighting_ambient_color"
+  },
+  "Cave": {
+   "hd2d_light2": "current choice",
+   "hd2d_light4": "current choice",
+   "hd2d_light5": "current choice",
+   "hd2d_room_light": "current choice"
+  },
+  "Night": {
+   "hd2d_light2": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_light4": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_light5": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_room_light": "INERT: writes settings.lighting_ambient_color"
+  },
+  "Dusk": {
+   "hd2d_light2": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_light4": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_light5": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_room_light": "INERT: writes settings.lighting_ambient_color"
+  },
+  "Day": {
+   "hd2d_light2": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_light4": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_light5": "INERT: writes settings.lighting_ambient_color",
+   "hd2d_room_light": "INERT: writes settings.lighting_ambient_color"
+  },
+  "As project": {
+   "hd2d_light2": "INERT: writes settings.lighting_enabled",
+   "hd2d_light4": "INERT: writes settings.lighting_enabled",
+   "hd2d_light5": "INERT: writes settings.lighting_enabled",
+   "hd2d_room_light": "INERT: writes settings.lighting_enabled"
+  },
+  "Off": {
+   "hd2d_light2": "current choice",
+   "hd2d_light4": "current choice",
+   "hd2d_light5": "current choice",
+   "hd2d_room_light": "current choice"
+  },
+  "On": {
+   "hd2d_light2": "INERT: writes settings.lighting_enabled",
+   "hd2d_light4": "INERT: writes settings.lighting_enabled",
+   "hd2d_light5": "INERT: writes settings.lighting_enabled",
+   "hd2d_room_light": "INERT: writes settings.lighting_enabled"
+  },
+  "box:light_x": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "INERT: writes lights[0].x"
+  },
+  "box:light_y": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "INERT: writes lights[0].y"
+  },
+  "box:light_radius": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "INERT: writes lights[0].radius"
+  },
+  "box:light_height": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "INERT: writes lights[0].elevation"
+  },
+  "box:light_rgb": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Characters cast shadows: On": {
+   "hd2d_light2": "INERT: writes settings.lighting_character_shadows",
+   "hd2d_light4": "INERT: writes settings.lighting_character_shadows",
+   "hd2d_light5": "INERT: writes settings.lighting_character_shadows",
+   "hd2d_room_light": "INERT: writes settings.lighting_character_shadows"
+  },
+  "High": {
+   "hd2d_light2": "current choice",
+   "hd2d_light4": "current choice",
+   "hd2d_light5": "current choice",
+   "hd2d_room_light": "current choice"
+  },
+  "Normal": {
+   "hd2d_light2": "INERT: writes settings.lighting_shadow_quality",
+   "hd2d_light4": "INERT: writes settings.lighting_shadow_quality",
+   "hd2d_light5": "INERT: writes settings.lighting_shadow_quality",
+   "hd2d_room_light": "INERT: writes settings.lighting_shadow_quality"
+  },
+  "Low": {
+   "hd2d_light2": "INERT: writes settings.lighting_shadow_quality",
+   "hd2d_light4": "INERT: writes settings.lighting_shadow_quality",
+   "hd2d_light5": "INERT: writes settings.lighting_shadow_quality",
+   "hd2d_room_light": "INERT: writes settings.lighting_shadow_quality"
+  },
+  "box:shadow_edge": {
+   "hd2d_light2": "INERT: writes settings.lighting_shadow_edge",
+   "hd2d_light4": "INERT: writes settings.lighting_shadow_edge",
+   "hd2d_light5": "INERT: writes settings.lighting_shadow_edge",
+   "hd2d_room_light": "INERT: writes settings.lighting_shadow_edge"
+  },
+  "box:shadow_strength_room": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Livelier": {
+   "hd2d_light5": "INERT: writes lights[4].flicker_strength"
+  },
+  "Calmer": {
+   "hd2d_light5": "INERT: writes lights[4].flicker_strength"
+  },
+  "box:light_flicker_speed": {
+   "hd2d_light5": "INERT: writes lights[4].flicker_brightness, lights[4].flicker_irregularity, lights[4].flicker_preset, lights[4].flicker_reach, lights[4].flicker_speed"
+  },
+  "box:light_flicker_brightness": {
+   "hd2d_light5": "INERT: writes lights[4].flicker_brightness, lights[4].flicker_irregularity, lights[4].flicker_preset, lights[4].flicker_reach, lights[4].flicker_speed"
+  },
+  "box:light_flicker_reach": {
+   "hd2d_light5": "INERT: writes lights[4].flicker_brightness, lights[4].flicker_irregularity, lights[4].flicker_preset, lights[4].flicker_reach, lights[4].flicker_speed"
+  },
+  "box:light_flicker_irregularity": {
+   "hd2d_light5": "INERT: writes lights[4].flicker_brightness, lights[4].flicker_irregularity, lights[4].flicker_preset, lights[4].flicker_reach, lights[4].flicker_speed"
+  }
+ },
+ "branch": {
+  "Delete": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Duplicate": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn"
+  },
+  "Casts shadows: On": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "allocation only",
+   "hd2d_light5": "allocation only"
+  },
+  "On: On": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Brighter": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn"
+  },
+  "Dimmer": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn"
+  },
+  "Bigger": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn"
+  },
+  "Smaller": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn"
+  },
+  "Purple": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Green": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Red": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Cold": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "White": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Warm": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "current choice",
+   "hd2d_light5": "current choice",
+   "hd2d_room_light": "drawn"
+  },
+  "Softer": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Soft": {
+   "hd2d_light2": "current choice",
+   "hd2d_light4": "current choice",
+   "hd2d_light5": "current choice",
+   "hd2d_room_light": "current choice"
+  },
+  "Sharp": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Shadows off": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "Shadows on": {
+   "hd2d_light2": "current choice",
+   "hd2d_light4": "current choice",
+   "hd2d_light5": "current choice",
+   "hd2d_room_light": "current choice"
+  },
+  "box:light_x": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn"
+  },
+  "box:light_y": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn"
+  },
+  "box:light_radius": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn"
+  },
+  "box:light_height": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn"
+  },
+  "box:light_intensity": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn"
+  },
+  "box:light_rgb": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  },
+  "box:shadow_strength_room": {
+   "hd2d_light2": "drawn",
+   "hd2d_light4": "drawn",
+   "hd2d_light5": "drawn",
+   "hd2d_room_light": "drawn"
+  }
+ }
+}
