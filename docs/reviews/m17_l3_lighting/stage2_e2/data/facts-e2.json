@@ -1,0 +1,235 @@
+{
+ "village_on_noon": {
+  "draw_calls": 32,
+  "static_draws": 27,
+  "lamp_head_draws": 2,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": [
+   [
+    464,
+    225,
+    494,
+    265
+   ],
+   [
+    786,
+    225,
+    816,
+    265
+   ]
+  ]
+ },
+ "village_off_noon": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": []
+ },
+ "village_on_evening": {
+  "draw_calls": 32,
+  "static_draws": 27,
+  "lamp_head_draws": 2,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": [
+   [
+    464,
+    225,
+    494,
+    265
+   ],
+   [
+    786,
+    225,
+    816,
+    265
+   ]
+  ]
+ },
+ "village_off_evening": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": []
+ },
+ "village_on_night": {
+  "draw_calls": 32,
+  "static_draws": 27,
+  "lamp_head_draws": 2,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": [
+   [
+    464,
+    225,
+    494,
+    265
+   ],
+   [
+    786,
+    225,
+    816,
+    265
+   ]
+  ]
+ },
+ "village_off_night": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": []
+ },
+ "village_blue_east_night": {
+  "draw_calls": 32,
+  "static_draws": 27,
+  "lamp_head_draws": 2,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": [
+   [
+    464,
+    225,
+    494,
+    265
+   ],
+   [
+    786,
+    225,
+    816,
+    265
+   ]
+  ]
+ },
+ "village_dim_west_night": {
+  "draw_calls": 32,
+  "static_draws": 27,
+  "lamp_head_draws": 2,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": [
+   [
+    464,
+    225,
+    494,
+    265
+   ],
+   [
+    786,
+    225,
+    816,
+    265
+   ]
+  ]
+ },
+ "village_bright_west_night": {
+  "draw_calls": 32,
+  "static_draws": 27,
+  "lamp_head_draws": 2,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": [
+   [
+    464,
+    225,
+    494,
+    265
+   ],
+   [
+    786,
+    225,
+    816,
+    265
+   ]
+  ]
+ },
+ "village_zero_west_night": {
+  "draw_calls": 32,
+  "static_draws": 27,
+  "lamp_head_draws": 1,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": [
+   [
+    464,
+    225,
+    494,
+    265
+   ],
+   [
+    786,
+    225,
+    816,
+    265
+   ]
+  ]
+ },
+ "lakeside_night": {
+  "draw_calls": 17,
+  "static_draws": 12,
+  "lamp_head_draws": 4,
+  "buffer_bytes": 47376,
+  "texture_bytes": 71684,
+  "boxes": [
+   [
+    1144,
+    375,
+    1181,
+    419
+   ],
+   [
+    1401,
+    256,
+    1439,
+    298
+   ],
+   [
+    1475,
+    -5,
+    1508,
+    30
+   ],
+   [
+    851,
+    126,
+    881,
+    165
+   ]
+  ]
+ },
+ "fixtures_night": {
+  "draw_calls": 6,
+  "static_draws": 6,
+  "lamp_head_draws": 2,
+  "buffer_bytes": 11128,
+  "texture_bytes": 20480,
+  "boxes": [
+   [
+    1088,
+    -15,
+    1118,
+    20
+   ],
+   [
+    1779,
+    -15,
+    1816,
+    20
+   ]
+  ]
+ },
+ "cottage": {
+  "draw_calls": 7,
+  "static_draws": 4,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 18544,
+  "texture_bytes": 45056,
+  "boxes": []
+ }
+}

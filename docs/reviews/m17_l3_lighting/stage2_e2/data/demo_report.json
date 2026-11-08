@@ -1,0 +1,630 @@
+{
+ "heads": {
+  "village": [
+   {
+    "at_px": [
+     560.0,
+     288.0,
+     80.0
+    ],
+    "head": {
+     "structure": "lamp_west",
+     "parts": [
+      3
+     ],
+     "nodes": [
+      "lantern"
+     ],
+     "materials": [
+      "lantern"
+     ]
+    }
+   },
+   {
+    "at_px": [
+     720.0,
+     288.0,
+     80.0
+    ],
+    "head": {
+     "structure": "lamp_east",
+     "parts": [
+      3
+     ],
+     "nodes": [
+      "lantern"
+     ],
+     "materials": [
+      "lantern"
+     ]
+    }
+   }
+  ],
+  "lakeside": [
+   {
+    "at_px": [
+     800.0,
+     326.0,
+     76.8
+    ],
+    "head": {
+     "structure": "lamp_post",
+     "parts": [
+      3
+     ],
+     "nodes": [
+      "lantern"
+     ],
+     "materials": [
+      "lantern"
+     ]
+    }
+   },
+   {
+    "at_px": [
+     941.0,
+     442.0,
+     76.8
+    ],
+    "head": {
+     "structure": "lamp_post_2",
+     "parts": [
+      3
+     ],
+     "nodes": [
+      "lantern"
+     ],
+     "materials": [
+      "lantern"
+     ]
+    }
+   },
+   {
+    "at_px": [
+     1043.0,
+     755.0,
+     76.8
+    ],
+    "head": {
+     "structure": "lamp_post_3",
+     "parts": [
+      3
+     ],
+     "nodes": [
+      "lantern"
+     ],
+     "materials": [
+      "lantern"
+     ]
+    }
+   },
+   {
+    "at_px": [
+     678.0,
+     586.0,
+     76.8
+    ],
+    "head": {
+     "structure": "lamp_post_4",
+     "parts": [
+      3
+     ],
+     "nodes": [
+      "lantern"
+     ],
+     "materials": [
+      "lantern"
+     ]
+    }
+   }
+  ],
+  "fixtures": [
+   {
+    "at_px": [
+     256.0,
+     256.0,
+     76.8
+    ],
+    "head": {
+     "structure": "lamp_a",
+     "parts": [
+      3
+     ],
+     "nodes": [
+      "lantern"
+     ],
+     "materials": [
+      "lantern"
+     ]
+    }
+   },
+   {
+    "at_px": [
+     640.0,
+     256.0,
+     80.0
+    ],
+    "head": {
+     "structure": "lamp_b",
+     "parts": [
+      3
+     ],
+     "nodes": [
+      "lantern"
+     ],
+     "materials": [
+      "lantern"
+     ]
+    }
+   }
+  ],
+  "cottage": [
+   {
+    "at_px": [
+     256.0,
+     224.0,
+     64.0
+    ],
+    "head": null
+   }
+  ]
+ },
+ "village": {
+  "changed": 720,
+  "outside_heads": 0,
+  "per_head": [
+   {
+    "changed": 360,
+    "rgb": [
+     140.9,
+     113.9,
+     61.2
+    ],
+    "luma": [
+     64.9,
+     116.0
+    ],
+    "luma_p10_p90": [
+     54.0,
+     211.6
+    ]
+   },
+   {
+    "changed": 360,
+    "rgb": [
+     140.9,
+     114.4,
+     61.5
+    ],
+    "luma": [
+     65.9,
+     116.3
+    ],
+    "luma_p10_p90": [
+     54.0,
+     211.6
+    ]
+   }
+  ],
+  "boxes": [
+   [
+    347,
+    168,
+    371,
+    199
+   ],
+   [
+    589,
+    168,
+    613,
+    199
+   ]
+  ],
+  "lamp_head_draws": 2,
+  "static_draws": 27,
+  "static_draws_e1": 26,
+  "buffer_bytes": 128448,
+  "buffer_bytes_e1": 128448
+ },
+ "lakeside": {
+  "changed": 424,
+  "outside_heads": 0,
+  "per_head": [
+   {
+    "changed": 424,
+    "rgb": [
+     128.9,
+     105.0,
+     63.2
+    ],
+    "luma": [
+     62.7,
+     107.4
+    ],
+    "luma_p10_p90": [
+     48.0,
+     206.9
+    ]
+   },
+   {
+    "changed": 0,
+    "rgb": null,
+    "luma": null,
+    "luma_p10_p90": null
+   },
+   {
+    "changed": 0,
+    "rgb": null,
+    "luma": null,
+    "luma_p10_p90": null
+   },
+   {
+    "changed": 0,
+    "rgb": null,
+    "luma": null,
+    "luma_p10_p90": null
+   }
+  ],
+  "boxes": [
+   [
+    858,
+    281,
+    886,
+    315
+   ],
+   [
+    1050,
+    192,
+    1079,
+    224
+   ],
+   [
+    1106,
+    -4,
+    1132,
+    23
+   ],
+   [
+    638,
+    94,
+    661,
+    124
+   ]
+  ],
+  "lamp_head_draws": 4,
+  "static_draws": 12,
+  "static_draws_e1": 9,
+  "buffer_bytes": 47376,
+  "buffer_bytes_e1": 47376
+ },
+ "fixtures": {
+  "changed": 218,
+  "outside_heads": 0,
+  "per_head": [
+   {
+    "changed": 218,
+    "rgb": [
+     115.7,
+     98.3,
+     60.3
+    ],
+    "luma": [
+     63.3,
+     99.1
+    ],
+    "luma_p10_p90": [
+     45.7,
+     219.5
+    ]
+   },
+   {
+    "changed": 0,
+    "rgb": null,
+    "luma": null,
+    "luma_p10_p90": null
+   }
+  ],
+  "boxes": [
+   [
+    815,
+    -12,
+    839,
+    16
+   ],
+   [
+    1334,
+    -12,
+    1363,
+    16
+   ]
+  ],
+  "lamp_head_draws": 2,
+  "static_draws": 6,
+  "static_draws_e1": 5,
+  "buffer_bytes": 11128,
+  "buffer_bytes_e1": 11128
+ },
+ "cottage": {
+  "changed": 0,
+  "outside_heads": 0,
+  "per_head": [],
+  "boxes": [],
+  "lamp_head_draws": 0,
+  "static_draws": 4,
+  "static_draws_e1": 4,
+  "buffer_bytes": 18544,
+  "buffer_bytes_e1": 18544
+ },
+ "variant_off": {
+  "changed": 0,
+  "outside_heads": 0,
+  "per_head": [],
+  "boxes": [],
+  "lamp_head_draws": 0,
+  "static_draws": 26,
+  "static_draws_e1": 26,
+  "buffer_bytes": 128448,
+  "buffer_bytes_e1": 128448
+ },
+ "variant_blue_east": {
+  "changed": 720,
+  "outside_heads": 0,
+  "per_head": [
+   {
+    "changed": 360,
+    "rgb": [
+     140.9,
+     113.9,
+     61.3
+    ],
+    "luma": [
+     64.7,
+     116.0
+    ],
+    "luma_p10_p90": [
+     54.0,
+     211.6
+    ]
+   },
+   {
+    "changed": 360,
+    "rgb": [
+     87.4,
+     93.5,
+     113.1
+    ],
+    "luma": [
+     65.9,
+     93.9
+    ],
+    "luma_p10_p90": [
+     42.2,
+     173.7
+    ]
+   }
+  ],
+  "boxes": [
+   [
+    347,
+    168,
+    371,
+    199
+   ],
+   [
+    589,
+    168,
+    613,
+    199
+   ]
+  ],
+  "lamp_head_draws": 2,
+  "static_draws": 27,
+  "static_draws_e1": 26,
+  "buffer_bytes": 128448,
+  "buffer_bytes_e1": 128448
+ },
+ "variant_dim_west": {
+  "changed": 720,
+  "outside_heads": 0,
+  "per_head": [
+   {
+    "changed": 360,
+    "rgb": [
+     116.2,
+     83.6,
+     53.6
+    ],
+    "luma": [
+     64.9,
+     89.9
+    ],
+    "luma_p10_p90": [
+     38.3,
+     171.2
+    ]
+   },
+   {
+    "changed": 360,
+    "rgb": [
+     140.9,
+     114.2,
+     61.5
+    ],
+    "luma": [
+     65.6,
+     116.2
+    ],
+    "luma_p10_p90": [
+     54.0,
+     211.6
+    ]
+   }
+  ],
+  "boxes": [
+   [
+    347,
+    168,
+    371,
+    199
+   ],
+   [
+    589,
+    168,
+    613,
+    199
+   ]
+  ],
+  "lamp_head_draws": 2,
+  "static_draws": 27,
+  "static_draws_e1": 26,
+  "buffer_bytes": 128448,
+  "buffer_bytes_e1": 128448
+ },
+ "variant_bright_west": {
+  "changed": 720,
+  "outside_heads": 0,
+  "per_head": [
+   {
+    "changed": 360,
+    "rgb": [
+     153.0,
+     139.1,
+     69.7
+    ],
+    "luma": [
+     64.9,
+     135.3
+    ],
+    "luma_p10_p90": [
+     68.3,
+     237.7
+    ]
+   },
+   {
+    "changed": 360,
+    "rgb": [
+     140.9,
+     114.6,
+     61.6
+    ],
+    "luma": [
+     66.4,
+     116.4
+    ],
+    "luma_p10_p90": [
+     54.0,
+     211.6
+    ]
+   }
+  ],
+  "boxes": [
+   [
+    347,
+    168,
+    371,
+    199
+   ],
+   [
+    589,
+    168,
+    613,
+    199
+   ]
+  ],
+  "lamp_head_draws": 2,
+  "static_draws": 27,
+  "static_draws_e1": 26,
+  "buffer_bytes": 128448,
+  "buffer_bytes_e1": 128448
+ },
+ "variant_zero_west": {
+  "changed": 360,
+  "outside_heads": 0,
+  "per_head": [
+   {
+    "changed": 0,
+    "rgb": null,
+    "luma": null,
+    "luma_p10_p90": null
+   },
+   {
+    "changed": 360,
+    "rgb": [
+     140.9,
+     114.1,
+     61.4
+    ],
+    "luma": [
+     65.4,
+     116.1
+    ],
+    "luma_p10_p90": [
+     54.0,
+     211.6
+    ]
+   }
+  ],
+  "boxes": [
+   [
+    347,
+    168,
+    371,
+    199
+   ],
+   [
+    589,
+    168,
+    613,
+    199
+   ]
+  ],
+  "lamp_head_draws": 1,
+  "static_draws": 27,
+  "static_draws_e1": 26,
+  "buffer_bytes": 128448,
+  "buffer_bytes_e1": 128448
+ },
+ "variant_west_off": {
+  "changed": 360,
+  "outside_heads": 0,
+  "per_head": [
+   {
+    "changed": 360,
+    "rgb": [
+     140.9,
+     114.1,
+     61.4
+    ],
+    "luma": [
+     65.4,
+     116.1
+    ],
+    "luma_p10_p90": [
+     54.0,
+     211.6
+    ]
+   }
+  ],
+  "boxes": [
+   [
+    589,
+    168,
+    613,
+    199
+   ]
+  ],
+  "lamp_head_draws": 1,
+  "static_draws": 27,
+  "static_draws_e1": 26,
+  "buffer_bytes": 128448,
+  "buffer_bytes_e1": 128448
+ },
+ "studio": {
+  "heads_in_edit_view": 2,
+  "heads_after_edit": 1,
+  "saved": true,
+  "heads_after_undo": 2,
+  "heads_after_redo": 1,
+  "heads_after_reopen": 1
+ }
+}

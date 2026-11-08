@@ -1,0 +1,199 @@
+{
+ "worktree": "D:\\Games\\Mesh-l3g",
+ "village_on_night": {
+  "clocks": [
+   "2520 MHz, 10001 MHz, P0",
+   "210 MHz, 405 MHz, P8"
+  ],
+  "draw_calls": {
+   "e1": 31,
+   "e2": 32
+  },
+  "lamp_head_draws": 2,
+  "e1_shadow_draws": 30,
+  "e1_buffer_bytes": 128448,
+  "e2_shadow_draws": 31,
+  "e2_buffer_bytes": 128448,
+  "e1": {
+   "p10_ms": 0.7567,
+   "p50_ms": 1.4648
+  },
+  "e2": {
+   "p10_ms": 0.7639,
+   "p50_ms": 1.4633
+  },
+  "paired_diff_ms": {
+   "p25": -0.0061,
+   "median": 0.0,
+   "p75": 0.0041
+  }
+ },
+ "lakeside_replica_night": {
+  "clocks": [
+   "210 MHz, 405 MHz, P8",
+   "210 MHz, 405 MHz, P8"
+  ],
+  "draw_calls": {
+   "e1": 14,
+   "e2": 17
+  },
+  "lamp_head_draws": 4,
+  "e1_shadow_draws": 13,
+  "e1_buffer_bytes": 47376,
+  "e2_shadow_draws": 16,
+  "e2_buffer_bytes": 47376,
+  "e1": {
+   "p10_ms": 1.2595,
+   "p50_ms": 1.2636
+  },
+  "e2": {
+   "p10_ms": 1.2595,
+   "p50_ms": 1.2636
+  },
+  "paired_diff_ms": {
+   "p25": -0.0031,
+   "median": 0.0,
+   "p75": 0.0031
+  }
+ },
+ "fixtures_night": {
+  "clocks": [
+   "240 MHz, 405 MHz, P8",
+   "450 MHz, 810 MHz, P5"
+  ],
+  "draw_calls": {
+   "e1": 5,
+   "e2": 6
+  },
+  "lamp_head_draws": 2,
+  "e1_shadow_draws": 4,
+  "e1_buffer_bytes": 11128,
+  "e2_shadow_draws": 5,
+  "e2_buffer_bytes": 11128,
+  "e1": {
+   "p10_ms": 0.3686,
+   "p50_ms": 0.3809
+  },
+  "e2": {
+   "p10_ms": 0.3686,
+   "p50_ms": 0.3809
+  },
+  "paired_diff_ms": {
+   "p25": 0.0,
+   "median": 0.0,
+   "p75": 0.001
+  }
+ },
+ "village_off_night": {
+  "clocks": [
+   "450 MHz, 810 MHz, P5",
+   "435 MHz, 810 MHz, P5"
+  ],
+  "draw_calls": {
+   "e1": 31,
+   "e2": 31
+  },
+  "lamp_head_draws": 0,
+  "e1_shadow_draws": 30,
+  "e1_buffer_bytes": 128448,
+  "e2_shadow_draws": 30,
+  "e2_buffer_bytes": 128448,
+  "e1": {
+   "p10_ms": 0.6615,
+   "p50_ms": 0.702
+  },
+  "e2": {
+   "p10_ms": 0.6615,
+   "p50_ms": 0.7014
+  },
+  "paired_diff_ms": {
+   "p25": -0.002,
+   "median": 0.0,
+   "p75": 0.001
+  }
+ },
+ "lk_lamps12": {
+  "clocks": [
+   "435 MHz, 810 MHz, P5",
+   "450 MHz, 810 MHz, P5"
+  ],
+  "draw_calls": {
+   "e1": 61,
+   "e2": 64
+  },
+  "lamp_head_draws": 4,
+  "e1_shadow_draws": 29,
+  "e1_buffer_bytes": 117760,
+  "e2_shadow_draws": 32,
+  "e2_buffer_bytes": 117760,
+  "e1": {
+   "p10_ms": 1.6527,
+   "p50_ms": 1.6978
+  },
+  "e2": {
+   "p10_ms": 1.662,
+   "p50_ms": 1.706
+  },
+  "paired_diff_ms": {
+   "p25": 0.0031,
+   "median": 0.0092,
+   "p75": 0.0164
+  }
+ },
+ "lk_lamps34": {
+  "clocks": [
+   "255 MHz, 405 MHz, P8",
+   "420 MHz, 810 MHz, P5"
+  ],
+  "draw_calls": {
+   "e1": 65,
+   "e2": 68
+  },
+  "lamp_head_draws": 4,
+  "e1_shadow_draws": 29,
+  "e1_buffer_bytes": 117760,
+  "e2_shadow_draws": 32,
+  "e2_buffer_bytes": 117760,
+  "e1": {
+   "p10_ms": 1.6108,
+   "p50_ms": 1.7439
+  },
+  "e2": {
+   "p10_ms": 1.62,
+   "p50_ms": 1.7531
+  },
+  "paired_diff_ms": {
+   "p25": 0.001,
+   "median": 0.0113,
+   "p75": 0.0236
+  }
+ },
+ "lk_l1b_lamps_off": {
+  "clocks": [
+   "420 MHz, 810 MHz, P5",
+   "390 MHz, 405 MHz, P8"
+  ],
+  "draw_calls": {
+   "e1": 65,
+   "e2": 65
+  },
+  "lamp_head_draws": 0,
+  "e1_shadow_draws": 29,
+  "e1_buffer_bytes": 117760,
+  "e2_shadow_draws": 29,
+  "e2_buffer_bytes": 117760,
+  "e1": {
+   "p10_ms": 1.41,
+   "p50_ms": 1.4223
+  },
+  "e2": {
+   "p10_ms": 1.4326,
+   "p50_ms": 1.4408
+  },
+  "paired_diff_ms": {
+   "p25": 0.0164,
+   "median": 0.0236,
+   "p75": 0.044
+  }
+ }
+}

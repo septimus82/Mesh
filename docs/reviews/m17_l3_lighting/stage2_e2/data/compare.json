@@ -1,0 +1,130 @@
+{
+ "cottage": {
+  "identical": true,
+  "pixels_changed": 0,
+  "box": null
+ },
+ "fixtures_night": {
+  "identical": false,
+  "pixels_changed": 393,
+  "box": [
+   1094,
+   0,
+   1116,
+   19
+  ],
+  "luma_before": 30.64,
+  "luma_after": 87.39
+ },
+ "lakeside_night": {
+  "identical": false,
+  "pixels_changed": 784,
+  "box": [
+   1146,
+   391,
+   1179,
+   418
+  ],
+  "luma_before": 25.48,
+  "luma_after": 96.92
+ },
+ "village_blue_east_night": {
+  "identical": false,
+  "pixels_changed": 1284,
+  "box": [
+   465,
+   240,
+   815,
+   264
+  ],
+  "luma_before": 26.88,
+  "luma_after": 86.97
+ },
+ "village_bright_west_night": {
+  "identical": false,
+  "pixels_changed": 1284,
+  "box": [
+   465,
+   240,
+   815,
+   264
+  ],
+  "luma_before": 27.32,
+  "luma_after": 114.66
+ },
+ "village_dim_west_night": {
+  "identical": false,
+  "pixels_changed": 1284,
+  "box": [
+   465,
+   240,
+   815,
+   264
+  ],
+  "luma_before": 26.78,
+  "luma_after": 85.47
+ },
+ "village_off_evening": {
+  "identical": true,
+  "pixels_changed": 0,
+  "box": null
+ },
+ "village_off_night": {
+  "identical": true,
+  "pixels_changed": 0,
+  "box": null
+ },
+ "village_off_noon": {
+  "identical": true,
+  "pixels_changed": 0,
+  "box": null
+ },
+ "village_on_evening": {
+  "identical": false,
+  "pixels_changed": 1284,
+  "box": [
+   465,
+   240,
+   815,
+   264
+  ],
+  "luma_before": 43.9,
+  "luma_after": 106.39
+ },
+ "village_on_night": {
+  "identical": false,
+  "pixels_changed": 1284,
+  "box": [
+   465,
+   240,
+   815,
+   264
+  ],
+  "luma_before": 27.02,
+  "luma_after": 102.98
+ },
+ "village_on_noon": {
+  "identical": false,
+  "pixels_changed": 1284,
+  "box": [
+   465,
+   240,
+   815,
+   264
+  ],
+  "luma_before": 63.27,
+  "luma_after": 113.59
+ },
+ "village_zero_west_night": {
+  "identical": false,
+  "pixels_changed": 642,
+  "box": [
+   787,
+   240,
+   815,
+   264
+  ],
+  "luma_before": 26.21,
+  "luma_after": 102.76
+ }
+}

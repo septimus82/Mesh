@@ -1,0 +1,106 @@
+{
+ "village_on_noon": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": null
+ },
+ "village_off_noon": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": null
+ },
+ "village_on_evening": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": null
+ },
+ "village_off_evening": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": null
+ },
+ "village_on_night": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": null
+ },
+ "village_off_night": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": null
+ },
+ "village_blue_east_night": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": null
+ },
+ "village_dim_west_night": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": null
+ },
+ "village_bright_west_night": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": null
+ },
+ "village_zero_west_night": {
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "boxes": null
+ },
+ "lakeside_night": {
+  "draw_calls": 14,
+  "static_draws": 9,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 47376,
+  "texture_bytes": 71684,
+  "boxes": null
+ },
+ "fixtures_night": {
+  "draw_calls": 5,
+  "static_draws": 5,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 11128,
+  "texture_bytes": 20480,
+  "boxes": null
+ },
+ "cottage": {
+  "draw_calls": 7,
+  "static_draws": 4,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 18544,
+  "texture_bytes": 45056,
+  "boxes": null
+ }
+}

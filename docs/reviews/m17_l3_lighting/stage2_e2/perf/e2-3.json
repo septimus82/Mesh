@@ -1,0 +1,131 @@
+{
+ "worktree": "D:\\Games\\Mesh-l3g",
+ "village_on_night": {
+  "p10_ms": 0.5601,
+  "p50_ms": 0.8069,
+  "p95_ms": 1.2452,
+  "draw_calls": 32,
+  "static_draws": 27,
+  "lamp_head_draws": 2,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "target": [
+   20.0,
+   8.416,
+   0.8
+  ],
+  "clocks": "285 MHz, 405 MHz, P8, 31"
+ },
+ "village_off_night": {
+  "p10_ms": 1.3128,
+  "p50_ms": 1.4029,
+  "p95_ms": 3.1048,
+  "draw_calls": 31,
+  "static_draws": 26,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 128448,
+  "texture_bytes": 141316,
+  "target": [
+   20.0,
+   8.416,
+   0.8
+  ],
+  "clocks": "210 MHz, 405 MHz, P8, 31"
+ },
+ "lakeside_replica_night": {
+  "p10_ms": 1.2605,
+  "p50_ms": 1.2626,
+  "p95_ms": 2.9624,
+  "draw_calls": 17,
+  "static_draws": 12,
+  "lamp_head_draws": 4,
+  "buffer_bytes": 47376,
+  "texture_bytes": 71684,
+  "target": [
+   17.5,
+   14.25,
+   0.8
+  ],
+  "clocks": "210 MHz, 405 MHz, P8, 31"
+ },
+ "fixtures_night": {
+  "p10_ms": 0.5018,
+  "p50_ms": 0.7301,
+  "p95_ms": 0.7834,
+  "draw_calls": 6,
+  "static_draws": 6,
+  "lamp_head_draws": 2,
+  "buffer_bytes": 11128,
+  "texture_bytes": 20480,
+  "target": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "clocks": "225 MHz, 405 MHz, P8, 31"
+ },
+ "lk_lamps12": {
+  "p10_ms": 1.5636,
+  "p50_ms": 1.6696,
+  "p95_ms": 2.647,
+  "draw_calls": 64,
+  "static_draws": 80,
+  "lamp_head_draws": 4,
+  "buffer_bytes": 117760,
+  "texture_bytes": 579464,
+  "target": [
+   27.188,
+   9.375,
+   0.8
+  ],
+  "clocks": "420 MHz, 810 MHz, P5, 32"
+ },
+ "lk_lamps34": {
+  "p10_ms": 1.6108,
+  "p50_ms": 1.7807,
+  "p95_ms": 2.6419,
+  "draw_calls": 68,
+  "static_draws": 80,
+  "lamp_head_draws": 4,
+  "buffer_bytes": 117760,
+  "texture_bytes": 579464,
+  "target": [
+   26.875,
+   20.0,
+   0.8
+  ],
+  "clocks": "375 MHz, 405 MHz, P8, 32"
+ },
+ "lk_l1b_lamps_off": {
+  "p10_ms": 1.4418,
+  "p50_ms": 1.5498,
+  "p95_ms": 3.1201,
+  "draw_calls": 65,
+  "static_draws": 77,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 117760,
+  "texture_bytes": 579464,
+  "target": [
+   26.875,
+   20.0,
+   0.8
+  ],
+  "clocks": "345 MHz, 405 MHz, P8, 31"
+ },
+ "cottage": {
+  "p10_ms": 0.471,
+  "p50_ms": 0.5345,
+  "p95_ms": 0.6738,
+  "draw_calls": 7,
+  "static_draws": 4,
+  "lamp_head_draws": 0,
+  "buffer_bytes": 18544,
+  "texture_bytes": 45056,
+  "target": [
+   8.0,
+   5.092,
+   0.9
+  ],
+  "clocks": "435 MHz, 810 MHz, P5, 31"
+ }
+}
