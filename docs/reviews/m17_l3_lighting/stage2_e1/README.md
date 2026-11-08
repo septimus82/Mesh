@@ -115,3 +115,7 @@ Windows, RTX 4070, Python 3.13, scratch APPDATA, XDG and Mesh folders:
   - the emission added in sRGB instead of linear light: 9 fail;
   - the emission texture not decoded from sRGB: 5 fail;
   - the emission multiplied by the scene's light: 10 fail.
+
+## Review round 1
+
+Emission texture sampling (wrap modes per axis; Linear filtering in linear light), fixed in `e27a1a8`: `review1_sampling.md`.

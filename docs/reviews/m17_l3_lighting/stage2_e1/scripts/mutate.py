@@ -14,6 +14,7 @@ FAST = [
     ("second UV map read", GLB, 'if em_ref.get("texCoord", 0) != 0:', "if False:"),
     ("sharpen base only", GLB, '(mat.get("pbrMetallicRoughness") or {}).get("baseColorTexture"), mat.get("emissiveTexture"))',
      '(mat.get("pbrMetallicRoughness") or {}).get("baseColorTexture"),)'),
+    ("wrap collapsed to one axis", GLB, "        return modes[0], modes[1]\n", "        return modes[0], modes[0]\n"),
 ]
 GPU = [
     ("added in display space", REN, "        lit = mix(l * 12.92, 1.055 * pow(l, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, l));\n",
@@ -22,6 +23,18 @@ GPU = [
      "            e *= t;"),
     ("emission lit by the scene", REN, "        vec3 e = u_emissive;\n",
      "        vec3 e = u_emissive * light_at(v_world, normalize(v_nrm), false);\n"),
+    ("one wrap for both axes", REN, "        texture.wrap_x, texture.wrap_y = mat.emissive_wrap\n",
+     "        texture.wrap_x = texture.wrap_y = mat.emissive_wrap[0]\n"),
+    ("linear blended in sRGB, decoded after (as before the fix)", REN,
+     "        return mat.emissive, texture, 1 if mat.emissive_nearest else 2\n",
+     "        texture.delete()\n"
+     "        texture = ctx.texture(image.size, components=4, data=image.convert('RGBA').tobytes(), filter=(filt, filt))\n"
+     "        texture.wrap_x, texture.wrap_y = mat.emissive_wrap\n"
+     "        self._textures[-1] = texture\n"
+     "        return mat.emissive, texture, 1\n"),
+    ("linear: bytes read as linear (no sRGB texture)", REN,
+     "                              internal_format=None if mat.emissive_nearest else GL_SRGB8_ALPHA8)\n",
+     "                              internal_format=None)\n"),
 ]
 kind = sys.argv[1]
 cases, target = (FAST, "tests/test_hd2d_emissive.py") if kind == "fast" else (GPU, "tests/test_hd2d_emissive_gpu.py")
