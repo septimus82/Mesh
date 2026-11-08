@@ -1,0 +1,52 @@
+{
+ "worktree": "D:\\Games\\Mesh-l3e",
+ "renderer": "D:\\Games\\Mesh-l3e\\engine\\hd2d\\renderer.py",
+ "start__night": {
+  "n": 600,
+  "p10_ms": 0.2355,
+  "p50_ms": 0.3236,
+  "p95_ms": 0.4137,
+  "target": [
+   20.0,
+   8.416,
+   0.8
+  ],
+  "draw_calls": 31
+ },
+ "start__night_glow": {
+  "n": 600,
+  "p10_ms": 0.2386,
+  "p50_ms": 0.2514,
+  "p95_ms": 0.4209,
+  "target": [
+   20.0,
+   8.416,
+   0.8
+  ],
+  "draw_calls": 31
+ },
+ "swatches__night": {
+  "n": 600,
+  "p10_ms": 0.2253,
+  "p50_ms": 0.3758,
+  "p95_ms": 0.4342,
+  "target": [
+   20.0,
+   8.416,
+   0.8
+  ],
+  "draw_calls": 37
+ },
+ "start__noon": {
+  "n": 600,
+  "p10_ms": 0.2376,
+  "p50_ms": 0.3487,
+  "p95_ms": 0.3604,
+  "target": [
+   20.0,
+   8.416,
+   0.8
+  ],
+  "draw_calls": 31
+ }
+}

@@ -1,0 +1,89 @@
+{
+ "start__evening": {
+  "identical": true,
+  "pixels_changed": 0,
+  "box": null
+ },
+ "start__evening_glow": {
+  "identical": false,
+  "pixels_changed": 1284,
+  "box": [
+   465,
+   240,
+   815,
+   264
+  ],
+  "luma_before": 43.9,
+  "luma_after": 237.36
+ },
+ "start__night": {
+  "identical": true,
+  "pixels_changed": 0,
+  "box": null
+ },
+ "start__night_glow": {
+  "identical": false,
+  "pixels_changed": 1284,
+  "box": [
+   465,
+   240,
+   815,
+   264
+  ],
+  "luma_before": 27.02,
+  "luma_after": 235.77
+ },
+ "start__noon": {
+  "identical": true,
+  "pixels_changed": 0,
+  "box": null
+ },
+ "start__noon_glow": {
+  "identical": false,
+  "pixels_changed": 1284,
+  "box": [
+   465,
+   240,
+   815,
+   264
+  ],
+  "luma_before": 63.27,
+  "luma_after": 240.59
+ },
+ "swatches__evening": {
+  "identical": false,
+  "pixels_changed": 23240,
+  "box": [
+   338,
+   498,
+   942,
+   568
+  ],
+  "luma_before": 11.73,
+  "luma_after": 124.85
+ },
+ "swatches__night": {
+  "identical": false,
+  "pixels_changed": 23240,
+  "box": [
+   338,
+   498,
+   942,
+   568
+  ],
+  "luma_before": 7.49,
+  "luma_after": 123.1
+ },
+ "swatches__noon": {
+  "identical": false,
+  "pixels_changed": 23240,
+  "box": [
+   338,
+   498,
+   942,
+   568
+  ],
+  "luma_before": 17.98,
+  "luma_after": 128.09
+ }
+}

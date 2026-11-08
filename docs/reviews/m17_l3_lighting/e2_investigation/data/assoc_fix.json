@@ -1,0 +1,62 @@
+{
+ "worktree": "D:\\Games\\Mesh-l3e",
+ "scenes": {
+  "packs/core_regions/scenes/lamp_fixtures.json": [
+   {
+    "lamp": 0,
+    "at_m": [
+     8.0,
+     8.0,
+     2.4
+    ],
+    "fixture": [
+     "lamp_a"
+    ],
+    "head": {
+     "structure": "lamp_a",
+     "model": "assets/models/lamp_post.glb",
+     "node": "lantern",
+     "part_rule_glows": [
+      [
+       "lantern",
+       "lantern",
+       10
+      ]
+     ]
+    },
+    "box_rule_also_glows": {
+     "lamp_a/cap/iron": 2,
+     "lamp_a/post/iron": 10,
+     "near_panel/wall_high/plaster.002": 3
+    }
+   },
+   {
+    "lamp": 1,
+    "at_m": [
+     20.0,
+     8.0,
+     2.5
+    ],
+    "fixture": [
+     "lamp_b"
+    ],
+    "head": {
+     "structure": "lamp_b",
+     "model": "assets/models/lamp_post.glb",
+     "node": "lantern",
+     "part_rule_glows": [
+      [
+       "lantern",
+       "lantern",
+       10
+      ]
+     ]
+    },
+    "box_rule_also_glows": {
+     "lamp_b/cap/iron": 2,
+     "lamp_b/post/iron": 10
+    }
+   }
+  ]
+ }
+}

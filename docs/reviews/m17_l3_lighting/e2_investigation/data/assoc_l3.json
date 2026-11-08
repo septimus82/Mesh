@@ -1,0 +1,187 @@
+{
+ "worktree": "D:\\Games\\Mesh-l3e",
+ "scenes": {
+  "packs/core_regions/scenes/start.json": [
+   {
+    "lamp": 0,
+    "at_m": [
+     17.5,
+     9.0,
+     2.5
+    ],
+    "fixture": [
+     "lamp_west"
+    ],
+    "head": {
+     "structure": "lamp_west",
+     "model": "assets/models/lamp_post.glb",
+     "node": "lantern",
+     "part_rule_glows": [
+      [
+       "lantern",
+       "lantern",
+       10
+      ]
+     ]
+    },
+    "box_rule_also_glows": {
+     "lamp_west/cap/iron": 2,
+     "lamp_west/post/iron": 10
+    }
+   },
+   {
+    "lamp": 1,
+    "at_m": [
+     22.5,
+     9.0,
+     2.5
+    ],
+    "fixture": [
+     "lamp_east"
+    ],
+    "head": {
+     "structure": "lamp_east",
+     "model": "assets/models/lamp_post.glb",
+     "node": "lantern",
+     "part_rule_glows": [
+      [
+       "lantern",
+       "lantern",
+       10
+      ]
+     ]
+    },
+    "box_rule_also_glows": {
+     "lamp_east/cap/iron": 2,
+     "lamp_east/post/iron": 10
+    }
+   }
+  ],
+  "packs/core_regions/scenes/lakeside.json": [
+   {
+    "lamp": 0,
+    "at_m": [
+     25.0,
+     10.19,
+     2.4
+    ],
+    "fixture": [
+     "lamp_post"
+    ],
+    "head": {
+     "structure": "lamp_post",
+     "model": "assets/models/lamp_post.glb",
+     "node": "lantern",
+     "part_rule_glows": [
+      [
+       "lantern",
+       "lantern",
+       10
+      ]
+     ]
+    },
+    "box_rule_also_glows": {
+     "lamp_post/cap/iron": 2,
+     "lamp_post/post/iron": 10
+    }
+   },
+   {
+    "lamp": 1,
+    "at_m": [
+     29.41,
+     13.81,
+     2.4
+    ],
+    "fixture": [
+     "lamp_post_2"
+    ],
+    "head": {
+     "structure": "lamp_post_2",
+     "model": "assets/models/lamp_post.glb",
+     "node": "lantern",
+     "part_rule_glows": [
+      [
+       "lantern",
+       "lantern",
+       10
+      ]
+     ]
+    },
+    "box_rule_also_glows": {
+     "lamp_post_2/cap/iron": 2,
+     "lamp_post_2/post/iron": 10
+    }
+   },
+   {
+    "lamp": 2,
+    "at_m": [
+     32.59,
+     23.59,
+     2.4
+    ],
+    "fixture": [
+     "lamp_post_3"
+    ],
+    "head": {
+     "structure": "lamp_post_3",
+     "model": "assets/models/lamp_post.glb",
+     "node": "lantern",
+     "part_rule_glows": [
+      [
+       "lantern",
+       "lantern",
+       10
+      ]
+     ]
+    },
+    "box_rule_also_glows": {
+     "lamp_post_3/cap/iron": 2,
+     "lamp_post_3/post/iron": 10
+    }
+   },
+   {
+    "lamp": 3,
+    "at_m": [
+     21.19,
+     18.31,
+     2.4
+    ],
+    "fixture": [
+     "lamp_post_4"
+    ],
+    "head": {
+     "structure": "lamp_post_4",
+     "model": "assets/models/lamp_post.glb",
+     "node": "lantern",
+     "part_rule_glows": [
+      [
+       "lantern",
+       "lantern",
+       10
+      ]
+     ]
+    },
+    "box_rule_also_glows": {
+     "cottage/roof/shingles": 1,
+     "cottage/roof/plaster": 1,
+     "cottage/wall_east_high/plaster": 1,
+     "cottage/wall_south_e_high/plaster": 2,
+     "lamp_post_4/cap/iron": 2,
+     "lamp_post_4/post/iron": 10
+    }
+   }
+  ],
+  "packs/core_regions/scenes/cottage.json": [
+   {
+    "lamp": 0,
+    "at_m": [
+     8.0,
+     7.0,
+     2.0
+    ],
+    "fixture": [],
+    "head": null
+   }
+  ]
+ }
+}

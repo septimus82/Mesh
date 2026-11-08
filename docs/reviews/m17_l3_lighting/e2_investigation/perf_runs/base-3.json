@@ -1,0 +1,64 @@
+{
+ "patch": null,
+ "suffix": "",
+ "shots": {
+  "_clocks": [
+   "1050 MHz, 5001 MHz, P0, 48",
+   "1545 MHz, 10001 MHz, P3, 48",
+   "1020 MHz, 10001 MHz, P0, 48",
+   "1095 MHz, 10001 MHz, P0, 48"
+  ],
+  "village": {
+   "n": 600,
+   "p50_ms": 0.3154,
+   "p10_ms": 0.2335,
+   "p95_ms": 0.3963,
+   "camera_target": [
+    20.0,
+    8.416,
+    0.8
+   ],
+   "shadow_lamps": 2,
+   "shadow_map_mb": 35.0
+  },
+  "lk_shadow": {
+   "n": 600,
+   "p50_ms": 2.9752,
+   "p10_ms": 1.6886,
+   "p95_ms": 5.1968,
+   "camera_target": [
+    27.188,
+    9.375,
+    0.8
+   ],
+   "shadow_lamps": 2,
+   "shadow_map_mb": 35.0
+  },
+  "lk_plain": {
+   "n": 600,
+   "p50_ms": 1.1049,
+   "p10_ms": 0.6298,
+   "p95_ms": 2.4504,
+   "camera_target": [
+    26.875,
+    20.0,
+    0.8
+   ],
+   "shadow_lamps": 2,
+   "shadow_map_mb": 35.0
+  },
+  "cottage": {
+   "n": 600,
+   "p50_ms": 0.2058,
+   "p10_ms": 0.1434,
+   "p95_ms": 0.2089,
+   "camera_target": [
+    8.0,
+    5.092,
+    0.9
+   ],
+   "shadow_lamps": 1,
+   "shadow_map_mb": 27.5
+  }
+ }
+}
