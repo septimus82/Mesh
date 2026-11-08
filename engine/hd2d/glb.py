@@ -32,6 +32,8 @@ from typing import Any
 from PIL import Image
 
 GL_NEAREST, GL_CLAMP_TO_EDGE = 9728, 33071
+GL_REPEAT, GL_MIRRORED_REPEAT = 10497, 33648
+WRAP_MODES = (GL_REPEAT, GL_CLAMP_TO_EDGE, GL_MIRRORED_REPEAT)  # glTF's sampler wrapS / wrapT (OpenGL's values)
 EMISSIVE_STRENGTH = "KHR_materials_emissive_strength"
 _COMPONENTS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT4": 16}
 _FORMATS = {5120: "b", 5121: "B", 5122: "h", 5123: "H", 5125: "I", 5126: "f"}
@@ -54,7 +56,7 @@ class Material:
     emissive: tuple[float, float, float] = (0.0, 0.0, 0.0)
     emissive_image: Image.Image | None = None
     emissive_nearest: bool = True
-    emissive_repeat: bool = True
+    emissive_wrap: tuple[int, int] = (GL_REPEAT, GL_REPEAT)  # its sampler's (wrapS, wrapT): one of WRAP_MODES each
 
     @property
     def glows(self) -> bool:
@@ -249,9 +251,20 @@ class _Reader:
                 if em_ref.get("texCoord", 0) != 0:  # (a second UV map: not read, so its emission isn't drawn)
                     material.emissive = (0.0, 0.0, 0.0)
                 else:
-                    material.emissive_image, material.emissive_nearest, material.emissive_repeat = texture(em_ref)
+                    material.emissive_image, material.emissive_nearest, _repeat = texture(em_ref)
+                    material.emissive_wrap = self.wrap(doc, em_ref, material.name)
             out.append(material)
         return out or [Material("default", None)]
+
+    def wrap(self, doc: dict, ref: dict, name: str) -> tuple[int, int]:
+        """A texture's sampler's (wrapS, wrapT), each as glTF says (default REPEAT), kept per axis."""
+        tex = doc["textures"][ref["index"]]
+        sampler = doc.get("samplers", [{}])[tex["sampler"]] if "sampler" in tex else {}
+        modes = (sampler.get("wrapS", GL_REPEAT), sampler.get("wrapT", GL_REPEAT))
+        if any(m not in WRAP_MODES for m in modes):
+            raise self.fail(f"material '{name}': its emission texture's wrap mode {modes} isn't one of glTF's (REPEAT "
+                            f"10497, CLAMP_TO_EDGE 33071, MIRRORED_REPEAT 33648)")
+        return modes[0], modes[1]
 
     def emission(self, mat: dict, name: str) -> tuple[float, float, float]:
         """glTF ``emissiveFactor`` (default black; each clamped to 0-1, as the base colour is) times

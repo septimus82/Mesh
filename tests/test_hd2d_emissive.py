@@ -41,7 +41,8 @@ def test_each_panels_emission_is_read_as_gltf_means(tmp_path: Path) -> None:
     m = _materials(demo.swatches_glb(tmp_path / "s.glb"))
     assert m["factor_only"].emissive == (1.0, 0.5, 0.25) and m["factor_only"].emissive_image is None
     textured = m["texture_only"]
-    assert textured.emissive == (1.0, 1.0, 1.0) and textured.emissive_nearest and textured.emissive_repeat
+    assert textured.emissive == (1.0, 1.0, 1.0) and textured.emissive_nearest
+    assert textured.emissive_wrap == (glb.GL_REPEAT, glb.GL_REPEAT)
     assert textured.emissive_image is not None and list(textured.emissive_image.getdata()) == list(demo.TEXELS)
     assert m["factor_and_texture"].emissive == (0.5, 1.0, 0.25) and m["factor_and_texture"].emissive_image is not None
     assert m["lit_and_glowing"].emissive == (0.25, 0.1, 0.0)
@@ -128,6 +129,35 @@ def test_keep_pixels_sharp_also_sharpens_an_emission_texture(tmp_path: Path) -> 
     assert changed == ["texture_only"]
     (tmp_path / "sharp.glb").write_bytes(sharp)
     assert _materials(tmp_path / "sharp.glb")["texture_only"].emissive_nearest
+
+
+def test_an_emission_textures_wrap_modes_are_kept_per_axis(tmp_path: Path) -> None:
+    m = _materials(demo.sampling_glb(tmp_path / "sampling.glb"))
+    assert m["repeat_u_clamp_v"].emissive_wrap == (glb.GL_REPEAT, glb.GL_CLAMP_TO_EDGE)
+    assert m["mirror_u_clamp_v"].emissive_wrap == (glb.GL_MIRRORED_REPEAT, glb.GL_CLAMP_TO_EDGE)
+    assert m["clamp_u_repeat_v"].emissive_wrap == (glb.GL_CLAMP_TO_EDGE, glb.GL_REPEAT)
+    assert m["linear_black_white"].emissive_wrap == (glb.GL_CLAMP_TO_EDGE, glb.GL_CLAMP_TO_EDGE)
+    assert all(m[n].emissive_nearest for n in ("repeat_u_clamp_v", "mirror_u_clamp_v", "clamp_u_repeat_v"))
+    assert not m["linear_black_white"].emissive_nearest and not m["linear_black_grey"].emissive_nearest
+
+
+def test_a_base_colour_textures_wrap_reads_as_before(tmp_path: Path) -> None:
+    """Unchanged for base colour textures: one wrap for both axes, clamped if either axis clamps."""
+    def mixed_base(doc: dict) -> None:
+        doc["samplers"].append({"magFilter": glb.GL_NEAREST, "wrapS": glb.GL_REPEAT, "wrapT": glb.GL_CLAMP_TO_EDGE})
+        doc["textures"].append({"source": 0, "sampler": 1})
+        _material(doc, "ordinary")["pbrMetallicRoughness"] = {"baseColorTexture": {"index": 1}}
+
+    ordinary = _materials(_edited(tmp_path, mixed_base))["ordinary"]
+    assert ordinary.repeat is False and ordinary.nearest and ordinary.emissive_image is None
+
+
+def test_an_unknown_emission_wrap_mode_is_refused(tmp_path: Path) -> None:
+    def bad_wrap(doc: dict) -> None:
+        doc["samplers"][0]["wrapT"] = 12345
+
+    with pytest.raises(GlbError, match="material 'texture_only': its emission texture's wrap mode"):
+        load_glb(_edited(tmp_path, bad_wrap))
 
 
 def test_every_model_mesh_ships_has_no_emission_so_draws_as_before() -> None:

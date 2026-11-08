@@ -87,6 +87,53 @@ def test_a_reimport_changes_the_emission_of_every_copy(run: dict) -> None:
     assert re_["texture_only"] == run["night"]["texture_only"] and re_["ordinary"] == run["night"]["ordinary"]
 
 
+def _wrapped(coord: float, mode: int) -> float:
+    """glTF's wrap of a texture coordinate into 0..1 (OpenGL's: REPEAT, CLAMP_TO_EDGE, MIRRORED_REPEAT)."""
+    if mode == demo.REPEAT:
+        return coord % 1.0
+    if mode == demo.MIRROR:
+        whole = int(coord // 1.0)
+        frac = coord - whole
+        return 1.0 - frac if whole % 2 else frac
+    return min(max(coord, 0.0), 0.999)
+
+
+@pytest.mark.parametrize("panel", ("repeat_u_clamp_v", "mirror_u_clamp_v", "clamp_u_repeat_v"))
+def test_an_emission_texture_wraps_each_axis_as_its_sampler_says(run: dict, panel: str) -> None:
+    """uv 0..2 across and down the panel: each axis repeats, clamps or mirrors on its own (Nearest texels)."""
+    index = next(i for i, ((name, *_r), _s) in enumerate(demo.SAMPLING) if name == panel)
+    sampler = demo.SAMPLING_SAMPLERS[demo.SAMPLING_TEXTURES[index]["sampler"]]
+    for fx in demo.GRID:
+        for fy in demo.GRID:
+            u, v = _wrapped(2 * fx, sampler["wrapS"]), _wrapped(2 * fy, sampler["wrapT"])
+            texel = demo.TEXELS[int(v * 2) * 2 + int(u * 2)]
+            got = run["sampling"][panel][f"{fx},{fy}"]
+            assert _close(got, texel[:3]), (panel, fx, fy, got, texel)
+
+
+def test_a_linear_emission_texture_blends_in_linear_light(run: dict) -> None:
+    """A Linear-filtered black / white emission texture (texel middles at u 0.25 and 0.75) blends as glTF's reference
+    does: texels decoded from sRGB, then blended. Halfway is linear 0.5, drawn 188 (blending the stored sRGB bytes would
+    draw 128)."""
+    got = run["sampling"]["linear_black_white"]
+    for fx in demo.LINEAR_AT:
+        white = min(max((fx - 0.25) / 0.5, 0.0), 1.0)
+        want = round(255 * demo.srgb(white))
+        assert all(abs(c - want) <= 3 for c in got[f"{fx},0.5"]), (fx, got[f"{fx},0.5"], want)
+    assert abs(got["0.5,0.5"][0] - 188) <= 3 and abs(got["0.375,0.5"][0] - 137) <= 3
+
+
+def test_a_linear_emission_texture_blends_a_mid_tone_in_linear_light(run: dict) -> None:
+    """Black / grey 128: linear light blends 0 and 0.216 (grey decoded), halfway 0.108, drawn 93. (Blending the sRGB
+    bytes and decoding after draws 64; reading the bytes as linear draws 137.)"""
+    got = run["sampling"]["linear_black_grey"]
+    grey = demo.linear(128 / 255)
+    for fx in demo.LINEAR_AT:
+        want = round(255 * demo.srgb(grey * min(max((fx - 0.25) / 0.5, 0.0), 1.0)))
+        assert all(abs(c - want) <= 3 for c in got[f"{fx},0.5"]), (fx, got[f"{fx},0.5"], want)
+    assert abs(got["0.5,0.5"][0] - 93) <= 3
+
+
 def test_studio_draws_it_and_it_survives_saving_and_reopening(run: dict) -> None:
     assert run["studio_saved_evening"]
     for label in ("studio", "studio_reopened"):

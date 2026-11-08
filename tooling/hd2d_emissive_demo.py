@@ -34,6 +34,27 @@ SWATCHES = (
     ("ordinary", GREY, None, False, None),
     ("lit_and_glowing", GREY, [0.25, 0.1, 0.0], False, None),
 )
+# Texture sampling (wrap modes per axis, Linear filtering of an sRGB emission texture): each panel's emission texture
+# (index into SAMPLING_TEXTURES) on uv 0..2 (wrap panels: the texture twice across and down) or 0..1, white factor.
+REPEAT, CLAMP, MIRROR, NEAREST, LINEAR = 10497, 33071, 33648, 9728, 9729
+BLACK_WHITE = ((0, 0, 0, 255), (255, 255, 255, 255))  # 2 x 1
+BLACK_GREY = ((0, 0, 0, 255), (128, 128, 128, 255))  # 2 x 1: a mid-tone, where linear and sRGB values differ
+SAMPLING_SAMPLERS = ({"magFilter": NEAREST, "minFilter": NEAREST},
+                     {"magFilter": NEAREST, "minFilter": NEAREST, "wrapS": REPEAT, "wrapT": CLAMP},
+                     {"magFilter": NEAREST, "minFilter": NEAREST, "wrapS": MIRROR, "wrapT": CLAMP},
+                     {"magFilter": NEAREST, "minFilter": NEAREST, "wrapS": CLAMP, "wrapT": REPEAT},
+                     {"magFilter": LINEAR, "minFilter": LINEAR, "wrapS": CLAMP, "wrapT": CLAMP})
+SAMPLING_TEXTURES = ({"source": 0, "sampler": 1}, {"source": 0, "sampler": 2}, {"source": 0, "sampler": 3},
+                     {"source": 1, "sampler": 4}, {"source": 2, "sampler": 4})
+SAMPLING = (  # (name, base, factor, texture index, strength), uv span
+    (("repeat_u_clamp_v", BLACK, [1.0, 1.0, 1.0], 0, None), 2.0),
+    (("mirror_u_clamp_v", BLACK, [1.0, 1.0, 1.0], 1, None), 2.0),
+    (("clamp_u_repeat_v", BLACK, [1.0, 1.0, 1.0], 2, None), 2.0),
+    (("linear_black_white", BLACK, [1.0, 1.0, 1.0], 3, None), 1.0),
+    (("linear_black_grey", BLACK, [1.0, 1.0, 1.0], 4, None), 1.0),
+)
+GRID = (0.125, 0.375, 0.625, 0.875)  # sample points across and down a wrap panel: the middles of its 4 x 4 texels
+LINEAR_AT = (0.1, 0.375, 0.5, 0.625, 0.9)  # across a Linear panel (its two texels' middles at 0.25 and 0.75)
 STRUCTURE_PX = (384.0, 256.0)  # where the panels stand (the row's middle)
 SCENE = "packs/core_regions/scenes/start.json"
 
@@ -56,17 +77,20 @@ def expected_glow(factor: list[float], texel: tuple[int, ...] | None = None, lit
     return tuple(out)
 
 
-def _png(texels: tuple[tuple[int, ...], ...]) -> bytes:
-    image = Image.new("RGBA", (2, 2))
+def _png(texels: tuple[tuple[int, ...], ...], size: tuple[int, int] = (2, 2)) -> bytes:
+    image = Image.new("RGBA", size)
     image.putdata(list(texels))
     buf = io.BytesIO()
     image.save(buf, "PNG")
     return buf.getvalue()
 
 
-def swatches_glb(path: Path, swatches: tuple = SWATCHES, texels: tuple = TEXELS) -> Path:
+def swatches_glb(path: Path, swatches: tuple = SWATCHES, texels: tuple = TEXELS, *, spans: tuple = (),
+                 images: tuple = (), samplers: tuple = ({"magFilter": 9728, "minFilter": 9728},),
+                 textures: tuple = ({"source": 0, "sampler": 0},)) -> Path:
     """The panels as a GLB (glTF Y-up: each panel in the XY plane facing +Z, which is south in Mesh), uv (0, 0) at
-    each panel's top left, as glTF's texture coordinates are."""
+    each panel's top left, as glTF's texture coordinates are, running to ``spans[i]`` (default 1) at the far corner.
+    A panel's texture: True is texture 0, an int that texture. ``images``: (texels, size) pairs (default TEXELS)."""
     binary = bytearray()
     views: list[dict] = []
     accessors: list[dict] = []
@@ -79,7 +103,7 @@ def swatches_glb(path: Path, swatches: tuple = SWATCHES, texels: tuple = TEXELS)
             return len(accessors) - 1
         return len(views) - 1
 
-    image_view = add(_png(texels))
+    image_views = [add(_png(t, size)) for t, size in (images or ((texels, (2, 2)),))]
     total = len(swatches) * WIDTH + (len(swatches) - 1) * GAP
     nodes, meshes, materials = [], [], []
     for i, (name, base, factor, textured, strength) in enumerate(swatches):
@@ -88,7 +112,8 @@ def swatches_glb(path: Path, swatches: tuple = SWATCHES, texels: tuple = TEXELS)
         pos = add(b"".join(struct.pack("<3f", x, y, 0.0) for x, y in corners), componentType=5126, count=4, type="VEC3",
                   min=[x0, 0.0, 0.0], max=[x0 + WIDTH, HEIGHT, 0.0])
         nrm = add(struct.pack("<12f", *(0.0, 0.0, 1.0) * 4), componentType=5126, count=4, type="VEC3")
-        uv = add(struct.pack("<8f", 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0), componentType=5126, count=4, type="VEC2")
+        k = spans[i] if i < len(spans) else 1.0
+        uv = add(struct.pack("<8f", 0.0, k, k, k, k, 0.0, 0.0, 0.0), componentType=5126, count=4, type="VEC2")
         idx = add(struct.pack("<6H", 0, 1, 2, 0, 2, 3), componentType=5123, count=6, type="SCALAR")
         meshes.append({"primitives": [{"attributes": {"POSITION": pos, "NORMAL": nrm, "TEXCOORD_0": uv},
                                        "indices": idx, "material": i}]})
@@ -96,15 +121,15 @@ def swatches_glb(path: Path, swatches: tuple = SWATCHES, texels: tuple = TEXELS)
         mat: dict[str, Any] = {"name": name, "pbrMetallicRoughness": {"baseColorFactor": base}}
         if factor is not None:
             mat["emissiveFactor"] = factor
-        if textured:
-            mat["emissiveTexture"] = {"index": 0}
+        if textured is not False:
+            mat["emissiveTexture"] = {"index": 0 if textured is True else textured}
         if strength is not None:
             mat["extensions"] = {"KHR_materials_emissive_strength": {"emissiveStrength": strength}}
         materials.append(mat)
     doc = {"asset": {"version": "2.0", "generator": "Mesh hd2d_emissive_demo"}, "scene": 0,
            "scenes": [{"nodes": list(range(len(nodes)))}], "nodes": nodes, "meshes": meshes, "materials": materials,
-           "images": [{"bufferView": image_view, "mimeType": "image/png"}],
-           "samplers": [{"magFilter": 9728, "minFilter": 9728}], "textures": [{"source": 0, "sampler": 0}],
+           "images": [{"bufferView": v, "mimeType": "image/png"} for v in image_views],
+           "samplers": list(samplers), "textures": list(textures),
            "buffers": [{"byteLength": len(binary)}], "bufferViews": views, "accessors": accessors}
     if any(s[4] is not None for s in swatches):
         doc["extensionsUsed"] = ["KHR_materials_emissive_strength"]
@@ -112,6 +137,24 @@ def swatches_glb(path: Path, swatches: tuple = SWATCHES, texels: tuple = TEXELS)
 
     path.write_bytes(join_glb(doc, bytes(binary)))
     return path
+
+
+def sampling_glb(path: Path) -> Path:
+    """The sampling panels (SAMPLING) as a GLB: wrap modes per axis on a Nearest texture, and a Linear black/white
+    emission texture."""
+    return swatches_glb(path, tuple(p for p, _span in SAMPLING), spans=tuple(span for _p, span in SAMPLING),
+                        images=((TEXELS, (2, 2)), (BLACK_WHITE, (2, 1)), (BLACK_GREY, (2, 1))), samplers=SAMPLING_SAMPLERS,
+                        textures=SAMPLING_TEXTURES)
+
+
+def panel_at(index: int, count: int, fx: float, fy: float) -> tuple[float, float, float]:
+    """The world point (m) ``fx`` across and ``fy`` down panel ``index`` of ``count``, placed at STRUCTURE_PX."""
+    from engine.hd2d.settings import PIXELS_PER_METRE
+
+    total = count * WIDTH + (count - 1) * GAP
+    x0 = -total / 2 + index * (WIDTH + GAP)
+    return (STRUCTURE_PX[0] / PIXELS_PER_METRE + x0 + fx * WIDTH, STRUCTURE_PX[1] / PIXELS_PER_METRE,
+            (1.0 - fy) * HEIGHT)
 
 
 def panel_points(index: int, count: int = len(SWATCHES)) -> dict[str, tuple[float, float, float]]:
@@ -195,6 +238,20 @@ def check(folder: Path) -> dict[str, Any]:
         game.load(SCENE)
         game.step(30)
         report["reimported"] = read_panels(game)
+        # texture sampling: wrap modes per axis, and a Linear emission texture (imported as exported: not sharpened)
+        sampling = catalog.import_model(project, sampling_glb(folder / "sampling.glb"), name="sampling",
+                                        pixels="as exported")
+        report["sampling_report"] = glb.inspect_glb(project / sampling.model)[1].lines()
+        place(project, sampling.model, sun="night")
+        game.load(SCENE)
+        game.step(30)
+        image, vp = game.draw(), game.window.hd2d_renderer.last_vp
+        count = len(SAMPLING)
+        report["sampling"] = {
+            name: {f"{fx},{fy}": pixel_at(image, vp, panel_at(i, count, fx, fy))
+                   for fx in (LINEAR_AT if span == 1.0 else GRID) for fy in ((0.5,) if span == 1.0 else GRID)}
+            for i, ((name, *_r), span) in enumerate(SAMPLING)}
+        place(project, asset.model, sun="night")  # (the panels again, for Studio)
     finally:
         game.close()
     # Mesh Studio's edit view draws it too; an edit saved with Ctrl+S, the project reopened: still glowing.
