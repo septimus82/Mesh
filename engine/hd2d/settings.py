@@ -339,6 +339,14 @@ OVER_LIGHT_LIMIT = "over_light_limit"  # not lit: the room already has MAX_LIGHT
 LIGHT_OFF = "off"  # turned off
 AMBIENT = "ambient"  # the room light's colour, not a lamp
 UNUSABLE = "unusable"  # can't be read (no size, or a value that isn't a number): skipped, as the 2D lighting skips it
+ROOM_SHADOWS_OFF = "room_shadows_off"  # lit, but the room's shadows are off (settings.hd2d.shadows): through walls
+
+# The 2D room lighting settings an HD-2D room doesn't use (its lamps are always lit; its daylight and ambient light are
+# settings.hd2d's; its shadow filter is fixed), and per light, its flicker (HD-2D lamps shine steadily): Studio shows
+# them as kept but unused there, the AI tools list them. Only lighting_shadow_softness and lighting_shadow_strength of
+# the room's are read (parse_scene_lights).
+IGNORED_ROOM_SETTINGS = ("lighting_enabled", "lighting_ambient_color", "lighting_shadows_mode", "lighting_shadow_edge",
+                         "lighting_shadow_quality", "lighting_character_shadows")
 
 
 def _read_scene_lights(lights: Any) -> tuple[list[PointLight], Rgb | None, list[str]]:
@@ -384,6 +392,23 @@ def shadow_allocation(lights: Any) -> list[str]:
     OVER_SHADOW_LIMIT, OVER_LIGHT_LIMIT, LIGHT_OFF, AMBIENT or UNUSABLE): the same reading ``parse_scene_lights``
     gives the renderer, so what Studio shows is what the room draws."""
     return _read_scene_lights(lights)[2]
+
+
+def scene_shadow_allocation(scene: Any) -> list[str]:
+    """``shadow_allocation`` of a whole scene: with the room's shadows off (``settings.hd2d.shadows`` false: the sun's
+    and every lamp's) a light that would have a shadow map, or asks for one, reads ROOM_SHADOWS_OFF."""
+    scene = scene if isinstance(scene, dict) else {}
+    status = shadow_allocation(scene.get("lights"))
+    if room_shadows(scene):
+        return status
+    return [ROOM_SHADOWS_OFF if s in (SHADOW_MAP, OVER_SHADOW_LIMIT) else s for s in status]
+
+
+def room_shadows(scene: Any) -> bool:
+    """Whether an HD-2D room draws shadows (``settings.hd2d.shadows``, as ``parse_hd2d`` reads it: on unless false)."""
+    settings = scene.get("settings") if isinstance(scene, dict) else None
+    hd2d = settings.get("hd2d") if isinstance(settings, dict) else None
+    return not (isinstance(hd2d, dict) and hd2d.get("shadows", True) is False)
 
 
 def parse_scene_lights(lights: Any, room: Any) -> dict[str, Any]:

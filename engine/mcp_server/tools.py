@@ -49,7 +49,9 @@ OP_CATALOG: dict[str, dict[str, Any]] = {
     "delete_quest_definition": {"required": ["quest_id"], "optional": ["quests_path"], "summary": "Delete a quest definition."},
     "paint_tiles": {"required": ["scene_path"], "optional": ["ops"], "summary": "Apply tile paint operations to a scene."},
     "add_light": {"required": ["scene_path"], "optional": ["light"], "summary": "Add a light to a scene."},
-    "update_light": {"required": ["scene_path"], "optional": ["index", "patch"], "summary": "Patch a light by index."},
+    "update_light": {"required": ["scene_path"], "optional": ["index", "patch"],
+                     "summary": "Patch a light by index (HD-2D rooms: intensity 0-10 and elevation are read; "
+                                "flicker is not)."},
     "delete_light": {"required": ["scene_path"], "optional": ["index"], "summary": "Delete a light by index."},
     "run_validation": {"required": [], "optional": ["scene_path"], "summary": "Validate a scene (or the whole world)."},
     "add_world_scene": {"required": ["scene_key", "path"], "optional": ["world_path", "label", "tags"], "summary": "Register a scene in the world."},
@@ -277,9 +279,14 @@ def list_lights(scene_path: str, root: str = ".") -> dict[str, Any]:
     ``index`` is the identifier the light action ops (``update_light``,
     ``delete_light``) key on, so the AI can list then refine a specific light.
     In an HD-2D room each row also has ``hd2d_shadow``: what the room does with it
-    (``engine.hd2d.settings.shadow_allocation``: ``shadow_map``, ``no_shadows``,
+    (``engine.hd2d.settings.scene_shadow_allocation``: ``shadow_map``, ``no_shadows``,
     ``over_shadow_limit`` (asks for shadows, but the room's shadow maps are taken:
-    it shines through walls), ``over_light_limit``, ``off``, ``ambient``, ``unusable``).
+    it shines through walls), ``room_shadows_off`` (the room's shadows are off),
+    ``over_light_limit``, ``off``, ``ambient``, ``unusable``), its ``intensity``
+    (brightness, 1 unless set) and ``hd2d_ignored`` (fields it has that HD-2D doesn't
+    use: ``flicker``); the result has ``hd2d_room_shadows`` (``settings.hd2d.shadows``)
+    and ``hd2d_ignored_settings`` (the room's 2D lighting settings HD-2D keeps but
+    doesn't use, ``engine.hd2d.settings.IGNORED_ROOM_SETTINGS``).
     """
     loaded = read_scene(scene_path, root)
     if not loaded.get("ok"):
@@ -290,9 +297,9 @@ def list_lights(scene_path: str, root: str = ".") -> dict[str, Any]:
     hd2d = isinstance(settings, dict) and isinstance(settings.get("hd2d"), dict)
     allocation: list[str] = []
     if hd2d:
-        from engine.hd2d.settings import shadow_allocation  # noqa: PLC0415  # (only HD-2D rooms need it)
+        from engine.hd2d import settings as hd2d_settings  # noqa: PLC0415  # (only HD-2D rooms need it)
 
-        allocation = shadow_allocation(lights)
+        allocation = hd2d_settings.scene_shadow_allocation(scene)
     rows: list[dict[str, Any]] = []
     for index, light in enumerate(lights or []):
         if not isinstance(light, dict):
@@ -309,12 +316,14 @@ def list_lights(scene_path: str, root: str = ".") -> dict[str, Any]:
         }
         if hd2d:
             row["hd2d_shadow"] = allocation[index]
+            row["intensity"] = light.get("intensity", 1.0)
+            row["hd2d_ignored"] = ["flicker"] if light.get("flicker_enabled") else []
         rows.append(row)
     result: dict[str, Any] = {"ok": True, "scene_path": scene_path, "count": len(rows), "lights": rows}
     if hd2d:
-        from engine.hd2d.settings import MAX_SHADOW_LIGHTS  # noqa: PLC0415
-
-        result["hd2d_shadow_maps"] = MAX_SHADOW_LIGHTS
+        result["hd2d_shadow_maps"] = hd2d_settings.MAX_SHADOW_LIGHTS
+        result["hd2d_room_shadows"] = hd2d_settings.room_shadows(scene)
+        result["hd2d_ignored_settings"] = [k for k in hd2d_settings.IGNORED_ROOM_SETTINGS if k in settings]
     return result
 
 
