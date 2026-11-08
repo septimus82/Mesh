@@ -148,6 +148,25 @@ def hard_wrap(label: Any) -> None:
     label.text = "\n".join(text[line.start:line.start + line.length].rstrip() for line in layout._lines)
 
 
+def _brightness(light: dict[str, Any]) -> float:
+    """An HD-2D lamp's brightness as its renderer reads it (``intensity``: 1 unless set; below 0 reads as 0)."""
+    try:
+        return max(0.0, float(light.get("intensity", 1.0)))
+    except (TypeError, ValueError):  # (a light the renderer can't read: it skips it)
+        return 1.0
+
+
+def _dimmer(level: float) -> float:
+    """One "Dimmer" step: x0.8 (to 2 places); from the smallest step (0.05) or anything that would not go lower, 0."""
+    down = round(level * 0.8, 2)
+    return down if 0.05 <= down < level else 0.0
+
+
+def _brighter(level: float) -> float:
+    """One "Brighter" step: x1.25 (to 2 places), from 0 too, up to 10."""
+    return min(10.0, round(max(level, 0.05) * 1.25, 2))
+
+
 def _colour_name(value: Any) -> str:
     rgb = ops.rgb(value)
     return next((name for name, hex_ in ops.LIGHT_COLOURS.items() if ops.rgb(hex_) == rgb), "custom")
@@ -166,14 +185,22 @@ HD2D_SHADOW_NOTES = {
                                       "walls. Turn shadows off on one of those to give it one."),
     hd2d_settings.OVER_LIGHT_LIMIT: (f"It gives no light: a room lights its first {hd2d_settings.MAX_LIGHTS} lamps "
                                      "and this one comes after them."),
+    hd2d_settings.ROOM_SHADOWS_OFF: "The room's shadows are off (Shadows on, above, turns them on): it shines through "
+                                    "walls.",
 }
+# The room's 2D lighting settings an HD-2D room keeps but doesn't use (hd2d_settings.IGNORED_ROOM_SETTINGS), named.
+HD2D_UNUSED_NAMES = {"lighting_enabled": "lighting on/off", "lighting_ambient_color": "room light",
+                     "lighting_shadows_mode": "shadows on/off", "lighting_shadow_edge": "edge width",
+                     "lighting_shadow_quality": "shadow quality", "lighting_character_shadows": "characters' shadows"}
 
 
-def hd2d_shadow_summary(allocation: list[str]) -> str:
-    """One line for an HD-2D room's lights: how many of its shadow maps are in use, and who asks without getting one."""
+def hd2d_shadow_summary(allocation: list[str], room_shadows: bool = True) -> str:
+    """One line for an HD-2D room's lights: how many of its shadow maps are in use, and who asks without getting one
+    (with the room's shadows off, that none are drawn)."""
     used = allocation.count(hd2d_settings.SHADOW_MAP)
     left_out = allocation.count(hd2d_settings.OVER_SHADOW_LIMIT)
-    text = f"Shadow maps: {used} of {hd2d_settings.MAX_SHADOW_LIGHTS} in use."
+    text = (f"Shadow maps: {used} of {hd2d_settings.MAX_SHADOW_LIGHTS} in use." if room_shadows else
+            "Shadows are off in this room: every light shines through walls.")
     if left_out:
         text += (f" {left_out} more light{'s' if left_out > 1 else ''} set to cast shadows "
                  f"{'get' if left_out > 1 else 'gets'} none and {'shine' if left_out > 1 else 'shines'} through walls.")
@@ -1568,7 +1595,7 @@ class Studio(InspectorMixin, SoundMixin):
 
     def place_light(self, wx: float, wy: float) -> None:
         self.tool = "select"
-        turn_on = not self._lit()
+        turn_on = not self.hd2d.active and not self._lit()  # (an HD-2D room's lights are always lit)
 
         def change(scene: dict[str, Any]) -> dict[str, Any]:
             out, self.light = ops.add_light(scene, wx, wy)
@@ -1645,8 +1672,39 @@ class Studio(InspectorMixin, SoundMixin):
 
     def _lighting_panel(self, rows: Rows, width: int) -> None:
         settings, scene = self._room_settings(), self.project.scene()
-        third, fifth = (width - 8) // 3, (width - 16) // 5
         rows.add(self._label("Lighting", bold=True, size=12))
+        if self.hd2d.active:  # (M17-L3 C3: only what the HD-2D renderer reads)
+            self._hd2d_room_lighting(rows, settings, width)
+        else:
+            self._room_lighting(rows, settings, scene, width)
+        rows.add(gui.UISpace(height=6))
+        items = ops.lights(scene)
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._label(f"Lights ({len(items)})", bold=True, size=11, width=width - 110))
+        row.add(self._button("+ Add light", self.arm_light, width=104, style=S_ACTIVE if self.tool == "light" else S_BUTTON))
+        rows.add(row)
+        allocation = self._hd2d_shadow_allocation()
+        if allocation:
+            summary = hd2d_shadow_summary(allocation, hd2d_settings.room_shadows(scene))
+            rows.add(self._label(summary, color=C_WARN if hd2d_settings.OVER_SHADOW_LIMIT in allocation else C_MUTED,
+                                 size=9, width=width))
+        for i, light in enumerate(items):
+            if isinstance(light, dict):
+                text = f"Light {i + 1}: {_colour_name(light.get('color'))}, size {float(light.get('radius', 0)):g}"
+                if allocation and light.get("type") == "ambient":  # (no size: it tints the room's light)
+                    text = f"Light {i + 1}: room light colour ({_colour_name(light.get('color'))})"
+                if allocation:
+                    text += HD2D_SHADOW_TAGS.get(allocation[i], "")
+                rows.add(self._button(text, partial(self._select_light, i), width=width,
+                                      style=S_ACTIVE if i == self.light else S_BUTTON))
+        if self.light is not None and self.light < len(items):
+            self._light_inspector(rows, items[self.light], width, allocation[self.light] if allocation else None)
+        rows.add(self._label("While this panel is open, clicks on the map work on lights.", color=C_MUTED, size=9, width=width))
+        rows.add(self._button("Done", self.open_lighting, width=80))
+
+    def _room_lighting(self, rows: Rows, settings: dict[str, Any], scene: dict[str, Any], width: int) -> None:
+        """A 2D room's lighting: on/off, the room light, shadows (engine.lighting)."""
+        third, fifth = (width - 8) // 3, (width - 16) // 5
         own = settings.get("lighting_enabled")
         state = "On: dark away from lights." if self._lit() else "Off: everything is fully lit."
         rows.add(self._label(state + ("" if own is not None else " (the project's setting)"), color=C_MUTED, size=9, width=width))
@@ -1696,28 +1754,49 @@ class Studio(InspectorMixin, SoundMixin):
         else:
             rows.add(self._label("Walls on the map block each light: a wall's shadow takes away only that light, "
                                  "never the room light.", color=C_MUTED, size=9, width=width))
-        rows.add(gui.UISpace(height=6))
-        items = ops.lights(scene)
-        row = gui.UIBoxLayout(vertical=False, space_between=6)
-        row.add(self._label(f"Lights ({len(items)})", bold=True, size=11, width=width - 110))
-        row.add(self._button("+ Add light", self.arm_light, width=104, style=S_ACTIVE if self.tool == "light" else S_BUTTON))
+
+    def _hd2d_room_lighting(self, rows: Rows, settings: dict[str, Any], width: int) -> None:
+        """An HD-2D room's lighting, as its renderer reads it: shadows on or off (settings.hd2d.shadows), their edges
+        and strength. Its lights are always lit, its daylight and ambient light are Sun and sky's (Environment), and
+        the 2D settings it doesn't use are named, their values kept (engine.hd2d.settings.IGNORED_ROOM_SETTINGS)."""
+        third = (width - 8) // 3
+        rows.add(self._label("An HD-2D room's lights are always lit (each light has its own On switch). Its daylight "
+                             "and the light away from lamps are set in Environment > Sun and sky.",
+                             color=C_MUTED, size=9, width=width))
+        on = hd2d_settings.room_shadows(self.project.scene())
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for text, value, said in (("Shadows on", True, "Shadows on: the sun and the lamps with shadow maps cast them."),
+                                  ("Shadows off", False, "Shadows off: no shadows in this room, from the sun or "
+                                                         "any lamp.")):
+            row.add(self._button(text, partial(self._set_hd2d_shadows, value, said), width=(width - 4) // 2,
+                                 style=S_ACTIVE if on is value else S_BUTTON))
         rows.add(row)
-        allocation = self._hd2d_shadow_allocation(items)
-        if allocation:
-            summary = hd2d_shadow_summary(allocation)
-            rows.add(self._label(summary, color=C_WARN if hd2d_settings.OVER_SHADOW_LIMIT in allocation else C_MUTED,
-                                 size=9, width=width))
-        for i, light in enumerate(items):
-            if isinstance(light, dict):
-                text = f"Light {i + 1}: {_colour_name(light.get('color'))}, size {float(light.get('radius', 0)):g}"
-                if allocation:
-                    text += HD2D_SHADOW_TAGS.get(allocation[i], "")
-                rows.add(self._button(text, partial(self._select_light, i), width=width,
-                                      style=S_ACTIVE if i == self.light else S_BUTTON))
-        if self.light is not None and self.light < len(items):
-            self._light_inspector(rows, items[self.light], width, allocation[self.light] if allocation else None)
-        rows.add(self._label("While this panel is open, clicks on the map work on lights.", color=C_MUTED, size=9, width=width))
-        rows.add(self._button("Done", self.open_lighting, width=80))
+        if on:
+            softness = settings.get("lighting_shadow_softness")
+            softness = softness if softness in ops.SHADOW_SOFTNESS else "sharp"  # (as the renderer reads it)
+            rows.add(self._label("Shadow edges", color=C_MUTED, size=10))
+            row = gui.UIBoxLayout(vertical=False, space_between=4)
+            for text, preset in (("Sharp", "sharp"), ("Soft", "soft"), ("Softer", "softer")):
+                row.add(self._button(text, partial(self.set_room_lighting, f"Shadow edges: {text.lower()}.", softness=preset),
+                                     width=third, style=S_ACTIVE if softness == preset else S_BUTTON))
+            rows.add(row)
+            rows.add(self._label({"sharp": "Sharp: crisp edges.", "soft": "Soft: feathered edges.",
+                                  "softer": "Softer: the sun's shadows broader still; lamps' as Soft."}[softness],
+                                 color=C_MUTED, size=9, width=width))
+            self._labeled(rows, "Strength (0-1, 1: full)", self._field(
+                f"{float(settings.get('lighting_shadow_strength', 1.0)):g}",
+                lambda v: self.set_room_lighting("Shadow strength changed.", shadow_strength=v), width=width - 122,
+                key="shadow_strength_room"), width)
+        rows.add(self._label("The room's structures block the sun and each lamp that has a shadow map; characters "
+                             "cast the sun's shadows only.", color=C_MUTED, size=9, width=width))
+        kept = [HD2D_UNUSED_NAMES[key] for key in hd2d_settings.IGNORED_ROOM_SETTINGS if key in settings]
+        rows.add(self._label("Not in HD-2D rooms: lighting on/off, room light presets, shadow edge width and quality, "
+                             "characters' lamp shadows, flicker." + (f" This room keeps its 2D {', '.join(kept)} "
+                                                                     "for 2D lighting; unused here." if kept else ""),
+                             color=C_MUTED, size=9, width=width))
+
+    def _set_hd2d_shadows(self, on: bool, said: str) -> None:
+        self._edit(lambda s: ops.set_hd2d_shadows(s, on), said)
 
     def _shadow_fine_tune(self, rows: Rows, settings: dict[str, Any], width: int) -> None:
         """The collapsed "Fine-tune shadows": edge width, strength, quality, characters' shadows."""
@@ -1788,15 +1867,16 @@ class Studio(InspectorMixin, SoundMixin):
         self.light = None if self.light == index else index
         self._rebuild()
 
-    def _hd2d_shadow_allocation(self, items: list[Any]) -> list[str]:
-        """In an HD-2D room, what the room does with each light (engine.hd2d.settings.shadow_allocation: the reading
-        the renderer gets); in a 2D room, nothing (its lighting has its own rules)."""
-        return hd2d_settings.shadow_allocation(items) if self.hd2d.active else []
+    def _hd2d_shadow_allocation(self) -> list[str]:
+        """In an HD-2D room, what the room does with each light (engine.hd2d.settings.scene_shadow_allocation: the
+        reading the renderer gets); in a 2D room, nothing (its lighting has its own rules)."""
+        return hd2d_settings.scene_shadow_allocation(self.project.scene()) if self.hd2d.active else []
 
     def _light_inspector(self, rows: Rows, light: dict[str, Any], width: int, allocation: str | None = None) -> None:
         third = (width - 8) // 3
         rows.add(gui.UISpace(height=4))
         rows.add(self._label(f"Light {(self.light or 0) + 1}", bold=True, size=12))
+        hd2d = self.hd2d.active
         current = ops.rgb(light.get("color"))
         names = list(ops.LIGHT_COLOURS)
         for start in (0, 3):
@@ -1805,19 +1885,27 @@ class Studio(InspectorMixin, SoundMixin):
                 row.add(self._button(name, partial(self.set_light, f"{name} light.", color=name), width=third,
                                      style=S_ACTIVE if ops.rgb(ops.LIGHT_COLOURS[name]) == current else S_BUTTON))
             rows.add(row)
+        if hd2d and light.get("type") == "ambient":  # the room light's colour: no place, size, brightness or shadows
+            self._hd2d_room_light_inspector(rows, light, width, current)
+            return
         radius = float(light.get("radius", 100))
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         row.add(self._button("Smaller", lambda: self.set_light("Smaller.", radius=max(8, round(radius * 0.8))), width=third))
         row.add(self._label(f"size {radius:g}", color=C_MUTED, size=10, width=third))
         row.add(self._button("Bigger", lambda: self.set_light("Bigger.", radius=min(4000, round(radius * 1.25))), width=third))
         rows.add(row)
-        self._flicker_rows(rows, light, width)
+        if hd2d:
+            self._hd2d_lamp_rows(rows, light, width, allocation)
+        else:
+            self._flicker_rows(rows, light, width)
         half = (width - 6) // 2
         row = gui.UIBoxLayout(vertical=False, space_between=6)
         row.add(self._toggle("On", light.get("enabled", True) is not False,
                              lambda on: self.set_light("Light on." if on else "Light off (kept, not deleted).", enabled=on), half))
+        said = (("Set to cast shadows.", "Set not to cast shadows: it shines through walls.") if hd2d else
+                ("Walls block it.", "It shines through walls."))  # (HD-2D: the note below says what it gets)
         row.add(self._toggle("Casts shadows", light.get("shadows", True) is not False,
-                             lambda on: self.set_light("Walls block it." if on else "It shines through walls.", shadows=on), half))
+                             lambda on: self.set_light(said[0] if on else said[1], shadows=on), half))
         rows.add(row)
         if allocation in HD2D_SHADOW_NOTES:  # (an HD-2D room: what the renderer actually does with this light)
             warn = allocation in (hd2d_settings.OVER_SHADOW_LIMIT, hd2d_settings.OVER_LIGHT_LIMIT)
@@ -1834,11 +1922,14 @@ class Studio(InspectorMixin, SoundMixin):
         for label, key in (("X", "x"), ("Y", "y"), ("Size", "radius")):
             self._labeled(rows, label, self._field(f"{float(light.get(key) or 0):g}", partial(self._set_light_field, key),
                                                    width=field_w, key=f"light_{key}"), width)
-        if self.hd2d.active:  # an HD-2D lamp hangs above the ground (1.5 m unless set)
+        if hd2d:  # an HD-2D lamp hangs above the ground (1.5 m unless set) and shines this brightly
             height = float(light.get("elevation", 48.0) or 0.0) / 32.0
             self._labeled(rows, "Height (m)", self._field(f"{height:g}", self._set_light_height, width=field_w,
                                                           key="light_height"), width)
-        if light.get("flicker_enabled"):
+            self._labeled(rows, "Brightness (0-10)", self._field(
+                f"{_brightness(light):g}", lambda v: self.set_light(f"Brightness {v.strip()}x.", intensity=v.strip()),
+                width=field_w, key="light_intensity"), width)
+        elif light.get("flicker_enabled"):  # (HD-2D lamps don't flicker: _hd2d_lamp_rows says so)
             from engine.lighting.flicker import FLICKER_PRESETS, flicker_profile  # noqa: PLC0415
 
             profile = flicker_profile(light) or FLICKER_PRESETS["torch"]
@@ -1852,6 +1943,42 @@ class Studio(InspectorMixin, SoundMixin):
         self._labeled(rows, "Colour (R, G, B)", self._field(", ".join(str(c) for c in current),
                       lambda v: self.set_light("Colour changed.", color=[p.strip() for p in v.split(",")]),
                       width=field_w, key="light_rgb"), width)
+
+    def _hd2d_lamp_rows(self, rows: Rows, light: dict[str, Any], width: int, allocation: str | None) -> None:
+        """An HD-2D lamp's brightness (its ``intensity``, 0-10: 1 normal), and its flicker named as not shown (HD-2D
+        lamps shine steadily; a 2D flicker is kept for 2D rooms)."""
+        from engine.lighting.flicker import FLICKER_LABELS  # noqa: PLC0415
+
+        third = (width - 8) // 3
+        level = _brightness(light)
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        down, up = _dimmer(level), _brighter(level)
+        row.add(self._button("Dimmer", lambda: self.set_light(f"Brightness {down:g}x.", intensity=down), width=third,
+                             disabled=level <= 0.0))
+        row.add(self._label(f"brightness {level:g}x", color=C_MUTED, size=10, width=third))
+        row.add(self._button("Brighter", lambda: self.set_light(f"Brightness {up:g}x.", intensity=up), width=third,
+                             disabled=level >= 10.0))
+        rows.add(row)
+        if level <= 0.0:
+            rows.add(self._label("At brightness 0 it gives no light" + (", but still holds one of the room's shadow "
+                                 "maps." if allocation == hd2d_settings.SHADOW_MAP else "."), color=C_WARN, size=9,
+                                 width=width))
+        flicker = ops.flicker_name(light)
+        rows.add(self._label("Flicker: none in HD-2D rooms, lamps shine steadily." + (
+            f" This light keeps its {FLICKER_LABELS[flicker].lower()} flicker for 2D." if flicker != "steady" else ""),
+            color=C_MUTED, size=9, width=width))
+
+    def _hd2d_room_light_inspector(self, rows: Rows, light: dict[str, Any], width: int, current: list[int]) -> None:
+        """An HD-2D room's ``"type": "ambient"`` light: its colour tints the light away from lamps (how bright that
+        is: Sun and sky's Ambient light). Colour and on/off only: it has no place, size or shadows."""
+        rows.add(self._label("The room light's colour: it tints the light away from lamps. How bright that is: "
+                             "Environment > Sun and sky > Ambient light.", color=C_MUTED, size=9, width=width))
+        rows.add(self._toggle("On", light.get("enabled", True) is not False, lambda on: self.set_light(
+            "Room light colour on." if on else "Room light colour off (kept, not deleted).", enabled=on), width))
+        rows.add(self._button("Delete", self.delete_light, width=(width - 6) // 2))
+        self._labeled(rows, "Colour (R, G, B)", self._field(", ".join(str(c) for c in current),
+                      lambda v: self.set_light("Colour changed.", color=[p.strip() for p in v.split(",")]),
+                      width=width - 122, key="light_rgb"), width)
 
     def open_ai(self) -> None:
         self._flush_fields()

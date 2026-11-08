@@ -3115,6 +3115,22 @@ def set_hd2d_sun(scene: Doc, *, preset: Any = _UNSET, azimuth: Any = _UNSET, ele
     return _checked_structures(_checked(scene, out))
 
 
+def set_hd2d_shadows(scene: Doc, on: Any) -> Doc:
+    """An HD-2D room's shadows on or off (``settings.hd2d.shadows``: the sun's and every lamp's at once; on is the
+    default, kept as no key). Its lights stay lit either way."""
+    if not isinstance(on, bool):
+        raise OpError(f"Shadows are on (true) or off (false) (got {on!r}).")
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room (it has no settings.hd2d).")
+    hd2d = _hd2d_block(out)
+    if on:
+        hd2d.pop("shadows", None)
+    else:
+        hd2d["shadows"] = False
+    return _checked(scene, out)
+
+
 def _hd2d_block(out: Doc) -> Doc:
     hd2d = (out.get("settings") or {}).get("hd2d")
     if not isinstance(hd2d, dict):
