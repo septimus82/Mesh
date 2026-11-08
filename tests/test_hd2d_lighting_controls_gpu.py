@@ -208,6 +208,33 @@ def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
         frames["l4_off"] = _brightness(off)
         out["l4_zero_is_off"] = list(zero.getdata()) == list(off.getdata())
         d.key(k.Z, k.MOD_CTRL)
+        # Dimmer at the bottom: the smallest step goes to 0 (as dark as off), then Dimmer is disabled; Brighter recovers.
+        def l4() -> tuple[Any, float]:
+            return studio.project.scene()["lights"][3].get("intensity"), d.renderer.settings.lights[2].intensity
+
+        d.type_into("light_intensity", "0.05")
+        floor: dict[str, Any] = {"start": l4()}
+        d.button("Dimmer")
+        floor["dimmed"] = l4()
+        floor["dimmed_is_off"] = list(_view(d).getdata()) == list(off.getdata())
+        floor["dimmer_disabled"] = bool(_button_widget(d, "Dimmer").disabled)
+        scene = copy.deepcopy(studio.project.scene())
+        d.button("Dimmer")
+        floor["disabled_click_no_edit"] = studio.project.scene() == scene
+        d.button("Brighter")
+        floor["recovered"] = l4()
+        floor["recovered_lit"] = _brightness(_view(d)) > frames["l4_0"]
+        floor["dimmer_enabled_again"] = not _button_widget(d, "Dimmer").disabled
+        d.key(k.Z, k.MOD_CTRL)
+        floor["undo_brighter"] = l4()
+        d.key(k.Z, k.MOD_CTRL)
+        floor["undo_dimmer"] = l4()
+        d.key(k.Y, k.MOD_CTRL)
+        floor["redo_dimmer"] = l4()
+        d.key(k.Z, k.MOD_CTRL)
+        d.key(k.Z, k.MOD_CTRL)
+        floor["back_to_start"] = list(_view(d).getdata()) == list(base.getdata())
+        out["dimmer_floor"] = floor
         _choose(d, 1)  # a shadow map's lamp
         before = d.renderer.settings.lights[0].intensity
         d.button("Brighter")
@@ -333,6 +360,16 @@ def test_brightness_in_real_frames(run: dict) -> None:
     assert _texts_have(run["l4_3_texts"], "brightness 3x")
     assert f["l2_dimmer"] < f["base"] < f["l2_brighter"], f
     assert run["l2_brighter"] == (1.6, 2.0) and run["l2_dimmer"] == (1.6, 1.28)
+
+
+def test_dimmer_at_the_bottom_reaches_zero_and_stops_and_brighter_recovers(run: dict) -> None:
+    f = run["dimmer_floor"]
+    assert f["start"] == (0.05, 0.05)
+    assert f["dimmed"] == (0.0, 0.0) and f["dimmed_is_off"]  # (the smallest step: 0, as dark as switched off)
+    assert f["dimmer_disabled"] and f["disabled_click_no_edit"]  # (at 0: disabled, never raises it)
+    assert f["recovered"] == (0.06, 0.06) and f["recovered_lit"] and f["dimmer_enabled_again"]
+    assert f["undo_brighter"] == (0.0, 0.0) and f["undo_dimmer"] == (0.05, 0.05) and f["redo_dimmer"] == (0.0, 0.0)
+    assert f["back_to_start"]
 
 
 def test_a_switched_off_lamps_brightness_draws_nothing_and_says_off(run: dict) -> None:

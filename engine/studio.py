@@ -156,6 +156,17 @@ def _brightness(light: dict[str, Any]) -> float:
         return 1.0
 
 
+def _dimmer(level: float) -> float:
+    """One "Dimmer" step: x0.8 (to 2 places); from the smallest step (0.05) or anything that would not go lower, 0."""
+    down = round(level * 0.8, 2)
+    return down if 0.05 <= down < level else 0.0
+
+
+def _brighter(level: float) -> float:
+    """One "Brighter" step: x1.25 (to 2 places), from 0 too, up to 10."""
+    return min(10.0, round(max(level, 0.05) * 1.25, 2))
+
+
 def _colour_name(value: Any) -> str:
     rgb = ops.rgb(value)
     return next((name for name, hex_ in ops.LIGHT_COLOURS.items() if ops.rgb(hex_) == rgb), "custom")
@@ -1941,10 +1952,10 @@ class Studio(InspectorMixin, SoundMixin):
         third = (width - 8) // 3
         level = _brightness(light)
         row = gui.UIBoxLayout(vertical=False, space_between=4)
-        row.add(self._button("Dimmer", lambda: self.set_light(f"Brightness {max(0.05, round(level * 0.8, 2)):g}x.",
-                                                              intensity=max(0.05, round(level * 0.8, 2))), width=third))
+        down, up = _dimmer(level), _brighter(level)
+        row.add(self._button("Dimmer", lambda: self.set_light(f"Brightness {down:g}x.", intensity=down), width=third,
+                             disabled=level <= 0.0))
         row.add(self._label(f"brightness {level:g}x", color=C_MUTED, size=10, width=third))
-        up = min(10.0, round(max(level, 0.05) * 1.25, 2))
         row.add(self._button("Brighter", lambda: self.set_light(f"Brightness {up:g}x.", intensity=up), width=third,
                              disabled=level >= 10.0))
         rows.add(row)

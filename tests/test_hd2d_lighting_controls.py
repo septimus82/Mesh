@@ -90,6 +90,25 @@ def test_brightness_is_validated_and_drawn_as_written() -> None:
     assert _drawn(ops.set_light(room, 1, intensity=0)).lights[0].intensity == 0.0
 
 
+def test_dimmer_and_brighter_steps_at_the_bounds() -> None:
+    from engine.studio import _brighter, _dimmer
+
+    assert _dimmer(1.6) == 1.28 and _dimmer(0.0625) == 0.05
+    assert _dimmer(0.06) == 0.05 and _dimmer(0.05) == 0.0  # (the smallest step: to 0, not stuck at 0.05)
+    assert _dimmer(0.01) == 0.0 and _dimmer(0.0) == 0.0  # (below the smallest step too; Studio disables it at 0)
+    assert _brighter(0.0) == 0.06 and _brighter(8.0) == 10.0 and _brighter(10.0) == 10.0
+    for level in [0.0, 0.01, 0.04, 0.05, 0.06, 0.0625, 0.1, 0.5, 1.0, 1.6, 3.0, 9.99, 10.0]:
+        down, up = _dimmer(level), _brighter(level)
+        assert down < level or down == level == 0.0, level  # (never raises it; always lowers it above 0)
+        assert up > level or up == level == 10.0, level
+        for value in (down, up):  # (each within set_light's 0-10)
+            assert _drawn(ops.set_light(_room(), 1, intensity=value)).lights[0].intensity == value
+    level, steps = 10.0, 0
+    while level > 0.0:  # (Dimmer from the top reaches 0)
+        level, steps = _dimmer(level), steps + 1
+    assert steps < 30
+
+
 def test_the_room_light_colour_tints_hd2d_ambient() -> None:
     room = _room()
     assert _drawn(ops.set_light(room, 0, color="Red")).ambient_color != _drawn(room).ambient_color
