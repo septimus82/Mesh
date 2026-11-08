@@ -22,9 +22,9 @@ from PIL import Image
 
 from engine.hd2d.dof import DofPass, blur_radius, character_band, dof_unavailable_reason, taps_for, view_depth
 from engine.hd2d.glb import Model, load_glb
-from engine.hd2d.lighting import LIGHTING_GLSL, Lighting
+from engine.hd2d.lighting import LIGHTING_GLSL, Lighting, lamp_head
 from engine.hd2d.precipitation import PrecipitationMaps, key_for
-from engine.hd2d.settings import PIXELS_PER_METRE, Hd2dSettings
+from engine.hd2d.settings import MAX_LIGHTS, PIXELS_PER_METRE, Hd2dSettings
 from engine.logging_tools import get_logger
 
 logger = get_logger(__name__)
@@ -46,6 +46,9 @@ uniform sampler2D u_tex;
 // shadows don't change it; times u_emissive_map (its emissiveTexture) when u_emissive_tex is 1 (sampled Nearest: its
 // sRGB texel decoded here) or 2 (sampled Linear from an sRGB texture: decoded before filtering, as glTF means it).
 uniform vec3 u_emissive; uniform int u_emissive_tex; uniform sampler2D u_emissive_map;
+// A lamp's own lamp head (engine.hd2d.lighting.lamp_head, drawn on its own): its lamp's colour x intensity (linear),
+// times the head's own texture (so its glass glows and its frame stays dark), added with the emission. 0: no lamp.
+uniform vec3 u_glow;
 // Cutaway (structures marked "cutaway", in play; u_cut_at.w > 0): not drawn when in front of the followed character
 // (more than 0.2 m nearer the camera than its middle, u_cut_at.xyz) and above u_cut_floor, inside the cone from the
 // camera (u_cut_eye) through the character's box: offsets across (u_cut_right) and up from the line of sight, scaled to
@@ -73,7 +76,7 @@ void main() {
     }
     vec4 c = texture(u_tex, v_uv);
     vec3 lit = c.rgb * light_at(v_world, normalize(v_nrm), false);
-    if (u_emissive != vec3(0.0)) {  // added in linear light (the frame holds sRGB), so it shows as glTF means it
+    if (u_emissive != vec3(0.0) || u_glow != vec3(0.0)) {  // added in linear light (the frame holds sRGB)
         vec3 e = u_emissive;
         if (u_emissive_tex == 1) {
             vec3 t = texture(u_emissive_map, v_uv).rgb;
@@ -81,6 +84,7 @@ void main() {
         } else if (u_emissive_tex == 2) {
             e *= texture(u_emissive_map, v_uv).rgb;
         }
+        e += mix(c.rgb / 12.92, pow((c.rgb + 0.055) / 1.055, vec3(2.4)), step(0.04045, c.rgb)) * u_glow;
         vec3 l = clamp(lit, 0.0, 1.0);
         l = mix(l / 12.92, pow((l + 0.055) / 1.055, vec3(2.4)), step(0.04045, l)) + e;
         lit = mix(l * 12.92, 1.055 * pow(l, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, l));
@@ -288,6 +292,11 @@ def _column_major(m: list[list[float]]) -> tuple[float, ...]:
     return tuple(float(m[r][c]) for c in range(4) for r in range(4))
 
 
+def _linear(c: float) -> float:
+    """An sRGB colour channel (0-1, as a lamp's colour is written) in linear light."""
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
 def _placement(x: float, y: float, z: float, rotation_deg: float, scale: float) -> list[list[float]]:
     """A structure's model matrix: scale, turn about the vertical axis, move (metres)."""
     c, s = math.cos(math.radians(rotation_deg)), math.sin(math.radians(rotation_deg))
@@ -482,6 +491,8 @@ class Hd2dRenderer:
         # id(a material's texture) -> (its emission, its emission texture or None, MESH_FS's u_emissive_tex): only
         # materials that glow
         self._emission: dict[int, tuple[tuple[float, float, float], Any, int]] = {}
+        self._heads: dict[tuple[str, int], tuple[float, float, float]] | None = None  # (_lamp_heads)
+        self._glow: dict[int, tuple[float, float, float]] = {}  # id(static draw) -> its lamp-driven glow (lamp heads)
         self.live: dict[str, tuple[str, tuple[float, ...]]] = {}  # id -> (model, matrix)
         self.particles: Any = None  # the room's environmental particles (engine.scene_particles), if it has any
         self.fire_sprites: Any = None  # its campfires' logs and flames (engine.fire: a scatter layer, always moving)
@@ -619,10 +630,33 @@ class Hd2dRenderer:
         finally:  # the buffers made here are the static batch's (set_live_ids frees and remakes them; batched only)
             self._static_buffers = self._buffers[first:] if self.batched else []
 
+    def _lamp_heads(self) -> dict[tuple[str, int], tuple[float, float, float]]:
+        """(structure id, part index) -> the lamp-driven glow (linear RGB) of each lamp's own lamp head
+        (lighting.lamp_head): its lamp's colour x intensity, summed if two lamps share a head. Only the lamps the
+        room draws (settings.lights: its first MAX_LIGHTS enabled ones), with an intensity above 0. Lamps don't move
+        in a renderer's life (a change of lights builds a new one): worked out once."""
+        if self._heads is None:
+            heads: dict[tuple[str, int], tuple[float, float, float]] = {}
+            for lamp in self.settings.lights[:MAX_LIGHTS]:
+                if lamp.intensity <= 0:
+                    continue
+                head = lamp_head((lamp.x / PIXELS_PER_METRE, lamp.y / PIXELS_PER_METRE, lamp.elevation / PIXELS_PER_METRE),
+                                 self.settings.structures, self.models)
+                if head is None:
+                    continue
+                glow = tuple(_linear(c) * lamp.intensity for c in lamp.color)
+                for i in head[1]:
+                    was = heads.get((head[0], i), (0.0, 0.0, 0.0))
+                    heads[(head[0], i)] = (was[0] + glow[0], was[1] + glow[1], was[2] + glow[2])
+            self._heads = heads
+        return self._heads
+
     def _build_batches(self, skip: set[str] | None) -> None:
         textures = self._materials
         structures = [st for st in self.settings.structures if st.id not in (skip or set())]
         self._cutaway = set()
+        self._glow = {}
+        heads = self._lamp_heads()
         if not self.batched:  # one shared buffer per model part, drawn once per instance with its placement
             shared = self._parts
             for st in structures:
@@ -634,18 +668,25 @@ class Hd2dRenderer:
                                                                part.indices)
                     self.static.append((shared[(st.model, i)], self._material_texture(st.model, part, textures), matrix))
                     self.static_spans[id(self.static[-1])] = [(st.id, 0, len(part.indices))]
+                    if (st.id, i) in heads:
+                        self._glow[id(self.static[-1])] = heads[(st.id, i)]
                     if st.cutaway:
                         self._cutaway.add(id(self.static[-1]))
                     self.triangles += len(part.indices) // 3
             return
-        merged: dict[tuple[int, bool], tuple[Any, array, array]] = {}  # (texture id, cutaway) -> (texture, vertices, indices)
-        spans: dict[tuple[int, bool], list[tuple[str, int, int]]] = {}  # ... -> (structure id, first index, count)
+        # (texture id, cutaway, lamp head's structure id or "") -> (texture, vertices, indices): a lamp head's glowing
+        # parts are drawn on their own (their glow is a uniform), every other part is batched as before
+        merged: dict[tuple[int, bool, str], tuple[Any, array, array]] = {}
+        spans: dict[tuple[int, bool, str], list[tuple[str, int, int]]] = {}  # ... -> (structure id, first index, count)
+        glows: dict[tuple[int, bool, str], tuple[float, float, float]] = {}
         for st in structures:
             m = _placement(st.x / PIXELS_PER_METRE, st.y / PIXELS_PER_METRE, st.elevation / PIXELS_PER_METRE,
                            st.rotation, st.scale)
-            for part in self.models[st.model].parts:
+            for part_index, part in enumerate(self.models[st.model].parts):
                 texture = self._material_texture(st.model, part, textures)
-                key = (id(texture), st.cutaway)
+                key = (id(texture), st.cutaway, st.id if (st.id, part_index) in heads else "")
+                if key[2]:
+                    glows[key] = heads[(st.id, part_index)]
                 _, verts, idx = merged.setdefault(key, (texture, array("f"), array("I")))
                 batch_spans = spans.setdefault(key, [])
                 if batch_spans and batch_spans[-1][0] == st.id:  # (this structure's earlier part with this texture)
@@ -673,6 +714,8 @@ class Hd2dRenderer:
             self.static_spans[id(self.static[-1])] = spans[key]
             if cutaway:
                 self._cutaway.add(id(self.static[-1]))
+            if key in glows:
+                self._glow[id(self.static[-1])] = glows[key]
 
     def _build_ground(self, resolve: Callable[[str], Path]) -> tuple[Any, Any]:
         g = self.settings.ground
@@ -941,7 +984,7 @@ class Hd2dRenderer:
         for buffer in self._buffers:
             buffer.delete()
         self._buffers, self._textures, self._sprite_textures, self.static = [], [], {}, []
-        self.static_spans, self._emission = {}, {}
+        self.static_spans, self._emission, self._glow = {}, {}, {}
         for key in list(self._terrain_draws):
             self._free_terrain_chunk(key)
         if self._caster_geometry is not None:
@@ -1276,7 +1319,8 @@ class Hd2dRenderer:
                                                          if self.scatter is not None else [])
         self._bind_cutaway(mp, cam if camera is None else None)
         mp["u_emissive"], mp["u_emissive_tex"], mp["u_emissive_map"] = (0.0, 0.0, 0.0), 0, EMISSIVE_UNIT
-        emission, glowing = self._emission, None
+        mp["u_glow"] = (0.0, 0.0, 0.0)
+        emission, glowing, lamp_glows, lamp_glowing = self._emission, None, self._glow, None
         for draw in statics:
             geometry, texture, matrix = draw
             mp["u_cut"] = 1 if id(draw) in self._cutaway else 0
@@ -1288,6 +1332,10 @@ class Hd2dRenderer:
                 glowing = glow
             if glow and glow[1] is not None:
                 glow[1].use(EMISSIVE_UNIT)
+            lamp_glow = lamp_glows.get(id(draw))
+            if lamp_glow is not lamp_glowing:  # (a lamp head: a draw of its own)
+                mp["u_glow"] = lamp_glow or (0.0, 0.0, 0.0)
+                lamp_glowing = lamp_glow
             texture.use(0)
             geometry.render(mp)
             self.draw_calls += 1
@@ -1614,6 +1662,7 @@ class Hd2dRenderer:
                 "texture_bytes": texture_bytes, "target_bytes": target_bytes, "batched": self.batched,
                 "shadows": self.lighting.enabled, "shadow_draws": self.lighting.shadow_draws,
                 "shadow_map_bytes": self.lighting.memory_bytes(), "lamps": len(self.lighting.lamps),
+                "lamp_head_draws": len(self._glow),
                 "shadow_lamps": sum(1 for slot in self.lighting.lamp_slots if slot >= 0),
                 "particles": sum(e.count for e, on in zip(self.particles.effects, self.particles.enabled) if on)
                 if self.particles is not None else 0,
