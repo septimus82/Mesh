@@ -42,6 +42,9 @@ void main() {
 MESH_FS = """
 #version 330
 uniform sampler2D u_tex;
+// A glTF material's emission (engine.hd2d.glb.Material.emissive, linear; 0: none): unlit, so lamps, the sun and the
+// shadows don't change it; times u_emissive_map (its emissiveTexture, sRGB) when u_emissive_tex is 1.
+uniform vec3 u_emissive; uniform int u_emissive_tex; uniform sampler2D u_emissive_map;
 // Cutaway (structures marked "cutaway", in play; u_cut_at.w > 0): not drawn when in front of the followed character
 // (more than 0.2 m nearer the camera than its middle, u_cut_at.xyz) and above u_cut_floor, inside the cone from the
 // camera (u_cut_eye) through the character's box: offsets across (u_cut_right) and up from the line of sight, scaled to
@@ -68,9 +71,21 @@ void main() {
         }
     }
     vec4 c = texture(u_tex, v_uv);
-    f_color = vec4(c.rgb * light_at(v_world, normalize(v_nrm), false), 1.0);
+    vec3 lit = c.rgb * light_at(v_world, normalize(v_nrm), false);
+    if (u_emissive != vec3(0.0)) {  // added in linear light (the frame holds sRGB), so it shows as glTF means it
+        vec3 e = u_emissive;
+        if (u_emissive_tex == 1) {
+            vec3 t = texture(u_emissive_map, v_uv).rgb;
+            e *= mix(t / 12.92, pow((t + 0.055) / 1.055, vec3(2.4)), step(0.04045, t));
+        }
+        vec3 l = clamp(lit, 0.0, 1.0);
+        l = mix(l / 12.92, pow((l + 0.055) / 1.055, vec3(2.4)), step(0.04045, l)) + e;
+        lit = mix(l * 12.92, 1.055 * pow(l, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, l));
+    }
+    f_color = vec4(lit, 1.0);
 }
 """
+EMISSIVE_UNIT = 3  # the emission texture's unit (MESH_FS; the sculpted ground binds its own before its draws)
 GROUND_FS = """
 #version 330
 // Sculpted ground (Milestone 20C): one material a texel (32 a metre), the one whose painted weight at the texel's
@@ -460,6 +475,8 @@ class Hd2dRenderer:
         self._cutaway: set[int] = set()  # ids of the static draws drawn with the cutaway (_build_batches)
         self._parts: dict[tuple[str, int], Any] = {}  # (model, part) -> its geometry in its own space (live drawing)
         self._materials: dict[tuple[str, str], Any] = {}
+        # id(a material's texture) -> (its emission, its emission texture or None): only materials that glow
+        self._emission: dict[int, tuple[tuple[float, float, float], Any]] = {}
         self.live: dict[str, tuple[str, tuple[float, ...]]] = {}  # id -> (model, matrix)
         self.particles: Any = None  # the room's environmental particles (engine.scene_particles), if it has any
         self.fire_sprites: Any = None  # its campfires' logs and flames (engine.fire: a scatter layer, always moving)
@@ -570,6 +587,11 @@ class Hd2dRenderer:
         if key not in cache:
             image = part.material.image or Image.new("RGBA", (1, 1), (200, 200, 200, 255))
             cache[key] = self._texture(image, nearest=part.material.nearest, repeat=part.material.repeat)
+            mat = part.material
+            if mat.glows:
+                glow = None if mat.emissive_image is None else self._texture(
+                    mat.emissive_image, nearest=mat.emissive_nearest, repeat=mat.emissive_repeat)
+                self._emission[id(cache[key])] = (mat.emissive, glow)
         return cache[key]
 
     def _build_structures(self, skip: set[str] | None = None) -> None:
@@ -901,7 +923,7 @@ class Hd2dRenderer:
         for buffer in self._buffers:
             buffer.delete()
         self._buffers, self._textures, self._sprite_textures, self.static = [], [], {}, []
-        self.static_spans = {}
+        self.static_spans, self._emission = {}, {}
         for key in list(self._terrain_draws):
             self._free_terrain_chunk(key)
         if self._caster_geometry is not None:
@@ -1235,10 +1257,19 @@ class Hd2dRenderer:
         statics = ground_draws + self.static + live + (self.scatter.statics(self.last_vp, _box_in_view)
                                                          if self.scatter is not None else [])
         self._bind_cutaway(mp, cam if camera is None else None)
+        mp["u_emissive"], mp["u_emissive_tex"], mp["u_emissive_map"] = (0.0, 0.0, 0.0), 0, EMISSIVE_UNIT
+        emission, glowing = self._emission, None
         for draw in statics:
             geometry, texture, matrix = draw
             mp["u_cut"] = 1 if id(draw) in self._cutaway else 0
             mp["u_model"] = matrix
+            glow = emission.get(id(texture))
+            if glow is not glowing:  # (statics are batched per material: this changes a few times a frame)
+                mp["u_emissive"] = glow[0] if glow else (0.0, 0.0, 0.0)
+                mp["u_emissive_tex"] = 1 if glow and glow[1] is not None else 0
+                glowing = glow
+            if glow and glow[1] is not None:
+                glow[1].use(EMISSIVE_UNIT)
             texture.use(0)
             geometry.render(mp)
             self.draw_calls += 1

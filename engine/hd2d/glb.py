@@ -2,7 +2,9 @@
 
 The supported subset, proven in Milestone 16 Stage 1: nodes with translation / rotation / scale or a matrix (and
 children), triangle primitives with POSITION, NORMAL, TEXCOORD_0 and indices, materials with a base-colour texture
-embedded in the GLB (PNG), and samplers (NEAREST for pixel art, REPEAT / CLAMP_TO_EDGE). glTF's Y-up becomes Mesh's
+embedded in the GLB (PNG), and samplers (NEAREST for pixel art, REPEAT / CLAMP_TO_EDGE). A material's emission (glTF
+``emissiveFactor``, times ``emissiveTexture`` and ``KHR_materials_emissive_strength`` when it has them) is kept and
+drawn unlit, added to the lit colour; other ``KHR_materials_*`` extensions are not drawn (``inspect_glb`` says so). glTF's Y-up becomes Mesh's
 Z-up: (x, y, z) -> (x, -z, y), so x is east, y north and z height, in metres.
 
 Collision is authored in Blender, never guessed from the picture: an object with the custom property
@@ -30,6 +32,7 @@ from typing import Any
 from PIL import Image
 
 GL_NEAREST, GL_CLAMP_TO_EDGE = 9728, 33071
+EMISSIVE_STRENGTH = "KHR_materials_emissive_strength"
 _COMPONENTS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT4": 16}
 _FORMATS = {5120: "b", 5121: "B", 5122: "h", 5123: "H", 5125: "I", 5126: "f"}
 _SIZES = {5120: 1, 5121: 1, 5122: 2, 5123: 2, 5125: 4, 5126: 4}
@@ -46,6 +49,16 @@ class Material:
     image: Image.Image | None
     nearest: bool = True
     repeat: bool = True
+    # glTF emission: ``emissiveFactor`` (linear, 0-1 each) times ``KHR_materials_emissive_strength``, and, when the
+    # material has one, ``emissiveTexture`` (sRGB, on the first UV map) multiplied in per texel. (0, 0, 0): none.
+    emissive: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    emissive_image: Image.Image | None = None
+    emissive_nearest: bool = True
+    emissive_repeat: bool = True
+
+    @property
+    def glows(self) -> bool:
+        return any(c > 0.0 for c in self.emissive)
 
 
 @dataclass
@@ -211,23 +224,47 @@ class _Reader:
                     images.append(decoded.convert("RGBA"))
             except OSError as exc:
                 raise self.fail(f"image {i} can't be decoded ({exc})") from exc
+        def texture(ref: dict) -> tuple[Image.Image | None, bool, bool]:  # (image, nearest, repeat)
+            tex = doc["textures"][ref["index"]]
+            sampler = doc.get("samplers", [{}])[tex["sampler"]] if "sampler" in tex else {}
+            return (images[tex["source"]] if "source" in tex else None,
+                    sampler.get("magFilter", GL_NEAREST) == GL_NEAREST,
+                    GL_CLAMP_TO_EDGE not in (sampler.get("wrapS"), sampler.get("wrapT")))
+
         out: list[Material] = []
         for mat in doc.get("materials", []):
             pbr = mat.get("pbrMetallicRoughness", {})
             ref = pbr.get("baseColorTexture")
             image, nearest, repeat = None, True, True
             if ref is not None:
-                tex = doc["textures"][ref["index"]]
-                image = images[tex["source"]] if "source" in tex else None
-                sampler = doc.get("samplers", [{}])[tex["sampler"]] if "sampler" in tex else {}
-                nearest = sampler.get("magFilter", GL_NEAREST) == GL_NEAREST
-                repeat = GL_CLAMP_TO_EDGE not in (sampler.get("wrapS"), sampler.get("wrapT"))
+                image, nearest, repeat = texture(ref)
             elif isinstance(pbr.get("baseColorFactor"), list) and len(pbr["baseColorFactor"]) == 4:
                 # A flat Blender colour (no texture): one texel of it, so it isn't drawn grey.
                 r, g, b, a = (min(max(float(c), 0.0), 1.0) for c in pbr["baseColorFactor"])
                 image = Image.new("RGBA", (1, 1), _srgb_byte(r, g, b, a))
-            out.append(Material(str(mat.get("name", f"material{len(out)}")), image, nearest, repeat))
+            material = Material(str(mat.get("name", f"material{len(out)}")), image, nearest, repeat)
+            material.emissive = self.emission(mat, material.name)
+            em_ref = mat.get("emissiveTexture")
+            if material.glows and em_ref is not None:
+                if em_ref.get("texCoord", 0) != 0:  # (a second UV map: not read, so its emission isn't drawn)
+                    material.emissive = (0.0, 0.0, 0.0)
+                else:
+                    material.emissive_image, material.emissive_nearest, material.emissive_repeat = texture(em_ref)
+            out.append(material)
         return out or [Material("default", None)]
+
+    def emission(self, mat: dict, name: str) -> tuple[float, float, float]:
+        """glTF ``emissiveFactor`` (default black; each clamped to 0-1, as the base colour is) times
+        ``KHR_materials_emissive_strength``'s ``emissiveStrength`` (default 1)."""
+        factor = mat.get("emissiveFactor", [0.0, 0.0, 0.0])
+        strength = ((mat.get("extensions") or {}).get(EMISSIVE_STRENGTH) or {}).get("emissiveStrength", 1.0)
+        numbers = [*factor, strength] if isinstance(factor, list) else []
+        if (len(numbers) != 4 or not all(isinstance(c, (int, float)) and not isinstance(c, bool) and math.isfinite(c)
+                                         for c in numbers) or strength < 0):
+            raise self.fail(f"material '{name}': its emission must be three numbers (emissiveFactor) and a strength "
+                            f"of 0 or more ({EMISSIVE_STRENGTH})")
+        r, g, b = (min(max(float(c), 0.0), 1.0) * float(strength) for c in factor)
+        return r, g, b
 
 
 def _srgb_byte(r: float, g: float, b: float, a: float) -> tuple[int, int, int, int]:
@@ -365,7 +402,7 @@ def _load_glb(path: str | Path) -> Model:
 
 # ---------------------------------------------------------------------------------------------- importing (Stage 5B)
 GL_LINEAR = 9729
-_HARMLESS_EXTENSIONS = ("KHR_materials_",)  # PBR extras Blender writes; Mesh's lighting doesn't use them
+_HARMLESS_EXTENSIONS = ("KHR_materials_",)  # material extras Blender writes: the shape reads without them (see Report)
 
 
 def split_glb(data: bytes) -> tuple[dict, bytes]:
@@ -405,18 +442,20 @@ def sharpen_textures(data: bytes) -> tuple[bytes, list[str]]:
     textures = doc.get("textures", [])
     changed: list[str] = []
     for mat in doc.get("materials", []):
-        ref = (mat.get("pbrMetallicRoughness") or {}).get("baseColorTexture")
-        if not isinstance(ref, dict) or not 0 <= ref.get("index", -1) < len(textures):
-            continue
-        tex = textures[ref["index"]]
-        sampler = samplers[tex["sampler"]] if isinstance(tex.get("sampler"), int) and tex["sampler"] < len(samplers) else {}
-        if sampler.get("magFilter", GL_NEAREST) == GL_NEAREST:  # what the renderer goes by (it has no mipmaps)
-            continue
-        sharp = {**sampler, "magFilter": GL_NEAREST, "minFilter": GL_NEAREST}
-        if sharp not in samplers:
-            samplers.append(sharp)
-        tex["sampler"] = samplers.index(sharp)
-        changed.append(str(mat.get("name", "material")))
+        for ref in ((mat.get("pbrMetallicRoughness") or {}).get("baseColorTexture"), mat.get("emissiveTexture")):
+            if not isinstance(ref, dict) or not 0 <= ref.get("index", -1) < len(textures):
+                continue
+            tex = textures[ref["index"]]
+            sampler = (samplers[tex["sampler"]] if isinstance(tex.get("sampler"), int) and tex["sampler"] < len(samplers)
+                       else {})
+            if sampler.get("magFilter", GL_NEAREST) == GL_NEAREST:  # what the renderer goes by (it has no mipmaps)
+                continue
+            sharp = {**sampler, "magFilter": GL_NEAREST, "minFilter": GL_NEAREST}
+            if sharp not in samplers:
+                samplers.append(sharp)
+            tex["sampler"] = samplers.index(sharp)
+            if str(mat.get("name", "material")) not in changed:
+                changed.append(str(mat.get("name", "material")))
     return (join_glb(doc, binary) if changed else data), changed
 
 
@@ -430,6 +469,7 @@ class Report:
     materials: list[tuple[str, tuple[int, int] | None, bool]]  # (name, texture size or None, sharp)
     colliders: list[tuple[str, str]]  # (node, kind)
     warnings: list[str] = field(default_factory=list)
+    glowing: list[str] = field(default_factory=list)  # the materials drawn with emission ("name (texture WxH)")
 
     @property
     def collision(self) -> dict[str, int]:
@@ -449,6 +489,8 @@ class Report:
             out.append("Textures: " + ", ".join(textured) + ".")
         if flat:
             out.append("Flat colour: " + ", ".join(flat) + ".")
+        if self.glowing:
+            out.append("Glows (emission, unlit): " + ", ".join(self.glowing) + ".")
         counts = self.collision
         if self.colliders:
             out.append("Collision: " + ", ".join(f"{n} {kind}" for kind, n in counts.items() if n) + ".")
@@ -469,6 +511,7 @@ def inspect_glb(path: str | Path) -> tuple[Model, Report]:
                  for m in seen.values()]
     warnings: list[str] = []
     smooth = [name for name, size, sharp in materials if size and not sharp]
+    smooth += [f"{m.name} (emission)" for m in seen.values() if m.emissive_image is not None and not m.emissive_nearest]
     if smooth:
         warnings.append(f"Smooth (Linear) texture filtering on {', '.join(smooth)}: pixel art will blur. Keep pixels "
                         f"sharp fixes the copy; in Blender, set the Image Texture node to Closest.")
@@ -479,6 +522,7 @@ def inspect_glb(path: str | Path) -> tuple[Model, Report]:
     if required:
         raise GlbError(f"{path}: needs glTF extension(s) Mesh doesn't read: {', '.join(required)} (turn off "
                        f"compression such as Draco when exporting)")
+    warnings += _material_warnings(doc, seen)
     if "KHR_texture_transform" in doc.get("extensionsUsed", []):
         warnings.append("Uses texture transforms (UV offset/scale in the material): Mesh ignores them; apply them "
                         "to the UVs instead.")
@@ -494,6 +538,33 @@ def inspect_glb(path: str | Path) -> tuple[Model, Report]:
     size = (hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2])
     if max(size) > 200:
         warnings.append(f"It is {max(size):.0f} m across: check Blender's unit scale (Mesh reads metres).")
+    glowing = [m.name + (f" (texture {m.emissive_image.size[0]}x{m.emissive_image.size[1]})" if m.emissive_image else "")
+               for m in seen.values() if m.glows]
     report = Report(sum(len(p.indices) // 3 for p in model.parts), len(model.parts), size, materials,
-                    [(c.node, c.kind) for c in model.colliders], warnings)
+                    [(c.node, c.kind) for c in model.colliders], warnings, glowing)
     return model, report
+
+
+def _material_warnings(doc: dict, used: dict[str, Material]) -> list[str]:
+    """What of the drawn materials Mesh doesn't draw: material extensions other than emission strength, emission on a
+    second UV map, and emission brighter than full (no bloom: it is drawn at full brightness)."""
+    out: list[str] = []
+    others: dict[str, list[str]] = {}
+    for i, mat in enumerate(doc.get("materials", [])):
+        name = str(mat.get("name", f"material{i}"))
+        if name not in used:
+            continue
+        for ext in mat.get("extensions") or {}:
+            if ext != EMISSIVE_STRENGTH:
+                others.setdefault(ext, []).append(name)
+        ref = mat.get("emissiveTexture")
+        if isinstance(ref, dict) and ref.get("texCoord", 0) != 0 and any(mat.get("emissiveFactor") or []):
+            out.append(f"{name}'s emission texture uses a second UV map: Mesh reads only the first, so {name} doesn't "
+                       f"glow (put the emission on the first UV map).")
+        if max(used[name].emissive) > 1.0:
+            out.append(f"{name}'s emission is brighter than full ({EMISSIVE_STRENGTH}): it is drawn at full brightness "
+                       f"(Mesh has no bloom).")
+    if others:
+        out.append("Material extensions Mesh doesn't draw: " + "; ".join(f"{ext} ({', '.join(names)})" for ext, names
+                   in sorted(others.items())) + ". Mesh draws a material's base colour and its emission.")
+    return out
