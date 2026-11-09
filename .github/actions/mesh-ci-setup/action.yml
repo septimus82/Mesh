@@ -59,7 +59,9 @@ runs:
       run: |
         $name = "mesa3d-$env:MESA_VERSION-release-msvc.7z"
         $archive = Join-Path $env:RUNNER_TEMP $name
-        Invoke-WebRequest -Uri "https://github.com/pal1000/mesa-dist-win/releases/download/$env:MESA_VERSION/$name" -OutFile $archive
+        # (retries transient 503/504s a bounded number of times, keeps the file only if its SHA-256 matched)
+        python "$env:GITHUB_WORKSPACE/tooling/ci_fetch_verified.py" "https://github.com/pal1000/mesa-dist-win/releases/download/$env:MESA_VERSION/$name" $env:MESA_SHA256 $archive
+        if ($LASTEXITCODE -ne 0) { throw "could not download a verified $name" }
         $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
         if ($actual -ne $env:MESA_SHA256) { throw "$name has SHA-256 $actual, expected $env:MESA_SHA256" }
         $unpacked = Join-Path $env:RUNNER_TEMP "mesa"
