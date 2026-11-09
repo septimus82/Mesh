@@ -45,3 +45,28 @@ def test_ai_sets_reviews_and_turns_off_the_picture_treatment(tmp_path: Path) -> 
     assert project.scene(room) == before
     off_lines = authoring.summarize({"rooms": {room: after}}, {"rooms": {room: before}})
     assert any("picture treatment off" in line for line in off_lines), off_lines
+
+
+@pytest.mark.parametrize("bad", [["golden_hour"], {"preset": "golden_hour"}, 2, True],
+                         ids=["list", "dict", "number", "bool"])
+def test_ai_authoring_refuses_a_malformed_preset_and_changes_nothing(tmp_path: Path, bad: object) -> None:
+    from engine.project_scaffold import create_project
+    from engine.studio_project import Project
+
+    root = tmp_path / "game"
+    create_project(root, "Game", template_id="hd2d_rpg")
+    project = Project(root, json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"])
+    room = project.current
+    authoring.apply(project, [{"op": "set_hd2d_post", "room": room, "preset": "natural"}])
+    documents, revision = json.dumps(project.all_documents(), sort_keys=True), project.revision
+    dirty, undo = set(project.dirty), project.can_undo()
+    on_disk = {p: p.read_bytes() for p in root.rglob("*.json")}
+    change = {"op": "set_hd2d_post", "room": room, "preset": bad}
+    with pytest.raises(authoring.ChangeError, match="Picture preset must be one of off, natural"):
+        authoring.dry_run(project, [change])  # (the review an AI's proposal gets)
+    with pytest.raises(authoring.ChangeError, match="Picture preset must be one of off, natural"):
+        authoring.apply(project, [{"op": "set_hd2d_post", "room": room, "strength": 0.5}, change])  # (all or none)
+    assert json.dumps(project.all_documents(), sort_keys=True) == documents and project.revision == revision
+    assert project.dirty == dirty and project.can_undo() == undo
+    assert {p: p.read_bytes() for p in root.rglob("*.json")} == on_disk
+    assert project.scene(room)["settings"]["hd2d"]["post"] == {"preset": "natural"}

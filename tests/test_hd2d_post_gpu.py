@@ -167,3 +167,14 @@ def test_it_plays_saves_reopens_and_exports(studio: dict) -> None:
     ex = studio["export"]
     assert ex["code"] == 0 and ex["scene_setting"] == {"preset": "natural"}, ex
     assert ex["bundle_run"].get("preset") == "natural" and ex["bundle_run"].get("stage") == "composite", ex
+
+
+def test_studio_shows_and_repairs_a_malformed_preset(studio: dict) -> None:
+    m = studio["malformed"]
+    named = "settings.hd2d.post.preset must be one of"
+    assert m["room"] and m["post_of"]["preset"] is None and named in str(m["post_of"]["error"]), m  # (opened, off)
+    assert m["renderer_post"] is None and named in str(m["renderer_error"]) and m["stage"] == "blit", m
+    assert m["warning"], "Camera and sun... > Picture says why the treatment is off"
+    assert m["repaired"] == {"stored": {"preset": "golden_hour"}, "renderer_preset": "golden_hour",
+                             "stage": "composite", "warning": False}, m["repaired"]
+    assert m["undone"] == {"preset": ["natural"], "strength": 0.5}, m["undone"]  # (one undo step: as it was)

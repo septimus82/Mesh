@@ -14,6 +14,7 @@ from engine import authoring
 from engine import project_ops as ops
 from engine.hd2d.post import NEUTRAL, PRESETS, Post, PostError, parse_post, stored
 from engine.hd2d.settings import Hd2dSettingsError, parse_hd2d
+from engine.scene_loader import environment_problems
 
 pytestmark = [pytest.mark.fast]
 
@@ -133,3 +134,55 @@ def test_it_is_an_authoring_operation_and_its_reader_is_not() -> None:
     assert "set_hd2d_post" in found and "post_of" not in found
     described = next(d for d in authoring.describe() if d["op"] == "set_hd2d_post")
     assert {p["name"] for p in described["params"]} >= {"preset", "strength", "vignette"}
+
+
+# A preset that isn't a string (hand-edited JSON, or an AI's mistake): the named error everywhere, never a TypeError
+MALFORMED = [["natural"], {"name": "natural"}, 1, 0.5, True, False]
+PRESET_ERROR = r"settings\.hd2d\.post\.preset must be one of natural, golden_hour, moonlight, interior_warm"
+
+
+@pytest.mark.parametrize("bad", MALFORMED, ids=["list", "dict", "int", "float", "true", "false"])
+def test_a_malformed_preset_is_refused_naming_the_key(bad: Any) -> None:
+    with pytest.raises(PostError, match=PRESET_ERROR):
+        parse_post({"preset": bad})
+
+
+@pytest.mark.parametrize("bad", MALFORMED, ids=["list", "dict", "int", "float", "true", "false"])
+def test_strict_scene_parsing_reports_a_malformed_preset(bad: Any) -> None:
+    room = copy.deepcopy(ROOM)
+    room["settings"]["hd2d"]["post"] = {"preset": bad}
+    with pytest.raises(Hd2dSettingsError, match=PRESET_ERROR):
+        parse_hd2d(room["settings"]["hd2d"])
+    problems = environment_problems(room)  # (mesh validate, AI validation)
+    assert len(problems) == 1 and "settings.hd2d.post.preset must be one of" in problems[0], problems
+
+
+@pytest.mark.parametrize("bad", MALFORMED, ids=["list", "dict", "int", "float", "true", "false"])
+def test_a_malformed_preset_loads_off_with_its_reason_and_the_room_stands(bad: Any) -> None:
+    raw = {**copy.deepcopy(ROOM["settings"]["hd2d"]), "camera": {"pitch": 40}, "post": {"preset": bad}}
+    settings = parse_hd2d(raw, lenient=True)
+    assert settings.post is None and settings.post_error is not None
+    assert "settings.hd2d.post.preset must be one of" in settings.post_error and repr(bad) in settings.post_error
+    assert settings.camera.pitch == 40  # (the rest of the room read as usual)
+
+
+@pytest.mark.parametrize("bad", MALFORMED, ids=["list", "dict", "int", "float", "true", "false"])
+def test_a_malformed_preset_is_shown_and_repaired_by_the_operation(bad: Any) -> None:
+    broken = copy.deepcopy(ROOM)
+    broken["settings"]["hd2d"]["post"] = {"preset": bad, "strength": 0.5}
+    view = ops.post_of(broken)
+    assert view["preset"] is None and "settings.hd2d.post.preset must be one of" in view["error"]
+    with pytest.raises(ops.OpError, match="choose a preset first"):  # (tuning a block that can't be read)
+        ops.set_hd2d_post(broken, strength=0.4)
+    assert ops.set_hd2d_post(broken, preset="moonlight")["settings"]["hd2d"]["post"] == {"preset": "moonlight"}
+    off = ops.set_hd2d_post(broken, preset="off")
+    assert off == ROOM  # (removed: the room as before the bad block)
+
+
+@pytest.mark.parametrize("bad", MALFORMED, ids=["list", "dict", "int", "float", "true", "false"])
+def test_the_operation_refuses_a_malformed_preset_changing_nothing(bad: Any) -> None:
+    for room in (copy.deepcopy(ROOM), ops.set_hd2d_post(copy.deepcopy(ROOM), preset="natural")):
+        before = json.dumps(room, sort_keys=True)
+        with pytest.raises(ops.OpError, match=r"Picture preset must be one of off, natural"):
+            ops.set_hd2d_post(room, preset=bad)
+        assert json.dumps(room, sort_keys=True) == before

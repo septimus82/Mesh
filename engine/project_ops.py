@@ -2861,7 +2861,7 @@ def set_hd2d_post(scene: Doc, preset: Any = _UNSET, strength: Any = _UNSET, vign
         return _checked(scene, out)
     raw: dict[str, Any]
     if preset is not _UNSET:
-        if preset not in PRESETS:
+        if not isinstance(preset, str) or preset not in PRESETS:
             raise OpError(f"Picture preset must be one of off, {', '.join(PRESETS)} (got {preset!r}).")
         raw = {"preset": preset}
     elif now is None:

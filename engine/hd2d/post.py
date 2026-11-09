@@ -125,7 +125,7 @@ def parse_post(raw: Any) -> Post | None:
     if unknown:
         raise PostError(f"{where} has unknown keys: {', '.join(sorted(map(str, unknown)))}")
     preset = raw.get("preset")
-    if preset not in PRESETS:
+    if not isinstance(preset, str) or preset not in PRESETS:  # (a list or object: refused, not a TypeError)
         raise PostError(f"{where}.preset must be one of {', '.join(PRESETS)} (got {preset!r})")
     strength = _number(raw, "strength", STRENGTH[1], STRENGTH[2], where) if "strength" in raw else STRENGTH[0]
     vignette = _number(raw, "vignette", *VIGNETTE, where) if "vignette" in raw else None

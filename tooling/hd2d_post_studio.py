@@ -7,7 +7,8 @@ A fresh HD-2D template project in OUT, its start room: Camera and sun... > Pictu
 once; Studio's lines drawn after it, the same pixels), strength and vignette typed, undo / redo, Off (the view exactly as
 before); the game's camera path draws Studio's view the same; an AI proposes Moonlight against the current revision (the
 person accepts; undo takes it back) and Golden hour against an old one that the person then changes too (a conflict,
-nothing applied); Play; Save, reopen, export, and the exported game draws it."""
+nothing applied); Play; Save, reopen, export, and the exported game draws it; then the saved room hand-edited so its
+preset is a list: Studio opens it off, says why, and a preset repairs it."""
 
 from __future__ import annotations
 
@@ -240,7 +241,49 @@ def studio(out: Path, *, export: bool = True) -> dict[str, Any]:
         d.close()
     if export:
         report["export"] = _export(project, out)
+    report["malformed"] = _malformed(project)
     return report
+
+
+def _malformed(project: Path) -> dict[str, Any]:
+    """The saved room hand-edited so its preset isn't a name (a list): Studio opens it with the treatment off and the
+    reason shown in Camera and sun... > Picture; choosing a preset repairs it (one undo step) and the view takes it."""
+    from hd2d_room_studio import _press, _right
+    from hd2d_studio_demo import StudioDriver
+
+    from engine import project_ops as ops
+
+    path = project / SCENES / "start.json"
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc["settings"]["hd2d"]["post"] = {"preset": ["natural"], "strength": 0.5}
+    path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+    d = StudioDriver(project)
+    try:
+        d.advance(5)
+        _press(d, "Camera and sun...", lambda w: w.rect.left < 230)
+        d.advance(2)
+        _canvas(d)
+
+        def warned() -> bool:
+            """Scrolled to the Picture section's buttons (as a person would): its warning beside them."""
+            d._scroll_panels(lambda: "Interior warm" in d.texts())
+            return any("can't be read" in t and "settings.hd2d.post.preset" in t for t in d.texts())
+
+        found: dict[str, Any] = {"room": d.studio.project.current, "post_of": ops.post_of(d.studio.project.scene()),
+                                 "renderer_post": d.renderer.settings.post,
+                                 "renderer_error": d.renderer.settings.post_error, "stage": d.renderer.last_stage,
+                                 "warning": warned()}
+        _press(d, "Golden hour", _right)
+        d.advance(2)
+        _canvas(d)
+        found["repaired"] = {"stored": _stored(d), "renderer_preset": getattr(d.renderer.settings.post, "preset", None),
+                             "stage": d.renderer.last_stage, "warning": warned()}
+        _press(d, "Undo")
+        d.advance(2)
+        found["undone"] = _stored(d)
+    finally:
+        d.close()
+    return found
 
 
 def _export(project: Path, out: Path) -> dict[str, Any]:
