@@ -513,10 +513,11 @@ class Hd2dRenderer:
         self.dof_unavailable = dof_unavailable_reason(ctx)
         self.last_dof: dict[str, Any] | None = None  # the last frame's focus, band and blur (None: not drawn)
         # The final composite (engine.hd2d.composite, M17-L4-1): a pass in the blit's place reading the world's colour
-        # and depth, shared by the game and Studio. L4-1 has only its identity (no pixel changes), reached through
-        # ``force_identity_composite``: a test/diagnostic switch, not a setting (nothing saved, nothing in Studio).
-        # Off (every room), the picture is made exactly as before and nothing is allocated; its program (and, after
-        # the depth of field, its one colour target) is made the first time a frame needs it.
+        # and depth, shared by the game and Studio. It runs for the room's colour grade and vignette (settings.post,
+        # engine.hd2d.post, L4-2), in Studio's editing view too, or its identity (``force_identity_composite``: a
+        # test/diagnostic switch, not a setting). Off (no post block, or strength 0), the picture is made exactly as
+        # before and nothing is allocated; its program (and, after the depth of field, its one colour target) is made
+        # the first time a frame needs it.
         self._composite: FinalComposite | None = None
         self.force_identity_composite = False
         self.composite_unavailable: str | None = None  # why it's off, if the driver refused its program
@@ -1404,7 +1405,11 @@ class Hd2dRenderer:
         if fires:  # their embers and smoke, in Studio's view too (a fire is part of the room, not its weather)
             self._draw_fire_particles(fires, vp, cam, fbo)
         dof = self._dof_frame(cam, camera is None, size) if solid is None else None
-        composite = self._final_composite() if solid is None and self.force_identity_composite else None
+        post = self.settings.post if solid is None else None
+        grading = post is not None and post.active
+        composite = self._final_composite() if solid is None and (grading or self.force_identity_composite) else None
+        if composite is not None:
+            composite.configure(post if grading else None)  # (its uniforms set only when the room's settings change)
         stage = self.last_stage = final_stage(dof=dof is not None, composite=composite is not None)
         lines_after = overlay is not None and solid is None and overlay_after(stage)
         if overlay is not None and solid is None and not lines_after:

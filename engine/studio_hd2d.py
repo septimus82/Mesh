@@ -2121,6 +2121,8 @@ class Hd2dView:
         rows.add(gui.UISpace(height=6))
         self._dof_section(rows, width, field, number)
         rows.add(gui.UISpace(height=6))
+        self._post_section(rows, width, field, number)
+        rows.add(gui.UISpace(height=6))
         rows.add(studio._label("Sun and sky", bold=True, size=12))
         row = _row()
         for preset in ("morning", "noon", "evening"):
@@ -2220,6 +2222,68 @@ class Hd2dView:
             renderer.settings = dataclasses.replace(renderer.settings, depth_of_field=dof, dof_error=None)
             unavailable = renderer.dof_status()[0] == "unavailable"
             studio.window.hd2d_dof_message = renderer.dof_unavailable if unavailable else None
+        studio._rebuild()
+        studio._say(said)
+
+    # ------------------------------------------------------------------ colour grade and vignette (M17-L4-2)
+    def _post_section(self, rows: Any, width: int, field: Any, number: Any) -> None:
+        """The room's picture treatment: a preset (Off by default; choosing one resets its strength and vignette),
+        the strength and the vignette. Shown in this view as in the game; Studio's lines are never graded. Each
+        change is one undo step (``project_ops.set_hd2d_post``); the sun never changes it."""
+        studio = self.studio
+        post = ops.post_of(studio.project.scene())
+        rows.add(studio._label("Picture", bold=True, size=12))
+        rows.add(studio._label("A colour grade and a vignette over the whole picture, here and in the game. Off in "
+                               "every room until you choose one; changing the sun never changes it.",
+                               color=C_MUTED, size=9, width=width))
+        if post["error"]:
+            rows.add(studio._label(f"Its setting can't be read, so it is off: {post['error']}. Choosing a preset "
+                                   "starts it afresh.", color=C_WARN, size=9, width=width))
+        third = (width - 8) // 3
+        for line in (("off", "natural", "golden_hour"), ("moonlight", "interior_warm")):
+            row = _row()
+            for name in line:
+                label = "Off" if name == "off" else name.replace("_", " ").capitalize()
+                current = (post["preset"] or "off") == name
+                said = "Picture: off (the original)." if name == "off" else f"Picture: {label}."
+                tip = {"off": "The original picture", "natural": "Gentle contrast and colour, a light vignette: daylight",
+                       "golden_hour": "Warmer highlights, cooler shadows: evening",
+                       "moonlight": "Cooler, lamp glass kept warm, no added contrast: night",
+                       "interior_warm": "A gentle warmth for enclosed rooms"}[name]
+                row.add(self._button(label, partial(self.set_post, said, preset=name), tip
+                                     + (" (choosing it again resets its strength and vignette)" if name != "off" else ""),
+                                     width=third, style=S_ACTIVE if current else S_BUTTON))
+            rows.add(row)
+        if post["preset"] is not None:
+            field("Strength (0-1)", "post_strength", f"{post['strength']:g}",
+                  number(lambda v: self.set_post(f"Picture strength {v:g}.", strength=v), "Strength", 0, 1))
+            field("Vignette (0-0.5)", "post_vignette", f"{post['vignette']:g}",
+                  number(lambda v: self.set_post(f"Vignette {v:g}.", vignette=v), "Vignette", 0, 0.5))
+            rows.add(studio._label(f"Strength scales the whole treatment (0: the original picture). Vignette: how much "
+                                   f"the corners darken ({post['label']}'s own: {post['vignette_default']:g}). The "
+                                   "grid, selection and handles, the HUD, menus and dialogue are never graded.",
+                                   color=C_MUTED, size=9, width=width))
+
+    def set_post(self, said: str, **change: Any) -> None:
+        """One undo step; the view takes the new treatment in place (uniforms: nothing rebuilt, no reload)."""
+        import dataclasses  # noqa: PLC0415
+
+        from engine.hd2d.post import PostError, parse_post  # noqa: PLC0415
+
+        studio = self.studio
+        try:
+            studio.project.edit_scene(lambda s: ops.set_hd2d_post(s, **change))
+        except ops.OpError as err:
+            studio._say(str(err), ok=False)
+            return
+        renderer = self.renderer
+        if renderer is not None:
+            hd2d = (studio.project.scene().get("settings") or {}).get("hd2d")
+            try:
+                post = parse_post(hd2d.get("post") if isinstance(hd2d, dict) else None)
+            except PostError:  # (the op only writes what reads back: off, as a load would set it aside)
+                post = None
+            renderer.settings = dataclasses.replace(renderer.settings, post=post, post_error=None)
         studio._rebuild()
         studio._say(said)
 
