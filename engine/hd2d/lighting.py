@@ -16,6 +16,11 @@ its height, and its head and feet can differ (half under a bridge, half in the s
   (#458); a light a few centimetres off the lantern, or just above the cap, would lose most of its pool to them
   (M17-L3). Every other structure, however close to the light, still casts that lamp's shadows.
 
+A lamp also lights its own lamp head (``lamp_head``, M17-L3 E2): of its own fixture, the drawn node nearest the
+light, and of that node only the materials no other node of the model uses (the kit lamp post: its "lantern" glass,
+not the "iron" its post, cap and frame share). The renderer draws those parts on their own and adds the lamp's colour
+x intensity, times their own texture, as unlit emission. Anything less certain lights nothing.
+
 Depth maps are read with a plain ``sampler2D`` and compared in the shader (arcade 3.3 can't bind
 ``sampler2DShadow``), filtered over 1, 3 x 3 or 5 x 5 texels by the room's shadow softness (sharp / soft / softer,
 the 2D setting). Acne is kept off with a small depth bias plus an offset of the receiving point along its normal
@@ -229,6 +234,46 @@ def sun_matrix(direction: tuple[float, float, float], lo: tuple[float, float, fl
 
 def _node_boxes(model: Any) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
     """Each drawn node's box in the model's own space (Z-up metres): its parts' vertices, all materials."""
+    return list(_named_node_boxes(model).values())
+
+
+def lamp_head(lamp: tuple[float, float, float], structures: Any, models: dict[str, Any]) -> tuple[str, frozenset[int]] | None:
+    """The lamp's own lamp head (lamp: metres): (structure id, the indices of its model's parts that glow), or None.
+
+    Its own fixture (``lamp_fixtures``); of it, the drawn node whose box is nearest the lamp, within FIXTURE_REACH_M;
+    of that node, the parts whose material no other node of the model uses and that have no glTF emission of their
+    own (an authored emission is drawn as it is, never added to). None, so nothing glows, when there is no fixture,
+    when two nodes (of one fixture or two) are as near as each other, or when the node has no material of its own."""
+    fixtures = lamp_fixtures(lamp, structures, models)
+    near: list[tuple[float, Any, str]] = []  # (distance m, structure, node)
+    for st in structures:
+        if st.id not in fixtures:
+            continue
+        local = _model_space(lamp, st)
+        for node, (lo, hi) in _named_node_boxes(models[st.model]).items():
+            d = _box_distance(local, lo, hi) * st.scale
+            if d <= FIXTURE_REACH_M:
+                near.append((d, st, node))
+    near.sort(key=lambda n: n[0])
+    if not near or (len(near) > 1 and near[1][0] - near[0][0] <= 1e-6):
+        return None
+    _d, st, node = near[0]
+    parts = models[st.model].parts
+    shared = {p.material.name for p in parts if p.node != node}
+    own = frozenset(i for i, p in enumerate(parts) if p.node == node and p.material.name not in shared
+                    and not p.material.glows)
+    return (st.id, own) if own else None
+
+
+def _model_space(p: tuple[float, float, float], st: Any) -> tuple[float, float, float]:
+    """A world point (m) in a structure's model's own space: its placement undone (move, turn about Z, scale)."""
+    dx, dy, dz = p[0] - st.x / PIXELS_PER_METRE, p[1] - st.y / PIXELS_PER_METRE, p[2] - st.elevation / PIXELS_PER_METRE
+    c, s = math.cos(math.radians(st.rotation)), math.sin(math.radians(st.rotation))
+    return (c * dx + s * dy) / st.scale, (-s * dx + c * dy) / st.scale, dz / st.scale
+
+
+def _named_node_boxes(model: Any) -> dict[str, tuple[tuple[float, float, float], tuple[float, float, float]]]:
+    """Each drawn node's box in the model's own space (Z-up metres), by node name: its parts' vertices."""
     boxes: dict[str, tuple[list[float], list[float]]] = {}
     for part in model.parts:
         lo, hi = boxes.setdefault(part.node, ([math.inf] * 3, [-math.inf] * 3))
@@ -236,7 +281,7 @@ def _node_boxes(model: Any) -> list[tuple[tuple[float, float, float], tuple[floa
         for i in range(0, len(v), 8):
             for k in range(3):
                 lo[k], hi[k] = min(lo[k], v[i + k]), max(hi[k], v[i + k])
-    return [((lo[0], lo[1], lo[2]), (hi[0], hi[1], hi[2])) for lo, hi in boxes.values() if lo[0] <= hi[0]]
+    return {node: ((lo[0], lo[1], lo[2]), (hi[0], hi[1], hi[2])) for node, (lo, hi) in boxes.items() if lo[0] <= hi[0]}
 
 
 def _box_distance(p: tuple[float, float, float], lo: tuple[float, float, float], hi: tuple[float, float, float]) -> float:
