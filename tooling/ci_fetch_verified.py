@@ -12,9 +12,13 @@ times, with growing waits, and anything else fails at once:
   hiccup);
 - every attempt asks the same URL; the version and the source are the caller's and never change;
 - the download goes to ``<out>.part`` and becomes ``<out>`` only after its hash matched, so a partial, corrupted or
-  wrongly hashed file is never left where the caller looks (a stale ``<out>`` is removed first).
+  wrongly hashed file is never left where the caller looks;
+- a ``<out>`` already there (the Windows setup's actions/cache restore) is used without a download only if its
+  SHA-256 is the expected one; otherwise it is reported (``::warning::``), deleted and downloaded again.
 
-Each attempt, failure and wait is printed; a final failure also prints a GitHub ``::error::`` line and exits 1.
+Each check, attempt, failure and wait is printed and flushed at once (the runner's stdout is a pipe, which would hold
+it until exit: E2's Extended 42580284863 showed five attempts with one timestamp); a final failure also prints a
+GitHub ``::error::`` line and exits 1.
 
     python tooling/ci_fetch_verified.py <https url> <sha256> <out file>
 """
@@ -47,6 +51,18 @@ class Permanent(Exception):
     """A failure no retry can fix."""
 
 
+def _say(message: str) -> None:
+    print(message, flush=True)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        while chunk := file.read(CHUNK):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _attempt(url: str, sha256: str, part: Path, opener: Callable[..., Any]) -> int:
     """One download into ``part``; returns its size once the hash matched."""
     digest = hashlib.sha256()
@@ -75,13 +91,23 @@ def _attempt(url: str, sha256: str, part: Path, opener: Callable[..., Any]) -> i
 
 def fetch(url: str, sha256: str, out: Path, *, opener: Callable[..., Any] = urllib.request.urlopen,
           sleep: Callable[[float], None] = time.sleep, delays: tuple[float, ...] = DELAYS,
-          log: Callable[[str], None] = print) -> bool:
-    """Download ``url`` to ``out``, verified against ``sha256``; True once ``out`` holds exactly that file."""
+          log: Callable[[str], None] = _say) -> bool:
+    """Make ``out`` hold exactly the file with ``sha256``: kept if it already does, else downloaded from ``url``;
+    True once it does."""
     sha256 = sha256.lower()
     if not url.startswith("https://") or not re.fullmatch(r"[0-9a-f]{64}", sha256):
         log(f"::error::refusing to fetch: needs an https URL and a 64-hex SHA-256 (got {url!r}, {sha256!r})")
         return False
     part = out.with_name(out.name + ".part")
+    out.parent.mkdir(parents=True, exist_ok=True)  # (on a cache miss the cache folder isn't there yet)
+    part.unlink(missing_ok=True)
+    if out.is_file():
+        actual = _sha256(out)
+        if actual == sha256:
+            log(f"cached: {out.name}, {out.stat().st_size} bytes, SHA-256 {sha256} verified; no download")
+            return True
+        log(f"::warning::{out.name}: rejected the file already there (cache): SHA-256 {actual}, expected {sha256}; "
+            "deleted, downloading instead")
     out.unlink(missing_ok=True)
     attempts = len(delays) + 1
     for n in range(1, attempts + 1):
