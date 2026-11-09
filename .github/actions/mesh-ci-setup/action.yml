@@ -49,17 +49,48 @@ runs:
     # asset, not one computed from a download; the archive is checked against it before anything is extracted.
     # To update: choose a release, read its digest with
     #   gh api repos/pal1000/mesa-dist-win/releases/tags/<version> --jq '.assets[] | select(.name | endswith("-release-msvc.7z")) | .digest'
-    # and change MESA_VERSION and MESA_SHA256 together.
-    - name: Install Mesa OpenGL (Windows)
+    # and change MESA_VERSION and MESA_SHA256 together (the cache key below follows them).
+    # Cache (#481): the verified archive itself (not the extracted DLLs) is kept in GitHub's Actions cache under one exact
+    # key, mesa-<os>-<version>-<sha256>, with no restore-keys, so another version can never be restored. Whatever is
+    # restored is only a candidate: ci_fetch_verified.py hashes it and uses it only on a match (else reports, deletes and
+    # downloads it), and the hash check below runs again before 7z. On a miss the bounded-retry download runs, and the
+    # save step runs only after that file passed both checks (a failed step skips it); only that one file is saved,
+    # never a .part. Cache scope (GitHub's rule): a run restores caches made on its own ref, its pull request's base
+    # branch, or the default branch (main); a pull request's cache (refs/pull/N/merge) is only for that pull request,
+    # so redesign/visual-editor gets its own entry from its first push run.
+    - name: Mesa pin (Windows)
+      id: mesa
       if: runner.os == 'Windows'
       shell: pwsh
       env:
         MESA_VERSION: "26.0.3"
         MESA_SHA256: "de1ec45c906164de2c046288a8969e83cf2d51d031dc8dfd1f9371bb31cd6755"
       run: |
+        "version=$env:MESA_VERSION" >> $env:GITHUB_OUTPUT
+        "sha256=$env:MESA_SHA256" >> $env:GITHUB_OUTPUT
+        "name=mesa3d-$env:MESA_VERSION-release-msvc.7z" >> $env:GITHUB_OUTPUT
+
+    - name: Restore the verified Mesa archive (Windows)
+      id: mesa-cache
+      if: runner.os == 'Windows'
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ runner.temp }}/mesa-cache/${{ steps.mesa.outputs.name }}
+        key: mesa-${{ runner.os }}-${{ steps.mesa.outputs.version }}-${{ steps.mesa.outputs.sha256 }}
+
+    - name: Install Mesa OpenGL (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        MESA_VERSION: ${{ steps.mesa.outputs.version }}
+        MESA_SHA256: ${{ steps.mesa.outputs.sha256 }}
+      run: |
         $name = "mesa3d-$env:MESA_VERSION-release-msvc.7z"
-        $archive = Join-Path $env:RUNNER_TEMP $name
-        Invoke-WebRequest -Uri "https://github.com/pal1000/mesa-dist-win/releases/download/$env:MESA_VERSION/$name" -OutFile $archive
+        $archive = Join-Path $env:RUNNER_TEMP "mesa-cache/$name"
+        # (uses the restored archive only if its SHA-256 matches; else downloads, retrying transient 503/504s a bounded
+        # number of times, and keeps the file only if its SHA-256 matched; -u: each line reaches the log at once)
+        python -u "$env:GITHUB_WORKSPACE/tooling/ci_fetch_verified.py" "https://github.com/pal1000/mesa-dist-win/releases/download/$env:MESA_VERSION/$name" $env:MESA_SHA256 $archive
+        if ($LASTEXITCODE -ne 0) { throw "could not get a verified $name" }
         $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
         if ($actual -ne $env:MESA_SHA256) { throw "$name has SHA-256 $actual, expected $env:MESA_SHA256" }
         $unpacked = Join-Path $env:RUNNER_TEMP "mesa"
@@ -76,3 +107,10 @@ runs:
           python -c "import pyglet; w = pyglet.window.Window(visible=False); from pyglet.gl import gl_info; print('OpenGL', gl_info.get_version_string(), '|', gl_info.get_renderer()); w.close()"
           if ($LASTEXITCODE -ne 0) { throw "Python cannot open an OpenGL context" }
         }
+
+    - name: Save the verified Mesa archive (Windows)
+      if: runner.os == 'Windows' && steps.mesa-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ runner.temp }}/mesa-cache/${{ steps.mesa.outputs.name }}
+        key: mesa-${{ runner.os }}-${{ steps.mesa.outputs.version }}-${{ steps.mesa.outputs.sha256 }}
