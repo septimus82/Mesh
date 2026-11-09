@@ -61,10 +61,13 @@ class StudioDriver:
 
     def advance(self, n: int = 1) -> None:
         """``n`` frames, each updated and drawn, without reading the picture back (#422 GPU lane: a read-back is a
-        full-window copy and a GPU sync, wasted where nothing looks at it)."""
+        full-window copy and a GPU sync, wasted where nothing looks at it). Each frame is completed as arcade's event
+        loop completes it: ``Window.flip()`` runs ``ctx.gc()`` after drawing, deleting the GL objects dropped since
+        (arcade's ``context_gc`` mode only queues them, #484). No swap: ``frame()`` still reads back the frame as drawn."""
         for _ in range(n):
             self.window.dispatch_event("on_update", 1 / 60)
             self.window.dispatch_event("on_draw")
+            self.window.ctx.gc()
 
     def frame(self, n: int = 1) -> Any:
         """``advance(n)``, then the picture drawn, read back from the window: for whatever looks at it."""
