@@ -23,6 +23,12 @@ class _Obj:
     def delete(self) -> None:
         self.log.append(("delete", self.kind))
 
+    def __setitem__(self, name: str, value: Any) -> None:  # (a program's uniforms)
+        self.log.append(("set", name))
+
+    def set_uniform_safe(self, name: str, value: Any) -> None:
+        self.log.append(("set", name))
+
 
 class _Ctx:
     NEAREST = 9728
@@ -44,6 +50,10 @@ class _Ctx:
         return _Obj("framebuffer", self.log, color_attachments[0].size)
 
 
+def _made(ctx: _Ctx) -> list[tuple[str, str]]:
+    return [e for e in ctx.log if e[0] != "set"]
+
+
 def test_the_stage_and_when_studio_s_lines_go_after_it() -> None:
     assert final_stage(dof=False, composite=False) == "blit"
     assert final_stage(dof=True, composite=False) == "dof"
@@ -55,13 +65,13 @@ def test_the_stage_and_when_studio_s_lines_go_after_it() -> None:
 def test_one_program_and_a_chain_target_only_when_asked_for_once_per_size() -> None:
     ctx = _Ctx()
     comp = FinalComposite(ctx, "vs")
-    assert ctx.log == [("make", "program")]  # nothing else until the depth of field runs before it
+    assert _made(ctx) == [("make", "program")]  # nothing else until the depth of field runs before it
     fbo, tex = comp.chain_target((640, 360))
     assert tex.size == (640, 360) and fbo.size == (640, 360) and tex.filter == (ctx.NEAREST, ctx.NEAREST)
     assert comp.chain_target((640, 360)) == (fbo, tex) and comp.chain_allocations == 1  # reused while the size holds
     comp.chain_target((800, 450))  # a new size: the old target freed, a new one made
     assert comp.chain_allocations == 2
-    assert ctx.log[1:] == [("make", "texture"), ("make", "framebuffer"), ("delete", "framebuffer"), ("delete", "texture"),
+    assert _made(ctx)[1:] == [("make", "texture"), ("make", "framebuffer"), ("delete", "framebuffer"), ("delete", "texture"),
                            ("make", "texture"), ("make", "framebuffer")]
     assert len(comp.gl_objects()) == 3
     comp.release()
@@ -73,14 +83,14 @@ def test_one_program_and_a_chain_target_only_when_asked_for_once_per_size() -> N
 def test_release_without_a_chain_target_frees_its_program() -> None:
     ctx = _Ctx()
     FinalComposite(ctx, "vs").release()
-    assert ctx.log == [("make", "program"), ("delete", "program")]
+    assert _made(ctx) == [("make", "program"), ("delete", "program")]
 
 
 def test_the_renderer_makes_it_once_and_a_refusing_driver_leaves_the_original_picture() -> None:
     fake = SimpleNamespace(ctx=_Ctx(), _composite=None, composite_unavailable=None)
     first = R.Hd2dRenderer._final_composite(cast(Any, fake))
     assert first is not None and R.Hd2dRenderer._final_composite(cast(Any, fake)) is first
-    assert fake.ctx.log == [("make", "program")]
+    assert _made(fake.ctx) == [("make", "program")]
     refused = SimpleNamespace(ctx=_Ctx(refuse=True), _composite=None, composite_unavailable=None)
     assert R.Hd2dRenderer._final_composite(cast(Any, refused)) is None
     assert refused.composite_unavailable.startswith("the final composite is off on this computer: the graphics driver")

@@ -2818,6 +2818,72 @@ def set_depth_of_field(scene: Doc, enabled: Any = _UNSET, focus_range: Any = _UN
     return _checked(scene, out)
 
 
+def post_of(scene: Doc) -> Doc:
+    """The room's colour grade and vignette as Studio shows them (engine.hd2d.post): ``preset`` (None: off),
+    ``strength``, ``vignette`` (the room's own or its preset's), ``vignette_default`` (the preset's), plus ``error``
+    (why a block that can't be read is set aside: off)."""
+    from engine.hd2d.post import PRESETS, STRENGTH, PostError, parse_post  # noqa: PLC0415
+
+    hd2d = (scene.get("settings") or {}).get("hd2d")
+    error = None
+    try:
+        post = parse_post(hd2d.get("post") if isinstance(hd2d, dict) else None)
+    except PostError as exc:
+        post, error = None, str(exc)
+    if post is None:
+        return {"preset": None, "strength": STRENGTH[0], "vignette": 0.0, "vignette_default": 0.0, "error": error}
+    return {"preset": post.preset, "label": PRESETS[post.preset].label, "strength": post.strength,
+            "vignette": post.vignette_amount, "vignette_default": post.grade.vignette, "error": None}
+
+
+def set_hd2d_post(scene: Doc, preset: Any = _UNSET, strength: Any = _UNSET, vignette: Any = _UNSET) -> Doc:
+    """This HD-2D room's colour grade and vignette (``settings.hd2d.post``; engine.hd2d.post), drawn in the game and
+    in Studio's view; off in every room until chosen, and never changed by the sun. ``preset``: "natural" (gentle,
+    daylight), "golden_hour" (warmer highlights, cooler shadows), "moonlight" (cooler, lamp glass kept warm, no added
+    contrast), "interior_warm" (a gentle warmth for enclosed rooms), or "off" (the original picture: the block
+    removed). Choosing a preset resets the strength and vignette to its own. ``strength`` (0-1): the whole treatment,
+    scaled (0: the original picture). ``vignette`` (0-0.5, or None for the preset's own): how much the corners
+    darken at full strength. Only what is given changes."""
+    from engine.hd2d.post import PRESETS, PostError, parse_post, stored  # noqa: PLC0415
+
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has no picture to grade.")
+    hd2d = _hd2d_block(out)
+    try:  # (a block that can't be read: start afresh, so it can be repaired)
+        now = parse_post(hd2d.get("post"))
+    except PostError:
+        now = None
+    if preset == "off":
+        if strength is not _UNSET or vignette is not _UNSET:
+            raise OpError("The picture treatment is off: there is no strength or vignette to set.")
+        hd2d.pop("post", None)
+        return _checked(scene, out)
+    raw: dict[str, Any]
+    if preset is not _UNSET:
+        if not isinstance(preset, str) or preset not in PRESETS:
+            raise OpError(f"Picture preset must be one of off, {', '.join(PRESETS)} (got {preset!r}).")
+        raw = {"preset": preset}
+    elif now is None:
+        raise OpError("This room's picture treatment is off: choose a preset first (natural, golden_hour, moonlight "
+                      "or interior_warm).")
+    else:
+        raw = stored(now) or {}
+    if strength is not _UNSET:
+        raw["strength"] = copy.deepcopy(strength)
+    if vignette is not _UNSET:
+        if vignette is None:
+            raw.pop("vignette", None)
+        else:
+            raw["vignette"] = copy.deepcopy(vignette)
+    try:
+        post = parse_post(raw)
+    except PostError as exc:
+        raise OpError(str(exc)) from exc
+    hd2d["post"] = stored(post)
+    return _checked(scene, out)
+
+
 def find_structure(scene: Doc, structure_id: str) -> Doc | None:
     return next((s for s in structures(scene) if isinstance(s, dict) and s.get("id") == structure_id), None)
 
