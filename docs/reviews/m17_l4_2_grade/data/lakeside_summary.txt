@@ -1,0 +1,4 @@
+natural       crushed+ max 0.323 clipped+ max 0.0 | char |W| min -0.0037 edge min 0.989 char hue max 1.18 | grass hue max 0.56 sat 1.07-1.09 | blue hue max 0.73 | dark detail min 0.972 dark mean 0.842-0.931 | corners 0.788 | glass hue max 1.19
+golden_hour   crushed+ max 0.364 clipped+ max 0.0 | char |W| min -0.008 edge min 0.981 char hue max 3.84 | grass hue max 4.0 sat 1.074-1.088 | blue hue max 3.73 | dark detail min 0.959 dark mean 0.83-0.912 | corners 0.735 | glass hue max 0.6
+moonlight     crushed+ max 0.06 clipped+ max 0.0 | char |W| min -0.0067 edge min 0.994 char hue max 6.13 | grass hue max 8.89 sat 0.873-0.918 | blue hue max 2.67 | dark detail min 0.987 dark mean 0.959-0.996 | corners 0.856 | glass hue max 0.43
+interior_warm crushed+ max 0.025 clipped+ max 0.0 | char |W| min -0.0063 edge min 0.999 char hue max 4.08 | grass hue max 4.68 sat 1.069-1.091 | blue hue max 3.93 | dark detail min 0.987 dark mean 0.99-1.0 | corners 0.931 | glass hue max 0.46

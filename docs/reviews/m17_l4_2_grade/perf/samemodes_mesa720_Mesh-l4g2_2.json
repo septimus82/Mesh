@@ -1,0 +1,37 @@
+{
+ "worktree": "D:\\Games\\Mesh-l4g2",
+ "l4_1": true,
+ "gl": "llvmpipe (LLVM 22.1.1, 256 bits)",
+ "size": [
+  1280,
+  720
+ ],
+ "rounds": 30,
+ "method": "wall round ctx.finish()",
+ "whole_frame": {
+  "off": {
+   "gpu": {
+    "p50_ms": 28.0042,
+    "p95_ms": 30.1308
+   },
+   "cpu": {
+    "p50_ms": 27.3059,
+    "p95_ms": 29.3733
+   }
+  },
+  "dof": {
+   "gpu": {
+    "p50_ms": 47.6172,
+    "p95_ms": 51.92
+   },
+   "cpu": {
+    "p50_ms": 27.4381,
+    "p95_ms": 29.6296
+   }
+  }
+ },
+ "whole_frame_clocks": [
+  "software",
+  "software"
+ ]
+}

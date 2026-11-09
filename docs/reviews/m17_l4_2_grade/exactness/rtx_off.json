@@ -1,0 +1,308 @@
+{
+ "worktree": "D:\\Games\\Mesh-l4g2",
+ "identity": false,
+ "post_zero": false,
+ "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "village__authored": {
+  "sha256": "e4d5028ba9a8e1d508dbab74116ff1237e60c6666135469a6330d3d3f09d5996",
+  "draw_calls": 67,
+  "shadow_draws": 29,
+  "renderer_gl_objects": 356,
+  "live": {
+   "texture": 42,
+   "framebuffer": 7,
+   "program": 33,
+   "buffer": 1032,
+   "geometry": 203
+  },
+  "dof_drawn": false
+ },
+ "village__authored__dof": {
+  "sha256": "5306824073d0b682ef69184e17956b339a290203729fc1555e2ff469704fe4a4",
+  "draw_calls": 67,
+  "shadow_draws": 29,
+  "renderer_gl_objects": 357,
+  "live": {
+   "texture": 42,
+   "framebuffer": 7,
+   "program": 34,
+   "buffer": 1032,
+   "geometry": 203
+  },
+  "dof_drawn": true
+ },
+ "village__night_lamps": {
+  "sha256": "f1883c8bec4a91838ced8ba446e588b6a273725ad4dbc77bc2fa0569f60fce56",
+  "draw_calls": 70,
+  "shadow_draws": 350,
+  "renderer_gl_objects": 365,
+  "live": {
+   "texture": 44,
+   "framebuffer": 8,
+   "program": 33,
+   "buffer": 1727,
+   "geometry": 206
+  },
+  "dof_drawn": false
+ },
+ "village__night_lamps__dof": {
+  "sha256": "ff811bf9cc64d4a7e5c7baeb0a80c5d298cb716518b3ee099a75a4dbf7288287",
+  "draw_calls": 70,
+  "shadow_draws": 32,
+  "renderer_gl_objects": 366,
+  "live": {
+   "texture": 44,
+   "framebuffer": 8,
+   "program": 34,
+   "buffer": 1727,
+   "geometry": 206
+  },
+  "dof_drawn": true
+ },
+ "village__evening": {
+  "sha256": "2ce4e2ab2170f38ad160a737dee85a74710e9a960d570afe085d149b6308778e",
+  "draw_calls": 67,
+  "shadow_draws": 29,
+  "renderer_gl_objects": 356,
+  "live": {
+   "texture": 42,
+   "framebuffer": 7,
+   "program": 33,
+   "buffer": 2410,
+   "geometry": 203
+  },
+  "dof_drawn": false
+ },
+ "village__evening__dof": {
+  "sha256": "06cf6668ab74c6dbba1f5048cd9cf75ff620666d7450c93f99562c5133b2ffce",
+  "draw_calls": 67,
+  "shadow_draws": 29,
+  "renderer_gl_objects": 357,
+  "live": {
+   "texture": 42,
+   "framebuffer": 7,
+   "program": 34,
+   "buffer": 2410,
+   "geometry": 203
+  },
+  "dof_drawn": true
+ },
+ "shore__authored": {
+  "sha256": "c6e6e8b4bdbe0716b106454edb7f4febcf577ca34ed93a95ce24772a4d697827",
+  "draw_calls": 78,
+  "shadow_draws": 29,
+  "renderer_gl_objects": 356,
+  "live": {
+   "texture": 42,
+   "framebuffer": 7,
+   "program": 33,
+   "buffer": 3099,
+   "geometry": 203
+  },
+  "dof_drawn": false
+ },
+ "shore__authored__dof": {
+  "sha256": "a7dc3673f7ec842484319e42d5e1bde2745376babc7c26e84830333f66ec3819",
+  "draw_calls": 78,
+  "shadow_draws": 29,
+  "renderer_gl_objects": 357,
+  "live": {
+   "texture": 42,
+   "framebuffer": 7,
+   "program": 34,
+   "buffer": 3099,
+   "geometry": 203
+  },
+  "dof_drawn": true
+ },
+ "shore__night_lamps": {
+  "sha256": "7b7b9d2d7416d484d83a96490405dad283d1c941f72e4693d91b26345555efe9",
+  "draw_calls": 81,
+  "shadow_draws": 350,
+  "renderer_gl_objects": 365,
+  "live": {
+   "texture": 44,
+   "framebuffer": 8,
+   "program": 33,
+   "buffer": 3794,
+   "geometry": 206
+  },
+  "dof_drawn": false
+ },
+ "shore__night_lamps__dof": {
+  "sha256": "d9c696cb0064e592a8a2ad2b48306bebfd2b2def11226ae7d919a20f6d805e7d",
+  "draw_calls": 81,
+  "shadow_draws": 32,
+  "renderer_gl_objects": 366,
+  "live": {
+   "texture": 44,
+   "framebuffer": 8,
+   "program": 34,
+   "buffer": 3794,
+   "geometry": 206
+  },
+  "dof_drawn": true
+ },
+ "shore__evening": {
+  "sha256": "f99aa1020dfc8ab938752a199799f64a3c96f0a651dd7cbc170bd162c490ce0c",
+  "draw_calls": 78,
+  "shadow_draws": 29,
+  "renderer_gl_objects": 356,
+  "live": {
+   "texture": 42,
+   "framebuffer": 7,
+   "program": 33,
+   "buffer": 4477,
+   "geometry": 203
+  },
+  "dof_drawn": false
+ },
+ "shore__evening__dof": {
+  "sha256": "9fc0c2522689dc4718efa795c09a2eb97e747a97831ee6039f8c91ccfdcef4b4",
+  "draw_calls": 78,
+  "shadow_draws": 29,
+  "renderer_gl_objects": 357,
+  "live": {
+   "texture": 42,
+   "framebuffer": 7,
+   "program": 34,
+   "buffer": 4477,
+   "geometry": 203
+  },
+  "dof_drawn": true
+ },
+ "cottage__authored": {
+  "sha256": "6ee9069753fc18e9605be70858c69886bddd82b67e436b43012ad4421430d87d",
+  "draw_calls": 71,
+  "shadow_draws": 29,
+  "renderer_gl_objects": 356,
+  "live": {
+   "texture": 42,
+   "framebuffer": 7,
+   "program": 33,
+   "buffer": 5166,
+   "geometry": 203
+  },
+  "dof_drawn": false
+ },
+ "cottage__authored__dof": {
+  "sha256": "21ef706ba5149348d58164f869639bad298596ce948801c3fc2b68c675da8dff",
+  "draw_calls": 71,
+  "shadow_draws": 29,
+  "renderer_gl_objects": 357,
+  "live": {
+   "texture": 42,
+   "framebuffer": 7,
+   "program": 34,
+   "buffer": 5166,
+   "geometry": 203
+  },
+  "dof_drawn": true
+ },
+ "cottage__night_lamps": {
+  "sha256": "e21b64510f67615af13b3dac6e18c73f89b848ed3435d4e0697523df0541d823",
+  "draw_calls": 74,
+  "shadow_draws": 350,
+  "renderer_gl_objects": 365,
+  "live": {
+   "texture": 44,
+   "framebuffer": 8,
+   "program": 33,
+   "buffer": 5861,
+   "geometry": 206
+  },
+  "dof_drawn": false
+ },
+ "cottage__night_lamps__dof": {
+  "sha256": "c80454f6103cb4f3c802c392b7ca5cd8f16771a3be6201b4a8a8d630b363ad37",
+  "draw_calls": 74,
+  "shadow_draws": 32,
+  "renderer_gl_objects": 366,
+  "live": {
+   "texture": 44,
+   "framebuffer": 8,
+   "program": 34,
+   "buffer": 5861,
+   "geometry": 206
+  },
+  "dof_drawn": true
+ },
+ "cottage__evening": {
+  "sha256": "68c2c6a009acad92be31764438dd860f3c13ec16036460b2b3b41fa4b9856730",
+  "draw_calls": 71,
+  "shadow_draws": 29,
+  "renderer_gl_objects": 356,
+  "live": {
+   "texture": 42,
+   "framebuffer": 7,
+   "program": 33,
+   "buffer": 6544,
+   "geometry": 203
+  },
+  "dof_drawn": false
+ },
+ "cottage__evening__dof": {
+  "sha256": "094338a0bb1a667b414b0ed7c8b28cbb7bdcf2ecec2c5273caf195a0e04b953c",
+  "draw_calls": 71,
+  "shadow_draws": 29,
+  "renderer_gl_objects": 357,
+  "live": {
+   "texture": 42,
+   "framebuffer": 7,
+   "program": 34,
+   "buffer": 6544,
+   "geometry": 203
+  },
+  "dof_drawn": true
+ },
+ "interior__authored": {
+  "sha256": "17564c285399bf3fdcb27866b1773156a9f0df560cc47ff908fa871db796ec59",
+  "draw_calls": 7,
+  "shadow_draws": 31,
+  "renderer_gl_objects": 36,
+  "live": {
+   "texture": 19,
+   "framebuffer": 7,
+   "program": 27,
+   "buffer": 6942,
+   "geometry": 26
+  },
+  "dof_drawn": false
+ },
+ "interior__authored__dof": {
+  "sha256": "cce94ea6e1ebd48283715200331ef8668c7eb85c209dd401016bd59d29143264",
+  "draw_calls": 7,
+  "shadow_draws": 7,
+  "renderer_gl_objects": 37,
+  "live": {
+   "texture": 19,
+   "framebuffer": 7,
+   "program": 28,
+   "buffer": 6942,
+   "geometry": 26
+  },
+  "dof_drawn": true
+ },
+ "studio_canvas": {
+  "sha256": "44fb48a00d72a143817bd6b55ec37b50ace92a0a73bfaaff271cd99c64ff8ecb",
+  "viewport": [
+   230,
+   26,
+   720,
+   650
+  ],
+  "draw_calls": 32,
+  "renderer_gl_objects": 107
+ },
+ "studio_canvas_lines": {
+  "sha256": "0a122d8d200f903e05e9599288eb6f904c75d1d73e109dc5bf38b557c952760b",
+  "viewport": [
+   230,
+   26,
+   720,
+   650
+  ],
+  "draw_calls": 32,
+  "renderer_gl_objects": 107
+ }
+}

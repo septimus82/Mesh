@@ -1,0 +1,467 @@
+{
+ "size": [
+  960,
+  540
+ ],
+ "rooms": {
+  "village": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "off": {
+    "stage": "blit",
+    "made": false,
+    "draw_calls": 32
+   },
+   "strength_zero": {
+    "same": true,
+    "stage": "blit",
+    "made": false
+   },
+   "presets": {
+    "natural": {
+     "stage": "composite",
+     "changed_share": 0.9996,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 32,
+     "weber_change_min": 0.006132967154045939,
+     "edge_ratio_min": 0.9539672267031174,
+     "glass_hue_shift_max": 1.437282229965156,
+     "crushed_increase": 0.0,
+     "clipped_increase": 0.0,
+     "dark_mean_ratio": 0.917,
+     "world_read_unchanged": true
+    },
+    "golden_hour": {
+     "stage": "composite",
+     "changed_share": 1.0,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 32,
+     "weber_change_min": 0.008706067589520777,
+     "edge_ratio_min": 0.9574114250545251,
+     "glass_hue_shift_max": 0.5465765501028557,
+     "crushed_increase": 0.0,
+     "clipped_increase": 0.0,
+     "dark_mean_ratio": 0.902,
+     "world_read_unchanged": true
+    },
+    "moonlight": {
+     "stage": "composite",
+     "changed_share": 0.9999,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 32,
+     "weber_change_min": 0.0002960046084318768,
+     "edge_ratio_min": 0.9607374257173091,
+     "glass_hue_shift_max": 0.18970189701897056,
+     "crushed_increase": 0.0,
+     "clipped_increase": 0.0,
+     "dark_mean_ratio": 0.982,
+     "world_read_unchanged": true
+    },
+    "interior_warm": {
+     "stage": "composite",
+     "changed_share": 0.9997,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 32,
+     "weber_change_min": -0.00116397092185469,
+     "edge_ratio_min": 0.982140820125826,
+     "glass_hue_shift_max": 0.1851307669703246,
+     "crushed_increase": 0.0,
+     "clipped_increase": 0.0,
+     "dark_mean_ratio": 0.992,
+     "world_read_unchanged": true
+    }
+   },
+   "vignette": {
+    "centre_same": true,
+    "corner_ratio": 0.786
+   },
+   "with_dof": {
+    "stage": "dof+composite",
+    "chain_allocations": 1,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true
+  },
+  "lakeside": {
+   "scene": "packs/core_regions/scenes/glow_lakeside.json",
+   "off": {
+    "stage": "blit",
+    "made": false,
+    "draw_calls": 17
+   },
+   "strength_zero": {
+    "same": true,
+    "stage": "blit",
+    "made": false
+   },
+   "presets": {
+    "natural": {
+     "stage": "composite",
+     "changed_share": 1.0,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 17,
+     "weber_change_min": -0.0029537914005483834,
+     "edge_ratio_min": 0.9804053783143996,
+     "glass_hue_shift_max": 1.2452830188679087,
+     "crushed_increase": 0.0,
+     "clipped_increase": -0.031,
+     "dark_mean_ratio": 0.932,
+     "world_read_unchanged": true
+    },
+    "golden_hour": {
+     "stage": "composite",
+     "changed_share": 1.0,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 17,
+     "weber_change_min": -0.004793764861569072,
+     "edge_ratio_min": 0.9690789402302921,
+     "glass_hue_shift_max": 0.6376880821590518,
+     "crushed_increase": 0.0,
+     "clipped_increase": -0.031,
+     "dark_mean_ratio": 0.915,
+     "world_read_unchanged": true
+    },
+    "moonlight": {
+     "stage": "composite",
+     "changed_share": 1.0,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 17,
+     "weber_change_min": 0.00044150110437118917,
+     "edge_ratio_min": 0.9290976916762416,
+     "glass_hue_shift_max": 0.2352364616515601,
+     "crushed_increase": 0.0,
+     "clipped_increase": -0.031,
+     "dark_mean_ratio": 0.997,
+     "world_read_unchanged": true
+    },
+    "interior_warm": {
+     "stage": "composite",
+     "changed_share": 0.9998,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 17,
+     "weber_change_min": -0.0030462376971016614,
+     "edge_ratio_min": 0.9664648937406332,
+     "glass_hue_shift_max": 0.37735849056602433,
+     "crushed_increase": 0.0,
+     "clipped_increase": -0.031,
+     "dark_mean_ratio": 1.002,
+     "world_read_unchanged": true
+    }
+   },
+   "vignette": {
+    "centre_same": true,
+    "corner_ratio": 0.794
+   },
+   "with_dof": {
+    "stage": "dof+composite",
+    "chain_allocations": 1,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true
+  },
+  "fixtures": {
+   "scene": "packs/core_regions/scenes/lamp_fixtures.json",
+   "off": {
+    "stage": "blit",
+    "made": false,
+    "draw_calls": 6
+   },
+   "strength_zero": {
+    "same": true,
+    "stage": "blit",
+    "made": false
+   },
+   "presets": {
+    "natural": {
+     "stage": "composite",
+     "changed_share": 1.0,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 6,
+     "weber_change_min": null,
+     "edge_ratio_min": null,
+     "glass_hue_shift_max": null,
+     "crushed_increase": 0.0,
+     "clipped_increase": -0.013,
+     "dark_mean_ratio": 0.903,
+     "world_read_unchanged": true
+    },
+    "golden_hour": {
+     "stage": "composite",
+     "changed_share": 1.0,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 6,
+     "weber_change_min": null,
+     "edge_ratio_min": null,
+     "glass_hue_shift_max": null,
+     "crushed_increase": 0.0,
+     "clipped_increase": -0.014,
+     "dark_mean_ratio": 0.897,
+     "world_read_unchanged": true
+    },
+    "moonlight": {
+     "stage": "composite",
+     "changed_share": 1.0,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 6,
+     "weber_change_min": null,
+     "edge_ratio_min": null,
+     "glass_hue_shift_max": null,
+     "crushed_increase": 0.0,
+     "clipped_increase": -0.014,
+     "dark_mean_ratio": 0.967,
+     "world_read_unchanged": true
+    },
+    "interior_warm": {
+     "stage": "composite",
+     "changed_share": 1.0,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 6,
+     "weber_change_min": null,
+     "edge_ratio_min": null,
+     "glass_hue_shift_max": null,
+     "crushed_increase": 0.0,
+     "clipped_increase": -0.013,
+     "dark_mean_ratio": 0.99,
+     "world_read_unchanged": true
+    }
+   },
+   "vignette": {
+    "centre_same": true,
+    "corner_ratio": 0.808
+   },
+   "with_dof": {
+    "stage": "dof+composite",
+    "chain_allocations": 1,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true
+  },
+  "cottage": {
+   "scene": "packs/core_regions/scenes/cottage.json",
+   "off": {
+    "stage": "blit",
+    "made": false,
+    "draw_calls": 7
+   },
+   "strength_zero": {
+    "same": true,
+    "stage": "blit",
+    "made": false
+   },
+   "presets": {
+    "natural": {
+     "stage": "composite",
+     "changed_share": 0.9997,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 7,
+     "weber_change_min": -0.004242515326415751,
+     "edge_ratio_min": 1.023546676343051,
+     "glass_hue_shift_max": 0.4471866265886355,
+     "crushed_increase": 0.0,
+     "clipped_increase": 0.0,
+     "dark_mean_ratio": 0.842,
+     "world_read_unchanged": true
+    },
+    "golden_hour": {
+     "stage": "composite",
+     "changed_share": 1.0,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 7,
+     "weber_change_min": -0.007981397665739503,
+     "edge_ratio_min": 1.0197775635276385,
+     "glass_hue_shift_max": 0.043302492289750916,
+     "crushed_increase": 0.0,
+     "clipped_increase": 0.0,
+     "dark_mean_ratio": 0.83,
+     "world_read_unchanged": true
+    },
+    "moonlight": {
+     "stage": "composite",
+     "changed_share": 0.9999,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 7,
+     "weber_change_min": -0.006608686902467853,
+     "edge_ratio_min": 1.0013520588507054,
+     "glass_hue_shift_max": 0.448647470066188,
+     "crushed_increase": 0.0,
+     "clipped_increase": -0.002,
+     "dark_mean_ratio": 0.959,
+     "world_read_unchanged": true
+    },
+    "interior_warm": {
+     "stage": "composite",
+     "changed_share": 1.0,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 7,
+     "weber_change_min": -0.006204136728570009,
+     "edge_ratio_min": 0.9989724389957038,
+     "glass_hue_shift_max": 0.0553498918947497,
+     "crushed_increase": 0.0,
+     "clipped_increase": 0.0,
+     "dark_mean_ratio": 0.99,
+     "world_read_unchanged": true
+    }
+   },
+   "vignette": {
+    "centre_same": true,
+    "corner_ratio": 0.647
+   },
+   "with_dof": {
+    "stage": "dof+composite",
+    "chain_allocations": 1,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true
+  },
+  "emissive": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "off": {
+    "stage": "blit",
+    "made": false,
+    "draw_calls": 8
+   },
+   "strength_zero": {
+    "same": true,
+    "stage": "blit",
+    "made": false
+   },
+   "presets": {
+    "natural": {
+     "stage": "composite",
+     "changed_share": 0.9974,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 8,
+     "weber_change_min": 0.0143974650165139,
+     "edge_ratio_min": 0.9913746983787338,
+     "glass_hue_shift_max": null,
+     "crushed_increase": 0.006,
+     "clipped_increase": 0.0,
+     "dark_mean_ratio": 0.919,
+     "world_read_unchanged": true
+    },
+    "golden_hour": {
+     "stage": "composite",
+     "changed_share": 1.0,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 8,
+     "weber_change_min": 0.015236232089869184,
+     "edge_ratio_min": 0.9722671600357023,
+     "glass_hue_shift_max": null,
+     "crushed_increase": 0.006,
+     "clipped_increase": 0.0,
+     "dark_mean_ratio": 0.904,
+     "world_read_unchanged": true
+    },
+    "moonlight": {
+     "stage": "composite",
+     "changed_share": 0.999,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 8,
+     "weber_change_min": 0.014879558473718524,
+     "edge_ratio_min": 0.9974942986306311,
+     "glass_hue_shift_max": null,
+     "crushed_increase": 0.0,
+     "clipped_increase": 0.0,
+     "dark_mean_ratio": 0.988,
+     "world_read_unchanged": true
+    },
+    "interior_warm": {
+     "stage": "composite",
+     "changed_share": 0.8708,
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 8,
+     "weber_change_min": -0.010149643707711709,
+     "edge_ratio_min": 1.002039325181048,
+     "glass_hue_shift_max": null,
+     "crushed_increase": 0.0,
+     "clipped_increase": 0.0,
+     "dark_mean_ratio": 0.99,
+     "world_read_unchanged": true
+    }
+   },
+   "vignette": {
+    "centre_same": true,
+    "corner_ratio": 0.732
+   },
+   "with_dof": {
+    "stage": "dof+composite",
+    "chain_allocations": 1,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true
+  }
+ },
+ "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "hud": {
+  "hud_pixels": 3168,
+  "hud_same": true,
+  "hud_alone_same": true,
+  "world_changed": true
+ },
+ "texels": {
+  "exposure_grey": [
+   121,
+   121,
+   121,
+   77
+  ],
+  "saturation_zero": [
+   110,
+   110,
+   110,
+   255
+  ],
+  "neutral": [
+   37,
+   180,
+   222,
+   9
+  ],
+  "bright_protected": [
+   248,
+   180,
+   81,
+   255
+  ],
+  "bright_unprotected": [
+   233,
+   176,
+   87,
+   255
+  ],
+  "dark_protected": [
+   55,
+   49,
+   44,
+   255
+  ]
+ },
+ "emission": {
+  "hue_shift_max": {
+   "natural": 1.02,
+   "golden_hour": 3.5,
+   "moonlight": 2.25,
+   "interior_warm": 3.96
+  },
+  "coloured_swatches": 3
+ }
+}

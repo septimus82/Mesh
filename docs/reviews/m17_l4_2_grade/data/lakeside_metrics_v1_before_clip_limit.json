@@ -1,0 +1,2247 @@
+{
+ "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "strength": 1.0,
+ "village__day__off": {
+  "shot": "village",
+  "time": "day",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 78.84,
+  "crushed_pct": 0.001,
+  "clipped_pct": 0.0,
+  "corners": 78.22,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "weber": -0.2570985847240848,
+    "edge": 6.189663922085272
+   }
+  ]
+ },
+ "village__day__natural": {
+  "shot": "village",
+  "time": "day",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 76.47,
+  "crushed_pct": 0.004,
+  "clipped_pct": 0.0,
+  "corners": 72.65,
+  "grass_hue_shift": 0.37,
+  "grass_sat_ratio": 1.073,
+  "blue_hue_shift": 0.34,
+  "dark_detail_ratio": 0.986,
+  "dark_mean_ratio": 0.915,
+  "crushed_increase": 0.003,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.929,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0069,
+    "edge_ratio": 1.015,
+    "hue_shift": 0.47
+   }
+  ]
+ },
+ "village__day__golden_hour": {
+  "shot": "village",
+  "time": "day",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 76.16,
+  "crushed_pct": 0.007,
+  "clipped_pct": 0.0,
+  "corners": 71.16,
+  "grass_hue_shift": 2.74,
+  "grass_sat_ratio": 1.074,
+  "blue_hue_shift": 1.78,
+  "dark_detail_ratio": 0.972,
+  "dark_mean_ratio": 0.9,
+  "crushed_increase": 0.006,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.91,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0102,
+    "edge_ratio": 1.024,
+    "hue_shift": 3.11
+   }
+  ]
+ },
+ "village__day__moonlight": {
+  "shot": "village",
+  "time": "day",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 77.78,
+  "crushed_pct": 0.003,
+  "clipped_pct": 0.0,
+  "corners": 71.87,
+  "grass_hue_shift": 4.28,
+  "grass_sat_ratio": 0.856,
+  "blue_hue_shift": 2.2,
+  "dark_detail_ratio": 1.0,
+  "dark_mean_ratio": 0.976,
+  "crushed_increase": 0.002,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.919,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": -0.0004,
+    "edge_ratio": 1.002,
+    "hue_shift": 5.41
+   }
+  ]
+ },
+ "village__day__interior_warm": {
+  "shot": "village",
+  "time": "day",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 78.64,
+  "crushed_pct": 0.001,
+  "clipped_pct": 0.0,
+  "corners": 74.75,
+  "grass_hue_shift": 3.1,
+  "grass_sat_ratio": 1.087,
+  "blue_hue_shift": 2.04,
+  "dark_detail_ratio": 0.996,
+  "dark_mean_ratio": 0.993,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.956,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0003,
+    "edge_ratio": 1.009,
+    "hue_shift": 2.84
+   }
+  ]
+ },
+ "village__evening__off": {
+  "shot": "village",
+  "time": "evening",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 45.63,
+  "crushed_pct": 0.013,
+  "clipped_pct": 0.0,
+  "corners": 43.05,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "weber": -0.2133448161292204,
+    "edge": 5.139983082045289
+   }
+  ]
+ },
+ "village__evening__natural": {
+  "shot": "village",
+  "time": "evening",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 43.02,
+  "crushed_pct": 0.043,
+  "clipped_pct": 0.0,
+  "corners": 38.43,
+  "grass_hue_shift": 0.5,
+  "grass_sat_ratio": 1.089,
+  "blue_hue_shift": 0.23,
+  "dark_detail_ratio": 0.985,
+  "dark_mean_ratio": 0.92,
+  "crushed_increase": 0.03,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.893,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0053,
+    "edge_ratio": 1.011,
+    "hue_shift": 0.36
+   }
+  ]
+ },
+ "village__evening__golden_hour": {
+  "shot": "village",
+  "time": "evening",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 42.54,
+  "crushed_pct": 0.054,
+  "clipped_pct": 0.0,
+  "corners": 37.44,
+  "grass_hue_shift": 2.79,
+  "grass_sat_ratio": 1.084,
+  "blue_hue_shift": 3.47,
+  "dark_detail_ratio": 0.979,
+  "dark_mean_ratio": 0.904,
+  "crushed_increase": 0.041,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.87,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0066,
+    "edge_ratio": 1.013,
+    "hue_shift": 2.34
+   }
+  ]
+ },
+ "village__evening__moonlight": {
+  "shot": "village",
+  "time": "evening",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 44.92,
+  "crushed_pct": 0.033,
+  "clipped_pct": 0.0,
+  "corners": 38.92,
+  "grass_hue_shift": 6.44,
+  "grass_sat_ratio": 0.872,
+  "blue_hue_shift": 2.2,
+  "dark_detail_ratio": 1.004,
+  "dark_mean_ratio": 0.983,
+  "crushed_increase": 0.02,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.904,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0019,
+    "edge_ratio": 1.004,
+    "hue_shift": 5.65
+   }
+  ]
+ },
+ "village__evening__interior_warm": {
+  "shot": "village",
+  "time": "evening",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 45.44,
+  "crushed_pct": 0.019,
+  "clipped_pct": 0.0,
+  "corners": 40.92,
+  "grass_hue_shift": 3.2,
+  "grass_sat_ratio": 1.084,
+  "blue_hue_shift": 3.55,
+  "dark_detail_ratio": 0.993,
+  "dark_mean_ratio": 0.992,
+  "crushed_increase": 0.006,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.951,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0009,
+    "edge_ratio": 1.007,
+    "hue_shift": 2.61
+   }
+  ]
+ },
+ "village__night_lamps__off": {
+  "shot": "village",
+  "time": "night_lamps",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 36.68,
+  "crushed_pct": 0.068,
+  "clipped_pct": 0.081,
+  "corners": 31.24,
+  "lamps": [
+   {
+    "lamp": 0,
+    "at": [
+     189,
+     479
+    ],
+    "rgb": [
+     255,
+     177,
+     72
+    ],
+    "hue": 34.43,
+    "sat": 0.718,
+    "glass": true
+   },
+   {
+    "lamp": 1,
+    "at": [
+     515,
+     349
+    ],
+    "rgb": [
+     255,
+     178,
+     73
+    ],
+    "hue": 34.62,
+    "sat": 0.714,
+    "glass": true
+   },
+   {
+    "lamp": 2,
+    "at": [
+     718,
+     67
+    ],
+    "rgb": [
+     255,
+     177,
+     72
+    ],
+    "hue": 34.43,
+    "sat": 0.718,
+    "glass": true
+   }
+  ],
+  "sprites": [
+   {
+    "pixels": 2392,
+    "weber": -0.0725138493475525,
+    "edge": 4.113889361379989
+   }
+  ]
+ },
+ "village__night_lamps__natural": {
+  "shot": "village",
+  "time": "night_lamps",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 34.11,
+  "crushed_pct": 0.256,
+  "clipped_pct": 0.081,
+  "corners": 27.14,
+  "lamps": [
+   {
+    "lamp": 0,
+    "at": [
+     189,
+     479
+    ],
+    "rgb": [
+     255,
+     178,
+     67
+    ],
+    "hue": 35.43,
+    "sat": 0.737,
+    "glass": true
+   },
+   {
+    "lamp": 1,
+    "at": [
+     515,
+     349
+    ],
+    "rgb": [
+     255,
+     179,
+     68
+    ],
+    "hue": 35.61,
+    "sat": 0.733,
+    "glass": true
+   },
+   {
+    "lamp": 2,
+    "at": [
+     718,
+     67
+    ],
+    "rgb": [
+     255,
+     178,
+     67
+    ],
+    "hue": 35.43,
+    "sat": 0.737,
+    "glass": true
+   }
+  ],
+  "grass_hue_shift": 0.48,
+  "grass_sat_ratio": 1.088,
+  "blue_hue_shift": 0.73,
+  "dark_detail_ratio": 0.99,
+  "dark_mean_ratio": 0.908,
+  "crushed_increase": 0.188,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.869,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0014,
+    "edge_ratio": 1.003,
+    "hue_shift": 1.03
+   }
+  ],
+  "glass_hue_shift": [
+   1.0,
+   0.99,
+   1.0
+  ]
+ },
+ "village__night_lamps__golden_hour": {
+  "shot": "village",
+  "time": "night_lamps",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 33.63,
+  "crushed_pct": 0.287,
+  "clipped_pct": 0.081,
+  "corners": 26.34,
+  "lamps": [
+   {
+    "lamp": 0,
+    "at": [
+     189,
+     479
+    ],
+    "rgb": [
+     255,
+     177,
+     70
+    ],
+    "hue": 34.7,
+    "sat": 0.725,
+    "glass": true
+   },
+   {
+    "lamp": 1,
+    "at": [
+     515,
+     349
+    ],
+    "rgb": [
+     255,
+     179,
+     71
+    ],
+    "hue": 35.22,
+    "sat": 0.722,
+    "glass": true
+   },
+   {
+    "lamp": 2,
+    "at": [
+     718,
+     67
+    ],
+    "rgb": [
+     255,
+     178,
+     70
+    ],
+    "hue": 35.03,
+    "sat": 0.725,
+    "glass": true
+   }
+  ],
+  "grass_hue_shift": 3.0,
+  "grass_sat_ratio": 1.082,
+  "blue_hue_shift": 1.62,
+  "dark_detail_ratio": 0.98,
+  "dark_mean_ratio": 0.891,
+  "crushed_increase": 0.219,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.843,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": -0.0027,
+    "edge_ratio": 0.993,
+    "hue_shift": 3.06
+   }
+  ],
+  "glass_hue_shift": [
+   0.27,
+   0.6,
+   0.6
+  ]
+ },
+ "village__night_lamps__moonlight": {
+  "shot": "village",
+  "time": "night_lamps",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 36.13,
+  "crushed_pct": 0.128,
+  "clipped_pct": 0.05,
+  "corners": 27.98,
+  "lamps": [
+   {
+    "lamp": 0,
+    "at": [
+     189,
+     479
+    ],
+    "rgb": [
+     253,
+     176,
+     74
+    ],
+    "hue": 34.19,
+    "sat": 0.708,
+    "glass": true
+   },
+   {
+    "lamp": 1,
+    "at": [
+     515,
+     349
+    ],
+    "rgb": [
+     255,
+     178,
+     75
+    ],
+    "hue": 34.33,
+    "sat": 0.706,
+    "glass": true
+   },
+   {
+    "lamp": 2,
+    "at": [
+     718,
+     67
+    ],
+    "rgb": [
+     255,
+     177,
+     74
+    ],
+    "hue": 34.14,
+    "sat": 0.71,
+    "glass": true
+   }
+  ],
+  "grass_hue_shift": 7.29,
+  "grass_sat_ratio": 0.876,
+  "blue_hue_shift": 0.81,
+  "dark_detail_ratio": 1.016,
+  "dark_mean_ratio": 0.982,
+  "crushed_increase": 0.06,
+  "clipped_increase": -0.031,
+  "corner_ratio": 0.896,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0079,
+    "edge_ratio": 1.0,
+    "hue_shift": 6.44
+   }
+  ],
+  "glass_hue_shift": [
+   0.24,
+   0.29,
+   0.29
+  ]
+ },
+ "village__night_lamps__interior_warm": {
+  "shot": "village",
+  "time": "night_lamps",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 36.5,
+  "crushed_pct": 0.093,
+  "clipped_pct": 0.081,
+  "corners": 29.57,
+  "lamps": [
+   {
+    "lamp": 0,
+    "at": [
+     189,
+     479
+    ],
+    "rgb": [
+     255,
+     177,
+     70
+    ],
+    "hue": 34.7,
+    "sat": 0.725,
+    "glass": true
+   },
+   {
+    "lamp": 1,
+    "at": [
+     515,
+     349
+    ],
+    "rgb": [
+     255,
+     178,
+     71
+    ],
+    "hue": 34.89,
+    "sat": 0.722,
+    "glass": true
+   },
+   {
+    "lamp": 2,
+    "at": [
+     718,
+     67
+    ],
+    "rgb": [
+     255,
+     177,
+     70
+    ],
+    "hue": 34.7,
+    "sat": 0.725,
+    "glass": true
+   }
+  ],
+  "grass_hue_shift": 3.41,
+  "grass_sat_ratio": 1.079,
+  "blue_hue_shift": 0.39,
+  "dark_detail_ratio": 1.001,
+  "dark_mean_ratio": 0.99,
+  "crushed_increase": 0.025,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.947,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": -0.0012,
+    "edge_ratio": 1.004,
+    "hue_shift": 2.77
+   }
+  ],
+  "glass_hue_shift": [
+   0.27,
+   0.27,
+   0.27
+  ]
+ },
+ "shore__day__off": {
+  "shot": "shore",
+  "time": "day",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 76.94,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 72.52,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "weber": 0.025599367965043928,
+    "edge": 2.41760060469048
+   }
+  ]
+ },
+ "shore__day__natural": {
+  "shot": "shore",
+  "time": "day",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 74.54,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 67.09,
+  "grass_hue_shift": 0.47,
+  "grass_sat_ratio": 1.074,
+  "blue_hue_shift": 0.3,
+  "dark_detail_ratio": 1.003,
+  "dark_mean_ratio": 0.915,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.925,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "abs_weber_change": 0.0018,
+    "edge_ratio": 1.024,
+    "hue_shift": 0.44
+   }
+  ]
+ },
+ "shore__day__golden_hour": {
+  "shot": "shore",
+  "time": "day",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 74.16,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 65.71,
+  "grass_hue_shift": 2.8,
+  "grass_sat_ratio": 1.074,
+  "blue_hue_shift": 1.29,
+  "dark_detail_ratio": 0.997,
+  "dark_mean_ratio": 0.9,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.906,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "abs_weber_change": 0.0011,
+    "edge_ratio": 1.042,
+    "hue_shift": 3.12
+   }
+  ]
+ },
+ "shore__day__moonlight": {
+  "shot": "shore",
+  "time": "day",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 75.95,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 66.46,
+  "grass_hue_shift": 4.46,
+  "grass_sat_ratio": 0.856,
+  "blue_hue_shift": 3.56,
+  "dark_detail_ratio": 1.049,
+  "dark_mean_ratio": 0.979,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.916,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "abs_weber_change": 0.0004,
+    "edge_ratio": 0.998,
+    "hue_shift": 4.89
+   }
+  ]
+ },
+ "shore__day__interior_warm": {
+  "shot": "shore",
+  "time": "day",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 76.77,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 69.3,
+  "grass_hue_shift": 3.18,
+  "grass_sat_ratio": 1.087,
+  "blue_hue_shift": 2.68,
+  "dark_detail_ratio": 1.009,
+  "dark_mean_ratio": 0.99,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.956,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "abs_weber_change": -0.0004,
+    "edge_ratio": 1.01,
+    "hue_shift": 3.28
+   }
+  ]
+ },
+ "shore__evening__off": {
+  "shot": "shore",
+  "time": "evening",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 47.47,
+  "crushed_pct": 0.013,
+  "clipped_pct": 0.0,
+  "corners": 42.33,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "weber": 0.029184994422937694,
+    "edge": 1.9136664627106903
+   }
+  ]
+ },
+ "shore__evening__natural": {
+  "shot": "shore",
+  "time": "evening",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 44.85,
+  "crushed_pct": 0.037,
+  "clipped_pct": 0.0,
+  "corners": 37.71,
+  "grass_hue_shift": 0.56,
+  "grass_sat_ratio": 1.09,
+  "blue_hue_shift": 0.37,
+  "dark_detail_ratio": 0.988,
+  "dark_mean_ratio": 0.921,
+  "crushed_increase": 0.024,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.891,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "abs_weber_change": 0.0015,
+    "edge_ratio": 1.014,
+    "hue_shift": 1.18
+   }
+  ]
+ },
+ "shore__evening__golden_hour": {
+  "shot": "shore",
+  "time": "evening",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 44.36,
+  "crushed_pct": 0.037,
+  "clipped_pct": 0.0,
+  "corners": 36.74,
+  "grass_hue_shift": 2.78,
+  "grass_sat_ratio": 1.084,
+  "blue_hue_shift": 2.84,
+  "dark_detail_ratio": 0.983,
+  "dark_mean_ratio": 0.904,
+  "crushed_increase": 0.024,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.868,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "abs_weber_change": 0.0028,
+    "edge_ratio": 1.023,
+    "hue_shift": 1.66
+   }
+  ]
+ },
+ "shore__evening__moonlight": {
+  "shot": "shore",
+  "time": "evening",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 46.72,
+  "crushed_pct": 0.013,
+  "clipped_pct": 0.0,
+  "corners": 38.26,
+  "grass_hue_shift": 6.5,
+  "grass_sat_ratio": 0.868,
+  "blue_hue_shift": 1.83,
+  "dark_detail_ratio": 1.004,
+  "dark_mean_ratio": 0.985,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.904,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "abs_weber_change": -0.0015,
+    "edge_ratio": 1.012,
+    "hue_shift": 4.44
+   }
+  ]
+ },
+ "shore__evening__interior_warm": {
+  "shot": "shore",
+  "time": "evening",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 47.31,
+  "crushed_pct": 0.013,
+  "clipped_pct": 0.0,
+  "corners": 40.22,
+  "grass_hue_shift": 3.2,
+  "grass_sat_ratio": 1.083,
+  "blue_hue_shift": 2.79,
+  "dark_detail_ratio": 0.997,
+  "dark_mean_ratio": 0.993,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.95,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "abs_weber_change": -0.0001,
+    "edge_ratio": 1.012,
+    "hue_shift": 2.74
+   }
+  ]
+ },
+ "shore__night_lamps__off": {
+  "shot": "shore",
+  "time": "night_lamps",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 27.05,
+  "crushed_pct": 0.212,
+  "clipped_pct": 0.0,
+  "corners": 26.28,
+  "lamps": [],
+  "sprites": [
+   {
+    "pixels": 2355,
+    "weber": 0.025875060614669248,
+    "edge": 0.8288024294711324
+   }
+  ]
+ },
+ "shore__night_lamps__natural": {
+  "shot": "shore",
+  "time": "night_lamps",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 24.55,
+  "crushed_pct": 0.457,
+  "clipped_pct": 0.0,
+  "corners": 22.32,
+  "lamps": [],
+  "grass_hue_shift": 0.19,
+  "grass_sat_ratio": 1.088,
+  "blue_hue_shift": 0.7,
+  "dark_detail_ratio": 0.983,
+  "dark_mean_ratio": 0.907,
+  "crushed_increase": 0.245,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.849,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "abs_weber_change": 0.002,
+    "edge_ratio": 0.989,
+    "hue_shift": 0.07
+   }
+  ],
+  "glass_hue_shift": []
+ },
+ "shore__night_lamps__golden_hour": {
+  "shot": "shore",
+  "time": "night_lamps",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 24.04,
+  "crushed_pct": 0.465,
+  "clipped_pct": 0.0,
+  "corners": 21.65,
+  "lamps": [],
+  "grass_hue_shift": 4.0,
+  "grass_sat_ratio": 1.085,
+  "blue_hue_shift": 1.49,
+  "dark_detail_ratio": 0.967,
+  "dark_mean_ratio": 0.888,
+  "crushed_increase": 0.253,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.824,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "abs_weber_change": 0.003,
+    "edge_ratio": 0.981,
+    "hue_shift": 3.84
+   }
+  ],
+  "glass_hue_shift": []
+ },
+ "shore__night_lamps__moonlight": {
+  "shot": "shore",
+  "time": "night_lamps",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 26.56,
+  "crushed_pct": 0.239,
+  "clipped_pct": 0.0,
+  "corners": 23.35,
+  "lamps": [],
+  "grass_hue_shift": 10.18,
+  "grass_sat_ratio": 0.915,
+  "blue_hue_shift": 0.92,
+  "dark_detail_ratio": 0.996,
+  "dark_mean_ratio": 0.983,
+  "crushed_increase": 0.027,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.889,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "abs_weber_change": 0.001,
+    "edge_ratio": 0.995,
+    "hue_shift": 6.15
+   }
+  ],
+  "glass_hue_shift": []
+ },
+ "shore__night_lamps__interior_warm": {
+  "shot": "shore",
+  "time": "night_lamps",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 26.79,
+  "crushed_pct": 0.224,
+  "clipped_pct": 0.0,
+  "corners": 24.79,
+  "lamps": [],
+  "grass_hue_shift": 4.68,
+  "grass_sat_ratio": 1.069,
+  "blue_hue_shift": 1.14,
+  "dark_detail_ratio": 0.996,
+  "dark_mean_ratio": 0.991,
+  "crushed_increase": 0.012,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.943,
+  "sprites": [
+   {
+    "pixels": 2355,
+    "abs_weber_change": 0.0002,
+    "edge_ratio": 1.001,
+    "hue_shift": 4.08
+   }
+  ],
+  "glass_hue_shift": []
+ },
+ "bridge__day__off": {
+  "shot": "bridge",
+  "time": "day",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 77.15,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 86.76,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "weber": -0.12412417171356246,
+    "edge": 5.618297924252156
+   }
+  ]
+ },
+ "bridge__day__natural": {
+  "shot": "bridge",
+  "time": "day",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 74.73,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 81.07,
+  "grass_hue_shift": 0.44,
+  "grass_sat_ratio": 1.074,
+  "blue_hue_shift": 0.3,
+  "dark_detail_ratio": 0.983,
+  "dark_mean_ratio": 0.925,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.934,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "abs_weber_change": 0.0005,
+    "edge_ratio": 1.016,
+    "hue_shift": 0.46
+   }
+  ]
+ },
+ "bridge__day__golden_hour": {
+  "shot": "bridge",
+  "time": "day",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 74.36,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 79.45,
+  "grass_hue_shift": 2.78,
+  "grass_sat_ratio": 1.074,
+  "blue_hue_shift": 1.46,
+  "dark_detail_ratio": 0.972,
+  "dark_mean_ratio": 0.91,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.916,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "abs_weber_change": 0.0039,
+    "edge_ratio": 1.025,
+    "hue_shift": 3.07
+   }
+  ]
+ },
+ "bridge__day__moonlight": {
+  "shot": "bridge",
+  "time": "day",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 76.08,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 79.71,
+  "grass_hue_shift": 4.49,
+  "grass_sat_ratio": 0.857,
+  "blue_hue_shift": 3.0,
+  "dark_detail_ratio": 1.004,
+  "dark_mean_ratio": 0.991,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.919,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "abs_weber_change": -0.0054,
+    "edge_ratio": 1.002,
+    "hue_shift": 5.02
+   }
+  ]
+ },
+ "bridge__day__interior_warm": {
+  "shot": "bridge",
+  "time": "day",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 76.92,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 83.05,
+  "grass_hue_shift": 3.16,
+  "grass_sat_ratio": 1.087,
+  "blue_hue_shift": 2.2,
+  "dark_detail_ratio": 0.996,
+  "dark_mean_ratio": 0.999,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.957,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "abs_weber_change": 0.0011,
+    "edge_ratio": 1.009,
+    "hue_shift": 2.72
+   }
+  ]
+ },
+ "bridge__evening__off": {
+  "shot": "bridge",
+  "time": "evening",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 46.46,
+  "crushed_pct": 0.031,
+  "clipped_pct": 0.0,
+  "corners": 56.12,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "weber": 0.15226517821258506,
+    "edge": 3.7434142972514093
+   }
+  ]
+ },
+ "bridge__evening__natural": {
+  "shot": "bridge",
+  "time": "evening",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 43.82,
+  "crushed_pct": 0.078,
+  "clipped_pct": 0.0,
+  "corners": 51.07,
+  "grass_hue_shift": 0.53,
+  "grass_sat_ratio": 1.089,
+  "blue_hue_shift": 0.15,
+  "dark_detail_ratio": 0.985,
+  "dark_mean_ratio": 0.921,
+  "crushed_increase": 0.047,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.91,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "abs_weber_change": 0.0171,
+    "edge_ratio": 1.005,
+    "hue_shift": 0.35
+   }
+  ]
+ },
+ "bridge__evening__golden_hour": {
+  "shot": "bridge",
+  "time": "evening",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 43.36,
+  "crushed_pct": 0.089,
+  "clipped_pct": 0.0,
+  "corners": 49.9,
+  "grass_hue_shift": 2.73,
+  "grass_sat_ratio": 1.084,
+  "blue_hue_shift": 3.72,
+  "dark_detail_ratio": 0.974,
+  "dark_mean_ratio": 0.906,
+  "crushed_increase": 0.058,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.889,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "abs_weber_change": 0.0313,
+    "edge_ratio": 1.003,
+    "hue_shift": 2.09
+   }
+  ]
+ },
+ "bridge__evening__moonlight": {
+  "shot": "bridge",
+  "time": "evening",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 45.7,
+  "crushed_pct": 0.04,
+  "clipped_pct": 0.0,
+  "corners": 51.06,
+  "grass_hue_shift": 6.38,
+  "grass_sat_ratio": 0.868,
+  "blue_hue_shift": 2.28,
+  "dark_detail_ratio": 1.0,
+  "dark_mean_ratio": 0.985,
+  "crushed_increase": 0.009,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.91,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "abs_weber_change": 0.009,
+    "edge_ratio": 1.002,
+    "hue_shift": 4.85
+   }
+  ]
+ },
+ "bridge__evening__interior_warm": {
+  "shot": "bridge",
+  "time": "evening",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 46.29,
+  "crushed_pct": 0.035,
+  "clipped_pct": 0.0,
+  "corners": 53.53,
+  "grass_hue_shift": 3.24,
+  "grass_sat_ratio": 1.085,
+  "blue_hue_shift": 3.8,
+  "dark_detail_ratio": 0.992,
+  "dark_mean_ratio": 0.993,
+  "crushed_increase": 0.004,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.954,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "abs_weber_change": -0.0007,
+    "edge_ratio": 1.007,
+    "hue_shift": 2.2
+   }
+  ]
+ },
+ "bridge__night_lamps__off": {
+  "shot": "bridge",
+  "time": "night_lamps",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 29.64,
+  "crushed_pct": 0.24,
+  "clipped_pct": 0.065,
+  "corners": 31.9,
+  "lamps": [
+   {
+    "lamp": 1,
+    "at": [
+     248,
+     693
+    ],
+    "rgb": [
+     255,
+     178,
+     73
+    ],
+    "hue": 34.62,
+    "sat": 0.714,
+    "glass": true
+   },
+   {
+    "lamp": 2,
+    "at": [
+     522,
+     316
+    ],
+    "rgb": [
+     255,
+     177,
+     72
+    ],
+    "hue": 34.43,
+    "sat": 0.718,
+    "glass": true
+   }
+  ],
+  "sprites": [
+   {
+    "pixels": 2369,
+    "weber": 0.3320612200079335,
+    "edge": 4.444357097600237
+   }
+  ]
+ },
+ "bridge__night_lamps__natural": {
+  "shot": "bridge",
+  "time": "night_lamps",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 27.13,
+  "crushed_pct": 0.563,
+  "clipped_pct": 0.065,
+  "corners": 27.66,
+  "lamps": [
+   {
+    "lamp": 1,
+    "at": [
+     248,
+     693
+    ],
+    "rgb": [
+     255,
+     178,
+     67
+    ],
+    "hue": 35.43,
+    "sat": 0.737,
+    "glass": true
+   },
+   {
+    "lamp": 2,
+    "at": [
+     522,
+     316
+    ],
+    "rgb": [
+     255,
+     178,
+     67
+    ],
+    "hue": 35.43,
+    "sat": 0.737,
+    "glass": true
+   }
+  ],
+  "grass_hue_shift": 0.38,
+  "grass_sat_ratio": 1.089,
+  "blue_hue_shift": 0.63,
+  "dark_detail_ratio": 0.98,
+  "dark_mean_ratio": 0.904,
+  "crushed_increase": 0.323,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.867,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "abs_weber_change": 0.0259,
+    "edge_ratio": 1.009,
+    "hue_shift": 0.57
+   }
+  ],
+  "glass_hue_shift": [
+   0.81,
+   1.0
+  ]
+ },
+ "bridge__night_lamps__golden_hour": {
+  "shot": "bridge",
+  "time": "night_lamps",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 26.65,
+  "crushed_pct": 0.604,
+  "clipped_pct": 0.051,
+  "corners": 26.85,
+  "lamps": [
+   {
+    "lamp": 1,
+    "at": [
+     248,
+     693
+    ],
+    "rgb": [
+     255,
+     176,
+     70
+    ],
+    "hue": 34.38,
+    "sat": 0.725,
+    "glass": true
+   },
+   {
+    "lamp": 2,
+    "at": [
+     522,
+     316
+    ],
+    "rgb": [
+     255,
+     178,
+     70
+    ],
+    "hue": 35.03,
+    "sat": 0.725,
+    "glass": true
+   }
+  ],
+  "grass_hue_shift": 3.49,
+  "grass_sat_ratio": 1.082,
+  "blue_hue_shift": 1.63,
+  "dark_detail_ratio": 0.964,
+  "dark_mean_ratio": 0.886,
+  "crushed_increase": 0.364,
+  "clipped_increase": -0.014,
+  "corner_ratio": 0.842,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "abs_weber_change": 0.0424,
+    "edge_ratio": 1.011,
+    "hue_shift": 2.82
+   }
+  ],
+  "glass_hue_shift": [
+   0.24,
+   0.6
+  ]
+ },
+ "bridge__night_lamps__moonlight": {
+  "shot": "bridge",
+  "time": "night_lamps",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 29.15,
+  "crushed_pct": 0.276,
+  "clipped_pct": 0.027,
+  "corners": 28.58,
+  "lamps": [
+   {
+    "lamp": 1,
+    "at": [
+     248,
+     693
+    ],
+    "rgb": [
+     250,
+     175,
+     74
+    ],
+    "hue": 34.38,
+    "sat": 0.704,
+    "glass": true
+   },
+   {
+    "lamp": 2,
+    "at": [
+     522,
+     316
+    ],
+    "rgb": [
+     255,
+     177,
+     74
+    ],
+    "hue": 34.14,
+    "sat": 0.71,
+    "glass": true
+   }
+  ],
+  "grass_hue_shift": 8.77,
+  "grass_sat_ratio": 0.9,
+  "blue_hue_shift": 0.73,
+  "dark_detail_ratio": 0.994,
+  "dark_mean_ratio": 0.98,
+  "crushed_increase": 0.036,
+  "clipped_increase": -0.038,
+  "corner_ratio": 0.896,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "abs_weber_change": 0.0098,
+    "edge_ratio": 1.0,
+    "hue_shift": 7.2
+   }
+  ],
+  "glass_hue_shift": [
+   0.24,
+   0.29
+  ]
+ },
+ "bridge__night_lamps__interior_warm": {
+  "shot": "bridge",
+  "time": "night_lamps",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 29.44,
+  "crushed_pct": 0.262,
+  "clipped_pct": 0.046,
+  "corners": 30.19,
+  "lamps": [
+   {
+    "lamp": 1,
+    "at": [
+     248,
+     693
+    ],
+    "rgb": [
+     254,
+     176,
+     70
+    ],
+    "hue": 34.57,
+    "sat": 0.724,
+    "glass": true
+   },
+   {
+    "lamp": 2,
+    "at": [
+     522,
+     316
+    ],
+    "rgb": [
+     255,
+     177,
+     70
+    ],
+    "hue": 34.7,
+    "sat": 0.725,
+    "glass": true
+   }
+  ],
+  "grass_hue_shift": 4.13,
+  "grass_sat_ratio": 1.071,
+  "blue_hue_shift": 0.25,
+  "dark_detail_ratio": 0.992,
+  "dark_mean_ratio": 0.99,
+  "crushed_increase": 0.022,
+  "clipped_increase": -0.019,
+  "corner_ratio": 0.946,
+  "sprites": [
+   {
+    "pixels": 2369,
+    "abs_weber_change": -0.0016,
+    "edge_ratio": 1.008,
+    "hue_shift": 3.29
+   }
+  ],
+  "glass_hue_shift": [
+   0.05,
+   0.27
+  ]
+ },
+ "cottage__day__off": {
+  "shot": "cottage",
+  "time": "day",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 76.29,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 86.21,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "weber": 0.05920371571489264,
+    "edge": 5.586570896522832
+   }
+  ]
+ },
+ "cottage__day__natural": {
+  "shot": "cottage",
+  "time": "day",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 73.86,
+  "crushed_pct": 0.003,
+  "clipped_pct": 0.0,
+  "corners": 80.57,
+  "grass_hue_shift": 0.4,
+  "grass_sat_ratio": 1.074,
+  "blue_hue_shift": 0.37,
+  "dark_detail_ratio": 0.997,
+  "dark_mean_ratio": 0.931,
+  "crushed_increase": 0.003,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.935,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0057,
+    "edge_ratio": 1.016,
+    "hue_shift": 0.45
+   }
+  ]
+ },
+ "cottage__day__golden_hour": {
+  "shot": "cottage",
+  "time": "day",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 73.45,
+  "crushed_pct": 0.003,
+  "clipped_pct": 0.0,
+  "corners": 78.98,
+  "grass_hue_shift": 2.74,
+  "grass_sat_ratio": 1.074,
+  "blue_hue_shift": 1.16,
+  "dark_detail_ratio": 0.974,
+  "dark_mean_ratio": 0.912,
+  "crushed_increase": 0.003,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.916,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0063,
+    "edge_ratio": 1.025,
+    "hue_shift": 3.11
+   }
+  ]
+ },
+ "cottage__day__moonlight": {
+  "shot": "cottage",
+  "time": "day",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 75.2,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 79.27,
+  "grass_hue_shift": 4.4,
+  "grass_sat_ratio": 0.858,
+  "blue_hue_shift": 1.26,
+  "dark_detail_ratio": 1.015,
+  "dark_mean_ratio": 0.995,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.919,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.007,
+    "edge_ratio": 1.002,
+    "hue_shift": 5.09
+   }
+  ]
+ },
+ "cottage__day__interior_warm": {
+  "shot": "cottage",
+  "time": "day",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 76.02,
+  "crushed_pct": 0.0,
+  "clipped_pct": 0.0,
+  "corners": 82.54,
+  "grass_hue_shift": 3.09,
+  "grass_sat_ratio": 1.086,
+  "blue_hue_shift": 1.47,
+  "dark_detail_ratio": 1.001,
+  "dark_mean_ratio": 1.0,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.957,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": -0.0,
+    "edge_ratio": 1.009,
+    "hue_shift": 2.72
+   }
+  ]
+ },
+ "cottage__evening__off": {
+  "shot": "cottage",
+  "time": "evening",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 42.82,
+  "crushed_pct": 0.014,
+  "clipped_pct": 0.0,
+  "corners": 47.07,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "weber": 0.5226711601400034,
+    "edge": 4.448999423669143
+   }
+  ]
+ },
+ "cottage__evening__natural": {
+  "shot": "cottage",
+  "time": "evening",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 40.2,
+  "crushed_pct": 0.054,
+  "clipped_pct": 0.0,
+  "corners": 42.29,
+  "grass_hue_shift": 0.46,
+  "grass_sat_ratio": 1.09,
+  "blue_hue_shift": 0.13,
+  "dark_detail_ratio": 0.979,
+  "dark_mean_ratio": 0.919,
+  "crushed_increase": 0.04,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.898,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0426,
+    "edge_ratio": 1.009,
+    "hue_shift": 0.38
+   }
+  ]
+ },
+ "cottage__evening__golden_hour": {
+  "shot": "cottage",
+  "time": "evening",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 39.71,
+  "crushed_pct": 0.059,
+  "clipped_pct": 0.0,
+  "corners": 41.25,
+  "grass_hue_shift": 2.79,
+  "grass_sat_ratio": 1.085,
+  "blue_hue_shift": 3.73,
+  "dark_detail_ratio": 0.967,
+  "dark_mean_ratio": 0.903,
+  "crushed_increase": 0.045,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.876,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.068,
+    "edge_ratio": 1.008,
+    "hue_shift": 2.26
+   }
+  ]
+ },
+ "cottage__evening__moonlight": {
+  "shot": "cottage",
+  "time": "evening",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 42.1,
+  "crushed_pct": 0.024,
+  "clipped_pct": 0.0,
+  "corners": 42.66,
+  "grass_hue_shift": 6.65,
+  "grass_sat_ratio": 0.872,
+  "blue_hue_shift": 2.33,
+  "dark_detail_ratio": 0.99,
+  "dark_mean_ratio": 0.983,
+  "crushed_increase": 0.01,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.906,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0071,
+    "edge_ratio": 1.002,
+    "hue_shift": 6.61
+   }
+  ]
+ },
+ "cottage__evening__interior_warm": {
+  "shot": "cottage",
+  "time": "evening",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 42.63,
+  "crushed_pct": 0.014,
+  "clipped_pct": 0.0,
+  "corners": 44.82,
+  "grass_hue_shift": 3.25,
+  "grass_sat_ratio": 1.084,
+  "blue_hue_shift": 3.93,
+  "dark_detail_ratio": 0.987,
+  "dark_mean_ratio": 0.993,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.952,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0022,
+    "edge_ratio": 1.006,
+    "hue_shift": 2.72
+   }
+  ]
+ },
+ "cottage__night_lamps__off": {
+  "shot": "cottage",
+  "time": "night_lamps",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 32.87,
+  "crushed_pct": 0.109,
+  "clipped_pct": 0.033,
+  "corners": 36.21,
+  "lamps": [
+   {
+    "lamp": 0,
+    "at": [
+     1096,
+     503
+    ],
+    "rgb": [
+     255,
+     177,
+     72
+    ],
+    "hue": 34.43,
+    "sat": 0.718,
+    "glass": true
+   },
+   {
+    "lamp": 3,
+    "at": [
+     795,
+     226
+    ],
+    "rgb": [
+     35,
+     36,
+     39
+    ],
+    "hue": 221.14,
+    "sat": 0.112,
+    "glass": false
+   }
+  ],
+  "sprites": [
+   {
+    "pixels": 2392,
+    "weber": -0.007409011908223592,
+    "edge": 3.6730160099295155
+   }
+  ]
+ },
+ "cottage__night_lamps__natural": {
+  "shot": "cottage",
+  "time": "night_lamps",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 30.28,
+  "crushed_pct": 0.235,
+  "clipped_pct": 0.033,
+  "corners": 31.86,
+  "lamps": [
+   {
+    "lamp": 0,
+    "at": [
+     1096,
+     503
+    ],
+    "rgb": [
+     255,
+     178,
+     67
+    ],
+    "hue": 35.43,
+    "sat": 0.737,
+    "glass": true
+   },
+   {
+    "lamp": 3,
+    "at": [
+     795,
+     226
+    ],
+    "rgb": [
+     33,
+     34,
+     37
+    ],
+    "hue": 221.14,
+    "sat": 0.118,
+    "glass": false
+   }
+  ],
+  "grass_hue_shift": 0.36,
+  "grass_sat_ratio": 1.088,
+  "blue_hue_shift": 0.61,
+  "dark_detail_ratio": 0.972,
+  "dark_mean_ratio": 0.906,
+  "crushed_increase": 0.126,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.88,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": -0.0,
+    "edge_ratio": 1.007,
+    "hue_shift": 0.8
+   }
+  ],
+  "glass_hue_shift": [
+   1.0
+  ]
+ },
+ "cottage__night_lamps__golden_hour": {
+  "shot": "cottage",
+  "time": "night_lamps",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 29.79,
+  "crushed_pct": 0.247,
+  "clipped_pct": 0.033,
+  "corners": 30.98,
+  "lamps": [
+   {
+    "lamp": 0,
+    "at": [
+     1096,
+     503
+    ],
+    "rgb": [
+     255,
+     177,
+     69
+    ],
+    "hue": 34.82,
+    "sat": 0.729,
+    "glass": true
+   },
+   {
+    "lamp": 3,
+    "at": [
+     795,
+     226
+    ],
+    "rgb": [
+     33,
+     33,
+     36
+    ],
+    "hue": 233.33,
+    "sat": 0.093,
+    "glass": false
+   }
+  ],
+  "grass_hue_shift": 3.18,
+  "grass_sat_ratio": 1.082,
+  "blue_hue_shift": 1.8,
+  "dark_detail_ratio": 0.959,
+  "dark_mean_ratio": 0.889,
+  "crushed_increase": 0.138,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.856,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": -0.0069,
+    "edge_ratio": 0.993,
+    "hue_shift": 2.88
+   }
+  ],
+  "glass_hue_shift": [
+   0.39
+  ]
+ },
+ "cottage__night_lamps__moonlight": {
+  "shot": "cottage",
+  "time": "night_lamps",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 32.28,
+  "crushed_pct": 0.129,
+  "clipped_pct": 0.0,
+  "corners": 32.61,
+  "lamps": [
+   {
+    "lamp": 0,
+    "at": [
+     1096,
+     503
+    ],
+    "rgb": [
+     253,
+     176,
+     74
+    ],
+    "hue": 34.19,
+    "sat": 0.708,
+    "glass": true
+   },
+   {
+    "lamp": 3,
+    "at": [
+     795,
+     226
+    ],
+    "rgb": [
+     34,
+     36,
+     41
+    ],
+    "hue": 220.68,
+    "sat": 0.179,
+    "glass": false
+   }
+  ],
+  "grass_hue_shift": 7.72,
+  "grass_sat_ratio": 0.894,
+  "blue_hue_shift": 0.67,
+  "dark_detail_ratio": 0.985,
+  "dark_mean_ratio": 0.983,
+  "crushed_increase": 0.02,
+  "clipped_increase": -0.033,
+  "corner_ratio": 0.901,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": -0.0036,
+    "edge_ratio": 0.999,
+    "hue_shift": 6.94
+   }
+  ],
+  "glass_hue_shift": [
+   0.24
+  ]
+ },
+ "cottage__night_lamps__interior_warm": {
+  "shot": "cottage",
+  "time": "night_lamps",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 32.62,
+  "crushed_pct": 0.116,
+  "clipped_pct": 0.033,
+  "corners": 34.36,
+  "lamps": [
+   {
+    "lamp": 0,
+    "at": [
+     1096,
+     503
+    ],
+    "rgb": [
+     255,
+     176,
+     70
+    ],
+    "hue": 34.38,
+    "sat": 0.725,
+    "glass": true
+   },
+   {
+    "lamp": 3,
+    "at": [
+     795,
+     226
+    ],
+    "rgb": [
+     36,
+     36,
+     38
+    ],
+    "hue": 230.53,
+    "sat": 0.062,
+    "glass": false
+   }
+  ],
+  "grass_hue_shift": 3.6,
+  "grass_sat_ratio": 1.076,
+  "blue_hue_shift": 0.32,
+  "dark_detail_ratio": 0.989,
+  "dark_mean_ratio": 0.991,
+  "crushed_increase": 0.007,
+  "clipped_increase": 0.0,
+  "corner_ratio": 0.949,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "abs_weber_change": 0.0013,
+    "edge_ratio": 1.004,
+    "hue_shift": 3.29
+   }
+  ],
+  "glass_hue_shift": [
+   0.05
+  ]
+ },
+ "interior__day__off": {
+  "shot": "interior",
+  "time": "day",
+  "preset": "off",
+  "stage": "blit",
+  "mean_luma": 50.4,
+  "crushed_pct": 0.0,
+  "clipped_pct": 3.218,
+  "corners": 14.63,
+  "sprites": [
+   {
+    "pixels": 5504,
+    "weber": 0.029107719787921822,
+    "edge": 7.592236272697043
+   },
+   {
+    "pixels": 4971,
+    "weber": 0.3288234351924525,
+    "edge": 8.469180397916958
+   },
+   {
+    "pixels": 28590,
+    "weber": -0.15470580311635426,
+    "edge": 1.5939373830299395
+   }
+  ]
+ },
+ "interior__day__natural": {
+  "shot": "interior",
+  "time": "day",
+  "preset": "natural",
+  "stage": "composite",
+  "mean_luma": 48.79,
+  "crushed_pct": 0.0,
+  "clipped_pct": 3.389,
+  "corners": 11.53,
+  "grass_hue_shift": 0.44,
+  "grass_sat_ratio": 1.07,
+  "blue_hue_shift": 0.22,
+  "dark_detail_ratio": 1.029,
+  "dark_mean_ratio": 0.842,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.171,
+  "corner_ratio": 0.788,
+  "sprites": [
+   {
+    "pixels": 5504,
+    "abs_weber_change": -0.0037,
+    "edge_ratio": 1.025,
+    "hue_shift": 0.36
+   },
+   {
+    "pixels": 4971,
+    "abs_weber_change": 0.0083,
+    "edge_ratio": 1.023,
+    "hue_shift": 0.83
+   },
+   {
+    "pixels": 28590,
+    "abs_weber_change": 0.0103,
+    "edge_ratio": 1.028,
+    "hue_shift": 0.95
+   }
+  ]
+ },
+ "interior__day__golden_hour": {
+  "shot": "interior",
+  "time": "day",
+  "preset": "golden_hour",
+  "stage": "composite",
+  "mean_luma": 48.72,
+  "crushed_pct": 0.0,
+  "clipped_pct": 3.363,
+  "corners": 10.75,
+  "grass_hue_shift": 3.36,
+  "grass_sat_ratio": 1.088,
+  "blue_hue_shift": 1.38,
+  "dark_detail_ratio": 1.021,
+  "dark_mean_ratio": 0.83,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.145,
+  "corner_ratio": 0.735,
+  "sprites": [
+   {
+    "pixels": 5504,
+    "abs_weber_change": -0.0079,
+    "edge_ratio": 1.026,
+    "hue_shift": 2.14
+   },
+   {
+    "pixels": 4971,
+    "abs_weber_change": 0.0006,
+    "edge_ratio": 1.019,
+    "hue_shift": 1.52
+   },
+   {
+    "pixels": 28590,
+    "abs_weber_change": 0.0105,
+    "edge_ratio": 1.04,
+    "hue_shift": 0.33
+   }
+  ]
+ },
+ "interior__day__moonlight": {
+  "shot": "interior",
+  "time": "day",
+  "preset": "moonlight",
+  "stage": "composite",
+  "mean_luma": 50.11,
+  "crushed_pct": 0.0,
+  "clipped_pct": 3.214,
+  "corners": 12.53,
+  "grass_hue_shift": 4.07,
+  "grass_sat_ratio": 0.853,
+  "blue_hue_shift": 1.83,
+  "dark_detail_ratio": 1.059,
+  "dark_mean_ratio": 0.956,
+  "crushed_increase": 0.0,
+  "clipped_increase": -0.004,
+  "corner_ratio": 0.856,
+  "sprites": [
+   {
+    "pixels": 5504,
+    "abs_weber_change": -0.002,
+    "edge_ratio": 1.002,
+    "hue_shift": 4.66
+   },
+   {
+    "pixels": 4971,
+    "abs_weber_change": -0.0032,
+    "edge_ratio": 1.001,
+    "hue_shift": 2.54
+   },
+   {
+    "pixels": 28590,
+    "abs_weber_change": -0.0012,
+    "edge_ratio": 1.01,
+    "hue_shift": 1.43
+   }
+  ]
+ },
+ "interior__day__interior_warm": {
+  "shot": "interior",
+  "time": "day",
+  "preset": "interior_warm",
+  "stage": "composite",
+  "mean_luma": 50.55,
+  "crushed_pct": 0.0,
+  "clipped_pct": 3.287,
+  "corners": 13.62,
+  "grass_hue_shift": 3.33,
+  "grass_sat_ratio": 1.091,
+  "blue_hue_shift": 0.98,
+  "dark_detail_ratio": 1.033,
+  "dark_mean_ratio": 0.99,
+  "crushed_increase": 0.0,
+  "clipped_increase": 0.069,
+  "corner_ratio": 0.931,
+  "sprites": [
+   {
+    "pixels": 5504,
+    "abs_weber_change": -0.0021,
+    "edge_ratio": 1.003,
+    "hue_shift": 2.34
+   },
+   {
+    "pixels": 4971,
+    "abs_weber_change": -0.0062,
+    "edge_ratio": 0.999,
+    "hue_shift": 1.39
+   },
+   {
+    "pixels": 28590,
+    "abs_weber_change": 0.0002,
+    "edge_ratio": 1.006,
+    "hue_shift": 0.53
+   }
+  ]
+ }
+}

@@ -1,0 +1,1267 @@
+{
+ "cameras": {
+  "village__day": {
+   "target": [
+    31.249999859331034,
+    16.249999118426246,
+    0.8
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "village__evening": {
+   "target": [
+    31.249999859331034,
+    16.249999118426246,
+    0.8
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "village__night_lamps": {
+   "target": [
+    31.249999859331034,
+    16.249999118426246,
+    0.8
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "shore__day": {
+   "target": [
+    43.74999845264135,
+    24.37499820407795,
+    0.6994062613203352
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "shore__evening": {
+   "target": [
+    43.74999845264135,
+    24.37499820407795,
+    0.6994062613203352
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "shore__night_lamps": {
+   "target": [
+    43.74999845264135,
+    24.37499820407795,
+    0.6994062613203352
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "bridge__day": {
+   "target": [
+    34.374999507658615,
+    24.687498168910714,
+    0.999999977492965
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "bridge__evening": {
+   "target": [
+    34.374999507658615,
+    24.687498168910714,
+    0.999999977492965
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "bridge__night_lamps": {
+   "target": [
+    34.374999507658615,
+    24.687498168910714,
+    0.999999977492965
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "cottage__day": {
+   "target": [
+    18.750001266020718,
+    16.874999048091762,
+    0.8
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "cottage__evening": {
+   "target": [
+    18.750001266020718,
+    16.874999048091762,
+    0.8
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "cottage__night_lamps": {
+   "target": [
+    18.750001266020718,
+    16.874999048091762,
+    0.8
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "interior__day": {
+   "target": [
+    8.0,
+    5.091815833349058,
+    0.9
+   ],
+   "pitch": 55.0,
+   "fov": 12.0,
+   "distance": 35.679,
+   "ortho": false,
+   "yaw": 0.0
+  }
+ },
+ "frames": {
+  "village__day__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.2147,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__day__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.2147,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__day__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.21469,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__day__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.21463,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__day__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.21469,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__evening__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.2178,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__evening__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.2178,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__evening__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.2178,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__evening__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.21779,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__evening__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.2178,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__night_lamps__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.22574,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__night_lamps__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.22573,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__night_lamps__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.22569,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__night_lamps__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.2253,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "village__night_lamps__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.22572,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__day__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.33117,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__day__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.33117,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__day__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.33116,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__day__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.33114,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__day__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.33116,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__evening__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.2376,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__evening__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.2376,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__evening__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.2376,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__evening__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.23759,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__evening__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.2376,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__night_lamps__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.23053,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__night_lamps__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.23052,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__night_lamps__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.23046,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__night_lamps__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.23022,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "shore__night_lamps__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.23052,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__day__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.27133,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__day__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.27133,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__day__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.27132,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__day__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.27129,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__day__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.27132,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__evening__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.21699,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__evening__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.21699,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__evening__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.21699,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__evening__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.21697,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__evening__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.21699,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__night_lamps__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.22182,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__night_lamps__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.2218,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__night_lamps__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.22174,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__night_lamps__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.22152,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "bridge__night_lamps__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.22181,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__day__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.18237,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__day__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.18237,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__day__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.18236,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__day__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.18229,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__day__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.18236,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__evening__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.19234,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__evening__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.19234,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__evening__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.19233,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__evening__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.19231,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__evening__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.19234,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__night_lamps__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.18547,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__night_lamps__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.18544,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__night_lamps__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.18528,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__night_lamps__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.18518,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "cottage__night_lamps__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.18545,
+   "studio_path_diff_box": [
+    0,
+    0,
+    1279,
+    719
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "interior__day__off": {
+   "stage": "blit",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.01123,
+   "studio_path_diff_box": [
+    725,
+    188,
+    868,
+    332
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "interior__day__natural": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.01123,
+   "studio_path_diff_box": [
+    725,
+    188,
+    868,
+    332
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "interior__day__golden_hour": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.01123,
+   "studio_path_diff_box": [
+    725,
+    188,
+    868,
+    332
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "interior__day__moonlight": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.01123,
+   "studio_path_diff_box": [
+    725,
+    188,
+    868,
+    332
+   ],
+   "game_path_in_studio_equals_game": false
+  },
+  "interior__day__interior_warm": {
+   "stage": "composite",
+   "canvas": [
+    230,
+    26,
+    720,
+    650
+   ],
+   "studio_path_vs_game_changed_share": 0.01123,
+   "studio_path_diff_box": [
+    725,
+    188,
+    868,
+    332
+   ],
+   "game_path_in_studio_equals_game": false
+  }
+ }
+}

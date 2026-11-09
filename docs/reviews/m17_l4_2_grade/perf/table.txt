@@ -1,0 +1,12 @@
+== mesa720 (llvmpipe (LLVM 22.1.1, 2, [1280, 720]) clocks ['software', 'software']
+   whole frame GPU p50/p95 | CPU p50: off 28.165/30.757 | 27.393 ; dof 48.222/51.047 | 27.537 ; graded 29.424/33.504 | 27.255 ; dof+graded 50.803/53.459 | 48.399
+   passes GPU p50/p95 | CPU p50: blit 0.8044/1.0945 | 0.0826 ; identity 0.8012/0.9586 | 0.0897 ; grade 2.4124/2.7970 | 0.1188 ; dof 20.9484/23.0011 | 0.1245 ; dof->grade 23.5353/26.4096 | 21.1215 software
+   configure {'unchanged_p50': 0.1, 'changed_p50': 25.45} allocations {'composite_objects': 3, 'chain_bytes': 3686400, 'chain_allocations': 1}
+== rtx1080 (NVIDIA GeForce RTX 4070/, [1920, 1080]) clocks ['2520 MHz, 10001 MHz, P0', '345 MHz, 405 MHz, P8']
+   whole frame GPU p50/p95 | CPU p50: off 3.447/5.195 | 7.307 ; dof 5.231/7.804 | 7.449 ; graded 3.459/6.085 | 7.389 ; dof+graded 5.535/8.243 | 7.716
+   passes GPU p50/p95 | CPU p50: blit 0.0133/0.0154 | 0.0321 ; identity 0.0143/0.0164 | 0.0429 ; grade 0.0369/0.0410 | 0.0703 ; dof 0.2621/0.2898 | 0.0685 ; dof->grade 0.3011/0.3328 | 0.1427 2775 MHz, 10001 MHz, P0
+   configure {'unchanged_p50': 0.1, 'changed_p50': 24.2} allocations {'composite_objects': 3, 'chain_bytes': 8294400, 'chain_allocations': 1}
+== rtx720 (NVIDIA GeForce RTX 4070/, [1280, 720]) clocks ['2520 MHz, 10001 MHz, P0', '210 MHz, 405 MHz, P8']
+   whole frame GPU p50/p95 | CPU p50: off 2.506/4.074 | 7.233 ; dof 3.895/5.857 | 7.383 ; graded 2.623/4.145 | 7.369 ; dof+graded 4.129/6.987 | 7.671
+   passes GPU p50/p95 | CPU p50: blit 0.0072/0.0082 | 0.0292 ; identity 0.0072/0.0082 | 0.0400 ; grade 0.0184/0.0195 | 0.0686 ; dof 0.1280/0.1300 | 0.0651 ; dof->grade 0.1485/0.1505 | 0.1413 2520 MHz, 10001 MHz, P0
+   configure {'unchanged_p50': 0.1, 'changed_p50': 24.4} allocations {'composite_objects': 3, 'chain_bytes': 3686400, 'chain_allocations': 1}

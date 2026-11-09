@@ -1,0 +1,262 @@
+{
+ "village__day__natural": {
+  "originals_agree_share": 0.7853,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9994
+ },
+ "village__day__golden_hour": {
+  "originals_agree_share": 0.7853,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "village__day__moonlight": {
+  "originals_agree_share": 0.7853,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "village__day__interior_warm": {
+  "originals_agree_share": 0.7853,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9995
+ },
+ "village__evening__natural": {
+  "originals_agree_share": 0.7822,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "village__evening__golden_hour": {
+  "originals_agree_share": 0.7822,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "village__evening__moonlight": {
+  "originals_agree_share": 0.7822,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "village__evening__interior_warm": {
+  "originals_agree_share": 0.7822,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9961
+ },
+ "village__night_lamps__natural": {
+  "originals_agree_share": 0.7743,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "village__night_lamps__golden_hour": {
+  "originals_agree_share": 0.7743,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "village__night_lamps__moonlight": {
+  "originals_agree_share": 0.7743,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9992
+ },
+ "village__night_lamps__interior_warm": {
+  "originals_agree_share": 0.7743,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9621
+ },
+ "shore__day__natural": {
+  "originals_agree_share": 0.6688,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9998
+ },
+ "shore__day__golden_hour": {
+  "originals_agree_share": 0.6688,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "shore__day__moonlight": {
+  "originals_agree_share": 0.6688,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "shore__day__interior_warm": {
+  "originals_agree_share": 0.6688,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9998
+ },
+ "shore__evening__natural": {
+  "originals_agree_share": 0.7624,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "shore__evening__golden_hour": {
+  "originals_agree_share": 0.7624,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "shore__evening__moonlight": {
+  "originals_agree_share": 0.7624,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "shore__evening__interior_warm": {
+  "originals_agree_share": 0.7624,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9958
+ },
+ "shore__night_lamps__natural": {
+  "originals_agree_share": 0.7695,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "shore__night_lamps__golden_hour": {
+  "originals_agree_share": 0.7695,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "shore__night_lamps__moonlight": {
+  "originals_agree_share": 0.7695,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9979
+ },
+ "shore__night_lamps__interior_warm": {
+  "originals_agree_share": 0.7695,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.8876
+ },
+ "bridge__day__natural": {
+  "originals_agree_share": 0.7287,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9995
+ },
+ "bridge__day__golden_hour": {
+  "originals_agree_share": 0.7287,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "bridge__day__moonlight": {
+  "originals_agree_share": 0.7287,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "bridge__day__interior_warm": {
+  "originals_agree_share": 0.7287,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9997
+ },
+ "bridge__evening__natural": {
+  "originals_agree_share": 0.783,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "bridge__evening__golden_hour": {
+  "originals_agree_share": 0.783,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "bridge__evening__moonlight": {
+  "originals_agree_share": 0.783,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9999
+ },
+ "bridge__evening__interior_warm": {
+  "originals_agree_share": 0.783,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9942
+ },
+ "bridge__night_lamps__natural": {
+  "originals_agree_share": 0.7782,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "bridge__night_lamps__golden_hour": {
+  "originals_agree_share": 0.7782,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "bridge__night_lamps__moonlight": {
+  "originals_agree_share": 0.7782,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9994
+ },
+ "bridge__night_lamps__interior_warm": {
+  "originals_agree_share": 0.7782,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9092
+ },
+ "cottage__day__natural": {
+  "originals_agree_share": 0.8176,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9996
+ },
+ "cottage__day__golden_hour": {
+  "originals_agree_share": 0.8176,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "cottage__day__moonlight": {
+  "originals_agree_share": 0.8176,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "cottage__day__interior_warm": {
+  "originals_agree_share": 0.8176,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9991
+ },
+ "cottage__evening__natural": {
+  "originals_agree_share": 0.8077,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "cottage__evening__golden_hour": {
+  "originals_agree_share": 0.8077,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "cottage__evening__moonlight": {
+  "originals_agree_share": 0.8077,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "cottage__evening__interior_warm": {
+  "originals_agree_share": 0.8077,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9934
+ },
+ "cottage__night_lamps__natural": {
+  "originals_agree_share": 0.8145,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "cottage__night_lamps__golden_hour": {
+  "originals_agree_share": 0.8145,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "cottage__night_lamps__moonlight": {
+  "originals_agree_share": 0.8145,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9996
+ },
+ "cottage__night_lamps__interior_warm": {
+  "originals_agree_share": 0.8145,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.8485
+ },
+ "interior__day__natural": {
+  "originals_agree_share": 0.9888,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9998
+ },
+ "interior__day__golden_hour": {
+  "originals_agree_share": 0.9888,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ },
+ "interior__day__moonlight": {
+  "originals_agree_share": 0.9888,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 0.9999
+ },
+ "interior__day__interior_warm": {
+  "originals_agree_share": 0.9888,
+  "graded_agree_where_originals_do": 1.0,
+  "graded_changed_share": 1.0
+ }
+}
