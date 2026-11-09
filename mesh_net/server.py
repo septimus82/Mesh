@@ -20,6 +20,8 @@ class Server:
         self.offline: dict[str, tuple[int, Player]] = {}
 
     async def start(self, port: int = 0) -> int:
+        if self.listener is not None:
+            raise RuntimeError("server already listening")
         self.listener = await asyncio.start_server(self._accept, "127.0.0.1", port, limit=wire.MAX_BYTES, backlog=16)
         self.clock = asyncio.create_task(self._run_clock())
         return int(self.listener.sockets[0].getsockname()[1])

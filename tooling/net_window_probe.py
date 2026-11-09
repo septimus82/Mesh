@@ -22,8 +22,8 @@ async def drive(arena, port: int) -> None:
             if cmd[0] == "quit":
                 return
             if cmd[0] in ("press", "release"):
-                dispatch = arena.press if cmd[0] == "press" else arena.release
-                dispatch(getattr(arena.arcade.key, cmd[1]), 0)
+                event = "on_key_press" if cmd[0] == "press" else "on_key_release"
+                arena.window.dispatch_event(event, getattr(arena.arcade.key, cmd[1]), 0)
             result = {"state": arena.client.state if arena.client else None,
                       "entity": arena.client.entity if arena.client else None}
             if cmd[0] == "capture":

@@ -25,14 +25,14 @@ def open_arena():
         root = Path(temp)
         paths = {"MESH_USER_DIR": "user", "MESH_RUNTIME_SETTINGS_PATH": "user/settings.json",
                  "MESH_PROJECTS_DIR": "projects", "MESH_PROJECTS_PATH": "user/projects.json",
-                 "MESH_SAVE_DIR": "saves"}
+                 "MESH_SAVE_DIR": "saves", "MESH_REPO_ROOT": "."}
         previous = {name: os.environ.get(name) for name in paths}
         try:
             for name, relative in paths.items():
                 os.environ[name] = str(root / relative)
-            from engine.optional_arcade import arcade
             from engine.config import load_config
             from engine.game import GameWindow
+            from engine.optional_arcade import arcade
             from engine.project_scaffold import create_project
 
             create_project(root, "Mesh local room")

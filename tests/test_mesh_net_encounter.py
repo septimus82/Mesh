@@ -4,9 +4,8 @@ import pytest
 from mesh_net import protocol as wire
 from mesh_net.simulation import Room
 
-pytestmark = pytest.mark.fast
 
-
+@pytest.mark.fast
 def test_range_cooldown_duplicate_attack_and_single_award():
     room = Room()
     a, b = room.join(), room.join()
@@ -49,6 +48,7 @@ def test_range_cooldown_duplicate_attack_and_single_award():
     assert resumed != a and room.snapshot()["holder"] == resumed and room.enemy.dead
 
 
+@pytest.mark.integration
 def test_headless_authority_does_not_load_graphics_or_studio():
     import subprocess
     import sys
