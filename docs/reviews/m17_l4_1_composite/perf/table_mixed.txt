@@ -1,0 +1,36 @@
+== mesa720_Mesh-l4a (llvmpipe (LLVM 22.1.1, 2, [1280, 720]) clocks ['software', 'software']
+   whole frame GPU p50/p95 | CPU p50: off 25.102/26.833 | 24.528 ; dof 42.135/43.820 | 24.637
+== mesa720_Mesh-l4a_2 (llvmpipe (LLVM 22.1.1, 2, [1280, 720]) clocks ['software', 'software']
+   whole frame GPU p50/p95 | CPU p50: off 25.343/27.937 | 24.800 ; dof 42.506/44.286 | 25.041
+== mesa720_Mesh-l4a_3 (llvmpipe (LLVM 22.1.1, 2, [1280, 720]) clocks ['software', 'software']
+   whole frame GPU p50/p95 | CPU p50: off 25.441/27.612 | 24.825 ; dof 42.774/46.642 | 25.136
+== mesa720_Mesh-l4c (llvmpipe (LLVM 22.1.1, 2, [1280, 720]) clocks ['software', 'software']
+   whole frame GPU p50/p95 | CPU p50: off 25.745/26.945 | 25.155 ; dof 42.481/45.083 | 24.990 ; identity 25.692/28.730 | 25.126 ; dof+identity 42.886/46.111 | 42.297
+   passes GPU p50/p95 | CPU p50: blit 0.6648/0.8298 | 0.0684 ; identity 0.6656/0.8248 | 0.0792 ; dof 18.0854/20.1933 | 0.1053 ; dof->identity 18.8998/20.9764 | 18.2066 software
+   allocations {'composite_objects': 3, 'chain_bytes': 3686400, 'chain_allocations': 1}
+== mesa720_Mesh-l4c_2 (llvmpipe (LLVM 22.1.1, 2, [1280, 720]) clocks ['software', 'software']
+   whole frame GPU p50/p95 | CPU p50: off 25.985/27.926 | 25.383 ; dof 43.333/45.516 | 25.156 ; identity 25.873/27.070 | 25.297 ; dof+identity 43.411/45.851 | 42.792
+   passes GPU p50/p95 | CPU p50: blit 0.6475/0.7981 | 0.0664 ; identity 0.6568/0.7892 | 0.0774 ; dof 17.5232/19.6559 | 0.1054 ; dof->identity 18.1251/20.5068 | 17.5574 software
+   allocations {'composite_objects': 3, 'chain_bytes': 3686400, 'chain_allocations': 1}
+== mesa720_Mesh-l4c_3 (llvmpipe (LLVM 22.1.1, 2, [1280, 720]) clocks ['software', 'software']
+   whole frame GPU p50/p95 | CPU p50: off 25.391/26.809 | 24.823 ; dof 42.837/45.388 | 25.230 ; identity 25.836/26.966 | 25.235 ; dof+identity 43.226/45.159 | 42.636
+   passes GPU p50/p95 | CPU p50: blit 0.6740/0.7970 | 0.0653 ; identity 0.6633/0.7783 | 0.0783 ; dof 17.7563/20.0854 | 0.1075 ; dof->identity 18.5726/20.5256 | 17.9290 software
+   allocations {'composite_objects': 3, 'chain_bytes': 3686400, 'chain_allocations': 1}
+== rtx1080_Mesh-l4a (NVIDIA GeForce RTX 4070/, [1920, 1080]) clocks ['2520 MHz, 10001 MHz, P0', '405 MHz, 405 MHz, P8']
+   whole frame GPU p50/p95 | CPU p50: off 2.268/3.413 | 6.859 ; dof 3.827/5.503 | 7.038
+== rtx1080_Mesh-l4c (NVIDIA GeForce RTX 4070/, [1920, 1080]) clocks ['2520 MHz, 10001 MHz, P0', '390 MHz, 405 MHz, P8']
+   whole frame GPU p50/p95 | CPU p50: off 3.264/4.869 | 6.891 ; dof 4.925/7.260 | 7.060 ; identity 3.149/5.950 | 7.032 ; dof+identity 5.035/7.030 | 7.274
+   passes GPU p50/p95 | CPU p50: blit 0.0138/0.0584 | 0.0292 ; identity 0.0143/0.0584 | 0.0411 ; dof 0.2621/1.1254 | 0.0645 ; dof->identity 0.2785/1.1899 | 0.1386 2775 MHz, 10001 MHz, P0
+   allocations {'composite_objects': 3, 'chain_bytes': 8294400, 'chain_allocations': 1}
+== rtx720_Mesh-l4a_1 (NVIDIA GeForce RTX 4070/, [1280, 720]) clocks ['2520 MHz, 10001 MHz, P0', '210 MHz, 405 MHz, P8']
+   whole frame GPU p50/p95 | CPU p50: off 2.011/3.183 | 6.961 ; dof 3.053/4.605 | 7.106
+== rtx720_Mesh-l4a_2 (NVIDIA GeForce RTX 4070/, [1280, 720]) clocks ['2520 MHz, 10001 MHz, P0', '330 MHz, 405 MHz, P8']
+   whole frame GPU p50/p95 | CPU p50: off 1.804/2.448 | 6.817 ; dof 2.623/3.570 | 6.950
+== rtx720_Mesh-l4c_1 (NVIDIA GeForce RTX 4070/, [1280, 720]) clocks ['2520 MHz, 10001 MHz, P0', '210 MHz, 405 MHz, P8']
+   whole frame GPU p50/p95 | CPU p50: off 2.493/4.427 | 6.907 ; dof 3.887/5.947 | 7.007 ; identity 2.483/4.446 | 6.901 ; dof+identity 3.979/6.053 | 7.253
+   passes GPU p50/p95 | CPU p50: blit 0.0072/0.0532 | 0.0292 ; identity 0.0072/0.0543 | 0.0410 ; dof 0.1280/0.9482 | 0.0644 ; dof->identity 0.1382/1.0127 | 0.1384 330 MHz, 405 MHz, P8
+   allocations {'composite_objects': 3, 'chain_bytes': 3686400, 'chain_allocations': 1}
+== rtx720_Mesh-l4c_2 (NVIDIA GeForce RTX 4070/, [1280, 720]) clocks ['2520 MHz, 10001 MHz, P0', '210 MHz, 405 MHz, P8']
+   whole frame GPU p50/p95 | CPU p50: off 2.489/4.367 | 6.851 ; dof 3.884/5.739 | 6.987 ; identity 2.482/4.226 | 6.900 ; dof+identity 3.977/5.879 | 7.155
+   passes GPU p50/p95 | CPU p50: blit 0.0072/0.0082 | 0.0289 ; identity 0.0072/0.0082 | 0.0408 ; dof 0.1280/0.1300 | 0.0640 ; dof->identity 0.1382/0.1403 | 0.1367 2400 MHz, 10001 MHz, P0
+   allocations {'composite_objects': 3, 'chain_bytes': 3686400, 'chain_allocations': 1}

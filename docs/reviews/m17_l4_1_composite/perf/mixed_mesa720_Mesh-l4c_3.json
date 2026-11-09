@@ -1,0 +1,105 @@
+{
+ "worktree": "D:\\Games\\Mesh-l4c",
+ "l4_1": true,
+ "gl": "llvmpipe (LLVM 22.1.1, 256 bits)",
+ "size": [
+  1280,
+  720
+ ],
+ "rounds": 30,
+ "method": "wall round ctx.finish()",
+ "whole_frame": {
+  "off": {
+   "gpu": {
+    "p50_ms": 25.3907,
+    "p95_ms": 26.8095
+   },
+   "cpu": {
+    "p50_ms": 24.8235,
+    "p95_ms": 26.2072
+   }
+  },
+  "dof": {
+   "gpu": {
+    "p50_ms": 42.8365,
+    "p95_ms": 45.3881
+   },
+   "cpu": {
+    "p50_ms": 25.2305,
+    "p95_ms": 26.9056
+   }
+  },
+  "identity": {
+   "gpu": {
+    "p50_ms": 25.836,
+    "p95_ms": 26.9664
+   },
+   "cpu": {
+    "p50_ms": 25.2351,
+    "p95_ms": 26.3302
+   }
+  },
+  "dof+identity": {
+   "gpu": {
+    "p50_ms": 43.2261,
+    "p95_ms": 45.1592
+   },
+   "cpu": {
+    "p50_ms": 42.6363,
+    "p95_ms": 44.5386
+   }
+  }
+ },
+ "whole_frame_clocks": [
+  "software",
+  "software"
+ ],
+ "passes": {
+  "blit": {
+   "gpu": {
+    "p50_ms": 0.674,
+    "p95_ms": 0.797
+   },
+   "cpu": {
+    "p50_ms": 0.0653,
+    "p95_ms": 0.0942
+   }
+  },
+  "identity": {
+   "gpu": {
+    "p50_ms": 0.6633,
+    "p95_ms": 0.7783
+   },
+   "cpu": {
+    "p50_ms": 0.0783,
+    "p95_ms": 0.125
+   }
+  },
+  "dof": {
+   "gpu": {
+    "p50_ms": 17.7563,
+    "p95_ms": 20.0854
+   },
+   "cpu": {
+    "p50_ms": 0.1075,
+    "p95_ms": 0.1591
+   }
+  },
+  "dof->identity": {
+   "gpu": {
+    "p50_ms": 18.5726,
+    "p95_ms": 20.5256
+   },
+   "cpu": {
+    "p50_ms": 17.929,
+    "p95_ms": 19.8826
+   }
+  }
+ },
+ "passes_clocks": "software",
+ "allocations": {
+  "composite_objects": 3,
+  "chain_bytes": 3686400,
+  "chain_allocations": 1
+ }
+}

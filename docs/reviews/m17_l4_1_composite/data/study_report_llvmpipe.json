@@ -1,0 +1,497 @@
+{
+ "size": [
+  960,
+  540
+ ],
+ "rooms": {
+  "village": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "off": {
+    "digest": "d0a9b8b3ca36f68f",
+    "stage": "blit",
+    "draw_calls": 32,
+    "live": {
+     "texture": 42,
+     "framebuffer": 6,
+     "program": 27,
+     "buffer": 312,
+     "geometry": 49
+    },
+    "repeat_same": true,
+    "blit_is_the_world": true,
+    "composite_made": false
+   },
+   "identity": {
+    "same_as_off": true,
+    "stage": "composite",
+    "draw_calls": 32,
+    "live": {
+     "texture": 42,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 312,
+     "geometry": 49
+    },
+    "repeat_same": true,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true,
+   "rgba": {
+    "identity_same": true,
+    "non_opaque": 0
+   },
+   "dof": {
+    "status": "on",
+    "stage": "dof",
+    "identity_stage": "dof+composite",
+    "changed_the_picture": true,
+    "identity_same": true,
+    "world_read_unchanged": true
+   },
+   "dof_forced": {
+    "stage": "dof",
+    "identity_stage": "dof+composite",
+    "identity_same": true,
+    "changed_the_picture": true,
+    "chain_allocations": 1
+   },
+   "off_after_dof_same": true,
+   "live_end": {
+    "texture": 43,
+    "framebuffer": 7,
+    "program": 29,
+    "buffer": 312,
+    "geometry": 49
+   }
+  },
+  "lakeside": {
+   "scene": "packs/core_regions/scenes/glow_lakeside.json",
+   "off": {
+    "digest": "eb45edfe6fec695f",
+    "stage": "blit",
+    "draw_calls": 17,
+    "live": {
+     "texture": 25,
+     "framebuffer": 6,
+     "program": 27,
+     "buffer": 496,
+     "geometry": 34
+    },
+    "repeat_same": true,
+    "blit_is_the_world": true,
+    "composite_made": false
+   },
+   "identity": {
+    "same_as_off": true,
+    "stage": "composite",
+    "draw_calls": 17,
+    "live": {
+     "texture": 25,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 496,
+     "geometry": 34
+    },
+    "repeat_same": true,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true,
+   "rgba": {
+    "identity_same": true,
+    "non_opaque": 0
+   },
+   "dof": {
+    "status": "on",
+    "stage": "dof",
+    "identity_stage": "dof+composite",
+    "changed_the_picture": true,
+    "identity_same": true,
+    "world_read_unchanged": true
+   },
+   "dof_forced": {
+    "stage": "dof",
+    "identity_stage": "dof+composite",
+    "identity_same": true,
+    "changed_the_picture": true,
+    "chain_allocations": 1
+   },
+   "off_after_dof_same": true,
+   "live_end": {
+    "texture": 26,
+    "framebuffer": 7,
+    "program": 29,
+    "buffer": 496,
+    "geometry": 34
+   }
+  },
+  "fixtures": {
+   "scene": "packs/core_regions/scenes/lamp_fixtures.json",
+   "off": {
+    "digest": "a066f1512b50d400",
+    "stage": "blit",
+    "draw_calls": 6,
+    "live": {
+     "texture": 16,
+     "framebuffer": 6,
+     "program": 27,
+     "buffer": 696,
+     "geometry": 27
+    },
+    "repeat_same": true,
+    "blit_is_the_world": true,
+    "composite_made": false
+   },
+   "identity": {
+    "same_as_off": true,
+    "stage": "composite",
+    "draw_calls": 6,
+    "live": {
+     "texture": 16,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 696,
+     "geometry": 27
+    },
+    "repeat_same": true,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true,
+   "rgba": {
+    "identity_same": true,
+    "non_opaque": 0
+   },
+   "dof": {
+    "status": "on",
+    "stage": "dof",
+    "identity_stage": "dof+composite",
+    "changed_the_picture": true,
+    "identity_same": true,
+    "world_read_unchanged": true
+   },
+   "dof_forced": {
+    "stage": "dof",
+    "identity_stage": "dof+composite",
+    "identity_same": true,
+    "changed_the_picture": true,
+    "chain_allocations": 1
+   },
+   "off_after_dof_same": true,
+   "live_end": {
+    "texture": 17,
+    "framebuffer": 7,
+    "program": 29,
+    "buffer": 696,
+    "geometry": 27
+   }
+  },
+  "cottage": {
+   "scene": "packs/core_regions/scenes/cottage.json",
+   "off": {
+    "digest": "829c0d2b515392c2",
+    "stage": "blit",
+    "draw_calls": 7,
+    "live": {
+     "texture": 18,
+     "framebuffer": 6,
+     "program": 27,
+     "buffer": 908,
+     "geometry": 26
+    },
+    "repeat_same": true,
+    "blit_is_the_world": true,
+    "composite_made": false
+   },
+   "identity": {
+    "same_as_off": true,
+    "stage": "composite",
+    "draw_calls": 7,
+    "live": {
+     "texture": 18,
+     "framebuffer": 6,
+     "program": 28,
+     "buffer": 908,
+     "geometry": 26
+    },
+    "repeat_same": true,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true,
+   "rgba": {
+    "identity_same": true,
+    "non_opaque": 0
+   },
+   "dof": {
+    "status": "on",
+    "stage": "dof",
+    "identity_stage": "dof+composite",
+    "changed_the_picture": true,
+    "identity_same": true,
+    "world_read_unchanged": true
+   },
+   "dof_forced": {
+    "stage": "dof",
+    "identity_stage": "dof+composite",
+    "identity_same": true,
+    "changed_the_picture": true,
+    "chain_allocations": 1
+   },
+   "off_after_dof_same": true,
+   "live_end": {
+    "texture": 19,
+    "framebuffer": 7,
+    "program": 29,
+    "buffer": 908,
+    "geometry": 26
+   }
+  },
+  "emissive": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "off": {
+    "digest": "4ee1c5e99294d803",
+    "stage": "blit",
+    "draw_calls": 8,
+    "live": {
+     "texture": 19,
+     "framebuffer": 5,
+     "program": 27,
+     "buffer": 272,
+     "geometry": 29
+    },
+    "repeat_same": true,
+    "blit_is_the_world": true,
+    "composite_made": false
+   },
+   "identity": {
+    "same_as_off": true,
+    "stage": "composite",
+    "draw_calls": 8,
+    "live": {
+     "texture": 19,
+     "framebuffer": 5,
+     "program": 28,
+     "buffer": 272,
+     "geometry": 29
+    },
+    "repeat_same": true,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true,
+   "rgba": {
+    "identity_same": true,
+    "non_opaque": 0
+   },
+   "dof": {
+    "status": "on",
+    "stage": "dof",
+    "identity_stage": "dof+composite",
+    "changed_the_picture": true,
+    "identity_same": true,
+    "world_read_unchanged": true
+   },
+   "dof_forced": {
+    "stage": "dof",
+    "identity_stage": "dof+composite",
+    "identity_same": true,
+    "changed_the_picture": true,
+    "chain_allocations": 1
+   },
+   "off_after_dof_same": true,
+   "live_end": {
+    "texture": 20,
+    "framebuffer": 6,
+    "program": 29,
+    "buffer": 272,
+    "geometry": 29
+   }
+  }
+ },
+ "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "software_renderer": false,
+ "room_changes": [
+  {
+   "room": "village",
+   "live": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 28,
+    "buffer": 1168,
+    "geometry": 49
+   }
+  },
+  {
+   "room": "cottage",
+   "live": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 28,
+    "buffer": 1336,
+    "geometry": 26
+   }
+  },
+  {
+   "room": "village",
+   "live": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 28,
+    "buffer": 1596,
+    "geometry": 49
+   }
+  },
+  {
+   "room": "cottage",
+   "live": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 28,
+    "buffer": 1764,
+    "geometry": 26
+   }
+  },
+  {
+   "room": "village",
+   "live": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 28,
+    "buffer": 2024,
+    "geometry": 49
+   }
+  }
+ ],
+ "sizes": {
+  "0:640x360": {
+   "identity_same": true,
+   "dof_identity_same": true,
+   "bytes": 691200,
+   "world_fbo": [
+    640,
+    360
+   ],
+   "chain": [
+    640,
+    360
+   ],
+   "chain_allocations": 1,
+   "live": {
+    "texture": 44,
+    "framebuffer": 8,
+    "program": 29,
+    "buffer": 2238,
+    "geometry": 50
+   }
+  },
+  "1:800x450": {
+   "identity_same": true,
+   "dof_identity_same": true,
+   "bytes": 1080000,
+   "world_fbo": [
+    800,
+    450
+   ],
+   "chain": [
+    800,
+    450
+   ],
+   "chain_allocations": 2,
+   "live": {
+    "texture": 44,
+    "framebuffer": 8,
+    "program": 29,
+    "buffer": 2238,
+    "geometry": 50
+   }
+  },
+  "2:640x360": {
+   "identity_same": true,
+   "dof_identity_same": true,
+   "bytes": 691200,
+   "world_fbo": [
+    640,
+    360
+   ],
+   "chain": [
+    640,
+    360
+   ],
+   "chain_allocations": 3,
+   "live": {
+    "texture": 44,
+    "framebuffer": 8,
+    "program": 29,
+    "buffer": 2238,
+    "geometry": 50
+   }
+  }
+ },
+ "texels": {
+  "same_size": {
+   "same": true,
+   "alphas": 256
+  },
+  "offset_viewport": {
+   "same": true,
+   "alphas": 256
+  }
+ },
+ "release": {
+  "composite_objects": 3,
+  "listed_in_gl_objects": true,
+  "composite_after": null,
+  "freed": {
+   "texture": 38,
+   "framebuffer": 4,
+   "program": 11,
+   "buffer": 57,
+   "geometry": 28
+  }
+ },
+ "studio": {
+  "viewport": [
+   230,
+   26,
+   720,
+   650
+  ],
+  "canvas_identity_same": false,
+  "canvas_equals_origin": true,
+  "canvas_identity_equals_origin_identity": false,
+  "read_final_in_canvas": true,
+  "lines_after_calls": [
+   true
+  ],
+  "lines": {
+   "pixels": 22868,
+   "outside_lines_same": false,
+   "line_pixels_same_share": 0.3787,
+   "line_pixels_max_delta": 166
+  },
+  "game_path": {
+   "same_as_earlier_studio_picture": false,
+   "changed_share_vs_earlier": 0.0023,
+   "same_as_studio_same_shadow_fit": true,
+   "game_repeat_same": true,
+   "studio_without_cutaway_same": true
+  },
+  "resized": {
+   "viewport": [
+    230,
+    26,
+    540,
+    570
+   ],
+   "identity_same": false,
+   "world_fbo": [
+    540,
+    570
+   ]
+  },
+  "live": {
+   "texture": 44,
+   "framebuffer": 8,
+   "program": 29,
+   "buffer": 234,
+   "geometry": 51
+  }
+ }
+}

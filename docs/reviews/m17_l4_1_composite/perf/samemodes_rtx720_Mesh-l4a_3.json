@@ -1,0 +1,37 @@
+{
+ "worktree": "D:\\Games\\Mesh-l4a",
+ "l4_1": false,
+ "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "size": [
+  1280,
+  720
+ ],
+ "rounds": 300,
+ "method": "GL timer query; CPU perf_counter round the call",
+ "whole_frame": {
+  "off": {
+   "gpu": {
+    "p50_ms": 1.9697,
+    "p95_ms": 3.3198
+   },
+   "cpu": {
+    "p50_ms": 6.8456,
+    "p95_ms": 7.3889
+   }
+  },
+  "dof": {
+   "gpu": {
+    "p50_ms": 2.7786,
+    "p95_ms": 4.4186
+   },
+   "cpu": {
+    "p50_ms": 6.9878,
+    "p95_ms": 7.5958
+   }
+  }
+ },
+ "whole_frame_clocks": [
+  "2520 MHz, 10001 MHz, P0",
+  "240 MHz, 405 MHz, P8"
+ ]
+}

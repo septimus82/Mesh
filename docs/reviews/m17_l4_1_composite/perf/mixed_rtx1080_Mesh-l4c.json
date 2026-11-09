@@ -1,0 +1,105 @@
+{
+ "worktree": "D:\\Games\\Mesh-l4c",
+ "l4_1": true,
+ "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "size": [
+  1920,
+  1080
+ ],
+ "rounds": 300,
+ "method": "GL timer query; CPU perf_counter round the call",
+ "whole_frame": {
+  "off": {
+   "gpu": {
+    "p50_ms": 3.2645,
+    "p95_ms": 4.8691
+   },
+   "cpu": {
+    "p50_ms": 6.8915,
+    "p95_ms": 7.5
+   }
+  },
+  "dof": {
+   "gpu": {
+    "p50_ms": 4.9249,
+    "p95_ms": 7.2602
+   },
+   "cpu": {
+    "p50_ms": 7.0597,
+    "p95_ms": 7.5273
+   }
+  },
+  "identity": {
+   "gpu": {
+    "p50_ms": 3.1488,
+    "p95_ms": 5.9505
+   },
+   "cpu": {
+    "p50_ms": 7.0317,
+    "p95_ms": 7.5758
+   }
+  },
+  "dof+identity": {
+   "gpu": {
+    "p50_ms": 5.0355,
+    "p95_ms": 7.0298
+   },
+   "cpu": {
+    "p50_ms": 7.2736,
+    "p95_ms": 7.9595
+   }
+  }
+ },
+ "whole_frame_clocks": [
+  "2520 MHz, 10001 MHz, P0",
+  "390 MHz, 405 MHz, P8"
+ ],
+ "passes": {
+  "blit": {
+   "gpu": {
+    "p50_ms": 0.0138,
+    "p95_ms": 0.0584
+   },
+   "cpu": {
+    "p50_ms": 0.0292,
+    "p95_ms": 0.0509
+   }
+  },
+  "identity": {
+   "gpu": {
+    "p50_ms": 0.0143,
+    "p95_ms": 0.0584
+   },
+   "cpu": {
+    "p50_ms": 0.0411,
+    "p95_ms": 0.0589
+   }
+  },
+  "dof": {
+   "gpu": {
+    "p50_ms": 0.2621,
+    "p95_ms": 1.1254
+   },
+   "cpu": {
+    "p50_ms": 0.0645,
+    "p95_ms": 0.0925
+   }
+  },
+  "dof->identity": {
+   "gpu": {
+    "p50_ms": 0.2785,
+    "p95_ms": 1.1899
+   },
+   "cpu": {
+    "p50_ms": 0.1386,
+    "p95_ms": 0.1959
+   }
+  }
+ },
+ "passes_clocks": "2775 MHz, 10001 MHz, P0",
+ "allocations": {
+  "composite_objects": 3,
+  "chain_bytes": 8294400,
+  "chain_allocations": 1
+ }
+}
