@@ -1,0 +1,18 @@
+llvmpipe (Mesa 26.0.3) frame vs the RTX 4070 frame of the same shot and candidate (the engine bypasses DoF on llvmpipe)
+interior__authored__combo            changed   7.67%  >2 levels:  0.003%  max 161
+interior__authored__dof_subtle       changed   2.98%  >2 levels:  0.101%  max 156
+interior__authored__grade            changed   4.48%  >2 levels:  0.003%  max 161
+interior__authored__original         changed   2.87%  >2 levels:  0.003%  max 156
+interior__authored__vignette         changed   6.41%  >2 levels:  0.003%  max 156
+village__authored__combo             changed  10.48%  >2 levels:  0.128%  max 123
+village__authored__dof_subtle        changed  52.72%  >2 levels: 36.358%  max 116
+village__authored__grade             changed   7.06%  >2 levels:  0.128%  max 129
+village__authored__haze              changed   6.42%  >2 levels:  0.128%  max 119
+village__authored__original          changed   3.03%  >2 levels:  0.128%  max 122
+village__authored__vignette          changed   6.55%  >2 levels:  0.127%  max 122
+village__night_lamps__combo          changed  17.24%  >2 levels:  0.122%  max  67
+village__night_lamps__dof_subtle     changed  49.65%  >2 levels: 23.340%  max 173
+village__night_lamps__grade          changed  21.04%  >2 levels:  0.122%  max  71
+village__night_lamps__haze           changed   9.74%  >2 levels:  0.122%  max  71
+village__night_lamps__original       changed   7.57%  >2 levels:  0.122%  max  71
+village__night_lamps__vignette       changed  10.50%  >2 levels:  0.122%  max  67

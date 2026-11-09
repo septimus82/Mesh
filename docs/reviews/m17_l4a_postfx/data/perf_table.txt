@@ -1,0 +1,21 @@
+== mesa_720: llvmpipe (LLVM 22.1.1, 256 bits) [1280, 720] (wall around ctx.finish(), 30 rounds)
+  village_noon clocks ['software', 'software']
+    blit 0.672/0.769 | grade 2.372/2.463 | vignette 2.039/2.285 | haze 1.966/2.186 | combo 2.605/2.934 | dof 18.095/19.824 | dof+combo 20.602/22.045
+    whole frame p50: draw+blit 25.65, draw+combo 27.97
+  village_night_lamps clocks ['software', 'software']
+    blit 0.695/0.808 | grade 2.370/2.851 | vignette 2.093/2.330 | haze 1.963/2.229 | combo 2.620/2.917 | dof 17.842/20.622 | dof+combo 20.299/22.398
+    whole frame p50: draw+blit 31.16, draw+combo 33.65
+== rtx_1080: NVIDIA GeForce RTX 4070/PCIe/SSE2 [1920, 1080] (GL timer query per pass, 400 rounds)
+  village_noon clocks ['2520 MHz, 10001 MHz, P0', '1545 MHz, 810 MHz, P5']
+    blit 0.025/0.028 cpu 0.131 | grade 0.058/0.062 cpu 0.393 | vignette 0.046/0.050 cpu 0.355 | haze 0.046/0.049 cpu 0.348 | combo 0.070/0.075 cpu 0.346 | dof 0.444/0.475 cpu 0.246 | dof+combo 0.515/0.552 cpu 0.629
+    whole frame p50: draw+blit 2.32, draw+combo 2.93
+  village_night_lamps clocks ['450 MHz, 810 MHz, P5', '1095 MHz, 810 MHz, P5']
+    blit 0.037/0.058 cpu 0.139 | grade 0.087/0.140 cpu 0.418 | vignette 0.070/0.112 cpu 0.377 | haze 0.069/0.111 cpu 0.359 | combo 0.104/0.170 cpu 0.355 | dof 0.660/1.077 cpu 0.254 | dof+combo 0.767/1.249 cpu 0.646
+    whole frame p50: draw+blit 3.19, draw+combo 3.94
+== rtx_720: NVIDIA GeForce RTX 4070/PCIe/SSE2 [1280, 720] (GL timer query per pass, 400 rounds)
+  village_noon clocks ['2520 MHz, 10001 MHz, P0', '570 MHz, 810 MHz, P5']
+    blit 0.034/0.036 cpu 0.134 | grade 0.076/0.079 cpu 0.398 | vignette 0.060/0.065 cpu 0.362 | haze 0.059/0.061 cpu 0.353 | combo 0.090/0.093 cpu 0.351 | dof 0.551/0.567 cpu 0.248 | dof+combo 0.644/0.664 cpu 0.642
+    whole frame p50: draw+blit 1.85, draw+combo 2.69
+  village_night_lamps clocks ['225 MHz, 405 MHz, P8', '525 MHz, 810 MHz, P5']
+    blit 0.037/0.042 cpu 0.135 | grade 0.084/0.095 cpu 0.403 | vignette 0.067/0.077 cpu 0.365 | haze 0.066/0.076 cpu 0.355 | combo 0.098/0.114 cpu 0.353 | dof 0.600/0.677 cpu 0.248 | dof+combo 0.701/0.793 cpu 0.637
+    whole frame p50: draw+blit 2.98, draw+combo 3.61

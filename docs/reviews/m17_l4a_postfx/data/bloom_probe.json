@@ -1,0 +1,188 @@
+{
+ "bridge__authored": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.062,
+  "hot_pixels": 0
+ },
+ "bridge__evening": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "bridge__morning": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "bridge__night": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "bridge__night_lamps": {
+  "maxch_ge_250_pct": 0.065,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.065,
+  "hot_pixels": 599
+ },
+ "bridge__noon": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.062,
+  "hot_pixels": 0
+ },
+ "cottage2__authored": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.127,
+  "hot_pixels": 0
+ },
+ "cottage2__evening": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "cottage2__morning": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "cottage2__night": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "cottage2__night_lamps": {
+  "maxch_ge_250_pct": 0.052,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.052,
+  "hot_pixels": 483
+ },
+ "cottage2__noon": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.127,
+  "hot_pixels": 0
+ },
+ "cottage__authored": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.103,
+  "hot_pixels": 0
+ },
+ "cottage__evening": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "cottage__morning": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "cottage__night": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "cottage__night_lamps": {
+  "maxch_ge_250_pct": 0.033,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.033,
+  "hot_pixels": 307
+ },
+ "cottage__noon": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.103,
+  "hot_pixels": 0
+ },
+ "interior__authored": {
+  "maxch_ge_250_pct": 3.413,
+  "luma_ge_200_pct": 3.687,
+  "luma_ge_160_pct": 8.614,
+  "hot_pixels": 31450
+ },
+ "shore__authored": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.01,
+  "hot_pixels": 0
+ },
+ "shore__evening": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "shore__morning": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "shore__night": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "shore__night_lamps": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "shore__noon": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.01,
+  "hot_pixels": 0
+ },
+ "village__authored": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.141,
+  "hot_pixels": 0
+ },
+ "village__evening": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "village__morning": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "village__night": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.0,
+  "hot_pixels": 0
+ },
+ "village__night_lamps": {
+  "maxch_ge_250_pct": 0.081,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.081,
+  "hot_pixels": 751
+ },
+ "village__noon": {
+  "maxch_ge_250_pct": 0.0,
+  "luma_ge_200_pct": 0.0,
+  "luma_ge_160_pct": 0.141,
+  "hot_pixels": 0
+ }
+}

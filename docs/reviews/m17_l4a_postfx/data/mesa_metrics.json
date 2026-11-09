@@ -1,0 +1,1795 @@
+{
+ "gl": "llvmpipe (LLVM 22.1.1, 256 bits)",
+ "size": [
+  1280,
+  720
+ ],
+ "village__authored__original": {
+  "shot": "village",
+  "time": "authored",
+  "candidate": "original",
+  "label": "original",
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "note": "village centre / crossroads: shop, lamp posts, paths",
+  "frame": {
+   "mean_luma": 78.84,
+   "crushed_pct": 0.001,
+   "clipped_pct": 0.0,
+   "far_band": {
+    "rms_contrast": 0.2981,
+    "mean_luma": 76.24,
+    "saturation": 0.4865
+   },
+   "near_band": {
+    "rms_contrast": 0.1956,
+    "mean_luma": 84.64,
+    "saturation": 0.5107
+   }
+  },
+  "dof": null,
+  "focus_m": 53.485,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": false,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 1.0,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.0,
+   "vig": 0.0,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "original"
+  },
+  "identity_pass_exact": true,
+  "blit_equals_world": true,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "luma": 60.53,
+    "ring_luma": 80.94,
+    "weber": -0.2523,
+    "edge_energy": 6.185,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   }
+  ]
+ },
+ "village__authored__grade": {
+  "shot": "village",
+  "time": "authored",
+  "candidate": "grade",
+  "label": "grade (day)",
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "note": "village centre / crossroads: shop, lamp posts, paths",
+  "frame": {
+   "mean_luma": 76.98,
+   "crushed_pct": 0.004,
+   "clipped_pct": 0.0,
+   "far_band": {
+    "rms_contrast": 0.3158,
+    "mean_luma": 74.27,
+    "saturation": 0.5268
+   },
+   "near_band": {
+    "rms_contrast": 0.2078,
+    "mean_luma": 82.95,
+    "saturation": 0.5549
+   }
+  },
+  "dof": null,
+  "focus_m": 53.485,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": true,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.06,
+   "pivot": 0.18,
+   "sat": 1.06,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.6,
+   "vig": 0.0,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "grade (day)"
+  },
+  "sprites": [
+   {
+    "pixels": 2392,
+    "luma": 58.36,
+    "ring_luma": 79.15,
+    "weber": -0.2627,
+    "edge_energy": 6.35,
+    "weber_ratio": 1.041,
+    "edge_ratio": 1.027
+   }
+  ],
+  "changed_pct": 99.99,
+  "mean_abs_delta": 4.399
+ },
+ "village__authored__vignette": {
+  "shot": "village",
+  "time": "authored",
+  "candidate": "vignette",
+  "label": "vignette 0.18",
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "note": "village centre / crossroads: shop, lamp posts, paths",
+  "frame": {
+   "mean_luma": 77.76,
+   "crushed_pct": 0.003,
+   "clipped_pct": 0.0,
+   "far_band": {
+    "rms_contrast": 0.3042,
+    "mean_luma": 75.09,
+    "saturation": 0.4878
+   },
+   "near_band": {
+    "rms_contrast": 0.1964,
+    "mean_luma": 83.26,
+    "saturation": 0.5118
+   }
+  },
+  "dof": null,
+  "focus_m": 53.485,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": false,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 1.0,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.0,
+   "vig": 0.18,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "vignette 0.18"
+  },
+  "sprites": [
+   {
+    "pixels": 2392,
+    "luma": 60.53,
+    "ring_luma": 80.94,
+    "weber": -0.2523,
+    "edge_energy": 6.185,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   }
+  ],
+  "changed_pct": 35.86,
+  "mean_abs_delta": 1.214
+ },
+ "village__authored__dof_subtle": {
+  "shot": "village",
+  "time": "authored",
+  "candidate": "dof_subtle",
+  "label": "existing DoF: Subtle",
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "note": "village centre / crossroads: shop, lamp posts, paths",
+  "frame": {
+   "mean_luma": 78.84,
+   "crushed_pct": 0.001,
+   "clipped_pct": 0.0,
+   "far_band": {
+    "rms_contrast": 0.2981,
+    "mean_luma": 76.24,
+    "saturation": 0.4865
+   },
+   "near_band": {
+    "rms_contrast": 0.1956,
+    "mean_luma": 84.64,
+    "saturation": 0.5107
+   }
+  },
+  "dof": null,
+  "focus_m": 53.485,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": false,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 1.0,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.0,
+   "vig": 0.0,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "DepthOfField(enabled=True, focus_range=2.5, near_falloff=10.0, far_falloff=10.0, max_blur=2.5, strength=1.0)",
+   "label": "existing DoF: Subtle"
+  },
+  "sprites": [
+   {
+    "pixels": 2392,
+    "luma": 60.53,
+    "ring_luma": 80.94,
+    "weber": -0.2523,
+    "edge_energy": 6.185,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   }
+  ],
+  "changed_pct": 0.0,
+  "mean_abs_delta": 0.0
+ },
+ "village__authored__haze": {
+  "shot": "village",
+  "time": "authored",
+  "candidate": "haze",
+  "label": "haze (day)",
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "note": "village centre / crossroads: shop, lamp posts, paths",
+  "frame": {
+   "mean_luma": 82.98,
+   "crushed_pct": 0.001,
+   "clipped_pct": 0.0,
+   "far_band": {
+    "rms_contrast": 0.2529,
+    "mean_luma": 88.51,
+    "saturation": 0.3129
+   },
+   "near_band": {
+    "rms_contrast": 0.1956,
+    "mean_luma": 84.64,
+    "saturation": 0.5107
+   }
+  },
+  "dof": null,
+  "focus_m": 53.485,
+  "post": {
+   "haze": true,
+   "haze_col": [
+    0.45641102318040466,
+    0.5775804404296506,
+    0.7605245046752924
+   ],
+   "haze_start": 3.0,
+   "haze_range": 12.0,
+   "haze_max": 0.12,
+   "haze_height": 0.0,
+   "grade": false,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 1.0,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.0,
+   "vig": 0.0,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "haze (day)"
+  },
+  "sprites": [
+   {
+    "pixels": 2392,
+    "luma": 60.53,
+    "ring_luma": 80.94,
+    "weber": -0.2523,
+    "edge_energy": 6.185,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   }
+  ],
+  "changed_pct": 33.92,
+  "mean_abs_delta": 8.33
+ },
+ "village__authored__combo": {
+  "shot": "village",
+  "time": "authored",
+  "candidate": "combo",
+  "label": "combined candidate",
+  "scene": "packs/core_regions/scenes/lakeside.json",
+  "note": "village centre / crossroads: shop, lamp posts, paths",
+  "frame": {
+   "mean_luma": 80.13,
+   "crushed_pct": 0.004,
+   "clipped_pct": 0.0,
+   "far_band": {
+    "rms_contrast": 0.2711,
+    "mean_luma": 85.73,
+    "saturation": 0.3348
+   },
+   "near_band": {
+    "rms_contrast": 0.2091,
+    "mean_luma": 81.53,
+    "saturation": 0.5555
+   }
+  },
+  "dof": null,
+  "focus_m": 53.485,
+  "post": {
+   "haze": true,
+   "haze_col": [
+    0.45641102318040466,
+    0.5775804404296506,
+    0.7605245046752924
+   ],
+   "haze_start": 3.0,
+   "haze_range": 12.0,
+   "haze_max": 0.12,
+   "haze_height": 0.0,
+   "grade": true,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.06,
+   "pivot": 0.18,
+   "sat": 1.06,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.6,
+   "vig": 0.18,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "combined candidate"
+  },
+  "sprites": [
+   {
+    "pixels": 2392,
+    "luma": 58.36,
+    "ring_luma": 79.15,
+    "weber": -0.2627,
+    "edge_energy": 6.35,
+    "weber_ratio": 1.041,
+    "edge_ratio": 1.027
+   }
+  ],
+  "changed_pct": 99.96,
+  "mean_abs_delta": 10.671
+ },
+ "village__night_lamps__original": {
+  "shot": "village",
+  "time": "night_lamps",
+  "candidate": "original",
+  "label": "original",
+  "scene": "packs/core_regions/scenes/lakeside__l4_night_lamps.json",
+  "note": "village centre / crossroads: shop, lamp posts, paths",
+  "frame": {
+   "mean_luma": 36.7,
+   "crushed_pct": 0.066,
+   "clipped_pct": 0.081,
+   "far_band": {
+    "rms_contrast": 0.4382,
+    "mean_luma": 31.52,
+    "saturation": 0.4472
+   },
+   "near_band": {
+    "rms_contrast": 0.3985,
+    "mean_luma": 42.04,
+    "saturation": 0.4832
+   }
+  },
+  "dof": null,
+  "focus_m": 53.485,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": false,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 1.0,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.0,
+   "vig": 0.0,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "original"
+  },
+  "identity_pass_exact": true,
+  "blit_equals_world": true,
+  "sprites": [
+   {
+    "pixels": 2392,
+    "luma": 38.11,
+    "ring_luma": 40.87,
+    "weber": -0.0677,
+    "edge_energy": 4.117,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   }
+  ],
+  "lamp_heads": [
+   {
+    "lamp": 0,
+    "at": [
+     189,
+     479
+    ],
+    "rgb": [
+     255,
+     177,
+     72
+    ],
+    "hue_deg": 34.4,
+    "sat": 0.718,
+    "val": 1.0
+   },
+   {
+    "lamp": 1,
+    "at": [
+     515,
+     349
+    ],
+    "rgb": [
+     255,
+     178,
+     73
+    ],
+    "hue_deg": 34.6,
+    "sat": 0.714,
+    "val": 1.0
+   },
+   {
+    "lamp": 2,
+    "at": [
+     718,
+     67
+    ],
+    "rgb": [
+     255,
+     177,
+     72
+    ],
+    "hue_deg": 34.4,
+    "sat": 0.718,
+    "val": 1.0
+   },
+   {
+    "lamp": 3,
+    "at": [
+     8,
+     208
+    ],
+    "rgb": [
+     36,
+     38,
+     41
+    ],
+    "hue_deg": 214.7,
+    "sat": 0.116,
+    "val": 0.161
+   }
+  ]
+ },
+ "village__night_lamps__grade": {
+  "shot": "village",
+  "time": "night_lamps",
+  "candidate": "grade",
+  "label": "grade (night)",
+  "scene": "packs/core_regions/scenes/lakeside__l4_night_lamps.json",
+  "note": "village centre / crossroads: shop, lamp posts, paths",
+  "frame": {
+   "mean_luma": 36.9,
+   "crushed_pct": 0.066,
+   "clipped_pct": 0.081,
+   "far_band": {
+    "rms_contrast": 0.437,
+    "mean_luma": 31.7,
+    "saturation": 0.411
+   },
+   "near_band": {
+    "rms_contrast": 0.3964,
+    "mean_luma": 42.25,
+    "saturation": 0.4308
+   }
+  },
+  "dof": null,
+  "focus_m": 53.485,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": true,
+   "wb": [
+    0.95,
+    0.98,
+    1.05
+   ],
+   "exposure": 1.03,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 0.92,
+   "shadow_tint": [
+    0.94,
+    0.97,
+    1.08
+   ],
+   "high_tint": [
+    1.04,
+    1.0,
+    0.95
+   ],
+   "split": 0.4,
+   "protect": 0.9,
+   "vig": 0.0,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "grade (night)"
+  },
+  "sprites": [
+   {
+    "pixels": 2392,
+    "luma": 38.07,
+    "ring_luma": 41.19,
+    "weber": -0.0758,
+    "edge_energy": 4.118,
+    "weber_ratio": 1.12,
+    "edge_ratio": 1.0
+   }
+  ],
+  "changed_pct": 100.0,
+  "mean_abs_delta": 3.031,
+  "lamp_heads": [
+   {
+    "lamp": 0,
+    "at": [
+     189,
+     479
+    ],
+    "rgb": [
+     255,
+     177,
+     74
+    ],
+    "hue_deg": 34.1,
+    "sat": 0.71,
+    "val": 1.0
+   },
+   {
+    "lamp": 1,
+    "at": [
+     515,
+     349
+    ],
+    "rgb": [
+     255,
+     178,
+     75
+    ],
+    "hue_deg": 34.3,
+    "sat": 0.706,
+    "val": 1.0
+   },
+   {
+    "lamp": 2,
+    "at": [
+     718,
+     67
+    ],
+    "rgb": [
+     255,
+     177,
+     74
+    ],
+    "hue_deg": 34.1,
+    "sat": 0.71,
+    "val": 1.0
+   },
+   {
+    "lamp": 3,
+    "at": [
+     8,
+     208
+    ],
+    "rgb": [
+     35,
+     38,
+     43
+    ],
+    "hue_deg": 216.8,
+    "sat": 0.18,
+    "val": 0.169
+   }
+  ]
+ },
+ "village__night_lamps__vignette": {
+  "shot": "village",
+  "time": "night_lamps",
+  "candidate": "vignette",
+  "label": "vignette 0.18",
+  "scene": "packs/core_regions/scenes/lakeside__l4_night_lamps.json",
+  "note": "village centre / crossroads: shop, lamp posts, paths",
+  "frame": {
+   "mean_luma": 36.13,
+   "crushed_pct": 0.123,
+   "clipped_pct": 0.067,
+   "far_band": {
+    "rms_contrast": 0.4522,
+    "mean_luma": 30.99,
+    "saturation": 0.4499
+   },
+   "near_band": {
+    "rms_contrast": 0.4012,
+    "mean_luma": 41.27,
+    "saturation": 0.4854
+   }
+  },
+  "dof": null,
+  "focus_m": 53.485,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": false,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 1.0,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.0,
+   "vig": 0.18,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "vignette 0.18"
+  },
+  "sprites": [
+   {
+    "pixels": 2392,
+    "luma": 38.11,
+    "ring_luma": 40.87,
+    "weber": -0.0677,
+    "edge_energy": 4.117,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   }
+  ],
+  "changed_pct": 31.69,
+  "mean_abs_delta": 0.633,
+  "lamp_heads": [
+   {
+    "lamp": 0,
+    "at": [
+     189,
+     479
+    ],
+    "rgb": [
+     254,
+     176,
+     72
+    ],
+    "hue_deg": 34.3,
+    "sat": 0.717,
+    "val": 0.996
+   },
+   {
+    "lamp": 1,
+    "at": [
+     515,
+     349
+    ],
+    "rgb": [
+     255,
+     178,
+     73
+    ],
+    "hue_deg": 34.6,
+    "sat": 0.714,
+    "val": 1.0
+   },
+   {
+    "lamp": 2,
+    "at": [
+     718,
+     67
+    ],
+    "rgb": [
+     255,
+     177,
+     72
+    ],
+    "hue_deg": 34.4,
+    "sat": 0.718,
+    "val": 1.0
+   },
+   {
+    "lamp": 3,
+    "at": [
+     8,
+     208
+    ],
+    "rgb": [
+     33,
+     35,
+     38
+    ],
+    "hue_deg": 214.7,
+    "sat": 0.125,
+    "val": 0.149
+   }
+  ]
+ },
+ "village__night_lamps__dof_subtle": {
+  "shot": "village",
+  "time": "night_lamps",
+  "candidate": "dof_subtle",
+  "label": "existing DoF: Subtle",
+  "scene": "packs/core_regions/scenes/lakeside__l4_night_lamps.json",
+  "note": "village centre / crossroads: shop, lamp posts, paths",
+  "frame": {
+   "mean_luma": 36.7,
+   "crushed_pct": 0.066,
+   "clipped_pct": 0.081,
+   "far_band": {
+    "rms_contrast": 0.4382,
+    "mean_luma": 31.52,
+    "saturation": 0.4472
+   },
+   "near_band": {
+    "rms_contrast": 0.3985,
+    "mean_luma": 42.04,
+    "saturation": 0.4832
+   }
+  },
+  "dof": null,
+  "focus_m": 53.485,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": false,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 1.0,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.0,
+   "vig": 0.0,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "DepthOfField(enabled=True, focus_range=2.5, near_falloff=10.0, far_falloff=10.0, max_blur=2.5, strength=1.0)",
+   "label": "existing DoF: Subtle"
+  },
+  "sprites": [
+   {
+    "pixels": 2392,
+    "luma": 38.11,
+    "ring_luma": 40.87,
+    "weber": -0.0677,
+    "edge_energy": 4.117,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   }
+  ],
+  "changed_pct": 0.0,
+  "mean_abs_delta": 0.0,
+  "lamp_heads": [
+   {
+    "lamp": 0,
+    "at": [
+     189,
+     479
+    ],
+    "rgb": [
+     255,
+     177,
+     72
+    ],
+    "hue_deg": 34.4,
+    "sat": 0.718,
+    "val": 1.0
+   },
+   {
+    "lamp": 1,
+    "at": [
+     515,
+     349
+    ],
+    "rgb": [
+     255,
+     178,
+     73
+    ],
+    "hue_deg": 34.6,
+    "sat": 0.714,
+    "val": 1.0
+   },
+   {
+    "lamp": 2,
+    "at": [
+     718,
+     67
+    ],
+    "rgb": [
+     255,
+     177,
+     72
+    ],
+    "hue_deg": 34.4,
+    "sat": 0.718,
+    "val": 1.0
+   },
+   {
+    "lamp": 3,
+    "at": [
+     8,
+     208
+    ],
+    "rgb": [
+     36,
+     38,
+     41
+    ],
+    "hue_deg": 214.7,
+    "sat": 0.116,
+    "val": 0.161
+   }
+  ]
+ },
+ "village__night_lamps__haze": {
+  "shot": "village",
+  "time": "night_lamps",
+  "candidate": "haze",
+  "label": "haze (night)",
+  "scene": "packs/core_regions/scenes/lakeside__l4_night_lamps.json",
+  "note": "village centre / crossroads: shop, lamp posts, paths",
+  "frame": {
+   "mean_luma": 36.95,
+   "crushed_pct": 0.054,
+   "clipped_pct": 0.061,
+   "far_band": {
+    "rms_contrast": 0.4063,
+    "mean_luma": 32.26,
+    "saturation": 0.4062
+   },
+   "near_band": {
+    "rms_contrast": 0.3985,
+    "mean_luma": 42.04,
+    "saturation": 0.4832
+   }
+  },
+  "dof": null,
+  "focus_m": 53.485,
+  "post": {
+   "haze": true,
+   "haze_col": [
+    0.011612245179743885,
+    0.017641954488384078,
+    0.05126945837404324
+   ],
+   "haze_start": 3.0,
+   "haze_range": 12.0,
+   "haze_max": 0.15,
+   "haze_height": 0.0,
+   "grade": false,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 1.0,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.0,
+   "vig": 0.0,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "haze (night)"
+  },
+  "sprites": [
+   {
+    "pixels": 2392,
+    "luma": 38.11,
+    "ring_luma": 40.87,
+    "weber": -0.0677,
+    "edge_energy": 4.117,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   }
+  ],
+  "changed_pct": 29.74,
+  "mean_abs_delta": 1.693,
+  "lamp_heads": [
+   {
+    "lamp": 0,
+    "at": [
+     189,
+     479
+    ],
+    "rgb": [
+     255,
+     177,
+     72
+    ],
+    "hue_deg": 34.4,
+    "sat": 0.718,
+    "val": 1.0
+   },
+   {
+    "lamp": 1,
+    "at": [
+     515,
+     349
+    ],
+    "rgb": [
+     255,
+     178,
+     73
+    ],
+    "hue_deg": 34.6,
+    "sat": 0.714,
+    "val": 1.0
+   },
+   {
+    "lamp": 2,
+    "at": [
+     718,
+     67
+    ],
+    "rgb": [
+     253,
+     176,
+     72
+    ],
+    "hue_deg": 34.5,
+    "sat": 0.715,
+    "val": 0.992
+   },
+   {
+    "lamp": 3,
+    "at": [
+     8,
+     208
+    ],
+    "rgb": [
+     36,
+     38,
+     41
+    ],
+    "hue_deg": 214.7,
+    "sat": 0.116,
+    "val": 0.161
+   }
+  ]
+ },
+ "village__night_lamps__combo": {
+  "shot": "village",
+  "time": "night_lamps",
+  "candidate": "combo",
+  "label": "combined candidate",
+  "scene": "packs/core_regions/scenes/lakeside__l4_night_lamps.json",
+  "note": "village centre / crossroads: shop, lamp posts, paths",
+  "frame": {
+   "mean_luma": 36.47,
+   "crushed_pct": 0.091,
+   "clipped_pct": 0.031,
+   "far_band": {
+    "rms_contrast": 0.4193,
+    "mean_luma": 31.75,
+    "saturation": 0.3883
+   },
+   "near_band": {
+    "rms_contrast": 0.4,
+    "mean_luma": 41.39,
+    "saturation": 0.43
+   }
+  },
+  "dof": null,
+  "focus_m": 53.485,
+  "post": {
+   "haze": true,
+   "haze_col": [
+    0.011612245179743885,
+    0.017641954488384078,
+    0.05126945837404324
+   ],
+   "haze_start": 3.0,
+   "haze_range": 12.0,
+   "haze_max": 0.15,
+   "haze_height": 0.0,
+   "grade": true,
+   "wb": [
+    0.95,
+    0.98,
+    1.05
+   ],
+   "exposure": 1.03,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 0.92,
+   "shadow_tint": [
+    0.94,
+    0.97,
+    1.08
+   ],
+   "high_tint": [
+    1.04,
+    1.0,
+    0.95
+   ],
+   "split": 0.4,
+   "protect": 0.9,
+   "vig": 0.18,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "combined candidate"
+  },
+  "sprites": [
+   {
+    "pixels": 2392,
+    "luma": 38.07,
+    "ring_luma": 41.19,
+    "weber": -0.0758,
+    "edge_energy": 4.118,
+    "weber_ratio": 1.12,
+    "edge_ratio": 1.0
+   }
+  ],
+  "changed_pct": 100.0,
+  "mean_abs_delta": 4.467,
+  "lamp_heads": [
+   {
+    "lamp": 0,
+    "at": [
+     189,
+     479
+    ],
+    "rgb": [
+     253,
+     176,
+     73
+    ],
+    "hue_deg": 34.1,
+    "sat": 0.708,
+    "val": 0.994
+   },
+   {
+    "lamp": 1,
+    "at": [
+     515,
+     349
+    ],
+    "rgb": [
+     255,
+     178,
+     75
+    ],
+    "hue_deg": 34.3,
+    "sat": 0.706,
+    "val": 1.0
+   },
+   {
+    "lamp": 2,
+    "at": [
+     718,
+     67
+    ],
+    "rgb": [
+     253,
+     176,
+     74
+    ],
+    "hue_deg": 34.2,
+    "sat": 0.708,
+    "val": 0.992
+   },
+   {
+    "lamp": 3,
+    "at": [
+     8,
+     208
+    ],
+    "rgb": [
+     32,
+     35,
+     40
+    ],
+    "hue_deg": 218.6,
+    "sat": 0.184,
+    "val": 0.157
+   }
+  ]
+ },
+ "interior__authored__original": {
+  "shot": "interior",
+  "time": "authored",
+  "candidate": "original",
+  "label": "original",
+  "scene": "packs/core_regions/scenes/cottage.json",
+  "note": "the cottage interior (its one lamp on, as authored)",
+  "frame": {
+   "mean_luma": 50.42,
+   "crushed_pct": 0.0,
+   "clipped_pct": 3.219,
+   "far_band": {
+    "rms_contrast": 1.1352,
+    "mean_luma": 67.38,
+    "saturation": 0.4286
+   },
+   "near_band": {
+    "rms_contrast": 0.9307,
+    "mean_luma": 20.96,
+    "saturation": 0.4158
+   }
+  },
+  "dof": null,
+  "focus_m": 35.928,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": false,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 1.0,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.0,
+   "vig": 0.0,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "original"
+  },
+  "identity_pass_exact": true,
+  "blit_equals_world": true,
+  "sprites": [
+   {
+    "pixels": 5504,
+    "luma": 126.29,
+    "ring_luma": 122.72,
+    "weber": 0.0291,
+    "edge_energy": 7.591,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   },
+   {
+    "pixels": 4971,
+    "luma": 148.21,
+    "ring_luma": 111.52,
+    "weber": 0.329,
+    "edge_energy": 8.469,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   },
+   {
+    "pixels": 28590,
+    "luma": 92.66,
+    "ring_luma": 109.61,
+    "weber": -0.1547,
+    "edge_energy": 1.595,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   }
+  ]
+ },
+ "interior__authored__grade": {
+  "shot": "interior",
+  "time": "authored",
+  "candidate": "grade",
+  "label": "grade (interior)",
+  "scene": "packs/core_regions/scenes/cottage.json",
+  "note": "the cottage interior (its one lamp on, as authored)",
+  "frame": {
+   "mean_luma": 49.02,
+   "crushed_pct": 0.0,
+   "clipped_pct": 1.714,
+   "far_band": {
+    "rms_contrast": 1.1704,
+    "mean_luma": 66.13,
+    "saturation": 0.4721
+   },
+   "near_band": {
+    "rms_contrast": 1.0361,
+    "mean_luma": 18.99,
+    "saturation": 0.4639
+   }
+  },
+  "dof": null,
+  "focus_m": 35.928,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": true,
+   "wb": [
+    1.04,
+    1.0,
+    0.94
+   ],
+   "exposure": 1.0,
+   "contrast": 1.05,
+   "pivot": 0.18,
+   "sat": 1.04,
+   "shadow_tint": [
+    0.95,
+    0.96,
+    1.06
+   ],
+   "high_tint": [
+    1.04,
+    1.0,
+    0.95
+   ],
+   "split": 0.35,
+   "protect": 0.85,
+   "vig": 0.0,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "grade (interior)"
+  },
+  "sprites": [
+   {
+    "pixels": 5504,
+    "luma": 125.3,
+    "ring_luma": 123.16,
+    "weber": 0.0174,
+    "edge_energy": 7.711,
+    "weber_ratio": 0.598,
+    "edge_ratio": 1.016
+   },
+   {
+    "pixels": 4971,
+    "luma": 148.06,
+    "ring_luma": 111.46,
+    "weber": 0.3284,
+    "edge_energy": 8.594,
+    "weber_ratio": 0.998,
+    "edge_ratio": 1.015
+   },
+   {
+    "pixels": 28590,
+    "luma": 91.63,
+    "ring_luma": 109.65,
+    "weber": -0.1644,
+    "edge_energy": 1.658,
+    "weber_ratio": 1.063,
+    "edge_ratio": 1.039
+   }
+  ],
+  "changed_pct": 100.0,
+  "mean_abs_delta": 3.149
+ },
+ "interior__authored__vignette": {
+  "shot": "interior",
+  "time": "authored",
+  "candidate": "vignette",
+  "label": "vignette 0.18",
+  "scene": "packs/core_regions/scenes/cottage.json",
+  "note": "the cottage interior (its one lamp on, as authored)",
+  "frame": {
+   "mean_luma": 50.08,
+   "crushed_pct": 0.0,
+   "clipped_pct": 3.219,
+   "far_band": {
+    "rms_contrast": 1.1458,
+    "mean_luma": 66.99,
+    "saturation": 0.4325
+   },
+   "near_band": {
+    "rms_contrast": 0.9549,
+    "mean_luma": 20.57,
+    "saturation": 0.4197
+   }
+  },
+  "dof": null,
+  "focus_m": 35.928,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": false,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 1.0,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.0,
+   "vig": 0.18,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "vignette 0.18"
+  },
+  "sprites": [
+   {
+    "pixels": 5504,
+    "luma": 126.29,
+    "ring_luma": 122.72,
+    "weber": 0.0291,
+    "edge_energy": 7.591,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   },
+   {
+    "pixels": 4971,
+    "luma": 148.21,
+    "ring_luma": 111.52,
+    "weber": 0.329,
+    "edge_energy": 8.469,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   },
+   {
+    "pixels": 28590,
+    "luma": 92.66,
+    "ring_luma": 109.61,
+    "weber": -0.1547,
+    "edge_energy": 1.595,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   }
+  ],
+  "changed_pct": 27.36,
+  "mean_abs_delta": 0.374
+ },
+ "interior__authored__dof_subtle": {
+  "shot": "interior",
+  "time": "authored",
+  "candidate": "dof_subtle",
+  "label": "existing DoF: Subtle",
+  "scene": "packs/core_regions/scenes/cottage.json",
+  "note": "the cottage interior (its one lamp on, as authored)",
+  "frame": {
+   "mean_luma": 50.42,
+   "crushed_pct": 0.0,
+   "clipped_pct": 3.219,
+   "far_band": {
+    "rms_contrast": 1.1352,
+    "mean_luma": 67.38,
+    "saturation": 0.4286
+   },
+   "near_band": {
+    "rms_contrast": 0.9307,
+    "mean_luma": 20.96,
+    "saturation": 0.4158
+   }
+  },
+  "dof": null,
+  "focus_m": 35.928,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": false,
+   "wb": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "exposure": 1.0,
+   "contrast": 1.0,
+   "pivot": 0.18,
+   "sat": 1.0,
+   "shadow_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "high_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "split": 0.0,
+   "protect": 0.0,
+   "vig": 0.0,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "DepthOfField(enabled=True, focus_range=2.5, near_falloff=10.0, far_falloff=10.0, max_blur=2.5, strength=1.0)",
+   "label": "existing DoF: Subtle"
+  },
+  "sprites": [
+   {
+    "pixels": 5504,
+    "luma": 126.29,
+    "ring_luma": 122.72,
+    "weber": 0.0291,
+    "edge_energy": 7.591,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   },
+   {
+    "pixels": 4971,
+    "luma": 148.21,
+    "ring_luma": 111.52,
+    "weber": 0.329,
+    "edge_energy": 8.469,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   },
+   {
+    "pixels": 28590,
+    "luma": 92.66,
+    "ring_luma": 109.61,
+    "weber": -0.1547,
+    "edge_energy": 1.595,
+    "weber_ratio": 1.0,
+    "edge_ratio": 1.0
+   }
+  ],
+  "changed_pct": 0.0,
+  "mean_abs_delta": 0.0
+ },
+ "interior__authored__combo": {
+  "shot": "interior",
+  "time": "authored",
+  "candidate": "combo",
+  "label": "combined candidate",
+  "scene": "packs/core_regions/scenes/cottage.json",
+  "note": "the cottage interior (its one lamp on, as authored)",
+  "frame": {
+   "mean_luma": 48.6,
+   "crushed_pct": 0.0,
+   "clipped_pct": 1.714,
+   "far_band": {
+    "rms_contrast": 1.1841,
+    "mean_luma": 65.65,
+    "saturation": 0.4885
+   },
+   "near_band": {
+    "rms_contrast": 1.072,
+    "mean_luma": 18.51,
+    "saturation": 0.4804
+   }
+  },
+  "dof": null,
+  "focus_m": 35.928,
+  "post": {
+   "haze": false,
+   "haze_col": [
+    0.6,
+    0.7,
+    0.85
+   ],
+   "haze_start": 2.0,
+   "haze_range": 14.0,
+   "haze_max": 0.3,
+   "haze_height": 0.0,
+   "grade": true,
+   "wb": [
+    1.04,
+    1.0,
+    0.94
+   ],
+   "exposure": 1.0,
+   "contrast": 1.05,
+   "pivot": 0.18,
+   "sat": 1.04,
+   "shadow_tint": [
+    0.95,
+    0.96,
+    1.06
+   ],
+   "high_tint": [
+    1.04,
+    1.0,
+    0.95
+   ],
+   "split": 0.35,
+   "protect": 0.85,
+   "vig": 0.2,
+   "vig_inner": 0.55,
+   "vig_outer": 1.05,
+   "debug": 0,
+   "dof": "None",
+   "label": "combined candidate"
+  },
+  "sprites": [
+   {
+    "pixels": 5504,
+    "luma": 125.3,
+    "ring_luma": 123.16,
+    "weber": 0.0174,
+    "edge_energy": 7.711,
+    "weber_ratio": 0.598,
+    "edge_ratio": 1.016
+   },
+   {
+    "pixels": 4971,
+    "luma": 148.06,
+    "ring_luma": 111.46,
+    "weber": 0.3284,
+    "edge_energy": 8.594,
+    "weber_ratio": 0.998,
+    "edge_ratio": 1.015
+   },
+   {
+    "pixels": 28590,
+    "luma": 91.63,
+    "ring_luma": 109.65,
+    "weber": -0.1644,
+    "edge_energy": 1.658,
+    "weber_ratio": 1.063,
+    "edge_ratio": 1.039
+   }
+  ],
+  "changed_pct": 100.0,
+  "mean_abs_delta": 3.612
+ }
+}
