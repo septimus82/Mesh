@@ -30,9 +30,9 @@ def open_arena():
         try:
             for name, relative in paths.items():
                 os.environ[name] = str(root / relative)
+            from engine import optional_arcade
             from engine.config import load_config
             from engine.game import GameWindow
-            from engine.optional_arcade import arcade
             from engine.project_scaffold import create_project
 
             create_project(root, "Mesh local room")
@@ -45,7 +45,7 @@ def open_arena():
                                 vsync=False, resizable=False, config=config, config_path=str(path))
             try:
                 window.load_scene(scene)
-                yield Arena(window, arcade)
+                yield Arena(window, optional_arcade.arcade)
             finally:
                 window.close()
         finally:

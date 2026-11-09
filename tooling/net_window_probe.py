@@ -39,12 +39,12 @@ async def drive(arena, port: int) -> None:
 
 
 if __name__ == "__main__":
-    from engine.optional_arcade import arcade
+    from engine import optional_arcade
 
-    original = arcade.Window.__init__
+    original = optional_arcade.arcade.Window.__init__
 
     def hidden(window, *args, **kwargs):
         original(window, *args, **{**kwargs, "visible": False})
 
-    with patch.object(arcade.Window, "__init__", hidden), open_arena() as arena:
+    with patch.object(optional_arcade.arcade.Window, "__init__", hidden), open_arena() as arena:
         asyncio.run(drive(arena, int(sys.argv[1])))
