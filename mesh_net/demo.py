@@ -70,6 +70,7 @@ class Arena:
         self.client: Client | None = None
         self.token: str | None = None
         self.playback = Playback()
+        self.local_interpolation = False
         self.status = "Connecting"
         window.push_handlers(on_key_press=self.press, on_key_release=self.release,
                              on_close=self.stop, on_deactivate=self.blur)
@@ -112,17 +113,30 @@ class Arena:
                 self.playback = Playback()
                 loop = asyncio.get_running_loop()
                 self.playback.push(client.state, loop.time())
-                next_input = 0.0
-                while True:
-                    if loop.time() >= next_input:
+                async def send_inputs() -> None:
+                    while True:
                         direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
                         action, self.action = self.action, None
                         await client.input(*direction, action=action)
-                        next_input = loop.time() + 0.8 / wire.HZ
-                    state = await client.receive()
-                    self.playback.push(state, loop.time())
-                    loot = int(state["holder"] == client.entity)
-                    self.status = f"P{client.entity} | HP {state['enemy_hp']} | loot {loot} | arrows, Space attack, E take, F2 leave"
+                        await asyncio.sleep(1 / wire.HZ)
+
+                async def receive_states() -> None:
+                    while True:
+                        state = await client.receive()
+                        self.playback.push(state, loop.time())
+                        loot = int(state["holder"] == client.entity)
+                        self.status = f"P{client.entity} | HP {state['enemy_hp']} | loot {loot} | arrows, Space attack, E take, F2 leave"
+
+                tasks = [asyncio.create_task(send_inputs()), asyncio.create_task(receive_states())]
+                try:
+                    done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                    for task in done:
+                        task.result()
+                finally:
+                    client.writer.close()
+                    for task in tasks:
+                        task.cancel()
+                    await asyncio.gather(*tasks, return_exceptions=True)
         except (OSError, EOFError, TimeoutError, wire.Invalid) as exc:
             self.status = f"Disconnected ({type(exc).__name__}) | R resume / N new"
         finally:
@@ -140,7 +154,11 @@ class Arena:
                 self.arcade.draw_circle_filled(*wire.ENEMY_AT, 7, (235, 91, 89))
             elif state["pickup"]:
                 self.arcade.draw_circle_filled(*wire.ENEMY_AT, 5, (149, 224, 82))
-            for eid, (x, y) in self.playback.positions(now).items():
+            positions = self.playback.positions(now)
+            if not self.local_interpolation:
+                positions[self.client.entity] = next((x, y) for eid, x, y in state["players"]
+                                                     if eid == self.client.entity)
+            for eid, (x, y) in positions.items():
                 self.arcade.draw_circle_filled(x, y, 4, OWN if eid == self.client.entity else OTHER)
 
     async def run(self, port: int) -> None:

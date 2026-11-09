@@ -25,20 +25,22 @@ IPv4 loopback TCP carries one UTF-8 JSON object per LF-terminated frame, up to 8
 | Client → server, `input` | `entity`, increasing `seq`, `dx`, `dy`, optional `action` | At most one cardinal direction. The optional action is `attack` or `take`. The server rejects forged ownership, ignores old sequences and latches at most one pending action per character. |
 | Server → clients, `state` | `tick`, `players` as ordered triples [entity, x, y], `enemy_hp`, `pickup`, `holder` | A full snapshot. Omission despawns a player. `pickup` denotes a drop on the ground. `holder` identifies its online owner, or is null. The offline character retains the resource until expiry. |
 
-The simulation advances integer steps at a target of 20 Hz, moving four pixels per tick within a 480 × 270 room. Input expires after five steps. Stalls may slow game time. The server checks a 36-pixel attack/collection radius and an eight-tick attack cooldown. One hit deals one damage. The enemy has two HP. Actors resolve in increasing entity ID order, including a race for the one pickup. The latest full snapshot corrects each client's view. The client buffers eight states, targets two ticks of interpolation delay and holds the latest position on starvation. That delay applies to the local player as well. Prediction is deferred pending a play-feel budget.
+The simulation advances integer steps at a target of 20 Hz, moving four pixels per tick within a 480 × 270 room. Input expires after five steps. Stalls may slow game time. The server checks a 36-pixel attack/collection radius and an eight-tick attack cooldown. One hit deals one damage. The enemy has two HP. Actors resolve in increasing entity ID order, including a race for the one pickup. The latest full snapshot corrects each client's view. The client buffers eight states and interpolates remote players two ticks behind. It displays its own latest authoritative position. Outgoing input runs at 20 Hz independently of snapshot reception, so a delayed downlink does not block release or attack while upstream remains writable. Remote positions hold at their last known values on starvation. Prediction remains deferred pending a play-feel budget.
 
 The listener accepts up to eight concurrent connections including incomplete handshakes. Live and offline character slots together are capped at sixteen. Incomplete frames time out after five seconds. More than eight inputs from a socket in one server tick ends that session. A peer with more than 16 KiB in the asyncio write backlog is disconnected on broadcast. OS socket buffers are additional. A disconnect removes the avatar and retains position, cooldown and loot for 600 simulation ticks (nominally 30 seconds). Server shutdown clears all credentials and progress.
 
 ## Reproduce the checks
 
 ```sh
-python -m pytest -q tests/test_mesh_net.py tests/test_mesh_net_encounter.py tests/test_mesh_net_playback.py
+python -m pytest -q tests/test_mesh_net.py tests/test_mesh_net_downlink.py tests/test_mesh_net_encounter.py tests/test_mesh_net_playback.py
 python -m mesh_net.study --loopback
 python -m mesh_net.study --lag-ms 0 --jitter-ms 0 --loss 0
 python -m mesh_net.study --lag-ms 75 --jitter-ms 110 --loss 0.1 --seed 42
 ```
 
 For the two-window check, set `MESH_GL_SMOKE=1` (`$env:MESH_GL_SMOKE='1'` in PowerShell), then run `python -m pytest -q tests/test_mesh_net_gpu.py` with a working display and OpenGL context. Linux software GL can use `MESH_GL_SMOKE=1 xvfb-run -a python -m pytest -q tests/test_mesh_net_gpu.py`. This test starts two hidden GameWindow processes with actual sockets, dispatches window key events, checks the loaded sign and samples both framebuffers for avatar colors. It checks movement, both attacks, death, exclusive loot, despawn and restored ownership on resume. The stdin test driver is checkout tooling and is excluded from the wheel.
+
+The [N5.1 rendered responsiveness check](n5_1_responsiveness.md) records the controlled local-display comparison, remote observations, correction behaviour and measurement limits. The check is descriptive and does not set a timing gate.
 
 ## Recorded evidence
 

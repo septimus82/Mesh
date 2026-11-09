@@ -18,13 +18,22 @@ class Server:
         self.connections: dict[asyncio.Task[None], asyncio.StreamWriter] = {}
         self.peers: dict[int, asyncio.StreamWriter] = {}
         self.offline: dict[str, tuple[int, Player]] = {}
+        self._lifecycle = asyncio.Lock()
 
     async def start(self, port: int = 0) -> int:
-        if self.listener is not None:
-            raise RuntimeError("server already listening")
-        self.listener = await asyncio.start_server(self._accept, "127.0.0.1", port, limit=wire.MAX_BYTES, backlog=16)
-        self.clock = asyncio.create_task(self._run_clock())
-        return int(self.listener.sockets[0].getsockname()[1])
+        async with self._lifecycle:
+            if self.listener is not None:
+                raise RuntimeError("server already listening")
+            listener = await asyncio.start_server(self._accept, "127.0.0.1", port, limit=wire.MAX_BYTES, backlog=16)
+            try:
+                clock = asyncio.create_task(self._run_clock())
+                port = int(listener.sockets[0].getsockname()[1])
+            except BaseException:
+                listener.close()
+                await listener.wait_closed()
+                raise
+            self.listener, self.clock = listener, clock
+            return port
 
     def _accept(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         if self.listener is None or len(self.connections) >= wire.MAX_PLAYERS:
@@ -89,21 +98,22 @@ class Server:
                     writer.write(data)
 
     async def close(self) -> None:
-        listener, self.listener = self.listener, None
-        if listener is not None:
-            listener.close()
-        tasks = list(self.connections)
-        if self.clock is not None:
-            tasks.append(self.clock)
-            self.clock = None
-        for writer in self.connections.values():
-            writer.transport.abort()
-        for task in tasks:
-            task.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
-        if listener is not None:
-            await listener.wait_closed()
-        self.offline.clear()
+        async with self._lifecycle:
+            listener, self.listener = self.listener, None
+            if listener is not None:
+                listener.close()
+            tasks = list(self.connections)
+            if self.clock is not None:
+                tasks.append(self.clock)
+                self.clock = None
+            for writer in self.connections.values():
+                writer.transport.abort()
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            if listener is not None:
+                await listener.wait_closed()
+            self.offline.clear()
 
 
 async def serve(port: int) -> None:

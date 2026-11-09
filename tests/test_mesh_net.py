@@ -138,6 +138,70 @@ def test_quota_rejects_flood_and_limits_half_open_connections(monkeypatch):
 
 
 @pytest.mark.integration
+def test_concurrent_start_and_close_own_one_listener_and_clock(monkeypatch):
+    async def run():
+        original = asyncio.start_server
+        listeners = []
+        async def tracked(*args, **kwargs):
+            listener = await original(*args, **kwargs)
+            listeners.append(listener)
+            return listener
+
+        monkeypatch.setattr(asyncio, "start_server", tracked)
+        server = Server()
+        results = await asyncio.gather(server.start(), server.start(), return_exceptions=True)
+        assert sum(type(result) is int for result in results) == 1
+        assert sum(isinstance(result, RuntimeError) for result in results) == 1
+        await server.close()
+        await server.close()
+        tick = server.room.tick
+        await asyncio.sleep(0.12)
+        assert server.room.tick == tick
+        assert len(listeners) == 1 and not listeners[0].is_serving()
+
+        server = Server()
+        entered, release = asyncio.Event(), asyncio.Event()
+        async def delayed(*args, **kwargs):
+            entered.set()
+            await release.wait()
+            return await original(*args, **kwargs)
+
+        monkeypatch.setattr(asyncio, "start_server", delayed)
+        starting = asyncio.create_task(server.start())
+        await entered.wait()
+        closing = asyncio.create_task(server.close())
+        release.set()
+        await starting
+        await closing
+        assert server.listener is None and server.clock is None
+        assert not server.connections
+
+        server = Server()
+        monkeypatch.setattr(asyncio, "start_server", delayed)
+        entered.clear()
+        release.clear()
+        starting = asyncio.create_task(server.start())
+        await entered.wait()
+        starting.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await starting
+        await server.close()
+        assert server.listener is None and server.clock is None
+        monkeypatch.setattr(asyncio, "start_server", original)
+        blocker = await original(lambda r, w: w.close(), "127.0.0.1", 0)
+        try:
+            with pytest.raises(OSError):
+                await server.start(blocker.sockets[0].getsockname()[1])
+            assert server.listener is None and server.clock is None
+            await server.start()
+            await server.close()
+        finally:
+            blocker.close()
+            await blocker.wait_closed()
+    asyncio.run(run())
+
+
+@pytest.mark.integration
 def test_server_process_killed_mid_session_reaches_eof():
     import sys
 
