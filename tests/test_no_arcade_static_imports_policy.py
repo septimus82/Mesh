@@ -16,7 +16,6 @@ EXCLUSIONS = {
 SCAN_DIRS = [
     "engine",
     "mesh_cli",
-    "mesh_net",
     "tooling",
 ]
 
