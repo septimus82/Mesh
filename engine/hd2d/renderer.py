@@ -20,6 +20,7 @@ from typing import Any, Callable, Iterable
 
 from PIL import Image
 
+from engine.hd2d.composite import FinalComposite, final_stage, overlay_after
 from engine.hd2d.dof import DofPass, blur_radius, character_band, dof_unavailable_reason, taps_for, view_depth
 from engine.hd2d.glb import Model, load_glb
 from engine.hd2d.lighting import LIGHTING_GLSL, Lighting, lamp_head
@@ -511,6 +512,15 @@ class Hd2dRenderer:
         self.dof_allow_software = False
         self.dof_unavailable = dof_unavailable_reason(ctx)
         self.last_dof: dict[str, Any] | None = None  # the last frame's focus, band and blur (None: not drawn)
+        # The final composite (engine.hd2d.composite, M17-L4-1): a pass in the blit's place reading the world's colour
+        # and depth, shared by the game and Studio. L4-1 has only its identity (no pixel changes), reached through
+        # ``force_identity_composite``: a test/diagnostic switch, not a setting (nothing saved, nothing in Studio).
+        # Off (every room), the picture is made exactly as before and nothing is allocated; its program (and, after
+        # the depth of field, its one colour target) is made the first time a frame needs it.
+        self._composite: FinalComposite | None = None
+        self.force_identity_composite = False
+        self.composite_unavailable: str | None = None  # why it's off, if the driver refused its program
+        self.last_stage = "blit"  # how the last frame's picture was made (engine.hd2d.composite.final_stage)
         self.water: Any = None  # the room's puddles and ponds on the GPU (engine.water; made when it has any)
         self.water_error: str | None = None  # why they're off in this room, if the GPU refused them
         self.preview: tuple[str, tuple[float, ...]] | None = None  # a model about to be placed (Mesh Studio)
@@ -966,7 +976,8 @@ class Hd2dRenderer:
                    + (self.fire_sprites.gl_objects() if self.fire_sprites is not None else [])
                    + (self.fire_particles.gl_objects() if self.fire_particles is not None else [])
                    + self.precipitation.gl_objects() + (self.water.gl_objects() if self.water is not None else [])
-                   + (self._dof_pass.gl_objects() if self._dof_pass is not None else []))
+                   + (self._dof_pass.gl_objects() if self._dof_pass is not None else [])
+                   + (self._composite.gl_objects() if self._composite is not None else []))
         return [o for o in objects if o is not None]
 
     def release(self) -> None:
@@ -997,6 +1008,9 @@ class Hd2dRenderer:
         if self._dof_pass is not None:
             self._dof_pass.release()
             self._dof_pass = None
+        if self._composite is not None:
+            self._composite.release()
+            self._composite = None
         if self.ground_prog is not None:
             self.ground_prog.delete()
             self.ground_prog = None
@@ -1266,12 +1280,20 @@ class Hd2dRenderer:
         self.camera.target = tuple(t + (g - t) * k for t, g in zip(self.camera.target, goal))
 
     def draw(self, *, solid: Any | None = None, read: bool = False, camera: Camera | None = None,
-             viewport: tuple[int, int, int, int] | None = None, overlay: Callable[[tuple[float, ...]], None] | None = None) -> Any:
+             viewport: tuple[int, int, int, int] | None = None, overlay: Callable[[tuple[float, ...]], None] | None = None,
+             read_final: bool = False) -> Any:
         """Draw the world into the active framebuffer. ``solid``: draw only that sprite, flat red, against the
         world's depth (for measuring what of it is visible); ``read``: return the rendered pixels (RGB bytes).
         Mesh Studio's editing view passes its own ``camera``, the ``viewport`` (x, y, w, h) of its canvas, and an
         ``overlay`` drawn in the world with its depth (selection boxes, the grid); the game's camera is untouched.
-        (``read`` returns the world as drawn, before the room's depth of field.)"""
+        (``read`` returns the world as drawn, before the room's depth of field and the final composite.)
+        ``read_final``: return instead the picture as it landed in the active framebuffer (its ``viewport``): the
+        world after the blit, the depth of field or the composite (engine.hd2d.composite), RGB bytes, rows bottom-up,
+        read before Studio's lines are drawn over it when they are drawn after it (the depth of field, the composite;
+        with the plain blit they're drawn into the world first). Nothing drawn after this call (Mesh's HUD, Studio's
+        panels) can be in it. For tests and captures."""
+        if read and read_final:
+            raise ValueError("draw(): read (the world before the composite) or read_final (the picture), not both")
         ctx = self.ctx
         self.last_dof = None
         previous = ctx.active_framebuffer
@@ -1382,26 +1404,55 @@ class Hd2dRenderer:
         if fires:  # their embers and smoke, in Studio's view too (a fire is part of the room, not its weather)
             self._draw_fire_particles(fires, vp, cam, fbo)
         dof = self._dof_frame(cam, camera is None, size) if solid is None else None
-        if overlay is not None and solid is None and dof is None:
+        composite = self._final_composite() if solid is None and self.force_identity_composite else None
+        stage = self.last_stage = final_stage(dof=dof is not None, composite=composite is not None)
+        lines_after = overlay is not None and solid is None and overlay_after(stage)
+        if overlay is not None and solid is None and not lines_after:
             overlay(vp)
         ctx.disable(ctx.DEPTH_TEST)
         pixels = fbo.read(components=3) if read else None
         previous.use()
         self._fbo_parts[0].use(0)
-        if dof is not None:  # in place of the blit; Studio's lines over it, sharp (_overlay_after)
-            self._composite_dof(dof, cam, viewport)
-            if overlay is not None:
-                self._overlay_after(fbo, previous, overlay, vp, viewport)
-            return pixels
-        with ctx.enabled_only():
-            if viewport:
+        if composite is not None:  # in place of the blit; after the depth of field when it runs (no copy between)
+            colour = self._fbo_parts[0]
+            if dof is not None:
+                chain, colour = composite.chain_target(size)
+                chain.use()
+                self._composite_dof(dof, cam, None)
+                previous.use()
+            with ctx.enabled_only():
                 full = ctx.viewport
-                ctx.viewport = viewport
-                self._blit.render(self.blit_prog)
-                ctx.viewport = full
-            else:
-                self._blit.render(self.blit_prog)
+                if viewport:
+                    ctx.viewport = viewport
+                composite.render(self._blit, colour, self._fbo_parts[1])
+                if viewport:
+                    ctx.viewport = full
+        elif dof is not None:  # in place of the blit
+            self._composite_dof(dof, cam, viewport)
+        else:
+            with ctx.enabled_only():
+                if viewport:
+                    full = ctx.viewport
+                    ctx.viewport = viewport
+                    self._blit.render(self.blit_prog)
+                    ctx.viewport = full
+                else:
+                    self._blit.render(self.blit_prog)
+        if read_final:
+            pixels = previous.read(viewport=tuple(int(v) for v in viewport) if viewport else (0, 0, *size), components=3)
+        if lines_after and overlay is not None:  # Studio's lines over the picture, sharp (_overlay_after)
+            self._overlay_after(fbo, previous, overlay, vp, viewport)
         return pixels
+
+    def _final_composite(self) -> FinalComposite | None:
+        """The composite pass, made the first time a frame needs it (None: the driver refused it; off here)."""
+        if self._composite is None and self.composite_unavailable is None:
+            try:
+                self._composite = FinalComposite(self.ctx, BLIT_VS)
+            except _gpu_refused() as exc:  # (a driver refusing the program: the original picture, said)
+                self.composite_unavailable = f"the final composite is off on this computer: the graphics driver refused it ({exc})"
+                logger.error("[Mesh][HD-2D] %s", self.composite_unavailable)
+        return self._composite
 
     # ------------------------------------------------------------------ depth of field (#460)
     def dof_status(self) -> tuple[str, str | None]:
