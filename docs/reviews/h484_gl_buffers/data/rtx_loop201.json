@@ -1,0 +1,6947 @@
+{
+ "worktree": "D:\\Games\\Mesh-h484",
+ "mode": "loop",
+ "gl": "hw",
+ "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "visits": [
+  {
+   "visit": 0,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 160,
+    "geometry": 48,
+    "vertex_array": 0
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 164216,
+   "flips": 31,
+   "working_set_mb": 197.8,
+   "private_mb": 823.1,
+   "gpu_free_mb": 4623.6
+  },
+  {
+   "visit": 1,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 147242,
+   "flips": 62,
+   "working_set_mb": 199.0,
+   "private_mb": 857.7,
+   "gpu_free_mb": 4634.7
+  },
+  {
+   "visit": 2,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 164841,
+   "flips": 93,
+   "working_set_mb": 200.9,
+   "private_mb": 879.1,
+   "gpu_free_mb": 4588.0
+  },
+  {
+   "visit": 3,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 147998,
+   "flips": 124,
+   "working_set_mb": 201.3,
+   "private_mb": 879.2,
+   "gpu_free_mb": 4599.3
+  },
+  {
+   "visit": 4,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 165074,
+   "flips": 155,
+   "working_set_mb": 202.8,
+   "private_mb": 880.2,
+   "gpu_free_mb": 4543.4
+  },
+  {
+   "visit": 5,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 148238,
+   "flips": 186,
+   "working_set_mb": 202.7,
+   "private_mb": 880.7,
+   "gpu_free_mb": 4598.4
+  },
+  {
+   "visit": 6,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 165751,
+   "flips": 217,
+   "working_set_mb": 203.6,
+   "private_mb": 893.7,
+   "gpu_free_mb": 4589.0
+  },
+  {
+   "visit": 7,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157641,
+   "flips": 248,
+   "working_set_mb": 204.8,
+   "private_mb": 894.2,
+   "gpu_free_mb": 4601.1
+  },
+  {
+   "visit": 8,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175884,
+   "flips": 279,
+   "working_set_mb": 206.2,
+   "private_mb": 907.2,
+   "gpu_free_mb": 4593.0
+  },
+  {
+   "visit": 9,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159049,
+   "flips": 310,
+   "working_set_mb": 207.5,
+   "private_mb": 908.6,
+   "gpu_free_mb": 4605.1
+  },
+  {
+   "visit": 10,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176145,
+   "flips": 341,
+   "working_set_mb": 207.8,
+   "private_mb": 908.6,
+   "gpu_free_mb": 4593.1
+  },
+  {
+   "visit": 11,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159289,
+   "flips": 372,
+   "working_set_mb": 208.0,
+   "private_mb": 910.2,
+   "gpu_free_mb": 4632.7
+  },
+  {
+   "visit": 12,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176336,
+   "flips": 403,
+   "working_set_mb": 208.0,
+   "private_mb": 910.2,
+   "gpu_free_mb": 4620.4
+  },
+  {
+   "visit": 13,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159108,
+   "flips": 434,
+   "working_set_mb": 207.9,
+   "private_mb": 909.9,
+   "gpu_free_mb": 4587.3
+  },
+  {
+   "visit": 14,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174417,
+   "flips": 465,
+   "working_set_mb": 208.0,
+   "private_mb": 909.9,
+   "gpu_free_mb": 4573.8
+  },
+  {
+   "visit": 15,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157771,
+   "flips": 496,
+   "working_set_mb": 208.0,
+   "private_mb": 908.0,
+   "gpu_free_mb": 4632.4
+  },
+  {
+   "visit": 16,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174865,
+   "flips": 527,
+   "working_set_mb": 208.0,
+   "private_mb": 908.0,
+   "gpu_free_mb": 4620.3
+  },
+  {
+   "visit": 17,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158009,
+   "flips": 558,
+   "working_set_mb": 208.0,
+   "private_mb": 908.0,
+   "gpu_free_mb": 4630.7
+  },
+  {
+   "visit": 18,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175056,
+   "flips": 589,
+   "working_set_mb": 208.0,
+   "private_mb": 908.0,
+   "gpu_free_mb": 4618.5
+  },
+  {
+   "visit": 19,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157828,
+   "flips": 620,
+   "working_set_mb": 208.2,
+   "private_mb": 906.5,
+   "gpu_free_mb": 4630.6
+  },
+  {
+   "visit": 20,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175387,
+   "flips": 651,
+   "working_set_mb": 208.2,
+   "private_mb": 906.5,
+   "gpu_free_mb": 4618.4
+  },
+  {
+   "visit": 21,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158579,
+   "flips": 682,
+   "working_set_mb": 208.2,
+   "private_mb": 906.5,
+   "gpu_free_mb": 4630.6
+  },
+  {
+   "visit": 22,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175626,
+   "flips": 713,
+   "working_set_mb": 208.2,
+   "private_mb": 918.5,
+   "gpu_free_mb": 4572.4
+  },
+  {
+   "visit": 23,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158819,
+   "flips": 744,
+   "working_set_mb": 208.2,
+   "private_mb": 918.5,
+   "gpu_free_mb": 4584.2
+  },
+  {
+   "visit": 24,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175866,
+   "flips": 775,
+   "working_set_mb": 208.2,
+   "private_mb": 916.4,
+   "gpu_free_mb": 4613.6
+  },
+  {
+   "visit": 25,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159059,
+   "flips": 806,
+   "working_set_mb": 208.3,
+   "private_mb": 916.4,
+   "gpu_free_mb": 4677.9
+  },
+  {
+   "visit": 26,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173837,
+   "flips": 837,
+   "working_set_mb": 208.3,
+   "private_mb": 916.4,
+   "gpu_free_mb": 4678.9
+  },
+  {
+   "visit": 27,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 156893,
+   "flips": 868,
+   "working_set_mb": 208.3,
+   "private_mb": 916.4,
+   "gpu_free_mb": 4674.4
+  },
+  {
+   "visit": 28,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173928,
+   "flips": 899,
+   "working_set_mb": 208.3,
+   "private_mb": 916.4,
+   "gpu_free_mb": 4662.3
+  },
+  {
+   "visit": 29,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157121,
+   "flips": 930,
+   "working_set_mb": 208.3,
+   "private_mb": 916.4,
+   "gpu_free_mb": 4674.5
+  },
+  {
+   "visit": 30,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174487,
+   "flips": 961,
+   "working_set_mb": 208.3,
+   "private_mb": 916.4,
+   "gpu_free_mb": 4676.0
+  },
+  {
+   "visit": 31,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157674,
+   "flips": 992,
+   "working_set_mb": 208.3,
+   "private_mb": 916.4,
+   "gpu_free_mb": 4644.0
+  },
+  {
+   "visit": 32,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175284,
+   "flips": 1023,
+   "working_set_mb": 208.3,
+   "private_mb": 915.4,
+   "gpu_free_mb": 4640.8
+  },
+  {
+   "visit": 33,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158547,
+   "flips": 1054,
+   "working_set_mb": 208.4,
+   "private_mb": 915.4,
+   "gpu_free_mb": 4695.8
+  },
+  {
+   "visit": 34,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175594,
+   "flips": 1085,
+   "working_set_mb": 208.4,
+   "private_mb": 915.4,
+   "gpu_free_mb": 4685.8
+  },
+  {
+   "visit": 35,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158787,
+   "flips": 1116,
+   "working_set_mb": 208.4,
+   "private_mb": 915.4,
+   "gpu_free_mb": 4697.8
+  },
+  {
+   "visit": 36,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176153,
+   "flips": 1147,
+   "working_set_mb": 208.4,
+   "private_mb": 915.4,
+   "gpu_free_mb": 4685.7
+  },
+  {
+   "visit": 37,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159340,
+   "flips": 1178,
+   "working_set_mb": 208.4,
+   "private_mb": 915.4,
+   "gpu_free_mb": 4697.8
+  },
+  {
+   "visit": 38,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176950,
+   "flips": 1209,
+   "working_set_mb": 208.5,
+   "private_mb": 902.2,
+   "gpu_free_mb": 4685.7
+  },
+  {
+   "visit": 39,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 160213,
+   "flips": 1240,
+   "working_set_mb": 208.6,
+   "private_mb": 899.5,
+   "gpu_free_mb": 4709.1
+  },
+  {
+   "visit": 40,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173719,
+   "flips": 1271,
+   "working_set_mb": 210.5,
+   "private_mb": 901.4,
+   "gpu_free_mb": 4696.9
+  },
+  {
+   "visit": 41,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 156897,
+   "flips": 1302,
+   "working_set_mb": 210.5,
+   "private_mb": 901.4,
+   "gpu_free_mb": 4663.9
+  },
+  {
+   "visit": 42,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174369,
+   "flips": 1333,
+   "working_set_mb": 210.5,
+   "private_mb": 901.4,
+   "gpu_free_mb": 4696.9
+  },
+  {
+   "visit": 43,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157556,
+   "flips": 1364,
+   "working_set_mb": 210.5,
+   "private_mb": 901.4,
+   "gpu_free_mb": 4709.0
+  },
+  {
+   "visit": 44,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175166,
+   "flips": 1395,
+   "working_set_mb": 210.5,
+   "private_mb": 901.4,
+   "gpu_free_mb": 4696.9
+  },
+  {
+   "visit": 45,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158429,
+   "flips": 1426,
+   "working_set_mb": 210.5,
+   "private_mb": 898.5,
+   "gpu_free_mb": 4709.0
+  },
+  {
+   "visit": 46,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175476,
+   "flips": 1457,
+   "working_set_mb": 210.5,
+   "private_mb": 898.5,
+   "gpu_free_mb": 4696.9
+  },
+  {
+   "visit": 47,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158669,
+   "flips": 1488,
+   "working_set_mb": 211.2,
+   "private_mb": 899.2,
+   "gpu_free_mb": 4709.0
+  },
+  {
+   "visit": 48,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176035,
+   "flips": 1519,
+   "working_set_mb": 211.2,
+   "private_mb": 899.2,
+   "gpu_free_mb": 4696.9
+  },
+  {
+   "visit": 49,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159222,
+   "flips": 1550,
+   "working_set_mb": 211.2,
+   "private_mb": 899.2,
+   "gpu_free_mb": 4709.0
+  },
+  {
+   "visit": 50,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176832,
+   "flips": 1581,
+   "working_set_mb": 211.2,
+   "private_mb": 899.2,
+   "gpu_free_mb": 4696.9
+  },
+  {
+   "visit": 51,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 160095,
+   "flips": 1612,
+   "working_set_mb": 211.2,
+   "private_mb": 899.2,
+   "gpu_free_mb": 4663.9
+  },
+  {
+   "visit": 52,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 177142,
+   "flips": 1643,
+   "working_set_mb": 211.2,
+   "private_mb": 912.3,
+   "gpu_free_mb": 4696.8
+  },
+  {
+   "visit": 53,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 156743,
+   "flips": 1674,
+   "working_set_mb": 211.2,
+   "private_mb": 912.2,
+   "gpu_free_mb": 4708.8
+  },
+  {
+   "visit": 54,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174303,
+   "flips": 1705,
+   "working_set_mb": 211.2,
+   "private_mb": 912.2,
+   "gpu_free_mb": 4696.6
+  },
+  {
+   "visit": 55,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157490,
+   "flips": 1736,
+   "working_set_mb": 211.2,
+   "private_mb": 912.2,
+   "gpu_free_mb": 4708.3
+  },
+  {
+   "visit": 56,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175100,
+   "flips": 1767,
+   "working_set_mb": 211.2,
+   "private_mb": 912.2,
+   "gpu_free_mb": 4696.2
+  },
+  {
+   "visit": 57,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158363,
+   "flips": 1798,
+   "working_set_mb": 211.2,
+   "private_mb": 912.2,
+   "gpu_free_mb": 4708.2
+  },
+  {
+   "visit": 58,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175410,
+   "flips": 1829,
+   "working_set_mb": 211.2,
+   "private_mb": 912.2,
+   "gpu_free_mb": 4696.1
+  },
+  {
+   "visit": 59,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158603,
+   "flips": 1860,
+   "working_set_mb": 211.2,
+   "private_mb": 912.2,
+   "gpu_free_mb": 4708.3
+  },
+  {
+   "visit": 60,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175969,
+   "flips": 1891,
+   "working_set_mb": 211.2,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4651.1
+  },
+  {
+   "visit": 61,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159156,
+   "flips": 1922,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4663.1
+  },
+  {
+   "visit": 62,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176766,
+   "flips": 1953,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4696.1
+  },
+  {
+   "visit": 63,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 160029,
+   "flips": 1984,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4708.1
+  },
+  {
+   "visit": 64,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 177076,
+   "flips": 2015,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4658.5
+  },
+  {
+   "visit": 65,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 160269,
+   "flips": 2046,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4669.7
+  },
+  {
+   "visit": 66,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173746,
+   "flips": 2077,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4655.8
+  },
+  {
+   "visit": 67,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 156923,
+   "flips": 2108,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4672.7
+  },
+  {
+   "visit": 68,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174329,
+   "flips": 2139,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4661.3
+  },
+  {
+   "visit": 69,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157489,
+   "flips": 2170,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4673.3
+  },
+  {
+   "visit": 70,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174536,
+   "flips": 2201,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4607.8
+  },
+  {
+   "visit": 71,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157729,
+   "flips": 2232,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4665.1
+  },
+  {
+   "visit": 72,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175289,
+   "flips": 2263,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4651.8
+  },
+  {
+   "visit": 73,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158476,
+   "flips": 2294,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4679.9
+  },
+  {
+   "visit": 74,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175884,
+   "flips": 2325,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4670.2
+  },
+  {
+   "visit": 75,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159044,
+   "flips": 2356,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4682.0
+  },
+  {
+   "visit": 76,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176091,
+   "flips": 2387,
+   "working_set_mb": 211.3,
+   "private_mb": 896.1,
+   "gpu_free_mb": 4666.2
+  },
+  {
+   "visit": 77,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159284,
+   "flips": 2418,
+   "working_set_mb": 211.3,
+   "private_mb": 893.7,
+   "gpu_free_mb": 4678.2
+  },
+  {
+   "visit": 78,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176845,
+   "flips": 2449,
+   "working_set_mb": 211.3,
+   "private_mb": 893.7,
+   "gpu_free_mb": 4627.8
+  },
+  {
+   "visit": 79,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 160031,
+   "flips": 2480,
+   "working_set_mb": 211.3,
+   "private_mb": 893.7,
+   "gpu_free_mb": 4642.2
+  },
+  {
+   "visit": 80,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173748,
+   "flips": 2511,
+   "working_set_mb": 211.3,
+   "private_mb": 893.7,
+   "gpu_free_mb": 4672.8
+  },
+  {
+   "visit": 81,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 156937,
+   "flips": 2542,
+   "working_set_mb": 211.3,
+   "private_mb": 893.7,
+   "gpu_free_mb": 4683.6
+  },
+  {
+   "visit": 82,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173982,
+   "flips": 2573,
+   "working_set_mb": 211.3,
+   "private_mb": 893.7,
+   "gpu_free_mb": 4684.3
+  },
+  {
+   "visit": 83,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 156754,
+   "flips": 2604,
+   "working_set_mb": 211.3,
+   "private_mb": 893.7,
+   "gpu_free_mb": 4696.3
+  },
+  {
+   "visit": 84,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174313,
+   "flips": 2635,
+   "working_set_mb": 211.3,
+   "private_mb": 906.8,
+   "gpu_free_mb": 4684.1
+  },
+  {
+   "visit": 85,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157505,
+   "flips": 2666,
+   "working_set_mb": 211.3,
+   "private_mb": 906.8,
+   "gpu_free_mb": 4696.8
+  },
+  {
+   "visit": 86,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174552,
+   "flips": 2697,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4684.4
+  },
+  {
+   "visit": 87,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157745,
+   "flips": 2728,
+   "working_set_mb": 211.3,
+   "private_mb": 909.2,
+   "gpu_free_mb": 4651.3
+  },
+  {
+   "visit": 88,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174792,
+   "flips": 2759,
+   "working_set_mb": 211.3,
+   "private_mb": 921.2,
+   "gpu_free_mb": 4637.7
+  },
+  {
+   "visit": 89,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157985,
+   "flips": 2790,
+   "working_set_mb": 211.3,
+   "private_mb": 921.2,
+   "gpu_free_mb": 4696.3
+  },
+  {
+   "visit": 90,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175462,
+   "flips": 2821,
+   "working_set_mb": 211.3,
+   "private_mb": 921.2,
+   "gpu_free_mb": 4684.1
+  },
+  {
+   "visit": 91,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158649,
+   "flips": 2852,
+   "working_set_mb": 211.3,
+   "private_mb": 921.2,
+   "gpu_free_mb": 4696.3
+  },
+  {
+   "visit": 92,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173752,
+   "flips": 2883,
+   "working_set_mb": 211.3,
+   "private_mb": 918.2,
+   "gpu_free_mb": 4684.0
+  },
+  {
+   "visit": 93,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 156947,
+   "flips": 2914,
+   "working_set_mb": 211.3,
+   "private_mb": 918.2,
+   "gpu_free_mb": 4696.2
+  },
+  {
+   "visit": 94,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174313,
+   "flips": 2945,
+   "working_set_mb": 211.3,
+   "private_mb": 918.2,
+   "gpu_free_mb": 4684.1
+  },
+  {
+   "visit": 95,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157500,
+   "flips": 2976,
+   "working_set_mb": 211.3,
+   "private_mb": 918.2,
+   "gpu_free_mb": 4696.8
+  },
+  {
+   "visit": 96,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174973,
+   "flips": 3007,
+   "working_set_mb": 211.3,
+   "private_mb": 918.2,
+   "gpu_free_mb": 4639.5
+  },
+  {
+   "visit": 97,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158160,
+   "flips": 3038,
+   "working_set_mb": 211.3,
+   "private_mb": 918.2,
+   "gpu_free_mb": 4651.6
+  },
+  {
+   "visit": 98,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175207,
+   "flips": 3069,
+   "working_set_mb": 211.3,
+   "private_mb": 918.2,
+   "gpu_free_mb": 4684.6
+  },
+  {
+   "visit": 99,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158400,
+   "flips": 3100,
+   "working_set_mb": 211.3,
+   "private_mb": 918.2,
+   "gpu_free_mb": 4696.6
+  },
+  {
+   "visit": 100,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175447,
+   "flips": 3131,
+   "working_set_mb": 211.3,
+   "private_mb": 918.2,
+   "gpu_free_mb": 4684.5
+  },
+  {
+   "visit": 101,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158640,
+   "flips": 3162,
+   "working_set_mb": 211.3,
+   "private_mb": 918.2,
+   "gpu_free_mb": 4696.6
+  },
+  {
+   "visit": 102,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176117,
+   "flips": 3193,
+   "working_set_mb": 211.2,
+   "private_mb": 918.0,
+   "gpu_free_mb": 4684.5
+  },
+  {
+   "visit": 103,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159304,
+   "flips": 3224,
+   "working_set_mb": 211.3,
+   "private_mb": 918.0,
+   "gpu_free_mb": 4696.8
+  },
+  {
+   "visit": 104,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176351,
+   "flips": 3255,
+   "working_set_mb": 211.3,
+   "private_mb": 918.0,
+   "gpu_free_mb": 4689.8
+  },
+  {
+   "visit": 105,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159544,
+   "flips": 3286,
+   "working_set_mb": 211.3,
+   "private_mb": 918.0,
+   "gpu_free_mb": 4704.6
+  },
+  {
+   "visit": 106,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173774,
+   "flips": 3317,
+   "working_set_mb": 211.3,
+   "private_mb": 918.0,
+   "gpu_free_mb": 4648.2
+  },
+  {
+   "visit": 107,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 156963,
+   "flips": 3348,
+   "working_set_mb": 211.3,
+   "private_mb": 918.0,
+   "gpu_free_mb": 4705.8
+  },
+  {
+   "visit": 108,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174571,
+   "flips": 3379,
+   "working_set_mb": 211.3,
+   "private_mb": 915.9,
+   "gpu_free_mb": 4712.1
+  },
+  {
+   "visit": 109,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157834,
+   "flips": 3410,
+   "working_set_mb": 211.3,
+   "private_mb": 915.9,
+   "gpu_free_mb": 4734.8
+  },
+  {
+   "visit": 110,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174881,
+   "flips": 3441,
+   "working_set_mb": 211.3,
+   "private_mb": 915.9,
+   "gpu_free_mb": 4732.9
+  },
+  {
+   "visit": 111,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158074,
+   "flips": 3472,
+   "working_set_mb": 211.3,
+   "private_mb": 915.9,
+   "gpu_free_mb": 4744.9
+  },
+  {
+   "visit": 112,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175440,
+   "flips": 3503,
+   "working_set_mb": 211.3,
+   "private_mb": 915.9,
+   "gpu_free_mb": 4738.2
+  },
+  {
+   "visit": 113,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158627,
+   "flips": 3534,
+   "working_set_mb": 211.3,
+   "private_mb": 915.9,
+   "gpu_free_mb": 4751.0
+  },
+  {
+   "visit": 114,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176237,
+   "flips": 3565,
+   "working_set_mb": 211.3,
+   "private_mb": 915.9,
+   "gpu_free_mb": 4738.6
+  },
+  {
+   "visit": 115,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159500,
+   "flips": 3596,
+   "working_set_mb": 211.3,
+   "private_mb": 915.9,
+   "gpu_free_mb": 4705.8
+  },
+  {
+   "visit": 116,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176547,
+   "flips": 3627,
+   "working_set_mb": 211.3,
+   "private_mb": 915.9,
+   "gpu_free_mb": 4739.2
+  },
+  {
+   "visit": 117,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159740,
+   "flips": 3658,
+   "working_set_mb": 211.3,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4751.3
+  },
+  {
+   "visit": 118,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 177107,
+   "flips": 3689,
+   "working_set_mb": 211.3,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4739.2
+  },
+  {
+   "visit": 119,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 160293,
+   "flips": 3720,
+   "working_set_mb": 211.3,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4749.6
+  },
+  {
+   "visit": 120,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173872,
+   "flips": 3751,
+   "working_set_mb": 211.3,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4738.0
+  },
+  {
+   "visit": 121,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 156977,
+   "flips": 3782,
+   "working_set_mb": 211.3,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4750.1
+  },
+  {
+   "visit": 122,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174022,
+   "flips": 3813,
+   "working_set_mb": 211.3,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4738.0
+  },
+  {
+   "visit": 123,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157215,
+   "flips": 3844,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4750.2
+  },
+  {
+   "visit": 124,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174775,
+   "flips": 3875,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4693.0
+  },
+  {
+   "visit": 125,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157962,
+   "flips": 3906,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4705.0
+  },
+  {
+   "visit": 126,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175370,
+   "flips": 3937,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4738.0
+  },
+  {
+   "visit": 127,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158530,
+   "flips": 3968,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4750.0
+  },
+  {
+   "visit": 128,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175577,
+   "flips": 3999,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4737.8
+  },
+  {
+   "visit": 129,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158770,
+   "flips": 4030,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4749.8
+  },
+  {
+   "visit": 130,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176330,
+   "flips": 4061,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4737.9
+  },
+  {
+   "visit": 131,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159517,
+   "flips": 4092,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4750.0
+  },
+  {
+   "visit": 132,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173820,
+   "flips": 4123,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4738.1
+  },
+  {
+   "visit": 133,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 156989,
+   "flips": 4154,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4750.1
+  },
+  {
+   "visit": 134,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174034,
+   "flips": 4185,
+   "working_set_mb": 211.4,
+   "private_mb": 890.7,
+   "gpu_free_mb": 4691.9
+  },
+  {
+   "visit": 135,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157227,
+   "flips": 4216,
+   "working_set_mb": 211.4,
+   "private_mb": 890.7,
+   "gpu_free_mb": 4746.5
+  },
+  {
+   "visit": 136,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174787,
+   "flips": 4247,
+   "working_set_mb": 211.4,
+   "private_mb": 890.7,
+   "gpu_free_mb": 4712.2
+  },
+  {
+   "visit": 137,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157974,
+   "flips": 4278,
+   "working_set_mb": 211.4,
+   "private_mb": 890.7,
+   "gpu_free_mb": 4697.3
+  },
+  {
+   "visit": 138,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175382,
+   "flips": 4309,
+   "working_set_mb": 211.4,
+   "private_mb": 890.7,
+   "gpu_free_mb": 4741.0
+  },
+  {
+   "visit": 139,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158542,
+   "flips": 4340,
+   "working_set_mb": 211.4,
+   "private_mb": 890.7,
+   "gpu_free_mb": 4710.9
+  },
+  {
+   "visit": 140,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175589,
+   "flips": 4371,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4697.6
+  },
+  {
+   "visit": 141,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158782,
+   "flips": 4402,
+   "working_set_mb": 211.4,
+   "private_mb": 903.9,
+   "gpu_free_mb": 4709.2
+  },
+  {
+   "visit": 142,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176342,
+   "flips": 4433,
+   "working_set_mb": 211.4,
+   "private_mb": 913.5,
+   "gpu_free_mb": 4654.9
+  },
+  {
+   "visit": 143,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159529,
+   "flips": 4464,
+   "working_set_mb": 211.4,
+   "private_mb": 913.5,
+   "gpu_free_mb": 4709.9
+  },
+  {
+   "visit": 144,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176937,
+   "flips": 4495,
+   "working_set_mb": 211.4,
+   "private_mb": 913.5,
+   "gpu_free_mb": 4716.5
+  },
+  {
+   "visit": 145,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 160097,
+   "flips": 4526,
+   "working_set_mb": 211.4,
+   "private_mb": 913.5,
+   "gpu_free_mb": 4728.6
+  },
+  {
+   "visit": 146,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173825,
+   "flips": 4557,
+   "working_set_mb": 211.4,
+   "private_mb": 913.5,
+   "gpu_free_mb": 4716.6
+  },
+  {
+   "visit": 147,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157001,
+   "flips": 4588,
+   "working_set_mb": 211.4,
+   "private_mb": 913.5,
+   "gpu_free_mb": 4740.3
+  },
+  {
+   "visit": 148,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174561,
+   "flips": 4619,
+   "working_set_mb": 211.4,
+   "private_mb": 901.5,
+   "gpu_free_mb": 4725.8
+  },
+  {
+   "visit": 149,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157748,
+   "flips": 4650,
+   "working_set_mb": 211.4,
+   "private_mb": 901.5,
+   "gpu_free_mb": 4733.9
+  },
+  {
+   "visit": 150,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175156,
+   "flips": 4681,
+   "working_set_mb": 211.4,
+   "private_mb": 913.5,
+   "gpu_free_mb": 4693.6
+  },
+  {
+   "visit": 151,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158316,
+   "flips": 4712,
+   "working_set_mb": 211.4,
+   "private_mb": 913.5,
+   "gpu_free_mb": 4748.6
+  },
+  {
+   "visit": 152,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175363,
+   "flips": 4743,
+   "working_set_mb": 211.4,
+   "private_mb": 913.5,
+   "gpu_free_mb": 4787.0
+  },
+  {
+   "visit": 153,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158556,
+   "flips": 4774,
+   "working_set_mb": 211.4,
+   "private_mb": 913.5,
+   "gpu_free_mb": 4799.0
+  },
+  {
+   "visit": 154,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176116,
+   "flips": 4805,
+   "working_set_mb": 211.5,
+   "private_mb": 925.6,
+   "gpu_free_mb": 4773.7
+  },
+  {
+   "visit": 155,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159303,
+   "flips": 4836,
+   "working_set_mb": 211.5,
+   "private_mb": 925.6,
+   "gpu_free_mb": 4785.8
+  },
+  {
+   "visit": 156,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176711,
+   "flips": 4867,
+   "working_set_mb": 211.5,
+   "private_mb": 925.6,
+   "gpu_free_mb": 4645.0
+  },
+  {
+   "visit": 157,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159871,
+   "flips": 4898,
+   "working_set_mb": 211.5,
+   "private_mb": 925.6,
+   "gpu_free_mb": 4648.5
+  },
+  {
+   "visit": 158,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176918,
+   "flips": 4929,
+   "working_set_mb": 211.5,
+   "private_mb": 925.6,
+   "gpu_free_mb": 4609.6
+  },
+  {
+   "visit": 159,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 156178,
+   "flips": 4960,
+   "working_set_mb": 211.5,
+   "private_mb": 925.6,
+   "gpu_free_mb": 4656.4
+  },
+  {
+   "visit": 160,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174013,
+   "flips": 4991,
+   "working_set_mb": 211.5,
+   "private_mb": 925.6,
+   "gpu_free_mb": 4679.7
+  },
+  {
+   "visit": 161,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157186,
+   "flips": 5022,
+   "working_set_mb": 211.5,
+   "private_mb": 925.6,
+   "gpu_free_mb": 4599.2
+  },
+  {
+   "visit": 162,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174652,
+   "flips": 5053,
+   "working_set_mb": 211.5,
+   "private_mb": 925.6,
+   "gpu_free_mb": 4621.6
+  },
+  {
+   "visit": 163,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157839,
+   "flips": 5084,
+   "working_set_mb": 211.5,
+   "private_mb": 925.6,
+   "gpu_free_mb": 4634.4
+  },
+  {
+   "visit": 164,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174886,
+   "flips": 5115,
+   "working_set_mb": 211.5,
+   "private_mb": 925.6,
+   "gpu_free_mb": 4694.1
+  },
+  {
+   "visit": 165,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158079,
+   "flips": 5146,
+   "working_set_mb": 211.5,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4662.0
+  },
+  {
+   "visit": 166,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175126,
+   "flips": 5177,
+   "working_set_mb": 211.5,
+   "private_mb": 908.9,
+   "gpu_free_mb": 4654.2
+  },
+  {
+   "visit": 167,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158319,
+   "flips": 5208,
+   "working_set_mb": 211.5,
+   "private_mb": 908.9,
+   "gpu_free_mb": 4714.5
+  },
+  {
+   "visit": 168,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175794,
+   "flips": 5239,
+   "working_set_mb": 211.5,
+   "private_mb": 908.9,
+   "gpu_free_mb": 4719.6
+  },
+  {
+   "visit": 169,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158981,
+   "flips": 5270,
+   "working_set_mb": 211.5,
+   "private_mb": 908.9,
+   "gpu_free_mb": 4740.1
+  },
+  {
+   "visit": 170,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176028,
+   "flips": 5301,
+   "working_set_mb": 211.5,
+   "private_mb": 908.9,
+   "gpu_free_mb": 4757.5
+  },
+  {
+   "visit": 171,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159221,
+   "flips": 5332,
+   "working_set_mb": 211.7,
+   "private_mb": 908.9,
+   "gpu_free_mb": 4767.1
+  },
+  {
+   "visit": 172,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173840,
+   "flips": 5363,
+   "working_set_mb": 211.7,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4805.6
+  },
+  {
+   "visit": 173,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157029,
+   "flips": 5394,
+   "working_set_mb": 211.7,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4822.1
+  },
+  {
+   "visit": 174,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174637,
+   "flips": 5425,
+   "working_set_mb": 211.7,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4759.7
+  },
+  {
+   "visit": 175,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157900,
+   "flips": 5456,
+   "working_set_mb": 211.7,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4814.8
+  },
+  {
+   "visit": 176,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174947,
+   "flips": 5487,
+   "working_set_mb": 211.7,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4802.8
+  },
+  {
+   "visit": 177,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158140,
+   "flips": 5518,
+   "working_set_mb": 211.7,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4814.9
+  },
+  {
+   "visit": 178,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175506,
+   "flips": 5549,
+   "working_set_mb": 211.7,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4804.5
+  },
+  {
+   "visit": 179,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158693,
+   "flips": 5580,
+   "working_set_mb": 211.7,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4816.1
+  },
+  {
+   "visit": 180,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176303,
+   "flips": 5611,
+   "working_set_mb": 211.7,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4783.7
+  },
+  {
+   "visit": 181,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159566,
+   "flips": 5642,
+   "working_set_mb": 211.7,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4797.8
+  },
+  {
+   "visit": 182,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176613,
+   "flips": 5673,
+   "working_set_mb": 211.7,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4740.5
+  },
+  {
+   "visit": 183,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159806,
+   "flips": 5704,
+   "working_set_mb": 211.7,
+   "private_mb": 922.0,
+   "gpu_free_mb": 4754.9
+  },
+  {
+   "visit": 184,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 177173,
+   "flips": 5735,
+   "working_set_mb": 211.7,
+   "private_mb": 924.1,
+   "gpu_free_mb": 4784.9
+  },
+  {
+   "visit": 185,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 160359,
+   "flips": 5766,
+   "working_set_mb": 211.8,
+   "private_mb": 921.6,
+   "gpu_free_mb": 4797.1
+  },
+  {
+   "visit": 186,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173938,
+   "flips": 5797,
+   "working_set_mb": 211.8,
+   "private_mb": 921.6,
+   "gpu_free_mb": 4786.1
+  },
+  {
+   "visit": 187,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157043,
+   "flips": 5828,
+   "working_set_mb": 211.8,
+   "private_mb": 921.6,
+   "gpu_free_mb": 4802.3
+  },
+  {
+   "visit": 188,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174088,
+   "flips": 5859,
+   "working_set_mb": 211.8,
+   "private_mb": 921.6,
+   "gpu_free_mb": 4785.9
+  },
+  {
+   "visit": 189,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157281,
+   "flips": 5890,
+   "working_set_mb": 211.8,
+   "private_mb": 921.6,
+   "gpu_free_mb": 4798.0
+  },
+  {
+   "visit": 190,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174841,
+   "flips": 5921,
+   "working_set_mb": 211.8,
+   "private_mb": 921.6,
+   "gpu_free_mb": 4785.9
+  },
+  {
+   "visit": 191,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158028,
+   "flips": 5952,
+   "working_set_mb": 211.8,
+   "private_mb": 921.6,
+   "gpu_free_mb": 4798.0
+  },
+  {
+   "visit": 192,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175436,
+   "flips": 5983,
+   "working_set_mb": 211.8,
+   "private_mb": 921.6,
+   "gpu_free_mb": 4741.0
+  },
+  {
+   "visit": 193,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158596,
+   "flips": 6014,
+   "working_set_mb": 211.8,
+   "private_mb": 921.6,
+   "gpu_free_mb": 4798.1
+  },
+  {
+   "visit": 194,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 175643,
+   "flips": 6045,
+   "working_set_mb": 211.8,
+   "private_mb": 921.6,
+   "gpu_free_mb": 4804.4
+  },
+  {
+   "visit": 195,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 158836,
+   "flips": 6076,
+   "working_set_mb": 211.9,
+   "private_mb": 922.1,
+   "gpu_free_mb": 4821.1
+  },
+  {
+   "visit": 196,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 176396,
+   "flips": 6107,
+   "working_set_mb": 211.9,
+   "private_mb": 922.1,
+   "gpu_free_mb": 4811.4
+  },
+  {
+   "visit": 197,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 159583,
+   "flips": 6138,
+   "working_set_mb": 211.9,
+   "private_mb": 922.1,
+   "gpu_free_mb": 4828.8
+  },
+  {
+   "visit": 198,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 173886,
+   "flips": 6169,
+   "working_set_mb": 211.9,
+   "private_mb": 922.1,
+   "gpu_free_mb": 4825.1
+  },
+  {
+   "visit": 199,
+   "room": "cottage",
+   "after_load": {
+    "texture": 9,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 139,
+    "geometry": 25,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 18,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 77,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 77,
+    "glIsBuffer_true": 77,
+    "traced_bytes": 139128
+   },
+   "py_objects": 157055,
+   "flips": 6200,
+   "working_set_mb": 211.9,
+   "private_mb": 922.1,
+   "gpu_free_mb": 4844.0
+  },
+  {
+   "visit": 200,
+   "room": "start",
+   "after_load": {
+    "texture": 31,
+    "framebuffer": 3,
+    "program": 27,
+    "buffer": 185,
+    "geometry": 48,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 42,
+    "framebuffer": 6,
+    "program": 27,
+    "buffer": 123,
+    "geometry": 49,
+    "vertex_array": 57
+   },
+   "pending": {},
+   "pending_new_by_site": {},
+   "driver": {
+    "traced_live": 123,
+    "glIsBuffer_true": 123,
+    "traced_bytes": 249032
+   },
+   "py_objects": 174100,
+   "flips": 6231,
+   "working_set_mb": 211.9,
+   "private_mb": 922.1,
+   "gpu_free_mb": 4835.4
+  }
+ ],
+ "end": {
+  "before": {
+   "texture": 42,
+   "framebuffer": 6,
+   "program": 27,
+   "buffer": 123,
+   "geometry": 49,
+   "vertex_array": 57
+  },
+  "pending": {},
+  "driver": {
+   "traced_live": 123,
+   "glIsBuffer_true": 123,
+   "traced_bytes": 249032
+  },
+  "after_ctx_gc": {
+   "texture": 42,
+   "framebuffer": 6,
+   "program": 27,
+   "buffer": 123,
+   "geometry": 49,
+   "vertex_array": 57
+  },
+  "driver_after_ctx_gc": {
+   "traced_live": 123,
+   "glIsBuffer_true": 123,
+   "traced_bytes": 249032
+  },
+  "after_collect_ctx_gc": {
+   "texture": 42,
+   "framebuffer": 6,
+   "program": 27,
+   "buffer": 123,
+   "geometry": 49,
+   "vertex_array": 57
+  },
+  "driver_after_collect": {
+   "traced_live": 123,
+   "glIsBuffer_true": 123,
+   "traced_bytes": 249032
+  },
+  "after_renderer_release": {
+   "texture": 5,
+   "framebuffer": 3,
+   "program": 18,
+   "buffer": 66,
+   "geometry": 21,
+   "vertex_array": 3
+  },
+  "working_set_mb": 211.9,
+  "private_mb": 922.1
+ },
+ "seconds": 113.7,
+ "survivor_sites": [
+  [
+   "engine/hd2d/renderer.py:591 _buffer <- engine/hd2d/renderer.py:602 _geometry",
+   28
+  ],
+  [
+   "engine/hd2d/renderer.py:591 _buffer <- engine/hd2d/renderer.py:599 _geometry",
+   27
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   3
+  ],
+  [
+   "arcade/context.py:138 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:203 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:217 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:218 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:230 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:235 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:264 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:270 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:115 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:115 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:115 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:115 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:115 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:116 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:116 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:116 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:116 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:116 __init__",
+   1
+  ]
+ ],
+ "created_sites": [
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   6030
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   6030
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   6030
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   6030
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   6030
+  ],
+  [
+   "engine/hd2d/renderer.py:591 _buffer <- engine/hd2d/renderer.py:602 _geometry",
+   3328
+  ],
+  [
+   "engine/hd2d/renderer.py:591 _buffer <- engine/hd2d/renderer.py:599 _geometry",
+   3127
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   603
+  ],
+  [
+   "arcade/future/texture_render_target.py:33 __init__ <- arcade/future/light/lights.py:93 __init__ <= engine/lighting/__init__.py:791 _create_layer",
+   403
+  ],
+  [
+   "arcade/future/light/lights.py:99 __init__ <- engine/lighting/__init__.py:791 _create_layer",
+   403
+  ],
+  [
+   "arcade/future/light/lights.py:111 __init__ <- engine/lighting/__init__.py:791 _create_layer",
+   403
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   201
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   201
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   201
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   201
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   201
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:73 <lambda>",
+   201
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:73 <lambda>",
+   201
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:73 <lambda>",
+   201
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:73 <lambda>",
+   201
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:73 <lambda>",
+   201
+  ],
+  [
+   "engine/hd2d/renderer.py:1143 _upload_dynamic <- engine/hd2d/renderer.py:1317 draw",
+   201
+  ],
+  [
+   "engine/hd2d/renderer.py:1144 _upload_dynamic <- engine/hd2d/renderer.py:1317 draw",
+   201
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers",
+   200
+  ]
+ ],
+ "deleted_sites": [
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   6029
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   6029
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   6029
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   6029
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   6029
+  ],
+  [
+   "engine/hd2d/renderer.py:591 _buffer <- engine/hd2d/renderer.py:602 _geometry",
+   3328
+  ],
+  [
+   "engine/hd2d/renderer.py:591 _buffer <- engine/hd2d/renderer.py:599 _geometry",
+   3127
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   603
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   600
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   600
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   600
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   600
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   600
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   600
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   600
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   600
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   600
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   600
+  ],
+  [
+   "arcade/future/light/lights.py:99 __init__ <- engine/lighting/__init__.py:791 _create_layer",
+   402
+  ],
+  [
+   "arcade/future/texture_render_target.py:33 __init__ <- arcade/future/light/lights.py:93 __init__ <= engine/lighting/__init__.py:791 _create_layer",
+   402
+  ],
+  [
+   "arcade/future/light/lights.py:111 __init__ <- engine/lighting/__init__.py:791 _create_layer",
+   402
+  ],
+  [
+   "engine/hd2d/renderer.py:1143 _upload_dynamic <- engine/hd2d/renderer.py:1317 draw",
+   201
+  ],
+  [
+   "engine/hd2d/renderer.py:1144 _upload_dynamic <- engine/hd2d/renderer.py:1317 draw",
+   201
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:73 <lambda>",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:73 <lambda>",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:73 <lambda>",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:73 <lambda>",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:73 <lambda>",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers",
+   200
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers",
+   200
+  ]
+ ],
+ "after_window_close": {
+  "texture": 5,
+  "framebuffer": 3,
+  "program": 9,
+  "buffer": 66,
+  "geometry": 21,
+  "vertex_array": 3
+ }
+}

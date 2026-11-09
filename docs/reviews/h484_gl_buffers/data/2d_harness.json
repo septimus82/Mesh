@@ -1,0 +1,1442 @@
+{
+ "worktree": "D:\\Games\\Mesh-h484",
+ "mode": "harness",
+ "gl": "hw",
+ "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "visits": [
+  {
+   "visit": 0,
+   "room": "start",
+   "after_load": {
+    "texture": 5,
+    "framebuffer": 3,
+    "program": 18,
+    "buffer": 105,
+    "geometry": 20,
+    "vertex_array": 0
+   },
+   "settled": {
+    "texture": 5,
+    "framebuffer": 3,
+    "program": 18,
+    "buffer": 280,
+    "geometry": 23,
+    "vertex_array": 6
+   },
+   "pending": {
+    "OpenGLBuffer": 194,
+    "OpenGLVertexArray": 1
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 145,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:283 __init__": 5,
+    "engine/scene_controller_core.py:284 __init__": 5,
+    "engine/scene_controller_core.py:285 __init__": 5,
+    "engine/scene_controller_core.py:287 __init__": 5,
+    "engine/particles.py:114 __init__": 5,
+    "engine/render_queue_arcade.py:45 draw": 5
+   },
+   "driver": {
+    "traced_live": 280,
+    "glIsBuffer_true": 280,
+    "traced_bytes": 507912
+   },
+   "py_objects": 146012,
+   "flips": 0,
+   "working_set_mb": 188.3,
+   "private_mb": 717.6,
+   "gpu_free_mb": 4807.3
+  },
+  {
+   "visit": 1,
+   "room": "other",
+   "after_load": {
+    "texture": 5,
+    "framebuffer": 3,
+    "program": 18,
+    "buffer": 354,
+    "geometry": 21,
+    "vertex_array": 6
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 528,
+    "geometry": 26,
+    "vertex_array": 12
+   },
+   "pending": {
+    "OpenGLBuffer": 423,
+    "OpenGLVertexArray": 4
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 528,
+    "glIsBuffer_true": 528,
+    "traced_bytes": 1019016
+   },
+   "py_objects": 146746,
+   "flips": 0,
+   "working_set_mb": 189.8,
+   "private_mb": 734.9,
+   "gpu_free_mb": 4801.1
+  },
+  {
+   "visit": 2,
+   "room": "start",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 602,
+    "geometry": 24,
+    "vertex_array": 12
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 772,
+    "geometry": 26,
+    "vertex_array": 15
+   },
+   "pending": {
+    "OpenGLBuffer": 652,
+    "OpenGLVertexArray": 7
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 772,
+    "glIsBuffer_true": 772,
+    "traced_bytes": 1470856
+   },
+   "py_objects": 147479,
+   "flips": 0,
+   "working_set_mb": 192.6,
+   "private_mb": 736.7,
+   "gpu_free_mb": 4801.1
+  },
+  {
+   "visit": 3,
+   "room": "other",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 846,
+    "geometry": 24,
+    "vertex_array": 15
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 1016,
+    "geometry": 26,
+    "vertex_array": 18
+   },
+   "pending": {
+    "OpenGLBuffer": 881,
+    "OpenGLVertexArray": 10
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 1016,
+    "glIsBuffer_true": 1016,
+    "traced_bytes": 1922696
+   },
+   "py_objects": 148337,
+   "flips": 0,
+   "working_set_mb": 193.7,
+   "private_mb": 736.7,
+   "gpu_free_mb": 4801.1
+  },
+  {
+   "visit": 4,
+   "room": "start",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 1090,
+    "geometry": 24,
+    "vertex_array": 18
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 1260,
+    "geometry": 26,
+    "vertex_array": 21
+   },
+   "pending": {
+    "OpenGLBuffer": 1110,
+    "OpenGLVertexArray": 13
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 1260,
+    "glIsBuffer_true": 1260,
+    "traced_bytes": 2374536
+   },
+   "py_objects": 147863,
+   "flips": 0,
+   "working_set_mb": 194.6,
+   "private_mb": 738.3,
+   "gpu_free_mb": 4801.3
+  },
+  {
+   "visit": 5,
+   "room": "other",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 1334,
+    "geometry": 24,
+    "vertex_array": 21
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 1504,
+    "geometry": 26,
+    "vertex_array": 24
+   },
+   "pending": {
+    "OpenGLBuffer": 1339,
+    "OpenGLVertexArray": 16
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 1504,
+    "glIsBuffer_true": 1504,
+    "traced_bytes": 2826376
+   },
+   "py_objects": 148691,
+   "flips": 0,
+   "working_set_mb": 195.5,
+   "private_mb": 742.6,
+   "gpu_free_mb": 4799.5
+  },
+  {
+   "visit": 6,
+   "room": "start",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 1578,
+    "geometry": 24,
+    "vertex_array": 24
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 1748,
+    "geometry": 26,
+    "vertex_array": 27
+   },
+   "pending": {
+    "OpenGLBuffer": 1568,
+    "OpenGLVertexArray": 19
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 1748,
+    "glIsBuffer_true": 1748,
+    "traced_bytes": 3278216
+   },
+   "py_objects": 149483,
+   "flips": 0,
+   "working_set_mb": 196.4,
+   "private_mb": 743.4,
+   "gpu_free_mb": 4799.4
+  },
+  {
+   "visit": 7,
+   "room": "other",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 1822,
+    "geometry": 24,
+    "vertex_array": 27
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 1992,
+    "geometry": 26,
+    "vertex_array": 30
+   },
+   "pending": {
+    "OpenGLBuffer": 1797,
+    "OpenGLVertexArray": 22
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 1992,
+    "glIsBuffer_true": 1992,
+    "traced_bytes": 3730056
+   },
+   "py_objects": 149863,
+   "flips": 0,
+   "working_set_mb": 199.5,
+   "private_mb": 746.2,
+   "gpu_free_mb": 4799.4
+  },
+  {
+   "visit": 8,
+   "room": "start",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 2066,
+    "geometry": 24,
+    "vertex_array": 30
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 2236,
+    "geometry": 26,
+    "vertex_array": 33
+   },
+   "pending": {
+    "OpenGLBuffer": 2026,
+    "OpenGLVertexArray": 25
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 2236,
+    "glIsBuffer_true": 2236,
+    "traced_bytes": 4181896
+   },
+   "py_objects": 150612,
+   "flips": 0,
+   "working_set_mb": 200.4,
+   "private_mb": 747.1,
+   "gpu_free_mb": 4754.3
+  },
+  {
+   "visit": 9,
+   "room": "other",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 2310,
+    "geometry": 24,
+    "vertex_array": 33
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 2480,
+    "geometry": 26,
+    "vertex_array": 36
+   },
+   "pending": {
+    "OpenGLBuffer": 2255,
+    "OpenGLVertexArray": 28
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 2480,
+    "glIsBuffer_true": 2480,
+    "traced_bytes": 4633736
+   },
+   "py_objects": 151407,
+   "flips": 0,
+   "working_set_mb": 201.3,
+   "private_mb": 749.8,
+   "gpu_free_mb": 4752.3
+  },
+  {
+   "visit": 10,
+   "room": "start",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 2554,
+    "geometry": 24,
+    "vertex_array": 36
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 2724,
+    "geometry": 26,
+    "vertex_array": 39
+   },
+   "pending": {
+    "OpenGLBuffer": 2484,
+    "OpenGLVertexArray": 31
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 2724,
+    "glIsBuffer_true": 2724,
+    "traced_bytes": 5085576
+   },
+   "py_objects": 152145,
+   "flips": 0,
+   "working_set_mb": 202.1,
+   "private_mb": 750.6,
+   "gpu_free_mb": 4752.2
+  },
+  {
+   "visit": 11,
+   "room": "other",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 2798,
+    "geometry": 24,
+    "vertex_array": 39
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 2968,
+    "geometry": 26,
+    "vertex_array": 42
+   },
+   "pending": {
+    "OpenGLBuffer": 2713,
+    "OpenGLVertexArray": 34
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 2968,
+    "glIsBuffer_true": 2968,
+    "traced_bytes": 5537416
+   },
+   "py_objects": 151988,
+   "flips": 0,
+   "working_set_mb": 203.0,
+   "private_mb": 752.1,
+   "gpu_free_mb": 4797.2
+  },
+  {
+   "visit": 12,
+   "room": "start",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 3042,
+    "geometry": 24,
+    "vertex_array": 42
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 3212,
+    "geometry": 26,
+    "vertex_array": 45
+   },
+   "pending": {
+    "OpenGLBuffer": 2942,
+    "OpenGLVertexArray": 37
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 3212,
+    "glIsBuffer_true": 3212,
+    "traced_bytes": 5989256
+   },
+   "py_objects": 152834,
+   "flips": 0,
+   "working_set_mb": 203.9,
+   "private_mb": 753.0,
+   "gpu_free_mb": 4797.0
+  },
+  {
+   "visit": 13,
+   "room": "other",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 3286,
+    "geometry": 24,
+    "vertex_array": 45
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 3456,
+    "geometry": 26,
+    "vertex_array": 48
+   },
+   "pending": {
+    "OpenGLBuffer": 3171,
+    "OpenGLVertexArray": 40
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 3456,
+    "glIsBuffer_true": 3456,
+    "traced_bytes": 6441096
+   },
+   "py_objects": 153630,
+   "flips": 0,
+   "working_set_mb": 204.7,
+   "private_mb": 755.0,
+   "gpu_free_mb": 4798.1
+  },
+  {
+   "visit": 14,
+   "room": "start",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 3530,
+    "geometry": 24,
+    "vertex_array": 48
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 3700,
+    "geometry": 26,
+    "vertex_array": 51
+   },
+   "pending": {
+    "OpenGLBuffer": 3400,
+    "OpenGLVertexArray": 43
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 3700,
+    "glIsBuffer_true": 3700,
+    "traced_bytes": 6892936
+   },
+   "py_objects": 154368,
+   "flips": 0,
+   "working_set_mb": 205.7,
+   "private_mb": 757.7,
+   "gpu_free_mb": 4796.1
+  },
+  {
+   "visit": 15,
+   "room": "other",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 3774,
+    "geometry": 24,
+    "vertex_array": 51
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 3944,
+    "geometry": 26,
+    "vertex_array": 54
+   },
+   "pending": {
+    "OpenGLBuffer": 3629,
+    "OpenGLVertexArray": 46
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 3944,
+    "glIsBuffer_true": 3944,
+    "traced_bytes": 7344776
+   },
+   "py_objects": 154232,
+   "flips": 0,
+   "working_set_mb": 206.8,
+   "private_mb": 758.4,
+   "gpu_free_mb": 4796.1
+  },
+  {
+   "visit": 16,
+   "room": "start",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 4018,
+    "geometry": 24,
+    "vertex_array": 54
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 4188,
+    "geometry": 26,
+    "vertex_array": 57
+   },
+   "pending": {
+    "OpenGLBuffer": 3858,
+    "OpenGLVertexArray": 49
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 4188,
+    "glIsBuffer_true": 4188,
+    "traced_bytes": 7796616
+   },
+   "py_objects": 155078,
+   "flips": 0,
+   "working_set_mb": 207.8,
+   "private_mb": 759.5,
+   "gpu_free_mb": 4796.0
+  },
+  {
+   "visit": 17,
+   "room": "other",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 4262,
+    "geometry": 24,
+    "vertex_array": 57
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 4432,
+    "geometry": 26,
+    "vertex_array": 60
+   },
+   "pending": {
+    "OpenGLBuffer": 4087,
+    "OpenGLVertexArray": 52
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 4432,
+    "glIsBuffer_true": 4432,
+    "traced_bytes": 8248456
+   },
+   "py_objects": 155874,
+   "flips": 0,
+   "working_set_mb": 208.6,
+   "private_mb": 760.2,
+   "gpu_free_mb": 4769.0
+  },
+  {
+   "visit": 18,
+   "room": "start",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 4506,
+    "geometry": 24,
+    "vertex_array": 60
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 4676,
+    "geometry": 26,
+    "vertex_array": 63
+   },
+   "pending": {
+    "OpenGLBuffer": 4316,
+    "OpenGLVertexArray": 55
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 4676,
+    "glIsBuffer_true": 4676,
+    "traced_bytes": 8700296
+   },
+   "py_objects": 156612,
+   "flips": 0,
+   "working_set_mb": 209.6,
+   "private_mb": 761.9,
+   "gpu_free_mb": 4796.0
+  },
+  {
+   "visit": 19,
+   "room": "other",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 4750,
+    "geometry": 24,
+    "vertex_array": 63
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 4920,
+    "geometry": 26,
+    "vertex_array": 66
+   },
+   "pending": {
+    "OpenGLBuffer": 4545,
+    "OpenGLVertexArray": 58
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 4920,
+    "glIsBuffer_true": 4920,
+    "traced_bytes": 9152136
+   },
+   "py_objects": 156476,
+   "flips": 0,
+   "working_set_mb": 210.4,
+   "private_mb": 764.7,
+   "gpu_free_mb": 4794.0
+  },
+  {
+   "visit": 20,
+   "room": "start",
+   "after_load": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 4994,
+    "geometry": 24,
+    "vertex_array": 66
+   },
+   "settled": {
+    "texture": 8,
+    "framebuffer": 5,
+    "program": 21,
+    "buffer": 5164,
+    "geometry": 26,
+    "vertex_array": 69
+   },
+   "pending": {
+    "OpenGLBuffer": 4774,
+    "OpenGLVertexArray": 61
+   },
+   "pending_new_by_site": {
+    "engine/particles.py:351 _sync_sprites": 150,
+    "engine/tilemap.py:196 load_map": 15,
+    "engine/scene_controller_core.py:437 _clear_layers": 15,
+    "engine/tilemap.py:397 _build_tile_layer": 15,
+    "engine/tilemap_batch_arcade.py:22 clear": 10,
+    "engine/scene_controller_core.py:439 _clear_layers": 5,
+    "engine/tilemap.py:73 <lambda>": 5,
+    "engine/scene_controller_parts/tilemap_state.py:31 _clear_tilemap_layers": 5
+   },
+   "driver": {
+    "traced_live": 5164,
+    "glIsBuffer_true": 5164,
+    "traced_bytes": 9603976
+   },
+   "py_objects": 157322,
+   "flips": 0,
+   "working_set_mb": 211.3,
+   "private_mb": 765.5,
+   "gpu_free_mb": 4794.0
+  }
+ ],
+ "end": {
+  "before": {
+   "texture": 8,
+   "framebuffer": 5,
+   "program": 21,
+   "buffer": 5164,
+   "geometry": 26,
+   "vertex_array": 69
+  },
+  "pending": {
+   "OpenGLBuffer": 4774,
+   "OpenGLVertexArray": 61
+  },
+  "driver": {
+   "traced_live": 5164,
+   "glIsBuffer_true": 5164,
+   "traced_bytes": 9603976
+  },
+  "after_ctx_gc": {
+   "texture": 8,
+   "framebuffer": 5,
+   "program": 21,
+   "buffer": 85,
+   "geometry": 26,
+   "vertex_array": 8
+  },
+  "driver_after_ctx_gc": {
+   "traced_live": 85,
+   "glIsBuffer_true": 85,
+   "traced_bytes": 207496
+  },
+  "after_collect_ctx_gc": {
+   "texture": 8,
+   "framebuffer": 5,
+   "program": 21,
+   "buffer": 85,
+   "geometry": 26,
+   "vertex_array": 8
+  },
+  "driver_after_collect": {
+   "traced_live": 85,
+   "glIsBuffer_true": 85,
+   "traced_bytes": 207496
+  },
+  "after_renderer_release": {
+   "texture": 8,
+   "framebuffer": 5,
+   "program": 21,
+   "buffer": 85,
+   "geometry": 26,
+   "vertex_array": 8
+  },
+  "working_set_mb": 211.4,
+  "private_mb": 765.5
+ },
+ "seconds": 8.6,
+ "survivor_sites": [
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   3
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   2
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   2
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   2
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   2
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   2
+  ],
+  [
+   "arcade/context.py:138 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:203 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:217 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:218 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:230 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:235 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:264 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/context.py:270 __init__ <- arcade/application.py:289 __init__ <= engine/game.py:435 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:115 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:115 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:115 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:115 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:115 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:116 __init__",
+   1
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:116 __init__",
+   1
+  ]
+ ],
+ "created_sites": [
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   630
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   630
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   630
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   630
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   630
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   63
+  ],
+  [
+   "arcade/future/texture_render_target.py:33 __init__ <- arcade/future/light/lights.py:93 __init__ <= engine/lighting/__init__.py:791 _create_layer",
+   43
+  ],
+  [
+   "arcade/future/light/lights.py:99 __init__ <- engine/lighting/__init__.py:791 _create_layer",
+   43
+  ],
+  [
+   "arcade/future/light/lights.py:111 __init__ <- engine/lighting/__init__.py:791 _create_layer",
+   43
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   42
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   42
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   42
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   42
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   42
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:22 clear",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:22 clear",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:22 clear",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:22 clear",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:22 clear",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   21
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   21
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   21
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   21
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   21
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:73 <lambda>",
+   21
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:73 <lambda>",
+   21
+  ]
+ ],
+ "deleted_sites": [
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   629
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   629
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   629
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   629
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/particles.py:351 _sync_sprites",
+   629
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:196 load_map",
+   63
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   60
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   60
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   60
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   60
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:437 _clear_layers",
+   60
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   60
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   60
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   60
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   60
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap.py:397 _build_tile_layer",
+   60
+  ],
+  [
+   "arcade/future/light/lights.py:99 __init__ <- engine/lighting/__init__.py:791 _create_layer",
+   42
+  ],
+  [
+   "arcade/future/texture_render_target.py:33 __init__ <- arcade/future/light/lights.py:93 __init__ <= engine/lighting/__init__.py:791 _create_layer",
+   42
+  ],
+  [
+   "arcade/future/light/lights.py:111 __init__ <- engine/lighting/__init__.py:791 _create_layer",
+   42
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:22 clear",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:22 clear",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:22 clear",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:22 clear",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:22 clear",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/tilemap_batch_arcade.py:83 _build_chunk",
+   40
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/render_queue_arcade.py:47 draw",
+   21
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/render_queue_arcade.py:47 draw",
+   21
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1418 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/render_queue_arcade.py:47 draw",
+   21
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1415 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/render_queue_arcade.py:47 draw",
+   21
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1428 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/render_queue_arcade.py:47 draw",
+   21
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1421 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   20
+  ],
+  [
+   "arcade/sprite_list/sprite_list.py:1424 __init__ <- arcade/sprite_list/sprite_list.py:326 _init_deferred <= engine/scene_controller_core.py:439 _clear_layers",
+   20
+  ]
+ ],
+ "after_window_close": {
+  "texture": 8,
+  "framebuffer": 5,
+  "program": 21,
+  "buffer": 85,
+  "geometry": 26,
+  "vertex_array": 8
+ }
+}
