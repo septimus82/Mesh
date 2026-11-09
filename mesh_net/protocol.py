@@ -13,6 +13,8 @@ MAX_BYTES = 8192
 MAX_PLAYERS = 8
 HZ = 20
 WIDTH, HEIGHT = 480, 270
+ENEMY_AT = (220, 135)
+ENEMY_HP = 2
 MAX_SEQ = (1 << 53) - 1
 
 
@@ -62,18 +64,22 @@ async def read(reader: asyncio.StreamReader, timeout: float = 5.0) -> Message:
     return msg
 
 
-def movement(msg: Message, entity: int) -> tuple[int, int, int]:
-    fields(msg, "input", "entity", "seq", "dx", "dy")
+def movement(msg: Message, entity: int) -> tuple[int, int, int, str | None]:
+    optional = ("action",) if "action" in msg else ()
+    fields(msg, "input", "entity", "seq", "dx", "dy", *optional)
+    action = msg.get("action")
+    if action not in (None, "attack", "take"):
+        raise Invalid("unknown action")
     if not integer(msg["entity"], entity, entity) or not integer(msg["seq"], 1):
         raise Invalid("invalid owner or sequence")
     dx, dy = msg["dx"], msg["dy"]
     if not integer(dx, -1, 1) or not integer(dy, -1, 1) or abs(dx) + abs(dy) > 1:
         raise Invalid("expected one cardinal direction")
-    return msg["seq"], dx, dy
+    return msg["seq"], dx, dy, action
 
 
 def snapshot(msg: Message) -> None:
-    fields(msg, "state", "tick", "players")
+    fields(msg, "state", "tick", "players", "enemy_hp", "pickup", "holder")
     players = msg["players"]
     if not integer(msg["tick"], 0) or type(players) is not list or len(players) > MAX_PLAYERS:
         raise Invalid("invalid snapshot")
@@ -85,3 +91,8 @@ def snapshot(msg: Message) -> None:
         if not integer(eid, 1) or eid in ids or not integer(x, 0, WIDTH) or not integer(y, 0, HEIGHT):
             raise Invalid("invalid player position or identity")
         ids.add(eid)
+    hp, pickup, holder = msg["enemy_hp"], msg["pickup"], msg["holder"]
+    if not integer(hp, 0, ENEMY_HP) or type(pickup) is not bool or (pickup and hp):
+        raise Invalid("invalid encounter state")
+    if holder is not None and (not integer(holder, 1) or holder not in ids or hp or pickup):
+        raise Invalid("invalid pickup holder")

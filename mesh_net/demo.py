@@ -63,6 +63,8 @@ class Arena:
         self.directions = {key.W: (0, 1), key.UP: (0, 1), key.S: (0, -1), key.DOWN: (0, -1),
                            key.A: (-1, 0), key.LEFT: (-1, 0), key.D: (1, 0), key.RIGHT: (1, 0)}
         self.keys: list[int] = []
+        self.action_keys: set[int] = set()
+        self.action: str | None = None
         self.running = True
         self.request: str | None = "resume"
         self.client: Client | None = None
@@ -76,6 +78,9 @@ class Arena:
         key = self.arcade.key
         if symbol in self.directions and symbol not in self.keys:
             self.keys.append(symbol)
+        elif symbol in (key.SPACE, key.E) and self.client and symbol not in self.action_keys:
+            self.action_keys.add(symbol)
+            self.action = "attack" if symbol == key.SPACE else "take"
         elif symbol == key.ESCAPE:
             self.stop()
         elif symbol == key.F2:
@@ -85,12 +90,15 @@ class Arena:
         return True
 
     def release(self, symbol: int, modifiers: int) -> bool:
+        self.action_keys.discard(symbol)
         if symbol in self.keys:
             self.keys.remove(symbol)
         return True
 
     def blur(self) -> bool:
         self.keys.clear()
+        self.action_keys.clear()
+        self.action = None
         return True
 
     def stop(self) -> bool:
@@ -104,13 +112,17 @@ class Arena:
                 self.playback = Playback()
                 loop = asyncio.get_running_loop()
                 self.playback.push(client.state, loop.time())
-                self.status = f"Player {client.entity} | arrows/WASD | F2 disconnect"
                 next_input = 0.0
                 while True:
                     if loop.time() >= next_input:
-                        await client.input(*(self.directions[self.keys[-1]] if self.keys else (0, 0)))
+                        direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
+                        action, self.action = self.action, None
+                        await client.input(*direction, action=action)
                         next_input = loop.time() + 0.8 / wire.HZ
-                    self.playback.push(await client.receive(), loop.time())
+                    state = await client.receive()
+                    self.playback.push(state, loop.time())
+                    loot = int(state["holder"] == client.entity)
+                    self.status = f"P{client.entity} | HP {state['enemy_hp']} | loot {loot} | arrows, Space attack, E take, F2 leave"
         except (OSError, EOFError, TimeoutError, wire.Invalid) as exc:
             self.status = f"Disconnected ({type(exc).__name__}) | R resume / N new"
         finally:
@@ -123,6 +135,11 @@ class Arena:
         self.window.scene_controller.draw()
         self.window.default_camera.use()
         if self.client:
+            state = self.client.state
+            if state["enemy_hp"]:
+                self.arcade.draw_circle_filled(*wire.ENEMY_AT, 7, (235, 91, 89))
+            elif state["pickup"]:
+                self.arcade.draw_circle_filled(*wire.ENEMY_AT, 5, (149, 224, 82))
             for eid, (x, y) in self.playback.positions(now).items():
                 self.arcade.draw_circle_filled(x, y, 4, OWN if eid == self.client.entity else OTHER)
 

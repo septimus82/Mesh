@@ -21,9 +21,11 @@ class Client:
     state: wire.Message
     seq: int = 0
 
-    async def input(self, dx: int, dy: int) -> None:
+    async def input(self, dx: int, dy: int, action: str | None = None) -> None:
         self.seq += 1
         msg = {"v": 1, "type": "input", "entity": self.entity, "seq": self.seq, "dx": dx, "dy": dy}
+        if action is not None:
+            msg["action"] = action
         wire.movement(msg, self.entity)
         self.writer.write(wire.encode(msg))
         await asyncio.wait_for(self.writer.drain(), 2)

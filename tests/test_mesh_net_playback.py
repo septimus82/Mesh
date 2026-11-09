@@ -7,7 +7,7 @@ pytestmark = pytest.mark.fast
 
 
 def state(t, *rows):
-    return {"v": 1, "type": "state", "tick": t, "players": list(rows)}
+    return {"v": 1, "type": "state", "tick": t, "players": list(rows), "enemy_hp": 2, "pickup": False, "holder": None}
 
 
 def test_interpolation_tracks_real_motion_and_never_extrapolates():

@@ -46,6 +46,12 @@ def test_independent_mesh_windows_share_motion_and_resume():
             await asyncio.gather(*(command(p, "state") for p in procs))
             first, second = await asyncio.gather(*(observe(p, lambda s: len(s["players"]) == 2) for p in procs))
             aid, bid = first["entity"], second["entity"]
+            await command(a, "press SPACE")
+            await observe(b, lambda s: s["enemy_hp"] == 1)
+            await command(b, "press SPACE")
+            await observe(a, lambda s: s["enemy_hp"] == 0 and s["pickup"])
+            await command(b, "press E")
+            await observe(a, lambda s: not s["pickup"] and s["holder"] == bid)
             starts = {eid: (x, y) for eid, x, y in first["state"]["players"]}
             await command(a, "press RIGHT")
             await observe(b, lambda s: any(i == aid and x > starts[i][0] for i, x, _ in s["players"]))
@@ -67,6 +73,8 @@ def test_independent_mesh_windows_share_motion_and_resume():
             assert (await command(a, "capture"))["avatars"] == [True, False]
             await command(b, "press R")
             joined = await observe(b, lambda s: len(s["players"]) == 2)
+            assert joined["state"]["enemy_hp"] == 0 and not joined["state"]["pickup"]
+            assert joined["state"]["holder"] == joined["entity"]
             assert joined["entity"] != bid and [joined["entity"], *saved] in joined["state"]["players"]
             await observe(a, lambda s: s["players"] == joined["state"]["players"])
         finally:
