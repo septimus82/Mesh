@@ -1,0 +1,1688 @@
+{
+ "worktree": "D:\\Games\\Mesh-h485",
+ "room": "start",
+ "scatter_added": false,
+ "viewport": [
+  720,
+  650
+ ],
+ "gl": "llvmpipe (LLVM 22.1.1, 256 bits)",
+ "shadows": true,
+ "scatter": false,
+ "canopy_blocks": 0,
+ "pose_default": {
+  "studio_cam": {
+   "target": [
+    20.0,
+    22.0,
+    0.0
+   ],
+   "pitch": 40.0,
+   "yaw": 0.0,
+   "fov": 30.0,
+   "distance": 48.4,
+   "ortho": false,
+   "right": [
+    1.0,
+    -0.0,
+    0.0
+   ]
+  },
+  "game_cam": {
+   "target": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "pitch": 30.0,
+   "yaw": 0.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "right": [
+    1.0,
+    -0.0,
+    0.0
+   ]
+  },
+  "cases": {},
+  "shadows_on": {
+   "base": {
+    "sprite_quads": "6768f6af6032c935",
+    "sprites": 5,
+    "sun_vp": "5f5e50ee5bcc5dc6",
+    "sun_map": "748d917fe6315ca7",
+    "extra_lamps": [],
+    "last_vp": "1c2cc896c0525e22"
+   },
+   "cases": {
+    "repeat": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "target": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "pitch_to_studio": {
+     "picture": {
+      "changed": 0.0023,
+      "pixels": 1077,
+      "bbox": [
+       18,
+       222,
+       587,
+       598
+      ]
+     },
+     "instrumented_changes": {
+      "sprite_quads": [
+       "6768f6af6032c935",
+       "9e58eb6d751551f7"
+      ],
+      "sun_map": [
+       "748d917fe6315ca7",
+       "3015ef9ef318e3f3"
+      ],
+      "sun_map_texels_changed": 2992
+     }
+    },
+    "pitch_60": {
+     "picture": {
+      "changed": 0.00991,
+      "pixels": 4640,
+      "bbox": [
+       5,
+       202,
+       599,
+       649
+      ]
+     },
+     "instrumented_changes": {
+      "sprite_quads": [
+       "6768f6af6032c935",
+       "5a0c9e343aadf2f2"
+      ],
+      "sun_map": [
+       "748d917fe6315ca7",
+       "7630cd8ff66cf592"
+      ],
+      "sun_map_texels_changed": 4809
+     }
+    },
+    "yaw_45": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "fov_plus_10": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "distance_x2": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "ortho_toggle": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "aspect_1": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "camera_ready_toggle": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "all_to_studio_as_485": {
+     "picture": {
+      "changed": 0.0023,
+      "pixels": 1077,
+      "bbox": [
+       18,
+       222,
+       587,
+       598
+      ]
+     },
+     "instrumented_changes": {
+      "sprite_quads": [
+       "6768f6af6032c935",
+       "9e58eb6d751551f7"
+      ],
+      "sun_map": [
+       "748d917fe6315ca7",
+       "3015ef9ef318e3f3"
+      ],
+      "sun_map_texels_changed": 2992
+     }
+    },
+    "all_but_pitch_to_studio": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    }
+   },
+   "restored_same": true,
+   "live_before_after": [
+    {
+     "texture": 43,
+     "framebuffer": 7,
+     "program": 28,
+     "buffer": 125,
+     "geometry": 51,
+     "vertex_array": 61
+    },
+    {
+     "texture": 43,
+     "framebuffer": 7,
+     "program": 28,
+     "buffer": 125,
+     "geometry": 51,
+     "vertex_array": 61
+    }
+   ]
+  },
+  "shadows_off": {
+   "base": {
+    "sprite_quads": "73d6c9c4f776ceba",
+    "sprites": 5,
+    "sun_vp": "5f5e50ee5bcc5dc6",
+    "sun_map": null,
+    "extra_lamps": [],
+    "last_vp": "1c2cc896c0525e22"
+   },
+   "cases": {
+    "repeat": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "target": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "pitch_to_studio": {
+     "picture": {
+      "changed": 0.0019,
+      "pixels": 887,
+      "bbox": [
+       18,
+       222,
+       570,
+       596
+      ]
+     },
+     "instrumented_changes": {
+      "sprite_quads": [
+       "73d6c9c4f776ceba",
+       "22f5e1a7e88207dc"
+      ]
+     }
+    },
+    "pitch_60": {
+     "picture": {
+      "changed": 0.00713,
+      "pixels": 3335,
+      "bbox": [
+       5,
+       202,
+       573,
+       649
+      ]
+     },
+     "instrumented_changes": {
+      "sprite_quads": [
+       "73d6c9c4f776ceba",
+       "3385dd40e7af0f02"
+      ]
+     }
+    },
+    "yaw_45": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "fov_plus_10": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "distance_x2": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "ortho_toggle": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "aspect_1": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "camera_ready_toggle": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    },
+    "all_to_studio_as_485": {
+     "picture": {
+      "changed": 0.0019,
+      "pixels": 887,
+      "bbox": [
+       18,
+       222,
+       570,
+       596
+      ]
+     },
+     "instrumented_changes": {
+      "sprite_quads": [
+       "73d6c9c4f776ceba",
+       "22f5e1a7e88207dc"
+      ]
+     }
+    },
+    "all_but_pitch_to_studio": {
+     "picture": {
+      "changed": 0.0
+     },
+     "instrumented_changes": {}
+    }
+   },
+   "restored_same": true,
+   "live_before_after": [
+    {
+     "texture": 43,
+     "framebuffer": 7,
+     "program": 28,
+     "buffer": 125,
+     "geometry": 51,
+     "vertex_array": 61
+    },
+    {
+     "texture": 43,
+     "framebuffer": 7,
+     "program": 28,
+     "buffer": 125,
+     "geometry": 51,
+     "vertex_array": 61
+    }
+   ]
+  },
+  "parity_game_path_vs_studio_same_camera": {
+   "changed": 0.0
+  }
+ },
+ "poses": {
+  "orbit_35": {
+   "studio_cam": {
+    "target": [
+     20.0,
+     22.0,
+     0.0
+    ],
+    "pitch": 40.0,
+    "yaw": 35.0,
+    "fov": 30.0,
+    "distance": 48.4,
+    "ortho": false,
+    "right": [
+     0.819152,
+     -0.573576,
+     0.0
+    ]
+   },
+   "game_cam": {
+    "target": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "pitch": 30.0,
+    "yaw": 0.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false,
+    "right": [
+     1.0,
+     -0.0,
+     0.0
+    ]
+   },
+   "cases": {},
+   "shadows_on": {
+    "base": {
+     "sprite_quads": "d03207190e0535f9",
+     "sprites": 5,
+     "sun_vp": "5f5e50ee5bcc5dc6",
+     "sun_map": "b83703901f385a87",
+     "extra_lamps": [],
+     "last_vp": "0ca8069b4f968102"
+    },
+    "cases": {
+     "repeat": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "target": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "pitch_to_studio": {
+      "picture": {
+       "changed": 0.00307,
+       "pixels": 1438,
+       "bbox": [
+        300,
+        163,
+        681,
+        641
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "d03207190e0535f9",
+        "5cc9c1620ff0d9da"
+       ],
+       "sun_map": [
+        "b83703901f385a87",
+        "eb9a209e54bf3ce4"
+       ],
+       "sun_map_texels_changed": 2581
+      }
+     },
+     "pitch_60": {
+      "picture": {
+       "changed": 0.01074,
+       "pixels": 5028,
+       "bbox": [
+        287,
+        143,
+        686,
+        641
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "d03207190e0535f9",
+        "c849ff07009bdf70"
+       ],
+       "sun_map": [
+        "b83703901f385a87",
+        "522112f0eff6e625"
+       ],
+       "sun_map_texels_changed": 6645
+      }
+     },
+     "yaw_45": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "fov_plus_10": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "distance_x2": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "ortho_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "aspect_1": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "camera_ready_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "all_to_studio_as_485": {
+      "picture": {
+       "changed": 0.00307,
+       "pixels": 1438,
+       "bbox": [
+        300,
+        163,
+        681,
+        641
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "d03207190e0535f9",
+        "5cc9c1620ff0d9da"
+       ],
+       "sun_map": [
+        "b83703901f385a87",
+        "eb9a209e54bf3ce4"
+       ],
+       "sun_map_texels_changed": 2581
+      }
+     },
+     "all_but_pitch_to_studio": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     }
+    },
+    "restored_same": true,
+    "live_before_after": [
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     },
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     }
+    ]
+   },
+   "shadows_off": {
+    "base": {
+     "sprite_quads": "3c50f5b69c49a5ad",
+     "sprites": 5,
+     "sun_vp": "5f5e50ee5bcc5dc6",
+     "sun_map": null,
+     "extra_lamps": [],
+     "last_vp": "0ca8069b4f968102"
+    },
+    "cases": {
+     "repeat": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "target": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "pitch_to_studio": {
+      "picture": {
+       "changed": 0.00237,
+       "pixels": 1107,
+       "bbox": [
+        300,
+        163,
+        681,
+        641
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "3c50f5b69c49a5ad",
+        "71f58868aea26bb3"
+       ]
+      }
+     },
+     "pitch_60": {
+      "picture": {
+       "changed": 0.00789,
+       "pixels": 3691,
+       "bbox": [
+        288,
+        143,
+        686,
+        641
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "3c50f5b69c49a5ad",
+        "ec9e2a344bb6d5d8"
+       ]
+      }
+     },
+     "yaw_45": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "fov_plus_10": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "distance_x2": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "ortho_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "aspect_1": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "camera_ready_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "all_to_studio_as_485": {
+      "picture": {
+       "changed": 0.00237,
+       "pixels": 1107,
+       "bbox": [
+        300,
+        163,
+        681,
+        641
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "3c50f5b69c49a5ad",
+        "71f58868aea26bb3"
+       ]
+      }
+     },
+     "all_but_pitch_to_studio": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     }
+    },
+    "restored_same": true,
+    "live_before_after": [
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     },
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     }
+    ]
+   },
+   "parity_game_path_vs_studio_same_camera": {
+    "changed": 0.0
+   }
+  },
+  "orbit_-60_pitch_25": {
+   "studio_cam": {
+    "target": [
+     20.0,
+     22.0,
+     0.0
+    ],
+    "pitch": 25.0,
+    "yaw": 300.0,
+    "fov": 30.0,
+    "distance": 48.4,
+    "ortho": false,
+    "right": [
+     0.5,
+     0.866025,
+     0.0
+    ]
+   },
+   "game_cam": {
+    "target": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "pitch": 30.0,
+    "yaw": 0.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false,
+    "right": [
+     1.0,
+     -0.0,
+     0.0
+    ]
+   },
+   "cases": {},
+   "shadows_on": {
+    "base": {
+     "sprite_quads": "d67674c8fd6f8729",
+     "sprites": 5,
+     "sun_vp": "5f5e50ee5bcc5dc6",
+     "sun_map": "18a9b308009690df",
+     "extra_lamps": [],
+     "last_vp": "edbfbb0ca54118d1"
+    },
+    "cases": {
+     "repeat": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "target": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "pitch_to_studio": {
+      "picture": {
+       "changed": 0.00153,
+       "pixels": 718,
+       "bbox": [
+        18,
+        300,
+        574,
+        429
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "d67674c8fd6f8729",
+        "a7cb0f33fe347056"
+       ],
+       "sun_map": [
+        "18a9b308009690df",
+        "7f9997f2d93100ee"
+       ],
+       "sun_map_texels_changed": 893
+      }
+     },
+     "pitch_60": {
+      "picture": {
+       "changed": 0.004,
+       "pixels": 1874,
+       "bbox": [
+        0,
+        226,
+        600,
+        435
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "d67674c8fd6f8729",
+        "7d0667b6008d4a28"
+       ],
+       "sun_map": [
+        "18a9b308009690df",
+        "8c7a011beacb2d43"
+       ],
+       "sun_map_texels_changed": 1455
+      }
+     },
+     "yaw_45": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "fov_plus_10": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "distance_x2": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "ortho_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "aspect_1": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "camera_ready_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "all_to_studio_as_485": {
+      "picture": {
+       "changed": 0.00153,
+       "pixels": 718,
+       "bbox": [
+        18,
+        300,
+        574,
+        429
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "d67674c8fd6f8729",
+        "a7cb0f33fe347056"
+       ],
+       "sun_map": [
+        "18a9b308009690df",
+        "7f9997f2d93100ee"
+       ],
+       "sun_map_texels_changed": 893
+      }
+     },
+     "all_but_pitch_to_studio": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     }
+    },
+    "restored_same": true,
+    "live_before_after": [
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     },
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     }
+    ]
+   },
+   "shadows_off": {
+    "base": {
+     "sprite_quads": "dd6da287f169d03b",
+     "sprites": 5,
+     "sun_vp": "5f5e50ee5bcc5dc6",
+     "sun_map": null,
+     "extra_lamps": [],
+     "last_vp": "edbfbb0ca54118d1"
+    },
+    "cases": {
+     "repeat": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "target": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "pitch_to_studio": {
+      "picture": {
+       "changed": 0.00136,
+       "pixels": 638,
+       "bbox": [
+        18,
+        300,
+        530,
+        415
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "dd6da287f169d03b",
+        "fb310ceacccb7c9f"
+       ]
+      }
+     },
+     "pitch_60": {
+      "picture": {
+       "changed": 0.00356,
+       "pixels": 1665,
+       "bbox": [
+        16,
+        275,
+        532,
+        415
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "dd6da287f169d03b",
+        "0a9ed515fa988be2"
+       ]
+      }
+     },
+     "yaw_45": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "fov_plus_10": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "distance_x2": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "ortho_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "aspect_1": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "camera_ready_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "all_to_studio_as_485": {
+      "picture": {
+       "changed": 0.00136,
+       "pixels": 638,
+       "bbox": [
+        18,
+        300,
+        530,
+        415
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "dd6da287f169d03b",
+        "fb310ceacccb7c9f"
+       ]
+      }
+     },
+     "all_but_pitch_to_studio": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     }
+    },
+    "restored_same": true,
+    "live_before_after": [
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     },
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     }
+    ]
+   },
+   "parity_game_path_vs_studio_same_camera": {
+    "changed": 0.0
+   }
+  },
+  "pitch_65_zoom": {
+   "studio_cam": {
+    "target": [
+     20.0,
+     22.0,
+     0.0
+    ],
+    "pitch": 65.0,
+    "yaw": 0.0,
+    "fov": 30.0,
+    "distance": 29.04,
+    "ortho": false,
+    "right": [
+     1.0,
+     -0.0,
+     0.0
+    ]
+   },
+   "game_cam": {
+    "target": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "pitch": 30.0,
+    "yaw": 0.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false,
+    "right": [
+     1.0,
+     -0.0,
+     0.0
+    ]
+   },
+   "cases": {},
+   "shadows_on": {
+    "base": {
+     "sprite_quads": "6768f6af6032c935",
+     "sprites": 5,
+     "sun_vp": "5f5e50ee5bcc5dc6",
+     "sun_map": "748d917fe6315ca7",
+     "extra_lamps": [],
+     "last_vp": "75d13f0d980f4334"
+    },
+    "cases": {
+     "repeat": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "target": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "pitch_to_studio": {
+      "picture": {
+       "changed": 0.00046,
+       "pixels": 215,
+       "bbox": [
+        699,
+        178,
+        719,
+        215
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "6768f6af6032c935",
+        "9e58eb6d751551f7"
+       ],
+       "sun_map": [
+        "748d917fe6315ca7",
+        "3015ef9ef318e3f3"
+       ],
+       "sun_map_texels_changed": 2992
+      }
+     },
+     "pitch_60": {
+      "picture": {
+       "changed": 0.00088,
+       "pixels": 411,
+       "bbox": [
+        699,
+        173,
+        719,
+        215
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "6768f6af6032c935",
+        "5a0c9e343aadf2f2"
+       ],
+       "sun_map": [
+        "748d917fe6315ca7",
+        "7630cd8ff66cf592"
+       ],
+       "sun_map_texels_changed": 4809
+      }
+     },
+     "yaw_45": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "fov_plus_10": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "distance_x2": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "ortho_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "aspect_1": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "camera_ready_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "all_to_studio_as_485": {
+      "picture": {
+       "changed": 0.00046,
+       "pixels": 215,
+       "bbox": [
+        699,
+        178,
+        719,
+        215
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "6768f6af6032c935",
+        "9e58eb6d751551f7"
+       ],
+       "sun_map": [
+        "748d917fe6315ca7",
+        "3015ef9ef318e3f3"
+       ],
+       "sun_map_texels_changed": 2992
+      }
+     },
+     "all_but_pitch_to_studio": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     }
+    },
+    "restored_same": true,
+    "live_before_after": [
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     },
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     }
+    ]
+   },
+   "shadows_off": {
+    "base": {
+     "sprite_quads": "73d6c9c4f776ceba",
+     "sprites": 5,
+     "sun_vp": "5f5e50ee5bcc5dc6",
+     "sun_map": null,
+     "extra_lamps": [],
+     "last_vp": "75d13f0d980f4334"
+    },
+    "cases": {
+     "repeat": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "target": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "pitch_to_studio": {
+      "picture": {
+       "changed": 0.00046,
+       "pixels": 215,
+       "bbox": [
+        699,
+        178,
+        719,
+        215
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "73d6c9c4f776ceba",
+        "22f5e1a7e88207dc"
+       ]
+      }
+     },
+     "pitch_60": {
+      "picture": {
+       "changed": 0.00088,
+       "pixels": 411,
+       "bbox": [
+        699,
+        173,
+        719,
+        215
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "73d6c9c4f776ceba",
+        "3385dd40e7af0f02"
+       ]
+      }
+     },
+     "yaw_45": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "fov_plus_10": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "distance_x2": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "ortho_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "aspect_1": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "camera_ready_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "all_to_studio_as_485": {
+      "picture": {
+       "changed": 0.00046,
+       "pixels": 215,
+       "bbox": [
+        699,
+        178,
+        719,
+        215
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "73d6c9c4f776ceba",
+        "22f5e1a7e88207dc"
+       ]
+      }
+     },
+     "all_but_pitch_to_studio": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     }
+    },
+    "restored_same": true,
+    "live_before_after": [
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     },
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     }
+    ]
+   },
+   "parity_game_path_vs_studio_same_camera": {
+    "changed": 0.0
+   }
+  },
+  "pan": {
+   "studio_cam": {
+    "target": [
+     26.0,
+     18.0,
+     0.0
+    ],
+    "pitch": 40.0,
+    "yaw": 0.0,
+    "fov": 30.0,
+    "distance": 48.4,
+    "ortho": false,
+    "right": [
+     1.0,
+     -0.0,
+     0.0
+    ]
+   },
+   "game_cam": {
+    "target": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "pitch": 30.0,
+    "yaw": 0.0,
+    "fov": 12.0,
+    "distance": 53.518,
+    "ortho": false,
+    "right": [
+     1.0,
+     -0.0,
+     0.0
+    ]
+   },
+   "cases": {},
+   "shadows_on": {
+    "base": {
+     "sprite_quads": "6768f6af6032c935",
+     "sprites": 5,
+     "sun_vp": "5f5e50ee5bcc5dc6",
+     "sun_map": "748d917fe6315ca7",
+     "extra_lamps": [],
+     "last_vp": "f6bbf2a1c19dc851"
+    },
+    "cases": {
+     "repeat": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "target": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "pitch_to_studio": {
+      "picture": {
+       "changed": 0.00218,
+       "pixels": 1022,
+       "bbox": [
+        160,
+        166,
+        435,
+        578
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "6768f6af6032c935",
+        "9e58eb6d751551f7"
+       ],
+       "sun_map": [
+        "748d917fe6315ca7",
+        "3015ef9ef318e3f3"
+       ],
+       "sun_map_texels_changed": 2992
+      }
+     },
+     "pitch_60": {
+      "picture": {
+       "changed": 0.0063,
+       "pixels": 2950,
+       "bbox": [
+        157,
+        147,
+        448,
+        578
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "6768f6af6032c935",
+        "5a0c9e343aadf2f2"
+       ],
+       "sun_map": [
+        "748d917fe6315ca7",
+        "7630cd8ff66cf592"
+       ],
+       "sun_map_texels_changed": 4809
+      }
+     },
+     "yaw_45": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "fov_plus_10": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "distance_x2": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "ortho_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "aspect_1": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "camera_ready_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "all_to_studio_as_485": {
+      "picture": {
+       "changed": 0.00218,
+       "pixels": 1022,
+       "bbox": [
+        160,
+        166,
+        435,
+        578
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "6768f6af6032c935",
+        "9e58eb6d751551f7"
+       ],
+       "sun_map": [
+        "748d917fe6315ca7",
+        "3015ef9ef318e3f3"
+       ],
+       "sun_map_texels_changed": 2992
+      }
+     },
+     "all_but_pitch_to_studio": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     }
+    },
+    "restored_same": true,
+    "live_before_after": [
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     },
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     }
+    ]
+   },
+   "shadows_off": {
+    "base": {
+     "sprite_quads": "73d6c9c4f776ceba",
+     "sprites": 5,
+     "sun_vp": "5f5e50ee5bcc5dc6",
+     "sun_map": null,
+     "extra_lamps": [],
+     "last_vp": "f6bbf2a1c19dc851"
+    },
+    "cases": {
+     "repeat": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "target": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "pitch_to_studio": {
+      "picture": {
+       "changed": 0.00148,
+       "pixels": 693,
+       "bbox": [
+        160,
+        166,
+        414,
+        578
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "73d6c9c4f776ceba",
+        "22f5e1a7e88207dc"
+       ]
+      }
+     },
+     "pitch_60": {
+      "picture": {
+       "changed": 0.00398,
+       "pixels": 1863,
+       "bbox": [
+        157,
+        147,
+        414,
+        578
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "73d6c9c4f776ceba",
+        "3385dd40e7af0f02"
+       ]
+      }
+     },
+     "yaw_45": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "fov_plus_10": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "distance_x2": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "ortho_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "aspect_1": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "camera_ready_toggle": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     },
+     "all_to_studio_as_485": {
+      "picture": {
+       "changed": 0.00148,
+       "pixels": 693,
+       "bbox": [
+        160,
+        166,
+        414,
+        578
+       ]
+      },
+      "instrumented_changes": {
+       "sprite_quads": [
+        "73d6c9c4f776ceba",
+        "22f5e1a7e88207dc"
+       ]
+      }
+     },
+     "all_but_pitch_to_studio": {
+      "picture": {
+       "changed": 0.0
+      },
+      "instrumented_changes": {}
+     }
+    },
+    "restored_same": true,
+    "live_before_after": [
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     },
+     {
+      "texture": 43,
+      "framebuffer": 7,
+      "program": 28,
+      "buffer": 125,
+      "geometry": 51,
+      "vertex_array": 61
+     }
+    ]
+   },
+   "parity_game_path_vs_studio_same_camera": {
+    "changed": 0.0
+   }
+  }
+ },
+ "live_end": {
+  "texture": 43,
+  "framebuffer": 7,
+  "program": 28,
+  "buffer": 125,
+  "geometry": 51,
+  "vertex_array": 61
+ }
+}

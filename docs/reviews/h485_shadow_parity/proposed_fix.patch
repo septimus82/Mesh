@@ -1,0 +1,53 @@
+diff --git a/engine/hd2d/renderer.py b/engine/hd2d/renderer.py
+index c6b3fa24..f08f5827 100644
+--- a/engine/hd2d/renderer.py
++++ b/engine/hd2d/renderer.py
+@@ -1099,11 +1099,12 @@ class Hd2dRenderer:
+         verts.extend(corners)
+         idx.extend((base, base + 1, base + 2, base + 2, base + 1, base + 3))
+ 
+-    def _sprite_quads(self, sprites: list[Any], shadows: bool,
+-                      right: tuple[float, float, float] = (1.0, 0.0, 0.0)) -> tuple[array, array, list[tuple[Any, int, int]]]:
++    def _sprite_quads(self, sprites: list[Any], shadows: bool, right: tuple[float, float, float] = (1.0, 0.0, 0.0),
++                      *, stretch: float) -> tuple[array, array, list[tuple[Any, int, int]]]:
+         """This frame's sprite geometry: ground shadows first (texture None), then upright billboards at each
+-        sprite's feet (its bottom edge on the map), facing the camera and stretched by 1 / cos(pitch) so they keep
+-        their drawn proportions; grouped by texture as (texture, first index, index count) ranges."""
++        sprite's feet (its bottom edge on the map), facing the camera drawing the frame (``right``) and stretched
++        by its 1 / cos(pitch) (``stretch``) so they keep their drawn proportions; grouped by texture as
++        (texture, first index, index count) ranges."""
+         verts, idx, ranges = array("f"), array("I"), []
+         if shadows:
+             for sprite in sprites:
+@@ -1113,7 +1114,6 @@ class Hd2dRenderer:
+                 self._quad(verts, idx, (x - r, y - r * 0.6, z, 0, 0, x + r, y - r * 0.6, z, 1, 0,
+                                         x - r, y + r * 0.6, z, 0, 1, x + r, y + r * 0.6, z, 1, 1))
+             ranges.append((None, 0, len(idx)))
+-        stretch = 1.0 / max(0.5, math.cos(math.radians(self.camera.pitch)))
+         groups: dict[int, tuple[Any, list[Any]]] = {}
+         for sprite in sprites:
+             tex = self._sprite_texture(sprite.texture)
+@@ -1313,10 +1313,12 @@ class Hd2dRenderer:
+         # This frame's characters first: the sun's shadow pass needs them before the scene is drawn. With real
+         # shadows on, no painted blob under them (their shadows fall from the sun); off, Stage 2's soft blob.
+         sprites = [solid] if solid is not None else self._sprites()
+-        verts, idx, ranges = self._sprite_quads(sprites, shadows=solid is None and not lighting.enabled, right=cam.right())
++        # billboards stand up for the camera drawing this frame: its right, and its pitch's stretch (#485)
++        stretch = 1.0 / max(0.5, math.cos(math.radians(cam.pitch)))
++        verts, idx, ranges = self._sprite_quads(sprites, shadows=solid is None and not lighting.enabled, right=cam.right(),
++                                                stretch=stretch)
+         geometry_sprites = self._upload_dynamic(verts, idx) if sprites else None
+         live = self.live_draws()
+-        stretch = 1.0 / max(0.5, math.cos(math.radians(self.camera.pitch)))
+         if solid is None:  # the flat ground receives, never casts; sculpted ground's hills cast too
+             casters = (self.static + live + (self._terrain_casters() if self.terrain is not None else [])
+                        + (self.scatter.casters() if self.scatter is not None else []))
+@@ -1477,7 +1479,7 @@ class Hd2dRenderer:
+         sprite = self.followed() if game else None
+         if sprite is None:
+             return view_depth(eye, target, target), 0.0
+-        stretch = 1.0 / max(0.5, math.cos(math.radians(self.camera.pitch)))
++        stretch = 1.0 / max(0.5, math.cos(math.radians(cam.pitch)))
+         h = abs(sprite.height) / PIXELS_PER_METRE * stretch
+         mid = (sprite.center_x / PIXELS_PER_METRE, sprite.bottom / PIXELS_PER_METRE,
+                self.elevation_of(sprite) / PIXELS_PER_METRE + h / 2)

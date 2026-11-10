@@ -1,0 +1,63 @@
+{
+ "worktree": "D:\\Games\\Mesh-h485fix",
+ "proj_start": {
+  "studio_cam": {
+   "target": [
+    20.0,
+    22.0,
+    0.0
+   ],
+   "pitch": 40.0,
+   "fov": 30.0,
+   "distance": 48.400000000000006,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "game_pitch": 30.0,
+  "canvas": "2f528b0375b17169",
+  "canvas_changed_when_game_camera_moved": {
+   "game_pitch_60": 0.0,
+   "game_cam_far_away": 0.0
+  }
+ },
+ "proj_cottage": {
+  "studio_cam": {
+   "target": [
+    8.0,
+    6.0,
+    0.0
+   ],
+   "pitch": 40.0,
+   "fov": 30.0,
+   "distance": 8.0,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "game_pitch": 55.0,
+  "canvas": "3937cfe753380599",
+  "canvas_changed_when_game_camera_moved": {
+   "game_pitch_60": 0.0,
+   "game_cam_far_away": 0.0
+  }
+ },
+ "proj_start_scatter": {
+  "studio_cam": {
+   "target": [
+    20.0,
+    22.0,
+    0.0
+   ],
+   "pitch": 40.0,
+   "fov": 30.0,
+   "distance": 48.400000000000006,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "game_pitch": 30.0,
+  "canvas": "d8944ef6f19023cf",
+  "canvas_changed_when_game_camera_moved": {
+   "game_pitch_60": 0.0,
+   "game_cam_far_away": 0.0
+  }
+ }
+}
