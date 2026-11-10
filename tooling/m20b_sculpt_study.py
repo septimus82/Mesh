@@ -16,7 +16,6 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
-import logging
 import os
 import random
 import statistics
@@ -35,8 +34,10 @@ import runner_calibration  # noqa: E402
 import terrain_advisory  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame, _gl_counts  # noqa: E402
 
+from engine.log_utils import get_logger  # noqa: E402
+
 PX = 32.0
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 RELEASES: list[float] = []  # each stroke's release: its commit, Studio's panel and the next frame (ms)
 
 
@@ -210,7 +211,9 @@ def _advisory(d: Any, gate_frame_ms: Any, trials: int = terrain_advisory.TRIALS,
     except Exception as exc:  # noqa: BLE001  # REASON: an advisory measurement's failure is recorded, never fails the run
         logger.warning("[Mesh][terrain advisory] the runner calibration failed (report-only)", exc_info=True)
         cpu, error = None, error or f"calibration: {type(exc).__name__}: {exc}"
-    return terrain_advisory.summarise(rows, gate_frame_ms, cpu, overhead_s=time.perf_counter() - start, error=error)
+    result: dict[str, Any] = terrain_advisory.summarise(rows, gate_frame_ms, cpu, overhead_s=time.perf_counter() - start,
+                                                        error=error)
+    return result
 
 
 def studio(out: Path) -> dict[str, Any]:
@@ -392,7 +395,8 @@ def advisory_detection(out: Path, trials: int = 3, steps: int = 8) -> dict[str, 
             try:
                 report[name] = _advisory(d, None, trials=trials, warm=1, steps=steps)  # (no gated stroke: no backstop)
             finally:
-                Hd2dView._flush_stroke, Hd2dView.end_stroke = flush, end
+                setattr(Hd2dView, "_flush_stroke", flush)
+                setattr(Hd2dView, "end_stroke", end)
     finally:
         d.close()
     return report
