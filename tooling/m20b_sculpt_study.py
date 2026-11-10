@@ -5,6 +5,7 @@
     py -3.13 tooling/m20b_sculpt_study.py scale OUT     # 32 x 24, 64 x 64, 128 x 128 m: load, strokes, frames, save
     py -3.13 tooling/m20b_sculpt_study.py flat OUT      # a flat room's first stroke, and its undo
     py -3.13 tooling/m20b_sculpt_study.py rechecks OUT  # QA's findings, checked again in Studio
+    py -3.13 tooling/m20b_sculpt_study.py advisory OUT  # the report-only measurements vs injected regressions (#422)
 
 Projects come from the HD-2D RPG template with the Hills room (tooling/m20a_terrain_study.py), or, for scale, a room
 whose ground is sculpted all over.
@@ -15,6 +16,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import logging
 import os
 import random
 import statistics
@@ -29,9 +31,12 @@ sys.path.insert(0, str(REPO / "tooling"))
 import hd2d_visual_study as study  # noqa: E402
 import m20a_terrain_study as m20a  # noqa: E402
 import review_media  # noqa: E402
+import runner_calibration  # noqa: E402
+import terrain_advisory  # noqa: E402
 from hd2d_demo import SCENES, HiddenGame, _gl_counts  # noqa: E402
 
 PX = 32.0
+logger = logging.getLogger(__name__)
 RELEASES: list[float] = []  # each stroke's release: its commit, Studio's panel and the next frame (ms)
 
 
@@ -116,6 +121,96 @@ def _counting_reloads(d: Any) -> Iterator[dict[str, int]]:
 
 def _path(a: tuple[float, float], b: tuple[float, float], n: int) -> list[tuple[float, float, float]]:
     return [(a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n, 0.0) for k in range(n + 1)]
+
+
+def _interleaved(d: Any, trials: int, warm: int, steps: int, a: tuple[float, float] = (6.5, 14.0),
+                 b: tuple[float, float] = (12.0, 20.5)) -> list[dict[str, Any]]:
+    """Report-only samples (#422, ``terrain_advisory``): ``warm`` + ``trials`` interleaved trials (ABBA), each a control
+    block (the stroke's path hovered: event, ground pick, brush ring, drawing, read-back, no edit) and a sculpt block
+    (press, the same path dragged, release + the next frame), every frame through ``d.frame()`` as the gated stroke's.
+    Raise and lower alternate, so the ground stays about where it was. Studio's Raise tool first, as a creator would."""
+    s, k = d.studio, d.arcade.key
+    left = d.arcade.MOUSE_BUTTON_LEFT
+    d.button("Raise")
+    rows: list[dict[str, Any]] = []
+    for t in range(warm + trials):
+        ends = (a, b) if t % 2 == 0 else (b, a)
+        screen = [d.screen(p) for p in _path(ends[0], ends[1], steps)]
+        lower = (t // 2) % 2 == 1
+
+        def control() -> tuple[list[float], float]:
+            # hovering rewrites the status line ("Ground +0.42 m here.") as the height under the brush changes; a stroke
+            # doesn't: silenced here, so a control frame is a sculpt frame without the edit
+            s._say = lambda *_a, **_k: None
+            try:
+                d.window.dispatch_event("on_mouse_motion", *screen[0], 0, 0)
+                d.advance()
+                times, last = [], screen[0]
+                for p in screen[1:]:
+                    start = time.perf_counter()
+                    d.window.dispatch_event("on_mouse_motion", p[0], p[1], p[0] - last[0], p[1] - last[1])
+                    d.frame()
+                    times.append((time.perf_counter() - start) * 1000)
+                    last = p
+                start = time.perf_counter()
+                d.frame()  # (the frame that would follow a release: nothing to commit)
+                return times, (time.perf_counter() - start) * 1000
+            finally:
+                del s._say
+
+        def sculpt() -> tuple[list[float], float, bool]:
+            undo_n = len(s.project._undo)
+            d.window.dispatch_event("on_mouse_motion", *screen[0], 0, 0)
+            if lower:
+                d.window.dispatch_event("on_key_press", k.LSHIFT, 0)
+            try:
+                d.window.dispatch_event("on_mouse_press", *screen[0], left, 0)
+                times, last = [], screen[0]
+                for p in screen[1:]:
+                    start = time.perf_counter()
+                    d.window.dispatch_event("on_mouse_drag", p[0], p[1], p[0] - last[0], p[1] - last[1], left, 0)
+                    d.frame()
+                    times.append((time.perf_counter() - start) * 1000)
+                    last = p
+                start = time.perf_counter()
+                d.window.dispatch_event("on_mouse_release", *screen[-1], left, 0)
+                d.frame()
+                release = (time.perf_counter() - start) * 1000
+            finally:
+                if lower:
+                    d.window.dispatch_event("on_key_release", k.LSHIFT, 0)
+            d.advance()
+            return times, release, len(s.project._undo) == undo_n + 1
+
+        if t % 2 == 0:
+            (c, crel), (sc, rel, committed) = control(), sculpt()
+        else:
+            (sc, rel, committed), (c, crel) = sculpt(), control()
+        if t >= warm:
+            rows.append({"control": c, "sculpt": sc, "release": rel, "control_release": crel, "committed": committed})
+    return rows
+
+
+def _advisory(d: Any, gate_frame_ms: Any, trials: int = terrain_advisory.TRIALS, warm: int = terrain_advisory.WARM,
+              steps: int = terrain_advisory.STEPS) -> dict[str, Any]:
+    """The report-only measurements (``terrain_advisory.summarise``): never raises. A failure mid-trial is recorded and
+    the stroke let go (Esc), so whatever runs next finds Studio as a creator would leave it."""
+    start = time.perf_counter()
+    rows: list[dict[str, Any]] = []
+    error = None
+    try:
+        rows = _interleaved(d, trials, warm, steps)
+    except Exception as exc:  # noqa: BLE001  # REASON: an advisory measurement's failure is recorded, never fails the run
+        logger.warning("[Mesh][terrain advisory] the interleaved trials failed (report-only)", exc_info=True)
+        error = f"{type(exc).__name__}: {exc}"
+        if d.studio.hd2d.stroke is not None:
+            d.key(d.arcade.key.ESCAPE)
+    try:
+        cpu = runner_calibration.cpu_ms()
+    except Exception as exc:  # noqa: BLE001  # REASON: an advisory measurement's failure is recorded, never fails the run
+        logger.warning("[Mesh][terrain advisory] the runner calibration failed (report-only)", exc_info=True)
+        cpu, error = None, error or f"calibration: {type(exc).__name__}: {exc}"
+    return terrain_advisory.summarise(rows, gate_frame_ms, cpu, overhead_s=time.perf_counter() - start, error=error)
 
 
 def studio(out: Path) -> dict[str, Any]:
@@ -247,6 +342,9 @@ def studio(out: Path) -> dict[str, Any]:
                               "room_reloads": lower_reloads["room_reloads"] + flatten_reloads["room_reloads"],
                               "scene_loads": lower_reloads["scene_loads"] + flatten_reloads["scene_loads"]}
         d.picture(out / "studio_controls.png")
+        # 8. report-only (#422 CI-422A2): interleaved control vs sculpt trials and the runner's calibration; recorded,
+        # never asserted (its strokes are saved and reopened with the rest below)
+        report["advisory"] = _advisory(d, report["stroke"]["frame_ms"].get("median"))
         final = list(_heights(s.project))
         d.key(k.S, k.MOD_CTRL)
     finally:
@@ -254,6 +352,47 @@ def studio(out: Path) -> dict[str, Any]:
     d = _driver(project)
     try:
         report["reopened_same"] = _heights(d.studio.project) == final
+    finally:
+        d.close()
+    return report
+
+
+def advisory_detection(out: Path, trials: int = 3, steps: int = 8) -> dict[str, Any]:
+    """The report-only measurements against deliberately injected regressions (#422 CI-422A2), in one Studio session:
+    none, every flush rebuilding every terrain chunk, and a full room reload after each committed stroke."""
+    from engine.studio_hd2d import Hd2dView
+
+    out.mkdir(parents=True, exist_ok=True)
+    project = m20a.make_project(out, "advisory", stages=("hill",), pond=False)
+    report: dict[str, Any] = {}
+    d = _driver(project)
+    try:
+        d.button("Sculpt")
+        d.advance(3)
+        flush, end = Hd2dView._flush_stroke, Hd2dView.end_stroke
+
+        def rebuild_all(self: Any) -> None:
+            stroke, renderer = self.stroke, self.renderer
+            sculpting = stroke is not None and stroke["pending"] and stroke["tool"] not in ("paint", "scatter")
+            if sculpting and renderer is not None and renderer.terrain is not None:
+                nx, ny = renderer.terrain.chunk_count()
+                stroke["pending"] = {(i, j) for j in range(ny) for i in range(nx)}
+            flush(self)
+
+        def reload_on_release(self: Any) -> None:
+            had = self.stroke is not None
+            end(self)
+            if had:
+                self.studio._reload()
+
+        for name, patch in (("none", None), ("rebuild_all", ("_flush_stroke", rebuild_all)),
+                            ("reload_on_release", ("end_stroke", reload_on_release))):
+            if patch is not None:
+                setattr(Hd2dView, *patch)
+            try:
+                report[name] = _advisory(d, None, trials=trials, warm=1, steps=steps)  # (no gated stroke: no backstop)
+            finally:
+                Hd2dView._flush_stroke, Hd2dView.end_stroke = flush, end
     finally:
         d.close()
     return report
@@ -589,7 +728,7 @@ def scale(out: Path) -> dict[str, Any]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     steps: dict[str, Callable[[Path], Any]] = {"studio": studio, "flat": first_stroke_on_flat, "world": world,
-                                               "scale": scale, "rechecks": rechecks}
+                                               "scale": scale, "rechecks": rechecks, "advisory": advisory_detection}
     parser.add_argument("command", choices=list(steps))
     parser.add_argument("out", type=Path)
     args = parser.parse_args()
