@@ -1,0 +1,1418 @@
+[
+ {
+  "job": "ab-windows-2022-7",
+  "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+  "cpu_ms": 20.67,
+  "gl_ms": 11.25,
+  "gate": {
+   "frame_ms": {
+    "median": 53.65,
+    "p95": 54.71,
+    "max": 90.45,
+    "n": 48
+   },
+   "update_terrain_ms": {
+    "median": 12.02,
+    "p95": 12.27,
+    "max": 12.45,
+    "n": 73
+   },
+   "commit_ms": 15.9,
+   "release_to_next_frame_ms": 231.0
+  },
+  "gate_failed": false,
+  "ab": {
+   "1_none_5": {
+    "control_frame_ms": 40.84,
+    "sculpt_frame_ms": 53.961,
+    "incremental_ms": 13.103,
+    "ratio": 1.321,
+    "update_terrain_ms": 10.954,
+    "commit_ms": 10.837,
+    "release_ms": 118.434,
+    "control_release_ms": 39.809,
+    "release_extra_ms": 78.48,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 53.88,
+     "p95": 59.51,
+     "max": 68.81,
+     "n": 160
+    }
+   },
+   "2_reload_on_release_5": {
+    "control_frame_ms": 40.82,
+    "sculpt_frame_ms": 53.948,
+    "incremental_ms": 13.229,
+    "ratio": 1.323,
+    "update_terrain_ms": 12.105,
+    "commit_ms": 10.897,
+    "release_ms": 1044.269,
+    "control_release_ms": 40.135,
+    "release_extra_ms": 1004.53,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 53.905,
+     "p95": 58.59,
+     "max": 66.95,
+     "n": 160
+    }
+   },
+   "3_reload_per_flush_5": {
+    "control_frame_ms": 40.885,
+    "sculpt_frame_ms": 40.315,
+    "incremental_ms": -0.555,
+    "ratio": 0.986,
+    "update_terrain_ms": 6.425,
+    "commit_ms": null,
+    "release_ms": 40.28,
+    "control_release_ms": 39.974,
+    "release_extra_ms": 0.114,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 40.285,
+     "p95": 716.19,
+     "max": 732.01,
+     "n": 160
+    }
+   },
+   "4_rebuild_all_5": {
+    "control_frame_ms": 40.677,
+    "sculpt_frame_ms": 76.77,
+    "incremental_ms": 36.096,
+    "ratio": 1.89,
+    "update_terrain_ms": 34.776,
+    "commit_ms": 10.965,
+    "release_ms": 119.155,
+    "control_release_ms": 39.957,
+    "release_extra_ms": 79.116,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 76.83,
+     "p95": 87.71,
+     "max": 93.02,
+     "n": 160
+    }
+   },
+   "5_cpu_frame_5": {
+    "control_frame_ms": 46.172,
+    "sculpt_frame_ms": 59.388,
+    "incremental_ms": 13.038,
+    "ratio": 1.284,
+    "update_terrain_ms": 12.259,
+    "commit_ms": 11.843,
+    "release_ms": 127.279,
+    "control_release_ms": 45.314,
+    "release_extra_ms": 80.614,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 59.4,
+     "p95": 70.02,
+     "max": 78.99,
+     "n": 160
+    }
+   },
+   "6_cpu_dab_5": {
+    "control_frame_ms": 40.415,
+    "sculpt_frame_ms": 58.346,
+    "incremental_ms": 17.758,
+    "ratio": 1.435,
+    "update_terrain_ms": 10.82,
+    "commit_ms": 10.925,
+    "release_ms": 117.861,
+    "control_release_ms": 39.708,
+    "release_extra_ms": 78.643,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 57.99,
+     "p95": 63.25,
+     "max": 67.78,
+     "n": 160
+    }
+   },
+   "7_cpu_frame_15": {
+    "control_frame_ms": 55.471,
+    "sculpt_frame_ms": 68.278,
+    "incremental_ms": 12.686,
+    "ratio": 1.229,
+    "update_terrain_ms": 11.889,
+    "commit_ms": 10.774,
+    "release_ms": 133.806,
+    "control_release_ms": 54.784,
+    "release_extra_ms": 79.048,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 67.98,
+     "p95": 71.93,
+     "max": 84.0,
+     "n": 160
+    }
+   },
+   "8_none_5": {
+    "control_frame_ms": 40.52,
+    "sculpt_frame_ms": 53.503,
+    "incremental_ms": 12.913,
+    "ratio": 1.32,
+    "update_terrain_ms": 11.913,
+    "commit_ms": 10.778,
+    "release_ms": 117.89,
+    "control_release_ms": 39.612,
+    "release_extra_ms": 78.303,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 53.48,
+     "p95": 57.97,
+     "max": 63.88,
+     "n": 160
+    }
+   }
+  }
+ },
+ {
+  "job": "ab-windows-2022-8",
+  "cpu": "AMD EPYC 9V45 96-Core Processor",
+  "cpu_ms": 13.01,
+  "gl_ms": 6.96,
+  "gate": {
+   "frame_ms": {
+    "median": 32.6,
+    "p95": 43.61,
+    "max": 55.44,
+    "n": 48
+   },
+   "update_terrain_ms": {
+    "median": 7.07,
+    "p95": 7.47,
+    "max": 12.58,
+    "n": 54
+   },
+   "commit_ms": 8.5,
+   "release_to_next_frame_ms": 131.2
+  },
+  "gate_failed": false,
+  "ab": {
+   "1_none_5": {
+    "control_frame_ms": 25.279,
+    "sculpt_frame_ms": 32.764,
+    "incremental_ms": 7.593,
+    "ratio": 1.3,
+    "update_terrain_ms": 5.945,
+    "commit_ms": 6.915,
+    "release_ms": 72.575,
+    "control_release_ms": 24.704,
+    "release_extra_ms": 48.053,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 32.72,
+     "p95": 37.1,
+     "max": 49.41,
+     "n": 160
+    }
+   },
+   "2_reload_on_release_5": {
+    "control_frame_ms": 25.348,
+    "sculpt_frame_ms": 32.759,
+    "incremental_ms": 7.363,
+    "ratio": 1.292,
+    "update_terrain_ms": 5.973,
+    "commit_ms": 6.83,
+    "release_ms": 694.924,
+    "control_release_ms": 24.321,
+    "release_extra_ms": 670.154,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 32.28,
+     "p95": 35.83,
+     "max": 37.76,
+     "n": 160
+    }
+   },
+   "3_reload_per_flush_5": {
+    "control_frame_ms": 24.416,
+    "sculpt_frame_ms": 23.94,
+    "incremental_ms": -0.401,
+    "ratio": 0.983,
+    "update_terrain_ms": 4.243,
+    "commit_ms": null,
+    "release_ms": 24.109,
+    "control_release_ms": 23.831,
+    "release_extra_ms": 0.162,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 24.13,
+     "p95": 467.84,
+     "max": 515.54,
+     "n": 160
+    }
+   },
+   "4_rebuild_all_5": {
+    "control_frame_ms": 24.377,
+    "sculpt_frame_ms": 45.59,
+    "incremental_ms": 21.177,
+    "ratio": 1.873,
+    "update_terrain_ms": 20.216,
+    "commit_ms": 6.886,
+    "release_ms": 70.407,
+    "control_release_ms": 24.017,
+    "release_extra_ms": 46.389,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 45.675,
+     "p95": 51.54,
+     "max": 59.81,
+     "n": 160
+    }
+   },
+   "5_cpu_frame_5": {
+    "control_frame_ms": 29.405,
+    "sculpt_frame_ms": 36.896,
+    "incremental_ms": 7.764,
+    "ratio": 1.264,
+    "update_terrain_ms": 5.909,
+    "commit_ms": 6.913,
+    "release_ms": 76.117,
+    "control_release_ms": 28.474,
+    "release_extra_ms": 47.257,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 36.98,
+     "p95": 42.08,
+     "max": 52.35,
+     "n": 160
+    }
+   },
+   "6_cpu_dab_5": {
+    "control_frame_ms": 24.248,
+    "sculpt_frame_ms": 36.795,
+    "incremental_ms": 12.518,
+    "ratio": 1.508,
+    "update_terrain_ms": 6.362,
+    "commit_ms": 6.969,
+    "release_ms": 71.76,
+    "control_release_ms": 23.398,
+    "release_extra_ms": 48.136,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 36.7,
+     "p95": 40.28,
+     "max": 52.28,
+     "n": 160
+    }
+   },
+   "7_cpu_frame_15": {
+    "control_frame_ms": 39.318,
+    "sculpt_frame_ms": 46.832,
+    "incremental_ms": 7.528,
+    "ratio": 1.191,
+    "update_terrain_ms": 6.957,
+    "commit_ms": 6.921,
+    "release_ms": 85.538,
+    "control_release_ms": 38.587,
+    "release_extra_ms": 46.748,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 46.635,
+     "p95": 49.79,
+     "max": 60.35,
+     "n": 160
+    }
+   },
+   "8_none_5": {
+    "control_frame_ms": 24.068,
+    "sculpt_frame_ms": 31.654,
+    "incremental_ms": 7.592,
+    "ratio": 1.315,
+    "update_terrain_ms": 6.306,
+    "commit_ms": 6.872,
+    "release_ms": 70.802,
+    "control_release_ms": 23.349,
+    "release_extra_ms": 47.52,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 31.505,
+     "p95": 34.7,
+     "max": 36.89,
+     "n": 160
+    }
+   }
+  }
+ },
+ {
+  "job": "ab-windows-latest-1",
+  "cpu": "AMD EPYC 7763 64-Core Processor",
+  "cpu_ms": 24.87,
+  "gl_ms": 10.34,
+  "gate": {
+   "frame_ms": {
+    "median": 55.25,
+    "p95": 56.65,
+    "max": 100.36,
+    "n": 48
+   },
+   "update_terrain_ms": {
+    "median": 13.24,
+    "p95": 13.51,
+    "max": 13.59,
+    "n": 73
+   },
+   "commit_ms": 17.1,
+   "release_to_next_frame_ms": 252.2
+  },
+  "gate_failed": false,
+  "ab": {
+   "1_none_5": {
+    "control_frame_ms": 41.105,
+    "sculpt_frame_ms": 55.594,
+    "incremental_ms": 14.56,
+    "ratio": 1.355,
+    "update_terrain_ms": 13.374,
+    "commit_ms": 11.933,
+    "release_ms": 129.5,
+    "control_release_ms": 39.885,
+    "release_extra_ms": 89.48,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 55.62,
+     "p95": 63.59,
+     "max": 73.5,
+     "n": 160
+    }
+   },
+   "2_reload_on_release_5": {
+    "control_frame_ms": 41.295,
+    "sculpt_frame_ms": 55.791,
+    "incremental_ms": 14.543,
+    "ratio": 1.352,
+    "update_terrain_ms": 13.584,
+    "commit_ms": 11.963,
+    "release_ms": 1229.741,
+    "control_release_ms": 40.275,
+    "release_extra_ms": 1189.852,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 55.67,
+     "p95": 61.53,
+     "max": 67.98,
+     "n": 160
+    }
+   },
+   "3_reload_per_flush_5": {
+    "control_frame_ms": 42.963,
+    "sculpt_frame_ms": 40.574,
+    "incremental_ms": -0.597,
+    "ratio": 0.986,
+    "update_terrain_ms": 7.157,
+    "commit_ms": null,
+    "release_ms": 41.335,
+    "control_release_ms": 40.931,
+    "release_extra_ms": 0.711,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 41.155,
+     "p95": 850.17,
+     "max": 1194.59,
+     "n": 160
+    }
+   },
+   "4_rebuild_all_5": {
+    "control_frame_ms": 41.079,
+    "sculpt_frame_ms": 81.948,
+    "incremental_ms": 40.707,
+    "ratio": 1.993,
+    "update_terrain_ms": 39.331,
+    "commit_ms": 11.871,
+    "release_ms": 130.615,
+    "control_release_ms": 40.095,
+    "release_extra_ms": 90.297,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 81.855,
+     "p95": 96.1,
+     "max": 99.63,
+     "n": 160
+    }
+   },
+   "5_cpu_frame_5": {
+    "control_frame_ms": 45.951,
+    "sculpt_frame_ms": 60.25,
+    "incremental_ms": 14.297,
+    "ratio": 1.311,
+    "update_terrain_ms": 13.416,
+    "commit_ms": 12.218,
+    "release_ms": 134.796,
+    "control_release_ms": 45.296,
+    "release_extra_ms": 89.499,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 60.36,
+     "p95": 68.03,
+     "max": 72.87,
+     "n": 160
+    }
+   },
+   "6_cpu_dab_5": {
+    "control_frame_ms": 40.974,
+    "sculpt_frame_ms": 60.307,
+    "incremental_ms": 19.322,
+    "ratio": 1.471,
+    "update_terrain_ms": 13.584,
+    "commit_ms": 12.087,
+    "release_ms": 130.247,
+    "control_release_ms": 40.336,
+    "release_extra_ms": 89.963,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 60.345,
+     "p95": 67.33,
+     "max": 72.81,
+     "n": 160
+    }
+   },
+   "7_cpu_frame_15": {
+    "control_frame_ms": 56.058,
+    "sculpt_frame_ms": 70.187,
+    "incremental_ms": 14.192,
+    "ratio": 1.254,
+    "update_terrain_ms": 13.374,
+    "commit_ms": 11.875,
+    "release_ms": 143.744,
+    "control_release_ms": 55.141,
+    "release_extra_ms": 88.764,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 70.16,
+     "p95": 76.44,
+     "max": 83.57,
+     "n": 160
+    }
+   },
+   "8_none_5": {
+    "control_frame_ms": 40.922,
+    "sculpt_frame_ms": 55.227,
+    "incremental_ms": 14.265,
+    "ratio": 1.35,
+    "update_terrain_ms": 13.365,
+    "commit_ms": 11.982,
+    "release_ms": 130.16,
+    "control_release_ms": 39.853,
+    "release_extra_ms": 89.966,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 55.215,
+     "p95": 61.3,
+     "max": 68.94,
+     "n": 160
+    }
+   }
+  }
+ },
+ {
+  "job": "ab-windows-latest-2",
+  "cpu": "AMD EPYC 9V45 96-Core Processor",
+  "cpu_ms": 14.16,
+  "gl_ms": 7.25,
+  "gate": {
+   "frame_ms": {
+    "median": 34.61,
+    "p95": 36.86,
+    "max": 58.87,
+    "n": 48
+   },
+   "update_terrain_ms": {
+    "median": 7.49,
+    "p95": 7.94,
+    "max": 9.46,
+    "n": 64
+   },
+   "commit_ms": 9.1,
+   "release_to_next_frame_ms": 140.7
+  },
+  "gate_failed": false,
+  "ab": {
+   "1_none_5": {
+    "control_frame_ms": 25.276,
+    "sculpt_frame_ms": 33.626,
+    "incremental_ms": 8.015,
+    "ratio": 1.317,
+    "update_terrain_ms": 6.328,
+    "commit_ms": 6.915,
+    "release_ms": 74.97,
+    "control_release_ms": 25.247,
+    "release_extra_ms": 50.208,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 33.345,
+     "p95": 37.22,
+     "max": 41.47,
+     "n": 160
+    }
+   },
+   "2_reload_on_release_5": {
+    "control_frame_ms": 25.676,
+    "sculpt_frame_ms": 33.731,
+    "incremental_ms": 7.966,
+    "ratio": 1.308,
+    "update_terrain_ms": 6.27,
+    "commit_ms": 6.851,
+    "release_ms": 725.189,
+    "control_release_ms": 25.195,
+    "release_extra_ms": 698.406,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 33.765,
+     "p95": 45.35,
+     "max": 76.27,
+     "n": 160
+    }
+   },
+   "3_reload_per_flush_5": {
+    "control_frame_ms": 25.594,
+    "sculpt_frame_ms": 25.465,
+    "incremental_ms": -0.149,
+    "ratio": 0.994,
+    "update_terrain_ms": 4.53,
+    "commit_ms": null,
+    "release_ms": 25.508,
+    "control_release_ms": 25.114,
+    "release_extra_ms": -0.182,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 25.53,
+     "p95": 484.19,
+     "max": 505.04,
+     "n": 160
+    }
+   },
+   "4_rebuild_all_5": {
+    "control_frame_ms": 26.023,
+    "sculpt_frame_ms": 48.061,
+    "incremental_ms": 21.904,
+    "ratio": 1.841,
+    "update_terrain_ms": 20.73,
+    "commit_ms": 6.996,
+    "release_ms": 75.695,
+    "control_release_ms": 25.407,
+    "release_extra_ms": 49.984,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 47.96,
+     "p95": 53.4,
+     "max": 66.35,
+     "n": 160
+    }
+   },
+   "5_cpu_frame_5": {
+    "control_frame_ms": 31.507,
+    "sculpt_frame_ms": 39.544,
+    "incremental_ms": 7.966,
+    "ratio": 1.253,
+    "update_terrain_ms": 6.351,
+    "commit_ms": 6.909,
+    "release_ms": 80.326,
+    "control_release_ms": 30.91,
+    "release_extra_ms": 49.403,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 39.57,
+     "p95": 42.77,
+     "max": 56.1,
+     "n": 160
+    }
+   },
+   "6_cpu_dab_5": {
+    "control_frame_ms": 26.358,
+    "sculpt_frame_ms": 39.255,
+    "incremental_ms": 12.991,
+    "ratio": 1.494,
+    "update_terrain_ms": 6.392,
+    "commit_ms": 7.071,
+    "release_ms": 75.624,
+    "control_release_ms": 25.575,
+    "release_extra_ms": 50.115,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 39.245,
+     "p95": 41.51,
+     "max": 45.61,
+     "n": 160
+    }
+   },
+   "7_cpu_frame_15": {
+    "control_frame_ms": 40.589,
+    "sculpt_frame_ms": 47.955,
+    "incremental_ms": 7.74,
+    "ratio": 1.192,
+    "update_terrain_ms": 7.05,
+    "commit_ms": 6.815,
+    "release_ms": 88.582,
+    "control_release_ms": 39.329,
+    "release_extra_ms": 48.799,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 47.695,
+     "p95": 50.84,
+     "max": 56.79,
+     "n": 160
+    }
+   },
+   "8_none_5": {
+    "control_frame_ms": 24.928,
+    "sculpt_frame_ms": 32.803,
+    "incremental_ms": 7.724,
+    "ratio": 1.311,
+    "update_terrain_ms": 5.952,
+    "commit_ms": 6.771,
+    "release_ms": 73.815,
+    "control_release_ms": 24.162,
+    "release_extra_ms": 48.988,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 32.655,
+     "p95": 36.7,
+     "max": 44.24,
+     "n": 160
+    }
+   }
+  }
+ },
+ {
+  "job": "ab-windows-latest-3",
+  "cpu": "AMD EPYC 7763 64-Core Processor",
+  "cpu_ms": 24.39,
+  "gl_ms": 10.43,
+  "gate": {
+   "frame_ms": {
+    "median": 54.12,
+    "p95": 55.96,
+    "max": 96.92,
+    "n": 48
+   },
+   "update_terrain_ms": {
+    "median": 13.12,
+    "p95": 13.39,
+    "max": 13.65,
+    "n": 73
+   },
+   "commit_ms": 16.9,
+   "release_to_next_frame_ms": 245.1
+  },
+  "gate_failed": false,
+  "ab": {
+   "1_none_5": {
+    "control_frame_ms": 40.535,
+    "sculpt_frame_ms": 54.989,
+    "incremental_ms": 14.314,
+    "ratio": 1.354,
+    "update_terrain_ms": 13.412,
+    "commit_ms": 11.815,
+    "release_ms": 128.76,
+    "control_release_ms": 39.844,
+    "release_extra_ms": 88.992,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 54.935,
+     "p95": 61.58,
+     "max": 66.02,
+     "n": 160
+    }
+   },
+   "2_reload_on_release_5": {
+    "control_frame_ms": 40.96,
+    "sculpt_frame_ms": 54.901,
+    "incremental_ms": 14.12,
+    "ratio": 1.344,
+    "update_terrain_ms": 13.409,
+    "commit_ms": 11.787,
+    "release_ms": 1220.025,
+    "control_release_ms": 39.913,
+    "release_extra_ms": 1178.73,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 54.895,
+     "p95": 64.29,
+     "max": 69.77,
+     "n": 160
+    }
+   },
+   "3_reload_per_flush_5": {
+    "control_frame_ms": 40.532,
+    "sculpt_frame_ms": 39.652,
+    "incremental_ms": -0.809,
+    "ratio": 0.98,
+    "update_terrain_ms": 7.137,
+    "commit_ms": null,
+    "release_ms": 39.704,
+    "control_release_ms": 39.562,
+    "release_extra_ms": 0.107,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 39.665,
+     "p95": 838.84,
+     "max": 851.38,
+     "n": 160
+    }
+   },
+   "4_rebuild_all_5": {
+    "control_frame_ms": 40.814,
+    "sculpt_frame_ms": 81.576,
+    "incremental_ms": 40.743,
+    "ratio": 1.995,
+    "update_terrain_ms": 39.334,
+    "commit_ms": 11.854,
+    "release_ms": 130.415,
+    "control_release_ms": 39.361,
+    "release_extra_ms": 91.07,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 81.665,
+     "p95": 95.05,
+     "max": 100.78,
+     "n": 160
+    }
+   },
+   "5_cpu_frame_5": {
+    "control_frame_ms": 45.361,
+    "sculpt_frame_ms": 59.662,
+    "incremental_ms": 14.213,
+    "ratio": 1.314,
+    "update_terrain_ms": 13.357,
+    "commit_ms": 11.69,
+    "release_ms": 133.53,
+    "control_release_ms": 44.642,
+    "release_extra_ms": 88.962,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 59.68,
+     "p95": 65.79,
+     "max": 71.1,
+     "n": 160
+    }
+   },
+   "6_cpu_dab_5": {
+    "control_frame_ms": 40.201,
+    "sculpt_frame_ms": 59.648,
+    "incremental_ms": 19.5,
+    "ratio": 1.486,
+    "update_terrain_ms": 13.428,
+    "commit_ms": 11.704,
+    "release_ms": 128.281,
+    "control_release_ms": 38.971,
+    "release_extra_ms": 89.379,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 59.595,
+     "p95": 66.4,
+     "max": 71.21,
+     "n": 160
+    }
+   },
+   "7_cpu_frame_15": {
+    "control_frame_ms": 55.392,
+    "sculpt_frame_ms": 69.581,
+    "incremental_ms": 14.143,
+    "ratio": 1.255,
+    "update_terrain_ms": 13.346,
+    "commit_ms": 11.756,
+    "release_ms": 143.37,
+    "control_release_ms": 54.471,
+    "release_extra_ms": 88.671,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 69.52,
+     "p95": 75.13,
+     "max": 81.43,
+     "n": 160
+    }
+   },
+   "8_none_5": {
+    "control_frame_ms": 40.358,
+    "sculpt_frame_ms": 54.517,
+    "incremental_ms": 14.233,
+    "ratio": 1.353,
+    "update_terrain_ms": 13.204,
+    "commit_ms": 11.75,
+    "release_ms": 127.163,
+    "control_release_ms": 39.237,
+    "release_extra_ms": 87.814,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 54.5,
+     "p95": 62.41,
+     "max": 70.47,
+     "n": 160
+    }
+   }
+  }
+ },
+ {
+  "job": "ab-windows-latest-4",
+  "cpu": "AMD EPYC 7763 64-Core Processor",
+  "cpu_ms": 24.12,
+  "gl_ms": 10.33,
+  "gate": {
+   "frame_ms": {
+    "median": 55.76,
+    "p95": 57.24,
+    "max": 100.44,
+    "n": 48
+   },
+   "update_terrain_ms": {
+    "median": 13.25,
+    "p95": 13.75,
+    "max": 14.17,
+    "n": 73
+   },
+   "commit_ms": 21.7,
+   "release_to_next_frame_ms": 260.5
+  },
+  "gate_failed": false,
+  "ab": {
+   "1_none_5": {
+    "control_frame_ms": 42.952,
+    "sculpt_frame_ms": 57.882,
+    "incremental_ms": 14.895,
+    "ratio": 1.349,
+    "update_terrain_ms": 13.685,
+    "commit_ms": 12.123,
+    "release_ms": 134.432,
+    "control_release_ms": 41.889,
+    "release_extra_ms": 92.956,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 57.68,
+     "p95": 65.08,
+     "max": 70.3,
+     "n": 160
+    }
+   },
+   "2_reload_on_release_5": {
+    "control_frame_ms": 43.374,
+    "sculpt_frame_ms": 58.84,
+    "incremental_ms": 15.349,
+    "ratio": 1.352,
+    "update_terrain_ms": 13.996,
+    "commit_ms": 12.158,
+    "release_ms": 1294.538,
+    "control_release_ms": 42.231,
+    "release_extra_ms": 1251.873,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 58.375,
+     "p95": 66.04,
+     "max": 72.75,
+     "n": 160
+    }
+   },
+   "3_reload_per_flush_5": {
+    "control_frame_ms": 42.715,
+    "sculpt_frame_ms": 41.806,
+    "incremental_ms": -0.935,
+    "ratio": 0.978,
+    "update_terrain_ms": 7.23,
+    "commit_ms": null,
+    "release_ms": 41.89,
+    "control_release_ms": 41.762,
+    "release_extra_ms": 0.414,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 41.775,
+     "p95": 862.19,
+     "max": 901.55,
+     "n": 160
+    }
+   },
+   "4_rebuild_all_5": {
+    "control_frame_ms": 43.023,
+    "sculpt_frame_ms": 84.815,
+    "incremental_ms": 41.594,
+    "ratio": 1.971,
+    "update_terrain_ms": 40.416,
+    "commit_ms": 12.23,
+    "release_ms": 139.815,
+    "control_release_ms": 42.373,
+    "release_extra_ms": 96.229,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 85.23,
+     "p95": 103.62,
+     "max": 161.43,
+     "n": 160
+    }
+   },
+   "5_cpu_frame_5": {
+    "control_frame_ms": 47.178,
+    "sculpt_frame_ms": 61.44,
+    "incremental_ms": 14.503,
+    "ratio": 1.31,
+    "update_terrain_ms": 13.627,
+    "commit_ms": 11.951,
+    "release_ms": 136.118,
+    "control_release_ms": 46.23,
+    "release_extra_ms": 89.797,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 61.59,
+     "p95": 68.86,
+     "max": 72.12,
+     "n": 160
+    }
+   },
+   "6_cpu_dab_5": {
+    "control_frame_ms": 41.732,
+    "sculpt_frame_ms": 62.55,
+    "incremental_ms": 20.851,
+    "ratio": 1.5,
+    "update_terrain_ms": 14.598,
+    "commit_ms": 11.826,
+    "release_ms": 131.899,
+    "control_release_ms": 40.581,
+    "release_extra_ms": 91.303,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 62.485,
+     "p95": 67.52,
+     "max": 75.51,
+     "n": 160
+    }
+   },
+   "7_cpu_frame_15": {
+    "control_frame_ms": 56.884,
+    "sculpt_frame_ms": 71.605,
+    "incremental_ms": 14.511,
+    "ratio": 1.256,
+    "update_terrain_ms": 13.603,
+    "commit_ms": 12.059,
+    "release_ms": 146.782,
+    "control_release_ms": 56.037,
+    "release_extra_ms": 90.808,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 71.53,
+     "p95": 78.48,
+     "max": 83.52,
+     "n": 160
+    }
+   },
+   "8_none_5": {
+    "control_frame_ms": 42.644,
+    "sculpt_frame_ms": 56.724,
+    "incremental_ms": 14.168,
+    "ratio": 1.333,
+    "update_terrain_ms": 13.505,
+    "commit_ms": 12.042,
+    "release_ms": 132.77,
+    "control_release_ms": 41.703,
+    "release_extra_ms": 90.914,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 56.695,
+     "p95": 64.39,
+     "max": 73.59,
+     "n": 160
+    }
+   }
+  }
+ },
+ {
+  "job": "ab-windows-latest-5",
+  "cpu": "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz",
+  "cpu_ms": 23.75,
+  "gl_ms": 10.77,
+  "gate": {
+   "frame_ms": {
+    "median": 59.61,
+    "p95": 62.89,
+    "max": 97.74,
+    "n": 48
+   },
+   "update_terrain_ms": {
+    "median": 13.2,
+    "p95": 13.52,
+    "max": 13.63,
+    "n": 73
+   },
+   "commit_ms": 18.9,
+   "release_to_next_frame_ms": 258.0
+  },
+  "gate_failed": false,
+  "ab": {
+   "1_none_5": {
+    "control_frame_ms": 45.358,
+    "sculpt_frame_ms": 59.45,
+    "incremental_ms": 14.172,
+    "ratio": 1.312,
+    "update_terrain_ms": 13.285,
+    "commit_ms": 11.877,
+    "release_ms": 129.389,
+    "control_release_ms": 44.192,
+    "release_extra_ms": 84.798,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 59.5,
+     "p95": 66.31,
+     "max": 72.06,
+     "n": 160
+    }
+   },
+   "2_reload_on_release_5": {
+    "control_frame_ms": 45.701,
+    "sculpt_frame_ms": 60.011,
+    "incremental_ms": 14.268,
+    "ratio": 1.313,
+    "update_terrain_ms": 13.456,
+    "commit_ms": 11.956,
+    "release_ms": 1106.797,
+    "control_release_ms": 44.934,
+    "release_extra_ms": 1058.575,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 59.95,
+     "p95": 66.64,
+     "max": 82.19,
+     "n": 160
+    }
+   },
+   "3_reload_per_flush_5": {
+    "control_frame_ms": 45.747,
+    "sculpt_frame_ms": 44.896,
+    "incremental_ms": -0.697,
+    "ratio": 0.985,
+    "update_terrain_ms": 6.659,
+    "commit_ms": null,
+    "release_ms": 44.995,
+    "control_release_ms": 44.432,
+    "release_extra_ms": 0.546,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 44.885,
+     "p95": 729.68,
+     "max": 749.13,
+     "n": 160
+    }
+   },
+   "4_rebuild_all_5": {
+    "control_frame_ms": 45.643,
+    "sculpt_frame_ms": 85.929,
+    "incremental_ms": 40.195,
+    "ratio": 1.88,
+    "update_terrain_ms": 38.675,
+    "commit_ms": 11.925,
+    "release_ms": 131.137,
+    "control_release_ms": 44.745,
+    "release_extra_ms": 86.269,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 85.975,
+     "p95": 98.35,
+     "max": 111.16,
+     "n": 160
+    }
+   },
+   "5_cpu_frame_5": {
+    "control_frame_ms": 50.927,
+    "sculpt_frame_ms": 64.799,
+    "incremental_ms": 13.993,
+    "ratio": 1.277,
+    "update_terrain_ms": 13.444,
+    "commit_ms": 11.812,
+    "release_ms": 135.108,
+    "control_release_ms": 49.621,
+    "release_extra_ms": 85.331,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 65.04,
+     "p95": 73.6,
+     "max": 99.78,
+     "n": 160
+    }
+   },
+   "6_cpu_dab_5": {
+    "control_frame_ms": 45.72,
+    "sculpt_frame_ms": 65.303,
+    "incremental_ms": 19.476,
+    "ratio": 1.426,
+    "update_terrain_ms": 13.521,
+    "commit_ms": 11.945,
+    "release_ms": 130.745,
+    "control_release_ms": 44.567,
+    "release_extra_ms": 86.233,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 65.25,
+     "p95": 74.47,
+     "max": 84.53,
+     "n": 160
+    }
+   },
+   "7_cpu_frame_15": {
+    "control_frame_ms": 60.849,
+    "sculpt_frame_ms": 74.928,
+    "incremental_ms": 14.024,
+    "ratio": 1.23,
+    "update_terrain_ms": 13.434,
+    "commit_ms": 11.981,
+    "release_ms": 145.227,
+    "control_release_ms": 60.107,
+    "release_extra_ms": 84.715,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 74.94,
+     "p95": 81.12,
+     "max": 85.62,
+     "n": 160
+    }
+   },
+   "8_none_5": {
+    "control_frame_ms": 45.32,
+    "sculpt_frame_ms": 59.78,
+    "incremental_ms": 14.29,
+    "ratio": 1.316,
+    "update_terrain_ms": 13.384,
+    "commit_ms": 11.805,
+    "release_ms": 130.258,
+    "control_release_ms": 44.295,
+    "release_extra_ms": 86.201,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 59.71,
+     "p95": 65.89,
+     "max": 71.47,
+     "n": 160
+    }
+   }
+  }
+ },
+ {
+  "job": "ab-windows-latest-6",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "cpu_ms": 18.95,
+  "gl_ms": 8.26,
+  "gate": {
+   "frame_ms": {
+    "median": 43.72,
+    "p95": 49.5,
+    "max": 76.56,
+    "n": 48
+   },
+   "update_terrain_ms": {
+    "median": 10.51,
+    "p95": 11.04,
+    "max": 13.65,
+    "n": 73
+   },
+   "commit_ms": 13.1,
+   "release_to_next_frame_ms": 181.9
+  },
+  "gate_failed": false,
+  "ab": {
+   "1_none_5": {
+    "control_frame_ms": 32.237,
+    "sculpt_frame_ms": 43.49,
+    "incremental_ms": 11.21,
+    "ratio": 1.348,
+    "update_terrain_ms": 8.597,
+    "commit_ms": 9.365,
+    "release_ms": 95.766,
+    "control_release_ms": 31.654,
+    "release_extra_ms": 64.163,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 43.545,
+     "p95": 46.87,
+     "max": 50.13,
+     "n": 160
+    }
+   },
+   "2_reload_on_release_5": {
+    "control_frame_ms": 32.467,
+    "sculpt_frame_ms": 43.562,
+    "incremental_ms": 11.087,
+    "ratio": 1.342,
+    "update_terrain_ms": 8.593,
+    "commit_ms": 9.306,
+    "release_ms": 879.505,
+    "control_release_ms": 31.599,
+    "release_extra_ms": 847.95,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 43.59,
+     "p95": 46.25,
+     "max": 51.16,
+     "n": 160
+    }
+   },
+   "3_reload_per_flush_5": {
+    "control_frame_ms": 32.373,
+    "sculpt_frame_ms": 31.84,
+    "incremental_ms": -0.564,
+    "ratio": 0.982,
+    "update_terrain_ms": 5.898,
+    "commit_ms": null,
+    "release_ms": 31.846,
+    "control_release_ms": 31.615,
+    "release_extra_ms": 0.106,
+    "room_reloads": 10,
+    "scene_loads": 10,
+    "frames_all": {
+     "median": 31.85,
+     "p95": 606.1,
+     "max": 615.42,
+     "n": 160
+    }
+   },
+   "4_rebuild_all_5": {
+    "control_frame_ms": 32.334,
+    "sculpt_frame_ms": 63.801,
+    "incremental_ms": 31.527,
+    "ratio": 1.975,
+    "update_terrain_ms": 30.248,
+    "commit_ms": 9.487,
+    "release_ms": 96.18,
+    "control_release_ms": 31.559,
+    "release_extra_ms": 64.36,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 63.69,
+     "p95": 71.93,
+     "max": 74.9,
+     "n": 160
+    }
+   },
+   "5_cpu_frame_5": {
+    "control_frame_ms": 37.214,
+    "sculpt_frame_ms": 48.417,
+    "incremental_ms": 11.094,
+    "ratio": 1.297,
+    "update_terrain_ms": 9.539,
+    "commit_ms": 9.297,
+    "release_ms": 100.556,
+    "control_release_ms": 36.663,
+    "release_extra_ms": 63.698,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 48.43,
+     "p95": 50.84,
+     "max": 54.73,
+     "n": 160
+    }
+   },
+   "6_cpu_dab_5": {
+    "control_frame_ms": 32.181,
+    "sculpt_frame_ms": 48.547,
+    "incremental_ms": 16.294,
+    "ratio": 1.504,
+    "update_terrain_ms": 10.488,
+    "commit_ms": 9.323,
+    "release_ms": 95.769,
+    "control_release_ms": 31.337,
+    "release_extra_ms": 64.454,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 48.47,
+     "p95": 53.03,
+     "max": 57.46,
+     "n": 160
+    }
+   },
+   "7_cpu_frame_15": {
+    "control_frame_ms": 47.376,
+    "sculpt_frame_ms": 58.397,
+    "incremental_ms": 11.009,
+    "ratio": 1.232,
+    "update_terrain_ms": 9.501,
+    "commit_ms": 9.691,
+    "release_ms": 110.382,
+    "control_release_ms": 46.945,
+    "release_extra_ms": 63.461,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 58.395,
+     "p95": 62.46,
+     "max": 65.47,
+     "n": 160
+    }
+   },
+   "8_none_5": {
+    "control_frame_ms": 32.186,
+    "sculpt_frame_ms": 43.361,
+    "incremental_ms": 11.105,
+    "ratio": 1.344,
+    "update_terrain_ms": 8.402,
+    "commit_ms": 9.237,
+    "release_ms": 95.866,
+    "control_release_ms": 31.451,
+    "release_extra_ms": 64.525,
+    "room_reloads": 0,
+    "scene_loads": 0,
+    "frames_all": {
+     "median": 43.335,
+     "p95": 46.36,
+     "max": 49.91,
+     "n": 160
+    }
+   }
+  }
+ }
+]
