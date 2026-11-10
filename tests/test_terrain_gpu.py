@@ -137,6 +137,9 @@ def test_studio_sculpts_live_one_stroke_one_undo_step(tmp_path: Path, record_tes
     s = r["stroke"]
     # Every run's timings, passing or not, in the lane's JUnit and summary (#422): reporting only, before any assert.
     record_testsuite_property("measure.terrain_stroke", json.dumps({k: v for k, v in s.items() if k.endswith("_ms")}))
+    # Report-only (#422 CI-422A2): ratio, calibrated release and frame backstop, with any advisory crossing; recorded,
+    # never asserted (tooling/terrain_advisory.py). The 60 ms gate below stays the enforced one.
+    record_testsuite_property("measure.terrain_advisory", json.dumps(r["advisory"]))
     c = r["controls"]
     # a successful stroke edits the room in place: no full room reload, from press to the frame after release (#422)
     assert (s["room_reloads"], s["scene_loads"], c["room_reloads"], c["scene_loads"]) == (0, 0, 0, 0), (s, c)
@@ -149,6 +152,24 @@ def test_studio_sculpts_live_one_stroke_one_undo_step(tmp_path: Path, record_tes
     assert c["shift_lowered"] and c["radius_px"] == [64.0, 80.0, 64.0] and c["picked_target_m"] is not None, c
     # timing last, so a slow runner can't hide the checks above; the gate itself is byte for byte as before (#422)
     assert s["frame_ms"]["median"] < 60 and s["commit_ms"] < 200, s  # no room reload per click
+
+
+def test_the_report_only_measurements_flag_injected_regressions(tmp_path: Path, record_testsuite_property: Any) -> None:
+    """The advisory measurements see what they are for (#422 CI-422A2): a stroke rebuilding every terrain chunk crosses
+    the sculpt/control ratio, a room reload on release the calibrated release; each well past the same session's
+    fault-free value. Only the faults are judged: the fault-free values are reported, never asserted."""
+    import m20b_sculpt_study as study
+
+    r = study.advisory_detection(tmp_path)
+    keep = ("ratio", "release_per_cpu", "release_extra_ms", "control_ms", "sculpt_ms", "cpu_ms", "crossed", "overhead_s")
+    record_testsuite_property("measure.terrain_advisory_detection",
+                              json.dumps({case: {k: v[k] for k in keep} for case, v in r.items()}))  # (each runner's margins)
+    none, rebuild, reload = r["none"], r["rebuild_all"], r["reload_on_release"]
+    for case in (none, rebuild, reload):
+        assert case["report_only"] and case["trials"] == 3 and case["cpu_ms"], case
+    assert "ratio" in rebuild["crossed"] and rebuild["ratio"] > 1.25 * none["ratio"], (none, rebuild)
+    assert "release_per_cpu" in reload["crossed"] and reload["release_extra_ms"] > 2 * none["release_extra_ms"], (none, reload)
+    assert rebuild["advisory"].startswith("CROSSED (advisory, not failed)"), rebuild
 
 
 def test_a_flat_room_s_first_stroke_and_its_undo(tmp_path: Path) -> None:
