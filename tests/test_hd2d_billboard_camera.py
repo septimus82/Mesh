@@ -12,6 +12,8 @@ import pytest
 from engine.hd2d import dof as d
 from engine.hd2d.renderer import PIXELS_PER_METRE, Camera, Hd2dRenderer
 
+pytestmark = pytest.mark.fast
+
 
 def _stretch(pitch: float) -> float:
     return 1.0 / max(0.5, math.cos(math.radians(pitch)))
