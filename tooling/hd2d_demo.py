@@ -134,6 +134,7 @@ class HiddenGame:
         self.window.load_scene(scene)
 
     def step(self, frames: int = 1) -> None:
+        """``frames`` updates only: nothing is drawn, so no frame is completed here (see ``draw``)."""
         for _ in range(frames):
             self.window.dispatch_event("on_update", 1 / 60)
 
@@ -145,8 +146,13 @@ class HiddenGame:
         self.step(2)
 
     def draw(self) -> Any:
+        """One rendered frame: drawn, the picture read back, then the frame completed as arcade's event loop completes it.
+        ``Window.flip()`` runs ``ctx.gc()``, which deletes the GL objects dropped since (arcade's ``context_gc`` mode
+        only queues them, #484). The buffers aren't swapped, so the picture returned is the frame as drawn."""
         self.window.dispatch_event("on_draw")
-        return self.arcade.get_image(0, 0, *self.window.get_framebuffer_size())
+        picture = self.arcade.get_image(0, 0, *self.window.get_framebuffer_size())
+        self.window.ctx.gc()
+        return picture
 
     def player(self) -> Any:
         return next(s for s in self.window.scene_controller.all_sprites if getattr(s, "mesh_tag", None) == "player")
