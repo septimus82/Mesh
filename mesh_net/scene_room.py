@@ -227,6 +227,8 @@ def tile_bodies(scene: dict[str, Any], scene_dir: Path) -> list[Body]:
         return []
     try:
         return _tiles(tilemap, layers, scene_dir)
+    except Unsupported:
+        raise
     except (OSError, ValueError, KeyError, TypeError) as exc:  # (json.JSONDecodeError is a ValueError)
         raise Unsupported(f"the scene's map or tileset cannot be read as the engine reads it: {exc!r}") from exc
 
@@ -238,6 +240,8 @@ def _name(layer: dict[str, Any]) -> str:
 def _tiles(tilemap: dict[str, Any], layers: list[dict[str, Any]], scene_dir: Path) -> list[Body]:
     map_path = scene_dir / str(tilemap["path"])
     payload = json.loads(map_path.read_text(encoding="utf-8"))
+    if str(payload.get("orientation", "")).lower() != "orthogonal":
+        raise Unsupported("the map is not orthogonal (engine.tilemap loads no tiles from it)")
     tw, th = int(payload["tilewidth"]), int(payload["tileheight"])
     tilesets = []  # (first gid, tile count, tile width, tile height), as engine.tilemap._load_tilesets builds them
     for entry in payload.get("tilesets") or []:
@@ -246,8 +250,9 @@ def _tiles(tilemap: dict[str, Any], layers: list[dict[str, Any]], scene_dir: Pat
             raise Unsupported(f"tileset '{source}' is not a JSON tileset")
         data = json.loads((map_path.parent / source).read_text(encoding="utf-8")) if source else entry
         base = (map_path.parent / source).parent if source else map_path.parent
-        if not (base / str(data["image"])).is_file() or int(data["tilecount"]) <= 0:
-            raise Unsupported(f"tileset '{source or data.get('name')}' has no picture or no tile count")
+        if (not (base / str(data["image"])).is_file() or int(data["tilecount"]) <= 0
+                or int(data.get("imagewidth", 0)) <= 0 or int(data.get("imageheight", 0)) <= 0):
+            raise Unsupported(f"tileset '{source or data.get('name')}' lacks a picture, its size or a tile count")
         tilesets.append((int(entry.get("firstgid", 1)), int(data["tilecount"]), int(data["tilewidth"]),
                          int(data["tileheight"])))
     tilesets.sort()
@@ -323,6 +328,9 @@ class SceneRoom:
 
         others = [e for e in entities if e is not template]
         self.levers = {e["id"]: (e, c) for e in others if (c := config(e, "SwitchInteract")) is not None}
+        # Sized once here (an unreadable picture is refused now, not mid-game). A lever with no picture can't be
+        # used, as engine.interaction._present has it.
+        self.lever_sizes = {i: picture_size(e, root) for i, (e, _) in self.levers.items()}
         self.used: set[str] = set()
         self.doors = {e["id"]: (body(e, root) if e.get("solid") else None, c) for e in others
                       if (c := config(e, "DoorLock")) is not None}
@@ -436,7 +444,8 @@ class SceneRoom:
         reach = []
         for lever_id, (entity, cfg) in self.levers.items():
             event = str(cfg.get("event_id") or "")
-            if not event or (cfg.get("one_shot") and lever_id in self.used):
+            size = self.lever_sizes[lever_id]
+            if not event or size is None or (cfg.get("one_shot") and lever_id in self.used):
                 continue
             authored = positive(entity.get("interact_radius"))
             radius = min(DEFAULT_INTERACT_MAX_DIST, authored) if authored else DEFAULT_INTERACT_MAX_DIST
@@ -445,11 +454,10 @@ class SceneRoom:
             if d > radius:
                 continue
             alignment = (dx * fx + dy * fy) / d if d > 0 else 1.0
-            size = picture_size(entity, self.root) or (16.0, 16.0)
             if alignment < 0.0 and d > max(8.0, (max(p.body.width, p.body.height) + max(size)) * 0.5):
                 continue
-            priority = max((int(v) for v in (entity.get("interaction_priority"), entity.get("interact_priority"))
-                            if isinstance(v, (int, float)) and not isinstance(v, bool)), default=0)
+            priority = max((n for v in (entity.get("interaction_priority"), entity.get("interact_priority"))
+                            if (n := _int(v)) is not None), default=0)
             reach.append((-priority, -alignment, d, lever_id, event))
         if reach:
             *_, lever_id, event = min(reach)
@@ -483,6 +491,16 @@ class SceneRoom:
                 "enemies": [[i, e.state.hp] for i, e in sorted(self.enemies.items())],
                 "drops": sorted(i for i, e in self.enemies.items() if e.dropped),
                 "loot": [[i, owner.get(id(e.holder))] for i, e in sorted(self.enemies.items()) if e.holder is not None]}
+
+
+def _int(value: Any) -> int | None:
+    """engine.interaction._read_priority's reading: int(value), never a bool."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def roll_drops(cfg: dict[str, Any] | None) -> list[dict[str, Any]]:

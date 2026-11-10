@@ -270,13 +270,17 @@ def test_unsupported_scenes_are_refused(room_factory):
     def sizeless_collider(scene):
         scene["entities"][0]["components"] = {"collider": {"kind": "box"}}  # Arcade's picture hit box in single-player
 
+    def unreadable_lever(scene):
+        scene["entities"][1]["sprite"] = "assets/prefabs.json"  # a file, not a picture
+
     def long_ids(scene):
         for n in range(29):  # 32 networked objects in all: the count is allowed, their ids are too long
             scene["entities"].append({**scene["entities"][3], "id": f"bandit_{n}_" + "x" * 200, "name": f"B{n}"})
 
     for change, message in ((hd2d, "HD-2D"), (empty_hd2d, "HD-2D"), (map_file_walls, "inline tiles"),
                             (second_player, "exactly one"), (bare_solid, "needs a picture"), (flag_gated, "game flags"),
-                            (sizeless_collider, "sized box"), (long_ids, "one frame")):
+                            (sizeless_collider, "sized box"), (long_ids, "one frame"),
+                            (unreadable_lever, "unreadable picture")):
         with pytest.raises(Unsupported, match=message):
             make_room(edited(change))
 
