@@ -13,6 +13,7 @@ whose ground is sculpted all over.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import random
@@ -20,7 +21,7 @@ import statistics
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
@@ -88,6 +89,31 @@ def _stroke(d: Any, points: list[tuple[float, float, float]], *, hold: Callable[
     return times
 
 
+@contextlib.contextmanager
+def _counting_reloads(d: Any) -> Iterator[dict[str, int]]:
+    """Counts full room reloads while it is open: Studio's ``_reload`` (the room rebuilt from its document) and the
+    window's ``load_scene`` underneath it (however it is reached). A successful stroke edits in place: zero (#422)."""
+    counts = {"room_reloads": 0, "scene_loads": 0}
+    patched = []
+    for obj, name, key in ((d.studio, "_reload", "room_reloads"), (d.window, "load_scene", "scene_loads")):
+        original = getattr(obj, name)
+
+        def counted(*a: Any, _original: Any = original, _key: str = key, **kw: Any) -> Any:
+            counts[_key] += 1
+            return _original(*a, **kw)
+
+        patched.append((obj, name, name in vars(obj), original))
+        setattr(obj, name, counted)
+    try:
+        yield counts
+    finally:
+        for obj, name, own, original in patched:
+            if own:
+                setattr(obj, name, original)
+            else:
+                delattr(obj, name)
+
+
 def _path(a: tuple[float, float], b: tuple[float, float], n: int) -> list[tuple[float, float, float]]:
     return [(a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n, 0.0) for k in range(n + 1)]
 
@@ -118,7 +144,8 @@ def studio(out: Path) -> dict[str, Any]:
                 if i == 20:
                     clip[-1].save(out / "stroke_mid.png")
 
-        frames = _stroke(d, _path((6.5, 14.0), (12.0, 20.5), 48), each=film)
+        with _counting_reloads(d) as reloads:  # (press, drags, release and the next frame: the whole stroke)
+            frames = _stroke(d, _path((6.5, 14.0), (12.0, 20.5), 48), each=film)
         live = list(view.renderer.terrain.heights)
         saved = list(_heights(s.project))
         report["stroke"] = {"frame_ms": _stats(frames), "update_terrain_ms": _stats(view.timings["sculpt_ms"]),
@@ -127,7 +154,7 @@ def studio(out: Path) -> dict[str, Any]:
                             "undo_steps_added": len(s.project._undo) - undo_before,
                             "shown_equals_saved": live == saved,
                             "raised_max_m": round(max(b - a for a, b in zip(before, saved)) / PX, 3),
-                            "message": s.message}
+                            "message": s.message, **reloads}
         if clip:
             review_media.save_clip(clip, out / "stroke.webp", duration=100, quality=80, method=6)
         d.picture(out / "stroke_after.png")
@@ -198,7 +225,8 @@ def studio(out: Path) -> dict[str, Any]:
                                     "nothing_recorded": len(s.project._undo) == undo_n, "message": s.message}
         # 7. Shift lowers; [ ] resize; Alt+click picks a flatten height, then a flatten stroke
         d.window.dispatch_event("on_key_press", k.LSHIFT, 0)
-        _stroke(d, _path((14.0, 10.0), (17.0, 10.0), 6))
+        with _counting_reloads(d) as lower_reloads:
+            _stroke(d, _path((14.0, 10.0), (17.0, 10.0), 6))
         d.window.dispatch_event("on_key_release", k.LSHIFT, 0)
         lowered = min(_heights(s.project)) < 0
         r0 = view.sculpt["radius"]
@@ -209,12 +237,15 @@ def studio(out: Path) -> dict[str, Any]:
         d.click(*d.screen((4.5, 19.5, 0.0)))
         d.window.dispatch_event("on_key_release", k.LALT, 0)
         picked = view.sculpt.get("target")
-        _stroke(d, _path((8.0, 12.0), (12.0, 12.0), 10))
+        with _counting_reloads(d) as flatten_reloads:
+            _stroke(d, _path((8.0, 12.0), (12.0, 12.0), 10))
         flat = Terrain.from_ground(__import__("engine.project_ops", fromlist=["x"])._parsed_ground(s.project.scene()))
         report["controls"] = {"shift_lowered": lowered, "radius_px": [r0, r1, view.sculpt["radius"]],
                               "picked_target_m": round(picked / PX, 3) if picked is not None else None,
                               "flattened_towards_m": round((flat.height(10.0 * PX, 12.0 * PX) or 0.0) / PX, 3),
-                              "tool": view.sculpt["tool"]}
+                              "tool": view.sculpt["tool"],
+                              "room_reloads": lower_reloads["room_reloads"] + flatten_reloads["room_reloads"],
+                              "scene_loads": lower_reloads["scene_loads"] + flatten_reloads["scene_loads"]}
         d.picture(out / "studio_controls.png")
         final = list(_heights(s.project))
         d.key(k.S, k.MOD_CTRL)

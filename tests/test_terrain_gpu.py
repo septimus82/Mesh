@@ -137,15 +137,18 @@ def test_studio_sculpts_live_one_stroke_one_undo_step(tmp_path: Path, record_tes
     s = r["stroke"]
     # Every run's timings, passing or not, in the lane's JUnit and summary (#422): reporting only, before any assert.
     record_testsuite_property("measure.terrain_stroke", json.dumps({k: v for k, v in s.items() if k.endswith("_ms")}))
+    c = r["controls"]
+    # a successful stroke edits the room in place: no full room reload, from press to the frame after release (#422)
+    assert (s["room_reloads"], s["scene_loads"], c["room_reloads"], c["scene_loads"]) == (0, 0, 0, 0), (s, c)
     assert s["undo_steps_added"] == 1 and s["shown_equals_saved"] and s["raised_max_m"] > 0.1, s
-    assert s["frame_ms"]["median"] < 60 and s["commit_ms"] < 200, s  # no room reload per click
     assert r["undo_gives_before"] and r["redo_gives_after"] and r["saved_dirty_after"] is False and r["reopened_same"], r
     for case in ("escape", "play_mid_stroke", "room_change_mid_stroke", "refused_upload"):
         assert r[case]["nothing_recorded"], (case, r[case])
     assert r["escape"]["ground_back"] and r["refused_upload"]["ground_back"], r
     assert r["play_mid_stroke"]["ground_is_saved"] and r["room_change_mid_stroke"]["ground_is_saved"], r
-    c = r["controls"]
     assert c["shift_lowered"] and c["radius_px"] == [64.0, 80.0, 64.0] and c["picked_target_m"] is not None, c
+    # timing last, so a slow runner can't hide the checks above; the gate itself is byte for byte as before (#422)
+    assert s["frame_ms"]["median"] < 60 and s["commit_ms"] < 200, s  # no room reload per click
 
 
 def test_a_flat_room_s_first_stroke_and_its_undo(tmp_path: Path) -> None:
