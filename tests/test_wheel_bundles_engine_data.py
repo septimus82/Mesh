@@ -94,7 +94,9 @@ def test_the_wheel_bundles_exactly_the_allow_list(built: tuple[Path, Path, Path]
     bundled = sorted(n.split("/data/share/mesh-engine/", 1)[1] for n in names if "/data/share/mesh-engine/" in n)
     assert bundled == allowed, "the wheel bundles exactly the allow-list"
     assert not any(n.startswith(("packs/", "tooling/", "tests/")) for n in names)
-    assert {"mesh_net/server.py", "mesh_net/demo.py", "mesh_net/sample_room.json"} <= set(names)
+    assert {"mesh_net/server.py", "mesh_net/demo.py", "mesh_net/sample_room.json", "mesh_net/scene_room.py",
+            "mesh_net/scene_client.py", "mesh_net/coop/scene.json", "mesh_net/coop/map.json",
+            "mesh_net/coop/prefabs.json"} <= set(names)
     schemas = sorted(p.relative_to(REPO).as_posix() for p in (REPO / "engine" / "schemas").glob("*.json"))
     assert schemas and set(schemas) <= set(names), "the engine's own schemas travel with the package"
 
@@ -115,6 +117,53 @@ def test_the_installed_product_works_with_nothing_from_the_checkout(built: tuple
     assert {"assets/sprites/hd2d_hero.png", "assets/sounds/ui_open.wav", "assets/hd2d_starter/textures/grass.png"} <= village
     assert len(probe["hd2d_rpg_models"]) == 14 and not village & UNVERIFIED_SPRITES
     assert {"config.json", "main.py", "assets"} <= set(report["cli"]["new_files"])
+
+
+_COOP = """
+import asyncio, json, sys
+from pathlib import Path
+import mesh_net
+from mesh_net.client import connect
+from mesh_net.scene_room import COOP_SCENE, SceneRoom, check_state, coop_files, disposable_project, parse_input
+from mesh_net.server import Server
+
+async def main():
+    with disposable_project(coop_files(), scaffold=False) as root:
+        room = SceneRoom(root / COOP_SCENE, root)
+    server = Server(room)
+    port = await server.start()
+    checks = {"check": lambda m: check_state(m, room.identity), "check_input": parse_input}
+    try:
+        async with connect(port, **checks) as a, connect(port, **checks) as b:
+            for _ in range(60):
+                await a.input(1, 0)
+                state = await b.receive()
+            print("MESH-COOP " + json.dumps({"players": state["players"], "scenery": len(room.scenery),
+                  "package": mesh_net.__file__, "graphics": [m for m in ("arcade", "pyglet") if m in sys.modules]}))
+    finally:
+        await server.close()
+
+asyncio.run(main())
+"""
+
+
+def test_the_installed_co_op_scene_server_runs_isolated(built: tuple[Path, Path, Path]) -> None:
+    """N6: the installed wheel hosts its packaged co-op room (pictures from share/mesh-engine, never the checkout),
+    without graphics, and two socket clients play it: one walks until the room's locked gate stops it."""
+    import json
+    import subprocess
+
+    wheel, venv, scratch = built
+    _holding(venv, wheel)
+    work = scratch / "coop"
+    work.mkdir()
+    proc = subprocess.run([str(ipc.venv_python(venv)), "-I", "-c", _COOP], cwd=work, env=ipc.clean_env(scratch),
+                          capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+    line = next((x for x in proc.stdout.splitlines() if x.startswith("MESH-COOP ")), None)
+    assert line, (proc.stderr or proc.stdout)[-1500:]
+    facts = json.loads(line[len("MESH-COOP "):])
+    assert Path(facts["package"]).resolve().is_relative_to(venv.resolve()) and facts["graphics"] == []
+    assert facts["scenery"] == 88 and [row[1:3] for row in facts["players"]] == [[390.5, 256.0], [128.0, 256.0]]
 
 
 _ASSET = "assets/sprites/starter_hero.png"

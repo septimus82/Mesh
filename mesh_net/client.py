@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
@@ -20,19 +20,21 @@ class Client:
     resume: str
     state: wire.Message
     seq: int = 0
+    check: Callable[[wire.Message], None] = wire.snapshot  # a room's state validator (mesh_net.scene_room.check_state)
+    check_input: Callable[[wire.Message, int], object] = wire.movement
 
     async def input(self, dx: int, dy: int, action: str | None = None) -> None:
         self.seq += 1
         msg = {"v": 1, "type": "input", "entity": self.entity, "seq": self.seq, "dx": dx, "dy": dy}
         if action is not None:
             msg["action"] = action
-        wire.movement(msg, self.entity)
+        self.check_input(msg, self.entity)
         self.writer.write(wire.encode(msg))
         await asyncio.wait_for(self.writer.drain(), 2)
 
     async def receive(self) -> wire.Message:
         msg = await wire.read(self.reader)
-        wire.snapshot(msg)
+        self.check(msg)
         if msg["tick"] <= self.state["tick"] or not any(row[0] == self.entity for row in msg["players"]):
             raise wire.Invalid("out of order or missing owner")
         self.state = msg
@@ -40,7 +42,8 @@ class Client:
 
 
 @asynccontextmanager
-async def connect(port: int, resume: str | None = None) -> AsyncIterator[Client]:
+async def connect(port: int, resume: str | None = None, check: Callable[[wire.Message], None] = wire.snapshot,
+                  check_input: Callable[[wire.Message, int], object] = wire.movement) -> AsyncIterator[Client]:
     reader, writer = await asyncio.wait_for(asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES), 3)
     try:
         writer.write(wire.encode({"v": 1, "type": "join", "resume": resume}))
@@ -50,10 +53,10 @@ async def connect(port: int, resume: str | None = None) -> AsyncIterator[Client]
                 or not re.fullmatch(r"[0-9a-f]{32}", hello["session"]) or not wire.integer(hello["entity"], 1)
                 or not isinstance(hello["state"], dict)):
             raise wire.Invalid("invalid welcome")
-        wire.snapshot(hello["state"])
+        check(hello["state"])
         if not any(row[0] == hello["entity"] for row in hello["state"]["players"]):
             raise wire.Invalid("missing own entity")
-        yield Client(reader, writer, hello["entity"], hello["session"], hello["resume"], hello["state"])
+        yield Client(reader, writer, hello["entity"], hello["session"], hello["resume"], hello["state"], 0, check, check_input)
     finally:
         writer.close()
         try:

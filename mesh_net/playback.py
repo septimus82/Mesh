@@ -3,18 +3,20 @@
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Callable
 
 from . import protocol as wire
 
 
 class Playback:
-    def __init__(self) -> None:
+    def __init__(self, check: Callable[[wire.Message], None] = wire.snapshot) -> None:
+        self.check = check
         self.states: deque[wire.Message] = deque(maxlen=8)
         self.arrival = 0.0
         self.cursor = 0.0
 
     def push(self, state: wire.Message, now: float) -> bool:
-        wire.snapshot(state)
+        self.check(state)
         if self.states and state["tick"] <= self.states[-1]["tick"]:
             return False
         self.states.append(state)
@@ -33,7 +35,7 @@ class Playback:
         before = {p[0]: p[1:3] for p in left["players"]}
         after = {p[0]: p[1:3] for p in right["players"]}
         result = {}
-        for eid, x, y in latest["players"]:
+        for eid, x, y, *_ in latest["players"]:
             ax, ay = before.get(eid, (x, y))
             bx, by = after.get(eid, (x, y))
             result[eid] = (ax + alpha * (bx - ax), ay + alpha * (by - ay))

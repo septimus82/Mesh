@@ -61,7 +61,7 @@ include = ["engine*", "mesh_cli*", "mesh_net*"]
 # validated against (engine.schema_validation), and the typing marker.
 [tool.setuptools.package-data]
 engine = ["schemas/*.json", "py.typed"]
-mesh_net = ["sample_room.json"]
+mesh_net = ["sample_room.json", "coop/*.json"]
 
 # MANIFEST.in lists the source distribution's data. A wheel only carries files inside packages, so the
 # engine's own files a pip-installed Mesh needs (what new projects copy, the HD-2D starter kit, Mesh Studio's
