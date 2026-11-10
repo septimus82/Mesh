@@ -1,0 +1,90 @@
+{
+ "worktree": "D:\\Games\\Mesh-h485b-base",
+ "village": {
+  "studio_pitch": 40.0,
+  "game_pitch": 30.0,
+  "has": {
+   "scatter": false,
+   "terrain": false,
+   "cutaway_structures": 11
+  },
+  "canvas": "6143b0c9b2f8f20d",
+  "fire": false,
+  "matched_camera": {
+   "target": [
+    20.0,
+    8.416238213470514,
+    0.8
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "matched": {
+   "game": "09962cb271334126",
+   "studio": "09962cb271334126",
+   "same": true
+  },
+  "canvas_no_billboards": "1314c7d95be5091f"
+ },
+ "village_decor": {
+  "studio_pitch": 40.0,
+  "game_pitch": 30.0,
+  "has": {
+   "scatter": true,
+   "terrain": true,
+   "cutaway_structures": 11
+  },
+  "canvas": "89bf60ed695e7fa0",
+  "fire": true,
+  "matched_camera": {
+   "target": [
+    20.0,
+    8.416238213470514,
+    0.8
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "matched": {
+   "game": "761bb7f4721397fe",
+   "studio": "761bb7f4721397fe",
+   "same": true
+  },
+  "canvas_no_billboards": "13ef225cdf3cd9cc"
+ },
+ "cottage": {
+  "studio_pitch": 40.0,
+  "game_pitch": 55.0,
+  "has": {
+   "scatter": false,
+   "terrain": false,
+   "cutaway_structures": 0
+  },
+  "canvas": "5c4175fcea7054f0",
+  "fire": false,
+  "matched_camera": {
+   "target": [
+    8.0,
+    5.091815833349058,
+    0.9
+   ],
+   "pitch": 55.0,
+   "fov": 12.0,
+   "distance": 35.679,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "matched": {
+   "game": "40bbc74347c2ca37",
+   "studio": "40bbc74347c2ca37",
+   "same": true
+  },
+  "canvas_no_billboards": "82c685bab0546eeb"
+ }
+}
