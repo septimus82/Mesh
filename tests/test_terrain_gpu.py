@@ -147,8 +147,8 @@ def test_studio_sculpts_live_one_stroke_one_undo_step(tmp_path: Path, record_tes
     assert r["escape"]["ground_back"] and r["refused_upload"]["ground_back"], r
     assert r["play_mid_stroke"]["ground_is_saved"] and r["room_change_mid_stroke"]["ground_is_saved"], r
     assert c["shift_lowered"] and c["radius_px"] == [64.0, 80.0, 64.0] and c["picked_target_m"] is not None, c
-    # timing last: a slow runner's frame can't hide the checks above (the gate itself is unchanged)
-    assert s["frame_ms"]["median"] < 60 and s["commit_ms"] < 200, s
+    # timing last, so a slow runner can't hide the checks above; the gate itself is byte for byte as before (#422)
+    assert s["frame_ms"]["median"] < 60 and s["commit_ms"] < 200, s  # no room reload per click
 
 
 def test_a_flat_room_s_first_stroke_and_its_undo(tmp_path: Path) -> None:
