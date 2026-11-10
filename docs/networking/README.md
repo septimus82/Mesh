@@ -1,6 +1,6 @@
 # Experimental local cooperative room
 
-Two independent Mesh game windows connect to one authoritative room on the same machine. The sample owns its clock, combat and character state. It uses a static Mesh scene and the engine's pure combat model. Existing projects continue to launch through the normal single-player entry point. The [architecture investigation](architecture_investigation.md) records the decision before implementation.
+Two independent Mesh game windows connect to one authoritative room on the same machine. The sample owns its clock, combat and character state. It uses a static Mesh scene and the engine's pure combat model. Existing projects continue to launch through the normal single-player entry point. The [architecture investigation](architecture_investigation.md) records the decision before implementation. [N6](n6_scene_integration.md) hosts a Studio-authored scene the same way: shared movement with the scene's collision, a lever and gate, and cooperative combat.
 
 ## Run with Python 3.11 or later
 

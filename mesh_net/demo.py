@@ -4,56 +4,40 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import os
-from contextlib import chdir, contextmanager
+from contextlib import contextmanager
 from importlib.resources import files
-from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from . import protocol as wire
 from .client import Client, connect
 from .playback import Playback
+from .scene_room import disposable_project
 
 OWN = (61, 225, 188)
 OTHER = (255, 191, 76)
 
 
 @contextmanager
-def open_arena():
+def open_arena(files_: dict[str, bytes] | None = None, size: tuple[int, int] = (wire.WIDTH, wire.HEIGHT),
+               make=lambda window, arcade, root, scene: Arena(window, arcade)):
     """Each client owns a disposable Mesh project and a single GL context."""
-    with TemporaryDirectory(prefix="mesh-room-") as temp, chdir(temp):
-        root = Path(temp)
-        paths = {"MESH_USER_DIR": "user", "MESH_RUNTIME_SETTINGS_PATH": "user/settings.json",
-                 "MESH_PROJECTS_DIR": "projects", "MESH_PROJECTS_PATH": "user/projects.json",
-                 "MESH_SAVE_DIR": "saves", "MESH_REPO_ROOT": "."}
-        previous = {name: os.environ.get(name) for name in paths}
-        try:
-            for name, relative in paths.items():
-                os.environ[name] = str(root / relative)
-            from engine import optional_arcade
-            from engine.config import load_config
-            from engine.game import GameWindow
-            from engine.project_scaffold import create_project
+    with disposable_project(files_ or {}) as root:
+        from engine import optional_arcade
+        from engine.config import load_config
+        from engine.game import GameWindow
 
-            create_project(root, "Mesh local room")
-            path = root / "config.json"
-            config = load_config(str(path))
-            config.cocreative_live_bridge_enabled = False
-            scene = config.start_scene
+        path = root / "config.json"
+        config = load_config(str(path))
+        config.cocreative_live_bridge_enabled = False
+        scene = config.start_scene
+        if files_ is None:
             (root / scene).write_bytes(files("mesh_net").joinpath("sample_room.json").read_bytes())
-            window = GameWindow(width=wire.WIDTH, height=wire.HEIGHT, title="Mesh local room",
-                                vsync=False, resizable=False, config=config, config_path=str(path))
-            try:
-                window.load_scene(scene)
-                yield Arena(window, optional_arcade.arcade)
-            finally:
-                window.close()
+        window = GameWindow(width=size[0], height=size[1], title="Mesh local room",
+                            vsync=False, resizable=False, config=config, config_path=str(path))
+        try:
+            window.load_scene(scene)
+            yield make(window, optional_arcade.arcade, root, scene)
         finally:
-            for name, value in previous.items():
-                if value is None:
-                    os.environ.pop(name, None)
-                else:
-                    os.environ[name] = value
+            window.close()
 
 
 class Arena:
@@ -69,6 +53,7 @@ class Arena:
         self.request: str | None = "resume"
         self.client: Client | None = None
         self.token: str | None = None
+        self.checks: dict = {}  # connect()'s validators; mesh_net.scene_client passes the scene room's
         self.playback = Playback()
         self.local_interpolation = False
         self.status = "Connecting"
@@ -108,9 +93,9 @@ class Arena:
 
     async def session(self, port: int) -> None:
         try:
-            async with connect(port, self.token) as client:
+            async with connect(port, self.token, **self.checks) as client:
                 self.client, self.token = client, client.resume
-                self.playback = Playback()
+                self.playback = Playback(client.check)
                 loop = asyncio.get_running_loop()
                 self.playback.push(client.state, loop.time())
                 async def send_inputs() -> None:
@@ -124,8 +109,7 @@ class Arena:
                     while True:
                         state = await client.receive()
                         self.playback.push(state, loop.time())
-                        loot = int(state["holder"] == client.entity)
-                        self.status = f"P{client.entity} | HP {state['enemy_hp']} | loot {loot} | arrows, Space attack, E take, F2 leave"
+                        self.status = self.describe(state, client.entity)
 
                 tasks = [asyncio.create_task(send_inputs()), asyncio.create_task(receive_states())]
                 try:
@@ -143,6 +127,10 @@ class Arena:
             self.client = None
             self.blur()
             self.playback = Playback()
+
+    def describe(self, state: wire.Message, entity: int) -> str:
+        loot = int(state["holder"] == entity)
+        return f"P{entity} | HP {state['enemy_hp']} | loot {loot} | arrows, Space attack, E take, F2 leave"
 
     def draw(self, now: float) -> None:
         self.window.clear(color=(32, 47, 57))

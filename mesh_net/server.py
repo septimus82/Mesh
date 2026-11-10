@@ -5,14 +5,16 @@ from __future__ import annotations
 import argparse
 import asyncio
 import secrets
+from contextlib import ExitStack
+from typing import Any
 
 from . import protocol as wire
 from .simulation import Player, Room
 
 
 class Server:
-    def __init__(self) -> None:
-        self.room = Room()
+    def __init__(self, room: Any = None) -> None:
+        self.room = room if room is not None else Room()  # or a mesh_net.scene_room.SceneRoom: same interface
         self.listener: asyncio.Server | None = None
         self.clock: asyncio.Task[None] | None = None
         self.connections: dict[asyncio.Task[None], asyncio.StreamWriter] = {}
@@ -116,8 +118,8 @@ class Server:
             self.offline.clear()
 
 
-async def serve(port: int) -> None:
-    server = Server()
+async def serve(port: int, room: Any = None) -> None:
+    server = Server(room)
     try:
         bound = await server.start(port)
         print(f"Mesh room listening on 127.0.0.1:{bound}", flush=True)
@@ -126,10 +128,24 @@ async def serve(port: int) -> None:
         await server.close()
 
 
-if __name__ == "__main__":
+def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=46870)
-    try:
-        asyncio.run(serve(parser.parse_args().port))
-    except KeyboardInterrupt:
-        pass
+    parser.add_argument("--coop", action="store_true", help="host the packaged co-op scene (mesh_net/coop)")
+    args = parser.parse_args()
+    with ExitStack() as stack:
+        room = None
+        if args.coop:
+            from .scene_room import COOP_SCENE, SceneRoom, coop_files, disposable_project
+
+            root = stack.enter_context(disposable_project(coop_files(), scaffold=False))
+            room = SceneRoom(root / COOP_SCENE, root)
+            print(f"Mesh scene {room.identity[:12]}", flush=True)
+        try:
+            asyncio.run(serve(args.port, room))
+        except KeyboardInterrupt:
+            pass
+
+
+if __name__ == "__main__":
+    main()
