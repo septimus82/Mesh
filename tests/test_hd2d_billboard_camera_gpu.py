@@ -235,11 +235,42 @@ def _studio_room(root: Path, name: str) -> dict:
     return out
 
 
+def _build_rooms(root: Path) -> dict:
+    with pytest.MonkeyPatch.context() as mp:  # (only while the rooms are built: the variable's earlier state, set or
+        mp.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")  # absent, comes back afterwards, even when building fails)
+        return {name: _studio_room(root, name) for name in ROOMS}
+
+
 @pytest.fixture(scope="module")
 def studio(tmp_path_factory: pytest.TempPathFactory) -> dict:
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
-    root = tmp_path_factory.mktemp("billboards")
-    return {name: _studio_room(root, name) for name in ROOMS}
+    return _build_rooms(tmp_path_factory.mktemp("billboards"))
+
+
+@pytest.mark.parametrize("fails", [False, True])
+@pytest.mark.parametrize("before", [None, "0", "1"])
+def test_building_the_rooms_leaves_the_ai_bridge_setting_as_it_found_it(monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+                                                                       before: str | None, fails: bool) -> None:
+    if before is None:
+        monkeypatch.delenv("MESH_STUDIO_NO_AI_BRIDGE", raising=False)
+    else:
+        monkeypatch.setenv("MESH_STUDIO_NO_AI_BRIDGE", before)
+    seen: list = []
+
+    def room(root: Path, name: str) -> str:  # (stands in for _studio_room: records the setting while building)
+        seen.append(os.environ.get("MESH_STUDIO_NO_AI_BRIDGE"))
+        if fails:
+            raise RuntimeError("building the room failed")
+        return name
+
+    monkeypatch.setattr(sys.modules[__name__], "_studio_room", room)
+    if fails:
+        with pytest.raises(RuntimeError):
+            _build_rooms(tmp_path)
+    else:
+        assert _build_rooms(tmp_path) == {name: name for name in ROOMS}
+    assert seen == (["1"] if fails else ["1"] * len(ROOMS))
+    assert os.environ.get("MESH_STUDIO_NO_AI_BRIDGE") == before
+    assert ("MESH_STUDIO_NO_AI_BRIDGE" in os.environ) == (before is not None)
 
 
 def _expect_all(stretches: dict, expected: float, kinds: tuple[str, ...]) -> None:
