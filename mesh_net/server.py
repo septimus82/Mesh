@@ -6,7 +6,6 @@ import argparse
 import asyncio
 import secrets
 from contextlib import ExitStack
-from pathlib import Path
 from typing import Any
 
 from . import protocol as wire
@@ -133,17 +132,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=46870)
     parser.add_argument("--coop", action="store_true", help="host the packaged co-op scene (mesh_net/coop)")
-    parser.add_argument("--scene", help="host this scene of --project instead of the fixed arena (mesh_net.scene_room)")
-    parser.add_argument("--project", default=".", help="the project folder the scene belongs to (default: here)")
     args = parser.parse_args()
     with ExitStack() as stack:
         room = None
-        if args.coop or args.scene:
+        if args.coop:
             from .scene_room import COOP_SCENE, SceneRoom, coop_files, disposable_project
 
-            root = (stack.enter_context(disposable_project(coop_files(), scaffold=False)) if args.coop
-                    else Path(args.project).resolve())
-            room = SceneRoom(root / (COOP_SCENE if args.coop else args.scene), root)
+            root = stack.enter_context(disposable_project(coop_files(), scaffold=False))
+            room = SceneRoom(root / COOP_SCENE, root)
             print(f"Mesh scene {room.identity[:12]}", flush=True)
         try:
             asyncio.run(serve(args.port, room))

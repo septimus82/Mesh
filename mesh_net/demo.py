@@ -18,7 +18,7 @@ OTHER = (255, 191, 76)
 
 @contextmanager
 def open_arena(files_: dict[str, bytes] | None = None, size: tuple[int, int] = (wire.WIDTH, wire.HEIGHT),
-               make=lambda window, arcade, scene: Arena(window, arcade)):
+               make=lambda window, arcade, root, scene: Arena(window, arcade)):
     """Each client owns a disposable Mesh project and a single GL context."""
     with disposable_project(files_ or {}) as root:
         from engine import optional_arcade
@@ -35,7 +35,7 @@ def open_arena(files_: dict[str, bytes] | None = None, size: tuple[int, int] = (
                             vsync=False, resizable=False, config=config, config_path=str(path))
         try:
             window.load_scene(scene)
-            yield make(window, optional_arcade.arcade, root / scene)
+            yield make(window, optional_arcade.arcade, root, scene)
         finally:
             window.close()
 

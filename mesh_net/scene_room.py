@@ -30,7 +30,7 @@ from typing import Any
 
 from engine.combat_model import AttackSpec, TargetState, resolve_attack
 from engine.interaction import DEFAULT_INTERACT_MAX_DIST
-from engine.physics_model import Aabb, Circle, MoveRequest, entity_shape, shape_aabb, shapes_overlap, sweep_axis_separate
+from engine.physics_model import Aabb, Circle, MoveRequest, collider_shape, entity_shape, shape_aabb, shapes_overlap, sweep_axis_separate
 
 from . import protocol as wire
 
@@ -45,6 +45,7 @@ COMBAT = {"damage": 1.0, "cooldown": 1.0, "range": 32.0, "hitbox_size": 32.0, "t
 COOP_FILES = {"packs/core_regions/scenes/start.json": "scene.json", "packs/core_regions/maps/start.json": "map.json",
               "assets/prefabs.json": "prefabs.json"}
 COOP_SCENE = "packs/core_regions/scenes/start.json"
+COOP_TILESET = ("assets/tilesets/starter.json", "assets/tilesets/starter.png")
 FACINGS = ((1, 0), (0, 1), (-1, 0), (0, -1))  # right, up, left, down: the wire carries the index
 
 
@@ -73,7 +74,10 @@ def picture_size(entity: dict[str, Any], root: Path) -> tuple[float, float] | No
     clips = animator.get("animations") if isinstance(animator.get("animations"), dict) else {}
     if clips:
         clip = clips.get(animator.get("animation_state")) or clips.get(animator.get("idle_clip")) or next(iter(clips.values()))
-        return float(clip["frame_width"]) * scale, float(clip["frame_height"]) * scale
+        try:
+            return float(clip["frame_width"]) * scale, float(clip["frame_height"]) * scale
+        except (KeyError, TypeError, ValueError) as exc:
+            raise Unsupported(f"entity '{entity.get('id')}' has an Animator clip without a frame size") from exc
     if entity.get("animations") or entity.get("sprite_sheet"):
         return None  # frame-list animation: give it a box or circle collider
     sprite = entity.get("sprite")
@@ -86,8 +90,11 @@ def picture_size(entity: dict[str, Any], root: Path) -> tuple[float, float] | No
     path = root / sprite if (root / sprite).is_file() else bundled_file(sprite)
     if path is None:
         return None
-    with Image.open(path) as image:
-        return image.width * scale, image.height * scale
+    try:
+        with Image.open(path) as image:
+            return image.width * scale, image.height * scale
+    except OSError as exc:
+        raise Unsupported(f"entity '{entity.get('id')}' has an unreadable picture '{sprite}'") from exc
 
 
 @dataclass
@@ -128,7 +135,7 @@ def move(mover: Body, delta: tuple[float, float], solids: list[Body]) -> None:
 
 def load_scene(path: Path) -> tuple[str, dict[str, Any]]:
     """The scene with its entities as the engine's loader resolves them (prefabs filled in, defaults applied), and
-    its identity: the SHA-256 of that, so two processes agree only when they would build the same room."""
+    the SHA-256 of that. (A room's identity adds the collision geometry its files give: SceneRoom.identity.)"""
     from engine.migrations import migrate_payload  # noqa: PLC0415
     from engine.scene_loader import SceneLoader  # noqa: PLC0415
     from engine.schema_validation import validate  # noqa: PLC0415
@@ -174,29 +181,76 @@ def disposable_project(files: dict[str, bytes], name: str = "Mesh local room", s
 
 
 def coop_files() -> dict[str, bytes]:
-    """The packaged co-op room (mesh_net/coop) as project files."""
-    return {rel: files("mesh_net").joinpath("coop", name).read_bytes() for rel, name in COOP_FILES.items()}
+    """The packaged co-op room (mesh_net/coop) as project files, with the engine's starter tileset its map uses
+    (what every new project holds), so a bare folder is enough for the server."""
+    from engine.repo_root import bundled_file  # noqa: PLC0415
+
+    room = {rel: files("mesh_net").joinpath("coop", name).read_bytes() for rel, name in COOP_FILES.items()}
+    tileset = {}
+    for rel in COOP_TILESET:
+        path = bundled_file(rel)
+        if path is None:
+            raise FileNotFoundError(f"bundled file not installed: {rel}")
+        tileset[rel] = path.read_bytes()
+    return {**tileset, **room}
 
 
 def refuse_unsupported(scene: dict[str, Any]) -> None:
-    if (scene.get("settings") or {}).get("hd2d"):
+    if (scene.get("settings") or {}).get("hd2d") is not None:  # (engine.hd2d.runtime: any value makes a 3D room)
         raise Unsupported("HD-2D rooms walk on 3D floors; this authority runs 2D collision only")
+    for entity in scene["entities"]:
+        if entity.get("require_flags") or entity.get("forbid_flags"):  # engine.scene_entity_gating
+            raise Unsupported(f"entity '{entity.get('id')}' depends on game flags, which a shared room does not have")
+
+
+def positive(value: Any) -> float | None:
+    """engine.interaction's reading of an authored radius: a finite number above zero, else none."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) and number > 0.0 else None
 
 
 def tile_bodies(scene: dict[str, Any], scene_dir: Path) -> list[Body]:
     """The blocking tiles engine.tilemap builds from the scene's painted collision layers (one tile-sized box each).
 
-    Only Studio's inline ``tiles`` grids: a collision layer read from the map file alone is refused."""
+    Only Studio's inline ``tiles`` grids, and JSON tilesets read as engine.tilemap reads them; anything else (a
+    collision layer kept only in the map file, a missing or TSX tileset) is refused."""
     tilemap = scene.get("tilemap")
     if not isinstance(tilemap, dict):
         return []
     blocking = tilemap.get("collision_layer_id")
     layers = [layer for layer in tilemap.get("tile_layers") or tilemap.get("layers") or []
-              if isinstance(layer, dict) and (layer.get("collision") or layer.get("id") == blocking)]
+              if isinstance(layer, dict) and (layer.get("collision") or (blocking and _name(layer) == blocking))]
     if not layers:
         return []
-    payload = json.loads((scene_dir / str(tilemap.get("path") or "")).read_text(encoding="utf-8"))
+    try:
+        return _tiles(tilemap, layers, scene_dir)
+    except (OSError, ValueError, KeyError, TypeError) as exc:  # (json.JSONDecodeError is a ValueError)
+        raise Unsupported(f"the scene's map or tileset cannot be read as the engine reads it: {exc!r}") from exc
+
+
+def _name(layer: dict[str, Any]) -> str:
+    return str(layer.get("id") or layer.get("name") or layer.get("layer") or "")
+
+
+def _tiles(tilemap: dict[str, Any], layers: list[dict[str, Any]], scene_dir: Path) -> list[Body]:
+    map_path = scene_dir / str(tilemap["path"])
+    payload = json.loads(map_path.read_text(encoding="utf-8"))
     tw, th = int(payload["tilewidth"]), int(payload["tileheight"])
+    tilesets = []  # (first gid, tile count, tile width, tile height), as engine.tilemap._load_tilesets builds them
+    for entry in payload.get("tilesets") or []:
+        source = entry.get("source")
+        if source and not str(source).lower().endswith(".json"):
+            raise Unsupported(f"tileset '{source}' is not a JSON tileset")
+        data = json.loads((map_path.parent / source).read_text(encoding="utf-8")) if source else entry
+        base = (map_path.parent / source).parent if source else map_path.parent
+        if not (base / str(data["image"])).is_file() or int(data["tilecount"]) <= 0:
+            raise Unsupported(f"tileset '{source or data.get('name')}' has no picture or no tile count")
+        tilesets.append((int(entry.get("firstgid", 1)), int(data["tilecount"]), int(data["tilewidth"]),
+                         int(data["tileheight"])))
+    tilesets.sort()
     width, height = int(payload["width"]), int(payload["height"])
     w, h = tilemap.get("width"), tilemap.get("height")
     if isinstance(w, int) and isinstance(h, int) and w > 0 and h > 0:  # the scene's size wins (engine.tilemap)
@@ -207,12 +261,15 @@ def tile_bodies(scene: dict[str, Any], scene_dir: Path) -> list[Body]:
     for layer in layers:
         tiles = layer.get("tiles")
         if not isinstance(tiles, list) or len(tiles) != width * height:
-            raise Unsupported(f"collision layer '{layer.get('id')}' has no inline tiles of the map's size")
-        ox, oy = offsets.get(str(layer.get("id")), (0.0, 0.0))
-        for index, gid in enumerate(tiles):
-            if int(gid or 0) & ~FLIP_MASK:
-                col, row = index % width, index // width
-                bodies.append(Body((col + 0.5) * tw + ox, height * th - (row + 0.5) * th + oy, tw, th, {}))
+            raise Unsupported(f"collision layer '{_name(layer)}' has no inline tiles of the map's size")
+        ox, oy = offsets.get(_name(layer), (0.0, 0.0))
+        for index, raw_gid in enumerate(tiles):
+            gid = int(raw_gid or 0) & ~FLIP_MASK
+            owner = [t for t in tilesets if t[0] <= gid < t[0] + t[1]]
+            if not gid or not owner:
+                continue  # an empty cell, or a tile no tileset has: engine.tilemap draws and blocks nothing there
+            col, row = index % width, index // width
+            bodies.append(Body((col + 0.5) * tw + ox, height * th - (row + 0.5) * th + oy, *owner[-1][2:], {}))
     return bodies
 
 
@@ -243,7 +300,7 @@ class SceneRoom:
 
     def __init__(self, path: Path, root: Path | None = None) -> None:
         root = root or path.parent
-        self.identity, scene = load_scene(path)
+        scene_hash, scene = load_scene(path)
         refuse_unsupported(scene)
         entities = scene["entities"]
         ids = [e.get("id") for e in entities]
@@ -253,11 +310,11 @@ class SceneRoom:
         if len(players) != 1:
             raise Unsupported(f"the scene needs exactly one player template, found {len(players)}")
         template = players[0]
-        collider = (template.get("components") or {}).get("collider") or {}
-        if collider.get("kind") not in ("box", "circle"):
-            raise Unsupported("the player template needs a box or circle collider (Studio characters start with one)")
         self.template, self.root = template, root
         self.spawn = (float(template["x"]), float(template["y"]))
+        if collider_shape(Body(*self.spawn, *self._template_size(), template)) is None:
+            raise Unsupported("the player template needs a sized box or circle collider (Studio characters start with "
+                              "an automatic one); Arcade's picture hit boxes cannot run without Arcade")
         self.step_px = float((config(template, "PlayerController") or {}).get("speed", SPEED)) / wire.HZ
         combat = {**COMBAT, **(config(template, "Combat") or {})}
         self.damage, self.reach, self.hitbox = float(combat["damage"]), float(combat["range"]), float(combat["hitbox_size"])
@@ -275,22 +332,27 @@ class SceneRoom:
             health = config(e, "Health")
             if health is None or e.get("tag") != self.target_tag:
                 continue
+            health = {**{k: e[k] for k in ("max_hp", "hp", "invulnerable") if k in e}, **health}  # Health reads both
             hp = float(health.get("max_hp", 1.0))
-            drops = config(e, "DropTable") or {}
-            seed = int(drops.get("seed", -1))
-            rng = random.Random(seed if seed >= 0 else f"{self.identity}:{e['id']}")
-            loot = [d for d in drops.get("drops") or [] if isinstance(d, dict) and rng.random() < float(d.get("chance", 1.0))]
-            self.enemies[e["id"]] = Enemy(body(e, root), TargetState(hp=float(health.get("hp", hp)), max_hp=hp),
-                                          bool(e.get("solid")), loot)
+            state = TargetState(hp=float(health.get("hp", hp)), max_hp=hp, invulnerable=bool(health.get("invulnerable")))
+            self.enemies[e["id"]] = Enemy(body(e, root), state, bool(e.get("solid")), roll_drops(config(e, "DropTable")))
         if len(self.levers) + len(self.doors) + len(self.enemies) > MAX_OBJECTS:
             raise Unsupported(f"more than {MAX_OBJECTS} networked objects")
         networked = set(self.levers) | set(self.doors) | set(self.enemies)
         self.scenery = tile_bodies(scene, path.parent) + [body(e, root) for e in others
                                                           if e.get("solid") and e["id"] not in networked]
+        self.ids = sorted(e["id"] for e in entities)
+        geometry = [[b.center_x, b.center_y, b.width, b.height] for b in self.solids_ever()]
+        geometry.append(list(self._template_size()))
+        self.identity = hashlib.sha256(json.dumps([scene_hash, geometry]).encode()).hexdigest()
 
         self.tick = 0
         self.next_id = 1
         self.players: dict[int, Player] = {}
+        try:
+            wire.encode({"v": 1, **self._worst_snapshot()})
+        except wire.Invalid as exc:
+            raise Unsupported("the room's largest snapshot would not fit in one frame (shorter ids, fewer objects)") from exc
 
     # --- sessions (called by mesh_net.server) ---------------------------------------------------------
 
@@ -305,6 +367,19 @@ class SceneRoom:
 
     def _template_size(self) -> tuple[float, float]:
         return picture_size(self.template, self.root) or (0.0, 0.0)
+
+    def solids_ever(self) -> list[Body]:
+        """Everything that can block. The identity covers it, so clients also agree on the room's collision."""
+        return self.scenery + [b for b, _ in self.doors.values() if b is not None] + [e.body for e in self.enemies.values()]
+
+    def _worst_snapshot(self) -> wire.Message:
+        """The largest snapshot this room can send (ticks and ids at their wire maximum: never reached)."""
+        far = -BOUND + 0.01
+        return {"type": "scene_state", "tick": wire.MAX_SEQ, "scene": self.identity,
+                "players": [[wire.MAX_SEQ - i, far, far, 3] for i in range(wire.MAX_PLAYERS)],
+                "open": sorted(self.doors), "used": sorted(self.levers),
+                "enemies": [[i, e.state.max_hp] for i, e in self.enemies.items()],
+                "drops": sorted(self.enemies), "loot": [[i, wire.MAX_SEQ] for i in self.enemies]}
 
     def leave(self, eid: int) -> Player:
         p = self.players.pop(eid)
@@ -336,6 +411,9 @@ class SceneRoom:
         for eid, p in sorted(self.players.items()):
             if self.tick - p.last_input <= wire.HZ // 4 and (p.dx or p.dy):
                 move(p.body, (p.dx * self.step_px, p.dy * self.step_px), solids)
+                # An open map has no edge: stay inside what clients accept on the wire.
+                p.body.center_x = max(-BOUND, min(BOUND, p.body.center_x))
+                p.body.center_y = max(-BOUND, min(BOUND, p.body.center_y))
             action, p.action = p.action, None
             if action == "use":
                 self._use(p)
@@ -352,19 +430,29 @@ class SceneRoom:
         return d if d <= radius else None
 
     def _use(self, p: Player) -> None:
-        """The nearest lever in reach that may still be used (engine.interaction's radius rule)."""
+        """engine.interaction.select_interaction_candidate over the levers that may still be used: in reach and not
+        behind the player beyond contact distance, ranked by priority, facing, distance, then id."""
+        fx, fy = FACINGS[p.facing]
         reach = []
         for lever_id, (entity, cfg) in self.levers.items():
             event = str(cfg.get("event_id") or "")
             if not event or (cfg.get("one_shot") and lever_id in self.used):
                 continue
-            authored = entity.get("interact_radius")
-            radius = min(DEFAULT_INTERACT_MAX_DIST, float(authored)) if authored else DEFAULT_INTERACT_MAX_DIST
-            d = self._near(p, float(entity["x"]), float(entity["y"]), radius)
-            if d is not None:
-                reach.append((d, lever_id, event))
+            authored = positive(entity.get("interact_radius"))
+            radius = min(DEFAULT_INTERACT_MAX_DIST, authored) if authored else DEFAULT_INTERACT_MAX_DIST
+            dx, dy = float(entity["x"]) - p.body.center_x, float(entity["y"]) - p.body.center_y
+            d = math.hypot(dx, dy)
+            if d > radius:
+                continue
+            alignment = (dx * fx + dy * fy) / d if d > 0 else 1.0
+            size = picture_size(entity, self.root) or (16.0, 16.0)
+            if alignment < 0.0 and d > max(8.0, (max(p.body.width, p.body.height) + max(size)) * 0.5):
+                continue
+            priority = max((int(v) for v in (entity.get("interaction_priority"), entity.get("interact_priority"))
+                            if isinstance(v, (int, float)) and not isinstance(v, bool)), default=0)
+            reach.append((-priority, -alignment, d, lever_id, event))
         if reach:
-            _, lever_id, event = min(reach)
+            *_, lever_id, event = min(reach)
             self.used.add(lever_id)
             self.locked -= {i for i, (_, c) in self.doors.items() if c.get("unlock_event") == event}  # locked -> open only
 
@@ -395,6 +483,29 @@ class SceneRoom:
                 "enemies": [[i, e.state.hp] for i, e in sorted(self.enemies.items())],
                 "drops": sorted(i for i, e in self.enemies.items() if e.dropped),
                 "loot": [[i, owner.get(id(e.holder))] for i, e in sorted(self.enemies.items()) if e.holder is not None]}
+
+
+def roll_drops(cfg: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """What DropTable gives when its enemy dies: the same normalisation, random stream and draws (one roll per drop,
+    then its quantity), so a seeded table drops what it drops in single-player."""
+    if not cfg:
+        return []
+    seed = cfg.get("seed")
+    rng = random.Random(None if seed == -1 else seed)
+    loot = []
+    for entry in cfg.get("drops") or []:
+        if not isinstance(entry, dict):
+            continue
+        chance = max(0.0, min(1.0, float(entry.get("chance", 1.0) or 1.0)))
+        low = int(entry.get("min_quantity", entry.get("quantity", 1)) or 1)
+        high = max(low, int(entry.get("max_quantity", low) or low))
+        if chance < 1.0 and (chance <= 0.0 or rng.random() > chance):
+            continue
+        quantity = rng.randint(low, high)
+        if quantity > 0:
+            loot.append({"item_id": str(entry["item_id"]).strip() if entry.get("item_id") else None,
+                         "gold": int(entry["gold"]) if entry.get("gold") is not None else None, "quantity": quantity})
+    return loot
 
 
 def parse_input(msg: wire.Message, eid: int) -> tuple[int, int, int, str | None]:

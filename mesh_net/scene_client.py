@@ -18,7 +18,7 @@ from engine.interaction import DEFAULT_INTERACT_MAX_DIST
 
 from . import protocol as wire
 from .demo import Arena, open_arena
-from .scene_room import check_state, config, coop_files, load_scene, parse_input
+from .scene_room import SceneRoom, check_state, coop_files, parse_input
 
 KEEP = ("Animator",)  # draws the picture the server's movement implies
 FOLLOW = "CameraFollow"  # the local player's avatar keeps the scene's own camera behaviour
@@ -29,13 +29,14 @@ USED_TINT = (128, 128, 128)
 
 
 class SceneArena(Arena):
-    def __init__(self, window: Any, arcade: Any, scene: Path) -> None:
+    def __init__(self, window: Any, arcade: Any, root: Path, scene: str) -> None:
         super().__init__(window, arcade)
-        self.identity, loaded = load_scene(scene)  # what the server computes from the same files
+        room = SceneRoom(root / scene, root)  # what the server builds; from this window's own files
+        self.identity = room.identity
         self.checks = {"check": self.check, "check_input": parse_input}
         sc = self.scene = window.scene_controller
         sprites = [s for s in sc.all_sprites if getattr(s, "mesh_id", None)]
-        if sorted(s.mesh_id for s in sprites) != sorted(e["id"] for e in loaded["entities"]):
+        if sorted(s.mesh_id for s in sprites) != room.ids:
             raise RuntimeError("the loaded room's objects differ from its scene file's")
         self.sprites = {s.mesh_id: s for s in sprites}
         template = next(s for s in sprites if getattr(s, "mesh_tag", None) == "player")
@@ -45,9 +46,8 @@ class SceneArena(Arena):
         for sprite in self.sprites.values():
             self._keep(sprite, KEEP)
         sc.entities.apply_pending_ops(sc)
-        entities = {e["id"]: e for e in loaded["entities"]}
-        self.doors = [i for i in self.sprites if config(entities[i], "DoorLock") is not None]
-        self.levers = [i for i in self.sprites if config(entities[i], "SwitchInteract") is not None]
+        self.doors, self.levers = sorted(room.doors), sorted(room.levers)
+        self.colors = {i: tuple(self.sprites[i].color) for i in self.levers}
         self.avatars: dict[int, Any] = {}
         self.drops: dict[str, Any] = {}
         self.last: float | None = None
@@ -111,7 +111,7 @@ class SceneArena(Arena):
         for door in self.doors:
             self.sprites[door].visible = door not in state["open"]
         for lever in self.levers:
-            self.sprites[lever].color = USED_TINT if lever in state["used"] else (255, 255, 255)
+            self.sprites[lever].color = USED_TINT if lever in state["used"] else self.colors[lever]
         for enemy, hp in state["enemies"]:
             self.sprites[enemy].visible = hp > 0
         for enemy in [e for e in self.drops if e not in state["drops"]]:
