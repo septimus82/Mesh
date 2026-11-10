@@ -269,6 +269,9 @@ def main(argv: list[str] | None = None) -> int:
     # junit-K.xml for the fan-in (``ci_shards.py check --plan <lane>``), which applies the lane's min_selected to the
     # whole selection; a shard alone isn't held to it. Give it before the lane: ``--shard 1/2 gpu``.
     parser.add_argument("--shard", type=_shard_spec, default=None, help="Run shard K/N of the lane (e.g. 1/2)")
+    # The lane's split, when its OSes have their own (#422 CI-422B): ``--shard 1/2 --shard-plan gpu-linux gpu`` on
+    # Linux. Default: the plan named after the lane (Windows' gpu shards). Only the lane's own plans are accepted.
+    parser.add_argument("--shard-plan", default=None, help="The lane's shard plan (default: the lane's name)")
     parser.add_argument("tier", choices=sorted(TIERS.keys()))
     parser.add_argument("--xdist", action="store_true", help="Use pytest-xdist if available")
     parser.add_argument(
@@ -282,6 +285,10 @@ def main(argv: list[str] | None = None) -> int:
     tier_cfg = TIERS[args.tier]
     if args.shard and args.tier not in ci_shards.PLANS:
         parser.error(f"--shard: the {args.tier} lane has no shard plan in tooling/ci_shards.py")
+    plan = args.shard_plan or args.tier
+    if args.shard_plan and (not args.shard or plan not in ci_shards.PLANS
+                            or not (plan == args.tier or plan.startswith(f"{args.tier}-"))):
+        parser.error(f"--shard-plan {plan}: needs --shard and one of the {args.tier} lane's plans in tooling/ci_shards.py")
 
     extra_args = args.pytest_args
     if extra_args and extra_args[0] == "--":
@@ -301,7 +308,7 @@ def main(argv: list[str] | None = None) -> int:
 
     shard_dir = repo_root / "artifacts" / "shards"
     shard_args = [] if not args.shard else [
-        "-p", "tooling.ci_shards_plugin", "--mesh-shard", args.shard, "--mesh-shard-plan", args.tier,
+        "-p", "tooling.ci_shards_plugin", "--mesh-shard", args.shard, "--mesh-shard-plan", plan,
         "--mesh-shard-record", str(shard_dir / f"shard-{args.shard.split('/')[0]}.json")]
     pytest_cmd = _pytest_cmd(
         mark_expr=tier_cfg.pytest_mark,

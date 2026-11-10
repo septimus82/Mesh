@@ -17,6 +17,9 @@ The gpu lane (``extended.yml``) is split the same way on Windows, by its own pla
 default suite's balance and the gpu lane's never move each other): ``gpu (windows-latest, py3.11, shard 1/2)`` and
 ``2/2``, each collecting the whole ``gl`` selection, and a fan-in named ``gpu (windows-latest, py3.11)`` that runs
 ``check --plan gpu --min-selected N``: the same checks, plus the lane's ``min_selected`` applied to the whole selection.
+Linux's gpu lane (#422 CI-422B) is split the same way by a plan of its own, ``gpu-linux`` (``--shard-plan gpu-linux``):
+Linux's module costs aren't Windows' (the slowest Linux modules include one Windows' plan leaves to the hash), so each
+OS's pins come from its own lane's timings and neither moves the other. Its fan-in is ``gpu (ubuntu-latest, py3.11)``.
 
 Standard library only: the fan-in runs it with the runner's own ``python3``.
 """
@@ -81,8 +84,28 @@ GPU_PINNED: dict[str, int] = {
     "tests/test_studio_3d_selection_gpu.py": 1,  # 57.4 s
     "tests/test_hd2d_studio_gpu.py": 2,  # 57.3 s
 }
-# Each split's pins, by plan name: ``default`` is the default suite's (ci.yml), ``gpu`` the gpu lane's (extended.yml).
-PLANS: dict[str, dict[str, int]] = {"default": PINNED, "gpu": GPU_PINNED}
+# Linux's gpu lane (``--shard 1/2 --shard-plan gpu-linux gpu``, #422 CI-422B): its 12 heaviest modules, pinned to balance
+# the two given where the hash puts the rest. Measured on CI's Linux gpu lane (Xvfb + Mesa llvmpipe), the mean of 7
+# green Extended runs at 1d11670-af380e7 on 5 CPU models (EPYC 9V45/9V74/7763, Xeon 8370C/6973P-C; setup + call +
+# teardown): 1,129-1,863 s in all, 66 modules; the hash alone gave the rest 191/290 s, with the pins 767/767 s (each run
+# within 3% of even). Re-measure and re-pin (bumping SCHEME) when the shards drift far apart.
+GPU_LINUX_PINNED: dict[str, int] = {
+    "tests/test_dialogue_reopen_gpu.py": 1,  # 176.4 s
+    "tests/test_hd2d_lighting_controls_gpu.py": 1,  # 169.4 s
+    "tests/test_terrain_gpu.py": 1,  # 163.4 s
+    "tests/test_fire_gpu.py": 2,  # 81.5 s
+    "tests/test_studio_workflow_polish_gpu.py": 2,  # 73.7 s
+    "tests/test_weather_authoring_gpu.py": 2,  # 72.3 s
+    "tests/test_water_gpu.py": 1,  # 67.7 s
+    "tests/test_hd2d_asset_pipeline_gpu.py": 2,  # 59.6 s
+    "tests/test_scatter_gpu.py": 2,  # 56.6 s
+    "tests/test_hd2d_starter_gpu.py": 2,  # 49.9 s
+    "tests/test_hd2d_post_gpu.py": 2,  # 48.5 s
+    "tests/test_hd2d_studio_gpu.py": 2,  # 35.4 s
+}
+# Each split's pins, by plan name: ``default`` is the default suite's (ci.yml), ``gpu`` Windows' gpu lane's and
+# ``gpu-linux`` Linux's (extended.yml).
+PLANS: dict[str, dict[str, int]] = {"default": PINNED, "gpu": GPU_PINNED, "gpu-linux": GPU_LINUX_PINNED}
 
 
 def module_of(nodeid: str) -> str:
@@ -271,7 +294,7 @@ def main(argv: list[str] | None = None) -> int:
     run_check.add_argument("folder", type=Path)
     run_check.add_argument("--shards", type=int, default=SHARDS)
     run_check.add_argument("--commit", default=None, help="The commit this run tested (GITHUB_SHA).")
-    run_check.add_argument("--plan", default="default", choices=sorted(PLANS), help="Whose split: default or gpu.")
+    run_check.add_argument("--plan", default="default", choices=sorted(PLANS), help="Whose split: default, gpu or gpu-linux.")
     run_check.add_argument("--min-selected", type=int, default=0, help="The lane's floor, for the whole suite.")
     args = parser.parse_args(argv)
     records, problems = load_records(args.folder)

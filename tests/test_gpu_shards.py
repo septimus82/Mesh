@@ -1,7 +1,7 @@
-"""#422 F13: Windows' gpu lane as two shards of whole modules, and a fan-in that is green only when together they ran
-the whole gl selection exactly once.
+"""#422 F13: each OS's gpu lane as two shards of whole modules (Windows since F13, Linux since CI-422B, each by its own
+plan), and a fan-in per OS that is green only when together its shards ran the whole gl selection exactly once.
 
-The fan-in (``gpu (windows-latest, py3.11)`` in extended.yml) runs ``tooling/ci_shards.py check --plan gpu`` on the
+Each fan-in (``gpu (<os>, py3.11)`` in extended.yml) runs ``tooling/ci_shards.py check --plan <plan>`` on its OS's
 shards' records and ``tooling/ci_require_jobs.py`` on their jobs. Every way the two can fail to add up to the lane must
 be refused: a failed or errored test, a test missing or run twice, a missing, cancelled or incomplete shard, another
 commit, another selection or plan, fewer tests than the lane's floor. A skip is an outcome (visible, listed); a test
@@ -19,7 +19,7 @@ from typing import Any
 import pytest
 
 from tooling import ci_require_jobs, ci_shards, test_tiers
-from tooling.ci_shards import GPU_PINNED, PINNED, check, ids_digest, module_of, scheme_digest, shard_of
+from tooling.ci_shards import GPU_LINUX_PINNED, GPU_PINNED, PINNED, check, ids_digest, module_of, scheme_digest, shard_of
 
 pytestmark = [pytest.mark.fast]
 
@@ -32,6 +32,7 @@ MODULES = ["tests/test_water_gpu.py", "tests/test_fire_gpu.py",
            *(f"tests/test_g{i}_gpu.py" for i in range(4))]
 COLLECTED = sorted(f"{m}::test_{t}" for m in MODULES for t in ("a", "b"))
 PHYSICAL = "tests/test_g0_gpu.py::test_b"  # (skipped: needs a physical GPU)
+GPU_PLANS = ("gpu", "gpu-linux")  # (Windows', Linux's: every fan-in check below holds for both)
 
 
 def _records(plan: str = "gpu", collected: list[str] | None = None) -> list[dict[str, Any]]:
@@ -53,8 +54,8 @@ def _junit(records: list[dict[str, Any]]) -> dict[int, dict[str, int] | None]:
                          "skipped": sum(o == "skipped" for o in r["outcomes"].values())} for r in records}
 
 
-def _check(records: list[dict[str, Any]], **kwargs: Any) -> tuple[list[str], dict[str, Any]]:
-    return check(records, commit=COMMIT, junit=_junit(records), plan="gpu", **kwargs)
+def _check(records: list[dict[str, Any]], plan: str = "gpu", **kwargs: Any) -> tuple[list[str], dict[str, Any]]:
+    return check(records, commit=COMMIT, junit=_junit(records), plan=plan, **kwargs)
 
 
 # --- the plans ------------------------------------------------------------------------------------------------------
@@ -64,38 +65,76 @@ def test_the_default_suites_split_is_unchanged() -> None:
     assert scheme_digest(2) == "337c292c31a29b91f76c9955a1f83a1045f55275afbc70cf28883926d02356b1"
     assert scheme_digest(1) == "ad47ad828de6a9bbef5dcaaf10edddbf63de97873e28e8bd3fb1e9e9d597d8a6"
     assert all(shard_of(m) == k for m, k in PINNED.items())
-    assert ci_shards.PLANS == {"default": PINNED, "gpu": GPU_PINNED}
+    assert ci_shards.PLANS == {"default": PINNED, "gpu": GPU_PINNED, "gpu-linux": GPU_LINUX_PINNED}
 
 
-def test_the_gpu_plan_pins_real_gl_modules_to_real_shards_and_has_its_own_scheme() -> None:
-    for module, shard in GPU_PINNED.items():
-        assert shard in (1, 2) and shard_of(module, 2, "gpu") == shard, module
+def test_windows_gpu_split_is_unchanged_by_linux_s() -> None:
+    # #422 CI-422B: Windows' gpu shards split as they did before Linux had a plan (5a9d8f6): same pins, same scheme.
+    assert scheme_digest(2, "gpu") == "236fa33ad55c0852a2ab943f08b932c96be64d52a4caa820e4af9fd224538424"
+    assert len(GPU_PINNED) == 12 and GPU_PINNED["tests/test_terrain_gpu.py"] == 2
+
+
+@pytest.mark.parametrize("plan", GPU_PLANS)
+def test_a_gpu_plan_pins_real_gl_modules_to_real_shards_and_has_its_own_scheme(plan: str) -> None:
+    pins = ci_shards.PLANS[plan]
+    for module, shard in pins.items():
+        assert shard in (1, 2) and shard_of(module, 2, plan) == shard, module
+        assert (REPO / module).is_file(), f"{module} is pinned in the {plan} plan but gone: re-measure and re-pin"
         source = (REPO / module).read_text(encoding="utf-8")
         assert test_tiers.GL_ENV[0][0] in source, f"{module} isn't a gl test module"  # (its GL opt-in)
-    assert not set(GPU_PINNED) & set(PINNED), "a module pinned in both plans"
-    assert scheme_digest(2, "gpu") != scheme_digest(2)
+    assert not set(pins) & set(PINNED), "a module pinned in a gpu plan and the default suite's"
+    assert len({scheme_digest(2), scheme_digest(2, "gpu"), scheme_digest(2, "gpu-linux")}) == 3
     # Hashed modules land where the default plan's hash puts them: only the pins differ.
-    assert shard_of("tests/test_g1_gpu.py", 2, "gpu") == shard_of("tests/test_g1_gpu.py")
+    assert shard_of("tests/test_g1_gpu.py", 2, plan) == shard_of("tests/test_g1_gpu.py")
 
 
-def test_the_terrain_module_and_its_measurement_run_in_one_shard() -> None:
-    assert shard_of("tests/test_terrain_gpu.py", 2, "gpu") == 2
+def _gl_modules() -> list[str]:
+    opt_in = test_tiers.GL_ENV[0][0]
+    return sorted(f"tests/{p.name}" for p in (REPO / "tests").glob("test_*.py")
+                  if opt_in in p.read_text(encoding="utf-8", errors="replace"))
+
+
+@pytest.mark.parametrize("plan", GPU_PLANS)
+def test_every_gl_module_today_and_any_new_one_lands_in_exactly_one_shard(plan: str) -> None:
+    # The fan-in proves it on each run's real collection (every shard collects the whole selection); this holds the
+    # plan to it without GL: the two shards' modules partition every module that opts into GL, neither shard is empty,
+    # and a module no plan names (a new one) is placed by the hash, never dropped.
+    modules = _gl_modules()
+    assert len(modules) >= 60, "the gl modules weren't found"
+    one = {m for m in modules if shard_of(m, 2, plan) == 1}
+    two = {m for m in modules if shard_of(m, 2, plan) == 2}
+    assert one | two == set(modules) and not one & two and one and two
+    assert shard_of("tests/test_brand_new_gpu.py", 2, plan) in (1, 2)
+
+
+def test_linux_s_plan_comes_from_linux_s_timings_not_windows() -> None:
+    # The slowest Linux module but one isn't among Windows' pins: copying Windows' plan would have left Linux uneven.
+    assert "tests/test_hd2d_lighting_controls_gpu.py" in GPU_LINUX_PINNED
+    assert "tests/test_hd2d_lighting_controls_gpu.py" not in GPU_PINNED
+    assert len(GPU_LINUX_PINNED) == 12 and scheme_digest(2, "gpu-linux") != scheme_digest(2, "gpu")
+
+
+@pytest.mark.parametrize(("plan", "shard"), [("gpu", 2), ("gpu-linux", 1)])
+def test_the_terrain_module_and_its_measurement_run_in_one_shard(plan: str, shard: int) -> None:
+    # (its gated stroke, zero-reload guard, report-only measurements and fault-detection test, all in one module)
+    assert shard_of("tests/test_terrain_gpu.py", 2, plan) == shard
 
 
 # --- the fan-in's check, on gpu records -----------------------------------------------------------------------------
 
-def test_two_complete_shards_pass_and_the_physical_gpu_skip_is_listed() -> None:
-    assert all(shard_of(m, 2, "gpu") != shard_of(m) for m in MODULES[:2]), "the pins must move these two"
-    records = _records()
-    assert {shard_of(module_of(t), 2, "gpu") for t in COLLECTED} == {1, 2}
-    problems, summary = _check(records, min_selected=len(COLLECTED))
+@pytest.mark.parametrize("plan", GPU_PLANS)
+def test_two_complete_shards_pass_and_the_physical_gpu_skip_is_listed(plan: str) -> None:
+    assert all(shard_of(m, 2, plan) != shard_of(m) for m in MODULES[:2]), "the pins must move these two"
+    records = _records(plan)
+    assert {shard_of(module_of(t), 2, plan) for t in COLLECTED} == {1, 2}
+    problems, summary = _check(records, plan, min_selected=len(COLLECTED))
     assert problems == []
-    assert summary["plan"] == "gpu" and summary["collected"] == summary["selected"] == len(COLLECTED)
+    assert summary["plan"] == plan and summary["collected"] == summary["selected"] == len(COLLECTED)
     assert summary["skipped"] == 1 and summary["skipped_tests"] == [PHYSICAL]
 
 
-def _broken(change: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    records, kwargs = _records(), {}
+def _broken(change: str, plan: str = "gpu") -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    records, kwargs = _records(plan), {}
     one, two = records
     victim = two["selected"][0]
     if change == "a failed gpu test":
@@ -133,18 +172,32 @@ def _broken(change: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         del two["outcomes"][victim]
     elif change == "fewer than the lane's floor":
         kwargs["min_selected"] = len(COLLECTED) + 1
+    elif change == "an empty shard":
+        two.update(selected=[], outcomes={}, durations={})
+    elif change == "an empty collection":
+        records = _records(plan, collected=[])
+        kwargs["min_selected"] = test_tiers.TIERS["gpu"].min_selected
+    elif change == "two records for one shard":
+        records.append(copy.deepcopy(two))
+    elif change == "the other OS's plan":  # (stale or crossed records: Windows' checked as Linux's, or back)
+        records = _records(plan="gpu-linux" if plan == "gpu" else "gpu")
+    elif change == "the other OS's stale scheme":  # (a record written before its plan was re-pinned)
+        two["scheme_digest"] = scheme_digest(2, "gpu-linux" if plan == "gpu" else "gpu")
     else:
         raise AssertionError(change)
     return records, kwargs
 
 
+@pytest.mark.parametrize("plan", GPU_PLANS)
 @pytest.mark.parametrize("change", [
     "a failed gpu test", "an errored gpu test", "a missing test", "a test run twice", "a missing shard",
     "a cancelled shard", "a failed shard", "another commit", "another selection", "a module on the wrong shard",
-    "the default plan's split", "a selected test without an outcome", "fewer than the lane's floor"])
-def test_every_way_the_gpu_shards_fail_to_add_up_is_refused(change: str) -> None:
-    records, kwargs = _broken(change)
-    problems, _ = _check(records, **kwargs)
+    "the default plan's split", "a selected test without an outcome", "fewer than the lane's floor",
+    "an empty shard", "an empty collection", "two records for one shard", "the other OS's plan",
+    "the other OS's stale scheme"])
+def test_every_way_the_gpu_shards_fail_to_add_up_is_refused(change: str, plan: str) -> None:
+    records, kwargs = _broken(change, plan)
+    problems, _ = _check(records, plan, **kwargs)
     assert problems, change
 
 
@@ -230,7 +283,19 @@ def test_the_unsharded_gpu_lane_is_unchanged(tmp_path: Path, monkeypatch: pytest
     assert rc == 1 and summary["problems"] == ["the lane selected 1 tests, fewer than the 256 it should"]
 
 
-@pytest.mark.parametrize("argv", [["--shard", "3/2", "gpu"], ["--shard", "x", "gpu"], ["--shard", "1/2", "extended"]])
+def test_a_linux_gpu_shard_runs_by_linux_s_plan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    rc, cmd, summary = _tiers(tmp_path, monkeypatch, ["--shard", "1/2", "--shard-plan", "gpu-linux", "gpu"])
+    assert rc == 0, summary["problems"]
+    text = " ".join(cmd)
+    assert "-m gl" in text and "-p tooling.ci_shards_plugin --mesh-shard 1/2 --mesh-shard-plan gpu-linux" in text
+    assert re.search(r"--mesh-shard-record \S*artifacts[\\/]shards[\\/]shard-1\.json", text)
+    assert summary["shard"] == "1/2"
+
+
+@pytest.mark.parametrize("argv", [["--shard", "3/2", "gpu"], ["--shard", "x", "gpu"], ["--shard", "1/2", "extended"],
+                                  ["--shard-plan", "gpu-linux", "gpu"],  # (a plan without a shard)
+                                  ["--shard", "1/2", "--shard-plan", "default", "gpu"],  # (another lane's plan)
+                                  ["--shard", "1/2", "--shard-plan", "gpu-mac", "gpu"]])  # (no such plan)
 def test_a_bad_shard_or_a_lane_without_a_plan_is_refused(argv: list[str]) -> None:
     with pytest.raises(SystemExit) as raised:
         test_tiers.main(argv)
@@ -240,14 +305,21 @@ def test_a_bad_shard_or_a_lane_without_a_plan_is_refused(argv: list[str]) -> Non
 # --- ci_require_jobs --job: the shard jobs' own conclusions ---------------------------------------------------------
 
 SHARD_JOBS = ["gpu (windows-latest, py3.11, shard 1/2)", "gpu (windows-latest, py3.11, shard 2/2)"]
+OSES = ("windows-latest", "ubuntu-latest")
 
 
+@pytest.mark.parametrize("os_name", OSES)
 @pytest.mark.parametrize(("conclusions", "ok"), [(("success", "success"), True), (("success", "failure"), False),
-                                                  (("cancelled", "success"), False), (("success", None), False)])
-def test_the_fan_in_needs_both_shard_jobs_to_have_succeeded(monkeypatch: pytest.MonkeyPatch,
+                                                  (("cancelled", "success"), False), (("success", None), False),
+                                                  (("skipped", "success"), False), (("success", "timed_out"), False)])
+def test_the_fan_in_needs_both_shard_jobs_to_have_succeeded(monkeypatch: pytest.MonkeyPatch, os_name: str,
                                                             conclusions: tuple[str | None, ...], ok: bool) -> None:
-    jobs = [{"name": n, "status": "completed", "conclusion": c, "run_attempt": 1}
-            for n, c in zip(SHARD_JOBS, conclusions) if c is not None]
+    names = [n.replace("windows-latest", os_name) for n in SHARD_JOBS]
+    # (the other OS's shards all succeeded: they must never stand in for this OS's)
+    other = [{"name": n.replace("windows-latest", next(o for o in OSES if o != os_name)), "status": "completed",
+              "conclusion": "success", "run_attempt": 1} for n in SHARD_JOBS]
+    jobs = other + [{"name": n, "status": "completed", "conclusion": c, "run_attempt": 1}
+                    for n, c in zip(names, conclusions) if c is not None]
     monkeypatch.setenv("GITHUB_REPOSITORY", "o/r")
     monkeypatch.setenv("GITHUB_RUN_ID", "1")
     monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
@@ -255,8 +327,23 @@ def test_the_fan_in_needs_both_shard_jobs_to_have_succeeded(monkeypatch: pytest.
     real = ci_require_jobs.check
     monkeypatch.delenv("NEEDS_RESULTS", raising=False)  # (only the jobs list decides here)
     monkeypatch.setattr(ci_require_jobs, "check", lambda *a, **k: real(*a, **k, delays=(), sleep=lambda _s: None))
-    argv = ["--name", "gpu (windows-latest, py3.11)", *(a for n in SHARD_JOBS for a in ("--job", n))]
+    argv = ["--name", f"gpu ({os_name}, py3.11)", *(a for n in names for a in ("--job", n))]
     assert ci_require_jobs.main(argv) == (0 if ok else 1)
+
+
+@pytest.mark.parametrize(("listed", "needs", "ok"), [
+    ("in_progress", '["skipped", "failure"]', False),  # (stale list, and needs: doesn't vouch: never success)
+    ("queued", "", False),  # (no needs: word at all)
+    ("in_progress", "not json", False),
+    ("in_progress", '["success", "success"]', True)])  # (#469: the engine vouches every needed job succeeded)
+def test_a_stale_or_unreadable_jobs_list_is_never_taken_as_success(listed: str, needs: str, ok: bool) -> None:
+    names = [n.replace("windows-latest", "ubuntu-latest") for n in SHARD_JOBS]
+    jobs = [{"name": names[0], "status": "completed", "conclusion": "success", "run_attempt": 1},
+            {"name": names[1], "status": listed, "conclusion": None, "run_attempt": 1}]
+    passed, lines = ci_require_jobs.check(lambda: (copy.deepcopy(jobs), len(jobs)), names, 1,
+                                          needs_ok=ci_require_jobs.needs_succeeded(needs), delays=(0, 0),
+                                          sleep=lambda _s: None, log=lambda _l: None)
+    assert passed is ok, lines
 
 
 def test_jobs_by_name_or_by_os_not_both() -> None:
@@ -275,15 +362,19 @@ def _jobs() -> dict[str, str]:
     return dict(zip(parts[1::2], parts[2::2]))
 
 
-def test_windows_gpu_runs_as_two_shards_and_every_other_lane_as_before() -> None:
+def test_each_os_s_gpu_lane_runs_as_two_shards_and_every_other_lane_as_before() -> None:
     jobs = _jobs()
     assert set(jobs) == {"dedup", "lane", "gpu-shards"}
     lane = jobs["lane"]
     legs = re.findall(r"^          - \{ (.*) \}$", lane, re.M)
     assert legs == ["os: ubuntu-latest, lane: extended", "os: windows-latest, lane: extended",
-                    "os: ubuntu-latest, lane: gpu",
+                    'os: ubuntu-latest, lane: gpu, shard: "1/2", shard_index: 1, plan: gpu-linux',
+                    'os: ubuntu-latest, lane: gpu, shard: "2/2", shard_index: 2, plan: gpu-linux',
+                    # (Windows' legs exactly as before CI-422B: the lane's own plan, gpu)
                     'os: windows-latest, lane: gpu, shard: "1/2", shard_index: 1',
                     'os: windows-latest, lane: gpu, shard: "2/2", shard_index: 2']
+    assert 'if ("${{ matrix.plan }}") { $shard += @("--shard-plan", "${{ matrix.plan }}") }' in lane
+    assert "xvfb-run -a python -m tooling.test_tiers @shard ${{ matrix.lane }}" in lane  # (each Linux shard, own Xvfb)
     # Unsharded legs keep their names; shards are "gpu (windows-latest, py3.11, shard K/2)".
     assert ("    name: ${{ matrix.lane }} (${{ matrix.os }}, py3.11${{ matrix.shard && "
             "format(', shard {0}', matrix.shard) || '' }})\n") in lane
@@ -301,8 +392,18 @@ def test_windows_gpu_runs_as_two_shards_and_every_other_lane_as_before() -> None
 
 def test_the_fan_in_keeps_the_lanes_check_name_and_fails_closed() -> None:
     fanin = _jobs()["gpu-shards"]
-    # One leg: run, it's "gpu (windows-latest, py3.11)"; left out by #344's duplicate check, it's unexpanded.
-    assert "    name: gpu (${{ matrix.os }}, py3.11)\n" in fanin and "        os: [windows-latest]\n" in fanin
+    # One leg per OS: run, it's "gpu (<os>, py3.11)", the name each lane's check had (Linux's unsharded lane until
+    # CI-422B); left out by #344's duplicate check, it's unexpanded. Not fail-fast: one OS's red never cancels the other.
+    assert "    name: gpu (${{ matrix.os }}, py3.11)\n" in fanin
+    fanin_legs = re.findall(r"^          - \{ (.*) \}$", fanin, re.M)
+    assert fanin_legs == ["os: windows-latest, plan: gpu", "os: ubuntu-latest, plan: gpu-linux"]
+    assert "    strategy:\n      fail-fast: false\n" in fanin
+    # Each fan-in leg checks by the plan its OS's shards ran (a mismatch would refuse every record: another scheme).
+    lane_plans = {os: plan or "gpu" for os, plan in re.findall(
+        r'^          - \{ os: ([\w-]+), lane: gpu, shard: "\d/2", shard_index: \d(?:, plan: ([\w-]+))? \}$',
+        _jobs()["lane"], re.M)}
+    assert lane_plans == {leg.split(",")[0].split(": ")[1]: leg.split("plan: ")[1] for leg in fanin_legs}
+    assert set(lane_plans.values()) <= set(ci_shards.PLANS)
     assert "    needs: [dedup, lane]\n" in fanin
     assert "    if: ${{ always() && needs.dedup.outputs.skip != 'true' }}\n" in fanin
     assert "permissions:\n      actions: read\n      contents: read" in fanin
@@ -312,8 +413,8 @@ def test_the_fan_in_keeps_the_lanes_check_name_and_fails_closed() -> None:
     assert fanin.count("        if: always()") == 2 and "cancelled()" not in fanin.split("steps:", 1)[1]
     assert "continue-on-error" not in fanin
     floor = test_tiers.TIERS["gpu"].min_selected
-    assert (f'python3 tooling/ci_shards.py check gpu-shards --plan gpu --min-selected {floor} '
-            '--commit "${{ github.sha }}"') in fanin
+    assert ('python3 tooling/ci_shards.py check gpu-shards --plan ${{ matrix.plan }} '
+            f'--min-selected {floor} --commit "${{{{ github.sha }}}}"') in fanin
     assert "exit $code" in fanin and "shell: bash" in fanin
     # The engine's needs: results stand in for a stale jobs list (ci_require_jobs.observe): "success" for lane must mean
     # every leg succeeded, so no leg may fail softly.
