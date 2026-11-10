@@ -94,6 +94,7 @@ def test_the_wheel_bundles_exactly_the_allow_list(built: tuple[Path, Path, Path]
     bundled = sorted(n.split("/data/share/mesh-engine/", 1)[1] for n in names if "/data/share/mesh-engine/" in n)
     assert bundled == allowed, "the wheel bundles exactly the allow-list"
     assert not any(n.startswith(("packs/", "tooling/", "tests/")) for n in names)
+    assert {"mesh_net/server.py", "mesh_net/demo.py", "mesh_net/sample_room.json"} <= set(names)
     schemas = sorted(p.relative_to(REPO).as_posix() for p in (REPO / "engine" / "schemas").glob("*.json"))
     assert schemas and set(schemas) <= set(names), "the engine's own schemas travel with the package"
 
