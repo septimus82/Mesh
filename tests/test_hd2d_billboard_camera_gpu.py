@@ -35,7 +35,10 @@ KINDS = ("texture", "framebuffer", "program", "buffer", "geometry", "vertex_arra
 GAME_CAMERA_CHANGES = {  # the unseen game camera, under a fixed Studio camera
     "pitch_60": {"pitch": 60.0},
     "pitch_15": {"pitch": 15.0},
-    "everything": {"target": (40.0, -20.0, 2.0), "pitch": 70.0, "yaw": 90.0, "distance": 90.0, "fov": 40.0},
+    "orthographic": {"ortho": True},
+    "aspect_4_3": {"_aspect": 4 / 3},  # (the game picture's aspect: the renderer keeps it, not the camera)
+    "everything": {"target": (40.0, -20.0, 2.0), "pitch": 70.0, "yaw": 90.0, "distance": 90.0, "fov": 40.0,
+                   "ortho": True, "_aspect": 1.0},
 }
 STUDIO_POSES = {  # Studio's camera (pitch, orbit, zoom): parity with the game's path at the same camera
     "default": {},
@@ -184,11 +187,13 @@ def _studio_room(root: Path, name: str) -> dict:
                 base = picture(studio_cam)
                 cases: dict = {"base_stretch": base[2]}
                 for label, change in GAME_CAMERA_CHANGES.items():
+                    aspect = hd._aspect
                     for f, v in change.items():
-                        setattr(game_cam, f, v)
+                        setattr(hd if f == "_aspect" else game_cam, f, v)
                     pic = picture(studio_cam)
                     for f, v in saved.items():
                         setattr(game_cam, f, v)
+                    hd._aspect = aspect
                     cases[label] = {"picture_same": pic[0] == base[0], "sun_map_same": pic[1] == base[1],
                                     "stretch": pic[2]}
                 out["independence"]["shadows_on" if shadows_on else "shadows_off"] = cases

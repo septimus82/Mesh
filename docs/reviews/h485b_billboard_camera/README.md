@@ -27,14 +27,18 @@ so every value is unchanged.
 - Studio's mouse picking (`studio_hd2d._under`) already used Studio's own pitch for the billboard stretch. Picking
   now matches what is drawn; before, it picked a billboard shape the picture didn't show.
 
-## Pictures (RTX 4070; Mesa llvmpipe gives the same hashes and shares)
+## Pictures (RTX 4070)
+
+Mesa llvmpipe rasterises differently, so its hashes differ from the RTX's, but every comparison below comes out the
+same on it, and the changed share of the canvas agrees to 0.01%.
 
 | picture | shows |
 |---|---|
 | `pictures/studio_canvas_cottage_before_after.png` | Studio's real canvas, before, after and changed (magenta): 30.4% of the canvas. The door, stretched for the room's 55° instead of Studio's 40°, was 1.34× too tall and hid the character and table behind it. |
 | `pictures/studio_canvas_village_decor_before_after.png` | Village with trees, a meadow, a campfire and a raised hill: 8.2%. Trees, grass, flowers, the fire and the canopy shadows now stand for Studio's 40° pitch instead of the room's 30° (slightly taller). |
 | `pictures/studio_canvas_village_before_after.png` | Template village: 0.23%, the #483 number (Elder, sign, door to the cottage, and their shadows). |
-| `pictures/no_billboards_*.png` | The same canvas with every billboard left out: structures, roofs (11 cutaway structures in the village), terrain, lamps and ground. Byte-identical before and after, in all three rooms, on both GPUs. |
+| `pictures/studio_pitches_*_before_after.png` | Studio's canvas at pitch 25°, 40° (default) and 65°, one pitch per row: before, after, changed. The changed share at 25 / 40 / 65°: village 0.28 / 0.23 / 0.44%, decorated village 3.72 / 8.20 / 16.89%, cottage 15.26 / 30.39 / 10.73%. Billboards were stretched for the room's pitch whatever Studio's: at 25° and 40° the cottage door was far too tall, at 65° too short. |
+| `pictures/no_billboards_*.png` | The same canvas with every billboard left out: structures, roofs (11 cutaway structures in the village), terrain, lamps and ground. Byte-identical before and after, in all three rooms, at 25°, 40° and 65°, on both GPUs. |
 | `pictures/matched_*_game_vs_studio.png` | Play's own camera (following the player at the room's pitch: 30° outdoors, 55° in the cottage), with Studio's camera set to it. The game's path and Studio's path give byte-identical pictures, before and after; the fix's equal the baseline's. The GPU test checks this pose as well as four Studio poses. |
 
 ## Gameplay preservation (byte-exact against `14e9d4f`)
@@ -70,8 +74,9 @@ arithmetic with the same values.
   - the DoF focus uses the camera it is given.
 - `tests/test_hd2d_billboard_camera_gpu.py` (GPU), in the village, the decorated village (trees, meadow, campfire)
   and the cottage:
-  - a fixed Studio camera's picture and sun shadow map are byte-identical while the unseen game camera's pitch, or
-    every field, changes, with shadows on and off;
+  - a fixed Studio camera's picture and sun shadow map are byte-identical while the unseen game camera changes, with
+    shadows on and off: its pitch (15°, 60°), an orthographic projection, the game picture's aspect (4:3), and
+    everything at once (target, pitch, yaw, distance, field of view, projection, aspect);
   - character, scatter, canopy-caster and campfire billboards all get Studio's stretch;
   - character billboard heights are measured from the geometry;
   - game/Studio parity at 4 Studio poses (pitch 25 and 65, orbit, zoom) and at play's own camera (room pitch 30 or 55);

@@ -9,6 +9,8 @@
    "cutaway_structures": 11
   },
   "canvas": "f0fb9ec2114cbabc",
+  "canvas_pitch25": "5b20b1c073298fbd",
+  "canvas_pitch65": "1e07c035a406556e",
   "fire": false,
   "matched_camera": {
    "target": [
@@ -27,7 +29,9 @@
    "studio": "5343e02856375290",
    "same": true
   },
-  "canvas_no_billboards": "5d83b08a625de0d9"
+  "canvas_no_billboards": "5d83b08a625de0d9",
+  "canvas_no_billboards_pitch25": "794a039918ecc2ab",
+  "canvas_no_billboards_pitch65": "8785e9856f5b8e41"
  },
  "village_decor": {
   "studio_pitch": 40.0,
@@ -38,6 +42,8 @@
    "cutaway_structures": 11
   },
   "canvas": "dbdfb4ef99deb01d",
+  "canvas_pitch25": "1869dbe229687793",
+  "canvas_pitch65": "b3282353fea6abea",
   "fire": true,
   "matched_camera": {
    "target": [
@@ -56,7 +62,9 @@
    "studio": "a056ecfcaa860d3b",
    "same": true
   },
-  "canvas_no_billboards": "7d5d07cf541adc53"
+  "canvas_no_billboards": "7d5d07cf541adc53",
+  "canvas_no_billboards_pitch25": "c557fc8d55494380",
+  "canvas_no_billboards_pitch65": "41bb46550abdcc66"
  },
  "cottage": {
   "studio_pitch": 40.0,
@@ -67,6 +75,8 @@
    "cutaway_structures": 0
   },
   "canvas": "f407d9a1b767a057",
+  "canvas_pitch25": "4eefaa30ce0fef82",
+  "canvas_pitch65": "142dd307c25a3600",
   "fire": false,
   "matched_camera": {
    "target": [
@@ -85,6 +95,8 @@
    "studio": "492bb23a010c8faf",
    "same": true
   },
-  "canvas_no_billboards": "0a3cdffd250bb854"
+  "canvas_no_billboards": "0a3cdffd250bb854",
+  "canvas_no_billboards_pitch25": "277743faae0b90c1",
+  "canvas_no_billboards_pitch65": "494d5e918aa5627f"
  }
 }
