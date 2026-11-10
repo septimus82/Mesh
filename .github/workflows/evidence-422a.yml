@@ -1,0 +1,83 @@
+name: Evidence CI-422A terrain timing
+
+# Evidence only (#422 CI-422A), never merged: runs on pushes to this branch alone. Each job is one hosted Windows runner
+# with Mesa's llvmpipe (the gpu lane's setup); it measures the runner (tooling/runner_calibration.py), runs the real
+# terrain-stroke test once, then the interleaved control-vs-sculpt measurement with and without injected faults.
+on:
+  push:
+    branches: [evidence/422a-terrain-timing]
+
+permissions:
+  contents: read
+
+jobs:
+  ab:
+    name: ab (${{ matrix.os }}, ${{ matrix.n }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, n: 1 }
+          - { os: windows-latest, n: 2 }
+          - { os: windows-latest, n: 3 }
+          - { os: windows-latest, n: 4 }
+          - { os: windows-latest, n: 5 }
+          - { os: windows-latest, n: 6 }
+          - { os: windows-2022, n: 7 }
+          - { os: windows-2022, n: 8 }
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      MESH_CI_SEED: "123"
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/mesh-ci-setup
+        with:
+          python-version: "3.11"
+      - name: Desktop 1920x1080
+        run: |
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          python -c "import pyglet; s = pyglet.display.get_display().get_default_screen(); print('desktop', s.width, 'x', s.height)"
+      - name: Runner calibration (before)
+        continue-on-error: true
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          python -m tooling.runner_calibration | Tee-Object out/calibration_before.txt
+      - name: The terrain-stroke test, once
+        continue-on-error: true
+        env:
+          MESH_GL_SMOKE: "1"
+        run: python -m pytest -o addopts= -q -p no:cacheprovider tests/test_terrain_gpu.py -k sculpts_live_one_stroke --junitxml=out/gate.xml
+      - name: Interleaved control vs sculpt, with and without faults
+        continue-on-error: true
+        run: |
+          $runs = @(@("none", 5), @("reload_on_release", 5), @("reload_per_flush", 5), @("rebuild_all", 5),
+                    @("cpu_frame", 5), @("cpu_dab", 5), @("cpu_frame", 15), @("none", 5))
+          $i = 0
+          foreach ($r in $runs) {
+            $i++
+            python docs/reviews/ci422a_terrain_timing/terrain_ab.py "out/ab_$($i)_$($r[0])_$($r[1]).json" --mut $r[0] --ms $r[1] | Tee-Object -Append out/ab_lines.txt
+          }
+      - name: Runner calibration (after)
+        continue-on-error: true
+        run: python -m tooling.runner_calibration | Tee-Object out/calibration_after.txt
+      - name: Summary
+        if: always()
+        run: |
+          $lines = @("## ab (${{ matrix.os }}, ${{ matrix.n }})", "")
+          foreach ($f in "out/calibration_before.txt", "out/calibration_after.txt", "out/ab_lines.txt") {
+            if (Test-Path $f) { $lines += '```'; $lines += Get-Content $f; $lines += '```' }
+          }
+          $lines -join "`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ab-${{ matrix.os }}-${{ matrix.n }}
+          retention-days: 30
+          path: out/
