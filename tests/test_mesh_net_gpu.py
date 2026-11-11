@@ -9,6 +9,7 @@ from collections import defaultdict, deque
 import pytest
 
 from mesh_net.server import Server
+from tests.net_walk import ABOVE, GAP, ON_ENEMY, walk
 
 pytestmark = pytest.mark.integration
 worker_logs = defaultdict(lambda: deque(maxlen=30))
@@ -155,7 +156,7 @@ def _scene_room():
 
 @pytest.mark.skipif(os.environ.get("MESH_GL_SMOKE") != "1",
                     reason="requires real Mesh windows (set MESH_GL_SMOKE=1)")
-def test_two_windows_play_the_studio_scene_together():
+def test_two_windows_play_the_studio_scene_together(record_testsuite_property):
     """N6: two hidden Mesh windows load the co-op scene, share movement, the lever and gate, the bandit and its
     loot through one authority, and render each other through the scene renderer and camera."""
     lever, gate, bandit = "start_gate_lever_352_352_0_0", "start_gate_432_256_0_0", "start_bandit_608_256_0_0"
@@ -174,10 +175,18 @@ def test_two_windows_play_the_studio_scene_together():
         await command(proc, f"press {key}")
         await command(proc, f"release {key}")
 
+    walks = []  # every walk's legs: recorded (lane summary) to show how late releases land on each runner
+
     async def run():
         room = _scene_room()
         server = Server(room)
         port = await server.start()
+
+        async def go(proc, eid, key, target, within):
+            """tests/net_walk.walk: to ``target`` +- ``within`` by the server's own position, back after an overshoot."""
+            await walk(lambda cmd: command(proc, cmd), key, target, within, lambda: (room, room.players[eid]),
+                       record=walks)
+
         procs = []
         try:
             for _ in range(2):
@@ -221,8 +230,13 @@ def test_two_windows_play_the_studio_scene_together():
                 assert (await command(proc, "capture"))["objects"][gate][4] is False
 
             # Combat: both reach the bandit and strike it; the server's HP, death and loot reach both windows.
-            await hold(a, "DOWN", a, lambda s: pos(s, aid)[1] <= 262)
-            await hold(a, "RIGHT", a, lambda s: pos(s, aid)[0] >= 575)
+            # A goes through the gate's gap and steps down onto the bandit from above (its feet stop A at y 268,
+            # facing it); B walks into it from the left along y 256.
+            await go(a, aid, "DOWN", *GAP)
+            await go(a, aid, "RIGHT", 520, 24)  # (past the gate, short of the bandit)
+            await go(a, aid, "UP", *ABOVE)
+            await go(a, aid, "RIGHT", 608, 16)
+            await go(a, aid, "DOWN", *ON_ENEMY)
             await hold(b, "RIGHT", b, lambda s: pos(s, bid)[0] >= 560)
             await tap(a, "SPACE")
             await observe(b, lambda s: s["enemies"] == [[bandit, 2.0]])
@@ -263,12 +277,15 @@ def test_two_windows_play_the_studio_scene_together():
                 require_clean_workers(problems)
             elif problems:
                 error.add_note("window cleanup: " + "; ".join(problems))
-    asyncio.run(run())
+    try:
+        asyncio.run(run())
+    finally:
+        record_testsuite_property("measure.net_walk_n6", json.dumps(walks))
 
 
 @pytest.mark.skipif(os.environ.get("MESH_GL_SMOKE") != "1",
                     reason="requires real Mesh windows (set MESH_GL_SMOKE=1)")
-def test_two_windows_meet_party_travel_and_return():
+def test_two_windows_meet_party_travel_and_return(record_testsuite_property):
     """N7: two hidden Mesh windows meet in the hub, form a party, travel into their own instance of Layer 1, open
     its gate, go down to Layer 2 and fight its guardian together, then one returns through Layer 1 to the hub while
     the other stays; that one drops and resumes. Every room is loaded by GameWindow.load_scene and drawn by the
@@ -315,26 +332,19 @@ def test_two_windows_meet_party_travel_and_return():
         await command(proc, f"press {key}")
         await command(proc, f"release {key}")
 
-    async def go(proc, key, target):
-        """Walk to ``target`` along the key's axis: held while far (a held key's release lands a few ticks late),
-        then in steps of a tick or two."""
-        axis, sign = {"RIGHT": (0, 1), "LEFT": (0, -1), "UP": (1, 1), "DOWN": (1, -1)}[key]
+    pids = {}  # window -> its player id (the server's member)
+    walks = []  # every walk's legs: recorded (lane summary) to show how late releases land on each runner
 
-        def short(r, margin=0.0):
-            return (target - own(r)[axis]) * sign > margin
+    async def go(proc, key, target, within):
+        """tests/net_walk.walk: to ``target`` +- ``within`` by the server's own position, back after an overshoot."""
+        def avatar():
+            m = world.members[pids[proc]]
+            room = world.instances[m.instance or ""].room
+            return room, room.players[m.eid]
+        await walk(lambda cmd: command(proc, cmd), key, target, within, avatar, record=walks)
 
-        reply = await until(proc, lambda r: True)
-        if short(reply, 60):
-            await hold(proc, key, lambda r: not short(r, 60))
-        for _ in range(40):
-            reply = await until(proc, lambda r: True)
-            if not short(reply):
-                return reply
-            tick = reply["state"]["tick"]
-            await command(proc, f"press {key}")
-            await until(proc, lambda r: r["state"]["tick"] > tick)
-            await command(proc, f"release {key}")
-        raise AssertionError(f"{key} to {target} not reached: {own(reply)}")
+    def facing(r):
+        return next(x for x in r["state"]["players"] if x[0] == r["entity"])[3]  # 0 right, 1 up, 2 left, 3 down
 
     async def shot(proc, players):
         """What the window rendered: its own room's scene, exactly these avatars drawn, the camera on its own."""
@@ -362,6 +372,7 @@ def test_two_windows_meet_party_travel_and_return():
             a, b = procs
             first, second = await asyncio.gather(*(until(p, lambda r: len(r["state"]["players"]) == 2) for p in procs))
             assert first["identity"] == second["identity"] == world.identity and first["key"] == second["key"] == hub
+            pids.update({a: first["player"], b: second["player"]})
 
             # The hub: a creates a party and invites the nearest player; b accepts.
             await tap(a, "P")
@@ -379,27 +390,31 @@ def test_two_windows_meet_party_travel_and_return():
             for proc in procs:
                 await shot(proc, [ra["entity"], rb["entity"]])
 
-            # Interaction: a opens Layer 1's gate with its lever; both see it open.
-            await go(a, "RIGHT", 352)
-            await go(a, "UP", 300)
+            # Interaction: a opens Layer 1's gate with its lever (352, 352: in reach from here), facing it.
+            await go(a, "RIGHT", 352, 16)
+            await go(a, "UP", 300, 16)
+            await hold(a, "UP", lambda r: facing(r) == 1)  # (a walk that stepped back down faces away)
             await tap(a, "E")
             for proc in procs:
                 await until(proc, lambda r: r["state"]["open"] == [gate1] and r["state"]["used"] == [lever1])
                 assert (await command(proc, "capture"))["objects"][gate1][4] is False
 
             # Both go down to Layer 2 through the open gate.
-            await go(a, "DOWN", 258)
-            await go(b, "RIGHT", 250)
-            await go(b, "UP", 254)
+            await go(a, "DOWN", *GAP)
+            await go(b, "RIGHT", 250, 40)
+            await go(b, "UP", *GAP)
             await asyncio.gather(*(hold(p, "RIGHT", lambda r: r["key"] == r2) for p in procs))
             ra, rb = await asyncio.gather(*(until(p, lambda r: len(r["state"]["players"]) == 2) for p in procs))
             assert ra["room"] == rb["room"] and ra["state"]["used"] == [] and ra["state"]["open"] == []  # its own
 
-            # Combat: both strike Layer 2's guardian; its HP, death and drop reach both windows.
+            # Combat: both strike Layer 2's guardian; its HP, death and drop reach both windows. Each goes up past it
+            # and steps down onto it from above: its feet (y 232-244) stop them at y 268, facing it.
             for proc in procs:
-                await go(proc, "RIGHT", 430)
-                await go(proc, "UP", 236)  # the guardian's feet (its collider) are at y 232-244: strike level with them
-                await hold(proc, "RIGHT", lambda r: next(x for x in r["state"]["players"] if x[0] == r["entity"])[3] == 0)
+                await go(proc, "RIGHT", 430, 16)
+                await go(proc, "UP", *ABOVE)
+                await go(proc, "RIGHT", 480, 16)
+                await go(proc, "DOWN", *ON_ENEMY)
+                await until(proc, lambda r: facing(r) == 3)
             await tap(a, "SPACE")
             await until(b, lambda r: r["state"]["enemies"] == [[guardian, 1.0]])
             await tap(b, "SPACE")
@@ -415,10 +430,12 @@ def test_two_windows_meet_party_travel_and_return():
             await shot(a, [la["entity"]])
             await shot(b, [rb["entity"]])
             # ... and on to the hub.
-            await go(a, "LEFT", 600)
-            await go(a, "UP", 254)
+            await go(a, "LEFT", 600, 40)
+            await go(a, "UP", *GAP)
             home = await hold(a, "LEFT", lambda r: r["key"] == hub)
-            assert own(home) == [704.0, 160.0] and [m[2] for m in home["party"]["members"]] == [hub, r2]
+            assert own(home) == [704.0, 160.0]
+            # (the enter and the party view are separate frames: the reply that first shows the hub can predate it)
+            await until(a, lambda r: [m[2] for m in r["party"]["members"]] == [hub, r2])
             await shot(a, [home["entity"]])
 
             # b drops and resumes: back in the party's Layer 2, the guardian still dead, the party intact.
@@ -450,4 +467,7 @@ def test_two_windows_meet_party_travel_and_return():
                 require_clean_workers(problems)
             elif problems:
                 error.add_note("window cleanup: " + "; ".join(problems))
-    asyncio.run(run())
+    try:
+        asyncio.run(run())
+    finally:
+        record_testsuite_property("measure.net_walk_n7", json.dumps(walks))
