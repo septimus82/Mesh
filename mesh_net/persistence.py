@@ -17,6 +17,7 @@ unlocks it earns. Rules:
 from __future__ import annotations
 
 import json
+import logging
 import math
 import re
 import secrets
@@ -30,7 +31,9 @@ from engine.interaction import DEFAULT_INTERACT_MAX_DIST
 from . import protocol as wire
 from .characters import (
     ITEM_ID,
+    MAX_CLAIM,
     MAX_GRANTS,
+    MAX_QUANTITY,
     UNLOCK_KEY,
     AccessDenied,
     CharacterState,
@@ -44,7 +47,10 @@ from .scene_room import Unsupported, roll_drops
 if TYPE_CHECKING:
     from .world import Instance, Member, RoomDef, World
 
+logger = logging.getLogger(__name__)
 PENDING_LIMIT = 64  # completions waiting for a store that failed
+MAX_RULES = 64
+CLAIM_ROOM = 60  # the longest room-instance id part of a claim key ("<key>:<n>/")
 NOTICES = ("picked_up", "inventory_full", "storage_failed", "unlocked")
 
 
@@ -73,8 +79,11 @@ def load_rules(data: Any, defs: dict[str, RoomDef]) -> list[Rule]:
     if not isinstance(data, dict) or data.get("version") != 1 or not isinstance(data.get("unlocks"), dict):
         raise Unsupported("progression rules need version 1 and an 'unlocks' table")
     rules = []
+    if len(data["unlocks"]) > MAX_RULES:
+        raise Unsupported(f"at most {MAX_RULES} unlocks (a character sheet lists them all)")
     for key, rule in sorted(data["unlocks"].items()):
-        if not UNLOCK_KEY.fullmatch(str(key)) or not isinstance(rule, dict) or set(rule) != {"label", "room", "defeat"}:
+        if (not UNLOCK_KEY.fullmatch(str(key)) or not isinstance(rule, dict) or set(rule) != {"label", "room", "defeat"}
+                or not all(isinstance(rule[k], str) for k in rule)):
             raise Unsupported(f"unlock '{key}' needs a short lower-case key, a label, a room and an enemy to defeat")
         room = defs.get(rule["room"])
         if room is None or not room.expedition or rule["defeat"] not in room.proto.enemies:
@@ -96,10 +105,20 @@ def item_limits(root: Path, defs: dict[str, RoomDef]) -> dict[str, int]:
               if ITEM_ID.fullmatch(item.id)}
     for d in defs.values():
         for enemy, table in d.drop_tables.items():
+            if len(enemy) > MAX_CLAIM - CLAIM_ROOM - 60:  # (room for "complete:", the instance, the enemy and a rule)
+                raise Unsupported(f"enemy id '{enemy[:40]}...' is too long to claim loot from")
             for drop in (table or {}).get("drops") or []:
                 item = drop.get("item_id") if isinstance(drop, dict) else None
                 if item and str(item).strip() not in limits:
                     raise Unsupported(f"enemy '{enemy}' drops '{item}', which assets/data/items.json does not define")
+                if item:
+                    try:
+                        low = int(drop.get("min_quantity", drop.get("quantity", 1)) or 1)
+                        high = max(low, int(drop.get("max_quantity", low) or low))
+                    except (TypeError, ValueError):
+                        low = high = 0
+                    if not 0 < low <= high <= MAX_QUANTITY:  # (roll_drops' reading of a quantity)
+                        raise Unsupported(f"enemy '{enemy}' drops '{item}' in quantities a character cannot hold")
     return limits
 
 
@@ -115,7 +134,7 @@ class Progress:
     takes: set[int] = field(default_factory=set)
     defeated: dict[str, set[str]] = field(default_factory=dict)  # instance -> enemies whose death was handled
     loot: dict[str, dict[tuple[str, str], list[tuple[str, int]]]] = field(default_factory=dict)  # inst -> (enemy, cid)
-    pending: deque[tuple[str, str, str]] = field(default_factory=lambda: deque(maxlen=PENDING_LIMIT))
+    pending: deque[tuple[str, str, str]] = field(default_factory=deque)  # (bounded by _complete: PENDING_LIMIT)
     sent: dict[int, wire.Message] = field(default_factory=dict)
 
     @classmethod
@@ -164,7 +183,7 @@ class Progress:
                 self._take(world, m)
         self.takes.clear()
         for _ in range(len(self.pending)):  # completions a failed store owes (retried each tick, bounded)
-            self._complete(world, *self.pending.popleft())
+            self._complete(world, *self.pending.popleft(), retry=True)
         for gone in [i for i in self.defeated if i not in world.instances]:  # temporary state ends with its room
             self.defeated.pop(gone, None)
             self.loot.pop(gone, None)
@@ -181,18 +200,22 @@ class Progress:
                 self.loot.setdefault(inst.id, {})[(enemy_id, self.characters[m.pid].id)] = grants
         for rule in self.rules:
             if rule.room == inst.key and rule.defeat == enemy_id:
-                for m in present:
-                    self._complete(world, self.characters[m.pid].id, f"{inst.id}/{enemy_id}", rule.key)
+                for m in present:  # (one completion per rule: two rules on one enemy are two completions)
+                    self._complete(world, self.characters[m.pid].id, f"{inst.id}/{enemy_id}/{rule.key}", rule.key)
 
-    def _complete(self, world: World, cid: str, completion: str, key: str) -> None:
+    def _complete(self, world: World, cid: str, completion: str, key: str, retry: bool = False) -> None:
         pid = self.owner.get(cid)
         try:
             fresh, state = self.store.complete(cid, self.run, completion, key)
         except DuplicateClaim:
             return
-        except StoreError:
-            self.pending.append((cid, completion, key))
-            if pid is not None:
+        except (StoreError, ValueError) as exc:
+            if len(self.pending) >= PENDING_LIMIT:  # never dropped silently
+                logger.error("[Mesh][Net] an unlock owed to character %s could not be recorded and the retry queue "
+                             "is full: %s (%s)", cid, key, exc)
+            else:
+                self.pending.append((cid, completion, key))
+            if pid is not None and not retry:  # (said once, not on every retry)
                 world._notice(world.members[pid], "storage_failed")
             return
         if pid is not None:
@@ -224,7 +247,8 @@ class Progress:
         except InventoryFull:
             world._notice(m, "inventory_full")  # the drop stays: make room and take it again
             return
-        except StoreError:
+        except (StoreError, ValueError) as exc:  # (a grant the store refuses never stops the world)
+            logger.warning("[Mesh][Net] loot for character %s not recorded: %s", cid, exc)
             world._notice(m, "storage_failed")  # nothing granted, nothing spent: try again
             return
         del self.loot[inst.id][(enemy_id, cid)]

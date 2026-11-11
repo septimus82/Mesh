@@ -602,3 +602,149 @@ def test_every_notice_has_words_in_the_window():
     from mesh_net.world_client import NOTICE_TEXT
 
     assert set(NOTICES) <= set(NOTICE_TEXT)
+
+
+# --- from the fresh independent review: each fails with its fix removed ---------------------------------
+
+
+def test_two_unlocks_on_one_enemy_are_both_earned(files, store):
+    ada, = creds(store, "Ada")
+    rules = expedition_rules()
+    rules["unlocks"]["guardian_slayer"] = {**rules["unlocks"][UNLOCK], "label": "Guardian slain"}
+    with disposable_project(files, scaffold=False) as root:
+        d = P(World(root, store=store, rules=rules))
+    a = d.enter(ada)
+    d.ask(a, "create")
+    to_layer_2(d, a)
+    kill(d, a, (480.0, 256.0), 2)
+    assert d.sheet(a).unlocks == ("guardian_slayer", UNLOCK) and d.sheet(a).completed == 2
+
+
+def test_drops_a_character_cannot_hold_are_refused_at_load_and_never_stop_the_world(files, store, monkeypatch):
+    doc = json.loads(files[f"packs/core_regions/scenes/{R1}.json"])
+    enemy = next(e for e in doc["entities"] if e.get("name") == "Bandit")
+    enemy["behaviour_config"]["DropTable"]["drops"] = [{"item_id": "relic_shard", "quantity": 1000}]
+    with pytest.raises(Unsupported, match="quantities"):
+        pworld({**files, f"packs/core_regions/scenes/{R1}.json": json.dumps(doc).encode()}, store)
+    ada, = creds(store, "Ada")
+    d = P(pworld(files, store))
+    a = d.enter(ada)
+    d.ask(a, "create")
+    d.through_hub_door(a)
+    kill(d, a, (608.0, 352.0), 3)
+
+    def refusing(*args, **kwargs):
+        raise ValueError("a grant the store refuses")
+
+    monkeypatch.setattr(store, "claim", refusing)
+    d.take_loot(a, (568.0, 352.0))  # (raised out of World.step before: the server shut down)
+    assert d.notices(a)[-1] == "storage_failed" and (BANDIT, ada["id"]) in d.w.progress.loot[d.m(a).instance]
+
+
+def test_only_the_entitled_character_can_take_a_drop(files, store):
+    ada, bo = creds(store, "Ada", "Bo")
+    d = P(pworld(files, store))
+    a, b = d.enter(ada), d.enter(bo)
+    d.party(a, b)
+    d.through_hub_door(a)
+    kill(d, a, (608.0, 352.0), 3)  # b arrives after the bandit fell
+    d.through_hub_door(b)
+    assert d.room(b) is d.room(a)
+    d.take_loot(b, (568.0, 352.0))
+    assert d.sheet(b).items == () and (BANDIT, ada["id"]) in d.w.progress.loot[d.m(a).instance]
+
+
+def test_a_completion_is_counted_once_by_the_store(store):
+    ada, = creds(store, "Ada")
+    store.unlock_keys = frozenset({UNLOCK})
+    store.complete(ada["id"], "run", "x", UNLOCK)
+    with pytest.raises(DuplicateClaim):
+        store.complete(ada["id"], "run", "x", UNLOCK)  # (the world's own guard aside: e.g. a retried completion)
+    assert store.load(ada["id"]).completed == 1
+
+
+def test_a_failed_rollback_fails_every_later_write_visibly(store):
+    ada, = creds(store, "Ada")
+    store.stack_limits = LIMITS
+    real = store.conn
+
+    class NoRollback:
+        def __getattr__(self, name):
+            return getattr(real, name)
+
+        def execute(self, sql, *args):
+            if sql == "ROLLBACK":
+                raise sqlite3.OperationalError("cannot roll back")
+            return real.execute(sql, *args)
+
+    store.conn = NoRollback()
+    store.fault = lambda point: (_ for _ in ()).throw(sqlite3.OperationalError("disk")) if point == "before_commit" else None
+    with pytest.raises(StoreError):
+        store.claim(ada["id"], "run", "x", [("relic_shard", 1)])
+    store.fault = None
+    store.conn = real
+    with pytest.raises(StoreError, match="restart"):
+        store.claim(ada["id"], "run", "y", [("relic_shard", 1)])
+    real.execute("ROLLBACK")
+
+
+def test_the_admin_command_never_leaves_a_character_without_its_key(tmp_path):
+    store = tmp_path / "characters.db"
+    run = [sys.executable, "-m", "mesh_net.characters"]
+    subprocess.run([*run, "new-store", str(store)], check=True, capture_output=True, timeout=60)
+    missing = tmp_path / "no such folder" / "ada.json"
+    made = subprocess.run([*run, "create", str(store), "Ada", "--key-file", str(missing)], capture_output=True,
+                          text=True, timeout=60)
+    assert made.returncode == 1 and "Traceback" not in made.stderr
+    listed = subprocess.run([*run, "list", str(store)], capture_output=True, text=True, timeout=60)
+    assert "Ada" not in listed.stdout  # nothing made: the name is still free
+    key_file = tmp_path / "ada.json"
+    assert subprocess.run([*run, "create", str(store), "Ada", "--key-file", str(key_file)], capture_output=True,
+                          timeout=60).returncode == 0 and json.loads(key_file.read_text(encoding="utf-8"))["key"]
+
+
+_LEFTOVER = """
+import os, sqlite3, sys
+c = sqlite3.connect(sys.argv[1], isolation_level=None)
+c.execute("PRAGMA journal_mode=WAL")
+c.execute("BEGIN IMMEDIATE")
+c.execute("UPDATE meta SET value = '2' WHERE key = 'schema_version'")
+c.execute("INSERT INTO meta VALUES ('marker', 'kept')")
+c.execute("COMMIT")
+os._exit(0)  # (a crashed writer: its journal is left behind, never checkpointed)
+"""
+
+
+def test_a_refused_store_keeps_its_content_including_a_leftover_journal(tmp_path):
+    path = tmp_path / "characters.db"
+    CharacterStore(path, create=True).close()
+    subprocess.run([sys.executable, "-c", _LEFTOVER, str(path)], check=True, timeout=60)
+    assert (tmp_path / "characters.db-wal").exists()
+    with pytest.raises(StoreUnavailable, match="schema version '2'"):
+        CharacterStore(path)
+    raw = sqlite3.connect(path)
+    try:
+        assert raw.execute("SELECT value FROM meta WHERE key = 'marker'").fetchone() == ("kept",)  # nothing lost
+    finally:
+        raw.close()
+
+
+def test_a_store_with_damaged_pages_is_refused(tmp_path):
+    path = tmp_path / "characters.db"
+    store = CharacterStore(path, create=True)
+    store.stack_limits = {f"item_{i}": 999 for i in range(16)}
+    for i in range(40):
+        cid, _ = store.create(f"Hero {i}")
+        for j in range(16):
+            store.claim(cid, "run", f"c{j}", [(f"item_{j}", 1)])
+    store.conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    store.close()
+    data = bytearray(path.read_bytes())
+    page = 4096
+    last = len(data) // page - 1  # garble a whole data page (the last one), not the header or the schema
+    data[last * page:(last + 1) * page] = bytes([0xA5]) * page
+    path.write_bytes(bytes(data))
+    before = _digest(path)
+    with pytest.raises(StoreUnavailable, match="damaged|not a usable"):
+        CharacterStore(path)
+    assert _digest(path) == before

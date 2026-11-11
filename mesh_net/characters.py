@@ -2,10 +2,13 @@
 
 One SQLite file (standard library) holds every character of one server. WAL journal with ``synchronous=FULL``: a
 commit that returns is on disk, and a transaction interrupted by a crash is rolled back when the file is next
-opened. Every change is one explicit transaction; the schema's constraints back every rule the code checks.
+opened. Every change is one explicit transaction; the schema's constraints back the identity, quantity and
+uniqueness rules (slot and stack limits are checked inside the same transaction).
 
 A store is never created, replaced or repaired implicitly: a missing, corrupt, foreign, read-only or newer file is
-refused (:class:`StoreUnavailable`), and the file is left exactly as it was. See docs/networking/n8_persistent_characters.md.
+refused (:class:`StoreUnavailable`) and its content is not changed. (Opening it does run SQLite's own recovery:
+a journal a crashed server left behind, ``-wal``, is folded into the file, which keeps every committed change.)
+See docs/networking/n8_persistent_characters.md.
 
 Local administration (the server's owner, on the server's machine)::
 
@@ -42,7 +45,7 @@ MAX_CHARACTERS = 1000
 MAX_SLOTS = 16  # distinct items one character can hold
 MAX_QUANTITY = 999  # of one item (an item's own max_stack may be lower)
 MAX_GRANTS = 8  # items in one claim
-MAX_CLAIM = 160
+MAX_CLAIM = 256  # a claim key: "complete:" + instance id (58) + "/" + enemy id + "/" + rule key (48)
 
 _SCHEMA = """
 CREATE TABLE meta (
@@ -71,7 +74,7 @@ CREATE TABLE unlocks (
 CREATE TABLE claims (
     character TEXT NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
     run TEXT NOT NULL CHECK (typeof(run) = 'text' AND length(run) BETWEEN 1 AND 32),
-    claim TEXT NOT NULL CHECK (typeof(claim) = 'text' AND length(claim) BETWEEN 1 AND 160),
+    claim TEXT NOT NULL CHECK (typeof(claim) = 'text' AND length(claim) BETWEEN 1 AND 256),
     PRIMARY KEY (character, run, claim)
 );
 """
@@ -124,6 +127,7 @@ class CharacterStore:
         self.unlock_keys: frozenset[str] = frozenset()  # the progression keys the world's rules define
         self.fault: Callable[[str], None] | None = None  # tests: called at "before_commit" and "after_commit"
         self.commits = 0
+        self.broken = False
         if create and self.path.exists():
             raise StoreUnavailable(f"{self.path} already exists; a store is never replaced")
         if not create and not self.path.is_file():
@@ -193,6 +197,8 @@ class CharacterStore:
 
     def _transaction(self, body: Callable[[sqlite3.Connection], object]) -> object:
         c = self.conn
+        if self.broken:
+            raise StoreError("the store's connection failed earlier; restart the server")
         try:
             c.execute("BEGIN IMMEDIATE")
             result = body(c)
@@ -208,7 +214,7 @@ class CharacterStore:
                 if c.in_transaction:
                     c.execute("ROLLBACK")
             except sqlite3.Error:
-                pass  # (the connection is unusable; the journal rolls the transaction back on the next open)
+                self.broken = True  # unusable: every later write fails visibly; the journal rolls back on reopen
             raise StoreError(f"storage failed: {exc}") from exc
         self.commits += 1
         if self.fault:
@@ -250,11 +256,11 @@ class CharacterStore:
             if type(quantity) is not int or not 0 < quantity <= MAX_QUANTITY:
                 raise ValueError(f"invalid quantity {quantity!r}")
 
-        def body(c: sqlite3.Connection) -> None:
-            try:
-                c.execute("INSERT INTO claims VALUES (?, ?, ?)", (character, run, claim))
-            except sqlite3.IntegrityError as exc:
-                raise DuplicateClaim(claim) from exc
+        def body(c: sqlite3.Connection) -> CharacterState:
+            if c.execute("SELECT 1 FROM claims WHERE character = ? AND run = ? AND claim = ?",
+                         (character, run, claim)).fetchone():
+                raise DuplicateClaim(claim)
+            c.execute("INSERT INTO claims VALUES (?, ?, ?)", (character, run, claim))
             held = dict(c.execute("SELECT item, quantity FROM inventory WHERE character = ?", (character,)).fetchall())
             for item, quantity in grants:
                 total = held.get(item, 0) + quantity
@@ -263,28 +269,34 @@ class CharacterStore:
                 held[item] = total
                 c.execute("INSERT INTO inventory VALUES (?, ?, ?) ON CONFLICT (character, item) "
                           "DO UPDATE SET quantity = excluded.quantity", (character, item, total))
+            return self._state(c, character)  # (read inside the transaction: a commit is never misreported)
 
-        self._transaction(body)
-        return self.load(character)
+        result = self._transaction(body)
+        assert isinstance(result, CharacterState)
+        return result
 
     def complete(self, character: str, run: str, completion: str, unlock: str) -> tuple[bool, CharacterState]:
         """An expedition objective done: counted once per ``completion``, and ``unlock`` granted (if not already).
         Returns (whether this unlocked it now, the character)."""
         if unlock not in self.unlock_keys or not UNLOCK_KEY.fullmatch(unlock):
             raise ValueError(f"unknown unlock {unlock!r}")
-        fresh = [False]
+        claim = f"complete:{completion}"
+        if not 0 < len(claim) <= MAX_CLAIM:
+            raise ValueError("completion key too long")
 
-        def body(c: sqlite3.Connection) -> None:
-            try:
-                c.execute("INSERT INTO claims VALUES (?, ?, ?)", (character, run, f"complete:{completion}"))
-            except sqlite3.IntegrityError as exc:
-                raise DuplicateClaim(completion) from exc
+        def body(c: sqlite3.Connection) -> tuple[bool, CharacterState]:
+            if c.execute("SELECT 1 FROM claims WHERE character = ? AND run = ? AND claim = ?",
+                         (character, run, claim)).fetchone():
+                raise DuplicateClaim(completion)
+            c.execute("INSERT INTO claims VALUES (?, ?, ?)", (character, run, claim))
             c.execute("UPDATE characters SET completed = completed + 1 WHERE id = ?", (character,))
-            fresh[0] = c.execute("INSERT OR IGNORE INTO unlocks VALUES (?, ?, ?)",
-                                 (character, unlock, int(time.time()))).rowcount == 1
+            fresh = c.execute("INSERT OR IGNORE INTO unlocks VALUES (?, ?, ?)",
+                              (character, unlock, int(time.time()))).rowcount == 1
+            return fresh, self._state(c, character)
 
-        self._transaction(body)
-        return fresh[0], self.load(character)
+        result = self._transaction(body)
+        assert isinstance(result, tuple)
+        return result
 
     # --- reads -----------------------------------------------------------------------------------------
 
@@ -299,11 +311,18 @@ class CharacterStore:
         return self.load(character)
 
     def load(self, character: str) -> CharacterState:
-        rows = self._read("SELECT name, completed FROM characters WHERE id = ?", (character,))
+        try:
+            return self._state(self.conn, character)
+        except sqlite3.Error as exc:
+            raise StoreError(f"storage read failed: {exc}") from exc
+
+    @staticmethod
+    def _state(c: sqlite3.Connection, character: str) -> CharacterState:
+        rows = c.execute("SELECT name, completed FROM characters WHERE id = ?", (character,)).fetchall()
         if not rows:
             raise AccessDenied()
-        items = self._read("SELECT item, quantity FROM inventory WHERE character = ? ORDER BY item", (character,))
-        unlocks = self._read("SELECT key FROM unlocks WHERE character = ? ORDER BY key", (character,))
+        items = c.execute("SELECT item, quantity FROM inventory WHERE character = ? ORDER BY item", (character,))
+        unlocks = c.execute("SELECT key FROM unlocks WHERE character = ? ORDER BY key", (character,))
         return CharacterState(character, rows[0][0], tuple((i, q) for i, q in items), tuple(k for k, in unlocks),
                               rows[0][1])
 
@@ -350,12 +369,18 @@ def main(argv: list[str] | None = None) -> int:
         try:
             if args.command == "create":
                 key_file = Path(args.key_file)
-                if key_file.exists():
-                    raise FileExistsError(f"{key_file} exists; a key file is never replaced")
-                cid, key = store.create(args.name)
+                # The key file is made first (new, private), so a character never exists without its key.
                 fd = os.open(key_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
                 with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                    try:
+                        cid, key = store.create(args.name)
+                    except BaseException:
+                        handle.close()
+                        key_file.unlink()  # (the empty file this command just made)
+                        raise
                     json.dump({"id": cid, "name": args.name.strip(), "key": key}, handle)
+                    handle.flush()
+                    os.fsync(handle.fileno())
                 print(f"created {args.name.strip()!r} ({cid}); access key written to {key_file}")
             elif args.command == "list":
                 for state in store.characters():
@@ -366,7 +391,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"backed up to {args.copy}")
         finally:
             store.close()
-    except (StoreUnavailable, StoreError, ValueError, FileExistsError) as exc:
+    except (StoreUnavailable, StoreError, ValueError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     return 0

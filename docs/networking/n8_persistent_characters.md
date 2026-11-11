@@ -93,10 +93,14 @@ reused is read-only (`ItemDatabase.load`, N6's `roll_drops`). N8 proceeds.
 - **One server per store:** `locking_mode=EXCLUSIVE`; the lock is taken by the start-up write and held until close,
   so a second server (or a stale one) is refused ("in use by another server").
 - **Refused, never repaired:** a missing file (unless `new-store`), an existing file for `new-store`, a non-database,
-  a damaged file (`PRAGMA quick_check`), a foreign SQLite file, a newer schema, a read-only file. The file is left
-  byte for byte as it was.
+  a damaged file (`PRAGMA quick_check`), a foreign SQLite file, a newer schema, a read-only file. Its content is not
+  changed. (Opening it runs SQLite's own crash recovery: a `-wal` journal a crashed server left behind is folded into
+  the file, keeping every committed change; tested.)
 - **Bounds:** 1000 characters per store, 16 distinct items per character, 999 of one item (and the item's own
-  `max_stack`), 8 items per claim.
+  `max_stack`), 8 items per claim, 64 unlock rules. A world refuses at load a drop a character could never hold (a
+  quantity above 999) and an enemy id too long for a claim key.
+- **After a failed rollback** the store refuses every later write (`StoreError`, "restart the server") rather than
+  guess at its connection's state; the journal rolls the transaction back on the next open.
 - **Migrations:** the schema version is checked at open; a store with another version is refused, never upgraded
   implicitly. A future version adds a migration step that runs only on request and only after a backup.
 - **Backup and restore:** `python -m mesh_net.characters backup STORE COPY` (SQLite's online backup, consistent while
@@ -142,3 +146,15 @@ Loopback only, as N4-N7. The access key proves ownership; the character id and n
 them to a new file only, mode 0600 where the OS supports it). Not addressed: anything that can read the player's
 key file or the server's process can act as that character; no transport encryption (loopback); no account
 recovery. These are deliberate limits of a local prototype, not of the store.
+
+## Known limits
+
+- Items cannot be removed (no use, drop or trade in N8): a full stack or slot list stays full.
+- Completions still owed when the server stops (the store was failing) are lost; they are logged, and the queue is
+  bounded (64; a full queue logs each further one as an error rather than dropping it silently).
+- A server pointed at a copy of a store could grant drops of its own run again: the store is the authority, and
+  copies are the owner's business (backups are for restoring, not for running side by side).
+- Only characters online in the instance when an enemy dies share its loot and unlocks (a retained, disconnected
+  party member does not).
+- After a server restart a window must join afresh (N): its old resume credential belonged to the old process.
+- The `fault` hook in `CharacterStore` exists for fault-injection tests; nothing sets it in normal runs.

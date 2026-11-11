@@ -266,6 +266,8 @@ class World:
         if progress is None and character is not None:
             raise persistence.Refused("unexpected_character")
         state = None
+        if resume is not None and character is not None:
+            raise wire.Invalid("a join resumes or names a character, not both")
         if resume is None and progress is not None:
             state = progress.authenticate(character)
             held = progress.owner.get(state.id)
