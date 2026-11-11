@@ -98,7 +98,8 @@ def test_the_wheel_bundles_exactly_the_allow_list(built: tuple[Path, Path, Path]
             "mesh_net/scene_client.py", "mesh_net/coop/scene.json", "mesh_net/coop/map.json",
             "mesh_net/coop/prefabs.json", "mesh_net/world.py", "mesh_net/world_client.py",
             "mesh_net/expedition/world.json", "mesh_net/expedition/hub.json", "mesh_net/expedition/ruins_1.json",
-            "mesh_net/expedition/ruins_2.json", "mesh_net/expedition/ruins_2_map.json"} <= set(names)
+            "mesh_net/expedition/ruins_2.json", "mesh_net/expedition/ruins_2_map.json", "mesh_net/characters.py",
+            "mesh_net/persistence.py", "mesh_net/expedition/items.json", "mesh_net/expedition/progression.json"} <= set(names)
     schemas = sorted(p.relative_to(REPO).as_posix() for p in (REPO / "engine" / "schemas").glob("*.json"))
     assert schemas and set(schemas) <= set(names), "the engine's own schemas travel with the package"
 
@@ -244,6 +245,72 @@ def test_the_installed_world_server_runs_isolated(built: tuple[Path, Path, Path]
     assert Path(facts["package"]).resolve().is_relative_to(venv.resolve()) and facts["graphics"] == []
     assert facts["rooms"][0] == facts["rooms"][1] == "ancient_ruins_layer_1:2"
     assert facts["instances"] == ["ancient_ruins_layer_1:2", "start:1"]
+
+
+_CHARACTERS = """
+import asyncio, json, subprocess, sys
+from pathlib import Path
+import mesh_net
+from mesh_net import protocol as wire
+from mesh_net.characters import CharacterStore
+from mesh_net.persistence import expedition_rules
+from mesh_net.scene_room import disposable_project
+from mesh_net.server import WorldServer
+from mesh_net.world import World, check_frame, check_welcome, expedition_files
+
+store_path, key_file = Path("characters.db").resolve(), Path("ada.json").resolve()
+run = [sys.executable, "-I", "-m", "mesh_net.characters"]
+made = [subprocess.run([*run, "new-store", str(store_path)], capture_output=True, text=True).returncode,
+        subprocess.run([*run, "create", str(store_path), "Ada", "--key-file", str(key_file)],
+                       capture_output=True, text=True).returncode]
+credential = {k: v for k, v in json.loads(key_file.read_text(encoding="utf-8")).items() if k in ("id", "key")}
+
+async def main():
+    store = CharacterStore(store_path)
+    with disposable_project(expedition_files(), scaffold=False) as root:
+        world = World(root, store=store, rules=expedition_rules())
+    ids = {k: d.proto.identity for k, d in world.defs.items()}
+    server = WorldServer(world)
+    port = await server.start()
+    try:
+        r, w = await asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES)
+        w.write(wire.encode({"v": 1, "type": "join", "resume": None, "character": credential}))
+        check_welcome(await wire.read(r), world.identity)
+        sheet = None
+        while sheet is None:
+            msg = await wire.read(r)
+            check_frame(msg, ids)
+            sheet = msg if msg["type"] == "character" else None
+        w.close()
+        print("MESH-CHARACTERS " + json.dumps({"made": made, "name": sheet["name"], "id": sheet["id"] == credential["id"],
+              "items": sorted(world.progress.store.stack_limits), "package": mesh_net.__file__,
+              "graphics": [m for m in ("arcade", "pyglet") if m in sys.modules]}))
+    finally:
+        await server.close()
+        store.close()
+
+asyncio.run(main())
+"""
+
+
+def test_the_installed_world_keeps_characters(built: tuple[Path, Path, Path]) -> None:
+    """N8: from the installed wheel alone, the admin command makes a store and a character, and the world server
+    takes that character back over a socket, with the item database and rules shipped in the package."""
+    import json
+    import subprocess
+
+    wheel, venv, scratch = built
+    _holding(venv, wheel)
+    work = scratch / "characters"
+    work.mkdir()
+    proc = subprocess.run([str(ipc.venv_python(venv)), "-I", "-c", _CHARACTERS], cwd=work, env=ipc.clean_env(scratch),
+                          capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+    line = next((x for x in proc.stdout.splitlines() if x.startswith("MESH-CHARACTERS ")), None)
+    assert line, (proc.stderr or proc.stdout)[-1500:]
+    facts = json.loads(line[len("MESH-CHARACTERS "):])
+    assert Path(facts["package"]).resolve().is_relative_to(venv.resolve()) and facts["graphics"] == []
+    assert facts["made"] == [0, 0] and facts["name"] == "Ada" and facts["id"]
+    assert facts["items"] == ["guardian_sigil", "relic_shard"]
 
 
 _ASSET = "assets/sprites/starter_hero.png"

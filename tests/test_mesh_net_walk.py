@@ -56,8 +56,9 @@ class LateWindow:
         op, key = command.split()
         self.pending.append((self.room.tick + self.late, op, key))
 
-    def avatar(self):
-        return self.room, self.room.players[self.eid]
+    async def where(self):
+        body = self.room.players[self.eid].body
+        return self.room.tick, body.center_x, body.center_y
 
     def pos(self):
         body = self.room.players[self.eid].body
@@ -135,7 +136,7 @@ def test_walk_lands_inside_the_gap_and_gets_through_at_every_delay(room, start, 
     window = LateWindow(room(), start, late=late)
 
     async def driver():
-        y = await walk(window.send, "DOWN", *GAP, window.avatar)
+        y = await walk(window.send, "DOWN", *GAP, window.where)
         x, _ = await hold_until(window, "RIGHT", lambda p: p[0] >= 470)
         return x, y
 
@@ -158,10 +159,10 @@ def test_walk_onto_the_enemy_from_above_lands_a_strike(room, enemy, route, late)
     window = LateWindow(r, start, late=late)
 
     async def driver():
-        await walk(window.send, key, target, within, window.avatar)
-        await walk(window.send, "UP", *ABOVE, window.avatar)
-        await walk(window.send, key2, target2, within2, window.avatar)
-        return await walk(window.send, "DOWN", *ON_ENEMY, window.avatar)
+        await walk(window.send, key, target, within, window.where)
+        await walk(window.send, "UP", *ABOVE, window.where)
+        await walk(window.send, key2, target2, within2, window.where)
+        return await walk(window.send, "DOWN", *ON_ENEMY, window.where)
 
     assert play(window, driver) == 268.0
     player = r.players[window.eid]
@@ -173,12 +174,12 @@ def test_walk_onto_the_enemy_from_above_lands_a_strike(room, enemy, route, late)
 def test_walk_still_fails_when_input_never_arrives():
     window = LateWindow(coop(), (372.0, 327.5), late=0, deaf=True)
     with pytest.raises(AssertionError, match="moving"):
-        play(window, lambda: walk(window.send, "DOWN", *GAP, window.avatar, timeout=1))
+        play(window, lambda: walk(window.send, "DOWN", *GAP, window.where, timeout=1))
 
 
 def test_walk_still_fails_when_a_wall_blocks_the_way():
     """Below the gap, RIGHT can't reach x 470: the avatar stops at the wall and the walk fails, never passes."""
     window = LateWindow(coop(), (372.0, 240.0), late=1)
     with pytest.raises(AssertionError, match="arriving"):
-        play(window, lambda: walk(window.send, "RIGHT", 470, 12, window.avatar, timeout=1))
+        play(window, lambda: walk(window.send, "RIGHT", 470, 12, window.where, timeout=1))
     assert window.pos()[0] == BLOCKED_X

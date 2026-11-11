@@ -1,0 +1,10 @@
+{
+  "unlocks": {
+    "ruins_layer_2_completed": {
+      "defeat": "ancient_ruins_layer_2_guardian_480_256_0_0",
+      "label": "Ancient Ruins \u2014 Layer 2 completed",
+      "room": "ancient_ruins_layer_2"
+    }
+  },
+  "version": 1
+}

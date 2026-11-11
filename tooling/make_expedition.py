@@ -24,6 +24,15 @@ SCENES = "packs/core_regions/scenes"
 WORLD = "packs/core_regions/worlds/main.json"
 HUB = f"{SCENES}/start.json"
 PREFABS = "assets/prefabs.json"
+ITEMS = "assets/data/items.json"  # engine.inventory's item database, in its own format
+PROGRESSION = "mesh_net/progression.json"  # N8: the world's unlock rules (server data, not a project file)
+# What the expedition's enemies drop (DropTable item_id): defined as every Mesh game defines items.
+ITEM_DEFS: dict[str, list[dict[str, object]]] = {"items": [
+    {"id": "relic_shard", "name": "Relic Shard", "description": "A carved fragment from the Ancient Ruins.",
+     "icon": None, "stackable": True, "max_stack": 20, "tags": ["relic"], "effects": {}},
+    {"id": "guardian_sigil", "name": "Guardian Sigil", "description": "Proof the Ruins' guardian has fallen.",
+     "icon": None, "stackable": False, "max_stack": 1, "tags": ["relic"], "effects": {}},
+]}
 HUB_LABEL, RUINS_1, RUINS_2 = "Adventurer's Hub", "Ancient Ruins — Layer 1", "Ancient Ruins — Layer 2"
 
 
@@ -70,10 +79,10 @@ def build() -> dict[str, str]:
     # Layer 1: a wall across the room with a gate a lever opens; a bandit beyond it guards the way down.
     r1 = ops.paint_tiles(r1, ops.WALLS, [(13, row) for row in range(1, 15) if row not in (7, 8)], ops.STARTER_WALL)
     r1 = _lever_and_gate(ops, r1, k1, (352, 352), (432, 256), "ruins_1_gate")
-    r1 = _enemy(ops, r1, k1, VILLAGER_SHEET, "Bandit", (608, 352), hp=3, gold=10, seed=7)
+    r1 = _enemy(ops, r1, k1, VILLAGER_SHEET, "Bandit", (608, 352), hp=3, item="relic_shard", seed=7)
     # Layer 2: its own lever and gate, and its own enemy.
     r2 = _lever_and_gate(ops, r2, k2, (224, 384), (480, 416), "ruins_2_gate")
-    r2 = _enemy(ops, r2, k2, VILLAGER_SHEET, "Guardian", (480, 256), hp=2, gold=25, seed=3)
+    r2 = _enemy(ops, r2, k2, VILLAGER_SHEET, "Guardian", (480, 256), hp=2, item="guardian_sigil", seed=3)
 
     # Doors, as Studio's "Add door to a room" makes them, shown as invisible passages (an area to walk into).
     hub, r1 = ops.link_rooms(hub, "start", HUB_LABEL, (704.0, 256.0), r1, k1, RUINS_1, (64.0, 256.0))
@@ -85,7 +94,11 @@ def build() -> dict[str, str]:
     def text(doc: object) -> str:
         return json.dumps(doc, indent=2, sort_keys=True) + "\n"
 
-    return {WORLD: text(world), HUB: text(hub), p1: text(r1), p2: text(r2), PREFABS: text(prefabs), **maps}
+    guardian = next(e["id"] for e in r2["entities"] if e.get("name") == "Guardian")
+    progression = {"version": 1, "unlocks": {"ruins_layer_2_completed": {
+        "label": f"{RUINS_2} completed", "room": k2, "defeat": guardian}}}
+    return {WORLD: text(world), HUB: text(hub), p1: text(r1), p2: text(r2), PREFABS: text(prefabs), ITEMS: text(ITEM_DEFS),
+            PROGRESSION: text(progression), **maps}
 
 
 def _edge(ops, width: int, height: int) -> list[tuple[int, int]]:
@@ -105,7 +118,7 @@ def _lever_and_gate(ops, scene, key, lever_at, gate_at, event):
     return ops.set_behaviour_param(scene, gate, "DoorLock", "unlock_event", event)
 
 
-def _enemy(ops, scene, key, sheet, name, at, *, hp, gold, seed):
+def _enemy(ops, scene, key, sheet, name, at, *, hp, item, seed):
     scene, enemy = ops.place_blank(scene, key, name, *at)
     scene = ops.set_picture(scene, enemy, sheet)
     scene = ops.set_animation(scene, enemy, ops.character_clips(
@@ -117,7 +130,7 @@ def _enemy(ops, scene, key, sheet, name, at, *, hp, gold, seed):
     scene = ops.set_behaviour_param(scene, enemy, "Health", "max_hp", hp)
     scene = ops.set_behaviour_param(scene, enemy, "Health", "hp", hp)
     scene = ops.add_behaviour(scene, enemy, "DropTable")
-    scene = ops.set_behaviour_param(scene, enemy, "DropTable", "drops", [{"chance": 1.0, "gold": gold}])
+    scene = ops.set_behaviour_param(scene, enemy, "DropTable", "drops", [{"chance": 1.0, "item_id": item}])
     return ops.set_behaviour_param(scene, enemy, "DropTable", "seed", seed)
 
 
@@ -133,7 +146,8 @@ def main() -> None:
 
     OUT.mkdir(exist_ok=True)
     for rel, text in build().items():
-        (OUT / EXPEDITION_FILES[rel]).write_text(text, encoding="utf-8", newline=chr(10))
+        name = "progression.json" if rel == PROGRESSION else EXPEDITION_FILES[rel]
+        (OUT / name).write_text(text, encoding="utf-8", newline=chr(10))
 
 
 if __name__ == "__main__":
