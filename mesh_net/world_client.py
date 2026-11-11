@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import math
 import time
 from collections import deque
@@ -52,6 +53,9 @@ class WorldArena(Arena):
         self.view: SceneView | None = None
         self.shown: str | None = None  # the room the view shows
         self.party: wire.Message | None = None
+        self.character: dict[str, str] | None = None  # N8: {"id", "key"} of the character this window plays
+        self.sheet: wire.Message | None = None  # the server's account of that character (items, unlocks)
+        self.refused: str | None = None
         self.notice: tuple[str, float] | None = None
         self.requests: list[wire.Message] = []
         self.seq = 0
@@ -149,6 +153,8 @@ class WorldArena(Arena):
             self.playback.push(state, now)
         elif kind == "party":
             self.party = msg
+        elif kind == "character":
+            self.sheet = msg
         elif kind == "notice":
             self.notice = (msg["code"], now + 3.0)
 
@@ -157,8 +163,16 @@ class WorldArena(Arena):
         try:
             reader, writer = await asyncio.wait_for(asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES), 3)
             try:
-                writer.write(wire.encode({"v": 1, "type": "join", "resume": self.token}))
+                join = {"v": 1, "type": "join", "resume": self.token}
+                if self.character is not None and self.token is None:
+                    join["character"] = self.character
+                writer.write(wire.encode(join))
                 hello = await wire.read(reader)
+                if hello.get("type") == "refused":  # the server said why it would not take this character
+                    wire.fields(hello, "refused", "code")
+                    self.refused = str(hello["code"])[:32]
+                    self.note(f"refused: {self.refused}")
+                    raise wire.Invalid(f"refused ({self.refused})")
                 check_welcome(hello, self.identity)
                 self.player, self.token, self.phase = hello["player"], hello["resume"], "loading"
                 self.note(f"welcome as P{self.player}")
@@ -231,7 +245,10 @@ class WorldArena(Arena):
             group = "no party (P create, I invite)"
         invites = f" | invite from P{party['invites'][0][1]} Y/N" if party.get("invites") else ""
         notice = f" | {NOTICE_TEXT[self.notice[0]]}" if self.notice else ""
-        return f"P{self.player} {label} | {group}{invites}{notice}"
+        sheet = self.sheet
+        own = (f"{sheet['name']} ({sum(q for _, q in sheet['items'])} items, {len(sheet['unlocks'])} unlocks) | "
+               if sheet else "")
+        return f"{own}P{self.player} {label} | {group}{invites}{notice}"
 
     def draw(self, now: float) -> None:
         if self.notice and now > self.notice[1]:
@@ -267,9 +284,21 @@ class WorldArena(Arena):
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=46870)
+    parser.add_argument("--character", help="the key file of the character to play (N8: python -m "
+                                            "mesh_net.characters create STORE NAME --key-file FILE)")
     args = parser.parse_args()
+    character = read_character(args.character) if args.character else None
     with open_arena(expedition_files(), SIZE, WorldArena) as arena:
+        arena.character = character
         asyncio.run(arena.run(args.port))
+
+
+def read_character(path: str) -> dict[str, str]:
+    """A character's key file: its id and access key (never shown)."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or not isinstance(data.get("id"), str) or not isinstance(data.get("key"), str):
+        raise SystemExit(f"{path} is not a character key file")
+    return {"id": data["id"], "key": data["key"]}
 
 
 if __name__ == "__main__":

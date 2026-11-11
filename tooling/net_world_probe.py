@@ -11,7 +11,7 @@ import sys
 from unittest.mock import patch
 
 from mesh_net.world import expedition_files
-from mesh_net.world_client import SIZE, WorldArena
+from mesh_net.world_client import SIZE, WorldArena, read_character
 from tooling.net_scene_probe import capture
 
 
@@ -36,6 +36,7 @@ async def drive(arena, port: int) -> None:
             result = {"phase": arena.phase, "player": arena.player, "room": arena.room, "key": arena.key,
                       "shown": arena.shown, "entity": arena.entity, "state": arena.state, "party": arena.party,
                       "status": arena.status, "identity": arena.identity, "loads": arena.loads, "trace": list(arena.trace),
+                      "sheet": arena.sheet, "refused": arena.refused,
                       "scene_path": getattr(arena.window.scene_controller, "current_scene_path", None)}
             if cmd[0] == "capture" and arena.view is not None:
                 result.update(capture(arena))
@@ -50,10 +51,12 @@ if __name__ == "__main__":
     from mesh_net.demo import open_arena
 
     original = optional_arcade.arcade.Window.__init__
+    character = read_character(sys.argv[2]) if len(sys.argv) > 2 else None  # (N8: a character key file)
 
     def hidden(window, *args, **kwargs):
         original(window, *args, **{**kwargs, "visible": False})
 
     with patch.object(optional_arcade.arcade.Window, "__init__", hidden), \
             open_arena(expedition_files(), SIZE, WorldArena) as arena:
+        arena.character = character
         asyncio.run(drive(arena, int(sys.argv[1])))

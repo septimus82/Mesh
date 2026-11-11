@@ -122,7 +122,7 @@
           "drops": [
             {
               "chance": 1.0,
-              "gold": 10
+              "item_id": "relic_shard"
             }
           ],
           "listen_event": "died",
