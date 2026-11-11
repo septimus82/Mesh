@@ -174,6 +174,20 @@ def test_two_windows_play_the_studio_scene_together():
         await command(proc, f"press {key}")
         await command(proc, f"release {key}")
 
+    async def settle(proc, eid, low, high):
+        """Bring the avatar's y into [low, high] a tick at a time (a held key's late release overshot past the gate's
+        gap: its feet then caught the wall below it, on hosted Windows too)."""
+        for _ in range(40):
+            state = await observe(proc, lambda s: True)
+            y = pos(state["state"], eid)[1]
+            if low <= y <= high:
+                return
+            key = "DOWN" if y > high else "UP"
+            await command(proc, f"press {key}")
+            await observe(proc, lambda s, t=state["state"]["tick"]: s["tick"] > t)
+            await command(proc, f"release {key}")
+        raise AssertionError(f"y not settled in [{low}, {high}]")
+
     async def run():
         room = _scene_room()
         server = Server(room)
@@ -221,7 +235,8 @@ def test_two_windows_play_the_studio_scene_together():
                 assert (await command(proc, "capture"))["objects"][gate][4] is False
 
             # Combat: both reach the bandit and strike it; the server's HP, death and loot reach both windows.
-            await hold(a, "DOWN", a, lambda s: pos(s, aid)[1] <= 262)
+            await hold(a, "DOWN", a, lambda s: pos(s, aid)[1] <= 270)
+            await settle(a, aid, 249, 259)  # feet inside the gap (y >= 248), level with the bandit's feet (y < 260)
             await hold(a, "RIGHT", a, lambda s: pos(s, aid)[0] >= 575)
             await hold(b, "RIGHT", b, lambda s: pos(s, bid)[0] >= 560)
             await tap(a, "SPACE")
