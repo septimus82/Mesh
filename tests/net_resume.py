@@ -9,6 +9,8 @@ which that pre-drop reply already satisfied: it took entity 2, and the window th
 
 ``drop_and_resume`` waits on each step: the window's own disconnect and the server's record of it, then the
 server's record of the resume, then the window showing the server's new avatar for that player in that room.
+``drop_and_resume_scene`` does the same for N6's single scene (mesh_net.server.Server and mesh_net.demo.Arena), whose
+pre-drop reply ("two players") its old wait accepted the same way.
 """
 
 from __future__ import annotations
@@ -70,4 +72,60 @@ async def drop_and_resume(command: Callable[[str], Awaitable[dict[str, Any]]], w
 
     back = await until("the resumed session", resumed)
     assert back["entity"] != before, f"P{pid} still shows its pre-drop avatar {before}"
+    return back
+
+
+async def drop_and_resume_scene(command: Callable[[str], Awaitable[dict[str, Any]]], server: Any, eid: int,
+                                away: Callable[[], Awaitable[Any]] | None = None, timeout: float = 10) -> dict[str, Any]:
+    """N6's drop and resume: entity ``eid``'s window (mesh_net.demo.Arena, driven by tooling/net_scene_probe) on
+    ``server`` (mesh_net.server.Server hosting a SceneRoom). Return the window's first reply from the resumed session.
+
+    Arena's F2 closes the connection (the server removes the entity at once) and then waits for the close, the probe
+    still answering with the old client: that entity, and a state with every player in it. Until the close ends,
+    R is ignored. So this waits for the window to have no client *and* the server to have parked the character
+    offline; only then sends R; then waits for the server to have rejoined that same character (the Player object
+    the resume token holds) under a new entity, and for the window to show that entity. Any player the server
+    gains that is not one it already had is an unexpected join, and fails at once.
+    """
+    room = server.room
+    character = room.players[eid]
+    before = dict(room.players)
+
+    async def until(what: str, ok: Callable[[dict[str, Any]], bool]) -> dict[str, Any]:
+        reply: dict[str, Any] = {}
+        try:
+            async with asyncio.timeout(timeout):
+                while not ok(reply := await command("state")):
+                    await asyncio.sleep(POLL)
+                return reply
+        except TimeoutError as exc:
+            raise AssertionError(f"resume of entity {eid}: {what} not reached in {timeout} s; window entity "
+                                 f"{reply.get('entity')}, status {reply.get('status')!r}; server players "
+                                 f"{sorted(room.players)}, peers {sorted(server.peers)}") from exc
+
+    def offline() -> bool:
+        return any(p is character for _, p in server.offline.values())
+
+    pre = await command("state")
+    assert pre["entity"] == eid and eid in server.peers and pre["state"], (pre["entity"], sorted(server.peers))
+    await command("press F2")
+    await until("the disconnect", lambda r: r["entity"] is None and r["state"] is None
+                and eid not in room.players and eid not in server.peers and offline())
+    if away is not None:
+        await away()
+    await command("release F2")
+    await command("press R")  # (handled while the window has no client: only then does R resume)
+    await command("release R")
+
+    def resumed(r: dict[str, Any]) -> bool:
+        joined = {e for e, p in room.players.items() if before.get(e) is not p}
+        strangers = sorted(e for e in joined if room.players[e] is not character)
+        assert not strangers, f"unexpected join while entity {eid} resumed: {strangers}"
+        if not joined:
+            return False
+        (new,) = joined
+        return r["entity"] == new and r["state"] is not None and any(row[0] == new for row in r["state"]["players"])
+
+    back = await until("the resumed session", resumed)
+    assert back["entity"] != eid and room.players[back["entity"]] is character and not offline()
     return back
