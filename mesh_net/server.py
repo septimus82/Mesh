@@ -201,14 +201,16 @@ def main() -> None:
                         help="host the packaged hub and expedition rooms (mesh_net/expedition)")
     args = parser.parse_args()
     with ExitStack() as stack:
-        room, host = None, Server
+        room: Any = None
+        host: type[Server] = Server
         if args.expedition:
             from .scene_room import disposable_project
             from .world import World, expedition_files
 
             root = stack.enter_context(disposable_project(expedition_files(), scaffold=False))
-            room, host = World(root), WorldServer
-            print(f"Mesh world {room.identity[:12]}", flush=True)
+            world = World(root)
+            room, host = world, WorldServer
+            print(f"Mesh world {world.identity[:12]}", flush=True)
         elif args.coop:
             from .scene_room import COOP_SCENE, SceneRoom, coop_files, disposable_project
 

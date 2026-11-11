@@ -5,7 +5,6 @@ import json
 import subprocess
 import sys
 import time
-from contextlib import AsyncExitStack
 
 import pytest
 
@@ -13,8 +12,15 @@ from mesh_net import protocol as wire
 from mesh_net.scene_room import Unsupported, disposable_project
 from mesh_net.server import WorldServer
 from mesh_net.world import (
-    EXPEDITION_FILES, MAX_INSTANCES, MAX_INVITES, MAX_PARTY, RETAIN_TICKS, TransferResult, World, check_frame,
-    check_welcome, expedition_files,
+    EXPEDITION_FILES,
+    MAX_INSTANCES,
+    MAX_INVITES,
+    MAX_PARTY,
+    RETAIN_TICKS,
+    World,
+    check_frame,
+    check_welcome,
+    expedition_files,
 )
 
 HUB, R1, R2 = "start", "ancient_ruins_layer_1", "ancient_ruins_layer_2"
@@ -161,23 +167,18 @@ def test_committed_world_is_a_fresh_studio_build(files):
 
 @pytest.mark.integration
 def test_the_rooms_are_ordinary_single_player_scenes(files):
-    """Each room loads in single-player through the engine's own loader; nothing in N7 is a new format."""
-    code = ("import sys, json; from engine.scene_loader import SceneLoader; from engine.migrations import migrate_payload\n"
-            "for p in sys.argv[1:]:\n"
-            "    d = SceneLoader().load(p) if hasattr(SceneLoader(), 'load') else None\n"
-            "    assert json.load(open(p, encoding='utf-8'))['entities']\n")
-    with disposable_project(files, scaffold=False) as root:
+    """Nothing in them is multiplayer-specific: the world file is Studio's (keys, paths, its own ``tags`` field), and
+    the engine's strict loader keeps every room's objects, doors and arrival markers."""
+    from engine.scene_loader import SceneLoader
+
+    with disposable_project(files) as root:
         world = json.loads((root / "packs/core_regions/worlds/main.json").read_text(encoding="utf-8"))
-        assert {k: v["path"] for k, v in world["scenes"].items()} == SCENES
-        assert {k: v["tags"] for k, v in world["scenes"].items()} == {HUB: ["start"], R1: ["expedition"], R2: ["expedition"]}
-        from engine.scene_loader import SceneLoader
-        from engine.migrations import migrate_payload
-        from engine.schema_validation import validate
-        for path in SCENES.values():
-            doc = migrate_payload("scene", json.loads((root / path).read_text(encoding="utf-8")))
-            validate(doc, "scene.schema.json", root / path)
-            assert SceneLoader().apply_scene_defaults(doc)["entities"]
-    assert code  # (the engine loader itself runs in the GPU test's windows)
+        scenes = {key: SceneLoader().load_scene(str(root / path), strict=True) for key, path in SCENES.items()}
+    assert {k: v["path"] for k, v in world["scenes"].items()} == SCENES and world["start_scene"] == HUB
+    assert {k: v["tags"] for k, v in world["scenes"].items()} == {HUB: ["start"], R1: ["expedition"], R2: ["expedition"]}
+    assert [e["tag"] for e in scenes[R1]["entities"] if e.get("tag") in ("door", "spawn_point")] == ["door", "spawn_point"] * 2
+    player = scenes[R2]["entities"][0]
+    assert [b["type"] for b in player["behaviours"]] == ["PlayerController", "CameraFollow", "Animator", "Combat"]
 
 
 @pytest.mark.integration
@@ -391,10 +392,21 @@ def test_departed_rooms_are_destroyed(world):
     d.party(a, b)
     d.through_hub_door(a, b)
     r1 = d.m(a).instance
+    open_gate(d, a)
+    d.to_layer_2(a)
+    d.to_layer_2(b)
+    r2 = d.m(a).instance
+    assert d.room(a).key == R2 and r1 in d.w.instances  # the party is still in its expedition
+    for pid in (a, b):  # back up to Layer 1 through Layer 2's door: as they left it
+        d.place(pid, 128.0, 256.0)
+    d.walk_in(-1, a, b)
+    assert d.m(a).instance == r1 and GATE1 in d.room(a).room.snapshot()["open"] and r2 in d.w.instances
     for pid in (a, b):  # back to the hub through Layer 1's door
         d.place(pid, 128.0, 256.0)
-    d.walk(a, -1, 0, 6, b)
-    assert d.room(a) is d.w.hub and d.room(b) is d.w.hub and r1 not in d.w.instances
+    d.walk_in(-1, a)
+    assert d.room(a) is d.w.hub and r1 in d.w.instances  # b is still inside
+    d.walk_in(-1, b)
+    assert d.room(b) is d.w.hub and r1 not in d.w.instances and r2 not in d.w.instances
     d.through_hub_door(a, b)
     r1b = d.m(a).instance
     assert r1b != r1  # a new instance, never the old id
@@ -454,22 +466,21 @@ def test_declined_and_simultaneous_invitations(world):
 
 
 @pytest.mark.integration
-def test_party_size_and_invitation_bounds(world):
-    d = Driver(world)
-    pids = [d.join()[0] for _ in range(wire.MAX_PLAYERS)]
-    leader, *rest = pids
-    for pid in rest[:MAX_PARTY - 1]:
+def test_party_size_and_invitation_bounds(files):
+    d = Driver(make_world(files))
+    leader, *rest = (d.join()[0] for _ in range(MAX_PARTY + 1))
+    for pid in rest[:-1]:
         d.party(leader, pid)
-    late = rest[MAX_PARTY - 1]
-    d.ask(leader, "invite", player=late)
-    d.ask(late, "accept", party=d.m(leader).party)
-    assert d.notices(late)[-1] == "party_full" and len(d.w.parties[d.m(leader).party].members) == MAX_PARTY
-    target = rest[-1]
-    d.ask(target, "decline", party=d.m(leader).party) if d.m(leader).party in d.w.invites.get(target, {}) else None
-    inviters = [p for p in pids if d.m(p).party is None and p != target]
-    for p in inviters[:MAX_INVITES + 1]:
-        d.ask(p, "invite", player=target)
-    assert len(d.w.invites[target]) <= MAX_INVITES
+    d.ask(leader, "invite", player=rest[-1])
+    d.ask(rest[-1], "accept", party=d.m(leader).party)
+    assert d.notices(rest[-1]) == ["party_full"] and len(d.w.parties[d.m(leader).party].members) == MAX_PARTY
+    d = Driver(make_world(files))
+    target, *leaders = (d.join()[0] for _ in range(wire.MAX_PLAYERS))
+    for pid in leaders:
+        d.ask(pid, "invite", player=target)
+    assert len(d.w.invites[target]) == MAX_INVITES
+    assert [d.notices(p) for p in leaders] == [[]] * MAX_INVITES + [["busy"]] * (len(leaders) - MAX_INVITES)
+    assert len(d.w.parties) == MAX_INVITES  # a refused invitation creates no party
 
 
 @pytest.mark.integration
@@ -667,6 +678,8 @@ def test_two_clients_travel_reconnect_and_return_over_sockets(files):
 
 @pytest.mark.integration
 def test_measure_world_tick_and_transfer_cost(world):
+    """Descriptive only (printed, never a gate): one world tick with 8 players in 5 rooms, and the tick in which a
+    player walks through a door."""
     d = Driver(world)
     pids = [d.join()[0] for _ in range(wire.MAX_PLAYERS)]
     for i in range(0, len(pids), 2):  # four parties of two, each in its own Layer 1
@@ -681,14 +694,16 @@ def test_measure_world_tick_and_transfer_cost(world):
         d.w.deliver()
         samples.append((time.perf_counter() - started) * 1000)
     samples.sort()
-    a, _ = d.join() if len(d.w.members) < wire.MAX_PLAYERS else (None, None)
-    transfers = []
-    pid = pids[0]
-    for _ in range(20):
-        d.place(pid, 640.0, 256.0) if d.room(pid).key == HUB else d.place(pid, 128.0, 256.0)
-        start = time.perf_counter()
-        d.walk(pid, 1 if d.room(pid).key == HUB else -1, 0, 6)
-        transfers.append((time.perf_counter() - start) * 1000 / 6)
+    pid, transfers = pids[0], []
+    for _ in range(20):  # one tick's walk from beside a door into it: Layer 1 to the hub and back
+        to_hub = d.room(pid).key == R1
+        d.place(pid, 116.0 if to_hub else 652.0, 256.0)
+        d.send(pid, -1 if to_hub else 1, 0)
+        started = time.perf_counter()
+        d.w.step()
+        d.w.deliver()
+        transfers.append((time.perf_counter() - started) * 1000)
+        assert d.room(pid).key == (HUB if to_hub else R1)
+    transfers.sort()
     print(f"world tick, 8 players in 5 rooms: median {samples[100]:.2f} ms, p95 {samples[190]:.2f} ms; "
-          f"ticks with a transfer: mean {sum(transfers) / len(transfers):.2f} ms")
-    assert a is None
+          f"tick with a transfer: median {transfers[10]:.2f} ms, max {transfers[-1]:.2f} ms")

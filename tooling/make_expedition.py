@@ -57,14 +57,14 @@ def build() -> dict[str, str]:
     prefabs = [ops.player_prefab_entry(definition), *[p for p in prefabs if p.get("id") != ops.PLAYER_PREFAB]]
     template = ops.thin_player(next(e for e in hub["entities"] if e.get("prefab_id") == ops.PLAYER_PREFAB))
 
-    rooms = {}
+    rooms: dict[str, tuple[dict, str, str]] = {}
     for label in (RUINS_1, RUINS_2):  # studio_project.add_room
         world, scene, key, path = ops.new_room(world, label, SCENES, template)
         scene, map_path, skeleton = ops.add_map(scene, path, width=24, height=16, ground=ops.STARTER_FLOOR,
                                                 border=ops.STARTER_WALL)
         maps[map_path] = json.dumps(skeleton, indent=2, sort_keys=True) + "\n"
         world["scenes"][key]["tags"] = ["expedition"]
-        rooms[label] = [scene, key, path]
+        rooms[label] = (scene, key, path)
     (r1, k1, p1), (r2, k2, p2) = rooms[RUINS_1], rooms[RUINS_2]
 
     # Layer 1: a wall across the room with a gate a lever opens; a bandit beyond it guards the way down.

@@ -38,8 +38,10 @@ class SceneView:
         self.identity = room.identity
         sc = self.scene = window.scene_controller
         sprites = [s for s in sc.all_sprites if getattr(s, "mesh_id", None)]
-        if sorted(s.mesh_id for s in sprites) != room.ids:
-            raise RuntimeError("the loaded room's objects differ from its scene file's")
+        loaded = sorted(s.mesh_id for s in sprites)
+        if loaded != room.ids:
+            raise RuntimeError(f"the loaded room's objects differ from its scene file's: missing "
+                               f"{sorted(set(room.ids) - set(loaded))}, extra {sorted(set(loaded) - set(room.ids))}")
         self.sprites = {s.mesh_id: s for s in sprites}
         template = next(s for s in sprites if getattr(s, "mesh_tag", None) == "player")
         self.template = dict(template.mesh_entity_data)

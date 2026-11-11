@@ -16,6 +16,8 @@ import math
 from pathlib import Path
 from typing import Any
 
+from engine.scene_runtime.room_memory import VAR as ROOM_MEMORY
+
 from . import protocol as wire
 from .demo import Arena, open_arena
 from .playback import Playback
@@ -52,6 +54,7 @@ class WorldArena(Arena):
         self.requests: list[wire.Message] = []
         self.seq = 0
         self.last: float | None = None
+        self.loads: list[str] = []  # the rooms this window loaded, in order (for diagnostics and tests)
 
     # (the shown room's presentation, as tooling/net_world_probe.py reads it)
     scene = property(lambda self: self.view.scene)
@@ -172,7 +175,7 @@ class WorldArena(Arena):
                         msg = await wire.read(reader)
                         check_frame(msg, self.identities)
                         self.on_frame(msg, loop.time())
-                        self.status = self.describe()
+                        self.status = self.caption()
 
                 tasks = [asyncio.create_task(send()), asyncio.create_task(receive())]
                 try:
@@ -196,7 +199,7 @@ class WorldArena(Arena):
             self.blur()
             self.requests.clear()
 
-    def describe(self) -> str:
+    def caption(self) -> str:
         label = self.defs[self.key].label if self.key else "?"
         party = self.party or {}
         if party.get("party"):
@@ -211,9 +214,18 @@ class WorldArena(Arena):
     def draw(self, now: float) -> None:
         if self.notice and now > self.notice[1]:
             self.notice = None
-            self.status = self.describe() if self.connected else self.status
+            self.status = self.caption() if self.connected else self.status
         if self.pending is not None and self.pending["room"] == self.room and self.key is not None:
+            # Single-player room memory (engine.scene_runtime.room_memory) would record this window's own edits (the
+            # scene's player definition, which the view removes) as collected, as load_scene leaves a room, and leave
+            # them out when it loads again (a return visit, or a resume into the room on screen). Here the server owns
+            # every room's state: the room being left records nothing (no room path), and nothing recorded remains.
+            self.window.scene_controller.room_path = None
+            state = getattr(self.window, "game_state_controller", None)
+            if state is not None:
+                state.set_var(ROOM_MEMORY, {})
             self.window.load_scene(self.defs[self.key].path)  # the room the server put this player in
+            self.loads.append(self.room)
             self.view = SceneView(self.window, self.arcade, self.defs[self.key].proto)
             self.shown, self.pending, self.last, self.phase = self.room, None, None, "playing"
         dt = 0.0 if self.last is None else min(0.1, now - self.last)

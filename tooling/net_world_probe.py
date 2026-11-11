@@ -16,6 +16,9 @@ from tooling.net_scene_probe import capture
 
 
 async def drive(arena, port: int) -> None:
+    # A hidden window has no focus of its own: the OS deactivates it when another test window loads a room, and the
+    # client (rightly, for a player switching windows) then lets go of held keys. Driven by this probe, it keeps them.
+    arena.window.remove_handlers(on_deactivate=arena.blur)
     render = asyncio.create_task(arena.run(port))
     try:
         while True:
@@ -32,7 +35,7 @@ async def drive(arena, port: int) -> None:
                 arena.window.dispatch_event(event, getattr(arena.arcade.key, cmd[1]), 0)
             result = {"phase": arena.phase, "player": arena.player, "room": arena.room, "key": arena.key,
                       "shown": arena.shown, "entity": arena.entity, "state": arena.state, "party": arena.party,
-                      "status": arena.status, "identity": arena.identity,
+                      "status": arena.status, "identity": arena.identity, "loads": arena.loads,
                       "scene_path": getattr(arena.window.scene_controller, "current_scene_path", None)}
             if cmd[0] == "capture" and arena.view is not None:
                 result.update(capture(arena))

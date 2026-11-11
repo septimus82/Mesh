@@ -15,6 +15,7 @@ import hashlib
 import json
 import re
 import secrets
+from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -132,7 +133,8 @@ def room_defs(root: Path, world_file: str = WORLD_FILE) -> tuple[str, dict[str, 
         path = root / entry["path"]
         proto = SceneRoom(path, root)  # every N6 refusal applies
         _, scene = load_scene(path)
-        doors, arrivals = [], {}
+        doors: list[Door] = []
+        arrivals: dict[str, tuple[float, float]] = {}
         for e in scene["entities"]:
             if str(e.get("tag") or "").strip().lower() == "spawn_point":  # engine.scene_runtime.spawn.find_spawn_marker
                 marker = str(e.get("spawn_id") or e.get("name") or "").strip().lower()
@@ -206,6 +208,7 @@ class World:
         self.next_pid = self.next_party = 1
         self.prepare_hook: Any = None  # tests: a callable(key) that raises, to fail a destination's preparation
         self.shared: dict[str, Instance] = {}  # key -> the one instance of a room that is not an expedition
+        self.transfers: deque[tuple[int, int, str, str, str]] = deque(maxlen=32)  # (tick, pid, from, door, result)
         self.hub = self._create(self.start, None)
 
     # --- instances ----------------------------------------------------------------------------------
@@ -236,9 +239,12 @@ class World:
             self.shared.pop(inst.key, None)
 
     def _cleanup(self) -> None:
-        """An expedition instance nobody is in, online or retained, ends now."""
-        held = {m.instance for m in self.members.values()}
-        for inst in [i for i in self.instances.values() if i.party is not None and i.id not in held]:
+        """A party's expedition (its instances of every expedition room) lasts while one of its members, online or
+        retained, is in any of them: going down a layer and back finds the first as the party left it. It ends in
+        the tick the last one leaves."""
+        inside = {i.party for m in self.members.values() if (i := self.instances.get(m.instance or "")) is not None
+                  and i.party is not None and i.party == m.party}
+        for inst in [i for i in self.instances.values() if i.party is not None and i.party not in inside]:
             self._destroy(inst)
 
     # --- sessions -----------------------------------------------------------------------------------
@@ -310,7 +316,8 @@ class World:
             raise wire.Invalid("input names no room")
         frame = {k: v for k, v in msg.items() if k != "room"}
         if room != m.instance:
-            parse_input(frame, frame.get("entity") if wire.integer(frame.get("entity"), 1) else 0)  # still well formed
+            entity: int = frame["entity"] if wire.integer(frame.get("entity"), 1) else 0
+            parse_input(frame, entity)  # (still checked: a malformed frame ends the connection either way)
             return
         assert m.eid is not None
         self.instances[room].room.input(m.eid, frame)
@@ -439,6 +446,11 @@ class World:
 
     def transfer(self, m: Member, source: Instance, door: Door) -> TransferResult:
         """Walk ``m`` through ``door``: resolve and prepare the destination, then leave and join in one step."""
+        result = self._transfer(m, source, door)
+        self.transfers.append((self.tick, m.pid, source.id, door.id, result.value))
+        return result
+
+    def _transfer(self, m: Member, source: Instance, door: Door) -> TransferResult:
         key = door.target
         d = self.defs[key]
         if d.expedition:
@@ -570,8 +582,9 @@ def expedition_files() -> dict[str, bytes]:
     """The packaged demonstration (mesh_net/expedition) as project files, with the engine's starter tileset."""
     from importlib.resources import files  # noqa: PLC0415
 
-    from .scene_room import COOP_TILESET  # noqa: PLC0415
     from engine.repo_root import bundled_file  # noqa: PLC0415
+
+    from .scene_room import COOP_TILESET  # noqa: PLC0415
 
     out = {rel: files("mesh_net").joinpath("expedition", name).read_bytes() for rel, name in EXPEDITION_FILES.items()}
     for rel in COOP_TILESET:
