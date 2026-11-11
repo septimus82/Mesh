@@ -13,6 +13,18 @@ rerun. It also missed every reload (evidence/422a-terrain-timing).
 | (release − plain frame) / `cpu_ms` | ≤ 8.0 | 3.36–4.06 (one 2.22, see limits) |
 | gated stroke frame median / `cpu_ms` (backstop) | ≤ 3.2 | 2.25–2.76 (one 1.44) |
 
+**Where it is enforced** (`performance_profile`): only on the profile the thresholds were validated on, which is
+GitHub-hosted (`RUNNER_ENVIRONMENT=github-hosted`) Linux or Windows runners with 4 vCPUs drawing with Mesa llvmpipe.
+
+- **Validated CI profile:** all three limits are enforced, fail-closed.
+- **CI that doesn't match the profile** (another vCPU count, a self-hosted or macOS runner, a hardware renderer, an
+  unreadable renderer, or another CI): the gate fails with `unsupported performance environment (<what didn't match>)`
+  and asks for re-measurement. CI enforcement is never silently downgraded.
+- **Outside CI** (a developer's machine): every measurement is taken and recorded, but the verdict is
+  `NOT VALIDATED`, never a pass and never a fail. There are no alternative thresholds for other core counts.
+
+The functional checks are asserted everywhere.
+
 These stay asserted as before: zero full room reloads (exact count), one undo step per stroke, undo/redo,
 save/reopen, the cancellation and recovery cases, and the 200 ms commit guard. The functional checks run first, then
 the commit guard, then the gate's verdict. A slow runner can't hide a functional failure.
@@ -96,7 +108,8 @@ Every row is a fast test case (`tests/test_terrain_advisory.py`).
    can't read faster than the CPU. On Linux the reload-on-release margin (12.5–14.6 against 8) could fall near the
    limit with such a reading, but reloads are also caught exactly by the zero-reload guard.
 4. **Core count.** The thresholds are for the hosted 4-vCPU runners. On a 16-thread desktop the fault-free ratio is
-   1.61–1.88: llvmpipe spreads drawing across cores, but not the terrain update. **So the gated test fails locally on
-   many-core machines with nothing regressed.** If GitHub moved `windows-latest` or `ubuntu-latest` to more vCPUs,
-   the ratio baseline would rise and need re-measuring.
+   1.61–1.89: llvmpipe spreads drawing across cores, but not the terrain update. Such a machine is outside the
+   validated profile, so its verdict is `NOT VALIDATED` and only the functional checks judge it. If GitHub moved
+   `windows-latest` or `ubuntu-latest` to more vCPUs, the gate would fail as an unsupported environment until the
+   thresholds are re-measured.
 5. **Regressions on a physical GPU only.** CI draws with llvmpipe (unchanged, pre-existing).

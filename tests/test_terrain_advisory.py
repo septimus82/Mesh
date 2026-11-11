@@ -82,7 +82,7 @@ def test_at_a_threshold_is_within_it() -> None:
     assert out["verdict"] == "PASS"
 
 
-# Every fault-free observation with these measurements (Extended, CI-422A2's report-only week): (run, OS, CPU,
+# Every fault-free observation with these measurements (Extended, CI-422A2's report-only observation, 2026-11-10..11): (run, OS, CPU,
 # legacy 60 ms median, ratio, calibrated release, calibrated frame, cpu_ms). The two 8370C rows failed the old gate.
 OBSERVED = [
     ("42858598998", "Windows", "Xeon 8573C", 57.17, 1.32, 4.009, 2.642, 21.64),
@@ -212,19 +212,102 @@ def test_what_it_records_is_json_and_it_never_raises() -> None:
 
 
 @pytest.mark.integration
-def test_a_failure_mid_measurement_is_reported_and_fails_the_gate() -> None:
-    # m20b_sculpt_study._advisory: the trials raise part way; the calibration still runs; the verdict fails (fail-closed)
+def test_a_failure_mid_measurement_is_reported_and_fails_the_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+    # m20b_sculpt_study._advisory on the validated CI profile: the trials raise part way; the calibration still runs;
+    # the verdict fails (fail-closed)
     import m20b_sculpt_study as study
 
     def boom(_name: str) -> None:
         raise RuntimeError("the Raise button is gone")
 
+    monkeypatch.setattr(study, "_profile", lambda: ta.performance_profile(HOSTED, 4, LLVMPIPE))
     d = SimpleNamespace(button=boom, studio=SimpleNamespace(hd2d=SimpleNamespace(stroke=None)),
                         arcade=SimpleNamespace(key=None, MOUSE_BUTTON_LEFT=1))
     out = study._advisory(d, 57.0, gate_frames=ta.GATE_FRAMES, required_gate_frames=ta.GATE_FRAMES)
     assert out["verdict"].startswith("FAIL: ") and out["trials"] == 0, out
     assert "incomplete: measurement failed: RuntimeError: the Raise button is gone" in out["problems"], out
     assert out["cpu_ms"] and math.isfinite(out["cpu_ms"]), out  # the diagnostics that were measurable
+
+
+@pytest.mark.integration
+def test_on_ci_an_unreadable_renderer_is_an_unsupported_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    import m20b_sculpt_study as study
+    from pyglet.gl import gl_info
+
+    def unreadable() -> str:
+        raise RuntimeError("no GL context")
+
+    for name, value in HOSTED.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setattr(study.os, "cpu_count", lambda: 4)
+    monkeypatch.setattr(gl_info, "get_renderer", unreadable)
+    profile = study._profile()
+    assert profile["mode"] == "unsupported_ci" and profile["mismatches"] == ["GL renderer None, not Mesa llvmpipe"]
+    monkeypatch.setattr(gl_info, "get_renderer", lambda: LLVMPIPE)
+    assert study._profile()["mode"] == "enforced"
+
+
+# --- where the gate is enforced (performance_profile) -----------------------------------------------------------------
+
+HOSTED = {"GITHUB_ACTIONS": "true", "CI": "true", "RUNNER_ENVIRONMENT": "github-hosted", "RUNNER_OS": "Windows"}
+LLVMPIPE = "llvmpipe (LLVM 22.1.1, 256 bits)"
+
+
+def test_the_validated_profile_is_the_hosted_4_vcpu_mesa_runner() -> None:
+    assert ta.PROFILE == {"runner_environment": "github-hosted", "runner_os": ("Linux", "Windows"), "vcpus": 4,
+                          "renderer": "llvmpipe"}
+    for os_name in ("Linux", "Windows"):
+        profile = ta.performance_profile({**HOSTED, "RUNNER_OS": os_name}, 4, LLVMPIPE)
+        assert profile["mode"] == "enforced" and profile["mismatches"] == [] and profile["ci"], profile
+
+
+@pytest.mark.parametrize(("change", "vcpus", "renderer", "mismatch"), [
+    ({}, 8, LLVMPIPE, "8 vCPUs, not 4"),
+    ({}, 2, LLVMPIPE, "2 vCPUs, not 4"),
+    ({}, None, LLVMPIPE, "None vCPUs, not 4"),
+    ({}, True, LLVMPIPE, "True vCPUs, not 4"),
+    ({"RUNNER_ENVIRONMENT": "self-hosted"}, 4, LLVMPIPE, "runner environment 'self-hosted', not 'github-hosted'"),
+    ({"RUNNER_ENVIRONMENT": None}, 4, LLVMPIPE, "runner environment None, not 'github-hosted'"),
+    ({"RUNNER_OS": "macOS"}, 4, LLVMPIPE, "runner OS 'macOS', not Linux or Windows"),
+    ({}, 4, "NVIDIA GeForce RTX 4070/PCIe/SSE2", "GL renderer 'NVIDIA GeForce RTX 4070/PCIe/SSE2', not Mesa llvmpipe"),
+    ({}, 4, None, "GL renderer None, not Mesa llvmpipe"),
+    ({"GITHUB_ACTIONS": None}, 4, LLVMPIPE, "not running in GitHub Actions"),  # (CI=true: some other CI)
+])
+def test_unexpected_ci_hardware_fails_the_gate_with_what_didnt_match(change: dict[str, Any], vcpus: Any, renderer: Any,
+                                                                     mismatch: str) -> None:
+    env = {k: v for k, v in {**HOSTED, **change}.items() if v is not None}
+    profile = ta.performance_profile(env, vcpus, renderer)
+    assert profile["mode"] == "unsupported_ci" and profile["mismatches"] == [mismatch], profile
+    out = _judge(_trials(), profile=profile)  # every measurement fine: the environment alone fails it
+    assert out["verdict"].startswith("FAIL: unsupported performance environment (" + mismatch), out
+    assert len(out["problems"]) == 1 and "re-measure them" in out["problems"][0], out
+
+
+@pytest.mark.parametrize(("env", "vcpus", "renderer"), [
+    ({}, 16, LLVMPIPE), ({}, 4, LLVMPIPE), ({"CI": "false"}, 8, "NVIDIA GeForce RTX 4070/PCIe/SSE2"), ({}, None, None),
+])
+def test_outside_ci_it_is_measured_and_recorded_but_never_judged(env: dict[str, str], vcpus: Any, renderer: Any) -> None:
+    profile = ta.performance_profile(env, vcpus, renderer)
+    assert profile["mode"] == "not_validated" and not profile["ci"] and profile["mismatches"], profile
+    clean, crossed = _judge(_trials(), profile=profile), _judge([_trial(40.0, 75.0)] * ta.TRIALS, profile=profile)
+    assert clean["verdict"] == crossed["verdict"] == "NOT VALIDATED", (clean, crossed)  # never a pass, never a fail
+    assert crossed["problems"] == ["ratio 1.875 > 1.6"] and crossed["ratio"] == 1.875  # what it measured, reported
+    assert clean["legacy_60ms"]["frame_median_ms"] == 57.0 and clean["profile"] == profile
+
+
+def test_missing_calibration_fails_on_ci_and_is_reported_outside_it() -> None:
+    enforced = ta.performance_profile(HOSTED, 4, LLVMPIPE)
+    local = ta.performance_profile({}, 16, LLVMPIPE)
+    on_ci, here = _judge(_trials(), cpu=None, profile=enforced), _judge(_trials(), cpu=None, profile=local)
+    assert on_ci["verdict"].startswith("FAIL: ") and "incomplete: runner calibration (cpu_ms)" in on_ci["problems"]
+    assert here["verdict"] == "NOT VALIDATED" and "incomplete: runner calibration (cpu_ms)" in here["problems"]
+
+
+@pytest.mark.parametrize("profile", [None, {}, {"mode": None}, {"mode": "relaxed"}, "enforced", 4])
+def test_no_profile_or_a_malformed_one_is_never_a_downgrade(profile: Any) -> None:
+    out = _judge([_trial(40.0, 75.0)] * ta.TRIALS, profile=profile)
+    assert out["verdict"].startswith("FAIL: "), out  # enforced (None, not a mapping) or unsupported: judged, failing
+    assert _judge(_trials(), profile=None)["verdict"] == "PASS"
 
 
 # --- the gated test (tests/test_terrain_gpu.py) ----------------------------------------------------------------------
@@ -254,6 +337,6 @@ def test_the_gate_is_enforced_last_with_the_zero_reload_and_commit_guards_kept()
     assert asserts[0] == ("assert (s['room_reloads'], s['scene_loads'], c['room_reloads'], c['scene_loads']) == "
                           "(0, 0, 0, 0), (s, c)")
     assert asserts[-2:] == ["assert s['commit_ms'] < 200, s",
-                            "assert gate['verdict'] == 'PASS' and gate['problems'] == [], gate"]
+                            "assert gate['verdict'] in ('PASS', 'NOT VALIDATED'), gate"]
     assert sum("gate" in a for a in asserts) == 1
     assert not any("frame_ms" in a or "60" in a or "legacy" in a for a in asserts), "the 60 ms median is report-only"

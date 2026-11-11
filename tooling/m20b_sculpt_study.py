@@ -193,6 +193,20 @@ def _interleaved(d: Any, trials: int, warm: int, steps: int, a: tuple[float, flo
     return rows
 
 
+def _profile() -> dict[str, Any]:
+    """This run's performance profile (``terrain_advisory.performance_profile``): the environment, the logical CPUs and
+    the GL renderer of the context Studio draws with. A renderer that can't be read is None: no match, never a guess."""
+    try:
+        from pyglet.gl import gl_info
+
+        renderer: Any = gl_info.get_renderer()
+    except Exception:  # noqa: BLE001  # REASON: an unreadable renderer is recorded as None, which can't match the profile
+        logger.warning("[Mesh][terrain gate] the GL renderer couldn't be read", exc_info=True)
+        renderer = None
+    profile: dict[str, Any] = terrain_advisory.performance_profile(os.environ, os.cpu_count(), renderer)
+    return profile
+
+
 def _advisory(d: Any, gate_frame_ms: Any, trials: int = terrain_advisory.TRIALS, warm: int = terrain_advisory.WARM,
               steps: int = terrain_advisory.STEPS, gate_frames: Any = None,
               required_gate_frames: int | None = None, cpu_ms: float | None = None) -> dict[str, Any]:
@@ -221,7 +235,7 @@ def _advisory(d: Any, gate_frame_ms: Any, trials: int = terrain_advisory.TRIALS,
         gate_frame_ms = statistics.median(frames) if frames else None
     result: dict[str, Any] = terrain_advisory.summarise(
         rows, gate_frame_ms, cpu, overhead_s=time.perf_counter() - start, error=error, steps=steps,
-        required_trials=trials, gate_frames=gate_frames, required_gate_frames=required_gate_frames)
+        required_trials=trials, gate_frames=gate_frames, required_gate_frames=required_gate_frames, profile=_profile())
     return result
 
 

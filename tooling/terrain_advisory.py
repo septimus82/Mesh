@@ -17,21 +17,53 @@ unusable (no calibration, fewer valid trials than required, a trial short of fra
 not committed, the gated stroke's frames cut short, a measurement error). ``verdict`` is ``"PASS"`` only when
 ``problems`` is empty. The old 60 ms comparison is kept as report-only data (``legacy_60ms``).
 
+**Where it is enforced** (``performance_profile``): the thresholds are validated on GitHub-hosted 4-vCPU Linux and
+Windows runners drawing with Mesa's llvmpipe, and only there. A run in GitHub Actions that doesn't match that profile
+fails, with what didn't match (the thresholds would need re-measuring, never silently relaxing). Outside CI (a
+developer's machine) the measurements are still taken and recorded, but the verdict is ``"NOT VALIDATED"``: the ratio
+depends on core count (llvmpipe spreads drawing over cores, not the terrain update: 1.79-1.89 on a 16-thread desktop),
+so neither a pass nor a fail would mean anything there. The functional checks are asserted everywhere.
+
 Thresholds from the evidence branch's 8 runners and 159 lane runs, where no fault-free run came within 15% of them,
-and a week of report-only observation (CI-422A2) in which none crossed. What they can't catch is in
-``docs/reviews/ci422a3_terrain_gate.md``.
+and CI-422A2's report-only observation (13 gated runs, 2026-11-10..11) in which none crossed. What they can't catch is
+in ``docs/reviews/ci422a3_terrain_gate.md``.
 """
 
 from __future__ import annotations
 
 import math
 import statistics
+from collections.abc import Mapping
 from typing import Any
 
 THRESHOLDS = {"ratio": 1.6, "release_per_cpu": 8.0, "frame_per_cpu": 3.2}
 WARM, TRIALS, STEPS = 1, 6, 10  # interleaved trials in the gated test: ~1.3 s each on a slow runner (EPYC 7763)
 GATE_FRAMES = 48  # the gated stroke's drag frames (m20b_sculpt_study.studio)
 LEGACY_FRAME_MS = 60.0  # the replaced gate: `frame median < 60`; now reported, never asserted
+PROFILE: dict[str, Any] = {"runner_environment": "github-hosted", "runner_os": ("Linux", "Windows"), "vcpus": 4,
+                           "renderer": "llvmpipe"}
+NOT_VALIDATED = "NOT VALIDATED"
+
+
+def performance_profile(env: Mapping[str, str], vcpus: Any, renderer: Any) -> dict[str, Any]:
+    """Whether this run is where the thresholds were validated (``PROFILE``): ``mode`` "enforced" there; in CI
+    (``GITHUB_ACTIONS`` or ``CI``) anywhere else "unsupported_ci", which fails the gate; outside CI "not_validated",
+    which records the measurements without a verdict. ``mismatches`` say what didn't match."""
+    ci = env.get("GITHUB_ACTIONS") == "true" or str(env.get("CI", "")).lower() in ("true", "1")
+    mismatches = []
+    if env.get("GITHUB_ACTIONS") != "true":
+        mismatches.append("not running in GitHub Actions")
+    if env.get("RUNNER_ENVIRONMENT") != PROFILE["runner_environment"]:
+        mismatches.append(f"runner environment {env.get('RUNNER_ENVIRONMENT')!r}, not 'github-hosted'")
+    if env.get("RUNNER_OS") not in PROFILE["runner_os"]:
+        mismatches.append(f"runner OS {env.get('RUNNER_OS')!r}, not Linux or Windows")
+    if isinstance(vcpus, bool) or vcpus != PROFILE["vcpus"]:
+        mismatches.append(f"{vcpus} vCPUs, not 4")
+    if not isinstance(renderer, str) or PROFILE["renderer"] not in renderer:
+        mismatches.append(f"GL renderer {renderer!r}, not Mesa llvmpipe")
+    mode = "enforced" if not mismatches else "unsupported_ci" if ci else "not_validated"
+    return {"mode": mode, "ci": ci, "mismatches": mismatches, "runner_environment": env.get("RUNNER_ENVIRONMENT"),
+            "runner_os": env.get("RUNNER_OS"), "vcpus": vcpus, "renderer": renderer}
 
 
 def _number(value: Any) -> float | None:
@@ -53,12 +85,13 @@ def _frames(values: Any, steps: int) -> float | None:
 
 def summarise(trials: Any, gate_frame_ms: Any, cpu_ms: Any, *, overhead_s: Any = None, error: str | None = None,
               steps: int = STEPS, required_trials: int = TRIALS, gate_frames: Any = None,
-              required_gate_frames: int | None = None) -> dict[str, Any]:
+              required_gate_frames: int | None = None, profile: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """The gate's measurements and verdict from interleaved ``trials`` (each ``{"control": [ms], "sculpt": [ms],
     "release": ms, "control_release": ms, "committed": bool}``, ``steps`` frames a block), the gated stroke's frame
     median (and, when ``required_gate_frames`` is given, its frame count ``gate_frames``) and the runner's ``cpu_ms``.
 
-    Every trial must be valid and there must be exactly ``required_trials`` of them. Never raises."""
+    Every trial must be valid and there must be exactly ``required_trials`` of them. ``profile``
+    (``performance_profile``; None: enforced) decides whether the verdict is enforced. Never raises."""
     missing: list[str] = []
     if error:
         missing.append(f"measurement failed: {error}")
@@ -106,12 +139,22 @@ def summarise(trials: Any, gate_frame_ms: Any, cpu_ms: Any, *, overhead_s: Any =
     problems = [f"{name} {values[name]:.3f} > {THRESHOLDS[name]}" for name in crossed]
     problems += [f"{name}: not measured" for name, v in values.items() if v is None]
     problems += [f"incomplete: {m}" for m in missing]
-    verdict = "PASS" if not problems else "FAIL: " + "; ".join(problems[:4])
+    profile = dict(profile) if isinstance(profile, Mapping) else {"mode": "enforced", "mismatches": []}
+    mode = profile.get("mode")
+    if mode == "not_validated":
+        verdict = NOT_VALIDATED  # (problems still listed: what this machine measured, judged by nothing)
+    else:
+        if mode != "enforced":
+            why = "; ".join(str(m) for m in profile.get("mismatches") or []) or f"mode {mode!r}"
+            problems.insert(0, f"unsupported performance environment ({why}): the thresholds are validated only on "
+                               "GitHub-hosted 4-vCPU Linux/Windows runners with Mesa llvmpipe; re-measure them "
+                               "(docs/reviews/ci422a3_terrain_gate.md) before changing the profile")
+        verdict = "PASS" if not problems else "FAIL: " + "; ".join(problems[:4])
 
     def r(v: float | None, n: int = 3) -> float | None:
         return None if v is None else round(v, n)
 
-    return {"verdict": verdict, "problems": problems, "crossed": crossed, "complete": not missing, "missing": missing,
+    return {"verdict": verdict, "problems": problems, "profile": profile, "crossed": crossed, "complete": not missing, "missing": missing,
             "thresholds": dict(THRESHOLDS), **{name: r(v) for name, v in values.items()},
             "trials": len(ratios), "required_trials": required_trials, "cpu_ms": r(cpu, 2), "gate_frame_ms": r(gate, 2),
             "control_ms": r(med(controls), 2), "sculpt_ms": r(sculpt, 2),
