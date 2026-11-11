@@ -1,0 +1,28 @@
+{
+  "id": "main",
+  "name": "Main World",
+  "scenes": {
+    "ancient_ruins_layer_1": {
+      "label": "Ancient Ruins \u2014 Layer 1",
+      "path": "packs/core_regions/scenes/ancient_ruins_layer_1.json",
+      "tags": [
+        "expedition"
+      ]
+    },
+    "ancient_ruins_layer_2": {
+      "label": "Ancient Ruins \u2014 Layer 2",
+      "path": "packs/core_regions/scenes/ancient_ruins_layer_2.json",
+      "tags": [
+        "expedition"
+      ]
+    },
+    "start": {
+      "label": "Adventurer's Hub",
+      "path": "packs/core_regions/scenes/start.json",
+      "tags": [
+        "start"
+      ]
+    }
+  },
+  "start_scene": "start"
+}

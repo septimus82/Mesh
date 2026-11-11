@@ -118,8 +118,73 @@ class Server:
             self.offline.clear()
 
 
-async def serve(port: int, room: Any = None) -> None:
-    server = Server(room)
+class WorldServer(Server):
+    """Hosts a mesh_net.world.World (N7): many rooms, parties and transfers. The world decides what each player
+    receives; this class only moves frames."""
+
+    def __init__(self, world: Any) -> None:
+        super().__init__(world)
+        self.world = world
+
+    async def _handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        pid = None
+        try:
+            msg = await wire.read(reader)
+            wire.fields(msg, "join", "resume")
+            pid, credential = self.world.connect(msg["resume"])
+            self.peers[pid] = writer
+            writer.write(wire.encode({"v": 1, "type": "welcome", "session": secrets.token_hex(16), "player": pid,
+                                      "resume": credential, "world": self.world.identity}))
+            for frame in self.world.take(pid):
+                writer.write(wire.encode(frame))
+            bucket, count = self.world.tick, 0
+            while True:
+                msg = await wire.read(reader)
+                if bucket != self.world.tick:
+                    bucket, count = self.world.tick, 0
+                count += 1
+                if count > 8:
+                    raise wire.Invalid("request rate")
+                kind = msg.get("type")
+                if kind == "input":
+                    self.world.input(pid, msg)
+                elif kind == "party":
+                    self.world.party(pid, msg)
+                else:
+                    raise wire.Invalid("unknown request")
+        except (wire.Invalid, OSError, EOFError, TimeoutError):
+            pass  # remote disconnects and invalid frames end this session
+        finally:
+            if pid is not None:
+                del self.peers[pid]
+                self.world.disconnect(pid)
+            writer.transport.abort()
+
+    async def _run_clock(self) -> None:
+        loop = asyncio.get_running_loop()
+        deadline = loop.time()
+        while True:
+            deadline += 1 / wire.HZ
+            await asyncio.sleep(max(0.0, deadline - loop.time()))
+            deadline = max(deadline, loop.time() - 1 / wire.HZ)  # never burst queued steps after a stall
+            self.world.step()
+            encoded: dict[int, bytes] = {}  # one encoding per frame object (a room's state is shared by its players)
+            for pid, frames in self.world.deliver().items():
+                writer = self.peers.get(pid)
+                if writer is None or writer.is_closing():
+                    continue
+                if writer.transport.get_write_buffer_size() > 4 * wire.MAX_BYTES:
+                    writer.transport.abort()
+                    continue
+                for frame in frames:
+                    data = encoded.get(id(frame))
+                    if data is None:
+                        data = encoded[id(frame)] = wire.encode(frame)
+                    writer.write(data)
+
+
+async def serve(port: int, room: Any = None, host: type[Server] = Server) -> None:
+    server = host(room)
     try:
         bound = await server.start(port)
         print(f"Mesh room listening on 127.0.0.1:{bound}", flush=True)
@@ -132,17 +197,26 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=46870)
     parser.add_argument("--coop", action="store_true", help="host the packaged co-op scene (mesh_net/coop)")
+    parser.add_argument("--expedition", action="store_true",
+                        help="host the packaged hub and expedition rooms (mesh_net/expedition)")
     args = parser.parse_args()
     with ExitStack() as stack:
-        room = None
-        if args.coop:
+        room, host = None, Server
+        if args.expedition:
+            from .scene_room import disposable_project
+            from .world import World, expedition_files
+
+            root = stack.enter_context(disposable_project(expedition_files(), scaffold=False))
+            room, host = World(root), WorldServer
+            print(f"Mesh world {room.identity[:12]}", flush=True)
+        elif args.coop:
             from .scene_room import COOP_SCENE, SceneRoom, coop_files, disposable_project
 
             root = stack.enter_context(disposable_project(coop_files(), scaffold=False))
             room = SceneRoom(root / COOP_SCENE, root)
             print(f"Mesh scene {room.identity[:12]}", flush=True)
         try:
-            asyncio.run(serve(args.port, room))
+            asyncio.run(serve(args.port, room, host))
         except KeyboardInterrupt:
             pass
 
