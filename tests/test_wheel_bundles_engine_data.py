@@ -96,7 +96,9 @@ def test_the_wheel_bundles_exactly_the_allow_list(built: tuple[Path, Path, Path]
     assert not any(n.startswith(("packs/", "tooling/", "tests/")) for n in names)
     assert {"mesh_net/server.py", "mesh_net/demo.py", "mesh_net/sample_room.json", "mesh_net/scene_room.py",
             "mesh_net/scene_client.py", "mesh_net/coop/scene.json", "mesh_net/coop/map.json",
-            "mesh_net/coop/prefabs.json"} <= set(names)
+            "mesh_net/coop/prefabs.json", "mesh_net/world.py", "mesh_net/world_client.py",
+            "mesh_net/expedition/world.json", "mesh_net/expedition/hub.json", "mesh_net/expedition/ruins_1.json",
+            "mesh_net/expedition/ruins_2.json", "mesh_net/expedition/ruins_2_map.json"} <= set(names)
     schemas = sorted(p.relative_to(REPO).as_posix() for p in (REPO / "engine" / "schemas").glob("*.json"))
     assert schemas and set(schemas) <= set(names), "the engine's own schemas travel with the package"
 
@@ -164,6 +166,84 @@ def test_the_installed_co_op_scene_server_runs_isolated(built: tuple[Path, Path,
     facts = json.loads(line[len("MESH-COOP "):])
     assert Path(facts["package"]).resolve().is_relative_to(venv.resolve()) and facts["graphics"] == []
     assert facts["scenery"] == 88 and [row[1:3] for row in facts["players"]] == [[390.5, 256.0], [128.0, 256.0]]
+
+
+_WORLD = """
+import asyncio, json, sys
+import mesh_net
+from mesh_net import protocol as wire
+from mesh_net.scene_room import disposable_project
+from mesh_net.server import WorldServer
+from mesh_net.world import World, check_frame, check_welcome, expedition_files
+
+async def peer(port, world):
+    r, w = await asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES)
+    w.write(wire.encode({"v": 1, "type": "join", "resume": None}))
+    hello = await wire.read(r)
+    check_welcome(hello, world.identity)
+    return {"r": r, "w": w, "pid": hello["player"], "seq": 0, "key": None, "party": None}
+
+async def pump(p, ids):
+    msg = await wire.read(p["r"])
+    check_frame(msg, ids)
+    if msg["type"] == "enter":
+        p.update(room=msg["room"], key=msg["key"], entity=msg["entity"])
+    elif msg["type"] == "party":
+        p["party"] = msg
+
+async def main():
+    with disposable_project(expedition_files(), scaffold=False) as root:
+        world = World(root)
+    ids = {k: d.proto.identity for k, d in world.defs.items()}
+    server = WorldServer(world)
+    port = await server.start()
+    try:
+        a, b = await peer(port, world), await peer(port, world)
+        for p in (a, b):
+            while p["party"] is None:
+                await pump(p, ids)
+        a["w"].write(wire.encode({"v": 1, "type": "party", "op": "invite", "player": b["pid"]}))
+        while not b["party"]["invites"]:
+            await pump(b, ids)
+        b["w"].write(wire.encode({"v": 1, "type": "party", "op": "accept", "party": b["party"]["invites"][0][0]}))
+        while len(a["party"]["members"]) < 2:
+            await pump(a, ids)
+        for _ in range(400):
+            if a["key"] == b["key"] == "ancient_ruins_layer_1":
+                break
+            for p in (a, b):
+                if p["key"] != "ancient_ruins_layer_1":
+                    p["seq"] += 1
+                    p["w"].write(wire.encode({"v": 1, "type": "input", "room": p["room"], "entity": p["entity"],
+                                              "seq": p["seq"], "dx": 1, "dy": 0}))
+                await pump(p, ids)
+        print("MESH-WORLD " + json.dumps({"rooms": [a["room"], b["room"]], "instances": sorted(world.instances),
+              "package": mesh_net.__file__, "graphics": [m for m in ("arcade", "pyglet") if m in sys.modules]}))
+    finally:
+        await server.close()
+
+asyncio.run(main())
+"""
+
+
+def test_the_installed_world_server_runs_isolated(built: tuple[Path, Path, Path]) -> None:
+    """N7: the installed wheel hosts its packaged hub and expedition rooms without graphics; two socket clients form
+    a party and walk into their own instance of the first expedition room."""
+    import json
+    import subprocess
+
+    wheel, venv, scratch = built
+    _holding(venv, wheel)
+    work = scratch / "world"
+    work.mkdir()
+    proc = subprocess.run([str(ipc.venv_python(venv)), "-I", "-c", _WORLD], cwd=work, env=ipc.clean_env(scratch),
+                          capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+    line = next((x for x in proc.stdout.splitlines() if x.startswith("MESH-WORLD ")), None)
+    assert line, (proc.stderr or proc.stdout)[-1500:]
+    facts = json.loads(line[len("MESH-WORLD "):])
+    assert Path(facts["package"]).resolve().is_relative_to(venv.resolve()) and facts["graphics"] == []
+    assert facts["rooms"][0] == facts["rooms"][1] == "ancient_ruins_layer_1:2"
+    assert facts["instances"] == ["ancient_ruins_layer_1:2", "start:1"]
 
 
 _ASSET = "assets/sprites/starter_hero.png"
