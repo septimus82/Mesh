@@ -137,9 +137,10 @@ def test_studio_sculpts_live_one_stroke_one_undo_step(tmp_path: Path, record_tes
     s = r["stroke"]
     # Every run's timings, passing or not, in the lane's JUnit and summary (#422): reporting only, before any assert.
     record_testsuite_property("measure.terrain_stroke", json.dumps({k: v for k, v in s.items() if k.endswith("_ms")}))
-    # Report-only (#422 CI-422A2): ratio, calibrated release and frame backstop, with any advisory crossing; recorded,
-    # never asserted (tooling/terrain_advisory.py). The 60 ms gate below stays the enforced one.
-    record_testsuite_property("measure.terrain_advisory", json.dumps(r["advisory"]))
+    # The enforced gate's measurements, verdict, validity and the legacy 60 ms comparison (report-only), recorded
+    # before any assert, so a failing run reports them too (#422 CI-422A3, tooling/terrain_advisory.py)
+    gate = r["advisory"]
+    record_testsuite_property("measure.terrain_advisory", json.dumps(gate))
     c = r["controls"]
     # a successful stroke edits the room in place: no full room reload, from press to the frame after release (#422)
     assert (s["room_reloads"], s["scene_loads"], c["room_reloads"], c["scene_loads"]) == (0, 0, 0, 0), (s, c)
@@ -150,26 +151,42 @@ def test_studio_sculpts_live_one_stroke_one_undo_step(tmp_path: Path, record_tes
     assert r["escape"]["ground_back"] and r["refused_upload"]["ground_back"], r
     assert r["play_mid_stroke"]["ground_is_saved"] and r["room_change_mid_stroke"]["ground_is_saved"], r
     assert c["shift_lowered"] and c["radius_px"] == [64.0, 80.0, 64.0] and c["picked_target_m"] is not None, c
-    # timing last, so a slow runner can't hide the checks above; the gate itself is byte for byte as before (#422)
-    assert s["frame_ms"]["median"] < 60 and s["commit_ms"] < 200, s  # no room reload per click
+    # timing last, so a slow runner can't hide the checks above (#422)
+    assert s["commit_ms"] < 200, s  # no room reload per click
+    # #422 CI-422A3: sculpt/control ratio <= 1.6, calibrated release <= 8.0 and frame backstop <= 3.2 replace the
+    # absolute 60 ms frame median (which followed the runner's CPU). Fail-closed: any threshold crossed, or any
+    # measurement missing, incomplete or invalid (calibration, all 6 trials, every frame, the gated stroke's 48) fails.
+    # Enforced on the validated profile (GitHub-hosted 4-vCPU Mesa runners); other CI hardware fails as unsupported;
+    # outside CI the verdict is NOT VALIDATED: measured and recorded, never a pass or a fail (terrain_advisory.py).
+    assert gate["verdict"] in ("PASS", "NOT VALIDATED"), gate
 
 
-def test_the_report_only_measurements_flag_injected_regressions(tmp_path: Path, record_testsuite_property: Any) -> None:
-    """The advisory measurements see what they are for (#422 CI-422A2): a stroke rebuilding every terrain chunk crosses
-    the sculpt/control ratio, a room reload on release the calibrated release; each well past the same session's
-    fault-free value. Only the faults are judged: the fault-free values are reported, never asserted."""
+def test_the_terrain_gate_fails_injected_regressions(tmp_path: Path, record_testsuite_property: Any) -> None:
+    """The enforced gate sees what it is for (#422 CI-422A2, CI-422A3): a stroke rebuilding every terrain chunk crosses
+    the sculpt/control ratio, a room reload on release the calibrated release, every frame slowed by 1.5x the runner's
+    calibration loop the calibrated backstop; each fails the verdict, well past the same session's fault-free value.
+    Only the faults are judged: the fault-free values are reported (the gated test above judges a fault-free stroke).
+    Outside CI (verdict NOT VALIDATED) the slowdown must still raise the calibrated frame by 1.0, but crossing 3.2 is
+    required only where 3.2 was validated: a many-core desktop's fault-free frame is far lower (about 1.2)."""
     import m20b_sculpt_study as study
 
     r = study.advisory_detection(tmp_path)
-    keep = ("ratio", "release_per_cpu", "release_extra_ms", "control_ms", "sculpt_ms", "cpu_ms", "crossed", "overhead_s")
+    keep = ("ratio", "release_per_cpu", "frame_per_cpu", "release_extra_ms", "control_ms", "sculpt_ms", "cpu_ms",
+            "crossed", "verdict", "overhead_s", "profile")
     record_testsuite_property("measure.terrain_advisory_detection",
                               json.dumps({case: {k: v[k] for k in keep} for case, v in r.items()}))  # (each runner's margins)
-    none, rebuild, reload = r["none"], r["rebuild_all"], r["reload_on_release"]
-    for case in (none, rebuild, reload):
-        assert case["report_only"] and case["trials"] == 3 and case["cpu_ms"], case
+    none, rebuild, reload, slow = r["none"], r["rebuild_all"], r["reload_on_release"], r["slow_frames"]
+    for case in (none, rebuild, reload, slow):
+        assert case["complete"] and case["trials"] == 3 and case["cpu_ms"], case
     assert "ratio" in rebuild["crossed"] and rebuild["ratio"] > 1.25 * none["ratio"], (none, rebuild)
     assert "release_per_cpu" in reload["crossed"] and reload["release_extra_ms"] > 2 * none["release_extra_ms"], (none, reload)
-    assert rebuild["advisory"].startswith("CROSSED (advisory, not failed)"), rebuild
+    assert slow["frame_per_cpu"] > none["frame_per_cpu"] + 1.0, (none, slow)
+    if slow["profile"]["mode"] == "not_validated":
+        assert all(case["verdict"] == "NOT VALIDATED" for case in (none, rebuild, reload, slow)), r
+    else:
+        assert "frame_per_cpu" in slow["crossed"], (none, slow)
+        for case in (rebuild, reload, slow):
+            assert case["verdict"].startswith("FAIL: ") and case["problems"], case
 
 
 def test_a_flat_room_s_first_stroke_and_its_undo(tmp_path: Path) -> None:
