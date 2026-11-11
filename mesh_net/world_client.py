@@ -33,7 +33,9 @@ NOTICE_TEXT = {"need_party": "an expedition needs a party (P)", "no_instance": "
                "room_full": "that room is full", "transfer_failed": "the way is blocked (try again)",
                "left_expedition": "you left the party's expedition", "in_party": "already in a party",
                "not_leader": "only the leader invites", "no_player": "nobody to invite", "busy": "they are busy",
-               "no_invite": "no such invitation", "party_full": "the party is full", "invited": "invited! Y/N"}
+               "no_invite": "no such invitation", "party_full": "the party is full", "invited": "invited! Y/N",
+               "picked_up": "picked up", "inventory_full": "no room for it (it stays here)",
+               "storage_failed": "could not be saved (nothing changed; try again)", "unlocked": "unlocked!"}
 
 
 class WorldArena(Arena):
@@ -56,6 +58,7 @@ class WorldArena(Arena):
         self.character: dict[str, str] | None = None  # N8: {"id", "key"} of the character this window plays
         self.sheet: wire.Message | None = None  # the server's account of that character (items, unlocks)
         self.refused: str | None = None
+        self.port: int | None = None  # another server to join next time (a restarted one), instead of run()'s
         self.notice: tuple[str, float] | None = None
         self.requests: list[wire.Message] = []
         self.seq = 0
@@ -159,6 +162,7 @@ class WorldArena(Arena):
             self.notice = (msg["code"], now + 3.0)
 
     async def session(self, port: int) -> None:
+        port = self.port or port
         loop = asyncio.get_running_loop()
         try:
             reader, writer = await asyncio.wait_for(asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES), 3)
@@ -244,7 +248,7 @@ class WorldArena(Arena):
         else:
             group = "no party (P create, I invite)"
         invites = f" | invite from P{party['invites'][0][1]} Y/N" if party.get("invites") else ""
-        notice = f" | {NOTICE_TEXT[self.notice[0]]}" if self.notice else ""
+        notice = f" | {NOTICE_TEXT.get(self.notice[0], self.notice[0])}" if self.notice else ""
         sheet = self.sheet
         own = (f"{sheet['name']} ({sum(q for _, q in sheet['items'])} items, {len(sheet['unlocks'])} unlocks) | "
                if sheet else "")

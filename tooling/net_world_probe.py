@@ -1,6 +1,6 @@
 """Local stdin/stdout test driver for one hidden world window (mesh_net.world_client), never a network endpoint.
 
-Commands: ``state``, ``press KEY``, ``release KEY``, ``capture``, ``quit``. Each prints one ``NET_PROOF {json}`` line.
+Commands: ``state``, ``press KEY``, ``release KEY``, ``capture``, ``port N`` (join that server next), ``quit``. Each prints one ``NET_PROOF {json}`` line.
 ``capture`` is tooling/net_scene_probe.py's: avatars counted by the pixels the scene renderer drew for them.
 """
 from __future__ import annotations
@@ -30,6 +30,8 @@ async def drive(arena, port: int) -> None:
                 render.result()
             if cmd[0] == "quit":
                 return
+            if cmd[0] == "port":  # the server to join next (a restarted one)
+                arena.port = int(cmd[1])
             if cmd[0] in ("press", "release"):
                 event = "on_key_press" if cmd[0] == "press" else "on_key_release"
                 arena.window.dispatch_event(event, getattr(arena.arcade.key, cmd[1]), 0)

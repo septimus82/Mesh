@@ -594,3 +594,11 @@ def test_measure_persistence_costs(tmp_path, files):
     print(f"character load {med(loads)}; claim commit {med(claims)}; completion commit {med(completes)}; "
           f"{size / 1024:.1f} KiB per character; restart (store + world) {restart:.0f} ms; "
           f"tick, 8 characters in the hub {med(ticks)}")
+
+
+def test_every_notice_has_words_in_the_window():
+    """The window's caption names each notice the world can send (a missing one raised KeyError in the window)."""
+    from mesh_net.world import NOTICES
+    from mesh_net.world_client import NOTICE_TEXT
+
+    assert set(NOTICES) <= set(NOTICE_TEXT)
