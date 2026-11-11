@@ -246,12 +246,15 @@ def test_interactions_and_input_cannot_reach_another_room(world):
     assert ra.key == rb.key == R1 and ra is not rb
     open_gate(d, a)
     assert GATE1 not in rb.room.snapshot()["open"] and not rb.room.used
-    # b names a's room and a's entity: dropped (it is not b's room), nothing in a's room moves or acts.
-    d.place(b, 352.0, 300.0, facing=1)
+    # b names a's room and a's entity, with a sequence a's room would accept: dropped (it is not b's room).
+    d.place(a, 568.0, 352.0, facing=0)  # beside a's bandit, facing it: an accepted "attack" would hit
+    hp = ra.room.enemies[BANDIT].state.hp
     before = d.at(a)
-    d.send(b, 1, 0, action="use", room=ra.id, entity=d.m(a).eid)
+    d.seq[b] = d.seq[a] + 100
+    d.send(b, 1, 0, action="attack", room=ra.id, entity=d.m(a).eid)
     d.step()
-    assert d.at(a) == before and not rb.room.used
+    assert d.at(a) == before and ra.room.enemies[BANDIT].state.hp == hp and ra.room.players[d.m(a).eid].seq < d.seq[b]
+    assert not rb.room.used
     with pytest.raises(wire.Invalid):
         d.send(b, room="not a room")
 
@@ -983,3 +986,88 @@ async def _within(seconds, predicate):
             return False
         await asyncio.sleep(0.02)
     return True
+
+
+# --- resource guards (from the fresh independent review: each fails with its guard removed) -------------
+
+
+@pytest.mark.integration
+def test_retained_characters_count_towards_the_cap(world):
+    from mesh_net.world import MAX_CHARACTERS
+
+    d = Driver(world)
+    for _ in range(MAX_CHARACTERS // wire.MAX_PLAYERS):
+        pids = [d.join()[0] for _ in range(wire.MAX_PLAYERS)]
+        for pid in pids:
+            d.w.disconnect(pid)  # retained for 30 s
+    assert len(d.w.members) == MAX_CHARACTERS
+    with pytest.raises(wire.Invalid, match="capacity"):
+        d.join()
+
+
+@pytest.mark.integration
+def test_notices_and_history_stay_bounded(world):
+    d = Driver(world)
+    a, _ = d.join()
+    for _ in range(50):
+        d.ask(a, "invite", player=a)  # refused each time: a notice
+    assert len(d.w.members[a].outbox) <= 8
+    for i in range(40):
+        pid, _ = d.join()
+        d.w.disconnect(pid)
+        if i % 10 == 9:
+            d.step(RETAIN_TICKS + 1)  # (the retained characters expire: room for more)
+    assert len(d.w.history) == d.w.history.maxlen == 64
+
+
+@pytest.mark.integration
+def test_invitations_end_with_their_invitee_or_their_party(world):
+    d = Driver(world)
+    a, b, c = (d.join()[0] for _ in range(3))
+    d.ask(a, "invite", player=b)
+    d.w.disconnect(b)
+    assert b not in d.w.invites  # an away player holds no invitations
+    d.ask(a, "invite", player=c)
+    assert d.w.invites[c]
+    d.ask(a, "leave")  # a's party ends with its last member
+    assert all(not pending for pending in d.w.invites.values())
+
+
+@pytest.mark.integration
+def test_the_server_limits_requests_per_tick(files):
+    async def run():
+        world = make_world(files)
+        server = WorldServer(world)
+        port = await server.start(0)
+        try:
+            peer = await Peer.open(port, world)
+            await peer.until(lambda p: p.room and p.party)
+            world.step = lambda: None  # (the tick stands still: every request below lands in one tick)
+            for _ in range(9):
+                await peer.send({"v": 1, "type": "party", "op": "leave"})
+            assert await _within(3, lambda: not any(m.online for m in world.members.values()))
+            await peer.close()
+        finally:
+            await server.close()
+
+    asyncio.run(run())
+
+
+@pytest.mark.integration
+def test_pressing_e_before_a_new_room_shows_does_not_ask_the_old_room():
+    """Just after an enter, the window still shows the last room until its next frame. E then must not look the new
+    room's drops up in the old room's view (that raised KeyError out of the window's event dispatch)."""
+    from types import SimpleNamespace
+
+    from mesh_net.world_client import WorldArena
+
+    def old_view_lookup(x, y, state):
+        raise KeyError(state["drops"][0])
+
+    key = SimpleNamespace(E=1, SPACE=2, P=3, I=4, Y=5, N=6, L=7, ESCAPE=8, F2=9, R=10)
+    state = {"players": [[1, 100.0, 100.0, 0]], "drops": [GUARDIAN]}
+    arena = SimpleNamespace(arcade=SimpleNamespace(key=key), directions={}, connected=True, action_keys=set(),
+                            action=None, phase="loading", request=None, note=lambda event: None, state=state,
+                            entity=1, view=SimpleNamespace(near_drop=old_view_lookup), shown="start:1",
+                            room=f"{R2}:3", _own=lambda: state["players"][0])
+    assert WorldArena.press(arena, key.E, 0) is True and arena.action == "use"

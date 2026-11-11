@@ -173,7 +173,7 @@ class WorldServer(Server):
             deadline = max(deadline, loop.time() - 1 / wire.HZ)  # never burst queued steps after a stall
             try:
                 self.world.step()
-                delivery = self.world.deliver()
+                self._send(self.world.deliver())
             except Exception:
                 # A broken world must not keep accepting players it no longer steps: say so and shut everything.
                 logger.exception("[Mesh][Net] the world failed; closing the server")
@@ -182,19 +182,21 @@ class WorldServer(Server):
                 for connection in list(self.connections.values()):
                     connection.transport.abort()
                 raise
-            encoded: dict[int, bytes] = {}  # one encoding per frame object (a room's state is shared by its players)
-            for pid, frames in delivery.items():
-                writer = self.peers.get(pid)
-                if writer is None or writer.is_closing():
-                    continue
-                if writer.transport.get_write_buffer_size() > 4 * wire.MAX_BYTES:
-                    writer.transport.abort()
-                    continue
-                for frame in frames:
-                    data = encoded.get(id(frame))
-                    if data is None:
-                        data = encoded[id(frame)] = wire.encode(frame)
-                    writer.write(data)
+
+    def _send(self, delivery: dict[int, list[wire.Message]]) -> None:
+        encoded: dict[int, bytes] = {}  # one encoding per frame object (a room's state is shared by its players)
+        for pid, frames in delivery.items():
+            writer = self.peers.get(pid)
+            if writer is None or writer.is_closing():
+                continue
+            if writer.transport.get_write_buffer_size() > 4 * wire.MAX_BYTES:
+                writer.transport.abort()
+                continue
+            for frame in frames:
+                data = encoded.get(id(frame))
+                if data is None:
+                    data = encoded[id(frame)] = wire.encode(frame)
+                writer.write(data)
 
 
 async def serve(port: int, room: Any = None, host: type[Server] = Server) -> None:

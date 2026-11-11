@@ -84,8 +84,9 @@ class WorldArena(Arena):
                 self.action = "attack"
             elif symbol == key.E:
                 own = self._own()
+                # (the view must show the room the state is for: just after an enter it still shows the last one)
                 near = own is not None and self.view is not None and self.state is not None \
-                    and self.view.near_drop(own[1], own[2], self.state)
+                    and self.shown == self.room and self.view.near_drop(own[1], own[2], self.state)
                 self.action = "take" if near else "use"
             elif symbol == key.P:
                 self._ask("create")
@@ -191,6 +192,7 @@ class WorldArena(Arena):
                     done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
                     for task in done:
                         task.result()
+                    self.status = "Disconnected (connection ended) | R resume / N new"  # (a loop ended quietly)
                 finally:
                     # Close first, then wait. On Python 3.11 asyncio.wait_for can drop a cancellation that lands as
                     # its inner result arrives (fixed in 3.12), so a send or receive loop may run on after cancel():

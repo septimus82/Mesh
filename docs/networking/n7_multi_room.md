@@ -78,9 +78,9 @@ room instance is already a self-contained object a future process could host).
   4. join the destination at the arrival marker, getting a new room-local `eid`;
   5. queue `enter` (destination id, key, `eid`, full snapshot) for that player.
 
-  If step 2 fails (instance limit, preparation error), nothing has changed and the player stays where they were
-  with a notice. If step 4 fails (destination full), the player is put back in the source room. Each outcome is a
-  named `TransferResult`. Server-side there is no in-between state anyone can observe.
+  If the destination is full or cannot be prepared (instance limit, preparation error), nothing has changed and the
+  player stays where they were with a notice. If joining fails after leaving (never observed; guarded), the player is
+  put back where they stood and any half-made avatar is removed. Each outcome is a named `TransferResult`. Server-side there is no in-between state anyone can observe.
 - **Client order independence.** Input frames carry the room id; a frame for any room but the player's current one
   is dropped (it was in flight during a transfer). `room_state` frames carry the room id; the client applies only
   frames for the room its last `enter` named, with strictly increasing ticks within it.
@@ -91,8 +91,9 @@ room instance is already a self-contained object a future process could host).
 - **Reconnect.** A disconnected player keeps their party membership, room and position for 30 s (N5's retention).
   The room's instance is kept alive while a retained player belongs to it. Resuming puts them back; if that is no
   longer allowed (party gone, instance gone, room full), they arrive in the hub.
-- **Cleanup.** An expedition instance with no online players and no retained ones is destroyed in the tick it
-  empties. The hub is never destroyed.
+- **Cleanup.** A party's expedition (its instances of every expedition room) lasts while any member, online or
+  retained, is in one of them, and ends in the tick the last one leaves (see "Expedition lifetime" below). The hub
+  and other shared rooms are never destroyed.
 - **Client.** A `GameWindow` client per player. On every `enter` it loads the destination through
   `GameWindow.load_scene` and builds the same presentation N6 does (the N6 client's scene part, extracted into a
   reusable `SceneView`).
@@ -214,6 +215,12 @@ remove the margin problem; that change is outside N7.
 - Instances are a shared budget: 8 including the hub, and a one-person party gets its own expedition. A few solo
   players can therefore use every expedition slot (bounded, but first come, first served). A fairer split is a
   design decision for later.
+- **Python 3.11 cancellation (remaining risk).** The leave fix closes the connection before waiting for the
+  session's loops. A cancellation swallowed while a session is still connecting (opening the socket or reading the
+  welcome) could still let that session continue as a new character for up to the server's 5 s read timeout
+  (a loading client sends nothing). Not observed; bounded.
+- **Leaving a party while away from the hub** assumes the hub can always take the player (online players never
+  exceed one room's capacity); if that limit ever changed, `_leave_party` would need to handle a failed move.
 - If the world itself raises while stepping, the server logs it, stops accepting and closes every connection
   rather than staying open but frozen.
 - One process; loopback only; plaintext resume tokens (N4's trust limits). No persistence: a server restart starts
