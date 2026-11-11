@@ -108,3 +108,75 @@ one frame at most 8192 bytes, checked at load for each room's largest possible s
 None of this needs changes to `GameWindow`, `SceneController`, Mesh Studio, the single-player simulation or the
 scene, world and save formats. The only change outside `mesh_net` is optional bookkeeping in N6's `SceneRoom`
 (doors, arrival markers, drop tables kept for re-rolling), which N6's own hosting ignores. N7 proceeds.
+
+## What was built
+
+| Milestone | Where | What |
+|---|---|---|
+| N7B rooms | `mesh_net/world.py` (`World`, `room_defs`, `Instance`) | Every room of the world file validated once; shared instances, per-party expedition instances, ids never reused, room-scoped `eid`s, per-room snapshots, bounded counts, cleanup |
+| N7C transitions | `World.step`, `World.transfer` | Walk-in doors (edge-triggered), destination resolution, preparation, leave/join in one tick, `TransferResult`, rollback, stale-input drop, a bounded transfer log |
+| N7D parties | `World.party`, `_leave_party`, `_fix_leader` | Create, invite, accept, decline, leave; leadership hand-over; expedition access only through party membership |
+| N7E demonstration | `mesh_net/expedition/`, `tooling/make_expedition.py` | Adventurer's Hub, Ancient Ruins - Layer 1 (walls, lever and gate, bandit), Layer 2 (lever and gate, guardian), built with Studio's own operations |
+| Server and client | `mesh_net/server.py` (`WorldServer`, `--expedition`), `mesh_net/world_client.py` | Frames moved by the server as the world decides; a GameWindow client that loads each room it enters |
+
+N6's window client was split so a world client can reuse it: `mesh_net/scene_client.py` now has `SceneView` (one
+room's presentation) and `SceneArena` (N6's single-room client, unchanged in behaviour, built on it).
+
+### Expedition lifetime (changed during implementation)
+
+The first version destroyed an expedition instance as soon as nobody was in it. That made going down to Layer 2
+and back reset Layer 1. A party's expedition now lasts while any member (online or retained) is in any of the
+party's instances, and ends in the tick the last one leaves. Each instance still has its own state.
+
+## Protocol (version 1 framing, new frame types)
+
+Client to server:
+
+| Frame | Fields | Checked |
+|---|---|---|
+| `join` | `resume` | as N5 |
+| `input` | `room`, `entity`, `seq`, `dx`, `dy`, optional `action` | `room` must be the player's current room (otherwise dropped: it was in flight during a transfer), then N6's `parse_input` |
+| `party` | `op` (`create`, `invite` + `player`, `accept`/`decline` + `party`, `leave`) | exact fields, numbers only; refusals answer with a `notice` |
+
+Server to client:
+
+| Frame | Fields |
+|---|---|
+| `welcome` | `session`, `player` (stable id), `resume`, `world` (identity of every room) |
+| `enter` | `room`, `key`, `entity`, `state` (full N6 `scene_state`) |
+| `room_state` | `room`, `state` |
+| `party` | `you`, `party`, `leader`, `members` `[pid, online, room key]`, `invites` `[party, inviter]`, `nearby` `[pid, eid]` (this room only) |
+| `notice` | `code` (one of `mesh_net.world.NOTICES`) |
+
+Clients validate every frame (`check_welcome`, `check_frame`, and N6's `check_state` against the room's identity).
+The world refuses to start if any room's largest possible `enter` frame would exceed 8192 bytes.
+
+## Try it
+
+```
+python -m mesh_net.server --expedition --port 46870
+python -m mesh_net.world_client --port 46870   # in two terminals
+```
+
+In the hub: P creates a party, I invites the nearest player, Y/N accepts or declines. Walk right into the hub's door
+together. In Layer 1, E at the lever opens the gate; the door down is beyond it. Space attacks, E takes loot. Walk
+back through the doors to return. F2 disconnects, R resumes.
+
+## Single-player findings and limits
+
+- **Room memory in a network client.** Single-player room memory records objects removed during play and leaves them
+  out when the room loads again. The network client removes the scene's player definition (every avatar comes
+  from the server), so a return visit, or a resume into the room on screen, loaded the room without it. The world
+  client clears the room path and the memory before each load (`world_client.WorldArena.draw`); nothing in the
+  engine changed.
+- **Focus.** The client lets go of held keys when its window is deactivated (correct for a player switching
+  windows). Hidden test windows are deactivated whenever another test window loads a room, so the test probe
+  (`tooling/net_world_probe.py`) ignores deactivation. Whether a visible window loses focus on a room change was not
+  checked by desktop automation (not authorised on the owner's machine).
+- Picture doors, doors used with E, event or one-shot doors, HD-2D rooms and flag-gated objects are refused at load.
+  A door's `spawn_id` must name an arrival marker in the destination (single-player falls back to the room's
+  default position instead).
+- Loot does not travel between rooms: there are no inventories (out of scope). A player who leaves a room leaves
+  its loot held by nobody.
+- One process; loopback only; plaintext resume tokens (N4's trust limits). No persistence: a server restart starts
+  every room anew. No matchmaking, guilds or friend lists.
