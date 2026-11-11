@@ -201,7 +201,8 @@ async def serve(port: int, room: Any = None, host: type[Server] = Server) -> Non
     try:
         bound = await server.start(port)
         print(f"Mesh room listening on 127.0.0.1:{bound}", flush=True)
-        await asyncio.Future()
+        assert server.clock is not None
+        await server.clock  # runs until stopped; if the room or world fails, the process ends with its error
     finally:
         await server.close()
 

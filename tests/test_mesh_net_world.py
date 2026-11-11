@@ -17,6 +17,7 @@ from mesh_net.world import (
     MAX_INVITES,
     MAX_PARTY,
     RETAIN_TICKS,
+    TransferResult,
     World,
     check_frame,
     check_welcome,
@@ -784,12 +785,28 @@ def test_a_failed_join_puts_the_player_back(world):
             raise OSError("broken destination")
         return original(self, m, inst, player)
 
+    def joined_then_failing(self, m, inst, player):  # (fails after the room took the avatar)
+        calls.append(inst.key)
+        if inst.key == R1:
+            inst.room.join(player)
+            raise OSError("broken destination")
+        return original(self, m, inst, player)
+
     World._enter = failing
     try:
         d.through_hub_door(a)
     finally:
         World._enter = original
     assert calls[0] == R1 and d.room(a) is d.w.hub and d.m(a).eid in d.w.hub.room.players
+    assert d.notices(a) == ["transfer_failed"]
+    door = next(x for x in d.w.defs[HUB].doors if x.target == R1)
+    World._enter = joined_then_failing
+    try:
+        result = d.w.transfer(d.m(a), d.w.hub, door)  # (called directly: before the tick's cleanup could hide it)
+    finally:
+        World._enter = original
+    target = d.w.instances[d.w.party_rooms[(d.m(a).party, R1)]]
+    assert result is TransferResult.FAILED and not target.room.players and d.room(a) is d.w.hub  # no orphan
     assert d.notices(a) == ["transfer_failed"]
     d.w.disconnect(a)  # no ghost: the player is somewhere, so leaving works
     assert not d.m(a).online
@@ -881,3 +898,18 @@ def test_a_failing_world_closes_the_server_instead_of_freezing(files, caplog):
 
     asyncio.run(run())
     assert "the world failed" in caplog.text
+
+
+@pytest.mark.integration
+def test_the_server_process_ends_when_its_world_fails(files):
+    """mesh_net.server.serve (what ``python -m mesh_net.server`` runs) returns with the world's error instead of
+    staying alive with no listener and no clock."""
+    from mesh_net.server import serve
+
+    async def run():
+        world = make_world(files)
+        world.step = lambda: (_ for _ in ()).throw(RuntimeError("deliberate"))
+        await asyncio.wait_for(serve(0, world, WorldServer), 5)
+
+    with pytest.raises(RuntimeError, match="deliberate"):
+        asyncio.run(run())

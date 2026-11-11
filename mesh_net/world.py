@@ -483,9 +483,13 @@ class World:
         player = self._fresh(target, at)  # (built before anything changes)
         old = source.room.leave(m.eid)  # no input for the old room applies from here on
         source.touching.pop(m.eid, None)
+        present = set(target.room.players)
         try:
             self._enter(m, target, player)
         except Exception:  # noqa: BLE001  # whatever failed, the player is put back, never left in no room
+            for eid in set(target.room.players) - present:  # (and no half-made avatar stays behind)
+                target.room.leave(eid)
+                target.touching.pop(eid, None)
             self._enter(m, source, old)
             return False
         return True
