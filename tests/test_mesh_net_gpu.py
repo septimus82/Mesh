@@ -297,7 +297,8 @@ def test_two_windows_meet_party_travel_and_return():
             if reply and reply["state"]:
                 last["players"], last["tick"] = reply["state"]["players"], reply["state"]["tick"]
             last["server"] = {m.pid: (m.instance, m.eid, m.online) for m in world.members.values()}
-            last["transfers"] = list(world.transfers)
+            last["trace"] = reply["trace"] if reply else None
+            last["history"] = list(world.history)[-12:]
             last["server_ticks"] = {i: (inst.room.tick, {e: (p.body.center_x, p.body.center_y, p.seq, p.last_input)
                                                          for e, p in inst.room.players.items()})
                                     for i, inst in world.instances.items()}
@@ -430,6 +431,16 @@ def test_two_windows_meet_party_travel_and_return():
             await until(a, lambda r: [m[1] for m in r["party"]["members"]] == [True, True])
             await shot(b, [back["entity"]])
         finally:
+            failure = sys.exc_info()[1]
+            if failure is not None:  # what each window and the server last knew, timestamped
+                for name, proc in zip("ab", procs):
+                    try:
+                        r = await asyncio.wait_for(command(proc, "state"), 5)
+                        failure.add_note(f"window {name}: phase {r['phase']}, room {r['room']}, status {r['status']!r}, "
+                                         f"trace {r['trace']}")
+                    except Exception as exc:  # noqa: BLE001  # (a window that can't answer says so)
+                        failure.add_note(f"window {name}: no answer ({exc!r})")
+                failure.add_note(f"server history: {list(world.history)}")
             try:
                 problems = await stop_workers(procs)
             finally:

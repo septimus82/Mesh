@@ -114,7 +114,7 @@ scene, world and save formats. The only change outside `mesh_net` is optional bo
 | Milestone | Where | What |
 |---|---|---|
 | N7B rooms | `mesh_net/world.py` (`World`, `room_defs`, `Instance`) | Every room of the world file validated once; shared instances, per-party expedition instances, ids never reused, room-scoped `eid`s, per-room snapshots, bounded counts, cleanup |
-| N7C transitions | `World.step`, `World.transfer` | Walk-in doors (edge-triggered), destination resolution, preparation, leave/join in one tick, `TransferResult`, rollback, stale-input drop, a bounded transfer log |
+| N7C transitions | `World.step`, `World.transfer` | Walk-in doors (edge-triggered), destination resolution, preparation, leave/join in one tick, `TransferResult`, rollback, stale-input drop, a bounded event history (`World.history`) |
 | N7D parties | `World.party`, `_leave_party`, `_fix_leader` | Create, invite, accept, decline, leave; leadership hand-over; expedition access only through party membership |
 | N7E demonstration | `mesh_net/expedition/`, `tooling/make_expedition.py` | Adventurer's Hub, Ancient Ruins - Layer 1 (walls, lever and gate, bandit), Layer 2 (lever and gate, guardian), built with Studio's own operations |
 | Server and client | `mesh_net/server.py` (`WorldServer`, `--expedition`), `mesh_net/world_client.py` | Frames moved by the server as the world decides; a GameWindow client that loads each room it enters |
@@ -161,6 +161,39 @@ python -m mesh_net.world_client --port 46870   # in two terminals
 In the hub: P creates a party, I invites the nearest player, Y/N accepts or declines. Walk right into the hub's door
 together. In Layer 1, E at the lever opens the gate; the door down is beyond it. Space attacks, E takes loot. Walk
 back through the doors to return. F2 disconnects, R resumes.
+
+## Hosted failures fixed in N7.1
+
+- **Leaving could hang the client (Windows gpu lane, Extended 42978577824).** F2 cancels the world client's session.
+  On Python 3.11 (the CI version), `asyncio.wait_for` drops a cancellation that lands just as its inner result
+  arrives (fixed in 3.12; local runs used 3.13). The session cancelled its send and receive loops and only then
+  closed the connection, so a loop that missed its cancellation kept the session waiting on it forever. The hosted
+  record showed exactly that: the server still had player B with its last input on the current tick, 15 s after
+  F2. The session now closes the connection first, and the send loop stops once the connection is closing.
+  `test_leaving_ends_the_session_even_if_a_cancellation_is_swallowed` reproduces 3.11's behaviour and fails without
+  the fix. The window keeps a timestamped trace (`WorldArena.trace`) and the world a bounded history of connects,
+  resumes, disconnects and transfers; the two-window test prints both if it fails.
+- **CI policy checks.** The world tests built a `welcome` frame with a literal `"session"` key, which the scanner
+  for editor session state rightly flags. The frame is now made by `mesh_net.world.welcome`, which the server uses
+  too. Two client tests lacked a tier marker and are now `integration` (they use a project folder).
+
+### N6's two-window test (inherited instability)
+
+N6's two-window test fails when, after holding DOWN to y <= 262 below the gate gap, the avatar overshoots past
+about 14 px: below y = 248 its feet catch the wall under the gap, and the next RIGHT is blocked (the failures seen
+had it at y = 241). N7 does not change anything that test runs except moving N6's client code into `SceneView`
+(same calls, same order). A measuring harness drove the same probe and server from each checkout, alternating,
+four runs of ten releases each:
+
+| Checkout | Overshoot per release (px), mean of runs | Largest | Probe round trip (median) |
+|---|---|---|---|
+| base `64dd1067` | 4.2, 3.5, 3.5, 5.8 | 13.5 | 0.2 ms |
+| N7 | 3.5, 5.0, 5.0, 3.5 | 8.5 | 0.2 ms |
+
+Overshoot comes in whole ticks (7.5 px) on both, and the base's own tail reaches 13.5 px, at the test's margin.
+Alternating full runs of the test came out 8/8 on each. The evidence points to that test's thin margin, not to N7;
+it cannot rule out a small difference. Making N6's test walk in short steps near the gap (as N7's test does) would
+remove the margin problem; that change is outside N7.
 
 ## Single-player findings and limits
 

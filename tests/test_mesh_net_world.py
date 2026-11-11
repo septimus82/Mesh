@@ -22,6 +22,7 @@ from mesh_net.world import (
     check_frame,
     check_welcome,
     expedition_files,
+    welcome,
 )
 
 HUB, R1, R2 = "start", "ancient_ruins_layer_1", "ancient_ruins_layer_2"
@@ -824,6 +825,7 @@ def test_malformed_requests_raise_invalid_only(world):
             d.w.input(a, {"v": 1, "type": "input", "room": room, "entity": 1, "seq": 1, "dx": 0, "dy": 0})
 
 
+@pytest.mark.integration
 def test_clients_reject_malformed_frames(world):
     ids = {k: d.proto.identity for k, d in world.defs.items()}
     hub = world.hub.room.snapshot()
@@ -850,10 +852,10 @@ def test_clients_reject_malformed_frames(world):
         with pytest.raises(wire.Invalid):
             check_frame(frame, ids)
     with pytest.raises(wire.Invalid):
-        check_welcome({"v": 1, "type": "welcome", "session": "0" * 32, "player": 1, "resume": "a" * 64,
-                       "world": "b" * 64}, world.identity)
+        check_welcome(welcome("0" * 32, 1, "a" * 64, "b" * 64), world.identity)  # another world
 
 
+@pytest.mark.integration
 def test_the_client_applies_only_its_own_rooms_frames_in_order(world):
     """world_client.WorldArena.on_frame: after an enter, a state of another room is dropped (it was in flight), and
     within its room a state must be newer than the last."""
@@ -913,3 +915,71 @@ def test_the_server_process_ends_when_its_world_fails(files):
 
     with pytest.raises(RuntimeError, match="deliberate"):
         asyncio.run(run())
+
+
+@pytest.mark.integration
+def test_leaving_ends_the_session_even_if_a_cancellation_is_swallowed(files, monkeypatch):
+    """F2 (or closing the window) cancels the world client's session. On Python 3.11, asyncio.wait_for returns the
+    inner result instead of raising when it is cancelled just as that result arrives (fixed in 3.12), so a send loop
+    can miss its cancellation. The session must still close its connection, so the server sees the player leave."""
+    from types import SimpleNamespace
+
+    import mesh_net.world_client as world_client
+
+    armed = [True]
+
+    async def swallowing_wait_for(aw, timeout):  # 3.11's race, every time: the cancel lands while it waits
+        if not armed[0]:
+            return await asyncio.wait_for(aw, timeout)
+        fut = asyncio.ensure_future(aw)
+        try:
+            await asyncio.sleep(0.2)
+            return await asyncio.shield(fut)
+        except asyncio.CancelledError:
+            return await fut  # (3.11: the inner result arrived, so the cancellation is dropped)
+
+    monkeypatch.setattr(world_client, "asyncio", SimpleNamespace(**{**vars(asyncio), "wait_for": swallowing_wait_for}))
+    keys = SimpleNamespace(**{name: i for i, name in enumerate(("W", "UP", "S", "DOWN", "A", "LEFT", "D", "RIGHT"))})
+    window = SimpleNamespace(push_handlers=lambda **handlers: None)
+
+    async def run():
+        world = make_world(files)
+        server = WorldServer(world)
+        port = await server.start(0)
+        session = None
+        try:
+            with disposable_project(files, scaffold=False) as root:
+                arena = world_client.WorldArena(window, SimpleNamespace(key=keys), root, "unused")
+            arena.phase = "connecting"
+            session = asyncio.create_task(arena.session(port))
+            assert await _within(5, lambda: any(m.online for m in world.members.values()) and arena.room)
+            arena.shown = arena.room  # (as the window does once it shows the room: the send loop now sends input)
+            await asyncio.sleep(0.3)
+            session.cancel()
+            # (well within the server's 5 s read timeout: the leave comes from the closed connection, not silence)
+            left = await _within(2, lambda: not any(m.online for m in world.members.values()))
+            assert left, f"the server never saw the player leave; client trace {list(arena.trace)}"
+            await asyncio.wait({session}, timeout=5)
+            assert session.done() and arena.phase == "disconnected" and "closed" in [e for _, e in arena.trace]
+        finally:
+            armed[0] = False
+            await server.close()  # (unblocks a session that hung: its connection ends)
+            if session is not None:
+                await asyncio.wait({session}, timeout=5)
+
+    asyncio.run(run())
+
+
+async def _until(predicate):
+    while not predicate():
+        await asyncio.sleep(0.02)
+
+
+async def _within(seconds, predicate):
+    """Whether ``predicate`` comes true within ``seconds`` (never cancels anything: a hung task stays visible)."""
+    deadline = asyncio.get_running_loop().time() + seconds
+    while not predicate():
+        if asyncio.get_running_loop().time() > deadline:
+            return False
+        await asyncio.sleep(0.02)
+    return True

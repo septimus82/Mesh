@@ -15,6 +15,7 @@ import hashlib
 import json
 import re
 import secrets
+import time
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -209,7 +210,8 @@ class World:
         self.next_pid = self.next_party = 1
         self.prepare_hook: Any = None  # tests: a callable(key) that raises, to fail a destination's preparation
         self.shared: dict[str, Instance] = {}  # key -> the one instance of a room that is not an expedition
-        self.transfers: deque[tuple[int, int, str, str, str]] = deque(maxlen=32)  # (tick, pid, from, door, result)
+        # What happened to players, newest last: (tick, monotonic seconds, event, pid, detail). Bounded; diagnostics.
+        self.history: deque[tuple[int, float, str, int, str]] = deque(maxlen=64)
         self.hub = self._create(self.start, None)
 
     # --- instances ----------------------------------------------------------------------------------
@@ -275,6 +277,7 @@ class World:
             self.members[m.pid] = m
             self._enter(m, self.hub, self._fresh(self.hub, self.hub.room.spawn))
         credential = secrets.token_hex(32)
+        self._log("resume" if resume is not None else "connect", m.pid, m.instance or "")
         m.token = credential  # kept, but only usable once this connection ends (disconnect files it)
         return m.pid, credential
 
@@ -285,6 +288,7 @@ class World:
         m.player = inst.room.leave(m.eid)
         inst.touching.pop(m.eid, None)
         m.eid, m.online, m.expires, m.outbox, m.sent_party = None, False, self.tick + RETAIN_TICKS, [], None
+        self._log("disconnect", pid, inst.id)
         if m.token is not None:
             self.tokens[m.token] = pid
         self.invites.pop(pid, None)
@@ -417,6 +421,9 @@ class World:
                 m.instance, m.player = self.hub.id, self._fresh(self.hub, self.hub.room.spawn)  # (retained only)
             self._destroy(inst)
 
+    def _log(self, event: str, pid: int, detail: str = "") -> None:
+        self.history.append((self.tick, time.monotonic(), event, pid, detail))
+
     def _notice(self, m: Member, code: str) -> None:
         if m.online and len(m.outbox) < 8:
             m.outbox.append({"v": 1, "type": "notice", "code": code})
@@ -449,7 +456,7 @@ class World:
     def transfer(self, m: Member, source: Instance, door: Door) -> TransferResult:
         """Walk ``m`` through ``door``: resolve and prepare the destination, then leave and join in one step."""
         result = self._transfer(m, source, door)
-        self.transfers.append((self.tick, m.pid, source.id, door.id, result.value))
+        self._log("transfer", m.pid, f"{source.id} {door.id} {result.value}")
         return result
 
     def _transfer(self, m: Member, source: Instance, door: Door) -> TransferResult:
@@ -495,6 +502,7 @@ class World:
         return True
 
     def _expire(self, m: Member) -> None:
+        self._log("expire", m.pid)
         if m.party is not None:
             self._leave_party(m)
         if m.token is not None:
@@ -535,6 +543,11 @@ class World:
             m.sent_party = view
             out.insert(1 if out and out[0]["type"] == "enter" else 0, view)
         return out
+
+
+def welcome(session: str, player: int, resume: str, world: str) -> wire.Message:
+    """The frame a world server answers a join with (mesh_net.server.WorldServer; check_welcome reads it)."""
+    return {"v": 1, "type": "welcome", "session": session, "player": player, "resume": resume, "world": world}
 
 
 # --- client-side validation (a world client checks every frame it receives) -----------------------

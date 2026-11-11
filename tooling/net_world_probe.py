@@ -35,7 +35,7 @@ async def drive(arena, port: int) -> None:
                 arena.window.dispatch_event(event, getattr(arena.arcade.key, cmd[1]), 0)
             result = {"phase": arena.phase, "player": arena.player, "room": arena.room, "key": arena.key,
                       "shown": arena.shown, "entity": arena.entity, "state": arena.state, "party": arena.party,
-                      "status": arena.status, "identity": arena.identity, "loads": arena.loads,
+                      "status": arena.status, "identity": arena.identity, "loads": arena.loads, "trace": list(arena.trace),
                       "scene_path": getattr(arena.window.scene_controller, "current_scene_path", None)}
             if cmd[0] == "capture" and arena.view is not None:
                 result.update(capture(arena))

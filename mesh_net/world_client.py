@@ -13,6 +13,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import math
+import time
+from collections import deque
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +57,7 @@ class WorldArena(Arena):
         self.seq = 0
         self.last: float | None = None
         self.loads: list[str] = []  # the rooms this window loaded, in order (for diagnostics and tests)
+        self.trace: deque[tuple[float, str]] = deque(maxlen=48)  # (monotonic seconds, what happened): diagnostics
 
     # (the shown room's presentation, as tooling/net_world_probe.py reads it)
     scene = property(lambda self: self.view.scene)
@@ -66,8 +69,13 @@ class WorldArena(Arena):
     def connected(self) -> bool:
         return self.phase in ("loading", "playing")
 
+    def note(self, event: str) -> None:
+        self.trace.append((round(time.monotonic(), 3), event))
+
     def press(self, symbol: int, modifiers: int) -> bool:
         key = self.arcade.key
+        if symbol in (key.F2, key.R, key.N, key.ESCAPE):
+            self.note(f"key {symbol} ({self.phase}, request {self.request})")
         if symbol in self.directions:
             return super().press(symbol, modifiers)
         if self.connected and symbol not in self.action_keys:
@@ -152,9 +160,10 @@ class WorldArena(Arena):
                 hello = await wire.read(reader)
                 check_welcome(hello, self.identity)
                 self.player, self.token, self.phase = hello["player"], hello["resume"], "loading"
+                self.note(f"welcome as P{self.player}")
 
                 async def send() -> None:
-                    while True:
+                    while not writer.is_closing():  # (see below: a missed cancellation still ends here)
                         for request in self.requests:
                             writer.write(wire.encode(request))
                         self.requests.clear()
@@ -183,6 +192,12 @@ class WorldArena(Arena):
                     for task in done:
                         task.result()
                 finally:
+                    # Close first, then wait. On Python 3.11 asyncio.wait_for can drop a cancellation that lands as
+                    # its inner result arrives (fixed in 3.12), so a send or receive loop may run on after cancel():
+                    # with the connection already closed, its next write or read ends it, and the server sees the
+                    # player leave (hosted Windows, Extended 42978577824: F2 left the session sending forever).
+                    self.note("closing")
+                    writer.close()
                     for task in tasks:
                         task.cancel()
                     await asyncio.gather(*tasks, return_exceptions=True)
@@ -192,8 +207,13 @@ class WorldArena(Arena):
                     await asyncio.wait_for(writer.wait_closed(), 2)
                 except (OSError, TimeoutError):
                     writer.transport.abort()
+                self.note("closed")
         except (OSError, EOFError, TimeoutError, wire.Invalid) as exc:
+            self.note(f"session ended: {type(exc).__name__}")
             self.status = f"Disconnected ({type(exc).__name__}) | R resume / N new"
+        except asyncio.CancelledError:
+            self.note("session cancelled")
+            raise
         finally:
             self.phase, self.room, self.pending = "disconnected", None, None
             self.blur()

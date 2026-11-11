@@ -136,8 +136,9 @@ class WorldServer(Server):
             wire.fields(msg, "join", "resume")
             pid, credential = self.world.connect(msg["resume"])
             self.peers[pid] = writer
-            writer.write(wire.encode({"v": 1, "type": "welcome", "session": secrets.token_hex(16), "player": pid,
-                                      "resume": credential, "world": self.world.identity}))
+            from .world import welcome  # noqa: PLC0415  # (the world's own frame builder)
+
+            writer.write(wire.encode(welcome(secrets.token_hex(16), pid, credential, self.world.identity)))
             for frame in self.world.take(pid):
                 writer.write(wire.encode(frame))
             bucket, count = self.world.tick, 0
