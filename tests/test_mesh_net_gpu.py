@@ -315,25 +315,27 @@ def test_two_windows_meet_party_travel_and_return():
         await command(proc, f"press {key}")
         await command(proc, f"release {key}")
 
-    async def go(proc, key, target):
-        """Walk to ``target`` along the key's axis: held while far (a held key's release lands a few ticks late),
-        then in steps of a tick or two."""
+    async def go(proc, key, target, within=16.0):
+        """Walk along the key's axis until ``target`` is reached and not passed by more than ``within`` px: held
+        while far (a held key's release lands a few ticks late), then a tick or two at a time, back if it overshot."""
         axis, sign = {"RIGHT": (0, 1), "LEFT": (0, -1), "UP": (1, 1), "DOWN": (1, -1)}[key]
+        back = {"RIGHT": "LEFT", "LEFT": "RIGHT", "UP": "DOWN", "DOWN": "UP"}[key]
 
-        def short(r, margin=0.0):
-            return (target - own(r)[axis]) * sign > margin
+        def ahead(r):
+            return (target - own(r)[axis]) * sign  # > 0: not there yet; < -within: overshot
 
         reply = await until(proc, lambda r: True)
-        if short(reply, 60):
-            await hold(proc, key, lambda r: not short(r, 60))
+        if ahead(reply) > 60:
+            await hold(proc, key, lambda r: ahead(r) <= 60)
         for _ in range(40):
             reply = await until(proc, lambda r: True)
-            if not short(reply):
+            if -within <= ahead(reply) <= 0:
                 return reply
             tick = reply["state"]["tick"]
-            await command(proc, f"press {key}")
+            step = key if ahead(reply) > 0 else back
+            await command(proc, f"press {step}")
             await until(proc, lambda r: r["state"]["tick"] > tick)
-            await command(proc, f"release {key}")
+            await command(proc, f"release {step}")
         raise AssertionError(f"{key} to {target} not reached: {own(reply)}")
 
     async def shot(proc, players):
@@ -388,7 +390,7 @@ def test_two_windows_meet_party_travel_and_return():
                 assert (await command(proc, "capture"))["objects"][gate1][4] is False
 
             # Both go down to Layer 2 through the open gate.
-            await go(a, "DOWN", 258)
+            await go(a, "DOWN", 264)  # (264-248: the feet stay inside the gate's gap, y 224-288)
             await go(b, "RIGHT", 250)
             await go(b, "UP", 254)
             await asyncio.gather(*(hold(p, "RIGHT", lambda r: r["key"] == r2) for p in procs))
@@ -418,7 +420,9 @@ def test_two_windows_meet_party_travel_and_return():
             await go(a, "LEFT", 600)
             await go(a, "UP", 254)
             home = await hold(a, "LEFT", lambda r: r["key"] == hub)
-            assert own(home) == [704.0, 160.0] and [m[2] for m in home["party"]["members"]] == [hub, r2]
+            assert own(home) == [704.0, 160.0]
+            # The party view follows the enter frame of the same tick: a reply can fall between the two.
+            await until(a, lambda r: [m[2] for m in r["party"]["members"]] == [hub, r2])
             await shot(a, [home["entity"]])
 
             # b drops and resumes: back in the party's Layer 2, the guardian still dead, the party intact.
@@ -484,25 +488,27 @@ async def _tap(proc, key):
     await command(proc, f"release {key}")
 
 
-async def _go(proc, key, target):
-    """Walk along the key's axis to ``target``: held while far, then a tick or two at a time (as N7's test)."""
+async def _go(proc, key, target, within=16.0):
+    """As N7's test's go(): reach ``target`` without passing it by more than ``within`` px (stepping back if so)."""
     axis, sign = {"RIGHT": (0, 1), "LEFT": (0, -1), "UP": (1, 1), "DOWN": (1, -1)}[key]
+    back = {"RIGHT": "LEFT", "LEFT": "RIGHT", "UP": "DOWN", "DOWN": "UP"}[key]
 
-    def short(r, margin=0.0):
-        return (target - _own(r)[axis]) * sign > margin
+    def ahead(r):
+        return (target - _own(r)[axis]) * sign
 
     playing = lambda r: r["phase"] == "playing" and r["state"]  # noqa: E731
     reply = await _state(proc, playing)
-    if short(reply, 60):
-        await _hold(proc, key, lambda r: not short(r, 60))
+    if ahead(reply) > 60:
+        await _hold(proc, key, lambda r: ahead(r) <= 60)
     for _ in range(40):
         reply = await _state(proc, playing)
-        if not short(reply):
+        if -within <= ahead(reply) <= 0:
             return reply
         tick = reply["state"]["tick"]
-        await command(proc, f"press {key}")
+        step = key if ahead(reply) > 0 else back
+        await command(proc, f"press {step}")
         await _state(proc, lambda r: playing(r) and r["state"]["tick"] > tick)
-        await command(proc, f"release {key}")
+        await command(proc, f"release {step}")
     raise AssertionError(f"{key} to {target} not reached: {_own(reply)}")
 
 
@@ -571,7 +577,7 @@ def test_two_characters_persist_through_a_server_restart(tmp_path):
             await _tap(a, "E")
             for p in procs:
                 await _state(p, lambda r: playing(r) and r["state"]["open"], why="gate open")
-            await _go(a, "DOWN", 258)
+            await _go(a, "DOWN", 264)
             await _go(b, "RIGHT", 250)
             await _go(b, "UP", 254)
             await asyncio.gather(*(_hold(p, "RIGHT", lambda r: r["key"] == r2, why="into Layer 2") for p in procs))
