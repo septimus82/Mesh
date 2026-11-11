@@ -164,7 +164,11 @@ def test_committed_world_is_a_fresh_studio_build(files):
         from make_expedition import build
     finally:
         sys.path.remove("tooling")
-    assert {rel: json.loads(text) for rel, text in build().items()} == {rel: json.loads(files[rel]) for rel in EXPEDITION_FILES}
+    built = {rel: json.loads(text) for rel, text in build().items()}
+    from mesh_net.persistence import expedition_rules
+
+    assert built.pop("mesh_net/progression.json") == expedition_rules()  # (N8's rules, packaged beside the rooms)
+    assert built == {rel: json.loads(files[rel]) for rel in EXPEDITION_FILES}
 
 
 @pytest.mark.integration

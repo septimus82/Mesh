@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from . import persistence
 from . import protocol as wire
 from .scene_room import BOUND, Body, Player, SceneRoom, Unsupported, check_state, config, load_scene, parse_input, roll_drops
 
@@ -36,6 +37,7 @@ EXPEDITION_FILES = {
     "packs/core_regions/maps/ancient_ruins_layer_1.json": "ruins_1_map.json",
     "packs/core_regions/maps/ancient_ruins_layer_2.json": "ruins_2_map.json",
     "assets/prefabs.json": "prefabs.json",
+    "assets/data/items.json": "items.json",
 }
 MAX_CONNECTIONS = wire.MAX_PLAYERS  # online players (mesh_net.server's accept limit)
 MAX_CHARACTERS = 16  # online + retained after a disconnect, as N5
@@ -47,7 +49,7 @@ RETAIN_TICKS = 30 * wire.HZ  # N5's resume window
 KEY = re.compile(r"[a-z0-9_]{1,48}")
 ROOM_ID = re.compile(r"[a-z0-9_]{1,48}:[0-9]{1,9}")
 PARTY_OPS = {"create": (), "invite": ("player",), "accept": ("party",), "decline": ("party",), "leave": ()}
-NOTICES = ("need_party", "no_instance", "room_full", "transfer_failed", "left_expedition", "in_party", "not_leader",
+NOTICES = persistence.NOTICES + ("need_party", "no_instance", "room_full", "transfer_failed", "left_expedition", "in_party", "not_leader",
            "no_player", "busy", "no_invite", "party_full", "invited")
 
 
@@ -186,9 +188,12 @@ class World:
     """Every room instance, player and party of one server. Only its owner calls step(); everything is in-process
     and deterministic, so a transfer between rooms happens inside one tick."""
 
-    def __init__(self, root: Path, world_file: str = WORLD_FILE) -> None:
+    def __init__(self, root: Path, world_file: str = WORLD_FILE, store: Any = None, rules: Any = None) -> None:
+        """``store`` (a mesh_net.characters.CharacterStore) and ``rules`` (progression rules) make the world's
+        characters persistent (N8); without them it is N7's world exactly."""
         self.root = root
         self.start, self.defs = room_defs(root, world_file)
+        self.progress = persistence.Progress.open(root, self.defs, store, rules) if store is not None else None
         identities = sorted([key, d.proto.identity, d.expedition] for key, d in self.defs.items())
         self.identity = hashlib.sha256(json.dumps(identities).encode()).hexdigest()
         for key, d in self.defs.items():  # the largest frame any room can send must fit
@@ -252,8 +257,24 @@ class World:
 
     # --- sessions -----------------------------------------------------------------------------------
 
-    def connect(self, resume: str | None) -> tuple[int, str]:
-        """A connection joins (resume None) or resumes. Returns (player id, the next resume credential)."""
+    def connect(self, resume: str | None, character: Any = None) -> tuple[int, str]:
+        """A connection joins (resume None) or resumes. Returns (player id, the next resume credential).
+
+        In a persistent world a join names its character (``{"id", "key"}``): a character already online is refused,
+        one disconnected but retained is resumed, any other joins anew. (A resume credential works as in N7.)"""
+        progress = self.progress
+        if progress is None and character is not None:
+            raise persistence.Refused("unexpected_character")
+        state = None
+        if resume is not None and character is not None:
+            raise wire.Invalid("a join resumes or names a character, not both")
+        if resume is None and progress is not None:
+            state = progress.authenticate(character)
+            held = progress.owner.get(state.id)
+            if held is not None:
+                if self.members[held].online:
+                    raise persistence.Refused("character_in_use")
+                resume = self.members[held].token  # retained: resume it (that credential is spent by this)
         if resume is not None:
             if not wire.token(resume) or resume not in self.tokens:
                 raise wire.Invalid("invalid resume")
@@ -271,10 +292,12 @@ class World:
                 self._fix_leader(self.parties[m.party])
         else:
             if sum(m.online for m in self.members.values()) >= MAX_CONNECTIONS or len(self.members) >= MAX_CHARACTERS:
-                raise wire.Invalid("character capacity")
+                raise persistence.Refused("capacity") if progress is not None else wire.Invalid("character capacity")
             m = Member(self.next_pid, self.next_pid)
             self.next_pid += 1
             self.members[m.pid] = m
+            if progress is not None and state is not None:
+                progress.bind(m.pid, state)
             self._enter(m, self.hub, self._fresh(self.hub, self.hub.room.spawn))
         credential = secrets.token_hex(32)
         self._log("resume" if resume is not None else "connect", m.pid, m.instance or "")
@@ -292,6 +315,9 @@ class World:
         if m.token is not None:
             self.tokens[m.token] = pid
         self.invites.pop(pid, None)
+        if self.progress is not None:
+            self.progress.takes.discard(pid)
+            self.progress.sent.pop(pid, None)
         if m.party is not None:
             self._fix_leader(self.parties[m.party])
 
@@ -324,6 +350,10 @@ class World:
             parse_input(frame, entity)  # (still checked: a malformed frame ends the connection either way)
             return
         assert m.eid is not None
+        if self.progress is not None and frame.get("action") == "take":  # (a persistent claim: the world handles it)
+            parse_input(frame, m.eid)
+            self.progress.takes.add(pid)
+            frame = {k: v for k, v in frame.items() if k != "action"}
         self.instances[room].room.input(m.eid, frame)
 
     def party(self, pid: int, msg: wire.Message) -> None:
@@ -444,6 +474,8 @@ class World:
                 if entered:  # (two doors at once: the first by id)
                     door = min((d for d in doors if d.id in entered), key=lambda d: d.id)
                     walked.append((by_room[(inst.id, eid)], inst, door))
+        if self.progress is not None:  # deaths, claims and unlocks, with everyone still where they fought
+            self.progress.after_step(self)
         for m, inst, door in walked:
             self.transfer(m, inst, door)
         for m in [m for m in self.members.values() if not m.online and m.expires <= self.tick]:
@@ -503,6 +535,8 @@ class World:
 
     def _expire(self, m: Member) -> None:
         self._log("expire", m.pid)
+        if self.progress is not None:
+            self.progress.release(m.pid)
         if m.party is not None:
             self._leave_party(m)
         if m.token is not None:
@@ -542,6 +576,11 @@ class World:
         if view != m.sent_party:
             m.sent_party = view
             out.insert(1 if out and out[0]["type"] == "enter" else 0, view)
+        progress = self.progress
+        sheet = progress.view(self, m) if progress is not None else None
+        if progress is not None and sheet is not None and sheet != progress.sent.get(pid):  # (changed by a commit)
+            progress.sent[pid] = sheet
+            out.insert(1 if out and out[0]["type"] == "enter" else 0, sheet)
         return out
 
 
@@ -589,6 +628,8 @@ def check_frame(msg: wire.Message, identities: dict[str, str]) -> None:
                 or not all(isinstance(r, list) and len(r) == 2 and wire.integer(r[0], 1) and wire.integer(r[1], 1)
                            for r in msg["invites"] + msg["nearby"])):
             raise wire.Invalid("invalid party")
+    elif kind == "character":
+        persistence.check_character(msg)
     elif kind == "notice":
         wire.fields(msg, "notice", "code")
         if not isinstance(msg["code"], str) or msg["code"] not in NOTICES:

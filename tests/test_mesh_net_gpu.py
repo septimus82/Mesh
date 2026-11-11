@@ -174,6 +174,20 @@ def test_two_windows_play_the_studio_scene_together():
         await command(proc, f"press {key}")
         await command(proc, f"release {key}")
 
+    async def settle(proc, eid, low, high):
+        """Bring the avatar's y into [low, high] a tick at a time (a held key's late release overshot past the gate's
+        gap: its feet then caught the wall below it, on hosted Windows too)."""
+        for _ in range(40):
+            state = await observe(proc, lambda s: True)
+            y = pos(state["state"], eid)[1]
+            if low <= y <= high:
+                return
+            key = "DOWN" if y > high else "UP"
+            await command(proc, f"press {key}")
+            await observe(proc, lambda s, t=state["state"]["tick"]: s["tick"] > t)
+            await command(proc, f"release {key}")
+        raise AssertionError(f"y not settled in [{low}, {high}]")
+
     async def run():
         room = _scene_room()
         server = Server(room)
@@ -221,7 +235,8 @@ def test_two_windows_play_the_studio_scene_together():
                 assert (await command(proc, "capture"))["objects"][gate][4] is False
 
             # Combat: both reach the bandit and strike it; the server's HP, death and loot reach both windows.
-            await hold(a, "DOWN", a, lambda s: pos(s, aid)[1] <= 262)
+            await hold(a, "DOWN", a, lambda s: pos(s, aid)[1] <= 270)
+            await settle(a, aid, 249, 259)  # feet inside the gap (y >= 248), level with the bandit's feet (y < 260)
             await hold(a, "RIGHT", a, lambda s: pos(s, aid)[0] >= 575)
             await hold(b, "RIGHT", b, lambda s: pos(s, bid)[0] >= 560)
             await tap(a, "SPACE")
@@ -315,25 +330,27 @@ def test_two_windows_meet_party_travel_and_return():
         await command(proc, f"press {key}")
         await command(proc, f"release {key}")
 
-    async def go(proc, key, target):
-        """Walk to ``target`` along the key's axis: held while far (a held key's release lands a few ticks late),
-        then in steps of a tick or two."""
+    async def go(proc, key, target, within=16.0):
+        """Walk along the key's axis until ``target`` is reached and not passed by more than ``within`` px: held
+        while far (a held key's release lands a few ticks late), then a tick or two at a time, back if it overshot."""
         axis, sign = {"RIGHT": (0, 1), "LEFT": (0, -1), "UP": (1, 1), "DOWN": (1, -1)}[key]
+        back = {"RIGHT": "LEFT", "LEFT": "RIGHT", "UP": "DOWN", "DOWN": "UP"}[key]
 
-        def short(r, margin=0.0):
-            return (target - own(r)[axis]) * sign > margin
+        def ahead(r):
+            return (target - own(r)[axis]) * sign  # > 0: not there yet; < -within: overshot
 
         reply = await until(proc, lambda r: True)
-        if short(reply, 60):
-            await hold(proc, key, lambda r: not short(r, 60))
+        if ahead(reply) > 60:
+            await hold(proc, key, lambda r: ahead(r) <= 60)
         for _ in range(40):
             reply = await until(proc, lambda r: True)
-            if not short(reply):
+            if -within <= ahead(reply) <= 0:
                 return reply
             tick = reply["state"]["tick"]
-            await command(proc, f"press {key}")
+            step = key if ahead(reply) > 0 else back
+            await command(proc, f"press {step}")
             await until(proc, lambda r: r["state"]["tick"] > tick)
-            await command(proc, f"release {key}")
+            await command(proc, f"release {step}")
         raise AssertionError(f"{key} to {target} not reached: {own(reply)}")
 
     async def shot(proc, players):
@@ -388,7 +405,7 @@ def test_two_windows_meet_party_travel_and_return():
                 assert (await command(proc, "capture"))["objects"][gate1][4] is False
 
             # Both go down to Layer 2 through the open gate.
-            await go(a, "DOWN", 258)
+            await go(a, "DOWN", 264)  # (264-248: the feet stay inside the gate's gap, y 224-288)
             await go(b, "RIGHT", 250)
             await go(b, "UP", 254)
             await asyncio.gather(*(hold(p, "RIGHT", lambda r: r["key"] == r2) for p in procs))
@@ -418,7 +435,9 @@ def test_two_windows_meet_party_travel_and_return():
             await go(a, "LEFT", 600)
             await go(a, "UP", 254)
             home = await hold(a, "LEFT", lambda r: r["key"] == hub)
-            assert own(home) == [704.0, 160.0] and [m[2] for m in home["party"]["members"]] == [hub, r2]
+            assert own(home) == [704.0, 160.0]
+            # The party view follows the enter frame of the same tick: a reply can fall between the two.
+            await until(a, lambda r: [m[2] for m in r["party"]["members"]] == [hub, r2])
             await shot(a, [home["entity"]])
 
             # b drops and resumes: back in the party's Layer 2, the guardian still dead, the party intact.
@@ -450,4 +469,192 @@ def test_two_windows_meet_party_travel_and_return():
                 require_clean_workers(problems)
             elif problems:
                 error.add_note("window cleanup: " + "; ".join(problems))
+    asyncio.run(run())
+
+
+async def _state(proc, predicate, timeout=15, why=""):
+    reply = None
+    try:
+        async with asyncio.timeout(timeout):
+            while True:
+                reply = await command(proc, "state")
+                if predicate(reply):
+                    return reply
+                await asyncio.sleep(0.025)
+    except TimeoutError as exc:
+        last = {k: reply.get(k) for k in ("phase", "key", "room", "status", "refused", "sheet", "trace")} if reply else None
+        raise AssertionError(f"{why or 'condition'} not reached; last: {last}") from exc
+
+
+def _own(reply):
+    return next(r[1:4] for r in reply["state"]["players"] if r[0] == reply["entity"])
+
+
+async def _hold(proc, key, predicate, why=""):
+    await command(proc, f"press {key}")
+    try:
+        return await _state(proc, lambda r: r["phase"] == "playing" and r["state"] and predicate(r), why=why)
+    finally:
+        await command(proc, f"release {key}")
+
+
+async def _tap(proc, key):
+    await command(proc, f"press {key}")
+    await command(proc, f"release {key}")
+
+
+async def _go(proc, key, target, within=16.0):
+    """As N7's test's go(): reach ``target`` without passing it by more than ``within`` px (stepping back if so)."""
+    axis, sign = {"RIGHT": (0, 1), "LEFT": (0, -1), "UP": (1, 1), "DOWN": (1, -1)}[key]
+    back = {"RIGHT": "LEFT", "LEFT": "RIGHT", "UP": "DOWN", "DOWN": "UP"}[key]
+
+    def ahead(r):
+        return (target - _own(r)[axis]) * sign
+
+    playing = lambda r: r["phase"] == "playing" and r["state"]  # noqa: E731
+    reply = await _state(proc, playing)
+    if ahead(reply) > 60:
+        await _hold(proc, key, lambda r: ahead(r) <= 60)
+    for _ in range(40):
+        reply = await _state(proc, playing)
+        if -within <= ahead(reply) <= 0:
+            return reply
+        tick = reply["state"]["tick"]
+        step = key if ahead(reply) > 0 else back
+        await command(proc, f"press {step}")
+        await _state(proc, lambda r: playing(r) and r["state"]["tick"] > tick)
+        await command(proc, f"release {step}")
+    raise AssertionError(f"{key} to {target} not reached: {_own(reply)}")
+
+
+async def _server(store, logs):
+    """``python -m mesh_net.server --expedition --store STORE`` as its own process; returns (process, port)."""
+    proc = await asyncio.create_subprocess_exec(sys.executable, "-m", "mesh_net.server", "--expedition", "--store",
+                                                str(store), "--port", "0", stdout=asyncio.subprocess.PIPE,
+                                                stderr=asyncio.subprocess.STDOUT)
+    async with asyncio.timeout(60):
+        while line := await proc.stdout.readline():
+            text = line.decode(errors="replace").rstrip()
+            logs.append(text)
+            if "listening on 127.0.0.1:" in text:
+                return proc, int(text.rsplit(":", 1)[1])
+    raise RuntimeError(f"server did not start: {logs[-10:]}")
+
+
+@pytest.mark.skipif(os.environ.get("MESH_GL_SMOKE") != "1",
+                    reason="requires real Mesh windows (set MESH_GL_SMOKE=1)")
+def test_two_characters_persist_through_a_server_restart(tmp_path):
+    """N8: two characters (made with the admin store) play in two hidden Mesh windows against a real server process
+    with a character store: party, Layer 1, Layer 2, the guardian struck by both, each takes their own sigil and
+    earns the unlock. They leave; the server process is killed outright. The store, read directly, holds both
+    characters' items and unlocks. A new server process on the same store takes both back as themselves (their
+    windows show their items and unlock), to fresh rooms, and they set out on a new expedition."""
+    from mesh_net.characters import CharacterStore
+
+    r1, r2 = "ancient_ruins_layer_1", "ancient_ruins_layer_2"
+    guardian, unlock = f"{r2}_guardian_480_256_0_0", "ruins_layer_2_completed"
+    path = tmp_path / "characters.db"
+    store = CharacterStore(path, create=True)
+    keys = []
+    for name in ("Ada", "Bo"):
+        cid, key = store.create(name)
+        keys.append((cid, tmp_path / f"{name}.json"))
+        keys[-1][1].write_text(json.dumps({"id": cid, "key": key}), encoding="utf-8")
+    store.close()
+    logs: list[str] = []
+
+    async def window(port, key_file):
+        return await asyncio.create_subprocess_exec(sys.executable, "-m", "tooling.net_world_probe", str(port),
+                                                    str(key_file), stdin=asyncio.subprocess.PIPE,
+                                                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+
+    async def run():
+        server, port = await _server(path, logs)
+        procs = []
+        try:
+            procs = [await window(port, key_file) for _, key_file in keys]
+            a, b = procs
+            playing = lambda r: r["phase"] == "playing" and r["state"] and r["sheet"]  # noqa: E731
+            ra, rb = [await _state(p, lambda r: playing(r) and len(r["state"]["players"]) == 2, why="both in the hub")
+                      for p in procs]
+            assert {ra["sheet"]["name"], rb["sheet"]["name"]} == {"Ada", "Bo"} and ra["sheet"]["items"] == []
+
+            await _tap(a, "P")
+            await _state(a, lambda r: r["party"] and r["party"]["party"], why="party made")
+            await _tap(a, "I")
+            await _state(b, lambda r: r["party"] and r["party"]["invites"], why="invitation")
+            await _tap(b, "Y")
+            for p in procs:
+                await _state(p, lambda r: r["party"] and len(r["party"]["members"]) == 2, why="party of two")
+            await asyncio.gather(*(_hold(p, "RIGHT", lambda r: r["key"] == r1, why="into Layer 1") for p in procs))
+            await _go(a, "RIGHT", 352)
+            await _go(a, "UP", 300)
+            await _tap(a, "E")
+            for p in procs:
+                await _state(p, lambda r: playing(r) and r["state"]["open"], why="gate open")
+            await _go(a, "DOWN", 264)
+            await _go(b, "RIGHT", 250)
+            await _go(b, "UP", 254)
+            await asyncio.gather(*(_hold(p, "RIGHT", lambda r: r["key"] == r2, why="into Layer 2") for p in procs))
+            for p in procs:
+                await _go(p, "RIGHT", 430)
+                await _go(p, "UP", 236)  # level with the guardian's feet (its collider)
+                await _hold(p, "RIGHT", lambda r: _own(r)[2] == 0, why="facing it")
+            await _tap(a, "SPACE")
+            await _state(b, lambda r: playing(r) and r["state"]["enemies"] == [[guardian, 1.0]], why="first hit")
+            await _tap(b, "SPACE")
+            for p in procs:  # both were there: both earn the unlock, both may take their own sigil
+                await _state(p, lambda r: playing(r) and unlock in r["sheet"]["unlocks"] and r["sheet"]["loot"],
+                             why="unlock and loot")
+                await _tap(p, "E")
+                got = await _state(p, lambda r: playing(r) and r["sheet"]["items"] == [["guardian_sigil", 1]],
+                                   why="sigil taken")
+                assert got["sheet"]["loot"] == [] and (await command(p, "capture"))["drops"] == [guardian]
+
+            for p in procs:  # both leave, then the server goes down hard
+                await _tap(p, "F2")
+                await _state(p, lambda r: r["phase"] == "disconnected", why="left")
+            server.kill()
+            await server.wait()
+            check = CharacterStore(path)  # what the store holds, not what the clients said
+            try:
+                for cid, _ in keys:
+                    state = check.load(cid)
+                    assert state.items == (("guardian_sigil", 1),) and state.unlocks == (unlock,) and state.completed == 1
+            finally:
+                check.close()
+
+            server, port = await _server(path, logs)
+            for p in procs:  # the windows join the new server as their characters (N: a fresh join, not a resume)
+                await command(p, f"port {port}")
+                await _tap(p, "N")
+            back = [await _state(p, lambda r: playing(r) and r["key"] == "start" and len(r["state"]["players"]) == 2,
+                                 why="back in the hub") for p in procs]
+            for reply, (cid, _) in zip(back, keys):
+                assert reply["sheet"]["id"] == cid and reply["sheet"]["items"] == [["guardian_sigil", 1]]
+                assert reply["sheet"]["unlocks"] == [unlock] and reply["room"] == "start:1"  # fresh rooms
+                shot = await command(procs[back.index(reply)], "capture")
+                assert len(shot["drawn"]) == 2 and all(shot["drawn"].values())
+            await _tap(a, "P")
+            await _state(a, lambda r: r["party"] and r["party"]["party"], why="new party")
+            await _tap(a, "I")
+            await _state(b, lambda r: r["party"] and r["party"]["invites"], why="new invitation")
+            await _tap(b, "Y")
+            await asyncio.gather(*(_hold(p, "RIGHT", lambda r: r["key"] == r1, why="a new expedition") for p in procs))
+            fresh = await _state(a, lambda r: playing(r) and r["key"] == r1, why="in the new Layer 1")
+            assert fresh["state"]["open"] == [] and fresh["sheet"]["unlocks"] == [unlock]
+        finally:
+            failure = sys.exc_info()[1]
+            if failure is not None:
+                failure.add_note(f"server log: {logs[-20:]}")
+            try:
+                problems = await stop_workers(procs)
+            finally:
+                if server.returncode is None:
+                    server.kill()
+                    await server.wait()
+            if failure is None:
+                require_clean_workers(problems)
+            elif problems:
+                failure.add_note("window cleanup: " + "; ".join(problems))
     asyncio.run(run())

@@ -7,6 +7,7 @@ import asyncio
 import logging
 import secrets
 from contextlib import ExitStack
+from pathlib import Path
 from typing import Any
 
 from . import protocol as wire
@@ -133,8 +134,15 @@ class WorldServer(Server):
         pid = None
         try:
             msg = await wire.read(reader)
-            wire.fields(msg, "join", "resume")
-            pid, credential = self.world.connect(msg["resume"])
+            wire.fields(msg, "join", "resume", *(("character",) if "character" in msg else ()))
+            try:
+                pid, credential = self.world.connect(msg["resume"], msg.get("character"))
+            except Exception as exc:
+                code = getattr(exc, "code", None)  # (mesh_net.persistence.Refused: say why before closing)
+                if code is not None:
+                    writer.write(wire.encode({"v": 1, "type": "refused", "code": code}))
+                    await asyncio.wait_for(writer.drain(), 2)
+                raise
             self.peers[pid] = writer
             from .world import welcome  # noqa: PLC0415  # (the world's own frame builder)
 
@@ -216,7 +224,12 @@ def main() -> None:
     parser.add_argument("--coop", action="store_true", help="host the packaged co-op scene (mesh_net/coop)")
     parser.add_argument("--expedition", action="store_true",
                         help="host the packaged hub and expedition rooms (mesh_net/expedition)")
+    parser.add_argument("--store", help="with --expedition: keep characters in this character store (N8; it must "
+                                        "exist: python -m mesh_net.characters new-store PATH)")
     args = parser.parse_args()
+    if args.store and not args.expedition:
+        parser.error("--store needs --expedition")
+    store_path = Path(args.store).resolve() if args.store else None  # (before the room folder becomes the cwd)
     with ExitStack() as stack:
         room: Any = None
         host: type[Server] = Server
@@ -224,9 +237,21 @@ def main() -> None:
             from .scene_room import disposable_project
             from .world import World, expedition_files
 
+            store = None
+            if store_path is not None:
+                from .characters import CharacterStore, StoreUnavailable
+                from .persistence import expedition_rules
+
+                try:
+                    store = CharacterStore(store_path)
+                except StoreUnavailable as exc:
+                    raise SystemExit(f"[Mesh][Net] {exc}") from None
+                stack.callback(store.close)
             root = stack.enter_context(disposable_project(expedition_files(), scaffold=False))
-            world = World(root)
+            world = World(root, store=store, rules=expedition_rules() if store is not None else None)
             room, host = world, WorldServer
+            if store_path is not None:
+                print(f"Mesh characters {store_path.name}", flush=True)
             print(f"Mesh world {world.identity[:12]}", flush=True)
         elif args.coop:
             from .scene_room import COOP_SCENE, SceneRoom, coop_files, disposable_project

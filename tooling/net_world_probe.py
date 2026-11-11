@@ -1,6 +1,6 @@
 """Local stdin/stdout test driver for one hidden world window (mesh_net.world_client), never a network endpoint.
 
-Commands: ``state``, ``press KEY``, ``release KEY``, ``capture``, ``quit``. Each prints one ``NET_PROOF {json}`` line.
+Commands: ``state``, ``press KEY``, ``release KEY``, ``capture``, ``port N`` (join that server next), ``quit``. Each prints one ``NET_PROOF {json}`` line.
 ``capture`` is tooling/net_scene_probe.py's: avatars counted by the pixels the scene renderer drew for them.
 """
 from __future__ import annotations
@@ -11,7 +11,7 @@ import sys
 from unittest.mock import patch
 
 from mesh_net.world import expedition_files
-from mesh_net.world_client import SIZE, WorldArena
+from mesh_net.world_client import SIZE, WorldArena, read_character
 from tooling.net_scene_probe import capture
 
 
@@ -30,12 +30,15 @@ async def drive(arena, port: int) -> None:
                 render.result()
             if cmd[0] == "quit":
                 return
+            if cmd[0] == "port":  # the server to join next (a restarted one)
+                arena.port = int(cmd[1])
             if cmd[0] in ("press", "release"):
                 event = "on_key_press" if cmd[0] == "press" else "on_key_release"
                 arena.window.dispatch_event(event, getattr(arena.arcade.key, cmd[1]), 0)
             result = {"phase": arena.phase, "player": arena.player, "room": arena.room, "key": arena.key,
                       "shown": arena.shown, "entity": arena.entity, "state": arena.state, "party": arena.party,
                       "status": arena.status, "identity": arena.identity, "loads": arena.loads, "trace": list(arena.trace),
+                      "sheet": arena.sheet, "refused": arena.refused,
                       "scene_path": getattr(arena.window.scene_controller, "current_scene_path", None)}
             if cmd[0] == "capture" and arena.view is not None:
                 result.update(capture(arena))
@@ -50,10 +53,12 @@ if __name__ == "__main__":
     from mesh_net.demo import open_arena
 
     original = optional_arcade.arcade.Window.__init__
+    character = read_character(sys.argv[2]) if len(sys.argv) > 2 else None  # (N8: a character key file)
 
     def hidden(window, *args, **kwargs):
         original(window, *args, **{**kwargs, "visible": False})
 
     with patch.object(optional_arcade.arcade.Window, "__init__", hidden), \
             open_arena(expedition_files(), SIZE, WorldArena) as arena:
+        arena.character = character
         asyncio.run(drive(arena, int(sys.argv[1])))
