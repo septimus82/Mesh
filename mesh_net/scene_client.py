@@ -28,16 +28,20 @@ DROP_COLOR = (240, 200, 70, 255)
 USED_TINT = (128, 128, 128)
 
 
-class SceneArena(Arena):
-    def __init__(self, window: Any, arcade: Any, root: Path, scene: str) -> None:
-        super().__init__(window, arcade)
-        room = SceneRoom(root / scene, root)  # what the server builds; from this window's own files
+class SceneView:
+    """One room's presentation in a GameWindow: the loaded scene with only the presentation behaviours (KEEP), one
+    avatar per player the server reports, and the gate, lever, enemy and drop states it sends. A world client
+    (mesh_net.world_client) builds one per room it enters."""
+
+    def __init__(self, window: Any, arcade: Any, room: SceneRoom) -> None:
+        self.window, self.arcade = window, arcade
         self.identity = room.identity
-        self.checks = {"check": self.check, "check_input": parse_input}
         sc = self.scene = window.scene_controller
         sprites = [s for s in sc.all_sprites if getattr(s, "mesh_id", None)]
-        if sorted(s.mesh_id for s in sprites) != room.ids:
-            raise RuntimeError("the loaded room's objects differ from its scene file's")
+        loaded = sorted(s.mesh_id for s in sprites)
+        if loaded != room.ids:
+            raise RuntimeError(f"the loaded room's objects differ from its scene file's: missing "
+                               f"{sorted(set(room.ids) - set(loaded))}, extra {sorted(set(loaded) - set(room.ids))}")
         self.sprites = {s.mesh_id: s for s in sprites}
         template = next(s for s in sprites if getattr(s, "mesh_tag", None) == "player")
         self.template = dict(template.mesh_entity_data)
@@ -50,7 +54,6 @@ class SceneArena(Arena):
         self.colors = {i: tuple(self.sprites[i].color) for i in self.levers}
         self.avatars: dict[int, Any] = {}
         self.drops: dict[str, Any] = {}
-        self.last: float | None = None
 
     def check(self, msg: wire.Message) -> None:
         check_state(msg, self.identity)
@@ -62,22 +65,9 @@ class SceneArena(Arena):
         sprite.mesh_behaviours = [b for b in sprite.mesh_behaviours if b in names]
         self.scene._rebuild_behaviours_for_sprite(sprite)
 
-    def press(self, symbol: int, modifiers: int) -> bool:
-        client = self.client
-        if symbol == self.arcade.key.E and client and symbol not in self.action_keys:
-            self.action_keys.add(symbol)
-            own = next(r for r in client.state["players"] if r[0] == client.entity)
-            near = any(math.hypot(own[1] - self.sprites[i].center_x, own[2] - self.sprites[i].center_y)
-                       <= DEFAULT_INTERACT_MAX_DIST for i in client.state["drops"])
-            self.action = "take" if near else "use"
-            return True
-        return super().press(symbol, modifiers)
-
-    def describe(self, state: wire.Message, entity: int) -> str:
-        enemies = ", ".join(f"{self.sprites[i].mesh_name} {hp:g}" for i, hp in state["enemies"])
-        loot = sum(1 for _, holder in state["loot"] if holder == entity)
-        gate = "open" if state["open"] else "locked"
-        return f"P{entity} | gate {gate} | {enemies} | loot {loot} | E use/take, Space attack, F2 leave"
+    def near_drop(self, x: float, y: float, state: wire.Message) -> bool:
+        return any(math.hypot(x - self.sprites[i].center_x, y - self.sprites[i].center_y) <= DEFAULT_INTERACT_MAX_DIST
+                   for i in state["drops"])
 
     def _spawn(self, eid: int, own: bool) -> Any:
         data = {**self.template, "id": f"net_player_{eid}", "name": f"Player {eid}"}
@@ -88,20 +78,15 @@ class SceneArena(Arena):
         self.scene.entities.enqueue_spawn(sprite, layer_name=data.get("layer") or "entities", is_solid=False)
         return sprite
 
-    def sync(self, now: float, dt: float) -> None:
-        """Make the room look like the latest snapshot (remote players two ticks behind, as Playback plays them)."""
-        client = self.client
-        state = client.state if client else None
-        positions = self.playback.positions(now) if state else {}
-        if client and state:
-            own = next(r for r in state["players"] if r[0] == client.entity)
-            positions[own[0]] = (own[1], own[2])
+    def sync(self, state: wire.Message | None, positions: dict[int, tuple[float, float]], own: int | None,
+             dt: float) -> None:
+        """Make the room look like ``state``, its players at ``positions`` (``own``: the local player's avatar)."""
         for eid in [e for e in self.avatars if e not in positions]:
             self.scene.entities.enqueue_despawn(self.avatars.pop(eid))
         for eid, (x, y) in positions.items():
             sprite = self.avatars.get(eid)
             if sprite is None:
-                sprite = self.avatars[eid] = self._spawn(eid, client is not None and eid == client.entity)
+                sprite = self.avatars[eid] = self._spawn(eid, eid == own)
                 sprite.center_x, sprite.center_y = x, y
             vx, vy = ((x - sprite.center_x) / dt, (y - sprite.center_y) / dt) if dt > 0 else (0.0, 0.0)
             sprite.center_x, sprite.center_y = x, y
@@ -123,16 +108,56 @@ class SceneArena(Arena):
                 drop.mesh_id = drop.mesh_name = f"drop:{enemy}"
                 self.scene.entities.enqueue_spawn(drop, layer_name="entities", is_solid=False)
 
-    def draw(self, now: float) -> None:
-        dt = 0.0 if self.last is None else min(0.1, now - self.last)
-        self.last = now
-        self.sync(now, dt)
+    def draw(self, dt: float) -> None:
         self.scene.entities.apply_pending_ops(self.scene)
         self.scene.update(dt)  # the kept behaviours: animation, and the local avatar's camera follow
         lighting = getattr(self.window, "lighting", None)
         if lighting is not None:
             lighting.update(dt)
         self.window.on_draw()
+
+
+class SceneArena(Arena):
+    def __init__(self, window: Any, arcade: Any, root: Path, scene: str) -> None:
+        super().__init__(window, arcade)
+        self.view = SceneView(window, arcade, SceneRoom(root / scene, root))  # what the server builds, from own files
+        self.identity = self.view.identity
+        self.checks = {"check": self.view.check, "check_input": parse_input}
+        self.last: float | None = None
+
+    # (the room's presentation, as tooling/net_scene_probe.py reads it)
+    scene = property(lambda self: self.view.scene)
+    sprites = property(lambda self: self.view.sprites)
+    avatars = property(lambda self: self.view.avatars)
+    drops = property(lambda self: self.view.drops)
+
+    def press(self, symbol: int, modifiers: int) -> bool:
+        client = self.client
+        if symbol == self.arcade.key.E and client and symbol not in self.action_keys:
+            self.action_keys.add(symbol)
+            own = next(r for r in client.state["players"] if r[0] == client.entity)
+            self.action = "take" if self.view.near_drop(own[1], own[2], client.state) else "use"
+            return True
+        return super().press(symbol, modifiers)
+
+    def describe(self, state: wire.Message, entity: int) -> str:
+        enemies = ", ".join(f"{self.sprites[i].mesh_name} {hp:g}" for i, hp in state["enemies"])
+        loot = sum(1 for _, holder in state["loot"] if holder == entity)
+        gate = "open" if state["open"] else "locked"
+        return f"P{entity} | gate {gate} | {enemies} | loot {loot} | E use/take, Space attack, F2 leave"
+
+    def draw(self, now: float) -> None:
+        """Remote players two ticks behind, as Playback plays them; the local one where the server last put it."""
+        dt = 0.0 if self.last is None else min(0.1, now - self.last)
+        self.last = now
+        client = self.client
+        state = client.state if client else None
+        positions = self.playback.positions(now) if state else {}
+        if client and state:
+            own = next(r for r in state["players"] if r[0] == client.entity)
+            positions[own[0]] = (own[1], own[2])
+        self.view.sync(state, positions, client.entity if client else None, dt)
+        self.view.draw(dt)
 
 
 def main() -> None:
