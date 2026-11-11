@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import secrets
 from contextlib import ExitStack
 from typing import Any
 
 from . import protocol as wire
 from .simulation import Player, Room
+
+logger = logging.getLogger(__name__)
 
 
 class Server:
@@ -167,9 +170,19 @@ class WorldServer(Server):
             deadline += 1 / wire.HZ
             await asyncio.sleep(max(0.0, deadline - loop.time()))
             deadline = max(deadline, loop.time() - 1 / wire.HZ)  # never burst queued steps after a stall
-            self.world.step()
+            try:
+                self.world.step()
+                delivery = self.world.deliver()
+            except Exception:
+                # A broken world must not keep accepting players it no longer steps: say so and shut everything.
+                logger.exception("[Mesh][Net] the world failed; closing the server")
+                if self.listener is not None:
+                    self.listener.close()
+                for connection in list(self.connections.values()):
+                    connection.transport.abort()
+                raise
             encoded: dict[int, bytes] = {}  # one encoding per frame object (a room's state is shared by its players)
-            for pid, frames in self.world.deliver().items():
+            for pid, frames in delivery.items():
                 writer = self.peers.get(pid)
                 if writer is None or writer.is_closing():
                     continue

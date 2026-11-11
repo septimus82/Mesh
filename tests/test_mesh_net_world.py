@@ -707,3 +707,177 @@ def test_measure_world_tick_and_transfer_cost(world):
     transfers.sort()
     print(f"world tick, 8 players in 5 rooms: median {samples[100]:.2f} ms, p95 {samples[190]:.2f} ms; "
           f"tick with a transfer: median {transfers[10]:.2f} ms, max {transfers[-1]:.2f} ms")
+
+
+# --- guards the independent review found unproven ---------------------------------------------------
+
+
+@pytest.mark.integration
+def test_a_resume_credential_works_once(world):
+    d = Driver(world)
+    a, first = d.join()
+    with pytest.raises(wire.Invalid):
+        d.join(first)  # not while its session is live
+    d.w.disconnect(a)
+    pid, second = d.join(first)
+    assert pid == a and second != first
+    d.w.disconnect(a)
+    with pytest.raises(wire.Invalid):
+        d.join(first)  # spent
+    assert d.join(second)[0] == a
+
+
+@pytest.mark.integration
+def test_invitations_expire_and_follow_their_inviter(world):
+    from mesh_net.world import INVITE_TICKS
+
+    d = Driver(world)
+    a, b, c = (d.join()[0] for _ in range(3))
+    d.ask(a, "invite", player=b)
+    d.step(INVITE_TICKS)
+    d.ask(b, "accept", party=d.m(a).party)
+    assert d.notices(b) == ["no_invite"] and d.m(b).party is None
+    d.party(a, c)
+    d.ask(a, "invite", player=b)
+    d.ask(a, "leave")  # the inviter leaves the party: its invitation goes with it
+    d.ask(b, "accept", party=d.m(c).party)
+    assert d.notices(b) == ["no_invite"] and d.m(b).party is None
+
+
+@pytest.mark.integration
+def test_accepting_while_the_leader_is_away_hands_over_the_lead(world):
+    d = Driver(world)
+    a, b, c = (d.join()[0] for _ in range(3))
+    d.ask(a, "invite", player=b)
+    d.w.disconnect(a)
+    d.ask(b, "accept", party=d.m(a).party)
+    party = d.w.parties[d.m(b).party]
+    assert party.members == [a, b] and party.leader == b
+    d.ask(b, "invite", player=c)
+    assert d.notices(b) == []
+
+
+@pytest.mark.integration
+def test_a_full_destination_refuses_and_keeps_the_player_where_they_stood(world):
+    d = Driver(world)
+    a, b = d.join()[0], d.join()[0]
+    d.party(a, b)
+    d.through_hub_door(a)
+    expedition = d.room(a).room
+    while len(expedition.players) < wire.MAX_PLAYERS:  # (filled by hand: eight connections can't fill a room)
+        expedition.join()
+    d.through_hub_door(b)
+    assert d.room(b) is d.w.hub and d.notices(b) == ["room_full"] and d.m(b).eid in d.w.hub.room.players
+
+
+@pytest.mark.integration
+def test_a_failed_join_puts_the_player_back(world):
+    d = Driver(world)
+    a, _ = d.join()
+    d.ask(a, "create")
+    original = World._enter
+    calls = []
+
+    def failing(self, m, inst, player):
+        calls.append(inst.key)
+        if inst.key == R1:
+            raise OSError("broken destination")
+        return original(self, m, inst, player)
+
+    World._enter = failing
+    try:
+        d.through_hub_door(a)
+    finally:
+        World._enter = original
+    assert calls[0] == R1 and d.room(a) is d.w.hub and d.m(a).eid in d.w.hub.room.players
+    assert d.notices(a) == ["transfer_failed"]
+    d.w.disconnect(a)  # no ghost: the player is somewhere, so leaving works
+    assert not d.m(a).online
+
+
+@pytest.mark.integration
+def test_malformed_requests_raise_invalid_only(world):
+    d = Driver(world)
+    a, _ = d.join()
+    for bad in ({"op": []}, {"op": {}}, {"op": None}):
+        with pytest.raises(wire.Invalid):
+            d.w.party(a, {"v": 1, "type": "party", **bad})
+    for room in ([], 5, None, "start:1:2", "START:1"):
+        with pytest.raises(wire.Invalid):
+            d.w.input(a, {"v": 1, "type": "input", "room": room, "entity": 1, "seq": 1, "dx": 0, "dy": 0})
+
+
+def test_clients_reject_malformed_frames(world):
+    ids = {k: d.proto.identity for k, d in world.defs.items()}
+    hub = world.hub.room.snapshot()
+    world.hub.room.join()
+    hub_with_one = world.hub.room.snapshot()
+    good_enter = {"v": 1, "type": "enter", "room": "start:1", "key": HUB, "entity": 1, "state": hub_with_one}
+    check_frame(good_enter, ids)
+    party = {"v": 1, "type": "party", "you": 1, "party": None, "leader": None, "members": [], "invites": [], "nearby": []}
+    check_frame(party, ids)
+    bad = [
+        {**good_enter, "key": [HUB]},
+        {**good_enter, "key": R1},  # the room id names another room
+        {**good_enter, "entity": 2},  # not its own avatar
+        {**good_enter, "state": hub},  # no players at all
+        {**good_enter, "state": {**hub_with_one, "scene": "0" * 64}},  # another scene
+        {**party, "members": [[1, True, [HUB]]]},
+        {**party, "members": [[1, True, "nowhere"]]},
+        {"v": 1, "type": "notice", "code": ["busy"]},
+        {"v": 1, "type": "notice", "code": "teleported"},
+        {"v": 1, "type": "room_state", "room": "start", "state": hub_with_one},
+        {"v": 1, "type": "welcome"},
+    ]
+    for frame in bad:
+        with pytest.raises(wire.Invalid):
+            check_frame(frame, ids)
+    with pytest.raises(wire.Invalid):
+        check_welcome({"v": 1, "type": "welcome", "session": "0" * 32, "player": 1, "resume": "a" * 64,
+                       "world": "b" * 64}, world.identity)
+
+
+def test_the_client_applies_only_its_own_rooms_frames_in_order(world):
+    """world_client.WorldArena.on_frame: after an enter, a state of another room is dropped (it was in flight), and
+    within its room a state must be newer than the last."""
+    from types import SimpleNamespace
+
+    from mesh_net.world_client import WorldArena
+
+    ids = {k: d.proto.identity for k, d in world.defs.items()}
+    world.hub.room.join()
+    state = world.hub.room.snapshot()
+    arena = SimpleNamespace(identities=ids, room=None, key=None, entity=None, state=None, playback=None,
+                            pending=None, phase="loading", party=None, notice=None)
+    WorldArena.on_frame(arena, {"v": 1, "type": "enter", "room": "start:1", "key": HUB, "entity": 1, "state": state}, 0.0)
+    assert arena.room == "start:1" and arena.pending is not None
+    WorldArena.on_frame(arena, {"v": 1, "type": "room_state", "room": "start:7", "state": {**state, "tick": 99}}, 0.1)
+    assert arena.state["tick"] == state["tick"]  # another room's: dropped
+    world.hub.room.step()
+    newer = world.hub.room.snapshot()
+    WorldArena.on_frame(arena, {"v": 1, "type": "room_state", "room": "start:1", "state": newer}, 0.1)
+    assert arena.state["tick"] == newer["tick"]
+    with pytest.raises(wire.Invalid):
+        WorldArena.on_frame(arena, {"v": 1, "type": "room_state", "room": "start:1", "state": newer}, 0.2)
+
+
+@pytest.mark.integration
+def test_a_failing_world_closes_the_server_instead_of_freezing(files, caplog):
+    async def run():
+        world = make_world(files)
+        server = WorldServer(world)
+        port = await server.start(0)
+        try:
+            peer = await Peer.open(port, world)
+            await peer.until(lambda p: p.room)
+            world.step = lambda: (_ for _ in ()).throw(RuntimeError("deliberate"))
+            with pytest.raises((asyncio.IncompleteReadError, ConnectionError, wire.Invalid)):
+                await peer.until(lambda p: False, timeout=5)
+            with pytest.raises(OSError):
+                await Peer.open(port, world)
+            await peer.close()
+        finally:
+            await server.close()
+
+    asyncio.run(run())
+    assert "the world failed" in caplog.text

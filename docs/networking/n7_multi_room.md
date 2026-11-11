@@ -178,5 +178,10 @@ back through the doors to return. F2 disconnects, R resumes.
   default position instead).
 - Loot does not travel between rooms: there are no inventories (out of scope). A player who leaves a room leaves
   its loot held by nobody.
+- Instances are a shared budget: 8 including the hub, and a one-person party gets its own expedition. A few solo
+  players can therefore use every expedition slot (bounded, but first come, first served). A fairer split is a
+  design decision for later.
+- If the world itself raises while stepping, the server logs it, stops accepting and closes every connection
+  rather than staying open but frozen.
 - One process; loopback only; plaintext resume tokens (N4's trust limits). No persistence: a server restart starts
   every room anew. No matchmaking, guilds or friend lists.

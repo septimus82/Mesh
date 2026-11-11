@@ -197,6 +197,7 @@ class World:
                              "state": {"v": 1, **worst}})
             except wire.Invalid as exc:
                 raise Unsupported(f"room '{key}' could send a frame larger than {wire.MAX_BYTES} bytes") from exc
+        self.sizes = {key: d.proto._template_size() for key, d in self.defs.items()}  # read once: no file at runtime
         self.tick = 0
         self.counter = 0  # instance ids are never reused: a stale frame never names a newer room
         self.instances: dict[str, Instance] = {}
@@ -214,7 +215,7 @@ class World:
     # --- instances ----------------------------------------------------------------------------------
 
     def _create(self, key: str, party: int | None) -> Instance:
-        if len(self.instances) >= MAX_INSTANCES:
+        if len(self.instances) >= MAX_INSTANCES or self.counter >= 999_999_999:  # (ROOM_ID allows 9 digits)
             raise RuntimeError("instance limit")
         if self.prepare_hook is not None:
             self.prepare_hook(key)
@@ -291,8 +292,7 @@ class World:
             self._fix_leader(self.parties[m.party])
 
     def _fresh(self, inst: Instance, at: tuple[float, float]) -> Player:
-        room = inst.room
-        return Player(Body(at[0], at[1], *room._template_size(), room.template))
+        return Player(Body(at[0], at[1], *self.sizes[inst.key], inst.room.template))
 
     def _enter(self, m: Member, inst: Instance, player: Player) -> None:
         m.eid = inst.room.join(player)
@@ -325,7 +325,7 @@ class World:
     def party(self, pid: int, msg: wire.Message) -> None:
         """A party request, checked against server state. Malformed raises; refused answers with a notice."""
         op = msg.get("op")
-        if op not in PARTY_OPS:
+        if not isinstance(op, str) or op not in PARTY_OPS:
             raise wire.Invalid("unknown party request")
         wire.fields(msg, "party", "op", *PARTY_OPS[op])
         if not all(wire.integer(msg[k], 1) for k in PARTY_OPS[op]):
@@ -361,7 +361,7 @@ class World:
             if m.party is not None:
                 return self._notice(m, "in_party")
             party = self.parties.get(msg["party"])
-            if party is None:
+            if party is None or pending[msg["party"]][0] not in party.members:  # gone, or its inviter left it
                 del pending[msg["party"]]
                 return self._notice(m, "no_invite")
             if len(party.members) >= MAX_PARTY:
@@ -369,6 +369,7 @@ class World:
             party.members.append(pid)
             m.party = party.id
             self.invites.pop(pid, None)
+            self._fix_leader(party)  # (a leader who went away meanwhile hands over to this online member)
         elif op == "leave":
             if m.party is not None:
                 self._leave_party(m)
@@ -387,6 +388,7 @@ class World:
         party.members.remove(m.pid)
         m.party = None
         inst = self.instances.get(m.instance or "")
+        # (The hub always has room: online players <= MAX_CONNECTIONS == one room's MAX_PLAYERS.)
         if inst is not None and inst.party == party.id:  # their access to the party's expedition ends with it
             if m.online:
                 self._move(m, inst, self.hub, self.hub.room.spawn)
@@ -469,21 +471,24 @@ class World:
         if len(target.room.players) >= wire.MAX_PLAYERS:
             return self._refuse(m, TransferResult.FULL)
         at = d.arrivals[door.spawn.lower()] if door.spawn else target.room.spawn
-        self._move(m, source, target, at)
-        return TransferResult.MOVED
+        return TransferResult.MOVED if self._move(m, source, target, at) else self._refuse(m, TransferResult.FAILED)
 
     def _refuse(self, m: Member, result: TransferResult) -> TransferResult:
         self._notice(m, result.value)
         return result
 
-    def _move(self, m: Member, source: Instance, target: Instance, at: tuple[float, float]) -> None:
+    def _move(self, m: Member, source: Instance, target: Instance, at: tuple[float, float]) -> bool:
+        """Leave ``source``, join ``target`` at ``at``; on any failure joining, back where they stood (False)."""
         assert m.eid is not None
+        player = self._fresh(target, at)  # (built before anything changes)
         old = source.room.leave(m.eid)  # no input for the old room applies from here on
         source.touching.pop(m.eid, None)
         try:
-            self._enter(m, target, self._fresh(target, at))
-        except wire.Invalid:  # (full: checked before, so never) put them back where they stood
+            self._enter(m, target, player)
+        except Exception:  # noqa: BLE001  # whatever failed, the player is put back, never left in no room
             self._enter(m, source, old)
+            return False
+        return True
 
     def _expire(self, m: Member) -> None:
         if m.party is not None:
@@ -545,7 +550,8 @@ def check_frame(msg: wire.Message, identities: dict[str, str]) -> None:
     kind = msg.get("type")
     if kind == "enter":
         wire.fields(msg, "enter", "room", "key", "entity", "state")
-        if msg["key"] not in identities or not wire.integer(msg["entity"], 1) or not _room_of(msg["room"], msg["key"]):
+        if (not isinstance(msg["key"], str) or msg["key"] not in identities or not wire.integer(msg["entity"], 1)
+                or not _room_of(msg["room"], msg["key"])):
             raise wire.Invalid("invalid enter")
         check_state(msg["state"], identities[msg["key"]])
         if not any(row[0] == msg["entity"] for row in msg["state"]["players"]):
@@ -562,13 +568,13 @@ def check_frame(msg: wire.Message, identities: dict[str, str]) -> None:
                 or not (msg["party"] is None or wire.integer(msg["party"], 1))
                 or not (msg["leader"] is None or wire.integer(msg["leader"], 1))
                 or not all(isinstance(r, list) and len(r) == 3 and wire.integer(r[0], 1) and type(r[1]) is bool
-                           and r[2] in identities for r in msg["members"])
+                           and isinstance(r[2], str) and r[2] in identities for r in msg["members"])
                 or not all(isinstance(r, list) and len(r) == 2 and wire.integer(r[0], 1) and wire.integer(r[1], 1)
                            for r in msg["invites"] + msg["nearby"])):
             raise wire.Invalid("invalid party")
     elif kind == "notice":
         wire.fields(msg, "notice", "code")
-        if msg["code"] not in NOTICES:
+        if not isinstance(msg["code"], str) or msg["code"] not in NOTICES:
             raise wire.Invalid("invalid notice")
     else:
         raise wire.Invalid("unknown frame")
