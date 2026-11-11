@@ -16,7 +16,7 @@ import pytest
 
 from mesh_net.scene_room import disposable_project
 from mesh_net.world import World, expedition_files
-from tests.net_resume import POLL, drop_and_resume
+from tests.net_resume import POLL, drop_and_resume, drop_and_resume_scene
 
 pytestmark = pytest.mark.integration
 LAYER_2, GUARDIAN = "ancient_ruins_layer_2", "ancient_ruins_layer_2_guardian_480_256_0_0"
@@ -182,3 +182,210 @@ def test_a_window_process_dying_is_not_swallowed():
     window = QueuedWindow(world, pid, token, fault="exit")
     with pytest.raises(RuntimeError, match="exited"):
         play(window, lambda: drop_and_resume(window.command, world, pid, window.room, timeout=1))
+
+
+# --- N6: one scene on mesh_net.server.Server, the window a mesh_net.demo.Arena --------------------------------------
+# These run the real Server, Arena.run / Arena.session and client.connect over loopback; only pyglet's window is a
+# stand-in (an event dispatched outside dispatch_events waits for it, as pyglet's does), and the connection's close
+# is held for SLOW_CLOSE after the server has seen it (52 ms on a hosted runner, about 1 ms on a desktop).
+
+SLOW_CLOSE = 0.3
+BANDIT = "start_bandit_608_256_0_0"
+
+
+class PygletQueue:
+    """The parts of a pyglet window Arena uses, with pyglet's queueing of events dispatched outside the loop."""
+
+    def __init__(self, drop=()):
+        self.handlers, self.queue, self.drop = {}, [], drop
+
+    def push_handlers(self, **handlers):
+        self.handlers.update(handlers)
+
+    def dispatch_event(self, name, symbol, modifiers):
+        if symbol not in self.drop:
+            self.queue.append((name, symbol, modifiers))
+
+    def dispatch_events(self):
+        queue, self.queue = self.queue, []
+        for name, symbol, modifiers in queue:
+            self.handlers[name](symbol, modifiers)
+
+    def set_caption(self, caption):
+        pass
+
+    def flip(self):
+        pass
+
+
+def scene_session(driver, fault=None):
+    """Run ``driver(command, server, aid, bid, arena)`` against a real Server hosting the co-op scene: entity aid is
+    a player the room holds, bid a real Arena's connection holding the bandit's loot. ``command`` answers as
+    tooling/net_scene_probe does. ``fault``: "ignore_f2" / "ignore_r" (the window never handles that key), "lying"
+    (the probe claims a disconnect the window never made), "fresh" (R joins as a new character), "stale" (the probe
+    keeps answering with the pre-drop reply), "exit" (the window process dies at R)."""
+    from contextlib import asynccontextmanager
+    from types import SimpleNamespace
+    from unittest.mock import patch
+
+    from mesh_net import demo
+    from mesh_net.scene_room import COOP_SCENE, SceneRoom, check_state, coop_files, parse_input
+    from mesh_net.server import Server
+
+    with disposable_project(coop_files(), scaffold=False) as root:
+        room = SceneRoom(root / COOP_SCENE, root)
+    names = ("W", "UP", "S", "DOWN", "A", "LEFT", "D", "RIGHT", "SPACE", "E", "ESCAPE", "F2", "R", "N")
+    key = SimpleNamespace(**{n: n for n in names})
+    window = PygletQueue(drop={"ignore_f2": ("F2",), "lying": ("F2",), "ignore_r": ("R",)}.get(fault, ()))
+
+    class Window(demo.Arena):  # (mesh_net.scene_client.SceneArena without its scene view)
+        def describe(self, state, entity):
+            return f"P{entity}"
+
+        def draw(self, now):
+            pass
+
+    real_connect = demo.connect
+
+    @asynccontextmanager
+    async def slow_close(*args, **kwargs):
+        async with real_connect(*args, **kwargs) as client:
+            try:
+                yield client
+            finally:
+                client.writer.close()  # the server sees the close at once ...
+                await asyncio.sleep(SLOW_CLOSE)  # ... while the window waits for it, its client still set
+
+    async def main():
+        server = Server(room)
+        port = await server.start()
+        arena = Window(window, SimpleNamespace(key=key))
+        arena.checks = {"check": lambda msg: check_state(msg, room.identity), "check_input": parse_input}
+        aid = room.join()
+        task = asyncio.create_task(arena.run(port))
+        stale = None
+        try:
+            while arena.client is None or len(arena.client.state["players"]) < 2:
+                await asyncio.sleep(POLL)
+            bid = arena.client.entity
+            room.enemies[BANDIT].holder = room.players[bid]
+
+            async def command(cmd):
+                nonlocal stale
+                if task.done():
+                    task.result()
+                op, *name = cmd.split()
+                if fault == "exit" and cmd == "press R":
+                    raise RuntimeError("window process exited with 1: []")
+                if fault == "fresh" and cmd == "press R":
+                    arena.token = None
+                if op in ("press", "release"):
+                    event = "on_key_press" if op == "press" else "on_key_release"
+                    window.dispatch_event(event, getattr(key, name[0]), 0)
+                reply = {"state": copy.deepcopy(arena.client.state) if arena.client else None,
+                         "entity": arena.client.entity if arena.client else None,
+                         "identity": room.identity, "status": arena.status}
+                if fault == "lying" and stale is not None:
+                    return {**reply, "state": None, "entity": None}
+                if fault == "stale" and stale is not None:
+                    return copy.deepcopy(stale)
+                if cmd == "press F2":
+                    stale = copy.deepcopy(reply)
+                return reply
+
+            return await driver(command, server, aid, bid, arena)
+        finally:
+            arena.stop()
+            await task
+            await server.close()
+
+    with patch.object(demo, "connect", slow_close):
+        return asyncio.run(main())
+
+
+def test_n6_old_wait_takes_the_pre_drop_reply():
+    """N6's sequence: F2; the other window sees b leave (the server has removed it); release F2; tap R; wait for two
+    players. The window is still closing its old session, so the probe answers with it: b's old entity, both players."""
+    async def driver(command, server, aid, bid, arena):
+        await command("press F2")
+        while bid in server.room.players:  # (what a's observation follows)
+            await asyncio.sleep(POLL)
+        await command("release F2")
+        await command("press R")
+        await command("release R")
+        while not ((r := await command("state"))["state"] and len(r["state"]["players"]) == 2):
+            await asyncio.sleep(POLL)
+        return r, aid, bid
+
+    back, aid, bid = scene_session(driver)
+    assert back["entity"] == bid  # the pre-drop session: N6's next check ("not in (aid, bid)") fails on it
+    assert sorted(p[0] for p in back["state"]["players"]) == [aid, bid]
+
+
+def test_n6_new_wait_returns_the_resumed_session():
+    handled = []
+
+    async def driver(command, server, aid, bid, arena):
+        press = arena.press
+
+        def recording(symbol, modifiers):
+            handled.append((symbol, arena.client is None))
+            return press(symbol, modifiers)
+        arena.window.handlers["on_key_press"] = recording
+        seen = []
+
+        async def away():
+            seen.append(sorted(server.room.players))
+
+        back = await drop_and_resume_scene(command, server, bid, away=away)
+        room, new = server.room, back["entity"]
+        assert seen == [[aid]] and new not in (aid, bid) and sorted(room.players) == [aid, new]
+        assert back["state"]["loot"] == [[BANDIT, new]] and room.enemies[BANDIT].holder is room.players[new]
+        assert sorted(p[0] for p in back["state"]["players"]) == [aid, new]
+        return back
+
+    assert scene_session(driver)["entity"] > 2
+    assert ("R", True) in handled and ("R", False) not in handled  # R was handled only once the client was gone
+
+
+@pytest.mark.parametrize(("fault", "match"), [
+    ("ignore_f2", "the disconnect not reached"),
+    ("lying", "the disconnect not reached"),  # the window says it left; the server still has the entity
+    ("ignore_r", "the resumed session not reached"),
+    ("stale", "the disconnect not reached"),  # the probe keeps the pre-drop entity
+    ("fresh", "unexpected join"),
+])
+def test_n6_new_wait_fails_closed(fault, match):
+    async def driver(command, server, aid, bid, arena):
+        return await drop_and_resume_scene(command, server, bid, timeout=1)
+
+    with pytest.raises(AssertionError, match=match):
+        scene_session(driver, fault)
+
+
+def test_n6_stale_entity_after_resume_is_refused():
+    """The window disconnects and the server resumes the character, but the probe then reports the pre-drop entity."""
+    async def driver(command, server, aid, bid, arena):
+        seen = {}
+
+        async def stale_after_drop(cmd):
+            reply = await command(cmd)
+            if cmd == "press F2":
+                seen["pre"] = copy.deepcopy(reply)
+            if reply["entity"] is None:
+                seen["gone"] = True
+            elif "gone" in seen:
+                return copy.deepcopy(seen["pre"])
+            return reply
+        return await drop_and_resume_scene(stale_after_drop, server, bid, timeout=1)
+
+    with pytest.raises(AssertionError, match="the resumed session not reached"):
+        scene_session(driver)
+
+
+def test_n6_window_process_dying_is_not_swallowed():
+    async def driver(command, server, aid, bid, arena):
+        return await drop_and_resume_scene(command, server, bid, timeout=1)
+
+    with pytest.raises(RuntimeError, match="exited"):
+        scene_session(driver, "exit")

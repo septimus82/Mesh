@@ -9,7 +9,7 @@ from collections import defaultdict, deque
 import pytest
 
 from mesh_net.server import Server
-from tests.net_resume import drop_and_resume
+from tests.net_resume import drop_and_resume, drop_and_resume_scene
 from tests.net_walk import ABOVE, GAP, ON_ENEMY, walk
 
 pytestmark = pytest.mark.integration
@@ -257,19 +257,20 @@ def test_two_windows_play_the_studio_scene_together(record_testsuite_property):
             await asyncio.gather(*(observe(p, lambda s: s["loot"] == [[bandit, bid]] and not s["drops"]) for p in procs))
 
             # Disconnect and resume: one avatar each way, never a duplicate; the loot follows the character.
-            await command(b, "press F2")
-            await observe(a, lambda s: [r[0] for r in s["players"]] == [aid])
-            alone = await command(a, "capture")
-            assert alone["players"] == [f"net_player_{aid}"] and list(alone["drawn"]) == [str(aid)]
-            await command(b, "release F2")
-            await tap(b, "R")
-            back = await observe(b, lambda s: len(s["players"]) == 2)
-            assert back["entity"] not in (aid, bid) and back["state"]["loot"] == [[bandit, back["entity"]]]
-            await observe(a, lambda s: s["players"] == back["state"]["players"] or s["tick"] > back["state"]["tick"])
+            async def b_away():  # while b is gone: a sees and draws only itself
+                await observe(a, lambda s: [r[0] for r in s["players"]] == [aid])
+                alone = await command(a, "capture")
+                assert alone["players"] == [f"net_player_{aid}"] and list(alone["drawn"]) == [str(aid)]
+            back = await drop_and_resume_scene(lambda cmd: command(b, cmd), server, bid, away=b_away)
+            new = back["entity"]
+            assert new not in (aid, bid) and back["state"]["loot"] == [[bandit, new]]
+            assert room.enemies[bandit].holder is room.players[new] and sorted(room.players) == sorted([aid, new])
+            await asyncio.gather(*(observe(p, lambda s: sorted(r[0] for r in s["players"]) == sorted([aid, new])
+                                           and s["loot"] == [[bandit, new]]) for p in procs))
             for proc in procs:
                 shot = await command(proc, "capture")
-                assert shot["players"] == sorted([f"net_player_{aid}", f"net_player_{back['entity']}"])
-                assert all(n > 0 for n in shot["drawn"].values()) and len(shot["drawn"]) == 2
+                assert shot["players"] == sorted([f"net_player_{aid}", f"net_player_{new}"])
+                assert all(n > 0 for n in shot["drawn"].values()) and sorted(shot["drawn"]) == sorted([str(aid), str(new)])
         finally:
             try:
                 problems = await stop_workers(procs)
