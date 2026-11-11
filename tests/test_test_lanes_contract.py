@@ -110,10 +110,12 @@ def test_the_extended_workflow_runs_both_lanes_by_the_canonical_selection() -> N
         assert trigger in text
     for policy_file in ("tooling/test_tiers.py", "tests/conftest.py", "pytest.ini"):
         assert f'"{policy_file}"' in text
-    # Each OS x lane; Windows' gpu lane as two shards (#422 F13; their fan-in: tests/test_gpu_shards.py).
+    # Each OS x lane; each OS's gpu lane as two shards (#422 F13, CI-422B; their fan-in: tests/test_gpu_shards.py).
     lane = text[text.index("\n  lane:"):text.index("\n  gpu-shards:")]
     for leg in ("{ os: ubuntu-latest, lane: extended }", "{ os: windows-latest, lane: extended }",
-                "{ os: ubuntu-latest, lane: gpu }", '{ os: windows-latest, lane: gpu, shard: "1/2", shard_index: 1 }',
+                '{ os: ubuntu-latest, lane: gpu, shard: "1/2", shard_index: 1, plan: gpu-linux }',
+                '{ os: ubuntu-latest, lane: gpu, shard: "2/2", shard_index: 2, plan: gpu-linux }',
+                '{ os: windows-latest, lane: gpu, shard: "1/2", shard_index: 1 }',
                 '{ os: windows-latest, lane: gpu, shard: "2/2", shard_index: 2 }'):
         assert f"          - {leg}\n" in lane, leg
     assert "python -m tooling.test_tiers @shard ${{ matrix.lane }}" in text  # (@shard: none, or --shard K/2)

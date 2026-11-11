@@ -166,7 +166,7 @@ def test_the_workflow_gates_only_pull_requests_and_runs_the_lanes_on_any_doubt()
     assert "needs: dedup\n" in lane
     assert "if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}" in lane
     assert lane.count("\n    if:") == 1, "the lane job has exactly one condition"
-    assert "{ os: ubuntu-latest, lane: gpu }" in lane and '{ os: windows-latest, lane: gpu, shard: "2/2"' in lane
+    assert '{ os: ubuntu-latest, lane: gpu, shard: "2/2"' in lane and '{ os: windows-latest, lane: gpu, shard: "2/2"' in lane
     # The gpu shards' fan-in is left out with them on a duplicate #344 run, and runs (red if need be) otherwise.
     fanin = text[text.index("\n  gpu-shards:"):]
     assert "needs: [dedup, lane]" in fanin and "if: ${{ always() && needs.dedup.outputs.skip != 'true' }}" in fanin

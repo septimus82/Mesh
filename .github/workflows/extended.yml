@@ -15,7 +15,9 @@ name: Extended acceptance
 #   - on a pull request that changes the test-selection policy itself.
 # Every trigger runs the same lanes with the same selection. Windows' gpu lane, the longest job (~35 min), runs as two
 # shard jobs of whole modules (#422 F13: `python -m tooling.test_tiers --shard K/2 gpu`, tooling/ci_shards.py's gpu
-# plan), each on its own runner with its own GL context, and `gpu (windows-latest, py3.11)` is their fan-in. One exception (#422): a pull request from the integration
+# plan), each on its own runner with its own GL context, and `gpu (windows-latest, py3.11)` is their fan-in. Linux's gpu
+# lane (~20-33 min) is split the same way since #422 CI-422B, by Linux's own measured plan (`--shard-plan gpu-linux`),
+# and `gpu (ubuntu-latest, py3.11)`, the name the unsharded lane had, is now its fan-in. One exception (#422): a pull request from the integration
 # branch itself (#344, into main) whose tested tree is the push-tested head's leaves its lanes out, since the push run
 # of that same commit tests the same tree - only after tooling/extended_dedup.py has checked that positively, and
 # the push run is linked as the evidence. Any doubt, and they run.
@@ -77,12 +79,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Each OS x lane, as before, except Windows' gpu lane: two shards (whole modules), whose fan-in below keeps the
-        # name `gpu (windows-latest, py3.11)`.
+        # Each OS x lane, as before, except the gpu lanes: two shards each (whole modules), whose fan-in below keeps
+        # the lane's name, `gpu (<os>, py3.11)`. Linux's shards split by Linux's own plan (plan: gpu-linux); Windows'
+        # by the lane's (gpu, the default).
         include:
           - { os: ubuntu-latest, lane: extended }
           - { os: windows-latest, lane: extended }
-          - { os: ubuntu-latest, lane: gpu }
+          - { os: ubuntu-latest, lane: gpu, shard: "1/2", shard_index: 1, plan: gpu-linux }
+          - { os: ubuntu-latest, lane: gpu, shard: "2/2", shard_index: 2, plan: gpu-linux }
           - { os: windows-latest, lane: gpu, shard: "1/2", shard_index: 1 }
           - { os: windows-latest, lane: gpu, shard: "2/2", shard_index: 2 }
 
@@ -116,6 +120,7 @@ jobs:
       - name: Run the ${{ matrix.lane }} lane
         run: |
           $shard = @(); if ("${{ matrix.shard }}") { $shard = @("--shard", "${{ matrix.shard }}") }
+          if ("${{ matrix.plan }}") { $shard += @("--shard-plan", "${{ matrix.plan }}") }
           if ($IsLinux) { xvfb-run -a python -m tooling.test_tiers @shard ${{ matrix.lane }} }
           else { python -m tooling.test_tiers @shard ${{ matrix.lane }} }
           if ($LASTEXITCODE -ne 0) { throw "the ${{ matrix.lane }} lane failed (exit $LASTEXITCODE): see the summary above and the artifact" }
@@ -164,13 +169,15 @@ jobs:
             artifacts/**/*.log
 
   gpu-shards:
-    # Windows' gpu lane, as one result under the name its check always had (#422 F13). Green only when both shard jobs
+    # Each OS's gpu lane, as one result under the name its check always had (#422 F13; Linux since CI-422B), one leg per
+    # OS with that OS's plan. Green only when both of its OS's shard jobs
     # succeeded (their conclusions, from the run's jobs list: tooling/ci_require_jobs.py) and their records show the
     # whole gl selection ran exactly once, on this commit, with at least the lane's min_selected tests, every test with
-    # a passing outcome and each JUnit report agreeing with its record (tooling/ci_shards.py check --plan gpu). The
+    # a passing outcome and each JUnit report agreeing with its record (tooling/ci_shards.py check --plan <plan>). The
     # expected tests are what the shards collected, not a fixed count. always(): a failed, cancelled or missing shard
-    # makes it red, never skipped. A #344 run the duplicate check left out leaves it out too; it's a one-leg matrix, so
-    # then it reports its unexpanded name, never a skipped `gpu (windows-latest, py3.11)`.
+    # makes it red, never skipped. A #344 run the duplicate check left out leaves it out too; a job-level if is decided
+    # before the matrix expands, so then it reports its unexpanded name, never a skipped `gpu (<os>, py3.11)`. Not
+    # fail-fast: one OS's red verdict must never cancel the other's.
     name: gpu (${{ matrix.os }}, py3.11)
     needs: [dedup, lane]
     if: ${{ always() && needs.dedup.outputs.skip != 'true' }}
@@ -180,8 +187,11 @@ jobs:
       actions: read
       contents: read
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest]
+        include:
+          - { os: windows-latest, plan: gpu }
+          - { os: ubuntu-latest, plan: gpu-linux }
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -199,7 +209,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          python3 tooling/ci_shards.py check gpu-shards --plan gpu --min-selected 256 --commit "${{ github.sha }}" > shards.txt 2>&1
+          python3 tooling/ci_shards.py check gpu-shards --plan ${{ matrix.plan }} --min-selected 256 --commit "${{ github.sha }}" > shards.txt 2>&1
           code=$?
           cat shards.txt
           { echo "## gpu lane (${{ matrix.os }}): the shards together"; echo; echo '```'; cat shards.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
