@@ -9,6 +9,7 @@ from collections import defaultdict, deque
 import pytest
 
 from mesh_net.server import Server
+from tests.net_resume import drop_and_resume
 from tests.net_walk import ABOVE, GAP, ON_ENEMY, walk
 
 pytestmark = pytest.mark.integration
@@ -441,13 +442,13 @@ def test_two_windows_meet_party_travel_and_return(record_testsuite_property):
             await until(a, lambda r: [m[2] for m in r["party"]["members"]] == [hub, r2])
             await shot(a, [home["entity"]])
 
-            # b drops and resumes: back in the party's Layer 2, the guardian still dead, the party intact.
-            await command(b, "press F2")
-            await until(a, lambda r: [m[1] for m in r["party"]["members"]] == [True, False])
-            await command(b, "release F2")
-            await tap(b, "R")
-            back = await until(b, lambda r: r["key"] == r2 and len(r["state"]["players"]) == 1)
-            assert back["room"] == rb["room"] and back["state"]["enemies"] == [[guardian, 0.0]]
+            # b drops and resumes: back in the party's Layer 2, the guardian still dead, the party intact. (A key's
+            # reply predates the key, and while F2 closes b still shows its old session: tests/net_resume.py.)
+            def b_away():  # a sees b leave the party's game
+                return until(a, lambda r: [m[1] for m in r["party"]["members"]] == [True, False])
+            back = await drop_and_resume(lambda cmd: command(b, cmd), world, pids[b], rb["room"], away=b_away)
+            assert back["room"] == rb["room"] and back["key"] == r2 and len(back["state"]["players"]) == 1
+            assert back["state"]["enemies"] == [[guardian, 0.0]]
             await until(a, lambda r: [m[1] for m in r["party"]["members"]] == [True, True])
             await shot(b, [back["entity"]])
         finally:
