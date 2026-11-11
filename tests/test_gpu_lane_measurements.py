@@ -1,5 +1,5 @@
 """GPU-lane measurements and runner calibration (#422): reported on every run, judged against nothing, never failing a
-lane, and the terrain frame-time assertion they explain unchanged."""
+lane (the terrain gate that judges its own measurements is tests/test_terrain_advisory.py's)."""
 
 from __future__ import annotations
 
@@ -174,14 +174,14 @@ def test_the_calibration_measures_this_runner() -> None:
     assert model and float(ms) > 0
 
 
-def test_the_terrain_stroke_is_recorded_before_its_unchanged_assertions() -> None:
+def test_the_terrain_stroke_is_recorded_before_its_assertions() -> None:
     source = (REPO / "tests" / "test_terrain_gpu.py").read_text(encoding="utf-8")
     body = source[source.index("def test_studio_sculpts_live_one_stroke_one_undo_step"):]
     body = body[:body.index("\n\n\n")]
     record = body.index('record_testsuite_property("measure.terrain_stroke"')
-    # The 60 ms limit and the rest of the assertion, byte for byte as before (#422: never weakened).
-    limit = 'assert s["frame_ms"]["median"] < 60 and s["commit_ms"] < 200, s  # no room reload per click'
-    assert body.count(limit) == 1
+    # The 200 ms commit guard, byte for byte as before. The 60 ms median it shared a line with was replaced by the
+    # enforced terrain gate (#422 CI-422A3, pinned in tests/test_terrain_advisory.py) and is still recorded.
+    assert body.count('assert s["commit_ms"] < 200, s  # no room reload per click') == 1
     assert record < body.index("    assert "), "recorded before any assertion, so failing runs report it too"
 
 

@@ -5,7 +5,7 @@
     py -3.13 tooling/m20b_sculpt_study.py scale OUT     # 32 x 24, 64 x 64, 128 x 128 m: load, strokes, frames, save
     py -3.13 tooling/m20b_sculpt_study.py flat OUT      # a flat room's first stroke, and its undo
     py -3.13 tooling/m20b_sculpt_study.py rechecks OUT  # QA's findings, checked again in Studio
-    py -3.13 tooling/m20b_sculpt_study.py advisory OUT  # the report-only measurements vs injected regressions (#422)
+    py -3.13 tooling/m20b_sculpt_study.py advisory OUT  # the enforced terrain gate vs injected regressions (#422)
 
 Projects come from the HD-2D RPG template with the Hills room (tooling/m20a_terrain_study.py), or, for scale, a room
 whose ground is sculpted all over.
@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import math
 import os
 import random
 import statistics
@@ -126,7 +127,7 @@ def _path(a: tuple[float, float], b: tuple[float, float], n: int) -> list[tuple[
 
 def _interleaved(d: Any, trials: int, warm: int, steps: int, a: tuple[float, float] = (6.5, 14.0),
                  b: tuple[float, float] = (12.0, 20.5)) -> list[dict[str, Any]]:
-    """Report-only samples (#422, ``terrain_advisory``): ``warm`` + ``trials`` interleaved trials (ABBA), each a control
+    """The gate's samples (#422, ``terrain_advisory``): ``warm`` + ``trials`` interleaved trials (ABBA), each a control
     block (the stroke's path hovered: event, ground pick, brush ring, drawing, read-back, no edit) and a sculpt block
     (press, the same path dragged, release + the next frame), every frame through ``d.frame()`` as the gated stroke's.
     Raise and lower alternate, so the ground stays about where it was. Studio's Raise tool first, as a creator would."""
@@ -193,26 +194,34 @@ def _interleaved(d: Any, trials: int, warm: int, steps: int, a: tuple[float, flo
 
 
 def _advisory(d: Any, gate_frame_ms: Any, trials: int = terrain_advisory.TRIALS, warm: int = terrain_advisory.WARM,
-              steps: int = terrain_advisory.STEPS) -> dict[str, Any]:
-    """The report-only measurements (``terrain_advisory.summarise``): never raises. A failure mid-trial is recorded and
-    the stroke let go (Esc), so whatever runs next finds Studio as a creator would leave it."""
+              steps: int = terrain_advisory.STEPS, gate_frames: Any = None,
+              required_gate_frames: int | None = None, cpu_ms: float | None = None) -> dict[str, Any]:
+    """The terrain gate's measurements and verdict (``terrain_advisory.summarise``, #422 CI-422A3): never raises, so a
+    failure mid-trial is reported with what was measured, and fails the verdict (fail-closed); the stroke is let go
+    (Esc), so whatever runs next finds Studio as a creator would leave it. Without a gated stroke (``gate_frame_ms``
+    None: ``advisory_detection``), the backstop judges the trials' own sculpt frames; ``cpu_ms`` given (the same,
+    one calibration for each of its cases) is used instead of calibrating here."""
     start = time.perf_counter()
     rows: list[dict[str, Any]] = []
     error = None
     try:
         rows = _interleaved(d, trials, warm, steps)
-    except Exception as exc:  # noqa: BLE001  # REASON: an advisory measurement's failure is recorded, never fails the run
-        logger.warning("[Mesh][terrain advisory] the interleaved trials failed (report-only)", exc_info=True)
+    except Exception as exc:  # noqa: BLE001  # REASON: recorded with what was measured; it fails the gate's verdict
+        logger.warning("[Mesh][terrain gate] the interleaved trials failed (the gate fails)", exc_info=True)
         error = f"{type(exc).__name__}: {exc}"
         if d.studio.hd2d.stroke is not None:
             d.key(d.arcade.key.ESCAPE)
     try:
-        cpu = runner_calibration.cpu_ms()
-    except Exception as exc:  # noqa: BLE001  # REASON: an advisory measurement's failure is recorded, never fails the run
-        logger.warning("[Mesh][terrain advisory] the runner calibration failed (report-only)", exc_info=True)
+        cpu = cpu_ms if cpu_ms is not None else runner_calibration.cpu_ms()
+    except Exception as exc:  # noqa: BLE001  # REASON: recorded with what was measured; it fails the gate's verdict
+        logger.warning("[Mesh][terrain gate] the runner calibration failed (the gate fails)", exc_info=True)
         cpu, error = None, error or f"calibration: {type(exc).__name__}: {exc}"
-    result: dict[str, Any] = terrain_advisory.summarise(rows, gate_frame_ms, cpu, overhead_s=time.perf_counter() - start,
-                                                        error=error)
+    if gate_frame_ms is None and rows:
+        frames = [x for row in rows for x in row["sculpt"] if isinstance(x, float) and math.isfinite(x)]
+        gate_frame_ms = statistics.median(frames) if frames else None
+    result: dict[str, Any] = terrain_advisory.summarise(
+        rows, gate_frame_ms, cpu, overhead_s=time.perf_counter() - start, error=error, steps=steps,
+        required_trials=trials, gate_frames=gate_frames, required_gate_frames=required_gate_frames)
     return result
 
 
@@ -243,7 +252,7 @@ def studio(out: Path) -> dict[str, Any]:
                     clip[-1].save(out / "stroke_mid.png")
 
         with _counting_reloads(d) as reloads:  # (press, drags, release and the next frame: the whole stroke)
-            frames = _stroke(d, _path((6.5, 14.0), (12.0, 20.5), 48), each=film)
+            frames = _stroke(d, _path((6.5, 14.0), (12.0, 20.5), terrain_advisory.GATE_FRAMES), each=film)
         live = list(view.renderer.terrain.heights)
         saved = list(_heights(s.project))
         report["stroke"] = {"frame_ms": _stats(frames), "update_terrain_ms": _stats(view.timings["sculpt_ms"]),
@@ -345,9 +354,11 @@ def studio(out: Path) -> dict[str, Any]:
                               "room_reloads": lower_reloads["room_reloads"] + flatten_reloads["room_reloads"],
                               "scene_loads": lower_reloads["scene_loads"] + flatten_reloads["scene_loads"]}
         d.picture(out / "studio_controls.png")
-        # 8. report-only (#422 CI-422A2): interleaved control vs sculpt trials and the runner's calibration; recorded,
-        # never asserted (its strokes are saved and reopened with the rest below)
-        report["advisory"] = _advisory(d, report["stroke"]["frame_ms"].get("median"))
+        # 8. the enforced performance gate (#422 CI-422A3): interleaved control vs sculpt trials and the runner's
+        # calibration, with the gated stroke's frames (its strokes are saved and reopened with the rest below)
+        gated = report["stroke"]["frame_ms"]
+        report["advisory"] = _advisory(d, gated.get("median"), gate_frames=gated.get("n"),
+                                       required_gate_frames=terrain_advisory.GATE_FRAMES)
         final = list(_heights(s.project))
         d.key(k.S, k.MOD_CTRL)
     finally:
@@ -361,8 +372,10 @@ def studio(out: Path) -> dict[str, Any]:
 
 
 def advisory_detection(out: Path, trials: int = 3, steps: int = 8) -> dict[str, Any]:
-    """The report-only measurements against deliberately injected regressions (#422 CI-422A2), in one Studio session:
-    none, every flush rebuilding every terrain chunk, and a full room reload after each committed stroke."""
+    """The enforced terrain gate against deliberately injected regressions (#422 CI-422A2, CI-422A3), in one Studio
+    session: none, every flush rebuilding every terrain chunk, a full room reload after each committed stroke, and every
+    frame slowed by 1.5x the runner's calibration loop (a substantial regression everywhere, which only the calibrated
+    backstop can see: it cancels out of the ratio and the release)."""
     from engine.studio_hd2d import Hd2dView
 
     out.mkdir(parents=True, exist_ok=True)
@@ -388,15 +401,26 @@ def advisory_detection(out: Path, trials: int = 3, steps: int = 8) -> dict[str, 
             if had:
                 self.studio._reload()
 
+        frame = d.frame
+        cpu = runner_calibration.cpu_ms()  # one calibration for every case: the faults are judged on the same divisor
+        slow_s = 1.5 * cpu / 1000
+
+        def slow_frame(*args: Any, **kwargs: Any) -> Any:
+            time.sleep(slow_s)
+            return frame(*args, **kwargs)
+
         for name, patch in (("none", None), ("rebuild_all", ("_flush_stroke", rebuild_all)),
-                            ("reload_on_release", ("end_stroke", reload_on_release))):
+                            ("reload_on_release", ("end_stroke", reload_on_release)), ("slow_frames", None)):
             if patch is not None:
                 setattr(Hd2dView, *patch)
+            if name == "slow_frames":
+                d.frame = slow_frame
             try:
-                report[name] = _advisory(d, None, trials=trials, warm=1, steps=steps)  # (no gated stroke: no backstop)
+                report[name] = _advisory(d, None, trials=trials, warm=1, steps=steps, cpu_ms=cpu)  # (backstop: trials)
             finally:
                 setattr(Hd2dView, "_flush_stroke", flush)
                 setattr(Hd2dView, "end_stroke", end)
+                d.frame = frame
     finally:
         d.close()
     return report

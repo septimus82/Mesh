@@ -124,7 +124,8 @@ Mesa's software renderer, not a physical GPU, so its times depend on the runner:
 runner's calibration before and after its tests (CPU, vCPUs, a fixed CPU loop and llvmpipe frame:
 `tooling/runner_calibration.py`), where it ran (runner OS and image, GL vendor/renderer/version, Mesa and LLVM
 versions, the Mesa settings in `test_tiers.MESA_ENV` that are set) and the values tests record with `record_testsuite_property("measure.<name>", ...)`
-(the terrain stroke's frame times), on passing runs too. Reporting only. Each OS's gpu lane runs as two shard jobs of
+(the terrain stroke's frame times), on passing runs too. Reporting only; the terrain stroke's own test enforces its
+runner-calibrated gate (`tooling/terrain_advisory.py`, `docs/reviews/ci422a3_terrain_gate.md`). Each OS's gpu lane runs as two shard jobs of
 whole modules: Windows' by the gpu plan in `tooling/ci_shards.py` (`python -m tooling.test_tiers --shard K/2 gpu`),
 Linux's by its own, measured on Linux (`--shard K/2 --shard-plan gpu-linux gpu`). Each fan-in, `gpu (<os>, py3.11)`, is
 green only when both of its shards succeeded and together ran the whole `gl` selection once, on that commit, with at
