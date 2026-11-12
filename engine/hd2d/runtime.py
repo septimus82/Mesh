@@ -107,6 +107,8 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
             logger.warning("[Mesh][HD-2D] %s", window.hd2d_dof_message)
         if hd2d.post_error:  # (a block that can't be read: the original picture, the rest of the room stands)
             logger.error("[Mesh][HD-2D] this room's colour grade is set aside (off): %s", hd2d.post_error)
+        if hd2d.haze_error:  # (likewise its haze)
+            logger.error("[Mesh][HD-2D] this room's haze is set aside (off): %s", hd2d.haze_error)
         models = window.hd2d_renderer.models
         sculpted = hd2d.ground is not None and hd2d.ground.terrain is not None  # Milestone 20A
         if sculpted or hd2d.rivers or any(model.colliders for model in models.values()):  # (floors and walls
