@@ -26,6 +26,7 @@ from array import array
 from dataclasses import dataclass
 from typing import Any
 
+from engine.hd2d.bloom import OUTPUTS
 from engine.wind import GLSL as WIND_GLSL
 
 PX_PER_M = 32.0
@@ -428,14 +429,17 @@ void main() {
 """
 FS = """
 #version 330
-uniform sampler2D u_tex; uniform vec3 u_light; uniform float u_opacity; uniform int u_probe;
-in vec2 v_uv; in float v_alpha; flat in vec4 v_probe; out vec4 f_color;
+uniform sampler2D u_tex; uniform vec3 u_light; uniform float u_opacity; uniform int u_probe; uniform float u_emit;
+in vec2 v_uv; in float v_alpha; flat in vec4 v_probe;
+""" + OUTPUTS + """
 void main() {
     vec4 c = texture(u_tex, v_uv);
     float a = (v_probe.w < 0.0 ? max(u_opacity, 0.85) : u_opacity) * v_alpha;  // a splash shows a little firmer
     if (c.a < 0.5 || a < 0.004) discard;  // binary alpha, like every Mesh picture
     // diagnostics (u_probe 1): the particle's world position (m) and its id (negative: landed), into a float target
     f_color = u_probe == 1 ? v_probe : vec4(c.rgb * u_light, a);
+    f_emit = vec4(0.0, 0.0, 0.0, a);  // (embers only: u_emit is the draw's)
+    if (u_emit > 0.0) f_emit.rgb = mix(c.rgb / 12.92, pow((c.rgb + 0.055) / 1.055, vec3(2.4)), step(0.04045, c.rgb)) * u_emit;
 }
 """
 
@@ -505,6 +509,7 @@ class FireParticles:
                     if kind == 4 and all(a[3] < 0 for a in anchors[:n]):
                         continue  # (no fire smokes)
                     prog["u_kind"], prog["u_light"], prog["u_opacity"], prog["u_per"] = kind, glow, opacity, per
+                    prog["u_emit"] = 1.0 if kind == 3 else 0.0  # (embers glow: engine.hd2d.bloom)
                     prog["u_variants"] = tuple(float(v) for vr in variants for v in vr)
                     self.geometry.render(prog, instances=n * per)
                     self.draw_calls += 1

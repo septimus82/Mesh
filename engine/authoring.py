@@ -42,7 +42,7 @@ _PROJECT_OPS: dict[str, Callable[..., Any]] = {
 _IMPLICIT = {"scene", "scene_key", "self"}
 # ``project_ops`` functions that look like edits but only read or prepare.
 _NOT_EDITS = {"ensure_entity_ids", "find_entity", "expand_players", "casts_shadow", "flicker_name",
-              "depth_of_field_of", "post_of", "haze_of"}
+              "depth_of_field_of", "post_of", "haze_of", "bloom_of"}
 
 
 class ChangeError(ValueError):
@@ -410,6 +410,7 @@ def summarize(before: Doc, after: Doc) -> list[str]:
         lines += _dof_lines(label, old.get("settings") or {}, room.get("settings") or {})
         lines += _post_lines(label, old.get("settings") or {}, room.get("settings") or {})
         lines += _haze_lines(label, old.get("settings") or {}, room.get("settings") or {})
+        lines += _bloom_lines(label, old.get("settings") or {}, room.get("settings") or {})
     if world_b.get("start_scene") != world_a.get("start_scene") and world_b:
         lines.append(f"Start room: {world_b.get('start_scene')} -> {world_a.get('start_scene')}")
     return lines
@@ -590,6 +591,22 @@ def _haze_lines(label: str, before: Doc, after: Doc) -> list[str]:
     if isinstance(now.get("color"), str):
         words.append(f"colour {now['color']}")
     return [f"{label}: haze {now.get('preset')}" + (f" ({', '.join(words)})" if words else "")]
+
+
+def _bloom_lines(label: str, before: Doc, after: Doc) -> list[str]:
+    """The room's bloom changed (M17-L4-4), in words."""
+    def bloom(settings: Doc) -> Any:
+        hd2d = settings.get("hd2d")
+        return hd2d.get("bloom") if isinstance(hd2d, dict) else None
+
+    if bloom(before) == bloom(after):
+        return []
+    now = bloom(after)
+    if not isinstance(now, dict):
+        return [f"{label}: bloom off"]
+    words = [f"{k} {now[k]:g}" for k in ("strength", "threshold", "spread")
+             if isinstance(now.get(k), (int, float)) and not isinstance(now.get(k), bool)]
+    return [f"{label}: bloom {now.get('preset')}" + (f" ({', '.join(words)})" if words else "")]
 
 
 def _dof_lines(label: str, before: Doc, after: Doc) -> list[str]:

@@ -2125,6 +2125,8 @@ class Hd2dView:
         rows.add(gui.UISpace(height=6))
         self._haze_section(rows, width, field, number)
         rows.add(gui.UISpace(height=6))
+        self._bloom_section(rows, width, field, number)
+        rows.add(gui.UISpace(height=6))
         rows.add(studio._label("Sun and sky", bold=True, size=12))
         row = _row()
         for preset in ("morning", "noon", "evening"):
@@ -2351,6 +2353,70 @@ class Hd2dView:
             except HazeError:  # (the op only writes what reads back: off, as a load would set it aside)
                 haze = None
             renderer.settings = dataclasses.replace(renderer.settings, haze=haze, haze_error=None)
+        studio._rebuild()
+        studio._say(said)
+
+    # ------------------------------------------------------------------ bloom (M17-L4-4)
+    def _bloom_section(self, rows: Any, width: int, field: Any, number: Any) -> None:
+        """The room's bloom: a preset (Off by default; choosing one resets its values), then its strength, threshold
+        and spread. Shown in this view as in the game; Studio's lines never glow. Each change is one undo step
+        (``project_ops.set_hd2d_bloom``)."""
+        studio = self.studio
+        bloom = ops.bloom_of(studio.project.scene())
+        rows.add(studio._label("Bloom", bold=True, size=12))
+        rows.add(studio._label("A soft glow around what gives off light (lamp heads, flames, embers, glowing "
+                               "materials), never around what is only bright, here and in the game. Off in every room "
+                               "until you choose one.", color=C_MUTED, size=9, width=width))
+        if bloom["error"]:
+            rows.add(studio._label(f"Its setting can't be read, so it is off: {bloom['error']}. Choosing a preset "
+                                   "starts it afresh.", color=C_WARN, size=9, width=width))
+        third = (width - 8) // 3
+        row = _row()
+        for name in ("off", "subtle", "warm"):  # (labels of their own: depth of field has a Subtle, Picture an Off)
+            label = "Bloom: off" if name == "off" else f"{name.capitalize()} bloom"
+            said = "Bloom: off (the original)." if name == "off" else f"Bloom: {label}."
+            tip = {"off": "No bloom: the original picture", "subtle": "A gentle glow from the brighter lights",
+                   "warm": "A stronger, wider glow for lamp-lit evenings and nights"}[name]
+            row.add(self._button(label, partial(self.set_bloom, said, preset=name), tip
+                                 + (" (choosing it again resets its values)" if name != "off" else ""),
+                                 width=third, style=S_ACTIVE if (bloom["preset"] or "off") == name else S_BUTTON))
+        rows.add(row)
+        if bloom["preset"] is not None:
+            field("Strength (0-3)", "bloom_strength", f"{bloom['strength']:g}",
+                  number(lambda v: self.set_bloom(f"Bloom strength {v:g}.", strength=v), "Strength", 0, 3))
+            field("Threshold (0-1)", "bloom_threshold", f"{bloom['threshold']:g}",
+                  number(lambda v: self.set_bloom(f"Bloom threshold {v:g}.", threshold=v), "Threshold", 0, 1))
+            field("Spread (0-1)", "bloom_spread", f"{bloom['spread']:g}",
+                  number(lambda v: self.set_bloom(f"Bloom spread {v:g}.", spread=v), "Spread", 0, 1))
+            rows.add(studio._label("Strength: how much glow is added. Threshold: how bright a light must be to glow "
+                                   "(lower: dimmer lights glow too). Spread: how far the glow reaches. Lamps' light on "
+                                   "the ground and walls never glows, nor the grid, selection and handles, the HUD, "
+                                   "menus or dialogue.", color=C_MUTED, size=9, width=width))
+        if self.renderer is not None and self.renderer.bloom_unavailable:
+            rows.add(studio._label(self.renderer.bloom_unavailable.capitalize() + ".", color=C_WARN, size=9,
+                                   width=width))
+
+    def set_bloom(self, said: str, **change: Any) -> None:
+        """One undo step; the view takes the new bloom in place (nothing rebuilt, no reload)."""
+        import dataclasses  # noqa: PLC0415
+
+        from engine.hd2d.bloom import BloomError, parse_bloom  # noqa: PLC0415
+
+        studio = self.studio
+        try:
+            studio.project.edit_scene(lambda s: ops.set_hd2d_bloom(s, **change))
+        except ops.OpError as err:
+            studio._say(str(err), ok=False)
+            studio._rebuild()
+            return
+        renderer = self.renderer
+        if renderer is not None:
+            hd2d = (studio.project.scene().get("settings") or {}).get("hd2d")
+            try:
+                bloom = parse_bloom(hd2d.get("bloom") if isinstance(hd2d, dict) else None)
+            except BloomError:  # (the op only writes what reads back: off, as a load would set it aside)
+                bloom = None
+            renderer.settings = dataclasses.replace(renderer.settings, bloom=bloom, bloom_error=None)
         studio._rebuild()
         studio._say(said)
 

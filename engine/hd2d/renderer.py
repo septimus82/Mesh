@@ -20,6 +20,7 @@ from typing import Any, Callable, Iterable
 
 from PIL import Image
 
+from engine.hd2d.bloom import OUTPUTS, BloomPass
 from engine.hd2d.composite import FinalComposite, final_stage, overlay_after
 from engine.hd2d.dof import DofPass, blur_radius, character_band, dof_unavailable_reason, taps_for, view_depth
 from engine.hd2d.glb import Model, load_glb
@@ -60,8 +61,8 @@ uniform vec3 u_glow;
 // and scales nothing), within u_cut_half with corners rounded by u_cut_round. The CPU twin: renderer.cutaway_cuts.
 uniform int u_cut; uniform vec4 u_cut_at; uniform vec3 u_cut_eye; uniform float u_cut_floor;
 uniform vec3 u_cut_right; uniform vec2 u_cut_half; uniform float u_cut_round; uniform vec4 u_cut_fwd;
-in vec3 v_nrm; in vec2 v_uv; in vec3 v_world; out vec4 f_color;
-""" + LIGHTING_GLSL + """
+in vec3 v_nrm; in vec2 v_uv; in vec3 v_world;
+""" + OUTPUTS + LIGHTING_GLSL + """
 void main() {
     if (u_cut == 1 && u_cut_at.w > 0.0 && v_world.z > u_cut_floor) {
         vec3 sight = u_cut_at.xyz - u_cut_eye;
@@ -80,8 +81,9 @@ void main() {
     }
     vec4 c = texture(u_tex, v_uv);
     vec3 lit = c.rgb * light_at(v_world, normalize(v_nrm), false);
+    vec3 e = vec3(0.0);  // (bloom reads it: engine.hd2d.bloom)
     if (u_emissive != vec3(0.0) || u_glow != vec3(0.0)) {  // added in linear light (the frame holds sRGB)
-        vec3 e = u_emissive;
+        e = u_emissive;
         if (u_emissive_tex == 1) {
             vec3 t = texture(u_emissive_map, v_uv).rgb;
             e *= mix(t / 12.92, pow((t + 0.055) / 1.055, vec3(2.4)), step(0.04045, t));
@@ -94,6 +96,7 @@ void main() {
         lit = mix(l * 12.92, 1.055 * pow(l, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, l));
     }
     f_color = vec4(lit, 1.0);
+    f_emit = vec4(e, 1.0);
 }
 """
 EMISSIVE_UNIT = 3  # the emission texture's unit (MESH_FS; the sculpted ground binds its own before its draws)
@@ -110,8 +113,8 @@ uniform vec4 u_paint_at;    // the ground's origin (m), corners per metre, and 1
 uniform vec4 u_paint_edge;  // the last cell's first corner (i, j) and its width (cells: the ground's edge may cut it)
 uniform int u_side;         // a steep face (its uv box-mapped onto its side)
 uniform float u_wobble;
-in vec3 v_nrm; in vec2 v_uv; in vec3 v_world; out vec4 f_color;
-""" + LIGHTING_GLSL + """
+in vec3 v_nrm; in vec2 v_uv; in vec3 v_world;
+""" + OUTPUTS + LIGHTING_GLSL + """
 float hash(ivec2 p, int m) {
     uint h = uint(p.x) * 374761393u + uint(p.y) * 668265263u + uint(m) * 2246822519u;
     h = (h ^ (h >> 13u)) * 1274126177u;
@@ -158,6 +161,7 @@ void main() {
     vec4 mat = textureLod(u_mats, vec2((float(pick - 1 + 4 * u_side) + fract(v_uv.x)) / 8.0, fract(v_uv.y)), 0.0);
     vec4 c = pick == 0 ? own : mat;
     f_color = vec4(c.rgb * light_at(v_world, normalize(v_nrm), false), 1.0);
+    f_emit = vec4(0.0, 0.0, 0.0, 1.0);
 }
 """
 SPRITE_VS = """
@@ -169,18 +173,23 @@ void main() { v_uv = in_uv; v_world = in_pos; gl_Position = u_vp * vec4(in_pos, 
 SPRITE_FS = """
 #version 330
 uniform sampler2D u_tex; uniform int u_solid;
-in vec2 v_uv; in vec3 v_world; out vec4 f_color;
-""" + LIGHTING_GLSL + """
+in vec2 v_uv; in vec3 v_world;
+""" + OUTPUTS + LIGHTING_GLSL + """
 void main() {
     vec4 c = texture(u_tex, v_uv);
     if (c.a < 0.5) discard;  // binary alpha: discard, write depth for the rest; no sorting needed
     f_color = u_solid == 1 ? vec4(1.0, 0.0, 0.0, 1.0) : vec4(c.rgb * light_at(v_world, vec3(0.0, -1.0, 0.0), true), 1.0);
+    f_emit = vec4(0.0, 0.0, 0.0, 1.0);
 }
 """
 SHADOW_FS = """
 #version 330
-in vec2 v_uv; out vec4 f_color;
-void main() { float d = length(v_uv - 0.5) * 2.0; if (d > 1.0) discard; f_color = vec4(0.0, 0.0, 0.0, 0.35 * (1.0 - d * d)); }
+in vec2 v_uv;
+""" + OUTPUTS + """
+void main() {
+    float d = length(v_uv - 0.5) * 2.0; if (d > 1.0) discard;
+    f_color = vec4(0.0, 0.0, 0.0, 0.35 * (1.0 - d * d)); f_emit = vec4(0.0, 0.0, 0.0, f_color.a);
+}
 """
 BLIT_VS = """
 #version 330
@@ -527,6 +536,11 @@ class Hd2dRenderer:
         self.last_stage = "blit"  # how the last frame's picture was made (engine.hd2d.composite.final_stage)
         self.last_haze: dict[str, float] | None = None  # the last frame's haze (onset, falloff, strength); None: none
         self._haze_values: tuple[Any, Any, dict[str, Any]] | None = None  # (haze, its light, its uniforms), cached
+        # Bloom (settings.bloom, engine.hd2d.bloom, M17-L4-4): the world's emission, spread and added in the composite.
+        # Off, nothing of it exists; its pass is made the first frame it's on and freed the first frame it's off.
+        self._bloom: BloomPass | None = None
+        self.bloom_unavailable: str | None = None  # why it's off on this computer (the driver refused it)
+        self.last_bloom: dict[str, Any] | None = None  # the last frame's (passes, levels, base size); None: none
         self.water: Any = None  # the room's puddles and ponds on the GPU (engine.water; made when it has any)
         self.water_error: str | None = None  # why they're off in this room, if the GPU refused them
         self.preview: tuple[str, tuple[float, ...]] | None = None  # a model about to be placed (Mesh Studio)
@@ -963,6 +977,8 @@ class Hd2dRenderer:
         return self._fbo
 
     def _release_fbo(self) -> None:
+        if self._bloom is not None:  # (its framebuffer draws into these textures)
+            self._bloom._free_world()
         if self._fbo is not None:
             self._fbo.delete()
         for part in self._fbo_parts:
@@ -983,7 +999,8 @@ class Hd2dRenderer:
                    + (self.fire_particles.gl_objects() if self.fire_particles is not None else [])
                    + self.precipitation.gl_objects() + (self.water.gl_objects() if self.water is not None else [])
                    + (self._dof_pass.gl_objects() if self._dof_pass is not None else [])
-                   + (self._composite.gl_objects() if self._composite is not None else []))
+                   + (self._composite.gl_objects() if self._composite is not None else [])
+                   + (self._bloom.gl_objects() if self._bloom is not None else []))
         return [o for o in objects if o is not None]
 
     def release(self) -> None:
@@ -1017,6 +1034,7 @@ class Hd2dRenderer:
         if self._composite is not None:
             self._composite.release()
             self._composite = None
+        self._free_bloom()
         if self.ground_prog is not None:
             self.ground_prog.delete()
             self.ground_prog = None
@@ -1333,8 +1351,12 @@ class Hd2dRenderer:
             lighting.render_shadows(casters, geometry_sprites, ranges, extra=extra, spans=self.static_spans)
         weather = self.particles is not None and solid is None and (camera is None or self.weather_preview)
         maps = self.precipitation_maps() if weather else []  # before the frame's target is in use: cached, mostly
-        fbo.use()
-        fbo.clear(color=(*(round(c * 255) for c in self.settings.sky), 255), depth=1.0)
+        bloom = self._bloom_frame() if solid is None else None  # (off: anything it held is freed)
+        world = bloom[1] if bloom is not None else fbo  # with bloom: the same colour and depth, and the emission
+        world.use()
+        world.clear(color=(*(round(c * 255) for c in self.settings.sky), 255), depth=1.0)
+        if bloom is not None:
+            bloom[0].clear_emission()
         ctx.enable(ctx.DEPTH_TEST)
         fires = self._fires(cam.target) if solid is None else []
         mp = self.mesh_prog
@@ -1399,36 +1421,39 @@ class Hd2dRenderer:
                     texture.use(0)
                     geometry.render(sp, first=first, vertices=count)
                 self.draw_calls += 1
-        self._draw_water(vp, cam, fbo, weather, maps, solid)
+        self._draw_water(vp, cam, world, weather, maps, solid)
         if weather:  # the game's view (or Studio's, previewing): falling in its world, landing on it
             ground = self.settings.ground.elevation / PIXELS_PER_METRE if self.settings.ground is not None else 0.0
             st = self.settings
             light = tuple(min(1.2, st.ambient * a + st.sun_intensity * 0.55 * max(0.0, st.sun[2]) * c)
                           for a, c in zip(st.ambient_color, st.sun_color))
-            self.particles.draw_3d(vp, cam, ground, light, fbo, maps)
+            self.particles.draw_3d(vp, cam, ground, light, world, maps)
             self.draw_calls += self.particles.draw_calls
         elif self.particles is not None:
             self.particles.draw_calls = 0  # not drawn in this view (Studio, not previewing)
         if fires:  # their embers and smoke, in Studio's view too (a fire is part of the room, not its weather)
-            self._draw_fire_particles(fires, vp, cam, fbo)
+            self._draw_fire_particles(fires, vp, cam, world)
         dof = self._dof_frame(cam, camera is None, size) if solid is None else None
         post = self.settings.post if solid is None else None
         grading = post is not None and post.active
         haze = self.settings.haze if solid is None else None
         hazing = haze is not None and haze.active
         self.last_haze = None
-        composite = (self._final_composite() if solid is None and (grading or hazing or self.force_identity_composite)
-                     else None)
-        if composite is not None:  # (its uniforms set only when the room's settings or the haze's onset change)
-            composite.configure(post if grading else None, self._haze_uniforms(haze) if hazing else None)
-            if hazing:
-                composite.frame(self._haze_onset(haze, cam, camera is None), cam.ortho)
+        self.last_bloom = None
+        composite = (self._final_composite() if solid is None and (grading or hazing or bloom is not None
+                                                                   or self.force_identity_composite) else None)
+        if composite is not None and hazing:
+            composite.frame(self._haze_onset(haze, cam, camera is None), cam.ortho)
         stage = self.last_stage = final_stage(dof=dof is not None, composite=composite is not None)
         lines_after = overlay is not None and solid is None and overlay_after(stage)
         if overlay is not None and solid is None and not lines_after:
             overlay(vp)
         ctx.disable(ctx.DEPTH_TEST)
         pixels = fbo.read(components=3) if read else None
+        glow = self._bloom_render(bloom, cam) if bloom is not None else None  # (None: refused just now: none)
+        if composite is not None:  # (its uniforms set only when the room's settings change)
+            composite.configure(post if grading else None, self._haze_uniforms(haze) if hazing else None,
+                                self.settings.bloom.values.strength if glow is not None else 0.0)
         previous.use()
         self._fbo_parts[0].use(0)
         if composite is not None:  # in place of the blit; after the depth of field when it runs (no copy between)
@@ -1442,7 +1467,7 @@ class Hd2dRenderer:
                 full = ctx.viewport
                 if viewport:
                     ctx.viewport = viewport
-                composite.render(self._blit, colour, self._fbo_parts[1])
+                composite.render(self._blit, colour, self._fbo_parts[1], glow)
                 if viewport:
                     ctx.viewport = full
         elif dof is not None:  # in place of the blit
@@ -1481,6 +1506,45 @@ class Hd2dRenderer:
         begin = haze_onset(focus, v.start, band if followed else None)
         self.last_haze = {"onset": begin, "falloff": v.falloff, "strength": v.strength, "focus": focus}
         return begin
+
+    def _bloom_frame(self) -> tuple[BloomPass, Any] | None:
+        """This frame's bloom pass and the framebuffer that draws the world with its emission, or None: bloom is off
+        (whatever it held is freed), or off on this computer (the driver refused it, or the composite)."""
+        bloom = self.settings.bloom
+        if bloom is None or not bloom.active:
+            self._free_bloom()
+            return None
+        if self.bloom_unavailable is not None or self._final_composite() is None:
+            return None
+        try:
+            if self._bloom is None:
+                self._bloom = BloomPass(self.ctx, BLIT_VS)
+            return self._bloom, self._bloom.world_target(*self._fbo_parts)
+        except _gpu_refused() + (ValueError,) as exc:  # (ValueError: a framebuffer the driver won't complete)
+            self._bloom_refused(exc)
+            return None
+
+    def _bloom_render(self, bloom: tuple[BloomPass, Any], cam: Camera) -> Any:
+        """The frame's glow (engine.hd2d.bloom.BloomPass.render), dimmed by the room's haze; None if refused now."""
+        h = self.last_haze
+        try:
+            glow = bloom[0].render(self._blit, self._fbo_parts[1], self.settings.bloom,
+                                   (h["strength"], h["onset"], h["falloff"]) if h else None, cam.ortho)
+        except _gpu_refused() + (ValueError,) as exc:
+            self._bloom_refused(exc)
+            return None
+        self.last_bloom = {"passes": bloom[0].passes, "base": tuple(glow.size)}
+        return glow
+
+    def _bloom_refused(self, exc: BaseException) -> None:
+        self.bloom_unavailable = f"bloom is off on this computer: the graphics driver refused it ({exc})"
+        logger.error("[Mesh][HD-2D] %s", self.bloom_unavailable)
+        self._free_bloom()
+
+    def _free_bloom(self) -> None:
+        if self._bloom is not None:
+            self._bloom.release()
+            self._bloom = None
 
     def _final_composite(self) -> FinalComposite | None:
         """The composite pass, made the first time a frame needs it (None: the driver refused it; off here)."""
@@ -1742,13 +1806,15 @@ class Hd2dRenderer:
         """Draw calls last frame, triangles and GPU memory this renderer holds (static buffers, textures, target)."""
         texture_bytes = sum(t.width * t.height * 4 for t in self._textures + list(self._sprite_textures.values()))
         target_bytes = sum(p.width * p.height * 4 for p in self._fbo_parts)
+        bloom_bytes = self._bloom.memory_bytes() if self._bloom is not None else 0
         buffer_bytes = sum(b.size for b in self._buffers + list(self._dynamic[1:] if self._dynamic else []))
         terrain_bytes = (sum(b.size for bufs in self._terrain_buffers.values() for b in bufs)
                          + (self._caster_buffer.size if self._caster_buffer is not None else 0))
         return {"draw_calls": self.draw_calls, "static_draws": len(self.static) + len(self._ground_draws()),
                 "terrain_bytes": terrain_bytes, "terrain_draws": len(self._ground_draws()) if self.terrain else 0,
                 "triangles": self.triangles, "buffer_bytes": buffer_bytes,
-                "texture_bytes": texture_bytes, "target_bytes": target_bytes, "batched": self.batched,
+                "texture_bytes": texture_bytes, "target_bytes": target_bytes, "bloom_bytes": bloom_bytes,
+                "batched": self.batched,
                 "shadows": self.lighting.enabled, "shadow_draws": self.lighting.shadow_draws,
                 "shadow_map_bytes": self.lighting.memory_bytes(), "lamps": len(self.lighting.lamps),
                 "lamp_head_draws": len(self._glow),

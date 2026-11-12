@@ -2953,6 +2953,73 @@ def set_hd2d_haze(scene: Doc, preset: Any = _UNSET, strength: Any = _UNSET, colo
     return _checked(scene, out)
 
 
+def bloom_of(scene: Doc) -> Doc:
+    """The room's bloom as Studio shows it (engine.hd2d.bloom): ``preset`` (None: off), ``label``, ``strength``,
+    ``threshold`` and ``spread`` (the room's own or its preset's), plus ``error`` (why a block that can't be read is set
+    aside: off)."""
+    from engine.hd2d.bloom import BloomError, parse_bloom  # noqa: PLC0415
+
+    hd2d = (scene.get("settings") or {}).get("hd2d")
+    error = None
+    try:
+        bloom = parse_bloom(hd2d.get("bloom") if isinstance(hd2d, dict) else None)
+    except BloomError as exc:
+        bloom, error = None, str(exc)
+    if bloom is None:
+        return {"preset": None, "error": error}
+    v = bloom.values
+    return {"preset": bloom.preset, "label": v.label, "strength": v.strength, "threshold": v.threshold,
+            "spread": v.spread, "error": None}
+
+
+def set_hd2d_bloom(scene: Doc, preset: Any = _UNSET, strength: Any = _UNSET, threshold: Any = _UNSET,
+                   spread: Any = _UNSET) -> Doc:
+    """This HD-2D room's bloom (``settings.hd2d.bloom``; engine.hd2d.bloom): a soft glow around what emits light
+    (lamp heads, glowing materials, campfire flames and embers, torches, glowing plants), never around what is merely
+    bright (a white wall, the sky, sunlit grass) and never around the HUD or Studio's lines; in the game and in
+    Studio's view; off in every room until chosen. ``preset``: "subtle" (a gentle glow from the brighter emitters),
+    "warm" (a stronger, wider glow for lamp-lit evenings and nights), or "off" (the original picture: the block
+    removed). Choosing a preset resets every value to its own. ``strength`` (0-3): how much glow is added (0: the
+    original picture). ``threshold`` (0-1, linear light): how bright an emitter must be to glow (a soft knee, no hard
+    edge). ``spread`` (0-1): how far the glow reaches (0: tight, 1: wide and faint). Only what is given changes."""
+    from engine.hd2d.bloom import PRESETS, BloomError, parse_bloom, stored  # noqa: PLC0415
+
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has no bloom.")
+    hd2d = _hd2d_block(out)
+    try:  # (a block that can't be read: start afresh, so it can be repaired)
+        now = parse_bloom(hd2d.get("bloom"))
+    except BloomError:
+        now = None
+    given = {k: v for k, v in (("strength", strength), ("threshold", threshold), ("spread", spread)) if v is not _UNSET}
+    if preset == "off":
+        if given:
+            raise OpError("Bloom is off: there is nothing to set.")
+        hd2d.pop("bloom", None)
+        return _checked(scene, out)
+    raw: dict[str, Any]
+    if preset is not _UNSET:
+        if not isinstance(preset, str) or preset not in PRESETS:
+            raise OpError(f"Bloom preset must be one of off, {', '.join(PRESETS)} (got {preset!r}).")
+        raw = {"preset": preset}
+    elif now is None:
+        raise OpError("This room's bloom is off: choose a preset first (subtle or warm).")
+    else:
+        raw = stored(now) or {}
+    for key, value in given.items():
+        if value is None:
+            raw.pop(key, None)
+        else:
+            raw[key] = copy.deepcopy(value)
+    try:
+        bloom = parse_bloom(raw)
+    except BloomError as exc:
+        raise OpError(str(exc)) from exc
+    hd2d["bloom"] = stored(bloom)
+    return _checked(scene, out)
+
+
 def find_structure(scene: Doc, structure_id: str) -> Doc | None:
     return next((s for s in structures(scene) if isinstance(s, dict) and s.get("id") == structure_id), None)
 

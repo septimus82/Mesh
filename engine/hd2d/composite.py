@@ -25,6 +25,12 @@ pixel's own depth (the world's depth texture, linearised as the depth of field's
 in linear light by engine.hd2d.haze.amount; nearer than the onset (and where nothing was drawn) the texel is kept
 exactly. Only the onset changes per frame (``frame``: one uniform, set when it moves). No pass, texture or target is
 added for it.
+**Bloom** (M17-L4-4, the room's ``settings.hd2d.bloom``: engine.hd2d.bloom), in the same pass, after the haze and
+before the grade: the glow its own pass made from the world's emission (``render``'s ``glow``, bilinear, a fixed
+share of the picture) times its strength, added in linear light. The order, from the world to the display: the world
+(its colour, depth and, with bloom, emission); the depth of field; the haze; the bloom; the grade and vignette; the
+display encoding; then Studio's lines and Mesh's HUD, which nothing here reads. Each pass reads only the world this
+frame drew: nothing feeds back from one frame to the next.
 
 GPU objects are made the first time they are needed and freed by ``release`` (the renderer's own, on scene change or
 window close); the chain target is remade when the picture's size changes.
@@ -50,6 +56,8 @@ uniform float u_vignette;
 // the camera's clip planes to read the depth buffer in metres (engine.hd2d.dof's linearisation)
 uniform float u_haze; uniform vec3 u_haze_color; uniform float u_haze_onset; uniform float u_haze_falloff;
 uniform int u_ortho; uniform float u_near; uniform float u_far;
+// the bloom (engine.hd2d.bloom: linear light, the picture's whole area) and its strength (0: none, never read)
+uniform sampler2D u_bloom; uniform float u_bloom_strength;
 in vec2 v_uv; out vec4 f_color;
 float view_depth(float d) {
     if (u_ortho == 1) return u_near + d * (u_far - u_near);
@@ -70,9 +78,12 @@ void main() {
         float x = max(view_depth(d) - u_haze_onset, 0.0) / u_haze_falloff;  // no corner at the onset: no edge
         a = u_haze * (1.0 - exp(-3.0 * x * x));
     }
-    if (u_grade == 0 && a <= 0.0) { f_color = c; return; }  // nearer than the haze, no grade: the texel exactly
+    vec3 b = u_bloom_strength > 0.0 ? texture(u_bloom, v_uv).rgb * u_bloom_strength : vec3(0.0);
+    // nearer than the haze, nothing glowing here, no grade: the texel exactly
+    if (u_grade == 0 && a <= 0.0 && b == vec3(0.0)) { f_color = c; return; }
     vec3 o = lin(c.rgb);
     if (a > 0.0) o = mix(o, u_haze_color, a);             // in linear light, before the grade
+    o += b;                                               // the bloom, after the haze
     if (u_grade == 0) { f_color = vec4(enc(o), c.a); return; }
     vec3 g = o * u_wb * u_exposure;
     float y0 = luma(o);
@@ -109,21 +120,23 @@ class FinalComposite:
         self.chain_allocations = 0  # how many times a chain target was made (resizes make a new one)
         self.program["u_color"] = 0
         self.program.set_uniform_safe("u_depth", 1)
+        self.program.set_uniform_safe("u_bloom", 2)
         self.program["u_mode"] = 0
         from engine.hd2d.dof import FAR, NEAR  # noqa: PLC0415  # (the renderer's clip planes)
 
         for name, value in (("u_grade", 0), ("u_haze", 0.0), ("u_near", NEAR), ("u_far", FAR), ("u_ortho", 0),
-                            ("u_haze_onset", 0.0)):
+                            ("u_haze_onset", 0.0), ("u_bloom_strength", 0.0)):
             self.program.set_uniform_safe(name, value)
-        self._configured: Any = (None, None)  # the Post and haze values its uniforms were last set for
+        self._configured: Any = (None, None, 0.0)  # the Post, haze values and bloom strength its uniforms are set for
         self.uniform_updates = 0  # how many times they were set (once per change of the room's settings)
         self._frame: tuple[float, int] | None = None  # the haze's onset and the camera's kind, last set
 
-    def configure(self, post: Any, haze: dict[str, Any] | None = None) -> None:
+    def configure(self, post: Any, haze: dict[str, Any] | None = None, bloom: float = 0.0) -> None:
         """The pass's mode: ``post`` (an active engine.hd2d.post.Post) grades with it; ``haze`` (engine.hd2d.haze
-        .uniforms, of an active haze) hazes first; neither is the identity. Its uniforms are set only when that
-        changes (the room's settings are one object until they're edited; the haze's values compare equal)."""
-        if post is self._configured[0] and haze == self._configured[1]:
+        .uniforms, of an active haze) hazes first; ``bloom`` (a strength above 0: ``render`` is given the glow) adds
+        it after the haze; none of them is the identity. Its uniforms are set only when that changes (the room's
+        settings are one object until they're edited; the haze's values compare equal)."""
+        if post is self._configured[0] and haze == self._configured[1] and bloom == self._configured[2]:
             return
         p = self.program
         if post is not None:
@@ -135,8 +148,9 @@ class FinalComposite:
                 p[name] = value
         else:
             p.set_uniform_safe("u_haze", 0.0)
-        p["u_mode"] = 1 if post is not None or haze is not None else 0
-        self._configured = (post, haze)
+        p.set_uniform_safe("u_bloom_strength", bloom)
+        p["u_mode"] = 1 if post is not None or haze is not None or bloom > 0.0 else 0
+        self._configured = (post, haze, bloom)
         self.uniform_updates += 1
 
     def frame(self, onset: float, ortho: bool) -> None:
@@ -165,17 +179,22 @@ class FinalComposite:
         self.chain_allocations += 1
         return self._chain
 
-    def render(self, quad: Any, colour: Any, depth: Any) -> None:
-        """Draw the picture from ``colour`` (and ``depth``) into the active framebuffer (its viewport set by the
-        caller, blending off)."""
+    def render(self, quad: Any, colour: Any, depth: Any, glow: Any = None) -> None:
+        """Draw the picture from ``colour`` (and ``depth``, and the bloom's ``glow`` when it's on) into the active
+        framebuffer (its viewport set by the caller, blending off)."""
         p = self.program
         colour.use(0)
         depth.use(1)
+        if glow is not None:
+            glow.use(2)
         quad.render(p)
         from pyglet import gl as raw  # noqa: PLC0415  # (arcade has no unbind)
 
         raw.glActiveTexture(raw.GL_TEXTURE1)  # the world's depth isn't left bound where the next frame draws into it
         raw.glBindTexture(raw.GL_TEXTURE_2D, 0)
+        if glow is not None:  # (nor the glow, drawn into by the next frame's bloom)
+            raw.glActiveTexture(raw.GL_TEXTURE2)
+            raw.glBindTexture(raw.GL_TEXTURE_2D, 0)
         raw.glActiveTexture(raw.GL_TEXTURE0)
 
     def gl_objects(self) -> list[Any]:
