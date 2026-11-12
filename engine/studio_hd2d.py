@@ -2123,6 +2123,8 @@ class Hd2dView:
         rows.add(gui.UISpace(height=6))
         self._post_section(rows, width, field, number)
         rows.add(gui.UISpace(height=6))
+        self._haze_section(rows, width, field, number)
+        rows.add(gui.UISpace(height=6))
         rows.add(studio._label("Sun and sky", bold=True, size=12))
         row = _row()
         for preset in ("morning", "noon", "evening"):
@@ -2284,6 +2286,71 @@ class Hd2dView:
             except PostError:  # (the op only writes what reads back: off, as a load would set it aside)
                 post = None
             renderer.settings = dataclasses.replace(renderer.settings, post=post, post_error=None)
+        studio._rebuild()
+        studio._say(said)
+
+    # ------------------------------------------------------------------ atmospheric depth (M17-L4-3)
+    def _haze_section(self, rows: Any, width: int, field: Any, number: Any) -> None:
+        """The room's haze: a preset (Off by default; choosing one resets its values), then its strength, colour, start
+        and falloff. Shown in this view as in the game; Studio's lines are never hazed. Each change is one undo step
+        (``project_ops.set_hd2d_haze``)."""
+        studio = self.studio
+        haze = ops.haze_of(studio.project.scene())
+        rows.add(studio._label("Haze", bold=True, size=12))
+        rows.add(studio._label("Distant scenery fades toward the haze colour with its distance from the camera, here "
+                               "and in the game. Off in every room until you choose one.", color=C_MUTED, size=9,
+                               width=width))
+        if haze["error"]:
+            rows.add(studio._label(f"Its setting can't be read, so it is off: {haze['error']}. Choosing a preset "
+                                   "starts it afresh.", color=C_WARN, size=9, width=width))
+        third = (width - 8) // 3
+        row = _row()
+        for name in ("off", "daytime", "evening"):  # (labels of their own: the sun has an Evening, Picture an Off)
+            label = "Haze: off" if name == "off" else f"{name.capitalize()} haze"
+            said = "Haze: off (the original)." if name == "off" else f"Haze: {label}."
+            tip = {"off": "No haze: the original picture", "daytime": "Subtle and cool: daylight",
+                   "evening": "A little stronger and warm: evening"}[name]
+            row.add(self._button(label, partial(self.set_haze, said, preset=name), tip
+                                 + (" (choosing it again resets its values)" if name != "off" else ""),
+                                 width=third, style=S_ACTIVE if (haze["preset"] or "off") == name else S_BUTTON))
+        rows.add(row)
+        if haze["preset"] is not None:
+            field("Strength (0-0.5)", "haze_strength", f"{haze['strength']:g}",
+                  number(lambda v: self.set_haze(f"Haze strength {v:g}.", strength=v), "Strength", 0, 0.5))
+            field("Colour", "haze_color", haze["color"],
+                  lambda v: self.set_haze("Haze colour changed.", color=v.strip()))
+            field("Start (m)", "haze_start", f"{haze['start']:g}",
+                  number(lambda v: self.set_haze(f"Haze starts {v:g} m beyond the focus.", start=v), "Start", 0, 40))
+            field("Falloff (m)", "haze_falloff", f"{haze['falloff']:g}",
+                  number(lambda v: self.set_haze(f"Haze falloff {v:g} m.", falloff=v), "Falloff", 1, 80))
+            rows.add(studio._label("Strength: how far the most distant things fade toward the colour. Colour: the haze "
+                                   "in daylight; the room's sun and ambient light light it, so it dims at night. "
+                                   "Start: how far beyond the focus it begins (the player in the game, never on them; "
+                                   "the middle of this view here). Falloff: how far it takes to reach full strength. "
+                                   "The grid, selection and handles, the HUD, menus and dialogue are never hazed.",
+                                   color=C_MUTED, size=9, width=width))
+
+    def set_haze(self, said: str, **change: Any) -> None:
+        """One undo step; the view takes the new haze in place (uniforms: nothing rebuilt, no reload)."""
+        import dataclasses  # noqa: PLC0415
+
+        from engine.hd2d.haze import HazeError, parse_haze  # noqa: PLC0415
+
+        studio = self.studio
+        try:
+            studio.project.edit_scene(lambda s: ops.set_hd2d_haze(s, **change))
+        except ops.OpError as err:
+            studio._say(str(err), ok=False)
+            studio._rebuild()
+            return
+        renderer = self.renderer
+        if renderer is not None:
+            hd2d = (studio.project.scene().get("settings") or {}).get("hd2d")
+            try:
+                haze = parse_haze(hd2d.get("haze") if isinstance(hd2d, dict) else None)
+            except HazeError:  # (the op only writes what reads back: off, as a load would set it aside)
+                haze = None
+            renderer.settings = dataclasses.replace(renderer.settings, haze=haze, haze_error=None)
         studio._rebuild()
         studio._say(said)
 

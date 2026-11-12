@@ -23,6 +23,9 @@ from PIL import Image
 from engine.hd2d.composite import FinalComposite, final_stage, overlay_after
 from engine.hd2d.dof import DofPass, blur_radius, character_band, dof_unavailable_reason, taps_for, view_depth
 from engine.hd2d.glb import Model, load_glb
+from engine.hd2d.haze import light_of
+from engine.hd2d.haze import onset as haze_onset
+from engine.hd2d.haze import uniforms as haze_uniforms
 from engine.hd2d.lighting import LIGHTING_GLSL, Lighting, lamp_head
 from engine.hd2d.precipitation import PrecipitationMaps, key_for
 from engine.hd2d.settings import MAX_LIGHTS, PIXELS_PER_METRE, Hd2dSettings
@@ -514,14 +517,16 @@ class Hd2dRenderer:
         self.last_dof: dict[str, Any] | None = None  # the last frame's focus, band and blur (None: not drawn)
         # The final composite (engine.hd2d.composite, M17-L4-1): a pass in the blit's place reading the world's colour
         # and depth, shared by the game and Studio. It runs for the room's colour grade and vignette (settings.post,
-        # engine.hd2d.post, L4-2), in Studio's editing view too, or its identity (``force_identity_composite``: a
-        # test/diagnostic switch, not a setting). Off (no post block, or strength 0), the picture is made exactly as
-        # before and nothing is allocated; its program (and, after the depth of field, its one colour target) is made
-        # the first time a frame needs it.
+        # engine.hd2d.post, L4-2) and its haze (settings.haze, engine.hd2d.haze, L4-3), in Studio's editing view too,
+        # or its identity (``force_identity_composite``: a test/diagnostic switch, not a setting). Off (neither block,
+        # or strength 0), the picture is made exactly as before and nothing is allocated; its program (and, after the
+        # depth of field, its one colour target) is made the first time a frame needs it.
         self._composite: FinalComposite | None = None
         self.force_identity_composite = False
         self.composite_unavailable: str | None = None  # why it's off, if the driver refused its program
         self.last_stage = "blit"  # how the last frame's picture was made (engine.hd2d.composite.final_stage)
+        self.last_haze: dict[str, float] | None = None  # the last frame's haze (onset, falloff, strength); None: none
+        self._haze_values: tuple[Any, Any, dict[str, Any]] | None = None  # (haze, its light, its uniforms), cached
         self.water: Any = None  # the room's puddles and ponds on the GPU (engine.water; made when it has any)
         self.water_error: str | None = None  # why they're off in this room, if the GPU refused them
         self.preview: tuple[str, tuple[float, ...]] | None = None  # a model about to be placed (Mesh Studio)
@@ -1409,9 +1414,15 @@ class Hd2dRenderer:
         dof = self._dof_frame(cam, camera is None, size) if solid is None else None
         post = self.settings.post if solid is None else None
         grading = post is not None and post.active
-        composite = self._final_composite() if solid is None and (grading or self.force_identity_composite) else None
-        if composite is not None:
-            composite.configure(post if grading else None)  # (its uniforms set only when the room's settings change)
+        haze = self.settings.haze if solid is None else None
+        hazing = haze is not None and haze.active
+        self.last_haze = None
+        composite = (self._final_composite() if solid is None and (grading or hazing or self.force_identity_composite)
+                     else None)
+        if composite is not None:  # (its uniforms set only when the room's settings or the haze's onset change)
+            composite.configure(post if grading else None, self._haze_uniforms(haze) if hazing else None)
+            if hazing:
+                composite.frame(self._haze_onset(haze, cam, camera is None), cam.ortho)
         stage = self.last_stage = final_stage(dof=dof is not None, composite=composite is not None)
         lines_after = overlay is not None and solid is None and overlay_after(stage)
         if overlay is not None and solid is None and not lines_after:
@@ -1450,6 +1461,26 @@ class Hd2dRenderer:
         if lines_after and overlay is not None:  # Studio's lines over the picture, sharp (_overlay_after)
             self._overlay_after(fbo, previous, overlay, vp, viewport)
         return pixels
+
+    def _haze_uniforms(self, haze: Any) -> dict[str, Any]:
+        """The composite's haze values for ``haze``, lit as the room's open ground is (engine.hd2d.haze.light_of):
+        worked out again only when the haze or the room's light changes."""
+        s = self.lighting.settings
+        light = light_of(s.ambient, s.ambient_color, self.lighting.sun, s.sun_intensity, s.sun_color)
+        cached = self._haze_values
+        if cached is None or cached[0] is not haze or cached[1] != light:
+            cached = self._haze_values = (haze, light, haze_uniforms(haze, light))
+        return cached[2]
+
+    def _haze_onset(self, haze: Any, cam: Camera, game: bool) -> float:
+        """Where this frame's haze begins (m along the view axis): ``start`` beyond the focus (the depth of field's:
+        the followed character in play, else the view's target), never within the character's own depth in play."""
+        focus, band = self.dof_focus(cam, game)
+        v = haze.values
+        followed = game and self.followed() is not None
+        begin = haze_onset(focus, v.start, band if followed else None)
+        self.last_haze = {"onset": begin, "falloff": v.falloff, "strength": v.strength, "focus": focus}
+        return begin
 
     def _final_composite(self) -> FinalComposite | None:
         """The composite pass, made the first time a frame needs it (None: the driver refused it; off here)."""

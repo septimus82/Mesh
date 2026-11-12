@@ -2884,6 +2884,75 @@ def set_hd2d_post(scene: Doc, preset: Any = _UNSET, strength: Any = _UNSET, vign
     return _checked(scene, out)
 
 
+def haze_of(scene: Doc) -> Doc:
+    """The room's atmospheric depth as Studio shows it (engine.hd2d.haze): ``preset`` (None: off), ``label``,
+    ``strength``, ``color`` ("#rrggbb"), ``start`` and ``falloff`` (the room's own or its preset's), plus ``error``
+    (why a block that can't be read is set aside: off)."""
+    from engine.hd2d.haze import HazeError, hex_color, parse_haze  # noqa: PLC0415
+
+    hd2d = (scene.get("settings") or {}).get("hd2d")
+    error = None
+    try:
+        haze = parse_haze(hd2d.get("haze") if isinstance(hd2d, dict) else None)
+    except HazeError as exc:
+        haze, error = None, str(exc)
+    if haze is None:
+        return {"preset": None, "error": error}
+    v = haze.values
+    return {"preset": haze.preset, "label": v.label, "strength": v.strength, "color": hex_color(v.color),
+            "start": v.start, "falloff": v.falloff, "error": None}
+
+
+def set_hd2d_haze(scene: Doc, preset: Any = _UNSET, strength: Any = _UNSET, color: Any = _UNSET, start: Any = _UNSET,
+                  falloff: Any = _UNSET) -> Doc:
+    """This HD-2D room's atmospheric depth (``settings.hd2d.haze``; engine.hd2d.haze): distant scenery fades toward a
+    haze colour with its distance from the camera (from the depth it was drawn with, never its height on screen),
+    in the game and in Studio's view; off in every room until chosen. ``preset``: "daytime" (subtle, cool), "evening"
+    (a little stronger, warm), or "off" (the original picture: the block removed). Choosing a preset resets every
+    value to its own. ``strength`` (0-0.5): how far the most distant things move toward the haze colour (0: the
+    original picture). ``color`` ("#rrggbb", or None for the preset's): the haze in full daylight; it is lit by the
+    room's own sun and ambient light, so it dims at night and warms with an evening sun. ``start`` (m, 0-40): how far
+    beyond the camera's focus (the player, in play) it begins; in play never within the player's own depth.
+    ``falloff`` (m, 1-80): how far beyond the start it takes to reach its full strength. Only what is given changes."""
+    from engine.hd2d.haze import PRESETS, HazeError, parse_haze, stored  # noqa: PLC0415
+
+    out = copy.deepcopy(scene)
+    if not isinstance((out.get("settings") or {}).get("hd2d"), dict):
+        raise OpError("This room isn't an HD-2D room, so it has no depth to haze.")
+    hd2d = _hd2d_block(out)
+    try:  # (a block that can't be read: start afresh, so it can be repaired)
+        now = parse_haze(hd2d.get("haze"))
+    except HazeError:
+        now = None
+    given = {k: v for k, v in (("strength", strength), ("color", color), ("start", start), ("falloff", falloff))
+             if v is not _UNSET}
+    if preset == "off":
+        if given:
+            raise OpError("The haze is off: there is nothing to set.")
+        hd2d.pop("haze", None)
+        return _checked(scene, out)
+    raw: dict[str, Any]
+    if preset is not _UNSET:
+        if not isinstance(preset, str) or preset not in PRESETS:
+            raise OpError(f"Haze preset must be one of off, {', '.join(PRESETS)} (got {preset!r}).")
+        raw = {"preset": preset}
+    elif now is None:
+        raise OpError("This room's haze is off: choose a preset first (daytime or evening).")
+    else:
+        raw = stored(now) or {}
+    for key, value in given.items():
+        if value is None:
+            raw.pop(key, None)
+        else:
+            raw[key] = copy.deepcopy(value)
+    try:
+        haze = parse_haze(raw)
+    except HazeError as exc:
+        raise OpError(str(exc)) from exc
+    hd2d["haze"] = stored(haze)
+    return _checked(scene, out)
+
+
 def find_structure(scene: Doc, structure_id: str) -> Doc | None:
     return next((s for s in structures(scene) if isinstance(s, dict) and s.get("id") == structure_id), None)
 
