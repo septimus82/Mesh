@@ -1,0 +1,148 @@
+{
+ "errors": {
+  "hd2d": null,
+  "water": null,
+  "rivers": null
+ },
+ "falls": [
+  [
+   {
+    "start": 2,
+    "foam": 0.6,
+    "spray": 0.4
+   }
+  ]
+ ],
+ "curtain": {
+  "lip_px": [
+   480.0,
+   176.90895948742096
+  ],
+  "foot_px": [
+   480.0,
+   361.73354826461286
+  ],
+  "changed": 47826,
+  "between_lip_and_foot": 0.969
+ },
+ "motion": {
+  "shifts_down_px": [
+   8,
+   8,
+   8,
+   7,
+   7,
+   8
+  ],
+  "rows": 173,
+  "still_same": true
+ },
+ "above_the_lip": {
+  "changed_by_the_join": 0,
+  "near_the_shore_changed": 0,
+  "near_joined": true
+ },
+ "behind": {
+  "changed_depth_tested": 5113,
+  "changed_no_depth_test": 13176
+ },
+ "in_front": {
+  "body_pixels": 1488,
+  "curtain_behind_it": 1483,
+  "changed_by_the_fall": 0
+ },
+ "foam": {
+  "lighter_in_pond": 809,
+  "lighter_in_pond_foam0": 15,
+  "pond_pixels": 2300,
+  "lighter_near": 2300,
+  "lighter_near_foam0": 18,
+  "near_pixels": 4320,
+  "far_changed": 0
+ },
+ "spray": {
+  "made_when_none": false,
+  "made_when_asked": true,
+  "pixels": 1564,
+  "box": [
+   384,
+   342,
+   572,
+   370
+  ],
+  "foot_px": [
+   480.0,
+   361.73354826461286
+  ]
+ },
+ "draws": {
+  "plain": 35,
+  "falls": 37,
+  "objects_plain": 108,
+  "objects_falls": 115,
+  "made_in_20_frames": {
+   "buffer": 0,
+   "texture": 0,
+   "framebuffer": 0,
+   "program": 0
+  },
+  "fall_buffers_made_in_20_frames": 0
+ },
+ "away": {
+  "draw_calls": 2,
+  "water_draws": 0,
+  "spray_draws": 0
+ },
+ "walks": {
+  "lip_y": 796.0,
+  "foot_y": 732.0,
+  "from_above": {
+   "x": 640.0,
+   "y": 798.0,
+   "z": 2.28125,
+   "lowest": 2.28125,
+   "deepest": 0.4031250000000002,
+   "wading_steps": 3,
+   "start": [
+    640.0,
+    848.0,
+    2.2890625
+   ]
+  },
+  "from_below": {
+   "x": 640.0,
+   "y": 718.0,
+   "z": -0.1484375,
+   "lowest": -0.35546875,
+   "deepest": 0.1484375,
+   "wading_steps": 5,
+   "start": [
+    640.0,
+    648.0,
+    -0.35546875
+   ]
+  },
+  "falling_at_end": false
+ },
+ "gone": {
+  "fall_program": false,
+  "fall_buffers": false,
+  "spray": false,
+  "objects": 109,
+  "objects_plain": 109
+ },
+ "haze_bloom": {
+  "stage": "composite",
+  "bloom": {
+   "passes": 11,
+   "base": [
+    640,
+    360
+   ]
+  },
+  "haze": "evening",
+  "curtain_emission_max": 0.0,
+  "room_emission_max": 1.59375,
+  "fall_count": 168
+ }
+}

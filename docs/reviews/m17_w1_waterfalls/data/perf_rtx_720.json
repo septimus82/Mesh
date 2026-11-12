@@ -1,0 +1,314 @@
+{
+ "worktree": "D:\\Games\\Mesh-w1",
+ "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "size": [
+  1280,
+  720
+ ],
+ "rounds": 150,
+ "method": "GL timer query; CPU perf_counter round the call",
+ "clocks_before": "1020 MHz, 10001 MHz, P0",
+ "day_static": {
+  "none": {
+   "gpu": {
+    "p50_ms": 2.7392,
+    "p95_ms": 3.839,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 4.3479,
+    "p95_ms": 5.081,
+    "n": 135
+   },
+   "draw_calls": 35,
+   "gl_objects": 108,
+   "water_bytes": 7428976,
+   "curtain_bytes": 0,
+   "curtain_indices": 0,
+   "spray_particles": 0
+  },
+  "one": {
+   "gpu": {
+    "p50_ms": 2.7679,
+    "p95_ms": 4.3622,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 4.9999,
+    "p95_ms": 5.8668,
+    "n": 135
+   },
+   "draw_calls": 37,
+   "gl_objects": 115,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 10
+  },
+  "one_no_spray": {
+   "gpu": {
+    "p50_ms": 2.7525,
+    "p95_ms": 4.2824,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 4.749,
+    "p95_ms": 5.4232,
+    "n": 135
+   },
+   "draw_calls": 36,
+   "gl_objects": 111,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 0
+  }
+ },
+ "day_moving": {
+  "none": {
+   "gpu": {
+    "p50_ms": 2.4484,
+    "p95_ms": 3.9864,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 4.1613,
+    "p95_ms": 4.981,
+    "n": 135
+   },
+   "draw_calls": 39,
+   "gl_objects": 108,
+   "water_bytes": 7428976,
+   "curtain_bytes": 0,
+   "curtain_indices": 0,
+   "spray_particles": 0
+  },
+  "one": {
+   "gpu": {
+    "p50_ms": 2.9778,
+    "p95_ms": 4.7718,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 4.8157,
+    "p95_ms": 5.7404,
+    "n": 135
+   },
+   "draw_calls": 41,
+   "gl_objects": 115,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 10
+  },
+  "one_no_spray": {
+   "gpu": {
+    "p50_ms": 2.7771,
+    "p95_ms": 4.353,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 4.5846,
+    "p95_ms": 5.4288,
+    "n": 135
+   },
+   "draw_calls": 40,
+   "gl_objects": 111,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 0
+  }
+ },
+ "day_offscreen": {
+  "none": {
+   "gpu": {
+    "p50_ms": 0.1618,
+    "p95_ms": 0.2222,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 0.8687,
+    "p95_ms": 1.3107,
+    "n": 135
+   },
+   "draw_calls": 2,
+   "gl_objects": 108,
+   "water_bytes": 7428976,
+   "curtain_bytes": 0,
+   "curtain_indices": 0,
+   "spray_particles": 0
+  },
+  "one": {
+   "gpu": {
+    "p50_ms": 0.1618,
+    "p95_ms": 0.2222,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 0.8837,
+    "p95_ms": 1.2649,
+    "n": 135
+   },
+   "draw_calls": 2,
+   "gl_objects": 111,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 10
+  }
+ },
+ "day_game_camera": {
+  "none": {
+   "gpu": {
+    "p50_ms": 0.9236,
+    "p95_ms": 2.1699,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 2.0412,
+    "p95_ms": 2.6207,
+    "n": 135
+   },
+   "draw_calls": 57,
+   "gl_objects": 108,
+   "water_bytes": 7428976,
+   "curtain_bytes": 0,
+   "curtain_indices": 0,
+   "spray_particles": 0
+  },
+  "one": {
+   "gpu": {
+    "p50_ms": 1.2851,
+    "p95_ms": 2.0275,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 2.3745,
+    "p95_ms": 2.8474,
+    "n": 135
+   },
+   "draw_calls": 59,
+   "gl_objects": 115,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 10
+  }
+ },
+ "editing_cpu": {
+  "one": {
+   "check_and_build_ms": {
+    "p50_ms": 2.5352,
+    "p95_ms": 2.9182,
+    "n": 36
+   },
+   "water_layer_rebuild_ms": {
+    "p50_ms": 1.0659,
+    "p95_ms": 1.3669,
+    "n": 36
+   },
+   "set_waterfall_op_ms": {
+    "p50_ms": 29.1362,
+    "p95_ms": 31.0149,
+    "n": 36
+   },
+   "fall_buffers_made": 458
+  },
+  "five": {
+   "check_and_build_ms": {
+    "p50_ms": 20.1245,
+    "p95_ms": 21.9577,
+    "n": 36
+   },
+   "water_layer_rebuild_ms": {
+    "p50_ms": 2.7387,
+    "p95_ms": 3.1892,
+    "n": 36
+   },
+   "set_waterfall_op_ms": {
+    "p50_ms": 38.4649,
+    "p95_ms": 41.1002,
+    "n": 36
+   },
+   "fall_buffers_made": 459
+  }
+ },
+ "five_static": {
+  "none": {
+   "gpu": {
+    "p50_ms": 0.9851,
+    "p95_ms": 2.1135,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 2.0706,
+    "p95_ms": 2.4872,
+    "n": 135
+   },
+   "draw_calls": 61,
+   "gl_objects": 112,
+   "water_bytes": 7532320,
+   "curtain_bytes": 0,
+   "curtain_indices": 0,
+   "spray_particles": 0
+  },
+  "five": {
+   "gpu": {
+    "p50_ms": 1.3496,
+    "p95_ms": 2.1207,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 2.378,
+    "p95_ms": 3.0503,
+    "n": 135
+   },
+   "draw_calls": 63,
+   "gl_objects": 119,
+   "water_bytes": 7576132,
+   "curtain_bytes": 43812,
+   "curtain_indices": 816,
+   "spray_particles": 50
+  }
+ },
+ "haze_bloom_static": {
+  "none": {
+   "gpu": {
+    "p50_ms": 1.9057,
+    "p95_ms": 2.945,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 2.8129,
+    "p95_ms": 3.3994,
+    "n": 135
+   },
+   "draw_calls": 60,
+   "gl_objects": 147,
+   "water_bytes": 7428976,
+   "curtain_bytes": 0,
+   "curtain_indices": 0,
+   "spray_particles": 0
+  },
+  "one": {
+   "gpu": {
+    "p50_ms": 2.1494,
+    "p95_ms": 3.6588,
+    "n": 135
+   },
+   "cpu": {
+    "p50_ms": 3.1298,
+    "p95_ms": 3.789,
+    "n": 135
+   },
+   "draw_calls": 62,
+   "gl_objects": 154,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 10
+  }
+ },
+ "clocks_after": "1665 MHz, 10001 MHz, P0"
+}

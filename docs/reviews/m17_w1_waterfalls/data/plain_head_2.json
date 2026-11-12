@@ -1,0 +1,31 @@
+{
+ "worktree": "D:\\Games\\Mesh-w1",
+ "glen_plain": {
+  "gpu": {
+   "p50_ms": 0.4045,
+   "p95_ms": 0.428,
+   "n": 360
+  },
+  "cpu": {
+   "p50_ms": 4.1202,
+   "p95_ms": 4.7743,
+   "n": 360
+  },
+  "draw_calls": 35,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "r4_mouth": {
+  "gpu": {
+   "p50_ms": 0.4321,
+   "p95_ms": 0.4567,
+   "n": 360
+  },
+  "cpu": {
+   "p50_ms": 6.204,
+   "p95_ms": 6.8925,
+   "n": 360
+  },
+  "draw_calls": 42,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ }
+}

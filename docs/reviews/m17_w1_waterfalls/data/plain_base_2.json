@@ -1,0 +1,31 @@
+{
+ "worktree": "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\c18a071c64bbe7a7\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\w1\\w1base",
+ "glen_plain": {
+  "gpu": {
+   "p50_ms": 0.4168,
+   "p95_ms": 0.4762,
+   "n": 360
+  },
+  "cpu": {
+   "p50_ms": 4.0238,
+   "p95_ms": 4.7587,
+   "n": 360
+  },
+  "draw_calls": 35,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ },
+ "r4_mouth": {
+  "gpu": {
+   "p50_ms": 0.4506,
+   "p95_ms": 0.469,
+   "n": 360
+  },
+  "cpu": {
+   "p50_ms": 6.2375,
+   "p95_ms": 6.8968,
+   "n": 360
+  },
+  "draw_calls": 42,
+  "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ }
+}

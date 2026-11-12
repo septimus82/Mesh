@@ -1,0 +1,314 @@
+{
+ "worktree": "D:\\Games\\Mesh-w1",
+ "gl": "llvmpipe (LLVM 22.1.1, 256 bits)",
+ "size": [
+  1280,
+  720
+ ],
+ "rounds": 20,
+ "method": "wall round ctx.finish()",
+ "clocks_before": "software",
+ "day_static": {
+  "none": {
+   "gpu": {
+    "p50_ms": 18.0571,
+    "p95_ms": 19.9889,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 17.3105,
+    "p95_ms": 19.2079,
+    "n": 18
+   },
+   "draw_calls": 35,
+   "gl_objects": 108,
+   "water_bytes": 7428976,
+   "curtain_bytes": 0,
+   "curtain_indices": 0,
+   "spray_particles": 0
+  },
+  "one": {
+   "gpu": {
+    "p50_ms": 19.4923,
+    "p95_ms": 21.2489,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 18.8367,
+    "p95_ms": 20.5547,
+    "n": 18
+   },
+   "draw_calls": 37,
+   "gl_objects": 115,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 10
+  },
+  "one_no_spray": {
+   "gpu": {
+    "p50_ms": 18.7914,
+    "p95_ms": 20.46,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 18.1391,
+    "p95_ms": 19.6428,
+    "n": 18
+   },
+   "draw_calls": 36,
+   "gl_objects": 111,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 0
+  }
+ },
+ "day_moving": {
+  "none": {
+   "gpu": {
+    "p50_ms": 17.3316,
+    "p95_ms": 19.4398,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 16.5218,
+    "p95_ms": 18.6708,
+    "n": 18
+   },
+   "draw_calls": 37,
+   "gl_objects": 108,
+   "water_bytes": 7428976,
+   "curtain_bytes": 0,
+   "curtain_indices": 0,
+   "spray_particles": 0
+  },
+  "one": {
+   "gpu": {
+    "p50_ms": 18.0826,
+    "p95_ms": 20.5501,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 17.4078,
+    "p95_ms": 19.541,
+    "n": 18
+   },
+   "draw_calls": 39,
+   "gl_objects": 115,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 10
+  },
+  "one_no_spray": {
+   "gpu": {
+    "p50_ms": 18.406,
+    "p95_ms": 20.6134,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 17.7087,
+    "p95_ms": 19.6606,
+    "n": 18
+   },
+   "draw_calls": 36,
+   "gl_objects": 111,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 0
+  }
+ },
+ "day_offscreen": {
+  "none": {
+   "gpu": {
+    "p50_ms": 7.458,
+    "p95_ms": 8.2131,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 6.7886,
+    "p95_ms": 7.5262,
+    "n": 18
+   },
+   "draw_calls": 2,
+   "gl_objects": 108,
+   "water_bytes": 7428976,
+   "curtain_bytes": 0,
+   "curtain_indices": 0,
+   "spray_particles": 0
+  },
+  "one": {
+   "gpu": {
+    "p50_ms": 7.2739,
+    "p95_ms": 8.0072,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 6.6269,
+    "p95_ms": 7.163,
+    "n": 18
+   },
+   "draw_calls": 2,
+   "gl_objects": 111,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 10
+  }
+ },
+ "day_game_camera": {
+  "none": {
+   "gpu": {
+    "p50_ms": 16.1543,
+    "p95_ms": 17.5211,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 15.4638,
+    "p95_ms": 16.826,
+    "n": 18
+   },
+   "draw_calls": 57,
+   "gl_objects": 108,
+   "water_bytes": 7428976,
+   "curtain_bytes": 0,
+   "curtain_indices": 0,
+   "spray_particles": 0
+  },
+  "one": {
+   "gpu": {
+    "p50_ms": 16.7906,
+    "p95_ms": 17.679,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 16.1602,
+    "p95_ms": 16.9771,
+    "n": 18
+   },
+   "draw_calls": 59,
+   "gl_objects": 115,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 10
+  }
+ },
+ "editing_cpu": {
+  "one": {
+   "check_and_build_ms": {
+    "p50_ms": 2.5536,
+    "p95_ms": 3.168,
+    "n": 36
+   },
+   "water_layer_rebuild_ms": {
+    "p50_ms": 1.0902,
+    "p95_ms": 1.2556,
+    "n": 36
+   },
+   "set_waterfall_op_ms": {
+    "p50_ms": 29.2414,
+    "p95_ms": 30.7677,
+    "n": 36
+   },
+   "fall_buffers_made": 66
+  },
+  "five": {
+   "check_and_build_ms": {
+    "p50_ms": 19.8638,
+    "p95_ms": 20.2677,
+    "n": 36
+   },
+   "water_layer_rebuild_ms": {
+    "p50_ms": 2.7829,
+    "p95_ms": 3.1333,
+    "n": 36
+   },
+   "set_waterfall_op_ms": {
+    "p50_ms": 38.2268,
+    "p95_ms": 39.7311,
+    "n": 36
+   },
+   "fall_buffers_made": 67
+  }
+ },
+ "five_static": {
+  "none": {
+   "gpu": {
+    "p50_ms": 17.9042,
+    "p95_ms": 29.9055,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 17.2328,
+    "p95_ms": 28.9791,
+    "n": 18
+   },
+   "draw_calls": 61,
+   "gl_objects": 112,
+   "water_bytes": 7532320,
+   "curtain_bytes": 0,
+   "curtain_indices": 0,
+   "spray_particles": 0
+  },
+  "five": {
+   "gpu": {
+    "p50_ms": 18.8781,
+    "p95_ms": 20.0842,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 18.203,
+    "p95_ms": 19.2964,
+    "n": 18
+   },
+   "draw_calls": 63,
+   "gl_objects": 119,
+   "water_bytes": 7576132,
+   "curtain_bytes": 43812,
+   "curtain_indices": 816,
+   "spray_particles": 50
+  }
+ },
+ "haze_bloom_static": {
+  "none": {
+   "gpu": {
+    "p50_ms": 26.1774,
+    "p95_ms": 28.2713,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 23.8464,
+    "p95_ms": 26.2637,
+    "n": 18
+   },
+   "draw_calls": 60,
+   "gl_objects": 147,
+   "water_bytes": 7428976,
+   "curtain_bytes": 0,
+   "curtain_indices": 0,
+   "spray_particles": 0
+  },
+  "one": {
+   "gpu": {
+    "p50_ms": 25.948,
+    "p95_ms": 26.9599,
+    "n": 18
+   },
+   "cpu": {
+    "p50_ms": 24.0139,
+    "p95_ms": 24.9009,
+    "n": 18
+   },
+   "draw_calls": 62,
+   "gl_objects": 154,
+   "water_bytes": 7437988,
+   "curtain_bytes": 9012,
+   "curtain_indices": 168,
+   "spray_particles": 10
+  }
+ },
+ "clocks_after": "software"
+}

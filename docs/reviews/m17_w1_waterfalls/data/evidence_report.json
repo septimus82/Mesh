@@ -1,0 +1,30 @@
+{
+ "day": {
+  "errors": [
+   null,
+   null
+  ],
+  "falls": null
+ },
+ "evening": {
+  "errors": [
+   null,
+   null
+  ],
+  "falls": null
+ },
+ "haze_bloom": {
+  "errors": [
+   null,
+   null
+  ],
+  "falls": null
+ },
+ "many": {
+  "errors": [
+   null,
+   null
+  ],
+  "falls": null
+ }
+}

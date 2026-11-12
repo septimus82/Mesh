@@ -1,0 +1,160 @@
+[
+ {
+  "name": "jet curve linear",
+  "file": "engine/hd2d/river.py",
+  "test": "tests/test_river_falls.py -k surface_leaves",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 3.75s"
+ },
+ {
+  "name": "ribbon drawn over the fall",
+  "file": "engine/hd2d/river.py",
+  "test": "tests/test_river_falls.py -k curtain_down",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 3.69s"
+ },
+ {
+  "name": "no sample at lip/foot",
+  "file": "engine/hd2d/river.py",
+  "test": "tests/test_river_falls.py -k surface_leaves",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 3.22s"
+ },
+ {
+  "name": "too gentle accepted",
+  "file": "engine/hd2d/river.py",
+  "test": "tests/test_river_falls.py -k refusals",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 3.77s"
+ },
+ {
+  "name": "neighbouring falls accepted",
+  "file": "engine/hd2d/river.py",
+  "test": "tests/test_river_falls.py -k refusals",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 3.90s"
+ },
+ {
+  "name": "room limit ignored",
+  "file": "engine/hd2d/river.py",
+  "test": "tests/test_river_falls.py -k eight",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 3.85s"
+ },
+ {
+  "name": "falling never blocks",
+  "file": "engine/hd2d/river.py",
+  "test": "tests/test_river_falls.py -k blocks",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 3.74s"
+ },
+ {
+  "name": "world ignores falling",
+  "file": "engine/hd2d/world.py",
+  "test": "tests/test_river_falls.py -k blocks",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 3.75s"
+ },
+ {
+  "name": "join checks above the fall",
+  "file": "engine/hd2d/river.py",
+  "test": "tests/test_river_falls.py -k pond",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 4.23s"
+ },
+ {
+  "name": "lip over the pond accepted",
+  "file": "engine/hd2d/river.py",
+  "test": "tests/test_river_falls.py -k pond",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 4.06s"
+ },
+ {
+  "name": "carve cuts the cliff",
+  "file": "engine/hd2d/river.py",
+  "test": "tests/test_river_falls.py -k carving",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 3.84s"
+ },
+ {
+  "name": "sinking measures the fall",
+  "file": "engine/hd2d/river.py",
+  "test": "tests/test_river_falls.py -k sinking",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 3.74s"
+ },
+ {
+  "name": "renumbering unguarded",
+  "file": "engine/project_ops.py",
+  "test": "tests/test_river_falls.py -k eight",
+  "caught": true,
+  "result": "1 failed, 10 deselected in 3.91s"
+ },
+ {
+  "name": "streaks move up",
+  "file": "engine/water.py",
+  "test": "tests/test_river_falls_gpu.py -k streaks_move",
+  "caught": true,
+  "result": "1 failed, 8 deselected in 10.86s"
+ },
+ {
+  "name": "curtain ignores depth",
+  "file": "engine/water.py",
+  "test": "tests/test_river_falls_gpu.py -k cliff_hides",
+  "caught": true,
+  "result": "1 failed, 8 deselected in 11.09s"
+ },
+ {
+  "name": "no foam in the pond",
+  "file": "engine/water.py",
+  "test": "tests/test_river_falls_gpu.py -k foam_at",
+  "caught": true,
+  "result": "1 failed, 8 deselected in 10.75s",
+  "rerun_after_test_fix": true,
+  "first_run": "1 passed, 8 deselected in 10.48s"
+ },
+ {
+  "name": "foam without end",
+  "file": "engine/water.py",
+  "test": "tests/test_river_falls_gpu.py -k foam_at",
+  "caught": true,
+  "result": "1 failed, 8 deselected in 11.28s"
+ },
+ {
+  "name": "spray always made",
+  "file": "engine/hd2d/renderer.py",
+  "test": "tests/test_river_falls_gpu.py -k foam_at",
+  "caught": true,
+  "result": "1 failed, 8 deselected in 10.40s"
+ },
+ {
+  "name": "falls never freed",
+  "file": "engine/water.py",
+  "test": "tests/test_river_falls_gpu.py -k two_draws",
+  "caught": true,
+  "result": "1 failed, 8 deselected in 10.90s"
+ },
+ {
+  "name": "pond easing above the fall",
+  "file": "engine/water.py",
+  "test": "tests/test_river_falls_gpu.py -k streaks_move",
+  "caught": true,
+  "result": "1 failed, 8 deselected in 10.39s",
+  "rerun_after_test_fix": true,
+  "first_run": "1 passed, 8 deselected in 9.57s"
+ },
+ {
+  "name": "studio insert not renumbered",
+  "file": "engine/studio_river.py",
+  "test": "tests/test_river_falls_gpu.py -k refuses_impossible",
+  "caught": true,
+  "result": "8 deselected, 1 error in 27.73s"
+ },
+ {
+  "name": "water writes emission",
+  "file": "engine/water.py",
+  "test": "tests/test_river_falls_gpu.py -k no_emission",
+  "caught": true,
+  "result": "1 failed, 8 deselected in 10.65s"
+ }
+]

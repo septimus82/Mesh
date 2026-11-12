@@ -1,0 +1,156 @@
+{
+ "selected": {
+  "point": 2,
+  "button": true
+ },
+ "made": {
+  "stored": [
+   {
+    "from": 2
+   }
+  ],
+  "steps": 1,
+  "message": "Waterfall from point 3 to 4: the water drops 2.88 m.",
+  "renderer_falls": [
+   {
+    "start": 2,
+    "foam": 0.6,
+    "spray": 0.4
+   }
+  ],
+  "curtain_drawn": true,
+  "fields": [
+   "river_fall_below",
+   "river_fall_foam",
+   "river_fall_spray"
+  ]
+ },
+ "joined": {
+  "mouth": "auto",
+  "message": "River 'glen_falls' flows into its pond now: one water surface there.",
+  "steps": 2
+ },
+ "carved": {
+  "message": "River 'glen_falls': its bed carved, a quarter of its width deep in the middle. Undo puts the ground back.",
+  "steps": 3,
+  "lowered": 245,
+  "falls": [
+   {
+    "from": 2
+   }
+  ],
+  "mouth": "auto",
+  "curtain_drawn": true
+ },
+ "tuned": {
+  "stored": [
+   {
+    "from": 2,
+    "foam": 0.3,
+    "spray": 0.0
+   }
+  ],
+  "steps": 5,
+  "spray_made": false
+ },
+ "refused": {
+  "points_same": true,
+  "message": "Refused: River 'glen_falls''s waterfall from point 3 to 4 (near (640, 796) px) drops 0.25 m: a waterfall drops at least 0.5 m (set point 4's water level lower, or make it an ordinary stretch). The river is as it was.",
+  "ok": false,
+  "held": true,
+  "put_back": "Put back as it was.",
+  "steps": 5
+ },
+ "renumbered": {
+  "inserted": [
+   {
+    "from": 3,
+    "foam": 0.3,
+    "spray": 0.0
+   }
+  ],
+  "removed": [
+   {
+    "from": 2,
+    "foam": 0.3,
+    "spray": 0.0
+   }
+  ],
+  "points": 5
+ },
+ "insert_refused": {
+  "points": 5,
+  "message": "Points 3 and 4 are a waterfall's top and foot: insert a point above or below it."
+ },
+ "reverse_refused": {
+  "first": true,
+  "message": "Water doesn't fall upwards: remove this river's waterfalls before turning it round."
+ },
+ "undone": [
+  {
+   "from": 3,
+   "foam": 0.3,
+   "spray": 0.0
+  }
+ ],
+ "redone": [
+  {
+   "from": 2,
+   "foam": 0.3,
+   "spray": 0.0
+  }
+ ],
+ "parity": {
+  "same": true,
+  "stage": "blit",
+  "bloom": [
+   null,
+   null
+  ]
+ },
+ "reopened_same": true,
+ "play": {
+  "mode": "play",
+  "falls": [
+   {
+    "start": 2,
+    "foam": 0.3,
+    "spray": 0.6
+   }
+  ],
+  "curtain_drawn": true,
+  "feet": 1,
+  "water_time": 0.5166666666666666
+ },
+ "stopped": {
+  "mode": "edit",
+  "same": true
+ },
+ "remove_refused": {
+  "falls": [
+   {
+    "from": 2,
+    "foam": 0.3,
+    "spray": 0.6
+   }
+  ],
+  "message": "Refused: River 'glen_falls' meets the pond 'start_pool_640_568_0_0' 1.26 m above its water near (640, 762) px: over its last 1.5 m before the shore and in the pond, its level must be within 5 cm of the pond's, 0 px (points 3 to 5; or carve its bed, which sinks water standing over the ground beside it). The river is as it was."
+ },
+ "removed": {
+  "falls": null,
+  "fall_program": false,
+  "spray": false
+ },
+ "export": {
+  "code": 0,
+  "bundle_run": {
+   "engine_from": "C:\\Users\\slebb\\AppData\\Local\\Temp\\pytest-of-slebb\\pytest-3313\\falls_studio0\\export\\engine\\__init__.py",
+   "falls": [
+    1
+   ],
+   "fall_count": 168,
+   "feet": 1
+  },
+  "same_rivers": true
+ }
+}
