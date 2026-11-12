@@ -1,0 +1,327 @@
+{
+ "size": [
+  960,
+  540
+ ],
+ "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "hud": {
+  "hud_pixels": 3168,
+  "opaque_same": true,
+  "world_changed": true
+ },
+ "village": {
+  "off": {
+   "stage": "blit",
+   "made": false
+  },
+  "zero": {
+   "same": true,
+   "stage": "blit",
+   "made": false
+  },
+  "subtle": {
+   "stage": "composite",
+   "passes": 11,
+   "emitting_px": 720,
+   "emitting_outside_heads": 0,
+   "emission_max": 0.6737552734375001,
+   "prefilter_error": 0.004191977223189647,
+   "prefilter_max": 1.0023817158347845,
+   "energy_passed": 53.496610156250014,
+   "energy_glow": 52.59956608352662,
+   "changed": 18433,
+   "changed_far": 0,
+   "far_px": 231084,
+   "added_near_share": 0.9999741722901395,
+   "max_change": 120,
+   "repeat_same": true
+  },
+  "warm": {
+   "stage": "composite",
+   "passes": 11,
+   "emitting_px": 720,
+   "emitting_outside_heads": 0,
+   "emission_max": 0.6737552734375001,
+   "prefilter_error": 0.013452686333913944,
+   "prefilter_max": 1.357202686333914,
+   "energy_passed": 72.42661523437499,
+   "energy_glow": 70.70867223567963,
+   "changed": 72438,
+   "changed_far": 0,
+   "far_px": 231084,
+   "added_near_share": 0.9710477529424276,
+   "max_change": 180,
+   "repeat_same": true
+  },
+  "strong": {
+   "stage": "composite",
+   "passes": 11,
+   "emitting_px": 720,
+   "emitting_outside_heads": 0,
+   "emission_max": 0.6737552734375001,
+   "prefilter_error": 0.015625,
+   "prefilter_max": 1.59375,
+   "energy_passed": 89.59724316406249,
+   "energy_glow": 86.6595438703537,
+   "changed": 126552,
+   "changed_far": 0,
+   "far_px": 231084,
+   "added_near_share": 0.8432593623853294,
+   "max_change": 197,
+   "repeat_same": true
+  },
+  "off_again": {
+   "same": true,
+   "made": false,
+   "objects_more": 0
+  }
+ },
+ "merely_bright": {
+  "same": true,
+  "emission_sum": 0.0,
+  "stage": "composite",
+  "bright_px": 0,
+  "backdrop_px": 0
+ },
+ "backdrop": {
+  "same": true,
+  "emission_sum": 0.0,
+  "stage": "composite",
+  "bright_px": 25608,
+  "backdrop_px": 350850
+ },
+ "capped": {
+  "emission_max": 5.0730140624999995,
+  "cap": 4.0,
+  "prefilter_max": 9.225284894427592,
+  "prefilter_luma_max": 3.9000000000000004,
+  "level_luma_max": 3.8761765625,
+  "prefilter_error": 0.10028489442759181
+ },
+ "spreads": {
+  "0.2": {
+   "far_share": 0.006578151736132629,
+   "glow_over_passed": 0.9917777951499019
+  },
+  "0.9": {
+   "far_share": 0.6367999255327087,
+   "glow_over_passed": 0.9565156757541198
+  }
+ },
+ "occluded": {
+  "player_px": 13039,
+  "emitting_under_player_aside": 360,
+  "emitting_under_player": 0
+ },
+ "moving": {
+  "glow_over_passed_min": 0.9758647772682537,
+  "glow_over_passed_max": 0.9775690759899447,
+  "passed_variation": 0.04717344242038797
+ },
+ "sizes": {
+  "960x540": {
+   "base": [
+    640,
+    360
+   ],
+   "glow": 70.70867223567963
+  },
+  "1920x1080": {
+   "base": [
+    640,
+    360
+   ],
+   "glow": 67.7963882320404
+  },
+  "correlation": 0.9880105210087378,
+  "energy_ratio": 0.9588129162723877
+ },
+ "haze": {
+  "error": 0.014496911579211957,
+  "max": 1.2566172152686792,
+  "dimmed_by": 0.1094991402156067
+ },
+ "dof": {
+  "dof_stage": "dof",
+  "stage": "dof+composite",
+  "changed": 72272,
+  "changed_far": 0
+ },
+ "texels": {
+  "none": {
+   "got": [
+    60,
+    50,
+    40,
+    200
+   ],
+   "model": [
+    60,
+    50,
+    40,
+    200
+   ]
+  },
+  "added": {
+   "got": [
+    125,
+    102,
+    70,
+    200
+   ],
+   "model": [
+    125,
+    102,
+    70,
+    200
+   ]
+  },
+  "clipped": {
+   "got": [
+    255,
+    255,
+    255,
+    255
+   ],
+   "model": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  "after_haze": {
+   "got": [
+    145,
+    152,
+    179,
+    200
+   ],
+   "model": [
+    145,
+    152,
+    179,
+    200
+   ]
+  },
+  "before_grade": {
+   "got": [
+    127,
+    101,
+    66,
+    200
+   ],
+   "grade_of_sum": [
+    127,
+    101,
+    66,
+    200
+   ],
+   "sum_of_grade": [
+    124,
+    100,
+    68,
+    200
+   ]
+  }
+ },
+ "refused": {
+  "program": {
+   "alone_same": true,
+   "with_haze_same": true,
+   "stage": "composite",
+   "reason": "bloom is off on this computer: the graphics driver refused it (program refused (simulated))",
+   "made": false
+  },
+  "framebuffer": {
+   "alone_same": true,
+   "with_haze_same": true,
+   "stage": "composite",
+   "reason": "bloom is off on this computer: the graphics driver refused it (framebuffer incomplete (simulated))",
+   "made": false
+  }
+ },
+ "lifecycle": {
+  "objects_off": 107,
+  "objects_on": 134,
+  "objects_after_off": 107,
+  "allocations_first": 2,
+  "memory_bytes": 4529920,
+  "resized": {
+   "objects": 134,
+   "allocations": 4,
+   "emission": [
+    800,
+    600
+   ]
+  },
+  "made_after_off": false
+ },
+ "campfire": {
+  "off": {
+   "stage": "blit",
+   "made": false
+  },
+  "zero": {
+   "same": true,
+   "stage": "blit",
+   "made": false
+  },
+  "subtle": {
+   "stage": "composite",
+   "passes": 11,
+   "emitting_px": 1643,
+   "emitting_outside_heads": null,
+   "emission_max": 0.8087671875,
+   "prefilter_error": 0.007736932376279149,
+   "prefilter_max": 0.7556582670190547,
+   "energy_passed": 32.35395169410705,
+   "energy_glow": 31.75992936248779,
+   "changed": 8687,
+   "changed_far": 0,
+   "far_px": 84688,
+   "added_near_share": 1.0,
+   "max_change": 66,
+   "repeat_same": true
+  },
+  "warm": {
+   "stage": "composite",
+   "passes": 11,
+   "emitting_px": 1643,
+   "emitting_outside_heads": null,
+   "emission_max": 0.8087671875,
+   "prefilter_error": 0.007750674720353179,
+   "prefilter_max": 0.958513306807622,
+   "energy_passed": 81.50082535247802,
+   "energy_glow": 79.57678920307158,
+   "changed": 66033,
+   "changed_far": 0,
+   "far_px": 84688,
+   "added_near_share": 0.9936024589811178,
+   "max_change": 110,
+   "repeat_same": true
+  },
+  "strong": {
+   "stage": "composite",
+   "passes": 11,
+   "emitting_px": 1643,
+   "emitting_outside_heads": null,
+   "emission_max": 0.8087671875,
+   "prefilter_error": 0.00694444444444442,
+   "prefilter_max": 1.09375,
+   "energy_passed": 145.10586014175414,
+   "energy_glow": 140.30221549034115,
+   "changed": 202737,
+   "changed_far": 0,
+   "far_px": 84688,
+   "added_near_share": 0.9048383477929266,
+   "max_change": 140,
+   "repeat_same": true
+  },
+  "off_again": {
+   "same": true,
+   "made": false,
+   "objects_more": 0
+  }
+ }
+}

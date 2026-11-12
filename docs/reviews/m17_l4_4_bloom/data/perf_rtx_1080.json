@@ -1,0 +1,177 @@
+{
+ "worktree": "D:\\Games\\Mesh-l4h",
+ "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "size": [
+  1920,
+  1080
+ ],
+ "rounds": 300,
+ "method": "GL timer query; CPU perf_counter round the call",
+ "whole_frame": {
+  "off": {
+   "gpu": {
+    "p50_ms": 1.9118,
+    "p95_ms": 4.1984,
+    "n": 270
+   },
+   "cpu": {
+    "p50_ms": 3.1665,
+    "p95_ms": 7.4938,
+    "n": 270
+   }
+  },
+  "bloom": {
+   "gpu": {
+    "p50_ms": 3.477,
+    "p95_ms": 7.9165,
+    "n": 270
+   },
+   "cpu": {
+    "p50_ms": 3.6384,
+    "p95_ms": 8.7104,
+    "n": 270
+   }
+  },
+  "bloom+haze+graded": {
+   "gpu": {
+    "p50_ms": 2.2574,
+    "p95_ms": 5.502,
+    "n": 270
+   },
+   "cpu": {
+    "p50_ms": 3.6096,
+    "p95_ms": 8.7355,
+    "n": 270
+   }
+  },
+  "haze+graded": {
+   "gpu": {
+    "p50_ms": 2.5216,
+    "p95_ms": 5.5788,
+    "n": 270
+   },
+   "cpu": {
+    "p50_ms": 3.2321,
+    "p95_ms": 7.5312,
+    "n": 270
+   }
+  },
+  "dof": {
+   "gpu": {
+    "p50_ms": 2.5958,
+    "p95_ms": 6.3037,
+    "n": 270
+   },
+   "cpu": {
+    "p50_ms": 3.2028,
+    "p95_ms": 7.6053,
+    "n": 270
+   }
+  },
+  "all": {
+   "gpu": {
+    "p50_ms": 3.5338,
+    "p95_ms": 8.1193,
+    "n": 270
+   },
+   "cpu": {
+    "p50_ms": 3.7492,
+    "p95_ms": 9.1742,
+    "n": 270
+   }
+  }
+ },
+ "whole_frame_clocks": [
+  "2520 MHz, 10001 MHz, P0",
+  "1875 MHz, 810 MHz, P5"
+ ],
+ "passes": {
+  "blit": {
+   "p50_ms": 0.0215,
+   "p95_ms": 0.0256,
+   "n": 540
+  },
+  "bloom_pass": {
+   "p50_ms": 0.0717,
+   "p95_ms": 0.0748,
+   "n": 540
+  },
+  "composite_with_glow": {
+   "p50_ms": 0.0379,
+   "p95_ms": 0.0399,
+   "n": 540
+  }
+ },
+ "moving": {
+  "off": {
+   "gpu": {
+    "p50_ms": 1.7091,
+    "p95_ms": 2.4422,
+    "n": 108
+   },
+   "cpu": {
+    "p50_ms": 3.155,
+    "p95_ms": 3.4997,
+    "n": 108
+   }
+  },
+  "bloom": {
+   "gpu": {
+    "p50_ms": 3.4575,
+    "p95_ms": 3.9711,
+    "n": 108
+   },
+   "cpu": {
+    "p50_ms": 3.6165,
+    "p95_ms": 4.0869,
+    "n": 108
+   }
+  }
+ },
+ "toggle_cpu_ms": {
+  "first_frame_on": {
+   "p50_ms": 7.3382,
+   "p95_ms": 7.848,
+   "n": 19
+  },
+  "first_frame_off": {
+   "p50_ms": 5.2315,
+   "p95_ms": 5.8172,
+   "n": 19
+  }
+ },
+ "objects": {
+  "off": {
+   "draw_calls": 72,
+   "bloom_passes": 0,
+   "gl_objects": 378,
+   "bloom_bytes": 0,
+   "target_bytes": 16588800,
+   "bloom_made": false
+  },
+  "bloom": {
+   "draw_calls": 72,
+   "bloom_passes": 11,
+   "gl_objects": 405,
+   "bloom_bytes": 10750720,
+   "target_bytes": 16588800,
+   "bloom_made": true
+  },
+  "all": {
+   "draw_calls": 72,
+   "bloom_passes": 11,
+   "gl_objects": 405,
+   "bloom_bytes": 10750720,
+   "target_bytes": 16588800,
+   "bloom_made": true
+  },
+  "off_again": {
+   "draw_calls": 72,
+   "bloom_passes": 0,
+   "gl_objects": 378,
+   "bloom_bytes": 0,
+   "target_bytes": 16588800,
+   "bloom_made": false
+  }
+ }
+}

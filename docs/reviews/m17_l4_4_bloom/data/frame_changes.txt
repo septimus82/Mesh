@@ -1,0 +1,51 @@
+off vs the pre-L4-3 baseline: 13 of 13 byte-identical
+
+bridge__day                    subtle changed       0 ( 0.00%) max   0
+bridge__day                    warm   changed       0 ( 0.00%) max   0
+bridge__day                    full   changed       0 ( 0.00%) max   0
+bridge__evening                warm   changed       0 ( 0.00%) max   0
+bridge__evening_lamps          subtle changed   13763 ( 1.49%) max  86
+bridge__evening_lamps          warm   changed   64368 ( 6.98%) max 146
+bridge__evening_lamps          full   changed  157680 (17.11%) max 169
+bridge__night_lamps            subtle changed   19647 ( 2.13%) max  94
+bridge__night_lamps            warm   changed   90321 ( 9.80%) max 151
+bridge__night_lamps            full   changed  181196 (19.66%) max 172
+cottage__day                   subtle changed       0 ( 0.00%) max   0
+cottage__day                   warm   changed       0 ( 0.00%) max   0
+cottage__day                   full   changed       0 ( 0.00%) max   0
+cottage__evening               warm   changed       0 ( 0.00%) max   0
+cottage__evening_lamps         subtle changed    7345 ( 0.80%) max  87
+cottage__evening_lamps         warm   changed   32828 ( 3.56%) max 143
+cottage__evening_lamps         full   changed   90089 ( 9.78%) max 165
+cottage__night_lamps           subtle changed    9072 ( 0.98%) max  95
+cottage__night_lamps           warm   changed   43723 ( 4.74%) max 150
+cottage__night_lamps           full   changed  102520 (11.12%) max 168
+interior__day                  subtle changed       0 ( 0.00%) max   0
+interior__day                  warm   changed       0 ( 0.00%) max   0
+interior__day                  full   changed       0 ( 0.00%) max   0
+interior__night_hearth         subtle changed    1971 ( 0.21%) max  32
+interior__night_hearth         warm   changed    8926 ( 0.97%) max  62
+interior__night_hearth         full   changed   48804 ( 5.30%) max  72
+interior__night_lamps          subtle changed       0 ( 0.00%) max   0
+interior__night_lamps          warm   changed       0 ( 0.00%) max   0
+interior__night_lamps          full   changed       0 ( 0.00%) max   0
+shore__day                     subtle changed       0 ( 0.00%) max   0
+shore__day                     warm   changed       0 ( 0.00%) max   0
+shore__day                     full   changed       0 ( 0.00%) max   0
+shore__evening                 warm   changed       0 ( 0.00%) max   0
+shore__evening_lamps           subtle changed       0 ( 0.00%) max   0
+shore__evening_lamps           warm   changed       0 ( 0.00%) max   0
+shore__evening_lamps           full   changed       0 ( 0.00%) max   0
+shore__night_lamps             subtle changed       0 ( 0.00%) max   0
+shore__night_lamps             warm   changed       0 ( 0.00%) max   0
+shore__night_lamps             full   changed       0 ( 0.00%) max   0
+village__day                   subtle changed       0 ( 0.00%) max   0
+village__day                   warm   changed       0 ( 0.00%) max   0
+village__day                   full   changed       0 ( 0.00%) max   0
+village__evening               warm   changed       0 ( 0.00%) max   0
+village__evening_lamps         subtle changed   18791 ( 2.04%) max  91
+village__evening_lamps         warm   changed   89902 ( 9.75%) max 152
+village__evening_lamps         full   changed  245704 (26.66%) max 170
+village__night_lamps           subtle changed   27232 ( 2.95%) max 102
+village__night_lamps           warm   changed  120087 (13.03%) max 164
+village__night_lamps           full   changed  273441 (29.67%) max 182

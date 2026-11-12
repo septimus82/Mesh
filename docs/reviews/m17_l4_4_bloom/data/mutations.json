@@ -1,0 +1,114 @@
+{
+ "threshold_ignored": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'not studio'",
+  "summary": "1 failed, 2 passed, 4 deselected in 17.01s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_the_glow_comes_from_the_emission_and_holds_its_light[village]"
+  ]
+ },
+ "ground_emits_its_colour": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'not studio'",
+  "summary": "1 failed, 3 passed, 4 deselected in 17.27s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_the_glow_comes_from_the_emission_and_holds_its_light[campfire]"
+  ]
+ },
+ "characters_drawn_without_emission": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'behind'",
+  "summary": "1 failed, 23 deselected in 16.83s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_an_emitter_behind_a_character_is_hidden"
+  ]
+ },
+ "emission_not_cleared": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'not studio'",
+  "summary": "1 failed, 6 passed, 4 deselected in 16.97s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_the_backdrop_never_glows - Assertio..."
+  ]
+ },
+ "glow_after_the_grade": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'texels'",
+  "summary": "1 failed, 23 deselected in 17.17s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_known_texels_match_the_maths_in_order"
+  ]
+ },
+ "glow_in_srgb": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'texels'",
+  "summary": "1 failed, 23 deselected in 17.08s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_known_texels_match_the_maths_in_order"
+  ]
+ },
+ "haze_doesnt_dim_it": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'haze'",
+  "summary": "1 failed, 23 deselected in 16.80s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_an_emitter_in_the_haze_glows_as_dimly_as_it_shows"
+  ]
+ },
+ "one_tap_prefilter": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'not studio'",
+  "summary": "1 failed, 2 passed, 4 deselected in 16.88s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_the_glow_comes_from_the_emission_and_holds_its_light[village]"
+  ]
+ },
+ "spread_inverted": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'spread'",
+  "summary": "1 failed, 23 deselected in 17.05s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_spread_reaches_farther_holding_the_same_light"
+  ]
+ },
+ "no_cap": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'capped'",
+  "summary": "1 failed, 23 deselected in 17.46s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_one_strong_light_is_capped - Assert..."
+  ]
+ },
+ "kept_when_off": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'not studio'",
+  "summary": "1 failed, 4 deselected in 16.86s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_off_and_strength_zero_are_the_original_picture_with_nothing_made[village]"
+  ]
+ },
+ "strength_zero_still_runs": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'zero'",
+  "summary": "1 failed, 22 deselected in 17.07s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_off_and_strength_zero_are_the_original_picture_with_nothing_made[village]"
+  ]
+ },
+ "studio_view_not_updated": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom_gpu.py -k 'studio'",
+  "summary": "1 failed, 20 deselected in 60.22s (0:01:00)",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom_gpu.py::test_studio_glows_its_view_at_once_and_not_its_lines"
+  ]
+ },
+ "knee_hard_edge": {
+  "caught": true,
+  "tests": "tests/test_hd2d_bloom.py -k 'knee'",
+  "summary": "1 failed, 29 deselected in 2.92s",
+  "failed": [
+   "FAILED tests/test_hd2d_bloom.py::test_the_knee_passes_nothing_well_below_all_above_and_is_smooth_between"
+  ]
+ }
+}
