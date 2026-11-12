@@ -182,6 +182,34 @@ def test_it_is_drawn_as_a_curtain_down_the_curve_not_as_ribbon() -> None:
     assert (half, foam, spray, drop) == pytest.approx((1.5, 0.6, 0.4, 1.5)) and ty > 0.99
 
 
+@pytest.mark.parametrize("run_px", [8.0, 32.0, 1024.0])  # 0.25 m (nearly vertical), 1 m, 32 m (the gentlest allowed)
+def test_the_tallest_fall_is_sampled_finely_along_its_whole_curve(run_px: float) -> None:
+    course = [[640.0, 20.0, 64.0, 0.0], [640.0, 40.0, 64.0, 0.0], [640.0, 40.0 + run_px, 64.0, -512.0],
+              [640.0, 40.0 + run_px + 80.0, 64.0, -512.0]]
+    r = _river(_room(points=course, falls=({"from": 1},)))
+    rib = river.ribbon(r)
+    ((lip, foot),) = rib.falls
+    assert rib.level[lip] - rib.level[foot] == pytest.approx(16.0), "the most a fall may drop"
+    data, idx, feet = river.fall_vertices((r,), 0.0)
+    n = river.FALL_FLOATS
+    verts = len(data) // n
+    rows = verts // 2 - 1
+    assert verts == 2 * (rows + 1) and len(idx) == 6 * rows and max(idx) == verts - 1, (verts, len(idx))
+    assert 9 <= rows <= river.MAX_FALL_ROWS == 401, rows
+    assert all(math.isfinite(v) for v in data)
+    mid = [((data[k * n] + data[(k + 1) * n]) / 2, (data[k * n + 1] + data[(k + 1) * n + 1]) / 2, data[k * n + 2])
+           for k in range(0, verts, 2)]
+    gaps = [math.dist(a, b) for a, b in zip(mid, mid[1:])]
+    assert max(gaps) <= river.FALL_ROW_M + 1e-6, ("rows no further apart along the curve", max(gaps))
+    slopes = [math.atan2(a[2] - b[2], math.hypot(b[0] - a[0], b[1] - a[1])) for a, b in zip(mid, mid[1:])]
+    assert max(b - a for a, b in zip(slopes, slopes[1:])) <= river.FALL_ROW_TURN + 1e-6, "nor turning more"
+    assert mid[0][2] == pytest.approx(0.0) and mid[-1][2] == pytest.approx(-16.0)
+    along = [data[k * n + 5] for k in range(0, verts, 2)]
+    assert along[-1] == pytest.approx(data[n - 1]), "its length: the curve's, as its rows measure it"
+    assert len(data) * 4 + len(idx) * 4 <= (river.MAX_FALL_ROWS + 1) * 2 * n * 4 + river.MAX_FALL_ROWS * 24
+    assert feet[0][8] == pytest.approx(16.0)
+
+
 def test_falling_water_blocks_whatever_passable_and_nobody_walks_off_the_lip_over_it() -> None:
     for passable in ("auto", "wade"):
         scene = _room(passable=passable, **({"wade_depth": 1.5} if passable == "wade" else {}))
@@ -227,6 +255,45 @@ def _glen() -> dict[str, Any]:
     course = [[640.0, 100.0, 96.0, 92.0], [640.0, 400.0, 96.0, 92.0], [640.0, 612.0, 96.0, 92.0],
               [640.0, 676.0, 96.0, 0.0], [640.0, 1000.0, 96.0, 0.0]]
     return ops.add_river(scene, "brook", course, falls=[{"from": 2}])
+
+
+def _pond_glen(passable: str = "wade") -> dict[str, Any]:
+    """The glen (``_glen``'s plateau and cliff) with a pond at the cliff's foot, its shore the sculpted ground, its bed
+    0.4 m down, waded to 1.5 m (``passable``); the stream falls from the cliff's edge into it, its foot 1.25 m inside
+    the pond's shore (y 660 px at its middle): the curtain's lower part stands over the pond's water."""
+    scene = _glen()
+    scene["settings"]["hd2d"].pop("rivers")
+    bed = [[float(x), float(y), 1.0] for y in range(680, 961, 40) for x in range(440, 841, 40)]
+    scene = ops.sculpt_terrain_stroke(scene, "flatten", bed, radius=56.0, target=-12.8)
+    scene, pond = ops.place_blank(scene, "start", "Pool", 640.0, 820.0)
+    scene = ops.set_water(scene, pond, preset="natural_pond", shape="ellipse", width=480.0, height=320.0,
+                          shore="terrain", passable=passable, **({"wade_depth": 1.5} if passable == "wade" else {}))
+    course = [[640.0, 100.0, 96.0, 92.0], [640.0, 400.0, 96.0, 92.0], [640.0, 612.0, 96.0, 92.0],
+              [640.0, 700.0, 96.0, 0.0], [640.0, 820.0, 96.0, 0.0]]
+    return ops.add_river(scene, "brook", course, falls=[{"from": 2}], mouth="auto")
+
+
+def test_a_waterfall_landing_in_a_wadeable_pond_still_blocks_under_its_curtain() -> None:
+    for passable in ("wade", "auto"):
+        scene = _pond_glen(passable)
+        world = World(parse_hd2d(scene["settings"]["hd2d"]), {}, river.ponds_of(scene["entities"]))
+        index = world.rivers
+
+        def floor(x: float, y: float) -> float:
+            return world.terrain.surface_at(x, y)[0] / P
+
+        assert index.level_at(20.0, 690 / P) is None, "the pond's water there, not the river's (one surface)"
+        assert index.falling_at(20.0, 690 / P), "under the curtain, inside the pond's shore"
+        assert world.stand(20.0, 800 / P, floor(640, 800), 0.2, 0.2) is not None, ("the pond, waded", passable)
+        assert world.stand(20.0, 690 / P, floor(640, 690), 0.2, 0.2) is None, ("under the curtain in the pond",
+                                                                              passable)
+        assert world.stand(23.0, 690 / P, floor(736, 690), 0.2, 0.2) is not None, "beside the curtain: the pond's"
+        # a character wading north across the pond towards the fall: stopped at the curtain, not before it
+        ys = [800.0 - 4.0 * k for k in range(40)]
+        first = next(y for y in ys if world.stand(20.0, y / P, floor(640, y), 0.2, 0.2) is None)
+        assert 700.0 <= first <= 700.0 + 0.2 * P + 4.0, ("stopped where the curtain lands", first)
+        assert world.excess(20.0, 690 / P, floor(640, 690), 0.2, 0.2, "blocking") > 0.0
+        assert world.excess(20.0, 800 / P, floor(640, 800), 0.2, 0.2, "blocking") < 0.0, "no blocking water there"
 
 
 def test_carving_digs_the_pool_under_the_fall_and_keeps_the_cliff_beside_it() -> None:

@@ -121,6 +121,25 @@ def test_with_haze_and_bloom_the_water_writes_no_emission(frames: dict) -> None:
     assert hb["fall_count"] > 0, hb
 
 
+def test_wading_a_pond_the_fall_lands_in_stops_at_its_curtain(frames: dict) -> None:
+    w = frames["pond_walk"]
+    assert w["mouth_problems"] == {}, w
+    went, beside = w["went"], w["beside"]
+    assert went["y"] > w["start"][1] + 32, ("waded across the pond", w)
+    assert went["y"] <= w["foot_y"] + 1.0, ("stopped where the curtain lands, not under it", w)
+    assert not w["falling_at_end"], w
+    assert beside["y"] > w["foot_y"] + 8.0, ("beside the curtain the pond is waded on, past where it lands", w)
+
+
+def test_the_tallest_fall_allowed_is_drawn_whole_finely_and_without_allocating(frames: dict) -> None:
+    t = frames["tall"]
+    assert t["errors"] == [None, None, {}] and t["drop_m"] == 16.0, t
+    assert t["foot_px"][1] - t["lip_px"][1] > 150 and t["covered"] > 0.9, ("drawn over its whole height", t)
+    assert t["shift_down_px"] > 0, ("its streaks move down", t)
+    assert 128 <= t["rows"] <= 401 and t["curtain_bytes"] <= 2 * 402 * 23 * 4 * 3 // 2 + 401 * 24 * 3 // 2 + 64, t
+    assert t["made_in_20_frames"] == {"buffer": 0, "texture": 0, "framebuffer": 0, "program": 0}, t
+
+
 def test_the_player_neither_walks_into_the_fall_nor_drops_down_it(frames: dict) -> None:
     w = frames["walks"]
     above, below = w["from_above"], w["from_below"]

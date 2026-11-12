@@ -790,12 +790,36 @@ def vertices(rivers: tuple[River, ...], lift: float,
 
 
 FALL_FLOATS = 23  # a fall's curtain vertex (fall_vertices)
-FALL_ROW_M = 0.125  # the curtain's rows: at most this far apart along it (m)
+FALL_ROW_M = 0.125  # the curtain's rows: at most this far apart along it (m) ...
+FALL_ROW_TURN = math.radians(6.0)  # ... nor its direction turning more than this between two (the lip's bend)
+# The most rows a curtain can have: its curve is at most run + drop long (run <= drop / FALL_STEEP: 48 m at a 16 m
+# drop), FALL_ROW_M a row, plus 90 degrees of turning at FALL_ROW_TURN, plus its first and last: 401 (fall_rows)
+MAX_FALL_ROWS = math.ceil((FALL_DROP_PX[1] / PX) * (1.0 + 1.0 / FALL_STEEP) / FALL_ROW_M
+                          + math.radians(90.0) / FALL_ROW_TURN) + 2
+
+
+def fall_rows(drop: float, run: float) -> list[float]:
+    """Where a curtain's rows are, as shares of its run (0 at its lip .. 1 at its foot; ``drop`` and ``run`` in m):
+    no two further apart along its curve (``level - drop * f * f`` over ``run``) than FALL_ROW_M, nor turning more
+    than FALL_ROW_TURN between them. Each step is the smaller of the two: the length by the curve's speed at the
+    step's far end (it only speeds up, so the step's length is no more), the turn by its bend at the near end (it
+    only straightens). The same fall: the same rows."""
+    rows, f = [0.0], 0.0
+    while f < 1.0:
+        def speed(at: float) -> float:  # m of curve per unit of f
+            return math.hypot(run, 2.0 * drop * min(1.0, at))
+
+        bend = 2.0 * drop * run / (run * run + 4.0 * drop * drop * f * f)  # radians per unit of f
+        step = min(FALL_ROW_M / speed(f + FALL_ROW_M / speed(f)), FALL_ROW_TURN / bend)
+        f = min(1.0, f + step)
+        rows.append(f)
+    return rows
 
 
 def fall_vertices(rivers: tuple[River, ...], lift: float) -> tuple[array, array, list[tuple[float, ...]]]:
     """Every fall's curtain (M17-W1): rows across the river from its lip to its foot along the jet's curve (the
-    ribbon's own course, banks and level there, rows at most FALL_ROW_M apart along the curve), FALL_FLOATS a vertex:
+    ribbon's own course, banks and level there; ``fall_rows``: at most FALL_ROW_M apart along the curve, nor turning
+    more than FALL_ROW_TURN, MAX_FALL_ROWS at most), FALL_FLOATS a vertex:
     position x, y, z (m, the level plus ``lift``), the tangent downstream (2), how far down the curtain (m along the
     curve), across (m right of the middle), the time the water has been falling there (s), its half width (m), the
     curve's slope there (dz/dm in plan, positive down), its flow (m/s), its colour and opacity (4), deep colour and its
@@ -812,14 +836,14 @@ def fall_vertices(rivers: tuple[River, ...], lift: float) -> tuple[array, array,
             top, low = r.level[lip], r.level[foot]
             drop, run = top - low, r.u[foot] - r.u[lip]
             flight = math.sqrt(2.0 * drop / GRAVITY)  # (s: the jet's time from lip to foot)
-            arc = sum(math.dist((r.u[k], r.level[k]), (r.u[k + 1], r.level[k + 1])) for k in range(lip, foot))
-            rows = max(8, min(96, math.ceil(arc * 1.0 / FALL_ROW_M)))
+            shares = fall_rows(drop, run)
+            rows = len(shares) - 1
+            arc = sum(math.hypot(run * (b - a), drop * (b * b - a * a)) for a, b in zip(shares, shares[1:]))
             seed = 1.7 * (i + 1) + 0.37 * n
             look = (*river.colour, river.opacity, *river.deep_colour, drop, fall.foam, fall.spray, seed, arc)
             base, along = count, 0.0
             prev: tuple[float, float] | None = None
-            for row in range(rows + 1):
-                f = row / rows  # (share of the stretch run: the curve's rows densest at its lip, where it bends)
+            for f in shares:  # (shares of the stretch run: densest at its lip, where it bends)
                 s = r.u[lip] + run * f
                 k = min(foot - 1, max(lip, next((j for j in range(lip, foot) if r.u[j + 1] >= s), foot - 1)))
                 t = (s - r.u[k]) / max(1e-9, r.u[k + 1] - r.u[k])
@@ -897,11 +921,20 @@ class RiverIndex:
                 best = (level, rid)
         return best
 
-    def falling_at(self, x: float, y: float) -> bool:
-        """Whether (x, y) m is under a waterfall's curtain (M17-W1): there the water blocks, as passable "block"."""
-        return bool(self._falling) and any(
-            index in self._falling and _in_quad(self._quads[index][0], (x, y)) and not self._past_end(index, (x, y))
-            for index in self._buckets.get((math.floor(x), math.floor(y)), ()))
+    def falling_at(self, x: float, y: float) -> tuple[float, str] | None:
+        """Under a waterfall's curtain (M17-W1): its water's height over (x, y) m (the curtain's highest there, m) and
+        its river, else None. Also where the curtain stands over the pond it falls into, though the pond's surface is
+        drawn there (``level_at`` says none of the river's): the falling water blocks there too, as passable "block",
+        whatever the pond lets characters wade."""
+        if not self._falling:
+            return None
+        best: tuple[float, str] | None = None
+        for index in self._buckets.get((math.floor(x), math.floor(y)), ()):
+            if index in self._falling and _in_quad(self._quads[index][0], (x, y))                     and not self._past_end(index, (x, y), pond=False):
+                _quad, level, rid = self._quads[index]
+                if best is None or level > best[0]:
+                    best = (level, rid)
+        return best
 
     def inset_at(self, x: float, y: float) -> float:
         """How far (m) in from its nearer bank a point on a river's water is (0 where none is): the distance to the
@@ -918,14 +951,15 @@ class RiverIndex:
         return [(self._quads[i][2], self._samples[i]) for i in self._buckets.get((math.floor(x), math.floor(y)), ())
                 if _in_quad(self._quads[i][0], (x, y))]
 
-    def _past_end(self, index: int, p: tuple[float, float]) -> bool:
-        """Whether p, on the quad ``index``, is where the drawn water isn't: in the pond the river flows into, or past
-        a round cap (as the river's shader works it out: along and across the course from the quad's sample)."""
+    def _past_end(self, index: int, p: tuple[float, float], pond: bool = True) -> bool:
+        """Whether p, on the quad ``index``, is where the drawn water isn't: in the pond the river flows into (unless
+        not ``pond``), or past a round cap (as the river's shader works it out: along and across the course from the
+        quad's sample)."""
         found = self._ends.get(index)
         if found is None:
             return False
-        r, k, caps, pond = found
-        if pond is not None and _in_pond(pond, p):
+        r, k, caps, into = found
+        if pond and into is not None and _in_pond(into, p):
             return True
         (cx, cy), (tx, ty) = r.centre[k], r.tangent[k]
         dx, dy = p[0] - cx, p[1] - cy
@@ -1147,8 +1181,8 @@ def carve(terrain: Any, river: River, depths: list[float], mouth: Mouth | None =
             beyond = (-t_raw if start_end else t_raw - 1.0) * length
             across = math.sqrt(max(0.0, dist * dist - beyond * beyond))
             target = level + BANK_SLOPE * math.hypot(beyond, max(0.0, across - half))
-        elif (fall_here := falls_at[k]) is not None:  # M17-W1: under a fall its pool, dug from the water it lands
-            if dist > half:  # beside it is kept as it is (no bank cut into it)  # in; the cliff beside it kept
+        elif (fall_here := falls_at[k]) is not None:  # M17-W1: under a fall, its pool, dug from where it lands;
+            if dist > half:  # the cliff beside it is kept as it is (no bank cut into it)
                 continue
             d = depth[fall_here[1]]
             target = r.level[fall_here[1]] - d * (1.0 - (dist / half) ** 2)

@@ -247,6 +247,8 @@ def frames(out: Path) -> dict[str, Any]:
     finally:
         f.close()
     report["haze_bloom"] = _haze_bloom(out)
+    report["tall"] = _tall(out)
+    report["pond_walk"] = _pond_walk(out)
     return report
 
 
@@ -272,8 +274,74 @@ def _walks(f: Frames) -> dict[str, Any]:
     start = (640.0, glen.Y(760.0), floor(640.0, glen.Y(760.0)))  # in the pool, 2.6 m out from the foot
     found["from_below"] = {**walker.walk(game, start, north, 180), "start": start}
     player = game.player()
-    found["falling_at_end"] = world.rivers.falling_at(player.center_x / PX, player.bottom / PX)
+    found["falling_at_end"] = world.rivers.falling_at(player.center_x / PX, player.bottom / PX) is not None
     return found
+
+
+def _tall(out: Path) -> dict[str, Any]:
+    """The tallest fall allowed (16 m, the "tall" glen): drawn over its whole height, its streaks moving down, its
+    rows within the sampling limits, nothing allocated a frame; the frame's cost against the same room without it."""
+    np = _np()
+    from engine.hd2d import river as river_mod  # noqa: PLC0415
+
+    f = Frames(glen.make_project(out, "glen_tall", variant="tall"))
+    try:
+        hd = f.hd
+        spec = ((20.0, 23.5, 7.5), 150.0, 14.0, 0.0)
+        top = glen.TALL_UPPER_PX / PX
+        pic = f.shot(spec, 3.0)
+        lip_px, foot_px = f.screen((*LIP, top)), f.screen((*FOOT, 0.0))
+        plain = f.shot(spec, 3.0, f.without_falls())
+        band = _changed(pic, plain)[int(lip_px[1]) + 2:int(foot_px[1]) - 2, int(lip_px[0]) - 6:int(lip_px[0]) + 6]
+        rows_top, rows_bottom = int(lip_px[1]) + 4, int(foot_px[1]) - 4
+        cols = slice(int(lip_px[0]) - 8, int(lip_px[0]) + 8)
+        a = f.shot(spec, 2.0)[rows_top:rows_bottom, cols].astype(float).mean(axis=2)
+        b = f.shot(spec, 2.0 + 1 / 30)[rows_top:rows_bottom, cols].astype(float).mean(axis=2)
+        errs = {s: float(np.mean((a[max(0, -s):len(a) - max(0, s)] - b[max(0, s):len(b) - max(0, -s)]) ** 2))
+                for s in range(-12, 13)}
+        (r,) = f.rivers
+        rib = river_mod.ribbon(r)
+        ((lip, foot),) = rib.falls
+        f.shot(spec, 3.0)
+        made = _gl_made(hd.ctx)
+        for k in range(20):
+            f.shot(spec, 3.0 + k / 60)
+        from PIL import Image  # noqa: PLC0415
+
+        Image.fromarray(pic).save(out / "tall.png")
+        return {"errors": [hd.water_error, hd.settings.rivers_error, hd.water.mouth_problems],
+                "drop_m": round(rib.level[lip] - rib.level[foot], 3), "run_m": round(rib.u[foot] - rib.u[lip], 3),
+                "rows": hd.water.fall_count // 6, "curtain_bytes": sum(b.size for b in hd.water.fall_buffers),
+                "lip_px": lip_px, "foot_px": foot_px, "covered": round(float(band.mean()), 3) if band.size else 0.0,
+                "shift_down_px": min(errs, key=lambda s: errs[s]), "draw_calls": hd.draw_calls,
+                "made_in_20_frames": {k: v - made[k] for k, v in _gl_made(hd.ctx).items()}}
+    finally:
+        f.close()
+
+
+def _pond_walk(out: Path) -> dict[str, Any]:
+    """The fall landing inside a pond waded to 1.5 m ("pond_landing"): the player wades north across the pond towards
+    it (the window's own key events) and stops where the curtain stands over the pond's water, not at the cliff."""
+    import r3_river_bed_study as walker  # noqa: PLC0415
+
+    f = Frames(glen.make_project(out, "glen_pond_landing", variant="pond_landing"))
+    try:
+        game, hd = f.game, f.hd
+        f.shot(FRONT, 3.0)
+        world = game.window.hd2d_world
+        keys = game.arcade.key
+        x, y = 640.0, glen.Y(780.0)
+        start = (x, y, float(min(h for h, _s in world.heights_at(x / PX, y / PX))))
+        north = keys.W if walker.walk(game, start, keys.W, 4)["y"] > start[1] else keys.S
+        went = walker.walk(game, start, north, 240)
+        beside = (736.0, glen.Y(780.0))  # (alongside it, past its edge: the pond's own water, waded to its shore)
+        side = walker.walk(game, (*beside, float(min(h for h, _s in world.heights_at(beside[0] / PX, beside[1] / PX)))),
+                           north, 240)
+        return {"foot_y": glen.Y(696.0), "shore_y": 746.6, "cliff_y": glen.CLIFF_Y, "start": start, "went": went,
+                "beside": side, "mouth_problems": hd.water.mouth_problems if hd.water else None,
+                "falling_at_end": world.rivers.falling_at(went["x"] / PX, went["y"] / PX) is not None}
+    finally:
+        f.close()
 
 
 def _haze_bloom(out: Path) -> dict[str, Any]:

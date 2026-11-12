@@ -335,13 +335,16 @@ class World:
         most = -1e9
         floor: float | None = None
         water = self.rivers.level_at(px, py) if self.rivers else None
+        falling = self.rivers.falling_at(px, py) if self.rivers else None
+        if falling is not None and (water is None or falling[0] >= water[0]):
+            water = falling  # (M17-W1: under a curtain, in the pond it falls into too: its falling water governs)
         if water is not None:
             floors = [top for top, _s in self.heights_at(px, py) if abs(top - h) <= STEP]
             floor = max(floors) if floors else h
             depth = water[0] - floor
             if depth > 0.0:
                 kind, wade = self._river_rules.get(water[1], ("auto", DEEP))
-                if self.rivers.falling_at(px, py):
+                if falling is not None:
                     kind = "block"  # (M17-W1: a waterfall: nobody wades into it, whatever its river's passable says)
                 if kind == "block":
                     if part != "wading":

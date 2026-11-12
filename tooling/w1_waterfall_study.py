@@ -9,7 +9,8 @@ rocks are scattered along the cliff top and round the pond, and a boulder stands
 Everything is made with the project ops, as Studio or an AI would make it. ``variant`` adds the evidence's other
 rooms' changes: "evening" (a low warm sun, lamps lit by the pool), "haze_bloom" (the evening with the room's haze and
 warm bloom), "plain" (the same stream without its waterfall: the stretch an ordinary slope, not flowing into the pond,
-which it can't meet so far above it), "many" (four more falls on
+which it can't meet so far above it), "tall" (a 16 m plateau and fall: the most allowed), "pond_landing" (the
+pond 1.25 m further north and waded to 1.5 m, the fall's foot 1.1 m inside it), "many" (four more falls on
 parallel streams, for the cost of several).
 """
 
@@ -54,8 +55,17 @@ def _dabs(xs: Any, ys: Any, strength: float = 1.0) -> list[list[float]]:
     return [[float(x), float(y), strength] for y in ys for x in xs]
 
 
-def glen(scene: dict[str, Any], *, fall: bool = True, carved: bool = True, extra: int = 0) -> dict[str, Any]:
-    """The waterfall glen, built into ``scene`` (the template's start room) with the project ops."""
+TALL_PLATEAU_PX, TALL_UPPER_PX = 510.0, 512.0  # "tall": a 16 m fall (the most allowed), its stream 2 px proud
+
+
+def glen(scene: dict[str, Any], *, fall: bool = True, carved: bool = True, extra: int = 0,
+         tall: bool = False, landing: bool = False) -> dict[str, Any]:
+    """The waterfall glen, built into ``scene`` (the template's start room) with the project ops (``tall``: its plateau
+    16 m up, its stream on it uncarved, 2 px proud of the ground, falling the most a waterfall may: 16 m)."""
+    plateau = TALL_PLATEAU_PX if tall else PLATEAU_PX
+    course = [[x, y, w, TALL_UPPER_PX if tall and level == UPPER_PX else level] for x, y, w, level in COURSE]
+    if landing:  # ("pond_landing": its foot 1.1 m inside a pond waded to 1.5 m: the curtain's lower part over it)
+        course[3][1] = Y(696.0)
     from engine import project_ops as ops
 
     hd2d = scene["settings"]["hd2d"]
@@ -66,19 +76,20 @@ def glen(scene: dict[str, Any], *, fall: bool = True, carved: bool = True, extra
         e["x"], e["y"] = PLAYER
     # the plateau (3 m), its edge kept crisp by small brushes along the cliff, the ground below it at 0
     scene = ops.sculpt_terrain_stroke(scene, "flatten", _dabs(range(0, 1281, 64), [Y(v) for v in range(0, 577, 64)]), radius=96.0,
-                                      target=PLATEAU_PX)
+                                      target=plateau)
     scene = ops.sculpt_terrain_stroke(scene, "flatten", _dabs(range(0, 1281, 12), (Y(606.0), Y(618.0))), radius=18.0,
-                                      target=PLATEAU_PX)
+                                      target=plateau)
     scene = ops.sculpt_terrain_stroke(scene, "flatten", _dabs(range(0, 1281, 12), (Y(648.0), Y(662.0))), radius=18.0,
                                       target=0.0)
     scene = ops.paint_terrain_stroke(scene, "stone", [[float(x), y, 1.0] for x in range(0, 1281, 24)
                                                       for y in (Y(622.0), Y(640.0))], radius=26.0)
-    scene, pond = ops.place_blank(scene, "start", "Pool", POND["x"], POND["y"])
-    scene = ops.set_water(scene, pond, preset="natural_pond", width=POND["width"], height=POND["height"])
+    scene, pond = ops.place_blank(scene, "start", "Pool", POND["x"], POND["y"] + (40.0 if landing else 0.0))
+    scene = ops.set_water(scene, pond, preset="natural_pond", width=POND["width"], height=POND["height"],
+                          **({"passable": "wade", "wade_depth": 1.5} if landing else {}))
     scene = ops.sculpt_terrain_stroke(scene, "flatten", _dabs(range(480, 801, 48), [Y(v) for v in range(780, 901, 48)]), radius=80.0,
                                       target=-POND_BED_PX)
     # (without its waterfall it can't flow into the pond: 2.9 m above it at the shore; its mouth stays none)
-    scene = ops.add_river(scene, "glen_falls", COURSE, flow=1.2, mouth="auto" if fall else "none", ends="round_source",
+    scene = ops.add_river(scene, "glen_falls", course, flow=1.2, mouth="auto" if fall else "none", ends="round_source",
                           **({"falls": [dict(FALL)]} if fall else {}))
     if carved:
         scene = ops.carve_river_bed(scene, "glen_falls", depths=[BED_M] * len(COURSE))
@@ -104,8 +115,8 @@ def make_project(out: Path, name: str, *, variant: str = "day", carved: bool = T
     scene = json.loads(path.read_text(encoding="utf-8"))
     lamps = [li for li in scene.get("lights") or [] if li.get("type") != "ambient"]  # (at LAMPS)
     # (the plain stream isn't carved: carving a slope standing over the ground below the cliff would sink it)
-    scene = glen(scene, fall=variant != "plain", carved=carved and variant != "plain",
-                 extra=4 if variant == "many" else 0)
+    scene = glen(scene, fall=variant != "plain", carved=carved and variant not in ("plain", "tall"),
+                 extra=4 if variant == "many" else 0, tall=variant == "tall", landing=variant == "pond_landing")
     if variant in ("evening", "haze_bloom"):
         hd2d = scene["settings"]["hd2d"]
         hd2d["sun"] = {"color": "#ffb070", "direction": [-0.75, -0.35, 0.28], "intensity": 0.75}
