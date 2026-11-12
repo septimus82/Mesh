@@ -1,0 +1,42 @@
+{
+ "depth_to_screen_height": {
+  "caught": true,
+  "summary": "26 deselected, 6 errors in 7.82s"
+ },
+ "mix_in_srgb": {
+  "caught": true,
+  "summary": "5 failed, 27 deselected in 13.16s"
+ },
+ "grade_then_haze": {
+  "caught": true,
+  "summary": "1 failed, 31 deselected in 13.11s"
+ },
+ "haze_unlit": {
+  "caught": true,
+  "summary": "5 failed, 27 deselected in 13.29s"
+ },
+ "no_character_rule": {
+  "caught": true,
+  "summary": "3 failed, 1 passed, 28 deselected in 13.00s"
+ },
+ "uniforms_every_frame": {
+  "caught": true,
+  "summary": "4 failed, 28 deselected in 13.01s"
+ },
+ "onset_set_once": {
+  "caught": true,
+  "summary": "1 failed, 31 deselected in 12.97s"
+ },
+ "studio_view_not_updated": {
+  "caught": true,
+  "summary": "1 failed, 31 deselected in 56.36s"
+ },
+ "haze_not_read": {
+  "caught": true,
+  "summary": "1 failed, 8 passed, 56 deselected, 1 error in 27.48s"
+ },
+ "no_corner_lost": {
+  "caught": true,
+  "summary": "4 failed, 1 passed, 27 deselected in 13.09s"
+ }
+}

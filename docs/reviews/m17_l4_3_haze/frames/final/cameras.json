@@ -1,0 +1,145 @@
+{
+ "village__day": {
+  "target": [
+   31.249999859331034,
+   16.249999118426246,
+   0.8
+  ],
+  "pitch": 30.0,
+  "fov": 12.0,
+  "distance": 53.518,
+  "ortho": false
+ },
+ "village__evening": {
+  "target": [
+   31.249999859331034,
+   16.249999118426246,
+   0.8
+  ],
+  "pitch": 30.0,
+  "fov": 12.0,
+  "distance": 53.518,
+  "ortho": false
+ },
+ "village__night_lamps": {
+  "target": [
+   31.249999859331034,
+   16.249999118426246,
+   0.8
+  ],
+  "pitch": 30.0,
+  "fov": 12.0,
+  "distance": 53.518,
+  "ortho": false
+ },
+ "shore__day": {
+  "target": [
+   43.74999845264135,
+   24.37499820407795,
+   0.6994062613203352
+  ],
+  "pitch": 30.0,
+  "fov": 12.0,
+  "distance": 53.518,
+  "ortho": false
+ },
+ "shore__evening": {
+  "target": [
+   43.74999845264135,
+   24.37499820407795,
+   0.6994062613203352
+  ],
+  "pitch": 30.0,
+  "fov": 12.0,
+  "distance": 53.518,
+  "ortho": false
+ },
+ "shore__night_lamps": {
+  "target": [
+   43.74999845264135,
+   24.37499820407795,
+   0.6994062613203352
+  ],
+  "pitch": 30.0,
+  "fov": 12.0,
+  "distance": 53.518,
+  "ortho": false
+ },
+ "bridge__day": {
+  "target": [
+   34.374999507658615,
+   24.687498168910714,
+   0.999999977492965
+  ],
+  "pitch": 30.0,
+  "fov": 12.0,
+  "distance": 53.518,
+  "ortho": false
+ },
+ "bridge__evening": {
+  "target": [
+   34.374999507658615,
+   24.687498168910714,
+   0.999999977492965
+  ],
+  "pitch": 30.0,
+  "fov": 12.0,
+  "distance": 53.518,
+  "ortho": false
+ },
+ "bridge__night_lamps": {
+  "target": [
+   34.374999507658615,
+   24.687498168910714,
+   0.999999977492965
+  ],
+  "pitch": 30.0,
+  "fov": 12.0,
+  "distance": 53.518,
+  "ortho": false
+ },
+ "cottage__day": {
+  "target": [
+   18.750001266020718,
+   16.874999048091762,
+   0.8
+  ],
+  "pitch": 30.0,
+  "fov": 12.0,
+  "distance": 53.518,
+  "ortho": false
+ },
+ "cottage__evening": {
+  "target": [
+   18.750001266020718,
+   16.874999048091762,
+   0.8
+  ],
+  "pitch": 30.0,
+  "fov": 12.0,
+  "distance": 53.518,
+  "ortho": false
+ },
+ "cottage__night_lamps": {
+  "target": [
+   18.750001266020718,
+   16.874999048091762,
+   0.8
+  ],
+  "pitch": 30.0,
+  "fov": 12.0,
+  "distance": 53.518,
+  "ortho": false
+ },
+ "interior__day": {
+  "target": [
+   8.0,
+   5.091815833349058,
+   0.9
+  ],
+  "pitch": 55.0,
+  "fov": 12.0,
+  "distance": 35.679,
+  "ortho": false
+ }
+}

@@ -1,0 +1,156 @@
+{
+ "worktree": "D:\\Games\\Mesh-l4h",
+ "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "size": [
+  1280,
+  720
+ ],
+ "rounds": 300,
+ "method": "GL timer query; CPU perf_counter round the call",
+ "whole_frame": {
+  "off": {
+   "gpu": {
+    "p50_ms": 1.7285,
+    "p95_ms": 2.6511,
+    "n": 270
+   },
+   "cpu": {
+    "p50_ms": 6.3095,
+    "p95_ms": 7.264,
+    "n": 270
+   }
+  },
+  "haze": {
+   "gpu": {
+    "p50_ms": 1.7469,
+    "p95_ms": 2.772,
+    "n": 270
+   },
+   "cpu": {
+    "p50_ms": 6.2907,
+    "p95_ms": 7.3273,
+    "n": 270
+   }
+  },
+  "graded": {
+   "gpu": {
+    "p50_ms": 1.8755,
+    "p95_ms": 2.814,
+    "n": 270
+   },
+   "cpu": {
+    "p50_ms": 6.3555,
+    "p95_ms": 7.4091,
+    "n": 270
+   }
+  },
+  "haze+graded": {
+   "gpu": {
+    "p50_ms": 2.0163,
+    "p95_ms": 3.0116,
+    "n": 270
+   },
+   "cpu": {
+    "p50_ms": 6.4078,
+    "p95_ms": 7.5828,
+    "n": 270
+   }
+  },
+  "dof": {
+   "gpu": {
+    "p50_ms": 2.5441,
+    "p95_ms": 3.5113,
+    "n": 270
+   },
+   "cpu": {
+    "p50_ms": 6.4087,
+    "p95_ms": 7.4359,
+    "n": 270
+   }
+  },
+  "dof+haze": {
+   "gpu": {
+    "p50_ms": 3.0121,
+    "p95_ms": 4.353,
+    "n": 270
+   },
+   "cpu": {
+    "p50_ms": 6.8368,
+    "p95_ms": 7.7397,
+    "n": 270
+   }
+  }
+ },
+ "whole_frame_clocks": [
+  "2520 MHz, 10001 MHz, P0",
+  "645 MHz, 810 MHz, P5"
+ ],
+ "passes": {
+  "blit": {
+   "p50_ms": 0.0266,
+   "p95_ms": 0.0287,
+   "n": 540
+  },
+  "haze": {
+   "p50_ms": 0.0389,
+   "p95_ms": 0.0399,
+   "n": 540
+  },
+  "grade": {
+   "p50_ms": 0.0727,
+   "p95_ms": 0.0737,
+   "n": 540
+  },
+  "haze+grade": {
+   "p50_ms": 0.0799,
+   "p95_ms": 0.0809,
+   "n": 540
+  }
+ },
+ "moving": {
+  "off": {
+   "gpu": {
+    "p50_ms": 0.7767,
+    "p95_ms": 1.2052,
+    "n": 108
+   },
+   "cpu": {
+    "p50_ms": 2.8959,
+    "p95_ms": 3.2311,
+    "n": 108
+   }
+  },
+  "haze": {
+   "gpu": {
+    "p50_ms": 0.8212,
+    "p95_ms": 1.5739,
+    "n": 108
+   },
+   "cpu": {
+    "p50_ms": 2.9313,
+    "p95_ms": 3.2046,
+    "n": 108
+   }
+  }
+ },
+ "objects": {
+  "composite_grade": 3,
+  "composite_haze_grade": 3,
+  "chain_allocations": 1,
+  "ctx_objects": {},
+  "ctx_stats": {
+   "texture": [
+    56,
+    4
+   ],
+   "framebuffer": [
+    12,
+    4
+   ],
+   "program": [
+    39,
+    4
+   ]
+  }
+ }
+}

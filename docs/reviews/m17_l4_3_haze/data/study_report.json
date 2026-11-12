@@ -1,0 +1,702 @@
+{
+ "size": [
+  960,
+  540
+ ],
+ "rooms": {
+  "village": {
+   "scene": "packs/core_regions/scenes/start.json",
+   "off": {
+    "stage": "blit",
+    "made": false,
+    "draw_calls": 32
+   },
+   "strength_zero": {
+    "same": true,
+    "stage": "blit",
+    "made": false
+   },
+   "presets": {
+    "daytime": {
+     "light": [
+      0.8218,
+      0.8106,
+      0.8329
+     ],
+     "lit_as_the_room": true,
+     "stage": "composite",
+     "match": {
+      "pixels": 516162,
+      "backdrop_share": 0.0,
+      "err_p99": 0.0024,
+      "err_max": 0.009,
+      "near_share": 0.5587,
+      "near_same": true,
+      "hazed_share": 0.3325,
+      "most": 0.1023,
+      "z_range": [
+       46.64,
+       67.36
+      ],
+      "by_depth": [
+       0.0,
+       0.0,
+       0.0004,
+       0.0129,
+       0.0415,
+       0.0758
+      ]
+     },
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 32,
+     "world_read_unchanged": true,
+     "weber_change_min": -0.030914725831569623,
+     "weber_ratio_min": 0.9496128243892795,
+     "edge_ratio_min": 0.9415608212804574,
+     "onset_beyond_character": true,
+     "clipped_increase": 0.0
+    },
+    "evening": {
+     "light": [
+      0.8218,
+      0.8106,
+      0.8329
+     ],
+     "lit_as_the_room": true,
+     "stage": "composite",
+     "match": {
+      "pixels": 515686,
+      "backdrop_share": 0.0,
+      "err_p99": 0.004,
+      "err_max": 0.0106,
+      "near_share": 0.5587,
+      "near_same": true,
+      "hazed_share": 0.3461,
+      "most": 0.1681,
+      "z_range": [
+       46.64,
+       67.36
+      ],
+      "by_depth": [
+       0.0,
+       0.0,
+       0.0007,
+       0.0238,
+       0.074,
+       0.1293
+      ]
+     },
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 32,
+     "world_read_unchanged": true,
+     "weber_change_min": -0.06535750139620655,
+     "weber_ratio_min": 0.8934753645149385,
+     "edge_ratio_min": 0.8767963636456656,
+     "onset_beyond_character": true,
+     "clipped_increase": 0.0
+    }
+   },
+   "start_zero": {
+    "followed": true,
+    "onset": 1.683,
+    "band": 0.683,
+    "match": 0.0051,
+    "player_weber_ratio": 1.0
+   },
+   "with_grade": {
+    "stage": "composite",
+    "near_same_as_grade": true,
+    "far_changed": true
+   },
+   "with_dof": {
+    "stage": "dof+composite",
+    "chain_allocations": 1,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true
+  },
+  "lakeside": {
+   "scene": "packs/core_regions/scenes/glow_lakeside.json",
+   "off": {
+    "stage": "blit",
+    "made": false,
+    "draw_calls": 17
+   },
+   "strength_zero": {
+    "same": true,
+    "stage": "blit",
+    "made": false
+   },
+   "presets": {
+    "daytime": {
+     "light": [
+      0.8218,
+      0.8106,
+      0.8329
+     ],
+     "lit_as_the_room": true,
+     "stage": "composite",
+     "match": {
+      "pixels": 518400,
+      "backdrop_share": 0.0,
+      "err_p99": 0.002,
+      "err_max": 0.01,
+      "near_share": 0.6937,
+      "near_same": true,
+      "hazed_share": 0.2502,
+      "most": 0.0694,
+      "z_range": [
+       46.64,
+       67.36
+      ],
+      "by_depth": [
+       0.0,
+       0.0,
+       0.0,
+       0.0019,
+       0.0181,
+       0.0508
+      ]
+     },
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 17,
+     "world_read_unchanged": true,
+     "weber_change_min": 0.0,
+     "weber_ratio_min": 1.0,
+     "edge_ratio_min": 0.9568177502443279,
+     "onset_beyond_character": true,
+     "clipped_increase": 0.0
+    },
+    "evening": {
+     "light": [
+      0.8218,
+      0.8106,
+      0.8329
+     ],
+     "lit_as_the_room": true,
+     "stage": "composite",
+     "match": {
+      "pixels": 518026,
+      "backdrop_share": 0.0,
+      "err_p99": 0.0024,
+      "err_max": 0.0056,
+      "near_share": 0.6937,
+      "near_same": true,
+      "hazed_share": 0.2652,
+      "most": 0.1195,
+      "z_range": [
+       46.64,
+       67.36
+      ],
+      "by_depth": [
+       0.0,
+       0.0,
+       0.0,
+       0.0036,
+       0.033,
+       0.0894
+      ]
+     },
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 17,
+     "world_read_unchanged": true,
+     "weber_change_min": 0.0,
+     "weber_ratio_min": 1.0,
+     "edge_ratio_min": 0.9167390550005599,
+     "onset_beyond_character": true,
+     "clipped_increase": 0.0
+    }
+   },
+   "start_zero": {
+    "followed": true,
+    "onset": 1.683,
+    "band": 0.683,
+    "match": 0.003,
+    "player_weber_ratio": 1.0005
+   },
+   "with_grade": {
+    "stage": "composite",
+    "near_same_as_grade": true,
+    "far_changed": true
+   },
+   "with_dof": {
+    "stage": "dof+composite",
+    "chain_allocations": 1,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true
+  },
+  "fixtures": {
+   "scene": "packs/core_regions/scenes/lamp_fixtures.json",
+   "off": {
+    "stage": "blit",
+    "made": false,
+    "draw_calls": 6
+   },
+   "strength_zero": {
+    "same": true,
+    "stage": "blit",
+    "made": false
+   },
+   "presets": {
+    "daytime": {
+     "light": [
+      1.0,
+      0.9676,
+      0.9159
+     ],
+     "lit_as_the_room": true,
+     "stage": "composite",
+     "match": {
+      "pixels": 518400,
+      "backdrop_share": 0.75,
+      "err_p99": 0.0016,
+      "err_max": 0.0067,
+      "near_share": 0.8454,
+      "near_same": true,
+      "hazed_share": 0.1206,
+      "most": 0.0468,
+      "z_range": [
+       53.54,
+       500.0
+      ],
+      "by_depth": [
+       0.0082,
+       null,
+       null,
+       null,
+       null,
+       null
+      ]
+     },
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 6,
+     "world_read_unchanged": true,
+     "weber_change_min": null,
+     "weber_ratio_min": null,
+     "edge_ratio_min": null,
+     "onset_beyond_character": true,
+     "clipped_increase": 0.0
+    },
+    "evening": {
+     "light": [
+      1.0,
+      0.9676,
+      0.9159
+     ],
+     "lit_as_the_room": true,
+     "stage": "composite",
+     "match": {
+      "pixels": 517602,
+      "backdrop_share": 0.75,
+      "err_p99": 0.002,
+      "err_max": 0.0099,
+      "near_share": 0.8454,
+      "near_same": true,
+      "hazed_share": 0.1296,
+      "most": 0.0829,
+      "z_range": [
+       53.54,
+       500.0
+      ],
+      "by_depth": [
+       0.0149,
+       null,
+       null,
+       null,
+       null,
+       null
+      ]
+     },
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 6,
+     "world_read_unchanged": true,
+     "weber_change_min": null,
+     "weber_ratio_min": null,
+     "edge_ratio_min": null,
+     "onset_beyond_character": true,
+     "clipped_increase": 0.0
+    }
+   },
+   "start_zero": {
+    "followed": false,
+    "onset": 0.0,
+    "band": 0.0,
+    "match": 0.0024,
+    "player_weber_ratio": null
+   },
+   "with_grade": {
+    "stage": "composite",
+    "near_same_as_grade": true,
+    "far_changed": true
+   },
+   "with_dof": {
+    "stage": "dof+composite",
+    "chain_allocations": 1,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true
+  },
+  "cottage": {
+   "scene": "packs/core_regions/scenes/cottage.json",
+   "off": {
+    "stage": "blit",
+    "made": false,
+    "draw_calls": 7
+   },
+   "strength_zero": {
+    "same": true,
+    "stage": "blit",
+    "made": false
+   },
+   "presets": {
+    "daytime": {
+     "light": [
+      1.0,
+      0.9735,
+      0.9312
+     ],
+     "lit_as_the_room": true,
+     "stage": "composite",
+     "match": {
+      "pixels": 518334,
+      "backdrop_share": 0.6768,
+      "err_p99": 0.0,
+      "err_max": 0.0,
+      "near_share": 1.0,
+      "near_same": true,
+      "hazed_share": 0.0,
+      "most": 0.0,
+      "z_range": [
+       32.66,
+       500.0
+      ],
+      "by_depth": [
+       0.0,
+       null,
+       null,
+       null,
+       null,
+       null
+      ]
+     },
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 7,
+     "world_read_unchanged": true,
+     "weber_change_min": 0.0,
+     "weber_ratio_min": 1.0,
+     "edge_ratio_min": 1.0,
+     "onset_beyond_character": true,
+     "clipped_increase": 0.0
+    },
+    "evening": {
+     "light": [
+      1.0,
+      0.9735,
+      0.9312
+     ],
+     "lit_as_the_room": true,
+     "stage": "composite",
+     "match": {
+      "pixels": 514044,
+      "backdrop_share": 0.6768,
+      "err_p99": 0.0,
+      "err_max": 0.0,
+      "near_share": 1.0,
+      "near_same": true,
+      "hazed_share": 0.0,
+      "most": 0.0,
+      "z_range": [
+       32.66,
+       500.0
+      ],
+      "by_depth": [
+       0.0,
+       null,
+       null,
+       null,
+       null,
+       null
+      ]
+     },
+     "repeat_same": true,
+     "uniform_updates_on_repeat": 0,
+     "draw_calls": 7,
+     "world_read_unchanged": true,
+     "weber_change_min": 0.0,
+     "weber_ratio_min": 1.0,
+     "edge_ratio_min": 1.0,
+     "onset_beyond_character": true,
+     "clipped_increase": 0.0
+    }
+   },
+   "start_zero": {
+    "followed": true,
+    "onset": 2.3211,
+    "band": 1.3211,
+    "match": 0.0,
+    "player_weber_ratio": 1.0
+   },
+   "with_grade": {
+    "stage": "composite",
+    "near_same_as_grade": true,
+    "far_changed": false
+   },
+   "with_dof": {
+    "stage": "dof+composite",
+    "chain_allocations": 1,
+    "world_read_unchanged": true
+   },
+   "off_again_same": true
+  }
+ },
+ "gl": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+ "hud": {
+  "hud_pixels": 3168,
+  "hud_same": true,
+  "world_changed": true
+ },
+ "night": {
+  "light": [
+   0.2422,
+   0.2702,
+   0.3507
+  ],
+  "shown": [
+   0.151,
+   0.1865,
+   0.2696
+  ],
+  "day_shown": [
+   0.5124,
+   0.5595,
+   0.6402
+  ],
+  "match": {
+   "pixels": 2777,
+   "backdrop_share": 0.0,
+   "err_p99": 0.0003,
+   "err_max": 0.0008,
+   "near_share": 0.5587,
+   "near_same": true,
+   "hazed_share": 0.3325,
+   "most": 0.1023,
+   "z_range": [
+    46.64,
+    67.36
+   ],
+   "by_depth": [
+    0.0,
+    0.0,
+    0.0004,
+    0.0129,
+    0.0415,
+    0.0758
+   ]
+  },
+  "lit_as_the_room": true
+ },
+ "walking": {
+  "frames": [
+   {
+    "step": 0,
+    "target": [
+     20.603,
+     8.416,
+     0.8
+    ],
+    "onset_minus_focus": 4.0,
+    "err_p99": 0.0024,
+    "near_same": true
+   },
+   {
+    "step": 1,
+    "target": [
+     21.488,
+     8.416,
+     0.8
+    ],
+    "onset_minus_focus": 4.0,
+    "err_p99": 0.0024,
+    "near_same": true
+   },
+   {
+    "step": 2,
+    "target": [
+     21.815,
+     8.416,
+     0.8
+    ],
+    "onset_minus_focus": 4.0,
+    "err_p99": 0.0021,
+    "near_same": true
+   },
+   {
+    "step": 3,
+    "target": [
+     21.866,
+     8.416,
+     0.8
+    ],
+    "onset_minus_focus": 4.0,
+    "err_p99": 0.0021,
+    "near_same": true
+   },
+   {
+    "step": 4,
+    "target": [
+     21.271,
+     8.416,
+     0.8
+    ],
+    "onset_minus_focus": 4.0,
+    "err_p99": 0.0021,
+    "near_same": true
+   }
+  ],
+  "moved": 5,
+  "onset_offsets": [
+   4.0
+  ]
+ },
+ "flat_camera": {
+  "pixels": 515593,
+  "backdrop_share": 0.0648,
+  "err_p99": 0.0058,
+  "err_max": 0.0174,
+  "near_share": 0.3677,
+  "near_same": true,
+  "hazed_share": 0.6178,
+  "most": 0.3,
+  "z_range": [
+   46.66,
+   500.0
+  ],
+  "by_depth": [
+   0.1305,
+   null,
+   null,
+   null,
+   null,
+   null
+  ]
+ },
+ "texels": {
+  "near": {
+   "got": [
+    37,
+    180,
+    222,
+    9
+   ],
+   "model": [
+    37,
+    180,
+    222,
+    9
+   ]
+  },
+  "at_onset": {
+   "got": [
+    37,
+    180,
+    222,
+    9
+   ],
+   "model": [
+    37,
+    180,
+    222,
+    9
+   ]
+  },
+  "mid": {
+   "got": [
+    79,
+    177,
+    225,
+    9
+   ],
+   "model": [
+    79,
+    177,
+    225,
+    9
+   ]
+  },
+  "far": {
+   "got": [
+    108,
+    130,
+    171,
+    200
+   ],
+   "model": [
+    108,
+    130,
+    171,
+    200
+   ]
+  },
+  "distant": {
+   "got": [
+    101,
+    109,
+    137,
+    255
+   ],
+   "model": [
+    102,
+    109,
+    137,
+    255
+   ]
+  },
+  "backdrop": {
+   "got": [
+    18,
+    14,
+    11,
+    255
+   ],
+   "model": [
+    18,
+    14,
+    11,
+    255
+   ]
+  },
+  "order": {
+   "both": [
+    110,
+    130,
+    166,
+    200
+   ],
+   "haze_then_grade": [
+    110,
+    130,
+    166,
+    200
+   ],
+   "grade_then_haze": [
+    108,
+    129,
+    171,
+    200
+   ]
+  }
+ },
+ "refused": {
+  "stage": "blit",
+  "same": true,
+  "reason": "the final composite is off on this computer: the graphics driver refused it (program refused (simulated))"
+ }
+}

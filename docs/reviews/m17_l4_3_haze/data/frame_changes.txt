@@ -1,0 +1,13 @@
+bridge__day              off==baseline True | daytime: changed 33.9% rows top/mid/bot 13.7/0.0/0.0 | evening: changed 34.8% rows top/mid/bot 19.0/0.0/0.0
+bridge__evening          off==baseline True | daytime: changed 31.9% rows top/mid/bot 8.1/0.0/0.0 | evening: changed 34.6% rows top/mid/bot 17.9/0.0/0.0
+bridge__night_lamps      off==baseline True | daytime: changed 29.5% rows top/mid/bot 4.8/0.0/0.0 | evening: changed 30.7% rows top/mid/bot 5.6/0.0/0.0
+cottage__day             off==baseline True | daytime: changed 26.2% rows top/mid/bot 12.7/0.0/0.0 | evening: changed 26.8% rows top/mid/bot 17.8/0.0/0.0
+cottage__evening         off==baseline True | daytime: changed 25.3% rows top/mid/bot 8.4/0.0/0.0 | evening: changed 27.1% rows top/mid/bot 20.6/0.0/0.0
+cottage__night_lamps     off==baseline True | daytime: changed 22.7% rows top/mid/bot 4.7/0.0/0.0 | evening: changed 23.6% rows top/mid/bot 5.4/0.0/0.0
+interior__day            off==baseline True | daytime: changed 0.0% rows top/mid/bot 0.0/0.0/0.0 | evening: changed 0.0% rows top/mid/bot 0.0/0.0/0.0
+shore__day               off==baseline True | daytime: changed 34.0% rows top/mid/bot 11.4/0.0/0.0 | evening: changed 34.7% rows top/mid/bot 15.0/0.0/0.0
+shore__evening           off==baseline True | daytime: changed 32.6% rows top/mid/bot 6.5/0.0/0.0 | evening: changed 34.3% rows top/mid/bot 13.1/0.0/0.0
+shore__night_lamps       off==baseline True | daytime: changed 30.8% rows top/mid/bot 4.1/0.0/0.0 | evening: changed 32.1% rows top/mid/bot 4.8/0.0/0.0
+village__day             off==baseline True | daytime: changed 27.0% rows top/mid/bot 15.4/0.0/0.0 | evening: changed 27.8% rows top/mid/bot 24.3/0.0/0.0
+village__evening         off==baseline True | daytime: changed 25.4% rows top/mid/bot 9.1/0.0/0.0 | evening: changed 28.2% rows top/mid/bot 21.0/0.0/0.0
+village__night_lamps     off==baseline True | daytime: changed 21.6% rows top/mid/bot 5.7/0.0/0.0 | evening: changed 22.8% rows top/mid/bot 6.7/0.0/0.0

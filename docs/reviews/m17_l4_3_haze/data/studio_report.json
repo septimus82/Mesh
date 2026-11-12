@@ -1,0 +1,169 @@
+{
+ "before": {
+  "preset": null,
+  "error": null
+ },
+ "still": true,
+ "daytime": {
+  "stored": {
+   "preset": "daytime"
+  },
+  "message": "Haze: Daytime haze.",
+  "stage": "composite",
+  "renderer_preset": "daytime",
+  "changed_share": 0.2477,
+  "fields": [
+   "haze_strength",
+   "haze_color",
+   "haze_start",
+   "haze_falloff"
+  ]
+ },
+ "lines": {
+  "after_calls": [
+   "composite",
+   "composite"
+  ],
+  "pixels": [
+   22856,
+   22856
+  ],
+  "same_share": 1.0
+ },
+ "parity": {
+  "same": true,
+  "stage": "composite",
+  "onsets": [
+   52.400000000000006,
+   52.400000000000006
+  ]
+ },
+ "typed": {
+  "preset": "daytime",
+  "strength": 0.4,
+  "start": 2.0,
+  "falloff": 20.0,
+  "color": "#a0b8d0"
+ },
+ "bad_colour": {
+  "stored": {
+   "preset": "daytime",
+   "strength": 0.4,
+   "start": 2.0,
+   "falloff": 20.0,
+   "color": "#a0b8d0"
+  },
+  "message": "settings.hd2d.haze.color must be a colour like #9fb0c4 (got 'bluish')",
+  "ok": false,
+  "put_back": "Put back as it was."
+ },
+ "too_strong": {
+  "stored": {
+   "preset": "daytime",
+   "strength": 0.4,
+   "start": 2.0,
+   "falloff": 20.0,
+   "color": "#a0b8d0"
+  },
+  "message": "Strength: a number from 0 to 0.5.",
+  "ok": false,
+  "put_back": "Put back as it was."
+ },
+ "undone": {
+  "preset": "daytime",
+  "strength": 0.4,
+  "start": 2.0,
+  "color": "#a0b8d0"
+ },
+ "redone": {
+  "preset": "daytime",
+  "strength": 0.4,
+  "start": 2.0,
+  "falloff": 20.0,
+  "color": "#a0b8d0"
+ },
+ "redone_renderer": {
+  "strength": 0.4,
+  "start": 2.0,
+  "falloff": 20.0,
+  "color": [
+   0.6275,
+   0.7216,
+   0.8157
+  ]
+ },
+ "op_parity": true,
+ "with_grade": {
+  "stage": "composite",
+  "post": "golden_hour"
+ },
+ "off": {
+  "stored": null,
+  "stage": "blit",
+  "view_same_as_before": true
+ },
+ "in_play": {
+  "mode": "play",
+  "preset": "evening",
+  "stage": "composite",
+  "haze": {
+   "onset": 54.79707115854579,
+   "falloff": 24.0,
+   "strength": 0.3,
+   "focus": 50.79707115854579
+  }
+ },
+ "saved": "Saved 1 file(s).",
+ "in_the_saved_file": {
+  "preset": "evening"
+ },
+ "rest_of_the_room_unchanged": true,
+ "reopened": {
+  "haze": {
+   "preset": "evening",
+   "label": "Evening",
+   "strength": 0.3,
+   "color": "#d4b4a4",
+   "start": 4.0,
+   "falloff": 24.0,
+   "error": null
+  },
+  "unsaved": [],
+  "renderer_preset": "evening"
+ },
+ "export": {
+  "code": 0,
+  "bundle_run": {
+   "engine_from": "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\c18a071c64bbe7a7\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\l4h\\bt2\\haze_studio0\\export\\engine\\__init__.py",
+   "preset": "evening",
+   "stage": "composite"
+  },
+  "scene_setting": {
+   "preset": "evening"
+  }
+ },
+ "malformed": {
+  "haze_of": {
+   "preset": null,
+   "error": "settings.hd2d.haze.preset must be one of daytime, evening (got ['daytime'])"
+  },
+  "renderer_haze": null,
+  "renderer_error": "settings.hd2d.haze.preset must be one of daytime, evening (got ['daytime'])",
+  "stage": "blit",
+  "warning": true,
+  "repaired": {
+   "stored": {
+    "preset": "daytime"
+   },
+   "renderer_preset": "daytime",
+   "stage": "composite",
+   "warning": false
+  },
+  "undone": {
+   "preset": [
+    "daytime"
+   ],
+   "strength": 0.2
+  }
+ }
+}
