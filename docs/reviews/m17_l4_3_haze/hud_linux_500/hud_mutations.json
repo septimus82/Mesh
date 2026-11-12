@@ -1,0 +1,30 @@
+{
+ "haze_after_hud": {
+  "caught": true,
+  "summary": "1 failed, 32 deselected in 14.28s",
+  "hud": {
+   "hud_pixels": 3168,
+   "translucent_pixels": 325584,
+   "opaque_same": false,
+   "opaque_changed": 3168,
+   "over_world_error": 123,
+   "over_hazed_world_error": 26,
+   "behind_changed": 324650,
+   "world_changed": false
+  }
+ },
+ "hud_before_world": {
+  "caught": true,
+  "summary": "1 failed, 32 deselected in 14.43s",
+  "hud": {
+   "hud_pixels": 0,
+   "translucent_pixels": 0,
+   "opaque_same": true,
+   "opaque_changed": 0,
+   "over_world_error": 0,
+   "over_hazed_world_error": 0,
+   "behind_changed": 0,
+   "world_changed": true
+  }
+ }
+}
