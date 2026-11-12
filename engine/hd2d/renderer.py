@@ -466,7 +466,8 @@ class Hd2dRenderer:
             made.append(self._caster_buffer)
         for obj in made:
             obj.delete()
-        for name in ("scatter", "precipitation", "water", "particles", "fire_sprites", "fire_particles", "_dof_pass"):
+        for name in ("scatter", "precipitation", "water", "particles", "fire_sprites", "fire_particles",
+                     "spray_particles", "_dof_pass"):
             part = getattr(self, name, None)
             if part is not None:
                 part.release()
@@ -510,6 +511,7 @@ class Hd2dRenderer:
         self.particles: Any = None  # the room's environmental particles (engine.scene_particles), if it has any
         self.fire_sprites: Any = None  # its campfires' logs and flames (engine.fire: a scatter layer, always moving)
         self.fire_particles: Any = None  # ... and their embers and smoke (engine.scene_particles.FireParticles)
+        self.spray_particles: Any = None  # M17-W1: its waterfalls' spray (the same particles; made when one sprays)
         self.fire_error: str | None = None  # why they're off in this room, if the GPU refused them
         self._fire_rows: Any = None
         self._fire_z: dict[tuple[int, int], float] = {}  # (x, y) px -> the height (px) a campfire's logs stand at
@@ -997,6 +999,7 @@ class Hd2dRenderer:
                    + (self.particles.gl_objects() if self.particles is not None else [])
                    + (self.fire_sprites.gl_objects() if self.fire_sprites is not None else [])
                    + (self.fire_particles.gl_objects() if self.fire_particles is not None else [])
+                   + (self.spray_particles.gl_objects() if self.spray_particles is not None else [])
                    + self.precipitation.gl_objects() + (self.water.gl_objects() if self.water is not None else [])
                    + (self._dof_pass.gl_objects() if self._dof_pass is not None else [])
                    + (self._composite.gl_objects() if self._composite is not None else [])
@@ -1039,7 +1042,7 @@ class Hd2dRenderer:
             self.ground_prog.delete()
             self.ground_prog = None
         self._paint_texture = None  # (deleted with the other textures)
-        for name in ("scatter", "fire_sprites", "fire_particles"):
+        for name in ("scatter", "fire_sprites", "fire_particles", "spray_particles"):
             part = getattr(self, name)
             if part is not None:
                 part.release()
@@ -1766,6 +1769,8 @@ class Hd2dRenderer:
         self.water.set_terrain(self.terrain, self.terrain_version)
         if self.last_vp is not None and not self.water.in_view(self.last_vp):
             self.water.draw_calls = 0
+            if self.spray_particles is not None:  # (its waterfalls' spray isn't drawn either)
+                self.spray_particles.draw_calls = 0
             return
         rain, shelter = 0.0, None
         if weather and self.particles is not None:
@@ -1778,6 +1783,25 @@ class Hd2dRenderer:
                            steps=list(getattr(self.window, "water_steps", None) or []), rain=rain, shelter=shelter,
                            light=light, sky=tuple(st.sky), reflections=st.water_reflections, lighting=self.lighting)
         self.draw_calls += self.water.draw_calls
+        self._draw_spray(vp, cam, fbo, light)
+
+    def _draw_spray(self, vp: tuple[float, ...], cam: Camera, fbo: Any, light: tuple[float, ...]) -> None:
+        """M17-W1: the room's waterfalls' spray (engine.scene_particles.FireParticles.draw_spray), drawn with its water
+        (so not when the water is out of the picture); its particles made when a fall sprays, freed when none does."""
+        feet = [f for f in self.water.feet if f[7] > 0.0] if self.water is not None else []
+        if not feet:
+            if self.spray_particles is not None:
+                self.spray_particles.release()
+                self.spray_particles = None
+            return
+        if self.spray_particles is None:
+            from engine.scene_particles import FireParticles  # noqa: PLC0415
+
+            self.spray_particles = FireParticles(self.ctx, gl=self.arcade.gl, max_fires=8)
+        wind = self.wind
+        self.spray_particles.draw_spray(vp, cam, feet, float(getattr(self.window, "water_time", 0.0)) % 3600.0,
+                                        wind.vector, wind.gust, light, fbo)
+        self.draw_calls += self.spray_particles.draw_calls
 
     def depth_at(self, x: int, y: int) -> float | None:
         """The last frame's depth (0 near .. 1 far, what its depth test kept: everything drawn solid, not water) at

@@ -28,6 +28,17 @@ collision and wading (engine.hd2d.world) and scatter (engine.hd2d.scatter). R4: 
 (``mouth: "auto"``, ``join``): none of its water is drawn in the pond's (one surface, the pond's), the pond's shore
 opens where it enters, and over its last BLEND_M before the shore it takes on the pond's look, its current eased out.
 Its free ends may finish in half circles (``ends``). What is drawn is what ``RiverIndex`` says is water.
+
+Waterfalls (M17-W1): a river's ``falls`` mark stretches between two neighbouring control points as falling water
+(``{"from": i}``: from point i, its lip, to point i + 1, its foot). The two points' levels are the water above and
+below the fall (it drops at least FALL_DROP_PX[0], and at least half as far as it runs in plan: FALL_STEEP); over
+the stretch the surface follows a falling jet's curve, level at the lip and steepest at the foot (``level - drop *
+f * f``, f the share of the stretch run), so the water leaves the lip smoothly. Every fall has ordinary water above
+and below it (it isn't the first or last stretch, nor next to another fall), its course turns no more than
+FALL_TURN_DEG over it, and the ribbon has a sample exactly at its lip and its foot. The ribbon isn't drawn over a
+fall: engine.water draws it as a curtain (``fall_vertices``) following the curve, the water whitening as it drops,
+with foam at its foot spreading downstream (``foam``) and a little spray (``spray``, engine.scene_particles). For
+collision a fall is always blocking water (``RiverIndex.falling_at``), whatever the river's ``passable``.
 """
 
 from __future__ import annotations
@@ -62,7 +73,15 @@ MAX_TOTAL_M = 2048.0  # all of a room's rivers together: ~0.2 s to check, ~1.75 
 BOUNDS_TOLERANCE_PX = 0.5  # (a bank exactly on the ground's edge, stored rounded, is on it)
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
 KEYS = {"id", "points", "flow", "colour", "deep_colour", "opacity", "depth", "waves", "reflection", "rain_ripples",
-        "mouth", "ends", "passable", "wade_depth"}
+        "mouth", "ends", "passable", "wade_depth", "falls"}
+# M17-W1: waterfalls
+FALL_KEYS = {"from", "foam", "spray"}
+FALL_DEFAULTS = {"foam": 0.6, "spray": 0.4}  # how much whitewater at its foot, how much spray rises (0: none)
+MAX_FALLS = water_mod.MAX_FALLS  # a room's falls (what the water shaders hold)
+FALL_DROP_PX = (16.0, 512.0)  # a fall drops 0.5 m .. 16 m
+FALL_STEEP = 0.5  # ... at least half as far as it runs in plan (gentler is a sloping stretch, not a fall)
+FALL_TURN_DEG = 20.0  # the most its course turns over a fall (a curtain, not a spiral)
+GRAVITY = 9.81  # m/s^2: how fast the water drops (its time of flight, for the curtain's streaks)
 MOUTHS = ("none", "auto")  # R4: "auto": its last point lies in a pond, which it flows into (``join``)
 # R4: which of its free ends (its source; its last point, unless it flows into a pond) finish in a half circle (a
 # river running off the room's edge keeps that end square: no gap of dry ground beside it there). Older: square
@@ -95,6 +114,16 @@ class River:
     ends: str = "square"  # ENDS
     passable: str = "auto"  # R4B (engine.water.PASSABLE): "auto" waded up to half a metre deep, as before
     wade_depth: float = water_mod.WADE_DEPTH_DEFAULT  # m: the deepest it is waded, if passable is "wade"
+    falls: tuple["Fall", ...] = ()  # M17-W1, in order downstream
+
+
+@dataclass(frozen=True)
+class Fall:
+    """A waterfall (M17-W1): the stretch from control point ``start`` (its lip) to ``start + 1`` (its foot)."""
+
+    start: int
+    foam: float = FALL_DEFAULTS["foam"]  # 0..1
+    spray: float = FALL_DEFAULTS["spray"]  # 0..1 (0: none)
 
 
 @dataclass(frozen=True)
@@ -110,6 +139,7 @@ class Ribbon:
     left: tuple[tuple[float, float], ...]
     right: tuple[tuple[float, float], ...]
     marks: tuple[float, ...] = ()  # each control point's place along it (``u``, m)
+    falls: tuple[tuple[int, int], ...] = ()  # M17-W1: each fall's samples at its lip and its foot
 
     @property
     def length_m(self) -> float:
@@ -164,11 +194,43 @@ def parse_river(raw: Any, where: str = "river") -> River:
     if passable not in water_mod.PASSABLE:
         raise RiverError(f"{where}.passable must be one of {', '.join(water_mod.PASSABLE)} (got {passable!r})")
     wade = _num(raw.get("wade_depth", water_mod.WADE_DEPTH_DEFAULT), f"{where}.wade_depth", *water_mod.WADE_DEPTH_M)
+    falls = _parse_falls(raw.get("falls", []), f"{where}.falls", len(out))
     return River(rid, tuple(out), _num(look["flow"], f"{where}.flow", 0.0, FLOW_MAX),
                  _colour(look["colour"], f"{where}.colour"), _colour(look["deep_colour"], f"{where}.deep_colour"),
                  _num(look["opacity"], f"{where}.opacity", 0.05, 1.0), _num(look["depth"], f"{where}.depth", 0.0, 1.0),
                  _num(look["waves"], f"{where}.waves", 0.0, 1.0), _num(look["reflection"], f"{where}.reflection", 0.0, 1.0),
-                 rain, mouth, ends, passable, wade)
+                 rain, mouth, ends, passable, wade, falls)
+
+
+def _parse_falls(raw: Any, where: str, points: int) -> tuple[Fall, ...]:
+    """A river's ``falls``: each ``{"from": i, "foam", "spray"}``, i a control point (0-based) with a stretch of
+    ordinary water before it and after the next (so not the first or the last stretch), in order, no two next to
+    each other (the water lands in a pool before it falls again)."""
+    if not isinstance(raw, list):
+        raise RiverError(f"{where} must be a list of waterfalls ({{\"from\": point}})")
+    if len(raw) > MAX_FALLS:
+        raise RiverError(f"{where}: a river may have at most {MAX_FALLS} waterfalls (got {len(raw)})")
+    out: list[Fall] = []
+    for i, item in enumerate(raw):
+        w = f"{where}[{i}]"
+        if not isinstance(item, dict):
+            raise RiverError(f"{w} must be an object {{\"from\": point, \"foam\": 0..1, \"spray\": 0..1}}")
+        extra = set(item) - FALL_KEYS
+        if extra:
+            raise RiverError(f"{w} has unknown keys: {', '.join(sorted(extra))}")
+        start = item.get("from")
+        if not isinstance(start, int) or isinstance(start, bool):
+            raise RiverError(f"{w}.from must be a control point's number, counted from 0 (got {start!r})")
+        if not 1 <= start <= points - 3:
+            raise RiverError(f"{w}: a waterfall needs water above and below it: it may run from point {start + 1} to "
+                             f"{start + 2} only if there is a point before it and one after (points 2 to "
+                             f"{max(2, points - 2)} of this river's {points} may start one)")
+        if out and start <= out[-1].start + 1:
+            raise RiverError(f"{w}: waterfalls are listed downstream, with ordinary water between them (from point "
+                             f"{out[-1].start + 1} and from point {start + 1})")
+        out.append(Fall(start, _num(item.get("foam", FALL_DEFAULTS["foam"]), f"{w}.foam", 0.0, 1.0),
+                        _num(item.get("spray", FALL_DEFAULTS["spray"]), f"{w}.spray", 0.0, 1.0)))
+    return tuple(out)
 
 
 def parse_rivers(raw: Any, bounds: tuple[float, float, float, float] | None = None) -> tuple[River, ...]:
@@ -195,6 +257,8 @@ def parse_rivers(raw: Any, bounds: tuple[float, float, float, float] | None = No
         raise RiverError(f"This room's rivers are {total:.0f} m long together: at most {MAX_TOTAL_M:.0f} m")
     if sum(r.mouth == "auto" for r in rivers) > MAX_MOUTHS:
         raise RiverError(f"A room may have at most {MAX_MOUTHS} rivers flowing into ponds (mouth \"auto\")")
+    if sum(len(r.falls) for r in rivers) > MAX_FALLS:
+        raise RiverError(f"A room may have at most {MAX_FALLS} waterfalls, all its rivers together")
     for river in rivers:
         rib = ribbon(river)
         if bounds is not None:
@@ -236,6 +300,9 @@ def to_json(river: River) -> dict[str, Any]:
         out["passable"] = river.passable
     if river.wade_depth != water_mod.WADE_DEPTH_DEFAULT:
         out["wade_depth"] = round(river.wade_depth, 3)
+    if river.falls:
+        out["falls"] = [{"from": f.start, **{k: round(getattr(f, k), 3) for k in FALL_DEFAULTS
+                                             if getattr(f, k) != FALL_DEFAULTS[k]}} for f in river.falls]
     return out
 
 
@@ -302,10 +369,16 @@ def ribbon(river: River) -> Ribbon:
     if total > MAX_LENGTH_M:  # (before it is sampled)
         raise RiverError(f"{name} is {total:.0f} m long: a river may be at most {MAX_LENGTH_M:.0f} m")
     count = max(2, round(total / STEP_M) + 1)
+    targets = [total * k / (count - 1) for k in range(count)]
+    falling = {f.start for f in river.falls}
+    if falling:  # M17-W1: a sample exactly at each fall's lip and foot (the nearest regular one moved there)
+        step = total / (count - 1)
+        marks_u = [at_point[i] for f in river.falls for i in (f.start, f.start + 1)]
+        targets = sorted([t for t in targets if all(abs(t - m) > 0.4 * step for m in marks_u)] + marks_u)
+        count = len(targets)
     centre, u = [], []
     j = 0
-    for k in range(count):
-        target = total * k / (count - 1)
+    for target in targets:
         while j < len(walk) - 2 and along[j + 1] < target:
             j += 1
         seg = along[j + 1] - along[j]
@@ -320,7 +393,10 @@ def ribbon(river: River) -> Ribbon:
         lo, hi = at_point[span], at_point[span + 1]
         f = min(1.0, max(0.0, (s - lo) / (hi - lo))) if hi - lo > 1e-12 else 0.0
         half.append((pts[span][2] + (pts[span + 1][2] - pts[span][2]) * f) / PX / 2)
-        level.append((pts[span][3] + (pts[span + 1][3] - pts[span][3]) * f) / PX)
+        if span in falling:  # a fall: a jet's curve, level at its lip, steepest at its foot
+            level.append((pts[span][3] - (pts[span][3] - pts[span + 1][3]) * f * f) / PX)
+        else:
+            level.append((pts[span][3] + (pts[span + 1][3] - pts[span][3]) * f) / PX)
     for k in range(1, count):
         if level[k] > level[k - 1] + LEVEL_TOLERANCE_PX / PX / 100:
             raise RiverError(f"{name} would run uphill near ({centre[k][0] * PX:.0f}, {centre[k][1] * PX:.0f}) px")
@@ -333,13 +409,40 @@ def ribbon(river: River) -> Ribbon:
         tangent.append((tx, ty))
         left.append((centre[k][0] - ty * half[k], centre[k][1] + tx * half[k]))
         right.append((centre[k][0] + ty * half[k], centre[k][1] - tx * half[k]))
+    samples = tuple((u.index(at_point[f.start]), u.index(at_point[f.start + 1])) for f in river.falls)
+    for fall, (lip, foot) in zip(river.falls, samples):
+        _check_fall(name, fall, pts, at_point, tangent, centre, lip, foot)
     rib = Ribbon(tuple(centre), tuple(level), tuple(u), tuple(half), tuple(tangent), tuple(left), tuple(right),
-                 tuple(at_point))
+                 tuple(at_point), samples)
     problem = _check(rib)
     if problem is not None:
         what, at = problem
         raise RiverError(f"{name}: {what} near ({at[0] * PX:.0f}, {at[1] * PX:.0f}) px")
     return rib
+
+
+def _check_fall(name: str, fall: Fall, pts: tuple[tuple[float, float, float, float], ...], at_point: list[float],
+                tangent: list[tuple[float, float]], centre: list[tuple[float, float]], lip: int, foot: int) -> None:
+    """A fall's own rules (M17-W1): how far it drops, how steep, how straight. Raises RiverError naming it."""
+    i = fall.start
+    drop, run = pts[i][3] - pts[i + 1][3], at_point[i + 1] - at_point[i]
+    where = (f"{name}'s waterfall from point {i + 1} to {i + 2} (near ({centre[lip][0] * PX:.0f}, "
+             f"{centre[lip][1] * PX:.0f}) px)")
+    if drop < FALL_DROP_PX[0]:
+        raise RiverError(f"{where} drops {max(0.0, drop) / PX:.2f} m: a waterfall drops at least "
+                         f"{FALL_DROP_PX[0] / PX:g} m (set point {i + 2}'s water level lower, or make it an ordinary "
+                         "stretch)")
+    if drop > FALL_DROP_PX[1]:
+        raise RiverError(f"{where} drops {drop / PX:.1f} m: a waterfall drops at most {FALL_DROP_PX[1] / PX:g} m")
+    if drop / PX < FALL_STEEP * run:
+        raise RiverError(f"{where} drops {drop / PX:.2f} m over {run:.2f} m: too gentle for a waterfall (it must drop "
+                         f"at least {FALL_STEEP:g} m a metre it runs): bring its points closer, or make it an "
+                         "ordinary sloping stretch")
+    (ax, ay), (bx, by) = tangent[lip], tangent[foot]
+    turn = math.degrees(abs(math.atan2(ax * by - ay * bx, ax * bx + ay * by)))
+    if turn > FALL_TURN_DEG:
+        raise RiverError(f"{where} turns {turn:.0f} degrees as it falls: a waterfall's course may turn at most "
+                         f"{FALL_TURN_DEG:g} (straighten the river there)")
 
 
 def _check(r: Ribbon) -> tuple[str, tuple[float, float]] | None:
@@ -500,6 +603,7 @@ class Mouth:
     tangent: tuple[float, float]
     half: float
     u: float
+    fall_u: float | None = None  # M17-W1: where the last fall before its mouth lands (m along): eased from there on
 
 
 def _in_pond(pond: Pond, p: tuple[float, float]) -> bool:
@@ -570,7 +674,15 @@ def join(river: River, ponds: tuple[Pond, ...]) -> Mouth:
         x, y = rib.centre[banked]
         raise RiverError(f"{name} runs with a bank in the pond '{pond.id}''s water near ({x * PX:.0f}, {y * PX:.0f}) "
                          "px, before its mouth: keep its course a little further from the shore until it turns in")
-    window = [k for k in range(len(rib.level)) if rib.u[k] >= u - BLEND_M - STEP_M]
+    for (lip, _foot), fall in zip(rib.falls, river.falls):
+        if inside[lip] or any(_in_pond(pond, c) for c in (rib.left[lip], rib.right[lip])):
+            x, y = rib.centre[lip]
+            raise RiverError(f"{name}'s waterfall from point {fall.start + 1} has its top over the pond "
+                             f"'{pond.id}''s water near ({x * PX:.0f}, {y * PX:.0f}) px: a waterfall may fall into "
+                             "the pond, but its top must be on the land")
+    # (M17-W1: water above a fall before the mouth isn't the pond's: the level is checked from the last foot on)
+    start = max([u - BLEND_M - STEP_M] + [rib.u[foot] for _lip, foot in rib.falls if rib.u[foot] <= u + BLEND_M])
+    window = [k for k in range(len(rib.level)) if rib.u[k] >= start]
     worst = max(window, key=lambda k: abs(rib.level[k] * PX - pond.level))
     gap = rib.level[worst] * PX - pond.level
     if abs(gap) > MOUTH_LEVEL_PX:
@@ -581,7 +693,9 @@ def join(river: River, ponds: tuple[Pond, ...]) -> Mouth:
                          f"its water near ({x * PX:.0f}, {y * PX:.0f}) px: over its last {BLEND_M:g} m before the "
                          f"shore and in the pond, its level must be within 5 cm of the pond's, {pond.level:g} px "
                          f"(points {first + 1} to {len(river.points)}{hint})")
-    return Mouth(river.id, pond, entry, (ax + tx * f, ay + ty * f), (tx / n, ty / n), half, u)
+    landed = [rib.u[foot] for _lip, foot in rib.falls if rib.u[foot] <= u + BLEND_M]
+    return Mouth(river.id, pond, entry, (ax + tx * f, ay + ty * f), (tx / n, ty / n), half, u,
+                 max(landed) if landed else None)
 
 
 def mouths(rivers: tuple[River, ...], ponds: tuple[Pond, ...]) -> tuple[dict[str, Mouth], dict[str, str]]:
@@ -668,9 +782,69 @@ def vertices(rivers: tuple[River, ...], lift: float,
             for (x, y), v in ((r.left[k], -1.0), (r.right[k], 1.0)):
                 data.extend((x, y, r.level[k] + lift, *r.tangent[k], r.u[k], v, r.half[k], river.flow, *look))
         for k in range(len(r.centre) - 1):
+            if any(lip <= k < foot for lip, foot in r.falls):
+                continue  # (M17-W1: a fall is drawn as its curtain, fall_vertices)
             a, b, c, d = base + 2 * k, base + 2 * k + 1, base + 2 * k + 2, base + 2 * k + 3
             idx.extend((a, c, b, b, c, d))
     return data, idx
+
+
+FALL_FLOATS = 23  # a fall's curtain vertex (fall_vertices)
+FALL_ROW_M = 0.125  # the curtain's rows: at most this far apart along it (m)
+
+
+def fall_vertices(rivers: tuple[River, ...], lift: float) -> tuple[array, array, list[tuple[float, ...]]]:
+    """Every fall's curtain (M17-W1): rows across the river from its lip to its foot along the jet's curve (the
+    ribbon's own course, banks and level there, rows at most FALL_ROW_M apart along the curve), FALL_FLOATS a vertex:
+    position x, y, z (m, the level plus ``lift``), the tangent downstream (2), how far down the curtain (m along the
+    curve), across (m right of the middle), the time the water has been falling there (s), its half width (m), the
+    curve's slope there (dz/dm in plan, positive down), its flow (m/s), its colour and opacity (4), deep colour and its
+    drop (m) (4), foam, spray, seed, the curtain's whole length (m); its triangles' indices; and each fall's foot for
+    the foam it raises and its spray: (x, y, level m, half width, tangent x, y, foam, spray, drop m, seed)."""
+    data, idx = array("f"), array("I")
+    feet: list[tuple[float, ...]] = []
+    count = 0
+    for i, river in enumerate(rivers):
+        if not river.falls:
+            continue
+        r = ribbon(river)
+        for n, (fall, (lip, foot)) in enumerate(zip(river.falls, r.falls)):
+            top, low = r.level[lip], r.level[foot]
+            drop, run = top - low, r.u[foot] - r.u[lip]
+            flight = math.sqrt(2.0 * drop / GRAVITY)  # (s: the jet's time from lip to foot)
+            arc = sum(math.dist((r.u[k], r.level[k]), (r.u[k + 1], r.level[k + 1])) for k in range(lip, foot))
+            rows = max(8, min(96, math.ceil(arc * 1.0 / FALL_ROW_M)))
+            seed = 1.7 * (i + 1) + 0.37 * n
+            look = (*river.colour, river.opacity, *river.deep_colour, drop, fall.foam, fall.spray, seed, arc)
+            base, along = count, 0.0
+            prev: tuple[float, float] | None = None
+            for row in range(rows + 1):
+                f = row / rows  # (share of the stretch run: the curve's rows densest at its lip, where it bends)
+                s = r.u[lip] + run * f
+                k = min(foot - 1, max(lip, next((j for j in range(lip, foot) if r.u[j + 1] >= s), foot - 1)))
+                t = (s - r.u[k]) / max(1e-9, r.u[k + 1] - r.u[k])
+                cx = r.centre[k][0] + (r.centre[k + 1][0] - r.centre[k][0]) * t
+                cy = r.centre[k][1] + (r.centre[k + 1][1] - r.centre[k][1]) * t
+                tx = r.tangent[k][0] + (r.tangent[k + 1][0] - r.tangent[k][0]) * t
+                ty = r.tangent[k][1] + (r.tangent[k + 1][1] - r.tangent[k][1]) * t
+                m = math.hypot(tx, ty) or 1.0
+                tx, ty = tx / m, ty / m
+                half = r.half[k] + (r.half[k + 1] - r.half[k]) * t
+                z = top - drop * f * f
+                if prev is not None:
+                    along += math.dist(prev, (s, z))
+                prev = (s, z)
+                slope = 2.0 * drop * f / max(1e-9, run)
+                for side in (-1.0, 1.0):
+                    data.extend((cx + ty * half * side, cy - tx * half * side, z + lift, tx, ty, along, half * side,
+                                 flight * f, half, slope, river.flow, *look))
+                count += 2
+            for row in range(rows):
+                a, b, c, d = base + 2 * row, base + 2 * row + 1, base + 2 * row + 2, base + 2 * row + 3
+                idx.extend((a, c, b, b, c, d))
+            (fx, fy), (tx, ty) = r.centre[foot], r.tangent[foot]
+            feet.append((fx, fy, low, r.half[foot], tx, ty, fall.foam, fall.spray, drop, seed))
+    return data, idx, feet
 
 
 # ---------------------------------------------------------------------- the water where it stands (R3)
@@ -686,6 +860,7 @@ class RiverIndex:
         # R4: what is drawn: a river flowing into a pond has none of its water in the pond (the pond's is there), and
         # its round ends have none past their caps. Per quad, if either applies: (ribbon, sample, caps, pond or None)
         self._ends: dict[int, tuple[Ribbon, int, tuple[float, float], Pond | None]] = {}
+        self._falling: set[int] = set()  # M17-W1: quads under a fall's curtain (blocking water, whatever passable says)
         joined, _problems = mouths(rivers, ponds)
         for river in rivers:
             r = ribbon(river)
@@ -694,7 +869,11 @@ class RiverIndex:
             for k in range(len(r.centre) - 1):
                 quad = (r.left[k], r.left[k + 1], r.right[k + 1], r.right[k])
                 index = len(self._quads)
-                self._quads.append((quad, (r.level[k] + r.level[k + 1]) / 2, river.id))
+                fall = any(lip <= k < foot for lip, foot in r.falls)
+                if fall:  # (its water as high as the curtain is over it: the higher sample)
+                    self._falling.add(index)
+                level = max(r.level[k], r.level[k + 1]) if fall else (r.level[k] + r.level[k + 1]) / 2
+                self._quads.append((quad, level, river.id))
                 self._samples.append(k)
                 in_pond = mouth is not None and (k >= mouth.entry - 1 or any(_in_pond(mouth.pond, c) for c in quad))
                 if in_pond or (caps[0] and r.u[k] < caps[0] + STEP_M) \
@@ -717,6 +896,12 @@ class RiverIndex:
             if _in_quad(quad, (x, y)) and (best is None or level > best[0]) and not self._past_end(index, (x, y)):
                 best = (level, rid)
         return best
+
+    def falling_at(self, x: float, y: float) -> bool:
+        """Whether (x, y) m is under a waterfall's curtain (M17-W1): there the water blocks, as passable "block"."""
+        return bool(self._falling) and any(
+            index in self._falling and _in_quad(self._quads[index][0], (x, y)) and not self._past_end(index, (x, y))
+            for index in self._buckets.get((math.floor(x), math.floor(y)), ()))
 
     def inset_at(self, x: float, y: float) -> float:
         """How far (m) in from its nearer bank a point on a river's water is (0 where none is): the distance to the
@@ -808,6 +993,8 @@ def sunk(terrain: Any, river: River, ponds: tuple["Pond", ...] = (), others: tup
     for k in range(len(rib.u)):
         while span < len(pts) - 2 and rib.marks[span + 1] < rib.u[k]:
             span += 1
+        if any(lip < k < foot for lip, foot in rib.falls):
+            continue  # (M17-W1: falling water doesn't stand over the ground: its lip and foot are measured)
         (cx, cy), (tx, ty), out = rib.centre[k], rib.tangent[k], rib.half[k] + 0.5
         known = []
         for side in (1, -1):
@@ -861,7 +1048,8 @@ def carve(terrain: Any, river: River, depths: list[float], mouth: Mouth | None =
     a half circle and no bed lies past it. Flowing into a pond (``mouth``), over its last BLEND_M before the shore its
     bed eases to the pond's own depth just inside it (at least SHORE_DEPTH_M, so its water still shows), and nothing
     is dug in the pond past the terrain cell along its shore: the pond's water and its own ground are the pond's
-    (walked by its rule). Ground only ever goes
+    (walked by its rule). Under a waterfall (M17-W1) the bed is the pool it falls into, dug from the level it lands
+    at, and the ground beside it (its cliff) is kept, no bank cut into it. Ground only ever goes
     down, so
     carving twice is carving once, and ground already lower is kept. Returns the corner chunks changed (as
     ``Terrain.sculpt`` does); ``terrain.changed`` notes the stored chunks."""
@@ -936,6 +1124,8 @@ def carve(terrain: Any, river: River, depths: list[float], mouth: Mouth | None =
                 r.centre[k][1] + (r.centre[k + 1][1] - r.centre[k][1]) * f,
                 r.level[k] + (r.level[k + 1] - r.level[k]) * f, depth[k] + (depth[k + 1] - depth[k]) * f)
 
+    falls_at: list[tuple[int, int] | None] = [next(((lip, foot) for lip, foot in r.falls if lip <= k < foot), None)
+                                               for k in range(n)]
     bowls = [(caps[0], middle(caps[0])) if caps[0] else None,
              (caps[1], middle(r.u[-1] - caps[1])) if caps[1] else None]
     for key, (dist, k, tc, t_raw) in nearest.items():
@@ -957,6 +1147,11 @@ def carve(terrain: Any, river: River, depths: list[float], mouth: Mouth | None =
             beyond = (-t_raw if start_end else t_raw - 1.0) * length
             across = math.sqrt(max(0.0, dist * dist - beyond * beyond))
             target = level + BANK_SLOPE * math.hypot(beyond, max(0.0, across - half))
+        elif (fall_here := falls_at[k]) is not None:  # M17-W1: under a fall its pool, dug from the water it lands
+            if dist > half:  # beside it is kept as it is (no bank cut into it)  # in; the cliff beside it kept
+                continue
+            d = depth[fall_here[1]]
+            target = r.level[fall_here[1]] - d * (1.0 - (dist / half) ** 2)
         elif dist <= half:
             d = depth[k] + (depth[k + 1] - depth[k]) * tc
             target = level - d * (1.0 - (dist / half) ** 2)

@@ -21,7 +21,8 @@ Rivers (#461 R3, ``settings.hd2d.rivers``): where a river's water stands more th
 feet, it can't stand there (deep water, like a ledge: walked up to, not into); shallower water is waded through,
 its steps rippling the surface (``on_wade``). The water's surface is the river's own level where its ribbon lies
 (``engine.hd2d.river.RiverIndex``: what is drawn), the feet the ground or floor under them: a bridge's deck above the
-water is dry, the river's carved bed under it is as deep as the water over it.
+water is dry, the river's carved bed under it is as deep as the water over it. A waterfall's stretch (M17-W1,
+``RiverIndex.falling_at``) is blocking water whatever its river's ``passable``: nobody wades into a fall.
 
 Sculpted ground (Milestone 20A, ``engine.hd2d.terrain``) is the ground (solid, floor "ground"), read straight from
 its heights where asked (``Terrain.surface_at``: the drawn triangle under the point), not stored as triangles; faces
@@ -340,6 +341,8 @@ class World:
             depth = water[0] - floor
             if depth > 0.0:
                 kind, wade = self._river_rules.get(water[1], ("auto", DEEP))
+                if self.rivers.falling_at(px, py):
+                    kind = "block"  # (M17-W1: a waterfall: nobody wades into it, whatever its river's passable says)
                 if kind == "block":
                     if part != "wading":
                         most = max(most, depth + BLOCK_EXCESS + self.rivers.inset_at(px, py))

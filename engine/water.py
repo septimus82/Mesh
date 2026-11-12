@@ -62,6 +62,7 @@ LIFT_M = 0.035  # the surface stands this far above its level: over the ground a
 MAX_STEPS = 8  # footstep ripples alive at once (the oldest gives way)
 MOUTH_BLEND_M = 1.5  # a river takes on the look of the pond it flows into over this (engine.hd2d.river.BLEND_M)
 MAX_MOUTHS = 8  # rivers flowing into ponds a room's shaders hold (engine.hd2d.river.MAX_MOUTHS)
+MAX_FALLS = 8  # M17-W1: waterfalls a room's shaders hold (engine.hd2d.river.MAX_FALLS)
 STEP_RIPPLE_S = 1.0  # how long a footstep's ring lasts
 _KEYS = {"preset", "width", "height", "colour", "opacity", "shape", "waves", "rain_ripples", "walkable", "step_sound",
          "reflection", "rotation", "seed", "shore", "shore_width", "deep_colour", "depth", "ripples", "passable",
@@ -388,12 +389,42 @@ uniform vec4 u_mouth_colour[MAX_MOUTHS]; uniform vec4 u_mouth_deep[MAX_MOUTHS]; 
 // 1 if its shore is the sculpted ground (how deep it looks: its real depth), else 0; 1 if the room's rain rings it
 uniform vec4 u_mouth_kind[MAX_MOUTHS];
 const float MOUTH_BLEND = """ + repr(MOUTH_BLEND_M) + """;  // the river takes on the pond's look over this (m)
+// M17-W1: waterfalls' feet (engine.hd2d.river.fall_vertices), for the whitewater and ripples they raise in the water
+// they land in: x, y, level (m, as drawn), half width; the tangent downstream, foam (0..1), drop (m); seed
+const int MAX_FALLS = """ + str(MAX_FALLS) + """;
+uniform int u_falls_n; uniform vec4 u_fall_foot[MAX_FALLS]; uniform vec4 u_fall_dir[MAX_FALLS];
+uniform float u_fall_seed[MAX_FALLS];
 """ + OUTPUTS + LIGHTING_GLSL + """
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 // rings on the surface: a ring of radius r (m) about c, as a narrow band, fading with age 0..1
 float ring(vec2 q, vec2 c, float r, float age) {
     float d = abs(length(q - c) - r);
     return (1.0 - smoothstep(0.0, 0.045, d)) * (1.0 - age);
+}
+// M17-W1: the whitewater (x, 0..1) and ripples (y) where waterfalls land in this water, at q (m, a texel's centre)
+// and its surface z (m, as drawn): a boil under and just past each curtain, churning, its froth thinning and coarsening
+// as the water settles downstream; rings spreading from it. Only the water it lands in (its level, within 0.3 m).
+vec2 plunge(vec2 q, float z, float t) {
+    vec2 out_w = vec2(0.0);
+    for (int i = 0; i < u_falls_n; i++) {
+        vec4 foot = u_fall_foot[i], dir = u_fall_dir[i];
+        if (abs(z - foot.z) > 0.3) continue;
+        vec2 d = q - foot.xy, down = dir.xy, side = vec2(-down.y, down.x);
+        float a = dot(d, down), c = dot(d, side);  // m downstream of the foot, m across
+        float reach = 0.7 + 0.3 * dir.w;  // how far its whitewater carries (a taller fall: further)
+        float spread = foot.w + 0.2 + 0.35 * max(a, 0.0);
+        float boil = (1.0 - smoothstep(spread - 0.3, spread, abs(c))) * smoothstep(-0.5, -0.25, a)
+                     * exp(-max(a, 0.0) / reach) * (1.0 - smoothstep(2.0 * reach, 3.0 * reach, a)) * dir.z;
+        float cell = 0.0625 + 0.0625 * clamp(a / (2.0 * reach), 0.0, 1.0);  // froth 2 texels, 4 as it settles
+        vec2 g = floor(vec2(a, c) / cell);
+        float n = hash(g + floor(t * 7.0 + hash(g + u_fall_seed[i]) * 7.0) * 0.37 + u_fall_seed[i]);
+        out_w.x = max(out_w.x, step(n, boil * 1.6) * mix(0.75, 1.0, boil));
+        float dl = length(vec2(max(a, 0.0) * 0.8, max(abs(c) - foot.w, 0.0)));
+        float band = fract(dl * 1.8 - t * 0.9 + u_fall_seed[i]);
+        out_w.y = max(out_w.y, (1.0 - step(0.06, band)) * (1.0 - smoothstep(0.0, 2.5 * reach, dl)) * step(-0.2, a)
+                               * dir.z * (1.0 - out_w.x));
+    }
+    return out_w;
 }
 // the sculpted ground's height (m) at p: its corners' heights, read between them
 float ground_at(vec2 p) {
@@ -704,6 +735,11 @@ void main() {
         lit = mix(lit, vec3(0.88, 0.94, 1.0) * light, rim * 0.35 + clamp(splash, 0.0, 1.0) * 0.8);
         alpha = clamp(v_colour.a * smoothstep(0.0, 0.04, inside * 2.0) + clamp(rings, 0.0, 1.0) * 0.2 + splash * 0.6, 0.0, 1.0);
     }
+    if (u_falls_n > 0 && material && sd_at(m) <= 0.0) {  // M17-W1: a waterfall landing in it
+        vec2 ww = plunge(q, v_world.z, t);
+        lit = mix(lit, vec3(0.86, 0.92, 0.95) * light, ww.x * 0.85 + ww.y * 0.22);
+        alpha = max(alpha, ww.x * 0.95);
+    }
     f_color = vec4(shade(lit), alpha);
     f_emit = vec4(0.0, 0.0, 0.0, alpha);  // (water dims what glows beneath it as it dims its colour)
 }
@@ -717,7 +753,7 @@ void main() {
 RIVER_VS = """
 #version 330
 uniform mat4 u_vp;
-uniform vec4 u_mouth_info[""" + str(MAX_MOUTHS) + """];
+uniform vec4 u_mouth_info[""" + str(MAX_MOUTHS) + """]; uniform vec4 u_mouth_kind[""" + str(MAX_MOUTHS) + """];
 const float MOUTH_BLEND = """ + repr(MOUTH_BLEND_M) + """;
 in vec3 in_pos; in vec2 in_tangent; in vec4 in_flow; in vec4 in_colour; in vec4 in_deep; in vec4 in_look;
 in vec4 in_ends;
@@ -730,8 +766,9 @@ void main() {
     vec3 pos = in_pos;
     int slot = int(floor(in_ends.w + 0.5));
     if (slot >= 0) {  // over its last stretch before the pond's shore, its surface eases to the pond's level
-        vec4 info = u_mouth_info[slot];
-        pos.z = mix(pos.z, info.w, smoothstep(info.y - MOUTH_BLEND, info.y, in_flow.x));
+        vec4 info = u_mouth_info[slot], kind = u_mouth_kind[slot];
+        float from_u = kind.w > 0.5 ? max(info.y - MOUTH_BLEND, kind.z) : info.y - MOUTH_BLEND;  // (M17-W1)
+        pos.z = mix(pos.z, info.w, smoothstep(from_u, info.y, in_flow.x));
     }
     v_world = pos; v_tangent = in_tangent; v_flow = in_flow.xyz; v_speed = in_flow.w;
     v_colour = in_colour; v_deep = in_deep; v_look = in_look; v_ends = in_ends;
@@ -771,6 +808,7 @@ void main() {
         // by how near the shore it is (its whole width at the shore, which may cross it at a slant), over its last
         // stretch only (not where it passed the pond upstream)
         near_mouth = u_mouth_info[slot].y - MOUTH_BLEND - 2.0 * u_mouth_info[slot].x;
+        if (u_mouth_kind[slot].w > 0.5) near_mouth = max(near_mouth, u_mouth_kind[slot].z + 1.0);  // (M17-W1: below a fall)
         blend = (1.0 - smoothstep(0.0, MOUTH_BLEND, sd)) * smoothstep(near_mouth - 1.0, near_mouth, u);
         colour = mix(v_colour, u_mouth_colour[slot], blend);
         deep_look = mix(v_deep, u_mouth_deep[slot], blend);
@@ -835,8 +873,68 @@ void main() {
     bool waterline = (water_depth >= 0.0 ? water_depth < 0.025 : edge_m < 0.045) && u < near_mouth;
     lit = mix(lit, vec3(0.80, 0.86, 0.86) * light, (waterline ? 0.45 : 0.0) + clamp(splash, 0.0, 1.0) * 0.8);
     float alpha = clamp((waterline ? max(alpha_water, 0.85) : alpha_water) + clamp(rings, 0.0, 1.0) * 0.2 + splash * 0.6, 0.0, 1.0);
+    if (u_falls_n > 0) {  // M17-W1: where a waterfall lands in it
+        vec2 ww = plunge(q, v_world.z, t);
+        lit = mix(lit, vec3(0.86, 0.92, 0.95) * light, ww.x * 0.85 + ww.y * 0.22);
+        alpha = max(alpha, ww.x * 0.95);
+    }
     f_color = vec4(shade(lit), alpha);
     f_emit = vec4(0.0, 0.0, 0.0, alpha);  // (water dims what glows beneath it as it dims its colour)
+}
+"""
+
+# M17-W1: waterfalls (engine.hd2d.river.fall_vertices): each a curtain of rows across the river from its lip to its
+# foot along the falling jet's curve, carrying how far down it (m), across it (m), how long the water has fallen (s)
+# and the curve's slope. Its own texel grid (32 a metre down and across it), streaks that pulse down each lane at the
+# speed the water falls, whitening as it drops, a crest at the lip, frayed edges; lit as it faces (both sides).
+FALL_VS = """
+#version 330
+uniform mat4 u_vp;
+in vec3 in_pos; in vec2 in_tangent; in vec4 in_fall; in vec2 in_slope; in vec4 in_colour; in vec4 in_deep; in vec4 in_look;
+out vec3 v_world; out vec2 v_tangent; out vec4 v_fall; out float v_slope;
+flat out vec4 v_colour; flat out vec4 v_deep; flat out vec4 v_look;
+void main() {
+    // in_fall: m down the curtain, m right of the middle, s fallen, half width (m); in_slope: dz/dm in plan (down),
+    // flow (m/s); in_deep: deep colour, its drop (m); in_look: foam, spray, seed, the curtain's length (m)
+    v_world = in_pos; v_tangent = in_tangent; v_fall = in_fall; v_slope = in_slope.x;
+    v_colour = in_colour; v_deep = in_deep; v_look = in_look;
+    gl_Position = u_vp * vec4(in_pos, 1.0);
+}
+"""
+FALL_FS = """
+#version 330
+in vec3 v_world; in vec2 v_tangent; in vec4 v_fall; in float v_slope;
+flat in vec4 v_colour; flat in vec4 v_deep; flat in vec4 v_look;
+""" + SHARED_GLSL + """
+void main() {
+    // the curtain's own pixel grid: everything at the centre of this fragment's texel, 32 a metre down and across it
+    float along = (floor(v_fall.x * 32.0) + 0.5) / 32.0, across = (floor(v_fall.y * 32.0) + 0.5) / 32.0;
+    float half_w = v_fall.w, length_m = v_look.w, seed = v_look.z, foam = v_look.x, t = u_time;
+    float down = clamp(along / max(length_m, 1e-3), 0.0, 1.0);  // 0 at its lip .. 1 at its foot
+    float lane = floor(across / 0.0625);  // lanes two texels wide
+    float h = hash(vec2(lane, seed)), h2 = hash(vec2(lane + 17.0, seed));
+    float tick = floor(t * 10.0);
+    // its edges fray: the outer texels come and go as the water breaks up, more so lower down
+    if (half_w - abs(across) < 0.03 + 0.07 * down * hash(vec2(lane, floor(along * 16.0) + tick))) discard;
+    // streaks: each lane's water comes in pulses (its own period), carried down as fast as the water falls (the time
+    // it has fallen, v_fall.z), so they stretch as it speeds up; nothing depends on the camera
+    float pulse = fract((v_fall.z - t) / (0.16 + 0.22 * h) + h2);
+    bool streak = pulse < 0.3 + 0.3 * down;
+    // white streaks (some lanes brighter than others) over darker, clearer water between them, whitening as it drops
+    float white = streak ? mix(0.7, 1.0, max(down, h)) : 0.06 + 0.32 * down;
+    vec3 n = normalize(vec3(normalize(v_tangent) * v_slope, 1.0));  // (up at its lip, facing downstream lower down)
+    if (dot(n, u_eye - v_world) < 0.0) n = -n;  // (lit as it faces: seen from behind, its other side)
+    vec3 light = u_lit == 1 ? light_at(v_world, n, false) : u_light;
+    vec3 col = streak ? v_colour.rgb : mix(v_colour.rgb, v_deep.rgb, 0.6);
+    vec3 froth = vec3(0.88, 0.94, 0.97) * light;
+    vec3 lit = mix(col * light, froth, white * mix(0.6, 1.0, foam));
+    // the crest where it tips over the lip: a thin bright line, its texels flickering
+    float crest = 1.0 - smoothstep(0.02, 0.08, along);
+    lit = mix(lit, froth * 1.08, crest * mix(0.45, 0.95, foam) * (0.6 + 0.4 * hash(vec2(lane, tick + seed))));
+    lit = mix(lit, froth, smoothstep(length_m - 0.35, length_m, along) * 0.8 * foam);  // whiter where it lands
+    float alpha = clamp(v_colour.a * (streak ? 1.0 : mix(0.62, 0.82, down)) + crest * 0.2, 0.0, 1.0);
+    f_color = vec4(shade(lit), alpha);
+    f_emit = vec4(0.0, 0.0, 0.0, alpha);  // (water dims what glows behind it as it dims its colour)
 }
 """
 
@@ -872,6 +970,14 @@ class WaterLayer:
         self.mouths: list[Any] = []  # R4: the rivers flowing into ponds, by slot (engine.hd2d.river.Mouth)
         self.mouth_problems: dict[str, str] = {}  # rivers with mouth "auto" that can't join a pond now, and why
         self._mouth_columns: dict[str, list[float]] = {}  # their uniforms (_columns), set on both programs each draw
+        # M17-W1: the rivers' waterfalls (set_rivers; made only when a river has one)
+        self.fall_program: Any = None
+        self.fall_buffers: tuple[Any, Any] | None = None  # (vertices, indices)
+        self.fall_geometry: Any = None
+        self.fall_count = 0  # indices drawn
+        self.fall_allocations = 0  # fall buffers made (diagnostics)
+        self.feet: list[tuple[float, ...]] = []  # each fall's foot (engine.hd2d.river.fall_vertices): foam, spray
+        self._fall_columns: dict[str, Any] = {}
         try:
             self.program = ctx.program(vertex_shader=VS, fragment_shader=FS)
             self.quad = ctx.buffer(data=array("f", [-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0]).tobytes())
@@ -963,7 +1069,61 @@ class WaterLayer:
         self.river_box = (min(xs) - half, min(ys) - half, min(zs), max(xs) + half, max(ys) + half, max(zs))
         self.mouths, self.mouth_problems = list(joined.values()), problems
         self._mouth_columns = self._columns()
+        self._set_falls(rivers)
         self.rivers, self._river_key = rivers, (rivers, self.ponds)  # recorded only once made (a failure tries again)
+
+    def _set_falls(self, rivers: tuple[Any, ...]) -> None:
+        """M17-W1: the rivers' waterfalls' curtains (their buffers made, or written into while they fit, as rivers'
+        are) and their feet's uniforms; none: their buffers and program freed."""
+        from engine.hd2d import river as river_mod  # noqa: PLC0415
+
+        data, idx, feet = river_mod.fall_vertices(rivers, LIFT_M)
+        if not feet:
+            self._free_falls()
+            return
+        if self.fall_program is None:
+            self.fall_program = self.ctx.program(vertex_shader=FALL_VS, fragment_shader=FALL_FS)
+        vertices, indices = data.tobytes(), idx.tobytes()
+        buffers = self.fall_buffers
+        if buffers is None or buffers[0].size < len(vertices) or buffers[1].size < len(indices):
+            self._free_fall_buffers()
+            vbo = self.ctx.buffer(reserve=len(vertices) * 3 // 2)
+            ibo = self.ctx.buffer(reserve=len(indices) * 3 // 2)
+            self.fall_buffers = (vbo, ibo)
+            self.fall_geometry = self.ctx.geometry(
+                [self.gl.BufferDescription(vbo, "3f 2f 4f 2f 4f 4f 4f", ["in_pos", "in_tangent", "in_fall", "in_slope",
+                                                                         "in_colour", "in_deep", "in_look"])],
+                index_buffer=ibo, index_element_size=4, mode=self.ctx.TRIANGLES)
+            self.fall_allocations += 1
+            buffers = self.fall_buffers
+        buffers[0].write(vertices)
+        buffers[1].write(indices)
+        self.fall_count, self.feet = len(idx), feet
+        pad = MAX_FALLS - len(feet)
+        self._fall_columns = {
+            "u_fall_foot": [v for f in feet for v in (f[0], f[1], f[2] + LIFT_M, f[3])] + [0.0] * (4 * pad),
+            "u_fall_dir": [v for f in feet for v in (f[4], f[5], f[6], f[8])] + [0.0] * (4 * pad),
+            "u_fall_seed": [f[9] for f in feet] + [0.0] * pad}
+
+    def _fall_uniforms(self, prog: Any) -> None:
+        """M17-W1: the falls' feet, for the whitewater they raise in the ponds and rivers they land in."""
+        prog.set_uniform_safe("u_falls_n", len(self.feet))
+        for name, flat in self._fall_columns.items():
+            prog.set_uniform_array_safe(name, flat)
+
+    def _free_fall_buffers(self) -> None:
+        if self.fall_geometry is not None:
+            self.fall_geometry.flush()
+        for obj in self.fall_buffers or ():
+            obj.delete()
+        self.fall_geometry = self.fall_buffers = None
+
+    def _free_falls(self) -> None:
+        self._free_fall_buffers()
+        if self.fall_program is not None:
+            self.fall_program.delete()
+        self.fall_program = None
+        self.fall_count, self.feet, self._fall_columns = 0, [], {}
 
     def _free_rivers(self) -> None:
         if self.river_geometry is not None:
@@ -973,6 +1133,7 @@ class WaterLayer:
         self.river_geometry = self.river_buffers = self.river_box = None
         self.rivers, self.river_count, self._river_key = (), 0, None
         self.mouths, self.mouth_problems, self._mouth_columns = [], {}, {}
+        self._free_falls()
 
     def in_view(self, vp: list[list[float]]) -> bool:
         """Whether any water surface is in the picture (its corners' clip-space box overlaps the screen): with none,
@@ -1087,6 +1248,7 @@ class WaterLayer:
             self.terrain[0].use(7)
             prog["u_terrain_box"] = self.terrain[1]
         self._mouth_uniforms(prog)
+        self._fall_uniforms(prog)
 
     def _mouth_uniforms(self, prog: Any) -> None:
         """R4: the rivers flowing into ponds (``self.mouths``), for both programs (the GLSL compiler may leave out
@@ -1110,7 +1272,7 @@ class WaterLayer:
                                  ("phase", row[28:32]), ("colour", row[8:12]), ("deep", row[16:20]),
                                  ("look", row[12:16]),
                                  ("kind", (1.0 if row[6] > 1.5 and row[20] == SHORES.index("terrain") else 0.0,
-                                           row[7], 0.0, 0.0))):
+                                           row[7], mouth.fall_u or 0.0, 0.0 if mouth.fall_u is None else 1.0))):
                 columns[name].extend(values)
         return {name: flat + [0.0] * (4 * MAX_MOUTHS - len(flat)) for name, flat in columns.items()}
 
@@ -1141,6 +1303,13 @@ class WaterLayer:
             passes.append((self.program, self.geometry, {"instances": self.count}))
         if self.river_geometry is not None:
             passes.append((self.river_program, self.river_geometry, {"vertices": self.river_count}))  # (indices used)
+        falls = self.fall_geometry is not None and self.fall_count > 0
+        if falls:  # M17-W1: its own uniforms (it reads only some of the shared ones)
+            fp = self.fall_program
+            fp["u_vp"], fp["u_eye"], fp["u_time"], fp["u_light"] = vp, eye, time, light
+            fp["u_lit"] = 1 if lighting is not None else 0
+            if lighting is not None:
+                lighting.bind(fp)
         for prog, _geometry, _count in passes:
             if reflect:
                 prog["u_screen"] = screen
@@ -1163,6 +1332,9 @@ class WaterLayer:
                 for prog, geometry, counts in passes:
                     geometry.render(prog, **counts)
                     self.draw_calls += 1
+                if falls:  # (after the water they fall into, over it)
+                    self.fall_geometry.render(self.fall_program, vertices=self.fall_count)
+                    self.draw_calls += 1
         finally:
             ctx.enable(ctx.DEPTH_TEST)
             fbo.depth_mask = True
@@ -1184,7 +1356,7 @@ class WaterLayer:
     def gl_objects(self) -> list[Any]:
         return [o for o in (self.program, self.quad, self.instances, *(self.copy or ()),
                             self.terrain[0] if self.terrain else None, self.river_program,
-                            *(self.river_buffers or ())) if o is not None]
+                            *(self.river_buffers or ()), self.fall_program, *(self.fall_buffers or ())) if o is not None]
 
     def memory_bytes(self) -> int:
         size = (self.instances.size if self.instances is not None else 0) + (self.quad.size if self.quad else 0)
@@ -1195,6 +1367,7 @@ class WaterLayer:
             w, h = self.terrain[0].size
             size += w * h * 4
         size += sum(b.size for b in self.river_buffers or ())
+        size += sum(b.size for b in self.fall_buffers or ())
         return int(size)
 
     def release(self) -> None:

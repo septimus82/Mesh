@@ -81,6 +81,7 @@ SMOKE_ROWS = ((".##.", "#%##", "##%#", ".##."),
               ("..###...", ".##%###.", "###%##%#", "#%####%#", "##%#%###", ".###%##.", "..####.."))
 EMBERS_PER_FIRE, SMOKE_PER_FIRE = 28, 18
 SMOKE_OPACITY = 0.32
+MIST_PER_FALL, MIST_OPACITY = 24, 0.3  # M17-W1: a waterfall's spray, at its fullest (``spray`` 1)
 EXPOSURES = ("outdoor", "indoor")  # settings.weather_exposure: an indoor room gets no precipitation
 PRECIPITATION = ("rain", "snow")  # what falls from the sky: kept out of indoor rooms (leaves, and later dust or ash, stay)
 
@@ -269,6 +270,9 @@ float hash(float n) { return fract(sin(n) * 43758.5453); }
 // number there and where the fire stands (so lighting or putting out one fire never changes another's). Each is born
 // again every lifetime somewhere else over the fire (its seed and its cycle), so nothing is spawned or stepped.
 uniform vec4 u_anchor[16]; uniform int u_per;
+// M17-W1: a waterfall's spray (u_kind 5): u_anchor its foot (x, y, level m, half width), u_aim (tangent downstream
+// x, y, how much spray 0..1): the first spray x u_per of its particles shown
+uniform vec4 u_aim[16];
 """ + WIND_GLSL + """
 float g_fire_alpha;
 vec4 fire_particle(out vec3 p) {
@@ -277,7 +281,7 @@ vec4 fire_particle(out vec3 p) {
     float key = float(gl_InstanceID - fi * max(u_per, 1)) * 1.618 + fract(a.x * 0.731 + a.y * 0.419) * 97.0;
     float size = abs(a.w), phase = hash(key * 3.1 + 0.7), sp = 0.8 + 0.4 * hash(key * 5.3 + 1.9);
     bool smoke = u_kind == 4;
-    float life = (smoke ? 4.6 : 1.5) * (1.6 - sp);  // (its speed factor 0.8-1.2: lifetimes 0.4-0.8 of that)
+    float life = (u_kind == 5 ? 2.6 : (smoke ? 4.6 : 1.5)) * (1.6 - sp);  // (its speed factor 0.8-1.2: lifetimes 0.4-0.8 of that)
     float cyc = u_time / life + phase, k = floor(cyc), age = fract(cyc), secs = age * life;
     float h1 = hash(k * 12.9898 + phase * 78.233), h2 = hash(k * 39.346 + phase * 11.135);
     float h3 = hash(k * 5.713 + phase * 31.7);
@@ -288,7 +292,16 @@ vec4 fire_particle(out vec3 p) {
     float s = s0 * max(0.0, 1.0 + u_gust * gust_wave(a.xy, u_time - secs * 0.5, u_wind));
     float carried = 1.5 * s / (s + 4.0);  // m/s it is carried downwind (a little, in a breath; up to 1.5 in a gale)
     vec4 vr;
-    if (smoke) {
+    if (u_kind == 5) {  // spray: across its foot, rising a little and drifting downstream, thinning out
+        vec4 aim = u_aim[fi];
+        vec2 down = aim.xy, side = vec2(-aim.y, aim.x);
+        p = a.xyz + vec3(side * (h1 - 0.5) * 2.2 * size + down * (0.1 + h2 * 0.5), 0.1);
+        p += vec3(down * (0.3 + 0.25 * h3) * secs + side * (h1 - 0.5) * 0.3 * secs + dir * carried * secs,
+                  (0.45 + 0.25 * h3) * secs * (1.0 - 0.45 * age));
+        vr = u_variants[age < 0.3 ? 0 : (age < 0.65 ? 1 : 2)];
+        g_fire_alpha = float(gl_InstanceID - fi * max(u_per, 1)) >= aim.z * float(u_per) ? 0.0
+                       : smoothstep(0.0, 0.15, age) * (1.0 - smoothstep(0.4, 1.0, age));
+    } else if (smoke) {
         p = a.xyz + vec3((vec2(h1, h2) - 0.5) * 0.25 * size, 0.5 * size);
         p += vec3(dir * carried * secs, 0.45 * secs * (1.0 - 0.3 * age));
         p.xy += vec2(sin(secs * 1.3 + phase * 6.2832), cos(secs * 1.1 + phase * 4.0)) * 0.15 * age;  // spreading
@@ -513,6 +526,41 @@ class FireParticles:
                     prog["u_variants"] = tuple(float(v) for vr in variants for v in vr)
                     self.geometry.render(prog, instances=n * per)
                     self.draw_calls += 1
+        finally:
+            fbo.depth_mask = True
+
+    def draw_spray(self, vp: tuple[float, ...], camera: Any, feet: list[tuple[float, ...]], time: float,
+                   wind: tuple[float, float], gust: float, light: tuple[float, float, float], fbo: Any) -> None:
+        """M17-W1: waterfalls' spray (u_kind 5): ``feet`` (engine.hd2d.river.fall_vertices: x, y, level m, half width,
+        tangent x, y, foam, spray, ...), up to MIST_PER_FALL soft puffs each (as many as its spray asks), rising a
+        little from where it lands and drifting downstream, in the room's ``light``. One draw for every fall."""
+        self.draw_calls = 0
+        feet = [f for f in feet if f[7] > 0.0][:self.max_fires]
+        if not feet:
+            return
+        ctx, prog = self.ctx, self.program
+        eye, target = camera.eye(), camera.target
+        f = [target[i] - eye[i] for i in range(3)]
+        m = math.sqrt(sum(v * v for v in f)) or 1.0
+        f = [v / m for v in f]
+        r = math.hypot(f[1], f[0]) or 1.0
+        right = (f[1] / r, -f[0] / r, 0.0)
+        up = (right[1] * f[2], -right[0] * f[2], right[0] * f[1] - right[1] * f[0])
+        n = len(feet)
+        prog["u_vp"], prog["u_time"], prog["u_right"], prog["u_up"] = vp, time, right, up
+        prog["u_flat"], prog["u_atlas"], prog["u_tex"], prog["u_probe"] = 0, (32.0, 24.0), 0, 0
+        prog["u_wind"], prog["u_gust"] = wind, gust
+        prog["u_anchor"] = tuple(v for a in feet for v in (a[0], a[1], a[2], a[3])) + (0.0,) * (4 * (16 - n))
+        prog["u_aim"] = tuple(v for a in feet for v in (a[4], a[5], a[7], 0.0)) + (0.0,) * (4 * (16 - n))
+        prog["u_kind"], prog["u_opacity"], prog["u_per"], prog["u_emit"] = 5, MIST_OPACITY, MIST_PER_FALL, 0.0
+        prog["u_light"] = tuple(min(1.0, c * 1.35) for c in light)  # (white water's spray: lighter than smoke)
+        prog["u_variants"] = tuple(float(v) for vr in SMOKE + ((0, 0, 1, 1),) for v in vr)
+        self.texture.use(0)
+        fbo.depth_mask = False
+        try:
+            with ctx.enabled(ctx.BLEND):
+                self.geometry.render(prog, instances=n * MIST_PER_FALL)
+                self.draw_calls += 1
         finally:
             fbo.depth_mask = True
 

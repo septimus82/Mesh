@@ -1313,13 +1313,13 @@ def _with_rivers(scene: Doc, edit: Any, river_id: str | None = None) -> Doc:
 
 
 _RIVER_LOOK = ("flow", "colour", "deep_colour", "opacity", "depth", "waves", "reflection", "rain_ripples", "mouth",
-               "ends", "passable", "wade_depth")
+               "ends", "passable", "wade_depth", "falls")
 
 
 def add_river(scene: Doc, river_id: str, points: Any, *, flow: Any = _UNSET, colour: Any = _UNSET,
               deep_colour: Any = _UNSET, opacity: Any = _UNSET, depth: Any = _UNSET, waves: Any = _UNSET,
               reflection: Any = _UNSET, rain_ripples: Any = _UNSET, mouth: Any = _UNSET,
-              ends: Any = _UNSET, passable: Any = _UNSET, wade_depth: Any = _UNSET) -> Doc:
+              ends: Any = _UNSET, passable: Any = _UNSET, wade_depth: Any = _UNSET, falls: Any = _UNSET) -> Doc:
     """Add a river to this HD-2D room: ``points`` ``[[x, y, width, level], ...]`` px, upstream to downstream (2-64;
     ``level`` its surface, as an object's elevation, never rising downstream; width 16-512 px). Its course curves
     smoothly through every point; it flows at ``flow`` m/s (0-8, default 1; 0: still). Its look: ``colour`` and
@@ -1334,9 +1334,11 @@ def add_river(scene: Doc, river_id: str, points: Any, *, flow: Any = _UNSET, col
     above the ground: sculpt its bed first (it doesn't carve one). ``passable`` (R4B: how characters may go into its
     water, whatever it looks like or how deep its bed is carved): "auto" (waded up to half a metre deep; the
     default, as before), "wade" (waded up to ``wade_depth`` m, 0.1-1.5) or "block" (not entered at all; a bridge's
-    deck over it stays dry)."""
+    deck over it stays dry). ``falls`` (M17-W1): its waterfalls, ``[{"from": i, "foam": 0-1, "spray": 0-1}]``, as
+    ``set_waterfall`` makes them."""
     look = {k: v for k, v in zip(_RIVER_LOOK, (flow, colour, deep_colour, opacity, depth, waves, reflection,
-                                               rain_ripples, mouth, ends, passable, wade_depth)) if v is not _UNSET}
+                                               rain_ripples, mouth, ends, passable, wade_depth, falls))
+            if v is not _UNSET}
 
     def edit(found: list[Doc]) -> list[Doc]:
         if any(r.get("id") == river_id for r in found):
@@ -1349,19 +1351,27 @@ def add_river(scene: Doc, river_id: str, points: Any, *, flow: Any = _UNSET, col
 def set_river(scene: Doc, river_id: str, *, points: Any = _UNSET, flow: Any = _UNSET, colour: Any = _UNSET,
               deep_colour: Any = _UNSET, opacity: Any = _UNSET, depth: Any = _UNSET, waves: Any = _UNSET,
               reflection: Any = _UNSET, rain_ripples: Any = _UNSET, mouth: Any = _UNSET, ends: Any = _UNSET,
-              passable: Any = _UNSET, wade_depth: Any = _UNSET) -> Doc:
+              passable: Any = _UNSET, wade_depth: Any = _UNSET, falls: Any = _UNSET) -> Doc:
     """Change a river of this room: its ``points`` (all of them, as ``add_river`` takes them), its look, its
     ``mouth``, its ``ends`` or how characters may go into it (``passable``: "auto", "wade" up to ``wade_depth`` m,
     or "block", as ``add_river`` describes); what isn't given stays. Checked as ``add_river`` checks a new one (a river flowing into
-    a pond: its join, whatever changed)."""
+    a pond: its join, whatever changed). A river with waterfalls (``falls``, M17-W1) given a different number of
+    points must be given its ``falls`` too (they name points by their place in the list)."""
     given = {k: v for k, v in zip(("points", *_RIVER_LOOK), (points, flow, colour, deep_colour, opacity, depth, waves,
                                                               reflection, rain_ripples, mouth, ends, passable,
-                                                              wade_depth)) if v is not _UNSET}
+                                                              wade_depth, falls)) if v is not _UNSET}
 
     def edit(found: list[Doc]) -> list[Doc]:
-        if not any(r.get("id") == river_id for r in found):
+        river = next((r for r in found if r.get("id") == river_id), None)
+        if river is None:
             raise OpError(f"This room has no river '{river_id}'.")
-        return [{**r, **given} if r.get("id") == river_id else r for r in found]
+        if (river.get("falls") and "falls" not in given and isinstance(points, list)
+                and len(points) != len(river.get("points") or [])):
+            starts = ", ".join(str(f.get("from")) for f in river["falls"] if isinstance(f, dict))
+            raise OpError(f"River '{river_id}' has waterfalls (from points {starts}, counted from 0): giving it "
+                          f"{len(points)} points instead of {len(river.get('points') or [])}, give its falls too, "
+                          "saying where each now starts")
+        return [{**r, **given} if r is river else r for r in found]
 
     return _with_rivers(scene, edit, river_id)
 
@@ -1456,6 +1466,57 @@ def remove_river(scene: Doc, river_id: str) -> Doc:
         return [r for r in found if r.get("id") != river_id]
 
     return _with_rivers(scene, edit)
+
+
+# --- waterfalls (M17-W1) ----------------------------------------------------------------------------
+# A river's ``falls`` (engine.hd2d.river): the stretch from a control point (its lip) to the next (its foot) falls,
+# the two points' water levels the water above and below it. Checked with the river, whole, before anything is written.
+def set_waterfall(scene: Doc, river_id: str, point: int, *, foam: Any = _UNSET, spray: Any = _UNSET) -> Doc:
+    """Make the stretch of a river from control point ``point`` (counted from 0, as its ``points`` list is) to the
+    next one a waterfall, or change that waterfall's ``foam`` (the whitewater where it lands, 0-1, default 0.6) and
+    ``spray`` (0-1, default 0.4; 0: none). The two points' water levels are the water above and below it: they must
+    already drop at least 0.5 m, and at least half as far as the stretch runs; the river needs a point before the lip
+    and one after the foot, and no other waterfall next to it. Refused, saying what to change, otherwise: nothing is
+    relevelled, moved or carved to make it fit (sculpt the ledge, or carve the river's bed, separately)."""
+    if not isinstance(point, int) or isinstance(point, bool):
+        raise OpError(f"A waterfall starts at a control point's number, counted from 0 (got {point!r}).")
+    change = {k: v for k, v in (("foam", foam), ("spray", spray)) if v is not _UNSET}
+
+    def edit(found: list[Doc]) -> list[Doc]:
+        river = next((r for r in found if r.get("id") == river_id), None)
+        if river is None:
+            raise OpError(f"This room has no river '{river_id}'.")
+        falls = [dict(f) for f in river.get("falls") or [] if isinstance(f, dict)]
+        same = next((f for f in falls if f.get("from") == point), None)
+        if same is not None:
+            same.update(change)
+        else:
+            falls.append({"from": point, **change})
+        falls.sort(key=_fall_start)
+        return [{**r, "falls": falls} if r is river else r for r in found]
+
+    return _with_rivers(scene, edit, river_id)
+
+
+def _fall_start(fall: Doc) -> int:
+    start = fall.get("from")
+    return start if isinstance(start, int) else -1
+
+
+def remove_waterfall(scene: Doc, river_id: str, point: int) -> Doc:
+    """Make a river's waterfall from control point ``point`` (counted from 0) an ordinary stretch again: its water
+    slopes from one point's level to the next's, as any stretch does."""
+    def edit(found: list[Doc]) -> list[Doc]:
+        river = next((r for r in found if r.get("id") == river_id), None)
+        if river is None:
+            raise OpError(f"This room has no river '{river_id}'.")
+        falls = [f for f in river.get("falls") or [] if not (isinstance(f, dict) and f.get("from") == point)]
+        if len(falls) == len(river.get("falls") or []):
+            raise OpError(f"River '{river_id}' has no waterfall from point {point}.")
+        out = {k: v for k, v in river.items() if k != "falls"}
+        return [({**out, "falls": falls} if falls else out) if r is river else r for r in found]
+
+    return _with_rivers(scene, edit, river_id)
 
 # --- how a door shows (Milestone 12.2) ------------------------------------------------------------
 # One door behaviour (SceneTransition); three ways to show it. A door picture; an invisible passage (an area the
