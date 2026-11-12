@@ -54,6 +54,7 @@ from array import array
 from dataclasses import dataclass, replace
 from typing import Any
 
+from engine.hd2d.bloom import OUTPUTS
 from engine.hd2d.lighting import LIGHTING_GLSL
 
 PX_PER_M = 32.0
@@ -387,8 +388,7 @@ uniform vec4 u_mouth_colour[MAX_MOUTHS]; uniform vec4 u_mouth_deep[MAX_MOUTHS]; 
 // 1 if its shore is the sculpted ground (how deep it looks: its real depth), else 0; 1 if the room's rain rings it
 uniform vec4 u_mouth_kind[MAX_MOUTHS];
 const float MOUTH_BLEND = """ + repr(MOUTH_BLEND_M) + """;  // the river takes on the pond's look over this (m)
-out vec4 f_color;
-""" + LIGHTING_GLSL + """
+""" + OUTPUTS + LIGHTING_GLSL + """
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 // rings on the surface: a ring of radius r (m) about c, as a narrow band, fading with age 0..1
 float ring(vec2 q, vec2 c, float r, float age) {
@@ -602,13 +602,14 @@ void main() {
         }
         if (shore == 3 && sd > -0.4 && open < 0.0) {  // (deeper in, no stone reaches)
             vec4 s = stone(q, reach, sun);
-            if (s.a > 0.0) { f_color = vec4(shade(s.rgb * light), 1.0); return; }
+            if (s.a > 0.0) { f_color = vec4(shade(s.rgb * light), 1.0); f_emit = vec4(0.0, 0.0, 0.0, 1.0); return; }
         }
         if (sd >= 0.0) {
             if (sd > reach) discard;  // (past the stones)
             vec4 c = bank(q, sd / max(reach, 1e-3), shore);
             if (c.a <= 0.0) discard;
             f_color = vec4(shade(c.rgb * light), c.a);
+            f_emit = vec4(0.0, 0.0, 0.0, c.a);
             return;
         }
         // the water lies a little below the ground, so near its far edge the view ray meets the bank's side before
@@ -634,6 +635,7 @@ void main() {
                 c = mix(vec3(0.33, 0.24, 0.15), vec3(0.20, 0.15, 0.10), hi) * (0.9 + 0.2 * hash(floor(q * 32.0)));
             }
             f_color = vec4(shade(c * side), 1.0);
+            f_emit = vec4(0.0, 0.0, 0.0, 1.0);
             return;
         }
         if (drop > 0.0 && sd_at(to_local(q + down * 1.8)) > 0.0) shadow = 0.7;
@@ -703,6 +705,7 @@ void main() {
         alpha = clamp(v_colour.a * smoothstep(0.0, 0.04, inside * 2.0) + clamp(rings, 0.0, 1.0) * 0.2 + splash * 0.6, 0.0, 1.0);
     }
     f_color = vec4(shade(lit), alpha);
+    f_emit = vec4(0.0, 0.0, 0.0, alpha);  // (water dims what glows beneath it as it dims its colour)
 }
 """
 
@@ -833,6 +836,7 @@ void main() {
     lit = mix(lit, vec3(0.80, 0.86, 0.86) * light, (waterline ? 0.45 : 0.0) + clamp(splash, 0.0, 1.0) * 0.8);
     float alpha = clamp((waterline ? max(alpha_water, 0.85) : alpha_water) + clamp(rings, 0.0, 1.0) * 0.2 + splash * 0.6, 0.0, 1.0);
     f_color = vec4(shade(lit), alpha);
+    f_emit = vec4(0.0, 0.0, 0.0, alpha);  // (water dims what glows beneath it as it dims its colour)
 }
 """
 

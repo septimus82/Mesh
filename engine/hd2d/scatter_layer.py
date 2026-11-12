@@ -29,6 +29,7 @@ from typing import Any, Callable, Iterable
 
 from PIL import Image
 
+from engine.hd2d.bloom import OUTPUTS
 from engine.hd2d.lighting import LIGHTING_GLSL
 from engine.hd2d.motion import MAX_ANGLE, OFF, Motion, glsl, seed_of, wrap_safe_fps
 from engine.hd2d.scatter import ASSETS, CELL_PX, FIRST_MOTION, MOTION_SHEET, SHEET, SLOTS
@@ -64,14 +65,16 @@ vec4 sheet_texel(vec2 uv, float sheet) { return sheet > 0.5 ? texture(u_tex2, uv
 """
 BILLBOARD_FS = """
 #version 330
-in vec2 v_uv; in vec3 v_world; in float v_glow; flat in float v_sheet; flat in float v_lift; out vec4 f_color;
-""" + SAMPLE + LIGHTING_GLSL + """
+in vec2 v_uv; in vec3 v_world; in float v_glow; flat in float v_sheet; flat in float v_lift;
+""" + OUTPUTS + SAMPLE + LIGHTING_GLSL + """
 void main() {
     vec4 c = sheet_texel(v_uv, v_sheet);
     if (c.a < 0.5) discard;
     // (a canopy takes its light a little toward the sun: its own clusters, in the sun's map, don't shade it)
     vec3 p = v_lift > 0.0 ? v_world + u_sun_dir * v_lift : v_world;
     f_color = vec4(c.rgb * max(light_at(p, vec3(0.0, -1.0, 0.0), true), vec3(v_glow)), 1.0);
+    f_emit = vec4(0.0, 0.0, 0.0, 1.0);  // (only what glows works out its emission: most fragments are grass)
+    if (v_glow > 0.0) f_emit.rgb = mix(c.rgb / 12.92, pow((c.rgb + 0.055) / 1.055, vec3(2.4)), step(0.04045, c.rgb)) * v_glow;
 }
 """
 CASTER_FS = """
