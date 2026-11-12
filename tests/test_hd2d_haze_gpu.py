@@ -151,8 +151,12 @@ def test_night_haze_is_dim(frames: dict) -> None:
 
 
 def test_the_hud_is_never_hazed(frames: dict) -> None:
-    hud = frames["hud"]
-    assert hud["hud_pixels"] > 500 and hud["hud_same"] and hud["world_changed"], hud
+    hud = frames["hud"]  # (tooling/hd2d_haze_study.py hud: the HUD drawn over black and white tells what is opaque)
+    assert hud["hud_pixels"] > 500 and hud["world_changed"], hud
+    assert hud["opaque_same"] and hud["opaque_changed"] == 0, hud  # opaque HUD: the very same bytes, haze or not
+    # translucent HUD (the hint's box, text edges): composited over whatever world is behind it, hazed or not
+    assert hud["translucent_pixels"] > 500 and hud["behind_changed"] > 500, hud  # (the haze did change what's behind)
+    assert hud["over_world_error"] <= 2 and hud["over_hazed_world_error"] <= 2, hud
 
 
 def test_a_refused_driver_gives_the_original_picture(frames: dict) -> None:

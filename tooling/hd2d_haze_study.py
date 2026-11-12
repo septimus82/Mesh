@@ -378,30 +378,60 @@ def known_texels(game: Any, scene: str) -> dict[str, Any]:
 
 
 def hud(game: Any, scene: str) -> dict[str, Any]:
-    """The window as the game draws it (world, then HUD): the HUD's own pixels the same with and without the haze."""
+    """The window as the game draws it (world, then HUD), with and without a strong haze: the HUD is drawn after it.
+
+    Where the HUD is fully opaque (the same pixel drawn over pure black and over pure white: no world can show through
+    it), its pixels are the same bytes with and without the haze, and the same as the HUD drawn alone. Where it is
+    translucent (the hint's dark box, text edges), the window is the HUD composited over the world it covers: its
+    coverage, recovered from the black and white frames, laid over the hazed world gives the hazed window (within
+    8-bit rounding). A haze applied after the HUD would change both. (A mask from "the window equals the HUD alone over
+    black" also takes in nearly-opaque edge pixels that only round alike over that world: CI's Linux fonts, #500.)"""
     from engine.hd2d.haze import Haze  # noqa: PLC0415
 
     np = _np()
     hd = settle(game, scene)
     base = hd.settings
+    strong = dataclasses.replace(base, haze=Haze("evening", strength=0.5, start=0.0, falloff=1.0))
+    w, h = game.window.get_framebuffer_size()
 
     def window() -> Any:
         return np.asarray(game.draw().convert("RGB")).astype(int)
 
-    plain = window()
-    hd.settings = dataclasses.replace(base, haze=Haze("evening", strength=0.5, start=0.0, falloff=1.0))
-    hazed = window()
-    kept = hd.draw
-    hd.draw = lambda *a, **k: None
-    try:
-        hd.settings = base
-        alone = window()
-    finally:
-        hd.draw = kept
-        hd.settings = base
-    covered = (np.abs(plain - alone).max(axis=2) == 0) & (alone.max(axis=2) > 0)
-    return {"hud_pixels": int(covered.sum()), "hud_same": bool((np.abs(hazed - plain).max(axis=2)[covered] == 0).all()),
-            "world_changed": bool((np.abs(hazed - plain).max(axis=2)[~covered] > 0).any())}
+    def world_under() -> Any:  # the world as it lands in the window before the HUD (the same draw on_draw makes)
+        game.window.use()
+        return np.flipud(np.frombuffer(hd.draw(read_final=True), dtype=np.uint8).reshape(h, w, 3)).astype(int)
+
+    def hud_over(colour: tuple[int, int, int, int]) -> Any:  # the HUD alone, drawn over one flat colour
+        kept = hd.draw
+        hd.draw = lambda *a, **k: game.window.ctx.active_framebuffer.clear(color=colour)
+        try:
+            return window()
+        finally:
+            hd.draw = kept
+
+    hd.settings = base
+    plain, world = window(), world_under()
+    hd.settings = strong
+    hazed, world_hazed = window(), world_under()
+    hd.settings = base
+    black, white = hud_over((0, 0, 0, 255)), hud_over((255, 255, 255, 255))
+    game.window.use()
+    drawn = (black.max(axis=2) > 0) | (white.min(axis=2) < 255)  # the HUD covers these pixels at all
+    opaque = drawn & (np.abs(white - black).max(axis=2) == 0)
+    clear = (white - black) / 255.0  # per channel: how much of what is behind shows through
+    translucent = drawn & ~opaque
+
+    def worst(img: Any, behind: Any) -> int:
+        predicted = np.rint(black + clear * behind)
+        return int(np.abs(img - predicted).max(axis=2)[translucent].max()) if translucent.any() else 0
+
+    return {"hud_pixels": int(opaque.sum()), "translucent_pixels": int(translucent.sum()),
+            "opaque_same": bool(np.array_equal(plain[opaque], hazed[opaque])
+                                and np.array_equal(plain[opaque], black[opaque])),
+            "opaque_changed": int((np.abs(hazed - plain).max(axis=2)[opaque] > 0).sum()),
+            "over_world_error": worst(plain, world), "over_hazed_world_error": worst(hazed, world_hazed),
+            "behind_changed": int((np.abs(world_hazed - world).max(axis=2)[translucent] > 0).sum()),
+            "world_changed": bool((np.abs(hazed - plain).max(axis=2)[~drawn] > 0).any())}
 
 
 def refused(game: Any, scene: str) -> dict[str, Any]:
