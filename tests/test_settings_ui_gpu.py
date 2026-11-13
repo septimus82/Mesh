@@ -28,11 +28,10 @@ def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
     import settings_ui_check
 
     out = tmp_path_factory.mktemp("settings_ui")
-    os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")
-    try:
+    # (for its run only, then as it was: absent stays absent, a value comes back, whatever the run did)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
         return settings_ui_check.check(out)
-    finally:
-        os.environ.pop("MESH_RUNTIME_SETTINGS_PATH", None)
 
 
 def test_the_pause_menus_slider_labels_are_clear_of_their_bars(run: dict) -> None:

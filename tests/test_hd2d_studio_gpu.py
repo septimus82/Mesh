@@ -38,9 +38,10 @@ def run(tmp_path_factory: pytest.TempPathFactory, monkeypatch_module: None) -> d
 
 @pytest.fixture(scope="module")
 def monkeypatch_module():
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"  # no loopback server for the AI bridge in a test
-    yield
-    os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
+    # (until the module's teardown, then as it was: absent stays absent, a value comes back)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")  # no loopback server for the AI bridge in a test
+        yield
 
 
 def _step(run: dict, name: str) -> dict:

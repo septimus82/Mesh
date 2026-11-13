@@ -39,10 +39,19 @@ PICTURE = "assets/sprites/starter_sign.png"
 
 @pytest.fixture(scope="module")
 def cycles(tmp_path_factory: pytest.TempPathFactory) -> list[dict]:
+    project = tmp_path_factory.mktemp("lifecycle") / "project"
+    # (for its session only, then as they were: the settings path is set only when absent; the AI bridge is off)
+    with pytest.MonkeyPatch.context() as env:
+        if "MESH_RUNTIME_SETTINGS_PATH" not in os.environ:
+            env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(project.parent / "user_settings.json"))
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
+        return _play_cycles(project)
+
+
+def _play_cycles(project: Path) -> list[dict]:
     import d1_debug_scenario as d1
     from hd2d_studio_demo import StudioDriver
 
-    project = tmp_path_factory.mktemp("lifecycle") / "project"
     d1.build(project)
     scene = json.loads((project / START).read_text(encoding="utf-8"))
     scene["entities"] += [
@@ -52,9 +61,6 @@ def cycles(tmp_path_factory: pytest.TempPathFactory) -> list[dict]:
         {"id": "coin", "name": "Coin", "x": 160.0, "y": 128.0, "sprite": PICTURE,
          "behaviours": ["Collectible"], "behaviour_config": {"Collectible": {"collect_by_name": "Player"}}}]
     (project / START).write_text(json.dumps(scene, indent=1), encoding="utf-8")
-    os.environ.setdefault("MESH_RUNTIME_SETTINGS_PATH", str(project.parent / "user_settings.json"))
-    hidden_bridge = os.environ.get("MESH_STUDIO_NO_AI_BRIDGE")
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
     d = StudioDriver(project)
     studio, window = d.studio, d.window
     results = []
@@ -90,10 +96,6 @@ def cycles(tmp_path_factory: pytest.TempPathFactory) -> list[dict]:
                             "document_unchanged": json.dumps(studio.project.scene(), sort_keys=True) == document})
     finally:
         d.close()
-        if hidden_bridge is None:
-            os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
-        else:
-            os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = hidden_bridge
     return results
 
 

@@ -223,8 +223,8 @@ def test_room_changes_keep_gpu_objects_level(tmp_path: Path) -> None:
         game.close()
 
 
-def test_studio_previews_the_weather_as_play_shows_it(tmp_path: Path) -> None:
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+def test_studio_previews_the_weather_as_play_shows_it(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
     import hd2d_studio_demo
     import m18_particles_study as m18
 
@@ -266,11 +266,10 @@ def test_studio_previews_the_weather_as_play_shows_it(tmp_path: Path) -> None:
         assert len(studio_view) > 2000 and same > 0.95, f"Studio's preview is play's weather ({same:.3f})"
     finally:
         driver.close()
-        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
 
 
-def test_studio_says_what_is_wrong_with_a_room_s_weather(tmp_path: Path) -> None:
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+def test_studio_says_what_is_wrong_with_a_room_s_weather(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
     import hd2d_studio_demo
     import m18_particles_study as m18
 
@@ -282,7 +281,6 @@ def test_studio_says_what_is_wrong_with_a_room_s_weather(tmp_path: Path) -> None
         assert "preset must be one of" in driver.studio._status_label.text
     finally:
         driver.close()
-        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
 
 
 def test_a_2d_room_s_rain_lands_on_its_ground_and_stays_on_its_map(tmp_path: Path) -> None:

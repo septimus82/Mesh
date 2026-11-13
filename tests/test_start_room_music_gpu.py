@@ -33,13 +33,11 @@ def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
     import m23d_start_music_studio as study
 
     out = tmp_path_factory.mktemp("m23d")
-    os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
-    try:
+    # (for its run only, then as they were: absent stays absent, a value comes back, whatever the run did)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
         return {"out": out, **{name: study.PHASES[name](out) for name in ("creator", "game", "saves")}}
-    finally:
-        os.environ.pop("MESH_RUNTIME_SETTINGS_PATH", None)
-        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
 
 
 def test_village_is_made_the_start_room_without_leaving_the_room_being_edited(run: dict) -> None:
@@ -112,13 +110,11 @@ def test_an_older_projects_absent_and_null_music_and_missing_start_room_are_kept
     import m23d_start_music_studio as study
 
     out = tmp_path_factory.mktemp("m23d_older")
-    os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
-    try:
+    # (for its run only, then as they were: absent stays absent, a value comes back, whatever the run did)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
         report = study.older(out)
-    finally:
-        os.environ.pop("MESH_RUNTIME_SETTINGS_PATH", None)
-        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
     assert report["before"]["start_scene"] == "(none)" and report["dirty_on_open"] is False
     assert any(line.startswith("This world names no starting room") and "Start" in line for line in report["rows"])
     assert report["after"] == {"start_scene": "(none)", "village": TRACK_A, "woodland": "(none)", "ruins": None}

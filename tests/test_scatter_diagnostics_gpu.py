@@ -30,14 +30,12 @@ def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
     import scatter_diagnostics_studio
 
     out = tmp_path_factory.mktemp("m22c")
-    os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
-    try:
+    # (for its run only, then as they were: absent stays absent, a value comes back, whatever the run did)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
         result: dict = scatter_diagnostics_studio.studio(out)
         return result
-    finally:
-        os.environ.pop("MESH_RUNTIME_SETTINGS_PATH", None)
-        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
 
 
 def test_trees_over_a_dense_meadow_say_the_meadow_leaves_no_room_and_change_nothing(run: dict) -> None:

@@ -34,19 +34,17 @@ sys.path.insert(0, str(REPO / "tooling"))
 
 
 @pytest.fixture
-def driver(tmp_path: Path) -> Iterator[Any]:
+def driver(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
     import hd2d_floors_demo
     from hd2d_studio_demo import StudioDriver
 
-    hidden = os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)  # (this test needs the live session)
+    monkeypatch.delenv("MESH_STUDIO_NO_AI_BRIDGE", raising=False)  # (this test needs the live session)
     project = hd2d_floors_demo.build(tmp_path / "HD-2D studio")
     d = StudioDriver(project)
     try:
         yield d
     finally:
         d.close()
-        if hidden is not None:
-            os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = hidden
 
 
 def test_a_proposal_that_timed_out_while_studio_was_busy_never_reaches_the_person(driver: Any) -> None:
