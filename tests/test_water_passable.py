@@ -22,8 +22,6 @@ from engine.hd2d import river
 from engine.hd2d.settings import parse_hd2d
 from engine.hd2d.world import DEEP, DEEP_SLACK, World, _surface
 
-pytestmark = pytest.mark.fast
-
 P = 32.0
 STREAM = [[4.0, 600.0, 96.0, -16.0], [800.0, 610.0, 96.0, -16.0], [1596.0, 600.0, 96.0, -16.0]]  # edge to edge
 POND = (1200.0, 300.0, 320.0, 192.0)  # px: x, y, width, height (an ellipse: x 1040..1360, y 204..396)
@@ -56,6 +54,7 @@ def _stands(world: World, x_px: float, y_px: float, z: float | None = None) -> b
     return world.stand(x_px / P, y_px / P, z, 0.3, 0.19) is not None
 
 
+@pytest.mark.fast
 def test_passable_is_stored_only_when_set_checked_and_older_rivers_and_ponds_are_as_they_were() -> None:
     plain = _room(pond={})
     assert ops.rivers(plain)[0].keys() == {"id", "points"}, "a river as before: no new keys"
@@ -77,6 +76,7 @@ def test_passable_is_stored_only_when_set_checked_and_older_rivers_and_ponds_are
     assert not water.blocks(water.parse_water({"preset": "pond", "passable": "wade", "walkable": False}))
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_a_river_s_water_is_walked_by_its_passable_not_its_look_or_carved_depth() -> None:
     deep_x, ford_x = 200.0, 800.0  # (its bed 0.8 m deep there; a 0.3 m ford mid-way)
     auto = _world(_room())
@@ -103,6 +103,7 @@ def test_a_river_s_water_is_walked_by_its_passable_not_its_look_or_carved_depth(
         if 560 / P < _y < 660 / P), "never through the water itself"
 
 
+@pytest.mark.fast
 def test_a_blocking_pond_blocks_where_its_water_is_not_the_box_round_it() -> None:
     scene = _room(pond={"walkable": False})  # (auto, walk through it off: blocks, as before)
     world = _world(scene)
@@ -124,6 +125,7 @@ def test_a_blocking_pond_blocks_where_its_water_is_not_the_box_round_it() -> Non
     assert _stands(world, 1320, 300), "inside its outline, the ground just above its water: dry, walked"
 
 
+@pytest.mark.fast
 def test_wading_a_pond_to_a_depth_and_the_river_mouth_into_a_blocking_pond() -> None:
     basin = _room(pond={"passable": "wade", "wade_depth": 0.4, "shore": "terrain"})
     basin = ops.sculpt_terrain_stroke(basin, "flatten", [[1200, 300, 1.0]], radius=72, target=-24.0)  # 0.75 m
@@ -148,6 +150,7 @@ def test_wading_a_pond_to_a_depth_and_the_river_mouth_into_a_blocking_pond() -> 
     assert box_left < shore - 24, "(where the old box would have stopped it: before the shore)"
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_ways_out_are_the_nearest_standing_places_the_same_every_time() -> None:
     world = _world(_room())
     x, y = 200.0 / P, 600.0 / P  # in the deep stretch
@@ -161,6 +164,7 @@ def test_ways_out_are_the_nearest_standing_places_the_same_every_time() -> None:
     assert world.ways_out(x, y, bed, radius=0.4) == [], "none near enough: none"
 
 
+@pytest.mark.fast
 def test_auto_keeps_r3_s_depth_rule_exactly() -> None:
     world = _world(_room())
     for x in range(40, 1560, 37):
@@ -197,6 +201,7 @@ def _said(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     return said
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_an_npc_put_in_deep_water_walks_out_never_deeper_and_then_keeps_its_route() -> None:
     from engine.physics_runtime import _sprite_to_aabb
 
@@ -230,6 +235,7 @@ def _uneven() -> dict[str, Any]:
     return ops.sculpt_terrain_stroke(s, "flatten", [[1300, 260, 1.0]] * 4, radius=30, target=-30.0)
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_an_npc_with_no_way_out_is_stranded_said_once_and_doesn_t_loop(monkeypatch: pytest.MonkeyPatch) -> None:
     """In blocking water at the bottom of a pit too steep to climb: no way out at all."""
     world = _world(_uneven())
@@ -251,6 +257,7 @@ def test_an_npc_with_no_way_out_is_stranded_said_once_and_doesn_t_loop(monkeypat
     assert abs(npc.center_x - 1082.0) < 24 and abs(npc.center_y - 310.0) < 24, "stayed in the pit (no teleport)"
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_an_npc_far_out_in_blocking_water_walks_out_though_no_way_out_is_within_reach(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """Re-review of bb320df: 8.75 m from the shore, no standing place within ways_out's 6 m: it still walks down the
@@ -273,6 +280,7 @@ def test_an_npc_far_out_in_blocking_water_walks_out_though_no_way_out_is_within_
     assert world.blocked(box.x / P, box.y / P, npc.mesh_entity_data["elevation"] / P) <= 0.0, "out"
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_leaving_blocking_water_lends_no_deeper_wading_through_the_water_beyond() -> None:
     """Re-review of bb320df: one put in a blocking pond over a deep (auto) river's bank, pushed towards the river,
     took the pond's large values as its allowance and waded right across 0.8 m of water (auto's limit 0.5 m)."""
@@ -308,6 +316,7 @@ def _flat_room(**pond: Any) -> dict[str, Any]:
     return ops.set_water(scene, pid, preset="natural_pond", shape="ellipse", width=640.0, height=400.0, **pond)
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_one_put_in_blocking_water_can_only_walk_out_never_across() -> None:
     """Pond water drawn over flat ground is as deep everywhere: one put just inside walked straight across it."""
     for pond in ({"passable": "block"}, {"walkable": False}):
@@ -336,6 +345,7 @@ def test_one_put_in_blocking_water_can_only_walk_out_never_across() -> None:
     assert walker.center_y - 18 < 495.0, ("out by its near bank", walker.center_y)
 
 
+@pytest.mark.fast
 def test_a_pond_on_a_raised_floor_doesn_t_block_the_ground_under_it() -> None:
     scene = _flat_room(passable="block")
     ops.entities(scene)[0]["elevation"] = 64.0  # (a roof pool, 2 m up)
@@ -343,6 +353,7 @@ def test_a_pond_on_a_raised_floor_doesn_t_block_the_ground_under_it() -> None:
     assert world.stand(800 / P, 600 / P, 0.0, 0.3, 0.19) is not None, "the ground under it: walked"
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_a_wide_npc_judged_by_its_own_feet_plans_a_bounded_number_of_times_and_says_so_once(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """Review of 6c0288b: judged by the navigation grid's footprint, an NPC with a wide feet box froze in the water
@@ -367,6 +378,7 @@ def test_a_wide_npc_judged_by_its_own_feet_plans_a_bounded_number_of_times_and_s
     assert planned["n"] <= 16, ("planned a bounded number of times in 30 s", planned["n"])
 
 
+@pytest.mark.fast
 def test_blocking_set_and_cleared_through_every_path() -> None:
     scene = _flat_room()
     pid = ops.entities(scene)[0]["id"]
@@ -382,6 +394,7 @@ def test_blocking_set_and_cleared_through_every_path() -> None:
     assert "solid" not in ops.find_entity(back, pid)
 
 
+@pytest.mark.fast
 def test_a_waded_pond_s_deep_basin_outside_its_outline_isn_t_its_water() -> None:
     """Only within its outline is it the pond's water: its box's corner, its basin dug deep past its edge, is dry."""
     scene = _room(pond={"passable": "wade", "wade_depth": 0.3, "shore": "terrain"})
@@ -393,6 +406,7 @@ def test_a_waded_pond_s_deep_basin_outside_its_outline_isn_t_its_water() -> None
     assert _stands(world, 1060, 220), "its box's corner, outside its outline: no water there (however deep the ground)"
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_in_blocking_water_only_steps_out_along_a_canal_a_river_or_round_a_rim() -> None:
     """Re-review of 82018f8: how far in it is, unchanged along a canal or a blocked river and nearly so round a
     pond's rim, let one put in it travel along it (and out somewhere far away). Each step must take it out."""
@@ -440,6 +454,7 @@ def test_in_blocking_water_only_steps_out_along_a_canal_a_river_or_round_a_rim()
         assert travelled < 40.0, ("not round its rim", deg, travelled)
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_an_npc_put_just_inside_a_blocking_pond_walks_out_and_on() -> None:
     world = _world(_flat_room(passable="block"))
     for x, y in ((520.0, 600.0), (800.0, 430.0), (1060.0, 700.0)):  # (inside its west, north and south-east shores)
@@ -451,6 +466,7 @@ def test_an_npc_put_just_inside_a_blocking_pond_walks_out_and_on() -> None:
         assert not getattr(npc, "mesh_hd2d_stranded", None), ("not stranded", x, y)
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_where_two_blocking_ponds_meet_no_one_is_held_and_an_npc_past_a_river_s_middle_walks_out() -> None:
     """Re-review of 1eb0144: where the larger of two blocking waters falls too gently for BLOCK_OUT (Lakeside's lake
     and its inlet), someone put there couldn't move; an NPC just past a blocked river's middle tried only the four
@@ -518,6 +534,7 @@ def _gets_out(world: World, x_px: float, y_px: float, frames: int = 500) -> bool
     return False
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_out_of_carved_narrow_and_uneven_blocking_water_some_way_always_leads() -> None:
     """Re-review of 1eb0144: in a carved blocked river, a narrow curved one and a terrain-shored pond with holes in
     its bed, the depth cap held one put past the river's middle (or over a hole) where only stepping out was
@@ -541,6 +558,7 @@ def test_out_of_carved_narrow_and_uneven_blocking_water_some_way_always_leads() 
     assert not held, held
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_an_npc_whose_route_point_can_t_be_reached_plans_again_once_a_second_not_every_frame(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """Re-review of 1eb0144: with no wait set, a point it can't reach (in blocking water) was planned for again every
@@ -565,6 +583,7 @@ def test_an_npc_whose_route_point_can_t_be_reached_plans_again_once_a_second_not
     assert not getattr(npc, "mesh_hd2d_stranded", None), "it can stand: it isn't stranded, its point is just out of reach"
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_where_a_lake_and_its_inlet_overlap_players_and_npcs_get_out_down_the_crease() -> None:
     """Re-review of 1eb0144 (Lakeside's lake and inlet, as built there): where two blocking waters overlap with their
     edges facing nearly opposite ways, the way out of both is a narrow crease. A player pushing roughly that way was
@@ -596,6 +615,7 @@ def test_where_a_lake_and_its_inlet_overlap_players_and_npcs_get_out_down_the_cr
     assert stranded == [], "an NPC walks out"
 
 
+@pytest.mark.fast
 def test_with_only_its_feet_s_edge_in_blocking_water_it_goes_no_further_in() -> None:
     """Re-review of bb320df: once its middle is out of blocking water, the rest of its feet may only come out."""
     from engine.physics_runtime import _sprite_to_aabb
@@ -618,6 +638,7 @@ def test_with_only_its_feet_s_edge_in_blocking_water_it_goes_no_further_in() -> 
         assert world.excess(box.x / P, box.y / P, 0.0, *half, "blocking") <= start + 1e-9, "never further in"
 
 
+@pytest.mark.fast
 def test_no_squeezing_along_a_gap_narrower_than_its_feet_between_blocking_ponds() -> None:
     """Re-review of 3f218ca: with only its feet's edge in blocking water, one put in a pond walked the length of a
     12 px gap between two blocking ponds (its feet 19 px wide), held to the edge it first had in."""
@@ -643,6 +664,7 @@ def test_no_squeezing_along_a_gap_narrower_than_its_feet_between_blocking_ponds(
         assert box.y < 640, ("not along the gap", sx, box.x, box.y)
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_npcs_that_walk_out_of_a_blocking_pond_go_on_with_their_route() -> None:
     """Re-review of 3f218ca: an NPC walked out to the first place it could stand, a shore whose navigation cell's
     middle was water, and from there found no route ever (planning once a second, unreported)."""
@@ -672,6 +694,7 @@ def _platform(world: World, h_m: float, box: tuple[float, float, float, float], 
         world._add_to_index(surface)
 
 
+@pytest.mark.fast
 def test_a_terrain_shored_pond_s_water_is_where_it_is_drawn_raised_carved_deep_or_under_a_deck() -> None:
     """Owner's pre-merge review of ddff3ce: a terrain-shored pond's water is drawn where its level lies over the
     sculpted ground, and only in a room that has one (water.py: shore 4 with u_has_terrain); without one it is drawn

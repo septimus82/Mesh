@@ -535,7 +535,7 @@ class TestEndToEndWorkflow:
 # A creator's project (Milestone 16 Stage 6B: mesh export from a pip install)
 # --------------------------------------------------------------------------- #
 
-@pytest.mark.fast
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_a_project_exports_as_a_standalone_game(tmp_path: Path) -> None:
     import engine
     from engine.project_scaffold import create_project
@@ -556,7 +556,7 @@ def test_a_project_exports_as_a_standalone_game(tmp_path: Path) -> None:
     assert manifest.repo_root == "." and (bundle / "engine" / "hd2d" / "renderer.py").is_file()
 
 
-@pytest.mark.fast
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_an_export_never_replaces_a_folder_that_is_not_an_earlier_bundle(tmp_path: Path) -> None:
     from engine.project_scaffold import create_project
 
@@ -569,7 +569,7 @@ def test_an_export_never_replaces_a_folder_that_is_not_an_earlier_bundle(tmp_pat
     assert build_bundle(project, tmp_path / "bundle")[0] == 0 and build_bundle(project, tmp_path / "bundle")[0] == 0
 
 
-@pytest.mark.fast
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_an_exported_game_starts_its_game_not_meshs_project_browser(tmp_path: Path) -> None:
     """The bundle carries Mesh's engine beside its own files, so the engine's source folder is the game's folder:
     it must still count as a project (pinned at launch), or the game opens Mesh's project browser (it did, listing
