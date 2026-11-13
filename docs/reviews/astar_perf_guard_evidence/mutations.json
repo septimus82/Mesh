@@ -1,0 +1,70 @@
+[
+ {
+  "mutation": "walks through walls (walkable check dropped)",
+  "new_guards_failing": [
+   "test_astar_perf_maze_50x50",
+   "test_astar_perf_worst_case_spiral"
+  ],
+  "new_tail": "3 failed, 24 passed in 6.03s",
+  "old_failing": []
+ },
+ {
+  "mutation": "no heuristic (always 0)",
+  "new_guards_failing": [
+   "test_astar_perf_diagonal_50x50",
+   "test_astar_perf_maze_50x50",
+   "test_astar_perf_straight_across_open_ground",
+   "test_astar_perf_worst_case_spiral"
+  ],
+  "new_tail": "4 failed, 23 passed in 11.14s",
+  "old_failing": []
+ },
+ {
+  "mutation": "heuristic ten times too high (greedy)",
+  "new_guards_failing": [],
+  "new_tail": "2 failed, 25 passed in 5.31s",
+  "old_failing": []
+ },
+ {
+  "mutation": "re-queues a tile it reaches again at the same cost",
+  "new_guards_failing": [
+   "HANG: no result in 90 s (the search never ends)"
+  ],
+  "new_tail": "timeout",
+  "old_failing": [
+   "HANG: no result in 90 s (the search never ends)"
+  ]
+ },
+ {
+  "mutation": "open list popped newest first (stack)",
+  "new_guards_failing": [
+   "test_astar_perf_diagonal_50x50",
+   "test_astar_perf_maze_50x50",
+   "test_astar_perf_open_grid_50x50",
+   "test_astar_perf_straight_across_open_ground",
+   "test_astar_perf_worst_case_spiral"
+  ],
+  "new_tail": "12 failed, 15 passed in 11.49s",
+  "old_failing": []
+ },
+ {
+  "mutation": "diagonal steps cost as much as straight ones",
+  "new_guards_failing": [],
+  "new_tail": "1 failed, 26 passed in 5.49s",
+  "old_failing": []
+ },
+ {
+  "mutation": "a list copy of the open list on every expansion (slow, same work)",
+  "new_guards_failing": [],
+  "new_tail": "27 passed in 5.72s",
+  "old_failing": []
+ },
+ {
+  "mutation": "a fixed busy loop per neighbour, sum(range(900)) (slow, same work)",
+  "new_guards_failing": [
+   "test_astar_runtime_per_probe_against_the_calibration_loop"
+  ],
+  "new_tail": "2 failed, 25 passed in 12.04s",
+  "old_failing": []
+ }
+]
