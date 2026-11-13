@@ -16,6 +16,12 @@ settings, never in the scene, and goes when the gesture is cancelled (Esc, undo,
   flow puts the points in the opposite order and gives them the levels in their old order (the highest first), so
   it relevels the water where it stands: a sloping river's surface rises at its old mouth and falls at its old
   source, and may need its bed sculpted again.
+- **Waterfalls (M17-W1):** with a point selected, Waterfall to next point makes the stretch from it to the next
+  fall (``project_ops.set_waterfall``): the two points' water levels are the top and the pool below (the panel sets
+  both: Water level and Water below), its foam and spray (0 off) are fields, Remove waterfall makes it ordinary
+  again. A waterfall's top and foot stay neighbours (no point is inserted between them, neither is removed while
+  it falls); inserting or removing a point elsewhere renumbers the waterfalls with it; a river with one isn't turned
+  round. Nothing is carved or relevelled to fit: refused, the reason is said.
 - **Refused edits:** a point, drag or field the checks refuse (a bank folding, banks touching, uphill, off the
   ground, too long) changes nothing: the last valid river stays drawn and saved, and the reason is said. While a
   drag goes somewhere refused the river stays as it last was valid and a red post marks the mouse.
@@ -393,10 +399,12 @@ class RiverTool:
         studio._say(ok)
         return True
 
-    def set_points(self, points: list[list[float]], ok: str) -> bool:
+    def set_points(self, points: list[list[float]], ok: str, *, falls: list[dict[str, Any]] | None = None) -> bool:
         rid = self.selected
         if rid is None:
             return False
+        if falls is not None:  # (M17-W1: the points renumbered, its waterfalls with them)
+            return self._commit(lambda s: ops.set_river(s, rid, points=points, falls=falls), ok)
         return self._commit(lambda s: ops.set_river(s, rid, points=points), ok)
 
     def insert_point(self) -> None:
@@ -408,10 +416,17 @@ class RiverTool:
             self.studio._say("Select a river's point first (click its post).", ok=False)
             return
         i = min(self.point, len(points) - 2)
+        falls = self.falls()
+        if any(f.get("from") == i for f in falls):  # (M17-W1: a waterfall's top and foot stay neighbours)
+            self.studio._say(f"Points {i + 1} and {i + 2} are a waterfall's top and foot: insert a point above or below "
+                             "it.", ok=False)
+            return
         x, y = halfway(points, i)
         a, b = points[i], points[i + 1]
         new = [round(x, 2), round(y, 2), round((a[2] + b[2]) / 2, 2), round((a[3] + b[3]) / 2, 2)]
-        if self.set_points([*points[:i + 1], new, *points[i + 1:]], f"Point added between points {i + 1} and {i + 2}."):
+        shifted = [{**f, "from": f["from"] + 1} if isinstance(f.get("from"), int) and f["from"] > i else f for f in falls]
+        if self.set_points([*points[:i + 1], new, *points[i + 1:]], f"Point added between points {i + 1} and {i + 2}.",
+                           falls=shifted if falls else None):
             self.point = i + 1
 
     def remove_point(self) -> None:
@@ -422,7 +437,16 @@ class RiverTool:
             self.studio._say("A river keeps at least two points: Remove river removes it all.", ok=False)
             return
         index = self.point
-        if self.set_points([p for i, p in enumerate(points) if i != index], f"Point {index + 1} removed."):
+        falls = self.falls()
+        held = next((f for f in falls if f.get("from") in (index, index - 1)), None)
+        if held is not None:  # (M17-W1)
+            self.studio._say(f"Point {index + 1} is the {'top' if held['from'] == index else 'foot'} of a waterfall: "
+                             "remove the waterfall first (select its top point).", ok=False)
+            return
+        shifted = [{**f, "from": f["from"] - 1} if isinstance(f.get("from"), int) and f["from"] > index else f
+                   for f in falls]
+        if self.set_points([p for i, p in enumerate(points) if i != index], f"Point {index + 1} removed.",
+                           falls=shifted if falls else None):
             self.point = min(index, len(points) - 2)
 
     def set_point(self, *, width_m: float | None = None, level_m: float | None = None) -> None:
@@ -451,12 +475,91 @@ class RiverTool:
         points = self._points(self.selected)
         if len(points) < 2:
             return
+        if self.falls():  # (M17-W1)
+            self.studio._say("Water doesn't fall upwards: remove this river's waterfalls before turning it round.",
+                             ok=False)
+            return
         turned = [[x, y, w, level] for (x, y, w, _l), level in zip(reversed(points), [p[3] for p in points])]
         sloped = points[0][3] != points[-1][3]
         if self.set_points(turned, "The river flows the other way now." + (
                 f" Its water was relevelled: {turned[0][3] / PX:+.2f} m at its new source, {turned[-1][3] / PX:+.2f} m "
                 "at its new mouth (check it against the bed)." if sloped else "")):
             self.point = None
+
+    # ------------------------------------------------------------------ waterfalls (M17-W1)
+    def falls(self, river_id: str | None = None) -> list[dict[str, Any]]:
+        """The selected (or named) river's waterfalls as saved: ``{"from": point (0-based), "foam", "spray"}``."""
+        found = self.find(self.selected if river_id is None else river_id)
+        return [dict(f) for f in (found or {}).get("falls") or [] if isinstance(f, dict)]
+
+    def fall_at(self, point: int | None) -> dict[str, Any] | None:
+        """The selected river's waterfall whose lip is at ``point``, if any."""
+        return next((f for f in self.falls() if f.get("from") == point), None)
+
+    def make_waterfall(self) -> None:
+        """The stretch from the selected point to the next falls (one undo step): the two points' levels are the
+        water above and below it, so the next must already be at least 0.5 m lower (refused, saying so, otherwise)."""
+        rid, p = self.selected, self.point
+        if rid is None or p is None:
+            self.studio._say("Select a river's point first: its waterfall falls from it to the next point.", ok=False)
+            return
+        pts = self._points(rid)
+        drop = (pts[p][3] - pts[p + 1][3]) / PX if p + 1 < len(pts) else 0.0
+        self._commit(lambda s: ops.set_waterfall(s, rid, p),
+                     f"Waterfall from point {p + 1} to {p + 2}: the water drops {drop:.2f} m.")
+
+    def remove_waterfall(self) -> None:
+        rid, p = self.selected, self.point
+        if rid is None or p is None or self.fall_at(p) is None:
+            return
+        self._commit(lambda s: ops.remove_waterfall(s, rid, p),
+                     f"Points {p + 1} to {p + 2} are an ordinary stretch again (no waterfall).")
+
+    def set_fall(self, **change: float) -> None:
+        """The selected waterfall's foam or spray (0-1; spray 0: none)."""
+        rid, p = self.selected, self.point
+        if rid is None or p is None or self.fall_at(p) is None:
+            return
+        words = ", ".join(f"{k} {v:g}" for k, v in change.items())
+        self._commit(lambda s: ops.set_waterfall(s, rid, p, **change), f"Waterfall from point {p + 1}: {words}.")
+
+    def set_lower_level(self, level_m: float) -> None:
+        """The water below the selected waterfall: its foot's (the next point's) level."""
+        p = self.point
+        points = self._points(self.selected)
+        if p is None or p + 1 >= len(points):
+            return
+        points[p + 1][3] = round(level_m * PX, 2)
+        self.set_points(points, f"Point {p + 2} (the waterfall's foot): water at {level_m:+.2f} m, "
+                                f"{(points[p][3] - points[p + 1][3]) / PX:.2f} m below its top.")
+
+    def _fall_rows(self, box: Any, width: int, pts: list[list[float]], field_row: Any, metres: Any) -> None:
+        from engine.studio_ui import C_MUTED  # noqa: PLC0415  # (the panel only: GUI)
+
+        studio, view, p = self.studio, self.view, self.point
+        assert p is not None
+        fall = self.fall_at(p)
+        above = self.fall_at(p - 1)
+        if fall is not None and p + 1 < len(pts):
+            box.add(studio._label(f"Waterfall from point {p + 1} to {p + 2}: the water drops "
+                                  f"{(pts[p][3] - pts[p + 1][3]) / PX:.2f} m (this point's water level to the next's).",
+                                  size=10, width=width))
+            field_row("Water below (m)", f"{pts[p + 1][3] / PX:+.2f}",
+                      metres(self.set_lower_level, -2048.0, 2048.0), "river_fall_below")
+            field_row("Foam (0-1)", f"{float(fall.get('foam', 0.6)):g}",
+                      metres(lambda v: self.set_fall(foam=v), 0.0, 1.0), "river_fall_foam")
+            field_row("Spray (0-1, 0 off)", f"{float(fall.get('spray', 0.4)):g}",
+                      metres(lambda v: self.set_fall(spray=v), 0.0, 1.0), "river_fall_spray")
+            box.add(view._button("Remove waterfall", self.remove_waterfall, "Make this stretch ordinary sloping water "
+                                 "again (one undo step)", width=width))
+        elif above is not None:
+            box.add(studio._label(f"The foot of the waterfall from point {p} (select point {p} to change it).",
+                                  color=C_MUTED, size=10, width=width))
+        else:
+            box.add(view._button("Waterfall to next point", self.make_waterfall, "The stretch from this point to the "
+                                 "next falls: this point's water level is the top, the next point's the pool below "
+                                 "(set it at least 0.5 m lower first). Needs a point before this one and one after the "
+                                 "next. Nothing is carved: sculpt the ledge, or carve the bed", width=width))
 
     def remove_river(self) -> None:
         rid = self.selected
@@ -595,6 +698,7 @@ class RiverTool:
                           "river_width")
                 field_row("Water level (m)", f"{p[3] / PX:+.2f}",
                           metres(lambda v: self.set_point(level_m=v), -2048.0, 2048.0), "river_level")
+                self._fall_rows(box, width, pts, field_row, metres)
                 row = _row()
                 row.add(view._button("Insert point", self.insert_point, "A point after this one, halfway along the "
                                      "course (Insert)", width=half))

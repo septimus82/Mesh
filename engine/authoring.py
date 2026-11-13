@@ -440,14 +440,23 @@ def _river_lines(label: str, before: list[Doc], after: list[Doc]) -> list[str]:
     """Rivers (``settings.hd2d.rivers``, #461) in words: what was added, changed or removed."""
     olds = {r.get("id"): r for r in before}
     news = {r.get("id"): r for r in after}
-    lines = [f"{label}: adds river '{rid}' ({len(r.get('points') or [])} points, flowing {r.get('flow', 1.0):g} m/s)"
-             for rid, r in news.items() if rid not in olds]
+    lines = [f"{label}: adds river '{rid}' ({len(r.get('points') or [])} points, flowing {r.get('flow', 1.0):g} m/s"
+             f"{'; ' + _fall_words(r) if r.get('falls') else ''})" for rid, r in news.items() if rid not in olds]
     for rid, r in news.items():
         if rid in olds and olds[rid] != r:
             what = sorted(k for k in olds[rid].keys() | r.keys() if olds[rid].get(k) != r.get(k))
+            what = [(_fall_words(r) if r.get("falls") else "no waterfalls now") if k == "falls" else k for k in what]
             lines.append(f"{label}: changes river '{rid}' ({', '.join(what)})")
     lines += [f"{label}: removes river '{rid}'" for rid in olds if rid not in news]
     return lines
+
+
+def _fall_words(river: Doc) -> str:
+    """A river's waterfalls (M17-W1) in words, its points counted from 1 as Studio shows them."""
+    falls = [f for f in river.get("falls") or [] if isinstance(f, dict) and isinstance(f.get("from"), int)]
+    return "waterfall" + ("s" if len(falls) > 1 else "") + " " + ", ".join(
+        f"from point {f['from'] + 1} to {f['from'] + 2}" + (f" (foam {f['foam']:g})" if "foam" in f else "")
+        + (f" (spray {f['spray']:g})" if "spray" in f else "") for f in falls)
 
 
 def _weather_words(effects: Any) -> str:
