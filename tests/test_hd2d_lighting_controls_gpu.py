@@ -146,7 +146,14 @@ def _texts_have(texts: list[str], phrase: str) -> bool:
 
 @pytest.fixture(scope="module")
 def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    # (the AI bridge off for the session only, then as it was: absent stays absent, a value comes back, also when the
+    # session fails part way)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
+        return _lighting_session(tmp_path_factory)
+
+
+def _lighting_session(tmp_path_factory: pytest.TempPathFactory) -> dict:
     from hd2d_studio_demo import StudioDriver
 
     from engine import project_ops as ops
@@ -310,7 +317,6 @@ def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
         out["reopened"]["off_active"] = widget is not None and widget.style == S_ACTIVE
     finally:
         d.close()
-        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
     out["file"] = json.loads(path.read_text(encoding="utf-8"))
     return out
 
