@@ -37,14 +37,15 @@ sys.path.insert(0, str(REPO / "tooling"))
 P = 32.0
 
 
-def test_studio_draws_one_water_surface_where_the_stream_enters_the_pond(tmp_path: Path) -> None:
+def test_studio_draws_one_water_surface_where_the_stream_enters_the_pond(tmp_path: Path,
+                                                                         monkeypatch: pytest.MonkeyPatch) -> None:
     import r4_river_mouth_study as study
     from hd2d_studio_demo import StudioDriver
 
     from engine.hd2d.river import RiverIndex, join, ponds_of, ribbon
     from engine.water import LIFT_M, inside
 
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    monkeypatch.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
     d = StudioDriver(study.make_project(tmp_path, "studio", carved=True))
     try:
         k, studio = d.arcade.key, d.studio
@@ -175,7 +176,7 @@ def test_studio_draws_one_water_surface_where_the_stream_enters_the_pond(tmp_pat
         d.close()
 
 
-def test_no_seam_where_the_shore_crosses_the_stream_at_a_slant(tmp_path: Path) -> None:
+def test_no_seam_where_the_shore_crosses_the_stream_at_a_slant(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Review of 51fb208: the pond's opening faded along the river while the river blended by distance from the
     shore, so a slanted shore showed a step in colour. Across the stream, a few texels either side of the shore (each
     side's middle colour: a single glint or grid line doesn't count) are the same water."""
@@ -185,7 +186,7 @@ def test_no_seam_where_the_shore_crosses_the_stream_at_a_slant(tmp_path: Path) -
     from engine.hd2d.river import join, ponds_of
     from engine.water import LIFT_M, inside
 
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    monkeypatch.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
     d = StudioDriver(study.make_project(tmp_path, "slant", carved=True, course=study.SLANT))
     try:
         view, renderer = d.studio.hd2d, d.renderer

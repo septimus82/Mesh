@@ -31,8 +31,11 @@ def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
     import d3a_interaction_scenario
 
     out = tmp_path_factory.mktemp("d3a")
-    os.environ.setdefault("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
-    return d3a_interaction_scenario.run(out)
+    # (for its run only, then as it was: absent stays absent, a value is left as it is and comes back)
+    with pytest.MonkeyPatch.context() as env:
+        if "MESH_RUNTIME_SETTINGS_PATH" not in os.environ:
+            env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
+        return d3a_interaction_scenario.run(out)
 
 
 def _code(answer: dict) -> str | None:

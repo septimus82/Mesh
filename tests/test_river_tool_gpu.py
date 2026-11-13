@@ -40,13 +40,14 @@ def _rivers(d: Any) -> list[dict[str, Any]]:
     return ops.rivers(d.studio.project.scene())
 
 
-def test_a_creator_draws_edits_and_plays_a_river_in_studio(tmp_path: Path, record_testsuite_property: Any) -> None:
+def test_a_creator_draws_edits_and_plays_a_river_in_studio(tmp_path: Path, record_testsuite_property: Any,
+                                                           monkeypatch: pytest.MonkeyPatch) -> None:
     import r1_river_study as r1
     from hd2d_studio_demo import StudioDriver
 
     from engine.studio_project import Project
 
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    monkeypatch.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
     project = r1.make_project(tmp_path, "tool", rivers=False)  # the beds, sculpted; no river yet
     d = StudioDriver(project)
     measures: dict[str, Any] = {}
@@ -201,14 +202,15 @@ def test_a_creator_draws_edits_and_plays_a_river_in_studio(tmp_path: Path, recor
         d.close()
 
 
-def test_losing_focus_drops_a_river_being_drawn_or_a_point_being_dragged(tmp_path: Path) -> None:
+def test_losing_focus_drops_a_river_being_drawn_or_a_point_being_dragged(tmp_path: Path,
+                                                                         monkeypatch: pytest.MonkeyPatch) -> None:
     """The window loses the keyboard (Alt+Tab) mid-gesture: a river still being drawn and a point being dragged are
     both dropped. Nothing is saved, the undo history and unsaved state are as they were, the saved rivers are
     drawn again, and nothing of the gesture resumes when the person comes back."""
     import r1_river_study as r1
     from hd2d_studio_demo import StudioDriver
 
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    monkeypatch.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
     project = r1.make_project(tmp_path, "focus", rivers=False)
     d = StudioDriver(project)
     try:
@@ -267,7 +269,8 @@ def test_losing_focus_drops_a_river_being_drawn_or_a_point_being_dragged(tmp_pat
         d.close()
 
 
-def test_a_narrow_raised_river_is_selected_by_its_water_not_the_ground_behind_it(tmp_path: Path) -> None:
+def test_a_narrow_raised_river_is_selected_by_its_water_not_the_ground_behind_it(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Studio's ordinary angled camera, 0.5 m rivers standing 0.31 m over their beds: a click on a visible water pixel
     (away from every post) of one running across the view selects it, though the ground under that pixel lies
     beyond the river; a click on dry ground beside it doesn't; a click where the bridge's deck hides the other one
@@ -283,7 +286,7 @@ def test_a_narrow_raised_river_is_selected_by_its_water_not_the_ground_behind_it
     from engine.studio_river import PICK_PX
     from engine.water import LIFT_M
 
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    monkeypatch.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
     project = r1.make_project(tmp_path, "narrow", rivers=False)  # the beds: floors 17-22 px below the ground
     path = project / "packs" / "core_regions" / "scenes" / "start.json"
     scene = json.loads(path.read_text(encoding="utf-8"))

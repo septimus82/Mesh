@@ -149,13 +149,14 @@ def test_an_npc_put_in_deep_water_walks_out_and_goes_on(tmp_path: Path) -> None:
         game.close()
 
 
-def test_studio_sets_walking_into_it_for_a_stream_and_a_pond_one_undo_step_each(tmp_path: Path) -> None:
+def test_studio_sets_walking_into_it_for_a_stream_and_a_pond_one_undo_step_each(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     import r4_river_mouth_study as study
     from hd2d_studio_demo import StudioDriver
 
     from engine import project_ops as ops
 
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    monkeypatch.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
     project = study.make_project(tmp_path, "studio", carved=True)
     pond = study.pond_id(project)
     d = StudioDriver(project)

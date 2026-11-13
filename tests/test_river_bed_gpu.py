@@ -33,7 +33,8 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tooling"))
 
 
-def test_studio_carves_a_stream_s_bed_so_its_water_shows_undo_and_clear_its_plants(tmp_path: Path) -> None:
+def test_studio_carves_a_stream_s_bed_so_its_water_shows_undo_and_clear_its_plants(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     import r3_river_bed_study as study
     from hd2d_studio_demo import StudioDriver
 
@@ -42,7 +43,7 @@ def test_studio_carves_a_stream_s_bed_so_its_water_shows_undo_and_clear_its_plan
     from engine.hd2d.scatter import parse_scatter
     from engine.water import LIFT_M
 
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    monkeypatch.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
     d = StudioDriver(study.make_project(tmp_path, "studio"))
     try:
         k, studio = d.arcade.key, d.studio

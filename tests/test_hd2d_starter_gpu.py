@@ -27,10 +27,12 @@ sys.path.insert(0, str(REPO / "tooling"))
 
 @pytest.fixture(scope="module")
 def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
     import hd2d_starter_demo as demo
 
-    report = demo.check(tmp_path_factory.mktemp("starter"))
+    # (the AI bridge off for its Studio session only, then as it was: absent stays absent, a value comes back)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
+        report = demo.check(tmp_path_factory.mktemp("starter"))
     return {s["step"]: s for s in report["steps"]} | {"timings": report["timings"], "gl": report["gl"]}
 
 

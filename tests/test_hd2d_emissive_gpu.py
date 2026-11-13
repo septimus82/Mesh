@@ -32,8 +32,10 @@ LIGHTINGS = ("noon", "night", "night_lamp_on", "night_lamp_off")
 
 @pytest.fixture(scope="module")
 def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
-    return demo.check(tmp_path_factory.mktemp("em") / "d")
+    # (the AI bridge off for its Studio session only, then as it was: absent stays absent, a value comes back)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
+        return demo.check(tmp_path_factory.mktemp("em") / "d")
 
 
 def _close(got: tuple[int, ...], want: tuple[int, ...], tol: int = 1) -> bool:
