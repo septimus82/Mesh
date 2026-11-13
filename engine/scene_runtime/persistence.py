@@ -26,8 +26,9 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
     if "settings" not in snapshot:
         snapshot["settings"] = {}
 
-    # Update camera state in settings
-    camera_settings = snapshot["settings"].get("camera", {})
+    # Update camera state in settings. With no camera block (or one that isn't an object) a new one is attached to the
+    # snapshot before the live zoom is written into it (a detached default dict would drop the zoom on save).
+    camera_settings = snapshot["settings"].get("camera")
     if not isinstance(camera_settings, dict):
         camera_settings = {}
         snapshot["settings"]["camera"] = camera_settings
