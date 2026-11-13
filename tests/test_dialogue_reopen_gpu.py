@@ -32,9 +32,11 @@ def report(tmp_path_factory: pytest.TempPathFactory) -> dict:
     import watchfire_r4_dialogue as r4
 
     out = tmp_path_factory.mktemp("r4")
-    os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
-    return r4.run(out)
+    # (for its run only, then as they were: absent stays absent, a value comes back, whatever the run did)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
+        return r4.run(out)
 
 
 def test_reopening_shows_the_same_numbers_openings_and_next_line_button(report: dict) -> None:
