@@ -19,7 +19,6 @@ from engine.project_scaffold import create_project
 from engine.studio_ai import StudioAIHost
 from engine.studio_project import Project
 
-pytestmark = pytest.mark.fast
 REPO = Path(__file__).resolve().parents[1]
 ADD_SEXTON = [{"op": "place_prefab", "prefab": "person", "x": 320, "y": 224},
               {"op": "rename_entity", "entity_id": "@0", "name": "Sexton"}]
@@ -36,6 +35,7 @@ def _room(root: Path) -> dict:
     return json.loads((root / "packs/core_regions/scenes/start.json").read_text(encoding="utf-8"))
 
 
+@pytest.mark.fast
 def test_offline_apply_writes_valid_files_or_nothing(root: Path) -> None:
     preview = authoring_session.apply(root, ADD_SEXTON, dry_run=True)
     assert preview["ok"] and any("adds 'Sexton'" in line for line in preview["summary"])
@@ -49,6 +49,7 @@ def test_offline_apply_writes_valid_files_or_nothing(root: Path) -> None:
     assert _room(root) == before
 
 
+@pytest.mark.fast
 def test_apply_ops_on_a_studio_project_goes_through_the_same_validated_path(root: Path) -> None:
     result = tools.apply_ops([{"type": "add_entity_from_prefab", "scene_path": "packs/core_regions/scenes/start.json",
                                "prefab_name": "person", "x": 96, "y": 96}], root=str(root))
@@ -57,6 +58,7 @@ def test_apply_ops_on_a_studio_project_goes_through_the_same_validated_path(root
     assert len(placed) == 1 and placed[0]["x"] == 96.0
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_the_cli_and_the_api_produce_the_same_room(root: Path, tmp_path: Path) -> None:
     other = tmp_path / "copy"
     create_project(other, "Game", template_id="blank")
@@ -106,6 +108,7 @@ def live(root: Path):
     host.stop()
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_while_studio_is_open_changes_are_proposed_never_written(root: Path, live) -> None:
     studio, host = live
     before = _room(root)
@@ -121,6 +124,7 @@ def test_while_studio_is_open_changes_are_proposed_never_written(root: Path, liv
     assert host.proposals[0].status == "rejected" and _room(root) == before
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_a_persons_edit_and_an_ai_proposal_both_survive_unless_they_touch_the_same_thing(root: Path, live) -> None:
     studio, host = live
     project = studio.project
@@ -150,6 +154,7 @@ def test_a_persons_edit_and_an_ai_proposal_both_survive_unless_they_touch_the_sa
     assert any(e.get("name") == "Warden" for e in project.scene()["entities"])
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_the_old_one_call_add_tool_never_reports_a_success_that_didnt_happen(root: Path, live) -> None:
     _studio, host = live
     result = tools.live_add_entity_from_prefab("person", 100, 100, root=str(root))
@@ -157,6 +162,7 @@ def test_the_old_one_call_add_tool_never_reports_a_success_that_didnt_happen(roo
     assert host.pending() == []
 
 
+@pytest.mark.fast
 def test_a_studio_save_keeps_a_version_something_else_wrote_meanwhile(root: Path) -> None:
     import os
 
@@ -173,6 +179,7 @@ def test_a_studio_save_keeps_a_version_something_else_wrote_meanwhile(root: Path
     assert any(e.get("name") == "Sexton" for e in _room(root)["entities"])
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_apply_ops_wont_write_files_under_an_open_studio(root: Path, live) -> None:
     _studio, host = live
     before = _room(root)

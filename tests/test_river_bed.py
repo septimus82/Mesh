@@ -23,8 +23,6 @@ from engine.hd2d.settings import parse_hd2d
 from engine.hd2d.terrain import MAX_SLOPE, Terrain
 from engine.hd2d.world import DEEP, World
 
-pytestmark = pytest.mark.fast
-
 P = 32.0
 # a 3 m stream flowing east right across a 50 x 37.5 m flat room (edge to edge: no way round it), its water 0.5 m
 # below the ground: unseen until its bed is carved
@@ -50,6 +48,7 @@ def _metres(px: float) -> float:
     return px / P
 
 
+@pytest.mark.fast
 def test_the_bed_is_deepest_in_the_middle_meets_the_water_at_its_edge_and_its_banks_are_walkable() -> None:
     carved = ops.carve_river_bed(_scene(), "stream")
     t = _terrain(carved)
@@ -67,6 +66,7 @@ def test_the_bed_is_deepest_in_the_middle_meets_the_water_at_its_edge_and_its_ba
     assert all(abs(b - a) < 8.0 for a, b in zip(across, across[1:])), "no seam: a smooth section"
 
 
+@pytest.mark.fast
 def test_carving_is_deterministic_idempotent_only_lowers_and_keeps_other_ground() -> None:
     scene = ops.sculpt_terrain_stroke(_scene(), "raise", [[1400, 1000, 40]], radius=96)  # a hill far away
     scene = ops.sculpt_terrain_stroke(scene, "lower", [[640, 620, 120]], radius=24)  # a pit already in the bed
@@ -84,6 +84,7 @@ def test_carving_is_deterministic_idempotent_only_lowers_and_keeps_other_ground(
     assert a["settings"]["hd2d"]["rivers"] == scene["settings"]["hd2d"]["rivers"], "the river itself unchanged"
 
 
+@pytest.mark.fast
 def test_depths_vary_along_a_river_a_shallow_point_is_a_ford() -> None:
     points = [[160.0, 600.0, 64.0, -16.0], [640.0, 600.0, 128.0, -16.0], [1120.0, 600.0, 64.0, -16.0]]
     by_width = _terrain(ops.carve_river_bed(_scene(points), "stream"))
@@ -99,6 +100,7 @@ def test_depths_vary_along_a_river_a_shallow_point_is_a_ford() -> None:
         ops.carve_river_bed({"entities": [], "settings": {}}, "stream")
 
 
+@pytest.mark.fast
 def test_scatter_keeps_out_of_a_river_and_clearing_takes_only_what_stands_in_its_water() -> None:
     from engine.hd2d.scatter import ASSETS, parse_scatter
 
@@ -130,6 +132,7 @@ def test_scatter_keeps_out_of_a_river_and_clearing_takes_only_what_stands_in_its
     assert ops.remove_river(cleared, "stream")["settings"]["hd2d"]["scatter"] == cleared["settings"]["hd2d"]["scatter"]
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_dry_shallow_and_deep_water_underfoot() -> None:
     world = _world(ops.carve_river_bed(_scene(), "stream"))
     feet = (0.3, 0.19)
@@ -149,6 +152,7 @@ def test_dry_shallow_and_deep_water_underfoot() -> None:
     assert path == [], "no way across: deep all along"
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_a_ford_can_be_walked_across_and_the_navigation_grid_knows_it() -> None:
     # edge to edge across the room (no way round its ends), shallow at its middle point (x 800 px)
     points = [[4.0, 600.0, 96.0, -16.0], [800.0, 600.0, 96.0, -16.0], [1596.0, 600.0, 96.0, -16.0]]
@@ -164,6 +168,7 @@ def test_a_ford_can_be_walked_across_and_the_navigation_grid_knows_it() -> None:
     assert world.stand(_metres(200), _metres(600), bed, 0.3, 0.19) is None, "mid-stream upstream: deep"
 
 
+@pytest.mark.fast
 def test_wading_steps_are_reported_dry_ground_and_deep_water_none() -> None:
     from types import SimpleNamespace
 
@@ -183,6 +188,7 @@ def test_wading_steps_are_reported_dry_ground_and_deep_water_none() -> None:
     assert sprite.mesh_hd2d_wading is None and len(steps) == 6, "dry: no step"
 
 
+@pytest.mark.fast
 def test_rooms_without_rivers_are_as_they_were() -> None:
     plain = {"ground": {"texture": "assets/textures/grass.png", "from": [0, 0], "to": [1600, 1200]}}
     world = World(parse_hd2d(plain), {})
@@ -190,6 +196,7 @@ def test_rooms_without_rivers_are_as_they_were() -> None:
     assert world.stand(20.0, 19.0, 0.0, 0.3, 0.19) == (0.0, "ground")
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_ai_carves_and_clears_and_reviews_it_saved_and_undone(tmp_path: Path) -> None:
     from engine.project_scaffold import create_project
     from engine.studio_project import Project
@@ -222,6 +229,7 @@ def test_ai_carves_and_clears_and_reviews_it_saved_and_undone(tmp_path: Path) ->
 
 # --- review of 4b2b060 (#465): the shapes the first tests missed --------------------------------------------------
 
+@pytest.mark.fast
 def test_no_bed_carries_on_past_a_river_s_end() -> None:
     """A river ending inside the room: past its end the ground rises from the end's water level all round (no dry
     pit where the bed would go on)."""
@@ -235,6 +243,7 @@ def test_no_bed_carries_on_past_a_river_s_end() -> None:
     assert t.height(1248, 600) == 0.0 and t.height(256, 600) == 0.0, "1.5 m past either end: the ground as it was"
 
 
+@pytest.mark.fast
 def test_a_river_drawn_over_the_ground_lies_in_its_bed_once_carved() -> None:
     """Studio draws a new river a little over the ground clicked (shown before its bed is carved). Carving lowers
     its water to just under the ground beside it first, so it lies in a channel instead of a sheet over the grass;
@@ -251,6 +260,7 @@ def test_a_river_drawn_over_the_ground_lies_in_its_bed_once_carved() -> None:
         ops.carve_river_bed(carved, "stream")
 
 
+@pytest.mark.fast
 def test_a_river_far_below_the_ground_gets_a_walkable_bank_all_the_way_up() -> None:
     """Water 3 m under the ground: its bank climbs at the walkable slope until it meets the ground (no cliff)."""
     deep = [[4.0, 600.0, 96.0, -96.0], [800.0, 600.0, 96.0, -96.0], [1596.0, 600.0, 96.0, -96.0]]
@@ -261,6 +271,7 @@ def test_a_river_far_below_the_ground_gets_a_walkable_bank_all_the_way_up() -> N
     assert t.height(800, 600 + 48 + 6 * 32) == 0.0, "the bank reached the ground"
 
 
+@pytest.mark.integration  # (#422 F13-D: integration)
 def test_two_metre_streams_are_wadeable_whatever_the_rounding() -> None:
     """A 2 m stream's default bed is half a metre deep: wadeable, whether its level stores a hair up or down."""
     for level in (-16.4, -16.3, -16.0):
@@ -271,6 +282,7 @@ def test_two_metre_streams_are_wadeable_whatever_the_rounding() -> None:
         assert world.path((25.0, 22.0, 0.0), (25.0, 15.0, 0.0)), (level, "across")
 
 
+@pytest.mark.fast
 def test_one_broken_river_doesn_t_hide_another_s_water_from_scatter() -> None:
     from engine.hd2d.scatter import parse_scatter
 
@@ -283,6 +295,7 @@ def test_one_broken_river_doesn_t_hide_another_s_water_from_scatter() -> None:
     assert rows and not [r for rs in rows.values() for r in rs if good.level_at(r[0] / P, r[1] / P)]
 
 
+@pytest.mark.fast
 def test_a_river_beside_a_carved_one_carves_once() -> None:
     """Re-review of c96e3e8: sinking measured on the neighbour's lowered bank re-sank at each carve; water already at
     or under the ground beside it isn't sunk again, so a second carve is refused."""

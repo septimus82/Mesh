@@ -47,12 +47,15 @@ def test_docs_verify_fails_on_each_stale_generated_doc_and_passes_when_fresh(tmp
     assert mesh_cli.main(["docs", "--out-dir", str(docs_dir)]) == 0
     assert mesh_cli.main(["docs", "--out-dir", str(docs_dir), "--verify"]) == 0
 
+    # Each generated doc made stale alone fails the check, then is put back; once all are back it passes again.
+    # (#422 F13-D: one final check, not one after every doc: each check regenerates every doc, and only the doc just
+    # put back changed since the check before it.)
     for filename in DOC_FILENAMES.values():
         stale_path = docs_dir / filename
         original = stale_path.read_text(encoding="utf-8")
         stale_path.write_text("stale\n", encoding="utf-8")
 
-        assert mesh_cli.main(["docs", "--out-dir", str(docs_dir), "--verify"]) == 1
+        assert mesh_cli.main(["docs", "--out-dir", str(docs_dir), "--verify"]) == 1, filename
 
         stale_path.write_text(original, encoding="utf-8")
-        assert mesh_cli.main(["docs", "--out-dir", str(docs_dir), "--verify"]) == 0
+    assert mesh_cli.main(["docs", "--out-dir", str(docs_dir), "--verify"]) == 0

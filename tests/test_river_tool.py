@@ -16,7 +16,7 @@ from engine import project_ops as ops
 from engine.hd2d.settings import parse_hd2d
 from engine.studio_river import RiverTool
 
-pytestmark = pytest.mark.fast
+pytestmark = pytest.mark.integration  # (#422 F13-D: integration)
 
 
 class _Studio:
