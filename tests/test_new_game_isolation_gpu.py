@@ -35,8 +35,11 @@ def sessions(tmp_path_factory: pytest.TempPathFactory) -> dict:
                           cwd=REPO, capture_output=True, text=True, timeout=300)
     assert made.returncode == 0, made.stderr[-2000:]
     project = next(p.parent for p in out.rglob("config.json") if (p.parent / "main.py").is_file())
-    os.environ.setdefault("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
-    return {"project": project, **r1.flag_sessions(project)}
+    # (for its run only, then as it was: absent stays absent, a value is left as it is and comes back)
+    with pytest.MonkeyPatch.context() as env:
+        if "MESH_RUNTIME_SETTINGS_PATH" not in os.environ:
+            env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
+        return {"project": project, **r1.flag_sessions(project)}
 
 
 def test_the_first_session_saves_and_loads_its_progress(sessions: dict) -> None:

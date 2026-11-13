@@ -42,8 +42,11 @@ def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
     import d2_ai_playtest_scenario
 
     out = tmp_path_factory.mktemp("d2")
-    os.environ.setdefault("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
-    return d2_ai_playtest_scenario.run(out)
+    # (for its run only, then as it was: absent stays absent, a value is left as it is and comes back)
+    with pytest.MonkeyPatch.context() as env:
+        if "MESH_RUNTIME_SETTINGS_PATH" not in os.environ:
+            env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
+        return d2_ai_playtest_scenario.run(out)
 
 
 def _reason(answer: dict) -> str:
