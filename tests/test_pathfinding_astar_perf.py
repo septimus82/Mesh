@@ -21,6 +21,7 @@ fail: a guard nothing can trip protects nothing."""
 from __future__ import annotations
 
 import importlib
+import json
 import statistics
 import time
 import types
@@ -212,10 +213,10 @@ def _check_runtime(costs: dict[str, float]) -> None:
 
 
 @pytest.mark.integration
-def test_astar_runtime_per_probe_against_the_calibration_loop(record_property: Any) -> None:
+def test_astar_runtime_per_probe_against_the_calibration_loop(record_testsuite_property: Any) -> None:
     costs = _probe_costs()
-    for name, cost in costs.items():
-        record_property(f"astar_probe_cost_{name}", round(cost, 2))
+    # (in the junit report where one is written, as the GPU lane's measurements are: this run's costs, pass or fail)
+    record_testsuite_property("measure.astar_probe_cost", json.dumps({k: round(v, 2) for k, v in costs.items()}))
     _check_runtime(costs)
 
 

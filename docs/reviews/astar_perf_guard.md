@@ -139,7 +139,7 @@ The three that pass:
 - **Constant-factor slowdowns under about 3.5 times are not caught.** The bound trades that for not failing on a slow
   runner. It can come down once CI has recorded enough costs (below).
 - **Hosted runners are not yet measured.** The bound rests on one machine, two Python versions, idle and loaded. The
-  test records each run's costs in junit (`astar_probe_cost_*`), which CI uploads for the Windows pytest shards; the
+  test records each run's costs in junit (`measure.astar_probe_cost`), which CI uploads for the Windows pytest shards; the
   Linux pytest job uploads no junit, so on Linux a cost is seen only if the check fails. CI's CPUs differ by 2.4 times
   on the calibration loop (10.5-25 ms across recent GPU-lane records); how far the ratio itself moves between them is
   the open question.
