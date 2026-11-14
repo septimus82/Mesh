@@ -304,7 +304,8 @@ def test_storage_failures_are_never_successes(files, store):
     kill(d, a, (480.0, 256.0), 2)  # the unlock cannot be written
     d.take_loot(a, (440.0, 256.0))  # nor the sigil
     assert d.sheet(a) == store.load(ada["id"]) and store.load(ada["id"]).unlocks == () and store.load(ada["id"]).items == ()
-    assert d.notices(a).count("storage_failed") >= 2 and (GUARDIAN, ada["id"]) in d.w.progress.loot[d.m(a).instance]
+    # The unlock is owed (kept in the journal, #496: tests/test_mesh_net_owed.py); the sigil was not granted.
+    assert d.notices(a) == ["unlock_owed", "storage_failed"] and (GUARDIAN, ada["id"]) in d.w.progress.loot[d.m(a).instance]
     store.fault = None
     d.step()  # the owed completion is retried
     d.take_loot(a, (440.0, 256.0))

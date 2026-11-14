@@ -21,7 +21,6 @@ import logging
 import math
 import re
 import secrets
-from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -42,16 +41,19 @@ from .characters import (
     InventoryFull,
     StoreError,
 )
+from .owed import Journal, JournalError, Owed, journal_path
 from .scene_room import Unsupported, roll_drops
 
 if TYPE_CHECKING:
     from .world import Instance, Member, RoomDef, World
 
 logger = logging.getLogger(__name__)
-PENDING_LIMIT = 64  # completions waiting for a store that failed
+RECORDED_PER_TICK = 8  # owed completions recorded in one tick once the store works again (each is a commit)
 MAX_RULES = 64
 CLAIM_ROOM = 60  # the longest room-instance id part of a claim key ("<key>:<n>/")
-NOTICES = ("picked_up", "inventory_full", "storage_failed", "unlocked")
+# "unlock_owed": earned, not yet recorded, kept in the journal (mesh_net.owed) and recorded when the store works again,
+# also after a restart. "unlock_not_kept": the journal failed too; held only in this server's memory.
+NOTICES = ("picked_up", "inventory_full", "storage_failed", "unlocked", "unlock_owed", "unlock_not_kept")
 
 
 class Refused(wire.Invalid):
@@ -134,16 +136,51 @@ class Progress:
     takes: set[int] = field(default_factory=set)
     defeated: dict[str, set[str]] = field(default_factory=dict)  # instance -> enemies whose death was handled
     loot: dict[str, dict[tuple[str, str], list[tuple[str, int]]]] = field(default_factory=dict)  # inst -> (enemy, cid)
-    pending: deque[tuple[str, str, str]] = field(default_factory=deque)  # (bounded by _complete: PENDING_LIMIT)
     sent: dict[int, wire.Message] = field(default_factory=dict)
+    # Completions earned that the store has not recorded, oldest first (#496). Each is in ``journal`` (durable: a
+    # server stopped or killed now records it at its next start) unless it is in ``unkept``.
+    owed: list[Owed] = field(default_factory=list)
+    journal: Journal | None = None
+    unkept: set[Owed] = field(default_factory=set)  # the journal failed too: these exist only in this process
+    refused: dict[Owed, str] = field(default_factory=dict)  # owed, and refused by the store for a reason of its own
+    recovered: int = 0  # owed by earlier runs and recorded when this one started
 
     @classmethod
     def open(cls, root: Path, defs: dict[str, RoomDef], store: CharacterStore, rules: Any) -> Progress:
+        """Raises mesh_net.owed.JournalError (a StoreUnavailable) if the journal of owed completions cannot be used:
+        a server never starts without knowing what an earlier run still owes."""
         progress = cls(store, load_rules(rules, defs))
         store.stack_limits = item_limits(root, defs)
         store.unlock_keys = frozenset(r.key for r in progress.rules)
-        store.begin_run(progress.run)
+        progress.journal = journal = Journal(journal_path(store.path))
+        progress.owed = list(journal.entries)
+        if journal.torn:
+            logger.warning("[Mesh][Net] %s: its last record was cut short while being written (%d bytes); that write "
+                           "never completed and was cleared", journal.path.name, journal.torn)
+        # (An owed completion is recorded under the run that earned it: that run's claims must outlive this start.)
+        store.begin_run(progress.run, keep={e.run for e in progress.owed})
+        if progress.owed:  # before anyone joins: what earlier runs owe
+            before = len(progress.owed)
+            progress._record(None, limit=None)
+            progress.recovered = before - len(progress.owed)
+            logger.warning("[Mesh][Net] %d completions owed by earlier runs: %d recorded now, %d still owed",
+                           before, progress.recovered, len(progress.owed))
         return progress
+
+    @property
+    def accepting(self) -> bool:
+        """Whether a new expedition may start. Not while the store is failing: a completion is owed that the store
+        has not refused for a reason of its own, or its connection is broken. Expeditions under way go on (what they
+        earn is owed too); no new one starts until everything owed is recorded."""
+        return not self.store.broken and all(e in self.refused for e in self.owed)
+
+    def close(self) -> None:
+        """The server stops. What the journal holds is recorded by the next start; what it could not take is lost,
+        and said so."""
+        for entry in self.owed:
+            if entry in self.unkept:
+                logger.error("[Mesh][Net] LOST: unlock %s earned by character %s was never recorded (the store and "
+                             "the journal of owed completions both failed)", entry.unlock, entry.character)
 
     # --- sessions -------------------------------------------------------------------------------------
 
@@ -182,8 +219,8 @@ class Progress:
             if m is not None and m.online:
                 self._take(world, m)
         self.takes.clear()
-        for _ in range(len(self.pending)):  # completions a failed store owes (retried each tick, bounded)
-            self._complete(world, *self.pending.popleft(), retry=True)
+        if self.owed:  # completions a failing store owes (tried again each tick)
+            self._record(world)
         for gone in [i for i in self.defeated if i not in world.instances]:  # temporary state ends with its room
             self.defeated.pop(gone, None)
             self.loot.pop(gone, None)
@@ -198,30 +235,102 @@ class Progress:
             grants = [(str(d["item_id"]).strip(), d["quantity"]) for d in roll_drops(table) if d["item_id"]][:MAX_GRANTS]
             if grants:
                 self.loot.setdefault(inst.id, {})[(enemy_id, self.characters[m.pid].id)] = grants
+        owed = []
         for rule in self.rules:
             if rule.room == inst.key and rule.defeat == enemy_id:
                 for m in present:  # (one completion per rule: two rules on one enemy are two completions)
-                    self._complete(world, self.characters[m.pid].id, f"{inst.id}/{enemy_id}/{rule.key}", rule.key)
+                    entry = self._complete(world, self.characters[m.pid].id, f"{inst.id}/{enemy_id}/{rule.key}", rule.key)
+                    if entry is not None:
+                        owed.append(entry)
+        if owed:  # the store did not take them: owed from here on, and kept before anyone is told
+            self.owed.extend(owed)
+            self._keep(world, owed)
 
-    def _complete(self, world: World, cid: str, completion: str, key: str, retry: bool = False) -> None:
+    def _complete(self, world: World, cid: str, completion: str, key: str) -> Owed | None:
+        """Record a completion just earned. Returns it if the store did not take it (it is then owed)."""
         pid = self.owner.get(cid)
         try:
             fresh, state = self.store.complete(cid, self.run, completion, key)
         except DuplicateClaim:
-            return
+            return None
         except (StoreError, ValueError) as exc:
-            if len(self.pending) >= PENDING_LIMIT:  # never dropped silently
-                logger.error("[Mesh][Net] an unlock owed to character %s could not be recorded and the retry queue "
-                             "is full: %s (%s)", cid, key, exc)
-            else:
-                self.pending.append((cid, completion, key))
-            if pid is not None and not retry:  # (said once, not on every retry)
-                world._notice(world.members[pid], "storage_failed")
-            return
+            entry = Owed(cid, self.run, completion, key)
+            if isinstance(exc, ValueError):  # (not a storage failure; the rules are checked at load, so not expected)
+                self.refused[entry] = str(exc)
+            logger.warning("[Mesh][Net] unlock %s earned by character %s not recorded: %s", key, cid, exc)
+            return entry
         if pid is not None:
             self.characters[pid] = state
             if fresh:
                 world._notice(world.members[pid], "unlocked")
+        return None
+
+    def _keep(self, world: World | None, entries: list[Owed]) -> None:
+        """Write owed completions to the journal, then tell their characters what is true: kept ("unlock_owed"), or,
+        if the journal failed too, held only in this server's memory ("unlock_not_kept")."""
+        try:
+            if self.journal is None:
+                raise JournalError("this world has no journal of owed completions")
+            self.journal.owe(entries)
+        except JournalError as exc:
+            told = [e for e in entries if e not in self.unkept]  # (said once, not on every later try)
+            self.unkept.update(entries)
+            for entry in told:
+                logger.error("[Mesh][Net] unlock %s owed to character %s is held in memory only (%s): it is lost if "
+                             "the server stops before its storage works again", entry.unlock, entry.character, exc)
+            code = "unlock_not_kept"
+        else:
+            self.unkept.difference_update(entries)
+            told, code = entries, "unlock_owed"
+        if world is not None:
+            for entry in told:
+                pid = self.owner.get(entry.character)
+                if pid is not None:
+                    world._notice(world.members[pid], code)
+
+    def _record(self, world: World | None, limit: int | None = RECORDED_PER_TICK) -> None:
+        """Record what is owed, oldest first, until the store fails again (it is still down: the rest wait too) or
+        ``limit`` are done. Each is recorded under the run that earned it, so the store counts it once however often
+        this is tried, in this process or after any number of restarts."""
+        settled: list[Owed] = []
+        for entry in [e for e in self.owed if e not in self.refused][:limit]:
+            pid = self.owner.get(entry.character)
+            state: CharacterState | None
+            try:
+                fresh, state = self.store.complete(entry.character, entry.run, entry.completion, entry.unlock)
+            except DuplicateClaim:  # recorded already: by a commit whose outcome was never learned, or an earlier try
+                fresh, state = False, None
+                if pid is not None:
+                    try:
+                        state = self.store.load(entry.character)
+                        fresh = entry.unlock in state.unlocks and entry.unlock not in self.characters[pid].unlocks
+                    except (StoreError, AccessDenied):
+                        state = None  # (the sheet is read again at the character's next commit or join)
+            except StoreError:
+                break
+            except (ValueError, AccessDenied) as exc:
+                # Not a storage failure: as things stand the store will never take it (the rules no longer define the
+                # unlock, the character is gone). It stays in the journal, named here and by the owed command.
+                self.refused[entry] = str(exc) or type(exc).__name__
+                logger.error("[Mesh][Net] unlock %s owed to character %s cannot be recorded (%s); it stays in the "
+                             "journal of owed completions", entry.unlock, entry.character, self.refused[entry])
+                continue
+            settled.append(entry)
+            if pid is not None and state is not None:
+                self.characters[pid] = state
+                if fresh and world is not None:
+                    world._notice(world.members[pid], "unlocked")
+        if settled:
+            self.owed = [e for e in self.owed if e not in settled]
+            kept = [e for e in settled if e not in self.unkept]
+            self.unkept.difference_update(settled)
+            try:
+                if self.journal is not None:
+                    self.journal.settle(kept)
+            except JournalError as exc:  # recorded all the same; the next start finds them owed and settles them
+                logger.warning("[Mesh][Net] %d owed completions recorded, the journal not updated: %s", len(kept), exc)
+        if self.unkept:  # what the journal could not take: try again, so that a stop loses nothing
+            self._keep(world, [e for e in self.owed if e in self.unkept])
 
     def _take(self, world: World, m: Member) -> None:
         """Claim the nearest drop this character is entitled to, within interaction reach."""

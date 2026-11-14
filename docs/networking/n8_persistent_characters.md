@@ -128,7 +128,92 @@ reused is read-only (`ItemDatabase.load`, N6's `roll_drops`). N8 proceeds.
 - When that enemy dies, every character in that instance earns the unlock (once: `unlocks` has one row per key) and
   one completion (`completed`, counted once per instance). Nobody else does. There is no request a client can send
   to unlock anything; the store refuses keys outside the rules.
-- A completion the store failed to write is retried each tick (up to 64 waiting) and reported as `storage_failed`.
+- A completion the store fails to write is owed, never dropped: it is written to a journal beside the store before
+  the player is told, and recorded when the store works again or by the next server (N8J).
+
+## N8J: completions a failing store owes (#496)
+
+The defect: a completion the store failed to write lived only in the server's memory (a retry queue of 64). A
+server stopped or killed while the store was still failing lost it; the player had earned an unlock that was never
+recorded. Reproduced with a real server process (`n8_owed_evidence/repro_before_fix.json`): unlock earned, the
+completion's transaction fails, the process is killed, a new server opens the same store: no unlock, `completed` 0.
+
+What happens now (`mesh_net/owed.py`, `Progress` in `mesh_net/persistence.py`):
+
+- **Owed, and written down first.** A completion the store does not take is *owed*. Before the player is told
+  anything it is appended to a journal beside the store, `<store>.owed`, and `fsync`ed. One write covers every
+  character of the event.
+- **The player is told what is true.** `unlock_owed`: earned, not yet recorded, kept. Never `unlocked` until the
+  store has committed it. If the journal fails too: `unlock_not_kept` (held only in this server's memory), and the
+  server's log names it at ERROR.
+- **Recorded when the store works again,** oldest first, at most 8 a tick (each is a commit), with one journal write
+  a tick to settle them. While the store still fails there is one attempt a tick, not one per owed completion.
+- **Recorded by the next server.** A server reads the journal before it listens and records what it holds
+  (`Mesh owed completions: N recorded from earlier runs, M still owed`). A server stopped or killed with completions
+  owed loses none that reached the journal.
+- **Counted once, however often it is tried.** A journal record names the character, the run that earned it, the
+  completion and the unlock: the store's own key for "counted once". Replay uses the earning run, and
+  `begin_run(keep=)` keeps that run's claims until its records are settled (every start used to delete all earlier
+  claims, which would have let a replay count twice). So a crash during recovery, a repeated restart, or a commit
+  that happened although the server was told it failed all end with the completion counted exactly once. A
+  completion earned again later, in another run, is a different key and counts as its own.
+- **No new expedition while anything is owed** (`storage_unavailable` at the door). Expeditions under way go on:
+  their rooms exist, so a party can still move between them and walk out. What they earn is owed too. That bounds
+  what can be owed (rooms that exist × their rules × who is there), so nothing is ever dropped for lack of room: the
+  64-entry limit is gone.
+- **Space kept in advance.** The journal is made 64 KiB of zeros when a server first opens the store, and records
+  overwrite that space. A full disk, the likeliest reason for the store to fail, does not stop the journal on a file
+  system that writes in place. It is started over (a fresh file, moved into place) whenever nothing is owed.
+- **Never repaired, never ignored.** A journal record that does not check out (checksum, fields, a settlement of
+  nothing, data after the end) refuses the store: the server does not start, says which byte, and changes nothing.
+  The one thing tolerated is a last record cut short by a crash while it was being written: that write never
+  completed, nobody was told it had, and it is cleared.
+- **A completion the store refuses for its own reason** (the rules no longer define the unlock, the character is
+  gone) stays in the journal, is named in the log at each start and by the owed command, and blocks nothing.
+
+For the server's owner:
+
+    python -m mesh_net.characters owed STORE     # what is still owed (reads the journal; the store is not opened)
+
+- Keep `<store>.owed` with the store: back them up and restore them together.
+- If the server says the store's storage is failing: free space or fix the disk; the server records what is owed by
+  itself. Restarting is safe at any point and loses nothing that is in the journal.
+- If the server refuses a damaged journal: nothing was changed. Keep the file. To start without it (giving up the
+  completions it holds, which the owed command cannot list either) move it aside by hand; nothing does that for you.
+
+Guarantees and their tests (`tests/test_mesh_net_owed.py`; real processes are `tests/net_owed_server.py`):
+
+| Case | What happens | Test |
+|---|---|---|
+| The store fails before the commit | owed, in the journal, `unlock_owed`; recorded when the store works | in process |
+| A commit happened but was reported failed | owed; the store answers "already counted"; counted once | in process and killed process |
+| Server killed with completions owed | the next server records each once | killed process (two characters) |
+| Server killed while recording them | the next one finishes; each counted once | killed process |
+| Server killed just after the journal write | recorded by the next server | killed process |
+| Server killed before the journal write | nothing was durable and nobody was told; files sound | killed process |
+| Several owed; several characters, one event | all kept in one write, all recorded | in process and killed process |
+| The same completion delivered again | refused by the store as a duplicate | in process |
+| Restart, and restart again | nothing changes; the earlier run's claims are forgotten once settled | in process and killed process |
+| More owed than the old queue held (402) | all kept; recorded 8 a tick | in process |
+| The journal fails too | `unlock_not_kept`, log at ERROR, no new expedition; kept as soon as the journal works | in process and killed process |
+| The journal is damaged | the server does not start; journal and store unchanged | in process and the shipped server |
+| The store works again | recorded, `unlocked`, expeditions open | in process |
+
+Removing each protection makes these tests fail: 20 of 20 (`n8_owed_evidence/mutations.json`); with the journal
+write alone removed, 6 of the 7 killed-process tests fail (`protection_off_crash_tests.txt`).
+
+Cost on the 20 Hz tick (50 ms), Windows, Python 3.13, NVMe (`n8_owed_evidence/measure_*.json`):
+
+| | Before | Now |
+|---|---|---|
+| Tick, 8 characters in the hub, nothing owed | 1.15 ms median, 1.37 p95 | 1.18 ms median, 1.38 p95 (no added work: one check) |
+| Tick with 4 completions owed, store failing | 0.29 ms (4 failed attempts) | 0.14 ms (1 attempt) |
+| The tick in which 4 completions become owed | no disk work | +5.1 ms median, 6.1 max: one journal write and `fsync` |
+| A tick recording 8 owed completions | 4.1 ms for 4, all at once however many | 9.2 ms median, 10.7 max (8 commits, one journal write) |
+| Server start (store + world) | 174 ms | 179 ms; 388 ms the first time (384 before), which makes the journal |
+
+The journal write is on the tick thread on purpose, like commits: the completion must be durable before the frame
+that tells the player goes out. It happens only in a tick where the store has just failed.
 
 ## What persists and what resets
 
@@ -137,7 +222,8 @@ reused is read-only (`ItemDatabase.load`, N6's `roll_drops`). N8 proceeds.
 | characters, names, access-key hashes | rooms, enemies, levers, gates, drops on the ground |
 | inventories | loot entitlements not yet claimed |
 | unlocks, completions | parties, invitations, positions, resume credentials |
-| claims of the current run (pruned at the next start) | room instances (expeditions start anew) |
+| completions a failing store owes (`<store>.owed`) | room instances (expeditions start anew) |
+| claims of the current run, and of an earlier run still owed something (otherwise pruned at the next start) | |
 
 ## Threat model (local prototype)
 
@@ -150,8 +236,18 @@ recovery. These are deliberate limits of a local prototype, not of the store.
 ## Known limits
 
 - Items cannot be removed (no use, drop or trade in N8): a full stack or slot list stays full.
-- Completions still owed when the server stops (the store was failing) are lost; they are logged, and the queue is
-  bounded (64; a full queue logs each further one as an error rather than dropping it silently).
+- With the store and its journal both failing, an owed completion exists only in the server's memory. The player is
+  told `unlock_not_kept`, the log names it, no new expedition starts, and it is kept as soon as either takes a
+  write; a server stopped or killed before that loses it. No storage took a write: this is said, never silent.
+- A server killed in the tick an enemy dies, before the journal write, loses that completion, as a kill between the
+  death and the store's commit always could: nothing durable existed yet and nobody had been told.
+- The journal relies on `fsync` being honoured by the disk, and its space kept in advance helps only where files are
+  overwritten in place (not on a copy-on-write file system). Power loss itself is not tested, only killed processes.
+- An owed completion is a notice, not a line on the character sheet (the sheet shows what the store holds).
+- A completion the store refuses for its own reason stays in the journal for good; while it is there the journal is
+  not started over, so later records are appended after it (two short lines for each completion owed and settled).
+- `backup` copies the store, not its journal: copy `<store>.owed` with it.
+- Loot not yet taken is still kept in memory only (unchanged).
 - A server pointed at a copy of a store could grant drops of its own run again: the store is the authority, and
   copies are the owner's business (backups are for restoring, not for running side by side).
 - Only characters online in the instance when an enemy dies share its loot and unlocks (a retained, disconnected

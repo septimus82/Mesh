@@ -1,0 +1,162 @@
+{
+ "the journal is not written (the old behaviour: owed in memory only)": {
+  "file": "mesh_net/persistence.py",
+  "caught": true,
+  "first_failure": [
+   "test_an_owed_unlock_is_kept_before_the_player_is_told_and_recorded_when_the_store_works_again"
+  ],
+  "summary": "1 failed in 4.98s"
+ },
+ "a new server does not record what the journal holds": {
+  "file": "mesh_net/persistence.py",
+  "caught": true,
+  "first_failure": [
+   "test_a_new_server_records_what_an_earlier_one_owed_once_however_often_it_starts"
+  ],
+  "summary": "1 failed, 1 passed in 5.29s"
+ },
+ "a new server forgets the journal's entries": {
+  "file": "mesh_net/persistence.py",
+  "caught": true,
+  "first_failure": [
+   "test_a_new_server_records_what_an_earlier_one_owed_once_however_often_it_starts"
+  ],
+  "summary": "1 failed, 1 passed in 5.22s"
+ },
+ "earlier runs' claims are purged at every start (replay could count twice)": {
+  "file": "mesh_net/persistence.py",
+  "caught": true,
+  "first_failure": [
+   "test_a_server_killed_while_recording_what_was_owed_still_counts_each_once"
+  ],
+  "summary": "1 failed, 20 passed in 13.24s"
+ },
+ "an owed completion is replayed under the new run, not the one that earned it": {
+  "file": "mesh_net/persistence.py",
+  "caught": true,
+  "first_failure": [
+   "test_a_new_server_records_what_an_earlier_one_owed_once_however_often_it_starts"
+  ],
+  "summary": "1 failed, 1 passed in 5.29s"
+ },
+ "a recorded completion is not settled in the journal": {
+  "file": "mesh_net/persistence.py",
+  "caught": true,
+  "first_failure": [
+   "test_an_owed_unlock_is_kept_before_the_player_is_told_and_recorded_when_the_store_works_again"
+  ],
+  "summary": "1 failed in 4.94s"
+ },
+ "new expeditions start while the store is failing": {
+  "file": "mesh_net/world.py",
+  "caught": true,
+  "first_failure": [
+   "test_no_new_expedition_starts_while_the_store_is_failing_and_nobody_is_trapped"
+  ],
+  "summary": "1 failed, 7 passed in 7.23s"
+ },
+ "every transfer into an expedition room is refused (players trapped)": {
+  "file": "mesh_net/world.py",
+  "caught": true,
+  "first_failure": [
+   "test_no_new_expedition_starts_while_the_store_is_failing_and_nobody_is_trapped"
+  ],
+  "summary": "1 failed, 7 passed in 7.25s"
+ },
+ "the player is told the unlock is kept when the journal failed": {
+  "file": "mesh_net/persistence.py",
+  "caught": true,
+  "first_failure": [
+   "test_when_the_journal_fails_too_the_player_is_told_it_is_not_saved_and_it_is_kept_as_soon_as_it_can_be"
+  ],
+  "summary": "1 failed, 6 passed in 7.02s"
+ },
+ "a failed journal write is not tried again": {
+  "file": "mesh_net/persistence.py",
+  "caught": true,
+  "first_failure": [
+   "test_when_the_journal_fails_too_the_player_is_told_it_is_not_saved_and_it_is_kept_as_soon_as_it_can_be"
+  ],
+  "summary": "1 failed, 6 passed in 7.08s"
+ },
+ "recovery is not paced (everything owed recorded in one tick)": {
+  "file": "mesh_net/persistence.py",
+  "caught": true,
+  "first_failure": [
+   "test_far_more_than_the_old_queue_held_is_kept_and_recorded_a_few_a_tick"
+  ],
+  "summary": "1 failed, 5 passed in 6.59s"
+ },
+ "a completion the store refuses is dropped": {
+  "file": "mesh_net/persistence.py",
+  "caught": true,
+  "first_failure": [
+   "test_a_completion_the_store_refuses_for_its_own_reason_stays_in_the_journal_and_blocks_nothing"
+  ],
+  "summary": "1 failed, 8 passed in 7.45s"
+ },
+ "begin_run ignores the runs to keep": {
+  "file": "mesh_net/characters.py",
+  "caught": true,
+  "first_failure": [
+   "test_an_earlier_run_s_claims_are_kept_only_while_it_is_owed_something"
+  ],
+  "summary": "1 failed, 2 passed in 5.59s"
+ },
+ "a record whose checksum fails is skipped, not refused": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "first_failure": [
+   "test_a_damaged_journal_is_refused_and_left_as_it_is[a"
+  ],
+  "summary": "1 failed, 11 passed in 7.67s"
+ },
+ "data after the journal's end is ignored": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "first_failure": [
+   "test_a_damaged_journal_is_refused_and_left_as_it_is[data"
+  ],
+  "summary": "1 failed, 13 passed in 7.63s"
+ },
+ "a settlement of nothing is ignored": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "first_failure": [
+   "test_a_damaged_journal_is_refused_and_left_as_it_is[a"
+  ],
+  "summary": "1 failed, 14 passed in 7.69s"
+ },
+ "a record cut short is not cleared": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "first_failure": [
+   "test_a_last_record_cut_short_by_a_crash_is_cleared_and_nothing_else_is"
+  ],
+  "summary": "1 failed, 10 passed in 7.51s"
+ },
+ "a journal write that fails is counted as written": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "first_failure": [
+   "test_when_the_journal_fails_too_the_player_is_told_it_is_not_saved_and_it_is_kept_as_soon_as_it_can_be"
+  ],
+  "summary": "1 failed, 6 passed in 6.98s"
+ },
+ "no space is kept in advance": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "first_failure": [
+   "test_far_more_than_the_old_queue_held_is_kept_and_recorded_a_few_a_tick"
+  ],
+  "summary": "1 failed, 5 passed in 6.83s"
+ },
+ "the journal is not started over when nothing is owed": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "first_failure": [
+   "test_far_more_than_the_old_queue_held_is_kept_and_recorded_a_few_a_tick"
+  ],
+  "summary": "1 failed, 5 passed in 6.92s"
+ }
+}
