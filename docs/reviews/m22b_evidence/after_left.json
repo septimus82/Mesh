@@ -1,0 +1,60 @@
+{
+ "1280x720": {
+  "left_buttons_in_ui": 17,
+  "below_the_window": [],
+  "below_count": 0,
+  "last_object_in_ui_before_scrolling": false,
+  "click_below_the_window_armed": null,
+  "wheel_over_left": {
+   "left_scroll": 6,
+   "view_unchanged": true,
+   "right_scroll_unchanged": true
+  },
+  "reached_last_object": "extra_29"
+ },
+ "640x480": {
+  "left_buttons_in_ui": 10,
+  "below_the_window": [],
+  "below_count": 0,
+  "last_object_in_ui_before_scrolling": false,
+  "click_below_the_window_armed": null,
+  "wheel_over_left": {
+   "left_scroll": 7,
+   "view_unchanged": true,
+   "right_scroll_unchanged": true
+  },
+  "reached_last_object": "extra_29"
+ },
+ "tooltip_scrolled_out": {
+  "over_it": "Turn the view 45 degrees (Q)",
+  "scrolled_out": true,
+  "over_where_it_was": "The whole room, from the front (Home)"
+ },
+ "palette_2d": {
+  "palette_rows": [
+   2,
+   16
+  ],
+  "before": [
+   [
+    0,
+    0
+   ],
+   8
+  ],
+  "wheel_over_palette": [
+   [
+    0,
+    1
+   ],
+   8
+  ],
+  "wheel_over_rooms": [
+   [
+    0,
+    1
+   ],
+   6
+  ]
+ }
+}

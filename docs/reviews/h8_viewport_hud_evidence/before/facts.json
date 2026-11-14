@@ -1,0 +1,509 @@
+{
+ "adventure_1280x720": {
+  "image": "adventure_1280x720.png",
+  "toasts": [
+   "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  H: Help"
+  ],
+  "corners": [
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ]
+  ],
+  "toast": true,
+  "border": [
+   19,
+   109,
+   380,
+   144
+  ],
+  "changed": [
+   19,
+   109,
+   602,
+   144
+  ],
+  "changed_outside_border": 609,
+  "window": [
+   1280,
+   720
+  ],
+  "layouts": null
+ },
+ "adventure_1920x1080": {
+  "image": "adventure_1920x1080.png",
+  "toasts": [
+   "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  H: Help"
+  ],
+  "corners": [
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ]
+  ],
+  "toast": true,
+  "border": [
+   19,
+   109,
+   380,
+   144
+  ],
+  "changed": [
+   19,
+   109,
+   602,
+   144
+  ],
+  "changed_outside_border": 609,
+  "window": [
+   1920,
+   1080
+  ],
+  "layouts": null
+ },
+ "adventure_560x420": {
+  "image": "adventure_560x420.png",
+  "toasts": [
+   "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  H: Help"
+  ],
+  "corners": [
+   [
+    86,
+    160,
+    72
+   ],
+   [
+    85,
+    160,
+    73
+   ],
+   [
+    86,
+    160,
+    72
+   ],
+   [
+    79,
+    166,
+    83
+   ]
+  ],
+  "toast": true,
+  "border": [
+   19,
+   109,
+   380,
+   144
+  ],
+  "changed": [
+   19,
+   109,
+   556,
+   144
+  ],
+  "changed_outside_border": 454,
+  "window": [
+   560,
+   420
+  ],
+  "layouts": null
+ },
+ "hd2d_rpg_1280x720": {
+  "image": "hd2d_rpg_1280x720.png",
+  "toasts": [
+   "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  H: Help"
+  ],
+  "corners": [
+   [
+    68,
+    62,
+    60
+   ],
+   [
+    32,
+    32,
+    35
+   ],
+   [
+    53,
+    87,
+    40
+   ],
+   [
+    57,
+    92,
+    43
+   ]
+  ],
+  "toast": true,
+  "border": [
+   19,
+   109,
+   380,
+   144
+  ],
+  "changed": [
+   19,
+   109,
+   602,
+   144
+  ],
+  "changed_outside_border": 609,
+  "window": [
+   1280,
+   720
+  ],
+  "layouts": null
+ },
+ "hd2d_rpg_1920x1080": {
+  "image": "hd2d_rpg_1920x1080.png",
+  "toasts": [
+   "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  H: Help"
+  ],
+  "corners": [
+   [
+    68,
+    62,
+    60
+   ],
+   [
+    32,
+    32,
+    35
+   ],
+   [
+    53,
+    87,
+    40
+   ],
+   [
+    57,
+    92,
+    43
+   ]
+  ],
+  "toast": true,
+  "border": [
+   19,
+   109,
+   380,
+   144
+  ],
+  "changed": [
+   19,
+   109,
+   602,
+   144
+  ],
+  "changed_outside_border": 609,
+  "window": [
+   1920,
+   1080
+  ],
+  "layouts": null
+ },
+ "hd2d_rpg_560x420": {
+  "image": "hd2d_rpg_560x420.png",
+  "toasts": [
+   "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  H: Help"
+  ],
+  "corners": [
+   [
+    55,
+    51,
+    50
+   ],
+   [
+    65,
+    44,
+    29
+   ],
+   [
+    53,
+    87,
+    40
+   ],
+   [
+    57,
+    92,
+    43
+   ]
+  ],
+  "toast": true,
+  "border": [
+   19,
+   109,
+   380,
+   144
+  ],
+  "changed": [
+   19,
+   109,
+   556,
+   144
+  ],
+  "changed_outside_border": 455,
+  "window": [
+   560,
+   420
+  ],
+  "layouts": null
+ },
+ "adventure_house_1280x720": {
+  "image": "adventure_house_1280x720.png",
+  "toasts": [],
+  "corners": [
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ]
+  ],
+  "toast": false,
+  "layouts": null
+ },
+ "hd2d_rpg_cottage_1920x1080": {
+  "image": "hd2d_rpg_cottage_1920x1080.png",
+  "toasts": [],
+  "corners": [
+   [
+    18,
+    14,
+    11
+   ],
+   [
+    18,
+    14,
+    11
+   ],
+   [
+    18,
+    14,
+    11
+   ],
+   [
+    18,
+    14,
+    11
+   ]
+  ],
+  "toast": false,
+  "layouts": null
+ },
+ "hd2d_rpg_1280x720_corner": {
+  "image": "hd2d_rpg_1280x720_corner.png",
+  "toasts": [],
+  "corners": [
+   [
+    49,
+    83,
+    37
+   ],
+   [
+    68,
+    62,
+    60
+   ],
+   [
+    57,
+    92,
+    43
+   ],
+   [
+    53,
+    87,
+    40
+   ]
+  ],
+  "toast": false,
+  "layouts": null
+ },
+ "adventure_1280x720_saved": {
+  "image": "adventure_1280x720_saved.png",
+  "toasts": [
+   "Game saved"
+  ],
+  "corners": [
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ]
+  ],
+  "toast": true,
+  "border": [
+   19,
+   109,
+   200,
+   144
+  ],
+  "changed": [
+   19,
+   109,
+   200,
+   144
+  ],
+  "changed_outside_border": 0,
+  "window": [
+   1280,
+   720
+  ],
+  "layouts": null
+ },
+ "hd2d_rpg_1280x720_resized_to_560x420": {
+  "image": "hd2d_rpg_1280x720_resized_to_560x420.png",
+  "toasts": [
+   "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  H: Help"
+  ],
+  "corners": [
+   [
+    55,
+    51,
+    50
+   ],
+   [
+    65,
+    44,
+    29
+   ],
+   [
+    53,
+    87,
+    40
+   ],
+   [
+    57,
+    92,
+    43
+   ]
+  ],
+  "toast": true,
+  "border": [
+   19,
+   109,
+   380,
+   144
+  ],
+  "changed": [
+   19,
+   109,
+   556,
+   144
+  ],
+  "changed_outside_border": 455,
+  "window": [
+   560,
+   420
+  ],
+  "layouts": null
+ },
+ "adventure_1280x720_text_scale_1.5": {
+  "image": "adventure_1280x720_text_scale_1.5.png",
+  "toasts": [
+   "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  H: Help"
+  ],
+  "corners": [
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ],
+   [
+    102,
+    102,
+    153
+   ]
+  ],
+  "toast": true,
+  "border": [
+   19,
+   109,
+   380,
+   144
+  ],
+  "changed": [
+   19,
+   109,
+   887,
+   144
+  ],
+  "changed_outside_border": 2165,
+  "window": [
+   1280,
+   720
+  ],
+  "layouts": null
+ }
+}

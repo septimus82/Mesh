@@ -1,0 +1,5 @@
+E       AssertionError: {'after_load': {'story_flags': ['task_accepted', 'watchfire_lit']}, 'loaded': True, 'new_game': {'room': 'packs/core_r...', 'packs/core_regions/scenes/start.json'], 'story_flags': ['task_accepted', 'watchfire_lit']}, 'role': 'flags-B', ...}
+E       assert (['saves/slot_a.json', 'packs/core_regions/scenes/start.json'] and not True)
+E        +  where True = any(<generator object test_a_new_game_after_it_starts_clean_and_the_save_still_loads.<locals>.<genexpr> at 0x000001E134FE7AC0>)
+FAILED tests/test_new_game_isolation_gpu.py::test_a_new_game_after_it_starts_clean_and_the_save_still_loads
+1 failed, 1 passed in 15.02s

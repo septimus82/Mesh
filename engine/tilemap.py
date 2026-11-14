@@ -104,11 +104,11 @@ class Tileset:
         return self.first_gid <= gid < self.first_gid + self.tile_count
 
     def slice_coordinates(self, local_id: int) -> tuple[int, int]:
+        """Top-left pixel of a tile in the tileset image (PIL crop coordinates, y down)."""
         col = local_id % max(1, self.columns)
         row = local_id // max(1, self.columns)
         source_x = self.margin + col * (self.tile_width + self.spacing)
-        source_y_top = self.margin + row * (self.tile_height + self.spacing)
-        source_y = self.image_height - source_y_top - self.tile_height
+        source_y = self.margin + row * (self.tile_height + self.spacing)
         return int(source_x), int(source_y)
 
 
@@ -144,6 +144,9 @@ class TilemapManager:
 
         width = int(payload.get("width", 0))
         height = int(payload.get("height", 0))
+        size = overrides.get("size") if overrides else None
+        if isinstance(size, (list, tuple)) and len(size) == 2 and all(isinstance(v, int) and v > 0 for v in size):
+            width, height = size  # the scene's size: its inline tiles are the map, resized in the editor
         tile_width = int(payload.get("tilewidth", 0))
         tile_height = int(payload.get("tileheight", 0))
         if width <= 0 or height <= 0 or tile_width <= 0 or tile_height <= 0:
@@ -165,9 +168,15 @@ class TilemapManager:
         }
         if overrides and isinstance(overrides.get("layers"), dict):
             for lname, override_data in overrides["layers"].items():
+                if not isinstance(override_data, list):
+                    continue
                 raw = layer_lookup.get(lname)
-                if raw is not None and isinstance(override_data, list):
-                    raw["data"] = override_data
+                if raw is None:
+                    # A layer painted in the scene but absent from the map file (e.g. added later).
+                    raw = layer_lookup[lname] = {"name": lname, "type": "tilelayer", "width": width, "height": height}
+                raw["data"] = override_data
+                if len(override_data) == width * height:
+                    raw["width"], raw["height"] = width, height
 
         instance = TilemapInstance(
             map_size=(width, height),
@@ -284,12 +293,13 @@ class TilemapManager:
             if isinstance(source, str) and source.strip():
                 tileset_path = (map_dir / source).resolve()
                 tileset_data = self._load_external_tileset(tileset_path)
+                image_base = tileset_path.parent  # an external tileset's image is relative to the tileset file
             else:
                 tileset_data = dict(entry)
-                tileset_path = map_dir
+                image_base = map_dir
             if not tileset_data:
                 continue
-            tileset = self._build_tileset(first_gid, tileset_data, tileset_path)
+            tileset = self._build_tileset(first_gid, tileset_data, image_base)
             if tileset is not None:
                 resolved.append(tileset)
         resolved.sort(key=lambda ts: ts.first_gid)

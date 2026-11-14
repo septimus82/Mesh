@@ -115,11 +115,12 @@ class GoldenFixtures:
 
     @staticmethod
     def simple_three_entities() -> list[MockSprite]:
-        """Three entities at different Y positions (y-sort test)."""
+        """Three entities at different Y positions (y-sort test). World y points up: the
+        highest one stands furthest back."""
         return [
-            make_sprite("entity_back", x=100, y=50, render_layer=0),
+            make_sprite("entity_back", x=100, y=150, render_layer=0),
             make_sprite("entity_middle", x=100, y=100, render_layer=0),
-            make_sprite("entity_front", x=100, y=150, render_layer=0),
+            make_sprite("entity_front", x=100, y=50, render_layer=0),
         ]
 
     @staticmethod
@@ -211,7 +212,7 @@ class GoldenFixtures:
 
 # These are the expected orderings for determinism verification
 GOLDEN_SIMPLE_THREE_ORDER = ["entity_back", "entity_middle", "entity_front"]
-GOLDEN_MIXED_LAYERS_ORDER = ["ground_decal", "enemy", "player", "flying_bat", "cloud"]
+GOLDEN_MIXED_LAYERS_ORDER = ["ground_decal", "player", "enemy", "flying_bat", "cloud"]
 GOLDEN_EXPLICIT_Z_ORDER = ["far_bg", "mid_entity", "near_entity"]
 
 
@@ -323,7 +324,7 @@ class TestZDepthOrdering:
 
         entity_ids = [c.entity_id for c in plan.calls]
 
-        # Lower Y (back) should come first
+        # Higher Y (further back) should come first
         assert entity_ids == GOLDEN_SIMPLE_THREE_ORDER
 
     def test_explicit_z_ordering(self) -> None:

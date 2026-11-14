@@ -46,9 +46,8 @@ def test_blank_project_content_roots_follow_config_not_cwd(
     assert root.resolve() in start_path.resolve().parents
 
     scene = json.loads(start_path.read_text(encoding="utf-8"))
-    names = [entity.get("name") for entity in scene.get("entities", [])]
-    assert names == ["Player"]
-    assert "Showcase Guide" not in names
+    # The room holds only where the game's one player starts (Milestone 11); it is defined in assets/prefabs.json.
+    assert [entity.get("prefab_id") for entity in scene.get("entities", [])] == ["player"]
 
 
 @pytest.mark.fast

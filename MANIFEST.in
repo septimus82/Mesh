@@ -81,3 +81,12 @@ prune saves
 prune .pytest_cache
 prune .mypy_cache
 prune .ruff_cache
+
+# ----------------------------------------------------------------------------
+# The bundled-file allow-list (pyproject.toml [tool.setuptools.data-files]) must be in the source distribution too,
+# or a wheel built from it lacks them: the HD-2D models, the notices and the icons' licence (docs/packaging.md).
+# ----------------------------------------------------------------------------
+recursive-include assets *.glb *.md *.svg
+include assets/icons/lucide/LICENSE
+# Never distributed: their provenance is unverified (docs/packaging.md).
+exclude assets/sprites/animated_player.png assets/sprites/sproutling.png assets/sprites/shelltide.png

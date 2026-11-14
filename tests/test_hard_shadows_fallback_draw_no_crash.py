@@ -18,6 +18,8 @@ def test_hard_shadows_fallback_draw_calls_draw_polygon_filled(monkeypatch) -> No
     def _draw_polygon_filled(points, color):  # noqa: ANN001,ARG001
         calls.append(len(points))
 
+    # The pre-Milestone-12 overlay, kept selectable for comparison: these tests pin that code path.
+    monkeypatch.setenv("MESH_SHADOWS_RENDERER", "legacy")
     monkeypatch.setattr(arcade, "draw_polygon_filled", _draw_polygon_filled, raising=False)
     import engine.lighting.shadows
     # Make sure shadows module sees the patch regardless of how it imported it

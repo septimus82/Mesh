@@ -1,12 +1,20 @@
-import sys
-
-from tests.subprocess_tools import run_checked
+import contextlib
+import io
+import subprocess
 
 
 def run_cli_help(command):
-    cmd = [sys.executable, "-m", "mesh_cli"] + command + ["--help"]
-    result = run_checked(cmd)
-    return result
+    # In process: each subprocess cost ~2.4 s of interpreter start and imports for a parser lookup (27 s for this
+    # file). A fresh interpreter's `mesh_cli --help` is still checked, in test_cli_commands_scaffold_guard.py.
+    from mesh_cli.main import main
+
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        try:
+            code = main(command + ["--help"])
+        except SystemExit as exc:
+            code = exc.code if isinstance(exc.code, int) else 1
+    return subprocess.CompletedProcess(command, code, out.getvalue(), "")
 
 def test_authoring_commands_help():
     commands = [

@@ -1,0 +1,84 @@
+{
+  "stroke": {
+    "frame_ms": {
+      "median": 16.65,
+      "p95": 19.13,
+      "max": 57.84,
+      "n": 166
+    },
+    "update_ms": {
+      "median": 0.47,
+      "p95": 0.87,
+      "max": 1.1,
+      "n": 77
+    },
+    "commit_ms": 4.9,
+    "release_to_next_frame_ms": 104.2,
+    "undo_steps_added": 1,
+    "instances": 151,
+    "shown_equals_saved": true,
+    "message": "Scattered 151 (Meadow): one undo step."
+  },
+  "undo_gives_none": true,
+  "redo_gives_it_back": true,
+  "escape": {
+    "stroke_had_added": 82,
+    "nothing_recorded": true,
+    "scatter_is_saved": true,
+    "message": "Stroke cancelled: the ground is as it was."
+  },
+  "play_mid_stroke": {
+    "nothing_recorded": true,
+    "scatter_is_saved": true
+  },
+  "room_change_mid_stroke": {
+    "nothing_recorded": true,
+    "scatter_is_saved": true
+  },
+  "refused_upload": {
+    "nothing_recorded": true,
+    "scatter_is_saved": true,
+    "message": "The stroke stopped: the scatter couldn't be drawn (out of memory (simulated))."
+  },
+  "refused_at_release": {
+    "nothing_recorded": true,
+    "scatter_is_saved": true,
+    "message": "The stroke stopped: the scatter couldn't be drawn (out of memory (simulated))."
+  },
+  "focus_lost_mid_stroke": {
+    "stroke_ended": true,
+    "undo_steps_added": 1,
+    "no_more_after": true
+  },
+  "thin_and_remove": {
+    "before": 151,
+    "after_ctrl_thin": 124,
+    "after_shift_remove": 25
+  },
+  "materials_only_earth": {
+    "on": [
+      "earth"
+    ],
+    "added": 20,
+    "all_on_earth": true
+  },
+  "out_of_water": {
+    "in_water": [
+      "reeds",
+      "reeds_cattail"
+    ],
+    "message": "Scattered 76 (Pond edge): one undo step."
+  },
+  "room_at_boulder": "hills",
+  "boulder_on_the_player_start": {
+    "message": "Scattered 1 (Boulder): one undo step. In the way (not moved): a boulder at (8.9 m, 3.4 m) blocks the player's start",
+    "warned": true
+  },
+  "sculpt_under_scatter": {
+    "instances_unmoved": true,
+    "instances_risen_with_the_ground": 13,
+    "their_chunks_rebuilt": true,
+    "message": "Raised the ground (32 dabs, one undo step)."
+  },
+  "reopened_same": true
+}

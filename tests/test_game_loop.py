@@ -91,19 +91,17 @@ def test_game_over_state(game_window):
     assert game_window.game_over_screen.visible is True
 
 def test_pause_toggle(game_window):
-    # Initial state
     assert game_window.paused is False
-    game_window.pause_menu.visible = False
+    game_window.pause_menu.toggle.return_value = True
 
-    # Press ESC
-    game_window.on_key_press(arcade.key.ESCAPE, 0)
+    game_window.on_key_press(arcade.key.ESCAPE, 0)  # opens the pause menu
 
     assert game_window.paused is True
-    assert game_window.settings_overlay.visible is True
-    assert game_window.pause_menu.toggle.call_count == 0
+    assert game_window.pause_menu.toggle.call_count == 1
+    assert game_window.settings_overlay.visible is False  # Settings lives inside the pause menu
 
-    # Press ESC again
-    game_window.on_key_press(arcade.key.ESCAPE, 0)
+    game_window.pause_menu.toggle.return_value = False
+    game_window.on_key_press(arcade.key.ESCAPE, 0)  # closes it
 
     assert game_window.paused is False
-    assert game_window.settings_overlay.visible is False
+    assert game_window.pause_menu.toggle.call_count == 2

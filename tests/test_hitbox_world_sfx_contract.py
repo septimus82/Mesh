@@ -36,8 +36,8 @@ def test_hitbox_damage_uses_world_sfx_helper() -> None:
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(
             optional_arcade.arcade,
-            "check_for_collision_with_list",
-            lambda _sprite, _targets: [target],
+            "check_for_collision",
+            lambda _sprite, other: other is target,
         )
         hitbox.update(0.1)
 

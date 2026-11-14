@@ -1,0 +1,240 @@
+{
+ "objects": [
+  "Player",
+  "Elder",
+  "Pond",
+  "Campfire 1",
+  "Campfire 2",
+  "Campfire 3",
+  "Campfire 4",
+  "Sign",
+  "Sign_1"
+ ],
+ "signs": [
+  "Sign",
+  "Sign_1"
+ ],
+ "1_click_lone_campfire": {
+  "selected": null,
+  "structure": null,
+  "message": "Placed Sign on the ground, 0.0 m up.",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "under": [
+   "n/a"
+  ]
+ },
+ "1b_under_hidden_fire": [
+  "n/a"
+ ],
+ "1b_click_where_the_fire_is_hidden": {
+  "selected": null,
+  "structure": "cottage",
+  "message": "Placed Sign on the ground, 0.0 m up.",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null
+ },
+ "1c_turn_the_selected_cottage": {
+  "selected": null,
+  "structure": "cottage",
+  "message": "Turned.",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "turned": [
+   null,
+   90.0
+  ],
+  "fire_unmoved": true
+ },
+ "1c_undo_turn": {
+  "rotation": null,
+  "still_selected": "cottage"
+ },
+ "1d_click_again_the_hidden_fire": {
+  "selected": null,
+  "structure": "cottage",
+  "message": "Undone.",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null
+ },
+ "2_signs_click_1": {
+  "selected": "Sign",
+  "structure": null,
+  "message": "Undone.",
+  "inspector_name": "Sign",
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "under": [
+   "n/a"
+  ]
+ },
+ "2_signs_click_2": {
+  "selected": "Sign",
+  "structure": null,
+  "message": "Undone.",
+  "inspector_name": "Sign",
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "under": [
+   "n/a"
+  ]
+ },
+ "2_signs_click_3": {
+  "selected": "Sign",
+  "structure": null,
+  "message": "Undone.",
+  "inspector_name": "Sign",
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "under": [
+   "n/a"
+  ]
+ },
+ "3_drag_selected": {
+  "selected": "Sign",
+  "structure": null,
+  "message": "Undone.",
+  "inspector_name": "Sign",
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "selected_before_drag": "Sign",
+  "moved": [
+   "Sign"
+  ]
+ },
+ "3_undo": {
+  "positions_restored": true
+ },
+ "3_redo": {
+  "positions_moved_again": true
+ },
+ "4_stack_click_1": {
+  "selected": null,
+  "structure": null,
+  "message": "Redone.",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "under": [
+   "n/a"
+  ]
+ },
+ "4_stack_click_2": {
+  "selected": null,
+  "structure": null,
+  "message": "Redone.",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "under": [
+   "n/a"
+  ]
+ },
+ "4_stack_right_click": {
+  "selected": "Campfire 3",
+  "structure": null,
+  "message": "Redone.",
+  "inspector_name": "Campfire 3",
+  "inspector_burning": [
+   "Burning: Off",
+   "Burning: Off"
+  ],
+  "campfire_of_selected": {
+   "enabled": false,
+   "size": 1.0,
+   "smoke": true,
+   "light": 1.0,
+   "light_radius": 192.0,
+   "sound": ""
+  },
+  "kept": false,
+  "menu": [
+   "Rename",
+   "Add behaviour...",
+   "Copy",
+   "Delete"
+  ]
+ },
+ "5_under_empty": [
+  "n/a"
+ ],
+ "5_click_empty_ground": {
+  "selected": null,
+  "structure": null,
+  "message": "Redone.",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null
+ },
+ "6_sculpt_click_on_campfire": {
+  "selected": null,
+  "structure": null,
+  "message": "Raised the ground (1 dabs, one undo step).",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "brush_on": true
+ },
+ "6_paint_click_on_campfire": {
+  "selected": null,
+  "structure": null,
+  "message": "Painted earth (1 dabs, one undo step).",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "brush_on": true
+ },
+ "6_scatter_click_on_campfire": {
+  "selected": null,
+  "structure": null,
+  "message": "Scattered 22 (Meadow): one undo step.",
+  "inspector_name": null,
+  "inspector_burning": [],
+  "campfire_of_selected": null,
+  "brush_on": true
+ },
+ "7_saved": {
+  "message": "Saved 1 file(s).",
+  "positions": {
+   "Elder": [
+    144.0,
+    640.0
+   ],
+   "Pond": [
+    832.0,
+    192.0
+   ],
+   "Campfire 1": [
+    307.2,
+    83.2
+   ],
+   "Campfire 2": [
+    448.0,
+    288.0
+   ],
+   "Campfire 3": [
+    448.0,
+    288.0
+   ],
+   "Campfire 4": [
+    192.0,
+    160.0
+   ],
+   "Sign": [
+    416.0,
+    208.0
+   ],
+   "Sign_1": [
+    384.0,
+    220.0
+   ]
+  }
+ },
+ "7_reopened": {
+  "positions_match": true
+ }
+}

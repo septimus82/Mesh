@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "description": "A carved fragment from the Ancient Ruins.",
+      "effects": {},
+      "icon": null,
+      "id": "relic_shard",
+      "max_stack": 20,
+      "name": "Relic Shard",
+      "stackable": true,
+      "tags": [
+        "relic"
+      ]
+    },
+    {
+      "description": "Proof the Ruins' guardian has fallen.",
+      "effects": {},
+      "icon": null,
+      "id": "guardian_sigil",
+      "max_stack": 1,
+      "name": "Guardian Sigil",
+      "stackable": false,
+      "tags": [
+        "relic"
+      ]
+    }
+  ]
+}

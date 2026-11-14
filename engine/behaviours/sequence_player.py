@@ -294,9 +294,8 @@ class SequencePlayer(Behaviour):
             entity.center_x = target_x
             entity.center_y = target_y
             return True
-        vx = (dx / distance) * speed if distance > 0 else 0.0
-        vy = (dy / distance) * speed if distance > 0 else 0.0
-        window.move_entity_with_collision(entity, vx, vy, dt)
+        step_len = min(speed * dt, distance)  # this frame's share of the way, never past the target
+        window.move_entity_with_collision(entity, dx / distance * step_len, dy / distance * step_len)
         return False
 
     def _compute_move_target(self, step: dict[str, Any], entity: Sprite) -> tuple[float, float]:

@@ -40,6 +40,8 @@ See Also:
 from __future__ import annotations
 
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
@@ -100,6 +102,8 @@ class MeshEventBus:
 
     Attributes:
         _history_limit: Maximum events retained in history (default: 50).
+        emitted: Events emitted so far (never reset): the history's last one is event number ``emitted``, so
+            ``engine.runtime_debug`` numbers the history and tells which events a play-test made.
 
     Example::
 
@@ -124,6 +128,8 @@ class MeshEventBus:
         self._wildcard_subscribers: List[EventCallback] = []
         self._history: List[Dict[str, Any]] = []
         self._history_limit: int = 50
+        self.emitted: int = 0
+        self._recording: list[list[Callable[[], None]]] = []  # (record_subscriptions: open records)
         self._recorder: Optional[Callable[[Dict[str, Any]], None]] = None
 
     def set_recorder(self, recorder: Optional[Callable[[Dict[str, Any]], None]]) -> None:
@@ -182,6 +188,8 @@ class MeshEventBus:
             if not listeners:
                 self._subscribers.pop(key, None)
 
+        for made in self._recording:
+            made.append(unsubscribe)
         return unsubscribe
 
     def subscribe_all(self, callback: EventCallback) -> Callable[[], None]:
@@ -194,6 +202,9 @@ class MeshEventBus:
                 self._wildcard_subscribers.remove(callback)
             except ValueError:
                 return
+
+        for made in self._recording:
+            made.append(unsubscribe)
 
         return unsubscribe
 
@@ -252,6 +263,7 @@ class MeshEventBus:
 
         # Add to history
         self._history.append(event_dict)
+        self.emitted += 1
         if len(self._history) > self._history_limit:
             self._history.pop(0)
 
@@ -283,6 +295,17 @@ class MeshEventBus:
             "types": {event_type: len(listeners) for event_type, listeners in self._subscribers.items()},
             "wildcard": len(self._wildcard_subscribers),
         }
+
+    @contextmanager
+    def record_subscriptions(self) -> Iterator[list[Callable[[], None]]]:
+        """The unsubscribe functions of every subscription made inside the ``with`` block (a scene's behaviours: the
+        scene ends them when it is unloaded, so a room's objects never react after it is gone)."""
+        made: list[Callable[[], None]] = []
+        self._recording.append(made)
+        try:
+            yield made
+        finally:
+            self._recording.remove(made)
 
     def clear(self) -> None:
         """Remove all registered subscribers."""

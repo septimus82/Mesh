@@ -1,0 +1,20 @@
+{
+ "project": "<scratch>\\project",
+ "rooms": [
+  "broken_empty",
+  "broken_not_audio",
+  "broken_truncated",
+  "dungeon",
+  "dungeon_quiet",
+  "forest",
+  "missing",
+  "no_setting",
+  "silence",
+  "town"
+ ],
+ "cc0_files": [
+  "forest_ambience",
+  "town_theme"
+ ],
+ "audible": false
+}

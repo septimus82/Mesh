@@ -13,6 +13,7 @@ GETTING_STARTED = (
     ("play", "Play the project in the current folder"),
     ("edit", "Open the project in the current folder in the editor"),
     ("mcp", "Connect an AI assistant to this project:  mesh mcp install"),
+    ("author", "Change a project from a script or AI tool:  mesh author ops"),
     ("validate", "Check a scene file for errors"),
     ("doctor", "Diagnose your install and project"),
 )
@@ -100,6 +101,10 @@ def dispatch(
         from .. import mcp_setup
 
         return int(mcp_setup.handle(args))
+    if args.command == "author":
+        from .. import author
+
+        return int(author.handle(args))
     if args.command == "wizard":
         return int(impl._handle_wizard(args))
     if args.command == "new-scene":

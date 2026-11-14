@@ -134,6 +134,43 @@ Only run it after intentionally adding tests without a tier marker.
 3. Optional dev-only asset watcher: set `MESH_HOT_RELOAD=1` to enable
    debounced asset cache reloads on file changes (`assets/` + `packs/`).
 
+### Scene hot reload (F7)
+
+Reloading the scene (**Ctrl+R**, the console's `reload`, or a queued reload such as the asset browser's) checks the
+scene before anything is cleared. It loads the scene the way a reload would: an open Studio document before the file,
+then migration, the scene schema and the scene validator. That load is strict, so a scene the loader would otherwise
+replace with an empty one is refused.
+
+**If the scene is refused:** the running scene is left exactly as it was. Its objects, subscriptions, queued events,
+player, camera, game state, room memory and asset caches are untouched. The hot-reload error says why: "Scene not
+reloaded: …". Fix the scene and reload again.
+
+**The result:** every attempt leaves one result in `SceneController.last_reload_result`. Two hosts expose it to an
+AI, each as `last_reload`, and both read that same object:
+
+- **Mesh Studio**, the authoring interface: `StudioAIHost.read_live_scene`, beside `last_save`. An agent reaches it
+  through `mesh author read` or MCP `read_project` while Studio has the project open.
+- **The legacy editor** (the in-game editor overlay): `EditorModeController.read_live_scene`, through the same live
+  bridge when that editor hosts the session.
+
+Both are read-only. A refused reload changes no revision and no proposal, and an AI's changes still go to the person
+as proposals. Before any reload, `last_reload` is `null`. Its fields:
+
+| Field | Values |
+| --- | --- |
+| `ok` | `true` or `false` |
+| `reason` | `scene_missing`, `scene_unreadable`, `invalid_json`, `schema_invalid`, `scene_invalid`, `no_scene` or `construction_failed` |
+| `stage` | `preflight` or `construction` |
+| `route` | `immediate` or `queued` |
+| `scene_path`, `message` | the scene, and the explanation people see |
+| `previous_scene_preserved` | whether the scene running before the attempt is still running |
+| `can_retry` | whether another reload can be attempted |
+| `errors`, `errors_total` | up to 10 validation errors, and how many there were |
+
+**Failures while the scene is built:** a scene that passes the check can still fail while it is being built, for
+example in lighting or HD-2D setup. That is stage `construction`, after the running scene began to be replaced, so
+`previous_scene_preserved` is false. Details: [reviews/f7_safe_hot_reload.md](reviews/f7_safe_hot_reload.md).
+
 ### Diagnostics sections
 
 | Section | Content |

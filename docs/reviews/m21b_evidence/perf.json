@@ -1,0 +1,40 @@
+{
+ "emitters_in_room": 51,
+ "frames": 685,
+ "soundscape_ms_per_frame": {
+  "mean": 0.218,
+  "p95": 0.161,
+  "max": 25.823
+ },
+ "whole_frame_ms_mean": 0.96,
+ "slowest_frames_ms": [
+  [
+   25.82,
+   0
+  ],
+  [
+   7.27,
+   1
+  ],
+  [
+   3.27,
+   31
+  ],
+  [
+   3.17,
+   11
+  ],
+  [
+   3.11,
+   10
+  ],
+  [
+   3.08,
+   223
+  ]
+ ],
+ "peak_registered_players": 14,
+ "max_active": 12,
+ "loop_calls_per_frame": 5.15,
+ "registered_after_close": 0
+}

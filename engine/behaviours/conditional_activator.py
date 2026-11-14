@@ -58,10 +58,15 @@ class ConditionalActivator(Behaviour):
         self.config["require_flags"] = list(self.require_flags)
         self.config["forbid_flags"] = list(self.forbid_flags)
         self._time_until_check = 0.0
-        self._was_solid = bool(getattr(entity, "mesh_is_solid", False))
+        # Behaviours are built before the loader marks the sprite solid, so read the entity's data.
+        data = getattr(entity, "mesh_entity_data", None) or {}
+        self._was_solid = bool(data.get("solid", getattr(entity, "mesh_is_solid", False)))
         self._visible_when_active = bool(getattr(entity, "visible", True))
         self._active: bool | None = None
-        self._apply_state(self._requirements_met())
+        # Only the look here: the loader adds a solid sprite to the solid list after this constructor (adding it now
+        # as well made the scene fail to load, "Sprite already in SpriteList"). The first update sets the solidity.
+        self._apply_state(self._requirements_met(), solids=False)
+        self._active = None
 
     @staticmethod
     def _merge_entity_data(entity: "Sprite", config: Dict[str, Any] | None) -> Dict[str, Any]:
@@ -92,30 +97,35 @@ class ConditionalActivator(Behaviour):
                 return False
         return True
 
-    def _apply_state(self, enabled: bool) -> None:
+    def _apply_state(self, enabled: bool, *, solids: bool = True) -> None:
         if self._active is not None and self._active == enabled:
             return
         self._active = enabled
         sprite = self.entity
         sprite.visible = bool(self._visible_when_active and enabled)
         sprite.alpha = 255 if sprite.visible else 0
-        if self._was_solid:
+        if self._was_solid and solids:
             if enabled:
                 self._ensure_in_solids()
             else:
                 self._remove_from_solids()
 
-    def _ensure_in_solids(self) -> None:
+    def _solids(self) -> Any:
+        """The list movement collides with. It lives on the scene controller: looking for it on the window (which
+        has none) made hiding a solid object leave it blocking the way, invisible."""
+        controller = getattr(self.window, "scene_controller", None)
+        solids = getattr(controller, "solid_sprites", None)
+        return solids if solids is not None else getattr(self.window, "solid_sprites", None)
 
-        solids = getattr(self.window, "solid_sprites", None)
+    def _ensure_in_solids(self) -> None:
+        solids = self._solids()
         if not isinstance(solids, optional_arcade.arcade.SpriteList):
             return
         if self.entity not in solids:
             solids.append(self.entity)
 
     def _remove_from_solids(self) -> None:
-
-        solids = getattr(self.window, "solid_sprites", None)
+        solids = self._solids()
         if not isinstance(solids, optional_arcade.arcade.SpriteList):
             return
         try:

@@ -117,12 +117,19 @@ class TestGameWindowToast(unittest.TestCase):
             "MeshEventBus"
         ]
 
+        import engine.game as game_module
+        import engine.game_parts.ui_dispatcher as dispatcher_module
+
         self.mocks = {}
         for mgr in managers:
-            patcher = patch(f"engine.game.{mgr}")
-            mock_cls = patcher.start()
-            self.mocks[mgr] = mock_cls
-            self.patchers.append(patcher)
+            # The UI moved from engine.game to the UI dispatcher (engine/game_parts/ui_dispatcher.py), which now
+            # builds it; engine.game still imports some of the same names. Patch every copy, and keep the
+            # dispatcher's mock (the one GameWindow's construction uses) for assertions.
+            for module, name in ((game_module, "engine.game"), (dispatcher_module, "engine.game_parts.ui_dispatcher")):
+                if hasattr(module, mgr):
+                    patcher = patch(f"{name}.{mgr}")
+                    self.mocks[mgr] = patcher.start()
+                    self.patchers.append(patcher)
 
         patcher = patch("engine.ui_overlays.perf.PerfOverlay")
         patcher.start()

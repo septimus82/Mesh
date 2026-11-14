@@ -1,0 +1,212 @@
+{
+  "method": "per resolution one game: the village in rain (4,000 drops) with the natural pond, the stone pool and two muddy puddles, the camera on the natural pond; after 300 drawn warm-up frames, 5 rounds, each measuring every reflection setting in turn (so all three see the same GPU clocks): the water pass's GPU time by a timer query round it (its frame copy included), the whole frame's GPU time with and without the water, and the water step's CPU time; medians",
+  "cases": {
+    "720p_full": {
+      "water_surfaces": 4,
+      "draw_calls": 33,
+      "water_bytes": 7373344,
+      "water_pass_gpu_ms": 0.359,
+      "water_draw_cpu_ms": 0.61,
+      "frame_gpu_ms_with": 0.954,
+      "frame_gpu_ms_without": 0.734,
+      "water_pass_gpu_ms_rounds": [
+        0.192,
+        0.276,
+        0.359,
+        0.506,
+        0.491
+      ]
+    },
+    "720p_half": {
+      "water_surfaces": 4,
+      "draw_calls": 33,
+      "water_bytes": 1843744,
+      "water_pass_gpu_ms": 0.187,
+      "water_draw_cpu_ms": 0.63,
+      "frame_gpu_ms_with": 1.411,
+      "frame_gpu_ms_without": 0.837,
+      "water_pass_gpu_ms_rounds": [
+        0.187,
+        0.254,
+        0.256,
+        0.175,
+        0.159
+      ]
+    },
+    "720p_sky": {
+      "water_surfaces": 4,
+      "draw_calls": 33,
+      "water_bytes": 544,
+      "water_pass_gpu_ms": 0.113,
+      "water_draw_cpu_ms": 0.471,
+      "frame_gpu_ms_with": 1.009,
+      "frame_gpu_ms_without": 0.927,
+      "water_pass_gpu_ms_rounds": [
+        0.113,
+        0.148,
+        0.142,
+        0.092,
+        0.081
+      ]
+    },
+    "1080p_full": {
+      "water_surfaces": 4,
+      "draw_calls": 33,
+      "water_bytes": 16589344,
+      "water_pass_gpu_ms": 0.193,
+      "water_draw_cpu_ms": 0.297,
+      "frame_gpu_ms_with": 0.793,
+      "frame_gpu_ms_without": 0.593,
+      "water_pass_gpu_ms_rounds": [
+        0.097,
+        0.097,
+        0.193,
+        0.214,
+        0.231
+      ]
+    },
+    "1080p_half": {
+      "water_surfaces": 4,
+      "draw_calls": 33,
+      "water_bytes": 4147744,
+      "water_pass_gpu_ms": 0.145,
+      "water_draw_cpu_ms": 0.337,
+      "frame_gpu_ms_with": 1.001,
+      "frame_gpu_ms_without": 0.609,
+      "water_pass_gpu_ms_rounds": [
+        0.075,
+        0.129,
+        0.145,
+        0.162,
+        0.183
+      ]
+    },
+    "1080p_sky": {
+      "water_surfaces": 4,
+      "draw_calls": 33,
+      "water_bytes": 544,
+      "water_pass_gpu_ms": 0.081,
+      "water_draw_cpu_ms": 0.236,
+      "frame_gpu_ms_with": 0.723,
+      "frame_gpu_ms_without": 0.643,
+      "water_pass_gpu_ms_rounds": [
+        0.035,
+        0.069,
+        0.081,
+        0.092,
+        0.099
+      ]
+    },
+    "4k_full": {
+      "water_surfaces": 4,
+      "draw_calls": 33,
+      "water_bytes": 66355744,
+      "water_pass_gpu_ms": 0.515,
+      "water_draw_cpu_ms": 0.297,
+      "frame_gpu_ms_with": 1.454,
+      "frame_gpu_ms_without": 0.94,
+      "water_pass_gpu_ms_rounds": [
+        0.348,
+        0.349,
+        0.515,
+        0.527,
+        0.526
+      ]
+    },
+    "4k_half": {
+      "water_surfaces": 4,
+      "draw_calls": 33,
+      "water_bytes": 16589344,
+      "water_pass_gpu_ms": 0.225,
+      "water_draw_cpu_ms": 0.333,
+      "frame_gpu_ms_with": 1.224,
+      "frame_gpu_ms_without": 0.952,
+      "water_pass_gpu_ms_rounds": [
+        0.179,
+        0.179,
+        0.225,
+        0.232,
+        0.23
+      ]
+    },
+    "4k_sky": {
+      "water_surfaces": 4,
+      "draw_calls": 33,
+      "water_bytes": 544,
+      "water_pass_gpu_ms": 0.129,
+      "water_draw_cpu_ms": 0.232,
+      "frame_gpu_ms_with": 1.093,
+      "frame_gpu_ms_without": 0.962,
+      "water_pass_gpu_ms_rounds": [
+        0.101,
+        0.1,
+        0.129,
+        0.131,
+        0.129
+      ]
+    }
+  },
+  "gpu": {
+    "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+    "gl_version": [
+      4,
+      6
+    ]
+  },
+  "lifecycle": {
+    "room_changes_10": {
+      "before": {
+        "buffer": 125,
+        "texture": 47,
+        "framebuffer": 8,
+        "program": 30
+      },
+      "after": {
+        "buffer": 125,
+        "texture": 47,
+        "framebuffer": 8,
+        "program": 30
+      }
+    },
+    "reflection_settings_switched_9": {
+      "after": {
+        "buffer": 125,
+        "texture": 47,
+        "framebuffer": 8,
+        "program": 30
+      },
+      "water_bytes": {
+        "full": 7373216,
+        "half": 1843616,
+        "sky": 416
+      }
+    },
+    "studio": {
+      "start": {
+        "texture": 48,
+        "framebuffer": 9,
+        "program": 31
+      },
+      "after_10_edits": {
+        "texture": 48,
+        "framebuffer": 9,
+        "program": 31
+      },
+      "after_3_reflection_changes": {
+        "texture": 48,
+        "framebuffer": 9,
+        "program": 31
+      },
+      "after_5_play_stop": {
+        "texture": 49,
+        "framebuffer": 10,
+        "program": 32
+      },
+      "after_10_play_stop": {
+        "texture": 49,
+        "framebuffer": 10,
+        "program": 32
+      }
+    }
+  }
+}

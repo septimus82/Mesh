@@ -497,6 +497,9 @@ def build_slot_payload(
     compact: bool,
     timestamp: str,
 ) -> tuple[dict[str, Any], str]:
+    from engine.scene_runtime.room_memory import remember_removed
+
+    remember_removed(window.scene_controller)  # this room's collected or defeated objects, into the game state
     snapshot = window.scene_controller.build_scene_snapshot(compact=compact)
     controller = getattr(window, "game_state_controller", None)
     if controller is not None:
@@ -519,6 +522,21 @@ def build_slot_payload(
     else:
         snapshot["saved_quests"] = {"schema_version": 1, "quests": {}}
 
+    # The room this was saved in. After loading a save the current scene is the save file itself;
+    # recording that made the next save point at a save, and its map was then looked for in saves/.
+    room = getattr(window.scene_controller, "room_path", None)
+    if not isinstance(room, str) or not room:
+        room = window.scene_controller.current_scene_path
+    # The room's authored settings aren't saved when the room can be read: loading takes them from the room as it is
+    # then (#390). A scene with no readable room (built in memory) keeps its whole snapshot: such a save is complete.
+    from engine.scene_runtime.saved_world import MUSIC, ROOM_IDS, room_ids, slim
+
+    loader = getattr(window, "scene_loader", None)
+    has_room = (isinstance(room, str) and bool(room) and loader is not None and hasattr(loader, "saved_room")
+                and loader.saved_room(room, warn=False) is not None)
+    if has_room:
+        slim(snapshot)
+
     # Add save schema version
     snapshot["save_schema_version"] = SAVE_SCHEMA_VERSION
     snapshot, _ = normalize_save_payload(snapshot, source="save_runtime/build_slot_payload")
@@ -526,17 +544,25 @@ def build_slot_payload(
     content_to_hash = {
         "data": snapshot,
         "slot": slot_name,
-        "scene_path": window.scene_controller.current_scene_path,
+        "scene_path": room,
     }
     content_str = json.dumps(content_to_hash, sort_keys=True)
     content_hash = __import__("hashlib").md5(content_str.encode("utf-8")).hexdigest()
 
     snapshot["meta"] = {
         "slot": slot_name,
-        "scene_path": window.scene_controller.current_scene_path,
+        "scene_path": room,
         "timestamp": timestamp,
         "version": constants.SLOT_META_VERSION,
     }
+    if has_room:
+        snapshot["meta"][ROOM_IDS] = room_ids(window.scene_controller)
+    from engine.audio import MusicPlaybackSnapshot
+
+    music = getattr(getattr(window, "audio", None), "snapshot_music", None)
+    playing = music() if callable(music) else None
+    if isinstance(playing, MusicPlaybackSnapshot):  # a room without its own music plays it again on loading (M21A)
+        snapshot["meta"][MUSIC] = {"path": playing.path, "volume": playing.volume} if playing.path else {"path": None}
     snapshot["save_format_version"] = SAVE_FORMAT_VERSION
 
     spawn_zone_id = None

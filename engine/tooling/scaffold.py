@@ -477,9 +477,15 @@ def create_scene(path: str, template_name: str = "empty", extra_args: Dict[str, 
     target_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        json_io.write_json_atomic(target_path, final_scene)
+        if force:
+            json_io.write_json_atomic(target_path, final_scene)
+        else:  # (never over anything, even something put there since the check above, or a broken link: F14)
+            json_io.write_json_new(target_path, final_scene)
         print(f"[Mesh][Scaffold] Created new scene at '{path}' using template '{template_name}'")
         return True
+    except FileExistsError:
+        print(f"[Mesh][Scaffold] ERROR: Something is already at '{path}' (left as it is). Use --force to overwrite.")
+        return False
     except OSError as exc:
         _log_swallow("SCAF-003", f"Failed to write scene file: {exc}")
         print(f"[Mesh][Scaffold] ERROR: Failed to write scene file: {exc}")

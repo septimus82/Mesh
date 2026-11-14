@@ -19,6 +19,9 @@ def init_audio_coordinator(
     window.audio.set_master_volume(window.engine_config.master_volume)
     window.audio.set_sfx_volume(window.engine_config.sfx_volume)
     window.audio.set_music_volume(window.engine_config.music_volume)
+    set_ambience = getattr(window.audio, "set_ambience_volume", None)
+    if callable(set_ambience):
+        set_ambience(getattr(window.engine_config, "ambience_volume", 1.0))
 
     window.runtime_settings = ensure_runtime_settings(window)
     window.runtime_settings_path = resolve_runtime_settings_path()

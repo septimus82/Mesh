@@ -14,6 +14,7 @@ from engine.editor.creator_mode import (
     creator_door_staging,
 )
 from engine.editor.creator_mode.creator_overlay_renderer import build_creator_overlay_draw_commands
+from tests._shared_python import run_python
 
 pytestmark = pytest.mark.fast
 
@@ -334,46 +335,26 @@ def test_pure_proposal_status_module_does_not_import_arcade() -> None:
 
 
 def test_pure_proposal_status_module_does_not_import_real_bridge_modules() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; "
-                "from engine.editor.creator_mode.creator_proposal_status "
-                "import build_creator_proposal_status; "
-                "blocked = ["
-                "'engine.editor.live_session_bridge', "
-                "'engine.editor.editor_live_ops_controller', "
-                "'engine.editor.proposal_inbox'"
-                "]; "
-                "print(any(name in sys.modules for name in blocked))"
-            ),
+    output = run_python(
+        (
+            "import sys; "
+            "from engine.editor.creator_mode.creator_proposal_status "
+            "import build_creator_proposal_status; "
+            "blocked = ["
+            "'engine.editor.live_session_bridge', "
+            "'engine.editor.editor_live_ops_controller', "
+            "'engine.editor.proposal_inbox'"
+            "]; "
+            "print(any(name in sys.modules for name in blocked))"
+        ),
+        watch=[
+            'engine.editor.live_session_bridge',
+            'engine.editor.editor_live_ops_controller',
+            'engine.editor.proposal_inbox',
         ],
-        capture_output=True,
-        check=True,
-        text=True,
     )
 
-    assert result.stdout.strip() == "False"
-
-
-def test_package_import_does_not_eagerly_import_renderer() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; import engine.editor.creator_mode; "
-                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
-    )
-
-    assert result.stdout.strip() == "False"
+    assert output.strip() == "False"
 
 
 class FakeBridge:

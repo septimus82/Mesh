@@ -34,6 +34,8 @@ def test_verify_all_includes_doctor_assets_warning_ok(monkeypatch, tmp_path, cap
             {
                 "entities": [
                     {
+                        "x": 0,  # a loadable room: verify-all now smoke-runs it (runtime-player-smoke)
+                        "y": 0,
                         "behaviours": ["SceneTransition"],
                         "behaviour_config": {"SceneTransition": {"target_scene": "scenes/missing.json"}},
                     }

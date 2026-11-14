@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from tooling import scan_exception_policies
@@ -67,10 +65,8 @@ def test_missing_ble001_reason_log_uses_deterministic_summary_fields() -> None:
     )
 
 
-def test_missing_ble001_reason_scan_ratchet() -> None:
-    repo_root = Path(__file__).resolve().parents[1]
-
-    payload = scan_exception_policies.scan(["engine", "mesh_cli", "tooling"], repo_root=repo_root)
+def test_missing_ble001_reason_scan_ratchet(exception_policy_scan: dict) -> None:
+    payload = exception_policy_scan
 
     assert payload["missing_ble001_reason_total"] == payload["ble001_missing_reason_count"]
     assert payload["missing_ble001_reason_total"] <= 0

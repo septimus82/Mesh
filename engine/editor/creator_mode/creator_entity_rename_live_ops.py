@@ -33,7 +33,7 @@ def build_creator_entity_rename_live_ops(
         f"Rename {request.entity_id} display label "
         f"from '{request.current_label}' to '{request.proposed_label}'"
     )
-    op = {
+    op: dict[str, object] = {
         "type": "set_entity_display_label",
         "scene_path": request.source_scene,
         "entity_id": request.entity_id,

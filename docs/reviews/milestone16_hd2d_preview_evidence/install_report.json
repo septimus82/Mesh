@@ -1,0 +1,690 @@
+{
+  "wheel": "mesh_engine-0.5.0-py3-none-any.whl",
+  "wheel_bytes": 3321068,
+  "bundled_files": 178,
+  "bundled_is_allow_list": true,
+  "requires": [
+    "arcade<4,>=3",
+    "jsonschema<5,>=4",
+    "pillow<12,>=10"
+  ],
+  "installed": [
+    "arcade==3.3.3",
+    "jsonschema==4.26.0",
+    "mesh-engine",
+    "pillow==11.3.0",
+    "pyglet==2.1.19"
+  ],
+  "driver_exit": 0,
+  "acceptance": {
+    "engine": "<OUT>\\mesh_venv\\Lib\\site-packages\\engine\\__init__.py",
+    "engine_from_venv": true,
+    "repo_on_sys_path": [],
+    "repo_env": {},
+    "cwd_outside_repo": true,
+    "launcher_templates": [
+      "blank",
+      "adventure",
+      "hd2d_rpg"
+    ],
+    "launcher": {
+      "default": "adventure",
+      "offered": [
+        [
+          "blank",
+          "Blank Project",
+          "An empty grass map and a player who can walk around. Nothing else: build your own game from scratch."
+        ],
+        [
+          "adventure",
+          "Top-down Adventure",
+          "A small village to explore: a hero you walk with WASD, a villager who talks, a house you can enter, trees and water in your way. Esc opens the menu to save and load."
+        ],
+        [
+          "hd2d_rpg",
+          "HD-2D RPG (Preview)",
+          "A playable, editable example: 3D buildings, pixel-art characters, stairs, a bridge, lighting and people to talk to. Import Blender GLB models and edit in 3D. A preview: some features are still experimental."
+        ]
+      ],
+      "chosen": "hd2d_rpg",
+      "screen": "opening",
+      "message": "",
+      "created": true,
+      "studio_started": [
+        {
+          "command": [
+            "python.exe",
+            "-m",
+            "mesh_cli",
+            "edit",
+            "Mesh Village"
+          ],
+          "cwd": "<OUT>\\projects\\Mesh Village"
+        }
+      ]
+    },
+    "installed_files": {
+      "count": 178,
+      "notices": {
+        "assets/NOTICE.md": true,
+        "assets/branding/NOTICE.md": true,
+        "assets/icons/NOTICE.md": true,
+        "assets/icons/lucide/LICENSE": true,
+        "assets/hd2d_starter/PROVENANCE.md": true
+      },
+      "unverified_sprites": [],
+      "help_in_project": true
+    },
+    "workflow": {
+      "steps": [
+        {
+          "step": "open",
+          "room": "start",
+          "hd2d": true,
+          "structures": 45,
+          "error": null
+        },
+        {
+          "step": "move_building",
+          "picked": "shop",
+          "shop": {
+            "cutaway": true,
+            "id": "shop",
+            "model": "assets/models/shop.glb",
+            "x": 928.0,
+            "y": 384.0
+          }
+        },
+        {
+          "step": "turn_structure",
+          "picked": "crate_1",
+          "crate": {
+            "id": "crate_1",
+            "model": "assets/models/crate.glb",
+            "x": 784.0,
+            "y": 288.0,
+            "rotation": 90.0
+          },
+          "see_through": true,
+          "see_through_undone": null
+        },
+        {
+          "step": "place_person",
+          "refused_message": "Nobody could stand there on the ground: something is in the way, or a floor is too low overhead.",
+          "marker": [
+            10.0,
+            24.0,
+            2.0
+          ],
+          "message": "Placed Person on 'plateau_west_1/col_platform', 2.0 m up.",
+          "entity": {
+            "behaviour_config": {
+              "Animator": {
+                "animation_state": "idle_down",
+                "animations": {
+                  "idle_down": {
+                    "fps": 2.0,
+                    "frame_height": 48,
+                    "frame_width": 32,
+                    "frames": 1,
+                    "sheet": "assets/sprites/hd2d_villager.png",
+                    "start": 0
+                  },
+                  "idle_left": {
+                    "fps": 2.0,
+                    "frame_height": 48,
+                    "frame_width": 32,
+                    "frames": 1,
+                    "sheet": "assets/sprites/hd2d_villager.png",
+                    "start": 4
+                  },
+                  "idle_right": {
+                    "fps": 2.0,
+                    "frame_height": 48,
+                    "frame_width": 32,
+                    "frames": 1,
+                    "sheet": "assets/sprites/hd2d_villager.png",
+                    "start": 8
+                  },
+                  "idle_up": {
+                    "fps": 2.0,
+                    "frame_height": 48,
+                    "frame_width": 32,
+                    "frames": 1,
+                    "sheet": "assets/sprites/hd2d_villager.png",
+                    "start": 12
+                  },
+                  "walk_down": {
+                    "fps": 8.0,
+                    "frame_height": 48,
+                    "frame_width": 32,
+                    "frames": 4,
+                    "sheet": "assets/sprites/hd2d_villager.png",
+                    "start": 0
+                  },
+                  "walk_left": {
+                    "fps": 8.0,
+                    "frame_height": 48,
+                    "frame_width": 32,
+                    "frames": 4,
+                    "sheet": "assets/sprites/hd2d_villager.png",
+                    "start": 4
+                  },
+                  "walk_right": {
+                    "fps": 8.0,
+                    "frame_height": 48,
+                    "frame_width": 32,
+                    "frames": 4,
+                    "sheet": "assets/sprites/hd2d_villager.png",
+                    "start": 8
+                  },
+                  "walk_up": {
+                    "fps": 8.0,
+                    "frame_height": 48,
+                    "frame_width": 32,
+                    "frames": 4,
+                    "sheet": "assets/sprites/hd2d_villager.png",
+                    "start": 12
+                  }
+                },
+                "directional_mode": "4-way",
+                "enable_auto_state": true,
+                "facing_default": "down",
+                "idle_clip": "idle_down",
+                "speed_threshold": 5.0,
+                "walk_clip": "walk_down"
+              },
+              "Dialogue": {
+                "dialogue": {
+                  "nodes": {
+                    "root": {
+                      "text": "Hello!"
+                    }
+                  },
+                  "speaker": "Person",
+                  "start": "root"
+                },
+                "once": false
+              }
+            },
+            "behaviours": [
+              "Dialogue",
+              "Animator"
+            ],
+            "components": {
+              "collider": {
+                "auto": true,
+                "kind": "box"
+              }
+            },
+            "name": "Person",
+            "sprite": "assets/sprites/hd2d_villager.png",
+            "tag": "npc",
+            "x": 320.0,
+            "y": 786.0,
+            "id": "start_person_320_786_0_0",
+            "elevation": 64.0
+          },
+          "stands_on": [
+            2.0,
+            "plateau_west_1/col_platform"
+          ],
+          "gone_after_undo": true,
+          "back_after_redo": true
+        },
+        {
+          "step": "edit_person",
+          "selected": "start_person_320_786_0_0",
+          "says": "Welcome to the west hill!"
+        },
+        {
+          "step": "modify_light",
+          "lamp": {
+            "color": "#88bbff",
+            "elevation": 96.0,
+            "intensity": 1.6,
+            "mode": "soft",
+            "radius": 224.0,
+            "x": 560.0,
+            "y": 288.0
+          },
+          "renderer_lamps": 2
+        },
+        {
+          "step": "place_model",
+          "listed": [
+            "Lamp post  x2",
+            "Lamp post  x2",
+            "Cottage  x1",
+            "Cottage  x1",
+            "Cottage interior",
+            "Cottage interior",
+            "Cottage",
+            "Cottage"
+          ],
+          "placed": "lamp_post",
+          "structure": {
+            "id": "lamp_post",
+            "model": "assets/models/lamp_post.glb",
+            "x": 704.0,
+            "y": 352.0
+          }
+        },
+        {
+          "step": "ai_proposal",
+          "summary": [
+            "Village: adds 'Sign_1' (a picture) at 992, 796"
+          ],
+          "sign": {
+            "id": "start_sign_992_796_0_0",
+            "x": 992.0,
+            "y": 796.0,
+            "elevation": 64.0
+          }
+        },
+        {
+          "step": "save_reopen",
+          "saved_message": "Saved 1 file(s).",
+          "same": true
+        },
+        {
+          "step": "play",
+          "walk": [
+            {
+              "after": "start",
+              "feet_m": [
+                20.0,
+                5.5
+              ],
+              "elevation_m": 0.0,
+              "floor": "ground",
+              "room": "packs/core_regions/scenes/start.json"
+            },
+            {
+              "after": "up the west stairs onto the plateau",
+              "feet_m": [
+                15.0,
+                24.02
+              ],
+              "elevation_m": 2.0,
+              "floor": "plateau_west_3/col_platform",
+              "room": "packs/core_regions/scenes/start.json"
+            },
+            {
+              "after": "talked to the new person",
+              "feet_m": [
+                11.09,
+                24.02
+              ],
+              "elevation_m": 2.0,
+              "floor": "plateau_west_2/col_platform",
+              "room": "packs/core_regions/scenes/start.json",
+              "prompt": "E: Interact: Person",
+              "dialogue_opened": true,
+              "speaker": "Person",
+              "first_line": "Welcome to the west hill!",
+              "dialogue_closed": true
+            },
+            {
+              "after": "across the bridge onto the east plateau",
+              "feet_m": [
+                26.88,
+                24.02
+              ],
+              "elevation_m": 2.0,
+              "floor": "plateau_east_2/col_platform",
+              "room": "packs/core_regions/scenes/start.json"
+            },
+            {
+              "after": "talked to the Elder",
+              "feet_m": [
+                26.88,
+                24.02
+              ],
+              "elevation_m": 2.0,
+              "floor": "plateau_east_2/col_platform",
+              "room": "packs/core_regions/scenes/start.json",
+              "prompt": "E: Interact: Elder",
+              "dialogue_opened": true,
+              "speaker": "Elder",
+              "first_line": "Welcome to Mesh Village!",
+              "dialogue_closed": true
+            },
+            {
+              "after": "down the east stairs",
+              "feet_m": [
+                30.0,
+                14.48
+              ],
+              "elevation_m": 0.0,
+              "floor": "ground",
+              "room": "packs/core_regions/scenes/start.json"
+            },
+            {
+              "after": "under the bridge",
+              "feet_m": [
+                20.0,
+                24.02
+              ],
+              "elevation_m": 0.0,
+              "floor": "ground",
+              "room": "packs/core_regions/scenes/start.json"
+            },
+            {
+              "after": "read the sign",
+              "feet_m": [
+                20.62,
+                8.47
+              ],
+              "elevation_m": 0.0,
+              "floor": "ground",
+              "room": "packs/core_regions/scenes/start.json",
+              "prompt": "E: Interact: Sign",
+              "dialogue_opened": true,
+              "speaker": "Sign",
+              "first_line": "Mesh Village",
+              "dialogue_closed": true
+            },
+            {
+              "after": "through the cottage door",
+              "feet_m": [
+                8.0,
+                6.35
+              ],
+              "elevation_m": 0.1,
+              "floor": "room/col_floor",
+              "room": "packs/core_regions/scenes/cottage.json"
+            },
+            {
+              "after": "quick-saved, moved, quick-loaded",
+              "feet_m": [
+                8.0,
+                6.35
+              ],
+              "elevation_m": 0.1,
+              "floor": "room/col_floor",
+              "room": "saves\\quicksave.json",
+              "saved_at": [
+                8.0,
+                6.35
+              ],
+              "moved_to": [
+                9.56,
+                6.35
+              ]
+            }
+          ],
+          "mode_after_stop": "edit"
+        },
+        {
+          "step": "model_browser",
+          "listed": [
+            "Shop  x1",
+            "Shop  x1",
+            "Cottage  x1",
+            "Cottage  x1",
+            "Cottage interior",
+            "Cottage interior",
+            "Cottage",
+            "Cottage"
+          ],
+          "imported": "Imported Cottage V2 as assets/models/cottage_v2.glb. Place in scene puts a copy in the room."
+        }
+      ],
+      "timings": {
+        "create_project_ms": null,
+        "studio_frame_ms_median": 15.78,
+        "game_frame_ms_median": 24.6,
+        "browser_open_ms": 315.7,
+        "import_check_ms": 335.7,
+        "import_ms": 418.2,
+        "renderer": {
+          "draw_calls": 29,
+          "static_draws": 24,
+          "triangles": 1408,
+          "buffer_bytes": 113208,
+          "texture_bytes": 137216,
+          "target_bytes": 3744000,
+          "batched": true,
+          "shadows": true,
+          "shadow_draws": 28,
+          "shadow_map_bytes": 36700160,
+          "lamps": 2,
+          "shadow_lamps": 2
+        }
+      },
+      "gl": {
+        "opened": {
+          "texture": 41,
+          "framebuffer": 7,
+          "program": 28
+        },
+        "edit_after_reopen": {
+          "texture": 41,
+          "framebuffer": 7,
+          "program": 28
+        },
+        "play_after_room_change_and_load": {
+          "texture": 20,
+          "framebuffer": 8,
+          "program": 29
+        },
+        "edit_after_stop": {
+          "texture": 42,
+          "framebuffer": 8,
+          "program": 29
+        },
+        "edit_after_second_play_stop": {
+          "texture": 42,
+          "framebuffer": 8,
+          "program": 29
+        },
+        "python_peak_during_play_kb": 35394
+      }
+    },
+    "export": {
+      "args": [
+        "mesh.exe",
+        "export",
+        "build"
+      ],
+      "code": 0,
+      "seconds": 3.1,
+      "stdout": "[Mesh][Export] building bundle from <OUT>\\projects\\Mesh Village...\n[Mesh][Export] OK (1037 files, 9,475,049 bytes)\n[Mesh][Export] wrote bundle to <OUT>\\projects\\Mesh Village\\dist\\bundle\n",
+      "stderr": ""
+    },
+    "exported_game": {
+      "run": {
+        "args": [
+          "python.exe",
+          "-I",
+          "bundle_probe.py",
+          "bundle",
+          "evidence"
+        ],
+        "code": 0,
+        "seconds": 8.5,
+        "stdout": "[Mesh][Prefabs] Loaded 3 prefabs\n[Mesh][Quests] Quest file missing: <OUT>\\projects\\Mesh Village\\assets\\data\\quests.json\n[Mesh][Scene] Loading scene 'packs/core_regions/scenes/start.json'\n[Mesh][SceneLoader] Loaded scene 'Village' with 8 entities\n[Mesh][Tilemap] Loaded 'start.json' with 1 draw layer(s) and 0 collision sprite(s)\n[Mesh][Scene] [+] Spawned 'Player' at (640.0, 194.0)\n[Mesh][Scene] [+] Spawned 'Elder' at (896.0, 786.0)\n[Mesh][Scene] [+] Spawned 'Mara' at (896.0, 418.0)\n[Mesh][Scene] [+] Spawned 'Sign' at (688.0, 284.0)\n[Mesh][Scene] [+] Spawned 'Door to Cottage' at (320.0, 316.8)\n[Mesh][Scene] [+] Spawned 'Arrival from Cottage' at (320.0, 220.8)\n[Mesh][Scene] [+] Spawned 'Person' at (320.0, 786.0)\n[Mesh][Scene] [+] Spawned 'Sign_1' at (992.0, 796.0)\n[Mesh][Scene] Scene ready with 8 sprite(s)\n[Mesh][UI] Rebuilding UI for scene\n[Mesh][Scene] Loading scene 'packs/core_regions/scenes/start.json'\n[Mesh][SceneLoader] Loaded scene 'Village' with 8 entities\n[Mesh][Tilemap] Loaded 'start.json' with 1 draw layer(s) and 0 collision sprite(s)\n[Mesh][Scene] [+] Spawned 'Player' at (640.0, 194.0)\n[Mesh][Scene] [+] Spawned 'Elder' at (896.0, 786.0)\n[Mesh][Scene] [+] Spawned 'Mara' at (896.0, 418.0)\n[Mesh][Scene] [+] Spawned 'Sign' at (688.0, 284.0)\n[Mesh][Scene] [+] Spawned 'Door to Cottage' at (320.0, 316.8)\n[Mesh][Scene] [+] Spawned 'Arrival from Cottage' at (320.0, 220.8)\n[Mesh][Scene] [+] Spawned 'Person' at (320.0, 786.0)\n[Mesh][Scene] [+] Spawned 'Sign_1' at (992.0, 796.0)\n[Mesh][Scene] Scene ready with 8 sprite(s)\n[Mesh][UI] Rebuilding UI for scene\n{\"engine\": \"<OUT>\\\\projects\\\\Mesh Village\\\\dist\\\\bundle\\\\engine\\\\__init__.py\", \"start\": \"packs/core_regions/scenes/start.json\", \"hd2d\": true, \"hd2d_error\": null, \"walked_m\": 3.52}\n",
+        "stderr": "INFO:engine.game:[Mesh][World] Loaded world 'main' from packs/core_regions/worlds/main.json\nINFO:engine.perks:[Mesh][Perks] Loaded 0 perks\nINFO:engine.assets:Creating generated placeholder texture\nINFO:engine.game:[Mesh][GameWindow] Initialized 1280x720 window\n"
+      },
+      "result": {
+        "engine": "<OUT>\\projects\\Mesh Village\\dist\\bundle\\engine\\__init__.py",
+        "start": "packs/core_regions/scenes/start.json",
+        "hd2d": true,
+        "hd2d_error": null,
+        "walked_m": 3.52
+      },
+      "files": 1768,
+      "manifest_repo_root": "."
+    },
+    "presentation": {
+      "cameras": {
+        "start": {
+          "bounds": [
+            0.0,
+            0.0,
+            1280.0,
+            1408.0
+          ],
+          "distance": 53.518,
+          "follow": "player",
+          "fov": 12.0,
+          "pitch": 30.0
+        },
+        "cottage": {
+          "bounds": [
+            144.0,
+            96.0,
+            368.0,
+            288.0
+          ],
+          "distance": 35.679,
+          "follow": "player",
+          "fov": 12.0,
+          "pitch": 55.0
+        }
+      },
+      "npc_sheets": [
+        "assets/sprites/hd2d_merchant.png",
+        "assets/sprites/hd2d_villager.png"
+      ],
+      "cutaway": [
+        "cottage",
+        "shop"
+      ],
+      "sun": [
+        -0.45,
+        -0.55,
+        0.7
+      ],
+      "spots": {
+        "centre": {
+          "feet_m": [
+            20.0,
+            15.03
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 82,
+          "player_visible_pct": 99.0,
+          "player_screen_px": [
+            640.0,
+            322.1
+          ],
+          "camera_target_m": [
+            20.0,
+            14.84,
+            0.8
+          ]
+        },
+        "behind_cottage": {
+          "feet_m": [
+            10.0,
+            15.03
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 82,
+          "player_visible_pct": 100.0,
+          "player_screen_px": [
+            475.9,
+            322.1
+          ],
+          "camera_target_m": [
+            12.59,
+            14.84,
+            0.8
+          ]
+        },
+        "under_bridge": {
+          "feet_m": [
+            20.0,
+            24.02
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 82,
+          "player_visible_pct": 92.3,
+          "player_screen_px": [
+            640.0,
+            322.1
+          ],
+          "camera_target_m": [
+            20.0,
+            23.83,
+            0.8
+          ]
+        }
+      }
+    },
+    "launcher_2d": {
+      "default": "adventure",
+      "offered": [
+        [
+          "blank",
+          "Blank Project",
+          "An empty grass map and a player who can walk around. Nothing else: build your own game from scratch."
+        ],
+        [
+          "adventure",
+          "Top-down Adventure",
+          "A small village to explore: a hero you walk with WASD, a villager who talks, a house you can enter, trees and water in your way. Esc opens the menu to save and load."
+        ],
+        [
+          "hd2d_rpg",
+          "HD-2D RPG (Preview)",
+          "A playable, editable example: 3D buildings, pixel-art characters, stairs, a bridge, lighting and people to talk to. Import Blender GLB models and edit in 3D. A preview: some features are still experimental."
+        ]
+      ],
+      "chosen": "adventure",
+      "screen": "opening",
+      "message": "",
+      "created": true,
+      "studio_started": [
+        {
+          "command": [
+            "python.exe",
+            "-m",
+            "mesh_cli",
+            "edit",
+            "Meadow"
+          ],
+          "cwd": "<OUT>\\projects\\Meadow"
+        }
+      ]
+    },
+    "adventure": {
+      "walked_up_m": 2.34,
+      "hd2d_renderer": false,
+      "studio_room": "start",
+      "studio_hd2d": false
+    },
+    "blank_new": {
+      "args": [
+        "mesh.exe",
+        "new",
+        "Pond",
+        "--template",
+        "blank",
+        "--dest",
+        "projects"
+      ],
+      "code": 0,
+      "seconds": 1.9,
+      "stdout": "Created <OUT>\\projects\\Pond\nNext:\n  cd <OUT>\\projects\\Pond\n  mesh play     walk around (WASD, E to talk)\n  mesh edit     open it in the editor (Shift+F5 for Creator Mode)\n",
+      "stderr": "INFO:engine.project_scaffold:Creating new project 'Pond' at <OUT>\\projects\\Pond (template=blank)\nINFO:engine.project_templates:Applying template 'blank' to <OUT>\\projects\\Pond\nINFO:engine.project_scaffold:Project created successfully.\n"
+    },
+    "blank": {
+      "walked_up_m": 2.34,
+      "hd2d_renderer": false,
+      "studio_room": "start",
+      "studio_hd2d": false
+    }
+  }
+}

@@ -1,0 +1,298 @@
+{
+ "editing_registered_players": 0,
+ "panel": "sound",
+ "placed": [
+  [
+   "Sound",
+   608.0,
+   128.0,
+   {}
+  ]
+ ],
+ "selected_after_placing": true,
+ "picker": "pick_sound",
+ "set": {
+  "sound": "assets/ambience/stream_loop.wav",
+  "volume": 0.7,
+  "distance": 256.0
+ },
+ "copied_into_project": true,
+ "move_undo_redo": [
+  [
+   640.0,
+   192.0
+  ],
+  [
+   608.0,
+   128.0
+  ],
+  [
+   640.0,
+   192.0
+  ]
+ ],
+ "weather": {
+  "rain": "steady",
+  "sounds": {
+   "rain": "assets/ambience/rain_loop.wav",
+   "wind": "assets/ambience/wind_loop.wav",
+   "rain_volume": 0.6,
+   "wind_volume": 0.5
+  },
+  "wind": {
+   "speed": 3.0,
+   "direction": 0.0,
+   "gust": 0.3
+  }
+ },
+ "editing_after_authoring": {
+  "registered_players": 0,
+  "loops": {}
+ },
+ "saved_message": "Saved 1 file(s).",
+ "in_the_saved_file": {
+  "emitters": [
+   [
+    640.0,
+    192.0,
+    {
+     "distance": 256.0,
+     "sound": "assets/ambience/stream_loop.wav",
+     "volume": 0.7
+    }
+   ]
+  ],
+  "weather_sounds": {
+   "rain": "assets/ambience/rain_loop.wav",
+   "wind": "assets/ambience/wind_loop.wav"
+  },
+  "particles": [
+   {
+    "count": 3000,
+    "preset": "rain"
+   }
+  ]
+ },
+ "reopened": {
+  "same_emitters": true,
+  "unsaved": [],
+  "registered_players": 0
+ },
+ "play_stop": [
+  {
+   "mode": "play",
+   "loops": {
+    "weather:rain": 0.153,
+    "weather:wind": 0.045
+   },
+   "registered": 2,
+   "walk": [
+    {
+     "x": 130,
+     "loops": {
+      "weather:rain": 0.159,
+      "weather:wind": 0.048
+     }
+    },
+    {
+     "x": 168,
+     "loops": {
+      "weather:rain": 0.242,
+      "weather:wind": 0.073
+     }
+    },
+    {
+     "x": 206,
+     "loops": {
+      "weather:rain": 0.31,
+      "weather:wind": 0.095
+     }
+    },
+    {
+     "x": 243,
+     "loops": {
+      "weather:rain": 0.365,
+      "weather:wind": 0.111
+     }
+    },
+    {
+     "x": 280,
+     "loops": {
+      "weather:rain": 0.409,
+      "weather:wind": 0.123
+     }
+    },
+    {
+     "x": 318,
+     "loops": {
+      "weather:rain": 0.445,
+      "weather:wind": 0.132
+     }
+    },
+    {
+     "x": 356,
+     "loops": {
+      "weather:rain": 0.473,
+      "weather:wind": 0.136
+     }
+    },
+    {
+     "x": 393,
+     "loops": {
+      "weather:rain": 0.498,
+      "weather:wind": 0.14
+     }
+    },
+    {
+     "x": 430,
+     "loops": {
+      "weather:rain": 0.516,
+      "weather:wind": 0.143,
+      "emitter:packs/core_regions/scenes/start.json:start_sound_608_128_0_0": 0.006
+     }
+    },
+    {
+     "x": 468,
+     "loops": {
+      "weather:rain": 0.532,
+      "weather:wind": 0.145,
+      "emitter:packs/core_regions/scenes/start.json:start_sound_608_128_0_0": 0.064
+     }
+    },
+    {
+     "x": 500,
+     "loops": {
+      "weather:rain": 0.545,
+      "weather:wind": 0.145,
+      "emitter:packs/core_regions/scenes/start.json:start_sound_608_128_0_0": 0.22
+     }
+    },
+    {
+     "x": 463,
+     "loops": {
+      "weather:rain": 0.554,
+      "weather:wind": 0.147,
+      "emitter:packs/core_regions/scenes/start.json:start_sound_608_128_0_0": 0.254
+     }
+    },
+    {
+     "x": 426,
+     "loops": {
+      "weather:rain": 0.563,
+      "weather:wind": 0.153,
+      "emitter:packs/core_regions/scenes/start.json:start_sound_608_128_0_0": 0.118
+     }
+    },
+    {
+     "x": 388,
+     "loops": {
+      "weather:rain": 0.57,
+      "weather:wind": 0.158,
+      "emitter:packs/core_regions/scenes/start.json:start_sound_608_128_0_0": 0.02
+     }
+    },
+    {
+     "x": 350,
+     "loops": {
+      "weather:rain": 0.577,
+      "weather:wind": 0.162,
+      "emitter:packs/core_regions/scenes/start.json:start_sound_608_128_0_0": 0.003
+     }
+    },
+    {
+     "x": 313,
+     "loops": {
+      "weather:rain": 0.581,
+      "weather:wind": 0.166
+     }
+    },
+    {
+     "x": 276,
+     "loops": {
+      "weather:rain": 0.583,
+      "weather:wind": 0.172
+     }
+    },
+    {
+     "x": 238,
+     "loops": {
+      "weather:rain": 0.587,
+      "weather:wind": 0.174
+     }
+    },
+    {
+     "x": 200,
+     "loops": {
+      "weather:rain": 0.589,
+      "weather:wind": 0.174
+     }
+    },
+    {
+     "x": 163,
+     "loops": {
+      "weather:rain": 0.591,
+      "weather:wind": 0.17
+     }
+    }
+   ],
+   "after_stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  },
+  {
+   "mode": "play",
+   "loops": {
+    "weather:rain": 0.593,
+    "weather:wind": 0.165
+   },
+   "registered": 2,
+   "after_stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  },
+  {
+   "mode": "play",
+   "loops": {
+    "weather:rain": 0.595,
+    "weather:wind": 0.159
+   },
+   "registered": 2,
+   "after_stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  },
+  {
+   "mode": "play",
+   "loops": {
+    "weather:rain": 0.596,
+    "weather:wind": 0.155
+   },
+   "registered": 2,
+   "after_stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  },
+  {
+   "mode": "play",
+   "loops": {
+    "weather:rain": 0.597,
+    "weather:wind": 0.154
+   },
+   "registered": 2,
+   "after_stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  }
+ ],
+ "after_close_registered": 0
+}

@@ -1,0 +1,175 @@
+{
+  "runs": [
+    {
+      "config": "shadows off, 0 lamps",
+      "cpu_ms_median": 1.116,
+      "cpu_ms_p95": 1.357,
+      "gpu_ms_median": 0.022,
+      "first_frame_ms": 4.96,
+      "draw_calls": 6,
+      "shadow_draws": 0,
+      "shadow_map_mib": 0.0,
+      "lamps": 0,
+      "shadow_lamps": 0,
+      "gpu_objects_created_during_frames": {
+        "buffer": 0,
+        "texture": 0,
+        "framebuffer": 0,
+        "geometry": 0
+      }
+    },
+    {
+      "config": "shadows on, 0 lamps",
+      "cpu_ms_median": 1.424,
+      "cpu_ms_p95": 1.658,
+      "gpu_ms_median": 0.081,
+      "first_frame_ms": 6.27,
+      "draw_calls": 5,
+      "shadow_draws": 4,
+      "shadow_map_mib": 20.0,
+      "lamps": 0,
+      "shadow_lamps": 0,
+      "gpu_objects_created_during_frames": {
+        "buffer": 0,
+        "texture": 0,
+        "framebuffer": 0,
+        "geometry": 0
+      }
+    },
+    {
+      "config": "shadows on, 1 lamp",
+      "cpu_ms_median": 1.486,
+      "cpu_ms_p95": 1.785,
+      "gpu_ms_median": 0.086,
+      "first_frame_ms": 8.07,
+      "draw_calls": 5,
+      "shadow_draws": 4,
+      "shadow_map_mib": 27.5,
+      "lamps": 1,
+      "shadow_lamps": 1,
+      "gpu_objects_created_during_frames": {
+        "buffer": 0,
+        "texture": 0,
+        "framebuffer": 0,
+        "geometry": 0
+      }
+    },
+    {
+      "config": "shadows on, 2 lamps",
+      "cpu_ms_median": 1.54,
+      "cpu_ms_p95": 1.792,
+      "gpu_ms_median": 0.09,
+      "first_frame_ms": 9.6,
+      "draw_calls": 5,
+      "shadow_draws": 4,
+      "shadow_map_mib": 35.0,
+      "lamps": 2,
+      "shadow_lamps": 2,
+      "gpu_objects_created_during_frames": {
+        "buffer": 0,
+        "texture": 0,
+        "framebuffer": 0,
+        "geometry": 0
+      }
+    },
+    {
+      "config": "shadows on, 4 lamps",
+      "cpu_ms_median": 1.509,
+      "cpu_ms_p95": 1.761,
+      "gpu_ms_median": 0.092,
+      "first_frame_ms": 8.97,
+      "draw_calls": 5,
+      "shadow_draws": 4,
+      "shadow_map_mib": 35.0,
+      "lamps": 4,
+      "shadow_lamps": 2,
+      "gpu_objects_created_during_frames": {
+        "buffer": 0,
+        "texture": 0,
+        "framebuffer": 0,
+        "geometry": 0
+      }
+    },
+    {
+      "config": "shadows on, 8 lamps",
+      "cpu_ms_median": 1.667,
+      "cpu_ms_p95": 2.048,
+      "gpu_ms_median": 0.233,
+      "first_frame_ms": 18.6,
+      "draw_calls": 5,
+      "shadow_draws": 4,
+      "shadow_map_mib": 35.0,
+      "lamps": 8,
+      "shadow_lamps": 2,
+      "gpu_objects_created_during_frames": {
+        "buffer": 0,
+        "texture": 0,
+        "framebuffer": 0,
+        "geometry": 0
+      }
+    },
+    {
+      "config": "shadows off, 8 lamps",
+      "cpu_ms_median": 1.19,
+      "cpu_ms_p95": 1.511,
+      "gpu_ms_median": 0.078,
+      "first_frame_ms": 4.38,
+      "draw_calls": 6,
+      "shadow_draws": 0,
+      "shadow_map_mib": 0.0,
+      "lamps": 8,
+      "shadow_lamps": 2,
+      "gpu_objects_created_during_frames": {
+        "buffer": 0,
+        "texture": 0,
+        "framebuffer": 0,
+        "geometry": 0
+      }
+    },
+    {
+      "config": "shadows on, 2 lamps, 1024",
+      "cpu_ms_median": 1.575,
+      "cpu_ms_p95": 2.039,
+      "gpu_ms_median": 0.147,
+      "first_frame_ms": 9.79,
+      "draw_calls": 5,
+      "shadow_draws": 4,
+      "shadow_map_mib": 20.0,
+      "lamps": 2,
+      "shadow_lamps": 2,
+      "gpu_objects_created_during_frames": {
+        "buffer": 0,
+        "texture": 0,
+        "framebuffer": 0,
+        "geometry": 0
+      }
+    },
+    {
+      "config": "shadows on, 2 lamps, 4096",
+      "cpu_ms_median": 2.156,
+      "cpu_ms_p95": 2.634,
+      "gpu_ms_median": 0.697,
+      "first_frame_ms": 12.65,
+      "draw_calls": 5,
+      "shadow_draws": 4,
+      "shadow_map_mib": 95.0,
+      "lamps": 2,
+      "shadow_lamps": 2,
+      "gpu_objects_created_during_frames": {
+        "buffer": 0,
+        "texture": 0,
+        "framebuffer": 0,
+        "geometry": 0
+      }
+    }
+  ],
+  "structures": 20,
+  "frames": 120,
+  "gl": {
+    "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+    "version": [
+      4,
+      6
+    ]
+  }
+}

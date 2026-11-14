@@ -365,7 +365,7 @@ def test_scene_controller_draw_composites_background_layer(tmp_path: Path) -> No
     from engine.scene_controller import SceneController
 
     arcade = optional_arcade.arcade
-    fixture_png = Path("tests/fixtures/background_layer_red.png")
+    fixture_png = tmp_path / "background_layer_red.png"  # not into the checkout
     _write_solid_png(fixture_png, 64, 64, (255, 0, 0, 255))
 
     window = arcade.Window(128, 128, "bg-full-path", visible=False)
@@ -389,6 +389,7 @@ def test_scene_controller_draw_composites_background_layer(tmp_path: Path) -> No
         controller._outline_settings = object()
         controller._tilemap_background_layers = []
         controller._tilemap_foreground_layers = []
+        controller._foreground_layers = []  # parallax canopies (drawn after the entities), none here
         controller._tilemap_draw_layers = []
         controller._tilemap_batcher = None
         controller.tilemap_instance = None

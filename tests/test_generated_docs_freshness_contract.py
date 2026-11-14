@@ -20,11 +20,15 @@ def test_generated_docs_content_matches_live_sources(tmp_path: Path) -> None:
     assert mesh_cli.main(["docs", "--out-dir", str(docs_dir)]) == 0
 
     behaviours = _headings(docs_dir / "behaviours.md")
-    assert len(behaviours) == 62
+    assert len(behaviours) == 67
+    assert "FloorRoute" in behaviours  # M16 Stage 3 (HD-2D floors)
     assert "BreedingShrineZone" in behaviours
     assert "Combat" in behaviours
     assert "EnemyAI" in behaviours
     assert "Vendor" in behaviours
+    assert "PictureByFlags" in behaviours
+    assert "WaterSurface" in behaviours  # M19A (puddles and ponds)
+    assert "SoundEmitter" in behaviours  # M21B (sounds in the world)
 
     input_doc = (docs_dir / "input.md").read_text(encoding="utf-8")
     assert "KEY_" not in input_doc
@@ -43,12 +47,15 @@ def test_docs_verify_fails_on_each_stale_generated_doc_and_passes_when_fresh(tmp
     assert mesh_cli.main(["docs", "--out-dir", str(docs_dir)]) == 0
     assert mesh_cli.main(["docs", "--out-dir", str(docs_dir), "--verify"]) == 0
 
+    # Each generated doc made stale alone fails the check, then is put back; once all are back it passes again.
+    # (#422 F13-D: one final check, not one after every doc: each check regenerates every doc, and only the doc just
+    # put back changed since the check before it.)
     for filename in DOC_FILENAMES.values():
         stale_path = docs_dir / filename
         original = stale_path.read_text(encoding="utf-8")
         stale_path.write_text("stale\n", encoding="utf-8")
 
-        assert mesh_cli.main(["docs", "--out-dir", str(docs_dir), "--verify"]) == 1
+        assert mesh_cli.main(["docs", "--out-dir", str(docs_dir), "--verify"]) == 1, filename
 
         stale_path.write_text(original, encoding="utf-8")
-        assert mesh_cli.main(["docs", "--out-dir", str(docs_dir), "--verify"]) == 0
+    assert mesh_cli.main(["docs", "--out-dir", str(docs_dir), "--verify"]) == 0

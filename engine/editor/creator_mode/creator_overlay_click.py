@@ -176,7 +176,7 @@ def resolve_creator_overlay_click_action(
     if action_id in {ENTITY_OPACITY_DRAFT_ACTION_ID, ENTITY_OPACITY_STAGE_ACTION_ID} or str(
         action_id or ""
     ).startswith(ENTITY_OPACITY_PRESET_ACTION_PREFIX):
-        if not entity_opacity_action_enabled(model, action_id):
+        if not entity_opacity_action_enabled(model, str(action_id or "")):
             return None
         return action_id
     if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:

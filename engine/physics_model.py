@@ -38,7 +38,9 @@ See Also:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Protocol, Sequence, Tuple
+from typing import Any, List, Optional, Protocol, Sequence, Tuple
+
+from engine.swallowed_exceptions import _log_swallow
 
 
 @dataclass
@@ -415,3 +417,116 @@ def aabb_at(pos: Tuple[float, float], w: float, h: float) -> Aabb:
         New Aabb instance centered at pos with given dimensions.
     """
     return Aabb(pos[0], pos[1], w, h)
+
+
+# --- Collider shapes of scene objects -------------------------------------------------------------
+# Duck-typed over anything with center_x/center_y/width/height and mesh_entity_data (an Arcade sprite, or the
+# mesh_net server's plain records), so the runtime and a graphics-free authority share one definition.
+
+
+def as_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        _log_swallow("PHRT-001", "engine.physics_runtime blanket exception fallback")
+        return float(default)
+
+
+def collider_circle(sprite: Any) -> Circle | None:
+    cx = as_float(getattr(sprite, "center_x", 0.0), 0.0)
+    cy = as_float(getattr(sprite, "center_y", 0.0), 0.0)
+
+    # Lightweight direct attributes for tests/runtime stubs.
+    kind_attr = str(getattr(sprite, "collider_kind", "") or "").strip().lower()
+    if kind_attr == "circle":
+        r = as_float(getattr(sprite, "collider_radius", 0.0), 0.0)
+        if r > 0.0:
+            ox = as_float(getattr(sprite, "collider_offset_x", 0.0), 0.0)
+            oy = as_float(getattr(sprite, "collider_offset_y", 0.0), 0.0)
+            return Circle(cx + ox, cy + oy, r)
+
+    # Entity-data collider component path used by scene entities.
+    entity_data = getattr(sprite, "mesh_entity_data", None)
+    if not isinstance(entity_data, dict):
+        return None
+    components = entity_data.get("components")
+    if not isinstance(components, dict):
+        return None
+    collider = components.get("collider")
+    if not isinstance(collider, dict):
+        return None
+    kind = str(collider.get("kind", "") or "").strip().lower()
+    if kind != "circle":
+        return None
+    radius = as_float(collider.get("r", collider.get("radius", 0.0)), 0.0)
+    if radius <= 0.0:
+        return None
+    ox = as_float(collider.get("offset_x", collider.get("ox", 0.0)), 0.0)
+    oy = as_float(collider.get("offset_y", collider.get("oy", 0.0)), 0.0)
+    return Circle(cx + ox, cy + oy, radius)
+
+
+def footprint(width: float, height: float) -> dict[str, float]:
+    """A character's feet in a picture this size: the bottom quarter, 60% as wide. Tall pictures then
+    don't block narrow paths with their heads (an "auto" box collider is this, at the current size)."""
+    h = max(8.0, height * 0.25)
+    return {"w": max(4.0, round(width * 0.6)), "h": round(h), "offset_x": 0.0, "offset_y": round(-height / 2 + h / 2)}
+
+
+def collider_box(sprite: Any) -> Aabb | None:
+    """A ``{"kind": "box", "w", "h", "offset_x", "offset_y"}`` collider: a footprint, so a tall
+    object (a tree, a headstone) blocks where it stands rather than with its whole picture."""
+    entity_data = getattr(sprite, "mesh_entity_data", None)
+    components = entity_data.get("components") if isinstance(entity_data, dict) else None
+    collider = components.get("collider") if isinstance(components, dict) else None
+    if not isinstance(collider, dict) or str(collider.get("kind", "") or "").strip().lower() != "box":
+        return None
+    if collider.get("auto"):  # a character's feet, whatever its picture and size are now
+        box = footprint(as_float(getattr(sprite, "width", 0.0), 0.0), as_float(getattr(sprite, "height", 0.0), 0.0))
+        return Aabb(as_float(getattr(sprite, "center_x", 0.0), 0.0) + box["offset_x"],
+                    as_float(getattr(sprite, "center_y", 0.0), 0.0) + box["offset_y"], box["w"], box["h"])
+    w = as_float(collider.get("w", collider.get("width", 0.0)), 0.0)
+    h = as_float(collider.get("h", collider.get("height", 0.0)), 0.0)
+    if w <= 0.0 or h <= 0.0:
+        return None
+    cx = as_float(getattr(sprite, "center_x", 0.0), 0.0)
+    cy = as_float(getattr(sprite, "center_y", 0.0), 0.0)
+    ox = as_float(collider.get("offset_x", collider.get("ox", 0.0)), 0.0)
+    oy = as_float(collider.get("offset_y", collider.get("oy", 0.0)), 0.0)
+    return Aabb(cx + ox, cy + oy, w, h)
+
+
+def collider_shape(sprite: Any) -> Aabb | Circle | None:
+    """The shape a ``components.collider`` gives a sprite, or None to use its whole picture."""
+    return collider_circle(sprite) or collider_box(sprite)
+
+
+def entity_shape(sprite: Any) -> Aabb | Circle:
+    shape = collider_shape(sprite)
+    if shape is not None:
+        return shape
+    cx = as_float(getattr(sprite, "center_x", 0.0), 0.0)
+    cy = as_float(getattr(sprite, "center_y", 0.0), 0.0)
+    w = as_float(getattr(sprite, "width", 0.0), 0.0)
+    h = as_float(getattr(sprite, "height", 0.0), 0.0)
+    return Aabb(cx, cy, w, h)
+
+
+def shape_aabb(shape: Aabb | Circle) -> Aabb:
+    if isinstance(shape, Circle):
+        return shape.bounds()
+    return shape
+
+
+def entity_aabb(sprite: Any) -> Aabb:
+    return shape_aabb(entity_shape(sprite))
+
+
+def shapes_overlap(shape_a: Aabb | Circle, shape_b: Aabb | Circle) -> bool:
+    if isinstance(shape_a, Circle) and isinstance(shape_b, Circle):
+        return circle_circle_overlap((shape_a.x, shape_a.y), shape_a.radius, (shape_b.x, shape_b.y), shape_b.radius)
+    if isinstance(shape_a, Circle):
+        return circle_aabb_overlap((shape_a.x, shape_a.y), shape_a.radius, shape_aabb(shape_b))
+    if isinstance(shape_b, Circle):
+        return circle_aabb_overlap((shape_b.x, shape_b.y), shape_b.radius, shape_aabb(shape_a))
+    return shape_a.intersection(shape_b) is not None

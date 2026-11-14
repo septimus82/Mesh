@@ -1,0 +1,37 @@
+{
+ "meadow": {
+  "message": "Scattered 1055 (Meadow): one undo step.",
+  "message_ok": true,
+  "rows": 1055,
+  "rows_changed": true,
+  "undo_steps_added": 1
+ },
+ "trees_over_meadow": {
+  "message": "Added nothing (Small tree). Held back: the Meadow already there leaves too little room (2,903 of 4,356 tries). Thin it first (Ctrl+drag) or scatter these before it.",
+  "message_ok": false,
+  "rows": 1055,
+  "rows_changed": false,
+  "undo_steps_added": 0
+ },
+ "rocks_over_meadow": {
+  "message": "Scattered 118 (Rocks): one undo step. Held back: the Meadow already there leaves too little room (4,087 of 6,377 tries). Thin it first (Ctrl+drag) or scatter these before it.",
+  "message_ok": true,
+  "rows": 1173,
+  "rows_changed": true,
+  "undo_steps_added": 1
+ },
+ "meadow_again": {
+  "message": "Added nothing (Meadow). Already as dense as Per m\u00b2 asks here. Raise Per m\u00b2 or brush somewhere sparser.",
+  "message_ok": false,
+  "rows": 1173,
+  "rows_changed": false,
+  "undo_steps_added": 0
+ },
+ "thin_where_nothing_is": {
+  "message": "Nothing under the brush to thin out.",
+  "message_ok": true,
+  "rows": 1173,
+  "rows_changed": false,
+  "undo_steps_added": 0
+ }
+}

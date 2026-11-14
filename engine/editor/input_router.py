@@ -41,7 +41,7 @@ def _is_creator_mode_toggle_key(key: int, modifiers: int) -> bool:
     arcade_key = getattr(arcade, "key", None)
     f5 = getattr(arcade_key, "F5", None)
     shift = int(getattr(arcade_key, "MOD_SHIFT", 0) or 0)
-    return f5 is not None and shift and key == f5 and _normalize_modifiers(modifiers) == shift
+    return bool(f5 is not None and shift and key == f5 and _normalize_modifiers(modifiers) == shift)
 
 
 def on_text(self: Any, text: str) -> bool:

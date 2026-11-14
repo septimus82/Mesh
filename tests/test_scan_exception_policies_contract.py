@@ -41,8 +41,8 @@ _EXPECTED_KEYS = {
 }
 
 
-def test_schema_shape() -> None:
-    result = _run_scan()
+def test_schema_shape(exception_policy_scan: dict) -> None:
+    result = exception_policy_scan
     missing = _EXPECTED_KEYS - set(result)
     assert not missing, f"Missing keys in scan result: {sorted(missing)}"
 
@@ -72,8 +72,8 @@ def test_schema_shape() -> None:
 # ------------------------------------------------------------------
 
 
-def test_determinism() -> None:
-    a = _run_scan()
+def test_determinism(exception_policy_scan: dict) -> None:
+    a = exception_policy_scan  # an earlier, independent scan
     b = _run_scan()
     # Compare the serialised form to catch ordering differences
     assert json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
@@ -86,10 +86,10 @@ def test_determinism() -> None:
 _BASELINE_PATH = _REPO_ROOT / "tooling" / "exception_policy_baseline.json"
 
 
-def test_baseline_matches_scan() -> None:
+def test_baseline_matches_scan(exception_policy_scan: dict) -> None:
     assert _BASELINE_PATH.exists(), "Baseline file missing"
     baseline = json.loads(_BASELINE_PATH.read_text(encoding="utf-8"))
-    result = _run_scan()
+    result = exception_policy_scan
 
     # Baseline must have the keys we compare against
     assert "ble001_count_total" in baseline
@@ -111,3 +111,44 @@ def test_baseline_matches_scan() -> None:
     assert result["silent_broad_catch_count_total"] <= baseline["silent_broad_catch_max"], (
         f"Silent broad catches {result['silent_broad_catch_count_total']} exceeds max {baseline['silent_broad_catch_max']}"
     )
+
+
+def test_statement_walk_finds_every_handler_in_ast_walk_order() -> None:
+    import ast
+    import textwrap
+
+    from tooling.scan_exception_policies import _statements
+
+    source = textwrap.dedent(
+        """
+        try:
+            x = [lambda: 1 for _ in range(2)]
+        except Exception:
+            pass
+        def f():
+            match x:
+                case [1, *rest] if rest:
+                    try:
+                        pass
+                    except (ValueError, TypeError):
+                        raise
+                case _:
+                    class C:
+                        def g(self):
+                            try:
+                                pass
+                            except* OSError:
+                                pass
+        try:
+            pass
+        finally:
+            try:
+                pass
+            except BaseException:
+                pass
+        """
+    )
+    tree = ast.parse(source)
+    walked = [n.lineno for n in ast.walk(tree) if isinstance(n, (ast.ExceptHandler, ast.Raise))]
+    assert len(walked) == 5
+    assert [n.lineno for n in _statements(tree) if isinstance(n, (ast.ExceptHandler, ast.Raise))] == walked

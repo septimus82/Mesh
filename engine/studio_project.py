@@ -1,0 +1,1002 @@
+"""The project the Studio edits: the world file plus open scene documents, with undo.
+
+Documents are plain dicts and every change goes through engine.project_ops, so this
+module never draws, never touches a running game, and can be tested headless. Undo
+stores whole-document snapshots: scenes are small, and snapshots cannot drift out of
+sync the way per-command inverse logic did in the old editor.
+
+The game has one player. Rooms hold only where it starts (``prefab_id: "player"``); its
+definition is the project's ``player`` prefab. ``scene()`` hands rooms out with the player
+filled in, so every operation edits it like any object, and storing a room splits it again:
+a change to the player in one room is a change to the player in every room.
+"""
+
+from __future__ import annotations
+
+import copy
+import json
+import os
+import pickle
+import posixpath
+import uuid
+from contextlib import contextmanager
+from dataclasses import dataclass, replace
+from pathlib import Path
+from typing import Any, Callable, Iterable, Iterator
+
+from engine import project_ops as ops
+from engine.json_io import json_bytes, publish_new, read_json, write_bytes_new, write_json_atomic, write_json_new
+from engine.log_utils import get_logger
+from engine.project_save import SaveError, refused, save_documents
+from engine.project_scaffold import ensure_starter_files
+
+Doc = dict[str, Any]
+UNDO_LIMIT = 100
+_LOG = get_logger(__name__)
+
+
+def _ids(room: Doc) -> set[str]:
+    return {str(e["id"]) for e in ops.entities(room) if e.get("id")}
+
+
+def _copy(doc: Any) -> Any:
+    """A deep copy of a project document (JSON data): a pickle round trip, several times faster than deepcopy for a
+    room holding thousands of scattered things; deepcopy if something in it won't pickle."""
+    try:
+        return pickle.loads(pickle.dumps(doc, protocol=pickle.HIGHEST_PROTOCOL))
+    except (pickle.PicklingError, TypeError, AttributeError):
+        return copy.deepcopy(doc)
+
+
+def _norm(rel: str) -> str:
+    """A project-relative path compared as the file system does (Windows: case-insensitive, either slash)."""
+    return posixpath.normpath(str(rel).replace("\\", "/")).casefold()
+
+
+def _remove_if_unchanged(root: Path, rel: str, data: bytes) -> str | None:
+    """Remove the project's file ``rel`` if it is still the plain file Mesh wrote, ``data`` (#462 S4); else leave it
+    and say why. It is moved aside first and checked there, so whatever another tool puts at ``rel`` meanwhile is never
+    what is removed: anything that isn't Mesh's file is put back, or left beside ``rel`` if something new is there by
+    then. A file reached through a link to outside its folder is never touched."""
+    target = root / rel
+    try:
+        if not os.path.lexists(target):
+            return None  # (gone already)
+        if target.parent.resolve() != (root.resolve() / rel).parent:
+            return "it is reached through a link, so Mesh leaves it alone"
+        if target.is_symlink() or not target.is_file():
+            return "it is a link or a folder now, not the file Mesh made"
+        aside = target.with_name(f".{target.name}.mesh-release-{uuid.uuid4().hex}")
+        os.rename(target, aside)
+    except OSError as exc:
+        return f"it couldn't be removed ({exc})"
+    try:
+        if not aside.is_symlink() and aside.is_file() and aside.read_bytes() == data:
+            aside.unlink()
+            return None
+    except OSError:
+        pass  # (unreadable: not known to be Mesh's, so put back)
+    try:
+        publish_new(aside, target)
+    except OSError:
+        return f"it was changed after Mesh made it, and something new is at {rel} now: it is kept as {aside.name}"
+    return "it was changed after Mesh made it"
+
+
+def _older_sheet(target: Path, source: Path) -> bool:
+    """Whether the project's ``target`` is an older copy of Mesh's sheet ``source``: narrower, and pixel for pixel
+    Mesh's as far as it goes (Milestone 23B's campfire added cells after 20E's: a sheet a creator changed is kept)."""
+    if target.suffix != ".png":
+        return False
+    from PIL import Image, ImageChops  # noqa: PLC0415
+
+    try:
+        with Image.open(target) as old, Image.open(source) as new:
+            if old.width >= new.width or old.height != new.height:
+                return False
+            box = (0, 0, old.width, old.height)
+            return ImageChops.difference(old.convert("RGBA"), new.convert("RGBA").crop(box)).getbbox() is None
+    except OSError:
+        return False
+
+
+@dataclass(frozen=True)
+class _State:
+    world: Doc
+    scenes: dict[str, Doc]
+    current: str
+    dirty: frozenset[str]
+    world_dirty: bool
+    player: Doc | None
+    player_dirty: bool
+
+
+class Project:
+    def __init__(self, root: Path, world_file: str) -> None:
+        self.root = Path(root)
+        self.world_file = world_file
+        self.world: Doc = json.loads((self.root / world_file).read_text(encoding="utf-8"))
+        self._seen_on_disk: dict[str, float] = {world_file: (self.root / world_file).stat().st_mtime}
+        self.last_save_backups: list[str] = []
+        self.last_save_report: Doc | None = None  # (the last save's outcome: engine.project_save.report)
+        self.scenes: dict[str, Doc] = {}
+        self.dirty: set[str] = set()
+        self.world_dirty = False
+        rooms = ops.world_rooms(self.world)
+        if not rooms:
+            raise ValueError(f"{world_file} lists no rooms")
+        self.current: str = ops.start_room(self.world) or rooms[0][0]  # (a world naming no room of its own: its first)
+        self._undo: list[_State] = []
+        self._redo: list[_State] = []
+        self.revision = 0  # goes up with every change, undo and redo: what an AI's view is "as of"
+        self.writes_files = True  # False for a dry run: nothing touches the disk
+        self._tx_depth = 0
+        self._views: dict[str, tuple[Doc, Doc | None, Doc]] = {}  # room -> (stored, player, expanded) cache
+        self.player: Doc | None = self._read_player()  # the shared player's definition (None: rooms have their own)
+        self.player_dirty = False
+        self.ids_seen: set[str] = set()  # every object id this session (#462 S1-ID): a new object never gets one
+        self._as_read: dict[str, Doc] = {}  # each room as first read (#462 S2): what every state before that holds
+        # #462 S4: every room key this session (a new room never gets one: a stale proposal or redo may name it), the
+        # map files it made (_norm -> (path, bytes as made): the only files it ever removes, and only unchanged) and
+        # those of them a save has used (part of the person's saved project then: never removed). Map files Mesh made
+        # but left alone: kept_files.
+        self.keys_seen: set[str] = set(self.world.get("scenes") or {})
+        self._made: dict[str, tuple[str, bytes]] = {}
+        self._saved_maps: set[str] = set()
+        self._disk_uncertain = False  # a save needed recovery: what the files on disk use isn't known, so this
+        # session removes nothing from then on (a later save writes only what changed since, not the whole world)
+        self.kept_files: list[Doc] = []
+        self.scene(self.current)
+
+    @classmethod
+    def open(cls, root: Path, world_file: str | None) -> "Project | None":
+        """The project at ``root``, or None if it has no world file (not a Studio project)."""
+        if not world_file or not (Path(root) / world_file).is_file():
+            return None
+        return cls(Path(root), world_file)
+
+    # --- reading ----------------------------------------------------------------------------
+    def rooms(self) -> list[tuple[str, str, str]]:
+        return ops.world_rooms(self.world)
+
+    def path(self, key: str) -> str:
+        return str(self.world["scenes"][key]["path"])
+
+    def label(self, key: str) -> str:
+        return str(self.world["scenes"][key].get("label") or key)
+
+    def scenes_dir(self) -> str:
+        return str(Path(self.path(self.start_key())).parent.as_posix())
+
+    def start_key(self) -> str:
+        """The room a new game starts in (``ops.start_room``), else the first room (a world naming none of its own)."""
+        return ops.start_room(self.world) or self.rooms()[0][0]
+
+    def set_start_room(self, key: str) -> None:
+        """A new game starts in room ``key`` (Milestone 23D): the world's ``start_scene``, one undo step; the room being
+        edited stays the one being edited. An OpError (no such room) changes nothing."""
+        world = ops.set_start_room(self.world, key)
+        if world == self.world:
+            return
+        before = self._snapshot()
+        self._record(before)
+        self.world, self.world_dirty = world, True
+
+    def scene(self, key: str | None = None) -> Doc:
+        """A room as editors see it: the shared player filled in (don't change it in place)."""
+        key = key or self.current
+        stored = self._room(key)
+        view = self._views.get(key)
+        if view is None or view[0] is not stored or view[1] is not self.player:
+            view = (stored, self.player, ops.expand_players(stored, self.player))
+            self._views[key] = view
+        return view[2]
+
+    def _room(self, key: str) -> Doc:
+        """A room as stored: the shared player is a reference."""
+        if key not in self.scenes:
+            path = self.root / self.path(key)
+            raw = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {"name": self.label(key), "entities": []}
+            if path.is_file():
+                self._seen_on_disk[self.path(key)] = path.stat().st_mtime
+            with ops.retired_ids(()):  # (an older room's missing ids are filled in as always, whenever it is read)
+                self.scenes[key] = ops.ensure_entity_ids(raw, key)
+            self.ids_seen.update(_ids(self.scenes[key]))
+            self._as_read.setdefault(key, _copy(self.scenes[key]))
+        return self.scenes[key]
+
+    def _store(self, key: str, doc: Doc, player_ids: list[str]) -> None:
+        """Keep an edited room, the shared player split back out of it (its definition may have changed)."""
+        stored, definition = ops.split_players(doc, player_ids, self.player)
+        self.scenes[key] = stored
+        self.ids_seen.update(_ids(stored))  # (#462 S1-ID: what it made, never given to another object)
+        self.dirty.add(key)
+        if definition is not None and definition != self.player:
+            self.player, self.player_dirty = definition, True
+
+    @property
+    def is_dirty(self) -> bool:
+        return bool(self.dirty) or self.world_dirty or self.player_dirty
+
+    def can_undo(self) -> bool:
+        return bool(self._undo)
+
+    def can_redo(self) -> bool:
+        return bool(self._redo)
+
+    def player_template(self) -> Doc | None:
+        """What a new room gets so you can walk around in it: a reference to the shared player (or, in a
+        project whose rooms still have their own, a copy of the start room's)."""
+        for entity in ops.entities(self._room(self.start_key())):
+            if entity.get("prefab_id") == ops.PLAYER_PREFAB:
+                return ops.thin_player(entity)
+            if entity.get("tag") == "player":
+                return entity
+        return None
+
+    def documents(self) -> dict[Path, Doc]:
+        """Absolute path -> document for every room the Studio has open (for play-testing). Rooms refer to
+        the shared player; ``player_prefab()`` is its definition for the runtime's prefab manager."""
+        return {self.root / self.path(key): doc for key, doc in self.scenes.items()}
+
+    def is_shared_player(self, entity_id: str | None, key: str | None = None) -> bool:
+        """Whether that object in the room is the game's one player."""
+        return bool(entity_id) and entity_id in ops.shared_player_ids(self._room(key or self.current))
+
+    def player_prefab(self) -> Doc | None:
+        """The shared player as an ``assets/prefabs.json`` entry (None if rooms still have their own)."""
+        return ops.player_prefab_entry(self.player) if self.player is not None else None
+
+    # --- the shared player --------------------------------------------------------------------
+    PREFABS = "assets/prefabs.json"
+
+    def _read_prefabs(self) -> list[Doc]:
+        """The prefab list, to read the shared player from: none if the file is missing or can't be read (the project
+        still opens). Saving uses ``_prefab_catalogue``, which never takes an unreadable file for an empty one."""
+        try:
+            return self._prefab_catalogue()
+        except ops.OpError:
+            return []
+
+    def _prefab_catalogue(self) -> list[Any]:
+        """``assets/prefabs.json`` as it is, to save the shared player into: [] only when there is no such file (a new
+        or older project starts one). A file that is there but can't be read, isn't JSON or isn't a list is never
+        taken for an empty one (saving would replace every prefab in it): ops.OpError, before anything is written."""
+        path = self.root / self.PREFABS
+        try:
+            path.stat()
+        except FileNotFoundError:
+            return []
+        except OSError as err:
+            raise ops.OpError(self._unreadable_prefabs(f"it can't be read: {err}")) from err
+        try:
+            data = read_json(path)
+        except OSError as err:  # (no permission, locked, a folder...)
+            raise ops.OpError(self._unreadable_prefabs(f"it can't be read: {err}")) from err
+        except ValueError as err:  # (not JSON, or not UTF-8 text)
+            raise ops.OpError(self._unreadable_prefabs(f"it isn't valid JSON: {err}")) from err
+        if not isinstance(data, list):
+            raise ops.OpError(self._unreadable_prefabs(f"it holds {type(data).__name__}, not a list of prefabs"))
+        return data
+
+    def _unreadable_prefabs(self, why: str) -> str:
+        return (f"{self.PREFABS} isn't a prefab list Studio can read ({why}), so the player wasn't saved and nothing "
+                "was written: saving would have replaced the other prefabs in it. Fix or restore that file, then save "
+                "again; your changes are kept until then.")
+
+    def _read_player(self) -> Doc | None:
+        entry = next((p for p in self._read_prefabs() if isinstance(p, dict) and p.get("id") == ops.PLAYER_PREFAB), None)
+        if entry is not None and (self.root / self.PREFABS).is_file():
+            self._seen_on_disk[self.PREFABS] = (self.root / self.PREFABS).stat().st_mtime
+        return copy.deepcopy(entry["entity"]) if entry and isinstance(entry.get("entity"), dict) else None
+
+    def own_players(self) -> dict[str, Doc]:
+        """Rooms that still have their own full player (projects made before the player was shared)."""
+        found = {key: ops.legacy_player(self._room(key)) for key, _label, _path in self.rooms()}
+        return {key: entity for key, entity in found.items() if entity is not None}
+
+    def player_differences(self, source: str | None = None) -> dict[str, list[str]]:
+        """How each room's own player differs from ``source``'s (default: the start room's), in words."""
+        players = self.own_players()
+        source = self._player_source(players, source)
+        return ops.player_differences(players, source) if source else {}
+
+    def _player_source(self, players: dict[str, Doc], source: str | None) -> str | None:
+        if source in players:
+            return source
+        return self.start_key() if self.start_key() in players else next(iter(players), None)
+
+    def share_player(self, source: str | None = None) -> dict[str, list[str]]:
+        """Give every room one player: ``source``'s (default: the start room's) becomes the game's player
+        and each room keeps only where its player starts. One undo step. Returns what was different in
+        the other rooms' players (and is now replaced), so it can be reported."""
+        players = self.own_players()
+        source = self._player_source(players, source)
+        if source is None:
+            return {}
+        differences = ops.player_differences(players, source)
+        before = self._snapshot()
+        for key, entity in players.items():
+            room = self._room(key)
+            self.scenes[key] = {**room, "entities": [ops.thin_player(e) if e is entity else e for e in ops.entities(room)]}
+            self.dirty.add(key)
+        self.player, self.player_dirty = ops.player_definition(players[source]), True
+        self._record(before)
+        return differences
+
+    # --- editing ----------------------------------------------------------------------------
+    def _snapshot(self) -> _State:
+        return _State(_copy(self.world), _copy(self.scenes), self.current, frozenset(self.dirty),
+                      self.world_dirty, _copy(self.player), self.player_dirty)
+
+    def _restore(self, state: _State) -> None:
+        self.world = _copy(state.world)
+        self.scenes = _copy(state.scenes)
+        for key in state.world.get("scenes") or {}:  # a room first read since (by an edit, a batch, the door tool):
+            if key not in self.scenes and key in self._as_read:  # as read then, never read again from disk, where a
+                self.scenes[key] = _copy(self._as_read[key])  # save since may have written the edit undone (#462 S2)
+        self.current = state.current
+        self.dirty = set(state.dirty)
+        self.world_dirty = state.world_dirty
+        self.player = _copy(state.player)
+        self.player_dirty = state.player_dirty
+
+    def _record(self, before: _State, uses: str | None = None) -> None:
+        """``before`` is an undo step now (outside a transaction). ``uses``: a map file the edit being made uses (its
+        room isn't stored yet), never released here as unused (#462 S4)."""
+        for room in before.scenes.values():  # (#462 S1-ID: every state an edit leaves, whatever wrote it, even each
+            self.ids_seen.update(_ids(room))  # step of a batch: none of its ids is given to another object)
+        if self._tx_depth:
+            return  # the transaction records once, at its end
+        self._undo.append(before)
+        self.keys_seen.update(before.world.get("scenes") or {})
+        dropped = [*self._redo, *self._undo[:-UNDO_LIMIT]]
+        del self._undo[:-UNDO_LIMIT]
+        self._redo.clear()
+        self.revision += 1
+        if dropped and self._made:  # (#462 S4: a room only they had can't come back: the map file made for it goes)
+            self._release(set().union(*(self._maps(s.world, s.scenes) for s in dropped)) - {_norm(uses or "")})
+
+    @contextmanager
+    def transaction(self) -> Iterator[None]:
+        """Group several edits into one undo step; any exception puts everything back."""
+        before = self._snapshot()
+        made = set(self._made)
+        self._tx_depth += 1
+        try:
+            with ops.retired_ids(self.ids_seen):
+                yield
+        except BaseException:
+            self._tx_depth -= 1
+            self._restore(before)
+            self._release(set(self._made) - made)  # (#462 S4: no map file it made is left behind)
+            raise
+        self._tx_depth -= 1
+        if not self._tx_depth and (self.scenes != before.scenes or self.world != before.world
+                                   or self.player != before.player):
+            self._record(before)
+
+    def all_documents(self) -> Doc:
+        """``{"world": ..., "rooms": {key: room}, "player": ...}`` with every room loaded: a whole-project
+        view (rooms as stored; ``player`` is the shared player's definition, or None)."""
+        return {"world": self.world, "rooms": {key: self._room(key) for key, _label, _path in self.rooms()},
+                "player": self.player}
+
+    def clone(self) -> "Project":
+        """A copy to try changes on (a dry run): same documents, no undo history, writes nothing."""
+        copy_ = Project.__new__(Project)
+        copy_.root, copy_.world_file = self.root, self.world_file
+        copy_.world, copy_.scenes = copy.deepcopy(self.world), copy.deepcopy(self.scenes)
+        copy_.dirty, copy_.world_dirty, copy_.current = set(self.dirty), self.world_dirty, self.current
+        copy_.player, copy_.player_dirty, copy_._views = copy.deepcopy(self.player), self.player_dirty, {}
+        copy_._undo, copy_._redo, copy_.revision, copy_.writes_files, copy_._tx_depth = [], [], self.revision, False, 0
+        copy_._seen_on_disk = dict(self._seen_on_disk)  # (a room loaded first in the copy records when it was read)
+        copy_.ids_seen = set(self.ids_seen)  # (a dry run's new objects get the ids the real edit would, then)
+        copy_._as_read = dict(self._as_read)
+        copy_.keys_seen = set(self.keys_seen)  # (a dry run's new room gets the key the real edit would)
+        copy_._made, copy_._saved_maps, copy_.kept_files, copy_._disk_uncertain = {}, set(), [], False
+        return copy_
+
+    def load_documents(self, docs: Doc) -> None:
+        """Replace the documents with ``docs`` (from ``all_documents``), for a clone made at another revision."""
+        self.world, self.scenes = copy.deepcopy(docs["world"]), copy.deepcopy(docs["rooms"])
+        if "player" in docs:
+            self.player = copy.deepcopy(docs["player"])
+
+    def edit_scene(self, change: Callable[[Doc], Doc], key: str | None = None) -> None:
+        """Replace one room with ``change(room)``. An OpError leaves everything untouched."""
+        key = key or self.current
+        before = self._snapshot()
+        player_ids = ops.shared_player_ids(self._room(key))
+        with ops.retired_ids(self.ids_seen):
+            updated = change(self.scene(key))
+        self._record(before)
+        self._store(key, updated, player_ids)
+
+    def add_room(self, label: str) -> str:
+        """A new room with its own player and a ready-to-paint map: wood floor, stone-wall border."""
+        before = self._snapshot()
+        world, scene, key, path = ops.new_room(self.world, label, self.scenes_dir(), self.player_template(),
+                                               self.keys_seen)
+        scene, map_path, skeleton = ops.add_map(scene, path, width=20, height=15, ground=ops.STARTER_FLOOR,
+                                                border=ops.STARTER_WALL, tilesets=self.project_tilesets())
+        self._claim_room_files(label, path, map_path)
+        self._write_map_file(map_path, skeleton, new_room=label)
+        self._record(before, uses=map_path)
+        self.world, self.world_dirty = world, True
+        self.scenes[key] = scene
+        self.dirty.add(key)
+        return key
+
+    def add_hd2d_room(self, label: str, width_m: Any, depth_m: Any, *, outdoor: bool = True) -> tuple[str, bool]:
+        """A new HD-2D room ``width_m`` x ``depth_m`` m (Milestone 22A: ``project_ops.make_hd2d_room``, the HD-2D
+        template's own recipe): grass ground, a camera framed for it, the default sun. A project without the HD-2D
+        starter kit (a 2D project's first HD-2D room) gets it first, as the HD-2D template installs it: that is
+        written straight away (like importing a model), the room itself is one undo step. Returns ``(key, whether
+        the kit was installed now)``."""
+        world, scene, key, path = ops.new_room(self.world, label, self.scenes_dir(), self.player_template(),
+                                               self.keys_seen)
+        scene, map_path, skeleton = ops.make_hd2d_room(scene, path, width_m, depth_m, outdoor=outdoor,
+                                                       tilesets=self.project_tilesets())
+        self._claim_room_files(label, path, map_path)  # (before the kit: a refused room installs nothing)
+        installed = self.ensure_hd2d_kit()
+        before = self._snapshot()
+        self._write_map_file(map_path, skeleton, new_room=label)
+        self._record(before, uses=map_path)
+        self.world, self.world_dirty = world, True
+        self.scenes[key] = scene
+        self.dirty.add(key)
+        return key, installed
+
+    def _claim_room_files(self, label: str, *paths: str) -> None:
+        """F15: a new room's files (its scene and map) must be its own: nothing on disk there yet (a file, a folder or a
+        link this project's rooms don't list, made by hand or by another tool) and no other room's. Mesh never takes
+        one over: OpError naming it, before anything is changed or written. ``save`` checks the scene again."""
+        listed = {_norm(p): lbl for _k, lbl, p in self.rooms()}
+        for rel in paths:
+            other = listed.get(_norm(rel))
+            target = self.root / rel
+            if other is None and not os.path.lexists(target):
+                continue
+            if other is not None:
+                taken = f"{rel} is already the file of the room '{other}'"
+            else:
+                what = "a link" if target.is_symlink() else "a folder" if target.is_dir() else "a file"
+                taken = f"There is already {what} at {rel} that isn't one of this project's rooms"
+            raise ops.OpError(f"{taken}, so the room '{label}' wasn't added and nothing was changed: Mesh never takes "
+                              f"over a file it didn't make. Give the room another name, or move {rel} out of the way "
+                              "first.")
+
+    def ensure_hd2d_kit(self) -> bool:
+        """The HD-2D starter kit in the project (its models, ground textures and scatter decoration), copied from Mesh
+        as the HD-2D template does; True if anything was copied now. Never overwrites a file the project has."""
+        import shutil  # noqa: PLC0415
+
+        from engine.hd2d import catalog  # noqa: PLC0415
+        from engine.hd2d.starter_village import GROUND_TEXTURES, KIT, SCATTER_KIT  # noqa: PLC0415
+        from engine.repo_root import bundled_dir, bundled_file  # noqa: PLC0415
+
+        if not self.writes_files:
+            return False
+        copied = False
+        kit_ids = {str(m.get("id")) for m in json.loads((bundled_dir(KIT) / "catalog.json").read_text(
+            encoding="utf-8")).get("models", [])}
+        have = {str(m.get("id")) for m in (self._read_json(catalog.CATALOG) or {}).get("models", [])
+                if isinstance(m, dict)}
+        if not kit_ids & have:
+            try:
+                catalog.install_kit(self.root, bundled_dir(KIT))
+                copied = True
+            except catalog.CatalogError as exc:
+                raise ops.OpError(f"Mesh couldn't add its HD-2D starter kit to this project: {exc}") from exc
+        for rel in (*GROUND_TEXTURES, *SCATTER_KIT):
+            target, source = self.root / rel, bundled_file(rel)
+            if source is not None and (not target.is_file() or _older_sheet(target, source)):
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+                copied = True
+        return copied
+
+    def add_map(self, key: str | None = None) -> None:
+        """Give a room without a map an empty one that covers its objects."""
+        key = key or self.current
+        width, height = ops.map_size_for(self.scene(key))
+        before = self._snapshot()
+        player_ids = ops.shared_player_ids(self._room(key))
+        scene, map_path, skeleton = ops.add_map(self.scene(key), self.path(key), width=width, height=height,
+                                                tilesets=self.project_tilesets())
+        self._write_map_file(map_path, skeleton)
+        self._record(before, uses=map_path)  # (it may be the file only a redo step used: this room's again now)
+        self._store(key, scene, player_ids)
+
+    def _write_map_file(self, map_path: str, skeleton: Doc, *, new_room: str | None = None) -> None:
+        # The map file holds only the size, tileset and empty layers (the painted tiles live
+        # in the room document), so it is written straight away: the Studio and play-tests
+        # load it from disk even before the room is saved. #462 S4: Mesh remembers it as made, so
+        # undo, a failed batch or closing can take it away again (_release) and redo put it back.
+        if not self.writes_files:
+            return
+        ensure_starter_files(self.root)
+        target = self.root / map_path
+        if new_room is None and os.path.lexists(target):
+            if self._unchanged(map_path) or self._holds(map_path, json_bytes(skeleton)):
+                return  # (this room's map as Mesh made it, or just what it would write: kept as it is)
+            what = "a link" if target.is_symlink() else "a folder" if target.is_dir() else "a file"
+            raise ops.OpError(f"There is already {what} at {map_path}, where this room's map would go, and it isn't a "
+                              "map Mesh made for it, so the map wasn't made: Mesh never takes over a file it didn't "
+                              f"make. Move {map_path} out of the way, then try again.")
+        try:  # F15: published only where nothing is, so never over anything that appeared since the room's paths were checked
+            self._made[_norm(map_path)] = (map_path, write_json_new(target, skeleton))
+        except FileExistsError as exc:
+            what = "a link" if target.is_symlink() else "a folder" if target.is_dir() else "a file"
+            room = f"the room '{new_room}' wasn't added" if new_room is not None else "the map wasn't made"
+            raise ops.OpError(f"There is now {what} at {map_path} (it appeared while the map was being made), so it "
+                              f"was left as it is and {room}: Mesh never takes over a file it didn't make. Move "
+                              f"{map_path} out of the way, then try again.") from exc
+
+    # --- files this session made (#462 S4) --------------------------------------------------------
+    def _holds(self, rel: str, data: bytes) -> bool:
+        """Whether the project's ``rel`` is a plain file (not a link) holding exactly ``data``."""
+        target = self.root / rel
+        try:
+            return not target.is_symlink() and target.is_file() and target.read_bytes() == data
+        except OSError:
+            return False
+
+    def _unchanged(self, rel: str) -> bool:
+        """Whether ``rel`` is a map file this session made, still exactly as made."""
+        made = self._made.get(_norm(rel))
+        return made is not None and self._holds(made[0], made[1])
+
+    def _maps(self, world: Doc, scenes: dict[str, Doc], disk: dict[str, Doc | None] | None = None) -> set[str]:
+        """The map files (``_norm``) the rooms of ``world`` use: as in ``scenes``, else as first read; given ``disk``
+        (a cache), a room never read here as its file on disk says."""
+        found = set()
+        for key, entry in (world.get("scenes") or {}).items():
+            if not isinstance(entry, dict) or not entry.get("path"):
+                continue
+            room = scenes.get(key) or self._as_read.get(key)
+            if room is None and disk is not None:
+                if key not in disk:
+                    disk[key] = self._read_json(str(entry["path"]))
+                room = disk[key]
+            tilemap = room.get("tilemap") if isinstance(room, dict) else None
+            if isinstance(tilemap, dict) and tilemap.get("path"):
+                scene_dir = posixpath.dirname(str(entry["path"]).replace("\\", "/"))
+                found.add(_norm(posixpath.join(scene_dir, str(tilemap["path"]).replace("\\", "/"))))
+        return found
+
+    def _release(self, candidates: Iterable[str], *, history: bool = True) -> None:
+        """Remove the map files among ``candidates`` (``_norm``) this session made that nothing uses any more: never
+        saved with a room, nor used, with ``history``, by a room of the project now or of an undo or redo step.
+        Each only if it is still exactly as made (``_remove_if_unchanged``, checked as it is removed); one changed or
+        replaced since is kept, and said so in ``kept_files``. Never raises: a file left is only said so."""
+        left = {c for c in candidates if c in self._made} - self._saved_maps
+        if not left or not self.writes_files or self._disk_uncertain:
+            return  # (after a save that needed recovery the files on disk may use any of them)
+        if history:
+            states = [(self.world, self.scenes), *((s.world, s.scenes) for s in (*self._undo, *self._redo))]
+            for world, scenes in states:  # (rooms as held here first: most candidates are used by the room now)
+                left -= self._maps(world, scenes)
+                if not left:
+                    return
+            disk = dict[str, Doc | None]()  # (then a room never read here, as its file on disk says: read once)
+            for world, scenes in states:
+                left -= self._maps(world, scenes, disk)
+        for norm in sorted(left):
+            rel, data = self._made.pop(norm)
+            self._kept(rel, _remove_if_unchanged(self.root, rel, data))
+
+    def _kept(self, rel: str, reason: str | None) -> None:
+        if reason is not None:
+            self.kept_files.append({"path": rel, "reason": reason})
+            _LOG.warning("Mesh made %s and no longer needs it, but left it in place: %s", rel, reason)
+
+    def _ready_maps(self, state: _State) -> None:
+        """Before undo or redo makes ``state`` the project: each map file this session made that a room of it uses and
+        that has gone from disk is written again, as made (#462 S4: an undone room comes back whole, or not at all).
+        If one can't be, the ones written now are removed again and OpError says so: the project and its history are as
+        they were. One changed or replaced since is left as it is, the room using it as it is now (no longer counted as
+        Mesh's: ``kept_files``)."""
+        if not self._made or not self.writes_files:
+            return
+        written: list[tuple[str, bytes]] = []
+        for norm in sorted(self._maps(state.world, state.scenes) & set(self._made)):
+            rel, data = self._made[norm]
+            try:
+                if os.path.lexists(self.root / rel):
+                    raise FileExistsError(rel)
+                write_bytes_new(self.root / rel, data)
+            except FileExistsError as exc:
+                if not os.path.lexists(self.root / rel):  # (not the map: a file where its folder should be)
+                    self._undo_ready(written)
+                    raise self._cant_ready(rel, exc) from exc
+                if not self._holds(rel, data):
+                    del self._made[norm]
+                    self._kept(rel, "it was changed after Mesh made it, so the room uses it as it is now")
+                continue
+            except OSError as exc:
+                self._undo_ready(written)
+                raise self._cant_ready(rel, exc) from exc
+            written.append((rel, data))
+
+    def _undo_ready(self, written: list[tuple[str, bytes]]) -> None:
+        for rel, data in written:  # (the maps ``_ready_maps`` wrote for an undo or redo that isn't happening)
+            self._kept(rel, _remove_if_unchanged(self.root, rel, data))
+
+    @staticmethod
+    def _cant_ready(rel: str, exc: OSError) -> ops.OpError:
+        return ops.OpError(f"{rel} has gone from disk and Mesh couldn't write it again ({exc}), so nothing was undone "
+                           "or redone: a room needs that map file. Make sure its folder can be written to, then try "
+                           "again.")
+
+    def discard_unsaved_files(self) -> None:
+        """The project is closed (or its edits dropped) without saving them: the map files this session made that no
+        save has used are removed, if unchanged (#462 S4). Undo and redo end with the session. (Nothing after a save
+        that needs recovery: ``_release``.)"""
+        self._release(set(self._made) - self._saved_maps, history=False)
+
+    # --- tilesets -------------------------------------------------------------------------
+    def map_path(self, key: str | None = None) -> str | None:
+        """Project-relative path of a room's map file, or None if the room has no map."""
+        tilemap = self.scene(key).get("tilemap")
+        if not isinstance(tilemap, dict) or not tilemap.get("path"):
+            return None
+        scene_dir = posixpath.dirname(self.path(key or self.current).replace("\\", "/"))
+        return posixpath.normpath(posixpath.join(scene_dir, str(tilemap["path"]).replace("\\", "/")))
+
+    def _read_json(self, rel: str) -> Doc | None:
+        try:
+            data = json.loads((self.root / rel).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        return data if isinstance(data, dict) else None
+
+    def project_tilesets(self) -> list[tuple[str, int]]:
+        """The tilesets new maps reference, with their first tile ids: the start room's, else the starter's."""
+        start_map = self.map_path(self.start_key())
+        doc = self._read_json(start_map) if start_map else None
+        found = ops.map_tilesets(doc, start_map) if doc and start_map else []
+        return found or [(ops.TILESET_SOURCE, 1)]
+
+    def room_tilesets(self, key: str | None = None) -> list[Doc]:
+        """The tilesets a room's map can paint with, in palette order.
+
+        Each: ``{name, source, firstgid, image, columns, rows, count, tile, hints}``; ``hints``
+        maps a local tile id to the ``{label, layer}`` its tileset suggests (the starter's do).
+        """
+        ensure_starter_files(self.root)
+        map_rel = self.map_path(key)
+        map_doc = self._read_json(map_rel) if map_rel else None
+        out = []
+        for source, firstgid in ops.map_tilesets(map_doc, map_rel) if map_doc and map_rel else []:
+            data = self._read_json(source)
+            if not data or not data.get("image"):
+                continue
+            tile = int(data.get("tilewidth") or ops.TILE_SIZE)
+            columns = int(data.get("columns") or max(1, int(data.get("imagewidth", tile)) // tile))
+            count = int(data.get("tilecount") or 0)
+            hints = {}
+            for entry in data.get("tiles") or []:
+                props = {p.get("name"): p.get("value") for p in entry.get("properties") or [] if isinstance(p, dict)}
+                layer = props.get("layer")
+                hints[int(entry["id"])] = {"label": str(props.get("label") or ""),
+                                           "layer": layer if layer in (ops.GROUND, ops.WALLS, ops.OVERHEAD) else None}
+            image = (self.root / posixpath.dirname(source) / str(data["image"])).resolve()
+            out.append({"name": str(data.get("name") or posixpath.splitext(posixpath.basename(source))[0]),
+                        "source": source, "firstgid": firstgid, "image": str(image), "columns": columns,
+                        "rows": -(-count // columns), "count": count, "tile": tile, "hints": hints})
+        return out
+
+    def import_tileset(self, image_path: Path | str, tile_size: int, name: str) -> Doc:
+        """Copy an image into the project as a tileset every room can paint with.
+
+        The image is cut to whole tiles and, if its tiles aren't the map's size, scaled so
+        they are: tiles always line up with the grid. Transparency is kept. Writes
+        ``assets/tilesets/<name>.png`` and ``.json`` and adds the tileset to every room's
+        map file straight away (map files hold no painted tiles and an unused tileset is
+        harmless, so importing isn't part of undo). Returns ``{name, source, count, scaled}``.
+        """
+        from PIL import Image  # noqa: PLC0415
+
+        source = Path(str(image_path).strip().strip('"'))
+        if not source.is_file():
+            raise ops.OpError(f"There is no file at {source}.")
+        if not 8 <= int(tile_size) <= 256:
+            raise ops.OpError("The tile size must be between 8 and 256 pixels.")
+        try:
+            with Image.open(source) as img:
+                image = img.convert("RGBA")
+        except (OSError, ValueError) as exc:
+            raise ops.OpError(f"{source.name} isn't an image Mesh can read.") from exc
+        columns, rows = image.width // tile_size, image.height // tile_size
+        if columns < 1 or rows < 1:
+            raise ops.OpError(f"The image ({image.width}x{image.height}) is smaller than one {tile_size} px tile.")
+        if columns * rows > 4096:
+            raise ops.OpError("That's more than 4096 tiles; split the image into smaller tilesets.")
+        image = image.crop((0, 0, columns * tile_size, rows * tile_size))
+        size = (columns * ops.TILE_SIZE, rows * ops.TILE_SIZE)
+        if tile_size != ops.TILE_SIZE:
+            image = image.resize(size, Image.Resampling.NEAREST if tile_size < ops.TILE_SIZE else Image.Resampling.LANCZOS)
+        label = (name or source.stem).strip() or "Tileset"
+        slug = ops.slug(label)
+        folder = posixpath.dirname(ops.TILESET_SOURCE)
+        candidate, n = slug, 2
+        while (self.root / folder / f"{candidate}.json").exists() or (self.root / folder / f"{candidate}.png").exists():
+            candidate, n = f"{slug}_{n}", n + 1
+        document = ops.tileset_document(label, f"{candidate}.png", *size)
+        (self.root / folder).mkdir(parents=True, exist_ok=True)
+        image.save(self.root / folder / f"{candidate}.png")
+        rel = f"{folder}/{candidate}.json"
+        write_json_atomic(self.root / rel, document)
+        self._add_tileset_to_maps(rel)
+        return {"name": label, "source": rel, "count": document["tilecount"], "scaled": tile_size != ops.TILE_SIZE}
+
+    IMAGE_TYPES = (".png", ".gif", ".bmp", ".jpg", ".jpeg", ".webp")
+
+    def import_sprite(self, image_path: Path | str) -> str:
+        """Copy a picture into ``assets/sprites/`` (as PNG, transparency kept) and return its
+        project-relative path. An image already inside the project is used where it is."""
+        from PIL import Image  # noqa: PLC0415
+
+        source = Path(str(image_path).strip().strip('"'))
+        if not source.is_file():
+            raise ops.OpError(f"There is no file at {source}.")
+        try:
+            inside = source.resolve().relative_to(self.root.resolve())
+        except ValueError:
+            inside = None
+        if inside is not None:
+            return inside.as_posix()
+        try:
+            with Image.open(source) as img:
+                image = img.convert("RGBA")
+        except (OSError, ValueError) as exc:
+            raise ops.OpError(f"{source.name} isn't an image Mesh can read.") from exc
+        folder = self.root / "assets" / "sprites"
+        folder.mkdir(parents=True, exist_ok=True)
+        stem, n = ops.slug(source.stem) or "sprite", 2
+        candidate = stem
+        while (folder / f"{candidate}.png").exists():
+            candidate, n = f"{stem}_{n}", n + 1
+        image.save(folder / f"{candidate}.png")
+        return f"assets/sprites/{candidate}.png"
+
+    # --- sounds (Milestone 21B: copied in straight away, like pictures; not part of undo) ----------------------------
+    def sounds(self) -> list[str]:
+        """Every sound file under ``assets/`` (.wav, .ogg, .mp3), project-relative, ambience first."""
+        from engine.sound_emitters import SOUND_FILES  # noqa: PLC0415
+
+        assets = self.root / "assets"
+        found = [p for p in assets.rglob("*") if p.suffix.lower() in SOUND_FILES] if assets.is_dir() else []
+        rel = [p.relative_to(self.root).as_posix() for p in found]
+        return sorted(rel, key=lambda r: (not r.startswith("assets/ambience/"), r.lower()))
+
+    def music_files(self) -> list[str]:
+        """Every sound file under ``assets/`` (.wav, .ogg, .mp3), project-relative, ``assets/music/`` first (Milestone
+        23D: a room's soundtrack; other sounds can be music too)."""
+        return sorted(self.sounds(), key=lambda r: (not r.startswith("assets/music/"), r.lower()))
+
+    def import_sound(self, sound_path: Path | str, folder_name: str = "ambience") -> str:
+        """Copy a sound file into ``assets/ambience/`` (or ``assets/<folder_name>/``: "music" for a room's
+        soundtrack) and return its project-relative path, after checking this computer can play it
+        (``sound_emitters.sound_problem``). One already in the project is used where it is; one with the same name
+        and the same bytes is not copied again; one with the same name and other bytes is copied under a new name
+        (``_2``...): a file already there is never replaced."""
+        import shutil  # noqa: PLC0415
+
+        from engine.sound_emitters import sound_problem  # noqa: PLC0415
+
+        source = Path(str(sound_path).strip().strip('"'))
+        problem = sound_problem(source)
+        if problem:
+            raise ops.OpError(problem)
+        try:
+            inside = source.resolve().relative_to(self.root.resolve())
+        except ValueError:
+            inside = None
+        if inside is not None:
+            return inside.as_posix()
+        if folder_name not in ("ambience", "music"):
+            raise ValueError(f"sounds are imported into assets/ambience or assets/music, not {folder_name!r}")
+        folder = self.root / "assets" / folder_name
+        folder.mkdir(parents=True, exist_ok=True)
+        stem, suffix, n = ops.slug(source.stem) or "sound", source.suffix.lower(), 2
+        candidate = stem
+        while (folder / f"{candidate}{suffix}").exists():
+            if (folder / f"{candidate}{suffix}").read_bytes() == source.read_bytes():
+                return f"assets/{folder_name}/{candidate}{suffix}"  # already copied in
+            candidate, n = f"{stem}_{n}", n + 1
+        shutil.copyfile(source, folder / f"{candidate}{suffix}")
+        return f"assets/{folder_name}/{candidate}{suffix}"
+
+    # --- HD-2D models (engine.hd2d.catalog: copied in straight away, like pictures; not part of undo) ----------
+    def model_assets(self) -> list[Any]:
+        """The project's Blender models: the catalogue's, then any other .glb, as ``ModelAsset``s."""
+        from engine.hd2d import catalog  # noqa: PLC0415
+
+        listed: list[Any] = self._catalog_call(catalog.assets, self.root)
+        return listed
+
+    def import_model(self, source: Path | str, **fields: Any) -> Any:
+        """Copy a Blender .glb into ``assets/models/`` with its preview and catalogue entry (``name``, ``category``,
+        ``notes``, ``license``, ``pixels``). Returns the ``ModelAsset``; raises OpError and writes nothing if refused."""
+        from engine.hd2d import catalog  # noqa: PLC0415
+
+        return self._catalog_call(catalog.import_model, self.root, source, **fields)
+
+    def plan_reimport(self, ref: str, source: Path | str | None = None) -> Any:
+        """What reimporting model ``ref`` would change, judged against every room as edited now. Writes nothing."""
+        from engine.hd2d import catalog  # noqa: PLC0415
+
+        return self._catalog_call(catalog.plan_reimport, self.root, ref, source, rooms=self.all_documents()["rooms"])
+
+    def reimport_model(self, ref: str, source: Path | str | None = None) -> Any:
+        """Replace model ``ref``'s file with a new export; every placed copy keeps its id and place."""
+        from engine.hd2d import catalog  # noqa: PLC0415
+
+        return self._catalog_call(catalog.reimport_model, self.root, ref, source, rooms=self.all_documents()["rooms"])
+
+    def set_model_properties(self, ref: str, **fields: Any) -> Any:
+        from engine.hd2d import catalog  # noqa: PLC0415
+
+        return self._catalog_call(catalog.set_properties, self.root, ref, **fields)
+
+    @staticmethod
+    def _catalog_call(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+        from engine.hd2d.catalog import CatalogError  # noqa: PLC0415
+
+        try:
+            return func(*args, **kwargs)
+        except CatalogError as err:
+            raise ops.OpError(str(err)) from err
+
+    def images(self) -> list[str]:
+        """Every picture under ``assets/`` (tilesets aside), project-relative, sprites first. Model previews are the
+        model browser's, not pictures to give objects."""
+        assets = self.root / "assets"
+        found = [p for p in assets.rglob("*") if p.suffix.lower() in self.IMAGE_TYPES and "tilesets" not in p.parts
+                 and "templates" not in p.parts and "models" not in p.parts] if assets.is_dir() else []
+        rel = [p.relative_to(self.root).as_posix() for p in found]
+        return sorted(rel, key=lambda r: (not r.startswith("assets/sprites/"), r.lower()))
+
+    def _add_tileset_to_maps(self, tileset_rel: str) -> None:
+        counts: dict[str, int] = {}
+        for key, _label, _path in self.rooms():
+            map_rel = self.map_path(key)
+            map_doc = self._read_json(map_rel) if map_rel else None
+            if map_rel is None or map_doc is None:
+                continue
+            for src, _gid in ops.map_tilesets(map_doc, map_rel):
+                if src not in counts:
+                    counts[src] = int((self._read_json(src) or {}).get("tilecount") or 0)
+            updated = ops.with_tileset(map_doc, map_rel, tileset_rel, counts)
+            if updated != map_doc:
+                write_json_atomic(self.root / map_rel, updated)
+
+    def link_rooms(self, key_a: str, at_a: tuple[float, float], key_b: str, at_b: tuple[float, float]) -> None:
+        """Connect two rooms with a door in each (at ``at_a`` in room ``key_a``, ``at_b`` in ``key_b``), each with its arrival spot."""
+        before = self._snapshot()
+        ids_a, ids_b = ops.shared_player_ids(self._room(key_a)), ops.shared_player_ids(self._room(key_b))
+        with ops.retired_ids(self.ids_seen):  # (Studio's door tool: its doors' ids never given back either)
+            a, b = ops.link_rooms(self.scene(key_a), key_a, self.label(key_a), at_a, self.scene(key_b), key_b,
+                                  self.label(key_b), at_b)
+        self._record(before)
+        self._store(key_a, a, ids_a)
+        self._store(key_b, b, ids_b)
+
+    def _map_file_at_size(self, key: str) -> tuple[str, Doc] | None:
+        """An HD-2D room grown in Studio (``ops.expand_hd2d_room``): its map file (the map's size, tilesets and empty
+        layers; the tiles live in the room) at the room's size, to be saved with it; None when they already agree.
+        A map file with tiles of its own is never resized: OpError, and nothing is saved."""
+        scene = self.scenes[key]
+        info, rel = ops.map_info(scene), self.map_path(key)
+        if not isinstance((scene.get("settings") or {}).get("hd2d"), dict) or info is None or rel is None:
+            return None
+        doc = self._read_json(rel)
+        if doc is None:  # missing or unreadable: never rebuilt (its tilesets are only in it), never passed over
+            saved = self._read_json(self.path(key))  # ... unless the room's size is what was saved with it before
+            saved_info = ops.map_info(saved) if saved is not None else None
+            if saved_info is not None and (saved_info["width"], saved_info["height"]) == (info["width"], info["height"]):
+                return None
+            state = "can't be read" if (self.root / rel).exists() else "is missing"
+            raise ops.OpError(f"{rel} {state}, so it can't be kept at the room's {info['width']} x {info['height']} "
+                              "tiles; nothing was saved. Put the map file back (or undo the change of size) and save "
+                              "again.")
+        if (doc.get("width"), doc.get("height")) == (info["width"], info["height"]):
+            return None
+        layers = doc.get("layers")
+        if doc.get("infinite") or not isinstance(layers, list) or not all(
+                isinstance(layer, dict) and layer.get("type") == "tilelayer" and not any(layer.get("data") or [])
+                for layer in layers):
+            raise ops.OpError(f"{rel} has tiles or objects of its own, so it isn't resized to the room's "
+                              f"{info['width']} x {info['height']} tiles; nothing was saved.")
+        w, h = info["width"], info["height"]
+        resized = {**doc, "width": w, "height": h,
+                   "layers": [{**layer, "width": w, "height": h, "data": [0] * (w * h)} for layer in layers]}
+        return rel, resized
+
+    def undo(self) -> bool:
+        if not self._undo:
+            return False
+        self._ready_maps(self._undo[-1])  # (#462 S4: OpError, and nothing changed, if a room's map can't be)
+        self._redo.append(self._snapshot())
+        self.keys_seen.update(self.world.get("scenes") or {})
+        self._restore(self._undo.pop())
+        self.revision += 1
+        return True
+
+    def redo(self) -> bool:
+        if not self._redo:
+            return False
+        self._ready_maps(self._redo[-1])  # (#462 S4: OpError, and nothing changed, if a room's map can't be)
+        self._undo.append(self._snapshot())
+        self.keys_seen.update(self.world.get("scenes") or {})
+        self._restore(self._redo.pop())
+        self.revision += 1
+        return True
+
+    def save(self) -> list[str]:
+        """Write every changed room, the world file and the shared player as one save (``engine.project_save``): all
+        of them or none. Returns the paths written. A save that fails raises SaveError (an ops.OpError) with a report
+        of what happened to each file; nothing here changes then (the edits stay unsaved, undo as it was).
+        ``last_save_report`` holds the outcome either way, ``last_save_backups`` outside changes kept beside files."""
+        self.last_save_backups, self.last_save_report = [], None
+        rooms = sorted(self.dirty)
+        planned = [(self.path(key), "room") for key in rooms]
+        if self.world_dirty:
+            planned.append((self.world_file, "world"))
+        try:  # an HD-2D room's map file at the room's size first: checked before anything is written
+            maps = [m for m in (self._map_file_at_size(key) for key in rooms) if m is not None]
+        except ops.OpError as err:
+            raise self._refused(refused("map_file_conflict", str(err), planned, self.root)) from err
+        documents: list[tuple[str, str, Any]] = [(rel, "map", doc) for rel, doc in maps]
+        documents += [(self.path(key), "room", self.scenes[key]) for key in rooms]
+        if self.world_dirty:
+            documents.append((self.world_file, "world", self.world))
+        if self.player_dirty and self.player is not None:
+            # The shared player is one entry of the project's prefab list: every other entry stays as it was.
+            # (an unreadable or malformed file refuses the save here, before anything is written: H1-F2)
+            try:
+                catalogue = self._prefab_catalogue()
+            except ops.OpError as err:
+                involved = [(rel, kind) for rel, kind, _doc in documents] + [(self.PREFABS, "prefabs")]
+                raise self._refused(refused("prefab_catalogue_unreadable", str(err), involved, self.root)) from err
+            prefabs = [p for p in catalogue if not (isinstance(p, dict) and p.get("id") == ops.PLAYER_PREFAB)]
+            documents.append((self.PREFABS, "prefabs", [ops.player_prefab_entry(self.player), *prefabs]))
+        try:
+            # A room file this project never read or wrote (a new room's, or a listed room's missing file) is created by
+            # this save: never over something another tool put there meanwhile (F15).
+            fresh = {self.path(key) for key in rooms if self.path(key) not in self._seen_on_disk}
+            outcome = save_documents(self.root, documents, self._seen_on_disk, fresh)
+        except SaveError as err:
+            self._refused(err)
+            raise
+        self.last_save_report, self.last_save_backups = outcome, list(outcome["outside_change_backups"])
+        # Undo or redo past this save comes back to rooms other than what was just written: they are to save again,
+        # in the states that have them (#462 S2: not in one from before a new room was added, or after it was undone),
+        # and so is a room the world just written doesn't list (its file may be gone by then: it is no room's now).
+        saved, world, player = frozenset(self.dirty), self.world_dirty, self.player_dirty
+        listed = set(self.world.get("scenes") or {})
+        self._undo, self._redo = [[replace(s, dirty=(s.dirty | saved | (set(s.world.get("scenes") or {}) - listed))
+                                           .intersection(s.world.get("scenes") or {}),
+                                           world_dirty=s.world_dirty or world,
+                                           player_dirty=s.player_dirty or player) for s in stack]
+                                  for stack in (self._undo, self._redo)]
+        self.dirty.clear()
+        self.world_dirty = False
+        self.player_dirty = False
+        for rel, _doc in maps:  # (#462 S4: an HD-2D map Mesh made, saved at the room's size, is still Mesh's)
+            if _norm(rel) in self._made:
+                try:
+                    self._made[_norm(rel)] = (rel, (self.root / rel).read_bytes())
+                except OSError:
+                    del self._made[_norm(rel)]
+        self._saved_maps |= self._maps(self.world, self.scenes) & set(self._made)  # (saved: the person's now, kept)
+        return [doc["path"] for doc in outcome["documents"]]
+
+    def _refused(self, err: SaveError) -> SaveError:
+        """A failed save, recorded: the edits stay as they are, unsaved (dirty, undo and revision untouched)."""
+        self.last_save_report, self.last_save_backups = err.report, list(err.report["outside_change_backups"])
+        self._disk_uncertain = self._disk_uncertain or bool(err.report.get("recovery_required"))  # (#462 S4)
+        return err

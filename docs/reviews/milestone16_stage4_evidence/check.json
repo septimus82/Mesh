@@ -1,0 +1,523 @@
+{
+  "lights": {
+    "lamps": 2,
+    "shadow_lamps": 2,
+    "softness": "soft",
+    "pcf_radius": 1,
+    "sun": [
+      0.351,
+      0.501,
+      0.791
+    ],
+    "shadow_resolution": 2048
+  },
+  "geometric_agreement": {
+    "spots": 1392,
+    "sun": {
+      "agree": 1316,
+      "disagree": 0,
+      "edge_skipped": 76,
+      "shaded": 138,
+      "lit": 1178,
+      "by_floor": {
+        "ground": {
+          "lit": 846,
+          "shaded": 106
+        },
+        "col_platform_west": {
+          "lit": 154,
+          "shaded": 0
+        },
+        "col_stairs_west": {
+          "lit": 32,
+          "shaded": 0
+        },
+        "col_landing_west": {
+          "lit": 4,
+          "shaded": 0
+        },
+        "col_bridge_deck": {
+          "lit": 26,
+          "shaded": 13
+        },
+        "col_platform_east": {
+          "lit": 80,
+          "shaded": 19
+        },
+        "col_stairs_east": {
+          "lit": 32,
+          "shaded": 0
+        },
+        "col_landing_east": {
+          "lit": 4,
+          "shaded": 0
+        }
+      }
+    },
+    "sun_mismatches": [],
+    "lamps": {
+      "lamp0": {
+        "agree": 190,
+        "disagree": 0,
+        "edge_skipped": 3,
+        "blocked": 11,
+        "reached": 179,
+        "mismatches": []
+      },
+      "lamp1": {
+        "agree": 241,
+        "disagree": 0,
+        "edge_skipped": 36,
+        "blocked": 118,
+        "reached": 123,
+        "mismatches": []
+      }
+    },
+    "cpu_seconds": 0.2
+  },
+  "cases": {
+    "underpass_ground_in_the_deck_shadow (16, 10.8)": [
+      0.2073,
+      0.7221
+    ],
+    "east_platform_in_the_hut_shadow (20, 11.5)": [
+      0.4198,
+      0.9069
+    ],
+    "open_ground (16, 5)": [
+      0.6944,
+      0.6944
+    ],
+    "ground_in_west_platform_shadow (6.2, 11)": [
+      0.2073,
+      0.6944
+    ],
+    "east_platform_open (20, 9.5)": [
+      0.7386,
+      0.7386
+    ],
+    "east_platform_behind_hut_from_lamp (24.5, 13.5)": [
+      0.6944,
+      0.7104
+    ],
+    "hut_lamp_term_behind_hut (on, off)": [
+      0.0,
+      0.016
+    ],
+    "hut_lamp_term_in_front (on, off)": [
+      0.1533,
+      0.1533
+    ],
+    "hut_lamp_position_m": [
+      19.5,
+      13.5,
+      3.2
+    ]
+  },
+  "player_open": {
+    "feet_m": [
+      16.0,
+      5.03
+    ],
+    "elevation_m": 0.0,
+    "light_on": [
+      0.6689,
+      0.6689,
+      0.6689
+    ],
+    "light_off": [
+      0.6689,
+      0.6689,
+      0.6689
+    ],
+    "pixels_mean_on": 52.94,
+    "pixels_mean_off": 52.94
+  },
+  "player_under_bridge": {
+    "feet_m": [
+      16.0,
+      12.06
+    ],
+    "elevation_m": 0.0,
+    "light_on": [
+      0.2073,
+      0.2073,
+      0.2073
+    ],
+    "light_off": [
+      0.7449,
+      0.7693,
+      0.7928
+    ],
+    "pixels_mean_on": 17.83,
+    "pixels_mean_off": 62.72
+  },
+  "player_on_bridge": {
+    "feet_m": [
+      16.0,
+      11.52
+    ],
+    "elevation_m": 2.0,
+    "light_on": [
+      0.799,
+      0.8081,
+      0.8103
+    ],
+    "light_off": [
+      0.799,
+      0.8081,
+      0.8103
+    ],
+    "pixels_mean_on": 84.32,
+    "pixels_mean_off": 84.32
+  },
+  "camera_moves": {
+    "shaded (16, 11.4, 0)": [
+      {
+        "camera_target": [
+          16.0,
+          9.0,
+          1.0
+        ],
+        "screen": [
+          480,
+          294
+        ],
+        "rgb": [
+          14,
+          26,
+          18
+        ]
+      },
+      {
+        "camera_target": [
+          13.0,
+          7.0,
+          1.0
+        ],
+        "screen": [
+          636,
+          347
+        ],
+        "rgb": [
+          14,
+          26,
+          18
+        ]
+      }
+    ],
+    "sunny (16, 7, 0)": [
+      {
+        "camera_target": [
+          16.0,
+          9.0,
+          1.0
+        ],
+        "screen": [
+          480,
+          131
+        ],
+        "rgb": [
+          52,
+          88,
+          45
+        ]
+      },
+      {
+        "camera_target": [
+          13.0,
+          7.0,
+          1.0
+        ],
+        "screen": [
+          674,
+          214
+        ],
+        "rgb": [
+          52,
+          88,
+          45
+        ]
+      }
+    ]
+  },
+  "warden": {
+    "samples": 160,
+    "light_min": 0.2073,
+    "light_max": 0.7103,
+    "track": [
+      [
+        17.1,
+        10.3,
+        0.0,
+        0.2073
+      ],
+      [
+        16.3,
+        12.0,
+        0.0,
+        0.2073
+      ],
+      [
+        16.6,
+        11.7,
+        0.0,
+        0.2073
+      ],
+      [
+        17.7,
+        10.1,
+        0.0,
+        0.2073
+      ],
+      [
+        18.5,
+        8.4,
+        0.0,
+        0.2073
+      ],
+      [
+        20.0,
+        6.9,
+        0.0,
+        0.6689
+      ],
+      [
+        20.2,
+        5.0,
+        0.0,
+        0.6689
+      ],
+      [
+        21.7,
+        5.1,
+        0.37,
+        0.6689
+      ],
+      [
+        22.7,
+        6.7,
+        1.2,
+        0.6689
+      ],
+      [
+        22.8,
+        8.8,
+        2.0,
+        0.6952
+      ],
+      [
+        24.1,
+        10.1,
+        2.0,
+        0.6689
+      ],
+      [
+        24.5,
+        10.4,
+        2.0,
+        0.6689
+      ],
+      [
+        23.0,
+        9.4,
+        2.0,
+        0.7096
+      ],
+      [
+        22.8,
+        7.5,
+        1.56,
+        0.6691
+      ],
+      [
+        22.8,
+        5.4,
+        0.54,
+        0.6689
+      ],
+      [
+        22.3,
+        3.6,
+        0.0,
+        0.6689
+      ],
+      [
+        22.0,
+        3.0,
+        0.0,
+        0.6689
+      ],
+      [
+        20.6,
+        4.3,
+        0.0,
+        0.6689
+      ],
+      [
+        19.1,
+        5.7,
+        0.0,
+        0.6689
+      ],
+      [
+        18.3,
+        7.5,
+        0.0,
+        0.6718
+      ],
+      [
+        17.6,
+        9.2,
+        0.0,
+        0.6689
+      ],
+      [
+        16.8,
+        11.0,
+        0.0,
+        0.2073
+      ],
+      [
+        16.0,
+        11.9,
+        0.0,
+        0.2073
+      ],
+      [
+        16.8,
+        11.0,
+        0.0,
+        0.2073
+      ],
+      [
+        18.2,
+        9.5,
+        0.0,
+        0.6689
+      ],
+      [
+        19.1,
+        7.8,
+        0.0,
+        0.6689
+      ],
+      [
+        20.2,
+        6.2,
+        0.0,
+        0.6689
+      ],
+      [
+        20.7,
+        4.6,
+        0.0,
+        0.6689
+      ],
+      [
+        22.3,
+        5.7,
+        0.66,
+        0.6689
+      ],
+      [
+        22.7,
+        7.6,
+        1.62,
+        0.6696
+      ],
+      [
+        23.1,
+        9.5,
+        2.0,
+        0.7097
+      ],
+      [
+        24.7,
+        10.6,
+        2.0,
+        0.6689
+      ],
+      [
+        24.0,
+        10.1,
+        2.0,
+        0.6689
+      ],
+      [
+        22.8,
+        8.7,
+        2.0,
+        0.6915
+      ],
+      [
+        22.8,
+        6.6,
+        1.14,
+        0.6689
+      ],
+      [
+        22.4,
+        4.7,
+        0.2,
+        0.6689
+      ],
+      [
+        22.0,
+        2.8,
+        0.0,
+        0.6689
+      ],
+      [
+        21.5,
+        3.6,
+        0.0,
+        0.6689
+      ],
+      [
+        20.0,
+        4.9,
+        0.0,
+        0.6689
+      ],
+      [
+        18.8,
+        6.4,
+        0.0,
+        0.6689
+      ]
+    ]
+  },
+  "pictures": {
+    "overview": [
+      "overview_shadows.png",
+      "overview_no_shadows.png"
+    ],
+    "underpass": [
+      "underpass_shadows.png",
+      "underpass_no_shadows.png"
+    ],
+    "hut_lamp": [
+      "hut_lamp_shadows.png",
+      "hut_lamp_no_shadows.png"
+    ],
+    "stairs_lamp": [
+      "stairs_lamp_shadows.png",
+      "stairs_lamp_no_shadows.png"
+    ]
+  },
+  "stats": {
+    "draw_calls": 7,
+    "static_draws": 4,
+    "triangles": 270,
+    "buffer_bytes": 27488,
+    "texture_bytes": 126976,
+    "target_bytes": 4147200,
+    "batched": true,
+    "shadows": true,
+    "shadow_draws": 0,
+    "shadow_map_bytes": 36700160,
+    "lamps": 2,
+    "shadow_lamps": 2
+  }
+}

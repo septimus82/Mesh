@@ -6,6 +6,40 @@
     "verify-demo": 21789,
     "web-smoke": 10071
   },
+  "platforms": {
+    "linux": {
+      "budgets_ms": {
+        "exception-policy-scan": 2845,
+        "player-package-gate": 1095,
+        "pytest-fast": 63237,
+        "verify-demo": 10217,
+        "web-smoke": 3657
+      },
+      "ratio_limits": {
+        "exception-policy-scan": 1.25,
+        "player-package-gate": 1.25,
+        "pytest-fast": 1.25,
+        "verify-demo": 1.25,
+        "web-smoke": 1.25
+      }
+    },
+    "windows": {
+      "budgets_ms": {
+        "exception-policy-scan": 2989,
+        "player-package-gate": 1770,
+        "pytest-fast": 93708,
+        "verify-demo": 18171,
+        "web-smoke": 5218
+      },
+      "ratio_limits": {
+        "exception-policy-scan": 1.25,
+        "player-package-gate": 1.25,
+        "pytest-fast": 1.3,
+        "verify-demo": 1.4,
+        "web-smoke": 1.25
+      }
+    }
+  },
   "ratio_limits": {
     "exception-policy-scan": 1.25,
     "player-package-gate": 1.25,
@@ -13,6 +47,11 @@
     "verify-demo": 1.25,
     "web-smoke": 1.25
   },
+  "report_only_ceiling_ratios": {
+    "exception-policy-scan": 1.85,
+    "pytest-fast": 1.65
+  },
+  "report_only_note": "#422 F13: these steps' cost grows with the repository and their calibration is stale (443 CI runs 2026-10-25..30: 61 Linux and 10 Windows timing-only failures, no regression); over their threshold they are reported, and they fail only over threshold x ceiling ratio (1.25 x the worst ratio seen). docs/reviews/h4_ci_timing_reliability.md",
   "schema_version": 2,
   "tolerance_ms": 50
 }

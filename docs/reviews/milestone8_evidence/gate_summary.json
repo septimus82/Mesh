@@ -1,0 +1,130 @@
+[
+  {
+    "suite": "first_workflow",
+    "about": "Milestone 1: first creation workflow",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 15,
+        "total": 15,
+        "ok": true,
+        "failures": [],
+        "minutes": 0.6
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "map_building",
+    "about": "Milestone 2: visual map building",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 23,
+        "total": 23,
+        "ok": true,
+        "failures": [],
+        "minutes": 1.5
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "map_tools",
+    "about": "Milestone 3: map tools",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 15,
+        "total": 15,
+        "ok": true,
+        "failures": [],
+        "minutes": 1.0
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "launcher",
+    "about": "Milestone 4: launcher and templates",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 20,
+        "total": 20,
+        "ok": true,
+        "failures": [],
+        "minutes": 2.5
+      }
+    ],
+    "note": "./mygame (copied by the suite; checked unchanged)"
+  },
+  {
+    "suite": "event_authoring",
+    "about": "Milestone 5: visual event authoring",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 17,
+        "total": 17,
+        "ok": true,
+        "failures": [],
+        "minutes": 4.9
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "ai_coauthoring",
+    "about": "Milestone 6: human and AI co-authoring",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 14,
+        "total": 14,
+        "ok": true,
+        "failures": [],
+        "minutes": 0.8
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "persistence",
+    "about": "Milestone 8: game state across rooms, saves and a restart",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 12,
+        "total": 12,
+        "ok": true,
+        "failures": [],
+        "minutes": 1.1
+      }
+    ],
+    "note": ""
+  },
+  {
+    "suite": "capability_lab",
+    "about": "Milestone 7+: engine capabilities, measured",
+    "ok": true,
+    "flaky": false,
+    "attempts": [
+      {
+        "passed": 27,
+        "total": 27,
+        "ok": true,
+        "failures": [],
+        "minutes": 2.4
+      }
+    ],
+    "note": ""
+  }
+]

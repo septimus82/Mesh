@@ -161,7 +161,7 @@ def log_viewport_pipeline(
         return
     ctx_vp = _read_ctx_viewport(window)
     win_vp = _read_window_viewport(window)
-    gui_vp = (None, None)
+    gui_vp: tuple[int | None, int | None] = (None, None)
     if camera_controller is not None:
         gui_vp = gui_camera_viewport(camera_controller)
     seq = getattr(window, "_resize_diag_seq", "?")
@@ -287,7 +287,7 @@ def maybe_log_draw_frame_sizes(
         return
     event = getattr(window, "_resize_diag_last_event", None)
     seq = getattr(window, "_resize_diag_seq", "?")
-    gui_vp = (None, None)
+    gui_vp: tuple[int | None, int | None] = (None, None)
     if camera_controller is not None:
         gui_vp = _viewport_wh(camera_controller.gui_camera)
     ctx_vp = _read_ctx_viewport(window)

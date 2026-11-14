@@ -82,7 +82,7 @@ class SelectableListScreen:
         *,
         title: str,
         items: list[SelectableItem],
-        on_activate: Callable[[SelectableItem], None] | None = None,
+        on_activate: Callable[[SelectableItem], object] | None = None,  # its result is ignored
         empty_detail: str = "No items.",
     ) -> None:
         self.title = str(title)

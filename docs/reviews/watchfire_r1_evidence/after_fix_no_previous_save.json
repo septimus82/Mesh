@@ -1,0 +1,108 @@
+{
+ "engine": "D:\\Games\\Mesh-r1",
+ "project": "<scratch>\\r1_new_fresh\\project",
+ "bundle": null,
+ "B": {
+  "role": "B-fresh",
+  "scene_loads": [
+   "packs/core_regions/scenes/start.json"
+  ],
+  "new_game": {
+   "room": "start",
+   "story_flags": [],
+   "all_flags": [
+    "hint_shown_controls"
+   ],
+   "counters": {}
+  },
+  "opening": [
+   "Traveller! Thank the stars. The watchfire at the Old Crossing has gone dark.",
+   "Without it, anyone on the forest road tonight will lose their way. Will you light it before nightfall?",
+   "[choices: I'll light the watchfire. | Not right now.]",
+   "[chose: Not right now.]",
+   "Then I'll keep waiting... but the dark won't."
+  ],
+  "crossing": {
+   "room": "old_crossing",
+   "story_flags": [],
+   "fires": [
+    {
+     "name": "Cold watchfire",
+     "burning": false
+    }
+   ]
+  }
+ },
+ "files_after_B": {
+  "saves": [],
+  "session_last_scene_path": "packs/core_regions/scenes/old_crossing.json",
+  "workspace_last_scene_id": null
+ },
+ "verdict": {
+  "checks": {
+   "new_game_story_flags_clear": true,
+   "opening_is_fresh_introduction": true,
+   "watchfire_starts_cold": true
+  },
+  "pass": true
+ },
+ "studio": {
+  "role": "studio",
+  "scene_loads": [
+   "packs/core_regions/scenes/old_crossing.json",
+   "packs/core_regions/scenes/start.json",
+   "packs/core_regions/scenes/start.json"
+  ],
+  "studio_room": "start",
+  "window_scene": "packs/core_regions/scenes/start.json",
+  "camera": [
+   640.0,
+   372.0
+  ]
+ },
+ "legacy_editor": {
+  "role": "studio",
+  "scene_loads": [
+   "packs/core_regions/scenes/start.json",
+   "packs/core_regions/scenes/start.json"
+  ],
+  "studio_room": null,
+  "window_scene": "packs/core_regions/scenes/start.json",
+  "camera": [
+   640.0,
+   372.0
+  ]
+ },
+ "studio_remembering_crossing": {
+  "role": "studio",
+  "scene_loads": [
+   "packs/core_regions/scenes/old_crossing.json",
+   "packs/core_regions/scenes/start.json",
+   "packs/core_regions/scenes/start.json"
+  ],
+  "studio_room": "start",
+  "window_scene": "packs/core_regions/scenes/start.json",
+  "camera": [
+   640.0,
+   360.0
+  ]
+ },
+ "legacy_editor_remembering_crossing": {
+  "role": "studio",
+  "scene_loads": [
+   "packs/core_regions/scenes/start.json",
+   "packs/core_regions/scenes/start.json"
+  ],
+  "studio_room": null,
+  "window_scene": "packs/core_regions/scenes/start.json",
+  "camera": [
+   640.0,
+   360.0
+  ]
+ },
+ "files_after_editors": {
+  "saves": [],
+  "session_last_scene_path": "packs/core_regions/scenes/start.json",
+  "workspace_last_scene_id": null
+ }
+}

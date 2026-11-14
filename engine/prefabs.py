@@ -253,6 +253,15 @@ class PrefabManager:
         sources.extend([path for _name, path in pack_entries])
         return sources
 
+    def put(self, entry: Dict[str, Any]) -> None:
+        """Use ``entry`` for its prefab id until the next load from disk: an editor's unsaved version
+        (Mesh Studio's shared player), the way the scene loader takes open scene documents."""
+        if not self._loaded:
+            self.load()
+        self._prefabs[str(entry["id"])] = entry
+        self._resolved_cache.clear()
+        self._resolved_variant_cache.clear()
+
     def get_prefab(self, prefab_id: str) -> Optional[Dict[str, Any]]:
         """Get the resolved entity data for a prefab (including inheritance)."""
         if not self._loaded:

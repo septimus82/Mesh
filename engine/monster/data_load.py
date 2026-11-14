@@ -59,9 +59,10 @@ def _read_json(path: Path) -> tuple[Any | None, ValidationResult]:
     return payload, ValidationResult(ok=True)
 
 
-def _require_mapping(value: Any, *, label: str) -> tuple[dict[str, Any] | None, str | None]:
+def _require_mapping(value: Any, *, label: str) -> tuple[dict[str, Any], str | None]:
+    """The value as a mapping, or an empty one and the reason it isn't (callers check the reason first)."""
     if not isinstance(value, dict):
-        return None, f"{label} must be a JSON object"
+        return {}, f"{label} must be a JSON object"
     return value, None
 
 
@@ -70,16 +71,16 @@ def _parse_base_stats(raw: Any, *, label: str) -> tuple[BattleStats | None, str 
     if err is not None:
         return None, err
 
-    def _int_field(*keys: str, default: int | None = None) -> tuple[int | None, str | None]:
+    def _int_field(*keys: str, default: int | None = None) -> tuple[int, str | None]:
         for key in keys:
             if key in mapping:
                 value = mapping[key]
                 if not isinstance(value, (int, float)) or isinstance(value, bool):
-                    return None, f"{label}.base_stats.{key} must be a number"
+                    return 0, f"{label}.base_stats.{key} must be a number"
                 return int(value), None
         if default is not None:
             return default, None
-        return None, f"{label}.base_stats missing required stat (expected one of: {', '.join(keys)})"
+        return 0, f"{label}.base_stats missing required stat (expected one of: {', '.join(keys)})"
 
     hp, err = _int_field("hp")
     if err:
@@ -126,10 +127,10 @@ def _parse_learnset(raw: Any, *, label: str) -> tuple[tuple[str, ...], str | Non
             move_ids.append(move_id)
             continue
         if isinstance(entry, dict):
-            move_id = entry.get("move_id")
-            if not isinstance(move_id, str) or not move_id.strip():
+            entry_move = entry.get("move_id")
+            if not isinstance(entry_move, str) or not entry_move.strip():
                 return (), f"{label}.learnset[{index}].move_id must be a non-empty string"
-            move_ids.append(move_id.strip())
+            move_ids.append(entry_move.strip())
             continue
         return (), f"{label}.learnset[{index}] must be a move id string or object with move_id"
     return tuple(move_ids), None
@@ -277,13 +278,13 @@ def _parse_battle_sprite(raw: Any, *, label: str) -> tuple[BattleSprite | None, 
     if not isinstance(sheet, str) or not sheet.strip():
         return None, f"{label}.battle_sprite.sheet must be a non-empty string"
 
-    def _positive_int(field: str) -> tuple[int | None, str | None]:
+    def _positive_int(field: str) -> tuple[int, str | None]:
         value = mapping.get(field)
         if not isinstance(value, (int, float)) or isinstance(value, bool):
-            return None, f"{label}.battle_sprite.{field} must be a positive number"
+            return 0, f"{label}.battle_sprite.{field} must be a positive number"
         parsed = int(value)
         if parsed <= 0:
-            return None, f"{label}.battle_sprite.{field} must be a positive number"
+            return 0, f"{label}.battle_sprite.{field} must be a positive number"
         return parsed, None
 
     columns, err = _positive_int("columns")
@@ -512,8 +513,8 @@ def parse_species(payload: Any, *, source: str = "species") -> tuple[dict[str, S
         if type_err:
             continue
         stats, stats_err = _parse_base_stats(row.get("base_stats"), label=label)
-        if stats_err:
-            errors.append(stats_err)
+        if stats is None:
+            errors.append(stats_err or f"{label}.base_stats is invalid")
             continue
         learnset, learn_err = _parse_learnset(row.get("learnset"), label=label)
         if learn_err:

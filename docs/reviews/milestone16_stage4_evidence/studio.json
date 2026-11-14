@@ -1,0 +1,12 @@
+{
+  "play": {
+    "mode": "play",
+    "hd2d": true,
+    "shadows": true,
+    "shadow_draws": 41,
+    "lamps": 2
+  },
+  "after_stop": {
+    "mode": "edit"
+  }
+}

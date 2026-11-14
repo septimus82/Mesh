@@ -1,0 +1,8 @@
+FAILED tests/test_new_game_isolation.py::test_a_game_start_never_reopens_the_session_scene[scenes/cellar.json]
+FAILED tests/test_new_game_isolation.py::test_a_game_start_never_reopens_the_session_scene[saves/slot_a.json]
+FAILED tests/test_new_game_isolation.py::test_the_editor_reopens_its_room_but_never_a_save[saves/slot_a.json-False]
+FAILED tests/test_new_game_isolation.py::test_workspace_scene_and_camera_reopen_only_in_the_editor[None-scenes/cellar.json-False]
+FAILED tests/test_new_game_isolation.py::test_workspace_scene_and_camera_reopen_only_in_the_editor[None-saves/slot_a.json-False]
+FAILED tests/test_new_game_isolation.py::test_workspace_scene_and_camera_reopen_only_in_the_editor[editor-saves/slot_a.json-False]
+FAILED tests/test_new_game_isolation.py::test_main_menu_new_game_clears_all_game_state
+7 failed, 2 passed in 3.15s

@@ -11,9 +11,9 @@ from .diagnostics import add_exception as diag_add_exception
 from .diagnostics import error as diag_error
 from .diagnostics import info as diag_info
 from .diagnostics import warn as diag_warn
-from .save_runtime import constants as save_constants
 from .save_runtime import io as save_io
 from .save_runtime import payloads as save_payloads
+from .save_runtime import storage as save_storage
 from .save_runtime.restore_policy import SLOT_POLICY
 from .save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from .save_runtime.ux_codes import (
@@ -21,6 +21,7 @@ from .save_runtime.ux_codes import (
     LOAD_FALLBACK_TO_START_SCENE,
     LOAD_NOT_FOUND,
     LOAD_PARSE_FAILED,
+    LOAD_ROOM_MISSING,
     LOAD_SCHEMA_INVALID,
     SAVE_IO_PERMISSION,
     SAVE_SERIALIZE_FAILED,
@@ -85,19 +86,59 @@ def _diag_context(
     return context
 
 
+def _game_root(window: Any) -> Path | None:
+    """The folder holding the game's config.json (an export's own folder), however the game was started."""
+    base = getattr(getattr(window, "engine_config", None), "_config_base_dir", None)
+    return Path(base).resolve() if isinstance(base, str) and base else None
+
+
+def _config_values(window: Any) -> dict[str, Any]:
+    config = getattr(window, "engine_config", None)
+    return {key: getattr(config, key, None) for key in ("game_id", "title", "start_scene", "world_file")}
+
+
 class SaveManager:
     """Manages saving and loading game state to disk."""
 
-    def __init__(self, window: GameWindow, save_dir: str = save_constants.DEFAULT_SAVE_DIR) -> None:
+    def __init__(self, window: GameWindow, save_dir: str | Path | None = None) -> None:
+        """``save_dir`` given: saves go there. Otherwise where the game keeps them (engine.save_runtime.storage): per
+        player for an exported game, ``saves`` in the folder it runs in for a project."""
         self.window = window
+        self.legacy_dir: Path | None = None  # an older export's saves in its installation: read, never written
+        if save_dir is None:
+            location = save_storage.resolve(_game_root(window), _config_values(window))
+            save_dir, self.legacy_dir = location.save_dir, location.legacy_dir
         self.save_dir = Path(save_dir)
         self._ensure_save_dir()
         self._last_loaded_signature: tuple[str, int] | None = None
         self._last_saved_signature: str | None = None
 
-    def _ensure_save_dir(self) -> None:
-        if not self.save_dir.exists():
+    def _ensure_save_dir(self) -> bool:
+        """Make the save folder; False (said once, the game carries on) when it can't be made."""
+        try:
             self.save_dir.mkdir(parents=True, exist_ok=True)
+            return True
+        except OSError as exc:
+            code, hint = _classify_save_exception(exc)
+            diag_warn(code, f"The save folder '{self.save_dir}' can't be created: {exc}", _DIAG_SOURCE,
+                      location=self.save_dir.as_posix(), hint=hint)
+            sys.stderr.write(f"[Mesh][Save] WARNING: can't create the save folder '{self.save_dir}': {exc}\n")
+            return False
+
+    def _load_path(self, slot_name: str) -> Path:
+        """The file a load of ``slot_name`` reads: the per-user one when it is a valid save, else an older export's
+        copy in its installation when that one is valid, else whichever exists (so the failure names it)."""
+        path = self.get_save_path(slot_name)
+        legacy = self.legacy_dir / path.name if self.legacy_dir is not None else None
+        if legacy is None or not legacy.is_file():
+            return path
+        for candidate in (path, legacy):
+            if save_io.is_valid_payload_file(candidate, policy=SLOT_POLICY):
+                return candidate
+        return path if path.is_file() else legacy
+
+    def _is_legacy(self, path: Path) -> bool:
+        return self.legacy_dir is not None and path.parent == self.legacy_dir
 
     def get_save_path(self, slot_name: str) -> Path:
         """Return the full path for a given save slot."""
@@ -146,15 +187,14 @@ class SaveManager:
                 timestamp=self._get_timestamp(),
             )
 
+            self._ensure_save_dir()  # (it may have been removed while the game ran)
             # Atomic write so partial saves never corrupt the existing slot file.
             # Keep the same JSON formatting (indent=2, sort_keys=True) with standardized trailing newline.
             save_io.write_json_pretty_atomic(path, snapshot)
 
-            # Toast if content changed or first save
-            if content_hash != self._last_saved_signature:
-                if hasattr(self.window, "player_hud"):
-                    self.window.player_hud.enqueue_toast("Game Saved")
-                self._last_saved_signature = content_hash
+            # Said only once the file is written: a player who saves twice should hear it twice.
+            self._toast("Game saved")
+            self._last_saved_signature = content_hash
 
             sys.stderr.write(f"[Mesh][Save] Game saved to '{path}'\n")
             return True
@@ -174,7 +214,14 @@ class SaveManager:
                 hint=hint,
             )
             sys.stderr.write(f"[Mesh][Save] ERROR: Failed to save game: {exc}\n")
+            self._toast(f"Couldn't save the game: {hint or exc}")
             return False
+
+    def _toast(self, message: str) -> None:
+        hud = getattr(self.window, "player_hud", None)
+        enqueue = getattr(hud, "enqueue_toast", None)
+        if callable(enqueue):
+            enqueue(message)
 
     def load_game(self, slot_name: str) -> bool:
         """Load a game state from a slot."""
@@ -189,7 +236,8 @@ class SaveManager:
         return self._load_game_impl(slot_name)
 
     def _load_game_impl(self, slot_name: str) -> bool:
-        path = self.get_save_path(slot_name)
+        path = self._load_path(slot_name)
+        legacy = self._is_legacy(path)  # (an older export's save: nothing is ever written next to it)
         if not path.exists():
             diag_warn(
                 LOAD_NOT_FOUND,
@@ -209,7 +257,7 @@ class SaveManager:
             return False
 
         try:
-            ok, payload_or_error = save_io.load_slot_payload(path, policy=SLOT_POLICY)
+            ok, payload_or_error = save_io.load_slot_payload(path, policy=SLOT_POLICY, sidecars=not legacy)
             if not ok:
                 msg = str(payload_or_error or "")
                 code = self._derive_load_failure_code(msg)
@@ -249,6 +297,20 @@ class SaveManager:
                 self._fallback_to_start_scene(slot_name=slot_name, failed_path=path, reason_code=code)
                 return False
             data = cast(dict[str, Any], payload_or_error)
+            missing_room = self._missing_room(data)
+            if missing_room is not None:  # (#390: a newer save has no copy of its room; refused before anything changes)
+                diag_error(
+                    LOAD_ROOM_MISSING,
+                    f"Save slot '{slot_name}' was made in the room '{missing_room}', which this game no longer has.",
+                    _DIAG_SOURCE,
+                    location=path.as_posix(),
+                    context=_diag_context(operation="load", save_path=path, slot_name=slot_name,
+                                          pointer="$.meta.scene_path", extra={"room": missing_room}),
+                    hint="Restore the room (or its old name) and load again; the save file is kept unchanged.",
+                )
+                sys.stderr.write(f"[Mesh][Save] Save '{path}' needs the room '{missing_room}', which is missing\n")
+                self._fallback_to_start_scene(slot_name=slot_name, failed_path=path, reason_code=LOAD_ROOM_MISSING)
+                return False
 
             # 1. Reset global state
             # We need to ensure the state is clean before loading the scene,
@@ -271,7 +333,7 @@ class SaveManager:
                 aggregator=apply_diags,
             )
             if not applied:
-                if SLOT_POLICY.write_sidecars_on_failure:
+                if SLOT_POLICY.write_sidecars_on_failure and not legacy:
                     save_io.write_diagnostics_sidecars(path, apply_diags)
                 primary = apply_diags.primary()
                 pointer = "$"
@@ -298,6 +360,14 @@ class SaveManager:
                 self._fallback_to_start_scene(slot_name=slot_name, failed_path=path, reason_code=LOAD_APPLY_FAILED)
                 return False
 
+            # The saved objects' states (health, timers...) belong to the saved room, which only loads on
+            # the next frame: applied above, they reached the room being left. Apply them again once it exists.
+            normalized, _ = save_payloads.normalize_save_payload(data, source=path.as_posix())
+            saved_entities = normalized.get("saved_entities")
+            scene_controller = getattr(self.window, "scene_controller", None)
+            if isinstance(saved_entities, dict) and isinstance(saved_entities.get("entities"), list) and scene_controller is not None:
+                scene_controller._pending_saved_entities = saved_entities["entities"]
+
             # 2. Determine which scene to load
             # If the save file IS a valid scene (which build_scene_snapshot produces),
             # we can load it directly as a scene.
@@ -307,15 +377,11 @@ class SaveManager:
             # But wait, load_scene reads the file again.
             # That's fine.
 
-            # Check signature to avoid spamming "Loaded"
-            current_signature = (str(path), path.stat().st_mtime_ns)
-            should_toast = current_signature != self._last_loaded_signature
-            self._last_loaded_signature = current_signature
-
+            # Every load the player asks for is confirmed (a repeated load used to say nothing).
+            self._last_loaded_signature = (str(path), path.stat().st_mtime_ns)
             if hasattr(self.window, "player_hud"):
                 self.window.player_hud.clear_toasts()
-                if should_toast:
-                    self.window.player_hud.enqueue_toast("Loaded")
+                self.window.player_hud.enqueue_toast("Game loaded")
 
             sys.stderr.write(f"[Mesh][Save] Loading save from '{path}'\n")
             self.window.request_scene_change(str(path))
@@ -376,7 +442,31 @@ class SaveManager:
             return "This save is incompatible with the current version. Create a new save."
         return "The save data appears corrupted. Restore from a backup or create a new save."
 
+    def _missing_room(self, data: dict[str, Any]) -> str | None:
+        """The room a newer save needs and this game can't read (None if it has it, or the save has its own copy)."""
+        from .scene_runtime.saved_world import needs_its_room
+
+        if not needs_its_room(data):
+            return None
+        meta = data.get("meta")
+        room = str(meta.get("scene_path") or "") if isinstance(meta, dict) else ""
+        loader = getattr(self.window, "scene_loader", None)
+        if not room or loader is None or not hasattr(loader, "saved_room"):
+            return room or "(unnamed)"
+        return None if loader.saved_room(room) is not None else room
+
     def _fallback_to_start_scene(self, *, slot_name: str, failed_path: Path, reason_code: str) -> None:
+        # Only a "Continue" with no game running should fall back to the start scene.
+        # Mid-game, a failed load must not throw the player back to the beginning.
+        scene = getattr(self.window, "scene_controller", None)
+        if getattr(scene, "current_scene_path", None):
+            hud = getattr(self.window, "player_hud", None)
+            if hud is not None and hasattr(hud, "enqueue_toast"):
+                hud.enqueue_toast("No saved game yet: save first (Esc, then Save Game; or F5)" if reason_code == LOAD_NOT_FOUND
+                                  else "Couldn't load that save: its room is missing from the game"
+                                  if reason_code == LOAD_ROOM_MISSING
+                                  else "Couldn't load that save: it may be damaged or from another version")
+            return
         cfg = getattr(self.window, "engine_config", None)
         target_scene = str(getattr(cfg, "start_scene", "") or "").strip()
         requester = getattr(self.window, "request_scene_change", None)
@@ -419,10 +509,9 @@ class SaveManager:
             )
 
     def list_saves(self) -> list[str]:
-        """Return a list of available save slots."""
-        if not self.save_dir.exists():
-            return []
-        return sorted([f.stem for f in self.save_dir.glob("*.json")])
+        """Return a list of available save slots (an older export's ones in its installation included)."""
+        folders = [d for d in (self.save_dir, self.legacy_dir) if d is not None and d.is_dir()]
+        return sorted({f.stem for d in folders for f in d.glob("*.json")})
 
     def _get_timestamp(self) -> str:
         import datetime

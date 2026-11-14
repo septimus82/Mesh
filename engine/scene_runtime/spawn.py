@@ -120,4 +120,9 @@ def apply_pending_spawn_point(controller: Any) -> None:
         controller._apply_entity_mutation(player, x=marker.center_x, y=marker.center_y)
     else:
         controller.apply_spawn(spawn_id)
+    # Arriving through a door stops the player: otherwise the key still held from
+    # walking into the door carries them straight into the next door, and back.
+    release_all = getattr(getattr(controller.window, "input", None), "release_all", None)
+    if callable(release_all):
+        release_all()
     controller.window.console_log(f"Moved player to spawn '{spawn_id}'")

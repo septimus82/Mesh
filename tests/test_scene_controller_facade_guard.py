@@ -7,6 +7,8 @@ from engine.scene_controller import SceneController
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
+# The runtime delegates are looked up where the facade's parts import them (engine/scene_controller_parts/
+# transitions.py and persistence.py); patching the old engine.scene_controller names had stopped testing anything.
 class TestSceneControllerFacadeGuard(unittest.TestCase):
     def setUp(self):
         self.mock_window = MagicMock()
@@ -15,12 +17,12 @@ class TestSceneControllerFacadeGuard(unittest.TestCase):
             self.controller = SceneController(self.mock_window)
 
     def test_reload_scene_delegates_to_runtime(self):
-        with patch("engine.scene_controller._reload_scene_runtime") as mock_reload:
+        with patch("engine.scene_controller_parts.transitions._reload_scene_runtime") as mock_reload:
             self.controller.reload_scene("new_path")
             mock_reload.assert_called_once_with(self.controller, new_path="new_path")
 
     def test_perform_scene_change_delegates_to_runtime(self):
-        with patch("engine.scene_controller._perform_scene_change_runtime") as mock_perform:
+        with patch("engine.scene_controller_parts.transitions._perform_scene_change_runtime") as mock_perform:
             self.controller._perform_scene_change("path", "spawn")
             mock_perform.assert_called_once_with(self.controller, "path", spawn_id="spawn")
 
@@ -36,23 +38,23 @@ class TestSceneControllerFacadeGuard(unittest.TestCase):
             mock_apply.assert_called_once_with(self.controller, state)
 
     def test_snapshot_player_state_delegates_to_runtime(self):
-        with patch("engine.scene_controller._snapshot_player_state_runtime") as mock_snap:
+        with patch("engine.scene_controller_parts.persistence._snapshot_player_state_runtime") as mock_snap:
             self.controller._snapshot_player_state()
             mock_snap.assert_called_once_with(self.controller)
 
     def test_restore_player_state_delegates_to_runtime(self):
-        with patch("engine.scene_controller._restore_player_state_runtime") as mock_restore:
+        with patch("engine.scene_controller_parts.persistence._restore_player_state_runtime") as mock_restore:
             snap = {"pos": (0, 0)}
             self.controller._restore_player_state(snap)
             mock_restore.assert_called_once_with(self.controller, snap)
 
     def test_snapshot_camera_state_delegates_to_runtime(self):
-        with patch("engine.scene_controller._snapshot_camera_state_runtime") as mock_snap:
+        with patch("engine.scene_controller_parts.persistence._snapshot_camera_state_runtime") as mock_snap:
             self.controller._snapshot_camera_state()
             mock_snap.assert_called_once_with(self.controller)
 
     def test_restore_camera_state_delegates_to_runtime(self):
-        with patch("engine.scene_controller._restore_camera_state_runtime") as mock_restore:
+        with patch("engine.scene_controller_parts.persistence._restore_camera_state_runtime") as mock_restore:
             snap = {"zoom": 1.0}
             self.controller._restore_camera_state(snap)
             mock_restore.assert_called_once_with(self.controller, snap)

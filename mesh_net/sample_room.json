@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "version": 1,
+  "name": "Local cooperative arena",
+  "entities": [
+    {"id": "landmark", "name": "Arena sign", "sprite": "assets/sprites/starter_sign.png", "x": 240, "y": 190}
+  ]
+}

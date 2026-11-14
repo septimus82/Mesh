@@ -1,0 +1,102 @@
+{
+ "worktree": "D:\\Games\\Mesh-h485b",
+ "village": {
+  "studio_pitch": 40.0,
+  "game_pitch": 30.0,
+  "has": {
+   "scatter": false,
+   "terrain": false,
+   "cutaway_structures": 11
+  },
+  "canvas": "f21be2b9d1c194ed",
+  "canvas_pitch25": "0abca22b1dd05542",
+  "canvas_pitch65": "e9e3584951bf4ca1",
+  "fire": false,
+  "matched_camera": {
+   "target": [
+    20.0,
+    8.416238213470514,
+    0.8
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "matched": {
+   "game": "5343e02856375290",
+   "studio": "5343e02856375290",
+   "same": true
+  },
+  "canvas_no_billboards": "5d83b08a625de0d9",
+  "canvas_no_billboards_pitch25": "794a039918ecc2ab",
+  "canvas_no_billboards_pitch65": "8785e9856f5b8e41"
+ },
+ "village_decor": {
+  "studio_pitch": 40.0,
+  "game_pitch": 30.0,
+  "has": {
+   "scatter": true,
+   "terrain": true,
+   "cutaway_structures": 11
+  },
+  "canvas": "620c9fd497e6728a",
+  "canvas_pitch25": "961c5765dc58268e",
+  "canvas_pitch65": "e409612fdc7d8ca3",
+  "fire": true,
+  "matched_camera": {
+   "target": [
+    20.0,
+    8.416238213470514,
+    0.8
+   ],
+   "pitch": 30.0,
+   "fov": 12.0,
+   "distance": 53.518,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "matched": {
+   "game": "a056ecfcaa860d3b",
+   "studio": "a056ecfcaa860d3b",
+   "same": true
+  },
+  "canvas_no_billboards": "7d5d07cf541adc53",
+  "canvas_no_billboards_pitch25": "c557fc8d55494380",
+  "canvas_no_billboards_pitch65": "41bb46550abdcc66"
+ },
+ "cottage": {
+  "studio_pitch": 40.0,
+  "game_pitch": 55.0,
+  "has": {
+   "scatter": false,
+   "terrain": false,
+   "cutaway_structures": 0
+  },
+  "canvas": "a96f053d9b07694b",
+  "canvas_pitch25": "42b9b69c64bba1cd",
+  "canvas_pitch65": "ad114c216f9e1d32",
+  "fire": false,
+  "matched_camera": {
+   "target": [
+    8.0,
+    5.091815833349058,
+    0.9
+   ],
+   "pitch": 55.0,
+   "fov": 12.0,
+   "distance": 35.679,
+   "ortho": false,
+   "yaw": 0.0
+  },
+  "matched": {
+   "game": "492bb23a010c8faf",
+   "studio": "492bb23a010c8faf",
+   "same": true
+  },
+  "canvas_no_billboards": "0a3cdffd250bb854",
+  "canvas_no_billboards_pitch25": "277743faae0b90c1",
+  "canvas_no_billboards_pitch65": "494d5e918aa5627f"
+ }
+}

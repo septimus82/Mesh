@@ -31,8 +31,11 @@ def test_apply_template_blank(tmp_path):
 
     data = json.loads(start_scene.read_text("utf-8"))
     assert data["name"] == "Start Scene"
-    players = [entity for entity in data.get("entities", []) if entity.get("tag") == "player"]
-    assert len(players) == 1
+    # One player for the whole game: the room says where it starts, the project's "player" prefab what it is.
+    players = [entity for entity in data.get("entities", []) if entity.get("prefab_id") == "player"]
+    assert len(players) == 1 and set(players[0]) == {"id", "x", "y", "prefab_id"}
+    prefabs = json.loads((root / "assets/prefabs.json").read_text("utf-8"))
+    assert next(p for p in prefabs if p["id"] == "player")["entity"]["tag"] == "player"
 
 def test_apply_template_lighting_playground(tmp_path):
     """Test lighting playground template."""

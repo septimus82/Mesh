@@ -1,0 +1,145 @@
+{
+ "kit_before": false,
+ "created": {
+  "room": "meadow",
+  "hd2d_view": true,
+  "message": "Created Meadow. Add a door from another room to connect it. Mesh's HD-2D starter kit (models, ground textures) was added to this project.",
+  "ground_to": [
+   1280.0,
+   960.0
+  ],
+  "kit_now": true
+ },
+ "panel": "environment",
+ "see_it_editor_camera": {
+  "pitch": 38.0,
+  "fov": 12.0,
+  "distance": 85.629
+ },
+ "sun_set_undo_redo": [
+  260.0,
+  250.0,
+  260.0
+ ],
+ "camera": {
+  "view": 18.0,
+  "pitch": 38.0,
+  "fov": 12.0,
+  "height": 0.8,
+  "bounded": true,
+  "ortho": false,
+  "distance": 85.629
+ },
+ "sun": {
+  "azimuth": 260.0,
+  "elevation": 12.0,
+  "color": "#ffb070",
+  "intensity": 0.85,
+  "ambient": 0.38,
+  "sky": "#d8906a"
+ },
+ "view_renderer": {
+  "camera": {
+   "pitch": 38.0,
+   "fov": 12.0,
+   "distance": 85.629,
+   "bounds": [
+    0.0,
+    0.0,
+    1280.0,
+    960.0
+   ]
+  },
+  "sun": [
+   -0.9633,
+   -0.1699,
+   0.2079
+  ],
+  "sun_intensity": 0.85,
+  "ambient": 0.38,
+  "sky": [
+   0.847,
+   0.565,
+   0.416
+  ]
+ },
+ "saved": "Saved 2 file(s).",
+ "in_the_saved_file": {
+  "camera": {
+   "bounds": [
+    0.0,
+    0.0,
+    1280.0,
+    960.0
+   ],
+   "distance": 85.629,
+   "follow": "player",
+   "fov": 12.0,
+   "height": 0.8,
+   "ortho": false,
+   "pitch": 38.0
+  },
+  "sun": {
+   "color": "#ffb070",
+   "direction": [
+    -0.9633,
+    -0.1699,
+    0.2079
+   ],
+   "intensity": 0.85
+  },
+  "ambient": 0.38,
+  "sky": "#d8906a"
+ },
+ "reopened": {
+  "same": true,
+  "unsaved": []
+ },
+ "in_play": {
+  "mode": "play",
+  "camera": {
+   "pitch": 38.0,
+   "fov": 12.0,
+   "distance": 85.629,
+   "bounds": [
+    0.0,
+    0.0,
+    1280.0,
+    960.0
+   ]
+  },
+  "sun": [
+   -0.9633,
+   -0.1699,
+   0.2079
+  ],
+  "sun_intensity": 0.85,
+  "ambient": 0.38,
+  "sky": [
+   0.847,
+   0.565,
+   0.416
+  ]
+ },
+ "export": {
+  "code": 0,
+  "bundle_run": {
+   "engine_from": "<scratch>\\export\\engine\\__init__.py",
+   "pitch": 38.0,
+   "fov": 12.0,
+   "sun": [
+    -0.9633,
+    -0.1699,
+    0.2079
+   ],
+   "grass": true
+  }
+ },
+ "template_untouched": {
+  "rooms": [
+   "cottage.json",
+   "start.json"
+  ],
+  "deterministic": true
+ }
+}
