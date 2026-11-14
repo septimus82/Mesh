@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "ms": 7229,
+      "name": "verify-demo",
+      "ok": true
+    },
+    {
+      "ms": 69,
+      "name": "verify-replays",
+      "ok": true
+    },
+    {
+      "ms": 426,
+      "name": "verify-strict",
+      "ok": true
+    },
+    {
+      "ms": 13301,
+      "name": "mypy-gate",
+      "ok": true
+    },
+    {
+      "ms": 0,
+      "name": "mypy-baseline-guard",
+      "ok": true
+    },
+    {
+      "ms": 441,
+      "name": "ruff-gate",
+      "ok": true
+    },
+    {
+      "ms": 140,
+      "name": "mypy-island",
+      "ok": true
+    },
+    {
+      "ms": 10,
+      "name": "exception-budget-guard",
+      "ok": true
+    },
+    {
+      "ms": 3314,
+      "name": "swallow-scan-gate",
+      "ok": true
+    },
+    {
+      "ms": 3329,
+      "name": "exception-policy-scan",
+      "ok": true
+    },
+    {
+      "ms": 76537,
+      "name": "pytest-fast",
+      "ok": true
+    },
+    {
+      "ms": 0,
+      "name": "pytest-fast-duration-guard",
+      "ok": true
+    },
+    {
+      "ms": 118,
+      "name": "runtime-player-smoke",
+      "ok": true
+    },
+    {
+      "ms": 874,
+      "name": "player-package-gate",
+      "ok": true
+    },
+    {
+      "ms": 3293,
+      "name": "web-smoke",
+      "ok": true
+    },
+    {
+      "ms": 2,
+      "name": "perf-baseline-compare",
+      "ok": true
+    },
+    {
+      "ms": 4,
+      "name": "world-progression-check",
+      "ok": true
+    },
+    {
+      "ms": 9,
+      "name": "spawn-placeholder-safety",
+      "ok": true
+    },
+    {
+      "ms": 4,
+      "name": "stamp-audit",
+      "ok": true
+    },
+    {
+      "ms": 3,
+      "name": "brush-audit",
+      "ok": true
+    },
+    {
+      "ms": 6,
+      "name": "macro-audit",
+      "ok": true
+    },
+    {
+      "ms": 32,
+      "name": "room-audit",
+      "ok": true
+    },
+    {
+      "ms": 1,
+      "name": "encounter-set-uniqueness",
+      "ok": true
+    },
+    {
+      "ms": 1,
+      "name": "encounter-set-variety",
+      "ok": true
+    },
+    {
+      "ms": 46,
+      "name": "prefab-lint-overrides",
+      "ok": true
+    },
+    {
+      "ms": 27,
+      "name": "encounter-coverage",
+      "ok": true
+    },
+    {
+      "ms": 20,
+      "name": "encounter-coverage-matrix",
+      "ok": true
+    },
+    {
+      "ms": 112,
+      "name": "doctor-assets",
+      "ok": true
+    },
+    {
+      "ms": 17,
+      "name": "content-audit",
+      "ok": true
+    },
+    {
+      "ms": 255,
+      "name": "encounter-audit",
+      "ok": true
+    },
+    {
+      "ms": 21,
+      "name": "list-scenes",
+      "ok": true
+    },
+    {
+      "ms": 2,
+      "name": "list-worlds",
+      "ok": true
+    }
+  ],
+  "total_ms": 109643
+}
