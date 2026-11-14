@@ -1,0 +1,78 @@
+[
+ {
+  "step": "1 store and character made",
+  "unlocks": [],
+  "completed": 0
+ },
+ {
+  "step": "2-3 server started, joined as the character",
+  "room": "start:1",
+  "sheet_unlocks": []
+ },
+ {
+  "step": "4 entered the expedition",
+  "rooms": [
+   "ancient_ruins_layer_2"
+  ]
+ },
+ {
+  "step": "5-6 guardian defeated with the completion's transaction failing",
+  "dead": true,
+  "pending": 1,
+  "accepting": null,
+  "run": "ba5545c70d43c966",
+  "unsaved": 0,
+  "commits": 1,
+  "instances": [
+   "ancient_ruins_layer_1:2",
+   "ancient_ruins_layer_2:3",
+   "start:1"
+  ]
+ },
+ {
+  "step": "7 the player was told storage_failed; the completion is owed in memory",
+  "notices": [
+   "storage_failed"
+  ],
+  "pending": 1,
+  "accepting": null,
+  "run": "ba5545c70d43c966",
+  "unsaved": 0,
+  "commits": 1,
+  "instances": [
+   "ancient_ruins_layer_1:2",
+   "ancient_ruins_layer_2:3",
+   "start:1"
+  ]
+ },
+ {
+  "step": "8 server process killed while the completion is owed",
+  "exit_code": 1
+ },
+ {
+  "step": "store reopened independently",
+  "unlocks": [],
+  "completed": 0,
+  "claim_rows": 0,
+  "files": [
+   "characters.db"
+  ]
+ },
+ {
+  "step": "9-10 restarted on the original store and rejoined",
+  "sheet_unlocks": [],
+  "sheet_completed": 0,
+  "pending": 0,
+  "accepting": null,
+  "run": "5043437d7e583b00",
+  "unsaved": 0,
+  "commits": 1,
+  "instances": [
+   "start:1"
+  ]
+ },
+ {
+  "step": "VERDICT",
+  "earned_progression_lost": true
+ }
+]

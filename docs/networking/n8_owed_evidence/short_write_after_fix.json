@@ -1,0 +1,167 @@
+{
+ "1 a write takes fewer bytes than given (40 of the record), then nothing more is asked": {
+  "asked_to_write": [
+   "B"
+  ],
+  "bytes_asked": 157,
+  "owe": "returned as if written",
+  "journal_position_advanced_by": 157,
+  "counted_in_memory": [
+   "A",
+   "B"
+  ],
+  "bytes_on_disk_after_A": 157,
+  "a_new_server_reads": [
+   "A",
+   "B"
+  ],
+  "cut_short_bytes_it_discards": 0,
+  "told_kept_but_not_on_disk": []
+ },
+ "2 a write takes zero bytes without raising": {
+  "asked_to_write": [
+   "B"
+  ],
+  "bytes_asked": 157,
+  "owe": "raised JournalError ([Errno 5] the write stopped after 0 of 157 bytes)",
+  "journal_position_advanced_by": 0,
+  "counted_in_memory": [
+   "A"
+  ],
+  "bytes_on_disk_after_A": 0,
+  "a_new_server_reads": [
+   "A"
+  ],
+  "cut_short_bytes_it_discards": 0,
+  "told_kept_but_not_on_disk": []
+ },
+ "3 a short write, then a write that works": {
+  "asked_to_write": [
+   "B"
+  ],
+  "bytes_asked": 157,
+  "owe": "returned as if written",
+  "journal_position_advanced_by": 157,
+  "counted_in_memory": [
+   "A",
+   "B"
+  ],
+  "bytes_on_disk_after_A": 157,
+  "a_new_server_reads": [
+   "A",
+   "B"
+  ],
+  "cut_short_bytes_it_discards": 0,
+  "told_kept_but_not_on_disk": []
+ },
+ "4 a short write, then an OSError": {
+  "asked_to_write": [
+   "B"
+  ],
+  "bytes_asked": 157,
+  "owe": "raised JournalError ([Errno 5] Input/output error)",
+  "journal_position_advanced_by": 0,
+  "counted_in_memory": [
+   "A"
+  ],
+  "bytes_on_disk_after_A": 40,
+  "a_new_server_reads": [
+   "A"
+  ],
+  "cut_short_bytes_it_discards": 40,
+  "told_kept_but_not_on_disk": []
+ },
+ "5 a short write in a batch of two completions": {
+  "asked_to_write": [
+   "B",
+   "C"
+  ],
+  "bytes_asked": 355,
+  "owe": "returned as if written",
+  "journal_position_advanced_by": 355,
+  "counted_in_memory": [
+   "A",
+   "B",
+   "C"
+  ],
+  "bytes_on_disk_after_A": 355,
+  "a_new_server_reads": [
+   "A",
+   "B",
+   "C"
+  ],
+  "cut_short_bytes_it_discards": 0,
+  "told_kept_but_not_on_disk": []
+ },
+ "6 every byte written, then fsync fails": {
+  "asked_to_write": [
+   "C"
+  ],
+  "bytes_asked": 198,
+  "owe": "raised JournalError ([Errno 5] Input/output error)",
+  "journal_position_advanced_by": 0,
+  "counted_in_memory": [
+   "A"
+  ],
+  "bytes_on_disk_after_A": 198,
+  "a_new_server_reads": [
+   "A",
+   "C"
+  ],
+  "cut_short_bytes_it_discards": 0,
+  "told_kept_but_not_on_disk": []
+ },
+ "7 a failed partial batch, then a shorter record written at the same place": {
+  "asked_to_write": [
+   "C",
+   "B"
+  ],
+  "bytes_asked": 355,
+  "owe": "raised JournalError ([Errno 28] No space left on device)",
+  "journal_position_advanced_by": 0,
+  "counted_in_memory": [
+   "A"
+  ],
+  "then_owe_SHORT": "returned as if written",
+  "counted_in_memory_after": [
+   "A",
+   "C",
+   "B",
+   "SHORT"
+  ],
+  "bytes_on_disk_after_A": 477,
+  "a_new_server_reads": [
+   "A",
+   "C",
+   "B",
+   "SHORT"
+  ],
+  "cut_short_bytes_it_discards": 0,
+  "told_kept_but_not_on_disk": []
+ },
+ "8 every byte written and fsync fails, then a shorter record": {
+  "asked_to_write": [
+   "C"
+  ],
+  "bytes_asked": 198,
+  "owe": "raised JournalError ([Errno 5] Input/output error)",
+  "journal_position_advanced_by": 0,
+  "counted_in_memory": [
+   "A"
+  ],
+  "then_owe_SHORT": "returned as if written",
+  "counted_in_memory_after": [
+   "A",
+   "C",
+   "SHORT"
+  ],
+  "bytes_on_disk_after_A": 320,
+  "a_new_server_reads": [
+   "A",
+   "C",
+   "SHORT"
+  ],
+  "cut_short_bytes_it_discards": 0,
+  "told_kept_but_not_on_disk": []
+ }
+}
