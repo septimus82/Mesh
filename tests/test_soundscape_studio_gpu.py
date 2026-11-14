@@ -30,15 +30,13 @@ sys.path.insert(0, str(REPO / "tooling"))
 def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
     import soundscape_studio
 
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
     out = tmp_path_factory.mktemp("soundscape")
-    os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")  # never the checkout's own file
-    try:
+    # (for its run only, then as they were: absent stays absent, a value comes back, whatever the run did)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
+        env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))  # never the checkout's own file
         soundscape_studio.setup2d(out)
         return soundscape_studio.studio2d(out)
-    finally:
-        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
-        os.environ.pop("MESH_RUNTIME_SETTINGS_PATH", None)
 
 
 def test_a_sound_is_placed_chosen_and_set_with_studios_controls(run: dict) -> None:

@@ -33,18 +33,17 @@ sys.path.insert(0, str(REPO / "tooling"))
 
 
 @pytest.fixture
-def driver(tmp_path: Path) -> Iterator[Any]:
+def driver(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
     import hd2d_floors_demo
     from hd2d_studio_demo import StudioDriver
 
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    monkeypatch.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
     project = hd2d_floors_demo.build(tmp_path / "HD-2D studio")
     d = StudioDriver(project)
     try:
         yield d
     finally:
         d.close()
-        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
 
 
 def _make(d: Any, kind: str, label: str) -> str:

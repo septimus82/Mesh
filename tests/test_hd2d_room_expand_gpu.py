@@ -30,13 +30,11 @@ def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
     import hd2d_room_expand_studio
 
     out = tmp_path_factory.mktemp("m22a1")
-    os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
-    try:
+    # (for its run only, then as they were: absent stays absent, a value comes back, whatever the run did)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
         return hd2d_room_expand_studio.studio(out)
-    finally:
-        os.environ.pop("MESH_RUNTIME_SETTINGS_PATH", None)
-        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
 
 
 def test_a_populated_room_is_expanded_in_studio_with_everything_kept(run: dict) -> None:

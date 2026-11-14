@@ -57,13 +57,11 @@ def studio(tmp_path_factory: pytest.TempPathFactory) -> dict:
     import w1_waterfall_checks
 
     out = tmp_path_factory.mktemp("falls_studio")
-    os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
-    try:
+    # (for its run only, then as they were: absent stays absent, a value comes back, whatever the run did)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
         found: dict = w1_waterfall_checks.studio(out)
-    finally:
-        os.environ.pop("MESH_RUNTIME_SETTINGS_PATH", None)
-        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
     _keep("studio", found)
     return found
 

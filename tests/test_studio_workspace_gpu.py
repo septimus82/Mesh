@@ -30,14 +30,12 @@ def run(tmp_path_factory: pytest.TempPathFactory) -> dict:
     import studio_workspace
 
     out = tmp_path_factory.mktemp("m23a")
-    os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
-    try:
+    # (for its run only, then as they were: absent stays absent, a value comes back, whatever the run did)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
         result: dict = studio_workspace.creator(out)
         return result
-    finally:
-        os.environ.pop("MESH_RUNTIME_SETTINGS_PATH", None)
-        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
 
 
 def test_each_category_shows_its_own_tools_at_once(run: dict) -> None:
@@ -84,14 +82,12 @@ def safety(tmp_path_factory: pytest.TempPathFactory) -> dict:
     import studio_workspace
 
     out = tmp_path_factory.mktemp("m23a_safety")
-    os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out / "user_settings.json")
-    os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
-    try:
+    # (for its run only, then as they were: absent stays absent, a value comes back, whatever the run did)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(out / "user_settings.json"))
+        env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
         result: dict = studio_workspace.safety(out)
         return result
-    finally:
-        os.environ.pop("MESH_RUNTIME_SETTINGS_PATH", None)
-        os.environ.pop("MESH_STUDIO_NO_AI_BRIDGE", None)
 
 
 def test_tab_takes_a_typed_name_before_hiding_the_panels(safety: dict) -> None:
