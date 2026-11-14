@@ -50,7 +50,7 @@ KEY = re.compile(r"[a-z0-9_]{1,48}")
 ROOM_ID = re.compile(r"[a-z0-9_]{1,48}:[0-9]{1,9}")
 PARTY_OPS = {"create": (), "invite": ("player",), "accept": ("party",), "decline": ("party",), "leave": ()}
 NOTICES = persistence.NOTICES + ("need_party", "no_instance", "room_full", "transfer_failed", "left_expedition", "in_party", "not_leader",
-           "no_player", "busy", "no_invite", "party_full", "invited")
+           "no_player", "busy", "no_invite", "party_full", "invited", "storage_unavailable")
 
 
 class TransferResult(enum.Enum):
@@ -59,6 +59,7 @@ class TransferResult(enum.Enum):
     NO_INSTANCE = "no_instance"  # the instance limit is reached
     FULL = "room_full"
     FAILED = "transfer_failed"  # the destination could not be prepared; nothing changed
+    STORAGE = "storage_unavailable"  # the character store is failing: no new expedition starts (#496)
 
 
 @dataclass(frozen=True)
@@ -501,6 +502,10 @@ class World:
         else:
             target = self.shared.get(key)  # a shared room other than the hub starts when first entered
         if target is None:
+            # A new expedition could earn completions the failing store would owe on top of what it owes already.
+            # Expeditions under way go on (their rooms exist: this branch is not reached), so nobody is trapped.
+            if d.expedition and self.progress is not None and not self.progress.accepting:
+                return self._refuse(m, TransferResult.STORAGE)
             if len(self.instances) >= MAX_INSTANCES:
                 return self._refuse(m, TransferResult.NO_INSTANCE)
             try:

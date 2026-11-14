@@ -234,12 +234,13 @@ def main() -> None:
         room: Any = None
         host: type[Server] = Server
         if args.expedition:
+            from .characters import StoreUnavailable
             from .scene_room import disposable_project
             from .world import World, expedition_files
 
             store = None
             if store_path is not None:
-                from .characters import CharacterStore, StoreUnavailable
+                from .characters import CharacterStore
                 from .persistence import expedition_rules
 
                 try:
@@ -248,10 +249,17 @@ def main() -> None:
                     raise SystemExit(f"[Mesh][Net] {exc}") from None
                 stack.callback(store.close)
             root = stack.enter_context(disposable_project(expedition_files(), scaffold=False))
-            world = World(root, store=store, rules=expedition_rules() if store is not None else None)
+            try:
+                world = World(root, store=store, rules=expedition_rules() if store is not None else None)
+            except StoreUnavailable as exc:  # (the journal of owed completions cannot be used: mesh_net.owed)
+                raise SystemExit(f"[Mesh][Net] {exc}") from None
             room, host = world, WorldServer
-            if store_path is not None:
-                print(f"Mesh characters {store_path.name}", flush=True)
+            if world.progress is not None:
+                stack.callback(world.progress.close)
+                print(f"Mesh characters {store_path.name if store_path else ''}", flush=True)
+                if world.progress.recovered or world.progress.owed:
+                    print(f"Mesh owed completions: {world.progress.recovered} recorded from earlier runs, "
+                          f"{len(world.progress.owed)} still owed", flush=True)
             print(f"Mesh world {world.identity[:12]}", flush=True)
         elif args.coop:
             from .scene_room import COOP_SCENE, SceneRoom, coop_files, disposable_project

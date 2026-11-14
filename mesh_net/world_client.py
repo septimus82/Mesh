@@ -35,7 +35,10 @@ NOTICE_TEXT = {"need_party": "an expedition needs a party (P)", "no_instance": "
                "not_leader": "only the leader invites", "no_player": "nobody to invite", "busy": "they are busy",
                "no_invite": "no such invitation", "party_full": "the party is full", "invited": "invited! Y/N",
                "picked_up": "picked up", "inventory_full": "no room for it (it stays here)",
-               "storage_failed": "could not be saved (nothing changed; try again)", "unlocked": "unlocked!"}
+               "storage_failed": "could not be saved (nothing changed; try again)", "unlocked": "unlocked!",
+               "unlock_owed": "unlock earned; the server's storage is failing, so it is kept and recorded later",
+               "unlock_not_kept": "unlock earned but NOT saved: the server's storage is failing",
+               "storage_unavailable": "the server's storage is failing: no new expedition until it recovers"}
 
 
 class WorldArena(Arena):

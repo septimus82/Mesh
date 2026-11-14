@@ -1,0 +1,8 @@
+tests/test_mesh_net_owed.py -k 'killed or dying or shipped', with the journal write removed (persistence.py: `self.journal.owe(entries)` -> `pass`):
+FAILED tests/test_mesh_net_owed.py::test_a_server_killed_with_unlocks_owed_loses_none_of_them
+FAILED tests/test_mesh_net_owed.py::test_a_server_killed_while_recording_what_was_owed_still_counts_each_once
+FAILED tests/test_mesh_net_owed.py::test_a_server_dying_at_the_moment_a_completion_becomes_owed[after the journal write]
+FAILED tests/test_mesh_net_owed.py::test_a_server_dying_at_the_moment_a_completion_becomes_owed[after a commit reported as failed]
+FAILED tests/test_mesh_net_owed.py::test_a_server_dying_at_the_moment_a_completion_becomes_owed[before the journal write]
+FAILED tests/test_mesh_net_owed.py::test_the_shipped_server_records_what_is_owed_when_it_starts
+6 failed, 1 passed, 20 deselected in 70.79s (0:01:10)

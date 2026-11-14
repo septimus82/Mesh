@@ -16,6 +16,7 @@ Local administration (the server's owner, on the server's machine)::
     python -m mesh_net.characters create STORE "Ada" --key-file ada.json   # the key is written there, never printed
     python -m mesh_net.characters list STORE
     python -m mesh_net.characters backup STORE COPY
+    python -m mesh_net.characters owed STORE      # completions a failing store still owes (mesh_net.owed)
 """
 
 from __future__ import annotations
@@ -240,9 +241,13 @@ class CharacterStore:
         self._transaction(body)
         return cid, key
 
-    def begin_run(self, run: str) -> None:
-        """A server run starts: loot claims of earlier runs name drops that no longer exist; forget them."""
-        self._transaction(lambda c: c.execute("DELETE FROM claims WHERE run <> ?", (run,)))
+    def begin_run(self, run: str, keep: Iterable[str] = ()) -> None:
+        """A server run starts: claims of earlier runs name drops and completions that no longer exist; forget them.
+        Except the runs in ``keep``: a completion one of them still owes (mesh_net.owed) is recorded under that run,
+        and its claims are what stop it being counted twice."""
+        runs = sorted({run, *keep})
+        marks = ", ".join("?" * len(runs))
+        self._transaction(lambda c: c.execute(f"DELETE FROM claims WHERE run NOT IN ({marks})", runs))
 
     def claim(self, character: str, run: str, claim: str, grants: Iterable[tuple[str, int]]) -> CharacterState:
         """Grant ``grants`` to ``character`` once for ``claim``: all of them or none."""
@@ -359,8 +364,17 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("backup")
     p.add_argument("store")
     p.add_argument("copy")
+    sub.add_parser("owed", help="list the completions still owed beside the store (it is not opened)").add_argument("store")
     args = parser.parse_args(argv)
     try:
+        if args.command == "owed":
+            from .owed import describe, journal_path  # noqa: PLC0415  # (owed imports this module)
+
+            entries = describe(args.store)
+            for entry in entries:
+                print(f"{entry['character']}  {entry['unlock']}  run={entry['run']}  completion={entry['completion']}")
+            print(f"{len(entries)} owed in {journal_path(args.store)}; a server opening the store records them")
+            return 0
         if args.command == "new-store":
             CharacterStore(args.store, create=True).close()
             print(f"created {args.store}")
