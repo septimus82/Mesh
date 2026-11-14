@@ -1,0 +1,314 @@
+[
+ {
+  "job": "timing rolling check (report only)",
+  "seconds": 237,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 4
+   },
+   {
+    "step": "Collect recent CI timings",
+    "seconds": 229
+   }
+  ]
+ },
+ {
+  "job": "acceptance (ubuntu-latest, py3.11)",
+  "seconds": 82,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 4
+   },
+   {
+    "step": "Set up Python, the project and a display",
+    "seconds": 16
+   },
+   {
+    "step": "Creator-workflow acceptance",
+    "seconds": 58
+   }
+  ]
+ },
+ {
+  "job": "acceptance (windows-latest, py3.11)",
+  "seconds": 159,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 9
+   },
+   {
+    "step": "Set up Python, the project and a display",
+    "seconds": 41
+   },
+   {
+    "step": "Creator-workflow acceptance",
+    "seconds": 102
+   }
+  ]
+ },
+ {
+  "job": "arcade3-canary (required, py3.11)",
+  "seconds": 48,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 4
+   },
+   {
+    "step": "Install dependencies (Arcade 3.x canary)",
+    "seconds": 13
+   },
+   {
+    "step": "Install Xvfb",
+    "seconds": 3
+   },
+   {
+    "step": "Arcade 3.x smoke tests",
+    "seconds": 7
+   },
+   {
+    "step": "Arcade 3.x installed wheel replay smoke",
+    "seconds": 16
+   }
+  ]
+ },
+ {
+  "job": "pytest (windows-latest, py3.11, shard 1/2)",
+  "seconds": 484,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 9
+   },
+   {
+    "step": "Set up Python, the project and a display",
+    "seconds": 50
+   },
+   {
+    "step": "Compile Python sources",
+    "seconds": 7
+   },
+   {
+    "step": "Run pytest (Windows, one shard)",
+    "seconds": 409
+   }
+  ]
+ },
+ {
+  "job": "verify (ubuntu-latest, py3.11)",
+  "seconds": 207,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 4
+   },
+   {
+    "step": "Set up Python, the project and a display",
+    "seconds": 23
+   },
+   {
+    "step": "Compile Python sources",
+    "seconds": 5
+   },
+   {
+    "step": "Warm pytest's caches (collect only, no test runs)",
+    "seconds": 33
+   },
+   {
+    "step": "Run verify-all (Linux)",
+    "seconds": 111
+   },
+   {
+    "step": "Build release bundle (seeded, Linux)",
+    "seconds": 10
+   },
+   {
+    "step": "Verify release bundle (strict, Linux)",
+    "seconds": 3
+   },
+   {
+    "step": "Upload release artifacts",
+    "seconds": 3
+   }
+  ]
+ },
+ {
+  "job": "web-smoke (required, py3.11)",
+  "seconds": 39,
+  "steps": [
+   {
+    "step": "Set up job",
+    "seconds": 3
+   },
+   {
+    "step": "Checkout",
+    "seconds": 7
+   },
+   {
+    "step": "Setup Python",
+    "seconds": 6
+   },
+   {
+    "step": "Install dependencies (web smoke)",
+    "seconds": 11
+   },
+   {
+    "step": "Build web target",
+    "seconds": 5
+   }
+  ]
+ },
+ {
+  "job": "installed (windows-latest, py3.11)",
+  "seconds": 162,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 10
+   },
+   {
+    "step": "Set up Python and a display (the checkout stays uninstalled)",
+    "seconds": 11
+   },
+   {
+    "step": "Installed-product check",
+    "seconds": 126
+   },
+   {
+    "step": "Upload the exported games' frames",
+    "seconds": 6
+   }
+  ]
+ },
+ {
+  "job": "installed (ubuntu-latest, py3.11)",
+  "seconds": 91,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 4
+   },
+   {
+    "step": "Set up Python and a display (the checkout stays uninstalled)",
+    "seconds": 10
+   },
+   {
+    "step": "Installed-product check",
+    "seconds": 68
+   },
+   {
+    "step": "Upload the exported games' frames",
+    "seconds": 4
+   }
+  ]
+ },
+ {
+  "job": "pytest (ubuntu-latest, py3.11)",
+  "seconds": 479,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 4
+   },
+   {
+    "step": "Set up Python, the project and a display",
+    "seconds": 19
+   },
+   {
+    "step": "Compile Python sources",
+    "seconds": 4
+   },
+   {
+    "step": "Run pytest (Linux)",
+    "seconds": 449
+   }
+  ]
+ },
+ {
+  "job": "verify (windows-latest, py3.11)",
+  "seconds": 360,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 9
+   },
+   {
+    "step": "Cache mypy cache",
+    "seconds": 3
+   },
+   {
+    "step": "Set up Python, the project and a display",
+    "seconds": 42
+   },
+   {
+    "step": "Compile Python sources",
+    "seconds": 7
+   },
+   {
+    "step": "Warm pytest's caches (collect only, no test runs)",
+    "seconds": 43
+   },
+   {
+    "step": "Run verify-all (Windows)",
+    "seconds": 208
+   },
+   {
+    "step": "Build release bundle (seeded, Windows)",
+    "seconds": 29
+   },
+   {
+    "step": "Verify release bundle (strict, Windows)",
+    "seconds": 3
+   },
+   {
+    "step": "Upload release artifacts",
+    "seconds": 4
+   }
+  ]
+ },
+ {
+  "job": "pytest (windows-latest, py3.11, shard 2/2)",
+  "seconds": 341,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 7
+   },
+   {
+    "step": "Set up Python, the project and a display",
+    "seconds": 35
+   },
+   {
+    "step": "Compile Python sources",
+    "seconds": 5
+   },
+   {
+    "step": "Run pytest (Windows, one shard)",
+    "seconds": 288
+   }
+  ]
+ },
+ {
+  "job": "tests (windows-latest, py3.11)",
+  "seconds": 10,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 4
+   }
+  ]
+ },
+ {
+  "job": "tests (ubuntu-latest, py3.11)",
+  "seconds": 8,
+  "steps": [
+   {
+    "step": "Checkout",
+    "seconds": 4
+   }
+  ]
+ }
+]

@@ -200,6 +200,15 @@ def exception_policy_scan():
     return scan(["engine", "mesh_cli", "tooling"], repo_root=Path(__file__).resolve().parent.parent)
 
 
+@pytest.fixture(scope="session")
+def verify_all_audit_artifacts(tmp_path_factory):
+    """The reports of one ``verify-all`` of this checkout, shared by the audit tests that only read them (#422: each
+    used to run its own, 16 whole verify-alls in one process). Read-only: no test writes into the folder."""
+    from tests._verify_all_audit import run_once
+
+    return run_once(tmp_path_factory.mktemp("verify_all_audit") / "artifacts")
+
+
 def _may_hold_fast_tests(path, seen: dict) -> bool:
     """Whether a test module can contain fast tests: it says "fast" somewhere (any case: marks, aliases, base classes),
     or it is one of the modules marked fast below. The full run checks this for every test (see the hook below)."""
