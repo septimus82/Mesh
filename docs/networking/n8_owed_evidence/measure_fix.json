@@ -2,39 +2,39 @@
  "checkout": "fix",
  "python": "3.13.3",
  "platform": "win32",
- "start_first_ms": 388.1,
- "start_again_ms": 179.2,
+ "start_first_ms": 391.2,
+ "start_again_ms": 178.5,
  "tick_8_in_hub_nothing_owed": {
   "n": 600,
-  "median_ms": 1.179,
-  "p95_ms": 1.378,
-  "max_ms": 2.247
+  "median_ms": 1.145,
+  "p95_ms": 1.361,
+  "max_ms": 2.376
  },
  "tick_expedition_nothing_owed": {
   "n": 300,
-  "median_ms": 0.069,
-  "p95_ms": 0.09,
-  "max_ms": 0.207
+  "median_ms": 0.068,
+  "p95_ms": 0.072,
+  "max_ms": 0.208
  },
  "owed_after_the_guardian": 4,
  "tick_store_failing_4_owed": {
   "n": 300,
-  "median_ms": 0.137,
-  "p95_ms": 0.161,
-  "max_ms": 0.266
+  "median_ms": 0.136,
+  "p95_ms": 0.173,
+  "max_ms": 0.426
  },
  "journal_write_4_completions": {
   "n": 60,
-  "median_ms": 5.06,
+  "median_ms": 4.982,
   "p95_ms": 5.656,
-  "max_ms": 6.147
+  "max_ms": 6.516
  },
  "owed_before_recovery": 244,
  "tick_recording_8_owed": {
   "n": 31,
-  "median_ms": 9.15,
-  "p95_ms": 9.916,
-  "max_ms": 10.688
+  "median_ms": 9.736,
+  "p95_ms": 12.299,
+  "max_ms": 13.073
  },
  "recovery_ticks": 31,
  "journal_bytes_after": 65536

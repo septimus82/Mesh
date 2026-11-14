@@ -18,7 +18,8 @@ is done (``ANSWER {...}``; so a test waits for an answer, never for a time):
 * ``{"op": "fault", "store": MODE, "journal": MODE}``: what the store's commit and the journal's write do from now on:
   ``null`` (work), ``"fail"`` (raise as a failing disk does), ``"exit"`` (the process dies there, ``os._exit``),
   ``"exit_after"`` (it dies just after the commit or the write is durable), and for the store ``"uncertain"`` (the
-  commit happens and the server is told it failed).
+  commit happens and the server is told it failed); for the journal ``"torn:F"`` (its next write takes fraction F of
+  its bytes and the process dies there: an append cut short).
 * ``{"op": "state"}``: what the world's ``Progress`` holds.
 * ``{"op": "step", "ticks": n}``: n more ticks at once.
 
@@ -74,6 +75,38 @@ def _mode(mode: Any, what: str) -> Any:
     return hook if mode else None
 
 
+def _die_mid_write(fraction: float) -> None:
+    """From now on the journal's next write takes only ``fraction`` of its bytes and the process dies there: an
+    append cut short by a crash, as the operating system would leave it."""
+    import builtins
+
+    from mesh_net import owed
+
+    class Dying:
+        def __init__(self, real: Any) -> None:
+            self.real = real
+
+        def write(self, data: Any) -> int:
+            self.real.write(bytes(data[: int(len(data) * fraction)]))
+            sys.stdout.flush()
+            os._exit(9)
+
+        def __enter__(self) -> Dying:
+            return self
+
+        def __exit__(self, *exc: Any) -> None:
+            self.real.close()
+
+        def __getattr__(self, name: str) -> Any:
+            return getattr(self.real, name)
+
+    def opened(path: Any, mode: str = "r", *args: Any, **kwargs: Any) -> Any:
+        real = builtins.open(path, mode, *args, **kwargs)
+        return Dying(real) if mode == "r+b" else real
+
+    setattr(owed, "open", opened)  # noqa: B010  # (the module's own name for the builtin: replaced for this process)
+
+
 def _state(world: World) -> dict[str, Any]:
     progress = world.progress
     assert progress is not None
@@ -116,7 +149,11 @@ def _handle(driver: Served, command: dict[str, Any]) -> dict[str, Any]:
     if op == "fault":
         progress.store.fault = _mode(command.get("store"), "store")
         assert progress.journal is not None
-        progress.journal.fault = _mode(command.get("journal"), "journal")
+        journal = command.get("journal")
+        if isinstance(journal, str) and journal.startswith("torn:"):
+            _die_mid_write(float(journal.split(":")[1]))
+        else:
+            progress.journal.fault = _mode(journal, "journal")
         return {}
     if op == "step":
         driver.step(int(command.get("ticks", 1)))

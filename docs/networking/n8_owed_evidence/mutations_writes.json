@@ -1,0 +1,147 @@
+{
+ "the write's count is ignored (the reviewed code: one write, then flush)": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "failing_tests": [
+   "test_a_failed_settlement_is_reconciled_and_nothing_owed_is_lost",
+   "test_a_journal_that_cannot_be_reconciled_takes_no_more_writes",
+   "test_a_journal_that_works_again_much_later_holds_only_what_is_still_owed",
+   "test_a_short_write_followed_by_an_error_fails_and_counts_nothing",
+   "test_a_short_write_in_a_batch_of_completions_is_finished_too",
+   "test_a_shorter_write_after_a_failed_one_does_not_damage_the_journal",
+   "test_a_write_that_makes_no_progress_fails_and_never_spins[a",
+   "test_a_write_that_makes_no_progress_fails_and_never_spins[none",
+   "test_a_write_that_makes_no_progress_fails_and_never_spins[some",
+   "test_a_write_that_never_completes_is_not_called_kept_and_a_restart_agrees",
+   "test_content_that_is_not_what_was_written_is_never_built_on_or_erased",
+   "test_kept_after_a_failed_then_retried_write_is_recorded_exactly_once",
+   "test_recorded_by_the_store_before_the_journal_worked_again_leaves_nothing_behind",
+   "test_short_writes_are_finished_before_the_record_counts[many]",
+   "test_short_writes_are_finished_before_the_record_counts[one]",
+   "test_short_writes_are_finished_before_the_record_counts[several]",
+   "test_the_player_is_told_kept_only_after_every_byte_is_written_and_flushed",
+   "test_the_same_entries_tried_again_after_a_failed_write_are_written_once"
+  ],
+  "summary": "18 failed, 31 passed in 27.46s"
+ },
+ "a write that takes nothing is not a failure (it is tried 3 more times, then called done)": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "failing_tests": [
+   "test_a_write_that_makes_no_progress_fails_and_never_spins[a",
+   "test_a_write_that_makes_no_progress_fails_and_never_spins[none",
+   "test_a_write_that_makes_no_progress_fails_and_never_spins[some",
+   "test_a_write_that_never_completes_is_not_called_kept_and_a_restart_agrees",
+   "test_short_writes_are_finished_before_the_record_counts[many]",
+   "test_short_writes_are_finished_before_the_record_counts[several]"
+  ],
+  "summary": "6 failed, 43 passed in 28.17s"
+ },
+ "the flush happens before the last byte is written": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "failing_tests": [
+   "test_a_journal_that_cannot_be_reconciled_takes_no_more_writes",
+   "test_a_shorter_write_after_a_failed_one_does_not_damage_the_journal",
+   "test_a_write_that_makes_no_progress_fails_and_never_spins[a",
+   "test_a_write_that_makes_no_progress_fails_and_never_spins[some",
+   "test_short_writes_are_finished_before_the_record_counts[many]",
+   "test_short_writes_are_finished_before_the_record_counts[one]",
+   "test_short_writes_are_finished_before_the_record_counts[several]",
+   "test_the_player_is_told_kept_only_after_every_byte_is_written_and_flushed"
+  ],
+  "summary": "8 failed, 41 passed in 28.26s"
+ },
+ "a failed append is not remembered (the next write starts at the same place, over what it left)": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "failing_tests": [
+   "test_a_failed_settlement_is_reconciled_and_nothing_owed_is_lost",
+   "test_a_journal_that_cannot_be_reconciled_takes_no_more_writes",
+   "test_a_journal_that_works_again_much_later_holds_only_what_is_still_owed",
+   "test_a_shorter_write_after_a_failed_one_does_not_damage_the_journal",
+   "test_a_whole_write_whose_flush_failed_is_not_taken_for_unwritten",
+   "test_content_that_is_not_what_was_written_is_never_built_on_or_erased",
+   "test_recorded_by_the_store_before_the_journal_worked_again_leaves_nothing_behind"
+  ],
+  "summary": "7 failed, 42 passed in 27.80s"
+ },
+ "a failed append is not finished before the next write": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "failing_tests": [
+   "test_a_failed_settlement_is_reconciled_and_nothing_owed_is_lost",
+   "test_a_journal_that_cannot_be_reconciled_takes_no_more_writes",
+   "test_a_journal_that_works_again_much_later_holds_only_what_is_still_owed",
+   "test_a_shorter_write_after_a_failed_one_does_not_damage_the_journal",
+   "test_a_whole_write_whose_flush_failed_is_not_taken_for_unwritten",
+   "test_content_that_is_not_what_was_written_is_never_built_on_or_erased",
+   "test_recorded_by_the_store_before_the_journal_worked_again_leaves_nothing_behind"
+  ],
+  "summary": "7 failed, 42 passed in 27.82s"
+ },
+ "a failed append is counted without being flushed": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "failing_tests": [
+   "test_a_failed_settlement_is_reconciled_and_nothing_owed_is_lost",
+   "test_a_journal_that_cannot_be_reconciled_takes_no_more_writes",
+   "test_a_journal_that_cannot_be_written_says_so_and_counts_nothing",
+   "test_a_journal_that_works_again_much_later_holds_only_what_is_still_owed",
+   "test_a_shorter_write_after_a_failed_one_does_not_damage_the_journal",
+   "test_a_write_that_never_completes_is_not_called_kept_and_a_restart_agrees",
+   "test_kept_after_a_failed_then_retried_write_is_recorded_exactly_once",
+   "test_recorded_by_the_store_before_the_journal_worked_again_leaves_nothing_behind",
+   "test_the_same_entries_tried_again_after_a_failed_write_are_written_once",
+   "test_when_the_journal_fails_too_the_player_is_told_it_is_not_saved_and_it_is_kept_as_soon_as_it_can_be"
+  ],
+  "summary": "10 failed, 39 passed in 27.30s"
+ },
+ "a failed append is written again from its start, whatever is there": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "failing_tests": [
+   "test_content_that_is_not_what_was_written_is_never_built_on_or_erased"
+  ],
+  "summary": "1 failed, 48 passed in 28.32s"
+ },
+ "content that is not this server's is written over": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "failing_tests": [
+   "test_content_that_is_not_what_was_written_is_never_built_on_or_erased"
+  ],
+  "summary": "1 failed, 48 passed in 27.94s"
+ },
+ "a record cut short is cleared front to back in one write": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "failing_tests": [
+   "test_clearing_a_record_cut_short_can_stop_anywhere_and_the_journal_stays_readable"
+  ],
+  "summary": "1 failed, 48 passed in 28.21s"
+ },
+ "an over-long unfinished end is taken for a record cut short": {
+  "file": "mesh_net/owed.py",
+  "caught": true,
+  "failing_tests": [
+   "test_an_unfinished_end_too_long_to_be_one_record_is_damage_not_a_crash_s_leftover"
+  ],
+  "summary": "1 failed, 48 passed in 28.15s"
+ },
+ "what the store recorded while the journal was failing is left in the journal": {
+  "file": "mesh_net/persistence.py",
+  "caught": true,
+  "failing_tests": [
+   "test_a_journal_that_works_again_much_later_holds_only_what_is_still_owed"
+  ],
+  "summary": "1 failed, 48 passed in 27.83s"
+ },
+ "only completions the journal had kept are settled": {
+  "file": "mesh_net/persistence.py",
+  "caught": false,
+  "failing_tests": [],
+  "summary": "49 passed in 28.05s",
+  "note": "equivalent, not a removed protection: the pass that settles whatever the journal holds that is no longer owed (the mutation before this one) settles the same records in the same call"
+ }
+}

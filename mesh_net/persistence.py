@@ -282,11 +282,28 @@ class Progress:
         else:
             self.unkept.difference_update(entries)
             told, code = entries, "unlock_owed"
+            self._settle_in_journal([])
         if world is not None:
             for entry in told:
                 pid = self.owner.get(entry.character)
                 if pid is not None:
                     world._notice(world.members[pid], code)
+
+    def _settle_in_journal(self, recorded: list[Owed]) -> None:
+        """Tell the journal what the store has recorded, and anything else it holds that is no longer owed: a journal
+        write that failed is finished later (mesh_net.owed), by when the store may have recorded what it was for.
+        If the journal cannot be written the completions are recorded all the same; the next start finds them owed
+        there and the store refuses to count them again."""
+        if self.journal is None:
+            return
+        try:
+            self.journal.settle(recorded)
+            stale = [e for e in self.journal.entries if e not in self.owed]
+            if stale:
+                self.journal.settle(stale)
+        except JournalError as exc:
+            logger.warning("[Mesh][Net] the journal of owed completions was not updated (%d recorded): %s",
+                           len(recorded), exc)
 
     def _record(self, world: World | None, limit: int | None = RECORDED_PER_TICK) -> None:
         """Record what is owed, oldest first, until the store fails again (it is still down: the rest wait too) or
@@ -322,13 +339,8 @@ class Progress:
                     world._notice(world.members[pid], "unlocked")
         if settled:
             self.owed = [e for e in self.owed if e not in settled]
-            kept = [e for e in settled if e not in self.unkept]
             self.unkept.difference_update(settled)
-            try:
-                if self.journal is not None:
-                    self.journal.settle(kept)
-            except JournalError as exc:  # recorded all the same; the next start finds them owed and settles them
-                logger.warning("[Mesh][Net] %d owed completions recorded, the journal not updated: %s", len(kept), exc)
+            self._settle_in_journal(settled)
         if self.unkept:  # what the journal could not take: try again, so that a stop loses nothing
             self._keep(world, [e for e in self.owed if e in self.unkept])
 
