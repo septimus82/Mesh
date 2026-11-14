@@ -1,0 +1,298 @@
+{
+  "size": [
+    1280,
+    720
+  ],
+  "spots": {
+    "cottage": "beside the cottage door",
+    "path": "on the path south-east of the cottage",
+    "centre": "the village centre"
+  },
+  "variants": {
+    "A": {
+      "label": "Starter cottage, starter hero (as shipped)",
+      "gl_after_load": {
+        "buffer": 1054,
+        "texture": 29,
+        "framebuffer": 3,
+        "program": 27
+      },
+      "hd2d_error": null,
+      "frame": {
+        "update_ms": 0.85,
+        "draw_cpu_ms": 4.12,
+        "hd2d_renderer_cpu_ms": 3.44,
+        "gpu_wait_ms": 1.66,
+        "frame_ms": 6.61,
+        "frame_ms_p95": 7.52,
+        "readback_ms": 5.33
+      },
+      "renderer": {
+        "draw_calls": 29,
+        "triangles": 1372,
+        "texture_bytes": 198656
+      },
+      "gl_after_reload": {
+        "buffer": 3952,
+        "texture": 40,
+        "framebuffer": 6,
+        "program": 27
+      },
+      "spots": {
+        "cottage": {
+          "feet_m": [
+            11.48,
+            8.55
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 82,
+          "player_visible_pct": 100.0,
+          "player_screen_px": [
+            569.8,
+            320.2
+          ],
+          "camera_target_m": [
+            12.59,
+            8.42,
+            0.8
+          ]
+        },
+        "path": {
+          "feet_m": [
+            13.52,
+            6.98
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 83,
+          "player_visible_pct": 99.0,
+          "player_screen_px": [
+            640.0,
+            268.4
+          ],
+          "camera_target_m": [
+            13.52,
+            8.42,
+            0.8
+          ]
+        },
+        "centre": {
+          "feet_m": [
+            20.0,
+            15.03
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 82,
+          "player_visible_pct": 99.0,
+          "player_screen_px": [
+            640.0,
+            322.1
+          ],
+          "camera_target_m": [
+            20.0,
+            14.84,
+            0.8
+          ]
+        }
+      }
+    },
+    "B": {
+      "label": "Pilot cottage, starter hero",
+      "gl_after_load": {
+        "buffer": 1058,
+        "texture": 31,
+        "framebuffer": 3,
+        "program": 27
+      },
+      "hd2d_error": null,
+      "frame": {
+        "update_ms": 0.82,
+        "draw_cpu_ms": 4.54,
+        "hd2d_renderer_cpu_ms": 3.85,
+        "gpu_wait_ms": 2.9,
+        "frame_ms": 8.26,
+        "frame_ms_p95": 11.65,
+        "readback_ms": 5.38
+      },
+      "renderer": {
+        "draw_calls": 31,
+        "triangles": 1508,
+        "texture_bytes": 230344
+      },
+      "gl_after_reload": {
+        "buffer": 3956,
+        "texture": 42,
+        "framebuffer": 6,
+        "program": 27
+      },
+      "spots": {
+        "cottage": {
+          "feet_m": [
+            11.48,
+            8.55
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 82,
+          "player_visible_pct": 100.0,
+          "player_screen_px": [
+            569.8,
+            320.2
+          ],
+          "camera_target_m": [
+            12.59,
+            8.42,
+            0.8
+          ]
+        },
+        "path": {
+          "feet_m": [
+            13.52,
+            6.98
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 83,
+          "player_visible_pct": 99.0,
+          "player_screen_px": [
+            640.0,
+            268.4
+          ],
+          "camera_target_m": [
+            13.52,
+            8.42,
+            0.8
+          ]
+        },
+        "centre": {
+          "feet_m": [
+            20.0,
+            15.03
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 82,
+          "player_visible_pct": 99.0,
+          "player_screen_px": [
+            640.0,
+            322.1
+          ],
+          "camera_target_m": [
+            20.0,
+            14.84,
+            0.8
+          ]
+        }
+      }
+    },
+    "C": {
+      "label": "Pilot cottage, pilot hero",
+      "gl_after_load": {
+        "buffer": 1058,
+        "texture": 31,
+        "framebuffer": 3,
+        "program": 27
+      },
+      "hd2d_error": null,
+      "frame": {
+        "update_ms": 0.82,
+        "draw_cpu_ms": 4.35,
+        "hd2d_renderer_cpu_ms": 3.68,
+        "gpu_wait_ms": 2.92,
+        "frame_ms": 8.1,
+        "frame_ms_p95": 11.56,
+        "readback_ms": 5.53
+      },
+      "renderer": {
+        "draw_calls": 31,
+        "triangles": 1508,
+        "texture_bytes": 230344
+      },
+      "gl_after_reload": {
+        "buffer": 3956,
+        "texture": 42,
+        "framebuffer": 6,
+        "program": 27
+      },
+      "spots": {
+        "cottage": {
+          "feet_m": [
+            11.48,
+            8.55
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 86,
+          "player_visible_pct": 100.0,
+          "player_screen_px": [
+            569.8,
+            320.2
+          ],
+          "camera_target_m": [
+            12.59,
+            8.42,
+            0.8
+          ]
+        },
+        "path": {
+          "feet_m": [
+            13.52,
+            6.98
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 87,
+          "player_visible_pct": 99.5,
+          "player_screen_px": [
+            640.0,
+            268.4
+          ],
+          "camera_target_m": [
+            13.52,
+            8.42,
+            0.8
+          ]
+        },
+        "centre": {
+          "feet_m": [
+            20.0,
+            15.03
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 88,
+          "player_visible_pct": 99.5,
+          "player_screen_px": [
+            640.0,
+            322.1
+          ],
+          "camera_target_m": [
+            20.0,
+            14.84,
+            0.8
+          ]
+        }
+      }
+    }
+  }
+}
