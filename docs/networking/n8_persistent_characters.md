@@ -206,11 +206,11 @@ Cost on the 20 Hz tick (50 ms), Windows, Python 3.13, NVMe (`n8_owed_evidence/me
 
 | | Before | Now |
 |---|---|---|
-| Tick, 8 characters in the hub, nothing owed | 1.15 ms median, 1.37 p95 | 1.15 ms median, 1.36 p95 (no added work: one check) |
+| Tick, 8 characters in the hub, nothing owed | 1.15 ms median, 1.37 p95 | 1.15 ms median, 1.34 p95 (no added work: one check) |
 | Tick with 4 completions owed, store failing | 0.29 ms (4 failed attempts) | 0.14 ms (1 attempt) |
-| The tick in which 4 completions become owed | no disk work | +5.0 ms median, 6.5 max: one journal write and `fsync` |
-| A tick recording 8 owed completions | 4.1 ms for 4, all at once however many | 9.7 ms median, 13.1 max (8 commits, one journal write) |
-| Server start (store + world) | 174 ms | 179 ms; 391 ms the first time (384 before), which makes the journal |
+| The tick in which 4 completions become owed | no disk work | +5.1 ms median, 6.7 max: one journal write and `fsync` |
+| A tick recording 8 owed completions | 4.1 ms for 4, all at once however many | 10.2 ms median, 14.2 max (8 commits, one journal write) |
+| Server start (store + world) | 174 ms | 168 ms; 388 ms the first time (384 before), which makes the journal |
 
 The journal write is on the tick thread on purpose, like commits: the completion must be durable before the frame
 that tells the player goes out. It happens only in a tick where the store has just failed.
@@ -274,7 +274,62 @@ them `test_a_whole_write_whose_flush_failed_is_not_taken_for_unwritten` with a j
 
 Cost: the same single write and single flush as before when the write is taken whole (the usual case): 5.0 ms
 median for four completions, as before (5.1). Finishing a failed append is one read of the journal's end and one
-write, in the next tick that writes to the journal. The figures in the table above are from the corrected code.
+write, in the next tick that writes to the journal.
+
+### Starting the journal over (second review of #510)
+
+Found in the second independent review: when nothing is owed the journal puts a fresh file in place of itself (make
+it, flush it, move it into place, flush the folder). If the folder flush failed after the move had happened, the
+error was swallowed and the journal kept the *old* file's position. The next completion was written at that position
+in the fresh, empty file; the player was told `unlock_owed`; and the next server refused the journal ("data after
+its end"). Reproduced before the fix (`n8_owed_evidence/reset_before_fix.json`): position in memory 484, file empty,
+second unlock told kept, restart refused.
+
+The folder flush is a POSIX step. Windows cannot open a folder to flush it and the journal does not try there, so
+this sequence is reachable on Linux and macOS servers, not on Windows ones. The steps before the move can fail on
+every platform (a refused move is what Windows answers while another program holds the file); those already left the
+journal consistent and are now tested.
+
+Now (`Journal._start_over`):
+
+- **What the journal believes is read back from the file that is there,** after every attempt, whichever step
+  failed. It is never assumed from the error.
+- **Failed before the move** (the fresh file could not be made or flushed, or the move was refused): the old file is
+  still the journal, whole; writing goes on after its records.
+- **Moved and the folder flushed:** the journal is empty; the next record is written at its beginning.
+- **Moved, the folder not flushed:** the fresh file is the journal, for this process and for any restart, and the
+  position is its beginning. But the move might not survive a power cut, and then neither would what is written to
+  the fresh file. So the next owed completion is still written there, whole and flushed (a killed server's successor
+  finds and records it), but it is not called kept: the player is told `unlock_not_kept` until the folder has been
+  flushed, which is tried again at every write, and then `unlock_owed`. A later start-over that works confirms it too.
+- **What is there cannot be read back as the empty journal it should be** (damaged, or holding a record): it takes no
+  more writes and is left exactly as found; completions are held in memory and said to be, no new expedition starts,
+  and the log says to stop the server and look at the file.
+- **Never while anything is owed:** the journal only starts over when every completion in it has been recorded in the
+  store, so no step of this can lose one.
+
+| Case | What happens | Test (`tests/test_mesh_net_owed_reset.py`) |
+|---|---|---|
+| Every step works | empty, position 0, next record first; a restart reads it | journal |
+| The fresh file cannot be made | old journal whole and in use; next completion after its records | journal; world and restart |
+| The fresh file's flush fails | the same | journal; world and restart |
+| The move is refused | the same | journal; world and restart |
+| Moved, folder flush fails (simulated POSIX) | position 0; next record at the start; `unlock_not_kept` until the folder flushes, then `unlock_owed` | journal; world and two restarts |
+| Server stopped while the folder still cannot be flushed | the next server records the completion, once | world and two restarts |
+| The same, a real server process, killed | restarts on a sound journal and records it, once | real killed process |
+| A later start-over works | the earlier one is confirmed | journal |
+| The fresh file cannot be read back / holds a record | no more writes; left as found; `unlock_not_kept`; no new expedition | journal; world |
+| Something still owed | never started over | journal |
+| The real folder flush fails (POSIX only) | as the simulated one | journal, on Linux |
+
+Against the reviewed code 12 of the 16 tests that run on Windows fail: 6 on behaviour (the stale position,
+`unlock_owed` where it was not true, the killed server's journal) and 6 only because they also check state the old
+journal did not have (`n8_owed_evidence/reset_tests_before_fix.txt`). Removing each protection of the corrected
+code fails them: 8 of 8 (`mutations_reset.json`); the earlier sets still hold on this code (20 of 20, and 11 of 12
+with the twelfth equivalent: `mutations_rerun.json`, `mutations_writes.json`).
+
+Cost: one read of the journal file (64 KiB) at each start-over, in the tick that settles the last owed completion.
+The figures in the table above were measured again on this code.
 
 ## What persists and what resets
 
@@ -304,6 +359,8 @@ recovery. These are deliberate limits of a local prototype, not of the store.
   death and the store's commit always could: nothing durable existed yet and nobody had been told.
 - The journal relies on `fsync` being honoured by the disk, and its space kept in advance helps only where files are
   overwritten in place (not on a copy-on-write file system). Power loss itself is not tested, only killed processes.
+  On Windows the folder is not flushed after the journal is started over (it cannot be): whether that move
+  survives a power cut is the file system's business there.
 - An owed completion is a notice, not a line on the character sheet (the sheet shows what the store holds).
 - A completion the store refuses for its own reason stays in the journal for good; while it is there the journal is
   not started over, so later records are appended after it (two short lines for each completion owed and settled).

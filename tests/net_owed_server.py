@@ -19,7 +19,8 @@ is done (``ANSWER {...}``; so a test waits for an answer, never for a time):
   ``null`` (work), ``"fail"`` (raise as a failing disk does), ``"exit"`` (the process dies there, ``os._exit``),
   ``"exit_after"`` (it dies just after the commit or the write is durable), and for the store ``"uncertain"`` (the
   commit happens and the server is told it failed); for the journal ``"torn:F"`` (its next write takes fraction F of
-  its bytes and the process dies there: an append cut short).
+  its bytes and the process dies there: an append cut short) and ``"folder"`` (when the journal is started over, the
+  fresh file is moved into place and flushing the folder fails: ``ResetFaults``).
 * ``{"op": "state"}``: what the world's ``Progress`` holds.
 * ``{"op": "step", "ticks": n}``: n more ticks at once.
 
@@ -152,6 +153,8 @@ def _handle(driver: Served, command: dict[str, Any]) -> dict[str, Any]:
         journal = command.get("journal")
         if isinstance(journal, str) and journal.startswith("torn:"):
             _die_mid_write(float(journal.split(":")[1]))
+        elif journal == "folder":  # starting the journal over: the move happens, flushing the folder fails
+            ResetFaults("folder_flush").install(setattr)
         else:
             progress.journal.fault = _mode(journal, "journal")
         return {}
@@ -347,6 +350,104 @@ def main() -> None:
     args = sys.argv[1:]
     replay_exit = int(args[args.index("--replay-exit") + 1]) if "--replay-exit" in args else None
     asyncio.run(_serve(Path(args[0]), replay_exit))
+
+
+
+
+FOLDER_FD = -7  # what the simulated folder "opens" as (never a real descriptor)
+
+
+class ResetFaults:
+    """Faults in the journal's start-over (``mesh_net.owed``: a fresh file written beside the journal, moved into
+    place, then the folder flushed), installed in that module's own names only.
+
+    ``fail`` names the step that fails: ``"temp_create"`` (the fresh file cannot be made), ``"temp_flush"`` (its flush
+    fails), ``"replace"`` (the move is refused, as Windows refuses it while another program holds the journal),
+    ``"folder_flush"`` (the move happened, flushing the folder fails), ``"scribble"`` (the move happened and something
+    else then wrote into the fresh file) or ``"foreign_record"`` (the same, and what it wrote is a whole journal
+    record, ``foreign``). ``None``: every step works. ``log`` is what happened, in order.
+
+    The folder flush is what POSIX systems do after a rename; Windows cannot open a folder to flush it and the journal
+    does not try there. So that the step can be driven on any machine it is **simulated** (``simulate_folder``): the
+    module sees a POSIX ``os`` whose folder opens as ``FOLDER_FD`` and whose flush of it works or fails as asked.
+    ``tests/test_mesh_net_owed_reset.py`` also fails the real one, where there is one."""
+
+    def __init__(self, fail: str | None = None, simulate_folder: bool = True) -> None:
+        self.fail = fail
+        self.simulate_folder = simulate_folder
+        self.log: list[str] = []
+        self.temp: set[int] = set()
+        self.foreign = b""  # what "foreign_record" writes: a whole journal record this server never wrote
+
+    def install(self, set_attribute: Any) -> ResetFaults:
+        """``set_attribute(module, name, value)``: pytest's ``monkeypatch.setattr``, or ``setattr`` in a process that
+        is about to be killed."""
+        import builtins
+
+        from mesh_net import owed
+
+        faults = self
+
+        class Os:
+            def __getattr__(self, name: str) -> Any:
+                return getattr(os, name)
+
+            @property
+            def name(self) -> str:
+                return "posix" if faults.simulate_folder else os.name
+
+            def open(self, path: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+                if faults.simulate_folder and Path(path).is_dir():
+                    return FOLDER_FD
+                return os.open(path, flags, *args, **kwargs)
+
+            def close(self, fd: int) -> None:
+                if fd != FOLDER_FD:
+                    os.close(fd)
+
+            def fsync(self, fd: int) -> None:
+                if fd == FOLDER_FD:
+                    if faults.fail == "folder_flush":
+                        faults.log.append("folder flush fails")
+                        raise OSError(5, "Input/output error")
+                    faults.log.append("folder flushed")
+                    return
+                if fd in faults.temp and faults.fail == "temp_flush":
+                    faults.log.append("fresh file's flush fails")
+                    raise OSError(5, "Input/output error")
+                os.fsync(fd)
+
+            def replace(self, source: Any, target: Any) -> None:
+                if faults.fail == "replace":
+                    faults.log.append("move refused")
+                    raise PermissionError(13, "Access is denied")
+                os.replace(source, target)
+                faults.log.append("moved into place")
+                if faults.fail == "scribble":
+                    with builtins.open(target, "r+b") as handle:
+                        handle.seek(100)
+                        handle.write(b"not a journal record\n")
+                    faults.log.append("something else wrote into it")
+                if faults.fail == "foreign_record":
+                    with builtins.open(target, "r+b") as handle:
+                        handle.write(faults.foreign)
+                    faults.log.append("something else wrote a record into it")
+
+        def opened(path: Any, mode: str = "r", *args: Any, **kwargs: Any) -> Any:
+            if mode == "wb":  # (only the fresh file is opened this way)
+                if faults.fail == "temp_create":
+                    faults.log.append("fresh file cannot be made")
+                    raise OSError(28, "No space left on device")
+                handle = builtins.open(path, mode, *args, **kwargs)
+                faults.temp.add(handle.fileno())
+                return handle
+            handle = builtins.open(path, mode, *args, **kwargs)
+            faults.temp.discard(handle.fileno())  # (a descriptor's number is reused once the fresh file is closed)
+            return handle
+
+        set_attribute(owed, "os", Os())
+        set_attribute(owed, "open", opened)
+        return self
 
 
 if __name__ == "__main__":

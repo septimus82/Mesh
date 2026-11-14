@@ -14,6 +14,9 @@ none of them.
 * **Space kept in advance.** The file is made ``RESERVED`` bytes long (zeros) when a server first opens the store,
   while the disk still takes writes, and records overwrite that space: a full disk, the likeliest reason for the
   store to fail, does not stop the journal on a file system that writes in place.
+* **Started over when nothing is owed,** by moving a fresh file into place. What the journal believes afterwards is
+  read back from the file that is there, whichever step failed (``Journal._start_over``); if the move happened but
+  the folder could not be flushed, what is written next is not called kept until it has been.
 * **Replay is safe to repeat.** A record names the character, the *run* that earned it, the completion and the
   unlock: the store's own key for "counted once" (``CharacterStore.complete``). Recording it again, after a crash
   during recovery or a commit whose outcome was never learned, is refused by the store as a duplicate. The store
@@ -161,19 +164,29 @@ def _clear(path: Path, start: int, end: int) -> None:
 
 
 def _make(path: Path) -> None:
-    """A new, empty journal with its space kept: written beside the store, then moved into place whole."""
+    """A new, empty journal with its space kept: written beside the store and flushed, then moved into place whole.
+    When this returns the file at ``path`` is the new one. If it raises, nothing was moved: whatever was at ``path``
+    is as it was."""
     fresh = path.with_name(path.name + ".new")
     with open(fresh, "wb") as handle:
         handle.write(b"\0" * RESERVED)
         handle.flush()
         os.fsync(handle.fileno())
     os.replace(fresh, path)
-    if os.name != "nt":  # make the rename durable where the folder itself must be flushed (Windows cannot open one)
-        fd = os.open(path.parent, os.O_RDONLY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+
+
+def _flush_folder(folder: Path) -> None:
+    """Make a move into ``folder`` durable where the platform needs the folder itself flushed for that. Not on
+    Windows, which cannot open a folder to flush it: there a move's survival of a power cut is the file system's own
+    business. (A move that happened is in place for this process and for any restart, flushed or not; the flush is
+    about a power cut, which nothing here tests.)"""
+    if os.name == "nt":
+        return
+    fd = os.open(folder, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 class Journal:
@@ -186,9 +199,15 @@ class Journal:
         # An append that failed part way: the bytes it was writing. What reached the disk is not known (some of them,
         # all of them unflushed), so nothing else is written until ``_finish`` has dealt with it.
         self.unfinished: bytes | None = None
+        # After the journal was started over (``_start_over``): its fresh file is in place but the folder could not
+        # be flushed (nothing in it is called kept until it has been: ``_confirm``); or what is there could not be
+        # read back as the journal it should be (why; it takes no more writes).
+        self.unconfirmed = False
+        self.unusable: str | None = None
         try:
             if not path.exists():
                 _make(path)
+                _flush_folder(path.parent)
             # (torn: bytes of a last record a crash cut short; that write never completed and nobody was told it had)
             self.entries, self.end, self.torn = read(path)
             if self.torn:
@@ -215,6 +234,8 @@ class Journal:
     def _append(self, data: bytes) -> None:
         """``data`` after the last record: every byte written and flushed when this returns, and counted. On a
         failure nothing is counted and the attempt is remembered: the next write finishes it first (``_finish``)."""
+        if self.unusable is not None:
+            raise JournalError(self.unusable)
         try:
             if self.fault:
                 self.fault("before_write")
@@ -259,12 +280,15 @@ class Journal:
         self._count(data)
 
     def owe(self, entries: Iterable[Owed]) -> None:
-        """Record completions as owed: all written and flushed when this returns (one write), or JournalError and
-        none of them counted."""
+        """Record completions as owed. When this returns they are written and flushed (one write) in a journal
+        whose place in its folder is confirmed: they can be called kept. Otherwise JournalError: either none of
+        them counts, or (after the journal was started over and its folder not flushed) they are written and count
+        but cannot be called kept yet; asking again later finds that out."""
         self._finish()
         new = [e for e in dict.fromkeys(entries) if e not in self.entries]
         if new:
             self._append(b"".join(_line("owed", e) for e in new))
+        self._confirm()
 
     def settle(self, entries: Iterable[Owed]) -> None:
         """These completions are recorded in the store: no longer owed. (A settlement lost to a crash is harmless:
@@ -273,12 +297,61 @@ class Journal:
         done = [e for e in dict.fromkeys(entries) if e in self.entries]
         if done:
             self._append(b"".join(_line("done", e) for e in done))
-        if not self.entries and self.end:  # nothing owed: a fresh file, so the space kept in advance is whole again
-            try:
-                _make(self.path)
-                self.end = 0
-            except OSError:
-                pass  # (no room for a fresh file now: the old one, complete and correct, goes on being appended to)
+        if not self.entries and self.end:
+            self._start_over()
+
+    def _start_over(self) -> None:
+        """Nothing is owed: a fresh file in place of this one, so the space kept in advance is whole again.
+
+        Whatever happens on the way, what this journal believes afterwards is read back from the file that is there,
+        not assumed from which step failed:
+
+        * The fresh file could not be made or moved into place: the old file is still the journal, whole, and writing
+          goes on after its records.
+        * It was moved into place and the folder flushed: the journal is empty and writing starts at its beginning.
+        * It was moved into place but the folder could not be flushed: the same, for this process and for any
+          restart. But the move might not survive a power cut, and then neither would anything written to the fresh
+          file. So what is owed next is still written there (a killed server's successor finds it), but it is not
+          called kept until the folder has been flushed (``_confirm``, at the end of every ``owe``).
+        * What is there cannot be read as the empty journal it should be: it takes no more writes (``unusable``),
+          and is left as found."""
+        replaced = flushed = False
+        try:
+            _make(self.path)
+            replaced = True
+            _flush_folder(self.path.parent)
+            flushed = True
+        except OSError:
+            pass  # (which step failed is in the two flags; what the file is now is read back below)
+        if flushed:
+            self.unconfirmed = False
+        elif replaced:
+            self.unconfirmed = True
+        try:
+            entries, end, torn = read(self.path)
+        except JournalError as exc:
+            self.unusable = f"{exc} Found after the journal was started over; nothing more is written to it."
+            return
+        if entries or torn:
+            self.unusable = (f"the journal of owed completions {self.path} holds records it should not after being "
+                             "started over. Nothing was changed and nothing more is written to it; stop the server "
+                             "and look at the file (python -m mesh_net.characters owed STORE)")
+            return
+        self.end = end
+
+    def _confirm(self) -> None:
+        """The journal was started over and its folder not flushed since: flush it now. Raises JournalError while
+        that fails: what is in the fresh file is there for a restart, but would not be sure to survive a power cut,
+        so the caller does not call it kept."""
+        if not self.unconfirmed:
+            return
+        try:
+            _flush_folder(self.path.parent)
+        except OSError as exc:
+            raise JournalError(f"the journal of owed completions {self.path} was started over and its folder cannot "
+                               f"be flushed ({exc}): what is written to it is there for a restart but might not "
+                               "survive a power cut") from exc
+        self.unconfirmed = False
 
 
 def describe(store: str | Path) -> list[dict[str, Any]]:
