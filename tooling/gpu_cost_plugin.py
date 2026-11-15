@@ -1,0 +1,148 @@
+"""A pytest plugin for measurement only (nothing in the repository is changed): for each test of the gpu lane, how long
+its setup, call and teardown took and, inside them, how much went to Studio rebuilding its panels, to frames drawn by
+the test drivers, to opening Studio or a game window, and to subprocesses.
+
+    PYTHONPATH=<this folder> pytest -p gpu_cost_plugin ...   (GPU_COST_OUT=<file.json>)
+"""
+import collections
+import json
+import os
+import subprocess
+import sys
+import time
+
+current = {"test": None, "phase": None}
+cost: dict = collections.defaultdict(lambda: collections.defaultdict(float))
+depth: collections.Counter = collections.Counter()
+
+
+def key() -> str:
+    return f"{current['test']}|{current['phase']}"
+
+
+def wrap(owner, name, label, count_arg=None):
+    real = getattr(owner, name)
+
+    def timed(*a, **k):
+        outer = depth[label] == 0
+        depth[label] += 1
+        start = time.perf_counter()
+        try:
+            return real(*a, **k)
+        finally:
+            depth[label] -= 1
+            if outer:  # (re-entrant calls counted once)
+                c = cost[key()]
+                c[label + "_s"] += time.perf_counter() - start
+                n = 1
+                if count_arg is not None:
+                    n = k.get(count_arg, a[1] if len(a) > 1 else 1)
+                c[label + "_n"] += n
+
+    timed.__wrapped__ = real
+    setattr(owner, name, timed)
+
+
+wrapped: set = set()
+
+
+def instrument() -> None:
+    """Wrap whatever of the drivers is imported by now (tests import them lazily)."""
+    studio = sys.modules.get("engine.studio")
+    if studio is not None and "rebuild" not in wrapped and hasattr(studio, "Studio"):
+        wrap(studio.Studio, "_rebuild", "rebuild")
+        wrapped.add("rebuild")
+    for mod_name, cls_name, method, label, arg in (
+            ("hd2d_studio_demo", "StudioDriver", "advance", "studio_frames", "n"),
+            ("hd2d_studio_demo", "StudioDriver", "__init__", "studio_open", None),
+            ("hd2d_demo", "HiddenGame", "__init__", "window_open", None),
+            ("hd2d_demo", "HiddenGame", "step", "game_frames", "n"),
+            ("hd2d_demo", "HiddenGame", "close", "window_close", None)):
+        mod = sys.modules.get(mod_name)
+        tag = f"{mod_name}.{cls_name}.{method}"
+        cls = getattr(mod, cls_name, None) if mod is not None else None
+        if cls is not None and tag not in wrapped and hasattr(cls, method):
+            wrap(cls, method, label, arg)
+            wrapped.add(tag)
+
+
+real_run = subprocess.run
+
+
+def run(*a, **k):
+    start = time.perf_counter()
+    try:
+        return real_run(*a, **k)
+    finally:
+        c = cost[key()]
+        c["subprocess_s"] += time.perf_counter() - start
+        c["subprocess_n"] += 1
+
+
+subprocess.run = run
+
+
+class Tracer:
+    """Instruments lazily: a cheap check at each function call of the test's own frames is too costly, so the drivers
+    are looked for when a fixture or test starts and again whenever a module is imported."""
+
+
+def pytest_runtest_logstart(nodeid, location):
+    current["test"] = nodeid
+
+
+def pytest_fixture_setup(fixturedef, request):
+    instrument()
+
+
+def pytest_runtest_setup(item):
+    current["test"], current["phase"] = item.nodeid, "setup"
+    instrument()
+
+
+def pytest_runtest_call(item):
+    current["phase"] = "call"
+    instrument()
+
+
+def pytest_runtest_teardown(item):
+    current["phase"] = "teardown"
+
+
+durations: dict = collections.defaultdict(dict)
+
+
+def pytest_runtest_logreport(report):
+    durations[report.nodeid][report.when] = report.duration
+    durations[report.nodeid]["outcome_" + report.when] = report.outcome
+
+
+real_import = __builtins__["__import__"] if isinstance(__builtins__, dict) else __builtins__.__import__
+
+
+def importer(name, *a, **k):
+    module = real_import(name, *a, **k)
+    if name in ("hd2d_studio_demo", "hd2d_demo") or name.startswith("engine.studio"):
+        instrument()
+    return module
+
+
+if isinstance(__builtins__, dict):
+    __builtins__["__import__"] = importer
+else:
+    __builtins__.__import__ = importer
+
+
+def pytest_sessionfinish(session, exitstatus):
+    out = os.environ.get("GPU_COST_OUT") or os.path.join("artifacts", "gpu_cost", f"cost_{sys.platform}.json.log")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    tests = {}
+    for nodeid, d in durations.items():
+        entry = dict(d)
+        for phase in ("setup", "call", "teardown"):
+            c = cost.get(f"{nodeid}|{phase}")
+            if c:
+                entry[phase + "_cost"] = {k: round(v, 3) for k, v in c.items()}
+        tests[nodeid] = entry
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump({"exit": int(exitstatus), "wrapped": sorted(wrapped), "tests": tests}, f, indent=1)

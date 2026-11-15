@@ -334,6 +334,8 @@ def main(argv: list[str] | None = None) -> int:
              else repo_root / "artifacts" / f"pytest_{args.tier}.xml")
     pytest_cmd += [f"--junitxml={junit}", "-rfEs"]
     gl_tier = dict(tier_cfg.env).get("MESH_GL_SMOKE") == "1"
+    if gl_tier:  # EVIDENCE BRANCH ONLY (never merged): what each test's time goes to (tooling/gpu_cost_plugin.py)
+        pytest_cmd += ["-p", "tooling.gpu_cost_plugin"]
     renderer = gl_renderer() if gl_tier else None
     runner = {"before": runner_calibration()} if tier_cfg.calibrate else None
     rc = _run(pytest_cmd, cwd=repo_root, env=_tier_env(tier_cfg, renderer))
