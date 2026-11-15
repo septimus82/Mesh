@@ -136,6 +136,9 @@ class Project:
         self.player_dirty = False
         self.ids_seen: set[str] = set()  # every object id this session (#462 S1-ID): a new object never gets one
         self._as_read: dict[str, Doc] = {}  # each room as first read (#462 S2): what every state before that holds
+        # The newest copy the undo history holds of each room, with its pickle: the next undo step holds the same
+        # copy if the room is byte for byte what it was (``_freeze``). Never the room being edited itself.
+        self._frozen: dict[str, tuple[bytes, Doc]] = {}
         # #462 S4: every room key this session (a new room never gets one: a stale proposal or redo may name it), the
         # map files it made (_norm -> (path, bytes as made): the only files it ever removes, and only unchanged) and
         # those of them a save has used (part of the person's saved project then: never removed). Map files Mesh made
@@ -202,7 +205,8 @@ class Project:
             with ops.retired_ids(()):  # (an older room's missing ids are filled in as always, whenever it is read)
                 self.scenes[key] = ops.ensure_entity_ids(raw, key)
             self.ids_seen.update(_ids(self.scenes[key]))
-            self._as_read.setdefault(key, _copy(self.scenes[key]))
+            if key not in self._as_read:  # (the copy every undo step holds too, until the room is first changed)
+                self._as_read[key] = self._freeze(key, self.scenes[key])
         return self.scenes[key]
 
     def _store(self, key: str, doc: Doc, player_ids: list[str]) -> None:
@@ -325,16 +329,50 @@ class Project:
         return differences
 
     # --- editing ----------------------------------------------------------------------------
-    def _snapshot(self) -> _State:
-        return _State(_copy(self.world), _copy(self.scenes), self.current, frozenset(self.dirty),
-                      self.world_dirty, _copy(self.player), self.player_dirty)
+    def _freeze(self, key: str, room: Doc) -> Doc:
+        """The undo history's own copy of a room as it is now: never the room itself, so nothing done to the room
+        afterwards (even in place) reaches it. The same copy as last time when the room is byte for byte what it
+        was then, so the steps of a history share one copy of every room they did not change, instead of each
+        holding its own of every room that is open.
 
-    def _restore(self, state: _State) -> None:
+        "What it was" is its pickle compared with the pickle of the copy: exact, including what ``==`` lets pass
+        (1, 1.0 and True; the order of keys). A room that will not pickle gets a copy of its own, as it always
+        did."""
+        try:
+            data = pickle.dumps(room, protocol=pickle.HIGHEST_PROTOCOL)
+        except (pickle.PicklingError, TypeError, AttributeError):
+            return copy.deepcopy(room)
+        held = self._frozen.get(key)
+        if held is not None and held[0] == data:
+            return held[1]
+        frozen: Doc = pickle.loads(data)
+        self._frozen[key] = (data, frozen)
+        return frozen
+
+    def _thaw(self, key: str, frozen: Doc) -> Doc:
+        """A room to edit, from the history's copy of it (which stays the history's: ``_freeze`` finds it again as
+        long as the room is not changed)."""
+        try:
+            data = pickle.dumps(frozen, protocol=pickle.HIGHEST_PROTOCOL)
+        except (pickle.PicklingError, TypeError, AttributeError):
+            return copy.deepcopy(frozen)
+        self._frozen[key] = (data, frozen)
+        room: Doc = pickle.loads(data)
+        return room
+
+    def _snapshot(self) -> _State:
+        return _State(_copy(self.world), {key: self._freeze(key, room) for key, room in self.scenes.items()},
+                      self.current, frozenset(self.dirty), self.world_dirty, _copy(self.player), self.player_dirty)
+
+    def _restore(self, state: _State, now: _State | None = None) -> None:
+        """``now``: a snapshot taken just before, nothing changed since (undo and redo). A room whose copy in
+        ``state`` is the very one in ``now`` is what it is to become already: it is left as it is."""
         self.world = _copy(state.world)
-        self.scenes = _copy(state.scenes)
+        self.scenes = {key: self.scenes[key] if now is not None and key in self.scenes and now.scenes.get(key) is room
+                       else self._thaw(key, room) for key, room in state.scenes.items()}
         for key in state.world.get("scenes") or {}:  # a room first read since (by an edit, a batch, the door tool):
             if key not in self.scenes and key in self._as_read:  # as read then, never read again from disk, where a
-                self.scenes[key] = _copy(self._as_read[key])  # save since may have written the edit undone (#462 S2)
+                self.scenes[key] = self._thaw(key, self._as_read[key])  # save since may have written the edit undone (#462 S2)
         self.current = state.current
         self.dirty = set(state.dirty)
         self.world_dirty = state.world_dirty
@@ -393,6 +431,7 @@ class Project:
         copy_._seen_on_disk = dict(self._seen_on_disk)  # (a room loaded first in the copy records when it was read)
         copy_.ids_seen = set(self.ids_seen)  # (a dry run's new objects get the ids the real edit would, then)
         copy_._as_read = dict(self._as_read)
+        copy_._frozen = dict(self._frozen)  # (the history's copies are never changed: a dry run may hold the same ones)
         copy_.keys_seen = set(self.keys_seen)  # (a dry run's new room gets the key the real edit would)
         copy_._made, copy_._saved_maps, copy_.kept_files, copy_._disk_uncertain = {}, set(), [], False
         return copy_
@@ -920,9 +959,10 @@ class Project:
         if not self._undo:
             return False
         self._ready_maps(self._undo[-1])  # (#462 S4: OpError, and nothing changed, if a room's map can't be)
-        self._redo.append(self._snapshot())
+        now = self._snapshot()
+        self._redo.append(now)
         self.keys_seen.update(self.world.get("scenes") or {})
-        self._restore(self._undo.pop())
+        self._restore(self._undo.pop(), now)
         self.revision += 1
         return True
 
@@ -930,9 +970,10 @@ class Project:
         if not self._redo:
             return False
         self._ready_maps(self._redo[-1])  # (#462 S4: OpError, and nothing changed, if a room's map can't be)
-        self._undo.append(self._snapshot())
+        now = self._snapshot()
+        self._undo.append(now)
         self.keys_seen.update(self.world.get("scenes") or {})
-        self._restore(self._redo.pop())
+        self._restore(self._redo.pop(), now)
         self.revision += 1
         return True
 
