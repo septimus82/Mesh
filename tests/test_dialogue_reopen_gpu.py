@@ -47,6 +47,15 @@ def test_reopening_shows_the_same_numbers_openings_and_next_line_button(report: 
     assert written["shown"]["openings"] == ["11"] and written["shown"]["next_line_button"] == ["+ Next line (after 11)"]
 
 
+def test_each_look_at_the_conversation_reads_the_whole_inspector_once(report: dict) -> None:
+    """Written, reopened, edited, another room and back, reopened, and saved and reopened twice more: six looks, each
+    the whole inspector from its top to its bottom (it shows part at a time), none of them made twice."""
+    reads = report["inspector_reads"]
+    assert len(reads) == 6, reads
+    assert all(read["from_top"] and read["to_bottom"] for read in reads), reads
+    assert all(read["positions"] > 1 for read in reads), "the conversation is longer than the inspector shows at once"
+
+
 def test_a_line_added_at_the_end_after_reopening_follows_the_last_line(report: dict) -> None:
     assert report["B_add_line_at_the_end_follows"] == ["Back already? Is it lit?"]
 

@@ -1,0 +1,41 @@
+{
+ "total_s": 161.2,
+ "rebuilds": {
+  "n": 359,
+  "s": 89.93010619981214
+ },
+ "frames": {
+  "n": 514,
+  "s": 30.552731500880327
+ },
+ "notches_total": 256,
+ "notches": {
+  "line 228 label_of up": 9,
+  "line 229 label_of up": 8,
+  "line 229 label_of down": 1,
+  "line 231 label_of up": 1,
+  "line 235 label_of up": 12,
+  "line 235 label_of down": 11,
+  "line 241 label_of up": 13,
+  "line 241 label_of down": 10,
+  "line 244 shown up": 28,
+  "line 244 shown down": 15,
+  "line 250 shown down": 8,
+  "line 250 shown up": 8,
+  "line 262 label_of up": 11,
+  "line 264 label_of up": 7,
+  "line 264 label_of down": 9,
+  "line 266 label_of up": 9,
+  "line 266 label_of down": 8,
+  "line 275 shown up": 16,
+  "line 275 shown down": 8,
+  "line 278 shown down": 8,
+  "line 278 shown up": 8,
+  "line 286 shown down": 8,
+  "line 286 shown up": 8,
+  "line 289 shown down": 8,
+  "line 289 shown up": 8,
+  "line 296 shown down": 8,
+  "line 296 shown up": 8
+ }
+}
