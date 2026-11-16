@@ -1,0 +1,56 @@
+"""After every test of the given modules: event loops left open, tasks left unfinished, sockets left open, child
+processes left running. Measurement only. Usage: py leak_check.py <repo> <out.json> <test paths...>"""
+import asyncio
+import gc
+import json
+import os
+import socket
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+repo = Path(sys.argv[1])
+os.chdir(repo)
+sys.path.insert(0, str(repo))
+rows = []
+
+
+def children() -> list[str]:
+    """This process's child processes still running (asked once, at the end)."""
+    if os.name == "nt":
+        cmd = ["powershell", "-NoProfile", "-Command",
+               f"Get-CimInstance Win32_Process -Filter 'ParentProcessId={os.getpid()}' | ForEach-Object {{ $_.Name }}"]
+        names = subprocess.run(cmd, capture_output=True, text=True).stdout.split()
+        return [n for n in names if n.lower() not in ("powershell.exe", "conhost.exe")]
+    return subprocess.run(["pgrep", "-P", str(os.getpid())], capture_output=True, text=True).stdout.split()[:-1]
+
+
+class Leaks:
+    @pytest.hookimpl(trylast=True)
+    def pytest_runtest_teardown(self, item):
+        gc.collect()
+        loops = tasks = sockets = 0
+        for obj in gc.get_objects():
+            try:
+                if isinstance(obj, asyncio.AbstractEventLoop) and not obj.is_closed():
+                    loops += 1
+                elif isinstance(obj, asyncio.Task) and not obj.done():
+                    tasks += 1
+                elif isinstance(obj, socket.socket) and obj.fileno() != -1:
+                    sockets += 1
+            except ReferenceError:
+                pass
+        rows.append({"test": item.nodeid, "open_loops": loops, "unfinished_tasks": tasks, "open_sockets": sockets})
+
+
+code = pytest.main(["-o", "addopts=", "-q", "-p", "no:cacheprovider", "-W", "error", "--strict-markers", *sys.argv[3:]],
+                   plugins=[Leaks()])
+bad = [r for r in rows if r["open_loops"] or r["unfinished_tasks"] or r["open_sockets"]]
+left = children()
+Path(sys.argv[2]).write_text(json.dumps({"exit": int(code), "tests": len(rows), "with_leftovers": bad,
+                                         "child_processes_at_end": left}, indent=1), encoding="utf-8")
+print(f"exit {int(code)}; {len(rows)} tests; {len(bad)} with a loop, task or socket left behind; child processes at the end: {left}")
+for r in bad[:20]:
+    print("  ", r)

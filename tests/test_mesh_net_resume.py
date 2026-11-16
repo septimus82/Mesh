@@ -6,7 +6,12 @@ the probe still answering with the old session.
 The first test reproduces Extended 43049464084 from its own numbers: N7's wait ("Layer 2, one player", after R)
 takes the pre-drop reply, and the window then draws its resumed avatar instead. The rest require the new wait to
 return the resumed session, and to fail when the resume, the identity, the room, the restored state or the window
-process is wrong."""
+process is wrong.
+
+These world tests run on simulated time (tests/net_sim_time.py): the window's 5 ms frames, its 150 ms close, the
+helper's 25 ms polls and its timeouts share one simulated clock, so the close still outlasts the replies that
+follow F2 (the race) without the test waiting for it. The N6 tests further down keep real time: their server,
+connection and client session are real."""
 
 import asyncio
 import copy
@@ -17,6 +22,7 @@ import pytest
 from mesh_net.scene_room import disposable_project
 from mesh_net.world import World, expedition_files
 from tests.net_resume import POLL, drop_and_resume, drop_and_resume_scene
+from tests.net_sim_time import run as simulated
 
 pytestmark = pytest.mark.integration
 LAYER_2, GUARDIAN = "ancient_ruins_layer_2", "ancient_ruins_layer_2_guardian_480_256_0_0"
@@ -41,7 +47,8 @@ def staged():
 class QueuedWindow:
     """One world window: ``command`` answers at once (the probe), keys wait for the next frame of ``run`` (the
     window's loop). ``fault``: "no_resume" (R does nothing), "fresh" (R joins as a new player), "wrong_room" (the
-    window shows another room than its enter named), "stale_state" (the window keeps its pre-drop state),
+    window shows another room than its enter named), "wrong_entity" (the window says it is another avatar than the
+    server gave it), "stale_state" (the window keeps its pre-drop state),
     "stale_avatar" (the scene keeps drawing the pre-drop avatar), "exit" (the window process dies at R)."""
 
     def __init__(self, world, pid, token, fault=None):
@@ -81,7 +88,7 @@ class QueuedWindow:
                 room, eid, enter = self.pending
                 assert enter["type"] == "enter" and enter["entity"] == eid
                 self.room = "elsewhere:9" if self.fault == "wrong_room" else room
-                self.entity, self.key = eid, self.world.instances[room].key
+                self.entity, self.key = (eid + 100 if self.fault == "wrong_entity" else eid), self.world.instances[room].key
                 if self.fault != "stale_state":
                     self.state = enter["state"]
             elif self.pending is not None:  # the next frame loads and shows it
@@ -97,7 +104,7 @@ def play(window, driver):
             return await driver()
         finally:
             task.cancel()
-    return asyncio.run(main())
+    return simulated(main())
 
 
 def test_the_old_wait_takes_the_pre_drop_reply():
@@ -148,6 +155,7 @@ def test_the_new_wait_returns_the_resumed_session():
     ("no_resume", "the resumed session not reached"),
     ("fresh", "the resumed session not reached"),  # another player id: this one never comes back
     ("wrong_room", "the resumed session not reached"),
+    ("wrong_entity", "the resumed session not reached"),  # a new avatar, but not the one the server gave this player
     ("stale_state", "the resumed session not reached"),
 ])
 def test_the_new_wait_fails_when_the_resume_is_wrong(fault, match):

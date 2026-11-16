@@ -1,0 +1,59 @@
+3 run(s), 218 tests
+
+module totals (s): each run | median | spread
+    17.33   0.07  test_mesh_net_owed  [17.38, 17.33, 17.31]
+    16.14   0.06  test_mesh_net_world  [16.14, 16.2, 16.13]
+    11.40   0.08  test_mesh_net_resume  [11.45, 11.4, 11.37]
+     7.71   0.04  test_mesh_net_characters  [7.71, 7.71, 7.75]
+     6.00   0.13  test_mesh_net_owed_reset  [6.1, 5.97, 6.0]
+     5.05   0.11  test_mesh_net_owed_writes  [5.13, 5.02, 5.05]
+     3.20   0.04  test_mesh_net_scene  [3.21, 3.17, 3.2]
+     3.08   0.01  test_mesh_net_walk  [3.09, 3.08, 3.08]
+     2.90   0.12  test_mesh_net  [3.01, 2.88, 2.9]
+     0.89   0.01  test_mesh_net_sim_time  [0.89, 0.88, 0.89]
+     0.66   0.00  test_mesh_net_downlink  [0.66, 0.66, 0.66]
+     0.26   0.00  test_mesh_net_encounter  [0.26, 0.26, 0.26]
+     0.01   0.00  test_mesh_net_playback  [0.01, 0.01, 0.01]
+    74.61   0.46  ALL  [75.04, 74.58, 74.61]
+
+tests over 0.5 s (median s | spread | test)
+    4.12   0.01  test_mesh_net_world::test_two_clients_travel_reconnect_and_return_over_sockets
+    2.79   0.03  test_mesh_net_owed::test_a_server_killed_with_unlocks_owed_loses_none_of_them
+    2.77   0.12  test_mesh_net_owed_reset::test_a_server_killed_after_such_a_start_over_restarts_and_records_what_was_owed
+    2.73   0.01  test_mesh_net_owed_writes::test_a_server_killed_in_the_middle_of_an_append_restarts_on_a_sound_journal
+    2.25   0.01  test_mesh_net_world::test_a_failing_world_closes_the_server_instead_of_freezing
+    2.00   0.04  test_mesh_net_owed::test_a_server_killed_while_recording_what_was_owed_still_counts_each_once
+    1.85   0.02  test_mesh_net_owed::test_a_server_dying_at_the_moment_a_completion_becomes_owed[after a commit reported as failed]
+    1.84   0.02  test_mesh_net_owed::test_a_server_dying_at_the_moment_a_completion_becomes_owed[after the journal write]
+    1.82   0.11  test_mesh_net::test_step_owns_distance_and_old_inputs_expire
+    1.82   0.05  test_mesh_net_owed::test_a_server_dying_at_the_moment_a_completion_becomes_owed[before the journal write]
+    1.81   0.03  test_mesh_net_owed::test_with_store_and_journal_both_failing_the_loss_is_said_never_silent
+    1.79   0.01  test_mesh_net_characters::test_one_server_per_store_and_backups
+    1.75   0.00  test_mesh_net_resume::test_n6_stale_entity_after_resume_is_refused
+    1.45   0.03  test_mesh_net_resume::test_n6_new_wait_fails_closed[ignore_r-the resumed session not reached]
+    1.42   0.00  test_mesh_net_resume::test_n6_new_wait_fails_closed[ignore_f2-the disconnect not reached]
+    1.42   0.00  test_mesh_net_resume::test_n6_new_wait_fails_closed[lying-the disconnect not reached]
+    1.35   0.02  test_mesh_net_world::test_committed_world_is_a_fresh_studio_build
+    1.11   0.00  test_mesh_net_resume::test_n6_new_wait_fails_closed[stale-the disconnect not reached]
+    1.11   0.02  test_mesh_net_world::test_leaving_ends_the_session_even_if_a_cancellation_is_swallowed
+    0.93   0.01  test_mesh_net_world::test_unknown_or_unreachable_destinations_are_refused_at_load
+    0.92   0.02  test_mesh_net_owed::test_the_shipped_server_records_what_is_owed_when_it_starts
+    0.86   0.02  test_mesh_net_owed::test_far_more_than_the_old_queue_held_is_kept_and_recorded_a_few_a_tick
+    0.83   0.00  test_mesh_net_resume::test_n6_new_wait_fails_closed[fresh-unexpected join]
+    0.83   0.05  test_mesh_net_resume::test_n6_new_wait_returns_the_resumed_session
+    0.76   0.01  test_mesh_net_owed::test_the_shipped_server_refuses_a_damaged_journal_and_changes_nothing
+    0.73   0.01  test_mesh_net_world::test_world_authority_runs_without_graphics
+    0.71   0.01  test_mesh_net_characters::test_the_admin_command_never_prints_a_key
+    0.70   0.00  test_mesh_net_characters::test_the_admin_command_never_leaves_a_character_without_its_key
+    0.68   0.01  test_mesh_net_owed::test_a_new_server_records_what_an_earlier_one_owed_once_however_often_it_starts
+    0.62   0.00  test_mesh_net_downlink::test_release_and_attack_reach_authority_during_nine_tick_downlink_pause
+    0.58   0.01  test_mesh_net_scene::test_authority_runs_without_graphics_or_studio
+    0.56   0.02  test_mesh_net_scene::test_server_tiles_are_the_engines_tiles
+    0.54   0.00  test_mesh_net_owed_reset::test_after_a_start_over_whose_folder_flush_failed_the_next_unlock_is_not_called_kept_and_is_not_lost
+    0.54   0.01  test_mesh_net_owed_reset::test_after_a_start_over_that_failed_before_the_move_the_next_unlock_is_kept_and_recovered[replace]
+    0.54   0.01  test_mesh_net_owed_reset::test_after_a_start_over_that_failed_before_the_move_the_next_unlock_is_kept_and_recovered[temp_flush]
+    0.54   0.01  test_mesh_net_owed_reset::test_a_server_stopped_while_the_folder_still_cannot_be_flushed_loses_nothing_on_restart
+    0.54   0.01  test_mesh_net_owed_writes::test_kept_after_a_failed_then_retried_write_is_recorded_exactly_once
+    0.53   0.00  test_mesh_net_owed_reset::test_after_a_start_over_that_failed_before_the_move_the_next_unlock_is_kept_and_recovered[temp_create]
+    0.53   0.01  test_mesh_net_sim_time::test_events_come_in_the_order_and_at_the_times_real_time_gives_them
+    0.52   0.02  test_mesh_net_scene::test_unsupported_scenes_are_refused

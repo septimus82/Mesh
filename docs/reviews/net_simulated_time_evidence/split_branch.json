@@ -1,0 +1,1594 @@
+[
+ {
+  "test": "test_mesh_net_walk::test_the_old_driver_reproduces_both_failures[N7 Layer 1 (Extended 43008772085)]",
+  "outcome": "passed",
+  "wall_s": 0.422,
+  "ticks": 67,
+  "tick_cpu_s": 0.009,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.001": {
+    "count": 1341,
+    "real_s": 0.029
+   },
+   "0.02": {
+    "count": 68,
+    "real_s": 0.021
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_the_old_driver_reproduces_both_failures[N6 co-op scene (Extended 43016671504)]",
+  "outcome": "passed",
+  "wall_s": 0.098,
+  "ticks": 69,
+  "tick_cpu_s": 0.012,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.001": {
+    "count": 1381,
+    "real_s": 0.038
+   },
+   "0.02": {
+    "count": 70,
+    "real_s": 0.027
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[0-N7]",
+  "outcome": "passed",
+  "wall_s": 0.179,
+  "ticks": 30,
+  "tick_cpu_s": 0.004,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.001": {
+    "count": 440,
+    "real_s": 0.009
+   },
+   "0.005": {
+    "count": 32,
+    "real_s": 0.002
+   },
+   "0.02": {
+    "count": 31,
+    "real_s": 0.008
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[0-N6]",
+  "outcome": "passed",
+  "wall_s": 0.07,
+  "ticks": 32,
+  "tick_cpu_s": 0.004,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.001": {
+    "count": 400,
+    "real_s": 0.009
+   },
+   "0.005": {
+    "count": 48,
+    "real_s": 0.003
+   },
+   "0.02": {
+    "count": 33,
+    "real_s": 0.007
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[2-N7]",
+  "outcome": "passed",
+  "wall_s": 0.181,
+  "ticks": 38,
+  "tick_cpu_s": 0.005,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.001": {
+    "count": 520,
+    "real_s": 0.012
+   },
+   "0.005": {
+    "count": 48,
+    "real_s": 0.002
+   },
+   "0.02": {
+    "count": 39,
+    "real_s": 0.01
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[2-N6]",
+  "outcome": "passed",
+  "wall_s": 0.076,
+  "ticks": 40,
+  "tick_cpu_s": 0.006,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.001": {
+    "count": 480,
+    "real_s": 0.013
+   },
+   "0.005": {
+    "count": 64,
+    "real_s": 0.003
+   },
+   "0.02": {
+    "count": 41,
+    "real_s": 0.011
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[4-N7]",
+  "outcome": "passed",
+  "wall_s": 0.192,
+  "ticks": 57,
+  "tick_cpu_s": 0.006,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.001": {
+    "count": 601,
+    "real_s": 0.013
+   },
+   "0.005": {
+    "count": 108,
+    "real_s": 0.004
+   },
+   "0.02": {
+    "count": 58,
+    "real_s": 0.011
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[4-N6]",
+  "outcome": "passed",
+  "wall_s": 0.078,
+  "ticks": 59,
+  "tick_cpu_s": 0.006,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.001": {
+    "count": 561,
+    "real_s": 0.012
+   },
+   "0.005": {
+    "count": 124,
+    "real_s": 0.005
+   },
+   "0.02": {
+    "count": 60,
+    "real_s": 0.011
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[0-N7 guardian]",
+  "outcome": "passed",
+  "wall_s": 0.189,
+  "ticks": 96,
+  "tick_cpu_s": 0.013,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.005": {
+    "count": 385,
+    "real_s": 0.021
+   },
+   "0.02": {
+    "count": 97,
+    "real_s": 0.008
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[0-N6 bandit]",
+  "outcome": "passed",
+  "wall_s": 0.071,
+  "ticks": 54,
+  "tick_cpu_s": 0.007,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.005": {
+    "count": 217,
+    "real_s": 0.011
+   },
+   "0.02": {
+    "count": 55,
+    "real_s": 0.005
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[2-N7 guardian]",
+  "outcome": "passed",
+  "wall_s": 0.194,
+  "ticks": 127,
+  "tick_cpu_s": 0.015,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.005": {
+    "count": 509,
+    "real_s": 0.025
+   },
+   "0.02": {
+    "count": 128,
+    "real_s": 0.011
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[2-N6 bandit]",
+  "outcome": "passed",
+  "wall_s": 0.073,
+  "ticks": 75,
+  "tick_cpu_s": 0.009,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.005": {
+    "count": 301,
+    "real_s": 0.014
+   },
+   "0.02": {
+    "count": 76,
+    "real_s": 0.006
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[4-N7 guardian]",
+  "outcome": "passed",
+  "wall_s": 0.198,
+  "ticks": 157,
+  "tick_cpu_s": 0.017,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.005": {
+    "count": 629,
+    "real_s": 0.029
+   },
+   "0.02": {
+    "count": 158,
+    "real_s": 0.013
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[4-N6 bandit]",
+  "outcome": "passed",
+  "wall_s": 0.082,
+  "ticks": 115,
+  "tick_cpu_s": 0.012,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.005": {
+    "count": 461,
+    "real_s": 0.02
+   },
+   "0.02": {
+    "count": 116,
+    "real_s": 0.009
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_still_fails_when_input_never_arrives",
+  "outcome": "passed",
+  "wall_s": 0.06,
+  "ticks": 51,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.005": {
+    "count": 208,
+    "real_s": 0.004
+   },
+   "0.02": {
+    "count": 52,
+    "real_s": 0.004
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_still_fails_when_a_wall_blocks_the_way",
+  "outcome": "passed",
+  "wall_s": 0.069,
+  "ticks": 53,
+  "tick_cpu_s": 0.009,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.005": {
+    "count": 216,
+    "real_s": 0.013
+   },
+   "0.02": {
+    "count": 54,
+    "real_s": 0.005
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_gives_up_when_each_release_lands_later_than_the_last",
+  "outcome": "passed",
+  "wall_s": 0.08,
+  "ticks": 160,
+  "tick_cpu_s": 0.013,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.005": {
+    "count": 641,
+    "real_s": 0.024
+   },
+   "0.02": {
+    "count": 161,
+    "real_s": 0.012
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_a_key_takes_effect_exactly_late_ticks_after_its_command[0]",
+  "outcome": "passed",
+  "wall_s": 0.059,
+  "ticks": 7,
+  "tick_cpu_s": 0.001,
+  "sleeps": {}
+ },
+ {
+  "test": "test_mesh_net_walk::test_a_key_takes_effect_exactly_late_ticks_after_its_command[2]",
+  "outcome": "passed",
+  "wall_s": 0.058,
+  "ticks": 11,
+  "tick_cpu_s": 0.001,
+  "sleeps": {}
+ },
+ {
+  "test": "test_mesh_net_walk::test_a_key_takes_effect_exactly_late_ticks_after_its_command[4]",
+  "outcome": "passed",
+  "wall_s": 0.059,
+  "ticks": 15,
+  "tick_cpu_s": 0.001,
+  "sleeps": {}
+ },
+ {
+  "test": "test_mesh_net_walk::test_commands_sent_in_one_tick_take_effect_in_the_order_sent",
+  "outcome": "passed",
+  "wall_s": 0.059,
+  "ticks": 8,
+  "tick_cpu_s": 0.001,
+  "sleeps": {}
+ },
+ {
+  "test": "test_mesh_net_walk::test_the_server_ticks_once_every_tick_of_simulated_time",
+  "outcome": "passed",
+  "wall_s": 0.061,
+  "ticks": 50,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.02": {
+    "count": 51,
+    "real_s": 0.001
+   },
+   "1.01": {
+    "count": 1,
+    "real_s": 0.002
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_still_fails_when_the_server_never_ticks",
+  "outcome": "passed",
+  "wall_s": 0.063,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.0": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.005": {
+    "count": 200,
+    "real_s": 0.003
+   },
+   "0.02": {
+    "count": 50,
+    "real_s": 0.004
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_gets_through_the_gap_wherever_the_ticks_fall_between_its_polls[N7]",
+  "outcome": "passed",
+  "wall_s": 0.434,
+  "ticks": 625,
+  "tick_cpu_s": 0.079,
+  "sleeps": {
+   "0.0": {
+    "count": 3,
+    "real_s": 0.0
+   },
+   "0.001": {
+    "count": 7771,
+    "real_s": 0.189
+   },
+   "0.0013": {
+    "count": 3,
+    "real_s": 0.0
+   },
+   "0.005": {
+    "count": 970,
+    "real_s": 0.047
+   },
+   "0.0061": {
+    "count": 3,
+    "real_s": 0.0
+   },
+   "0.0117": {
+    "count": 3,
+    "real_s": 0.0
+   },
+   "0.0189": {
+    "count": 3,
+    "real_s": 0.0
+   },
+   "0.02": {
+    "count": 640,
+    "real_s": 0.162
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_gets_through_the_gap_wherever_the_ticks_fall_between_its_polls[N6]",
+  "outcome": "passed",
+  "wall_s": 0.312,
+  "ticks": 655,
+  "tick_cpu_s": 0.08,
+  "sleeps": {
+   "0.0": {
+    "count": 3,
+    "real_s": 0.0
+   },
+   "0.001": {
+    "count": 7171,
+    "real_s": 0.164
+   },
+   "0.0013": {
+    "count": 3,
+    "real_s": 0.0
+   },
+   "0.005": {
+    "count": 1210,
+    "real_s": 0.061
+   },
+   "0.0061": {
+    "count": 3,
+    "real_s": 0.0
+   },
+   "0.0117": {
+    "count": 3,
+    "real_s": 0.0
+   },
+   "0.0189": {
+    "count": 3,
+    "real_s": 0.0
+   },
+   "0.02": {
+    "count": 670,
+    "real_s": 0.15
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_the_old_wait_takes_the_pre_drop_reply",
+  "outcome": "passed",
+  "wall_s": 0.168,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.005": {
+    "count": 5,
+    "real_s": 0.0
+   },
+   "0.025": {
+    "count": 7,
+    "real_s": 0.0
+   },
+   "0.15": {
+    "count": 1,
+    "real_s": 0.0
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_the_new_wait_returns_the_resumed_session",
+  "outcome": "passed",
+  "wall_s": 0.17,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.005": {
+    "count": 10,
+    "real_s": 0.0
+   },
+   "0.025": {
+    "count": 8,
+    "real_s": 0.0
+   },
+   "0.15": {
+    "count": 1,
+    "real_s": 0.0
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_the_new_wait_fails_when_the_resume_is_wrong[no_resume-the resumed session not reached]",
+  "outcome": "passed",
+  "wall_s": 0.173,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.005": {
+    "count": 206,
+    "real_s": 0.004
+   },
+   "0.025": {
+    "count": 47,
+    "real_s": 0.004
+   },
+   "0.15": {
+    "count": 1,
+    "real_s": 0.0
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_the_new_wait_fails_when_the_resume_is_wrong[fresh-the resumed session not reached]",
+  "outcome": "passed",
+  "wall_s": 0.167,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.005": {
+    "count": 206,
+    "real_s": 0.004
+   },
+   "0.025": {
+    "count": 47,
+    "real_s": 0.004
+   },
+   "0.15": {
+    "count": 1,
+    "real_s": 0.0
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_the_new_wait_fails_when_the_resume_is_wrong[wrong_room-the resumed session not reached]",
+  "outcome": "passed",
+  "wall_s": 0.169,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.005": {
+    "count": 206,
+    "real_s": 0.004
+   },
+   "0.025": {
+    "count": 47,
+    "real_s": 0.004
+   },
+   "0.15": {
+    "count": 1,
+    "real_s": 0.0
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_the_new_wait_fails_when_the_resume_is_wrong[wrong_entity-the resumed session not reached]",
+  "outcome": "passed",
+  "wall_s": 0.169,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.005": {
+    "count": 206,
+    "real_s": 0.004
+   },
+   "0.025": {
+    "count": 47,
+    "real_s": 0.004
+   },
+   "0.15": {
+    "count": 1,
+    "real_s": 0.0
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_the_new_wait_fails_when_the_resume_is_wrong[stale_state-the resumed session not reached]",
+  "outcome": "passed",
+  "wall_s": 0.173,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.005": {
+    "count": 206,
+    "real_s": 0.005
+   },
+   "0.025": {
+    "count": 47,
+    "real_s": 0.004
+   },
+   "0.15": {
+    "count": 1,
+    "real_s": 0.0
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_the_new_wait_fails_when_the_server_resumes_elsewhere",
+  "outcome": "passed",
+  "wall_s": 0.168,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.005": {
+    "count": 10,
+    "real_s": 0.0
+   },
+   "0.025": {
+    "count": 8,
+    "real_s": 0.0
+   },
+   "0.15": {
+    "count": 1,
+    "real_s": 0.0
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_the_scene_check_still_fails_on_the_wrong_avatar",
+  "outcome": "passed",
+  "wall_s": 0.166,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.005": {
+    "count": 10,
+    "real_s": 0.001
+   },
+   "0.025": {
+    "count": 8,
+    "real_s": 0.001
+   },
+   "0.15": {
+    "count": 1,
+    "real_s": 0.0
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_a_window_process_dying_is_not_swallowed",
+  "outcome": "passed",
+  "wall_s": 0.168,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.005": {
+    "count": 5,
+    "real_s": 0.0
+   },
+   "0.025": {
+    "count": 7,
+    "real_s": 0.0
+   },
+   "0.15": {
+    "count": 1,
+    "real_s": 0.0
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_n6_old_wait_takes_the_pre_drop_reply",
+  "outcome": "passed",
+  "wall_s": 0.459,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.0167": {
+    "count": 3,
+    "real_s": 0.081
+   },
+   "0.025": {
+    "count": 2,
+    "real_s": 0.066
+   },
+   "0.0373": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0382": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.0412": {
+    "count": 1,
+    "real_s": 0.031
+   },
+   "0.0415": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0452": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0489": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.0492": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.05": {
+    "count": 2,
+    "real_s": 0.1
+   },
+   "0.3": {
+    "count": 1,
+    "real_s": 0.308
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_n6_new_wait_returns_the_resumed_session",
+  "outcome": "passed",
+  "wall_s": 0.831,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.0167": {
+    "count": 5,
+    "real_s": 0.148
+   },
+   "0.025": {
+    "count": 14,
+    "real_s": 0.425
+   },
+   "0.0352": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.0356": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0359": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0362": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0395": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0399": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0403": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0433": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0437": {
+    "count": 3,
+    "real_s": 0.138
+   },
+   "0.0473": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.0475": {
+    "count": 2,
+    "real_s": 0.123
+   },
+   "0.048": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.05": {
+    "count": 5,
+    "real_s": 0.173
+   },
+   "0.3": {
+    "count": 2,
+    "real_s": 0.616
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_n6_new_wait_fails_closed[ignore_f2-the disconnect not reached]",
+  "outcome": "passed",
+  "wall_s": 1.415,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.0167": {
+    "count": 34,
+    "real_s": 1.045
+   },
+   "0.025": {
+    "count": 34,
+    "real_s": 1.029
+   },
+   "0.0352": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0354": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0357": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.036": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.0364": {
+    "count": 2,
+    "real_s": 0.092
+   },
+   "0.0392": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0393": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0394": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0397": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0401": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.0404": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0407": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0429": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0432": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0434": {
+    "count": 3,
+    "real_s": 0.138
+   },
+   "0.0446": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0448": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0468": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0469": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.0471": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.0474": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0477": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.0481": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.0483": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.05": {
+    "count": 19,
+    "real_s": 1.102
+   },
+   "0.3": {
+    "count": 1,
+    "real_s": 0.306
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_n6_new_wait_fails_closed[lying-the disconnect not reached]",
+  "outcome": "passed",
+  "wall_s": 1.443,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.0167": {
+    "count": 35,
+    "real_s": 1.074
+   },
+   "0.025": {
+    "count": 34,
+    "real_s": 1.042
+   },
+   "0.0369": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0371": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0375": {
+    "count": 2,
+    "real_s": 0.092
+   },
+   "0.0379": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.0381": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0392": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0411": {
+    "count": 3,
+    "real_s": 0.138
+   },
+   "0.0412": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0414": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0419": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0434": {
+    "count": 1,
+    "real_s": 0.045
+   },
+   "0.0449": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.045": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0451": {
+    "count": 2,
+    "real_s": 0.092
+   },
+   "0.0453": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0455": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0479": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0488": {
+    "count": 2,
+    "real_s": 0.092
+   },
+   "0.049": {
+    "count": 2,
+    "real_s": 0.123
+   },
+   "0.0491": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.0492": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.05": {
+    "count": 19,
+    "real_s": 1.133
+   },
+   "0.3": {
+    "count": 1,
+    "real_s": 0.307
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_n6_new_wait_fails_closed[ignore_r-the resumed session not reached]",
+  "outcome": "passed",
+  "wall_s": 1.475,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.0167": {
+    "count": 36,
+    "real_s": 1.106
+   },
+   "0.025": {
+    "count": 46,
+    "real_s": 1.397
+   },
+   "0.0341": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0366": {
+    "count": 1,
+    "real_s": 0.045
+   },
+   "0.0372": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.0373": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0377": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.038": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0383": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0385": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.04": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.041": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0412": {
+    "count": 2,
+    "real_s": 0.092
+   },
+   "0.042": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.0422": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0424": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.044": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0448": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0451": {
+    "count": 2,
+    "real_s": 0.092
+   },
+   "0.0454": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.0461": {
+    "count": 2,
+    "real_s": 0.108
+   },
+   "0.0477": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0486": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0487": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0489": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.0493": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0497": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.05": {
+    "count": 3,
+    "real_s": 0.119
+   },
+   "0.3": {
+    "count": 1,
+    "real_s": 0.306
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_n6_new_wait_fails_closed[stale-the disconnect not reached]",
+  "outcome": "passed",
+  "wall_s": 1.136,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.0167": {
+    "count": 25,
+    "real_s": 0.765
+   },
+   "0.025": {
+    "count": 34,
+    "real_s": 1.038
+   },
+   "0.035": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0363": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0365": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.037": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0373": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.0393": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0402": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0406": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0407": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0409": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0418": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0435": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0444": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0445": {
+    "count": 2,
+    "real_s": 0.061
+   },
+   "0.0451": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.046": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0475": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0485": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0486": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.0487": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.05": {
+    "count": 3,
+    "real_s": 0.116
+   },
+   "0.3": {
+    "count": 1,
+    "real_s": 0.305
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_n6_new_wait_fails_closed[fresh-unexpected join]",
+  "outcome": "passed",
+  "wall_s": 0.83,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.0167": {
+    "count": 5,
+    "real_s": 0.148
+   },
+   "0.025": {
+    "count": 14,
+    "real_s": 0.424
+   },
+   "0.0363": {
+    "count": 1,
+    "real_s": 0.0
+   },
+   "0.0364": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0367": {
+    "count": 2,
+    "real_s": 0.092
+   },
+   "0.0401": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0407": {
+    "count": 2,
+    "real_s": 0.093
+   },
+   "0.0439": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.044": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0441": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0447": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.0478": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.048": {
+    "count": 2,
+    "real_s": 0.122
+   },
+   "0.0481": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.05": {
+    "count": 5,
+    "real_s": 0.173
+   },
+   "0.3": {
+    "count": 2,
+    "real_s": 0.614
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_n6_stale_entity_after_resume_is_refused",
+  "outcome": "passed",
+  "wall_s": 1.757,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.0167": {
+    "count": 35,
+    "real_s": 1.075
+   },
+   "0.025": {
+    "count": 45,
+    "real_s": 1.366
+   },
+   "0.0351": {
+    "count": 2,
+    "real_s": 0.092
+   },
+   "0.0353": {
+    "count": 2,
+    "real_s": 0.093
+   },
+   "0.0356": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0359": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.036": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.0376": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0388": {
+    "count": 1,
+    "real_s": 0.031
+   },
+   "0.0389": {
+    "count": 2,
+    "real_s": 0.092
+   },
+   "0.0391": {
+    "count": 3,
+    "real_s": 0.139
+   },
+   "0.0392": {
+    "count": 1,
+    "real_s": 0.045
+   },
+   "0.0412": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.0417": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.0425": {
+    "count": 2,
+    "real_s": 0.092
+   },
+   "0.0426": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.043": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0432": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0437": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0446": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0451": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0462": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0465": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0466": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0468": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0471": {
+    "count": 1,
+    "real_s": 0.061
+   },
+   "0.0472": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.0481": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.0493": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.05": {
+    "count": 20,
+    "real_s": 1.099
+   },
+   "0.3": {
+    "count": 2,
+    "real_s": 0.616
+   }
+  }
+ },
+ {
+  "test": "test_mesh_net_resume::test_n6_window_process_dying_is_not_swallowed",
+  "outcome": "passed",
+  "wall_s": 0.461,
+  "ticks": 0,
+  "tick_cpu_s": 0.0,
+  "sleeps": {
+   "0.0167": {
+    "count": 3,
+    "real_s": 0.091
+   },
+   "0.025": {
+    "count": 12,
+    "real_s": 0.368
+   },
+   "0.0359": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0399": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0401": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0435": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0444": {
+    "count": 1,
+    "real_s": 0.046
+   },
+   "0.0476": {
+    "count": 1,
+    "real_s": 0.047
+   },
+   "0.0484": {
+    "count": 1,
+    "real_s": 0.062
+   },
+   "0.05": {
+    "count": 3,
+    "real_s": 0.119
+   },
+   "0.3": {
+    "count": 1,
+    "real_s": 0.308
+   }
+  }
+ }
+]

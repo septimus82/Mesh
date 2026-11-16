@@ -1,0 +1,219 @@
+{
+ "none (helpers)": {
+  "file": null,
+  "tests_run": [
+   "tests/test_mesh_net_walk.py",
+   "tests/test_mesh_net_resume.py"
+  ],
+  "caught": false,
+  "failing": [],
+  "summary": "44 passed in 18.29s",
+  "wall_s": 19.2
+ },
+ "walk: decides while the avatar still moves (the old driver's fault)": {
+  "file": "tests/net_walk.py",
+  "tests_run": [
+   "tests/test_mesh_net_walk.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_walk_gets_through_the_gap_wherever_the_ticks_fall_between_its_polls[N6]",
+   "test_walk_gets_through_the_gap_wherever_the_ticks_fall_between_its_polls[N7]",
+   "test_walk_gives_up_when_each_release_lands_later_than_the_last",
+   "test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N6-4]",
+   "test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N7-4]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N6 bandit-4]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N7 guardian-2]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N7 guardian-4]",
+   "test_walk_still_fails_when_the_server_never_ticks"
+  ],
+  "summary": "9 failed, 16 passed in 6.70s",
+  "wall_s": 7.6
+ },
+ "walk: lets go without allowing for the last leg's carry": {
+  "file": "tests/net_walk.py",
+  "tests_run": [
+   "tests/test_mesh_net_walk.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_walk_gets_through_the_gap_wherever_the_ticks_fall_between_its_polls[N6]",
+   "test_walk_gets_through_the_gap_wherever_the_ticks_fall_between_its_polls[N7]",
+   "test_walk_gives_up_when_each_release_lands_later_than_the_last",
+   "test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N6-4]",
+   "test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N7-4]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N6 bandit-2]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N6 bandit-4]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N7 guardian-2]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N7 guardian-4]"
+  ],
+  "summary": "9 failed, 16 passed in 6.64s",
+  "wall_s": 7.5
+ },
+ "walk: never walks back after an overshoot": {
+  "file": "tests/net_walk.py",
+  "tests_run": [
+   "tests/test_mesh_net_walk.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_walk_gets_through_the_gap_wherever_the_ticks_fall_between_its_polls[N6]",
+   "test_walk_gets_through_the_gap_wherever_the_ticks_fall_between_its_polls[N7]",
+   "test_walk_gives_up_when_each_release_lands_later_than_the_last",
+   "test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N6-4]",
+   "test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N7-4]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N6 bandit-2]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N6 bandit-4]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N7 guardian-2]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N7 guardian-4]"
+  ],
+  "summary": "9 failed, 16 passed in 8.17s",
+  "wall_s": 9.1
+ },
+ "walk: settles anywhere": {
+  "file": "tests/net_walk.py",
+  "tests_run": [
+   "tests/test_mesh_net_walk.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_walk_gets_through_the_gap_wherever_the_ticks_fall_between_its_polls[N6]",
+   "test_walk_gets_through_the_gap_wherever_the_ticks_fall_between_its_polls[N7]",
+   "test_walk_gives_up_when_each_release_lands_later_than_the_last",
+   "test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N6-0]",
+   "test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N6-2]",
+   "test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N6-4]",
+   "test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N7-0]",
+   "test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N7-2]",
+   "test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N7-4]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N6 bandit-0]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N6 bandit-2]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N6 bandit-4]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N7 guardian-0]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N7 guardian-2]",
+   "test_walk_onto_the_enemy_from_above_lands_a_strike[N7 guardian-4]",
+   "test_walk_still_fails_when_a_wall_blocks_the_way",
+   "test_walk_still_fails_when_input_never_arrives"
+  ],
+  "summary": "17 failed, 8 passed in 5.91s",
+  "wall_s": 6.8
+ },
+ "walk: a wait that times out is taken as reached": {
+  "file": "tests/net_walk.py",
+  "tests_run": [
+   "tests/test_mesh_net_walk.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_walk_still_fails_when_a_wall_blocks_the_way",
+   "test_walk_still_fails_when_input_never_arrives"
+  ],
+  "summary": "2 failed, 23 passed in 6.73s",
+  "wall_s": 7.6
+ },
+ "walk: gives up only after 1000 legs": {
+  "file": "tests/net_walk.py",
+  "tests_run": [
+   "tests/test_mesh_net_walk.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_walk_gives_up_when_each_release_lands_later_than_the_last"
+  ],
+  "summary": "1 failed, 24 passed in 11.81s",
+  "wall_s": 12.7
+ },
+ "resume: R sent without waiting for the old session to close": {
+  "file": "tests/net_resume.py",
+  "tests_run": [
+   "tests/test_mesh_net_resume.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_the_new_wait_fails_when_the_server_resumes_elsewhere",
+   "test_the_new_wait_returns_the_resumed_session"
+  ],
+  "summary": "2 failed, 17 passed in 14.77s",
+  "wall_s": 15.7
+ },
+ "resume: the pre-drop reply is taken as the resumed session (N7's fault)": {
+  "file": "tests/net_resume.py",
+  "tests_run": [
+   "tests/test_mesh_net_resume.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_the_new_wait_fails_when_the_resume_is_wrong[fresh-the resumed session not reached]",
+   "test_the_new_wait_fails_when_the_resume_is_wrong[stale_state-the resumed session not reached]",
+   "test_the_new_wait_fails_when_the_resume_is_wrong[wrong_entity-the resumed session not reached]",
+   "test_the_new_wait_fails_when_the_resume_is_wrong[wrong_room-the resumed session not reached]",
+   "test_the_new_wait_fails_when_the_server_resumes_elsewhere"
+  ],
+  "summary": "5 failed, 14 passed in 14.68s",
+  "wall_s": 15.6
+ },
+ "resume: the window's entity is not compared with the server's": {
+  "file": "tests/net_resume.py",
+  "tests_run": [
+   "tests/test_mesh_net_resume.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_the_new_wait_fails_when_the_resume_is_wrong[wrong_entity-the resumed session not reached]"
+  ],
+  "summary": "1 failed, 18 passed in 14.67s",
+  "wall_s": 15.5
+ },
+ "resume: the room resumed into is not checked": {
+  "file": "tests/net_resume.py",
+  "tests_run": [
+   "tests/test_mesh_net_resume.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_the_new_wait_fails_when_the_server_resumes_elsewhere"
+  ],
+  "summary": "1 failed, 18 passed in 14.71s",
+  "wall_s": 15.6
+ },
+ "resume: the window's room is not compared with the server's": {
+  "file": "tests/net_resume.py",
+  "tests_run": [
+   "tests/test_mesh_net_resume.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_the_new_wait_fails_when_the_resume_is_wrong[wrong_room-the resumed session not reached]"
+  ],
+  "summary": "1 failed, 18 passed in 14.71s",
+  "wall_s": 15.6
+ },
+ "resume: the restored state is not looked at": {
+  "file": "tests/net_resume.py",
+  "tests_run": [
+   "tests/test_mesh_net_resume.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_the_new_wait_fails_when_the_resume_is_wrong[stale_state-the resumed session not reached]"
+  ],
+  "summary": "1 failed, 18 passed in 14.71s",
+  "wall_s": 15.6
+ },
+ "resume: a wait that times out is taken as reached": {
+  "file": "tests/net_resume.py",
+  "tests_run": [
+   "tests/test_mesh_net_resume.py"
+  ],
+  "caught": true,
+  "failing": [
+   "test_the_new_wait_fails_when_the_resume_is_wrong[fresh-the resumed session not reached]",
+   "test_the_new_wait_fails_when_the_resume_is_wrong[no_resume-the resumed session not reached]",
+   "test_the_new_wait_fails_when_the_resume_is_wrong[stale_state-the resumed session not reached]",
+   "test_the_new_wait_fails_when_the_resume_is_wrong[wrong_entity-the resumed session not reached]",
+   "test_the_new_wait_fails_when_the_resume_is_wrong[wrong_room-the resumed session not reached]"
+  ],
+  "summary": "5 failed, 14 passed in 14.75s",
+  "wall_s": 15.6
+ }
+}

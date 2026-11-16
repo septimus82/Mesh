@@ -1,0 +1,108 @@
+CI 43811262872, Windows pytest shard 1/2
+1 run(s), 87 tests
+
+module totals (s): each run | median | spread
+    13.05   0.00  test_mesh_net_owed  [13.05]
+     9.58   0.00  test_mesh_net_characters  [9.58]
+     4.79   0.00  test_mesh_net_owed_reset  [4.79]
+     0.93   0.00  test_mesh_net  [0.93]
+     0.63   0.00  test_mesh_net_downlink  [0.63]
+     0.13   0.00  test_mesh_net_encounter  [0.13]
+     0.02   0.00  test_mesh_net_playback  [0.02]
+    29.13   0.00  ALL  [29.13]
+
+tests over 0.5 s (median s | spread | test)
+    2.03   0.00  test_mesh_net_characters::test_a_store_with_damaged_pages_is_refused
+    1.99   0.00  test_mesh_net_owed::test_far_more_than_the_old_queue_held_is_kept_and_recorded_a_few_a_tick
+    1.63   0.00  test_mesh_net_owed::test_a_server_killed_with_unlocks_owed_loses_none_of_them
+    1.62   0.00  test_mesh_net_owed_reset::test_a_server_killed_after_such_a_start_over_restarts_and_records_what_was_owed
+    1.48   0.00  test_mesh_net_characters::test_one_server_per_store_and_backups
+    1.45   0.00  test_mesh_net_owed::test_a_server_killed_while_recording_what_was_owed_still_counts_each_once
+    1.28   0.00  test_mesh_net_characters::test_measure_persistence_costs
+    1.08   0.00  test_mesh_net_owed::test_a_server_dying_at_the_moment_a_completion_becomes_owed[after a commit reported as failed]
+    1.06   0.00  test_mesh_net_owed::test_a_server_dying_at_the_moment_a_completion_becomes_owed[after the journal write]
+    1.06   0.00  test_mesh_net_owed::test_with_store_and_journal_both_failing_the_loss_is_said_never_silent
+    1.04   0.00  test_mesh_net_owed::test_a_server_dying_at_the_moment_a_completion_becomes_owed[before the journal write]
+    0.66   0.00  test_mesh_net_owed::test_a_new_server_records_what_an_earlier_one_owed_once_however_often_it_starts
+    0.64   0.00  test_mesh_net_owed::test_the_shipped_server_records_what_is_owed_when_it_starts
+    0.60   0.00  test_mesh_net_downlink::test_release_and_attack_reach_authority_during_nine_tick_downlink_pause
+    0.54   0.00  test_mesh_net_owed_reset::test_after_a_start_over_that_failed_before_the_move_the_next_unlock_is_kept_and_recovered[temp_flush]
+    0.54   0.00  test_mesh_net_owed_reset::test_after_a_start_over_whose_folder_flush_failed_the_next_unlock_is_not_called_kept_and_is_not_lost
+    0.54   0.00  test_mesh_net_owed_reset::test_a_server_stopped_while_the_folder_still_cannot_be_flushed_loses_nothing_on_restart
+    0.53   0.00  test_mesh_net_owed_reset::test_after_a_start_over_that_failed_before_the_move_the_next_unlock_is_kept_and_recovered[replace]
+    0.53   0.00  test_mesh_net_owed_reset::test_after_a_start_over_that_failed_before_the_move_the_next_unlock_is_kept_and_recovered[temp_create]
+
+CI 43811262872, Windows pytest shard 2/2
+1 run(s), 118 tests
+
+module totals (s): each run | median | spread
+    35.22   0.00  test_mesh_net_walk  [35.22]
+    16.41   0.00  test_mesh_net_resume  [16.41]
+    14.53   0.00  test_mesh_net_world  [14.53]
+     4.08   0.00  test_mesh_net_owed_writes  [4.08]
+     2.66   0.00  test_mesh_net_scene  [2.66]
+     0.05   0.00  test_mesh_net_gpu  [0.05]
+    72.94   0.00  ALL  [72.94]
+
+tests over 0.5 s (median s | spread | test)
+    5.05   0.00  test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[N7 guardian-4]
+    4.11   0.00  test_mesh_net_world::test_two_clients_travel_reconnect_and_return_over_sockets
+    4.11   0.00  test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[N7 guardian-2]
+    3.62   0.00  test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[N6 bandit-4]
+    3.14   0.00  test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[N7 guardian-0]
+    2.38   0.00  test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[N6 bandit-2]
+    2.23   0.00  test_mesh_net_walk::test_the_old_driver_reproduces_both_failures[N7 Layer 1 (Extended 43008772085)]
+    2.21   0.00  test_mesh_net_world::test_a_failing_world_closes_the_server_instead_of_freezing
+    2.19   0.00  test_mesh_net_walk::test_the_old_driver_reproduces_both_failures[N6 co-op scene (Extended 43016671504)]
+    1.94   0.00  test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N7-4]
+    1.88   0.00  test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N6-4]
+    1.76   0.00  test_mesh_net_resume::test_n6_stale_entity_after_resume_is_refused
+    1.72   0.00  test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[N6 bandit-0]
+    1.63   0.00  test_mesh_net_owed_writes::test_a_server_killed_in_the_middle_of_an_append_restarts_on_a_sound_journal
+    1.43   0.00  test_mesh_net_resume::test_n6_new_wait_fails_closed[ignore_r-the resumed session not reached]
+    1.40   0.00  test_mesh_net_resume::test_n6_new_wait_fails_closed[lying-the disconnect not reached]
+    1.39   0.00  test_mesh_net_resume::test_n6_new_wait_fails_closed[ignore_f2-the disconnect not reached]
+    1.33   0.00  test_mesh_net_resume::test_the_new_wait_fails_when_the_resume_is_wrong[stale_state-the resumed session not reached]
+    1.32   0.00  test_mesh_net_resume::test_the_new_wait_fails_when_the_resume_is_wrong[wrong_room-the resumed session not reached]
+    1.32   0.00  test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N7-2]
+    1.30   0.00  test_mesh_net_resume::test_the_new_wait_fails_when_the_resume_is_wrong[no_resume-the resumed session not reached]
+    1.30   0.00  test_mesh_net_resume::test_the_new_wait_fails_when_the_resume_is_wrong[fresh-the resumed session not reached]
+    1.28   0.00  test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N6-2]
+    1.16   0.00  test_mesh_net_walk::test_walk_still_fails_when_a_wall_blocks_the_way
+    1.10   0.00  test_mesh_net_resume::test_n6_new_wait_fails_closed[stale-the disconnect not reached]
+    1.09   0.00  test_mesh_net_walk::test_walk_still_fails_when_input_never_arrives
+    1.08   0.00  test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N7-0]
+    1.05   0.00  test_mesh_net_world::test_leaving_ends_the_session_even_if_a_cancellation_is_swallowed
+    1.05   0.00  test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[N6-0]
+    0.81   0.00  test_mesh_net_world::test_unknown_or_unreachable_destinations_are_refused_at_load
+    0.80   0.00  test_mesh_net_resume::test_n6_new_wait_returns_the_resumed_session
+    0.78   0.00  test_mesh_net_resume::test_n6_new_wait_fails_closed[fresh-unexpected join]
+    0.72   0.00  test_mesh_net_world::test_committed_world_is_a_fresh_studio_build
+    0.65   0.00  test_mesh_net_world::test_measure_world_tick_and_transfer_cost
+    0.56   0.00  test_mesh_net_owed_writes::test_kept_after_a_failed_then_retried_write_is_recorded_exactly_once
+
+Extended 43811263074, gpu shard 2/2, Windows
+1 run(s), 4 tests
+
+module totals (s): each run | median | spread
+    83.56   0.00  test_mesh_net_gpu  [83.56]
+    83.56   0.00  ALL  [83.56]
+
+tests over 0.5 s (median s | spread | test)
+   34.38   0.00  test_mesh_net_gpu::test_two_windows_meet_party_travel_and_return
+   32.35   0.00  test_mesh_net_gpu::test_two_characters_persist_through_a_server_restart
+   13.40   0.00  test_mesh_net_gpu::test_two_windows_play_the_studio_scene_together
+    3.42   0.00  test_mesh_net_gpu::test_independent_mesh_windows_share_motion_and_resume
+
+Extended 43811263074, gpu shard 2/2, Linux
+1 run(s), 4 tests
+
+module totals (s): each run | median | spread
+    75.19   0.00  test_mesh_net_gpu  [75.19]
+    75.19   0.00  ALL  [75.19]
+
+tests over 0.5 s (median s | spread | test)
+   32.33   0.00  test_mesh_net_gpu::test_two_windows_meet_party_travel_and_return
+   29.10   0.00  test_mesh_net_gpu::test_two_characters_persist_through_a_server_restart
+   11.76   0.00  test_mesh_net_gpu::test_two_windows_play_the_studio_scene_together
+    1.99   0.00  test_mesh_net_gpu::test_independent_mesh_windows_share_motion_and_resume

@@ -1,0 +1,34 @@
+"""Per-module and per-test times of the networking tests, from one or more JUnit files (given as arguments)."""
+import statistics
+import sys
+import xml.etree.ElementTree as ET
+from collections import defaultdict
+
+runs = []
+for path in sys.argv[1:]:
+    tests: dict[str, float] = defaultdict(float)
+    for case in ET.parse(path).getroot().iter("testcase"):
+        cls = case.get("classname", "")
+        if "mesh_net" not in cls:
+            continue
+        tests[f"{cls.split('.')[-1]}::{case.get('name')}"] += float(case.get("time", 0))
+    runs.append(tests)
+
+names = sorted(set().union(*runs))
+modules: dict[str, list[float]] = defaultdict(lambda: [0.0] * len(runs))
+for name in names:
+    for i, run in enumerate(runs):
+        modules[name.split("::")[0]][i] += run.get(name, 0.0)
+print(f"{len(runs)} run(s), {len(names)} tests")
+print("\nmodule totals (s): each run | median | spread")
+total = [0.0] * len(runs)
+for module, times in sorted(modules.items(), key=lambda kv: -statistics.median(kv[1])):
+    total = [a + b for a, b in zip(total, times)]
+    print(f"  {statistics.median(times):7.2f}  {max(times) - min(times):5.2f}  {module}  {[round(t, 2) for t in times]}")
+print(f"  {statistics.median(total):7.2f}  {max(total) - min(total):5.2f}  ALL  {[round(t, 2) for t in total]}")
+print("\ntests over 0.5 s (median s | spread | test)")
+for name in sorted(names, key=lambda n: -statistics.median([r.get(n, 0.0) for r in runs])):
+    times = [r.get(name, 0.0) for r in runs]
+    if statistics.median(times) < 0.5:
+        break
+    print(f"  {statistics.median(times):6.2f}  {max(times) - min(times):5.2f}  {name}")
