@@ -1,0 +1,104 @@
+"""pytest plugin (verification only, wraps from outside): after every selective panel refresh (``Studio._rewindow``)
+do what a wheel notch did before, a full rebuild, and require the two to be the same Studio: every widget in the
+window's tree (kind, text, place, size, enabled, style, pointed at or pressed), the scroll state, the scrollbars, the
+tooltips, the palette and preview slots, the boxes and what is typed in them, the pictures drawn over the panels.
+
+Any difference is written to MESH_PANEL_VERIFY_OUT (a JSON-lines file) and fails the test that scrolled.
+Counts (re-windows checked, refused re-windows that fell back to a rebuild) go to the same file at the end.
+"""
+import json
+import os
+from pathlib import Path
+
+OUT = Path(os.environ.get("MESH_PANEL_VERIFY_OUT", "panel_verify.jsonl"))
+counts = {"rewindows_checked": 0, "rewindows_refused": 0, "differences": 0}
+
+
+def _rect(widget):
+    r = widget.rect
+    return [round(r.left, 1), round(r.bottom, 1), round(r.width, 1), round(r.height, 1)]
+
+
+def snapshot(studio):
+    from engine.studio_inspector import _on_screen
+
+    studio.ui.execute_layout()
+    widgets = []
+    for w in studio.ui.walk_widgets():
+        style = getattr(w, "_style", None) or getattr(w, "style", None)
+        widgets.append([type(w).__name__, getattr(w, "text", None), _rect(w), getattr(w, "disabled", None),
+                        json.dumps(style, sort_keys=True, default=str) if isinstance(style, dict) else None,
+                        bool(getattr(w, "hovered", False)), bool(getattr(w, "pressed", False)),
+                        bool(getattr(w, "_active", False)) and hasattr(w, "caret"), getattr(w, "visible", None)])
+    shown = {id(w) for w in studio.ui.walk_widgets()}
+    keys = {id(f): key for key, f in studio._focusable.items()}
+    return {
+        "widgets": widgets,
+        "scroll": [studio.panel_scroll, studio.left_scroll, list(studio._panel_more), list(studio._left_more)],
+        "bars": {side: [round(v, 1) if isinstance(v, float) else v for v in bar] for side, bar in sorted(studio._bars.items())},
+        "tips": sorted([tip, _rect(w)] for w, tip in studio.hd2d.tips),
+        "sheet": _rect(studio._sheet_space) if studio._sheet_space is not None else None,
+        "import": _rect(studio._import_space) if studio._import_space is not None else None,
+        "fields": sorted([str(keys.get(id(f))), f.text, original, id(f) in shown, bool(f.active)]
+                         for f, original, _c in studio._fields),
+        "focusable": sorted(studio._focusable),
+        "thumbs": sorted([str(path)[-60:], _rect(space)] for space, path in studio._thumbs if _on_screen(space)),
+        "anim": _rect(studio._anim_space) if studio._anim_space is not None and _on_screen(studio._anim_space) else None,
+        "typing": studio._typing(),
+        "context": [str(studio.panel), str(studio.selected), str(studio.left_tab), studio.mode, studio.message],
+    }
+
+
+def differences(a, b):
+    out = []
+    for key in a:
+        if a[key] == b[key]:
+            continue
+        if key == "widgets":
+            if len(a[key]) != len(b[key]):
+                out.append({"what": "widgets", "kept": len(a[key]), "rebuilt": len(b[key]),
+                            "kept_texts": [w[1] for w in a[key] if w[1]][:80], "rebuilt_texts": [w[1] for w in b[key] if w[1]][:80]})
+            else:
+                out.extend({"what": "widget", "at": i, "kept": x, "rebuilt": y}
+                           for i, (x, y) in enumerate(zip(a[key], b[key])) if x != y)
+        else:
+            out.append({"what": key, "kept": a[key], "rebuilt": b[key]})
+    return out[:12]
+
+
+def pytest_configure(config):
+    from engine.studio import Studio
+
+    real = Studio._rewindow
+    checking = [False]
+
+    def checked(self, side):
+        done = real(self, side)
+        if checking[0]:
+            return done
+        if not done:
+            counts["rewindows_refused"] += 1
+            return done
+        counts["rewindows_checked"] += 1
+        checking[0] = True
+        try:
+            kept = snapshot(self)
+            self._rebuild()  # what a wheel notch did before
+            rebuilt = snapshot(self)
+        finally:
+            checking[0] = False
+        found = differences(kept, rebuilt)
+        if found:
+            counts["differences"] += 1
+            test = os.environ.get("PYTEST_CURRENT_TEST", "")
+            with OUT.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps({"test": test, "side": side, "differences": found}, default=str) + "\n")
+            raise AssertionError(f"the re-windowed {side} panel is not what a rebuild makes: {json.dumps(found, default=str)[:1500]}")
+        return done
+
+    Studio._rewindow = checked
+
+
+def pytest_unconfigure(config):
+    with OUT.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps({"counts": counts}) + "\n")

@@ -173,12 +173,14 @@ class StudioDriver:
 
     def type_into(self, key: str, text: str) -> None:
         """Click Mesh Studio's text field ``key``, select what is in it (Ctrl+A), type ``text`` and press Enter, as a
-        person types (key and text events into the window)."""
+        person types (key and text events into the window). On screen: in the window's widget tree. (A field in a
+        row scrolled out of view is in none. Its ``parent`` says nothing: Studio keeps a panel's rows while it only
+        scrolls, a field in a row of its own with them.)"""
         k = self.arcade.key
         self._scroll_panels(lambda: key in self.studio._focusable
-                            and getattr(self.studio._focusable[key], "parent", None) is not None)
+                            and self.studio._focusable[key].get_ui_manager() is not None)
         field = self.studio._focusable[key]
-        assert getattr(field, "parent", None) is not None, f"the field '{key}' isn't on screen"
+        assert field.get_ui_manager() is not None, f"the field '{key}' isn't on screen"
         self.advance()
         r = field.rect
         self.click(r.left + r.width / 2, r.bottom + r.height / 2)

@@ -1,0 +1,54 @@
+"""Before / after table from panel_bench.py runs. Usage: py bench_table.py <dir> <before prefix> <after prefix> [runs]"""
+import json
+import statistics
+import sys
+from pathlib import Path
+
+folder, before, after = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+runs = int(sys.argv[4]) if len(sys.argv) > 4 else 3
+
+
+def load(prefix):
+    return [json.loads((folder / f"{prefix}_{i}.json").read_text(encoding="utf-8")) for i in range(1, runs + 1)]
+
+
+def value(reports, scene, name, key, stat):
+    values = [r[scene][name][key][stat] for r in reports if isinstance(r[scene].get(name), dict) and r[scene][name].get("n")]
+    return statistics.median(values) if values else None
+
+
+def spread(reports, scene, name, key, stat):
+    values = [r[scene][name][key][stat] for r in reports if isinstance(r[scene].get(name), dict) and r[scene][name].get("n")]
+    return (max(values) - min(values)) if values else None
+
+
+a, b = load(before), load(after)
+for scene in ("hd2d", "2d"):
+    print(f"\n### {scene}\n")
+    print("| interaction | n | handler ms (median / p95 / max) before | after | change | to the drawn frame ms (median / p95) before | after | "
+          "full rebuilds | re-windows | widgets made | bindings | ui draw ms | scene ms |")
+    print("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    names = [n for n, r in a[0][scene].items() if isinstance(r, dict) and r.get("n")]
+    for name in names:
+        def cell(reports, key, stats=("median", "p95", "max")):
+            parts = [value(reports, scene, name, key, s) for s in stats]
+            return " / ".join("-" if p is None else f"{p:.1f}" for p in parts)
+
+        hb, ha = value(a, scene, name, "handler_ms", "median"), value(b, scene, name, "handler_ms", "median")
+        change = "" if not hb or ha is None else f"{(ha - hb) / hb * 100:+.0f}%"
+        n = a[0][scene][name]["n"]
+
+        def pair(key, stat="mean", fmt="{:.2f}"):
+            x, y = value(a, scene, name, key, stat), value(b, scene, name, key, stat)
+            return f"{'-' if x is None else fmt.format(x)} -> {'-' if y is None else fmt.format(y)}"
+
+        print(f"| {name} | {n} | {cell(a, 'handler_ms')} | {cell(b, 'handler_ms')} | {change} | "
+              f"{cell(a, 'latency_ms', ('median', 'p95'))} | {cell(b, 'latency_ms', ('median', 'p95'))} | "
+              f"{pair('rebuilds')} | {pair('rewindows')} | {pair('widgets', 'median', '{:.0f}')} | {pair('binds', 'median', '{:.0f}')} | "
+              f"{pair('ui_draw_ms', 'median', '{:.1f}')} | {pair('scene_draw_ms', 'median', '{:.1f}')} |")
+    print("\nspread of the handler median across runs (ms), before / after:")
+    for name in names:
+        print(f"  {name}: {spread(a, scene, name, 'handler_ms', 'median'):.1f} / {spread(b, scene, name, 'handler_ms', 'median') or 0:.1f}")
+    for key in ("live_widgets_at_start", "live_widgets_after_inspector_scrolls", "live_widgets_after_switching", "live_widgets_at_end",
+                "live_widgets_before_and_after_many_scrolls"):
+        print(f"  {key}: before {[r[scene].get(key) for r in a]}  after {[r[scene].get(key) for r in b]}")

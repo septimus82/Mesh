@@ -1,0 +1,402 @@
+"""Mesh Studio's panel interactions, measured in real hidden windows. Measurement only: Studio is wrapped from outside.
+
+Usage: py panel_bench.py <repo> <workdir> <out.json> [--memory]
+
+For each interaction (one wheel notch, one click, one resize ...): the input handler's wall time, the next update and
+the next drawn frame (Studio's UI drawn apart from the scene), and what the handler did: full rebuilds, panel
+re-windows, widgets constructed, listener bindings. ``--memory``: also the bytes each handler allocates (tracemalloc;
+timings from such a run are not used).
+"""
+import gc
+import json
+import os
+import statistics
+import sys
+import time
+import tracemalloc
+from pathlib import Path
+
+repo, work, out = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
+MEMORY = "--memory" in sys.argv
+os.chdir(repo)
+sys.path.insert(0, str(repo))
+sys.path.insert(0, str(repo / "tooling"))
+os.environ["MESH_GL_SMOKE"] = "1"
+
+import arcade.gui as gui  # noqa: E402
+from arcade.gui import property as gui_property  # noqa: E402
+from hd2d_studio_demo import StudioDriver  # noqa: E402
+
+from engine import project_ops as ops  # noqa: E402
+from engine import studio as studio_module  # noqa: E402
+from engine.project_scaffold import create_project  # noqa: E402
+from engine.studio import LEFT_TABS, Studio  # noqa: E402
+
+SCENE = "packs/core_regions/scenes/start.json"
+meter = {"rebuilds": 0, "rebuild_s": 0.0, "rewindows": 0, "rewindow_s": 0.0, "top_bars": 0, "left_s": 0.0, "right_s": 0.0,
+         "top_s": 0.0, "widgets": 0, "binds": 0, "bind_s": 0.0, "ui_draw_s": 0.0}
+
+
+def timed(cls, name, count_key, time_key):
+    if not hasattr(cls, name):
+        return
+    real = getattr(cls, name)
+
+    def wrapper(*args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return real(*args, **kwargs)
+        finally:
+            if count_key:
+                meter[count_key] += 1
+            if time_key:
+                meter[time_key] += time.perf_counter() - started
+
+    setattr(cls, name, wrapper)
+
+
+timed(Studio, "_rebuild", "rebuilds", "rebuild_s")
+timed(Studio, "_rewindow", "rewindows", "rewindow_s")  # (the selective refresh, where the checkout has one)
+timed(Studio, "_left_panel", None, "left_s")
+timed(Studio, "_right_panel", None, "right_s")
+timed(Studio, "_top_bar", "top_bars", "top_s")
+timed(gui_property.Property, "bind", "binds", "bind_s")
+real_widget_init = gui.UIWidget.__init__
+
+
+def counting_init(self, *args, **kwargs):
+    meter["widgets"] += 1
+    real_widget_init(self, *args, **kwargs)
+
+
+gui.UIWidget.__init__ = counting_init
+
+
+def live_widgets() -> int:
+    gc.collect()
+    return sum(1 for o in gc.get_objects() if isinstance(o, gui.UIWidget))
+
+
+class Bench:
+    def __init__(self, project: Path, size=(1280, 720)) -> None:
+        self.d = StudioDriver(project)
+        self.s = self.d.studio
+        self.w = self.d.window
+        real_draw = self.s.ui.draw
+
+        def ui_draw(*args, **kwargs):
+            started = time.perf_counter()
+            try:
+                return real_draw(*args, **kwargs)
+            finally:
+                meter["ui_draw_s"] += time.perf_counter() - started
+
+        self.s.ui.draw = ui_draw
+        if size != (1280, 720):
+            self.resize(*size)
+        self.d.advance(3)
+
+    def resize(self, w: int, h: int) -> None:
+        self.w.set_size(w, h)
+        self.w.dispatch_event("on_resize", w, h)
+        self.d.advance(2)
+
+    def measure(self, action) -> dict:
+        self.w.ctx.finish()
+        before = dict(meter)
+        if MEMORY:
+            tracemalloc.reset_peak()
+            base = tracemalloc.get_traced_memory()[0]
+        t0 = time.perf_counter()
+        action()
+        t1 = time.perf_counter()
+        allocated = (tracemalloc.get_traced_memory()[1] - base) if MEMORY else None
+        self.w.dispatch_event("on_update", 1 / 60)
+        t2 = time.perf_counter()
+        self.w.dispatch_event("on_draw")
+        self.w.ctx.finish()
+        t3 = time.perf_counter()
+        self.w.ctx.gc()
+        delta = {k: meter[k] - before[k] for k in meter}
+        ms = 1000.0
+        row = {"handler_ms": (t1 - t0) * ms, "update_ms": (t2 - t1) * ms, "draw_ms": (t3 - t2) * ms,
+               "ui_draw_ms": delta["ui_draw_s"] * ms, "scene_draw_ms": (t3 - t2 - delta["ui_draw_s"]) * ms,
+               "latency_ms": (t3 - t0) * ms, "rebuilds": delta["rebuilds"], "rebuild_ms": delta["rebuild_s"] * ms,
+               "rewindows": delta["rewindows"], "rewindow_ms": delta["rewindow_s"] * ms,
+               "left_panel_ms": delta["left_s"] * ms, "right_panel_ms": delta["right_s"] * ms, "top_bar_ms": delta["top_s"] * ms,
+               "widgets": delta["widgets"], "binds": delta["binds"], "bind_ms": delta["bind_s"] * ms}
+        if MEMORY:
+            row["handler_allocated_kb"] = allocated / 1024
+        return row
+
+    # ---- input, as the window gets it
+    def wheel(self, x: float, dy: int) -> dict:
+        return self.measure(lambda: self.w.dispatch_event("on_mouse_scroll", x, self.w.height / 2, 0, dy))
+
+    def button(self, text: str, *, prefix: bool = False):
+        for widget in self.s.ui.walk_widgets():
+            label = getattr(widget, "text", None)
+            if hasattr(widget, "on_click") and isinstance(label, str) and (label == text or (prefix and label.startswith(text))):
+                return widget
+        return None
+
+    def press(self, widget) -> dict:
+        r = widget.rect
+        x, y = r.left + r.width / 2, r.bottom + r.height / 2
+        a = self.d.arcade
+
+        def act():
+            self.w.dispatch_event("on_mouse_motion", x, y, 0, 0)
+            self.w.dispatch_event("on_mouse_press", x, y, a.MOUSE_BUTTON_LEFT, 0)
+            self.w.dispatch_event("on_mouse_release", x, y, a.MOUSE_BUTTON_LEFT, 0)
+
+        return self.measure(act)
+
+    def click_text(self, text: str, *, prefix: bool = False) -> dict | None:
+        self.d.advance()
+        widget = self.button(text, prefix=prefix)
+        return self.press(widget) if widget is not None else None
+
+    def scroll_cycle(self, side: str, cycles: int) -> list[dict]:
+        x = self.w.width - 100 if side == "right" else 100
+        more = (lambda: self.s._panel_more) if side == "right" else (lambda: self.s._left_more)
+        rows = []
+        for _ in range(cycles):
+            for index, dy in ((1, -1), (0, 1)):
+                for _n in range(200):
+                    if not more()[index]:
+                        break
+                    rows.append(self.wheel(x, dy))
+        return rows
+
+
+def summary(rows: list[dict]) -> dict:
+    rows = [r for r in rows if r]
+    if not rows:
+        return {"n": 0}
+    result: dict = {"n": len(rows)}
+    for key in rows[0]:
+        values = sorted(r[key] for r in rows)
+        p95 = values[min(len(values) - 1, int(round(0.95 * (len(values) - 1))))]
+        result[key] = {"median": round(statistics.median(values), 3), "p95": round(p95, 3), "max": round(values[-1], 3),
+                       "mean": round(statistics.fmean(values), 3)}
+    return result
+
+
+LINES = ["Have you seen the old mill?", "It stopped turning the winter the river froze.", "My father kept its wheel.",
+         "He said the water remembers.", "Go and look, if you like.", "Mind the loose boards.", "And the owl.",
+         "It has lived there longer than I have.", "Come back and tell me what you find.", "Safe roads."]
+
+
+def with_conversation(project: Path, lights: bool) -> None:
+    """A talker with a conversation of ten more lines (and, in the 3D room, three more lights): a room as a creator
+    has it some hours in, not as the template starts it."""
+    path = project / SCENE
+    scene = json.loads(path.read_text(encoding="utf-8"))
+    talker = next(e["id"] for e in scene["entities"] if "elder" in e["id"] or "guide" in e["id"])
+    for text in LINES:
+        scene, _line = ops.add_line(scene, talker, text=text)
+    if lights:
+        for x, y in ((400.0, 800.0), (880.0, 800.0), (960.0, 1000.0)):
+            scene, _index = ops.add_light(scene, x, y, color="Warm", radius=200)
+    path.write_bytes(json.dumps(scene, indent=2).encode("utf-8"))
+
+
+def hd2d_project() -> Path:
+    project = work / "bench_hd2d_v2"
+    if not project.exists():
+        create_project(project, "Bench HD-2D", "hd2d_rpg")
+        with_conversation(project, lights=True)
+    return project
+
+
+def flat_project() -> Path:
+    project = work / "bench_2d_v2"
+    if not project.exists():
+        create_project(project, "Bench 2D", "adventure")
+        with_conversation(project, lights=False)
+    return project
+
+
+def workloads(project: Path, label: str, reps: int) -> dict:
+    results: dict = {}
+    b = Bench(project)
+    s, d = b.s, b.d
+    ids = [e["id"] for e in s.project.scene().get("entities") or []]
+    talker = next(i for i in ids if "elder" in i or "guide" in i)
+    player = next(i for i in ids if "player" in i)
+    for _ in range(12):  # (warm: the first rebuilds of a process cost more than the ones after)
+        for entity in (talker, player):
+            s.select(entity)
+            d.advance()
+    results["idle_frame"] = summary([b.measure(lambda: None) for _ in range(30)])
+    results["live_widgets_at_start"] = live_widgets()
+
+    # 1. scrolling a long Inspector, both panels visible
+    s.select(talker)
+    d.advance()
+    b.click_text("Dialogue")
+    results["panels_visible"] = list(s._panel_widths())
+    rows = b.scroll_cycle("right", reps)
+    results["inspector_scroll_dialogue"] = summary(rows)
+    results["inspector_scroll_dialogue_notches"] = len(rows)
+    s.select(player)
+    d.advance()
+    b.click_text("Look")
+    results["inspector_scroll_look"] = summary(b.scroll_cycle("right", reps * 3))
+    results["live_widgets_after_inspector_scrolls"] = live_widgets()
+    if MEMORY:
+        gc.collect()
+        results["traced_kb_after_inspector_scrolls"] = round(tracemalloc.get_traced_memory()[0] / 1024)
+
+    if s.hd2d.active:  # a long list (the model browser): rows made as they are first shown
+        s.hd2d.open_models()
+        d.advance()
+        results["inspector_scroll_models"] = summary(b.scroll_cycle("right", reps))
+        s.hd2d.open_models()
+        d.advance()
+
+    # 3. changing the selected entity
+    rows = []
+    for _ in range(reps * 3):
+        for entity in (talker, player):
+            rows.append(b.measure(lambda e=entity: s.select(e)))
+    results["select_change"] = summary(rows)
+
+    # 4. switching inspector tabs and tool categories
+    s.select(talker)
+    d.advance()
+    rows = []
+    for _ in range(reps):
+        for tab in ("Look", "Animation", "Collision", "Dialogue", "Conditions", "Behaviours"):
+            rows.append(b.click_text(tab))
+    results["inspector_tab_switch"] = summary(rows)
+    rows = []
+    for _ in range(reps):
+        for _key, title in LEFT_TABS:
+            rows.append(b.click_text(title))
+    results["tools_category_switch"] = summary(rows)
+    results["live_widgets_after_switching"] = live_widgets()
+
+    # 5. an ordinary property control
+    s.select(player)
+    d.advance()
+    b.click_text("Look")
+    rows = [b.click_text("Mirrored", prefix=True) for _ in range(reps * 4)]
+    results["property_toggle"] = summary(rows)
+
+    # 6. typing in a box, then scrolling (the wheel commits what was typed, then scrolls)
+    rows_scroll, rows_type = [], []
+    k = d.arcade.key
+    for _ in range(reps * 2):
+        b.click_text("Look")
+        d.advance()
+        field = s._focusable.get("look_scale")
+        if field is None or getattr(field, "parent", None) is None:
+            break
+        r = field.rect
+        d.click(r.left + r.width / 2, r.bottom + r.height / 2)
+        b.w.dispatch_event("on_key_press", k.A, k.MOD_CTRL)
+        b.w.dispatch_event("on_key_release", k.A, k.MOD_CTRL)
+        rows_type.append(b.measure(lambda: b.w.dispatch_event("on_text", "2")))
+        rows_scroll.append(b.wheel(b.w.width - 100, -1))
+        b.wheel(b.w.width - 100, 1)
+        s.undo()
+        d.advance()
+    results["type_a_character"] = summary(rows_type)
+    results["scroll_with_typed_value"] = summary(rows_scroll)
+
+    # 7. lighting controls
+    b.click_text("Lighting")
+    d.advance()
+    results["lighting_panel_buttons"] = [w.text for w in s.ui.walk_widgets() if hasattr(w, "on_click")
+                                         and isinstance(getattr(w, "text", None), str) and w.rect.left > b.w.width - 340][:60]
+    if b.click_text("Light 4", prefix=True):  # (the 3D room: one light's own settings, all of them)
+        d.advance()
+        b.click_text("> More settings")
+        d.advance()
+    results["lighting_scroll"] = summary(b.scroll_cycle("right", reps))
+    rows = []
+    for _ in range(reps * 2):
+        for text in ("Sharp", "Soft"):
+            hit = b.click_text(text)
+            if hit:
+                rows.append(hit)
+    results["lighting_control_click"] = summary(rows)
+    while s.project.can_undo():
+        s.undo()
+    d.advance()
+
+    # 8. resizing the window
+    rows = []
+    for _ in range(reps * 2):
+        for size in ((1100, 660), (1280, 720)):
+            def act(size=size):
+                b.w.set_size(*size)
+                b.w.dispatch_event("on_resize", *size)
+            rows.append(b.measure(act))
+    results["resize"] = summary(rows)
+
+    # 9. switching rooms
+    b.click_text("Rooms")
+    d.advance()
+    rooms = [title for _key, title, _path in s.project.rooms()]
+    rows = []
+    for _ in range(reps):
+        for title in reversed(rooms):
+            hit = b.click_text(title)
+            if hit:
+                rows.append(hit)
+    results["room_switch"] = summary(rows)
+    results["live_widgets_at_end"] = live_widgets()
+    if MEMORY:
+        gc.collect()
+        results["traced_kb_at_end"] = round(tracemalloc.get_traced_memory()[0] / 1024)
+    d.close()
+
+    # 2. scrolling the Tools panel, both panels visible, in a small-laptop window
+    b = Bench(project, size=(1100, 620))
+    s, d = b.s, b.d
+    s.select(player)
+    d.advance()
+    results["small_window_panels_visible"] = list(s._panel_widths())
+    for key, title in LEFT_TABS:
+        b.click_text(title)
+        d.advance()
+        if s._left_more[1]:
+            rows = b.scroll_cycle("left", reps * 2)
+            results[f"tools_scroll_{key}"] = summary(rows)
+    before = live_widgets()
+    for _ in range(40):
+        b.scroll_cycle("right", 1)
+        b.scroll_cycle("left", 1)
+    results["live_widgets_before_and_after_many_scrolls"] = [before, live_widgets()]
+    d.close()
+    return results
+
+
+if MEMORY:
+    tracemalloc.start()
+report = {"repo": str(repo.name), "memory_run": MEMORY, "python": sys.version.split()[0],
+          "has_selective_refresh": hasattr(Studio, "_rewindow")}
+reps = 2 if MEMORY else 3
+report["hd2d"] = workloads(hd2d_project(), "hd2d", reps)
+report["2d"] = workloads(flat_project(), "2d", reps)
+out.write_text(json.dumps(report, indent=1), encoding="utf-8")
+
+
+def line(name: str, r: dict) -> str:
+    if not isinstance(r, dict) or not r.get("n"):
+        return f"{name:38s} (none)"
+    h, lat = r["handler_ms"], r["latency_ms"]
+    return (f"{name:38s} n {r['n']:3d}  handler {h['median']:7.1f} / {h['p95']:7.1f} / {h['max']:7.1f} ms   "
+            f"ui draw {r['ui_draw_ms']['median']:6.1f}  scene {r['scene_draw_ms']['median']:6.1f}  latency {lat['median']:7.1f} / {lat['p95']:7.1f}   "
+            f"rebuilds {r['rebuilds']['mean']:.2f}  rewindows {r['rewindows']['mean']:.2f}  widgets {r['widgets']['median']:.0f}  "
+            f"binds {r['binds']['median']:.0f} ({r['bind_ms']['median']:.1f} ms)"
+            + (f"  alloc {r['handler_allocated_kb']['median']:.0f} kB" if "handler_allocated_kb" in r else ""))
+
+
+for scene in ("hd2d", "2d"):
+    print("==", scene)
+    for name, r in report[scene].items():
+        print(line(name, r) if isinstance(r, dict) else f"{name:38s} {r}")

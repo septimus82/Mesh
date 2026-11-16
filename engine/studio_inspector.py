@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import reprlib
 import time
+from collections.abc import Iterator
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
@@ -66,6 +67,15 @@ class Rows:
         """Remember where a section starts, to scroll it into view."""
         self.anchors[name] = len(self.items)
 
+    def widgets(self) -> Iterator[Any]:
+        """Every widget the rows have made, at any depth (a ``LazyRow`` never shown has made none)."""
+        todo = [item.widget if isinstance(item, LazyRow) else item for item in self.items]
+        while todo:
+            widget = todo.pop()
+            if widget is not None:
+                yield widget
+                todo.extend(widget.children)
+
 
 class LazyRow:
     """A right-panel row of a known height whose widgets are made only if it is shown: a long list (the model
@@ -73,6 +83,12 @@ class LazyRow:
 
     def __init__(self, height: float, make: Any) -> None:
         self.height, self.make = height, make
+        self.widget: Any = None  # made the first time the row is shown, and kept while its panel's rows are
+
+    def shown(self) -> Any:
+        if self.widget is None:
+            self.widget = self.make()
+        return self.widget
 
 
 def row_height(widget: Any) -> float:
@@ -103,8 +119,9 @@ def _guess_frame(size: tuple[int, int] | None) -> tuple[int, int]:
 
 
 def _on_screen(widget: Any) -> bool:
-    """Whether a preview slot is in the shown panel (rows scrolled out of view never get laid out)."""
-    return getattr(widget, "parent", None) is not None
+    """Whether a preview slot is in the shown panel: in the window's widget tree, at any depth. (A row scrolled out
+    of view is in no tree: never laid out, or left where it was last shown.)"""
+    return widget.get_ui_manager() is not None
 
 
 # Panels whose pictures (``_thumbs``) are drawn: the inspector, the picture picker and the 3D model panels.
