@@ -8,7 +8,8 @@ opening that needs the flag), saved; Studio closed and reopened; the same conver
 back, saved and reopened again, and saved and reopened twice more without edits.
 
 Recorded each time: the inspector's line list as shown (numbers and flow), its "Otherwise line" and openings, and the
-conversation as stored (line ids, what follows each, the choices' destinations and flags). Then the conversation is
+conversation as stored (line ids, what follows each, the choices' destinations and flags); and for each read of the
+inspector, that it went from its top to its bottom (``inspector_reads``). Then the conversation is
 played in the game (a hidden game window, the player walking up and pressing E) and in an exported build.
 
     py -3.13 tooling/watchfire_r4_dialogue.py OUT
@@ -122,14 +123,20 @@ def run(out: Path) -> dict[str, Any]:
         raise AssertionError(f"the inspector never reached its bottom in {WHEEL_LIMIT} notches: {d().studio._panel_more}")
 
     def all_labels() -> list[str]:
-        """Everything in the panels, read with the mouse wheel from top to bottom (it shows part at a time)."""
+        """Everything in the panels, read with the mouse wheel from top to bottom (it shows part at a time). The
+        inspector is left at its bottom: whatever looks for something next goes to the top itself (``down_until``),
+        and what closes Studio or leaves the room next has no use for a scroll back up (each notch rebuilds the
+        panels: docs/reviews/gpu_test_time.md)."""
         seen: list[str] = []
+        at: list[tuple[int, int]] = []  # rows out of view (above, below) at each position read
 
         def read() -> None:
+            at.append((more(below=False), more(below=True)))
             seen.extend(t for t in d().labels() if t not in seen)
 
         down_until(read)
-        to_top()
+        report.setdefault("inspector_reads", []).append(
+            {"from_top": at[0][0] == 0, "to_bottom": at[-1][1] == 0, "positions": len(at)})
         return seen
 
     def all_lines() -> list[str]:
@@ -274,8 +281,8 @@ def run(out: Path) -> dict[str, Any]:
         d().advance(2)
         report["C_edited"] = {"shown": shown(), "stored": stored(), "undo_restored_the_line": LINES["flint"] in
                               [n["text"] for n in undone["nodes"].values()], "redo_same": stored() == before_undo}
-        # the "+ Next line" button: where does a new line go now?
-        report["C_next_line_button"] = shown()["next_line_button"]
+        # the "+ Next line" button: where does a new line go now? (As just read: nothing was done since.)
+        report["C_next_line_button"] = report["C_edited"]["shown"]["next_line_button"]
 
         # D: another room and back
         other = next(k for k, _l, path in d().studio.project.rooms() if not path.endswith("hills.json"))
