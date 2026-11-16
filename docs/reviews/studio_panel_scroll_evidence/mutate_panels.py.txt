@@ -72,7 +72,10 @@ MUTATIONS = {
 
 env = dict(os.environ, MESH_GL_SMOKE="1")
 results = {}
+ONLY = sys.argv[3:]  # (optional: only the faults whose names contain one of these)
 for name, (file, old, new) in MUTATIONS.items():
+    if ONLY and not any(part in name for part in ONLY):
+        continue
     original = None
     try:
         if file is not None:

@@ -466,7 +466,8 @@ def test_tooltips_are_where_their_buttons_are_shown_and_nowhere_else(d: Any) -> 
 def test_the_import_preview_is_drawn_only_while_its_row_is_in_view(d: Any) -> None:
     """The picture being imported is drawn over a slot in the panel: none where that row is scrolled out of view."""
     studio = d.studio
-    _size(d, 1100, 560)
+    _size(d, 1100, 440)  # (short enough that the rows above the preview and the preview never fit together,
+    #                       whatever the fonts' heights: at 560 they do on Linux and the panel does not scroll)
     studio.import_form.update(path=str(Path(studio.project.root) / "assets" / "sprites" / "hd2d_hero.png"), name="hero", tile="32")
     studio.panel = "import_tileset"
     studio._rebuild()
@@ -707,7 +708,8 @@ def test_scrolling_and_switching_many_times_leaves_no_widgets_or_listeners_behin
 
     def live() -> int:
         gc.collect()
-        return sum(1 for o in gc.get_objects() if isinstance(o, gui.UIWidget))
+        # (by type: ``isinstance`` asks a weak proxy for its class, and one whose object is gone raises)
+        return sum(1 for o in gc.get_objects() if issubclass(type(o), gui.UIWidget))
 
     def listeners(widget: Any) -> int:
         total = 0

@@ -242,4 +242,12 @@ on screen; the palette and preview slots kept where a row was.
 acceptance tests are 124 s shorter between them. The lane is about as long as it was: this change is for the
 person scrolling, and takes nothing off CI.
 
+**The first Extended run failed, and is kept** (head `406223fc`, run 43939458541; CI on that head passed). Both
+systems' first GPU shard failed in two of the new module's own tests, under Python 3.11 and Mesa. The lifetime test
+counted live widgets with `isinstance`, which asks a weak proxy for its class and raises when the proxy's object is
+gone (another test's leftover; both systems). The import-preview test took its panel to scroll in a 560 px window,
+and with Linux's fonts it fits. Faults of the tests, not of Studio: corrected in the next commit (by type; a
+440 px window, where the rows above the preview and the preview cannot fit together whatever the fonts), each
+still failing under the fault it is there to catch. Not rerun.
+
 CI and Extended on the pull request's head: in the pull request.
