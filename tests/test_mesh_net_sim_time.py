@@ -13,7 +13,8 @@ pytestmark = pytest.mark.integration
 
 
 async def scenario(log, unit):
-    """Sleeps, a poll, a timeout and a cancellation whose times never coincide (in units of ``unit`` seconds)."""
+    """Sleeps, a timeout and a cancellation whose times never coincide (in units of ``unit`` seconds). Every timer is
+    set at the start, so a real loop that stalls still fires them in this order."""
     loop = asyncio.get_running_loop()
     start = loop.time()
 
@@ -24,41 +25,40 @@ async def scenario(log, unit):
         await asyncio.sleep(units * unit)
         note(name)
 
-    async def poller():
+    async def cancelled():
         try:
-            while True:
-                await asyncio.sleep(4 * unit)
-                note("poll")
+            await asyncio.sleep(100 * unit)
         except asyncio.CancelledError:
-            note("poll cancelled")
+            note("cancelled")
             raise
 
     async def timed_out():
         try:
             async with asyncio.timeout(7 * unit):
-                await asyncio.sleep(100 * unit)
+                await asyncio.sleep(200 * unit)
         except TimeoutError:
             note("timeout")
 
-    tasks = [asyncio.create_task(c) for c in (sleeper("a", 5), sleeper("b", 2), poller(), timed_out(), sleeper("c", 10))]
+    tasks = [asyncio.create_task(c) for c in (sleeper("a", 5), sleeper("b", 2), cancelled(), timed_out(), sleeper("c", 10))]
     await asyncio.sleep(13 * unit)
     tasks[2].cancel()
     await asyncio.gather(*tasks, return_exceptions=True)
     note("end")
 
 
-EXPECTED = [("b", 2), ("poll", 4), ("a", 5), ("timeout", 7), ("poll", 8), ("c", 10), ("poll", 12), ("poll cancelled", 13), ("end", 13)]
+EXPECTED = [("b", 2), ("a", 5), ("timeout", 7), ("c", 10), ("cancelled", 13), ("end", 13)]
 
 
 def test_events_come_in_the_order_and_at_the_times_real_time_gives_them():
-    """The same tasks on a real loop (40 ms a unit: wider than any platform's timer) and on the simulated one."""
+    """The same tasks on a real loop (40 ms a unit: wider than any platform's timer) and on the simulated one, there
+    at 40 s a unit: 520 simulated seconds, not waited for."""
     real, simulated = [], []
     asyncio.run(scenario(real, 0.04))
     started = time.perf_counter()
-    run(scenario(simulated, 0.04))
+    run(scenario(simulated, 40.0))
     assert simulated == EXPECTED  # the exact times
     assert [what for what, _ in real] == [what for what, _ in EXPECTED]  # (real timers run a little late)
-    assert time.perf_counter() - started < 0.3  # (0.52 s of it simulated)
+    assert time.perf_counter() - started < 60
 
 
 def test_a_timer_fires_at_its_own_time_not_at_an_earlier_timers():
@@ -133,11 +133,13 @@ def test_a_run_leaves_no_task_or_loop_behind_and_real_loops_keep_real_time():
         loop = asyncio.get_running_loop()
         started = time.perf_counter()
         before = loop.time()
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.2)
         return time.perf_counter() - started, loop.time() - before
 
+    # A real 200 ms, on a loop this module never touched. (A real Windows loop may call a timer due 15.6 ms early,
+    # and its clock moves in steps of that size.)
     waited, loop_time = asyncio.run(real())
-    assert waited >= 0.04 and loop_time >= 0.04  # a real 50 ms, on a loop this module never touched
+    assert waited >= 0.15 and loop_time >= 0.15
 
 
 def test_a_wait_nothing_can_end_fails_at_once():

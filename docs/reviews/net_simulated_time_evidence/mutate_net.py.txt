@@ -97,7 +97,7 @@ STANDINS = {
         "            raise SimulationStuck(f\"nothing can continue at {self.now:.3f} s simulated: every task waits, and not on a timer\")\n",
         "            timeout = 1.0\n", [SIM]),
     "clock: no real-time limit": (
-        "tests/net_sim_time.py", "        if time.monotonic() > self.real_deadline:\n", "        if False:\n",
+        "tests/net_sim_time.py", "        if time.perf_counter() > self.real_deadline:\n", "        if False:\n",
         [SIM + "::test_a_loop_that_never_waits_fails_on_real_time"], 90),
 }
 

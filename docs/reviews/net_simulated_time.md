@@ -179,8 +179,8 @@ tick against poll, in both rooms (30 walks).
 ## 6. Guards
 
 - A wait nothing can end (no timer, nothing ready) raises `SimulationStuck` at once.
-- A run past `real_limit` (30 s) of **real** time raises `SimulationStuck`: read from `time.monotonic()`, not the
-  simulated clock, so a loop that never waits is still ended.
+- A run past `real_limit` (30 s) of **real** time raises `SimulationStuck`: read from `time.perf_counter()`, not
+  the simulated clock, so a loop that never waits is still ended.
 - A run past `simulated_limit` (600 s) of simulated time raises `SimulationStuck`.
 - The helpers' own `asyncio.timeout` still bounds each wait (in simulated seconds), with the same messages.
 
@@ -199,11 +199,11 @@ Same selection plus the new module, same machine, three runs each (`baseline_loc
 
 | | before | after |
 |---|---|---|
-| `test_mesh_net_walk` | 35.25 s (16 tests) | **3.08 s** (25 tests) |
+| `test_mesh_net_walk` | 35.25 s (16 tests) | **3.12 s** (25 tests) |
 | `test_mesh_net_resume` | 17.03 s (18 tests) | **11.40 s** (19 tests; 9.7 s of it the real N6 tests) |
-| `test_mesh_net_sim_time` | | 0.89 s (8 tests) |
-| every headless networking module | 112.26 s (200 tests) | **74.61 s** (218 tests) |
-| the pytest run of them, wall | 124.9 to 128.9 s | 88.8 to 89.4 s |
+| `test_mesh_net_sim_time` | | 1.03 s (8 tests) |
+| every headless networking module | 112.26 s (200 tests) | **74.84 s** (218 tests) |
+| the pytest run of them, wall | 124.9 to 128.9 s | 88.5 to 88.8 s |
 
 - Simulated ticks: the 14 positive original walking tests take the same 1,016 (identical per test); the two
   negative ones 104, where a real Windows second gave 71; the nine new walking tests add 1,531.
@@ -213,7 +213,20 @@ Same selection plus the new module, same machine, three runs each (`baseline_loc
 
 CI figures are in the pull request (the Windows shard's JUnit gives per-test times; Linux gives only the job's).
 
-## 8. Limits
+## 8. CI history
+
+The first CI run of this branch (43830807804, head `ce7df836`) **failed** on attempt 1, in one of the new tests:
+`test_a_loop_that_never_waits_fails_on_real_time` required the real-time guard to take at least its 0.2 s and
+measured 0.1965 s. The guard read `time.monotonic()`, which Python 3.11 on Windows reads from a counter that moves
+in 15.6 ms steps (`GetTickCount64`; Python 3.13, used locally, reads the fine counter), so a limit set from it
+could end up to one step early. Extended 43830804815 on that head passed on attempt 1. Nothing was rerun.
+
+Corrected in a second commit: the guard reads `time.perf_counter()` (fine on every version). The two other
+real-time assertions in the new tests were made independent of timer steps and of a stalled runner at the same
+time: the comparison with a real loop sets every timer at the start (a stall then cannot reorder them), and the
+"real loops keep real time" check sleeps 200 ms and requires 150.
+
+## 9. Limits
 
 - Windows shard 2 holds both changed modules; in the reference run shard 1 was the longer Windows shard and the
   Linux job the longest of the three. A shorter shard 2 does not shorten the workflow by itself.

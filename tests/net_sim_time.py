@@ -11,9 +11,10 @@ one ``run`` call, and every other loop in the process keeps real time.
 Not for anything with a real peer (a socket, a subprocess, a thread): its answer takes real time the simulated clock
 would run past. Those tests keep ``asyncio.run``.
 
-Two guards, neither on the simulated clock: a wait nothing can end (no timer, nothing ready) fails at once, and a run
-that outlasts ``real_limit`` seconds of real time (a loop that never waits, a poll with no timeout of its own) or
-``simulated_limit`` seconds of simulated time fails with ``SimulationStuck``.
+Guards: a wait nothing can end (no timer, nothing ready) fails at once, and a run that outlasts ``real_limit`` seconds
+of real time (a loop that never waits) or ``simulated_limit`` seconds of simulated time (a poll with no timeout of its
+own) fails with ``SimulationStuck``. The real limit is read from ``time.perf_counter()``, never the simulated clock
+(and not ``time.monotonic()``, which Python 3.11 reads in 15.6 ms steps on Windows).
 """
 
 from __future__ import annotations
@@ -39,13 +40,13 @@ class _Clock(selectors.DefaultSelector):
     def __init__(self, real_limit: float, simulated_limit: float) -> None:
         super().__init__()
         self.now = 0.0
-        self.real_deadline = time.monotonic() + real_limit
+        self.real_deadline = time.perf_counter() + real_limit
         self.real_limit, self.simulated_limit = real_limit, simulated_limit
 
     def select(self, timeout: float | None = None) -> list[tuple[selectors.SelectorKey, int]]:
         ready = super().select(0)
-        if time.monotonic() > self.real_deadline:
-            self.real_deadline = time.monotonic() + GRACE  # (so the run's tasks can be cancelled and the loop closed)
+        if time.perf_counter() > self.real_deadline:
+            self.real_deadline = time.perf_counter() + GRACE  # (so the run's tasks can be cancelled and the loop closed)
             raise SimulationStuck(f"still running after {self.real_limit} s of real time, at {self.now:.3f} s simulated")
         if ready:
             return ready

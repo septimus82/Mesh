@@ -8,8 +8,8 @@
   ],
   "caught": false,
   "failing": [],
-  "summary": "52 passed in 20.27s",
-  "wall_s": 21.1
+  "summary": "52 passed in 20.34s",
+  "wall_s": 21.2
  },
  "window: a release takes effect one tick early": {
   "file": "tests/test_mesh_net_walk.py",
@@ -23,8 +23,8 @@
    "test_commands_sent_in_one_tick_take_effect_in_the_order_sent",
    "test_walk_gives_up_when_each_release_lands_later_than_the_last"
   ],
-  "summary": "4 failed, 21 passed in 6.37s",
-  "wall_s": 17.5
+  "summary": "4 failed, 21 passed in 6.36s",
+  "wall_s": 7.2
  },
  "window: a release takes effect one tick late": {
   "file": "tests/test_mesh_net_walk.py",
@@ -39,8 +39,8 @@
    "test_commands_sent_in_one_tick_take_effect_in_the_order_sent",
    "test_walk_gives_up_when_each_release_lands_later_than_the_last"
   ],
-  "summary": "5 failed, 20 passed in 6.48s",
-  "wall_s": 10.1
+  "summary": "5 failed, 20 passed in 6.43s",
+  "wall_s": 7.3
  },
  "window: a press takes effect one tick late": {
   "file": "tests/test_mesh_net_walk.py",
@@ -54,8 +54,8 @@
    "test_a_key_takes_effect_exactly_late_ticks_after_its_command[4]",
    "test_commands_sent_in_one_tick_take_effect_in_the_order_sent"
   ],
-  "summary": "4 failed, 21 passed in 6.61s",
-  "wall_s": 7.5
+  "summary": "4 failed, 21 passed in 6.33s",
+  "wall_s": 7.2
  },
  "window: commands due in one tick are handled last first": {
   "file": "tests/test_mesh_net_walk.py",
@@ -66,8 +66,8 @@
   "failing": [
    "test_commands_sent_in_one_tick_take_effect_in_the_order_sent"
   ],
-  "summary": "1 failed, 24 passed in 6.39s",
-  "wall_s": 7.3
+  "summary": "1 failed, 24 passed in 6.34s",
+  "wall_s": 7.2
  },
  "server: every tenth tick is skipped": {
   "file": "tests/test_mesh_net_walk.py",
@@ -81,8 +81,8 @@
    "test_the_server_ticks_once_every_tick_of_simulated_time",
    "test_walk_still_fails_when_input_never_arrives"
   ],
-  "summary": "4 failed, 21 passed in 6.45s",
-  "wall_s": 7.3
+  "summary": "4 failed, 21 passed in 6.50s",
+  "wall_s": 7.4
  },
  "server: every tenth tick is run twice": {
   "file": "tests/test_mesh_net_walk.py",
@@ -95,8 +95,8 @@
    "test_a_key_takes_effect_exactly_late_ticks_after_its_command[4]",
    "test_the_server_ticks_once_every_tick_of_simulated_time"
   ],
-  "summary": "3 failed, 22 passed in 6.43s",
-  "wall_s": 7.3
+  "summary": "3 failed, 22 passed in 6.30s",
+  "wall_s": 7.2
  },
  "server: ticks every 40 ms of simulated time": {
   "file": "tests/test_mesh_net_walk.py",
@@ -107,7 +107,7 @@
   "failing": [
    "test_the_server_ticks_once_every_tick_of_simulated_time"
   ],
-  "summary": "1 failed, 24 passed in 6.63s",
+  "summary": "1 failed, 24 passed in 6.64s",
   "wall_s": 7.5
  },
  "server: never ticks": {
@@ -138,8 +138,8 @@
    "test_walk_still_fails_when_a_wall_blocks_the_way",
    "test_walk_still_fails_when_input_never_arrives"
   ],
-  "summary": "20 failed, 5 passed in 22.27s",
-  "wall_s": 23.1
+  "summary": "20 failed, 5 passed in 22.49s",
+  "wall_s": 23.4
  },
  "resume window: the old session closes at once (no race left)": {
   "file": "tests/test_mesh_net_resume.py",
@@ -150,7 +150,7 @@
   "failing": [
    "test_the_old_wait_takes_the_pre_drop_reply"
   ],
-  "summary": "1 failed, 18 passed in 14.73s",
+  "summary": "1 failed, 18 passed in 14.68s",
   "wall_s": 15.6
  },
  "resume window: a key is handled as its command arrives (no frame queue)": {
@@ -170,8 +170,8 @@
    "test_the_old_wait_takes_the_pre_drop_reply",
    "test_the_scene_check_still_fails_on_the_wrong_avatar"
   ],
-  "summary": "9 failed, 10 passed in 285.24s (0:04:45)",
-  "wall_s": 286.1
+  "summary": "9 failed, 10 passed in 285.26s (0:04:45)",
+  "wall_s": 286.2
  },
  "clock: a timer within 15.6 ms is called due (a real Windows loop's rule)": {
   "file": "tests/net_sim_time.py",
@@ -185,8 +185,8 @@
    "test_a_timeout_is_simulated_time_and_still_fails_the_wait",
    "test_a_timer_fires_at_its_own_time_not_at_an_earlier_timers"
   ],
-  "summary": "2 failed, 50 passed in 20.63s",
-  "wall_s": 21.5
+  "summary": "2 failed, 50 passed in 20.66s",
+  "wall_s": 21.6
  },
  "clock: waits run twice as long as asked": {
   "file": "tests/net_sim_time.py",
@@ -202,8 +202,8 @@
    "test_events_come_in_the_order_and_at_the_times_real_time_gives_them",
    "test_the_server_ticks_once_every_tick_of_simulated_time"
   ],
-  "summary": "4 failed, 48 passed in 20.50s",
-  "wall_s": 21.4
+  "summary": "4 failed, 48 passed in 20.61s",
+  "wall_s": 21.5
  },
  "clock: simulated time never moves": {
   "file": "tests/net_sim_time.py",
@@ -219,8 +219,8 @@
    "test_events_come_in_the_order_and_at_the_times_real_time_gives_them",
    "test_the_result_and_an_exception_come_back_as_from_asyncio_run"
   ],
-  "summary": "6 failed, 2 passed in 184.17s (0:03:04)",
-  "wall_s": 185.1
+  "summary": "6 failed, 2 passed in 184.14s (0:03:04)",
+  "wall_s": 185.0
  },
  "clock: a wait nothing can end is waited on (no guard)": {
   "file": "tests/net_sim_time.py",
@@ -231,8 +231,8 @@
   "failing": [
    "test_a_wait_nothing_can_end_fails_at_once"
   ],
-  "summary": "1 failed, 7 passed in 4.08s",
-  "wall_s": 4.9
+  "summary": "1 failed, 7 passed in 4.23s",
+  "wall_s": 5.1
  },
  "clock: no real-time limit": {
   "file": "tests/net_sim_time.py",
