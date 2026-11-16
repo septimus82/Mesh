@@ -223,6 +223,9 @@ class SoundMixin:
         rows.add(self._toggle("Loop", bool(emitter.get("loop", True)),
                               lambda on: change("Plays round." if on else "Plays once each time the player comes near.",
                                                 loop=on), width))
+        rows.add(self._toggle("Quieter behind walls", bool(emitter.get("occlusion", False)),
+                              lambda on: change("Quieter while a wall is between it and the player." if on
+                                                else "Heard the same through walls.", occlusion=on), width))
         rows.add(self._toggle("On", bool(emitter.get("enabled", True)),
                               lambda on: change("On." if on else "Off: silent.", enabled=on), width))
         self._labeled(rows, "Fade in / out (s)", self._fields_pair(

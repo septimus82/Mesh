@@ -36,6 +36,8 @@ class SoundEmitter(Behaviour):
         "enabled": ParamDef(bool, default=True, description="On"),
         "fade_in": ParamDef(float, default=1.0, description="Fade in (s)"),
         "fade_out": ParamDef(float, default=1.0, description="Fade out (s)"),
+        "occlusion": ParamDef(bool, default=False,
+                              description="Quieter while a wall stands between it and the listener"),
     }
 
     def __init__(self, entity: Any, window: Any, **config: Any) -> None:

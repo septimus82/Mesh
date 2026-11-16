@@ -1525,6 +1525,7 @@ A sound in the world, louder near it: water, birds, a humming machine (Studio: t
 | enabled | On | bool | True |
 | fade_in | Fade in (s) | float | 1.0 |
 | fade_out | Fade out (s) | float | 1.0 |
+| occlusion | Quieter while a wall stands between it and the listener | bool | False |
 
 Example configuration snippet:
 ```json

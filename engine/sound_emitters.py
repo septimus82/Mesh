@@ -13,7 +13,12 @@ placed, moved, copied, deleted, undone and saved like any object, in 2D and HD-2
   an emitter 3 m up a hill is 3 m further from someone at its foot;
 - ``stereo``: heard from its side (panned by where it is from the listener; less so close by); ``loop``: plays
   round (off: once each time the listener comes within reach); ``enabled``; ``fade_in`` / ``fade_out`` (s): when it
-  starts and stops.
+  starts and stops;
+- ``occlusion`` (Milestone 21C1; off unless set): quieter while a wall stands between it and the listener
+  (``engine.sound_occlusion``: a 2D room's wall tiles, an HD-2D room's wall colliders a person can't see over). Its
+  loudness is then ``OCCLUDED`` of what its distance gives and it is heard less from its side (``OCCLUDED_PAN``), easing
+  there and back over about ``OCCLUSION_EASE_S`` each way: the same loop, never restarted. Only loudness and side
+  change: nothing is filtered (the backend has no filters), so it is quieter, not muffled.
 
 The listener is the player (else the camera's centre). Only emitters within reach play: one out of reach has no
 player at all (nothing decoded), and the loudest ``MAX_ACTIVE`` play at once, at most ``MAX_SAME_SOUND`` of one
@@ -61,8 +66,13 @@ STOP_BEYOND = 1.1  # an emitter stops once the listener is this many times its d
 STEREO_WIDTH = 0.75  # the most an emitter is panned (never hard into one ear)
 WIND_LOUD_AT = 14.0  # m/s: the wind's sound is at full strength from this speed
 SOUND_FILES = (".wav", ".ogg", ".mp3")
+OCCLUDED = 0.35  # an emitter behind a wall plays at this much of its level (engine.audio's WORLD_SFX_OCCLUDED_VOLUME_MUL)
+OCCLUDED_PAN = 0.4  # ... and this much of its pan (WORLD_SFX_OCCLUDED_PAN_MUL): it comes round the wall, less from a side
+OCCLUSION_EASE_S = 0.25  # s: it eases behind a wall and out again this gently (then follows EASE_S like any level)
+OCCLUSION_CELL = 8.0  # px: the wall question is asked again once the listener or the emitter is in another such cell
+OCCLUSION_ASKS = 4  # emitters asked it in one update (the longest unasked first): the rest keep their last answer
 
-_FIELDS = ("sound", "volume", "radius", "distance", "stereo", "loop", "enabled", "fade_in", "fade_out")
+_FIELDS = ("sound", "volume", "radius", "distance", "stereo", "loop", "enabled", "fade_in", "fade_out", "occlusion")
 
 
 class EmitterError(ValueError):
@@ -80,6 +90,7 @@ class Emitter:
     enabled: bool = True
     fade_in: float = 1.0  # s
     fade_out: float = 1.0  # s
+    occlusion: bool = False  # quieter behind a wall (rooms made before Milestone 21C1 have none: as they were)
 
 
 DEFAULT = Emitter()
@@ -119,7 +130,8 @@ def parse_emitter(raw: Any, where: str = "SoundEmitter") -> Emitter:
                            f"({distance:g} px)")
     return Emitter(sound=sound.strip(), volume=number("volume", 0.0, 1.0), radius=radius, distance=distance,
                    stereo=flag("stereo"), loop=flag("loop"), enabled=flag("enabled"),
-                   fade_in=number("fade_in", 0.0, 30.0), fade_out=number("fade_out", 0.0, 30.0))
+                   fade_in=number("fade_in", 0.0, 30.0), fade_out=number("fade_out", 0.0, 30.0),
+                   occlusion=flag("occlusion"))
 
 
 def gain(distance: float, emitter: Emitter) -> float:
@@ -220,6 +232,11 @@ class _Live:
     playing: bool = False
     pan: float = 0.0
     sent: tuple[float, float] = (-1.0, 0.0)  # the volume and pan its loop was last given
+    occlusion: float = 1.0  # 1 heard clear ... OCCLUDED behind a wall (eased)
+    blocked: bool = False  # the last answer: a wall stands between it and the listener
+    asked: tuple[Any, tuple[float, float, float]] | None = None  # what that answer is for: the room's walls and
+    # the listener's cell (``Soundscape.heard_from``), and its own place (None: not asked since it came into reach)
+    asked_at: int = -1  # the update it was asked at
 
 
 @dataclass
@@ -238,6 +255,10 @@ class Soundscape:
     player: Any = None  # the listener, found once per room
     updates: int = 0
     loop_calls: int = 0  # play_loop / stop_loop calls made (diagnostics: the per-frame cost)
+    blockers: Any = None  # what stands in a sound's way in this room (engine.sound_occlusion.blockers), when last asked
+    walls: list[Any] = field(default_factory=list)  # an HD-2D room's walls a sound doesn't pass
+    heard_from: tuple[int, tuple[int, int, int]] = (0, (0, 0, 0))  # those walls' number, and the listener's cell
+    wall_asks: int = 0  # times the wall question was asked (diagnostics)
 
     def register(self, entity: Any, emitter: Emitter) -> None:
         data = getattr(entity, "mesh_entity_data", None) or {}
@@ -248,6 +269,8 @@ class Soundscape:
     def diagnostics(self) -> dict[str, Any]:
         return {"emitters": len(self.emitters), "playing": sorted(e.key for e in self.emitters if e.playing),
                 "levels": {e.key: round(e.level, 3) for e in self.emitters if e.playing},
+                "behind_walls": sorted(e.key for e in self.emitters if e.playing and e.blocked),
+                "wall_asks": self.wall_asks,
                 "weather": {k: round(v, 3) for k, v in self.levels.items()}, "headroom": round(self.headroom, 3),
                 "updates": self.updates, "loop_calls": self.loop_calls}
 
@@ -266,6 +289,7 @@ def reset(window: Any, room: str = "", settings: Any = None) -> None:
     scape = soundscape_of(window)
     scape.stale |= {e.key for e in scape.emitters if e.playing}
     scape.emitters, scape.room, scape.player = [], room, None
+    scape.blockers, scape.walls = None, []  # (the room's walls are found again when a sound first asks)
     settings = settings if isinstance(settings, dict) else {}
     try:
         scape.weather = parse_weather_sounds(settings.get("weather_sounds"))
@@ -311,6 +335,53 @@ def _ease(now: float, target: float, dt: float, seconds: float) -> float:
     return target if seconds <= 0 else now + (target - now) * min(1.0, dt / seconds)
 
 
+def _behind_walls(window: Any, scape: Soundscape, walled: list[tuple[_Live, tuple[float, float, float]]],
+                  listener: tuple[float, float, float], dt: float) -> None:
+    """Milestone 21C1: for the emitters in reach that are quieter behind walls, whether a wall stands between each and
+    the listener (``_Live.blocked``), and how much of it is heard now (``_Live.occlusion``, eased).
+
+    The question (``engine.sound_occlusion.blocked``) is asked of an emitter only when the listener or it has moved to
+    another ``OCCLUSION_CELL`` or the room's walls changed, and of at most ``OCCLUSION_ASKS`` emitters an update, the
+    longest unasked first; never of an emitter out of reach."""
+    from engine import sound_occlusion  # noqa: PLC0415
+
+    what = sound_occlusion.blockers(window)
+    walls_number = scape.heard_from[0]
+    if not sound_occlusion.same(what, scape.blockers):  # (another room, or its walls changed: every answer is old)
+        scape.blockers, scape.walls, walls_number = what, sound_occlusion.acoustic_walls(what), walls_number + 1
+    here = (walls_number, _cell(listener))
+    if here == scape.heard_from:
+        here = scape.heard_from  # (the same object as the answers hold: nothing moved, nothing more to compare)
+    else:
+        scape.heard_from = here
+    due = []
+    for index, (live, at) in enumerate(walled):
+        asked = live.asked
+        if asked is not None and asked[0] is here:
+            if asked[1] == at:
+                continue  # (the usual case: neither has moved since it was asked)
+            if _cell(asked[1]) == _cell(at):
+                live.asked = (here, at)  # (it moved, within its cell: the same answer)
+                continue
+        due.append((asked is not None, live.asked_at, index, live, at))
+    if due:
+        due.sort(key=lambda item: item[:3])  # never asked first, then the longest unasked (then as they are in the room)
+        for _asked, _when, _index, live, at in due[:OCCLUSION_ASKS]:
+            live.blocked = sound_occlusion.blocked(what, scape.walls, listener, at)
+            live.asked, live.asked_at = (here, at), scape.updates
+            scape.wall_asks += 1
+    for live, _at in walled:
+        goal = OCCLUDED if live.blocked else 1.0
+        if live.occlusion != goal:
+            eased = _ease(live.occlusion, goal, dt, OCCLUSION_EASE_S) if live.playing else goal
+            live.occlusion = goal if abs(eased - goal) < 1e-3 else eased
+
+
+def _cell(place: tuple[float, float, float]) -> tuple[int, int, int]:
+    return (math.floor(place[0] / OCCLUSION_CELL), math.floor(place[1] / OCCLUSION_CELL),
+            math.floor(place[2] / OCCLUSION_CELL))
+
+
 def update(window: Any, dt: float) -> None:
     """Every frame: each emitter's loudness and pan from where the listener is, the weather's from the weather."""
     audio = getattr(window, "audio", None)
@@ -330,6 +401,7 @@ def update(window: Any, dt: float) -> None:
     lx, ly, lz = listener
 
     targets: dict[str, tuple[float, float, float]] = {}  # key -> (target level, pan, distance)
+    walled: list[tuple[_Live, tuple[float, float, float]]] = []  # in reach and quieter behind walls: (it, its place)
     for live in scape.emitters:
         e = live.emitter
         if not e.enabled or not e.sound:
@@ -339,8 +411,20 @@ def update(window: Any, dt: float) -> None:
         z = float(z) if isinstance(z, (int, float)) and not isinstance(z, bool) else 0.0
         dx, dy = float(live.entity.center_x) - lx, float(live.entity.center_y) - ly
         d = math.sqrt(dx * dx + dy * dy + (z - lz) ** 2)
+        if e.occlusion:  # (Milestone 21C1; an emitter not set to mind walls costs this one test)
+            if d < e.distance:
+                walled.append((live, (float(live.entity.center_x), float(live.entity.center_y), z)))
+            elif live.asked is not None:  # (out of reach: asked afresh when it is back, and clear until then)
+                live.asked, live.blocked, live.occlusion = None, False, 1.0
         if d < e.distance * STOP_BEYOND + 16.0:
             targets[live.key] = (e.volume * gain(d, e), pan(dx, d, e), d)
+    if walled:
+        _behind_walls(window, scape, walled, listener, dt)
+        for live, _at in walled:
+            if live.occlusion != 1.0:
+                level, side, d = targets[live.key]
+                behind = (1.0 - live.occlusion) / (1.0 - OCCLUDED)  # 0 clear ... 1 behind a wall
+                targets[live.key] = (level * live.occlusion, side * (1.0 - (1.0 - OCCLUDED_PAN) * behind), d)
     chosen: set[str] = set()
     per_sound: dict[str, int] = {}
     by_key = {live.key: live for live in scape.emitters}
@@ -366,8 +450,9 @@ def update(window: Any, dt: float) -> None:
     for live in scape.emitters:
         e = live.emitter
         if live.key in chosen and not live.playing:
-            if starts >= STARTS_PER_FRAME:
-                continue  # (a crowded room entered: they start over the next frames, each fading in)
+            if starts >= STARTS_PER_FRAME or (e.occlusion and live.asked is None):
+                continue  # (a crowded room entered: they start over the next frames, each fading in; one quieter
+                # behind walls starts once it's known whether it is behind one, so never loud and then turned down)
             starts += 1
         if live.key in chosen:
             target, side, _d = targets[live.key]

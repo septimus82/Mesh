@@ -1,0 +1,39 @@
+{
+ "hd2d": {
+  "project": "OUT\\hd2d",
+  "emitter": "start_water_behind_the_cottage_320_496_0_0",
+  "settings": {
+   "sound": "assets/ambience/stream_loop.wav",
+   "volume": 0.9,
+   "radius": 96.0,
+   "distance": 768.0,
+   "stereo": true,
+   "loop": true,
+   "enabled": true,
+   "fade_in": 1.0,
+   "fade_out": 1.0,
+   "occlusion": true
+  },
+  "player_start_m": [
+   20.0,
+   14.5
+  ]
+ },
+ "2d": {
+  "project": "OUT\\2d",
+  "emitter": "start_hum_behind_the_wall_400_176_0_0",
+  "tile": 32,
+  "settings": {
+   "sound": "assets/ambience/stream_loop.wav",
+   "volume": 0.9,
+   "radius": 416.0,
+   "distance": 640.0,
+   "stereo": true,
+   "loop": true,
+   "enabled": true,
+   "fade_in": 1.0,
+   "fade_out": 1.0,
+   "occlusion": true
+  }
+ }
+}

@@ -68,7 +68,7 @@ A **sound emitter** is a sound heard from a place: a stream, birds in a tree, a 
 2. Choose **Sound** in the top bar, then **+ Add sound**; or **Sound** in the Objects list.
 3. Click the map where it's heard from. In an HD-2D room that's the floor under the mouse, at its height.
 4. In its inspector: **Choose sound...**, from the project's sounds or Mesh's sound library. A library sound is copied into the project's `assets/ambience`, so the game and its export have it. **Import sound file...** brings in your own (checked first: Studio says plainly if this computer can't play it).
-5. Set its volume, how far it's heard and at full strength (in metres; 1 m is a tile), stereo, loop, on/off and fades. In an HD-2D room, also its height.
+5. Set its volume, how far it's heard and at full strength (in metres; 1 m is a tile), stereo, loop, quieter behind walls, on/off and fades. In an HD-2D room, also its height.
 6. Drag it to move it; delete, copy, undo and redo it like any object. Its Conditions (Show when) work as any object's: a sound they leave out of the room when it loads is silent.
 7. Save. Press Play (F4) to hear it.
 
@@ -93,6 +93,32 @@ While editing it shows as a speaker with two rings: full strength inside the fil
 | `loop` | plays round (off: once each time the player comes near) | on |
 | `enabled` | on or off | on |
 | `fade_in`, `fade_out` | seconds, when it starts and stops | 1, 1 |
+| `occlusion` | quieter while a wall stands between it and the player (below) | off |
+
+### Behind walls (Milestone 21C1)
+
+Turn on **Quieter behind walls** in a sound's inspector and it is turned down while a wall stands between it and the player: a stream behind a cottage, a machine in the next room. Walk out from behind the wall and it comes back.
+
+**What you hear:**
+- Behind a wall it plays at about a third of the loudness its distance gives it (0.35), and less from its side (its pan narrows to 0.4 of what it was): it reaches you round the wall.
+- It changes over about a second, both ways. It's the same sound throughout: never stopped, restarted or doubled.
+- Distance still counts behind a wall: nearer is louder.
+- **It is quieter, not muffled.** Mesh's audio has volume and pan and no filters, so the sound keeps its brightness. A truly muffled sound would need a filter or a second, pre-muffled recording; neither is part of this.
+
+**What counts as a wall:**
+
+| Room | A wall is | Not a wall |
+|---|---|---|
+| 2D | a wall tile (the tile map's collision layer) on the straight line from the player to the sound | solid objects (a crate, a person); the tile the sound itself is on; the tile the player is on |
+| HD-2D | a structure's wall collider at least 1.5 m tall and 1 m long, on the line from the player's ears (1.2 m up) to the sound at its own height | fences, railings, furniture, lamp posts; floors, platforms and raised ground; sculpted hills; water; a roof (it has no collider, cut away or not); a wall the sound or the player stands inside |
+
+In an HD-2D room heights count: a sound up on a plateau is heard over a wall below it, and a doorway's gap lets it through.
+
+**One answer per sound:** a wall is between or it isn't. How thick the wall is, and how far round it the sound must travel, aren't measured.
+
+**Off unless you turn it on.** Rooms made before this have no `occlusion` setting and sound exactly as they did. Turning it off again removes the setting from the file.
+
+**For AI tools:** `set_sound_emitter(..., occlusion=true)`.
 
 **Mesh's sound library** (`assets/ambience`): rain, wind, flowing water, birdsong, and a forest or meadow. These are 10 s mono WAV loops: they play on every computer, and they loop without a seam. The four recorded ones are cut from CC0 recordings (authors and sources in `assets/NOTICE.md`); the wind is synthesised by Mesh.
 
@@ -157,7 +183,7 @@ The editor is silent. A room's music, sounds and weather play in play-tests (F4)
 - `diagnostics()` reports what is playing, what is fading, the players held, the players released and the files that failed.
 - `scene_music` (default on): Studio's editor turns it off, so rooms leave the music, their sounds and their weather alone.
 
-**Sounds in the world:** `engine/sound_emitters.py` holds the soundscape: `window.soundscape`, `reset` on each room, `update` every frame. The behaviour is `engine/behaviours/sound_emitter.py`. Studio and AI tools edit through `project_ops`:
+**Sounds in the world:** `engine/sound_emitters.py` holds the soundscape: `window.soundscape`, `reset` on each room, `update` every frame. The behaviour is `engine/behaviours/sound_emitter.py`. Whether a wall stands between a listener and a sound is `engine/sound_occlusion.py` (`blockers`, `blocked`): asked only for emitters in reach with `occlusion` on, when the listener or the emitter has moved 8 px or the room's walls changed, at most four emitters an update. Studio and AI tools edit through `project_ops`:
 - `set_sound_emitter` and `sound_emitter_of`;
 - `set_weather_sounds` and `weather_sounds_of`;
 - `set_rain` and `rain_strength`.
@@ -173,7 +199,7 @@ Playback is Arcade's `Sound` over pyglet's media player: XAudio2 on Windows, Ope
 **Limits:**
 - **One player per streamed source:** a streamed source can't be played twice at once. Mesh opens a new stream for each track it starts, and never crossfades a track into itself (the same track carries on instead).
 - **Releasing players:** a player must be released with `arcade.stop_sound`, not only paused. A paused player stays registered with Arcade for the rest of the game. That was Mesh's music before Milestone 21A: every change of track left one behind.
-- **No effects:** there is no reverb, filtering or mixing graph; volume and pan are what each player has. A muffled sound, for an occluded source, is a separate `*_muffled` file.
+- **No effects:** there is no reverb, filtering or mixing graph; volume and pan are what each player has. For a one-shot sound effect behind an obstruction, Mesh plays a separate `*_muffled` file when the game provides one. A sound emitter set to be quieter behind walls is only turned down and narrowed: a loop can't be swapped for a muffled copy without a second player and a restart.
 - **No device check:** Mesh can't check that sound reaches a speaker. With no audio device, pyglet's silent driver plays nothing, and the game runs on.
 - **Decoding depends on the platform.** WAV is decoded by pyglet itself, everywhere. MP3 and OGG need a decoder from the system:
   - **Windows:** Media Foundation. It decodes MP3; OGG Vorbis only with Microsoft's optional codec extension installed.

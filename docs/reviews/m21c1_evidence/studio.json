@@ -1,0 +1,137 @@
+{
+ "inspector_shows_the_switch": true,
+ "message_off": "Heard the same through walls.",
+ "message_on": "Quieter while a wall is between it and the player.",
+ "clicked_off_on_undo_undo_redo_redo": [
+  true,
+  null,
+  true,
+  null,
+  true,
+  null,
+  true
+ ],
+ "saved_message": "Saved 1 file(s).",
+ "editing_registered_players": 0,
+ "in_the_saved_file": {
+  "distance": 768.0,
+  "occlusion": true,
+  "radius": 96.0,
+  "sound": "assets/ambience/stream_loop.wav",
+  "volume": 0.9
+ },
+ "reopened": {
+  "setting": true,
+  "unsaved": []
+ },
+ "play_stop": [
+  {
+   "mode": "play",
+   "walk": {
+    "frames": 2050,
+    "marks": {
+     "clear": 240,
+     "behind": 510,
+     "deep": 813,
+     "behind_again": 1056,
+     "clear_again": 1394,
+     "edge_in_0": 1504,
+     "edge_out_0": 1568,
+     "edge_in_1": 1632,
+     "edge_out_1": 1696,
+     "edge_in_2": 1760,
+     "edge_out_2": 1824,
+     "end": 2050
+    },
+    "levels_at_marks": {
+     "clear": 0.6638,
+     "behind": 0.1746,
+     "deep": 0.2693,
+     "behind_again": 0.1756,
+     "clear_again": 0.6657,
+     "edge_in_0": 0.2385,
+     "edge_out_0": 0.6044,
+     "edge_in_1": 0.2383,
+     "edge_out_1": 0.6044,
+     "edge_in_2": 0.2383,
+     "edge_out_2": 0.6044,
+     "end": 0.6648
+    },
+    "pans_at_marks": {
+     "clear": -0.746,
+     "behind": -0.237,
+     "deep": -0.021,
+     "behind_again": -0.233,
+     "clear_again": -0.747,
+     "edge_in_0": -0.282,
+     "edge_out_0": -0.686,
+     "edge_in_1": -0.282,
+     "edge_out_1": -0.686,
+     "edge_in_2": -0.282,
+     "edge_out_2": -0.686,
+     "end": -0.745
+    },
+    "behind_walls_at_marks": {
+     "clear": false,
+     "behind": true,
+     "deep": true,
+     "behind_again": true,
+     "clear_again": false,
+     "edge_in_0": true,
+     "edge_out_0": false,
+     "edge_in_1": true,
+     "edge_out_1": false,
+     "edge_in_2": true,
+     "edge_out_2": false,
+     "end": false
+    },
+    "largest_change_in_one_frame": 0.015,
+    "silent_frames_after_the_first_second": 0,
+    "wall_questions_asked": 237,
+    "loops_heard": [
+     "emitter:packs/core_regions/scenes/start.json:start_water_behind_the_cottage_320_496_0_0"
+    ]
+   },
+   "playing": {
+    "loops": [
+     "emitter:packs/core_regions/scenes/start.json:start_water_behind_the_cottage_320_496_0_0"
+    ],
+    "registered": 1
+   },
+   "after_stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  },
+  {
+   "mode": "play",
+   "playing": {
+    "loops": [
+     "emitter:packs/core_regions/scenes/start.json:start_water_behind_the_cottage_320_496_0_0"
+    ],
+    "registered": 1
+   },
+   "after_stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  },
+  {
+   "mode": "play",
+   "playing": {
+    "loops": [
+     "emitter:packs/core_regions/scenes/start.json:start_water_behind_the_cottage_320_496_0_0"
+    ],
+    "registered": 1
+   },
+   "after_stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  }
+ ],
+ "after_close_registered": 0
+}
