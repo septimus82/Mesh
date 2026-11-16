@@ -2867,6 +2867,14 @@ class Hd2dView:
         self.snap = not self.snap
         self.studio._rebuild()
 
+    def shown_live(self) -> tuple[Any, ...]:
+        """What the 3D panels show of the renderer itself, which no edit changes: which renderer it is, and what it
+        can't draw on this computer (``Studio._rows_stamp``)."""
+        renderer = self.renderer
+        if renderer is None:
+            return (None,)
+        return id(renderer), renderer.dof_status(), renderer.bloom_unavailable
+
     def tooltip(self, x: float, y: float) -> str | None:
         for widget, tip in self.tips:
             rect = getattr(widget, "rect", None)

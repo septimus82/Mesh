@@ -88,7 +88,7 @@ def _type_only(d: Any, key: str, text: str) -> None:
     d.advance()  # (laid out: a panel just rebuilt has its fields at 0, 0 until drawn)
     field = d.studio._focusable[key]
     r = field.rect
-    assert field.parent is not None and r.bottom > 0, f"the field {key!r} isn't on screen ({r})"
+    assert field.get_ui_manager() is not None and r.bottom > 0, f"the field {key!r} isn't on screen ({r})"
     d.click(r.left + r.width / 2, r.bottom + r.height / 2)
     _ctrl(d, d.arcade.key.A)
     d.window.dispatch_event("on_text", text)

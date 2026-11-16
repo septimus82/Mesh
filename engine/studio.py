@@ -252,6 +252,12 @@ class Studio(InspectorMixin, SoundMixin):
         self._compact_side = "left"
         self._last_context: tuple[Any, ...] | None = None
         self._bars: dict[str, tuple[float, float, float, int, int, int]] = {}  # scrollbars: side -> geometry, rows
+        # Each side panel's rows as last built, the box showing the ones in view and the px kept above them: a wheel
+        # notch shows other rows of the same ones (``_rewindow``), not both panels and the top bar built again.
+        self._windows: dict[str, tuple[Rows, Any, float]] = {}
+        self._rows_as_of: tuple[Any, ...] | None = None  # what those rows were built from (``_rows_stamp``)
+        self._tips_built: list[tuple[Any, str]] = []  # every tooltip and slot the rows have, in view or not
+        self._spaces_built: tuple[Any, Any] = (None, None)
         self._left_more = (0, 0)
         self._built_for = (0, 0)  # the window's size the panels were laid out for
         self._labels: dict[str, optional_arcade.arcade.Text] = {}
@@ -1413,6 +1419,7 @@ class Studio(InspectorMixin, SoundMixin):
             return
         self.ui.clear()
         self._fields, self._focusable = [], {}
+        self._windows, self._rows_as_of = {}, None
         self._built_for = (self.window.width, self.window.height)
         self._thumbs, self._anim_space = [], None
         root = self.ui.add(gui.UIAnchorLayout())
@@ -1421,7 +1428,7 @@ class Studio(InspectorMixin, SoundMixin):
             self._compact_side = "right"  # (something to inspect or a panel opened: it's what is shown when narrow)
         self._last_context = context
         left, right = self._panel_widths()
-        self._sheet_space, self.hd2d.tips, self._bars = None, [], {}
+        self._sheet_space, self._import_space, self.hd2d.tips, self._bars = None, None, [], {}
         self._top_bar_box = root.add(self._top_bar(), anchor_x="left", anchor_y="top", align_x=8, align_y=-8)
         if left:
             root.add(self._left_panel(), anchor_x="left", anchor_y="top", align_x=10, align_y=-(TOP_H + 10))
@@ -1434,22 +1441,91 @@ class Studio(InspectorMixin, SoundMixin):
         if self.modal == "close":
             self._add_close_question(root)
         self._rebuild_status()
-        shown = {id(w) for w in self.ui.walk_widgets()}  # scrolled out of a panel: no tooltip, no palette there
-        self.hd2d.tips = [(w, tip) for w, tip in self.hd2d.tips if id(w) in shown]
-        if self._sheet_space is not None and id(self._sheet_space) not in shown:
-            self._sheet_space = None
+        self._tips_built, self._spaces_built = self.hd2d.tips, (self._sheet_space, self._import_space)
+        self._only_shown()
+        self._rows_as_of = self._rows_stamp()
         if self._focus_after_build and self._focus_after_build in self._focusable:
             self._focusable[self._focus_after_build].activate()
         self._focus_after_build = None
 
+    def _only_shown(self) -> None:
+        """Tooltips, the palette and the import preview only where their widgets are in view: a row scrolled out of
+        a panel has none of them."""
+        shown = {id(w) for w in self.ui.walk_widgets()}
+        self.hd2d.tips = [(w, tip) for w, tip in self._tips_built if id(w) in shown]
+        sheet, preview = self._spaces_built
+        self._sheet_space = sheet if id(sheet) in shown else None
+        self._import_space = preview if id(preview) in shown else None
+
+    def _rows_stamp(self) -> tuple[Any, ...]:
+        """What the panels' rows were built from, of what can change with no rebuild following: the project (every
+        edit, undo and redo moves its revision), the room, the window's size, and what the 3D renderer says it can't
+        draw here."""
+        return (self.project.revision, self.project.current, self.window.width, self.window.height,
+                self.hd2d.shown_live())
+
+    def _rewindow(self, side: str) -> bool:
+        """One side panel ("left" or "right") from its scroll on, shown from the rows it was last built with: the
+        widgets that leave the view are taken out of the window's tree, the ones that enter it put in, none made
+        again; the other panel and the top bar are not touched. As after a rebuild, no box is left being typed in
+        and no button looks pressed or pointed at.
+
+        False, and nothing done (the caller rebuilds), where the rows kept may not be what a rebuild would make now:
+        none kept or not in the window (never built, play mode); a menu or a question open over the panels (a
+        rebuild draws them again, on top); or the project, the room, the window's size or the renderer's limits no
+        longer the ones they were built from (``_rows_stamp``; ``_refresh_top_bar`` and the window losing the
+        keyboard forget it too)."""
+        window = self._windows.get(side)
+        if (window is None or self.mode != "edit" or self.menu is not None or self.modal is not None
+                or self._rows_as_of is None or self._rows_as_of != self._rows_stamp()):
+            return False
+        rows, old, reserve = window
+        parent = old.parent
+        if parent is None or old.get_ui_manager() is not self.ui:
+            return False
+        for field, _original, _commit in self._fields:
+            if field.active:
+                field.deactivate()
+        index = parent.children.index(old)
+        how = parent.remove(old) or {}
+        for child in list(old.children):
+            old.remove(child)  # (out of the tree, and the old box no longer listening to it)
+        for widget in rows.widgets():
+            if getattr(widget, "hovered", False):
+                widget.hovered = False
+            if getattr(widget, "pressed", False):
+                widget.pressed = False
+        for field, _original, _commit in self._fields:
+            field.with_background(color=C_FIELD)  # (arcade.gui repaints a box it has seen pointed at; ``_field``)
+        self.hd2d.tips = self._tips_built  # (a row made now, on its first showing, adds its own)
+        parent.add(self._scrolled(rows, left=side == "left", reserve=reserve), index=index, **how)
+        self._only_shown()
+        return True
+
+    def _scroll_panel(self, left: bool, scroll_y: float) -> None:
+        """One wheel notch over a side panel that has more rows that way. What is typed and not committed yet is
+        committed first, as before anything that rebuilds the panels; if there was any (taken or refused), the
+        panels are built again as they always were, since a commit may change what any row shows. Otherwise only
+        that panel's rows in view change (``_rewindow``)."""
+        typed = any(field.text != original for field, original, _commit in self._fields)
+        self._flush_fields()
+        if left:
+            self.left_scroll = max(0, self.left_scroll - int(scroll_y) * 2)
+        else:
+            self.panel_scroll = max(0, self.panel_scroll - int(scroll_y) * 2)
+        if typed or not self._rewindow("left" if left else "right"):
+            self._rebuild()
+
     def _refresh_top_bar(self) -> None:
         """The top bar again (Save, Undo, Redo, the title's unsaved mark) without rebuilding the panels: what a live
-        edit (a sculpting stroke) changes. Falls back to a full rebuild if there is no bar to replace."""
+        edit (a sculpting stroke) changes. Falls back to a full rebuild if there is no bar to replace. The panels are
+        left as built before that edit, so the next wheel notch over one builds them (``_rewindow``)."""
         old = getattr(self, "_top_bar_box", None)
         root = getattr(old, "parent", None)
         if old is None or root is None or self.mode != "edit":
             self._rebuild()
             return
+        self._rows_as_of = None
         root.remove(old)
         self._top_bar_box = root.add(self._top_bar(), anchor_x="left", anchor_y="top", align_x=8, align_y=-8)
 
@@ -2200,10 +2276,11 @@ class Studio(InspectorMixin, SoundMixin):
                 self.panel_scroll = max(0, rows.anchors[self._scroll_to] - 1)
             self._scroll_to = None
         scroll = self.left_scroll if left else self.panel_scroll
+        self._windows["left" if left else "right"] = (rows, box, reserve)
         if sum(heights) <= room:
             self._set_scroll(left, 0, (0, 0))
             for widget in items:
-                box.add(widget.make() if isinstance(widget, LazyRow) else widget)
+                box.add(widget.shown() if isinstance(widget, LazyRow) else widget)
             return box
         room -= 2 * 22  # the "more above / below" lines
         last_page = len(items)
@@ -2226,7 +2303,7 @@ class Studio(InspectorMixin, SoundMixin):
         if start:
             box.add(self._label(f"^ {start} more above (scroll up)", color=C_MUTED, size=9))
         for index in shown:
-            box.add(items[index].make() if isinstance(items[index], LazyRow) else items[index])
+            box.add(items[index].shown() if isinstance(items[index], LazyRow) else items[index])
         if below:
             box.add(self._label(f"v {below} more below (scroll down)", color=C_MUTED, size=9))
         return box
@@ -3322,9 +3399,7 @@ class Studio(InspectorMixin, SoundMixin):
         if right_w and x >= self.window.width - right_w and self.modal is None:
             more_above, more_below = self._panel_more
             if (scroll_y > 0 and more_above) or (scroll_y < 0 and more_below):
-                self._flush_fields()
-                self.panel_scroll = max(0, self.panel_scroll - int(scroll_y) * 2)
-                self._rebuild()
+                self._scroll_panel(False, scroll_y)
             return True
         geometry = self._sheet_geometry()
         if self._sheet_cell(x, y) is not None and geometry is not None:
@@ -3338,9 +3413,7 @@ class Studio(InspectorMixin, SoundMixin):
         if x < left_w and y < self.window.height - TOP_H and self.modal is None:  # the left panel: never the view
             more_above, more_below = self._left_more
             if (scroll_y > 0 and more_above) or (scroll_y < 0 and more_below):
-                self._flush_fields()
-                self.left_scroll = max(0, self.left_scroll - int(scroll_y) * 2)
-                self._rebuild()
+                self._scroll_panel(True, scroll_y)
             return True
         if self._in_map(x, y):
             if self.hd2d.active:
@@ -3477,9 +3550,11 @@ class Studio(InspectorMixin, SoundMixin):
 
     def on_deactivate(self) -> None:
         """The window lost the keyboard (Alt+Tab): keys held then are let go unseen, so none stays held here; a brush
-        stroke ends where it is (its release would never come, and a held brush would keep working)."""
+        stroke ends where it is (its release would never come, and a held brush would keep working). The panels'
+        rows are no longer kept for scrolling: what they list from the project's folder may change meanwhile."""
         self.keys.clear()
         self.panning = False
+        self._rows_as_of = None  # (the project's folder may be different when the person is back: ``_rewindow``)
         if self.hd2d.stroke is not None:
             self.hd2d.end_stroke()
         if self.hd2d.river.cancel_edit("River edit cancelled: the window lost focus (nothing was saved)."):

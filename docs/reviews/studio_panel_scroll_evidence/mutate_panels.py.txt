@@ -1,0 +1,109 @@
+"""Deliberate faults in Studio's selective panel refresh; which of the new tests fail. Each file is restored.
+
+Usage: py mutate_panels.py <repo> <out.json>
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+REPO = Path(sys.argv[1])
+OUT = Path(sys.argv[2])
+STUDIO, INSPECTOR, HD2D = "engine/studio.py", "engine/studio_inspector.py", "engine/studio_hd2d.py"
+TESTS = ["tests/test_studio_panel_scroll_gpu.py"]
+
+MUTATIONS = {
+    "none": (None, None, None),
+    "every notch builds everything again (as before this change)": (
+        STUDIO, "        if typed or not self._rewindow(\"left\" if left else \"right\"):\n", "        if True:\n"),
+    "the rows kept are used whatever the project, room, window or renderer now is": (
+        STUDIO, "\n                or self._rows_as_of is None or self._rows_as_of != self._rows_stamp()):\n", "):\n"),
+    "the project's revision is not part of what the rows were built from": (
+        STUDIO, "        return (self.project.revision, self.project.current, self.window.width, self.window.height,\n",
+        "        return (0, self.project.current, self.window.width, self.window.height,\n"),
+    "the window's size is not part of what the rows were built from": (
+        STUDIO, "        return (self.project.revision, self.project.current, self.window.width, self.window.height,\n",
+        "        return (self.project.revision, self.project.current, 0, 0,\n"),
+    "the renderer's limits are not part of what the rows were built from": (
+        STUDIO, "                self.hd2d.shown_live())\n", "                None)\n"),
+    "a top-bar-only refresh leaves the rows kept": (
+        STUDIO, "        self._rows_as_of = None\n        root.remove(old)\n", "        root.remove(old)\n"),
+    "the window losing the keyboard leaves the rows kept": (
+        STUDIO, "        self._rows_as_of = None  # (the project's folder may be different when the person is back: ``_rewindow``)\n", ""),
+    "a menu open over the panels is not a reason to rebuild": (
+        STUDIO, "        if (window is None or self.mode != \"edit\" or self.menu is not None or self.modal is not None\n",
+        "        if (window is None or self.mode != \"edit\" or self.modal is not None\n"),
+    "typed text is committed but the panels are not built again": (
+        STUDIO, "        typed = any(field.text != original for field, original, _commit in self._fields)\n", "        typed = False\n"),
+    "typed text is not committed by the wheel": (
+        STUDIO, "        typed = any(field.text != original for field, original, _commit in self._fields)\n        self._flush_fields()\n",
+        "        typed = False\n"),
+    "a box being typed in stays so when its panel scrolls": (
+        STUDIO, "        for field, _original, _commit in self._fields:\n            if field.active:\n                field.deactivate()\n", ""),
+    "a button pointed at or pressed stays looking so": (
+        STUDIO, "            if getattr(widget, \"hovered\", False):\n                widget.hovered = False\n"
+                "            if getattr(widget, \"pressed\", False):\n                widget.pressed = False\n", "            pass\n"),
+    "a box pointed at before keeps arcade's repaint": (
+        STUDIO, "            field.with_background(color=C_FIELD)  # (arcade.gui repaints a box it has seen pointed at; ``_field``)\n",
+        "            pass\n"),
+    "tooltips and slots are not looked at again after a scroll": (
+        STUDIO, "        parent.add(self._scrolled(rows, left=side == \"left\", reserve=reserve), index=index, **how)\n        self._only_shown()\n",
+        "        parent.add(self._scrolled(rows, left=side == \"left\", reserve=reserve), index=index, **how)\n"),
+    "the rows' box is put back last, not where it was": (
+        STUDIO, "        parent.add(self._scrolled(rows, left=side == \"left\", reserve=reserve), index=index, **how)\n",
+        "        parent.add(self._scrolled(rows, left=side == \"left\", reserve=reserve), **how)\n"),
+    "the rows that leave the view stay children of the old box": (
+        STUDIO, "        for child in list(old.children):\n            old.remove(child)  # (out of the tree, and the old box no longer listening to it)\n", ""),
+    "the left panel is re-windowed as if it were the right one": (
+        STUDIO, "        parent.add(self._scrolled(rows, left=side == \"left\", reserve=reserve), index=index, **how)\n",
+        "        parent.add(self._scrolled(rows, left=False, reserve=reserve), index=index, **how)\n"),
+    "a long list's row is made again each time it is shown": (
+        INSPECTOR, "        if self.widget is None:\n            self.widget = self.make()\n        return self.widget\n",
+        "        self.widget = self.make()\n        return self.widget\n"),
+    "a picture is 'on screen' whenever its slot has a parent (the old test)": (
+        INSPECTOR, "    return widget.get_ui_manager() is not None\n", "    return getattr(widget, \"parent\", None) is not None\n"),
+    "the import preview and palette are kept where a row was": (
+        STUDIO, "        self._sheet_space = sheet if id(sheet) in shown else None\n        self._import_space = preview if id(preview) in shown else None\n",
+        "        self._sheet_space, self._import_space = sheet, preview\n"),
+}
+
+env = dict(os.environ, MESH_GL_SMOKE="1")
+results = {}
+for name, (file, old, new) in MUTATIONS.items():
+    original = None
+    try:
+        if file is not None:
+            path = REPO / file
+            original = path.read_bytes()
+            text = original.decode("utf-8")
+            nl = "\r\n" if "\r\n" in text else "\n"
+            flat = text.replace("\r\n", "\n")
+            if flat.count(old) != 1:
+                results[name] = {"error": f"pattern found {flat.count(old)} times in {file}"}
+                print("SKIPPED ", name, results[name]["error"], flush=True)
+                original = None
+                continue
+            path.write_bytes(flat.replace(old, new).replace("\n", nl).encode("utf-8"))
+        started = time.perf_counter()
+        try:
+            run = subprocess.run([sys.executable, "-m", "pytest", "-o", "addopts=", "-q", "-p", "no:cacheprovider", "-W", "error",
+                                  "--strict-markers", "-m", "gl", *TESTS], cwd=REPO, env=env, capture_output=True, text=True, timeout=1500)
+            failed = sorted(set(re.findall(r"^(?:FAILED|ERROR) \S+?::(.+?)(?: - .*)?$", run.stdout, re.M)))
+            lines = [line for line in run.stdout.strip().splitlines() if " passed" in line or " failed" in line or " error" in line]
+            summary = lines[-1] if lines else run.stderr[-200:]
+        except subprocess.TimeoutExpired:
+            failed, summary = ["(the tests did not finish in 1500 s)"], "timeout"
+        results[name] = {"file": file, "caught": bool(failed), "failing": failed, "summary": summary,
+                         "wall_s": round(time.perf_counter() - started, 1)}
+    finally:
+        if original is not None:
+            (REPO / file).write_bytes(original)
+    r = results[name]
+    print(("CAUGHT " if r["caught"] else "PASSED ") + f" {name}: {r['summary']}", flush=True)
+    for test in r["failing"]:
+        print("          ", test[:150], flush=True)
+    OUT.write_text(json.dumps(results, indent=1), encoding="utf-8")
+print(subprocess.run(["git", "status", "--short"], cwd=REPO, capture_output=True, text=True).stdout)

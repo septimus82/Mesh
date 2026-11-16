@@ -1,0 +1,225 @@
+{
+ "none": {
+  "file": null,
+  "caught": false,
+  "failing": [],
+  "summary": "28 passed in 108.48s (0:01:48)",
+  "wall_s": 110.0
+ },
+ "every notch builds everything again (as before this change)": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_a_box_only_clicked_is_left_untyped_in_by_the_wheel_and_nothing_is_committed",
+   "test_a_box_scrolled_out_of_view_and_back_keeps_its_text_and_commits_to_its_own_property",
+   "test_a_control_scrolled_away_and_back_still_does_its_own_action_and_undoes",
+   "test_a_long_lists_rows_are_made_once_however_often_they_are_scrolled_past",
+   "test_a_menu_open_over_the_panels_is_drawn_again_by_a_rebuild",
+   "test_a_wheel_notch_over_the_inspector_builds_nothing_again_and_leaves_the_rest_alone",
+   "test_a_wheel_notch_over_the_tools_builds_nothing_again_and_leaves_the_inspector_alone",
+   "test_an_edit_behind_the_panels_makes_the_next_notch_build_them_again",
+   "test_another_object_selected_shows_its_own_rows_from_the_top_and_scrolls_them",
+   "test_notches_one_after_another_with_nothing_built_between_draw_what_a_rebuild_draws[left]",
+   "test_notches_one_after_another_with_nothing_built_between_draw_what_a_rebuild_draws[right]",
+   "test_play_and_back_to_editing_rebuilds_the_panels_and_scrolling_goes_on",
+   "test_resizing_after_scrolling_fits_the_rows_to_the_window_and_scrolling_goes_on",
+   "test_scrolling_and_switching_many_times_leaves_no_widgets_or_listeners_behind",
+   "test_the_window_losing_the_keyboard_makes_the_next_notch_build_the_panels_again",
+   "test_what_the_renderer_cannot_draw_here_changing_makes_the_next_notch_build_them_again"
+  ],
+  "summary": "16 failed, 12 passed in 176.40s (0:02:56)",
+  "wall_s": 184.7
+ },
+ "the rows kept are used whatever the project, room, window or renderer now is": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_an_edit_behind_the_panels_makes_the_next_notch_build_them_again",
+   "test_resizing_after_scrolling_fits_the_rows_to_the_window_and_scrolling_goes_on",
+   "test_the_window_losing_the_keyboard_makes_the_next_notch_build_the_panels_again",
+   "test_what_the_renderer_cannot_draw_here_changing_makes_the_next_notch_build_them_again"
+  ],
+  "summary": "4 failed, 24 passed in 108.46s (0:01:48)",
+  "wall_s": 116.7
+ },
+ "the project's revision is not part of what the rows were built from": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_an_edit_behind_the_panels_makes_the_next_notch_build_them_again"
+  ],
+  "summary": "1 failed, 27 passed in 110.45s (0:01:50)",
+  "wall_s": 112.0
+ },
+ "the window's size is not part of what the rows were built from": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_resizing_after_scrolling_fits_the_rows_to_the_window_and_scrolling_goes_on"
+  ],
+  "summary": "1 failed, 27 passed in 108.99s (0:01:48)",
+  "wall_s": 110.5
+ },
+ "the renderer's limits are not part of what the rows were built from": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_what_the_renderer_cannot_draw_here_changing_makes_the_next_notch_build_them_again"
+  ],
+  "summary": "1 failed, 27 passed in 111.40s (0:01:51)",
+  "wall_s": 113.0
+ },
+ "a top-bar-only refresh leaves the rows kept": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_an_edit_behind_the_panels_makes_the_next_notch_build_them_again"
+  ],
+  "summary": "1 failed, 27 passed in 110.82s (0:01:50)",
+  "wall_s": 112.3
+ },
+ "the window losing the keyboard leaves the rows kept": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_the_window_losing_the_keyboard_makes_the_next_notch_build_the_panels_again"
+  ],
+  "summary": "1 failed, 27 passed in 110.51s (0:01:50)",
+  "wall_s": 112.0
+ },
+ "a menu open over the panels is not a reason to rebuild": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_a_menu_open_over_the_panels_is_drawn_again_by_a_rebuild"
+  ],
+  "summary": "1 failed, 27 passed in 109.73s (0:01:49)",
+  "wall_s": 111.2
+ },
+ "typed text is committed but the panels are not built again": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_a_box_being_typed_in_is_committed_once_to_its_own_property_by_the_wheel"
+  ],
+  "summary": "1 failed, 27 passed in 111.68s (0:01:51)",
+  "wall_s": 113.2
+ },
+ "typed text is not committed by the wheel": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_a_box_being_typed_in_is_committed_once_to_its_own_property_by_the_wheel",
+   "test_a_refused_value_stays_in_its_box_through_scrolling_and_esc_puts_back_what_it_was"
+  ],
+  "summary": "2 failed, 26 passed in 110.02s (0:01:50)",
+  "wall_s": 111.5
+ },
+ "a box being typed in stays so when its panel scrolls": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_a_box_only_clicked_is_left_untyped_in_by_the_wheel_and_nothing_is_committed"
+  ],
+  "summary": "1 failed, 27 passed in 111.39s (0:01:51)",
+  "wall_s": 113.0
+ },
+ "a button pointed at or pressed stays looking so": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[conversation]",
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[look]",
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[models]",
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[one light]",
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[tools]"
+  ],
+  "summary": "5 failed, 23 passed in 95.19s (0:01:35)",
+  "wall_s": 96.7
+ },
+ "a box pointed at before keeps arcade's repaint": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[tools]"
+  ],
+  "summary": "1 failed, 27 passed in 110.17s (0:01:50)",
+  "wall_s": 111.6
+ },
+ "tooltips and slots are not looked at again after a scroll": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[models]",
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[tools]",
+   "test_tooltips_are_where_their_buttons_are_shown_and_nowhere_else"
+  ],
+  "summary": "3 failed, 25 passed in 106.46s (0:01:46)",
+  "wall_s": 107.9
+ },
+ "the rows' box is put back last, not where it was": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_a_box_only_clicked_is_left_untyped_in_by_the_wheel_and_nothing_is_committed",
+   "test_another_object_selected_shows_its_own_rows_from_the_top_and_scrolls_them",
+   "test_play_and_back_to_editing_rebuilds_the_panels_and_scrolling_goes_on",
+   "test_resizing_after_scrolling_fits_the_rows_to_the_window_and_scrolling_goes_on",
+   "test_the_import_preview_is_drawn_only_while_its_row_is_in_view",
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[conversation]",
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[look]",
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[models]",
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[one light]"
+  ],
+  "summary": "9 failed, 19 passed in 95.51s (0:01:35)",
+  "wall_s": 96.9
+ },
+ "the rows that leave the view stay children of the old box": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_scrolling_and_switching_many_times_leaves_no_widgets_or_listeners_behind"
+  ],
+  "summary": "1 failed, 27 passed in 97.43s (0:01:37)",
+  "wall_s": 99.6
+ },
+ "the left panel is re-windowed as if it were the right one": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_a_wheel_notch_over_the_tools_builds_nothing_again_and_leaves_the_inspector_alone",
+   "test_notches_one_after_another_with_nothing_built_between_draw_what_a_rebuild_draws[left]",
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[tools]"
+  ],
+  "summary": "3 failed, 25 passed in 109.39s (0:01:49)",
+  "wall_s": 111.0
+ },
+ "a long list's row is made again each time it is shown": {
+  "file": "engine/studio_inspector.py",
+  "caught": true,
+  "failing": [
+   "test_a_long_lists_rows_are_made_once_however_often_they_are_scrolled_past"
+  ],
+  "summary": "1 failed, 27 passed in 113.24s (0:01:53)",
+  "wall_s": 114.7
+ },
+ "a picture is 'on screen' whenever its slot has a parent (the old test)": {
+  "file": "engine/studio_inspector.py",
+  "caught": true,
+  "failing": [
+   "test_a_long_lists_rows_are_made_once_however_often_they_are_scrolled_past",
+   "test_the_panel_kept_is_the_panel_a_rebuild_makes_at_every_scroll[models]"
+  ],
+  "summary": "2 failed, 26 passed in 108.38s (0:01:48)",
+  "wall_s": 109.8
+ },
+ "the import preview and palette are kept where a row was": {
+  "file": "engine/studio.py",
+  "caught": true,
+  "failing": [
+   "test_the_import_preview_is_drawn_only_while_its_row_is_in_view"
+  ],
+  "summary": "1 failed, 27 passed in 107.92s (0:01:47)",
+  "wall_s": 109.4
+ }
+}
