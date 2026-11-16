@@ -1,0 +1,79 @@
+"""The walking tests' event sequences on real time and on simulated time: measurement only.
+
+Usage: py compare_clocks.py <repo> <out.json> [real_runs]
+For every walking test: each walk's legs (key, from, carry) and where it settled, the commands in the order and at the
+server tick they took effect, the final position and the number of server ticks; once on simulated time and
+``real_runs`` times on real time (asyncio.run), from the same test functions.
+"""
+import asyncio
+import json
+import sys
+import time
+from pathlib import Path
+
+repo = Path(sys.argv[1])
+sys.path.insert(0, str(repo))
+runs = int(sys.argv[3]) if len(sys.argv) > 3 else 2
+
+import pytest  # noqa: E402,F401
+
+import tests.test_mesh_net_walk as tw  # noqa: E402
+from split_sim import cases  # noqa: E402  (same folder: the parametrize expansion)
+
+sim_run = tw.simulated
+real_walk = tw.walk
+trace: dict = {}
+
+
+async def recording_walk(send, key, target, within, where, timeout=15, record=None):
+    return await real_walk(send, key, target, within, where, timeout, trace.setdefault("walks", []))
+
+
+tw.walk = recording_walk
+real_tick = tw.LateWindow.tick
+
+
+def tick(self):
+    due = [(self.room.tick, op, key) for at, op, key in self.pending if at <= self.room.tick]
+    trace.setdefault("effects", []).extend(due)
+    real_tick(self)
+    trace["ticks"] = self.room.tick
+    trace["pos"] = self.pos()
+
+
+tw.LateWindow.tick = tick
+
+
+def one(fn, kwargs, clock):
+    trace.clear()
+    tw.simulated = clock
+    started = time.perf_counter()
+    try:
+        fn(**kwargs)
+        outcome = "passed"
+    except BaseException as exc:  # noqa: BLE001
+        outcome = f"FAILED {type(exc).__name__}"
+    return {"outcome": outcome, "wall_s": round(time.perf_counter() - started, 3), **json.loads(json.dumps(trace))}
+
+
+rows = []
+for test_id, fn, kwargs in cases(tw):
+    sim = one(fn, kwargs, sim_run)
+    sim2 = one(fn, kwargs, sim_run)
+    reals = [one(fn, kwargs, asyncio.run) for _ in range(runs)]
+
+    def same(a, b, keys):
+        return all(a.get(k) == b.get(k) for k in keys)
+
+    row = {"test": test_id, "simulated": sim, "simulated_again_identical": same(sim, sim2, ("outcome", "walks", "effects", "ticks", "pos")),
+           "real": reals,
+           "real_same_outcome_and_final_position": all(same(sim, r, ("outcome", "pos")) for r in reals),
+           "real_same_walks": all(same(sim, r, ("walks",)) for r in reals),
+           "real_same_commands_in_order": all([e[1:] for e in sim.get("effects", [])] == [e[1:] for e in r.get("effects", [])] for r in reals)}
+    rows.append(row)
+    print(f"{test_id}\n   sim  {sim['wall_s']:5.2f} s ticks {sim.get('ticks')} pos {sim.get('pos')} {sim['outcome']}  repeat identical {row['simulated_again_identical']}")
+    for r in reals:
+        print(f"   real {r['wall_s']:5.2f} s ticks {r.get('ticks')} pos {r.get('pos')} {r['outcome']}")
+    print(f"   same outcome+position {row['real_same_outcome_and_final_position']}  same walks (legs, carries) {row['real_same_walks']}  "
+          f"same commands in order {row['real_same_commands_in_order']}", flush=True)
+Path(sys.argv[2]).write_text(json.dumps(rows, indent=1), encoding="utf-8")

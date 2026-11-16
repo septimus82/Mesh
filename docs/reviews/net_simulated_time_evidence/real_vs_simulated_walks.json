@@ -1,0 +1,8429 @@
+[
+ {
+  "test": "test_mesh_net_walk::test_the_old_driver_reproduces_both_failures[N7 Layer 1 (Extended 43008772085)]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.209,
+   "effects": [
+    [
+     3,
+     "press",
+     "DOWN"
+    ],
+    [
+     12,
+     "release",
+     "DOWN"
+    ],
+    [
+     21,
+     "press",
+     "RIGHT"
+    ],
+    [
+     61,
+     "release",
+     "RIGHT"
+    ]
+   ],
+   "ticks": 67,
+   "pos": [
+    406.5,
+    232.5
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 2.245,
+    "effects": [
+     [
+      3,
+      "press",
+      "DOWN"
+     ],
+     [
+      12,
+      "release",
+      "DOWN"
+     ],
+     [
+      21,
+      "press",
+      "RIGHT"
+     ],
+     [
+      61,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 67,
+    "pos": [
+     406.5,
+     232.5
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 2.263,
+    "effects": [
+     [
+      3,
+      "press",
+      "DOWN"
+     ],
+     [
+      12,
+      "release",
+      "DOWN"
+     ],
+     [
+      21,
+      "press",
+      "RIGHT"
+     ],
+     [
+      61,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 67,
+    "pos": [
+     406.5,
+     232.5
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_the_old_driver_reproduces_both_failures[N6 co-op scene (Extended 43016671504)]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.096,
+   "effects": [
+    [
+     3,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     23,
+     "press",
+     "RIGHT"
+    ],
+    [
+     63,
+     "release",
+     "RIGHT"
+    ]
+   ],
+   "ticks": 69,
+   "pos": [
+    406.5,
+    237.5
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 2.185,
+    "effects": [
+     [
+      3,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      23,
+      "press",
+      "RIGHT"
+     ],
+     [
+      63,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 69,
+    "pos": [
+     406.5,
+     237.5
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 2.198,
+    "effects": [
+     [
+      3,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      23,
+      "press",
+      "RIGHT"
+     ],
+     [
+      63,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 69,
+    "pos": [
+     406.5,
+     237.5
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[0-N7]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.183,
+   "walks": [
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 270.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     6,
+     "release",
+     "DOWN"
+    ],
+    [
+     8,
+     "press",
+     "RIGHT"
+    ],
+    [
+     24,
+     "release",
+     "RIGHT"
+    ]
+   ],
+   "ticks": 30,
+   "pos": [
+    472.0,
+    270.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 1.109,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 270.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      8,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 30,
+    "pos": [
+     472.0,
+     270.0
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 1.104,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 270.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      8,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 30,
+    "pos": [
+     472.0,
+     270.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[0-N6]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.074,
+   "walks": [
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 267.5,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     10,
+     "release",
+     "DOWN"
+    ],
+    [
+     12,
+     "press",
+     "RIGHT"
+    ],
+    [
+     26,
+     "release",
+     "RIGHT"
+    ]
+   ],
+   "ticks": 32,
+   "pos": [
+    477.0,
+    267.5
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 1.051,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 267.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      12,
+      "press",
+      "RIGHT"
+     ],
+     [
+      26,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 32,
+    "pos": [
+     477.0,
+     267.5
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 1.062,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 267.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      12,
+      "press",
+      "RIGHT"
+     ],
+     [
+      26,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 32,
+    "pos": [
+     477.0,
+     267.5
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[2-N7]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.19,
+   "walks": [
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 255.0,
+     "carry": 15.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     10,
+     "release",
+     "DOWN"
+    ],
+    [
+     14,
+     "press",
+     "RIGHT"
+    ],
+    [
+     32,
+     "release",
+     "RIGHT"
+    ]
+   ],
+   "ticks": 38,
+   "pos": [
+    487.0,
+    255.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 1.366,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 255.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      14,
+      "press",
+      "RIGHT"
+     ],
+     [
+      32,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 38,
+    "pos": [
+     487.0,
+     255.0
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 1.352,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 255.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      14,
+      "press",
+      "RIGHT"
+     ],
+     [
+      32,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 38,
+    "pos": [
+     487.0,
+     255.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[2-N6]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.077,
+   "walks": [
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 252.5,
+     "carry": 15.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     18,
+     "press",
+     "RIGHT"
+    ],
+    [
+     34,
+     "release",
+     "RIGHT"
+    ]
+   ],
+   "ticks": 40,
+   "pos": [
+    492.0,
+    252.5
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 1.297,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 252.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      18,
+      "press",
+      "RIGHT"
+     ],
+     [
+      34,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 40,
+    "pos": [
+     492.0,
+     252.5
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 1.309,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 252.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      18,
+      "press",
+      "RIGHT"
+     ],
+     [
+      34,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 40,
+    "pos": [
+     492.0,
+     252.5
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[4-N7]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.192,
+   "walks": [
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 277.5,
+     "carry": 30.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ],
+      [
+       "UP",
+       240.0,
+       30.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     6,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     20,
+     "press",
+     "UP"
+    ],
+    [
+     25,
+     "release",
+     "UP"
+    ],
+    [
+     31,
+     "press",
+     "RIGHT"
+    ],
+    [
+     51,
+     "release",
+     "RIGHT"
+    ]
+   ],
+   "ticks": 57,
+   "pos": [
+    502.0,
+    277.5
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 1.923,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 277.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ],
+       [
+        "UP",
+        240.0,
+        30.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      20,
+      "press",
+      "UP"
+     ],
+     [
+      25,
+      "release",
+      "UP"
+     ],
+     [
+      31,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 57,
+    "pos": [
+     502.0,
+     277.5
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 1.936,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 277.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ],
+       [
+        "UP",
+        240.0,
+        30.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      20,
+      "press",
+      "UP"
+     ],
+     [
+      25,
+      "release",
+      "UP"
+     ],
+     [
+      31,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 57,
+    "pos": [
+     502.0,
+     277.5
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_lands_inside_the_gap_and_gets_through_at_every_delay[4-N6]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.079,
+   "walks": [
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 275.0,
+     "carry": 30.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ],
+      [
+       "UP",
+       237.5,
+       30.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     6,
+     "press",
+     "DOWN"
+    ],
+    [
+     18,
+     "release",
+     "DOWN"
+    ],
+    [
+     24,
+     "press",
+     "UP"
+    ],
+    [
+     29,
+     "release",
+     "UP"
+    ],
+    [
+     35,
+     "press",
+     "RIGHT"
+    ],
+    [
+     53,
+     "release",
+     "RIGHT"
+    ]
+   ],
+   "ticks": 59,
+   "pos": [
+    507.0,
+    275.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 1.887,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 275.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ],
+       [
+        "UP",
+        237.5,
+        30.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      29,
+      "release",
+      "UP"
+     ],
+     [
+      35,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 59,
+    "pos": [
+     507.0,
+     275.0
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 1.89,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 275.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ],
+       [
+        "UP",
+        237.5,
+        30.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      29,
+      "release",
+      "UP"
+     ],
+     [
+      35,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 59,
+    "pos": [
+     507.0,
+     275.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[0-N7 guardian]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.195,
+   "walks": [
+    {
+     "to": [
+      "RIGHT",
+      430,
+      16
+     ],
+     "at": 431.5,
+     "carry": 0.0,
+     "legs": [
+      [
+       "RIGHT",
+       64.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "UP",
+      300.0,
+      24.0
+     ],
+     "at": 302.5,
+     "carry": 0.0,
+     "legs": [
+      [
+       "UP",
+       160.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "RIGHT",
+      480,
+      16
+     ],
+     "at": 484.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "RIGHT",
+       431.5,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      268.0,
+      6.0
+     ],
+     "at": 268.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       302.5,
+       0.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     2,
+     "press",
+     "RIGHT"
+    ],
+    [
+     51,
+     "release",
+     "RIGHT"
+    ],
+    [
+     55,
+     "press",
+     "UP"
+    ],
+    [
+     74,
+     "release",
+     "UP"
+    ],
+    [
+     78,
+     "press",
+     "RIGHT"
+    ],
+    [
+     85,
+     "release",
+     "RIGHT"
+    ],
+    [
+     89,
+     "press",
+     "DOWN"
+    ],
+    [
+     94,
+     "release",
+     "DOWN"
+    ]
+   ],
+   "ticks": 96,
+   "pos": [
+    484.0,
+    268.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 3.12,
+    "walks": [
+     {
+      "to": [
+       "RIGHT",
+       430,
+       16
+      ],
+      "at": 431.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "RIGHT",
+        64.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "UP",
+       300.0,
+       24.0
+      ],
+      "at": 302.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "UP",
+        160.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "RIGHT",
+       480,
+       16
+      ],
+      "at": 484.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "RIGHT",
+        431.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       268.0,
+       6.0
+      ],
+      "at": 268.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        302.5,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      2,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ],
+     [
+      55,
+      "press",
+      "UP"
+     ],
+     [
+      74,
+      "release",
+      "UP"
+     ],
+     [
+      78,
+      "press",
+      "RIGHT"
+     ],
+     [
+      85,
+      "release",
+      "RIGHT"
+     ],
+     [
+      89,
+      "press",
+      "DOWN"
+     ],
+     [
+      94,
+      "release",
+      "DOWN"
+     ]
+    ],
+    "ticks": 96,
+    "pos": [
+     484.0,
+     268.0
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 3.122,
+    "walks": [
+     {
+      "to": [
+       "RIGHT",
+       430,
+       16
+      ],
+      "at": 431.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "RIGHT",
+        64.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "UP",
+       300.0,
+       24.0
+      ],
+      "at": 302.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "UP",
+        160.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "RIGHT",
+       480,
+       16
+      ],
+      "at": 484.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "RIGHT",
+        431.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       268.0,
+       6.0
+      ],
+      "at": 268.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        302.5,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      2,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ],
+     [
+      55,
+      "press",
+      "UP"
+     ],
+     [
+      74,
+      "release",
+      "UP"
+     ],
+     [
+      78,
+      "press",
+      "RIGHT"
+     ],
+     [
+      85,
+      "release",
+      "RIGHT"
+     ],
+     [
+      89,
+      "press",
+      "DOWN"
+     ],
+     [
+      94,
+      "release",
+      "DOWN"
+     ]
+    ],
+    "ticks": 96,
+    "pos": [
+     484.0,
+     268.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[0-N6 bandit]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.071,
+   "walks": [
+    {
+     "to": [
+      "RIGHT",
+      520,
+      24
+     ],
+     "at": 527.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "RIGHT",
+       392.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "UP",
+      300.0,
+      24.0
+     ],
+     "at": 304.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "UP",
+       274.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "RIGHT",
+      608,
+      16
+     ],
+     "at": 609.5,
+     "carry": 0.0,
+     "legs": [
+      [
+       "RIGHT",
+       527.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      268.0,
+      6.0
+     ],
+     "at": 268.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       304.0,
+       0.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     2,
+     "press",
+     "RIGHT"
+    ],
+    [
+     20,
+     "release",
+     "RIGHT"
+    ],
+    [
+     24,
+     "press",
+     "UP"
+    ],
+    [
+     28,
+     "release",
+     "UP"
+    ],
+    [
+     32,
+     "press",
+     "RIGHT"
+    ],
+    [
+     43,
+     "release",
+     "RIGHT"
+    ],
+    [
+     47,
+     "press",
+     "DOWN"
+    ],
+    [
+     52,
+     "release",
+     "DOWN"
+    ]
+   ],
+   "ticks": 54,
+   "pos": [
+    609.5,
+    268.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 1.715,
+    "walks": [
+     {
+      "to": [
+       "RIGHT",
+       520,
+       24
+      ],
+      "at": 527.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "RIGHT",
+        392.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "UP",
+       300.0,
+       24.0
+      ],
+      "at": 304.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "UP",
+        274.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "RIGHT",
+       608,
+       16
+      ],
+      "at": 609.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "RIGHT",
+        527.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       268.0,
+       6.0
+      ],
+      "at": 268.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        304.0,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      2,
+      "press",
+      "RIGHT"
+     ],
+     [
+      20,
+      "release",
+      "RIGHT"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      28,
+      "release",
+      "UP"
+     ],
+     [
+      32,
+      "press",
+      "RIGHT"
+     ],
+     [
+      43,
+      "release",
+      "RIGHT"
+     ],
+     [
+      47,
+      "press",
+      "DOWN"
+     ],
+     [
+      52,
+      "release",
+      "DOWN"
+     ]
+    ],
+    "ticks": 54,
+    "pos": [
+     609.5,
+     268.0
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 1.724,
+    "walks": [
+     {
+      "to": [
+       "RIGHT",
+       520,
+       24
+      ],
+      "at": 527.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "RIGHT",
+        392.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "UP",
+       300.0,
+       24.0
+      ],
+      "at": 304.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "UP",
+        274.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "RIGHT",
+       608,
+       16
+      ],
+      "at": 609.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "RIGHT",
+        527.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       268.0,
+       6.0
+      ],
+      "at": 268.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        304.0,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      2,
+      "press",
+      "RIGHT"
+     ],
+     [
+      20,
+      "release",
+      "RIGHT"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      28,
+      "release",
+      "UP"
+     ],
+     [
+      32,
+      "press",
+      "RIGHT"
+     ],
+     [
+      43,
+      "release",
+      "RIGHT"
+     ],
+     [
+      47,
+      "press",
+      "DOWN"
+     ],
+     [
+      52,
+      "release",
+      "DOWN"
+     ]
+    ],
+    "ticks": 54,
+    "pos": [
+     609.5,
+     268.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[2-N7 guardian]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.204,
+   "walks": [
+    {
+     "to": [
+      "RIGHT",
+      430,
+      16
+     ],
+     "at": 424.0,
+     "carry": 15.0,
+     "legs": [
+      [
+       "RIGHT",
+       64.0,
+       0.0
+      ],
+      [
+       "LEFT",
+       446.5,
+       15.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "UP",
+      300.0,
+      24.0
+     ],
+     "at": 317.5,
+     "carry": 15.0,
+     "legs": [
+      [
+       "UP",
+       160.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "RIGHT",
+      480,
+      16
+     ],
+     "at": 476.5,
+     "carry": 15.0,
+     "legs": [
+      [
+       "RIGHT",
+       424.0,
+       0.0
+      ],
+      [
+       "LEFT",
+       499.0,
+       15.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      268.0,
+      6.0
+     ],
+     "at": 268.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       317.5,
+       0.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     4,
+     "press",
+     "RIGHT"
+    ],
+    [
+     55,
+     "release",
+     "RIGHT"
+    ],
+    [
+     59,
+     "press",
+     "LEFT"
+    ],
+    [
+     62,
+     "release",
+     "LEFT"
+    ],
+    [
+     68,
+     "press",
+     "UP"
+    ],
+    [
+     89,
+     "release",
+     "UP"
+    ],
+    [
+     95,
+     "press",
+     "RIGHT"
+    ],
+    [
+     105,
+     "release",
+     "RIGHT"
+    ],
+    [
+     109,
+     "press",
+     "LEFT"
+    ],
+    [
+     112,
+     "release",
+     "LEFT"
+    ],
+    [
+     118,
+     "press",
+     "DOWN"
+    ]
+   ],
+   "ticks": 127,
+   "pos": [
+    476.5,
+    268.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 4.094,
+    "walks": [
+     {
+      "to": [
+       "RIGHT",
+       430,
+       16
+      ],
+      "at": 424.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "RIGHT",
+        64.0,
+        0.0
+       ],
+       [
+        "LEFT",
+        446.5,
+        15.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "UP",
+       300.0,
+       24.0
+      ],
+      "at": 317.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "UP",
+        160.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "RIGHT",
+       480,
+       16
+      ],
+      "at": 476.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "RIGHT",
+        424.0,
+        0.0
+       ],
+       [
+        "LEFT",
+        499.0,
+        15.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       268.0,
+       6.0
+      ],
+      "at": 268.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        317.5,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      4,
+      "press",
+      "RIGHT"
+     ],
+     [
+      55,
+      "release",
+      "RIGHT"
+     ],
+     [
+      59,
+      "press",
+      "LEFT"
+     ],
+     [
+      62,
+      "release",
+      "LEFT"
+     ],
+     [
+      68,
+      "press",
+      "UP"
+     ],
+     [
+      89,
+      "release",
+      "UP"
+     ],
+     [
+      95,
+      "press",
+      "RIGHT"
+     ],
+     [
+      105,
+      "release",
+      "RIGHT"
+     ],
+     [
+      109,
+      "press",
+      "LEFT"
+     ],
+     [
+      112,
+      "release",
+      "LEFT"
+     ],
+     [
+      118,
+      "press",
+      "DOWN"
+     ]
+    ],
+    "ticks": 127,
+    "pos": [
+     476.5,
+     268.0
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 4.077,
+    "walks": [
+     {
+      "to": [
+       "RIGHT",
+       430,
+       16
+      ],
+      "at": 424.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "RIGHT",
+        64.0,
+        0.0
+       ],
+       [
+        "LEFT",
+        446.5,
+        15.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "UP",
+       300.0,
+       24.0
+      ],
+      "at": 317.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "UP",
+        160.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "RIGHT",
+       480,
+       16
+      ],
+      "at": 476.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "RIGHT",
+        424.0,
+        0.0
+       ],
+       [
+        "LEFT",
+        499.0,
+        15.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       268.0,
+       6.0
+      ],
+      "at": 268.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        317.5,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      4,
+      "press",
+      "RIGHT"
+     ],
+     [
+      55,
+      "release",
+      "RIGHT"
+     ],
+     [
+      59,
+      "press",
+      "LEFT"
+     ],
+     [
+      62,
+      "release",
+      "LEFT"
+     ],
+     [
+      68,
+      "press",
+      "UP"
+     ],
+     [
+      89,
+      "release",
+      "UP"
+     ],
+     [
+      95,
+      "press",
+      "RIGHT"
+     ],
+     [
+      105,
+      "release",
+      "RIGHT"
+     ],
+     [
+      109,
+      "press",
+      "LEFT"
+     ],
+     [
+      112,
+      "release",
+      "LEFT"
+     ],
+     [
+      118,
+      "press",
+      "DOWN"
+     ]
+    ],
+    "ticks": 127,
+    "pos": [
+     476.5,
+     268.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[2-N6 bandit]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.078,
+   "walks": [
+    {
+     "to": [
+      "RIGHT",
+      520,
+      24
+     ],
+     "at": 542.0,
+     "carry": 15.0,
+     "legs": [
+      [
+       "RIGHT",
+       392.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "UP",
+      300.0,
+      24.0
+     ],
+     "at": 319.0,
+     "carry": 15.0,
+     "legs": [
+      [
+       "UP",
+       274.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "RIGHT",
+      608,
+      16
+     ],
+     "at": 602.0,
+     "carry": 15.0,
+     "legs": [
+      [
+       "RIGHT",
+       542.0,
+       0.0
+      ],
+      [
+       "LEFT",
+       624.5,
+       15.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      268.0,
+      6.0
+     ],
+     "at": 268.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       319.0,
+       0.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     4,
+     "press",
+     "RIGHT"
+    ],
+    [
+     24,
+     "release",
+     "RIGHT"
+    ],
+    [
+     30,
+     "press",
+     "UP"
+    ],
+    [
+     36,
+     "release",
+     "UP"
+    ],
+    [
+     42,
+     "press",
+     "RIGHT"
+    ],
+    [
+     53,
+     "release",
+     "RIGHT"
+    ],
+    [
+     57,
+     "press",
+     "LEFT"
+    ],
+    [
+     60,
+     "release",
+     "LEFT"
+    ],
+    [
+     66,
+     "press",
+     "DOWN"
+    ]
+   ],
+   "ticks": 75,
+   "pos": [
+    602.0,
+    268.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 2.363,
+    "walks": [
+     {
+      "to": [
+       "RIGHT",
+       520,
+       24
+      ],
+      "at": 542.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "RIGHT",
+        392.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "UP",
+       300.0,
+       24.0
+      ],
+      "at": 319.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "UP",
+        274.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "RIGHT",
+       608,
+       16
+      ],
+      "at": 602.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "RIGHT",
+        542.0,
+        0.0
+       ],
+       [
+        "LEFT",
+        624.5,
+        15.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       268.0,
+       6.0
+      ],
+      "at": 268.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        319.0,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      4,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ],
+     [
+      30,
+      "press",
+      "UP"
+     ],
+     [
+      36,
+      "release",
+      "UP"
+     ],
+     [
+      42,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ],
+     [
+      57,
+      "press",
+      "LEFT"
+     ],
+     [
+      60,
+      "release",
+      "LEFT"
+     ],
+     [
+      66,
+      "press",
+      "DOWN"
+     ]
+    ],
+    "ticks": 75,
+    "pos": [
+     602.0,
+     268.0
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 2.369,
+    "walks": [
+     {
+      "to": [
+       "RIGHT",
+       520,
+       24
+      ],
+      "at": 542.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "RIGHT",
+        392.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "UP",
+       300.0,
+       24.0
+      ],
+      "at": 319.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "UP",
+        274.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "RIGHT",
+       608,
+       16
+      ],
+      "at": 602.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "RIGHT",
+        542.0,
+        0.0
+       ],
+       [
+        "LEFT",
+        624.5,
+        15.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       268.0,
+       6.0
+      ],
+      "at": 268.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        319.0,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      4,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ],
+     [
+      30,
+      "press",
+      "UP"
+     ],
+     [
+      36,
+      "release",
+      "UP"
+     ],
+     [
+      42,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ],
+     [
+      57,
+      "press",
+      "LEFT"
+     ],
+     [
+      60,
+      "release",
+      "LEFT"
+     ],
+     [
+      66,
+      "press",
+      "DOWN"
+     ]
+    ],
+    "ticks": 75,
+    "pos": [
+     602.0,
+     268.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[4-N7 guardian]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.2,
+   "walks": [
+    {
+     "to": [
+      "RIGHT",
+      430,
+      16
+     ],
+     "at": 424.0,
+     "carry": 30.0,
+     "legs": [
+      [
+       "RIGHT",
+       64.0,
+       0.0
+      ],
+      [
+       "LEFT",
+       461.5,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "UP",
+      300.0,
+      24.0
+     ],
+     "at": 295.0,
+     "carry": 30.0,
+     "legs": [
+      [
+       "UP",
+       160.0,
+       0.0
+      ],
+      [
+       "DOWN",
+       332.5,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "RIGHT",
+      480,
+      16
+     ],
+     "at": 476.5,
+     "carry": 30.0,
+     "legs": [
+      [
+       "RIGHT",
+       424.0,
+       0.0
+      ],
+      [
+       "LEFT",
+       514.0,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      268.0,
+      6.0
+     ],
+     "at": 268.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       295.0,
+       0.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     6,
+     "press",
+     "RIGHT"
+    ],
+    [
+     59,
+     "release",
+     "RIGHT"
+    ],
+    [
+     65,
+     "press",
+     "LEFT"
+    ],
+    [
+     70,
+     "release",
+     "LEFT"
+    ],
+    [
+     78,
+     "press",
+     "UP"
+    ],
+    [
+     101,
+     "release",
+     "UP"
+    ],
+    [
+     107,
+     "press",
+     "DOWN"
+    ],
+    [
+     112,
+     "release",
+     "DOWN"
+    ],
+    [
+     120,
+     "press",
+     "RIGHT"
+    ],
+    [
+     132,
+     "release",
+     "RIGHT"
+    ],
+    [
+     138,
+     "press",
+     "LEFT"
+    ],
+    [
+     143,
+     "release",
+     "LEFT"
+    ],
+    [
+     151,
+     "press",
+     "DOWN"
+    ]
+   ],
+   "ticks": 157,
+   "pos": [
+    476.5,
+    268.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 4.99,
+    "walks": [
+     {
+      "to": [
+       "RIGHT",
+       430,
+       16
+      ],
+      "at": 424.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "RIGHT",
+        64.0,
+        0.0
+       ],
+       [
+        "LEFT",
+        461.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "UP",
+       300.0,
+       24.0
+      ],
+      "at": 295.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "UP",
+        160.0,
+        0.0
+       ],
+       [
+        "DOWN",
+        332.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "RIGHT",
+       480,
+       16
+      ],
+      "at": 476.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "RIGHT",
+        424.0,
+        0.0
+       ],
+       [
+        "LEFT",
+        514.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       268.0,
+       6.0
+      ],
+      "at": 268.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        295.0,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      6,
+      "press",
+      "RIGHT"
+     ],
+     [
+      59,
+      "release",
+      "RIGHT"
+     ],
+     [
+      65,
+      "press",
+      "LEFT"
+     ],
+     [
+      70,
+      "release",
+      "LEFT"
+     ],
+     [
+      78,
+      "press",
+      "UP"
+     ],
+     [
+      101,
+      "release",
+      "UP"
+     ],
+     [
+      107,
+      "press",
+      "DOWN"
+     ],
+     [
+      112,
+      "release",
+      "DOWN"
+     ],
+     [
+      120,
+      "press",
+      "RIGHT"
+     ],
+     [
+      132,
+      "release",
+      "RIGHT"
+     ],
+     [
+      138,
+      "press",
+      "LEFT"
+     ],
+     [
+      143,
+      "release",
+      "LEFT"
+     ],
+     [
+      151,
+      "press",
+      "DOWN"
+     ]
+    ],
+    "ticks": 157,
+    "pos": [
+     476.5,
+     268.0
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 5.002,
+    "walks": [
+     {
+      "to": [
+       "RIGHT",
+       430,
+       16
+      ],
+      "at": 424.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "RIGHT",
+        64.0,
+        0.0
+       ],
+       [
+        "LEFT",
+        461.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "UP",
+       300.0,
+       24.0
+      ],
+      "at": 295.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "UP",
+        160.0,
+        0.0
+       ],
+       [
+        "DOWN",
+        332.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "RIGHT",
+       480,
+       16
+      ],
+      "at": 476.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "RIGHT",
+        424.0,
+        0.0
+       ],
+       [
+        "LEFT",
+        514.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       268.0,
+       6.0
+      ],
+      "at": 268.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        295.0,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      6,
+      "press",
+      "RIGHT"
+     ],
+     [
+      59,
+      "release",
+      "RIGHT"
+     ],
+     [
+      65,
+      "press",
+      "LEFT"
+     ],
+     [
+      70,
+      "release",
+      "LEFT"
+     ],
+     [
+      78,
+      "press",
+      "UP"
+     ],
+     [
+      101,
+      "release",
+      "UP"
+     ],
+     [
+      107,
+      "press",
+      "DOWN"
+     ],
+     [
+      112,
+      "release",
+      "DOWN"
+     ],
+     [
+      120,
+      "press",
+      "RIGHT"
+     ],
+     [
+      132,
+      "release",
+      "RIGHT"
+     ],
+     [
+      138,
+      "press",
+      "LEFT"
+     ],
+     [
+      143,
+      "release",
+      "LEFT"
+     ],
+     [
+      151,
+      "press",
+      "DOWN"
+     ]
+    ],
+    "ticks": 157,
+    "pos": [
+     476.5,
+     268.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_onto_the_enemy_from_above_lands_a_strike[4-N6 bandit]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.085,
+   "walks": [
+    {
+     "to": [
+      "RIGHT",
+      520,
+      24
+     ],
+     "at": 519.5,
+     "carry": 30.0,
+     "legs": [
+      [
+       "RIGHT",
+       392.0,
+       0.0
+      ],
+      [
+       "LEFT",
+       557.0,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "UP",
+      300.0,
+      24.0
+     ],
+     "at": 296.5,
+     "carry": 30.0,
+     "legs": [
+      [
+       "UP",
+       274.0,
+       0.0
+      ],
+      [
+       "DOWN",
+       334.0,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "RIGHT",
+      608,
+      16
+     ],
+     "at": 602.0,
+     "carry": 30.0,
+     "legs": [
+      [
+       "RIGHT",
+       519.5,
+       0.0
+      ],
+      [
+       "LEFT",
+       639.5,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      268.0,
+      6.0
+     ],
+     "at": 268.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       296.5,
+       0.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     6,
+     "press",
+     "RIGHT"
+    ],
+    [
+     28,
+     "release",
+     "RIGHT"
+    ],
+    [
+     34,
+     "press",
+     "LEFT"
+    ],
+    [
+     39,
+     "release",
+     "LEFT"
+    ],
+    [
+     47,
+     "press",
+     "UP"
+    ],
+    [
+     55,
+     "release",
+     "UP"
+    ],
+    [
+     61,
+     "press",
+     "DOWN"
+    ],
+    [
+     66,
+     "release",
+     "DOWN"
+    ],
+    [
+     74,
+     "press",
+     "RIGHT"
+    ],
+    [
+     90,
+     "release",
+     "RIGHT"
+    ],
+    [
+     96,
+     "press",
+     "LEFT"
+    ],
+    [
+     101,
+     "release",
+     "LEFT"
+    ],
+    [
+     109,
+     "press",
+     "DOWN"
+    ]
+   ],
+   "ticks": 115,
+   "pos": [
+    602.0,
+    268.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 3.596,
+    "walks": [
+     {
+      "to": [
+       "RIGHT",
+       520,
+       24
+      ],
+      "at": 519.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "RIGHT",
+        392.0,
+        0.0
+       ],
+       [
+        "LEFT",
+        557.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "UP",
+       300.0,
+       24.0
+      ],
+      "at": 296.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "UP",
+        274.0,
+        0.0
+       ],
+       [
+        "DOWN",
+        334.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "RIGHT",
+       608,
+       16
+      ],
+      "at": 602.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "RIGHT",
+        519.5,
+        0.0
+       ],
+       [
+        "LEFT",
+        639.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       268.0,
+       6.0
+      ],
+      "at": 268.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        296.5,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      6,
+      "press",
+      "RIGHT"
+     ],
+     [
+      28,
+      "release",
+      "RIGHT"
+     ],
+     [
+      34,
+      "press",
+      "LEFT"
+     ],
+     [
+      39,
+      "release",
+      "LEFT"
+     ],
+     [
+      47,
+      "press",
+      "UP"
+     ],
+     [
+      55,
+      "release",
+      "UP"
+     ],
+     [
+      61,
+      "press",
+      "DOWN"
+     ],
+     [
+      66,
+      "release",
+      "DOWN"
+     ],
+     [
+      74,
+      "press",
+      "RIGHT"
+     ],
+     [
+      90,
+      "release",
+      "RIGHT"
+     ],
+     [
+      96,
+      "press",
+      "LEFT"
+     ],
+     [
+      101,
+      "release",
+      "LEFT"
+     ],
+     [
+      109,
+      "press",
+      "DOWN"
+     ]
+    ],
+    "ticks": 115,
+    "pos": [
+     602.0,
+     268.0
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 3.61,
+    "walks": [
+     {
+      "to": [
+       "RIGHT",
+       520,
+       24
+      ],
+      "at": 519.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "RIGHT",
+        392.0,
+        0.0
+       ],
+       [
+        "LEFT",
+        557.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "UP",
+       300.0,
+       24.0
+      ],
+      "at": 296.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "UP",
+        274.0,
+        0.0
+       ],
+       [
+        "DOWN",
+        334.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "RIGHT",
+       608,
+       16
+      ],
+      "at": 602.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "RIGHT",
+        519.5,
+        0.0
+       ],
+       [
+        "LEFT",
+        639.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       268.0,
+       6.0
+      ],
+      "at": 268.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        296.5,
+        0.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      6,
+      "press",
+      "RIGHT"
+     ],
+     [
+      28,
+      "release",
+      "RIGHT"
+     ],
+     [
+      34,
+      "press",
+      "LEFT"
+     ],
+     [
+      39,
+      "release",
+      "LEFT"
+     ],
+     [
+      47,
+      "press",
+      "UP"
+     ],
+     [
+      55,
+      "release",
+      "UP"
+     ],
+     [
+      61,
+      "press",
+      "DOWN"
+     ],
+     [
+      66,
+      "release",
+      "DOWN"
+     ],
+     [
+      74,
+      "press",
+      "RIGHT"
+     ],
+     [
+      90,
+      "release",
+      "RIGHT"
+     ],
+     [
+      96,
+      "press",
+      "LEFT"
+     ],
+     [
+      101,
+      "release",
+      "LEFT"
+     ],
+     [
+      109,
+      "press",
+      "DOWN"
+     ]
+    ],
+    "ticks": 115,
+    "pos": [
+     602.0,
+     268.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_still_fails_when_input_never_arrives",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.072,
+   "walks": [],
+   "effects": [
+    [
+     2,
+     "press",
+     "DOWN"
+    ]
+   ],
+   "ticks": 51,
+   "pos": [
+    372.0,
+    327.5
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 1.143,
+    "walks": [],
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ]
+    ],
+    "ticks": 34,
+    "pos": [
+     372.0,
+     327.5
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 1.134,
+    "walks": [],
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ]
+    ],
+    "ticks": 34,
+    "pos": [
+     372.0,
+     327.5
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_still_fails_when_a_wall_blocks_the_way",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.081,
+   "walks": [],
+   "effects": [
+    [
+     3,
+     "press",
+     "RIGHT"
+    ]
+   ],
+   "ticks": 53,
+   "pos": [
+    406.5,
+    240.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 1.192,
+    "walks": [],
+    "effects": [
+     [
+      3,
+      "press",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 36,
+    "pos": [
+     406.5,
+     240.0
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 1.199,
+    "walks": [],
+    "effects": [
+     [
+      3,
+      "press",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 36,
+    "pos": [
+     406.5,
+     240.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_gives_up_when_each_release_lands_later_than_the_last",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.091,
+   "walks": [],
+   "effects": [
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     6,
+     "release",
+     "DOWN"
+    ],
+    [
+     9,
+     "press",
+     "UP"
+    ],
+    [
+     11,
+     "release",
+     "UP"
+    ],
+    [
+     15,
+     "press",
+     "DOWN"
+    ],
+    [
+     18,
+     "release",
+     "DOWN"
+    ],
+    [
+     23,
+     "press",
+     "UP"
+    ],
+    [
+     27,
+     "release",
+     "UP"
+    ],
+    [
+     33,
+     "press",
+     "DOWN"
+    ],
+    [
+     38,
+     "release",
+     "DOWN"
+    ],
+    [
+     45,
+     "press",
+     "UP"
+    ],
+    [
+     51,
+     "release",
+     "UP"
+    ],
+    [
+     59,
+     "press",
+     "DOWN"
+    ],
+    [
+     66,
+     "release",
+     "DOWN"
+    ],
+    [
+     75,
+     "press",
+     "UP"
+    ],
+    [
+     83,
+     "release",
+     "UP"
+    ],
+    [
+     93,
+     "press",
+     "DOWN"
+    ],
+    [
+     102,
+     "release",
+     "DOWN"
+    ],
+    [
+     113,
+     "press",
+     "UP"
+    ],
+    [
+     123,
+     "release",
+     "UP"
+    ],
+    [
+     135,
+     "press",
+     "DOWN"
+    ],
+    [
+     146,
+     "release",
+     "DOWN"
+    ],
+    [
+     159,
+     "press",
+     "UP"
+    ]
+   ],
+   "ticks": 160,
+   "pos": [
+    372.0,
+    240.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 4.985,
+    "walks": [],
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      9,
+      "press",
+      "UP"
+     ],
+     [
+      11,
+      "release",
+      "UP"
+     ],
+     [
+      15,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      23,
+      "press",
+      "UP"
+     ],
+     [
+      27,
+      "release",
+      "UP"
+     ],
+     [
+      33,
+      "press",
+      "DOWN"
+     ],
+     [
+      38,
+      "release",
+      "DOWN"
+     ],
+     [
+      45,
+      "press",
+      "UP"
+     ],
+     [
+      51,
+      "release",
+      "UP"
+     ],
+     [
+      59,
+      "press",
+      "DOWN"
+     ],
+     [
+      66,
+      "release",
+      "DOWN"
+     ],
+     [
+      75,
+      "press",
+      "UP"
+     ],
+     [
+      83,
+      "release",
+      "UP"
+     ],
+     [
+      93,
+      "press",
+      "DOWN"
+     ],
+     [
+      102,
+      "release",
+      "DOWN"
+     ],
+     [
+      113,
+      "press",
+      "UP"
+     ],
+     [
+      123,
+      "release",
+      "UP"
+     ],
+     [
+      135,
+      "press",
+      "DOWN"
+     ],
+     [
+      146,
+      "release",
+      "DOWN"
+     ],
+     [
+      159,
+      "press",
+      "UP"
+     ]
+    ],
+    "ticks": 160,
+    "pos": [
+     372.0,
+     240.0
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 4.982,
+    "walks": [],
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      9,
+      "press",
+      "UP"
+     ],
+     [
+      11,
+      "release",
+      "UP"
+     ],
+     [
+      15,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      23,
+      "press",
+      "UP"
+     ],
+     [
+      27,
+      "release",
+      "UP"
+     ],
+     [
+      33,
+      "press",
+      "DOWN"
+     ],
+     [
+      38,
+      "release",
+      "DOWN"
+     ],
+     [
+      45,
+      "press",
+      "UP"
+     ],
+     [
+      51,
+      "release",
+      "UP"
+     ],
+     [
+      59,
+      "press",
+      "DOWN"
+     ],
+     [
+      66,
+      "release",
+      "DOWN"
+     ],
+     [
+      75,
+      "press",
+      "UP"
+     ],
+     [
+      83,
+      "release",
+      "UP"
+     ],
+     [
+      93,
+      "press",
+      "DOWN"
+     ],
+     [
+      102,
+      "release",
+      "DOWN"
+     ],
+     [
+      113,
+      "press",
+      "UP"
+     ],
+     [
+      123,
+      "release",
+      "UP"
+     ],
+     [
+      135,
+      "press",
+      "DOWN"
+     ],
+     [
+      146,
+      "release",
+      "DOWN"
+     ],
+     [
+      159,
+      "press",
+      "UP"
+     ]
+    ],
+    "ticks": 160,
+    "pos": [
+     372.0,
+     240.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_a_key_takes_effect_exactly_late_ticks_after_its_command[0]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.064,
+   "effects": [
+    [
+     0,
+     "press",
+     "DOWN"
+    ],
+    [
+     3,
+     "release",
+     "DOWN"
+    ]
+   ],
+   "ticks": 7,
+   "pos": [
+    372.0,
+    297.5
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 0.06,
+    "effects": [
+     [
+      0,
+      "press",
+      "DOWN"
+     ],
+     [
+      3,
+      "release",
+      "DOWN"
+     ]
+    ],
+    "ticks": 7,
+    "pos": [
+     372.0,
+     297.5
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 0.062,
+    "effects": [
+     [
+      0,
+      "press",
+      "DOWN"
+     ],
+     [
+      3,
+      "release",
+      "DOWN"
+     ]
+    ],
+    "ticks": 7,
+    "pos": [
+     372.0,
+     297.5
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_a_key_takes_effect_exactly_late_ticks_after_its_command[2]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.062,
+   "effects": [
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     7,
+     "release",
+     "DOWN"
+    ]
+   ],
+   "ticks": 11,
+   "pos": [
+    372.0,
+    282.5
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 0.062,
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      7,
+      "release",
+      "DOWN"
+     ]
+    ],
+    "ticks": 11,
+    "pos": [
+     372.0,
+     282.5
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 0.061,
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      7,
+      "release",
+      "DOWN"
+     ]
+    ],
+    "ticks": 11,
+    "pos": [
+     372.0,
+     282.5
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_a_key_takes_effect_exactly_late_ticks_after_its_command[4]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.061,
+   "effects": [
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     11,
+     "release",
+     "DOWN"
+    ]
+   ],
+   "ticks": 15,
+   "pos": [
+    372.0,
+    267.5
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 0.063,
+    "effects": [
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      11,
+      "release",
+      "DOWN"
+     ]
+    ],
+    "ticks": 15,
+    "pos": [
+     372.0,
+     267.5
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 0.063,
+    "effects": [
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      11,
+      "release",
+      "DOWN"
+     ]
+    ],
+    "ticks": 15,
+    "pos": [
+     372.0,
+     267.5
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_commands_sent_in_one_tick_take_effect_in_the_order_sent",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.06,
+   "effects": [
+    [
+     1,
+     "press",
+     "DOWN"
+    ],
+    [
+     1,
+     "release",
+     "DOWN"
+    ],
+    [
+     5,
+     "press",
+     "DOWN"
+    ],
+    [
+     5,
+     "press",
+     "LEFT"
+    ],
+    [
+     5,
+     "release",
+     "LEFT"
+    ]
+   ],
+   "ticks": 8,
+   "pos": [
+    372.0,
+    297.5
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 0.059,
+    "effects": [
+     [
+      1,
+      "press",
+      "DOWN"
+     ],
+     [
+      1,
+      "release",
+      "DOWN"
+     ],
+     [
+      5,
+      "press",
+      "DOWN"
+     ],
+     [
+      5,
+      "press",
+      "LEFT"
+     ],
+     [
+      5,
+      "release",
+      "LEFT"
+     ]
+    ],
+    "ticks": 8,
+    "pos": [
+     372.0,
+     297.5
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 0.062,
+    "effects": [
+     [
+      1,
+      "press",
+      "DOWN"
+     ],
+     [
+      1,
+      "release",
+      "DOWN"
+     ],
+     [
+      5,
+      "press",
+      "DOWN"
+     ],
+     [
+      5,
+      "press",
+      "LEFT"
+     ],
+     [
+      5,
+      "release",
+      "LEFT"
+     ]
+    ],
+    "ticks": 8,
+    "pos": [
+     372.0,
+     297.5
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_the_server_ticks_once_every_tick_of_simulated_time",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.061,
+   "effects": [],
+   "ticks": 50,
+   "pos": [
+    372.0,
+    320.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "FAILED AssertionError",
+    "wall_s": 1.072,
+    "effects": [],
+    "ticks": 33,
+    "pos": [
+     372.0,
+     320.0
+    ]
+   },
+   {
+    "outcome": "FAILED AssertionError",
+    "wall_s": 1.076,
+    "effects": [],
+    "ticks": 33,
+    "pos": [
+     372.0,
+     320.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": false,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_still_fails_when_the_server_never_ticks",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.07,
+   "walks": []
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 1.062,
+    "walks": []
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 1.075,
+    "walks": []
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_gets_through_the_gap_wherever_the_ticks_fall_between_its_polls[N7]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.447,
+   "walks": [
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 270.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 270.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 270.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 270.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 270.0,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 255.0,
+     "carry": 15.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 255.0,
+     "carry": 15.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 255.0,
+     "carry": 15.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 255.0,
+     "carry": 15.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 255.0,
+     "carry": 15.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 277.5,
+     "carry": 30.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ],
+      [
+       "UP",
+       240.0,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 277.5,
+     "carry": 30.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ],
+      [
+       "UP",
+       240.0,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 277.5,
+     "carry": 30.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ],
+      [
+       "UP",
+       240.0,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 277.5,
+     "carry": 30.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ],
+      [
+       "UP",
+       240.0,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 277.5,
+     "carry": 30.0,
+     "legs": [
+      [
+       "DOWN",
+       300.0,
+       0.0
+      ],
+      [
+       "UP",
+       240.0,
+       30.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     6,
+     "release",
+     "DOWN"
+    ],
+    [
+     8,
+     "press",
+     "RIGHT"
+    ],
+    [
+     24,
+     "release",
+     "RIGHT"
+    ],
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     6,
+     "release",
+     "DOWN"
+    ],
+    [
+     8,
+     "press",
+     "RIGHT"
+    ],
+    [
+     24,
+     "release",
+     "RIGHT"
+    ],
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     6,
+     "release",
+     "DOWN"
+    ],
+    [
+     8,
+     "press",
+     "RIGHT"
+    ],
+    [
+     24,
+     "release",
+     "RIGHT"
+    ],
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     6,
+     "release",
+     "DOWN"
+    ],
+    [
+     8,
+     "press",
+     "RIGHT"
+    ],
+    [
+     24,
+     "release",
+     "RIGHT"
+    ],
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     6,
+     "release",
+     "DOWN"
+    ],
+    [
+     8,
+     "press",
+     "RIGHT"
+    ],
+    [
+     24,
+     "release",
+     "RIGHT"
+    ],
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     10,
+     "release",
+     "DOWN"
+    ],
+    [
+     14,
+     "press",
+     "RIGHT"
+    ],
+    [
+     32,
+     "release",
+     "RIGHT"
+    ],
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     10,
+     "release",
+     "DOWN"
+    ],
+    [
+     14,
+     "press",
+     "RIGHT"
+    ],
+    [
+     32,
+     "release",
+     "RIGHT"
+    ],
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     10,
+     "release",
+     "DOWN"
+    ],
+    [
+     14,
+     "press",
+     "RIGHT"
+    ],
+    [
+     32,
+     "release",
+     "RIGHT"
+    ],
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     10,
+     "release",
+     "DOWN"
+    ],
+    [
+     14,
+     "press",
+     "RIGHT"
+    ],
+    [
+     32,
+     "release",
+     "RIGHT"
+    ],
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     10,
+     "release",
+     "DOWN"
+    ],
+    [
+     14,
+     "press",
+     "RIGHT"
+    ],
+    [
+     32,
+     "release",
+     "RIGHT"
+    ],
+    [
+     6,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     20,
+     "press",
+     "UP"
+    ],
+    [
+     25,
+     "release",
+     "UP"
+    ],
+    [
+     31,
+     "press",
+     "RIGHT"
+    ],
+    [
+     51,
+     "release",
+     "RIGHT"
+    ],
+    [
+     6,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     20,
+     "press",
+     "UP"
+    ],
+    [
+     25,
+     "release",
+     "UP"
+    ],
+    [
+     31,
+     "press",
+     "RIGHT"
+    ],
+    [
+     51,
+     "release",
+     "RIGHT"
+    ],
+    [
+     6,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     20,
+     "press",
+     "UP"
+    ],
+    [
+     25,
+     "release",
+     "UP"
+    ],
+    [
+     31,
+     "press",
+     "RIGHT"
+    ],
+    [
+     51,
+     "release",
+     "RIGHT"
+    ],
+    [
+     6,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     20,
+     "press",
+     "UP"
+    ],
+    [
+     25,
+     "release",
+     "UP"
+    ],
+    [
+     31,
+     "press",
+     "RIGHT"
+    ],
+    [
+     51,
+     "release",
+     "RIGHT"
+    ],
+    [
+     6,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     20,
+     "press",
+     "UP"
+    ],
+    [
+     25,
+     "release",
+     "UP"
+    ],
+    [
+     31,
+     "press",
+     "RIGHT"
+    ],
+    [
+     51,
+     "release",
+     "RIGHT"
+    ]
+   ],
+   "ticks": 57,
+   "pos": [
+    502.0,
+    277.5
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 19.864,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 270.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 270.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 270.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 270.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 270.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 255.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 255.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 255.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 255.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 255.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 277.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ],
+       [
+        "UP",
+        240.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 277.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ],
+       [
+        "UP",
+        240.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 277.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ],
+       [
+        "UP",
+        240.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 277.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ],
+       [
+        "UP",
+        240.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 277.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ],
+       [
+        "UP",
+        240.0,
+        30.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      8,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      8,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      8,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      8,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      8,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      14,
+      "press",
+      "RIGHT"
+     ],
+     [
+      32,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      14,
+      "press",
+      "RIGHT"
+     ],
+     [
+      32,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      14,
+      "press",
+      "RIGHT"
+     ],
+     [
+      32,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      14,
+      "press",
+      "RIGHT"
+     ],
+     [
+      32,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      14,
+      "press",
+      "RIGHT"
+     ],
+     [
+      32,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      20,
+      "press",
+      "UP"
+     ],
+     [
+      25,
+      "release",
+      "UP"
+     ],
+     [
+      31,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      20,
+      "press",
+      "UP"
+     ],
+     [
+      25,
+      "release",
+      "UP"
+     ],
+     [
+      31,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      20,
+      "press",
+      "UP"
+     ],
+     [
+      25,
+      "release",
+      "UP"
+     ],
+     [
+      31,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      20,
+      "press",
+      "UP"
+     ],
+     [
+      25,
+      "release",
+      "UP"
+     ],
+     [
+      31,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      20,
+      "press",
+      "UP"
+     ],
+     [
+      25,
+      "release",
+      "UP"
+     ],
+     [
+      31,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 57,
+    "pos": [
+     502.0,
+     277.5
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 19.846,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 270.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 270.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 270.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 270.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 270.0,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 255.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 255.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 255.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 255.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 255.0,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 277.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ],
+       [
+        "UP",
+        240.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 277.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ],
+       [
+        "UP",
+        240.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 277.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ],
+       [
+        "UP",
+        240.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 277.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ],
+       [
+        "UP",
+        240.0,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 277.5,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        300.0,
+        0.0
+       ],
+       [
+        "UP",
+        240.0,
+        30.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      8,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      8,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      8,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      8,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      6,
+      "release",
+      "DOWN"
+     ],
+     [
+      8,
+      "press",
+      "RIGHT"
+     ],
+     [
+      24,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      14,
+      "press",
+      "RIGHT"
+     ],
+     [
+      32,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      14,
+      "press",
+      "RIGHT"
+     ],
+     [
+      32,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      14,
+      "press",
+      "RIGHT"
+     ],
+     [
+      32,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      14,
+      "press",
+      "RIGHT"
+     ],
+     [
+      32,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      14,
+      "press",
+      "RIGHT"
+     ],
+     [
+      32,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      20,
+      "press",
+      "UP"
+     ],
+     [
+      25,
+      "release",
+      "UP"
+     ],
+     [
+      31,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      20,
+      "press",
+      "UP"
+     ],
+     [
+      25,
+      "release",
+      "UP"
+     ],
+     [
+      31,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      20,
+      "press",
+      "UP"
+     ],
+     [
+      25,
+      "release",
+      "UP"
+     ],
+     [
+      31,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      20,
+      "press",
+      "UP"
+     ],
+     [
+      25,
+      "release",
+      "UP"
+     ],
+     [
+      31,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      20,
+      "press",
+      "UP"
+     ],
+     [
+      25,
+      "release",
+      "UP"
+     ],
+     [
+      31,
+      "press",
+      "RIGHT"
+     ],
+     [
+      51,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 57,
+    "pos": [
+     502.0,
+     277.5
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ },
+ {
+  "test": "test_mesh_net_walk::test_walk_gets_through_the_gap_wherever_the_ticks_fall_between_its_polls[N6]",
+  "simulated": {
+   "outcome": "passed",
+   "wall_s": 0.335,
+   "walks": [
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 267.5,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 267.5,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 267.5,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 267.5,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 267.5,
+     "carry": 0.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 252.5,
+     "carry": 15.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 252.5,
+     "carry": 15.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 252.5,
+     "carry": 15.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 252.5,
+     "carry": 15.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 252.5,
+     "carry": 15.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 275.0,
+     "carry": 30.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ],
+      [
+       "UP",
+       237.5,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 275.0,
+     "carry": 30.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ],
+      [
+       "UP",
+       237.5,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 275.0,
+     "carry": 30.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ],
+      [
+       "UP",
+       237.5,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 275.0,
+     "carry": 30.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ],
+      [
+       "UP",
+       237.5,
+       30.0
+      ]
+     ]
+    },
+    {
+     "to": [
+      "DOWN",
+      274.0,
+      24.0
+     ],
+     "at": 275.0,
+     "carry": 30.0,
+     "legs": [
+      [
+       "DOWN",
+       327.5,
+       0.0
+      ],
+      [
+       "UP",
+       237.5,
+       30.0
+      ]
+     ]
+    }
+   ],
+   "effects": [
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     10,
+     "release",
+     "DOWN"
+    ],
+    [
+     12,
+     "press",
+     "RIGHT"
+    ],
+    [
+     26,
+     "release",
+     "RIGHT"
+    ],
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     10,
+     "release",
+     "DOWN"
+    ],
+    [
+     12,
+     "press",
+     "RIGHT"
+    ],
+    [
+     26,
+     "release",
+     "RIGHT"
+    ],
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     10,
+     "release",
+     "DOWN"
+    ],
+    [
+     12,
+     "press",
+     "RIGHT"
+    ],
+    [
+     26,
+     "release",
+     "RIGHT"
+    ],
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     10,
+     "release",
+     "DOWN"
+    ],
+    [
+     12,
+     "press",
+     "RIGHT"
+    ],
+    [
+     26,
+     "release",
+     "RIGHT"
+    ],
+    [
+     2,
+     "press",
+     "DOWN"
+    ],
+    [
+     10,
+     "release",
+     "DOWN"
+    ],
+    [
+     12,
+     "press",
+     "RIGHT"
+    ],
+    [
+     26,
+     "release",
+     "RIGHT"
+    ],
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     18,
+     "press",
+     "RIGHT"
+    ],
+    [
+     34,
+     "release",
+     "RIGHT"
+    ],
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     18,
+     "press",
+     "RIGHT"
+    ],
+    [
+     34,
+     "release",
+     "RIGHT"
+    ],
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     18,
+     "press",
+     "RIGHT"
+    ],
+    [
+     34,
+     "release",
+     "RIGHT"
+    ],
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     18,
+     "press",
+     "RIGHT"
+    ],
+    [
+     34,
+     "release",
+     "RIGHT"
+    ],
+    [
+     4,
+     "press",
+     "DOWN"
+    ],
+    [
+     14,
+     "release",
+     "DOWN"
+    ],
+    [
+     18,
+     "press",
+     "RIGHT"
+    ],
+    [
+     34,
+     "release",
+     "RIGHT"
+    ],
+    [
+     6,
+     "press",
+     "DOWN"
+    ],
+    [
+     18,
+     "release",
+     "DOWN"
+    ],
+    [
+     24,
+     "press",
+     "UP"
+    ],
+    [
+     29,
+     "release",
+     "UP"
+    ],
+    [
+     35,
+     "press",
+     "RIGHT"
+    ],
+    [
+     53,
+     "release",
+     "RIGHT"
+    ],
+    [
+     6,
+     "press",
+     "DOWN"
+    ],
+    [
+     18,
+     "release",
+     "DOWN"
+    ],
+    [
+     24,
+     "press",
+     "UP"
+    ],
+    [
+     29,
+     "release",
+     "UP"
+    ],
+    [
+     35,
+     "press",
+     "RIGHT"
+    ],
+    [
+     53,
+     "release",
+     "RIGHT"
+    ],
+    [
+     6,
+     "press",
+     "DOWN"
+    ],
+    [
+     18,
+     "release",
+     "DOWN"
+    ],
+    [
+     24,
+     "press",
+     "UP"
+    ],
+    [
+     29,
+     "release",
+     "UP"
+    ],
+    [
+     35,
+     "press",
+     "RIGHT"
+    ],
+    [
+     53,
+     "release",
+     "RIGHT"
+    ],
+    [
+     6,
+     "press",
+     "DOWN"
+    ],
+    [
+     18,
+     "release",
+     "DOWN"
+    ],
+    [
+     24,
+     "press",
+     "UP"
+    ],
+    [
+     29,
+     "release",
+     "UP"
+    ],
+    [
+     35,
+     "press",
+     "RIGHT"
+    ],
+    [
+     53,
+     "release",
+     "RIGHT"
+    ],
+    [
+     6,
+     "press",
+     "DOWN"
+    ],
+    [
+     18,
+     "release",
+     "DOWN"
+    ],
+    [
+     24,
+     "press",
+     "UP"
+    ],
+    [
+     29,
+     "release",
+     "UP"
+    ],
+    [
+     35,
+     "press",
+     "RIGHT"
+    ],
+    [
+     53,
+     "release",
+     "RIGHT"
+    ]
+   ],
+   "ticks": 59,
+   "pos": [
+    507.0,
+    275.0
+   ]
+  },
+  "simulated_again_identical": true,
+  "real": [
+   {
+    "outcome": "passed",
+    "wall_s": 20.662,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 267.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 267.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 267.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 267.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 267.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 252.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 252.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 252.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 252.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 252.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 275.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ],
+       [
+        "UP",
+        237.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 275.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ],
+       [
+        "UP",
+        237.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 275.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ],
+       [
+        "UP",
+        237.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 275.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ],
+       [
+        "UP",
+        237.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 275.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ],
+       [
+        "UP",
+        237.5,
+        30.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      12,
+      "press",
+      "RIGHT"
+     ],
+     [
+      26,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      12,
+      "press",
+      "RIGHT"
+     ],
+     [
+      26,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      12,
+      "press",
+      "RIGHT"
+     ],
+     [
+      26,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      12,
+      "press",
+      "RIGHT"
+     ],
+     [
+      26,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      12,
+      "press",
+      "RIGHT"
+     ],
+     [
+      26,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      18,
+      "press",
+      "RIGHT"
+     ],
+     [
+      34,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      18,
+      "press",
+      "RIGHT"
+     ],
+     [
+      34,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      18,
+      "press",
+      "RIGHT"
+     ],
+     [
+      34,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      18,
+      "press",
+      "RIGHT"
+     ],
+     [
+      34,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      18,
+      "press",
+      "RIGHT"
+     ],
+     [
+      34,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      29,
+      "release",
+      "UP"
+     ],
+     [
+      35,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      29,
+      "release",
+      "UP"
+     ],
+     [
+      35,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      29,
+      "release",
+      "UP"
+     ],
+     [
+      35,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      29,
+      "release",
+      "UP"
+     ],
+     [
+      35,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      29,
+      "release",
+      "UP"
+     ],
+     [
+      35,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 59,
+    "pos": [
+     507.0,
+     275.0
+    ]
+   },
+   {
+    "outcome": "passed",
+    "wall_s": 20.676,
+    "walks": [
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 267.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 267.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 267.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 267.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 267.5,
+      "carry": 0.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 252.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 252.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 252.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 252.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 252.5,
+      "carry": 15.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 275.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ],
+       [
+        "UP",
+        237.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 275.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ],
+       [
+        "UP",
+        237.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 275.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ],
+       [
+        "UP",
+        237.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 275.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ],
+       [
+        "UP",
+        237.5,
+        30.0
+       ]
+      ]
+     },
+     {
+      "to": [
+       "DOWN",
+       274.0,
+       24.0
+      ],
+      "at": 275.0,
+      "carry": 30.0,
+      "legs": [
+       [
+        "DOWN",
+        327.5,
+        0.0
+       ],
+       [
+        "UP",
+        237.5,
+        30.0
+       ]
+      ]
+     }
+    ],
+    "effects": [
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      12,
+      "press",
+      "RIGHT"
+     ],
+     [
+      26,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      12,
+      "press",
+      "RIGHT"
+     ],
+     [
+      26,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      12,
+      "press",
+      "RIGHT"
+     ],
+     [
+      26,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      12,
+      "press",
+      "RIGHT"
+     ],
+     [
+      26,
+      "release",
+      "RIGHT"
+     ],
+     [
+      2,
+      "press",
+      "DOWN"
+     ],
+     [
+      10,
+      "release",
+      "DOWN"
+     ],
+     [
+      12,
+      "press",
+      "RIGHT"
+     ],
+     [
+      26,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      18,
+      "press",
+      "RIGHT"
+     ],
+     [
+      34,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      18,
+      "press",
+      "RIGHT"
+     ],
+     [
+      34,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      18,
+      "press",
+      "RIGHT"
+     ],
+     [
+      34,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      18,
+      "press",
+      "RIGHT"
+     ],
+     [
+      34,
+      "release",
+      "RIGHT"
+     ],
+     [
+      4,
+      "press",
+      "DOWN"
+     ],
+     [
+      14,
+      "release",
+      "DOWN"
+     ],
+     [
+      18,
+      "press",
+      "RIGHT"
+     ],
+     [
+      34,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      29,
+      "release",
+      "UP"
+     ],
+     [
+      35,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      29,
+      "release",
+      "UP"
+     ],
+     [
+      35,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      29,
+      "release",
+      "UP"
+     ],
+     [
+      35,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      29,
+      "release",
+      "UP"
+     ],
+     [
+      35,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ],
+     [
+      6,
+      "press",
+      "DOWN"
+     ],
+     [
+      18,
+      "release",
+      "DOWN"
+     ],
+     [
+      24,
+      "press",
+      "UP"
+     ],
+     [
+      29,
+      "release",
+      "UP"
+     ],
+     [
+      35,
+      "press",
+      "RIGHT"
+     ],
+     [
+      53,
+      "release",
+      "RIGHT"
+     ]
+    ],
+    "ticks": 59,
+    "pos": [
+     507.0,
+     275.0
+    ]
+   }
+  ],
+  "real_same_outcome_and_final_position": true,
+  "real_same_walks": true,
+  "real_same_commands_in_order": true
+ }
+]

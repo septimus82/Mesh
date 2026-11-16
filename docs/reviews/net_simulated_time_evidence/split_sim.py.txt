@@ -1,0 +1,98 @@
+"""Where the simulated walking and reconnect tests' time goes: measurement only (wraps from outside, changes nothing).
+
+Usage: py split_sim.py <repo> <out.json>
+For each test: wall time, simulated ticks or frames, and every asyncio.sleep by its requested duration
+(count and the real time the awaits took), plus the CPU spent inside the simulation step itself.
+"""
+import asyncio
+import inspect
+import json
+import sys
+import time
+from collections import defaultdict
+from pathlib import Path
+
+repo = Path(sys.argv[1])
+sys.path.insert(0, str(repo))
+
+import pytest  # noqa: E402
+
+import tests.test_mesh_net_resume as tr  # noqa: E402
+import tests.test_mesh_net_walk as tw  # noqa: E402
+
+real_sleep = asyncio.sleep
+sleeps: dict[float, list[float]] = defaultdict(lambda: [0, 0.0])
+step_cpu = [0.0, 0]
+
+
+async def counting_sleep(delay, result=None):
+    started = time.perf_counter()
+    try:
+        return await real_sleep(delay, result)
+    finally:
+        entry = sleeps[round(delay, 4)]
+        entry[0] += 1
+        entry[1] += time.perf_counter() - started
+
+
+asyncio.sleep = counting_sleep  # (this measuring process only)
+
+real_tick = tw.LateWindow.tick
+
+
+def timed_tick(self):
+    started = time.perf_counter()
+    try:
+        return real_tick(self)
+    finally:
+        step_cpu[0] += time.perf_counter() - started
+        step_cpu[1] += 1
+
+
+tw.LateWindow.tick = timed_tick
+
+
+def cases(module):
+    for name, fn in vars(module).items():
+        if not name.startswith("test_") or not callable(fn):
+            continue
+        marks = [m for m in getattr(fn, "pytestmark", []) if m.name == "parametrize"]
+        combos = [({}, "")]
+        for mark in reversed(marks):  # (the bottom decorator varies slowest, as pytest ids are built)
+            names, values = mark.args[0], mark.args[1]
+            names = [n.strip() for n in names.split(",")] if isinstance(names, str) else list(names)
+            ids = mark.kwargs.get("ids")
+            new = []
+            for kwargs, label in combos:
+                for i, value in enumerate(values):
+                    value = value if len(names) > 1 else (value,)
+                    tag = str(ids[i]) if ids else "-".join(str(v) for v in value)
+                    new.append(({**kwargs, **dict(zip(names, value))}, f"{label}-{tag}" if label else tag))
+            combos = new
+        for kwargs, label in combos:
+            yield f"{module.__name__.split('.')[-1]}::{name}" + (f"[{label}]" if label else ""), fn, kwargs
+
+
+rows = []
+for module in (tw, tr):
+    for test_id, fn, kwargs in cases(module):
+        if "monkeypatch" in inspect.signature(fn).parameters:
+            continue
+        sleeps.clear()
+        step_cpu[:] = [0.0, 0]
+        started = time.perf_counter()
+        try:
+            fn(**kwargs)
+            outcome = "passed"
+        except BaseException as exc:  # noqa: BLE001
+            outcome = f"FAILED {type(exc).__name__}: {str(exc)[:120]}"
+        wall = time.perf_counter() - started
+        rows.append({"test": test_id, "outcome": outcome, "wall_s": round(wall, 3),
+                     "ticks": step_cpu[1], "tick_cpu_s": round(step_cpu[0], 3),
+                     "sleeps": {str(k): {"count": v[0], "real_s": round(v[1], 3)} for k, v in sorted(sleeps.items())}})
+        slept = sum(v[1] for v in sleeps.values())
+        print(f"{wall:6.2f} s  ticks {step_cpu[1]:4d} ({step_cpu[0]:.2f} s cpu)  asleep {slept:5.2f} s  "
+              f"{ {k: v[0] for k, v in sorted(sleeps.items())} }  {test_id}  {outcome}", flush=True)
+
+Path(sys.argv[2]).write_text(json.dumps(rows, indent=1), encoding="utf-8")
+print("total wall", round(sum(r["wall_s"] for r in rows), 2))
