@@ -34,7 +34,21 @@ The rain's loudness follows the rain actually falling (``engine.water.rain_rate`
 and which are on: what makes the ripples), the wind's follows the wind where the listener is (the room's
 ``settings.wind`` with its gusts: ``engine.wind.speed_at``). Both ease (about a second), so rain that stops fades
 out, and a room entered with the same rain keeps the same loop playing (keys ``weather:rain``, ``weather:wind``).
-An indoor room has no rain (``weather_exposure``), so none is heard; muffled weather indoors is Milestone 21C.
+
+**Indoors** (``settings.weather_exposure: "indoor"``) no rain falls in the room (its rain effects are left out of its
+particles), so none is heard. With ``"indoors": true`` in its weather sounds (Milestone 21C2: Studio's "Hear outside
+weather indoors"), the room's own rain and wind settings are the weather outside it, heard quietly from in here::
+
+    "weather_exposure": "indoor", "particles": [{"preset": "rain"}], "wind": {"speed": 3.0},
+    "weather_sounds": {"rain": "assets/ambience/rain_loop.wav", "wind": "assets/ambience/wind_loop.wav",
+                       "indoors": true}
+
+The rain's loudness is then that of the rain the room asks for (``engine.water.rain_rate`` over its ``particles`` as
+written: the rain that would fall were it outdoors), the wind's that of its ``wind``, each times ``INDOORS``. Only
+the room's own settings are read: a room with no rain set has no rain outside, whatever the last room had. The loops
+are the same two keys, so walking in from a rainy room with the same sound the rain carries on, easing down, and
+eases up again on the way out. Quieter only: nothing is filtered. Without the setting an indoor room is as it was
+before Milestone 21C2; in an outdoor room the setting does nothing.
 
 **Loudness together:** when the ambience playing would add up past ``HEADROOM`` (about two full-strength
 sounds), every ambience level is scaled down together, smoothly, so a stream beside rain beside wind never piles up.
@@ -65,6 +79,7 @@ RESEND = 0.002  # a loop's volume is set again once what it should play differs 
 STOP_BEYOND = 1.1  # an emitter stops once the listener is this many times its distance away (+ 16 px)
 STEREO_WIDTH = 0.75  # the most an emitter is panned (never hard into one ear)
 WIND_LOUD_AT = 14.0  # m/s: the wind's sound is at full strength from this speed
+INDOORS = 0.35  # the weather outside, heard from an indoor room that asks to hear it (as OCCLUDED: behind a wall)
 SOUND_FILES = (".wav", ".ogg", ".mp3")
 OCCLUDED = 0.35  # an emitter behind a wall plays at this much of its level (engine.audio's WORLD_SFX_OCCLUDED_VOLUME_MUL)
 OCCLUDED_PAN = 0.4  # ... and this much of its pan (WORLD_SFX_OCCLUDED_PAN_MUL): it comes round the wall, less from a side
@@ -159,6 +174,7 @@ class WeatherSounds:
     wind: str = ""
     rain_volume: float = 0.6
     wind_volume: float = 0.5
+    indoors: bool = False  # an indoor room: hear its rain and wind, quietly, as the weather outside (Milestone 21C2)
 
 
 def parse_weather_sounds(raw: Any, where: str = "settings.weather_sounds") -> WeatherSounds:
@@ -167,7 +183,7 @@ def parse_weather_sounds(raw: Any, where: str = "settings.weather_sounds") -> We
         return WeatherSounds()
     if not isinstance(raw, dict):
         raise EmitterError(f"{where} must be an object like {{\"rain\": \"assets/ambience/rain_loop.wav\"}}")
-    unknown = set(raw) - {"rain", "wind", "rain_volume", "wind_volume"}
+    unknown = set(raw) - {"rain", "wind", "rain_volume", "wind_volume", "indoors"}
     if unknown:
         raise EmitterError(f"{where}: unknown setting(s) {', '.join(sorted(unknown))}")
     out: dict[str, Any] = {}
@@ -181,7 +197,10 @@ def parse_weather_sounds(raw: Any, where: str = "settings.weather_sounds") -> We
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0.0 <= value <= 1.0:
             raise EmitterError(f"{where}.{key} must be a number from 0 to 1 (got {value!r})")
         out[key] = float(value)
-    return WeatherSounds(**out)
+    indoors = raw.get("indoors", False)
+    if not isinstance(indoors, bool):
+        raise EmitterError(f"{where}.indoors must be true or false (got {indoors!r})")
+    return WeatherSounds(**out, indoors=indoors)
 
 
 LIBRARY = "assets/ambience"  # Mesh's own loops (CC0; tooling/make_ambience_library.py): Studio copies a chosen one in
@@ -247,6 +266,8 @@ class Soundscape:
     stale: set[str] = field(default_factory=set)  # loops of the last room's emitters, to stop unless still here
     weather: WeatherSounds = field(default_factory=WeatherSounds)
     wind: Any = None  # engine.wind.Wind (None: calm)
+    indoor: bool = False  # the room is indoors (``weather_exposure``): no rain falls in it
+    outside_rain: float = 0.0  # an indoor room: how hard its own rain setting falls (heard if it asks: ``indoors``)
     levels: dict[str, float] = field(default_factory=dict)  # "rain"/"wind": what they play at now
     sent: dict[str, tuple[float, str]] = field(default_factory=dict)  # "rain"/"wind": the volume and file last given
     headroom: float = 1.0  # the common scale (1: nothing scaled down)
@@ -272,6 +293,7 @@ class Soundscape:
                 "behind_walls": sorted(e.key for e in self.emitters if e.playing and e.blocked),
                 "wall_asks": self.wall_asks,
                 "weather": {k: round(v, 3) for k, v in self.levels.items()}, "headroom": round(self.headroom, 3),
+                "weather_from_outside": self.indoor and self.weather.indoors,
                 "updates": self.updates, "loop_calls": self.loop_calls}
 
 
@@ -302,6 +324,21 @@ def reset(window: Any, room: str = "", settings: Any = None) -> None:
         scape.wind = parse_wind(settings.get("wind"))
     except WindError:
         scape.wind = None  # (its particles say so already)
+    scape.indoor, scape.outside_rain = False, 0.0
+    from engine.scene_particles import SceneParticlesError, parse_exposure, parse_particles  # noqa: PLC0415
+
+    try:
+        scape.indoor = parse_exposure(settings.get("weather_exposure")) == "indoor"
+        if scape.indoor and scape.weather.rain:
+            # Milestone 21C2: no rain falls in here (engine.scene_particles.configure leaves it out), so the rain
+            # heard from outside (if the room asks to hear it) is the rain it asks for, as written: not the
+            # particles on screen
+            from engine.water import rain_rate  # noqa: PLC0415
+
+            effects = parse_particles(settings.get("particles"), scape.wind)
+            scape.outside_rain = rain_rate(effects, [e.enabled for e in effects])
+    except SceneParticlesError:
+        pass  # (the room's particles say why; no weather is heard from outside)
 
 
 def _listener(window: Any, scape: Soundscape) -> tuple[float, float, float] | None:
@@ -436,13 +473,17 @@ def update(window: Any, dt: float) -> None:
             per_sound[sound] = per_sound.get(sound, 0) + 1
 
     weather = scape.weather
-    rain_target = min(1.0, _rain_rate(window)) * weather.rain_volume if weather.rain else 0.0
+    outside = scape.indoor and weather.indoors  # (Milestone 21C2: an indoor room hearing the weather outside it)
+    rain_target = min(1.0, scape.outside_rain if outside else _rain_rate(window)) * weather.rain_volume \
+        if weather.rain else 0.0
     wind_target = 0.0
     if weather.wind and scape.wind is not None and not scape.wind.calm:
         from engine.wind import speed_at  # noqa: PLC0415
 
         speed = speed_at(lx / PX_PER_M, ly / PX_PER_M, scape.time, scape.wind)
         wind_target = min(1.0, speed / WIND_LOUD_AT) ** 0.7 * weather.wind_volume
+    if outside:
+        rain_target, wind_target = rain_target * INDOORS, wind_target * INDOORS
     total = sum(targets[k][0] for k in chosen) + rain_target + wind_target
     scape.headroom = _ease(scape.headroom, min(1.0, HEADROOM / total) if total > 0 else 1.0, dt, 0.5)
 

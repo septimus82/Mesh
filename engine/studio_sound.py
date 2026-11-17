@@ -78,15 +78,17 @@ class SoundMixin:
         rows.add(self._label("Sound and weather", bold=True, size=12))
         rows.add(self._label("What this room sounds like. Heard in play (F4); the editor stays silent.", color=C_MUTED,
                              size=9, width=width))
-        rows.add(self._label("Rain (snow and windborne leaves: Environment, Weather particles...)" if self.hd2d.active
-                             else "Rain", color=C_MUTED, size=10, width=width))
+        heard = ops.indoor_weather(scene)
+        rows.add(self._label(("Rain outside (not shown in here: this room is indoors)" if heard["indoor"] else
+                              "Rain (snow and windborne leaves: Environment, Weather particles...)" if self.hd2d.active
+                              else "Rain"), color=C_MUTED, size=10, width=width))
         rain = ops.rain_strength(scene)
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         for key, title in RAIN_TITLES:
             row.add(self._button(title, partial(self.set_rain, key), width=quarter,
                                  style=S_ACTIVE if rain == key else S_BUTTON))
         rows.add(row)
-        rows.add(self._label("Wind", color=C_MUTED, size=10))
+        rows.add(self._label("Wind outside" if heard["indoor"] else "Wind", color=C_MUTED, size=10))
         wind = _wind_of(scene)
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         for title, speed, gust in WINDS:
@@ -112,6 +114,16 @@ class SoundMixin:
             rows.add(row)
         rows.add(self._label("The rain is heard as hard as it falls, the wind as hard as it blows where the player is; "
                              "both fade when the weather stops.", color=C_MUTED, size=9, width=width))
+        rows.add(self._toggle("Outdoors (rain and snow fall)", not heard["indoor"], lambda on: self._edit(
+            lambda s: ops.set_weather_exposure(s, "outdoor" if on else "indoor"),
+            "Outdoors: rain and snow fall." if on else "Indoors: no rain or snow here."), width))
+        if heard["indoor"]:  # (Milestone 21C2)
+            rows.add(self._toggle("Hear outside weather indoors", heard["enabled"], lambda on: self._edit(
+                lambda s: ops.set_weather_sounds(s, indoors=on),
+                "The weather outside is heard in here, quietly." if on else "Indoors as before: no rain is heard in here."),
+                width))
+        silent = heard["indoor"] and heard["enabled"] and not (heard["rain"] or heard["wind"])
+        rows.add(self._label(heard["message"], color=C_ERROR if silent else C_MUTED, size=9, width=width))
         rows.add(gui.UISpace(height=6))
         emitters = [e for e in ops.entities(scene) if ops.sound_emitter_of(e) is not None]
         row = gui.UIBoxLayout(vertical=False, space_between=6)
