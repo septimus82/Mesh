@@ -121,8 +121,10 @@ def _rain_on_screen(window: Any) -> int:
 class _Walk:
     """The player walked with the arrow keys (the game's own movement and doors), every frame's soundscape logged."""
 
-    def __init__(self, window: Any, keys: Any, real_time: bool = False) -> None:
-        self.window, self.keys, self.real_time = window, keys, real_time
+    def __init__(self, window: Any, keys: Any, real_time: bool = False, base: int = 0) -> None:
+        """``base``: the players this process had registered before the game started (pyglet's count is
+        process-wide: in a test run, other tests' players are in it), so that the log counts this game's own."""
+        self.window, self.keys, self.real_time, self.base = window, keys, real_time, base
         self.log: list[dict[str, Any]] = []
 
     def frame(self) -> None:
@@ -136,7 +138,7 @@ class _Walk:
         self.log.append({"f": len(self.log), "room": _room(self.window), "rain_on_screen": _rain_on_screen(self.window),
                          "loops": {key: [round(t.volume * t.scale * audio.ambience_volume, 4), round(t.pan or 0.0, 3), t.path]
                                    for key, t in audio._loops.items()},
-                         "registered": _registered()})
+                         "registered": _registered() - self.base})
 
     def stand(self, seconds: float) -> None:
         for _ in range(round(seconds * 60)):
@@ -238,7 +240,7 @@ def walk(out: Path) -> dict[str, Any]:
     game = _game(project)
     keys = game.arcade.key
     try:
-        run = _Walk(game.window, keys)
+        run = _Walk(game.window, keys, base=base)
         marks = _route(run)
         _write(out / "walk_log.json", run.log)
         report: dict[str, Any] = {"walk": _summary(run.log, marks)}
@@ -396,7 +398,7 @@ def studio(out: Path) -> dict[str, Any]:
             d.key(k.F4)
             row: dict[str, Any] = {"mode": d.studio.mode, "started_in": _room(d.window)}
             if i == 0:
-                run = _Walk(d.window, k)
+                run = _Walk(d.window, k, base=base)
                 row["walk"] = _summary(run.log, _route(run))
             else:
                 row["settled"] = _settled(d.window, 8.0)
@@ -514,6 +516,7 @@ def perf(out: Path, indoors: str = "on") -> dict[str, Any]:
 def listen(out: Path) -> dict[str, Any]:
     """The owner's listening pass, through the speakers. Only ever run by a person, on purpose."""
     _authored(out / "listen", 0.8)
+    base = _registered()
     game = _game(out / "listen")
     steps: list[str] = []
 
@@ -523,7 +526,7 @@ def listen(out: Path) -> dict[str, Any]:
             print(f"[{len(steps):2d}] {text}", flush=True)
 
     try:
-        run = _Walk(game.window, game.arcade.key, real_time=True)
+        run = _Walk(game.window, game.arcade.key, real_time=True, base=base)
         summary = _summary(run.log, _route(run, say))
     finally:
         game.window.close()

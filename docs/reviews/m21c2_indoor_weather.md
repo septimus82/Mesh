@@ -174,6 +174,13 @@ No measurable cost. The room's rain setting is read once as the room loads; each
   suite are left to CI and Extended on the pull request's head. The export check (section 6) is part of the
   demonstration tool, not of a CI test.
 
+**The first Extended run failed, and is kept** (head `1d295590`, run 44056973057; CI on that head passed). Both
+systems' second GPU shard failed in two of the new real-window tests: the walk's log counted pyglet's registered
+players for the whole process, and in the full lane other tests had left three registered before this one began,
+so "2 players" read as 5. A fault of the demonstration tool's log, not of the game: its other counts were already
+taken from before the game started, and this one now is too. Corrected in the next commit and checked with three
+players registered beforehand. Not rerun.
+
 ## 8. Listening checklist (for the owner)
 
 Stages A, B and C1 are still **PENDING OWNER REVIEW**: their checklists are in
