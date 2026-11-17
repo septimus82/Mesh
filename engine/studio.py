@@ -211,9 +211,10 @@ def hd2d_shadow_summary(allocation: list[str], room_shadows: bool = True) -> str
 
 
 class Studio(InspectorMixin, SoundMixin):
-    def __init__(self, window: Any, project: Project) -> None:
+    def __init__(self, window: Any, project: Project, ownership: Any = None) -> None:
         self.window = window
         self.project = project
+        self.ownership = ownership  # its hold on the project (engine.editor.project_ownership; ``open_studio``)
         self.mode = "edit"
         self._editor_audio(True)
         self.selected: str | None = None
@@ -3340,6 +3341,13 @@ class Studio(InspectorMixin, SoundMixin):
         self.keys.discard(symbol)
         return self.mode == "edit"
 
+    def release_project(self) -> None:
+        """Studio is closing: its session stops (its record removed), then the project is let go (#462 R2). Until
+        then nothing else may write the project. Safe to call again."""
+        self.ai.stop()
+        if self.ownership is not None:
+            self.ownership.release()
+
     def on_close(self) -> bool:
         """Closing with unsaved changes asks: Save, Discard or Cancel."""
         if self._closing or not self.project.is_dirty:
@@ -3599,17 +3607,35 @@ class Studio(InspectorMixin, SoundMixin):
 
 
 def open_studio(window: Any, root: Any, world_file: str | None, scene_path: str | None = None) -> Studio | None:
-    """Attach the Studio to ``window`` if ``root`` is a Studio project (it has a world)."""
-    project = Project.open(root, world_file)
-    if project is None:
-        return None
-    if scene_path:
-        wanted = str(scene_path).replace("\\", "/").lstrip("./")
-        for key, _label, path in project.rooms():
-            if path.replace("\\", "/").lstrip("./") == wanted:
-                project.current = key
-                project.scene(key)
-    studio = Studio(window, project)
+    """Attach the Studio to ``window`` if ``root`` is a Studio project (it has a world).
+
+    Studio owns the project from before it reads it until it closes (#462 R2,
+    ``engine.editor.project_ownership``): the hold the launch already took (``window.project_ownership``), else one
+    taken here. Raises ``OwnedElsewhere`` if another Mesh Studio (or a tool writing its files) has the project:
+    nothing is read, and nothing of the other's is touched."""
+    from engine.editor import project_ownership  # noqa: PLC0415
+
+    held = getattr(window, "project_ownership", None)
+    taken = None
+    if held is None or not held.held:
+        held = taken = project_ownership.acquire(root, project_ownership.STUDIO, wait=2.0)
+    try:
+        project = Project.open(root, world_file)
+        if project is None:
+            if taken is not None:
+                taken.release()
+            return None
+        if scene_path:
+            wanted = str(scene_path).replace("\\", "/").lstrip("./")
+            for key, _label, path in project.rooms():
+                if path.replace("\\", "/").lstrip("./") == wanted:
+                    project.current = key
+                    project.scene(key)
+        studio = Studio(window, project, held)
+    except BaseException:
+        if taken is not None:
+            taken.release()  # (Studio didn't open: the project is nobody's)
+        raise
     window.studio = studio
     set_app_icon(window)
     return studio

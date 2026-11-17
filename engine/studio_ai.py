@@ -110,8 +110,13 @@ class StudioAIHost:
     def start(self) -> None:
         from engine.editor.live_session_bridge import EditorLiveSessionBridge  # noqa: PLC0415
 
-        self.bridge = EditorLiveSessionBridge(self, self.project.root)
-        self.bridge.start()
+        # (#462 R2: Mesh Studio's own hold on the project, taken before it read it; without one the bridge takes it)
+        self.bridge = EditorLiveSessionBridge(self, self.project.root, ownership=getattr(self.studio, "ownership", None))
+        try:
+            self.bridge.start()
+        except BaseException:
+            self.bridge = None
+            raise
 
     def stop(self) -> None:
         self.play.cancel("Mesh Studio is closing")

@@ -1,0 +1,57 @@
+"""#462 R2, Astra's reproduction with two real Studio processes; prints what happened at each step.
+
+    py -3.13 repro.py REPO OUT
+
+REPO: the checkout whose engine and tests/studio_owner_process.py are used. OUT: a new folder (a throwaway project).
+"""
+import json
+import sys
+from pathlib import Path
+
+REPO, OUT = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve()
+assert not OUT.exists() or not any(OUT.iterdir()), f"{OUT} is not empty"
+OUT.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(REPO))
+
+from engine import authoring_session  # noqa: E402
+from engine.project_scaffold import create_project  # noqa: E402
+from tests.test_studio_project_ownership import ADD_SEXTON, ROOM, StudioProcess  # noqa: E402
+
+root = OUT / "game"
+create_project(root, "Game", template_id="blank")
+
+
+def on_disk():
+    return [str(e.get("name")) for e in json.loads((root / ROOM).read_text(encoding="utf-8"))["entities"]]
+
+
+def state():
+    found = authoring_session.studio_state(root)
+    return {"state": found["state"], "session_id": (found.get("info") or {}).get("session_id"),
+            "problem": (found.get("problem") or {}).get("reason")}
+
+
+steps = {}
+a = StudioProcess(root, log=OUT / "a.log")
+steps["1 Studio A opens"] = {"ready": a.start["ready"], "session": a.start.get("session_id", "")[:8]}
+a.ask("edit Unsaved Warden")
+steps["1 A holds unsaved work"] = a.ask("state")
+b = StudioProcess(root, log=OUT / "b.log")
+steps["2 Studio B opens the same project"] = {"ready": b.start["ready"], "refused": b.start.get("refused"),
+                                              "session": (b.start.get("session_id") or "")[:8]}
+steps["3 whose session is discovered now"] = {**state(), "is_A": state()["session_id"] == a.start.get("session_id")}
+if b.start["ready"]:
+    b.close()
+else:
+    b.end()
+steps["4 B closed; A still open; what outside tools see"] = {**state(), "is_A": state()["session_id"] == a.start.get("session_id")}
+result = authoring_session.apply(root, ADD_SEXTON)
+steps["6-7 an outside tool applies a change"] = {k: result.get(k) for k in ("ok", "source", "reason", "note") if k in result}
+steps["7 the room on disk"] = on_disk()
+steps["7 Studio A, in memory"] = a.ask("state")
+steps["8 A saves"] = a.ask("save")
+steps["8 the room on disk after A's save"] = on_disk()
+steps["8 backups A's save had to make"] = sorted(p.relative_to(root).as_posix() for p in root.rglob("*.outside-change.bak"))
+a.close()
+print(json.dumps(steps, indent=1))
+(OUT / "repro.json").write_text(json.dumps(steps, indent=1) + "\n", encoding="utf-8")

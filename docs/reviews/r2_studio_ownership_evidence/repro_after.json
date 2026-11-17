@@ -1,0 +1,60 @@
+{
+ "1 Studio A opens": {
+  "ready": true,
+  "session": "7EkQ4d_d"
+ },
+ "1 A holds unsaved work": {
+  "names": [
+   "Player",
+   "Unsaved Warden"
+  ],
+  "unsaved": true,
+  "pending": [],
+  "session_id": "7EkQ4d_dT7-ZDQUjpeQCv_yN4TulmqZ9MjtZA7wUbEo"
+ },
+ "2 Studio B opens the same project": {
+  "ready": false,
+  "refused": "This project is already open in Mesh Studio. Use the window that has it: a project can be open in one Mesh Studio at a time, so that neither overwrites the other's unsaved work. (<project>)",
+  "session": ""
+ },
+ "3 whose session is discovered now": {
+  "state": "live",
+  "session_id": "7EkQ4d_dT7-ZDQUjpeQCv_yN4TulmqZ9MjtZA7wUbEo",
+  "problem": null,
+  "is_A": true
+ },
+ "4 B closed; A still open; what outside tools see": {
+  "state": "live",
+  "session_id": "7EkQ4d_dT7-ZDQUjpeQCv_yN4TulmqZ9MjtZA7wUbEo",
+  "problem": null,
+  "is_A": true
+ },
+ "6-7 an outside tool applies a change": {
+  "ok": true,
+  "note": "Mesh Studio has this project open, so the changes were proposed there instead of written to the files (that would overwrite the person's unsaved work)."
+ },
+ "7 the room on disk": [
+  "None"
+ ],
+ "7 Studio A, in memory": {
+  "names": [
+   "Player",
+   "Unsaved Warden"
+  ],
+  "unsaved": true,
+  "pending": [
+   "Changes from an AI"
+  ],
+  "session_id": "7EkQ4d_dT7-ZDQUjpeQCv_yN4TulmqZ9MjtZA7wUbEo"
+ },
+ "8 A saves": {
+  "saved": [
+   "packs/core_regions/scenes/start.json"
+  ]
+ },
+ "8 the room on disk after A's save": [
+  "None",
+  "Unsaved Warden"
+ ],
+ "8 backups A's save had to make": []
+}

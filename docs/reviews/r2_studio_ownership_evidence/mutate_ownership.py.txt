@@ -1,0 +1,109 @@
+"""Deliberate faults in #462 R2 (one writable owner per project); which tests fail. Each file is restored.
+
+Usage: py mutate_ownership.py <repo> <out.json> [name part ...]
+
+Runs tests/test_studio_project_ownership.py (separate Studio processes, production bridge and authoring code) for
+every fault, and tests/test_authoring_session_discovery.py for the faults marked so.
+"""
+import json
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+REPO = Path(sys.argv[1])
+OUT = Path(sys.argv[2])
+ONLY = sys.argv[3:]
+OWN, BRIDGE, CLIENT, SESSION = ("engine/editor/project_ownership.py", "engine/editor/live_session_bridge.py",
+                                "engine/mcp_server/live_session_client.py", "engine/authoring_session.py")
+STUDIO, LAUNCH, GAME = "engine/studio.py", "engine/game_launch.py", "engine/game.py"
+MAIN = ["tests/test_studio_project_ownership.py"]
+DISCOVERY = ["tests/test_authoring_session_discovery.py"]
+
+MUTATIONS = {
+    "none": (None, None, None, True),
+    "the lock is never taken (every owner is let in: the defect itself)": (
+        OWN, "        while not _lock(fd, exclusive=True):\n", "        while False:\n", True),
+    "the bridge publishes its record without owning the project": (
+        BRIDGE, "            self._ownership = project_ownership.acquire(self.workspace_root, kind, wait=2.0)\n            self._owns_here = True\n",
+        "            pass\n", False),
+    "a bridge that stops lets go of a project it was only given": (
+        BRIDGE, "        if self._owns_here and self._ownership is not None:\n", "        if self._ownership is not None:\n", False),
+    "a bridge that took the project itself keeps it when it stops": (
+        BRIDGE, "        self._release_if_owned_here()  # (last: the record is gone before the project is anyone else's)\n", "", True),
+    "a session that fails to publish keeps the project and its server": (
+        BRIDGE, "        except BaseException:\n            self._give_up_start()\n            raise\n",
+        "        except BaseException:\n            raise\n", False),
+    "outside tools take a project with no record as free whoever owns it": (
+        CLIENT, "        if owner is None:\n            return {\"state\": \"none\"}\n", "        if True:\n            return {\"state\": \"none\"}\n", False),
+    "ownership that can't be told is taken as free": (
+        CLIENT, "        except project_ownership.OwnershipUnavailable as exc:\n            return {\"state\": \"uncertain\", \"problem\": {\"reason\": \"ownership_unknown\", \"owned\": None, \"discovery\": \"\",\n"
+                "                                                      \"why\": f\"whether anything has it open can't be told ({exc})\"}}\n",
+        "        except project_ownership.OwnershipUnavailable:\n            return {\"state\": \"none\"}\n", False),
+    "an abandoned record is reported as a running Studio's": (
+        CLIENT, "        owned: bool | None = _owner(roots) is not None\n", "        owned: bool | None = True\n", False),
+    "a direct write does not own the project": (
+        SESSION, "            held = project_ownership.acquire(root, project_ownership.AUTHORING, wait=0.5)\n        except project_ownership.OwnedElsewhere as owned:\n            kind = owned.holder.get(\"kind\")\n",
+        "            held = None\n        except project_ownership.OwnedElsewhere as owned:\n            kind = owned.holder.get(\"kind\")\n", True),
+    "recovery removes the record without owning the project": (
+        SESSION, "    try:\n        held = project_ownership.acquire(root, project_ownership.AUTHORING, wait=0.5)\n    except project_ownership.OwnedElsewhere as owned:\n        return _fail(\"project_open\"",
+        "    try:\n        held = project_ownership.Ownership(Path(root), project_ownership.AUTHORING, -1)\n    except project_ownership.OwnedElsewhere as owned:\n        return _fail(\"project_open\"", False),
+    "asking whether a project is owned takes it (exclusive)": (
+        OWN, "                if _lock(fd, exclusive=False):\n", "                if _lock(fd, exclusive=True):\n", False),
+    "asking makes the lock file": (
+        OWN, "        fd = os.open(path, os.O_RDWR | getattr(os, \"O_BINARY\", 0))\n    except FileNotFoundError:\n        return None\n",
+        "        path.parent.mkdir(parents=True, exist_ok=True)\n        fd = os.open(path, os.O_RDWR | os.O_CREAT | getattr(os, \"O_BINARY\", 0))\n    except FileNotFoundError:\n        return None\n", False),
+    "an owner never waits (a tool's one write, or someone asking, refuses a Studio at once)": (
+        OWN, "            if time.monotonic() >= deadline:\n                holder = _note(fd)\n                os.close(fd)\n                raise OwnedElsewhere(root, holder)\n",
+        "            if True:\n                holder = _note(fd)\n                os.close(fd)\n                raise OwnedElsewhere(root, holder)\n", False),
+    "letting go leaves the file open (the lock held)": (
+        OWN, "        try:\n            os.close(fd)\n        except OSError as exc:\n            logger.warning(\"[Mesh][Ownership] closing the lock of %s failed: %s\", self.root, exc)\n",
+        "", False),
+    "mesh edit opens its window before it owns the project": (
+        LAUNCH, "    except project_ownership.OwnedElsewhere as owned:\n        print(f\"[Mesh][CLI] {owned}\")\n        return project_ownership.EXIT_OPEN_ELSEWHERE\n",
+        "    except project_ownership.OwnedElsewhere:\n        held = project_ownership.Ownership(root, kind, -1)\n", False),
+}
+
+results = {}
+for name, (file, old, new, discovery) in MUTATIONS.items():
+    if ONLY and not any(part in name for part in ONLY):
+        continue
+    original = None
+    try:
+        if file is not None:
+            path = REPO / file
+            original = path.read_bytes()
+            text = original.decode("utf-8")
+            nl = "\r\n" if "\r\n" in text else "\n"
+            flat = text.replace("\r\n", "\n")
+            if flat.count(old) != 1:
+                results[name] = {"error": f"pattern found {flat.count(old)} times in {file}"}
+                print("SKIPPED ", name, results[name]["error"], flush=True)
+                original = None
+                continue
+            path.write_bytes(flat.replace(old, new).replace("\n", nl).encode("utf-8"))
+        started = time.perf_counter()
+        failed, summaries = [], []
+        for tests in ((MAIN, DISCOVERY) if discovery else (MAIN,)):
+            try:
+                run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-o",
+                                      "faulthandler_timeout=150", *tests], cwd=REPO, capture_output=True, text=True, timeout=420)
+                out = run.stdout
+            except subprocess.TimeoutExpired as hung:
+                out = (hung.stdout or b"").decode("utf-8", "replace") if isinstance(hung.stdout, bytes) else (hung.stdout or "")
+                failed.append("(the tests did not finish in 420 s)")
+            failed += sorted(set(re.findall(r"^(?:FAILED|ERROR) \S+?::(.+?)(?: - .*)?$", out, re.M)))
+            lines = [line for line in out.strip().splitlines() if " passed" in line or " failed" in line or " error" in line]
+            summaries.append(lines[-1] if lines else "no summary")
+        results[name] = {"file": file, "caught": bool(failed), "failing": failed, "summary": " | ".join(summaries),
+                         "wall_s": round(time.perf_counter() - started, 1)}
+    finally:
+        if original is not None:
+            (REPO / file).write_bytes(original)
+    r = results[name]
+    print(("CAUGHT " if r["caught"] else "PASSED ") + f" {name}: {r['summary']}", flush=True)
+    for test in r["failing"][:6]:
+        print("          ", test[:140], flush=True)
+    OUT.write_text(json.dumps(results, indent=1), encoding="utf-8")
+print(subprocess.run(["git", "status", "--short"], cwd=REPO, capture_output=True, text=True).stdout)

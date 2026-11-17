@@ -47,6 +47,26 @@ def launch_editor(
 
 
 def _run_editor(root: Path, config_path: Path, *, scene_path: str | None, open_tile_paint: bool) -> int:
+    """Own the project (#462 R2: one editor writes a project at a time), then open the editor on it. The project is
+    taken before a window exists or a file is read, and let go when the editor has closed."""
+    from engine.editor import project_ownership  # noqa: PLC0415
+
+    kind = project_ownership.EDITOR if os.environ.get("MESH_LEGACY_EDITOR") == "1" else project_ownership.STUDIO
+    try:
+        held = project_ownership.acquire(root, kind, wait=2.0)
+    except project_ownership.OwnedElsewhere as owned:
+        print(f"[Mesh][CLI] {owned}")
+        return project_ownership.EXIT_OPEN_ELSEWHERE
+    except project_ownership.OwnershipUnavailable as exc:
+        print(f"[Mesh][CLI] {exc}")
+        return 1
+    try:
+        return _run_owned_editor(root, config_path, held, scene_path=scene_path, open_tile_paint=open_tile_paint)
+    finally:
+        held.release()
+
+
+def _run_owned_editor(root: Path, config_path: Path, held: Any, *, scene_path: str | None, open_tile_paint: bool) -> int:
     reset_path_caches()
 
     config = load_config(str(config_path))
@@ -68,6 +88,7 @@ def _run_editor(root: Path, config_path: Path, *, scene_path: str | None, open_t
         config=config,
         config_path=str(config_path),
     )
+    window.project_ownership = held  # (Mesh Studio, or the legacy editor's bridge, holds the project by this)
 
     wc = getattr(window, "world_controller", None)
     initial_scene = (

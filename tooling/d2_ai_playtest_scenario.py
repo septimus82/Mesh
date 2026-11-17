@@ -154,7 +154,7 @@ def run(out: Path, *, keep: bool = False) -> dict[str, Any]:
             "sign_kept": sign_ids <= {e["id"] for e in studio.project.scene()["entities"]},
             "files_unchanged": d1._files(project) == files_before,
             "proposals": len(studio.ai.proposals)}
-        studio.ai.stop()  # (Studio closing; on_close does this)
+        studio.release_project()  # (Studio closing: its session goes and the project is let go; closing does this)
         report["7_closed"] = tools.debug_play_action("interact", root=str(project))
     finally:
         d.close()

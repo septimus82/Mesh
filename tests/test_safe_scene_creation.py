@@ -53,9 +53,11 @@ def _open(root: Path) -> Project:
 
 
 def _tree(root: Path) -> dict[str, Any]:
-    """Every file and folder in the project, files with their bytes and modification time."""
+    """Every file and folder in the project, files with their bytes and modification time. The ``.mesh`` folder
+    aside: whoever writes a project owns it while it does (#462 R2), and the lock that says so is kept there."""
     return {p.relative_to(root).as_posix(): (p.read_bytes(), p.stat().st_mtime_ns) if p.is_file() and not p.is_symlink()
-            else "link" if p.is_symlink() else "folder" for p in sorted(root.rglob("*"))}
+            else "link" if p.is_symlink() else "folder" for p in sorted(root.rglob("*"))
+            if ".mesh" not in p.relative_to(root).parts}
 
 
 def _memory(project: Project) -> tuple[Any, ...]:

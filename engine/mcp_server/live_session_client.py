@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 from urllib import error, parse, request
 
+from engine.editor import project_ownership
 from engine.editor.live_session_bridge import (
     LOOPBACK_HOST,
     REQUEST_ID,
@@ -199,9 +200,16 @@ def session_state(root: str | Path = ".", *, timeout: float = 2.0) -> dict[str, 
 
     ``state`` is ``"live"`` once an editor's session for it is verified (``info``, and ``host``: ``mesh_studio`` or
     another editor); ``"none"`` only when there is no session record for it at all (an editor that closes removes
-    its record); otherwise ``"uncertain"``, with ``problem`` (the reason, ``why``, the record's path). A record that
-    can't be read or verified (malformed, no answer, a timeout, another session or project folder) isn't proof the
-    editor is closed: one that crashed leaves its record until it is opened again or the record is removed.
+    its record) **and nothing owns the project** (#462 R2, ``engine.editor.project_ownership``); otherwise
+    ``"uncertain"``, with ``problem`` (the reason, ``why``, the record's path, and ``owned``: whether an editor or a
+    tool holds the project now, None if that can't be told). A record that can't be read or verified (malformed, no
+    answer, a timeout, another session or project folder) isn't proof the editor is closed.
+
+    What ownership adds. A record that can't be verified keeps its reason, with ``owned`` False when nothing owns
+    the project: the editor that left the record crashed or was killed, and the record stays until an editor opens
+    the project or it is removed on purpose (``authoring_session.recover``). Two reasons are new:
+    ``owned_without_session`` (no record, and the project is owned: an editor still starting, one whose live session
+    is turned off, or a tool writing the files at this moment) and ``ownership_unknown`` (it can't be told).
     """
     raw_root = Path(root).resolve()
     records = [session_file_path(p) for p in dict.fromkeys((raw_root, _resolve_discovery_root(raw_root)))]
@@ -210,8 +218,21 @@ def session_state(root: str | Path = ".", *, timeout: float = 2.0) -> dict[str, 
     except OSError as exc:
         return {"state": "uncertain", "problem": {"reason": "unreadable_live_session", "why": f"it can't be checked ({exc})",
                                                   "discovery": str(records[0])}}
+    roots = [path.parent.parent for path in records]
     if not present:
-        return {"state": "none"}
+        try:
+            owner = _owner(roots)
+        except project_ownership.OwnershipUnavailable as exc:
+            return {"state": "uncertain", "problem": {"reason": "ownership_unknown", "owned": None, "discovery": "",
+                                                      "why": f"whether anything has it open can't be told ({exc})"}}
+        if owner is None:
+            return {"state": "none"}
+        writing = owner.get("kind") == project_ownership.AUTHORING
+        return {"state": "uncertain", "problem": {
+            "reason": "owned_without_session", "owned": True, "owner": owner.get("kind") or "", "discovery": "",
+            "why": ("an outside tool is writing its files at this moment" if writing else
+                    "an editor has it open with no live session to send changes to (it is still starting, or its "
+                    "live session is turned off)")}}
     info, health, failure, why = _verify_session(raw_root, timeout=timeout)
     if info is not None:
         return {"state": "live", "info": info, "host": str(health.get("host") or "legacy_editor")}
@@ -220,7 +241,34 @@ def session_state(root: str | Path = ".", *, timeout: float = 2.0) -> dict[str, 
         reason, why = "unreadable_live_session", "its session record can't be read"
     elif reason == "no_live_session":
         reason = "unverified_live_session"
-    return {"state": "uncertain", "problem": {"reason": reason, "why": why, "discovery": str(present[0])}}
+    try:
+        owned: bool | None = _owner(roots) is not None
+    except project_ownership.OwnershipUnavailable:
+        owned = None
+    # (``owned`` False: nothing owns the project, so no editor is behind this record any more: it was left behind)
+    return {"state": "uncertain", "problem": {"reason": reason, "why": why, "discovery": str(present[0]), "owned": owned}}
+
+
+def _owner(roots: list[Path]) -> dict[str, Any] | None:
+    """Who owns the project now (its note; {} if unreadable), looking where its session record may be; None: nobody."""
+    for root in roots:
+        owner = project_ownership.owned(root)
+        if owner is not None:
+            return owner
+    return None
+
+
+def remove_abandoned_session(root: str | Path = ".") -> list[str]:
+    """Remove the session record of the project at ``root``, for when the editor that wrote it is gone (#462 R2).
+    The caller must own that project (``project_ownership.acquire(root, ...)``): that is the proof that no editor
+    does. Only ``root``'s own record: never the discovery root's (``MESH_REPO_ROOT`` or a folder above), which can be
+    another project, one this caller doesn't own and whose Studio may be running."""
+    path = session_file_path(Path(root).resolve())
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return []
+    return [str(path)]
 
 
 def resolved_discovery_root(root: str | Path = ".") -> str:

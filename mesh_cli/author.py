@@ -36,7 +36,9 @@ def add_parser(subparsers: Any) -> None:
     propose.add_argument("--base-revision", type=int, default=None, help="The revision your changes are based on (from read)")
     status = sub.add_parser("status", help="What happened to a proposal")
     status.add_argument("proposal_id")
-    for p in (read, apply, propose, status):
+    recover = sub.add_parser("recover", help="Remove a session record left by a Mesh Studio that crashed (only if "
+                                             "nothing has the project open)")
+    for p in (read, apply, propose, status, recover):
         p.add_argument("--project", default=".", help="The project folder (default: here)")
 
 
@@ -62,8 +64,10 @@ def handle(args: argparse.Namespace) -> int:
                                                base_revision=args.base_revision, source="mesh author")
         elif command == "status":
             result = authoring_session.proposal_status(args.project, args.proposal_id)
+        elif command == "recover":
+            result = authoring_session.recover(args.project)
         else:
-            print("usage: mesh author {ops,read,apply,propose,status} ...", file=sys.stderr)
+            print("usage: mesh author {ops,read,apply,propose,status,recover} ...", file=sys.stderr)
             return 2
     except (OSError, ValueError) as exc:
         result = {"ok": False, "reason": "bad_input", "message": str(exc)}

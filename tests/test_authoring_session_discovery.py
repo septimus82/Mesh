@@ -28,6 +28,7 @@ from urllib import error
 import pytest
 
 from engine import authoring, authoring_session
+from engine.editor import project_ownership
 from engine.editor.live_session_bridge import session_file_path
 from engine.mcp_server import live_session_client, tools
 from engine.project_scaffold import create_project
@@ -54,7 +55,7 @@ def root(tmp_path: Path) -> Path:
 def _files(root: Path) -> dict[str, str]:
     """Every file of the project and its hash: equal before and after means nothing was written or created."""
     return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in sorted(root.rglob("*")) if p.is_file()}
+            for p in sorted(root.rglob("*")) if p.is_file() and p != project_ownership.lock_path(root)}
 
 
 class _Studio:
@@ -247,15 +248,17 @@ def test_a_record_copied_from_another_project_is_not_its_session(tmp_path: Path,
 # --------------------------------------------------------------------- a Studio that stopped answering
 
 def test_a_studio_that_stopped_answering_is_not_taken_for_closed_and_recovers(root: Path, studio: Any) -> None:
-    """Its bridge gone, its record left behind (frozen, or crashed): writes are refused, with what to do. Opening the
-    project in Studio again replaces the record (proposals again); with Studio closed for sure, removing the record
-    the message names lets the files be changed directly."""
+    """Its bridge gone, its record left behind (crashed): writes are refused, with what to do. Opening the project in
+    Studio again replaces the record (proposals again); with Studio closed for sure, removing the record the message
+    names lets the files be changed directly. (#462 R2: a Studio that is frozen but running still owns the project,
+    and can't be opened again beside itself: the health-check tests above; tests/test_studio_project_ownership.py.)"""
     person, host = studio
     server = host.bridge._server
     assert server is not None
     server.shutdown()
     server.server_close()
     host.bridge._server = None
+    host.bridge._ownership.release()  # (its process gone: the operating system lets its hold on the project go)
     _refused_everywhere(root, "unverified_live_session")
     message = authoring_session.apply(root, ADD_SEXTON)["message"]
     assert "didn't answer" in message and "open the project in Mesh Studio once" in message
@@ -299,20 +302,29 @@ def test_a_proposal_that_fails_is_never_written_to_the_files_instead(root: Path,
 
 
 @pytest.mark.parametrize(("meanwhile", "reason"), [
-    ({"state": "live", "host": "mesh_studio", "info": {}}, "studio_open"),
-    ({"state": "live", "host": "legacy_editor", "info": {}}, "other_editor_open"),
-    ({"state": "uncertain", "problem": {"reason": "unverified_live_session", "why": "it didn't answer",
-                                        "discovery": "x"}}, "studio_session_uncertain"),
-], ids=["studio", "another editor", "uncertain"])
-def test_an_editor_opening_between_the_check_and_the_write_stops_the_write(root: Path, meanwhile: dict[str, Any],
-                                                                           reason: str,
+    (project_ownership.STUDIO, "studio_open"),
+    (project_ownership.EDITOR, "other_editor_open"),
+    (project_ownership.AUTHORING, "project_busy"),
+], ids=["studio", "another editor", "another tool writing"])
+def test_an_editor_opening_between_the_check_and_the_write_stops_the_write(root: Path, meanwhile: str, reason: str,
                                                                            monkeypatch: pytest.MonkeyPatch) -> None:
-    """apply checks again just before it writes (after working the changes out): Studio or another editor opened,
-    or a record that can't be verified appeared, meanwhile: nothing written, a new room's files included."""
-    states = iter([{"state": "none"}, meanwhile])
-    monkeypatch.setattr(authoring_session, "studio_state", lambda _root, **_kw: next(states))
+    """apply found nothing open; before it writes, Studio (or another editor, or another tool's write) takes the
+    project. apply owns the project to write it (#462 R2), so it finds it taken: nothing read past the other,
+    nothing written, a new room's files included."""
+    real, taken = authoring_session.studio_state, []
+
+    def state_then_someone_opens(found_root: Any, **kwargs: Any) -> dict[str, Any]:
+        found = real(found_root, **kwargs)
+        if not taken:  # (just after apply looked: the project gets an owner)
+            taken.append(project_ownership.acquire(root, meanwhile))
+        return found
+
+    monkeypatch.setattr(authoring_session, "studio_state", state_then_someone_opens)
     before = _files(root)
-    answer = authoring_session.apply(root, [*ADD_SEXTON, *ADD_CELLAR])
+    try:
+        answer = authoring_session.apply(root, [*ADD_SEXTON, *ADD_CELLAR])
+    finally:
+        taken[0].release()
     assert answer["ok"] is False and answer["reason"] == reason
     assert _files(root) == before
 

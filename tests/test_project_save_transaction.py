@@ -69,9 +69,10 @@ def _edit_everything(project: Project) -> None:
 
 
 def _tree(root: Path) -> dict[str, tuple[bytes, int]]:
-    """Every file in the project, with its bytes and modification time."""
+    """Every file in the project, with its bytes and modification time (the ``.mesh`` folder aside: whoever writes
+    a project owns it while it does, #462 R2, and the lock that says so is kept there, not in the project's content)."""
     return {p.relative_to(root).as_posix(): (p.read_bytes(), p.stat().st_mtime_ns)
-            for p in sorted(root.rglob("*")) if p.is_file()}
+            for p in sorted(root.rglob("*")) if p.is_file() and ".mesh" not in p.relative_to(root).parts}
 
 
 def _memory(project: Project) -> tuple[Any, ...]:

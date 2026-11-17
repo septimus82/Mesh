@@ -10,8 +10,14 @@ Both ends of a change go through ``engine.authoring``. What differs is where the
 - **It can't be told** (F1, #422): an editor's session record that can't be read or verified (no
   answer, a timeout, a malformed record, another session or project folder) isn't proof that
   Studio is closed. Nothing is read from or written to the files then; the result says why and
-  what to do. Only "no session record at all" counts as closed, and ``apply`` checks it again
-  just before it writes.
+  what to do. Only "no session record at all, and nothing owns the project" counts as closed.
+
+**Who may write (#462 R2).** A project has one writable owner at a time, across processes
+(``engine.editor.project_ownership``: an operating-system lock). Mesh Studio owns it while it is open.
+``apply``, writing the files directly, owns it for that one write: it takes the project *before* it reads
+the files and holds it until they are saved, so a Studio can't open in between (it waits a moment, then
+says the project is busy), and if a Studio has it, the write is refused. A second Studio opening or
+closing never changes whose project it is.
 
 Writing the files is ``Project.save`` (F3, ``engine.project_save``): every changed file or none. A save
 that fails returns ``reason: "save_failed"`` with its report as ``save``: the stage and reason code,
@@ -30,10 +36,12 @@ from typing import Any
 from urllib import error, parse
 
 from engine import authoring
+from engine.editor import project_ownership
 from engine.mcp_server.live_session_client import (
     _request_json,
     bad_request_id,
     new_request_id,
+    remove_abandoned_session,
     session_state,
     unknown_outcome,
 )
@@ -70,13 +78,47 @@ def uncertain(state: Doc) -> Doc:
     """The refusal when it can't be told whether an editor has the project open: nothing was read or written."""
     problem = state.get("problem") or {}
     discovery = str(problem.get("discovery") or "")
-    return _fail("studio_session_uncertain",
-                 f"Mesh Studio may have this project open, but its session couldn't be confirmed: {problem.get('why')}. "
-                 "Nothing was changed, so no unsaved work in Studio can be overwritten. If Studio is open, make sure it "
-                 "is responding (not frozen or showing a dialog) and try again; changes will then go to it for review. "
-                 "If it isn't running, open the project in Mesh Studio once (that replaces its leftover session "
-                 f"record) or delete {discovery}, then try again.",
-                 problem=problem.get("reason"), discovery=discovery)
+    reason, owned = problem.get("reason"), problem.get("owned")
+    if owned is False and discovery:  # (#462 R2: nothing owns the project: the editor that left this record is gone)
+        # (the record's own project folder: recovery removes only the record of the project it was given)
+        folder = Path(discovery).parent.parent
+        message = (f"No editor has this project open now, but a session record that no editor answers for is in its "
+                   f"folder ({problem.get('why')}): its editor crashed or was closed by force, perhaps with unsaved "
+                   "work, or the record came with a copy of the project. Nothing was changed. To write the project's "
+                   "files again, open the project in Mesh Studio once (that replaces the record), or remove the "
+                   f"record ({discovery}) with `mesh author recover --project \"{folder}\"`, which first makes sure "
+                   "nothing has that project open; then try again.")
+    elif reason == "owned_without_session":
+        message = (f"This project is in use: {problem.get('why')}. Nothing was changed, so nothing of its can be "
+                   "overwritten. If Mesh Studio is starting, try again in a moment; changes will then go to it for "
+                   "review. If it was started with its live session turned off, close it, or start it normally.")
+    elif owned:  # (an editor holds the project, and its session can't be confirmed: it is running)
+        message = (f"Mesh Studio has this project open, but its session couldn't be confirmed: {problem.get('why')}. "
+                   "Nothing was changed, so no unsaved work in Studio can be overwritten. Make sure Studio is "
+                   "responding (not frozen or showing a dialog) and try again; changes will then go to it for review. "
+                   "If it keeps failing, save your work in Studio and open the project there again: that writes its "
+                   f"session record ({discovery}) afresh. Don't delete the record while Studio is open.")
+    else:
+        message = (f"Mesh Studio may have this project open, but its session couldn't be confirmed: {problem.get('why')}. "
+                   "Nothing was changed, so no unsaved work in Studio can be overwritten. If Studio is open, make sure "
+                   "it is responding (not frozen or showing a dialog) and try again; changes will then go to it for "
+                   "review. If it isn't running, open the project in Mesh Studio once (that replaces its leftover "
+                   f"session record) or delete {discovery}, then try again.")
+    return _fail("studio_session_uncertain", message, problem=reason, discovery=discovery)
+
+
+def recover(root: str | Path = ".") -> Doc:
+    """Remove a session record whose editor is gone (#462 R2), so that the project's files can be written again.
+    The project is owned for the moment it takes: if an editor has it open, nothing is removed. Only the record of
+    the project at ``root`` is removed, the one project owned here (never another, whatever ``MESH_REPO_ROOT`` says)."""
+    try:
+        held = project_ownership.acquire(root, project_ownership.AUTHORING, wait=0.5)
+    except project_ownership.OwnedElsewhere as owned:
+        return _fail("project_open", f"Nothing was removed: {owned} Its session record is in use.")
+    except project_ownership.OwnershipUnavailable as exc:
+        return _fail("ownership_unknown", f"Nothing was removed: {exc}")
+    with held:
+        return {"ok": True, "removed": remove_abandoned_session(root)}
 
 
 def other_editor(host: str) -> Doc:
@@ -199,19 +241,37 @@ def apply(root: str | Path, changes: list[Doc], *, dry_run: bool = False, title:
             result["note"] = ("Mesh Studio has this project open, so the changes were proposed there instead of "
                               "written to the files (that would overwrite the person's unsaved work).")
         return result
+    held = None
+    if not dry_run:
+        # (#462 R2) Own the project for this write, from before its files are read until they are saved: no Studio
+        # can open it meanwhile, and if one has it (it opened since the check above) nothing is read or written.
+        try:
+            held = project_ownership.acquire(root, project_ownership.AUTHORING, wait=0.5)
+        except project_ownership.OwnedElsewhere as owned:
+            kind = owned.holder.get("kind")
+            if kind == project_ownership.AUTHORING:
+                return _fail("project_busy", "Another tool is writing this project's files right now, so nothing was "
+                                             "written. Apply the changes again in a moment.")
+            if kind == project_ownership.EDITOR:
+                return other_editor(project_ownership.EDITOR)
+            return _fail("studio_open", "Mesh Studio opened this project just now, so nothing was written: apply the "
+                                        "changes again to propose them there.")
+        except project_ownership.OwnershipUnavailable as exc:
+            return _fail("ownership_unknown", f"Nothing was written: {exc}")
+    try:
+        return _apply_to_files(root, changes, dry_run)
+    finally:
+        if held is not None:
+            held.release()
+
+
+def _apply_to_files(root: str | Path, changes: list[Doc], dry_run: bool) -> Doc:
+    """The changes applied to the project's files (``apply`` owns the project, unless it is only a dry run)."""
     try:
         project = open_project(root)
         before, after = authoring.dry_run(project, changes)
         if dry_run:
             return {"ok": True, "source": "files", "dry_run": True, "summary": authoring.summarize(before, after)}
-        recheck = studio_state(root)  # (just before the first write: Studio may have opened it meanwhile)
-        if recheck["state"] == "uncertain":
-            return uncertain(recheck)
-        if recheck["state"] == "live" and recheck["host"] != STUDIO_HOST:
-            return other_editor(recheck["host"])
-        if recheck["state"] == "live":
-            return _fail("studio_open", "Mesh Studio opened this project just now, so nothing was written: apply the "
-                                        "changes again to propose them there.")
         result = authoring.apply(project, changes)
         written = project.save()
     except authoring.ChangeError as err:
