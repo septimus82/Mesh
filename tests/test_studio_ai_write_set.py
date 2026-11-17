@@ -92,8 +92,8 @@ def _move(project: Project, entity_id: str, x: float, y: float) -> None:
     project.edit_scene(lambda room: authoring.ops.move_entity(room, entity_id, x, y))
 
 
-def _propose(root: Path, host: StudioAIHost, changes: list[dict[str, Any]], revision: int) -> Any:
-    staged = authoring_session.propose(root, changes, base_revision=revision)
+def _propose(root: Path, host: StudioAIHost, changes: list[dict[str, Any]], revision_id: str) -> Any:
+    staged = authoring_session.propose(root, changes, base_revision_id=revision_id)  # (#462 R1: the reading's id)
     assert staged["ok"], staged
     return next(p for p in host.proposals if p.proposal_id == staged["proposal"]["proposal_id"])
 
@@ -106,7 +106,7 @@ def test_a_stale_move_doesn_t_put_back_the_coordinate_the_person_changed(root: P
     person, host, warden = studio
     assert _at(person.project, warden) == (0.0, 0.0)
     read = authoring_session.read_project(root)
-    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision"])
+    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision_id"])
     _move(person.project, warden, 100, 0)
     documents, revision = copy.deepcopy(person.project.all_documents()), person.project.revision
 
@@ -122,7 +122,7 @@ def test_an_edit_the_proposal_doesnt_write_still_lets_it_apply(root: Path, studi
     """Legitimate concurrent work: the person renames the Warden; the AI's move doesn't write its name. Both land."""
     person, host, warden = studio
     read = authoring_session.read_project(root)
-    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision"])
+    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision_id"])
     person.project.edit_scene(lambda room: authoring.ops.rename_entity(room, warden, "Keeper"))
 
     result = host.accept(proposal)
@@ -145,7 +145,7 @@ def test_a_batch_is_refused_whole_if_any_of_its_writes_lands_on_the_persons_edit
     scout = _place(person.project, "Scout", 300, 300)
     read = authoring_session.read_project(root)
     proposal = _propose(root, host, [{"op": "move_entity", "entity_id": scout, "x": 320, "y": 300},
-                                     {"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision"])
+                                     {"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision_id"])
     _move(person.project, warden, 100, 0)
     before = copy.deepcopy(person.project.all_documents())
 
@@ -163,13 +163,13 @@ def test_repeated_writes_in_a_batch_are_judged_by_what_the_batch_finally_writes(
     read = authoring_session.read_project(root)
     batch = [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 50},
              {"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}]
-    clean = _propose(root, host, batch, read["revision"])
+    clean = _propose(root, host, batch, read["revision_id"])
     person.project.edit_scene(lambda room: authoring.ops.rename_entity(room, warden, "Keeper"))
     assert host.accept(clean)["ok"] is True and _at(person.project, warden) == (0.0, 100.0)
 
     read = authoring_session.read_project(root)
     clash = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 150},
-                                  {"op": "move_entity", "entity_id": warden, "x": 0, "y": 200}], read["revision"])
+                                  {"op": "move_entity", "entity_id": warden, "x": 0, "y": 200}], read["revision_id"])
     _move(person.project, warden, 100, 100)
     assert host.accept(clash)["reason"] == "conflict" and _at(person.project, warden) == (100.0, 100.0)
 
@@ -180,7 +180,7 @@ def test_objects_the_batch_creates_and_refers_to_land_beside_the_persons_new_one
     person, host, _warden = studio
     read = authoring_session.read_project(root)
     proposal = _propose(root, host, [{"op": "place_prefab", "prefab": "person", "x": 400, "y": 64},
-                                     {"op": "rename_entity", "entity_id": "@0", "name": "Ranger"}], read["revision"])
+                                     {"op": "rename_entity", "entity_id": "@0", "name": "Ranger"}], read["revision_id"])
     mine = _place(person.project, "Gardener", 200, 64)
     theirs_before = copy.deepcopy(_entity(person.project, mine))
 
@@ -196,7 +196,7 @@ def test_a_proposal_is_applied_once_and_a_conflict_clears_when_the_person_puts_t
                                                                                           studio: Any) -> None:
     person, host, warden = studio
     read = authoring_session.read_project(root)
-    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision"])
+    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision_id"])
     _move(person.project, warden, 100, 0)
     assert host.accept(proposal)["reason"] == "conflict"
     _move(person.project, warden, 0, 0)  # the person moves it back: the proposal no longer writes over anything
@@ -209,7 +209,7 @@ def test_a_proposal_is_applied_once_and_a_conflict_clears_when_the_person_puts_t
 def test_the_same_result_both_ways_isnt_a_conflict(root: Path, studio: Any) -> None:
     person, host, warden = studio
     read = authoring_session.read_project(root)
-    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision"])
+    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision_id"])
     _move(person.project, warden, 0, 100)
     assert host.accept(proposal)["ok"] is True and _at(person.project, warden) == (0.0, 100.0)
 
@@ -220,7 +220,7 @@ def test_a_refusal_leaves_undo_and_saving_as_they_were_and_an_acceptance_is_one_
                                                                                         studio: Any) -> None:
     person, host, warden = studio
     read = authoring_session.read_project(root)
-    stale = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision"])
+    stale = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision_id"])
     _move(person.project, warden, 100, 0)
     dirty = person.project.is_dirty
     assert host.accept(stale)["reason"] == "conflict" and person.project.is_dirty == dirty
@@ -229,7 +229,7 @@ def test_a_refusal_leaves_undo_and_saving_as_they_were_and_an_acceptance_is_one_
     host.reject_proposal(stale)
 
     read = authoring_session.read_project(root)
-    rename = _propose(root, host, [{"op": "rename_entity", "entity_id": warden, "name": "Keeper"}], read["revision"])
+    rename = _propose(root, host, [{"op": "rename_entity", "entity_id": warden, "name": "Keeper"}], read["revision_id"])
     _move(person.project, warden, 150, 0)
     assert host.accept(rename)["ok"] is True
     assert person.project.undo() and _entity(person.project, warden)["name"] == "Warden"
@@ -248,7 +248,7 @@ def test_a_failure_part_way_through_applying_changes_nothing(root: Path, studio:
     scout = _place(person.project, "Scout", 300, 300)
     read = authoring_session.read_project(root)
     proposal = _propose(root, host, [{"op": "move_entity", "entity_id": scout, "x": 320, "y": 300},
-                                     {"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision"])
+                                     {"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision_id"])
     person.project.edit_scene(lambda room: authoring.ops.rename_entity(room, warden, "Keeper"))
     before, revision = copy.deepcopy(person.project.all_documents()), person.project.revision
     real = authoring._apply_one
@@ -282,13 +282,13 @@ def test_river_settings_the_proposal_doesnt_write_survive_and_ones_it_does_clash
 
     person.project.edit_scene(hd2d)
     read = authoring_session.read_project(root)
-    wade = _propose(root, host, [{"op": "set_river", "river_id": "brook", "passable": "wade"}], read["revision"])
+    wade = _propose(root, host, [{"op": "set_river", "river_id": "brook", "passable": "wade"}], read["revision_id"])
     person.project.edit_scene(lambda room: authoring.ops.set_river(room, "brook", flow=2.5))
     assert host.accept(wade)["ok"] is True
     assert river()["passable"] == "wade" and river()["flow"] == 2.5, "both kept"
 
     read = authoring_session.read_project(root)
-    faster = _propose(root, host, [{"op": "set_river", "river_id": "brook", "flow": 3.0}], read["revision"])
+    faster = _propose(root, host, [{"op": "set_river", "river_id": "brook", "flow": 3.0}], read["revision_id"])
     person.project.edit_scene(lambda room: authoring.ops.set_river(room, "brook", flow=1.5))
     assert host.accept(faster)["reason"] == "conflict" and river()["flow"] == 1.5
 
@@ -323,7 +323,7 @@ def test_a_proposal_naming_an_object_moves_the_one_it_named_not_whoever_took_the
     person, host, warden = studio
     farmer = _place(person.project, "Farmer", 200, 200)
     read = authoring_session.read_project(root)
-    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": "Warden", "x": 0, "y": 100}], read["revision"])
+    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": "Warden", "x": 0, "y": 100}], read["revision_id"])
     person.project.edit_scene(lambda room: authoring.ops.rename_entity(room, warden, "Captain"))
     person.project.edit_scene(lambda room: authoring.ops.rename_entity(room, farmer, "Warden"))
 
@@ -343,7 +343,7 @@ def test_a_proposal_writes_in_the_room_its_preview_showed_whichever_room_is_open
     in_cellar = _place(person.project, "Warden", 0, 0)
     person.project.current = start
     read = authoring_session.read_project(root)
-    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": "Warden", "x": 0, "y": 100}], read["revision"])
+    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": "Warden", "x": 0, "y": 100}], read["revision_id"])
     person.project.current = cellar  # the person looks at the cellar (as Studio's room switch does)
 
     assert host.accept(proposal)["ok"] is True

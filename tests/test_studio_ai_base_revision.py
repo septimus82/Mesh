@@ -9,6 +9,10 @@ accepting it overwrote what the person had done. Inputs that aren't revisions (`
 
 Each test runs a real StudioAIHost on its loopback bridge, the AI going through ``authoring_session`` (what the MCP
 tools and ``mesh author`` call), and the person editing Studio's own documents.
+
+#462 R1: the AI proposes against the ``revision_id`` it read (the revision of this Studio session), never a bare
+number; a bare number, or a revision of another session, is refused the same way on every way in (last tests here;
+across real Studio restarts: tests/test_studio_revision_identity.py).
 """
 
 from __future__ import annotations
@@ -132,7 +136,7 @@ def test_a_proposal_on_an_evicted_revision_is_refused_not_rebased_over_the_perso
     _evict(root, person.project)
     documents, revision, files = copy.deepcopy(person.project.all_documents()), person.project.revision, _files(root)
 
-    refused = authoring_session.propose(root, _guard(warden), base_revision=read["revision"])
+    refused = authoring_session.propose(root, _guard(warden), base_revision_id=read["revision_id"])
 
     assert refused["ok"] is False and refused["reason"] == "base_revision_unavailable", refused
     assert refused["base_revision"] == read["revision"] and refused["revision"] == revision
@@ -142,8 +146,9 @@ def test_a_proposal_on_an_evicted_revision_is_refused_not_rebased_over_the_perso
     # Read again: the AI now sees the Keeper, and its proposal is checked against what the person has.
     fresh = authoring_session.read_project(root)
     assert fresh["revision"] == revision
-    staged = authoring_session.propose(root, _guard(warden), base_revision=fresh["revision"])
+    staged = authoring_session.propose(root, _guard(warden), base_revision_id=fresh["revision_id"])
     assert staged["ok"] and staged["proposal"]["base_revision"] == revision
+    assert staged["proposal"]["base_revision_id"] == fresh["revision_id"]
     assert any("Keeper" in line and "Guard" in line for line in staged["proposal"]["summary"]), staged["proposal"]
 
 
@@ -151,30 +156,33 @@ def test_eviction_follows_the_snapshots_studio_keeps(root: Path, studio: Any) ->
     """One read fewer than SNAPSHOTS_KEPT later, the AI's revision is still kept, and the overlapping rename meets
     the person's as a conflict at acceptance; with SNAPSHOTS_KEPT later reads it is gone, and refused."""
     person, host, warden = studio
-    kept = authoring_session.read_project(root)["revision"]
+    kept_read = authoring_session.read_project(root)
+    kept = kept_read["revision"]
     _rename(person.project, warden, "Keeper")
     _evict(root, person.project, reads=SNAPSHOTS_KEPT - 1)
-    staged = authoring_session.propose(root, _guard(warden), base_revision=kept)
+    staged = authoring_session.propose(root, _guard(warden), base_revision_id=kept_read["revision_id"])
     assert staged["ok"] and staged["proposal"]["base_revision"] == kept
     clash = host.accept(host.proposals[-1])
     assert clash["reason"] == "conflict" and clash["conflicts"][0]["studio"] == "Keeper"
     assert clash["conflicts"][0]["ai"] == "Guard" and "Keeper" in _names(person.project)
     authoring_session.withdraw(root, staged["proposal_id"])
     _evict(root, person.project, reads=1)
-    assert authoring_session.propose(root, _guard(warden), base_revision=kept)["reason"] == "base_revision_unavailable"
+    assert authoring_session.propose(root, _guard(warden),
+                                     base_revision_id=kept_read["revision_id"])["reason"] == "base_revision_unavailable"
 
 
 # --------------------------------------------------------------------- what still works as before
 
 def test_an_older_revision_studio_keeps_is_still_compared_with_the_persons_changes(root: Path, studio: Any) -> None:
     person, host, warden = studio
-    read = authoring_session.read_project(root)["revision"]
+    seen = authoring_session.read_project(root)
+    read = seen["revision"]
     _paint(person.project, 3)  # the person paints: separate from the AI's change
     _rename(person.project, warden, "Keeper")  # and renames: the same property as the AI's
     independent = authoring_session.propose(root, [{"op": "place_prefab", "prefab": "person", "x": 320, "y": 224},
                                                    {"op": "rename_entity", "entity_id": "@0", "name": "Sexton"}],
-                                            base_revision=read)
-    overlapping = authoring_session.propose(root, _guard(warden), base_revision=read)
+                                            base_revision_id=seen["revision_id"])
+    overlapping = authoring_session.propose(root, _guard(warden), base_revision_id=seen["revision_id"])
     assert independent["proposal"]["base_revision"] == read == overlapping["proposal"]["base_revision"]
     first, second = host.proposals
     assert host.accept(first)["ok"]  # both survive: the person's paint and Keeper, the AI's Sexton
@@ -190,7 +198,7 @@ def test_the_current_revision_works_without_a_read_at_it(root: Path, studio: Any
     _rename(person.project, warden, "Keeper")  # (no read since: Studio keeps nothing at this revision)
     current = person.project.revision
     assert current not in host._snapshots
-    staged = authoring_session.propose(root, _guard(warden), base_revision=current)
+    staged = authoring_session.propose(root, _guard(warden), base_revision_id=host.revision_id())
     assert staged["ok"] and staged["proposal"]["base_revision"] == current
     assert host.accept(host.proposals[-1])["ok"] and "Guard" in _names(person.project)
 
@@ -202,6 +210,7 @@ def test_without_a_base_revision_it_is_proposed_against_the_project_as_it_is_now
     _evict(root, person.project)
     staged = authoring_session.propose(root, _guard(warden))
     assert staged["ok"] and staged["proposal"]["base_revision"] == person.project.revision
+    assert staged["proposal"]["base_revision_id"] is None  # (#462 R1: no base given, none verified)
     assert tools.live_stage_proposal([{"op": "rename_entity", "entity_id": warden, "name": "Watch"}],
                                      root=str(root))["ok"]  # (the older tool: no base_revision, as before)
 
@@ -230,24 +239,55 @@ def test_something_that_isnt_a_revision_is_refused_not_replaced(root: Path, stud
 def test_the_bridge_mcp_and_cli_all_refuse_the_evicted_revision_the_same_way(root: Path, studio: Any,
                                                                             tmp_path: Path) -> None:
     person, host, warden = studio
-    old = authoring_session.read_project(root)["revision"]
+    read = authoring_session.read_project(root)
+    old, old_id = read["revision"], read["revision_id"]
     _rename(person.project, warden, "Keeper")
     _evict(root, person.project)
     current = person.project.revision
-    info, _failure = _load_verified_session(root)
-    assert info is not None
-    bridge = _request_json(info, "POST", "/live/stage_proposal", {"changes": _guard(warden), "base_revision": old},
-                           timeout=6.0)
-    mcp = tools.propose_changes(_guard(warden), base_revision=old, root=str(root))
-    changes = tmp_path / "changes.json"
-    changes.write_text(json.dumps({"changes": _guard(warden)}), encoding="utf-8")
-    run = subprocess.run([sys.executable, "-m", "mesh_cli", "author", "propose", str(changes), "--project", str(root),
-                          "--base-revision", str(old)], cwd=REPO, capture_output=True, text=True, timeout=120,
-                         env={**os.environ, "PYTHONPATH": str(REPO)})
-    cli = json.loads(run.stdout)
-    assert run.returncode == 1, run.stdout + run.stderr
+    bridge, mcp, cli = _every_way_in(root, warden, tmp_path, base_revision_id=old_id)
     for answer in (bridge, mcp, cli):
         assert (answer["ok"], answer["reason"], answer["base_revision"], answer["revision"]) == (
             False, "base_revision_unavailable", old, current), answer
         assert "Read the project again" in answer["message"]
     assert host.proposals == [] and person.inbox == [] and "Keeper" in _names(person.project)
+
+
+def _every_way_in(root: Path, warden: str, tmp_path: Path, **base: Any) -> tuple[Any, Any, Any]:
+    """The same proposal on the loopback bridge itself, through the MCP tool and through ``mesh author propose`` (its
+    own process): ``base`` is ``base_revision`` and/or ``base_revision_id``."""
+    info, _failure = _load_verified_session(root)
+    assert info is not None
+    bridge = _request_json(info, "POST", "/live/stage_proposal", {"changes": _guard(warden), **base}, timeout=6.0)
+    mcp = tools.propose_changes(_guard(warden), root=str(root), **base)
+    changes = tmp_path / f"changes_{len(list(tmp_path.glob('changes_*')))}.json"
+    changes.write_text(json.dumps({"changes": _guard(warden)}), encoding="utf-8")
+    flags = [f for key, value in base.items() for f in (f"--{key.replace('_', '-')}", str(value))]
+    run = subprocess.run([sys.executable, "-m", "mesh_cli", "author", "propose", str(changes), "--project", str(root),
+                          *flags], cwd=REPO, capture_output=True, text=True, timeout=120,
+                         env={**os.environ, "PYTHONPATH": str(REPO)})
+    assert run.returncode == 1, run.stdout + run.stderr
+    return bridge, mcp, json.loads(run.stdout)
+
+
+def test_every_way_in_refuses_a_bare_number_and_another_sessions_revision_the_same_way(root: Path, studio: Any,
+                                                                                      tmp_path: Path) -> None:
+    """#462 R1. A bare number can't say which session it was read in (the next session counts from 0 again); a
+    revision_id of another session (or project) can't be compared with what the person has. Both are refused, the
+    same on the bridge, the MCP tool and the CLI, for the current revision too, and nothing reaches the person."""
+    person, host, warden = studio
+    read = authoring_session.read_project(root)  # (the current revision, kept: still refused as a bare number)
+    session = person.project.session
+    elsewhere = ("e" if session[0] == "f" else "f") + session[1:] + read["revision_id"][len(session):]
+    documents, files = copy.deepcopy(person.project.all_documents()), _files(root)
+    for base, reason in (({"base_revision": read["revision"]}, "revision_id_required"),
+                         ({"base_revision_id": elsewhere}, "revision_from_another_session")):
+        for answer in _every_way_in(root, warden, tmp_path, **base):
+            assert (answer["ok"], answer["reason"], answer["revision"]) == (False, reason, read["revision"]), answer
+            assert "revision_id" not in answer and "read" in answer["message"].lower()
+    _nothing_staged(person, host, documents, read["revision"], root, files)
+    # (and the reading's own id is taken)
+    assert tools.propose_changes(_guard(warden), root=str(root), base_revision_id=read["revision_id"])["ok"]
+    assert authoring_session.propose(root, _guard(warden), base_revision=read["revision"],
+                                     base_revision_id=read["revision_id"])["ok"]  # (both, agreeing: fine)
+    assert person.inbox == ["Changes from an AI", "Changes from an AI"]
+

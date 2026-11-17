@@ -132,7 +132,7 @@ def test_a_persons_edit_and_an_ai_proposal_both_survive_unless_they_touch_the_sa
     assert seen["source"] == "mesh_studio" and seen["revision"] == 0
     # The person paints while the AI prepares an NPC: both survive.
     project.edit_scene(lambda s: __import__("engine.project_ops", fromlist=["x"]).paint_tiles(s, "walls", [(2, 2)], 9))
-    staged = authoring_session.propose(root, ADD_SEXTON, title="Add the sexton", base_revision=seen["revision"])
+    staged = authoring_session.propose(root, ADD_SEXTON, title="Add the sexton", base_revision_id=seen["revision_id"])
     proposal = host.proposals[-1]
     assert host.accept(proposal)["ok"]
     room = project.scene()
@@ -146,7 +146,7 @@ def test_a_persons_edit_and_an_ai_proposal_both_survive_unless_they_touch_the_sa
     # The same property both ways: a conflict, reported, nothing lost.
     seen = authoring_session.read_project(root)
     authoring_session.propose(root, [{"op": "rename_entity", "entity_id": "Sexton", "name": "Gravedigger"}],
-                              base_revision=seen["revision"])
+                              base_revision_id=seen["revision_id"])
     project.edit_scene(lambda s: authoring.ops.rename_entity(s, proposal.created[0], "Warden"))
     clash = host.accept(host.proposals[-1])
     assert clash["reason"] == "conflict" and clash["conflicts"][0]["studio"] == "Warden"

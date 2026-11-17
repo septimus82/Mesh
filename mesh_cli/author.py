@@ -33,7 +33,11 @@ def add_parser(subparsers: Any) -> None:
     propose = sub.add_parser("propose", help="Propose changes to the Mesh Studio that has the project open")
     propose.add_argument("changes", help="JSON file of changes, or - for stdin")
     propose.add_argument("--title", default="", help="A short title for the person reviewing it")
-    propose.add_argument("--base-revision", type=int, default=None, help="The revision your changes are based on (from read)")
+    propose.add_argument("--base-revision-id", default=None,
+                         help="The revision_id your changes are based on (from read)")
+    propose.add_argument("--base-revision", type=int, default=None,
+                         help="A bare revision number: refused without --base-revision-id (it can't say which Studio "
+                              "session it was read in)")
     status = sub.add_parser("status", help="What happened to a proposal")
     status.add_argument("proposal_id")
     recover = sub.add_parser("recover", help="Remove a session record left by a Mesh Studio that crashed (only if "
@@ -61,7 +65,8 @@ def handle(args: argparse.Namespace) -> int:
             result = authoring_session.apply(args.project, _changes(args.changes), dry_run=args.dry_run, source="mesh author")
         elif command == "propose":
             result = authoring_session.propose(args.project, _changes(args.changes), title=args.title,
-                                               base_revision=args.base_revision, source="mesh author")
+                                               base_revision=args.base_revision, source="mesh author",
+                                               base_revision_id=args.base_revision_id)
         elif command == "status":
             result = authoring_session.proposal_status(args.project, args.proposal_id)
         elif command == "recover":

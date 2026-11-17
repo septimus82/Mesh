@@ -18,6 +18,7 @@ import json
 import os
 import pickle
 import posixpath
+import secrets
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
@@ -129,6 +130,9 @@ class Project:
         self._undo: list[_State] = []
         self._redo: list[_State] = []
         self.revision = 0  # goes up with every change, undo and redo: what an AI's view is "as of"
+        # (#462 R1) this opening of the project, new each time it is opened: revision counts from 0 again then, so a
+        # revision is "revision N of this session" (an AI's ``revision_id``: engine.studio_ai), never a bare N
+        self.session = secrets.token_hex(8)
         self.writes_files = True  # False for a dry run: nothing touches the disk
         self._tx_depth = 0
         self._views: dict[str, tuple[Doc, Doc | None, Doc]] = {}  # room -> (stored, player, expanded) cache
@@ -428,6 +432,7 @@ class Project:
         copy_.dirty, copy_.world_dirty, copy_.current = set(self.dirty), self.world_dirty, self.current
         copy_.player, copy_.player_dirty, copy_._views = copy.deepcopy(self.player), self.player_dirty, {}
         copy_._undo, copy_._redo, copy_.revision, copy_.writes_files, copy_._tx_depth = [], [], self.revision, False, 0
+        copy_.session = self.session  # (a dry run of this session's project, at its revision)
         copy_._seen_on_disk = dict(self._seen_on_disk)  # (a room loaded first in the copy records when it was read)
         copy_.ids_seen = set(self.ids_seen)  # (a dry run's new objects get the ids the real edit would, then)
         copy_._as_read = dict(self._as_read)

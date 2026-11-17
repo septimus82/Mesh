@@ -1,0 +1,6 @@
+ee04d03c
+>       assert old_number["ok"] is False, "the revision read before the restart was taken as the reopened project's"
+E       AssertionError: the revision read before the restart was taken as the reopened project's
+E       assert True is False
+FAILED tests/test_studio_revision_identity.py::test_a_revision_read_before_studio_restarted_never_passes_for_the_reopened_project
+1 failed, 2 deselected in 11.00s

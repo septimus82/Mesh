@@ -20,7 +20,10 @@ JSON line on stdout for each:
     state          {"names": [...], "unsaved": bool, "pending": [titles], "session_id": ...}
     accept         accept the first proposal waiting
     save           save, as Studio's Save
-    close          close as Studio closes: its session stopped, the project let go, then exit 0
+    rename ID NAME the person renames object ID to NAME (unsaved)
+    undo / redo    as Studio's Undo and Redo: {"done": bool}
+    reject         reject the first proposal waiting
+    close         close as Studio closes: its session stopped, the project let go, then exit 0
 
 Killed, it ends as a crashed Studio does: nothing is released by its own code.
 """
@@ -138,6 +141,15 @@ def main() -> int:
             authoring.apply(project, [{"op": "place_prefab", "prefab": "person", "x": 64, "y": 64},
                                       {"op": "rename_entity", "entity_id": "@0", "name": argument}])
             _say(ok=True)
+        elif command == "rename":  # (R1) rename ENTITY_ID NAME: the person renames an object
+            entity_id, _, name = argument.partition(" ")
+            authoring.apply(project, [{"op": "rename_entity", "entity_id": entity_id, "name": name}])
+            _say(ok=True)
+        elif command in ("undo", "redo"):  # (R1) as Studio's Undo and Redo
+            _say(done=bool(getattr(project, command)()))
+        elif command == "reject":  # (R1) the person rejects the first proposal waiting
+            waiting = host.pending()
+            _say(result=host.reject_proposal(waiting[0]) if waiting else None)
         elif command == "state":
             _say(names=[str(e.get("name")) for e in project.scene()["entities"]], unsaved=bool(project.is_dirty),
                  pending=[p.title for p in host.pending()], session_id=session_id)

@@ -169,13 +169,16 @@ def read_project(root: str | Path = ".") -> Doc:
     docs = project.all_documents()
     # Rooms with the shared player filled in, as Studio shows them; ``player`` is its one definition.
     rooms = {key: {"label": label, "path": path, "room": project.scene(key)} for key, label, path in project.rooms()}
-    return {"ok": True, "source": "files", "revision": None, "current_room": project.current, "world": docs["world"],
+    return {"ok": True, "source": "files", "revision": None, "revision_id": None, "current_room": project.current,
+            "world": docs["world"],
             "rooms": rooms, "player": docs["player"], "models": authoring.models(project)}
 
 
 def propose(root: str | Path, changes: list[Doc], *, title: str = "", base_revision: int | None = None,
-            source: str = "", request_id: str = "") -> Doc:
-    """Send changes to the Mesh Studio that has this project open, for the person to review."""
+            source: str = "", request_id: str = "", base_revision_id: str | None = None) -> Doc:
+    """Send changes to the Mesh Studio that has this project open, for the person to review. ``base_revision_id``:
+    the ``revision_id`` of the reading they are based on (#462 R1); a bare ``base_revision`` is refused by Studio
+    (``revision_id_required``: it can't say which session it was read in)."""
     state = studio_state(root)
     if state["state"] == "uncertain":
         return uncertain(state)
@@ -187,6 +190,8 @@ def propose(root: str | Path, changes: list[Doc], *, title: str = "", base_revis
     payload: Doc = {"changes": changes, "title": title, "source": source or "an AI"}
     if base_revision is not None:  # (as given: Mesh Studio checks it, and never takes another in its place, F6)
         payload["base_revision"] = base_revision
+    if base_revision_id is not None:  # (as given, too: #462 R1)
+        payload["base_revision_id"] = base_revision_id
     result = _call(state["info"], "POST", "/live/stage_proposal", payload, request_id=request_id)
     if result.get("ok"):
         result["next"] = "The person reviews it in Mesh Studio (top bar: AI). proposal_status tells you what they decided."

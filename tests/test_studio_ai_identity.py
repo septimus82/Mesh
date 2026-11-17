@@ -82,8 +82,8 @@ def _entity(project: Project, entity_id: str) -> dict[str, Any]:
     return next(e for e in project.scene()["entities"] if e.get("id") == entity_id)
 
 
-def _propose(root: Path, host: StudioAIHost, changes: list[dict[str, Any]], revision: int) -> Any:
-    staged = authoring_session.propose(root, changes, base_revision=revision)
+def _propose(root: Path, host: StudioAIHost, changes: list[dict[str, Any]], revision_id: str) -> Any:
+    staged = authoring_session.propose(root, changes, base_revision_id=revision_id)  # (#462 R1: the reading's id)
     assert staged["ok"], staged
     return next(p for p in host.proposals if p.proposal_id == staged["proposal"]["proposal_id"])
 
@@ -107,7 +107,7 @@ def test_a_proposal_about_a_deleted_object_never_lands_on_the_newcomer_that_took
     same spot. Accepting must not move the Scout (a different object), nor report success."""
     person, host, warden = studio
     read = authoring_session.read_project(root)
-    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision"])
+    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision_id"])
     _delete(person.project, warden)
     scout = _place(person.project, 0, 0, "Scout")
     before = copy.deepcopy(person.project.all_documents())
@@ -176,7 +176,7 @@ def test_undoing_a_deletion_brings_back_the_same_object_and_its_proposal_still_a
     an object undone out of existence still keeps its id from being given to the next one."""
     person, host, warden = studio
     read = authoring_session.read_project(root)
-    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision"])
+    proposal = _propose(root, host, [{"op": "move_entity", "entity_id": warden, "x": 0, "y": 100}], read["revision_id"])
     _delete(person.project, warden)
     assert person.project.undo() and warden in _ids(person.project)
     assert host.accept(proposal)["ok"] is True and _entity(person.project, warden)["y"] == 100.0
@@ -196,7 +196,7 @@ def test_an_ai_proposal_placing_on_a_deleted_objects_spot_gets_a_new_id_and_its_
     proposal = _propose(root, host, [{"op": "place_prefab", "prefab": "person", "x": 0, "y": 0},
                                      {"op": "rename_entity", "entity_id": "@0", "name": "Ranger"},
                                      {"op": "move_entity", "entity_id": "Ranger", "x": 0, "y": 32}],
-                        read["revision"])
+                        read["revision_id"])
 
     result = host.accept(proposal)
 
@@ -247,7 +247,7 @@ def test_studios_door_tool_never_gives_a_deleted_doors_id_to_the_new_door(root: 
     door = next(e["id"] for e in person.project.scene(start)["entities"] if str(e["id"]).startswith("start_door_to"))
     read = authoring_session.read_project(root)
     proposal = _propose(root, host, [{"op": "rename_entity", "entity_id": door, "name": "Secret Door"}],
-                        read["revision"])
+                        read["revision_id"])
     for entity in [e for e in person.project.scene(start)["entities"] if e["id"] != _warden and
                    (e["id"] == door or e.get("spawn_id") or e.get("tag") == "spawn_point")]:
         person.project.edit_scene(lambda room, gone=entity["id"]: authoring.ops.remove_entity(room, gone), start)
@@ -271,7 +271,7 @@ def test_a_new_rooms_player_id_is_never_given_to_a_player_placed_after_it_is_del
     player = next(e["id"] for e in person.project.scene(cellar)["entities"] if e.get("tag") == "player")
     read = authoring_session.read_project(root)
     proposal = _propose(root, host, [{"op": "move_entity", "entity_id": player, "x": 128, "y": 160,
-                                      "room": cellar}], read["revision"])
+                                      "room": cellar}], read["revision_id"])
     person.project.edit_scene(lambda room: authoring.ops.remove_entity(room, player), cellar)
     made = authoring.apply(person.project, [{"op": "place_prefab", "prefab": "player", "x": 128, "y": 128,
                                              "room": cellar}])
@@ -342,10 +342,10 @@ def test_a_new_rooms_player_deleted_by_an_ai_batch_keeps_its_id_from_the_player_
     player = next(e["id"] for e in person.project.scene(cellar)["entities"] if e.get("tag") == "player")
     read = authoring_session.read_project(root)
     move = _propose(root, host, [{"op": "move_entity", "entity_id": player, "x": 128, "y": 160, "room": cellar}],
-                    read["revision"])
+                    read["revision_id"])
     replace = _propose(root, host, [{"op": "remove_entity", "entity_id": player, "room": cellar},
                                     {"op": "place_prefab", "prefab": "player", "x": 128, "y": 128, "room": cellar}],
-                       read["revision"])
+                       read["revision_id"])
     assert host.accept(replace)["ok"] is True
     newcomer = str(replace.created[1])
 

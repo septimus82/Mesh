@@ -19,6 +19,7 @@ from engine.studio_ai import SNAPSHOTS_KEPT, StudioAIHost
 
 pytestmark = pytest.mark.fast
 CHANGE = [{"op": "rename_entity", "entity_id": "warden", "name": "Guard"}]
+SESSION = "0123456789abcdef"
 
 
 class _Project:
@@ -26,6 +27,7 @@ class _Project:
 
     def __init__(self) -> None:
         self.revision = 0
+        self.session = SESSION  # (#462 R1: this opening of the project)
         self.docs: dict[str, Any] = {"world": {}, "rooms": {}, "player": {}}
 
     def all_documents(self) -> dict[str, Any]:
@@ -52,9 +54,10 @@ def _nothing_staged(ai: StudioAIHost, docs: dict[str, Any]) -> None:
 
 def test_an_evicted_revision_is_refused_with_the_current_one(host: StudioAIHost) -> None:
     docs = copy.deepcopy(host.project.all_documents())
-    refused = host.stage_proposal_payload({"changes": CHANGE, "base_revision": 0})
+    refused = host.stage_proposal_payload({"changes": CHANGE, "base_revision_id": f"{SESSION}:0"})
     assert isinstance(refused, dict) and refused["ok"] is False and refused["reason"] == "base_revision_unavailable"
     assert refused["base_revision"] == 0 and refused["revision"] == SNAPSHOTS_KEPT
+    assert refused["base_revision_id"] == f"{SESSION}:0" and "revision_id" not in refused
     assert f"revision {SNAPSHOTS_KEPT}" in refused["message"] and "Read the project again" in refused["message"]
     _nothing_staged(host, docs)
 
@@ -67,3 +70,50 @@ def test_something_that_isnt_a_revision_is_refused(host: StudioAIHost, given: An
     assert isinstance(refused, dict) and refused["reason"] == "invalid_base_revision" and refused["base_revision"] == given
     assert refused["revision"] == SNAPSHOTS_KEPT and f"0 to {SNAPSHOTS_KEPT}" in refused["message"]
     _nothing_staged(host, docs)
+
+
+# --------------------------------------------------------------------- #462 R1: which session a revision is of
+
+def test_a_bare_revision_number_is_refused_because_it_cant_say_which_session(host: StudioAIHost) -> None:
+    docs = copy.deepcopy(host.project.all_documents())
+    for given in (SNAPSHOTS_KEPT, SNAPSHOTS_KEPT - 1, 0):  # (current, kept and evicted alike)
+        refused = host.stage_proposal_payload({"changes": CHANGE, "base_revision": given})
+        assert isinstance(refused, dict) and refused["reason"] == "revision_id_required", refused
+        assert refused["base_revision"] == given and "revision_id" not in refused
+        assert "base_revision_id" in refused["message"] and "read_project" in refused["message"]
+    _nothing_staged(host, docs)
+
+
+@pytest.mark.parametrize("given", [f"{'f' * 16}:{SNAPSHOTS_KEPT}", f"{'0' * 16}:0", f"{'a' * 16}:{SNAPSHOTS_KEPT - 1}"],
+                         ids=["another session, the current number", "another session, revision 0",
+                              "another session, a kept number"])
+def test_a_revision_of_another_session_or_project_is_refused(host: StudioAIHost, given: str) -> None:
+    docs = copy.deepcopy(host.project.all_documents())
+    refused = host.stage_proposal_payload({"changes": CHANGE, "base_revision_id": given})
+    assert isinstance(refused, dict) and refused["reason"] == "revision_from_another_session", refused
+    assert refused["base_revision_id"] == given and refused["revision"] == SNAPSHOTS_KEPT and "revision_id" not in refused
+    assert "Read the project again" in refused["message"]
+    _nothing_staged(host, docs)
+
+
+@pytest.mark.parametrize("given", ["", "abc", f"{SESSION}", f"{SESSION}:", f"{SESSION}:-1", f"{SESSION}:01",
+                                   f"{SESSION.upper()}:1", f" {SESSION}:1", f"{SESSION}:1 ", f"{SESSION}:1:1", 7, True,
+                                   [f"{SESSION}:1"], {"id": f"{SESSION}:1"}, f"{SESSION}:{SNAPSHOTS_KEPT + 1}"],
+                         ids=["empty", "not an id", "no number", "an empty number", "negative", "a leading zero",
+                              "upper case", "a space before", "a space after", "two numbers", "a number", "true",
+                              "a list", "an object", "a future revision"])
+def test_something_that_isnt_a_revision_id_of_this_session_is_refused(host: StudioAIHost, given: Any) -> None:
+    docs = copy.deepcopy(host.project.all_documents())
+    refused = host.stage_proposal_payload({"changes": CHANGE, "base_revision_id": given})
+    assert isinstance(refused, dict) and refused["reason"] == "invalid_base_revision", refused
+    assert refused["base_revision_id"] == given and "revision_id" not in refused
+    _nothing_staged(host, docs)
+
+
+def test_a_number_and_an_id_that_disagree_are_refused(host: StudioAIHost) -> None:
+    docs = copy.deepcopy(host.project.all_documents())
+    refused = host.stage_proposal_payload({"changes": CHANGE, "base_revision": SNAPSHOTS_KEPT - 1,
+                                           "base_revision_id": f"{SESSION}:{SNAPSHOTS_KEPT}"})
+    assert isinstance(refused, dict) and refused["reason"] == "invalid_base_revision" and "different" in refused["message"]
+    _nothing_staged(host, docs)
+

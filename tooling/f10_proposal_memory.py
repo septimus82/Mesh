@@ -130,7 +130,7 @@ def session(root: Path, proposals: int) -> dict[str, Any]:
         for i in range(proposals):
             room = rooms[i % len(rooms)]
             kind = ("accept", "accept", "reject", "withdraw", "fail", "conflict")[i % 6]
-            revision = authoring_session.read_project(root)["revision"]
+            revision_id = authoring_session.read_project(root)["revision_id"]
             if kind == "fail":  # (removes a person the person removes first: nothing to remove when accepted)
                 victim = next(e["id"] for e in project.scene(room)["entities"] if "_person_" in str(e.get("id")))
                 changes: list[dict[str, Any]] = [{"op": "remove_entity", "room": room, "entity_id": victim}]
@@ -139,7 +139,7 @@ def session(root: Path, proposals: int) -> dict[str, Any]:
                 changes = [{"op": "rename_entity", "room": room, "entity_id": victim, "name": f"AI name {i}"}]
             else:
                 changes = [{"op": "place_prefab", "room": room, "prefab": "person", "x": 200 + i, "y": 300}]
-            staged = authoring_session.propose(root, changes, title=f"Change {i}", base_revision=revision)
+            staged = authoring_session.propose(root, changes, title=f"Change {i}", base_revision_id=revision_id)
             assert staged.get("ok"), staged
             pid = staged["proposal_id"]
             proposal = next(p for p in host.proposals if p.proposal_id == pid)

@@ -67,7 +67,7 @@ def _stage(d: Any, changes: list[dict[str, Any]]) -> Any:
     """An AI reads the project and proposes ``changes`` against what it read (what the MCP tools send)."""
     read = d.studio.ai.read_live_scene()
     proposal = d.studio.ai.stage_proposal_payload({"title": "Tidy the start", "source": "a test AI",
-                                                   "changes": changes, "base_revision": read["revision"]})
+                                                   "changes": changes, "base_revision_id": read["revision_id"]})
     assert not isinstance(proposal, dict), proposal
     return proposal
 
