@@ -134,9 +134,30 @@ A room's rain and wind have sounds. In Studio's **Sound** panel:
 - The wind is as loud as it blows where the player is, gusts included.
 - Both ease in and out over a second or two: rain that stops fades, it doesn't cut off.
 - A room entered with the same rain keeps the same loop playing.
-- An indoor room (`weather_exposure`) has no rain, so none is heard. Muffled weather indoors is Milestone 21C.
+- An indoor room (`weather_exposure`) has no rain, so none is heard, unless it asks to hear the weather outside (below).
 
-In the file: `settings.weather_sounds` (`rain`, `wind`, `rain_volume`, `wind_volume`).
+In the file: `settings.weather_sounds` (`rain`, `wind`, `rain_volume`, `wind_volume`, `indoors`).
+
+### Weather heard from indoors (Milestone 21C2)
+
+Step out of a rainy village into a cottage: the rain stops falling on you, and you can still hear it outside.
+
+**In Mesh Studio**, in the indoor room's **Sound** panel:
+1. The panel shows **Outdoors (rain and snow fall): Off** for an indoor room. Its Rain and Wind are labelled **Rain outside** and **Wind outside**: no rain is drawn in an indoor room.
+2. Set **Rain outside** and **Wind outside** to the weather outside this room, usually the same as the room its door leads to. Their sounds are chosen with them, as outdoors.
+3. Turn on **Hear outside weather indoors**.
+4. The line under it says what will be heard, or why nothing will: no rain or wind is set, or one has no sound chosen.
+
+**What you hear:**
+- The room's rain and wind at about a third of their outdoor loudness (0.35).
+- Coming in from a room with the same rain sound, the rain carries on and sinks over a second or two; going out, it rises again. It is the same loop: never stopped, restarted or doubled.
+- **Quieter, not muffled:** Mesh's audio has no filters, so the weather keeps its brightness.
+
+**Where the weather comes from:** only the indoor room's own settings. Nothing is carried over from the room you came from: a room with no rain set has no rain outside it. So a save loaded straight into the room, or a game started in it, sounds the same as walking in.
+
+**Off unless you turn it on.** An indoor room without the setting is as it was: no rain is heard in it. (Its wind, if it has one with a sound, is heard at full strength, as it was before this; with the setting on, the wind is quieter too.) In an outdoor room the setting does nothing. Turning it off removes it from the file.
+
+**For AI tools:** `set_weather_sounds(indoors=true)` in a room whose `weather_exposure` is `"indoor"` (`set_weather_exposure`), with its rain (`set_rain`) and wind (`set_wind`) set to the weather outside.
 
 **Changing weather during play:** Mesh's weather is set per room, so the weather heard changes with the room. Within a room, each rain or snow effect has an on/off switch on the particle layer (`set_enabled`), the one Studio's weather preview uses. The sound follows it. There are no scripted weather changes yet.
 

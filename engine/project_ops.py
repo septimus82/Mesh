@@ -1047,21 +1047,61 @@ def set_sound_emitter(scene: Doc, entity_id: str, *, sound: Any = _UNSET, volume
 
 
 def weather_sounds_of(scene: Doc) -> Doc:
-    """The room's weather sounds (``settings.weather_sounds``) completed: rain and wind files ("" none) and volumes."""
+    """The room's weather sounds (``settings.weather_sounds``) completed: rain and wind files ("" none), their
+    volumes, and ``indoors`` (an indoor room hears them, quietly, as the weather outside)."""
     from engine.sound_emitters import EmitterError, WeatherSounds, parse_weather_sounds  # noqa: PLC0415
 
     try:
         w = parse_weather_sounds(_settings_of(scene).get("weather_sounds"))
     except EmitterError:
         w = WeatherSounds()
-    return {"rain": w.rain, "wind": w.wind, "rain_volume": w.rain_volume, "wind_volume": w.wind_volume}
+    return {"rain": w.rain, "wind": w.wind, "rain_volume": w.rain_volume, "wind_volume": w.wind_volume,
+            "indoors": w.indoors}
+
+
+def indoor_weather(scene: Doc) -> Doc:
+    """What of the weather is heard in the room, for Mesh Studio's Sound panel and AI tools to say: ``indoor`` (its
+    ``weather_exposure``), ``enabled`` (its weather sounds' ``indoors``), ``rain`` and ``wind`` (heard from outside:
+    the room is indoors, hears outside, and has that weather set with a sound for it), and ``message`` (one
+    sentence: what is heard, or why nothing is)."""
+    sounds = weather_sounds_of(scene)
+    settings = _settings_of(scene)
+    indoor = settings.get("weather_exposure") == "indoor"
+    rain_set = rain_strength(scene)
+    wind = settings.get("wind")
+    speed = wind.get("speed") if isinstance(wind, dict) else None
+    wind_set = isinstance(speed, (int, float)) and not isinstance(speed, bool) and speed > 0
+    rain = indoor and sounds["indoors"] and rain_set != "off" and bool(sounds["rain"])
+    wind_heard = indoor and sounds["indoors"] and wind_set and bool(sounds["wind"])
+    if not indoor:
+        message = "Outdoors: the rain and wind are heard as they fall and blow."
+    elif not sounds["indoors"]:
+        message = ("Indoors: no rain falls or is heard in here." + (
+            " The wind set here is heard at full strength, as outdoors." if wind_set and sounds["wind"] else "")
+            + " Turn on Hear outside weather indoors to hear this room's rain and wind quietly, as the weather outside.")
+    elif rain or wind_heard:
+        heard = [name for name, on in (("rain", rain), ("wind", wind_heard)) if on]
+        message = f"Indoors: the {' and '.join(heard)} set here {'is' if len(heard) == 1 else 'are'} heard quietly, as the weather outside."
+        missing = [f"the {name} has no sound chosen" for name, is_set, on in (
+            ("rain", rain_set != "off", rain), ("wind", wind_set, wind_heard)) if is_set and not on]
+        if missing:
+            message += f" Not heard: {' and '.join(missing)}."
+    else:
+        why = [f"the {name} has no sound chosen" for name, is_set in (("rain", rain_set != "off"), ("wind", wind_set))
+               if is_set]
+        message = ("Nothing will be heard from outside yet: " + (" and ".join(why) if why else
+                   "this room has no rain or wind set, so there is no weather outside to hear") + ".")
+    return {"indoor": indoor, "enabled": sounds["indoors"], "rain": rain, "wind": wind_heard, "message": message}
 
 
 def set_weather_sounds(scene: Doc, *, rain: Any = _UNSET, wind: Any = _UNSET, rain_volume: Any = _UNSET,
-                       wind_volume: Any = _UNSET) -> Doc:
+                       wind_volume: Any = _UNSET, indoors: Any = _UNSET) -> Doc:
     """The sounds of the room's weather (``settings.weather_sounds``): ``rain`` and ``wind`` (sound files, "" none)
     and their volumes (0-1). The rain is heard as loud as the rain falls (its particles), the wind as hard as the
-    room's wind blows where the player is. Only what is given changes; nothing left: the key is removed."""
+    room's wind blows where the player is. ``indoors`` (true or false; Milestone 21C2), for a room whose
+    ``weather_exposure`` is "indoor": hear the room's own rain and wind settings, quietly, as the weather outside it
+    (no rain falls in an indoor room, and without this none is heard). Only what is given changes; nothing left: the
+    key is removed."""
     from engine.sound_emitters import EmitterError, parse_weather_sounds  # noqa: PLC0415
 
     out = copy.deepcopy(scene)
@@ -1073,11 +1113,15 @@ def set_weather_sounds(scene: Doc, *, rain: Any = _UNSET, wind: Any = _UNSET, ra
     for key, value in {"rain": rain, "wind": wind, "rain_volume": rain_volume, "wind_volume": wind_volume}.items():
         if value is not _UNSET:
             now[key] = _sound_path(value) if key in ("rain", "wind") else value
+    if indoors is False:
+        now.pop("indoors", None)  # (off is no setting: the room reads as one made before Milestone 21C2 does)
+    elif indoors is not _UNSET:
+        now["indoors"] = indoors
     try:
         parse_weather_sounds(now)
     except EmitterError as exc:
         raise OpError(str(exc)) from exc
-    if any(now.get(k) for k in ("rain", "wind")):
+    if any(now.get(k) for k in ("rain", "wind", "indoors")):
         out.setdefault("settings", {})["weather_sounds"] = now
     elif isinstance(settings, dict):
         settings.pop("weather_sounds", None)

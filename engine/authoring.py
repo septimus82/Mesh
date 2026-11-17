@@ -42,7 +42,7 @@ _PROJECT_OPS: dict[str, Callable[..., Any]] = {
 _IMPLICIT = {"scene", "scene_key", "self"}
 # ``project_ops`` functions that look like edits but only read or prepare.
 _NOT_EDITS = {"ensure_entity_ids", "find_entity", "expand_players", "casts_shadow", "flicker_name",
-              "depth_of_field_of", "post_of", "haze_of", "bloom_of"}
+              "depth_of_field_of", "post_of", "haze_of", "bloom_of", "indoor_weather"}
 
 
 class ChangeError(ValueError):

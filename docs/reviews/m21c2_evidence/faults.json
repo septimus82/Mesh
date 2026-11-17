@@ -1,0 +1,212 @@
+{
+ "none": {
+  "file": null,
+  "caught": false,
+  "failing": [],
+  "summary": "20 passed in 3.54s | 7 passed in 29.65s",
+  "wall_s": 35.4
+ },
+ "every indoor room hears the weather outside, asked or not (incorrectly audible indoor weather)": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_an_indoor_room_without_the_setting_is_as_it_was",
+   "test_turning_the_setting_off_again_is_the_room_as_it_was",
+   "test_the_switch_off_is_the_cottage_as_it_was"
+  ],
+  "summary": "2 failed, 18 passed in 3.93s | 1 failed, 6 passed in 30.68s",
+  "wall_s": 36.9
+ },
+ "the setting works outdoors too": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_outdoors_the_weather_is_heard_as_before_whatever_the_setting"
+  ],
+  "summary": "1 failed, 19 passed in 3.91s",
+  "wall_s": 4.8
+ },
+ "indoors the rain is still taken from the particles on screen (none: the weather is lost)": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_a_calm_room_has_no_wind_outside_and_a_room_with_no_sound_has_nothing_to_play",
+   "test_an_indoor_room_that_asks_hears_its_own_rain_and_wind_quietly",
+   "test_going_in_and_out_and_playing_and_stopping_leave_no_player_behind",
+   "test_loading_a_save_straight_into_the_room_sounds_as_walking_into_it_does",
+   "test_particles_the_game_cant_use_mean_no_rain_from_outside_and_nothing_raised",
+   "test_the_ambience_volume_and_muting_apply_as_ever",
+   "test_turning_the_setting_off_again_is_the_room_as_it_was",
+   "test_walking_in_the_rain_carries_on_and_eases_down_and_up_again_on_the_way_out",
+   "test_in_the_game_alone_the_walk_a_save_made_indoors_and_a_start_indoors_agree",
+   "test_play_and_stop_leave_no_player_behind_wherever_the_play_test_starts",
+   "test_played_from_studio_the_weather_follows_in_through_the_door_and_out"
+  ],
+  "summary": "8 failed, 12 passed in 3.91s | 3 failed, 4 passed in 30.07s",
+  "wall_s": 36.2
+ },
+ "the last room's rain outside is kept when this room's can't be read": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_particles_the_game_cant_use_mean_no_rain_from_outside_and_nothing_raised"
+  ],
+  "summary": "1 failed, 19 passed in 3.87s",
+  "wall_s": 4.8
+ },
+ "the weather is not quieter indoors": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_a_calm_room_has_no_wind_outside_and_a_room_with_no_sound_has_nothing_to_play",
+   "test_an_indoor_room_that_asks_hears_its_own_rain_and_wind_quietly",
+   "test_loading_a_save_straight_into_the_room_sounds_as_walking_into_it_does",
+   "test_particles_the_game_cant_use_mean_no_rain_from_outside_and_nothing_raised",
+   "test_rain_or_wind_taken_out_of_the_room_stops_being_heard",
+   "test_the_ambience_volume_and_muting_apply_as_ever",
+   "test_turning_the_setting_off_again_is_the_room_as_it_was",
+   "test_walking_in_the_rain_carries_on_and_eases_down_and_up_again_on_the_way_out",
+   "test_in_the_game_alone_the_walk_a_save_made_indoors_and_a_start_indoors_agree",
+   "test_play_and_stop_leave_no_player_behind_wherever_the_play_test_starts",
+   "test_played_from_studio_the_weather_follows_in_through_the_door_and_out"
+  ],
+  "summary": "8 failed, 12 passed in 3.93s | 3 failed, 4 passed in 31.21s",
+  "wall_s": 37.4
+ },
+ "only the rain is quieter indoors": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_an_indoor_room_that_asks_hears_its_own_rain_and_wind_quietly",
+   "test_particles_the_game_cant_use_mean_no_rain_from_outside_and_nothing_raised",
+   "test_rain_or_wind_taken_out_of_the_room_stops_being_heard",
+   "test_walking_in_the_rain_carries_on_and_eases_down_and_up_again_on_the_way_out",
+   "test_in_the_game_alone_the_walk_a_save_made_indoors_and_a_start_indoors_agree",
+   "test_played_from_studio_the_weather_follows_in_through_the_door_and_out"
+  ],
+  "summary": "4 failed, 16 passed in 3.96s | 2 failed, 5 passed in 30.17s",
+  "wall_s": 36.4
+ },
+ "each room has its own weather loops (a second copy at every door)": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_a_calm_room_has_no_wind_outside_and_a_room_with_no_sound_has_nothing_to_play",
+   "test_an_indoor_room_that_asks_hears_its_own_rain_and_wind_quietly",
+   "test_an_indoor_room_without_the_setting_is_as_it_was",
+   "test_going_in_and_out_and_playing_and_stopping_leave_no_player_behind",
+   "test_loading_a_save_straight_into_the_room_sounds_as_walking_into_it_does",
+   "test_outdoors_the_weather_is_heard_as_before_whatever_the_setting",
+   "test_particles_the_game_cant_use_mean_no_rain_from_outside_and_nothing_raised",
+   "test_rain_or_wind_taken_out_of_the_room_stops_being_heard",
+   "test_the_last_rooms_rain_does_not_follow_into_a_room_with_none_set",
+   "test_turning_the_setting_off_again_is_the_room_as_it_was",
+   "test_walking_in_the_rain_carries_on_and_eases_down_and_up_again_on_the_way_out",
+   "test_in_the_game_alone_the_walk_a_save_made_indoors_and_a_start_indoors_agree",
+   "test_play_and_stop_leave_no_player_behind_wherever_the_play_test_starts",
+   "test_played_from_studio_the_weather_follows_in_through_the_door_and_out",
+   "test_the_switch_off_is_the_cottage_as_it_was"
+  ],
+  "summary": "11 failed, 9 passed in 3.99s | 4 failed, 3 passed in 30.84s",
+  "wall_s": 37.1
+ },
+ "a rain effect switched off in the room still counts": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_no_rain_is_invented_where_none_is_set"
+  ],
+  "summary": "1 failed, 19 passed in 4.02s",
+  "wall_s": 5.0
+ },
+ "the setting is on unless set (rooms made before this change)": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_studio_is_told_what_is_heard_or_why_nothing_is"
+  ],
+  "summary": "1 failed, 19 passed in 4.17s",
+  "wall_s": 5.2
+ },
+ "the setting may be anything": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_an_ai_tool_sets_it_and_it_is_undone_redone_saved_and_read_back",
+   "test_the_op_sets_it_and_off_is_no_setting_at_all",
+   "test_the_setting_is_off_unless_set_and_checked_with_a_reason"
+  ],
+  "summary": "3 failed, 17 passed in 4.05s",
+  "wall_s": 5.0
+ },
+ "the op writes off as a setting": {
+  "file": "engine/project_ops.py",
+  "caught": true,
+  "failing": [
+   "test_an_ai_tool_sets_it_and_it_is_undone_redone_saved_and_read_back",
+   "test_the_op_sets_it_and_off_is_no_setting_at_all"
+  ],
+  "summary": "2 failed, 18 passed in 4.05s",
+  "wall_s": 5.0
+ },
+ "the op drops the setting while no sound is chosen": {
+  "file": "engine/project_ops.py",
+  "caught": true,
+  "failing": [
+   "test_studio_is_told_what_is_heard_or_why_nothing_is",
+   "test_the_op_sets_it_and_off_is_no_setting_at_all",
+   "test_in_the_game_alone_the_walk_a_save_made_indoors_and_a_start_indoors_agree",
+   "test_play_and_stop_leave_no_player_behind_wherever_the_play_test_starts",
+   "test_played_from_studio_the_weather_follows_in_through_the_door_and_out",
+   "test_rain_and_wind_set_in_the_cottage_are_its_weather_outside",
+   "test_the_switch_off_is_the_cottage_as_it_was",
+   "test_turned_on_with_no_weather_set_it_says_why_nothing_is_heard"
+  ],
+  "summary": "2 failed, 18 passed in 3.98s | 6 failed, 1 passed in 30.21s",
+  "wall_s": 36.4
+ },
+ "Studio says rain is heard though it has no sound": {
+  "file": "engine/project_ops.py",
+  "caught": true,
+  "failing": [
+   "test_studio_is_told_what_is_heard_or_why_nothing_is"
+  ],
+  "summary": "1 failed, 19 passed in 4.03s",
+  "wall_s": 5.0
+ },
+ "Studio says the weather is heard in an outdoor room that has the setting": {
+  "file": "engine/project_ops.py",
+  "caught": true,
+  "failing": [
+   "test_studio_is_told_what_is_heard_or_why_nothing_is"
+  ],
+  "summary": "1 failed, 19 passed in 3.95s",
+  "wall_s": 4.9
+ },
+ "the Sound panel doesn't offer the switch in an indoor room": {
+  "file": "engine/studio_sound.py",
+  "caught": true,
+  "failing": [
+   "test_in_the_game_alone_the_walk_a_save_made_indoors_and_a_start_indoors_agree",
+   "test_play_and_stop_leave_no_player_behind_wherever_the_play_test_starts",
+   "test_played_from_studio_the_weather_follows_in_through_the_door_and_out",
+   "test_rain_and_wind_set_in_the_cottage_are_its_weather_outside",
+   "test_the_sound_panel_says_what_each_room_hears",
+   "test_the_switch_off_is_the_cottage_as_it_was",
+   "test_turned_on_with_no_weather_set_it_says_why_nothing_is_heard"
+  ],
+  "summary": "20 passed in 3.49s | 7 errors in 12.89s",
+  "wall_s": 18.4
+ },
+ "the Sound panel doesn't say what is heard": {
+  "file": "engine/studio_sound.py",
+  "caught": true,
+  "failing": [
+   "test_rain_and_wind_set_in_the_cottage_are_its_weather_outside",
+   "test_the_sound_panel_says_what_each_room_hears",
+   "test_turned_on_with_no_weather_set_it_says_why_nothing_is_heard"
+  ],
+  "summary": "20 passed in 3.55s | 3 failed, 4 passed in 30.29s",
+  "wall_s": 36.1
+ }
+}

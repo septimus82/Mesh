@@ -1,0 +1,28 @@
+{
+ "export_code": 0,
+ "export_tail": "[Mesh][Export] OK (1077 files, 11,699,988 bytes)",
+ "sounds_in_bundle": {
+  "assets/ambience/rain_loop.wav": true,
+  "assets/ambience/wind_loop.wav": true
+ },
+ "bundle_run": {
+  "engine_from": "OUT\\game_export\\engine\\__init__.py",
+  "master_volume": 0.0,
+  "village": {
+   "room": "start.json",
+   "rain_on_screen": 1,
+   "rain": 0.5994,
+   "wind": 0.3853
+  },
+  "cottage": {
+   "room": "cottage.json",
+   "rain_on_screen": 0,
+   "rain": 0.2106,
+   "wind": 0.1284
+  },
+  "registered": 2,
+  "unplayable": [],
+  "registered_after_close": 0,
+  "engine_is_the_bundles": true
+ }
+}

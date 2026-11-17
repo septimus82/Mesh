@@ -1,0 +1,228 @@
+{
+ "baseline_engine_90208d39": [
+  {
+   "indoors": "off",
+   "village": {
+    "updates_timed": 2000,
+    "mean_us": 20.13,
+    "median_us": 18.0,
+    "p95_us": 27.3,
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "cottage": {
+    "updates_timed": 2000,
+    "mean_us": 17.49,
+    "median_us": 16.0,
+    "p95_us": 25.5,
+    "loops": [
+     "weather:wind"
+    ]
+   },
+   "players_registered": 1,
+   "players_registered_after_close": 0
+  },
+  {
+   "indoors": "off",
+   "village": {
+    "updates_timed": 2000,
+    "mean_us": 19.23,
+    "median_us": 17.5,
+    "p95_us": 26.7,
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "cottage": {
+    "updates_timed": 2000,
+    "mean_us": 17.34,
+    "median_us": 15.7,
+    "p95_us": 24.8,
+    "loops": [
+     "weather:wind"
+    ]
+   },
+   "players_registered": 1,
+   "players_registered_after_close": 0
+  },
+  {
+   "indoors": "off",
+   "village": {
+    "updates_timed": 2000,
+    "mean_us": 19.24,
+    "median_us": 17.5,
+    "p95_us": 26.3,
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "cottage": {
+    "updates_timed": 2000,
+    "mean_us": 17.0,
+    "median_us": 15.7,
+    "p95_us": 24.5,
+    "loops": [
+     "weather:wind"
+    ]
+   },
+   "players_registered": 1,
+   "players_registered_after_close": 0
+  }
+ ],
+ "this_build_cottage_not_asking": [
+  {
+   "indoors": "off",
+   "village": {
+    "updates_timed": 2000,
+    "mean_us": 19.66,
+    "median_us": 17.7,
+    "p95_us": 26.8,
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "cottage": {
+    "updates_timed": 2000,
+    "mean_us": 18.02,
+    "median_us": 16.3,
+    "p95_us": 26.3,
+    "loops": [
+     "weather:wind"
+    ]
+   },
+   "players_registered": 1,
+   "players_registered_after_close": 0
+  },
+  {
+   "indoors": "off",
+   "village": {
+    "updates_timed": 2000,
+    "mean_us": 19.38,
+    "median_us": 17.6,
+    "p95_us": 26.8,
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "cottage": {
+    "updates_timed": 2000,
+    "mean_us": 17.32,
+    "median_us": 15.8,
+    "p95_us": 24.7,
+    "loops": [
+     "weather:wind"
+    ]
+   },
+   "players_registered": 1,
+   "players_registered_after_close": 0
+  },
+  {
+   "indoors": "off",
+   "village": {
+    "updates_timed": 2000,
+    "mean_us": 19.59,
+    "median_us": 17.8,
+    "p95_us": 26.9,
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "cottage": {
+    "updates_timed": 2000,
+    "mean_us": 17.51,
+    "median_us": 16.0,
+    "p95_us": 25.0,
+    "loops": [
+     "weather:wind"
+    ]
+   },
+   "players_registered": 1,
+   "players_registered_after_close": 0
+  }
+ ],
+ "this_build_cottage_hears_outside": [
+  {
+   "indoors": "on",
+   "village": {
+    "updates_timed": 2000,
+    "mean_us": 19.23,
+    "median_us": 17.3,
+    "p95_us": 26.8,
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "cottage": {
+    "updates_timed": 2000,
+    "mean_us": 16.44,
+    "median_us": 15.4,
+    "p95_us": 22.3,
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "players_registered": 2,
+   "players_registered_after_close": 0
+  },
+  {
+   "indoors": "on",
+   "village": {
+    "updates_timed": 2000,
+    "mean_us": 19.19,
+    "median_us": 17.4,
+    "p95_us": 26.7,
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "cottage": {
+    "updates_timed": 2000,
+    "mean_us": 15.97,
+    "median_us": 15.1,
+    "p95_us": 22.1,
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "players_registered": 2,
+   "players_registered_after_close": 0
+  },
+  {
+   "indoors": "on",
+   "village": {
+    "updates_timed": 2000,
+    "mean_us": 19.35,
+    "median_us": 17.3,
+    "p95_us": 26.7,
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "cottage": {
+    "updates_timed": 2000,
+    "mean_us": 16.12,
+    "median_us": 15.1,
+    "p95_us": 22.8,
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "players_registered": 2,
+   "players_registered_after_close": 0
+  }
+ ],
+ "note": "The starter village (steady rain, strong wind) and its cottage, the player standing; 2,000 soundscape updates timed in each room per run; runs alternated baseline / not asking / hears outside. players_registered is read in the cottage."
+}
