@@ -1,0 +1,98 @@
+{
+ "A structures": {
+  "original": "crate",
+  "AI proposal (preview)": [
+   "Village: moves structure 'crate' (12.5 m, 28.1 m) -> (12.5 m, 28.1 m, turned 90 degrees)"
+  ],
+  "based on": "1",
+  "replacement": "crate_3",
+  "replacement before accept": {
+   "id": "crate_3",
+   "model": "assets/models/crate.glb",
+   "x": 1200.0,
+   "y": 900.0
+  },
+  "accept": {
+   "ok": false,
+   "reason": "conflict",
+   "conflict at": [
+    "rooms/start/settings/hd2d/structures/#crate/rotation"
+   ]
+  },
+  "replacement after": {
+   "id": "crate_3",
+   "model": "assets/models/crate.glb",
+   "x": 1200.0,
+   "y": 900.0
+  }
+ },
+ "B rivers": {
+  "original": "river",
+  "AI proposal (preview)": [
+   "Village: changes river 'river' (passable)"
+  ],
+  "replacement": "river-2",
+  "replacement before accept": {
+   "id": "river-2",
+   "points": [
+    [
+     200.0,
+     1300.0,
+     48.0,
+     24.0
+    ],
+    [
+     700.0,
+     1300.0,
+     48.0,
+     24.0
+    ]
+   ]
+  },
+  "accept": {
+   "ok": false,
+   "reason": "conflict",
+   "conflict at": [
+    "rooms/start/settings/hd2d/rivers/#river/passable"
+   ]
+  },
+  "replacement after": {
+   "id": "river-2",
+   "points": [
+    [
+     200.0,
+     1300.0,
+     48.0,
+     24.0
+    ],
+    [
+     700.0,
+     1300.0,
+     48.0,
+     24.0
+    ]
+   ]
+  }
+ },
+ "C dialogue lines": {
+  "talker": "start_elder",
+  "original": "line_2",
+  "AI proposal (preview)": [
+   "Village: 'Elder' conversation line 'line_2' speaker: (none) -> 'Ghost'"
+  ],
+  "replacement": "line_3",
+  "replacement before accept": {
+   "text": "The ferry runs at dawn."
+  },
+  "accept": {
+   "ok": false,
+   "reason": "conflict",
+   "conflict at": [
+    "rooms/start/entities/#start_elder/behaviour_config/Dialogue/dialogue/nodes/line_2/speaker"
+   ]
+  },
+  "replacement after": {
+   "text": "The ferry runs at dawn."
+  }
+ }
+}

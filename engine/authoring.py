@@ -134,7 +134,8 @@ def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str
         bound = _bind(func, args, scene, room, project, index, name)
         if pins is not None:
             pins.append(_pinned(change, room, bound))
-        result = func(**bound)
+        with ops.in_room(room):  # (#462 R3: the structures, rivers and lines it makes avoid ids theirs had there)
+            result = func(**bound)
         new_scene, made = (result if isinstance(result, tuple) else (result, None))
         project.edit_scene(lambda _s: new_scene, room)
         return made if isinstance(made, (str, int)) else None

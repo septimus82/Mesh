@@ -36,8 +36,10 @@ UNDO_LIMIT = 100
 _LOG = get_logger(__name__)
 
 
-def _ids(room: Doc) -> set[str]:
-    return {str(e["id"]) for e in ops.entities(room) if e.get("id")}
+def _ids(key: str, room: Doc) -> set[str]:
+    """Its objects' ids, and its structures', rivers' and conversation lines' with what they are unique among (#462 R3:
+    ``project_ops.scoped_ids``): every id a room's thing has had this session is kept, never given to another."""
+    return {str(e["id"]) for e in ops.entities(room) if e.get("id")} | ops.scoped_ids(key, room)
 
 
 def _copy(doc: Any) -> Any:
@@ -208,7 +210,7 @@ class Project:
                 self._seen_on_disk[self.path(key)] = path.stat().st_mtime
             with ops.retired_ids(()):  # (an older room's missing ids are filled in as always, whenever it is read)
                 self.scenes[key] = ops.ensure_entity_ids(raw, key)
-            self.ids_seen.update(_ids(self.scenes[key]))
+            self.ids_seen.update(_ids(key, self.scenes[key]))
             if key not in self._as_read:  # (the copy every undo step holds too, until the room is first changed)
                 self._as_read[key] = self._freeze(key, self.scenes[key])
         return self.scenes[key]
@@ -217,7 +219,7 @@ class Project:
         """Keep an edited room, the shared player split back out of it (its definition may have changed)."""
         stored, definition = ops.split_players(doc, player_ids, self.player)
         self.scenes[key] = stored
-        self.ids_seen.update(_ids(stored))  # (#462 S1-ID: what it made, never given to another object)
+        self.ids_seen.update(_ids(key, stored))  # (#462 S1-ID, R3: what it made, never given to another object)
         self.dirty.add(key)
         if definition is not None and definition != self.player:
             self.player, self.player_dirty = definition, True
@@ -386,8 +388,8 @@ class Project:
     def _record(self, before: _State, uses: str | None = None) -> None:
         """``before`` is an undo step now (outside a transaction). ``uses``: a map file the edit being made uses (its
         room isn't stored yet), never released here as unused (#462 S4)."""
-        for room in before.scenes.values():  # (#462 S1-ID: every state an edit leaves, whatever wrote it, even each
-            self.ids_seen.update(_ids(room))  # step of a batch: none of its ids is given to another object)
+        for key, room in before.scenes.items():  # (#462 S1-ID: every state an edit leaves, whatever wrote it, even
+            self.ids_seen.update(_ids(key, room))  # each step of a batch: none of its ids is given to another object)
         if self._tx_depth:
             return  # the transaction records once, at its end
         self._undo.append(before)
@@ -452,7 +454,7 @@ class Project:
         key = key or self.current
         before = self._snapshot()
         player_ids = ops.shared_player_ids(self._room(key))
-        with ops.retired_ids(self.ids_seen):
+        with ops.retired_ids(self.ids_seen), ops.in_room(key):  # (#462 R3: what it makes in this room)
             updated = change(self.scene(key))
         self._record(before)
         self._store(key, updated, player_ids)
