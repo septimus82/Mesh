@@ -989,6 +989,12 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         stop_live_bridge = getattr(editor, "stop_live_bridge", None) if editor is not None else None
         if callable(stop_live_bridge):
             stop_live_bridge()
+        release_project = getattr(getattr(self, "studio", None), "release_project", None)
+        if callable(release_project):
+            release_project()  # (#462 R2: Mesh Studio's session ends and the project is let go, however it closed)
+        held = getattr(self, "project_ownership", None)
+        if held is not None:
+            held.release()  # (the launch's own hold, for an editor that isn't Studio)
         self._stop_asset_hot_reload_watcher()
         audio = getattr(self, "audio", None)
         if audio is not None and callable(getattr(audio, "shutdown", None)):

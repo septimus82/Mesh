@@ -54,11 +54,19 @@ same for any MCP client.
 **When it can't be told whether Studio has the project open (F1):** the project has a session record (`.mesh/live_session.json`) that can't be read or verified. For example, Studio didn't answer, timed out, or answered for another session or folder. In that case these tools write and create nothing, and they don't offer the files as current. They answer `reason: "studio_session_uncertain"`, with `problem` (why), `discovery` (the record's path) and what to do:
 
 - **Studio is open:** make sure it's responding, then try again.
-- **Studio isn't running:** open the project in Mesh Studio once, which replaces its leftover record, or delete the record. Then try again.
+- **Studio isn't running:** open the project in Mesh Studio once, which replaces its leftover record, or remove the record with `mesh author recover`. Then try again.
+
+**One editor owns a project at a time (#462 R2).** Whoever writes a project owns it while it does: Mesh Studio from before it reads the project until it has closed, and a tool writing the files directly for that one write. Ownership is an operating-system lock on `.mesh/owner.lock`, held by the running process, so it works across processes and is gone the moment its process is, however it ended. What follows:
+
+- **A second Mesh Studio on the same project is refused** with a message, before it opens a window. The first one's session record and unsaved work are untouched, and closing the second changes nothing: changes still go to the first for review.
+- **A Studio that crashed** no longer owns the project, but its session record stays. The answer is still `studio_session_uncertain`, and says that no editor has the project open now. Nothing is written until an editor opens the project (that replaces the record) or `mesh author recover` removes it. `recover` owns the project while it does so: if an editor has the project open, it removes nothing.
+- **A Studio that is running but can't be confirmed** (frozen, or its record damaged) still owns the project. The answer says so, and says not to delete its record.
+- **A Studio with its live session turned off** (`MESH_STUDIO_NO_AI_BRIDGE`), or one still starting, owns the project with no record: `problem: "owned_without_session"`. Nothing is written or read as current.
+- **A direct write owns the project** from before it reads the files until they are saved. A Studio opened meanwhile waits a moment for it and then opens on the files as written. If a Studio got there first, the write is refused (`studio_open`); if another tool is writing, `project_busy`.
 
 **When another editor (not Mesh Studio) has the project open:** the file-writing tools (`apply_changes`, `apply_ops`, `create_scene`) and `read_project` refuse with `reason: "other_editor_open"`. That editor's unsaved edits aren't in the files, and it takes no proposals. To go on, close it, or open the project in Mesh Studio.
 
-Only a project with no session record at all is changed directly. `apply_changes` checks again just before it writes. A proposal that fails is never written to the files instead.
+Only a project with no session record at all, and no owner, is changed directly, and `apply_changes` owns it while it writes. A proposal that fails is never written to the files instead.
 
 **When Studio is busy (#462 S3):** each request waits for Studio's main thread, up to about 5 s. Every change has a `request_id` in its answer. Two answers mean the deadline passed, and they mean different things:
 

@@ -28,6 +28,13 @@ one's outcome, and the work never runs twice. With anything different it is refu
 cancelled request stays cancelled: try again with a new id. Finished and cancelled requests are remembered for
 ``REQUESTS_KEPT_SECONDS``, at most ``REQUESTS_KEPT`` of them; queued and started ones until they end. GET requests
 only read: they get the same deadline and cancellation, but no id, status or memory.
+
+**Whose record it is (#462 R2).** The session record (``.mesh/live_session.json``) tells outside tools how to reach
+the editor that has the project open. Only the project's owner (``engine.editor.project_ownership``: an
+operating-system lock, one holder at a time across processes) writes or removes it: ``start`` owns the project
+before anything else (given Mesh Studio's ownership, or taking its own), and refuses (``OwnedElsewhere``) if
+another editor has it. A second editor therefore never replaces the first one's record, and closing never removes
+another's.
 """
 
 from __future__ import annotations
@@ -48,6 +55,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlsplit
 
+from engine.editor import project_ownership
 from engine.logging_tools import get_logger
 
 SESSION_SCHEMA_VERSION = 1
@@ -143,10 +151,15 @@ class EditorLiveSessionBridge:
     until the editor main/update thread calls :meth:`drain_pending`.
     """
 
-    def __init__(self, editor: Any, workspace_root: str | Path, *, request_timeout: float = 5.0) -> None:
+    def __init__(self, editor: Any, workspace_root: str | Path, *, request_timeout: float = 5.0,
+                 ownership: project_ownership.Ownership | None = None) -> None:
+        """``ownership``: the editor's own hold on the project (Mesh Studio takes it before it reads the project);
+        None: ``start`` takes it, and ``stop`` lets it go."""
         self.editor = editor
         self.workspace_root = Path(workspace_root).resolve()
         self.request_timeout = float(request_timeout)
+        self._ownership = ownership
+        self._owns_here = False  # this bridge took the project itself, so it lets it go when it stops
         self.session_id = secrets.token_urlsafe(32)
         self.token = secrets.token_urlsafe(32)
         self.started_at = time.time()
@@ -166,8 +179,42 @@ class EditorLiveSessionBridge:
         return self._info
 
     def start(self, *, write_discovery: bool = True) -> LiveSessionInfo:
+        """Own the project, then serve and publish the session record. Raises ``project_ownership.OwnedElsewhere``
+        if another editor has the project (nothing is started, and its record is left as it is). If anything after
+        that fails, nothing is left behind: no server, no record, no hold on the project."""
         if self._server is not None:
             return self.info
+        if self._ownership is None or not self._ownership.held:
+            kind = (project_ownership.STUDIO if getattr(self.editor, "host_kind", "") == project_ownership.STUDIO
+                    else project_ownership.EDITOR)
+            self._ownership = project_ownership.acquire(self.workspace_root, kind, wait=2.0)
+            self._owns_here = True
+        try:
+            return self._start_owned(write_discovery)
+        except BaseException:
+            self._give_up_start()
+            raise
+
+    def _give_up_start(self) -> None:
+        server, self._server = self._server, None
+        if server is not None:
+            if self._thread is not None and self._thread.is_alive():
+                server.shutdown()
+            server.server_close()
+        self._thread = None
+        if self._info is not None:
+            delete_live_session_file(self.workspace_root, self.session_id)
+            self._info = None
+        if getattr(self.editor, "live_bridge", None) is self:
+            setattr(self.editor, "live_bridge", None)
+        self._release_if_owned_here()
+
+    def _release_if_owned_here(self) -> None:
+        if self._owns_here and self._ownership is not None:
+            self._ownership.release()
+            self._ownership, self._owns_here = None, False
+
+    def _start_owned(self, write_discovery: bool) -> LiveSessionInfo:
         handler_cls = self._build_handler_class()
         server = ThreadingHTTPServer((LOOPBACK_HOST, 0), handler_cls)
         self._server = server
@@ -221,10 +268,11 @@ class EditorLiveSessionBridge:
             delete_live_session_file(self.workspace_root, self.session_id)
         if getattr(self.editor, "live_bridge", None) is self:
             setattr(self.editor, "live_bridge", None)
+        self._release_if_owned_here()  # (last: the record is gone before the project is anyone else's)
 
     def refresh_discovery(self) -> None:
-        if self._info is None:
-            return
+        if self._info is None or self._ownership is None or not self._ownership.held:
+            return  # (#462 R2: only the project's owner writes its record)
         self._info = LiveSessionInfo(
             schema_version=self._info.schema_version,
             workspace_root=self._info.workspace_root,

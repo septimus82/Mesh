@@ -266,7 +266,14 @@ class Launcher:
             self.opening["log"].close()
             log_path, self.opening = self.opening["log_path"], None
             self.screen = "home"
-            self.say(f"Mesh Studio closed straight away (exit code {proc.returncode}). Details: {log_path}", ok=False)
+            from engine.editor.project_ownership import EXIT_OPEN_ELSEWHERE  # noqa: PLC0415
+
+            if proc.returncode == EXIT_OPEN_ELSEWHERE:  # (#462 R2: one Mesh Studio per project)
+                self.say("That project is already open in Mesh Studio. Use the window that has it: a project can be "
+                         "open in one Mesh Studio at a time.", ok=False)
+            else:
+                self.say(f"Mesh Studio closed straight away (exit code {proc.returncode}). Details: {log_path}",
+                         ok=False)
         elif _has_window(proc.pid) or time.time() - self.opening["started"] > 60:
             self.opening["log"].close()
             self.window.close()  # Studio is up; the launcher's job is done

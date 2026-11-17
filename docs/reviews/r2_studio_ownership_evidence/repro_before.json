@@ -1,0 +1,61 @@
+{
+ "1 Studio A opens": {
+  "ready": true,
+  "session": "7u5tHrLN"
+ },
+ "1 A holds unsaved work": {
+  "names": [
+   "Player",
+   "Unsaved Warden"
+  ],
+  "unsaved": true,
+  "pending": [],
+  "session_id": "7u5tHrLNnb0Jo9_fIvrX3-GcgBa91-VR-6VWh7nb_jE"
+ },
+ "2 Studio B opens the same project": {
+  "ready": true,
+  "refused": null,
+  "session": "aXPBZbgY"
+ },
+ "3 whose session is discovered now": {
+  "state": "live",
+  "session_id": "aXPBZbgYyObgOKX_HtKUs2lqTUA06v0ynuprZURsmdo",
+  "problem": null,
+  "is_A": false
+ },
+ "4 B closed; A still open; what outside tools see": {
+  "state": "none",
+  "session_id": null,
+  "problem": null,
+  "is_A": false
+ },
+ "6-7 an outside tool applies a change": {
+  "ok": true,
+  "source": "files"
+ },
+ "7 the room on disk": [
+  "None",
+  "Sexton"
+ ],
+ "7 Studio A, in memory": {
+  "names": [
+   "Player",
+   "Unsaved Warden"
+  ],
+  "unsaved": true,
+  "pending": [],
+  "session_id": "7u5tHrLNnb0Jo9_fIvrX3-GcgBa91-VR-6VWh7nb_jE"
+ },
+ "8 A saves": {
+  "saved": [
+   "packs/core_regions/scenes/start.json"
+  ]
+ },
+ "8 the room on disk after A's save": [
+  "None",
+  "Unsaved Warden"
+ ],
+ "8 backups A's save had to make": [
+  "packs/core_regions/scenes/start.json.outside-change.bak"
+ ]
+}
