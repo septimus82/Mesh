@@ -423,7 +423,28 @@ def test_many_may_ask_at_once_and_an_owner_being_made_waits_for_them(root: Path)
     for thread in askers:
         thread.join()
     assert len(answers) == 1600 and owners > 0
-    assert all(a is None or a.get("kind") == project_ownership.STUDIO for a in answers)  # never "someone, unknown"
+    # Every answer is "nobody" or an owner. An owner caught between taking the project and writing its note (or
+    # between clearing it and letting go) is an owner whose note can't be read: {}. How often that is seen depends
+    # on timing (once in 1,600 on a CI runner), so it isn't asserted here; the test below pins it without a race.
+    assert all(a is None or not a or a.get("kind") == project_ownership.STUDIO for a in answers)
+
+
+def test_an_owner_with_no_note_yet_is_an_owner_and_asking_waits_a_moment_for_its_note(root: Path) -> None:
+    project_ownership.acquire(root, project_ownership.STUDIO).release()  # (the lock file exists, with no note in it)
+    owner = os.open(project_ownership.lock_path(root), os.O_RDWR | getattr(os, "O_BINARY", 0))
+    writes = threading.Timer(0.1, lambda: os.write(owner, b'{"kind": "mesh_studio"}'))
+    try:
+        assert project_ownership._lock(owner, exclusive=True)  # an owner, at the instant it took the project
+        assert project_ownership.owned(root, wait=0.0) == {}  # owned: by someone whose note can't be read yet
+        with pytest.raises(project_ownership.OwnedElsewhere) as refused:
+            project_ownership.acquire(root, project_ownership.AUTHORING)
+        assert refused.value.holder == {}  # (and refused as owned, whoever it is)
+        writes.start()
+        assert project_ownership.owned(root, wait=10.0) == {"kind": "mesh_studio"}  # asks again until it's there
+    finally:
+        writes.cancel()
+        writes.join()
+        os.close(owner)
 
 
 def test_someone_asking_is_not_an_owner_to_anyone_else_who_asks(root: Path) -> None:

@@ -182,7 +182,24 @@ Five tests, none run locally before the push (the brief asked for targeted local
 | gpu, both systems | `test_runtime_debugger_gpu.py`, `test_ai_playtest_gpu.py` (1 each) | the scenarios' "Studio closes" (above) |
 
 The other 20 cross-process tests and both real-window tests passed on Linux and Windows in those runs. Corrected
-in the next commit. Not rerun.
+in the next commit (`b51c1dc7`). Not rerun.
+
+**The second CI run failed too, and is kept** (head `b51c1dc7`: CI 44110970103; one job, Windows pytest shard 2/2,
+1 failed of 6,001). `test_many_may_ask_at_once_and_an_owner_being_made_waits_for_them` asserted that, while owners
+are made and let go as fast as possible, nobody asking is ever told "owned, by someone whose note can't be read"
+(`{}`). That is a real answer, and the documented one: an owner holds the lock for an instant before its note is
+written, and for an instant after clearing it. `owned` asks again for up to a quarter of a second to get the note;
+on that runner one of 1,600 asks ran out of time. It had passed on Windows in the first run and in every local run.
+
+- Nothing in the product changed. `{}` is an owner to every caller (each tests `is None`, checked again for this),
+  so the answer was never "free": a refusal's wording falls back to "open in Mesh Studio", nothing more.
+- Measured locally (`churn_probe`, 8 askers against owners made in a loop): no `{}` in 32,000 asks at the normal
+  wait; 10 in 32,000 at a fifth of it; 196 in 8,000 with no wait. So it is the wait running out, not a second cause.
+- The assertion was mine, tightened during the fault-injection work to more than the mechanism promises. It now
+  allows `{}` there, and a new test without a race pins what it was reaching for: an owner with no note yet is an
+  owner (to someone asking, and to another owner being made), and asking waits for the note and returns it.
+
+Extended on `b51c1dc7` passed at its first attempt (44110957374: every lane, Linux and Windows). CI not rerun.
 
 ## 8. Limits
 
