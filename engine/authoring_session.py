@@ -80,12 +80,14 @@ def uncertain(state: Doc) -> Doc:
     discovery = str(problem.get("discovery") or "")
     reason, owned = problem.get("reason"), problem.get("owned")
     if owned is False and discovery:  # (#462 R2: nothing owns the project: the editor that left this record is gone)
+        # (the record's own project folder: recovery removes only the record of the project it was given)
+        folder = Path(discovery).parent.parent
         message = (f"No editor has this project open now, but a session record that no editor answers for is in its "
                    f"folder ({problem.get('why')}): its editor crashed or was closed by force, perhaps with unsaved "
                    "work, or the record came with a copy of the project. Nothing was changed. To write the project's "
                    "files again, open the project in Mesh Studio once (that replaces the record), or remove the "
-                   f"record ({discovery}) with `mesh author recover`, which first makes sure nothing has the project "
-                   "open; then try again.")
+                   f"record ({discovery}) with `mesh author recover --project \"{folder}\"`, which first makes sure "
+                   "nothing has that project open; then try again.")
     elif reason == "owned_without_session":
         message = (f"This project is in use: {problem.get('why')}. Nothing was changed, so nothing of its can be "
                    "overwritten. If Mesh Studio is starting, try again in a moment; changes will then go to it for "
@@ -107,7 +109,8 @@ def uncertain(state: Doc) -> Doc:
 
 def recover(root: str | Path = ".") -> Doc:
     """Remove a session record whose editor is gone (#462 R2), so that the project's files can be written again.
-    The project is owned for the moment it takes: if an editor has it open, nothing is removed."""
+    The project is owned for the moment it takes: if an editor has it open, nothing is removed. Only the record of
+    the project at ``root`` is removed, the one project owned here (never another, whatever ``MESH_REPO_ROOT`` says)."""
     try:
         held = project_ownership.acquire(root, project_ownership.AUTHORING, wait=0.5)
     except project_ownership.OwnedElsewhere as owned:

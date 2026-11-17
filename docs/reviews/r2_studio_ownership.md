@@ -4,7 +4,7 @@
 project's files behind the first. Baseline `ad762a2b` (`redesign/visual-editor`). Evidence:
 `docs/reviews/r2_studio_ownership_evidence/`.
 
-**Verdict: READY FOR INDEPENDENT REVIEW.**
+**Verdict: READY FOR RE-REVIEW** (the independent review's recovery-boundary finding is corrected: section 9).
 
 ## 1. The defect, reproduced
 
@@ -94,7 +94,7 @@ and then opens on the files as written; if a Studio got there first, `apply` is 
 replaces the old one. Until then the old record still refuses direct writes: the crashed Studio may have held
 unsaved work the person will want to know about, and a record is never removed to make a write possible.
 `mesh author recover` removes it on purpose; it owns the project while it does, so with an editor open it removes
-nothing.
+nothing. It removes only the record of the project it was given and owns (section 9).
 
 ## 5. Evidence
 
@@ -102,7 +102,8 @@ nothing.
 discovered is A's at every step; the tool's change is proposed to A; nothing on disk changes; A's save makes no
 backup.
 
-**Separate processes** (`tests/test_studio_project_ownership.py`, 21 tests, default lane, both systems in CI):
+**Separate processes** (`tests/test_studio_project_ownership.py`, 21 tests, default lane, both systems in CI;
+26 with the churn note test and the recovery-boundary tests of section 9):
 
 | # in the brief | test |
 |---|---|
@@ -215,3 +216,62 @@ Extended on `b51c1dc7` passed at its first attempt (44110957374: every lane, Lin
 - **Read-only tools that open Studio** on a project (`tooling/scene_snapshot.py`) are refused while a Studio has it.
 - **Not addressed:** R1 (revisions reused across restarts) and R3 (ids reused for structures, rivers, dialogue
   lines).
+
+## 9. Independent review: the recovery boundary
+
+The review found, from the source, that `authoring_session.recover(A)` owned only A but removed the session record
+of A **and** of A's discovery root, `_resolve_discovery_root(A)`. `find_repo_root` returns `MESH_REPO_ROOT` first
+whenever it names a folder with a project marker, so the discovery root can be another project, B.
+
+**Reproduced first, with the production code** (`recover_before.json`, `repro_recover.py.txt`, head `49206ba4`):
+A has a record left by a Studio that crashed; B is open in Mesh Studio itself (a real hidden window, live session
+on) with unsaved work. `mesh author recover --project A` run as its own process with `MESH_REPO_ROOT=B`:
+
+| | before (`49206ba4`) | after |
+|---|---|---|
+| what recover reported removing | A's record **and B's** | A's record only |
+| B's record | deleted | byte-identical |
+| B's ownership | still B's Studio | still B's Studio |
+| outside tools asking about B | `uncertain`, `owned_without_session` | `live`, B's session |
+| an outside change to B | refused, `studio_session_uncertain` | proposed to B, waiting for review |
+| B's unsaved work, B's files | intact, unchanged | intact, unchanged |
+| A afterwards | `none` | `none` |
+
+So the lock kept the failure closed (nothing was written behind B), but one project's repair cut another project's
+running Studio off from outside tools until it was opened again. That is the defect: an action authorised by A's
+ownership changed B.
+
+**Root cause.** `remove_abandoned_session` reused discovery's "where may this project's record be" list (the folder
+given, and its discovery root) as the list of records to delete. Discovery may look in more places than the caller
+owns; removal must not.
+
+**The correction** (smallest; ordinary discovery unchanged):
+
+- `live_session_client.remove_abandoned_session(root)` removes `root`'s own record and nothing else.
+- `authoring_session.uncertain`: when the leftover record it reports belongs to another folder (found through the
+  discovery root), its advice now names that folder: `` `mesh author recover --project "<the record's project>"` ``,
+  so the record can still be recovered, by owning the project it belongs to. Before, it said `mesh author recover`,
+  which (with the correction) would remove nothing.
+
+No second lock is taken; recovery still refuses a project that is owned, and still answers `ownership_unknown`
+when ownership can't be established. Reason codes and answers are unchanged.
+
+**Regressions** (`tests/test_studio_project_ownership.py`, separate Studio processes; the first three fail on
+`49206ba4`, checked by running them against the unchanged production files):
+
+- recovering A never touches B open in Studio, in-process (`MESH_REPO_ROOT=B`) and through `mesh author recover`
+  as its own process: A's record removed, B's record byte-identical, B still owned by its Studio and `live`, an
+  outside change proposed to B with B's unsaved work intact, A then `none` (2 cases);
+- a record found through `MESH_REPO_ROOT` (B's Studio crashed, A has no record): writing A is refused as before, the
+  advice names B, recovering A removes nothing, recovering B removes B's record;
+- recovery refuses a project open in Studio (A) and touches no other (B), `MESH_REPO_ROOT=B`, through the CLI (a
+  guard: it passed before too).
+
+The existing recovery tests (a genuinely abandoned record recovered; refused while a Studio runs; `mesh author
+recover` single-project) are unchanged and pass.
+
+**Local:** the ownership, authoring-session (discovery, policy, session), request-state and repo-root modules, 103
+passed; the real-window ownership tests, 2 passed; ruff and mypy.
+
+**Limits, changed.** A record that is found only through the discovery root is no longer removed by recovering the
+folder that found it; it is removed by recovering its own project, as the refusal says.

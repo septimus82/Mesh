@@ -54,7 +54,7 @@ same for any MCP client.
 **When it can't be told whether Studio has the project open (F1):** the project has a session record (`.mesh/live_session.json`) that can't be read or verified. For example, Studio didn't answer, timed out, or answered for another session or folder. In that case these tools write and create nothing, and they don't offer the files as current. They answer `reason: "studio_session_uncertain"`, with `problem` (why), `discovery` (the record's path) and what to do:
 
 - **Studio is open:** make sure it's responding, then try again.
-- **Studio isn't running:** open the project in Mesh Studio once, which replaces its leftover record, or remove the record with `mesh author recover`. Then try again.
+- **Studio isn't running:** open the project in Mesh Studio once, which replaces its leftover record, or remove the record with `mesh author recover --project <the record's project folder>` (it removes only that project's record, and only while nothing has that project open). Then try again.
 
 **One editor owns a project at a time (#462 R2).** Whoever writes a project owns it while it does: Mesh Studio from before it reads the project until it has closed, and a tool writing the files directly for that one write. Ownership is an operating-system lock on `.mesh/owner.lock`, held by the running process, so it works across processes and is gone the moment its process is, however it ended. What follows:
 

@@ -259,17 +259,16 @@ def _owner(roots: list[Path]) -> dict[str, Any] | None:
 
 
 def remove_abandoned_session(root: str | Path = ".") -> list[str]:
-    """Remove the session record(s) of the project at ``root``, for when the editor that wrote them is gone (#462
-    R2). The caller must own the project (``project_ownership.acquire``): that is the proof that no editor does."""
-    raw_root = Path(root).resolve()
-    removed = []
-    for path in dict.fromkeys(session_file_path(p) for p in (raw_root, _resolve_discovery_root(raw_root))):
-        try:
-            path.unlink()
-            removed.append(str(path))
-        except FileNotFoundError:
-            continue
-    return removed
+    """Remove the session record of the project at ``root``, for when the editor that wrote it is gone (#462 R2).
+    The caller must own that project (``project_ownership.acquire(root, ...)``): that is the proof that no editor
+    does. Only ``root``'s own record: never the discovery root's (``MESH_REPO_ROOT`` or a folder above), which can be
+    another project, one this caller doesn't own and whose Studio may be running."""
+    path = session_file_path(Path(root).resolve())
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return []
+    return [str(path)]
 
 
 def resolved_discovery_root(root: str | Path = ".") -> str:

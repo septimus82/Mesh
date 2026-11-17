@@ -1,0 +1,67 @@
+{
+ "0 markers (find_repo_root honours MESH_REPO_ROOT only at a folder with one)": {
+  "B has config.json": true,
+  "B has pyproject.toml": false
+ },
+ "1 A: a Studio crashed, leaving its record": {
+  "record": {
+   "exists": true,
+   "sha256": "370f1118ff9720b4",
+   "session_id": "DTIjGqvv"
+  },
+  "owned": null
+ },
+ "2 B open in Mesh Studio": {
+  "ready": true,
+  "record": {
+   "exists": true,
+   "sha256": "b78c2e6dcad3a101",
+   "session_id": "8YwN0DZe"
+  },
+  "owned": "mesh_studio",
+  "state": "live",
+  "unsaved": true
+ },
+ "3 mesh author recover --project A, MESH_REPO_ROOT=B": {
+  "exit": 0,
+  "answer": {
+   "ok": true,
+   "removed": [
+    "<OUT>\\project_a\\.mesh\\live_session.json"
+   ]
+  }
+ },
+ "4 B's record after recovering A": {
+  "record": {
+   "exists": true,
+   "sha256": "b78c2e6dcad3a101",
+   "session_id": "8YwN0DZe"
+  },
+  "unchanged": true,
+  "owned": "mesh_studio"
+ },
+ "5 what outside tools see for B": {
+  "state": "live",
+  "problem": null,
+  "owned": null
+ },
+ "6 B still open, with its unsaved work": {
+  "unsaved": true,
+  "has Unsaved Warden": true
+ },
+ "7 an outside change to B": {
+  "ok": true
+ },
+ "7 proposed to B (files untouched)": {
+  "files unchanged": true,
+  "pending in B": [
+   "Changes from an AI"
+  ]
+ },
+ "8 A after recovery": {
+  "record": {
+   "exists": false
+  },
+  "state": "none"
+ }
+}

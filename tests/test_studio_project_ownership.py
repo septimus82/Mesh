@@ -238,6 +238,81 @@ def test_mesh_author_recover_says_what_it_did(root: Path, studios: Any, capsys: 
     assert json.loads(capsys.readouterr().out) == {"ok": True, "removed": []}
 
 
+# ---------------------------------------------------------------- recovery repairs one project, never another
+@pytest.fixture
+def other(tmp_path: Path) -> Path:
+    """A second project, B, beside ``root`` (A)."""
+    path = tmp_path / "other"
+    create_project(path, "Other", template_id="blank")
+    return path
+
+
+def _recover_cli(project: Path, repo_root: Path) -> tuple[int, dict[str, Any]]:
+    """``mesh author recover --project PROJECT`` as its own process, run from a shell where MESH_REPO_ROOT names
+    another project (``repo_root``)."""
+    run = subprocess.run([sys.executable, "-m", "mesh_cli", "author", "recover", "--project", str(project)], cwd=REPO,
+                         capture_output=True, text=True, encoding="utf-8", timeout=120,
+                         env={**os.environ, "MESH_REPO_ROOT": str(repo_root)})
+    answer = json.loads(run.stdout[run.stdout.index("{"):])  # (its answer is the JSON at the end of what it prints)
+    assert isinstance(answer, dict)
+    return run.returncode, answer
+
+
+@pytest.mark.parametrize("how", ["recover", "mesh author recover"])
+def test_recovering_one_project_never_touches_another_project_open_in_studio(
+        root: Path, other: Path, studios: Any, monkeypatch: pytest.MonkeyPatch, how: str) -> None:
+    crashed = studios(root)  # A: a Studio crashed, leaving its record (one that may be recovered)
+    crashed.kill()
+    b = studios(other)  # B: open in Studio, with unsaved work
+    b.ask("edit Unsaved Warden")
+    b_record, b_files = session_file_path(other).read_bytes(), _files(other)
+
+    if how == "recover":  # MESH_REPO_ROOT=B makes B the discovery root of A: it gives no authority over B
+        with monkeypatch.context() as env:
+            env.setenv("MESH_REPO_ROOT", str(other))
+            recovered = authoring_session.recover(root)
+        code = 0 if recovered["ok"] else 1
+    else:
+        code, recovered = _recover_cli(root, other)
+    assert (code, recovered) == (0, {"ok": True, "removed": [str(session_file_path(root))]})  # A's record, only
+
+    assert session_file_path(other).read_bytes() == b_record  # B's record exactly as it was
+    assert (project_ownership.owned(other) or {}).get("kind") == project_ownership.STUDIO  # and B still owns B
+    state = authoring_session.studio_state(other)
+    assert state["state"] == "live" and state["info"]["session_id"] == b.start["session_id"]
+    result = authoring_session.apply(other, ADD_SEXTON)  # outside changes to B still go to B, for review
+    assert result["ok"] and "proposed there" in result["note"] and _files(other) == b_files
+    held = b.ask("state")
+    assert held["unsaved"] and "Unsaved Warden" in held["names"] and held["pending"] == ["Changes from an AI"]
+    assert authoring_session.studio_state(root) == {"state": "none"}  # and A, recovered, may be written again
+    assert b.close() == 0
+
+
+def test_recovery_refuses_a_project_open_in_studio_and_touches_no_other(root: Path, other: Path, studios: Any) -> None:
+    a = studios(root)  # A itself is open
+    b = studios(other)
+    records = {p: session_file_path(p).read_bytes() for p in (root, other)}
+    code, refused = _recover_cli(root, other)
+    assert (code, refused["ok"], refused["reason"]) == (1, False, "project_open")
+    assert {p: session_file_path(p).read_bytes() for p in (root, other)} == records
+    for studio, path in ((a, root), (b, other)):
+        state = authoring_session.studio_state(path)
+        assert state["state"] == "live" and state["info"]["session_id"] == studio.start["session_id"]
+
+
+def test_a_record_found_through_mesh_repo_root_is_recovered_only_by_naming_its_own_project(
+        root: Path, other: Path, studios: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    crashed = studios(other)  # B's Studio crashed; A has no record of its own
+    crashed.kill()
+    monkeypatch.setenv("MESH_REPO_ROOT", str(other))  # (so outside tools asking about A find B's record)
+    refused = authoring_session.apply(root, ADD_SEXTON)
+    assert refused["reason"] == "studio_session_uncertain"  # (ordinary discovery, unchanged: uncertain, refused)
+    assert f'mesh author recover --project "{other.resolve()}"' in refused["message"]  # names B: the record's own project
+    assert authoring_session.recover(root) == {"ok": True, "removed": []}  # recovering A removes nothing of B's
+    assert session_file_path(other).is_file()
+    assert authoring_session.recover(other) == {"ok": True, "removed": [str(session_file_path(other))]}
+
+
 # ---------------------------------------------------------------- a Studio that is running but can't be confirmed
 def _cut_short(path: Path) -> None:
     path.write_text(path.read_text(encoding="utf-8")[:40], encoding="utf-8")
