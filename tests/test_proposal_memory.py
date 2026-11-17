@@ -182,7 +182,7 @@ def test_a_revision_snapshot_the_proposal_was_based_on_is_left_intact(host: Stud
     revision = host.project.revision
     authoring.apply(host.project, _place(600))  # (the person edits since)
     kept = copy.deepcopy(host._snapshots[revision])
-    proposal = _stage(host, _place(700), base_revision=revision)
+    proposal = _stage(host, _place(700), base_revision_id=f"{host.project.session}:{revision}")
     assert proposal.base == kept  # (checked against what the tool read)
     host.reject_proposal(proposal)
     assert proposal.base == {} and host._snapshots[revision] == kept  # (let go of, never emptied)

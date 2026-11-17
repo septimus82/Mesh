@@ -44,8 +44,8 @@ same for any MCP client.
 | Tool | Purpose |
 | --- | --- |
 | `authoring_operations` | Every operation (`place_prefab`, `rename_entity`, `set_dialogue_text`, `add_line`, `set_choice`, `set_show_when`, `paint_tiles`, `add_room`, `link_rooms`, …) with its settings and what it does. Generated from the engine, so it is never out of date. |
-| `read_project(root)` | Every room with its objects and map. If Mesh Studio has the project open, this is what the person sees now (unsaved edits included), with a `revision`. It also includes `last_save`, the person's last save (F3), and `last_reload`, the last hot reload of the room (F7: a refused scene and why, `null` before one; see [debug_diagnostics.md](debug_diagnostics.md#scene-hot-reload-f7)). |
-| `propose_changes(changes, title, base_revision, root)` | Send a batch to the Mesh Studio that has the project open. The person reviews it (top bar **AI**) and accepts or rejects it. Invalid batches are refused at once, with the change and the reason. At most 20 proposals wait for the person at once; more are refused (`too_many_pending`) until some are decided (F10, [reviews/f10_proposal_memory.md](reviews/f10_proposal_memory.md)). |
+| `read_project(root)` | Every room with its objects and map. If Mesh Studio has the project open, this is what the person sees now (unsaved edits included), with a `revision_id` to base proposals on (and `revision`, its number in this Studio session). It also includes `last_save`, the person's last save (F3), and `last_reload`, the last hot reload of the room (F7: a refused scene and why, `null` before one; see [debug_diagnostics.md](debug_diagnostics.md#scene-hot-reload-f7)). |
+| `propose_changes(changes, title, base_revision_id, root)` | Send a batch to the Mesh Studio that has the project open. The person reviews it (top bar **AI**) and accepts or rejects it. Invalid batches are refused at once, with the change and the reason. At most 20 proposals wait for the person at once; more are refused (`too_many_pending`) until some are decided (F10, [reviews/f10_proposal_memory.md](reviews/f10_proposal_memory.md)). |
 | `proposal_status(proposal_id, root)` | `pending`, `accepted` (with the ids it created), `rejected` or `conflict`. |
 | `withdraw_proposal(proposal_id, root)` | Take back a proposal that is still waiting. |
 | `request_status(request_id, root)` | What became of a request that answered `outcome_unknown`: `queued`, `started`, `finished` (with its `result`) or `cancelled` (#462 S3, below). |
@@ -105,12 +105,15 @@ A batch is a list of changes:
 - **`@N`**: the id of the object made by change `N` of the same batch, counting from 0.
 - **All or nothing:** a batch applies completely or not at all, and is one Undo step in the Studio.
 
-**Revisions and conflicts.** Pass the `revision` you read as `base_revision`:
+**Revisions and conflicts.** Pass the `revision_id` you read as `base_revision_id`:
 - If the person changed other things since you read, both sets of changes survive (they paint the floor while you add an NPC).
 - If you both changed the same property, Studio reports a conflict, applies nothing, and the person's version stands. Read again and propose anew.
-- **Studio keeps only the last 30 revisions it was read at.** If yours is no longer kept, the proposal is refused with `reason: "base_revision_unavailable"` and the current `revision`. Nothing is staged, and it is never compared with a newer revision instead (F6), because that would hide the person's changes since. Read again and propose against the new revision.
-- **A `base_revision` that isn't a revision read_project gave** (not a whole number, `true`/`false`, negative or newer than the project) is refused with `reason: "invalid_base_revision"`.
-- **Without a `base_revision`,** the batch is checked against the project as it is now.
+- **Studio keeps only the last 30 revisions it was read at.** If yours is no longer kept, the proposal is refused with `reason: "base_revision_unavailable"` and the current `revision` number. Nothing is staged, and it is never compared with a newer revision instead (F6), because that would hide the person's changes since. Read again and propose against the new revision.
+- **A `base_revision_id` that isn't one read_project gave** (not a string as given, or naming a revision this session hasn't had) is refused with `reason: "invalid_base_revision"`.
+- **A revision of another Studio session or project is refused** (`reason: "revision_from_another_session"`, #462 R1). Revision numbers start again at 0 each time Studio opens a project, so revision 0 read before Studio was closed and reopened (or crashed) is not today's revision 0. `revision_id` carries the session as well as the number, so it can't pass for another session's. Read again and propose against the new `revision_id`.
+- **A bare `base_revision` number is refused** (`reason: "revision_id_required"`), current or not: it can't say which session it was read in. This is a change for clients written before #462 R1: read `revision_id` and send it as `base_revision_id` (the CLI: `mesh author propose --base-revision-id`). A `base_revision` sent with it must name the same revision.
+- No refusal includes the current `revision_id`: you get it by reading the project, with what the person has changed since.
+- **Without a base,** the batch is checked against the project as it is now. Its `proposal.base_revision_id` is then `null`: no base was verified.
 
 **No MCP?** `mesh author ops | read | apply | propose | status` does the same from a command line, with JSON in and out.
 

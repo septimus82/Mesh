@@ -184,7 +184,7 @@ def studio(out: Path, *, export: bool = True) -> dict[str, Any]:
         ai = d.studio.ai
         room = d.studio.project.current
         proposal = ai.stage_proposal_payload({"changes": [{"op": "set_hd2d_post", "room": room, "preset": "moonlight"}],
-                                              "base_revision": d.studio.project.revision})
+                                              "base_revision_id": ai.revision_id()})
         report["ai_staged"] = {"summary": getattr(proposal, "summary", proposal)}
         d.studio.accept_ai(proposal)  # (the person's Accept: applied, the room reloaded, one undo step)
         d.advance(3)
@@ -195,9 +195,9 @@ def studio(out: Path, *, export: bool = True) -> dict[str, Any]:
         d.advance(2)
         report["ai_undone"] = {"stored": _stored(d), "renderer_post": d.renderer.settings.post}
         # an AI proposal against a revision the person then changes too: a conflict, nothing applied
-        old = d.studio.project.revision
+        old = ai.revision_id()
         stale = ai.stage_proposal_payload({"changes": [{"op": "set_hd2d_post", "room": room, "preset": "golden_hour"}],
-                                           "base_revision": old})
+                                           "base_revision_id": old})
         _press(d, "Camera and sun...", lambda w: w.rect.left < 230)  # (accepting showed the inspector)
         d.advance(2)
         _press(d, "Interior warm", _right)

@@ -181,7 +181,7 @@ def run(out: Path) -> int:
         seen = ai("read_project")
         assert seen["source"] == "mesh_studio" and seen["unsaved"], "the AI sees the open, unsaved project"
         memo["base"] = seen["revision"]
-        proposal = ai("propose_changes", title="Add a sexton", base_revision=seen["revision"], changes=[
+        proposal = ai("propose_changes", title="Add a sexton", base_revision_id=seen["revision_id"], changes=[
             {"op": "place_prefab", "prefab": "person", "x": 448, "y": 224},
             {"op": "rename_entity", "entity_id": "@0", "name": "Sexton"}])
         assert proposal["ok"], proposal
@@ -221,7 +221,7 @@ def run(out: Path) -> int:
 
     def s08_ai_adds_dialogue_and_condition() -> dict[str, Any]:
         seen = ai("read_project")
-        proposal = ai("propose_changes", title="The sexton speaks, once the lantern is lit", base_revision=seen["revision"],
+        proposal = ai("propose_changes", title="The sexton speaks, once the lantern is lit", base_revision_id=seen["revision_id"],
                       changes=[
                           {"op": "set_dialogue_text", "entity_id": "Sexton", "text": "Who goes there, so late?"},
                           {"op": "add_line", "entity_id": "Sexton", "text": "Mind the open graves."},
@@ -257,7 +257,7 @@ def run(out: Path) -> int:
         p().wait(lambda s: s["tool"] == "select", "the Select tool")
         p().select("Sexton")
         p().fill("name", "Warden")  # the person renames him...
-        proposal = ai("propose_changes", title="Rename the sexton", base_revision=seen["revision"],  # ...so does the AI
+        proposal = ai("propose_changes", title="Rename the sexton", base_revision_id=seen["revision_id"],  # ...so does the AI
                       changes=[{"op": "rename_entity", "entity_id": "Sexton", "name": "Gravedigger"}])
         assert proposal["ok"], proposal
         memo["conflict"] = proposal["proposal_id"]

@@ -898,7 +898,8 @@ def read_project(root: str = ".") -> dict[str, Any]:
     """Every room of the project with its objects and map, and its Blender ``models`` (HD-2D structures).
 
     If Mesh Studio has it open, this is what the person sees right now (unsaved edits included)
-    plus a ``revision`` to pass to propose_changes as ``base_revision``. Place a model with
+    plus a ``revision_id`` to pass to propose_changes as ``base_revision_id`` (``revision`` is its
+    number within this Studio session, for showing only). Place a model with
     {"op": "place_structure", "model": "<its id>", "x": ..., "y": ...}; models are imported by the person.
     """
     from engine import authoring_session
@@ -907,17 +908,22 @@ def read_project(root: str = ".") -> dict[str, Any]:
 
 
 def propose_changes(changes: list[dict[str, Any]], title: str = "", base_revision: int | None = None,
-                    root: str = ".", request_id: str = "") -> dict[str, Any]:
+                    root: str = ".", request_id: str = "", base_revision_id: str | None = None) -> dict[str, Any]:
     """Propose changes to the project open in Mesh Studio; the person there accepts or rejects them.
 
-    ``changes`` is a list of operations (see authoring_operations). Give ``base_revision`` from
-    read_project so Studio can tell your changes from the person's since then: separate edits both
+    ``changes`` is a list of operations (see authoring_operations). Give ``base_revision_id``: the
+    ``revision_id`` from read_project, so Studio can tell your changes from the person's since then: separate edits both
     survive; anything your changes would write over what the person changed since is reported as a
     conflict and nothing is applied, including a value you give that equals what you read (both x
     and y of a move_entity, say). Invalid changes are
-    refused at once with the reason. A ``base_revision`` Studio no longer keeps is refused
-    (``base_revision_unavailable``, with the current ``revision``: read again), as is one that isn't
-    a revision (``invalid_base_revision``); neither is replaced by another revision. At most 20
+    refused at once with the reason. A revision Studio no longer keeps is refused
+    (``base_revision_unavailable``: read again), as is one that isn't a revision
+    (``invalid_base_revision``) and one read in another Studio session or project
+    (``revision_from_another_session``: Studio was closed and opened again since); none is replaced
+    by another revision. ``base_revision`` alone (a number: older clients) is refused
+    (``revision_id_required``): numbers start again at 0 each time Studio opens the project, so it
+    can't say which session it was read in. Leave both out to propose against the project as it is
+    now (the proposal's ``base_revision_id`` is then null). At most 20
     proposals wait for the person at once: more are refused (``too_many_pending``) until some are decided.
     Returns ``{ok, proposal_id, proposal{summary, status}}``.
     ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
@@ -926,7 +932,7 @@ def propose_changes(changes: list[dict[str, Any]], title: str = "", base_revisio
     from engine import authoring_session
 
     return authoring_session.propose(root, changes, title=title, base_revision=base_revision, source="an MCP client",
-                                     request_id=request_id)
+                                     request_id=request_id, base_revision_id=base_revision_id)
 
 
 def apply_changes(changes: list[dict[str, Any]], root: str = ".", dry_run: bool = False,

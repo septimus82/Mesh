@@ -1,0 +1,43 @@
+{
+ "1 the AI reads (Studio lifetime A)": {
+  "revision": 0,
+  "revision_id": null,
+  "session": "xPyXdoCN"
+ },
+ "2 the person renames the Warden and saves": {
+  "saved": [
+   "packs/core_regions/scenes/start.json"
+  ],
+  "on disk": [
+   "Creator Warden"
+  ]
+ },
+ "3-4 Studio reopened (lifetime B)": {
+  "session": "JME0k9X3",
+  "revision now": 0
+ },
+ "5-6 the AI proposes on its old read (numeric base_revision)": {
+  "ok": true,
+  "proposal base_revision": 0
+ },
+ "6 the person's inbox in B": [
+  "AI rename"
+ ],
+ "7 the person accepts": {
+  "ok": true
+ },
+ "7 B's room in memory": [
+  "Player",
+  "AI Warden"
+ ],
+ "7 undo": {
+  "undone": true,
+  "names": [
+   "Player",
+   "Creator Warden"
+  ]
+ },
+ "end: the saved rename on disk": [
+  "Creator Warden"
+ ]
+}

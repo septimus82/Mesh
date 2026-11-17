@@ -5,12 +5,16 @@ bridge (``engine.editor.live_session_bridge``, the same transport the legacy edi
 Studio never applies them on its own:
 
 - **Staging** checks the batch on a copy of the project, as of the revision the tool read
-  (``base_revision``), and lists what it would change. A batch that can't apply is refused
-  straight back to the tool with the reason. So is a ``base_revision`` Studio can't compare
-  with (F6, #422): one it no longer keeps (it keeps the last ``SNAPSHOTS_KEPT`` it was read
-  at), or one that isn't a revision. Comparing with today's project instead would hide the
-  person's changes since, and the proposal could overwrite them without a conflict. Without
-  a ``base_revision`` the batch is checked against the project as it is now. Its changes are kept
+  (``base_revision_id``), and lists what it would change. A batch that can't apply is refused
+  straight back to the tool with the reason. So is a base Studio can't compare with (F6, #422):
+  a revision it no longer keeps (it keeps the last ``SNAPSHOTS_KEPT`` it was read at), one that
+  isn't a revision, or (#462 R1) one read in another session: the revision number counts from 0
+  again each time the project is opened, so a reading's identity is the number together with
+  that opening's (``revision_id``: ``Project.session`` and ``revision``), and a bare number is
+  refused (``revision_id_required``) because it can't be told apart. Comparing with today's
+  project instead would hide the person's changes since, and the proposal could overwrite them
+  without a conflict. Without a base the batch is checked against the project as it is now (its
+  ``base_revision_id`` is then None: no base was verified). Its changes are kept
   as they were resolved there (#462 S1): each in the room it was previewed in and an object it
   named as the id that name had, so accepting it later writes where the preview did, not in the
   room open by then nor on another object that took the name.
@@ -43,6 +47,7 @@ project, and Studio refuses while the person is in the middle of something. Play
 from __future__ import annotations
 
 import copy
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -54,6 +59,7 @@ SNAPSHOTS_KEPT = 30
 PENDING_MAX = 20  # proposals waiting for the person (pending or in conflict); more are refused until some are decided
 HISTORY_KEPT = 100  # decided proposals remembered (for proposal_status and Studio's AI panel), each without documents
 DECIDED = ("accepted", "rejected", "failed")
+REVISION_ID = re.compile(r"[0-9a-f]{16}:(0|[1-9][0-9]{0,11})")  # (#462 R1) "<Project.session>:<revision>"
 
 
 @dataclass
@@ -71,6 +77,7 @@ class Proposal:
     conflicts: list[Doc] = field(default_factory=list)
     created: dict[int, str] = field(default_factory=dict)
     staged_at: float = field(default_factory=time.time)
+    base_revision_id: str | None = None  # (#462 R1) the base the tool gave, verified; None: proposed with no base
 
     def settle(self, status: str, message: str) -> None:
         """Decided (``DECIDED``): its documents and changes are let go: replaced, never emptied in place, so nothing
@@ -81,7 +88,8 @@ class Proposal:
     def view(self) -> Doc:
         return {"proposal_id": self.proposal_id, "title": self.title, "source": self.source, "status": self.status,
                 "message": self.message, "summary": list(self.summary), "conflicts": list(self.conflicts),
-                "base_revision": self.base_revision, "created": {str(k): v for k, v in self.created.items()}}
+                "base_revision": self.base_revision, "base_revision_id": self.base_revision_id,
+                "created": {str(k): v for k, v in self.created.items()}}
 
 
 class StudioAIHost:
@@ -138,11 +146,17 @@ class StudioAIHost:
         self._remember(self.project.revision, docs)
         rooms = {key: {"label": label, "path": path, "room": docs["rooms"][key]} for key, label, path in self.project.rooms()}
         scene_controller = getattr(self.window, "scene_controller", None)
-        return {"ok": True, "mode": "live_studio", "revision": self.project.revision, "current_room": self.project.current,
+        return {"ok": True, "mode": "live_studio", "revision": self.project.revision, "revision_id": self.revision_id(),
+                "current_room": self.project.current,
                 "unsaved": self.project.is_dirty, "last_save": self.project.last_save_report,
                 "last_reload": getattr(scene_controller, "last_reload_result", None), "world": docs["world"],
                 "rooms": rooms,
                 "models": authoring.models(self.project)}
+
+    def revision_id(self) -> str:
+        """The identity of the project as it is now (#462 R1): its revision in this opening of it. Another session (a
+        restart, a crash) or another project never has the same one, though its revision number may be the same."""
+        return f"{self.project.session}:{self.project.revision}"
 
     def _remember(self, revision: int, docs: Doc) -> None:
         self._snapshots[revision] = docs
@@ -164,10 +178,10 @@ class StudioAIHost:
                         f"{waiting} proposals are already waiting for the person in Mesh Studio (at most {PENDING_MAX} "
                         "can), so this one wasn't staged. Wait for them to be accepted or rejected (proposal_status "
                         "says), or withdraw ones that are no longer wanted, then propose again.")}
-        found = self._base(payload.get("base_revision"))
+        found = self._base(payload.get("base_revision"), payload.get("base_revision_id"))
         if isinstance(found, dict):  # (refused: nothing staged, nothing in the person's inbox)
             return found
-        base_revision, base = found
+        base_revision, base, base_revision_id = found
         pinned: list[Doc] = []  # (#462 S1: as resolved here, so accepting it writes where this preview does)
         try:
             before, after = authoring.dry_run(self.project, changes, base=base, pins=pinned)
@@ -175,34 +189,70 @@ class StudioAIHost:
             return {"ok": False, "mode": "live_studio", "reason": "invalid_change", "index": err.index, "op": err.op,
                     "message": str(err)}
         proposal = Proposal(changes=pinned, title=title, source=source, base_revision=base_revision,
-                            base=before, after=after, summary=authoring.summarize(before, after) or ["(no visible change)"])
+                            base=before, after=after, summary=authoring.summarize(before, after) or ["(no visible change)"],
+                            base_revision_id=base_revision_id)
         self.proposals.append(proposal)
         self.studio.on_ai_proposal(proposal)
         return proposal
 
-    def _base(self, revision: Any) -> tuple[int, Doc] | Doc:
-        """``(revision, documents)`` a proposal based on ``revision`` is checked against, or the refusal (F6):
-        none given, or the current one, is the project as it is now; an older one is what the tool read then, if
-        Studio still keeps it. Never another revision in its place."""
+    def _base(self, revision: Any, revision_id: Any) -> tuple[int, Doc, str | None] | Doc:
+        """``(revision, documents, revision_id)`` a proposal based on ``revision_id`` is checked against, or the
+        refusal (F6, #462 R1): none given is the project as it is now (``revision_id`` None: no base verified); the
+        current one is that too; an older one of this session is what the tool read then, if Studio still keeps it.
+        Never another revision in its place, nor a revision of another session or project, nor a bare number (it
+        can't say which session it was read in). The refusals never give the current ``revision_id``: a tool gets it
+        by reading the project, with what the person has changed since."""
         current = self.project.revision
-        if revision is None:
-            return current, copy.deepcopy(self.project.all_documents())
-        if isinstance(revision, bool) or not isinstance(revision, int) or not 0 <= revision <= current:
+        if revision is None and revision_id is None:
+            return current, copy.deepcopy(self.project.all_documents()), None
+        if revision is not None and (isinstance(revision, bool) or not isinstance(revision, int)
+                                     or not 0 <= revision <= current):
             return {"ok": False, "mode": "live_studio", "reason": "invalid_base_revision", "base_revision": revision,
                     "revision": current, "message": (
                         f"base_revision must be a revision read_project gave (a whole number from 0 to {current}), "
                         f"not {revision!r}, so nothing was staged. Read the project again and propose against its "
-                        "revision, or leave base_revision out to propose against the project as it is now.")}
-        if revision == current:
-            return current, copy.deepcopy(self.project.all_documents())
-        if revision in self._snapshots:
-            return revision, self._snapshots[revision]
+                        "revision_id, or leave the base out to propose against the project as it is now.")}
+        if revision_id is None:
+            return {"ok": False, "mode": "live_studio", "reason": "revision_id_required", "base_revision": revision,
+                    "revision": current, "message": (
+                        f"A bare base_revision ({revision}) can't say which Mesh Studio session it was read in: the "
+                        "project counts revisions from 0 again each time Studio opens it, so a revision read before "
+                        "Studio was closed and opened again would pass for one of today's. Nothing was staged. Read "
+                        "the project again (read_project) and pass its revision_id as base_revision_id; or leave both "
+                        "out to propose against the project as it is now.")}
+        if not isinstance(revision_id, str) or not REVISION_ID.fullmatch(revision_id):
+            return {"ok": False, "mode": "live_studio", "reason": "invalid_base_revision",
+                    "base_revision_id": revision_id, "revision": current, "message": (
+                        f"base_revision_id must be a revision_id read_project gave, exactly as given, not "
+                        f"{revision_id!r}, so nothing was staged. Read the project again and propose against its "
+                        "revision_id.")}
+        session, number = revision_id.split(":")[0], int(revision_id.split(":")[1])
+        if session != self.project.session:
+            return {"ok": False, "mode": "live_studio", "reason": "revision_from_another_session",
+                    "base_revision_id": revision_id, "revision": current, "message": (
+                        "These changes are based on a reading of another Mesh Studio session (Studio has been closed "
+                        "and opened again since, or ended) or of another project, so what the person has changed since "
+                        "can't be told: nothing was staged. Read the project again and propose against its "
+                        "revision_id.")}
+        if (revision is not None and revision != number) or number > current:
+            return {"ok": False, "mode": "live_studio", "reason": "invalid_base_revision", "base_revision": revision,
+                    "base_revision_id": revision_id, "revision": current, "message": (
+                        f"base_revision_id {revision_id!r} names a revision this Mesh Studio session hasn't had"
+                        if number > current else
+                        f"base_revision {revision} and base_revision_id {revision_id!r} name different revisions") + (
+                        ", so nothing was staged. Pass the revision_id read_project gave as base_revision_id (it needs "
+                        "no base_revision with it).")}
+        if number == current:
+            return current, copy.deepcopy(self.project.all_documents()), revision_id
+        if number in self._snapshots:
+            return number, self._snapshots[number], revision_id
+        revision = number
         return {"ok": False, "mode": "live_studio", "reason": "base_revision_unavailable", "base_revision": revision,
-                "revision": current, "message": (
+                "base_revision_id": revision_id, "revision": current, "message": (
                     f"Mesh Studio no longer keeps revision {revision}, which these changes are based on (it keeps the "
                     f"last {SNAPSHOTS_KEPT} it was read at), so nothing was staged: checked against the project as it is "
                     "now, they could overwrite what the person changed since without a conflict. Read the project "
-                    f"again (it is at revision {current}) and propose against that.")}
+                    f"again (it is at revision {current}) and propose against its revision_id.")}
 
     def stage_proposal(self, ops: list[Doc]) -> Proposal | Doc:
         """The legacy editor's signature: stage a bare list of changes."""
