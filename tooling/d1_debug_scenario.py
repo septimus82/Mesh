@@ -189,7 +189,7 @@ def run(out: Path, *, keep: bool = False) -> dict[str, Any]:
             "files_unchanged": _files(project) == files_before,
             "flags_after_stop": dict(d.window.game_state_controller.state.flags)}
         token = studio.ai.bridge.token
-        studio.ai.stop()  # (Studio closing: its session goes; on_close does this)
+        studio.release_project()  # (Studio closing: its session goes and the project is let go; closing does this)
         transcript.append({"tool": "debug_runtime_snapshot", "arguments": {},
                            "response": tools.debug_runtime_snapshot(root=str(project)), "note": "after Studio closed"})
         report["9_closed"] = transcript[-1]["response"]

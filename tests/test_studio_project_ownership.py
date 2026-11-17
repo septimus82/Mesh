@@ -468,6 +468,7 @@ def test_a_project_whose_ownership_cant_be_established_is_not_taken_as_free(root
         path.unlink()
     blocked.rmdir()
     blocked.write_text("not a folder", encoding="utf-8")  # the ownership file can't even be made
+    assert project_ownership.owned(root) is None  # (no lock file can be there: nothing owns it; on Linux and Windows)
     with pytest.raises(project_ownership.OwnershipUnavailable, match="can't be made or opened"):
         project_ownership.acquire(root, project_ownership.STUDIO)
     assert authoring_session.apply(root, ADD_SEXTON)["reason"] == "ownership_unknown"

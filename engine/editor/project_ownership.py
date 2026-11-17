@@ -185,7 +185,7 @@ def owned(root: str | Path, *, wait: float = 0.25) -> dict[str, Any] | None:
     path = lock_path(root)
     try:
         fd = os.open(path, os.O_RDWR | getattr(os, "O_BINARY", 0))
-    except FileNotFoundError:
+    except (FileNotFoundError, NotADirectoryError):  # (no lock file, or no folder for one: nothing has owned it)
         return None
     except OSError as exc:
         raise OwnershipUnavailable(f"{path} can't be opened ({exc}).") from exc

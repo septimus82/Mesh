@@ -164,8 +164,25 @@ the lock shared, another is still told the project has no owner.
     second Studio beside the first. A frozen Studio still owns its project; the test now lets the hold go as a
     crash does. The frozen case is the health-check tests above it, which pass unchanged.
   - its file comparison leaves out `.mesh/owner.lock`.
-- `tests/test_project_save_transaction.py`, `tests/test_room_file_ownership.py`: their whole-tree comparisons leave
-  out `.mesh`. A direct write now leaves the lock file there, also when its save fails.
+- `tests/test_project_save_transaction.py`, `tests/test_room_file_ownership.py`, `tests/test_safe_scene_creation.py`:
+  their whole-tree comparisons leave out `.mesh`. A direct write now leaves the lock file there, also when its
+  save fails.
+- `tooling/d1_debug_scenario.py`, `tooling/d2_ai_playtest_scenario.py` (the scenarios behind
+  `tests/test_runtime_debugger_gpu.py` and `tests/test_ai_playtest_gpu.py`): each stood for "Studio closes" by
+  stopping its session only, and then expected `studio_not_open`. A Studio whose session has stopped but which is
+  still open owns its project (`owned_without_session`). They now close as Studio closes: `release_project()`.
+
+**The first CI and Extended runs failed, and are kept** (head `1f855cbb`: CI 44104873884, Extended 44104866232).
+Five tests, none run locally before the push (the brief asked for targeted local runs, and these were not in mine):
+
+| lane | test | cause |
+|---|---|---|
+| pytest, both systems | `test_safe_scene_creation.py` (2 tests) | a whole-tree comparison saw the new `.mesh/owner.lock` |
+| pytest, Linux | this change's own "ownership can't be established" test | with `.mesh` a file, asking raised "not a directory" on Linux where Windows says "not found": the reason differed. `owned` now takes both as "no lock file" |
+| gpu, both systems | `test_runtime_debugger_gpu.py`, `test_ai_playtest_gpu.py` (1 each) | the scenarios' "Studio closes" (above) |
+
+The other 20 cross-process tests and both real-window tests passed on Linux and Windows in those runs. Corrected
+in the next commit. Not rerun.
 
 ## 8. Limits
 
