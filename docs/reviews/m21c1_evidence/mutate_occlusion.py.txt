@@ -1,0 +1,129 @@
+"""Deliberate faults in the M21C1 sound occlusion; which tests fail. Each file is restored.
+
+Usage: py mutate_occlusion.py <repo> <out.json> [name part ...]
+
+Headless tests (tests/test_sound_occlusion.py) run for every fault; the real-window ones
+(tests/test_sound_occlusion_gpu.py, MESH_GL_SMOKE=1) for the faults marked GPU as well.
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+REPO = Path(sys.argv[1])
+OUT = Path(sys.argv[2])
+ONLY = sys.argv[3:]
+SE, OCC, OPS = "engine/sound_emitters.py", "engine/sound_occlusion.py", "engine/project_ops.py"
+HEADLESS = ["tests/test_sound_occlusion.py"]
+GPU = ["tests/test_sound_occlusion_gpu.py"]
+
+MUTATIONS = {
+    "none": (None, None, None, True),
+    "the wall question always answers no (the occlusion calculation removed)": (
+        OCC, "    if what is None:\n        return False\n    if what[0] == \"2d\":\n",
+        "    if what is not None:\n        return False\n    if what[0] == \"2d\":\n", True),
+    "an emitter behind a wall is not turned down": (
+        SE, "                targets[live.key] = (level * live.occlusion, side * (1.0 - (1.0 - OCCLUDED_PAN) * behind), d)\n",
+        "                targets[live.key] = (level, side * (1.0 - (1.0 - OCCLUDED_PAN) * behind), d)\n", True),
+    "its side is not narrowed behind a wall": (
+        SE, "                targets[live.key] = (level * live.occlusion, side * (1.0 - (1.0 - OCCLUDED_PAN) * behind), d)\n",
+        "                targets[live.key] = (level * live.occlusion, side, d)\n", False),
+    "it jumps behind a wall and out (no easing)": (
+        SE, "            eased = _ease(live.occlusion, goal, dt, OCCLUSION_EASE_S) if live.playing else goal\n",
+        "            eased = goal\n", True),
+    "it starts before it is known whether a wall is between": (
+        SE, "            if starts >= STARTS_PER_FRAME or (e.occlusion and live.asked is None):\n",
+        "            if starts >= STARTS_PER_FRAME:\n", False),
+    "every due emitter is asked in one update (no budget)": (
+        SE, "        for _asked, _when, _index, live, at in due[:OCCLUSION_ASKS]:\n",
+        "        for _asked, _when, _index, live, at in due:\n", False),
+    "the question is asked every update (nothing remembered)": (
+        SE, "        if asked is not None and asked[0] is here:\n", "        if asked is not None and asked[0] is None:\n", True),
+    "emitters out of reach are asked too": (
+        SE, "            if d < e.distance:\n                walled.append(", "            if True:\n                walled.append(", False),
+    "every emitter minds walls, set to or not (rooms made before this change)": (
+        SE, "        if e.occlusion:  # (Milestone 21C1; an emitter not set to mind walls costs this one test)\n",
+        "        if True:\n", False),
+    "a room's walls changing is not noticed": (
+        SE, "    if not sound_occlusion.same(what, scape.blockers):  # (another room, or its walls changed: every answer is old)\n",
+        "    if scape.blockers is None and what is not None:\n", False),
+    "another room keeps the last room's walls": (
+        SE, "    scape.blockers, scape.walls = None, []  # (the room's walls are found again when a sound first asks)\n", "", False),
+    "an emitter out of reach keeps its old answer": (
+        SE, "            elif live.asked is not None:  # (out of reach: asked afresh when it is back, and clear until then)\n"
+            "                live.asked, live.blocked, live.occlusion = None, False, 1.0\n", "", False),
+    "the setting is on unless set (rooms made before this change)": (
+        SE, "    occlusion: bool = False  # quieter behind a wall (rooms made before Milestone 21C1 have none: as they were)\n",
+        "    occlusion: bool = True\n", False),
+    "the op writes off as a setting": (
+        OPS, "        if key == \"occlusion\" and value is False:\n            config.pop(key, None)  # (off is no setting: the room reads as one made before Milestone 21C1 does)\n            continue\n",
+        "", False),
+    "fences and railings are walls (no least height)": (
+        OCC, "        if wall.hi[2] - wall.lo[2] >= MIN_HEIGHT and span >= MIN_SPAN:\n", "        if span >= MIN_SPAN:\n", False),
+    "posts are walls (no least length)": (
+        OCC, "        if wall.hi[2] - wall.lo[2] >= MIN_HEIGHT and span >= MIN_SPAN:\n",
+        "        if wall.hi[2] - wall.lo[2] >= MIN_HEIGHT:\n", False),
+    "a wall is in the way whatever the heights (the line is flat)": (
+        OCC, "    a = (listener[0] / PX_PER_M, listener[1] / PX_PER_M, listener[2] / PX_PER_M + EAR)\n"
+             "    b = (source[0] / PX_PER_M, source[1] / PX_PER_M, source[2] / PX_PER_M)\n",
+        "    a = (listener[0] / PX_PER_M, listener[1] / PX_PER_M, 1.0)\n"
+        "    b = (source[0] / PX_PER_M, source[1] / PX_PER_M, 1.0)\n", False),
+    "a wall an end stands in counts": (
+        OCC, "        if lo[0] <= p[0] <= hi[0] and lo[1] <= p[1] <= hi[1] and lo[2] <= p[2] <= hi[2]:\n            return False  # (it stands in the wall: a machine set into it, a listener pressed against it)\n",
+        "        pass\n", False),
+    "a turned wall is its box round its corners": (
+        OCC, "    if wall.turned is not None:\n        cx, cy, ex, ey, c, s = wall.turned\n", "    if False:\n        cx, cy, ex, ey, c, s = wall.turned\n", False),
+    "the sound's own wall tile counts (2D)": (
+        OCC, "        if tile != goal and wall(tile):\n", "        if wall(tile):\n", False),
+    "a line squeezes between two wall tiles (2D)": (
+        OCC, "        if tile[0] != before[0] and tile[1] != before[1] and wall((tile[0], before[1])) and wall((before[0], tile[1])):\n"
+             "            return True  # (a diagonal step between two wall tiles that meet at their corners: a wall's corner)\n", "", False),
+    "outside the map is a wall (2D)": (
+        OCC, "        return bool(grid.in_bounds(tile)) and not grid.is_walkable(tile)\n", "        return not grid.is_walkable(tile)\n", False),
+    "a 2D room's wall tiles are not looked at": (
+        OCC, "    if grid is None or not getattr(grid, \"blocked\", None):\n        return None\n", "    if True:\n        return None\n", True),
+}
+
+results = {}
+for name, (file, old, new, gpu) in MUTATIONS.items():
+    if ONLY and not any(part in name for part in ONLY):
+        continue
+    original = None
+    try:
+        if file is not None:
+            path = REPO / file
+            original = path.read_bytes()
+            text = original.decode("utf-8")
+            nl = "\r\n" if "\r\n" in text else "\n"
+            flat = text.replace("\r\n", "\n")
+            if flat.count(old) != 1:
+                results[name] = {"error": f"pattern found {flat.count(old)} times in {file}"}
+                print("SKIPPED ", name, results[name]["error"], flush=True)
+                original = None
+                continue
+            path.write_bytes(flat.replace(old, new).replace("\n", nl).encode("utf-8"))
+        started = time.perf_counter()
+        failed, summaries = [], []
+        for tests, env in ((HEADLESS, dict(os.environ)), (GPU, dict(os.environ, MESH_GL_SMOKE="1"))):
+            if tests is GPU and not gpu:
+                continue
+            args = ["-m", "gl"] if tests is GPU else []
+            run = subprocess.run([sys.executable, "-m", "pytest", "-o", "addopts=", "-q", "-p", "no:cacheprovider", "-W", "error",
+                                  "--strict-markers", *args, *tests], cwd=REPO, env=env, capture_output=True, text=True, timeout=900)
+            failed += sorted(set(re.findall(r"^(?:FAILED|ERROR) \S+?::(.+?)(?: - .*)?$", run.stdout, re.M)))
+            lines = [line for line in run.stdout.strip().splitlines() if " passed" in line or " failed" in line or " error" in line]
+            summaries.append(lines[-1] if lines else run.stderr[-200:])
+        results[name] = {"file": file, "caught": bool(failed), "failing": failed, "summary": " | ".join(summaries),
+                         "wall_s": round(time.perf_counter() - started, 1)}
+    finally:
+        if original is not None:
+            (REPO / file).write_bytes(original)
+    r = results[name]
+    print(("CAUGHT " if r["caught"] else "PASSED ") + f" {name}: {r['summary']}", flush=True)
+    for test in r["failing"]:
+        print("          ", test[:150], flush=True)
+    OUT.write_text(json.dumps(results, indent=1), encoding="utf-8")
+print(subprocess.run(["git", "status", "--short"], cwd=REPO, capture_output=True, text=True).stdout)

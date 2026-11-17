@@ -35,7 +35,7 @@ def test_a_sound_emitter_is_an_object_with_checked_settings() -> None:
                                   distance=480, stereo=False)
     got = ops.sound_emitter_of(ops.find_entity(scene, eid))
     assert got == {"sound": STREAM, "volume": 0.6, "radius": 96.0, "distance": 480.0, "stereo": False, "loop": True,
-                   "enabled": True, "fade_in": 1.0, "fade_out": 1.0}
+                   "enabled": True, "fade_in": 1.0, "fade_out": 1.0, "occlusion": False}
     for bad, reason in (({"distance": 50}, "must be less than"), ({"volume": 3}, "from 0 to 1"),
                         ({"sound": "notes.txt"}, ".wav, .ogg or .mp3")):
         with pytest.raises(ops.OpError, match=reason):

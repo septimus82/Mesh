@@ -1,0 +1,229 @@
+{
+ "baseline_engine_7e72a25b": [
+  {
+   "occlusion": "off",
+   "emitters": 60,
+   "updates_timed": 2050,
+   "update_us": {
+    "mean": 580.5,
+    "median": 521.4,
+    "p95": 659.5,
+    "max": 9002.0
+   },
+   "wall_questions_asked": null,
+   "wall_questions_per_update": 0.0,
+   "walls_in_the_room": 23,
+   "walls_a_sound_does_not_pass": 0,
+   "players_registered": 3,
+   "loops_playing": 3,
+   "engine_bytes_retained_over_the_walk": 723545,
+   "frames": 2170,
+   "players_registered_after_close": 0
+  },
+  {
+   "occlusion": "off",
+   "emitters": 60,
+   "updates_timed": 2050,
+   "update_us": {
+    "mean": 574.2,
+    "median": 515.0,
+    "p95": 653.0,
+    "max": 8180.3
+   },
+   "wall_questions_asked": null,
+   "wall_questions_per_update": 0.0,
+   "walls_in_the_room": 23,
+   "walls_a_sound_does_not_pass": 0,
+   "players_registered": 3,
+   "loops_playing": 3,
+   "engine_bytes_retained_over_the_walk": 723085,
+   "frames": 2170,
+   "players_registered_after_close": 0
+  },
+  {
+   "occlusion": "off",
+   "emitters": 60,
+   "updates_timed": 2050,
+   "update_us": {
+    "mean": 574.7,
+    "median": 517.3,
+    "p95": 643.1,
+    "max": 8553.8
+   },
+   "wall_questions_asked": null,
+   "wall_questions_per_update": 0.0,
+   "walls_in_the_room": 23,
+   "walls_a_sound_does_not_pass": 0,
+   "players_registered": 3,
+   "loops_playing": 3,
+   "engine_bytes_retained_over_the_walk": 723227,
+   "frames": 2170,
+   "players_registered_after_close": 0
+  }
+ ],
+ "this_build_occlusion_off": [
+  {
+   "occlusion": "off",
+   "emitters": 60,
+   "updates_timed": 2050,
+   "update_us": {
+    "mean": 604.9,
+    "median": 549.3,
+    "p95": 673.8,
+    "max": 8095.9
+   },
+   "wall_questions_asked": 0,
+   "wall_questions_per_update": 0.0,
+   "walls_in_the_room": 23,
+   "walls_a_sound_does_not_pass": 0,
+   "players_registered": 3,
+   "loops_playing": 3,
+   "engine_bytes_retained_over_the_walk": 723267,
+   "frames": 2170,
+   "players_registered_after_close": 0
+  },
+  {
+   "occlusion": "off",
+   "emitters": 60,
+   "updates_timed": 2050,
+   "update_us": {
+    "mean": 603.6,
+    "median": 547.5,
+    "p95": 670.5,
+    "max": 8075.3
+   },
+   "wall_questions_asked": 0,
+   "wall_questions_per_update": 0.0,
+   "walls_in_the_room": 23,
+   "walls_a_sound_does_not_pass": 0,
+   "players_registered": 3,
+   "loops_playing": 3,
+   "engine_bytes_retained_over_the_walk": 723437,
+   "frames": 2170,
+   "players_registered_after_close": 0
+  },
+  {
+   "occlusion": "off",
+   "emitters": 60,
+   "updates_timed": 2050,
+   "update_us": {
+    "mean": 608.1,
+    "median": 549.2,
+    "p95": 683.1,
+    "max": 8347.9
+   },
+   "wall_questions_asked": 0,
+   "wall_questions_per_update": 0.0,
+   "walls_in_the_room": 23,
+   "walls_a_sound_does_not_pass": 0,
+   "players_registered": 3,
+   "loops_playing": 3,
+   "engine_bytes_retained_over_the_walk": 722921,
+   "frames": 2170,
+   "players_registered_after_close": 0
+  },
+  {
+   "occlusion": "off",
+   "emitters": 60,
+   "updates_timed": 2050,
+   "update_us": {
+    "mean": 612.9,
+    "median": 552.9,
+    "p95": 689.3,
+    "max": 8257.1
+   },
+   "wall_questions_asked": 0,
+   "wall_questions_per_update": 0.0,
+   "walls_in_the_room": 23,
+   "walls_a_sound_does_not_pass": 0,
+   "players_registered": 3,
+   "loops_playing": 3,
+   "engine_bytes_retained_over_the_walk": 722683,
+   "frames": 2170,
+   "players_registered_after_close": 0
+  }
+ ],
+ "this_build_occlusion_on": [
+  {
+   "occlusion": "on",
+   "emitters": 60,
+   "updates_timed": 2050,
+   "update_us": {
+    "mean": 730.0,
+    "median": 647.5,
+    "p95": 869.6,
+    "max": 6682.7
+   },
+   "wall_questions_asked": 3277,
+   "wall_questions_per_update": 1.51,
+   "walls_in_the_room": 23,
+   "walls_a_sound_does_not_pass": 12,
+   "players_registered": 3,
+   "loops_playing": 3,
+   "engine_bytes_retained_over_the_walk": 744881,
+   "frames": 2170,
+   "players_registered_after_close": 0
+  },
+  {
+   "occlusion": "on",
+   "emitters": 60,
+   "updates_timed": 2050,
+   "update_us": {
+    "mean": 726.4,
+    "median": 642.3,
+    "p95": 870.1,
+    "max": 6665.1
+   },
+   "wall_questions_asked": 3277,
+   "wall_questions_per_update": 1.51,
+   "walls_in_the_room": 23,
+   "walls_a_sound_does_not_pass": 12,
+   "players_registered": 3,
+   "loops_playing": 3,
+   "engine_bytes_retained_over_the_walk": 746725,
+   "frames": 2170,
+   "players_registered_after_close": 0
+  },
+  {
+   "occlusion": "on",
+   "emitters": 60,
+   "updates_timed": 2050,
+   "update_us": {
+    "mean": 730.0,
+    "median": 649.6,
+    "p95": 871.3,
+    "max": 6351.4
+   },
+   "wall_questions_asked": 3277,
+   "wall_questions_per_update": 1.51,
+   "walls_in_the_room": 23,
+   "walls_a_sound_does_not_pass": 12,
+   "players_registered": 3,
+   "loops_playing": 3,
+   "engine_bytes_retained_over_the_walk": 745825,
+   "frames": 2170,
+   "players_registered_after_close": 0
+  },
+  {
+   "occlusion": "on",
+   "emitters": 60,
+   "updates_timed": 2050,
+   "update_us": {
+    "mean": 741.0,
+    "median": 657.7,
+    "p95": 880.5,
+    "max": 6703.4
+   },
+   "wall_questions_asked": 3277,
+   "wall_questions_per_update": 1.51,
+   "walls_in_the_room": 23,
+   "walls_a_sound_does_not_pass": 12,
+   "players_registered": 3,
+   "loops_playing": 3,
+   "engine_bytes_retained_over_the_walk": 747155,
+   "frames": 2170,
+   "players_registered_after_close": 0
+  }
+ ],
+ "note": "60 emitters of one sound about the HD-2D starter village, the player walking the demo's route (2,050 updates timed per run); occlusion on: all 60 mind walls. Runs 1-3 alternated baseline / off / on; run 4 after the last tidy of the code."
+}

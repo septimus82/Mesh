@@ -1001,7 +1001,8 @@ def sound_emitter_of(entity: Doc) -> Doc | None:
     except EmitterError as exc:
         error, e = str(exc), DEFAULT
     out: Doc = {"sound": e.sound, "volume": e.volume, "radius": e.radius, "distance": e.distance, "stereo": e.stereo,
-                "loop": e.loop, "enabled": e.enabled, "fade_in": e.fade_in, "fade_out": e.fade_out}
+                "loop": e.loop, "enabled": e.enabled, "fade_in": e.fade_in, "fade_out": e.fade_out,
+                "occlusion": e.occlusion}
     if error:
         out["error"] = error
     return out
@@ -1009,12 +1010,14 @@ def sound_emitter_of(entity: Doc) -> Doc | None:
 
 def set_sound_emitter(scene: Doc, entity_id: str, *, sound: Any = _UNSET, volume: Any = _UNSET, radius: Any = _UNSET,
                       distance: Any = _UNSET, stereo: Any = _UNSET, loop: Any = _UNSET, enabled: Any = _UNSET,
-                      fade_in: Any = _UNSET, fade_out: Any = _UNSET) -> Doc:
+                      fade_in: Any = _UNSET, fade_out: Any = _UNSET, occlusion: Any = _UNSET) -> Doc:
     """Make the object a sound emitter, or change it (engine.sound_emitters): ``sound`` (a project sound file, .wav
     .ogg or .mp3; "" none yet), ``volume`` (0-1, at full strength), ``radius`` (px: full strength within it),
     ``distance`` (px: heard up to it; more than ``radius``), ``stereo`` (heard from its side), ``loop`` (plays round;
-    false: once each time the player comes near), ``enabled``, ``fade_in`` / ``fade_out`` (s, 0-30). Only what is
-    given changes. It has no picture in the game; in an HD-2D room its ``elevation`` is its height."""
+    false: once each time the player comes near), ``enabled``, ``fade_in`` / ``fade_out`` (s, 0-30), ``occlusion``
+    (true: quieter while a wall stands between it and the player; a 2D room's wall tiles, an HD-2D room's walls a
+    person can't see over). Only what is given changes. It has no picture in the game; in an HD-2D room its
+    ``elevation`` is its height."""
     from engine.sound_emitters import EmitterError, parse_emitter  # noqa: PLC0415
 
     out = copy.deepcopy(scene)
@@ -1022,9 +1025,12 @@ def set_sound_emitter(scene: Doc, entity_id: str, *, sound: Any = _UNSET, volume
     config = _behaviour_config(entity, "SoundEmitter", create=True)
     assert config is not None
     given = {"sound": sound, "volume": volume, "radius": radius, "distance": distance, "stereo": stereo, "loop": loop,
-             "enabled": enabled, "fade_in": fade_in, "fade_out": fade_out}
+             "enabled": enabled, "fade_in": fade_in, "fade_out": fade_out, "occlusion": occlusion}
     for key, value in given.items():
         if value is _UNSET:
+            continue
+        if key == "occlusion" and value is False:
+            config.pop(key, None)  # (off is no setting: the room reads as one made before Milestone 21C1 does)
             continue
         if key == "sound":
             value = _sound_path(value)
