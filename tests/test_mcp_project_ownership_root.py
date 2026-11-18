@@ -11,7 +11,6 @@ stop the write. Now the check, the lock and every target are the project's (``pr
 from __future__ import annotations
 
 import hashlib
-import json
 import subprocess
 import sys
 import threading
