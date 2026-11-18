@@ -1,0 +1,251 @@
+"""R4/R5 remediation B: the three findings of the independent verification of remediation A, reproduced.
+
+    py -3.13 repro_b.py REPO OUT_JSON
+
+R5 cases (finding 1, 3b) run if REPO has R5's `_own_for_files`; R4 cases (finding 2, 3a) if it has R4's
+`_own_project`. Disposable scaffolded projects; Studio and lock holders are their own processes (the OS lock); the
+writers are production entry points (MCP tools, the console's ai_job, `mesh undo-last-plan`)."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+from pathlib import Path
+
+REPO = Path(sys.argv[1]).resolve()
+OUT = Path(sys.argv[2])
+sys.path.insert(0, str(REPO))
+os.chdir(REPO)
+
+from engine.ai_ops import AIOps  # noqa: E402
+from engine.editor import project_ownership  # noqa: E402
+from engine.project_scaffold import create_project  # noqa: E402
+from tests.test_studio_project_ownership import StudioProcess  # noqa: E402
+
+TMP = Path(tempfile.mkdtemp(prefix="mesh-r45b-"))
+HAS_R4 = "_own_project" in (REPO / "mesh_cli/ai.py").read_text(encoding="utf-8")
+HAS_R5 = "_own_for_files" in (REPO / "engine/mcp_server/tools.py").read_text(encoding="utf-8")
+ROOM = "packs/core_regions/scenes/start.json"
+
+
+def files(root: Path) -> dict[str, str]:
+    skip = ("owner.lock", "live_session.json")
+    return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()[:16]
+            for p in sorted(root.rglob("*")) if p.is_file() and p.name not in skip}
+
+
+def diff(a: dict[str, str], b: dict[str, str]) -> dict[str, list[str]]:
+    return {"changed": sorted(k for k in a if k in b and a[k] != b[k]), "created": sorted(set(b) - set(a)),
+            "deleted": sorted(set(a) - set(b))}
+
+
+def project(label: str) -> Path:
+    root = TMP / label / "game"
+    create_project(root, "Game", template_id="blank")
+    return root
+
+
+def studio(root: Path, label: str) -> StudioProcess:
+    s = StudioProcess(root, "nobridge", log=TMP / f"{label}.log", env={"MESH_TEST_OWNER_WAIT": "0.3"})
+    assert s.start["ready"], s.start
+    s.ask("edit Unsaved Warden")
+    return s
+
+
+def nested_pack(outer: Path) -> Path:
+    """The outer game's world lists a room in packs/region2; region2 later becomes a Mesh project of its own."""
+    region = outer / "packs/region2"
+    (region / "scenes").mkdir(parents=True)
+    shutil.copy(outer / ROOM, region / "scenes/cellar.json")
+    world_path = outer / json.loads((outer / "config.json").read_text(encoding="utf-8"))["world_file"]
+    world = json.loads(world_path.read_text(encoding="utf-8"))
+    world["scenes"]["cellar"] = {"label": "Cellar", "path": "packs/region2/scenes/cellar.json"}
+    world_path.write_text(json.dumps(world, indent=2), encoding="utf-8")
+    (region / "worlds").mkdir()
+    (region / "worlds/main.json").write_text(json.dumps({"id": "main", "name": "Region", "start_scene": "cellar",
+        "scenes": {"cellar": {"label": "Cellar", "path": "scenes/cellar.json"}}}), encoding="utf-8")
+    shutil.copytree(outer / "assets", region / "assets")  # (its own prefabs, as a project of its own has)
+    (region / "config.json").write_text(json.dumps({"title": "Region 2", "world_file": "worlds/main.json",
+                                                    "start_scene": "scenes/cellar.json"}), encoding="utf-8")
+    return region
+
+
+def mesh(cwd: Path, *args: str) -> dict:
+    run = subprocess.run([sys.executable, "-m", "mesh_cli", *args], cwd=cwd, capture_output=True, text=True,
+                         timeout=300, env={**os.environ, "PYTHONPATH": str(REPO)})
+    return {"exit": run.returncode, "said": [line for line in run.stdout.splitlines() if "[Mesh]" in line][-3:]}
+
+
+# ------------------------------------------------------------------------------- finding 1 (R5)
+def f1_adapted_authoring_into_nested() -> dict:
+    from engine.mcp_server import tools
+
+    outer = project("f1")
+    region = nested_pack(outer)
+    s = studio(region, "f1")  # Mesh Studio has region2 open, unsaved work in it
+    before = files(region)
+    result = tools.apply_ops([{"type": "add_light", "scene_path": "packs/region2/scenes/cellar.json",
+                               "light": {"x": 5, "y": 5, "radius": 40}}], root=str(outer), validate=False)
+    state = s.ask("state")
+    s.close()
+    control_root = project("f1_control")
+    control = tools.apply_ops([{"type": "add_light", "scene_path": ROOM, "light": {"x": 5, "y": 5, "radius": 40}}],
+                              root=str(control_root), validate=False)
+    return {"route": result.get("mode") or ("authoring" if "authoring" in result else "fallback"),
+            "result": {"ok": result.get("ok"), "reason": (result.get("authoring") or {}).get("reason")},
+            "nested_files_written_behind_its_studio": diff(before, files(region)),
+            "studio_unsaved_work_kept": "Unsaved Warden" in state["names"] and state["unsaved"],
+            "normal_project_control": {"ok": control.get("ok"), "route": control.get("mode")}}
+
+
+# ------------------------------------------------------------------------------- finding 2 (R4)
+def _undo_project(label: str) -> tuple[Path, Path]:
+    root = project(label)
+    backup = root / ".mesh/plan_backups/2000_manual"
+    (backup / "files").mkdir(parents=True)
+    return root, backup
+
+
+def f2a_created_then_a_directory() -> dict:
+    root, backup = _undo_project("f2a")
+    (root / "scenes").mkdir(exist_ok=True)
+    (root / "scenes/made.json").write_text("{}", encoding="utf-8")
+    (root / "scenes/became_a_folder.json").mkdir()  # the second created file is now a folder
+    (root / "scenes/became_a_folder.json/inside.txt").write_text("keep", encoding="utf-8")
+    (backup / "manifest.json").write_text(json.dumps({"created": ["scenes/made.json", "scenes/became_a_folder.json"],
+                                                      "modified": []}), encoding="utf-8")
+    before = files(root)
+    ran = mesh(root, "undo-last-plan")
+    return {"undo": ran, "files": diff(before, files(root))}
+
+
+def f2b_modified_into_a_directory() -> dict:
+    root, backup = _undo_project("f2b")
+    (backup / "files/scenes").mkdir(parents=True)
+    (backup / "files/scenes/room.json").write_text('{"restored": true}', encoding="utf-8")
+    (root / "scenes/room.json").mkdir(parents=True)  # the room's path is now a folder
+    (backup / "manifest.json").write_text(json.dumps({"created": [], "modified": ["scenes/room.json"]}), encoding="utf-8")
+    before = files(root)
+    ran = mesh(root, "undo-last-plan")
+    return {"undo": ran, "files": diff(before, files(root)),
+            "room_is_a_file_after": (root / "scenes/room.json").is_file()}
+
+
+def f2c_valid_and_invalid() -> dict:
+    root, backup = _undo_project("f2c")
+    (backup / "files" / Path(ROOM).parent).mkdir(parents=True)
+    shutil.copy(root / ROOM, backup / "files" / ROOM)
+    (root / ROOM).write_text((root / ROOM).read_text(encoding="utf-8").replace("{", '{"saved_since": 1, ', 1), encoding="utf-8")
+    (root / "notes.txt").write_text("a file where a folder is expected", encoding="utf-8")
+    (backup / "files/notes.txt").mkdir()
+    (backup / "files/notes.txt/x.json").write_text("{}", encoding="utf-8")
+    (root / "made.json").write_text("{}", encoding="utf-8")
+    (backup / "manifest.json").write_text(json.dumps({"created": ["made.json"],
+                                                      "modified": [ROOM, "notes.txt/x.json"]}), encoding="utf-8")
+    before = files(root)
+    ran = mesh(root, "undo-last-plan")
+    return {"manifest": "created made.json (valid); modified the room (valid) and notes.txt/x.json (its folder is a file)",
+            "undo": ran, "files": diff(before, files(root))}
+
+
+# ------------------------------------------------------------------------------- finding 3
+def _marker_removed_mid_write(work, name: str, root: Path, nested: Path) -> dict:
+    """Studio owns ``root`` (the outer project); the writer owns ``nested``; once it is writing (paused at AIOps),
+    the nested project's config.json is removed: its files are the outer project's now. Does the write go on?"""
+    s = studio(root, f"f3_{name}")
+    started, go = threading.Event(), threading.Event()
+    attr = "apply_job"
+    original = getattr(AIOps, attr)
+
+    def paused(self, *a, **k):  # type: ignore[no-untyped-def]
+        started.set()
+        go.wait(60)
+        return original(self, *a, **k)
+
+    setattr(AIOps, attr, paused)
+    result: list = []
+    thread = threading.Thread(target=lambda: result.append(work()))
+    thread.start()
+    try:
+        assert started.wait(60)
+        held = (project_ownership.owned(nested, wait=0) or {}).get("kind")
+        (nested / "config.json").unlink()  # the nested project stops being one: its files are the outer project's
+        before = files(root)
+    finally:
+        go.set()
+        thread.join(60)
+        setattr(AIOps, attr, original)
+    out = {"writer_held": f"<outer>/inner ({held})", "after_marker_removed": result[0],
+           "outer_files_written_behind_its_studio": diff(before, files(root)),
+           "outer_studio_unsaved_kept": s.ask("state")["unsaved"]}
+    s.close()
+    return out
+
+
+def f3a_console() -> dict:
+    from engine.console_controller import ConsoleController
+
+    root = project("f3a")
+    nested = root / "inner"
+    create_project(nested, "Inner", template_id="blank")
+    job = TMP / "f3a_job.json"
+    job.write_text(json.dumps({"operations": [{"type": "add_light", "scene_path": ROOM,
+                                               "light": {"x": 1, "y": 1, "radius": 9}}]}), encoding="utf-8")
+
+    class Window:
+        def reload_scene(self) -> None:
+            pass
+
+    def work():  # type: ignore[no-untyped-def]
+        os.chdir(nested)
+        try:
+            console = ConsoleController(Window())
+            console.execute_command(f"ai_job {job}")
+            return console.lines[1:]
+        finally:
+            os.chdir(REPO)
+
+    return _marker_removed_mid_write(work, "console", root, nested)
+
+
+def f3b_mcp() -> dict:
+    from engine.mcp_server import tools
+
+    root = project("f3b")
+    nested = root / "inner"
+    create_project(nested, "Inner", template_id="blank")
+
+    def work():  # type: ignore[no-untyped-def]  # (a fallback operation: the world file)
+        r = tools.apply_ops([{"type": "set_world_start", "world_path": "packs/core_regions/worlds/main.json",
+                              "start_scene": "elsewhere"}], root=str(nested), validate=False)
+        return {"ok": r.get("ok"), "results": [x.get("message") for x in r.get("results") or []]}
+
+    return _marker_removed_mid_write(work, "mcp", root, nested)
+
+
+def main() -> None:
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip()
+    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", "engine", "mesh_cli"], cwd=REPO,
+                                capture_output=True, text=True).stdout.strip())
+    out: dict = {"head": head, "uncommitted_changes": dirty, "has_r4": HAS_R4, "has_r5": HAS_R5}
+    if HAS_R5:
+        out["finding1_mcp_adapted_authoring_into_a_nested_project"] = f1_adapted_authoring_into_nested()
+        out["finding3_mcp_marker_removed_after_the_lock"] = f3b_mcp()
+    if HAS_R4:
+        out["finding2a_undo_created_file_now_a_folder"] = f2a_created_then_a_directory()
+        out["finding2b_undo_modified_file_now_a_folder"] = f2b_modified_into_a_directory()
+        out["finding2c_undo_valid_and_invalid_entries"] = f2c_valid_and_invalid()
+        out["finding3_console_marker_removed_after_the_lock"] = f3a_console()
+    text = json.dumps(out, indent=2, default=str)
+    OUT.write_text(text + "\n", encoding="utf-8")
+    print(text)
+
+
+if __name__ == "__main__":
+    main()

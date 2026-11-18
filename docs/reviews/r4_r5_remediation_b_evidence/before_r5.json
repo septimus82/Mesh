@@ -1,0 +1,42 @@
+{
+  "head": "0bd783f906b7f9eb40f40bbfac3d402d99752c6a",
+  "uncommitted_changes": false,
+  "has_r4": false,
+  "has_r5": true,
+  "finding1_mcp_adapted_authoring_into_a_nested_project": {
+    "route": "files",
+    "result": {
+      "ok": true,
+      "reason": null
+    },
+    "nested_files_written_behind_its_studio": {
+      "changed": [
+        "scenes/cellar.json"
+      ],
+      "created": [],
+      "deleted": []
+    },
+    "studio_unsaved_work_kept": true,
+    "normal_project_control": {
+      "ok": true,
+      "route": "files"
+    }
+  },
+  "finding3_mcp_marker_removed_after_the_lock": {
+    "writer_held": "<outer>/inner (authoring)",
+    "after_marker_removed": {
+      "ok": true,
+      "results": [
+        "Updated world start scene"
+      ]
+    },
+    "outer_files_written_behind_its_studio": {
+      "changed": [
+        "inner/packs/core_regions/worlds/main.json"
+      ],
+      "created": [],
+      "deleted": []
+    },
+    "outer_studio_unsaved_kept": true
+  }
+}
