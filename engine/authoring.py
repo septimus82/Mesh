@@ -370,7 +370,8 @@ def _path_text(path: tuple[Any, ...]) -> str:
 
 # --------------------------------------------------------------------------------------- summary
 def summarize(before: Doc, after: Doc) -> list[str]:
-    """Plain-language lines for what changed between two whole-project views, room by room."""
+    """Plain-language lines for what changed between two whole-project views, room by room, then the shared player
+    (what it is and says is the view's ``player``, not in any room)."""
     lines: list[str] = []
     world_b, world_a = before.get("world") or {}, after.get("world") or {}
     rooms_b, rooms_a = before.get("rooms") or {}, after.get("rooms") or {}
@@ -414,6 +415,10 @@ def summarize(before: Doc, after: Doc) -> list[str]:
         lines += _bloom_lines(label, old.get("settings") or {}, room.get("settings") or {})
     if world_b.get("start_scene") != world_a.get("start_scene") and world_b:
         lines.append(f"Start room: {world_b.get('start_scene')} -> {world_a.get('start_scene')}")
+    player_b, player_a = before.get("player"), after.get("player")
+    if isinstance(player_b, dict) and isinstance(player_a, dict):  # (as an object's changes read, a room's above)
+        lines += [f"The player (every room): {_friendly(path)}: {_short(was)} -> {_short(now)}"
+                  for path, (was, now) in changes_between(player_b, player_a).items()]
     return lines
 
 
