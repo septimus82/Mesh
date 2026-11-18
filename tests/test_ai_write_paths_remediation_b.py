@@ -216,3 +216,30 @@ def test_a_plan_stops_once_its_project_stopped_being_one(root: Path, studios: An
 def test_aiops_with_no_owner_is_unchanged(root: Path) -> None:
     # (callers that hold no lock, the existing tests' sandboxes: as before remediation B)
     assert AIOps(root).add_light(ROOM, {"x": 1, "y": 1, "radius": 9}).ok
+
+
+def test_an_undo_stops_writing_once_its_project_stopped_being_one(root: Path, monkeypatch: pytest.MonkeyPatch,
+                                                                  capsys: pytest.CaptureFixture[str]) -> None:
+    from engine.tooling.plan_executor import BackupManager
+
+    inner = root / "inner"
+    create_project(inner, "Inner", template_id="blank")
+    saved = (inner / ROOM).read_text(encoding="utf-8")
+    (inner / ROOM).write_text(saved.replace("{", '{"saved_since": 1, ', 1), encoding="utf-8")
+    (inner / "made.json").write_text("{}", encoding="utf-8")
+    _backup(inner, {"created": ["made.json"], "modified": [ROOM]}, {ROOM: saved})
+    preflight = BackupManager._unsafe_entries
+
+    def then_the_marker_goes(*args: Any) -> list[str]:
+        problems = preflight(*args)  # every entry fine, under the nested project's lock
+        (inner / "config.json").unlink()  # then the nested project stops being one
+        return problems
+
+    monkeypatch.setattr(BackupManager, "_unsafe_entries", staticmethod(then_the_marker_goes))
+    before = _files(root)
+    with monkeypatch.context() as patch:
+        patch.chdir(inner)
+        assert ai_cli._handle_undo_last_plan(argparse.Namespace()) == 1
+    out = capsys.readouterr().out
+    assert "isn't this project's any more" in out and "Undo successful" not in out
+    assert _files(root) == before  # nothing deleted or restored once it changed
