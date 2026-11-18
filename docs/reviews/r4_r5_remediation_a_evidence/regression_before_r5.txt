@@ -1,0 +1,21 @@
+tests\test_mcp_project_ownership_root.py:123: AssertionError: {'ok': True, 'results': [{'data': {'world_path': '<tmp>'}, 'message': 'Updated world start scene', 'ok': True, 'type': 'set_world_start'}]}
+tests\test_mcp_project_ownership_root.py:123: AssertionError: {'data': None, 'message': "Created scene 'scenes/attic.json'", 'ok': True}
+tests\test_mcp_project_ownership_root.py:147: AssertionError: {'ok': True, 'results': [{'data': {'world_path': '<tmp>'}, 'message': 'Updated world start scene', 'ok': True, 'type': 'set_world_start'}]}
+tests\test_mcp_project_ownership_root.py:147: AssertionError: {'data': None, 'message': "Created scene 'scenes/attic.json'", 'ok': True}
+tests\test_mcp_project_ownership_root.py:157: AssertionError: assert (False is False and 'another Mesh project than the one held' in 'set_world_start failed: path is in another project inside this one: inner/packs/core_regions/worlds/main.json')
+tests\test_mcp_project_ownership_root.py:181: AssertionError: assert None == 'authoring'
+tests\test_mcp_project_ownership_root.py:181: AssertionError: assert None == 'authoring'
+PASSED tests/test_mcp_project_ownership_root.py::test_a_root_inside_a_project_studio_has_is_refused[live-apply_ops]
+PASSED tests/test_mcp_project_ownership_root.py::test_a_root_inside_a_project_studio_has_is_refused[live-create_scene]
+PASSED tests/test_mcp_project_ownership_root.py::test_a_root_inside_a_project_studio_has_is_refused[nobridge-apply_ops]
+PASSED tests/test_mcp_project_ownership_root.py::test_a_root_inside_a_project_studio_has_is_refused[nobridge-create_scene]
+PASSED tests/test_mcp_project_ownership_root.py::test_a_nested_project_is_edited_under_its_own_ownership[apply_ops]
+PASSED tests/test_mcp_project_ownership_root.py::test_a_nested_project_is_edited_under_its_own_ownership[create_scene]
+FAILED tests/test_mcp_project_ownership_root.py::test_studio_opening_after_the_check_is_never_written_behind_through_an_inner_root[apply_ops]
+FAILED tests/test_mcp_project_ownership_root.py::test_studio_opening_after_the_check_is_never_written_behind_through_an_inner_root[create_scene]
+FAILED tests/test_mcp_project_ownership_root.py::test_a_writer_owning_the_project_stops_one_started_in_an_inner_folder[apply_ops]
+FAILED tests/test_mcp_project_ownership_root.py::test_a_writer_owning_the_project_stops_one_started_in_an_inner_folder[create_scene]
+FAILED tests/test_mcp_project_ownership_root.py::test_the_outer_root_cant_change_a_nested_project_studio_has
+FAILED tests/test_mcp_project_ownership_root.py::test_an_inner_root_works_under_the_projects_lock[apply_ops]
+FAILED tests/test_mcp_project_ownership_root.py::test_an_inner_root_works_under_the_projects_lock[create_scene]
+7 failed, 6 passed in 28.37s

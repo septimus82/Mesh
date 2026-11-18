@@ -1,0 +1,86 @@
+{
+  "head": "e88ed5563e399331a08f5cb83aa73dfb5340d966",
+  "uncommitted_changes": false,
+  "has_r4": true,
+  "has_r5": false,
+  "r4_console_from_an_interior_folder": {
+    "studio_owns": "the project",
+    "console_cwd": "<project>/packs/core_regions",
+    "console_said": [
+      "[AI] ai_job: nothing was changed. Mesh Studio has this project open, and its unsaved work isn't in the files, so they aren't written behind it. Close it (saving or discarding that work) and run ai_job again; to change a project while it is open, propose the changes there (its AI panel, or `mesh author propose`). (<tmp>)"
+    ],
+    "files_written_behind_studio": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    }
+  },
+  "r4_console_into_a_nested_project": {
+    "studio_owns": "<project>/inner (its own Mesh project)",
+    "console_cwd": "<project>",
+    "console_said": [
+      "[AI] Job failed (1 op(s)); see details:",
+      " - add_light failed: path is in another Mesh project than the one held (<tmp>): inner/packs/core_regions/scenes/start.json"
+    ],
+    "nested_files_written_behind_its_studio": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    }
+  },
+  "r4_apply_plan_from_an_interior_folder": {
+    "studio_owns": "the project",
+    "cwd": "<project>/packs/core_regions",
+    "apply_plan": {
+      "exit": 1,
+      "said": [
+        "[Mesh][CLI] apply-plan: nothing was changed. Mesh Studio has this project open, and its unsaved work isn't in the files, so they aren't written behind it. Close it (saving or discarding that work) and run apply-plan again; to change a project while it is open, propose the changes there (its AI panel, or `mesh author propose`). (<tmp>)"
+      ]
+    },
+    "files_written_behind_studio": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    }
+  },
+  "r4_undo_manifest_into_a_nested_project": {
+    "plan_applied": 0,
+    "manifest": {
+      "created": [
+        "packs\\region2\\scenes\\cellar.json"
+      ],
+      "modified": [
+        "packs/core_regions/scenes/start.json"
+      ]
+    },
+    "nested_now_owned_by": "Mesh Studio (a separate process)",
+    "undo": {
+      "exit": 1,
+      "said": [
+        "[Mesh][Undo] Restoring backup: 1795021793_9c684e10",
+        "[Mesh][Undo] Not restored: nothing was changed, because packs\\region2\\scenes\\cellar.json isn't a file of this project (<tmp>): outside it, or in another project.",
+        "[Mesh][CLI] Undo failed: see above."
+      ]
+    },
+    "nested_files_changed": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    },
+    "outer_files_changed": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    }
+  },
+  "r4_undo_failure_reporting": {
+    "undo_with_corrupt_backup": {
+      "exit": 1,
+      "said": [
+        "[Mesh][Undo] Restoring backup: 1000_corrupt",
+        "[Mesh][Undo] Corrupt backup (missing manifest).",
+        "[Mesh][CLI] Undo failed: see above."
+      ]
+    }
+  }
+}
