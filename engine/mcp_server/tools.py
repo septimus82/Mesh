@@ -562,11 +562,11 @@ def _own_for_files(root: str, tool: str) -> tuple[Any, dict[str, Any] | None]:
 
 
 def _owned_ops(root: str, held: Any) -> Any:
-    """``AIOps`` at ``root`` writing only files of the project ``held`` owns (``AIOps(project=...)``: inside ``root``,
-    and not in another project nested in it, whose owner is not the one held; #462 R5)."""
+    """``AIOps`` at ``root`` writing only files ``held`` covers (``AIOps(owner=...)``, ``Ownership.owns``: inside its
+    project, not in another project nested in it, and not once that project changed; #462 R5)."""
     from engine.ai_ops import AIOps
 
-    return AIOps(base_dir=root, project=held.root)
+    return AIOps(base_dir=root, owner=held)
 
 
 def create_scene(name: str, template: str = "empty", root: str = ".") -> dict[str, Any]:

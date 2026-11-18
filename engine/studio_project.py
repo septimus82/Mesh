@@ -990,11 +990,16 @@ class Project:
         self.revision += 1
         return True
 
-    def save(self) -> list[str]:
+    def save(self, owner: Any = None) -> list[str]:
         """Write every changed room, the world file and the shared player as one save (``engine.project_save``): all
         of them or none. Returns the paths written. A save that fails raises SaveError (an ops.OpError) with a report
         of what happened to each file; nothing here changes then (the edits stay unsaved, undo as it was).
-        ``last_save_report`` holds the outcome either way, ``last_save_backups`` outside changes kept beside files."""
+        ``last_save_report`` holds the outcome either way, ``last_save_backups`` outside changes kept beside files.
+
+        ``owner``: the ``project_ownership.Ownership`` a writer outside Studio holds (#462 R5 remediation B). Every
+        file this save would write (the exact list handed to ``save_documents``) must be one it covers (``owns``):
+        a room the world lists in another Mesh project (one nested in this one, with its own owner) refuses the whole
+        save before anything is written (``not_this_project``)."""
         self.last_save_backups, self.last_save_report = [], None
         rooms = sorted(self.dirty)
         planned = [(self.path(key), "room") for key in rooms]
@@ -1018,6 +1023,12 @@ class Project:
                 raise self._refused(refused("prefab_catalogue_unreadable", str(err), involved, self.root)) from err
             prefabs = [p for p in catalogue if not (isinstance(p, dict) and p.get("id") == ops.PLAYER_PREFAB)]
             documents.append((self.PREFABS, "prefabs", [ops.player_prefab_entry(self.player), *prefabs]))
+        foreign = [rel for rel, _kind, _doc in documents if owner is not None and not owner.owns(self.root / rel)]
+        if foreign:
+            raise self._refused(refused(
+                "not_this_project", f"{', '.join(foreign)} {'is' if len(foreign) == 1 else 'are'} in another Mesh "
+                f"project than the one held ({owner.root}), so nothing was saved: that project has its own owner.",
+                [(rel, kind) for rel, kind, _doc in documents], self.root))
         try:
             # A room file this project never read or wrote (a new room's, or a listed room's missing file) is created by
             # this save: never over something another tool put there meanwhile (F15).
