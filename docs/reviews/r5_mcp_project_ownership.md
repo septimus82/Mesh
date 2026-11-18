@@ -135,3 +135,12 @@ Local, Windows, Python 3.13 (`-W error`):
   the check, the lock refuses it (`project_busy`).
 - The other direct `AIOps` writers are outside this brief: the console's `ai_job` and `mesh apply-plan` are R4
   (PR #521, unmerged).
+
+## Remediation A (independent review, P1: project ownership boundaries)
+
+The independent review found this PR's writers locked the folder they were given, not the Mesh project it is in,
+and limited targets with a check of their own. Corrected with one rule shared with the other PR (#521 / #522): one
+commit, `60b09b37` (`project_ownership.project_root` / `ownership_root` / `in_project`, and `AIOps(project=...)`),
+merged into both. The root cause, the changed invariant, the corrected paths, the before/after reproductions, the
+tests, fault injection and the combined results are in `docs/reviews/r4_r5_remediation_a.md`. Sections above
+describing this PR's own nested-project check, or a lock on the working folder or `root`, are superseded by it.
