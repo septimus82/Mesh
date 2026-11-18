@@ -202,7 +202,8 @@ def test_an_undo_with_a_destination_outside_the_project_or_an_unsafe_alias_is_re
     victim.write_text("{}", encoding="utf-8")
     original = (newest / "manifest.json").read_text(encoding="utf-8")
     for bad in ({"created": [str(victim)]}, {"created": ["../../../victim.json"]}, {"modified": ["scenes/../../../../x.json"]},
-                {"created": ["../../inner/config.json"]}, {"created": [7]}, {"modified": "scenes/start.json"}):
+                {"created": ["../../inner/config.json"]}, {"created": [7]}, {"modified": "scenes/start.json"},
+                {"modified": ["scenes/start.json", "scenes/no_copy.json"]}):  # (a valid entry, one with no copy: none)
         # (entries are relative to where the plan ran: packs/core_regions)
         manifest = {**json.loads(original), **bad}
         (newest / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
