@@ -203,3 +203,31 @@ def owned(root: str | Path, *, wait: float = 0.25) -> dict[str, Any] | None:
             time.sleep(0.02)
     finally:
         os.close(fd)
+
+
+# ------------------------------------------------------------- whose project a file is (#462 R4/R5 remediation)
+PROJECT_MARKER = "config.json"  # a Mesh project's root: what ``mesh edit`` and Mesh Studio open
+
+
+def project_root(path: str | Path) -> Path | None:
+    """The Mesh project ``path`` belongs to: the nearest folder, ``path`` itself or one above it, holding a
+    ``config.json``, once ``..``, links and junctions are resolved (``Path.resolve``); None if it is in no project. A
+    folder inside a project with a ``config.json`` of its own is a project of its own (nested), with its own owner; any
+    other folder inside a project is that project's."""
+    target = Path(path).expanduser().resolve()
+    return next((folder for folder in (target, *target.parents) if (folder / PROJECT_MARKER).is_file()), None)
+
+
+def ownership_root(start: str | Path) -> Path:
+    """Whose lock a writer working from the folder ``start`` takes: the project ``start`` is in, wherever inside it the
+    writer started, so every writer of one project takes one lock. Outside any project (no editor can open it):
+    ``start`` itself."""
+    folder = Path(start).expanduser().resolve()
+    return project_root(folder) or folder
+
+
+def in_project(root: str | Path, target: str | Path) -> bool:
+    """Whether ``target`` (resolved) is a file of the project owned at ``root`` (an ``ownership_root``): inside it, and
+    in no other project nested in it. What a writer holding ``root`` may change."""
+    owned, resolved = Path(root).resolve(), Path(target).expanduser().resolve()
+    return resolved.is_relative_to(owned) and project_root(resolved) == project_root(owned)
