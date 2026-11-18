@@ -69,6 +69,19 @@ class OwnershipUnavailable(RuntimeError):
     file system has no locks). Nothing is taken as free: the caller refuses."""
 
 
+def refused_write(command: str, exc: OwnedElsewhere | OwnershipUnavailable) -> str:
+    """What ``command``, which writes a project's files directly, says when it can't own the project (#462 R4)."""
+    if isinstance(exc, OwnershipUnavailable):
+        return f"{command}: nothing was changed. {exc}"
+    kind = exc.holder.get("kind")
+    if kind == AUTHORING:
+        return f"{command}: nothing was changed. Another tool is writing this project's files right now; try again in a moment."
+    who = "Another Mesh editor" if kind == EDITOR else "Mesh Studio"
+    return (f"{command}: nothing was changed. {who} has this project open, and its unsaved work isn't in the files, so "
+            f"they aren't written behind it. Close it (saving or discarding that work) and run {command} again; to change "
+            f"a project while it is open, propose the changes there (its AI panel, or `mesh author propose`). ({exc.root})")
+
+
 def lock_path(root: str | Path) -> Path:
     return Path(root).resolve() / LOCK_RELATIVE_PATH
 

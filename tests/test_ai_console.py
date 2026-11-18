@@ -6,6 +6,7 @@ from engine.console_controller import ConsoleController
 
 
 def test_ai_job_calls_ops_and_reload(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)  # (ai_job owns the project it runs in while it writes: this one, never the checkout)
     job = {"operations": []}
     job_path = tmp_path / "job.json"
     job_path.write_text(json.dumps(job), encoding="utf-8")

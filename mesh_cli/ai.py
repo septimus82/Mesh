@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 from engine import ai_history, json_io
 from engine.ai_audit import run_ai_audit
@@ -82,8 +83,31 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     ai_audit_parser.add_argument("--json", action="store_true", help="Output as JSON")
 
 
+def _own_project(command: str) -> Any:
+    """The project these commands write (the folder they run in), owned for the whole command (#462 R4), or None
+    (said why) if Mesh Studio, another editor or another writer has it, or that can't be told."""
+    from engine.editor import project_ownership  # noqa: PLC0415  # (the editor package is heavy: only when writing)
+
+    try:
+        return project_ownership.acquire(Path.cwd(), project_ownership.AUTHORING, wait=0.5)
+    except (project_ownership.OwnedElsewhere, project_ownership.OwnershipUnavailable) as exc:
+        print("[Mesh][CLI] " + project_ownership.refused_write(command, exc))
+        return None
+
+
 def _handle_apply_plan(args: argparse.Namespace) -> int:
-    """Apply a content plan."""
+    """Apply a content plan. Writing (not ``--dry-run``), it owns the project from before it reads anything until its
+    backups and history are written (#462 R4): never behind an open Mesh Studio, and no Studio opens meanwhile."""
+    if getattr(args, "dry_run", False):
+        return _apply_plan(args, None)
+    held = _own_project("apply-plan")
+    if held is None:
+        return 1
+    with held:
+        return _apply_plan(args, held.root)
+
+
+def _apply_plan(args: argparse.Namespace, root: Path | None) -> int:
     if getattr(args, "from_triage", False):
         triage_plan = Path("artifacts/triage_last_plan.json")
         if triage_plan.exists():
@@ -142,7 +166,7 @@ def _handle_apply_plan(args: argparse.Namespace) -> int:
             if issues:
                 print(f"[Mesh][CLI] Plan linting passed with {len(issues)} warnings.")
 
-        executor = PlanExecutor(dry_run=args.dry_run, safe_paths_only=True)
+        executor = PlanExecutor(dry_run=args.dry_run, safe_paths_only=True, root=root)
         executor.execute(plan, profile="cli_apply", ai_safe=args.ai_safe)
         print(f"[Mesh][CLI] Plan '{args.plan_path}' applied successfully.")
 
@@ -192,10 +216,14 @@ def _handle_apply_plan(args: argparse.Namespace) -> int:
 
 
 def _handle_undo_last_plan(args: argparse.Namespace) -> int:
-    """Undo the last applied plan."""
+    """Undo the last applied plan: it writes the project's files, so it owns the project meanwhile (#462 R4)."""
+    held = _own_project("undo-last-plan")
+    if held is None:
+        return 1
     try:
         executor = PlanExecutor()
-        executor.undo_last()
+        with held:
+            executor.undo_last()
         print("[Mesh][CLI] Undo successful.")
         return 0
     except Exception as e:

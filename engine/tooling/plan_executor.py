@@ -123,8 +123,12 @@ class BackupManager:
             return False
 
 class PlanExecutor:
-    def __init__(self, dry_run: bool = False, safe_paths_only: bool = False, writer: Optional[Callable[[Path, str], None]] = None):
+    def __init__(self, dry_run: bool = False, safe_paths_only: bool = False, writer: Optional[Callable[[Path, str], None]] = None,
+                 root: Optional[Path] = None):
+        """``root``: the project its caller owns (#462 R4): a file outside it, or in another project inside it, is
+        refused before it is written."""
         self.dry_run = dry_run
+        self.root = root.resolve() if root is not None else None
         self.safe_paths_only = safe_paths_only
         self._writer = writer
         # Back-compat: some callers access `executor.writer` directly.
@@ -313,7 +317,17 @@ class PlanExecutor:
         else:
             print(f"  [Warning] Unknown action type: {t}")
 
+    def _check_owned(self, path: Path) -> None:
+        if self.root is None:
+            return
+        target = path.resolve()
+        inner = [d for d in target.parents if d.is_relative_to(self.root) and d != self.root]
+        if not target.is_relative_to(self.root) or any((d / "config.json").is_file() for d in inner):
+            raise PermissionError(f"'{path}' isn't in the project being changed ({self.root}): nothing of it is written, "
+                                  "since only that project is held against other writers.")
+
     def _track_file(self, path: Path):
+        self._check_owned(path)
         self._check_safety(path)
         if not self.dry_run:
             if self._writer is None:
@@ -329,10 +343,10 @@ class PlanExecutor:
         path = Path(args["path"])
         manifest = path / "manifest.json"
 
+        self._track_file(manifest)  # (checked before its folder is made)
         if self._writer is None and not path.exists():
             path.mkdir(parents=True, exist_ok=True)
 
-        self._track_file(manifest)
         if not manifest.exists():
             content = self._dump_json({
                 "id": args["id"],

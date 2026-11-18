@@ -1,0 +1,100 @@
+"""R4 reproduction: `mesh apply-plan` and `mesh undo-last-plan` while Mesh Studio (another process) has unsaved work.
+
+    py -3.13 repro_plan.py REPO OUT_JSON
+
+Disposable projects only (a temp folder). Studio is tests/studio_owner_process.py (Studio's own Project, AI host and
+live-session bridge, the project owned as open_studio owns it). The commands are the real CLI in a subprocess."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+REPO = Path(sys.argv[1]).resolve()
+OUT = Path(sys.argv[2])
+sys.path.insert(0, str(REPO))
+os.chdir(REPO)
+
+from engine.project_scaffold import create_project  # noqa: E402
+from tests.test_studio_project_ownership import ROOM, StudioProcess  # noqa: E402
+
+PLAN = {"wizard": "r4-repro", "version": 1, "inputs": {"pack": "core_regions"},
+        "actions": [{"type": "add_npc", "description": "AI adds a Ferryman",
+                     "args": {"scene_path": ROOM, "role": "villager", "name": "Ferryman", "x": 96, "y": 96}}]}
+
+
+def files(root: Path) -> dict[str, str]:
+    skip = {".mesh/owner.lock", ".mesh/live_session.json"}
+    return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()[:16]
+            for p in sorted(root.rglob("*")) if p.is_file() and p.relative_to(root).as_posix() not in skip}
+
+
+def diff(a: dict[str, str], b: dict[str, str]) -> dict[str, list[str]]:
+    return {"changed": sorted(k for k in a if k in b and a[k] != b[k]), "created": sorted(set(b) - set(a)),
+            "deleted": sorted(set(a) - set(b))}
+
+
+def names(root: Path) -> list[str]:
+    return [str(e.get("name")) for e in json.loads((root / ROOM).read_text(encoding="utf-8"))["entities"]]
+
+
+def mesh(root: Path, *args: str) -> dict:
+    run = subprocess.run([sys.executable, "-m", "mesh_cli", *args], cwd=root, capture_output=True, text=True,
+                         timeout=300, env={**os.environ, "PYTHONPATH": str(REPO)})
+    tail = [line for line in run.stdout.splitlines() if "[Mesh]" in line or "Error" in line][-6:]
+    return {"argv": ["mesh", *args], "exit": run.returncode, "stdout_tail": tail}
+
+
+def case(tmp: Path, label: str, studio_open: bool) -> dict:
+    root = tmp / label / "game"
+    create_project(root, "Game", template_id="blank")
+    plan = tmp / label / "plan.json"
+    plan.write_text(json.dumps(PLAN), encoding="utf-8")
+    out: dict = {"studio_open": studio_open}
+    studio = None
+    if studio_open:
+        studio = StudioProcess(root, log=tmp / label / "studio.log",
+                               env={"MESH_TEST_OWNER_WAIT": "0.3", "PYTHONPATH": str(REPO),
+                                    "MESH_RUNTIME_SETTINGS_PATH": str(tmp / label / "settings.json")})
+        assert studio.start["ready"], studio.start
+        studio.ask("edit Unsaved Warden")
+    before = files(root)
+    out["apply"] = mesh(root, "apply-plan", str(plan))
+    after_apply = files(root)
+    out["apply"]["files"] = diff(before, after_apply)
+    out["apply"]["room_on_disk"] = names(root)
+    if studio is not None:
+        out["studio_after_apply"] = studio.ask("state")
+        out["studio_save"] = studio.ask("save")  # the person's next Save
+        out["room_on_disk_after_studio_save"] = names(root)
+        out["outside_change_backups"] = sorted(p.relative_to(root).as_posix() for p in root.rglob("*.outside-change*"))
+        studio.ask("edit Second Unsaved")  # more unsaved work, then the plan undone behind Studio
+        saved = files(root)
+        out["undo"] = mesh(root, "undo-last-plan")
+        out["undo"]["files"] = diff(saved, files(root))
+        out["undo"]["room_on_disk"] = names(root)
+        out["studio_after_undo"] = studio.ask("state")
+        assert studio.close() == 0
+        studio.end()
+    else:
+        out["undo"] = mesh(root, "undo-last-plan")
+        out["undo"]["files"] = diff(after_apply, files(root))
+        out["undo"]["room_on_disk"] = names(root)
+    return out
+
+
+def main() -> None:
+    with tempfile.TemporaryDirectory(prefix="mesh-r4-") as tmp:
+        result = {"head": subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip(),
+                  "studio_open": case(Path(tmp), "open", True), "studio_closed": case(Path(tmp), "closed", False)}
+    OUT.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(result, indent=2))
+
+
+if __name__ == "__main__":
+    main()

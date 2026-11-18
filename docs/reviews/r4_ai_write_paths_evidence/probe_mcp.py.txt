@@ -1,0 +1,67 @@
+"""R4 side finding (not fixed here): MCP apply_ops' direct-file fallback checks for Studio, then writes without owning
+the project. Can a Studio open between the check and the write, and the write then land behind it?
+
+    py -3.13 probe_mcp.py REPO OUT_JSON
+
+The pause is a test seam (AIOps.apply_job waits) standing in for the moment between the check and the write."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import sys
+import tempfile
+import threading
+from pathlib import Path
+
+REPO = Path(sys.argv[1]).resolve()
+OUT = Path(sys.argv[2])
+sys.path.insert(0, str(REPO))
+os.chdir(REPO)
+
+from engine import ai_ops  # noqa: E402
+from engine.editor import project_ownership  # noqa: E402
+from engine.mcp_server import tools  # noqa: E402
+from engine.project_scaffold import create_project  # noqa: E402
+from tests.test_studio_project_ownership import StudioProcess  # noqa: E402
+
+
+def main() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="mesh-r4p-"))
+    root = tmp / "game"
+    create_project(root, "Game", template_id="blank")
+    world_file = json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"]
+    world = root / world_file
+    started, go = threading.Event(), threading.Event()
+    original = ai_ops.AIOps.apply_job
+
+    def paused(self, job):  # type: ignore[no-untyped-def]
+        started.set()
+        go.wait(60)
+        return original(self, job)
+
+    ai_ops.AIOps.apply_job = paused  # type: ignore[method-assign]
+    result: list = []
+    op = {"type": "set_world_start", "world_path": world_file, "start_scene": "elsewhere", "start_spawn": "door"}
+    writer = threading.Thread(target=lambda: result.append(tools.apply_ops([op], root=str(root), validate=False)))
+    writer.start()
+    assert started.wait(60)
+    studio = StudioProcess(root, log=tmp / "studio.log", env={"MESH_TEST_OWNER_WAIT": "0.3"})
+    opened = studio.start
+    before = hashlib.sha256(world.read_bytes()).hexdigest()
+    owner_during = project_ownership.owned(root)
+    go.set()
+    writer.join(60)
+    after = hashlib.sha256(world.read_bytes()).hexdigest()
+    out = {"studio_opened_while_the_write_was_pending": bool(opened.get("ready")),
+           "owner_while_pending": owner_during and owner_during.get("kind"),
+           "apply_ops_ok": bool(result and result[0].get("ok")),
+           "world_file_changed_while_studio_owned_it": before != after}
+    studio.close()
+    OUT.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(out, indent=2))
+
+
+if __name__ == "__main__":
+    main()
