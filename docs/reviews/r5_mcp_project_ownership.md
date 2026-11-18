@@ -110,8 +110,18 @@ Local, Windows, Python 3.13 (`-W error`):
   `test_studio_revision_identity_gpu`: **4 passed**;
 - `tooling.ruff_gate` ok, `tooling.mypy_gate` ok (one F541 in the new test fixed before commit).
 
-CI and Extended run on the PR's head after this report is committed: their first-attempt results (failures
-kept, nothing rerun) are in the PR's "CI and Extended results" comment.
+### PR #522, first attempts (none rerun)
+
+- head `d1f29f9e`: **CI failed** (run 44324837662) and **Extended failed** (run 44324833415), from one cause.
+  The exception-policy scan counted the new `except Exception` in `_own_for_files` (an unexpected lock failure is a
+  refusal) as a *silent* broad catch: 483 against the baseline's 482 (`test_scan_exception_policies_contract::
+  test_baseline_matches_scan` on both OSes, verify-all's `exception-policy-scan` step). Every other failure (the
+  verify jobs, Extended's verify-all-dependent tests) followed from verify-all failing. Linux pytest otherwise
+  12,155 passed, 1 failed; Extended's GPU lanes passed. The focused local run had not included that scan.
+  Fixed without touching the baseline: the catch now logs the failure with its traceback (`exc_info=True`) and
+  still refuses; the scan counts 482 again.
+- The next head's results are in the PR's "CI and Extended results" comment (this report is committed before
+  they run).
 
 ## 6. Limits
 

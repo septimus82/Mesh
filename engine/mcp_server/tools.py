@@ -546,6 +546,10 @@ def _own_for_files(root: str, tool: str) -> tuple[Any, dict[str, Any] | None]:
             f"Mesh Studio opened this project just now, so {tool} wrote nothing (the person's unsaved work would be "
             "overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
     except Exception as exc:  # noqa: BLE001  # REASON: ownership not established, however it failed, is a refusal, never a pass
+        from engine.logging_tools import get_logger  # noqa: PLC0415
+
+        logger = get_logger(__name__)  # (unexpected: kept with its traceback, and refused)
+        logger.warning("[Mesh][MCP] %s: the project's ownership couldn't be established: %s", tool, exc, exc_info=True)
         return None, {"ok": False, "reason": "ownership_unknown",
                       "message": f"{tool} wrote nothing: this project's ownership can't be established ({exc})."}
 
