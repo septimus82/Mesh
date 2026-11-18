@@ -1,0 +1,38 @@
+{
+  "head": "2d1f9ea0f36559073dcec3260cad727bde850377",
+  "uncommitted_changes": false,
+  "has_r4": false,
+  "has_r5": true,
+  "finding1_mcp_adapted_authoring_into_a_nested_project": {
+    "route": "authoring",
+    "result": {
+      "ok": false,
+      "reason": "save_failed"
+    },
+    "nested_files_written_behind_its_studio": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    },
+    "studio_unsaved_work_kept": true,
+    "normal_project_control": {
+      "ok": true,
+      "route": "files"
+    }
+  },
+  "finding3_mcp_marker_removed_after_the_lock": {
+    "writer_held": "<outer>/inner (authoring)",
+    "after_marker_removed": {
+      "ok": false,
+      "results": [
+        "set_world_start failed: path is in another Mesh project than the one held (<tmp>): packs/core_regions/worlds/main.json"
+      ]
+    },
+    "outer_files_written_behind_its_studio": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    },
+    "outer_studio_unsaved_kept": true
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "caught": 11,
+  "of": 11,
+  "mutations": [
+    {
+      "mutation": "finding 3: identity rediscovered from the held root",
+      "file": "engine/editor/project_ownership.py",
+      "caught": true,
+      "summary": [
+        "6 failed, 35 passed, 1 skipped in 84.27s (0:01:24)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_remediation_b.py::test_a_plan_stops_once_its_project_stopped_being_one",
+        "tests/test_ai_write_paths_remediation_b.py::test_an_undo_stops_writing_once_its_project_stopped_being_one",
+        "tests/test_ai_write_paths_remediation_b.py::test_the_console_stops_once_its_project_stopped_being_one",
+        "tests/test_mcp_project_ownership_remediation_b.py::test_a_nested_projects_lock_covers_nothing_once_it_stopped_being_a_project",
+        "tests/test_project_ownership_root.py::test_a_lock_never_covers_another_project_after_a_marker_changes"
+      ]
+    },
+    {
+      "mutation": "finding 3: a released lock still covers files",
+      "file": "engine/editor/project_ownership.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 40 passed, 1 skipped in 83.83s (0:01:23)"
+      ],
+      "failed": [
+        "tests/test_project_ownership_root.py::test_aiops_held_to_a_project_writes_its_files_and_no_nested_projects"
+      ]
+    },
+    {
+      "mutation": "finding 1: Project.save checks nothing",
+      "file": "engine/studio_project.py",
+      "caught": true,
+      "summary": [
+        "3 failed, 38 passed, 1 skipped in 84.00s (0:01:23)"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership_remediation_b.py::test_a_nested_projects_lock_covers_nothing_once_it_stopped_being_a_project",
+        "tests/test_mcp_project_ownership_remediation_b.py::test_adapted_authoring_never_saves_a_room_of_a_nested_project",
+        "tests/test_mcp_project_ownership_remediation_b.py::test_the_persistence_path_refuses_it_whoever_calls_it_and_whether_or_not_the_nested_project_is_open"
+      ]
+    },
+    {
+      "mutation": "finding 1: authoring_session doesn't pass its lock to the save",
+      "file": "engine/authoring_session.py",
+      "caught": true,
+      "summary": [
+        "3 failed, 38 passed, 1 skipped in 83.84s (0:01:23)"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership_remediation_b.py::test_a_nested_projects_lock_covers_nothing_once_it_stopped_being_a_project",
+        "tests/test_mcp_project_ownership_remediation_b.py::test_adapted_authoring_never_saves_a_room_of_a_nested_project",
+        "tests/test_mcp_project_ownership_remediation_b.py::test_the_persistence_path_refuses_it_whoever_calls_it_and_whether_or_not_the_nested_project_is_open"
+      ]
+    },
+    {
+      "mutation": "finding 2: a folder accepted where a file is deleted or restored",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "2 failed, 39 passed, 1 skipped in 83.89s (0:01:23)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_remediation_b.py::test_a_created_file_that_is_now_a_folder_refuses_the_undo_before_anything_is_deleted",
+        "tests/test_ai_write_paths_remediation_b.py::test_a_modified_file_that_is_now_a_folder_is_never_copied_into_it"
+      ]
+    },
+    {
+      "mutation": "finding 2: a file accepted where a folder is needed above a restored file",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 40 passed, 1 skipped in 84.25s (0:01:24)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_remediation_b.py::test_one_bad_entry_among_valid_ones_refuses_the_whole_undo"
+      ]
+    },
+    {
+      "mutation": "finding 3: undo doesn't check again before each write",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 40 passed, 1 skipped in 84.13s (0:01:24)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_remediation_b.py::test_an_undo_stops_writing_once_its_project_stopped_being_one"
+      ]
+    },
+    {
+      "mutation": "finding 3: the plan's records written after the project changed",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 40 passed, 1 skipped in 84.00s (0:01:24)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_remediation_b.py::test_a_plan_stops_once_its_project_stopped_being_one"
+      ]
+    },
+    {
+      "mutation": "finding 3: plan writes not checked against the lock",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 40 passed, 1 skipped in 84.26s (0:01:24)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_remediation_b.py::test_a_plan_stops_once_its_project_stopped_being_one"
+      ]
+    },
+    {
+      "mutation": "ai_job: AIOps without the lock",
+      "file": "engine/console_runtime/handlers_ai.py",
+      "caught": true,
+      "summary": [
+        "2 failed, 39 passed, 1 skipped in 84.16s (0:01:24)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_project_root.py::test_the_outer_projects_console_cant_change_a_nested_project",
+        "tests/test_ai_write_paths_remediation_b.py::test_the_console_stops_once_its_project_stopped_being_one"
+      ]
+    },
+    {
+      "mutation": "MCP fallback: AIOps without the lock",
+      "file": "engine/mcp_server/tools.py",
+      "caught": true,
+      "summary": [
+        "2 failed, 39 passed, 1 skipped in 84.15s (0:01:24)"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership_remediation_b.py::test_a_nested_projects_lock_covers_nothing_once_it_stopped_being_a_project",
+        "tests/test_mcp_project_ownership_root.py::test_the_outer_root_cant_change_a_nested_project_studio_has"
+      ]
+    }
+  ]
+}
