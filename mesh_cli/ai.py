@@ -105,10 +105,10 @@ def _handle_apply_plan(args: argparse.Namespace) -> int:
     if held is None:
         return 1
     with held:
-        return _apply_plan(args, held.root)
+        return _apply_plan(args, held)
 
 
-def _apply_plan(args: argparse.Namespace, root: Path | None) -> int:
+def _apply_plan(args: argparse.Namespace, owner: Any) -> int:
     if getattr(args, "from_triage", False):
         triage_plan = Path("artifacts/triage_last_plan.json")
         if triage_plan.exists():
@@ -167,12 +167,12 @@ def _apply_plan(args: argparse.Namespace, root: Path | None) -> int:
             if issues:
                 print(f"[Mesh][CLI] Plan linting passed with {len(issues)} warnings.")
 
-        executor = PlanExecutor(dry_run=args.dry_run, safe_paths_only=True, root=root)
+        executor = PlanExecutor(dry_run=args.dry_run, safe_paths_only=True, owner=owner)
         executor.execute(plan, profile="cli_apply", ai_safe=args.ai_safe)
         print(f"[Mesh][CLI] Plan '{args.plan_path}' applied successfully.")
 
         # AI History Logging
-        if args.ai_safe and not args.dry_run:
+        if args.ai_safe and not args.dry_run and executor.records_allowed():
             scenes = ai_history.extract_scenes_from_plan({"actions": plan.actions})
             goal = plan.inputs.get("prompt") or plan.inputs.get("goal")
             ai_history.append_history_entry(args.plan_path, scenes, goal=goal)
@@ -197,7 +197,7 @@ def _apply_plan(args: argparse.Namespace, root: Path | None) -> int:
                 print("[Mesh][CLI] Tests failed!")
 
         # Record history
-        if not args.dry_run:
+        if not args.dry_run and executor.records_allowed():
             result = {
                 "success": True,
                 "summary": executor.summary,
@@ -224,7 +224,7 @@ def _handle_undo_last_plan(args: argparse.Namespace) -> int:
     try:
         executor = PlanExecutor()
         with held:
-            restored = executor.undo_last(root=held.root)
+            restored = executor.undo_last(owner=held)
         if not restored:
             print("[Mesh][CLI] Undo failed: see above.")
             return 1

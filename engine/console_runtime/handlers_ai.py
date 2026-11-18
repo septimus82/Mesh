@@ -47,7 +47,7 @@ def handle_ai_job(controller: Any, args: list[str]) -> bool:
         controller.log("[AI] " + project_ownership.refused_write("ai_job", exc))
         return True
     with held:
-        result = AIOps(".", project=held.root).apply_job(job)  # (only the held project's files)
+        result = AIOps(".", owner=held).apply_job(job)  # (only the held project's files)
     ok = result.get("ok", False)
     op_count = len(result.get("results") or [])
     scenes = {
