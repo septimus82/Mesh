@@ -236,7 +236,7 @@ def test_an_undo_stops_writing_once_its_project_stopped_being_one(root: Path, mo
         return problems
 
     monkeypatch.setattr(BackupManager, "_unsafe_entries", staticmethod(then_the_marker_goes))
-    before = _files(root)
+    before = {k: v for k, v in _files(root).items() if k != "inner/config.json"}  # (the marker the test removes)
     with monkeypatch.context() as patch:
         patch.chdir(inner)
         assert ai_cli._handle_undo_last_plan(argparse.Namespace()) == 1
