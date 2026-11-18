@@ -196,4 +196,9 @@ never the checkout).
   asks for `project_ownership` to be reused. Hiding it behind a call into a non-runtime module would satisfy the
   check without changing the dependency.
 
-FINAL_RESULTS
+- head `e1ebdbfd` (the fix, the tests and the boundary entry): **CI passed** (run 44306478094, attempt 1, every
+  job; Linux 12,133 passed; the 11 new windowless tests passed in Windows shard 1/2's junit) and **Extended passed**
+  (run 44306465417, attempt 1, every lane; `test_ai_job_typed_into_the_console_of_a_studio_play_test_changes_nothing`
+  ran and passed on the Ubuntu and Windows GPU lanes).
+- The head after this report's last edit (documentation only) has its own CI and Extended runs; their results are
+  in the PR's "CI and Extended results" comment.
