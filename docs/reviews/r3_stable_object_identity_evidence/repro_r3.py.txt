@@ -1,0 +1,113 @@
+"""R3 (#462), Astra's three reproductions; prints what accepting the stale proposal did to the replacement.
+
+    py -3.13 repro_r3.py REPO OUT
+
+REPO: the checkout whose engine and tests are used. OUT: a new, empty folder. A real StudioAIHost on its loopback
+bridge; the AI through engine.authoring_session with R1's base_revision_id; the person edits with the operations
+Studio's tools call, through Project.edit_scene; acceptance is StudioAIHost.accept (Studio's Accept).
+"""
+import copy
+import json
+import sys
+import threading
+import time
+from pathlib import Path
+
+REPO, OUT = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve()
+assert not OUT.exists() or not any(OUT.iterdir()), f"{OUT} is not empty"
+OUT.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(REPO))
+
+from engine import authoring_session  # noqa: E402
+from engine import project_ops as ops  # noqa: E402
+from engine.project_scaffold import create_project  # noqa: E402
+from engine.studio_ai import StudioAIHost  # noqa: E402
+from engine.studio_project import Project  # noqa: E402
+from tests.test_studio_object_identity import (COURSE, ELSEWHERE, MODEL, _add_line, _draw_river, _lines,  # noqa: E402
+                                               _rivers, _Studio, _structure, _talker)
+
+
+def session(name):
+    root = OUT / name
+    create_project(root, "Game", template_id="hd2d_rpg")
+    person = _Studio(Project(root, json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"]))
+    host = StudioAIHost(person)
+    host.start()
+    stop = threading.Event()
+
+    def pump():
+        while not stop.is_set():
+            host.drain()
+            time.sleep(0.01)
+
+    threading.Thread(target=pump, daemon=True).start()
+    return root, person, host, lambda: (stop.set(), host.stop())
+
+
+def propose(root, host, changes):
+    read = authoring_session.read_project(root)
+    staged = authoring_session.propose(root, changes, title="An AI's change", base_revision_id=read["revision_id"])
+    assert staged["ok"], staged
+    return next(p for p in host.proposals if p.proposal_id == staged["proposal"]["proposal_id"]), read["revision_id"]
+
+
+def accepted(result):
+    return {k: result.get(k) for k in ("ok", "reason") if k in result} | (
+        {"conflict at": [c.get("path") or c.get("where") or str(c)[:80] for c in result.get("conflicts", [])][:2]}
+        if result.get("conflicts") else {}) | ({"message": result["message"][:140]} if result.get("message") else {})
+
+
+steps = {}
+# A. structures
+root, person, host, end = session("structures")
+project, made = person.project, []
+
+
+def place(scene, x):
+    out, sid = ops.place_structure(scene, MODEL, x, 900.0)
+    made.append(sid)
+    return out
+
+
+project.edit_scene(lambda s: place(s, 400.0))
+turn, rid = propose(root, host, [{"op": "set_structure", "structure_id": made[0], "rotation": 90}])
+project.edit_scene(lambda s: ops.remove_structure(s, made[0]))
+project.edit_scene(lambda s: place(s, 1200.0))
+before = copy.deepcopy(_structure(project, made[1]))
+steps["A structures"] = {"original": made[0], "AI proposal (preview)": turn.summary, "based on": rid.split(":")[1],
+                         "replacement": made[1], "replacement before accept": before,
+                         "accept": accepted(host.accept(turn)), "replacement after": _structure(project, made[1])}
+end()
+
+# B. rivers
+root, person, host, end = session("rivers")
+project = person.project
+original = _draw_river(project, COURSE)
+block, rid = propose(root, host, [{"op": "set_river", "river_id": original, "passable": "block"}])
+project.edit_scene(lambda s: ops.remove_river(s, original))
+replacement = _draw_river(project, ELSEWHERE)
+before = {k: v for k, v in _rivers(project)[replacement].items() if k in ("id", "passable", "points")}
+result = host.accept(block)
+steps["B rivers"] = {"original": original, "AI proposal (preview)": block.summary, "replacement": replacement,
+                     "replacement before accept": before, "accept": accepted(result),
+                     "replacement after": {k: v for k, v in _rivers(project)[replacement].items()
+                                           if k in ("id", "passable", "points")}}
+end()
+
+# C. dialogue lines
+root, person, host, end = session("lines")
+project = person.project
+talker = _talker(project)
+original = _add_line(project, talker, "The bridge is out.")
+ghost, rid = propose(root, host, [{"op": "set_line", "entity_id": talker, "node_id": original, "speaker": "Ghost"}])
+project.edit_scene(lambda s: ops.remove_line(s, talker, original))
+replacement = _add_line(project, talker, "The ferry runs at dawn.")
+before = copy.deepcopy(_lines(project, talker)[replacement])
+steps["C dialogue lines"] = {"talker": talker, "original": original, "AI proposal (preview)": ghost.summary,
+                             "replacement": replacement, "replacement before accept": before,
+                             "accept": accepted(host.accept(ghost)),
+                             "replacement after": _lines(project, talker)[replacement]}
+end()
+text = json.dumps(steps, indent=1, default=str)
+print(text)
+(OUT / "repro_r3.json").write_text(text + "\n", encoding="utf-8")

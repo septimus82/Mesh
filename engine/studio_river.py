@@ -290,8 +290,10 @@ class RiverTool:
         self._add_draft_point(at)
 
     def _new_id(self) -> str:
-        taken = {r.get("id") for r in self.saved()}
-        return next(rid for rid in ("river", *(f"river-{n}" for n in range(2, 1000))) if rid not in taken)
+        """The river being drawn's id: one no river of this room has, nor had this session (#462 R3)."""
+        project = self.studio.project
+        with ops.retired_ids(project.ids_seen), ops.in_room(project.current):
+            return ops.unique_river_id(project.scene())
 
     def _add_draft_point(self, at: tuple[float, float, float]) -> None:
         studio = self.studio

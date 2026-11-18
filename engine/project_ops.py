@@ -10,6 +10,7 @@ instead, with a message fit to show a user.
 from __future__ import annotations
 
 import copy
+import itertools
 import json
 import math
 import posixpath
@@ -79,6 +80,9 @@ def entity_ref(scene: Doc, ref: Any) -> str:
 
 
 _RETIRED: ContextVar[Collection[str]] = ContextVar("mesh_retired_entity_ids", default=frozenset())
+_ROOM: ContextVar[str | None] = ContextVar("mesh_editing_room", default=None)
+_PLAYERS: ContextVar[Collection[str]] = ContextVar("mesh_editing_room_players", default=frozenset())
+_SCOPE = "\x1f"  # (#462 R3: between a scoped id's parts, never in an id Mesh makes)
 
 
 @contextmanager
@@ -91,6 +95,72 @@ def retired_ids(ids: Collection[str]) -> Iterator[None]:
         yield
     finally:
         _RETIRED.reset(token)
+
+
+@contextmanager
+def in_room(key: str, players: Collection[str] = ()) -> Iterator[None]:
+    """While editing the room ``key`` (#462 R3): the structures, rivers and conversation lines made in it avoid the ids
+    their kind had there this session (``retired_ids`` holds them as ``scoped_id``s). Mesh Studio's edits (an edit of
+    a room, each change of an AI's batch) say which room; an edit that doesn't retires nothing of theirs.
+    ``players``: the room's objects that are the shared player, whose conversation is one in every room
+    (``player_line_ids``)."""
+    token, players_token = _ROOM.set(key), _PLAYERS.set(frozenset(players))
+    try:
+        yield
+    finally:
+        _PLAYERS.reset(players_token)
+        _ROOM.reset(token)
+
+
+def scoped_id(kind: str, room: str, *parts: str) -> str:
+    """An id with what it is unique among (#462 R3): a structure's or river's in its room, a conversation line's in its
+    room and object (its conversation): ``"structure", room, id``; ``"river", room, id``; ``"line", room, object, id``.
+    Two conversations both have a ``line_2``; two rooms both have a ``river``."""
+    return _SCOPE.join((kind, room, *parts))
+
+
+def scoped_ids(room_key: str, scene: Doc) -> set[str]:
+    """The ids of the structures, rivers and conversation lines in a room, each as ``scoped_id`` (Mesh Studio keeps
+    every one it has seen this session, with the objects' ids: ``Project.ids_seen``)."""
+    found = {scoped_id("structure", room_key, str(s["id"])) for s in structures(scene)
+             if isinstance(s, dict) and s.get("id")}
+    found.update(scoped_id("river", room_key, str(r["id"])) for r in rivers(scene) if r.get("id"))
+    for entity in entities(scene):
+        nodes = (_dialogue_doc(entity) or {}).get("nodes")
+        if isinstance(nodes, dict) and entity.get("id"):
+            found.update(scoped_id("line", room_key, str(entity["id"]), str(node)) for node in nodes)
+    return found
+
+
+def player_line_ids(definition: Doc | None) -> set[str]:
+    """The shared player's conversation lines, as Mesh Studio keeps them (#462 R3): its conversation is one in every
+    room (rooms hold only a reference to the player; the definition holds what it says), so its lines are scoped to
+    the project, ``"player-line", id``, not to a room and object as another conversation's are."""
+    nodes = (_dialogue_doc(definition) or {}).get("nodes") if isinstance(definition, dict) else None
+    return {_SCOPE.join(("player-line", str(node))) for node in nodes} if isinstance(nodes, dict) else set()
+
+
+def _had(prefix: str) -> set[str]:
+    return {r[len(prefix):] for r in _RETIRED.get() if isinstance(r, str) and r.startswith(prefix)}
+
+
+def _retired_here(kind: str, *scope: str) -> set[str]:
+    """The ids things of ``kind`` have had this session in the room being edited (and ``scope`` in it: a line's
+    object): none, outside Mesh Studio's edits."""
+    room = _ROOM.get()
+    if room is None:
+        return set()
+    return _had(scoped_id(kind, room, *scope) + _SCOPE)
+
+
+def _lines_had(entity_id: str) -> set[str]:
+    """The line ids ``entity_id``'s conversation had this session: the shared player's in any room, another object's
+    in this room; none, outside Mesh Studio's edits."""
+    if _ROOM.get() is None or not entity_id:
+        return set()
+    if entity_id in _PLAYERS.get():
+        return _had("player-line" + _SCOPE)
+    return _retired_here("line", entity_id)
 
 
 def unique_entity_id(scene: Doc, base: str) -> str:
@@ -398,7 +468,10 @@ def set_dialogue_text(scene: Doc, entity_id: str, text: str) -> Doc:
     if dialogue is None:
         dialogue = config["dialogue"] = {"speaker": entity.get("name") or "", "start": "root", "nodes": {}}
     start = str(dialogue.setdefault("start", "root"))
-    dialogue.setdefault("nodes", {}).setdefault(start, {})["text"] = str(text)
+    nodes = dialogue.setdefault("nodes", {})
+    if start not in nodes and start in _lines_had(str(entity_id)):  # (#462 R3: a line made, not one back)
+        start = dialogue["start"] = _new_line_id(nodes, str(entity_id))
+    nodes.setdefault(start, {})["text"] = str(text)
     config.pop("dialogue_lines", None)  # the node graph is now the source of truth
     return _checked(scene, out)
 
@@ -1393,9 +1466,20 @@ def add_river(scene: Doc, river_id: str, points: Any, *, flow: Any = _UNSET, col
     def edit(found: list[Doc]) -> list[Doc]:
         if any(r.get("id") == river_id for r in found):
             raise OpError(f"This room already has a river '{river_id}'.")
+        if str(river_id) in _retired_here("river"):  # (#462 R3)
+            raise OpError(f"This room had a river '{river_id}' earlier in this session (it was removed), so a new one "
+                          "can't take its id: a change meant for the old one would land on it. Choose another id.")
         return [*found, {"id": river_id, "points": points, **look}]
 
     return _with_rivers(scene, edit, river_id)
+
+
+def unique_river_id(scene: Doc) -> str:
+    """A new river's id, as Studio's river tool names them: "river", "river-2", "river-3"...: the first no river here
+    has, nor had this session (#462 R3)."""
+    taken = {r.get("id") for r in rivers(scene)} | _retired_here("river")
+    names = itertools.chain(("river",), (f"river-{n}" for n in itertools.count(2)))  # (one at a time)
+    return next(rid for rid in names if rid not in taken)
 
 
 def set_river(scene: Doc, river_id: str, *, points: Any = _UNSET, flow: Any = _UNSET, colour: Any = _UNSET,
@@ -2033,7 +2117,7 @@ def _graph(entity: Doc) -> tuple[Doc, Doc, Doc]:
     if not nodes and isinstance(lines, list):
         previous = None
         for text in [str(x) for x in lines if isinstance(x, (str, int, float)) and str(x).strip()]:
-            node_id = _new_line_id(nodes)
+            node_id = _new_line_id(nodes, str(entity.get("id") or ""))
             nodes[node_id] = {"text": text}
             if previous:
                 nodes[previous]["next"] = node_id
@@ -2061,11 +2145,14 @@ def _line_number(node_id: str) -> int | None:
     return int(numbered.group(1)) if numbered else None
 
 
-def _new_line_id(nodes: Doc) -> str:
-    """The next line's id: numbered after every ``line_N`` there (a number freed by deleting a line is not used
-    again, so a new line is always numbered last), and after the line count (``line_2`` after ``root``)."""
-    n = max([len(nodes)] + [k for k in map(_line_number, nodes) if k is not None]) + 1
-    while f"line_{n}" in nodes:
+def _new_line_id(nodes: Doc, entity_id: str = "") -> str:
+    """The next line's id: numbered after every ``line_N`` there and every one its conversation (``entity_id``'s) had
+    this session (#462 R3: deleting the last line and adding one used to give the new line the deleted one's id, and a
+    proposal about the deleted line then changed the new one), and after the line count (``line_2`` after ``root``).
+    Outside Mesh Studio's edits, after the lines there, as always."""
+    had = _lines_had(entity_id)
+    n = max([len(nodes)] + [k for k in map(_line_number, [*nodes, *had]) if k is not None]) + 1
+    while f"line_{n}" in nodes or f"line_{n}" in had:
         n += 1
     return f"line_{n}"
 
@@ -2094,7 +2181,7 @@ def add_line(scene: Doc, entity_id: str, *, after: str | None = None, text: str 
     out = copy.deepcopy(scene)
     entity = find_entity(out, entity_id)
     _config, graph, nodes = _graph(entity)
-    node_id = _new_line_id(nodes)
+    node_id = _new_line_id(nodes, str(entity_id))
     node: Doc = {"text": str(text).strip() or "..."}
     if speaker:
         node["speaker"] = str(speaker)
@@ -3477,7 +3564,10 @@ def _structure_number(name: str, value: Any) -> float:
 
 
 def unique_structure_id(scene: Doc, base: str) -> str:
-    taken = {s.get("id") for s in structures(scene) if isinstance(s, dict)}
+    """``base`` (a model's name), or ``base_2``, ``base_3``...: the first no structure here has, nor had this session
+    (#462 R3: a structure deleted and another placed never share an id, so a proposal about the first can't change
+    the second)."""
+    taken = {s.get("id") for s in structures(scene) if isinstance(s, dict)} | _retired_here("structure")
     for i, st in enumerate(structures(scene)):
         if isinstance(st, dict) and not st.get("id"):
             taken.add(f"structure{i}")  # an id-less structure is known by its position
@@ -3505,9 +3595,19 @@ def place_structure(scene: Doc, model: str, x: float, y: float, elevation: float
         model = asset_path(model, "A structure's model")
     except Hd2dSettingsError as err:
         raise OpError(str(err)) from err
+    if structure_id:  # (#462 R3: an id given is checked as a river's is, never stored as given whatever it is)
+        from engine.hd2d.river import ID_RE  # noqa: PLC0415
+
+        if not isinstance(structure_id, str) or not ID_RE.match(structure_id):
+            raise OpError("A structure's id must be a short name of lowercase letters, digits, '-' or '_' (got "
+                          f"{structure_id!r}); leave it out for one made from the model's name.")
     sid = str(structure_id) if structure_id else unique_structure_id(out, posixpath.splitext(posixpath.basename(model.replace("\\", "/")))[0])
     if find_structure(out, sid) is not None:
         raise OpError(f"There is already a structure '{sid}' in this room.")
+    if structure_id and sid in _retired_here("structure"):
+        raise OpError(f"This room had a structure '{sid}' earlier in this session (it was removed), so a new one can't "
+                      "take its id: a change meant for the old one would land on it. Leave structure_id out for a new "
+                      "id, or choose another.")
     entry: Doc = {"id": sid, "model": model, "x": round(_structure_number("x", x), 2),
                   "y": round(_structure_number("y", y), 2)}
     for key, value, default in (("elevation", elevation, 0.0), ("rotation", rotation, 0.0), ("scale", scale, 1.0)):
