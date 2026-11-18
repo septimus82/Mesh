@@ -1,0 +1,124 @@
+{
+  "head": "ee1986e0c58f8f93f7339ed8c7bc91d032713ef5",
+  "engine_uncommitted_changes": true,
+  "studio_opens_between_check_and_write": {
+    "world": {
+      "tool": "apply_ops",
+      "studio_opened_after_the_check": true,
+      "owner_when_the_tool_continued": "mesh_studio",
+      "result": {
+        "ok": false,
+        "reason": "studio_open"
+      },
+      "files_written_behind_studio": {
+        "changed": [],
+        "created": [],
+        "deleted": []
+      },
+      "studio_unsaved_work_kept": true
+    },
+    "quests": {
+      "tool": "apply_ops",
+      "studio_opened_after_the_check": true,
+      "owner_when_the_tool_continued": "mesh_studio",
+      "result": {
+        "ok": false,
+        "reason": "studio_open"
+      },
+      "files_written_behind_studio": {
+        "changed": [],
+        "created": [],
+        "deleted": []
+      },
+      "studio_unsaved_work_kept": true
+    },
+    "cutscenes": {
+      "tool": "apply_ops",
+      "studio_opened_after_the_check": true,
+      "owner_when_the_tool_continued": "mesh_studio",
+      "result": {
+        "ok": false,
+        "reason": "studio_open"
+      },
+      "files_written_behind_studio": {
+        "changed": [],
+        "created": [],
+        "deleted": []
+      },
+      "studio_unsaved_work_kept": true
+    },
+    "create_scene": {
+      "tool": "create_scene",
+      "studio_opened_after_the_check": true,
+      "owner_when_the_tool_continued": "mesh_studio",
+      "result": {
+        "ok": false,
+        "reason": "studio_open"
+      },
+      "files_written_behind_studio": {
+        "changed": [],
+        "created": [],
+        "deleted": []
+      },
+      "studio_unsaved_work_kept": true
+    }
+  },
+  "studio_closed": {
+    "world": {
+      "tool": "apply_ops",
+      "result": {
+        "ok": true
+      },
+      "files": {
+        "changed": [
+          "packs/core_regions/worlds/main.json"
+        ],
+        "created": [],
+        "deleted": []
+      },
+      "owner_after": null
+    },
+    "quests": {
+      "tool": "apply_ops",
+      "result": {
+        "ok": true
+      },
+      "files": {
+        "changed": [
+          "assets/data/quests.json"
+        ],
+        "created": [],
+        "deleted": []
+      },
+      "owner_after": null
+    },
+    "cutscenes": {
+      "tool": "apply_ops",
+      "result": {
+        "ok": true
+      },
+      "files": {
+        "changed": [],
+        "created": [
+          "cutscenes.json"
+        ],
+        "deleted": []
+      },
+      "owner_after": null
+    },
+    "create_scene": {
+      "tool": "create_scene",
+      "result": {
+        "ok": true
+      },
+      "files": {
+        "changed": [],
+        "created": [
+          "packs/core_regions/scenes/attic.json"
+        ],
+        "deleted": []
+      },
+      "owner_after": null
+    }
+  }
+}

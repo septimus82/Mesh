@@ -1,0 +1,53 @@
+tests\test_mcp_project_ownership.py:175: AssertionError: [{'ok': True, 'results': [{'data': {'world_path': '<tmp>'}, 'message': 'Updated world start scene', 'ok': True, 'type': 'set_world_start'}]}]
+tests\test_mcp_project_ownership.py:175: AssertionError: [{'ok': True, 'results': [{'data': None, 'message': "Upserted quest 'ai_quest'", 'ok': True, 'type': 'add_quest_definition'}]}]
+tests\test_mcp_project_ownership.py:175: AssertionError: [{'ok': True, 'results': [{'data': {'id': 'ai_scene'}, 'message': "Added cutscene 'ai_scene'", 'ok': True, 'type': 'add_cutscene'}]}]
+tests\test_mcp_project_ownership.py:175: AssertionError: [{'data': None, 'message': "Created scene 'packs/core_regions/scenes/attic.json'", 'ok': True}]
+tests\test_mcp_project_ownership.py:190: assert (not [<tests.test_studio_project_ownership.StudioProcess object at 0x00000163A2B409F0>])
+tests\test_mcp_project_ownership.py:190: assert (not [<tests.test_studio_project_ownership.StudioProcess object at 0x00000163A2B41B70>])
+tests\test_mcp_project_ownership.py:190: assert (not [<tests.test_studio_project_ownership.StudioProcess object at 0x00000163A2A9D230>])
+tests\test_mcp_project_ownership.py:190: assert (not [<tests.test_studio_project_ownership.StudioProcess object at 0x00000163A2B25010>])
+tests\test_mcp_project_ownership.py:215: AssertionError: ready
+tests\test_mcp_project_ownership.py:215: AssertionError: ready
+tests\test_mcp_project_ownership.py:215: AssertionError: ready
+tests\test_mcp_project_ownership.py:215: AssertionError: ready
+tests\test_mcp_project_ownership.py:283: AssertionError: assert None == 'authoring'
+tests\test_mcp_project_ownership.py:305: assert (True is False)
+tests\test_mcp_project_ownership.py:305: assert (True is False)
+tests\test_mcp_project_ownership.py:305: assert (True is False)
+tests\test_mcp_project_ownership.py:305: assert (True is False)
+tests\test_mcp_project_ownership.py:330: assert (True is False)
+PASSED tests/test_mcp_project_ownership.py::test_refused_while_studio_holds_unsaved_edits[live-world]
+PASSED tests/test_mcp_project_ownership.py::test_refused_while_studio_holds_unsaved_edits[live-quests]
+PASSED tests/test_mcp_project_ownership.py::test_refused_while_studio_holds_unsaved_edits[live-cutscenes]
+PASSED tests/test_mcp_project_ownership.py::test_refused_while_studio_holds_unsaved_edits[live-create_scene]
+PASSED tests/test_mcp_project_ownership.py::test_refused_while_studio_holds_unsaved_edits[nobridge-world]
+PASSED tests/test_mcp_project_ownership.py::test_refused_while_studio_holds_unsaved_edits[nobridge-quests]
+PASSED tests/test_mcp_project_ownership.py::test_refused_while_studio_holds_unsaved_edits[nobridge-cutscenes]
+PASSED tests/test_mcp_project_ownership.py::test_refused_while_studio_holds_unsaved_edits[nobridge-create_scene]
+PASSED tests/test_mcp_project_ownership.py::test_studio_and_an_mcp_write_started_at_once_never_overlap[world]
+PASSED tests/test_mcp_project_ownership.py::test_studio_and_an_mcp_write_started_at_once_never_overlap[quests]
+PASSED tests/test_mcp_project_ownership.py::test_studio_and_an_mcp_write_started_at_once_never_overlap[cutscenes]
+PASSED tests/test_mcp_project_ownership.py::test_studio_and_an_mcp_write_started_at_once_never_overlap[create_scene]
+PASSED tests/test_mcp_project_ownership.py::test_with_studio_closed_each_write_succeeds_and_lets_the_project_go[world]
+PASSED tests/test_mcp_project_ownership.py::test_with_studio_closed_each_write_succeeds_and_lets_the_project_go[quests]
+PASSED tests/test_mcp_project_ownership.py::test_with_studio_closed_each_write_succeeds_and_lets_the_project_go[cutscenes]
+PASSED tests/test_mcp_project_ownership.py::test_with_studio_closed_each_write_succeeds_and_lets_the_project_go[create_scene]
+FAILED tests/test_mcp_project_ownership.py::test_studio_opening_between_the_check_and_the_write_is_never_written_behind[world]
+FAILED tests/test_mcp_project_ownership.py::test_studio_opening_between_the_check_and_the_write_is_never_written_behind[quests]
+FAILED tests/test_mcp_project_ownership.py::test_studio_opening_between_the_check_and_the_write_is_never_written_behind[cutscenes]
+FAILED tests/test_mcp_project_ownership.py::test_studio_opening_between_the_check_and_the_write_is_never_written_behind[create_scene]
+FAILED tests/test_mcp_project_ownership.py::test_studio_opening_during_a_permitted_write_waits_until_it_is_done[world]
+FAILED tests/test_mcp_project_ownership.py::test_studio_opening_during_a_permitted_write_waits_until_it_is_done[quests]
+FAILED tests/test_mcp_project_ownership.py::test_studio_opening_during_a_permitted_write_waits_until_it_is_done[cutscenes]
+FAILED tests/test_mcp_project_ownership.py::test_studio_opening_during_a_permitted_write_waits_until_it_is_done[create_scene]
+FAILED tests/test_mcp_project_ownership.py::test_a_second_mcp_writer_is_turned_away_while_one_writes[world]
+FAILED tests/test_mcp_project_ownership.py::test_a_second_mcp_writer_is_turned_away_while_one_writes[quests]
+FAILED tests/test_mcp_project_ownership.py::test_a_second_mcp_writer_is_turned_away_while_one_writes[cutscenes]
+FAILED tests/test_mcp_project_ownership.py::test_a_second_mcp_writer_is_turned_away_while_one_writes[create_scene]
+FAILED tests/test_mcp_project_ownership.py::test_failed_raising_and_killed_writes_let_the_project_go
+FAILED tests/test_mcp_project_ownership.py::test_an_ownership_that_cant_be_established_is_a_refusal[world]
+FAILED tests/test_mcp_project_ownership.py::test_an_ownership_that_cant_be_established_is_a_refusal[quests]
+FAILED tests/test_mcp_project_ownership.py::test_an_ownership_that_cant_be_established_is_a_refusal[cutscenes]
+FAILED tests/test_mcp_project_ownership.py::test_an_ownership_that_cant_be_established_is_a_refusal[create_scene]
+FAILED tests/test_mcp_project_ownership.py::test_writes_stay_in_the_owned_project
+18 failed, 16 passed in 77.55s (0:01:17)

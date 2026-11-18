@@ -1,0 +1,117 @@
+{
+  "caught": 8,
+  "of": 8,
+  "mutations": [
+    {
+      "mutation": "writes without owning the project (the check alone, as before)",
+      "file": "engine/mcp_server/tools.py",
+      "caught": true,
+      "summary": [
+        "8 failed in 18.87s"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership.py::test_studio_opening_between_the_check_and_the_write_is_never_written_behind[world]",
+        "tests/test_mcp_project_ownership.py::test_studio_opening_between_the_check_and_the_write_is_never_written_behind[quests]",
+        "tests/test_mcp_project_ownership.py::test_studio_opening_between_the_check_and_the_write_is_never_written_behind[cutscenes]",
+        "tests/test_mcp_project_ownership.py::test_studio_opening_between_the_check_and_the_write_is_never_written_behind[create_scene]",
+        "tests/test_mcp_project_ownership.py::test_studio_opening_during_a_permitted_write_waits_until_it_is_done[world]",
+        "tests/test_mcp_project_ownership.py::test_studio_opening_during_a_permitted_write_waits_until_it_is_done[quests]",
+        "tests/test_mcp_project_ownership.py::test_studio_opening_during_a_permitted_write_waits_until_it_is_done[cutscenes]",
+        "tests/test_mcp_project_ownership.py::test_studio_opening_during_a_permitted_write_waits_until_it_is_done[create_scene]"
+      ]
+    },
+    {
+      "mutation": "a Studio that opened since the check taken as a pass",
+      "file": "engine/mcp_server/tools.py",
+      "caught": true,
+      "summary": [
+        "4 failed in 14.49s"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership.py::test_studio_opening_between_the_check_and_the_write_is_never_written_behind[world]",
+        "tests/test_mcp_project_ownership.py::test_studio_opening_between_the_check_and_the_write_is_never_written_behind[quests]",
+        "tests/test_mcp_project_ownership.py::test_studio_opening_between_the_check_and_the_write_is_never_written_behind[cutscenes]",
+        "tests/test_mcp_project_ownership.py::test_studio_opening_between_the_check_and_the_write_is_never_written_behind[create_scene]"
+      ]
+    },
+    {
+      "mutation": "an unexpected lock error taken as permission",
+      "file": "engine/mcp_server/tools.py",
+      "caught": true,
+      "summary": [
+        "4 failed in 3.48s"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership.py::test_an_ownership_that_cant_be_established_is_a_refusal[world]",
+        "tests/test_mcp_project_ownership.py::test_an_ownership_that_cant_be_established_is_a_refusal[quests]",
+        "tests/test_mcp_project_ownership.py::test_an_ownership_that_cant_be_established_is_a_refusal[cutscenes]",
+        "tests/test_mcp_project_ownership.py::test_an_ownership_that_cant_be_established_is_a_refusal[create_scene]"
+      ]
+    },
+    {
+      "mutation": "create_scene lets the project go before writing",
+      "file": "engine/mcp_server/tools.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 4 passed in 11.37s"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership.py::test_studio_opening_during_a_permitted_write_waits_until_it_is_done[create_scene]"
+      ]
+    },
+    {
+      "mutation": "apply_ops lets the project go before writing",
+      "file": "engine/mcp_server/tools.py",
+      "caught": true,
+      "summary": [
+        "7 failed, 1 passed in 16.96s"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership.py::test_studio_opening_during_a_permitted_write_waits_until_it_is_done[world]",
+        "tests/test_mcp_project_ownership.py::test_studio_opening_during_a_permitted_write_waits_until_it_is_done[quests]",
+        "tests/test_mcp_project_ownership.py::test_studio_opening_during_a_permitted_write_waits_until_it_is_done[cutscenes]",
+        "tests/test_mcp_project_ownership.py::test_a_second_mcp_writer_is_turned_away_while_one_writes[world]",
+        "tests/test_mcp_project_ownership.py::test_a_second_mcp_writer_is_turned_away_while_one_writes[quests]",
+        "tests/test_mcp_project_ownership.py::test_a_second_mcp_writer_is_turned_away_while_one_writes[cutscenes]",
+        "tests/test_mcp_project_ownership.py::test_a_second_mcp_writer_is_turned_away_while_one_writes[create_scene]"
+      ]
+    },
+    {
+      "mutation": "apply_ops never lets the project go",
+      "file": "engine/mcp_server/tools.py",
+      "caught": true,
+      "summary": [
+        "4 failed, 1 passed in 6.41s"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership.py::test_with_studio_closed_each_write_succeeds_and_lets_the_project_go[world]",
+        "tests/test_mcp_project_ownership.py::test_with_studio_closed_each_write_succeeds_and_lets_the_project_go[quests]",
+        "tests/test_mcp_project_ownership.py::test_with_studio_closed_each_write_succeeds_and_lets_the_project_go[cutscenes]",
+        "tests/test_mcp_project_ownership.py::test_failed_raising_and_killed_writes_let_the_project_go"
+      ]
+    },
+    {
+      "mutation": "create_scene never lets the project go",
+      "file": "engine/mcp_server/tools.py",
+      "caught": true,
+      "summary": [
+        "2 failed, 3 passed in 10.44s"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership.py::test_with_studio_closed_each_write_succeeds_and_lets_the_project_go[create_scene]",
+        "tests/test_mcp_project_ownership.py::test_failed_raising_and_killed_writes_let_the_project_go"
+      ]
+    },
+    {
+      "mutation": "writes into another project inside the owned one",
+      "file": "engine/mcp_server/tools.py",
+      "caught": true,
+      "summary": [
+        "1 failed in 3.28s"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership.py::test_writes_stay_in_the_owned_project"
+      ]
+    }
+  ]
+}
