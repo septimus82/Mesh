@@ -128,10 +128,14 @@ def _note(fd: int) -> dict[str, Any]:
 
 
 class Ownership:
-    """A project owned: held until ``release`` (or until this process ends, however it ends)."""
+    """A project owned: held until ``release`` (or until this process ends, however it ends).
 
-    def __init__(self, root: Path, kind: str, fd: int) -> None:
-        self.root, self.kind, self._fd = root, kind, fd
+    ``project``: what the lock was the lock of when taken: ``root`` if it was a Mesh project then, else None (a
+    folder in no project, or not a project's root). Never rediscovered: a ``config.json`` added or removed since
+    doesn't change what this lock covers (``owns``)."""
+
+    def __init__(self, root: Path, kind: str, fd: int, project: Path | None = None) -> None:
+        self.root, self.kind, self._fd, self.project = root, kind, fd, project
 
     @property
     def held(self) -> bool:
@@ -150,6 +154,11 @@ class Ownership:
             os.close(fd)
         except OSError as exc:
             logger.warning("[Mesh][Ownership] closing the lock of %s failed: %s", self.root, exc)
+
+    def owns(self, target: str | Path) -> bool:
+        """Whether this lock, still held, covers ``target`` (``in_project`` against the identity captured when it was
+        taken). A project that stopped being one, or became one, since: not covered (#462 R4/R5 remediation B)."""
+        return self.held and in_project(self.root, target, self.project)
 
     def __enter__(self) -> Ownership:
         return self
@@ -188,7 +197,7 @@ def acquire(root: str | Path, kind: str, *, wait: float = 0.0) -> Ownership:
         os.write(fd, json.dumps({"kind": kind, "pid": os.getpid(), "since": time.time()}).encode("utf-8"))
     except OSError as exc:  # (the note is for messages: owning the project doesn't depend on it)
         logger.warning("[Mesh][Ownership] the note in %s couldn't be written: %s", path, exc)
-    return Ownership(root, kind, fd)
+    return Ownership(root, kind, fd, root if (root / PROJECT_MARKER).is_file() else None)
 
 
 def owned(root: str | Path, *, wait: float = 0.25) -> dict[str, Any] | None:
@@ -239,8 +248,10 @@ def ownership_root(start: str | Path) -> Path:
     return project_root(folder) or folder
 
 
-def in_project(root: str | Path, target: str | Path) -> bool:
-    """Whether ``target`` (resolved) is a file of the project owned at ``root`` (an ``ownership_root``): inside it, and
-    in no other project nested in it. What a writer holding ``root`` may change."""
+def in_project(root: str | Path, target: str | Path, project: Path | None) -> bool:
+    """Whether ``target`` (resolved) is a file of what a lock on ``root`` covers: inside ``root``, and its project now
+    (``project_root``) the one the lock was taken as (``project``: ``Ownership.project``, captured then; never
+    rediscovered from ``root``). So not in a project nested in it, and not once ``root`` stopped being a project
+    (its files are its parent's now) or became one. Writers ask ``Ownership.owns``."""
     owned, resolved = Path(root).resolve(), Path(target).expanduser().resolve()
-    return resolved.is_relative_to(owned) and project_root(resolved) == project_root(owned)
+    return resolved.is_relative_to(owned) and project_root(resolved) == (Path(project).resolve() if project else None)
