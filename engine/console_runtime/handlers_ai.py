@@ -20,8 +20,9 @@ def _editing_here(window: Any) -> str:
 def handle_ai_job(controller: Any, args: list[str]) -> bool:
     """``ai_job <job_path>``: writes the project's files directly (``AIOps``), so only where nothing edits the project
     (#462 R4). Inside Mesh Studio (its play-test) or the editor it is refused, writing nothing: the window's own
-    hold on the project is for its editor, never a pass for this. Elsewhere it owns the project while it writes, as
-    any outside writer does (``engine.editor.project_ownership``); if it can't, nothing is changed."""
+    hold on the project is for its editor, never a pass for this. Elsewhere it owns the project it runs in
+    (``project_ownership.ownership_root``: the project, wherever inside it) while it writes, as any outside writer
+    does, and writes only that project's files (never a nested project's); if it can't own it, nothing is changed."""
     if not args:
         controller.log("Usage: ai_job <job_path>")
         return True
@@ -41,12 +42,12 @@ def handle_ai_job(controller: Any, args: list[str]) -> bool:
     from engine.editor import project_ownership  # noqa: PLC0415  # (the editor package is heavy: only when writing)
 
     try:
-        held = project_ownership.acquire(Path.cwd(), project_ownership.AUTHORING, wait=0.5)
+        held = project_ownership.acquire(project_ownership.ownership_root(Path.cwd()), project_ownership.AUTHORING, wait=0.5)
     except (project_ownership.OwnedElsewhere, project_ownership.OwnershipUnavailable) as exc:
         controller.log("[AI] " + project_ownership.refused_write("ai_job", exc))
         return True
     with held:
-        result = AIOps(".").apply_job(job)
+        result = AIOps(".", project=held.root).apply_job(job)  # (only the held project's files)
     ok = result.get("ok", False)
     op_count = len(result.get("results") or [])
     scenes = {

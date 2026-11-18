@@ -66,7 +66,35 @@ class BackupManager:
             manifest_path = self.current_backup_path / "manifest.json"
             json_io.write_json_atomic(manifest_path, self.manifest)
 
-    def restore_last_backup(self) -> bool:
+    @staticmethod
+    def _unsafe_entries(manifest: Any, backup: Path, root: Path) -> list[str]:
+        """Why the backup can't be restored into the project owned at ``root`` (#462 R4): each destination must be a
+        file of that project (``project_ownership.in_project``: inside it, in no project nested in it, links and ``..``
+        resolved), and each modified file's copy must be in the backup. Empty if all are."""
+        from engine.editor.project_ownership import in_project  # noqa: PLC0415
+
+        if not isinstance(manifest, dict):
+            return ["the manifest isn't an object"]
+        problems: list[str] = []
+        for kind in ("created", "modified"):
+            entries = manifest.get(kind, [])
+            if not isinstance(entries, list):
+                problems.append(f"its '{kind}' list isn't a list")
+                continue
+            for entry in entries:
+                if not isinstance(entry, str) or not entry.strip():
+                    problems.append(f"a '{kind}' entry isn't a path: {entry!r}")
+                    continue
+                dst = Path(entry)
+                if not in_project(root, dst):
+                    problems.append(f"{entry} isn't a file of this project ({root}): outside it, or in another project")
+                elif kind == "modified":
+                    src = backup / "files" / (dst.relative_to(dst.anchor) if dst.is_absolute() else dst)
+                    if not src.resolve().is_relative_to(backup.resolve()) or not src.is_file():
+                        problems.append(f"the backup has no copy of {entry}")
+        return problems
+
+    def restore_last_backup(self, root: Optional[Path] = None) -> bool:
         if not self.backup_root.exists():
             print("[Mesh][Undo] No backups found.")
             return False
@@ -86,6 +114,10 @@ class BackupManager:
 
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            problems = self._unsafe_entries(manifest, target, root) if root is not None else []
+            if problems:  # (refused whole, before anything is deleted or restored)
+                print("[Mesh][Undo] Not restored: nothing was changed, because " + "; ".join(problems) + ".")
+                return False
 
             # 1. Delete created files
             for created in manifest.get("created", []):
@@ -162,8 +194,9 @@ class PlanExecutor:
     def _dump_json(self, payload: Any) -> str:
         return json_io.dumps_stable(payload) + "\n"
 
-    def undo_last(self) -> bool:
-        return self.backup_mgr.restore_last_backup()
+    def undo_last(self, root: Optional[Path] = None) -> bool:
+        """Restore the newest backup; ``root``: the project the caller owns (#462 R4), every destination checked first."""
+        return self.backup_mgr.restore_last_backup(root)
 
     def execute(self, plan: Plan, profile: str = "default", ai_safe: bool = False):
         self.current_plan = plan
@@ -318,11 +351,9 @@ class PlanExecutor:
             print(f"  [Warning] Unknown action type: {t}")
 
     def _check_owned(self, path: Path) -> None:
-        if self.root is None:
-            return
-        target = path.resolve()
-        inner = [d for d in target.parents if d.is_relative_to(self.root) and d != self.root]
-        if not target.is_relative_to(self.root) or any((d / "config.json").is_file() for d in inner):
+        from engine.editor.project_ownership import in_project  # noqa: PLC0415  # (only when a project is held)
+
+        if self.root is not None and not in_project(self.root, path):
             raise PermissionError(f"'{path}' isn't in the project being changed ({self.root}): nothing of it is written, "
                                   "since only that project is held against other writers.")
 

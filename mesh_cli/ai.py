@@ -84,12 +84,13 @@ def register(subparsers: argparse._SubParsersAction) -> None:
 
 
 def _own_project(command: str) -> Any:
-    """The project these commands write (the folder they run in), owned for the whole command (#462 R4), or None
+    """The project these commands write (the one the folder they run in is in: ``ownership_root``, wherever inside it
+    they start), owned for the whole command (#462 R4), or None
     (said why) if Mesh Studio, another editor or another writer has it, or that can't be told."""
     from engine.editor import project_ownership  # noqa: PLC0415  # (the editor package is heavy: only when writing)
 
     try:
-        return project_ownership.acquire(Path.cwd(), project_ownership.AUTHORING, wait=0.5)
+        return project_ownership.acquire(project_ownership.ownership_root(Path.cwd()), project_ownership.AUTHORING, wait=0.5)
     except (project_ownership.OwnedElsewhere, project_ownership.OwnershipUnavailable) as exc:
         print("[Mesh][CLI] " + project_ownership.refused_write(command, exc))
         return None
@@ -223,7 +224,10 @@ def _handle_undo_last_plan(args: argparse.Namespace) -> int:
     try:
         executor = PlanExecutor()
         with held:
-            executor.undo_last()
+            restored = executor.undo_last(root=held.root)
+        if not restored:
+            print("[Mesh][CLI] Undo failed: see above.")
+            return 1
         print("[Mesh][CLI] Undo successful.")
         return 0
     except Exception as e:
