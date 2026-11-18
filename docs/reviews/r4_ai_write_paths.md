@@ -185,4 +185,15 @@ Local, Windows, Python 3.13 (`-W error`):
 `tests/test_ai_console.py` now runs in a temporary folder (ai_job owns the folder it runs in while it writes:
 never the checkout).
 
-PR_RESULTS
+### PR #521: CI and Extended (first attempts, none rerun)
+
+- head `97759e57`: **CI failed** (run 44301684577, attempt 1): `tests/test_runtime_editor_import_boundary.py::
+  test_runtime_modules_do_not_import_editor` on Linux and Windows shard 2/2. The cause was this change:
+  `engine/console_runtime/handlers_ai.py` (runtime code) now imports `engine.editor` (`project_ownership`). Every
+  other test passed (Linux 12,132 passed, 1 failed). The focused local run had not included that boundary test.
+  **Extended passed** (run 44301692241, attempt 1, every lane). Fixed in the next commit with a documented entry
+  in the test's `ALLOWED_VIOLATIONS`: the import is the project lock (no editor UI), taken lazily, and the brief
+  asks for `project_ownership` to be reused. Hiding it behind a call into a non-runtime module would satisfy the
+  check without changing the dependency.
+
+FINAL_RESULTS
