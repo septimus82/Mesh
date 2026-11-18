@@ -327,8 +327,8 @@ def test_writes_stay_in_the_owned_project(root: Path, tmp_path: Path) -> None:
     before = _files(root)
     into_inner = tools.apply_ops([{"type": "set_world_start", "world_path": "inner/worlds/main.json",
                                    "start_scene": "x"}], root=str(root), validate=False)
-    assert into_inner["ok"] is False and "another project inside this one" in into_inner["results"][0]["message"]
-    with pytest.raises(ValueError, match="another project inside this one"):  # (as a path outside always has)
+    assert into_inner["ok"] is False and "another Mesh project than the one held" in into_inner["results"][0]["message"]
+    with pytest.raises(ValueError, match="another Mesh project than the one held"):  # (as a path outside always has)
         tools.create_scene("inner/scenes/attic", root=str(root))
     with pytest.raises(ValueError, match="escapes workspace"):
         tools.create_scene(os.path.relpath(tmp_path / "elsewhere", root), root=str(root))

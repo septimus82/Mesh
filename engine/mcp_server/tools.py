@@ -525,14 +525,21 @@ def _own_for_files(root: str, tool: str) -> tuple[Any, dict[str, Any] | None]:
     The check above says no editor has it open; owning it (R2's lock, ``engine.editor.project_ownership``) is what
     makes that still true while the tool reads and writes: a Studio opening meanwhile waits, then is turned away.
     Owned elsewhere (a Studio that opened since the check, another editor, another writer), or ownership that can't
-    be established for any reason: refused, nothing read or written."""
-    blocked = _files_blocked(root, tool)
-    if blocked is not None:
-        return None, blocked
+    be established for any reason: refused, nothing read or written.
+
+    The project is the one ``root`` is in (``project_ownership.ownership_root``, #462 R4/R5 remediation): a ``root``
+    inside a project, an ordinary folder of it, is checked and owned as that project, never as a folder of its own."""
     from engine.editor import project_ownership  # noqa: PLC0415  # (the editor package is heavy: only when writing)
 
     try:
-        return project_ownership.acquire(root, project_ownership.AUTHORING, wait=0.5), None
+        project = project_ownership.ownership_root(root)
+    except (OSError, ValueError) as exc:  # (a root that can't be resolved: whose project it is can't be told)
+        return None, {"ok": False, "reason": "ownership_unknown", "message": f"{tool} wrote nothing: {root} can't be resolved ({exc})."}
+    blocked = _files_blocked(str(project), tool)
+    if blocked is not None:
+        return None, blocked
+    try:
+        return project_ownership.acquire(project, project_ownership.AUTHORING, wait=0.5), None
     except project_ownership.OwnedElsewhere as owned:
         kind = owned.holder.get("kind")
         if kind == project_ownership.AUTHORING:
@@ -554,20 +561,12 @@ def _own_for_files(root: str, tool: str) -> tuple[Any, dict[str, Any] | None]:
                       "message": f"{tool} wrote nothing: this project's ownership can't be established ({exc})."}
 
 
-def _owned_ops(root: str) -> Any:
-    """``AIOps`` for the project owned at ``root``: as ``AIOps`` (every file inside ``root``), and never in another
-    project inside it (a folder with its own ``config.json``): its owner is not the one held (#462 R5)."""
+def _owned_ops(root: str, held: Any) -> Any:
+    """``AIOps`` at ``root`` writing only files of the project ``held`` owns (``AIOps(project=...)``: inside ``root``,
+    and not in another project nested in it, whose owner is not the one held; #462 R5)."""
     from engine.ai_ops import AIOps
 
-    class OwnedOps(AIOps):
-        def _contain(self, path: Path, original: str | None) -> Path:
-            resolved = super()._contain(path, original)
-            base = self.base_dir.resolve()
-            if any((d / "config.json").is_file() for d in (resolved, *resolved.parents) if d != base and d.is_relative_to(base)):
-                raise ValueError(f"path is in another project inside this one: {original or path}")
-            return resolved
-
-    return OwnedOps(base_dir=root)
+    return AIOps(base_dir=root, project=held.root)
 
 
 def create_scene(name: str, template: str = "empty", root: str = ".") -> dict[str, Any]:
@@ -577,7 +576,7 @@ def create_scene(name: str, template: str = "empty", root: str = ".") -> dict[st
     if refused is not None:
         return {**refused, "data": None}
     with held:
-        return _result_to_dict(_owned_ops(root).create_scene(name, template))
+        return _result_to_dict(_owned_ops(root, held).create_scene(name, template))
 
 
 def add_entity_from_prefab(
@@ -699,7 +698,7 @@ def apply_ops(
     if refused is not None:
         return {**refused, "results": []}
     with held:
-        ops_runner = _owned_ops(root)
+        ops_runner = _owned_ops(root, held)
         outcome = ops_runner.apply_job({"operations": list(operations)})
 
         annotated: list[dict[str, Any]] = []
