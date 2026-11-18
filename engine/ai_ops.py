@@ -104,22 +104,20 @@ class AIOpsResult:
 class AIOps:
     """Small, stable set of scene/content operations for AI tools."""
 
-    def __init__(self, base_dir: str | Path = ".", *, project: str | Path | None = None) -> None:
-        """``project``: the project its caller owns (``project_ownership.ownership_root``, #462 R4/R5): a file not of
-        that project (outside it, or in a project nested in it) is refused, never read for a write or written."""
+    def __init__(self, base_dir: str | Path = ".", *, owner: Any = None) -> None:
+        """``owner``: the ``project_ownership.Ownership`` its caller holds (#462 R4/R5): a file it doesn't cover
+        (``Ownership.owns``: outside its project, in a project nested in it, or once that project changed) is
+        refused, never read for a write or written."""
         self.base_dir = Path(base_dir)
-        self.project = Path(project).resolve() if project is not None else None
+        self.owner = owner
 
     def _contain(self, path: Path, original: str | None) -> Path:
         resolved_base = self.base_dir.resolve()
         resolved_path = path.resolve()
         if not resolved_path.is_relative_to(resolved_base):
             raise ValueError(f"path escapes workspace: {original or path}")
-        if self.project is not None:
-            from engine.editor import project_ownership  # noqa: PLC0415  # (the editor package is heavy: only when owned)
-
-            if not project_ownership.in_project(self.project, resolved_path):
-                raise ValueError(f"path is in another Mesh project than the one held ({self.project}): {original or path}")
+        if self.owner is not None and not self.owner.owns(resolved_path):
+            raise ValueError(f"path is in another Mesh project than the one held ({self.owner.root}): {original or path}")
         return resolved_path
 
     # ------------------------------------------------------------------ world helpers
