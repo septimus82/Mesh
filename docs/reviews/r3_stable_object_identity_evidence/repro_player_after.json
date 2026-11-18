@@ -1,0 +1,48 @@
+{
+ "shared player, replacement written in same room": {
+  "player in that room": "start_player_128_128_0_0",
+  "original": "line_2",
+  "AI proposal (preview)": [
+   "(no visible change)"
+  ],
+  "based on": "3",
+  "replacement": "line_3",
+  "replacement before accept": {
+   "text": "The ferry runs at dawn."
+  },
+  "accept": {
+   "ok": false,
+   "reason": "conflict",
+   "conflict at": [
+    "player/behaviour_config/Dialogue/dialogue/nodes/line_2/speaker"
+   ]
+  },
+  "replacement after": {
+   "text": "The ferry runs at dawn."
+  },
+  "same in every room": true
+ },
+ "shared player, replacement written in another room": {
+  "player in that room": "cottage_player_128_128_0_0",
+  "original": "line_2",
+  "AI proposal (preview)": [
+   "(no visible change)"
+  ],
+  "based on": "3",
+  "replacement": "line_3",
+  "replacement before accept": {
+   "text": "The ferry runs at dawn."
+  },
+  "accept": {
+   "ok": false,
+   "reason": "conflict",
+   "conflict at": [
+    "player/behaviour_config/Dialogue/dialogue/nodes/line_2/speaker"
+   ]
+  },
+  "replacement after": {
+   "text": "The ferry runs at dawn."
+  },
+  "same in every room": true
+ }
+}

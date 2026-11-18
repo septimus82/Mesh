@@ -10,6 +10,7 @@ instead, with a message fit to show a user.
 from __future__ import annotations
 
 import copy
+import itertools
 import json
 import math
 import posixpath
@@ -80,6 +81,7 @@ def entity_ref(scene: Doc, ref: Any) -> str:
 
 _RETIRED: ContextVar[Collection[str]] = ContextVar("mesh_retired_entity_ids", default=frozenset())
 _ROOM: ContextVar[str | None] = ContextVar("mesh_editing_room", default=None)
+_PLAYERS: ContextVar[Collection[str]] = ContextVar("mesh_editing_room_players", default=frozenset())
 _SCOPE = "\x1f"  # (#462 R3: between a scoped id's parts, never in an id Mesh makes)
 
 
@@ -96,14 +98,17 @@ def retired_ids(ids: Collection[str]) -> Iterator[None]:
 
 
 @contextmanager
-def in_room(key: str) -> Iterator[None]:
+def in_room(key: str, players: Collection[str] = ()) -> Iterator[None]:
     """While editing the room ``key`` (#462 R3): the structures, rivers and conversation lines made in it avoid the ids
     their kind had there this session (``retired_ids`` holds them as ``scoped_id``s). Mesh Studio's edits (an edit of
-    a room, each change of an AI's batch) say which room; an edit that doesn't retires nothing of theirs."""
-    token = _ROOM.set(key)
+    a room, each change of an AI's batch) say which room; an edit that doesn't retires nothing of theirs.
+    ``players``: the room's objects that are the shared player, whose conversation is one in every room
+    (``player_line_ids``)."""
+    token, players_token = _ROOM.set(key), _PLAYERS.set(frozenset(players))
     try:
         yield
     finally:
+        _PLAYERS.reset(players_token)
         _ROOM.reset(token)
 
 
@@ -127,14 +132,35 @@ def scoped_ids(room_key: str, scene: Doc) -> set[str]:
     return found
 
 
+def player_line_ids(definition: Doc | None) -> set[str]:
+    """The shared player's conversation lines, as Mesh Studio keeps them (#462 R3): its conversation is one in every
+    room (rooms hold only a reference to the player; the definition holds what it says), so its lines are scoped to
+    the project, ``"player-line", id``, not to a room and object as another conversation's are."""
+    nodes = (_dialogue_doc(definition) or {}).get("nodes") if isinstance(definition, dict) else None
+    return {_SCOPE.join(("player-line", str(node))) for node in nodes} if isinstance(nodes, dict) else set()
+
+
+def _had(prefix: str) -> set[str]:
+    return {r[len(prefix):] for r in _RETIRED.get() if isinstance(r, str) and r.startswith(prefix)}
+
+
 def _retired_here(kind: str, *scope: str) -> set[str]:
     """The ids things of ``kind`` have had this session in the room being edited (and ``scope`` in it: a line's
     object): none, outside Mesh Studio's edits."""
     room = _ROOM.get()
     if room is None:
         return set()
-    prefix = scoped_id(kind, room, *scope) + _SCOPE
-    return {r[len(prefix):] for r in _RETIRED.get() if isinstance(r, str) and r.startswith(prefix)}
+    return _had(scoped_id(kind, room, *scope) + _SCOPE)
+
+
+def _lines_had(entity_id: str) -> set[str]:
+    """The line ids ``entity_id``'s conversation had this session: the shared player's in any room, another object's
+    in this room; none, outside Mesh Studio's edits."""
+    if _ROOM.get() is None or not entity_id:
+        return set()
+    if entity_id in _PLAYERS.get():
+        return _had("player-line" + _SCOPE)
+    return _retired_here("line", entity_id)
 
 
 def unique_entity_id(scene: Doc, base: str) -> str:
@@ -443,7 +469,7 @@ def set_dialogue_text(scene: Doc, entity_id: str, text: str) -> Doc:
         dialogue = config["dialogue"] = {"speaker": entity.get("name") or "", "start": "root", "nodes": {}}
     start = str(dialogue.setdefault("start", "root"))
     nodes = dialogue.setdefault("nodes", {})
-    if start not in nodes and start in _retired_here("line", str(entity_id)):  # (#462 R3: a line made, not one back)
+    if start not in nodes and start in _lines_had(str(entity_id)):  # (#462 R3: a line made, not one back)
         start = dialogue["start"] = _new_line_id(nodes, str(entity_id))
     nodes.setdefault(start, {})["text"] = str(text)
     config.pop("dialogue_lines", None)  # the node graph is now the source of truth
@@ -1452,7 +1478,8 @@ def unique_river_id(scene: Doc) -> str:
     """A new river's id, as Studio's river tool names them: "river", "river-2", "river-3"...: the first no river here
     has, nor had this session (#462 R3)."""
     taken = {r.get("id") for r in rivers(scene)} | _retired_here("river")
-    return next(rid for rid in ("river", *(f"river-{n}" for n in range(2, 100000))) if rid not in taken)
+    names = itertools.chain(("river",), (f"river-{n}" for n in itertools.count(2)))  # (one at a time)
+    return next(rid for rid in names if rid not in taken)
 
 
 def set_river(scene: Doc, river_id: str, *, points: Any = _UNSET, flow: Any = _UNSET, colour: Any = _UNSET,
@@ -2123,7 +2150,7 @@ def _new_line_id(nodes: Doc, entity_id: str = "") -> str:
     this session (#462 R3: deleting the last line and adding one used to give the new line the deleted one's id, and a
     proposal about the deleted line then changed the new one), and after the line count (``line_2`` after ``root``).
     Outside Mesh Studio's edits, after the lines there, as always."""
-    had = _retired_here("line", entity_id) if entity_id else set()
+    had = _lines_had(entity_id)
     n = max([len(nodes)] + [k for k in map(_line_number, [*nodes, *had]) if k is not None]) + 1
     while f"line_{n}" in nodes or f"line_{n}" in had:
         n += 1

@@ -8,7 +8,9 @@ the replacement: the person approved a change to an object they had since delete
 Ordinary objects already never reuse an id within a session (#462 S1-ID: ``Project.ids_seen``,
 ``project_ops.retired_ids``). The same set now remembers structures and rivers per room and lines per conversation
 (room and object), and the ids those three kinds are given avoid it: a new one never takes an id one of its kind had
-this session, and an explicitly given id that one had is refused.
+this session, and an explicitly given id that one had is refused. The shared player's conversation is one in every room
+(rooms hold a reference to the player; ``Project.player`` holds what it says), so its lines are remembered once, for
+the whole project.
 
 Each test runs a real StudioAIHost on its loopback bridge; the AI goes through ``authoring_session`` (what the MCP
 tools and ``mesh author`` call) with R1's ``base_revision_id``; the person edits with the operations Studio's own
@@ -140,6 +142,8 @@ def _everything_but(project: Project, kind: str) -> Any:
     """The project's documents with the one kind of thing a test changes taken out: equal before and after means
     nothing else was changed."""
     docs = copy.deepcopy(project.all_documents())
+    if kind == "dialogue" and isinstance(docs.get("player"), dict):  # (the shared player's conversation)
+        (docs["player"].get("behaviour_config") or {}).pop("Dialogue", None)
     for room in docs["rooms"].values():
         hd2d = (room.get("settings") or {}).get("hd2d") or {}
         if kind in ("structures", "rivers"):
@@ -458,3 +462,183 @@ def test_a_revision_of_another_session_is_still_refused(root: Path, studio: Any)
                                         base_revision_id=other)
     assert refused["reason"] == "revision_from_another_session" and person.inbox == []
 
+
+
+# ---------------------------------------------------------------- the shared player's conversation
+def _player(project: Project, key: str | None = None) -> str:
+    """The shared player's object in a room (each room has its own reference, with its own id)."""
+    return project.shared_players(key or project.current)[0]
+
+
+def _player_lines(project: Project, key: str | None = None) -> dict[str, dict[str, Any]]:
+    return ops.conversation(ops.find_entity(project.scene(key), _player(project, key)))["nodes"]
+
+
+def _add_player_line(project: Project, key: str, text: str) -> str:
+    """The person selects the player in room ``key`` and adds a line in Studio's conversation editor."""
+    made: list[str] = []
+
+    def change(scene: dict[str, Any]) -> dict[str, Any]:
+        out, node_id = ops.add_line(scene, _player(project, key), text="...")
+        made.append(node_id)
+        return out
+
+    project.edit_scene(change, key)
+    project.edit_scene(lambda s: ops.set_line(s, _player(project, key), made[0], text=text), key)
+    return made[0]
+
+
+def _remove_player_line(project: Project, key: str, node_id: str) -> None:
+    project.edit_scene(lambda s: ops.remove_line(s, _player(project, key), node_id), key)
+
+
+def _talking_player(project: Project) -> tuple[str, str]:
+    """The person gives the player its first words, in the start room: ``(start room, another room)``."""
+    start = project.current
+    project.edit_scene(lambda s: ops.set_dialogue_text(s, _player(project), "Morning."))
+    return start, next(k for k, _l, _p in project.rooms() if k != start)
+
+
+def _everywhere(project: Project) -> list[dict[str, dict[str, Any]]]:
+    return [_player_lines(project, key) for key, _l, _p in project.rooms()]
+
+
+def _npc(project: Project) -> str:
+    return next(e["id"] for e in project.scene()["entities"]
+                if "Dialogue" in (e.get("behaviours") or []) and not project.is_shared_player(e["id"]))
+
+
+@pytest.mark.parametrize("elsewhere", [False, True], ids=["written in the same room", "written in another room"])
+def test_a_stale_proposal_about_a_deleted_player_line_never_lands_on_its_replacement(root: Path, studio: Any,
+                                                                                    elsewhere: bool) -> None:
+    person, host = studio
+    project = person.project
+    start, other = _talking_player(project)
+    where = other if elsewhere else start
+    original = _add_player_line(project, start, "The bridge is out.")
+    assert original == "line_2"
+    ghost = _propose(root, host, [{"op": "set_line", "entity_id": _player(project), "node_id": original,
+                                   "speaker": "Ghost"}])
+    _remove_player_line(project, start, original)  # the person deletes the player's line ...
+    replacement = _add_player_line(project, where, "The ferry runs at dawn.")  # ... and writes another
+    assert replacement != original, "the player's replacement line was given the deleted line's id"
+    written, others = copy.deepcopy(_player_lines(project, where)), _everything_but(project, "dialogue")
+
+    _refused_or_conflict(host.accept(ghost))
+    assert _everywhere(project) == [written, written] and "speaker" not in written[replacement]
+    assert _everything_but(project, "dialogue") == others
+    fresh = _propose(root, host, [{"op": "set_line", "entity_id": _player(project, other), "node_id": replacement,
+                                   "speaker": "Ghost", "room": other}])  # (made in the other room: every room's)
+    assert host.accept(fresh)["ok"]
+    assert all(lines[replacement]["speaker"] == "Ghost" for lines in _everywhere(project))
+
+
+def test_the_players_lines_have_one_history_in_every_room_through_undo_and_redo(root: Path, studio: Any) -> None:
+    person, host = studio
+    project = person.project
+    npc = _npc(project)
+    start, other = _talking_player(project)
+    made = []
+    for cycle in range(4):  # written in one room, deleted in the other
+        here, there = (start, other) if cycle % 2 == 0 else (other, start)
+        made.append(_add_player_line(project, here, f"Line {cycle}"))
+        _remove_player_line(project, there, made[-1])
+    assert made == ["line_2", "line_3", "line_4", "line_5"]
+
+    kept = _add_player_line(project, other, "Keep me.")
+    ghost = _propose(root, host, [{"op": "set_line", "entity_id": _player(project), "node_id": kept,
+                                   "speaker": "Ghost"}])
+    _remove_player_line(project, start, kept)
+    assert project.undo() and all(kept in lines for lines in _everywhere(project))  # the deleted line itself, back
+    assert host.accept(ghost)["ok"]  # it is what was previewed
+    assert all(lines[kept]["speaker"] == "Ghost" for lines in _everywhere(project))
+    _remove_player_line(project, other, kept)
+    assert project.undo() and project.redo() and not any(kept in lines for lines in _everywhere(project))
+    following = _add_player_line(project, start, "Next.")
+    assert following not in (*made, kept)  # redo never freed its id
+    alone: list[str] = []
+
+    def add_only(scene: dict[str, Any]) -> dict[str, Any]:  # (one edit: the line made, then that edit undone)
+        out, node_id = ops.add_line(scene, _player(project, start), text="Gone.")
+        alone.append(node_id)
+        return out
+
+    project.edit_scene(add_only, start)
+    assert project.undo() and not any(alone[0] in lines for lines in _everywhere(project))
+    assert _add_player_line(project, other, "Instead.") not in (*made, kept, following, alone[0])  # nor undoing it
+
+    expected = ops.add_line(copy.deepcopy(project.scene()), npc, text="Mine.")[1]  # (another object's: its own)
+    assert _add_line(project, npc, "Mine.") == expected
+
+
+def test_an_ai_batch_on_the_players_lines_gets_new_ids_and_its_preview_names_them(root: Path, studio: Any) -> None:
+    person, host = studio
+    project = person.project
+    start, other = _talking_player(project)
+    batch = [{"op": "add_line", "entity_id": _player(project, other), "text": "One", "room": other},
+             {"op": "remove_line", "entity_id": _player(project, other), "node_id": "@0", "room": other},
+             {"op": "add_line", "entity_id": _player(project), "text": "Two"}]
+    _before, after = authoring.dry_run(project, batch)  # (Studio's preview: a copy, its ids as the edit's)
+    staged = _stage(root, batch)
+    assert staged["ok"], staged
+    accepted = host.accept(next(p for p in host.proposals if p.proposal_id == staged["proposal"]["proposal_id"]))
+    assert accepted["ok"], accepted
+    created = accepted["created"]
+    assert created[0] != created[2], created  # never one id for two lines
+    previewed = after["player"]["behaviour_config"]["Dialogue"]["dialogue"]["nodes"]
+    assert previewed[created[2]]["text"] == "Two" and created[0] not in previewed
+    assert _everywhere(project) == [previewed, previewed]
+
+
+def test_saving_and_opening_again_keeps_the_players_lines(root: Path, studio: Any) -> None:
+    person, _host = studio
+    project = person.project
+    start, other = _talking_player(project)
+    kept = _add_player_line(project, other, "Saved.")
+    project.save()
+    world_file = json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"]
+    reopened = Project(root, world_file)  # (another session: the player as saved, its lines' ids as they were)
+    assert reopened.player == project.player and kept in _player_lines(reopened, start)
+    assert Project(root, world_file).player == reopened.player  # (loading makes no ids)
+    _remove_player_line(reopened, start, kept)  # a line as saved, deleted in the new session ...
+    assert _add_player_line(reopened, other, "More.") not in ("root", kept)  # ... isn't given to the next one
+
+
+def test_a_room_with_its_own_player_numbers_its_lines_as_any_conversation(root: Path) -> None:
+    """A project made before the player was shared: a room's own full player is an object like any other, and its
+    conversation's lines are remembered for that room and object."""
+    world_file = json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"]
+    shared = Project(root, world_file)
+    start = shared.current
+    room_file = root / shared.path(start)
+    room = json.loads(room_file.read_text(encoding="utf-8"))
+    room["entities"] = [{**copy.deepcopy(shared.player), **{k: e[k] for k in ("id", "x", "y") if k in e}}
+                        if e.get("prefab_id") == "player" else e for e in room["entities"]]
+    room_file.write_text(json.dumps(room), encoding="utf-8")
+    project = Project(root, world_file)
+    own = project.own_players()[start]["id"]
+    assert not project.is_shared_player(own)
+    project.edit_scene(lambda s: ops.set_dialogue_text(s, own, "Morning."))
+    first = _add_line(project, own, "First.")
+    project.edit_scene(lambda s: ops.remove_line(s, own, first))
+    assert _add_line(project, own, "Second.") != first
+    assert not any(i.startswith("player-line") for i in project.ids_seen)  # (not the shared player's scope)
+
+
+# ---------------------------------------------------------------- a new river's id
+@pytest.mark.parametrize("present, had, expected", [
+    ([], [], "river"),
+    (["river", "river-2", "river-3"], [], "river-4"),
+    ([], ["river", "river-2"], "river-3"),
+    (["river", "river-3"], ["river-2", "river-4"], "river-5"),
+    (["river-2", "river-500"], ["river"], "river-3"),
+    (["river", *(f"river-{n}" for n in range(2, 2001))], [], "river-2001"),
+], ids=["none", "several", "had", "present and had", "high numbers", "a long run"])
+def test_a_new_rivers_id_is_the_first_free_one_in_the_tools_order(present: list[str], had: list[str],
+                                                                   expected: str) -> None:
+    scene = {"settings": {"hd2d": {"rivers": [{"id": rid} for rid in present]}}}
+    with ops.retired_ids({ops.scoped_id("river", "start", rid) for rid in had}), ops.in_room("start"):
+        assert ops.unique_river_id(scene) == expected
+    with ops.retired_ids({ops.scoped_id("river", "start", rid) for rid in had}), ops.in_room("cottage"):
+        assert ops.unique_river_id(scene) == next(  # (another room's: what this room had doesn't count)
+            r for r in ("river", *(f"river-{n}" for n in range(2, 3000))) if r not in present)

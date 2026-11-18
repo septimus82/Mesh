@@ -220,6 +220,7 @@ class Project:
         stored, definition = ops.split_players(doc, player_ids, self.player)
         self.scenes[key] = stored
         self.ids_seen.update(_ids(key, stored))  # (#462 S1-ID, R3: what it made, never given to another object)
+        self.ids_seen.update(ops.player_line_ids(definition))  # (R3: lines it gave the shared player, in any room)
         self.dirty.add(key)
         if definition is not None and definition != self.player:
             self.player, self.player_dirty = definition, True
@@ -251,7 +252,11 @@ class Project:
 
     def is_shared_player(self, entity_id: str | None, key: str | None = None) -> bool:
         """Whether that object in the room is the game's one player."""
-        return bool(entity_id) and entity_id in ops.shared_player_ids(self._room(key or self.current))
+        return bool(entity_id) and entity_id in self.shared_players(key or self.current)
+
+    def shared_players(self, key: str) -> list[str]:
+        """The room's objects that are the game's one player (a reference each)."""
+        return ops.shared_player_ids(self._room(key))
 
     def player_prefab(self) -> Doc | None:
         """The shared player as an ``assets/prefabs.json`` entry (None if rooms still have their own)."""
@@ -390,6 +395,7 @@ class Project:
         room isn't stored yet), never released here as unused (#462 S4)."""
         for key, room in before.scenes.items():  # (#462 S1-ID: every state an edit leaves, whatever wrote it, even
             self.ids_seen.update(_ids(key, room))  # each step of a batch: none of its ids is given to another object)
+        self.ids_seen.update(ops.player_line_ids(before.player))  # (R3: the shared player's, in whichever room)
         if self._tx_depth:
             return  # the transaction records once, at its end
         self._undo.append(before)
@@ -453,8 +459,8 @@ class Project:
         """Replace one room with ``change(room)``. An OpError leaves everything untouched."""
         key = key or self.current
         before = self._snapshot()
-        player_ids = ops.shared_player_ids(self._room(key))
-        with ops.retired_ids(self.ids_seen), ops.in_room(key):  # (#462 R3: what it makes in this room)
+        player_ids = self.shared_players(key)
+        with ops.retired_ids(self.ids_seen), ops.in_room(key, player_ids):  # (#462 R3: what it makes in this room)
             updated = change(self.scene(key))
         self._record(before)
         self._store(key, updated, player_ids)
