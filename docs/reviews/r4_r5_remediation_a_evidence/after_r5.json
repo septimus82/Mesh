@@ -1,0 +1,53 @@
+{
+  "head": "6054aa55b16cad980f3f724abec555636c48d78c",
+  "uncommitted_changes": false,
+  "has_r4": false,
+  "has_r5": true,
+  "r5_mcp_root_is_an_interior_folder": {
+    "apply_ops": {
+      "result": {
+        "ok": false,
+        "reason": "studio_open"
+      },
+      "tool": "apply_ops",
+      "tool_root": "<project>/packs/core_regions",
+      "studio_opened_after_the_check": "the project",
+      "files_written_behind_studio": {
+        "changed": [],
+        "created": [],
+        "deleted": []
+      },
+      "tool_lock_file_in_the_interior_folder": false
+    },
+    "create_scene": {
+      "result": {
+        "ok": false,
+        "reason": "studio_open"
+      },
+      "tool": "create_scene",
+      "tool_root": "<project>/packs/core_regions",
+      "studio_opened_after_the_check": "the project",
+      "files_written_behind_studio": {
+        "changed": [],
+        "created": [],
+        "deleted": []
+      },
+      "tool_lock_file_in_the_interior_folder": false
+    }
+  },
+  "r5_two_writers_from_two_folders": {
+    "result": {
+      "ok": false,
+      "reason": "project_busy"
+    },
+    "owner_while_b_wrote": "authoring",
+    "writer_a": "another process owning <project> as a writer (mid-write)",
+    "writer_b": "apply_ops with root <project>/packs/core_regions",
+    "writer_b_wrote": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    },
+    "writer_b_lock_file_in_the_interior_folder": false
+  }
+}

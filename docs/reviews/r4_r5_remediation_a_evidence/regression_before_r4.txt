@@ -1,0 +1,16 @@
+tests\test_ai_write_paths_project_root.py:138: AssertionError: ['[AI] Applied 1 operation(s) from <tmp> | scenes: scenes/start.json']
+tests\test_ai_write_paths_project_root.py:157: AssertionError: ['[AI] Applied 2 operation(s) from <tmp> | scenes: inner/packs/core_regions/scenes/start.json']
+tests\test_ai_write_paths_project_root.py:187: AssertionError: assert 0 == 1
+tests\test_ai_write_paths_project_root.py:210: AssertionError: {'created': ['<tmp>']}
+tests\test_ai_write_paths_project_root.py:223: AssertionError: [Mesh][Undo] Restoring backup: 1000_corrupt
+tests\test_ai_write_paths_project_root.py:244: AssertionError: assert None == 'authoring'
+tests\test_ai_write_paths_project_root.py:292: AssertionError: [Mesh][Executor] Executing plan (1 actions)...
+PASSED tests/test_ai_write_paths_project_root.py::test_a_nested_project_is_edited_under_its_own_ownership
+FAILED tests/test_ai_write_paths_project_root.py::test_started_from_a_folder_inside_a_project_studio_has_every_writer_is_refused
+FAILED tests/test_ai_write_paths_project_root.py::test_the_outer_projects_console_cant_change_a_nested_project
+FAILED tests/test_ai_write_paths_project_root.py::test_an_undo_with_any_destination_in_another_project_is_refused_whole
+FAILED tests/test_ai_write_paths_project_root.py::test_an_undo_with_a_destination_outside_the_project_or_an_unsafe_alias_is_refused
+FAILED tests/test_ai_write_paths_project_root.py::test_a_failed_undo_exits_nonzero_and_never_says_it_succeeded
+FAILED tests/test_ai_write_paths_project_root.py::test_inside_an_ordinary_folder_writers_work_under_the_projects_lock
+FAILED tests/test_ai_write_paths_project_root.py::test_two_writers_starting_in_different_folders_cannot_both_hold_the_project
+7 failed, 1 passed in 18.44s

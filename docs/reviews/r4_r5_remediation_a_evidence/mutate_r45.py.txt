@@ -1,0 +1,74 @@
+"""R4/R5 remediation A fault injection, on the combined tree: each mutation breaks one part of the project-ownership
+rule or a writer's use of it; the remediation tests must fail. Each file is put back byte for byte (checked).
+
+    py -3.13 mutate_r45.py REPO OUT_JSON"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(sys.argv[1]).resolve()
+OUT = Path(sys.argv[2])
+TESTS = ["tests/test_project_ownership_root.py", "tests/test_ai_write_paths_project_root.py",
+         "tests/test_mcp_project_ownership_root.py", "tests/test_ai_write_paths.py", "tests/test_mcp_project_ownership.py"]
+OWN, AIOPS, CON = "engine/editor/project_ownership.py", "engine/ai_ops.py", "engine/console_runtime/handlers_ai.py"
+CLI, EXE, MCP = "mesh_cli/ai.py", "engine/tooling/plan_executor.py", "engine/mcp_server/tools.py"
+MUTATIONS = [
+    ("rule: a writer locks the folder it started in (no walk up to the project)", OWN,
+     "    return project_root(folder) or folder", "    return folder"),
+    ("rule: a nested project's files count as the outer project's", OWN,
+     " and project_root(resolved) == project_root(owned)", ""),
+    ("rule: links and junctions not resolved", OWN,
+     "    target = Path(path).expanduser().resolve()\n    return next(",
+     "    target = Path(os.path.abspath(Path(path).expanduser()))\n    return next("),
+    ("AIOps: the held project not enforced", AIOPS, "        if self.project is not None:", "        if False:"),
+    ("undo: destinations not checked", EXE,
+     "problems = self._unsafe_entries(manifest, target, root) if root is not None else []", "problems = []"),
+    ("undo: a missing backup copy not checked", EXE,
+     "if not src.resolve().is_relative_to(backup.resolve()) or not src.is_file():", "if False:"),
+    ("undo CLI: a failed undo reported as success", CLI, "        if not restored:", "        if False:"),
+    ("apply-plan / undo: lock the starting folder", CLI,
+     "project_ownership.acquire(project_ownership.ownership_root(Path.cwd()),", "project_ownership.acquire(Path.cwd(),"),
+    ("ai_job: locks the starting folder", CON,
+     "project_ownership.acquire(project_ownership.ownership_root(Path.cwd()),", "project_ownership.acquire(Path.cwd(),"),
+    ("ai_job: AIOps not held to the project", CON, 'AIOps(".", project=held.root)', 'AIOps(".")'),
+    ("MCP: locks root as given", MCP, "project_ownership.acquire(project, project_ownership.AUTHORING",
+     "project_ownership.acquire(root, project_ownership.AUTHORING"),
+    ("MCP: AIOps not held to the project", MCP, "return AIOps(base_dir=root, project=held.root)",
+     "return AIOps(base_dir=root)"),
+]
+
+
+def main() -> None:
+    results = []
+    for name, rel, old, new in MUTATIONS:
+        path = REPO / rel
+        original = path.read_bytes()
+        text = original.decode("utf-8")
+        if "\r\n" in text:
+            old, new = old.replace("\n", "\r\n"), new.replace("\n", "\r\n")
+        assert text.count(old) == 1, (name, text.count(old))
+        path.write_bytes(text.replace(old, new).encode("utf-8"))
+        try:
+            run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-W", "error",
+                                  "--tb=no", "-rf", *TESTS], cwd=REPO, env=dict(os.environ), capture_output=True,
+                                 text=True, timeout=2400)
+        finally:
+            path.write_bytes(original)
+        assert path.read_bytes() == original
+        summary = [line for line in run.stdout.splitlines() if " passed" in line or " failed" in line][-1:]
+        failed = sorted({line.split(" ")[1].split("[")[0] for line in run.stdout.splitlines() if line.startswith("FAILED")})
+        results.append({"mutation": name, "file": rel, "caught": run.returncode != 0, "summary": summary,
+                        "failed": failed or None})
+        print(json.dumps(results[-1])[:300], flush=True)
+    report = {"caught": sum(r["caught"] for r in results), "of": len(results), "mutations": results}
+    OUT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(f"{report['caught']}/{report['of']} caught")
+
+
+if __name__ == "__main__":
+    main()
