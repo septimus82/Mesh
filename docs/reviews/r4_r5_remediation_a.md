@@ -130,7 +130,15 @@ Local, Windows, Python 3.13 (`-W error`), on the combined tree (base + #521 + #5
 - `tooling.ruff_gate` ok, `tooling.mypy_gate` ok, the exception-policy scan 482 (the baseline, unchanged); no new
   entry in `ALLOWED_VIOLATIONS`.
 
-CI and Extended run on each PR's new head after this report is committed; their first attempts (failures kept,
+**First attempts on the first remediation heads** (#521 `5b64b6d5`: CI 44355790916, Extended 44355779948; #522
+`3df562d1`: CI 44355795772, Extended 44355785705): both **CI runs failed**, on Linux only:
+`test_test_lanes_contract::test_no_test_runs_nowhere_unless_listed`, because the Windows-only junction test was
+skipped on Linux without naming the lane that runs it. Everything else passed (Linux 12,144 and 12,172 passed,
+1 failed each). Both **Extended runs passed**. Fixed by the contract's own means, not the baseline: the skip reason
+now says "the default lane runs this on Windows" (the Windows pytest shards run it). Not caught locally: the focused
+runs didn't include the lanes contract.
+
+CI and Extended run on each PR's next head after this report is committed; their first attempts (failures kept,
 nothing rerun) are in each PR's "Remediation A: CI and Extended results" comment.
 
 ## 6. Limits

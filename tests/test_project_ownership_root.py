@@ -56,7 +56,7 @@ def test_whose_project_a_path_is(outer: Path, tmp_path: Path) -> None:
     assert not in_project(tmp_path, outer / "scenes/x.json")
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="Windows paths: case and junctions")
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows paths (case, junctions); the default lane runs this on Windows")
 def test_windows_case_and_junctions(outer: Path, tmp_path: Path) -> None:
     assert ownership_root(str(outer / REGION).upper()) == outer.resolve()
     assert in_project(str(outer).upper(), str(outer / REGION / "scenes/start.json").lower())
