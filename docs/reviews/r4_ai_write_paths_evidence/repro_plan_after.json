@@ -1,5 +1,5 @@
 {
-  "head": "ee1986e0c58f8f93f7339ed8c7bc91d032713ef5",
+  "head": "05202d337590dbd22b1b7f2ccbfafec2667f4c58",
   "studio_open": {
     "studio_open": true,
     "apply": {
@@ -10,7 +10,7 @@
       ],
       "exit": 1,
       "stdout_tail": [
-        "[Mesh][CLI] apply-plan: nothing was changed. Mesh Studio has this project open, and its unsaved work isn't in the files, so they aren't written behind it. Propose the changes in Mesh Studio instead (its AI panel, or `mesh author propose`), or close it and run apply-plan again. (<tmp>)"
+        "[Mesh][CLI] apply-plan: nothing was changed. Mesh Studio has this project open, and its unsaved work isn't in the files, so they aren't written behind it. Close it (saving or discarding that work) and run apply-plan again; to change a project while it is open, propose the changes there (its AI panel, or `mesh author propose`). (<tmp>)"
       ],
       "files": {
         "changed": [],
@@ -28,7 +28,7 @@
       ],
       "unsaved": true,
       "pending": [],
-      "session_id": "VvrrJ1Br3kzgQyPG5aF2b4DS-_RSd_iUWq4dTTv95js"
+      "session_id": "iZwZSzsopXbiCEZbfIDNOt1Pwu00H-fioHUHlWFvpIY"
     },
     "studio_save": {
       "saved": [
@@ -47,7 +47,7 @@
       ],
       "exit": 1,
       "stdout_tail": [
-        "[Mesh][CLI] undo-last-plan: nothing was changed. Mesh Studio has this project open, and its unsaved work isn't in the files, so they aren't written behind it. Propose the changes in Mesh Studio instead (its AI panel, or `mesh author propose`), or close it and run undo-last-plan again. (<tmp>)"
+        "[Mesh][CLI] undo-last-plan: nothing was changed. Mesh Studio has this project open, and its unsaved work isn't in the files, so they aren't written behind it. Close it (saving or discarding that work) and run undo-last-plan again; to change a project while it is open, propose the changes there (its AI panel, or `mesh author propose`). (<tmp>)"
       ],
       "files": {
         "changed": [],
@@ -67,7 +67,7 @@
       ],
       "unsaved": true,
       "pending": [],
-      "session_id": "VvrrJ1Br3kzgQyPG5aF2b4DS-_RSd_iUWq4dTTv95js"
+      "session_id": "iZwZSzsopXbiCEZbfIDNOt1Pwu00H-fioHUHlWFvpIY"
     }
   },
   "studio_closed": {
@@ -88,9 +88,9 @@
           "packs/core_regions/scenes/start.json"
         ],
         "created": [
-          ".mesh/plan_backups/1795001971_815f2bb4/files/packs/core_regions/scenes/start.json",
-          ".mesh/plan_backups/1795001971_815f2bb4/manifest.json",
-          ".mesh/plan_history/1795001971_815f2bb4.json"
+          ".mesh/plan_backups/1795003895_815f2bb4/files/packs/core_regions/scenes/start.json",
+          ".mesh/plan_backups/1795003895_815f2bb4/manifest.json",
+          ".mesh/plan_history/1795003895_815f2bb4.json"
         ],
         "deleted": []
       },
@@ -106,7 +106,7 @@
       ],
       "exit": 0,
       "stdout_tail": [
-        "[Mesh][Undo] Restoring backup: 1795001971_815f2bb4",
+        "[Mesh][Undo] Restoring backup: 1795003895_815f2bb4",
         "[Mesh][Undo] Restore complete.",
         "[Mesh][CLI] Undo successful."
       ],

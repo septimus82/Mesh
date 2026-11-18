@@ -59,6 +59,12 @@ F4, `, the command typed as text, Enter, then Stop and Ctrl+S; `repro_console_be
 A job with an operation that fails reported "Job failed" and still left its first write on disk (each operation is
 applied on its own; section 6).
 
+**With the fix** (the same scripts at `05202d33`: `repro_plan_after.json`, `repro_console_after.json`): with Studio
+open, `apply-plan` and `undo-last-plan` exit 1, "nothing was changed. Mesh Studio has this project open ...", every
+file identical; `ai_job` in the play-test says "nothing was changed. Mesh Studio has this project open in this
+window ...", every file identical; Stop keeps the unsaved work and Save writes exactly it, no `.outside-change.bak`.
+With Studio closed, all three apply as before.
+
 ## 3. The protection
 
 The one already there, R2's lock, now taken by these commands too. No new mechanism, no new state, no change to
