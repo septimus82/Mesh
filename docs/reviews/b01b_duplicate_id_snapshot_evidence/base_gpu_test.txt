@@ -1,0 +1,6 @@
+INFO:engine.perks:[Mesh][Perks] Loaded 0 perks
+INFO:engine.game:[Mesh][GameWindow] Initialized 960x540 window
+[Mesh][Save] Loading save from 'saves\twins.json'
+=========================== short test summary info ===========================
+FAILED tests/test_saved_world_gpu.py::test_two_objects_sharing_an_id_each_come_back_where_they_were_left
+1 failed, 6 deselected in 6.79s
