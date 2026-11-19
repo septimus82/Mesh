@@ -104,14 +104,20 @@ class AIOpsResult:
 class AIOps:
     """Small, stable set of scene/content operations for AI tools."""
 
-    def __init__(self, base_dir: str | Path = ".") -> None:
+    def __init__(self, base_dir: str | Path = ".", *, owner: Any = None) -> None:
+        """``owner``: the ``project_ownership.Ownership`` its caller holds (#462 R4/R5): a file it doesn't cover
+        (``Ownership.owns``: outside its project, in a project nested in it, or once that project changed) is
+        refused, never read for a write or written."""
         self.base_dir = Path(base_dir)
+        self.owner = owner
 
     def _contain(self, path: Path, original: str | None) -> Path:
         resolved_base = self.base_dir.resolve()
         resolved_path = path.resolve()
         if not resolved_path.is_relative_to(resolved_base):
             raise ValueError(f"path escapes workspace: {original or path}")
+        if self.owner is not None and not self.owner.owns(resolved_path):
+            raise ValueError(f"path is in another Mesh project than the one held ({self.owner.root}): {original or path}")
         return resolved_path
 
     # ------------------------------------------------------------------ world helpers

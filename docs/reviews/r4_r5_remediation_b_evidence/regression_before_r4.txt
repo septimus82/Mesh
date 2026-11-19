@@ -1,0 +1,17 @@
+tests\test_ai_write_paths_remediation_b.py:97: assert 'Not restored: nothing was changed, because scenes/became_a_folder.json is a folder' in "[Mesh][Undo] Restoring backup: 2000_manual\n  - Deleting scenes\\made.json\n  - Deleting scenes\\became_a_folder.json... restoring backup: [WinError 5] �tkomst nekad: 'scenes\\\\became_a_folder.json'\n[Mesh][CLI] Undo failed: see above.\n"
+tests\test_ai_write_paths_remediation_b.py:106: AssertionError: [Mesh][Undo] Restoring backup: 2000_manual
+tests\test_ai_write_paths_remediation_b.py:131: AssertionError: [Mesh][Undo] Restoring backup: 2000_manual
+tests\test_ai_write_paths_remediation_b.py:192: AssertionError: assert ('[AI] Applied...es/start.json' == '[AI] Job fai... see details:'
+tests\test_ai_write_paths_remediation_b.py:212: assert (0 == 1)
+tests\test_project_ownership_root_b.py:133: AttributeError: 'Ownership' object has no attribute 'project'
+PASSED tests/test_ai_write_paths_remediation_b.py::test_one_bad_entry_among_valid_ones_refuses_the_whole_undo[copy_is_a_folder]
+PASSED tests/test_ai_write_paths_remediation_b.py::test_one_bad_entry_among_valid_ones_refuses_the_whole_undo[copy_missing]
+PASSED tests/test_ai_write_paths_remediation_b.py::test_missing_destinations_and_valid_backups_still_restore
+PASSED tests/test_ai_write_paths_remediation_b.py::test_aiops_with_no_owner_is_unchanged
+FAILED tests/test_ai_write_paths_remediation_b.py::test_a_created_file_that_is_now_a_folder_refuses_the_undo_before_anything_is_deleted
+FAILED tests/test_ai_write_paths_remediation_b.py::test_a_modified_file_that_is_now_a_folder_is_never_copied_into_it
+FAILED tests/test_ai_write_paths_remediation_b.py::test_one_bad_entry_among_valid_ones_refuses_the_whole_undo[folder_above_is_a_file]
+FAILED tests/test_ai_write_paths_remediation_b.py::test_the_console_stops_once_its_project_stopped_being_one
+FAILED tests/test_ai_write_paths_remediation_b.py::test_a_plan_stops_once_its_project_stopped_being_one
+FAILED tests/test_project_ownership_root_b.py::test_a_lock_never_covers_another_project_after_a_marker_changes
+6 failed, 4 passed in 26.74s

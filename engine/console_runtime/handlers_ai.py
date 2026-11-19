@@ -2,15 +2,35 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from engine.ai_ops import AIOps, load_job
 
 
+def _editing_here(window: Any) -> str:
+    """Who edits the project in this window, or "": its unsaved work is in no file (#462 R4)."""
+    if getattr(window, "studio", None) is not None:
+        return "Mesh Studio"
+    held = getattr(window, "project_ownership", None)
+    editor = getattr(window, "editor_controller", None)
+    return "the editor" if getattr(held, "held", False) is True or getattr(editor, "active", False) is True else ""
+
+
 def handle_ai_job(controller: Any, args: list[str]) -> bool:
-    """``ai_job <job_path>``"""
+    """``ai_job <job_path>``: writes the project's files directly (``AIOps``), so only where nothing edits the project
+    (#462 R4). Inside Mesh Studio (its play-test) or the editor it is refused, writing nothing: the window's own
+    hold on the project is for its editor, never a pass for this. Elsewhere it owns the project it runs in
+    (``project_ownership.ownership_root``: the project, wherever inside it) while it writes, as any outside writer
+    does, and writes only that project's files (never a nested project's); if it can't own it, nothing is changed."""
     if not args:
         controller.log("Usage: ai_job <job_path>")
+        return True
+    editing = _editing_here(controller.window)
+    if editing:
+        controller.log(f"[AI] ai_job: nothing was changed. {editing} has this project open in this window, and ai_job "
+                       "would write its files behind your unsaved work. Ask an AI through Mesh Studio's AI panel (its "
+                       "changes come to you to accept), or close it and run the job in the game.")
         return True
     job_path = args[0]
     try:
@@ -19,8 +39,15 @@ def handle_ai_job(controller: Any, args: list[str]) -> bool:
         controller.log(f"[AI] Failed to load job '{job_path}': {exc}")
         return True
 
-    ops = AIOps(".")
-    result = ops.apply_job(job)
+    from engine.editor import project_ownership  # noqa: PLC0415  # (the editor package is heavy: only when writing)
+
+    try:
+        held = project_ownership.acquire(project_ownership.ownership_root(Path.cwd()), project_ownership.AUTHORING, wait=0.5)
+    except (project_ownership.OwnedElsewhere, project_ownership.OwnershipUnavailable) as exc:
+        controller.log("[AI] " + project_ownership.refused_write("ai_job", exc))
+        return True
+    with held:
+        result = AIOps(".", owner=held).apply_job(job)  # (only the held project's files)
     ok = result.get("ok", False)
     op_count = len(result.get("results") or [])
     scenes = {

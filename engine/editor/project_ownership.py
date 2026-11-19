@@ -69,6 +69,19 @@ class OwnershipUnavailable(RuntimeError):
     file system has no locks). Nothing is taken as free: the caller refuses."""
 
 
+def refused_write(command: str, exc: OwnedElsewhere | OwnershipUnavailable) -> str:
+    """What ``command``, which writes a project's files directly, says when it can't own the project (#462 R4)."""
+    if isinstance(exc, OwnershipUnavailable):
+        return f"{command}: nothing was changed. {exc}"
+    kind = exc.holder.get("kind")
+    if kind == AUTHORING:
+        return f"{command}: nothing was changed. Another tool is writing this project's files right now; try again in a moment."
+    who = "Another Mesh editor" if kind == EDITOR else "Mesh Studio"
+    return (f"{command}: nothing was changed. {who} has this project open, and its unsaved work isn't in the files, so "
+            f"they aren't written behind it. Close it (saving or discarding that work) and run {command} again; to change "
+            f"a project while it is open, propose the changes there (its AI panel, or `mesh author propose`). ({exc.root})")
+
+
 def lock_path(root: str | Path) -> Path:
     return Path(root).resolve() / LOCK_RELATIVE_PATH
 
@@ -115,10 +128,14 @@ def _note(fd: int) -> dict[str, Any]:
 
 
 class Ownership:
-    """A project owned: held until ``release`` (or until this process ends, however it ends)."""
+    """A project owned: held until ``release`` (or until this process ends, however it ends).
 
-    def __init__(self, root: Path, kind: str, fd: int) -> None:
-        self.root, self.kind, self._fd = root, kind, fd
+    ``project``: what the lock was the lock of when taken: ``root`` if it was a Mesh project then, else None (a
+    folder in no project, or not a project's root). Never rediscovered: a ``config.json`` added or removed since
+    doesn't change what this lock covers (``owns``)."""
+
+    def __init__(self, root: Path, kind: str, fd: int, project: Path | None = None) -> None:
+        self.root, self.kind, self._fd, self.project = root, kind, fd, project
 
     @property
     def held(self) -> bool:
@@ -137,6 +154,11 @@ class Ownership:
             os.close(fd)
         except OSError as exc:
             logger.warning("[Mesh][Ownership] closing the lock of %s failed: %s", self.root, exc)
+
+    def owns(self, target: str | Path) -> bool:
+        """Whether this lock, still held, covers ``target`` (``in_project`` against the identity captured when it was
+        taken). A project that stopped being one, or became one, since: not covered (#462 R4/R5 remediation B)."""
+        return self.held and in_project(self.root, target, self.project)
 
     def __enter__(self) -> Ownership:
         return self
@@ -175,7 +197,7 @@ def acquire(root: str | Path, kind: str, *, wait: float = 0.0) -> Ownership:
         os.write(fd, json.dumps({"kind": kind, "pid": os.getpid(), "since": time.time()}).encode("utf-8"))
     except OSError as exc:  # (the note is for messages: owning the project doesn't depend on it)
         logger.warning("[Mesh][Ownership] the note in %s couldn't be written: %s", path, exc)
-    return Ownership(root, kind, fd)
+    return Ownership(root, kind, fd, root if (root / PROJECT_MARKER).is_file() else None)
 
 
 def owned(root: str | Path, *, wait: float = 0.25) -> dict[str, Any] | None:
@@ -203,3 +225,33 @@ def owned(root: str | Path, *, wait: float = 0.25) -> dict[str, Any] | None:
             time.sleep(0.02)
     finally:
         os.close(fd)
+
+
+# ------------------------------------------------------------- whose project a file is (#462 R4/R5 remediation)
+PROJECT_MARKER = "config.json"  # a Mesh project's root: what ``mesh edit`` and Mesh Studio open
+
+
+def project_root(path: str | Path) -> Path | None:
+    """The Mesh project ``path`` belongs to: the nearest folder, ``path`` itself or one above it, holding a
+    ``config.json``, once ``..``, links and junctions are resolved (``Path.resolve``); None if it is in no project. A
+    folder inside a project with a ``config.json`` of its own is a project of its own (nested), with its own owner; any
+    other folder inside a project is that project's."""
+    target = Path(path).expanduser().resolve()
+    return next((folder for folder in (target, *target.parents) if (folder / PROJECT_MARKER).is_file()), None)
+
+
+def ownership_root(start: str | Path) -> Path:
+    """Whose lock a writer working from the folder ``start`` takes: the project ``start`` is in, wherever inside it the
+    writer started, so every writer of one project takes one lock. Outside any project (no editor can open it):
+    ``start`` itself."""
+    folder = Path(start).expanduser().resolve()
+    return project_root(folder) or folder
+
+
+def in_project(root: str | Path, target: str | Path, project: Path | None) -> bool:
+    """Whether ``target`` (resolved) is a file of what a lock on ``root`` covers: inside ``root``, and its project now
+    (``project_root``) the one the lock was taken as (``project``: ``Ownership.project``, captured then; never
+    rediscovered from ``root``). So not in a project nested in it, and not once ``root`` stopped being a project
+    (its files are its parent's now) or became one. Writers ask ``Ownership.owns``."""
+    owned, resolved = Path(root).resolve(), Path(target).expanduser().resolve()
+    return resolved.is_relative_to(owned) and project_root(resolved) == (Path(project).resolve() if project else None)

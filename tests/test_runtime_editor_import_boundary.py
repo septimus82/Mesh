@@ -75,6 +75,8 @@ ALLOWED_VIOLATIONS: dict[tuple[str, str], str] = {
     ("engine/input_runtime/capture_runtime.py", "engine.editor_runtime.input"): "Editor runtime input integration",
     ("engine/input_runtime/capture_runtime.py", "engine.editor_runtime.hover_detection"): "Editor runtime hover detection",
     ("engine/input_runtime/capture_runtime.py", "engine.editor.editor_cursor_apply"): "Editor cursor application",
+    # #462 R4: ai_job writes project files, so it owns the project first (R2's OS lock; no editor UI, imported lazily)
+    ("engine/console_runtime/handlers_ai.py", "engine.editor"): "Project ownership lock (engine.editor.project_ownership)",
 }
 
 # Ratchet file for tracking violation count over time

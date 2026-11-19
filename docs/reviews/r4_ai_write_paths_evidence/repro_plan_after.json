@@ -1,0 +1,125 @@
+{
+  "head": "05202d337590dbd22b1b7f2ccbfafec2667f4c58",
+  "studio_open": {
+    "studio_open": true,
+    "apply": {
+      "argv": [
+        "mesh",
+        "apply-plan",
+        "<tmp>"
+      ],
+      "exit": 1,
+      "stdout_tail": [
+        "[Mesh][CLI] apply-plan: nothing was changed. Mesh Studio has this project open, and its unsaved work isn't in the files, so they aren't written behind it. Close it (saving or discarding that work) and run apply-plan again; to change a project while it is open, propose the changes there (its AI panel, or `mesh author propose`). (<tmp>)"
+      ],
+      "files": {
+        "changed": [],
+        "created": [],
+        "deleted": []
+      },
+      "room_on_disk": [
+        "None"
+      ]
+    },
+    "studio_after_apply": {
+      "names": [
+        "Player",
+        "Unsaved Warden"
+      ],
+      "unsaved": true,
+      "pending": [],
+      "session_id": "iZwZSzsopXbiCEZbfIDNOt1Pwu00H-fioHUHlWFvpIY"
+    },
+    "studio_save": {
+      "saved": [
+        "packs/core_regions/scenes/start.json"
+      ]
+    },
+    "room_on_disk_after_studio_save": [
+      "None",
+      "Unsaved Warden"
+    ],
+    "outside_change_backups": [],
+    "undo": {
+      "argv": [
+        "mesh",
+        "undo-last-plan"
+      ],
+      "exit": 1,
+      "stdout_tail": [
+        "[Mesh][CLI] undo-last-plan: nothing was changed. Mesh Studio has this project open, and its unsaved work isn't in the files, so they aren't written behind it. Close it (saving or discarding that work) and run undo-last-plan again; to change a project while it is open, propose the changes there (its AI panel, or `mesh author propose`). (<tmp>)"
+      ],
+      "files": {
+        "changed": [],
+        "created": [],
+        "deleted": []
+      },
+      "room_on_disk": [
+        "None",
+        "Unsaved Warden"
+      ]
+    },
+    "studio_after_undo": {
+      "names": [
+        "Player",
+        "Unsaved Warden",
+        "Second Unsaved"
+      ],
+      "unsaved": true,
+      "pending": [],
+      "session_id": "iZwZSzsopXbiCEZbfIDNOt1Pwu00H-fioHUHlWFvpIY"
+    }
+  },
+  "studio_closed": {
+    "studio_open": false,
+    "apply": {
+      "argv": [
+        "mesh",
+        "apply-plan",
+        "<tmp>"
+      ],
+      "exit": 0,
+      "stdout_tail": [
+        "[Mesh][Executor] Executing plan (1 actions)...",
+        "[Mesh][CLI] Plan '<tmp>' applied successfully."
+      ],
+      "files": {
+        "changed": [
+          "packs/core_regions/scenes/start.json"
+        ],
+        "created": [
+          ".mesh/plan_backups/1795003895_815f2bb4/files/packs/core_regions/scenes/start.json",
+          ".mesh/plan_backups/1795003895_815f2bb4/manifest.json",
+          ".mesh/plan_history/1795003895_815f2bb4.json"
+        ],
+        "deleted": []
+      },
+      "room_on_disk": [
+        "None",
+        "Ferryman"
+      ]
+    },
+    "undo": {
+      "argv": [
+        "mesh",
+        "undo-last-plan"
+      ],
+      "exit": 0,
+      "stdout_tail": [
+        "[Mesh][Undo] Restoring backup: 1795003895_815f2bb4",
+        "[Mesh][Undo] Restore complete.",
+        "[Mesh][CLI] Undo successful."
+      ],
+      "files": {
+        "changed": [
+          "packs/core_regions/scenes/start.json"
+        ],
+        "created": [],
+        "deleted": []
+      },
+      "room_on_disk": [
+        "None"
+      ]
+    }
+  }
+}

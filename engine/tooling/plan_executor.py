@@ -66,7 +66,53 @@ class BackupManager:
             manifest_path = self.current_backup_path / "manifest.json"
             json_io.write_json_atomic(manifest_path, self.manifest)
 
-    def restore_last_backup(self) -> bool:
+    @staticmethod
+    def _unsafe_entries(manifest: Any, backup: Path, owner: Any = None) -> list[str]:
+        """Why the backup can't be restored, checked for every entry before anything is deleted or restored (#462 R4):
+
+        - each destination must be covered by ``owner`` (the ``Ownership`` held: ``owns``, inside its project and in no
+          project nested in it, links and ``..`` resolved), when one is held;
+        - a created file's path, if anything is there, must be a file (the restore deletes it), never a folder;
+        - a modified file's path, if anything is there, must be a file (the restore replaces it), and every folder
+          above it that exists must be a folder;
+        - each modified file's copy must be a file inside the backup.
+
+        A destination that doesn't exist is fine (a created file already gone; a modified one is put back). Empty if all
+        are restorable."""
+        if not isinstance(manifest, dict):
+            return ["the manifest isn't an object"]
+        problems: list[str] = []
+        for kind in ("created", "modified"):
+            entries = manifest.get(kind, [])
+            if not isinstance(entries, list):
+                problems.append(f"its '{kind}' list isn't a list")
+                continue
+            for entry in entries:
+                if not isinstance(entry, str) or not entry.strip():
+                    problems.append(f"a '{kind}' entry isn't a path: {entry!r}")
+                    continue
+                dst = Path(entry)
+                if owner is not None and not owner.owns(dst):
+                    problems.append(f"{entry} isn't a file of this project ({owner.root}): outside it, or in another project")
+                    continue
+                if dst.is_dir() or (os.path.lexists(dst) and not dst.is_file()):
+                    problems.append(f"{entry} is a folder (or not a file) now, not the file the plan {kind}")
+                    continue
+                if kind == "modified":
+                    blocked = next((str(folder) for folder in Path(os.path.abspath(dst)).parents
+                                    if os.path.lexists(folder) and not folder.is_dir()), None)
+                    src = backup / "files" / (dst.relative_to(dst.anchor) if dst.is_absolute() else dst)
+                    if blocked is not None:
+                        problems.append(f"{entry} can't be put back: {blocked} is a file, not a folder")
+                    elif not src.resolve().is_relative_to(backup.resolve()) or not src.is_file():
+                        problems.append(f"the backup has no copy of {entry} (or its copy isn't a file)")
+        return problems
+
+    def restore_last_backup(self, owner: Any = None) -> bool:
+        """Restore the newest backup. ``owner``: the ``Ownership`` its caller holds (#462 R4). Every entry is checked
+        first (``_unsafe_entries``): one that can't be restored refuses the whole undo, nothing changed. Before each
+        deletion or restoration the destination is checked against ``owner`` again: if the project changed meanwhile,
+        the undo stops there (nothing further is written)."""
         if not self.backup_root.exists():
             print("[Mesh][Undo] No backups found.")
             return False
@@ -86,10 +132,23 @@ class BackupManager:
 
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            problems = self._unsafe_entries(manifest, target, owner)
+            if problems:  # (refused whole, before anything is deleted or restored)
+                print("[Mesh][Undo] Not restored: nothing was changed, because " + "; ".join(problems) + ".")
+                return False
+
+            def still_ours(path: Path) -> bool:
+                if owner is None or owner.owns(path):
+                    return True
+                print(f"[Mesh][Undo] Stopped: {path} isn't this project's any more (it changed during the undo); "
+                      "nothing further was written.")
+                return False
 
             # 1. Delete created files
             for created in manifest.get("created", []):
                 p = Path(created)
+                if not still_ours(p):
+                    return False
                 if p.exists():
                     print(f"  - Deleting {p}")
                     p.unlink()
@@ -103,6 +162,8 @@ class BackupManager:
                 else:
                     src = target / "files" / dst
 
+                if not still_ours(dst):
+                    return False
                 if src.exists():
                     print(f"  - Restoring {dst}")
                     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -123,8 +184,13 @@ class BackupManager:
             return False
 
 class PlanExecutor:
-    def __init__(self, dry_run: bool = False, safe_paths_only: bool = False, writer: Optional[Callable[[Path, str], None]] = None):
+    def __init__(self, dry_run: bool = False, safe_paths_only: bool = False, writer: Optional[Callable[[Path, str], None]] = None,
+                 owner: Any = None):
+        """``owner``: the ``project_ownership.Ownership`` its caller holds (#462 R4): a file it doesn't cover
+        (``owns``: outside its project, in a project nested in it, or once that project changed) is refused before
+        it is written."""
         self.dry_run = dry_run
+        self.owner = owner
         self.safe_paths_only = safe_paths_only
         self._writer = writer
         # Back-compat: some callers access `executor.writer` directly.
@@ -158,8 +224,9 @@ class PlanExecutor:
     def _dump_json(self, payload: Any) -> str:
         return json_io.dumps_stable(payload) + "\n"
 
-    def undo_last(self) -> bool:
-        return self.backup_mgr.restore_last_backup()
+    def undo_last(self, owner: Any = None) -> bool:
+        """Restore the newest backup; ``owner``: the ``Ownership`` the caller holds (#462 R4), every entry checked first."""
+        return self.backup_mgr.restore_last_backup(owner)
 
     def execute(self, plan: Plan, profile: str = "default", ai_safe: bool = False):
         self.current_plan = plan
@@ -194,7 +261,7 @@ class PlanExecutor:
                 self.summary["actions_executed"] += 1
         except Exception as e:
             print(f"[Mesh][Executor] ERROR: {e}")
-            if not self.dry_run and not capture_mode:
+            if not self.dry_run and not capture_mode and self.records_allowed():
                 print("[Mesh][Executor] Attempting rollback...")
                 self.backup_mgr.finish_backup()
                 # Auto-rollback could happen here, but we leave it to user for now.
@@ -213,7 +280,7 @@ class PlanExecutor:
             if missing:
                 raise ValueError(f"touches mismatch: missing {missing}")
 
-        if not self.dry_run and not capture_mode:
+        if not self.dry_run and not capture_mode and self.records_allowed():
             self.backup_mgr.finish_backup()
             plan_history.record_history(plan, dict(self.summary), profile)
 
@@ -313,7 +380,21 @@ class PlanExecutor:
         else:
             print(f"  [Warning] Unknown action type: {t}")
 
+    def records_allowed(self) -> bool:
+        """Whether the plan's own records (its backup's manifest, its history, in ``.mesh``) may still be written: the
+        lock held still covers them (#462 R4 remediation B). Not once the project changed during the plan."""
+        if self.owner is None or self.owner.owns(Path(".mesh") / "plan_history"):
+            return True
+        print("[Mesh][Executor] The project changed during the plan, so its backup and history weren't written.")
+        return False
+
+    def _check_owned(self, path: Path) -> None:
+        if self.owner is not None and not self.owner.owns(path):
+            raise PermissionError(f"'{path}' isn't in the project being changed ({self.owner.root}): nothing of it is "
+                                  "written, since only that project is held against other writers.")
+
     def _track_file(self, path: Path):
+        self._check_owned(path)
         self._check_safety(path)
         if not self.dry_run:
             if self._writer is None:
@@ -329,10 +410,10 @@ class PlanExecutor:
         path = Path(args["path"])
         manifest = path / "manifest.json"
 
+        self._track_file(manifest)  # (checked before its folder is made)
         if self._writer is None and not path.exists():
             path.mkdir(parents=True, exist_ok=True)
 
-        self._track_file(manifest)
         if not manifest.exists():
             content = self._dump_json({
                 "id": args["id"],

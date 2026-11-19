@@ -1,0 +1,6 @@
+{
+  "studio_opened_while_the_write_was_pending": true,
+  "owner_while_pending": "mesh_studio",
+  "apply_ops_ok": true,
+  "world_file_changed_while_studio_owned_it": true
+}
