@@ -1,0 +1,91 @@
+"""R5 fault injection: each mutation removes or weakens one part of the protection in engine/mcp_server/tools.py;
+the named tests must fail. The file is put back byte for byte after each (checked).
+
+    py -3.13 mutate_r5.py REPO OUT_JSON"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(sys.argv[1]).resolve()
+OUT = Path(sys.argv[2])
+FILE = "engine/mcp_server/tools.py"
+T = "tests/test_mcp_project_ownership.py::"
+NOT_HELD = '__import__("engine.editor.project_ownership", fromlist=["x"]).Ownership(Path(root), "x", -1)'
+
+MUTATIONS = [
+    ("writes without owning the project (the check alone, as before)",
+     "return project_ownership.acquire(root, project_ownership.AUTHORING, wait=0.5), None",
+     f"return {NOT_HELD}, None",
+     [T + "test_studio_opening_between_the_check_and_the_write_is_never_written_behind",
+      T + "test_studio_opening_during_a_permitted_write_waits_until_it_is_done"]),
+    ("a Studio that opened since the check taken as a pass",
+     'return None, {"ok": False, "reason": "studio_open", "message": (\n'
+     '            f"Mesh Studio opened this project just now, so {tool} wrote nothing (the person\'s unsaved work would be "\n'
+     '            "overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}',
+     f"return {NOT_HELD}, None",
+     [T + "test_studio_opening_between_the_check_and_the_write_is_never_written_behind"]),
+    ("an unexpected lock error taken as permission",
+     'return None, {"ok": False, "reason": "ownership_unknown",\n'
+     '                      "message": f"{tool} wrote nothing: this project\'s ownership can\'t be established ({exc})."}',
+     f"return {NOT_HELD}, None",
+     [T + "test_an_ownership_that_cant_be_established_is_a_refusal"]),
+    ("create_scene lets the project go before writing",
+     "    with held:\n        return _result_to_dict(_owned_ops(root).create_scene(name, template))",
+     "    held.release()\n    if True:\n        return _result_to_dict(_owned_ops(root).create_scene(name, template))",
+     [T + "test_studio_opening_during_a_permitted_write_waits_until_it_is_done[create_scene]",
+      T + "test_a_second_mcp_writer_is_turned_away_while_one_writes"]),
+    ("apply_ops lets the project go before writing",
+     "    with held:\n        ops_runner = _owned_ops(root)",
+     "    held.release()\n    if True:\n        ops_runner = _owned_ops(root)",
+     [T + "test_studio_opening_during_a_permitted_write_waits_until_it_is_done",
+      T + "test_a_second_mcp_writer_is_turned_away_while_one_writes"]),
+    ("apply_ops never lets the project go",
+     "    with held:\n        ops_runner = _owned_ops(root)",
+     "    if held:\n        ops_runner = _owned_ops(root)",
+     [T + "test_with_studio_closed_each_write_succeeds_and_lets_the_project_go",
+      T + "test_failed_raising_and_killed_writes_let_the_project_go"]),
+    ("create_scene never lets the project go",
+     "    with held:\n        return _result_to_dict(_owned_ops(root).create_scene(name, template))",
+     "    if held:\n        return _result_to_dict(_owned_ops(root).create_scene(name, template))",
+     [T + "test_with_studio_closed_each_write_succeeds_and_lets_the_project_go",
+      T + "test_failed_raising_and_killed_writes_let_the_project_go"]),
+    ("writes into another project inside the owned one",
+     "    return OwnedOps(base_dir=root)", "    return AIOps(base_dir=root)",
+     [T + "test_writes_stay_in_the_owned_project"]),
+]
+
+
+def main() -> None:
+    results = []
+    path = REPO / FILE
+    for name, old, new, tests in MUTATIONS:
+        original = path.read_bytes()
+        text = original.decode("utf-8")
+        if "\r\n" in text:  # (the working tree is CRLF here: autocrlf)
+            old, new = old.replace("\n", "\r\n"), new.replace("\n", "\r\n")
+        assert text.count(old) == 1, (name, text.count(old))
+        path.write_bytes(text.replace(old, new).encode("utf-8"))
+        try:
+            run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-W", "error",
+                                  "--tb=no", "-rf", *tests], cwd=REPO, env=dict(os.environ), capture_output=True,
+                                 text=True, timeout=1500)
+        finally:
+            path.write_bytes(original)
+        assert path.read_bytes() == original
+        summary = [line for line in run.stdout.splitlines() if " passed" in line or " failed" in line][-1:]
+        failed = [line.split(" ")[1] for line in run.stdout.splitlines() if line.startswith("FAILED")]
+        results.append({"mutation": name, "file": FILE, "caught": run.returncode != 0, "summary": summary,
+                        "failed": failed or None})
+        print(json.dumps(results[-1]), flush=True)
+    report = {"caught": sum(r["caught"] for r in results), "of": len(results), "mutations": results}
+    OUT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(f"{report['caught']}/{report['of']} caught")
+
+
+if __name__ == "__main__":
+    main()

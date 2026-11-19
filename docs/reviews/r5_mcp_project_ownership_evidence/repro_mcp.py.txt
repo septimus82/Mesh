@@ -1,0 +1,125 @@
+"""R5 reproduction: MCP apply_ops' direct-file fallback and create_scene check that no editor has the project, then
+write. Mesh Studio opening between the check and the write: does the write land behind it?
+
+    py -3.13 repro_mcp.py REPO OUT_JSON
+
+Deterministic: the check (`tools._files_blocked`) runs as written; the seam pauses right after it returns "free",
+Studio (its own process, tests/studio_owner_process.py) opens and makes an unsaved edit, then the tool continues.
+Each write path on its own, on a fresh disposable project; then the same with Studio closed (control)."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import threading
+from pathlib import Path
+
+REPO = Path(sys.argv[1]).resolve()
+OUT = Path(sys.argv[2])
+sys.path.insert(0, str(REPO))
+os.chdir(REPO)
+
+from engine.editor import project_ownership  # noqa: E402
+from engine.mcp_server import tools  # noqa: E402
+from engine.project_scaffold import create_project  # noqa: E402
+from tests.test_studio_project_ownership import StudioProcess  # noqa: E402
+
+TMP = Path(tempfile.mkdtemp(prefix="mesh-r5-"))
+PATHS = {
+    "world": lambda world: ("apply_ops", [{"type": "set_world_start", "world_path": world, "start_scene": "attic",
+                                           "start_spawn": "door"}]),
+    "quests": lambda world: ("apply_ops", [{"type": "add_quest_definition", "quest_id": "ai_quest",
+                                            "quest": {"title": "From the AI"}}]),
+    "cutscenes": lambda world: ("apply_ops", [{"type": "add_cutscene", "id": "ai_scene",
+                                               "steps": [{"type": "wait", "seconds": 1}]}]),
+    "create_scene": lambda world: ("create_scene", "packs/core_regions/scenes/attic"),
+}
+
+
+def files(root: Path) -> dict[str, str]:
+    skip = {".mesh/owner.lock", ".mesh/live_session.json"}
+    return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()[:16]
+            for p in sorted(root.rglob("*")) if p.is_file() and p.relative_to(root).as_posix() not in skip}
+
+
+def diff(a: dict[str, str], b: dict[str, str]) -> dict[str, list[str]]:
+    return {"changed": sorted(k for k in a if k in b and a[k] != b[k]), "created": sorted(set(b) - set(a)),
+            "deleted": sorted(set(a) - set(b))}
+
+
+def project(label: str) -> tuple[Path, str]:
+    root = TMP / label / "game"
+    create_project(root, "Game", template_id="blank")
+    (root / "assets/data").mkdir(parents=True, exist_ok=True)
+    (root / "assets/data/quests.json").write_text('{"quests": {}}\n', encoding="utf-8")
+    return root, json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"]
+
+
+def call(tool: str, arg, root: Path) -> dict:
+    if tool == "apply_ops":
+        return tools.apply_ops(arg, root=str(root), validate=False)
+    return tools.create_scene(arg, root=str(root))
+
+
+def raced(label: str) -> dict:
+    root, world = project(f"raced_{label}")
+    tool, arg = PATHS[label](world)
+    checked, go = threading.Event(), threading.Event()
+    original = tools._files_blocked
+
+    def check_then_pause(r: str, t: str):  # the check as written; then the moment before the write
+        verdict = original(r, t)
+        checked.set()
+        assert go.wait(60)
+        return verdict
+
+    tools._files_blocked = check_then_pause
+    result: list = []
+    writer = threading.Thread(target=lambda: result.append(call(tool, arg, root)))
+    try:
+        writer.start()
+        assert checked.wait(60)
+        studio = StudioProcess(root, log=TMP / f"{label}.log", env={"MESH_TEST_OWNER_WAIT": "0.3"})
+        studio.ask("edit Unsaved Warden")
+        before = files(root)
+        go.set()
+        writer.join(60)
+    finally:
+        tools._files_blocked = original
+    out = {"tool": tool, "studio_opened_after_the_check": bool(studio.start.get("ready")),
+           "owner_when_the_tool_continued": (project_ownership.owned(root) or {}).get("kind"),
+           "result": {k: result[0].get(k) for k in ("ok", "reason") if k in result[0]},
+           "files_written_behind_studio": diff(before, files(root))}
+    state = studio.ask("state")
+    out["studio_unsaved_work_kept"] = "Unsaved Warden" in state["names"] and state["unsaved"]
+    studio.close()
+    return out
+
+
+def closed(label: str) -> dict:
+    root, world = project(f"closed_{label}")
+    tool, arg = PATHS[label](world)
+    before = files(root)
+    result = call(tool, arg, root)
+    return {"tool": tool, "result": {k: result.get(k) for k in ("ok", "reason") if k in result},
+            "files": diff(before, files(root)), "owner_after": project_ownership.owned(root)}
+
+
+def main() -> None:
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip()
+    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", "engine"], cwd=REPO, capture_output=True,
+                                text=True).stdout.strip())
+    out = {"head": head, "engine_uncommitted_changes": dirty,
+           "studio_opens_between_check_and_write": {k: raced(k) for k in PATHS},
+           "studio_closed": {k: closed(k) for k in PATHS}}
+    text = json.dumps(out, indent=2)
+    OUT.write_text(text + "\n", encoding="utf-8")
+    print(text)
+
+
+if __name__ == "__main__":
+    main()

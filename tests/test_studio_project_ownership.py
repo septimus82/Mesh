@@ -419,12 +419,12 @@ def test_a_studio_opening_during_an_outside_write_opens_on_what_was_written(root
     real_save = Project.save
     seen: dict[str, Any] = {}
 
-    def slow_save(self: Any) -> Any:
+    def slow_save(self: Any, *args: Any, **kwargs: Any) -> Any:  # (the save as called: R5's owner too)
         seen["studio"] = _start(root, tmp_path / "commands", MESH_TEST_OWNER_WAIT="30")
         threading.Event().wait(1.5)  # (the Studio has started and waits for the project all this time)
         seen["running_during_the_write"] = seen["studio"].poll() is None
         seen["owner_during_the_write"] = project_ownership.owned(root)
-        return real_save(self)
+        return real_save(self, *args, **kwargs)
 
     monkeypatch.setattr(Project, "save", slow_save)
     try:

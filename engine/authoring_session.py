@@ -264,21 +264,22 @@ def apply(root: str | Path, changes: list[Doc], *, dry_run: bool = False, title:
         except project_ownership.OwnershipUnavailable as exc:
             return _fail("ownership_unknown", f"Nothing was written: {exc}")
     try:
-        return _apply_to_files(root, changes, dry_run)
+        return _apply_to_files(root, changes, dry_run, held)
     finally:
         if held is not None:
             held.release()
 
 
-def _apply_to_files(root: str | Path, changes: list[Doc], dry_run: bool) -> Doc:
-    """The changes applied to the project's files (``apply`` owns the project, unless it is only a dry run)."""
+def _apply_to_files(root: str | Path, changes: list[Doc], dry_run: bool, held: Any = None) -> Doc:
+    """The changes applied to the project's files (``apply`` owns the project, unless it is only a dry run). The save
+    writes only files ``held`` covers (#462 R5 remediation B: a room in a nested project refuses it, nothing written)."""
     try:
         project = open_project(root)
         before, after = authoring.dry_run(project, changes)
         if dry_run:
             return {"ok": True, "source": "files", "dry_run": True, "summary": authoring.summarize(before, after)}
         result = authoring.apply(project, changes)
-        written = project.save()
+        written = project.save(owner=held)
     except authoring.ChangeError as err:
         return _fail("invalid_change", str(err), index=err.index, op=err.op)
     except SaveError as err:

@@ -519,15 +519,64 @@ def _files_blocked(root: str, tool: str) -> dict[str, Any] | None:
         "be overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
 
 
-def create_scene(name: str, template: str = "empty", root: str = ".") -> dict[str, Any]:
-    """Create a new scene from a template. Wraps ``AIOps.create_scene``; refused, writing nothing, while Mesh Studio
-    has the project open or that can't be told (F1)."""
+def _own_for_files(root: str, tool: str) -> tuple[Any, dict[str, Any] | None]:
+    """The project at ``root`` owned for ``tool``'s direct write (``Ownership``, None), or (None, why not) (#462 R5).
+
+    The check above says no editor has it open; owning it (R2's lock, ``engine.editor.project_ownership``) is what
+    makes that still true while the tool reads and writes: a Studio opening meanwhile waits, then is turned away.
+    Owned elsewhere (a Studio that opened since the check, another editor, another writer), or ownership that can't
+    be established for any reason: refused, nothing read or written.
+
+    The project is the one ``root`` is in (``project_ownership.ownership_root``, #462 R4/R5 remediation): a ``root``
+    inside a project, an ordinary folder of it, is checked and owned as that project, never as a folder of its own."""
+    from engine.editor import project_ownership  # noqa: PLC0415  # (the editor package is heavy: only when writing)
+
+    try:
+        project = project_ownership.ownership_root(root)
+    except (OSError, ValueError) as exc:  # (a root that can't be resolved: whose project it is can't be told)
+        return None, {"ok": False, "reason": "ownership_unknown", "message": f"{tool} wrote nothing: {root} can't be resolved ({exc})."}
+    blocked = _files_blocked(str(project), tool)
+    if blocked is not None:
+        return None, blocked
+    try:
+        return project_ownership.acquire(project, project_ownership.AUTHORING, wait=0.5), None
+    except project_ownership.OwnedElsewhere as owned:
+        kind = owned.holder.get("kind")
+        if kind == project_ownership.AUTHORING:
+            return None, {"ok": False, "reason": "project_busy", "message": (
+                f"Another tool is writing this project's files right now, so {tool} wrote nothing. Try again in a moment.")}
+        if kind == project_ownership.EDITOR:
+            from engine import authoring_session  # noqa: PLC0415
+
+            return None, authoring_session.other_editor(project_ownership.EDITOR)
+        return None, {"ok": False, "reason": "studio_open", "message": (
+            f"Mesh Studio opened this project just now, so {tool} wrote nothing (the person's unsaved work would be "
+            "overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
+    except Exception as exc:  # noqa: BLE001  # REASON: ownership not established, however it failed, is a refusal, never a pass
+        from engine.logging_tools import get_logger  # noqa: PLC0415
+
+        logger = get_logger(__name__)  # (unexpected: kept with its traceback, and refused)
+        logger.warning("[Mesh][MCP] %s: the project's ownership couldn't be established: %s", tool, exc, exc_info=True)
+        return None, {"ok": False, "reason": "ownership_unknown",
+                      "message": f"{tool} wrote nothing: this project's ownership can't be established ({exc})."}
+
+
+def _owned_ops(root: str, held: Any) -> Any:
+    """``AIOps`` at ``root`` writing only files ``held`` covers (``AIOps(owner=...)``, ``Ownership.owns``: inside its
+    project, not in another project nested in it, and not once that project changed; #462 R5)."""
     from engine.ai_ops import AIOps
 
-    blocked = _files_blocked(root, "create_scene")
-    if blocked is not None:
-        return {**blocked, "data": None}
-    return _result_to_dict(AIOps(base_dir=root).create_scene(name, template))
+    return AIOps(base_dir=root, owner=held)
+
+
+def create_scene(name: str, template: str = "empty", root: str = ".") -> dict[str, Any]:
+    """Create a new scene from a template. Wraps ``AIOps.create_scene``; refused, writing nothing, while Mesh Studio
+    has the project open or that can't be told (F1), and done owning the project (R5: ``_own_for_files``)."""
+    held, refused = _own_for_files(root, "create_scene")
+    if refused is not None:
+        return {**refused, "data": None}
+    with held:
+        return _result_to_dict(_owned_ops(root, held).create_scene(name, template))
 
 
 def add_entity_from_prefab(
@@ -645,31 +694,29 @@ def apply_ops(
     changes = _studio_changes(list(operations), root)
     if changes is not None:  # a Studio project: the shared, validated authoring path
         return _apply_ops_through_authoring(list(operations), changes, root)
-    blocked = _files_blocked(root, "apply_ops")
-    if blocked is not None:
-        return {**blocked, "results": []}
+    held, refused = _own_for_files(root, "apply_ops")  # (R5: owned from before the files are read until validated)
+    if refused is not None:
+        return {**refused, "results": []}
+    with held:
+        ops_runner = _owned_ops(root, held)
+        outcome = ops_runner.apply_job({"operations": list(operations)})
 
-    from engine.ai_ops import AIOps
+        annotated: list[dict[str, Any]] = []
+        raw_results = outcome.get("results", []) if isinstance(outcome, dict) else []
+        for op, result in zip(operations, raw_results):
+            entry = dict(result) if isinstance(result, dict) else {"ok": False, "message": str(result)}
+            if isinstance(op, dict):
+                entry["type"] = op.get("type")
+            annotated.append(entry)
 
-    ops_runner = AIOps(base_dir=root)
-    outcome = ops_runner.apply_job({"operations": list(operations)})
-
-    annotated: list[dict[str, Any]] = []
-    raw_results = outcome.get("results", []) if isinstance(outcome, dict) else []
-    for op, result in zip(operations, raw_results):
-        entry = dict(result) if isinstance(result, dict) else {"ok": False, "message": str(result)}
-        if isinstance(op, dict):
-            entry["type"] = op.get("type")
-        annotated.append(entry)
-
-    payload: dict[str, Any] = {
-        "ok": bool(outcome.get("ok", False)) if isinstance(outcome, dict) else False,
-        "results": annotated,
-    }
-    if validate:
-        payload["validation"] = _result_to_dict(
-            ops_runner.run_validation(validate_scene_path)
-        )
+        payload: dict[str, Any] = {
+            "ok": bool(outcome.get("ok", False)) if isinstance(outcome, dict) else False,
+            "results": annotated,
+        }
+        if validate:
+            payload["validation"] = _result_to_dict(
+                ops_runner.run_validation(validate_scene_path)
+            )
     return payload
 
 
