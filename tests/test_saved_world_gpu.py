@@ -232,3 +232,48 @@ def test_a_save_whose_room_is_gone_loads_its_own_copy(tmp_path: Path) -> None:
         assert game.window.game_state_controller.get_var("coins") == 7
     finally:
         game.close()
+
+
+def test_two_objects_sharing_an_id_each_come_back_where_they_were_left(tmp_path: Path) -> None:
+    """B-01b: two room objects with one authored id are saved as two entities with their own positions (before, the
+    first one's move was lost: it reopened at its authored place). Each twin's position and
+    own authored field (tags) come back; behaviour state (saved_entities) is B-01."""
+    import saved_world_fixtures as fx
+
+    project = fx.build_project(tmp_path / "2d", "2d")
+
+    def add_twins(scene: dict) -> dict:
+        template = next(e for e in scene["entities"] if e.get("prefab_id") != "player" and e.get("id"))
+        for x, y, tag in ((300.0, 200.0, "hp30"), (500.0, 260.0, "hp11")):
+            scene["entities"].append({**template, "id": "orc", "name": "orc", "x": x, "y": y, "tags": [tag]})
+        return scene
+
+    _edit_room(project, add_twins)
+    from hd2d_demo import HiddenGame
+
+    def orcs(game: Any) -> list[tuple[int, int, Any]]:
+        return [(round(s.center_x), round(s.center_y), (s.mesh_entity_data or {}).get("tags"))
+                for s in game.window.scene_controller.all_sprites
+                if (getattr(s, "mesh_entity_data", None) or {}).get("id") == "orc"]
+
+    game = HiddenGame(project)
+    try:
+        game.load(fx.ROOM)
+        game.step(5)
+        twins = [s for s in game.window.scene_controller.all_sprites
+                 if (getattr(s, "mesh_entity_data", None) or {}).get("id") == "orc"]
+        twins[0].center_x += 17
+        twins[1].center_y += 23
+        assert orcs(game) == [(317, 200, ["hp30"]), (500, 283, ["hp11"])]
+        assert game.window.save_manager.save_game("twins")
+    finally:
+        game.close()
+    game = HiddenGame(project)
+    try:
+        game.load(fx.ROOM)
+        game.step(2)
+        assert game.window.save_manager.load_game("twins")
+        game.step(4)
+        assert orcs(game) == [(317, 200, ["hp30"]), (500, 283, ["hp11"])]
+    finally:
+        game.close()

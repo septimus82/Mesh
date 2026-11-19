@@ -42,7 +42,10 @@ from __future__ import annotations
 import copy
 from typing import Any
 
+from engine.log_utils import get_logger
 from engine.scene_runtime.room_memory import room_key
+
+logger = get_logger(__name__)
 
 ROOM_IDS = "room_entity_ids"
 MUSIC = "music"  # meta: the music playing when saved ({"path", "volume"}; path None: silence)
@@ -112,8 +115,23 @@ def compose(save: dict[str, Any], room: dict[str, Any], room_path: str) -> dict[
     saved = [e for e in (save.get("entities") or []) if isinstance(e, dict)]
     kept = [copy.deepcopy(e) for e in saved
             if not (from_room_then is not None and _id(e) in from_room_then and _id(e) not in in_room_now)]
-    authored = {i: e for e in room.get("entities") or [] if (i := _id(e))}
-    kept = [_where_play_left(authored[i], e) if (i := _id(e)) in authored else e for e in kept]
+    authored: dict[str, list[dict[str, Any]]] = {}
+    for room_entity in room.get("entities") or []:
+        if i := _id(room_entity):
+            authored.setdefault(i, []).append(room_entity)
+    seen: dict[str, int] = {}  # the k-th saved entity with an id pairs with the k-th authored entry with it
+    paired: list[dict[str, Any]] = []
+    for e in kept:
+        i = _id(e)
+        k = seen.get(i, 0) if i else 0
+        if i:
+            seen[i] = k + 1
+        paired.append(_where_play_left(authored[i][k], e) if i in authored and k < len(authored[i]) else e)
+    kept = paired
+    for i, n in seen.items():
+        if i in authored and n != len(authored[i]):
+            logger.warning("saved world: %d saved objects share id %r but the room now has %d; paired in order, "
+                           "the extra saved ones keep their saved fields", n, i, len(authored[i]))
     have = {i for i in map(_id, kept) if i}
     removed = _removed(save, room_path)
     added = [copy.deepcopy(e) for e in room.get("entities") or []

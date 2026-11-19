@@ -3,7 +3,10 @@ from __future__ import annotations
 import copy
 from typing import TYPE_CHECKING, Any, Dict
 
+from engine.log_utils import get_logger
 from engine.swallowed_exceptions import _log_swallow
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from ..scene_controller import SceneController
@@ -57,7 +60,7 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
 
     authored_entities = snapshot.get("entities")
     entities: list[dict[str, Any]] = []
-    authored_entity_by_key: dict[tuple[str, str], int] = {}
+    authored_entity_by_key: dict[tuple[str, str], list[int]] = {}
     if isinstance(authored_entities, list):
         for entity in authored_entities:
             if not isinstance(entity, dict):
@@ -67,9 +70,21 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
             for key_name in ("id", "name", "mesh_name", "prefab_id"):
                 value = entity.get(key_name)
                 if isinstance(value, str) and value.strip():
-                    authored_entity_by_key[(key_name, value.strip())] = entity_index
+                    authored_entity_by_key.setdefault((key_name, value.strip()), []).append(entity_index)
 
     updated_entity_indexes: set[int] = set()
+    # A sprite whose own data equals an authored entry is that entry (claimed first, so a clone listed before its
+    # original cannot take the original's entry); each entry is claimed by at most one sprite.
+    exact_entry: dict[int, int] = {}
+    reserved: set[int] = set()
+    for sprite in controller.all_sprites:
+        own = getattr(sprite, "mesh_entity_data", None)
+        if isinstance(own, dict):
+            index = next((i for i in _authored_candidates(own, authored_entity_by_key)
+                          if i not in reserved and entities[i] == own), None)
+            if index is not None:
+                exact_entry[id(sprite)] = index
+                reserved.add(index)
 
     for sprite in controller.all_sprites:
         # Start with the original entity data if available
@@ -77,7 +92,11 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
         if not isinstance(entity_data, dict):
             entity_data = {}
 
-        authored_entity_index = _find_authored_entity_index_for_sprite(entity_data, authored_entity_by_key)
+        authored_entity_index = exact_entry.get(id(sprite))
+        if authored_entity_index is None:
+            authored_entity_index = _find_authored_entity_index_for_sprite(
+                entity_data, authored_entity_by_key, updated_entity_indexes | reserved
+            )
         current_data = copy.deepcopy(entities[authored_entity_index]) if authored_entity_index is not None else {}
         _merge_authored_entity_fields(current_data, entity_data)
 
@@ -240,18 +259,33 @@ _SPRITE_SYNC_ENTITY_FIELDS = {
 _PREFAB_OWNED_ENTITY_FIELDS = {"name", "sprite"}
 
 
-def _find_authored_entity_index_for_sprite(
-    entity_data: dict[str, Any],
-    authored_entity_by_key: dict[tuple[str, str], int],
-) -> int | None:
+def _authored_candidates(
+    entity_data: dict[str, Any], authored_entity_by_key: dict[tuple[str, str], list[int]]
+) -> list[int]:
+    """The authored entries sharing the first of id/name/mesh_name/prefab_id that matches any entry (authored order)."""
     for key_name in ("id", "name", "mesh_name", "prefab_id"):
         value = entity_data.get(key_name)
-        if not isinstance(value, str) or not value.strip():
-            continue
-        authored_index = authored_entity_by_key.get((key_name, value.strip()))
-        if authored_index is not None:
-            return authored_index
-    return None
+        if isinstance(value, str) and value.strip():
+            candidates = authored_entity_by_key.get((key_name, value.strip()))
+            if candidates:
+                return candidates
+    return []
+
+
+def _find_authored_entity_index_for_sprite(
+    entity_data: dict[str, Any],
+    authored_entity_by_key: dict[tuple[str, str], list[int]],
+    claimed: set[int],
+) -> int | None:
+    """The first unclaimed authored entry sharing the sprite's key, or None. An entry is claimed by at most one sprite.
+    When the key matches only claimed entries the sprite is another entity sharing it (e.g. a console clone): it gets
+    no entry, so the caller emits it as its own record instead of merging it into the first, and that is logged."""
+    candidates = _authored_candidates(entity_data, authored_entity_by_key)
+    free = [i for i in candidates if i not in claimed]
+    if candidates and not free:
+        logger.warning("scene snapshot: %s is shared by more live entities than authored entries; "
+                       "the extra one is saved as its own entity", entity_data.get("id") or entity_data.get("name"))
+    return free[0] if free else None
 
 
 def _merge_authored_entity_fields(target: dict[str, Any], source: dict[str, Any]) -> None:
