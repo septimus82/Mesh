@@ -740,7 +740,7 @@ class Project:
                         "rows": -(-count // columns), "count": count, "tile": tile, "hints": hints})
         return out
 
-    def import_tileset(self, image_path: Path | str, tile_size: int, name: str) -> Doc:
+    def import_tileset(self, image_path: Path | str, tile_size: int, name: str, owner: Any = None) -> Doc:
         """Copy an image into the project as a tileset every room can paint with.
 
         The image is cut to whole tiles and, if its tiles aren't the map's size, scaled so
@@ -748,6 +748,10 @@ class Project:
         ``assets/tilesets/<name>.png`` and ``.json`` and adds the tileset to every room's
         map file straight away (map files hold no painted tiles and an unused tileset is
         harmless, so importing isn't part of undo). Returns ``{name, source, count, scaled}``.
+
+        ``owner``: the ``project_ownership.Ownership`` Studio holds (#462). Every file the import would write must be
+        one it covers (``owns``): a room the world lists in another Mesh project (one nested in this one, with its
+        own owner) refuses the whole import before anything is written.
         """
         from PIL import Image  # noqa: PLC0415
 
@@ -777,11 +781,19 @@ class Project:
         while (self.root / folder / f"{candidate}.json").exists() or (self.root / folder / f"{candidate}.png").exists():
             candidate, n = f"{slug}_{n}", n + 1
         document = ops.tileset_document(label, f"{candidate}.png", *size)
+        picture, rel = f"{folder}/{candidate}.png", f"{folder}/{candidate}.json"
+        maps = self._maps_with_tileset(rel)
+        # Every file the import will write, known before any is: all of them must be ones ``owner`` covers (#462).
+        foreign = [d for d in (picture, rel, *maps) if owner is not None and not owner.owns(self.root / d)]
+        if foreign:
+            raise ops.OpError(
+                f"Not imported: {', '.join(foreign)} {'is' if len(foreign) == 1 else 'are'} in another Mesh project "
+                f"than the one held ({owner.root}), so nothing was written: that project has its own owner.")
         (self.root / folder).mkdir(parents=True, exist_ok=True)
-        image.save(self.root / folder / f"{candidate}.png")
-        rel = f"{folder}/{candidate}.json"
+        image.save(self.root / picture)
         write_json_atomic(self.root / rel, document)
-        self._add_tileset_to_maps(rel)
+        for map_rel, updated in maps.items():
+            write_json_atomic(self.root / map_rel, updated)
         return {"name": label, "source": rel, "count": document["tilecount"], "scaled": tile_size != ops.TILE_SIZE}
 
     IMAGE_TYPES = (".png", ".gif", ".bmp", ".jpg", ".jpeg", ".webp")
@@ -912,8 +924,11 @@ class Project:
         rel = [p.relative_to(self.root).as_posix() for p in found]
         return sorted(rel, key=lambda r: (not r.startswith("assets/sprites/"), r.lower()))
 
-    def _add_tileset_to_maps(self, tileset_rel: str) -> None:
+    def _maps_with_tileset(self, tileset_rel: str) -> dict[str, Doc]:
+        """Every room's map file that doesn't reference the tileset yet, as it will be with it (each map file once,
+        however many rooms use it). Nothing is written here."""
         counts: dict[str, int] = {}
+        changed: dict[str, Doc] = {}
         for key, _label, _path in self.rooms():
             map_rel = self.map_path(key)
             map_doc = self._read_json(map_rel) if map_rel else None
@@ -924,7 +939,8 @@ class Project:
                     counts[src] = int((self._read_json(src) or {}).get("tilecount") or 0)
             updated = ops.with_tileset(map_doc, map_rel, tileset_rel, counts)
             if updated != map_doc:
-                write_json_atomic(self.root / map_rel, updated)
+                changed[map_rel] = updated
+        return changed
 
     def link_rooms(self, key_a: str, at_a: tuple[float, float], key_b: str, at_b: tuple[float, float]) -> None:
         """Connect two rooms with a door in each (at ``at_a`` in room ``key_a``, ``at_b`` in ``key_b``), each with its arrival spot."""

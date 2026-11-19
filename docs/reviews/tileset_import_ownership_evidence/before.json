@@ -1,0 +1,35 @@
+{
+  "owner_passed": false,
+  "result": {
+    "name": "Rocks",
+    "source": "assets/tilesets/rocks.json",
+    "count": 2,
+    "scaled": false
+  },
+  "created": [
+    "assets/tilesets/rocks.json",
+    "assets/tilesets/rocks.png"
+  ],
+  "changed": [
+    "packs/core_regions/maps/start.json",
+    "packs/region2/packs/core_regions/maps/start.json"
+  ],
+  "nested_map_tilesets_before": [
+    {
+      "firstgid": 1,
+      "source": "../../../assets/tilesets/starter.json"
+    }
+  ],
+  "nested_map_tilesets_after": [
+    {
+      "firstgid": 1,
+      "source": "../../../assets/tilesets/starter.json"
+    },
+    {
+      "firstgid": 17,
+      "source": "../../../../../assets/tilesets/rocks.json"
+    }
+  ],
+  "outer_lock_holder_kind": "mesh_studio",
+  "nested_lock_holder_is_child": true
+}

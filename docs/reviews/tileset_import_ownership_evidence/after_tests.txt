@@ -1,0 +1,13 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.3, pytest-8.4.2, pluggy-1.6.0 -- <tmp>
+rootdir: <repo>
+configfile: pytest.ini
+plugins: anyio-4.15.1
+collecting ... collected 4 items
+
+tests/test_studio_tileset_ownership_gpu.py::test_outer_studios_import_never_writes_a_map_file_another_studio_owns PASSED [ 25%]
+tests/test_tileset_import_ownership.py::test_a_nested_project_another_studio_holds_refuses_the_whole_import PASSED [ 50%]
+tests/test_tileset_import_ownership.py::test_another_projects_map_refuses_it_whether_or_not_that_project_is_open PASSED [ 75%]
+tests/test_tileset_import_ownership.py::test_ordinary_imports_write_every_destination PASSED [100%]
+
+============================= 4 passed in 25.02s ==============================
