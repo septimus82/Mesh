@@ -3,30 +3,28 @@
 Maintained by the master only (workers report in their PRs). GitHub is the source of truth: a fresh master session
 rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and priorities: `MESH_RELIABILITY_MASTER_PLAN.md`.
 
-**As of 2026-11-19.** Integration `redesign/visual-editor` = `ad91e28c665ae6adc22be4ce0b2c4e7d26e1817b`
-(post-merge CI 44507117728 and Extended 44507117836 green, attempt 1). Nothing merged since.
+**As of 2026-11-19.** Integration `redesign/visual-editor` = `7307a48f34d2ba8588bde21fb20b3a8daf4355e5` when this
+board was written; this board itself lands with PR #527 (its merge commit is the next one: `gh pr view 527 --json
+mergeCommit`). Owner-approved order integrated serially, each with tree identity checked and post-merge gates green:
+
+| Merge | PR | Merge commit | Tree (= reviewed) | Post-merge CI | Post-merge Extended |
+|---|---|---|---|---|---|
+| 1 | #525 stale-content undo | `d2dee7cf37ae8f8073627992cddbdd488fc50d34` | `baf97aea` (= PR head tree) | 44544167005 ✓ a1 | 44544167843 ✓ a1 |
+| 2 | #529 A-01 `mesh new --force` | `190f5349812014a9a993ecb1f618c7c74cf9766e` | `445a000b` (= tip + exactly #529's reviewed diff) | 44549684496 ✓ a1 | 44549684498 ✓ a1 |
+| 3 | #526 master plan | `7307a48f34d2ba8588bde21fb20b3a8daf4355e5` | `d3409df5` (= tip + exactly #526's diff) | 44556297528 ✓ a1 | 44556297554 ✓ a1 |
+| 4 | #527 this board | see `gh pr view 527` | | | |
 
 States: `QUEUED` · `DISCOVERED` (source located, not reproduced) · `IN PROGRESS` · `READY FOR REVIEW` · `APPROVED`
 (master) · `MERGED + VERIFIED`. Approval: `OWNER` = the owner must approve the merge.
 
 | ID | Pri | Agent (model) | State | Branch / PR | Base → head | Evidence | Master verdict | Approval | Next action |
 |---|---|---|---|---|---|---|---|---|---|
-| A-00 stale-content plan undo | P1 | original Opus session; independent review by a Sonnet reviewer | APPROVED | `fix/stale-plan-undo` / #525 (draft) | `ad91e28c` → `5fd408d6` | CI 44517832117 ✓ a1; Extended 44517840518 ✓ a1; 23 CLI tests; 8/8 faults | **APPROVE**; F1, F2 tracked separately (not in #525) | OWNER | merge on owner approval (order below) |
-| A-01 `mesh new --force` deletion | P0 | mesh-creator-safety (Sonnet) | READY FOR REVIEW | `fix/a01-new-force-deletion` / #529 (draft) | `ad91e28c` → `0db758cc` | reproduced on base (6 cases deleted markers, exit 0); head: all refused, markers intact; 16 of 20 new tests fail on base; 18 pass + 2 skips on head; 4/5 faults caught (link check alone masked by Python 3.13's own `rmtree` junction refusal) | **APPROVE** pending its first CI/Extended (see PR) | OWNER | merge on owner approval |
-| B-01 duplicate-name entity save identity | P1 | mesh-gameplay-reliability (Sonnet) | READY FOR REVIEW (design) | `design/b01-entity-save-identity` / #528 (draft, docs only) | `ad91e28c` → `c08b68e0` | reproduced on base through SaveManager + hidden GameWindow (two "Goblin" records land on one sprite, other keeps authored state, no diagnostic) | **design accepted with one change**: keep name-keying for id-less entities with a unique name (dropping them would lose runtime-spawned state); owner answers open questions 1–6 | OWNER (migration v2→v3) | owner decisions, then B-01 implementation brief |
+| A-00 stale-content plan undo | P1 | original Opus session; independent Sonnet review | MERGED + VERIFIED | #525 → `d2dee7cf` | `ad91e28c` → `5fd408d6` | PR gates ✓ a1; post-merge ✓ a1 | APPROVED | owner approved | F1/F2 follow-ups (below) |
+| A-01 `mesh new --force` deletion | P0 | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #529 → `190f5349` | `ad91e28c` → `0db758cc` | reproduced (6 cases deleted markers); fixed; PR gates ✓ a1; post-merge ✓ a1 | APPROVED | owner approved | low follow-ups (below) |
+| B-01 duplicate-name entity save identity | P1 | mesh-gameplay-reliability (Sonnet) | READY FOR REVIEW (design rev 2) | `design/b01-entity-save-identity` / #528 (draft, docs only) | `ad91e28c` → `ef6ddb9e` | base reproductions by running: duplicate names, id-less duplicates, duplicate-id clone | design covers the owner's three points; **one gap**: refused v3 records are dropped at the next save (state carry-forward or backup needed); owner questions 2, 7, 8, 9 | OWNER (migration v2→v3 not authorised) | owner decisions; worker revises the gap; then an implementation brief |
+| B-01b snapshot merge of same-id sprites | P1? | (unassigned) | DISCOVERED | | | B-01 rev 2: `engine/scene_runtime/persistence.py:60-80` merges sprites sharing an id before saved state applies (a clone's hp lost) | | OWNER | owner decides (B-01 question 9) |
 | B-02 primary tag after load | P1/P2 | mesh-gameplay-reliability | DISCOVERED | after B-01 (same file) | | `entity_state.py:309` sorted tags, `:413` `mesh_tag = state.tags[0]` | | OWNER | queue behind B-01 |
-| Plan doc | | master (corrections) | READY FOR REVIEW | `docs/reliability-master-plan` / #526 (draft) | `ad91e28c` → `a9d89f01` | docs only; #525 status and evidence provenance corrected | integrate | owner | merge on owner approval |
-| Agent definitions + runbook + board | | master | READY FOR REVIEW | `docs/reliability-agents` / #527 (draft) | `ad91e28c` → (see PR) | docs + `.claude/agents/`; CI 44531913505 ✓ a1 on `11492053` | integrate | owner | merge on owner approval |
-
-## Proposed merge order (owner approval required; one at a time)
-
-1. #525, then post-merge CI + Extended on the new tip.
-2. #529, then post-merge CI + Extended.
-3. #526 (docs), then CI.
-4. #527 (docs), refreshed with the merge SHAs above in a last commit before merging, then CI.
-
-No file overlaps between them. Each merge: head unchanged, `git merge-tree` equals the reviewed tree, merged tree
-checked. #528 stays open as the design record until the owner answers its questions.
+| A-02 quest list erasure | P1 | mesh-creator-safety | QUEUED | | | `engine/ai_ops.py:322` `payload["quests"] = {}` when the key isn't a dict | | OWNER | next Lane A task |
 
 ## Follow-ups noted by reviews (not assigned)
 
@@ -48,16 +46,15 @@ checked. #528 stays open as the design record until the owner answers its questi
 | B-01/B-02 probe (read-only) | Sonnet 5.5 | 6 | ~75k | located keying and tag code |
 | plan reference lookup | Haiku 5.5 | 11 | ~68k | 8 references confirmed |
 | #525 independent review | Sonnet 5.5 | 8 | ~87k | APPROVE, F1/F2 |
-| A-01 implementation | Sonnet 5.5 | 36 | ~102k | #529 |
+| A-01 implementation | Sonnet 5.5 | 36 | ~102k | #529 (merged) |
 | B-01 design | Sonnet 5.5 | 44 | ~140k | #528 |
+| B-01 design revision 2 (same agent, resumed) | Sonnet 5.5 | 20 | ~181k | #528 `ef6ddb9e` |
 
 ## Worktrees in use
 
 | Worktree | Holds |
 |---|---|
-| `D:\Games\Mesh-staleundo` | #525 |
-| `D:\Games\Mesh-A-01` | #529 |
 | `D:\Games\Mesh-B-01` | #528 |
-| `D:\Games\Mesh-plan526` | #526 (master's corrections) |
 | `D:\Games\Mesh-relmaster` | #527 |
-| `D:\Games\Mesh-agent-a`, `D:\Games\Mesh-agent-b` | read-only probes, detached at `ad91e28c` (removable with owner's OK) |
+| `D:\Games\Mesh-staleundo`, `D:\Games\Mesh-A-01`, `D:\Games\Mesh-plan526` | merged work (#525, #529, #526): removable with the owner's OK |
+| `D:\Games\Mesh-agent-a`, `D:\Games\Mesh-agent-b` | read-only probes, detached at `ad91e28c` (removable with the owner's OK) |
