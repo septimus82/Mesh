@@ -294,10 +294,32 @@ class AIOps:
     def edit_dialogue(self, scene_path: str, entity_id: str, patch: dict[str, Any]) -> AIOpsResult:
         return self.set_behaviour_params(scene_path, entity_id, "Dialogue", {"dialogue": patch})
 
+    @staticmethod
+    def _quest_index(quests: Any) -> tuple[dict[str, int] | None, str]:
+        """For a list-form ``quests`` (a form the runtime loader accepts): ``({id: position}, "")``, else ``(None, why)``."""
+        index: dict[str, int] = {}
+        for position, entry in enumerate(quests):
+            entry_id = entry.get("id") if isinstance(entry, dict) else None
+            if not isinstance(entry_id, str) or not entry_id.strip():
+                return None, f"quests entry {position} is not an object with an id; refusing to touch quests.json"
+            if entry_id in index:
+                return None, f"quests.json has duplicate quest id '{entry_id}'; refusing to touch it"
+            index[entry_id] = position
+        return index, ""
+
     def edit_quest(self, quest_id: str, patch: dict[str, Any], quests_path: str = "assets/data/quests.json") -> AIOpsResult:
         path = self._scene_path(quests_path)
         payload = _load_json(path)
         quests = payload.get("quests") if isinstance(payload, dict) else None
+        if isinstance(quests, list):
+            index, why = self._quest_index(quests)
+            if index is None:
+                return AIOpsResult(False, why)
+            if quest_id not in index:
+                return AIOpsResult(False, f"Quest '{quest_id}' not found")
+            quests[index[quest_id]] = _deep_merge(quests[index[quest_id]], patch)
+            _write_json(path, payload)
+            return AIOpsResult(True, f"Updated quest '{quest_id}'")
         if not isinstance(quests, dict):
             return AIOpsResult(False, "quests.json missing quests object")
         quest = quests.get(quest_id)
@@ -318,14 +340,22 @@ class AIOps:
         if not isinstance(payload, dict):
             return AIOpsResult(False, "quests root must be an object")
         quests = payload.setdefault("quests", {})
-        if not isinstance(quests, dict):
-            payload["quests"] = {}
-            quests = payload["quests"]
-        existing = quests.get(quest_id, {})
-        if isinstance(existing, dict):
-            quests[quest_id] = _deep_merge(existing, quest_data)
+        if isinstance(quests, list):  # the runtime loads a list of {"id": ...} too: keep it a list
+            index, why = self._quest_index(quests)
+            if index is None:
+                return AIOpsResult(False, why)
+            if quest_id in index:
+                quests[index[quest_id]] = _deep_merge(quests[index[quest_id]], quest_data) | {"id": quest_id}
+            else:
+                quests.append({"id": quest_id} | deepcopy(quest_data) | {"id": quest_id})
+        elif isinstance(quests, dict):
+            existing = quests.get(quest_id, {})
+            if isinstance(existing, dict):
+                quests[quest_id] = _deep_merge(existing, quest_data)
+            else:
+                quests[quest_id] = quest_data
         else:
-            quests[quest_id] = quest_data
+            return AIOpsResult(False, "quests must be an object or a list; refusing to touch quests.json")
         _write_json(path, payload)
         return AIOpsResult(True, f"Upserted quest '{quest_id}'")
 
@@ -333,6 +363,15 @@ class AIOps:
         path = self._scene_path(quests_path)
         payload = _load_json(path)
         quests = payload.get("quests") if isinstance(payload, dict) else None
+        if isinstance(quests, list):
+            index, why = self._quest_index(quests)
+            if index is None:
+                return AIOpsResult(False, why)
+            if quest_id not in index:
+                return AIOpsResult(False, f"Quest '{quest_id}' not found")
+            deleted = quests.pop(index[quest_id])
+            _write_json(path, payload)
+            return AIOpsResult(True, f"Deleted quest '{quest_id}'", {"deleted": deleted})
         if not isinstance(quests, dict):
             return AIOpsResult(False, "quests.json missing quests object")
         if quest_id not in quests:

@@ -1,0 +1,12 @@
+== ruff_gate
+[ruff-gate] ok
+exit 0
+== mypy_gate
+[mypy-gate] ok
+exit 0
+== scan_exception_policies
+[exception-policy-scan] BLE001 missing REASON: 0
+[exception-policy-scan] broad catches: 1283
+[exception-policy-scan] silent broad catches: 482
+[exception-policy-scan] artifact: artifacts/exception_policy_scan.json
+exit 0

@@ -1,0 +1,40 @@
+INFO:engine.project_scaffold:Project created successfully.
+__________________ test_edit_and_delete_work_on_a_list[mcp] ___________________
+
+quests = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4424/test_edit_and_delete_work_on_a1/game/assets/data/quests.json')
+run = <function _mcp at 0x0000028A3E3227A0>
+
+    @pytest.mark.parametrize("run", PATHS)
+    def test_edit_and_delete_work_on_a_list(quests: Path, run: Callable[..., Any]) -> None:
+        _put(quests, json.dumps({"quests": [A, B]}))
+        root = quests.parents[2]
+>       assert run(root, [{"type": "edit_quest", "quest_id": "b", "patch": {"title": "B2"}}])["ok"] is True
+E       assert False is True
+
+tests\test_ai_quest_forms.py:117: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+INFO:engine.project_scaffold:Creating new project 'Game' at C:\Users\<name>\AppData\Local\Temp\pytest-of-<name>\pytest-4424\test_edit_and_delete_work_on_a1\game (template=blank)
+INFO:engine.project_templates:Applying template 'blank' to C:\Users\<name>\AppData\Local\Temp\pytest-of-<name>\pytest-4424\test_edit_and_delete_work_on_a1\game
+INFO:engine.project_scaffold:Project created successfully.
+=========================== short test summary info ===========================
+FAILED tests/test_ai_quest_forms.py::test_list_form_stays_a_list_and_keeps_every_quest[apply_job]
+FAILED tests/test_ai_quest_forms.py::test_list_form_stays_a_list_and_keeps_every_quest[mcp]
+FAILED tests/test_ai_quest_forms.py::test_list_form_update_merges_the_matching_entry_in_place[apply_job]
+FAILED tests/test_ai_quest_forms.py::test_list_form_update_merges_the_matching_entry_in_place[mcp]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[quests_string-add-apply_job]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[quests_string-add-mcp]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[quests_number-add-apply_job]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[quests_number-add-mcp]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[quests_null-add-apply_job]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[quests_null-add-mcp]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[entry_without_id-add-apply_job]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[entry_without_id-add-mcp]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[entry_blank_id-add-apply_job]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[entry_blank_id-add-mcp]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[entry_not_object-add-apply_job]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[entry_not_object-add-mcp]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[duplicate_ids-add-apply_job]
+FAILED tests/test_ai_quest_forms.py::test_malformed_files_are_refused_byte_identical[duplicate_ids-add-mcp]
+FAILED tests/test_ai_quest_forms.py::test_edit_and_delete_work_on_a_list[apply_job]
+FAILED tests/test_ai_quest_forms.py::test_edit_and_delete_work_on_a_list[mcp]
+20 failed, 44 passed in 9.12s
