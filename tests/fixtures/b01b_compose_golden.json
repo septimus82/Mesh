@@ -1,0 +1,170 @@
+{
+ "player_spawned_extra": {
+  "entities": [
+   {
+    "id": "a",
+    "tags": [
+     "ta"
+    ],
+    "x": 11,
+    "y": 0.0
+   },
+   {
+    "id": "zz",
+    "tags": [
+     "spawn"
+    ],
+    "x": 5,
+    "y": 0.0
+   },
+   {
+    "id": "b",
+    "tags": [
+     "tb"
+    ],
+    "x": 2,
+    "y": 0.0
+   },
+   {
+    "id": "c",
+    "tags": [
+     "tc"
+    ],
+    "x": 3,
+    "y": 0.0
+   }
+  ],
+  "settings": {},
+  "state": {
+   "variables": {}
+  }
+ },
+ "removed_in_play": {
+  "entities": [
+   {
+    "id": "a",
+    "tags": [
+     "ta"
+    ],
+    "x": 11,
+    "y": 0.0
+   },
+   {
+    "id": "c",
+    "tags": [
+     "tc"
+    ],
+    "x": 3,
+    "y": 0.0
+   }
+  ],
+  "settings": {},
+  "state": {
+   "variables": {
+    "room_memory": {
+     "scenes/room.json": {
+      "removed": [
+       "b"
+      ]
+     }
+    }
+   }
+  }
+ },
+ "room_added_object": {
+  "entities": [
+   {
+    "id": "a",
+    "tags": [
+     "ta"
+    ],
+    "x": 11,
+    "y": 0.0
+   },
+   {
+    "id": "b",
+    "tags": [
+     "tb"
+    ],
+    "x": 22,
+    "y": 0.0
+   },
+   {
+    "id": "c",
+    "tags": [
+     "tc"
+    ],
+    "x": 3,
+    "y": 0.0
+   }
+  ],
+  "settings": {},
+  "state": {
+   "variables": {}
+  }
+ },
+ "room_deleted_object": {
+  "entities": [
+   {
+    "id": "a",
+    "tags": [
+     "ta"
+    ],
+    "x": 11,
+    "y": 0.0
+   },
+   {
+    "id": "b",
+    "tags": [
+     "tb"
+    ],
+    "x": 22,
+    "y": 0.0
+   },
+   {
+    "id": "c",
+    "tags": [
+     "tc"
+    ],
+    "x": 33,
+    "y": 0.0
+   }
+  ],
+  "settings": {},
+  "state": {
+   "variables": {}
+  }
+ },
+ "unique_moved": {
+  "entities": [
+   {
+    "id": "a",
+    "tags": [
+     "ta"
+    ],
+    "x": 11,
+    "y": 0.0
+   },
+   {
+    "id": "b",
+    "tags": [
+     "tb"
+    ],
+    "x": 22,
+    "y": 0.0
+   },
+   {
+    "id": "c",
+    "tags": [
+     "tc"
+    ],
+    "x": 33,
+    "y": 0.0
+   }
+  ],
+  "settings": {},
+  "state": {
+   "variables": {}
+  }
+ }
+}

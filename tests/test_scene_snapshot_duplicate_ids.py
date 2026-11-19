@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -61,6 +62,13 @@ def _golden_cases() -> dict[str, tuple[dict[str, Any], list[SimpleNamespace]]]:
         "behaviours": ({"entities": [beh]}, [_sprite(beh, behaviours=[{"type": "patrol", "params": {"speed": 2}}])]),
         "empty": ({"entities": []}, []),
     }
+
+
+
+def _captured(caplog: pytest.LogCaptureFixture, name: str) -> Any:
+    """The engine's loggers do not propagate to the root: attach caplog's handler to this one."""
+    logging.getLogger(name).addHandler(caplog.handler)
+    return caplog.at_level("WARNING", logger=name)
 
 
 @pytest.mark.fast
@@ -131,7 +139,7 @@ def test_sprites_whose_data_was_edited_since_loading_pair_with_entries_in_author
 def test_the_ambiguous_case_keeps_both_records_and_logs(caplog: pytest.LogCaptureFixture) -> None:
     one = _ent(id="orc", x=1.0, y=1.0, x_hp=1)
     clone = _ent(id="orc", x=50.0, y=50.0, x_hp=2)
-    with caplog.at_level("WARNING", logger="engine.scene_runtime.persistence"):
+    with _captured(caplog, "engine.scene_runtime.persistence"):
         snap = _snapshot({"entities": [one]}, [_sprite(one), _sprite(clone)])
     assert len(snap["entities"]) == 2
     assert any("orc" in r.getMessage() for r in caplog.records)

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import copy
-import logging
 from typing import TYPE_CHECKING, Any, Dict
 
+from engine.log_utils import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from ..scene_controller import SceneController

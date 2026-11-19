@@ -1,0 +1,9 @@
+E         At index 0 diff: (15, ['hp11']) != (15, ['hp30'])
+E         Use -v to get more diff
+
+tests\test_saved_world_duplicate_ids.py:77: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_saved_world_duplicate_ids.py::test_twins_pair_with_their_own_authored_entry_by_order
+FAILED tests/test_saved_world_duplicate_ids.py::test_more_saved_than_authored_the_extra_keeps_its_saved_fields_and_warns
+FAILED tests/test_saved_world_duplicate_ids.py::test_fewer_saved_than_authored_the_rest_follow_the_existing_added_logic
+3 failed, 6 passed in 3.25s
