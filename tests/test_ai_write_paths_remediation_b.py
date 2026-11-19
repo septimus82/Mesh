@@ -69,13 +69,24 @@ def _files(path: Path) -> dict[str, str]:
             for p in sorted(path.rglob("*")) if p.is_file() and p.name not in skip}
 
 
+def _left(path: Path) -> dict[str, Any]:
+    """What a plan left at ``path``, as a manifest records it (#462 P1): absent, or a file and its bytes' SHA-256."""
+    if not os.path.lexists(path):
+        return {"exists": False}
+    return {"exists": True, "sha256": hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None}
+
+
 def _backup(root: Path, manifest: dict[str, Any], copies: dict[str, str] | None = None) -> Path:
+    """A plan's backup whose manifest says the plan left every file as it is now (#462 P1), so what an undo checks
+    beyond that (where each entry points, what is there) is what these tests exercise."""
     backup = root / ".mesh/plan_backups/2000_manual"
     (backup / "files").mkdir(parents=True)
     for rel, text in (copies or {}).items():
         (backup / "files" / rel).parent.mkdir(parents=True, exist_ok=True)
         (backup / "files" / rel).write_text(text, encoding="utf-8")
-    (backup / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    after = {entry: _left(root / entry) for entry in [*manifest["created"], *manifest["modified"]]}
+    (backup / "manifest.json").write_text(json.dumps({"version": 2, "completed": True, **manifest, "after": after}),
+                                          encoding="utf-8")
     return backup
 
 

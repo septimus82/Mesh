@@ -1,0 +1,30 @@
+{
+  "start": [
+    "None"
+  ],
+  "apply_exit": 0,
+  "after_plan": [
+    "None",
+    "Ferryman"
+  ],
+  "saved": [
+    "packs/core_regions/scenes/start.json"
+  ],
+  "after_human_save": [
+    "None",
+    "Ferryman",
+    "Later human edit"
+  ],
+  "undo_exit": 0,
+  "undo_stdout": [
+    "[Mesh][Undo] Restoring backup: 1795086631_5afebe16",
+    "  - Restoring packs\\core_regions\\scenes\\start.json",
+    "[Mesh][Undo] Restore complete.",
+    "[Mesh][CLI] Undo successful."
+  ],
+  "after_undo": [
+    "None"
+  ],
+  "room_unchanged_by_undo": false,
+  "room_sha256_after_undo": "054de5cbd458f4942096b6d0a23e368680009e9bd49a463629d99939b732cc81"
+}

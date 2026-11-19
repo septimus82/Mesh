@@ -1,0 +1,14 @@
+{
+  "after": {
+    "packs\\core_regions\\scenes\\start.json": {
+      "exists": true,
+      "sha256": "c7bbcdd36426cfdf4beb5fcc4e94d824a78afe1c07fc84b3040acc1bfcc989b3"
+    }
+  },
+  "completed": true,
+  "created": [],
+  "modified": [
+    "packs\\core_regions\\scenes\\start.json"
+  ],
+  "version": 2
+}

@@ -1,0 +1,48 @@
+FFFFFFFFFFFFFFFFFFFFFF.                                                  [100%]
+================================== FAILURES ===================================
+<repo>\tests\test_stale_plan_undo.py:85: AssertionError: [Mesh][Undo] Restoring backup: 1795087100_5afebe16
+<repo>\tests\test_stale_plan_undo.py:119: KeyError: 'version'
+<repo>\tests\test_stale_plan_undo.py:130: AssertionError: assert (1 == 1 and 2 == 1)
+<repo>\tests\test_stale_plan_undo.py:140: KeyError: 'after'
+<repo>\tests\test_stale_plan_undo.py:85: AssertionError: [Mesh][Undo] Restoring backup: 1795087112_17b7d405
+<repo>\tests\test_stale_plan_undo.py:85: AssertionError: [Mesh][Undo] Restoring backup: 1795087117_17b7d405
+<repo>\tests\test_stale_plan_undo.py:85: AssertionError: [Mesh][Undo] Restoring backup: 1795087122_17b7d405
+<repo>\tests\test_stale_plan_undo.py:85: AssertionError: [Mesh][Undo] Restoring backup: 1795087127_5afebe16
+<repo>\tests\test_stale_plan_undo.py:174: KeyError: 'after'
+<repo>\tests\test_stale_plan_undo.py:85: AssertionError: [Mesh][Undo] Restoring backup: 1795087134_6f15c98d
+<repo>\tests\test_stale_plan_undo.py:85: AssertionError: [Mesh][Undo] Restoring backup: 1795087139_58a2dab3
+<repo>\tests\test_stale_plan_undo.py:205: KeyError: 'completed'
+<repo>\tests\test_stale_plan_undo.py:85: AssertionError: [Mesh][Undo] Restoring backup: 1795087149_5afebe16
+<repo>\tests\test_stale_plan_undo.py:238: KeyError: 'after'
+<repo>\tests\test_stale_plan_undo.py:85: AssertionError: [Mesh][Undo] Restoring backup: 1795087156_58a2dab3
+<repo>\tests\test_stale_plan_undo.py:242: KeyError: 'after'
+<repo>\tests\test_stale_plan_undo.py:244: KeyError: 'after'
+<repo>\tests\test_stale_plan_undo.py:246: KeyError: 'after'
+<repo>\tests\test_stale_plan_undo.py:248: KeyError: 'after'
+<repo>\tests\test_stale_plan_undo.py:85: AssertionError: [Mesh][Undo] Restoring backup: 1795087171_58a2dab3
+<repo>\tests\test_stale_plan_undo.py:252: KeyError: 'completed'
+<repo>\tests\test_stale_plan_undo.py:86: AssertionError: [Mesh][Undo] Restoring backup: 1795087178_58a2dab3
+=========================== short test summary info ===========================
+FAILED tests/test_stale_plan_undo.py::test_a_later_human_edit_refuses_the_undo_and_both_npcs_stay
+FAILED tests/test_stale_plan_undo.py::test_an_undo_right_after_the_plan_restores_it
+FAILED tests/test_stale_plan_undo.py::test_an_unchanged_multi_file_plan_restores_every_file
+FAILED tests/test_stale_plan_undo.py::test_two_actions_changing_one_file_restore_it_to_before_the_plan
+FAILED tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[edited]
+FAILED tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[deleted]
+FAILED tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[replaced]
+FAILED tests/test_stale_plan_undo.py::test_a_modified_file_edited_by_hand_refuses_the_undo
+FAILED tests/test_stale_plan_undo.py::test_a_file_the_plan_left_absent_that_exists_now_refuses_the_undo
+FAILED tests/test_stale_plan_undo.py::test_one_changed_file_in_a_multi_file_plan_refuses_every_file
+FAILED tests/test_stale_plan_undo.py::test_an_undo_already_done_or_followed_by_an_edit_never_runs_again
+FAILED tests/test_stale_plan_undo.py::test_a_plan_that_stopped_is_undone_only_while_what_it_left_is_unchanged
+FAILED tests/test_stale_plan_undo.py::test_a_backup_from_before_the_record_is_never_restored
+FAILED tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[no_after]
+FAILED tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[after_not_an_object]
+FAILED tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[an_entry_missing]
+FAILED tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[bad_sha256]
+FAILED tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[exists_not_a_bool]
+FAILED tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[extra_key]
+FAILED tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[unknown_version]
+FAILED tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[no_completed]
+FAILED tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[not_json]
+22 failed, 1 passed in 93.26s (0:01:33)
