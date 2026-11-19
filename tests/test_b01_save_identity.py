@@ -239,12 +239,38 @@ def test_T12_idless_record_never_lands_on_an_id_sprite() -> None:
     assert gob.hp == 20
 
 
-def test_T13_an_expired_projectile_is_missing_not_an_error() -> None:
+def test_T13_an_expired_projectile_is_missing_and_carried_never_applied_elsewhere() -> None:
     diags: list[Diagnostic] = []
     result = apply_entities_ex(stage(Stub("Hero", 1, 1)), [name_record("proj_Hero", 5, 5, 1)], diagnostics=diags,
                                strict=True)
-    assert (result.applied, result.missing, result.unbound, result.unresolved) == (0, 1, 0, [])
-    assert [(d.code, d.level) for d in diags] == [("save.restore.entity_missing", DiagnosticLevel.WARN)]
+    assert (result.applied, result.missing, result.unbound) == (0, 1, 0)
+    assert [e["reason"] for e in result.unresolved] == ["entity_missing"]  # kept, not dropped
+    assert "save.restore.entity_missing" in [d.code for d in diags]
+    assert not [d for d in diags if d.level == DiagnosticLevel.ERROR]  # (reported, never an error)
+    # a different projectile of the same name, somewhere else, does not take it
+    other = Stub("proj_Hero", 99, 99, 20)
+    again = apply_entities_ex(stage(other), [], carried=result.unresolved)
+    assert (again.applied, again.unresolved) == (0, result.unresolved) and other.hp == 20
+
+
+def test_a_carried_missing_id_record_binds_when_the_id_returns() -> None:
+    first = apply_entities_ex(stage(Stub("Hero", 1, 1, mesh_id="hero")), [id_record("gob_a", "Goblin", 5, 5, 3)])
+    assert (first.missing, [e["reason"] for e in first.unresolved]) == (1, ["entity_missing"])
+    back = Stub("Goblin", 100, 100, 20, "gob_a")
+    result = apply_entities_ex(stage(Stub("Hero", 1, 1, mesh_id="hero"), back), [], carried=first.unresolved)
+    assert (result.applied, result.retried, result.unresolved) == (1, 1, []) and back.hp == 3
+    wrong_id = Stub("Goblin", 5, 5, 20, "gob_x")  # another id at the very place: still not it
+    assert apply_entities_ex(stage(wrong_id), [], carried=first.unresolved).applied == 0 and wrong_id.hp == 20
+
+
+def test_a_carried_idless_record_binds_only_to_a_sprite_at_its_exact_place() -> None:
+    first = apply_entities_ex(stage(), [name_record("proj_Hero", 5, 5, 1)])
+    assert [e["reason"] for e in first.unresolved] == ["entity_missing"]
+    elsewhere = Stub("proj_Hero", 6, 6, 20)
+    assert apply_entities_ex(stage(elsewhere), [], carried=first.unresolved).applied == 0 and elsewhere.hp == 20
+    there = Stub("proj_Hero", 5, 5, 20)
+    result = apply_entities_ex(stage(elsewhere, there), [], carried=first.unresolved)
+    assert (result.retried, result.unresolved) == (1, []) and there.hp == 1 and elsewhere.hp == 20
 
 
 def test_T14_dup_authored_ids_all_written_with_a_warning(arena: Arena) -> None:
@@ -361,8 +387,8 @@ def test_T5_real_v2_save_with_idless_dupname_dupid(arena: Arena) -> None:
     codes = last_load_codes()
     assert codes.count("save.restore.entity_legacy_ambiguous") == 1  # Goblin (100, 100): no live goblin stands there
     assert codes.count("save.restore.entity_missing") >= 1  # Goblin_clone: no such sprite any more
-    held = arena.held()
-    assert len(held) == 1 and held[0]["record"]["entity_id"] == "Goblin" and held[0]["record"]["x"] == 100.0
+    held = arena.held()  # the Goblin at (100, 100) (unbound) and Goblin_clone (no such sprite): both carried
+    assert sorted((e["record"]["entity_id"], e["reason"]) for e in held) == [("Goblin", "position"), ("Goblin_clone", "entity_missing")]
     assert "could not be matched" in " ".join(arena.toasts())
 
 
@@ -462,7 +488,15 @@ def test_T18_a_renamed_id_reports_missing_and_applies_nothing_elsewhere(arena: A
     assert arena.load()
     assert hp_of(arena.by_id("gob_x")) == 20.0 and arena.by_id("gob_x").center_x == 100.0  # not given gob_a's state
     assert "save.restore.entity_missing" in last_load_codes()
-    assert arena.held() == []  # missing is not unresolved: the entity is gone, there is nothing to bind it to
+    held = arena.held()  # missing is unmatched too: carried, so it binds again if the id comes back
+    assert [(e["reason"], e["record"]["mesh_id"]) for e in held] == [("entity_missing", "gob_a")]
+    assert arena.save("s2")["saved_entities"]["unresolved"] == held
+    scene["entities"][1]["id"] = "gob_a"  # the id comes back
+    arena.room.write_text(json.dumps(scene), encoding="utf-8")
+    arena.enter()
+    assert arena.load("s2")
+    assert hp_of(arena.by_id("gob_a")) == 3.0
+    assert [e["record"]["mesh_id"] for e in arena.held()] == ["gob_x"]  # gob_a left the list; the now-absent gob_x joined it
 
 
 def test_T19_wrong_room_guard(arena: Arena) -> None:

@@ -9,5 +9,6 @@ M8 wrong-room guard off: CAUGHT by ['FAILED tests/test_b01_save_identity.py::tes
 M9 duplicate-id count mismatch applied anyway: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T16_dup_authored_ids_count_mismatch_refused']; restored byte-identical: True
 M10 a legacy record binds by name alone when several share it: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T10_idless_same_name_distinct_xy_both_restored']; restored byte-identical: True
 M11 id-less records may land on id sprites: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T12_idless_record_never_lands_on_an_id_sprite']; restored byte-identical: True
+M13 records whose entity is absent are dropped again: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T13_an_expired_projectile_is_missing_and_carried_never_applied_elsewhere']; restored byte-identical: True
 M12 retried records may overwrite resolved sprites: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T35_unresolved_never_overwrite_resolved_state']; restored byte-identical: True
 ALL CAUGHT AND RESTORED

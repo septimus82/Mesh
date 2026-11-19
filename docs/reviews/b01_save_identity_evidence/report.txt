@@ -9,6 +9,8 @@ engine/scene_lifecycle_controller.py; digest.py untouched)
 - Binding: id records by id; duplicates of one id bind by order + place only when record and sprite counts agree; id-less
   records bind to id-less sprites by name, then by unique place; v2 records by name, then by unique place cross-checked
   with the save's own snapshot. Nothing is "last wins"; nothing is applied on a guess.
+- Records whose entity is absent at load (entity_missing) are unmatched too (owner rule, master review): reported as
+  entity_missing with the same counts, and kept as unresolved (reason entity_missing).
 - Unbound records -> diagnostics (entity_id_ambiguous / entity_legacy_ambiguous / entity_nameclash, roll-ups
   entities_unbound / entities_unresolved), stderr, the load attempt's diagnostics, and a player toast; kept as
   saved_entities.unresolved in every later save (dedup by scene_path + SHA-256), retried each load against sprites that
@@ -23,7 +25,8 @@ OWNER REQUIREMENT -> TESTS (tests/test_b01_save_identity.py = I, tests/test_b01_
   tests/fixtures/saved_world/v2_idless_dupname_dupid.json), I::T6/T7/T8, I::test_migration_v2_to_v3_only_tags_and_never_invents,
   R::T27 (the .v2.bak loads), G::test_a_v2_save_from_the_real_engine_binds_every_record...
 - never silently merge or discard state: I::T1/T1b/T2/T3 (duplicate names), T14-T16 (duplicate ids), T33-T36 + new-game test
-  (unresolved), T11 (same-place id-less clash)
+  (unresolved), T11 (same-place id-less clash), T13/T18/T5 + the two carried-missing tests (absent entities carried:
+  expired projectile never applied elsewhere; id binds again when it returns; id-less binds only at its exact place)
 - uniquely named runtime-spawned id-less entities preserved: I::T9, T10, T13, T12
 - bind ambiguous records only when identity is provable: I::T7, T11, T16, T34b, T35; fault injection M3, M9-M12
 - carry unresolved records across repeated saves: I::T33 (save/load x4, byte-equal, never multiplied), T34, T36
@@ -41,9 +44,9 @@ BEFORE / AFTER (real cycle, hidden GameWindow, production SaveManager; before_af
   one), spawned_7 (4.0), and both gob_a twins (hp 20 at (100,100), clone hp 11 at (150,150)).
 
 TESTS (Windows, py -3.13 -W error; details in tests_on_base.txt / tests_on_head.txt)
-- new: 49 tests (default lane) + 3 GPU-lane tests. On the base 45 of 49 fail; the 4 that pass are guards that must hold
+- new: 51 tests (default lane) + 3 GPU-lane tests. On the base 47 of 51 fail; the 4 that pass are guards that must hold
   on both (T29 digest, T26 and test_a_v3_save... newer-version refusal, a v3 save is not backed up).
-- fault injection (fault_injection.py.txt / _output.txt): 12 mutations (backup verify skipped, unresolved not carried,
+- fault injection (fault_injection.py.txt / _output.txt): 13 mutations (M13: absent-entity records dropped again) (backup verify skipped, unresolved not carried,
   uniqueness proof dropped, id-less dropped, load rewrites slot, backup lookup removed, failed backup no longer refuses,
   wrong-room guard off, count check off, legacy name-only bind, id-less lands on id sprite, retry overwrites resolved
   sprite): all caught, each file restored byte for byte (SHA-256 and git diff compared).
@@ -55,9 +58,9 @@ POINTS FOR THE REVIEWER (facts, not decisions)
    exactly the saves T16/T33 require to load. Implemented: the three binding codes are ERROR when apply_entities_ex is
    strict (a developer's strict check, T16 asserts it) and WARN in the slot load (strict_binding=False). Loads are never
    refused for an unprovable identity.
-2. Records whose entity is absent (expired projectile, removed id) are counted missing and dropped, as the design says
-   (T13, T18); only ambiguous records become unresolved. The v2 fixture's Goblin_clone record is such a case; the
-   original is kept in the .v2.bak.
+2. Records whose entity is absent are carried as unresolved (reason entity_missing), retried under the same provable rules
+   (id records by exact id; name records by unique place; never by name alone). Consequence: expired projectiles
+   accumulate in saved_entities.unresolved (deduplicated by content) until bound or edited out; that is the owner's rule.
 3. The first apply (onto the room being left) reports nothing to stderr and its identity diagnostics are replaced in the
    load attempt by the second (saved room) apply's, so a clone case is not reported twice.
 4. A retried (carried) name-keyed record binds only by unique place, never by name alone (a stale record must not land on

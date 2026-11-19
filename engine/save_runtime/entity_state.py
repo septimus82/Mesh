@@ -883,6 +883,8 @@ def apply_entities_ex(
         claimed.update(id(s) for s in group_sprites)  # these sprites had their record(s) in this load
         for item in absent:
             result.missing += 1
+            # not applied, so unmatched: kept (reported as missing, carried in every save) until it binds or is edited out
+            result.unresolved = merge_unresolved(result.unresolved, [unresolved_entry(item[0], "entity_missing", room, first_seen)])
             _append_diagnostic(diagnostics, _diagnostic(
                 level=DiagnosticLevel.WARN, code="save.restore.entity_missing",
                 message=f"Saved entity '{item[1].entity_id}' not present in scene.", source=source,
