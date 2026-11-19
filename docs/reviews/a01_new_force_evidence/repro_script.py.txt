@@ -1,0 +1,25 @@
+import os, subprocess, sys, shutil
+from pathlib import Path
+S = Path(r"<home>\AppData\Local\Temp\claude\c18a071c64bbe7a7\bff3a484-a7b8-4c6b-bf14-a015c42db67e\scratchpad\A-01")
+R = S / "repro"
+env = dict(os.environ, PYTHONPATH=r"D:\Games\Mesh-A-01")
+def case(label, cmd, name_fn):
+    c = R / label
+    assert R in c.parents
+    if c.exists(): shutil.rmtree(c)
+    outer = c / "outer"; dest = outer / "sandbox" / "dest"; dest.mkdir(parents=True)
+    (outer / "victim").mkdir(); (outer / "victim" / "MARKER.txt").write_text("v")
+    (outer / "sandbox" / "KEEP.txt").write_text("k")
+    name = name_fn(outer)
+    assert str((outer / "victim").resolve()).startswith(str(outer))
+    argv = [sys.executable] if False else ["py", "-3.13", "-m", "mesh_cli"]
+    if cmd == "new": argv += ["new", name, "--dest", str(dest), "--force"]
+    else: argv += ["new_project", name, str(dest), "--force"]
+    r = subprocess.run(argv, cwd=S, env=env, capture_output=True, text=True)
+    print(f"== {label}: name={name!r} exit={r.returncode}")
+    print("  victim/MARKER.txt exists:", (outer/"victim"/"MARKER.txt").exists(), "| sandbox/KEEP.txt exists:", (outer/"sandbox"/"KEEP.txt").exists())
+    print("  stderr:", r.stderr.strip()[-200:])
+for cmd in ("new", "new_project"):
+    case(f"{cmd}_sibling", cmd, lambda o: "../../victim")
+    case(f"{cmd}_absolute", cmd, lambda o: str(o / "victim"))
+    case(f"{cmd}_parent", cmd, lambda o: "..")  # dest/.. = sandbox, inside outer
