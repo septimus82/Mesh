@@ -149,7 +149,7 @@ def test_studio_says_why_it_didnt_save_and_keeps_the_work(root: Path) -> None:
     (root / CATALOGUE).write_bytes(b"{not json")
     said: list[tuple[str, bool]] = []
     studio = SimpleNamespace(project=project, _flush_fields=lambda: True, _rebuild=lambda: None,
-                             message="", _say=lambda text, ok=True: said.append((text, ok)))
+                             message="", _say=lambda text, ok=True: said.append((text, ok)), ownership=None)
     assert Studio.save(studio) is False  # type: ignore[arg-type]
     text, ok = said[-1]
     assert not ok and text.startswith("Couldn't save: assets/prefabs.json isn't a prefab list Studio can read")

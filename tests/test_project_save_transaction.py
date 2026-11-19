@@ -552,7 +552,7 @@ def test_studio_says_the_save_failed_and_that_the_changes_are_still_there(root: 
     _edit_everything(project)
     said: list[tuple[str, bool]] = []
     studio = SimpleNamespace(project=project, _flush_fields=lambda: True, _rebuild=lambda: None, message="",
-                             _say=lambda text, ok=True: said.append((text, ok)), window=None)
+                             _say=lambda text, ok=True: said.append((text, ok)), window=None, ownership=None)
     _failing(monkeypatch, "_replace", lambda n, _a: n == 2)
     assert Studio.save(cast(Studio, studio)) is False
     text, ok = said[-1]

@@ -159,9 +159,9 @@ def ctrl_s(out: Path) -> dict[str, Any]:
         saves: list[int] = []
         project_save = d.studio.project.save
 
-        def counted() -> list[str]:
+        def counted(*args: Any, **kwargs: Any) -> list[str]:
             saves.append(1)
-            written: list[str] = project_save()
+            written: list[str] = project_save(*args, **kwargs)
             return written
 
         d.studio.project.save = counted  # (counts the files written: Ctrl+S saves once)

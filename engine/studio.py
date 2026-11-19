@@ -688,10 +688,13 @@ class Studio(InspectorMixin, SoundMixin):
             self._say("Nothing to save.")
             return True
         try:
-            written = self.project.save()
+            # Only files of the project Studio holds (#462 P1): a room its world lists in another Mesh project (one
+            # nested in it, with its own owner) refuses the whole save before anything is written (``not_this_project``).
+            written = self.project.save(owner=self.ownership)
         except (OSError, ops.OpError) as err:
             report = getattr(err, "report", None)  # (engine.project_save.SaveError: the edits are still here, unsaved)
-            kept = " Your changes are still here, unsaved." if report and report["stage"] != "validate" else ""
+            kept = (" Your changes are still here, unsaved." if report and (
+                report["stage"] != "validate" or report["reason"] == "not_this_project") else "")
             self._say(f"Couldn't save: {err}{kept}", ok=False)
             return False
         self._rebuild()

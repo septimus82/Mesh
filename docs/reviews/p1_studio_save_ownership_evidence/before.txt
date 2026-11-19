@@ -1,0 +1,11 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+____ test_outer_studios_ctrl_s_never_overwrites_a_room_another_studio_owns ____
+tests\test_studio_save_ownership_gpu.py:94: in test_outer_studios_ctrl_s_never_overwrites_a_room_another_studio_owns
+    assert refused["ok"] is False and refused["unsaved"] and refused["rooms_unsaved"] == ["cellar"], refused
+E   AssertionError: {'message': 'Saved 1 file(s). Something else had changed packs/region2/packs/core_regions/scenes/start.json.outside-ch... opened it; that version is kept beside it (.outside-change.bak).', 'ok': False, 'rooms_unsaved': [], 'unsaved': False}
+E   assert (False is False and False)
+---------------------------- Captured stderr setup ----------------------------
+=========================== short test summary info ===========================
+FAILED tests/test_studio_save_ownership_gpu.py::test_outer_studios_ctrl_s_never_overwrites_a_room_another_studio_owns
+1 failed in 13.54s

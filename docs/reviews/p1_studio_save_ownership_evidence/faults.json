@@ -1,0 +1,61 @@
+{
+  "caught": 5,
+  "of": 5,
+  "mutations": [
+    {
+      "mutation": "Studio's save without its ownership",
+      "file": "engine/studio.py",
+      "caught": true,
+      "summary": [
+        "1 failed in 13.08s"
+      ],
+      "first_failure": [
+        "<repo>\\tests\\test_studio_save_ownership_gpu.py:94: AssertionError: {'message': 'Saved 1 file(s). Something else had changed packs/region2/packs/core_regions/scenes/start.json.outside-ch... opened it; that version is kept beside it (.outside-change.bak).', 'ok': False, 'rooms_unsaved': [], 'unsaved': False}"
+      ]
+    },
+    {
+      "mutation": "the refusal doesn't say the edits are kept",
+      "file": "engine/studio.py",
+      "caught": true,
+      "summary": [
+        "1 failed in 12.92s"
+      ],
+      "first_failure": [
+        "<repo>\\tests\\test_studio_save_ownership_gpu.py:98: AssertionError: Couldn't save: packs/region2/packs/core_regions/scenes/start.json is in another Mesh project than the one held (<tmp>), so nothing was saved: that project has its own owner."
+      ]
+    },
+    {
+      "mutation": "the save's destination check refuses nothing",
+      "file": "engine/studio_project.py",
+      "caught": true,
+      "summary": [
+        "1 failed in 13.08s"
+      ],
+      "first_failure": [
+        "<repo>\\tests\\test_studio_save_ownership_gpu.py:94: AssertionError: {'message': 'Saved 1 file(s). Something else had changed packs/region2/packs/core_regions/scenes/start.json.outside-ch... opened it; that version is kept beside it (.outside-change.bak).', 'ok': False, 'rooms_unsaved': [], 'unsaved': False}"
+      ]
+    },
+    {
+      "mutation": "a mixed save writes the valid files and skips the foreign one",
+      "file": "engine/studio_project.py",
+      "caught": true,
+      "summary": [
+        "1 failed in 12.97s"
+      ],
+      "first_failure": [
+        "<repo>\\tests\\test_studio_save_ownership_gpu.py:94: AssertionError: {'message': 'Saved 0 file(s).', 'ok': True, 'rooms_unsaved': [], 'unsaved': False}"
+      ]
+    },
+    {
+      "mutation": "only an all-foreign save is refused; a mixed one drops the foreign file",
+      "file": "engine/studio_project.py",
+      "caught": true,
+      "summary": [
+        "1 failed in 13.26s"
+      ],
+      "first_failure": [
+        "<repo>\\tests\\test_studio_save_ownership_gpu.py:113: assert (True is False)"
+      ]
+    }
+  ]
+}
