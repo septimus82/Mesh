@@ -1,8 +1,10 @@
 # B-01 design: stable entity identity in saves (#462 reliability)
 
-Status: DESIGN ONLY (no production code or tests changed). Base `ad91e28c665ae6adc22be4ce0b2c4e7d26e1817b`.
+Status: DESIGN ONLY (no production code or tests changed), revision 2 (owner feedback: id-less entities, duplicate ids,
+backward-compatible recovery). Base `ad91e28c665ae6adc22be4ce0b2c4e7d26e1817b`.
 Agent: mesh-gameplay-reliability. This is a **save-format migration**: owner approval needed before implementation.
-Evidence: `docs/reviews/b01_entity_save_identity_evidence/` (`repro_b01.py.txt`, `repro_b01_output.txt`).
+Evidence: `docs/reviews/b01_entity_save_identity_evidence/` (`repro_b01*.py.txt` + `*_output.txt`; the base-written v2 save
+`v2_save_idless_dupname_dupid.json` is a real-save candidate fixture).
 
 ## 1. Reproduction on the base (production SaveManager, hidden GameWindow)
 
@@ -56,11 +58,26 @@ absent entity is counted as missing with a WARN; a duplicate is never detected.
 - Hand-edited / AI-authored scenes: not guaranteed (strict mode off by default). Real saved fixtures exist where
   names are unique by luck (`tests/fixtures/saved_world/pre390_*.json`).
 
-**Entities with no authored id (runtime-spawned).** `combat.py:225-234` (hitbox), `shooter.py:150-181`
-(projectile, name `proj_<name>`) create sprites through `_create_sprite` with no `id`; so do console spawn
-(`console_runtime/handlers_entity.py:166,195`). Today these are saved under `proj_goblin` etc. and, on load, are
-reported missing (the room does not contain them). Not verified: whether monster companions/eggs spawn with
-ids (their persistence may use the game-state variables rather than `saved_entities`).
+**Runtime spawns and id-less sprites today** (all go through `_create_sprite`; a grep of `_create_sprite(` finds only these):
+
+| Source | file:line | name / id | state on base |
+|---|---|---|---|
+| Authored entity with no `id` | `scene_lifecycle_controller.py:353` | name or prefab id / none | see below (run) |
+| Projectile | `shooter.py:150-184` | `proj_<name>` / none | run: spawned by `_create_sprite`+`add_sprite_to_layer` as the behaviour does (behaviour not fired) |
+| Hitbox (0.2 s life) | `combat.py:205-238` | `hitbox_<name>` / none | read only: same path as projectile |
+| Console `spawn` | `console_runtime/handlers_entity.py:150-170` | `spawned_N` / none | run (same dict shape) |
+| Console `clone` | `handlers_entity.py:185-196` | `<name>_clone` / **copies the source `id`** | run: duplicate id (below) |
+| Monster companions / eggs | `monster/egg_lifecycle.py:39-61`, `companion_mind.py:494` | not sprites: plain data in game-state variables | read only; no `_create_sprite` call in `engine/monster/` |
+| Spawner behaviours | none found | | read only (grep) |
+
+Verified by running on the base (`repro_b01_idless.py.txt`, hp set after spawn): an id-less sprite with a **unique** name
+(`spawned_7`, hp 4) is saved by name, re-created from the save's scene snapshot (which also carries id-less sprites
+with their x/y) and gets its state back (hp 4). Two id-less sprites sharing a name (`proj_Hero`, hp 2 and 6): both
+records applied to the last sprite, the first came back at hp 5 (its spawn value, **2 lost**), no diagnostic. The
+console-clone case shows a second defect: original `gob_a` and the clone (same id) were **merged into one entity at
+the snapshot layer** (`scene_runtime/persistence.py:60-80`, `authored_entity_by_key` matches by id/name), so the room
+had one `gob_a` at the clone's position, hp 20; the clone's hp 11 was lost before `saved_entities` is even applied.
+This must keep working after the change: id-less state saved and restored by name as today, never worse.
 
 **Entities whose id changes.** Lint rename (`rename_id`), duplicate (`__dupN`), hand edit. `remember_removed`
 (`scene_runtime/room_memory.py:68-82`) and `saved_world.compose` (`:104-121`) already treat the authored `id` as
@@ -72,7 +89,7 @@ scene (`save_manager.py:387`); its own `entities` list is the scene snapshot wit
 `saved_entities` x/y equal the snapshot x/y for the same object, e.g. Elder 896/786). Entity state is applied
 twice: at `load_game` to the room being left (`payloads.py:378-386`) and again once the saved room exists via
 `controller._pending_saved_entities` (`save_manager.py:369`, `scene_lifecycle_controller.py:366-373`). Records
-carry no scene identity, so the first apply can match same-named entities in the wrong room (design below: validate scene).
+carry no scene identity, so the first apply can match same-named entities in the wrong room (design: validate scene).
 
 **digest.py / payloads.py use of `entity_id`.** `digest.py:72` normalises `entity_id`; `:134` sorts by it only
 (duplicates tie, so digest depends on input order). `payloads.py:512` calls `serialize_entities`; `:383` calls
@@ -84,120 +101,168 @@ builds its own payload keyed by its own ids, then `compute_world_digest`. `compu
 
 ## 3. Proposed key and migration
 
-**Key.** An entity's save identity is its authored scene `id` (`mesh_id`), unique within a scene. `mesh_name`
-stays a human label and a fallback only for v2 records.
+**Two record classes** (`saved_entities.schema_version` 1 -> 2; `SAVE_SCHEMA_VERSION` 2 -> 3). `entity_id` keeps
+today's value (the display name), so `digest.normalize_entity_state` (`digest.py:72`) is untouched.
+- `keying: "id"`: sprite has an authored `mesh_id`. Fields add `mesh_id` and `occurrence` (0-based rank among live
+  sprites with that id in `all_sprites` order; 0 for a unique id).
+- `keying: "name"`: sprite has no `mesh_id` (id-less authored, projectile, hitbox, console spawn). Written exactly as
+  today (name + x, y + behaviour state), plus the marker. Nothing id-less is dropped.
+- Container adds `scene_path` (room the records belong to) and counters `{id: n, name: n}`.
+- Sort key `(keying, mesh_id or "", entity_id, x, y, occurrence)`: total, independent of sprite order.
 
-**New record fields** (`saved_entities.schema_version` 1 -> 2; `SAVE_SCHEMA_VERSION` 2 -> 3):
-- `mesh_id` (str, required for v3 records): the authored id. A sprite with no `mesh_id` gets **no** `saved_entities`
-  record (see below).
-- `entity_id` kept, now the display name (unchanged value), so v3 files stay readable as before and
-  `digest.normalize_entity_state` (`digest.py:72`) is untouched.
-- Container gains `scene_path` (the room the records belong to) for the wrong-room guard.
+**Writing.** One record per sprite, never dropped. Duplicate authored ids are kept as occurrences 0..k-1 and each
+id gets a WARN `save.serialize.entity_id_duplicate` (context: id, count) in the diagnostics list and the log.
 
-**Writing (v3).** One record per sprite that has a `mesh_id`; sort key `(mesh_id, entity_id)`, so ordering is
-total and independent of sprite order. Sprites with no id (runtime-spawned) are omitted from `entities` and
-counted: `saved_entities.unkeyed_skipped: N` plus an INFO diagnostic `save.serialize.entity_unkeyed`
-(open question 1: owner may prefer a persisted "runtime spawn" record class instead).
-Duplicate `mesh_id` among live sprites at save time: write the first by sprite order, **omit the rest** and
-emit a WARN `save.serialize.entity_id_duplicate` per id (never two records for one key).
+**Duplicate authored ids: policy = write all, bind only when counts match, otherwise refuse that id and report.**
+Chosen over refusing the save: a clone or hand-edit mistake must not cost the player a save, and a hard error
+would also block saves in games already shipped with duplicates. Over silently picking one: that is the bug.
+On load, id `I` has `r` records and `s` live sprites. If `r == s`, record `occurrence k` binds to the k-th sprite
+**and** its (x, y) must equal that sprite's current (x, y) within 0.01 (the scene snapshot restores positions first),
+else that record is refused. If `r != s` (as in the clone repro, where the snapshot already merged the pair into one
+sprite), no record for `I` is applied: ERROR-level `save.restore.entity_id_ambiguous` (WARN non-strict; fails in
+strict), with `{id, records, sprites}`. The refused records stay in the save file and count under `unbound`; they
+are reported, never discarded. (The snapshot-layer merge of same-id sprites, `persistence.py:60-80`, is a related
+defect outside this key change: listed as follow-up B-01b, not fixed here.)
 
-**Reading v3.** Match `mesh_id` -> sprite via a dict built once per apply; duplicate sprite ids in the live scene
-(or a duplicate `mesh_id` in the file) mark that id **ambiguous**: apply neither, ERROR-level diagnostic
-`save.restore.entity_id_ambiguous` (WARN in non-strict, fail in strict), counted as missing. If
-`saved_entities.scene_path` is set and differs from the room being applied to, skip the whole block with
-`save.restore.entities_wrong_room`. Records without a live sprite stay `entity_missing` (now by id, as today).
+**id-less records on load (`keying: "name"`).** Applied by name against **id-less sprites only** (so an id-less
+record can never land on an authored-id sprite, and vice versa):
+1. One record, one id-less sprite with that name: apply (= today's behaviour for these entities).
+2. Several id-less records and/or sprites share a name: bind a record to a sprite only when exactly one record and
+   exactly one sprite in that group have equal (x, y) within 0.01; apply those. Every record not bound this way is
+   **not applied** and reported (below). Never "last wins", never by order. (Repro: `proj_Hero` at (10,10) and (20,20)
+   both bind by position, so 2 and 6 are both restored; two sprites at the same spot are refused and reported.)
+3. No id-less sprite with that name: `save.restore.entity_missing` as today (an expired projectile).
+Written vs applied is visible in the counters: `applied`, `missing` (as today), `unbound` (new).
 
-**Reading v2 (name-keyed) saves** (`migrate_save`, `schema.py:82` registers v2 -> v3; it only tags records
-`legacy_keying: "name"` and bumps the version, no data invented). `apply_entities` then resolves a legacy record:
-1. Name `N` has exactly one record and exactly one live sprite named `N`: apply (identical to today).
-2. One record, several sprites named `N`: the save cannot say which; try the save's own scene snapshot
-   (the save file's `entities` list holds `id` + live x/y written from the same instant). If exactly one snapshot
-   entity with `name == N` has matching (x, y) to 0.01, bind to that id's sprite; else **do not apply**,
-   `save.restore.entity_legacy_ambiguous` ERROR/WARN.
-3. k records, k sprites, same name: bind each record by exact (x, y) against the snapshot as in rule 2; any record
-   not uniquely bound is not applied and reported (never "last wins").
-4. No sprite named `N`: `entity_missing` WARN with the legacy name (as today).
-5. Records and sprites for a name with count mismatch (e.g. 2 records, 1 sprite): apply only through rule 2/3,
-   rest reported.
-All v2 diagnostics carry `legacy_keying` so a player-facing summary can say "N object states from an old save
-could not be matched". Nothing is rewritten on disk by loading; the next save writes v3.
+**Reading v2 (name-keyed) saves** (`schema.py:82` migration v2 -> v3 runs **in memory only**: tags every record
+`keying: "name"`, `legacy: true`; invents nothing). Resolution of a legacy record named `N`:
+1. Exactly one record and one sprite named `N` (any id): apply (identical to today).
+2. Duplicate names, record count and sprite count may differ: bind a record to a sprite only if its (x, y) equals
+   exactly one live sprite's (x, y) named `N` and exactly one record claims that (x, y). For sprites with an id,
+   the save's own snapshot (`entities`: id + x, y of the same instant) is the cross-check: a record bound to an id-ful
+   sprite must also match that id's snapshot position. Unbound records are reported, not applied.
+3. No sprite named `N`: `entity_missing`.
 
-**Determinism.** Output order `(mesh_id, entity_id)`; v2 matching iterates records in file order and sprites in
-`all_sprites` order, tie-free because ambiguity is refused rather than resolved by order.
+**Counts and diagnostics.** Codes: `save.restore.entity_id_ambiguous`, `save.restore.entity_legacy_ambiguous`
+(v2 record unbound), `save.restore.entity_nameclash` (id-less group, v3), `save.restore.entities_wrong_room`,
+`save.serialize.entity_id_duplicate`. Each carries `{name|id, records, sprites, x, y}`. A roll-up
+`save.restore.entities_unbound` carries `{applied, missing, unbound}`. Channels: stderr log (as today), the
+save-runtime diagnostics aggregator/sidecar (`io.py:74-105`), and **new**: one player toast through the existing
+`_toast` (`save_manager.py:220`), "Loaded. N object states from this save could not be matched; see the log",
+shown only when `unbound > 0`.
 
-**Impact on digests/replays.** `digest.py` is left unchanged (still `entity_id`, then x/y, ...). Digests derived
-from `serialize_entities` change for scenes that previously had missing ids or duplicate names (those records
-disappear/reorder); unique-named scenes with ids keep identical digests because `entity_id`, x, y, tags and
-behaviour state are the same values. Episode goldens use their own payload (`episode.py:1163`) and are unaffected.
-Adding `mesh_id` to the digest was rejected: it would churn every scene-derived digest for no gain, as sort ties
-no longer occur.
+### Backward-compatible recovery
 
-**Downgrade / forward-compat.** A v3 save opened by a v2-only game is refused by `schema.py:145-150`
-("newer game version") with the existing clear message: nothing is half-loaded. The reader ignores unknown
-record fields except `x_*`, so later additive fields are safe. Rollback of the migration = keep the reader,
-stop writing v3.
+(a) **Loading a v2 save never rewrites it.** The load path (`save_manager.py:238-409`) reads the slot, migrates in
+memory, and the only writes it can make are failure diagnostics sidecars (`io.py:461-496`); the slot file is
+byte-identical after a load. Test T20 hashes the file before and after.
 
-## 4. Old-save compatibility test plan (to be written at implementation; none committed here)
+(b) **First v3 save over a v2 slot.** `save_game` (`save_manager.py:179-218`), before the atomic write, copies an
+existing slot file whose `save_schema_version < 3` to `<slot>.v2.bak` **only if that `.bak` does not yet exist**
+(first overwrite wins; later saves never replace it), then writes v3. Copy failure: WARN `save.write.v2_backup_failed`
+and the save proceeds (progress outranks the backup); the toast says so. Never for an installation-bundled legacy
+save (`_is_legacy`: nothing is written next to it). The `.bak` is not read by the game; it is the recovery record.
 
-Default lane, through the production `SaveManager` where a window is needed (hidden `GameWindow` as in
-`tests/test_hot_reload_preflight.py`), plain `apply_entities` otherwise.
+(c) **Unmatched legacy records are surfaced** by `entity_legacy_ambiguous` per record (name, x, y, behaviour names),
+the `entities_unbound` roll-up with counts, and the toast. They are not carried into the v3 file (to keep v3
+clean); they live in the `.v2.bak` and in the log/sidecar.
+
+(d) **Recovering state that could not be applied.** Developer: open `<slot>.v2.bak`, find the record by the name,
+x, y from the diagnostic (`saved_entities.entities[]`), then either give the entity an id in the scene and re-save
+from play, or copy the behaviour state into the entity's `behaviour_config`. Player: copy `<slot>.v2.bak` over the
+slot (only a v2-capable build reads it, see (e)). A tool (`mesh` CLI "list unbound records of a save") is **not**
+proposed here: open question 7.
+
+(e) **Downgrade.** A v3 save in a v2-only build is refused by `schema.py:145-150` with the existing "newer game
+version" message, nothing partially loaded, and the `.v2.bak` is a loadable v2 file for that build (it lacks only
+progress made after the first v3 save). Forward: the reader ignores unknown record fields except `x_*`.
+
+**Determinism.** Output order is the total sort key above; v2/legacy matching uses exact coordinates, not
+iteration order, so reordering `all_sprites` changes nothing.
+
+**Impact on digests/replays.** `digest.py` unchanged. `serialize_entities`-derived digests change only where records
+were previously dropped/reordered; unique-named scenes keep identical values. Episode goldens use their own payload
+(`mesh_cli/episode.py:1130-1163`). New fields (`keying`, `mesh_id`, `occurrence`) are not in the digest projection.
+
+## 4. Test plan (to be written at implementation; none committed here)
+
+Default lane, production `SaveManager`, hidden `GameWindow` as in `tests/test_hot_reload_preflight.py`.
 
 | # | Name | Setup | Assertions |
 |---|---|---|---|
-| T1 | `test_dup_names_roundtrip_v3` | the repro: gob_a hp 3, gob_b hp 20 | after load a=3 at (111,122), b=20 at (333,344); fails on base |
-| T2 | `test_dup_names_swapped_sprite_order` | load a scene whose entity order is reversed before restore | same result (order-independent) |
-| T3 | `test_unnamed_same_prefab` | 3 entities, no `name`, same prefab, differing hp | each restored |
-| T4 | `test_real_old_saves_load` | `tests/fixtures/saved_world/pre390_2d.json`, `pre390_hd2d.json` (v2, unique names) | schema -> 3, all records applied, 0 missing, no new diagnostics |
-| T5 | `test_v2_duplicate_names_bound_by_snapshot_xy` | hand-built v2 save with two `Goblin` records, snapshot ids/xy present | each bound by position; no cross-apply |
-| T6 | `test_v2_duplicate_names_unbindable_refused` | same, but record xy match no snapshot entity | nothing applied to either, one `entity_legacy_ambiguous` diagnostic per record, counts honest |
-| T7 | `test_v2_unique_name_unchanged` | v2, unique names | behaviour identical to base (golden of applied values) |
-| T8 | `test_runtime_spawned_not_keyed` | projectile with no `id` | no record, `unkeyed_skipped` counted, INFO diag, save loads without missing-warnings |
-| T9 | `test_renamed_entity_survives` | save, rename entity (`ops.rename_entity`), reload | state follows the id (fails on base) |
-| T10 | `test_id_renamed_reports_missing` | save, lint-rename the id, reload | `entity_missing` by id, others fine, no cross-apply |
-| T11 | `test_duplicate_live_ids_ambiguous` | scene with two sprites sharing an id | save writes one record + WARN; load refuses ambiguous id |
-| T12 | `test_wrong_room_guard` | records from room A applied while room B is live (first apply of `payloads.py:378`) | skipped with `entities_wrong_room`, no state changes |
-| T13 | `test_future_version_refused` | v4 payload | `schema.py` error, game state untouched |
-| T14 | `test_serialization_order_total` | duplicate names, shuffled sprites | serialized list identical across orderings |
-| T15 | `test_digest_stable_for_unique_names` | unique-named scene before/after | digest equals recorded value; episode goldens (`tests/` replay suite) unchanged |
-| T16 | `test_v3_roundtrip_byte_stable` | save, load, save | second file's `saved_entities` equal the first |
+| T1 | `dup_names_roundtrip_v3` | repro 1: gob_a hp 3, gob_b hp 20 | restored exactly; fails on base |
+| T2 | `dup_names_sprite_order_independent` | reverse entity order before restore | identical result |
+| T3 | `unnamed_same_prefab` | 3 unnamed same-prefab entities, differing hp | each restored |
+| T4 | `real_old_saves_load` | `tests/fixtures/saved_world/pre390_2d.json`, `pre390_hd2d.json` (v2; none has an id-less entity) | schema 3 in memory, all applied, 0 unbound, no new diagnostics |
+| T5 | `real_v2_save_with_idless_fixture` | `evidence/v2_save_idless_dupname_dupid.json` (base-written v2, scrubbed) | `spawned_7` hp 4 restored; both `proj_Hero` restored by position; the same-id clone reported, never silently applied |
+| T6 | `v2_dup_names_bound_by_xy` | hand-built v2, two `Goblin` records, snapshot ids | bound by position, no cross-apply |
+| T7 | `v2_dup_names_unbindable_refused` | record xy matches nothing | none applied, one diagnostic per record, counts honest |
+| T8 | `v2_unique_name_unchanged` | v2 unique names | applied values equal base golden |
+| T9 | `idless_unique_name_roundtrip` | `spawned_7` | state back (as base), record `keying: name` |
+| T10 | `idless_same_name_distinct_xy` | two `proj_X` | both restored by position; fails on base (2 lost) |
+| T11 | `idless_same_name_same_xy` | two `proj_X` at one spot | neither applied, `entity_nameclash` x2, `unbound` 2 |
+| T12 | `idless_never_hits_id_sprite` | id-less record named like an id-ful sprite | id-ful sprite untouched |
+| T13 | `projectile_hitbox_expired` | record for a projectile gone at load | `entity_missing`, no error, as base |
+| T14 | `dup_authored_ids_all_written` | clone with copied id | 2 records (occurrence 0, 1), WARN `entity_id_duplicate` |
+| T15 | `dup_authored_ids_counts_match_binds` | two live sprites, same id, positions kept | bound by occurrence + xy |
+| T16 | `dup_authored_ids_count_mismatch_refused` | 2 records saved, 1 sprite at load | none applied, ERROR code, `unbound` 2, records still in the file |
+| T17 | `renamed_entity_survives` | rename via `ops.rename_entity` | state follows the id; fails on base |
+| T18 | `id_renamed_reports_missing` | lint-rename an id | `entity_missing` by id, no cross-apply |
+| T19 | `wrong_room_guard` | room A records, room B live (`payloads.py:378`) | skipped `entities_wrong_room` |
+| T20 | `v2_load_never_rewrites_slot` | v2 file, load, hash before/after | byte-identical, no sidecar on success |
+| T21 | `first_v3_save_makes_v2_bak` | load v2 slot, save | `<slot>.v2.bak` equals the original bytes; v3 written |
+| T22 | `second_save_keeps_first_bak` | save again | `.bak` unchanged |
+| T23 | `bak_copy_failure_still_saves` | make `.bak` unwritable | save succeeds, WARN `v2_backup_failed` |
+| T24 | `legacy_installation_save_not_touched` | `_is_legacy` path | no `.bak`, no write |
+| T25 | `unbound_toast_only_when_unbound` | T7 vs T8 | toast only for T7 |
+| T26 | `future_version_refused` | v4 payload | `schema.py` error, state untouched |
+| T27 | `v2_bak_is_loadable` | load the `.v2.bak` again | same result as the first v2 load |
+| T28 | `serialization_order_total` | duplicate names/ids, shuffled sprites | identical list |
+| T29 | `digest_stable_unique_names` | unique-named scene | digest equals recorded value; episode goldens unchanged |
+| T30 | `v3_roundtrip_stable` | save, load, save | `saved_entities` equal |
 
-Adjacent suites to run at implementation: `test_save_entity_quest_state`, `test_save_serialization_strictness`,
-`test_save_format_versioning`, `test_save_load_roundtrip`, `test_room_memory`, `test_replay_determinism`,
-`test_debug_bundle_contract`, `test_health_save_restore`, `test_runtime_save_load_diagnostics_contract`,
-and the `saved_world` fixture tests.
+Adjacent suites: `test_save_entity_quest_state`, `test_save_serialization_strictness`, `test_save_format_versioning`,
+`test_save_load_roundtrip`, `test_room_memory`, `test_replay_determinism`, `test_debug_bundle_contract`,
+`test_health_save_restore`, `test_runtime_save_load_diagnostics_contract`, the `saved_world` fixture tests.
 
 ### Failure scenarios
 
 | What could go wrong | How the design prevents or reports it |
 |---|---|
-| Two entities share a name (today: last wins, silent) | Keyed by id; v2 duplicates refused or position-bound, diagnostics + honest counts |
-| Authored ids duplicated in a scene | Save writes one + WARN; load treats id ambiguous; strict mode fails; lint already flags |
-| Scene has an entity with no id | No record, counted, INFO diagnostic; never keyed by name for v3 |
-| Entity renamed after save | Name no longer matters in v3 |
-| Entity id renamed/removed after save | Reported `entity_missing` by id; never applied elsewhere |
-| v2 save, ambiguous names | Not applied, ERROR/WARN `entity_legacy_ambiguous`; the scene snapshot still places objects |
-| Records applied to the wrong room (`payloads.py:378` runs before the saved room loads) | `scene_path` guard on v3; v2 keeps today's behaviour (flagged limitation) |
-| Old game opens a v3 save | Refused by `schema.py:145` with a clear message |
-| Ordering differs across machines | Total sort key `(mesh_id, entity_id)`; no order-dependent ties |
-| Digest drift | `digest.py` untouched; only duplicate/idless scenes change, covered by T15 |
-| Migration writes data it cannot know | Migration only tags; no id is invented from a name |
+| Two authored entities share a name (base: last wins, silent) | Keyed by id; nothing depends on the name |
+| Authored ids duplicated (clone, hand edit) | All records written with occurrence + WARN; bind only on equal counts and matching xy; else refuse that id with ERROR + counts; records stay in the file |
+| Id-less sprites share a name (projectiles) | Bound only by unique (x, y); the rest `entity_nameclash`, counted, never applied |
+| Id-less record lands on an authored-id sprite | Impossible: id-less records match id-less sprites only (T12) |
+| Id-less runtime sprite state worse than base | Same name-keyed record as base; better for shared names (T9, T10) |
+| Entity renamed after save | Name irrelevant for id records |
+| Entity id renamed/removed after save | `entity_missing` by id; no cross-apply |
+| v2 save, ambiguous names | Unbound records reported, kept in `.v2.bak`; snapshot still places objects |
+| Load rewrites or damages the v2 file | Load is read-only (T20) |
+| First v3 save overwrites the only copy of v2 progress | One-time `.v2.bak` (T21-23) |
+| `.bak` cannot be written | Save proceeds, WARN + toast |
+| Records applied to the wrong room (`payloads.py:378` pre-apply) | `scene_path` guard on v3 (T19); v2 unchanged (flagged) |
+| Old game opens a v3 save | Refused clearly (`schema.py:145`); `.v2.bak` is loadable there |
+| Ordering differs across machines | Total sort key; position-based matching |
+| Digest drift | `digest.py` untouched; T29 |
+| Migration invents data | In-memory tagging only |
 
-## 5. Interaction with B-02 (not part of this task)
+## 5. Interaction with B-02
 
-B-02 (primary tag from sorted `tags[0]`, `entity_state.py` ~309/~413) is independent of the key, but both touch
-the same record: land them in separate PRs, B-01 first; B-02 may then add a `tag` field to v3 records or a v4
-bump. They collide only in `SavedEntityState.to_dict/from_dict` and `serialize_entity` (merge conflicts, no semantic
-overlap).
+B-02 (primary tag from sorted `tags[0]`, `entity_state.py` ~309/~413) is independent of the key; both touch
+`SavedEntityState.to_dict/from_dict` and `serialize_entity`. Separate PRs, B-01 first; B-02 may add a `tag` field
+to v3 records. Merge conflicts only, no semantic overlap.
 
-## 6. Open questions for the owner
+## 6. Open questions
 
-1. Runtime-spawned entities (no id): skip them (recommended, matches what a room reload can recreate) or persist
-   an "unbound" class that respawns them? Needs a look at monster companions/eggs (not verified here).
-2. v2 duplicates: is position-binding via the save's own snapshot acceptable, or refuse every ambiguous v2 record
-   outright (simpler, loses some HP states from old saves)?
-3. Duplicate/missing authored ids at save time: WARN (proposed) or block the save in strict mode only?
-4. Bump to `SAVE_SCHEMA_VERSION` 3 (proposed, clean downgrade refusal) versus staying at 2 with an additive
-   `mesh_id` field (older games would then silently ignore it and keep misapplying).
-5. Digest: leave `digest.py` untouched (proposed). Confirm no stored digest outside `replays/golden` derives
-   from `serialize_entities` (only `episode.py` was traced).
-6. Should the wrong-room guard also be backported to v2 saves (they carry `meta.scene_path`)?
+Answered by this revision (the owner confirms by approving the design):
+1. Runtime-spawned / id-less entities: **answered**: kept as name-keyed records, applied by unique name or unique position.
+3. Duplicate/missing authored ids at save time: **answered**: write all, WARN; no save refusal.
+4. Bump to v3 rather than an additive v2 field: **answered** (clean downgrade refusal plus `.v2.bak`).
+5. Digest: **answered** (unchanged; episode goldens independent; only `episode.py` was traced).
+6. Wrong-room guard for v2 saves: **answered**: not backported, so v2 loading stays identical to today.
+
+Still need the owner:
+2. Position binding for v2 duplicates (proposed) versus refusing every ambiguous v2 record.
+7. Recovery tool: manual steps only (proposed), or a small CLI listing the unbound records of a save/`.bak`?
+8. The player toast on unbound records (new UI text) and the `.v2.bak` file next to the slot: acceptable, or log-only?
+9. Fix the snapshot-layer merge of same-id sprites (`persistence.py:60-80`) as B-01b, or leave it?
