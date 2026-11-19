@@ -1,0 +1,80 @@
+"""B-01 fault injection: each mutation breaks one rule in the engine, the targeted tests must catch it, and the file
+is restored byte for byte (SHA-256 checked, and `git diff` of the mutated file must equal its diff before)."""
+import hashlib
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(r"D:\Games\Mesh-B-01-impl")
+IDENT = "tests/test_b01_save_identity.py"
+RECOV = "tests/test_b01_save_recovery.py"
+
+MUTATIONS = [
+    ("M1 backup verification skipped", "engine/save_runtime/io.py",
+     "            if _sha256_file(backup) != digest:", "            if False:", [RECOV]),
+    ("M2 unresolved records not carried into saves", "engine/save_runtime/entity_state.py",
+     '"unresolved": held_unresolved(scene_controller),', '"unresolved": [],', [IDENT]),
+    ("M3 position binding without the uniqueness proof", "engine/save_runtime/entity_state.py",
+     "if len(found) == 1 and claimed_by[found[0]] == 1:", "if found:", [IDENT]),
+    ("M4 id-less sprites dropped from saves", "engine/save_runtime/entity_state.py",
+     "        if state is None:\n            continue\n        if state.keying == KEYING_ID and state.mesh_id:",
+     "        if state is None or state.keying == KEYING_NAME:\n            continue\n        if state.keying == KEYING_ID and state.mesh_id:", [IDENT]),
+    ("M5 a load rewrites the v2 slot", "engine/save_manager.py",
+     "            data = cast(dict[str, Any], payload_or_error)\n",
+     "            data = cast(dict[str, Any], payload_or_error)\n            path.write_text(path.read_text(encoding='utf-8') + ' ', encoding='utf-8')\n", [RECOV]),
+    ("M6b existing backups are not looked at", "engine/save_runtime/io.py",
+     "            if os.path.lexists(backup):", "            if False:", [RECOV]),
+    ("M7 a failed backup no longer refuses the save", "engine/save_manager.py",
+     "                self._toast(\"The game wasn't saved over the old save: its backup failed. Try another slot.\")\n                return False",
+     "                self._toast(\"The game wasn't saved over the old save: its backup failed. Try another slot.\")\n                backup = None", [RECOV]),
+    ("M8 wrong-room guard off", "engine/save_runtime/entity_state.py",
+     "    return room_key(a) == room_key(b) or", "    return True or room_key(a) == room_key(b) or", [IDENT]),
+    ("M9 duplicate-id count mismatch applied anyway", "engine/save_runtime/entity_state.py",
+     "        if count != live:\n            return [], [(it, \"count_mismatch\") for it in items], []",
+     "        if False:\n            return [], [(it, \"count_mismatch\") for it in items], []", [IDENT]),
+    ("M10 a legacy record binds by name alone when several share it", "engine/save_runtime/entity_state.py",
+     "    pairs, unbound = _bind_by_position(items, sprites, check)\n    return pairs, [(it, \"position\") for it in unbound], []",
+     "    return [(it, sprites[-1]) for it in items], [], []", [IDENT]),
+    ("M11 id-less records may land on id sprites", "engine/save_runtime/entity_state.py",
+     "if legacy or _sprite_mesh_id(s) is None]", "if True]", [IDENT]),
+    ("M12 retried records may overwrite resolved sprites", "engine/save_runtime/entity_state.py",
+     "        return [s for s in found if id(s) not in claimed]", "        return list(found)", [IDENT]),
+]
+
+
+def sha(p: Path) -> str:
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+def git_diff(rel: str) -> str:
+    return subprocess.run(["git", "diff", "--", rel], cwd=REPO, capture_output=True, text=True).stdout
+
+
+def main() -> int:
+    bad = 0
+    for name, rel, old, new, tests in MUTATIONS:
+        path = REPO / rel
+        original = path.read_bytes()
+        before_hash, before_diff = hashlib.sha256(original).hexdigest(), git_diff(rel)
+        text = original.decode("utf-8")
+        nl = chr(13) + chr(10) if chr(13) in text else chr(10)
+        old, new = old.replace(chr(10), nl), new.replace(chr(10), nl)
+        assert text.count(old) == 1, (name, text.count(old))
+        path.write_bytes(text.replace(old, new).encode("utf-8"))
+        try:
+            run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-W", "error", "-x",
+                                  "--no-header", *tests], cwd=REPO, capture_output=True, text=True)
+        finally:
+            path.write_bytes(original)
+        failed = [line.split(" - ")[0] for line in run.stdout.splitlines() if line.startswith("FAILED")]
+        ok = sha(path) == before_hash and git_diff(rel) == before_diff
+        caught = run.returncode != 0 and bool(failed)
+        bad += (not caught) + (not ok)
+        print(f"{name}: {'CAUGHT' if caught else 'NOT CAUGHT'} by {failed[:1] or run.stdout.splitlines()[-1:]}; "
+              f"restored byte-identical: {ok}")
+    print("ALL CAUGHT AND RESTORED" if not bad else f"PROBLEMS: {bad}")
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

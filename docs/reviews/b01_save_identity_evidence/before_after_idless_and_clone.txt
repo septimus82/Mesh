@@ -1,0 +1,71 @@
+# repro_b01_idless (id-less proj_Hero x2, spawned_7, console clone with a copied id)
+## BASE 0e05bd94 (script run against the unmodified base)
+WARNING:engine.scene_runtime.persistence:scene snapshot: gob_a is shared by more live entities than authored entries; the extra one is saved as its own entity
+[Mesh][Save] Game saved to '<home>\AppData\Local\Temp\b01_h0nwqj3v\saves\slot1.json'
+[Mesh][Save] Loading save from '<home>\AppData\Local\Temp\b01_h0nwqj3v\saves\slot1.json'
+WARNING:engine.scene_runtime.saved_world:saved world: 2 saved objects share id 'gob_a' but the room now has 1; paired in order, the extra saved ones keep their saved fields
+BEFORE SAVE (id, mesh_name, x, y, hp):
+   (None, 'proj_Hero', 10, 10, 2.0)
+   (None, 'proj_Hero', 20, 20, 6.0)
+   (None, 'spawned_7', 30, 30, 4.0)
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_a', 'Goblin_clone', 150, 150, 11.0)
+   ('gob_b', 'Goblin', 300, 300, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+saved_entities records (entity_id, x, y, hp):
+   ('Goblin', 100.0, 100.0, 20.0)
+   ('Goblin', 300.0, 300.0, 20.0)
+   ('Goblin_clone', 150.0, 150.0, 11.0)
+   ('Hero', 50.0, 50.0, 10.0)
+   ('proj_Hero', 10.0, 10.0, 2.0)
+   ('proj_Hero', 20.0, 20.0, 6.0)
+   ('spawned_7', 30.0, 30.0, 4.0)
+snapshot entities (id, name, x, y): [('hero', 'Hero', 50.0, 50.0), ('gob_a', 'Goblin', 100.0, 100.0), ('gob_b', 'Goblin', 300.0, 300.0), (None, 'proj_Hero', 10.0, 10.0), (None, 'proj_Hero', 20.0, 20.0), (None, 'spawned_7', 30.0, 30.0), ('gob_a', 'Goblin_clone', 150.0, 150.0)]
+AFTER fresh room:
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_b', 'Goblin', 300, 300, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+AFTER LOAD of slot1:
+   (None, 'proj_Hero', 10, 10, 5.0)
+   (None, 'proj_Hero', 20, 20, 6.0)
+   (None, 'spawned_7', 30, 30, 4.0)
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_a', 'Goblin_clone', 150, 150, 11.0)
+   ('gob_b', 'Goblin', 300, 300, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+
+## HEAD
+WARNING:engine.scene_runtime.persistence:scene snapshot: gob_a is shared by more live entities than authored entries; the extra one is saved as its own entity
+[Mesh][Save] WARNING: 2 entities share the authored id 'gob_a'; all are saved, bound by order and position.
+[Mesh][Save] Game saved to '<home>\AppData\Local\Temp\b01_hrm7j6uo\saves\slot1.json'
+[Mesh][Save] Loading save from '<home>\AppData\Local\Temp\b01_hrm7j6uo\saves\slot1.json'
+WARNING:engine.scene_runtime.saved_world:saved world: 2 saved objects share id 'gob_a' but the room now has 1; paired in order, the extra saved ones keep their saved fields
+BEFORE SAVE (id, mesh_name, x, y, hp):
+   (None, 'proj_Hero', 10, 10, 2.0)
+   (None, 'proj_Hero', 20, 20, 6.0)
+   (None, 'spawned_7', 30, 30, 4.0)
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_a', 'Goblin_clone', 150, 150, 11.0)
+   ('gob_b', 'Goblin', 300, 300, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+saved_entities records (entity_id, x, y, hp):
+   ('Goblin', 100.0, 100.0, 20.0)
+   ('Goblin_clone', 150.0, 150.0, 11.0)
+   ('Goblin', 300.0, 300.0, 20.0)
+   ('Hero', 50.0, 50.0, 10.0)
+   ('proj_Hero', 10.0, 10.0, 2.0)
+   ('proj_Hero', 20.0, 20.0, 6.0)
+   ('spawned_7', 30.0, 30.0, 4.0)
+snapshot entities (id, name, x, y): [('hero', 'Hero', 50.0, 50.0), ('gob_a', 'Goblin', 100.0, 100.0), ('gob_b', 'Goblin', 300.0, 300.0), (None, 'proj_Hero', 10.0, 10.0), (None, 'proj_Hero', 20.0, 20.0), (None, 'spawned_7', 30.0, 30.0), ('gob_a', 'Goblin_clone', 150.0, 150.0)]
+AFTER fresh room:
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_b', 'Goblin', 300, 300, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+AFTER LOAD of slot1:
+   (None, 'proj_Hero', 10, 10, 2.0)
+   (None, 'proj_Hero', 20, 20, 6.0)
+   (None, 'spawned_7', 30, 30, 4.0)
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_a', 'Goblin_clone', 150, 150, 11.0)
+   ('gob_b', 'Goblin', 300, 300, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)

@@ -1,0 +1,22 @@
+import sys
+from types import SimpleNamespace
+root = sys.argv[1]
+sys.path.insert(0, root)
+import engine
+print("engine from", engine.__file__)
+from engine.save_runtime.digest import compute_world_digest_from_scene
+
+class Health:
+    def __init__(self, hp): self.hp = hp
+    def saveable_state(self): return {"hp": self.hp, "dead": False}
+
+class Stub:
+    def __init__(self, name, x, y, hp, mesh_id=None, tag=None):
+        self.mesh_name = name; self.mesh_id = mesh_id; self.center_x = x; self.center_y = y
+        self.mesh_entity_data = {"id": mesh_id} if mesh_id else {}
+        self.mesh_behaviours_runtime = [Health(hp)]; self.mesh_tag = tag
+
+scene = SimpleNamespace(all_sprites=[
+    Stub("Hero", 50, 50, 10, "hero", "player"), Stub("Orc", 100, 100, 20, "orc_1"),
+    Stub("Troll", 300, 300, 12.5, "troll_1"), Stub("proj_Hero", 10, 10, 3), Stub("spawned_7", 30, 30, 4)])
+print(compute_world_digest_from_scene(scene, None, 7))

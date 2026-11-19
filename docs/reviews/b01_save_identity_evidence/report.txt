@@ -1,0 +1,71 @@
+B-01: stable entity identity in saves (v3 migration, #462 reliability) -- implementation report
+Design: docs/reviews/b01_entity_save_identity_design.md revision 3 (design PR #528, owner-approved for implementation).
+Base 0e05bd94 (includes B-01b #531). Agent: mesh-gameplay-reliability.
+
+WHAT CHANGED (engine/save_runtime/{entity_state,schema,io,payloads,normalize,ux_codes}.py, engine/save_manager.py,
+engine/scene_lifecycle_controller.py; digest.py untouched)
+- SAVE_SCHEMA_VERSION 2 -> 3. Records: keying "id" (mesh_id + occurrence) or "name" (id-less); total sort key; container adds
+  scene_path, counters, unresolved. v2 -> v3 runs in memory only (tags records keying:name, legacy:true).
+- Binding: id records by id; duplicates of one id bind by order + place only when record and sprite counts agree; id-less
+  records bind to id-less sprites by name, then by unique place; v2 records by name, then by unique place cross-checked
+  with the save's own snapshot. Nothing is "last wins"; nothing is applied on a guess.
+- Unbound records -> diagnostics (entity_id_ambiguous / entity_legacy_ambiguous / entity_nameclash, roll-ups
+  entities_unbound / entities_unresolved), stderr, the load attempt's diagnostics, and a player toast; kept as
+  saved_entities.unresolved in every later save (dedup by scene_path + SHA-256), retried each load against sprites that
+  received no record, removed only by binding or manual edit.
+- Recovery: load never rewrites a v2 slot; first v3 save over a pre-v3 slot writes <slot>.json.v2.bak and verifies it
+  (SHA-256 of a fresh read) or refuses (slot byte-identical, save.write.v2_backup_failed, toast); an existing backup is
+  never replaced (<slot>.json.v2.<sha8>.bak); a v4 save is refused by the existing newer-version error.
+- A v3 save's records name their room; the first apply onto the room being left skips another room's records.
+
+OWNER REQUIREMENT -> TESTS (tests/test_b01_save_identity.py = I, tests/test_b01_save_recovery.py = R, *_gpu.py = G)
+- preserve v2 compatibility: I::T4 (real pre390_2d/hd2d), I::T5 (real base-written v2 save, scrubbed fixture
+  tests/fixtures/saved_world/v2_idless_dupname_dupid.json), I::T6/T7/T8, I::test_migration_v2_to_v3_only_tags_and_never_invents,
+  R::T27 (the .v2.bak loads), G::test_a_v2_save_from_the_real_engine_binds_every_record...
+- never silently merge or discard state: I::T1/T1b/T2/T3 (duplicate names), T14-T16 (duplicate ids), T33-T36 + new-game test
+  (unresolved), T11 (same-place id-less clash)
+- uniquely named runtime-spawned id-less entities preserved: I::T9, T10, T13, T12
+- bind ambiguous records only when identity is provable: I::T7, T11, T16, T34b, T35; fault injection M3, M9-M12
+- carry unresolved records across repeated saves: I::T33 (save/load x4, byte-equal, never multiplied), T34, T36
+- no v2 overwrite without a verified backup: R::T21, T22, T23, T31, T32, failed-write-after-backup, unreadable-slot
+- real gameplay cycles (production SaveManager, hidden GameWindow): every I:: and R:: test except the unit-level
+  T12/T13/T19b/T28/T29/T34b/T35 and the T4 migration check; G:: runs a template project
+- failure injection / recovery / rollback / repeat saves: R::T23 (unwritable backup), T31 (copy differs), failed write after
+  backup then retry, .bak copied back over the slot then saved again, T32
+- unsafe operations refused with the original bytes unchanged: R::T20/T20b (load), T23/T31 (save), T26 (newer version)
+
+BEFORE / AFTER (real cycle, hidden GameWindow, production SaveManager; before_after_*.txt)
+- two Goblins, gob_a hp 3 at (111,122) and gob_b hp 20: BASE load gives gob_a hp 20 (hurt state lost), apply_entities on a
+  pristine room gives gob_a untouched at (100,100); HEAD gives hp 3 at (111,122) in both.
+- id-less proj_Hero x2 + spawned_7 + console clone with a copied id: HEAD restores both proj_Hero (2.0 and 6.0, base lost
+  one), spawned_7 (4.0), and both gob_a twins (hp 20 at (100,100), clone hp 11 at (150,150)).
+
+TESTS (Windows, py -3.13 -W error; details in tests_on_base.txt / tests_on_head.txt)
+- new: 49 tests (default lane) + 3 GPU-lane tests. On the base 45 of 49 fail; the 4 that pass are guards that must hold
+  on both (T29 digest, T26 and test_a_v3_save... newer-version refusal, a v3 save is not backed up).
+- fault injection (fault_injection.py.txt / _output.txt): 12 mutations (backup verify skipped, unresolved not carried,
+  uniqueness proof dropped, id-less dropped, load rewrites slot, backup lookup removed, failed backup no longer refuses,
+  wrong-room guard off, count check off, legacy name-only bind, id-less lands on id sprite, retry overwrites resolved
+  sprite): all caught, each file restored byte for byte (SHA-256 and git diff compared).
+- digest: unique-named scene digest b5f16a32... identical on base and head (digest_probe_output.txt); T29 pins it.
+
+POINTS FOR THE REVIEWER (facts, not decisions)
+1. Strict mode. The design says entity_id_ambiguous is ERROR ("WARN non-strict; fails in strict"). The production slot load
+   runs with SLOT_POLICY.strict_restore=True, where any ERROR refuses the load (LOAD_APPLY_FAILED): that would refuse
+   exactly the saves T16/T33 require to load. Implemented: the three binding codes are ERROR when apply_entities_ex is
+   strict (a developer's strict check, T16 asserts it) and WARN in the slot load (strict_binding=False). Loads are never
+   refused for an unprovable identity.
+2. Records whose entity is absent (expired projectile, removed id) are counted missing and dropped, as the design says
+   (T13, T18); only ambiguous records become unresolved. The v2 fixture's Goblin_clone record is such a case; the
+   original is kept in the .v2.bak.
+3. The first apply (onto the room being left) reports nothing to stderr and its identity diagnostics are replaced in the
+   load attempt by the second (saved room) apply's, so a clone case is not reported twice.
+4. A retried (carried) name-keyed record binds only by unique place, never by name alone (a stale record must not land on
+   a newcomer that merely shares a name).
+5. A sprite with neither name nor id is still not serialised (as on the base).
+6. A slot that is not parseable as a save is also backed up before being overwritten (its version cannot be read).
+7. Unresolved records live with the game session (the GameState object): a New Game drops them; a load replaces them.
+8. Wrong-room guard: same room = equal room_key or equal absolute path.
+9. The backup name is <slot file>.v2.bak (e.g. slot1.json.v2.bak), like the diagnostics sidecars.
+
+NOT VERIFIED HERE: macOS/Linux; physical-GPU rendering (GPU lane here ran on this machine's GL context).
