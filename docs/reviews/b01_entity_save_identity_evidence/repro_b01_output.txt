@@ -1,0 +1,53 @@
+INFO:engine.project_scaffold:Creating new project 'Game' at <home>\AppData\Local\Temp\b01_<tmp>\game (template=blank)
+INFO:engine.project_templates:Applying template 'blank' to <home>\AppData\Local\Temp\b01_<tmp>\game
+INFO:engine.project_scaffold:Project created successfully.
+INFO:engine.perks:[Mesh][Perks] Loaded 7 perks
+INFO:engine.game:[Mesh][GameWindow] Initialized 320x200 window
+[Mesh][Save] Game saved to '<home>\AppData\Local\Temp\b01_<tmp>\saves\slot1.json'
+[Mesh][Save] Loading save from '<home>\AppData\Local\Temp\b01_<tmp>\saves\slot1.json'
+[Mesh][Prefabs] Loaded 97 prefabs
+[Mesh][Prefabs] Loaded 9 variants from pack 'core_regions'
+[Mesh][Scene] Loading scene '<home>\AppData\Local\Temp\b01_<tmp>\arena.json'
+[Mesh][Scene] [+] Spawned 'Hero' at (50.0, 50.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (100.0, 100.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (300.0, 300.0)
+[Mesh][Scene] Scene ready with 3 sprite(s)
+BEFORE SAVE   (id, mesh_name, x, y, hp):
+   ('gob_a', 'Goblin', 111, 122, 3.0)
+   ('gob_b', 'Goblin', 333, 344, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+save_schema_version: 2
+saved_entities records (entity_id, x, y, hp):
+   ('Goblin', 111.0, 122.0, 3.0) keys: ['behaviour_state', 'entity_id', 'x', 'y']
+   ('Goblin', 333.0, 344.0, 20.0) keys: ['behaviour_state', 'entity_id', 'x', 'y']
+   ('Hero', 50.0, 50.0, 10.0) keys: ['behaviour_state', 'entity_id', 'tags', 'x', 'y']
+[Mesh][Scene] Loading scene '<home>\AppData\Local\Temp\b01_<tmp>\arena.json'
+[Mesh][Scene] [+] Spawned 'Hero' at (50.0, 50.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (100.0, 100.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (300.0, 300.0)
+[Mesh][Scene] Scene ready with 3 sprite(s)
+AFTER FRESH ROOM (pre-load):
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_b', 'Goblin', 300, 300, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+[Mesh][Scene] Queued scene change to '<home>\AppData\Local\Temp\b01_<tmp>\saves\slot1.json'
+[Mesh][Scene] Loading pending scene '<home>\AppData\Local\Temp\b01_<tmp>\saves\slot1.json'
+[Mesh][Scene] Loading scene '<home>\AppData\Local\Temp\b01_<tmp>\saves\slot1.json'
+[Mesh][Scene] [+] Spawned 'Hero' at (50.0, 50.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (111.0, 122.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (333.0, 344.0)
+[Mesh][Scene] Scene ready with 3 sprite(s)
+AFTER LOAD of slot1:
+   ('gob_a', 'Goblin', 111, 122, 20.0)
+   ('gob_b', 'Goblin', 333, 344, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+[Mesh][Scene] Loading scene '<home>\AppData\Local\Temp\b01_<tmp>\arena.json'
+[Mesh][Scene] [+] Spawned 'Hero' at (50.0, 50.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (100.0, 100.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (300.0, 300.0)
+[Mesh][Scene] Scene ready with 3 sprite(s)
+apply_entities (applied, missing): (3, 0) diagnostics: []
+AFTER apply_entities on pristine room:
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_b', 'Goblin', 333, 344, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
