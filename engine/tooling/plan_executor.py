@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import re
 import shutil
 import time
 from dataclasses import asdict
@@ -15,6 +16,9 @@ from engine.tooling.plan_types import Action, Plan
 from engine.tooling.validate_all import UnifiedValidator
 
 BACKUP_DIR = Path(".mesh/plan_backups")
+# 2 (#462 P1): the manifest records what the plan left at each file (``after``); an undo restores nothing unless every
+# file is still exactly that. A manifest without a version predates the record and is never restored.
+MANIFEST_VERSION = 2
 
 class PlanExecutionSummary(TypedDict):
     files_created: list[str]
@@ -39,6 +43,8 @@ class BackupManager:
             return
 
         str_path = str(path)
+        if str_path in self.manifest["created"] or str_path in self.manifest["modified"]:
+            return  # (touched earlier in this plan: its state before the plan is already recorded, never a later one)
         if path.exists():
             # It's a modification
             if str_path not in self.manifest["modified"]:
@@ -61,10 +67,59 @@ class BackupManager:
             if str_path not in self.manifest["created"]:
                 self.manifest["created"].append(str_path)
 
-    def finish_backup(self):
+    def finish_backup(self, completed: bool = True):
+        """Write the manifest, with what the plan left at every file it created or modified (``after``: each one's
+        ``fingerprint`` now, while its writer still holds the project). ``completed``: False for a plan that stopped
+        with an error (what it left before it stopped is recorded the same way)."""
         if self.current_backup_path:
             manifest_path = self.current_backup_path / "manifest.json"
-            json_io.write_json_atomic(manifest_path, self.manifest)
+            entries = [*self.manifest["created"], *self.manifest["modified"]]
+            json_io.write_json_atomic(manifest_path, {
+                "version": MANIFEST_VERSION, "completed": completed, **self.manifest,
+                "after": {entry: self.fingerprint(Path(entry)) for entry in entries}})
+
+    @staticmethod
+    def fingerprint(path: Path) -> dict[str, Any]:
+        """What is at ``path`` now: ``{"exists": False}``, or ``{"exists": True, "sha256": <its bytes' SHA-256>}``
+        (None for something there that isn't a file: no undo restores over it)."""
+        if not os.path.lexists(path):
+            return {"exists": False}
+        return {"exists": True, "sha256": hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None}
+
+    @staticmethod
+    def _unverified(manifest: dict[str, Any]) -> list[str]:
+        """Why a manifest (one with a ``version``) can't say what the plan left behind: an unknown version, or no
+        valid ``after`` record for one of its files. Empty if every file has one."""
+        if manifest.get("version") != MANIFEST_VERSION:
+            return [f"its manifest is version {manifest.get('version')!r}, which this Mesh can't check"]
+        after = manifest.get("after")
+        if not isinstance(after, dict) or not isinstance(manifest.get("completed"), bool):
+            return ["its manifest has no complete record of what the plan left behind"]
+        problems = []
+        for kind in ("created", "modified"):
+            entries = manifest.get(kind)
+            for entry in entries if isinstance(entries, list) else []:
+                record = after.get(entry) if isinstance(entry, str) else None
+                if record == {"exists": False} or (
+                        isinstance(record, dict) and record.keys() == {"exists", "sha256"} and record["exists"] is True
+                        and (record["sha256"] is None or (isinstance(record["sha256"], str)
+                                                          and re.fullmatch(r"[0-9a-f]{64}", record["sha256"])))):
+                    continue
+                if isinstance(entry, str):  # (an entry that isn't a path: ``_unsafe_entries`` says so)
+                    problems.append(f"its manifest has no valid record of what the plan left at {entry}")
+        return problems
+
+    @classmethod
+    def _changed_since(cls, manifest: dict[str, Any]) -> list[str]:
+        """Every file whose state isn't the one the plan left (``after``), and how."""
+        changed = []
+        for entry in dict.fromkeys([*manifest.get("created", []), *manifest.get("modified", [])]):
+            left, now = manifest["after"][entry], cls.fingerprint(Path(entry))
+            if now != left:
+                how = ("it is gone" if not now["exists"] else "something is there now; the plan left nothing"
+                       if not left["exists"] else "its contents changed")
+                changed.append(f"{entry} ({how})")
+        return changed
 
     @staticmethod
     def _unsafe_entries(manifest: Any, backup: Path, owner: Any = None) -> list[str]:
@@ -110,7 +165,10 @@ class BackupManager:
 
     def restore_last_backup(self, owner: Any = None) -> bool:
         """Restore the newest backup. ``owner``: the ``Ownership`` its caller holds (#462 R4). Every entry is checked
-        first (``_unsafe_entries``): one that can't be restored refuses the whole undo, nothing changed. Before each
+        first: the manifest must record what the plan left at each file (``_unverified``; one without that record, from
+        before #462 P1, is never restored), each must be restorable (``_unsafe_entries``), and each must still be
+        exactly what the plan left (``_changed_since``: work done since is never erased). Any problem refuses the whole
+        undo, nothing changed. Before each
         deletion or restoration the destination is checked against ``owner`` again: if the project changed meanwhile,
         the undo stops there (nothing further is written)."""
         if not self.backup_root.exists():
@@ -132,10 +190,36 @@ class BackupManager:
 
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            problems = self._unsafe_entries(manifest, target, owner)
-            if problems:  # (refused whole, before anything is deleted or restored)
+        except (OSError, ValueError) as exc:
+            print(f"[Mesh][Undo] Not restored: nothing was changed, because its manifest can't be read ({exc}).")
+            return False
+        copies = target / "files"
+        if isinstance(manifest, dict) and "version" not in manifest:  # (#462 P1: from before the record existed)
+            print("[Mesh][Undo] Not restored: nothing was changed, because this backup was made before Mesh recorded "
+                  "what a plan leaves behind, so it can't tell whether those files were changed since: restoring it "
+                  f"could erase later work. To undo it by hand, the files as they were before the plan are in {copies}"
+                  f" (it changed: {', '.join(map(str, manifest.get('modified') or [])) or 'none'}; it created: "
+                  f"{', '.join(map(str, manifest.get('created') or [])) or 'none'}).")
+            return False
+
+        try:
+            # Every check before anything is deleted or restored; any problem refuses the whole undo (#462 R4, P1):
+            # the manifest says what the plan left at every file, every destination is restorable, and every file is
+            # still exactly what the plan left (so nothing done since is erased).
+            problems = (["the manifest isn't an object"] if not isinstance(manifest, dict) else
+                        self._unverified(manifest) or self._unsafe_entries(manifest, target, owner))
+            if problems:
                 print("[Mesh][Undo] Not restored: nothing was changed, because " + "; ".join(problems) + ".")
                 return False
+            changed = self._changed_since(manifest)
+            if changed:
+                print("[Mesh][Undo] Not restored: nothing was changed, because files changed after the plan finished, "
+                      f"and undoing it would erase that: {'; '.join(changed)}. (Something edited, replaced or removed "
+                      "them since, or this plan was undone already.) The files as they were before the plan are in "
+                      f"{copies}, to take back by hand if you want any of them.")
+                return False
+            if not manifest["completed"]:
+                print("[Mesh][Undo] That plan stopped with an error: undoing what it changed before it stopped.")
 
             def still_ours(path: Path) -> bool:
                 if owner is None or owner.owns(path):
@@ -263,7 +347,7 @@ class PlanExecutor:
             print(f"[Mesh][Executor] ERROR: {e}")
             if not self.dry_run and not capture_mode and self.records_allowed():
                 print("[Mesh][Executor] Attempting rollback...")
-                self.backup_mgr.finish_backup()
+                self.backup_mgr.finish_backup(completed=False)
                 # Auto-rollback could happen here, but we leave it to user for now.
             raise e
 

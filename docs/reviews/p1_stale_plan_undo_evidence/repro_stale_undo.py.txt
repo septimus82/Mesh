@@ -1,0 +1,81 @@
+"""#462 P1 stale plan undo: does ``mesh undo-last-plan`` erase work saved after the plan?
+
+    py -3.13 repro_stale_undo.py REPO WORKDIR OUT_JSON
+
+A disposable scaffolded project (WORKDIR removed first only if it carries this script's marker):
+1. ``mesh apply-plan`` (a subprocess) adds an NPC "Ferryman";
+2. the production project API (``engine.studio_project.Project``, as Mesh Studio holds and saves it: the project owned,
+   ``authoring.apply``, ``Project.save(owner=...)``) adds an NPC "Later human edit" and saves; the hold is let go;
+3. ``mesh undo-last-plan`` (a subprocess), nothing holding the project.
+Records the room's NPC names after each step, the undo's exit code and output, and the room's bytes."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+REPO, WORK, OUT = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve(), Path(sys.argv[3])
+sys.path.insert(0, str(REPO))
+
+from engine import authoring  # noqa: E402
+from engine.editor import project_ownership  # noqa: E402
+from engine.project_scaffold import create_project  # noqa: E402
+from engine.studio_project import Project  # noqa: E402
+
+MARK = ".repro_stale_undo_workdir"
+ROOM = "packs/core_regions/scenes/start.json"
+WORLD = "packs/core_regions/worlds/main.json"
+PLAN = {"wizard": "p1", "version": 1, "inputs": {"pack": "core_regions"},
+        "actions": [{"type": "add_npc", "description": "AI adds a Ferryman",
+                     "args": {"scene_path": ROOM, "role": "villager", "name": "Ferryman", "x": 96, "y": 96}}]}
+
+
+def mesh(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run([sys.executable, "-m", "mesh_cli", *args], cwd=root, capture_output=True, text=True,
+                          timeout=300, env={**os.environ, "PYTHONPATH": str(REPO)})
+
+
+def names(root: Path) -> list[str]:
+    return [str(e.get("name")) for e in json.loads((root / ROOM).read_text(encoding="utf-8"))["entities"]]
+
+
+def main() -> None:
+    if WORK.exists():
+        assert (WORK / MARK).is_file(), f"{WORK} isn't this script's"
+        shutil.rmtree(WORK)
+    WORK.mkdir(parents=True)
+    (WORK / MARK).write_text("", encoding="utf-8")
+    root = WORK / "game"
+    create_project(root, "Game", template_id="blank")
+    (WORK / "plan.json").write_text(json.dumps(PLAN), encoding="utf-8")
+    report: dict[str, object] = {"start": names(root)}
+
+    applied = mesh(root, "apply-plan", str(WORK / "plan.json"))
+    report["apply_exit"], report["after_plan"] = applied.returncode, names(root)
+
+    with project_ownership.acquire(root, project_ownership.STUDIO, wait=2.0) as held:  # (as Mesh Studio holds it)
+        project = Project(root, WORLD)
+        authoring.apply(project, [{"op": "place_prefab", "prefab": "person", "x": 160, "y": 64},
+                                  {"op": "rename_entity", "entity_id": "@0", "name": "Later human edit"}])
+        report["saved"] = project.save(owner=held)
+    report["after_human_save"] = names(root)
+    room_before_undo = (root / ROOM).read_bytes()
+    assert project_ownership.owned(root) is None  # (nothing holds the project)
+
+    undone = mesh(root, "undo-last-plan")
+    report["undo_exit"] = undone.returncode
+    report["undo_stdout"] = [line for line in undone.stdout.splitlines() if line.startswith("[Mesh]") or line.startswith("  ")]
+    report["after_undo"] = names(root)
+    report["room_unchanged_by_undo"] = (root / ROOM).read_bytes() == room_before_undo
+    report["room_sha256_after_undo"] = hashlib.sha256((root / ROOM).read_bytes()).hexdigest()
+    OUT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(report, indent=2))
+
+
+if __name__ == "__main__":
+    main()

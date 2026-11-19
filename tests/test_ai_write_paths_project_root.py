@@ -175,9 +175,11 @@ def test_an_undo_with_any_destination_in_another_project_is_refused_whole(outer:
     saved.parent.mkdir(parents=True, exist_ok=True)
     saved.write_bytes((outer / ROOM).read_bytes())
     manifest["modified"] = [ROOM]
-    (newest / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     (outer / ROOM).write_text((outer / ROOM).read_text(encoding="utf-8").replace("{", '{"saved_since": 1, ', 1),
                               encoding="utf-8")
+    # (and what it left there: the room as it is now, #462 P1, so the destinations are what refuses it)
+    manifest["after"][ROOM] = {"exists": True, "sha256": hashlib.sha256((outer / ROOM).read_bytes()).hexdigest()}
+    (newest / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     region2 = outer / "packs/region2"  # later: region2 became a Mesh project of its own
     (region2 / "config.json").write_text(json.dumps({"title": "Region 2"}), encoding="utf-8")
     before = _files(outer)
@@ -206,6 +208,10 @@ def test_an_undo_with_a_destination_outside_the_project_or_an_unsafe_alias_is_re
                 {"modified": ["scenes/start.json", "scenes/no_copy.json"]}):  # (a valid entry, one with no copy: none)
         # (entries are relative to where the plan ran: packs/core_regions)
         manifest = {**json.loads(original), **bad}
+        for entries in bad.values():  # (#462 P1: a record of what the plan left for each, so the entry is what refuses)
+            for entry in entries if isinstance(entries, list) else []:
+                if isinstance(entry, str):
+                    manifest["after"].setdefault(entry, {"exists": False})
         (newest / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
         before = _files(outer)
         assert _undo(outer / REGION, monkeypatch) == 1, bad
