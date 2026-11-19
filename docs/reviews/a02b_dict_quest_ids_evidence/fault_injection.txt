@@ -1,0 +1,6 @@
+key+x (id = key + "x")            caught by 4 tests
+no mismatch report                 caught by test_id_differing_from_key_keeps_inner_id_and_reports
+disable the whole branch           caught by 5 tests (= base behaviour)
+inner id always replaced by key    caught by test_id_differing_from_key_keeps_inner_id_and_reports
+mutate raw in place                survives (equivalent: file re-read per load)
+restored: sha256 prefix c6d80f559818cfbe before and after

@@ -64,7 +64,15 @@ class QuestManager:
                 entries = [(None, entry) for entry in root]
             else:
                 entries = []
-            for _, raw in entries:
+            for key, raw in entries:
+                if key is not None and isinstance(raw, dict):
+                    inner = str(raw.get("id", "")).strip()
+                    if not inner:
+                        # Dict form: the key is the id when the entry has none (normalize a copy).
+                        raw = {**raw, "id": key}
+                    elif inner != str(key).strip():
+                        # The inner id wins (as before); never drop silently.
+                        print(f"[Mesh][Quests] Quest key '{key}' differs from its id '{inner}'; using '{inner}'")
                 quest = self._normalize_quest(raw)
                 if quest is None:
                     continue
