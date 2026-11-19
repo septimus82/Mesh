@@ -1,0 +1,69 @@
+{
+  "caught": 5,
+  "of": 5,
+  "mutations": [
+    {
+      "mutation": "Studio's import without its ownership",
+      "file": "engine/studio.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 13 passed in 21.80s"
+      ],
+      "failed": [
+        "tests/test_studio_tileset_ownership_gpu.py::test_outer_studios_import_never_writes_a_map_file_another_studio_owns"
+      ]
+    },
+    {
+      "mutation": "the destination check refuses nothing",
+      "file": "engine/studio_project.py",
+      "caught": true,
+      "summary": [
+        "3 failed, 11 passed in 20.81s"
+      ],
+      "failed": [
+        "tests/test_studio_tileset_ownership_gpu.py::test_outer_studios_import_never_writes_a_map_file_another_studio_owns",
+        "tests/test_tileset_import_ownership.py::test_a_nested_project_another_studio_holds_refuses_the_whole_import",
+        "tests/test_tileset_import_ownership.py::test_another_projects_map_refuses_it_whether_or_not_that_project_is_open"
+      ]
+    },
+    {
+      "mutation": "map files left out of the check",
+      "file": "engine/studio_project.py",
+      "caught": true,
+      "summary": [
+        "3 failed, 11 passed in 21.38s"
+      ],
+      "failed": [
+        "tests/test_studio_tileset_ownership_gpu.py::test_outer_studios_import_never_writes_a_map_file_another_studio_owns",
+        "tests/test_tileset_import_ownership.py::test_a_nested_project_another_studio_holds_refuses_the_whole_import",
+        "tests/test_tileset_import_ownership.py::test_another_projects_map_refuses_it_whether_or_not_that_project_is_open"
+      ]
+    },
+    {
+      "mutation": "foreign map files skipped, the rest imported (reported as success)",
+      "file": "engine/studio_project.py",
+      "caught": true,
+      "summary": [
+        "3 failed, 11 passed in 21.02s"
+      ],
+      "failed": [
+        "tests/test_studio_tileset_ownership_gpu.py::test_outer_studios_import_never_writes_a_map_file_another_studio_owns",
+        "tests/test_tileset_import_ownership.py::test_a_nested_project_another_studio_holds_refuses_the_whole_import",
+        "tests/test_tileset_import_ownership.py::test_another_projects_map_refuses_it_whether_or_not_that_project_is_open"
+      ]
+    },
+    {
+      "mutation": "the tileset files written before the check",
+      "file": "engine/studio_project.py",
+      "caught": true,
+      "summary": [
+        "3 failed, 11 passed in 20.85s"
+      ],
+      "failed": [
+        "tests/test_studio_tileset_ownership_gpu.py::test_outer_studios_import_never_writes_a_map_file_another_studio_owns",
+        "tests/test_tileset_import_ownership.py::test_a_nested_project_another_studio_holds_refuses_the_whole_import",
+        "tests/test_tileset_import_ownership.py::test_another_projects_map_refuses_it_whether_or_not_that_project_is_open"
+      ]
+    }
+  ]
+}

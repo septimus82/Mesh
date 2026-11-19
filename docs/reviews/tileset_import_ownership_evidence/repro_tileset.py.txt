@@ -1,0 +1,84 @@
+"""#462 tileset import across project ownership: what Studio's import changes, before and after.
+
+    py -3.13 repro_tileset.py REPO WORKDIR OUT_JSON
+
+Disposable projects under WORKDIR (removed first if this script made it before: a marker file). The outer project's
+world lists the start room of packs/region2, a scaffolded Mesh project of its own, held by a windowless Mesh Studio
+process (tests/studio_owner_process.py: the OS lock). This process holds the outer project as Studio does
+(``acquire(root, STUDIO)``) and calls what Studio's Import button calls: ``Project.import_tileset`` with Studio's hold
+(``owner=`` once that exists; before, Studio passed nothing). Records every file created or changed."""
+
+from __future__ import annotations
+
+import hashlib
+import inspect
+import json
+import shutil
+import sys
+from pathlib import Path
+
+REPO, WORK, OUT = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve(), Path(sys.argv[3])
+sys.path.insert(0, str(REPO))
+
+from engine.editor import project_ownership  # noqa: E402
+from engine.project_scaffold import create_project  # noqa: E402
+from engine.studio_project import Project  # noqa: E402
+from tests.test_studio_project_ownership import StudioProcess  # noqa: E402
+
+MARK = ".repro_tileset_workdir"
+
+
+def files(root: Path) -> dict[str, str]:
+    return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(root.rglob("*")) if p.is_file() and ".mesh" not in p.relative_to(root).parts}
+
+
+def main() -> None:
+    if WORK.exists():
+        assert (WORK / MARK).is_file(), f"{WORK} isn't this script's"
+        shutil.rmtree(WORK)
+    WORK.mkdir(parents=True)
+    (WORK / MARK).write_text("", encoding="utf-8")
+    outer, image = WORK / "game", WORK / "rocks.png"
+    create_project(outer, "Game", template_id="blank")
+    create_project(outer / "packs/region2", "Region 2", template_id="blank")
+    world_path = outer / json.loads((outer / "config.json").read_text(encoding="utf-8"))["world_file"]
+    world = json.loads(world_path.read_text(encoding="utf-8"))
+    world["scenes"]["cellar"] = {"label": "Cellar", "path": "packs/region2/packs/core_regions/scenes/start.json"}
+    world_path.write_text(json.dumps(world, indent=2), encoding="utf-8")
+    from PIL import Image
+
+    Image.new("RGBA", (64, 32), (90, 90, 90, 255)).save(image)
+    child = StudioProcess(outer / "packs/region2", "nobridge", log=WORK / "child.log", env={"MESH_TEST_OWNER_WAIT": "0.3"})
+    assert child.start["ready"], child.start
+    held = project_ownership.acquire(outer, project_ownership.STUDIO, wait=2.0)
+    try:
+        project = Project(outer, json.loads((outer / "config.json").read_text(encoding="utf-8"))["world_file"])
+        before = files(outer)
+        nested_map = outer / "packs/region2/packs/core_regions/maps/start.json"
+        map_before = json.loads(nested_map.read_text(encoding="utf-8")).get("tilesets")
+        kwargs = {"owner": held} if "owner" in inspect.signature(project.import_tileset).parameters else {}
+        try:
+            result: object = project.import_tileset(str(image), 32, "Rocks", **kwargs)
+        except Exception as exc:  # noqa: BLE001  # REASON: the refusal is the outcome recorded
+            result = f"{type(exc).__name__}: {exc}"
+        after = files(outer)
+        report = {
+            "owner_passed": bool(kwargs), "result": result,
+            "created": sorted(set(after) - set(before)),
+            "changed": sorted(k for k in before if k in after and before[k] != after[k]),
+            "nested_map_tilesets_before": map_before,
+            "nested_map_tilesets_after": json.loads(nested_map.read_text(encoding="utf-8")).get("tilesets"),
+            "outer_lock_holder_kind": (project_ownership.owned(outer) or {}).get("kind"),
+            "nested_lock_holder_is_child": (project_ownership.owned(outer / "packs/region2") or {}).get("pid")
+            == child.start["pid"],
+        }
+    finally:
+        held.release()
+        child.close()
+    OUT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(report, indent=2))
+
+
+if __name__ == "__main__":
+    main()

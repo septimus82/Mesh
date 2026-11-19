@@ -23,6 +23,8 @@ JSON line on stdout for each:
     room PATH      go to the room whose file is PATH (Studio's room switch, ``real``)
     ctrl_s         press Ctrl+S in Studio's window (``real`` only: Studio's own save, as the person saves):
                    {"message": what Studio says, "ok": bool, "unsaved": bool, "rooms_unsaved": [keys]}
+    import_tileset JSON  import a tileset as the person does (``real`` only): the form filled with
+                   {"path", "tile", "name"}, then Studio's Import button's action; answers as ``ctrl_s``
     rename ID NAME the person renames object ID to NAME (unsaved)
     undo / redo    as Studio's Undo and Redo: {"done": bool}
     reject         reject the first proposal waiting
@@ -93,6 +95,9 @@ class _Windowless:
     def ctrl_s(self) -> dict[str, Any]:
         return {"error": "ctrl_s needs Mesh Studio itself (real)"}
 
+    def import_tileset(self, form: dict[str, str]) -> dict[str, Any]:
+        return {"error": "import_tileset needs Mesh Studio itself (real)"}
+
     def close(self) -> None:
         self.host.stop()
         if self.held is not None:
@@ -122,6 +127,16 @@ class _Real:
         self.driver.key(k.S, k.MOD_CTRL)  # (the window's own key event: Studio's on_key_press, then Studio.save)
         studio = self.driver.studio
         return {"message": studio.message, "ok": bool(studio.message_ok)}
+
+    def import_tileset(self, form: dict[str, str]) -> dict[str, Any]:
+        studio = self.driver.studio
+        studio.open_import()  # (the Import tileset panel, as the menu opens it)
+        studio._set_import_path(form["path"])
+        studio._set_import_tile(form["tile"])
+        studio.import_form["name"] = form["name"]
+        studio.import_tileset()  # (the panel's Import button)
+        self.driver.advance()
+        return {"message": studio.message, "ok": bool(studio.message_ok), "panel": studio.panel}
 
     def close(self) -> None:
         self.driver.close()  # (the window closes: Studio's session stops and the project is let go)
@@ -184,6 +199,8 @@ def main() -> int:
             key = next(k for k, _label, path in project.rooms() if path.replace("\\", "/") == argument)
             session.switch(key)
             _say(room=project.current)
+        elif command == "import_tileset":
+            _say(**session.import_tileset(json.loads(argument)), unsaved=bool(project.is_dirty))
         elif command == "ctrl_s":
             _say(**session.ctrl_s(), unsaved=bool(project.is_dirty), rooms_unsaved=sorted(project.dirty))
         elif command == "close":

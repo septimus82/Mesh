@@ -961,7 +961,8 @@ class Studio(InspectorMixin, SoundMixin):
         self._flush_fields()
         form = self.import_form
         try:
-            result = self.project.import_tileset(form["path"], int(form["tile"] or 0), form["name"])
+            result = self.project.import_tileset(form["path"], int(form["tile"] or 0), form["name"],
+                                                 owner=self.ownership)  # (only files of the project Studio holds)
         except ValueError as err:  # OpError, or a tile size that isn't a number
             self._say(str(err) if isinstance(err, ops.OpError) else "The tile size must be a whole number.", ok=False)
             return

@@ -1,0 +1,20 @@
+{
+  "owner_passed": true,
+  "result": "OpError: Not imported: packs/region2/packs/core_regions/maps/start.json is in another Mesh project than the one held (<tmp>), so nothing was written: that project has its own owner.",
+  "created": [],
+  "changed": [],
+  "nested_map_tilesets_before": [
+    {
+      "firstgid": 1,
+      "source": "../../../assets/tilesets/starter.json"
+    }
+  ],
+  "nested_map_tilesets_after": [
+    {
+      "firstgid": 1,
+      "source": "../../../assets/tilesets/starter.json"
+    }
+  ],
+  "outer_lock_holder_kind": "mesh_studio",
+  "nested_lock_holder_is_child": true
+}
