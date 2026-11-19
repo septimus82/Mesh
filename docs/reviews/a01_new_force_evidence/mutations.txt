@@ -1,0 +1,10 @@
+M1 name check off -> rc 1 2 failed, 10 passed, 8 deselected in 32.02s
+M2 name+parent checks off -> rc 1 12 failed, 8 deselected in 40.76s
+M3 config.json check off -> rc 1 2 failed, 18 deselected in 9.47s
+M4 link check off -> rc 0 2 passed, 18 deselected in 7.41s
+M5 target resolved (follows link) + link check off -> rc 0 2 passed, 18 deselected in 7.46s
+restored byte-identical
+M5 target resolved + link + parent checks off -> rc 1 2 failed, 18 deselected in 9.53s
+restored byte-identical
+(first three lines above from run 1 use fixtures where victim had config.json; M4 alone, link check off, is NOT caught on Python 3.13
+because shutil.rmtree itself refuses a junction there; the resolve()/parent layers are what M5 removes. Python 3.11 not installed locally.)
