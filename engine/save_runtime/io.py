@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +18,7 @@ from engine.save_runtime.restore_policy import (
     RestorePolicy,
 )
 from engine.save_runtime.save_diagnostics import SaveDiagnosticsAggregator
-from engine.save_runtime.schema import SaveValidationError, migrate_save, validate_save
+from engine.save_runtime.schema import SAVE_SCHEMA_VERSION, SaveValidationError, migrate_save, validate_save
 from engine.swallowed_exceptions import _log_swallow
 
 _LAST_LOAD_ATTEMPT: dict[str, Any] = {
@@ -144,8 +147,74 @@ def _record_sidecar_write_failure(
     )
 
 
-def write_json_pretty_atomic(path: Path, payload: Any) -> None:
+class V2BackupError(RuntimeError):
+    """The v2 save could not be backed up and verified: the slot must not be overwritten."""
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _slot_schema_version(raw: bytes) -> int:
+    """The schema version a slot file declares (as ``migrate_save`` reads it); 0 when it can't be read at all."""
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return 0
+    if not isinstance(data, dict):
+        return 0
+    value = data.get("save_schema_version")
+    if value is None:
+        value = data.get("save_format_version", 0)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _write_backup_bytes(target: Path, data: bytes) -> None:
+    """Create ``target`` (never replacing a file) holding ``data``, durably."""
+    with open(target, "xb") as handle:
+        handle.write(data)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def ensure_v2_backup(path: Path) -> Path | None:
+    """Before a v3 save overwrites ``path``: when it still holds a pre-v3 save, copy it to ``<slot>.v2.bak`` and verify
+    the copy (SHA-256 of a fresh read). Returns the backup (None: nothing to back up). Raises ``V2BackupError`` when the
+    copy can't be made or doesn't verify: the caller must then leave the slot untouched.
+
+    An existing backup is never replaced: one with other bytes makes the new one ``<slot>.v2.<sha8>.bak``. A backup
+    already holding exactly these bytes is reused. The game never reads a backup; it is the recovery record."""
+    if not path.exists():
+        return None
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        raise V2BackupError(f"can't read '{path}' to back it up: {exc}") from exc
+    if _slot_schema_version(raw) >= SAVE_SCHEMA_VERSION:
+        return None
+    digest = hashlib.sha256(raw).hexdigest()
+    try:
+        for backup in (Path(f"{path.as_posix()}.v2.bak"), Path(f"{path.as_posix()}.v2.{digest[:8]}.bak")):
+            if os.path.lexists(backup):
+                if _sha256_file(backup) == digest:
+                    return backup  # a verified copy of these very bytes is already there
+                continue
+            _write_backup_bytes(backup, raw)
+            if _sha256_file(backup) != digest:
+                backup.unlink()  # (the file this call just created)
+                raise V2BackupError(f"the backup '{backup}' doesn't match '{path}'")
+            return backup
+    except OSError as exc:
+        raise V2BackupError(f"can't back up '{path}': {exc}") from exc
+    raise V2BackupError(f"every backup name for '{path}' is taken by a file with other bytes")
+
+
+def write_json_pretty_atomic(path: Path, payload: Any, extra_diagnostics: Iterable[Diagnostic] = ()) -> None:
     aggregator = SaveDiagnosticsAggregator()
+    aggregator.add(extra_diagnostics)
     try:
         normalized_payload = payload
         if isinstance(payload, dict):

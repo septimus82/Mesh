@@ -368,9 +368,12 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     pending = getattr(controller, "_pending_saved_entities", None)
     if pending is not None:  # a loaded save's object states belong to this room, now that it exists
         controller._pending_saved_entities = None
-        from engine.save_runtime.entity_state import apply_entities  # noqa: PLC0415
+        from engine.save_runtime import entity_state  # noqa: PLC0415
 
-        apply_entities(controller, pending)
+        if isinstance(pending, entity_state.PendingSavedEntities):  # (a save's: with the identity context it carries)
+            entity_state.apply_pending_saved_entities(controller, pending)
+        else:
+            entity_state.apply_entities(controller, pending)
     controller._scene_index = build_scene_index_from_sprites(controller.all_sprites)
     controller.entities.invalidate("scene_load")
 

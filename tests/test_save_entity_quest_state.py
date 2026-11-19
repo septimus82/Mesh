@@ -638,36 +638,36 @@ class TestQuestMigration:
 class TestSchemaMigration:
     """Tests for save schema migration."""
 
-    def test_schema_version_is_2(self) -> None:
-        """Current schema version is 2."""
-        assert SAVE_SCHEMA_VERSION == 2
+    def test_schema_version_is_3(self) -> None:
+        """Current schema version is 3 (B-01: entity records keyed by identity)."""
+        assert SAVE_SCHEMA_VERSION == 3
 
-    def test_migrate_v0_to_v2(self) -> None:
-        """v0 save is migrated to v2."""
+    def test_migrate_v0_to_v3(self) -> None:
+        """v0 save is migrated to the current version."""
         data = {"flags": ["flag_a", "flag_b"]}
         migrated = migrate_save(data)
 
-        assert migrated["save_schema_version"] == 2
+        assert migrated["save_schema_version"] == 3
         assert migrated["flags"] == {"flag_a": True, "flag_b": True}
         assert "saved_entities" in migrated
         assert "saved_quests" in migrated
 
-    def test_migrate_v1_to_v2(self) -> None:
-        """v1 save is migrated to v2."""
+    def test_migrate_v1_to_v3(self) -> None:
+        """v1 save is migrated to the current version."""
         data = {
             "save_schema_version": 1,
             "flags": {"test": True},
         }
         migrated = migrate_save(data)
 
-        assert migrated["save_schema_version"] == 2
+        assert migrated["save_schema_version"] == 3
         assert migrated["saved_entities"]["schema_version"] == 1
         assert migrated["saved_entities"]["entities"] == []
         assert migrated["saved_quests"]["schema_version"] == 1
         assert migrated["saved_quests"]["quests"] == {}
 
-    def test_v2_is_not_modified(self) -> None:
-        """v2 save is not modified."""
+    def test_v2_records_are_only_tagged_legacy(self) -> None:
+        """A v2 save is migrated in memory: its records are tagged as name-keyed legacy, nothing else changes."""
         data = {
             "save_schema_version": 2,
             "flags": {"test": True},
@@ -676,8 +676,8 @@ class TestSchemaMigration:
         }
         migrated = migrate_save(dict(data))
 
-        assert migrated["save_schema_version"] == 2
-        assert migrated["saved_entities"]["entities"] == [{"entity_id": "e1"}]
+        assert migrated["save_schema_version"] == 3
+        assert migrated["saved_entities"]["entities"] == [{"entity_id": "e1", "keying": "name", "legacy": True}]
 
 
 class TestSchemaValidation:
@@ -955,7 +955,7 @@ class TestFullSaveRestoreCycle:
 
         migrated = migrate_save(v1_payload)
 
-        assert migrated["save_schema_version"] == 2
+        assert migrated["save_schema_version"] == 3
         assert migrated["flags"]["boss_defeated"] is True
         assert migrated["game_state"]["counters"]["gold"] == 1000
         assert migrated["saved_entities"]["entities"] == []

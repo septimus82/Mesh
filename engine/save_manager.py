@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from .diagnostics import Diagnostic
 from .diagnostics import add_exception as diag_add_exception
 from .diagnostics import error as diag_error
 from .diagnostics import info as diag_info
@@ -14,6 +15,7 @@ from .diagnostics import warn as diag_warn
 from .save_runtime import io as save_io
 from .save_runtime import payloads as save_payloads
 from .save_runtime import storage as save_storage
+from .save_runtime.entity_state import IDENTITY_DIAGNOSTIC_CODES, PendingSavedEntities, saved_entities_context
 from .save_runtime.restore_policy import SLOT_POLICY
 from .save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from .save_runtime.ux_codes import (
@@ -26,6 +28,7 @@ from .save_runtime.ux_codes import (
     SAVE_IO_PERMISSION,
     SAVE_SERIALIZE_FAILED,
     SAVE_SLOT_INVALID,
+    SAVE_V2_BACKUP_FAILED,
     SAVE_WRITE_FAILED,
 )
 
@@ -180,17 +183,36 @@ class SaveManager:
         """Save the current game state to a slot."""
         path = self.get_save_path(slot_name)
         try:
+            serialize_diags: list[Diagnostic] = []
             snapshot, content_hash = save_payloads.build_slot_payload(
                 self.window,
                 slot_name,
                 compact=compact,
                 timestamp=self._get_timestamp(),
+                diagnostics=serialize_diags,
             )
 
             self._ensure_save_dir()  # (it may have been removed while the game ran)
+            # A v2 save is never overwritten until a verified copy of it exists (B-01): no copy, no save.
+            try:
+                backup = save_io.ensure_v2_backup(path)
+            except save_io.V2BackupError as exc:
+                diag_error(
+                    SAVE_V2_BACKUP_FAILED,
+                    f"Slot '{slot_name}' was not saved: its older save could not be backed up first ({exc}).",
+                    _DIAG_SOURCE,
+                    location=path.as_posix(),
+                    context=_diag_context(operation="save", save_path=path, slot_name=slot_name, pointer="$"),
+                    hint="The old save is unchanged. Free disk space or save to another slot.",
+                )
+                sys.stderr.write(f"[Mesh][Save] ERROR: {SAVE_V2_BACKUP_FAILED}: {exc}\n")
+                self._toast("The game wasn't saved over the old save: its backup failed. Try another slot.")
+                return False
+            if backup is not None:
+                sys.stderr.write(f"[Mesh][Save] Older save backed up to '{backup}'\n")
             # Atomic write so partial saves never corrupt the existing slot file.
             # Keep the same JSON formatting (indent=2, sort_keys=True) with standardized trailing newline.
-            save_io.write_json_pretty_atomic(path, snapshot)
+            save_io.write_json_pretty_atomic(path, snapshot, serialize_diags)
 
             # Said only once the file is written: a player who saves twice should hear it twice.
             self._toast("Game saved")
@@ -216,6 +238,17 @@ class SaveManager:
             sys.stderr.write(f"[Mesh][Save] ERROR: Failed to save game: {exc}\n")
             self._toast(f"Couldn't save the game: {hint or exc}")
             return False
+
+    def _entities_restored(self, path: Path, aggregator: SaveDiagnosticsAggregator, result: Any, diags: list[Diagnostic]) -> None:
+        """The saved room now exists and its objects' states were restored: say which could not be matched (the load
+        attempt's diagnostics, the log, and once to the player; the records stay in the save as unresolved)."""
+        if diags or any(d.code in IDENTITY_DIAGNOSTIC_CODES for d in aggregator.finalize_sorted()):
+            fresh = SaveDiagnosticsAggregator()  # (the first apply, to the room being left, said it about the wrong room)
+            fresh.add(d for d in aggregator.finalize_sorted() if d.code not in IDENTITY_DIAGNOSTIC_CODES)
+            fresh.add(diags)
+            save_io.record_load_attempt(kind="slot_apply", path=path, ok=True, aggregator=fresh)
+        if result.unresolved:
+            self._toast(f"Loaded. {len(result.unresolved)} object states from this save could not be matched; see the log")
 
     def _toast(self, message: str) -> None:
         hud = getattr(self.window, "player_hud", None)
@@ -366,7 +399,16 @@ class SaveManager:
             saved_entities = normalized.get("saved_entities")
             scene_controller = getattr(self.window, "scene_controller", None)
             if isinstance(saved_entities, dict) and isinstance(saved_entities.get("entities"), list) and scene_controller is not None:
-                scene_controller._pending_saved_entities = saved_entities["entities"]
+                context = saved_entities_context(normalized)
+                scene_controller._pending_saved_entities = PendingSavedEntities(
+                    records=saved_entities["entities"],
+                    scene_path=context["scene_path"],
+                    snapshot=context["snapshot"],
+                    carried=context["carried"],
+                    first_seen=context["first_seen"],
+                    source=path.as_posix(),
+                    on_done=lambda result, diags: self._entities_restored(path, apply_diags, result, diags),
+                )
 
             # 2. Determine which scene to load
             # If the save file IS a valid scene (which build_scene_snapshot produces),

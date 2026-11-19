@@ -9,7 +9,11 @@ from engine.migrations import migrate_payload
 from engine.paths import resolve_path
 from engine.persistence_io import SAVE_FORMAT_VERSION
 from engine.save_runtime import constants
-from engine.save_runtime.entity_state import apply_entities, serialize_entities
+from engine.save_runtime.entity_state import (
+    apply_entities_ex,
+    saved_entities_context,
+    serialize_saved_entities,
+)
 from engine.save_runtime.errors import single_line_error
 from engine.save_runtime.normalize import normalize_save_payload
 from engine.save_runtime.quest_state import apply_quests, serialize_quests
@@ -380,13 +384,25 @@ def apply_loaded_payload(
         entities_list = saved_entities.get("entities", [])
         scene_controller = getattr(window, "scene_controller", None)
         if scene_controller is not None and isinstance(entities_list, list):
-            applied, missing = apply_entities(
+            # The records of a v3 save name their room: applied here, to the room being left, only if it is that room
+            # (the saved room's own apply happens when it loads). Loading never fails on an unprovable identity: those
+            # records are reported and carried as unresolved instead (the diagnostics are warnings, not errors).
+            context = saved_entities_context(payload)
+            current_room = getattr(scene_controller, "room_path", None) or getattr(scene_controller, "current_scene_path", None)
+            result = apply_entities_ex(
                 scene_controller,
                 entities_list,
                 strict=strict,
                 diagnostics=diagnostics_local,
                 source=source_label,
+                scene_path=context["scene_path"],
+                current_room=str(current_room) if context["guard_room"] and current_room else None,
+                snapshot=context["snapshot"],
+                first_seen=context["first_seen"],
+                strict_binding=False,
+                log=False,  # (the saved room's own apply, once it exists, is the one that speaks)
             )
+            applied, missing = result.applied, result.missing
             if missing > 0:
                 _append_diagnostic(
                     diagnostics_local,
@@ -496,6 +512,7 @@ def build_slot_payload(
     *,
     compact: bool,
     timestamp: str,
+    diagnostics: list[Diagnostic] | None = None,
 ) -> tuple[dict[str, Any], str]:
     from engine.scene_runtime.room_memory import remember_removed
 
@@ -505,12 +522,12 @@ def build_slot_payload(
     if controller is not None:
         snapshot["game_state"] = controller.export_state()
 
-    # Add saved entity state (v2)
+    # Add saved entity state (v3: records keyed by authored id or, id-less, by name; with the unresolved ones)
     scene_controller = window.scene_controller
-    snapshot["saved_entities"] = {
-        "schema_version": 1,
-        "entities": serialize_entities(scene_controller),
-    }
+    saved_room = getattr(scene_controller, "room_path", None)
+    if not isinstance(saved_room, str) or not saved_room:
+        saved_room = scene_controller.current_scene_path
+    snapshot["saved_entities"] = serialize_saved_entities(scene_controller, room=saved_room, diagnostics=diagnostics)
 
     # Add saved quest state (v2)
     if controller is not None:
