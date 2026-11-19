@@ -1,7 +1,10 @@
 # B-01 design: stable entity identity in saves (#462 reliability)
 
-Status: DESIGN ONLY (no production code or tests changed), revision 2 (owner feedback: id-less entities, duplicate ids,
-backward-compatible recovery). Base `ad91e28c665ae6adc22be4ce0b2c4e7d26e1817b`.
+Status: DESIGN ONLY (no production code or tests changed), revision 3. Revision 2: owner feedback on id-less entities,
+duplicate ids, backward-compatible recovery. Revision 3 (master, from the owner's decisions of 2026-11-19): legacy
+position binding only when provably unique (Q2), manual recovery only (Q7), the `.v2.bak` must be created **and
+verified** or the v2 slot is not overwritten (Q8), B-01b lands first as its own PR (Q9), and unresolved records survive
+every later save (§3 "Unresolved records"). Base `ad91e28c665ae6adc22be4ce0b2c4e7d26e1817b`.
 Agent: mesh-gameplay-reliability. This is a **save-format migration**: owner approval needed before implementation.
 Evidence: `docs/reviews/b01_entity_save_identity_evidence/` (`repro_b01*.py.txt` + `*_output.txt`; the base-written v2 save
 `v2_save_idless_dupname_dupid.json` is a real-save candidate fixture).
@@ -120,9 +123,9 @@ On load, id `I` has `r` records and `s` live sprites. If `r == s`, record `occur
 **and** its (x, y) must equal that sprite's current (x, y) within 0.01 (the scene snapshot restores positions first),
 else that record is refused. If `r != s` (as in the clone repro, where the snapshot already merged the pair into one
 sprite), no record for `I` is applied: ERROR-level `save.restore.entity_id_ambiguous` (WARN non-strict; fails in
-strict), with `{id, records, sprites}`. The refused records stay in the save file and count under `unbound`; they
-are reported, never discarded. (The snapshot-layer merge of same-id sprites, `persistence.py:60-80`, is a related
-defect outside this key change: listed as follow-up B-01b, not fixed here.)
+strict), with `{id, records, sprites}`. The refused records become unresolved (below): reported and carried in every
+later save, never discarded. (The snapshot-layer merge of same-id sprites, `persistence.py:60-80`, is fixed first and
+separately by B-01b (owner Q9): with it, both sprites survive the snapshot, so the counts can match.)
 
 **id-less records on load (`keying: "name"`).** Applied by name against **id-less sprites only** (so an id-less
 record can never land on an authored-id sprite, and vice versa):
@@ -140,7 +143,8 @@ Written vs applied is visible in the counters: `applied`, `missing` (as today), 
 2. Duplicate names, record count and sprite count may differ: bind a record to a sprite only if its (x, y) equals
    exactly one live sprite's (x, y) named `N` and exactly one record claims that (x, y). For sprites with an id,
    the save's own snapshot (`entities`: id + x, y of the same instant) is the cross-check: a record bound to an id-ful
-   sprite must also match that id's snapshot position. Unbound records are reported, not applied.
+   sprite must also match that id's snapshot position. Binding happens only when this mapping is provably unique (Q2);
+   anything else is not applied, reported, and preserved as unresolved (below), never guessed.
 3. No sprite named `N`: `entity_missing`.
 
 **Counts and diagnostics.** Codes: `save.restore.entity_id_ambiguous`, `save.restore.entity_legacy_ambiguous`
@@ -151,27 +155,46 @@ save-runtime diagnostics aggregator/sidecar (`io.py:74-105`), and **new**: one p
 `_toast` (`save_manager.py:220`), "Loaded. N object states from this save could not be matched; see the log",
 shown only when `unbound > 0`.
 
+### Unresolved records (owner requirement: never silently discard unresolved gameplay state)
+
+Every record a load does not apply (a v2 legacy record that doesn't bind, a v3 `entity_id_ambiguous` or
+`entity_nameclash` record, a refused occurrence) becomes **unresolved**: kept verbatim with its keying, plus
+`{reason, scene_path, first_seen}` (the save it first came from), and never treated as live state.
+- **Kept across saves.** Unresolved records are held with the restored scene state and written back on every later
+  save into `saved_entities.unresolved` (next to `entities`), deduplicated by `(scene_path, SHA-256 of the record)`,
+  so repeated saves neither lose nor multiply them. A save writes back every unresolved record it holds, whichever
+  room is current.
+- **Retried on every load** with the same binding rules, but only against sprites that received no record in that
+  load (an unresolved record never overwrites state that a resolved record just applied). When a scene fix makes one
+  bind uniquely (an id corrected, a duplicate removed), it is applied and leaves the list.
+- **Removed only by binding or by manual recovery** (a developer editing the save, §d). No expiry, no automatic
+  discard. Each load reports the count (`save.restore.entities_unresolved`, log, sidecar, and the player toast when
+  > 0).
+
 ### Backward-compatible recovery
 
 (a) **Loading a v2 save never rewrites it.** The load path (`save_manager.py:238-409`) reads the slot, migrates in
 memory, and the only writes it can make are failure diagnostics sidecars (`io.py:461-496`); the slot file is
 byte-identical after a load. Test T20 hashes the file before and after.
 
-(b) **First v3 save over a v2 slot.** `save_game` (`save_manager.py:179-218`), before the atomic write, copies an
-existing slot file whose `save_schema_version < 3` to `<slot>.v2.bak` **only if that `.bak` does not yet exist**
-(first overwrite wins; later saves never replace it), then writes v3. Copy failure: WARN `save.write.v2_backup_failed`
-and the save proceeds (progress outranks the backup); the toast says so. Never for an installation-bundled legacy
-save (`_is_legacy`: nothing is written next to it). The `.bak` is not read by the game; it is the recovery record.
+(b) **First v3 save over a v2 slot (Q8).** `save_game` (`save_manager.py:179-218`), before writing v3 over a slot file
+whose `save_schema_version < 3`: copy it to `<slot>.v2.bak`, then **verify** the copy (re-read it and compare its
+SHA-256 with the original's). Only a verified backup lets the v3 write go ahead. If creating or verifying the backup
+fails, the save is **refused**: the v2 slot is left byte-identical, the error `save.write.v2_backup_failed` is logged
+and the toast says the game wasn't saved over the old save (saving to another slot still works). Existing backups are
+never replaced: if `<slot>.v2.bak` already exists with different bytes, the new backup is
+`<slot>.v2.<first 8 hex of its SHA-256>.bak` (verified the same way). Never for an installation-bundled legacy save
+(`_is_legacy`: nothing is written next to it). The game never reads a `.bak`; it is the recovery record.
 
-(c) **Unmatched legacy records are surfaced** by `entity_legacy_ambiguous` per record (name, x, y, behaviour names),
-the `entities_unbound` roll-up with counts, and the toast. They are not carried into the v3 file (to keep v3
-clean); they live in the `.v2.bak` and in the log/sidecar.
+(c) **Unmatched legacy records are surfaced and preserved**: `entity_legacy_ambiguous` per record (name, x, y,
+behaviour names), the roll-up counts and the toast; the records themselves become unresolved and are carried in every
+later v3 save (§ "Unresolved records"), and the original file is the verified `.v2.bak`.
 
-(d) **Recovering state that could not be applied.** Developer: open `<slot>.v2.bak`, find the record by the name,
-x, y from the diagnostic (`saved_entities.entities[]`), then either give the entity an id in the scene and re-save
-from play, or copy the behaviour state into the entity's `behaviour_config`. Player: copy `<slot>.v2.bak` over the
-slot (only a v2-capable build reads it, see (e)). A tool (`mesh` CLI "list unbound records of a save") is **not**
-proposed here: open question 7.
+(d) **Recovering state that could not be applied: manual only (Q7; no new tool).** Developer: find the record in
+`saved_entities.unresolved` (or in `<slot>.v2.bak`, `saved_entities.entities[]`) by the name, x, y from the diagnostic,
+then give the entity an id or a distinct position in the scene so the next load binds it, or copy the behaviour
+state into the entity's `behaviour_config`. Player: copy `<slot>.v2.bak` over the slot (only a v2-capable build
+reads it, see (e)).
 
 (e) **Downgrade.** A v3 save in a v2-only build is refused by `schema.py:145-150` with the existing "newer game
 version" message, nothing partially loaded, and the `.v2.bak` is a loadable v2 file for that build (it lacks only
@@ -212,7 +235,7 @@ Default lane, production `SaveManager`, hidden `GameWindow` as in `tests/test_ho
 | T20 | `v2_load_never_rewrites_slot` | v2 file, load, hash before/after | byte-identical, no sidecar on success |
 | T21 | `first_v3_save_makes_v2_bak` | load v2 slot, save | `<slot>.v2.bak` equals the original bytes; v3 written |
 | T22 | `second_save_keeps_first_bak` | save again | `.bak` unchanged |
-| T23 | `bak_copy_failure_still_saves` | make `.bak` unwritable | save succeeds, WARN `v2_backup_failed` |
+| T23 | `bak_copy_failure_refuses_overwrite` | make `.bak` unwritable | save refused, v2 slot byte-identical, `v2_backup_failed`, toast |
 | T24 | `legacy_installation_save_not_touched` | `_is_legacy` path | no `.bak`, no write |
 | T25 | `unbound_toast_only_when_unbound` | T7 vs T8 | toast only for T7 |
 | T26 | `future_version_refused` | v4 payload | `schema.py` error, state untouched |
@@ -220,6 +243,12 @@ Default lane, production `SaveManager`, hidden `GameWindow` as in `tests/test_ho
 | T28 | `serialization_order_total` | duplicate names/ids, shuffled sprites | identical list |
 | T29 | `digest_stable_unique_names` | unique-named scene | digest equals recorded value; episode goldens unchanged |
 | T30 | `v3_roundtrip_stable` | save, load, save | `saved_entities` equal |
+| T31 | `bak_verify_failure_refuses_overwrite` | the copy's bytes differ from the slot (fault-injected) | save refused, v2 slot byte-identical |
+| T32 | `existing_different_bak_kept` | a `.v2.bak` with other bytes already there | it is unchanged; new verified `<slot>.v2.<sha8>.bak` |
+| T33 | `unresolved_survive_repeated_saves` | T7's unbound records; save, load, save, load | records in `saved_entities.unresolved` each time, byte-equal, counted, never duplicated |
+| T34 | `unresolved_bind_after_scene_fix` | T33, then give the entity a distinct position/id in the scene | the record binds on the next load and leaves `unresolved` |
+| T35 | `unresolved_never_overwrite_resolved_state` | an unresolved record and a resolved record for one sprite | the resolved state stays; the unresolved record stays unresolved |
+| T36 | `unresolved_across_rooms` | unresolved in room A, save while in room B | room A's unresolved records still written |
 
 Adjacent suites: `test_save_entity_quest_state`, `test_save_serialization_strictness`, `test_save_format_versioning`,
 `test_save_load_roundtrip`, `test_room_memory`, `test_replay_determinism`, `test_debug_bundle_contract`,
@@ -236,10 +265,11 @@ Adjacent suites: `test_save_entity_quest_state`, `test_save_serialization_strict
 | Id-less runtime sprite state worse than base | Same name-keyed record as base; better for shared names (T9, T10) |
 | Entity renamed after save | Name irrelevant for id records |
 | Entity id renamed/removed after save | `entity_missing` by id; no cross-apply |
-| v2 save, ambiguous names | Unbound records reported, kept in `.v2.bak`; snapshot still places objects |
+| v2 save, ambiguous names | Not applied, reported, carried as unresolved in every later save, and in the verified `.v2.bak`; snapshot still places objects |
+| A later save silently drops state that couldn't be applied | Unresolved records are written back on every save, deduplicated, removed only by binding or manual recovery (T33-T36) |
 | Load rewrites or damages the v2 file | Load is read-only (T20) |
 | First v3 save overwrites the only copy of v2 progress | One-time `.v2.bak` (T21-23) |
-| `.bak` cannot be written | Save proceeds, WARN + toast |
+| `.bak` cannot be written or doesn't verify | The save is refused; the v2 slot stays byte-identical (T23, T31) |
 | Records applied to the wrong room (`payloads.py:378` pre-apply) | `scene_path` guard on v3 (T19); v2 unchanged (flagged) |
 | Old game opens a v3 save | Refused clearly (`schema.py:145`); `.v2.bak` is loadable there |
 | Ordering differs across machines | Total sort key; position-based matching |
@@ -261,8 +291,12 @@ Answered by this revision (the owner confirms by approving the design):
 5. Digest: **answered** (unchanged; episode goldens independent; only `episode.py` was traced).
 6. Wrong-room guard for v2 saves: **answered**: not backported, so v2 loading stays identical to today.
 
-Still need the owner:
-2. Position binding for v2 duplicates (proposed) versus refusing every ambiguous v2 record.
-7. Recovery tool: manual steps only (proposed), or a small CLI listing the unbound records of a save/`.bak`?
-8. The player toast on unbound records (new UI text) and the `.v2.bak` file next to the slot: acceptable, or log-only?
-9. Fix the snapshot-layer merge of same-id sprites (`persistence.py:60-80`) as B-01b, or leave it?
+Decided by the owner (2026-11-19):
+2. Legacy duplicate names: bind by position only when the mapping is provably unique; otherwise refuse and preserve.
+7. Recovery: manual first; no new CLI tool yet.
+8. Player warning and `.v2.bak`: approved, but failing to create and verify the backup refuses the overwrite of the v2
+   save (§3 (b)).
+9. B-01b: fixed as a separate PR **before** the v3 migration is implemented.
+10. (Added) Unmatched records survive repeated v3 saves; unresolved gameplay state is never silently discarded.
+
+Not yet decided: authorisation to implement the v3 migration itself (this design is documentation only).
