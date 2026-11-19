@@ -236,7 +236,8 @@ def test_a_save_whose_room_is_gone_loads_its_own_copy(tmp_path: Path) -> None:
 
 def test_two_objects_sharing_an_id_each_come_back_where_they_were_left(tmp_path: Path) -> None:
     """B-01b: two room objects with one authored id are saved as two entities with their own positions (before, the
-    first one's move was lost: it reopened at its authored place). Each twin's position and own authored field (tags) come back; behaviour state (saved_entities) is B-01."""
+    first one's move was lost: it reopened at its authored place). Each twin's position and
+    own authored field (tags) come back; behaviour state (saved_entities) is B-01."""
     import saved_world_fixtures as fx
 
     project = fx.build_project(tmp_path / "2d", "2d")
@@ -251,7 +252,8 @@ def test_two_objects_sharing_an_id_each_come_back_where_they_were_left(tmp_path:
     from hd2d_demo import HiddenGame
 
     def orcs(game: Any) -> list[tuple[int, int, Any]]:
-        return [(round(s.center_x), round(s.center_y), (s.mesh_entity_data or {}).get("tags")) for s in game.window.scene_controller.all_sprites
+        return [(round(s.center_x), round(s.center_y), (s.mesh_entity_data or {}).get("tags"))
+                for s in game.window.scene_controller.all_sprites
                 if (getattr(s, "mesh_entity_data", None) or {}).get("id") == "orc"]
 
     game = HiddenGame(project)
