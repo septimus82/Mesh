@@ -19,7 +19,7 @@ At the beginning of **every** session or automated cycle, refresh `redesign/visu
 | R5 MCP ownership | merged | [PR #522](https://github.com/septimus82/Mesh/pull/522) |
 | Studio Ctrl+S nested-project protection | merged | [PR #523](https://github.com/septimus82/Mesh/pull/523) |
 | Studio tileset import ownership | merged | [PR #524](https://github.com/septimus82/Mesh/pull/524) |
-| Stale-content AI plan undo | **draft PR / independent review needed** at `5fd408d612ef7166a622e68e2dcd74349d0936d5`; CI was in progress when checked | [PR #525](https://github.com/septimus82/Mesh/pull/525) |
+| Stale-content AI plan undo | draft PR at `5fd408d612ef7166a622e68e2dcd74349d0936d5`; CI 44517832117 and Extended 44517840518 passed at attempt 1; independent review **APPROVED** (non-blocking follow-ups F1/F2 tracked separately); merge awaits owner approval | [PR #525](https://github.com/septimus82/Mesh/pull/525) |
 | Creator-integrity tracking | open | [Issue #462](https://github.com/septimus82/Mesh/issues/462) |
 | Repository health | open | [Issue #422](https://github.com/septimus82/Mesh/issues/422) |
 | Release golden digests | open | [Issue #359](https://github.com/septimus82/Mesh/issues/359) |
@@ -246,9 +246,9 @@ Do not edit D:\Games\Mesh or delete branches without explicit authorization.
 
 ## 11. Suggested first actions
 
-1. **Master reviews PR #525**, currently a draft at `5fd408d6` in the 2026-11-19 snapshot. Confirm its CI/Extended status and challenge legacy, partial failure, and mixed-manifest cases. Don't reopen the same task on another worker.
+1. **PR #525 is reviewed**: independent review APPROVED at `5fd408d6` (legacy, partial-failure and mixed-manifest cases challenged), CI and Extended green at attempt 1. Its merge needs owner approval; follow-ups F1/F2 are tracked separately and not added to #525. Don't reopen the same task on another worker.
 2. **Lane A starts A-01** after checking #525's changed files (it edits plan execution, not scaffolding): harden `mesh new --force` on a separate worktree. No direct experiments on meaningful user data.
 3. **Lane B starts B-01** on a separate worktree: stable entity state persistence across save/reload; design legacy migration before editing saved-state schema.
-4. **Master keeps the queue, review decisions, merge SHAs and evidence in GitHub**, then updates this Markdown after approved integration milestones. Fable's temporary `/tmp/claude-0/.../scratchpad/` repro scripts must be copied into reproducible repo tests or reports if they still exist; do not rely on ephemeral folders.
+4. **Master keeps the queue, review decisions, merge SHAs and evidence in GitHub**, then updates this Markdown after approved integration milestones. For #521/#522 remediation B, #523, #524 and #525, the reproduction and fault-injection scripts are committed under `docs/reviews/*_evidence/` (`*.py.txt`; #523's reproduction is its permanent real-window test). Whether scripts from earlier sessions' temporary scratchpad folders still exist is not verified: reproduce from the repository, never from ephemeral folders.
 
 **Success criterion:** Mesh is not merely impressive on paper. The creator and gameplay acceptance sequences succeed repeatedly from a fresh installed build, without hidden data loss, while the master can account for every change from GitHub after any chat reset.
