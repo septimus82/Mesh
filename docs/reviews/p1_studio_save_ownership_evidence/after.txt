@@ -1,0 +1,10 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.3, pytest-8.4.2, pluggy-1.6.0 -- <tmp>
+rootdir: <repo>
+configfile: pytest.ini
+plugins: anyio-4.15.1
+collecting ... collected 1 item
+
+tests/test_studio_save_ownership_gpu.py::test_outer_studios_ctrl_s_never_overwrites_a_room_another_studio_owns PASSED [100%]
+
+============================= 1 passed in 14.16s ==============================

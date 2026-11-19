@@ -20,6 +20,9 @@ JSON line on stdout for each:
     state          {"names": [...], "unsaved": bool, "pending": [titles], "session_id": ...}
     accept         accept the first proposal waiting
     save           save, as Studio's Save
+    room PATH      go to the room whose file is PATH (Studio's room switch, ``real``)
+    ctrl_s         press Ctrl+S in Studio's window (``real`` only: Studio's own save, as the person saves):
+                   {"message": what Studio says, "ok": bool, "unsaved": bool, "rooms_unsaved": [keys]}
     rename ID NAME the person renames object ID to NAME (unsaved)
     undo / redo    as Studio's Undo and Redo: {"done": bool}
     reject         reject the first proposal waiting
@@ -84,6 +87,12 @@ class _Windowless:
     def pump(self) -> None:
         self.host.drain()
 
+    def switch(self, key: str) -> None:
+        self.project.current = key
+
+    def ctrl_s(self) -> dict[str, Any]:
+        return {"error": "ctrl_s needs Mesh Studio itself (real)"}
+
     def close(self) -> None:
         self.host.stop()
         if self.held is not None:
@@ -103,6 +112,16 @@ class _Real:
 
     def pump(self) -> None:
         self.driver.advance()  # (Studio's own update: it drains its AI host)
+
+    def switch(self, key: str) -> None:
+        self.driver.studio.switch_room(key)
+        self.driver.advance()
+
+    def ctrl_s(self) -> dict[str, Any]:
+        k = self.driver.arcade.key
+        self.driver.key(k.S, k.MOD_CTRL)  # (the window's own key event: Studio's on_key_press, then Studio.save)
+        studio = self.driver.studio
+        return {"message": studio.message, "ok": bool(studio.message_ok)}
 
     def close(self) -> None:
         self.driver.close()  # (the window closes: Studio's session stops and the project is let go)
@@ -161,6 +180,12 @@ def main() -> int:
                 _say(saved=project.save())
             except Exception as exc:  # noqa: BLE001  # REASON: a failed save is the answer the test asked for
                 _say(saved=None, error=f"{type(exc).__name__}: {exc}")
+        elif command == "room":  # room PATH: the person goes to that room
+            key = next(k for k, _label, path in project.rooms() if path.replace("\\", "/") == argument)
+            session.switch(key)
+            _say(room=project.current)
+        elif command == "ctrl_s":
+            _say(**session.ctrl_s(), unsaved=bool(project.is_dirty), rooms_unsaved=sorted(project.dirty))
         elif command == "close":
             session.close()
             _say(closed=True)
