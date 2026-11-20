@@ -61,6 +61,25 @@ def dispatch(
     parser: argparse.ArgumentParser | None = None,
     impl_module: ModuleType | None = None,
 ) -> int:
+    """Run the command; one that writes a project's files in place owns the project first (#462 A-04)."""
+    from ..write_guard import own_for_write
+
+    proceed, held = own_for_write(args)
+    if not proceed:
+        return 1
+    try:
+        return _dispatch(args, parser=parser, impl_module=impl_module)
+    finally:
+        if held is not None:
+            held.release()
+
+
+def _dispatch(
+    args: argparse.Namespace,
+    *,
+    parser: argparse.ArgumentParser | None = None,
+    impl_module: ModuleType | None = None,
+) -> int:
     impl_candidate = impl_module
     if impl_candidate is None:
         from .. import legacy_impl as impl_candidate  # pragma: no cover - compatibility path
