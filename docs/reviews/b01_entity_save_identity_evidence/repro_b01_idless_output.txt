@@ -1,0 +1,54 @@
+[Mesh][Save] Game saved to '<home>\AppData\Local\Temp\b01_<tmp>\saves\slot1.json'
+[Mesh][Save] Loading save from '<home>\AppData\Local\Temp\b01_<tmp>\saves\slot1.json'
+[Mesh][Scene] Loading scene '<home>\AppData\Local\Temp\b01_<tmp>\arena.json'
+[Mesh][Scene] [+] Spawned 'Hero' at (50.0, 50.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (100.0, 100.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (300.0, 300.0)
+[Mesh][Scene] Scene ready with 3 sprite(s)
+[Mesh][Scene] [+] Spawned 'proj_Hero' at (10.0, 10.0)
+[Mesh][Scene] [+] Spawned 'proj_Hero' at (20.0, 20.0)
+[Mesh][Scene] [+] Spawned 'spawned_7' at (30.0, 30.0)
+[Mesh][Scene] [+] Spawned 'Goblin_clone' at (150.0, 150.0)
+BEFORE SAVE (id, mesh_name, x, y, hp):
+   (None, 'proj_Hero', 10, 10, 2.0)
+   (None, 'proj_Hero', 20, 20, 6.0)
+   (None, 'spawned_7', 30, 30, 4.0)
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_a', 'Goblin_clone', 150, 150, 11.0)
+   ('gob_b', 'Goblin', 300, 300, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+saved_entities records (entity_id, x, y, hp):
+   ('Goblin', 100.0, 100.0, 20.0)
+   ('Goblin', 300.0, 300.0, 20.0)
+   ('Goblin_clone', 150.0, 150.0, 11.0)
+   ('Hero', 50.0, 50.0, 10.0)
+   ('proj_Hero', 10.0, 10.0, 2.0)
+   ('proj_Hero', 20.0, 20.0, 6.0)
+   ('spawned_7', 30.0, 30.0, 4.0)
+snapshot entities (id, name, x, y): [('hero', 'Hero', 50.0, 50.0), ('gob_a', 'Goblin', 150.0, 150.0), ('gob_b', 'Goblin', 300.0, 300.0), (None, 'proj_Hero', 10.0, 10.0), (None, 'proj_Hero', 20.0, 20.0), (None, 'spawned_7', 30.0, 30.0)]
+[Mesh][Scene] Loading scene '<home>\AppData\Local\Temp\b01_<tmp>\arena.json'
+[Mesh][Scene] [+] Spawned 'Hero' at (50.0, 50.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (100.0, 100.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (300.0, 300.0)
+[Mesh][Scene] Scene ready with 3 sprite(s)
+AFTER fresh room:
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_b', 'Goblin', 300, 300, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+[Mesh][Scene] Queued scene change to '<home>\AppData\Local\Temp\b01_<tmp>\saves\slot1.json'
+[Mesh][Scene] Loading pending scene '<home>\AppData\Local\Temp\b01_<tmp>\saves\slot1.json'
+[Mesh][Scene] Loading scene '<home>\AppData\Local\Temp\b01_<tmp>\saves\slot1.json'
+[Mesh][Scene] [+] Spawned 'Hero' at (50.0, 50.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (150.0, 150.0)
+[Mesh][Scene] [+] Spawned 'Goblin' at (300.0, 300.0)
+[Mesh][Scene] [+] Spawned 'proj_Hero' at (10.0, 10.0)
+[Mesh][Scene] [+] Spawned 'proj_Hero' at (20.0, 20.0)
+[Mesh][Scene] [+] Spawned 'spawned_7' at (30.0, 30.0)
+[Mesh][Scene] Scene ready with 6 sprite(s)
+AFTER LOAD of slot1:
+   (None, 'proj_Hero', 10, 10, 5.0)
+   (None, 'proj_Hero', 20, 20, 6.0)
+   (None, 'spawned_7', 30, 30, 4.0)
+   ('gob_a', 'Goblin', 150, 150, 20.0)
+   ('gob_b', 'Goblin', 300, 300, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)

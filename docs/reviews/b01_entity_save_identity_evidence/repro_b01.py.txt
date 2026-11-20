@@ -1,0 +1,99 @@
+"""B-01 reproduction: duplicate-named entities through the production SaveManager (hidden GameWindow).
+Run (from the repo root, scratch cwd): py -3.13 repro_b01.py  -- disposable game under a temp dir."""
+from __future__ import annotations
+import json, os, sys, tempfile
+from pathlib import Path
+
+REPO = Path(os.environ["MESH_REPO"])
+sys.path.insert(0, str(REPO))
+os.chdir(REPO)
+
+from engine.config import EngineConfig
+from engine.game import GameWindow
+from engine.project_scaffold import create_project
+from engine.save_manager import SaveManager
+from engine.scene_lifecycle_controller import handle_pending_scene_load
+
+PIC = "assets/placeholder.png"
+
+
+def goblin(eid, x, y, hp):
+    return {"id": eid, "name": "Goblin", "x": x, "y": y, "sprite": PIC,
+            "behaviours": ["Health"], "behaviour_config": {"Health": {"max_hp": 20, "hp": hp}}}
+
+
+def hero():
+    return {"id": "hero", "name": "Hero", "tag": "player", "x": 50, "y": 50, "sprite": PIC,
+            "behaviours": ["Health"], "behaviour_config": {"Health": {"max_hp": 10, "hp": 10}}}
+
+
+def snapshot(window):
+    out = []
+    for s in window.scene_controller.all_sprites:
+        d = s.mesh_entity_data or {}
+        hp = None
+        for b in getattr(s, "mesh_behaviours_runtime", []) or []:
+            if type(b).__name__ == "Health":
+                hp = b.hp
+        out.append((d.get("id"), getattr(s, "mesh_name", None), round(s.center_x), round(s.center_y), hp))
+    return sorted(out, key=lambda r: str(r[0]))
+
+
+def main():
+    work = Path(tempfile.mkdtemp(prefix="b01_"))
+    root = work / "game"
+    create_project(root, "Game", template_id="blank")
+    scene = work / "arena.json"
+    scene.write_text(json.dumps({"name": "Arena", "schema_version": 1, "version": 1, "layers": [],
+        "entities": [hero(), goblin("gob_a", 100, 100, 20), goblin("gob_b", 300, 300, 20)]}), encoding="utf-8")
+    cfg = EngineConfig(width=320, height=200, title="B01", vsync=False, start_scene="", world_file=None,
+                       main_menu_scene=None)
+    window = GameWindow(width=320, height=200, title="B01", vsync=False, config=cfg)
+    try:
+        window.scene_controller.load_scene(str(scene))
+        by_id = {(s.mesh_entity_data or {}).get("id"): s for s in window.scene_controller.all_sprites}
+        # distinct play state: gob_a hurt and moved, gob_b untouched at its own spot
+        a, b = by_id["gob_a"], by_id["gob_b"]
+        a.center_x, a.center_y = 111.0, 122.0
+        for beh in a.mesh_behaviours_runtime:
+            if type(beh).__name__ == "Health":
+                beh.hp = 3.0
+        b.center_x, b.center_y = 333.0, 344.0
+        print("BEFORE SAVE   (id, mesh_name, x, y, hp):")
+        for r in snapshot(window): print("  ", r)
+
+        mgr = SaveManager(window, save_dir=str(work / "saves"))
+        assert mgr.save_game("slot1")
+        data = json.loads((work / "saves" / "slot1.json").read_text(encoding="utf-8"))
+        print("save_schema_version:", data["save_schema_version"])
+        print("saved_entities records (entity_id, x, y, hp):")
+        for e in data["saved_entities"]["entities"]:
+            hp = (e.get("behaviour_state", {}).get("Health") or {}).get("hp")
+            print("  ", (e["entity_id"], e["x"], e["y"], hp), "keys:", sorted(e))
+
+        # load it back through the production path into a fresh room instance
+        window.scene_controller.load_scene(str(scene))  # pristine room (hp 20/20 each, authored spots)
+        print("AFTER FRESH ROOM (pre-load):")
+        for r in snapshot(window): print("  ", r)
+        assert mgr.load_game("slot1")
+        assert handle_pending_scene_load(window.scene_controller) is True
+        print("AFTER LOAD of slot1:")
+        for r in snapshot(window): print("  ", r)
+        # the same records applied straight to a pristine room (what apply_entities does with no snapshot to help)
+        from engine.save_runtime.entity_state import apply_entities
+        window.scene_controller.load_scene(str(scene))
+        diags = []
+        res = apply_entities(window.scene_controller, data["saved_entities"]["entities"], diagnostics=diags)
+        print("apply_entities (applied, missing):", res, "diagnostics:", [d.code for d in diags])
+        print("AFTER apply_entities on pristine room:")
+        for r in snapshot(window): print("  ", r)
+    finally:
+        try:
+            from tests._game_window_live import dispose_game_window
+            dispose_game_window(window)
+        except Exception:
+            window.close()
+
+
+if __name__ == "__main__":
+    main()

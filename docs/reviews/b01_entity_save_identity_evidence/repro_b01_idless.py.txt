@@ -1,0 +1,112 @@
+"""B-01 revision reproduction: id-less / runtime-spawned and duplicate-id entities through the production SaveManager (hidden GameWindow).
+Run (from the repo root, scratch cwd): py -3.13 repro_b01.py  -- disposable game under a temp dir."""
+from __future__ import annotations
+import json, os, sys, tempfile
+from pathlib import Path
+
+REPO = Path(os.environ["MESH_REPO"])
+sys.path.insert(0, str(REPO))
+os.chdir(REPO)
+
+from engine.config import EngineConfig
+from engine.game import GameWindow
+from engine.project_scaffold import create_project
+from engine.save_manager import SaveManager
+from engine.scene_lifecycle_controller import handle_pending_scene_load
+
+PIC = "assets/placeholder.png"
+
+
+def goblin(eid, x, y, hp):
+    return {"id": eid, "name": "Goblin", "x": x, "y": y, "sprite": PIC,
+            "behaviours": ["Health"], "behaviour_config": {"Health": {"max_hp": 20, "hp": hp}}}
+
+
+def hero():
+    return {"id": "hero", "name": "Hero", "tag": "player", "x": 50, "y": 50, "sprite": PIC,
+            "behaviours": ["Health"], "behaviour_config": {"Health": {"max_hp": 10, "hp": 10}}}
+
+
+def snapshot(window):
+    out = []
+    for s in window.scene_controller.all_sprites:
+        d = s.mesh_entity_data or {}
+        hp = None
+        for b in getattr(s, "mesh_behaviours_runtime", []) or []:
+            if type(b).__name__ == "Health":
+                hp = b.hp
+        out.append((d.get("id"), getattr(s, "mesh_name", None), round(s.center_x), round(s.center_y), hp))
+    return sorted(out, key=lambda r: str(r[0]))
+
+
+def idless(name, x, y, hp):
+    return {"name": name, "x": x, "y": y, "sprite": PIC, "layer": "entities",
+            "behaviours": ["Health"], "behaviour_config": {"Health": {"max_hp": 20, "hp": hp}}}
+
+
+def hp_of(s):
+    for b in getattr(s, "mesh_behaviours_runtime", []) or []:
+        if type(b).__name__ == "Health":
+            return b.hp
+
+
+def rows(window):
+    out = [((s.mesh_entity_data or {}).get("id"), s.mesh_name, round(s.center_x), round(s.center_y), hp_of(s))
+           for s in window.scene_controller.all_sprites]
+    return sorted(out, key=lambda r: (str(r[0]), str(r[1]), r[2]))
+
+
+def main():
+    work = Path(tempfile.mkdtemp(prefix="b01_"))
+    root = work / "game"
+    create_project(root, "Game", template_id="blank")
+    scene = work / "arena.json"
+    scene.write_text(json.dumps({"name": "Arena", "schema_version": 1, "version": 1, "layers": [],
+        "entities": [hero(), goblin("gob_a", 100, 100, 20), goblin("gob_b", 300, 300, 20)]}), encoding="utf-8")
+    cfg = EngineConfig(width=320, height=200, title="B01", vsync=False, start_scene="", world_file=None,
+                       main_menu_scene=None)
+    window = GameWindow(width=320, height=200, title="B01", vsync=False, config=cfg)
+    try:
+        sc = window.scene_controller
+        sc.load_scene(str(scene))
+        # runtime spawns exactly as combat/shooter/console do: _create_sprite + add_sprite_to_layer, no id
+        for data in (idless("proj_Hero", 10, 10, 5), idless("proj_Hero", 20, 20, 9), idless("spawned_7", 30, 30, 7)):
+            sp = sc._create_sprite(data)
+            sc.add_sprite_to_layer(sp, "entities")
+            for b in sp.mesh_behaviours_runtime:  # play changes the state after spawn: hp = authored hp - 3
+                if type(b).__name__ == "Health": b.hp = data["behaviour_config"]["Health"]["hp"] - 3.0
+        # console 'clone' path copies mesh_entity_data including the id
+        orig = [s for s in sc.all_sprites if (s.mesh_entity_data or {}).get("id") == "gob_a"][0]
+        clone = dict(orig.mesh_entity_data); clone["x"], clone["y"] = 150, 150
+        clone["name"] = "Goblin_clone"
+        c = sc._create_sprite(clone); sc.add_sprite_to_layer(c, "entities")
+        for b in c.mesh_behaviours_runtime:
+            if type(b).__name__ == "Health": b.hp = 11.0
+        print("BEFORE SAVE (id, mesh_name, x, y, hp):")
+        for r in rows(window): print("  ", r)
+        mgr = SaveManager(window, save_dir=str(work / "saves"))
+        assert mgr.save_game("slot1")
+        data = json.loads((work / "saves" / "slot1.json").read_text(encoding="utf-8"))
+        if os.environ.get("MESH_SAVE_OUT"):  # keep the base-written v2 save as a candidate real fixture
+            Path(os.environ["MESH_SAVE_OUT"]).write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+        print("saved_entities records (entity_id, x, y, hp):")
+        for e in data["saved_entities"]["entities"]:
+            print("  ", (e["entity_id"], e["x"], e["y"], (e.get("behaviour_state", {}).get("Health") or {}).get("hp")))
+        print("snapshot entities (id, name, x, y):", [(e.get("id"), e.get("name"), e["x"], e["y"]) for e in data["entities"]])
+        sc.load_scene(str(scene))
+        print("AFTER fresh room:")
+        for r in rows(window): print("  ", r)
+        assert mgr.load_game("slot1")
+        assert handle_pending_scene_load(sc) is True
+        print("AFTER LOAD of slot1:")
+        for r in rows(window): print("  ", r)
+    finally:
+        try:
+            from tests._game_window_live import dispose_game_window
+            dispose_game_window(window)
+        except Exception:
+            window.close()
+
+
+if __name__ == "__main__":
+    main()
