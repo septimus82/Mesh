@@ -1,6 +1,7 @@
 # B-01 design: stable entity identity in saves (#462 reliability)
 
-Status: DESIGN ONLY (no production code or tests changed), revision 3. Revision 2: owner feedback on id-less entities,
+Status: DESIGN ONLY (no production code or tests changed), revision 3 (+ 2026-11-20 correction: duplicate ids bind by
+unique position only, never by occurrence order). Revision 2: owner feedback on id-less entities,
 duplicate ids, backward-compatible recovery. Revision 3 (master, from the owner's decisions of 2026-11-19): legacy
 position binding only when provably unique (Q2), manual recovery only (Q7), the `.v2.bak` must be created **and
 verified** or the v2 slot is not overwritten (Q8), B-01b lands first as its own PR (Q9), and unresolved records survive
@@ -119,9 +120,12 @@ id gets a WARN `save.serialize.entity_id_duplicate` (context: id, count) in the 
 **Duplicate authored ids: policy = write all, bind only when counts match, otherwise refuse that id and report.**
 Chosen over refusing the save: a clone or hand-edit mistake must not cost the player a save, and a hard error
 would also block saves in games already shipped with duplicates. Over silently picking one: that is the bug.
-On load, id `I` has `r` records and `s` live sprites. If `r == s`, record `occurrence k` binds to the k-th sprite
-**and** its (x, y) must equal that sprite's current (x, y) within 0.01 (the scene snapshot restores positions first),
-else that record is refused. If `r != s` (as in the clone repro, where the snapshot already merged the pair into one
+On load, id `I` has `r` records and `s` live sprites. If `r == s == 1`, the record binds (the id is provable). If
+`r == s > 1`, a record binds **only by provably unique position**: its (x, y) matches exactly one of those sprites
+within 0.01 and no other record matches that sprite (the scene snapshot restores positions first). Occurrence order
+is never identity (rev 3 correction, owner challenge 2026-11-20: twins at identical positions with different states
+would otherwise be exchanged when the sprite order differs); it orders output only. Records not uniquely matched
+(e.g. identical positions) are refused (`ambiguous_position`) and become unresolved. If `r != s` (as in the clone repro, where the snapshot already merged the pair into one
 sprite), no record for `I` is applied: ERROR-level `save.restore.entity_id_ambiguous` (WARN non-strict; fails in
 strict), with `{id, records, sprites}`. The refused records become unresolved (below): reported and carried in every
 later save, never discarded. (The snapshot-layer merge of same-id sprites, `persistence.py:60-80`, is fixed first and
@@ -227,7 +231,8 @@ Default lane, production `SaveManager`, hidden `GameWindow` as in `tests/test_ho
 | T12 | `idless_never_hits_id_sprite` | id-less record named like an id-ful sprite | id-ful sprite untouched |
 | T13 | `projectile_hitbox_expired` | record for a projectile gone at load | `entity_missing`, no error, as base |
 | T14 | `dup_authored_ids_all_written` | clone with copied id | 2 records (occurrence 0, 1), WARN `entity_id_duplicate` |
-| T15 | `dup_authored_ids_counts_match_binds` | two live sprites, same id, positions kept | bound by occurrence + xy |
+| T15 | `dup_authored_ids_counts_match_binds` | two live sprites, same id, distinct positions, sprite order reversed | each bound by its unique position |
+| T15b | `dup_authored_ids_same_position_never_by_order` | two live sprites, same id, identical positions, different states, order reversed (and not) | neither applied, both unresolved and reported, carried by the next save; nothing exchanged |
 | T16 | `dup_authored_ids_count_mismatch_refused` | 2 records saved, 1 sprite at load | none applied, ERROR code, `unbound` 2, records still in the file |
 | T17 | `renamed_entity_survives` | rename via `ops.rename_entity` | state follows the id; fails on base |
 | T18 | `id_renamed_reports_missing` | lint-rename an id | `entity_missing` by id, no cross-apply |
