@@ -1,0 +1,17 @@
+import hashlib, json, sys, tempfile
+from pathlib import Path
+from engine import authoring_session
+from engine.project_scaffold import create_project
+base = Path(sys.argv[1]); 
+for op in ["room_music","weather_sounds_of","hd2d_camera_of","hd2d_room_size","hd2d_sun_of"]:
+    root = base / op
+    create_project(root, "G", template_id="blank")
+    def snap(): return {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()[:12] for p in sorted(root.rglob("*.json"))}
+    before = snap()
+    r = authoring_session.apply(root, [{"op": op}])
+    after = snap()
+    changed = [k for k in after if before.get(k) != after[k]]
+    print(op, "ok=", r.get("ok"), r.get("reason"), (r.get("message") or "")[:90], "changed:", changed)
+    for k in changed:
+        d = json.loads((root / k).read_text(encoding="utf-8"))
+        print("   scene now keys:", list(d)[:8], "entities" in d)
