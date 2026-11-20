@@ -1,0 +1,23 @@
+E       AssertionError: assert ([] == ['a', 'b']
+E         
+E         Right contains 2 more items, first extra item: 'a'
+E         Use -v to get more diff)
+E       AssertionError: assert ('key1' in '')
+E       AssertionError: assert [] == ['a']
+E         
+E         Right contains one more item: 'a'
+E         Use -v to get more diff
+E       AssertionError: assert [] == ['core', 'pk', 'shared']
+E         
+E         Right contains 3 more items, first extra item: 'core'
+E         Use -v to get more diff
+E       AssertionError: assert [] == ['a', 'ai']
+E         
+E         Right contains 2 more items, first extra item: 'a'
+E         Use -v to get more diff
+FAILED tests/test_quest_dict_form_ids.py::test_keyed_entries_without_id_load_with_key_as_id
+FAILED tests/test_quest_dict_form_ids.py::test_id_differing_from_key_keeps_inner_id_and_reports
+FAILED tests/test_quest_dict_form_ids.py::test_non_dict_values_are_still_skipped
+FAILED tests/test_quest_dict_form_ids.py::test_pack_quests_load_by_key_and_pack_wins_a_collision
+FAILED tests/test_quest_dict_form_ids.py::test_ai_added_quest_in_dict_form_file_loads
+5 failed, 3 passed in 5.29s
