@@ -1,0 +1,46 @@
+scenario                     cycle  records  unresolved scene ents slot bytes
+step3 no-change                  0        6           0          6      10903
+step3 no-change                  1        6           0          6      11468
+step3 no-change                  2        6           0          6      11468
+step3 no-change                  3        6           0          6      11468
+step3 no-change                  4        6           0          6      11468
+step3 no-change                  5        6           0          6      11468
+step3 no-change                  6        6           0          6      11468
+step3 no-change                  7        6           0          6      11468
+step3 no-change                  8        6           0          6      11468
+step5 ambiguous                  0        4           0          4       8237
+step5 ambiguous                  1        4           2          4       9819
+step5 ambiguous                  2        4           4          4      11197
+step5 ambiguous                  3        4           4          4      11197
+step5 ambiguous                  4        4           4          4      11197
+step5 ambiguous                  5        4           4          4      11197
+step5 ambiguous                  6        4           4          4      11197
+step5 ambiguous                  7        4           4          4      11197
+step5 ambiguous                  8        4           4          4      11197
+projectiles new names            0       10           0         10      13001
+projectiles new names            1       10           0         15      17461
+projectiles new names            2       10           0         20      21721
+projectiles new names            3       10           0         25      25981
+projectiles new names            4       10           0         30      30241
+projectiles new names            5       10           0         35      34501
+projectiles new names            6       10           0         40      38761
+projectiles new names            7       10           0         45      43021
+projectiles new names            8       10           0         50      47281
+projectiles same names           0       10           0         10      13001
+projectiles same names           1       10           0         10      15486
+projectiles same names           2       10           0         10      15486
+projectiles same names           3       10           0         10      15486
+projectiles same names           4       10           0         10      15486
+projectiles same names           5       10           0         10      15486
+projectiles same names           6       10           0         10      15486
+projectiles same names           7       10           0         10      15486
+projectiles same names           8       10           0         10      15486
+projectiles expire only          0       10           0         10      13001
+projectiles expire only          1        5           0         10      13861
+projectiles expire only          2       10           0         10      15486
+projectiles expire only          3       10           0         10      15486
+projectiles expire only          4       10           0         10      15486
+projectiles expire only          5       10           0         10      15486
+projectiles expire only          6       10           0         10      15486
+projectiles expire only          7       10           0         10      15486
+projectiles expire only          8       10           0         10      15486
