@@ -2,7 +2,7 @@ F.F.F.F.FF                                                               [100%]
 ================================== FAILURES ===================================
 _______________ test_mcp_list_and_inspect_use_dict_keys_as_ids ________________
 
-root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-slebb/pytest-4593/test_mcp_list_and_inspect_use_0/game')
+root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4593/test_mcp_list_and_inspect_use_0/game')
 
     def test_mcp_list_and_inspect_use_dict_keys_as_ids(root: Path) -> None:
         _write(root, DICT_FORM)
@@ -18,7 +18,7 @@ tests\test_quest_dict_form_readers.py:57: AssertionError
 ---------------------------- Captured stderr setup ----------------------------
 ___________________ test_plan_tester_sees_dict_form_quests ____________________
 
-root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-slebb/pytest-4593/test_plan_tester_sees_dict_for0/game')
+root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4593/test_plan_tester_sees_dict_for0/game')
 monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000026CF3295940>
 
     def test_plan_tester_sees_dict_form_quests(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -40,7 +40,7 @@ tests\test_quest_dict_form_readers.py:74: AssertionError
   - t... PASS
 ______________________ test_editor_model_reads_dict_form ______________________
 
-root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-slebb/pytest-4593/test_editor_model_reads_dict_f0/game')
+root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4593/test_editor_model_reads_dict_f0/game')
 
     def test_editor_model_reads_dict_form(root: Path) -> None:
         path = _write(root, DICT_FORM)
@@ -55,7 +55,7 @@ tests\test_quest_dict_form_readers.py:88: AssertionError
 ---------------------------- Captured stderr setup ----------------------------
 ________________ test_editor_never_converts_dict_form_to_list _________________
 
-root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-slebb/pytest-4593/test_editor_never_converts_dic0/game')
+root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4593/test_editor_never_converts_dic0/game')
 
     def test_editor_never_converts_dict_form_to_list(root: Path) -> None:
         path = _write(root, DICT_FORM)
@@ -69,7 +69,7 @@ tests\test_quest_dict_form_readers.py:100: Failed
 ---------------------------- Captured stderr setup ----------------------------
 ________________ test_context_exporter_titles_dict_form_quests ________________
 
-root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-slebb/pytest-4593/test_context_exporter_titles_d0/game')
+root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4593/test_context_exporter_titles_d0/game')
 
     def test_context_exporter_titles_dict_form_quests(root: Path) -> None:
         _write(root, DICT_FORM)
@@ -84,7 +84,7 @@ tests\test_quest_dict_form_readers.py:114: AssertionError
 ---------------------------- Captured stderr setup ----------------------------
 ___________________ test_ai_audit_lists_dict_form_quest_ids ___________________
 
-root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-slebb/pytest-4593/test_ai_audit_lists_dict_form_0/game')
+root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4593/test_ai_audit_lists_dict_form_0/game')
 monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000026CF31260F0>
 
     def test_ai_audit_lists_dict_form_quest_ids(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
