@@ -16,9 +16,12 @@ from typing import Any
 
 # commands (``args.command``) that write project files, whatever their options
 WRITE_COMMANDS = frozenset({"new-npc", "place-npc", "new-quest", "new-behaviour", "add-puzzle", "new-prefab",
-                            "place-prefab"})
+                            "place-prefab", "polish", "lock-packs",
+                            "init-content-pack"})
 # (command, subcommand) pairs, the subcommand read from ``<command>_command``
-WRITE_SUBCOMMANDS = frozenset({("world", "add-scene"), ("world", "link-scenes"), ("room", "scaffold")})
+WRITE_SUBCOMMANDS = frozenset({("world", "add-scene"), ("world", "link-scenes"), ("room", "scaffold"),
+                                 ("sprite", "import-sheet"), ("sprite", "import-aseprite"),
+                                 ("assets", "fix-missing")})
 # scene-family handlers (``args.func.__name__``) that write the scene file
 WRITE_SCENE_HANDLERS = frozenset({
     "_handle_new_scene", "_handle_edit_scene", "_handle_tidy_scene", "_handle_scene_create",
@@ -29,7 +32,8 @@ WRITE_SCENE_HANDLERS = frozenset({
     "_handle_scene_add_entity", "_handle_scene_add_triggerzone_objective", "_handle_scene_add_dialogue_choice_flag",
     "_handle_scene_stamp", "_handle_scene_macro_apply", "_handle_scene_prefab_reset"})
 
-_PATH_ATTRS = ("scene_path", "into", "path", "world_path", "world", "from_scene", "scene")
+_PATH_ATTRS = ("scene_path", "into", "path", "world_path", "world", "from_scene", "scene", "repo_root",
+               "out_dir", "out")
 
 
 def writes_project(args: argparse.Namespace) -> bool:
@@ -38,6 +42,12 @@ def writes_project(args: argparse.Namespace) -> bool:
         return True
     if (command, getattr(args, f"{command}_command", None)) in WRITE_SUBCOMMANDS:
         return True
+    if (command, getattr(args, "assets_command", None)) == ("assets", "import-sprites"):
+        return not getattr(args, "dry_run", False)
+    if command == "golden-slice":
+        return getattr(args, "golden_slice_command", None) == "scaffold" and not getattr(args, "dry_run", False)
+    if command == "content":
+        return getattr(args, "content_episode_command", None) == "new" and not getattr(args, "dry_run", False)
     if command == "schema-fix-ids":
         return not getattr(args, "dry_run", False)
     if command == "migrate":

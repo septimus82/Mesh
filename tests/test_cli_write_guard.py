@@ -37,13 +37,18 @@ FAMILIES = {
                      "--tile-h", "16", "--layer", "ground:0"],
     "scene-add-placeholder": ["scene", "add-placeholder", ROOM, "--x", "32", "--y", "32"],
     "tidy-scene": ["tidy-scene", ROOM],
+    "polish": ["polish", ROOM],
+    "assets-import-sprites": ["assets", "import-sprites"],
 }
+CHANGES_NOTHING = {"tidy-scene", "polish"}  # (an already compact scene is rewritten identically)
 
 
 @pytest.fixture
 def root(tmp_path: Path) -> Path:
     path = tmp_path / "game"
     create_project(path, "Game", template_id="blank")
+    (path / "assets/sprites").mkdir(parents=True, exist_ok=True)
+    (path / "assets/sprites/annex.png").write_bytes(bytes([0x89]) + b"PNG")
     return path
 
 
@@ -92,6 +97,7 @@ def test_a_scene_path_in_the_project_is_refused_from_any_folder(root: Path, stud
 def test_dry_runs_and_readers_still_work_while_studio_has_the_project(root: Path, studio_lock: None) -> None:
     before = _files(root)
     assert _mesh(root, "schema-fix-ids", "--dry-run").returncode == 0
+    assert _mesh(root, "assets", "import-sprites", "--dry-run").returncode == 0
     assert _mesh(root, "list-scenes").returncode == 0
     assert _files(root) == before
 
@@ -101,7 +107,7 @@ def test_command_still_works_with_no_owner_and_lets_the_project_go(root: Path, n
     before = _files(root)
     result = _mesh(root, *FAMILIES[name])
     assert result.returncode == 0, result.stdout[-1500:]
-    if name != "tidy-scene":  # (an already tidy scene is rewritten identically)
+    if name not in CHANGES_NOTHING:
         assert _files(root) != before
     assert project_ownership.owned(root) is None  # released: Studio can open it now
 
@@ -112,4 +118,10 @@ def test_writes_project_classifies_commands() -> None:
     assert write_guard.writes_project(parse(["schema-fix-ids"]))
     assert not write_guard.writes_project(parse(["schema-fix-ids", "--dry-run"]))
     assert not write_guard.writes_project(parse(["list-scenes"]))
+    assert write_guard.writes_project(parse(["assets", "import-sprites"]))
+    assert not write_guard.writes_project(parse(["assets", "import-sprites", "--dry-run"]))
+    assert write_guard.writes_project(parse(["assets", "fix-missing"]))
+    assert write_guard.writes_project(parse(["lock-packs"]))
+    assert not write_guard.writes_project(parse(["content", "episode", "new", "--id", "e", "--title", "t",
+                                                  "--out-dir", ".", "--dry-run"]))
     assert not write_guard.writes_project(argparse.Namespace(command=None))
