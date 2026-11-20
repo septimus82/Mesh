@@ -9,7 +9,7 @@ from typing import Any, Callable
 
 import pytest
 
-from engine.ai_ops import MAX_PAINT_TILE_COORD, MAX_PAINT_TILE_OPS, AIOps
+from engine.ai_ops import MAX_PAINT_TILE_COORD, MAX_PAINT_TILE_NEW_LAYERS, MAX_PAINT_TILE_OPS, AIOps
 from engine.mcp_server import tools
 
 pytestmark = pytest.mark.integration  # (F13-A: filesystem)
@@ -90,3 +90,37 @@ def test_valid_batch_unknown_dimensions(tmp_path: Path) -> None:
     assert _job(tmp_path, [_p(1, 0, 4)])["ok"] is True
     data = json.loads(scene.read_text(encoding="utf-8"))["tilemap"]["overrides"]["layers"]["ground"]
     assert data == [0, 4]
+
+
+def _on(layer: Any, col: int = 0) -> dict[str, Any]:
+    return {"layer": layer, "col": col, "row": 0, "gid": 1}
+
+
+@pytest.mark.parametrize("run", PATHS)
+def test_many_new_layers_refused_without_allocating(tmp_path: Path, run: Callable[..., Any]) -> None:
+    scene = _scene(tmp_path)
+    before = scene.read_bytes()
+    out = run(tmp_path, [_on(f"a{i}") for i in range(MAX_PAINT_TILE_NEW_LAYERS + 1)])
+    assert out["ok"] is False and "new layers" in json.dumps(out)
+    assert scene.read_bytes() == before
+
+
+@pytest.mark.parametrize("run", PATHS)
+@pytest.mark.parametrize("layer", [None, {"a": 1}, ["x"], 5, ""])
+def test_non_string_layer_refused(tmp_path: Path, run: Callable[..., Any], layer: Any) -> None:
+    scene = _scene(tmp_path)
+    before = scene.read_bytes()
+    out = run(tmp_path, [_on(layer)])
+    assert out["ok"] is False and "layer=" in json.dumps(out)
+    assert scene.read_bytes() == before
+
+
+@pytest.mark.parametrize("run", PATHS)
+def test_exactly_the_new_layer_limit_works_and_existing_layers_are_free(tmp_path: Path, run: Callable[..., Any]) -> None:
+    scene = _scene(tmp_path)
+    names = [f"a{i}" for i in range(MAX_PAINT_TILE_NEW_LAYERS)]
+    assert run(tmp_path, [_on(n) for n in names])["ok"] is True
+    # all layers now exist: painting them again (plus repeats of one new name) is unlimited
+    assert run(tmp_path, [_on(n, 1) for n in names] * 3 + [_on("fresh")])["ok"] is True
+    layers = json.loads(scene.read_text(encoding="utf-8"))["tilemap"]["overrides"]["layers"]
+    assert set(layers) == {*names, "fresh"} and layers["a0"][:2] == [1, 1]

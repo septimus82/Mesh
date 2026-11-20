@@ -99,6 +99,8 @@ def build_prefab_entity_definition(
 # coordinate bound only when the tilemap's own width/height are unknown.
 MAX_PAINT_TILE_COORD = 1024
 MAX_PAINT_TILE_OPS = 10_000
+# Layers one batch may create (names not already in overrides.layers); each allocates a full layer.
+MAX_PAINT_TILE_NEW_LAYERS = 8
 
 
 @dataclass
@@ -481,9 +483,20 @@ class AIOps:
             return AIOpsResult(False, f"paint_tiles: {len(ops)} ops exceeds the limit of {MAX_PAINT_TILE_OPS}")
         bound_col = width if width and height else MAX_PAINT_TILE_COORD
         bound_row = height if width and height else MAX_PAINT_TILE_COORD
+        new_layers: set[str] = set()
         for i, op in enumerate(ops):
             if not isinstance(op, dict):
                 return AIOpsResult(False, f"paint_tiles op {i}: must be an object")
+            name = op.get("layer", "ground")
+            if not isinstance(name, str) or not name:
+                return AIOpsResult(False, f"paint_tiles op {i}: layer={name!r} must be a non-empty string")
+            if name not in layers:
+                new_layers.add(name)
+                if len(new_layers) > MAX_PAINT_TILE_NEW_LAYERS:
+                    return AIOpsResult(
+                        False,
+                        f"paint_tiles op {i}: layer={name!r} would create more than "
+                        f"{MAX_PAINT_TILE_NEW_LAYERS} new layers in one batch")
             for key, limit in (("col", bound_col), ("row", bound_row), ("gid", None)):
                 val = op.get(key, 0)
                 if type(val) is not int or val < 0:
@@ -492,7 +505,7 @@ class AIOps:
                     return AIOpsResult(False, f"paint_tiles op {i}: {key}={val} is outside the map (must be < {limit})")
 
         for op in ops:
-            layer = str(op.get("layer", "ground"))
+            layer = op.get("layer", "ground")
             col = op.get("col", 0)
             row = op.get("row", 0)
             gid = op.get("gid", 0)
