@@ -39,6 +39,9 @@ MUTATIONS = [
      "if legacy or _sprite_mesh_id(s) is None]", "if True]", [IDENT]),
     ("M13 records whose entity is absent are dropped again", "engine/save_runtime/entity_state.py",
      'result.unresolved = merge_unresolved(result.unresolved, [unresolved_entry(item[0], "entity_missing", room, first_seen)])', "pass", [IDENT]),
+    ("M14 twins of one id paired by order again", "engine/save_runtime/entity_state.py",
+     "        pairs, unbound = _bind_by_position(items, sprites, None)\n        return pairs, [(it, \"ambiguous_position\") for it in unbound], []",
+     "        return list(zip(items, sprites)), [], []", [IDENT]),
     ("M12 retried records may overwrite resolved sprites", "engine/save_runtime/entity_state.py",
      "        return [s for s in found if id(s) not in claimed]", "        return list(found)", [IDENT]),
 ]

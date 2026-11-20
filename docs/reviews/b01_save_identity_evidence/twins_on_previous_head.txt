@@ -1,0 +1,7 @@
+# the twin tests (owner challenge) run against the previous head d668097e (order-based pairing): all fail
+FAILED tests/test_b01_save_identity.py::test_twins_at_identical_places_are_never_told_apart_by_order[False]
+FAILED tests/test_b01_save_identity.py::test_twins_at_identical_places_are_never_told_apart_by_order[True]
+FAILED tests/test_b01_save_identity.py::test_twins_at_distinct_places_bind_to_their_own_whichever_order
+FAILED tests/test_b01_save_identity.py::test_twin_records_bind_by_unique_place_never_by_sprite_order
+FAILED tests/test_b01_save_identity.py::test_carried_twin_records_get_the_same_rule
+5 failed, 37 deselected in 9.36s

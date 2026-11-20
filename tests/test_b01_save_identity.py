@@ -683,3 +683,85 @@ def test_migration_v2_to_v3_only_tags_and_never_invents() -> None:
 def test_a_v3_save_from_a_newer_build_is_still_refused() -> None:
     with pytest.raises(ValueError, match="newer game version"):
         migrate_save({"save_schema_version": 4, "saved_entities": {"schema_version": 3, "entities": []}})
+
+
+# =====================================================================================================================
+# Twins of one id: order is never identity (owner challenge on #535)
+# =====================================================================================================================
+
+
+def _twins_room(arena: Arena, twin_at: tuple[float, float]) -> None:
+    """gob_a hp 5 and a console clone sharing its id (hp 11) at ``twin_at``, saved; returns with the save written."""
+    arena.write_room(hero(), goblin("gob_a", 100, 100))
+    arena.enter()
+    arena.place(arena.by_id("gob_a"), 100, 100, hp=5)
+    arena.spawn(dict(arena.by_id("gob_a").mesh_entity_data, x=twin_at[0], y=twin_at[1], name="Goblin_clone"), hp=11)
+    arena.save()
+
+
+def _reverse_snapshot_twins(arena: Arena) -> None:
+    save = arena.read()
+    twins = [e for e in save["entities"] if e.get("id") == "gob_a"]
+    assert len(twins) == 2
+    others = [e for e in save["entities"] if e.get("id") != "gob_a"]
+    save["entities"] = others + list(reversed(twins))  # (the sprites are made in the other order)
+    arena.slot().write_text(json.dumps(save, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_twins_at_identical_places_are_never_told_apart_by_order(arena: Arena, reverse: bool) -> None:
+    """Same id, same place, different states: nothing can say which record is whose, so neither is applied (order
+    never decides, whichever way the sprites come), both are reported and carried in every later save."""
+    _twins_room(arena, (100, 100))
+    if reverse:
+        _reverse_snapshot_twins(arena)
+    arena.enter()
+    assert arena.load()
+    twins = [s for s in arena.sprites() if getattr(s, "mesh_id", None) == "gob_a"]
+    assert [hp_of(s) for s in twins] == [20.0, 20.0]  # nothing applied, nothing exchanged
+    held = arena.held()
+    assert len(held) == 2 and {e["record"]["behaviour_state"]["Health"]["hp"] for e in held} == {5.0, 11.0}
+    assert {e["reason"] for e in held} == {"ambiguous_position"}
+    assert last_load_codes().count("save.restore.entity_id_ambiguous") == 2
+    assert "could not be matched" in " ".join(arena.toasts())
+    first = arena.save("s1")["saved_entities"]["unresolved"]
+    arena.enter()
+    assert arena.load("s1")
+    later = arena.save("s2")["saved_entities"]["unresolved"]
+    assert all(e in later for e in first) and len(first) == 2  # the originals are carried verbatim, never dropped
+    # (the live twins, still alike, wrote records of their own: those are ambiguous in turn, reported and carried too)
+
+
+def test_twins_at_distinct_places_bind_to_their_own_whichever_order(arena: Arena) -> None:
+    _twins_room(arena, (150, 150))
+    _reverse_snapshot_twins(arena)
+    arena.enter()
+    assert arena.load()
+    twins = sorted((s for s in arena.sprites() if getattr(s, "mesh_id", None) == "gob_a"), key=lambda s: s.center_x)
+    assert [(s.center_x, hp_of(s)) for s in twins] == [(100.0, 5.0), (150.0, 11.0)]
+    assert arena.held() == []
+
+
+def test_twin_records_bind_by_unique_place_never_by_sprite_order() -> None:
+    near, far = (100.0, 100.0), (150.0, 150.0)
+    records = [id_record("gob_a", "Goblin", *near, 5, 0), id_record("gob_a", "Goblin", *far, 11, 1)]
+    for order in ((near, far), (far, near)):
+        a, b = (Stub("Goblin", *p, 20, "gob_a") for p in order)
+        result = apply_entities_ex(stage(a, b), records)
+        assert (result.applied, result.unbound) == (2, 0)
+        assert {(s.center_x, s.hp) for s in (a, b)} == {(100.0, 5), (150.0, 11)}
+    same = [id_record("gob_a", "Goblin", *near, 5, 0), id_record("gob_a", "Goblin", *near, 11, 1)]
+    for _ in range(2):
+        a, b = Stub("Goblin", *near, 20, "gob_a"), Stub("Goblin", *near, 20, "gob_a")
+        for sprites in ((a, b), (b, a)):
+            result = apply_entities_ex(stage(*sprites), same)
+            assert (result.applied, result.unbound) == (0, 2) and a.hp == b.hp == 20
+            assert [e["reason"] for e in result.unresolved] == ["ambiguous_position"] * 2
+
+
+def test_carried_twin_records_get_the_same_rule() -> None:
+    first = apply_entities_ex(stage(), [id_record("gob_a", "Goblin", 100, 100, 5, 0), id_record("gob_a", "Goblin", 100, 100, 11, 1)])
+    assert len(first.unresolved) == 2
+    a, b = Stub("Goblin", 100, 100, 20, "gob_a"), Stub("Goblin", 100, 100, 20, "gob_a")
+    result = apply_entities_ex(stage(a, b), [], carried=first.unresolved)
+    assert (result.applied, len(result.unresolved)) == (0, 2) and a.hp == b.hp == 20  # identical places: still refused

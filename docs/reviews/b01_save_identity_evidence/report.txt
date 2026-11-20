@@ -11,6 +11,11 @@ engine/scene_lifecycle_controller.py; digest.py untouched)
   with the save's own snapshot. Nothing is "last wins"; nothing is applied on a guess.
 - Records whose entity is absent at load (entity_missing) are unmatched too (owner rule, master review): reported as
   entity_missing with the same counts, and kept as unresolved (reason entity_missing).
+- Twins of one id (count == live > 1) bind ONLY by provably unique place (each record matches exactly one sprite, each
+  sprite is claimed by one record); occurrence is output order only, never identity. Identical places, or any record not
+  uniquely matched, are refused (reason ambiguous_position), reported, carried as unresolved; the retry path uses the
+  same rule (owner challenge; tests I::test_twins_*, test_twin_records_*, test_carried_twin_*; twins_on_previous_head.txt
+  shows them failing on d668097e; mutation M14 restores order pairing and is caught).
 - Unbound records -> diagnostics (entity_id_ambiguous / entity_legacy_ambiguous / entity_nameclash, roll-ups
   entities_unbound / entities_unresolved), stderr, the load attempt's diagnostics, and a player toast; kept as
   saved_entities.unresolved in every later save (dedup by scene_path + SHA-256), retried each load against sprites that
@@ -44,9 +49,9 @@ BEFORE / AFTER (real cycle, hidden GameWindow, production SaveManager; before_af
   one), spawned_7 (4.0), and both gob_a twins (hp 20 at (100,100), clone hp 11 at (150,150)).
 
 TESTS (Windows, py -3.13 -W error; details in tests_on_base.txt / tests_on_head.txt)
-- new: 51 tests (default lane) + 3 GPU-lane tests. On the base 47 of 51 fail; the 4 that pass are guards that must hold
+- new: 56 tests (default lane) + 3 GPU-lane tests. On the base 52 of 56 fail; the 4 that pass are guards that must hold
   on both (T29 digest, T26 and test_a_v3_save... newer-version refusal, a v3 save is not backed up).
-- fault injection (fault_injection.py.txt / _output.txt): 13 mutations (M13: absent-entity records dropped again) (backup verify skipped, unresolved not carried,
+- fault injection (fault_injection.py.txt / _output.txt): 14 mutations (M13: absent-entity records dropped again; M14: twins paired by order again) (backup verify skipped, unresolved not carried,
   uniqueness proof dropped, id-less dropped, load rewrites slot, backup lookup removed, failed backup no longer refuses,
   wrong-room guard off, count check off, legacy name-only bind, id-less lands on id sprite, retry overwrites resolved
   sprite): all caught, each file restored byte for byte (SHA-256 and git diff compared).

@@ -767,14 +767,10 @@ def _bind_group(
             return [(items[0], sprites[0])], [], []
         if count != live:
             return [], [(it, "count_mismatch") for it in items], []
-        pairs: list[tuple[_Item, Any]] = []
-        refused: list[tuple[_Item, str]] = []
-        for item, sprite in zip(items, sprites):  # the k-th record, the k-th sprite, and the place must agree
-            if _near(item[1].x, item[1].y, *_sprite_xy(sprite)):
-                pairs.append((item, sprite))
-            else:
-                refused.append((item, "position_mismatch"))
-        return pairs, refused, []
+        # Twins of one id: occurrence is output order only, never identity. A record binds to the one twin standing
+        # exactly at its place, and only if no other record claims that twin; identical places stay unbound.
+        pairs, unbound = _bind_by_position(items, sprites, None)
+        return pairs, [(it, "ambiguous_position") for it in unbound], []
     if count == live == 1 and name_only_ok:
         return [(items[0], sprites[0])], [], []
     pairs, unbound = _bind_by_position(items, sprites, check)
@@ -906,7 +902,7 @@ def apply_entities_ex(
                 warn(diagnostics, bind_level, "save.restore.entity_id_ambiguous",
                               f"{len(items)} saved entities have id '{key}' but the scene has {len(group_sprites)} "
                               f"live with it; none applied." if why == "count_mismatch" else
-                              f"Saved entity with id '{key}' is not where its live twin stands; not applied.",
+                              f"Saved entity with id '{key}' at ({item[1].x:g}, {item[1].y:g}) cannot be told from its live twins by place; not applied.",
                               source, f"/saved_entities/entities/{key}",
                               {"id": key, "records": len(items), "sprites": len(group_sprites),
                                "x": item[1].x, "y": item[1].y},
