@@ -1,7 +1,9 @@
 # B-01 design: stable entity identity in saves (#462 reliability)
 
 Status: DESIGN ONLY (no production code or tests changed), revision 3 (+ 2026-11-20 correction: duplicate ids bind by
-unique position only, never by occurrence order). Revision 2: owner feedback on id-less entities,
+unique position only, never by occurrence order). **Implemented in #535** (merged); this record matches it, including
+three points settled during implementation review: identity diagnostics are WARN in normal save-slot loads, records
+whose entity is absent are carried as unresolved, and backups are named after the slot file (`<slot file>.v2.bak`). Revision 2: owner feedback on id-less entities,
 duplicate ids, backward-compatible recovery. Revision 3 (master, from the owner's decisions of 2026-11-19): legacy
 position binding only when provably unique (Q2), manual recovery only (Q7), the `.v2.bak` must be created **and
 verified** or the v2 slot is not overwritten (Q8), B-01b lands first as its own PR (Q9), and unresolved records survive
@@ -126,8 +128,9 @@ within 0.01 and no other record matches that sprite (the scene snapshot restores
 is never identity (rev 3 correction, owner challenge 2026-11-20: twins at identical positions with different states
 would otherwise be exchanged when the sprite order differs); it orders output only. Records not uniquely matched
 (e.g. identical positions) are refused (`ambiguous_position`) and become unresolved. If `r != s` (as in the clone repro, where the snapshot already merged the pair into one
-sprite), no record for `I` is applied: ERROR-level `save.restore.entity_id_ambiguous` (WARN non-strict; fails in
-strict), with `{id, records, sprites}`. The refused records become unresolved (below): reported and carried in every
+sprite), no record for `I` is applied: `save.restore.entity_id_ambiguous` with `{id, records, sprites}`, a WARN in
+normal save-slot loads (owner-accepted: an ERROR there would refuse the very saves that must still load; records are
+carried, never guessed or dropped) and an ERROR when `apply_entities_ex` is called strict. The refused records become unresolved (below): reported and carried in every
 later save, never discarded. (The snapshot-layer merge of same-id sprites, `persistence.py:60-80`, is fixed first and
 separately by B-01b (owner Q9): with it, both sprites survive the snapshot, so the counts can match.)
 
@@ -138,7 +141,8 @@ record can never land on an authored-id sprite, and vice versa):
    exactly one sprite in that group have equal (x, y) within 0.01; apply those. Every record not bound this way is
    **not applied** and reported (below). Never "last wins", never by order. (Repro: `proj_Hero` at (10,10) and (20,20)
    both bind by position, so 2 and 6 are both restored; two sprites at the same spot are refused and reported.)
-3. No id-less sprite with that name: `save.restore.entity_missing` as today (an expired projectile).
+3. No id-less sprite with that name: `save.restore.entity_missing` (an expired projectile), and the record is carried as
+   unresolved (owner rule: unmatched records survive later saves).
 Written vs applied is visible in the counters: `applied`, `missing` (as today), `unbound` (new).
 
 **Reading v2 (name-keyed) saves** (`schema.py:82` migration v2 -> v3 runs **in memory only**: tags every record
@@ -149,7 +153,7 @@ Written vs applied is visible in the counters: `applied`, `missing` (as today), 
    the save's own snapshot (`entities`: id + x, y of the same instant) is the cross-check: a record bound to an id-ful
    sprite must also match that id's snapshot position. Binding happens only when this mapping is provably unique (Q2);
    anything else is not applied, reported, and preserved as unresolved (below), never guessed.
-3. No sprite named `N`: `entity_missing`.
+3. No sprite named `N`: `entity_missing`, and the record is carried as unresolved.
 
 **Counts and diagnostics.** Codes: `save.restore.entity_id_ambiguous`, `save.restore.entity_legacy_ambiguous`
 (v2 record unbound), `save.restore.entity_nameclash` (id-less group, v3), `save.restore.entities_wrong_room`,
@@ -182,7 +186,7 @@ memory, and the only writes it can make are failure diagnostics sidecars (`io.py
 byte-identical after a load. Test T20 hashes the file before and after.
 
 (b) **First v3 save over a v2 slot (Q8).** `save_game` (`save_manager.py:179-218`), before writing v3 over a slot file
-whose `save_schema_version < 3`: copy it to `<slot>.v2.bak`, then **verify** the copy (re-read it and compare its
+whose `save_schema_version < 3`: copy it to `<slot>.v2.bak` (`<slot>` is the slot file's name, e.g. `slot1.json.v2.bak`), then **verify** the copy (re-read it and compare its
 SHA-256 with the original's). Only a verified backup lets the v3 write go ahead. If creating or verifying the backup
 fails, the save is **refused**: the v2 slot is left byte-identical, the error `save.write.v2_backup_failed` is logged
 and the toast says the game wasn't saved over the old save (saving to another slot still works). Existing backups are
@@ -229,13 +233,13 @@ Default lane, production `SaveManager`, hidden `GameWindow` as in `tests/test_ho
 | T10 | `idless_same_name_distinct_xy` | two `proj_X` | both restored by position; fails on base (2 lost) |
 | T11 | `idless_same_name_same_xy` | two `proj_X` at one spot | neither applied, `entity_nameclash` x2, `unbound` 2 |
 | T12 | `idless_never_hits_id_sprite` | id-less record named like an id-ful sprite | id-ful sprite untouched |
-| T13 | `projectile_hitbox_expired` | record for a projectile gone at load | `entity_missing`, no error, as base |
+| T13 | `projectile_hitbox_expired` | record for a projectile gone at load | `entity_missing` reported, carried as unresolved, never applied to another sprite |
 | T14 | `dup_authored_ids_all_written` | clone with copied id | 2 records (occurrence 0, 1), WARN `entity_id_duplicate` |
 | T15 | `dup_authored_ids_counts_match_binds` | two live sprites, same id, distinct positions, sprite order reversed | each bound by its unique position |
 | T15b | `dup_authored_ids_same_position_never_by_order` | two live sprites, same id, identical positions, different states, order reversed (and not) | neither applied, both unresolved and reported, carried by the next save; nothing exchanged |
-| T16 | `dup_authored_ids_count_mismatch_refused` | 2 records saved, 1 sprite at load | none applied, ERROR code, `unbound` 2, records still in the file |
+| T16 | `dup_authored_ids_count_mismatch_refused` | 2 records saved, 1 sprite at load | none applied, `entity_id_ambiguous` (ERROR when strict, WARN in slot loads), both carried as unresolved |
 | T17 | `renamed_entity_survives` | rename via `ops.rename_entity` | state follows the id; fails on base |
-| T18 | `id_renamed_reports_missing` | lint-rename an id | `entity_missing` by id, no cross-apply |
+| T18 | `id_renamed_reports_missing` | lint-rename an id | `entity_missing` by id, carried as unresolved, binds again if the id returns; no cross-apply |
 | T19 | `wrong_room_guard` | room A records, room B live (`payloads.py:378`) | skipped `entities_wrong_room` |
 | T20 | `v2_load_never_rewrites_slot` | v2 file, load, hash before/after | byte-identical, no sidecar on success |
 | T21 | `first_v3_save_makes_v2_bak` | load v2 slot, save | `<slot>.v2.bak` equals the original bytes; v3 written |
@@ -269,7 +273,7 @@ Adjacent suites: `test_save_entity_quest_state`, `test_save_serialization_strict
 | Id-less record lands on an authored-id sprite | Impossible: id-less records match id-less sprites only (T12) |
 | Id-less runtime sprite state worse than base | Same name-keyed record as base; better for shared names (T9, T10) |
 | Entity renamed after save | Name irrelevant for id records |
-| Entity id renamed/removed after save | `entity_missing` by id; no cross-apply |
+| Entity id renamed/removed after save | `entity_missing` by id, carried as unresolved; no cross-apply |
 | v2 save, ambiguous names | Not applied, reported, carried as unresolved in every later save, and in the verified `.v2.bak`; snapshot still places objects |
 | A later save silently drops state that couldn't be applied | Unresolved records are written back on every save, deduplicated, removed only by binding or manual recovery (T33-T36) |
 | Load rewrites or damages the v2 file | Load is read-only (T20) |
