@@ -9,6 +9,7 @@ from typing import Any, Dict, List, cast
 from engine import json_io
 from engine.game_state_controller import GameStateController
 from engine.paths import get_content_roots, set_content_roots
+from engine.quest_runtime.normalize import quest_entries
 from engine.scene_loader import SceneLoader
 from engine.swallowed_exceptions import _log_swallow
 from engine.tooling.plan_types import Plan
@@ -164,7 +165,7 @@ class PlanTester:
             try:
                 data = json.loads(quests_path.read_text(encoding="utf-8"))
                 if isinstance(data, dict) and "quests" in data:
-                    all_quests.extend(data["quests"])
+                    all_quests.extend(quest_entries(data["quests"]))
                 elif isinstance(data, list):
                     all_quests.extend(data)
             except Exception as e:
@@ -180,7 +181,7 @@ class PlanTester:
                     try:
                         data = json.loads(pack_quests.read_text(encoding="utf-8"))
                         if isinstance(data, dict) and "quests" in data:
-                            all_quests.extend(data["quests"])
+                            all_quests.extend(quest_entries(data["quests"]))
                         elif isinstance(data, list):
                             all_quests.extend(data)
                     except Exception as e:

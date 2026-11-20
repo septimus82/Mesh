@@ -211,8 +211,10 @@ def _load_quests(root: str) -> list[dict[str, Any]]:
         return []
     if isinstance(raw, dict):
         quests = raw.get("quests")
-        if isinstance(quests, list):
-            return [q for q in quests if isinstance(q, dict)]
+        if isinstance(quests, (list, dict)):
+            from engine.quest_runtime.normalize import quest_entries  # noqa: PLC0415
+
+            return quest_entries(quests)
         # Legacy {quest_id: {...}} mapping.
         result: list[dict[str, Any]] = []
         for key, value in raw.items():

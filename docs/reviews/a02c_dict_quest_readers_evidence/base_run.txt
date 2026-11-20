@@ -1,0 +1,111 @@
+F.F.F.F.FF                                                               [100%]
+================================== FAILURES ===================================
+_______________ test_mcp_list_and_inspect_use_dict_keys_as_ids ________________
+
+root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4593/test_mcp_list_and_inspect_use_0/game')
+
+    def test_mcp_list_and_inspect_use_dict_keys_as_ids(root: Path) -> None:
+        _write(root, DICT_FORM)
+        result = list_quests(str(root))
+>       assert [q["id"] for q in result["quests"]] == EXPECTED_IDS
+E       AssertionError: assert ['quests'] == ['inner', 'plain', 'same']
+E         
+E         At index 0 diff: 'quests' != 'inner'
+E         Right contains 2 more items, first extra item: 'plain'
+E         Use -v to get more diff
+
+tests\test_quest_dict_form_readers.py:57: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+___________________ test_plan_tester_sees_dict_form_quests ____________________
+
+root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4593/test_plan_tester_sees_dict_for0/game')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000026CF3295940>
+
+    def test_plan_tester_sees_dict_form_quests(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        _write(root, DICT_FORM)
+        seen: list[dict[str, Any]] = []
+        monkeypatch.setattr(PlanTester, "_run_quest_test", lambda self, test, data: seen.append(data))
+        report = PlanTester(root).run_tests([TestSpec(name="t", type="quest")])
+        assert report.passed
+>       assert sorted(seen[0]) == EXPECTED_IDS
+E       AssertionError: assert [] == ['inner', 'plain', 'same']
+E         
+E         Right contains 3 more items, first extra item: 'inner'
+E         Use -v to get more diff
+
+tests\test_quest_dict_form_readers.py:74: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+---------------------------- Captured stdout call -----------------------------
+[Mesh][Tester] Running 1 tests...
+  - t... PASS
+______________________ test_editor_model_reads_dict_form ______________________
+
+root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4593/test_editor_model_reads_dict_f0/game')
+
+    def test_editor_model_reads_dict_form(root: Path) -> None:
+        path = _write(root, DICT_FORM)
+        model = QuestEditorModel.load(path)
+>       assert sorted(q["id"] for q in model.quests()) == EXPECTED_IDS
+E       AssertionError: assert [] == ['inner', 'plain', 'same']
+E         
+E         Right contains 3 more items, first extra item: 'inner'
+E         Use -v to get more diff
+
+tests\test_quest_dict_form_readers.py:88: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+________________ test_editor_never_converts_dict_form_to_list _________________
+
+root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4593/test_editor_never_converts_dic0/game')
+
+    def test_editor_never_converts_dict_form_to_list(root: Path) -> None:
+        path = _write(root, DICT_FORM)
+        before = path.read_bytes()
+        entries = QuestEditorModel.load(path).quests()
+>       with pytest.raises(ValueError, match="dict form"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests\test_quest_dict_form_readers.py:100: Failed
+---------------------------- Captured stderr setup ----------------------------
+________________ test_context_exporter_titles_dict_form_quests ________________
+
+root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4593/test_context_exporter_titles_d0/game')
+
+    def test_context_exporter_titles_dict_form_quests(root: Path) -> None:
+        _write(root, DICT_FORM)
+>       assert _load_quest_definitions() == {"plain": "Plain", "same": "Same", "inner": "Inner"}
+E       AssertionError: assert {} == {'inner': 'In...same': 'Same'}
+E         
+E         Right contains 3 more items:
+E         {'inner': 'Inner', 'plain': 'Plain', 'same': 'Same'}
+E         Use -v to get more diff
+
+tests\test_quest_dict_form_readers.py:114: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+___________________ test_ai_audit_lists_dict_form_quest_ids ___________________
+
+root = WindowsPath('<home>/AppData/Local/Temp/pytest-of-<name>/pytest-4593/test_ai_audit_lists_dict_form_0/game')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000026CF31260F0>
+
+    def test_ai_audit_lists_dict_form_quest_ids(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        _write(root, DICT_FORM)
+        monkeypatch.setattr("engine.ai_audit.find_repo_root", lambda: root)
+        report = build_audit_report()
+        ids = sorted(q.id for q in report.quests)
+>       assert ids == EXPECTED_IDS
+E       AssertionError: assert ['quests'] == ['inner', 'plain', 'same']
+E         
+E         At index 0 diff: 'quests' != 'inner'
+E         Right contains 2 more items, first extra item: 'plain'
+E         Use -v to get more diff
+
+tests\test_quest_dict_form_readers.py:122: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+=========================== short test summary info ===========================
+FAILED tests/test_quest_dict_form_readers.py::test_mcp_list_and_inspect_use_dict_keys_as_ids
+FAILED tests/test_quest_dict_form_readers.py::test_plan_tester_sees_dict_form_quests
+FAILED tests/test_quest_dict_form_readers.py::test_editor_model_reads_dict_form
+FAILED tests/test_quest_dict_form_readers.py::test_editor_never_converts_dict_form_to_list
+FAILED tests/test_quest_dict_form_readers.py::test_context_exporter_titles_dict_form_quests
+FAILED tests/test_quest_dict_form_readers.py::test_ai_audit_lists_dict_form_quest_ids
+6 failed, 4 passed in 4.63s
