@@ -24,7 +24,8 @@ _EDIT_RETURNS = ("Doc", "tuple[Doc, str]", "tuple[Doc, int]")
 
 
 def _tree(root: Path) -> dict[str, str]:
-    return {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob("*")) if p.is_file() and ".mesh" not in p.relative_to(root).parts}
+    files = [p for p in sorted(root.rglob("*")) if p.is_file() and ".mesh" not in p.relative_to(root).parts]
+    return {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
 
 
 @pytest.fixture
