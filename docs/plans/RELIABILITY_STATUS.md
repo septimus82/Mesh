@@ -3,8 +3,8 @@
 Maintained by the master only (workers report in their PRs). GitHub is the source of truth: a fresh master session
 rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and priorities: `MESH_RELIABILITY_MASTER_PLAN.md`.
 
-**As of 2026-11-20 (cycle 4).** Integration `redesign/visual-editor` = `384894d51fdef5426923cb42309d8aa907f61214`
-(post-merge CI 44606027334 ✓ a1, Extended 44606027196 ✓ a1).
+**As of 2026-11-20 (cycle 4).** Integration `redesign/visual-editor` = `02782bc5151317e74aeeb9429af34addb41f7a2d`
+(post-merge CI 44698696102 ✓ a1, Extended 44698696238 ✓ a1). This board lands with PR #536 (`gh pr view 536`).
 
 ## Integration record
 
@@ -17,6 +17,8 @@ rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and pr
 | #531 B-01b duplicate-id snapshot | `55bdd589da2fa5737cf7bc99f19841db82d9e324` | `2a9397f5` (= head `77d72f5c`) | 44589776415 **✗ a1 (waived, below)** | 44589776439 ✓ a1 |
 | #530 A-02 quest list erasure | `0e05bd94723f8eb137acd900b1bc03ada0ba59e2` | `a5bb55f4` | 44596602343 ✓ a1 | 44596602245 ✓ a1 |
 | #532 status board | `384894d51fdef5426923cb42309d8aa907f61214` | `3947402d` | 44606027334 ✓ a1 | 44606027196 ✓ a1 |
+| #534 T-01 Studio helper | `299ad96d7b3455d624ef3187535af9561b261352` | `d1104029` (= tip + exactly #534's reviewed diff) | 44694417509 ✓ a1 | 44694417510 ✓ a1 |
+| #533 A-02b dict-form quests | `02782bc5151317e74aeeb9429af34addb41f7a2d` | `a0721217` (= tip + exactly #533's reviewed diff) | 44698696102 ✓ a1 | 44698696238 ✓ a1 |
 
 **Waiver (owner, one-time, narrowly scoped; not a relaxation of CI).** Post-merge CI run 44589776415 on `55bdd589`
 FAILED at attempt 1: one Windows test,
@@ -27,7 +29,8 @@ its logs are preserved; it was not rerun and is not counted as green. Follow-up:
 
 **Earlier failed heads, kept:** #531 `a51c9e86` (CI 44577439782 ✗, Extended 44577435395 ✗: ruff gate), `06c48cda` (CI
 cancelled). #535 `5b87c527` (CI 44611731802 ✗: tier-marker ratchet on four renamed tests; Extended 44611733132 ✓),
-`46454b4e` (CI 44613893043 and Extended 44613890614 cancelled, superseded). Only final heads passed at attempt 1.
+`46454b4e` (CI 44613893043 and Extended 44613890614 cancelled, superseded), `d668097e` (CI 44614620041 ✓, Extended
+44614604198 ✓; superseded by the identity fix). Only final heads passed at attempt 1.
 
 ## Work
 
@@ -36,12 +39,13 @@ Approval: `OWNER` = the owner must approve the merge.
 
 | ID | Pri | Agent (model) | State | Branch / PR | Base → head | Evidence | Master verdict | Approval | Next action |
 |---|---|---|---|---|---|---|---|---|---|
-| B-01 save identity migration (v3) | P1 | mesh-gameplay-reliability (Sonnet) | APPROVED (after one correction) | `fix/b01-save-identity-migration` / #535 (draft) | `0e05bd94` → `d668097e` | real cycles (SaveManager + hidden GameWindow): twins, id-less duplicates, console clone all restored on head; v2 load read-only; verified `.json.v2.bak` or refusal (slot byte-identical); unresolved carried by every save; 51 default + 3 GPU tests (47 of 51 fail on base); 13/13 faults; final head CI 44614620041 ✓ a1, Extended 44614604198 ✓ a1 | round 1 **CHANGES REQUIRED** (absent-entity records dropped at the next save, against the owner's carry-forward rule); round 2 **APPROVE**. Accepted deviation for owner confirmation: identity diagnostics are WARN in the strict slot load (ERROR would refuse the saves the requirements say must load) | OWNER (migration) | owner decision; merge #528 (design) with it |
-| A-02b dict-form quests without `"id"` | P2 | mesh-creator-safety (Sonnet) | APPROVED | `fix/a02b-dict-quest-ids` / #533 (draft) | `0e05bd94` → `ea139378` | real `QuestManager`: keyed core and pack quests (and an AI-added one) now load; id≠key keeps the inner id and is reported; list form, files on disk unchanged; 8 tests (5 fail on base); 4/5 faults (the 5th equivalent); CI 44604916385 ✓ a1, Extended 44604909450 ✓ a1 | **APPROVE** | owner | merge on owner approval |
-| T-01 Studio helper command-file flake | test infra | mesh-creator-safety (Sonnet) | APPROVED | `fix/t01-studio-helper-command-files` / #534 (draft) | `0e05bd94` → `18298d33` | sharing violation reproduced by simulation (natural race not caught); retry only `PermissionError` on Windows (no winerror, 5, 32), ~0.4 s, then re-raised; a helper that dies now puts its stderr tail in the failure; tests and evidence only; CI 44608611102 ✓ a1, Extended 44608605194 ✓ a1 | **APPROVE** (the waived failure's cause stays unconfirmed) | owner | merge on owner approval |
-| B-01 design | | | READY (docs) | #528 (draft) | `ad91e28c` → `99e1768e` | rev 3 | complete | owner | merge with #535 |
-| A-02c other quests.json readers | P2 | (unassigned) | DISCOVERED | | | A-02b worker: `engine/mcp_server/tools.py` `_load_quests` (~204), `engine/tooling/plan_tester.py` (~162-190), `engine/editor/quest_editor_model.py:50`, `engine/tooling/ai_context_exporter.py` mishandle dict-form `{"quests": {...}}` | | owner | candidate Lane A task |
-| B-02 primary tag after load | P1/P2 | mesh-gameplay-reliability | DISCOVERED | after B-01 (same file) | | `entity_state.py:309`, `:413` | | OWNER | after #535 merges |
+| B-01 save identity migration (v3) | P1 | mesh-gameplay-reliability (Sonnet) | APPROVED (after two corrections) | `fix/b01-save-identity-migration` / #535 (draft) | `0e05bd94` → `4cdd233e` | real cycles restore twins, id-less duplicates and clones; v2 load read-only; verified `.json.v2.bak` or refusal; unresolved carried by every save; owner identity challenge: same-id twins at identical places were exchanged by sprite order → now bound by provably unique place only, else unresolved and reported; 56 B-01 tests (52 fail on base); 14/14 faults; final head CI 44696230300 ✓ a1, Extended 44696229177 ✓ a1 | round 1 CHANGES REQUIRED (absent-entity records dropped); round 2 APPROVE; owner challenge → CHANGES REQUIRED (order-based twin pairing); round 3 **APPROVE**. Identity diagnostics WARN in the strict slot load (owner accepted) | OWNER (migration) | owner merge decision, with #528 (`d79c9f2e`) |
+| A-02b dict-form quests without `"id"` | P2 | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #533 → `02782bc5` | `0e05bd94` → `ea139378` | see #533 | APPROVED | owner approved | |
+| T-01 Studio helper command-file flake | test infra | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #534 → `299ad96d` | `0e05bd94` → `18298d33` | see #534 (the waived failure's cause stays unconfirmed) | APPROVED | owner approved | |
+| B-01 design | | | READY (docs) | #528 (draft) | `ad91e28c` → `d79c9f2e` | rev 3 + 2026-11-20 correction (duplicate ids bind by unique place only; T15, T15b) | complete | owner | merge with #535 |
+| A-02c other quests.json readers | P2 | mesh-creator-safety (Sonnet) | IN PROGRESS | `fix/a02c-dict-quest-readers` (worktree `D:\Games\Mesh-A-02c`) | base `02782bc5` | MCP `_load_quests`, `plan_tester`, `quest_editor_model`, `ai_context_exporter`, `ai_audit` (to confirm) | | owner | review the draft PR |
+| B-02 primary tag after load | P1/P2 | mesh-gameplay-reliability | QUEUED (owner: after B-01 integrates) | | | `entity_state.py:309`, `:413` | | OWNER | after #535 merges |
+| U-01 unresolved-record accumulation | P2 | (unassigned) | QUEUED (owner: separate, measurable) | | | B-01: expired projectile records and indistinguishable twins' records accumulate in `saved_entities.unresolved` (deduplicated); never discarded automatically | | owner | measure growth per save/load cycle on real games; propose a bound that discards nothing automatically |
 
 ## Follow-ups noted by reviews (not assigned)
 
@@ -64,14 +68,16 @@ Approval: `OWNER` = the owner must approve the merge.
 | T-01 | Sonnet 5.5 | 28 | ~94k | #534 |
 | B-01 round 1 | Sonnet 5.5 | 144 | ~341k | #535 `5b87c527` |
 | B-01 round 2 (same agent, resumed) | Sonnet 5.5 | 160 | ~357k | #535 `d668097e` |
+| B-01 round 3, identity challenge (resumed) | Sonnet 5.5 | 17 | ~384k | #535 `4cdd233e` |
+| A-02c | Sonnet 5.5 | (running) | | |
 
 ## Worktrees in use
 
 | Worktree | Holds |
 |---|---|
 | `D:\Games\Mesh-B-01-impl` | #535 |
-| `D:\Games\Mesh-A-02b` | #533 |
-| `D:\Games\Mesh-T-01` | #534 |
+| `D:\Games\Mesh-A-02c` | A-02c (in progress) |
+| `D:\Games\Mesh-A-02b`, `D:\Games\Mesh-T-01` | merged work (#533, #534): removable after verification |
 | `D:\Games\Mesh-B-01` | #528 |
 | `D:\Games\Mesh-board` | this board update |
 | `D:\Games\Mesh-A-02`, `D:\Games\Mesh-B-01b` | merged work (#530, #531): removable after verification |
