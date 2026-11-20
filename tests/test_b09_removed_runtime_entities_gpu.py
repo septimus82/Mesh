@@ -41,3 +41,28 @@ def test_the_slot_does_not_grow_with_each_cycles_spawns(tmp_path: Path) -> None:
         counts.append(len(r["slot"]["entities"]))
     assert counts == [7, 7, 7]  # Hero, Goblin and the five live projectiles
     shutil.rmtree(work, ignore_errors=True)
+
+
+def _reverse_slot_entities(work: Path) -> None:
+    import json
+
+    path = work / "saves" / "slot1.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["entities"].reverse()  # (the runtime object before the room's, whatever order a save came to have)
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_a_same_named_runtime_twin_of_an_id_less_room_object_never_costs_the_room_object(tmp_path: Path, reverse: bool) -> None:
+    work = tmp_path / "w"
+    run_step(work, "--wolf", "--mutate", "wolf_runtime", "--mutate", "move_wolf", "--save", "slot1")
+    if reverse:
+        _reverse_slot_entities(work)
+    # (1) the runtime twin expires, the room's wolf stays live where play left it
+    r = run_step(work, "--wolf", "--load", "slot1", "--mutate", "expire_runtime_wolf", "--save", "slot1")
+    assert 420.0 in r["slot"]["wolves"]
+    assert run_step(work, "--wolf", "--load", "slot1")["after_load"].count("wolf") >= 1  # (the expired twin may linger: told apart by nothing)
+    # (2) both have no sprite (removed in play): the room's wolf is still carried, never dropped for its twin
+    r = run_step(work, "--wolf", "--load", "slot1", "--mutate", "expire_all_wolves", "--save", "slot1")
+    assert 420.0 in r["slot"]["wolves"]
+    shutil.rmtree(work, ignore_errors=True)

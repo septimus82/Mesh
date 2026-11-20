@@ -88,13 +88,6 @@ def test_a_flag_gated_carried_object_stays_while_its_gate_hides_it() -> None:
 
 
 @pytest.mark.fast
-def test_the_extra_same_named_object_past_the_rooms_count_is_the_runtime_one() -> None:
-    scene = {"entities": [_ent(name="wolf"), _ent(name="wolf", x=9.0)]}
-    snap = _snapshot(scene, [_sprite(scene["entities"][0])], room_idless={("wolf", None): 1})
-    assert [e["x"] for e in snap["entities"]] == [0.0]  # (the room's wolf stays; the second one expired)
-
-
-@pytest.mark.fast
 def test_a_room_object_removed_in_play_stays_removed_through_room_memory() -> None:
     room = {"entities": [_ent(id="a"), _ent(id="b")]}
     save = {"entities": [_ent(id="a")], "meta": {saved_world.ROOM_IDS: ["a", "b"]},
@@ -122,6 +115,37 @@ def test_a_runtime_spawned_each_cycle_with_the_same_name_stays_flat() -> None:
 
 
 @pytest.mark.fast
-def test_carried_pairs_the_rooms_own_first_and_leaves_ided_objects_alone() -> None:
+def test_carried_is_only_what_the_room_has_no_name_for_and_leaves_ided_objects_alone() -> None:
     entities = [_ent(id="a"), _ent(name="wolf"), _ent(name="wolf"), _ent(name="owl")]
-    assert saved_world.carried(entities, {("wolf", None): 1}) == {2, 3}
+    assert saved_world.carried(entities, {("wolf", None): 1}) == {3}  # (only "owl": the room has no owl)
+
+
+# ---- owner challenge: a room-file id-less object and a runtime one with the SAME name and prefab, in either order ----
+def _wolf(x: float) -> dict[str, Any]:
+    return _ent(name="wolf", x=x)
+
+
+@pytest.mark.fast
+@pytest.mark.parametrize("runtime_first", [False, True])
+def test_a_sprite_less_runtime_twin_never_costs_the_room_file_object_whichever_comes_first(runtime_first: bool) -> None:
+    room_wolf, runtime_wolf = _wolf(1.0), _wolf(777.0)
+    saved = [runtime_wolf, room_wolf] if runtime_first else [room_wolf, runtime_wolf]
+    scene = {"entities": [_ent(id="a"), *saved]}
+    counts = saved_world.room_idless([room_wolf])
+    # (1) the room's wolf is live (moved), the runtime one expired
+    live = _sprite({**room_wolf, "x": 5.0})
+    snap = _snapshot(scene, [_sprite(scene["entities"][0]), live], counts)
+    assert 5.0 in [e["x"] for e in snap["entities"] if e.get("name") == "wolf"]
+    # (2) neither has a sprite: the room's must stay (the runtime twin may stay too: they can't be told apart)
+    snap = _snapshot(scene, [_sprite(scene["entities"][0])], counts)
+    assert 1.0 in [e["x"] for e in snap["entities"] if e.get("name") == "wolf"]
+
+
+@pytest.mark.fast
+def test_the_ambiguous_same_name_case_is_warned_not_dropped(caplog: pytest.LogCaptureFixture) -> None:
+    import logging
+
+    logging.getLogger(saved_world.__name__).addHandler(caplog.handler)
+    with caplog.at_level("WARNING", logger=saved_world.__name__):
+        assert saved_world.carried([_wolf(1.0), _wolf(2.0)], {("wolf", None): 1}) == set()
+    assert "can't be told apart" in caplog.text

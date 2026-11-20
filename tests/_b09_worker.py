@@ -37,6 +37,18 @@ def mutate(arena: Arena, name: str) -> None:
         count, _, salt = name.split(":", 1)[1].partition(":")
         for n in range(int(count)):
             arena.spawn(dict(PROJECTILE, name=f"proj_{salt or 0}_{n}", x=200 + n))
+    elif name == "wolf_runtime":  # a runtime object with the SAME name as the room's id-less wolf
+        arena.spawn(dict(PROJECTILE, name="wolf", x=777))
+    elif name == "move_wolf":  # the room's own wolf, moved by play
+        [s for s in arena.sprites() if s.mesh_name == "wolf" and s.center_x < 700][0].center_x = 420.0
+    elif name == "expire_runtime_wolf":
+        for sprite in [s for s in arena.sprites() if s.mesh_name == "wolf" and s.center_x > 700]:
+            sprite.remove_from_sprite_lists()
+    elif name == "expire_all_wolves":  # (the room's own gone too: removed in play)
+        for sprite in [s for s in arena.sprites() if s.mesh_name == "wolf"]:
+            sprite.remove_from_sprite_lists()
+    elif name == "reverse_slot_entities":  # (handled by the caller: a file edit between processes)
+        pass
     elif name == "expire":  # projectile.py: remove_from_sprite_lists()
         for sprite in [s for s in arena.sprites() if s.mesh_name.startswith("proj_")]:
             sprite.remove_from_sprite_lists()
@@ -50,13 +62,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--load")
     parser.add_argument("--mutate", action="append", default=[])
     parser.add_argument("--save")
+    parser.add_argument("--wolf", action="store_true", help="the room also has an id-less object named wolf")
     args = parser.parse_args(argv)
     window = make_window()
     try:
         arena = Arena(window, args.workdir)
         arena.saves.mkdir(parents=True, exist_ok=True)
         if not arena.room.exists():
-            arena.write_room(hero(), goblin("gob_a", 100, 100))
+            wolf = [goblin(None, 400, 400, name="wolf")] if args.wolf else []  # (an id-less room-file object)
+            arena.write_room(hero(), goblin("gob_a", 100, 100), *wolf)
         arena.enter()
         out: dict[str, Any] = {}
         if args.load:
@@ -68,7 +82,8 @@ def main(argv: list[str] | None = None) -> int:
             assert arena.manager.save_game(args.save), "the save was refused"
             data = arena.read(args.save)
             out["slot"] = {"size": (arena.slot(args.save)).stat().st_size,
-                           "entities": sorted(str(e.get("name")) for e in data["entities"])}
+                           "entities": sorted(str(e.get("name")) for e in data["entities"]),
+                           "wolves": [e["x"] for e in data["entities"] if e.get("name") == "wolf"]}
         out["live"] = sorted(s.mesh_name for s in arena.sprites())
         print("B09_RESULT " + json.dumps(out, sort_keys=True))
         sys.stdout.flush()
