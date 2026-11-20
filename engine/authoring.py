@@ -40,9 +40,32 @@ _PROJECT_OPS: dict[str, Callable[..., Any]] = {
 }
 # Settings the API fills in itself, never the caller.
 _IMPLICIT = {"scene", "scene_key", "self"}
-# ``project_ops`` functions that look like edits but only read or prepare.
-_NOT_EDITS = {"ensure_entity_ids", "find_entity", "expand_players", "casts_shadow", "flicker_name",
-              "depth_of_field_of", "post_of", "haze_of", "bloom_of", "indoor_weather"}
+# The room edits: the ONLY ``project_ops`` functions an authoring change can name (A-03). Each is
+# ``(scene, ...) -> scene`` (or ``(scene, ...) -> (scene, id)``) and changes the scene. A new project_ops function is
+# never an edit until it is added here on purpose; tests/test_authoring_edit_contract.py fails if one is in neither set.
+EDIT_OPS: frozenset[str] = frozenset({
+    "add_behaviour", "add_choice", "add_light", "add_line", "add_river", "animation_use_picture", "carve_river_bed",
+    "clear_scatter", "clear_scatter_in_rivers", "clear_terrain_paint", "duplicate_light", "expand_hd2d_room",
+    "flatten_all_terrain", "move_entity", "paint_terrain_stroke", "paint_tiles", "paste_entity", "place_blank",
+    "place_prefab", "place_structure", "remove_behaviour", "remove_choice", "remove_entity", "remove_light",
+    "remove_line", "remove_river", "remove_structure", "remove_trigger_zone", "remove_water", "remove_waterfall",
+    "rename_entity", "reset_animation", "resize_map", "scatter_stroke", "sculpt_terrain", "sculpt_terrain_stroke",
+    "set_animation", "set_behaviour_param", "set_campfire", "set_choice", "set_clip", "set_collider",
+    "set_conversation", "set_depth_of_field", "set_dialogue_text", "set_door", "set_entity_fields", "set_hd2d_bloom",
+    "set_hd2d_camera", "set_hd2d_haze", "set_hd2d_post", "set_hd2d_shadows", "set_hd2d_sun", "set_light", "set_line",
+    "set_look", "set_motion", "set_particles", "set_picture", "set_picture_rules", "set_rain", "set_river",
+    "set_room_lighting", "set_room_music", "set_scatter", "set_shadows", "set_show_when", "set_solid",
+    "set_sound_emitter", "set_start_rules", "set_structure", "set_terrain_edges", "set_terrain_paint",
+    "set_trigger_zone", "set_water", "set_water_reflections", "set_waterfall", "set_weather", "set_weather_exposure",
+    "set_weather_sounds", "set_wind", "settle_on_ground",
+})
+# ``(scene, ...) -> Doc`` functions that only read (they return something *about* the room, not the room), or prepare.
+# Naming one in a change is refused: applying one would replace the room with its answer.
+NOT_EDITS: frozenset[str] = frozenset({
+    "ensure_entity_ids", "find_entity", "expand_players", "casts_shadow", "flicker_name", "depth_of_field_of", "post_of",
+    "haze_of", "bloom_of", "indoor_weather", "room_music", "weather_sounds_of", "hd2d_camera_of", "hd2d_room_size",
+    "hd2d_sun_of",
+})
 
 
 class ChangeError(ValueError):
@@ -54,17 +77,8 @@ class ChangeError(ValueError):
 
 
 def _room_ops() -> dict[str, Callable[..., Any]]:
-    """Every ``project_ops`` function that edits one room: ``(scene, ...) -> scene``, ``(scene, id)`` or
-    ``(scene, index)`` (a light)."""
-    found: dict[str, Callable[..., Any]] = {}
-    for name, func in vars(ops).items():
-        if name.startswith("_") or name in _NOT_EDITS or not inspect.isfunction(func) or func.__module__ != ops.__name__:
-            continue
-        params = list(inspect.signature(func).parameters)
-        returns = str(inspect.signature(func).return_annotation)
-        if params and params[0] == "scene" and returns in ("Doc", "tuple[Doc, str]", "tuple[Doc, int]"):
-            found[name] = func
-    return found
+    """Every room edit: the ``project_ops`` functions named in ``EDIT_OPS`` (a missing one is an error, at once)."""
+    return {name: getattr(ops, name) for name in sorted(EDIT_OPS)}
 
 
 def operations() -> dict[str, Callable[..., Any]]:
@@ -119,6 +133,9 @@ def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str
                pins: list[Doc] | None = None) -> str | int | None:
     name = str(change.get("op") or change.get("type") or "")  # "type": how older Mesh tools spell it
     func = operations().get(name)
+    if func is None and name in NOT_EDITS:
+        raise ChangeError(index, name, f"'{name}' only reads the room, it is not an edit, so it can't be applied. "
+                                       "Read it with read_project, or use the matching set_ operation to change it.")
     if func is None:
         raise ChangeError(index, name or "?", f"there is no operation '{name}'. describe() lists them.")
     args = {k: _deref(v, created, index, name) for k, v in change.items() if k not in ("op", "type", "room")}
