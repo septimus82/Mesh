@@ -1,0 +1,32 @@
+"""GAME-1 finding F-1, minimal reproduction: a runtime (id-less) entity that expired after a load comes back.
+
+    py -3.13 docs/reviews/game1_persistence_evidence/game1_expired_entity_repro.py.txt SCRATCH_DIR
+
+Three fresh processes, the production SaveManager: (1) spawn a projectile-like entity, save; (2) load, the entity
+expires the way engine/behaviours/projectile.py does it (remove_from_sprite_lists), save; (3) load. Expected: the
+entity stays gone. Observed: the save still lists it in its top-level `entities` and the load spawns it again.
+"""
+from __future__ import annotations
+
+import json
+import shutil
+import sys
+from pathlib import Path
+
+REPO = next(p for p in Path(__file__).resolve().parents if (p / "tests" / "_game1_worker.py").exists())
+sys.path.insert(0, str(REPO))
+from tests._game1_worker import run_step  # noqa: E402
+
+work = Path(sys.argv[1])
+shutil.rmtree(work, ignore_errors=True)
+names = lambda r: sorted(s["name"] for s in r["sprites"])  # noqa: E731
+r1 = run_step(work, "--mutate", "spawn:1:0", "--save", "slot1")
+print("1. spawned + saved   live:", names(r1["state"]))
+r2 = run_step(work, "--load", "slot1", "--mutate", "expire", "--save", "slot1")
+saved = json.loads((work / "saves" / "slot1.json").read_text(encoding="utf-8"))
+print("2. loaded, expired   live:", names(r2["state"]))
+print("   slot top-level entities:", sorted(e.get("name") for e in saved["entities"]))
+print("   slot saved_entities    :", sorted(e["entity_id"] for e in saved["saved_entities"]["entities"]))
+r3 = run_step(work, "--load", "slot1")
+print("3. fresh load        live:", names(r3["after_load"]))
+print("RESURRECTED:", "proj_0_0" in names(r3["after_load"]))
