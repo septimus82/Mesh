@@ -1,0 +1,13 @@
+# Run: copy to a .py in the repo root, then `py -3.13 repro_probe.py`. Production SaveManager + hidden GameWindow.
+import tempfile
+from pathlib import Path
+from tests._b01_arena import PIC, Arena, close_window, make_window
+w = make_window()
+try:
+    a = Arena(w, Path(tempfile.mkdtemp()))
+    a.write_room({"id": "hero", "name": "Hero", "tag": "player", "tags": ["friendly"], "x": 50, "y": 50, "sprite": PIC},
+                 {"id": "npc", "name": "Guard", "tag": "guard", "tags": ["alpha", "zeta"], "x": 90, "y": 90, "sprite": PIC})
+    a.enter(); a.save(); a.enter(); assert a.load()
+    print({s.mesh_id: s.mesh_tag for s in a.sprites()})
+finally:
+    close_window(w)

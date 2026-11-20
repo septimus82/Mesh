@@ -1,0 +1,19 @@
+# Fault injection: apply each mutation to engine/save_runtime/entity_state.py, run tests/test_b02_primary_tag.py, restore.
+import subprocess, sys
+F = "engine/save_runtime/entity_state.py"
+M = [
+ ("restore ignores primary_tag", "                if state.primary_tag:\n                    sprite.mesh_tag = state.primary_tag\n                elif", "                if False:\n                    pass\n                elif"),
+ ("always tags[0] when absent", "elif getattr(sprite, \"mesh_tag\", None) not in state.tags:", "elif True:"),
+ ("no diagnostic on fallback", "code=\"save.restore.primary_tag_guessed\"", "code=\"save.restore.x_silent\""),
+ ("to_dict drops primary_tag", "        if self.primary_tag:\n            result[\"primary_tag\"]", "        if False:\n            result[\"primary_tag\"]"),
+ ("from_dict drops primary_tag", "            primary_tag=primary_tag,\n        )\n\n\ndef _sprite_mesh_id", "            primary_tag=None,\n        )\n\n\ndef _sprite_mesh_id"),
+]
+orig = open(F, encoding="utf-8").read()
+try:
+    for name, a, b in M:
+        assert orig.count(a) == 1, name
+        open(F, "w", encoding="utf-8").write(orig.replace(a, b))
+        r = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-W", "error", "tests/test_b02_primary_tag.py"], capture_output=True, text=True)
+        print(name, "->", "CAUGHT" if r.returncode else "SURVIVED", r.stdout.strip().splitlines()[-1])
+finally:
+    open(F, "w", encoding="utf-8").write(orig)
