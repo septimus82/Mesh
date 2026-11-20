@@ -1,0 +1,9 @@
+cycle 0: objects 7 bytes 191828
+cycle 1: objects 7 bytes 191828
+cycle 2: objects 7 bytes 191828
+cycle 3: objects 7 bytes 191828
+cycle 4: objects 7 bytes 191828
+cycle 5: objects 7 bytes 191828
+cycle 6: objects 7 bytes 191828
+F-1: slot objects after expire+save: ['Goblin', 'Hero']
+F-1: fresh load live: ['Goblin', 'Hero'] RESURRECTED: False

@@ -89,6 +89,35 @@ def _id(entity: Any) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+def _idless_key(entity: dict[str, Any]) -> tuple[Any, Any]:
+    return entity.get("name"), entity.get("prefab_id")
+
+
+def room_idless(room_entities: Any) -> dict[tuple[Any, Any], int]:
+    """How many id-less objects (by name and prefab) the room file has: what a loaded save's own id-less objects are
+    told apart from by (never saved: the loader hands it to the controller)."""
+    counts: dict[tuple[Any, Any], int] = {}
+    for e in room_entities or []:
+        if isinstance(e, dict) and not _id(e):
+            counts[_idless_key(e)] = counts.get(_idless_key(e), 0) + 1
+    return counts
+
+
+def carried(entities: list[dict[str, Any]], from_room: dict[tuple[Any, Any], int]) -> set[int]:
+    """B-09: the indexes of the id-less ``entities`` only a save carries: past the room's own count of that name and
+    prefab (in order), so spawned during play (a projectile). A snapshot drops one whose sprite is gone."""
+    left = dict(from_room)
+    out: set[int] = set()
+    for index, e in enumerate(entities):
+        if not _id(e):
+            key = _idless_key(e)
+            if left.get(key, 0) > 0:
+                left[key] -= 1
+            else:
+                out.add(index)
+    return out
+
+
 def needs_its_room(save: dict[str, Any]) -> bool:
     """True for a save made since #390: it has no copy of its room, so it can't be loaded without it."""
     meta = save.get("meta")

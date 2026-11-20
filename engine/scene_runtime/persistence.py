@@ -4,6 +4,7 @@ import copy
 from typing import TYPE_CHECKING, Any, Dict
 
 from engine.log_utils import get_logger
+from engine.scene_entity_gating import entity_passes_flag_gates
 from engine.swallowed_exceptions import _log_swallow
 
 logger = get_logger(__name__)
@@ -72,6 +73,10 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
                 if isinstance(value, str) and value.strip():
                     authored_entity_by_key.setdefault((key_name, value.strip()), []).append(entity_index)
 
+    from .saved_world import carried
+
+    room_counts = getattr(controller, "_room_idless", None)  # (None: not loaded from a save: nothing is save-only)
+    from_save_only = carried(entities, room_counts) if room_counts is not None else set()
     updated_entity_indexes: set[int] = set()
     # A sprite whose own data equals an authored entry is that entry (claimed first, so a clone listed before its
     # original cannot take the original's entry); each entry is claimed by at most one sprite.
@@ -147,11 +152,18 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
             entities[authored_entity_index] = current_data
             updated_entity_indexes.add(authored_entity_index)
 
+    getter = getattr(controller.window, "get_flag", None)
+    kept_entities: list[dict[str, Any]] = []
     for index, entity in enumerate(entities):
         if index not in updated_entity_indexes:
+            # B-09: an object only the last save carried, with no live sprite, is gone as it is in play (a projectile
+            # that expired); a flag-gated one has no sprite for another reason and stays.
+            if index in from_save_only and entity_passes_flag_gates(entity, get_flag=getter if callable(getter) else None):
+                continue
             _remove_runtime_only_entity_fields(entity)
+        kept_entities.append(entity)
 
-    snapshot["entities"] = entities
+    snapshot["entities"] = kept_entities
 
     # Tilemap overrides (inline painted tiles)
     if controller.tilemap_instance and controller.tilemap_instance.layer_data:

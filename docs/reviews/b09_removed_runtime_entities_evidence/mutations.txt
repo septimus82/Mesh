@@ -1,0 +1,7 @@
+Mutations (each applied to the fix, tests/test_b09_removed_runtime_entities*.py run, then reverted):
+M1 drop disabled in build_scene_snapshot              -> 3 default-lane tests fail
+M2 carried(): every id-less object counted as carried -> 2 fail (room-file object kept; carried ordering)
+M3 flag-gate guard removed                            -> 1 fails (gated carried object)
+M4 carried(): id'd objects counted too                -> 2 fail
+M5 lifecycle does not pass the loader's room counts   -> both GPU fresh-process tests fail
+On base (no fix): 8 of 11 fail (base_tests.txt); the 3 that pass are the room-file/not-from-save/with-sprite guards.

@@ -1,0 +1,22 @@
+"""B-09: the GAME-1 projectile measurement. Run: py -3.13 b09_measure.py.txt SCRATCH_DIR  (from a Mesh checkout, as
+MESH_GL_SMOKE=1). Fresh processes, production SaveManager. Per cycle: load, last cycle's 5 projectiles expire, 5 new
+ones spawn, save. Prints the slot's top-level object count and file size; also the F-1 resurrection check."""
+import os, shutil, sys
+from pathlib import Path
+REPO = next(p for p in [Path.cwd(), *Path.cwd().parents] if (p / "tests" / "_b09_worker.py").exists())
+sys.path.insert(0, str(REPO)); os.environ["MESH_GL_SMOKE"] = "1"
+from tests._b09_worker import run_step  # noqa: E402
+work = Path(sys.argv[1]); shutil.rmtree(work, ignore_errors=True)
+r = run_step(work, "--mutate", "spawn:5:0", "--save", "slot1")
+print("cycle 0: objects", len(r["slot"]["entities"]), "bytes", r["slot"]["size"])
+for c in range(1, 7):
+    r = run_step(work, "--load", "slot1", "--mutate", "expire", "--mutate", f"spawn:5:{c}", "--save", "slot1")
+    print(f"cycle {c}: objects", len(r["slot"]["entities"]), "bytes", r["slot"]["size"])
+shutil.rmtree(work, ignore_errors=True)
+work.mkdir(parents=True)
+run_step(work, "--mutate", "spawn:1:0", "--save", "slot1")
+r2 = run_step(work, "--load", "slot1", "--mutate", "expire", "--save", "slot1")
+print("F-1: slot objects after expire+save:", r2["slot"]["entities"])
+r3 = run_step(work, "--load", "slot1")
+print("F-1: fresh load live:", r3["after_load"], "RESURRECTED:", "proj_0_0" in r3["after_load"])
+shutil.rmtree(work, ignore_errors=True)

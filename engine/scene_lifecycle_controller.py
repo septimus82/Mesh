@@ -279,6 +279,8 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     checked = take(controller, scene_path)  # (a reload checked this scene before clearing anything: built from that)
     scene = checked if checked is not None else controller.window.scene_loader.load_scene(scene_path)
     controller.current_scene_path = scene_path
+    # (B-09: the save's own id-less objects are told from its room's by this; None: not loaded from a save)
+    controller._room_idless = None if checked is not None else getattr(controller.window.scene_loader, "last_room_idless", None)
     # The room this is, also when it comes from a save slot (which records the room it was made in).
     controller.room_path = room_memory.room_key(getattr(controller.window.scene_loader, "last_saved_from", None) or scene_path)
     controller._loaded_scene_data = scene
