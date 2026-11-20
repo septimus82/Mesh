@@ -38,6 +38,13 @@ ADD_SEXTON = [{"op": "place_prefab", "prefab": "person", "x": 320, "y": 224},
               {"op": "rename_entity", "entity_id": "@0", "name": "Sexton"}]
 
 
+def _log_tail(log: Any, lines: int = 40) -> str:
+    """The last lines of a Studio process's stderr log, for a failure message (CI never shows the log itself)."""
+    log.flush()
+    text = Path(log.name).read_text(encoding="utf-8", errors="replace")
+    return f"--- the process's stderr (last {lines} lines) ---\n" + "\n".join(text.splitlines()[-lines:])
+
+
 class StudioProcess:
     """A Mesh Studio session in its own process; ``start`` is what it said on opening (``ready``, or ``refused``)."""
 
@@ -50,7 +57,11 @@ class StudioProcess:
                                      stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=self._log, text=True,
                                      encoding="utf-8",
                                      env={k: v for k, v in {**os.environ, **(env or {})}.items() if v is not None})
-        self.start = self._answer()
+        try:
+            self.start = self._answer()
+        except AssertionError:
+            self.end()  # (nobody else holds it: its pipe and log closed before the failure is raised)
+            raise
 
     def _answer(self) -> dict[str, Any]:
         assert self.proc.stdout is not None
@@ -59,7 +70,8 @@ class StudioProcess:
                 answer = json.loads(line)
                 assert isinstance(answer, dict)
                 return answer
-        raise AssertionError(f"the Studio process ended without answering (exit {self.proc.wait()})")
+        code = self.proc.wait()
+        raise AssertionError(f"the Studio process ended without answering (exit {code})\n{_log_tail(self._log)}")
 
     def ask(self, command: str) -> dict[str, Any]:
         self._sent += 1

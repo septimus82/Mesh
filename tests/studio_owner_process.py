@@ -63,6 +63,20 @@ class _Studio:
         pass
 
 
+def read_command(path: Path, *, attempts: int = 20, pause: float = 0.02) -> str:
+    """The command file's text. On Windows a file just renamed into place can be briefly held by another process
+    (a scanner, the indexer) without sharing: opening it then fails with a ``PermissionError`` (the C runtime reports
+    it with no ``winerror``, or 32 or 5). Only that is retried, about 0.4 s in all; then the error is raised as it was."""
+    for attempt in range(attempts):
+        try:
+            return path.read_text(encoding="utf-8")
+        except PermissionError as exc:
+            if os.name != "nt" or getattr(exc, "winerror", None) not in (None, 5, 32) or attempt == attempts - 1:
+                raise
+            time.sleep(pause)
+    raise AssertionError("unreachable")
+
+
 def _say(**fields: Any) -> None:
     print(json.dumps(fields), flush=True)
 
@@ -170,7 +184,7 @@ def main() -> int:
             time.sleep(0.01)
             continue
         taken += 1
-        command, _, argument = waiting.read_text(encoding="utf-8").strip().partition(" ")
+        command, _, argument = read_command(waiting).strip().partition(" ")
         if command == "edit":
             authoring.apply(project, [{"op": "place_prefab", "prefab": "person", "x": 64, "y": 64},
                                       {"op": "rename_entity", "entity_id": "@0", "name": argument}])
