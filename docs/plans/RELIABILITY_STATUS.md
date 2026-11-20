@@ -3,8 +3,8 @@
 Maintained by the master only (workers report in their PRs). GitHub is the source of truth: a fresh master session
 rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and priorities: `MESH_RELIABILITY_MASTER_PLAN.md`.
 
-**As of 2026-11-20 (cycle 4).** Integration `redesign/visual-editor` = `02782bc5151317e74aeeb9429af34addb41f7a2d`
-(post-merge CI 44698696102 ✓ a1, Extended 44698696238 ✓ a1). This board lands with PR #536 (`gh pr view 536`).
+**As of 2026-11-20 (cycle 5).** Integration `redesign/visual-editor` = `d89f32c4b0b1be502761c357b3a67ba34a4b9a39`
+(post-merge CI 44720700860 ✓ a1, Extended 44720700937 ✓ a1). This board lands with its own PR (`gh pr list --head docs/reliability-status-cycle5`).
 
 ## Integration record
 
@@ -19,6 +19,10 @@ rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and pr
 | #532 status board | `384894d51fdef5426923cb42309d8aa907f61214` | `3947402d` | 44606027334 ✓ a1 | 44606027196 ✓ a1 |
 | #534 T-01 Studio helper | `299ad96d7b3455d624ef3187535af9561b261352` | `d1104029` (= tip + exactly #534's reviewed diff) | 44694417509 ✓ a1 | 44694417510 ✓ a1 |
 | #533 A-02b dict-form quests | `02782bc5151317e74aeeb9429af34addb41f7a2d` | `a0721217` (= tip + exactly #533's reviewed diff) | 44698696102 ✓ a1 | 44698696238 ✓ a1 |
+| #536 status board | `58306e04adf308cb5a1e133ba54f325c56056d4c` | `4b982100` | 44705119411 ✓ a1 | 44705119347 ✓ a1 |
+| #535 B-01 v3 save migration | `eda041ac228f0dd7aeae4ec4e5d6590a95941f60` | `9233a34f` (= tip + exactly #535's reviewed diff, head `4cdd233e`) | 44712018838 ✓ a1 | 44712018948 ✓ a1 |
+| #528 B-01 design record | `17d88e12e12dca50293ee1646b5d02833cd48af1` | `313c28f7` (docs only) | 44717090335 ✓ a1 | 44717090260 ✓ a1 |
+| #537 A-02c quest readers | `d89f32c4b0b1be502761c357b3a67ba34a4b9a39` | `4bd8d225` (= tip + exactly #537's reviewed diff) | 44720700860 ✓ a1 | 44720700937 ✓ a1 |
 
 **Waiver (owner, one-time, narrowly scoped; not a relaxation of CI).** Post-merge CI run 44589776415 on `55bdd589`
 FAILED at attempt 1: one Windows test,
@@ -39,12 +43,12 @@ Approval: `OWNER` = the owner must approve the merge.
 
 | ID | Pri | Agent (model) | State | Branch / PR | Base → head | Evidence | Master verdict | Approval | Next action |
 |---|---|---|---|---|---|---|---|---|---|
-| B-01 save identity migration (v3) | P1 | mesh-gameplay-reliability (Sonnet) | APPROVED (after two corrections) | `fix/b01-save-identity-migration` / #535 (draft) | `0e05bd94` → `4cdd233e` | real cycles restore twins, id-less duplicates and clones; v2 load read-only; verified `.json.v2.bak` or refusal; unresolved carried by every save; owner identity challenge: same-id twins at identical places were exchanged by sprite order → now bound by provably unique place only, else unresolved and reported; 56 B-01 tests (52 fail on base); 14/14 faults; final head CI 44696230300 ✓ a1, Extended 44696229177 ✓ a1 | round 1 CHANGES REQUIRED (absent-entity records dropped); round 2 APPROVE; owner challenge → CHANGES REQUIRED (order-based twin pairing); round 3 **APPROVE**. Identity diagnostics WARN in the strict slot load (owner accepted) | OWNER (migration) | owner merge decision, with #528 (`d79c9f2e`) |
+| B-01 save identity migration (v3) | P1 | mesh-gameplay-reliability (Sonnet) | MERGED + VERIFIED | #535 → `eda041ac` | `0e05bd94` → `4cdd233e` | see #535 (three review rounds, owner identity challenge resolved) | APPROVED | owner approved (slot-load identity warnings non-fatal; records never guessed, lost or discarded) | |
 | A-02b dict-form quests without `"id"` | P2 | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #533 → `02782bc5` | `0e05bd94` → `ea139378` | see #533 | APPROVED | owner approved | |
 | T-01 Studio helper command-file flake | test infra | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #534 → `299ad96d` | `0e05bd94` → `18298d33` | see #534 (the waived failure's cause stays unconfirmed) | APPROVED | owner approved | |
-| B-01 design | | | READY (docs) | #528 (draft) | `ad91e28c` → `d79c9f2e` | rev 3 + 2026-11-20 correction (duplicate ids bind by unique place only; T15, T15b) | complete | owner | merge with #535 |
-| A-02c other quests.json readers | P2 | mesh-creator-safety (Sonnet) | IN PROGRESS | `fix/a02c-dict-quest-readers` (worktree `D:\Games\Mesh-A-02c`) | base `02782bc5` | MCP `_load_quests`, `plan_tester`, `quest_editor_model`, `ai_context_exporter`, `ai_audit` (to confirm) | | owner | review the draft PR |
-| B-02 primary tag after load | P1/P2 | mesh-gameplay-reliability | QUEUED (owner: after B-01 integrates) | | | `entity_state.py:309`, `:413` | | OWNER | after #535 merges |
+| B-01 design | | | MERGED | #528 → `17d88e12` | → `bce4f95f` | matches the implementation (WARN in slot loads, absent-entity records carried, backups `slot1.json.v2.bak`) | | owner approved | |
+| A-02c other quests.json readers | P2 | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #537 → `d89f32c4` | `02782bc5` → `00fb0fce` | five readers fixed via a shared `quest_entries`; the editor refuses to save over a dict-form file | APPROVED | owner approved | |
+| B-02 primary tag after load | P1/P2 | mesh-gameplay-reliability (Sonnet) | APPROVED | `fix/b02-primary-tag` / #538 (draft) | `eda041ac` → `655dfc0b` | real cycle on base: player came back as "friendly", guard as "alpha"; head keeps both; new optional `primary_tag` (no schema bump); old records keep the live primary when saved, else `tags[0]` + WARN `primary_tag_guessed`; 8 tests (7 fail on base), 5/5 faults; digests unchanged; CI 44720168671 ✓ a1, Extended 44720166357 ✓ a1 | **APPROVE** | OWNER (saved-record field) | owner merge decision |
 | U-01 unresolved-record accumulation | P2 | (unassigned) | QUEUED (owner: separate, measurable) | | | B-01: expired projectile records and indistinguishable twins' records accumulate in `saved_entities.unresolved` (deduplicated); never discarded automatically | | owner | measure growth per save/load cycle on real games; propose a bound that discards nothing automatically |
 
 ## Follow-ups noted by reviews (not assigned)
@@ -69,15 +73,13 @@ Approval: `OWNER` = the owner must approve the merge.
 | B-01 round 1 | Sonnet 5.5 | 144 | ~341k | #535 `5b87c527` |
 | B-01 round 2 (same agent, resumed) | Sonnet 5.5 | 160 | ~357k | #535 `d668097e` |
 | B-01 round 3, identity challenge (resumed) | Sonnet 5.5 | 17 | ~384k | #535 `4cdd233e` |
-| A-02c | Sonnet 5.5 | (running) | | |
+| A-02c | Sonnet 5.5 | 32 | ~112k | #537 (merged) |
+| B-02 | Sonnet 5.5 | 36 | ~108k | #538 |
 
 ## Worktrees in use
 
 | Worktree | Holds |
 |---|---|
-| `D:\Games\Mesh-B-01-impl` | #535 |
-| `D:\Games\Mesh-A-02c` | A-02c (in progress) |
-| `D:\Games\Mesh-A-02b`, `D:\Games\Mesh-T-01` | merged work (#533, #534): removable after verification |
-| `D:\Games\Mesh-B-01` | #528 |
+| `D:\Games\Mesh-B-02` | #538 (B-02) |
 | `D:\Games\Mesh-board` | this board update |
-| `D:\Games\Mesh-A-02`, `D:\Games\Mesh-B-01b` | merged work (#530, #531): removable after verification |
+| `D:\Games\Mesh-B-01-impl`, `D:\Games\Mesh-B-01`, `D:\Games\Mesh-A-02c`, `D:\Games\Mesh-A-02b`, `D:\Games\Mesh-T-01`, `D:\Games\Mesh-A-02`, `D:\Games\Mesh-B-01b` | merged work (#535, #528, #537, #533, #534, #530, #531): removable after verification |
