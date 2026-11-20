@@ -75,7 +75,7 @@ def test_a_save_records_the_room_it_was_made_in_not_the_save_file(monkeypatch) -
         all_sprites=[], build_scene_snapshot=lambda compact=False: {"name": "Hall", "entities": []})
     state.export_state = lambda: {"flags": {}}  # type: ignore[attr-defined]
     window = SimpleNamespace(scene_controller=controller, game_state_controller=state)
-    monkeypatch.setattr(payloads, "serialize_entities", lambda _c: [])
+    monkeypatch.setattr(payloads, "serialize_saved_entities", lambda _c, **_k: {"schema_version": 2, "entities": []})
     snapshot, _ = payloads.build_slot_payload(window, "quicksave", compact=False, timestamp="t")
     assert snapshot["meta"]["scene_path"] == "packs/rooms/hall.json"
 
