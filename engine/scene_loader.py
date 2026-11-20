@@ -157,6 +157,7 @@ class SceneLoader:
     def __init__(self) -> None:
         self.documents: Dict[str, Dict[str, Any]] = {}
         self.last_saved_from: str | None = None  # the room the last loaded save slot was made in
+        self.last_room_idless: dict[tuple[Any, Any], int] | None = None
 
     def apply_scene_defaults(self, raw_scene: Dict[str, Any]) -> Dict[str, Any]:
         """Public wrapper so tooling can reuse the defaulting logic."""
@@ -187,6 +188,7 @@ class SceneLoader:
         else:
             raw_scene = json.loads(full_path.read_text(encoding="utf-8"))
         saved_from: str | None = None  # the room a save slot was made in
+        self.last_room_idless = None  # (B-09) set below for a save slot: its room's id-less objects, by name and prefab
         if isinstance(raw_scene, dict) and "save_format_version" in raw_scene:
             # A save slot is a scene snapshot plus save metadata (restored separately by
             # SaveManager before it loads the slot as a scene); keep only the scene part.
@@ -200,8 +202,9 @@ class SceneLoader:
                     raise FileNotFoundError(f"The room '{saved_from}' this save was made in is missing; "
                                             "the save was not loaded")
             if room is not None:  # (#390: the room as it is now, with what play changed: engine.scene_runtime.saved_world)
-                from engine.scene_runtime.saved_world import compose  # noqa: PLC0415
+                from engine.scene_runtime.saved_world import compose, room_idless  # noqa: PLC0415
 
+                self.last_room_idless = room_idless(room.get("entities"))
                 raw_scene = compose(raw_scene, room, str(saved_from))
             raw_scene = {k: v for k, v in raw_scene.items() if k in SCENE_TOP_LEVEL_KEYS}
         self.last_saved_from = saved_from if isinstance(saved_from, str) and saved_from.strip() else None

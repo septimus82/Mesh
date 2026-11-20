@@ -89,6 +89,36 @@ def _id(entity: Any) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+def _idless_key(entity: dict[str, Any]) -> tuple[Any, Any]:
+    return entity.get("name"), entity.get("prefab_id")
+
+
+def room_idless(room_entities: Any) -> dict[tuple[Any, Any], int]:
+    """How many id-less objects (by name and prefab) the room file has: what a loaded save's own id-less objects are
+    told apart from by (never saved: the loader hands it to the controller)."""
+    counts: dict[tuple[Any, Any], int] = {}
+    for e in room_entities or []:
+        if isinstance(e, dict) and not _id(e):
+            counts[_idless_key(e)] = counts.get(_idless_key(e), 0) + 1
+    return counts
+
+
+def carried(entities: list[dict[str, Any]], from_room: dict[tuple[Any, Any], int]) -> set[int]:
+    """B-09: the indexes of the id-less ``entities`` that are provably not the room's: the room file has no id-less
+    object with their name and prefab, so they were spawned during play (a projectile) and only a save carries them.
+    A snapshot drops one whose sprite is gone. Where the room has some of that name and prefab, a save's id-less
+    objects can't be told from the room's (not by list order), so none is dropped (warned), as before B-09."""
+    found: dict[tuple[Any, Any], int] = {}
+    for e in entities:
+        if not _id(e):
+            found[_idless_key(e)] = found.get(_idless_key(e), 0) + 1
+    for key, n in found.items():
+        if 0 < from_room.get(key, 0) < n:
+            logger.warning("saved world: %d id-less objects named %r (prefab %r), the room has %d; they can't be told "
+                           "apart, so an expired one is kept", n, key[0], key[1], from_room[key])
+    return {i for i, e in enumerate(entities) if not _id(e) and from_room.get(_idless_key(e), 0) == 0}
+
+
 def needs_its_room(save: dict[str, Any]) -> bool:
     """True for a save made since #390: it has no copy of its room, so it can't be loaded without it."""
     meta = save.get("meta")
