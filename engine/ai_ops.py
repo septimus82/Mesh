@@ -94,6 +94,13 @@ def build_prefab_entity_definition(
     return entity_def
 
 
+# paint_tiles limits. No engine-wide map-size limit exists; these bound one AI/MCP edit.
+# 1024x1024 cells (~1M ints, a few MB of JSON) is far above any shipped map. Used for the
+# coordinate bound only when the tilemap's own width/height are unknown.
+MAX_PAINT_TILE_COORD = 1024
+MAX_PAINT_TILE_OPS = 10_000
+
+
 @dataclass
 class AIOpsResult:
     ok: bool
@@ -467,11 +474,28 @@ class AIOps:
                     print(f"[Mesh][AIOps] WARNING: Failed to infer map dimensions from '{resolved}': {exc}")
                     setattr(self, "_mesh_paint_tiles_map_dim_error_logged", True)
 
+        # Validate the whole batch before touching anything: a bad op refuses all of it.
+        if not isinstance(ops, list):
+            return AIOpsResult(False, "paint_tiles ops must be a list")
+        if len(ops) > MAX_PAINT_TILE_OPS:
+            return AIOpsResult(False, f"paint_tiles: {len(ops)} ops exceeds the limit of {MAX_PAINT_TILE_OPS}")
+        bound_col = width if width and height else MAX_PAINT_TILE_COORD
+        bound_row = height if width and height else MAX_PAINT_TILE_COORD
+        for i, op in enumerate(ops):
+            if not isinstance(op, dict):
+                return AIOpsResult(False, f"paint_tiles op {i}: must be an object")
+            for key, limit in (("col", bound_col), ("row", bound_row), ("gid", None)):
+                val = op.get(key, 0)
+                if type(val) is not int or val < 0:
+                    return AIOpsResult(False, f"paint_tiles op {i}: {key}={val!r} must be a non-negative integer")
+                if limit is not None and val >= limit:
+                    return AIOpsResult(False, f"paint_tiles op {i}: {key}={val} is outside the map (must be < {limit})")
+
         for op in ops:
             layer = str(op.get("layer", "ground"))
-            col = int(op.get("col", 0))
-            row = int(op.get("row", 0))
-            gid = int(op.get("gid", 0))
+            col = op.get("col", 0)
+            row = op.get("row", 0)
+            gid = op.get("gid", 0)
             data = layers.get(layer)
             if not isinstance(data, list):
                 # Build a new layer sized by known map dims or minimal required size
