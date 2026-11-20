@@ -42,7 +42,7 @@ _PROJECT_OPS: dict[str, Callable[..., Any]] = {
 _IMPLICIT = {"scene", "scene_key", "self"}
 # The room edits: the ONLY ``project_ops`` functions an authoring change can name (A-03). Each is
 # ``(scene, ...) -> scene`` (or ``(scene, ...) -> (scene, id)``) and changes the scene. A new project_ops function is
-# never an edit until it is added here on purpose; tests/test_authoring_edit_contract.py fails if one is in neither set.
+# never an edit until it is added here on purpose; tests/test_authoring_read_only_ops.py fails if one is in neither set.
 EDIT_OPS: frozenset[str] = frozenset({
     "add_behaviour", "add_choice", "add_light", "add_line", "add_river", "animation_use_picture", "carve_river_bed",
     "clear_scatter", "clear_scatter_in_rivers", "clear_terrain_paint", "duplicate_light", "expand_hd2d_room",

@@ -3,7 +3,7 @@ hd2d_camera_of hd2d_room_size hd2d_sun_of room_music weather_sounds_of
 Added: none. Changed entries: none (the other 85 describe() entries are identical).
 
 New tests on base (authoring.py swapped back): 18 failed. On head: 18 passed.
-Mutations (tests/test_authoring_edit_contract.py + tests/test_authoring.py):
+Mutations (tests/test_authoring_read_only_ops.py + tests/test_authoring.py):
  M1 add room_music to EDIT_OPS: 5 failed
  M2 remove room_music from NOT_EDITS: 3 failed
  M3 drop the refusal branch in _apply_one: 5 failed
