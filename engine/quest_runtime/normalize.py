@@ -3,6 +3,24 @@ from __future__ import annotations
 from typing import Any
 
 
+def quest_entries(quests_root: Any) -> list[dict[str, Any]]:
+    """Raw quest dicts from a quests.json ``"quests"`` value (list or dict form), same id rule as the loader.
+
+    Dict form ``{"<key>": {...}}``: an entry without its own "id" gets the key as id; an inner "id" wins.
+    List entries are returned as they are. Non-dict entries are skipped.
+    """
+    if isinstance(quests_root, dict):
+        rows = [
+            {**raw, "id": key} if not str(raw.get("id", "")).strip() else raw
+            for key, raw in quests_root.items()
+            if isinstance(raw, dict)
+        ]
+        return rows
+    if isinstance(quests_root, list):
+        return [raw for raw in quests_root if isinstance(raw, dict)]
+    return []
+
+
 def normalize_quest(data: Any) -> dict[str, Any] | None:
     if not isinstance(data, dict):
         return None

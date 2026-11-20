@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Set
 
 from engine.content_index import ContentIndex
 from engine.paths import resolve_path
+from engine.quest_runtime.normalize import quest_entries
 from engine.repo_root import find_repo_root
 from engine.tooling_runtime.discovery import discover_scene_paths
 
@@ -43,8 +44,8 @@ class AIAuditReport:
 def _extract_quest_ids(raw_quests: Any) -> Set[str]:
     if isinstance(raw_quests, dict):
         quests = raw_quests.get("quests")
-        if isinstance(quests, list):
-            return _extract_quest_ids_from_list(quests)
+        if isinstance(quests, (list, dict)):
+            return _extract_quest_ids_from_list(quest_entries(quests))
         return {str(key) for key in raw_quests.keys() if str(key).strip()}
     if isinstance(raw_quests, list):
         return _extract_quest_ids_from_list(raw_quests)
