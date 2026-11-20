@@ -49,6 +49,7 @@ IDENTITY_DIAGNOSTIC_CODES = frozenset({
     "save.restore.entities_unbound",
     "save.restore.entities_unresolved",
     "save.restore.entities_wrong_room",
+    "save.restore.primary_tag_guessed",
 })
 
 
@@ -114,6 +115,7 @@ class SavedEntityState:
         keying: "id" (authored id: see mesh_id/occurrence), "name" (id-less sprite) or None (a v2-era record)
         mesh_id: the authored id of an id-keyed record
         occurrence: 0-based rank of the sprite among the live sprites sharing its authored id
+        primary_tag: the sprite's primary tag (``mesh_tag``); ``tags`` is sorted so cannot say which one it was (B-02)
     """
     entity_id: str
     prefab_id: str | None = None
@@ -126,6 +128,7 @@ class SavedEntityState:
     keying: str | None = None
     mesh_id: str | None = None
     occurrence: int = 0
+    primary_tag: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to JSON-friendly dict."""
@@ -146,6 +149,9 @@ class SavedEntityState:
 
         if self.tags:
             result["tags"] = sorted(list(self.tags))
+
+        if self.primary_tag:
+            result["primary_tag"] = self.primary_tag
 
         if self.animation_state:
             result["animation_state"] = self.animation_state
@@ -227,6 +233,9 @@ class SavedEntityState:
         except (TypeError, ValueError):
             occurrence = 0
 
+        primary_tag = data.get("primary_tag")
+        primary_tag = primary_tag.strip() if isinstance(primary_tag, str) and primary_tag.strip() else None
+
         return cls(
             entity_id=entity_id,
             prefab_id=prefab_id,
@@ -239,6 +248,7 @@ class SavedEntityState:
             keying=keying,
             mesh_id=mesh_id,
             occurrence=occurrence,
+            primary_tag=primary_tag,
         )
 
 
@@ -333,8 +343,10 @@ def serialize_entity(
     # Get tags
     tags: list[str] = []
     mesh_tag = getattr(sprite, "mesh_tag", None)
+    primary_tag: str | None = None
     if isinstance(mesh_tag, str) and mesh_tag.strip():
-        tags.append(mesh_tag.strip())
+        primary_tag = mesh_tag.strip()
+        tags.append(primary_tag)
     mesh_tags = getattr(sprite, "mesh_tags", None)
     if isinstance(mesh_tags, (list, tuple)):
         for t in mesh_tags:
@@ -395,6 +407,7 @@ def serialize_entity(
         behaviour_state=behaviour_state,
         keying=KEYING_ID if mesh_id else KEYING_NAME,
         mesh_id=mesh_id,
+        primary_tag=primary_tag,
     )
 
 
@@ -517,7 +530,25 @@ def apply_entity_state(
         if state.tags:
             # Set primary tag
             if hasattr(sprite, "mesh_tag"):
-                sprite.mesh_tag = state.tags[0] if state.tags else None
+                if state.primary_tag:
+                    sprite.mesh_tag = state.primary_tag
+                elif getattr(sprite, "mesh_tag", None) not in state.tags:
+                    # no recorded primary and the live one isn't a saved tag: sorted order is a guess (B-02)
+                    sprite.mesh_tag = state.tags[0]
+                    _append_diagnostic(
+                        diagnostics,
+                        _diagnostic(
+                            level=DiagnosticLevel.WARN,
+                            code="save.restore.primary_tag_guessed",
+                            message=(
+                                f"Entity '{state.entity_id}' has no recorded primary tag; "
+                                f"used '{state.tags[0]}' (first saved tag)."
+                            ),
+                            source=source,
+                            pointer=f"/saved_entities/entities/{state.entity_id}/tags",
+                            hint="Save again to record the primary tag.",
+                        ),
+                    )
             # Set all tags
             if hasattr(sprite, "mesh_tags"):
                 sprite.mesh_tags = list(state.tags)
