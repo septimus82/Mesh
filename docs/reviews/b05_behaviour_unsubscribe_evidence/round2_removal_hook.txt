@@ -1,0 +1,20 @@
+# Round 2: removal hook in engine/scene_controller_parts/entity_factory.py (entity sprite subclass: remove_from_sprite_lists ends behaviours once)
+# On 9c5be0cf (hook absent), tests/test_behaviour_teardown_on_entity_removal.py:
+FAILED tests/test_behaviour_teardown_on_entity_removal.py::test_kill_ends_behaviours_and_listeners_return_to_baseline
+FAILED tests/test_behaviour_teardown_on_entity_removal.py::test_health_death_ends_behaviours
+FAILED tests/test_behaviour_teardown_on_entity_removal.py::test_collectible_pickup_ends_behaviours
+FAILED tests/test_behaviour_teardown_on_entity_removal.py::test_projectile_expiry_ends_behaviours
+FAILED tests/test_behaviour_teardown_on_entity_removal.py::test_removal_ends_behaviours_once
+FAILED tests/test_behaviour_teardown_on_entity_removal.py::test_scene_change_ends_listeners_and_a_later_room_works
+6 failed, 2 passed in 8.54s
+
+# On head: 8 passed
+# Mutations:
+M [s/^                _end_behaviours(self)/                pass/] -> 6 failed, 2 passed in 8.74s
+M [s/^                super().remove_from_sprite_lists()/                pass/] -> 4 failed, 4 passed in 8.58s
+M [s/^    sprite._mesh_behaviours_ended = True/    pass/] -> 1 failed, 7 passed in 8.58s
+M [s/^    if getattr(sprite, "_mesh_behaviours_ended", False):/    if False:/] -> 1 failed, 7 passed in 9.28s
+M [s/_entity_sprite_class(scene_controller_module.optional_arcade.arcade.Sprite)()/scene_controller_module.optional_arcade.arcade.Sprite()/] -> 6 failed, 2 passed in 8.52s
+
+# Validation: 254 related test files 1700 passed 5 skipped; slow set (scene_exit, quest_manager, unification, lifecycle policy, both B-05 files) all passed
+# Not covered: editor/authoring delete (layer.remove, no remove_from_sprite_lists) and scene clear; scene change is covered by scene subscription tracking.

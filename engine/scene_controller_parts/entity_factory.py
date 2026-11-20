@@ -43,6 +43,43 @@ def _apply_collision_poly(self, sprite: Any, poly: Any) -> None:
         return
 
 
+_ENTITY_SPRITE_CLASSES: dict[type, type] = {}
+
+
+def _end_behaviours(sprite: Any) -> None:
+    """Tell the sprite's behaviours it is gone (``on_destroy``), once: their event-bus subscriptions end with it."""
+    import engine.scene_controller_core as scene_controller_module
+
+    if getattr(sprite, "_mesh_behaviours_ended", False):
+        return
+    sprite._mesh_behaviours_ended = True
+    for behaviour in list(getattr(sprite, "mesh_behaviours_runtime", None) or ()):
+        on_destroy = getattr(behaviour, "on_destroy", None)
+        if not callable(on_destroy):
+            continue
+        try:
+            on_destroy()
+        except Exception:  # noqa: BLE001  # REASON: one behaviour's failing teardown must not stop the others or the removal
+            scene_controller_module.logger.warning(
+                "on_destroy failed for %s on %s", type(behaviour).__name__, getattr(sprite, "mesh_name", "?"), exc_info=True
+            )
+
+
+def _entity_sprite_class(base: type) -> type:
+    """The scene's entity sprite: ``remove_from_sprite_lists`` (also ``kill()``: death, pickup, expiry) ends its
+    behaviours. Moving a sprite between layers goes through the list's own ``remove`` and is not an ending."""
+    cls = _ENTITY_SPRITE_CLASSES.get(base)
+    if cls is None:
+
+        class MeshEntitySprite(base):
+            def remove_from_sprite_lists(self) -> None:
+                super().remove_from_sprite_lists()
+                _end_behaviours(self)
+
+        cls = _ENTITY_SPRITE_CLASSES[base] = MeshEntitySprite
+    return cls
+
+
 def _create_sprite(self, entity: dict[str, Any]) -> Any | None:
     import engine.scene_controller_core as scene_controller_module
 
@@ -64,7 +101,7 @@ def _create_sprite(self, entity: dict[str, Any]) -> Any | None:
 
         if entity.get("flip_x") and hasattr(texture, "flip_left_right"):
             texture = texture.flip_left_right()  # a mirrored picture (facing the other way)
-        sprite = scene_controller_module.optional_arcade.arcade.Sprite()
+        sprite = _entity_sprite_class(scene_controller_module.optional_arcade.arcade.Sprite)()
         sprite.texture = texture
         # Logic-only entities (arrival spots, triggers) keep the placeholder for their
         # hitbox but are never drawn: players shouldn't see grey squares. An object with its picture hidden
@@ -175,6 +212,7 @@ def _rebuild_behaviours_for_sprite(self, sprite: Any) -> None:
     for unsubscribe in made:
         self.track_scene_subscription(unsubscribe)
     cast(Any, sprite).mesh_behaviours_runtime = runtime_instances
+    cast(Any, sprite)._mesh_behaviours_ended = False  # fresh behaviours: their ending is still to come
 
 
 def _create_behaviour_instances(self, sprite: Any, names: list[str], config_root: dict[str, Any]) -> list[Any]:
