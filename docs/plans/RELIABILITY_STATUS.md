@@ -3,8 +3,8 @@
 Maintained by the master only (workers report in their PRs). GitHub is the source of truth: a fresh master session
 rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and priorities: `MESH_RELIABILITY_MASTER_PLAN.md`.
 
-**As of 2026-11-20 (cycle 5).** Integration `redesign/visual-editor` = `d89f32c4b0b1be502761c357b3a67ba34a4b9a39`
-(post-merge CI 44720700860 ✓ a1, Extended 44720700937 ✓ a1). This board lands with its own PR (`gh pr list --head docs/reliability-status-cycle5`).
+**As of 2026-11-20 (cycle 6).** Integration `redesign/visual-editor` = `d525eea3d49b865d89af06bd0654962fc11da80b`
+(post-merge CI 44754391666 ✓ a1, Extended 44754391627 ✓ a1). This board lands with its own PR (`gh pr list --head docs/reliability-status-cycle6`).
 
 ## Integration record
 
@@ -23,6 +23,10 @@ rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and pr
 | #535 B-01 v3 save migration | `eda041ac228f0dd7aeae4ec4e5d6590a95941f60` | `9233a34f` (= tip + exactly #535's reviewed diff, head `4cdd233e`) | 44712018838 ✓ a1 | 44712018948 ✓ a1 |
 | #528 B-01 design record | `17d88e12e12dca50293ee1646b5d02833cd48af1` | `313c28f7` (docs only) | 44717090335 ✓ a1 | 44717090260 ✓ a1 |
 | #537 A-02c quest readers | `d89f32c4b0b1be502761c357b3a67ba34a4b9a39` | `4bd8d225` (= tip + exactly #537's reviewed diff) | 44720700860 ✓ a1 | 44720700937 ✓ a1 |
+| #539 status board | `eb9e03b71912ee6be15a2289849daed473f7b8e6` | `9f59c51b` | 44726823616 ✓ a1 | 44726823629 ✓ a1 |
+| #538 B-02 primary tag | `551ba25ffca2684011351f12c1383fa7688adf05` | `b8a15e9f` (= tip + exactly #538's reviewed diff) | 44730232987 ✓ a1 | 44730233136 ✓ a1 |
+| #540 GAME-1 acceptance | `446236a6ac26c88ae784e02c78dbd6422bfca679` | `2e1fa844` (= reviewed head) | 44746454898 ✓ a1 | 44746454540 ✓ a1 |
+| #541 B-09 removed runtime entities | `d525eea3d49b865d89af06bd0654962fc11da80b` | `f99d158d` (= tip + exactly #541's reviewed diff, head `90378a9d`) | 44754391666 ✓ a1 | 44754391627 ✓ a1 |
 
 **Waiver (owner, one-time, narrowly scoped; not a relaxation of CI).** Post-merge CI run 44589776415 on `55bdd589`
 FAILED at attempt 1: one Windows test,
@@ -48,8 +52,12 @@ Approval: `OWNER` = the owner must approve the merge.
 | T-01 Studio helper command-file flake | test infra | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #534 → `299ad96d` | `0e05bd94` → `18298d33` | see #534 (the waived failure's cause stays unconfirmed) | APPROVED | owner approved | |
 | B-01 design | | | MERGED | #528 → `17d88e12` | → `bce4f95f` | matches the implementation (WARN in slot loads, absent-entity records carried, backups `slot1.json.v2.bak`) | | owner approved | |
 | A-02c other quests.json readers | P2 | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #537 → `d89f32c4` | `02782bc5` → `00fb0fce` | five readers fixed via a shared `quest_entries`; the editor refuses to save over a dict-form file | APPROVED | owner approved | |
-| B-02 primary tag after load | P1/P2 | mesh-gameplay-reliability (Sonnet) | APPROVED | `fix/b02-primary-tag` / #538 (draft) | `eda041ac` → `655dfc0b` | real cycle on base: player came back as "friendly", guard as "alpha"; head keeps both; new optional `primary_tag` (no schema bump); old records keep the live primary when saved, else `tags[0]` + WARN `primary_tag_guessed`; 8 tests (7 fail on base), 5/5 faults; digests unchanged; CI 44720168671 ✓ a1, Extended 44720166357 ✓ a1 | **APPROVE** | OWNER (saved-record field) | owner merge decision |
-| U-01 unresolved-record accumulation | P2 | (unassigned) | QUEUED (owner: separate, measurable) | | | B-01: expired projectile records and indistinguishable twins' records accumulate in `saved_entities.unresolved` (deduplicated); never discarded automatically | | owner | measure growth per save/load cycle on real games; propose a bound that discards nothing automatically |
+| B-02 primary tag after load | P1/P2 | mesh-gameplay-reliability (Sonnet) | MERGED + VERIFIED | #538 → `551ba25f` | `eda041ac` → `655dfc0b` | see #538 | APPROVED | owner approved | |
+| GAME-1 persistence acceptance | P1 | mesh-gameplay-reliability (Sonnet) | MERGED + VERIFIED | #540 → `446236a6` | `551ba25f` → `7f73502a` | fresh-process save/exit/load: health, quests, inventory, entity state, primary tags, v2 fixtures (`.v2.bak` byte-identical), ambiguous ids; 10 GPU cases | APPROVED | owner approved | found F-1 (→ B-09) |
+| B-09 removed runtime entities resurrected (F-1) | P1/P2 | mesh-gameplay-reliability (Sonnet) | MERGED + VERIFIED | #541 → `d525eea3` | `551ba25f` → `90378a9d` | projectile measurement flat (7 entities, 191,828 B over 6 cycles) | owner challenge: order-based room/runtime pairing could drop the room-file object → fixed order-independent; APPROVED | owner approved | **Accepted limitation:** a runtime object sharing a name and prefab with an id-less room-file object is kept after it expires (warned), never at the room object's expense. **Process breach:** the worker ran `git stash` once (immediately popped; the stash list was verified intact). |
+| A-03 read-only project ops applied as edits | P1 | mesh-creator-safety (Sonnet) | IN PROGRESS | `fix/a03-read-only-ops-not-edits` (worktree `D:\Games\Mesh-A-03`) | base `d525eea3` | source-confirmed: `engine/authoring.py` `_room_ops()` registers every `(scene, ...) -> Doc` function except a denylist; `room_music`, `weather_sounds_of`, `hd2d_camera_of`, `hd2d_room_size`, `hd2d_sun_of` slip through | | OWNER | review the draft PR |
+| B-05 behaviours never unsubscribe | P2 | mesh-gameplay-reliability (Sonnet) | IN PROGRESS | `fix/b05-behaviour-unsubscribe` (worktree `D:\Games\Mesh-B-05`) | base `d525eea3` | source-confirmed: `bus.subscribe` returns an unsubscribe callable; four behaviours call a nonexistent `bus.unsubscribe(...)` | | owner | review the draft PR |
+| U-01 unresolved-record accumulation | P2 | (unassigned) | MEASURED (GAME-1) | | | unresolved records bounded by deduplication (ambiguous twins plateau at 4 after 2 cycles; no-change cycles 0); the only unbounded growth was F-1, fixed by B-09; nothing discarded | | owner | keep tracked; revisit if real games show growth |
 
 ## Follow-ups noted by reviews (not assigned)
 
@@ -75,11 +83,15 @@ Approval: `OWNER` = the owner must approve the merge.
 | B-01 round 3, identity challenge (resumed) | Sonnet 5.5 | 17 | ~384k | #535 `4cdd233e` |
 | A-02c | Sonnet 5.5 | 32 | ~112k | #537 (merged) |
 | B-02 | Sonnet 5.5 | 36 | ~108k | #538 |
+| GAME-1 | Sonnet 5.5 | 61 | ~155k | #540 |
+| B-09 rounds 1 + 2 (resumed) | Sonnet 5.5 | 53 | ~303k | #541 |
+| A-03, B-05 | Sonnet 5.5 ×2 | (running) | | |
 
 ## Worktrees in use
 
 | Worktree | Holds |
 |---|---|
-| `D:\Games\Mesh-B-02` | #538 (B-02) |
+| `D:\Games\Mesh-A-03` | A-03 (in progress) |
+| `D:\Games\Mesh-B-05` | B-05 (in progress) |
 | `D:\Games\Mesh-board` | this board update |
-| `D:\Games\Mesh-B-01-impl`, `D:\Games\Mesh-B-01`, `D:\Games\Mesh-A-02c`, `D:\Games\Mesh-A-02b`, `D:\Games\Mesh-T-01`, `D:\Games\Mesh-A-02`, `D:\Games\Mesh-B-01b` | merged work (#535, #528, #537, #533, #534, #530, #531): removable after verification |
+| `D:\Games\Mesh-B-02`, `D:\Games\Mesh-GAME-1`, `D:\Games\Mesh-B-09` | merged work (#538, #540, #541): removable after verification |
