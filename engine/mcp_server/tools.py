@@ -693,7 +693,12 @@ def apply_ops(
     failures are isolated (one bad op does not abort the rest); ``ok`` is the
     AND of every operation's success.
     """
-    changes = _studio_changes(list(operations), root)
+    try:
+        changes = _studio_changes(list(operations), root)
+    except _RefusedOps as exc:
+        return {"ok": False, "message": str(exc), "results": [
+            {"type": op.get("type"), "ok": False, "message": str(exc), "data": {}}
+            for op in operations if isinstance(op, dict)]}
     if changes is not None:  # a Studio project: the shared, validated authoring path
         return _apply_ops_through_authoring(list(operations), changes, root)
     held, refused = _own_for_files(root, "apply_ops")  # (R5: owned from before the files are read until validated)
@@ -1126,6 +1131,10 @@ _ADAPTED_OPS = {"add_entity_from_prefab", "delete_entity", "set_behaviour_params
                 "add_light", "update_light", "delete_light"}
 
 
+class _RefusedOps(Exception):
+    """An apply_ops batch refused before any change was built."""
+
+
 def _studio_changes(operations: list[dict[str, Any]], root: str) -> list[dict[str, Any]] | None:
     """apply_ops operations as authoring changes, if they all target rooms of a Studio project."""
     if not operations or not all(isinstance(op, dict) and op.get("type") in _ADAPTED_OPS for op in operations):
@@ -1169,10 +1178,17 @@ def _studio_changes(operations: list[dict[str, Any]], root: str) -> list[dict[st
         elif kind == "delete_light":
             changes.append({"op": "remove_light", "room": room, "index": int(op.get("index", 0))})
         else:  # paint_tiles: one change per (layer, tile)
+            from engine.ai_ops import validate_paint_ops
+
+            cells_in = op.get("ops") or []
+            # (out-of-map cells are ignored by project_ops.paint_tiles, so no map bound here)
+            error = validate_paint_ops(cells_in)
+            if error:
+                raise _RefusedOps(error)
             groups: dict[tuple[str, int], list[list[int]]] = {}
-            for cell in op.get("ops") or []:
-                groups.setdefault((str(cell.get("layer")), int(cell.get("gid", 0))), []).append(
-                    [int(cell.get("col", 0)), int(cell.get("row", 0))])
+            for cell in cells_in:
+                groups.setdefault((cell.get("layer", "ground"), cell.get("gid", 0)), []).append(
+                    [cell.get("col", 0), cell.get("row", 0)])
             for (layer, gid), cells in groups.items():
                 changes.append({"op": "paint_tiles", "room": room, "layer": layer, "cells": cells, "tile": gid})
     return changes

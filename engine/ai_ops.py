@@ -103,6 +103,37 @@ MAX_PAINT_TILE_OPS = 10_000
 MAX_PAINT_TILE_NEW_LAYERS = 8
 
 
+def validate_paint_ops(ops: Any, *, known_layers: Any = None, bound_col: int | None = None,
+                       bound_row: int | None = None) -> str | None:
+    """The refusal message for a ``paint_tiles`` batch, or None if it is valid (shared by the direct and Studio paths).
+
+    ``known_layers`` (existing layer names) enables the new-layer cap; ``bound_*`` (exclusive) the in-map check.
+    """
+    if not isinstance(ops, list):
+        return "paint_tiles ops must be a list"
+    if len(ops) > MAX_PAINT_TILE_OPS:
+        return f"paint_tiles: {len(ops)} ops exceeds the limit of {MAX_PAINT_TILE_OPS}"
+    new_layers: set[str] = set()
+    for i, op in enumerate(ops):
+        if not isinstance(op, dict):
+            return f"paint_tiles op {i}: must be an object"
+        name = op.get("layer", "ground")
+        if not isinstance(name, str) or not name:
+            return f"paint_tiles op {i}: layer={name!r} must be a non-empty string"
+        if known_layers is not None and name not in known_layers:
+            new_layers.add(name)
+            if len(new_layers) > MAX_PAINT_TILE_NEW_LAYERS:
+                return (f"paint_tiles op {i}: layer={name!r} would create more than "
+                        f"{MAX_PAINT_TILE_NEW_LAYERS} new layers in one batch")
+        for key, limit in (("col", bound_col), ("row", bound_row), ("gid", None)):
+            val = op.get(key, 0)
+            if type(val) is not int or val < 0:
+                return f"paint_tiles op {i}: {key}={val!r} must be a non-negative integer"
+            if limit is not None and val >= limit:
+                return f"paint_tiles op {i}: {key}={val} is outside the map (must be < {limit})"
+    return None
+
+
 @dataclass
 class AIOpsResult:
     ok: bool
@@ -477,32 +508,12 @@ class AIOps:
                     setattr(self, "_mesh_paint_tiles_map_dim_error_logged", True)
 
         # Validate the whole batch before touching anything: a bad op refuses all of it.
-        if not isinstance(ops, list):
-            return AIOpsResult(False, "paint_tiles ops must be a list")
-        if len(ops) > MAX_PAINT_TILE_OPS:
-            return AIOpsResult(False, f"paint_tiles: {len(ops)} ops exceeds the limit of {MAX_PAINT_TILE_OPS}")
-        bound_col = width if width and height else MAX_PAINT_TILE_COORD
-        bound_row = height if width and height else MAX_PAINT_TILE_COORD
-        new_layers: set[str] = set()
-        for i, op in enumerate(ops):
-            if not isinstance(op, dict):
-                return AIOpsResult(False, f"paint_tiles op {i}: must be an object")
-            name = op.get("layer", "ground")
-            if not isinstance(name, str) or not name:
-                return AIOpsResult(False, f"paint_tiles op {i}: layer={name!r} must be a non-empty string")
-            if name not in layers:
-                new_layers.add(name)
-                if len(new_layers) > MAX_PAINT_TILE_NEW_LAYERS:
-                    return AIOpsResult(
-                        False,
-                        f"paint_tiles op {i}: layer={name!r} would create more than "
-                        f"{MAX_PAINT_TILE_NEW_LAYERS} new layers in one batch")
-            for key, limit in (("col", bound_col), ("row", bound_row), ("gid", None)):
-                val = op.get(key, 0)
-                if type(val) is not int or val < 0:
-                    return AIOpsResult(False, f"paint_tiles op {i}: {key}={val!r} must be a non-negative integer")
-                if limit is not None and val >= limit:
-                    return AIOpsResult(False, f"paint_tiles op {i}: {key}={val} is outside the map (must be < {limit})")
+        error = validate_paint_ops(
+            ops, known_layers=layers,
+            bound_col=width if width and height else MAX_PAINT_TILE_COORD,
+            bound_row=height if width and height else MAX_PAINT_TILE_COORD)
+        if error:
+            return AIOpsResult(False, error)
 
         for op in ops:
             layer = op.get("layer", "ground")
