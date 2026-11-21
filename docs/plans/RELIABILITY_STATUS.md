@@ -3,8 +3,16 @@
 Maintained by the master only (workers report in their PRs). GitHub is the source of truth: a fresh master session
 rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and priorities: `MESH_RELIABILITY_MASTER_PLAN.md`.
 
-**As of 2026-11-21 — CYCLE 10 CLOSED.** Integration `redesign/visual-editor` = `6366e2cc02e358321456088af8a94a109c0c31f9`
-(post-merge CI 44922788419 ✓ a1, Extended 44922788400 ✓ a1). This board lands with its own PR (`gh pr list --head docs/reliability-board-cycle10-close`).
+**As of 2026-11-21 — REVIEW PHASE DONE; vertical slice in progress.** Integration `redesign/visual-editor` =
+`fed442a5c55f1ad374a8d9ec40df4b40ac529e73` (post-merge CI 44937909206 ✓ a1, Extended 44937909101 ✓ a1). This board lands with its own PR
+(`gh pr list --head docs/reliability-board-review-phase`). Cycle 10 closed with #565 (`1bd4aad9`).
+
+**Independent review of `e390ef6e` (2 fresh reviewers, 39 production files `ad91e28c..e390ef6e`): no blockers.**
+Three SERIOUS findings, each reproduced and fixed below (RV-1..RV-3). MINOR, recorded only: `died` no longer carries an
+`entity` key (no reader); the atomic-write temp name is ~24 chars longer (MAX_PATH edge); non-int paint values now refused
+(intended); same-key entities can swap unsynced fields across layers (not a regression).
+**Ember Hollow vertical slice (owner brief):** being built on `fed442a5` through the AI authoring / MCP path only (no JSON
+edits, no engine changes); acceptance A validate, B AI playtest, C fresh-process persistence, D exported build.
 
 **Owner decisions closing cycle 10 (final):** frame-time cap DEFERRED (not implemented); A-07 light references → refuse
 (A-07b, #564, merged); cleanup of the 15 merged worktrees done. **Next phase (owner):** independent review of the verified
@@ -60,6 +68,10 @@ disagreement, or two failed correction rounds. Cycle 10 merges below were made u
 | #562 A-05b Studio paint validation | `9e501f8809d0be891a631a511e9784e70ea60e6c` | `a6903449` (head `504776ee`) | 44911286304 ✓ a1 | 44911286239 ✓ a1 |
 | #563 status board (cycle 10) | `e390ef6e10e8f68aa0c0f2e25678a2d21a973da5` | `b5b2b6ef` (= tip + exactly #563's diff) | 44915720973 ✓ a1 | 44915720999 ✓ a1 |
 | #564 A-07b a batch can't shift a light it added | `6366e2cc02e358321456088af8a94a109c0c31f9` | `218d6769` (head `3eb56996`) | 44922788419 ✓ a1 | 44922788400 ✓ a1 |
+| #565 status board (close cycle 10) | `1bd4aad9968cd46a90fb792057f229928cea8ad2` | `bc1521bd` (= tip + exactly #565's diff) | 44929496302 ✓ a1 | 44929496316 ✓ a1 |
+| #566 RV-1 carried record retried only in its own room | `dc6b0a257b2c973123ec316b63b07da932dc7752` | `2dfa155f` (head `3c6791b5`) | 44932235458 ✓ a1 | 44932235446 ✓ a1 |
+| #567 RV-2 authored id-less prefab never dropped | `71e1e5aa1bd8af78eddcc7cade25b8c090ff24bb` | `c1e22105` (head `690f38aa`) | 44934927988 ✓ a1 | 44934927965 ✓ a1 |
+| #568 RV-3 `mesh new --force` owns before deleting | `fed442a5c55f1ad374a8d9ec40df4b40ac529e73` | `9741bce3` (head `a1e9aabc`) | 44937909206 ✓ a1 | 44937909101 ✓ a1 |
 
 **Waiver (owner, one-time, narrowly scoped; not a relaxation of CI).** Post-merge CI run 44589776415 on `55bdd589`
 FAILED at attempt 1: one Windows test,
@@ -113,6 +125,9 @@ Approval: `OWNER` = the owner must approve the merge.
 | B-08 tunneling and non-finite moves | P2 | gameplay (Sonnet) | MERGED + VERIFIED | #561 → `5e7e3b19` | `8a5ce09e` → `ae723541` | confirmed both movers skip thin walls on fast/hitched moves; half-size substeps (cap 256) and a non-finite guard; small moves unchanged; per-mechanism mutants fail | APPROVED | master (standing authority) | |
 | A-05b Studio paint validation | low | creator-safety (Sonnet) | MERGED + VERIFIED | #562 → `9e501f88` | `cbd1bf05` → `504776ee` | shared `validate_paint_ops`; the Studio path refuses what the direct path refuses (missing layer no longer becomes `"None"`) | APPROVED | master (standing authority) | |
 | A-07b light `@N` shift (owner decision) | P2 | creator-safety (Sonnet) | MERGED + VERIFIED | #564 → `6366e2cc` | `e390ef6e` → `3eb56996` | in one batch a `remove_light` at or below a light that batch added is refused (whole batch, files unchanged), via `authoring.apply` and MCP; mutant fails. Round 2 added a non-int index guard; my round-1 concern proved unfounded (already converted to `ChangeError`) | APPROVED | master (standing authority) | |
+| RV-1 carried unresolved record bound in another room | SERIOUS | gameplay (Sonnet) | MERGED + VERIFIED | #566 → `dc6b0a25` | `6366e2cc` → `3c6791b5` | review repro: room A's carried record bound to a same-id entity added to room B and was dropped from `unresolved`; retry now only in the entry's own room (`_same_room`); mutant fails | APPROVED | master (standing authority) | |
+| RV-2 authored id-less prefab entity dropped from save | SERIOUS | gameplay (Sonnet) | MERGED + VERIFIED | #567 → `71e1e5aa` | `6366e2cc` → `690f38aa` | review repro: raw-room key `(None, prefab)` vs resolved `(Name, prefab)` made authored prefab objects look save-only; one shared key (`prefab_id`); B-09's runtime-entity drop kept; mutant fails | APPROVED | master (standing authority) | |
+| RV-3 `mesh new --force` deleted an owned project | SERIOUS | creator-safety (Sonnet) | MERGED + VERIFIED | #568 → `fed442a5` | `6366e2cc` → `a1e9aabc` | pre-existing, missed by A-04: rmtree without ownership; now owns first (refuses if Studio/another process owns), deletes all but the lock, releases, removes the rest; real two-process test; mutant fails | APPROVED | master (standing authority) | |
 | U-01 unresolved-record accumulation | P2 | (unassigned) | MEASURED (GAME-1) | | | unresolved records bounded by deduplication (ambiguous twins plateau at 4 after 2 cycles; no-change cycles 0); the only unbounded growth was F-1, fixed by B-09; nothing discarded | | owner | keep tracked; revisit if real games show growth |
 
 ## Follow-ups noted by reviews (not assigned)
@@ -131,6 +146,8 @@ Approval: `OWNER` = the owner must approve the merge.
 - **T-03, low:** conftest's function-scoped launch-root undo can't see a module-scoped fixture's pin.
 - **A-05b, informational:** an `apply_ops` refusal response has no `authoring` key.
 - **CI evidence gap:** the Ubuntu `pytest` job writes no junit, so per-test results there can't be shown (A-08's POSIX-only tests).
+- **RV-3 follow-up, low:** `mesh_cli/new_game.py` has its own `--force` file-overwrite path, not checked for ownership.
+- **RV-1 note:** a carried entry without a `scene_path` (none are written today) would still retry in any room.
 - **Process:** workers run the gates (and the tier-marker ratchet) on the exact commit they push.
 
 ## Task log (models and usage, as reported by the Agent tool)
@@ -161,12 +178,19 @@ Approval: `OWNER` = the owner must approve the merge.
 | B-08 | Sonnet 5.5 | 32 | ~111k | #561 |
 | A-05b | Sonnet 5.5 | 10 | ~82k | #562 |
 | A-07b rounds 1 + 2 (resumed) | Sonnet 5.5 | 38 | ~89k | #564 |
+| Independent review, save/persistence | Opus 5.5 | 53 | ~190k | 2 SERIOUS, 1 MINOR |
+| Independent review, creator + gameplay | Opus 5.5 | 58 | ~168k | no blockers, 1 SERIOUS (pre-existing), 3 MINOR |
+| RV-1 | Sonnet 5.5 | 17 | ~91k | #566 |
+| RV-2 | Sonnet 5.5 | 15 | ~89k | #567 |
+| RV-3 | Sonnet 5.5 | 64 | ~111k | #568 |
 
 ## Worktrees in use
 
 | Worktree | Holds |
 |---|---|
-| `D:\Games\Mesh-A-07b` | merged work (#564): removable after verification |
+| `D:\Games\Mesh-A-07b`, `D:\Games\Mesh-RV1`, `D:\Games\Mesh-RV2`, `D:\Games\Mesh-RV3` | merged work (#564, #566-#568): removable after verification, with owner OK |
+| `D:\Games\Mesh-review` | the review's detached checkout at `e390ef6e` |
+| `D:\Games\Mesh-slice-engine` | Ember Hollow's pinned engine checkout at `fed442a5` (read-only) |
 | `D:\Games\Mesh-acc` | ACC-2 (detached at `9341bfdd`) |
 | `D:\Games\Mesh-board` | this board update |
 
