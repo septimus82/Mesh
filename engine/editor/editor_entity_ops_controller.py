@@ -43,6 +43,8 @@ class EditorEntityOpsController:
 
     def delete_entity_internal(self, sprite: Any) -> None:
         """Delete an entity sprite from the scene."""
+        from engine.scene_controller_parts.entity_factory import _end_behaviours  # noqa: PLC0415
+
         editor = self._editor
         # Remove from layers
         for layer in editor.window.scene_controller.layers.values():
@@ -52,6 +54,8 @@ class EditorEntityOpsController:
         # Remove from solids if present
         if sprite in editor.window.scene_controller.solid_sprites:
             editor.window.scene_controller.solid_sprites.remove(sprite)
+
+        _end_behaviours(sprite)
 
         if editor.selected_entity == sprite:
             editor.selected_entity = None
