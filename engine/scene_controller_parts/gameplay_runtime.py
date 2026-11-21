@@ -4,33 +4,35 @@ from typing import Any
 
 
 def move_entity_with_collision(self, sprite, dx: float, dy: float, friction: float = 1.0) -> None:
+    import math
+
     import engine.scene_controller_core as scene_controller_module
+    from engine.physics_model import fast_move_steps
 
-    sprite.center_x += dx
-    hit_list = scene_controller_module.optional_arcade.arcade.check_for_collision_with_list(
-        sprite,
-        self.solid_sprites,
-    )
-    if hit_list:
-        if dx > 0:
-            min_left = min(wall.left for wall in hit_list)
-            sprite.right = min_left
-        elif dx < 0:
-            max_right = max(wall.right for wall in hit_list)
-            sprite.left = max_right
+    if not (math.isfinite(dx) and math.isfinite(dy)):  # a NaN/inf move would park the sprite at NaN for good
+        return
+    check = scene_controller_module.optional_arcade.arcade.check_for_collision_with_list
+    # Cut a fast move into pieces no longer than half the sprite, so a thin wall can't be skipped.
+    nx, ny = fast_move_steps(dx, sprite.width), fast_move_steps(dy, sprite.height)
+    for _ in range(nx):
+        sprite.center_x += dx / nx
+        hit_list = check(sprite, self.solid_sprites)
+        if hit_list:
+            if dx > 0:
+                sprite.right = min(wall.left for wall in hit_list)
+            elif dx < 0:
+                sprite.left = max(wall.right for wall in hit_list)
+            break
 
-    sprite.center_y += dy
-    hit_list = scene_controller_module.optional_arcade.arcade.check_for_collision_with_list(
-        sprite,
-        self.solid_sprites,
-    )
-    if hit_list:
-        if dy > 0:
-            min_bottom = min(wall.bottom for wall in hit_list)
-            sprite.top = min_bottom
-        elif dy < 0:
-            max_top = max(wall.top for wall in hit_list)
-            sprite.bottom = max_top
+    for _ in range(ny):
+        sprite.center_y += dy / ny
+        hit_list = check(sprite, self.solid_sprites)
+        if hit_list:
+            if dy > 0:
+                sprite.top = min(wall.bottom for wall in hit_list)
+            elif dy < 0:
+                sprite.bottom = max(wall.top for wall in hit_list)
+            break
 
 
 def on_collectible_picked(self, collectible, collector) -> None:
