@@ -2772,7 +2772,7 @@ def duplicate_light(scene: Doc, index: int, *, dx: float = 32, dy: float = -32) 
 
 
 def remove_light(scene: Doc, index: int) -> Doc:
-    """Delete a light (later lights move down one index)."""
+    """Delete a light (later lights move down one index; a batch refuses a remove that would move or drop a light it added earlier)."""
     out = copy.deepcopy(scene)
     _light(out, index)
     del out["lights"][index]

@@ -121,16 +121,17 @@ def apply(project: Project, changes: list[Doc], *, pins: list[Doc] | None = None
     if not isinstance(changes, list) or not all(isinstance(c, dict) for c in changes):
         raise ChangeError(0, "?", "changes must be a list of objects like {\"op\": ..., ...}.")
     created: dict[int, str | int] = {}
+    lights: dict[str, set[int]] = {}  # room -> indexes of the lights this batch added (they sit at the end)
     with project.transaction():
         for index, change in enumerate(changes):
-            made = _apply_one(project, index, change, created, pins)
+            made = _apply_one(project, index, change, created, pins, lights)
             if made is not None:
                 created[index] = made
     return {"ok": True, "applied": len(changes), "created": created}
 
 
 def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str | int],
-               pins: list[Doc] | None = None) -> str | int | None:
+               pins: list[Doc] | None = None, lights: dict[str, set[int]] | None = None) -> str | int | None:
     name = str(change.get("op") or change.get("type") or "")  # "type": how older Mesh tools spell it
     func = operations().get(name)
     if func is None and name in NOT_EDITS:
@@ -149,12 +150,21 @@ def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str
             raise ChangeError(index, name, f"there is no room '{room}'. Rooms: {', '.join(k for k, _, _ in project.rooms())}.")
         scene = project.scene(room)
         bound = _bind(func, args, scene, room, project, index, name)
+        at = bound.get("index")
+        if lights is not None and name == "remove_light" and isinstance(at, int) and not isinstance(at, bool):
+            hit = sorted(i for i in lights.get(room, ()) if i >= at)  # (A-07b: it would move or drop a light an '@N' names)
+            if hit:
+                raise ChangeError(index, name, f"removing light {bound['index']} in room '{room}' would shift or remove "
+                                  f"light(s) {hit} that this batch added earlier (an '@N' may name them). Remove it in "
+                                  "a separate request, or before the add_light.")
         if pins is not None:
             pins.append(_pinned(change, room, bound))
         with ops.in_room(room, project.shared_players(room)):  # (#462 R3: what it makes avoids ids theirs had)
             result = func(**bound)
         new_scene, made = (result if isinstance(result, tuple) else (result, None))
         project.edit_scene(lambda _s: new_scene, room)
+        if lights is not None and name in ("add_light", "duplicate_light") and isinstance(made, int):
+            lights.setdefault(room, set()).add(made)  # (both append, so no other op moves a light's index)
         return made if isinstance(made, (str, int)) else None
     except ops.OpError as err:
         raise ChangeError(index, name, str(err)) from err
