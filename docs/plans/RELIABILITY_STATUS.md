@@ -3,8 +3,8 @@
 Maintained by the master only (workers report in their PRs). GitHub is the source of truth: a fresh master session
 rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and priorities: `MESH_RELIABILITY_MASTER_PLAN.md`.
 
-**As of 2026-11-21 (cycle 8).** Integration `redesign/visual-editor` = `4512aec8e9fb444b049606820ba806eafe0bc096`
-(post-merge CI 44836606461 ✓ a1, Extended 44836606490 ✓ a1). This board lands with its own PR (`gh pr list --head docs/reliability-board-cycle8`).
+**As of 2026-11-21 (cycle 9).** Integration `redesign/visual-editor` = `9341bfdd08bebb5318961acab190a5c322a5dee5`
+(post-merge CI 44876963282 ✓ a1, Extended 44876963293 ✓ a1). This board lands with its own PR (`gh pr list --head docs/reliability-board-cycle9`).
 
 ## Integration record
 
@@ -33,6 +33,9 @@ rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and pr
 | #545 status board | `0791b04d45dff6e9951d2123c9220db9cf44d261` | `1ac31173` (= head `3ee634d8`) | 44825716598 ✓ a1 | 44825716831 ✓ a1 |
 | #547 A-04 CLI writers own the project | `4ae467c5f7282d3664fe27efa711580ab0b3acbf` | `bca38154` (= tip + exactly #547's reviewed diff, head `2df87f6f`) | 44832791487 ✓ a1 | 44832791497 ✓ a1 |
 | #546 A-05 `paint_tiles` bounds | `4512aec8e9fb444b049606820ba806eafe0bc096` | `2542f4f6` (= tip + exactly #546's reviewed diff, head `b750bbbf`) | 44836606461 ✓ a1 | 44836606490 ✓ a1 |
+| #548 status board | `11c5809fc8179aa457f574491ab3196f2c6676f2` | `2e5b4b20` (= tip + exactly #548's diff) | 44845816189 ✓ a1 | 44845816188 ✓ a1 |
+| #550 B-05b every removal path ends behaviours | `052cf097e93387e0237e82e89e88d174db90aa4a` | `9e11d779` (= tip + exactly #550's reviewed diff, head `6d911e31`) | 44874121077 ✓ a1 | 44874121078 ✓ a1 |
+| #551 T-02 bridge retry tests: normal deadline for the retry | `9341bfdd08bebb5318961acab190a5c322a5dee5` | `07fcb01d` (= tip + exactly #551's reviewed diff, head `c803ede9`) | 44876963282 ✓ a1 | 44876963293 ✓ a1 |
 
 **Waiver (owner, one-time, narrowly scoped; not a relaxation of CI).** Post-merge CI run 44589776415 on `55bdd589`
 FAILED at attempt 1: one Windows test,
@@ -46,7 +49,10 @@ cancelled). #535 `5b87c527` (CI 44611731802 ✗: tier-marker ratchet on four ren
 `46454b4e` (CI 44613893043 and Extended 44613890614 cancelled, superseded), `d668097e` (CI 44614620041 ✓, Extended
 44614604198 ✓; superseded by the identity fix). #544 `bd7d75d7` (CI 44762715843 ✗: the
 fast-marking policy, a module named `*contract*` without fast markers; Extended 44762706497 ✓; fixed by a pure rename).
-#546 `5dc2edca` and #547 `86af1526` (CI cancelled, superseded by the review corrections). Only final heads passed at attempt 1.
+#546 `5dc2edca` and #547 `86af1526` (CI cancelled, superseded by the review corrections). #549 `cbb7fa66` (CI 44841828542 ✗ a1:
+`test_live_bridge_request_states.py::test_a_proposal_that_timed_out_while_queued_never_reaches_the_person`, unrelated to B-06: the
+retry kept the 0.2 s deadline; not rerun, owner chose a fix over a waiver → T-02 #551; Extended 44841862606 ✓ a1).
+Only final heads passed at attempt 1.
 
 ## Work
 
@@ -67,9 +73,10 @@ Approval: `OWNER` = the owner must approve the merge.
 | B-05 behaviours never unsubscribe | P2 | mesh-gameplay-reliability (Sonnet) | MERGED + VERIFIED | #543 → `68ad13b0` | `d525eea3` → `19db914b` | round 1 fixed the unsubscribe calls but nothing called teardown → round 2: `MeshEntitySprite.remove_from_sprite_lists` ends behaviours once (deaths, pickups, projectile expiry, `kill()`) | CHANGES REQUIRED → APPROVED | owner approved | follow-up B-05b below |
 | A-04 legacy CLI writers bypass locks | P1 | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #547 → `4ae467c5` | `68ad13b0` → `2df87f6f` | one guard in `dispatch()` (same `project_ownership.acquire` as R4); ~40 in-place writers own the project or refuse (exit 1, files byte-identical); mutants 3/3 caught | round 1 missed `polish` and `assets import-sprites` → CHANGES REQUIRED → APPROVED | owner approved | **Limitation:** the writer list is a hand-kept table; a new in-place CLI writer must be added |
 | A-05 `paint_tiles` bounds | P1/P2 | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #546 → `4512aec8` | `68ad13b0` → `b750bbbf` | whole batch validated before any write: non-negative ints inside the map (1024 cap when dimensions unknown), ≤10,000 ops, layer a non-empty string, ≤8 new layers per batch; mutants 4/4 caught | round 1 left growth through `layer` → CHANGES REQUIRED → APPROVED | owner approved | `"3"`/`3.0` now refused (intended) |
-| ACC-2 creator-workflow acceptance rerun | P1 | master | **INCOMPLETE (test-side), no product defect found** | evidence `D:\Games\Mesh-462-acceptanceerun-2026-11-21` | `4512aec8` (detached worktree `D:\Games\Mesh-acc`) | same 33-step scenario and criteria as the 2026-11-06 PASS at `59f171b5`. Run 1: 3/3 then **A4 FAIL**: the test sent a bare `base_revision`, retired by design in R1 (#518, `revision_id_required`, nothing staged). Adapted copy (14 lines: `base_revision_id` from `revision_id`; diff kept). Run 2: **24/24, then C1 FAIL**: C1 demands an empty `.mesh/`, but since R2 (#517) `.mesh/owner.lock` stays by design (`project_ownership.py:18`); the session record itself was gone. C2–F1 not reached | | owner | decide: adapt C1 to the R2 design and run once from the start |
-| B-05b other entity removal paths | P2 | mesh-gameplay-reliability (Sonnet) | IN PROGRESS | `fix/b05b-removal-paths-end-behaviours` (worktree `D:\Games\Mesh-B-05b`) | base `4512aec8` | `SpriteList.remove` in `scene_entity_store_controller.py:207`, authoring `_shared.py:252`, editor `editor_entity_ops_controller.py:50` bypass the B-05 hook | | owner | review the draft PR |
-| B-06 RNG stream seeds | P2 | mesh-gameplay-reliability (Sonnet) | IN PROGRESS | `fix/b06-stable-rng-seeds` (worktree `D:\Games\Mesh-B-06`) | base `4512aec8` | source-confirmed: `rng_service.py:200,220` `hash((seed, name))` is salted per process | | owner | review the draft PR |
+| ACC-2 creator-workflow acceptance rerun | P1 | master | **INCOMPLETE (test-side), no product defect found** | evidence `D:\Games\Mesh-462-acceptance\rerun-2026-11-21` (`run1`-`run3`) | runs 1-2 `4512aec8`, run 3 `052cf097` (detached worktree `D:\Games\Mesh-acc`) | same 33-step scenario and criteria as the 2026-11-06 PASS at `59f171b5`. Run 1: **A4 FAIL** (bare `base_revision`, retired by R1 #518) → owner-approved adaptation (14 lines). Run 2: 24/24 then **C1 FAIL** (C1 wanted an empty `.mesh/`; R2 #517 keeps `.mesh/owner.lock` by design). Owner approved the C1 correction (session record gone, OS lock free, another process acquires and releases, `owner.lock` may stay; `c1-adaptation.diff`). Run 3: **32/33, C1 PASS, F1 FAIL**: F1 flags every hidden file and found exactly `.mesh/owner.lock` (same R2 cause); F1's later checks (orphan maps, project as last saved) did not run. Not rerun. Master's miss: the other hidden-file check should have been found before run 3 | | owner | decide: let F1 allow exactly `.mesh/owner.lock` and run once more from the start |
+| B-05b other entity removal paths | P2 | mesh-gameplay-reliability (Sonnet) | MERGED + VERIFIED | #550 → `052cf097` | `4512aec8` → `6d911e31` | despawn op, authoring delete and editor delete now call `_end_behaviours` after removal; 6 tests; mutant (store call removed) → 2 fail | APPROVED | owner approved | |
+| B-06 RNG stream seeds | P2 | mesh-gameplay-reliability (Sonnet) | READY FOR REVIEW (refreshed) | #549 | `4512aec8` → `cbb7fa66`; refreshed by merging `9341bfdd` (with T-02) → `2a1afbc0` | `sha256(f"{seed}:{name}")` replaces the salted `hash()`; subprocess test across `PYTHONHASHSEED`; first head's CI failed only on the T-02 timing test (kept above) | APPROVED (`cbb7fa66`) | owner | approve the merge once `2a1afbc0` CI + Extended pass at attempt 1 |
+| T-02 bridge retry tests: short deadline kept for the retry | test infra | master (Sonnet independent review) | MERGED + VERIFIED | #551 → `9341bfdd` | `052cf097` → `c803ede9` | test-only: both "timed out, then sent again" tests set a normal 30 s deadline before the retry; cancellation assertions unchanged; no other test in the file has the flaw (review) | APPROVED (independent review) | owner approved | |
 | U-01 unresolved-record accumulation | P2 | (unassigned) | MEASURED (GAME-1) | | | unresolved records bounded by deduplication (ambiguous twins plateau at 4 after 2 cycles; no-change cycles 0); the only unbounded growth was F-1, fixed by B-09; nothing discarded | | owner | keep tracked; revisit if real games show growth |
 
 ## Follow-ups noted by reviews (not assigned)
@@ -107,15 +114,16 @@ Approval: `OWNER` = the owner must approve the merge.
 | A-03 rounds 1 + 2, B-05 rounds 1 + 2 | Sonnet 5.5 ×2 | (not recorded) | | #544, #543 |
 | A-05 rounds 1 + 2 | Sonnet 5.5 | 39 | ~93k | #546 |
 | A-04 rounds 1 + 2 | Sonnet 5.5 | 145 | ~202k | #547 |
-| B-05b, B-06 | Sonnet 5.5 ×2 | (running) | | |
+| B-05b, B-06 | Sonnet 5.5 ×2 | (not recorded) | | #550, #549 |
+| T-02 independent review | Sonnet 5.5 | 2 | ~70k | APPROVE on #551 |
 
 ## Worktrees in use
 
 | Worktree | Holds |
 |---|---|
-| `D:\Games\Mesh-B-05b` | B-05b (in progress) |
-| `D:\Games\Mesh-B-06` | B-06 (in progress) |
-| `D:\Games\Mesh-acc` | ACC-2 (detached at `4512aec8`) |
+| `D:\Games\Mesh-B-05b`, `D:\Games\Mesh-T-02` | merged work (#550, #551): removable after verification, with owner OK |
+| `D:\Games\Mesh-B-06` | B-06 (#549, open) |
+| `D:\Games\Mesh-acc` | ACC-2 (detached at `052cf097`) |
 | `D:\Games\Mesh-board` | this board update |
 | `D:\Games\Mesh-A-04`, `D:\Games\Mesh-A-05` | merged work (#547, #546): removable after verification, with owner OK |
 
