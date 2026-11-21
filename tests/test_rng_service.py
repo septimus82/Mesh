@@ -350,6 +350,7 @@ class TestDeterminismIntegration:
 # ============================================================================
 
 
+@pytest.mark.fast
 class TestStableStreamSeeds:
     def test_distinct_names_distinct_streams(self) -> None:
         service = RNGService()
