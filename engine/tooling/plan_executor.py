@@ -100,7 +100,7 @@ class BackupManager:
             entries = manifest.get(kind)
             for entry in entries if isinstance(entries, list) else []:
                 record = after.get(entry) if isinstance(entry, str) else None
-                if record == {"exists": False} or (
+                if (isinstance(record, dict) and record.keys() == {"exists"} and record["exists"] is False) or (
                         isinstance(record, dict) and record.keys() == {"exists", "sha256"} and record["exists"] is True
                         and (record["sha256"] is None or (isinstance(record["sha256"], str)
                                                           and re.fullmatch(r"[0-9a-f]{64}", record["sha256"])))):
@@ -347,7 +347,11 @@ class PlanExecutor:
             print(f"[Mesh][Executor] ERROR: {e}")
             if not self.dry_run and not capture_mode and self.records_allowed():
                 print("[Mesh][Executor] Attempting rollback...")
-                self.backup_mgr.finish_backup(completed=False)
+                try:
+                    self.backup_mgr.finish_backup(completed=False)
+                except Exception as record_error:  # (never masks the plan's own error; no manifest = undo refuses)
+                    print(f"[Mesh][Executor] The stopped plan's manifest couldn't be written ({record_error}), so it "
+                          "can't be undone automatically.")
                 # Auto-rollback could happen here, but we leave it to user for now.
             raise e
 
