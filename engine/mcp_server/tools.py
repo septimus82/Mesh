@@ -1163,7 +1163,7 @@ def _studio_changes(operations: list[dict[str, Any]], root: str) -> list[dict[st
             changes.append({"op": "add_light", "room": room, "x": light.pop("x", 0.0), "y": light.pop("y", 0.0),
                             "color": light.pop("color", "#ffddaa"), "radius": light.pop("radius", 160.0)})
             if light:  # the rest as update_light takes it, on the light just added
-                changes.append({"op": "set_light", "room": room, "index": len(ops_.lights(project.scene(room))), **light})
+                changes.append({"op": "set_light", "room": room, "index": f"@{len(changes) - 1}", **light})
         elif kind == "update_light":
             changes.append({"op": "set_light", "room": room, "index": int(op.get("index", 0)), **(op.get("patch") or {})})
         elif kind == "delete_light":
