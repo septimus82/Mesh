@@ -60,9 +60,10 @@ def on_damage_event(window: Any, event: MeshEvent) -> None:
         window.particle_manager.emit_hit_effect(target.center_x, target.center_y)
 
 def on_collectible_event(window: Any, event: MeshEvent) -> None:
-    collectible = event.payload.get("collectible")
-    if collectible:
-        window.particle_manager.emit_collect_effect(collectible.center_x, collectible.center_y)
+    # The payload carries the pick-up position (the sprite may already be removed), not a sprite.
+    position = event.payload.get("position")
+    if position:
+        window.particle_manager.emit_collect_effect(position[0], position[1])
 
 def on_level_up(window: Any, event: MeshEvent) -> None:
     payload = event.payload or {}
