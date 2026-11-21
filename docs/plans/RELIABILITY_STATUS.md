@@ -3,8 +3,13 @@
 Maintained by the master only (workers report in their PRs). GitHub is the source of truth: a fresh master session
 rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and priorities: `MESH_RELIABILITY_MASTER_PLAN.md`.
 
-**As of 2026-11-21 (cycle 10).** Integration `redesign/visual-editor` = `9e501f8809d0be891a631a511e9784e70ea60e6c`
-(post-merge CI 44911286304 ✓ a1, Extended 44911286239 ✓ a1). This board lands with its own PR (`gh pr list --head docs/reliability-board-cycle10`).
+**As of 2026-11-21 — CYCLE 10 CLOSED.** Integration `redesign/visual-editor` = `6366e2cc02e358321456088af8a94a109c0c31f9`
+(post-merge CI 44922788419 ✓ a1, Extended 44922788400 ✓ a1). This board lands with its own PR (`gh pr list --head docs/reliability-board-cycle10-close`).
+
+**Owner decisions closing cycle 10 (final):** frame-time cap DEFERRED (not implemented); A-07 light references → refuse
+(A-07b, #564, merged); cleanup of the 15 merged worktrees done. **Next phase (owner):** independent review of the verified
+tip `e390ef6e` → fix genuine blockers it finds → a small playable vertical slice built with Mesh's existing tools. No new
+reliability tasks or broad audits; the lanes stay idle until the review or the slice gives concrete work.
 
 **Standing authority (owner, 2026-11-21):** the master merges focused, independently approved fixes whose exact head passed
 CI + Extended and whose merge tree equals the reviewed change, and runs failure recovery, without asking. Escalation only for
@@ -53,6 +58,8 @@ disagreement, or two failed correction rounds. Cycle 10 merges below were made u
 | #560 T-03 lifecycle fixture leak | `5e805371e994bd3a428ffedde284547d426f1cd5` | `7c33e1e0` (head `3b34ef3e`) | 44905181639 ✓ a1 | 44905181634 ✓ a1 |
 | #561 B-08 tunneling + non-finite moves | `5e7e3b1971b77f531f6f5080403fd17e54851788` | `5778cb8d` (head `ae723541`) | 44908222390 ✓ a1 | 44908222335 ✓ a1 |
 | #562 A-05b Studio paint validation | `9e501f8809d0be891a631a511e9784e70ea60e6c` | `a6903449` (head `504776ee`) | 44911286304 ✓ a1 | 44911286239 ✓ a1 |
+| #563 status board (cycle 10) | `e390ef6e10e8f68aa0c0f2e25678a2d21a973da5` | `b5b2b6ef` (= tip + exactly #563's diff) | 44915720973 ✓ a1 | 44915720999 ✓ a1 |
+| #564 A-07b a batch can't shift a light it added | `6366e2cc02e358321456088af8a94a109c0c31f9` | `218d6769` (head `3eb56996`) | 44922788419 ✓ a1 | 44922788400 ✓ a1 |
 
 **Waiver (owner, one-time, narrowly scoped; not a relaxation of CI).** Post-merge CI run 44589776415 on `55bdd589`
 FAILED at attempt 1: one Windows test,
@@ -70,7 +77,7 @@ fast-marking policy, a module named `*contract*` without fast markers; Extended 
 `test_live_bridge_request_states.py::test_a_proposal_that_timed_out_while_queued_never_reaches_the_person`, unrelated to B-06: the
 retry kept the 0.2 s deadline; not rerun, owner chose a fix over a waiver → T-02 #551; Extended 44841862606 ✓ a1).
 #558 `2b14a8ab` (CI cancelled, superseded by review round 2) and `76666227` (CI cancelled, superseded). #560 `2f5a334b` (CI
-cancelled, superseded by review round 2). Only final heads passed at attempt 1.
+cancelled, superseded by review round 2). #564 `7dedd034` (CI cancelled, superseded by review round 2). Only final heads passed at attempt 1.
 
 ## Work
 
@@ -105,6 +112,7 @@ Approval: `OWNER` = the owner must approve the merge.
 | T-03 lifecycle fixture leak | test infra | gameplay (Sonnet) | MERGED + VERIFIED | #560 → `5e805371` | `08f2ce0f` → `3b34ef3e` | module fixture left `MESH_REPO_ROOT` pinned to a dead project (local `MESH_GL_SMOKE` runs only); round 2 restores a preset value | APPROVED | master (standing authority) | |
 | B-08 tunneling and non-finite moves | P2 | gameplay (Sonnet) | MERGED + VERIFIED | #561 → `5e7e3b19` | `8a5ce09e` → `ae723541` | confirmed both movers skip thin walls on fast/hitched moves; half-size substeps (cap 256) and a non-finite guard; small moves unchanged; per-mechanism mutants fail | APPROVED | master (standing authority) | |
 | A-05b Studio paint validation | low | creator-safety (Sonnet) | MERGED + VERIFIED | #562 → `9e501f88` | `cbd1bf05` → `504776ee` | shared `validate_paint_ops`; the Studio path refuses what the direct path refuses (missing layer no longer becomes `"None"`) | APPROVED | master (standing authority) | |
+| A-07b light `@N` shift (owner decision) | P2 | creator-safety (Sonnet) | MERGED + VERIFIED | #564 → `6366e2cc` | `e390ef6e` → `3eb56996` | in one batch a `remove_light` at or below a light that batch added is refused (whole batch, files unchanged), via `authoring.apply` and MCP; mutant fails. Round 2 added a non-int index guard; my round-1 concern proved unfounded (already converted to `ChangeError`) | APPROVED | master (standing authority) | |
 | U-01 unresolved-record accumulation | P2 | (unassigned) | MEASURED (GAME-1) | | | unresolved records bounded by deduplication (ambiguous twins plateau at 4 after 2 cycles; no-change cycles 0); the only unbounded growth was F-1, fixed by B-09; nothing discarded | | owner | keep tracked; revisit if real games show growth |
 
 ## Follow-ups noted by reviews (not assigned)
@@ -117,9 +125,7 @@ Approval: `OWNER` = the owner must approve the merge.
   change nothing); some `new-*` commands fail on a fresh blank project for unrelated reasons.
 - **ACC-2 environment:** the rerun forces `PYGLET_AUDIO=silent` (the exported game starts at full volume with fresh player
   settings); otherwise the 2026-11-06 environment.
-- **A-07, design question:** within an authoring batch, a later `remove_light` of a lower index silently shifts an
-  earlier `@N` light (documented on `remove_light`); refusing would change the authoring contract.
-- **B-08, policy:** `on_update` passes `delta_time` uncapped; a cap would change game time for every timer. Moves past
+- **B-08, policy (owner: DEFERRED):** `on_update` passes `delta_time` uncapped; a cap would change game time for every timer. Moves past
   256 half-size pieces in one frame can still tunnel. NaN `x`/`y` in hand-written scene JSON is accepted by `float()`.
 - **B-07, low:** `RangedAttackAI.last_attack_time` uses `time.time()` and is never reset on a scene change.
 - **T-03, low:** conftest's function-scoped launch-root undo can't see a module-scoped fixture's pin.
@@ -154,14 +160,17 @@ Approval: `OWNER` = the owner must approve the merge.
 | B-03, T-03 rounds 1 + 2 (resumed) | Sonnet 5.5 | 16 | ~128k | #559, #560 |
 | B-08 | Sonnet 5.5 | 32 | ~111k | #561 |
 | A-05b | Sonnet 5.5 | 10 | ~82k | #562 |
+| A-07b rounds 1 + 2 (resumed) | Sonnet 5.5 | 38 | ~89k | #564 |
 
 ## Worktrees in use
 
 | Worktree | Holds |
 |---|---|
-| `D:\Games\Mesh-A-04`, `D:\Games\Mesh-A-05`, `D:\Games\Mesh-B-05b`, `D:\Games\Mesh-T-02`, `D:\Games\Mesh-B-06`, `D:\Games\Mesh-B-07`, `D:\Games\Mesh-A-F12`, `D:\Games\Mesh-B-04`, `D:\Games\Mesh-B-04b`, `D:\Games\Mesh-A-07`, `D:\Games\Mesh-B-03`, `D:\Games\Mesh-A-08`, `D:\Games\Mesh-T-03`, `D:\Games\Mesh-B-08`, `D:\Games\Mesh-A-05b` | merged work (#546-#562): removable after verification, with owner OK |
+| `D:\Games\Mesh-A-07b` | merged work (#564): removable after verification |
 | `D:\Games\Mesh-acc` | ACC-2 (detached at `9341bfdd`) |
 | `D:\Games\Mesh-board` | this board update |
 
 Removed 2026-11-21 (owner-authorised; each clean, on its merged head, no unmerged commits; branches kept): `Mesh-B-02`,
-`Mesh-GAME-1`, `Mesh-B-09`, `Mesh-A-03`, `Mesh-B-05`.
+`Mesh-GAME-1`, `Mesh-B-09`, `Mesh-A-03`, `Mesh-B-05`. Removed 2026-11-21 (owner-approved; same checks: clean, fully merged into
+`e390ef6e`, no unique commits, no active worker; branches kept): `Mesh-A-04`, `Mesh-A-05`, `Mesh-B-05b`, `Mesh-T-02`, `Mesh-B-06`,
+`Mesh-B-07`, `Mesh-A-F12`, `Mesh-B-04`, `Mesh-B-04b`, `Mesh-A-07`, `Mesh-B-03`, `Mesh-A-08`, `Mesh-T-03`, `Mesh-B-08`, `Mesh-A-05b`.
