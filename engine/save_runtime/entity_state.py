@@ -955,6 +955,9 @@ def apply_entities_ex(
         retry_groups: dict[tuple[str, bool, str], list[_Item]] = {}
         entry_of: dict[int, dict[str, Any]] = {}
         for entry in merge_unresolved(carried):
+            owner = str(entry.get("scene_path") or "")
+            if owner and room and not _same_room(owner, room):
+                continue  # another room's record: stays in result.unresolved (carried forward), never bound here
             item, space, legacy = _classify(entry["record"])
             entry_of[id(item[0])] = entry
             key = item[1].mesh_id if space == KEYING_ID else item[1].entity_id
