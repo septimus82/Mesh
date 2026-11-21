@@ -84,7 +84,7 @@ def test_write_json_atomic_failed_write_cleans_temp_and_preserves_destination(
 
     def _path_open_with_failing_write(self, mode="r", *args, **kwargs):
         handle = real_path_open(self, mode, *args, **kwargs)
-        if self == tmp_path_expected and "w" in mode:
+        if self.parent == tmp_path_expected.parent and self.name.endswith(".tmp") and ("w" in mode or "x" in mode):
             return _ExplodingWriter(handle)
         return handle
 
