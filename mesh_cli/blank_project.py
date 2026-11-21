@@ -59,6 +59,43 @@ def _bad_name(name: str) -> str | None:
     return None
 
 
+def _replace_owned(project_dir: Path) -> bool:
+    """Empty an existing project while owning it; False (nothing deleted) if another process owns it (#462 RV-3).
+
+    The lock file lives in ``.mesh/``, so it is kept until everything else is gone, then released and removed.
+    ponytail: in the instant between release and the last rmtree an opener sees an already-empty project, never a
+    half-deleted one.
+    """
+    import shutil  # noqa: PLC0415
+
+    from engine.editor import project_ownership as po  # noqa: PLC0415
+
+    try:
+        held = po.acquire(project_dir, po.AUTHORING, wait=0.5)
+    except (po.OwnedElsewhere, po.OwnershipUnavailable) as exc:
+        print("[mesh] Error: " + po.refused_write("new --force", exc), file=sys.stderr)
+        return False
+    lock = po.lock_path(project_dir)
+
+    def _remove(child: Path) -> None:
+        if child.is_dir() and not _is_link(child):
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+
+    try:
+        for child in project_dir.iterdir():
+            if child.name != ".mesh":
+                _remove(child)
+        for child in lock.parent.iterdir():
+            if child != lock:
+                _remove(child)
+    finally:
+        held.release()
+    shutil.rmtree(project_dir)
+    return True
+
+
 def create_blank_project(name: str, dest: Path, *, template_id: str = "blank", force: bool = False) -> int:
     problem = _bad_name(name)
     if problem:
@@ -98,9 +135,8 @@ def create_blank_project(name: str, dest: Path, *, template_id: str = "blank", f
                     file=sys.stderr,
                 )
                 return 1
-            import shutil
-
-            shutil.rmtree(project_dir)
+            if not _replace_owned(project_dir):
+                return 1
 
     from engine.project_scaffold import create_project, validate_new_project_target
 

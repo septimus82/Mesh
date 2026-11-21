@@ -124,3 +124,46 @@ def test_valid_new_and_force_over_a_mesh_project_still_work(tmp_path, layout, cm
     assert not (project / "stale.txt").exists()
     assert (dest / "other.txt").read_bytes() == b"other\n"
     assert (outer / "victim" / "MARKER.txt").read_bytes() == b"victim\n"
+
+
+# --- RV-3: --force never deletes a project another process owns -------------------------------------------------
+_HOLDER = ("import sys, time; sys.path.insert(0, sys.argv[1]); from engine.editor import project_ownership as o; "
+           "h = o.acquire(sys.argv[2], o.STUDIO); print('held', flush=True); time.sleep(120)")
+
+
+def _project(tmp_path: Path) -> Path:
+    from engine.project_scaffold import create_project
+
+    root = tmp_path / "dest" / "game"
+    create_project(root, "game", template_id="blank")
+    return root
+
+
+def _content(root: Path) -> dict[str, bytes]:
+    return {k: v for k, v in _snapshot(root).items() if not k.replace("\\", "/").endswith("owner.lock")}
+
+
+def test_force_refuses_a_project_studio_has_open(tmp_path: Path) -> None:
+    root = _project(tmp_path)
+    holder = subprocess.Popen([sys.executable, "-c", _HOLDER, str(_REPO), str(root)], stdout=subprocess.PIPE, text=True)
+    try:
+        assert holder.stdout is not None and holder.stdout.readline().strip() == "held"
+        before = _content(root)
+        done = _cli(tmp_path, "new", "game", "--dest", str(root.parent), "--force")
+        after = _content(root)
+    finally:
+        holder.kill()
+        holder.wait()
+        assert holder.stdout is not None
+        holder.stdout.close()
+    assert done.returncode != 0
+    assert "nothing was changed" in done.stderr and "Mesh Studio" in done.stderr
+    assert after == before
+
+
+def test_force_still_replaces_an_unowned_project(tmp_path: Path) -> None:
+    root = _project(tmp_path)
+    (root / "junk.txt").write_bytes(b"old\n")
+    done = _cli(tmp_path, "new", "game", "--dest", str(root.parent), "--force")
+    assert done.returncode == 0, done.stderr
+    assert not (root / "junk.txt").exists() and (root / "config.json").is_file()
