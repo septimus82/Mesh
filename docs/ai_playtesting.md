@@ -4,7 +4,7 @@ D1 ([runtime_debugger.md](runtime_debugger.md)) lets an AI look at the game runn
 lets it play that game: walk the player, talk to people and choose in conversations, with **the player's own
 controls**. After each action it sees what happened.
 
-There is one MCP tool, `debug_play_action(action, direction, frames, choice)`, with four bounded actions:
+There is one MCP tool, `debug_play_action(action, direction, frames, choice)`, with five bounded actions:
 
 | `action` | What it presses | Refused when |
 | --- | --- | --- |
@@ -12,6 +12,7 @@ There is one MCP tool, `debug_play_action(action, direction, frames, choice)`, w
 | `interact` | Taps the key bound to `interact`, to talk to or use what's in front of the player. | A conversation is on screen (`dialogue_open`): advance or choose instead. |
 | `advance` | Taps `interact` during a conversation, for the next line. | No conversation (`no_dialogue`); the line waits for a choice (`choice_needed`). |
 | `choose` | Moves the choice cursor with `move_up` / `move_down`, then confirms with `interact`. `choice` is a choice's `index` or its exact words. | No choices on screen (`no_choices`); not one of them, or one that can't be made now (`choice_not_available`). |
+| `attack` | Taps the key bound to `attack`, as a player's attack. Combat's cooldown applies (a second attack inside it hits nothing), and so does its aim: it follows the player's movement when the attack lands, else the entity's angle, so a player standing still attacks the same way every time (right, by default). The snapshot shows the result: a defeated enemy is gone from `nearby`, and quest progress is in `game_state`. (`nearby` does not show health, so a hit that doesn't kill is not visible there.) | A conversation is on screen (`dialogue_open`). |
 
 It answers `{ok, action, snapshot}`:
 
@@ -115,7 +116,7 @@ reasons, for example:
 
 ```json
 {
- "message": "action must be one of move, interact, advance, choose, not 'jump'.",
+ "message": "action must be one of move, interact, advance, choose, attack, not 'jump'.",
  "mode": "live_studio",
  "ok": false,
  "reason": "invalid_action"

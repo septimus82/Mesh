@@ -2,16 +2,18 @@
 
 D1 (``engine.runtime_debug``) lets an AI look at the running game. Here, once the person allows it in Studio's AI
 panel (``StudioAIHost.gameplay_control``: separate from starting and stopping play-tests, off until turned on, for
-that Studio session only), it can also act in the game, through four bounded actions:
+that Studio session only), it can also act in the game, through five bounded actions:
 
 - ``move``: hold a direction (``up``, ``down``, ``left``, ``right``) for 1 to ``MOVE_FRAMES_MAX`` frames;
 - ``interact``: press the interact key once, to talk to or use what's in front of the player;
 - ``advance``: press it once in a conversation, to go on to the next line;
 - ``choose``: pick one of the conversation's choices (its number or its words), moving the cursor with the
-  up and down keys and confirming with the interact key, as a player does.
+  up and down keys and confirming with the interact key, as a player does;
+- ``attack``: press the attack key once, as a player's attack (Combat's cooldown and aim apply: a player standing
+  still aims where the game aims, not where this action says; the answer's snapshot shows the result).
 
 Every action is the game's own input: key presses and releases sent to the window, for the keys the game binds to
-``move_up`` / ``move_down`` / ``move_left`` / ``move_right`` and ``interact``. So the game's rules apply as they do to
+``move_up`` / ``move_down`` / ``move_left`` / ``move_right``, ``interact`` and ``attack``. So the game's rules apply as they do to
 a player (collisions, doors, dialogue, quests), and nothing else is reachable: no other keys, no code, no state set
 directly, no project files.
 
@@ -36,7 +38,7 @@ from typing import Any
 
 Doc = dict[str, Any]
 
-ACTIONS = ("move", "interact", "advance", "choose")
+ACTIONS = ("move", "interact", "advance", "choose", "attack")
 DIRECTIONS = {"up": "move_up", "down": "move_down", "left": "move_left", "right": "move_right"}
 MOVE_FRAMES_MAX = 120  # two seconds at 60 frames a second
 TAP_FRAMES = 2  # a key pressed and let go, as a quick tap
@@ -178,6 +180,15 @@ class PlayDriver:
                 return _refused("no_key", f"The game binds no key to {DIRECTIONS[direction]}.")
             return {"request": {"action": "move", "direction": direction, "frames": frames},
                     "steps": [("press", key, frames), ("wait", None, SETTLE_FRAMES)]}
+        if action == "attack":
+            if talking:
+                return _refused("dialogue_open", "A conversation is on screen, so the player can't attack: advance "
+                                                 "or choose first.", dialogue=dialogue)
+            attack = self._key("attack")
+            if attack is None:
+                return _refused("no_key", "The game binds no key to attack.")
+            return {"request": {"action": "attack"},
+                    "steps": [("press", attack, TAP_FRAMES), ("wait", None, SETTLE_FRAMES)]}
         interact = self._key("interact")
         if interact is None:
             return _refused("no_key", "The game binds no key to interact.")

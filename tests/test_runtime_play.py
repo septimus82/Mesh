@@ -31,8 +31,9 @@ from engine.studio_ai import StudioAIHost
 from engine.studio_project import Project
 
 pytestmark = pytest.mark.integration  # (loopback bridges and project files, like the other live-session tests)
-UP, DOWN, LEFT, RIGHT, E = 1, 2, 3, 4, 5
-BINDINGS = {"move_up": [UP], "move_down": [DOWN], "move_left": [LEFT], "move_right": [RIGHT], "interact": [E]}
+UP, DOWN, LEFT, RIGHT, E, SPACE = 1, 2, 3, 4, 5, 6
+BINDINGS = {"move_up": [UP], "move_down": [DOWN], "move_left": [LEFT], "move_right": [RIGHT], "interact": [E],
+            "attack": [SPACE]}
 
 
 class _Box:
@@ -152,8 +153,9 @@ def _until_done(studio: _Studio, started: dict[str, Any], limit: int = 400) -> d
     ({"action": "move", "direction": "up", "frames": "5"}, "invalid_action"),
     ({"action": "advance"}, "no_dialogue"),
     ({"action": "choose", "choice": 0}, "no_choices"),
+    ({"action": "swing"}, "invalid_action"),
 ], ids=["unknown action", "unknown direction", "no frames", "too many frames", "a bool", "text", "nothing said",
-        "no choices"])
+        "no choices", "an unknown attack-like action"])
 def test_an_action_that_cant_apply_is_refused_and_presses_nothing(studio: _Studio, request_: dict[str, Any],
                                                                   reason: str) -> None:
     answer = studio.ai.debug_act(request_)
@@ -167,6 +169,7 @@ def test_what_is_on_screen_decides_what_can_be_done(studio: _Studio) -> None:
     box.open, box.choices = True, [{"text": "Yes"}, {"text": "No", "disabled": True}, {"text": "Later"}]
     assert studio.ai.debug_act({"action": "move", "direction": "up", "frames": 5})["reason"] == "dialogue_open"
     assert studio.ai.debug_act({"action": "interact"})["reason"] == "dialogue_open"
+    assert studio.ai.debug_act({"action": "attack"})["reason"] == "dialogue_open"
     assert studio.ai.debug_act({"action": "advance"})["reason"] == "choice_needed"
     for wanted in ("Maybe", 1, 7, True):  # (not there; can't be made now; no such number; not a choice)
         assert studio.ai.debug_act({"action": "choose", "choice": wanted})["reason"] == "choice_not_available"
@@ -187,10 +190,77 @@ def test_playing_needs_its_own_permission(studio: _Studio) -> None:
     studio.ai.gameplay_control, studio.ai.playtest_control = False, True  # (play-tests allowed; playing them, not)
     answer = studio.ai.debug_act({"action": "move", "direction": "up", "frames": 5})
     assert answer["reason"] == "gameplay_control_off" and "separate permission" in answer["message"]
+    refused_attack = studio.ai.debug_act({"action": "attack"})
+    assert refused_attack["reason"] == "gameplay_control_off" and refused_attack["message"] == answer["message"]
+    studio.frame(5)
+    assert studio.window.log == []
     assert StudioAIHost(studio).gameplay_control is False  # (a new Studio session starts with it off)
 
 
 # --------------------------------------------------------------------- running them
+
+def _fighting(studio: _Studio, monkeypatch: pytest.MonkeyPatch, enemy_x: float) -> Any:
+    """The shipped player's attack on the fake game: the player's real Combat, a real Hitbox it spawns, and an
+    enemy with real Health, so a hit lands (or doesn't) as in the game."""
+    import engine.optional_arcade as optional_arcade  # noqa: PLC0415
+    from engine.behaviours.combat import Combat  # noqa: PLC0415
+    from engine.behaviours.health import Health  # noqa: PLC0415
+    from engine.behaviours.hitbox import Hitbox  # noqa: PLC0415
+    from engine.player_actions import dispatch_attack_action  # noqa: PLC0415
+
+    window = studio.window
+    sprite = optional_arcade.arcade.Sprite
+    player = window.player
+    player.mesh_behaviours_runtime = [Combat(player, window, damage=10.0, cooldown=1.0, range=32.0)]
+    enemy = sprite()
+    enemy.center_x, enemy.center_y = 100.0 + enemy_x, 50.0
+    enemy.mesh_name, enemy.mesh_id, enemy.mesh_tag = "Wolf", "wolf", "enemy"
+    health = Health(enemy, window, max_hp=10.0)
+    enemy.mesh_behaviours_runtime = [health]
+    controller = window.scene_controller
+    controller.all_sprites.append(enemy)
+    controller._loaded_scene_data = {}
+    controller.add_sprite_to_layer = lambda s, _layer: controller.all_sprites.append(s)
+
+    def create(data: dict[str, Any]) -> Any:
+        box = sprite()
+        box.center_x, box.center_y = data["x"], data["y"]
+        box.mesh_name, box.mesh_tag = data["name"], ""
+        box.mesh_behaviours_runtime = [Hitbox(box, window, **data["behaviour_config"]["Hitbox"])]
+        return box
+
+    controller._create_sprite = create
+    window.audio = SimpleNamespace(play_world_sfx=lambda *a, **k: None)
+    window.game_state_controller.get_equipment = dict  # (no weapon)
+    fake_update = window.update
+
+    def update() -> None:
+        if SPACE in window.down:  # (the player controller: attack held, so attack)
+            dispatch_attack_action(player, window)
+        fake_update()
+        for behaviour in [b for s in list(controller.all_sprites) for b in getattr(s, "mesh_behaviours_runtime", [])
+                          if hasattr(b, "update")]:
+            behaviour.update(1 / 60)
+
+    window.update = update
+    monkeypatch.setattr(optional_arcade.arcade, "check_for_collision", lambda a, b: abs(a.center_x - b.center_x) < 20)
+    return health
+
+
+def test_an_attack_hits_what_is_in_front_of_the_player(studio: _Studio, monkeypatch: pytest.MonkeyPatch) -> None:
+    health = _fighting(studio, monkeypatch, enemy_x=32.0)  # (Combat aims right, 32 px: the hitbox lands on it)
+    started = studio.ai.debug_act({"action": "attack"})
+    assert started["ok"] and started["action"] == {"action": "attack"}
+    result = _until_done(studio, started)
+    assert result["status"] == "done" and result["ok"] is True
+    assert studio.window.log == [("on_key_press", SPACE), ("on_key_release", SPACE)]
+    assert health.hp == 0.0  # (10 damage on 10 hp)
+
+
+def test_an_attack_that_reaches_nothing_hurts_nothing(studio: _Studio, monkeypatch: pytest.MonkeyPatch) -> None:
+    health = _fighting(studio, monkeypatch, enemy_x=-200.0)
+    assert _until_done(studio, studio.ai.debug_act({"action": "attack"}))["status"] == "done"
+    assert health.hp == 10.0
 
 def test_a_move_holds_its_key_for_exactly_its_frames(studio: _Studio) -> None:
     started = studio.ai.debug_act({"action": "move", "direction": "right", "frames": 7})
