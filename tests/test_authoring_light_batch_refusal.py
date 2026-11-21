@@ -102,3 +102,14 @@ def test_a_light_added_in_another_room_is_unaffected(root: Path) -> None:
     with pytest.raises(ChangeError):
         authoring.apply(project, [{"op": "add_light", "room": other, "x": 8, "y": 0},
                                   {"op": "remove_light", "room": other, "index": 0}])
+
+
+@pytest.mark.parametrize("bad", ["x", None, 1.5])
+def test_a_non_integer_index_fails_as_before_with_no_crash(root: Path, bad: object) -> None:
+    _seed(root)
+    before = _snapshot(root)
+    project = _project(root)
+    with pytest.raises(ChangeError):
+        authoring.apply(project, [add, {"op": "remove_light", "index": bad}])
+    project.save()
+    assert _snapshot(root) == before

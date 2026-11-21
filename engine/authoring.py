@@ -150,8 +150,9 @@ def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str
             raise ChangeError(index, name, f"there is no room '{room}'. Rooms: {', '.join(k for k, _, _ in project.rooms())}.")
         scene = project.scene(room)
         bound = _bind(func, args, scene, room, project, index, name)
-        if lights is not None and name == "remove_light":  # (A-07b: it would move or drop a light an '@N' names)
-            hit = sorted(i for i in lights.get(room, ()) if i >= int(bound["index"]))
+        at = bound.get("index")
+        if lights is not None and name == "remove_light" and isinstance(at, int) and not isinstance(at, bool):
+            hit = sorted(i for i in lights.get(room, ()) if i >= at)  # (A-07b: it would move or drop a light an '@N' names)
             if hit:
                 raise ChangeError(index, name, f"removing light {bound['index']} in room '{room}' would shift or remove "
                                   f"light(s) {hit} that this batch added earlier (an '@N' may name them). Remove it in "
