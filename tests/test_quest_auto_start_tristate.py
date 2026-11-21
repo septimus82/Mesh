@@ -10,6 +10,8 @@ from engine.events import MeshEvent
 from engine.save_runtime import payloads as save_payloads
 from tests.test_quest_stage_progress_roundtrip import _Window
 
+pytestmark = pytest.mark.fast
+
 _STAGES = [{"id": "s1", "title": "One", "text": "x"}, {"id": "s2", "title": "Two", "text": "y"}]
 _TRIGGERED = [{"id": "s1", "title": "One", "text": "x", "start_on_event": {"type": "go"}}, _STAGES[1]]
 
