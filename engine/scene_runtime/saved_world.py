@@ -90,7 +90,9 @@ def _id(entity: Any) -> str | None:
 
 
 def _idless_key(entity: dict[str, Any]) -> tuple[Any, Any]:
-    return entity.get("name"), entity.get("prefab_id")
+    # A prefab's object is told by its prefab alone: loading fills in the prefab's name, which the room file lacks.
+    prefab = entity.get("prefab_id")
+    return (None, prefab) if prefab else (entity.get("name"), None)
 
 
 def room_idless(room_entities: Any) -> dict[tuple[Any, Any], int]:
