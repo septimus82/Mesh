@@ -3,8 +3,13 @@
 Maintained by the master only (workers report in their PRs). GitHub is the source of truth: a fresh master session
 rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and priorities: `MESH_RELIABILITY_MASTER_PLAN.md`.
 
-**As of 2026-11-21 (cycle 9).** Integration `redesign/visual-editor` = `9341bfdd08bebb5318961acab190a5c322a5dee5`
-(post-merge CI 44876963282 ✓ a1, Extended 44876963293 ✓ a1). This board lands with its own PR (`gh pr list --head docs/reliability-board-cycle9`).
+**As of 2026-11-21 (cycle 10).** Integration `redesign/visual-editor` = `9e501f8809d0be891a631a511e9784e70ea60e6c`
+(post-merge CI 44911286304 ✓ a1, Extended 44911286239 ✓ a1). This board lands with its own PR (`gh pr list --head docs/reliability-board-cycle10`).
+
+**Standing authority (owner, 2026-11-21):** the master merges focused, independently approved fixes whose exact head passed
+CI + Extended and whose merge tree equals the reviewed change, and runs failure recovery, without asking. Escalation only for
+destructive/incompatible data changes, new save-format migrations or major architecture, gate waivers, unresolved review
+disagreement, or two failed correction rounds. Cycle 10 merges below were made under it, one at a time, each verified.
 
 ## Integration record
 
@@ -36,6 +41,18 @@ rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and pr
 | #548 status board | `11c5809fc8179aa457f574491ab3196f2c6676f2` | `2e5b4b20` (= tip + exactly #548's diff) | 44845816189 ✓ a1 | 44845816188 ✓ a1 |
 | #550 B-05b every removal path ends behaviours | `052cf097e93387e0237e82e89e88d174db90aa4a` | `9e11d779` (= tip + exactly #550's reviewed diff, head `6d911e31`) | 44874121077 ✓ a1 | 44874121078 ✓ a1 |
 | #551 T-02 bridge retry tests: normal deadline for the retry | `9341bfdd08bebb5318961acab190a5c322a5dee5` | `07fcb01d` (= tip + exactly #551's reviewed diff, head `c803ede9`) | 44876963282 ✓ a1 | 44876963293 ✓ a1 |
+| #552 status board (cycle 9) | `08f2ce0f4550d0988b2792353cb9fa3916114642` | `84e431cf` (= tip + exactly #552's diff) | 44882250376 ✓ a1 | 44882250370 ✓ a1 |
+| #549 B-06 stable RNG stream seeds | `8a5ce09e6dcb78c9d160b429ce00c6e1c4e6263c` | `3d18702b` (= tip + exactly the reviewed `cbb7fa66` change; head `2a1afbc0` after the T-02 refresh) | 44884740592 ✓ a1 | 44884740664 ✓ a1 |
+| #553 B-07 RangedAttackAI finds the player | `f640dbd436d96126abde7a8b3af50de79532a9f8` | `0cbd4908` (head `f0d19532`) | 44887817923 ✓ a1 | 44887817940 ✓ a1 |
+| #554 A-00 F1/F2 plan manifest | `23bdb0eaddb497ab182d6e8e2113b8d4a19cf292` | `af31916e` (head `a5778bf7`) | 44890518911 ✓ a1 | 44890518976 ✓ a1 |
+| #555 B-04 hit particles | `5f7ea5a8e4a37a079ac4ac2f395e3f5b6f29e9c6` | `f6287854` (head `ab318ef8`) | 44892887087 ✓ a1 | 44892887096 ✓ a1 |
+| #557 B-04b collect particles | `2e5e7ffb586dccfb467d23a0edd8bb0afbbaef28` | `80eab02a` (head `c7aded1d`; same changed lines, hunk offset +1 after #555) | 44895536721 ✓ a1 | 44895536574 ✓ a1 |
+| #556 A-07 light `@N` references | `cbd1bf0506ba1dc40969e618ce027b9c0d04d262` | `63d2487d` (head `df4630eb`) | 44897936891 ✓ a1 | 44897936939 ✓ a1 |
+| #559 B-03 one death counts once | `bab1e086bdcb3e6b80175b9b95924ac20e39ec2b` | `8cdc5891` (head `5b1703c1`) | 44900345727 ✓ a1 | 44900345739 ✓ a1 |
+| #558 A-08 exclusive atomic-write temp | `3cb747f91e515197f1b9f5142108a5eab81b1949` | `132f17c2` (head `fc903887`) | 44902650038 ✓ a1 | 44902650100 ✓ a1 |
+| #560 T-03 lifecycle fixture leak | `5e805371e994bd3a428ffedde284547d426f1cd5` | `7c33e1e0` (head `3b34ef3e`) | 44905181639 ✓ a1 | 44905181634 ✓ a1 |
+| #561 B-08 tunneling + non-finite moves | `5e7e3b1971b77f531f6f5080403fd17e54851788` | `5778cb8d` (head `ae723541`) | 44908222390 ✓ a1 | 44908222335 ✓ a1 |
+| #562 A-05b Studio paint validation | `9e501f8809d0be891a631a511e9784e70ea60e6c` | `a6903449` (head `504776ee`) | 44911286304 ✓ a1 | 44911286239 ✓ a1 |
 
 **Waiver (owner, one-time, narrowly scoped; not a relaxation of CI).** Post-merge CI run 44589776415 on `55bdd589`
 FAILED at attempt 1: one Windows test,
@@ -52,7 +69,8 @@ fast-marking policy, a module named `*contract*` without fast markers; Extended 
 #546 `5dc2edca` and #547 `86af1526` (CI cancelled, superseded by the review corrections). #549 `cbb7fa66` (CI 44841828542 ✗ a1:
 `test_live_bridge_request_states.py::test_a_proposal_that_timed_out_while_queued_never_reaches_the_person`, unrelated to B-06: the
 retry kept the 0.2 s deadline; not rerun, owner chose a fix over a waiver → T-02 #551; Extended 44841862606 ✓ a1).
-Only final heads passed at attempt 1.
+#558 `2b14a8ab` (CI cancelled, superseded by review round 2) and `76666227` (CI cancelled, superseded). #560 `2f5a334b` (CI
+cancelled, superseded by review round 2). Only final heads passed at attempt 1.
 
 ## Work
 
@@ -73,28 +91,40 @@ Approval: `OWNER` = the owner must approve the merge.
 | B-05 behaviours never unsubscribe | P2 | mesh-gameplay-reliability (Sonnet) | MERGED + VERIFIED | #543 → `68ad13b0` | `d525eea3` → `19db914b` | round 1 fixed the unsubscribe calls but nothing called teardown → round 2: `MeshEntitySprite.remove_from_sprite_lists` ends behaviours once (deaths, pickups, projectile expiry, `kill()`) | CHANGES REQUIRED → APPROVED | owner approved | follow-up B-05b below |
 | A-04 legacy CLI writers bypass locks | P1 | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #547 → `4ae467c5` | `68ad13b0` → `2df87f6f` | one guard in `dispatch()` (same `project_ownership.acquire` as R4); ~40 in-place writers own the project or refuse (exit 1, files byte-identical); mutants 3/3 caught | round 1 missed `polish` and `assets import-sprites` → CHANGES REQUIRED → APPROVED | owner approved | **Limitation:** the writer list is a hand-kept table; a new in-place CLI writer must be added |
 | A-05 `paint_tiles` bounds | P1/P2 | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #546 → `4512aec8` | `68ad13b0` → `b750bbbf` | whole batch validated before any write: non-negative ints inside the map (1024 cap when dimensions unknown), ≤10,000 ops, layer a non-empty string, ≤8 new layers per batch; mutants 4/4 caught | round 1 left growth through `layer` → CHANGES REQUIRED → APPROVED | owner approved | `"3"`/`3.0` now refused (intended) |
-| ACC-2 creator-workflow acceptance rerun | P1 | master | **INCOMPLETE (test-side), no product defect found** | evidence `D:\Games\Mesh-462-acceptance\rerun-2026-11-21` (`run1`-`run3`) | runs 1-2 `4512aec8`, run 3 `052cf097` (detached worktree `D:\Games\Mesh-acc`) | same 33-step scenario and criteria as the 2026-11-06 PASS at `59f171b5`. Run 1: **A4 FAIL** (bare `base_revision`, retired by R1 #518) → owner-approved adaptation (14 lines). Run 2: 24/24 then **C1 FAIL** (C1 wanted an empty `.mesh/`; R2 #517 keeps `.mesh/owner.lock` by design). Owner approved the C1 correction (session record gone, OS lock free, another process acquires and releases, `owner.lock` may stay; `c1-adaptation.diff`). Run 3: **32/33, C1 PASS, F1 FAIL**: F1 flags every hidden file and found exactly `.mesh/owner.lock` (same R2 cause); F1's later checks (orphan maps, project as last saved) did not run. Not rerun. Master's miss: the other hidden-file check should have been found before run 3 | | owner | decide: let F1 allow exactly `.mesh/owner.lock` and run once more from the start |
+| ACC-2 creator-workflow acceptance rerun | P1 | master | **PASSED (33/33)** | evidence `D:\Games\Mesh-462-acceptance\rerun-2026-11-21` (`run1`-`run4`) | run 4 at `9341bfdd` | same 33-step scenario and criteria as the 2026-11-06 PASS at `59f171b5`. Runs 1-3 stopped on test-side issues only (A4 bare `base_revision` retired by R1; C1 and then F1 expecting no `.mesh/owner.lock`, which R2 keeps). Three recorded harness adaptations (`harness-adaptation.diff`, `c1-adaptation.diff`, `f1-adaptation.diff`; C1 owner-approved, F1 the same rule under the standing authority). Run 4: **33/33 PASS**, C1 proves the lock free from another process. No product defect | APPROVED | | |
 | B-05b other entity removal paths | P2 | mesh-gameplay-reliability (Sonnet) | MERGED + VERIFIED | #550 → `052cf097` | `4512aec8` → `6d911e31` | despawn op, authoring delete and editor delete now call `_end_behaviours` after removal; 6 tests; mutant (store call removed) → 2 fail | APPROVED | owner approved | |
-| B-06 RNG stream seeds | P2 | mesh-gameplay-reliability (Sonnet) | READY FOR REVIEW (refreshed) | #549 | `4512aec8` → `cbb7fa66`; refreshed by merging `9341bfdd` (with T-02) → `2a1afbc0` | `sha256(f"{seed}:{name}")` replaces the salted `hash()`; subprocess test across `PYTHONHASHSEED`; first head's CI failed only on the T-02 timing test (kept above) | APPROVED (`cbb7fa66`) | owner | approve the merge once `2a1afbc0` CI + Extended pass at attempt 1 |
+| B-06 RNG stream seeds | P2 | mesh-gameplay-reliability (Sonnet) | MERGED + VERIFIED | #549 → `8a5ce09e` | `4512aec8` → `cbb7fa66`, refreshed `2a1afbc0` | `sha256(f"{seed}:{name}")` replaces the salted `hash()`; first head's CI failed only on the T-02 timing test (kept above); refreshed head green a1 | APPROVED | owner approved T-02 route | |
 | T-02 bridge retry tests: short deadline kept for the retry | test infra | master (Sonnet independent review) | MERGED + VERIFIED | #551 → `9341bfdd` | `052cf097` → `c803ede9` | test-only: both "timed out, then sent again" tests set a normal 30 s deadline before the retry; cancellation assertions unchanged; no other test in the file has the flaw (review) | APPROVED (independent review) | owner approved | |
+| B-07 RangedAttackAI player lookup | P2 | gameplay (Sonnet) | MERGED + VERIFIED | #553 → `f640dbd4` | `9341bfdd` → `f0d19532` | confirmed: `GameWindow` has no `current_scene`, archer never fired; now `scene_controller._find_player_sprite()`; GPU test ran on Linux + Windows; mutant fails | APPROVED | master (standing authority) | |
+| A-00 F1/F2 plan manifest | P2 | creator-safety (Sonnet) | MERGED + VERIFIED | #554 → `23bdb0ea` | `9341bfdd` → `a5778bf7` | a stopped plan's own error is never masked by a manifest-write failure (undo refuses the manifest-less backup); `{"exists": 0}` no longer passes as absent; mutant fails | APPROVED | master (standing authority) | |
+| B-04 hit particles | P2 | gameplay (Sonnet) | MERGED + VERIFIED | #555 → `5f7ea5a8` | `08f2ce0f` → `ab318ef8` | confirmed: handler read `.center_x` off the target's name string (bus swallowed the error); resolves by `find_sprite_by_name`; contract unchanged | APPROVED | master (standing authority) | |
+| B-04b collect particles | P2 | gameplay (Sonnet) | MERGED + VERIFIED | #557 → `2e5e7ffb` | `08f2ce0f` → `c7aded1d` | confirmed: handler read a `collectible` key never sent; uses the payload's `position` | APPROVED | master (standing authority) | |
+| A-07 MCP route / light references | P2 | creator-safety (Sonnet) | MERGED + VERIFIED | #556 → `cbd1bf05` | `08f2ce0f` → `df4630eb` | stale route REFUTED (ownership taken before writing; existing two-process tests); light index CONFIRMED: settings of a second added light landed on the first; now `@<change>` | APPROVED | master (standing authority) | |
+| B-03 death counted twice | P2 | gameplay (Sonnet) | MERGED + VERIFIED | #559 → `bab1e086` | `08f2ce0f` → `5b1703c1` | reproduced: a live window has no separate gameplay bus, so Health's two `died` emits reached the same subscribers (cellar quest counted 2 per kill); one `died` per bus now | APPROVED | master (standing authority) | |
+| A-08 atomic-write temp file | low | creator-safety (Sonnet) | MERGED + VERIFIED | #558 → `3cb747f9` | `08f2ce0f` → `fc903887` | exclusive unique temp (`"x"`), mode kept; round 1 left six leftover-temp asserts vacuous → round 2 fixed and proved they bite | APPROVED | master (standing authority) | |
+| T-03 lifecycle fixture leak | test infra | gameplay (Sonnet) | MERGED + VERIFIED | #560 → `5e805371` | `08f2ce0f` → `3b34ef3e` | module fixture left `MESH_REPO_ROOT` pinned to a dead project (local `MESH_GL_SMOKE` runs only); round 2 restores a preset value | APPROVED | master (standing authority) | |
+| B-08 tunneling and non-finite moves | P2 | gameplay (Sonnet) | MERGED + VERIFIED | #561 → `5e7e3b19` | `8a5ce09e` → `ae723541` | confirmed both movers skip thin walls on fast/hitched moves; half-size substeps (cap 256) and a non-finite guard; small moves unchanged; per-mechanism mutants fail | APPROVED | master (standing authority) | |
+| A-05b Studio paint validation | low | creator-safety (Sonnet) | MERGED + VERIFIED | #562 → `9e501f88` | `cbd1bf05` → `504776ee` | shared `validate_paint_ops`; the Studio path refuses what the direct path refuses (missing layer no longer becomes `"None"`) | APPROVED | master (standing authority) | |
 | U-01 unresolved-record accumulation | P2 | (unassigned) | MEASURED (GAME-1) | | | unresolved records bounded by deduplication (ambiguous twins plateau at 4 after 2 cycles; no-change cycles 0); the only unbounded growth was F-1, fixed by B-09; nothing discarded | | owner | keep tracked; revisit if real games show growth |
 
 ## Follow-ups noted by reviews (not assigned)
 
-- **F1 (A-00, P2):** an `OSError` while `finish_backup` fingerprints a file leaves the plan written with no manifest
-  (undo then refuses, safely) and, on the error path, replaces the plan's own error.
-- **F2 (A-00, informational):** `_unverified` accepts `{"exists": 0}` as absent; require `record["exists"] is False`.
 - **A-01, low:** no test fails without the link check on Python 3.13; Windows reserved names aren't refused.
-- **#524 review, low:** `engine/json_io.write_text_atomic` writes `<target>.tmp` unchecked; exclusive temporary file.
 - **B-01b, informational:** twins pair by order (positional if the room file was reordered since the save).
 - **B-01, informational:** expired projectile records accumulate in `saved_entities.unresolved` (deduplicated) until
   they bind or are edited out; four tests in `test_save_entity_quest_state.py` keep their v2 names while asserting v3.
-- **A-05, low:** the Studio-project `apply_ops` path (`engine/mcp_server/tools.py` `_studio_changes`) calls `int()` on
-  paint cells and raises on non-numeric input before any write; `project_ops.paint_tiles` already ignores out-of-map cells.
 - **A-04, informational:** `edit-scene` printed `Unknown action type: update_scene_settings` on a blank project (it may
   change nothing); some `new-*` commands fail on a fresh blank project for unrelated reasons.
 - **ACC-2 environment:** the rerun forces `PYGLET_AUDIO=silent` (the exported game starts at full volume with fresh player
   settings); otherwise the 2026-11-06 environment.
+- **A-07, design question:** within an authoring batch, a later `remove_light` of a lower index silently shifts an
+  earlier `@N` light (documented on `remove_light`); refusing would change the authoring contract.
+- **B-08, policy:** `on_update` passes `delta_time` uncapped; a cap would change game time for every timer. Moves past
+  256 half-size pieces in one frame can still tunnel. NaN `x`/`y` in hand-written scene JSON is accepted by `float()`.
+- **B-07, low:** `RangedAttackAI.last_attack_time` uses `time.time()` and is never reset on a scene change.
+- **T-03, low:** conftest's function-scoped launch-root undo can't see a module-scoped fixture's pin.
+- **A-05b, informational:** an `apply_ops` refusal response has no `authoring` key.
+- **CI evidence gap:** the Ubuntu `pytest` job writes no junit, so per-test results there can't be shown (A-08's POSIX-only tests).
 - **Process:** workers run the gates (and the tier-marker ratchet) on the exact commit they push.
 
 ## Task log (models and usage, as reported by the Agent tool)
@@ -116,16 +146,22 @@ Approval: `OWNER` = the owner must approve the merge.
 | A-04 rounds 1 + 2 | Sonnet 5.5 | 145 | ~202k | #547 |
 | B-05b, B-06 | Sonnet 5.5 ×2 | (not recorded) | | #550, #549 |
 | T-02 independent review | Sonnet 5.5 | 2 | ~70k | APPROVE on #551 |
+| A-00 F1/F2 | Sonnet 5.5 | 16 | ~85k | #554 |
+| B-07 | Sonnet 5.5 | 16 | ~88k | #553 |
+| B-04, B-04b (resumed) | Sonnet 5.5 | 20 | ~93k | #555, #557 |
+| A-07 | Sonnet 5.5 | 20 | ~102k | #556 |
+| A-08 rounds 1 + 2 | Sonnet 5.5 | 34 | ~101k | #558 |
+| B-03, T-03 rounds 1 + 2 (resumed) | Sonnet 5.5 | 16 | ~128k | #559, #560 |
+| B-08 | Sonnet 5.5 | 32 | ~111k | #561 |
+| A-05b | Sonnet 5.5 | 10 | ~82k | #562 |
 
 ## Worktrees in use
 
 | Worktree | Holds |
 |---|---|
-| `D:\Games\Mesh-B-05b`, `D:\Games\Mesh-T-02` | merged work (#550, #551): removable after verification, with owner OK |
-| `D:\Games\Mesh-B-06` | B-06 (#549, open) |
-| `D:\Games\Mesh-acc` | ACC-2 (detached at `052cf097`) |
+| `D:\Games\Mesh-A-04`, `D:\Games\Mesh-A-05`, `D:\Games\Mesh-B-05b`, `D:\Games\Mesh-T-02`, `D:\Games\Mesh-B-06`, `D:\Games\Mesh-B-07`, `D:\Games\Mesh-A-F12`, `D:\Games\Mesh-B-04`, `D:\Games\Mesh-B-04b`, `D:\Games\Mesh-A-07`, `D:\Games\Mesh-B-03`, `D:\Games\Mesh-A-08`, `D:\Games\Mesh-T-03`, `D:\Games\Mesh-B-08`, `D:\Games\Mesh-A-05b` | merged work (#546-#562): removable after verification, with owner OK |
+| `D:\Games\Mesh-acc` | ACC-2 (detached at `9341bfdd`) |
 | `D:\Games\Mesh-board` | this board update |
-| `D:\Games\Mesh-A-04`, `D:\Games\Mesh-A-05` | merged work (#547, #546): removable after verification, with owner OK |
 
 Removed 2026-11-21 (owner-authorised; each clean, on its merged head, no unmerged commits; branches kept): `Mesh-B-02`,
 `Mesh-GAME-1`, `Mesh-B-09`, `Mesh-A-03`, `Mesh-B-05`.
