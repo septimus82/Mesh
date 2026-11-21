@@ -26,7 +26,7 @@ Top-level keys:
 | `id` | string | Unique identifier referenced by behaviours/UI. |
 | `title` | string | Quest name shown in the Quest Log overlay. |
 | `description` | string | Fallback text when no stage is active yet. |
-| `auto_start` | bool | When true, the first stage activates on load without requiring a trigger. |
+| `auto_start` | bool (optional) | `true`: the first stage starts at load. `false`: the quest stays inactive until its first stage's `start_on_event` fires or something starts it explicitly (quest giver, `start_quest`). Absent: legacy behaviour, the first stage starts at load when it has no `start_on_event`. |
 | `stages` | array | Ordered list of dictionaries (see below). |
 | `reward` | object | Optional payload applied when the quest completes. |
 
