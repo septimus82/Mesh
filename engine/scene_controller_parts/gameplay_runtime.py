@@ -49,7 +49,7 @@ def on_collectible_picked(self, collectible, collector) -> None:
     )
 
 
-def on_damage(self, source, target, amount: float) -> None:
+def on_damage(self, source, target, amount: float, *, emit: bool = True) -> None:
     import engine.scene_controller_core as scene_controller_module
 
     payload = {
@@ -59,7 +59,8 @@ def on_damage(self, source, target, amount: float) -> None:
     }
     scene_controller_module.request_animation_state(source, "attack", priority=20.0, ttl=0.25)
     scene_controller_module.request_animation_state(target, "hit", priority=40.0, ttl=0.45)
-    self.window.emit_signal(scene_controller_module.EVENT_DAMAGE_APPLIED, **payload)
+    if emit:  # (False when Health.apply_damage already published damage_applied)
+        self.window.emit_signal(scene_controller_module.EVENT_DAMAGE_APPLIED, **payload)
     self.window.console_log(
         f"{payload['source']} dealt {payload['amount']:.1f} damage to {payload['target']}",
     )

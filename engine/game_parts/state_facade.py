@@ -426,8 +426,10 @@ def on_damage(
     source: engine.optional_arcade.arcade.Sprite,
     target: engine.optional_arcade.arcade.Sprite,
     amount: float,
+    *,
+    emit: bool = True,
 ) -> None:
-    self.scene_controller.on_damage(source, target, amount)
+    self.scene_controller.on_damage(source, target, amount, emit=emit)
 
 
 def move_entity_with_collision(
