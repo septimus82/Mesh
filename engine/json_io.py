@@ -4,6 +4,8 @@ import contextlib
 import json
 import logging
 import os
+import secrets
+import shutil
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -71,21 +73,27 @@ def write_text_atomic(
 ) -> None:
     target = _coerce_path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = target.with_suffix(target.suffix + ".tmp")
+    # Exclusive, unique temp beside the target: never an existing file or a link (mode "x" is O_EXCL), never shared
+    # between two writers. Created with the process umask, like a plain write; an existing target keeps its own mode.
+    tmp_path = target.with_name(f".{target.name}.{os.getpid()}.{secrets.token_hex(6)}.tmp")
+    created = False
     try:
-        with tmp_path.open("w", encoding=encoding, newline="\n") as handle:
+        with tmp_path.open("x", encoding=encoding, newline="\n") as handle:
+            created = True
             handle.write(text)
             if durable:
                 handle.flush()
                 os.fsync(handle.fileno())
+        if os.name != "nt":
+            with contextlib.suppress(OSError):
+                shutil.copymode(target, tmp_path)  # (no target yet: keeps the umask mode)
         os.replace(tmp_path, target)
         if durable:
             _fsync_parent_directory(target)
     finally:
-        try:
-            tmp_path.unlink()
-        except FileNotFoundError:
-            pass
+        if created:  # (only a temp this call created)
+            with contextlib.suppress(FileNotFoundError):
+                tmp_path.unlink()
 
 
 def write_json_atomic(
