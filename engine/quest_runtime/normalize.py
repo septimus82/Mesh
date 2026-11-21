@@ -43,7 +43,8 @@ def normalize_quest(data: Any) -> dict[str, Any] | None:
         if isinstance(blocks_flags_raw, list)
         else []
     )
-    auto_start = bool(data.get("auto_start", False))
+    # Tri-state: True / False (explicit) / None (absent: legacy implicit start when the first stage has no trigger).
+    auto_start = bool(data["auto_start"]) if "auto_start" in data else None
     stages = normalize_stages(data.get("stages"))
     if not stages:
         print(f"[Mesh][Quests] Quest '{quest_id}' has no stages; skipping")

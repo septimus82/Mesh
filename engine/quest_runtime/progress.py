@@ -263,6 +263,9 @@ def maybe_start_pending(manager: Any, quest: dict[str, Any], state: dict[str, An
         return
     if pending_stage.get("start_event"):
         return
+    # Explicit auto_start false: the first stage waits for its trigger or an explicit start (docs/quests.md).
+    if quest.get("auto_start") is False and state.get("status") == "inactive":
+        return
     start_stage(manager, quest, pending_stage, state, source="auto")
 
 
