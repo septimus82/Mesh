@@ -1103,7 +1103,8 @@ def debug_play_action(action: str, direction: str = "", frames: int = 30, choice
     ``action``: ``"move"`` (hold ``direction`` up/down/left/right for ``frames``, 1 to 120), ``"interact"``
     (press the interact key: talk to or use what's in front of the player), ``"advance"`` (the next line of a
     conversation), ``"attack"`` (press the attack key once; the game's Combat cooldown and aim apply, so standing
-    still it aims as the game aims it, and a defeated enemy is gone from the snapshot's ``nearby``) or ``"choose"`` (a conversation's choice: its ``index`` or its exact words, as listed in a
+    still it aims as the game aims it, and a defeated enemy is gone from the snapshot's ``nearby``) or
+    ``"choose"`` (a conversation's choice: its ``index`` or its exact words, as listed in a
     snapshot's ``dialogue.choices``). The game's rules apply, as for a player.
 
     Returns ``{ok, action{status, before, after, dialogue}, snapshot}``: where the player was and is, the
