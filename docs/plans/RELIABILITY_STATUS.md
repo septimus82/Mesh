@@ -3,8 +3,8 @@
 Maintained by the master only (workers report in their PRs). GitHub is the source of truth: a fresh master session
 rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and priorities: `MESH_RELIABILITY_MASTER_PLAN.md`.
 
-**As of 2026-11-20 (cycle 7).** Integration `redesign/visual-editor` = `68ad13b0486f175f61fd2d8b26895b2c3eeaeaee`
-(post-merge CI 44816833213 ✓ a1, Extended 44816833218 ✓ a1). This board lands with its own PR (`gh pr list --head docs/reliability-board-cycle7`).
+**As of 2026-11-21 (cycle 8).** Integration `redesign/visual-editor` = `4512aec8e9fb444b049606820ba806eafe0bc096`
+(post-merge CI 44836606461 ✓ a1, Extended 44836606490 ✓ a1). This board lands with its own PR (`gh pr list --head docs/reliability-board-cycle8`).
 
 ## Integration record
 
@@ -30,6 +30,9 @@ rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and pr
 | #542 status board | `36d60f1d00710a50e144174823d111fc40c82119` | `8d2173f9` | 44763294564 ✓ a1 | 44763294786 ✓ a1 |
 | #544 A-03 read-only ops never edits | `d3f451a479aff5ae41157984fa1d67a65f04aff6` | `d9f66b64` (= tip + exactly #544's reviewed diff, head `9a4c5f75`) | 44811646730 ✓ a1 | 44811646841 ✓ a1 |
 | #543 B-05 behaviour teardown | `68ad13b0486f175f61fd2d8b26895b2c3eeaeaee` | `1a9d6cf7` (= tip + exactly #543's reviewed diff, head `19db914b`) | 44816833213 ✓ a1 | 44816833218 ✓ a1 |
+| #545 status board | `0791b04d45dff6e9951d2123c9220db9cf44d261` | `1ac31173` (= head `3ee634d8`) | 44825716598 ✓ a1 | 44825716831 ✓ a1 |
+| #547 A-04 CLI writers own the project | `4ae467c5f7282d3664fe27efa711580ab0b3acbf` | `bca38154` (= tip + exactly #547's reviewed diff, head `2df87f6f`) | 44832791487 ✓ a1 | 44832791497 ✓ a1 |
+| #546 A-05 `paint_tiles` bounds | `4512aec8e9fb444b049606820ba806eafe0bc096` | `2542f4f6` (= tip + exactly #546's reviewed diff, head `b750bbbf`) | 44836606461 ✓ a1 | 44836606490 ✓ a1 |
 
 **Waiver (owner, one-time, narrowly scoped; not a relaxation of CI).** Post-merge CI run 44589776415 on `55bdd589`
 FAILED at attempt 1: one Windows test,
@@ -43,7 +46,7 @@ cancelled). #535 `5b87c527` (CI 44611731802 ✗: tier-marker ratchet on four ren
 `46454b4e` (CI 44613893043 and Extended 44613890614 cancelled, superseded), `d668097e` (CI 44614620041 ✓, Extended
 44614604198 ✓; superseded by the identity fix). #544 `bd7d75d7` (CI 44762715843 ✗: the
 fast-marking policy, a module named `*contract*` without fast markers; Extended 44762706497 ✓; fixed by a pure rename).
-Only final heads passed at attempt 1.
+#546 `5dc2edca` and #547 `86af1526` (CI cancelled, superseded by the review corrections). Only final heads passed at attempt 1.
 
 ## Work
 
@@ -62,8 +65,11 @@ Approval: `OWNER` = the owner must approve the merge.
 | B-09 removed runtime entities resurrected (F-1) | P1/P2 | mesh-gameplay-reliability (Sonnet) | MERGED + VERIFIED | #541 → `d525eea3` | `551ba25f` → `90378a9d` | projectile measurement flat (7 entities, 191,828 B over 6 cycles) | owner challenge: order-based room/runtime pairing could drop the room-file object → fixed order-independent; APPROVED | owner approved | **Accepted limitation:** a runtime object sharing a name and prefab with an id-less room-file object is kept after it expires (warned), never at the room object's expense. **Process breach:** the worker ran `git stash` once (immediately popped; the stash list was verified intact). |
 | A-03 read-only project ops applied as edits | P1 | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #544 → `d3f451a4` | `d525eea3` → `9a4c5f75` | an explicit `EDIT_OPS` allowlist (82 edits) plus `NOT_EDITS`; naming a reader is refused, files byte-identical; a guard test fails for any unclassified function | APPROVED | owner approved | |
 | B-05 behaviours never unsubscribe | P2 | mesh-gameplay-reliability (Sonnet) | MERGED + VERIFIED | #543 → `68ad13b0` | `d525eea3` → `19db914b` | round 1 fixed the unsubscribe calls but nothing called teardown → round 2: `MeshEntitySprite.remove_from_sprite_lists` ends behaviours once (deaths, pickups, projectile expiry, `kill()`) | CHANGES REQUIRED → APPROVED | owner approved | follow-up B-05b below |
-| A-04 legacy CLI writers bypass locks | P1 | mesh-creator-safety (Sonnet) | IN PROGRESS | `fix/a04-legacy-cli-locks` (worktree `D:\Games\Mesh-A-04`) | base `68ad13b0` | source-confirmed: `new-npc`, `place-npc`, `edit-scene` write without project ownership; bounded discovery of other CLI writers | | owner | review the draft PR |
-| A-05 `paint_tiles` bounds | P1/P2 | mesh-creator-safety (Sonnet) | IN PROGRESS | `fix/a05-paint-tiles-bounds` (worktree `D:\Games\Mesh-A-05`) | base `68ad13b0` | source-confirmed: `engine/ai_ops.py` `paint_tiles` accepts negative (writes from the list's end), past-width (wraps) and huge (unbounded growth) coordinates | | owner | review the draft PR |
+| A-04 legacy CLI writers bypass locks | P1 | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #547 → `4ae467c5` | `68ad13b0` → `2df87f6f` | one guard in `dispatch()` (same `project_ownership.acquire` as R4); ~40 in-place writers own the project or refuse (exit 1, files byte-identical); mutants 3/3 caught | round 1 missed `polish` and `assets import-sprites` → CHANGES REQUIRED → APPROVED | owner approved | **Limitation:** the writer list is a hand-kept table; a new in-place CLI writer must be added |
+| A-05 `paint_tiles` bounds | P1/P2 | mesh-creator-safety (Sonnet) | MERGED + VERIFIED | #546 → `4512aec8` | `68ad13b0` → `b750bbbf` | whole batch validated before any write: non-negative ints inside the map (1024 cap when dimensions unknown), ≤10,000 ops, layer a non-empty string, ≤8 new layers per batch; mutants 4/4 caught | round 1 left growth through `layer` → CHANGES REQUIRED → APPROVED | owner approved | `"3"`/`3.0` now refused (intended) |
+| ACC-2 creator-workflow acceptance rerun | P1 | master | **INCOMPLETE (test-side), no product defect found** | evidence `D:\Games\Mesh-462-acceptanceerun-2026-11-21` | `4512aec8` (detached worktree `D:\Games\Mesh-acc`) | same 33-step scenario and criteria as the 2026-11-06 PASS at `59f171b5`. Run 1: 3/3 then **A4 FAIL**: the test sent a bare `base_revision`, retired by design in R1 (#518, `revision_id_required`, nothing staged). Adapted copy (14 lines: `base_revision_id` from `revision_id`; diff kept). Run 2: **24/24, then C1 FAIL**: C1 demands an empty `.mesh/`, but since R2 (#517) `.mesh/owner.lock` stays by design (`project_ownership.py:18`); the session record itself was gone. C2–F1 not reached | | owner | decide: adapt C1 to the R2 design and run once from the start |
+| B-05b other entity removal paths | P2 | mesh-gameplay-reliability (Sonnet) | IN PROGRESS | `fix/b05b-removal-paths-end-behaviours` (worktree `D:\Games\Mesh-B-05b`) | base `4512aec8` | `SpriteList.remove` in `scene_entity_store_controller.py:207`, authoring `_shared.py:252`, editor `editor_entity_ops_controller.py:50` bypass the B-05 hook | | owner | review the draft PR |
+| B-06 RNG stream seeds | P2 | mesh-gameplay-reliability (Sonnet) | IN PROGRESS | `fix/b06-stable-rng-seeds` (worktree `D:\Games\Mesh-B-06`) | base `4512aec8` | source-confirmed: `rng_service.py:200,220` `hash((seed, name))` is salted per process | | owner | review the draft PR |
 | U-01 unresolved-record accumulation | P2 | (unassigned) | MEASURED (GAME-1) | | | unresolved records bounded by deduplication (ambiguous twins plateau at 4 after 2 cycles; no-change cycles 0); the only unbounded growth was F-1, fixed by B-09; nothing discarded | | owner | keep tracked; revisit if real games show growth |
 
 ## Follow-ups noted by reviews (not assigned)
@@ -76,8 +82,12 @@ Approval: `OWNER` = the owner must approve the merge.
 - **B-01b, informational:** twins pair by order (positional if the room file was reordered since the save).
 - **B-01, informational:** expired projectile records accumulate in `saved_entities.unresolved` (deduplicated) until
   they bind or are edited out; four tests in `test_save_entity_quest_state.py` keep their v2 names while asserting v3.
-- **B-05b (Lane A, P2):** editor and authoring deletes remove sprites with `layer.remove`, which the B-05 hook doesn't
-  cover; behaviours of objects deleted in the editor stay subscribed until the scene ends.
+- **A-05, low:** the Studio-project `apply_ops` path (`engine/mcp_server/tools.py` `_studio_changes`) calls `int()` on
+  paint cells and raises on non-numeric input before any write; `project_ops.paint_tiles` already ignores out-of-map cells.
+- **A-04, informational:** `edit-scene` printed `Unknown action type: update_scene_settings` on a blank project (it may
+  change nothing); some `new-*` commands fail on a fresh blank project for unrelated reasons.
+- **ACC-2 environment:** the rerun forces `PYGLET_AUDIO=silent` (the exported game starts at full volume with fresh player
+  settings); otherwise the 2026-11-06 environment.
 - **Process:** workers run the gates (and the tier-marker ratchet) on the exact commit they push.
 
 ## Task log (models and usage, as reported by the Agent tool)
@@ -95,13 +105,19 @@ Approval: `OWNER` = the owner must approve the merge.
 | GAME-1 | Sonnet 5.5 | 61 | ~155k | #540 |
 | B-09 rounds 1 + 2 (resumed) | Sonnet 5.5 | 53 | ~303k | #541 |
 | A-03 rounds 1 + 2, B-05 rounds 1 + 2 | Sonnet 5.5 ×2 | (not recorded) | | #544, #543 |
-| A-04, A-05 | Sonnet 5.5 ×2 | (running) | | |
+| A-05 rounds 1 + 2 | Sonnet 5.5 | 39 | ~93k | #546 |
+| A-04 rounds 1 + 2 | Sonnet 5.5 | 145 | ~202k | #547 |
+| B-05b, B-06 | Sonnet 5.5 ×2 | (running) | | |
 
 ## Worktrees in use
 
 | Worktree | Holds |
 |---|---|
-| `D:\Games\Mesh-A-04` | A-04 (in progress) |
-| `D:\Games\Mesh-A-05` | A-05 (in progress) |
+| `D:\Games\Mesh-B-05b` | B-05b (in progress) |
+| `D:\Games\Mesh-B-06` | B-06 (in progress) |
+| `D:\Games\Mesh-acc` | ACC-2 (detached at `4512aec8`) |
 | `D:\Games\Mesh-board` | this board update |
-| `D:\Games\Mesh-B-02`, `D:\Games\Mesh-GAME-1`, `D:\Games\Mesh-B-09`, `D:\Games\Mesh-A-03`, `D:\Games\Mesh-B-05` | merged work (#538, #540, #541, #544, #543): removable after verification, with owner OK |
+| `D:\Games\Mesh-A-04`, `D:\Games\Mesh-A-05` | merged work (#547, #546): removable after verification, with owner OK |
+
+Removed 2026-11-21 (owner-authorised; each clean, on its merged head, no unmerged commits; branches kept): `Mesh-B-02`,
+`Mesh-GAME-1`, `Mesh-B-09`, `Mesh-A-03`, `Mesh-B-05`.
