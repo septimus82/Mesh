@@ -13,12 +13,11 @@ import pytest
 
 from engine import optional_arcade
 from engine.editor.editor_entity_ops_controller import EditorEntityOpsController
-from engine.scene_runtime.index_build import build_scene_index_from_sprites
 from engine.scene_entity_store_controller import SceneEntityStoreController
 from engine.scene_runtime.authoring.entity_ops_parts.delete_ops import debug_remove_entity_by_id
+from engine.scene_runtime.index_build import build_scene_index_from_sprites
 from tests._b01_arena import Arena, close_window, make_window
-from tests.test_behaviour_teardown_on_entity_removal import (
-    CUTSCENE, EXIT, HERO, QUEST, XP, Probe, _all_four, _baseline_with_hero, listeners)
+from tests.test_behaviour_teardown_on_entity_removal import Probe, _all_four, _baseline_with_hero, listeners
 
 pytestmark = [pytest.mark.integration,
               pytest.mark.skipif(not optional_arcade.has_arcade(), reason="needs real arcade (a hidden window)")]
