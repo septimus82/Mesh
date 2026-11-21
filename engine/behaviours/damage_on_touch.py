@@ -103,8 +103,10 @@ class DamageOnTouch(Behaviour):
 
         # Health (when present) applies the damage and publishes damage_applied itself; otherwise event only.
         health = next((b for b in getattr(target, "mesh_behaviours_runtime", []) if hasattr(b, "apply_damage")), None)
-        self.window.on_damage(self.entity, target, self.damage, emit=health is None)
-        if health is not None:
+        if health is None:
+            self.window.on_damage(self.entity, target, self.damage)
+        else:
+            self.window.on_damage(self.entity, target, self.damage, emit=False)
             health.apply_damage(
                 self.damage,
                 source_entity=str(getattr(self.entity, "mesh_name", "") or "") or "DamageOnTouch",
