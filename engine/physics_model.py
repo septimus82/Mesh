@@ -37,6 +37,7 @@ See Also:
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any, List, Optional, Protocol, Sequence, Tuple
 
@@ -250,6 +251,34 @@ class SensorQuery(Protocol):
         """Return list of (id, Aabb) for sensors overlapping the given AABB."""
 
 
+def fast_move_steps(delta: float, size: float) -> int:
+    """Pieces to cut one axis of a move into so no piece exceeds half the mover's size (a thin wall can't be skipped).
+
+    Capped: ponytail: 256 pieces bound the cost of an absurd move; past that a wall thinner than size/512 per
+    unit of cap could still be skipped (a continuous swept test would lift the cap).
+    """
+    half = max(float(size) / 2.0, 1.0)
+    return min(256, max(1, math.ceil(abs(delta) / half)))
+
+
+def _sweep_in_steps(req: MoveRequest, query_tiles: "TileQuery", nx: int, ny: int) -> MoveResult:
+    """The same x-then-y sweep as one move, walked in short pieces, stopping an axis at its first wall."""
+    aabb = req.aabb
+    hits: List[Hit] = []
+    hit_x = hit_y = False
+    dx, dy = req.delta
+    for axis, count in ((0, nx), (1, ny)):
+        piece = (dx / nx, 0.0) if axis == 0 else (0.0, dy / ny)
+        for _ in range(count):
+            r = sweep_axis_separate(MoveRequest(req.entity_id, (aabb.x, aabb.y), piece, aabb, req.sensor_query), query_tiles)
+            aabb = Aabb(r.final_pos[0], r.final_pos[1], aabb.w, aabb.h)
+            hits.extend(r.hits)
+            if r.hit_x or r.hit_y:
+                hit_x, hit_y = hit_x or r.hit_x, hit_y or r.hit_y
+                break
+    return MoveResult(final_pos=(aabb.x, aabb.y), hit_x=hit_x, hit_y=hit_y, hits=tuple(hits))
+
+
 def sweep_axis_separate(
     req: MoveRequest,
     query_tiles: TileQuery,
@@ -293,6 +322,12 @@ def sweep_axis_separate(
     """
     dx, dy = req.delta
     curr_aabb = req.aabb
+
+    if not (math.isfinite(dx) and math.isfinite(dy)):  # a NaN/inf move would park the entity at NaN for good
+        return MoveResult(final_pos=(curr_aabb.x, curr_aabb.y), hit_x=False, hit_y=False)
+    nx, ny = fast_move_steps(dx, curr_aabb.w), fast_move_steps(dy, curr_aabb.h)
+    if nx > 1 or ny > 1:
+        return _sweep_in_steps(req, query_tiles, nx, ny)
 
     hits: List[Hit] = []
     hit_x = False
