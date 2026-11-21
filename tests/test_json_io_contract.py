@@ -41,7 +41,7 @@ def test_write_json_atomic_replaces(tmp_path) -> None:
     json_io.write_json_atomic(path, {"b": 2})
     json_io.write_json_atomic(path, {"a": 1})
     assert json_io.read_json(path) == {"a": 1}
-    assert not path.with_suffix(path.suffix + ".tmp").exists()
+    assert not list(path.parent.glob("*.tmp")) + list(path.parent.glob(".*.tmp"))
 
 
 def test_write_json_atomic_success_leaves_no_temp_sibling(tmp_path) -> None:
@@ -50,7 +50,7 @@ def test_write_json_atomic_success_leaves_no_temp_sibling(tmp_path) -> None:
     json_io.write_json_atomic(path, {"ok": True})
 
     assert json_io.read_json(path) == {"ok": True}
-    assert not path.with_suffix(path.suffix + ".tmp").exists()
+    assert not list(path.parent.glob("*.tmp")) + list(path.parent.glob(".*.tmp"))
 
 
 def test_write_json_atomic_failed_write_cleans_temp_and_preserves_destination(
@@ -60,7 +60,7 @@ def test_write_json_atomic_failed_write_cleans_temp_and_preserves_destination(
     path = tmp_path / "payload.json"
     path.write_text('{"sentinel": 1}\n', encoding="utf-8")
     real_path_open = pathlib.Path.open
-    tmp_path_expected = path.with_suffix(path.suffix + ".tmp")
+    tmp_dir = path.parent
 
     class _ExplodingWriter:
         def __init__(self, handle) -> None:
@@ -84,7 +84,7 @@ def test_write_json_atomic_failed_write_cleans_temp_and_preserves_destination(
 
     def _path_open_with_failing_write(self, mode="r", *args, **kwargs):
         handle = real_path_open(self, mode, *args, **kwargs)
-        if self.parent == tmp_path_expected.parent and self.name.endswith(".tmp") and ("w" in mode or "x" in mode):
+        if self.parent == tmp_dir and self.name.endswith(".tmp") and ("w" in mode or "x" in mode):
             return _ExplodingWriter(handle)
         return handle
 
@@ -94,7 +94,7 @@ def test_write_json_atomic_failed_write_cleans_temp_and_preserves_destination(
         json_io.write_json_atomic(path, {"updated": True})
 
     assert path.read_text(encoding="utf-8") == '{"sentinel": 1}\n'
-    assert not path.with_suffix(path.suffix + ".tmp").exists()
+    assert not list(path.parent.glob("*.tmp")) + list(path.parent.glob(".*.tmp"))
 
 
 def test_coerce_path_rejects_non_pathlike() -> None:

@@ -76,8 +76,10 @@ def write_text_atomic(
     # Exclusive, unique temp beside the target: never an existing file or a link (mode "x" is O_EXCL), never shared
     # between two writers. Created with the process umask, like a plain write; an existing target keeps its own mode.
     tmp_path = target.with_name(f".{target.name}.{os.getpid()}.{secrets.token_hex(6)}.tmp")
+    created = False
     try:
         with tmp_path.open("x", encoding=encoding, newline="\n") as handle:
+            created = True
             handle.write(text)
             if durable:
                 handle.flush()
@@ -89,10 +91,9 @@ def write_text_atomic(
         if durable:
             _fsync_parent_directory(target)
     finally:
-        try:
-            tmp_path.unlink()
-        except FileNotFoundError:
-            pass
+        if created:  # (only a temp this call created)
+            with contextlib.suppress(FileNotFoundError):
+                tmp_path.unlink()
 
 
 def write_json_atomic(
