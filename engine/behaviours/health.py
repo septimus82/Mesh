@@ -18,7 +18,7 @@ from engine.combat_constants import (
     KEY_WAS_CRIT,
 )
 from engine.combat_model import AttackSpec, TargetState, resolve_attack
-from engine.event_emit import emit_gameplay_event
+from engine.event_emit import _explicit_attr, emit_gameplay_event
 
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -211,17 +211,20 @@ class Health(Behaviour):
             )
 
         if result.target_dead:
-            # self.window.on_entity_died(self.entity)
-            emit_gameplay_event(
-                self.window,
-                "died",
-                {"name": name, "entity": source_entity_id or name},
-                source_entity_id=source_entity_id,
-                source_behaviour="Health",
-            )
-            # Preserve legacy died event payload for old event_bus subscribers.
+            # One "died" per bus. A window with no separate gameplay bus routes emit_gameplay_event to the legacy
+            # bus, so the gameplay-style emit would reach the same subscribers a second time (counters counted
+            # each death twice): there, only the legacy emit (actor + name) is sent.
             legacy_bus = getattr(self.window, "event_bus", None)
+            if legacy_bus is None or _explicit_attr(self.window, "gameplay_event_bus") is not None:
+                emit_gameplay_event(
+                    self.window,
+                    "died",
+                    {"name": name, "entity": source_entity_id or name},
+                    source_entity_id=source_entity_id,
+                    source_behaviour="Health",
+                )
             if legacy_bus is not None:
+                # Legacy died payload (actor) for old event_bus subscribers.
                 emit_gameplay_event(
                     SimpleNamespace(event_bus=legacy_bus),
                     "died",
