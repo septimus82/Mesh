@@ -150,7 +150,11 @@ class SetGameStateOnEvent(Behaviour):
         return data
 
     def subscribed_event_types(self) -> frozenset[str] | None:
-        return frozenset({self.event_type}) if self.event_type else frozenset()
+        # A behaviour on the bus gets each event from the bus; the scene's per-frame delivery of the same events
+        # must not hand it a second copy (SL-2: counters and toasts ran twice).
+        if not self.event_type or getattr(self, "_unsubscribe", None) is not None:
+            return frozenset()
+        return frozenset({self.event_type})
 
     def on_event(self, event: MeshEvent) -> None:  # noqa: D401
         if self._consumed:
