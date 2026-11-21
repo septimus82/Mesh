@@ -40,12 +40,23 @@ PICTURE = "assets/sprites/starter_sign.png"
 @pytest.fixture(scope="module")
 def cycles(tmp_path_factory: pytest.TempPathFactory) -> list[dict]:
     project = tmp_path_factory.mktemp("lifecycle") / "project"
+    before = os.environ.get("MESH_REPO_ROOT")  # (a runner or developer may have set it: give it back)
     # (for its session only, then as they were: the settings path is set only when absent; the AI bridge is off)
     with pytest.MonkeyPatch.context() as env:
         if "MESH_RUNTIME_SETTINGS_PATH" not in os.environ:
             env.setenv("MESH_RUNTIME_SETTINGS_PATH", str(project.parent / "user_settings.json"))
         env.setenv("MESH_STUDIO_NO_AI_BRIDGE", "1")
-        return _play_cycles(project)
+        try:
+            return _play_cycles(project)
+        finally:
+            # Play pins the launched project as the content root and writes MESH_REPO_ROOT directly. This fixture is
+            # module-scoped, so conftest's per-test undo has already recorded the pin as "before" and would restore
+            # it: clear it here so later modules (vertical-slice smoke: quests from the repo) see the repo again.
+            from engine.repo_root import clear_launched_project_root
+
+            clear_launched_project_root()
+            if before is not None:
+                os.environ["MESH_REPO_ROOT"] = before
 
 
 def _play_cycles(project: Path) -> list[dict]:
