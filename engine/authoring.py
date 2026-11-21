@@ -101,6 +101,8 @@ def describe() -> list[Doc]:
                           "required": param.default is inspect.Parameter.empty}
             if param.default is not inspect.Parameter.empty and param.default is not ops._UNSET:
                 entry["default"] = param.default if isinstance(param.default, (str, int, float, bool, type(None))) else repr(param.default)
+            if param.kind is inspect.Parameter.VAR_KEYWORD:
+                entry.update(type="object", required=False, note=f'one object of settings, e.g. {{"{param.name}": {{"scale": 1.2}}}}')
             if param.name == "entity_id":
                 entry["note"] = "an object's id or its unique name, or @N for one made earlier in the batch"
             params.append(entry)
@@ -230,8 +232,14 @@ def _bind(func: Callable[..., Any], args: Doc, scene: Doc, room: str, project: P
             if problem:
                 raise ChangeError(index, name, problem)
         bound[key] = value
-    missing = [p.name for p in params.values()
-               if p.default is inspect.Parameter.empty and p.name not in bound and p.name not in _IMPLICIT]
+    for p in params.values():  # a ``**fields`` setting is given as one object, {"fields": {"scale": 1.2}}
+        if p.kind is inspect.Parameter.VAR_KEYWORD and p.name in bound:
+            extra = bound.pop(p.name)
+            if not isinstance(extra, dict) or set(extra) & set(bound):
+                raise ChangeError(index, name, f"'{p.name}' must be an object of settings, e.g. {{\"scale\": 1.2}}.")
+            bound.update(extra)
+    missing = [p.name for p in params.values() if p.kind is not inspect.Parameter.VAR_KEYWORD
+               and p.default is inspect.Parameter.empty and p.name not in bound and p.name not in _IMPLICIT]
     if missing:
         raise ChangeError(index, name, f"missing setting(s): {', '.join(missing)}.")
     return bound
