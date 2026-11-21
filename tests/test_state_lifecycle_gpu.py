@@ -40,6 +40,7 @@ PICTURE = "assets/sprites/starter_sign.png"
 @pytest.fixture(scope="module")
 def cycles(tmp_path_factory: pytest.TempPathFactory) -> list[dict]:
     project = tmp_path_factory.mktemp("lifecycle") / "project"
+    before = os.environ.get("MESH_REPO_ROOT")  # (a runner or developer may have set it: give it back)
     # (for its session only, then as they were: the settings path is set only when absent; the AI bridge is off)
     with pytest.MonkeyPatch.context() as env:
         if "MESH_RUNTIME_SETTINGS_PATH" not in os.environ:
@@ -54,6 +55,8 @@ def cycles(tmp_path_factory: pytest.TempPathFactory) -> list[dict]:
             from engine.repo_root import clear_launched_project_root
 
             clear_launched_project_root()
+            if before is not None:
+                os.environ["MESH_REPO_ROOT"] = before
 
 
 def _play_cycles(project: Path) -> list[dict]:
