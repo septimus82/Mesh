@@ -56,7 +56,7 @@ def test_failed_replace_leaves_no_temp_and_original_intact(tmp_path, monkeypatch
     assert _temps(tmp_path) == []
 
 
-@pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits")
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits; the Linux lane runs this on Linux")
 def test_mode_preserved_for_existing_and_umask_for_new(tmp_path) -> None:
     target = tmp_path / "scene.json"
     target.write_text("old\n")
