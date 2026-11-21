@@ -55,8 +55,9 @@ def on_any_event_boss_reward_clarity(window: Any, event: MeshEvent) -> None:
     maybe_finish_boss_gold_reward_toast(window, actor, scene_id, seconds=3.0)
 
 def on_damage_event(window: Any, event: MeshEvent) -> None:
-    target = event.payload.get("target")
-    if target:
+    # The payload carries the target's name (a string), not a sprite: resolve it, skip if it is gone.
+    target = window.scene_controller.find_sprite_by_name(event.payload.get("target"))
+    if target is not None:
         window.particle_manager.emit_hit_effect(target.center_x, target.center_y)
 
 def on_collectible_event(window: Any, event: MeshEvent) -> None:
