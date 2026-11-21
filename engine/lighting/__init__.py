@@ -66,6 +66,7 @@ import importlib
 import importlib.util
 import math
 import os
+import time
 import zlib
 from contextlib import nullcontext
 from typing import TYPE_CHECKING, Any, Iterable, Optional
@@ -75,6 +76,7 @@ from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
 from . import cookies as _cookies
+from . import light_compositor as _light_compositor
 from . import lighting_snapshot as _lighting_snapshot
 from . import lighting_stats as _lighting_stats
 from . import occluder_layer_builder as _occluder_layer_builder
@@ -85,7 +87,7 @@ from . import shadow_selection as _shadow_selection
 from . import shadowcast_snapshot as _shadowcast_snapshot
 from . import shafts as _shafts
 from . import static_light_builder as _static_light_builder
-from .flicker import FlickerNoise, apply_light_flicker
+from .flicker import FlickerNoise, apply_flicker, apply_light_flicker, flicker_state
 from .types import DynamicLightHandle, _FlickerLightState, _LayerContext
 
 logger = get_logger(__name__)
@@ -114,6 +116,15 @@ _LIGHT_MODULE_CANDIDATES: tuple[str, ...] = (
     "arcade.lights",
     "arcade.future.light",
 )
+
+
+def _dynamic_flicker_settings(handle: DynamicLightHandle) -> dict[str, Any]:
+    """A carried light's flicker settings: its owner's (preset, strength...), else the older single values."""
+    if handle.flicker_settings:
+        return {**handle.flicker_settings, "radius": handle.base_radius}
+    return {"flicker_speed": handle.flicker_speed, "flicker_amount": handle.flicker_amount,
+            "flicker_radius_px": handle.flicker_radius_px, "flicker_intensity": handle.flicker_intensity,
+            "radius": handle.base_radius}
 
 
 def _resolve_light_symbols(
@@ -203,6 +214,8 @@ class LightManager:
         lighting.set_shadows_mode("none")
     """
 
+    base_ambient_color: tuple[int, int, int, int] | None = None  # the project's; day/night changes ambient_color
+
     def __init__(
         self,
         window: Any,
@@ -264,10 +277,27 @@ class LightManager:
         self._shadowcast_debug_overridden: bool = False
         self._debug_geometry_overridden: bool = False
         self._shadows_mode_overridden: bool = False
+        # Per-light shadows (light_compositor): GPU resources, the room's occluders split for casting, cached
+        # shadow triangles per light, which lights cast shadows, and how many may in one frame.
+        self._compositor: Any = None
+        self._shadow_occluders: Any = None
+        self._shadow_cache: dict[Any, Any] = {}
+        self._light_casts_shadows: dict[int, bool] = {}
+        self.shadow_light_budget: int = _light_compositor.DEFAULT_SHADOW_LIGHT_BUDGET
+        self.shadow_softness: str = "sharp"  # shadow edges: sharp, soft or softer (light_compositor.SOFTNESS)
+        self.reduced_flicker: bool = False  # calmer flickering (an accessibility setting): gentler, no stutter
+        # Fine-tuning (room settings): edge width in px (None: the preset's), strength 0-1, quality.
+        self.shadow_edge_px: float | None = None
+        self.shadow_strength: float = 1.0
+        self.shadow_quality: str = "normal"
+        self.character_shadows: bool = True  # characters cast shadows from lamps (light_compositor.character_shadows)
+        self._opaque_boxes: dict[Any, Any] = {}
+        self._character_heights: dict[int, float] = {}
 
         if self.available:
             self._rebuild_layer()
         self._last_lighting_stats: dict[str, Any] = {}
+        self._profile: list[tuple[float, float | None]] = []
 
     def toggle_shadowmask(self) -> bool:
         """Toggle shadow mask feature and rebuild light layer.
@@ -363,23 +393,25 @@ class LightManager:
         if not callable(draw):
             return False
         rgb = self._ambient_rgb()
-        # Try to draw without position (screen space composition)
+        # Lights are placed in world coordinates, so they are drawn through the world camera (its scroll
+        # and zoom). The composite onto the screen is a full-screen quad the camera doesn't affect. end()
+        # runs under the GUI camera, so that is put back afterwards.
+        window = getattr(self, "window", None)
+        use_camera = getattr(getattr(window, "camera", None), "use", None)
+        if use_camera is not None and callable(use_camera):
+            use_camera()
         try:
-            draw(ambient_color=rgb)
-            return True
-        except TypeError:
-            pass
-        try:
-            draw(rgb)
-            return True
-        except TypeError:
-            pass
-        try:
-            draw()
-            return True
-        except TypeError:
-            pass
-        return False
+            for args, kwargs in (((), {"ambient_color": rgb}), ((rgb,), {}), ((), {})):
+                try:
+                    draw(*args, **kwargs)
+                    return True
+                except TypeError:
+                    pass
+            return False
+        finally:
+            restore = getattr(getattr(window, "camera_controller", None), "use_gui_camera", None)
+            if callable(restore):
+                restore()
 
     def _log_counter_once(self, key: str, msg: str) -> None:
         """Log a message once per key, with a counter."""
@@ -410,7 +442,39 @@ class LightManager:
     def end(self) -> None:
         if not self.enabled or self._layer is None:
             return
-        if self.shadows_mode == "hard":
+        if os.environ.get("MESH_LIGHTING_PROFILE") != "1":
+            self._end_frame()
+            return
+        # Measured on request only: reading a GPU timer waits for the GPU, which costs a little itself.
+        ctx = getattr(self.window, "ctx", None)
+        query = ctx.query(samples=False, primitives=False) if ctx is not None and hasattr(ctx, "query") else None
+        started = time.perf_counter()
+        if query is not None:
+            with query:
+                self._end_frame()
+        else:
+            self._end_frame()
+        cpu_ms = (time.perf_counter() - started) * 1000.0
+        gpu_ms = query.time_elapsed / 1e6 if query is not None else None
+        self._profile.append((cpu_ms, gpu_ms))
+        del self._profile[:-240]  # the last few seconds
+
+    def lighting_profile(self) -> dict[str, Any] | None:
+        """Mean CPU and GPU time of the lighting pass (lighting.end) over recent frames, with MESH_LIGHTING_PROFILE=1."""
+        if not self._profile:
+            return None
+        cpu = [c for c, _g in self._profile]
+        gpu = [g for _c, g in self._profile if g is not None]
+        return {"frames": len(cpu), "cpu_ms": round(sum(cpu) / len(cpu), 3),
+                "gpu_ms": round(sum(gpu) / len(gpu), 3) if gpu else None}
+
+    def _end_frame(self) -> None:
+        if self.shadows_mode == "hard" and os.environ.get("MESH_SHADOWS_RENDERER") != "legacy":
+            # Each light's shadow blocks only that light; the room light stays (light_compositor). If the
+            # GPU can't do it, the room is drawn lit without shadows: never black painted over it.
+            if not _light_compositor.render_shadowed_lighting(self):
+                self._draw_layer_safe()
+        elif self.shadows_mode == "hard":  # the pre-Milestone-12 overlay, kept for comparison (MESH_SHADOWS_RENDERER=legacy)
             try:
                 self._end_hard_shadows_overlay()
             except Exception:  # pragma: no cover - defensive  # noqa: BLE001  # REASON: shadow overlay
@@ -495,32 +559,8 @@ class LightManager:
     def _end_hard_shadows_overlay(self) -> bool:
         return _shadow_pipeline.end_hard_shadows_overlay(self)
 
-    def _draw_pending_shadow_fallback(self) -> None:
-        _shadow_pipeline.draw_pending_shadow_fallback(self)
-
     def _draw_direct_shadows(self) -> None:
         _shadow_pipeline.draw_direct_shadows(self)
-
-    def _end_hard_shadows_composite(self) -> bool:
-        return _shadow_pipeline.end_hard_shadows_composite(self)
-
-    def _draw_hard_shadow_fallback(
-        self,
-        *,
-        draw: Any,
-        offset: tuple[float, float],
-        viewport: Any,
-        polys: list[list[tuple[float, float]]],
-        stats: dict[str, Any],
-    ) -> bool:
-        return _shadow_pipeline.draw_hard_shadow_fallback(
-            self,
-            draw=draw,
-            offset=offset,
-            viewport=viewport,
-            polys=polys,
-            stats=stats,
-        )
 
     def _select_shadow_light_params(self) -> tuple[float, float, float] | None:
         return _shadow_selection.select_shadow_light_params(self)
@@ -612,6 +652,7 @@ class LightManager:
         flicker_amount: float = 0.0,
         flicker_radius_px: float | None = None,
         flicker_intensity: float | None = None,
+        flicker_settings: dict[str, Any] | None = None,
         cookie_id: str | None = None,
         cookie_scale: float = 1.0,
         cookie_rotation_deg: float = 0.0,
@@ -663,7 +704,7 @@ class LightManager:
             flicker_amount = 0.0
         seed_used = None
         if flicker_enabled:
-            if flicker_seed is None:
+            if not flicker_seed:  # None or 0 means "any": each light its own, so torches don't flicker together
                 seed_used = self._derive_flicker_seed(owner, len(self._flicker_lights))
             else:
                 try:
@@ -685,6 +726,7 @@ class LightManager:
             color_rgba=color_rgba,
             flicker_enabled=bool(flicker_enabled),
             flicker_seed=seed_used,
+            flicker_settings=dict(flicker_settings) if flicker_settings else None,
             flicker_speed=flicker_speed,
             flicker_amount=flicker_amount,
             flicker_radius_px=flicker_radius_px,
@@ -704,54 +746,9 @@ class LightManager:
         self._dynamic_handles.append(handle)
         self._add_light(light)
         if handle.flicker_enabled:
-            seed = 0 if handle.flicker_seed is None else int(handle.flicker_seed)
-            radius_px = handle.flicker_radius_px
-            if radius_px is not None:
-                try:
-                    radius_px = float(radius_px)
-                except (TypeError, ValueError):  # noqa: BLE001  # REASON: radius parse
-                    _log_swallow(
-                        "LGIN-016",
-                        "engine.lighting.__init__.LightManager.register_dynamic_light parse_flicker_radius_px",
-                        once=False,
-                    )
-                    radius_px = None
-            intensity = handle.flicker_intensity
-            if intensity is not None:
-                try:
-                    intensity = float(intensity)
-                except (TypeError, ValueError):  # noqa: BLE001  # REASON: intensity parse
-                    _log_swallow(
-                        "LGIN-017",
-                        "engine.lighting.__init__.LightManager.register_dynamic_light parse_flicker_intensity",
-                        once=False,
-                    )
-                    intensity = None
-            state = _FlickerLightState(
-                light=light,
-                base_radius=base_radius,
-                base_color=base_color,
-                noise=FlickerNoise(seed),
-                speed=float(handle.flicker_speed),
-                amount=float(handle.flicker_amount),
-                radius_px=radius_px,
-                intensity=intensity,
-            )
+            state = flicker_state(light, base_radius, base_color, _dynamic_flicker_settings(handle), int(seed_used or 0))
             self._flicker_lights.append(state)
-            flicker_radius, flicker_color = apply_light_flicker(
-                base_radius=state.base_radius,
-                base_color=state.base_color,
-                noise=state.noise,
-                time_s=self._flicker_time,
-                speed=state.speed,
-                amount=state.amount,
-                radius_px=state.radius_px,
-                intensity=state.intensity,
-            )
-            if hasattr(light, "radius"):
-                light.radius = flicker_radius
-            if hasattr(light, "color"):
-                light.color = flicker_color
+            apply_flicker(state, self._flicker_time, bool(getattr(self, "reduced_flicker", False)))
         return handle
 
     def update(self, dt: float) -> None:  # noqa: ARG002
@@ -777,22 +774,8 @@ class LightManager:
                 if hasattr(handle.light, "y"):
                     handle.light.y = ly
 
-        if self._flicker_lights:
-            for entry in self._flicker_lights:
-                radius, color = apply_light_flicker(
-                    base_radius=entry.base_radius,
-                    base_color=entry.base_color,
-                    noise=entry.noise,
-                    time_s=self._flicker_time,
-                    speed=entry.speed,
-                    amount=entry.amount,
-                    radius_px=entry.radius_px,
-                    intensity=entry.intensity,
-                )
-                if hasattr(entry.light, "radius"):
-                    entry.light.radius = radius
-                if hasattr(entry.light, "color"):
-                    entry.light.color = color
+        for entry in self._flicker_lights:
+            apply_flicker(entry, self._flicker_time, bool(getattr(self, "reduced_flicker", False)))
 
     def resize(self, width: int, height: int) -> None:
         self._width = int(width)
@@ -1014,6 +997,7 @@ class LightManager:
     def _rebuild_layer(self) -> None:
         if not self.available:
             return
+        _release_light_layer(self._layer)  # the previous room's: freed now, not by the cycle collector
         try:
             self._layer = self._create_layer()
         except Exception:  # noqa: BLE001  # REASON: layer create
@@ -1030,6 +1014,10 @@ class LightManager:
 
         _occluder_layer_builder.rebuild_occluder_layer(self)
         _static_light_builder.rebuild_static_and_dynamic_lights(self)
+
+    def clear_dynamic_lights(self) -> None:
+        """Forget the lights objects carry (on a scene change: the new scene's objects register their own)."""
+        self._dynamic_handles = []
 
     def _normalize_cookie_offset(self, value: Any) -> tuple[float, float]:
         return _cookies.normalize_cookie_offset(value)
@@ -1225,3 +1213,30 @@ __all__ = [
     "compute_shadow_hulls_from_configs",
     "compute_shadow_geometry_from_configs",
 ]
+
+
+def _release_light_layer(layer: Any) -> None:
+    """Free a light layer this manager made and no longer draws with: every room load replaces it. Its lights
+    point back at it (``Light._light_layer``), so dropping it left its textures, framebuffers and programs for
+    Python's cycle collector, a few full-screen textures per room change. Only what the layer created itself
+    is deleted; nothing is shared with another layer."""
+    if layer is None:
+        return
+    lights = getattr(layer, "_lights", None)
+    for light in list(lights or ()):
+        if getattr(light, "_light_layer", None) is layer:
+            light._light_layer = None
+    if isinstance(lights, list):
+        lights.clear()
+    for name in ("_fbo", "_light_buffer"):
+        fbo = getattr(layer, name, None)
+        attachments = list(getattr(fbo, "color_attachments", None) or ())
+        for obj in [fbo, *attachments]:
+            delete = getattr(obj, "delete", None)
+            if callable(delete):
+                delete()
+    for name in ("_buffer", "_light_program", "_combine_program"):
+        delete = getattr(getattr(layer, name, None), "delete", None)
+        if callable(delete):
+            delete()
+

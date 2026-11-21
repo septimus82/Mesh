@@ -1,0 +1,218 @@
+{
+ "room": "lakeside",
+ "editing_registered_players": 0,
+ "placed": [
+  {
+   "name": "Pond water",
+   "at_m": [
+    40.5,
+    29.0,
+    -0.78
+   ],
+   "sound": {
+    "sound": "assets/ambience/stream_loop.wav",
+    "volume": 0.8,
+    "radius": 80.0,
+    "distance": 352.0,
+    "stereo": true,
+    "loop": true,
+    "enabled": true,
+    "fade_in": 1.0,
+    "fade_out": 1.0
+   }
+  },
+  {
+   "name": "Birds",
+   "at_m": [
+    8.5,
+    33.5,
+    5.7
+   ],
+   "sound": {
+    "sound": "assets/ambience/birds_loop.wav",
+    "volume": 0.7,
+    "radius": 96.0,
+    "distance": 448.0,
+    "stereo": true,
+    "loop": true,
+    "enabled": true,
+    "fade_in": 1.0,
+    "fade_out": 1.0
+   }
+  },
+  {
+   "name": "Meadow",
+   "at_m": [
+    49.0,
+    19.0,
+    0.0
+   ],
+   "sound": {
+    "sound": "assets/ambience/forest_loop.wav",
+    "volume": 0.45,
+    "radius": 192.0,
+    "distance": 512.0,
+    "stereo": true,
+    "loop": true,
+    "enabled": true,
+    "fade_in": 1.0,
+    "fade_out": 1.0
+   }
+  }
+ ],
+ "weather": {
+  "rain": "steady",
+  "sounds": {
+   "rain": "assets/ambience/rain_loop.wav",
+   "wind": "assets/ambience/wind_loop.wav",
+   "rain_volume": 0.6,
+   "wind_volume": 0.5
+  },
+  "wind": {
+   "speed": 5.0,
+   "direction": 0.0,
+   "gust": 0.9
+  }
+ },
+ "editing_after_authoring": {
+  "registered_players": 0,
+  "loops": {}
+ },
+ "saved_message": "Saved 1 file(s).",
+ "in_the_saved_file": {
+  "emitters": [
+   [
+    "Pond water",
+    1296.0,
+    928.0,
+    -25.0,
+    {
+     "distance": 352.0,
+     "radius": 80.0,
+     "sound": "assets/ambience/stream_loop.wav"
+    }
+   ],
+   [
+    "Birds",
+    272.0,
+    1072.0,
+    182.4,
+    {
+     "distance": 448.0,
+     "radius": 96.0,
+     "sound": "assets/ambience/birds_loop.wav",
+     "volume": 0.7
+    }
+   ],
+   [
+    "Meadow",
+    1568.0,
+    608.0,
+    null,
+    {
+     "distance": 512.0,
+     "radius": 192.0,
+     "sound": "assets/ambience/forest_loop.wav",
+     "volume": 0.45
+    }
+   ]
+  ],
+  "weather_sounds": {
+   "rain": "assets/ambience/rain_loop.wav",
+   "wind": "assets/ambience/wind_loop.wav"
+  },
+  "particles": [
+   {
+    "count": 3000,
+    "preset": "rain"
+   }
+  ],
+  "wind": {
+   "direction": 0.0,
+   "gust": 0.9,
+   "speed": 5.0
+  }
+ },
+ "reopened": {
+  "same_emitters": true,
+  "unsaved": []
+ },
+ "play_stop": [
+  {
+   "play": {
+    "mode": "play",
+    "loops": {
+     "weather:rain": "assets/ambience/rain_loop.wav",
+     "weather:wind": "assets/ambience/wind_loop.wav"
+    },
+    "registered": 2
+   },
+   "stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "loops": {
+     "weather:rain": "assets/ambience/rain_loop.wav",
+     "weather:wind": "assets/ambience/wind_loop.wav"
+    },
+    "registered": 2
+   },
+   "stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "loops": {
+     "weather:rain": "assets/ambience/rain_loop.wav",
+     "weather:wind": "assets/ambience/wind_loop.wav"
+    },
+    "registered": 2
+   },
+   "stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "loops": {
+     "weather:rain": "assets/ambience/rain_loop.wav",
+     "weather:wind": "assets/ambience/wind_loop.wav"
+    },
+    "registered": 2
+   },
+   "stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  },
+  {
+   "play": {
+    "mode": "play",
+    "loops": {
+     "weather:rain": "assets/ambience/rain_loop.wav",
+     "weather:wind": "assets/ambience/wind_loop.wav"
+    },
+    "registered": 2
+   },
+   "stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  }
+ ],
+ "after_close_registered": 0
+}

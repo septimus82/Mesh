@@ -207,7 +207,7 @@ class MonsterBattleController:
     def _resolve_turn(self, player_action: MoveAction, opponent_action: MoveAction) -> None:
         ordered = sorted(
             (player_action, opponent_action),
-            key=lambda action: (-self._monster_for(action.side).stats.spd, 0 if action.side == "player" else 1),
+            key=lambda action: (-self._monster_for(action.side).battle_stats.spd, 0 if action.side == "player" else 1),
         )
         self._resolve_actions(ordered)
         self._apply_end_of_turn_ticks()

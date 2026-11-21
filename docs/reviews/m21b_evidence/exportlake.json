@@ -1,0 +1,25 @@
+{
+ "export_code": 0,
+ "export_tail": "\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m21b\\sc\\lake...\n[Mesh][Export] OK (1065 files, 13,742,906 bytes)\n[Mesh][Export] wrote bundle to <scratch>\\lake_export\n",
+ "sounds_in_bundle": {
+  "assets/ambience/birds_loop.wav": true,
+  "assets/ambience/forest_loop.wav": true,
+  "assets/ambience/rain_loop.wav": true,
+  "assets/ambience/stream_loop.wav": true,
+  "assets/ambience/wind_loop.wav": true
+ },
+ "bundle_run": {
+  "engine_from": "<scratch>\\lake_export\\engine\\__init__.py",
+  "master_volume": 0.0,
+  "emitters": 3,
+  "loops": {
+   "weather:rain": 0.532,
+   "weather:wind": 0.255,
+   "emitter:packs/core_regions/scenes/lakeside.json:lakeside_sound_1296_928_0_0": 0.732,
+   "emitter:packs/core_regions/scenes/lakeside.json:lakeside_sound_1568_608_0_0": 0.043
+  },
+  "registered": 4,
+  "unplayable": [],
+  "registered_after_close": 0
+ }
+}

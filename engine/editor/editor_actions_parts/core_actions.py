@@ -18,7 +18,6 @@ __all__ = [
     "_redo",
     "_duplicate",
     "_delete",
-    "_export_web_demo",
     "_quit_app",
     "_action_refactor_delete_selected",
     "_action_refactor_move_selected",
@@ -72,14 +71,6 @@ def _duplicate(window: Any) -> None:
 
 def _delete(window: Any) -> None:
     _entity_actions._delete(window, _get_editor)
-
-
-def _export_web_demo(window: Any) -> None:
-    if _is_web_runtime():
-        return
-    exporter = getattr(window, "export_web_demo", None) if window is not None else None
-    if callable(exporter):
-        exporter()
 
 
 def _quit_app(window: Any) -> None:

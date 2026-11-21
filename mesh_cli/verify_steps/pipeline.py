@@ -215,8 +215,11 @@ class VerifyStepContext:
     ensure_scene_transition_entity: Callable[..., Any]
     exception_budget_files: tuple[str, ...]
     steps: list[dict[str, Any]] = field(default_factory=list)
-    pytest_fast_metrics: dict[str, float | bool | None] = field(
-        default_factory=lambda: {"ok": None, "total": None, "top10": None}
+    pytest_fast_metrics: dict[str, Any] = field(
+        default_factory=lambda: {
+            "ok": None, "baseline": "none", "entries": None,
+            "slowest_entries_seconds": None, "slowest10_seconds": None, "wall_seconds": None,
+        }
     )
     pytest_fast_ran: bool = False
     exit_code: int = 0
@@ -578,7 +581,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     code = int(find_blanket_swallow.main(["--roots", "engine", "mesh_cli"]))
 
                 scan_path = repo_root / "artifacts" / "swallow_scan.json"
-                if scan_path.exists():
+                if scan_path.exists() and artifacts_dir is not None:  # an artifact only when asked for, as every step
                     artifact = _normalize_path_for_json(scan_path, repo_root=repo_root)
                     artifacts_written["swallow_scan"] = artifact
 
@@ -785,24 +788,27 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 failure_seen = True
                 exit_code = 1 if code != 2 else 2
 
-        # Step 10: pytest-fast-duration-guard (ratchet against slowdowns)
+        # Step 10: pytest-fast-duration-guard: the slowest test entries against a baseline recorded on purpose
+        # (MESH_RECORD_PYTEST_FAST_BASELINE=1); without one (a fresh checkout, CI) it only reports (#422 F13)
         if failure_seen:
             _skipped_step("pytest-fast-duration-guard")
         elif not pytest_fast_ran:
             _add_step("pytest-fast-duration-guard", 0, error="skipped: pytest-fast not run", artifact=None)
         else:
             try:
-                metrics_dir = repo_root / ".mesh" / "metrics"
-                durations_path = metrics_dir / "pytest_durations_fast.json"
-                total_baseline_path = metrics_dir / "pytest_fast_total_seconds.txt"
-                top10_baseline_path = metrics_dir / "pytest_fast_top10_seconds.txt"
+                import os
 
-                code, error, total_seconds, top10_seconds, ok = _evaluate_pytest_fast_duration_guard(
-                    durations_path, total_baseline_path, top10_baseline_path
+                metrics_dir = repo_root / ".mesh" / "metrics"
+                wall_ms = next((row["ms"] for row in reversed(step_duration_rows) if row["name"] == "pytest-fast"), None)
+                code, error, guard_metrics = _evaluate_pytest_fast_duration_guard(
+                    metrics_dir / "pytest_durations_fast.json",
+                    metrics_dir / "pytest_fast_duration_baseline.json",
+                    wall_seconds=None if wall_ms is None else float(cast(int, wall_ms)) / 1000.0,
+                    record=os.getenv("MESH_RECORD_PYTEST_FAST_BASELINE") == "1",
                 )
-                pytest_fast_metrics["total"] = total_seconds
-                pytest_fast_metrics["top10"] = top10_seconds
-                pytest_fast_metrics["ok"] = ok
+                pytest_fast_metrics.update(guard_metrics)
+                if code == 0 and guard_metrics["ok"] is None:
+                    error = f"report-only: baseline {guard_metrics['baseline']}"
             except Exception as exc:  # noqa: BLE001  # REASON: pytest-fast-duration-guard step isolation
                 _log_swallow("VSTP-010", "pytest-fast-duration-guard step isolation fallback", once=False)
                 code = 1

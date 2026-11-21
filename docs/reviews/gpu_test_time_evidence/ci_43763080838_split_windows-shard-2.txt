@@ -1,0 +1,54 @@
+wrapped: ['hd2d_demo.HiddenGame.__init__', 'hd2d_demo.HiddenGame.close', 'hd2d_demo.HiddenGame.step', 'hd2d_studio_demo.StudioDriver.__init__', 'hd2d_studio_demo.StudioDriver.advance', 'rebuild'] exit 0
+tests 265  total 1812 s
+  rebuild          305.7 s  16.9%   n=1162
+  studio_frames    677.5 s  37.4%   n=7207
+  game_frames       15.1 s   0.8%   n=12753
+  studio_open      119.3 s   6.6%   n=53
+  window_open       24.6 s   1.4%   n=110
+  window_close       2.5 s   0.1%   n=109
+  subprocess        40.7 s   2.2%   n=22
+(studio_open includes its window_open, first rebuild and first frame; rebuilds are never inside frames)
+
+  total  setup   call      rebuild       frames      open  subproc  test
+  301.8  301.8    0.0  126.9/331    125.3/447     4.4/2        0.0  test_hd2d_lighting_controls_gpu.py::test_the_hd2d_panel_shows_only_what_the_renderer_rea
+  114.0    0.0  114.0    6.6/30      77.2/1610    4.6/2        0.0  test_terrain_gpu.py::test_studio_paints_live_one_stroke_one_undo_step
+   89.1   89.1    0.0   32.0/143     33.7/411     4.6/2        0.0  test_hd2d_asset_pipeline_gpu.py::test_models_import_through_studio_with_their_report
+   82.0    0.0   82.0    5.3/25      56.4/880     4.5/2        0.0  test_scatter_gpu.py::test_studio_scatters_one_stroke_one_undo_step
+   79.7   79.7    0.0   11.0/54      45.5/1767    5.6/2        0.0  test_hd2d_starter_gpu.py::test_the_project_opens_in_studio_as_hd2d
+   59.3    0.0   59.3    4.4/21      42.2/141     4.5/2        0.0  test_fire_gpu.py::test_studio_places_edits_saves_reopens_and_plays_a_campfire_silently
+   57.6    0.0   57.6    0.0/0        0.1/120     0.0/0        0.0  test_fire_gpu.py::test_the_flames_lean_downwind_in_gusts_and_stand_in_still_air
+   56.8   56.8    0.0   25.3/118     24.8/506     3.8/2        0.0  test_hd2d_studio_gpu.py::test_the_hd2d_room_opens_in_studio_as_a_lit_3d_view
+   54.4   54.4    0.0    9.0/38      28.0/120     4.5/1       10.6  test_river_falls_gpu.py::test_studio_makes_joins_carves_and_tunes_a_waterfall
+   45.4   45.4    0.0   10.5/28      14.6/123     5.3/2       15.2  test_dof_studio_gpu.py::test_it_is_off_until_turned_on_and_then_subtle
+   37.5    0.0   37.5    3.0/22      22.4/353     4.5/2        0.0  test_terrain_gpu.py::test_studio_sculpts_live_one_stroke_one_undo_step
+   33.7    0.0   33.7    0.0/0        0.0/0       0.0/0        0.0  test_mesh_net_gpu.py::test_two_windows_meet_party_travel_and_return
+   32.1    0.0   32.1    6.8/35      19.3/94      2.8/1        0.0  test_river_tool_gpu.py::test_a_creator_draws_edits_and_plays_a_river_in_studio
+   31.6    0.0   31.6    0.0/0        0.0/0       0.0/0        0.0  test_mesh_net_gpu.py::test_two_characters_persist_through_a_server_restart
+   31.5    0.0   31.5    5.1/20      19.8/197     4.5/2        0.0  test_terrain_gpu.py::test_studio_sculpts_a_click_at_a_time_with_undo_redo_save_and_reope
+   30.9    0.0   30.9    0.0/0        0.0/0       0.0/0        0.0  test_room_transition_gl_lifetime_gpu.py::test_room_round_trips_leave_live_gl_objects_fla
+   30.5    0.0   30.5    1.2/9       18.5/343     2.3/1        0.0  test_terrain_gpu.py::test_the_terrain_gate_fails_injected_regressions
+   30.2    0.0   30.2    0.6/3        4.8/100     2.9/1        0.0  test_fire_gpu.py::test_review_edges_a_bridge_fire_seventeen_fires_a_refused_gpu_and_eigh
+   29.7   29.7    0.0   11.5/34      11.2/118     2.7/2        1.2  test_hd2d_room_studio_gpu.py::test_an_hd2d_room_is_made_in_studio_with_its_size_and_the_
+   29.6   29.6    0.0    8.8/55      13.2/559     7.0/5        1.2  test_start_room_music_gpu.py::test_village_is_made_the_start_room_without_leaving_the_ro
+
+modules:  total  rebuild  frames  subprocess
+   322.1    19.8   167.7     0.0  tests/test_terrain_gpu.py
+   301.9   126.9   125.3     0.0  tests/test_hd2d_lighting_controls_gpu.py
+   169.1     5.0    47.1     0.0  tests/test_fire_gpu.py
+   110.0     5.3    57.0     0.0  tests/test_scatter_gpu.py
+    92.5    32.0    33.7     0.0  tests/test_hd2d_asset_pipeline_gpu.py
+    83.6     9.0    29.1    10.6  tests/test_river_falls_gpu.py
+    81.6     0.0     0.0     0.0  tests/test_mesh_net_gpu.py
+    79.7    11.0    45.5     0.0  tests/test_hd2d_starter_gpu.py
+    56.8    25.3    24.8     0.0  tests/test_hd2d_studio_gpu.py
+    48.4    10.4    28.1     0.0  tests/test_river_tool_gpu.py
+    46.6     0.0     0.1     0.0  tests/test_river_gpu.py
+    45.4    10.5    14.6    15.2  tests/test_dof_studio_gpu.py
+    44.5    13.2    22.8     4.6  tests/test_studio_workspace_gpu.py
+    35.6    10.3    15.3     2.5  tests/test_start_room_music_gpu.py
+    30.9     0.0     0.0     0.0  tests/test_room_transition_gl_lifetime_gpu.py
+    29.7    11.5    11.2     1.2  tests/test_hd2d_room_studio_gpu.py
+    29.7     1.8    17.6     0.1  tests/test_river_mouth_gpu.py
+    26.3     0.0     0.0     0.0  tests/test_motion_gpu.py
+    26.0     1.5    13.5     0.5  tests/test_river_bed_gpu.py
+    23.9     0.4     1.8     0.0  tests/test_hd2d_composite_gpu.py

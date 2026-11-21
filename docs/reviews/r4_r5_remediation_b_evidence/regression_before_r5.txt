@@ -1,0 +1,10 @@
+tests\test_mcp_project_ownership_remediation_b.py:98: AssertionError: {'authoring': {'created': {'0': 0}, 'ok': True, 'source': 'files', 'summary': [], ...}, 'mode': 'files', 'ok': True, 'results': [{'data': {}, 'message': 'applied', 'ok': True, 'type': 'add_light'}], ...}
+tests\test_mcp_project_ownership_remediation_b.py:114: AssertionError: {'created': {'0': 0}, 'ok': True, 'source': 'files', 'summary': [], ...}
+tests\test_mcp_project_ownership_remediation_b.py:160: AssertionError: [{'authoring': {'created': {'0': 0}, 'ok': True, 'source': 'files', 'summary': [], ...}, 'mode': 'files', 'ok': True, 'results': [{'data': {}, 'message': 'applied', 'ok': True, 'type': 'add_light'}], ...}]
+tests\test_mcp_project_ownership_remediation_b.py:160: AssertionError: [{'ok': True, 'results': [{'data': {'world_path': '<tmp>'}, 'message': 'Updated world start scene', 'ok': True, 'type': 'set_world_start'}]}]
+PASSED tests/test_mcp_project_ownership_remediation_b.py::test_a_normal_room_still_saves_through_adapted_authoring
+FAILED tests/test_mcp_project_ownership_remediation_b.py::test_adapted_authoring_never_saves_a_room_of_a_nested_project
+FAILED tests/test_mcp_project_ownership_remediation_b.py::test_the_persistence_path_refuses_it_whoever_calls_it_and_whether_or_not_the_nested_project_is_open
+FAILED tests/test_mcp_project_ownership_remediation_b.py::test_a_nested_projects_lock_covers_nothing_once_it_stopped_being_a_project[adapted]
+FAILED tests/test_mcp_project_ownership_remediation_b.py::test_a_nested_projects_lock_covers_nothing_once_it_stopped_being_a_project[fallback]
+4 failed, 1 passed in 11.71s

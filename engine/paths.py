@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 from typing import List, Optional
 
@@ -6,7 +5,7 @@ from engine.swallowed_exceptions import _log_swallow
 
 from .config import EngineConfig, load_config
 from .content_index import ContentIndex
-from .repo_root import find_repo_root
+from .repo_root import bundled_data_roots, find_repo_root
 
 _CACHED_CONFIG: Optional[EngineConfig] = None
 _CONFIG_PINNED: bool = False
@@ -22,25 +21,8 @@ _ENGINE_BUNDLED_PREFIXES: tuple[str, ...] = (
 
 
 def _engine_install_roots() -> list[Path]:
-    installed_roots: list[Path] = []
-    try:
-        installed_roots.append(Path(sys.prefix))
-    except Exception:
-        _log_swallow("PATH-002", "engine/paths.py pass-only blanket swallow")
-    try:
-        installed_roots.append(Path(__file__).resolve().parent.parent)
-    except Exception:
-        _log_swallow("PATH-003", "engine/paths.py pass-only blanket swallow")
-
-    seen: set[str] = set()
-    unique: list[Path] = []
-    for root in installed_roots:
-        key = str(root)
-        if key in seen:
-            continue
-        seen.add(key)
-        unique.append(root)
-    return unique
+    """The source tree, then a pip install's share/mesh-engine (see repo_root.bundled_data_roots)."""
+    return bundled_data_roots()
 
 
 def _is_engine_bundled_path(path_str: str) -> bool:

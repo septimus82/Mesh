@@ -118,10 +118,11 @@ def test_create_project_template_draws_template_cards_with_descriptions() -> Non
 
 def test_settings_draws_cards_with_values_and_selected_highlight() -> None:
     overlay = _overlay("settings")
-    overlay._settings_index = 2
+    overlay._settings_index = 3  # Fog (after Music, SFX and Ambience)
     overlay._runtime_settings = lambda: SimpleNamespace(
         music_volume=1.0,
         sfx_volume=0.35,
+        ambience_volume=0.6,
         fog_enabled=True,
         soft_shadows_enabled=False,
     )
@@ -131,6 +132,7 @@ def test_settings_draws_cards_with_values_and_selected_highlight() -> None:
     assert ("text", "Settings") in events
     assert ("text", "100%") in events
     assert ("text", "35%") in events
+    assert ("text", "60%") in events
     assert ("text", "ON") in events
     assert ("text", "OFF") in events
     assert _card_fill_count(events) == len(main_menu_module.SETTINGS_ROWS)

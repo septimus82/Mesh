@@ -1,0 +1,75 @@
+{
+  "stroke": {
+    "frame_ms": {
+      "median": 15.09,
+      "p95": 17.72,
+      "max": 49.06,
+      "n": 370
+    },
+    "paint_upload_ms": {
+      "median": 0.06,
+      "p95": 0.11,
+      "max": 0.19,
+      "n": 240
+    },
+    "commit_ms": 7.1,
+    "release_to_next_frame_ms": 99.4,
+    "dabs": 370,
+    "undo_steps_added": 1,
+    "shown_equals_saved": true,
+    "heights_unchanged": true,
+    "collision_unchanged": true,
+    "chunks_stored": 4,
+    "message": "Painted earth (356 dabs, one undo step)."
+  },
+  "undo_gives_before": true,
+  "redo_gives_after": true,
+  "saved_dirty_after": false,
+  "escape": {
+    "stroke_had_painted": true,
+    "nothing_recorded": true,
+    "paint_is_saved": true,
+    "message": "Stroke cancelled: the ground is as it was."
+  },
+  "play_mid_stroke": {
+    "mode": "play",
+    "after_stop": "edit",
+    "nothing_recorded": true,
+    "paint_is_saved": true
+  },
+  "room_change_mid_stroke": {
+    "nothing_recorded": true,
+    "paint_is_saved": true
+  },
+  "refused_upload": {
+    "nothing_recorded": true,
+    "paint_is_saved": true,
+    "message": "The stroke stopped: the paint couldn't be drawn (out of memory (simulated))."
+  },
+  "focus_lost_mid_stroke": {
+    "stroke_ended": true,
+    "undo_steps_added": 1,
+    "paints_no_more": true
+  },
+  "shift_paints_grass": "grass",
+  "controls": {
+    "alt_click_picked": "earth",
+    "radius_px": [
+      32.0,
+      40.0,
+      32.0
+    ],
+    "hard_edges": "hard",
+    "edges_one_undo_step": true,
+    "soft_when_soft_adds_undo_steps": 0,
+    "edges_after_undo": "soft"
+  },
+  "sculpt_over_the_path": {
+    "paint_kept": true,
+    "path_raised_m": 0.534,
+    "still_earth_there": "earth"
+  },
+  "branch_over_the_mound": "earth",
+  "undo_steps_for_the_room": 7,
+  "reopened_same": true
+}

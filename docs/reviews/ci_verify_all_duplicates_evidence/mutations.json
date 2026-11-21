@@ -1,0 +1,105 @@
+{
+ "an audit test runs its own verify-all again (the old file)": {
+  "file": "tests/test_verify_all_stamp_audit_artifact.py",
+  "caught": true,
+  "failed": [
+   "test_every_audit_test_reads_the_shared_run",
+   "test_no_test_runs_its_own_verify_all_of_this_checkout"
+  ],
+  "errors": [],
+  "summary": "2 failed, 25 passed in 4.29s"
+ },
+ "the fixture runs once a test, not once a session": {
+  "file": "tests/conftest.py",
+  "caught": true,
+  "failed": [
+   "test_the_fixture_is_that_run_once_a_session"
+  ],
+  "errors": [],
+  "summary": "1 failed, 26 passed in 4.19s"
+ },
+ "a failed shared run is not raised": {
+  "file": "tests/_verify_all_audit.py",
+  "caught": true,
+  "failed": [
+   "test_a_failed_verify_all_fails_whoever_shares_it[exit"
+  ],
+  "errors": [],
+  "summary": "2 failed, 25 passed in 4.19s"
+ },
+ "the shared run doesn't go to the checkout": {
+  "file": "tests/_verify_all_audit.py",
+  "caught": true,
+  "failed": [
+   "test_no_test_runs_its_own_verify_all_of_this_checkout",
+   "test_the_shared_run_is_one_whole_verify_all_of_this_checkout"
+  ],
+  "errors": [],
+  "summary": "2 failed, 25 passed in 4.25s"
+ },
+ "the shared run skips part of verify-all": {
+  "file": "tests/_verify_all_audit.py",
+  "caught": true,
+  "failed": [
+   "test_the_shared_run_is_one_whole_verify_all_of_this_checkout"
+  ],
+  "errors": [],
+  "summary": "1 failed, 26 passed in 4.19s"
+ },
+ "the shared run leaves a stand-in in place": {
+  "file": "tests/_verify_all_audit.py",
+  "caught": true,
+  "failed": [
+   "test_a_failed_verify_all_fails_whoever_shares_it[exit",
+   "test_a_failed_verify_all_fails_whoever_shares_it[raises]",
+   "test_the_shared_run_is_one_whole_verify_all_of_this_checkout"
+  ],
+  "errors": [],
+  "summary": "4 failed, 23 passed in 4.16s"
+ },
+ "CI's bundle no longer reuses its job's verify-all": {
+  "file": ".github/workflows/ci.yml",
+  "caught": true,
+  "failed": [
+   "test_ci_s_verify_job_runs_one_verify_all_per_runner_and_the_bundle_reuses_it"
+  ],
+  "errors": [],
+  "summary": "1 failed, 26 passed in 4.17s"
+ },
+ "CI's verify step runs verify-all twice": {
+  "file": ".github/workflows/ci.yml",
+  "caught": true,
+  "failed": [
+   "test_each_job_runs_verify_all_at_most_once[ci.yml]"
+  ],
+  "errors": [],
+  "summary": "1 failed, 26 passed in 4.21s"
+ },
+ "CI's pytest job also runs verify-all": {
+  "file": ".github/workflows/ci.yml",
+  "caught": true,
+  "failed": [
+   "test_each_job_runs_verify_all_at_most_once[ci.yml]"
+  ],
+  "errors": [],
+  "summary": "1 failed, 26 passed in 4.18s"
+ },
+ "CI's verify-all writes no reuse evidence": {
+  "file": ".github/workflows/ci.yml",
+  "caught": true,
+  "failed": [
+   "test_ci_s_verify_job_runs_one_verify_all_per_runner_and_the_bundle_reuses_it"
+  ],
+  "errors": [],
+  "summary": "1 failed, 26 passed in 4.20s"
+ },
+ "the baseline update runs its own verify-all": {
+  "file": ".github/workflows/update_ci_baseline.yml",
+  "caught": true,
+  "failed": [
+   "test_the_baseline_update_takes_its_job_s_verify_all"
+  ],
+  "errors": [],
+  "summary": "1 failed, 26 passed in 4.17s"
+ }
+}

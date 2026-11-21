@@ -86,7 +86,7 @@ class TestSaveQuickActions(unittest.TestCase):
             # 2. Save
             action_save = ACTIONS["save_game"]
             action_save(self.window)
-            self.window.player_hud.enqueue_toast.assert_called_with("Game Saved")
+            self.window.player_hud.enqueue_toast.assert_called_with("Game saved")
             self.window.player_hud.enqueue_toast.reset_mock()
 
             # Verify file exists
@@ -99,7 +99,7 @@ class TestSaveQuickActions(unittest.TestCase):
 
             action_load(self.window)
             self.window.request_scene_change.assert_called()
-            self.window.player_hud.enqueue_toast.assert_called_with("Loaded")
+            self.window.player_hud.enqueue_toast.assert_called_with("Game loaded")
 
         finally:
             shutil.rmtree(temp_dir)

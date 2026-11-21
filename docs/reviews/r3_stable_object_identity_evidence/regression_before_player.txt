@@ -1,0 +1,12 @@
+Reviewed implementation (f9febde9's engine + Project.shared_players accessor only):
+tests/test_studio_object_identity.py:524: AssertionError: the player's replacement line was given the deleted line's id
+tests/test_studio_object_identity.py:524: AssertionError: the player's replacement line was given the deleted line's id
+tests/test_studio_object_identity.py:546: AssertionError: assert ['line_2', 'l..._2', 'line_2'] == ['line_2', 'l..._4', 'line_5']
+tests/test_studio_object_identity.py:587: AssertionError: {0: 'line_2', 2: 'line_2'}
+tests/test_studio_object_identity.py:604: AssertionError: assert 'line_2' not in ('root', 'line_2')
+FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_player_line_never_lands_on_its_replacement[written in the same room]
+FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_player_line_never_lands_on_its_replacement[written in another room]
+FAILED tests/test_studio_object_identity.py::test_the_players_lines_have_one_history_in_every_room_through_undo_and_redo
+FAILED tests/test_studio_object_identity.py::test_an_ai_batch_on_the_players_lines_gets_new_ids_and_its_preview_names_them
+FAILED tests/test_studio_object_identity.py::test_saving_and_opening_again_keeps_the_players_lines
+5 failed, 10 passed, 16 deselected in 13.21s

@@ -1,0 +1,130 @@
+{
+ "process_mb_before": 16.5,
+ "stored_mb": 0.55,
+ "room_load_ms": 1285.7,
+ "frames": {
+  "still": {
+   "wall_ms": 9.21,
+   "cpu_ms": 7.2
+  },
+  "moving": {
+   "wall_ms": 9.3,
+   "cpu_ms": 7.3
+  }
+ },
+ "draws": {
+  "draw_calls": 136,
+  "shadow_draws": 48,
+  "scatter_sprite_draws": 22,
+  "terrain_draws": 357,
+  "lamps": 6,
+  "shadow_lamps": 2,
+  "particles": 5500,
+  "water_surfaces": 1,
+  "precipitation_maps": 2,
+  "scatter_instances": 8000
+ },
+ "gpu_mb": {
+  "terrain": 19.32,
+  "buffer": 0.06,
+  "texture": 0.78,
+  "target": 7.37,
+  "shadow_map": 36.7,
+  "particle": 0.14,
+  "precipitation": 10.49,
+  "water": 7.64,
+  "scatter": 4.51
+ },
+ "process_mb_playing": 972.1,
+ "room_changes": {
+  "gl_objects_each": [
+   {
+    "buffer": 1680,
+    "texture": 41,
+    "framebuffer": 8,
+    "program": 35
+   },
+   {
+    "buffer": 1680,
+    "texture": 41,
+    "framebuffer": 8,
+    "program": 35
+   },
+   {
+    "buffer": 1680,
+    "texture": 41,
+    "framebuffer": 8,
+    "program": 35
+   },
+   {
+    "buffer": 1680,
+    "texture": 41,
+    "framebuffer": 8,
+    "program": 35
+   },
+   {
+    "buffer": 1680,
+    "texture": 41,
+    "framebuffer": 8,
+    "program": 35
+   }
+  ],
+  "stable": true,
+  "process_mb_each": [
+   1094.2,
+   1062.9,
+   1061.4,
+   1065.5,
+   1075.5
+  ]
+ },
+ "studio": {
+  "room_open_ms": 1155.6,
+  "stroke_commit_ms": 37.8,
+  "stroke_release_to_next_frame_ms": 165.6,
+  "save_ms": 218.2,
+  "undo_ms": 1896.9,
+  "play_stop": {
+   "gl_objects_each": [
+    {
+     "buffer": 1684,
+     "texture": 45,
+     "framebuffer": 11,
+     "program": 37
+    },
+    {
+     "buffer": 1684,
+     "texture": 45,
+     "framebuffer": 11,
+     "program": 37
+    },
+    {
+     "buffer": 1684,
+     "texture": 45,
+     "framebuffer": 11,
+     "program": 37
+    },
+    {
+     "buffer": 1684,
+     "texture": 45,
+     "framebuffer": 11,
+     "program": 37
+    },
+    {
+     "buffer": 1684,
+     "texture": 45,
+     "framebuffer": 11,
+     "program": 37
+    }
+   ],
+   "stable": true,
+   "process_mb_each": [
+    1275.2,
+    1270.7,
+    1269.6,
+    1267.9,
+    1264.3
+   ]
+  }
+ }
+}

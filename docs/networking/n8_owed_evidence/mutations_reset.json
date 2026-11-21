@@ -1,0 +1,92 @@
+{
+ "the reviewed behaviour: the old position is kept unless every step of the start-over worked": {
+  "caught": true,
+  "failing_tests": [
+   "test_a_second_start_over_that_works_confirms_the_first",
+   "test_a_server_killed_after_such_a_start_over_restarts_and_records_what_was_owed",
+   "test_a_server_stopped_while_the_folder_still_cannot_be_flushed_loses_nothing_on_restart",
+   "test_after_a_start_over_whose_folder_flush_failed_the_next_unlock_is_not_called_kept_and_is_not_lost",
+   "test_moved_into_place_but_the_folder_not_flushed_the_journal_writes_at_the_start_and_calls_nothing_kept"
+  ],
+  "summary": "5 failed, 60 passed, 1 skipped in 33.45s"
+ },
+ "a completion written to a fresh journal whose folder is not flushed is called kept": {
+  "caught": true,
+  "failing_tests": [
+   "test_a_second_start_over_that_works_confirms_the_first",
+   "test_a_server_killed_after_such_a_start_over_restarts_and_records_what_was_owed",
+   "test_a_server_stopped_while_the_folder_still_cannot_be_flushed_loses_nothing_on_restart",
+   "test_after_a_start_over_whose_folder_flush_failed_the_next_unlock_is_not_called_kept_and_is_not_lost",
+   "test_moved_into_place_but_the_folder_not_flushed_the_journal_writes_at_the_start_and_calls_nothing_kept"
+  ],
+  "summary": "5 failed, 60 passed, 1 skipped in 32.99s"
+ },
+ "a failed folder flush is forgotten": {
+  "caught": true,
+  "failing_tests": [
+   "test_a_second_start_over_that_works_confirms_the_first",
+   "test_a_server_killed_after_such_a_start_over_restarts_and_records_what_was_owed",
+   "test_a_server_stopped_while_the_folder_still_cannot_be_flushed_loses_nothing_on_restart",
+   "test_after_a_start_over_whose_folder_flush_failed_the_next_unlock_is_not_called_kept_and_is_not_lost",
+   "test_moved_into_place_but_the_folder_not_flushed_the_journal_writes_at_the_start_and_calls_nothing_kept"
+  ],
+  "summary": "5 failed, 60 passed, 1 skipped in 32.85s"
+ },
+ "a later start-over that works does not confirm the earlier one": {
+  "caught": true,
+  "failing_tests": [
+   "test_a_second_start_over_that_works_confirms_the_first"
+  ],
+  "summary": "1 failed, 64 passed, 1 skipped in 35.56s"
+ },
+ "the folder flush is never tried again": {
+  "caught": true,
+  "failing_tests": [
+   "test_after_a_start_over_whose_folder_flush_failed_the_next_unlock_is_not_called_kept_and_is_not_lost",
+   "test_moved_into_place_but_the_folder_not_flushed_the_journal_writes_at_the_start_and_calls_nothing_kept"
+  ],
+  "summary": "2 failed, 63 passed, 1 skipped in 35.15s"
+ },
+ "a fresh journal that cannot be read back is written to": {
+  "caught": true,
+  "failing_tests": [
+   "test_a_fresh_journal_found_holding_a_record_is_not_written_to_either",
+   "test_a_fresh_journal_that_cannot_be_read_back_means_not_kept_and_no_new_expedition",
+   "test_a_fresh_journal_that_cannot_be_read_back_takes_no_more_writes_and_is_left_as_found"
+  ],
+  "summary": "3 failed, 62 passed, 1 skipped in 35.53s"
+ },
+ "a fresh journal found holding records is used": {
+  "caught": true,
+  "failing_tests": [
+   "test_a_fresh_journal_found_holding_a_record_is_not_written_to_either"
+  ],
+  "summary": "1 failed, 64 passed, 1 skipped in 35.74s"
+ },
+ "the journal starts over although something is still owed": {
+  "caught": true,
+  "failing_tests": [
+   "test_a_commit_reported_as_failed_that_happened_is_counted_once",
+   "test_a_failed_settlement_is_reconciled_and_nothing_owed_is_lost",
+   "test_a_journal_that_works_again_much_later_holds_only_what_is_still_owed",
+   "test_a_new_server_records_what_an_earlier_one_owed_once_however_often_it_starts",
+   "test_a_server_killed_while_recording_what_was_owed_still_counts_each_once",
+   "test_a_server_killed_with_unlocks_owed_loses_none_of_them",
+   "test_after_a_start_over_that_failed_before_the_move_the_next_unlock_is_kept_and_recovered[replace]",
+   "test_after_a_start_over_that_failed_before_the_move_the_next_unlock_is_kept_and_recovered[temp_create]",
+   "test_after_a_start_over_that_failed_before_the_move_the_next_unlock_is_kept_and_recovered[temp_flush]",
+   "test_after_a_start_over_whose_folder_flush_failed_the_next_unlock_is_not_called_kept_and_is_not_lost",
+   "test_an_owed_unlock_is_kept_before_the_player_is_told_and_recorded_when_the_store_works_again",
+   "test_far_more_than_the_old_queue_held_is_kept_and_recorded_a_few_a_tick",
+   "test_kept_after_a_failed_then_retried_write_is_recorded_exactly_once",
+   "test_space_is_kept_in_advance_and_whole_again_when_nothing_is_owed",
+   "test_the_journal_never_starts_over_while_anything_is_owed",
+   "test_the_owner_can_list_what_is_owed_without_opening_the_store",
+   "test_the_player_is_told_kept_only_after_every_byte_is_written_and_flushed",
+   "test_the_same_unlock_earned_again_in_the_next_run_is_a_completion_of_its_own",
+   "test_the_shipped_server_records_what_is_owed_when_it_starts",
+   "test_when_the_journal_fails_too_the_player_is_told_it_is_not_saved_and_it_is_kept_as_soon_as_it_can_be"
+  ],
+  "summary": "20 failed, 45 passed, 1 skipped in 29.98s"
+ }
+}

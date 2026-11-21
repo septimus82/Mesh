@@ -43,3 +43,12 @@ def test_entity_shape_persistence_round_trip() -> None:
 
     degenerate = restored["entities"][1]
     assert sanitize_poly(degenerate["collision_poly"]) == []
+
+
+@pytest.mark.fast
+def test_snapshots_keep_an_entitys_collider_component() -> None:
+    from engine.scene_runtime.persistence import _remove_runtime_only_entity_fields
+
+    entity = {"id": "player", "components": {"collider": {"kind": "circle", "r": 13, "offset_y": -20}}, "_runtime": 1}
+    _remove_runtime_only_entity_fields(entity)
+    assert entity == {"id": "player", "components": {"collider": {"kind": "circle", "r": 13, "offset_y": -20}}}

@@ -1,0 +1,92 @@
+{
+ "walk": {
+  "frames": 1823,
+  "marks": {
+   "outside": 360,
+   "at_the_door": 549,
+   "inside": 1095,
+   "inside_later": 1275,
+   "outside_again": 1823
+  },
+  "at_marks": {
+   "outside": {
+    "room": "start.json",
+    "rain": 0.5954,
+    "wind": 0.3481,
+    "rain_on_screen": 1,
+    "registered": 2
+   },
+   "at_the_door": {
+    "room": "start.json",
+    "rain": 0.5994,
+    "wind": 0.3881,
+    "rain_on_screen": 1,
+    "registered": 2
+   },
+   "inside": {
+    "room": "cottage.json",
+    "rain": 0.2106,
+    "wind": 0.1334,
+    "rain_on_screen": 0,
+    "registered": 2
+   },
+   "inside_later": {
+    "room": "cottage.json",
+    "rain": 0.2106,
+    "wind": 0.127,
+    "rain_on_screen": 0,
+    "registered": 2
+   },
+   "outside_again": {
+    "room": "start.json",
+    "rain": 0.5994,
+    "wind": 0.353,
+    "rain_on_screen": 1,
+    "registered": 2
+   }
+  },
+  "largest_change_in_one_frame": {
+   "rain": 0.0083,
+   "wind": 0.0052
+  },
+  "lowest_after_the_first_three_seconds": {
+   "rain": 0.2106,
+   "wind": 0.1232
+  },
+  "most_players_registered": 2,
+  "loops_heard": [
+   "weather:rain",
+   "weather:wind"
+  ]
+ },
+ "save_made_indoors": {
+  "inside_before_saving": {
+   "room": "cottage.json",
+   "rain_on_screen": 0,
+   "rain": 0.2106,
+   "wind": 0.1178
+  },
+  "outside_before_loading": {
+   "room": "start.json",
+   "rain_on_screen": 1,
+   "rain": 0.5974,
+   "wind": 0.3579
+  },
+  "after_loading": {
+   "room": "quicksave.json",
+   "rain_on_screen": 0,
+   "rain": 0.2114,
+   "wind": 0.1238
+  },
+  "registered": 2
+ },
+ "registered_after_close": 0,
+ "started_indoors": {
+  "room": "cottage.json",
+  "rain_on_screen": 0,
+  "rain": 0.2086,
+  "wind": 0.1413,
+  "registered": 2
+ },
+ "registered_after_second_close": 0
+}

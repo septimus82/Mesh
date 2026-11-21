@@ -35,6 +35,10 @@ def handle(args: argparse.Namespace) -> int:
         from . import mcp_setup
 
         return mcp_setup.handle(args)
+    if args.command == "author":
+        from . import author
+
+        return author.handle(args)
     if args.command == "dump-state":
         return _handle_dump_state(args)
     if args.command == "build-web":
@@ -212,6 +216,11 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         help=argparse.SUPPRESS,
     )
     mcp_install_parser.set_defaults(func=_handle_mcp)
+
+    # One authoring API (shared with Mesh Studio and the MCP tools)
+    from . import author
+
+    author.add_parser(subparsers)
 
     # Dump State
     dump_state_parser = subparsers.add_parser("dump-state", help="Print a deterministic debug state snapshot")

@@ -1,0 +1,66 @@
+{
+  "head": "d9d72f4898f49dbce81b3a5bd96aa710e4bd3729",
+  "uncommitted_changes": false,
+  "has_r4": true,
+  "has_r5": false,
+  "finding2a_undo_created_file_now_a_folder": {
+    "undo": {
+      "exit": 1,
+      "said": [
+        "[Mesh][Undo] Restoring backup: 2000_manual",
+        "[Mesh][Undo] Not restored: nothing was changed, because scenes/became_a_folder.json is a folder (or not a file) now, not the file the plan created.",
+        "[Mesh][CLI] Undo failed: see above."
+      ]
+    },
+    "files": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    }
+  },
+  "finding2b_undo_modified_file_now_a_folder": {
+    "undo": {
+      "exit": 1,
+      "said": [
+        "[Mesh][Undo] Restoring backup: 2000_manual",
+        "[Mesh][Undo] Not restored: nothing was changed, because scenes/room.json is a folder (or not a file) now, not the file the plan modified.",
+        "[Mesh][CLI] Undo failed: see above."
+      ]
+    },
+    "files": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    },
+    "room_is_a_file_after": false
+  },
+  "finding2c_undo_valid_and_invalid_entries": {
+    "manifest": "created made.json (valid); modified the room (valid) and notes.txt/x.json (its folder is a file)",
+    "undo": {
+      "exit": 1,
+      "said": [
+        "[Mesh][Undo] Restoring backup: 2000_manual",
+        "[Mesh][Undo] Not restored: nothing was changed, because notes.txt/x.json can't be put back: <tmp> is a file, not a folder.",
+        "[Mesh][CLI] Undo failed: see above."
+      ]
+    },
+    "files": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    }
+  },
+  "finding3_console_marker_removed_after_the_lock": {
+    "writer_held": "<outer>/inner (authoring)",
+    "after_marker_removed": [
+      "[AI] Job failed (1 op(s)); see details:",
+      " - add_light failed: path is in another Mesh project than the one held (<tmp>): packs/core_regions/scenes/start.json"
+    ],
+    "outer_files_written_behind_its_studio": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    },
+    "outer_studio_unsaved_kept": true
+  }
+}

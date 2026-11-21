@@ -624,3 +624,59 @@ def test_verify_step_budget_guard_web_smoke_big_miss_still_fails_without_history
     assert checked["threshold_ms"] == 14226
     assert checked["effective_ms"] == 14350
     assert checked["ok"] is False
+
+
+@pytest.mark.parametrize(("platform", "expect_ok"), [("windows", True), ("linux", False), ("macos", False)])
+def test_verify_step_budget_guard_platform_budgets_override_on_that_platform(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, platform: str, expect_ok: bool
+) -> None:
+    monkeypatch.setattr(verify_mod, "_verify_step_budget_platform", lambda: platform)
+    monkeypatch.setenv("MESH_VERIFY_STEP_BUDGET_NO_HISTORY", "1")
+    baseline_path = tmp_path / "verify_step_budget.json"
+    _write_json(
+        baseline_path,
+        {
+            "schema_version": 2,
+            "budgets_ms": {"slow": 100, "other": 50},
+            "tolerance_ms": 10,
+            "platforms": {
+                "windows": {"budgets_ms": {"slow": 300}, "ratio_limits": {"slow": 1.1}},
+                "linux": {"budgets_ms": {"slow": 150}},
+            },
+        },
+    )
+
+    code, error, payload = verify_mod._evaluate_verify_step_budget_guard(
+        step_durations_payload=_durations_payload({"slow": 250, "other": 40}),
+        baseline_path=baseline_path,
+        update_command="python -c \"noop\"",
+        artifacts_dir=None,
+    )
+
+    rows = {row["name"]: row for row in payload["checked_steps"]}
+    assert rows["other"]["budget_ms"] == 50, "steps a platform doesn't override keep the top-level budget"
+    assert rows["slow"]["budget_ms"] == {"windows": 300, "linux": 150, "macos": 100}[platform]
+    assert rows["slow"]["threshold_ms"] == {"windows": 330, "linux": 187, "macos": 125}[platform]
+    assert (code == 0) is expect_ok
+    if not expect_ok:
+        assert f"verify slow-step budget exceeded ({platform} budgets)" in error
+
+
+def test_writing_a_baseline_replaces_only_this_platforms_budgets(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(verify_mod, "_verify_step_budget_platform", lambda: "linux")
+    baseline_path = tmp_path / "verify_step_budget.json"
+    original = {
+        "schema_version": 2,
+        "budgets_ms": {"slow": 100},
+        "ratio_limits": {"slow": 1.25},
+        "tolerance_ms": 50,
+        "platforms": {"linux": {"budgets_ms": {"slow": 150}}, "windows": {"budgets_ms": {"slow": 300}}},
+    }
+    _write_json(baseline_path, original)
+
+    verify_mod._write_verify_step_budget_baseline(baseline_path, _durations_payload({"slow": 170}))
+
+    written = json.loads(baseline_path.read_text(encoding="utf-8"))
+    assert written["platforms"]["linux"] == {"budgets_ms": {"slow": 170}, "ratio_limits": {"slow": 1.25}}
+    assert written["platforms"]["windows"] == original["platforms"]["windows"]
+    assert written["budgets_ms"] == original["budgets_ms"]

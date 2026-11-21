@@ -21,7 +21,9 @@ from typing import Any, Callable
 # Increment when adding new required fields or changing semantics.
 # v1: Initial schema with flags, counters, player position
 # v2: Added saved_entities and saved_quests blocks
-SAVE_SCHEMA_VERSION = 2
+# v3: saved_entities records are keyed by authored id (keying "id": mesh_id + occurrence) or, for id-less sprites, by
+#     name (keying "name"); the block adds scene_path, counters and the carried-over ``unresolved`` records (B-01).
+SAVE_SCHEMA_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -106,6 +108,25 @@ def _migrate_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
             "quests": {},
         }
 
+    return data
+
+
+@register_migration(2)
+def _migrate_v2_to_v3(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Migrate v2 to v3, in memory only (a load never rewrites the slot file).
+
+    v2 records are keyed by name alone. Each one is tagged ``keying: "name"`` and ``legacy: true`` so the loader binds
+    it with the legacy rules (by name, and by position when names repeat); nothing is invented or dropped.
+    """
+    data["save_schema_version"] = 3
+    block = data.get("saved_entities")
+    entities = block.get("entities") if isinstance(block, dict) else None
+    if isinstance(entities, list):
+        for record in entities:
+            if isinstance(record, dict) and "keying" not in record:
+                record["keying"] = "name"
+                record["legacy"] = True
     return data
 
 
@@ -279,6 +300,13 @@ def validate_save(data: dict[str, Any]) -> None:
                 path="saved_entities.entities",
                 message=f"saved_entities.entities must be a list, got {type(entities_list).__name__}",
                 value=entities_list,
+            )
+        unresolved = saved_entities.get("unresolved")
+        if unresolved is not None and not isinstance(unresolved, list):
+            raise SaveValidationError(
+                path="saved_entities.unresolved",
+                message=f"saved_entities.unresolved must be a list, got {type(unresolved).__name__}",
+                value=unresolved,
             )
 
     # Validate saved_quests (v2)

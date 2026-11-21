@@ -1,0 +1,9 @@
+{
+  "inside_door_shadow_px": {
+    "current": 6954,
+    "prototype_cast_shadow_false": 0
+  },
+  "inside_pixels_changed_by_prototype": 7134,
+  "inside_changed_outside_the_door_shadow": 180,
+  "village_pixels_changed_with_no_opt_outs": 0
+}

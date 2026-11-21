@@ -30,7 +30,9 @@ def test_save_manager_write_is_atomic_on_replace_failure(tmp_path, monkeypatch):
 
     assert manager.save_game("slot1") is False
     assert json.loads(path.read_text(encoding="utf-8")) == {"sentinel": 1}
-    window.player_hud.enqueue_toast.assert_not_called()
+    # The failure is reported (with what to try), never as a success.
+    toasts = [c.args[0] for c in window.player_hud.enqueue_toast.call_args_list]
+    assert len(toasts) == 1 and toasts[0].startswith("Couldn't save the game:"), toasts
 
 
 def test_snapshot_write_is_atomic_on_replace_failure(tmp_path, monkeypatch):

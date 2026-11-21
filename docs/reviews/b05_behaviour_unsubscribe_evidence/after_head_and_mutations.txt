@@ -1,0 +1,11 @@
+# HEAD with fix
+................                                                         [100%]
+16 passed in 3.13s
+
+# Mutations (each caught: 2 failed of 16)
+M: grant_experience [s/^            unsubscribe()  #.*/            pass/] -> 2 failed, 14 passed in 3.55s
+M: quest_giver [s/^        unsubscribe, self._subscription = self._subscription, None/        unsubscribe = self._subscription/;s/^            unsubscribe()  #.*/            pass/] -> 2 failed, 14 passed in 3.91s
+M: cutscene_trigger [s/^        unsubscribe, self._subscription = self._subscription, None/        unsubscribe = None/] -> 2 failed, 14 passed in 3.52s
+M: scene_exit [s/^            unsubscribe()  #.*/            self._subscription.__class__/] -> 2 failed, 14 passed in 3.62s
+
+# Note: no runtime path calls Behaviour.on_destroy/on_removed when a sprite is removed (see report); scene change already ends subscriptions via record_subscriptions, covered by test_scene_change_ends_the_subscription.

@@ -1,0 +1,72 @@
+"""#462 P1 stale plan undo fault injection: each mutation disables part of the protection; the tests must fail.
+Each file is put back byte for byte (checked).
+
+    py -3.13 mutate_stale_undo.py REPO OUT_JSON"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(sys.argv[1]).resolve()
+OUT = Path(sys.argv[2])
+TESTS = ["tests/test_stale_plan_undo.py"]
+EXE = "engine/tooling/plan_executor.py"
+MUTATIONS = [
+    ("the conflict check disabled (every file taken as unchanged)", EXE,
+     "            changed = self._changed_since(manifest)\n", "            changed: list[str] = []\n"),
+    ("only existence compared, not the bytes' hash", EXE,
+     "            if now != left:\n", "            if now[\"exists\"] != left[\"exists\"]:\n"),
+    ("the expected state taken from the file at undo time", EXE,
+     "            left, now = manifest[\"after\"][entry], cls.fingerprint(Path(entry))\n",
+     "            left, now = cls.fingerprint(Path(entry)), cls.fingerprint(Path(entry))\n"),
+    ("legacy backups no longer refused as such", EXE,
+     "        if isinstance(manifest, dict) and \"version\" not in manifest:", "        if False:"),
+    ("records not validated (malformed or incomplete accepted)", EXE,
+     "self._unverified(manifest) or self._unsafe_entries(manifest, target, owner))",
+     "self._unsafe_entries(manifest, target, owner))"),
+    ("the plan records no final state", EXE,
+     "                \"after\": {entry: self.fingerprint(Path(entry)) for entry in entries}})",
+     "                \"after\": {}})"),
+    ("a file touched twice backed up twice (its in-plan state as 'before')", EXE,
+     "        if str_path in self.manifest[\"created\"] or str_path in self.manifest[\"modified\"]:\n"
+     "            return  # (touched earlier in this plan: its state before the plan is already recorded, never a later one)\n",
+     ""),
+    ("a plan that stopped recorded as completed", EXE,
+     "self.backup_mgr.finish_backup(completed=False)", "self.backup_mgr.finish_backup()"),
+]
+
+
+def main() -> None:
+    results = []
+    for name, rel, old, new in MUTATIONS:
+        path = REPO / rel
+        original = path.read_bytes()
+        text = original.decode("utf-8")
+        if "\r\n" in text:
+            old, new = old.replace("\n", "\r\n"), new.replace("\n", "\r\n")
+        assert text.count(old) == 1, (name, text.count(old))
+        path.write_bytes(text.replace(old, new).encode("utf-8"))
+        try:
+            run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-W", "error",
+                                  "--tb=no", "-rf", *TESTS], cwd=REPO, env=dict(os.environ), capture_output=True,
+                                 text=True, timeout=1800)
+        finally:
+            path.write_bytes(original)
+        assert path.read_bytes() == original
+        lines = run.stdout.splitlines()
+        summary = [line for line in lines if " passed" in line or " failed" in line][-1:]
+        failed = sorted({line.split(" ")[1].split(" - ")[0] for line in lines if line.startswith("FAILED")})
+        results.append({"mutation": name, "file": rel, "caught": run.returncode != 0, "summary": summary,
+                        "failed": failed or None})
+        print(json.dumps(results[-1])[:300], flush=True)
+    report = {"caught": sum(r["caught"] for r in results), "of": len(results), "mutations": results}
+    OUT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(f"{report['caught']}/{report['of']} caught")
+
+
+if __name__ == "__main__":
+    main()

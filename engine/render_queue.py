@@ -53,19 +53,23 @@ class SpriteDrawList:
         self.sprites_submitted += 1
 
     def build_batches(self) -> list[tuple[BatchKey, list[DrawSpriteCmd]]]:
-        batches: dict[BatchKey, list[DrawSpriteCmd]] = {}
-        order: list[BatchKey] = []
+        """Runs of consecutive commands that can be drawn in one call, in submission order.
+
+        Only neighbours are merged: commands arrive depth-sorted, and gathering every use of a
+        texture into one batch would draw a sprite in front of others it should be behind.
+        """
+        batches: list[tuple[BatchKey, list[DrawSpriteCmd]]] = []
         for cmd in self.commands:
             key = BatchKey(
                 layer=int(cmd.layer),
                 blend_mode=str(cmd.blend_mode or "normal"),
                 texture_key=cmd.texture_key,
             )
-            if key not in batches:
-                batches[key] = []
-                order.append(key)
-            batches[key].append(cmd)
-        return [(key, batches[key]) for key in order]
+            if batches and batches[-1][0] == key:
+                batches[-1][1].append(cmd)
+            else:
+                batches.append((key, [cmd]))
+        return batches
 
 
 def estimate_batch_stats(draw_list: SpriteDrawList) -> RenderQueueStats:

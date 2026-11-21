@@ -31,7 +31,7 @@ python -m mesh_cli new-game --out saves/fresh.json --json --force
 
 A single JSON file that:
 
-- Passes `validate_save()` (schema v2).
+- Passes `validate_save()` (schema v3: the current one; its entity block is empty, so no record needs binding).
 - Contains `save_format_version`, `save_schema_version`, scene ids,
   game state with `campaign.started` flag, empty quest/entity blocks,
   RNG seed + initial RNG state, and metadata.
@@ -43,7 +43,7 @@ A single JSON file that:
 ```json
 {
   "save_format_version": 1,
-  "save_schema_version": 2,
+  "save_schema_version": 3,
   "scene_id": "scenes/town_schedule_01.json",
   "scene_path": "scenes/town_schedule_01.json",
   "gold": 0,

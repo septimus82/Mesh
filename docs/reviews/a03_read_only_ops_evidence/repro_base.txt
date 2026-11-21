@@ -1,0 +1,10 @@
+room_music ok= True None  changed: ['packs\\core_regions\\scenes\\start.json']
+   scene now keys: ['entities', 'mode', 'path'] True
+weather_sounds_of ok= True None  changed: ['packs\\core_regions\\scenes\\start.json']
+   scene now keys: ['entities', 'indoors', 'rain', 'rain_volume', 'wind', 'wind_volume'] True
+hd2d_camera_of ok= True None  changed: ['packs\\core_regions\\scenes\\start.json']
+   scene now keys: ['bounded', 'distance', 'entities', 'fov', 'height', 'ortho', 'pitch', 'view'] True
+hd2d_room_size ok= True None  changed: ['packs\\core_regions\\scenes\\start.json']
+   scene now keys: ['depth', 'entities', 'expandable', 'why', 'width'] True
+hd2d_sun_of ok= True None  changed: ['packs\\core_regions\\scenes\\start.json']
+   scene now keys: ['ambient', 'azimuth', 'color', 'elevation', 'entities', 'intensity', 'sky'] True

@@ -1,0 +1,91 @@
+{
+ "still_while_off": true,
+ "breeze": {
+  "ms": 572.9,
+  "message": "Breeze: 3 m/s toward 0 degrees, gusts 0.3.",
+  "wind": {
+   "speed": 3.0,
+   "direction": 0.0,
+   "gust": 0.3
+  },
+  "motion": null
+ },
+ "animation_on": {
+  "ms": 308.6,
+  "message": "Animation on.",
+  "wind": {
+   "speed": 3.0,
+   "direction": 0.0,
+   "gust": 0.3
+  },
+  "motion": {}
+ },
+ "live_preview": {
+  "clock_advanced_s": 3.02,
+  "canvas_changed": true
+ },
+ "typed": {
+  "message": "Wind: 3 m/s toward 200 degrees, gusts 0.3.",
+  "wind": {
+   "speed": 3.0,
+   "direction": 200.0,
+   "gust": 0.3
+  },
+  "motion": {
+   "sway": 1.6
+  }
+ },
+ "bad_number": {
+  "message": "Type a number.",
+  "unchanged": true
+ },
+ "undo_steps_added": 4,
+ "undo": {
+  "wind": {
+   "speed": 3.0,
+   "direction": 0.0,
+   "gust": 0.3
+  },
+  "motion": {
+   "sway": 1.6
+  }
+ },
+ "redo": {
+  "wind": {
+   "speed": 3.0,
+   "direction": 200.0,
+   "gust": 0.3
+  },
+  "motion": {
+   "sway": 1.6
+  }
+ },
+ "saved": {
+  "wind": {
+   "direction": 200.0,
+   "gust": 0.3,
+   "speed": 3.0
+  },
+  "motion": {
+   "sway": 1.6
+  },
+  "scatter_unchanged": true
+ },
+ "review": [
+  "hills: wind 3 m/s toward 200 degrees, gusts 0.3",
+  "hills: decoration animation on (sway 1.6)"
+ ],
+ "animation_off": {
+  "message": "Animation off.",
+  "wind": {
+   "speed": 3.0,
+   "direction": 200.0,
+   "gust": 0.3
+  },
+  "motion": {
+   "sway": 1.6,
+   "enabled": false
+  },
+  "still": true
+ }
+}

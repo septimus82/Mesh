@@ -1,0 +1,225 @@
+name: Extended acceptance
+
+# The tests the required PR run doesn't execute (H6, #422), in the lanes tooling/test_tiers.py defines for local runs
+# and CI alike:
+#   extended  the slow/e2e tests (no GL), which the default run deselects;
+#   gpu       every test that needs a GL context (the `gl` marker, by capability), which the default run skips.
+# Here the GL context is Mesa's llvmpipe SOFTWARE renderer (Xvfb on Linux, Mesa's opengl32 on Windows): a pass is
+# evidence on a software renderer, not of compatibility with physical GPUs (no GitHub-hosted runner has one).
+#
+# When it runs:
+#   - after every merge to the integration branch (push), so a regression shows within one merge;
+#   - nightly (schedule) - but GitHub runs schedules only from the repository's default branch, main, so this fires
+#     once the workflow reaches main;
+#   - on demand (workflow_dispatch: Actions > Extended acceptance > Run workflow, e.g. before a release);
+#   - on a pull request that changes the test-selection policy itself.
+# Every trigger runs the same lanes with the same selection. Windows' gpu lane, the longest job (~35 min), runs as two
+# shard jobs of whole modules (#422 F13: `python -m tooling.test_tiers --shard K/2 gpu`, tooling/ci_shards.py's gpu
+# plan), each on its own runner with its own GL context, and `gpu (windows-latest, py3.11)` is their fan-in. Linux's gpu
+# lane (~20-33 min) is split the same way since #422 CI-422B, by Linux's own measured plan (`--shard-plan gpu-linux`),
+# and `gpu (ubuntu-latest, py3.11)`, the name the unsharded lane had, is now its fan-in. One exception (#422): a pull request from the integration
+# branch itself (#344, into main) whose tested tree is the push-tested head's leaves its lanes out, since the push run
+# of that same commit tests the same tree - only after tooling/extended_dedup.py has checked that positively, and
+# the push run is linked as the evidence. Any doubt, and they run.
+
+on:
+  push:
+    branches: [redesign/visual-editor]
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/extended.yml"
+      - "tooling/test_tiers.py"
+      - "tests/conftest.py"
+      - "pytest.ini"
+      - "tests/baselines/never_runs.txt"
+
+concurrency:
+  group: extended-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  dedup:
+    # Pull requests only: whether this run would only repeat the push run (tooling/extended_dedup.py). It never fails
+    # the lanes' way: a failed or cancelled check, or any doubt, leaves skip unset and the lanes run.
+    name: duplicate check (pull request)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      skip: ${{ steps.decide.outputs.skip }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: tooling
+
+      - name: Would this run only repeat the push run?
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m tooling.extended_dedup --push-branch redesign/visual-editor --workflow extended.yml
+
+  lane:
+    name: ${{ matrix.lane }} (${{ matrix.os }}, py3.11${{ matrix.shard && format(', shard {0}', matrix.shard) || '' }})
+    needs: dedup
+    # A skipped duplicate check (push, schedule, dispatch) or a failed one runs the lanes; only a positive skip leaves
+    # them out. (A job-level if is evaluated before the matrix expands, so a left-out run reports no lane check names.)
+    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each OS x lane, as before, except the gpu lanes: two shards each (whole modules), whose fan-in below keeps
+        # the lane's name, `gpu (<os>, py3.11)`. Linux's shards split by Linux's own plan (plan: gpu-linux); Windows'
+        # by the lane's (gpu, the default).
+        include:
+          - { os: ubuntu-latest, lane: extended }
+          - { os: windows-latest, lane: extended }
+          - { os: ubuntu-latest, lane: gpu, shard: "1/2", shard_index: 1, plan: gpu-linux }
+          - { os: ubuntu-latest, lane: gpu, shard: "2/2", shard_index: 2, plan: gpu-linux }
+          - { os: windows-latest, lane: gpu, shard: "1/2", shard_index: 1 }
+          - { os: windows-latest, lane: gpu, shard: "2/2", shard_index: 2 }
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      MESH_CI_SEED: "123"
+      CI: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python, the project and a display
+        uses: ./.github/actions/mesh-ci-setup
+        with:
+          python-version: "3.11"
+
+      - name: Desktop 1920x1080 (Windows, gpu lane)
+        # The runner's desktop is 1024x768 and Windows caps a window's resize at it: a hidden window resized to
+        # 1280x720 came out 1028x720 (#422 H6.1). The resize contract stays; the desktop is made big enough for it.
+        if: runner.os == 'Windows' && matrix.lane == 'gpu'
+        run: |
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          python -c "import pyglet; s = pyglet.display.get_display().get_default_screen(); print('desktop', s.width, 'x', s.height); assert s.width >= 1280 and s.height >= 720, 'the desktop is still smaller than 1280x720'"
+
+      - name: Run the ${{ matrix.lane }} lane
+        run: |
+          $shard = @(); if ("${{ matrix.shard }}") { $shard = @("--shard", "${{ matrix.shard }}") }
+          if ("${{ matrix.plan }}") { $shard += @("--shard-plan", "${{ matrix.plan }}") }
+          if ($IsLinux) { xvfb-run -a python -m tooling.test_tiers @shard ${{ matrix.lane }} }
+          else { python -m tooling.test_tiers @shard ${{ matrix.lane }} }
+          if ($LASTEXITCODE -ne 0) { throw "the ${{ matrix.lane }} lane failed (exit $LASTEXITCODE): see the summary above and the artifact" }
+
+      - name: Lane summary
+        if: always()
+        run: |
+          $path = "artifacts/pytest_${{ matrix.lane }}_summary.json"
+          if (Test-Path $path) {
+            $s = Get-Content $path -Raw | ConvertFrom-Json
+            $lines = @("## ${{ matrix.lane }} lane (${{ matrix.os }}${{ matrix.shard && format(', shard {0}', matrix.shard) || '' }})", "",
+                       "- selection: ``$($s.selection)`` $($s.paths -join ' ')",
+                       "- selected $($s.selected), passed $($s.passed), failed $($s.failed.Count), errors $($s.errors.Count), skipped $($s.skipped), $($s.seconds) s",
+                       "- GL renderer: $($s.gl_renderer)")
+            foreach ($f in @($s.failed) + @($s.errors)) { if ($f) { $lines += "- FAILED: ``$f``" } }
+            foreach ($p in $s.skip_reasons.PSObject.Properties) { $lines += "- skipped $($p.Value): $($p.Name)" }
+            foreach ($p in $s.problems) { $lines += "- PROBLEM: $p" }
+            # Reporting only (#422): the runner's calibration and the values tests recorded, on passing runs too.
+            $h = $s.runner.host
+            if ($h) {
+              $mesa = @($h.mesa_env.PSObject.Properties | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join ", "
+              $lines += "- host: $($h.runner_os), image $($h.image_os) $($h.image_version); GL $($h.gl_vendor) | $($h.gl_renderer) | $($h.gl_version); Mesa $($h.mesa_version), LLVM $($h.llvm_version); Mesa settings: $(if ($mesa) { $mesa } else { 'none set' })"
+            }
+            foreach ($when in "before", "after") {
+              $c = $s.runner.$when
+              if ($c.cpu) {
+                $frame = if ($c.gl_frame_ms) { "$($c.gl_frame_ms) ms" } else { "none ($($c.error))" }
+                $lines += "- runner ${when}: $($c.cpu), $($c.vcpus) vCPU; cpu loop $($c.cpu_ms) ms; llvmpipe frame $frame"
+              } elseif ($c) { $lines += "- runner ${when}: no calibration: $($c.error)" }
+            }
+            foreach ($p in $s.measurements.PSObject.Properties) { $lines += "- measured $($p.Name): ``$($p.Value | ConvertTo-Json -Compress -Depth 5)``" }
+          } else { $lines = @("## ${{ matrix.lane }} lane (${{ matrix.os }})", "", "- no summary: the lane did not run") }
+          $lines -join "`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload lane reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lane-${{ matrix.lane }}-${{ matrix.os }}-py3.11${{ matrix.shard && format('-shard-{0}', matrix.shard_index) || '' }}
+          retention-days: 14
+          if-no-files-found: warn
+          overwrite: true  # (a re-run attempt of a shard replaces its earlier record, which the fan-in reads)
+          path: |
+            artifacts/pytest_${{ matrix.lane }}*
+            artifacts/shards/
+            artifacts/**/*.log
+
+  gpu-shards:
+    # Each OS's gpu lane, as one result under the name its check always had (#422 F13; Linux since CI-422B), one leg per
+    # OS with that OS's plan. Green only when both of its OS's shard jobs
+    # succeeded (their conclusions, from the run's jobs list: tooling/ci_require_jobs.py) and their records show the
+    # whole gl selection ran exactly once, on this commit, with at least the lane's min_selected tests, every test with
+    # a passing outcome and each JUnit report agreeing with its record (tooling/ci_shards.py check --plan <plan>). The
+    # expected tests are what the shards collected, not a fixed count. always(): a failed, cancelled or missing shard
+    # makes it red, never skipped. A #344 run the duplicate check left out leaves it out too; a job-level if is decided
+    # before the matrix expands, so then it reports its unexpanded name, never a skipped `gpu (<os>, py3.11)`. Not
+    # fail-fast: one OS's red verdict must never cancel the other's.
+    name: gpu (${{ matrix.os }}, py3.11)
+    needs: [dedup, lane]
+    if: ${{ always() && needs.dedup.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, plan: gpu }
+          - { os: ubuntu-latest, plan: gpu-linux }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: tooling
+
+      - name: Download the shards' records
+        uses: actions/download-artifact@v4
+        with:
+          pattern: lane-gpu-${{ matrix.os }}-py3.11-shard-*
+          path: gpu-shards
+
+      - name: The shards together ran the whole gpu lane, each test once
+        if: always()  # (also when the download failed or the run was cancelled: then it refuses, red)
+        shell: bash
+        run: |
+          set +e
+          python3 tooling/ci_shards.py check gpu-shards --plan ${{ matrix.plan }} --min-selected 256 --commit "${{ github.sha }}" > shards.txt 2>&1
+          code=$?
+          cat shards.txt
+          { echo "## gpu lane (${{ matrix.os }}): the shards together"; echo; echo '```'; cat shards.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $code
+
+      - name: Both shard jobs succeeded
+        if: always()  # (also when the download failed or the run was cancelled: then it refuses, red)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEEDS_RESULTS: ${{ toJSON(needs.*.result) }}  # (the engine's word when the jobs list lags)
+        run: >-
+          python3 tooling/ci_require_jobs.py --name "gpu (${{ matrix.os }}, py3.11)"
+          --job "gpu (${{ matrix.os }}, py3.11, shard 1/2)" --job "gpu (${{ matrix.os }}, py3.11, shard 2/2)"

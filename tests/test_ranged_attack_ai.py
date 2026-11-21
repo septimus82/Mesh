@@ -19,7 +19,7 @@ class TestRangedAttackAI(unittest.TestCase):
         self.player.x = 100
         self.player.y = 0
 
-        self.window.current_scene.entities = [self.player, self.entity]
+        self.window.scene_controller._find_player_sprite.return_value = self.player
 
         self.ai = RangedAttackAI(self.entity, self.window, attack_range=200.0, attack_cooldown=1.0)
 

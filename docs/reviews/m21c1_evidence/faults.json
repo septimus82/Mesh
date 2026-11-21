@@ -1,0 +1,264 @@
+{
+ "none": {
+  "file": null,
+  "caught": false,
+  "failing": [],
+  "summary": "28 passed in 3.32s | 5 passed in 21.54s",
+  "wall_s": 30.0
+ },
+ "the wall question always answers no (the occlusion calculation removed)": {
+  "file": "engine/sound_occlusion.py",
+  "caught": true,
+  "failing": [
+   "test_a_doorway_lets_the_sound_through_under_its_lintel",
+   "test_a_line_does_not_squeeze_between_two_wall_tiles_that_meet_at_their_corners",
+   "test_a_turned_wall_is_in_the_way_where_it_stands_not_where_its_box_reaches",
+   "test_a_wall_is_in_the_way_only_of_a_line_through_it",
+   "test_a_wall_put_up_or_taken_down_is_heard_without_anyone_moving",
+   "test_a_wall_tile_on_the_line_is_in_the_way_and_the_two_ends_own_tiles_are_not",
+   "test_another_room_has_its_own_walls_and_the_last_rooms_loop_stops",
+   "test_at_most_a_few_are_asked_in_one_update_and_none_starts_before_its_answer",
+   "test_behind_a_wall_it_is_quieter_and_heard_less_from_its_side",
+   "test_distance_still_counts_behind_a_wall",
+   "test_each_emitter_has_its_own_answer",
+   "test_going_behind_a_wall_and_out_again_eases_with_no_jump_and_no_restart",
+   "test_in_a_2d_room_its_wall_tiles_are_the_walls",
+   "test_it_comes_into_reach_behind_a_wall_already_quiet",
+   "test_one_that_must_wait_its_turn_to_be_asked_starts_only_once_it_has_been",
+   "test_the_ambience_and_master_volumes_and_muting_apply_as_ever",
+   "test_in_a_2d_room_a_wall_of_tiles_does_the_same",
+   "test_in_the_game_alone_the_hd2d_walk_is_the_same",
+   "test_played_from_studio_it_is_quieter_behind_the_cottage_and_returns"
+  ],
+  "summary": "16 failed, 12 passed in 3.92s | 3 failed, 2 passed in 22.09s",
+  "wall_s": 28.1
+ },
+ "an emitter behind a wall is not turned down": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_a_wall_put_up_or_taken_down_is_heard_without_anyone_moving",
+   "test_another_room_has_its_own_walls_and_the_last_rooms_loop_stops",
+   "test_at_most_a_few_are_asked_in_one_update_and_none_starts_before_its_answer",
+   "test_behind_a_wall_it_is_quieter_and_heard_less_from_its_side",
+   "test_distance_still_counts_behind_a_wall",
+   "test_each_emitter_has_its_own_answer",
+   "test_going_behind_a_wall_and_out_again_eases_with_no_jump_and_no_restart",
+   "test_in_a_2d_room_its_wall_tiles_are_the_walls",
+   "test_it_comes_into_reach_behind_a_wall_already_quiet",
+   "test_one_that_must_wait_its_turn_to_be_asked_starts_only_once_it_has_been",
+   "test_the_ambience_and_master_volumes_and_muting_apply_as_ever",
+   "test_in_a_2d_room_a_wall_of_tiles_does_the_same",
+   "test_in_the_game_alone_the_hd2d_walk_is_the_same",
+   "test_played_from_studio_it_is_quieter_behind_the_cottage_and_returns"
+  ],
+  "summary": "11 failed, 17 passed in 3.81s | 3 failed, 2 passed in 22.37s",
+  "wall_s": 28.3
+ },
+ "its side is not narrowed behind a wall": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_behind_a_wall_it_is_quieter_and_heard_less_from_its_side"
+  ],
+  "summary": "1 failed, 27 passed in 3.72s",
+  "wall_s": 4.6
+ },
+ "it jumps behind a wall and out (no easing)": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_a_wall_put_up_or_taken_down_is_heard_without_anyone_moving",
+   "test_crossing_a_walls_edge_again_and_again_keeps_one_loop_and_never_cuts_it",
+   "test_going_behind_a_wall_and_out_again_eases_with_no_jump_and_no_restart",
+   "test_in_a_2d_room_its_wall_tiles_are_the_walls",
+   "test_in_a_2d_room_a_wall_of_tiles_does_the_same",
+   "test_in_the_game_alone_the_hd2d_walk_is_the_same",
+   "test_played_from_studio_it_is_quieter_behind_the_cottage_and_returns"
+  ],
+  "summary": "4 failed, 24 passed in 3.75s | 3 failed, 2 passed in 22.15s",
+  "wall_s": 28.1
+ },
+ "it starts before it is known whether a wall is between": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_one_that_must_wait_its_turn_to_be_asked_starts_only_once_it_has_been"
+  ],
+  "summary": "1 failed, 27 passed in 3.68s",
+  "wall_s": 4.6
+ },
+ "every due emitter is asked in one update (no budget)": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_at_most_a_few_are_asked_in_one_update_and_none_starts_before_its_answer"
+  ],
+  "summary": "1 failed, 27 passed in 3.68s",
+  "wall_s": 4.6
+ },
+ "the question is asked every update (nothing remembered)": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_at_most_a_few_are_asked_in_one_update_and_none_starts_before_its_answer",
+   "test_the_question_is_asked_only_when_someone_has_moved_and_never_of_one_out_of_reach",
+   "test_in_the_game_alone_the_hd2d_walk_is_the_same",
+   "test_played_from_studio_it_is_quieter_behind_the_cottage_and_returns"
+  ],
+  "summary": "2 failed, 26 passed in 3.84s | 2 failed, 3 passed in 22.02s",
+  "wall_s": 28.1
+ },
+ "emitters out of reach are asked too": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_it_comes_into_reach_behind_a_wall_already_quiet",
+   "test_the_question_is_asked_only_when_someone_has_moved_and_never_of_one_out_of_reach"
+  ],
+  "summary": "2 failed, 26 passed in 3.82s",
+  "wall_s": 4.7
+ },
+ "every emitter minds walls, set to or not (rooms made before this change)": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_an_emitter_not_set_to_mind_walls_is_heard_exactly_as_before",
+   "test_each_emitter_has_its_own_answer"
+  ],
+  "summary": "2 failed, 26 passed in 3.80s",
+  "wall_s": 4.7
+ },
+ "a room's walls changing is not noticed": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_a_wall_put_up_or_taken_down_is_heard_without_anyone_moving"
+  ],
+  "summary": "1 failed, 27 passed in 3.71s",
+  "wall_s": 4.6
+ },
+ "another room keeps the last room's walls": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_another_room_has_its_own_walls_and_the_last_rooms_loop_stops"
+  ],
+  "summary": "1 failed, 27 passed in 3.75s",
+  "wall_s": 4.6
+ },
+ "an emitter out of reach keeps its old answer": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_it_comes_into_reach_behind_a_wall_already_quiet"
+  ],
+  "summary": "1 failed, 27 passed in 3.78s",
+  "wall_s": 4.7
+ },
+ "the setting is on unless set (rooms made before this change)": {
+  "file": "engine/sound_emitters.py",
+  "caught": true,
+  "failing": [
+   "test_an_emitter_not_set_to_mind_walls_is_heard_exactly_as_before",
+   "test_each_emitter_has_its_own_answer",
+   "test_the_op_sets_it_and_off_is_no_setting_at_all",
+   "test_the_setting_is_off_unless_set_and_checked_with_a_reason"
+  ],
+  "summary": "4 failed, 24 passed in 3.76s",
+  "wall_s": 4.7
+ },
+ "the op writes off as a setting": {
+  "file": "engine/project_ops.py",
+  "caught": true,
+  "failing": [
+   "test_an_ai_tool_sets_it_and_it_is_undone_redone_saved_and_read_back",
+   "test_the_op_sets_it_and_off_is_no_setting_at_all"
+  ],
+  "summary": "2 failed, 26 passed in 3.81s",
+  "wall_s": 4.7
+ },
+ "fences and railings are walls (no least height)": {
+  "file": "engine/sound_occlusion.py",
+  "caught": true,
+  "failing": [
+   "test_a_doorway_lets_the_sound_through_under_its_lintel",
+   "test_only_walls_a_person_cant_see_over_and_that_arent_posts_are_in_a_sounds_way"
+  ],
+  "summary": "2 failed, 26 passed in 3.72s",
+  "wall_s": 4.6
+ },
+ "posts are walls (no least length)": {
+  "file": "engine/sound_occlusion.py",
+  "caught": true,
+  "failing": [
+   "test_only_walls_a_person_cant_see_over_and_that_arent_posts_are_in_a_sounds_way"
+  ],
+  "summary": "1 failed, 27 passed in 3.68s",
+  "wall_s": 4.6
+ },
+ "a wall is in the way whatever the heights (the line is flat)": {
+  "file": "engine/sound_occlusion.py",
+  "caught": true,
+  "failing": [
+   "test_a_wall_is_in_the_way_only_of_a_line_through_it"
+  ],
+  "summary": "1 failed, 27 passed in 3.70s",
+  "wall_s": 4.6
+ },
+ "a wall an end stands in counts": {
+  "file": "engine/sound_occlusion.py",
+  "caught": true,
+  "failing": [
+   "test_a_wall_one_end_stands_in_does_not_count"
+  ],
+  "summary": "1 failed, 27 passed in 3.66s",
+  "wall_s": 4.5
+ },
+ "a turned wall is its box round its corners": {
+  "file": "engine/sound_occlusion.py",
+  "caught": true,
+  "failing": [
+   "test_a_turned_wall_is_in_the_way_where_it_stands_not_where_its_box_reaches"
+  ],
+  "summary": "1 failed, 27 passed in 3.65s",
+  "wall_s": 4.6
+ },
+ "the sound's own wall tile counts (2D)": {
+  "file": "engine/sound_occlusion.py",
+  "caught": true,
+  "failing": [
+   "test_a_wall_tile_on_the_line_is_in_the_way_and_the_two_ends_own_tiles_are_not"
+  ],
+  "summary": "1 failed, 27 passed in 3.79s",
+  "wall_s": 4.7
+ },
+ "a line squeezes between two wall tiles (2D)": {
+  "file": "engine/sound_occlusion.py",
+  "caught": true,
+  "failing": [
+   "test_a_line_does_not_squeeze_between_two_wall_tiles_that_meet_at_their_corners"
+  ],
+  "summary": "1 failed, 27 passed in 3.68s",
+  "wall_s": 4.6
+ },
+ "outside the map is a wall (2D)": {
+  "file": "engine/sound_occlusion.py",
+  "caught": true,
+  "failing": [
+   "test_a_wall_tile_on_the_line_is_in_the_way_and_the_two_ends_own_tiles_are_not"
+  ],
+  "summary": "1 failed, 27 passed in 3.67s",
+  "wall_s": 4.5
+ },
+ "a 2D room's wall tiles are not looked at": {
+  "file": "engine/sound_occlusion.py",
+  "caught": true,
+  "failing": [
+   "test_in_a_2d_room_its_wall_tiles_are_the_walls",
+   "test_in_a_2d_room_a_wall_of_tiles_does_the_same"
+  ],
+  "summary": "1 failed, 27 passed in 3.65s | 1 failed, 4 passed in 22.35s",
+  "wall_s": 28.2
+ }
+}

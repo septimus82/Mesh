@@ -56,8 +56,7 @@ ISLAND_ANIMATION: list[str] = [
 ]
 
 # Sprite animator (runtime, well-typed)
-ISLAND_SPRITE = [
-    "engine/sprite_animator.py",
+ISLAND_SPRITE: list[str] = [
 ]
 
 # Pathfinding models

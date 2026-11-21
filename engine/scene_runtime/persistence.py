@@ -3,7 +3,11 @@ from __future__ import annotations
 import copy
 from typing import TYPE_CHECKING, Any, Dict
 
+from engine.log_utils import get_logger
+from engine.scene_entity_gating import entity_passes_flag_gates
 from engine.swallowed_exceptions import _log_swallow
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from ..scene_controller import SceneController
@@ -26,8 +30,9 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
     if "settings" not in snapshot:
         snapshot["settings"] = {}
 
-    # Update camera state in settings
-    camera_settings = snapshot["settings"].get("camera", {})
+    # Update camera state in settings. With no camera block (or one that isn't an object) a new one is attached to the
+    # snapshot before the live zoom is written into it (a detached default dict would drop the zoom on save).
+    camera_settings = snapshot["settings"].get("camera")
     if not isinstance(camera_settings, dict):
         camera_settings = {}
         snapshot["settings"]["camera"] = camera_settings
@@ -56,7 +61,7 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
 
     authored_entities = snapshot.get("entities")
     entities: list[dict[str, Any]] = []
-    authored_entity_by_key: dict[tuple[str, str], int] = {}
+    authored_entity_by_key: dict[tuple[str, str], list[int]] = {}
     if isinstance(authored_entities, list):
         for entity in authored_entities:
             if not isinstance(entity, dict):
@@ -66,9 +71,25 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
             for key_name in ("id", "name", "mesh_name", "prefab_id"):
                 value = entity.get(key_name)
                 if isinstance(value, str) and value.strip():
-                    authored_entity_by_key[(key_name, value.strip())] = entity_index
+                    authored_entity_by_key.setdefault((key_name, value.strip()), []).append(entity_index)
 
+    from .saved_world import carried
+
+    room_counts = getattr(controller, "_room_idless", None)  # (None: not loaded from a save: nothing is save-only)
+    from_save_only = carried(entities, room_counts) if room_counts is not None else set()
     updated_entity_indexes: set[int] = set()
+    # A sprite whose own data equals an authored entry is that entry (claimed first, so a clone listed before its
+    # original cannot take the original's entry); each entry is claimed by at most one sprite.
+    exact_entry: dict[int, int] = {}
+    reserved: set[int] = set()
+    for sprite in controller.all_sprites:
+        own = getattr(sprite, "mesh_entity_data", None)
+        if isinstance(own, dict):
+            index = next((i for i in _authored_candidates(own, authored_entity_by_key)
+                          if i not in reserved and entities[i] == own), None)
+            if index is not None:
+                exact_entry[id(sprite)] = index
+                reserved.add(index)
 
     for sprite in controller.all_sprites:
         # Start with the original entity data if available
@@ -76,7 +97,11 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
         if not isinstance(entity_data, dict):
             entity_data = {}
 
-        authored_entity_index = _find_authored_entity_index_for_sprite(entity_data, authored_entity_by_key)
+        authored_entity_index = exact_entry.get(id(sprite))
+        if authored_entity_index is None:
+            authored_entity_index = _find_authored_entity_index_for_sprite(
+                entity_data, authored_entity_by_key, updated_entity_indexes | reserved
+            )
         current_data = copy.deepcopy(entities[authored_entity_index]) if authored_entity_index is not None else {}
         _merge_authored_entity_fields(current_data, entity_data)
 
@@ -127,22 +152,36 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
             entities[authored_entity_index] = current_data
             updated_entity_indexes.add(authored_entity_index)
 
+    getter = getattr(controller.window, "get_flag", None)
+    kept_entities: list[dict[str, Any]] = []
     for index, entity in enumerate(entities):
         if index not in updated_entity_indexes:
+            # B-09: an object only the last save carried, with no live sprite, is gone as it is in play (a projectile
+            # that expired); a flag-gated one has no sprite for another reason and stays.
+            if index in from_save_only and entity_passes_flag_gates(entity, get_flag=getter if callable(getter) else None):
+                continue
             _remove_runtime_only_entity_fields(entity)
+        kept_entities.append(entity)
 
-    snapshot["entities"] = entities
+    snapshot["entities"] = kept_entities
 
     # Tilemap overrides (inline painted tiles)
     if controller.tilemap_instance and controller.tilemap_instance.layer_data:
         tilemap = snapshot.get("tilemap") or {}
         if not isinstance(tilemap, dict):
             tilemap = {}
-        overrides = tilemap.get("overrides") or {}
-        if not isinstance(overrides, dict):
-            overrides = {}
-        overrides["layers"] = dict(controller.tilemap_instance.layer_data)
-        tilemap["overrides"] = overrides
+        if isinstance(tilemap.get("tile_layers"), list):
+            # The inline-layers format has no "overrides": its tiles are the painted data.
+            for entry in tilemap["tile_layers"]:
+                tiles = controller.tilemap_instance.layer_data.get(str(entry.get("id"))) if isinstance(entry, dict) else None
+                if tiles is not None:
+                    entry["tiles"] = list(tiles)
+        else:
+            overrides = tilemap.get("overrides") or {}
+            if not isinstance(overrides, dict):
+                overrides = {}
+            overrides["layers"] = dict(controller.tilemap_instance.layer_data)
+            tilemap["overrides"] = overrides
         snapshot["tilemap"] = tilemap
     _remove_runtime_tilemap_fields(snapshot)
 
@@ -166,11 +205,14 @@ _AUTHORED_ENTITY_FIELDS = {
     "behaviour_config",
     "behaviours",
     "collision_poly",
+    "components",  # e.g. a feet collider: without it a loaded player collides with its whole sprite
     "depth_z",
     "dialogue",
     "dialogue_lines",
+    "elevation",  # HD-2D height (engine.hd2d): without it a loaded NPC on a platform drops to the ground
     "encounter_cost",
     "encounter_group",
+    "flip_x",
     "follow_speed",
     "follow_target",
     "forbid_flags",
@@ -210,6 +252,7 @@ _SPRITE_SYNC_ENTITY_FIELDS = {
     "behaviours",
     "collision_poly",
     "depth_z",
+    "elevation",  # changes as an HD-2D character climbs stairs: the floor it stands on is saved with it
     "layer",
     "mesh_name",
     "occluder_poly",
@@ -228,18 +271,33 @@ _SPRITE_SYNC_ENTITY_FIELDS = {
 _PREFAB_OWNED_ENTITY_FIELDS = {"name", "sprite"}
 
 
-def _find_authored_entity_index_for_sprite(
-    entity_data: dict[str, Any],
-    authored_entity_by_key: dict[tuple[str, str], int],
-) -> int | None:
+def _authored_candidates(
+    entity_data: dict[str, Any], authored_entity_by_key: dict[tuple[str, str], list[int]]
+) -> list[int]:
+    """The authored entries sharing the first of id/name/mesh_name/prefab_id that matches any entry (authored order)."""
     for key_name in ("id", "name", "mesh_name", "prefab_id"):
         value = entity_data.get(key_name)
-        if not isinstance(value, str) or not value.strip():
-            continue
-        authored_index = authored_entity_by_key.get((key_name, value.strip()))
-        if authored_index is not None:
-            return authored_index
-    return None
+        if isinstance(value, str) and value.strip():
+            candidates = authored_entity_by_key.get((key_name, value.strip()))
+            if candidates:
+                return candidates
+    return []
+
+
+def _find_authored_entity_index_for_sprite(
+    entity_data: dict[str, Any],
+    authored_entity_by_key: dict[tuple[str, str], list[int]],
+    claimed: set[int],
+) -> int | None:
+    """The first unclaimed authored entry sharing the sprite's key, or None. An entry is claimed by at most one sprite.
+    When the key matches only claimed entries the sprite is another entity sharing it (e.g. a console clone): it gets
+    no entry, so the caller emits it as its own record instead of merging it into the first, and that is logged."""
+    candidates = _authored_candidates(entity_data, authored_entity_by_key)
+    free = [i for i in candidates if i not in claimed]
+    if candidates and not free:
+        logger.warning("scene snapshot: %s is shared by more live entities than authored entries; "
+                       "the extra one is saved as its own entity", entity_data.get("id") or entity_data.get("name"))
+    return free[0] if free else None
 
 
 def _merge_authored_entity_fields(target: dict[str, Any], source: dict[str, Any]) -> None:
@@ -277,6 +335,8 @@ def _remove_runtime_tilemap_fields(snapshot: dict[str, Any]) -> None:
     if not isinstance(tilemap, dict):
         return
     tilemap.pop("resolved_path", None)
+    if "tile_layers" in tilemap and not tilemap.get("layers"):
+        tilemap.pop("layers", None)  # added empty by the loader; the inline-layers format forbids it
 
 
 def apply_scene_state(controller: SceneController, state_block: Any) -> None:

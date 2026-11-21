@@ -1,0 +1,11 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+____ test_outer_studios_import_never_writes_a_map_file_another_studio_owns ____
+tests\test_studio_tileset_ownership_gpu.py:110: in test_outer_studios_import_never_writes_a_map_file_another_studio_owns
+    assert refused["ok"] is False and refused["panel"] == "import_tileset", refused
+E   AssertionError: {'message': 'Imported Rocks: 2 tiles. Pick one and paint.', 'ok': True, 'panel': 'inspect', 'unsaved': True}
+E   assert (True is False)
+---------------------------- Captured stderr setup ----------------------------
+=========================== short test summary info ===========================
+FAILED tests/test_studio_tileset_ownership_gpu.py::test_outer_studios_import_never_writes_a_map_file_another_studio_owns
+1 failed in 19.35s

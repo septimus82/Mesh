@@ -1,0 +1,12 @@
+f96703e8
+(baseline f96703e8: the three reproductions, before any production change)
+E       AssertionError: the replacement was given the deleted structure's id
+E       assert 'crate' != 'crate'
+E       AssertionError: the replacement river was given the deleted river's id
+E       assert 'river' != 'river'
+E       AssertionError: the replacement line was given the deleted line's id
+E       assert 'line_2' != 'line_2'
+FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_structure_never_lands_on_its_replacement
+FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_river_never_lands_on_its_replacement
+FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_line_never_lands_on_its_replacement
+3 failed, 16 deselected in 7.05s

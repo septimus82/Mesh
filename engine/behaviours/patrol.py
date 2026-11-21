@@ -86,19 +86,17 @@ class PatrolBehaviour(Behaviour):
 
         norm_x = dx / dist
         norm_y = dy / dist
-        move_speed = self.speed
-        if step > dist and dt > 0:
-            move_speed = min(self.speed, dist / dt)
+        step = min(step, dist)  # this frame's distance, never past the point
 
         mover = getattr(self.window, "move_entity_with_collision", None)
         if callable(mover):
-            mover(self.entity, norm_x * move_speed, norm_y * move_speed, dt)
+            mover(self.entity, norm_x * step, norm_y * step)  # it moves by exactly what it's given
         else:  # Fallback if window lacks helper.
-            self.entity.center_x += norm_x * min(step, dist)
-            self.entity.center_y += norm_y * min(step, dist)
+            self.entity.center_x += norm_x * step
+            self.entity.center_y += norm_y * step
 
         remaining = math.hypot(target[0] - self.entity.center_x, target[1] - self.entity.center_y)
-        if remaining <= max(1.0, move_speed * dt * 0.25):
+        if remaining <= max(1.0, step * 0.25):
             self.entity.center_x = target[0]
             self.entity.center_y = target[1]
             self._advance()

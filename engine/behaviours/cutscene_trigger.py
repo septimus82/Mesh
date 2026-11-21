@@ -40,14 +40,9 @@ class CutsceneTrigger(Behaviour):
             controller.play_cutscene(self._cutscene_id)
 
     def on_destroy(self) -> None:
-        bus = getattr(self.window, "event_bus", None)
-        if bus is not None and self._subscription is not None:
-            try:
-                bus.unsubscribe(self._subscription)
-            except Exception as exc:  # noqa: BLE001  # REASON: event-bus unsubscribe callbacks must not break behaviour teardown
-                if not getattr(self, "_mesh_unsubscribe_error_logged", False):
-                    print(f"[Mesh][CutsceneTrigger] ERROR unsubscribing: {exc}")
-                    setattr(self, "_mesh_unsubscribe_error_logged", True)
+        unsubscribe, self._subscription = self._subscription, None
+        if unsubscribe is not None:
+            unsubscribe()  # the callable MeshEventBus.subscribe returned (the bus has no unsubscribe method)
         on_destroy = getattr(super(), "on_destroy", None)
         if callable(on_destroy):
             on_destroy()

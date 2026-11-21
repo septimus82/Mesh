@@ -15,10 +15,18 @@ mock_arcade.arcade.key.BACKSPACE = 65288
 mock_arcade.arcade.key.DELETE = 65535
 mock_arcade.arcade.key.S = 115
 mock_arcade.arcade.key.MOD_CTRL = 2
+# Only while this file's imports run: left in place, every module imported after this file was collected
+# got the mock instead of the real engine.optional_arcade.
+_real_optional_arcade = sys.modules.get('engine.optional_arcade')
 sys.modules['engine.optional_arcade'] = mock_arcade
 
-from engine.editor.editor_keybinds_controller import EditorKeybindsController
-from engine.editor.keybinds_ui_model import KeybindsState
+from engine.editor.editor_keybinds_controller import EditorKeybindsController  # noqa: E402
+from engine.editor.keybinds_ui_model import KeybindsState  # noqa: E402
+
+if _real_optional_arcade is not None:
+    sys.modules['engine.optional_arcade'] = _real_optional_arcade
+else:
+    del sys.modules['engine.optional_arcade']
 
 
 class MockEditor:

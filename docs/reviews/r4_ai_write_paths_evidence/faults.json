@@ -1,0 +1,145 @@
+{
+  "caught": 12,
+  "of": 12,
+  "mutations": [
+    {
+      "mutation": "ai_job: no refusal inside an editing window",
+      "file": "engine/console_runtime/handlers_ai.py",
+      "caught": true,
+      "summary": [
+        "2 failed in 8.49s"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_ai_job_is_refused_in_a_window_that_edits_the_project",
+        "tests/test_ai_write_paths_gpu.py::test_ai_job_typed_into_the_console_of_a_studio_play_test_changes_nothing"
+      ]
+    },
+    {
+      "mutation": "ai_job: the window's own hold on the project taken as a pass",
+      "file": "engine/console_runtime/handlers_ai.py",
+      "caught": true,
+      "summary": [
+        "1 failed in 3.40s"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_ai_job_is_refused_in_a_window_that_edits_the_project"
+      ]
+    },
+    {
+      "mutation": "ai_job: the legacy editor being active not checked",
+      "file": "engine/console_runtime/handlers_ai.py",
+      "caught": true,
+      "summary": [
+        "1 failed in 3.24s"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_ai_job_is_refused_in_a_window_that_edits_the_project"
+      ]
+    },
+    {
+      "mutation": "ai_job: writes without owning the project",
+      "file": "engine/console_runtime/handlers_ai.py",
+      "caught": true,
+      "summary": [
+        "2 failed in 7.13s"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_ai_job_in_a_game_window_is_refused_while_studio_has_the_project_and_works_once_closed",
+        "tests/test_ai_write_paths.py::test_ai_job_holds_the_project_while_it_writes_and_lets_it_go_however_it_ends"
+      ]
+    },
+    {
+      "mutation": "ai_job: lets the project go before writing",
+      "file": "engine/console_runtime/handlers_ai.py",
+      "caught": true,
+      "summary": [
+        "1 failed in 4.65s"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_ai_job_holds_the_project_while_it_writes_and_lets_it_go_however_it_ends"
+      ]
+    },
+    {
+      "mutation": "ai_job: never lets the project go",
+      "file": "engine/console_runtime/handlers_ai.py",
+      "caught": true,
+      "summary": [
+        "2 failed in 8.44s"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_ai_job_in_a_game_window_is_refused_while_studio_has_the_project_and_works_once_closed",
+        "tests/test_ai_write_paths.py::test_ai_job_holds_the_project_while_it_writes_and_lets_it_go_however_it_ends"
+      ]
+    },
+    {
+      "mutation": "apply-plan: writes without owning the project",
+      "file": "mesh_cli/ai.py",
+      "caught": true,
+      "summary": [
+        "3 failed in 10.94s"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_apply_plan_and_undo_are_refused_while_mesh_studio_has_the_project",
+        "tests/test_ai_write_paths.py::test_a_competing_writer_or_an_editor_holding_the_project_stops_the_plan",
+        "tests/test_ai_write_paths.py::test_mesh_studio_opening_during_a_plan_is_turned_away_until_it_is_written"
+      ]
+    },
+    {
+      "mutation": "undo-last-plan: writes without owning the project",
+      "file": "mesh_cli/ai.py",
+      "caught": true,
+      "summary": [
+        "2 failed in 19.75s"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_apply_plan_and_undo_are_refused_while_mesh_studio_has_the_project",
+        "tests/test_ai_write_paths.py::test_a_competing_writer_or_an_editor_holding_the_project_stops_the_plan"
+      ]
+    },
+    {
+      "mutation": "apply-plan: never lets the project go",
+      "file": "mesh_cli/ai.py",
+      "caught": true,
+      "summary": [
+        "2 failed in 3.58s"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_apply_plan_with_studio_closed_writes_and_lets_the_project_go",
+        "tests/test_ai_write_paths.py::test_failed_plans_and_unavailable_ownership_leave_no_hold_and_no_change"
+      ]
+    },
+    {
+      "mutation": "apply-plan --dry-run made to own the project (read-only refused)",
+      "file": "mesh_cli/ai.py",
+      "caught": true,
+      "summary": [
+        "1 failed in 11.17s"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_apply_plan_and_undo_are_refused_while_mesh_studio_has_the_project"
+      ]
+    },
+    {
+      "mutation": "plan executor: writes outside the owned project",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "1 failed in 3.38s"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_a_plan_writes_only_inside_the_project_it_owns"
+      ]
+    },
+    {
+      "mutation": "plan executor: writes into another project inside the owned one",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "1 failed in 3.40s"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_a_plan_writes_only_inside_the_project_it_owns"
+      ]
+    }
+  ]
+}

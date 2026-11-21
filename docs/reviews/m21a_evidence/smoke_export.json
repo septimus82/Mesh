@@ -1,0 +1,18 @@
+{
+ "export_code": 0,
+ "export_tail": "al\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\audio\\run3\\project...\n[Mesh][Export] OK (1031 files, 12,396,246 bytes)\n[Mesh][Export] wrote bundle to <scratch>\\export\n",
+ "music_in_bundle": [
+  "assets/music/dungeon_theme.wav",
+  "assets/music/forest_theme.wav",
+  "assets/music/TownTheme.mp3"
+ ],
+ "bundle_run": {
+  "engine_from": "<scratch>\\export\\engine\\__init__.py",
+  "master_volume": 0.0,
+  "music": "assets/music/TownTheme.mp3",
+  "registered": 1,
+  "playing": true,
+  "time": 1.64,
+  "registered_after_close": 0
+ }
+}

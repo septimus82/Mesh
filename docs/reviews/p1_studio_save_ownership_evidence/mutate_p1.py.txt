@@ -1,0 +1,65 @@
+"""#462 P1 Studio save fault injection: each mutation undoes part of the correction; the real-window test must fail.
+Each file is put back byte for byte (checked).
+
+    MESH_GL_SMOKE=1 py -3.13 mutate_p1.py REPO OUT_JSON"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(sys.argv[1]).resolve()
+OUT = Path(sys.argv[2])
+TESTS = ["tests/test_studio_save_ownership_gpu.py"]
+STUDIO, SAVE = "engine/studio.py", "engine/studio_project.py"
+MUTATIONS = [
+    ("Studio's save without its ownership", STUDIO,
+     "written = self.project.save(owner=self.ownership)", "written = self.project.save()"),
+    ("the refusal doesn't say the edits are kept", STUDIO,
+     ' or report["reason"] == "not_this_project")', ")"),
+    ("the save's destination check refuses nothing", SAVE,
+     "foreign = [rel for rel, _kind, _doc in documents if owner is not None and not owner.owns(self.root / rel)]",
+     "foreign: list[str] = []"),
+    ("a mixed save writes the valid files and skips the foreign one", SAVE,
+     "        if foreign:\n            raise self._refused(refused(",
+     "        documents = [d for d in documents if d[0] not in foreign]\n        if False:\n            raise self._refused(refused("),
+    ("only an all-foreign save is refused; a mixed one drops the foreign file", SAVE,
+     "        if foreign:\n            raise self._refused(refused(",
+     "        if foreign and len(foreign) < len(documents):\n            documents = [d for d in documents if d[0] not in foreign]\n"
+     "        elif foreign:\n            raise self._refused(refused("),
+]
+
+
+def main() -> None:
+    results = []
+    for name, rel, old, new in MUTATIONS:
+        path = REPO / rel
+        original = path.read_bytes()
+        text = original.decode("utf-8")
+        if "\r\n" in text:
+            old, new = old.replace("\n", "\r\n"), new.replace("\n", "\r\n")
+        assert text.count(old) == 1, (name, text.count(old))
+        path.write_bytes(text.replace(old, new).encode("utf-8"))
+        try:
+            run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-W", "error",
+                                  "-o", "addopts=", "--strict-markers", "--tb=line", "-rf", *TESTS], cwd=REPO,
+                                 env=dict(os.environ), capture_output=True, text=True, timeout=1200)
+        finally:
+            path.write_bytes(original)
+        assert path.read_bytes() == original
+        lines = run.stdout.splitlines()
+        summary = [line for line in lines if " passed" in line or " failed" in line][-1:]
+        where = [line.strip() for line in lines if "AssertionError" in line or "assert " in line][:2]
+        results.append({"mutation": name, "file": rel, "caught": run.returncode != 0, "summary": summary,
+                        "first_failure": where or None})
+        print(json.dumps(results[-1])[:300], flush=True)
+    report = {"caught": sum(r["caught"] for r in results), "of": len(results), "mutations": results}
+    OUT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(f"{report['caught']}/{report['of']} caught")
+
+
+if __name__ == "__main__":
+    main()

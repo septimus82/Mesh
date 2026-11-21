@@ -27,6 +27,9 @@ class EngineConfig:
     width: int = 1280
     height: int = 720
     title: str = "Mesh Engine - Demo"
+    # The game's stable id (engine.save_runtime.storage): an exported game keeps its players' saves under it. New
+    # projects get one; an older project without it gets one derived from its title, start room and world file.
+    game_id: str | None = None
 
     fullscreen: bool = False
     vsync: bool = True
@@ -39,6 +42,7 @@ class EngineConfig:
     master_volume: float = 1.0
     sfx_volume: float = 1.0
     music_volume: float = 1.0
+    ambience_volume: float = 1.0
 
     profile: str = "release"
 
@@ -58,7 +62,7 @@ class EngineConfig:
     music_crossfade_enabled: bool = False
     music_crossfade_out_s: float = 0.25
     music_crossfade_in_s: float = 0.25
-    soft_shadows_enabled: bool = False
+    soft_shadows_enabled: bool = False  # legacy: ignored since the per-light shadows (M12); kept so old configs load
     soft_shadows_expand_px: float = 6.0
     soft_shadows_alpha_scale: float = 0.35
     ambient_light_rgba: tuple[int, int, int, int] = (255, 255, 255, 255)
@@ -74,6 +78,7 @@ class EngineConfig:
     lighting_max_static_lights: int = 128
     lighting_max_dynamic_lights: int = 64
     lighting_shadows_mode: str = "hard"
+    lighting_shadow_softness: str = "sharp"  # shadow edges: sharp, soft or softer (rooms may set their own)
     lighting_debug_shadows: bool = False
 
     # Day/night cycle

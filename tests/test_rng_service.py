@@ -9,6 +9,13 @@ These tests verify that:
 """
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
 from engine.rng_service import RNGService, RNGStream, get_rng, rng_service
 
 # ============================================================================
@@ -336,3 +343,63 @@ class TestDeterminismIntegration:
         # Should get same sequence
         actual = [service.random() for _ in range(10)]
         assert actual == expected
+
+
+# ============================================================================
+# Named-stream seed stability (B-06)
+# ============================================================================
+
+
+@pytest.mark.fast
+class TestStableStreamSeeds:
+    def test_distinct_names_distinct_streams(self) -> None:
+        service = RNGService()
+        service.seed(7)
+        a = [service.get_stream("ai").random() for _ in range(5)]
+        b = [service.get_stream("loot").random() for _ in range(5)]
+        assert a != b
+
+    def test_reseed_resets_named_stream(self) -> None:
+        service = RNGService()
+        service.seed(7)
+        stream = service.get_stream("ai")
+        first = [stream.random() for _ in range(5)]
+        service.seed(7)
+        assert [stream.random() for _ in range(5)] == first
+
+    def test_none_seed_is_entropy(self) -> None:
+        service = RNGService()
+        service.seed(None)
+        a = RNGService()
+        a.seed(None)
+        assert [service.get_stream("x").random() for _ in range(3)] != [
+            a.get_stream("x").random() for _ in range(3)
+        ]
+
+    def test_stream_values_pinned(self) -> None:
+        """Pins the derivation: changing it silently breaks replays."""
+        service = RNGService()
+        service.seed(12345)
+        assert service.get_stream("particles").random() == 0.5874571159669687
+
+
+@pytest.mark.integration
+def test_named_stream_identical_across_hash_seeds() -> None:
+    code = (
+        "from engine.rng_service import RNGService\n"
+        "s = RNGService(); s.seed(12345)\n"
+        "late = RNGService(); late.seed(12345)\n"
+        "print([s.get_stream('particles').random() for _ in range(5)])\n"
+        "s.seed(12345)\n"
+        "print([s.get_stream('particles').random() for _ in range(5)])\n"
+        "print([late.get_stream('particles').random() for _ in range(5)])\n"
+    )
+    outs = []
+    for hs in ("1", "2"):
+        env = {**os.environ, "PYTHONHASHSEED": hs}
+        r = subprocess.run(
+            [sys.executable, "-c", code], capture_output=True, text=True,
+            env=env, cwd=Path(__file__).resolve().parent.parent, check=True,
+        )
+        outs.append(r.stdout)
+    assert outs[0] == outs[1]

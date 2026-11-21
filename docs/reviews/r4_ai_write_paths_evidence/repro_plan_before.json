@@ -1,0 +1,138 @@
+{
+  "head": "ee1986e0c58f8f93f7339ed8c7bc91d032713ef5",
+  "studio_open": {
+    "studio_open": true,
+    "apply": {
+      "argv": [
+        "mesh",
+        "apply-plan",
+        "<tmp>"
+      ],
+      "exit": 0,
+      "stdout_tail": [
+        "[Mesh][Executor] Executing plan (1 actions)...",
+        "[Mesh][CLI] Plan '<tmp>' applied successfully."
+      ],
+      "files": {
+        "changed": [
+          "packs/core_regions/scenes/start.json"
+        ],
+        "created": [
+          ".mesh/plan_backups/1795001696_815f2bb4/files/packs/core_regions/scenes/start.json",
+          ".mesh/plan_backups/1795001696_815f2bb4/manifest.json",
+          ".mesh/plan_history/1795001696_815f2bb4.json"
+        ],
+        "deleted": []
+      },
+      "room_on_disk": [
+        "None",
+        "Ferryman"
+      ]
+    },
+    "studio_after_apply": {
+      "names": [
+        "Player",
+        "Unsaved Warden"
+      ],
+      "unsaved": true,
+      "pending": [],
+      "session_id": "loa8mfQIhFNGDcoACtPxyzh4A31xIGhrzwvIvVJ6WCM"
+    },
+    "studio_save": {
+      "saved": [
+        "packs/core_regions/scenes/start.json"
+      ]
+    },
+    "room_on_disk_after_studio_save": [
+      "None",
+      "Unsaved Warden"
+    ],
+    "outside_change_backups": [
+      "packs/core_regions/scenes/start.json.outside-change.bak"
+    ],
+    "undo": {
+      "argv": [
+        "mesh",
+        "undo-last-plan"
+      ],
+      "exit": 0,
+      "stdout_tail": [
+        "[Mesh][Undo] Restoring backup: 1795001696_815f2bb4",
+        "[Mesh][Undo] Restore complete.",
+        "[Mesh][CLI] Undo successful."
+      ],
+      "files": {
+        "changed": [
+          "packs/core_regions/scenes/start.json"
+        ],
+        "created": [],
+        "deleted": []
+      },
+      "room_on_disk": [
+        "None"
+      ]
+    },
+    "studio_after_undo": {
+      "names": [
+        "Player",
+        "Unsaved Warden",
+        "Second Unsaved"
+      ],
+      "unsaved": true,
+      "pending": [],
+      "session_id": "loa8mfQIhFNGDcoACtPxyzh4A31xIGhrzwvIvVJ6WCM"
+    }
+  },
+  "studio_closed": {
+    "studio_open": false,
+    "apply": {
+      "argv": [
+        "mesh",
+        "apply-plan",
+        "<tmp>"
+      ],
+      "exit": 0,
+      "stdout_tail": [
+        "[Mesh][Executor] Executing plan (1 actions)...",
+        "[Mesh][CLI] Plan '<tmp>' applied successfully."
+      ],
+      "files": {
+        "changed": [
+          "packs/core_regions/scenes/start.json"
+        ],
+        "created": [
+          ".mesh/plan_backups/1795001701_815f2bb4/files/packs/core_regions/scenes/start.json",
+          ".mesh/plan_backups/1795001701_815f2bb4/manifest.json",
+          ".mesh/plan_history/1795001701_815f2bb4.json"
+        ],
+        "deleted": []
+      },
+      "room_on_disk": [
+        "None",
+        "Ferryman"
+      ]
+    },
+    "undo": {
+      "argv": [
+        "mesh",
+        "undo-last-plan"
+      ],
+      "exit": 0,
+      "stdout_tail": [
+        "[Mesh][Undo] Restoring backup: 1795001701_815f2bb4",
+        "[Mesh][Undo] Restore complete.",
+        "[Mesh][CLI] Undo successful."
+      ],
+      "files": {
+        "changed": [
+          "packs/core_regions/scenes/start.json"
+        ],
+        "created": [],
+        "deleted": []
+      },
+      "room_on_disk": [
+        "None"
+      ]
+    }
+  }
+}

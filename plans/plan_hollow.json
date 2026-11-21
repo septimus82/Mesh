@@ -22,7 +22,7 @@
     {
       "type": "create_scene",
       "args": {
-        "path": "packs\\core_regions\\scenes\\Hollow Grove_hub.json",
+        "path": "packs/core_regions/scenes/Hollow Grove_hub.json",
         "template": "overworld"
       },
       "description": "Create hub scene 'Hollow Grove_hub'"
@@ -30,7 +30,7 @@
     {
       "type": "create_scene",
       "args": {
-        "path": "packs\\core_regions\\scenes\\Hollow Grove_interior.json",
+        "path": "packs/core_regions/scenes/Hollow Grove_interior.json",
         "template": "interior"
       },
       "description": "Create interior scene 'Hollow Grove_interior'"
@@ -38,7 +38,7 @@
     {
       "type": "create_scene",
       "args": {
-        "path": "packs\\core_regions\\scenes\\Hollow Grove_dungeon.json",
+        "path": "packs/core_regions/scenes/Hollow Grove_dungeon.json",
         "template": "interior"
       },
       "description": "Create dungeon scene 'Hollow Grove_dungeon'"
@@ -46,7 +46,7 @@
     {
       "type": "add_npc",
       "args": {
-        "scene_path": "packs\\core_regions\\scenes\\Hollow Grove_hub.json",
+        "scene_path": "packs/core_regions/scenes/Hollow Grove_hub.json",
         "name": "Hollow Grove_Merchant",
         "role": "merchant",
         "quest_id": "Hollow Grove_fetch_quest",
@@ -57,7 +57,7 @@
     {
       "type": "add_npc",
       "args": {
-        "scene_path": "packs\\core_regions\\scenes\\Hollow Grove_hub.json",
+        "scene_path": "packs/core_regions/scenes/Hollow Grove_hub.json",
         "name": "Hollow Grove_Guard",
         "role": "guard",
         "quest_id": "Hollow Grove_kill_quest",
@@ -68,7 +68,7 @@
     {
       "type": "add_npc",
       "args": {
-        "scene_path": "packs\\core_regions\\scenes\\Hollow Grove_interior.json",
+        "scene_path": "packs/core_regions/scenes/Hollow Grove_interior.json",
         "name": "Hollow Grove_Elder",
         "role": "quest_giver",
         "quest_id": "Hollow Grove_fetch_quest",
@@ -79,7 +79,7 @@
     {
       "type": "create_quest",
       "args": {
-        "path": "packs\\core_regions\\assets\\data\\quests.json",
+        "path": "packs/core_regions/assets/data/quests.json",
         "id": "Hollow Grove_fetch_quest",
         "title": "Hollow Grove Fetch",
         "type": "fetch"
@@ -89,7 +89,7 @@
     {
       "type": "create_quest",
       "args": {
-        "path": "packs\\core_regions\\assets\\data\\quests.json",
+        "path": "packs/core_regions/assets/data/quests.json",
         "id": "Hollow Grove_kill_quest",
         "title": "Hollow Grove Hunt",
         "type": "kill"
@@ -100,7 +100,7 @@
       "type": "wire_world",
       "args": {
         "world_path": "worlds/main_world.json",
-        "scene_path": "packs\\core_regions\\scenes\\Hollow Grove_hub.json",
+        "scene_path": "packs/core_regions/scenes/Hollow Grove_hub.json",
         "scene_id": "Hollow Grove_hub"
       },
       "description": "Register Hollow Grove_hub in world"
@@ -109,7 +109,7 @@
       "type": "wire_world",
       "args": {
         "world_path": "worlds/main_world.json",
-        "scene_path": "packs\\core_regions\\scenes\\Hollow Grove_interior.json",
+        "scene_path": "packs/core_regions/scenes/Hollow Grove_interior.json",
         "scene_id": "Hollow Grove_interior"
       },
       "description": "Register Hollow Grove_interior in world"
@@ -118,7 +118,7 @@
       "type": "wire_world",
       "args": {
         "world_path": "worlds/main_world.json",
-        "scene_path": "packs\\core_regions\\scenes\\Hollow Grove_dungeon.json",
+        "scene_path": "packs/core_regions/scenes/Hollow Grove_dungeon.json",
         "scene_id": "Hollow Grove_dungeon"
       },
       "description": "Register Hollow Grove_dungeon in world"
@@ -127,7 +127,7 @@
       "type": "wire_world",
       "args": {
         "world_path": "worlds/main_world.json",
-        "scene_path": "packs\\core_regions\\scenes\\Hollow Grove_interior.json",
+        "scene_path": "packs/core_regions/scenes/Hollow Grove_interior.json",
         "scene_id": "Hollow Grove_interior",
         "link_from": "Hollow Grove_hub"
       },
@@ -137,7 +137,7 @@
       "type": "wire_world",
       "args": {
         "world_path": "worlds/main_world.json",
-        "scene_path": "packs\\core_regions\\scenes\\Hollow Grove_dungeon.json",
+        "scene_path": "packs/core_regions/scenes/Hollow Grove_dungeon.json",
         "scene_id": "Hollow Grove_dungeon",
         "link_from": "Hollow Grove_hub"
       },
@@ -146,7 +146,7 @@
     {
       "type": "polish_scene",
       "args": {
-        "path": "packs\\core_regions\\scenes\\Hollow Grove_hub.json",
+        "path": "packs/core_regions/scenes/Hollow Grove_hub.json",
         "compact_only": false
       },
       "description": "Polish Hollow Grove_hub.json"
@@ -154,7 +154,7 @@
     {
       "type": "validate",
       "args": {
-        "scene_path": "packs\\core_regions\\scenes\\Hollow Grove_hub.json",
+        "scene_path": "packs/core_regions/scenes/Hollow Grove_hub.json",
         "check_refs": false
       },
       "description": "Validate Hollow Grove_hub.json"
@@ -162,7 +162,7 @@
     {
       "type": "polish_scene",
       "args": {
-        "path": "packs\\core_regions\\scenes\\Hollow Grove_interior.json",
+        "path": "packs/core_regions/scenes/Hollow Grove_interior.json",
         "compact_only": false
       },
       "description": "Polish Hollow Grove_interior.json"
@@ -170,7 +170,7 @@
     {
       "type": "validate",
       "args": {
-        "scene_path": "packs\\core_regions\\scenes\\Hollow Grove_interior.json",
+        "scene_path": "packs/core_regions/scenes/Hollow Grove_interior.json",
         "check_refs": false
       },
       "description": "Validate Hollow Grove_interior.json"
@@ -178,7 +178,7 @@
     {
       "type": "polish_scene",
       "args": {
-        "path": "packs\\core_regions\\scenes\\Hollow Grove_dungeon.json",
+        "path": "packs/core_regions/scenes/Hollow Grove_dungeon.json",
         "compact_only": false
       },
       "description": "Polish Hollow Grove_dungeon.json"
@@ -186,7 +186,7 @@
     {
       "type": "validate",
       "args": {
-        "scene_path": "packs\\core_regions\\scenes\\Hollow Grove_dungeon.json",
+        "scene_path": "packs/core_regions/scenes/Hollow Grove_dungeon.json",
         "check_refs": false
       },
       "description": "Validate Hollow Grove_dungeon.json"

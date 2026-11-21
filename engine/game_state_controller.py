@@ -596,6 +596,20 @@ class GameStateController:
         """Completely replace the current game state with the provided data."""
         self.state = GameState()  # Reset to clean state
         self.import_state(state_data)
+        # Quests begin as in a fresh game: auto_start quests start, pending stages sync with the new flags.
+        # (The full manager GameWindow installs has this; the windowless lightweight one does not.)
+        resync = getattr(self.quests, "reload_from_state", None)
+        if callable(resync):
+            resync()
+        # ... and isn't over: a game that ended (the player died) ends with it, as the restart key ends it: its screen
+        # gone, unpaused. (It stayed set through New Game and Studio's Play and Stop: every later play-test began over.)
+        window = getattr(self, "window", None)
+        if window is not None and getattr(window, "game_over", False):
+            window.game_over = False
+            screen = getattr(window, "game_over_screen", None)
+            if screen is not None:
+                screen.visible = False
+            window.paused = False
 
     def handle_event(self, event: Any) -> None:
         """Centralized event handler for game state updates."""

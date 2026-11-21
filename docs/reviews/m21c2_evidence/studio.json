@@ -1,0 +1,210 @@
+{
+ "village": {
+  "rain": "steady",
+  "sounds": {
+   "rain": "assets/ambience/rain_loop.wav",
+   "wind": "assets/ambience/wind_loop.wav",
+   "rain_volume": 0.6,
+   "wind_volume": 0.5,
+   "indoors": false
+  },
+  "says": "Outdoors: the rain and wind are heard as they fall and blow.",
+  "says_it_on_screen": true,
+  "outdoors_switch": true,
+  "indoor_switch_shown": false
+ },
+ "cottage_as_made": {
+  "indoor": true,
+  "says": "Indoors: no rain falls or is heard in here. Turn on Hear outside weather indoors to hear this room's rain and wind quietly, as the weather outside.",
+  "says_it_on_screen": true,
+  "rain_label": true,
+  "outdoors_switch": true,
+  "indoor_switch": true
+ },
+ "on_with_nothing_set": {
+  "setting": true,
+  "message": "The weather outside is heard in here, quietly.",
+  "says": "Nothing will be heard from outside yet: this room has no rain or wind set, so there is no weather outside to hear.",
+  "says_it_on_screen": true
+ },
+ "cottage_set": {
+  "setting": true,
+  "rain": "steady",
+  "sounds": {
+   "rain": "assets/ambience/rain_loop.wav",
+   "wind": "assets/ambience/wind_loop.wav",
+   "rain_volume": 0.6,
+   "wind_volume": 0.5,
+   "indoors": true
+  },
+  "heard": {
+   "rain": true,
+   "wind": true
+  },
+  "says": "Indoors: the rain and wind set here are heard quietly, as the weather outside.",
+  "says_it_on_screen": true,
+  "copied_into_project": [
+   true,
+   true
+  ]
+ },
+ "message_off": "Indoors as before: no rain is heard in here.",
+ "on_clicked_off_undo_redo_undo": [
+  true,
+  null,
+  true,
+  null,
+  true
+ ],
+ "saved_message": "Saved 2 file(s).",
+ "editing_registered_players": 0,
+ "in_the_saved_file": {
+  "weather_exposure": "indoor",
+  "weather_sounds": {
+   "indoors": true,
+   "rain": "assets/ambience/rain_loop.wav",
+   "wind": "assets/ambience/wind_loop.wav"
+  }
+ },
+ "reopened": {
+  "setting": true,
+  "says": "Indoors: the rain and wind set here are heard quietly, as the weather outside.",
+  "unsaved": []
+ },
+ "play_stop": [
+  {
+   "mode": "play",
+   "started_in": "start.json",
+   "walk": {
+    "frames": 1823,
+    "marks": {
+     "outside": 360,
+     "at_the_door": 549,
+     "inside": 1095,
+     "inside_later": 1275,
+     "outside_again": 1823
+    },
+    "at_marks": {
+     "outside": {
+      "room": "start.json",
+      "rain": 0.5954,
+      "wind": 0.3481,
+      "rain_on_screen": 1,
+      "registered": 2
+     },
+     "at_the_door": {
+      "room": "start.json",
+      "rain": 0.5994,
+      "wind": 0.3881,
+      "rain_on_screen": 1,
+      "registered": 2
+     },
+     "inside": {
+      "room": "cottage.json",
+      "rain": 0.2106,
+      "wind": 0.1333,
+      "rain_on_screen": 0,
+      "registered": 2
+     },
+     "inside_later": {
+      "room": "cottage.json",
+      "rain": 0.2106,
+      "wind": 0.1268,
+      "rain_on_screen": 0,
+      "registered": 2
+     },
+     "outside_again": {
+      "room": "start.json",
+      "rain": 0.5994,
+      "wind": 0.353,
+      "rain_on_screen": 1,
+      "registered": 2
+     }
+    },
+    "largest_change_in_one_frame": {
+     "rain": 0.0081,
+     "wind": 0.0052
+    },
+    "lowest_after_the_first_three_seconds": {
+     "rain": 0.2106,
+     "wind": 0.1231
+    },
+    "most_players_registered": 2,
+    "loops_heard": [
+     "weather:rain",
+     "weather:wind"
+    ]
+   },
+   "playing": {
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ],
+    "registered": 2
+   },
+   "after_stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  },
+  {
+   "mode": "play",
+   "started_in": "start.json",
+   "settled": {
+    "room": "start.json",
+    "rain_on_screen": 1,
+    "rain": 0.5997,
+    "wind": 0.4053
+   },
+   "playing": {
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ],
+    "registered": 2
+   },
+   "after_stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  },
+  {
+   "mode": "play",
+   "started_in": "cottage.json",
+   "settled": {
+    "room": "cottage.json",
+    "rain_on_screen": 0,
+    "rain": 0.2106,
+    "wind": 0.1359
+   },
+   "playing": {
+    "loops": [
+     "weather:rain",
+     "weather:wind"
+    ],
+    "registered": 2
+   },
+   "after_stop": {
+    "mode": "edit",
+    "loops": {},
+    "registered": 0
+   }
+  }
+ ],
+ "switched_off": {
+  "setting": null,
+  "says": "Indoors: no rain falls or is heard in here. The wind set here is heard at full strength, as outdoors. Turn on Hear outside weather indoors to hear this room's rain and wind quietly, as the weather outside.",
+  "played": {
+   "room": "cottage.json",
+   "rain_on_screen": 0,
+   "rain": 0.0,
+   "wind": 0.3989
+  },
+  "loops": [
+   "weather:wind"
+  ]
+ },
+ "after_close_registered": 0
+}

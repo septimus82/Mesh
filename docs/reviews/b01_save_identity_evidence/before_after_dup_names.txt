@@ -1,0 +1,52 @@
+# repro_b01 (design evidence script, two Goblins with ids gob_a/gob_b, hp 3 vs 20): production SaveManager, hidden GameWindow
+## BASE 0e05bd94
+[Mesh][Save] Game saved to '<home>\AppData\Local\Temp\b01__7gtp3zw\saves\slot1.json'
+[Mesh][Save] Loading save from '<home>\AppData\Local\Temp\b01__7gtp3zw\saves\slot1.json'
+BEFORE SAVE   (id, mesh_name, x, y, hp):
+   ('gob_a', 'Goblin', 111, 122, 3.0)
+   ('gob_b', 'Goblin', 333, 344, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+save_schema_version: 2
+saved_entities records (entity_id, x, y, hp):
+   ('Goblin', 111.0, 122.0, 3.0) keys: ['behaviour_state', 'entity_id', 'x', 'y']
+   ('Goblin', 333.0, 344.0, 20.0) keys: ['behaviour_state', 'entity_id', 'x', 'y']
+   ('Hero', 50.0, 50.0, 10.0) keys: ['behaviour_state', 'entity_id', 'tags', 'x', 'y']
+AFTER FRESH ROOM (pre-load):
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_b', 'Goblin', 300, 300, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+AFTER LOAD of slot1:
+   ('gob_a', 'Goblin', 111, 122, 20.0)
+   ('gob_b', 'Goblin', 333, 344, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+apply_entities (applied, missing): (3, 0) diagnostics: []
+AFTER apply_entities on pristine room:
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_b', 'Goblin', 333, 344, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+
+## HEAD
+[Mesh][Save] Game saved to '<home>\AppData\Local\Temp\b01_p8s9dm2h\saves\slot1.json'
+[Mesh][Save] Loading save from '<home>\AppData\Local\Temp\b01_p8s9dm2h\saves\slot1.json'
+BEFORE SAVE   (id, mesh_name, x, y, hp):
+   ('gob_a', 'Goblin', 111, 122, 3.0)
+   ('gob_b', 'Goblin', 333, 344, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+save_schema_version: 3
+saved_entities records (entity_id, x, y, hp):
+   ('Goblin', 111.0, 122.0, 3.0) keys: ['behaviour_state', 'entity_id', 'keying', 'mesh_id', 'occurrence', 'x', 'y']
+   ('Goblin', 333.0, 344.0, 20.0) keys: ['behaviour_state', 'entity_id', 'keying', 'mesh_id', 'occurrence', 'x', 'y']
+   ('Hero', 50.0, 50.0, 10.0) keys: ['behaviour_state', 'entity_id', 'keying', 'mesh_id', 'occurrence', 'tags', 'x', 'y']
+AFTER FRESH ROOM (pre-load):
+   ('gob_a', 'Goblin', 100, 100, 20.0)
+   ('gob_b', 'Goblin', 300, 300, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+AFTER LOAD of slot1:
+   ('gob_a', 'Goblin', 111, 122, 3.0)
+   ('gob_b', 'Goblin', 333, 344, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)
+apply_entities (applied, missing): (3, 0) diagnostics: []
+AFTER apply_entities on pristine room:
+   ('gob_a', 'Goblin', 111, 122, 3.0)
+   ('gob_b', 'Goblin', 333, 344, 20.0)
+   ('hero', 'Hero', 50, 50, 10.0)

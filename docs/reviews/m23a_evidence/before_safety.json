@@ -1,0 +1,152 @@
+{
+ "tab_valid": {
+  "before": {
+   "shown": true,
+   "text": "Elder Ash",
+   "focused": false,
+   "message": "Click an object to edit it. Right-click for actions. F4 plays your game.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder"
+  },
+  "after_tab": {
+   "shown": false,
+   "text": null,
+   "focused": false,
+   "message": "The view alone: Tab (or Focus) brings the panels back.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    0,
+    0
+   ],
+   "record": "Elder"
+  },
+  "after_tab_again": {
+   "shown": true,
+   "text": "Elder",
+   "focused": false,
+   "message": "Panels back.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder"
+  }
+ },
+ "tab_refused": {
+  "before": {
+   "shown": true,
+   "text": "   ",
+   "focused": false,
+   "message": "Panels back.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder"
+  },
+  "after_tab": {
+   "shown": false,
+   "text": null,
+   "focused": false,
+   "message": "The view alone: Tab (or Focus) brings the panels back.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    0,
+    0
+   ],
+   "record": "Elder"
+  },
+  "after_tab_again": {
+   "shown": true,
+   "text": "Elder",
+   "focused": false,
+   "message": "Panels back.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder"
+  }
+ },
+ "category_refused": {
+  "after_switch": {
+   "shown": false,
+   "text": null,
+   "focused": false,
+   "message": "Type a number.",
+   "message_ok": false,
+   "left_tab": "objects",
+   "panels": [
+    230,
+    330
+   ]
+  },
+  "after_save": {
+   "message": "Type a number.",
+   "message_ok": false
+  },
+  "back_on_terrain": {
+   "shown": true,
+   "text": "big",
+   "focused": false,
+   "message": "Type a number.",
+   "message_ok": false,
+   "left_tab": "terrain",
+   "panels": [
+    230,
+    330
+   ]
+  },
+  "radius": [
+   64.0,
+   64.0
+  ]
+ },
+ "category_valid": {
+  "left_tab": "objects",
+  "radius": 96.0
+ },
+ "resize_valid": {
+  "after_resize": {
+   "shown": true,
+   "text": "Elder",
+   "focused": false,
+   "message": "Put back as it was.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder"
+  }
+ },
+ "resize_refused": {
+  "after_resize": {
+   "shown": true,
+   "text": "Elder",
+   "focused": false,
+   "message": "Put back as it was.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder"
+  }
+ }
+}

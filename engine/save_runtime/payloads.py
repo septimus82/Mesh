@@ -9,7 +9,11 @@ from engine.migrations import migrate_payload
 from engine.paths import resolve_path
 from engine.persistence_io import SAVE_FORMAT_VERSION
 from engine.save_runtime import constants
-from engine.save_runtime.entity_state import apply_entities, serialize_entities
+from engine.save_runtime.entity_state import (
+    apply_entities_ex,
+    saved_entities_context,
+    serialize_saved_entities,
+)
 from engine.save_runtime.errors import single_line_error
 from engine.save_runtime.normalize import normalize_save_payload
 from engine.save_runtime.quest_state import apply_quests, serialize_quests
@@ -380,13 +384,25 @@ def apply_loaded_payload(
         entities_list = saved_entities.get("entities", [])
         scene_controller = getattr(window, "scene_controller", None)
         if scene_controller is not None and isinstance(entities_list, list):
-            applied, missing = apply_entities(
+            # The records of a v3 save name their room: applied here, to the room being left, only if it is that room
+            # (the saved room's own apply happens when it loads). Loading never fails on an unprovable identity: those
+            # records are reported and carried as unresolved instead (the diagnostics are warnings, not errors).
+            context = saved_entities_context(payload)
+            current_room = getattr(scene_controller, "room_path", None) or getattr(scene_controller, "current_scene_path", None)
+            result = apply_entities_ex(
                 scene_controller,
                 entities_list,
                 strict=strict,
                 diagnostics=diagnostics_local,
                 source=source_label,
+                scene_path=context["scene_path"],
+                current_room=str(current_room) if context["guard_room"] and current_room else None,
+                snapshot=context["snapshot"],
+                first_seen=context["first_seen"],
+                strict_binding=False,
+                log=False,  # (the saved room's own apply, once it exists, is the one that speaks)
             )
+            applied, missing = result.applied, result.missing
             if missing > 0:
                 _append_diagnostic(
                     diagnostics_local,
@@ -496,18 +512,22 @@ def build_slot_payload(
     *,
     compact: bool,
     timestamp: str,
+    diagnostics: list[Diagnostic] | None = None,
 ) -> tuple[dict[str, Any], str]:
+    from engine.scene_runtime.room_memory import remember_removed
+
+    remember_removed(window.scene_controller)  # this room's collected or defeated objects, into the game state
     snapshot = window.scene_controller.build_scene_snapshot(compact=compact)
     controller = getattr(window, "game_state_controller", None)
     if controller is not None:
         snapshot["game_state"] = controller.export_state()
 
-    # Add saved entity state (v2)
+    # Add saved entity state (v3: records keyed by authored id or, id-less, by name; with the unresolved ones)
     scene_controller = window.scene_controller
-    snapshot["saved_entities"] = {
-        "schema_version": 1,
-        "entities": serialize_entities(scene_controller),
-    }
+    saved_room = getattr(scene_controller, "room_path", None)
+    if not isinstance(saved_room, str) or not saved_room:
+        saved_room = scene_controller.current_scene_path
+    snapshot["saved_entities"] = serialize_saved_entities(scene_controller, room=saved_room, diagnostics=diagnostics)
 
     # Add saved quest state (v2)
     if controller is not None:
@@ -519,6 +539,21 @@ def build_slot_payload(
     else:
         snapshot["saved_quests"] = {"schema_version": 1, "quests": {}}
 
+    # The room this was saved in. After loading a save the current scene is the save file itself;
+    # recording that made the next save point at a save, and its map was then looked for in saves/.
+    room = getattr(window.scene_controller, "room_path", None)
+    if not isinstance(room, str) or not room:
+        room = window.scene_controller.current_scene_path
+    # The room's authored settings aren't saved when the room can be read: loading takes them from the room as it is
+    # then (#390). A scene with no readable room (built in memory) keeps its whole snapshot: such a save is complete.
+    from engine.scene_runtime.saved_world import MUSIC, ROOM_IDS, room_ids, slim
+
+    loader = getattr(window, "scene_loader", None)
+    has_room = (isinstance(room, str) and bool(room) and loader is not None and hasattr(loader, "saved_room")
+                and loader.saved_room(room, warn=False) is not None)
+    if has_room:
+        slim(snapshot)
+
     # Add save schema version
     snapshot["save_schema_version"] = SAVE_SCHEMA_VERSION
     snapshot, _ = normalize_save_payload(snapshot, source="save_runtime/build_slot_payload")
@@ -526,17 +561,25 @@ def build_slot_payload(
     content_to_hash = {
         "data": snapshot,
         "slot": slot_name,
-        "scene_path": window.scene_controller.current_scene_path,
+        "scene_path": room,
     }
     content_str = json.dumps(content_to_hash, sort_keys=True)
     content_hash = __import__("hashlib").md5(content_str.encode("utf-8")).hexdigest()
 
     snapshot["meta"] = {
         "slot": slot_name,
-        "scene_path": window.scene_controller.current_scene_path,
+        "scene_path": room,
         "timestamp": timestamp,
         "version": constants.SLOT_META_VERSION,
     }
+    if has_room:
+        snapshot["meta"][ROOM_IDS] = room_ids(window.scene_controller)
+    from engine.audio import MusicPlaybackSnapshot
+
+    music = getattr(getattr(window, "audio", None), "snapshot_music", None)
+    playing = music() if callable(music) else None
+    if isinstance(playing, MusicPlaybackSnapshot):  # a room without its own music plays it again on loading (M21A)
+        snapshot["meta"][MUSIC] = {"path": playing.path, "volume": playing.volume} if playing.path else {"path": None}
     snapshot["save_format_version"] = SAVE_FORMAT_VERSION
 
     spawn_zone_id = None

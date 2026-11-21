@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+import os
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from . import json_io
 from .editor_palette import load_prefab_palette
@@ -34,6 +35,17 @@ def _deep_merge(dest: dict[str, Any], src: dict[str, Any]) -> dict[str, Any]:
         else:
             merged[key] = deepcopy(value)
     return merged
+
+
+def _unknown_light_settings(settings: dict[str, Any]) -> str | None:
+    """A refusal naming settings a light doesn't have (the canonical set_light's), or None."""
+    import inspect
+
+    from . import project_ops as ops
+
+    known = [name for name in inspect.signature(ops.set_light).parameters if name not in ("scene", "index")]
+    unknown = sorted(set(settings) - set(known))
+    return f"Lights have no setting {', '.join(map(repr, unknown))}. They have: {', '.join(known)}." if unknown else None
 
 
 def find_prefab_palette_entry(
@@ -82,6 +94,46 @@ def build_prefab_entity_definition(
     return entity_def
 
 
+# paint_tiles limits. No engine-wide map-size limit exists; these bound one AI/MCP edit.
+# 1024x1024 cells (~1M ints, a few MB of JSON) is far above any shipped map. Used for the
+# coordinate bound only when the tilemap's own width/height are unknown.
+MAX_PAINT_TILE_COORD = 1024
+MAX_PAINT_TILE_OPS = 10_000
+# Layers one batch may create (names not already in overrides.layers); each allocates a full layer.
+MAX_PAINT_TILE_NEW_LAYERS = 8
+
+
+def validate_paint_ops(ops: Any, *, known_layers: Any = None, bound_col: int | None = None,
+                       bound_row: int | None = None) -> str | None:
+    """The refusal message for a ``paint_tiles`` batch, or None if it is valid (shared by the direct and Studio paths).
+
+    ``known_layers`` (existing layer names) enables the new-layer cap; ``bound_*`` (exclusive) the in-map check.
+    """
+    if not isinstance(ops, list):
+        return "paint_tiles ops must be a list"
+    if len(ops) > MAX_PAINT_TILE_OPS:
+        return f"paint_tiles: {len(ops)} ops exceeds the limit of {MAX_PAINT_TILE_OPS}"
+    new_layers: set[str] = set()
+    for i, op in enumerate(ops):
+        if not isinstance(op, dict):
+            return f"paint_tiles op {i}: must be an object"
+        name = op.get("layer", "ground")
+        if not isinstance(name, str) or not name:
+            return f"paint_tiles op {i}: layer={name!r} must be a non-empty string"
+        if known_layers is not None and name not in known_layers:
+            new_layers.add(name)
+            if len(new_layers) > MAX_PAINT_TILE_NEW_LAYERS:
+                return (f"paint_tiles op {i}: layer={name!r} would create more than "
+                        f"{MAX_PAINT_TILE_NEW_LAYERS} new layers in one batch")
+        for key, limit in (("col", bound_col), ("row", bound_row), ("gid", None)):
+            val = op.get(key, 0)
+            if type(val) is not int or val < 0:
+                return f"paint_tiles op {i}: {key}={val!r} must be a non-negative integer"
+            if limit is not None and val >= limit:
+                return f"paint_tiles op {i}: {key}={val} is outside the map (must be < {limit})"
+    return None
+
+
 @dataclass
 class AIOpsResult:
     ok: bool
@@ -92,14 +144,20 @@ class AIOpsResult:
 class AIOps:
     """Small, stable set of scene/content operations for AI tools."""
 
-    def __init__(self, base_dir: str | Path = ".") -> None:
+    def __init__(self, base_dir: str | Path = ".", *, owner: Any = None) -> None:
+        """``owner``: the ``project_ownership.Ownership`` its caller holds (#462 R4/R5): a file it doesn't cover
+        (``Ownership.owns``: outside its project, in a project nested in it, or once that project changed) is
+        refused, never read for a write or written."""
         self.base_dir = Path(base_dir)
+        self.owner = owner
 
     def _contain(self, path: Path, original: str | None) -> Path:
         resolved_base = self.base_dir.resolve()
         resolved_path = path.resolve()
         if not resolved_path.is_relative_to(resolved_base):
             raise ValueError(f"path escapes workspace: {original or path}")
+        if self.owner is not None and not self.owner.owns(resolved_path):
+            raise ValueError(f"path is in another Mesh project than the one held ({self.owner.root}): {original or path}")
         return resolved_path
 
     # ------------------------------------------------------------------ world helpers
@@ -175,8 +233,28 @@ class AIOps:
         from .tooling_runtime import scaffold
 
         scene_name = name if name.endswith(".json") else f"{name}.json"
-        path = self._scene_path(scene_name)
-        scaffold.create_scene(str(path), template_name=template)
+        requested = Path(scene_name) if Path(scene_name).is_absolute() else self.base_dir / scene_name
+        # The requested entry itself, in its folder inside the workspace: never where a link there points (resolving
+        # the whole path made a broken link's destination the target, and the scene was written through the link).
+        path = self._contain(requested.parent, scene_name) / requested.name
+        if os.path.lexists(path):  # (F14: never taken for a scene just made, and never replaced)
+            what = "a link" if path.is_symlink() else "a folder" if path.is_dir() else "a scene file"
+            return AIOpsResult(False, f"Scene '{scene_name}' wasn't created: there is already {what} at {path}, "
+                                      "left as it is. Choose another name (or read and edit that scene instead).",
+                               {"path": str(path), "reason": "already_exists"})
+        templates = scaffold.list_scene_template_names()
+        if template not in templates:
+            return AIOpsResult(False, f"Scene '{scene_name}' wasn't created: there is no scene template '{template}' "
+                                      f"(templates: {', '.join(templates)}).",
+                               {"path": str(path), "reason": "unknown_template"})
+        if not scaffold.create_scene(str(path), template_name=template):
+            if os.path.lexists(path):  # (something was put there meanwhile: left as it is, never taken as created)
+                return AIOpsResult(False, f"Scene '{scene_name}' wasn't created: something appeared at {path} while "
+                                          "it was being created, and was left as it is. Choose another name.",
+                                   {"path": str(path), "reason": "already_exists"})
+            return AIOpsResult(False, f"Scene '{scene_name}' wasn't created: writing {path} failed; see the log. "
+                                      "Nothing else was changed.",
+                               {"path": str(path), "reason": "write_failed"})
         return AIOpsResult(True, f"Created scene '{scene_name}'")
 
     def add_entity_from_prefab(
@@ -189,7 +267,8 @@ class AIOps:
         prefab_path: Optional[str] = None,
     ) -> AIOpsResult:
         scene_file, scene = self._load_scene(scene_path)
-        palette = load_prefab_palette(prefab_path or None or "", strict=False)
+        # No path: the project's prefab catalogue (an empty path would name the project folder itself)
+        palette = load_prefab_palette(prefab_path, strict=False) if prefab_path else load_prefab_palette(strict=False)
         match = find_prefab_palette_entry(palette, prefab_name)
         if match is None and prefab_path:
             try:
@@ -205,18 +284,27 @@ class AIOps:
         self._save_scene(scene_file, scene)
         return AIOpsResult(True, f"Added prefab '{prefab_name}' to {scene_path}", {"entity_name": entity_def["name"]})
 
-    def delete_entity(self, scene_path: str, entity_id: str) -> AIOpsResult:
+    def _edit_scene(self, scene_path: str, change: Callable[[dict[str, Any]], dict[str, Any]], done: str,
+                    data: Callable[[dict[str, Any]], dict[str, Any]] | None = None) -> AIOpsResult:
+        """One edit of one scene file through the canonical, validated operations (``project_ops``, as Mesh
+        Studio and the authoring API use): the same result and the same refusals whoever asks."""
+        from . import project_ops as ops
+
         scene_file, scene = self._load_scene(scene_path)
-        entities = scene.get("entities", [])
-        if not isinstance(entities, list):
-            return AIOpsResult(False, "Scene entities is not a list")
-        before = len(entities)
-        entities = [e for e in entities if not (isinstance(e, dict) and str(e.get("name")) == entity_id)]
-        if len(entities) == before:
-            return AIOpsResult(False, f"Entity '{entity_id}' not found")
-        scene["entities"] = entities
-        self._save_scene(scene_file, scene)
-        return AIOpsResult(True, f"Deleted entity '{entity_id}'")
+        if any(isinstance(e, dict) and not e.get("id") for e in ops.entities(scene)):
+            scene = ops.ensure_entity_ids(scene, scene_file.stem)  # older scenes: objects are edited by id
+        try:
+            out = change(scene)
+        except (ops.OpError, TypeError) as exc:
+            return AIOpsResult(False, str(exc))
+        self._save_scene(scene_file, out)
+        return AIOpsResult(True, done, data(out) if data else {})
+
+    def delete_entity(self, scene_path: str, entity_id: str) -> AIOpsResult:
+        from . import project_ops as ops
+
+        return self._edit_scene(scene_path, lambda s: ops.remove_entity(s, ops.entity_ref(s, entity_id)),
+                                f"Deleted entity '{entity_id}'")
 
     def set_behaviour_params(
         self,
@@ -225,34 +313,53 @@ class AIOps:
         behaviour_name: str,
         params: dict[str, Any],
     ) -> AIOpsResult:
-        scene_file, scene = self._load_scene(scene_path)
-        found = False
-        for entity in scene.get("entities", []):
-            if not isinstance(entity, dict):
-                continue
-            if str(entity.get("name")) != entity_id:
-                continue
-            found = True
-            cfg_root = entity.setdefault("behaviour_config", {})
-            if not isinstance(cfg_root, dict):
-                entity["behaviour_config"] = {}
-                cfg_root = entity["behaviour_config"]
-            current = cfg_root.get(behaviour_name, {})
-            if not isinstance(current, dict):
-                current = {}
-            cfg_root[behaviour_name] = _deep_merge(current, params)
-        if not found:
-            return AIOpsResult(False, f"Entity '{entity_id}' not found")
-        self._save_scene(scene_file, scene)
-        return AIOpsResult(True, f"Updated {behaviour_name} on '{entity_id}'")
+        """Give the object the behaviour if it lacks it, then set each param. A dict value is merged into the
+        current one (so a partial dialogue patch keeps the rest)."""
+        from . import project_ops as ops
+
+        def change(scene: dict[str, Any]) -> dict[str, Any]:
+            target = ops.entity_ref(scene, entity_id)
+            if behaviour_name not in ops.entity_behaviours(ops.find_entity(scene, target)):
+                scene = ops.add_behaviour(scene, target, behaviour_name)
+            for param, value in (params or {}).items():
+                config = (ops.find_entity(scene, target).get("behaviour_config") or {}).get(behaviour_name) or {}
+                current = config.get(param)
+                if isinstance(value, dict) and isinstance(current, dict):
+                    value = _deep_merge(deepcopy(current), value)
+                scene = ops.set_behaviour_param(scene, target, behaviour_name, param, value)
+            return scene
+
+        return self._edit_scene(scene_path, change, f"Updated {behaviour_name} on '{entity_id}'")
 
     def edit_dialogue(self, scene_path: str, entity_id: str, patch: dict[str, Any]) -> AIOpsResult:
         return self.set_behaviour_params(scene_path, entity_id, "Dialogue", {"dialogue": patch})
+
+    @staticmethod
+    def _quest_index(quests: Any) -> tuple[dict[str, int] | None, str]:
+        """For a list-form ``quests`` (a form the runtime loader accepts): ``({id: position}, "")``, else ``(None, why)``."""
+        index: dict[str, int] = {}
+        for position, entry in enumerate(quests):
+            entry_id = entry.get("id") if isinstance(entry, dict) else None
+            if not isinstance(entry_id, str) or not entry_id.strip():
+                return None, f"quests entry {position} is not an object with an id; refusing to touch quests.json"
+            if entry_id in index:
+                return None, f"quests.json has duplicate quest id '{entry_id}'; refusing to touch it"
+            index[entry_id] = position
+        return index, ""
 
     def edit_quest(self, quest_id: str, patch: dict[str, Any], quests_path: str = "assets/data/quests.json") -> AIOpsResult:
         path = self._scene_path(quests_path)
         payload = _load_json(path)
         quests = payload.get("quests") if isinstance(payload, dict) else None
+        if isinstance(quests, list):
+            index, why = self._quest_index(quests)
+            if index is None:
+                return AIOpsResult(False, why)
+            if quest_id not in index:
+                return AIOpsResult(False, f"Quest '{quest_id}' not found")
+            quests[index[quest_id]] = _deep_merge(quests[index[quest_id]], patch)
+            _write_json(path, payload)
+            return AIOpsResult(True, f"Updated quest '{quest_id}'")
         if not isinstance(quests, dict):
             return AIOpsResult(False, "quests.json missing quests object")
         quest = quests.get(quest_id)
@@ -273,14 +380,22 @@ class AIOps:
         if not isinstance(payload, dict):
             return AIOpsResult(False, "quests root must be an object")
         quests = payload.setdefault("quests", {})
-        if not isinstance(quests, dict):
-            payload["quests"] = {}
-            quests = payload["quests"]
-        existing = quests.get(quest_id, {})
-        if isinstance(existing, dict):
-            quests[quest_id] = _deep_merge(existing, quest_data)
+        if isinstance(quests, list):  # the runtime loads a list of {"id": ...} too: keep it a list
+            index, why = self._quest_index(quests)
+            if index is None:
+                return AIOpsResult(False, why)
+            if quest_id in index:
+                quests[index[quest_id]] = _deep_merge(quests[index[quest_id]], quest_data) | {"id": quest_id}
+            else:
+                quests.append({"id": quest_id} | deepcopy(quest_data) | {"id": quest_id})
+        elif isinstance(quests, dict):
+            existing = quests.get(quest_id, {})
+            if isinstance(existing, dict):
+                quests[quest_id] = _deep_merge(existing, quest_data)
+            else:
+                quests[quest_id] = quest_data
         else:
-            quests[quest_id] = quest_data
+            return AIOpsResult(False, "quests must be an object or a list; refusing to touch quests.json")
         _write_json(path, payload)
         return AIOpsResult(True, f"Upserted quest '{quest_id}'")
 
@@ -288,6 +403,15 @@ class AIOps:
         path = self._scene_path(quests_path)
         payload = _load_json(path)
         quests = payload.get("quests") if isinstance(payload, dict) else None
+        if isinstance(quests, list):
+            index, why = self._quest_index(quests)
+            if index is None:
+                return AIOpsResult(False, why)
+            if quest_id not in index:
+                return AIOpsResult(False, f"Quest '{quest_id}' not found")
+            deleted = quests.pop(index[quest_id])
+            _write_json(path, payload)
+            return AIOpsResult(True, f"Deleted quest '{quest_id}'", {"deleted": deleted})
         if not isinstance(quests, dict):
             return AIOpsResult(False, "quests.json missing quests object")
         if quest_id not in quests:
@@ -383,11 +507,19 @@ class AIOps:
                     print(f"[Mesh][AIOps] WARNING: Failed to infer map dimensions from '{resolved}': {exc}")
                     setattr(self, "_mesh_paint_tiles_map_dim_error_logged", True)
 
+        # Validate the whole batch before touching anything: a bad op refuses all of it.
+        error = validate_paint_ops(
+            ops, known_layers=layers,
+            bound_col=width if width and height else MAX_PAINT_TILE_COORD,
+            bound_row=height if width and height else MAX_PAINT_TILE_COORD)
+        if error:
+            return AIOpsResult(False, error)
+
         for op in ops:
-            layer = str(op.get("layer", "ground"))
-            col = int(op.get("col", 0))
-            row = int(op.get("row", 0))
-            gid = int(op.get("gid", 0))
+            layer = op.get("layer", "ground")
+            col = op.get("col", 0)
+            row = op.get("row", 0)
+            gid = op.get("gid", 0)
             data = layers.get(layer)
             if not isinstance(data, list):
                 # Build a new layer sized by known map dims or minimal required size
@@ -418,51 +550,38 @@ class AIOps:
 
     # --- lights ------------------------------------------------------
     def add_light(self, scene_path: str, light: dict[str, Any]) -> AIOpsResult:
-        scene_file, scene = self._load_scene(scene_path)
-        lights = scene.setdefault("lights", [])
-        if not isinstance(lights, list):
-            return AIOpsResult(False, "Scene 'lights' must be a list")
-        normalized = {
-            "x": float(light.get("x", 0.0)),
-            "y": float(light.get("y", 0.0)),
-            "radius": float(light.get("radius", 160.0)),
-            "color": light.get("color", "#ffddaa"),
-            "mode": str(light.get("mode", "soft")),
-        }
-        lights.append(normalized)
-        self._save_scene(scene_file, scene)
-        return AIOpsResult(True, f"Added light {len(lights)-1}", {"index": len(lights) - 1, "light": normalized})
+        """A point light; settings beyond position, size and colour as ``update_light`` takes them."""
+        from . import project_ops as ops
+
+        rest = {k: v for k, v in light.items() if k not in ("x", "y", "radius", "color")}
+        if unknown := _unknown_light_settings(rest):
+            return AIOpsResult(False, unknown)
+
+        def change(scene: dict[str, Any]) -> dict[str, Any]:
+            out, index = ops.add_light(scene, float(light.get("x", 0.0)), float(light.get("y", 0.0)),
+                                       color=light.get("color", "#ffddaa"), radius=light.get("radius", 160.0))
+            return ops.set_light(out, index, **rest) if rest else out
+
+        return self._edit_scene(scene_path, change, "Added light", lambda s: {
+            "index": len(s["lights"]) - 1, "light": s["lights"][-1]})
 
     def update_light(self, scene_path: str, index: int, patch: dict[str, Any]) -> AIOpsResult:
-        scene_file, scene = self._load_scene(scene_path)
-        lights = scene.get("lights")
-        if not isinstance(lights, list):
-            return AIOpsResult(False, "Scene has no lights array")
-        if index < 0 or index >= len(lights):
-            return AIOpsResult(False, f"Light index {index} out of range")
-        target = lights[index]
-        for key, value in patch.items():
-            if key in {"x", "y", "radius"}:
-                target[key] = float(value)
-            elif key == "mode":
-                target[key] = str(value)
-            elif key == "color":
-                target[key] = value
-            else:
-                target[key] = value
-        self._save_scene(scene_file, scene)
-        return AIOpsResult(True, f"Updated light {index}", {"index": index, "light": target})
+        from . import project_ops as ops
+
+        if unknown := _unknown_light_settings(patch):
+            return AIOpsResult(False, unknown)
+
+        return self._edit_scene(scene_path, lambda s: ops.set_light(s, index, **patch), f"Updated light {index}",
+                                lambda s: {"index": index, "light": s["lights"][index]})
 
     def delete_light(self, scene_path: str, index: int) -> AIOpsResult:
-        scene_file, scene = self._load_scene(scene_path)
-        lights = scene.get("lights")
-        if not isinstance(lights, list):
-            return AIOpsResult(False, "Scene has no lights array")
-        if index < 0 or index >= len(lights):
-            return AIOpsResult(False, f"Light index {index} out of range")
-        deleted = lights.pop(index)
-        self._save_scene(scene_file, scene)
-        return AIOpsResult(True, f"Deleted light {index}", {"deleted": deleted, "index": index})
+        from . import project_ops as ops
+
+        _scene_file, before = self._load_scene(scene_path)
+        lights = ops.lights(before)
+        deleted = lights[index] if 0 <= index < len(lights) else None
+        return self._edit_scene(scene_path, lambda s: ops.remove_light(s, index), f"Deleted light {index}",
+                                lambda _s: {"deleted": deleted, "index": index})
 
     # ------------------------------------------------------------------ cutscene operations
     def add_or_update_cutscene(

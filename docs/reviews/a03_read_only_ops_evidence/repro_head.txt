@@ -1,0 +1,5 @@
+room_music ok= False invalid_change Change 0 (room_music): 'room_music' only reads the room, it is not an edit, so it can't be changed: []
+weather_sounds_of ok= False invalid_change Change 0 (weather_sounds_of): 'weather_sounds_of' only reads the room, it is not an edit,  changed: []
+hd2d_camera_of ok= False invalid_change Change 0 (hd2d_camera_of): 'hd2d_camera_of' only reads the room, it is not an edit, so it  changed: []
+hd2d_room_size ok= False invalid_change Change 0 (hd2d_room_size): 'hd2d_room_size' only reads the room, it is not an edit, so it  changed: []
+hd2d_sun_of ok= False invalid_change Change 0 (hd2d_sun_of): 'hd2d_sun_of' only reads the room, it is not an edit, so it can't  changed: []

@@ -1,0 +1,84 @@
+"""R3 re-review: (1) the new tests against the reviewed implementation (f9febde9's engine, plus only the
+``Project.shared_players`` accessor the tests' helpers call); (2) deliberate faults in the shared-player protection.
+
+    py -3.13 mutate_rr.py REPO BEFORE.txt FAULTS.json
+"""
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+REPO, BEFORE, OUT = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
+TEST = "tests/test_studio_object_identity.py"
+OPS, PROJECT, AUTHORING = "engine/project_ops.py", "engine/studio_project.py", "engine/authoring.py"
+REVIEWED = "f9febde9700a14fd11d688badb5b556aa00b0cec"
+
+
+def body(path):
+    return (REPO / path).read_bytes().decode("utf-8").replace("\r\n", "\n")
+
+
+def put(path, text, like):
+    nl = "\r\n" if b"\r\n" in like else "\n"
+    (REPO / path).write_bytes(text.replace("\n", nl).encode("utf-8"))
+
+
+def pytest(*args):
+    return subprocess.run([sys.executable, "-m", "pytest", "-o", "addopts=", "-q", "-p", "no:cacheprovider", "-W",
+                           "error", *args], cwd=REPO, capture_output=True, text=True, timeout=900)
+
+
+# (1) the reviewed implementation
+saved = {p: (REPO / p).read_bytes() for p in (OPS, PROJECT, AUTHORING)}
+try:
+    for p in (OPS, AUTHORING):
+        put(p, subprocess.run(["git", "show", f"{REVIEWED}:{p}"], cwd=REPO, capture_output=True, text=True,
+                              check=True, encoding="utf-8").stdout.replace("\r\n", "\n"), saved[p])
+    old = subprocess.run(["git", "show", f"{REVIEWED}:{PROJECT}"], cwd=REPO, capture_output=True, text=True,
+                         check=True, encoding="utf-8").stdout.replace("\r\n", "\n")
+    anchor = '''        return bool(entity_id) and entity_id in ops.shared_player_ids(self._room(key or self.current))
+'''
+    assert old.count(anchor) == 1
+    put(PROJECT, old.replace(anchor, anchor + '''
+    def shared_players(self, key: str) -> list[str]:
+        return ops.shared_player_ids(self._room(key))
+'''), saved[PROJECT])
+    run = pytest(TEST, "-k", "player or river", "-rfE", "--tb=line")
+finally:
+    for p, data in saved.items():
+        (REPO / p).write_bytes(data)
+lines = [ln for ln in run.stdout.splitlines() if ln.startswith(("FAILED", "ERROR")) or " passed" in ln or
+         " failed" in ln or "AssertionError" in ln]
+BEFORE.write_text(f"Reviewed implementation ({REVIEWED[:8]}'s engine + Project.shared_players accessor only):\n"
+                  + "\n".join(lines) + "\n", encoding="utf-8")
+print(BEFORE.read_text(encoding="utf-8"))
+
+# (2) faults
+MUTANTS = [
+    ("a new line's id ignores the lines the shared player had", OPS,
+     "    if entity_id in _PLAYERS.get():\n", "    if False:\n"),
+    ("a Studio edit doesn't say which objects are the shared player", PROJECT,
+     "ops.in_room(key, player_ids):", "ops.in_room(key):"),
+    ("an AI's change doesn't say which objects are the shared player", AUTHORING,
+     "ops.in_room(room, project.shared_players(room)):", "ops.in_room(room):"),
+    ("the lines an edit gives the shared player are not remembered", PROJECT,
+     "        self.ids_seen.update(ops.player_line_ids(definition))", "        pass"),
+    ("the shared player's lines before an edit are not remembered", PROJECT,
+     "        self.ids_seen.update(ops.player_line_ids(before.player))", "        pass"),
+    ("the shared player's lines are scoped to a room, not the project", OPS,
+     '        return _had("player-line" + _SCOPE)', '        return _retired_here("line", entity_id)'),
+]
+results = []
+for name, path, old, new in MUTANTS:
+    original = (REPO / path).read_bytes()
+    text = body(path)
+    assert text.count(old) == 1, (name, text.count(old))
+    put(path, text.replace(old, new), original)
+    try:
+        run = pytest("-x", TEST)
+    finally:
+        (REPO / path).write_bytes(original)
+    failed = [ln for ln in run.stdout.splitlines() if ln.startswith(("FAILED", "ERROR"))]
+    results.append({"fault": name, "caught": run.returncode != 0, "by": failed[:1]})
+    print(name, "CAUGHT" if run.returncode else "SURVIVED", failed[:1], flush=True)
+OUT.write_text(json.dumps(results, indent=1) + "\n", encoding="utf-8")

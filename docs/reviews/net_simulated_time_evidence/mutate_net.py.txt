@@ -1,0 +1,146 @@
+"""Deliberate faults in the networking test helpers and stand-ins; which tests fail. Each file is restored.
+
+Usage: py mutate_net.py <repo> <out.json> <group> [<group> ...]
+Groups: helpers (tests/net_walk.py, tests/net_resume.py: run on any checkout), standins (the changed test modules).
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+REPO = Path(sys.argv[1])
+OUT = Path(sys.argv[2])
+GROUPS = sys.argv[3:]
+WALK, RESUME, SIM = "tests/test_mesh_net_walk.py", "tests/test_mesh_net_resume.py", "tests/test_mesh_net_sim_time.py"
+
+HELPERS = {
+    "none (helpers)": (None, None, None, [WALK, RESUME]),
+    "walk: decides while the avatar still moves (the old driver's fault)": (
+        "tests/net_walk.py", "                    elif tick - since >= 2:\n", "                    else:\n", [WALK]),
+    "walk: lets go without allowing for the last leg's carry": (
+        "tests/net_walk.py", "            carry = abs(here - released)\n", "            carry = 0.0\n", [WALK]),
+    "walk: never walks back after an overshoot": (
+        "tests/net_walk.py", "        step = key if (target - here) * AXES[key][1] > 0 else BACK[key]\n", "        step = key\n", [WALK]),
+    "walk: settles anywhere": (
+        "tests/net_walk.py", "        if abs(target - here) <= within:\n", "        if True:\n", [WALK]),
+    "walk: a wait that times out is taken as reached": (
+        "tests/net_walk.py",
+        "            raise AssertionError(f\"{key} to {target}: {what} not reached in {timeout} s (legs {log})\") from exc\n",
+        "            return (await sample())[1]\n", [WALK]),
+    "walk: gives up only after 1000 legs": ("tests/net_walk.py", "ATTEMPTS = 12\n", "ATTEMPTS = 1000\n", [WALK]),
+    "resume: R sent without waiting for the old session to close": (
+        "tests/net_resume.py",
+        "    await until(\"the disconnect\", lambda r: r[\"phase\"] == \"disconnected\" and not m.online\n"
+        "                and (\"disconnect\", room) in events())\n", "", [RESUME]),
+    "resume: the pre-drop reply is taken as the resumed session (N7's fault)": (
+        "tests/net_resume.py",
+        "        if not m.online or not events() or events()[-1][0] != \"resume\":\n"
+        "            return False  # (a fresh join would be another player: \"connect\" with a new pid, this one still away)\n"
+        "        assert m.instance == room, f\"P{pid} resumed into {m.instance}, not {room}\"\n"
+        "        return (r[\"phase\"] == \"playing\" and r[\"player\"] == pid and r[\"entity\"] == m.eid and r[\"room\"] == m.instance\n"
+        "                and any(p[0] == m.eid for p in r[\"state\"][\"players\"]))\n",
+        "        return r[\"phase\"] == \"playing\" and bool(r[\"state\"]) and r[\"key\"] is not None and len(r[\"state\"][\"players\"]) == 1\n",
+        [RESUME]),
+    "resume: the window's entity is not compared with the server's": (
+        "tests/net_resume.py", "r[\"player\"] == pid and r[\"entity\"] == m.eid and r[\"room\"] == m.instance\n",
+        "r[\"player\"] == pid and r[\"room\"] == m.instance\n", [RESUME]),
+    "resume: the room resumed into is not checked": (
+        "tests/net_resume.py", "        assert m.instance == room, f\"P{pid} resumed into {m.instance}, not {room}\"\n", "", [RESUME]),
+    "resume: the window's room is not compared with the server's": (
+        "tests/net_resume.py", "r[\"entity\"] == m.eid and r[\"room\"] == m.instance\n", "r[\"entity\"] == m.eid\n", [RESUME]),
+    "resume: the restored state is not looked at": (
+        "tests/net_resume.py", "\n                and any(p[0] == m.eid for p in r[\"state\"][\"players\"]))\n", ")\n", [RESUME]),
+    "resume: a wait that times out is taken as reached": (
+        "tests/net_resume.py",
+        "            seen = {k: reply.get(k) for k in (\"phase\", \"player\", \"room\", \"key\", \"entity\")}\n", "            return reply\n", [RESUME]),
+}
+
+STANDINS = {
+    "none (stand-ins)": (None, None, None, [WALK, RESUME, SIM]),
+    "window: a release takes effect one tick early": (
+        WALK, "        self.pending.append((self.room.tick + self.late, op, key))\n",
+        "        self.pending.append((self.room.tick + self.late - (op == \"release\"), op, key))\n", [WALK]),
+    "window: a release takes effect one tick late": (
+        WALK, "        self.pending.append((self.room.tick + self.late, op, key))\n",
+        "        self.pending.append((self.room.tick + self.late + (op == \"release\"), op, key))\n", [WALK]),
+    "window: a press takes effect one tick late": (
+        WALK, "        self.pending.append((self.room.tick + self.late, op, key))\n",
+        "        self.pending.append((self.room.tick + self.late + (op == \"press\"), op, key))\n", [WALK]),
+    "window: commands due in one tick are handled last first": (
+        WALK, "        for item in [p for p in self.pending if p[0] <= self.room.tick]:\n",
+        "        for item in reversed([p for p in self.pending if p[0] <= self.room.tick]):\n", [WALK]),
+    "server: every tenth tick is skipped": (
+        WALK, "        self.room.step()\n", "        if self.seq % 10:\n            self.room.step()\n", [WALK]),
+    "server: every tenth tick is run twice": (
+        WALK, "        self.room.step()\n", "        self.room.step()\n        if not self.seq % 10:\n            self.room.step()\n", [WALK]),
+    "server: ticks every 40 ms of simulated time": (
+        WALK, "                await asyncio.sleep(TICK)\n", "                await asyncio.sleep(2 * TICK)\n", [WALK]),
+    "server: never ticks": (
+        WALK, "                await asyncio.sleep(TICK)\n                window.tick()\n", "                await asyncio.sleep(TICK)\n", [WALK]),
+    "resume window: the old session closes at once (no race left)": (
+        RESUME, "                    await asyncio.sleep(CLOSE)  # ... and the loop waits for the close, the old session still shown\n",
+        "                    await asyncio.sleep(0)\n", [RESUME]),
+    "resume window: a key is handled as its command arrives (no frame queue)": (
+        RESUME, "            await asyncio.sleep(FRAME)\n            while self.queue:\n",
+        "            await asyncio.sleep(0)\n            while self.queue:\n", [RESUME]),
+    "clock: a timer within 15.6 ms is called due (a real Windows loop's rule)": (
+        "tests/net_sim_time.py", "        self._clock_resolution = 1e-9\n", "        self._clock_resolution = 0.015625\n", [SIM, WALK, RESUME]),
+    "clock: waits run twice as long as asked": (
+        "tests/net_sim_time.py", "        self.now += max(0.0, timeout)\n", "        self.now += 2 * max(0.0, timeout)\n", [SIM, WALK, RESUME]),
+    "clock: simulated time never moves": (
+        "tests/net_sim_time.py", "        self.now += max(0.0, timeout)\n", "        self.now += 0.0\n", [SIM]),
+    "clock: a wait nothing can end is waited on (no guard)": (
+        "tests/net_sim_time.py",
+        "            raise SimulationStuck(f\"nothing can continue at {self.now:.3f} s simulated: every task waits, and not on a timer\")\n",
+        "            timeout = 1.0\n", [SIM]),
+    "clock: no real-time limit": (
+        "tests/net_sim_time.py", "        if time.perf_counter() > self.real_deadline:\n", "        if False:\n",
+        [SIM + "::test_a_loop_that_never_waits_fails_on_real_time"], 90),
+}
+
+mutations = {}
+if "helpers" in GROUPS:
+    mutations.update(HELPERS)
+if "standins" in GROUPS:
+    mutations.update(STANDINS)
+env = dict(os.environ)
+env.pop("MESH_GL_SMOKE", None)
+results = {}
+for name, (file, old, new, tests, *limits) in mutations.items():
+    limit = limits[0] if limits else 900
+    original = None
+    try:
+        if file is not None:
+            path = REPO / file
+            original = path.read_bytes()
+            text = original.decode("utf-8")
+            nl = "\r\n" if "\r\n" in text else "\n"
+            flat = text.replace("\r\n", "\n")
+            if flat.count(old) != 1:
+                results[name] = {"error": f"pattern found {flat.count(old)} times in {file}"}
+                print("SKIPPED ", name, results[name]["error"], flush=True)
+                original = None
+                continue
+            path.write_bytes(flat.replace(old, new).replace("\n", nl).encode("utf-8"))
+        started = time.perf_counter()
+        try:
+            run = subprocess.run([sys.executable, "-m", "pytest", "-o", "addopts=", "-q", "-p", "no:cacheprovider", "-W", "error",
+                                  "--strict-markers", *tests], cwd=REPO, env=env, capture_output=True, text=True, timeout=limit)
+            failed = sorted(set(re.findall(r"^(?:FAILED|ERROR) \S+?::(.+?)(?: - .*)?$", run.stdout, re.M)))
+            summary = run.stdout.strip().splitlines()[-1] if run.stdout.strip() else run.stderr[-200:]
+        except subprocess.TimeoutExpired:
+            failed, summary = [f"(the test did not finish in {limit} s: nothing else ends it)"], "timeout"
+        results[name] = {"file": file, "tests_run": tests, "caught": bool(failed), "failing": failed, "summary": summary,
+                         "wall_s": round(time.perf_counter() - started, 1)}
+    finally:
+        if original is not None:
+            (REPO / file).write_bytes(original)
+    r = results[name]
+    print(("CAUGHT " if r["caught"] else "PASSED ") + f" {name}: {r['summary']}", flush=True)
+    for test in r["failing"]:
+        print("          ", test[:150], flush=True)
+OUT.write_text(json.dumps(results, indent=1), encoding="utf-8")
+print(subprocess.run(["git", "status", "--short"], cwd=REPO, capture_output=True, text=True).stdout)

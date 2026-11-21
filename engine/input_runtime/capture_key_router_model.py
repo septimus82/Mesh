@@ -1332,11 +1332,11 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             action_id="capture.overlay.encounter_debug.toggle",
             when=_when_not_debug,
         ),
-        # F9 - Copy coords (debug/inspector) or pause (normal path)
+        # F9 - Quick load (copies coords instead while debugging/inspecting)
         RouteSpec(
             scope=SCOPE_GLOBAL,
             combo=KeyCombo(key=key.F9, mods=0),
-            action_id="capture.debug.copy_coords_or_pause",
+            action_id="capture.savegame.quickload_or_copy_coords",
             when=_when_always,
         ),
         RouteSpec(

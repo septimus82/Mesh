@@ -1,0 +1,14 @@
+B-02: primary tag survives save/load. Code commit 2b28e223aaea53beabd6a106823f0438fa1919fc on base eda041ac.
+Change: SavedEntityState.primary_tag (optional record field "primary_tag"; NOT "tag"); written from sprite.mesh_tag;
+tags stay sorted. Restore: primary_tag present -> mesh_tag = it; absent -> live mesh_tag kept if among saved tags,
+else tags[0] + WARN save.restore.primary_tag_guessed (added to IDENTITY_DIAGNOSTIC_CODES). Schema stays v3.
+Unresolved records are stored verbatim, so they carry the field untouched (test).
+Digest: digest.py untouched; normalize_entity_state projects named fields only, so primary_tag is not in it and
+digests are identical (test_digest_ignores_primary_tag). Left out deliberately: adding it would change every digest
+of an entity with tags.
+Repro (repro_probe.py.txt): base {'hero': 'friendly', 'npc': 'alpha'}; head {'hero': 'player', 'npc': 'guard'}.
+Tests: tests_on_base.txt (7 of 8 fail on base; the unresolved-carry test passes on base as a guard), tests_on_head.txt (8 pass).
+Mutations: mutations_output.txt (5/5 caught).
+Adjacent: 115 test files referencing save_runtime/SaveManager/entity_state/digest + tier ratchet, -m "not slow and not e2e":
+all passed, 1 skipped. GPU: MESH_GL_SMOKE=1 tests/test_b01_save_identity_gpu.py + tests/test_saved_world_gpu.py: 10 passed.
+Gates: ruff ok, mypy ok, scan_exception_policies silent broad catches 482 = baseline.

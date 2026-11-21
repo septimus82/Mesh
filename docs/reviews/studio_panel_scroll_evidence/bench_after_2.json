@@ -1,0 +1,2758 @@
+{
+ "repo": "Mesh-panels",
+ "memory_run": false,
+ "python": "3.13.3",
+ "has_selective_refresh": true,
+ "hd2d": {
+  "idle_frame": {
+   "n": 30,
+   "handler_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "update_ms": {
+    "median": 0.309,
+    "p95": 0.47,
+    "max": 0.493,
+    "mean": 0.339
+   },
+   "draw_ms": {
+    "median": 10.642,
+    "p95": 12.556,
+    "max": 54.829,
+    "mean": 11.937
+   },
+   "ui_draw_ms": {
+    "median": 3.201,
+    "p95": 4.258,
+    "max": 47.234,
+    "mean": 4.767
+   },
+   "scene_draw_ms": {
+    "median": 7.314,
+    "p95": 8.034,
+    "max": 8.298,
+    "mean": 7.171
+   },
+   "latency_ms": {
+    "median": 10.961,
+    "p95": 12.918,
+    "max": 55.214,
+    "mean": 12.276
+   },
+   "rebuilds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rebuild_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "right_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "top_bar_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "widgets": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "binds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "bind_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   }
+  },
+  "live_widgets_at_start": 137,
+  "panels_visible": [
+   230,
+   330
+  ],
+  "inspector_scroll_dialogue": {
+   "n": 42,
+   "handler_ms": {
+    "median": 11.172,
+    "p95": 13.648,
+    "max": 14.949,
+    "mean": 11.403
+   },
+   "update_ms": {
+    "median": 0.353,
+    "p95": 0.413,
+    "max": 0.466,
+    "mean": 0.357
+   },
+   "draw_ms": {
+    "median": 72.875,
+    "p95": 80.764,
+    "max": 84.308,
+    "mean": 73.391
+   },
+   "ui_draw_ms": {
+    "median": 65.935,
+    "p95": 73.942,
+    "max": 76.876,
+    "mean": 66.385
+   },
+   "scene_draw_ms": {
+    "median": 6.994,
+    "p95": 8.221,
+    "max": 8.545,
+    "mean": 7.006
+   },
+   "latency_ms": {
+    "median": 85.28,
+    "p95": 93.557,
+    "max": 95.747,
+    "mean": 85.151
+   },
+   "rebuilds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rebuild_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "rewindows": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rewindow_ms": {
+    "median": 10.852,
+    "p95": 13.308,
+    "max": 14.528,
+    "mean": 11.043
+   },
+   "left_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "right_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "top_bar_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "widgets": {
+    "median": 3.0,
+    "p95": 3,
+    "max": 3,
+    "mean": 2.857
+   },
+   "binds": {
+    "median": 167.0,
+    "p95": 172,
+    "max": 172,
+    "mean": 163.214
+   },
+   "bind_ms": {
+    "median": 4.896,
+    "p95": 5.677,
+    "max": 6.469,
+    "mean": 4.989
+   }
+  },
+  "inspector_scroll_dialogue_notches": 42,
+  "inspector_scroll_look": {
+   "n": 36,
+   "handler_ms": {
+    "median": 9.895,
+    "p95": 11.993,
+    "max": 12.999,
+    "mean": 9.767
+   },
+   "update_ms": {
+    "median": 0.348,
+    "p95": 0.451,
+    "max": 0.564,
+    "mean": 0.366
+   },
+   "draw_ms": {
+    "median": 67.798,
+    "p95": 71.109,
+    "max": 71.857,
+    "mean": 67.767
+   },
+   "ui_draw_ms": {
+    "median": 60.33,
+    "p95": 63.483,
+    "max": 63.976,
+    "mean": 60.143
+   },
+   "scene_draw_ms": {
+    "median": 7.63,
+    "p95": 8.639,
+    "max": 8.728,
+    "mean": 7.624
+   },
+   "latency_ms": {
+    "median": 77.958,
+    "p95": 82.851,
+    "max": 84.149,
+    "mean": 77.901
+   },
+   "rebuilds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rebuild_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "rewindows": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rewindow_ms": {
+    "median": 9.564,
+    "p95": 11.68,
+    "max": 12.637,
+    "mean": 9.414
+   },
+   "left_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "right_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "top_bar_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "widgets": {
+    "median": 2.5,
+    "p95": 3,
+    "max": 3,
+    "mean": 2.5
+   },
+   "binds": {
+    "median": 147.5,
+    "p95": 162,
+    "max": 162,
+    "mean": 147.5
+   },
+   "bind_ms": {
+    "median": 4.342,
+    "p95": 5.727,
+    "max": 6.06,
+    "mean": 4.459
+   }
+  },
+  "live_widgets_after_inspector_scrolls": 140,
+  "inspector_scroll_models": {
+   "n": 24,
+   "handler_ms": {
+    "median": 9.211,
+    "p95": 15.138,
+    "max": 20.828,
+    "mean": 9.897
+   },
+   "update_ms": {
+    "median": 0.333,
+    "p95": 0.427,
+    "max": 0.52,
+    "mean": 0.351
+   },
+   "draw_ms": {
+    "median": 38.339,
+    "p95": 72.199,
+    "max": 72.75,
+    "mean": 44.404
+   },
+   "ui_draw_ms": {
+    "median": 33.334,
+    "p95": 58.937,
+    "max": 58.988,
+    "mean": 37.946
+   },
+   "scene_draw_ms": {
+    "median": 4.933,
+    "p95": 13.262,
+    "max": 13.762,
+    "mean": 6.458
+   },
+   "latency_ms": {
+    "median": 47.405,
+    "p95": 87.681,
+    "max": 93.93,
+    "mean": 54.652
+   },
+   "rebuilds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rebuild_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "rewindows": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rewindow_ms": {
+    "median": 8.903,
+    "p95": 14.8,
+    "max": 20.494,
+    "mean": 9.572
+   },
+   "left_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "right_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "top_bar_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "widgets": {
+    "median": 3.0,
+    "p95": 7,
+    "max": 11,
+    "mean": 3.583
+   },
+   "binds": {
+    "median": 147.0,
+    "p95": 225,
+    "max": 303,
+    "mean": 156.0
+   },
+   "bind_ms": {
+    "median": 4.222,
+    "p95": 5.7,
+    "max": 7.606,
+    "mean": 4.528
+   }
+  },
+  "select_change": {
+   "n": 18,
+   "handler_ms": {
+    "median": 195.872,
+    "p95": 267.788,
+    "max": 317.614,
+    "mean": 197.12
+   },
+   "update_ms": {
+    "median": 0.375,
+    "p95": 0.392,
+    "max": 0.486,
+    "mean": 0.374
+   },
+   "draw_ms": {
+    "median": 73.449,
+    "p95": 77.989,
+    "max": 83.979,
+    "mean": 74.053
+   },
+   "ui_draw_ms": {
+    "median": 69.74,
+    "p95": 74.31,
+    "max": 79.255,
+    "mean": 70.325
+   },
+   "scene_draw_ms": {
+    "median": 3.612,
+    "p95": 4.724,
+    "max": 4.962,
+    "mean": 3.728
+   },
+   "latency_ms": {
+    "median": 269.984,
+    "p95": 340.696,
+    "max": 392.01,
+    "mean": 271.546
+   },
+   "rebuilds": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 195.855,
+    "p95": 267.77,
+    "max": 317.596,
+    "mean": 197.101
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 54.949,
+    "p95": 161.453,
+    "max": 171.376,
+    "mean": 67.592
+   },
+   "right_panel_ms": {
+    "median": 88.922,
+    "p95": 105.737,
+    "max": 107.437,
+    "mean": 88.916
+   },
+   "top_bar_ms": {
+    "median": 33.79,
+    "p95": 37.578,
+    "max": 39.692,
+    "mean": 34.478
+   },
+   "widgets": {
+    "median": 148.5,
+    "p95": 160,
+    "max": 160,
+    "mean": 148.5
+   },
+   "binds": {
+    "median": 3013.5,
+    "p95": 3247,
+    "max": 3247,
+    "mean": 3013.5
+   },
+   "bind_ms": {
+    "median": 67.719,
+    "p95": 76.455,
+    "max": 188.122,
+    "mean": 73.325
+   }
+  },
+  "inspector_tab_switch": {
+   "n": 18,
+   "handler_ms": {
+    "median": 165.927,
+    "p95": 288.354,
+    "max": 349.433,
+    "mean": 190.156
+   },
+   "update_ms": {
+    "median": 0.386,
+    "p95": 0.412,
+    "max": 0.507,
+    "mean": 0.391
+   },
+   "draw_ms": {
+    "median": 71.833,
+    "p95": 77.636,
+    "max": 78.015,
+    "mean": 70.99
+   },
+   "ui_draw_ms": {
+    "median": 67.706,
+    "p95": 74.243,
+    "max": 74.244,
+    "mean": 67.177
+   },
+   "scene_draw_ms": {
+    "median": 3.918,
+    "p95": 4.854,
+    "max": 4.961,
+    "mean": 3.813
+   },
+   "latency_ms": {
+    "median": 239.999,
+    "p95": 360.586,
+    "max": 418.253,
+    "mean": 261.536
+   },
+   "rebuilds": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 163.235,
+    "p95": 285.728,
+    "max": 346.8,
+    "mean": 187.542
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 55.999,
+    "p95": 58.066,
+    "max": 60.695,
+    "mean": 55.928
+   },
+   "right_panel_ms": {
+    "median": 68.23,
+    "p95": 130.908,
+    "max": 192.64,
+    "mean": 86.16
+   },
+   "top_bar_ms": {
+    "median": 32.349,
+    "p95": 34.838,
+    "max": 35.233,
+    "mean": 32.606
+   },
+   "widgets": {
+    "median": 135.0,
+    "p95": 167,
+    "max": 167,
+    "mean": 141.5
+   },
+   "binds": {
+    "median": 2776.0,
+    "p95": 3459,
+    "max": 3459,
+    "mean": 2904.667
+   },
+   "bind_ms": {
+    "median": 61.729,
+    "p95": 79.73,
+    "max": 82.0,
+    "mean": 65.059
+   }
+  },
+  "tools_category_switch": {
+   "n": 15,
+   "handler_ms": {
+    "median": 132.626,
+    "p95": 167.861,
+    "max": 274.129,
+    "mean": 146.302
+   },
+   "update_ms": {
+    "median": 0.336,
+    "p95": 0.418,
+    "max": 0.517,
+    "mean": 0.354
+   },
+   "draw_ms": {
+    "median": 60.875,
+    "p95": 74.912,
+    "max": 77.38,
+    "mean": 62.3
+   },
+   "ui_draw_ms": {
+    "median": 56.449,
+    "p95": 70.887,
+    "max": 72.987,
+    "mean": 58.54
+   },
+   "scene_draw_ms": {
+    "median": 3.831,
+    "p95": 4.394,
+    "max": 4.426,
+    "mean": 3.761
+   },
+   "latency_ms": {
+    "median": 193.836,
+    "p95": 242.251,
+    "max": 331.114,
+    "mean": 208.956
+   },
+   "rebuilds": {
+    "median": 1,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 130.957,
+    "p95": 165.597,
+    "max": 272.094,
+    "mean": 143.986
+   },
+   "rewindows": {
+    "median": 0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 41.586,
+    "p95": 77.279,
+    "max": 77.379,
+    "mean": 48.282
+   },
+   "right_panel_ms": {
+    "median": 48.715,
+    "p95": 54.482,
+    "max": 200.756,
+    "mean": 58.604
+   },
+   "top_bar_ms": {
+    "median": 32.245,
+    "p95": 33.346,
+    "max": 35.102,
+    "mean": 32.311
+   },
+   "widgets": {
+    "median": 115,
+    "p95": 131,
+    "max": 131,
+    "mean": 113.6
+   },
+   "binds": {
+    "median": 2313,
+    "p95": 2746,
+    "max": 2746,
+    "mean": 2317.6
+   },
+   "bind_ms": {
+    "median": 50.203,
+    "p95": 59.194,
+    "max": 60.563,
+    "mean": 50.945
+   }
+  },
+  "live_widgets_after_switching": 101,
+  "property_toggle": {
+   "n": 12,
+   "handler_ms": {
+    "median": 382.13,
+    "p95": 474.571,
+    "max": 565.589,
+    "mean": 403.899
+   },
+   "update_ms": {
+    "median": 0.315,
+    "p95": 0.341,
+    "max": 0.351,
+    "mean": 0.319
+   },
+   "draw_ms": {
+    "median": 69.619,
+    "p95": 70.367,
+    "max": 72.48,
+    "mean": 69.82
+   },
+   "ui_draw_ms": {
+    "median": 56.021,
+    "p95": 57.282,
+    "max": 58.002,
+    "mean": 56.088
+   },
+   "scene_draw_ms": {
+    "median": 13.681,
+    "p95": 14.429,
+    "max": 14.478,
+    "mean": 13.732
+   },
+   "latency_ms": {
+    "median": 452.332,
+    "p95": 545.112,
+    "max": 635.274,
+    "mean": 474.038
+   },
+   "rebuilds": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 137.684,
+    "p95": 165.647,
+    "max": 232.337,
+    "mean": 147.852
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 29.906,
+    "p95": 35.007,
+    "max": 124.174,
+    "mean": 38.195
+   },
+   "right_panel_ms": {
+    "median": 73.309,
+    "p95": 74.597,
+    "max": 79.783,
+    "mean": 73.06
+   },
+   "top_bar_ms": {
+    "median": 32.45,
+    "p95": 35.074,
+    "max": 48.091,
+    "mean": 33.632
+   },
+   "widgets": {
+    "median": 115.0,
+    "p95": 115,
+    "max": 115,
+    "mean": 115.0
+   },
+   "binds": {
+    "median": 2322.0,
+    "p95": 2322,
+    "max": 2322,
+    "mean": 2322.0
+   },
+   "bind_ms": {
+    "median": 50.084,
+    "p95": 51.698,
+    "max": 145.642,
+    "mean": 57.873
+   }
+  },
+  "type_a_character": {
+   "n": 6,
+   "handler_ms": {
+    "median": 0.722,
+    "p95": 0.818,
+    "max": 0.818,
+    "mean": 0.736
+   },
+   "update_ms": {
+    "median": 0.253,
+    "p95": 0.259,
+    "max": 0.259,
+    "mean": 0.253
+   },
+   "draw_ms": {
+    "median": 21.802,
+    "p95": 23.316,
+    "max": 23.316,
+    "mean": 21.87
+   },
+   "ui_draw_ms": {
+    "median": 18.108,
+    "p95": 18.844,
+    "max": 18.844,
+    "mean": 18.169
+   },
+   "scene_draw_ms": {
+    "median": 3.53,
+    "p95": 4.694,
+    "max": 4.694,
+    "mean": 3.701
+   },
+   "latency_ms": {
+    "median": 22.813,
+    "p95": 24.307,
+    "max": 24.307,
+    "mean": 22.859
+   },
+   "rebuilds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rebuild_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "right_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "top_bar_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "widgets": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "binds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "bind_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   }
+  },
+  "scroll_with_typed_value": {
+   "n": 6,
+   "handler_ms": {
+    "median": 525.349,
+    "p95": 634.082,
+    "max": 634.082,
+    "mean": 554.171
+   },
+   "update_ms": {
+    "median": 0.317,
+    "p95": 0.412,
+    "max": 0.412,
+    "mean": 0.335
+   },
+   "draw_ms": {
+    "median": 74.455,
+    "p95": 78.769,
+    "max": 78.769,
+    "mean": 74.875
+   },
+   "ui_draw_ms": {
+    "median": 60.632,
+    "p95": 62.004,
+    "max": 62.004,
+    "mean": 60.452
+   },
+   "scene_draw_ms": {
+    "median": 13.997,
+    "p95": 16.765,
+    "max": 16.765,
+    "mean": 14.423
+   },
+   "latency_ms": {
+    "median": 599.791,
+    "p95": 710.157,
+    "max": 710.157,
+    "mean": 629.381
+   },
+   "rebuilds": {
+    "median": 2.0,
+    "p95": 2,
+    "max": 2,
+    "mean": 2.0
+   },
+   "rebuild_ms": {
+    "median": 286.576,
+    "p95": 292.509,
+    "max": 292.509,
+    "mean": 286.442
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 60.137,
+    "p95": 66.784,
+    "max": 66.784,
+    "mean": 61.381
+   },
+   "right_panel_ms": {
+    "median": 150.573,
+    "p95": 158.891,
+    "max": 158.891,
+    "mean": 150.82
+   },
+   "top_bar_ms": {
+    "median": 63.065,
+    "p95": 71.774,
+    "max": 71.774,
+    "mean": 65.117
+   },
+   "widgets": {
+    "median": 231.0,
+    "p95": 231,
+    "max": 231,
+    "mean": 231.0
+   },
+   "binds": {
+    "median": 4673.0,
+    "p95": 4673,
+    "max": 4673,
+    "mean": 4673.0
+   },
+   "bind_ms": {
+    "median": 103.782,
+    "p95": 105.866,
+    "max": 105.866,
+    "mean": 103.292
+   }
+  },
+  "lighting_panel_buttons": [
+   "Done",
+   "Light 6: Warm, size 200 - no shadow map",
+   "Light 5: Warm, size 200 - no shadow map",
+   "Light 4: Warm, size 200 - no shadow map",
+   "Light 3: custom, size 224 - shadows",
+   "Light 2: custom, size 224 - shadows",
+   "Light 1: room light colour (custom)",
+   "+ Add light",
+   "1",
+   "Softer",
+   "Soft",
+   "Sharp",
+   "Shadows off",
+   "Shadows on"
+  ],
+  "lighting_scroll": {
+   "n": 42,
+   "handler_ms": {
+    "median": 10.012,
+    "p95": 11.219,
+    "max": 13.946,
+    "mean": 9.976
+   },
+   "update_ms": {
+    "median": 0.299,
+    "p95": 0.379,
+    "max": 0.421,
+    "mean": 0.308
+   },
+   "draw_ms": {
+    "median": 39.646,
+    "p95": 43.496,
+    "max": 45.67,
+    "mean": 39.329
+   },
+   "ui_draw_ms": {
+    "median": 35.983,
+    "p95": 39.888,
+    "max": 41.934,
+    "mean": 35.701
+   },
+   "scene_draw_ms": {
+    "median": 3.444,
+    "p95": 5.709,
+    "max": 6.07,
+    "mean": 3.629
+   },
+   "latency_ms": {
+    "median": 49.685,
+    "p95": 54.891,
+    "max": 57.267,
+    "mean": 49.613
+   },
+   "rebuilds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rebuild_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "rewindows": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rewindow_ms": {
+    "median": 9.721,
+    "p95": 10.886,
+    "max": 13.649,
+    "mean": 9.675
+   },
+   "left_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "right_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "top_bar_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "widgets": {
+    "median": 3.0,
+    "p95": 3,
+    "max": 3,
+    "mean": 2.857
+   },
+   "binds": {
+    "median": 159.5,
+    "p95": 162,
+    "max": 162,
+    "mean": 156.429
+   },
+   "bind_ms": {
+    "median": 4.712,
+    "p95": 5.865,
+    "max": 6.148,
+    "mean": 4.79
+   }
+  },
+  "lighting_control_click": {
+   "n": 12,
+   "handler_ms": {
+    "median": 449.429,
+    "p95": 554.275,
+    "max": 561.898,
+    "mean": 471.448
+   },
+   "update_ms": {
+    "median": 0.321,
+    "p95": 0.383,
+    "max": 0.464,
+    "mean": 0.339
+   },
+   "draw_ms": {
+    "median": 79.721,
+    "p95": 82.902,
+    "max": 85.842,
+    "mean": 79.703
+   },
+   "ui_draw_ms": {
+    "median": 65.813,
+    "p95": 70.042,
+    "max": 71.686,
+    "mean": 66.299
+   },
+   "scene_draw_ms": {
+    "median": 13.113,
+    "p95": 14.545,
+    "max": 15.244,
+    "mean": 13.405
+   },
+   "latency_ms": {
+    "median": 531.669,
+    "p95": 635.65,
+    "max": 642.174,
+    "mean": 551.491
+   },
+   "rebuilds": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 202.662,
+    "p95": 209.942,
+    "max": 308.999,
+    "mean": 210.573
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 29.997,
+    "p95": 33.499,
+    "max": 33.629,
+    "mean": 30.633
+   },
+   "right_panel_ms": {
+    "median": 133.462,
+    "p95": 138.511,
+    "max": 139.338,
+    "mean": 134.303
+   },
+   "top_bar_ms": {
+    "median": 33.059,
+    "p95": 35.554,
+    "max": 138.842,
+    "mean": 41.868
+   },
+   "widgets": {
+    "median": 142.0,
+    "p95": 142,
+    "max": 142,
+    "mean": 142.0
+   },
+   "binds": {
+    "median": 2918.0,
+    "p95": 2918,
+    "max": 2918,
+    "mean": 2918.0
+   },
+   "bind_ms": {
+    "median": 65.788,
+    "p95": 69.997,
+    "max": 170.398,
+    "mean": 74.185
+   }
+  },
+  "resize": {
+   "n": 12,
+   "handler_ms": {
+    "median": 22.567,
+    "p95": 23.323,
+    "max": 23.625,
+    "mean": 22.328
+   },
+   "update_ms": {
+    "median": 205.142,
+    "p95": 214.177,
+    "max": 338.817,
+    "mean": 216.782
+   },
+   "draw_ms": {
+    "median": 70.15,
+    "p95": 76.637,
+    "max": 77.085,
+    "mean": 70.493
+   },
+   "ui_draw_ms": {
+    "median": 64.304,
+    "p95": 70.501,
+    "max": 71.228,
+    "mean": 64.765
+   },
+   "scene_draw_ms": {
+    "median": 5.664,
+    "p95": 6.584,
+    "max": 6.592,
+    "mean": 5.729
+   },
+   "latency_ms": {
+    "median": 298.776,
+    "p95": 310.849,
+    "max": 432.423,
+    "mean": 309.603
+   },
+   "rebuilds": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 204.787,
+    "p95": 213.853,
+    "max": 338.425,
+    "mean": 216.406
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 30.697,
+    "p95": 35.94,
+    "max": 36.455,
+    "mean": 31.243
+   },
+   "right_panel_ms": {
+    "median": 136.108,
+    "p95": 146.339,
+    "max": 266.518,
+    "mean": 146.828
+   },
+   "top_bar_ms": {
+    "median": 33.694,
+    "p95": 36.399,
+    "max": 36.42,
+    "mean": 33.867
+   },
+   "widgets": {
+    "median": 142.0,
+    "p95": 142,
+    "max": 142,
+    "mean": 142.0
+   },
+   "binds": {
+    "median": 2910.5,
+    "p95": 2918,
+    "max": 2918,
+    "mean": 2910.5
+   },
+   "bind_ms": {
+    "median": 66.588,
+    "p95": 68.771,
+    "max": 199.046,
+    "mean": 77.121
+   }
+  },
+  "room_switch": {
+   "n": 6,
+   "handler_ms": {
+    "median": 368.176,
+    "p95": 469.907,
+    "max": 469.907,
+    "mean": 342.748
+   },
+   "update_ms": {
+    "median": 0.369,
+    "p95": 0.438,
+    "max": 0.438,
+    "mean": 0.37
+   },
+   "draw_ms": {
+    "median": 83.448,
+    "p95": 91.032,
+    "max": 91.032,
+    "mean": 82.521
+   },
+   "ui_draw_ms": {
+    "median": 72.639,
+    "p95": 77.472,
+    "max": 77.472,
+    "mean": 71.871
+   },
+   "scene_draw_ms": {
+    "median": 10.564,
+    "p95": 14.05,
+    "max": 14.05,
+    "mean": 10.651
+   },
+   "latency_ms": {
+    "median": 450.487,
+    "p95": 561.299,
+    "max": 561.299,
+    "mean": 425.639
+   },
+   "rebuilds": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 164.419,
+    "p95": 286.39,
+    "max": 286.39,
+    "mean": 199.326
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 56.671,
+    "p95": 61.812,
+    "max": 61.812,
+    "mean": 57.058
+   },
+   "right_panel_ms": {
+    "median": 68.704,
+    "p95": 177.093,
+    "max": 177.093,
+    "mean": 84.977
+   },
+   "top_bar_ms": {
+    "median": 32.411,
+    "p95": 161.287,
+    "max": 161.287,
+    "mean": 54.211
+   },
+   "widgets": {
+    "median": 117.0,
+    "p95": 121,
+    "max": 121,
+    "mean": 117.0
+   },
+   "binds": {
+    "median": 2433.0,
+    "p95": 2515,
+    "max": 2515,
+    "mean": 2433.0
+   },
+   "bind_ms": {
+    "median": 54.31,
+    "p95": 182.3,
+    "max": 182.3,
+    "mean": 76.002
+   }
+  },
+  "live_widgets_at_end": 125,
+  "small_window_panels_visible": [
+   230,
+   330
+  ],
+  "tools_scroll_environment": {
+   "n": 24,
+   "handler_ms": {
+    "median": 7.666,
+    "p95": 9.488,
+    "max": 130.904,
+    "mean": 12.635
+   },
+   "update_ms": {
+    "median": 0.345,
+    "p95": 0.46,
+    "max": 0.509,
+    "mean": 0.36
+   },
+   "draw_ms": {
+    "median": 35.678,
+    "p95": 39.032,
+    "max": 39.855,
+    "mean": 35.684
+   },
+   "ui_draw_ms": {
+    "median": 31.997,
+    "p95": 34.715,
+    "max": 36.336,
+    "mean": 32.072
+   },
+   "scene_draw_ms": {
+    "median": 3.596,
+    "p95": 4.317,
+    "max": 4.709,
+    "mean": 3.612
+   },
+   "latency_ms": {
+    "median": 44.046,
+    "p95": 48.611,
+    "max": 168.335,
+    "mean": 48.679
+   },
+   "rebuilds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rebuild_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "rewindows": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rewindow_ms": {
+    "median": 7.342,
+    "p95": 9.142,
+    "max": 130.516,
+    "mean": 12.29
+   },
+   "left_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "right_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "top_bar_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "widgets": {
+    "median": 2.5,
+    "p95": 3,
+    "max": 3,
+    "mean": 2.5
+   },
+   "binds": {
+    "median": 120.0,
+    "p95": 132,
+    "max": 132,
+    "mean": 120.0
+   },
+   "bind_ms": {
+    "median": 3.508,
+    "p95": 4.056,
+    "max": 4.503,
+    "mean": 3.497
+   }
+  },
+  "live_widgets_before_and_after_many_scrolls": [
+   242,
+   242
+  ]
+ },
+ "2d": {
+  "idle_frame": {
+   "n": 30,
+   "handler_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "update_ms": {
+    "median": 0.274,
+    "p95": 0.327,
+    "max": 0.347,
+    "mean": 0.282
+   },
+   "draw_ms": {
+    "median": 7.557,
+    "p95": 9.095,
+    "max": 23.371,
+    "mean": 8.126
+   },
+   "ui_draw_ms": {
+    "median": 2.506,
+    "p95": 3.037,
+    "max": 18.939,
+    "mean": 3.11
+   },
+   "scene_draw_ms": {
+    "median": 5.043,
+    "p95": 5.773,
+    "max": 6.576,
+    "mean": 5.016
+   },
+   "latency_ms": {
+    "median": 7.868,
+    "p95": 9.369,
+    "max": 23.696,
+    "mean": 8.409
+   },
+   "rebuilds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rebuild_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "right_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "top_bar_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "widgets": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "binds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "bind_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   }
+  },
+  "live_widgets_at_start": 360,
+  "panels_visible": [
+   230,
+   330
+  ],
+  "inspector_scroll_dialogue": {
+   "n": 42,
+   "handler_ms": {
+    "median": 10.235,
+    "p95": 11.448,
+    "max": 11.839,
+    "mean": 10.189
+   },
+   "update_ms": {
+    "median": 0.288,
+    "p95": 0.338,
+    "max": 0.415,
+    "mean": 0.296
+   },
+   "draw_ms": {
+    "median": 43.075,
+    "p95": 47.758,
+    "max": 48.508,
+    "mean": 42.802
+   },
+   "ui_draw_ms": {
+    "median": 37.595,
+    "p95": 42.376,
+    "max": 43.151,
+    "mean": 37.265
+   },
+   "scene_draw_ms": {
+    "median": 5.515,
+    "p95": 6.553,
+    "max": 6.601,
+    "mean": 5.537
+   },
+   "latency_ms": {
+    "median": 53.191,
+    "p95": 58.809,
+    "max": 60.24,
+    "mean": 53.286
+   },
+   "rebuilds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rebuild_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "rewindows": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rewindow_ms": {
+    "median": 9.936,
+    "p95": 11.134,
+    "max": 11.56,
+    "mean": 9.894
+   },
+   "left_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "right_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "top_bar_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "widgets": {
+    "median": 3.0,
+    "p95": 3,
+    "max": 3,
+    "mean": 2.857
+   },
+   "binds": {
+    "median": 167.0,
+    "p95": 172,
+    "max": 172,
+    "mean": 163.214
+   },
+   "bind_ms": {
+    "median": 4.861,
+    "p95": 5.729,
+    "max": 5.913,
+    "mean": 4.905
+   }
+  },
+  "inspector_scroll_dialogue_notches": 42,
+  "inspector_scroll_look": {
+   "n": 36,
+   "handler_ms": {
+    "median": 8.96,
+    "p95": 11.26,
+    "max": 13.323,
+    "mean": 9.056
+   },
+   "update_ms": {
+    "median": 0.292,
+    "p95": 0.339,
+    "max": 0.365,
+    "mean": 0.298
+   },
+   "draw_ms": {
+    "median": 37.588,
+    "p95": 40.662,
+    "max": 41.56,
+    "mean": 37.451
+   },
+   "ui_draw_ms": {
+    "median": 31.696,
+    "p95": 34.081,
+    "max": 35.931,
+    "mean": 31.603
+   },
+   "scene_draw_ms": {
+    "median": 5.713,
+    "p95": 7.296,
+    "max": 7.525,
+    "mean": 5.848
+   },
+   "latency_ms": {
+    "median": 46.647,
+    "p95": 51.047,
+    "max": 55.184,
+    "mean": 46.804
+   },
+   "rebuilds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rebuild_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "rewindows": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rewindow_ms": {
+    "median": 8.637,
+    "p95": 10.991,
+    "max": 13.063,
+    "mean": 8.752
+   },
+   "left_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "right_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "top_bar_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "widgets": {
+    "median": 2.5,
+    "p95": 3,
+    "max": 3,
+    "mean": 2.5
+   },
+   "binds": {
+    "median": 147.5,
+    "p95": 162,
+    "max": 162,
+    "mean": 147.5
+   },
+   "bind_ms": {
+    "median": 4.318,
+    "p95": 5.468,
+    "max": 8.045,
+    "mean": 4.524
+   }
+  },
+  "live_widgets_after_inspector_scrolls": 363,
+  "select_change": {
+   "n": 18,
+   "handler_ms": {
+    "median": 160.438,
+    "p95": 186.757,
+    "max": 344.466,
+    "mean": 171.701
+   },
+   "update_ms": {
+    "median": 0.313,
+    "p95": 0.348,
+    "max": 0.354,
+    "mean": 0.32
+   },
+   "draw_ms": {
+    "median": 66.86,
+    "p95": 70.122,
+    "max": 71.33,
+    "mean": 66.848
+   },
+   "ui_draw_ms": {
+    "median": 60.815,
+    "p95": 64.018,
+    "max": 64.241,
+    "mean": 61.131
+   },
+   "scene_draw_ms": {
+    "median": 5.585,
+    "p95": 6.78,
+    "max": 7.312,
+    "mean": 5.717
+   },
+   "latency_ms": {
+    "median": 227.971,
+    "p95": 254.876,
+    "max": 412.082,
+    "mean": 238.868
+   },
+   "rebuilds": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 160.42,
+    "p95": 186.741,
+    "max": 344.446,
+    "mean": 171.682
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 32.686,
+    "p95": 37.252,
+    "max": 199.443,
+    "mean": 42.286
+   },
+   "right_panel_ms": {
+    "median": 89.132,
+    "p95": 108.378,
+    "max": 114.928,
+    "mean": 89.727
+   },
+   "top_bar_ms": {
+    "median": 33.381,
+    "p95": 37.254,
+    "max": 39.865,
+    "mean": 33.736
+   },
+   "widgets": {
+    "median": 130.5,
+    "p95": 142,
+    "max": 142,
+    "mean": 130.5
+   },
+   "binds": {
+    "median": 2629.5,
+    "p95": 2863,
+    "max": 2863,
+    "mean": 2629.5
+   },
+   "bind_ms": {
+    "median": 59.702,
+    "p95": 70.009,
+    "max": 72.417,
+    "mean": 59.683
+   }
+  },
+  "inspector_tab_switch": {
+   "n": 18,
+   "handler_ms": {
+    "median": 152.024,
+    "p95": 300.552,
+    "max": 368.631,
+    "mean": 173.743
+   },
+   "update_ms": {
+    "median": 0.339,
+    "p95": 0.434,
+    "max": 0.501,
+    "mean": 0.352
+   },
+   "draw_ms": {
+    "median": 63.996,
+    "p95": 71.884,
+    "max": 73.626,
+    "mean": 64.712
+   },
+   "ui_draw_ms": {
+    "median": 58.287,
+    "p95": 65.905,
+    "max": 67.193,
+    "mean": 59.083
+   },
+   "scene_draw_ms": {
+    "median": 5.675,
+    "p95": 6.623,
+    "max": 6.639,
+    "mean": 5.629
+   },
+   "latency_ms": {
+    "median": 218.487,
+    "p95": 362.158,
+    "max": 428.291,
+    "mean": 238.807
+   },
+   "rebuilds": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 149.78,
+    "p95": 298.434,
+    "max": 366.605,
+    "mean": 171.366
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 32.307,
+    "p95": 38.394,
+    "max": 199.455,
+    "mean": 42.602
+   },
+   "right_panel_ms": {
+    "median": 75.539,
+    "p95": 130.101,
+    "max": 223.865,
+    "mean": 90.374
+   },
+   "top_bar_ms": {
+    "median": 33.086,
+    "p95": 35.064,
+    "max": 35.364,
+    "mean": 32.974
+   },
+   "widgets": {
+    "median": 117.0,
+    "p95": 149,
+    "max": 149,
+    "mean": 123.5
+   },
+   "binds": {
+    "median": 2392.0,
+    "p95": 3075,
+    "max": 3075,
+    "mean": 2520.667
+   },
+   "bind_ms": {
+    "median": 54.728,
+    "p95": 224.787,
+    "max": 235.29,
+    "mean": 75.88
+   }
+  },
+  "tools_category_switch": {
+   "n": 15,
+   "handler_ms": {
+    "median": 125.757,
+    "p95": 148.615,
+    "max": 319.745,
+    "mean": 139.928
+   },
+   "update_ms": {
+    "median": 0.322,
+    "p95": 0.373,
+    "max": 0.379,
+    "mean": 0.332
+   },
+   "draw_ms": {
+    "median": 57.167,
+    "p95": 66.422,
+    "max": 73.199,
+    "mean": 58.775
+   },
+   "ui_draw_ms": {
+    "median": 51.61,
+    "p95": 59.665,
+    "max": 60.533,
+    "mean": 52.718
+   },
+   "scene_draw_ms": {
+    "median": 5.558,
+    "p95": 6.829,
+    "max": 12.665,
+    "mean": 6.057
+   },
+   "latency_ms": {
+    "median": 184.862,
+    "p95": 222.194,
+    "max": 375.516,
+    "mean": 199.036
+   },
+   "rebuilds": {
+    "median": 1,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 123.691,
+    "p95": 146.678,
+    "max": 317.877,
+    "mean": 137.868
+   },
+   "rewindows": {
+    "median": 0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 33.091,
+    "p95": 62.904,
+    "max": 229.426,
+    "mean": 49.088
+   },
+   "right_panel_ms": {
+    "median": 49.896,
+    "p95": 53.011,
+    "max": 53.69,
+    "mean": 50.234
+   },
+   "top_bar_ms": {
+    "median": 32.945,
+    "p95": 36.613,
+    "max": 37.305,
+    "mean": 33.561
+   },
+   "widgets": {
+    "median": 103,
+    "p95": 129,
+    "max": 129,
+    "mean": 107.2
+   },
+   "binds": {
+    "median": 2076,
+    "p95": 2596,
+    "max": 2596,
+    "mean": 2160.0
+   },
+   "bind_ms": {
+    "median": 47.639,
+    "p95": 59.864,
+    "max": 243.56,
+    "mean": 61.889
+   }
+  },
+  "live_widgets_after_switching": 342,
+  "property_toggle": {
+   "n": 12,
+   "handler_ms": {
+    "median": 229.434,
+    "p95": 234.485,
+    "max": 524.994,
+    "mean": 253.558
+   },
+   "update_ms": {
+    "median": 0.31,
+    "p95": 0.345,
+    "max": 0.412,
+    "mean": 0.32
+   },
+   "draw_ms": {
+    "median": 65.139,
+    "p95": 65.745,
+    "max": 66.124,
+    "mean": 64.894
+   },
+   "ui_draw_ms": {
+    "median": 56.979,
+    "p95": 57.406,
+    "max": 57.831,
+    "mean": 56.455
+   },
+   "scene_draw_ms": {
+    "median": 8.347,
+    "p95": 8.809,
+    "max": 9.093,
+    "mean": 8.439
+   },
+   "latency_ms": {
+    "median": 295.529,
+    "p95": 299.225,
+    "max": 590.539,
+    "mean": 318.772
+   },
+   "rebuilds": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 140.751,
+    "p95": 148.393,
+    "max": 168.329,
+    "mean": 143.286
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 31.698,
+    "p95": 33.719,
+    "max": 34.81,
+    "mean": 31.6
+   },
+   "right_panel_ms": {
+    "median": 73.133,
+    "p95": 77.349,
+    "max": 83.506,
+    "mean": 73.722
+   },
+   "top_bar_ms": {
+    "median": 33.545,
+    "p95": 38.366,
+    "max": 48.396,
+    "mean": 35.102
+   },
+   "widgets": {
+    "median": 115.0,
+    "p95": 115,
+    "max": 115,
+    "mean": 115.0
+   },
+   "binds": {
+    "median": 2322.0,
+    "p95": 2322,
+    "max": 2322,
+    "mean": 2322.0
+   },
+   "bind_ms": {
+    "median": 53.865,
+    "p95": 55.758,
+    "max": 58.862,
+    "mean": 53.556
+   }
+  },
+  "type_a_character": {
+   "n": 6,
+   "handler_ms": {
+    "median": 0.824,
+    "p95": 0.938,
+    "max": 0.938,
+    "mean": 0.833
+   },
+   "update_ms": {
+    "median": 0.256,
+    "p95": 0.296,
+    "max": 0.296,
+    "mean": 0.264
+   },
+   "draw_ms": {
+    "median": 23.303,
+    "p95": 25.179,
+    "max": 25.179,
+    "mean": 23.46
+   },
+   "ui_draw_ms": {
+    "median": 17.903,
+    "p95": 19.362,
+    "max": 19.362,
+    "mean": 18.11
+   },
+   "scene_draw_ms": {
+    "median": 5.386,
+    "p95": 5.816,
+    "max": 5.816,
+    "mean": 5.35
+   },
+   "latency_ms": {
+    "median": 24.367,
+    "p95": 26.387,
+    "max": 26.387,
+    "mean": 24.557
+   },
+   "rebuilds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rebuild_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "right_panel_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "top_bar_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "widgets": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "binds": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "bind_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   }
+  },
+  "scroll_with_typed_value": {
+   "n": 6,
+   "handler_ms": {
+    "median": 375.754,
+    "p95": 531.936,
+    "max": 531.936,
+    "mean": 401.461
+   },
+   "update_ms": {
+    "median": 0.309,
+    "p95": 0.363,
+    "max": 0.363,
+    "mean": 0.319
+   },
+   "draw_ms": {
+    "median": 68.554,
+    "p95": 71.474,
+    "max": 71.474,
+    "mean": 68.982
+   },
+   "ui_draw_ms": {
+    "median": 60.043,
+    "p95": 62.001,
+    "max": 62.001,
+    "mean": 60.147
+   },
+   "scene_draw_ms": {
+    "median": 8.677,
+    "p95": 9.765,
+    "max": 9.765,
+    "mean": 8.836
+   },
+   "latency_ms": {
+    "median": 446.707,
+    "p95": 599.113,
+    "max": 599.113,
+    "mean": 470.762
+   },
+   "rebuilds": {
+    "median": 2.0,
+    "p95": 2,
+    "max": 2,
+    "mean": 2.0
+   },
+   "rebuild_ms": {
+    "median": 286.018,
+    "p95": 446.812,
+    "max": 446.812,
+    "mean": 312.27
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 60.81,
+    "p95": 68.946,
+    "max": 68.946,
+    "mean": 62.891
+   },
+   "right_panel_ms": {
+    "median": 147.953,
+    "p95": 313.309,
+    "max": 313.309,
+    "mean": 175.4
+   },
+   "top_bar_ms": {
+    "median": 64.404,
+    "p95": 69.539,
+    "max": 69.539,
+    "mean": 65.135
+   },
+   "widgets": {
+    "median": 231.0,
+    "p95": 231,
+    "max": 231,
+    "mean": 231.0
+   },
+   "binds": {
+    "median": 4673.0,
+    "p95": 4673,
+    "max": 4673,
+    "mean": 4673.0
+   },
+   "bind_ms": {
+    "median": 104.995,
+    "p95": 107.153,
+    "max": 107.153,
+    "mean": 104.787
+   }
+  },
+  "lighting_panel_buttons": [
+   "Done",
+   "+ Add light",
+   "> Fine-tune shadows",
+   "Softer",
+   "Soft",
+   "Sharp",
+   "Project's",
+   "Shadows off",
+   "Shadows on",
+   "Project's",
+   "Brighter",
+   "Darker",
+   "Black",
+   "Cave",
+   "Night",
+   "Dusk",
+   "Day",
+   "As project",
+   "Off",
+   "On"
+  ],
+  "lighting_scroll": {
+   "n": 0
+  },
+  "lighting_control_click": {
+   "n": 12,
+   "handler_ms": {
+    "median": 230.507,
+    "p95": 235.36,
+    "max": 411.766,
+    "mean": 244.78
+   },
+   "update_ms": {
+    "median": 0.33,
+    "p95": 0.437,
+    "max": 0.498,
+    "mean": 0.352
+   },
+   "draw_ms": {
+    "median": 71.011,
+    "p95": 72.651,
+    "max": 73.4,
+    "mean": 70.997
+   },
+   "ui_draw_ms": {
+    "median": 63.009,
+    "p95": 64.511,
+    "max": 64.626,
+    "mean": 62.872
+   },
+   "scene_draw_ms": {
+    "median": 8.14,
+    "p95": 8.774,
+    "max": 8.814,
+    "mean": 8.125
+   },
+   "latency_ms": {
+    "median": 302.084,
+    "p95": 306.36,
+    "max": 484.723,
+    "mean": 316.129
+   },
+   "rebuilds": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 140.974,
+    "p95": 143.304,
+    "max": 146.242,
+    "mean": 141.276
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 29.509,
+    "p95": 30.839,
+    "max": 33.339,
+    "mean": 29.938
+   },
+   "right_panel_ms": {
+    "median": 75.72,
+    "p95": 78.192,
+    "max": 80.946,
+    "mean": 75.483
+   },
+   "top_bar_ms": {
+    "median": 32.118,
+    "p95": 34.667,
+    "max": 37.882,
+    "mean": 32.706
+   },
+   "widgets": {
+    "median": 112.0,
+    "p95": 112,
+    "max": 112,
+    "mean": 112.0
+   },
+   "binds": {
+    "median": 2316.0,
+    "p95": 2316,
+    "max": 2316,
+    "mean": 2316.0
+   },
+   "bind_ms": {
+    "median": 50.659,
+    "p95": 51.547,
+    "max": 54.06,
+    "mean": 50.753
+   }
+  },
+  "resize": {
+   "n": 12,
+   "handler_ms": {
+    "median": 23.07,
+    "p95": 24.281,
+    "max": 34.87,
+    "mean": 23.787
+   },
+   "update_ms": {
+    "median": 145.854,
+    "p95": 149.599,
+    "max": 339.653,
+    "mean": 161.609
+   },
+   "draw_ms": {
+    "median": 67.971,
+    "p95": 70.223,
+    "max": 70.451,
+    "mean": 68.2
+   },
+   "ui_draw_ms": {
+    "median": 61.824,
+    "p95": 64.509,
+    "max": 65.237,
+    "mean": 62.442
+   },
+   "scene_draw_ms": {
+    "median": 5.845,
+    "p95": 6.181,
+    "max": 6.649,
+    "mean": 5.758
+   },
+   "latency_ms": {
+    "median": 236.617,
+    "p95": 250.418,
+    "max": 433.122,
+    "mean": 253.596
+   },
+   "rebuilds": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 145.453,
+    "p95": 149.218,
+    "max": 339.286,
+    "mean": 161.218
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 30.534,
+    "p95": 31.694,
+    "max": 32.259,
+    "mean": 30.518
+   },
+   "right_panel_ms": {
+    "median": 77.376,
+    "p95": 78.918,
+    "max": 81.641,
+    "mean": 77.476
+   },
+   "top_bar_ms": {
+    "median": 32.579,
+    "p95": 34.851,
+    "max": 35.182,
+    "mean": 33.163
+   },
+   "widgets": {
+    "median": 112.0,
+    "p95": 112,
+    "max": 112,
+    "mean": 112.0
+   },
+   "binds": {
+    "median": 2316.0,
+    "p95": 2316,
+    "max": 2316,
+    "mean": 2316.0
+   },
+   "bind_ms": {
+    "median": 55.459,
+    "p95": 56.807,
+    "max": 58.703,
+    "mean": 55.713
+   }
+  },
+  "room_switch": {
+   "n": 6,
+   "handler_ms": {
+    "median": 218.029,
+    "p95": 430.997,
+    "max": 430.997,
+    "mean": 254.216
+   },
+   "update_ms": {
+    "median": 0.336,
+    "p95": 0.369,
+    "max": 0.369,
+    "mean": 0.34
+   },
+   "draw_ms": {
+    "median": 71.913,
+    "p95": 72.83,
+    "max": 72.83,
+    "mean": 71.718
+   },
+   "ui_draw_ms": {
+    "median": 64.29,
+    "p95": 65.921,
+    "max": 65.921,
+    "mean": 64.201
+   },
+   "scene_draw_ms": {
+    "median": 7.708,
+    "p95": 8.236,
+    "max": 8.236,
+    "mean": 7.517
+   },
+   "latency_ms": {
+    "median": 289.624,
+    "p95": 503.428,
+    "max": 503.428,
+    "mean": 326.274
+   },
+   "rebuilds": {
+    "median": 1.0,
+    "p95": 1,
+    "max": 1,
+    "mean": 1.0
+   },
+   "rebuild_ms": {
+    "median": 151.6,
+    "p95": 358.09,
+    "max": 358.09,
+    "mean": 184.248
+   },
+   "rewindows": {
+    "median": 0.0,
+    "p95": 0,
+    "max": 0,
+    "mean": 0.0
+   },
+   "rewindow_ms": {
+    "median": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "left_panel_ms": {
+    "median": 35.869,
+    "p95": 40.208,
+    "max": 40.208,
+    "mean": 35.855
+   },
+   "right_panel_ms": {
+    "median": 78.784,
+    "p95": 286.682,
+    "max": 286.682,
+    "mean": 112.406
+   },
+   "top_bar_ms": {
+    "median": 32.78,
+    "p95": 34.307,
+    "max": 34.307,
+    "mean": 33.014
+   },
+   "widgets": {
+    "median": 117.0,
+    "p95": 118,
+    "max": 118,
+    "mean": 117.0
+   },
+   "binds": {
+    "median": 2410.5,
+    "p95": 2431,
+    "max": 2431,
+    "mean": 2410.5
+   },
+   "bind_ms": {
+    "median": 53.759,
+    "p95": 57.835,
+    "max": 57.835,
+    "mean": 54.354
+   }
+  },
+  "live_widgets_at_end": 361,
+  "small_window_panels_visible": [
+   230,
+   330
+  ],
+  "live_widgets_before_and_after_many_scrolls": [
+   478,
+   478
+  ]
+ }
+}

@@ -90,8 +90,10 @@ class Projectile(Behaviour):
 
         import math
         rad = math.radians(self.direction)
-        self.entity.change_x = math.cos(rad) * self.speed
-        self.entity.change_y = math.sin(rad) * self.speed
+        # The scene moves sprites by change_x/y once per frame (arcade's unit: pixels per 1/60 s), and
+        # speed is pixels per second: unconverted, a 300 px/s shot jumped 300 px a frame, through anything.
+        self.entity.change_x = math.cos(rad) * self.speed / 60.0
+        self.entity.change_y = math.sin(rad) * self.speed / 60.0
         self.entity.angle = self.direction
 
     def update(self, dt: float) -> None:
@@ -126,10 +128,10 @@ class Projectile(Behaviour):
 
         # Check collision
 
-        sprite_list = optional_arcade.arcade.SpriteList()
-        for candidate in candidates:
-            sprite_list.append(candidate)
-        hits = optional_arcade.arcade.check_for_collision_with_list(self.entity, sprite_list)
+        # Sprite against sprite, not through a SpriteList made per update: each held GPU buffers that every candidate
+        # kept (a sprite keeps the lists it joins), so they grew without end.
+        check = optional_arcade.arcade.check_for_collision
+        hits = [candidate for candidate in candidates if check(self.entity, candidate)]
         for hit in hits:
             tag = getattr(hit, "mesh_tag", "")
 

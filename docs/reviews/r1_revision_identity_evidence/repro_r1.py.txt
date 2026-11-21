@@ -1,0 +1,70 @@
+"""R1 (#462), Astra's sequence with two genuine Mesh Studio lifetimes; prints what happened at each step.
+
+    py -3.13 repro_r1.py REPO OUT
+
+REPO: the checkout whose engine and tests/studio_owner_process.py are used. OUT: a new, empty folder (a throwaway
+project). Each Studio is its own process (Studio's project, AI host and live-session bridge: the production code);
+the AI is engine.authoring_session (what the MCP tools and `mesh author` call), in this process.
+"""
+import json
+import sys
+from pathlib import Path
+
+REPO, OUT = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve()
+assert not OUT.exists() or not any(OUT.iterdir()), f"{OUT} is not empty"
+OUT.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(REPO))
+
+from engine import authoring_session  # noqa: E402
+from engine.project_scaffold import create_project  # noqa: E402
+from tests.test_studio_project_ownership import ROOM, StudioProcess  # noqa: E402
+
+root = OUT / "game"
+create_project(root, "Game", template_id="blank")
+
+
+def names_on_disk() -> list[str]:
+    return [str(e.get("name")) for e in json.loads((root / ROOM).read_text(encoding="utf-8"))["entities"]
+            if e.get("name") not in (None, "None")]
+
+
+steps: dict = {}
+setup = StudioProcess(root, log=OUT / "setup.log")  # (a Warden in the room, saved: the starting point)
+setup.ask("edit Warden")
+setup.ask("save")
+setup.close()
+
+a = StudioProcess(root, log=OUT / "a.log")  # Studio, first lifetime
+read = authoring_session.read_project(root)  # 1. the AI reads the project
+warden = next(e["id"] for e in read["rooms"]["start"]["room"]["entities"] if e.get("name") == "Warden") \
+    if "start" in read["rooms"] else next(e["id"] for r in read["rooms"].values() for e in r["room"]["entities"]
+                                          if e.get("name") == "Warden")
+steps["1 the AI reads (Studio lifetime A)"] = {"revision": read["revision"], "revision_id": read.get("revision_id"),
+                                               "session": a.start["session_id"][:8]}
+a.ask(f"rename {warden} Creator Warden")  # 2. the person renames it and saves
+steps["2 the person renames the Warden and saves"] = {"saved": a.ask("save")["saved"], "on disk": names_on_disk()}
+a.close()  # 3. Studio closes ...
+b = StudioProcess(root, log=OUT / "b.log")  # ... and opens again
+steps["3-4 Studio reopened (lifetime B)"] = {"session": b.start["session_id"][:8],
+                                             "revision now": authoring_session.read_project(root)["revision"]}
+rename = [{"op": "rename_entity", "entity_id": warden, "name": "AI Warden"}]
+answers = {"numeric base_revision": authoring_session.propose(root, rename, title="AI rename",
+                                                              base_revision=read["revision"])}
+if read.get("revision_id"):  # (the fix: the session-bound identity the AI was given in lifetime A)
+    answers["revision_id from lifetime A"] = authoring_session.propose(root, rename, title="AI rename",
+                                                                       base_revision_id=read["revision_id"])
+for how, answer in answers.items():  # 5-6. the AI's old proposal
+    steps[f"5-6 the AI proposes on its old read ({how})"] = {
+        k: answer.get(k) for k in ("ok", "reason") if k in answer} | (
+        {"proposal base_revision": answer["proposal"].get("base_revision")} if answer.get("ok") else {})
+state = b.ask("state")
+steps["6 the person's inbox in B"] = state["pending"]
+if state["pending"]:  # 7. the person accepts it
+    steps["7 the person accepts"] = {k: v for k, v in (b.ask("accept")["result"] or {}).items() if k in ("ok", "reason")}
+    steps["7 B's room in memory"] = [n for n in b.ask("state")["names"] if n != "None"]
+    steps["7 undo"] = {"undone": b.ask("undo")["done"], "names": [n for n in b.ask("state")["names"] if n != "None"]}
+steps["end: the saved rename on disk"] = names_on_disk()
+b.close()
+text = json.dumps(steps, indent=1)
+print(text)
+(OUT / "repro_r1.json").write_text(text + "\n", encoding="utf-8")

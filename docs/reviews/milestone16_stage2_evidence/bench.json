@@ -1,0 +1,39 @@
+{
+  "batched": {
+    "build_ms": 172.4,
+    "build_python_peak_kib": 240.0,
+    "cpu_ms_median": 0.796,
+    "cpu_ms_p95": 0.966,
+    "gpu_ms_median": 0.022,
+    "draw_calls": 6,
+    "static_draws": 4,
+    "triangles": 1320,
+    "buffer_bytes": 109720,
+    "texture_bytes": 22528,
+    "target_bytes": 7372800,
+    "batched": true
+  },
+  "unbatched": {
+    "build_ms": 23.5,
+    "build_python_peak_kib": 160.5,
+    "cpu_ms_median": 11.953,
+    "cpu_ms_p95": 13.513,
+    "gpu_ms_median": 0.182,
+    "draw_calls": 223,
+    "static_draws": 221,
+    "triangles": 1320,
+    "buffer_bytes": 11984,
+    "texture_bytes": 22528,
+    "target_bytes": 7372800,
+    "batched": false
+  },
+  "structures": 20,
+  "frames": 300,
+  "gl": {
+    "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+    "version": [
+      4,
+      6
+    ]
+  }
+}

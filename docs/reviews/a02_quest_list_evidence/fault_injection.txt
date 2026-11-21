@@ -1,0 +1,12 @@
+== M1 append dropped (replace list)
+2 failed, 62 passed in 9.49s
+== M2 duplicate-id check removed
+6 failed, 58 passed in 9.41s
+== M3 id-less entries allowed
+14 failed, 50 passed in 8.76s
+== M4 non-list/dict reset instead of refuse
+6 failed, 58 passed in 8.90s
+== M5 list delete pops wrong index
+64 passed in 8.26s
+== M5 (rerun, strengthened test)
+2 failed, 62 passed in 8.64s

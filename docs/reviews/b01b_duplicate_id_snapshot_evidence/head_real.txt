@@ -1,0 +1,5 @@
+authored entities: [('start_player_128_128_0_0', None, 128.0, 128.0), ('start_guide_320_128_0_0', 'Guide', 320.0, 128.0)]
+live orcs: [(300, 200, ['hp30']), (500, 260, ['hp11'])]
+moved orcs: [(317, 200), (500, 283)]
+saved orcs: [(317.0, 200.0, ['hp30']), (500.0, 283.0, ['hp11'])]
+reloaded orcs: [(317, 200, ['hp30']), (500, 283, ['hp11'])]

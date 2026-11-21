@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 
@@ -49,6 +50,14 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
     assert payload["artifacts"]["dir"] == "artifacts"
     written = payload["artifacts"]["written"]
     assert set(written.keys()) == {
+        # Milestone 13: the steps the pipeline gained since this list was written
+        "exception_policy_scan",
+        "runtime_diagnostics_snapshot",
+        "runtime_smoke",
+        "swallow_scan",
+        "verify_summary_json",
+        "verify_summary_txt",
+        "web_smoke",
         "verify_all_summary",
         "verify_step_durations",
         "verify_step_budget_check",
@@ -121,7 +130,7 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
         assert set(step.keys()) == {"artifact", "code", "error", "name", "ok"}
         assert step["ok"] is True
         assert step["code"] == 0
-        if step["name"] in {"pytest-fast", "pytest-fast-duration-guard"}:
+        if step["name"] in {"pytest-fast", "pytest-fast-duration-guard", "web-smoke"}:  # web-smoke: skipped without a web build
             assert step["error"]
         else:
             assert step["error"] == ""
@@ -202,6 +211,8 @@ def test_verify_all_schema_failure_includes_skipped_steps(monkeypatch, tmp_path,
     assert written["artifact_index"] is None
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows path semantics: a backslash separates paths only on Windows (on Linux "
+                    "it is a file-name character, which pathlib keeps); the extended lane runs this on Windows (#422 H6)")
 def test_verify_all_path_normalization_uses_forward_slashes(tmp_path):
     import mesh_cli
 

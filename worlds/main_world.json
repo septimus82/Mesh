@@ -226,31 +226,31 @@
   ],
   "scenes": {
     "Ashen_dungeon": {
-      "path": "packs\\core_regions\\scenes\\Ashen_dungeon.json"
+      "path": "packs/core_regions/scenes/Ashen_dungeon.json"
     },
     "Ashen_hub": {
-      "path": "packs\\core_regions\\scenes\\Ashen_hub.json"
+      "path": "packs/core_regions/scenes/Ashen_hub.json"
     },
     "Ashen_interior": {
-      "path": "packs\\core_regions\\scenes\\Ashen_interior.json"
+      "path": "packs/core_regions/scenes/Ashen_interior.json"
     },
     "Hollow Grove_dungeon": {
-      "path": "packs\\core_regions\\scenes\\Hollow Grove_dungeon.json"
+      "path": "packs/core_regions/scenes/Hollow Grove_dungeon.json"
     },
     "Hollow Grove_hub": {
-      "path": "packs\\core_regions\\scenes\\Hollow Grove_hub.json"
+      "path": "packs/core_regions/scenes/Hollow Grove_hub.json"
     },
     "Hollow Grove_interior": {
-      "path": "packs\\core_regions\\scenes\\Hollow Grove_interior.json"
+      "path": "packs/core_regions/scenes/Hollow Grove_interior.json"
     },
     "Ridge Outpost_dungeon": {
-      "path": "packs\\core_regions\\scenes\\Ridge Outpost_dungeon.json"
+      "path": "packs/core_regions/scenes/Ridge Outpost_dungeon.json"
     },
     "Ridge Outpost_hub": {
-      "path": "packs\\core_regions\\scenes\\Ridge Outpost_hub.json"
+      "path": "packs/core_regions/scenes/Ridge Outpost_hub.json"
     },
     "Ridge Outpost_interior": {
-      "path": "packs\\core_regions\\scenes\\Ridge Outpost_interior.json"
+      "path": "packs/core_regions/scenes/Ridge Outpost_interior.json"
     },
     "cellar": {
       "label": "Cellar",

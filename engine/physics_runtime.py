@@ -14,10 +14,20 @@ from engine.physics_model import (
     Circle,
     MoveRequest,
     MoveResult,
-    circle_aabb_overlap,
-    circle_circle_overlap,
+    footprint,  # noqa: F401
     sweep_axis_separate,
 )
+
+# The pure collider shapes moved to engine.physics_model (shared with the graphics-free mesh_net authority);
+# their old names stay importable from here.
+from engine.physics_model import as_float as _as_float
+from engine.physics_model import collider_box as _sprite_box_shape
+from engine.physics_model import collider_circle as _sprite_circle_shape  # noqa: F401
+from engine.physics_model import collider_shape as _sprite_collider_shape
+from engine.physics_model import entity_aabb as _sprite_to_aabb
+from engine.physics_model import entity_shape as _sprite_to_shape
+from engine.physics_model import shape_aabb as _shape_to_aabb
+from engine.physics_model import shapes_overlap as _shapes_overlap
 from engine.spatial_hash_model import SpatialHashConfig, SpatialHashIndex, build_spatial_hash, query_aabb
 from engine.swallowed_exceptions import _log_swallow
 
@@ -47,78 +57,6 @@ class PhysicsProxySprite:
     def bottom(self): return self.center_y - self.height / 2
 
     # Setters needed if check_for_collision modifies it? (Unlikely for read-only query)
-
-def _as_float(value: Any, default: float = 0.0) -> float:
-    try:
-        return float(value)
-    except Exception:
-        _log_swallow("PHRT-001", "engine.physics_runtime blanket exception fallback")
-        return float(default)
-
-
-def _sprite_circle_shape(sprite: Any) -> Circle | None:
-    cx = _as_float(getattr(sprite, "center_x", 0.0), 0.0)
-    cy = _as_float(getattr(sprite, "center_y", 0.0), 0.0)
-
-    # Lightweight direct attributes for tests/runtime stubs.
-    kind_attr = str(getattr(sprite, "collider_kind", "") or "").strip().lower()
-    if kind_attr == "circle":
-        r = _as_float(getattr(sprite, "collider_radius", 0.0), 0.0)
-        if r > 0.0:
-            ox = _as_float(getattr(sprite, "collider_offset_x", 0.0), 0.0)
-            oy = _as_float(getattr(sprite, "collider_offset_y", 0.0), 0.0)
-            return Circle(cx + ox, cy + oy, r)
-
-    # Entity-data collider component path used by scene entities.
-    entity_data = getattr(sprite, "mesh_entity_data", None)
-    if not isinstance(entity_data, dict):
-        return None
-    components = entity_data.get("components")
-    if not isinstance(components, dict):
-        return None
-    collider = components.get("collider")
-    if not isinstance(collider, dict):
-        return None
-    kind = str(collider.get("kind", "") or "").strip().lower()
-    if kind != "circle":
-        return None
-    radius = _as_float(collider.get("r", collider.get("radius", 0.0)), 0.0)
-    if radius <= 0.0:
-        return None
-    ox = _as_float(collider.get("offset_x", collider.get("ox", 0.0)), 0.0)
-    oy = _as_float(collider.get("offset_y", collider.get("oy", 0.0)), 0.0)
-    return Circle(cx + ox, cy + oy, radius)
-
-
-def _sprite_to_shape(sprite: Any) -> Aabb | Circle:
-    circle = _sprite_circle_shape(sprite)
-    if circle is not None:
-        return circle
-    cx = _as_float(getattr(sprite, "center_x", 0.0), 0.0)
-    cy = _as_float(getattr(sprite, "center_y", 0.0), 0.0)
-    w = _as_float(getattr(sprite, "width", 0.0), 0.0)
-    h = _as_float(getattr(sprite, "height", 0.0), 0.0)
-    return Aabb(cx, cy, w, h)
-
-
-def _shape_to_aabb(shape: Aabb | Circle) -> Aabb:
-    if isinstance(shape, Circle):
-        return shape.bounds()
-    return shape
-
-
-def _sprite_to_aabb(sprite: Any) -> Aabb:
-    return _shape_to_aabb(_sprite_to_shape(sprite))
-
-
-def _shapes_overlap(shape_a: Aabb | Circle, shape_b: Aabb | Circle) -> bool:
-    if isinstance(shape_a, Circle) and isinstance(shape_b, Circle):
-        return circle_circle_overlap((shape_a.x, shape_a.y), shape_a.radius, (shape_b.x, shape_b.y), shape_b.radius)
-    if isinstance(shape_a, Circle):
-        return circle_aabb_overlap((shape_a.x, shape_a.y), shape_a.radius, _shape_to_aabb(shape_b))
-    if isinstance(shape_b, Circle):
-        return circle_aabb_overlap((shape_b.x, shape_b.y), shape_b.radius, _shape_to_aabb(shape_a))
-    return shape_a.intersection(shape_b) is not None
 
 def _collider_sample_ids(solid_sprites: Any, *, limit: int = 8) -> tuple[int, ...]:
     if not solid_sprites:
@@ -532,6 +470,7 @@ def move_entity_with_physics(
     moving_shape = _sprite_to_shape(entity)
     start_aabb = _shape_to_aabb(moving_shape)
     moving_circle_radius = float(moving_shape.radius) if isinstance(moving_shape, Circle) else None
+    moving_box = _sprite_box_shape(entity)
     req = MoveRequest(
         entity_id=getattr(entity, "mesh_id", "unknown"),
         from_pos=(start_aabb.x, start_aabb.y),
@@ -577,14 +516,15 @@ def move_entity_with_physics(
         else:
             proxy_shape = aabb
 
-        any_circle = isinstance(proxy_shape, Circle)
-        if not any_circle:
+        # Arcade's own check uses whole pictures; any collider shape (ours or theirs) needs ours.
+        custom_shapes = isinstance(proxy_shape, Circle) or moving_box is not None
+        if not custom_shapes:
             for candidate in candidates:
-                if _sprite_circle_shape(candidate) is not None:
-                    any_circle = True
+                if _sprite_collider_shape(candidate) is not None:
+                    custom_shapes = True
                     break
 
-        if any_circle:
+        if custom_shapes:
             hits = []
             for s in candidates:
                 try:
@@ -616,8 +556,9 @@ def move_entity_with_physics(
     # 3. Execute Pure Model
     result = sweep_axis_separate(req, query_tiles)
 
-    # 4. Apply Side Effects
-    entity.center_x = result.final_pos[0]
-    entity.center_y = result.final_pos[1]
+    # 4. Apply Side Effects: move the entity by what the shape moved. (Setting its centre to the
+    # shape's would drift an offset collider, e.g. one at the feet, by its offset every frame.)
+    entity.center_x += result.final_pos[0] - start_aabb.x
+    entity.center_y += result.final_pos[1] - start_aabb.y
 
     return result

@@ -32,10 +32,17 @@ class TestThemeRuntimeApplication(unittest.TestCase):
             }
         }
 
-        self.controller._apply_theme_runtime(scene_data)
+        with patch("engine.scene_controller_parts.encounter_resolution._exists", return_value=True):
+            self.controller._apply_theme_runtime(scene_data)
 
         self.assertIn("music", scene_data["settings"])
         self.assertEqual(scene_data["settings"]["music"], "assets/music/forest_ambience.mp3")
+
+        # The theme's track isn't shipped (no forest_ambience.mp3 in the repository): no music setting, so the
+        # music playing carries on rather than the room asking for a file that isn't there (M21A).
+        missing = {"settings": {"region_theme": "moss"}}
+        self.controller._apply_theme_runtime(missing)
+        self.assertNotIn("music", missing["settings"])
 
     @patch("engine.scene_controller.get_theme_manager")
     def test_apply_theme_lighting(self, mock_get_tm):

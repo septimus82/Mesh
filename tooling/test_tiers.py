@@ -1,12 +1,43 @@
+"""The canonical test lanes, for local runs and CI alike (H6, #422).
+
+    python -m tooling.test_tiers <tier> [-- extra pytest args]
+
+* ``tier0``/``tier1``/``tier2``: fast, fast + integration (+ verify-all), everything the default run selects.
+* ``extended``: the tests the default run deselects (``slow``/``e2e``) and that need no GL context. CI's extended
+  workflow runs it; the default suite never does.
+* ``gpu``: every test that needs a real GL context, found by capability (the ``gl`` marker tests/conftest.py gives
+  each test whose skipif names MESH_GL_SMOKE), not by file name. Run with MESH_GL_SMOKE=1 and MESH_REQUIRE_GL=1, so a
+  GL test skipped for want of GL fails instead of passing quietly.
+* ``acceptance``: the creator-workflow GL tests (``ACCEPTANCE``): save and reopen, dialogue, new-game isolation,
+  creator editing, background rendering. A subset of ``gpu``.
+
+Every lane writes a JUnit report and ``pytest_<tier>_summary.json`` under artifacts/, and fails when it selects or
+runs no test, besides failing on any failed test (pytest's own exit code).
+
+Reporting only (#422), so a run's speed can be read: a summary's ``measurements`` are the values tests recorded with
+``record_testsuite_property("measure.<name>", <json>)`` (the terrain stroke's frame times, on passing runs too), and
+the gpu lane's ``runner`` is ``tooling/runner_calibration.py`` run before and after its tests (CPU, vCPUs, a fixed
+CPU loop and a fixed llvmpipe frame) and ``runner.host``, where that ran: the runner OS and image, the GL strings and
+the Mesa/LLVM versions in them, and the Mesa settings in ``MESA_ENV`` that are set. Nothing is judged against them.
+"""
+
 from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
+import os
+import re
 import subprocess
 import sys
-from dataclasses import dataclass
+import xml.etree.ElementTree as ET
+from collections import Counter
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import Any
 
+from tooling import ci_shards
 from tooling.pytest_runner_common import (
     build_pytest_args,
     build_pytest_env,
@@ -20,13 +51,164 @@ class TierDef:
     pytest_mark: str | None
     verify_all: bool
     compileall: bool
+    paths: tuple[str, ...] = ()  # test files to run (default: all of tests/)
+    env: tuple[tuple[str, str], ...] = ()
+    pytest_args: tuple[str, ...] = ()
+    # The lane fails when it selects fewer: a marker or rule change that drops tests is caught, not reported as green.
+    # Lower it only on purpose, when tests are removed.
+    min_selected: int = 0
+    calibrate: bool = False  # measure the runner before and after (tooling/runner_calibration.py), reporting only
 
+
+# Creator-workflow acceptance, required on every PR (CI's acceptance (<os>) jobs): what a person making a game relies
+# on most, in a real (hidden) GL window. Measured on CI's Mesa (#422 H6): about 77 s on Linux, 131 s on Windows.
+# tests/test_dialogue_reopen_gpu.py (dialogue edits persist across reopen) is left to the gpu lane (every merge and
+# nightly): 196 s / 369 s alone, it would lengthen required PR feedback by about two minutes.
+ACCEPTANCE = (
+    "tests/test_saved_world_gpu.py",            # save, reopen, play: the saved world comes back
+    "tests/test_new_game_isolation_gpu.py",     # a new game starts clean, not with the editor's state
+    "tests/test_studio_workflow_polish_gpu.py",  # creator field editing in Mesh Studio
+    "tests/test_background_layers_render_contract.py",  # background layers reach the screen
+)
+GL_ENV = (("MESH_GL_SMOKE", "1"), ("MESH_REQUIRE_GL", "1"))
 
 TIERS: dict[str, TierDef] = {
     "tier0": TierDef(pytest_mark="fast", verify_all=False, compileall=True),
     "tier1": TierDef(pytest_mark="fast or integration", verify_all=True, compileall=False),
     "tier2": TierDef(pytest_mark=None, verify_all=False, compileall=False),
+    # The installed-product tests are slow but already run, isolated, in CI's required installed (<os>) jobs.
+    "extended": TierDef(pytest_mark="(slow or e2e) and not gl", verify_all=False, compileall=False,
+                        pytest_args=("--ignore=tests/test_wheel_bundles_engine_data.py",), min_selected=162),
+    # Rendering, in hidden windows (nothing shown on the desktop, no input), wherever a GL context exists.
+    "gpu": TierDef(pytest_mark="gl", verify_all=False, compileall=False, env=GL_ENV, min_selected=256,
+                   calibrate=True),
+    "acceptance": TierDef(pytest_mark="gl", verify_all=False, compileall=False, paths=ACCEPTANCE, env=GL_ENV,
+                          min_selected=22),
 }
+
+
+@dataclass
+class LaneRun:
+    """What a lane selected and what actually ran (from its JUnit report)."""
+
+    selected: int = 0
+    passed: int = 0
+    failed: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+    skipped: int = 0
+    skip_reasons: dict[str, int] = field(default_factory=dict)
+    seconds: float = 0.0
+    measurements: dict[str, Any] = field(default_factory=dict)  # "measure.<name>" suite properties, by <name>
+
+
+def summarize_junit(path: Path) -> LaneRun:
+    root = ET.parse(path).getroot()
+    cases = list(root.iter("testcase"))
+
+    def name(case: ET.Element) -> str:
+        return f"{case.get('classname')}::{case.get('name')}"
+
+    failed = [c for c in cases if c.find("failure") is not None]
+    errors = [c for c in cases if c.find("error") is not None]
+    skips = [s for s in (c.find("skipped") for c in cases) if s is not None]
+    suites = [root] if root.tag == "testsuite" else list(root.iter("testsuite"))
+    measurements: dict[str, Any] = {}
+    for prop in root.iter("property"):
+        key, value = prop.get("name") or "", prop.get("value") or ""
+        if key.startswith("measure."):
+            try:
+                measurements[key[len("measure."):]] = json.loads(value)
+            except ValueError:
+                measurements[key[len("measure."):]] = value
+    return LaneRun(
+        selected=len(cases),
+        passed=len(cases) - len(failed) - len(errors) - len(skips),
+        failed=sorted(name(c) for c in failed),
+        errors=sorted(name(c) for c in errors),
+        skipped=len(skips),
+        skip_reasons=dict(Counter((s.get("message") or "").strip()[:160] for s in skips).most_common()),
+        seconds=round(sum(float(s.get("time") or 0) for s in suites), 1),
+        measurements=measurements,
+    )
+
+
+def lane_problems(run: LaneRun | None, *, gl_renderer: str | None, gl_tier: bool, min_selected: int = 0) -> list[str]:
+    """Why a lane's run doesn't count, even when pytest itself passed: it selected or ran nothing, fewer tests than
+    it should, or (a GPU lane) it had no GL context."""
+    problems = []
+    if run is None or not run.selected:
+        problems.append("the lane selected no test")
+    elif run.passed + len(run.failed) + len(run.errors) == 0:
+        problems.append("the lane ran no test (every selected test was skipped)")
+    if run is not None and 0 < run.selected < min_selected:
+        problems.append(f"the lane selected {run.selected} tests, fewer than the {min_selected} it should")
+    if gl_tier and not gl_renderer:
+        problems.append("no GL context here: a GPU lane can't run")
+    return problems
+
+
+def gl_renderer() -> str | None:
+    """The GL renderer a hidden window gets here (e.g. Mesa's llvmpipe in CI), or None without one."""
+    probe = ("import pyglet; w = pyglet.window.Window(visible=False); from pyglet.gl import gl_info; "
+             "print(gl_info.get_renderer(), '|', gl_info.get_version_string()); w.close()")
+    proc = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True)
+    return proc.stdout.strip().splitlines()[-1] if proc.returncode == 0 and proc.stdout.strip() else None
+
+
+def runner_calibration() -> dict[str, Any]:
+    """``tooling/runner_calibration.py`` in its own process (like ``gl_renderer``): what it measured, ``complete``
+    (it measured a llvmpipe frame), and ``error`` saying why not (a missing or invalid ``gl_frame_ms``, and its last
+    stderr line). Whatever valid it measured is kept. Reporting only: it never fails the lane."""
+    try:
+        proc = subprocess.run([sys.executable, "-m", "tooling.runner_calibration"], capture_output=True, text=True,
+                              timeout=120, cwd=Path(__file__).resolve().parents[1])
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"complete": False, "error": f"{type(exc).__name__}: {exc}"[:300]}
+    out: dict[str, Any] = {}
+    for line in proc.stdout.splitlines():
+        try:
+            out.update(json.loads(line))
+        except (ValueError, TypeError):
+            continue
+    why = []
+    frame = out.get("gl_frame_ms")
+    if "gl_frame_ms" not in out:
+        why.append("no gl_frame_ms")
+    elif isinstance(frame, bool) or not isinstance(frame, (int, float)) or not frame > 0:
+        why.append(f"invalid gl_frame_ms {out.pop('gl_frame_ms')!r}"[:100])
+    if proc.returncode != 0:
+        why.append(((proc.stderr or "").strip().splitlines() or [f"exit code {proc.returncode}"])[-1][:300])
+    out["complete"] = not why
+    if why:
+        out["error"] = "; ".join(why)
+    return out
+
+
+# The Mesa/llvmpipe settings that change what the gpu lane measures, recorded in ``runner.host`` when set (#422):
+# which driver, forced software GL, llvmpipe's thread count, overridden GL/GLSL versions. Nothing else from the
+# environment is recorded.
+MESA_ENV = ("GALLIUM_DRIVER", "LIBGL_ALWAYS_SOFTWARE", "LP_NUM_THREADS", "MESA_GL_VERSION_OVERRIDE",
+            "MESA_GLSL_VERSION_OVERRIDE", "MESA_LOADER_DRIVER_OVERRIDE")
+UNAVAILABLE = "unavailable"
+
+
+def runner_host(calibration: Mapping[str, Any], env: Mapping[str, str] | None = None) -> dict[str, Any]:
+    """Where a gpu lane ran: GitHub's ``RUNNER_OS``/``ImageOS``/``ImageVersion`` (``unavailable`` elsewhere), the
+    calibration context's GL strings and the Mesa and LLVM versions they name, and the ``MESA_ENV`` settings that are
+    set. Anything missing or malformed is ``unavailable``: reporting only."""
+    env = os.environ if env is None else env
+
+    def text(value: object) -> str:
+        return value.strip()[:200] if isinstance(value, str) and value.strip() else UNAVAILABLE
+
+    renderer, version = text(calibration.get("gl_renderer")), text(calibration.get("gl_version"))
+    mesa = re.search(r"\bMesa (\d[\w.+~-]*)", version)
+    llvm = re.search(r"\bLLVM (\d[\w.]*)", renderer)
+    return {"runner_os": text(env.get("RUNNER_OS")), "image_os": text(env.get("ImageOS")),
+            "image_version": text(env.get("ImageVersion")), "gl_vendor": text(calibration.get("gl_vendor")),
+            "gl_renderer": renderer, "gl_version": version,
+            "mesa_version": mesa.group(1) if mesa else UNAVAILABLE, "llvm_version": llvm.group(1) if llvm else UNAVAILABLE,
+            "mesa_env": {name: text(env.get(name)) for name in MESA_ENV if env.get(name)}}
 
 
 def _xdist_available() -> bool:
@@ -44,6 +226,8 @@ def _pytest_cmd(
 ) -> list[str]:
     pytest_args = [
         "-q",
+        "-p",
+        "no:cacheprovider",  # a tier needs no cache; an unwritable .pytest_cache failed every run under -W error
         "-W",
         "error",
         "--strict-markers",
@@ -56,8 +240,38 @@ def _pytest_cmd(
     return [sys.executable, "-m", "pytest", *build_pytest_args(pytest_args)]
 
 
+SOFTWARE_RENDERERS = ("llvmpipe", "softpipe", "swiftshader", "software")
+
+
+def _tier_env(tier_cfg: TierDef, renderer: str | None = None) -> dict[str, str]:
+    env = build_pytest_env()
+    env.update(dict(tier_cfg.env))
+    if renderer and any(name in renderer.lower() for name in SOFTWARE_RENDERERS):
+        env["MESH_GL_SOFTWARE"] = "1"  # tests marked gpu_hardware skip, visibly, instead of failing
+    return env
+
+
+def _shard_spec(value: str) -> str:
+    """``K/N``, as ``--shard`` takes it."""
+    try:
+        shard, shards = (int(part) for part in value.split("/"))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value}: expected K/N, e.g. 1/2") from None
+    if not 1 <= shard <= shards:
+        raise argparse.ArgumentTypeError(f"{value}: K must be 1..N")
+    return value
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
+    # Shard K of N of the lane (#422 F13, CI's Windows gpu lane): whole modules, by the lane's plan in
+    # tooling/ci_shards.py (only a lane with one can be sharded). The shard writes artifacts/shards/shard-K.json and
+    # junit-K.xml for the fan-in (``ci_shards.py check --plan <lane>``), which applies the lane's min_selected to the
+    # whole selection; a shard alone isn't held to it. Give it before the lane: ``--shard 1/2 gpu``.
+    parser.add_argument("--shard", type=_shard_spec, default=None, help="Run shard K/N of the lane (e.g. 1/2)")
+    # The lane's split, when its OSes have their own (#422 CI-422B): ``--shard 1/2 --shard-plan gpu-linux gpu`` on
+    # Linux. Default: the plan named after the lane (Windows' gpu shards). Only the lane's own plans are accepted.
+    parser.add_argument("--shard-plan", default=None, help="The lane's shard plan (default: the lane's name)")
     parser.add_argument("tier", choices=sorted(TIERS.keys()))
     parser.add_argument("--xdist", action="store_true", help="Use pytest-xdist if available")
     parser.add_argument(
@@ -69,6 +283,12 @@ def main(argv: list[str] | None = None) -> int:
 
     repo_root = Path(__file__).resolve().parents[1]
     tier_cfg = TIERS[args.tier]
+    if args.shard and args.tier not in ci_shards.PLANS:
+        parser.error(f"--shard: the {args.tier} lane has no shard plan in tooling/ci_shards.py")
+    plan = args.shard_plan or args.tier
+    if args.shard_plan and (not args.shard or plan not in ci_shards.PLANS
+                            or not (plan == args.tier or plan.startswith(f"{args.tier}-"))):
+        parser.error(f"--shard-plan {plan}: needs --shard and one of the {args.tier} lane's plans in tooling/ci_shards.py")
 
     extra_args = args.pytest_args
     if extra_args and extra_args[0] == "--":
@@ -86,9 +306,13 @@ def main(argv: list[str] | None = None) -> int:
         if rc != 0:
             return rc
 
+    shard_dir = repo_root / "artifacts" / "shards"
+    shard_args = [] if not args.shard else [
+        "-p", "tooling.ci_shards_plugin", "--mesh-shard", args.shard, "--mesh-shard-plan", plan,
+        "--mesh-shard-record", str(shard_dir / f"shard-{args.shard.split('/')[0]}.json")]
     pytest_cmd = _pytest_cmd(
         mark_expr=tier_cfg.pytest_mark,
-        extra_args=extra_args,
+        extra_args=[*tier_cfg.pytest_args, *tier_cfg.paths, *shard_args, *extra_args],
         xdist_jobs=xdist_jobs,
     )
     log_path = repo_root / "artifacts" / f"pytest_{args.tier}.log"
@@ -101,13 +325,44 @@ def main(argv: list[str] | None = None) -> int:
             "PYTEST_ADDOPTS": "cleared",
             "xdist": format_xdist(xdist_jobs is not None, xdist_jobs),
             "tier": args.tier,
+            "shard": args.shard or "none",
         },
         pytest_cmd,
     )
     print(f"test-tiers: wrote log: {log_path}")
-    rc = _run(pytest_cmd, cwd=repo_root, env=build_pytest_env())
+    junit = (shard_dir / f"junit-{args.shard.split('/')[0]}.xml" if args.shard
+             else repo_root / "artifacts" / f"pytest_{args.tier}.xml")
+    pytest_cmd += [f"--junitxml={junit}", "-rfEs"]
+    gl_tier = dict(tier_cfg.env).get("MESH_GL_SMOKE") == "1"
+    renderer = gl_renderer() if gl_tier else None
+    runner = {"before": runner_calibration()} if tier_cfg.calibrate else None
+    rc = _run(pytest_cmd, cwd=repo_root, env=_tier_env(tier_cfg, renderer))
+    if runner is not None:
+        runner["after"] = runner_calibration()
+        runner["host"] = runner_host({**runner["after"], **runner["before"]})  # the GL strings either run got
+    run = summarize_junit(junit) if junit.is_file() else None
+    problems = lane_problems(run, gl_renderer=renderer, gl_tier=gl_tier,
+                             min_selected=0 if extra_args or args.shard else tier_cfg.min_selected)
+    summary = {"tier": args.tier, "shard": args.shard, "pytest_exit": rc, "selection": tier_cfg.pytest_mark, "paths": list(tier_cfg.paths),
+               "gl_renderer": renderer, **({"runner": runner} if runner else {}), **(asdict(run) if run else {}),
+               "problems": problems}
+    (repo_root / "artifacts" / f"pytest_{args.tier}_summary.json").write_text(json.dumps(summary, indent=1) + "\n",
+                                                                               encoding="utf-8")
+    if run is not None:
+        print(f"test-tiers: {args.tier}{f' shard {args.shard}' if args.shard else ''}: selected {run.selected}, passed {run.passed}, failed {len(run.failed)}, "
+              f"errors {len(run.errors)}, skipped {run.skipped}" + (f"; GL renderer: {renderer}" if gl_tier else ""))
+        for reason, count in run.skip_reasons.items():
+            print(f"test-tiers:   skipped {count}: {reason}")
+        for name, value in run.measurements.items():
+            print(f"test-tiers:   measured {name}: {json.dumps(value)}")
+    if runner is not None:
+        print(f"test-tiers:   runner: {json.dumps(runner)}")
+    for problem in problems:
+        print(f"test-tiers: FAILED: {problem}")
     if rc != 0:
         return rc
+    if problems:
+        return 1
 
     if tier_cfg.verify_all:
         rc = _run([sys.executable, "-m", "mesh_cli", "verify-all", "--artifacts", "artifacts"], cwd=repo_root)

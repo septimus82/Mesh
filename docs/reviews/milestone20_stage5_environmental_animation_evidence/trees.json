@@ -1,0 +1,19 @@
+{
+ "tree_planes": {
+  "sprite_quads": 5,
+  "casts": false,
+  "blocks": false
+ },
+ "tree_layered": {
+  "sprite_quads": 0,
+  "casts": true,
+  "blocks": true
+ },
+ "tree_small": {
+  "sprite_quads": 4,
+  "casts": true,
+  "blocks": true
+ },
+ "frames_differ_front": true,
+ "scatter_bytes": 524928
+}

@@ -1,0 +1,40 @@
+{
+ "1280x720": {
+  "left_buttons_in_ui": 75,
+  "below_the_window": [
+   "Sound",
+   "Water",
+   "Trigger zone",
+   "Empty object",
+   "Extra object 29",
+   "Extra object 28"
+  ],
+  "below_count": 56,
+  "clicked_below_the_window": "extra_29",
+  "wheel_over_left": {
+   "left_scroll": null,
+   "view_unchanged": true,
+   "right_scroll_unchanged": true
+  },
+  "reached_last_object": "not reachable: no left-panel button 'Extra object 29' reachable"
+ },
+ "640x480": {
+  "left_buttons_in_ui": 75,
+  "below_the_window": [
+   "Sound",
+   "Water",
+   "Trigger zone",
+   "Empty object",
+   "Extra object 29",
+   "Extra object 28"
+  ],
+  "below_count": 63,
+  "clicked_below_the_window": "extra_29",
+  "wheel_over_left": {
+   "left_scroll": null,
+   "view_unchanged": true,
+   "right_scroll_unchanged": true
+  },
+  "reached_last_object": "not reachable: no left-panel button 'Extra object 29' reachable"
+ }
+}

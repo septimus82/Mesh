@@ -1,7 +1,9 @@
 """CLI command: ``mesh_cli artifacts-diff``
 
 Compares two verify bundles (base vs curr) and summarises regressions,
-improvements, and changes.
+improvements, changes and informational differences. Only regressions fail
+``--fail-on-regression``; a bundle whose verify report is missing, corrupt or
+lacks a verify outcome is an error, never a clean comparison.
 
 Headless-safe — no engine or arcade imports.
 """
@@ -21,6 +23,11 @@ from typing import Any
 
 _DEFAULT_TIMING_THRESHOLD_MS = 50
 _BASELINE_META_FILENAME = "BASELINE_META.json"
+_CATEGORIES = ("regression", "improvement", "changed", "informational")
+
+
+class ArtifactsDiffError(Exception):
+    """A bundle can't be compared: its verify report is missing, corrupt or incomplete."""
 
 
 # ---------------------------------------------------------------------------
@@ -103,7 +110,7 @@ class DiffItem:
         self.field = field
         self.base_val = base_val
         self.curr_val = curr_val
-        self.category = category  # regression | improvement | changed
+        self.category = category  # regression | improvement | changed | informational
 
     def __repr__(self) -> str:
         return f"DiffItem({self.field!r}, {self.base_val!r}->{self.curr_val!r}, {self.category})"
@@ -199,9 +206,10 @@ def compute_diff(
         items.append(DiffItem("shadow_backend.reason", b_reason, c_reason, "changed"))
 
     # --- timing ---
+    # Total wall time is reported but informational: it varies with the runner, and the per-step, per-platform
+    # verify-all step budgets (budgets.verify_step_budget above) are what fail on slow steps.
     # Skip timing comparison when base total_ms is 0 (sentinel for "no
-    # timing baseline"), which avoids false regressions when comparing a
-    # seed baseline against a real run.
+    # timing baseline").
     b_total_ms = _dig(base, "timing", "total_ms")
     c_total_ms = _dig(curr, "timing", "total_ms")
     if (
@@ -211,8 +219,7 @@ def compute_diff(
     ):
         delta = int(c_total_ms) - int(b_total_ms)
         if abs(delta) > timing_threshold_ms:
-            cat = "regression" if delta > 0 else "improvement"
-            items.append(DiffItem("timing.total_ms", int(b_total_ms), int(c_total_ms), cat))
+            items.append(DiffItem("timing.total_ms", int(b_total_ms), int(c_total_ms), "informational"))
 
     # --- schema_version changes (from index.json) ---
     if base_schemas and curr_schemas:
@@ -224,7 +231,7 @@ def compute_diff(
                 items.append(DiffItem(f"schema.{key}", bv, cv, "changed"))
 
     # --- deterministic sort: category order then field name ---
-    _cat_order = {"regression": 0, "improvement": 1, "changed": 2}
+    _cat_order = {category: order for order, category in enumerate(_CATEGORIES)}
     items.sort(key=lambda it: (_cat_order.get(it.category, 9), it.field))
     return items
 
@@ -244,11 +251,7 @@ def _format_val(v: Any) -> str:
 
 def format_text(items: list[DiffItem]) -> str:
     """Render diff items as plain text report."""
-    sections: dict[str, list[DiffItem]] = {
-        "regression": [],
-        "improvement": [],
-        "changed": [],
-    }
+    sections: dict[str, list[DiffItem]] = {category: [] for category in _CATEGORIES}
     for it in items:
         sections.setdefault(it.category, []).append(it)
 
@@ -275,6 +278,12 @@ def format_text(items: list[DiffItem]) -> str:
             lines.append(f"  {it.field}: {_format_val(it.base_val)} -> {_format_val(it.curr_val)}")
         lines.append("")
 
+    if sections["informational"]:
+        lines.append("INFORMATIONAL (does not fail):")
+        for it in sections["informational"]:
+            lines.append(f"  {it.field}: {_format_val(it.base_val)} -> {_format_val(it.curr_val)}")
+        lines.append("")
+
     if not has_any:
         lines.append("No differences detected.")
         lines.append("")
@@ -282,17 +291,14 @@ def format_text(items: list[DiffItem]) -> str:
     reg = len(sections["regression"])
     imp = len(sections["improvement"])
     chg = len(sections["changed"])
-    lines.append(f"Summary: {reg} regression(s), {imp} improvement(s), {chg} changed")
+    info = len(sections["informational"])
+    lines.append(f"Summary: {reg} regression(s), {imp} improvement(s), {chg} changed, {info} informational")
     return "\n".join(lines)
 
 
 def format_markdown(items: list[DiffItem]) -> str:
     """Render diff items as GitHub-flavoured markdown."""
-    sections: dict[str, list[DiffItem]] = {
-        "regression": [],
-        "improvement": [],
-        "changed": [],
-    }
+    sections: dict[str, list[DiffItem]] = {category: [] for category in _CATEGORIES}
     for it in items:
         sections.setdefault(it.category, []).append(it)
 
@@ -327,6 +333,15 @@ def format_markdown(items: list[DiffItem]) -> str:
             lines.append(f"| `{it.field}` | {_format_val(it.base_val)} | {_format_val(it.curr_val)} |")
         lines.append("")
 
+    if sections["informational"]:
+        lines.append("## Informational (does not fail)")
+        lines.append("")
+        lines.append("| Field | Base | Current |")
+        lines.append("|-------|------|---------|")
+        for it in sections["informational"]:
+            lines.append(f"| `{it.field}` | {_format_val(it.base_val)} | {_format_val(it.curr_val)} |")
+        lines.append("")
+
     if not has_any:
         lines.append("No differences detected.")
         lines.append("")
@@ -334,7 +349,8 @@ def format_markdown(items: list[DiffItem]) -> str:
     reg = len(sections["regression"])
     imp = len(sections["improvement"])
     chg = len(sections["changed"])
-    lines.append(f"**Summary:** {reg} regression(s), {imp} improvement(s), {chg} changed")
+    info = len(sections["informational"])
+    lines.append(f"**Summary:** {reg} regression(s), {imp} improvement(s), {chg} changed, {info} informational")
     return "\n".join(lines)
 
 
@@ -368,15 +384,18 @@ def build_json_payload(items: list[DiffItem]) -> dict[str, Any]:
     regressions = [_diff_item_to_json_obj(it) for it in items if it.category == "regression"]
     improvements = [_diff_item_to_json_obj(it) for it in items if it.category == "improvement"]
     changed = [_diff_item_to_json_obj(it) for it in items if it.category == "changed"]
+    informational = [_diff_item_to_json_obj(it) for it in items if it.category == "informational"]
     payload: dict[str, Any] = {
         "schema_version": 1,
         "regressions": regressions,
         "improvements": improvements,
         "changed": changed,
+        "informational": informational,
         "counts": {
             "regressions": len(regressions),
             "improvements": len(improvements),
             "changed": len(changed),
+            "informational": len(informational),
         },
         "ok": len(regressions) == 0,
     }
@@ -401,20 +420,18 @@ def diff_artifacts(
 ) -> tuple[str, bool]:
     """Compare two artifact directories.
 
-    Returns ``(formatted_output, has_regressions)``.
+    Returns ``(formatted_output, has_regressions)``. Raises :class:`ArtifactsDiffError` when either bundle's verify
+    report is missing, corrupt or has no verify outcome, so a broken bundle can't pass as "no regressions".
     """
     base_report = _locate_report(base_dir)
     curr_report = _locate_report(curr_dir)
-
-    if base_report is None and curr_report is None:
-        msg = "error: verify_report.json not found in either base or curr"
-        return msg, False
-    if base_report is None:
-        msg = f"error: verify_report.json not found in base ({base_dir.as_posix()})"
-        return msg, False
-    if curr_report is None:
-        msg = f"error: verify_report.json not found in curr ({curr_dir.as_posix()})"
-        return msg, False
+    problems = [
+        problem
+        for report, label, directory in ((base_report, "base", base_dir), (curr_report, "curr", curr_dir))
+        if (problem := _report_problem(report, label, directory)) is not None
+    ]
+    if problems or base_report is None or curr_report is None:
+        raise ArtifactsDiffError("; ".join(problems))
 
     base_schemas = _get_index_schemas(base_dir)
     curr_schemas = _get_index_schemas(curr_dir)
@@ -438,6 +455,17 @@ def diff_artifacts(
         output = format_text(items)
 
     return output, has_regressions
+
+
+def _report_problem(report: dict[str, Any] | None, label: str, directory: Path) -> str | None:
+    if report is None:
+        return f"error: verify_report.json missing or not valid JSON in {label} ({directory.as_posix()})"
+    if not isinstance(_dig(report, "verify_summary", "ok"), bool):
+        return (
+            f"error: verify_report.json in {label} ({directory.as_posix()}) has no verify outcome "
+            "(verify_summary.ok is not true/false)"
+        )
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -515,15 +543,19 @@ def _handle_artifacts_diff(args: argparse.Namespace) -> int:
     out_path_raw = str(getattr(args, "out", "") or "").strip()
     out_path = Path(out_path_raw) if out_path_raw else None
 
-    output, has_regressions = diff_artifacts(base_dir, curr_dir, fmt=fmt)
+    error = False
+    try:
+        output, has_regressions = diff_artifacts(base_dir, curr_dir, fmt=fmt)
+    except ArtifactsDiffError as exc:
+        output, has_regressions, error = str(exc), False, True
     if out_path is not None:
         if not out_path.is_absolute():
             out_path = Path.cwd() / out_path
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(output + "\n", encoding="utf-8")
-    print(output)
+    print(output, file=sys.stderr if error else sys.stdout)
 
-    if fail_on_regression and has_regressions:
+    if error or (fail_on_regression and has_regressions):
         return 2
     return 0
 
@@ -560,7 +592,7 @@ def register(
         "--fail-on-regression",
         action="store_true",
         default=False,
-        help="Exit 2 if any regression detected",
+        help="Exit 2 if any regression is detected (informational differences never fail; a broken bundle always exits 2)",
     )
     parser.add_argument(
         "--update-baseline",

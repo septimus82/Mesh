@@ -1,0 +1,231 @@
+{
+ "passed": true,
+ "steps": [
+  {
+   "step": "launch_mesh",
+   "ok": true,
+   "error": null,
+   "seconds": 4.5,
+   "screenshot": "01_launch_mesh.png"
+  },
+  {
+   "step": "launcher_appears",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "buttons": [
+     "New Project",
+     "Open Project..."
+    ]
+   },
+   "seconds": 0.0,
+   "screenshot": "02_launcher_appears.png"
+  },
+  {
+   "step": "new_project",
+   "ok": true,
+   "error": null,
+   "seconds": 0.5,
+   "screenshot": "03_new_project.png"
+  },
+  {
+   "step": "choose_top_down_adventure",
+   "ok": true,
+   "error": null,
+   "seconds": 1.1,
+   "screenshot": "04_choose_top_down_adventure.png"
+  },
+  {
+   "step": "name_and_destination",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "target": "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö\\Village Quest"
+   },
+   "seconds": 8.8,
+   "screenshot": "05_name_and_destination.png"
+  },
+  {
+   "step": "create_and_open",
+   "ok": true,
+   "error": null,
+   "seconds": 5.9,
+   "screenshot": "06_create_and_open.png"
+  },
+  {
+   "step": "example_content",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "objects": [
+     "Arrival from House",
+     "Door to House",
+     "Guide",
+     "Player"
+    ],
+    "wall_tiles": 55
+   },
+   "seconds": 0.0,
+   "screenshot": "07_example_content.png"
+  },
+  {
+   "step": "change_map_and_dialogue",
+   "ok": true,
+   "error": null,
+   "seconds": 11.1,
+   "screenshot": "08_change_map_and_dialogue.png"
+  },
+  {
+   "step": "play_and_talk",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "dialogue": {
+     "speaker": "Guide",
+     "text": "Have you met my grandma? She lives in the house."
+    }
+   },
+   "seconds": 3.5,
+   "screenshot": "09_play_and_talk.png"
+  },
+  {
+   "step": "save_and_stop",
+   "ok": true,
+   "error": null,
+   "seconds": 0.8,
+   "screenshot": "10_save_and_stop.png"
+  },
+  {
+   "step": "close_the_application",
+   "ok": true,
+   "error": null,
+   "seconds": 0.6,
+   "screenshot": null
+  },
+  {
+   "step": "launch_again",
+   "ok": true,
+   "error": null,
+   "seconds": 4.4,
+   "screenshot": "12_launch_again.png"
+  },
+  {
+   "step": "open_from_recent",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "recent": [
+     {
+      "name": "Village Quest",
+      "path": "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö\\Village Quest",
+      "missing": false
+     }
+    ]
+   },
+   "seconds": 5.3,
+   "screenshot": "13_open_from_recent.png"
+  },
+  {
+   "step": "changes_persisted",
+   "ok": true,
+   "error": null,
+   "seconds": 0.6,
+   "screenshot": "14_changes_persisted.png"
+  },
+  {
+   "step": "create_blank_project",
+   "ok": true,
+   "error": null,
+   "seconds": 24.2,
+   "screenshot": "15_create_blank_project.png"
+  },
+  {
+   "step": "blank_has_no_monster_or_demo_content",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "files": [
+     ".mesh/editor_session_state.json",
+     "assets/data/events.json",
+     "assets/prefabs.json",
+     "assets/sprites/animated_player.png",
+     "assets/sprites/door.png",
+     "assets/tilesets/starter.json",
+     "assets/tilesets/starter.png",
+     "config.json",
+     "main.py",
+     "packs/core_regions/maps/start.json",
+     "packs/core_regions/scenes/start.json",
+     "packs/core_regions/worlds/main.json"
+    ]
+   },
+   "seconds": 0.0,
+   "screenshot": "16_blank_has_no_monster_or_demo_content.png"
+  },
+  {
+   "step": "add_room_and_object_then_play",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "walked": [
+     [
+      128.0,
+      128.0
+     ],
+     [
+      248.1287899966701,
+      128.0
+     ]
+    ]
+   },
+   "seconds": 5.7,
+   "screenshot": "17_add_room_and_object_then_play.png"
+  },
+  {
+   "step": "open_older_projects",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m3acc6\\work\\village": {
+     "tilesets": [
+      "Starter",
+      "Meadow"
+     ],
+     "objects": 3
+    },
+    "D:\\Games\\Mesh\\mygame": {
+     "tilesets": [
+      "Starter"
+     ],
+     "objects": 4
+    }
+   },
+   "seconds": 32.8,
+   "screenshot": null
+  },
+  {
+   "step": "bad_and_missing_paths",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "not a project": "There's no Mesh project in C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö: it has no config.json. Choose the folder that contains config.json.",
+    "moved": "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö\\Empty Canvas isn't there any more. It may have been moved, renamed or deleted. Use Open Project to find it, or Remove to take it off this list.",
+    "Village Quest": "There is already a Mesh project at C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö\\Village Quest. Use Open Project to open it, or pick another name.",
+    "What?": "A name can't contain any of these: < > : \" / \\ | ? *",
+    "engine folder": "Choose a folder outside the Mesh engine folder (D:\\Games\\Mesh): your game and the engine stay separate."
+   },
+   "seconds": 39.3,
+   "screenshot": null
+  },
+  {
+   "step": "engine_folder_unchanged",
+   "ok": true,
+   "error": null,
+   "detail": {
+    "git_status_lines": 46
+   },
+   "seconds": 0.1,
+   "screenshot": null
+  }
+ ]
+}

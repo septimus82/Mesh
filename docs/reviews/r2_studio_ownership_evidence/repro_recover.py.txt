@@ -1,0 +1,88 @@
+"""PR #517 review: can recovering project A remove project B's live session record? Prints each step.
+
+    py -3.13 repro_recover.py REPO OUT
+
+REPO: the checkout whose engine, mesh_cli and tests/studio_owner_process.py are used. OUT: a new, empty folder.
+B is Mesh Studio itself (a real hidden window, live session on); `mesh author recover --project A` is run as its
+own process with MESH_REPO_ROOT=B, as a person's shell might have it.
+"""
+import hashlib
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO, OUT = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve()
+assert not OUT.exists() or not any(OUT.iterdir()), f"{OUT} is not empty"
+OUT.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(REPO))
+os.environ.pop("MESH_REPO_ROOT", None)
+
+from engine import authoring_session  # noqa: E402
+from engine.editor import project_ownership  # noqa: E402
+from engine.editor.live_session_bridge import session_file_path  # noqa: E402
+from engine.project_scaffold import create_project  # noqa: E402
+from tests.test_studio_project_ownership import ADD_SEXTON, StudioProcess, _files  # noqa: E402
+
+a_root, b_root = OUT / "project_a", OUT / "project_b"
+create_project(a_root, "A", template_id="blank")
+create_project(b_root, "B", template_id="blank")
+
+
+def record(root: Path) -> dict:
+    path = session_file_path(root)
+    if not path.exists():
+        return {"exists": False}
+    data = path.read_bytes()
+    return {"exists": True, "sha256": hashlib.sha256(data).hexdigest()[:16],
+            "session_id": json.loads(data).get("session_id", "")[:8]}
+
+
+def scrub(text: str) -> str:
+    return text.replace(str(OUT), "<OUT>").replace(str(OUT).replace("\\", "\\\\"), "<OUT>")
+
+
+steps: dict = {"0 markers (find_repo_root honours MESH_REPO_ROOT only at a folder with one)": {
+    "B has config.json": (b_root / "config.json").is_file(), "B has pyproject.toml": (b_root / "pyproject.toml").is_file()}}
+
+# A: a Studio that crashed leaves A's record behind (a genuinely abandoned record)
+crashed = StudioProcess(a_root, log=OUT / "a_crashed.log")
+crashed.kill()
+steps["1 A: a Studio crashed, leaving its record"] = {"record": record(a_root), "owned": project_ownership.owned(a_root)}
+
+# B: Mesh Studio, live session on, unsaved work
+b = StudioProcess(b_root, "real", log=OUT / "b.log", env={"MESH_STUDIO_NO_AI_BRIDGE": None, "MESH_TEST_OWNER_WAIT": "0.3"})
+assert b.start["ready"], b.start
+b.ask("edit Unsaved Warden")
+b_files = _files(b_root)
+b_record = record(b_root)
+steps["2 B open in Mesh Studio"] = {"ready": b.start["ready"], "record": b_record,
+                                    "owned": (project_ownership.owned(b_root) or {}).get("kind"),
+                                    "state": authoring_session.studio_state(b_root)["state"],
+                                    "unsaved": b.ask("state")["unsaved"]}
+
+# recover A, with MESH_REPO_ROOT=B
+run = subprocess.run([sys.executable, "-m", "mesh_cli", "author", "recover", "--project", str(a_root)], cwd=REPO,
+                     capture_output=True, text=True, encoding="utf-8", timeout=120,
+                     env={**os.environ, "MESH_REPO_ROOT": str(b_root)})
+out = json.loads(scrub(run.stdout[run.stdout.index("{"):]))
+steps["3 mesh author recover --project A, MESH_REPO_ROOT=B"] = {"exit": run.returncode, "answer": out}
+
+state = authoring_session.studio_state(b_root)
+steps["4 B's record after recovering A"] = {"record": record(b_root), "unchanged": record(b_root) == b_record,
+                                            "owned": (project_ownership.owned(b_root) or {}).get("kind")}
+steps["5 what outside tools see for B"] = {"state": state["state"],
+                                           "problem": (state.get("problem") or {}).get("reason"),
+                                           "owned": (state.get("problem") or {}).get("owned")}
+held = b.ask("state")
+steps["6 B still open, with its unsaved work"] = {"unsaved": held["unsaved"], "has Unsaved Warden": "Unsaved Warden" in held["names"]}
+result = authoring_session.apply(b_root, ADD_SEXTON)
+steps["7 an outside change to B"] = {k: result.get(k) for k in ("ok", "source", "reason") if k in result}
+steps["7 proposed to B (files untouched)"] = {"files unchanged": _files(b_root) == b_files,
+                                              "pending in B": b.ask("state")["pending"]}
+steps["8 A after recovery"] = {"record": record(a_root), "state": authoring_session.studio_state(a_root)["state"]}
+b.close()
+text = json.dumps(steps, indent=1)
+print(text)
+(OUT / "repro_recover.json").write_text(text + "\n", encoding="utf-8")

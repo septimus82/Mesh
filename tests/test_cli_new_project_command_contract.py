@@ -47,7 +47,8 @@ def test_creates_scaffolded_project(project: Path) -> None:
     # The starter scene has no lights; lighting on renders a near-black screen.
     assert cfg["lighting_enabled"] is False
     assert (project / "packs/core_regions/worlds/main.json").is_file()
-    assert (project / "assets/sprites/animated_player.png").is_file()
+    assert (project / "assets/sprites/starter_hero.png").is_file()
+    assert not (project / "assets/sprites/animated_player.png").exists(), "no template uses the legacy sheet"
 
 
 def test_refuses_to_overwrite_without_force(tmp_path: Path) -> None:
@@ -58,9 +59,11 @@ def test_refuses_to_overwrite_without_force(tmp_path: Path) -> None:
 
 def test_default_template_has_player_and_interactable(project: Path) -> None:
     entities = _scene(project)["entities"]
-    players = [e for e in entities if e.get("tag") == "player"]
+    # One player for the whole game: the room says where it starts, the "player" prefab what it is.
+    players = [e for e in entities if e.get("prefab_id") == "player"]
     assert len(players) == 1
-    assert "PlayerController" in players[0]["behaviours"]
+    prefabs = json.loads((project / "assets/prefabs.json").read_text(encoding="utf-8"))
+    assert "PlayerController" in next(p for p in prefabs if p["id"] == "player")["entity"]["behaviours"]
     npc = next(e for e in entities if "Dialogue" in e.get("behaviours", []))
     nodes = npc["behaviour_config"]["Dialogue"]["dialogue"]["nodes"]
     assert nodes["root"]["text"]
@@ -85,6 +88,8 @@ def test_project_boots_headless_and_loads_start_scene(project: Path, tmp_path: P
     # Subprocess: the runtime-only smoke rejects editor modules this test process already imported.
     artifact = tmp_path / "smoke.json"
     env = {k: v for k, v in os.environ.items() if k != "MESH_REPO_ROOT"}
+    # Run this checkout's engine: from the project folder Python may otherwise import another Mesh install.
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
     cmd = [sys.executable, "-m", "mesh_cli", "play-runtime", "--headless-smoke", "--smoke-scene", _START_SCENE]
     cmd += ["--smoke-ticks", "3", "--smoke-artifact", str(artifact)]
     result = subprocess.run(cmd, cwd=project, env=env, capture_output=True, text=True, timeout=120)

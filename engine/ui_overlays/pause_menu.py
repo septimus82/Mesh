@@ -9,7 +9,7 @@ import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
 
 from ..text_draw import TextCache, draw_text_cached
-from ._settings_data import SETTINGS_ROWS
+from ._settings_data import SETTINGS_ROWS, toast_settings_not_saved, toast_settings_saved
 from .common import UIElement, _draw_rectangle_filled
 from .widgets import Button, DrawInstruction, Label, Padding, Panel, Rect, ScrollList, Slider, Toggle, VStack
 
@@ -25,6 +25,21 @@ _MAIN_ACTIONS: tuple[tuple[str, str], ...] = (
     ("pause.main.load", "Load Game"),
     ("pause.main.quit", "Quit"),
 )
+
+
+def slot_label(slot: str) -> str:
+    """A save slot as a player reads it: the quick save, a dated save, or its name."""
+    if slot == "quicksave":
+        return "Quick save (F5)"
+    if slot.startswith("save_"):
+        import datetime  # noqa: PLC0415
+
+        try:
+            when = datetime.datetime.strptime(slot[5:], "%Y%m%d_%H%M%S")
+        except ValueError:
+            return slot
+        return f"Saved {when.day} {when.strftime('%b')}, {when.strftime('%H:%M:%S')}"
+    return slot
 
 
 @dataclass(frozen=True)
@@ -80,10 +95,12 @@ class PauseMenu(UIElement):
         self._save_scroll = ScrollList(items=[], row_height=34, selected_index=0)
         self._load_scroll = ScrollList(items=[], row_height=34, selected_index=0)
         self._settings_widgets: dict[str, Slider | Toggle | Button] = {
-            "music_volume": Slider(label="Music Volume", value=1.0, step=0.01, height=34.0),
-            "sfx_volume": Slider(label="SFX Volume", value=1.0, step=0.01, height=34.0),
+            # label_size: the 16 pt label's line (26 px as drawn) (the bar keeps below it: they overlapped until Milestone 21B.1)
+            "music_volume": Slider(label="Music Volume", value=1.0, step=0.01, height=50.0, label_size=26.0),
+            "sfx_volume": Slider(label="SFX Volume", value=1.0, step=0.01, height=50.0, label_size=26.0),
+            "ambience_volume": Slider(label="Ambience Volume", value=1.0, step=0.01, height=50.0, label_size=26.0),
             "fog_enabled": Toggle(label="Fog", value=False, height=30.0),
-            "soft_shadows_enabled": Toggle(label="Soft Shadows", value=False, height=30.0),
+            "reduced_flicker": Toggle(label="Calmer Flickering", value=False, height=30.0),
             "back": Button(text="Back", action_id="pause.settings.back", font_size=18, height=34.0),
         }
 
@@ -127,21 +144,19 @@ class PauseMenu(UIElement):
         self._invalidate_layout()
 
     def _save_runtime_settings(self) -> None:
-        from ..i18n import tr  # noqa: PLC0415
-
         editor = getattr(self.window, "editor", None)
         if editor is not None and hasattr(editor, "workspace"):
-            editor.workspace.save_user_settings()
+            saved = editor.workspace.save_user_settings() is not False
         else:
             from ..runtime_settings_storage import save_runtime_settings  # noqa: PLC0415
 
             path = getattr(self.window, "runtime_settings_path", None)
             settings = self._runtime_settings()
-            save_runtime_settings(path, settings)
-        hud = getattr(self.window, "player_hud", None)
-        enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
-        if callable(enqueue):
-            enqueue(tr("UI_SETTINGS_SAVED"), seconds=2.0)
+            saved = save_runtime_settings(path, settings)
+        if saved:
+            toast_settings_saved(self.window)
+        else:
+            toast_settings_not_saved(self.window)
 
     def _window_size(self) -> tuple[int, int]:
         return (int(getattr(self.window, "width", 800) or 800), int(getattr(self.window, "height", 600) or 600))
@@ -174,12 +189,18 @@ class PauseMenu(UIElement):
         self._layout_dirty = False
         return layout
 
+    def _main_actions(self) -> tuple[tuple[str, str], ...]:
+        # In a Mesh Studio play-test, "Quit" would close the Studio: it ends the play-test instead.
+        if getattr(self.window, "studio", None) is not None:
+            return tuple((a, "Exit Play-Test" if a == "pause.main.quit" else label) for a, label in _MAIN_ACTIONS)
+        return _MAIN_ACTIONS
+
     def _layout_main(self) -> PauseMenuLayout:
         panel_bounds = self._panel_bounds()
         title = Label(text="PAUSED", font_size=30, color_token="white", height=48.0)
         buttons: list[Button] = []
         hit_targets: list[PauseHitTarget] = []
-        for index, (action_id, label) in enumerate(_MAIN_ACTIONS):
+        for index, (action_id, label) in enumerate(self._main_actions()):
             selected = index == self.selected_index
             button = Button(
                 text=label,
@@ -212,7 +233,7 @@ class PauseMenu(UIElement):
         title_bounds = Rect(inner.x, inner.top - 44.0, inner.width, 44.0)
         footer_bounds = Rect(inner.x, inner.y, inner.width, 34.0)
         list_bounds = Rect(inner.x, footer_bounds.top + 12.0, inner.width, max(80.0, title_bounds.bottom - footer_bounds.top - 24.0))
-        items = [*self.save_slots, "<New Save>", "Back"]
+        items = [*(slot_label(s) for s in self.save_slots), "New save", "Back"]
         self.selected_save_index = self._clamp_index(self.selected_save_index, len(items))
         self._save_scroll.items = items
         self._save_scroll.selected_index = self.selected_save_index
@@ -243,7 +264,7 @@ class PauseMenu(UIElement):
         title_bounds = Rect(inner.x, inner.top - 44.0, inner.width, 44.0)
         footer_bounds = Rect(inner.x, inner.y, inner.width, 34.0)
         list_bounds = Rect(inner.x, footer_bounds.top + 12.0, inner.width, max(80.0, title_bounds.bottom - footer_bounds.top - 24.0))
-        content_items = self.save_slots if self.save_slots else ["No saves found"]
+        content_items = [slot_label(s) for s in self.save_slots] if self.save_slots else ["No saved games yet"]
         items = [*content_items, "Back"]
         back_index = len(items) - 1
         if not self.save_slots and self.selected_save_index == 0:
@@ -275,7 +296,7 @@ class PauseMenu(UIElement):
         )
 
     def _layout_settings(self) -> PauseMenuLayout:
-        panel_bounds = self._panel_bounds(height_scale=0.66, min_height=350.0, max_height=520.0)
+        panel_bounds = self._panel_bounds(height_scale=0.66, min_height=400.0, max_height=520.0)  # three sliders
         settings = self._runtime_settings()
         self._sync_settings_widgets(settings)
         title = Label(text="SETTINGS", font_size=28, color_token="white", height=44.0)
@@ -346,15 +367,18 @@ class PauseMenu(UIElement):
         music = self._settings_widgets["music_volume"]
         sfx = self._settings_widgets["sfx_volume"]
         fog = self._settings_widgets["fog_enabled"]
-        shadows = self._settings_widgets["soft_shadows_enabled"]
         if isinstance(music, Slider):
             music.value = float(settings.music_volume)
         if isinstance(sfx, Slider):
             sfx.value = float(settings.sfx_volume)
+        ambience = self._settings_widgets["ambience_volume"]
+        if isinstance(ambience, Slider):
+            ambience.value = float(getattr(settings, "ambience_volume", 1.0))
         if isinstance(fog, Toggle):
             fog.value = bool(settings.fog_enabled)
-        if isinstance(shadows, Toggle):
-            shadows.value = bool(settings.soft_shadows_enabled)
+        calm = self._settings_widgets["reduced_flicker"]
+        if isinstance(calm, Toggle):
+            calm.value = bool(getattr(settings, "reduced_flicker", False))
 
     def _save_action_id(self, row_index: int) -> str:
         if row_index < len(self.save_slots):
@@ -595,7 +619,13 @@ class PauseMenu(UIElement):
             self.selected_save_index = 0
             self._load_scroll.scroll_offset = 0.0
         elif action_id == "pause.main.quit":
-            optional_arcade.arcade.close_window()
+            studio = getattr(self.window, "studio", None)
+            if studio is not None and callable(getattr(studio, "stop", None)):
+                self.visible = False
+                self.window.paused = False
+                studio.stop()
+            else:
+                optional_arcade.arcade.close_window()
         elif action_id.startswith("pause.save.slot."):
             self._play_ui_sound("assets/sounds/ui_click.wav")
             index = int(action_id.rsplit(".", 1)[1])

@@ -39,3 +39,14 @@ def test_compute_ambient_rgb_interpolates():
     assert 10 <= r <= 200
     assert 10 <= g <= 200
     assert 30 <= b <= 220
+
+
+@pytest.mark.fast
+def test_switched_off_it_leaves_the_projects_ambient_alone() -> None:
+    """Found by the capability lab: constructing it always applied the 21:00 colour, so a project's
+    lighting_ambient_color never showed while day/night was off."""
+    from types import SimpleNamespace
+
+    lighting = SimpleNamespace(ambient_color=(255, 255, 255, 255))
+    DayNightCycle(lighting, enabled=False, start_hour=21.0)
+    assert lighting.ambient_color == (255, 255, 255, 255)

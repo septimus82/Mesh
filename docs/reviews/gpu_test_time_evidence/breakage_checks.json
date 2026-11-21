@@ -1,0 +1,42 @@
+{
+ "(no mutation: the tests pass)": {
+  "caught": false,
+  "failing_tests": [],
+  "summary": "6 passed in 146.22s (0:02:26)"
+ },
+ "a look is made twice again (the duplicate read)": {
+  "caught": true,
+  "failing_tests": [
+   "test_each_look_at_the_conversation_reads_the_whole_inspector_once"
+  ],
+  "summary": "1 failed, 5 passed in 151.18s (0:02:31)"
+ },
+ "a look reads only what the inspector shows first": {
+  "caught": true,
+  "failing_tests": [
+   "test_each_look_at_the_conversation_reads_the_whole_inspector_once",
+   "test_edits_after_reopening_keep_numbers_and_undo_redo",
+   "test_reopening_shows_the_same_numbers_openings_and_next_line_button"
+  ],
+  "summary": "3 failed, 3 passed in 125.78s (0:02:05)"
+ },
+ "a look starts where the inspector happens to be": {
+  "caught": true,
+  "failing_tests": [
+   "test_a_line_added_at_the_end_after_reopening_follows_the_last_line",
+   "test_another_room_saving_and_reopening_change_nothing",
+   "test_each_look_at_the_conversation_reads_the_whole_inspector_once",
+   "test_edits_after_reopening_keep_numbers_and_undo_redo",
+   "test_it_plays_as_written_in_the_game_and_the_exported_build",
+   "test_reopening_shows_the_same_numbers_openings_and_next_line_button"
+  ],
+  "summary": "6 errors in 30.86s"
+ },
+ "a look stops before the inspector's last rows": {
+  "caught": true,
+  "failing_tests": [
+   "test_each_look_at_the_conversation_reads_the_whole_inspector_once"
+  ],
+  "summary": "1 failed, 5 passed in 145.64s (0:02:25)"
+ }
+}

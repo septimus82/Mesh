@@ -322,6 +322,7 @@ class ConsoleController:
                     ("set volume <0..1>", ""),
                     ("set master <0..1>", ""),
                     ("set music <0..1>", ""),
+                    ("set ambience <0..1>", ""),
                     ("set sfx <0..1>", ""),
                     ("set fullscreen <on|off>", ""),
                     ("set vsync <on|off>", ""),

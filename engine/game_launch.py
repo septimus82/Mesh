@@ -28,7 +28,10 @@ def launch_editor(
     scene_path: str | None = None,
     open_tile_paint: bool = True,
 ) -> int:
-    """Launch the game window with the in-game editor active for a project."""
+    """Open a project for editing: Mesh Studio for projects with a world, else the legacy editor.
+
+    ``MESH_LEGACY_EDITOR=1`` forces the legacy editor.
+    """
     root = resolve_project_root(project_root)
     config_path = root / "config.json"
     if not config_path.is_file():
@@ -37,6 +40,33 @@ def launch_editor(
 
     previous_cwd = Path.cwd()
     os.chdir(root)
+    try:
+        return _run_editor(root, config_path, scene_path=scene_path, open_tile_paint=open_tile_paint)
+    finally:
+        os.chdir(previous_cwd)
+
+
+def _run_editor(root: Path, config_path: Path, *, scene_path: str | None, open_tile_paint: bool) -> int:
+    """Own the project (#462 R2: one editor writes a project at a time), then open the editor on it. The project is
+    taken before a window exists or a file is read, and let go when the editor has closed."""
+    from engine.editor import project_ownership  # noqa: PLC0415
+
+    kind = project_ownership.EDITOR if os.environ.get("MESH_LEGACY_EDITOR") == "1" else project_ownership.STUDIO
+    try:
+        held = project_ownership.acquire(root, kind, wait=2.0)
+    except project_ownership.OwnedElsewhere as owned:
+        print(f"[Mesh][CLI] {owned}")
+        return project_ownership.EXIT_OPEN_ELSEWHERE
+    except project_ownership.OwnershipUnavailable as exc:
+        print(f"[Mesh][CLI] {exc}")
+        return 1
+    try:
+        return _run_owned_editor(root, config_path, held, scene_path=scene_path, open_tile_paint=open_tile_paint)
+    finally:
+        held.release()
+
+
+def _run_owned_editor(root: Path, config_path: Path, held: Any, *, scene_path: str | None, open_tile_paint: bool) -> int:
     reset_path_caches()
 
     config = load_config(str(config_path))
@@ -58,6 +88,7 @@ def launch_editor(
         config=config,
         config_path=str(config_path),
     )
+    window.project_ownership = held  # (Mesh Studio, or the legacy editor's bridge, holds the project by this)
 
     wc = getattr(window, "world_controller", None)
     initial_scene = (
@@ -72,13 +103,39 @@ def launch_editor(
         window.scene_controller._pending_scene_change = None
     except Exception as exc:  # noqa: BLE001  # REASON: editor launch should report scene load failures before opening the window loop
         print(f"[Mesh][CLI] Failed to load scene '{initial_scene}': {exc}")
-        os.chdir(previous_cwd)
         return 1
 
-    editor = window.editor_controller
-    editor._enable_editor_mode()
+    studio = None
+    if os.environ.get("MESH_LEGACY_EDITOR") != "1":
+        from engine.studio import open_studio
 
-    if open_tile_paint:
+        try:
+            studio = open_studio(window, root, getattr(config, "world_file", None), scene_path)
+        except Exception as exc:  # noqa: BLE001  # REASON: a Studio start-up failure must be reported plainly, not crash the CLI with a traceback
+            print(f"[Mesh][CLI] Mesh Studio failed to start: {type(exc).__name__}: {exc}")
+            print("[Mesh][CLI] Set MESH_LEGACY_EDITOR=1 to use the legacy editor meanwhile.")
+            return 1
+        # Mesh Studio uses the whole screen (Milestone 23A), still an ordinary window to resize or restore;
+        # MESH_STUDIO_WINDOWED=1 keeps the project's own window size.
+        # Only a window on screen, on the first frame of its own loop: maximising a hidden window shows it (Windows),
+        # and a launch whose loop never runs (a test's) never shows or grows one.
+        import engine.optional_arcade as optional_arcade  # noqa: PLC0415  # the engine's one arcade import route
+
+        maximize, schedule = getattr(window, "maximize", None), getattr(optional_arcade.arcade, "schedule_once", None)
+
+        def _maximize(_dt: float) -> None:
+            if getattr(window, "visible", False) and callable(maximize):
+                maximize()
+
+        if studio is not None and os.environ.get("MESH_STUDIO_WINDOWED") != "1" and callable(schedule) \
+                and getattr(window, "resizable", True):
+            schedule(_maximize, 0.0)
+
+    editor = window.editor_controller
+    if studio is None:
+        editor._enable_editor_mode()
+
+    if studio is None and open_tile_paint:
         tile_ctrl = editor.tile
         if tile_ctrl.tilemap_available():
             tilemap = scene_data.get("tilemap") if isinstance(scene_data, dict) else None
@@ -96,6 +153,4 @@ def launch_editor(
         window.run()
     except KeyboardInterrupt:
         print("[Mesh] Shutdown requested — exiting cleanly.")
-    finally:
-        os.chdir(previous_cwd)
     return 0

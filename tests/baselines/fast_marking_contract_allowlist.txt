@@ -225,7 +225,6 @@ tests/test_release_contract_report_schema_v1_ok.py
 tests/test_release_contract_report_schema_v1_rejects_bad_types.py
 tests/test_release_notes_contract.py
 tests/test_release_web_demo_contract.py
-tests/test_render_sort_model_contract.py
 tests/test_repo_hygiene_policy_contract.py
 tests/test_restore_policy_matrix_contract.py
 tests/test_safe_refactor_ops_matrix_contract.py
@@ -263,7 +262,6 @@ tests/test_shortcut_dispatch_contract.py
 tests/test_shortcut_resolver_model_contract.py
 tests/test_spatial_hash_model_contract.py
 tests/test_sprite_outline_model_contract.py
-tests/test_sprite_shadow_model_contract.py
 tests/test_state_codec_contract.py
 tests/test_title_menu_contract.py
 tests/test_todo_audit_ratchet_contract.py

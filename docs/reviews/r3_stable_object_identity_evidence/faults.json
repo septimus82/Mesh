@@ -1,0 +1,93 @@
+[
+ {
+  "fault": "a new structure's id ignores the ids structures had",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_structure_never_lands_on_its_replacement"
+  ]
+ },
+ {
+  "fault": "a structure id given that one had is taken",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_batch_that_makes_removes_and_makes_again_gets_new_ids_and_its_preview_names_them"
+  ]
+ },
+ {
+  "fault": "a structure id given isn't checked",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_an_id_that_isnt_one_is_refused[structure: not a short name]"
+  ]
+ },
+ {
+  "fault": "a new river's id ignores the ids rivers had",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_river_never_lands_on_its_replacement"
+  ]
+ },
+ {
+  "fault": "a river id given that one had is taken",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_batch_that_makes_removes_and_makes_again_gets_new_ids_and_its_preview_names_them"
+  ]
+ },
+ {
+  "fault": "a new line's id ignores the lines its conversation had",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_line_never_lands_on_its_replacement"
+  ]
+ },
+ {
+  "fault": "a conversation made again gets its old opening line's id",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_conversation_made_again_never_gets_its_old_opening_lines_id"
+  ]
+ },
+ {
+  "fault": "lines are not remembered",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_line_never_lands_on_its_replacement"
+  ]
+ },
+ {
+  "fault": "structures, rivers and lines are not remembered at all",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_structure_never_lands_on_its_replacement"
+  ]
+ },
+ {
+  "fault": "an AI's change doesn't say which room it makes things in",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_batch_that_makes_removes_and_makes_again_gets_new_ids_and_its_preview_names_them"
+  ]
+ },
+ {
+  "fault": "a Studio edit doesn't say which room it makes things in",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_structure_never_lands_on_its_replacement"
+  ]
+ },
+ {
+  "fault": "the river tool picks an id without what rivers had",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_river_never_lands_on_its_replacement"
+  ]
+ },
+ {
+  "fault": "a preview's copy forgets the ids seen",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_studio_and_an_ai_never_give_each_other_an_id_back"
+  ]
+ }
+]

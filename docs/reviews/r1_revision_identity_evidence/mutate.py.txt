@@ -1,0 +1,45 @@
+"""R1 deliberate faults: each must fail a test. py -3.13 mutate.py REPO OUT.json"""
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+REPO, OUT = Path(sys.argv[1]), Path(sys.argv[2])
+TESTS = ["tests/test_studio_ai_base_revision_policy.py", "tests/test_studio_revision_identity.py",
+         "tests/test_studio_ai_base_revision.py"]
+MUTANTS = [
+    ("the session is never compared", "engine/studio_ai.py",
+     "        if session != self.project.session:\n", "        if False:\n"),
+    ("a bare number is taken (as it was)", "engine/studio_ai.py",
+     "        if revision_id is None:\n            return {\"ok\": False, \"mode\": \"live_studio\", \"reason\": \"revision_id_required\"",
+     "        if revision_id is None:\n            return self._base(None, None) if revision == current else {\"ok\": False, \"mode\": \"live_studio\", \"reason\": \"revision_id_required\""),
+    ("every opening has the same identity", "engine/studio_project.py",
+     "        self.session = secrets.token_hex(8)\n", "        self.session = \"0123456789abcdef\"\n"),
+    ("a future number of this session is taken as current", "engine/studio_ai.py",
+     "if (revision is not None and revision != number) or number > current:",
+     "if (revision is not None and revision != number):"),
+    ("a refusal hands out the current id", "engine/studio_ai.py",
+     "\"base_revision_id\": revision_id, \"revision\": current, \"message\": (\n                        \"These changes",
+     "\"base_revision_id\": revision_id, \"revision\": current, \"revision_id\": self.revision_id(), \"message\": (\n                        \"These changes"),
+    ("an unbased proposal reports a verified base", "engine/studio_ai.py",
+     "            return current, copy.deepcopy(self.project.all_documents()), None\n",
+     "            return current, copy.deepcopy(self.project.all_documents()), self.revision_id()\n"),
+]
+results = []
+for name, path, old, new in MUTANTS:
+    p = REPO / path
+    original = p.read_bytes()
+    text = original.decode("utf-8")
+    nl = "\r\n" if "\r\n" in text else "\n"
+    body = text.replace("\r\n", "\n")
+    assert body.count(old) == 1, (name, body.count(old))
+    p.write_bytes(body.replace(old, new).replace("\n", nl).encode("utf-8"))
+    try:
+        run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-x", *TESTS], cwd=REPO,
+                             capture_output=True, text=True, timeout=900)
+    finally:
+        p.write_bytes(original)
+    failed = [line for line in run.stdout.splitlines() if line.startswith("FAILED")]
+    results.append({"fault": name, "caught": run.returncode != 0, "by": failed[:1]})
+    print(name, "CAUGHT" if run.returncode else "SURVIVED", failed[:1], flush=True)
+OUT.write_text(json.dumps(results, indent=1) + "\n", encoding="utf-8")

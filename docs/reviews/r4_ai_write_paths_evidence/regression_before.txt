@@ -1,0 +1,22 @@
+tests\test_ai_write_paths.py:126: AssertionError: [Mesh][Executor] Executing plan (1 actions)...
+tests\test_ai_write_paths.py:179: AssertionError: assert 0 == 1
+tests\test_ai_write_paths.py:208: assert (True is False)
+tests\test_ai_write_paths.py:229: TypeError: 'NoneType' object is not subscriptable
+tests\test_ai_write_paths.py:259: AssertionError: assert 0 == 1
+tests\test_ai_write_paths.py:283: AssertionError: assert 0 == 1
+tests\test_ai_write_paths.py:296: assert ['[AI] Applie...s/start.json'] == ['[AI] ai_job...in the game.']
+tests\test_ai_write_paths.py:311: assert (['[AI] Applied 2 operation(s) from <tmp> | scenes: packs/core_regions/scenes/start.json'] and False)
+tests\test_ai_write_paths.py:341: assert (True is False)
+tests\test_ai_write_paths_gpu.py:63: AssertionError: ["DEBUG: Enter pressed (key=65293). Command: 'ai_job <tmp> packs/core_regions/scenes/start.json', '[HotReload] Clearing 2 entities...', '[HotReload] Rebuilding layers...', ...]
+PASSED tests/test_ai_write_paths.py::test_apply_plan_with_studio_closed_writes_and_lets_the_project_go
+FAILED tests/test_ai_write_paths.py::test_apply_plan_and_undo_are_refused_while_mesh_studio_has_the_project
+FAILED tests/test_ai_write_paths.py::test_a_competing_writer_or_an_editor_holding_the_project_stops_the_plan
+FAILED tests/test_ai_write_paths.py::test_mesh_studio_opening_during_a_plan_is_turned_away_until_it_is_written
+FAILED tests/test_ai_write_paths.py::test_a_writer_killed_mid_plan_leaves_the_project_free
+FAILED tests/test_ai_write_paths.py::test_failed_plans_and_unavailable_ownership_leave_no_hold_and_no_change
+FAILED tests/test_ai_write_paths.py::test_a_plan_writes_only_inside_the_project_it_owns
+FAILED tests/test_ai_write_paths.py::test_ai_job_is_refused_in_a_window_that_edits_the_project
+FAILED tests/test_ai_write_paths.py::test_ai_job_in_a_game_window_is_refused_while_studio_has_the_project_and_works_once_closed
+FAILED tests/test_ai_write_paths.py::test_ai_job_holds_the_project_while_it_writes_and_lets_it_go_however_it_ends
+FAILED tests/test_ai_write_paths_gpu.py::test_ai_job_typed_into_the_console_of_a_studio_play_test_changes_nothing
+10 failed, 1 passed in 20.29s

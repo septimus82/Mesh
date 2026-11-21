@@ -4,6 +4,17 @@ from __future__ import annotations
 from typing import Any, Dict
 
 
+def _exists(path: str) -> bool:
+    from pathlib import Path  # noqa: PLC0415
+
+    from engine.paths import resolve_path  # noqa: PLC0415
+
+    try:
+        return Path(resolve_path(path)).is_file()
+    except (OSError, ValueError):  # a path that can't be resolved isn't there
+        return False
+
+
 def _apply_theme_runtime(self, scene_data: Dict[str, Any]) -> None:
     import engine.scene_controller as scene_controller_module
 
@@ -32,8 +43,9 @@ def _apply_theme_runtime(self, scene_data: Dict[str, Any]) -> None:
             "lava_rumble": "assets/music/lava_rumble.mp3",
             "void_hum": "assets/music/void_hum.mp3",
         }
-        if encounter_set.ambient_audio_key in audio_map:
-            settings["music"] = audio_map[encounter_set.ambient_audio_key]
+        track = audio_map.get(encounter_set.ambient_audio_key)
+        if track is not None and _exists(track):  # (none of these files ships yet: then the music carries on)
+            settings["music"] = track
 
     if "lights" not in scene_data and theme.lighting_hint:
         lighting_map = {
