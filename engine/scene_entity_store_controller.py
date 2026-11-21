@@ -177,6 +177,8 @@ class SceneEntityStoreController:
         self._pending_ops.append(op)
 
     def apply_pending_ops(self, controller: Any, *, stage: str | None = None) -> None:
+        from engine.scene_controller_parts.entity_factory import _end_behaviours  # noqa: PLC0415
+
         if not self._pending_ops:
             return
         plan = build_drain_plan(self._pending_ops)
@@ -213,6 +215,7 @@ class SceneEntityStoreController:
                 except Exception:
                     _log_swallow("SCEN-002", "engine/scene_entity_store_controller.py pass-only blanket swallow")
                     pass
+                _end_behaviours(sprite)
                 continue
             if op.kind == "mutate" and isinstance(payload, dict):
                 sprite = payload.get("sprite")
