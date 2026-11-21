@@ -174,6 +174,7 @@ def test_a_proposal_that_timed_out_while_queued_never_reaches_the_person(root: P
     assert host.bridge.pending_count() == 0 and host.bridge.drain_pending() == 0
     status = tools.request_status(answer["request_id"], root=str(root))
     assert status["ok"] is True and status["state"] == "cancelled" and status["result"]["reason"] == "timeout"
+    host.bridge.request_timeout = 30.0  # (the retry is meant to succeed: a normal deadline, not the 0.2 s one)
     with _pumping(host):  # sending it again (a new request) stages it, once
         again = tools.propose_changes(BARREL, title="Barrel", root=str(root))
     assert again["ok"] is True and again["request_state"] == "finished" and person.inbox == ["Barrel"]
@@ -188,6 +189,7 @@ def test_a_play_test_start_that_timed_out_never_starts_later(root: Path, studio:
     host.bridge.drain_pending()
     assert person.plays == 0  # (was: 3 play-tests started now, each after "timeout")
     assert [a["request_state"] for a in answers] == ["cancelled"] * 3 and host.bridge.drain_pending() == 0
+    host.bridge.request_timeout = 30.0  # (the retry is meant to succeed: a normal deadline, not the 0.2 s one)
     with _pumping(host):
         assert runtime_debug.request_play(root)["status"] == "playing"
     assert person.plays == 1
