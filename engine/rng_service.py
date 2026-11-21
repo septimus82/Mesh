@@ -26,6 +26,7 @@ Usage Pattern:
 """
 from __future__ import annotations
 
+import hashlib
 import random
 from typing import Any, Sequence, TypeVar
 
@@ -148,6 +149,12 @@ class RNGStream:
         return self._rng.triangular(low, high, mode)
 
 
+def _derive_stream_seed(global_seed: int, name: str) -> int:
+    """Stable 32-bit stream seed; builtin hash() of a str is salted per process."""
+    digest = hashlib.sha256(f"{global_seed}:{name}".encode()).digest()
+    return int.from_bytes(digest[:4], "big")
+
+
 class RNGService:
     """Central RNG service managing multiple named streams.
     
@@ -197,7 +204,7 @@ class RNGService:
         for name, stream in self._streams.items():
             # Derive stream seed from global seed + stream name
             if value is not None:
-                stream_seed = hash((value, name)) & 0xFFFFFFFF
+                stream_seed = _derive_stream_seed(value, name)
             else:
                 stream_seed = None
             stream.seed(stream_seed)
@@ -217,7 +224,7 @@ class RNGService:
         if name not in self._streams:
             # Create new stream with derived seed
             if self._global_seed is not None:
-                stream_seed = hash((self._global_seed, name)) & 0xFFFFFFFF
+                stream_seed = _derive_stream_seed(self._global_seed, name)
             else:
                 stream_seed = None
             self._streams[name] = RNGStream(seed=stream_seed, name=name)
