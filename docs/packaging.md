@@ -60,9 +60,11 @@ isn't needed.
 
 **To bundle another file:**
 
-1. Check its licence.
-2. Add it to `assets/NOTICE.md` and to `[tool.setuptools.data-files]`.
-3. `tests/test_wheel_bundles_engine_data.py` then expects it.
+1. Check its licence. An AI-generated file (PixelLab or any other generator) may not be bundled yet: see
+   `docs/asset_licensing.md` (D6).
+2. Add it to `assets/NOTICE.md`, saying how it was made, and to `[tool.setuptools.data-files]`.
+3. `tests/test_wheel_bundles_engine_data.py` then expects it. `tests/test_distributed_asset_provenance.py` fails if
+   it has no NOTICE row or the row names an AI generator.
 
 ## Exporting a game from an installed Mesh (issue #357)
 

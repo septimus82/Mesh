@@ -546,7 +546,9 @@ supported positions`)
   (recommended), or bring wading and blocking water into scope.
 - **D5. Performance acceptance.** Which machine is the "identified hardware", and is there a frame-time target, or
   record-only?
-- **D6. PixelLab.** Budget size, whether access is granted for M2-4, and licence terms for anything kept.
+- **D6. PixelLab. DECIDED (owner, 2026-11-22):** approved for development (M2 prototype, future games, kept in a
+  separate private project, within the approved allowance and `tooling/pixellab_budget.py`); not for distribution
+  until the licensing requirements are met. Rules and open items: `docs/asset_licensing.md`.
 - **D7. M4–M6.** Confirm or replace the coordinator's proposal (§6). It is not from the original report.
 - **D8. Single-player behaviour changes that parity brings.** Two changes need approval:
   - **(a)** M3-4's shared same-level predicate: in HD-2D rooms, interaction and combat stop reaching across floors in

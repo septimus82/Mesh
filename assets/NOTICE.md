@@ -15,10 +15,19 @@ A pip-installed Mesh carries these files under `<prefix>/share/mesh-engine/` (`p
 | `assets/sounds/*.wav`, `assets/music/dungeon_theme.wav` | Tones and a loop synthesised by `tooling/generate_sounds.py` and `tooling/generate_music.py` | Mesh's own |
 | `assets/templates/*.png` | The launcher's template pictures, rendered from Mesh's own templates | Mesh's own |
 | `docs/hd2d_preview.md` | The HD-2D RPG (Preview)'s creator help (copied into each new HD-2D project as `HD-2D Help.md`) | Mesh's own |
+| `locales/en.json` | The engine's interface text (`engine.i18n`), written for Mesh | Mesh's own |
 | `assets/hd2d_starter/**` | The HD-2D starter kit: models built by Mesh's Blender scripts, pixel textures drawn in code, CPU previews | Mesh's own: see `assets/hd2d_starter/PROVENANCE.md` |
 | `assets/branding/*` | The MeshMind Studios brand: Mesh Studio's application icon and the publisher's wordmark | © MeshMind Studios, all rights reserved; **not** covered by Mesh's code licence: see `assets/branding/NOTICE.md` |
-| `assets/icons/*.png`, `assets/icons/lucide/*.svg` | Mesh Studio's button icons, from [Lucide](https://lucide.dev) (`lucide-static@1.61.0`) | ISC licence: the notice is `assets/icons/lucide/LICENSE`, kept with every copy (`assets/icons/NOTICE.md`) |
+| `assets/icons/*.png`, `assets/icons/lucide/*.svg`, `assets/icons/NOTICE.md`, `assets/icons/lucide/LICENSE` | Mesh Studio's button icons, from [Lucide](https://lucide.dev) (`lucide-static@1.61.0`) | ISC licence: the notice is `assets/icons/lucide/LICENSE`, kept with every copy (`assets/icons/NOTICE.md`) |
+| `assets/NOTICE.md` | This file | Mesh's own |
 
 **Not bundled:** `assets/sprites/animated_player.png`, `sproutling.png` and `shelltide.png`. Their provenance is
 unverified, so a pip-installed Mesh never ships them. No template's new project uses `animated_player.png`. The
 developer-only monster template names the other two; in a pip install its creatures show Mesh's placeholder instead.
+
+**Provenance rule (D6, 2026-11-22; `docs/asset_licensing.md`).** Every bundled file has a row here whose "What and
+where from" cell says how it was made. A file made with a generator (PixelLab or any other AI model) must name that
+generator there and is never described as made by Mesh's own scripts. Until the distribution requirements in
+`docs/asset_licensing.md` are met, no such file may be bundled. `tests/test_distributed_asset_provenance.py` fails
+when a bundled file has no row here, when a starter-kit file is not on the allow-list, or when a row here, a row of
+the kit's `PROVENANCE.md` or a value in its `catalog.json` names an AI generator.
