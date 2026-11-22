@@ -22,13 +22,13 @@ import pytest
 
 from engine import optional_arcade
 from engine.physics_model import entity_aabb
+from mesh_net.protocol import HZ
 from mesh_net.scene_room import Body
 
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.skipif(os.environ.get("MESH_GL_SMOKE") != "1" or not optional_arcade.has_arcade(),
                        reason="real-GPU render test is opt-in (set MESH_GL_SMOKE=1 with a display/GL context)"),
-    pytest.mark.filterwarnings("ignore:draw_text is an extremely slow function"),
 ]
 
 REPO = Path(__file__).resolve().parents[1]
@@ -81,9 +81,9 @@ def authority(files: dict[str, bytes]) -> tuple[Any, Any]:
     return room, built[0][0]
 
 
-def window_digest(files: dict[str, bytes], tmp: Path) -> tuple[str, Any]:
-    """The game, in a hidden window, loads the room: its window's collision world's digest, and its player's movement
-    box (engine.physics_model.entity_aabb) where it starts."""
+def window_digest(files: dict[str, bytes], tmp: Path) -> tuple[str, Any, float]:
+    """The game, in a hidden window, loads the room: its window's collision world's digest, its player's movement box
+    (engine.physics_model.entity_aabb) where it starts, and its PlayerController's speed."""
     project = tmp / "game"
     for rel, data in files.items():
         (project / rel).parent.mkdir(parents=True, exist_ok=True)
@@ -104,7 +104,9 @@ def window_digest(files: dict[str, bytes], tmp: Path) -> tuple[str, Any]:
             assert w.hd2d_error is None and w.hd2d_renderer is not None and w.hd2d_renderer.terrain is not None
             assert w.hd2d_world.terrain is w.hd2d_renderer.terrain, "walked on what is drawn"
             assert [x for x in w.hd2d_world.walls if x.name == "scatter:boulder"], "the boulder blocks"
-            return w.hd2d_world.collision_digest(), entity_aabb(game.player())
+            player = game.player()
+            controller = next(b for b in player.mesh_behaviours_runtime if type(b).__name__ == "PlayerController")
+            return w.hd2d_world.collision_digest(), entity_aabb(player), controller.speed
         finally:
             game.close()
 
@@ -122,8 +124,9 @@ def test_the_room_without_the_pond_loads_with_the_windows_collision_world(tmp_pa
     room, world = authority(files)
     assert not isinstance(room, Exception), room
     assert room.world is world and room.digest == world.collision_digest()
-    digest, feet = window_digest(files, tmp_path)
+    digest, feet, speed = window_digest(files, tmp_path)
     assert digest == room.digest
     (x, y), (w, h) = room.spawn, room._template_size()
     assert feet == entity_aabb(Body(x, y, w, h, room.template)), "the same body moves in both"
+    assert speed / HZ == room.step_px, "the same step a tick"
     assert digest != authority(room_files(tmp_path / "pond", pond=True))[1].collision_digest(), "the pond is in it"
