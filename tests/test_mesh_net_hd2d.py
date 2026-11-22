@@ -343,6 +343,25 @@ def test_the_authoritys_copy_of_the_behaviour_metadata_is_current() -> None:
     assert copy == json.loads(json.dumps(validation_metadata())), "run: py -3.13 tooling/write_net_behaviours.py"
 
 
+def test_a_stale_entry_in_the_copy_is_caught() -> None:
+    """A behaviour removed from the code but left in mesh_net/behaviours.json (which the authority has registered in
+    this process already) is not part of the registry's own metadata, so the copy no longer matches it."""
+    from engine.behaviours import load_builtin_behaviours, registry
+
+    load_builtin_behaviours()
+    stale = {**json.loads((REPO / "mesh_net" / "behaviours.json").read_text(encoding="utf-8")),
+             "RemovedBehaviour": {"fields": [], "params": {}}}
+    registry.register_validation_metadata(stale)  # (as loading a room registers the copy)
+    try:
+        assert registry.get_behaviour_info("RemovedBehaviour") is not None
+        assert "RemovedBehaviour" not in registry.validation_metadata()
+        assert stale != json.loads(json.dumps(registry.validation_metadata())), "the drift test fails on it"
+    finally:
+        registry._BEHAVIOUR_INFO.pop("RemovedBehaviour", None)
+        registry._NAME_ALIASES.pop("removedbehaviour", None)
+        registry.BEHAVIOUR_PARAM_DEFS.pop("RemovedBehaviour", None)
+
+
 def test_a_refused_room_stays_said_and_is_never_resumed_into(crossing: dict[str, bytes]) -> None:
     from mesh_net.world_client import WorldArena
 

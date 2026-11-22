@@ -301,11 +301,12 @@ def validation_metadata() -> dict[str, Any]:
     """What validating a scene's entities reads from this registry (engine.scene_loader.SceneLoader.validate_entity),
     as JSON: each behaviour's config fields (name, type) and params (type, required), by canonical name. The
     graphics-free net authority keeps a copy (mesh_net/behaviours.json; loading the behaviours themselves imports
-    Arcade) so it keeps exactly the entities the game keeps."""
+    Arcade) so it keeps exactly the entities the game keeps. Only behaviours whose class is loaded: never an entry
+    register_validation_metadata put there (a stale copy would otherwise describe itself)."""
     return {name: {"fields": [{k: f[k] for k in ("name", "type") if k in f} for f in info.config_fields],
                    "params": {k: [p.type if isinstance(p.type, str) else p.type.__name__, p.default is None]
                               for k, p in BEHAVIOUR_PARAM_DEFS.get(name, {}).items()}}
-            for name, info in sorted(_BEHAVIOUR_INFO.items())}
+            for name, info in sorted(_BEHAVIOUR_INFO.items()) if name in BEHAVIOUR_REGISTRY}
 
 
 def register_validation_metadata(metadata: dict[str, Any]) -> None:

@@ -533,6 +533,10 @@ supported positions`)
 - **R5: hosted-runner performance.** llvmpipe frame times aren't representative. They stay report-only.
 - **R6: assets.** The Blender version drifts (docs say 4, the investigator says 5.2.0 LTS). Rigged-character source
   licence. PixelLab cost/limits and art licence. No PixelLab art has shipped to date.
+- **R7: project behaviours online (M1-A-2).** The authority validates scene entities with a copy of the built-in
+  behaviours' validation metadata (`mesh_net/behaviours.json`). A project's own custom (plugin) behaviours aren't
+  in it, so the authority drops entities that use them: a refusal at welcome if the client's window loaded the mod
+  (safe direction), otherwise scenery-only on both sides. Acceptable for M1; handle it when the plugin system returns.
 
 ### 7.4 Owner decisions (unresolved)
 - **D1. Protocol.** Wire `VERSION = 1` is checked exactly (`mesh_net/protocol.py:11`, `:30`). M3's elevation/floor
