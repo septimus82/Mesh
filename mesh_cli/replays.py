@@ -43,6 +43,10 @@ PERF_SCHEMA_VERSION = 1
 UPDATE_GOLDEN_SCHEMA_VERSION = 2
 DEFAULT_SEED = 123
 _PREVIEW_ITEMS = 3
+# Episode cases pool tick timings over at least this many samples (T-07). Nearest-rank p95 of 40 samples is the
+# 38th smallest, so it ignores the 2 slowest ticks: an isolated stall cannot fail the budget, while a sustained
+# slowdown (more than 5% of ticks over budget) still does. Below 20 samples p95 is simply the max.
+MIN_TICK_SAMPLES = 40
 
 
 @dataclass(frozen=True, slots=True)
@@ -450,6 +454,7 @@ def _run_episode_case(*, case: ReplaySuiteCase, case_out_dir: Path, seed: int) -
             seed=seed,
             quiet=True,
             episode_json=False,
+            timing_min_samples=MIN_TICK_SAMPLES,
         )
     )
 
@@ -1025,7 +1030,7 @@ def _extract_performance_metrics(timing_payload: dict[str, Any]) -> dict[str, An
     if tick_ms_count <= 0:
         tick_ms_count = len(tick_ms_list)
 
-    return {
+    metrics: dict[str, Any] = {
         "total_ms": total_ms,
         "tick_ms_count": tick_ms_count,
         "tick_ms_list": tick_ms_list,
@@ -1033,6 +1038,10 @@ def _extract_performance_metrics(timing_payload: dict[str, Any]) -> dict[str, An
         "tick_ms_p95": tick_ms_p95,
         "tick_ms_max": tick_ms_max,
     }
+    pooled = timing_payload.get("pooled")
+    if isinstance(pooled, dict):
+        metrics["pooled"] = pooled
+    return metrics
 
 
 def _evaluate_case_budget(

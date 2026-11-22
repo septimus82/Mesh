@@ -47,6 +47,8 @@ from .replay_digest_projection import scope_quest_state
 
 SCHEMA_VERSION = 1
 DEFAULT_SEED = 123
+# Most executions (run_1, run_2 and timing-only repeats) one replay-check may run to reach its tick-sample minimum.
+MAX_TIMING_EXECUTIONS = 10
 PREFIX_PATTERN = re.compile(r"^([a-z]+[0-9]+)_")
 
 DEFAULT_PREFABS_PATH = Path("assets/prefabs.json")
@@ -222,12 +224,39 @@ def _handle_replay_check(args: argparse.Namespace) -> int:
                 save_restore_diagnostics={"counts": {"total": 0, "errors": 0, "warnings": 0, "infos": 0}, "diagnostics": []},
             )
 
+        # Timing-only repeats (T-07): extra fresh executions when run_1 + run_2 give too few tick samples. Their
+        # digests/events/final state must equal run_1's, but nothing from them is ever written as replay state.
+        timing_min_samples = int(getattr(args, "timing_min_samples", 0) or 0)
+        timing_runs: list[ReplayRunResult] = [run_1, run_2]
+        repeats_consistent = True
+        if timing_min_samples > 0 and run_1.ok and run_2.ok:
+            with suppress_stdout():
+                while (
+                    sum(len(r.tick_ms_list) for r in timing_runs) < timing_min_samples
+                    and len(timing_runs) < MAX_TIMING_EXECUTIONS
+                ):
+                    repeat = _run_replay_once(spec, script_payload)
+                    timing_runs.append(repeat)
+                    if not (
+                        repeat.ok
+                        and repeat.digests == run_1.digests
+                        and repeat.events == run_1.events
+                        and repeat.final_state_bundle == run_1.final_state_bundle
+                    ):
+                        repeats_consistent = False
+                        break
+        pooled_timing = (
+            pooled_timing_summary([r.tick_ms_list for r in timing_runs], min_samples=timing_min_samples)
+            if timing_min_samples > 0 and run_1.ok and run_2.ok
+            else None
+        )
+
         determinism = {
             "digests_match": run_1.ok and run_2.ok and run_1.digests == run_2.digests,
             "events_match": run_1.ok and run_2.ok and run_1.events == run_2.events,
             "final_state_match": run_1.ok and run_2.ok and run_1.final_state_bundle == run_2.final_state_bundle,
         }
-        ok = run_1.ok and run_2.ok and all(bool(v) for v in determinism.values())
+        ok = run_1.ok and run_2.ok and all(bool(v) for v in determinism.values()) and repeats_consistent
         digest_triplet = {
             "expected_event_digest": "",
             "expected_world_digest": "",
@@ -276,7 +305,7 @@ def _handle_replay_check(args: argparse.Namespace) -> int:
             },
             "provenance": provenance_to_dict(get_provenance(deterministic=True)),
         }
-        _write_replay_artifacts(out_dir=out_dir, report=report, run=run_1)
+        _write_replay_artifacts(out_dir=out_dir, report=report, run=run_1, pooled_timing=pooled_timing)
 
         if json_stdout:
             sys.stdout.write(dumps_json_deterministic(report))
@@ -1517,7 +1546,9 @@ def _summarize_run(run: ReplayRunResult) -> dict[str, Any]:
     }
 
 
-def _write_replay_artifacts(*, out_dir: Path, report: dict[str, Any], run: ReplayRunResult) -> None:
+def _write_replay_artifacts(
+    *, out_dir: Path, report: dict[str, Any], run: ReplayRunResult, pooled_timing: dict[str, Any] | None = None
+) -> None:
     write_json_atomic(out_dir / "replay_report.json", report, indent=2, sort_keys=True, trailing_newline=True)
     write_text_atomic(out_dir / "replay_report.txt", _format_replay_report_text(report), encoding="utf-8")
 
@@ -1550,7 +1581,7 @@ def _write_replay_artifacts(*, out_dir: Path, report: dict[str, Any], run: Repla
         text += "\n"
     write_text_atomic(ndjson_path, text, encoding="utf-8")
 
-    timing_payload = {
+    timing_payload: dict[str, Any] = {
         "schema_version": 1,
         "timing": {
             "total_ms": run.total_ms,
@@ -1561,6 +1592,10 @@ def _write_replay_artifacts(*, out_dir: Path, report: dict[str, Any], run: Repla
             "tick_ms_max": run.tick_ms_max,
         },
     }
+    if pooled_timing is not None:
+        # total_ms / tick_ms_max stay the canonical (first) execution's; only p95 is judged over the pooled samples.
+        timing_payload["timing"]["tick_ms_p95"] = pooled_timing["tick_ms_p95"]
+        timing_payload["timing"]["pooled"] = pooled_timing
     write_json_atomic(out_dir / "timings.json", timing_payload, indent=2, sort_keys=True, trailing_newline=True)
 
     diagnostics_payload = run.save_restore_diagnostics
@@ -1626,6 +1661,23 @@ def _format_replay_report_text(report: dict[str, Any]) -> str:
 
 def _round_ms(value: float, *, decimals: int = 3) -> float:
     return float(f"{float(value):.{decimals}f}")
+
+
+def pooled_timing_summary(tick_lists: list[list[float]], *, min_samples: int) -> dict[str, Any]:
+    """Pool comparable tick samples from several executions of one replay (timing-only; never replay state)."""
+    pooled = [float(v) for ticks in tick_lists for v in ticks]
+    return {
+        "min_samples": min_samples,
+        "executions": len(tick_lists),
+        "repeats": max(0, len(tick_lists) - 2),
+        "samples_per_execution": [len(ticks) for ticks in tick_lists],
+        "total_ms_per_execution": [_round_ms(sum(ticks)) for ticks in tick_lists],
+        "pooled_count": len(pooled),
+        "min_samples_met": len(pooled) >= min_samples,
+        "tick_ms_p50": _compute_percentile_ms(pooled, 0.50),
+        "tick_ms_p95": _compute_percentile_ms(pooled, 0.95),
+        "tick_ms_max": _round_ms(max(pooled)) if pooled else 0.0,
+    }
 
 
 def _compute_percentile_ms(values: list[float], percentile: float) -> float:
