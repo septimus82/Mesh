@@ -12,7 +12,7 @@ import pytest
 
 from engine import optional_arcade
 from engine.save_runtime.schema import SAVE_SCHEMA_VERSION
-from tests._b01_arena import Arena, close_window, make_window, sha
+from tests._b01_arena import Arena, close_window, make_window
 from tests.test_b01_save_identity import two_goblins
 
 pytestmark = [pytest.mark.integration,
