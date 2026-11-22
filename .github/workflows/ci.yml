@@ -736,13 +736,63 @@ jobs:
           path: |
             artifacts/pytest_acceptance*
 
+  replays:
+    # R-2: the replay suite (golden ratchet, ~8 s) on every pull request and push, required through the `tests` fan-in.
+    # It only compares: a mismatch fails the job, and goldens change only through a reviewed
+    # `replays update-golden --reason` (docs/replay_suite.md), never here. One OS: the digests are platform-independent;
+    # only the time budgets are Linux-only (`--budgets-only-on linux`). The `ship` job still runs it too.
+    name: replays (${{ matrix.os }}, py${{ matrix.python }})
+    needs: dedup
+    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.11"]
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      MESH_CI_SEED: "123"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python, the project and a display
+        uses: ./.github/actions/mesh-ci-setup
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Run replay suite (golden ratchet)
+        run: |
+          xvfb-run -a python -m mesh_cli replays run --suite replays/suite.json --out-dir artifacts/replay_suite --seed $env:MESH_CI_SEED --budgets-only-on linux --quiet
+          if ($LASTEXITCODE -ne 0) { throw "the replay suite failed (exit $LASTEXITCODE): a golden mismatch is a regression, or an intentional change needing a reviewed 'replays update-golden --reason'" }
+
+      - name: Upload replay report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-suite-${{ matrix.os }}-py${{ matrix.python }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: artifacts/replay_suite/**
+
   tests:
-    # The fan-in: one OS's result, green only when its pytest, verify, installed and acceptance jobs all succeeded (failed,
+    # The fan-in: one OS's result, green only when its pytest, verify, installed and acceptance jobs and the replays job (R-2, ubuntu only) all succeeded (failed,
     # cancelled, skipped or missing: red). It always runs once they are done, so it never waits forever, and keeps the check name
     # reviews and merges have always looked at. The one exception: a run the duplicate check positively left out (`dedup`),
     # where there is nothing to fan in and the push run of the same tree is the result.
     name: tests (${{ matrix.os }}, py${{ matrix.python }})
-    needs: [dedup, pytest, verify, installed, acceptance]
+    needs: [dedup, pytest, verify, installed, acceptance, replays]
     if: ${{ always() && needs.dedup.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10

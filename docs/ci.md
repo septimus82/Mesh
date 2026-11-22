@@ -56,6 +56,16 @@ python -m pytest -q -p no:cacheprovider -p tooling.ci_shards_plugin --mesh-shard
 python tooling/ci_shards.py check artifacts/shards
 ```
 
+## Replay Suite (every PR and push)
+
+The golden replay suite (~8 s) runs as the `replays (ubuntu-latest, py3.11)` job on every pull request and push, and is
+required: both `tests (<os>, py3.11)` fan-ins list it (`needs:` and `tooling/ci_require_jobs.py`), so a mismatch, or a
+replays job that is missing, skipped or cancelled, turns the required checks red. One OS is enough: digests are
+platform-independent; only the time budgets are Linux-only. The job only compares and uploads `replay-suite-*`
+(`artifacts/replay_suite/**`); it never updates goldens. A failure is a regression, or an intentional change that needs a
+reviewed refresh: `python -m mesh_cli replays update-golden --suite replays/suite.json --out-dir artifacts/replay_suite --seed 123 --reason "..."`
+(see `docs/replay_suite.md`), committed in the PR. The ship job below still runs it too.
+
 ## Release Branch Ship Job
 
 On `release/**` branches (or `workflow_dispatch`), CI also runs:
