@@ -1,0 +1,74 @@
+{
+  "imported": {
+    "id": "house",
+    "model": "assets/models/house.glb",
+    "name": "House",
+    "category": "Buildings",
+    "scale": 1.0,
+    "rotation": 0.0,
+    "collision": {
+      "solid": 1,
+      "floor": 0,
+      "wall": 6
+    },
+    "floors": [
+      "col_floor"
+    ],
+    "notes": "",
+    "license": "Original (Mesh, build_house.py)",
+    "catalogued": true,
+    "missing": false
+  },
+  "structures": [
+    {
+      "id": "house",
+      "model": "assets/models/house.glb",
+      "x": 208.0,
+      "y": 352.0
+    },
+    {
+      "id": "house_2",
+      "model": "assets/models/house.glb",
+      "x": 432.0,
+      "y": 352.0
+    }
+  ],
+  "before_draw": [
+    492.0,
+    282.0
+  ],
+  "plan": {
+    "changes": [
+      "Size 4.5 x 3.5 x 3.2 m -> 4.5 x 4.5 x 3.9 m.",
+      "Collider 'col_floor' (solid) changed shape.",
+      "Collider 'col_wall_east' (wall) changed shape.",
+      "Collider 'col_wall_north' (wall) changed shape.",
+      "Collider 'col_wall_west' (wall) changed shape."
+    ],
+    "warnings": [
+      "Room 'houses': walkable ground around house, house_2 shrinks (1528 -> 1512 spots of 0.5 m); check characters' routes."
+    ],
+    "wrote": []
+  },
+  "reimport_changed": [
+    "assets/models/catalog.json",
+    "assets/models/house.glb",
+    "assets/models/previews/house.png"
+  ],
+  "after_draw": [
+    492.0,
+    282.0
+  ],
+  "broken": {
+    "refused": true,
+    "problem": "OUT_DIR\\blender_exports\\house.glb: its glTF description is damaged (a cut-off or corrupted file?)",
+    "error": "OUT_DIR\\blender_exports\\house.glb: its glTF description is damaged (a cut-off or corrupted file?)",
+    "project_unchanged": true
+  },
+  "sha256": {
+    "house.glb": "831add52846537681af096bff069a7678f62026a5f5360e0d307401342f5ef40",
+    "house_v2.glb": "7fbaed38295d3ca87907bfc8023099660a0e27087e0bcbf3ea3f84f360ea6621",
+    "before.png": "a4a1b534cc2aaf17d21fd1213b84c69d25a21d19eb0e6d7c2cda6274985197a9",
+    "after.png": "ab798b8149968509afa899d07366d2a1d4cd471c6085b33e6f501748f45c8cea"
+  }
+}
