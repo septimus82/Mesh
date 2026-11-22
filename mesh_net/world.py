@@ -13,6 +13,7 @@ import copy
 import enum
 import hashlib
 import json
+import math
 import re
 import secrets
 import time
@@ -147,6 +148,8 @@ def room_defs(root: Path, world_file: str = WORLD_FILE) -> tuple[str, dict[str, 
             cfg = config(e, "SceneTransition")
             if cfg is not None:
                 doors.append(_door(e, {**{k: e[k] for k in e if k in ("target_scene", "spawn_id")}, **cfg}))
+        if proto.world is not None:
+            _refuse_doors_over_floors(proto, doors)
         tags = entry.get("tags") or []
         defs[key] = RoomDef(key, entry["path"], str(entry.get("label") or key), EXPEDITION_TAG in tags, proto, doors, arrivals,
                             {i: config(e, "DropTable") for e in scene["entities"] if (i := e.get("id")) in proto.enemies})
@@ -183,6 +186,27 @@ def _door(entity: dict[str, Any], cfg: dict[str, Any]) -> Door:
     target = str(cfg.get("target_scene") or cfg.get("scene") or cfg.get("target") or "").strip()
     spawn = str(cfg.get("spawn_id") or cfg.get("target_spawn") or cfg.get("spawn_point") or "").strip()
     return Door(str(name), target, spawn, float(entity["x"]), float(entity["y"]), w / 2, h / 2)
+
+
+def _refuse_doors_over_floors(room: SceneRoom, doors: list[Door]) -> None:
+    """HD-2D: a walk-in door fires on a planar overlap (Door.touches), so where its area has more than one floor
+    height (a ground door under a deck, a door across stairs) it would fire for a player on any of them: refused
+    (elevation-aware doors are M3). Every place a player's body touching the area can be is sampled (4 px apart)."""
+    from engine.hd2d.world import STEP  # noqa: PLC0415
+
+    w, h = room._template_size()
+    for door in doors:
+        rx, ry = door.half_w + w / 2 - 0.01, door.half_h + h / 2 - 0.01  # (strict overlap: centres inside these)
+        nx, ny = max(1, math.ceil(2 * rx / 4)), max(1, math.ceil(2 * ry / 4))
+        heights: set[float] = set()
+        for i in range(nx + 1):
+            for j in range(ny + 1):
+                at = (door.x - rx + 2 * rx * i / nx, door.y - ry + 2 * ry * j / ny)
+                heights |= room.floors(Body(*at, w, h, room.template))
+        if heights and max(heights) - min(heights) > STEP:
+            raise Unsupported(f"door '{door.id}' covers more than one floor height ({min(heights):g} m and "
+                              f"{max(heights):g} m): it would fire for a player on any of them (HD-2D doors are "
+                              "planar here)")
 
 
 class World:
@@ -228,7 +252,9 @@ class World:
         if self.prepare_hook is not None:
             self.prepare_hook(key)
         d = self.defs[key]
-        room = copy.deepcopy(d.proto)  # fresh: tick 0, no players, its own enemies, levers and drops
+        # fresh: tick 0, no players, its own enemies, levers and drops (an HD-2D room's collision world is shared:
+        # nothing moving through it changes it)
+        room = copy.deepcopy(d.proto, {id(d.proto.world): d.proto.world})
         for enemy_id, enemy in room.enemies.items():
             enemy.loot = roll_drops(d.drop_tables.get(enemy_id))  # an unseeded table rolls anew, as each game does
         self.counter += 1
@@ -323,7 +349,7 @@ class World:
             self._fix_leader(self.parties[m.party])
 
     def _fresh(self, inst: Instance, at: tuple[float, float]) -> Player:
-        return Player(Body(at[0], at[1], *self.sizes[inst.key], inst.room.template))
+        return Player(Body(at[0], at[1], *self.sizes[inst.key], dict(inst.room.template)))  # (its own elevation)
 
     def _enter(self, m: Member, inst: Instance, player: Player) -> None:
         m.eid = inst.room.join(player)
@@ -495,6 +521,11 @@ class World:
     def _transfer(self, m: Member, source: Instance, door: Door) -> TransferResult:
         key = door.target
         d = self.defs[key]
+        # Single-player's arrival (engine.scene_runtime.transitions.perform_scene_change, then spawn.py: the marker's
+        # x/y only): the room's player, as it loads, keeps its elevation. Where it can't stand there, refused
+        at = d.arrivals[door.spawn.lower()] if door.spawn else d.proto.spawn
+        if not d.proto.stands(Body(*at, *self.sizes[key], d.proto.template)):
+            return self._refuse(m, TransferResult.FAILED)
         if d.expedition:
             if m.party is None:
                 return self._refuse(m, TransferResult.NO_PARTY)
@@ -514,7 +545,6 @@ class World:
                 return self._refuse(m, TransferResult.FAILED)
         if len(target.room.players) >= wire.MAX_PLAYERS:
             return self._refuse(m, TransferResult.FULL)
-        at = d.arrivals[door.spawn.lower()] if door.spawn else target.room.spawn
         return TransferResult.MOVED if self._move(m, source, target, at) else self._refuse(m, TransferResult.FAILED)
 
     def _refuse(self, m: Member, result: TransferResult) -> TransferResult:

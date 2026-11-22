@@ -294,6 +294,33 @@ def reload_behaviour_modules() -> int:
     return reloaded
 
 
+_PARAM_TYPES: dict[str, type] = {t.__name__: t for t in (int, float, bool, str, list, tuple, dict)}
+
+
+def validation_metadata() -> dict[str, Any]:
+    """What validating a scene's entities reads from this registry (engine.scene_loader.SceneLoader.validate_entity),
+    as JSON: each behaviour's config fields (name, type) and params (type, required), by canonical name. The
+    graphics-free net authority keeps a copy (mesh_net/behaviours.json; loading the behaviours themselves imports
+    Arcade) so it keeps exactly the entities the game keeps. Only behaviours whose class is loaded: never an entry
+    register_validation_metadata put there (a stale copy would otherwise describe itself)."""
+    return {name: {"fields": [{k: f[k] for k in ("name", "type") if k in f} for f in info.config_fields],
+                   "params": {k: [p.type if isinstance(p.type, str) else p.type.__name__, p.default is None]
+                              for k, p in BEHAVIOUR_PARAM_DEFS.get(name, {}).items()}}
+            for name, info in sorted(_BEHAVIOUR_INFO.items()) if name in BEHAVIOUR_REGISTRY}
+
+
+def register_validation_metadata(metadata: dict[str, Any]) -> None:
+    """Make validation see the behaviours ``metadata`` (validation_metadata's JSON) describes, without their classes:
+    those not registered already. (Loading the behaviours later registers each in full, as always.)"""
+    for name, entry in metadata.items():
+        if name in _BEHAVIOUR_INFO:
+            continue
+        _NAME_ALIASES[name.lower()] = name
+        BEHAVIOUR_PARAM_DEFS[name] = {k: ParamDef(_PARAM_TYPES.get(kind, kind), None if required else ...)
+                                      for k, (kind, required) in entry["params"].items()}  # (... : has a default)
+        _BEHAVIOUR_INFO[name] = BehaviourInfo(name=name, description="", config_fields=list(entry["fields"]))
+
+
 def list_behaviours() -> list[BehaviourInfo]:
     """Return a sorted list of registered behaviour metadata."""
 

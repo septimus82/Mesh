@@ -24,7 +24,7 @@ from engine.scene_runtime.room_memory import VAR as ROOM_MEMORY
 from . import protocol as wire
 from .demo import Arena, open_arena
 from .playback import Playback
-from .scene_client import SceneView
+from .scene_client import JoinRefused, SceneView
 from .scene_room import check_state
 from .world import World, check_frame, check_welcome, expedition_files
 
@@ -61,6 +61,7 @@ class WorldArena(Arena):
         self.character: dict[str, str] | None = None  # N8: {"id", "key"} of the character this window plays
         self.sheet: wire.Message | None = None  # the server's account of that character (items, unlocks)
         self.refused: str | None = None
+        self.refusal: str | None = None  # why this window left the room it was put in (JoinRefused): shown until it plays
         self.port: int | None = None  # another server to join next time (a restarted one), instead of run()'s
         self.notice: tuple[str, float] | None = None
         self.requests: list[wire.Message] = []
@@ -258,6 +259,8 @@ class WorldArena(Arena):
         return f"{own}P{self.player} {label} | {group}{invites}{notice}"
 
     def draw(self, now: float) -> None:
+        if self.refusal is not None and not self.connected:  # (over the disconnect's own caption, until it plays a room)
+            self.status = f"Refused: {self.refusal} | N new"
         if self.notice and now > self.notice[1]:
             self.notice = None
             self.status = self.caption() if self.connected else self.status
@@ -272,8 +275,15 @@ class WorldArena(Arena):
                 state.set_var(ROOM_MEMORY, {})
             self.window.load_scene(self.defs[self.key].path)  # the room the server put this player in
             self.loads.append(self.room)
-            self.view = SceneView(self.window, self.arcade, self.defs[self.key].proto)
-            self.shown, self.pending, self.last, self.phase = self.room, None, None, "playing"
+            try:
+                self.view = SceneView(self.window, self.arcade, self.defs[self.key].proto)
+            except JoinRefused as exc:  # (HD-2D: this window would play the room differently): leave, never play it
+                self.note(f"refused the room: {exc}")
+                self.view, self.pending, self.refusal, self.request = None, None, str(exc), "disconnect"
+                self.token = None  # (no resume back into that room; a retained character is refused there again)
+                self.window.clear(color=(16, 16, 24))
+                return
+            self.shown, self.pending, self.last, self.phase, self.refusal = self.room, None, None, "playing", None
         dt = 0.0 if self.last is None else min(0.1, now - self.last)
         self.last = now
         if self.view is None:
