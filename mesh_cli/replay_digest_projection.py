@@ -71,3 +71,27 @@ def project_final_state_for_digest(obj: Any) -> Any:
     if isinstance(obj, dict) and not isinstance(projected, dict):
         return {}
     return projected
+
+
+def _is_pristine_quest(quest: Any) -> bool:
+    """Inactive with no progress: only empty/None values besides id and state."""
+    if not isinstance(quest, dict) or quest.get("state") != "inactive":
+        return False
+    return not any(v for k, v in quest.items() if k not in ("quest_id", "state"))
+
+
+def scope_quest_state(state: dict[str, Any], declared: tuple[str, ...] | list[str] = ()) -> dict[str, Any]:
+    """Keep only the quests a replay is about (R-1).
+
+    A quest is relevant when the replay declares it (starts it / is its episode quest) or when it is not
+    pristine in this snapshot (anything but status ``inactive`` with no progress). An untouched, undeclared
+    catalogue quest is dropped, so adding unrelated quests does not move digests. A quest the replay should
+    have advanced but did not is still caught: it differs from the golden (declared: wrong state;
+    undeclared: missing from the snapshot where the golden has it).
+    """
+    quests = state.get("quests")
+    if not isinstance(quests, dict):
+        return state
+    keep = set(declared)
+    scoped = {qid: q for qid, q in quests.items() if qid in keep or not _is_pristine_quest(q)}
+    return {**state, "quests": scoped}

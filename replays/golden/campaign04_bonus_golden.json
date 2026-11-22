@@ -5,7 +5,7 @@
     "world_digest_count": 47
   },
   "expected_event_digest": "c7e25476e2a7efb425143c2d63860d66a3f71dbc74bf849e4181a0c6849600d8",
-  "expected_final_state_digest": "e6bf832c93882fe6e330d0953a7dfa6de7d2cff3d2e4c07ad73c98c1682b02f1",
+  "expected_final_state_digest": "f56e268efca27114afa2d43d4fe41bf0b6382c259d597f954587206821fc90f2",
   "expected_world_digest": "deb15f527d6e582f42b3a213bf85615c940ac8e8f6effb9d793ee392bfaa1707",
   "id": "campaign04_bonus",
   "run_determinism": {
@@ -37,6 +37,6 @@
     ]
   },
   "scene": "scenes/episode_01_intro.json",
-  "schema_version": 1,
+  "schema_version": 2,
   "script": "replays/campaign04_bonus.json"
 }

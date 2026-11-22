@@ -43,6 +43,7 @@ from .replay_digest_projection import (
 from .replay_digest_projection import (
     project_world_digests_for_digest as _project_world_digests_for_digest,
 )
+from .replay_digest_projection import scope_quest_state
 
 SCHEMA_VERSION = 1
 DEFAULT_SEED = 123
@@ -1151,7 +1152,7 @@ def _compute_digest(ctx: ReplayContext, frame: int) -> str:
             "y": 0.0,
             "behaviour_state": {
                 "flags": dict(sorted(ctx.window.game_state_controller.state.flags.items())),
-                "quest_state": ctx.quest_runner.get_state(),
+                "quest_state": _scoped_quest_state(ctx),
                 "cutscenes": {
                     cutscene_id: _unwrap_state_wrapper(runner.saveable_state())
                     for cutscene_id, runner in sorted(ctx.cutscene_runners.items())
@@ -1161,6 +1162,12 @@ def _compute_digest(ctx: ReplayContext, frame: int) -> str:
         }
     )
     return compute_world_digest(entities=entities_payload, quests=[], frame=frame)
+
+
+def _scoped_quest_state(ctx: ReplayContext) -> dict[str, Any]:
+    """Quest state as digested: the episode's own quest plus any quest the replay touched (R-1)."""
+    declared = (ctx.spec.quest_id,) if ctx.spec.quest_id else ()
+    return scope_quest_state(ctx.quest_runner.get_state(), declared)
 
 
 def _build_state_snapshot(ctx: ReplayContext, *, frame: int, label: str, tick: int, dt: float) -> dict[str, Any]:
@@ -1178,7 +1185,7 @@ def _build_state_snapshot(ctx: ReplayContext, *, frame: int, label: str, tick: i
         "tick": tick,
         "dt": float(dt),
         "flags": dict(sorted(ctx.window.game_state_controller.state.flags.items())),
-        "quest_state": ctx.quest_runner.get_state(),
+        "quest_state": _scoped_quest_state(ctx),
         "cutscenes": cutscene_states,
         "dialogues": dialogue_states,
     }
@@ -1210,7 +1217,7 @@ def _build_final_state_bundle(ctx: ReplayContext, *, seed: int, scene_rel: str, 
         "episode_prefix": ctx.spec.episode_prefix,
         "quest_id": ctx.spec.quest_id,
         "flags": dict(sorted(ctx.window.game_state_controller.state.flags.items())),
-        "quest_state": ctx.quest_runner.get_state(),
+        "quest_state": _scoped_quest_state(ctx),
         "cutscene_state": {
             cutscene_id: _unwrap_state_wrapper(runner.saveable_state())
             for cutscene_id, runner in sorted(ctx.cutscene_runners.items())

@@ -112,6 +112,12 @@ Excluded report-only keys include:
 These are excluded because they describe runtime/report context, not gameplay state transitions.
 Gameplay-relevant changes (event types/payloads, digest sequence, final state content) still change digests.
 
+### Quest scoping (golden schema 2)
+
+Digested quest state holds only the quests a replay is about: those it declares (campaign `quests` list, the episode's own
+quest) plus any quest that is not pristine in that snapshot. Untouched, undeclared catalogue quests are excluded, so adding
+unrelated quests to `assets/data/quests.json` does not invalidate goldens (`mesh_cli.replay_digest_projection.scope_quest_state`).
+
 ### Digest Projection Policy
 
 Digest projection is policy-gated by a stable config constant:
