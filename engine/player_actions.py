@@ -85,8 +85,9 @@ def dispatch_attack_action(entity: Any, window: Any) -> bool:
     for behaviour in behaviours:
         attack = getattr(behaviour, "attack", None)
         if callable(attack):
-            attack()
-            attacked = True
+            # Combat.attack() is False when its cooldown refuses the swing; attack is level-triggered (held key),
+            # so only a swing that happened is traced (once), not every frame the key is down.
+            attacked = attack() is not False
             break
     if not attacked:
         return False
