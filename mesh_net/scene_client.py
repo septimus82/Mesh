@@ -28,12 +28,34 @@ DROP_COLOR = (240, 200, 70, 255)
 USED_TINT = (128, 128, 128)
 
 
+class JoinRefused(RuntimeError):
+    """This window can't join the room: it would play it differently from the server (check_window_world)."""
+
+
+def check_window_world(window: Any, room: SceneRoom) -> None:
+    """The join guard for an HD-2D room (M1-A-2): this window plays it only on the collision world the server runs.
+
+    The room's identity already holds the collision digest of what this client's own files build (SceneRoom), which
+    the server's must match; but the window's own build can still fall back to 2D (engine.hd2d.runtime.configure_scene:
+    a texture missing, the driver refusing) or differ. So the window joins only with a World (``hd2d_world``, no
+    ``hd2d_error``) whose digest is the room's. A 2D room needs nothing."""
+    if room.digest is None:
+        return
+    world, error = getattr(window, "hd2d_world", None), getattr(window, "hd2d_error", None)
+    if world is None or error:
+        raise JoinRefused(f"this window plays the HD-2D room in 2D ({error or 'no collision world'}): it can't join "
+                          "a room the server runs on 3D floors")
+    if world.collision_digest() != room.digest:
+        raise JoinRefused("this window's HD-2D collision world differs from the room the server runs")
+
+
 class SceneView:
     """One room's presentation in a GameWindow: the loaded scene with only the presentation behaviours (KEEP), one
     avatar per player the server reports, and the gate, lever, enemy and drop states it sends. A world client
     (mesh_net.world_client) builds one per room it enters."""
 
     def __init__(self, window: Any, arcade: Any, room: SceneRoom) -> None:
+        check_window_world(window, room)  # (before anything changes in the window)
         self.window, self.arcade = window, arcade
         self.identity = room.identity
         sc = self.scene = window.scene_controller

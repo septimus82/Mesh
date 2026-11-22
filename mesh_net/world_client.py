@@ -24,7 +24,7 @@ from engine.scene_runtime.room_memory import VAR as ROOM_MEMORY
 from . import protocol as wire
 from .demo import Arena, open_arena
 from .playback import Playback
-from .scene_client import SceneView
+from .scene_client import JoinRefused, SceneView
 from .scene_room import check_state
 from .world import World, check_frame, check_welcome, expedition_files
 
@@ -272,7 +272,13 @@ class WorldArena(Arena):
                 state.set_var(ROOM_MEMORY, {})
             self.window.load_scene(self.defs[self.key].path)  # the room the server put this player in
             self.loads.append(self.room)
-            self.view = SceneView(self.window, self.arcade, self.defs[self.key].proto)
+            try:
+                self.view = SceneView(self.window, self.arcade, self.defs[self.key].proto)
+            except JoinRefused as exc:  # (HD-2D: this window would play the room differently): leave, never play it
+                self.note(f"refused the room: {exc}")
+                self.view, self.pending, self.refused, self.request = None, None, "hd2d_world", "disconnect"
+                self.window.clear(color=(16, 16, 24))
+                return
             self.shown, self.pending, self.last, self.phase = self.room, None, None, "playing"
         dt = 0.0 if self.last is None else min(0.1, now - self.last)
         self.last = now

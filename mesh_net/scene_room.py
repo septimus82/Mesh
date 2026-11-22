@@ -9,8 +9,16 @@ The scene is the file Studio saves. Its authored definitions say what the server
 * ``Health`` (+ ``DropTable``) on a ``tag: "enemy"`` entity is an enemy whose HP, death and loot the server owns.
 
 Painted collision tiles block too. Everything else is scenery here. Scenes whose collision this authority cannot
-reproduce (HD-2D floors, collision tiles kept only in a map file) are refused at load (:class:`Unsupported`)
+reproduce (collision tiles kept only in a map file, flag-gated objects) are refused at load (:class:`Unsupported`)
 rather than simulated differently from single-player.
+
+HD-2D rooms (M1-A-2) walk on the one collision world single-player builds (engine.hd2d.world.build_world, from this
+project's files, no GL) through ``World.move`` with this module's Arcade-free sweep (``move``): one floor solver. Each
+body's elevation is its ``mesh_entity_data["elevation"]``, as a sprite's. Refused (:func:`hd2d_world`) where this
+authority would differ from single-player: a room single-player plays 2D, water that limits walking (owner D4), a
+template that can't stand where it is. The room's ``World.collision_digest`` is part of its identity, so a client whose
+files give another collision world is refused before it enters (mesh_net.scene_client.check_window_world adds its
+window's own world). Elevation stays server-side (wire v1 unchanged) until M3.
 """
 
 from __future__ import annotations
@@ -20,19 +28,32 @@ import json
 import math
 import os
 import random
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import chdir, contextmanager
 from dataclasses import dataclass, field
 from importlib.resources import files
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from engine.combat_model import AttackSpec, TargetState, resolve_attack
 from engine.interaction import DEFAULT_INTERACT_MAX_DIST
-from engine.physics_model import Aabb, Circle, MoveRequest, collider_shape, entity_shape, shape_aabb, shapes_overlap, sweep_axis_separate
+from engine.physics_model import (
+    Aabb,
+    Circle,
+    MoveRequest,
+    collider_shape,
+    entity_aabb,
+    entity_shape,
+    shape_aabb,
+    shapes_overlap,
+    sweep_axis_separate,
+)
 
 from . import protocol as wire
+
+if TYPE_CHECKING:  # (2D rooms never load the 3D code)
+    from engine.hd2d.world import World
 
 ACTIONS = ("attack", "take", "use")
 MAX_OBJECTS = 32  # doors + levers + enemies: keeps a full snapshot inside one frame
@@ -195,9 +216,58 @@ def coop_files() -> dict[str, bytes]:
     return {**tileset, **room}
 
 
+def contained(root: Path) -> Callable[[str], Path]:
+    """A scene path to the project's file, refused (Hd2dSettingsError) when it lies, links followed, outside the
+    project: engine.hd2d.runtime._contained's rule, with the project folder as the one content root."""
+    from engine.hd2d.settings import Hd2dSettingsError  # noqa: PLC0415
+
+    base = root.resolve()
+
+    def resolve(rel: str) -> Path:
+        path = root / rel
+        if not path.resolve().is_relative_to(base):
+            raise Hd2dSettingsError(f"'{rel}' lies outside the project's content (a link out of it?)")
+        return path
+
+    return resolve
+
+
+def hd2d_world(scene: dict[str, Any], root: Path) -> World | None:
+    """The room's collision world (engine.hd2d.world.World) as single-player builds it, or None for a 2D room.
+
+    engine.hd2d.runtime.configure_scene's lenient parse and its builder (build_world, which reads the models itself),
+    from this project's files. Unsupported where this authority would move characters differently from single-player:
+    a room single-player plays 2D (its HD-2D block or a structure can't be read; or nothing in it is 3D to walk on, so
+    single-player moves it in 2D under a 3D picture), collision single-player sets aside (broken sculpted heights,
+    scatter or rivers, an unreadable scatter model), and water that limits walking (``rivers or ponds``, as
+    World._wet: owner decision D4)."""
+    settings = scene.get("settings") or {}
+    raw = settings.get("hd2d")
+    if raw is None:  # (engine.hd2d.runtime: any value makes a 3D room)
+        return None
+    from engine.hd2d.glb import GlbError  # noqa: PLC0415  # (2D rooms never load the 3D code)
+    from engine.hd2d.settings import Hd2dSettingsError, parse_hd2d  # noqa: PLC0415
+    from engine.hd2d.world import build_world  # noqa: PLC0415
+
+    w, h = settings.get("world_width"), settings.get("world_height")
+    map_size = (float(w), float(h)) if isinstance(w, (int, float)) and isinstance(h, (int, float)) else None
+    try:
+        hd2d = parse_hd2d(raw, map_size_px=map_size, lenient=True)
+        world, _models, set_aside = build_world(hd2d, scene["entities"], contained(root))
+    except (Hd2dSettingsError, GlbError) as exc:
+        raise Unsupported(f"HD-2D room that single-player plays 2D (its 3D build fails): {exc}") from exc
+    aside = [e for e in (hd2d.terrain_error, hd2d.scatter_error, hd2d.rivers_error) if e] + list(set_aside.values())
+    if aside:
+        raise Unsupported(f"HD-2D room whose collision single-player partly sets aside: {'; '.join(aside)}")
+    if world is None:
+        raise Unsupported("HD-2D room with nothing 3D to walk on (no colliders, sculpted ground or rivers): "
+                          "single-player moves it in 2D")
+    if world.rivers or world.ponds:
+        raise Unsupported("HD-2D room with rivers or ponds that limit walking: water is not run online (owner D4)")
+    return world
+
+
 def refuse_unsupported(scene: dict[str, Any]) -> None:
-    if (scene.get("settings") or {}).get("hd2d") is not None:  # (engine.hd2d.runtime: any value makes a 3D room)
-        raise Unsupported("HD-2D rooms walk on 3D floors; this authority runs 2D collision only")
     for entity in scene["entities"]:
         if entity.get("require_flags") or entity.get("forbid_flags"):  # engine.scene_entity_gating
             raise Unsupported(f"entity '{entity.get('id')}' depends on game flags, which a shared room does not have")
@@ -307,6 +377,8 @@ class SceneRoom:
         root = root or path.parent
         scene_hash, scene = load_scene(path)
         refuse_unsupported(scene)
+        self.world = hd2d_world(scene, root)  # HD-2D: the one collision world; None for a 2D room
+        self.digest: str | None = self.world.collision_digest() if self.world is not None else None
         entities = scene["entities"]
         ids = [e.get("id") for e in entities]
         if any(not isinstance(i, str) or not i for i in ids) or len(set(ids)) != len(ids):
@@ -320,6 +392,9 @@ class SceneRoom:
         if collider_shape(Body(*self.spawn, *self._template_size(), template)) is None:
             raise Unsupported("the player template needs a sized box or circle collider (Studio characters start with "
                               "an automatic one); Arcade's picture hit boxes cannot run without Arcade")
+        if not self.stands(Body(*self.spawn, *self._template_size(), template)):
+            raise Unsupported(f"HD-2D: the player template '{template['id']}' can't stand where it is at its "
+                              "elevation (no floor within a step, or inside a wall or under a low deck)")
         self.step_px = float((config(template, "PlayerController") or {}).get("speed", SPEED)) / wire.HZ
         combat = {**COMBAT, **(config(template, "Combat") or {})}
         self.damage, self.reach, self.hitbox = float(combat["damage"]), float(combat["range"]), float(combat["hitbox_size"])
@@ -352,7 +427,8 @@ class SceneRoom:
         self.ids = sorted(e["id"] for e in entities)
         geometry = [[b.center_x, b.center_y, b.width, b.height] for b in self.solids_ever()]
         geometry.append(list(self._template_size()))
-        self.identity = hashlib.sha256(json.dumps([scene_hash, geometry]).encode()).hexdigest()
+        collision = [self.digest] if self.digest is not None else []  # (a 2D room's identity is as before)
+        self.identity = hashlib.sha256(json.dumps([scene_hash, geometry, *collision]).encode()).hexdigest()
 
         self.tick = 0
         self.next_id = 1
@@ -369,12 +445,38 @@ class SceneRoom:
             raise wire.Invalid("room full")
         eid, self.next_id = self.next_id, self.next_id + 1
         if player is None:
-            player = Player(Body(*self.spawn, *self._template_size(), self.template))
+            player = Player(Body(*self.spawn, *self._template_size(), dict(self.template)))  # (its own elevation)
         self.players[eid] = player
         return eid
 
     def _template_size(self) -> tuple[float, float]:
         return picture_size(self.template, self.root) or (0.0, 0.0)
+
+    def stands(self, body: Body) -> bool:
+        """Whether ``body`` can be where it is at its elevation: World.stand asked as World.move asks it (the movement
+        box, in metres). Always in a 2D room."""
+        if self.world is None:
+            return True
+        from engine.hd2d.world import elevation_of  # noqa: PLC0415
+
+        return self._stand(body, elevation_of(body)) is not None
+
+    def floors(self, body: Body) -> set[float]:
+        """Every elevation (m, to 1 mm) ``body``, centred where it is, could stand at (several under a bridge)."""
+        from engine.hd2d.settings import PIXELS_PER_METRE  # noqa: PLC0415
+
+        assert self.world is not None
+        box = entity_aabb(body)
+        return {round(stood[0], 3) for h, _s in self.world.heights_at(box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE)
+                if (stood := self._stand(body, h)) is not None}
+
+    def _stand(self, body: Body, z: float) -> tuple[float, str] | None:
+        from engine.hd2d.settings import PIXELS_PER_METRE  # noqa: PLC0415
+
+        assert self.world is not None
+        box = entity_aabb(body)
+        return self.world.stand(box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE, z, box.w / 2 / PIXELS_PER_METRE,
+                                box.h / 2 / PIXELS_PER_METRE)
 
     def solids_ever(self) -> list[Body]:
         """Everything that can block. The identity covers it, so clients also agree on the room's collision."""
@@ -418,7 +520,11 @@ class SceneRoom:
         solids = self.solids()
         for eid, p in sorted(self.players.items()):
             if self.tick - p.last_input <= wire.HZ // 4 and (p.dx or p.dy):
-                move(p.body, (p.dx * self.step_px, p.dy * self.step_px), solids)
+                delta = (p.dx * self.step_px, p.dy * self.step_px)
+                if self.world is not None:  # HD-2D: the shared floor solver, its 2D part this module's sweep
+                    self.world.move(p.body, delta, solids, sweep=move)
+                else:
+                    move(p.body, delta, solids)
                 # An open map has no edge: stay inside what clients accept on the wire.
                 p.body.center_x = max(-BOUND, min(BOUND, p.body.center_x))
                 p.body.center_y = max(-BOUND, min(BOUND, p.body.center_y))
