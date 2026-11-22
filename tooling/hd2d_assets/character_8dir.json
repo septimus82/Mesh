@@ -1,0 +1,57 @@
+{
+  "sheet": "character_8dir.png",
+  "frame_width": 32,
+  "frame_height": 52,
+  "columns": 10,
+  "rows": 8,
+  "facings": [
+    "down",
+    "down_left",
+    "left",
+    "up_left",
+    "up",
+    "up_right",
+    "right",
+    "down_right"
+  ],
+  "compass": [
+    "S",
+    "SW",
+    "W",
+    "NW",
+    "N",
+    "NE",
+    "E",
+    "SE"
+  ],
+  "row_order": "one row per facing in 'facings' order, row 0 at the top",
+  "animations": {
+    "idle": {
+      "first": 0,
+      "frames": 2,
+      "fps": 2,
+      "loop": true
+    },
+    "walk": {
+      "first": 2,
+      "frames": 8,
+      "fps": 10,
+      "loop": true
+    }
+  },
+  "pivot": [
+    16,
+    45
+  ],
+  "pivot_note": "the feet point in every frame, px from the frame's top-left",
+  "camera": {
+    "projection": "orthographic",
+    "pitch_deg": 32,
+    "pixels_per_metre": 32,
+    "facing_turn_deg": -45
+  },
+  "source": {
+    "script": "tooling/hd2d_assets/build_character.py",
+    "blender": "Blender 5.2.0 LTS (hash fbe6228777e7 built 2026-07-14 01:35:40)"
+  }
+}
