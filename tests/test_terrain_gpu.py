@@ -163,8 +163,9 @@ def test_studio_sculpts_live_one_stroke_one_undo_step(tmp_path: Path, record_tes
 
 def test_the_terrain_gate_fails_injected_regressions(tmp_path: Path, record_testsuite_property: Any) -> None:
     """The enforced gate sees what it is for (#422 CI-422A2, CI-422A3): a stroke rebuilding every terrain chunk crosses
-    the sculpt/control ratio, a room reload on release the calibrated release, every frame slowed by 1.5x the runner's
-    calibration loop the calibrated backstop; each fails the verdict, well past the same session's fault-free value.
+    the sculpt/control ratio, a room reload on release the calibrated release, every frame slowed by at least 1.5x the
+    runner's calibration loop (sized past the threshold from the fault-free frame, T-05) the calibrated backstop; each
+    fails the verdict, well past the same session's fault-free value.
     Only the faults are judged: the fault-free values are reported (the gated test above judges a fault-free stroke).
     Outside CI (verdict NOT VALIDATED) the slowdown must still raise the calibrated frame by 1.0, but crossing 3.2 is
     required only where 3.2 was validated: a many-core desktop's fault-free frame is far lower (about 1.2)."""
