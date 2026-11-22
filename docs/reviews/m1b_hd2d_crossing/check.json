@@ -1,0 +1,358 @@
+{
+ "legs": [
+  {
+   "after": "start: on the ground",
+   "room": "crossing.json",
+   "feet_m": [
+    16.0,
+    3.938
+   ],
+   "elevation_m": 0.0,
+   "floor": "ground",
+   "camera_target": [
+    16.0,
+    8.416,
+    0.8
+   ],
+   "picture": "01_ground.png"
+  },
+  {
+   "after": "half way up the west stairs",
+   "room": "crossing.json",
+   "feet_m": [
+    11.0,
+    15.031
+   ],
+   "elevation_m": 1.266,
+   "floor": "stairs/col_stairs",
+   "camera_target": [
+    13.075,
+    13.756,
+    1.859
+   ],
+   "picture": "02_stairs.png"
+  },
+  {
+   "after": "on the west plateau",
+   "room": "crossing.json",
+   "feet_m": [
+    11.0,
+    20.031
+   ],
+   "elevation_m": 2.0,
+   "floor": "platform_4m_3/col_platform",
+   "camera_target": [
+    13.505,
+    11.958,
+    2.8
+   ]
+  },
+  {
+   "after": "on the deck, above the guard under it",
+   "room": "crossing.json",
+   "feet_m": [
+    15.531,
+    20.031
+   ],
+   "elevation_m": 2.0,
+   "floor": "bridge_6m/col_deck",
+   "camera_target": [
+    15.125,
+    11.957,
+    2.8
+   ],
+   "guard": {
+    "feet_m": [
+     15.5,
+     19.938
+    ],
+    "elevation_m": 0.0,
+    "stands_on": [
+     0.0,
+     "ground"
+    ]
+   },
+   "picture": "03_deck_above_guard.png"
+  },
+  {
+   "after": "on the east plateau",
+   "room": "crossing.json",
+   "feet_m": [
+    26.0,
+    20.031
+   ],
+   "elevation_m": 2.0,
+   "floor": "platform_4m_5/col_platform",
+   "camera_target": [
+    18.495,
+    11.957,
+    2.8
+   ]
+  },
+  {
+   "after": "down the east stairs: on the ground",
+   "room": "crossing.json",
+   "feet_m": [
+    26.0,
+    10.969
+   ],
+   "elevation_m": 0.0,
+   "floor": "ground",
+   "camera_target": [
+    19.402,
+    11.23,
+    0.815
+   ]
+  },
+  {
+   "after": "under the deck, beside the guard",
+   "room": "crossing.json",
+   "feet_m": [
+    16.938,
+    20.031
+   ],
+   "elevation_m": 0.0,
+   "floor": "ground",
+   "camera_target": [
+    16.938,
+    16.448,
+    0.8
+   ],
+   "overhead": [
+    2.0,
+    "bridge_6m/col_deck"
+   ],
+   "picture": "04_under_deck.png"
+  },
+  {
+   "after": "behind the cottage (see-through)",
+   "room": "crossing.json",
+   "feet_m": [
+    6.0,
+    10.969
+   ],
+   "elevation_m": 0.0,
+   "floor": "ground",
+   "camera_target": [
+    12.591,
+    10.813,
+    0.8
+   ],
+   "seen": {
+    "visible_px": 1754,
+    "without_cutaway_px": 0,
+    "total_px": 1754
+   },
+   "picture": "05_behind_cottage.png"
+  },
+  {
+   "after": "at the cottage's doorway",
+   "room": "crossing.json",
+   "feet_m": [
+    6.0,
+    4.953
+   ],
+   "elevation_m": 0.0,
+   "floor": "ground",
+   "camera_target": [
+    12.591,
+    8.416,
+    0.8
+   ],
+   "picture": "06_doorway.png"
+  },
+  {
+   "after": "through the doorway: Inside (its south wall see-through)",
+   "room": "inside.json",
+   "feet_m": [
+    8.0,
+    3.438
+   ],
+   "elevation_m": 0.1,
+   "floor": "interior/col_floor",
+   "camera_target": [
+    8.0,
+    3.765,
+    0.9
+   ],
+   "seen": {
+    "visible_px": 5230,
+    "without_cutaway_px": 2872,
+    "total_px": 5626
+   },
+   "picture": "07_inside.png"
+  },
+  {
+   "after": "back out through the doorway: the Crossing",
+   "room": "crossing.json",
+   "feet_m": [
+    6.0,
+    4.438
+   ],
+   "elevation_m": 0.0,
+   "floor": "ground",
+   "camera_target": [
+    12.591,
+    8.416,
+    0.8
+   ]
+  },
+  {
+   "after": "loaded 'm1b_deck'",
+   "room": "m1b_deck.json",
+   "feet_m": [
+    15.531,
+    20.031
+   ],
+   "elevation_m": 2.0,
+   "floor": "bridge_6m/col_deck",
+   "camera_target": [
+    15.531,
+    11.957,
+    2.8
+   ]
+  },
+  {
+   "after": "loaded 'm1b_under'",
+   "room": "m1b_under.json",
+   "feet_m": [
+    16.938,
+    20.031
+   ],
+   "elevation_m": 0.0,
+   "floor": "ground",
+   "camera_target": [
+    16.938,
+    16.449,
+    0.8
+   ]
+  }
+ ],
+ "hd2d_error": null,
+ "floors": [
+  "bridge_6m/col_deck",
+  "cottage/col_floor",
+  "ground",
+  "platform_4m/col_platform",
+  "platform_4m_2/col_platform",
+  "platform_4m_3/col_platform",
+  "platform_4m_4/col_platform",
+  "platform_4m_5/col_platform",
+  "platform_4m_6/col_platform",
+  "stairs/col_landing",
+  "stairs/col_stairs",
+  "stairs_2/col_landing",
+  "stairs_2/col_stairs"
+ ],
+ "saved_deck": true,
+ "saved_under": true,
+ "door_in": {
+  "from": "crossing.json",
+  "to": "inside.json",
+  "feet_when_it_fired": [
+   6.0,
+   6.359
+  ]
+ },
+ "door_out": {
+  "from": "inside.json",
+  "to": "crossing.json",
+  "feet_when_it_fired": [
+   6.984,
+   7.656
+  ]
+ },
+ "loads": {
+  "m1b_deck": {
+   "ok": true,
+   "expected": [
+    [
+     15.531,
+     20.031
+    ],
+    2.0,
+    "bridge_6m/col_deck"
+   ],
+   "got": [
+    [
+     15.531,
+     20.031
+    ],
+    2.0,
+    "bridge_6m/col_deck"
+   ]
+  },
+  "m1b_under": {
+   "ok": true,
+   "expected": [
+    [
+     16.938,
+     20.031
+    ],
+    0.0,
+    "ground"
+   ],
+   "got": [
+    [
+     16.938,
+     20.031
+    ],
+    0.0,
+    "ground"
+   ]
+  }
+ },
+ "camera_bounds_max_drift_m": 0.0,
+ "camera_frames": 1344,
+ "timing": {
+  "frames": 360,
+  "median_ms": 2.57,
+  "p95_ms": 5.32,
+  "p99_ms": 5.69,
+  "max_ms": 5.91,
+  "what": "hidden 1280x720 window, vsync off; per frame: on_update(1/60) + on_draw + ctx.finish + ctx.gc"
+ },
+ "machine": {
+  "cpu": "AMD Ryzen 7 5700X3D 8-Core Processor",
+  "cores": 16,
+  "gpu": "NVIDIA Corporation NVIDIA GeForce RTX 4070/PCIe/SSE2",
+  "gl_version_and_driver": "4.6.0 NVIDIA 610.88",
+  "os": "Windows-11-10.0.26300-SP0",
+  "python": "3.13.3",
+  "framebuffer": [
+   1280,
+   720
+  ]
+ },
+ "renderer": {
+  "draw_calls": 19,
+  "static_draws": 17,
+  "terrain_bytes": 0,
+  "terrain_draws": 0,
+  "triangles": 942,
+  "buffer_bytes": 77472,
+  "texture_bytes": 122884,
+  "target_bytes": 7372800,
+  "bloom_bytes": 0,
+  "batched": true,
+  "shadows": true,
+  "shadow_draws": 18,
+  "shadow_map_bytes": 36700160,
+  "lamps": 3,
+  "lamp_head_draws": 2,
+  "shadow_lamps": 2,
+  "particles": 0,
+  "particle_bytes": 0,
+  "precipitation_maps": 0,
+  "precipitation_bytes": 0,
+  "precipitation_builds": 0,
+  "precipitation_error": null,
+  "water_surfaces": 0,
+  "rivers": 0,
+  "water_bytes": 0,
+  "scatter_instances": 0,
+  "scatter_bytes": 0,
+  "scatter_sprite_draws": 0,
+  "water_error": null
+ }
+}

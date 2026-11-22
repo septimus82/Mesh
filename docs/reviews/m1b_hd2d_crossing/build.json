@@ -1,0 +1,126 @@
+{
+ "room": {
+  "key": "crossing",
+  "message": "Created Crossing. Add a door from another room to connect it. Mesh's HD-2D starter kit (models, ground textures) was added to this project."
+ },
+ "start_room": "New games start in Crossing. Save to keep it (Ctrl+Z undoes it).",
+ "player_hops": 9,
+ "structures": [
+  "platform_4m",
+  "platform_4m_2",
+  "platform_4m_3",
+  "platform_4m_4",
+  "platform_4m_5",
+  "platform_4m_6",
+  "bridge_6m",
+  "stairs",
+  "stairs_2",
+  "cottage",
+  "lamp_post",
+  "lamp_post_2"
+ ],
+ "lights": [
+  {
+   "x": 432.0,
+   "y": 160.0,
+   "radius": 224.0,
+   "color": "#ffcc88",
+   "mode": "soft",
+   "elevation": 80.0
+  },
+  {
+   "x": 592.0,
+   "y": 160.0,
+   "radius": 224.0,
+   "color": "#ffcc88",
+   "mode": "soft",
+   "elevation": 80.0
+  },
+  {
+   "x": 512.0,
+   "y": 640.0,
+   "radius": 224.0,
+   "color": "#ffcc88",
+   "mode": "soft",
+   "elevation": 44.8
+  }
+ ],
+ "guard_hops": 3,
+ "guard": {
+  "id": "crossing_person_496_546_0_0",
+  "x": 496.0,
+  "y": 656.0,
+  "elevation": null
+ },
+ "door_message": "Created Inside: walk into the new door here to go there. Inside has a door back beside where the player starts in it.",
+ "crossing_door": {
+  "x": 192.0,
+  "y": 256.0,
+  "door_style": "passage",
+  "behaviour_config": {
+   "SceneTransition": {
+    "target_scene": "inside",
+    "spawn_id": "from_crossing",
+    "trigger_on_touch": true,
+    "target_tag": "player",
+    "allow_interact": false,
+    "area_width": 48.0,
+    "area_height": 32.0
+   }
+  }
+ },
+ "inside_key": "inside",
+ "inside_hops": 3,
+ "inside_door": {
+  "x": 224.0,
+  "y": 288.0,
+  "door_style": "passage",
+  "behaviour_config": {
+   "SceneTransition": {
+    "target_scene": "crossing",
+    "spawn_id": "from_inside",
+    "trigger_on_touch": true,
+    "target_tag": "player",
+    "allow_interact": false,
+    "area_width": 48.0,
+    "area_height": 16.0
+   }
+  }
+ },
+ "inside_arrival": {
+  "x": 256.0,
+  "y": 128.0
+ },
+ "interior": "interior",
+ "saved": "Saved 1 file(s).",
+ "studio_s": 60.2,
+ "saved_crossing": {
+  "structures": 12,
+  "camera": {
+   "bounds": [
+    0.0,
+    0.0,
+    1024.0,
+    1024.0
+   ],
+   "distance": 53.518,
+   "follow": "player",
+   "fov": 12.0,
+   "pitch": 30.0
+  },
+  "doors": [
+   {
+    "id": "crossing_door_to_inside_192_256_0_0",
+    "tag": "door",
+    "x": 192.0,
+    "y": 256.0
+   },
+   {
+    "id": "crossing_arrival_inside_192_160_0_0",
+    "tag": "spawn_point",
+    "x": 192.0,
+    "y": 160.0
+   }
+  ]
+ }
+}
