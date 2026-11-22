@@ -385,11 +385,16 @@ def studio(out: Path) -> dict[str, Any]:
     return report
 
 
+SLOW_FRAME_MARGIN = 0.75  # how far past the backstop's threshold the injected slowdown aims (T-05)
+
+
 def advisory_detection(out: Path, trials: int = 3, steps: int = 8) -> dict[str, Any]:
     """The enforced terrain gate against deliberately injected regressions (#422 CI-422A2, CI-422A3), in one Studio
     session: none, every flush rebuilding every terrain chunk, a full room reload after each committed stroke, and every
-    frame slowed by 1.5x the runner's calibration loop (a substantial regression everywhere, which only the calibrated
-    backstop can see: it cancels out of the ratio and the release)."""
+    frame slowed by at least 1.5x the runner's calibration loop (a substantial regression everywhere, which only the
+    calibrated backstop can see: it cancels out of the ratio and the release). The slowdown is sized from this session's
+    fault-free frame so that it lands past the backstop's threshold by a margin (T-05: a fixed 1.5x fell just short on a
+    runner whose fault-free frame was low, though the gate itself was right); the gate's thresholds are unchanged."""
     from engine.studio_hd2d import Hd2dView
 
     out.mkdir(parents=True, exist_ok=True)
@@ -417,10 +422,10 @@ def advisory_detection(out: Path, trials: int = 3, steps: int = 8) -> dict[str, 
 
         frame = d.frame
         cpu = runner_calibration.cpu_ms()  # one calibration for every case: the faults are judged on the same divisor
-        slow_s = 1.5 * cpu / 1000
+        slow_s = [1.5 * cpu / 1000]  # (resized once the fault-free frame is known, below)
 
         def slow_frame(*args: Any, **kwargs: Any) -> Any:
-            time.sleep(slow_s)
+            time.sleep(slow_s[0])
             return frame(*args, **kwargs)
 
         for name, patch in (("none", None), ("rebuild_all", ("_flush_stroke", rebuild_all)),
@@ -428,9 +433,15 @@ def advisory_detection(out: Path, trials: int = 3, steps: int = 8) -> dict[str, 
             if patch is not None:
                 setattr(Hd2dView, *patch)
             if name == "slow_frames":
+                fault_free = float(report["none"]["frame_per_cpu"])
+                threshold = float(terrain_advisory.THRESHOLDS["frame_per_cpu"])
+                factor = max(1.5, threshold - fault_free + SLOW_FRAME_MARGIN)  # past the threshold, never below 1.5x
+                slow_s[0] = factor * cpu / 1000
                 d.frame = slow_frame
             try:
                 report[name] = _advisory(d, None, trials=trials, warm=1, steps=steps, cpu_ms=cpu)  # (backstop: trials)
+                if name == "slow_frames":
+                    report[name]["slow_frame_factor"] = round(slow_s[0] * 1000 / cpu, 3)  # (what was injected)
             finally:
                 setattr(Hd2dView, "_flush_stroke", flush)
                 setattr(Hd2dView, "end_stroke", end)
