@@ -70,6 +70,7 @@ def queue_scene_change(controller: Any, scene_path: str, *, spawn_id: str | None
     scene_path = _resolve_scene_path(controller, scene_path)
     if not scene_path:
         return
+    controller._carry_player_hp = True  # a gameplay room change: the player's HP goes with them (N1)
     if _try_fade_scene_change(controller, scene_path, spawn_id=spawn_id):
         return
     controller._pending_scene_change = {

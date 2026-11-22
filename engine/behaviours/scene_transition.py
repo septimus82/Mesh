@@ -256,6 +256,9 @@ class SceneTransition(Behaviour):
         )
         requester = getattr(self.window, "request_scene_change", None)
         if callable(requester):
+            controller = getattr(self.window, "scene_controller", None)
+            if controller is not None:
+                controller._carry_player_hp = True  # the player's HP goes through the door (N1)
             requester(self.target_scene)
 
     def _log(self, message: str) -> None:

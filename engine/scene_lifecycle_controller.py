@@ -259,9 +259,20 @@ def apply_scene_music(window: Any, settings: Any) -> None:
                            volume=_number(settings, "music_volume", 1.0) if music else 0.0)
 
 
+def _player_health(controller: Any) -> Any:
+    player = controller._find_player_sprite()
+    return next((b for b in getattr(player, "mesh_behaviours_runtime", None) or [] if type(b).__name__ == "Health"), None)
+
+
 def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     """Load entities from a JSON scene file and build sprites for them."""
     print(f"[Mesh][Scene] Loading scene '{scene_path}'")
+    carried_hp: float | None = None
+    if getattr(controller, "_carry_player_hp", False):
+        controller._carry_player_hp = False
+        health = _player_health(controller)  # (read now: the room being left is still built)
+        if health is not None and health.hp > 0:
+            carried_hp = float(health.hp)
     # Every room change comes through here: note what was collected or defeated in the room being left.
     # Not when loading a save: its game state, room memory included, has just replaced this one.
     if not room_memory.is_save_slot(controller.window, scene_path):
@@ -367,6 +378,9 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     # Build deterministic per-scene entity index once per load.
     # Use the same iteration order as legacy lookup paths (layer order).
     controller.entities.apply_pending_ops(controller, stage="load")
+    health = _player_health(controller) if carried_hp is not None else None
+    if health is not None and carried_hp is not None:  # (before a loaded save's states: those win)
+        health.hp = min(carried_hp, float(health.max_hp))
     pending = getattr(controller, "_pending_saved_entities", None)
     if pending is not None:  # a loaded save's object states belong to this room, now that it exists
         controller._pending_saved_entities = None
