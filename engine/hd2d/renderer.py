@@ -495,6 +495,7 @@ class Hd2dRenderer:
         self.camera = Camera(cam.pitch, cam.fov, cam.distance, cam.ortho)
         self._aspect = 16 / 9  # the game picture's, from the last frame drawn with the game's camera
         self._camera_ready = False
+        self.camera_target: Any | None = None  # followed instead of the tag's sprite when set (a net client's own avatar)
         self.draw_calls = 0
         self.static: list[tuple[Any, Any, tuple[float, ...]]] = []  # (geometry, texture, model matrix)
         # id(static draw) -> its structures' index spans (structure id, first, count), in index order: what lets a
@@ -1255,10 +1256,8 @@ class Hd2dRenderer:
             ctx.enable(ctx.DEPTH_TEST)
 
     # ------------------------------------------------------------------ per frame
-    follow_target: Any | None = None  # a sprite the camera, cutaway and focus follow instead of the tag's (a net client's own)
-
     def followed(self) -> Any | None:
-        target = self.follow_target
+        target = self.camera_target
         if target is not None:
             scene = getattr(self.window, "scene_controller", None)
             if any(s is target for s in getattr(scene, "all_sprites", None) or ()):  # (gone from the scene: the tag's)

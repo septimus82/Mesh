@@ -1,4 +1,4 @@
-"""HD-2D online M3-1: the renderer follows an explicitly set sprite (``Hd2dRenderer.follow_target``) and otherwise the
+"""HD-2D online M3-1: the renderer follows an explicitly set sprite (``Hd2dRenderer.camera_target``) and otherwise the
 first sprite with the camera's tag; a net client's SceneView sets its own avatar. The unit cases need no graphics; the
 real-window case builds the floors demo's crossing in a hidden window. GL-gated: set MESH_GL_SMOKE=1."""
 
@@ -26,7 +26,7 @@ def renderer(sprites: list[Any], target: Any = None) -> Any:
     """What ``followed`` reads: the scene's sprites (the drawable ones) and the camera's tag."""
     window = SimpleNamespace(scene_controller=SimpleNamespace(all_sprites=sprites))
     return SimpleNamespace(settings=SimpleNamespace(camera=SimpleNamespace(follow="player")), window=window,
-                           follow_target=target, _sprites=lambda: [s for s in sprites if s.visible])
+                           camera_target=target, _sprites=lambda: [s for s in sprites if s.visible])
 
 
 @pytest.mark.fast
@@ -42,6 +42,13 @@ def test_an_explicit_target_wins_over_the_tag() -> None:
     assert Hd2dRenderer.followed(renderer([first, second], second)) is second
     other = sprite(None)  # (it need not carry the tag)
     assert Hd2dRenderer.followed(renderer([first, other], other)) is other
+
+
+@pytest.mark.fast
+def test_an_invisible_target_is_still_followed() -> None:
+    first, hidden = sprite("player"), sprite("player")
+    hidden.visible = False  # (not drawn, so not among the tag rule's candidates; the camera must not jump to a peer)
+    assert Hd2dRenderer.followed(renderer([first, hidden], hidden)) is hidden
 
 
 @pytest.mark.fast
@@ -104,24 +111,31 @@ def test_a_client_window_follows_its_own_avatar(own: int) -> None:
 
     def check(window: Any, view: Any) -> None:
         renderer = window.hd2d_renderer
-        assert renderer is not None and renderer.follow_target is None
+        assert renderer is not None and renderer.camera_target is None
         view.sync(None, positions, None, 0.1)
         view.scene.entities.apply_pending_ops(view.scene)  # (what the client's draw does next)
-        assert renderer.follow_target is None
+        assert renderer.camera_target is None
         assert renderer.followed() is view.avatars[1], "no explicit target: the first tagged avatar"
         view.sync(None, positions, own, 0.1)
         mine, other = view.avatars[own], view.avatars[3 - own]
         mine_x, other_x = mine.center_x / PIXELS_PER_METRE, other.center_x / PIXELS_PER_METRE
-        assert renderer.follow_target is mine and renderer.followed() is mine
-        for _ in range(80):  # (the smoothed camera settles on its goal)
-            renderer.update(0.1)
+        assert renderer.camera_target is mine and renderer.followed() is mine
+        for _ in range(80):  # (only what the client does each frame: the camera must move by itself)
+            view.sync(None, positions, own, 0.1)
+            view.draw(0.1)
         assert renderer.camera.target[0] == pytest.approx(mine_x, abs=0.05)
         assert abs(renderer.camera.target[0] - other_x) > 5
+        walked = {**positions, own: (450.0, 300.0)}  # (the avatar walks: only the client's frames may move the camera)
+        for _ in range(80):
+            view.sync(None, walked, own, 0.1)
+            view.draw(0.1)
+        assert abs(renderer.camera.target[0] - mine_x) > 5
+        assert renderer.camera.target[0] == pytest.approx(450.0 / PIXELS_PER_METRE, abs=0.05)
         view.scene.entities.enqueue_despawn(mine)  # (destroyed under the renderer, still set: the tag's, no stale sprite)
         view.scene.entities.apply_pending_ops(view.scene)
-        assert renderer.follow_target is mine and renderer.followed() is other
+        assert renderer.camera_target is mine and renderer.followed() is other
         view.sync(None, {3 - own: positions[3 - own]}, own, 0.1)  # (and the client drops it: unset)
-        assert renderer.follow_target is None and renderer.followed() is other
+        assert renderer.camera_target is None and renderer.followed() is other
 
     hidden_view(crossing_files(), check)
 
