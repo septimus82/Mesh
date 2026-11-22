@@ -61,6 +61,7 @@ class WorldArena(Arena):
         self.character: dict[str, str] | None = None  # N8: {"id", "key"} of the character this window plays
         self.sheet: wire.Message | None = None  # the server's account of that character (items, unlocks)
         self.refused: str | None = None
+        self.refusal: str | None = None  # why this window left the room it was put in (JoinRefused): shown until it plays
         self.port: int | None = None  # another server to join next time (a restarted one), instead of run()'s
         self.notice: tuple[str, float] | None = None
         self.requests: list[wire.Message] = []
@@ -258,6 +259,8 @@ class WorldArena(Arena):
         return f"{own}P{self.player} {label} | {group}{invites}{notice}"
 
     def draw(self, now: float) -> None:
+        if self.refusal is not None and not self.connected:  # (over the disconnect's own caption, until it plays a room)
+            self.status = f"Refused: {self.refusal} | N new"
         if self.notice and now > self.notice[1]:
             self.notice = None
             self.status = self.caption() if self.connected else self.status
@@ -276,10 +279,11 @@ class WorldArena(Arena):
                 self.view = SceneView(self.window, self.arcade, self.defs[self.key].proto)
             except JoinRefused as exc:  # (HD-2D: this window would play the room differently): leave, never play it
                 self.note(f"refused the room: {exc}")
-                self.view, self.pending, self.refused, self.request = None, None, "hd2d_world", "disconnect"
+                self.view, self.pending, self.refusal, self.request = None, None, str(exc), "disconnect"
+                self.token = None  # (no resume back into that room; a retained character is refused there again)
                 self.window.clear(color=(16, 16, 24))
                 return
-            self.shown, self.pending, self.last, self.phase = self.room, None, None, "playing"
+            self.shown, self.pending, self.last, self.phase, self.refusal = self.room, None, None, "playing", None
         dt = 0.0 if self.last is None else min(0.1, now - self.last)
         self.last = now
         if self.view is None:

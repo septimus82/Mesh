@@ -99,7 +99,8 @@ def test_the_wheel_bundles_exactly_the_allow_list(built: tuple[Path, Path, Path]
             "mesh_net/coop/prefabs.json", "mesh_net/world.py", "mesh_net/world_client.py",
             "mesh_net/expedition/world.json", "mesh_net/expedition/hub.json", "mesh_net/expedition/ruins_1.json",
             "mesh_net/expedition/ruins_2.json", "mesh_net/expedition/ruins_2_map.json", "mesh_net/characters.py",
-            "mesh_net/persistence.py", "mesh_net/expedition/items.json", "mesh_net/expedition/progression.json"} <= set(names)
+            "mesh_net/persistence.py", "mesh_net/expedition/items.json", "mesh_net/expedition/progression.json",
+            "mesh_net/behaviours.json"} <= set(names)
     schemas = sorted(p.relative_to(REPO).as_posix() for p in (REPO / "engine" / "schemas").glob("*.json"))
     assert schemas and set(schemas) <= set(names), "the engine's own schemas travel with the package"
 

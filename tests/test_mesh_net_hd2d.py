@@ -308,9 +308,74 @@ def test_a_window_whose_room_fell_back_to_2d_or_differs_does_not_join(crossing: 
     check_window_world(SimpleNamespace(), flat)  # a 2D room needs no collision world
 
 
+def decorative_pond(scene: dict[str, Any]) -> None:
+    """A walkable pond (no limit to walking: the room is run) that single-player leaves out (SceneLoader's
+    validate_entity: a behaviour no game has)."""
+    scene["entities"].append({"id": "pond", "x": 800.0, "y": 640.0, "behaviours": ["WaterSurface", "NoSuchBehaviour"],
+                              "behaviour_config": {"WaterSurface": {"preset": "pond", "walkable": True}}})
+
+
+def test_the_authority_keeps_exactly_the_entities_single_player_keeps(crossing: dict[str, bytes]) -> None:
+    from engine.behaviours import load_builtin_behaviours
+    from engine.hd2d.settings import parse_hd2d
+    from engine.hd2d.world import build_world
+    from engine.scene_loader import SceneLoader
+    from mesh_net.scene_room import contained
+
+    load_builtin_behaviours()  # (as the game window has them)
+    files = edited(crossing, decorative_pond)
+    with disposable_project(files, scaffold=False) as root:
+        room = SceneRoom(root / SCENE, root)
+        scene = SceneLoader().load_scene(str(root / SCENE))  # single-player's loader
+        window = build_world(parse_hd2d(scene["settings"]["hd2d"], lenient=True), scene["entities"], contained(root))[0]
+    assert "pond" not in room.ids and "pond" not in [e.get("id") for e in scene["entities"]]
+    assert window is not None and room.digest == window.collision_digest()
+    check_window_world(SimpleNamespace(hd2d_world=window, hd2d_error=None), room)  # the client joins
+    assert room.identity == make_room(edited(crossing, lambda s: None)).identity, "as if the pond weren't there"
+
+
+def test_the_authoritys_copy_of_the_behaviour_metadata_is_current() -> None:
+    from engine.behaviours import load_builtin_behaviours
+    from engine.behaviours.registry import validation_metadata
+
+    load_builtin_behaviours()
+    copy = json.loads((REPO / "mesh_net" / "behaviours.json").read_text(encoding="utf-8"))
+    assert copy == json.loads(json.dumps(validation_metadata())), "run: py -3.13 tooling/write_net_behaviours.py"
+
+
+def test_a_refused_room_stays_said_and_is_never_resumed_into(crossing: dict[str, bytes]) -> None:
+    from mesh_net.world_client import WorldArena
+
+    room = make_room(crossing)
+    window = SimpleNamespace(scene_controller=SimpleNamespace(room_path="x"), game_state_controller=None,
+                             load_scene=lambda path: None, clear=lambda color: None, hd2d_world=None,
+                             hd2d_error="GlbError: a texture is missing")
+    enter = {"room": "start:3"}
+    arena = SimpleNamespace(notice=None, pending=enter, room="start:3", key="start", window=window, loads=[],
+                            defs={"start": SimpleNamespace(path=SCENE, proto=room)}, arcade=None, note=lambda e: None,
+                            refusal=None, token="t" * 64, request=None, connected=True, view=None, status="", last=None)
+    WorldArena.draw(arena, 1.0)
+    assert arena.view is None and arena.pending is None and arena.request == "disconnect"
+    assert arena.token is None, "no resume back into the refused room"
+    arena.connected, arena.status = False, "Disconnected | R resume / N new"  # (what Arena.run then says)
+    WorldArena.draw(arena, 1.1)
+    assert arena.status.startswith("Refused: this window plays the HD-2D room in 2D (GlbError: a texture is missing)")
+    arena.connected, arena.pending = True, enter  # put back there (a retained character): refused again, said again
+    WorldArena.draw(arena, 1.2)
+    arena.connected = False
+    WorldArena.draw(arena, 1.3)
+    assert arena.view is None and arena.status.startswith("Refused:")
+
+
 def test_the_authority_runs_an_hd2d_room_without_graphics(crossing: dict[str, bytes], tmp_path: Path) -> None:
+    """In a fresh process: no Arcade, so no behaviours loaded (scene validation reads mesh_net/behaviours.json), and
+    the same room (its dropped pond included) as this process, which has them, builds."""
+    from engine.behaviours import load_builtin_behaviours
+
+    load_builtin_behaviours()
+    files = edited(crossing, decorative_pond)
     project = tmp_path / "proj"
-    for rel, data in crossing.items():
+    for rel, data in files.items():
         (project / rel).parent.mkdir(parents=True, exist_ok=True)
         (project / rel).write_bytes(data)
     code = ("import sys; from pathlib import Path; from mesh_net.scene_room import *; from mesh_net.server import Server\n"
@@ -320,5 +385,7 @@ def test_the_authority_runs_an_hd2d_room_without_graphics(crossing: dict[str, by
             "for seq in range(1, 31): room.input(eid, {'v': 1, 'type': 'input', 'entity': eid, 'seq': seq, 'dx': -1, 'dy': 0}); room.step()\n"
             "assert room.world is not None and room.players[eid].body.center_x < 512 - 100\n"
             "bad = [k for k in ('arcade', 'pyglet', 'engine.game', 'engine.studio', 'engine.physics_runtime') if k in sys.modules]\n"
-            "assert not bad, bad")
-    subprocess.run([sys.executable, "-c", code], check=True, capture_output=True)
+            "assert not bad, bad\n"
+            "print(room.identity)")
+    done = subprocess.run([sys.executable, "-c", code], check=True, capture_output=True, text=True)
+    assert done.stdout.strip().splitlines()[-1] == make_room(files).identity

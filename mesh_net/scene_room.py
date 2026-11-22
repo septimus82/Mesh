@@ -31,6 +31,7 @@ import random
 from collections.abc import Callable, Iterator
 from contextlib import chdir, contextmanager
 from dataclasses import dataclass, field
+from functools import cache
 from importlib.resources import files
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -154,19 +155,35 @@ def move(mover: Body, delta: tuple[float, float], solids: list[Body]) -> None:
     mover.center_y += result.final_pos[1] - start.y
 
 
+@cache
+def behaviour_metadata() -> dict[str, Any]:
+    """The behaviours scene validation knows, for a process that hasn't loaded them (loading them imports Arcade):
+    mesh_net/behaviours.json, engine.behaviours.registry.validation_metadata's copy (a test keeps it current)."""
+    data: dict[str, Any] = json.loads(files("mesh_net").joinpath("behaviours.json").read_text(encoding="utf-8"))
+    return data
+
+
 def load_scene(path: Path) -> tuple[str, dict[str, Any]]:
-    """The scene with its entities as the engine's loader resolves them (prefabs filled in, defaults applied), and
-    the SHA-256 of that. (A room's identity adds the collision geometry its files give: SceneRoom.identity.)"""
+    """The scene with its entities as the engine's loader resolves them (engine.scene_loader.SceneLoader.load_scene:
+    an entity that fails ``validate_entity`` is left out, the rest get prefabs and defaults), and the SHA-256 of that.
+    A scene single-player would load as its empty fallback (it fails ``validate_scene``) is refused. (A room's
+    identity adds the collision geometry its files give: SceneRoom.identity.)"""
+    from engine.behaviours.registry import register_validation_metadata  # noqa: PLC0415
     from engine.migrations import migrate_payload  # noqa: PLC0415
     from engine.scene_loader import SceneLoader  # noqa: PLC0415
     from engine.schema_validation import validate  # noqa: PLC0415
 
+    register_validation_metadata(behaviour_metadata())  # (only what isn't registered: loaded behaviours win)
     data = path.read_bytes()
     migrated = migrate_payload("scene", json.loads(data.decode("utf-8")))
     validate(migrated, "scene.schema.json", path)
     loader = SceneLoader()
     scene = loader.apply_scene_defaults(migrated)
-    scene["entities"] = [loader.apply_entity_defaults(e) for e in scene["entities"] if isinstance(e, dict)]
+    report = loader.validate_scene(scene, validate_entities=False)
+    if not report.ok:
+        raise Unsupported(f"single-player loads this scene as an empty room: {'; '.join(report.errors)}")
+    scene["entities"] = [loader.apply_entity_defaults(e) for i, e in enumerate(scene["entities"])
+                         if loader.validate_entity(e, index=i).ok]  # (what single-player keeps, by its own check)
     canonical = json.dumps(scene, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
     return hashlib.sha256(canonical.encode()).hexdigest(), scene
 
