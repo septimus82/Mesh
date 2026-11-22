@@ -256,7 +256,10 @@ class SceneTransition(Behaviour):
         )
         requester = getattr(self.window, "request_scene_change", None)
         if callable(requester):
-            requester(self.target_scene)
+            requester(self.target_scene)  # (this clears any carry mark: a door marks it after)
+            controller = getattr(self.window, "scene_controller", None)
+            if controller is not None:
+                controller._carry_player_hp = True  # the player's HP goes through the door (N1)
 
     def _log(self, message: str) -> None:
         logger = getattr(self.window, "console_log", None)
