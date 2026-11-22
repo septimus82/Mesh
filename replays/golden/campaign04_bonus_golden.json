@@ -5,7 +5,7 @@
     "world_digest_count": 47
   },
   "expected_event_digest": "c7e25476e2a7efb425143c2d63860d66a3f71dbc74bf849e4181a0c6849600d8",
-  "expected_final_state_digest": "03d738348c53d18fce4e70c0172fefad4a76b76ce4358b8e925f7400ca1b5a1b",
+  "expected_final_state_digest": "e6bf832c93882fe6e330d0953a7dfa6de7d2cff3d2e4c07ad73c98c1682b02f1",
   "expected_world_digest": "deb15f527d6e582f42b3a213bf85615c940ac8e8f6effb9d793ee392bfaa1707",
   "id": "campaign04_bonus",
   "run_determinism": {
