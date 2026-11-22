@@ -5,7 +5,7 @@
     "world_digest_count": 57
   },
   "expected_event_digest": "92a2ca74ac8601bf7de38c6fef65548909130d2b6753f2b07c1a9bd17f5da74c",
-  "expected_final_state_digest": "dbd6f7dac5a1ba9330dd975c4ccf2527aaae450b5992fbbe18286064e474a128",
+  "expected_final_state_digest": "72b35d8ae46cb93e5337cf1cdcabc49959e70e94795ea309bfa6e4b7e434ea88",
   "expected_world_digest": "9ff145ecbc6000f72cab59002d5dacd893b01ae41c8e7848bef87476340b21d0",
   "id": "campaign05_standard",
   "run_determinism": {
@@ -37,6 +37,6 @@
     ]
   },
   "scene": "scenes/episode_01_intro.json",
-  "schema_version": 1,
+  "schema_version": 2,
   "script": "replays/campaign05_standard.json"
 }

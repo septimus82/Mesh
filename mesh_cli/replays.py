@@ -22,6 +22,7 @@ from engine.save_runtime.normalize import normalize_save_payload
 from . import episode as episode_commands
 from .replay_digest_projection import (
     DIGEST_PROJECTION_POLICY,
+    scope_quest_state,
 )
 from .replay_digest_projection import (
     project_event_for_digest as _project_event_for_golden_digest,
@@ -37,7 +38,7 @@ from .replay_digest_projection import (
 )
 
 SCHEMA_VERSION = 1
-GOLDEN_SCHEMA_VERSION = 1
+GOLDEN_SCHEMA_VERSION = 2  # 2: digests scope quest state to each replay's relevant quests (R-1)
 PERF_SCHEMA_VERSION = 1
 UPDATE_GOLDEN_SCHEMA_VERSION = 2
 DEFAULT_SEED = 123
@@ -453,6 +454,17 @@ def _run_episode_case(*, case: ReplaySuiteCase, case_out_dir: Path, seed: int) -
     )
 
 
+def _scope_checkpoint_quests(checkpoints: dict[str, Any], declared: Any) -> dict[str, Any]:
+    """Digest view of campaign checkpoints: quest state limited to the replay's relevant quests (R-1)."""
+    declared_ids = tuple(str(q) for q in declared) if isinstance(declared, list) else ()
+    return {
+        label: {**cp, "quest_state": scope_quest_state(cp["quest_state"], declared_ids)}
+        if isinstance(cp.get("quest_state"), dict)
+        else cp
+        for label, cp in checkpoints.items()
+    }
+
+
 def _run_campaign_case(*, case: ReplaySuiteCase, case_out_dir: Path, seed: int) -> int:
     from tooling.campaign_replay import (
         diff_traces,
@@ -536,7 +548,7 @@ def _run_campaign_case(*, case: ReplaySuiteCase, case_out_dir: Path, seed: int) 
             "final_state": {
                 "campaign_id": str(script_payload.get("campaign_id", "")),
                 "final_flags": dict(trace_1.get("final_flags", {})) if isinstance(trace_1.get("final_flags"), dict) else {},
-                "checkpoints": run_1.checkpoints,
+                "checkpoints": _scope_checkpoint_quests(run_1.checkpoints, script_payload.get("quests", [])),
                 "milestones": run_1.milestone_log,
             },
             "snapshots": list(run_1.milestone_log),
