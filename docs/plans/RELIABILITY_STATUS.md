@@ -3,9 +3,14 @@
 Maintained by the master only (workers report in their PRs). GitHub is the source of truth: a fresh master session
 rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and priorities: `MESH_RELIABILITY_MASTER_PLAN.md`.
 
-**As of 2026-11-22 — Ember Hollow COMPLETE; Astra audit follow-up merged.** Integration `redesign/visual-editor` =
-`4e0e95978d5726150cf553054fca68f363282279` (post-merge CI 45013139705 ✓ a1, Extended 45013139672 ✓ a1; replay suite 13/13 at this tip,
-master's local run). This board lands with its own PR (`gh pr list --head docs/reliability-board-astra`).
+**As of 2026-11-22 — post-cycle decisions implemented; IDLE.** Integration `redesign/visual-editor` =
+`d3394df2b17e0ed7e4dd9ece965e967fb300c0e7` (post-merge CI 45028645649 ✗ a1, ✓ a2 — see below; Extended 45028645576 ✓ a1). The replay
+suite now runs in every CI run as a required check. This board lands with its own PR (`gh pr list --head docs/reliability-board-replays`).
+
+**Owner post-cycle decisions (2026-11-22):** (1) replay isolation APPROVED → R-1 #586; (2) replay suite on every PR as required
+validation APPROVED → R-2 #585 (release verification kept; goldens never auto-updated); (3) terrain production threshold 3.2
+UNCHANGED — on failures investigate runner variation, calibration, real frame performance and self-test behaviour; no
+weakening without evidence and owner approval. After verification: idle; no new audit or backlog.
 
 **Ember Hollow round 2** (engine `df656ef8`, report `D:\Games\Mesh-slice\evidence\round2\REPORT_round2.md`): content corrected
 through ops (rats tagged `enemy` via `set_entity_fields`, contact damage 3 > defence 2, Combat targets `enemy`); **A, B, C, D all PASS**.
@@ -109,6 +114,9 @@ disagreement, or two failed correction rounds. Cycle 10 merges below were made u
 | #581 N3 one attack, one trace | `54cc10d89f19e83985e44e01c37380f02009f97d` | `93d3f972` (head `3657a3cd`) | 45008219121 ✓ a1 | 45008219089 ✓ a1 |
 | #582 N1 player HP carries across room changes | `b2f1a4e1dd7c134f2d1b934bc807caa834fcf799` | `697394a9` (head `1e10d9ee`) | 45010056196 ✓ a1 | 45010056202 ✓ a1 |
 | #578 G-1 replay goldens refreshed (explained) | `4e0e95978d5726150cf553054fca68f363282279` | `0e593fc7` (head `56e750ce`) | 45013139705 ✓ a1 | 45013139672 ✓ a1 |
+| #584 status board (Ember Hollow complete) | `594454b6ad54ac8108a3dafd0275d877d6cc3935` | `8c62ec1e` (= tip + exactly #584's diff) | 45018422061 ✓ a1 | 45018422098 ✓ a1 |
+| #585 R-2 replay suite required on every PR | `edfad84771ff6a8ec0a5f721f2b29b481b1cbf23` | `4d7f8ce5` (head `88c3f58b`) | 45025408178 ✓ a1 (replay job ran ✓) | 45025408226 ✓ a1 |
+| #586 R-1 replay digests scoped to each replay's quests | `d3394df2b17e0ed7e4dd9ece965e967fb300c0e7` | `206e0f29` (head `a1facdc0`) | 45028645649 **✗ a1**, ✓ a2 (see below) | 45028645576 ✓ a1 |
 
 **Waiver (owner, one-time, narrowly scoped; not a relaxation of CI).** Post-merge CI run 44589776415 on `55bdd589`
 FAILED at attempt 1: one Windows test,
@@ -144,6 +152,11 @@ production thresholds untouched; independent review APPROVE. Its own Extended: f
 **#583 CI 44994370624 FAILED at attempt 1** on an unrelated race test, `test_ai_write_paths.py::
 test_studio_and_a_plan_starting_at_once_never_both_have_the_project` (Studio's 2.0 s owner wait expired while the plan held the
 project on a slow Windows runner); T-05 touches only the terrain study tool; one `--failed` rerun → attempt 2 ✓. Follow-up T-06.
+**Post-merge CI 45028645649 on `d3394df2` (#586 R-1) FAILED at attempt 1** — the new required replay job: `mismatched 0`
+(R-1's scoped goldens correct on Linux) but `budget_failed 1`: ep05 `tick_ms_p95` 65.1 ms > 50 (ep05 has so few ticks that its
+p95 is its single slowest tick). Evidence it is a runner spike, not R-1: in the same run every other episode was faster than
+before (ep01 2.05 vs 2.8–3.2 ms) and ep05's total (88.8 ms) was below an earlier passing run's (105.6 ms); ep05's slowest tick
+was 25.5 / 38.7 ms in R-2's runs without scoping. One `--failed` rerun → attempt 2 ✓ (replay job and both fan-ins). Follow-up T-07.
 #582 superseded heads: #582 `12fdd739` (CI cancelled, superseded by review round 2), `6a192375` (CI cancelled; its mypy
 failure fixed in `1e10d9ee`).
 
@@ -197,6 +210,8 @@ Approval: `OWNER` = the owner must approve the merge.
 | N1 player HP refilled on every room change | engine (slice r2) | gameplay (Sonnet) | MERGED + VERIFIED | #582 → `b2f1a4e1` | `df656ef8` → `1e10d9ee` | a door marks the controller; `load_scene` re-applies the player's HP (clamped, before a save's states); round 2 clears a stale mark on New Game / load / reload | APPROVED (round 2) | master (standing authority) | |
 | N3 attack traced every held frame | telemetry (slice r2) | creator-safety (Sonnet) | MERGED + VERIFIED | #581 → `54cc10d8` | `df656ef8` → `3657a3cd` | only a swing Combat performed is traced, once | APPROVED | master (standing authority) | |
 | T-05 terrain gate self-test fault too small | test infra | master (Sonnet independent review) | MERGED + VERIFIED | #583 → `0b891b19` | `e78a7de1` → `b445fa8b` | owner option 2; see above | APPROVED (independent review) | owner chose | |
+| R-1 replay digests hashed the whole quest catalogue | test infra (owner) | Sonnet | MERGED + VERIFIED | #586 → `d3394df2` | `594454b6` → `a1facdc0` | `scope_quest_state`: a quest is digested if the replay declares it or it is not pristine; flags/entities/events/cross-scene untouched; goldens tool-regenerated (`GOLDEN_SCHEMA_VERSION` 2); 7 tests (isolation ×2 fail on base, detection ×5); mutant fails; 13/13 | APPROVED | master (standing authority) | |
+| R-2 replay suite ran only on release branches | CI (owner) | Sonnet | MERGED + VERIFIED | #585 → `edfad847` | `594454b6` → `88c3f58b` | `replays (ubuntu-latest, py3.11)` job with the `ship` invocation, never updating goldens; required via the `tests` fan-in `needs` and `ci_require_jobs.required_jobs()` (fail-closed); pinned by `test_ci_require_jobs.py`; proven in its own and post-merge CI | APPROVED | master (standing authority) | |
 | U-01 unresolved-record accumulation | P2 | (unassigned) | MEASURED (GAME-1) | | | unresolved records bounded by deduplication (ambiguous twins plateau at 4 after 2 cycles; no-change cycles 0); the only unbounded growth was F-1, fixed by B-09; nothing discarded | | owner | keep tracked; revisit if real games show growth |
 
 ## Follow-ups noted by reviews (not assigned)
@@ -218,10 +233,12 @@ Approval: `OWNER` = the owner must approve the merge.
 - **RV-3 follow-up, low:** `mesh_cli/new_game.py` has its own `--force` file-overwrite path, not checked for ownership.
 - **T-06, test reliability:** `test_ai_write_paths.py::test_studio_and_a_plan_starting_at_once_never_both_have_the_project`'s
   2.0 s owner wait expired once on Windows CI (#583 CI a1); track, don't weaken blindly.
-- **Terrain gate, owner's call if it recurs:** hosted runners' fault-free `frame_per_cpu` varied 1.45 → 2.70 in one day; the
-  real gate (fault-free stroke vs 3.2) may false-fail on slow runners — recalibration would be a gate change.
-- **Replay suite (owner's call):** make the fixtures hermetic (quest state filtered to each scene's own quests) and consider
-  running `replays run` (~8 s) on PRs; today only the release `ship` job runs it.
+- **Terrain gate (owner: threshold 3.2 UNCHANGED):** hosted runners' fault-free `frame_per_cpu` varied 1.45 → 2.70 in one day;
+  if the real gate false-fails, investigate runner variation, calibration, frames and the self-test; no weakening without
+  evidence and owner approval.
+- **T-07, replay budget:** ep05's `tick_ms_p95` budget (50 ms) is measured over so few ticks that it acts as a single-tick
+  maximum (25–65 ms observed); a spike failed the required replay job once (#586 post-merge a1). Changing the budget or its
+  metric is the owner's call.
 - **AS-2 follow-up:** `engine/savegame.py`'s separate snapshot writer (`save_format_version`) has no newer-schema guard.
 - **Ember Hollow round 2 minor:** N2 the current scene path reads `saves\quicksave.json` after an F9 load; N4 `mesh validate`
   says "no params provided" for behaviours with settings; AI snapshots carry no HP; no wait action.
@@ -280,6 +297,7 @@ Approval: `OWNER` = the owner must approve the merge.
 | G-1 | Sonnet 5.5 | 14 | ~89k | #578 |
 | N1 rounds 1 + 2 / N3 | Sonnet 5.5 ×2 | 38 / 31 | ~121k / ~100k | #582, #581 |
 | T-05 independent review | Sonnet 5.5 | 3 | ~69k | APPROVE on #583 |
+| R-1 / R-2 | Sonnet 5.5 ×2 | 31 / 17 | ~122k / ~95k | #586, #585 |
 
 ## Worktrees in use
 
@@ -290,6 +308,7 @@ Approval: `OWNER` = the owner must approve the merge.
 | `D:\Games\Mesh-slice-engine`, `D:\Games\Mesh-slice-engine2` | Ember Hollow's pinned engine checkouts: round 1 at `fed442a5`, round 2 at `df656ef8` (read-only) |
 | `D:\Games\Mesh-SL1`, `D:\Games\Mesh-SL2`, `D:\Games\Mesh-SL3`, `D:\Games\Mesh-SL4`, `D:\Games\Mesh-SL5`, `D:\Games\Mesh-AS1`, `D:\Games\Mesh-AS2`, `D:\Games\Mesh-AS3`, `D:\Games\Mesh-AS4`, `D:\Games\Mesh-G1`, `D:\Games\Mesh-N1`, `D:\Games\Mesh-N3`, `D:\Games\Mesh-T-05` | merged work (#570-#583): removable after verification, with owner OK |
 | `D:\Games\Mesh-golden` | the replay investigation's detached checkout at `df656ef8` |
+| `D:\Games\Mesh-RP1`, `D:\Games\Mesh-RP2` | merged work (#586, #585): removable after verification, with owner OK |
 | `D:\Games\Mesh-acc` | ACC-2 (detached at `9341bfdd`) |
 | `D:\Games\Mesh-board` | this board update |
 
