@@ -97,3 +97,16 @@ def test_a_loaded_game_does_not_inherit_hp_from_the_room_left_behind(arena: Aren
     arena.window.request_scene_change(str(arena.room))  # a menu / Continue style change, not a door
     assert handle_pending_scene_load(arena.controller) is True
     assert hp_of(_player(arena)) == 10
+
+
+def test_a_door_that_never_happened_leaves_no_mark_for_the_next_load(arena: Arena) -> None:
+    _two_rooms(arena)
+    set_hp(_player(arena), 7)
+    arena.controller._carry_player_hp = True  # as a door sets it, then the room change never comes
+    arena.window.request_scene_change(str(arena.room))  # New Game / Continue / menu
+    assert handle_pending_scene_load(arena.controller) is True
+    assert hp_of(_player(arena)) == 10
+    arena.controller._carry_player_hp = True
+    arena.controller.request_scene_reload()
+    assert handle_pending_scene_load(arena.controller) is True
+    assert hp_of(_player(arena)) == 10

@@ -36,6 +36,7 @@ def _resolve_scene_path(controller: Any, scene_path: str) -> str:
 
 def request_scene_reload(controller: Any, *, clear_assets: bool = False) -> None:
     """Request that the currently loaded scene reload on the next frame."""
+    controller._carry_player_hp = False  # only a door carries HP (N1): never a stale mark into a reload
     if controller.current_scene_path:
         controller._pending_scene_path = controller.current_scene_path
         controller._clear_assets_on_next_load = clear_assets
@@ -55,6 +56,7 @@ def request_scene_reload(controller: Any, *, clear_assets: bool = False) -> None
 
 def request_scene_change(controller: Any, scene_path: str) -> None:
     """Request that a different scene load on the next frame."""
+    controller._carry_player_hp = False  # New Game, Continue, menus, editor: not a door (a door marks it after this)
     scene_path = _resolve_scene_path(controller, scene_path)
     if not scene_path:
         return
@@ -166,6 +168,7 @@ def reload_scene(controller: SceneController, new_path: str | None = None) -> bo
     )
 
     scene_path = str(new_path or controller.current_scene_path or "").strip()
+    controller._carry_player_hp = False
 
     def _log(msg: str) -> None:
         controller.window.console_log(f"[HotReload] {msg}")
