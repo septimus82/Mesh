@@ -290,6 +290,7 @@ class SceneController:
         self.scene_settings: Dict[str, Any] = {}
         self.current_scene_path: str | None = None
         self._pending_scene_path: str | None = None
+        self._carry_player_hp: bool = False  # set by a door: the next room load keeps the player's HP (N1)
         self._pending_scene_change: dict[str, Any] | None = None
         self._clear_assets_on_next_load: bool = False
         self._suppress_spawn_toasts: bool = False
