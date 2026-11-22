@@ -425,7 +425,7 @@ the fix goes into the shared builder/World (one placement helper both runtimes c
 - **R2: terrain source.** Single-player swaps in `renderer.terrain` (`runtime.py:124-125`), while a headless World uses
   `Terrain.from_ground`. Parity on a sculpted room must be shown. *(Inferred to be the same data; not proven.)*
 - **R3: tick quantisation.** The server moves `speed/20` px per tick, while single-player moves per frame with
-  substeps (`world.py:400-405`). M1-A-3 compares at equal deltas. Real play will still differ by frame timing, which
+  substeps (`world.py:402-407`). M1-A-3 compares at equal deltas. Real play will still differ by frame timing, which
   is an M3 reconciliation concern.
 - **R4: server cost.** `World.move` per body per tick (8 bodies × 20 Hz, `protocol.py:13-14`) with wall scans
   (`world.py:301-303`, linear in walls). M1-B-2 measures it.
