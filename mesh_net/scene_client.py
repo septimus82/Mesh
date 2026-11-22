@@ -113,6 +113,9 @@ class SceneView:
             vx, vy = ((x - sprite.center_x) / dt, (y - sprite.center_y) / dt) if dt > 0 else (0.0, 0.0)
             sprite.center_x, sprite.center_y = x, y
             sprite.mesh_velocity_x, sprite.mesh_velocity_y = vx, vy  # the Animator walks or stands by these
+        renderer = getattr(self.window, "hd2d_renderer", None)
+        if renderer is not None:  # (every frame: a room change or a resume brings a new renderer and avatar)
+            renderer.follow_target = self.avatars.get(own) if own is not None else None
         if state is None:
             return
         for door in self.doors:

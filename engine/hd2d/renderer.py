@@ -1255,7 +1255,14 @@ class Hd2dRenderer:
             ctx.enable(ctx.DEPTH_TEST)
 
     # ------------------------------------------------------------------ per frame
+    follow_target: Any | None = None  # a sprite the camera, cutaway and focus follow instead of the tag's (a net client's own)
+
     def followed(self) -> Any | None:
+        target = self.follow_target
+        if target is not None:
+            scene = getattr(self.window, "scene_controller", None)
+            if any(s is target for s in getattr(scene, "all_sprites", None) or ()):  # (gone from the scene: the tag's)
+                return target
         tag = self.settings.camera.follow
         for sprite in self._sprites():
             if getattr(sprite, "mesh_tag", None) == tag:
