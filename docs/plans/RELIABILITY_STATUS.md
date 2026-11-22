@@ -3,9 +3,15 @@
 Maintained by the master only (workers report in their PRs). GitHub is the source of truth: a fresh master session
 rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and priorities: `MESH_RELIABILITY_MASTER_PLAN.md`.
 
-**As of 2026-11-22 — Ember Hollow round 1 done, its defects fixed; round 2 in progress.** Integration `redesign/visual-editor` =
-`df656ef879c7309b574208883448d51e2bd24592` (post-merge CI 44962995486 ✓ a1, Extended 44962995489 ✓ a1). This board lands with its own PR
-(`gh pr list --head docs/reliability-board-slice-r1`). Review phase: #569 (`8a79adcf`). Cycle 10 closed with #565 (`1bd4aad9`).
+**As of 2026-11-22 — Ember Hollow COMPLETE; Astra audit follow-up merged.** Integration `redesign/visual-editor` =
+`4e0e95978d5726150cf553054fca68f363282279` (post-merge CI 45013139705 ✓ a1, Extended 45013139672 ✓ a1; replay suite 13/13 at this tip,
+master's local run). This board lands with its own PR (`gh pr list --head docs/reliability-board-astra`).
+
+**Ember Hollow round 2** (engine `df656ef8`, report `D:\Games\Mesh-slice\evidence\round2\REPORT_round2.md`): content corrected
+through ops (rats tagged `enemy` via `set_entity_fields`, contact damage 3 > defence 2, Combat targets `enemy`); **A, B, C, D all PASS**.
+B was a genuine AI-only playtest: 47 MCP calls each decided by the AI from the previous snapshot, no script, no injected keys
+(caveat: game time pauses between calls). New findings N1–N4 (N1 and N3 fixed below; N2 scene path reads the save file after
+a load, N4 cosmetic, both recorded).
 
 **Ember Hollow round 1** (project `D:\Games\Mesh-slice\EmberHollow`, engine `fed442a5`, built only through MCP/authoring
 ops and `mesh` commands; report `D:\Games\Mesh-slice\evidence\REPORT.md`): A validate PASS; B AI playtest PARTIAL (the AI
@@ -13,8 +19,15 @@ playtest had no attack, so the quest only completed with attack keys injected in
 script, not a live AI — not counted as a pass); C fresh-process persistence PASS; D exported build PASS. Five defects found
 and fixed below (SL-1..SL-5); six minor items recorded. Round 2 (engine `df656ef8`): content corrected (rat tags, contact
 damage above defence) and B re-run with the AI deciding every action, no script, no injected keys.
-**Queued after Ember Hollow (owner):** Astra audit follow-up — `mesh new --force` nested-project preflight, future-schema
-slot overwrite refusal, SoundEmitter teardown, diagnostic sidecars as save slots, replay-golden investigation.
+**Astra audit follow-up (owner, started after Ember Hollow):** AS-1..AS-4 fixed and merged below. **Replay goldens:** 13/13
+mismatched deterministically; not caused by this programme (identical digests from `ad91e28c` to `df656ef8`). Two data commits
+explain every difference — `976b3ddd` (2026-03-06) added 61 inactive quest stubs and the replays hash the whole quest catalogue;
+`220f3a43` (2026-04-18) removed the trailing cutscene `stop` (`command_count` −1). Restoring just those two files makes 13/13 pass;
+B-06's RNG change is irrelevant. Refreshed with the update tool, reason naming both (G-1 #578). The replay suite runs only in the
+release `ship` job, which is why it went unnoticed since March.
+**Owner decision (terrain gate):** the self-test of the calibrated terrain gate failed twice on a docs-only merge (a fixed 1.5x
+slow-frame fault fell under 3.2 on a fast runner); owner chose "T-05 first, then resume" — the queue was held until T-05 (#583)
+was merged and its post-merge Extended green.
 
 **Independent review of `e390ef6e` (2 fresh reviewers, 39 production files `ad91e28c..e390ef6e`): no blockers.**
 Three SERIOUS findings, each reproduced and fixed below (RV-1..RV-3). MINOR, recorded only: `died` no longer carries an
@@ -87,6 +100,15 @@ disagreement, or two failed correction rounds. Cycle 10 merges below were made u
 | #574 SL-5 AI playtesting can attack | `32b838b9b07a2a16b35c157689ed57a029820aba` | `0f4e603a` (head `2dbfdfb4`) | 44955048707 ✓ a1 | 44955048866 ✓ a1 |
 | #571 SL-1 DamageOnTouch reduces Health | `de6b84c8f2edc05773eba7d87401551237761a17` | `43d85a82` (head `98fc904c`) | 44958263858 ✓ a1 | 44958263876 **✗ a1**, ✓ a2 (see below) |
 | #573 SL-3 explicit `auto_start: false` waits | `df656ef879c7309b574208883448d51e2bd24592` | `3215333d` (head `4d25c172`) | 44962995486 ✓ a1 | 44962995489 ✓ a1 |
+| #575 status board (Ember Hollow round 1) | `e78a7de1c97189be314278cf9bf956ce1fd6a764` | `0b89743e` (= tip + exactly #575's diff) | 44969013001 ✓ a1 | 44969012985 **✗ a1, ✗ a2** (terrain self-test; see below) |
+| #583 T-05 terrain gate self-test sizes its fault | `0b891b198071862aa8998eaa4e68670ffd8d4067` | `31f4f3bc` (head `b445fa8b`) | 44996399822 ✓ a1 | 44996399799 ✓ a1 |
+| #576 AS-1 `mesh new --force` refuses nested projects | `944e2c8dc1fd2aa8de2d40750305aecdcba67ff3` | `912fc50e` (head `d3ff9558`) | 44998993549 ✓ a1 | 44998993501 ✓ a1 |
+| #577 AS-2 newer-schema slot never overwritten | `8632e665429a854d24cab5b09b6fd5fa1b4b3b6f` | `205a1e12` (head `d2b6ea3b`) | 45001168927 ✓ a1 | 45001168755 ✓ a1 |
+| #579 AS-4 sidecars never listed as slots | `b61e3af01eed62bfeec61b012990628e569234c9` | `cd24034b` (head `38e874d2`) | 45003997330 ✓ a1 | 45003997348 ✓ a1 |
+| #580 AS-3 deleting an entity stops its SoundEmitter | `7d080df98c2e92bc5d0238fb3477ea7154ce482e` | `5da3ed6f` (head `96bb5d65`) | 45006244634 ✓ a1 | 45006244638 ✓ a1 |
+| #581 N3 one attack, one trace | `54cc10d89f19e83985e44e01c37380f02009f97d` | `93d3f972` (head `3657a3cd`) | 45008219121 ✓ a1 | 45008219089 ✓ a1 |
+| #582 N1 player HP carries across room changes | `b2f1a4e1dd7c134f2d1b934bc807caa834fcf799` | `697394a9` (head `1e10d9ee`) | 45010056196 ✓ a1 | 45010056202 ✓ a1 |
+| #578 G-1 replay goldens refreshed (explained) | `4e0e95978d5726150cf553054fca68f363282279` | `0e593fc7` (head `56e750ce`) | 45013139705 ✓ a1 | 45013139672 ✓ a1 |
 
 **Waiver (owner, one-time, narrowly scoped; not a relaxation of CI).** Post-merge CI run 44589776415 on `55bdd589`
 FAILED at attempt 1: one Windows test,
@@ -113,6 +135,17 @@ round 2; its Extended 44944823086 ✓, superseded). Only final heads passed at a
 out). Evidence it is environmental, not #571: `mesh_net` / `tooling.net_world_probe` never use DamageOnTouch or `on_damage`
 (SL-1's only code paths); #571's own PR-head Extended 44947199016 passed the gpu lane; the exact test passed 3/3 locally at
 `de6b84c8` (42.5 s, 37.0 s, 37.0 s). One `--failed` rerun → attempt 2 ✓. Attempt 1 is not counted as green. Follow-up T-04.
+
+**Post-merge Extended 44969012985 on `e78a7de1` (#575, docs only) FAILED at attempts 1 and 2** —
+`tests/test_terrain_gpu.py::test_the_terrain_gate_fails_injected_regressions`: the injected 1.5x slow-frame fault measured
+2.965 (< 3.2) on a runner whose fault-free `frame_per_cpu` was ~1.45, though the same code passed 8 Extended runs that day.
+Owner chose T-05 first: the fault is now sized from the session's fault-free frame (`max(1.5, 3.2 − fault_free + 0.75)`);
+production thresholds untouched; independent review APPROVE. Its own Extended: fault-free 2.70, injected 4.285 → crossed.
+**#583 CI 44994370624 FAILED at attempt 1** on an unrelated race test, `test_ai_write_paths.py::
+test_studio_and_a_plan_starting_at_once_never_both_have_the_project` (Studio's 2.0 s owner wait expired while the plan held the
+project on a slow Windows runner); T-05 touches only the terrain study tool; one `--failed` rerun → attempt 2 ✓. Follow-up T-06.
+#582 superseded heads: #582 `12fdd739` (CI cancelled, superseded by review round 2), `6a192375` (CI cancelled; its mypy
+failure fixed in `1e10d9ee`).
 
 ## Work
 
@@ -156,6 +189,14 @@ Approval: `OWNER` = the owner must approve the merge.
 | SL-3 quest `auto_start: false` ignored | engine (slice) | gameplay (Sonnet) | MERGED + VERIFIED | #573 → `df656ef8` | `fed442a5` → `4d25c172` | 26 shipped quests omit `auto_start` and rely on the implicit start → worker escalated; master chose the compatible option: tri-state, only explicit `false` waits (absent unchanged), docs updated; round 1 failed the tier-marker ratchet | APPROVED (round 2) | master (standing authority) | |
 | SL-4 `set_entity_fields` unusable via authoring | authoring (slice) | creator-safety (Sonnet) | MERGED + VERIFIED | #570 → `451eca7c` | `fed442a5` → `93102d56` | the only `**kwargs` op was bound as one `fields` param; `_bind` now spreads an object; op guards unchanged | APPROVED | master (standing authority) | |
 | SL-5 AI playtesting had no attack | AI-playtest tool (slice) | creator-safety (Sonnet) | MERGED + VERIFIED | #574 → `32b838b9` | `fed442a5` → `2dbfdfb4` | `attack` taps the game's own binding via the same driver and permission as `interact`; refused in dialogue | APPROVED | master (standing authority) | |
+| AS-1 `mesh new --force` deleted a nested project | P1 (audit) | creator-safety (Sonnet) | MERGED + VERIFIED | #576 → `944e2c8d` | `df656ef8` → `d3ff9558` | preflight walks the target (links not followed) and refuses any nested `config.json`, before the lock or any delete; real Studio-lock test; junction removal checked by the master on Windows | APPROVED | master (standing authority) | |
+| AS-2 newer-schema slot overwritten | P1 (audit) | gameplay (Sonnet) | MERGED + VERIFIED | #577 → `8632e665` | `df656ef8` → `d2b6ea3b` | the shared writer (`save_game` → `ensure_v2_backup`) refuses a slot above `SAVE_SCHEMA_VERSION` (`save.write.newer_schema_slot`), bytes untouched; other slots fine | APPROVED | master (standing authority) | |
+| AS-3 SoundEmitter kept playing after delete | P2 (audit) | gameplay (Sonnet) | MERGED + VERIFIED | #580 → `7d080df9` | `df656ef8` → `96bb5d65` | `on_destroy` → `Soundscape.unregister` stops (fade 0) only that entity's loop; counting backend, nothing aloud | APPROVED | master (standing authority) | |
+| AS-4 diagnostic sidecars listed as slots | P2 (audit) | creator-safety (Sonnet) | MERGED + VERIFIED | #579 → `b61e3af0` | `df656ef8` → `38e874d2` | `list_saves` skips dotted stems (slot names never contain a dot) | APPROVED | master (standing authority) | |
+| G-1 replay goldens 13/13 stale | release (audit) | investigation (Opus) + Sonnet | MERGED + VERIFIED | #578 → `4e0e9597` | `df656ef8` → `56e750ce` | first divergences found and proved by counterfactual (see header); tool-rewritten digests only; 13/13 at the merged tip | APPROVED | master (standing authority) | |
+| N1 player HP refilled on every room change | engine (slice r2) | gameplay (Sonnet) | MERGED + VERIFIED | #582 → `b2f1a4e1` | `df656ef8` → `1e10d9ee` | a door marks the controller; `load_scene` re-applies the player's HP (clamped, before a save's states); round 2 clears a stale mark on New Game / load / reload | APPROVED (round 2) | master (standing authority) | |
+| N3 attack traced every held frame | telemetry (slice r2) | creator-safety (Sonnet) | MERGED + VERIFIED | #581 → `54cc10d8` | `df656ef8` → `3657a3cd` | only a swing Combat performed is traced, once | APPROVED | master (standing authority) | |
+| T-05 terrain gate self-test fault too small | test infra | master (Sonnet independent review) | MERGED + VERIFIED | #583 → `0b891b19` | `e78a7de1` → `b445fa8b` | owner option 2; see above | APPROVED (independent review) | owner chose | |
 | U-01 unresolved-record accumulation | P2 | (unassigned) | MEASURED (GAME-1) | | | unresolved records bounded by deduplication (ambiguous twins plateau at 4 after 2 cycles; no-change cycles 0); the only unbounded growth was F-1, fixed by B-09; nothing discarded | | owner | keep tracked; revisit if real games show growth |
 
 ## Follow-ups noted by reviews (not assigned)
@@ -175,6 +216,15 @@ Approval: `OWNER` = the owner must approve the merge.
 - **A-05b, informational:** an `apply_ops` refusal response has no `authoring` key.
 - **CI evidence gap:** the Ubuntu `pytest` job writes no junit, so per-test results there can't be shown (A-08's POSIX-only tests).
 - **RV-3 follow-up, low:** `mesh_cli/new_game.py` has its own `--force` file-overwrite path, not checked for ownership.
+- **T-06, test reliability:** `test_ai_write_paths.py::test_studio_and_a_plan_starting_at_once_never_both_have_the_project`'s
+  2.0 s owner wait expired once on Windows CI (#583 CI a1); track, don't weaken blindly.
+- **Terrain gate, owner's call if it recurs:** hosted runners' fault-free `frame_per_cpu` varied 1.45 → 2.70 in one day; the
+  real gate (fault-free stroke vs 3.2) may false-fail on slow runners — recalibration would be a gate change.
+- **Replay suite (owner's call):** make the fixtures hermetic (quest state filtered to each scene's own quests) and consider
+  running `replays run` (~8 s) on PRs; today only the release `ship` job runs it.
+- **AS-2 follow-up:** `engine/savegame.py`'s separate snapshot writer (`save_format_version`) has no newer-schema guard.
+- **Ember Hollow round 2 minor:** N2 the current scene path reads `saves\quicksave.json` after an F9 load; N4 `mesh validate`
+  says "no params provided" for behaviours with settings; AI snapshots carry no HP; no wait action.
 - **T-04, test reliability:** `test_mesh_net_gpu.py::test_two_characters_persist_through_a_server_restart`'s 15 s "sigil taken"
   wait timed out once on Windows CI (post-merge 44958263876 a1); track, don't weaken.
 - **Ember Hollow minor findings (round 1):** no quest op in authoring ops and `add_quest_definition` fails without
@@ -224,6 +274,12 @@ Approval: `OWNER` = the owner must approve the merge.
 | SL-3 (escalation, option 1, round 2) | Sonnet 5.5 | 23 | ~108k | #573 |
 | SL-4 | Sonnet 5.5 | 18 | ~85k | #570 |
 | SL-5 | Sonnet 5.5 | 32 | ~110k | #574 |
+| Ember Hollow round 2 (creator) | Opus 5.5 | 115 | ~226k | AI-only B, A/C/D, REPORT_round2 |
+| AS-1 / AS-2 / AS-3 / AS-4 | Sonnet 5.5 ×4 | 26 / 24 / 12 / 11 | ~91k / ~96k / ~92k / ~75k | #576, #577, #580, #579 |
+| Replay-golden investigation | Opus 5.5 | 45 | ~115k | root causes + counterfactual |
+| G-1 | Sonnet 5.5 | 14 | ~89k | #578 |
+| N1 rounds 1 + 2 / N3 | Sonnet 5.5 ×2 | 38 / 31 | ~121k / ~100k | #582, #581 |
+| T-05 independent review | Sonnet 5.5 | 3 | ~69k | APPROVE on #583 |
 
 ## Worktrees in use
 
@@ -232,7 +288,8 @@ Approval: `OWNER` = the owner must approve the merge.
 | `D:\Games\Mesh-A-07b`, `D:\Games\Mesh-RV1`, `D:\Games\Mesh-RV2`, `D:\Games\Mesh-RV3` | merged work (#564, #566-#568): removable after verification, with owner OK |
 | `D:\Games\Mesh-review` | the review's detached checkout at `e390ef6e` |
 | `D:\Games\Mesh-slice-engine`, `D:\Games\Mesh-slice-engine2` | Ember Hollow's pinned engine checkouts: round 1 at `fed442a5`, round 2 at `df656ef8` (read-only) |
-| `D:\Games\Mesh-SL1`, `D:\Games\Mesh-SL2`, `D:\Games\Mesh-SL3`, `D:\Games\Mesh-SL4`, `D:\Games\Mesh-SL5` | merged work (#570-#574): removable after verification, with owner OK |
+| `D:\Games\Mesh-SL1`, `D:\Games\Mesh-SL2`, `D:\Games\Mesh-SL3`, `D:\Games\Mesh-SL4`, `D:\Games\Mesh-SL5`, `D:\Games\Mesh-AS1`, `D:\Games\Mesh-AS2`, `D:\Games\Mesh-AS3`, `D:\Games\Mesh-AS4`, `D:\Games\Mesh-G1`, `D:\Games\Mesh-N1`, `D:\Games\Mesh-N3`, `D:\Games\Mesh-T-05` | merged work (#570-#583): removable after verification, with owner OK |
+| `D:\Games\Mesh-golden` | the replay investigation's detached checkout at `df656ef8` |
 | `D:\Games\Mesh-acc` | ACC-2 (detached at `9341bfdd`) |
 | `D:\Games\Mesh-board` | this board update |
 
