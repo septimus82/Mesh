@@ -434,12 +434,13 @@ def fit_view(camera: Camera, goal: tuple[float, float, float], floor: float,
 class Hd2dRenderer:
     def __init__(self, window: Any, settings: Hd2dSettings, resolve: Callable[[str], Path], *, batched: bool = True,
                  models: dict[str, Model] | None = None, live: Iterable[str] = ()) -> None:
-        """``models``: already-read models to reuse (Mesh Studio rebuilding after an edit). ``live``: structure ids
+        """``models``: already-read models to reuse (engine.hd2d.world.build_world's), kept as the same dict: what is
+        read later (scatter models) is added to it, so the collision world reading it sees them too. ``live``: structure ids
         kept out of the static batches and drawn with a transform that can change every frame (the one being
         edited; ``set_live``)."""
         import engine.optional_arcade as optional_arcade  # noqa: PLC0415  # the engine's one arcade import route
 
-        self.models: dict[str, Model] = dict(models or {})  # read (and validated) first: a bad file fails before GL work
+        self.models: dict[str, Model] = {} if models is None else models  # read (and validated) first: a bad file fails before GL work
         for structure in settings.structures:
             if structure.model not in self.models:
                 self.models[structure.model] = load_glb(resolve(structure.model))

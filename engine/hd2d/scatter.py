@@ -32,6 +32,7 @@ import math
 import random
 from collections import Counter
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable, Iterable
 
 PX = 32.0  # px a metre
@@ -659,3 +660,18 @@ def _segment_distance(p: tuple[float, float], a: tuple[float, float], b: tuple[f
     dx, dy = bx - ax, by - ay
     t = max(0.0, min(1.0, ((p[0] - ax) * dx + (p[1] - ay) * dy) / max(1e-9, dx * dx + dy * dy)))
     return math.hypot(p[0] - ax - t * dx, p[1] - ay - t * dy)
+
+
+def model_path(resolve: Callable[[str], Any], rel: str) -> Path | None:
+    """Where a scatter model is (a Path), or None: the project's kit (``resolve``: the room's, runtime._contained),
+    else Mesh's own. (The renderer's scatter layer and the collision builder, engine.hd2d.world.build_world.)"""
+    from engine.repo_root import bundled_file  # noqa: PLC0415
+
+    for find in (resolve, bundled_file):
+        try:
+            path = find(rel)
+            if path is not None and Path(path).is_file():
+                return Path(path)
+        except (OSError, ValueError):
+            continue
+    return None

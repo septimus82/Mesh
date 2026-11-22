@@ -1,7 +1,8 @@
 """Setting up and releasing a scene's HD-2D renderer (``window.hd2d_renderer``) on scene load and window close; the
 game loop (``engine.game_runtime.tick``) updates and draws it. A scene without ``settings.hd2d`` never gets a
 renderer, so 2D games are untouched. A scene whose structures carry collision (``engine.hd2d.glb``) also gets
-``window.hd2d_world``: height-aware movement over its floors (``engine.hd2d.world``).
+``window.hd2d_world``: height-aware movement over its floors (``engine.hd2d.world``), built by the one builder
+the net authority uses too (``build_world``: it reads the models, and the renderer draws those same ones).
 
 A scene whose HD-2D settings or models are broken still loads (drawn 2D) and the reason is logged and kept on
 ``window.hd2d_error``, so a bad .glb never takes the game down.
@@ -98,7 +99,16 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
         except WindError as exc:  # (still air, the reason kept: the room stands, its decoration flutters as in calm)
             window.hd2d_motion_error = window.hd2d_motion_error or f"its wind is set aside (still air): {exc}"
             logger.error("[Mesh][HD-2D] this room's wind is set aside (still air): %s", exc)
-        window.hd2d_renderer = Hd2dRenderer(window, hd2d, _contained(resolve_path))
+        from engine.hd2d.world import build_world  # noqa: PLC0415
+
+        resolve = _contained(resolve_path)
+        # (the collision world and the models first: a structure that can't be read fails here, the room drawn 2D; a
+        # scatter model that can't be read is left out, and the scatter layer sets it aside and says so, as before.
+        # R4B: its ponds that block or are waded to a depth do so by their outline; a room without a World keeps their
+        # 2D box, as before)
+        collision, models, _set_aside = build_world(hd2d, scene.get("entities") if isinstance(scene, dict) else None,
+                                                    resolve)
+        window.hd2d_renderer = Hd2dRenderer(window, hd2d, resolve, models=models)  # (drawn from the same models)
         if hd2d.dof_error:  # (a block that can't be read: off, the rest of the room stands)
             window.hd2d_dof_message = f"its depth of field is set aside (off): {hd2d.dof_error}"
             logger.error("[Mesh][HD-2D] this room's depth of field is set aside (off): %s", hd2d.dof_error)
@@ -111,15 +121,8 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
             logger.error("[Mesh][HD-2D] this room's haze is set aside (off): %s", hd2d.haze_error)
         if hd2d.bloom_error:  # (and its bloom)
             logger.error("[Mesh][HD-2D] this room's bloom is set aside (off): %s", hd2d.bloom_error)
-        models = window.hd2d_renderer.models
-        sculpted = hd2d.ground is not None and hd2d.ground.terrain is not None  # Milestone 20A
-        if sculpted or hd2d.rivers or any(model.colliders for model in models.values()):  # (floors and walls
-            from engine.hd2d.river import ponds_of  # noqa: PLC0415  # authored in the GLBs; rivers' deep water,
-            from engine.hd2d.world import World  # noqa: PLC0415  # #461 R3; the ponds rivers flow into, R4
-
-            # (R4B: its ponds that block or are waded to a depth do so by their outline here; a room without a World
-            # keeps their 2D box, as before)
-            window.hd2d_world = World(hd2d, models, ponds_of(scene.get("entities") if isinstance(scene, dict) else None))
+        if collision is not None:  # (floors and walls authored in the GLBs; rivers' deep water, #461 R3)
+            window.hd2d_world = collision
             window.hd2d_world.on_wade = partial(_wade, window)
             if window.hd2d_renderer.terrain is not None:  # one set of heights: what is drawn is what is walked on
                 window.hd2d_world.update_terrain(window.hd2d_renderer.terrain)
