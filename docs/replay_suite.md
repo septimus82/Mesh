@@ -150,6 +150,27 @@ Then review:
 
 Finally re-run `replays run` to confirm the ratchet passes before committing.
 
+## Pooled tick timing (T-07)
+
+Episode cases are short (8 to 18 ticks), and nearest-rank p95 of fewer than 20 samples is just the slowest tick, so one
+scheduler stall used to fail `max_tick_ms_p95`. The budget values are unchanged; the measurement is not:
+
+- `replay-check` already runs the episode twice (`run_1`, `run_2`). When a suite case has fewer than
+  `MIN_TICK_SAMPLES` (40) tick samples in those, it runs further fresh, timing-only executions in the same process
+  until it has 40, at most `MAX_TIMING_EXECUTIONS` (10) executions in all. 40 samples is the smallest pool whose p95 (the
+  38th smallest) ignores the two slowest ticks: an isolated stall passes, a sustained slowdown (over 5% of ticks)
+  still fails.
+- `tick_ms_p95` is computed over the pooled samples. `total_ms` and `tick_ms_max` stay the canonical `run_1` values,
+  so `max_total_ms` is still one replay's total and `max_tick_ms_max` is no looser or stricter than before.
+- Digests, events, final state and goldens come from `run_1` only. Every repeat builds a fresh context and must
+  reproduce `run_1`'s digests, events and final state exactly, otherwise the case fails (nondeterminism).
+- No warm-up is excluded: the runner has no such notion, setup happens before the first tick, and pooling dilutes any
+  one-off cost.
+- `performance.json` / `timings.json` carry a `pooled` object: `min_samples`, `min_samples_met`, `executions`,
+  `repeats` (beyond `run_1` and `run_2`), `samples_per_execution`, `total_ms_per_execution`, `pooled_count`,
+  `tick_ms_p50`, `tick_ms_p95`, `tick_ms_max`. `tick_ms_count` / `tick_ms_list` remain the canonical execution's.
+- Campaign cases record placeholder zero timings, so their budgets are not a timing measurement.
+
 ## CI Budget Notes
 
 CI enforces replay budgets on Linux only:
