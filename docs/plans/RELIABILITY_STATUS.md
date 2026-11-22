@@ -3,9 +3,18 @@
 Maintained by the master only (workers report in their PRs). GitHub is the source of truth: a fresh master session
 rechecks every row (`RELIABILITY_COORDINATION.md` §5) before acting. IDs and priorities: `MESH_RELIABILITY_MASTER_PLAN.md`.
 
-**As of 2026-11-21 — REVIEW PHASE DONE; vertical slice in progress.** Integration `redesign/visual-editor` =
-`fed442a5c55f1ad374a8d9ec40df4b40ac529e73` (post-merge CI 44937909206 ✓ a1, Extended 44937909101 ✓ a1). This board lands with its own PR
-(`gh pr list --head docs/reliability-board-review-phase`). Cycle 10 closed with #565 (`1bd4aad9`).
+**As of 2026-11-22 — Ember Hollow round 1 done, its defects fixed; round 2 in progress.** Integration `redesign/visual-editor` =
+`df656ef879c7309b574208883448d51e2bd24592` (post-merge CI 44962995486 ✓ a1, Extended 44962995489 ✓ a1). This board lands with its own PR
+(`gh pr list --head docs/reliability-board-slice-r1`). Review phase: #569 (`8a79adcf`). Cycle 10 closed with #565 (`1bd4aad9`).
+
+**Ember Hollow round 1** (project `D:\Games\Mesh-slice\EmberHollow`, engine `fed442a5`, built only through MCP/authoring
+ops and `mesh` commands; report `D:\Games\Mesh-slice\evidence\REPORT.md`): A validate PASS; B AI playtest PARTIAL (the AI
+playtest had no attack, so the quest only completed with attack keys injected in-process, and the driver was a steering
+script, not a live AI — not counted as a pass); C fresh-process persistence PASS; D exported build PASS. Five defects found
+and fixed below (SL-1..SL-5); six minor items recorded. Round 2 (engine `df656ef8`): content corrected (rat tags, contact
+damage above defence) and B re-run with the AI deciding every action, no script, no injected keys.
+**Queued after Ember Hollow (owner):** Astra audit follow-up — `mesh new --force` nested-project preflight, future-schema
+slot overwrite refusal, SoundEmitter teardown, diagnostic sidecars as save slots, replay-golden investigation.
 
 **Independent review of `e390ef6e` (2 fresh reviewers, 39 production files `ad91e28c..e390ef6e`): no blockers.**
 Three SERIOUS findings, each reproduced and fixed below (RV-1..RV-3). MINOR, recorded only: `died` no longer carries an
@@ -72,6 +81,12 @@ disagreement, or two failed correction rounds. Cycle 10 merges below were made u
 | #566 RV-1 carried record retried only in its own room | `dc6b0a257b2c973123ec316b63b07da932dc7752` | `2dfa155f` (head `3c6791b5`) | 44932235458 ✓ a1 | 44932235446 ✓ a1 |
 | #567 RV-2 authored id-less prefab never dropped | `71e1e5aa1bd8af78eddcc7cade25b8c090ff24bb` | `c1e22105` (head `690f38aa`) | 44934927988 ✓ a1 | 44934927965 ✓ a1 |
 | #568 RV-3 `mesh new --force` owns before deleting | `fed442a5c55f1ad374a8d9ec40df4b40ac529e73` | `9741bce3` (head `a1e9aabc`) | 44937909206 ✓ a1 | 44937909101 ✓ a1 |
+| #569 status board (review phase) | `8a79adcf41e4759d75f1dfab302f76b687a57bef` | `734d0937` (= tip + exactly #569's diff) | 44944554010 ✓ a1 | 44944554105 ✓ a1 |
+| #570 SL-4 `set_entity_fields` via authoring | `451eca7cf547109d9eb2113933ebe7c34e069bdb` | `d41efe8a` (head `93102d56`) | 44948891259 ✓ a1 | 44948891185 ✓ a1 |
+| #572 SL-2 one quest event, one listener reaction | `f03476a888091712c7fda6403e3813acea30321d` | `2ef2238d` (head `29dde80e`) | 44951944521 ✓ a1 | 44951944578 ✓ a1 |
+| #574 SL-5 AI playtesting can attack | `32b838b9b07a2a16b35c157689ed57a029820aba` | `0f4e603a` (head `2dbfdfb4`) | 44955048707 ✓ a1 | 44955048866 ✓ a1 |
+| #571 SL-1 DamageOnTouch reduces Health | `de6b84c8f2edc05773eba7d87401551237761a17` | `43d85a82` (head `98fc904c`) | 44958263858 ✓ a1 | 44958263876 **✗ a1**, ✓ a2 (see below) |
+| #573 SL-3 explicit `auto_start: false` waits | `df656ef879c7309b574208883448d51e2bd24592` | `3215333d` (head `4d25c172`) | 44962995486 ✓ a1 | 44962995489 ✓ a1 |
 
 **Waiver (owner, one-time, narrowly scoped; not a relaxation of CI).** Post-merge CI run 44589776415 on `55bdd589`
 FAILED at attempt 1: one Windows test,
@@ -89,7 +104,15 @@ fast-marking policy, a module named `*contract*` without fast markers; Extended 
 `test_live_bridge_request_states.py::test_a_proposal_that_timed_out_while_queued_never_reaches_the_person`, unrelated to B-06: the
 retry kept the 0.2 s deadline; not rerun, owner chose a fix over a waiver → T-02 #551; Extended 44841862606 ✓ a1).
 #558 `2b14a8ab` (CI cancelled, superseded by review round 2) and `76666227` (CI cancelled, superseded). #560 `2f5a334b` (CI
-cancelled, superseded by review round 2). #564 `7dedd034` (CI cancelled, superseded by review round 2). Only final heads passed at attempt 1.
+cancelled, superseded by review round 2). #564 `7dedd034` (CI cancelled, superseded by review round 2). #571 `71ee20ca` (CI 44944215643 ✗ a1: mypy gate, the `SceneController` stub lacked the new `emit` keyword; fixed in round 2;
+its Extended cancelled, superseded). #573 `ac708341` (CI 44944711054 ✗ a1: tier-marker ratchet, new tests unmarked; fixed in
+round 2; its Extended 44944823086 ✓, superseded). Only final heads passed at attempt 1.
+
+**Post-merge Extended 44958263876 on `de6b84c8` (#571) FAILED at attempt 1** — one Windows gpu test,
+`tests/test_mesh_net_gpu.py::test_two_characters_persist_through_a_server_restart` (15 s `_state` wait "sigil taken" timed
+out). Evidence it is environmental, not #571: `mesh_net` / `tooling.net_world_probe` never use DamageOnTouch or `on_damage`
+(SL-1's only code paths); #571's own PR-head Extended 44947199016 passed the gpu lane; the exact test passed 3/3 locally at
+`de6b84c8` (42.5 s, 37.0 s, 37.0 s). One `--failed` rerun → attempt 2 ✓. Attempt 1 is not counted as green. Follow-up T-04.
 
 ## Work
 
@@ -128,6 +151,11 @@ Approval: `OWNER` = the owner must approve the merge.
 | RV-1 carried unresolved record bound in another room | SERIOUS | gameplay (Sonnet) | MERGED + VERIFIED | #566 → `dc6b0a25` | `6366e2cc` → `3c6791b5` | review repro: room A's carried record bound to a same-id entity added to room B and was dropped from `unresolved`; retry now only in the entry's own room (`_same_room`); mutant fails | APPROVED | master (standing authority) | |
 | RV-2 authored id-less prefab entity dropped from save | SERIOUS | gameplay (Sonnet) | MERGED + VERIFIED | #567 → `71e1e5aa` | `6366e2cc` → `690f38aa` | review repro: raw-room key `(None, prefab)` vs resolved `(Name, prefab)` made authored prefab objects look save-only; one shared key (`prefab_id`); B-09's runtime-entity drop kept; mutant fails | APPROVED | master (standing authority) | |
 | RV-3 `mesh new --force` deleted an owned project | SERIOUS | creator-safety (Sonnet) | MERGED + VERIFIED | #568 → `fed442a5` | `6366e2cc` → `a1e9aabc` | pre-existing, missed by A-04: rmtree without ownership; now owns first (refuses if Studio/another process owns), deletes all but the lock, releases, removes the rest; real two-process test; mutant fails | APPROVED | master (standing authority) | |
+| SL-1 DamageOnTouch never reduced Health | engine (slice) | gameplay (Sonnet) | MERGED + VERIFIED | #571 → `de6b84c8` | `fed442a5` → `98fc904c` | DamageOnTouch only emitted `damage_applied`; now applies through `Health.apply_damage` (Hitbox/Projectile pattern), one event per hit, `on_damage(..., emit=False)` keeps anim/log; round 1 failed the mypy gate (stub) | APPROVED (round 2) | master (standing authority) | |
+| SL-2 SetGameStateOnEvent reacted twice | engine (slice) | gameplay (Sonnet) | MERGED + VERIFIED | #572 → `f03476a8` | `fed442a5` → `29dde80e` | bus subscription AND per-frame delivery both handed it each event (counters doubled); bus only now | APPROVED | master (standing authority) | |
+| SL-3 quest `auto_start: false` ignored | engine (slice) | gameplay (Sonnet) | MERGED + VERIFIED | #573 → `df656ef8` | `fed442a5` → `4d25c172` | 26 shipped quests omit `auto_start` and rely on the implicit start → worker escalated; master chose the compatible option: tri-state, only explicit `false` waits (absent unchanged), docs updated; round 1 failed the tier-marker ratchet | APPROVED (round 2) | master (standing authority) | |
+| SL-4 `set_entity_fields` unusable via authoring | authoring (slice) | creator-safety (Sonnet) | MERGED + VERIFIED | #570 → `451eca7c` | `fed442a5` → `93102d56` | the only `**kwargs` op was bound as one `fields` param; `_bind` now spreads an object; op guards unchanged | APPROVED | master (standing authority) | |
+| SL-5 AI playtesting had no attack | AI-playtest tool (slice) | creator-safety (Sonnet) | MERGED + VERIFIED | #574 → `32b838b9` | `fed442a5` → `2dbfdfb4` | `attack` taps the game's own binding via the same driver and permission as `interact`; refused in dialogue | APPROVED | master (standing authority) | |
 | U-01 unresolved-record accumulation | P2 | (unassigned) | MEASURED (GAME-1) | | | unresolved records bounded by deduplication (ambiguous twins plateau at 4 after 2 cycles; no-change cycles 0); the only unbounded growth was F-1, fixed by B-09; nothing discarded | | owner | keep tracked; revisit if real games show growth |
 
 ## Follow-ups noted by reviews (not assigned)
@@ -147,6 +175,13 @@ Approval: `OWNER` = the owner must approve the merge.
 - **A-05b, informational:** an `apply_ops` refusal response has no `authoring` key.
 - **CI evidence gap:** the Ubuntu `pytest` job writes no junit, so per-test results there can't be shown (A-08's POSIX-only tests).
 - **RV-3 follow-up, low:** `mesh_cli/new_game.py` has its own `--force` file-overwrite path, not checked for ownership.
+- **T-04, test reliability:** `test_mesh_net_gpu.py::test_two_characters_persist_through_a_server_restart`'s 15 s "sigil taken"
+  wait timed out once on Windows CI (post-merge 44958263876 a1); track, don't weaken.
+- **Ember Hollow minor findings (round 1):** no quest op in authoring ops and `add_quest_definition` fails without
+  `quests.json`; `apply-plan --ai-safe` error names `plan.meta.touches` (reads `inputs.meta.touches`); validator false
+  alarms (Cellar "unreachable", `ai-audit` transitions/tags/quest triggers); MCP `validate_scene` without a path skips;
+  change summary calls an event listener "zone entered"; `mesh new-quest --target` treated as a file path (code reading).
+  Friction: no op renames a room or sets the start room; `add_room` is 2D only; AI playtest `nearby` has no HP.
 - **RV-1 note:** a carried entry without a `scene_path` (none are written today) would still retry in any room.
 - **Process:** workers run the gates (and the tier-marker ratchet) on the exact commit they push.
 
@@ -183,6 +218,12 @@ Approval: `OWNER` = the owner must approve the merge.
 | RV-1 | Sonnet 5.5 | 17 | ~91k | #566 |
 | RV-2 | Sonnet 5.5 | 15 | ~89k | #567 |
 | RV-3 | Sonnet 5.5 | 64 | ~111k | #568 |
+| Ember Hollow round 1 (creator) | Opus 5.5 | 166 | ~375k | project, export, evidence, 11 findings |
+| SL-1 rounds 1 + 2 | Sonnet 5.5 | 20 | ~92k | #571 |
+| SL-2 | Sonnet 5.5 | 30 | ~106k | #572 |
+| SL-3 (escalation, option 1, round 2) | Sonnet 5.5 | 23 | ~108k | #573 |
+| SL-4 | Sonnet 5.5 | 18 | ~85k | #570 |
+| SL-5 | Sonnet 5.5 | 32 | ~110k | #574 |
 
 ## Worktrees in use
 
@@ -190,7 +231,8 @@ Approval: `OWNER` = the owner must approve the merge.
 |---|---|
 | `D:\Games\Mesh-A-07b`, `D:\Games\Mesh-RV1`, `D:\Games\Mesh-RV2`, `D:\Games\Mesh-RV3` | merged work (#564, #566-#568): removable after verification, with owner OK |
 | `D:\Games\Mesh-review` | the review's detached checkout at `e390ef6e` |
-| `D:\Games\Mesh-slice-engine` | Ember Hollow's pinned engine checkout at `fed442a5` (read-only) |
+| `D:\Games\Mesh-slice-engine`, `D:\Games\Mesh-slice-engine2` | Ember Hollow's pinned engine checkouts: round 1 at `fed442a5`, round 2 at `df656ef8` (read-only) |
+| `D:\Games\Mesh-SL1`, `D:\Games\Mesh-SL2`, `D:\Games\Mesh-SL3`, `D:\Games\Mesh-SL4`, `D:\Games\Mesh-SL5` | merged work (#570-#574): removable after verification, with owner OK |
 | `D:\Games\Mesh-acc` | ACC-2 (detached at `9341bfdd`) |
 | `D:\Games\Mesh-board` | this board update |
 
