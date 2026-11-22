@@ -152,6 +152,8 @@ CI enforces replay budgets on Linux only:
 python -m mesh_cli replays run --suite replays/suite.json --out-dir artifacts/replay_suite --seed 123 --budgets-only-on linux --quiet
 ```
 
-This avoids Windows timing noise while still keeping a deterministic perf gate for release branches.
+This avoids Windows timing noise while still keeping a deterministic perf gate.
+
+The suite runs on every pull request and push as the required `replays (ubuntu-latest, py3.11)` job (R-2), and again in the release `ship` job.
 
 CI policy: CI only runs `mesh_cli replays run` and never updates goldens automatically.

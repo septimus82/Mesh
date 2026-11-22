@@ -191,7 +191,7 @@ def test_the_timing_window_counts_push_runs_so_skipped_344_runs_dont_shrink_it(t
 CI = EXTENDED.with_name("ci.yml")
 GATE = "    needs: dedup\n    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}\n"
 # Every ci.yml job, by what the duplicate check does to it. A new job must be put in one of these on purpose.
-CI_GATED = {"arcade3-canary", "web-smoke", "pytest", "verify", "installed", "acceptance"}
+CI_GATED = {"arcade3-canary", "web-smoke", "pytest", "verify", "installed", "acceptance", "replays"}
 CI_UNGATED = {"dedup", "timing-rolling", "ship"}  # the check itself; push-only; release-only (never on #344)
 
 
@@ -224,7 +224,7 @@ def test_ci_leaves_out_every_test_job_of_a_duplicate_344_run_and_only_then() -> 
         assert f"    name: {name} (required, py${{{{ matrix.python }}}})\n" in jobs[name]
         assert '      matrix:\n        python: ["3.11"]\n' in jobs[name]
     fanin = jobs["tests"]
-    assert "    needs: [dedup, pytest, verify, installed, acceptance]\n" in fanin
+    assert "    needs: [dedup, pytest, verify, installed, acceptance, replays]\n" in fanin
     assert "    if: ${{ always() && needs.dedup.outputs.skip != 'true' }}\n" in fanin
     assert "    name: tests (${{ matrix.os }}, py${{ matrix.python }})\n" in fanin
     for name in CI_UNGATED - {"dedup"}:

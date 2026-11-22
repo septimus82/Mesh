@@ -23,6 +23,8 @@ SHARD_JOBS = ["pytest (windows-latest, py3.11, shard 1/2)", "pytest (windows-lat
 
 def _names(part: str) -> list[str]:
     """A component's Windows job names (F13-C: ``pytest`` is two shard jobs)."""
+    if part == "replays":  # R-2: one job on ubuntu, required by every OS's fan-in
+        return ["replays (ubuntu-latest, py3.11)"]
     return SHARD_JOBS if part == "pytest" else [f"{part} (windows-latest, py3.11)"]
 
 
@@ -31,7 +33,8 @@ def _jobs(**conclusions: str | None) -> list[dict[str, object]]:
             for part, c in conclusions.items() for name in _names(part)]
 
 
-ALL_OK = {part: "success" for part in COMPONENTS}
+PARTS = (*COMPONENTS, "replays")
+ALL_OK = {part: "success" for part in PARTS}
 
 
 def test_the_required_jobs_are_this_os_s_pytest_verify_installed_and_acceptance() -> None:
@@ -39,10 +42,12 @@ def test_the_required_jobs_are_this_os_s_pytest_verify_installed_and_acceptance(
     # F13-C: Windows' pytest is two shard jobs, each required; Linux's is one, as before.
     assert SHARDED == {"windows-latest": 2}
     assert REQUIRED == [*SHARD_JOBS, "verify (windows-latest, py3.11)",
-                        "installed (windows-latest, py3.11)", "acceptance (windows-latest, py3.11)"]
+                        "installed (windows-latest, py3.11)", "acceptance (windows-latest, py3.11)",
+                        "replays (ubuntu-latest, py3.11)"]
     assert required_jobs("ubuntu-latest", "3.11") == [
         "pytest (ubuntu-latest, py3.11)", "verify (ubuntu-latest, py3.11)",
-        "installed (ubuntu-latest, py3.11)", "acceptance (ubuntu-latest, py3.11)"]
+        "installed (ubuntu-latest, py3.11)", "acceptance (ubuntu-latest, py3.11)",
+        "replays (ubuntu-latest, py3.11)"]
 
 
 def test_the_shard_count_is_the_one_the_shards_use() -> None:
@@ -53,7 +58,7 @@ def test_the_shard_count_is_the_one_the_shards_use() -> None:
 
 def test_green_only_when_all_succeeded() -> None:
     ok, lines = verdict(_jobs(**ALL_OK), REQUIRED)
-    assert ok and len(lines) == 5
+    assert ok and len(lines) == 6
 
 
 @pytest.mark.parametrize("bad", ["failure", "cancelled", "skipped", None, "missing"])
@@ -72,7 +77,7 @@ def test_one_shard_that_did_not_succeed_is_red(shard: str, bad: str | None) -> N
 
 
 @pytest.mark.parametrize("bad", ["failure", "cancelled", "skipped", "timed_out", "action_required", None])
-@pytest.mark.parametrize("which", COMPONENTS)
+@pytest.mark.parametrize("which", PARTS)
 def test_any_other_conclusion_of_any_job_is_red(which: str, bad: str | None) -> None:
     conclusions: dict[str, str | None] = {**ALL_OK, which: bad}
     ok, lines = verdict(_jobs(**conclusions), REQUIRED)
@@ -80,7 +85,7 @@ def test_any_other_conclusion_of_any_job_is_red(which: str, bad: str | None) -> 
     assert any(line.startswith("FAILED") and which in line for line in lines)
 
 
-@pytest.mark.parametrize("absent", COMPONENTS)
+@pytest.mark.parametrize("absent", PARTS)
 def test_a_missing_job_is_red(absent: str) -> None:
     ok, lines = verdict(_jobs(**{k: v for k, v in ALL_OK.items() if k != absent}), REQUIRED)
     assert not ok
@@ -88,7 +93,7 @@ def test_a_missing_job_is_red(absent: str) -> None:
 
 
 def test_the_other_os_does_not_count() -> None:
-    other = [{"name": f"{part} (ubuntu-latest, py3.11)", "conclusion": "success"} for part in COMPONENTS]
+    other = [{"name": f"{part} (ubuntu-latest, py3.11)", "conclusion": "success"} for part in PARTS]
     assert not verdict(other + _jobs(**{**ALL_OK, "installed": "failure"}), REQUIRED)[0]
     assert not verdict(other, REQUIRED)[0]
 
@@ -118,7 +123,16 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     # It always runs after both (never left pending or skipped) and asks the jobs list (needs.*.result only settles a
     # stale "running" entry: ci_require_jobs.observe); the one exception is a run #422's duplicate check positively left
     # out (tests/test_extended_dedup.py).
-    assert "needs: [dedup, pytest, verify, installed, acceptance]" in tests_job
+    assert "needs: [dedup, pytest, verify, installed, acceptance, replays]" in tests_job
+    # R-2: the replay suite runs on every PR/push, only compares, and is required via the fan-in (ubuntu only).
+    replays_job = _job_block(text, "replays")
+    assert "name: replays (${{ matrix.os }}, py${{ matrix.python }})" in replays_job
+    assert "os: [ubuntu-latest]" in replays_job
+    assert "if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}" in replays_job
+    assert "python -m mesh_cli replays run --suite replays/suite.json --out-dir artifacts/replay_suite" in replays_job
+    assert "$LASTEXITCODE -ne 0" in replays_job and "upload-artifact" in replays_job
+    code = chr(10).join(ln for ln in replays_job.splitlines() if not ln.lstrip().startswith("#"))
+    assert "update-golden" not in code.replace("'replays update-golden --reason'", "")
     assert "if: ${{ always() && needs.dedup.outputs.skip != 'true' }}" in tests_job
     assert "tooling/ci_require_jobs.py --os \"${{ matrix.os }}\"" in tests_job
     assert "NEEDS_RESULTS: ${{ toJSON(needs.*.result) }}" in tests_job
@@ -239,8 +253,8 @@ def test_a_transient_api_failure_is_read_again() -> None:
 
 
 def test_an_incomplete_list_is_read_again() -> None:
-    ok, _, sleeps, log = _fan_in(_read(ALL_OK, total=14), _read(ALL_OK))
-    assert ok and "incomplete list: 5 of 14 jobs" in log[0]
+    ok, _, sleeps, log = _fan_in(_read(ALL_OK, total=15), _read(ALL_OK))
+    assert ok and "incomplete list: 6 of 15 jobs" in log[0]
 
 
 @pytest.mark.parametrize("persistent", ["api", "missing", "running", "stale"])
@@ -273,9 +287,9 @@ def test_successes_from_different_reads_are_never_combined() -> None:
 def test_an_older_success_never_hides_a_newer_failure() -> None:
     older = _read(ALL_OK, attempt=1)[0]
     newer = _read({**ALL_OK, "pytest": "failure"})[0]
-    ok, lines, _, _ = _fan_in((older + newer, 10))
+    ok, lines, _, _ = _fan_in((older + newer, 12))
     assert not ok and f"FAILED  {SHARD_JOBS[0]}: failure" in lines and f"FAILED  {SHARD_JOBS[1]}: failure" in lines
-    ok, _, _, _ = _fan_in((newer + older, 10))
+    ok, _, _, _ = _fan_in((newer + older, 12))
     assert not ok, "whatever the order GitHub lists them in"
 
 
@@ -313,7 +327,7 @@ def test_the_needs_word_never_stands_in_for_a_job_the_list_does_not_show_from_th
     reads = {
         "missing": _read({k: v for k, v in STALE.items() if k != "acceptance"}),
         "older attempt": _read(STALE, attempt=ATTEMPT - 1),
-        "incomplete": _read(STALE, total=14),
+        "incomplete": _read(STALE, total=15),
     }
     ok, lines, sleeps, _ = _fan_in(reads[problem], needs_ok=True)
     assert not ok and sleeps == list(fanin.DELAYS), "bounded: it still gives up, red"
