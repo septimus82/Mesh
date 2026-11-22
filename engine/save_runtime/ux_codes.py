@@ -5,6 +5,7 @@ SAVE_WRITE_FAILED = "SAVE_WRITE_FAILED"
 SAVE_SERIALIZE_FAILED = "SAVE_SERIALIZE_FAILED"
 SAVE_SLOT_INVALID = "SAVE_SLOT_INVALID"
 SAVE_V2_BACKUP_FAILED = "save.write.v2_backup_failed"  # the old (v2) save couldn't be backed up: not overwritten
+SAVE_SLOT_NEWER_SCHEMA = "save.write.newer_schema_slot"  # the slot holds a save from a newer build: not overwritten
 SAVE_IO_PERMISSION = "SAVE_IO_PERMISSION"
 LOAD_NOT_FOUND = "LOAD_NOT_FOUND"
 LOAD_PARSE_FAILED = "LOAD_PARSE_FAILED"
@@ -42,6 +43,7 @@ __all__ = [
     "SAVE_LOAD_CODES",
     "SAVE_SERIALIZE_FAILED",
     "SAVE_SLOT_INVALID",
+    "SAVE_SLOT_NEWER_SCHEMA",
     "SAVE_V2_BACKUP_FAILED",
     "SAVE_WRITE_FAILED",
 ]

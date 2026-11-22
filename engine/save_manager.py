@@ -28,6 +28,7 @@ from .save_runtime.ux_codes import (
     SAVE_IO_PERMISSION,
     SAVE_SERIALIZE_FAILED,
     SAVE_SLOT_INVALID,
+    SAVE_SLOT_NEWER_SCHEMA,
     SAVE_V2_BACKUP_FAILED,
     SAVE_WRITE_FAILED,
 )
@@ -196,6 +197,18 @@ class SaveManager:
             # A v2 save is never overwritten until a verified copy of it exists (B-01): no copy, no save.
             try:
                 backup = save_io.ensure_v2_backup(path)
+            except save_io.NewerSaveError as exc:
+                diag_error(
+                    SAVE_SLOT_NEWER_SCHEMA,
+                    f"Slot '{slot_name}' was not saved: {exc}.",
+                    _DIAG_SOURCE,
+                    location=path.as_posix(),
+                    context=_diag_context(operation="save", save_path=path, slot_name=slot_name, pointer="$/save_schema_version"),
+                    hint="The newer save is unchanged. Update the game, or save to another slot.",
+                )
+                sys.stderr.write(f"[Mesh][Save] ERROR: {SAVE_SLOT_NEWER_SCHEMA}: {exc}\n")
+                self._toast("The game wasn't saved: that slot holds a save from a newer game version. Try another slot.")
+                return False
             except save_io.V2BackupError as exc:
                 diag_error(
                     SAVE_V2_BACKUP_FAILED,

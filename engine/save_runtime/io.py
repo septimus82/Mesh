@@ -151,6 +151,10 @@ class V2BackupError(RuntimeError):
     """The v2 save could not be backed up and verified: the slot must not be overwritten."""
 
 
+class NewerSaveError(RuntimeError):
+    """The slot holds a save from a newer build than this one: it must not be overwritten (AS-2)."""
+
+
 def _sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -182,7 +186,8 @@ def _write_backup_bytes(target: Path, data: bytes) -> None:
 
 def ensure_v2_backup(path: Path) -> Path | None:
     """Before a v3 save overwrites ``path``: when it still holds a pre-v3 save, copy it to ``<slot>.v2.bak`` and verify
-    the copy (SHA-256 of a fresh read). Returns the backup (None: nothing to back up). Raises ``V2BackupError`` when the
+    the copy (SHA-256 of a fresh read). Returns the backup (None: nothing to back up). Raises ``NewerSaveError`` when the slot
+    holds a save from a newer build (never overwritten), ``V2BackupError`` when the
     copy can't be made or doesn't verify: the caller must then leave the slot untouched.
 
     An existing backup is never replaced: one with other bytes makes the new one ``<slot>.v2.<sha8>.bak``. A backup
@@ -193,7 +198,10 @@ def ensure_v2_backup(path: Path) -> Path | None:
         raw = path.read_bytes()
     except OSError as exc:
         raise V2BackupError(f"can't read '{path}' to back it up: {exc}") from exc
-    if _slot_schema_version(raw) >= SAVE_SCHEMA_VERSION:
+    version = _slot_schema_version(raw)
+    if version > SAVE_SCHEMA_VERSION:
+        raise NewerSaveError(f"'{path}' is a save from a newer game version (schema v{version}; this game supports up to v{SAVE_SCHEMA_VERSION})")
+    if version == SAVE_SCHEMA_VERSION:
         return None
     digest = hashlib.sha256(raw).hexdigest()
     try:
