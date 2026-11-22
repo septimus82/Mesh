@@ -553,7 +553,9 @@ class SaveManager:
     def list_saves(self) -> list[str]:
         """Return a list of available save slots (an older export's ones in its installation included)."""
         folders = [d for d in (self.save_dir, self.legacy_dir) if d is not None and d.is_dir()]
-        return sorted({f.stem for d in folders for f in d.glob("*.json")})
+        # get_save_path keeps only alphanumerics, "_" and "-": a slot's stem never holds a ".", so
+        # "<slot>.json.diagnostics.json" sidecars are not slots (backups/temp files don't end in .json).
+        return sorted({f.stem for d in folders for f in d.glob("*.json") if "." not in f.stem})
 
     def _get_timestamp(self) -> str:
         import datetime
