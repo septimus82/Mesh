@@ -32,7 +32,7 @@ from PIL import Image
 from engine.hd2d.bloom import OUTPUTS
 from engine.hd2d.lighting import LIGHTING_GLSL
 from engine.hd2d.motion import MAX_ANGLE, OFF, Motion, glsl, seed_of, wrap_safe_fps
-from engine.hd2d.scatter import ASSETS, CELL_PX, FIRST_MOTION, MOTION_SHEET, SHEET, SLOTS
+from engine.hd2d.scatter import ASSETS, CELL_PX, FIRST_MOTION, MOTION_SHEET, SHEET, SLOTS, model_path
 from engine.logging_tools import get_logger
 from engine.wind import CALM, PERIOD, Wind
 
@@ -328,7 +328,7 @@ class ScatterLayer:
         if rel not in self.r.models:
             from engine.hd2d.glb import load_glb  # noqa: PLC0415
 
-            path = model_path(self.r, rel)
+            path = model_path(self.r._resolve, rel)
             if path is None:
                 return None
             from engine.hd2d.glb import GlbError  # noqa: PLC0415
@@ -550,20 +550,6 @@ def _open(renderer: Any, rel: str) -> Image.Image | None:
                 with Image.open(path) as img:
                     rgba: Image.Image = img.convert("RGBA")
                     return rgba
-        except (OSError, ValueError):
-            continue
-    return None
-
-
-def model_path(renderer: Any, rel: str) -> Path | None:
-    """Where a scatter model is: the project's kit, else Mesh's own."""
-    from engine.repo_root import bundled_file  # noqa: PLC0415
-
-    for find in (renderer._resolve, bundled_file):
-        try:
-            path = find(rel)
-            if path is not None and Path(path).is_file():
-                return Path(path)
         except (OSError, ValueError):
             continue
     return None

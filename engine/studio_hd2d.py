@@ -1148,9 +1148,7 @@ class Hd2dView:
             return
         world = getattr(self.studio.window, "hd2d_world", None)
         if world is None:  # a room without floors had no collision world: it gets one now, on the same heights
-            from engine.hd2d.world import World  # noqa: PLC0415
-
-            world = self.studio.window.hd2d_world = World(renderer.settings, renderer.models)
+            world = self.studio.window.hd2d_world = self._new_world(renderer)
         world.update_terrain(terrain)
         tool, rate, target = self._brush_now()
         if tool == "flatten" and target is None:
@@ -1163,6 +1161,14 @@ class Hd2dView:
         x0, y0 = self.stroke["last"]
         self._dab(x0, y0, 1 / 60)  # (a tap does a little: a 60th of a second's worth)
         self._flush_stroke()
+
+    def _new_world(self, renderer: Any) -> Any:
+        """The collision world for a room that had none, from the one builder play uses (engine.hd2d.world.build_world:
+        the renderer's models, its ponds included as in play)."""
+        from engine.hd2d.world import build_world  # noqa: PLC0415
+
+        return build_world(renderer.settings, self.studio.project.scene().get("entities"), renderer._resolve,
+                           models=renderer.models, always=True)[0]
 
     def _dab(self, x: float, y: float, seconds: float) -> None:
         """One dab of the stroke at (x, y) px worth ``seconds`` of the brush's rate: px for raise and lower, a share
@@ -1265,9 +1271,7 @@ class Hd2dView:
             if any(ASSETS[name].blocks for name, _r, _a in changes):  # (a boulder: walked round at once)
                 world = getattr(self.studio.window, "hd2d_world", None)
                 if world is None:  # (a room that had nothing to collide with has now)
-                    from engine.hd2d.world import World  # noqa: PLC0415
-
-                    world = self.studio.window.hd2d_world = World(renderer.settings, renderer.models)
+                    world = self.studio.window.hd2d_world = self._new_world(renderer)
                     if renderer.terrain is not None:
                         world.update_terrain(renderer.terrain)
                 world.set_scatter(renderer.scatter.instances)

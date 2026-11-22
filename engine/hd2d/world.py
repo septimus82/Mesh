@@ -24,6 +24,11 @@ its steps rippling the surface (``on_wade``). The water's surface is the river's
 water is dry, the river's carved bed under it is as deep as the water over it. A waterfall's stretch (M17-W1,
 ``RiverIndex.falling_at``) is blocking water whatever its river's ``passable``: nobody wades into a fall.
 
+One collision world (HD-2D online M1-A-1): ``build_world`` reads the models it needs itself (``engine.hd2d.glb``: PIL
+only) and builds it; single-player (``engine.hd2d.runtime``), Mesh Studio and the graphics-free net authority all build
+it there, and moving through it needs no Arcade (``World.move``'s ``sweep``: the 2D part). ``World.collision_digest`` is
+a fingerprint of what it collides with, the same in every process.
+
 Sculpted ground (Milestone 20A, ``engine.hd2d.terrain``) is the ground (solid, floor "ground"), read straight from
 its heights where asked (``Terrain.surface_at``: the drawn triangle under the point), not stored as triangles; faces
 too steep to stand on (``MAX_SLOPE``) are left out, so they stop characters like a ledge does. Walking up a gentle slope
@@ -32,12 +37,15 @@ is the rule above, frame by frame. ``update_terrain`` takes the edited heights (
 
 from __future__ import annotations
 
+import hashlib
 import heapq
+import json
 import math
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Any, Callable, Iterable
 
 from engine.hd2d.settings import PIXELS_PER_METRE, Hd2dSettings
+from engine.physics_model import entity_aabb
 
 if TYPE_CHECKING:  # the reader is only needed where models are loaded (engine.hd2d.runtime)
     from engine.hd2d.glb import Model
@@ -56,6 +64,9 @@ WADE_STEP = 14.0 / PIXELS_PER_METRE  # m: a wading step every this far (as engin
 NAV_CELL = 0.5  # m: the navigation grid's cell
 NAV_HALF = (0.3, 0.19)  # m: half the footprint the navigation grid plans for (a character's feet box)
 _BUCKET = 2.0  # m: the spatial index's cell
+DIGEST_VERSION = 1  # World.collision_digest's solver version: bump on any change to how support, collision or water
+# are decided, here or in what it asks (engine.hd2d.river's RiverIndex, engine.water's outlines, engine.hd2d.terrain's
+# surface_at). Every constant above but _BUCKET (which changes no outcome) is in the digest itself
 
 
 @dataclass(frozen=True)
@@ -195,6 +206,7 @@ class World:
 
         # (none: nothing to ask; ``ponds``, engine.hd2d.river.Pond: a river flowing into one has no water in it, R4)
         self.rivers = RiverIndex(settings.rivers, ponds)
+        self._river_specs, self._pond_specs = tuple(settings.rivers), tuple(ponds)  # (collision_digest)
         # R4B: how far into each river's water characters may go (engine.water.PASSABLE), and the ponds that limit it
         # (blocking or waded to a depth; not one shown only when flags say: its own 2D box, which its flags hide, as
         # before), by their outline: where their water is drawn. Their 2D boxes are then not met here (``_step``)
@@ -390,21 +402,61 @@ class World:
             return None
         return water[0] - z, water[1]
 
+    def collision_digest(self) -> str:
+        """A fingerprint (sha256 hex) of everything this world collides with: its surfaces (floor, solid or not,
+        corners), walls (scatter's included), the sculpted ground's heights, the rivers' and ponds' rules and the
+        solver's constants. Every number is quantised to 1e-4 (m, or px for the rivers', ponds' and ground's own
+        values) and dumped as integers, so it is the same in every process and on every platform (no float repr);
+        a collider moved 1 cm changes it, a texture never does (nothing drawn is in it). M1-A-2/3 compare it.
+
+        ``"v"`` (DIGEST_VERSION) is the solver's version: bump it on any change to how this module decides support,
+        collision or water (a rule, a tolerance written in the code), so builds that would move characters differently
+        never match. Rivers and ponds are in the room's own order (the order can matter to the rivers' mouths): the
+        same ponds listed in another order give another digest (a refusal, never a false match)."""
+
+        def q(v: float) -> int:
+            return round(v * 10000)
+
+        t = self.terrain
+        dump = {
+            "v": DIGEST_VERSION,
+            "constants": [q(v) for v in (STEP, BODY, DEEP, DEEP_SLACK, BLOCK_EXCESS, POND_DRY, BLOCK_OUT, ESCAPE_SLACK,
+                                         WADE_STEP, NAV_CELL, *NAV_HALF, _MAX_SLOPE)],
+            "surfaces": sorted([s.floor, s.solid, [q(c) for p in s.corners for c in p]] for s in self.surfaces),
+            "walls": sorted([w.name, [q(v) for v in (*w.lo, *w.hi)], [q(v) for v in w.turned or ()]]
+                            for w in self.walls),
+            "terrain": None if t is None else [[q(v) for v in (*t.origin, *t.size, t.base)], t.cell, t.edges,
+                                               [q(h) for h in t.heights]],
+            "rivers": [[r.id, [q(v) for p in r.points for v in p], r.mouth, r.ends, r.passable, q(r.wade_depth),
+                        [f.start for f in r.falls]] for r in self._river_specs],
+            "ponds": [[p.id, q(p.centre[0]), q(p.centre[1]), q(p.level), p.gated, q(p.water.width),
+                       q(p.water.height), p.water.shape, q(p.water.rotation), p.water.seed, p.water.walkable,
+                       p.water.passable, q(p.water.wade_depth), p.water.shore] for p in self._pond_specs],
+        }
+        return hashlib.sha256(json.dumps(dump, separators=(",", ":")).encode()).hexdigest()
+
     # ------------------------------------------------------------------ moving a sprite
-    def move(self, sprite: Any, delta: tuple[float, float], solids: Iterable[Any] | None) -> None:
+    def move(self, sprite: Any, delta: tuple[float, float], solids: Iterable[Any] | None,
+             sweep: Callable[[Any, tuple[float, float], list[Any]], Any] | None = None) -> None:
         """Move ``sprite`` by ``delta`` (px) as far as the floors, walls and its level's 2D solids allow, and set its
         elevation to the floor it ends on (``mesh_entity_data["elevation"]``, px; saved with the game).
 
         Long moves (a slow frame) go in steps no longer than half the footprint's smaller side, so every wall,
-        railing and gap on the way is met by some step: nothing is tunnelled through. A normal frame is one step."""
-        from engine.physics_runtime import _sprite_to_aabb  # noqa: PLC0415
+        railing and gap on the way is met by some step: nothing is tunnelled through. A normal frame is one step.
 
-        box = _sprite_to_aabb(sprite)
+        ``sweep(sprite, delta, solids)``: the 2D move through its level's solids; by default the game's
+        (engine.physics_runtime.move_entity_with_physics, Arcade), the net authority passing its Arcade-free twin
+        (mesh_net.scene_room.move)."""
+        box = entity_aabb(sprite)
         longest = max(abs(delta[0]), abs(delta[1]))
         steps = max(1, math.ceil(longest / max(1.0, min(box.w, box.h) / 2)))
         solids = list(solids or ())
+        if sweep is None:
+            from engine.physics_runtime import move_entity_with_physics  # noqa: PLC0415
+
+            sweep = move_entity_with_physics
         for _ in range(steps):
-            self._step(sprite, (delta[0] / steps, delta[1] / steps), solids)
+            self._step(sprite, (delta[0] / steps, delta[1] / steps), solids, sweep)
         if self.rivers:
             self._wade(sprite)
 
@@ -423,10 +475,9 @@ class World:
         if self.on_wade is not None:
             self.on_wade(sprite, (sprite.center_x, sprite.bottom), water[1])
 
-    def _step(self, sprite: Any, delta: tuple[float, float], solids: list[Any]) -> None:
-        from engine.physics_runtime import _sprite_to_aabb, move_entity_with_physics  # noqa: PLC0415
-
-        box = _sprite_to_aabb(sprite)
+    def _step(self, sprite: Any, delta: tuple[float, float], solids: list[Any],
+              sweep: Callable[[Any, tuple[float, float], list[Any]], Any]) -> None:
+        box = entity_aabb(sprite)
         hw, hh = box.w / 2 / PIXELS_PER_METRE, box.h / 2 / PIXELS_PER_METRE
         x, y, z = box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE, elevation_of(sprite)
         dx, dy = delta
@@ -492,7 +543,7 @@ class World:
         start = (sprite.center_x, sprite.center_y)
         level = [s for s in solids if s is not sprite and _on_level(s, z)
                  and (getattr(s, "mesh_entity_data", None) or {}).get("id") not in self._pond_ids]  # (R4B: by outline)
-        move_entity_with_physics(sprite, (dx, dy), level)  # the scene's 2D solids on this level
+        sweep(sprite, (dx, dy), level)  # the scene's 2D solids on this level
         moved = (sprite.center_x - start[0]) / PIXELS_PER_METRE, (sprite.center_y - start[1]) / PIXELS_PER_METRE
         if not self._settle(sprite, x + moved[0], y + moved[1], z, hw, hh, deep, block):
             sprite.center_x, sprite.center_y = start  # (never expected: each axis was checked)
@@ -651,3 +702,47 @@ class World:
             at = came[at]
         route.reverse()
         return route[1:] + [goal]
+
+
+def build_world(settings: Hd2dSettings, entities: Any, resolve: Callable[[str], Any], *,
+                models: dict[str, Model] | None = None,
+                always: bool = False) -> tuple[World | None, dict[str, Model], dict[str, str]]:
+    """A room's collision world, built the one way single-player (engine.hd2d.runtime), Mesh Studio and the net
+    authority build it: no window, no GL (the models are read with engine.hd2d.glb, PIL only).
+
+    ``settings``: its parsed ``settings.hd2d``; ``entities``: the scene's (its ponds, engine.hd2d.river.ponds_of);
+    ``resolve``: a scene path to its file (runtime._contained). Every model the room uses that ``models`` (read into in
+    place, so the renderer can share it) lacks is read: its structures' (one that can't be found or read raises
+    Hd2dSettingsError / GlbError: single-player then plays the room 2D) and its scatter's (one that can't be read is set
+    aside, the room stands and its instances block nothing, as the renderer's scatter layer does; one not found is
+    skipped, as there). A room gets a World where it has sculpted ground, rivers, or any model with colliders; or
+    ``always`` (Mesh Studio: a room that has just got something to collide with).
+
+    Returns (the World or None, the models, {scatter model: why it was set aside})."""
+    from engine.hd2d.glb import GlbError, load_glb  # noqa: PLC0415
+    from engine.hd2d.river import ponds_of  # noqa: PLC0415
+
+    models = {} if models is None else models
+    for st in settings.structures:
+        if st.model not in models:
+            models[st.model] = load_glb(resolve(st.model))
+    set_aside: dict[str, str] = {}
+    if settings.scatter:
+        from engine.hd2d.scatter import ASSETS, model_path  # noqa: PLC0415
+
+        for name, rows in settings.scatter.items():  # (every model it draws, as the renderer reads them: the same
+            asset = ASSETS.get(name)  # models, so the same rooms get a World)
+            rel = asset.model if asset is not None and rows else None
+            if rel is None or rel in models or rel in set_aside:
+                continue
+            path = model_path(resolve, rel)
+            if path is None:
+                continue
+            try:
+                models[rel] = load_glb(path)
+            except GlbError as exc:
+                set_aside[rel] = f"its model {rel} can't be read: {exc}"
+    sculpted = settings.ground is not None and settings.ground.terrain is not None  # Milestone 20A
+    if not (always or sculpted or settings.rivers or any(model.colliders for model in models.values())):
+        return None, models, set_aside
+    return World(settings, models, ponds_of(entities)), models, set_aside
