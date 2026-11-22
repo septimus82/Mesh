@@ -376,7 +376,7 @@ def check(out: Path, *, pictures: bool = True, timing: bool = True) -> dict[str,
             return {"visible_px": r.visible_pixels(p), "without_cutaway_px": without, "total_px": _total_pixels(r, p)}
 
         def drive(key: str, axis: int, target: float, frames: int = 900) -> bool:
-            return hold_key(game, game.player(), getattr(keys, key), axis, target, frames, each_frame)
+            return bool(hold_key(game, game.player(), getattr(keys, key), axis, target, frames, each_frame))
 
         def through_door(key: str, axis: int, target: float) -> dict[str, Any]:
             before = room()
