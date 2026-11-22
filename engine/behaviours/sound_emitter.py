@@ -63,3 +63,12 @@ class SoundEmitter(Behaviour):
 
         name = str(getattr(self.entity, "mesh_name", "") or "Sound")
         get_logger(__name__).error("[Mesh][Audio] %s: %s", name, message)
+
+    def on_destroy(self) -> None:
+        audio = getattr(self.window, "audio", None)
+        scape = getattr(self.window, "soundscape", None)
+        if audio is not None and isinstance(scape, sound_emitters.Soundscape):
+            scape.unregister(self.entity, audio)
+        on_destroy = getattr(super(), "on_destroy", None)
+        if callable(on_destroy):
+            on_destroy()

@@ -287,6 +287,14 @@ class Soundscape:
         self.emitters.append(_Live(key, entity, emitter))
         self.stale.discard(key)
 
+    def unregister(self, entity: Any, audio: Any) -> None:
+        """The entity is gone: forget its emitter and stop its loop at once (idempotent; others untouched)."""
+        for live in [e for e in self.emitters if e.entity is entity]:
+            self.emitters.remove(live)
+            if live.playing:
+                audio.stop_loop(live.key, fade_out_s=0.0)
+                self.loop_calls += 1
+
     def diagnostics(self) -> dict[str, Any]:
         return {"emitters": len(self.emitters), "playing": sorted(e.key for e in self.emitters if e.playing),
                 "levels": {e.key: round(e.level, 3) for e in self.emitters if e.playing},
