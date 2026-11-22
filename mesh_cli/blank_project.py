@@ -59,6 +59,20 @@ def _bad_name(name: str) -> str | None:
     return None
 
 
+def _nested_project(root: Path) -> Path | None:
+    """The first independent Mesh project below ``root`` (a folder with a config.json), or None; links are not followed."""
+    from engine.editor.project_ownership import PROJECT_MARKER  # noqa: PLC0415
+
+    pending = [root]
+    while pending:
+        for child in sorted(pending.pop().iterdir()):
+            if child.is_dir() and not _is_link(child):
+                if (child / PROJECT_MARKER).is_file():
+                    return child
+                pending.append(child)
+    return None
+
+
 def _replace_owned(project_dir: Path) -> bool:
     """Empty an existing project while owning it; False (nothing deleted) if another process owns it (#462 RV-3).
 
@@ -132,6 +146,14 @@ def create_blank_project(name: str, dest: Path, *, template_id: str = "blank", f
                 print(
                     f"[mesh] Error: '{project_dir}' is not a Mesh project (no config.json), "
                     "so --force will not delete it. Remove it yourself or pick another name.",
+                    file=sys.stderr,
+                )
+                return 1
+            nested = _nested_project(project_dir)
+            if nested is not None:
+                print(
+                    f"[mesh] Error: '{project_dir}' contains another Mesh project at '{nested}'; "
+                    "--force will not delete it. Move that project out first. Nothing was changed.",
                     file=sys.stderr,
                 )
                 return 1

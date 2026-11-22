@@ -167,3 +167,58 @@ def test_force_still_replaces_an_unowned_project(tmp_path: Path) -> None:
     done = _cli(tmp_path, "new", "game", "--dest", str(root.parent), "--force")
     assert done.returncode == 0, done.stderr
     assert not (root / "junk.txt").exists() and (root / "config.json").is_file()
+
+
+# --- AS-1: --force refuses a target that contains another Mesh project -------------------------------------------
+def _with_child(tmp_path: Path) -> tuple[Path, Path]:
+    root = _project(tmp_path)
+    child = root / "sub" / "Child"
+    (child / ".mesh").mkdir(parents=True)
+    (child / "config.json").write_bytes(b"{}\n")
+    (child / "data.txt").write_bytes(b"child\n")
+    (root / "parent.txt").write_bytes(b"parent\n")
+    return root, child
+
+
+def _refused(tmp_path: Path, root: Path, child: Path, before: dict[str, bytes]) -> None:
+    done = _cli(tmp_path, "new", "game", "--dest", str(root.parent), "--force")
+    assert done.returncode != 0
+    assert "another Mesh project" in done.stderr and "Child" in done.stderr
+    assert _content(root) == before and (child / "data.txt").read_bytes() == b"child\n"
+
+
+def test_force_refuses_a_target_with_a_nested_project(tmp_path: Path) -> None:
+    root, child = _with_child(tmp_path)
+    _refused(tmp_path, root, child, _content(root))
+
+
+def test_force_refuses_a_target_with_a_nested_project_studio_has_open(tmp_path: Path) -> None:
+    root, child = _with_child(tmp_path)
+    holder = subprocess.Popen([sys.executable, "-c", _HOLDER, str(_REPO), str(child)], stdout=subprocess.PIPE, text=True)
+    try:
+        assert holder.stdout is not None and holder.stdout.readline().strip() == "held"
+        _refused(tmp_path, root, child, _content(root))
+    finally:
+        holder.kill()
+        holder.wait()
+        assert holder.stdout is not None
+        holder.stdout.close()
+
+
+def test_force_does_not_follow_a_link_to_another_project(tmp_path: Path) -> None:
+    root = _project(tmp_path)
+    other = tmp_path / "other_project"
+    other.mkdir()
+    (other / "config.json").write_bytes(b"{}\n")
+    (other / "keep.txt").write_bytes(b"keep\n")
+    link = root / "linked"
+    if os.name == "nt":
+        done = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(other)], capture_output=True, text=True)
+        if done.returncode != 0:
+            pytest.skip("cannot create a junction here")
+    else:
+        link.symlink_to(other, target_is_directory=True)
+    before = _snapshot(other)
+    done = _cli(tmp_path, "new", "game", "--dest", str(root.parent), "--force")
+    assert "another Mesh project" not in done.stderr, done.stderr
+    assert _snapshot(other) == before
