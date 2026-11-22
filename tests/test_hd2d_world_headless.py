@@ -151,6 +151,24 @@ def test_the_fingerprint_follows_collision_and_only_collision(tmp_path: Path) ->
     assert _digest(_crossing(), entities=[{**pond, "x": 301}]) != wet
 
 
+# The fingerprint of one fixed room, written down: an odd-pixel structure turned 37 degrees (turned walls, rotated
+# floors), raised 3 px, an odd-pixel boulder turned 30 degrees at size 107, and a blocking pond. The Windows and Linux
+# CI jobs both check it, so they check each other. It changes only with the solver (DIGEST_VERSION, its constants) or
+# these files: then write the new value here, with the reason in the commit. Never loosen the quantisation to pass.
+PINNED = "ef49c14cf30ab6842845985223800c5a2091ff0fc7a30173544edc7a4350b7df"
+
+
+@pytest.mark.fast
+def test_the_fingerprint_of_a_fixed_room_is_the_same_on_every_platform() -> None:
+    hd2d = {"structures": [{"id": "crossing", "model": "crossing.glb", "x": 513, "y": 383, "rotation": 37,
+                            "elevation": 3}],
+            "ground": {"to": [1025, 769]}, "scatter": {"boulder": [[129, 97, 30, 107]]}}
+    pond = {"id": "pond", "x": 301, "y": 611, "behaviour_config": {"WaterSurface": {"preset": "pond", "walkable": False}}}
+    world, _models, _aside = build_world(parse_hd2d(hd2d), [pond], _resolve())
+    assert world is not None and any(w.turned is not None for w in world.walls) and world.ponds
+    assert world.collision_digest() == PINNED
+
+
 # A child process: builds the crossing room (a structure, a scatter boulder, sculpted ground) with the builder, walks a
 # net Body up the stairs and across the bridge and another into the boulder with the authority's Arcade-free sweep,
 # prints its fingerprint, and says what graphics or Studio modules it loaded.

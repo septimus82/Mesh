@@ -64,6 +64,9 @@ WADE_STEP = 14.0 / PIXELS_PER_METRE  # m: a wading step every this far (as engin
 NAV_CELL = 0.5  # m: the navigation grid's cell
 NAV_HALF = (0.3, 0.19)  # m: half the footprint the navigation grid plans for (a character's feet box)
 _BUCKET = 2.0  # m: the spatial index's cell
+DIGEST_VERSION = 1  # World.collision_digest's solver version: bump on any change to how support, collision or water
+# are decided, here or in what it asks (engine.hd2d.river's RiverIndex, engine.water's outlines, engine.hd2d.terrain's
+# surface_at). Every constant above but _BUCKET (which changes no outcome) is in the digest itself
 
 
 @dataclass(frozen=True)
@@ -404,15 +407,21 @@ class World:
         corners), walls (scatter's included), the sculpted ground's heights, the rivers' and ponds' rules and the
         solver's constants. Every number is quantised to 1e-4 (m, or px for the rivers', ponds' and ground's own
         values) and dumped as integers, so it is the same in every process and on every platform (no float repr);
-        a collider moved 1 cm changes it, a texture never does (nothing drawn is in it). M1-A-2/3 compare it."""
+        a collider moved 1 cm changes it, a texture never does (nothing drawn is in it). M1-A-2/3 compare it.
+
+        ``"v"`` (DIGEST_VERSION) is the solver's version: bump it on any change to how this module decides support,
+        collision or water (a rule, a tolerance written in the code), so builds that would move characters differently
+        never match. Rivers and ponds are in the room's own order (the order can matter to the rivers' mouths): the
+        same ponds listed in another order give another digest (a refusal, never a false match)."""
 
         def q(v: float) -> int:
             return round(v * 10000)
 
         t = self.terrain
         dump = {
-            "v": 1,
-            "constants": [q(STEP), q(BODY), q(DEEP), q(_MAX_SLOPE)],
+            "v": DIGEST_VERSION,
+            "constants": [q(v) for v in (STEP, BODY, DEEP, DEEP_SLACK, BLOCK_EXCESS, POND_DRY, BLOCK_OUT, ESCAPE_SLACK,
+                                         WADE_STEP, NAV_CELL, *NAV_HALF, _MAX_SLOPE)],
             "surfaces": sorted([s.floor, s.solid, [q(c) for p in s.corners for c in p]] for s in self.surfaces),
             "walls": sorted([w.name, [q(v) for v in (*w.lo, *w.hi)], [q(v) for v in w.turned or ()]]
                             for w in self.walls),
