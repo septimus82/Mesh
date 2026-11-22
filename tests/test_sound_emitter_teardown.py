@@ -15,7 +15,7 @@ from engine import optional_arcade
 from engine import sound_emitters as se
 from tests._b01_arena import PIC, Arena, close_window, make_window
 from tests.test_audio_buses_and_scene_music import Backend
-from tests.test_behaviour_teardown_on_delete_paths import PATHS, IDS
+from tests.test_behaviour_teardown_on_delete_paths import IDS, PATHS
 
 pytestmark = [pytest.mark.integration,
               pytest.mark.skipif(not optional_arcade.has_arcade(), reason="needs real arcade (a hidden window)")]
