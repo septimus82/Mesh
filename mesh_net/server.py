@@ -16,6 +16,44 @@ from .simulation import Player, Room
 logger = logging.getLogger(__name__)
 
 
+class InputBudget:
+    """Flood protection for one session's frames after its welcome: a token bucket on the event loop's clock.
+
+    A client sends one input a tick (HZ a second). A network stall (a TCP retransmission) or a server stall (GC, a
+    store write, a debugger) holds them back, and they then arrive together, many within one tick: a burst is normal
+    and must never end the session. Each frame takes a token; the bucket refills at RATE a second up to BURST. RATE is
+    twice the rate a client sends at, so a client keeping to it never runs the bucket dry, and the burst a stall of up
+    to BURST / HZ seconds (3 s) builds up always fits. A session that does run it dry sends faster than any client
+    and is closed, as before. Its frames are never dropped or merged instead: the frames past the limit are the newest
+    ones, which last-input-wins would apply.
+
+    A new session starts with START tokens, the 8 frames at once the old per-tick limit allowed (a world client's
+    most: 4 queued party requests and an input). Its bucket fills at RATE, twice as fast as a client's backlog can
+    grow, so a stall straight after joining fits too, while a flood straight after joining is refused.
+
+    The clock is ``loop.time()``, never the tick count: after a server stall the clock skips the missed ticks
+    (``Server._run_clock``), but the backlog to read covers all of the stall's time.
+    """
+
+    RATE = 2 * wire.HZ  # tokens a second
+    BURST = 3 * wire.HZ  # 3 s of a client's input: a 2 s stall's backlog (40) with room to spare
+    START = 8
+
+    def __init__(self) -> None:
+        self.clock = asyncio.get_running_loop().time
+        self.tokens, self.at = float(self.START), self.clock()
+
+    def take(self) -> bool:
+        """Spend a token on one frame; False when there is none (the session must end)."""
+        now = self.clock()
+        self.tokens = min(self.BURST, self.tokens + (now - self.at) * self.RATE)
+        self.at = now
+        if self.tokens < 1:
+            return False
+        self.tokens -= 1
+        return True
+
+
 class Server:
     def __init__(self, room: Any = None) -> None:
         self.room = room if room is not None else Room()  # or a mesh_net.scene_room.SceneRoom: same interface
@@ -74,17 +112,16 @@ class Server:
             self.peers[eid] = writer
             writer.write(wire.encode({"v": wire.VERSION, "type": "welcome", "session": secrets.token_hex(16),
                                       "entity": eid, "resume": credential, "state": self.room.snapshot()}))
-            bucket, count = self.room.tick, 0
+            budget = InputBudget()
             while True:
                 msg = await wire.read(reader)
-                if bucket != self.room.tick:
-                    bucket, count = self.room.tick, 0
-                count += 1
-                if count > 8:
+                if not budget.take():
                     raise wire.Invalid("input rate")
                 self.room.input(eid, msg)
-        except (wire.Invalid, OSError, EOFError, TimeoutError):
-            pass  # remote disconnects and invalid frames end this session
+        except wire.Invalid as exc:
+            logger.info("[Mesh][Net] session closed: %s", exc)  # invalid frames, or too many (InputBudget)
+        except (OSError, EOFError, TimeoutError):
+            pass  # remote disconnects end this session
         finally:
             if eid is not None:
                 del self.peers[eid]
@@ -160,13 +197,10 @@ class WorldServer(Server):
             writer.write(wire.encode(welcome(secrets.token_hex(16), pid, credential, self.world.identity)))
             for frame in self.world.take(pid):
                 writer.write(wire.encode(frame))
-            bucket, count = self.world.tick, 0
+            budget = InputBudget()
             while True:
                 msg = await wire.read(reader)
-                if bucket != self.world.tick:
-                    bucket, count = self.world.tick, 0
-                count += 1
-                if count > 8:
+                if not budget.take():
                     raise wire.Invalid("request rate")
                 kind = msg.get("type")
                 if kind == "input":
@@ -175,8 +209,10 @@ class WorldServer(Server):
                     self.world.party(pid, msg)
                 else:
                     raise wire.Invalid("unknown request")
-        except (wire.Invalid, OSError, EOFError, TimeoutError):
-            pass  # remote disconnects and invalid frames end this session
+        except wire.Invalid as exc:
+            logger.info("[Mesh][Net] session closed: %s", exc)  # invalid frames, or too many (InputBudget)
+        except (OSError, EOFError, TimeoutError):
+            pass  # remote disconnects end this session
         finally:
             if pid is not None:
                 del self.peers[pid]

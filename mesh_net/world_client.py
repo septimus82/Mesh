@@ -187,6 +187,7 @@ class WorldArena(Arena):
                 self.note(f"welcome as P{self.player}")
 
                 async def send() -> None:
+                    due = loop.time()
                     while not writer.is_closing():  # (see below: a missed cancellation still ends here)
                         for request in self.requests:
                             writer.write(wire.encode(request))
@@ -201,7 +202,8 @@ class WorldArena(Arena):
                                 frame["action"] = action
                             writer.write(wire.encode(frame))
                         await asyncio.wait_for(writer.drain(), 2)
-                        await asyncio.sleep(1 / wire.HZ)
+                        due = max(due + 1 / wire.HZ, loop.time())  # fixed schedule: no drift, no catch-up burst
+                        await asyncio.sleep(due - loop.time())
 
                 async def receive() -> None:
                     while True:

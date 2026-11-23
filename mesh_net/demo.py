@@ -106,11 +106,13 @@ class Arena:
                 loop = asyncio.get_running_loop()
                 self.playback.push(client.state, loop.time())
                 async def send_inputs() -> None:
+                    due = loop.time()
                     while True:
                         direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
                         action, self.action = self.action, None
                         await client.input(*direction, action=action)
-                        await asyncio.sleep(1 / wire.HZ)
+                        due = max(due + 1 / wire.HZ, loop.time())  # fixed schedule: no drift, no catch-up burst
+                        await asyncio.sleep(due - loop.time())
 
                 async def receive_states() -> None:
                     while True:
