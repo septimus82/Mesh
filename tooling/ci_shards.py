@@ -102,6 +102,8 @@ GPU_LINUX_PINNED: dict[str, int] = {
     "tests/test_hd2d_starter_gpu.py": 2,  # 49.9 s
     "tests/test_hd2d_post_gpu.py": 2,  # 48.5 s
     "tests/test_hd2d_studio_gpu.py": 2,  # 35.4 s
+    # (added at #604: the hash put it on shard 1, which then took 1,055 s against shard 2's 781 s)
+    "tests/test_mesh_net_hd2d_gpu.py": 2,
 }
 # Each split's pins, by plan name: ``default`` is the default suite's (ci.yml), ``gpu`` Windows' gpu lane's and
 # ``gpu-linux`` Linux's (extended.yml).

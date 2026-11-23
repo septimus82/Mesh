@@ -1,5 +1,7 @@
 """How the real-window networking tests walk an avatar to a place: by the authoritative position, both ways.
 
+(In tooling/ so the tooling that drives windows, tooling/m3_two_client_evidence.py, shares it with the tests.)
+
 A window's held key reaches the server late: the test's command, the window's next frame and its next input frame
 all come first. On a slow hosted runner that is a few ticks (7.5 px each), so "hold until past y, then release"
 lands well past y. Two Windows failures did exactly that: a DOWN aimed just above the bottom of a gate's gap stopped
@@ -86,7 +88,8 @@ async def walk(send: Callable[[str], Awaitable[Any]], key: str, target: float, w
         log.append((step, here, carry))
         await send(f"press {step}")
         try:
-            await until(lambda pos, start=here: pos != start, f"{step} from {here} moving")
+            start = here
+            await until(lambda pos: pos != start, f"{step} from {here} moving")
             released = await until(lambda pos: (target - pos) * sign <= carry, f"{step} from {here} arriving")
         finally:
             await send(f"release {step}")

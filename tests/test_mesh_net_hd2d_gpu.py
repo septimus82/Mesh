@@ -95,11 +95,12 @@ def test_one_stands_on_the_deck_while_the_other_passes_beneath(facts: dict[str, 
     above, samples = part["above"], part["samples"]
     assert above[2:4] == DECK
     assert samples and all(s["a"] == above for s in samples), "A stayed where it stood on the deck"
-    assert all(s["b"][2:4] == GROUND and abs(s["b"][0] - above[0]) < 16 for s in samples), "B beneath it, on the ground"
+    assert all(s["b"][2:4] == GROUND and abs(s["b"][0] - above[0]) <= 16 for s in samples), "B beneath it, on the ground"
     ys = [s["b"][1] for s in samples]
     assert ys == sorted(ys) and ys[0] < above[1] - 96 < above[1] + 48 < part["passed"][1], (ys, part["passed"])
     a, b = part["a"], part["b"]
-    assert a[2:4] == DECK and b[2:4] == GROUND and abs(a[1] - b[1]) <= 4 and abs(a[0] - b[0]) < 16, (a, b)
+    # (each walked to its spot within 8 px: a step is 7.5 px; "beneath" is within half a picture's width)
+    assert a[2:4] == DECK and b[2:4] == GROUND and abs(a[1] - b[1]) <= 8 and abs(a[0] - b[0]) <= 16, (a, b)
     windows = part["windows"]
     assert windows["a"] == {"own": _row(a), "peer": _row(b)} and windows["b"] == {"own": _row(b), "peer": _row(a)}
     for name, look in part["look"].items():
@@ -113,17 +114,21 @@ def test_one_stands_on_the_deck_while_the_other_passes_beneath(facts: dict[str, 
 
 def test_no_attack_through_the_deck(facts: dict[str, Any]) -> None:
     """A on the deck, facing the bandit beneath with its hitbox on it (planar contact: only the floors between can
-    refuse it), strikes: the bandit keeps its HP. B on the ground strikes it: it dies and drops its loot, in both windows."""
+    refuse it), strikes: the server runs the swing (its cooldown starts) and the bandit keeps its HP. B on the ground
+    strikes it: it dies and drops its loot, in both windows."""
     part = _part(facts, "c")
     assert part["a_at"][2:4] == DECK and part["a_facing"] == 0 and part["a_planar_hit"], part
+    assert part["a_swung"], "the server ran A's attack"
     assert part["after_a_attack"] == {"hp": part["hp_before"], "dead": False}, part["after_a_attack"]
     assert part["after_b_attack"] == {"hp": 0.0, "dead": True, "dropped": True}, part["after_b_attack"]
     assert part["drops_seen"] == [[facts["join"]["bandit"]]] * 2, part["drops_seen"]
 
 
 def test_no_looting_through_the_deck(facts: dict[str, Any]) -> None:
-    """A on the deck, within planar reach of the loot beneath, takes: the loot stays. B on the ground takes it."""
+    """A on the deck, within planar reach of the loot beneath, takes (its window sends ``take``, not ``use``: the
+    server's rule is what refuses it): the loot stays. B on the ground takes it."""
     part = _part(facts, "c")
+    assert part["a_sent"] == ["attack", "take"], part["a_sent"]
     assert part["a_loot_distance"] <= DEFAULT_INTERACT_MAX_DIST, part
     assert part["after_a_take"] == {"dropped": True, "held": False}, part["after_a_take"]
     taken = part["after_b_take"]

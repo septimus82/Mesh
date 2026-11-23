@@ -25,6 +25,7 @@ Hidden windows only, audio at master 0 (the Crossing's build sets it), no OS inp
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 import os
 import shutil
@@ -35,7 +36,7 @@ from pathlib import Path
 from typing import Any
 
 REPO = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO))  # (tests.net_walk, the window tests' command channel, the acceptance's checks)
+sys.path.insert(0, str(REPO))  # (tooling.net_walk and tooling.net_windows, shared with the window tests)
 CROSSING, START = "crossing", "start"
 PX = 32.0
 # Under the bridge deck (x 13-19 m, standable y 19.5-20.5 m) on the ground, in the underpass (x 14.5-17.5 m):
@@ -121,10 +122,13 @@ def raised_collider(glb: bytes, node: str, by: float = 0.5) -> bytes:
 # deck stands centres y 636-680 and the plateau up to 722, its north edge a 2 m drop: PLATEAU_Y keeps 74 px (10 ticks of
 # a late release) short of it.
 STAIRS_X, PLATEAU_Y, GROUND_Y = 347.0, 648.0, 144.0
-DECK_X = 512.0  # on the deck, its hitbox (32 px ahead) on the bandit beneath, clear of the door's area
+# Every walk's band is at least 8 px each way: one step is 7.5 px and a slow runner's release lands 2 steps late, so a
+# narrower band can't be settled in (tooling/net_walk.py: it converges while the carry is under 2 * within).
+DECK_X = 504.0  # on the deck, its hitbox (the room's reach ahead) on the bandit beneath, after turning right (+3 steps)
 OVER_X = 528.0  # on the deck over the underpass, where B passes beneath
 SOUTH_Y, NORTH_Y = 500.0, 760.0  # B's pass: south of the plateaus (y 18 m) to north of them (22 m)
-STRIKE = (544.0, 624.0)  # B on the ground below the bandit, facing up: its hitbox on the bandit, the loot in reach
+STRIKE = (544.0, 610.0)  # B on the ground below the bandit, facing up (after turning, +3 steps): its hitbox on it,
+# the loot in reach (y 600-644 lands a strike)
 DECK_Z, DECK_FLOOR = 64.0, "bridge_6m/col_deck"
 BRIDGE_GLB, DECK_NODE = "assets/models/bridge_6m.glb", "col_deck"
 
@@ -151,8 +155,8 @@ class _Phase:
 async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None) -> dict[str, Any]:
     from engine.physics_model import Aabb, entity_shape, shapes_overlap
     from mesh_net.server import WorldServer
-    from tests.net_walk import walk
-    from tests.test_mesh_net_gpu import command, stop_workers
+    from tooling.net_walk import walk
+    from tooling.net_windows import command, stop_workers
 
     facts: dict[str, Any] = {}
     server = WorldServer(world)
@@ -160,7 +164,7 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
     procs: list[Any] = []
     names: dict[Any, str] = {}
     frames: list[str] = []
-    walks: list[Any] = facts.setdefault("walks", [])  # each walk's legs and late-release carries (tests/net_walk.py)
+    walks: list[Any] = facts.setdefault("walks", [])  # each walk's legs and late-release carries (tooling/net_walk.py)
 
     async def window(*extra: str) -> Any:
         proc = await asyncio.create_subprocess_exec(
@@ -268,6 +272,15 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
         return {"camera_target": w.get("camera_target"), "followed": w.get("followed"), "camera": w.get("camera"),
                 "camera_height": w.get("camera_height"), "own": view(r, eid)}
 
+    received: list[tuple[int, str]] = []  # (player, action) of every input frame the server took with an action
+    take_input = world.input
+
+    def spy(pid: int, msg: Any) -> None:
+        if msg.get("action"):
+            received.append((pid, str(msg["action"])))
+        take_input(pid, msg)
+
+    world.input = spy  # (this run's server only: what each window sent, to check A's window asked for each action)
     room_def = world.defs[CROSSING]
     bandit = next(iter(room_def.proto.enemies))
     door = next(d for d in room_def.doors if d.target == START)
@@ -328,7 +341,7 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
             part["samples"] = samples
             await go(b, pb, "UP", NORTH_Y, 16)
             part["passed"] = server_level(pb)
-            await go(b, pb, "DOWN", part["above"][1], 4)
+            await go(b, pb, "DOWN", part["above"][1])
             await rest(pa, pb)
             part["a"], part["b"] = server_level(pa), server_level(pb)
             ra, rb = await command(a, "state"), await command(b, "state")
@@ -345,17 +358,19 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
         # (c) from the deck A strikes at the bandit beneath, then reaches for its loot (each in planar reach: only the
         # floors between them can refuse it); B on the ground does each.
         with _Phase(facts, "c") as part:
-            await go(a, pa, "LEFT", DECK_X, 4)
+            await go(a, pa, "LEFT", DECK_X)
             await face(a, pa, "RIGHT", 0)
             p = player(pa)
-            enemy = world.instances[world.members[pa].instance].room.enemies[bandit]
-            hit = Aabb(p.body.center_x + 32.0, p.body.center_y, 32.0, 32.0)  # (SceneRoom._attack's, facing right)
+            room = world.instances[world.members[pa].instance].room
+            enemy = room.enemies[bandit]
+            hit = Aabb(p.body.center_x + room.reach, p.body.center_y, room.hitbox, room.hitbox)  # (_attack's, facing right)
             part["a_at"], part["a_facing"] = server_level(pa), p.facing
             part["a_planar_hit"] = shapes_overlap(hit, entity_shape(enemy.body))
-            part["hp_before"] = enemy.state.hp
+            part["hp_before"], swing = enemy.state.hp, p.attack_after
             await acted(a, pa, "SPACE")
             part["after_a_attack"] = {"hp": enemy.state.hp, "dead": enemy.state.dead}
-            await go(b, pb, "RIGHT", STRIKE[0], 4)
+            part["a_swung"] = p.attack_after > swing  # (the server ran A's attack: its cooldown started)
+            await go(b, pb, "RIGHT", STRIKE[0])
             await go(b, pb, "DOWN", STRIKE[1])
             await face(b, pb, "UP", 1)
             await snap("04_a_struck_from_deck")
@@ -367,6 +382,7 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
                                              + (p.body.center_y - enemy.body.center_y) ** 2) ** 0.5, 2)
             await acted(a, pa, "E")
             part["after_a_take"] = {"dropped": enemy.dropped, "held": enemy.holder is not None}
+            part["a_sent"] = [action for pid, action in received if pid == pa]  # (what A's window asked: attack, take)
             await snap("05_a_reached_for_loot")
             await acted(b, pb, "E")
             room = world.instances[world.members[pb].instance].room
@@ -438,7 +454,7 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
             ra = await settle(a, lambda r: r["key"] == CROSSING and r["shown"] == r["room"])
             part["a_window"] = {"key": ra.get("key"), "loads": ra.get("loads")}
             await snap("07_a_over_door")
-            await go(b, pb, "LEFT", door.x, 4)
+            await go(b, pb, "LEFT", door.x)
             await command(b, "press UP")
             try:
                 rb = await settle(b, lambda r: r["key"] == START and r["phase"] == "playing" and r["shown"] == r["room"])
@@ -547,7 +563,9 @@ def main() -> None:
         facts = run(project, work, raw)
         seconds = round(time.perf_counter() - t0, 1)
         (work / "facts.json").write_text(json.dumps(facts, indent=1), encoding="utf-8")  # (kept with --work)
-        import tests.test_mesh_net_hd2d_gpu as acceptance  # the run is kept only if the acceptance holds for it
+        # The run is kept only if the acceptance's own assertions hold for it. (Imported by name when it runs: tooling
+        # never imports tests statically, so type checking never follows it into tests/.)
+        acceptance = importlib.import_module("tests.test_mesh_net_hd2d_gpu")
 
         checks = sorted(n for n in dir(acceptance) if n.startswith("test_"))
         for name in checks:
