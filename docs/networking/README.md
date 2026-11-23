@@ -14,11 +14,11 @@ Install Mesh in a virtual environment with `python -m pip install -e ".[dev]"` f
 
 Each window loads its own disposable blank project with the packaged arena sign. Teal is the local player, gold is a peer and red is the stationary enemy. Use arrows or WASD to move. Press Space once in each window near the enemy, then E in either window to collect its green drop. The title shows the enemy's HP and your loot count. F2 disconnects, R resumes, N starts a fresh character after a disconnect, and Escape closes the window. Stop the server with Ctrl+C. Restart it to reset the encounter. A client that closes its process loses its resume credential.
 
-## Protocol version 1
+## Protocol version 2
 
-IPv4 loopback TCP carries one UTF-8 JSON object per LF-terminated frame, up to 8,192 bytes including LF. Both peers check field names, types, version and value ranges. Duplicate JSON keys are rejected. Coordinates, IDs, ticks and sequences are integers. Entity IDs are unique within the lifetime of a server process. Every join gets a new session and entity.
+IPv4 loopback TCP carries one UTF-8 JSON object per LF-terminated frame, up to 8,192 bytes including LF. Both peers check field names, types, version and value ranges. Duplicate JSON keys, `NaN` and `Infinity` are rejected. The version is checked exactly in both directions, with no downgrade: a server answers a join of another version with `{"v": 2, "type": "refused", "code": "protocol_version"}` and closes, and a client refuses any frame of another version. Version 2 (M3-2, owner decision D1) added each body's elevation and floor to scene snapshots ([N6](n6_scene_integration.md)); `mesh_net/protocol.py` documents the rules. Coordinates, IDs, ticks and sequences are integers. Entity IDs are unique within the lifetime of a server process. Every join gets a new session and entity.
 
-| Direction | Fields in addition to `v: 1` and `type` | Effect |
+| Direction | Fields in addition to `v: 2` and `type` | Effect |
 |---|---|---|
 | Client → server, `join` | `resume` is null or a previously issued 64-hex bearer credential | Claims a fresh character or a retained offline character. Successful resume rotates the credential. |
 | Server → client, `welcome` | `entity`, `session` (32 hex), `resume`, `state` | Establishes socket ownership and includes a complete current snapshot. |

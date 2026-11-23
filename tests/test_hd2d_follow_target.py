@@ -107,7 +107,7 @@ def test_a_client_window_follows_its_own_avatar(own: int) -> None:
     """Two player-tagged avatars far apart in one HD-2D room: the window of the client that is ``own`` looks at its
     own, whichever is first (and a client with no avatar of its own yet gets the tag's, as single-player does)."""
     pytest.importorskip("arcade")
-    positions = {1: (160.0, 300.0), 2: (700.0, 300.0)}
+    positions = {1: (160.0, 300.0, 0.0, "ground"), 2: (700.0, 300.0, 0.0, "ground")}  # (x, y, elevation, floor)
 
     def check(window: Any, view: Any) -> None:
         renderer = window.hd2d_renderer
@@ -125,7 +125,7 @@ def test_a_client_window_follows_its_own_avatar(own: int) -> None:
             view.draw(0.1)
         assert renderer.camera.target[0] == pytest.approx(mine_x, abs=0.05)
         assert abs(renderer.camera.target[0] - other_x) > 5
-        walked = {**positions, own: (450.0, 300.0)}  # (the avatar walks: only the client's frames may move the camera)
+        walked = {**positions, own: (450.0, 300.0, 0.0, "ground")}  # (the avatar walks: only the client's frames may move the camera)
         for _ in range(80):
             view.sync(None, walked, own, 0.1)
             view.draw(0.1)

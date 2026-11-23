@@ -57,7 +57,7 @@ class SceneView:
     def __init__(self, window: Any, arcade: Any, room: SceneRoom) -> None:
         check_window_world(window, room)  # (before anything changes in the window)
         self.window, self.arcade = window, arcade
-        self.identity = room.identity
+        self.room, self.identity = room, room.identity
         sc = self.scene = window.scene_controller
         sprites = [s for s in sc.all_sprites if getattr(s, "mesh_id", None)]
         loaded = sorted(s.mesh_id for s in sprites)
@@ -78,7 +78,7 @@ class SceneView:
         self.drops: dict[str, Any] = {}
 
     def check(self, msg: wire.Message) -> None:
-        check_state(msg, self.identity)
+        check_state(msg, self.identity, self.room)
         named = {*msg["open"], *msg["used"], *msg["drops"], *(r[0] for r in msg["enemies"]), *(r[0] for r in msg["loot"])}
         if not named <= self.sprites.keys():
             raise wire.Invalid("the server names objects this room does not have")
@@ -100,12 +100,13 @@ class SceneView:
         self.scene.entities.enqueue_spawn(sprite, layer_name=data.get("layer") or "entities", is_solid=False)
         return sprite
 
-    def sync(self, state: wire.Message | None, positions: dict[int, tuple[float, float]], own: int | None,
-             dt: float) -> None:
-        """Make the room look like ``state``, its players at ``positions`` (``own``: the local player's avatar)."""
+    def sync(self, state: wire.Message | None, positions: dict[int, tuple[float, float, float, str | None]],
+             own: int | None, dt: float) -> None:
+        """Make the room look like ``state``, its players at ``positions`` (x, y, elevation, floor: a snapshot row's,
+        mesh_net.protocol) (``own``: the local player's avatar)."""
         for eid in [e for e in self.avatars if e not in positions]:
             self.scene.entities.enqueue_despawn(self.avatars.pop(eid))
-        for eid, (x, y) in positions.items():
+        for eid, (x, y, elevation, floor) in positions.items():
             sprite = self.avatars.get(eid)
             if sprite is None:
                 sprite = self.avatars[eid] = self._spawn(eid, eid == own)
@@ -113,6 +114,9 @@ class SceneView:
             vx, vy = ((x - sprite.center_x) / dt, (y - sprite.center_y) / dt) if dt > 0 else (0.0, 0.0)
             sprite.center_x, sprite.center_y = x, y
             sprite.mesh_velocity_x, sprite.mesh_velocity_y = vx, vy  # the Animator walks or stands by these
+            if self.room.world is not None:  # HD-2D: where the server stands it (what the renderer draws from)
+                sprite.mesh_entity_data["elevation"] = elevation
+                sprite.mesh_hd2d_floor = floor
         renderer = getattr(self.window, "hd2d_renderer", None)
         if renderer is not None:  # (every frame: a room change or a resume brings a new renderer and avatar)
             renderer.camera_target = self.avatars.get(own) if own is not None else None
@@ -183,7 +187,7 @@ class SceneArena(Arena):
         positions = self.playback.positions(now) if state else {}
         if client and state:
             own = next(r for r in state["players"] if r[0] == client.entity)
-            positions[own[0]] = (own[1], own[2])
+            positions[own[0]] = (own[1], own[2], own[4], own[5])
         self.view.sync(state, positions, client.entity if client else None, dt)
         self.view.draw(dt)
 

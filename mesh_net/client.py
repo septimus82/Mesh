@@ -25,7 +25,7 @@ class Client:
 
     async def input(self, dx: int, dy: int, action: str | None = None) -> None:
         self.seq += 1
-        msg = {"v": 1, "type": "input", "entity": self.entity, "seq": self.seq, "dx": dx, "dy": dy}
+        msg = {"v": wire.VERSION, "type": "input", "entity": self.entity, "seq": self.seq, "dx": dx, "dy": dy}
         if action is not None:
             msg["action"] = action
         self.check_input(msg, self.entity)
@@ -46,8 +46,11 @@ async def connect(port: int, resume: str | None = None, check: Callable[[wire.Me
                   check_input: Callable[[wire.Message, int], object] = wire.movement) -> AsyncIterator[Client]:
     reader, writer = await asyncio.wait_for(asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES), 3)
     try:
-        writer.write(wire.encode({"v": 1, "type": "join", "resume": resume}))
+        writer.write(wire.encode({"v": wire.VERSION, "type": "join", "resume": resume}))
         hello = await wire.read(reader)
+        if hello.get("type") == "refused":  # (the server said why: another protocol version)
+            wire.fields(hello, "refused", "code")
+            raise wire.Invalid(f"refused ({str(hello['code'])[:32]})")
         wire.fields(hello, "welcome", "entity", "session", "resume", "state")
         if (not wire.token(hello["resume"]) or not isinstance(hello["session"], str)
                 or not re.fullmatch(r"[0-9a-f]{32}", hello["session"]) or not wire.integer(hello["entity"], 1)

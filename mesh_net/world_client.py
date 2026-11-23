@@ -119,7 +119,7 @@ class WorldArena(Arena):
 
     def _ask(self, op: str, **fields: int) -> None:
         if len(self.requests) < 4:
-            self.requests.append({"v": 1, "type": "party", "op": op, **fields})
+            self.requests.append({"v": wire.VERSION, "type": "party", "op": op, **fields})
 
     def _own(self) -> list[Any] | None:
         if self.state is None:
@@ -141,17 +141,18 @@ class WorldArena(Arena):
         named, with ticks strictly increasing within it."""
         kind = msg["type"]
         if kind == "enter":
+            identity, room = self.identities[msg["key"]], self.defs[msg["key"]].proto
+            check_state(msg["state"], identity, room)  # (its rows against this window's own room, before any is kept)
             self.room, self.key, self.entity = msg["room"], msg["key"], msg["entity"]
             self.state = msg["state"]
-            identity = self.identities[msg["key"]]
-            self.playback = Playback(lambda s: check_state(s, identity))
+            self.playback = Playback(lambda s: check_state(s, identity, room))
             self.playback.push(self.state, now)
             self.pending, self.phase = msg, "loading"
         elif kind == "room_state":
             if msg["room"] != self.room or self.key is None:
                 return  # sent before this player left that room
             state = msg["state"]
-            check_state(state, self.identities[self.key])
+            check_state(state, self.identities[self.key], self.defs[self.key].proto)
             if self.state is not None and state["tick"] <= self.state["tick"]:
                 raise wire.Invalid("room state out of order")
             if not any(r[0] == self.entity for r in state["players"]):
@@ -171,7 +172,7 @@ class WorldArena(Arena):
         try:
             reader, writer = await asyncio.wait_for(asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES), 3)
             try:
-                join = {"v": 1, "type": "join", "resume": self.token}
+                join = {"v": wire.VERSION, "type": "join", "resume": self.token}
                 if self.character is not None and self.token is None:
                     join["character"] = self.character
                 writer.write(wire.encode(join))
@@ -194,7 +195,7 @@ class WorldArena(Arena):
                             direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
                             action, self.action = self.action, None
                             self.seq += 1
-                            frame = {"v": 1, "type": "input", "room": self.room, "entity": self.entity,
+                            frame = {"v": wire.VERSION, "type": "input", "room": self.room, "entity": self.entity,
                                      "seq": self.seq, "dx": direction[0], "dy": direction[1]}
                             if action is not None:
                                 frame["action"] = action
@@ -293,7 +294,7 @@ class WorldArena(Arena):
         positions = self.playback.positions(now) if state else {}
         own = self._own() if state else None
         if own is not None:
-            positions[own[0]] = (own[1], own[2])
+            positions[own[0]] = (own[1], own[2], own[4], own[5])
         self.view.sync(state, positions, self.entity if state else None, dt)
         self.view.draw(dt)
 

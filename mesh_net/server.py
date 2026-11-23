@@ -59,7 +59,11 @@ class Server:
         credential = secrets.token_hex(32)
         try:
             msg = await wire.read(reader)
-            wire.fields(msg, "join", "resume")
+            try:
+                wire.fields(msg, "join", "resume")
+            except wire.VersionMismatch as exc:
+                await self._refuse(writer, exc)
+                raise
             key = msg["resume"]
             if key is not None and (not wire.token(key) or key not in self.offline):
                 raise wire.Invalid("invalid resume")
@@ -67,8 +71,8 @@ class Server:
                 raise wire.Invalid("character capacity")
             eid = self.room.join(self.offline.pop(key)[1] if key is not None else None)
             self.peers[eid] = writer
-            writer.write(wire.encode({"v": 1, "type": "welcome", "session": secrets.token_hex(16), "entity": eid,
-                                      "resume": credential, "state": self.room.snapshot()}))
+            writer.write(wire.encode({"v": wire.VERSION, "type": "welcome", "session": secrets.token_hex(16),
+                                      "entity": eid, "resume": credential, "state": self.room.snapshot()}))
             bucket, count = self.room.tick, 0
             while True:
                 msg = await wire.read(reader)
@@ -85,6 +89,15 @@ class Server:
                 del self.peers[eid]
                 self.offline[credential] = (self.room.tick + 30 * wire.HZ, self.room.leave(eid))
             writer.transport.abort()
+
+    @staticmethod
+    async def _refuse(writer: asyncio.StreamWriter, exc: Exception) -> None:
+        """Say why a join is refused before closing, when the refusal has a code (wire.VersionMismatch: another
+        protocol version; mesh_net.persistence.Refused)."""
+        code = getattr(exc, "code", None)
+        if code is not None:
+            writer.write(wire.encode({"v": wire.VERSION, "type": "refused", "code": code}))
+            await asyncio.wait_for(writer.drain(), 2)
 
     async def _run_clock(self) -> None:
         loop = asyncio.get_running_loop()
@@ -134,14 +147,11 @@ class WorldServer(Server):
         pid = None
         try:
             msg = await wire.read(reader)
-            wire.fields(msg, "join", "resume", *(("character",) if "character" in msg else ()))
             try:
+                wire.fields(msg, "join", "resume", *(("character",) if "character" in msg else ()))
                 pid, credential = self.world.connect(msg["resume"], msg.get("character"))
             except Exception as exc:
-                code = getattr(exc, "code", None)  # (mesh_net.persistence.Refused: say why before closing)
-                if code is not None:
-                    writer.write(wire.encode({"v": 1, "type": "refused", "code": code}))
-                    await asyncio.wait_for(writer.drain(), 2)
+                await self._refuse(writer, exc)  # (another protocol version, or mesh_net.persistence.Refused)
                 raise
             self.peers[pid] = writer
             from .world import welcome  # noqa: PLC0415  # (the world's own frame builder)

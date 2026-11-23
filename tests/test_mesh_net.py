@@ -11,7 +11,7 @@ from mesh_net.simulation import Room
 
 
 def intent(eid, seq, dx=1, dy=0):
-    return {"v": 1, "type": "input", "entity": eid, "seq": seq, "dx": dx, "dy": dy}
+    return {"v": 2, "type": "input", "entity": eid, "seq": seq, "dx": dx, "dy": dy}
 
 
 @pytest.mark.fast
@@ -30,7 +30,7 @@ def test_step_owns_distance_and_old_inputs_expire():
         room.step()
     assert room.players[eid].x == start + 20
     for invalid in [intent(eid + 1, 7), intent(eid, True), intent(eid, 7, 9), intent(eid, 7, 1, 1),
-                    {**intent(eid, 7), "x": 10}, {**intent(eid, 7), "v": 2}]:
+                    {**intent(eid, 7), "x": 10}, {**intent(eid, 7), "v": 1}]:
         with pytest.raises(wire.Invalid):
             room.input(eid, invalid)
 
@@ -83,7 +83,7 @@ def test_bad_frames_close_only_the_offender():
         port = await server.start()
         try:
             async with connect(port) as survivor:
-                for data in [b'{"v":1,"type":"join","resume":null,"resume":null}\n', b'[]\n', b'\xff\n',
+                for data in [b'{"v":2,"type":"join","resume":null,"resume":null}\n', b'[]\n', b'\xff\n',
                              b'[' * 1500 + b']' * 1500 + b'\n', b'x' * (wire.MAX_BYTES + 1) + b'\n']:
                     reader, writer = await asyncio.open_connection("127.0.0.1", port)
                     try:

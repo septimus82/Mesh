@@ -182,7 +182,7 @@ def run_authority(room: SceneRoom, starts: list[tuple[float, float, float]],
         before = []
         for i, eid in enumerate(eids):
             dx, dy = scripts[i][tick]
-            room.input(eid, {"v": 1, "type": "input", "entity": eid, "seq": tick + 1, "dx": dx, "dy": dy})
+            room.input(eid, {"v": 2, "type": "input", "entity": eid, "seq": tick + 1, "dx": dx, "dy": dy})
             body = room.players[eid].body
             before.append((body.center_x, body.center_y))
         room.step()
@@ -349,7 +349,7 @@ def test_the_authority_has_no_floor_solver_of_its_own(room: SceneRoom, monkeypat
 
     monkeypatch.setattr(World, "move", spy)
     eid = room.join()
-    room.input(eid, {"v": 1, "type": "input", "entity": eid, "seq": 1, "dx": 1, "dy": 1})
+    room.input(eid, {"v": 2, "type": "input", "entity": eid, "seq": 1, "dx": 1, "dy": 1})
     room.step()
     room.leave(eid)
     assert calls == [scene_room.move], "the authority's movement is World.move with its sweep"

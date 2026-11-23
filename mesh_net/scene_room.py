@@ -18,7 +18,8 @@ body's elevation is its ``mesh_entity_data["elevation"]``, as a sprite's. Refuse
 authority would differ from single-player: a room single-player plays 2D, water that limits walking (owner D4), a
 template that can't stand where it is. The room's ``World.collision_digest`` is part of its identity, so a client whose
 files give another collision world is refused before it enters (mesh_net.scene_client.check_window_world adds its
-window's own world). Elevation stays server-side (wire v1 unchanged) until M3.
+window's own world). Snapshots carry each body's elevation and floor (wire v2, mesh_net.protocol); clients place
+avatars there and check them against their own world (check_state), never send them.
 """
 
 from __future__ import annotations
@@ -58,7 +59,9 @@ if TYPE_CHECKING:  # (2D rooms never load the 3D code)
 
 ACTIONS = ("attack", "take", "use")
 MAX_OBJECTS = 32  # doors + levers + enemies: keeps a full snapshot inside one frame
-BOUND = 100_000.0  # coordinate sanity limit on the wire
+BOUND = 100_000.0  # coordinate sanity limit on the wire (x, y and elevation, px)
+MAX_FLOOR = 128  # characters in a floor id on the wire
+ROUNDING = 0.005  # px: how far a snapshot's x/y (rounded to 0.01 px) may be from the authority's
 FLIP_MASK = 0x80000000 | 0x40000000 | 0x20000000  # engine.tilemap.FLIP_MASK (that module needs Arcade)
 # The authored defaults of the behaviours read here (their PARAM_DEFS; a test keeps them equal).
 SPEED = 150.0
@@ -128,6 +131,7 @@ class Body:
     width: float
     height: float
     mesh_entity_data: dict[str, Any]
+    mesh_hd2d_floor: str | None = None  # HD-2D: the floor it stands on (World.move sets it; SceneRoom.join first)
 
 
 def body(entity: dict[str, Any], root: Path) -> Body:
@@ -396,6 +400,13 @@ class SceneRoom:
         refuse_unsupported(scene)
         self.world = hd2d_world(scene, root)  # HD-2D: the one collision world; None for a 2D room
         self.digest: str | None = self.world.collision_digest() if self.world is not None else None
+        self.floor_ids: frozenset[str] = frozenset()  # every floor a body can stand on (a 2D room: none)
+        if self.world is not None:
+            grounds = {"ground"} if self.world.terrain is not None else set()
+            self.floor_ids = frozenset({s.floor for s in self.world.surfaces} | grounds)
+            if any(len(f) > MAX_FLOOR for f in self.floor_ids):
+                raise Unsupported(f"HD-2D room with a floor id longer than {MAX_FLOOR} characters (the wire's limit): "
+                                  "shorter structure ids or collider names")
         entities = scene["entities"]
         ids = [e.get("id") for e in entities]
         if any(not isinstance(i, str) or not i for i in ids) or len(set(ids)) != len(ids):
@@ -406,6 +417,7 @@ class SceneRoom:
         template = players[0]
         self.template, self.root = template, root
         self.spawn = (float(template["x"]), float(template["y"]))
+        self.size = self._template_size()  # (read once: a client checks every row with it, check_levels)
         if collider_shape(Body(*self.spawn, *self._template_size(), template)) is None:
             raise Unsupported("the player template needs a sized box or circle collider (Studio characters start with "
                               "an automatic one); Arcade's picture hit boxes cannot run without Arcade")
@@ -451,7 +463,7 @@ class SceneRoom:
         self.next_id = 1
         self.players: dict[int, Player] = {}
         try:
-            wire.encode({"v": 1, **self._worst_snapshot()})
+            wire.encode({"v": wire.VERSION, **self._worst_snapshot()})
         except wire.Invalid as exc:
             raise Unsupported("the room's largest snapshot would not fit in one frame (shorter ids, fewer objects)") from exc
 
@@ -463,8 +475,25 @@ class SceneRoom:
         eid, self.next_id = self.next_id, self.next_id + 1
         if player is None:
             player = Player(Body(*self.spawn, *self._template_size(), dict(self.template)))  # (its own elevation)
+        if self.world is not None and player.body.mesh_hd2d_floor is None:  # (a body not yet moved here)
+            from engine.hd2d.world import elevation_of  # noqa: PLC0415
+
+            stood = self._stand(player.body, elevation_of(player.body))
+            if stood is None:  # (never expected: spawns and arrivals are checked to stand)
+                raise wire.Invalid("the body can't stand where it joins")
+            player.body.mesh_hd2d_floor = stood[1]
         self.players[eid] = player
         return eid
+
+    def level(self, body: Body) -> tuple[float, str | None]:
+        """What the wire says of where ``body`` stands (mesh_net.protocol): its elevation (px) and floor; (0, None)
+        in a 2D room."""
+        if self.world is None:
+            return 0, None
+        from engine.hd2d.settings import PIXELS_PER_METRE  # noqa: PLC0415
+        from engine.hd2d.world import elevation_of  # noqa: PLC0415
+
+        return round(elevation_of(body) * PIXELS_PER_METRE, 3), body.mesh_hd2d_floor
 
     def _template_size(self) -> tuple[float, float]:
         return picture_size(self.template, self.root) or (0.0, 0.0)
@@ -502,8 +531,9 @@ class SceneRoom:
     def _worst_snapshot(self) -> wire.Message:
         """The largest snapshot this room can send (ticks and ids at their wire maximum: never reached)."""
         far = -BOUND + 0.01
+        floor = max(sorted(self.floor_ids), key=len, default=None)
         return {"type": "scene_state", "tick": wire.MAX_SEQ, "scene": self.identity,
-                "players": [[wire.MAX_SEQ - i, far, far, 3] for i in range(wire.MAX_PLAYERS)],
+                "players": [[wire.MAX_SEQ - i, far, far, 3, far, floor] for i in range(wire.MAX_PLAYERS)],
                 "open": sorted(self.doors), "used": sorted(self.levers),
                 "enemies": [[i, e.state.max_hp] for i, e in self.enemies.items()],
                 "drops": sorted(self.enemies), "loot": [[i, wire.MAX_SEQ] for i in self.enemies]}
@@ -607,8 +637,8 @@ class SceneRoom:
 
     def snapshot(self) -> wire.Message:
         owner = {id(p): eid for eid, p in self.players.items()}
-        return {"v": 1, "type": "scene_state", "tick": self.tick, "scene": self.identity,
-                "players": [[eid, round(p.body.center_x, 2), round(p.body.center_y, 2), p.facing]
+        return {"v": wire.VERSION, "type": "scene_state", "tick": self.tick, "scene": self.identity,
+                "players": [[eid, round(p.body.center_x, 2), round(p.body.center_y, 2), p.facing, *self.level(p.body)]
                             for eid, p in sorted(self.players.items())],
                 "open": sorted(set(self.doors) - self.locked), "used": sorted(self.used),
                 "enemies": [[i, e.state.hp] for i, e in sorted(self.enemies.items())],
@@ -664,8 +694,16 @@ def parse_input(msg: wire.Message, eid: int) -> tuple[int, int, int, str | None]
     return msg["seq"], dx, dy, action
 
 
-def check_state(msg: wire.Message, scene: str | None = None) -> None:
-    """A client's validation of one scene_state frame (and, given its own scene's identity, that they match)."""
+def _number(value: Any) -> bool:
+    """A finite wire number within the coordinate bound (NaN fails every comparison, so it never passes)."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and abs(value) <= BOUND
+
+
+def check_state(msg: wire.Message, scene: str | None = None, room: SceneRoom | None = None) -> None:
+    """A client's validation of one scene_state frame (and, given its own scene's identity, that they match; given its
+    own room, that every body stands where the client's own collision world says it can: check_levels)."""
+    if not isinstance(msg, dict):
+        raise wire.Invalid("invalid scene snapshot")
     wire.fields(msg, "scene_state", "tick", "scene", "players", "open", "used", "enemies", "drops", "loot")
     if not wire.integer(msg["tick"], 0) or not isinstance(msg["scene"], str) or len(msg["scene"]) != 64:
         raise wire.Invalid("invalid scene snapshot")
@@ -675,10 +713,10 @@ def check_state(msg: wire.Message, scene: str | None = None) -> None:
     if type(players) is not list or len(players) > wire.MAX_PLAYERS:
         raise wire.Invalid("invalid players")
     seen = set()
-    for row in players:
-        if (not isinstance(row, list) or len(row) != 4 or not wire.integer(row[0], 1) or row[0] in seen
-                or not all(isinstance(v, (int, float)) and not isinstance(v, bool) and abs(v) <= BOUND for v in row[1:3])
-                or not wire.integer(row[3], 0, 3)):
+    for row in players:  # [entity, x, y, facing, elevation, floor] (mesh_net.protocol)
+        if (not isinstance(row, list) or len(row) != 6 or not wire.integer(row[0], 1) or row[0] in seen
+                or not all(_number(v) for v in (row[1], row[2], row[4])) or not wire.integer(row[3], 0, 3)
+                or not (row[5] is None or (isinstance(row[5], str) and 0 < len(row[5]) <= MAX_FLOOR))):
             raise wire.Invalid("invalid player row")
         seen.add(row[0])
     for key in ("open", "used", "drops"):
@@ -690,3 +728,31 @@ def check_state(msg: wire.Message, scene: str | None = None) -> None:
         if type(rows) is not list or len(rows) > MAX_OBJECTS or not all(
                 isinstance(r, list) and len(r) == 2 and isinstance(r[0], str) and check(r[1]) for r in rows):
             raise wire.Invalid(f"invalid {key}")
+    if room is not None:
+        check_levels(players, room)
+
+
+def check_levels(players: list[Any], room: SceneRoom) -> None:
+    """Each (well-formed) row's elevation and floor against the client's own room. A 2D room: elevation 0, no floor.
+    An HD-2D room: a floor its collision world has, and one that is there, under the row's feet, within a step
+    (World.STEP: what a body standing on it may be off by) of the row's elevation; anything else is inconsistent with
+    the world both sides run, and refused (never adjusted). The feet are sampled at the row's x/y and the corners of
+    its 0.01 px rounding, so the rounding itself never refuses a floor's own edge."""
+    if room.world is None:
+        if any(row[4] != 0 or row[5] is not None for row in players):
+            raise wire.Invalid("a 2D room's player row carries an elevation or a floor")
+        return
+    from engine.hd2d.settings import PIXELS_PER_METRE  # noqa: PLC0415
+    from engine.hd2d.world import STEP  # noqa: PLC0415
+
+    w, h = room.size
+    for row in players:
+        floor, z = row[5], row[4] / PIXELS_PER_METRE
+        if floor not in room.floor_ids:
+            raise wire.Invalid(f"a player row stands on a floor this room does not have: {str(floor)[:48]!r}")
+        box = entity_aabb(Body(row[1], row[2], w, h, room.template))
+        x, y, r = box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE, ROUNDING / PIXELS_PER_METRE
+        if not any(s.floor == floor and abs(height - z) <= STEP + 1e-6
+                   for px, py in ((x, y), (x - r, y - r), (x + r, y - r), (x - r, y + r), (x + r, y + r))
+                   for height, s in room.world.heights_at(px, py)):
+            raise wire.Invalid(f"a player row's floor {floor!r} is not under it at elevation {row[4]:g} px")

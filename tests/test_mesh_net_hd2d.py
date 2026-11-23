@@ -3,6 +3,9 @@ collision world single-player builds (engine.hd2d.world.build_world + World.move
 only where it would differ from single-player, keeps single-player's arrival rule, and a client whose collision world
 differs (its files, or its window's own build) is refused before it plays the room.
 
+M3-2 (wire v2): snapshot rows carry each body's elevation and floor, clients place avatars there and refuse rows their
+own collision world contradicts, and no client frame can place a body.
+
 The room is the floors demo's stone crossing (tooling/hd2d_floors_demo.py build): ground, stairs, two platforms 2 m up
 and a bridge between them over an underpass."""
 
@@ -24,7 +27,7 @@ from engine.physics_model import entity_aabb
 from mesh_net import protocol as wire
 from mesh_net.client import connect
 from mesh_net.scene_client import JoinRefused, SceneView, check_window_world
-from mesh_net.scene_room import COOP_SCENE, SceneRoom, Unsupported, check_state, coop_files, disposable_project, load_scene
+from mesh_net.scene_room import COOP_SCENE, Player, SceneRoom, Unsupported, check_state, coop_files, disposable_project, load_scene
 from mesh_net.server import Server
 from mesh_net.world import WORLD_FILE, World, check_welcome, welcome
 
@@ -107,7 +110,7 @@ class Walker:
 
     def send(self, eid: int, dx: int, dy: int) -> None:
         self.seq += 1
-        self.room.input(eid, {"v": 1, "type": "input", "entity": eid, "seq": self.seq, "dx": dx, "dy": dy})
+        self.room.input(eid, {"v": 2, "type": "input", "entity": eid, "seq": self.seq, "dx": dx, "dy": dy})
 
 
 def test_the_authority_walks_the_crossing_on_the_shared_floor_solver(crossing: dict[str, bytes]) -> None:
@@ -224,7 +227,7 @@ def make_world(files: dict[str, bytes]) -> World:
 def walk_through(world: World, pid: int, dx: int, dy: int, ticks: int = 60) -> None:
     for seq in range(1, ticks + 1):
         m = world.members[pid]
-        world.input(pid, {"v": 1, "type": "input", "room": m.instance, "entity": m.eid, "seq": seq, "dx": dx, "dy": dy})
+        world.input(pid, {"v": 2, "type": "input", "room": m.instance, "entity": m.eid, "seq": seq, "dx": dx, "dy": dy})
         world.step()
         if m.instance != world.hub.id or world.members[pid].outbox and any(
                 f["type"] == "notice" for f in world.members[pid].outbox):
@@ -243,7 +246,7 @@ def test_an_arrival_keeps_the_rooms_elevation_and_one_that_cant_stand_is_refused
     walk_through(world, pid, 0, -1)  # into "down": the deck room's player (2 m up) can't stand on its ground arrival
     m = world.members[pid]
     assert m.instance == world.hub.id and m.eid in world.hub.room.players, "refused: still where it was"
-    assert {"v": 1, "type": "notice", "code": "transfer_failed"} in m.outbox
+    assert {"v": 2, "type": "notice", "code": "transfer_failed"} in m.outbox
     assert world.history[-1][2:] == ("transfer", pid, f"{world.hub.id} down transfer_failed")
     m.outbox.clear()
     walk_through(world, pid, 0, 1)  # into "up": its arrival on the west platform
@@ -252,7 +255,7 @@ def test_an_arrival_keeps_the_rooms_elevation_and_one_that_cant_stand_is_refused
     body = world.instances[m.instance or ""].room.players[m.eid].body
     assert (body.center_x, body.center_y) == (317.0, 391.5), "the marker's x/y"
     assert body.mesh_entity_data["elevation"] == 64.0, "the room's player elevation, kept (single-player's rule)"
-    world.input(pid, {"v": 1, "type": "input", "room": m.instance, "entity": m.eid, "seq": 999, "dx": 0, "dy": -1})
+    world.input(pid, {"v": 2, "type": "input", "room": m.instance, "entity": m.eid, "seq": 999, "dx": 0, "dy": -1})
     world.step()
     assert getattr(body, "mesh_hd2d_floor", None) == "crossing/col_platform_west" and body.mesh_entity_data["elevation"] == 64.0
 
@@ -401,10 +404,183 @@ def test_the_authority_runs_an_hd2d_room_without_graphics(crossing: dict[str, by
             f"files = {{p.relative_to(r).as_posix(): p.read_bytes() for r in [Path({str(project)!r})] for p in r.rglob('*') if p.is_file()}}\n"
             "with disposable_project(files, scaffold=False) as root: room = SceneRoom(root / 'packs/core_regions/scenes/start.json', root)\n"
             "Server(room); eid = room.join()\n"
-            "for seq in range(1, 31): room.input(eid, {'v': 1, 'type': 'input', 'entity': eid, 'seq': seq, 'dx': -1, 'dy': 0}); room.step()\n"
+            "for seq in range(1, 31): room.input(eid, {'v': 2, 'type': 'input', 'entity': eid, 'seq': seq, 'dx': -1, 'dy': 0}); room.step()\n"
             "assert room.world is not None and room.players[eid].body.center_x < 512 - 100\n"
             "bad = [k for k in ('arcade', 'pyglet', 'engine.game', 'engine.studio', 'engine.physics_runtime') if k in sys.modules]\n"
             "assert not bad, bad\n"
             "print(room.identity)")
     done = subprocess.run([sys.executable, "-c", code], check=True, capture_output=True, text=True)
     assert done.stdout.strip().splitlines()[-1] == make_room(files).identity
+
+
+# --- M3-2: wire v2 carries each body's elevation and floor ----------------------------------------------------------
+
+DECK = "crossing/col_bridge_deck"
+
+
+def deck_and_under(room: SceneRoom) -> tuple[int, int]:
+    """Two players at one place: one on the bridge deck (2 m up), one on the ground under it (as above)."""
+    walk = Walker(room)
+    deck, under = room.join(), room.join()
+    for dx, dy, target in ((-1, 0, 10.0), (0, 1, 11.5), (1, 0, 16.0)):
+        assert walk.drive(deck, dx, dy, target)
+    assert walk.drive(under, 0, 1, 12.0) and walk.drive(deck, 0, 1, walk.feet(under)[1])
+    assert walk.where(deck) == (64.0, DECK) and walk.where(under) == (0.0, "ground")
+    return deck, under
+
+
+def headless_view(room: SceneRoom) -> SceneView:
+    """A client's SceneView of ``room`` without a window: what SceneView.sync and draw use of one (avatars are plain
+    objects; nothing is drawn)."""
+    entities = SimpleNamespace(enqueue_spawn=lambda sprite, **kw: None, enqueue_despawn=lambda sprite: None,
+                               apply_pending_ops=lambda scene: None)
+    scene = SimpleNamespace(entities=entities, _rebuild_behaviours_for_sprite=lambda sprite: None, update=lambda dt: None,
+                            _create_sprite=lambda data: SimpleNamespace(mesh_entity_data=data, mesh_behaviours=[]))
+    view = SceneView.__new__(SceneView)
+    view.window, view.arcade, view.scene = SimpleNamespace(hd2d_renderer=None, on_draw=lambda: None), None, scene
+    view.room, view.identity, view.template = room, room.identity, dict(room.template)
+    view.sprites, view.doors, view.levers, view.colors, view.avatars, view.drops = {}, [], [], {}, {}, {}
+    return view
+
+
+def row(state: dict[str, Any], eid: int) -> list[Any]:
+    return next(r for r in state["players"] if r[0] == eid)
+
+
+def test_a_body_on_the_deck_arrives_at_other_clients_at_deck_height(crossing: dict[str, bytes]) -> None:
+    """The authority walks one body onto the bridge deck and another under it; a client (its room from its own files)
+    receives both rows with their elevation and floor and places each avatar there: what the HD-2D renderer draws."""
+    from engine.hd2d.renderer import Hd2dRenderer
+    from mesh_net.playback import Playback
+    from mesh_net.scene_client import SceneArena
+
+    server = make_room(crossing)
+    deck, under = deck_and_under(server)
+    client = make_room(dict(crossing))
+    playback = Playback(lambda s: check_state(s, client.identity, client))
+    for t in range(4):  # (still: the bodies stand)
+        server.step()
+        state = server.snapshot()
+        assert playback.push(state, t / wire.HZ)
+    assert row(state, deck)[4:] == [64.0, DECK] and row(state, under)[4:] == [0.0, "ground"]
+    view = headless_view(client)
+    arena: Any = SimpleNamespace(client=SimpleNamespace(state=state, entity=under), playback=playback, view=view,
+                                 last=None)
+    SceneArena.draw(arena, 1.0)  # (this client is the one under the bridge; its peer is on the deck)
+    peer, own = view.avatars[deck], view.avatars[under]
+    assert (peer.mesh_entity_data["elevation"], peer.mesh_hd2d_floor) == (64.0, DECK)
+    assert (own.mesh_entity_data["elevation"], own.mesh_hd2d_floor) == (0.0, "ground")
+    assert Hd2dRenderer.elevation_of(peer) == 64.0 and Hd2dRenderer.elevation_of(own) == 0.0
+    assert abs(peer.center_x - own.center_x) < 0.01, "one place, two floors"
+    assert view.template.get("elevation") is None, "placing avatars never writes the room's template"
+
+
+def test_the_level_on_the_wire_is_the_authoritys_own(crossing: dict[str, bytes]) -> None:
+    """Up the stairs, every snapshot's row says the body's elevation and floor as the authority holds them, and each
+    passes the client's own world's check; a body just joined has its floor too."""
+    room, client = make_room(crossing), make_room(dict(crossing))
+    walk = Walker(room)
+    a = room.join()
+    assert row(room.snapshot(), a)[4:] == [0.0, "ground"], "a body not yet moved"
+    walk.drive(a, -1, 0, 10.0)
+    floors = set()
+    for _ in range(80):
+        walk.send(a, 0, 1)
+        room.step()
+        state = room.snapshot()
+        check_state(state, client.identity, client)
+        elevation, floor = walk.where(a)
+        assert row(state, a)[4:] == [elevation, floor]
+        floors.add(floor)
+    assert {"ground", "crossing/col_stairs_west", "crossing/col_platform_west"} <= floors
+
+
+def test_malformed_rows_are_refused_whole(crossing: dict[str, bytes]) -> None:
+    """Wrong arity or types, NaN or infinity, an elevation past the bound, a floor id the room doesn't have: refused
+    (wire.Invalid, the connection's end), before anything is applied."""
+    from mesh_net.world_client import WorldArena
+
+    room = make_room(crossing)
+    deck, _under = deck_and_under(room)
+    room.step()
+    good = room.snapshot()
+    check_state(good, room.identity, room)
+    d = row(good, deck)
+
+    def with_deck(new: list[Any]) -> dict[str, Any]:
+        return {**good, "players": [new if r[0] == deck else r for r in good["players"]]}
+
+    nan = [*d[:4], float("nan"), DECK]
+    bad_rows = [d[:5], [*d, None], [*d[:4], "64", DECK], [*d[:4], True, DECK], [*d[:4], None, DECK], nan,
+                [*d[:4], float("inf"), DECK], [*d[:4], -float("inf"), DECK], [*d[:4], 100_001.0, DECK],
+                [*d[:4], 64.0, 3], [*d[:4], 64.0, ""], [*d[:4], 64.0, "x" * 129], [*d[:4], 64.0, "crossing/col_no_such"],
+                [d[0], float("nan"), *d[2:]]]
+    for bad in bad_rows:
+        with pytest.raises(wire.Invalid):
+            check_state(with_deck(bad), room.identity, room)
+    # The world client: a refused frame changes nothing it holds (no half-applied state).
+    arena: Any = SimpleNamespace(identities={"start": room.identity}, defs={"start": SimpleNamespace(proto=room)},
+                                 room=None, key=None, entity=None, state=None, playback=None, pending=None, phase="loading")
+    enter = {"v": 2, "type": "enter", "room": "start:1", "key": "start", "entity": deck}
+    with pytest.raises(wire.Invalid):
+        WorldArena.on_frame(arena, {**enter, "state": with_deck(nan)}, 0.0)
+    assert (arena.room, arena.state, arena.playback, arena.pending) == (None, None, None, None)
+    WorldArena.on_frame(arena, {**enter, "state": good}, 0.0)
+    kept = arena.state
+    newer = {**with_deck([*d[:4], float("inf"), DECK]), "tick": good["tick"] + 1}
+    with pytest.raises(wire.Invalid):
+        WorldArena.on_frame(arena, {"v": 2, "type": "room_state", "room": "start:1", "state": newer}, 0.1)
+    assert arena.state is kept and arena.playback.states[-1] is kept
+
+
+def test_rows_inconsistent_with_the_clients_own_world_are_refused(crossing: dict[str, bytes]) -> None:
+    """A floor that is not under the row at its elevation (the deck's id at ground height, the ground at deck height,
+    a floor elsewhere in the room) is refused, never corrected."""
+    room = make_room(crossing)
+    deck, under = deck_and_under(room)
+    room.step()
+    good = room.snapshot()
+    d, u = row(good, deck), row(good, under)
+    for bad_deck, bad_under in (([*d[:4], 0.0, DECK], u), (d, [*u[:4], 0.0, DECK]), ([*d[:4], 64.0, "ground"], u),
+                                ([*d[:4], 64.0, "crossing/col_platform_east"], u), ([*d[:4], 50.0, DECK], u)):
+        with pytest.raises(wire.Invalid, match="is not under it"):
+            check_state({**good, "players": sorted([bad_deck, bad_under])}, room.identity, room)
+    check_state({**good, "players": sorted([[*d[:4], 60.0, DECK], u])}, room.identity, room)  # (within a step)
+
+
+def test_a_client_can_never_place_a_body(crossing: dict[str, bytes]) -> None:
+    """Input frames are a direction and an action only: one carrying an elevation, a floor or a position is refused
+    (N6 and N7), over the socket the session ends, and the body stays where the server had it."""
+    from engine.hd2d.world import elevation_of
+
+    room = make_room(crossing)
+    eid = room.join()
+    base = {"v": 2, "type": "input", "entity": eid, "seq": 1, "dx": 0, "dy": 0}
+    for extra in ({"elevation": 64.0}, {"floor": DECK}, {"x": 1.0, "y": 1.0}, {"z": 2.0}, {"level": [64.0, DECK]}):
+        with pytest.raises(wire.Invalid):
+            room.input(eid, {**base, **extra})
+    body = room.players[eid].body
+    assert (elevation_of(body), body.mesh_hd2d_floor) == (0.0, "ground")
+    world = make_world(world_files(crossing, [door("up", 512.0, 200.0, "high")]))
+    pid, _ = world.connect(None)
+    m = world.members[pid]
+    with pytest.raises(wire.Invalid):
+        world.input(pid, {**base, "room": m.instance, "entity": m.eid, "elevation": 64.0, "floor": DECK})
+
+    async def run() -> None:
+        server = Server(make_room(crossing))
+        port = await server.start()
+        try:
+            async with connect(port, check=lambda s: check_state(s, room.identity, room)) as client:
+                client.writer.write(wire.encode({**base, "entity": client.entity, "elevation": 64.0, "floor": DECK}))
+                with pytest.raises((EOFError, ConnectionError, wire.Invalid)):
+                    for _ in range(200):
+                        await client.receive()
+            assert not server.room.players and len(server.offline) == 1
+            [(_expiry, kept)] = server.offline.values()
+            assert isinstance(kept, Player)
+            assert (elevation_of(kept.body), kept.body.mesh_hd2d_floor) == (0.0, "ground"), "never the client's"
+        finally:
+            await server.close()
+
+    asyncio.run(run())

@@ -43,13 +43,13 @@ The room was built by `tooling/make_coop_scene.py` with Mesh's own authoring cod
 
 ### Wire changes
 
-The join, welcome, resume and quota rules are N4's protocol version 1. Hosting a scene changes two messages:
+The join, welcome, resume and quota rules are N4's (now protocol version 2). Hosting a scene changes two messages:
 
 - **`input`** may carry the action `use`, and diagonal directions.
 - **`scene_state`** replaces `state`. It carries:
   - `tick`
   - `scene` (the identity)
-  - `players` as `[entity, x, y, facing]`, with scene coordinates rounded to 0.01 and facing 0–3 (right, up, left, down); clients don't use facing yet
+  - `players` as `[entity, x, y, facing, elevation, floor]`, with scene coordinates rounded to 0.01 and facing 0–3 (right, up, left, down); clients don't use facing yet. `elevation` (px) and `floor` (the collision world's floor id, `"ground"` for its ground) are where the server stands the body in an HD-2D room; a 2D room sends `0` and `null`. Clients place avatars there, refuse rows their own collision world contradicts, and never send either (protocol version 2, M3-2)
   - `open` (ids of unlocked doors)
   - `used` (ids of used levers)
   - `enemies` as `[id, hp]`

@@ -224,8 +224,8 @@ class World:
         for key, d in self.defs.items():  # the largest frame any room can send must fit
             worst = d.proto._worst_snapshot()
             try:
-                wire.encode({"v": 1, "type": "enter", "room": f"{key}:999999999", "key": key, "entity": wire.MAX_SEQ,
-                             "state": {"v": 1, **worst}})
+                wire.encode({"v": wire.VERSION, "type": "enter", "room": f"{key}:999999999", "key": key, "entity": wire.MAX_SEQ,
+                             "state": {"v": wire.VERSION, **worst}})
             except wire.Invalid as exc:
                 raise Unsupported(f"room '{key}' could send a frame larger than {wire.MAX_BYTES} bytes") from exc
         self.sizes = {key: d.proto._template_size() for key, d in self.defs.items()}  # read once: no file at runtime
@@ -356,7 +356,7 @@ class World:
         m.instance = inst.id
         inst.touching[m.eid] = self._doors_touched(inst, player.body)
         m.outbox = [msg for msg in m.outbox if msg["type"] != "enter"]
-        m.outbox.insert(0, {"v": 1, "type": "enter", "room": inst.id, "key": inst.key, "entity": m.eid,
+        m.outbox.insert(0, {"v": wire.VERSION, "type": "enter", "room": inst.id, "key": inst.key, "entity": m.eid,
                             "state": inst.room.snapshot()})
 
     def _doors_touched(self, inst: Instance, body: Body) -> frozenset[str]:
@@ -483,7 +483,7 @@ class World:
 
     def _notice(self, m: Member, code: str) -> None:
         if m.online and len(m.outbox) < 8:
-            m.outbox.append({"v": 1, "type": "notice", "code": code})
+            m.outbox.append({"v": wire.VERSION, "type": "notice", "code": code})
 
     # --- simulation ---------------------------------------------------------------------------------
 
@@ -583,7 +583,7 @@ class World:
     def party_view(self, m: Member) -> wire.Message:
         party = self.parties.get(m.party or 0)
         inst = self.instances[m.instance or ""]
-        return {"v": 1, "type": "party", "you": m.pid, "party": party.id if party else None,
+        return {"v": wire.VERSION, "type": "party", "you": m.pid, "party": party.id if party else None,
                 "leader": party.leader if party else None,
                 "members": [[p, self.members[p].online, self.instances[self.members[p].instance or ""].key]
                             for p in party.members] if party else [],
@@ -593,7 +593,7 @@ class World:
     def deliver(self) -> dict[int, list[wire.Message]]:
         """This tick's frames per online player: queued ones (an ``enter`` first), the party view when it changed,
         then their own room's state. A player never receives another room's state."""
-        states = {i: {"v": 1, "type": "room_state", "room": i, "state": inst.room.snapshot()}
+        states = {i: {"v": wire.VERSION, "type": "room_state", "room": i, "state": inst.room.snapshot()}
                   for i, inst in self.instances.items()}
         out = {}
         for m in self.members.values():
@@ -621,7 +621,7 @@ class World:
 
 def welcome(session: str, player: int, resume: str, world: str) -> wire.Message:
     """The frame a world server answers a join with (mesh_net.server.WorldServer; check_welcome reads it)."""
-    return {"v": 1, "type": "welcome", "session": session, "player": player, "resume": resume, "world": world}
+    return {"v": wire.VERSION, "type": "welcome", "session": session, "player": player, "resume": resume, "world": world}
 
 
 # --- client-side validation (a world client checks every frame it receives) -----------------------

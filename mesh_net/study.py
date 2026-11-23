@@ -49,7 +49,7 @@ def study(*, lag_ms: int = 75, jitter_ms: int = 40, loss: float = 0.1, seed: int
         if ms % 50 == 0:
             seq += 1
             dx = (1 if ms // 1000 % 2 == 0 else -1) if ms < 4000 else 0
-            send({"v": 1, "type": "input", "entity": eid, "seq": seq, "dx": dx, "dy": 0}, ms)
+            send({"v": wire.VERSION, "type": "input", "entity": eid, "seq": seq, "dx": dx, "dy": 0}, ms)
         deliver(ms)
         if ms % 50 == 0:
             room.step()
