@@ -35,6 +35,8 @@ class InputBudget:
     (``Server._run_clock``), but the backlog to read covers all of the stall's time.
     """
 
+    # (RATE and BURST are fixed from wire.HZ at import: HZ is implicit on both sides of the wire, so changing it
+    # is a protocol change anyway.)
     RATE = 2 * wire.HZ  # tokens a second
     BURST = 3 * wire.HZ  # 3 s of a client's input: a 2 s stall's backlog (40) with room to spare
     START = 8

@@ -34,7 +34,7 @@ The room was built by `tooling/make_coop_scene.py` with Mesh's own authoring cod
 
 ### Authority rules the server enforces
 
-- **Ownership, ordering and quotas.** These are N4's, unchanged: inputs are tied to the connection's entity and to increasing sequence numbers, at most eight frames per tick, with bounded frames and backlog. A replayed sequence number neither steers nor acts. A spent resume credential is refused.
+- **Ownership, ordering and quotas.** These are N4's: inputs are tied to the connection's entity and to increasing sequence numbers, with bounded frames and backlog. The frame rate is limited by N4's token bucket (README, Protocol version 2): it refills at 40 frames a second up to a burst of 60, and a new session may send 8 at once. A replayed sequence number neither steers nor acts. A spent resume credential is refused.
 - **Movement.** Each component of the direction is -1, 0 or 1. Diagonals are normalised, as `PlayerController` does. Speed is `PlayerController.speed`, divided across 20 Hz ticks. Input expires after five ticks. Positions stay within ±100,000 px, the limit clients accept, on maps without walls at the edge.
 - **Lever.** A lever is chosen by the interaction rule above. A one-shot lever works once, for everyone. A gate can only change from locked to open. Players are resolved in entity-id order, so two players pulling in the same tick give one activation.
 - **Attack.** An attack is a `hitbox_size` square, `range` ahead of the player in the direction of the last move, tested against each living enemy's collider shape. Two hits in one tick on a dying enemy: the second finds it dead (`resolve_attack`'s rule). Cooldown is counted in ticks.

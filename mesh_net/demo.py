@@ -111,7 +111,7 @@ class Arena:
                         direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
                         action, self.action = self.action, None
                         await client.input(*direction, action=action)
-                        due = max(due + 1 / wire.HZ, loop.time())  # fixed schedule: no drift, no catch-up burst
+                        due = max(due + 1 / wire.HZ, loop.time())  # fixed schedule: no drift; after a stall, one extra send
                         await asyncio.sleep(due - loop.time())
 
                 async def receive_states() -> None:

@@ -101,7 +101,9 @@ room instance is already a self-contained object a future process could host).
 ### Limits (all checked)
 
 8 connections and 16 characters (online + retained), as N5; 8 players per room, as N6; 8 room instances (hub
-included); 4 players per party; 4 pending invitations per player, 60 s each; 8 frames per connection per tick;
+included); 4 players per party; 4 pending invitations per player, 60 s each; frames per connection through N4's token
+bucket (40 a second, bursts up to 60, 8 at once for a new session; past that the session is closed and the reason
+logged);
 one frame at most 8192 bytes, checked at load for each room's largest possible snapshot.
 
 ### Gate
