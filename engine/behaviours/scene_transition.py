@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from arcade import Sprite
 
 import engine.optional_arcade as optional_arcade
+from engine.hd2d.world import door_level, same_level
 
 from ..events import MeshEvent
 from .base import Behaviour, ParamDef
@@ -159,13 +161,17 @@ class SceneTransition(Behaviour):
 
         if not candidates:
             return
+        # An HD-2D room: only for a candidate on the door's level (engine.hd2d.world.door_level and same_level, as the
+        # net authority's doors); a 2D room has no World, and every candidate is on it.
+        world = getattr(self.window, "hd2d_world", None)
         if self.area[0] > 0 and self.area[1] > 0:
             x = float(self.entity.center_x)
             y = float(self.entity.bottom if self.area_at == "base" else self.entity.center_y)
             half_w, half_h = self.area[0] / 2, self.area[1] / 2
             for candidate in candidates:
                 if (candidate.left < x + half_w and candidate.right > x - half_w
-                        and candidate.bottom < y + half_h and candidate.top > y - half_h):
+                        and candidate.bottom < y + half_h and candidate.top > y - half_h
+                        and same_level(world, door_level(world, self._doorway(x, y, *self.area)), candidate)):
                     self._trigger_transition(reason="collision", actor=candidate)
                     return
             return
@@ -173,9 +179,16 @@ class SceneTransition(Behaviour):
         # buffers, and a sprite keeps every list it joins, so one per update grew the GPU's buffers without end.
         check = optional_arcade.arcade.check_for_collision
         for candidate in candidates:
-            if check(self.entity, candidate):
+            if check(self.entity, candidate) and same_level(world, door_level(world, self._doorway(
+                    self.entity.center_x, self.entity.bottom, self.entity.width, self.entity.height)), candidate):
                 self._trigger_transition(reason="collision", actor=candidate)
                 return
+
+    def _doorway(self, x: Any, y: Any, width: Any, height: Any) -> SimpleNamespace:
+        """The door's doorway for door_level: the area at (x, y), or a picture door's picture standing on its base
+        (in an HD-2D room a picture stands on its bottom edge: its middle is up in the wall behind)."""
+        return SimpleNamespace(center_x=x, center_y=y, width=width, height=height,
+                               mesh_entity_data=getattr(self.entity, "mesh_entity_data", None))
 
     def hidden_by_show_when(self) -> bool:
         """Whether its "Show when" (a ConditionalActivator on the door) keeps it hidden now, by the flags as they are

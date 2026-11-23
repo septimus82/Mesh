@@ -42,6 +42,7 @@ import heapq
 import json
 import math
 from dataclasses import dataclass
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Callable, Iterable
 
 from engine.hd2d.settings import PIXELS_PER_METRE, Hd2dSettings
@@ -202,6 +203,24 @@ def same_level(world: World | None, a: Any, b: Any) -> bool:
     box = entity_aabb(low)
     return not any(z0 + STEP < h < z1 + STEP and s.floor != _GROUND.floor
                    for h, s in world.heights_at(box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE))
+
+
+def door_level(world: World | None, area: Any) -> Any:
+    """What same_level asks about for a walk-in door (M3-3): its doorway ``area`` (center_x, center_y, width, height
+    px: the box a player walks into; ``mesh_entity_data``: the door's entity) at the floor a character stands on there
+    (World.stand, at the area's centre) nearest the door's saved elevation, or at its saved elevation where none is (and
+    always without an HD-2D World). Studio's Add door never saves an elevation, so a door added on a 2 m platform or on
+    ground sculpted up afterwards is saved at 0: it is on that floor, the only one to stand on there; one under an open
+    deck, where the ground and the deck both stand, stays on the floor nearest what it saved. Single-player's
+    SceneTransition and the net authority's doors both ask this, so they decide alike."""
+    z = elevation_of(area)
+    if isinstance(world, World):
+        x, y = area.center_x / PIXELS_PER_METRE, area.center_y / PIXELS_PER_METRE
+        found = {where[0] for h, _s in world.heights_at(x, y) if (where := world.stand(x, y, h, 0.0, 0.0)) is not None}
+        if found:
+            z = min(found, key=lambda h: (abs(h - z), h))
+    return SimpleNamespace(center_x=area.center_x, center_y=area.center_y, width=area.width, height=area.height,
+                           mesh_entity_data={"elevation": round(z * PIXELS_PER_METRE, 3)})
 
 
 def elevation_of(sprite: Any) -> float:

@@ -334,9 +334,10 @@ def defined_names(source: str) -> set[str]:
 def test_the_authority_has_no_floor_solver_of_its_own(room: SceneRoom, monkeypatch: pytest.MonkeyPatch) -> None:
     """mesh_net defines no ``stand``, ``STEP`` or other piece of the floor solver: World.move does it all, given
     mesh_net.scene_room.move (N6's Arcade-free 2D sweep) as its sweep. Nor a level rule of its own: using, attacking
-    and taking ask engine.hd2d.world.same_level (M3-4, tests/test_hd2d_same_level.py)."""
+    and taking ask engine.hd2d.world.same_level (M3-4, tests/test_hd2d_same_level.py), and doors door_level with it
+    (M3-3, tests/test_hd2d_doors_floors.py)."""
     solver = {"stand", "STEP", "BODY", "DEEP", "heights_at", "_settle", "_step", "_on_level", "excess", "Surface",
-              "same_level", "elevation_of"}
+              "same_level", "elevation_of", "door_level"}
     for path in sorted((REPO / "mesh_net").rglob("*.py")):
         assert not defined_names(path.read_text(encoding="utf-8")) & solver, f"{path.relative_to(REPO)} defines a solver part"
     for source in ("STEP, BODY = 0.35, 1.5", "async def stand(): pass", "self.excess = 0", "[a, *heights_at] = b",

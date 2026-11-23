@@ -10,10 +10,10 @@ id, never by a room's entity ids. See docs/networking/n7_multi_room.md.
 from __future__ import annotations
 
 import copy
+import dataclasses
 import enum
 import hashlib
 import json
-import math
 import re
 import secrets
 import time
@@ -74,12 +74,21 @@ class Door:
     y: float
     half_w: float
     half_h: float
+    world: Any = field(default=None, compare=False, repr=False)  # HD-2D: the room's World (None: a 2D room)
+    level: Any = field(default=None, compare=False, repr=False)  # HD-2D: engine.hd2d.world.door_level's answer
 
     def touches(self, body: Body) -> bool:
-        """SceneTransition.update's area test: the player picture's bounds against the area (strict overlap)."""
+        """SceneTransition.update's area test: the player picture's bounds against the area (strict overlap), and in an
+        HD-2D room the player on the door's level (engine.hd2d.world.same_level with door_level, single-player's)."""
         hw, hh = body.width / 2, body.height / 2
-        return (body.center_x - hw < self.x + self.half_w and body.center_x + hw > self.x - self.half_w
-                and body.center_y - hh < self.y + self.half_h and body.center_y + hh > self.y - self.half_h)
+        if not (body.center_x - hw < self.x + self.half_w and body.center_x + hw > self.x - self.half_w
+                and body.center_y - hh < self.y + self.half_h and body.center_y + hh > self.y - self.half_h):
+            return False
+        if self.world is None:
+            return True
+        from engine.hd2d.world import same_level  # noqa: PLC0415
+
+        return same_level(self.world, self.level, body)
 
 
 @dataclass
@@ -147,9 +156,13 @@ def room_defs(root: Path, world_file: str = WORLD_FILE) -> tuple[str, dict[str, 
                     arrivals.setdefault(marker, (float(e["x"]), float(e["y"])))
             cfg = config(e, "SceneTransition")
             if cfg is not None:
-                doors.append(_door(e, {**{k: e[k] for k in e if k in ("target_scene", "spawn_id")}, **cfg}))
-        if proto.world is not None:
-            _refuse_doors_over_floors(proto, doors)
+                door = _door(e, {**{k: e[k] for k in e if k in ("target_scene", "spawn_id")}, **cfg})
+                if proto.world is not None:  # HD-2D: it fires for a player on its level only (M3-3)
+                    from engine.hd2d.world import door_level  # noqa: PLC0415
+
+                    area = Body(door.x, door.y, 2 * door.half_w, 2 * door.half_h, e)
+                    door = dataclasses.replace(door, world=proto.world, level=door_level(proto.world, area))
+                doors.append(door)
         tags = entry.get("tags") or []
         defs[key] = RoomDef(key, entry["path"], str(entry.get("label") or key), EXPEDITION_TAG in tags, proto, doors, arrivals,
                             {i: config(e, "DropTable") for e in scene["entities"] if (i := e.get("id")) in proto.enemies})
@@ -186,27 +199,6 @@ def _door(entity: dict[str, Any], cfg: dict[str, Any]) -> Door:
     target = str(cfg.get("target_scene") or cfg.get("scene") or cfg.get("target") or "").strip()
     spawn = str(cfg.get("spawn_id") or cfg.get("target_spawn") or cfg.get("spawn_point") or "").strip()
     return Door(str(name), target, spawn, float(entity["x"]), float(entity["y"]), w / 2, h / 2)
-
-
-def _refuse_doors_over_floors(room: SceneRoom, doors: list[Door]) -> None:
-    """HD-2D: a walk-in door fires on a planar overlap (Door.touches), so where its area has more than one floor
-    height (a ground door under a deck, a door across stairs) it would fire for a player on any of them: refused
-    (elevation-aware doors are M3). Every place a player's body touching the area can be is sampled (4 px apart)."""
-    from engine.hd2d.world import STEP  # noqa: PLC0415
-
-    w, h = room._template_size()
-    for door in doors:
-        rx, ry = door.half_w + w / 2 - 0.01, door.half_h + h / 2 - 0.01  # (strict overlap: centres inside these)
-        nx, ny = max(1, math.ceil(2 * rx / 4)), max(1, math.ceil(2 * ry / 4))
-        heights: set[float] = set()
-        for i in range(nx + 1):
-            for j in range(ny + 1):
-                at = (door.x - rx + 2 * rx * i / nx, door.y - ry + 2 * ry * j / ny)
-                heights |= room.floors(Body(*at, w, h, room.template))
-        if heights and max(heights) - min(heights) > STEP:
-            raise Unsupported(f"door '{door.id}' covers more than one floor height ({min(heights):g} m and "
-                              f"{max(heights):g} m): it would fire for a player on any of them (HD-2D doors are "
-                              "planar here)")
 
 
 class World:
