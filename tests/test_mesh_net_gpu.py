@@ -4,28 +4,16 @@ import asyncio
 import json
 import os
 import sys
-from collections import defaultdict, deque
 
 import pytest
 
 from mesh_net.server import Server
 from tests.net_resume import drop_and_resume, drop_and_resume_scene
 from tests.net_tmp import private_temp
-from tests.net_walk import ABOVE, GAP, ON_ENEMY, walk
+from tooling.net_walk import ABOVE, GAP, ON_ENEMY, walk
+from tooling.net_windows import command, require_clean_workers, stop_workers
 
 pytestmark = pytest.mark.integration
-worker_logs = defaultdict(lambda: deque(maxlen=30))
-
-
-async def command(proc, cmd):
-    proc.stdin.write((cmd + "\n").encode())
-    await proc.stdin.drain()
-    async with asyncio.timeout(90):
-        while line := await proc.stdout.readline():
-            if line.startswith(b"NET_PROOF "):
-                return json.loads(line[len(b"NET_PROOF "):])
-            worker_logs[proc].append(line.decode(errors="replace").rstrip())
-        raise RuntimeError(f"window process exited with {await proc.wait()}: {list(worker_logs[proc])}")
 
 
 async def observe(proc, predicate):
@@ -40,36 +28,6 @@ async def observe(proc, predicate):
     except TimeoutError as exc:
         raise AssertionError(f"state condition at line {predicate.__code__.co_firstlineno} "
                              f"not reached; last response: {reply}") from exc
-
-
-async def stop_workers(procs):
-    problems = []
-    for proc in procs:
-        if proc.stdin and not proc.stdin.is_closing():
-            if proc.returncode is None:
-                try:
-                    proc.stdin.write(b"quit\n")
-                    await proc.stdin.drain()
-                except OSError:
-                    pass
-            proc.stdin.close()
-    for proc in procs:
-        reader = asyncio.create_task(proc.stdout.read())
-        try:
-            await asyncio.wait_for(proc.wait(), 8)
-        except TimeoutError:
-            proc.kill()
-            await proc.wait()
-            problems.append("worker timed out and was killed")
-        output = await reader
-        if proc.returncode != 0:
-            problems.append(f"worker exited {proc.returncode}: {list(worker_logs[proc])}, {output[-2000:]!r}")
-    return problems
-
-
-def require_clean_workers(problems):
-    if problems:
-        raise AssertionError("; ".join(problems))
 
 
 def test_worker_exit_failure_is_detected():
@@ -185,7 +143,7 @@ def test_two_windows_play_the_studio_scene_together(record_testsuite_property):
         port = await server.start()
 
         async def go(proc, eid, key, target, within):
-            """tests/net_walk.walk: to ``target`` +- ``within`` by the server's own position, back after an overshoot."""
+            """tooling/net_walk.walk: to ``target`` +- ``within`` by the server's own position, back after an overshoot."""
             async def where():
                 body = room.players[eid].body
                 return room.tick, body.center_x, body.center_y
@@ -341,7 +299,7 @@ def test_two_windows_meet_party_travel_and_return(record_testsuite_property):
     walks = []  # every walk's legs: recorded (lane summary) to show how late releases land on each runner
 
     async def go(proc, key, target, within):
-        """tests/net_walk.walk: to ``target`` +- ``within`` by the server's own position, back after an overshoot."""
+        """tooling/net_walk.walk: to ``target`` +- ``within`` by the server's own position, back after an overshoot."""
         async def where():
             m = world.members[pids[proc]]
             room = world.instances[m.instance or ""].room
@@ -511,7 +469,7 @@ async def _tap(proc, key):
 
 
 async def _go(proc, key, target, within, walks):
-    """tests/net_walk.walk on the window's copy of the server's snapshots (this test's server is another process)."""
+    """tooling/net_walk.walk on the window's copy of the server's snapshots (this test's server is another process)."""
     async def where():
         r = await _state(proc, lambda r: r["phase"] == "playing" and r["state"])
         x, y, _ = _own(r)
