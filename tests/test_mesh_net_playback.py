@@ -21,6 +21,17 @@ def test_interpolation_tracks_real_motion_and_never_extrapolates():
     assert view.positions(1.1) == {2: (40, 80)}
 
 
+def test_a_scene_rows_elevation_is_interpolated_with_its_position():
+    """v2 scene rows ([entity, x, y, facing, elevation, floor]): elevation follows x/y two ticks behind; the floor is
+    the nearer state's."""
+    view = Playback(lambda s: None)
+    assert view.push(state(10, [1, 0.0, 30.0, 0, 0.0, "crossing/col_stairs_west"]), 0.0)
+    assert view.push(state(12, [1, 8.0, 30.0, 0, 32.0, "crossing/col_platform_west"]), 0.0)
+    assert view.positions(0.025)[1] == pytest.approx((2.0, 30.0, 8.0, "crossing/col_stairs_west"))
+    assert view.positions(0.05)[1] == pytest.approx((4.0, 30.0, 16.0, "crossing/col_platform_west"))
+    assert view.positions(1.0)[1] == (8.0, 30.0, 32.0, "crossing/col_platform_west")
+
+
 def test_disruption_converges_and_the_study_is_reproducible():
     result = study(jitter_ms=110)
     assert result == study(jitter_ms=110)

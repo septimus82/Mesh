@@ -36,6 +36,44 @@ def test_every_frame_of_another_version_is_refused_as_such(version: Any) -> None
     assert wire.VERSION == 2
 
 
+def test_a_frame_without_a_version_is_malformed_not_another_version(coop: SceneRoom) -> None:
+    """No ``v`` at all is a malformed frame (wire.Invalid): the server closes without a protocol_version refusal."""
+    with pytest.raises(wire.Invalid) as refused:
+        wire.fields({"type": "join", "resume": None}, "join", "resume")
+    assert not isinstance(refused.value, wire.VersionMismatch)
+
+    async def run() -> None:
+        server = Server(coop)
+        port = await server.start()
+        try:
+            reader, writer = await asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES)
+            try:
+                writer.write(b'{"type":"join","resume":null}\n')
+                assert await asyncio.wait_for(reader.read(1), 2) == b"", "closed, nothing said"
+            finally:
+                writer.close()
+                await writer.wait_closed()
+        finally:
+            await server.close()
+
+    asyncio.run(run())
+
+
+def test_a_disconnect_says_why() -> None:
+    """The window's caption after a session ends: a refusal's own words, else the error's kind."""
+    from mesh_net.demo import reason
+
+    mismatch = None
+    try:
+        wire.fields({"v": 1, "type": "welcome"}, "welcome")
+    except wire.VersionMismatch as exc:
+        mismatch = exc
+    assert mismatch is not None and reason(mismatch) == "protocol version 1: this Mesh speaks version 2 only"
+    assert reason(wire.Invalid("refused (protocol_version)")) == "refused (protocol_version)"
+    assert reason(asyncio.IncompleteReadError(b"", None)) == "IncompleteReadError"
+    assert len(reason(wire.Invalid("x" * 500))) == 64
+
+
 def test_a_v1_client_is_refused_by_a_v2_server_with_a_reason(coop: SceneRoom) -> None:
     """N6 and N7: a v1 join is answered with ``refused`` (code protocol_version) and the connection closed; nobody
     joins. (A v1 client can't read the v2 frame either, so it ends there too.)"""
@@ -141,12 +179,17 @@ def test_an_older_snapshot_never_replaces_a_newer_one(coop: SceneRoom) -> None:
             reader = asyncio.StreamReader()
             client = Client(reader, None, a, "0" * 32, "a" * 64, first,  # type: ignore[arg-type]  # (receives only)
                             check=lambda s: check_state(s, room.identity, room))
-            reader.feed_data(wire.encode(second) + wire.encode(first) + wire.encode(second))
+            room.step()
+            bad = {**room.snapshot(), "players": [[*r[:5], "ground"] for r in second["players"]]}  # newer, a floor
+            reader.feed_data(wire.encode(second) + wire.encode(first) + wire.encode(second) + wire.encode(bad))
             assert await client.receive() == second
             for _ in range(2):  # the older one, then the same tick again
                 with pytest.raises(wire.Invalid, match="out of order"):
                     await client.receive()
                 assert client.state == second
+            with pytest.raises(wire.Invalid, match="carries an elevation or a floor"):  # (checked before applied)
+                await client.receive()
+            assert client.state == second
             return client
 
         asyncio.run(run())

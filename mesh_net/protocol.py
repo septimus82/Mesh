@@ -54,8 +54,10 @@ def integer(value: object, low: int, high: int = MAX_SEQ) -> bool:
 
 
 def fields(msg: Message, kind: str, *keys: str) -> None:
-    if not integer(msg.get("v"), VERSION, VERSION):
-        raise VersionMismatch(f"protocol version {repr(msg.get('v'))[:16]}: this Mesh speaks version {VERSION} only")
+    if "v" not in msg:
+        raise Invalid("invalid message shape (no version)")  # (malformed, not another version)
+    if not integer(msg["v"], VERSION, VERSION):
+        raise VersionMismatch(f"protocol version {repr(msg['v'])[:16]}: this Mesh speaks version {VERSION} only")
     if set(msg) != {"v", "type", *keys} or msg.get("type") != kind:
         raise Invalid("invalid message shape")
 

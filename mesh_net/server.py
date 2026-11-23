@@ -69,7 +69,8 @@ class Server:
                 raise wire.Invalid("invalid resume")
             if key is None and len(self.peers) + len(self.offline) >= 16:
                 raise wire.Invalid("character capacity")
-            eid = self.room.join(self.offline.pop(key)[1] if key is not None else None)
+            eid = self.room.join(self.offline[key][1] if key is not None else None)
+            self.offline.pop(key, None)  # (only once joined: a refused join keeps the retained character)
             self.peers[eid] = writer
             writer.write(wire.encode({"v": wire.VERSION, "type": "welcome", "session": secrets.token_hex(16),
                                       "entity": eid, "resume": credential, "state": self.room.snapshot()}))

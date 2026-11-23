@@ -472,16 +472,16 @@ class SceneRoom:
     def join(self, player: Player | None = None) -> int:
         if len(self.players) >= wire.MAX_PLAYERS:
             raise wire.Invalid("room full")
-        eid, self.next_id = self.next_id, self.next_id + 1
         if player is None:
             player = Player(Body(*self.spawn, *self._template_size(), dict(self.template)))  # (its own elevation)
         if self.world is not None and player.body.mesh_hd2d_floor is None:  # (a body not yet moved here)
             from engine.hd2d.world import elevation_of  # noqa: PLC0415
 
             stood = self._stand(player.body, elevation_of(player.body))
-            if stood is None:  # (never expected: spawns and arrivals are checked to stand)
+            if stood is None:  # (never expected: spawns and arrivals are checked to stand; nothing changed yet)
                 raise wire.Invalid("the body can't stand where it joins")
             player.body.mesh_hd2d_floor = stood[1]
+        eid, self.next_id = self.next_id, self.next_id + 1
         self.players[eid] = player
         return eid
 

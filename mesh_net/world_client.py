@@ -22,7 +22,7 @@ from typing import Any
 from engine.scene_runtime.room_memory import VAR as ROOM_MEMORY
 
 from . import protocol as wire
-from .demo import Arena, open_arena
+from .demo import Arena, open_arena, reason
 from .playback import Playback
 from .scene_client import JoinRefused, SceneView
 from .scene_room import check_state
@@ -235,7 +235,7 @@ class WorldArena(Arena):
                 self.note("closed")
         except (OSError, EOFError, TimeoutError, wire.Invalid) as exc:
             self.note(f"session ended: {type(exc).__name__}")
-            self.status = f"Disconnected ({type(exc).__name__}) | R resume / N new"
+            self.status = f"Disconnected ({reason(exc)}) | R resume / N new"
         except asyncio.CancelledError:
             self.note("session cancelled")
             raise

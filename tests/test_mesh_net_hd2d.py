@@ -498,6 +498,7 @@ def test_the_level_on_the_wire_is_the_authoritys_own(crossing: dict[str, bytes])
 def test_malformed_rows_are_refused_whole(crossing: dict[str, bytes]) -> None:
     """Wrong arity or types, NaN or infinity, an elevation past the bound, a floor id the room doesn't have: refused
     (wire.Invalid, the connection's end), before anything is applied."""
+    from mesh_net.demo import reason
     from mesh_net.world_client import WorldArena
 
     room = make_room(crossing)
@@ -531,6 +532,12 @@ def test_malformed_rows_are_refused_whole(crossing: dict[str, bytes]) -> None:
     with pytest.raises(wire.Invalid):
         WorldArena.on_frame(arena, {"v": 2, "type": "room_state", "room": "start:1", "state": newer}, 0.1)
     assert arena.state is kept and arena.playback.states[-1] is kept
+    # Inconsistent (well-formed, newer, but the deck body standing on the ground at deck height): refused whole too.
+    wrong = {**with_deck([*d[:4], 64.0, "ground"]), "tick": good["tick"] + 1}
+    with pytest.raises(wire.Invalid, match="is not under it") as refused:
+        WorldArena.on_frame(arena, {"v": 2, "type": "room_state", "room": "start:1", "state": wrong}, 0.1)
+    assert arena.state is kept and list(arena.playback.states) == [kept], "nothing of it applied"
+    assert "is not under it" in reason(refused.value), "the session ends saying why"
 
 
 def test_rows_inconsistent_with_the_clients_own_world_are_refused(crossing: dict[str, bytes]) -> None:
@@ -584,3 +591,41 @@ def test_a_client_can_never_place_a_body(crossing: dict[str, bytes]) -> None:
             await server.close()
 
     asyncio.run(run())
+
+
+def test_a_row_within_its_rounding_of_a_floors_edge_is_accepted(crossing: dict[str, bytes]) -> None:
+    """x/y travel rounded to 0.01 px: a body just inside the deck's edge can arrive just outside it. Within the
+    rounding (0.005 px) the row stands on the deck; beyond it, it does not."""
+    from engine.hd2d.settings import PIXELS_PER_METRE
+
+    room = make_room(crossing)
+    deck, _under = deck_and_under(room)
+    room.step()
+    good = room.snapshot()
+    d = row(good, deck)
+    assert room.world is not None
+    box = entity_aabb(room.players[deck].body)
+    offset = box.x - room.players[deck].body.center_x  # (the feet box's centre from the body's)
+    y = box.y / PIXELS_PER_METRE
+
+    def on_deck(x: float) -> bool:
+        assert room.world is not None
+        return any(s.floor == DECK for _h, s in room.world.heights_at(x, y))
+
+    inside, outside = box.x / PIXELS_PER_METRE, box.x / PIXELS_PER_METRE
+    while on_deck(outside):  # east along the deck to past its edge
+        outside += 0.25
+    for _ in range(60):  # then the edge, to well under a millionth of a pixel
+        middle = (inside + outside) / 2
+        inside, outside = (middle, outside) if on_deck(middle) else (inside, middle)
+
+    def at(past_px: float) -> dict[str, Any]:
+        """The deck row with its feet ``past_px`` beyond the deck's edge."""
+        x = outside * PIXELS_PER_METRE + past_px - offset
+        return {**good, "players": [[*r[:1], x, *r[2:]] if r[0] == deck else r for r in good["players"]]}
+
+    assert not on_deck(outside + 0.004 / PIXELS_PER_METRE), "the row's own point is off the deck"
+    check_state(at(0.004), room.identity, room)  # within the rounding: accepted
+    with pytest.raises(wire.Invalid, match="is not under it"):
+        check_state(at(0.02), room.identity, room)  # beyond it: refused
+    assert d[4:] == [64.0, DECK]
