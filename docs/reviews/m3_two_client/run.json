@@ -1,12 +1,12 @@
 {
- "commit": "4e21efe7538055b65dd18b8b6489fd44c8264b7b",
+ "commit": "ac51eef551db49132cc72c9198a0f7fcc5166695",
  "gl": [
   "NVIDIA Corporation",
   "NVIDIA GeForce RTX 4070/PCIe/SSE2"
  ],
  "os": "Windows-11",
  "python": "3.13.3",
- "build_and_run_s": 133.2,
+ "build_and_run_s": 139.7,
  "checks_passed": [
   "test_a_client_whose_geometry_differs_is_refused_and_the_room_plays_on",
   "test_a_client_whose_room_fell_back_to_2d_refuses_it_and_the_room_plays_on",
