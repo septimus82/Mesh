@@ -175,11 +175,18 @@ def same_level(world: World | None, a: Any, b: Any) -> bool:
       are never closer, so anything nearer is no stacked floor. A 2 m bridge deck and the ground under it are out of
       reach; two on one staircase or slope within reach are in it (72 px across, the interaction reach, is about
       1.1 m up the floors demo's stairs), as are one at the top of the stairs and one on the landing beside it;
-    - **no floor between them**: at the lower one's place (its box's centre: where World.move stands a character,
-      and where Studio stands any other object) no floor (World.heights_at) lies above a step over its feet and
-      below a step over the higher one's: the higher one's supporting floor, or any other, over the lower one. A
-      standing character never has a floor within BODY over it (World.stand), so between characters the reach
-      decides; this refuses a lever, item or enemy set under a deck lower than that, from the deck.
+    - **no floor between them**: at the lower one's place (its box's centre: where World.move stands a character)
+      no structure's floor (World.heights_at) lies above a step over its feet and below a step over the higher one's:
+      the higher one's supporting floor, or any other, over the lower one. This refuses a lever, item or enemy set
+      under a deck lower than BODY, from the deck. A standing character never has a floor within BODY over it
+      (World.stand), so between characters the reach decides. The ground (flat or sculpted, floor "ground") is never
+      counted: a heightfield can't lie between two things above it, and counting it would refuse an object on a slope
+      whose collider is off its centre (Studio stands one at its centre), or one a later terrain raise left buried.
+
+    What it doesn't see: a floor that, over the lower one, is more than a step above the higher one. An open ramp or
+    arched bridge climbing on overhead is one: a character on it at 1.25 m and one on the ground below where it is
+    1.65 m up are judged one level. Directly under a character on it, nothing is (BODY's clearance), and no model
+    Mesh ships makes such a place; checking higher would refuse stair and slope neighbours far more often.
 
     Elevation is what each entity records: a character's as World.move sets it, anything never moved as saved. No
     recorded floor (``mesh_hd2d_floor``) is read, so objects never moved need none, and both runtimes, sharing the
@@ -193,8 +200,8 @@ def same_level(world: World | None, a: Any, b: Any) -> bool:
         return False
     low, (z0, z1) = (a, (za, zb)) if za <= zb else (b, (zb, za))
     box = entity_aabb(low)
-    return not any(z0 + STEP < h < z1 + STEP for h, _s in world.heights_at(box.x / PIXELS_PER_METRE,
-                                                                           box.y / PIXELS_PER_METRE))
+    return not any(z0 + STEP < h < z1 + STEP and s.floor != _GROUND.floor
+                   for h, s in world.heights_at(box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE))
 
 
 def elevation_of(sprite: Any) -> float:

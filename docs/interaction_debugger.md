@@ -34,6 +34,7 @@ refusals as the D1 tools.
 | `behaviours` | No behaviour takes the interaction now. `SceneTransition` is explained rule by rule: `interact_allowed`, `has_target`, `not_used_up`, `flags`. `Dialogue` is too: `conversation_open`, `has_lines`, `flags`, `not_used_up`. Any other behaviour is `not_analysed`. |
 | `distance` | The player is farther than its interaction radius (its `interact_radius`, a behaviour's, or 72 px). |
 | `facing` | It is behind the player, and the player isn't touching it. |
+| `level` | HD-2D rooms only: it is on another floor (more than a body's height above or below the player, or with a floor between them, as from a bridge deck to the ground under it). The game's own rule, `engine.hd2d.world.same_level`. |
 | `selection` | Another object is chosen instead. Candidates are ranked by priority, then how directly the player faces them, then distance; `candidates` lists them in that order. This is the engine's own `select_interaction_candidate`, called as the game calls it. |
 
 ## A debugging session, as it ran

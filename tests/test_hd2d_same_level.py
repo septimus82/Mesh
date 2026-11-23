@@ -12,11 +12,14 @@ deck over an underpass) and asks both runtimes:
   enemy loses HP), ``take`` (its dropped loot is held).
 
 Every answer, in both runtimes, must be the case's. Characters stand where World.stand puts them (asserted); objects
-stand at the floor under their centre, as Studio places them, or float where a case says."""
+stand at the floor under their centre, as Studio places them, or float where a case says. Behaviours are made from the
+classes the game makes them from (the behaviour registry), so a test that patches what they look up patches what
+runs, whatever re-imported the behaviour modules earlier in the session."""
 
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Iterator, cast
@@ -27,7 +30,8 @@ import pytest
 import engine.optional_arcade as optional_arcade
 from engine.combat_model import TargetState
 from engine.hd2d.settings import PIXELS_PER_METRE as M
-from engine.hd2d.world import BODY, World, same_level
+from engine.hd2d.settings import parse_hd2d
+from engine.hd2d.world import BODY, World, build_world, same_level
 from engine.physics_model import entity_aabb, entity_shape, shapes_overlap
 from mesh_net.scene_room import COOP_SCENE, Body, Player, SceneRoom, coop_files, disposable_project
 from tests.test_hd2d_net_parity import SCENE, single_player_world, sprite
@@ -62,14 +66,14 @@ CASES: dict[str, tuple[tuple[float, float], float, tuple[float, float], tuple[st
     "stairs' top, landing": (TOP_AT, 1.75, (16.0, 32.0), ("floor", 2.0), True),
     "stairs, just within reach above": (STAIRS_AT, 0.5, (16.0, 32.0), 0.5 * M + BODY * M - 0.5, True),
     "stairs, just beyond reach above": (STAIRS_AT, 0.5, (16.0, 32.0), 0.5 * M + BODY * M + 0.5, False),
+    # (saved on the ground at the stairs' foot, where they are already 0.1 m up: within a step, so no floor between)
+    "stairs, an object at their foot": (STAIRS_AT, 0.5, (16.0, -25.6), 0.0, True),
 }
 
 
 @pytest.fixture(scope="module")
 def project(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Path]:
     """The floors demo's project with a lever (and its gate) and an enemy, as the current folder while this runs."""
-    import sys
-
     sys.path.insert(0, str(REPO / "tooling"))
     try:
         import hd2d_floors_demo
@@ -136,6 +140,15 @@ def authority(room: SceneRoom, actor: tuple[float, float, float], target: tuple[
     return {"use": GATE not in room.locked, "attack": enemy.state.hp < 3.0, "take": enemy.holder is player}[action]
 
 
+def behaviour(name: str) -> Any:
+    """The class the game makes ``name`` from (engine.behaviours.registry.create_behaviour's)."""
+    from engine.behaviours import load_builtin_behaviours
+    from engine.behaviours.registry import BEHAVIOUR_REGISTRY
+
+    load_builtin_behaviours()
+    return BEHAVIOUR_REGISTRY[name]
+
+
 class Thing(SimpleNamespace):
     """A game sprite as the behaviours read it: hashable, as Arcade's are (the Hitbox keeps what it hit in a set)."""
 
@@ -158,13 +171,10 @@ def single_player(world: World | None, room: SceneRoom, actor_at: tuple[float, f
     """The game's own code, ``window.hd2d_world`` the World (None: a 2D room), an actor facing right at ``actor_at``
     and each kind of target at ``target``: what took effect. Sprites touch where their collider boxes overlap (the
     authority's test; Arcade's own needs pictures)."""
-    from engine.behaviours.collectible import Collectible
-    from engine.behaviours.combat import Combat
-    from engine.behaviours.health import Health
-    from engine.behaviours.hitbox import Hitbox
-    from engine.behaviours.pickup_collectible import PickupCollectible
     from engine.interaction import perform_interaction
 
+    Collectible, Combat, Health = behaviour("Collectible"), behaviour("Combat"), behaviour("Health")
+    Hitbox, PickupCollectible = behaviour("Hitbox"), behaviour("PickupCollectible")
     monkeypatch.setattr(optional_arcade.arcade, "check_for_collision",
                         lambda a, b: shapes_overlap(entity_shape(a), entity_shape(b)))
     x, y, z = actor_at
@@ -268,35 +278,34 @@ def test_without_an_hd2d_world_nothing_changes(room: SceneRoom, monkeypatch: pyt
 @pytest.mark.parametrize("answer", [True, False])
 def test_every_consumer_asks_the_one_rule_and_nothing_else(answer: bool, room: SceneRoom, world: World,
                                                            monkeypatch: pytest.MonkeyPatch) -> None:
-    """Swap engine.hd2d.world.same_level for a constant, where each runtime looks it up: every action in both follows
-    it (a refused case taking effect, an accepted one refused), so neither runtime has a level check of its own."""
-    import engine.behaviours.collectible
-    import engine.behaviours.hitbox
-    import engine.hd2d.world
-    import engine.interaction
+    """Swap engine.hd2d.world.same_level for a constant where the code that runs looks it up (the globals of the
+    behaviour classes the game makes, of engine.interaction, and engine.hd2d.world for the authority's lazy import):
+    every action in both runtimes follows it (a refused case taking effect, an accepted one refused), so neither has
+    a level check of its own."""
+    from engine.interaction import perform_interaction
 
-    for module in (engine.hd2d.world, engine.interaction, engine.behaviours.hitbox, engine.behaviours.collectible):
-        monkeypatch.setattr(module, "same_level", lambda _world, _a, _b: answer)
+    def constant(_world: Any, _a: Any, _b: Any) -> bool:
+        return answer
+
+    for name in ("Hitbox", "Collectible", "Projectile", "DamageOnTouch"):
+        monkeypatch.setitem(behaviour(name).update.__globals__, "same_level", constant)
+    monkeypatch.setitem(perform_interaction.__globals__, "same_level", constant)
+    monkeypatch.setattr(sys.modules["engine.hd2d.world"], "same_level", constant)
     actor, target = placed(room, "under the deck, ground" if not answer else "deck, ground directly beneath")
     done = {f"single-player {k}": v for k, v in single_player(world, room, actor, target, monkeypatch).items()}
+    done.update({f"single-player {k}": v for k, v in hurt(world, room, actor, target, monkeypatch).items()})
     done.update({f"authority {a}": authority(room, actor, target, a) for a in ("use", "attack", "take")})
     assert done == dict.fromkeys(done, answer), done
 
 
-@pytest.mark.parametrize("case", ["deck, ground directly beneath", "under the deck, ground"])
-def test_shots_and_hurtful_touches_respect_floors_too(case: str, room: SceneRoom, world: World,
-                                                      monkeypatch: pytest.MonkeyPatch) -> None:
-    """Single-player's other ways to hurt (the authority has neither): a Shooter's shot hits for its shooter, and a
-    DamageOnTouch hazard touches, only on one level."""
-    from engine.behaviours.damage_on_touch import DamageOnTouch
-    from engine.behaviours.health import Health
-    from engine.behaviours.projectile import Projectile
-    from engine.behaviours.shooter import Shooter
-
+def hurt(world: World | None, room: SceneRoom, actor_at: tuple[float, float, float], target: tuple[float, float, float],
+         monkeypatch: pytest.MonkeyPatch) -> dict[str, bool]:
+    """Single-player's other ways to hurt (the authority has neither), the actor at ``actor_at`` and the target at
+    ``target``: a Shooter's shot at an enemy, and a DamageOnTouch hazard at the actor. What took effect."""
+    DamageOnTouch, Health = behaviour("DamageOnTouch"), behaviour("Health")
+    Projectile, Shooter = behaviour("Projectile"), behaviour("Shooter")
     monkeypatch.setattr(optional_arcade.arcade, "check_for_collision",
                         lambda a, b: shapes_overlap(entity_shape(a), entity_shape(b)))
-    (x, y, z), (tx, ty, tz) = placed(room, case)
-    expected = CASES[case][-1]
 
     def thing(at: tuple[float, float, float], data: dict[str, Any], tag: str) -> Any:
         made = Thing(**vars(sprite(at[0], at[1], (0.0, 0.0), {**data, "elevation": at[2]})))
@@ -306,8 +315,8 @@ def test_shots_and_hurtful_touches_respect_floors_too(case: str, room: SceneRoom
 
     window = MagicMock()
     window.hd2d_world, window.game_state_controller = world, None
-    actor = thing((x, y, z), room.template, "player")
-    enemy = thing((tx, ty, tz), {"components": BOX}, "enemy")
+    actor = thing(actor_at, room.template, "player")
+    enemy = thing(target, {"components": BOX}, "enemy")
     enemy.mesh_behaviours_runtime = [Health(enemy, window, max_hp=3.0, hp=3.0)]
     spawned: list[Any] = []
 
@@ -323,11 +332,91 @@ def test_shots_and_hurtful_touches_respect_floors_too(case: str, room: SceneRoom
     (shot,) = spawned
     assert shot.mesh_attacker is actor, "the shot says who fired it"
     Projectile(shot, window, **shot.config).update(0.01)
-    assert (enemy.mesh_behaviours_runtime[0].hp < 3.0) is expected, "shot"
+    done = {"shot": enemy.mesh_behaviours_runtime[0].hp < 3.0}
 
     actor.mesh_behaviours_runtime = [Health(actor, window, max_hp=3.0, hp=3.0)]
     window.find_sprite_by_name = lambda _name: actor
     window.should_collide = lambda _a, _b: True
-    hazard = thing((tx, ty, tz), {"components": BOX}, "spikes")
+    hazard = thing(target, {"components": BOX}, "spikes")
     DamageOnTouch(hazard, window, target_name="player", damage=1.0).update(0.01)
-    assert (actor.mesh_behaviours_runtime[0].hp < 3.0) is expected, "touch"
+    done["touch"] = actor.mesh_behaviours_runtime[0].hp < 3.0
+    return done
+
+
+@pytest.mark.parametrize("case", ["deck, ground directly beneath", "under the deck, ground"])
+def test_shots_and_hurtful_touches_respect_floors_too(case: str, room: SceneRoom, world: World,
+                                                      monkeypatch: pytest.MonkeyPatch) -> None:
+    """A Shooter's shot hits for its shooter, and a DamageOnTouch hazard touches, only on one level."""
+    actor, target = placed(room, case)
+    assert hurt(world, room, actor, target, monkeypatch) == dict.fromkeys(("shot", "touch"), CASES[case][-1])
+
+
+def test_the_debugger_says_when_its_on_another_floor(room: SceneRoom, world: World) -> None:
+    """debug_interaction's reach rules (engine.runtime_diagnose) in an HD-2D room: from the deck, a lever directly
+    beneath is in reach and faced, and the ``level`` rule says it is on another floor, so nothing is chosen; from under
+    the deck it is on the player's level and chosen, as the game chooses. A 2D room's rules are as before."""
+    from engine import interaction, runtime_diagnose
+
+    for case, ok in (("deck, ground directly beneath", False), ("under the deck, ground", True)):
+        (x, y, z), (tx, ty, tz) = placed(room, case)
+        actor = sprite(x, y, room._template_size(), {**room.template, "elevation": z, "facing": "right"})
+        lever: Any = Thing(**vars(sprite(tx, ty, (0.0, 0.0), {"id": "lever", "elevation": tz, "components": BOX})))
+        lever.mesh_behaviours_runtime, lever.visible = [Lever()], True
+        window = SimpleNamespace(hd2d_world=world, all_sprites=[actor, lever], get_flag=None)
+        found = {c["code"]: c for c in runtime_diagnose._reach_and_selection(window, lever, actor)}
+        assert found["distance"]["ok"] and found["facing"]["ok"], case
+        assert found["level"]["ok"] is ok, case
+        if ok:
+            assert found["selection"]["ok"] and found["selection"]["detail"]["chosen"] == "lever", case
+            assert interaction.resolve_interaction_candidate(window, actor=actor) is not None, "the game agrees"
+        else:
+            assert "another floor" in found["level"]["message"] and "selection" not in found, case
+            assert interaction.resolve_interaction_candidate(window, actor=actor) is None, "the game agrees"
+    flat = SimpleNamespace(hd2d_world=None, all_sprites=[actor, lever], get_flag=None)
+    assert "level" not in {c["code"] for c in runtime_diagnose._reach_and_selection(flat, lever, actor)}
+
+
+def hill() -> World:
+    """A room of sculpted ground with one hill (2.5 m high, 6 m across): its flank rises about 0.6 m a metre at x 16 m,
+    y 8.5 m to 9.5 m."""
+    from engine import project_ops as ops
+
+    room = {"entities": [], "settings": {"world_width": 1024, "world_height": 768,
+                                         "hd2d": {"ground": {"to": [1024, 768]}}}}
+    hd2d = ops.sculpt_terrain_stroke(room, "raise", [[512, 384, 80]], 192)["settings"]["hd2d"]
+    world = build_world(parse_hd2d(hd2d), [], lambda rel: REPO / rel)[0]
+    assert world is not None and world.terrain is not None
+    return world
+
+
+def ground_at(world: World, x: float, y: float) -> float:
+    """The sculpted ground's height (m) at (x, y) m."""
+    ((h, surface),) = world.heights_at(x, y)
+    assert surface.floor == "ground"
+    return h
+
+
+def test_the_ground_never_counts_as_a_floor_between() -> None:
+    """A heightfield can't lie between two things above it: on a hill's flank (about 0.6 m a metre), an object
+    standing at its centre whose collider is 0.75 m uphill of it, and one a later raise of the ground left buried more
+    than a step deep, are both on the level of a character a metre further up the slope."""
+    world = hill()
+
+    def hero(feet_y: float) -> SimpleNamespace:  # (a character standing with its feet at (16 m, feet_y m))
+        made = SimpleNamespace(center_x=16.0 * M, center_y=feet_y * M + 18.0, width=32.0, height=48.0,
+                               mesh_entity_data={"components": {"collider": {"kind": "box", "auto": True}}})
+        box = entity_aabb(made)
+        stood = world.stand(box.x / M, box.y / M, ground_at(world, box.x / M, box.y / M), box.w / 2 / M, box.h / 2 / M)
+        assert stood is not None
+        made.mesh_entity_data["elevation"] = round(stood[0] * M, 3)
+        return made
+
+    offset = SimpleNamespace(center_x=16.0 * M, center_y=8.5 * M, width=32.0, height=32.0, mesh_entity_data={
+        "elevation": round(ground_at(world, 16.0, 8.5) * M, 3),
+        "components": {"collider": {"kind": "box", "w": 16, "h": 16, "offset_y": 24}}})  # (0.75 m uphill)
+    assert ground_at(world, 16.0, 8.5 + 0.75) - ground_at(world, 16.0, 8.5) > 0.35, "its collider's ground: past a step"
+    buried = SimpleNamespace(center_x=16.0 * M, center_y=8.0 * M, width=32.0, height=32.0,
+                             mesh_entity_data={"elevation": 0.0})  # (saved before the hill was raised)
+    assert ground_at(world, 16.0, 8.0) > 0.35, "buried more than a step deep"
+    for thing, up in ((offset, hero(9.5)), (buried, hero(9.0))):
+        assert same_level(world, up, thing) and same_level(world, thing, up)
