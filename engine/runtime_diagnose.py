@@ -414,12 +414,14 @@ def _reach_and_selection(window: Any, sprite: Any, actor: Any) -> list[Doc]:
         return found
     getter = getattr(window, "get_flag", None)
     entities = list(interaction._iter_scene_entities(window))
-    winner = interaction.select_interaction_candidate(entities, actor=actor, get_flag=getter if callable(getter) else None)
+    world = getattr(window, "hd2d_world", None)  # (an HD-2D room: only what is on the player's level, as the game has it)
+    winner = interaction.select_interaction_candidate(entities, actor=actor, get_flag=getter if callable(getter) else None,
+                                                      world=world)
     ranked: list[Doc] = []
     for entity in entities:
         candidate = interaction._candidate_from_entity(entity, actor=actor, actor_pos=me,
                                                        max_dist=interaction.DEFAULT_INTERACT_MAX_DIST,
-                                                       get_flag=getter if callable(getter) else None)
+                                                       get_flag=getter if callable(getter) else None, world=world)
         if candidate is not None:
             ranked.append({"entity_id": candidate.entity_id, "name": getattr(entity, "mesh_name", None),
                            "priority": candidate.priority, "facing_alignment": round(candidate.facing_alignment, 3),

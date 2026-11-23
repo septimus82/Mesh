@@ -12,6 +12,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
     from engine.game import GameWindow
 import engine.optional_arcade as optional_arcade
+from engine.hd2d.world import same_level
 
 
 @register_behaviour(
@@ -57,6 +58,9 @@ class Collectible(Behaviour):
 
         if not optional_arcade.arcade.check_for_collision(self.entity, collector):
             return
+
+        if not same_level(getattr(self.window, "hd2d_world", None), self.entity, collector):
+            return  # an HD-2D room: on another floor (engine.hd2d.world.same_level)
 
         if not self.window.should_collide(self.entity, collector):
             return
