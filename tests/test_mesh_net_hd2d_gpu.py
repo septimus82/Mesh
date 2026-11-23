@@ -131,21 +131,26 @@ def test_no_looting_through_the_deck(facts: dict[str, Any]) -> None:
     assert part["a_sent"] == ["attack", "take"], part["a_sent"]
     assert part["a_loot_distance"] <= DEFAULT_INTERACT_MAX_DIST, part
     assert part["after_a_take"] == {"dropped": True, "held": False}, part["after_a_take"]
+    assert part["b_sent"] == "take" and part["b_loot_distance"] <= DEFAULT_INTERACT_MAX_DIST, part
     taken = part["after_b_take"]
     assert taken["dropped"] is False and taken["holder"] == taken["b"], taken
     assert part["loot_seen"] == [[[facts["join"]["bandit"], taken["b"]]]] * 2, part["loot_seen"]
 
 
 def test_no_door_through_the_deck(facts: dict[str, Any]) -> None:
-    """A walks over the door beneath on the deck, its picture across the door's area: no transfer, in the server or
-    its window. B walks into it on the ground: through to the Start room; A's window sees B go."""
+    """A walks over the door beneath on the deck, its picture across the door's area: on the deck at every moment it
+    is on the area, and no transfer, in the server or its window; it ends 2 m up (on the deck, or past its west end on
+    the plateau, where a slow runner's late release carries it). B walks into it on the ground: through to the Start
+    room; A's window sees B go."""
     part = _part(facts, "door")
     pa, pb = facts["join"]["players"]
     # (A crosses the door's area on the deck each time it walks onto the deck, too: never a transfer, all run long)
     assert facts["transfers"] == [[pb, f"crossing:1 {facts['join']['door']} moved"]], facts["transfers"]
     assert part["a_touched_area"], "A crossed the door's area"
-    assert part["a_after"][2:4] == DECK and part["a_after"][4].startswith("crossing:"), part["a_after"]
-    assert part["a_window"] == {"key": "crossing", "loads": [part["a_after"][4]]}, part["a_window"]
+    assert part["a_contact_levels"] == [DECK], part["a_contact_levels"]  # (through the deck, all the way across)
+    after = part["a_after"]
+    assert after[2] == DECK[0] and after[3] != GROUND[1] and after[4].startswith("crossing:"), after
+    assert part["a_window"] == {"key": "crossing", "loads": [after[4]], "own": after[:4]}, part["a_window"]
     assert part["b_window"]["key"] == "start" and part["b_after"][4].startswith("start:"), part
     assert part["a_sees"] == [facts["join"]["entities"][0]], part["a_sees"]
 
