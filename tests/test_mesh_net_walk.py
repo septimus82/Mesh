@@ -1,4 +1,4 @@
-"""The real-window networking tests' walking helper (tests/net_walk.py), against the rooms' real collision and a
+"""The real-window networking tests' walking helper (tooling/net_walk.py), against the rooms' real collision and a
 window whose keys reach the server ``late`` ticks after the test's command (what a slow hosted runner does).
 
 The first tests reproduce the two Windows failures from their own numbers: the old "hold until past y" driver,
@@ -19,7 +19,7 @@ import pytest
 from mesh_net.scene_room import COOP_SCENE, SceneRoom, coop_files, disposable_project
 from mesh_net.world import World, expedition_files
 from tests.net_sim_time import run as simulated
-from tests.net_walk import ABOVE, GAP, ON_ENEMY, walk
+from tooling.net_walk import ABOVE, GAP, ON_ENEMY, walk
 
 pytestmark = pytest.mark.integration
 DIRECTIONS = {"RIGHT": (1, 0), "LEFT": (-1, 0), "UP": (0, 1), "DOWN": (0, -1)}

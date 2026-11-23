@@ -1,0 +1,33 @@
+{
+ "commit": "4e21efe7538055b65dd18b8b6489fd44c8264b7b",
+ "gl": [
+  "NVIDIA Corporation",
+  "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ ],
+ "os": "Windows-11",
+ "python": "3.13.3",
+ "build_and_run_s": 133.2,
+ "checks_passed": [
+  "test_a_client_whose_geometry_differs_is_refused_and_the_room_plays_on",
+  "test_a_client_whose_room_fell_back_to_2d_refuses_it_and_the_room_plays_on",
+  "test_each_camera_follows_its_own_character",
+  "test_each_player_climbs_onto_the_deck_and_back_down",
+  "test_no_attack_through_the_deck",
+  "test_no_door_through_the_deck",
+  "test_no_looting_through_the_deck",
+  "test_one_stands_on_the_deck_while_the_other_passes_beneath",
+  "test_the_windows_exit_cleanly"
+ ],
+ "files": [
+  "01_start.png",
+  "02_a_on_deck.png",
+  "02_b_on_deck.png",
+  "03_a_over_b_under.png",
+  "04_a_struck_from_deck.png",
+  "05_a_reached_for_loot.png",
+  "06_b_took_loot.png",
+  "07_a_over_door.png",
+  "08_b_through_door.png",
+  "seq_b_passes_beneath_a.gif"
+ ]
+}
