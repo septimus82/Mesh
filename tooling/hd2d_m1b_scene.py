@@ -23,7 +23,14 @@ The geometry (ground 0 m, deck 2 m, stairs between, an underpass) is what M1-A's
 plays it with the game's runtime (``hd2d_demo.HiddenGame``), driving the player only with key press/release events:
 ground, up the west stairs, the west plateau, the deck above the guard, the east plateau, down the east stairs, under
 the bridge, behind the cottage (cutaway), through the doorway into Inside and back out; saves and loads on the deck and
-under it; a fixed walk timed frame by frame (update + draw + GPU finish). Nothing is played aloud (master volume 0)."""
+under it; a fixed walk timed frame by frame (update + draw + GPU finish). Nothing is played aloud (master volume 0).
+
+    py -3.13 tooling/hd2d_m1b_scene.py perf OUT     M1-B-2 (report only): OUT/perf.json (builds OUT/game if absent)
+
+``perf`` times ``SceneRoom.step`` headless with 8 bodies walking a fixed loop round the Crossing (ground, stairs, deck,
+underpass, the cottage's doorway), then draws the same walk as a net client does (``SceneView``, the room's own lamps,
+shadows and post effects) at 1280 x 720 in a hidden window, with 7 (and, as a baseline, 0) peer avatars, and records the
+hardware, the rendering settings and what else the machine was doing. Never a gate: nothing here passes or fails."""
 
 from __future__ import annotations
 
@@ -473,14 +480,344 @@ def _timed_walk(game: Any) -> dict[str, Any]:
             "what": "hidden 1280x720 window, vsync off; per frame: on_update(1/60) + on_draw + ctx.finish + ctx.gc"}
 
 
+# ------------------------------------------------------------------------------------------- perf (M1-B-2, report only)
+# The fixed walk: a closed loop of feet targets (axis 0 x / 1 y, m), one axis at a time as ``check`` walks it: west
+# stairs up, the west plateau, over the deck, the east plateau, east stairs down, under the deck, behind the cottage,
+# into its doorway and back to the start (16, 3.94). About 450 server ticks (22 s) a lap.
+ROUTE = [(0, 11.0), (1, 20.0), (0, 26.0), (1, 11.0), (0, 17.0), (1, 20.0), (1, 11.0), (0, 6.0), (0, 9.5), (1, 5.0),
+         (0, 6.0), (1, 6.3), (1, 3.94), (0, 16.0)]
+PEER_DELAY = 5  # ticks between one body setting off and the next (0.25 s: about 1.2 m apart, the peers in view)
+PERF_TRIALS = (7, 0, 7, 7, 0, 7, 7)  # peers per client trial (plus the player's own avatar): 0 is the baseline
+PERF_WARMUP, PERF_FRAMES = 300, 1500
+TICK_TRIALS, TICK_COUNT, TICK_BODIES = 3, 2400, 8
+
+
+class _Walker:
+    """One body walking ROUTE on the authority (mesh_net.scene_room.SceneRoom), from tick ``start``, by the input frames
+    its client would send: one per tick, the direction of the current leg. A leg ends when the feet reach its target
+    or stop moving (3 ticks): ``stalls`` counts those."""
+
+    def __init__(self, eid: int, start: int) -> None:
+        self.eid, self.start = eid, start
+        self.leg, self.sign, self.seq, self.still, self.stalls, self.last = 0, 0, 0, 0, 0, -1.0
+
+    def send(self, room: Any, tick: int) -> None:
+        from engine.physics_model import entity_aabb
+        from mesh_net import protocol as wire
+
+        box = entity_aabb(room.players[self.eid].body)
+        axis, target = ROUTE[self.leg % len(ROUTE)]
+        here = (box.x / PX, box.y / PX)[axis]
+        if tick < self.start:
+            d = 0
+        else:
+            if not self.sign:
+                self.sign = 1 if target >= here else -1
+            self.still = self.still + 1 if abs(here - self.last) < 1e-6 else 0
+            if (here - target) * self.sign >= 0 or self.still >= 3:
+                self.stalls += (here - target) * self.sign < 0
+                self.leg, self.sign, self.still = self.leg + 1, 0, 0
+                axis, target = ROUTE[self.leg % len(ROUTE)]
+                here = (box.x / PX, box.y / PX)[axis]
+                self.sign = 1 if target >= here else -1
+            d = self.sign
+        self.last = here
+        self.seq += 1
+        room.input(self.eid, {"v": wire.VERSION, "type": "input", "entity": self.eid, "seq": self.seq,
+                              "dx": d if axis == 0 else 0, "dy": d if axis == 1 else 0})
+
+
+def summary(values: list[float]) -> dict[str, Any]:
+    """Median, nearest-rank p95 and p99, the worst value and the five worst (index, value), in ms rounded to 0.01."""
+    import math
+
+    ordered = sorted(values)
+
+    def rank(q: float) -> float:
+        return round(ordered[max(0, math.ceil(q * len(ordered)) - 1)], 2)
+
+    worst = sorted(range(len(values)), key=lambda i: -values[i])[:5]
+    return {"n": len(values), "median_ms": round(statistics.median(values), 2), "p95_ms": rank(0.95),
+            "p99_ms": rank(0.99), "max_ms": round(ordered[-1], 2), "worst": [[i, round(values[i], 2)] for i in worst]}
+
+
+def _system_cpu() -> tuple[float, float] | None:
+    """(idle, total) CPU time of the whole machine (Windows GetSystemTimes, s); None elsewhere."""
+    if sys.platform != "win32":
+        return None
+    import ctypes
+
+    idle, kernel, user = (ctypes.c_ulonglong() for _ in range(3))
+    if not ctypes.windll.kernel32.GetSystemTimes(ctypes.byref(idle), ctypes.byref(kernel), ctypes.byref(user)):  # type: ignore[attr-defined,unused-ignore]
+        return None
+    return idle.value / 1e7, (kernel.value + user.value) / 1e7  # (kernel time includes idle time)
+
+
+class _Load:
+    """The machine's CPU busy share over an interval, and this process's own share of it (% of all logical cores)."""
+
+    def __init__(self) -> None:
+        self.sys, self.own, self.wall = _system_cpu(), time.process_time(), time.perf_counter()
+
+    def done(self) -> dict[str, Any]:
+        now, own, wall = _system_cpu(), time.process_time() - self.own, time.perf_counter() - self.wall
+        cores = os.cpu_count() or 1
+        out: dict[str, Any] = {"seconds": round(wall, 1), "this_process_pct": round(100 * own / wall / cores, 1)}
+        if self.sys and now and now[1] > self.sys[1]:
+            busy = 100 * (1 - (now[0] - self.sys[0]) / (now[1] - self.sys[1]))
+            out["machine_busy_pct"] = round(busy, 1)
+            out["others_pct"] = round(max(0.0, busy - out["this_process_pct"]), 1)
+        return out
+
+
+def _gpu_load() -> dict[str, Any] | None:
+    """NVIDIA's own counters when nvidia-smi is there (utilisation, clocks, power state, driver); None otherwise."""
+    import shutil
+
+    smi = shutil.which("nvidia-smi")
+    if smi is None:
+        return None
+    keys = ("utilization.gpu", "clocks.gr", "clocks.mem", "pstate", "driver_version")
+    try:
+        done = subprocess.run([smi, f"--query-gpu={','.join(keys)}", "--format=csv,noheader,nounits"],
+                              capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    values = done.stdout.strip().splitlines()[0].split(", ") if done.returncode == 0 and done.stdout.strip() else []
+    return dict(zip(keys, values)) if len(values) == len(keys) else None
+
+
+def _foreground(window: Any) -> dict[str, bool] | None:
+    """Whether the foreground window is this one (it must never be), and whether it fills its monitor (another
+    program full screen, e.g. a game). Nothing about it is named. Windows only."""
+    if sys.platform != "win32":
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined,unused-ignore]
+    fg = user32.GetForegroundWindow()
+    if not fg:
+        return {"ours": False, "full_screen": False}
+
+    class MonitorInfo(ctypes.Structure):
+        _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", wintypes.RECT), ("rcWork", wintypes.RECT),
+                    ("dwFlags", wintypes.DWORD)]
+
+    rect, info = wintypes.RECT(), MonitorInfo(cbSize=ctypes.sizeof(MonitorInfo))
+    user32.MonitorFromWindow.restype = wintypes.HANDLE
+    user32.GetWindowRect(fg, ctypes.byref(rect))
+    user32.GetMonitorInfoW(user32.MonitorFromWindow(fg, 2), ctypes.byref(info))
+    m = info.rcMonitor
+    full = (rect.left, rect.top, rect.right, rect.bottom) == (m.left, m.top, m.right, m.bottom)
+    return {"ours": int(fg) == int(getattr(window, "_hwnd", 0) or 0), "full_screen": full}
+
+
+def hardware(window: Any) -> dict[str, Any]:
+    """``machine`` plus RAM, the OS build, the GL/windowing library versions and the GPU driver's own version. No user,
+    host or path."""
+    from importlib.metadata import version
+
+    info = machine(window)
+    if sys.platform == "win32":
+        import ctypes
+
+        class MemoryStatus(ctypes.Structure):
+            _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                        ("ullTotalPhys", ctypes.c_ulonglong), *((n, ctypes.c_ulonglong) for n in
+                        ("ullAvailPhys", "ullTotalPageFile", "ullAvailPageFile", "ullTotalVirtual", "ullAvailVirtual",
+                         "ullAvailExtendedVirtual"))]
+
+        status = MemoryStatus(dwLength=ctypes.sizeof(MemoryStatus))
+        if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):  # type: ignore[attr-defined,unused-ignore]
+            info["ram_gib"] = round(status.ullTotalPhys / 2**30, 1)
+    gpu = _gpu_load()
+    info.update({"os_version": platform.version(), "pyglet": version("pyglet"), "arcade": version("arcade"),
+                 "gpu_driver": gpu["driver_version"] if gpu else None})
+    return info
+
+
+def rendering(window: Any) -> dict[str, Any]:
+    """Everything in the frame's cost that a setting decides: picture, MSAA, vsync, shadows, lamps, post effects."""
+    from engine.hd2d.lighting import POINT_FACE
+
+    s = window.hd2d_renderer.settings
+    lighting = getattr(window, "lighting", None)
+    effects = {"bloom": s.bloom, "haze": s.haze, "depth_of_field": s.depth_of_field, "grade_vignette": s.post}
+    return {"framebuffer": list(window.get_framebuffer_size()), "window": "hidden (never shown), vsync off",
+            "window_msaa_samples": getattr(window.config, "samples", None), "sun_shadows": s.shadows,
+            "sun_shadow_map_px": s.shadow_resolution, "shadow_softness": s.shadow_softness,
+            "lamps": len(s.lights), "lamp_shadow_face_px": POINT_FACE,
+            # (no block: None; depth of field is an object with enabled False when off)
+            **{k: v is not None and bool(getattr(v, "enabled", True)) for k, v in effects.items()},
+            "camera": {k: getattr(s.camera, k) for k in ("pitch", "fov", "distance", "ortho")},
+            "structures": len(s.structures), "post_process_effects": len(window.post_process_pipeline.effects),
+            "lighting_2d": bool(getattr(lighting, "enabled", False))}
+
+
+def server_tick(project: Path) -> dict[str, Any]:
+    """``SceneRoom.step`` (the authority's tick, headless) with TICK_BODIES bodies walking ROUTE round the Crossing on
+    its HD-2D World: TICK_TRIALS runs of TICK_COUNT ticks after 100 untimed. Only ``step`` is timed (inputs not)."""
+    from contextlib import chdir
+
+    from mesh_net.scene_room import SceneRoom
+
+    with chdir(project):  # (the project's own prefabs and shared player, as a server hosting it loads them)
+        room = SceneRoom(project / ROOM_FILE, project)
+    walkers = [_Walker(room.join(), i * PEER_DELAY) for i in range(TICK_BODIES)]
+    trials = []
+    for trial in range(TICK_TRIALS + 1):
+        times = []
+        for _ in range(100 if trial == 0 else TICK_COUNT):
+            for walker in walkers:
+                walker.send(room, room.tick)
+            t = time.perf_counter()
+            room.step()
+            times.append((time.perf_counter() - t) * 1000)
+        if trial:
+            trials.append(summary(times))
+    return {"bodies": len(walkers), "ticks_per_trial": TICK_COUNT, "trials": trials,
+            "stalled_legs": sum(w.stalls for w in walkers), "legs_walked": sum(w.leg for w in walkers)}
+
+
+def _client_trial(game: Any, project: Path, peers: int) -> dict[str, Any]:
+    """The Crossing as a net client draws it (mesh_net.scene_client.SceneView: the scene's own renderer and lamps, an
+    avatar per player) with 1 + ``peers`` bodies walking ROUTE on a local authority (SceneRoom, stepped at its 20 Hz
+    between frames, untimed); the peers played two ticks behind (Playback), the own avatar as the server last put it,
+    as mesh_net.world_client draws them. Each frame timed: net (snapshot in, positions), sync, update (scene, camera,
+    lamps), draw (``on_draw``; the GPU's own time with a timer query), finish (``ctx.finish``: the GPU done), flip."""
+    from engine.scene_runtime.room_memory import VAR as ROOM_MEMORY
+    from mesh_net import protocol as wire
+    from mesh_net.playback import Playback
+    from mesh_net.scene_client import SceneView
+    from mesh_net.scene_room import SceneRoom
+
+    w = game.window
+    # (as mesh_net.world_client loads a room: the last trial's view removed the player definition, which room memory
+    # would otherwise keep out of the room)
+    w.scene_controller.room_path = None
+    w.game_state_controller.set_var(ROOM_MEMORY, {})
+    game.load(ROOM_FILE)
+    game.step(60)
+    room = SceneRoom(project / ROOM_FILE, project)
+    view = SceneView(w, game.arcade, room)
+    walkers = [_Walker(room.join(), i * PEER_DELAY) for i in range(peers + 1)]
+    own = walkers[0].eid
+    playback = Playback(view.check)
+    query = w.ctx.query(time=True, samples=False, primitives=False)
+    stage_names = ("net", "sync", "update", "draw", "finish", "flip")
+    stages: dict[str, list[float]] = {k: [] for k in ("frame", "gpu", *stage_names)}
+    drawn: list[float] = []
+    original = w.on_draw
+
+    def timed_draw() -> None:
+        t = time.perf_counter()
+        with query:
+            original()
+        drawn.append((time.perf_counter() - t) * 1000)
+
+    in_view: list[int] = []
+    where: list[tuple[float, float, float]] = []
+    per_tick = 60 // wire.HZ
+    w.on_draw = timed_draw  # (SceneView.draw calls window.on_draw(): this instance attribute)
+    load: _Load | None = None
+    gpu_before, fg_before, snapshot = None, None, room.snapshot()
+    try:
+        for i in range(PERF_WARMUP + PERF_FRAMES):
+            if i == PERF_WARMUP:
+                load, gpu_before, fg_before = _Load(), _gpu_load(), _foreground(w)
+            if i % per_tick == 0:  # the authority's tick (another machine's work: untimed)
+                for walker in walkers:
+                    walker.send(room, room.tick)
+                room.step()
+                snapshot = room.snapshot()
+            now = i / 60
+            t0 = time.perf_counter()
+            if i % per_tick == 0:
+                playback.push(snapshot, now)
+            state = playback.states[-1]
+            positions = playback.positions(now)
+            mine = next(r for r in state["players"] if r[0] == own)
+            positions[own] = (mine[1], mine[2], mine[4], mine[5])
+            t1 = time.perf_counter()
+            view.sync(state, positions, own, 1 / 60)
+            t2 = time.perf_counter()
+            view.draw(1 / 60)
+            t3 = time.perf_counter()
+            w.ctx.finish()
+            t4 = time.perf_counter()
+            w.flip()
+            t5 = time.perf_counter()
+            gpu_ms = query.time_elapsed / 1e6
+            if i < PERF_WARMUP:
+                continue
+            ms = [(b - a) * 1000 for a, b in ((t0, t1), (t1, t2), (t2, t3), (t3, t4), (t4, t5))]
+            for name, value in zip(stage_names, (ms[0], ms[1], ms[2] - drawn[-1], drawn[-1], ms[3], ms[4])):
+                stages[name].append(value)
+            stages["frame"].append((t5 - t0) * 1000)
+            stages["gpu"].append(gpu_ms)
+            vp = w.hd2d_renderer.camera.view_projection(w.hd2d_renderer._aspect)  # (untimed: avatars in the picture)
+            seen = 0
+            for eid, (x, y, z, _floor) in positions.items():
+                p = (x / PX, y / PX, z / PX, 1.0)
+                c = [sum(vp[r][k] * p[k] for k in range(4)) for r in range(4)]
+                seen += eid != own and c[3] > 0 and abs(c[0]) < c[3] and abs(c[1]) < c[3]
+            in_view.append(seen)
+            where.append((round(mine[1] / PX, 1), round(mine[2] / PX, 1), round(mine[4] / PX, 2)))
+    finally:
+        del w.on_draw
+    assert load is not None
+    frame = summary(stages["frame"])
+    return {"peers": peers, "frames": PERF_FRAMES, "frame": frame,
+            "stages_median_p95_ms": {k: [summary(v)["median_ms"], summary(v)["p95_ms"]] for k, v in stages.items()
+                                     if k != "frame"},
+            "worst_frames": [{"frame": i, "ms": ms, "own_centre_xy_elevation_m": where[i],
+                              **{k: round(stages[k][i], 2) for k in ("gpu", *stage_names)}}
+                             for i, ms in frame["worst"]],
+            "peers_in_view": {"mean": round(statistics.mean(in_view), 2), "min": min(in_view), "max": max(in_view)},
+            "own_stalled_legs": walkers[0].stalls, "own_legs": walkers[0].leg,
+            "noise": {**load.done(), "gpu_before": gpu_before, "gpu_after": _gpu_load(),
+                      "foreground_before": fg_before, "foreground_after": _foreground(w)},
+            "renderer": {k: w.hd2d_renderer.stats()[k] for k in ("draw_calls", "triangles", "shadow_draws", "lamps",
+                                                                  "shadow_lamps")}}
+
+
+def perf(out: Path) -> dict[str, Any]:
+    """M1-B-2: the server tick (headless), then the client trials (PERF_TRIALS) in one hidden 1280 x 720 window; the
+    hardware, rendering settings and what else the machine was doing. OUT/game is built first if it isn't there."""
+    from hd2d_demo import HiddenGame
+
+    project = out / "game"
+    if not project.exists():
+        build(out, pictures=False)
+    idle = _Load()
+    time.sleep(5)  # (what the machine does without us: the owner's programs)
+    report: dict[str, Any] = {"machine_before": {**idle.done(), "gpu": _gpu_load()}}
+    report["server_tick"] = server_tick(project)
+    game = HiddenGame(project, size=(1280, 720))
+    try:
+        report["trials"] = [_client_trial(game, project, peers) for peers in PERF_TRIALS]
+        report["hardware"] = hardware(game.window)
+        report["rendering"] = rendering(game.window)
+    finally:
+        game.close()
+    _write(out / "perf.json", report)
+    return report
+
+
 if __name__ == "__main__":
     command, out_dir = sys.argv[1], Path(sys.argv[2]).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(out_dir / "user_settings.json")  # never a checkout's own file
     os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    from hidden_windows import no_activate
+
+    no_activate()  # hidden, and never activated: no focus or keys taken from the person (Studio's window too)
     result = {}
     if command in ("build", "all"):
         result["build"] = build(out_dir)
     if command in ("check", "all"):
         result["check"] = check(out_dir)
+    if command == "perf":
+        result["perf"] = perf(out_dir)
     print(json.dumps(result, indent=1, default=str)[:8000])
