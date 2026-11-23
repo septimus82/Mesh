@@ -1,14 +1,15 @@
 """M4-0: today's online combat under simulated latency, measured headless (docs/plans/m4_online_combat.md).
 
-    py -3.13 tooling/m4_latency_probe.py [--seed N] [--hz HZ] [--json OUT]
+    py -3.13 tooling/m4_latency_probe.py [--seeds N ...] [--sessions K] [--hz HZ] [--rto MS] [--json OUT]
 
 The real authority (mesh_net.scene_room.SceneRoom, its step, input and _attack) and the client's real display rules
 (mesh_net.scene_client.SceneArena.draw: the local avatar at the latest snapshot; everyone else through
 mesh_net.playback.Playback, two ticks behind) run on one virtual millisecond clock. Between them, a seeded model of
-the TCP link the server uses: a one-way delay with uniform jitter, and a lost segment arriving a retransmission later,
-everything behind it held up (in order, never dropped: TCP). The client sends its intent every 1/HZ s on its own clock
-(mesh_net.demo.Arena.session), at a seeded phase to the server's tick. No socket, no window, no GPU, no wall clock:
-the same seed gives the same numbers.
+the TCP link the server uses: a one-way delay with uniform jitter, and a lost segment arriving a retransmission later
+(RTT + ``--rto``, Linux-like), everything behind it held up (in order, never dropped: TCP). The client sends its
+intent every 1/HZ s on its own clock (mesh_net.demo.Arena.session), at a seeded phase to the server's tick that stays
+fixed for the session. No socket, no window, no GPU, no wall clock: the same seeds give the same numbers. Several seeds
+(``--seeds``) give each number's spread (``ranges``).
 
 What the tool adds that the game doesn't have: a scripted mover for the moving-target case (today's authority never
 moves an enemy) and that enemy's position in the client's copy of each snapshot (today's wire carries none), shown
@@ -30,12 +31,12 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from importlib.resources import files
 from pathlib import Path
-from statistics import median
 from typing import Any
 from unittest import mock
 
 REPO = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO))
+if __package__ in (None, ""):  # (run as a script: the checkout's packages; importing the module changes nothing)
+    sys.path.insert(0, str(REPO))
 
 from engine.combat_model import TargetState  # noqa: E402
 from mesh_net import protocol as wire  # noqa: E402
@@ -43,14 +44,14 @@ from mesh_net.playback import Playback  # noqa: E402
 from mesh_net.scene_room import COOP_SCENE, Body, Player, SceneRoom, coop_files, disposable_project  # noqa: E402
 
 FRAME_MS = 1000 / 60  # the client window's frame (mesh_net.demo.Arena.run)
-RTO_MS = 200.0  # TCP's minimum retransmission timeout (Linux; Windows' is higher): a lost segment's extra delay floor
+RTO_MS = 200.0  # a lost segment arrives RTT + this later (Linux's RTO is SRTT + 4 RTTVAR, at least 200 ms; --rto)
 # (round trip ms, one-way jitter +-ms, loss per message): the brief's 0/50/100/200 ms with a little jitter and loss
 PROFILES = ((0, 0, 0.0), (0, 10, 0.01), (50, 10, 0.01), (100, 10, 0.01), (200, 10, 0.01))
 BANDIT = "start_bandit_608_256_0_0"
 
 
 def pct(values: list[float], q: float) -> float:
-    """The ``q`` quantile (0..1), nearest rank: a sample that happened, never an interpolation."""
+    """The ``q`` quantile (0..1), nearest rank: a sample that happened, never an interpolation (p50 too)."""
     ordered = sorted(values)
     return ordered[min(len(ordered) - 1, max(0, math.ceil(q * len(ordered)) - 1))]
 
@@ -58,7 +59,7 @@ def pct(values: list[float], q: float) -> float:
 def summary(values: list[float]) -> dict[str, float]:
     if not values:
         return {"n": 0}
-    return {"n": len(values), "p50": round(median(values), 1), "p95": round(pct(values, 0.95), 1),
+    return {"n": len(values), "p50": round(pct(values, 0.5), 1), "p95": round(pct(values, 0.95), 1),
             "max": round(max(values), 1)}
 
 
@@ -75,7 +76,7 @@ class Link:
     def arrival(self, sent: float) -> float:
         delay = max(0.0, self.one_way_ms + self.rng.uniform(-self.jitter_ms, self.jitter_ms))
         if self.rng.random() < self.loss:
-            delay += max(RTO_MS, 2 * self.one_way_ms)  # retransmitted after a timeout (or ~an RTT on fast retransmit)
+            delay += 2 * self.one_way_ms + RTO_MS  # retransmitted after a timeout: RTT + RTO_MS
         self.last = max(self.last, sent + delay)  # head-of-line: never before the one sent earlier
         return self.last
 
@@ -466,8 +467,10 @@ def stairs(rtt: float, jitter: float, loss: float, seed: int, ms: float = 16000)
 
 
 def pooled(scenario: Callable[..., dict[str, Any]], seeds: list[int], *args: Any) -> dict[str, Any]:
-    """One scenario over several sessions (each its own phase between the client's send clock and the server's tick,
-    which a connection keeps: one session alone measures one phase): lists joined, counts added, ``max_`` the most."""
+    """One scenario over several sessions: lists joined, counts added, ``max_`` the most. Each session keeps one fixed
+    phase between the client's send clock and the server's tick, and one phase alone skews every delay; real clients
+    drift instead (their loops sleep 1/HZ after each send, so the phase wanders), which pooling many fixed phases stands
+    in for *(an approximation: a drifting phase is not modelled)*."""
     total: dict[str, Any] = {}
     for seed in seeds:
         for key, value in scenario(*args[:3], seed, *args[3:]).items():
@@ -520,19 +523,50 @@ def measure(seed: int = 7, sessions: int = 6) -> dict[str, Any]:
             "moving_attacker": fairness(pooled(moving_attacker, seeds, *profile)),
             "stairs": fairness(pooled(stairs, seeds, *profile))})
     return {"seed": seed, "sessions_per_profile": sessions, "frame_ms": round(FRAME_MS, 2), "rto_ms": RTO_MS,
-            "profiles": rows}
+            "hz": wire.HZ, "profiles": rows}
+
+
+def snapshot_bytes() -> dict[str, dict[int, int]]:
+    """Encoded snapshot size (bytes, with its LF) by player count, in both rooms."""
+    sizes: dict[str, dict[int, int]] = {}
+    for name, opened in (("coop_2d", coop_room), ("crossing_hd2d", stairs_room)):
+        with opened() as room:
+            sizes[name] = {}
+            for n in range(1, wire.MAX_PLAYERS + 1):
+                room.join()
+                if n in (1, 2, 8):
+                    sizes[name][n] = len(wire.encode(room.snapshot()))
+    return sizes
+
+
+def ranges(runs: list[Any]) -> Any:
+    """Several seeds' results as one: every number becomes [lowest, highest]; anything else is the first run's."""
+    first = runs[0]
+    if isinstance(first, dict):
+        return {k: ranges([r[k] for r in runs]) for k in first}
+    if isinstance(first, list) and all(isinstance(r, list) and len(r) == len(first) for r in runs):
+        return [ranges([r[i] for r in runs]) for i in range(len(first))]
+    if isinstance(first, (int, float)) and not isinstance(first, bool) and all(isinstance(r, (int, float)) for r in runs):
+        low, high = min(runs), max(runs)
+        return first if low == high else [low, high]
+    return first
 
 
 def main() -> None:
+    global RTO_MS
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--seed", type=int, default=7)
-    parser.add_argument("--sessions", type=int, default=6, help="sessions pooled per latency profile")
+    parser.add_argument("--seeds", type=int, nargs="+", default=[7, 8, 9], help="one run per seed; the spread is "
+                                                                                 "reported as [lowest, highest]")
+    parser.add_argument("--sessions", type=int, default=24, help="sessions pooled per latency profile")
+    parser.add_argument("--rto", type=float, default=RTO_MS, help="a lost segment arrives RTT + this many ms later")
     parser.add_argument("--hz", type=int, default=wire.HZ, help="what-if: the authority's tick and the client's send "
                                                                 "rate (the game's is mesh_net.protocol.HZ)")
     parser.add_argument("--json", help="also write the full result here")
     args = parser.parse_args()
+    RTO_MS = args.rto
     with mock.patch.object(wire, "HZ", args.hz):
-        result = measure(args.seed, args.sessions)
+        runs = [measure(seed, args.sessions) for seed in args.seeds]
+        result = {"seeds": args.seeds, "range": ranges(runs), "runs": runs, "snapshot_bytes": snapshot_bytes()}
     text = json.dumps(result, indent=1)
     if args.json:
         Path(args.json).write_text(text + "\n", encoding="utf-8")

@@ -20,7 +20,7 @@ def test_the_link_is_tcp_like_and_seeded_and_quantiles_are_samples() -> None:
     assert a == arrivals(3) and a != arrivals(4), "one seed, one run"
     assert all(x <= y for x, y in zip(a, a[1:])), "in order: a late segment holds up the ones behind it"
     assert all(x >= i * 50.0 + 40.0 for i, x in enumerate(a)), "never sooner than the delay less its jitter"
-    assert max(x - i * 50.0 for i, x in enumerate(a)) >= 40.0 + RTO_MS, "a lost segment waits for its retransmission"
+    assert max(x - i * 50.0 for i, x in enumerate(a)) >= 40.0 + 100.0 + RTO_MS, "a loss waits a retransmission: RTT + RTO"
     ideal = Link(0.0, 0.0, 0.0, random.Random(1))
     assert [ideal.arrival(t) for t in (0.0, 5.0, 9.0)] == [0.0, 5.0, 9.0]
 
