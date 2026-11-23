@@ -29,6 +29,7 @@ from mesh_net.owed import RESERVED, Journal, JournalDamaged, JournalError, Owed
 from mesh_net.persistence import RECORDED_PER_TICK
 from mesh_net.world import expedition_files
 from tests.net_owed_server import Client, ServerProcess
+from tests.net_tmp import private_temp
 from tests.test_mesh_net_characters import UNLOCK, P, creds, pworld, to_layer_2
 from tests.test_mesh_net_world import GUARDIAN, HUB, R1, R2, kill
 
@@ -586,28 +587,29 @@ def test_with_store_and_journal_both_failing_the_loss_is_said_never_silent(tmp_p
         server.kill()
 
 
-def _run_server(path: Path) -> subprocess.Popen[str]:
+def _run_server(path: Path, env: dict[str, str] | None = None) -> subprocess.Popen[str]:
     return subprocess.Popen([sys.executable, "-m", "mesh_net.server", "--expedition", "--store", str(path), "--port", "0"],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=REPO)
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=REPO, env=env)
 
 
 def test_the_shipped_server_records_what_is_owed_when_it_starts(files, stores, tmp_path):
     path = tmp_path / "characters.db"
     store, d, (ada,), _ = earn_owed(files, stores, path, "Ada")
     store.close()
-    proc = _run_server(path)
-    watchdog = threading.Timer(120, proc.kill)  # (a server that neither listens nor exits ends the test, not hangs it)
-    watchdog.start()
-    try:
-        lines = []
-        for line in proc.stdout:  # (until it listens: every line before that is read, none waited for by time)
-            lines.append(line.strip())
-            if line.startswith("Mesh room listening"):
-                break
-    finally:
-        watchdog.cancel()
-        proc.kill()
-        proc.communicate(timeout=30)
+    with private_temp() as (env, _base):  # (killed below: the server cannot remove its own mesh-room folder)
+        proc = _run_server(path, env)
+        watchdog = threading.Timer(120, proc.kill)  # (a server that neither listens nor exits ends the test, not hangs it)
+        watchdog.start()
+        try:
+            lines = []
+            for line in proc.stdout:  # (until it listens: every line before that is read, none waited for by time)
+                lines.append(line.strip())
+                if line.startswith("Mesh room listening"):
+                    break
+        finally:
+            watchdog.cancel()
+            proc.kill()
+            proc.communicate(timeout=30)
     assert "Mesh owed completions: 1 recorded from earlier runs, 0 still owed" in lines, lines
     assert sheet_of(path, ada["id"]).unlocks == (UNLOCK,) and sheet_of(path, ada["id"]).completed == 1
     assert journal_of(path) == []

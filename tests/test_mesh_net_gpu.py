@@ -10,6 +10,7 @@ import pytest
 
 from mesh_net.server import Server
 from tests.net_resume import drop_and_resume, drop_and_resume_scene
+from tests.net_tmp import private_temp
 from tests.net_walk import ABOVE, GAP, ON_ENEMY, walk
 
 pytestmark = pytest.mark.integration
@@ -518,11 +519,11 @@ async def _go(proc, key, target, within, walks):
     await walk(lambda cmd: command(proc, cmd), key, target, within, where, record=walks)
 
 
-async def _server(store, logs):
+async def _server(store, logs, env):
     """``python -m mesh_net.server --expedition --store STORE`` as its own process; returns (process, port)."""
     proc = await asyncio.create_subprocess_exec(sys.executable, "-m", "mesh_net.server", "--expedition", "--store",
                                                 str(store), "--port", "0", stdout=asyncio.subprocess.PIPE,
-                                                stderr=asyncio.subprocess.STDOUT)
+                                                stderr=asyncio.subprocess.STDOUT, env=env)
     async with asyncio.timeout(60):
         while line := await proc.stdout.readline():
             text = line.decode(errors="replace").rstrip()
@@ -560,8 +561,8 @@ def test_two_characters_persist_through_a_server_restart(tmp_path, record_testsu
                                                     str(key_file), stdin=asyncio.subprocess.PIPE,
                                                     stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
 
-    async def run():
-        server, port = await _server(path, logs)
+    async def run(env):
+        server, port = await _server(path, logs, env)
         procs = []
         try:
             procs = [await window(port, key_file) for _, key_file in keys]
@@ -619,7 +620,7 @@ def test_two_characters_persist_through_a_server_restart(tmp_path, record_testsu
             finally:
                 check.close()
 
-            server, port = await _server(path, logs)
+            server, port = await _server(path, logs, env)
             for p in procs:  # the windows join the new server as their characters (N: a fresh join, not a resume)
                 await command(p, f"port {port}")
                 await _tap(p, "N")
@@ -653,6 +654,7 @@ def test_two_characters_persist_through_a_server_restart(tmp_path, record_testsu
             elif problems:
                 failure.add_note("window cleanup: " + "; ".join(problems))
     try:
-        asyncio.run(run())
+        with private_temp() as (env, _base):  # the killed servers cannot remove their own mesh-room folders
+            asyncio.run(run(env))
     finally:
         record_testsuite_property("measure.net_walk_n8", json.dumps(walks))
