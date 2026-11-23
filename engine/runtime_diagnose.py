@@ -37,6 +37,8 @@ from pathlib import Path
 from typing import Any
 
 from engine import interaction
+from engine.hd2d.world import World as Hd2dWorld
+from engine.hd2d.world import elevation_of, same_level
 from engine.runtime_debug import _ROOTS, plain, playtest_view
 from engine.scene_entity_gating import _normalize_flag_list, is_player_entity_payload
 from engine.scene_runtime import room_memory
@@ -412,14 +414,24 @@ def _reach_and_selection(window: Any, sprite: Any, actor: Any) -> list[Doc]:
                        contact_distance=round(contact, 1)))
     if behind:
         return found
+    world = getattr(window, "hd2d_world", None)  # (an HD-2D room: only what is on the player's level, as the game has it)
+    if isinstance(world, Hd2dWorld):
+        level = same_level(world, actor, sprite)
+        found.append(_cond("level", level, "It is on the player's level." if level else (
+            "It is on another floor: more than a body's height above or below the player, or with a floor between "
+            "them (the player on a deck over it, or under one)."),
+            player_elevation_m=round(elevation_of(actor), 3), its_elevation_m=round(elevation_of(sprite), 3)))
+        if not level:
+            return found
     getter = getattr(window, "get_flag", None)
     entities = list(interaction._iter_scene_entities(window))
-    winner = interaction.select_interaction_candidate(entities, actor=actor, get_flag=getter if callable(getter) else None)
+    winner = interaction.select_interaction_candidate(entities, actor=actor, get_flag=getter if callable(getter) else None,
+                                                      world=world)
     ranked: list[Doc] = []
     for entity in entities:
         candidate = interaction._candidate_from_entity(entity, actor=actor, actor_pos=me,
                                                        max_dist=interaction.DEFAULT_INTERACT_MAX_DIST,
-                                                       get_flag=getter if callable(getter) else None)
+                                                       get_flag=getter if callable(getter) else None, world=world)
         if candidate is not None:
             ranked.append({"entity_id": candidate.entity_id, "name": getattr(entity, "mesh_name", None),
                            "priority": candidate.priority, "facing_alignment": round(candidate.facing_alignment, 3),

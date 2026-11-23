@@ -12,6 +12,7 @@ from engine.combat_constants import (
     KEY_TARGET,
 )
 from engine.event_emit import emit_gameplay_event
+from engine.hd2d.world import same_level
 
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -141,6 +142,9 @@ class Projectile(Behaviour):
                 return
 
             if tag == self.target_tag:
+                shooter = getattr(self.entity, "mesh_attacker", self.entity)  # (Shooter says who fired it)
+                if not same_level(getattr(self.window, "hd2d_world", None), shooter, hit):
+                    continue  # (an HD-2D room: on another floor than the shooter, engine.hd2d.world.same_level)
                 self._apply_damage(hit)
                 self.entity.remove_from_sprite_lists()
                 return

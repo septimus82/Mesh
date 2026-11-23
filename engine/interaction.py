@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Iterable
 
 from engine.fire import fires_of
+from engine.hd2d.world import same_level
 from engine.logging_tools import get_logger
 
 DEFAULT_INTERACT_MAX_DIST = 72.0
@@ -289,6 +290,7 @@ def _candidate_from_entity(
     actor_pos: tuple[float, float],
     max_dist: float,
     get_flag: Callable[[str, bool], bool] | None = None,
+    world: Any = None,
 ) -> InteractionCandidate | None:
     if entity is actor:
         return None
@@ -304,7 +306,7 @@ def _candidate_from_entity(
     dx = entity_pos[0] - actor_pos[0]
     dy = entity_pos[1] - actor_pos[1]
     distance = math.hypot(dx, dy)
-    if distance > radius:
+    if distance > radius or not same_level(world, actor, entity):  # (an HD-2D room's floors: engine.hd2d.world)
         return None
     facing = _facing_vector(actor)
     alignment = 0.0
@@ -332,7 +334,10 @@ def select_interaction_candidate(
     actor: Any | None,
     max_dist: float = DEFAULT_INTERACT_MAX_DIST,
     get_flag: Callable[[str, bool], bool] | None = None,
+    world: Any = None,
 ) -> InteractionCandidate | None:
+    """``world``: the room's HD-2D World (``window.hd2d_world``): only what is on the actor's level
+    (engine.hd2d.world.same_level) is a candidate. None (a 2D room): planar."""
     if actor is None:
         return None
     actor_pos = _position(actor)
@@ -353,6 +358,7 @@ def select_interaction_candidate(
                 actor_pos=actor_pos,
                 max_dist=capped,
                 get_flag=get_flag,
+                world=world,
             )
         except Exception as exc:
             if _expected_eligibility_error(exc):
@@ -423,6 +429,7 @@ def resolve_interaction_candidate(
         actor=actor,
         max_dist=max_dist,
         get_flag=getter if callable(getter) else None,
+        world=getattr(window, "hd2d_world", None),
     )
 
 
@@ -629,6 +636,7 @@ def perform_interaction(
                 actor_pos=pos,
                 max_dist=max_dist,
                 get_flag=getter if callable(getter) else None,
+                world=getattr(window, "hd2d_world", None),
             )
             if pos is not None
             else None

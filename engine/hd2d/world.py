@@ -161,6 +161,49 @@ def _on_level(solid: Any, z: float) -> bool:
     return abs(e - z) < BODY
 
 
+def same_level(world: World | None, a: Any, b: Any) -> bool:
+    """Whether ``a`` and ``b`` (sprites or bodies: an entity ``elevation`` and a collider or picture box) are on one
+    level, so one may use, attack or pick up the other (M3-4, owner decision D8). The one rule interaction, combat and
+    pickups ask, in single-player (engine.interaction, the Hitbox, Projectile, DamageOnTouch and Collectible
+    behaviours) and in the net authority (mesh_net.scene_room). Always true without an HD-2D World (a 2D room, or
+    ``world`` None): nothing changes there.
+
+    In an HD-2D room both must hold:
+
+    - **vertical reach**: their elevations are less than BODY (1.5 m, a character's height) apart. BODY because
+      World.stand keeps that much clear over a character's feet: two floors characters stand on, one over the other,
+      are never closer, so anything nearer is no stacked floor. A 2 m bridge deck and the ground under it are out of
+      reach; two on one staircase or slope within reach are in it (72 px across, the interaction reach, is about
+      1.1 m up the floors demo's stairs), as are one at the top of the stairs and one on the landing beside it;
+    - **no floor between them**: at the lower one's place (its box's centre: where World.move stands a character)
+      no structure's floor (World.heights_at) lies above a step over its feet and below a step over the higher one's:
+      the higher one's supporting floor, or any other, over the lower one. This refuses a lever, item or enemy set
+      under a deck lower than BODY, from the deck. A standing character never has a floor within BODY over it
+      (World.stand), so between characters the reach decides. The ground (flat or sculpted, floor "ground") is never
+      counted: a heightfield can't lie between two things above it, and counting it would refuse an object on a slope
+      whose collider is off its centre (Studio stands one at its centre), or one a later terrain raise left buried.
+
+    What it doesn't see: a floor that, over the lower one, is more than a step above the higher one. An open ramp or
+    arched bridge climbing on overhead is one: a character on it at 1.25 m and one on the ground below where it is
+    1.65 m up are judged one level. Directly under a character on it, nothing is (BODY's clearance), and no model
+    Mesh ships makes such a place; checking higher would refuse stair and slope neighbours far more often.
+
+    Elevation is what each entity records: a character's as World.move sets it, anything never moved as saved. No
+    recorded floor (``mesh_hd2d_floor``) is read, so objects never moved need none, and both runtimes, sharing the
+    World, decide alike. An attack asks about the attacker, not its hitbox or shot (``mesh_attacker``, set by Combat
+    and Shooter; the authority asks about the player): out ahead on a stair, a hitbox at the attacker's feet height
+    would be under the stair."""
+    if not isinstance(world, World):
+        return True
+    za, zb = elevation_of(a), elevation_of(b)
+    if abs(za - zb) >= BODY:
+        return False
+    low, (z0, z1) = (a, (za, zb)) if za <= zb else (b, (zb, za))
+    box = entity_aabb(low)
+    return not any(z0 + STEP < h < z1 + STEP and s.floor != _GROUND.floor
+                   for h, s in world.heights_at(box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE))
+
+
 def elevation_of(sprite: Any) -> float:
     """A sprite's elevation in metres (its entity's ``elevation`` px)."""
     data = getattr(sprite, "mesh_entity_data", None) or {}

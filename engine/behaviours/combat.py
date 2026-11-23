@@ -234,5 +234,6 @@ class Combat(Behaviour):
         sprite = scene_controller._create_sprite(hitbox_data)
         if sprite:
             sprite.alpha = 0 # Invisible
+            sprite.mesh_attacker = self.entity  # who it hits for: in an HD-2D room only what is on its level (Hitbox)
             # Add to scene
             scene_controller.add_sprite_to_layer(sprite, "entities")

@@ -181,4 +181,5 @@ class Shooter(Behaviour):
         sprite = scene_controller._create_sprite(projectile_data)
         if sprite:
             sprite.color = (255, 255, 0) # Yellow bullet
+            sprite.mesh_attacker = self.entity  # who it hits for: in an HD-2D room only what is on its level (Projectile)
             scene_controller.add_sprite_to_layer(sprite, "entities")
