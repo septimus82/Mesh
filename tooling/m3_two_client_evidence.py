@@ -127,6 +127,7 @@ STAIRS_X, PLATEAU_Y, GROUND_Y = 347.0, 648.0, 144.0
 DECK_X = 504.0  # on the deck, its hitbox (the room's reach ahead) on the bandit beneath, after turning right (+3 steps)
 OVER_X = 528.0  # on the deck over the underpass, where B passes beneath
 SOUTH_Y, NORTH_Y = 500.0, 760.0  # B's pass: south of the plateaus (y 18 m) to north of them (22 m)
+LOOT_Y = 632.0  # B, then, to take the loot (544, 672): 40 px +- 8 below it, well within its 72 px reach
 STRIKE = (544.0, 610.0)  # B on the ground below the bandit, facing up (after turning, +3 steps): its hitbox on it,
 # the loot in reach (y 600-644 lands a strike)
 DECK_Z, DECK_FLOOR = 64.0, "bridge_6m/col_deck"
@@ -231,17 +232,24 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
                 await command(proc, f"release {key}")
         await rest(pid)
 
-    async def acted(proc: Any, pid: int, key: str) -> None:
-        """Tap an action key; wait until the server has run the input frame that carried it (the window's input
-        sequence after the tap: tooling/net_world_probe ``seq``), and one tick more."""
+    async def acted(proc: Any, pid: int, key: str) -> str:
+        """Tap an action key; wait until the server has taken the input frame that carries the action (``received``)
+        and run two ticks after it; return the action the window sent. (Not by the window's input sequence when the
+        tap returns: pyglet may queue the key and deliver it at the window's next frame, so on a slow runner the
+        action can ride a later frame than the next one: Linux llvmpipe, Extended 45202555678.)"""
+        before = sum(1 for who, _ in received if who == pid)
         await command(proc, f"press {key}")
-        sent = (await command(proc, f"release {key}"))["seq"]
-        async with asyncio.timeout(10):
-            while player(pid).seq <= sent:
-                await asyncio.sleep(0.005)
-            tick = world.tick
-            while world.tick <= tick + 1:
-                await asyncio.sleep(0.005)
+        await command(proc, f"release {key}")
+        try:
+            async with asyncio.timeout(15):
+                while sum(1 for who, _ in received if who == pid) <= before:
+                    await asyncio.sleep(0.005)
+                tick = world.tick
+                while world.tick <= tick + 1:
+                    await asyncio.sleep(0.005)
+        except TimeoutError as exc:
+            raise AssertionError(f"no action frame from player {pid} reached the server after {key}") from exc
+        return [action for who, action in received if who == pid][before]
 
     def view(reply: dict[str, Any], eid: int) -> list[Any] | None:
         """The avatar ``eid`` as the window holds it: [x, y, elevation px, floor] (net_world_probe.window_facts)."""
@@ -384,7 +392,10 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
             part["after_a_take"] = {"dropped": enemy.dropped, "held": enemy.holder is not None}
             part["a_sent"] = [action for pid, action in received if pid == pa]  # (what A's window asked: attack, take)
             await snap("05_a_reached_for_loot")
-            await acted(b, pb, "E")
+            await go(b, pb, "UP", LOOT_Y)  # (well inside the loot's reach, whatever spot the strike landed from)
+            part["b_loot_distance"] = round(((player(pb).body.center_x - enemy.body.center_x) ** 2
+                                             + (player(pb).body.center_y - enemy.body.center_y) ** 2) ** 0.5, 2)
+            part["b_sent"] = await acted(b, pb, "E")
             room = world.instances[world.members[pb].instance].room
             part["after_b_take"] = {"dropped": enemy.dropped, "b": world.members[pb].eid,
                                     "holder": next((e for e, pl in room.players.items() if pl is enemy.holder), None)}
@@ -436,23 +447,26 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
         with _Phase(facts, "door") as part:
             await go(b, pb, "DOWN", SOUTH_Y)  # (B out of A's way, south of the deck)
             touched = False
+            contact: set[tuple[Any, Any]] = set()  # (elevation px, floor) of A at every moment its picture is on the area
             await command(a, "press LEFT")
             try:
                 async with asyncio.timeout(20):
                     while world.members[pa].instance.startswith(CROSSING) and player(pa).body.center_x > door.x - 16:
                         body = player(pa).body
                         hw, hh = body.width / 2, body.height / 2  # (Door.touches' area test, without the floors)
-                        touched = touched or (body.center_x - hw < door.x + door.half_w
-                                              and body.center_x + hw > door.x - door.half_w
-                                              and body.center_y - hh < door.y + door.half_h
-                                              and body.center_y + hh > door.y - door.half_h)
+                        if (body.center_x - hw < door.x + door.half_w and body.center_x + hw > door.x - door.half_w
+                                and body.center_y - hh < door.y + door.half_h and body.center_y + hh > door.y - door.half_h):
+                            touched = True
+                            contact.add((body.mesh_entity_data.get("elevation"), body.mesh_hd2d_floor))
                         await asyncio.sleep(0.005)
             finally:
                 await command(a, "release LEFT")
-            await rest(pa)
+            await rest(pa)  # (where a late release leaves A: the deck, or the plateau past its west end; both 2 m)
             part["a_touched_area"], part["a_after"] = touched, server_level(pa)
-            ra = await settle(a, lambda r: r["key"] == CROSSING and r["shown"] == r["room"])
-            part["a_window"] = {"key": ra.get("key"), "loads": ra.get("loads")}
+            part["a_contact_levels"] = sorted([list(c) for c in contact], key=str)
+            ra = await settle(a, lambda r: r["key"] == CROSSING and r["shown"] == r["room"]
+                              and view(r, aid) == part["a_after"][:4])
+            part["a_window"] = {"key": ra.get("key"), "loads": ra.get("loads"), "own": view(ra, aid)}
             await snap("07_a_over_door")
             await go(b, pb, "LEFT", door.x)
             await command(b, "press UP")
