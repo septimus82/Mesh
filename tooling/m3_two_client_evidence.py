@@ -128,7 +128,8 @@ DECK_X = 504.0  # on the deck, its hitbox (the room's reach ahead) on the bandit
 OVER_X = 528.0  # on the deck over the underpass, where B passes beneath
 SOUTH_Y, NORTH_Y = 500.0, 760.0  # B's pass: south of the plateaus (y 18 m) to north of them (22 m)
 LOOT_Y = 632.0  # B, then, to take the loot (544, 672): 40 px +- 8 below it, well within its 72 px reach
-STRIKE = (544.0, 610.0)  # B on the ground below the bandit, facing up (after turning, +3 steps): its hitbox on it,
+B_START_X = 560.0  # B's first step, aside from A at the spawn (512)
+STRIKE = (544.0, 610.0)  # B on the ground below the bandit, come up to it (or turned up, +3 steps): its hitbox on it,
 # the loot in reach (y 600-644 lands a strike)
 DECK_Z, DECK_FLOOR = 64.0, "bridge_6m/col_deck"
 BRIDGE_GLB, DECK_NODE = "assets/models/bridge_6m.glb", "col_deck"
@@ -305,6 +306,7 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
         # (a) each walks up the stairs onto the deck and back down while the other stands still; both windows and
         # the server say where.
         with _Phase(facts, "a") as part:
+            await go(b, pb, "RIGHT", B_START_X)  # (B a step aside: two avatars at the spawn read as one)
             await rest(pa, pb)
             await snap("01_start")
             for name, mover, mid, eid, other, opid in (("a", a, pa, aid, b, pb), ("b", b, pb, bid, a, pa)):
@@ -366,6 +368,7 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
         # (c) from the deck A strikes at the bandit beneath, then reaches for its loot (each in planar reach: only the
         # floors between them can refuse it); B on the ground does each.
         with _Phase(facts, "c") as part:
+            await go(b, pb, "DOWN", SOUTH_Y)  # (B south of the deck: nobody stands in front of the bandit)
             await go(a, pa, "LEFT", DECK_X)
             await face(a, pa, "RIGHT", 0)
             p = player(pa)
@@ -378,10 +381,11 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
             await acted(a, pa, "SPACE")
             part["after_a_attack"] = {"hp": enemy.state.hp, "dead": enemy.state.dead}
             part["a_swung"] = p.attack_after > swing  # (the server ran A's attack: its cooldown started)
-            await go(b, pb, "RIGHT", STRIKE[0])
-            await go(b, pb, "DOWN", STRIKE[1])
-            await face(b, pb, "UP", 1)
+            await rest(pa, pb)
             await snap("04_a_struck_from_deck")
+            await go(b, pb, "RIGHT", STRIKE[0])
+            await go(b, pb, "UP", STRIKE[1])
+            await face(b, pb, "UP", 1)
             await acted(b, pb, "SPACE")
             part["after_b_attack"] = {"hp": enemy.state.hp, "dead": enemy.state.dead, "dropped": enemy.dropped}
             seen = [await settle(w, lambda r: bool(r["state"] and bandit in r["state"]["drops"])) for w in (a, b)]
@@ -566,6 +570,10 @@ def main() -> None:
     parser.add_argument("--work", type=Path, help="keep the built project and raw frames here (default: a temp folder)")
     args = parser.parse_args()
     os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+    import engine.optional_arcade  # noqa: F401  # (first: DPI-unaware, as the engine runs)
+    from tooling.hidden_windows import no_activate
+
+    no_activate()  # this process's hidden Studio window never activates (the probes install it in theirs)
     with tempfile.TemporaryDirectory(prefix="m3-evidence-") as temp:
         work = (args.work or Path(temp)).resolve()
         work.mkdir(parents=True, exist_ok=True)
