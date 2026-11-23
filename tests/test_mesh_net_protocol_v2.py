@@ -13,7 +13,7 @@ from mesh_net import protocol as wire
 from mesh_net.client import Client, connect
 from mesh_net.scene_room import COOP_SCENE, SceneRoom, check_state, coop_files, disposable_project
 from mesh_net.server import Server, WorldServer
-from mesh_net.world import World, check_welcome, expedition_files
+from mesh_net.world import World, check_welcome, expedition_files, welcome
 
 pytestmark = pytest.mark.integration  # (sockets, rooms built in folders)
 
@@ -121,9 +121,23 @@ def test_a_v1_server_is_refused_by_a_v2_client() -> None:
             listener.close()
             await listener.wait_closed()
 
-    v1_welcome = (b'{"v":1,"type":"welcome","session":"' + b"0" * 32 + b'","entity":1,"resume":"' + b"a" * 64
-                  + b'","state":{"v":1,"type":"state","tick":0,"players":[[1,1,1]],"enemy_hp":2,"pickup":false,'
-                  b'"holder":null}}\n')
+    async def real_welcome() -> wire.Message:
+        """A v2 server's own welcome (mesh_net.server), to turn into the v1 one a v1 server would send."""
+        server = Server()
+        port = await server.start()
+        try:
+            reader, writer = await asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES)
+            try:
+                writer.write(wire.encode({"v": 2, "type": "join", "resume": None}))
+                return await wire.read(reader)
+            finally:
+                writer.close()
+                await writer.wait_closed()
+        finally:
+            await server.close()
+
+    hello = asyncio.run(real_welcome())
+    v1_welcome = wire.encode({**hello, "v": 1, "state": {**hello["state"], "v": 1}})
     for answer in (v1_welcome, b'{"v":1,"type":"refused","code":"capacity"}\n'):
         with pytest.raises(wire.VersionMismatch, match="protocol version 1"):
             asyncio.run(run(answer))
@@ -131,8 +145,7 @@ def test_a_v1_server_is_refused_by_a_v2_client() -> None:
         asyncio.run(run(None))
     assert [j["v"] for j in joins] == [2, 2, 2], "one v2 join each time, never a v1 retry"
     with pytest.raises(wire.VersionMismatch):  # N7's welcome
-        check_welcome({"v": 1, "type": "welcome", "session": "0" * 32, "player": 1, "resume": "a" * 64,
-                       "world": "w"}, "w")
+        check_welcome({**welcome("0" * 32, 1, "a" * 64, "w"), "v": 1}, "w")
 
 
 def test_nan_and_infinity_never_pass_the_wire() -> None:
