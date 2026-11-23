@@ -117,8 +117,10 @@ def raised_collider(glb: bytes, node: str, by: float = 0.5) -> bytes:
 
 # ------------------------------------------------------------------------------------------------------------ the run
 # Where the run walks (picture centres, px; the avatar's feet are 18 px below): from the start (16, 4.5 m) left to the
-# west stairs, up them onto the west plateau (2 m), right along it onto the deck; back the same way down.
-STAIRS_X, PLATEAU_Y, GROUND_Y = 347.0, 661.0, 144.0
+# west stairs, up them onto the west plateau (2 m), right along it onto the deck; back the same way down. At 2 m the
+# deck stands centres y 636-680 and the plateau up to 722, its north edge a 2 m drop: PLATEAU_Y keeps 74 px (10 ticks of
+# a late release) short of it.
+STAIRS_X, PLATEAU_Y, GROUND_Y = 347.0, 648.0, 144.0
 DECK_X = 512.0  # on the deck, its hitbox (32 px ahead) on the bandit beneath, clear of the door's area
 OVER_X = 528.0  # on the deck over the underpass, where B passes beneath
 SOUTH_Y, NORTH_Y = 500.0, 760.0  # B's pass: south of the plateaus (y 18 m) to north of them (22 m)
@@ -158,6 +160,7 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
     procs: list[Any] = []
     names: dict[Any, str] = {}
     frames: list[str] = []
+    walks: list[Any] = facts.setdefault("walks", [])  # each walk's legs and late-release carries (tests/net_walk.py)
 
     async def window(*extra: str) -> Any:
         proc = await asyncio.create_subprocess_exec(
@@ -198,7 +201,7 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
             room = world.instances[m.instance].room
             body = room.players[m.eid].body
             return room.tick, body.center_x, body.center_y
-        await walk(lambda cmd: command(proc, cmd), key, target, within, where)
+        await walk(lambda cmd: command(proc, cmd), key, target, within, where, record=walks)
 
     async def rest(*pids: int) -> None:
         """Until each player has stood still for 8 server ticks (the movement lease, the windows' interpolation)."""
@@ -542,6 +545,7 @@ def main() -> None:
         raw.mkdir()
         facts = run(project, work, raw)
         seconds = round(time.perf_counter() - t0, 1)
+        (work / "facts.json").write_text(json.dumps(facts, indent=1), encoding="utf-8")  # (kept with --work)
         import tests.test_mesh_net_hd2d_gpu as acceptance  # the run is kept only if the acceptance holds for it
 
         checks = sorted(n for n in dir(acceptance) if n.startswith("test_"))
