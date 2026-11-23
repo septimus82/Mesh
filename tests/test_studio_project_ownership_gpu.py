@@ -78,7 +78,9 @@ def test_one_mesh_studio_has_a_project_and_a_second_is_turned_away_without_touch
     assert _files(root) == before
     held = a.ask("state")
     assert "Unsaved Warden" in held["names"] and held["unsaved"] and held["pending"] == ["Changes from an AI"]
-    assert a.ask("accept")["result"]["ok"] and a.ask("save")["saved"] == [ROOM]
+    assert a.ask("accept")["result"]["ok"]
+    saved = a.ask("save")
+    assert saved["saved"] == [ROOM], saved  # (the whole answer: its "error" says why a save failed)
     assert sorted(n for n in _on_disk(root) if n != "None") == ["Sexton", "Unsaved Warden"]
     assert not list(root.rglob("*.outside-change.bak"))
 

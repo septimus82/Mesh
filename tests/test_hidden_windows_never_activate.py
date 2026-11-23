@@ -1,7 +1,8 @@
 """A hidden test window never activates (Windows): it never becomes the foreground or active window and never gets
 WM_ACTIVATE, when created, resized or moved. pyglet's own SetWindowPos calls activated such windows and took the
 keyboard from the person's full-screen game (tooling/hidden_windows.py; tests/conftest.py installs it for the run).
-The window is made as the tests make theirs: pyglet's Window, hidden by tests/conftest.py. GL-gated: MESH_GL_SMOKE=1."""
+The window is made as the tests make theirs: pyglet's Window, hidden by tests/conftest.py. GL-gated: MESH_GL_SMOKE=1.
+The wrapper's rule itself is checked fast, on every system, with stand-in user32 functions (no window)."""
 
 from __future__ import annotations
 
@@ -14,6 +15,54 @@ import pytest
 from engine import optional_arcade
 
 WM_ACTIVATE = 0x0006
+HWND_TOP, SWP_NOSIZE, SWP_NOMOVE = 0, 0x0001, 0x0002
+
+
+def _wrapper(visible: set[int]) -> tuple[Any, list[tuple[str, tuple[Any, ...]]]]:
+    """tooling/hidden_windows's wrapper around stand-in user32 functions, which record their calls; ``visible``: the
+    windows shown (IsWindowVisible)."""
+    from tooling.hidden_windows import _NoActivateUser32
+
+    calls: list[tuple[str, tuple[Any, ...]]] = []
+
+    class User32:
+        def SetWindowPos(self, *args: Any) -> int:  # noqa: N802
+            calls.append(("SetWindowPos", args))
+            return 1
+
+        def SetForegroundWindow(self, *args: Any) -> int:  # noqa: N802
+            calls.append(("SetForegroundWindow", args))
+            return 1
+
+        def DefWindowProcW(self, *args: Any) -> int:  # noqa: N802
+            calls.append(("DefWindowProcW", args))
+            return 7
+
+    wrapper = _NoActivateUser32.__new__(_NoActivateUser32)  # (without __init__: no real user32 here)
+    wrapper._user32, wrapper._is_visible = User32(), lambda hwnd: hwnd in visible
+    return wrapper, calls
+
+
+@pytest.mark.fast
+def test_the_wrapper_makes_only_hidden_windows_non_activating() -> None:
+    from tooling.hidden_windows import SWP_NOACTIVATE, SWP_SHOWWINDOW
+
+    shown, hidden = 1, 2
+    wrapper, calls = _wrapper({shown})
+    flags = SWP_NOMOVE | SWP_NOSIZE
+    wrapper.SetWindowPos(shown, HWND_TOP, 0, 0, 10, 10, flags)  # a shown window: unchanged
+    wrapper.SetForegroundWindow(shown)
+    wrapper.SetWindowPos(hidden, HWND_TOP, 0, 0, 10, 10, flags)  # hidden, staying hidden: never activates
+    assert wrapper.SetForegroundWindow(hidden) is False  # (not passed on)
+    wrapper.SetWindowPos(hidden, HWND_TOP, 0, 0, 0, 0, flags | SWP_SHOWWINDOW)  # being shown: as pyglet does it
+    assert wrapper.DefWindowProcW(hidden, 0, 0, 0) == 7  # everything else passes through
+    assert calls == [
+        ("SetWindowPos", (shown, HWND_TOP, 0, 0, 10, 10, flags)),
+        ("SetForegroundWindow", (shown,)),
+        ("SetWindowPos", (hidden, HWND_TOP, 0, 0, 10, 10, flags | SWP_NOACTIVATE)),
+        ("SetWindowPos", (hidden, HWND_TOP, 0, 0, 0, 0, flags | SWP_SHOWWINDOW)),
+        ("DefWindowProcW", (hidden, 0, 0, 0)),
+    ]
 
 
 @pytest.mark.integration

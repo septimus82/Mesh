@@ -54,7 +54,8 @@ def no_activate() -> None:
     import pyglet.libs.win32 as libs  # noqa: PLC0415  # (opens no window, and leaves DPI awareness alone)
 
     if not getattr(libs._user32, "mesh_no_activate", False):  # noqa: SLF001
-        libs._user32 = _NoActivateUser32(libs._user32)  # noqa: SLF001  # (pyglet.window.win32 imports it from here)
+        # (pyglet.window.win32 imports it from here; through the module's dict: the wrapper stands in for its WinDLL)
+        vars(libs)["_user32"] = _NoActivateUser32(libs._user32)  # noqa: SLF001
     window_module = sys.modules.get("pyglet.window.win32")
     if window_module is not None:  # (already imported: it holds its own reference)
-        window_module.__dict__["_user32"] = libs._user32  # noqa: SLF001
+        vars(window_module)["_user32"] = libs._user32  # noqa: SLF001
