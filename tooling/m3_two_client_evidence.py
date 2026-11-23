@@ -449,6 +449,7 @@ async def _scenario(world: Any, project: Path, raised: Path, shoot: Path | None)
             ra = await settle(a, lambda r: r["state"] is not None and [x[0] for x in r["state"]["players"]] == [aid])
             part["a_sees"] = [x[0] for x in ra["state"]["players"]] if ra.get("state") else None
             await snap("08_b_through_door")
+        facts["foreign_keys"] = {n: (await command(w, "state"))["foreign_keys"] for n, w in (("a", a), ("b", b))}
         facts["frames"] = frames
         facts["history"] = [list(h) for h in world.history]
         facts["transfers"] = [[h[3], h[4]] for h in world.history if h[2] == "transfer"]  # (player id, what happened)

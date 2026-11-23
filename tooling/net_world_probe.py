@@ -84,6 +84,18 @@ async def drive(arena, port: int) -> None:
     # A hidden window has no focus of its own: the OS deactivates it when another test window loads a room, and the
     # client (rightly, for a player switching windows) then lets go of held keys. Driven by this probe, it keeps them.
     arena.window.remove_handlers(on_deactivate=arena.blur)
+    # A hidden window can still be activated, and then it has the keyboard: a key really pressed on this computer reaches
+    # it (two local runs: a stray Up held for good, the avatar walking off by itself). Only the keys this probe
+    # dispatches reach the client; any other is stopped here and counted (``foreign_keys``).
+    dispatching, foreign = [False], [0]
+
+    def guard(symbol: int, modifiers: int) -> bool | None:
+        if dispatching[0]:
+            return None
+        foreign[0] += 1
+        return True  # (handled: the client never sees it)
+
+    arena.window.push_handlers(on_key_press=guard, on_key_release=guard)
     render = asyncio.create_task(arena.run(port))
     try:
         while True:
@@ -99,7 +111,11 @@ async def drive(arena, port: int) -> None:
                 arena.port = int(cmd[1])
             if cmd[0] in ("press", "release"):
                 event = "on_key_press" if cmd[0] == "press" else "on_key_release"
-                arena.window.dispatch_event(event, getattr(arena.arcade.key, cmd[1]), 0)
+                dispatching[0] = True
+                try:
+                    arena.window.dispatch_event(event, getattr(arena.arcade.key, cmd[1]), 0)
+                finally:
+                    dispatching[0] = False
             if cmd[0] == "frame":  # this window's picture, read back from its framebuffer
                 arena.draw(asyncio.get_running_loop().time())
                 rendered(arena).save(cmd[1])
@@ -107,6 +123,7 @@ async def drive(arena, port: int) -> None:
                       "shown": arena.shown, "entity": arena.entity, "state": arena.state, "party": arena.party,
                       "status": arena.status, "identity": arena.identity, "loads": arena.loads, "trace": list(arena.trace),
                       "sheet": arena.sheet, "refused": arena.refused, "refusal": arena.refusal, "seq": arena.seq,
+                      "foreign_keys": foreign[0],
                       "window": window_facts(arena), "hd2d_error": getattr(arena.window, "hd2d_error", None),
                       "scene_path": getattr(arena.window.scene_controller, "current_scene_path", None)}
             if cmd[0] == "capture" and arena.view is not None:
