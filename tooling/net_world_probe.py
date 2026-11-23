@@ -15,7 +15,7 @@ import argparse
 import asyncio
 import json
 import sys
-from contextlib import nullcontext
+from contextlib import ExitStack, nullcontext
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -25,6 +25,19 @@ from mesh_net.world_client import SIZE, WorldArena, read_character
 from tooling.net_scene_probe import capture, rendered
 
 PX = 32.0  # engine.hd2d.settings.PIXELS_PER_METRE
+# A hidden window can still be activated, and then it has the keyboard: keys really pressed on this computer reach it
+# (local runs: a stray Up held for good, the avatar walking off by itself; windows that stopped moving). Only the keys
+# this probe dispatches reach the client or the game window; any other is stopped and counted (``foreign_keys``).
+DISPATCHING, FOREIGN = [False], [0]
+
+
+def only_dispatched(handler: Any) -> Any:
+    def guarded(self: Any, symbol: int, modifiers: int) -> Any:
+        if DISPATCHING[0]:
+            return handler(self, symbol, modifiers)
+        FOREIGN[0] += 1
+        return True  # (handled: nothing else sees it)
+    return guarded
 
 
 def window_facts(arena) -> dict[str, Any] | None:
@@ -84,18 +97,6 @@ async def drive(arena, port: int) -> None:
     # A hidden window has no focus of its own: the OS deactivates it when another test window loads a room, and the
     # client (rightly, for a player switching windows) then lets go of held keys. Driven by this probe, it keeps them.
     arena.window.remove_handlers(on_deactivate=arena.blur)
-    # A hidden window can still be activated, and then it has the keyboard: a key really pressed on this computer reaches
-    # it (two local runs: a stray Up held for good, the avatar walking off by itself). Only the keys this probe
-    # dispatches reach the client; any other is stopped here and counted (``foreign_keys``).
-    dispatching, foreign = [False], [0]
-
-    def guard(symbol: int, modifiers: int) -> bool | None:
-        if dispatching[0]:
-            return None
-        foreign[0] += 1
-        return True  # (handled: the client never sees it)
-
-    arena.window.push_handlers(on_key_press=guard, on_key_release=guard)
     render = asyncio.create_task(arena.run(port))
     try:
         while True:
@@ -111,11 +112,11 @@ async def drive(arena, port: int) -> None:
                 arena.port = int(cmd[1])
             if cmd[0] in ("press", "release"):
                 event = "on_key_press" if cmd[0] == "press" else "on_key_release"
-                dispatching[0] = True
+                DISPATCHING[0] = True
                 try:
                     arena.window.dispatch_event(event, getattr(arena.arcade.key, cmd[1]), 0)
                 finally:
-                    dispatching[0] = False
+                    DISPATCHING[0] = False
             if cmd[0] == "frame":  # this window's picture, read back from its framebuffer
                 arena.draw(asyncio.get_running_loop().time())
                 rendered(arena).save(cmd[1])
@@ -123,7 +124,7 @@ async def drive(arena, port: int) -> None:
                       "shown": arena.shown, "entity": arena.entity, "state": arena.state, "party": arena.party,
                       "status": arena.status, "identity": arena.identity, "loads": arena.loads, "trace": list(arena.trace),
                       "sheet": arena.sheet, "refused": arena.refused, "refusal": arena.refusal, "seq": arena.seq,
-                      "foreign_keys": foreign[0],
+                      "foreign_keys": FOREIGN[0],
                       "window": window_facts(arena), "hd2d_error": getattr(arena.window, "hd2d_error", None),
                       "scene_path": getattr(arena.window.scene_controller, "current_scene_path", None)}
             if cmd[0] == "capture" and arena.view is not None:
@@ -164,7 +165,13 @@ if __name__ == "__main__":
     # HUD, so that 4 s toast would cover the middle of every picture for good.)
     hint = patch("engine.ui_overlays.hud.PlayerHUD.maybe_show_controls_hint", return_value=None) \
         if args.project is not None else nullcontext()
-    with patch.object(optional_arcade.arcade.Window, "__init__", hidden), fail, hint, \
-            open_arena(files, SIZE, WorldArena) as arena:
-        arena.character = character
-        asyncio.run(drive(arena, args.port))
+    from engine.game import GameWindow
+
+    with ExitStack() as keys:
+        for cls, names in ((WorldArena, ("press", "release")), (GameWindow, ("on_key_press", "on_key_release"))):
+            for name in names:
+                keys.enter_context(patch.object(cls, name, only_dispatched(getattr(cls, name))))
+        with patch.object(optional_arcade.arcade.Window, "__init__", hidden), fail, hint, \
+                open_arena(files, SIZE, WorldArena) as arena:
+            arena.character = character
+            asyncio.run(drive(arena, args.port))
