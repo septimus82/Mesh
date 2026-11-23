@@ -234,10 +234,11 @@ def walk_through(world: World, pid: int, dx: int, dy: int, ticks: int = 60) -> N
             return
 
 
-def test_a_door_over_more_than_one_floor_height_is_refused(crossing: dict[str, bytes]) -> None:
+def test_a_door_over_more_than_one_floor_height_loads(crossing: dict[str, bytes]) -> None:
+    """M1-A-2 refused a door under (and on) the bridge; since M3-3 it fires for a player on its level only, in both
+    runtimes (tests/test_hd2d_doors_floors.py), so it loads."""
     assert make_world(world_files(crossing, [door("ground_door", 512.0, 200.0, "high")])).defs["start"].doors
-    with pytest.raises(Unsupported, match="door 'bridge_door' covers more than one floor height"):
-        make_world(world_files(crossing, [door("bridge_door", 512.0, 400.0, "high")]))  # under (and on) the bridge
+    assert make_world(world_files(crossing, [door("bridge_door", 512.0, 400.0, "high")])).defs["start"].doors
 
 
 def test_an_arrival_keeps_the_rooms_elevation_and_one_that_cant_stand_is_refused(crossing: dict[str, bytes]) -> None:
