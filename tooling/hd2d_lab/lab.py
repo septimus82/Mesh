@@ -142,7 +142,9 @@ class Character:
 class Lab:
     def __init__(self, size: tuple[int, int] = (960, 540), *, window=None) -> None:
         from engine import optional_arcade
+        from tooling.hidden_windows import no_activate
 
+        no_activate()  # hidden, and never activated: no focus or keys taken from the person
         arcade = optional_arcade.arcade
         self.arcade = arcade
         self.window = window or arcade.Window(size[0], size[1], "HD-2D lab", visible=False)

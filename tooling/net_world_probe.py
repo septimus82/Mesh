@@ -136,7 +136,9 @@ async def drive(arena, port: int) -> None:
 if __name__ == "__main__":
     from engine import optional_arcade
     from mesh_net.demo import open_arena
+    from tooling.hidden_windows import no_activate
 
+    no_activate()  # hidden, and never activated: no focus or keys taken from the person
     original = optional_arcade.arcade.Window.__init__
     parser = argparse.ArgumentParser()
     parser.add_argument("port", type=int)

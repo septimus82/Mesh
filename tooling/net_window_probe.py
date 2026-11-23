@@ -40,7 +40,9 @@ async def drive(arena, port: int) -> None:
 
 if __name__ == "__main__":
     from engine import optional_arcade
+    from tooling.hidden_windows import no_activate
 
+    no_activate()  # hidden, and never activated: no focus or keys taken from the person
     original = optional_arcade.arcade.Window.__init__
 
     def hidden(window, *args, **kwargs):

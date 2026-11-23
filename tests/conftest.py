@@ -20,6 +20,17 @@ if os.getenv("MESH_TEST_REAL_AUDIO") != "1" and os.getenv("MESH_TEST_BLOCK_ARCAD
 
 from engine.behaviours import load_builtin_behaviours  # noqa: E402
 
+# The test run's windows are hidden (``_windows_never_shown``), and on Windows a hidden window must never activate
+# either: pyglet's own SetWindowPos calls activated them and took the keyboard from whatever the person was using
+# (tooling/hidden_windows.py). Before any window, so pyglet.window picks it up whenever it is imported.
+if os.getenv("MESH_TEST_BLOCK_ARCADE") != "1":
+    try:
+        from tooling.hidden_windows import no_activate
+
+        no_activate()
+    except ImportError:  # no pyglet: nothing opens windows
+        pass
+
 # The studies' animated WebP clips are for a person to look at and nothing asserts on them; encoding them was a large
 # part of the GPU lane (#422). Their frames are still drawn. MESH_REVIEW_MEDIA=1 writes them (tooling/review_media.py).
 os.environ.setdefault("MESH_REVIEW_MEDIA", "0")

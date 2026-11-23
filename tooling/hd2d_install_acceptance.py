@@ -30,7 +30,7 @@ from typing import Any
 
 REPO = Path(__file__).resolve().parents[1]
 HARNESS = ("hd2d_demo.py", "hd2d_floors_demo.py", "hd2d_studio_demo.py", "hd2d_starter_demo.py", "hd2d_visual_study.py",
-           "hd2d_install_driver.py")
+           "hd2d_install_driver.py", "hidden_windows.py")
 TEST_MODEL = REPO / "tooling" / "hd2d_assets" / "cottage_v2.glb"  # the workflow imports one model through Studio
 
 
