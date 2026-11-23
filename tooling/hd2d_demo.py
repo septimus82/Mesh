@@ -109,8 +109,11 @@ def build(project: Path) -> Path:
 # ---------------------------------------------------------------------- the hidden game window
 class HiddenGame:
     def __init__(self, project: Path, size: tuple[int, int] = (960, 540)) -> None:
+        from hidden_windows import no_activate  # (a sibling: the installed-engine harness copies it too)
+
         import engine.optional_arcade as optional_arcade  # first: DPI-unaware, as the engine runs
 
+        no_activate()  # hidden, and never activated: no focus or keys taken from the person
         self.arcade = arcade = optional_arcade.arcade
         self._original_init = arcade.Window.__init__
         original = self._original_init

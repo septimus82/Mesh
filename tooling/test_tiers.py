@@ -149,9 +149,10 @@ def lane_problems(run: LaneRun | None, *, gl_renderer: str | None, gl_tier: bool
 
 def gl_renderer() -> str | None:
     """The GL renderer a hidden window gets here (e.g. Mesa's llvmpipe in CI), or None without one."""
-    probe = ("import pyglet; w = pyglet.window.Window(visible=False); from pyglet.gl import gl_info; "
+    probe = ("from tooling.hidden_windows import no_activate; no_activate(); "  # (hidden, and never activated)
+             "import pyglet; w = pyglet.window.Window(visible=False); from pyglet.gl import gl_info; "
              "print(gl_info.get_renderer(), '|', gl_info.get_version_string()); w.close()")
-    proc = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True)
+    proc = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, cwd=Path(__file__).resolve().parents[1])
     return proc.stdout.strip().splitlines()[-1] if proc.returncode == 0 and proc.stdout.strip() else None
 
 

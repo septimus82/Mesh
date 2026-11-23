@@ -61,7 +61,9 @@ class Bench:
     def __init__(self, size: tuple[int, int] = SIZE, *, visible: bool = False) -> None:
         import engine.optional_arcade as optional_arcade  # first: DPI-unaware, as the engine runs (1 px = 1 px)
         from engine.lighting import LightManager
+        from tooling.hidden_windows import no_activate
 
+        no_activate()  # a hidden bench never activates: no focus or keys taken from the person
         arcade = optional_arcade.arcade
 
         self.arcade = arcade

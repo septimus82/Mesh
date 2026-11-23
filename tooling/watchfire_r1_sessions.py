@@ -81,8 +81,11 @@ def _files(project: Path) -> dict[str, Any]:
 # ---------------------------------------------------------------------- inside one session (cwd = the project)
 def _session(role: str, engine: Path, tools: Path) -> None:
     sys.path.insert(0, str(engine))
+    from hidden_windows import no_activate  # noqa: PLC0415  # (this script's sibling: its folder is sys.path[0])
+
     import engine.optional_arcade as optional_arcade  # noqa: PLC0415  # first: DPI-unaware, as the engine runs
 
+    no_activate()  # hidden, and never activated: no focus or keys taken from the person
     arcade = optional_arcade.arcade
     original_init = arcade.Window.__init__
 

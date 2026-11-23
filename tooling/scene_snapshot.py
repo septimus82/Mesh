@@ -28,7 +28,9 @@ def snapshot(project: Path, scene_path: str, out: Path, *, player: tuple[float, 
     """Render the room (as the game, or in Mesh Studio's edit view with ``studio``, optionally with the object
     named ``select`` selected and its inspector on ``tab``); returns what was drawn beside the saved picture."""
     import engine.optional_arcade as optional_arcade  # first: DPI-unaware, as the engine runs
+    from tooling.hidden_windows import no_activate
 
+    no_activate()  # hidden, and never activated: no focus or keys taken from the person
     arcade = optional_arcade.arcade
     original_init = arcade.Window.__init__
 

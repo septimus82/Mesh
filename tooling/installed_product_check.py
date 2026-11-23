@@ -171,10 +171,11 @@ del _mesh_audit
 '''
 
 # The exported game, started as a player starts it from another folder (`python <game>/main.py`: sys.path[0] is the
-# game's folder, the working directory isn't) with two changes made from outside: the window is hidden, and the endless
+# game's folder, the working directory isn't) with two changes made from outside: the window is hidden (and never
+# activated: tooling/hidden_windows.py's source goes in front, as nothing of the checkout may be read), and the endless
 # main loop is replaced by a bounded one at a fixed step: settle, walk right, draw and read the picture back, save, load
 # the start room again and walk again (the same steps must give the same walk), load the save (back where it was).
-GAME = r'''
+GAME = Path(__file__).with_name("hidden_windows.py").read_text(encoding="utf-8") + r'''
 import json, runpy, sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -182,6 +183,7 @@ evidence, game, mode = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
 sys.path.insert(0, str(game))  # (as `python <game>/main.py` does: the script's folder first)
 facts = {"mode": mode}
 import engine.optional_arcade as optional_arcade
+no_activate()  # (tooling/hidden_windows.py, in front) hidden, and never activated: no focus or keys taken
 arcade = optional_arcade.arcade
 shown = arcade.Window.__init__
 def hidden(window, *args, **kwargs):

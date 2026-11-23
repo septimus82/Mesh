@@ -77,7 +77,9 @@ def gl_frame() -> dict[str, object]:
     from pyglet.gl import gl_info
 
     from engine import optional_arcade
+    from tooling.hidden_windows import no_activate
 
+    no_activate()  # hidden, and never activated: no focus or keys taken from the person
     geometry = optional_arcade.arcade_gl.geometry
     window = optional_arcade.arcade.Window(64, 64, visible=False)
     try:

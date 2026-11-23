@@ -35,7 +35,8 @@ OUT, REPO, PLAYER_PYTHON = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3
 HARNESS = Path(__file__).resolve().parent
 sys.path.insert(0, str(HARNESS))
 
-BUNDLE_PROBE = r'''
+# (tooling/hidden_windows.py's source in front: the probe runs isolated, beside nothing of the harness)
+BUNDLE_PROBE = (HARNESS / "hidden_windows.py").read_text(encoding="utf-8") + r'''
 """Start the exported game from its bundle (sys.argv[1]) in a hidden window, as its main.py does, and walk."""
 import json, os, sys
 from pathlib import Path
@@ -45,6 +46,7 @@ os.chdir(bundle)
 from engine.dpi_bootstrap import set_process_dpi_unaware
 set_process_dpi_unaware()
 import engine, engine.optional_arcade as optional_arcade
+no_activate()  # hidden, and never activated: no focus or keys taken from the person
 arcade = optional_arcade.arcade
 original = arcade.Window.__init__
 def hidden(window, *args, **kwargs):
@@ -126,9 +128,12 @@ def launcher_new_project(evidence: Path, projects: Path, name: str, template_id:
     here instead, and the project is opened in Studio in a hidden window by the workflow that follows."""
     import subprocess as subprocess_module
 
+    from hidden_windows import no_activate
+
     import engine.launcher as launcher
     import engine.optional_arcade as optional_arcade
 
+    no_activate()  # hidden, and never activated: no focus or keys taken from the person
     arcade = optional_arcade.arcade
     original_init, original_popen = arcade.Window.__init__, subprocess_module.Popen
     started: list[dict[str, Any]] = []

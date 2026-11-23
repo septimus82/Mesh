@@ -138,11 +138,25 @@ class Arena:
 
 
 def make_window() -> Any:
+    """A hidden GameWindow that never activates, also in the worker processes (tests/_b09_worker.py,
+    tests/_game1_worker.py), where tests/conftest.py's hiding doesn't run: they used to open a shown window."""
+    from unittest.mock import patch
+
+    import engine.optional_arcade as optional_arcade  # first: DPI-unaware, as the engine runs
     from engine.game import GameWindow
+    from tooling.hidden_windows import no_activate
+
+    no_activate()
+    arcade = optional_arcade.arcade
+    shown = arcade.Window.__init__
+
+    def hidden(window: Any, *args: Any, **kwargs: Any) -> None:
+        shown(window, *args, **{**kwargs, "visible": False})
 
     cfg = EngineConfig(width=320, height=200, title="B01", vsync=False, start_scene="", world_file=None,
                        main_menu_scene=None)
-    return GameWindow(width=320, height=200, title=cfg.title, vsync=False, config=cfg)
+    with patch.object(arcade.Window, "__init__", hidden):
+        return GameWindow(width=320, height=200, title=cfg.title, vsync=False, config=cfg)
 
 
 def close_window(window: Any) -> None:
