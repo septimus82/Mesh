@@ -12,6 +12,7 @@ from engine.combat_constants import (
     KEY_TARGET,
 )
 from engine.event_emit import emit_gameplay_event
+from engine.hd2d.world import same_level
 
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -117,8 +118,11 @@ class Hitbox(Behaviour):
 
         # Sprite against sprite, not through a SpriteList made per update: each held GPU buffers that every candidate
         # kept (a sprite keeps the lists it joins), so they grew without end.
+        # (in an HD-2D room only what is on the attacker's level: engine.hd2d.world.same_level; Combat says who attacks)
         check = optional_arcade.arcade.check_for_collision
-        hits = [candidate for candidate in candidates if check(self.entity, candidate)]
+        world, attacker = getattr(self.window, "hd2d_world", None), getattr(self.entity, "mesh_attacker", self.entity)
+        hits = [candidate for candidate in candidates
+                if check(self.entity, candidate) and same_level(world, attacker, candidate)]
         for hit in hits:
             if hit in self._hit_list:
                 continue

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import engine.optional_arcade as optional_arcade
+from engine.hd2d.world import same_level
 
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -94,6 +95,9 @@ class DamageOnTouch(Behaviour):
 
         if not optional_arcade.arcade.check_for_collision(self.entity, target):
             return
+
+        if not same_level(getattr(self.window, "hd2d_world", None), self.entity, target):
+            return  # an HD-2D room: on another floor (engine.hd2d.world.same_level)
 
         if not self.window.should_collide(self.entity, target):
             return

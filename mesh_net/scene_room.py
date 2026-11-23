@@ -586,6 +586,15 @@ class SceneRoom:
             elif action == "take":
                 self._take(p)
 
+    def _level(self, a: Body, b: Body) -> bool:
+        """Whether ``a`` may use, attack or pick up ``b``: engine.hd2d.world.same_level (M3-4), single-player's own
+        rule. Always in a 2D room (which never loads the 3D code)."""
+        if self.world is None:
+            return True
+        from engine.hd2d.world import same_level  # noqa: PLC0415
+
+        return same_level(self.world, a, b)
+
     def _near(self, p: Player, x: float, y: float, radius: float = DEFAULT_INTERACT_MAX_DIST) -> float | None:
         d = math.hypot(p.body.center_x - x, p.body.center_y - y)
         return d if d <= radius else None
@@ -604,7 +613,7 @@ class SceneRoom:
             radius = min(DEFAULT_INTERACT_MAX_DIST, authored) if authored else DEFAULT_INTERACT_MAX_DIST
             dx, dy = float(entity["x"]) - p.body.center_x, float(entity["y"]) - p.body.center_y
             d = math.hypot(dx, dy)
-            if d > radius:
+            if d > radius or not self._level(p.body, Body(float(entity["x"]), float(entity["y"]), *size, entity)):
                 continue
             alignment = (dx * fx + dy * fy) / d if d > 0 else 1.0
             if alignment < 0.0 and d > max(8.0, (max(p.body.width, p.body.height) + max(size)) * 0.5):
@@ -624,6 +633,8 @@ class SceneRoom:
         for enemy_id, enemy in sorted(self.enemies.items()):
             if enemy.state.dead or not shapes_overlap(hit, entity_shape(enemy.body)):
                 continue
+            if not self._level(p.body, enemy.body):  # (the attacker's level, as single-player's Hitbox asks)
+                continue
             spec = AttackSpec(f"player:{id(p)}", enemy_id, self.damage, 0.0, "combat.default")
             enemy.state, result = resolve_attack(spec, enemy.state)
             if result.target_dead and enemy.loot:
@@ -631,7 +642,8 @@ class SceneRoom:
 
     def _take(self, p: Player) -> None:
         for _, enemy in sorted(self.enemies.items()):
-            if enemy.dropped and self._near(p, enemy.body.center_x, enemy.body.center_y) is not None:
+            if (enemy.dropped and self._near(p, enemy.body.center_x, enemy.body.center_y) is not None
+                    and self._level(p.body, enemy.body)):
                 enemy.dropped, enemy.holder = False, p
                 return
 

@@ -64,6 +64,18 @@ _SLOW_NODEID_PARTS = (
 
 
 @pytest.fixture
+def private_server_temp(monkeypatch):
+    """The temp folder for server processes a test starts and kills outright (tests/net_tmp): their children inherit
+    TMP/TEMP/TMPDIR from here, and the folder is removed after the test, passing or failing."""
+    from tests.net_tmp import private_temp
+
+    with private_temp() as (env, base):
+        for key in ("TMP", "TEMP", "TMPDIR"):
+            monkeypatch.setenv(key, env[key])
+        yield base
+
+
+@pytest.fixture
 def builtin_behaviours_loaded():
     """Explicitly load builtin behaviours for tests that need the registry."""
     load_builtin_behaviours()
