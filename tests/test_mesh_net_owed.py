@@ -33,7 +33,7 @@ from tests.net_tmp import private_temp
 from tests.test_mesh_net_characters import UNLOCK, P, creds, pworld, to_layer_2
 from tests.test_mesh_net_world import GUARDIAN, HUB, R1, R2, kill
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("private_server_temp")]  # (servers killed outright)
 GUARDIAN_AT = (480.0, 256.0)
 REPO = Path(__file__).resolve().parents[1]
 
@@ -489,7 +489,8 @@ def test_a_server_killed_with_unlocks_owed_loses_none_of_them(tmp_path):
     assert all(sheet_of(path, c).completed == 1 for c in ids)
 
 
-def test_a_server_killed_while_recording_what_was_owed_still_counts_each_once(files, stores, tmp_path):
+def test_a_server_killed_while_recording_what_was_owed_still_counts_each_once(files, stores, tmp_path,
+                                                                              private_server_temp):
     path = tmp_path / "characters.db"
     store, d, (ada, bo), _ = earn_owed(files, stores, path, "Ada", "Bo")
     store.close()
@@ -500,6 +501,7 @@ def test_a_server_killed_while_recording_what_was_owed_still_counts_each_once(fi
         assert server.port == 0 and server.exited() == 9
     finally:
         server.kill()
+    assert list(Path(private_server_temp).glob("mesh-room-*"))  # it died inside its room folder, in the private temp
     done = [sheet_of(path, c).completed for c in ids]
     assert done == [1, 0] and len(journal_of(path)) == 2  # one recorded; the journal still says both are owed
 
@@ -596,7 +598,7 @@ def test_the_shipped_server_records_what_is_owed_when_it_starts(files, stores, t
     path = tmp_path / "characters.db"
     store, d, (ada,), _ = earn_owed(files, stores, path, "Ada")
     store.close()
-    with private_temp() as (env, _base):  # (killed below: the server cannot remove its own mesh-room folder)
+    with private_temp() as (env, _):  # (killed below: the server cannot remove its own mesh-room folder)
         proc = _run_server(path, env)
         watchdog = threading.Timer(120, proc.kill)  # (a server that neither listens nor exits ends the test, not hangs it)
         watchdog.start()

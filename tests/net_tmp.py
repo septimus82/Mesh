@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import os
 import shutil
+import sys
 import tempfile
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 
@@ -17,4 +19,11 @@ def private_temp() -> Iterator[tuple[dict[str, str], str]]:
     try:
         yield {**os.environ, "TMP": base, "TEMP": base, "TMPDIR": base}, base
     finally:
-        shutil.rmtree(base, ignore_errors=True)
+        for _ in range(20):  # (a just-killed child's handles can take a moment to go)
+            shutil.rmtree(base, ignore_errors=True)
+            if not os.path.exists(base):
+                break
+            time.sleep(0.25)
+        else:
+            if sys.exc_info()[0] is None:  # (a failure in the test itself still wins)
+                raise RuntimeError(f"the private temp folder could not be removed: {os.path.basename(base)}")

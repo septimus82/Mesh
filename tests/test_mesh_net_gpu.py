@@ -654,7 +654,7 @@ def test_two_characters_persist_through_a_server_restart(tmp_path, record_testsu
             elif problems:
                 failure.add_note("window cleanup: " + "; ".join(problems))
     try:
-        with private_temp() as (env, _base):  # the killed servers cannot remove their own mesh-room folders
+        with private_temp() as (env, _):  # the killed servers cannot remove their own mesh-room folders
             asyncio.run(run(env))
     finally:
         record_testsuite_property("measure.net_walk_n8", json.dumps(walks))

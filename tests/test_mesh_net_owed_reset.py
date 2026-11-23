@@ -31,7 +31,7 @@ from tests.net_owed_server import Client, ResetFaults, ServerProcess
 from tests.test_mesh_net_characters import UNLOCK, P, creds, pworld, to_layer_2
 from tests.test_mesh_net_world import R2, kill
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("private_server_temp")]  # (servers killed outright)
 GUARDIAN_AT = (480.0, 256.0)
 A = Owed("a" * 32, "ab12", "room:1/guardian/k", UNLOCK)
 B = Owed("b" * 32, "ab12", "room:1/guardian/k", UNLOCK)
