@@ -99,7 +99,8 @@ def test_bad_frames_close_only_the_offender():
 
 
 @pytest.mark.integration
-def test_quota_rejects_flood_and_limits_half_open_connections(monkeypatch):
+def test_quota_rejects_flood_and_limits_half_open_connections(monkeypatch, caplog):
+    caplog.set_level("INFO", logger="mesh_net.server")
     original_read = wire.read
 
     async def bounded_read(reader):
@@ -122,6 +123,7 @@ def test_quota_rejects_flood_and_limits_half_open_connections(monkeypatch):
                 flood.writer.write(b"".join(wire.encode(intent(flood.entity, n)) for n in range(1, 25)))
                 await until(clients[0], lambda s: len(s["players"]) == wire.MAX_PLAYERS - 1)
                 assert flood.entity not in server.peers
+                assert "[Mesh][Net] session closed: input rate" in caplog.messages
             monkeypatch.setattr(wire, "read", bounded_read)
             reader, writer = await asyncio.open_connection("127.0.0.1", port)
             try:

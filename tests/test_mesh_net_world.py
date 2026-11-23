@@ -1038,7 +1038,17 @@ def test_invitations_end_with_their_invitee_or_their_party(world):
 
 
 @pytest.mark.integration
-def test_the_server_limits_requests_per_tick(files):
+def test_the_server_refuses_requests_past_its_budget(files, monkeypatch, caplog):
+    import mesh_net.server
+
+    class Frozen(mesh_net.server.InputBudget):  # (its clock stands still: no refill, only the first allowance)
+        def __init__(self):
+            super().__init__()
+            self.clock, self.at = (lambda: 0.0), 0.0
+
+    monkeypatch.setattr(mesh_net.server, "InputBudget", Frozen)
+    caplog.set_level("INFO", logger="mesh_net.server")
+
     async def run():
         world = make_world(files)
         server = WorldServer(world)
@@ -1046,8 +1056,7 @@ def test_the_server_limits_requests_per_tick(files):
         try:
             peer = await Peer.open(port, world)
             await peer.until(lambda p: p.room and p.party)
-            world.step = lambda: None  # (the tick stands still: every request below lands in one tick)
-            for _ in range(9):
+            for _ in range(Frozen.START + 1):  # the first allowance, and one more
                 await peer.send({"v": 2, "type": "party", "op": "leave"})
             assert await _within(3, lambda: not any(m.online for m in world.members.values()))
             await peer.close()
@@ -1055,6 +1064,7 @@ def test_the_server_limits_requests_per_tick(files):
             await server.close()
 
     asyncio.run(run())
+    assert "[Mesh][Net] session closed: request rate" in caplog.messages
 
 
 @pytest.mark.integration
