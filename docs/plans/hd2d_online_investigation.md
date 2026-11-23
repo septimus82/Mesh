@@ -30,6 +30,10 @@
 > - small factual fixes.
 >
 > Marked *(revised after review)* in the text.
+>
+> **Revision 3** (owner decisions, 2026-11-23): D1, D5, D7 and D8 decided and recorded in §7.4; D8 gains part (c),
+> doors, after M3-3's investigation; §6's M4–M6 table and §7.1 follow the staged authorization. Status at this
+> revision: M1-A complete (#591, #595, #596); M1-B-1 merged (#594); M3-1 merged (#597).
 
 ## 1. Investigator's findings, with the coordinator's verification
 
@@ -460,7 +464,10 @@ supported positions`)
 2. **Wire elevation and floor.** Snapshot rows carry elevation and floor, and clients place avatars at them
    (`scene_room.py:485-494`, `:556`). This is a protocol change (decision D1).
 3. **Doors and arrivals on floors.** Elevation-aware `Door.touches` (`world.py:77-81`), and lifting the base-anchored
-   door refusal (`:174-175`).
+   door refusal (`:174-175`). *(Revision 3:)* M3-3's investigation proved single-player doors are planar too
+   (`engine/behaviours/scene_transition.py:162-177`): a player on the 2 m deck fires a ground door beneath it, tick
+   for tick the same as the authority. Doors therefore use M3-4's shared predicate in both runtimes (decision
+   D8(c)), and M3-3 lands after M3-4. Arrivals keep today's rule; relocation is deferred (D8(b)).
 4. **Same-level actions: ONE shared predicate in both runtimes** *(revised after review)*.
    - Single-player interaction and combat are planar too: `engine/interaction.py:306`, `:497` (`math.hypot` on x/y),
      and the Combat hitbox is placed by x/y (`engine/behaviours/combat.py:195-199`). Making the server alone
@@ -476,13 +483,15 @@ supported positions`)
    joins an HD-2D room. This is the §3.3 guard, re-tested with two real windows.
 6. **Two-window acceptance in the gpu lane,** on the M1-B scene, styled after `tests/test_mesh_net_gpu.py:160`, `:292`.
 
-**PROPOSED by the coordinator — not from the original report; needs owner confirmation:**
+**M4–M6: staged authorization (owner decision D7, 2026-11-23).** The coordinator's earlier proposal is kept in the
+right-hand column for reference only; the owner's scope governs.
 
-| | Proposed content | Depends on |
+| | Owner's authorization | Coordinator's earlier proposal (reference) |
 |---|---|---|
-| M4 | Elevation-aware gameplay breadth online: enemy/NPC movement on floors server-side (`FloorRoute` / `World.path`), line-of-sight through decks, 8-direction facing on the wire | M3 |
-| M5 | Online persistence of HD-2D state: character room, position, elevation and floor in the N8 store (schema migration), resume onto a standable spot | M3 (M4 optional) |
-| M6 | Content production readiness: the M2 pipeline as a documented creator workflow, asset licensing/provenance gate, budgeted PixelLab use, performance budget per scene | M1-B, M2 |
+| M3 | Finish and independently verify **all** acceptance tests. | — |
+| M4 | **Approved to begin after M3 passes.** Focus: responsive server-authoritative online combat, including simulated latency. | Elevation-aware gameplay breadth: enemy/NPC movement on floors server-side (`FloorRoute` / `World.path`), line-of-sight through decks, 8-direction facing on the wire |
+| M5 | Architecture **planning** may proceed; implementation needs a focused review after M4. | Online persistence of HD-2D state in the N8 store (schema migration), resume onto a standable spot |
+| M6 | **Not authorized for production.** The online RPG stays a concept until the underlying gameplay is proven. | Content production readiness: M2 pipeline as a creator workflow, licensing/provenance gate, PixelLab budget, per-scene performance budget |
 
 ## 7. Dependency order, gates, risks and owner decisions
 
@@ -493,8 +502,10 @@ supported positions`)
 | M1-B-1 → M1-B-2 | now (M1-B-1 also checks the M1-A-2 load if merged) | M1-A, M2 |
 | M2-1, M2-2 → M2-3 (→ M2-4 optional) | now | M1-A, M1-B |
 | M3 | **M1-A-3 merged, all gates green**; M1-B-1 merged | — |
-| M4 / M5 (proposed) | M3 | each other |
-| M6 (proposed) | M1-B + M2 | M3+ |
+| M3-2 (protocol v2) ∥ M3-4 (same-level) → M3-3 (doors) → M3-5/M3-6 | M3-1 merged (#597) | each other where files allow |
+| M4 | **M3 passes** (D7) | M5 planning |
+| M5 | planning now; implementation after a focused review following M4 (D7) | — |
+| M6 | not authorized (D7) | — |
 
 ### 7.2 Gates every PR in this plan meets
 - **CI**, all required:
@@ -538,26 +549,33 @@ supported positions`)
   in it, so the authority drops entities that use them: a refusal at welcome if the client's window loaded the mod
   (safe direction), otherwise scenery-only on both sides. Acceptable for M1; handle it when the plugin system returns.
 
-### 7.4 Owner decisions (unresolved)
-- **D1. Protocol.** Wire `VERSION = 1` is checked exactly (`mesh_net/protocol.py:11`, `:30`). M3's elevation/floor
-  fields (and 8-way facing later) need either v2, which refuses old clients, or a v1 extension. Recommended: v2,
-  because there are no deployed clients to keep.
+### 7.4 Owner decisions
+- **D1. Protocol. DECIDED (owner, 2026-11-23): v2.** Introduce network protocol version 2 for elevation and
+  supporting-floor replication; there are no deployed clients to keep. Refuse incompatible v1 peers explicitly; never
+  silently downgrade. The server keeps authority over position, elevation and supporting floor. Collision-geometry
+  fingerprint validation stays. Malformed, stale and inconsistent network states are tested. (M3-2.)
 - **D2. What identity covers.** Collision digest only (recommended: the authority only needs collision), or full model
   bytes, which also catches visual-only drift.
 - **D3. Saves.** M1-A changes no save format. Confirm that M5's N8 schema migration (position, elevation, floor) is
   acceptable when it comes.
 - **D4. Water online.** Refuse every HD-2D net room with rivers or ponds (`world.rivers or world.ponds`) for M1-A
   (recommended), or bring wading and blocking water into scope.
-- **D5. Performance acceptance.** Which machine is the "identified hardware", and is there a frame-time target, or
-  record-only?
+- **D5. Performance. PROVISIONAL TARGET (owner, 2026-11-23).** Smooth 60 FPS gameplay at 1280×720 on named
+  reference hardware: target frame time ≈ 16.7 ms; initial reporting threshold p95 ≤ 33.3 ms. Record median, p95,
+  worst frames and the rendering configuration, with representative HD-2D lighting and multiplayer entities.
+  Investigate sustained problems before considering architectural changes. **A development target only — not
+  authorization to create or weaken a mandatory CI performance gate.** (M1-B-2.)
 - **D6. PixelLab. DECIDED (owner, 2026-11-22):** approved for development (M2 prototype, future games, kept in a
   separate private project, within the approved allowance and `tooling/pixellab_budget.py`); not for distribution
   until the licensing requirements are met. Rules and open items: `docs/asset_licensing.md`.
-- **D7. M4–M6.** Confirm or replace the coordinator's proposal (§6). It is not from the original report.
-- **D8. Single-player behaviour changes that parity brings.** Two changes need approval:
-  - **(a)** M3-4's shared same-level predicate: in HD-2D rooms, interaction and combat stop reaching across floors in
-    single-player too.
-  - **(b)** *Optionally*, an arrival whose kept elevation can't stand. Today single-player keeps x/y-only placement
-    (`spawn.py:118-119`); the authority refuses such a transfer. The question is whether single-player should place
-    the player on the floor instead.
-  - 2D rooms are unaffected by either.
+- **D7. M4–M6. DECIDED (owner, 2026-11-23): staged authorization** — see the table in §6.
+- **D8. Single-player behaviour changes that parity brings.**
+  - **(a) + (c) APPROVED (owner, 2026-11-23).** Interactions, combat, pickups and doors become floor-aware in HD-2D
+    rooms, in both single-player and multiplayer. A bridge-deck actor cannot attack, loot or interact with
+    ground-level entities directly underneath; characters on compatible stairs and slopes can interact within valid
+    reach. Use shared supporting-floor and vertical-reach rules, not exact height equality alone. Existing 2D
+    gameplay and recorded replay behaviour are preserved. Cross-floor refusal and same-floor acceptance are tested.
+    Bounded and independently reviewed. (M3-4, then M3-3 for doors.)
+  - **(b) DEFERRED (owner, 2026-11-23).** No automatic relocation of invalid arrivals yet. First define deterministic
+    recovery rules for invalid spawn points, including multiple floors and saved positions. Never silently move a
+    player onto the wrong supporting floor.
