@@ -37,9 +37,9 @@ from tests.test_mesh_net_hd2d import crossing, door, world_files  # noqa: F401  
 pytestmark = pytest.mark.integration  # (builds a project in a folder, loads its rooms from files)
 
 FEET = 18.0  # px: the template's sprite centre is this far above its feet
-AREA = 16.0  # px: each door's area, square
-# name: (door (x m, y m, saved elevation px), actor (feet x m, feet y m, its floor m), route, whether it fires)
-CASES: dict[str, tuple[tuple[float, float, float], tuple[float, float, float], list[tuple[int, int, int]], bool]] = {
+AREA = 16.0  # px: a door's area, square, unless a case says
+# name: (door (x m, y m, saved elevation px[, area px]), actor (feet x m, feet y m, its floor m), route, whether it fires)
+CASES: dict[str, tuple[tuple[float, ...], tuple[float, float, float], list[tuple[int, int, int]], bool]] = {
     # a ground door under the deck (saved at 0): only for the one under the deck
     "ground door, deck actor": ((15.0, 12.0, 0.0), (16.0, 12.0, 2.0), [(-1, 0, 11)], False),
     "ground door, ground actor": ((15.0, 12.0, 0.0), (16.0, 12.0, 0.0), [(-1, 0, 11)], True),
@@ -52,6 +52,10 @@ CASES: dict[str, tuple[tuple[float, float, float], tuple[float, float, float], l
     # on the stairs (1 m up there; saved at 0) and at their foot: within reach of one walking the stairs
     "stairs door, actor walking up": ((10.0, 6.5, 0.0), (10.0, 3.5, 0.0), [(0, 1, 30)], True),
     "door at the stairs' foot, actor walking down": ((10.0, 4.5, 0.0), (10.0, 7.0, 1.25), [(0, -1, 30)], True),
+    # a 32 px area across the platform's south face (saved at 0): its centre on the platform, its bottom on the ground;
+    # its doorway (its centre, in both runtimes) is on the platform, so it fires for the one walking to that edge
+    "area across the platform's edge, platform actor": ((12.0, 9.25, 0.0, 32.0), (12.0, 11.0, 2.0), [(0, -1, 30)],
+                                                         True),
 }
 
 
@@ -59,8 +63,9 @@ def walk(files: dict[str, bytes], case: str) -> tuple[list[bool], list[bool], in
     """The case walked in both runtimes: per tick whether single-player's door fired, and whether the door's area
     overlaps the player's picture at all (the planar test alone); the tick the authority transferred (None: never);
     and the door's doorway as door_level gives it."""
-    (dx_m, dy_m, saved), (fx, fy, floor), route, _ = CASES[case]
-    entity = door("door", dx_m * M, dy_m * M, "high", AREA)
+    (dx_m, dy_m, saved, *sized), (fx, fy, floor), route, _ = CASES[case]
+    area = sized[0] if sized else AREA
+    entity = door("door", dx_m * M, dy_m * M, "high", area)
     if saved:
         entity["elevation"] = saved
     script = ticks(route)
@@ -87,10 +92,10 @@ def walk(files: dict[str, bytes], case: str) -> tuple[list[bool], list[bool], in
                              mesh_name="door", mesh_entity_data=entity)
             SceneTransition(sprite, window, **entity["behaviour_config"]["SceneTransition"]).update(1 / 20)
             fired.append(requests == ["deck"])
-            planar.append(Door("d", "deck", "", entity["x"], entity["y"], AREA / 2, AREA / 2).touches(
+            planar.append(Door("d", "deck", "", entity["x"], entity["y"], area / 2, area / 2).touches(
                 Body(x, y, *size, {})))
-        level = door_level(sp[0], SimpleNamespace(center_x=entity["x"], center_y=entity["y"], width=AREA,
-                                                  height=AREA, mesh_entity_data=entity)).mesh_entity_data
+        level = door_level(sp[0], SimpleNamespace(center_x=entity["x"], center_y=entity["y"], width=area,
+                                                  height=area, mesh_entity_data=entity)).mesh_entity_data
         return fired, planar, authority(net, at, z, script), level
 
 
@@ -154,11 +159,20 @@ def test_a_door_fires_only_on_its_level_on_the_same_tick_in_both_runtimes(case: 
 def test_a_door_is_on_the_floor_one_stands_on_nearest_its_saved_elevation(crossing: dict[str, bytes]) -> None:  # noqa: F811
     """door_level: under the open deck (the ground and the deck both stand) a door saved at 0 is on the ground and one
     saved 2 m up on the deck; on the solid platform, where only its top stands, one saved at 0 is on the platform; on
-    the stairs, where they are 1 m up, at 1 m."""
+    the stairs, where they are 1 m up, at 1 m; across the platform's edge, where its centre is: on the platform."""
     assert walk(crossing, "ground door, ground actor")[3] == {"elevation": 0.0}
     assert walk(crossing, "deck door, deck actor")[3] == {"elevation": 2.0 * M}
     assert walk(crossing, "platform door saved at 0, platform actor")[3] == {"elevation": 2.0 * M}
     assert walk(crossing, "stairs door, actor walking up")[3] == {"elevation": 1.0 * M}
+    assert walk(crossing, "area across the platform's edge, platform actor")[3] == {"elevation": 2.0 * M}
+
+
+def test_a_door_midway_between_two_floors_is_on_the_lower(sp_world: World) -> None:
+    """door_level's tie-break: under the open deck, a door saved 1 m up (as near the ground as the deck) is on the
+    ground."""
+    level = door_level(sp_world, SimpleNamespace(center_x=15.0 * M, center_y=12.0 * M, width=AREA, height=AREA,
+                                                 mesh_entity_data={"elevation": 1.0 * M}))
+    assert level.mesh_entity_data == {"elevation": 0.0}
 
 
 @pytest.mark.parametrize("answer", [True, False])
@@ -191,32 +205,52 @@ def test_a_multi_height_door_room_now_loads_and_decides_per_player(crossing: dic
             NetWorld(root)
 
 
-def test_a_picture_door_fires_only_on_its_level(crossing: dict[str, bytes], monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
-    """Single-player's picture door (no area: its hit box; the authority refuses those): a 32 px door picture on the
-    ground under the deck, its doorway its base, fires for a player standing on it under the deck and not for one at
-    the same place on the deck."""
+@pytest.fixture(scope="module")
+def sp_world(crossing: dict[str, bytes]) -> World:  # noqa: F811
+    """The World single-player builds for the crossing."""
+    with disposable_project(crossing, scaffold=False) as root:
+        return single_player_world(root)[0]
+
+
+# name: (door picture's centre (x m, y m), its saved elevation px, the player's sprite centre (x m, y m), its
+# elevation px, whether it fires); the door picture is 32 px square, the player's 32 x 48
+PICTURE_CASES: dict[str, tuple[tuple[float, float], float, tuple[float, float], float, bool]] = {
+    "ground door under the deck, player under it": ((15.0, 12.0), 0.0, (15.0, 12.0), 0.0, True),
+    "ground door under the deck, player on it": ((15.0, 12.0), 0.0, (15.0, 12.0), 2.0 * M, False),
+    # against the platform's south face: its base on the ground, its middle over the platform 2 m up
+    "door at the platform's foot, ground player": ((12.0, 9.25), 0.0, (12.0, 8.6), 0.0, True),
+    # on the platform, saved at 0 (Studio's Add door): on the platform (door_level)
+    "door on the platform saved at 0, platform player": ((11.0, 12.0), 0.0, (11.0, 12.0), 2.0 * M, True),
+}
+
+
+@pytest.mark.parametrize("case", list(PICTURE_CASES))
+def test_a_picture_door_fires_only_on_its_level(case: str, sp_world: World, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Single-player's picture door (no area: its hit box; the authority refuses those). Its doorway is its picture's
+    bottom edge (an HD-2D picture stands on it), at door_level: under the deck it fires for a player under it and not
+    for one on it; against the platform's face it is on the ground in front, not on the platform its middle is over;
+    added on the platform at 0, it is on the platform."""
     import engine.optional_arcade as optional_arcade
     from engine.physics_model import entity_aabb
 
+    (dx, dy), saved, (hx, hy), z, expected = PICTURE_CASES[case]
     monkeypatch.setattr(optional_arcade.arcade, "check_for_collision",
                         lambda a, b: entity_aabb(a).intersection(entity_aabb(b)) is not None)
-    entity = door("door", 15.0 * M, 12.0 * M, "high", AREA)
+    entity = door("door", dx * M, dy * M, "high", AREA)
     del entity["behaviour_config"]["SceneTransition"]["area_width"], entity["behaviour_config"]["SceneTransition"]["area_height"]
-    with disposable_project(world_files(crossing, [entity]), scaffold=False) as root:
-        world = single_player_world(root)[0]
+    if saved:
+        entity["elevation"] = saved
     sprite = Picture(center_x=entity["x"], center_y=entity["y"], width=32.0, height=32.0, mesh_tag="door",
                      mesh_name="door", mesh_entity_data=entity)
-    fired = {}
-    for z in (0.0, 2.0 * M):
-        hero = Picture(center_x=entity["x"], center_y=entity["y"], width=32.0, height=48.0, mesh_tag="player",
-                       mesh_name="hero", mesh_entity_data={"elevation": z})
-        requests: list[str] = []
-        window = SimpleNamespace(scene_controller=SimpleNamespace(all_sprites=[hero]), hd2d_world=world,
-                                 request_scene_change=requests.append, set_next_spawn_point=lambda _s: None,
-                                 console_log=lambda _m: None)
-        behaviour("SceneTransition")(sprite, window, **entity["behaviour_config"]["SceneTransition"]).update(1 / 60)
-        fired[z] = requests == ["deck"]
-    assert fired == {0.0: True, 2.0 * M: False}
+    hero = Picture(center_x=hx * M, center_y=hy * M, width=32.0, height=48.0, mesh_tag="player", mesh_name="hero",
+                   mesh_entity_data={"elevation": z})
+    assert entity_aabb(sprite).intersection(entity_aabb(hero)) is not None, f"{case}: they touch"
+    requests: list[str] = []
+    window = SimpleNamespace(scene_controller=SimpleNamespace(all_sprites=[hero]), hd2d_world=sp_world,
+                             request_scene_change=requests.append, set_next_spawn_point=lambda _s: None,
+                             console_log=lambda _m: None)
+    behaviour("SceneTransition")(sprite, window, **entity["behaviour_config"]["SceneTransition"]).update(1 / 60)
+    assert (requests == ["deck"]) is expected, case
 
 
 def test_a_2d_room_s_door_fires_whatever_the_elevations() -> None:

@@ -472,7 +472,8 @@ supported positions`)
    real `PlayerController` at dt 1/20), a player on the deck fired the door on the same ticks (1–6) in single-player
    and through the authority's `Door.touches`. Doors therefore use M3-4's shared predicate in both runtimes (owner
    decision D8(c)); *coordinator sequencing:* M3-3 lands after M3-4. No arrival relocation is implemented (D8(b)
-   deferred).
+   deferred). *Coordinator sequencing:* base-anchored doors remain refused online (parity would need Arcade's hit-box
+   trimming); follow-up.
 4. **Same-level actions: ONE shared predicate in both runtimes** *(revised after review)*.
    - Single-player interaction and combat are planar too: `engine/interaction.py:306`, `:497` (`math.hypot` on x/y),
      and the Combat hitbox is placed by x/y (`engine/behaviours/combat.py:195-199`). Making the server alone

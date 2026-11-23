@@ -211,8 +211,12 @@ def door_level(world: World | None, area: Any) -> Any:
     (World.stand, at the area's centre) nearest the door's saved elevation, or at its saved elevation where none is (and
     always without an HD-2D World). Studio's Add door never saves an elevation, so a door added on a 2 m platform or on
     ground sculpted up afterwards is saved at 0: it is on that floor, the only one to stand on there; one under an open
-    deck, where the ground and the deck both stand, stays on the floor nearest what it saved. Single-player's
-    SceneTransition and the net authority's doors both ask this, so they decide alike."""
+    deck, where the ground and the deck both stand, stays on the floor nearest what it saved (midway: the lower).
+    Single-player's SceneTransition and the net authority's doors both ask this, so they decide alike.
+
+    One point decides it: the doorway's centre. An area across a floor's edge is on whatever floor is under its
+    centre, and one whose centre is on a railing or other collider gets whatever stands there (its saved elevation if
+    nothing does)."""
     z = elevation_of(area)
     if isinstance(world, World):
         x, y = area.center_x / PIXELS_PER_METRE, area.center_y / PIXELS_PER_METRE
