@@ -40,6 +40,13 @@ def open_arena(files_: dict[str, bytes] | None = None, size: tuple[int, int] = (
             window.close()
 
 
+def reason(exc: BaseException) -> str:
+    """Why a session ended, short, for the caption: a refusal's own words (wire.Invalid: another protocol version,
+    a refused character, a malformed frame), else the error's kind."""
+    text = str(exc) if isinstance(exc, wire.Invalid) else ""
+    return text[:64] or type(exc).__name__
+
+
 class Arena:
     def __init__(self, window, arcade) -> None:
         self.window, self.arcade = window, arcade
@@ -122,7 +129,7 @@ class Arena:
                         task.cancel()
                     await asyncio.gather(*tasks, return_exceptions=True)
         except (OSError, EOFError, TimeoutError, wire.Invalid) as exc:
-            self.status = f"Disconnected ({type(exc).__name__}) | R resume / N new"
+            self.status = f"Disconnected ({reason(exc)}) | R resume / N new"
         finally:
             self.client = None
             self.blur()

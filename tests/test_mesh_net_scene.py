@@ -27,7 +27,7 @@ class Driver:
 
     def send(self, eid, dx=0, dy=0, action=None, seq=None):
         self.seq[eid] = seq if seq is not None else self.seq.get(eid, 0) + 1
-        msg = {"v": 1, "type": "input", "entity": eid, "seq": self.seq[eid], "dx": dx, "dy": dy}
+        msg = {"v": 2, "type": "input", "entity": eid, "seq": self.seq[eid], "dx": dx, "dy": dy}
         if action:
             msg["action"] = action
         self.room.input(eid, msg)
@@ -161,7 +161,7 @@ def test_lever_opens_the_gate_once_for_everyone(room_factory):
     d.walk(a, 1, 0, 20)
     assert d.at(a)[0] > 440  # through the open gate
     with pytest.raises(wire.Invalid):
-        room.input(b, {"v": 1, "type": "input", "entity": a, "seq": 99, "dx": 0, "dy": 0, "action": "use"})
+        room.input(b, {"v": 2, "type": "input", "entity": a, "seq": 99, "dx": 0, "dy": 0, "action": "use"})
 
 
 @pytest.mark.integration
@@ -224,17 +224,18 @@ def test_two_players_defeat_the_bandit_and_one_takes_its_loot(room_factory):
 
 @pytest.mark.fast
 def test_inputs_and_snapshots_are_validated():
-    good = {"v": 1, "type": "input", "entity": 3, "seq": 1, "dx": 1, "dy": -1, "action": "use"}
+    good = {"v": 2, "type": "input", "entity": 3, "seq": 1, "dx": 1, "dy": -1, "action": "use"}
     assert parse_input(good, 3) == (1, 1, -1, "use")
     for bad in ({**good, "dx": 2}, {**good, "action": "teleport"}, {**good, "entity": 4}, {**good, "seq": 0},
                 {**good, "x": 5}, {**good, "dx": 1.0}):
         with pytest.raises(wire.Invalid):
             parse_input(bad, 3)
-    state = {"v": 1, "type": "scene_state", "tick": 1, "scene": "a" * 64, "players": [[1, 2.5, 3, 0]],
+    state = {"v": 2, "type": "scene_state", "tick": 1, "scene": "a" * 64, "players": [[1, 2.5, 3, 0, 0, None]],
              "open": [], "used": [], "enemies": [["e", 3.0]], "drops": [], "loot": [["e", 1]]}
     check_state(state)
-    for bad in ({"players": [[1, 2, 3, 4]]}, {"players": [[1, 2, 3, 0], [1, 2, 3, 0]]}, {"loot": [["e", 2]]},
-                {"enemies": [["e", -1]]}, {"players": [[1, float("inf"), 3, 0]]}, {"open": [3]}):
+    for bad in ({"players": [[1, 2, 3, 4, 0, None]]}, {"players": [[1, 2, 3, 0, 0, None], [1, 2, 3, 0, 0, None]]},
+                {"loot": [["e", 2]]}, {"enemies": [["e", -1]]}, {"players": [[1, float("inf"), 3, 0, 0, None]]},
+                {"open": [3]}, {"players": [[1, 2.5, 3, 0]]}):
         with pytest.raises(wire.Invalid):
             check_state({**state, **bad})
 

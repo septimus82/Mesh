@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from engine.combat_model import AttackSpec, TargetState, resolve_attack
 
-from .protocol import ENEMY_AT, ENEMY_HP, HEIGHT, HZ, MAX_PLAYERS, WIDTH, Invalid, Message, movement
+from .protocol import ENEMY_AT, ENEMY_HP, HEIGHT, HZ, MAX_PLAYERS, VERSION, WIDTH, Invalid, Message, movement
 
 
 @dataclass
@@ -72,7 +72,7 @@ class Room:
                 p.loot, self.pickup = True, False
 
     def snapshot(self) -> Message:
-        return {"v": 1, "type": "state", "tick": self.tick,
+        return {"v": VERSION, "type": "state", "tick": self.tick,
                 "enemy_hp": int(self.enemy.hp), "pickup": self.pickup,
                 "holder": next((eid for eid, p in self.players.items() if p.loot), None),
                 "players": [[eid, p.x, p.y] for eid, p in self.players.items()]}

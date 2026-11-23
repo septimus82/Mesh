@@ -129,7 +129,7 @@ The first version destroyed an expedition instance as soon as nobody was in it. 
 and back reset Layer 1. A party's expedition now lasts while any member (online or retained) is in any of the
 party's instances, and ends in the tick the last one leaves. Each instance still has its own state.
 
-## Protocol (version 1 framing, new frame types)
+## Protocol (version 2 framing, new frame types)
 
 Client to server:
 

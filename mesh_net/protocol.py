@@ -1,4 +1,25 @@
-"""Version 1 wire messages. Each bounded UTF-8 JSON object ends in LF."""
+"""Version 2 wire messages. Each bounded UTF-8 JSON object ends in LF.
+
+Every message carries ``"v": VERSION`` and is checked exactly (``fields``). A peer speaking another version is refused
+(:class:`VersionMismatch`): a server answers such a join with ``{"type": "refused", "code": "protocol_version"}`` and
+closes, a client refuses any frame of another version. There is no downgrade and no v1 behaviour. (A v1 server, whose
+own check is exact too, closes on a v2 join without a word.) JSON's ``NaN`` and ``Infinity`` are refused in any frame.
+
+Version 2 (owner decision D1): a scene snapshot's player row is ``[entity, x, y, facing, elevation, floor]``
+(mesh_net.scene_room.check_state), the authority's own placement of that body:
+
+* ``elevation``: px, a finite number within the coordinate bound, as ``mesh_entity_data["elevation"]`` holds it
+  (rounded to 0.001 px); always ``0`` in a 2D room.
+* ``floor``: the id of the floor it stands on, as the room's collision world names it (engine.hd2d.world:
+  ``"<structure id>/<collider node>"``, or ``"ground"`` for an HD-2D room's ground); ``null`` in a 2D room, which has
+  no collision world.
+
+Clients never send any of it: an input frame is a direction and an action only, and a frame with any other key is
+refused, so the server alone places bodies. Snapshots carry the server's ``tick``; a client accepts only a tick newer
+than the last it applied. Any frame that is malformed, out of order or inconsistent with the client's own room (its
+collision world, mesh_net.scene_room.check_state) is refused whole, before anything of it is applied, and the
+connection ends with that reason (``Invalid``).
+"""
 
 from __future__ import annotations
 
@@ -8,7 +29,7 @@ import re
 from typing import Any
 
 Message = dict[str, Any]
-VERSION = 1
+VERSION = 2
 MAX_BYTES = 8192
 MAX_PLAYERS = 8
 HZ = 20
@@ -22,13 +43,23 @@ class Invalid(ValueError):
     """Peer violated a wire or session rule."""
 
 
+class VersionMismatch(Invalid):
+    """The peer speaks another protocol version: refused at the handshake, never downgraded."""
+
+    code = "protocol_version"  # (the ``refused`` frame's code, as mesh_net.persistence.Refused's)
+
+
 def integer(value: object, low: int, high: int = MAX_SEQ) -> bool:
     return type(value) is int and low <= value <= high
 
 
 def fields(msg: Message, kind: str, *keys: str) -> None:
-    if set(msg) != {"v", "type", *keys} or msg.get("type") != kind or not integer(msg.get("v"), VERSION, VERSION):
-        raise Invalid("invalid message shape or version")
+    if "v" not in msg:
+        raise Invalid("invalid message shape (no version)")  # (malformed, not another version)
+    if not integer(msg["v"], VERSION, VERSION):
+        raise VersionMismatch(f"protocol version {repr(msg['v'])[:16]}: this Mesh speaks version {VERSION} only")
+    if set(msg) != {"v", "type", *keys} or msg.get("type") != kind:
+        raise Invalid("invalid message shape")
 
 
 def token(value: object) -> bool:
@@ -51,12 +82,16 @@ def _object(pairs: list[tuple[str, Any]]) -> Message:
     return result
 
 
+def _constant(name: str) -> Any:
+    raise Invalid(f"{name} is not a number on the wire")
+
+
 async def read(reader: asyncio.StreamReader, timeout: float = 5.0) -> Message:
     try:
         data = await asyncio.wait_for(reader.readuntil(b"\n"), timeout)
         if len(data) > MAX_BYTES:
             raise Invalid("oversize")
-        msg = json.loads(data.decode("utf-8"), object_pairs_hook=_object)
+        msg = json.loads(data.decode("utf-8"), object_pairs_hook=_object, parse_constant=_constant)
     except (ValueError, RecursionError, asyncio.LimitOverrunError) as exc:
         raise Invalid("invalid frame") from exc
     if not isinstance(msg, dict):

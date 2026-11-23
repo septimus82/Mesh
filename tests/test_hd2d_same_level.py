@@ -33,6 +33,7 @@ from engine.hd2d.settings import PIXELS_PER_METRE as M
 from engine.hd2d.settings import parse_hd2d
 from engine.hd2d.world import BODY, World, build_world, same_level
 from engine.physics_model import entity_aabb, entity_shape, shapes_overlap
+from mesh_net import protocol as wire
 from mesh_net.scene_room import COOP_SCENE, Body, Player, SceneRoom, coop_files, disposable_project
 from tests.test_hd2d_net_parity import SCENE, single_player_world, sprite
 
@@ -134,7 +135,7 @@ def authority(room: SceneRoom, actor: tuple[float, float, float], target: tuple[
     enemy.state, enemy.dropped, enemy.holder = TargetState(hp=3.0, max_hp=3.0), action == "take", None
     eid = room.join(Player(Body(actor[0], actor[1], *room._template_size(), {**room.template, "elevation": actor[2]}),
                            facing=0))
-    room.input(eid, {"v": 1, "type": "input", "entity": eid, "seq": 1, "dx": 0, "dy": 0, "action": action})
+    room.input(eid, {"v": wire.VERSION, "type": "input", "entity": eid, "seq": 1, "dx": 0, "dy": 0, "action": action})
     room.step()
     player = room.leave(eid)
     return {"use": GATE not in room.locked, "attack": enemy.state.hp < 3.0, "take": enemy.holder is player}[action]
@@ -270,7 +271,7 @@ def test_without_an_hd2d_world_nothing_changes(room: SceneRoom, monkeypatch: pyt
     gate = next(i for i, (_b, c) in flat.doors.items() if c.get("unlock_event") == _cfg["event_id"])
     eid = flat.join(Player(Body(float(lever["x"]), float(lever["y"]), *flat._template_size(),
                                 {**flat.template, "elevation": 64.0})))
-    flat.input(eid, {"v": 1, "type": "input", "entity": eid, "seq": 1, "dx": 0, "dy": 0, "action": "use"})
+    flat.input(eid, {"v": wire.VERSION, "type": "input", "entity": eid, "seq": 1, "dx": 0, "dy": 0, "action": "use"})
     flat.step()
     assert gate not in flat.locked and lever_id in flat.used, "a 2D room's lever is used whatever the elevations"
 

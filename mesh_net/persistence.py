@@ -383,7 +383,7 @@ class Progress:
         if state is None:
             return None
         loot = sorted(enemy for (enemy, cid) in self.loot.get(m.instance or "", {}) if cid == state.id)
-        return {"v": 1, "type": "character", "id": state.id, "name": state.name, "items": [list(i) for i in state.items],
+        return {"v": wire.VERSION, "type": "character", "id": state.id, "name": state.name, "items": [list(i) for i in state.items],
                 "unlocks": list(state.unlocks), "completed": state.completed, "loot": loot}
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Callable
+from typing import Any
 
 from . import protocol as wire
 
@@ -23,7 +24,9 @@ class Playback:
         self.arrival = now
         return True
 
-    def positions(self, now: float) -> dict[int, tuple[float, float]]:
+    def positions(self, now: float) -> dict[int, tuple[Any, ...]]:
+        """Each player's (x, y) two ticks behind; for a scene room's rows (mesh_net.protocol v2) (x, y, elevation,
+        floor): the elevation interpolated with x and y, the floor the nearer state's."""
         if not self.states:
             return {}
         latest = self.states[-1]
@@ -32,11 +35,13 @@ class Playback:
         left = next(s for s in reversed(self.states) if s["tick"] <= self.cursor)
         right = next(s for s in self.states if s["tick"] >= self.cursor)
         alpha = (self.cursor - left["tick"]) / max(1, right["tick"] - left["tick"])
-        before = {p[0]: p[1:3] for p in left["players"]}
-        after = {p[0]: p[1:3] for p in right["players"]}
-        result = {}
-        for eid, x, y, *_ in latest["players"]:
-            ax, ay = before.get(eid, (x, y))
-            bx, by = after.get(eid, (x, y))
-            result[eid] = (ax + alpha * (bx - ax), ay + alpha * (by - ay))
+        before = {p[0]: p for p in left["players"]}
+        after = {p[0]: p for p in right["players"]}
+        result: dict[int, tuple[Any, ...]] = {}
+        for row in latest["players"]:
+            a, b = before.get(row[0], row), after.get(row[0], row)
+            at: tuple[Any, ...] = (a[1] + alpha * (b[1] - a[1]), a[2] + alpha * (b[2] - a[2]))
+            if len(row) == 6:
+                at += (a[4] + alpha * (b[4] - a[4]), (a if alpha < 0.5 else b)[5])
+            result[row[0]] = at
         return result
