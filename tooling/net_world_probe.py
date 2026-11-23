@@ -25,16 +25,16 @@ from mesh_net.world_client import SIZE, WorldArena, read_character
 from tooling.net_scene_probe import capture, rendered
 
 PX = 32.0  # engine.hd2d.settings.PIXELS_PER_METRE
-# A hidden window can still be activated, and then it has the keyboard: keys really pressed on this computer reach it
-# (local runs: a stray Up held for good, the avatar walking off by itself; windows that stopped moving). Only the keys
-# this probe dispatches reach the client or the game window; any other is stopped and counted (``foreign_keys``).
-DISPATCHING, FOREIGN = [False], [0]
+# Only the keys this probe sends reach the client or the game window: they carry OWN, a modifier bit no keyboard sets
+# (pyglet may queue an event and deliver it later, so only a mark on the event itself tells them apart). Any other key
+# event (a hidden window can still be activated, and then it has the keyboard) is stopped and counted (``foreign_keys``).
+OWN, FOREIGN = 1 << 24, [0]
 
 
 def only_dispatched(handler: Any) -> Any:
     def guarded(self: Any, symbol: int, modifiers: int) -> Any:
-        if DISPATCHING[0]:
-            return handler(self, symbol, modifiers)
+        if modifiers & OWN:
+            return handler(self, symbol, modifiers & ~OWN)
         FOREIGN[0] += 1
         return True  # (handled: nothing else sees it)
     return guarded
@@ -112,11 +112,7 @@ async def drive(arena, port: int) -> None:
                 arena.port = int(cmd[1])
             if cmd[0] in ("press", "release"):
                 event = "on_key_press" if cmd[0] == "press" else "on_key_release"
-                DISPATCHING[0] = True
-                try:
-                    arena.window.dispatch_event(event, getattr(arena.arcade.key, cmd[1]), 0)
-                finally:
-                    DISPATCHING[0] = False
+                arena.window.dispatch_event(event, getattr(arena.arcade.key, cmd[1]), OWN)
             if cmd[0] == "frame":  # this window's picture, read back from its framebuffer
                 arena.draw(asyncio.get_running_loop().time())
                 rendered(arena).save(cmd[1])
