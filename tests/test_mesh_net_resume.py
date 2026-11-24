@@ -146,7 +146,7 @@ def test_the_new_wait_returns_the_resumed_session():
     m = world.members[pid]
     assert seen == [False] and m.online and back["player"] == pid
     assert back["entity"] == m.eid != before and back["room"] == room and back["key"] == LAYER_2
-    assert back["state"]["enemies"] == [[GUARDIAN, 0.0]] and [p[0] for p in back["state"]["players"]] == [m.eid]
+    assert [r[:2] for r in back["state"]["enemies"]] == [[GUARDIAN, 0.0]] and [p[0] for p in back["state"]["players"]] == [m.eid]
     assert sorted(int(e) for e in window.capture()["drawn"]) == [back["entity"]]
     assert [e[2] for e in world.history if e[3] == pid][-2:] == ["disconnect", "resume"]
 

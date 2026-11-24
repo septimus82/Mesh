@@ -11,7 +11,7 @@ from mesh_net.simulation import Room
 
 
 def intent(eid, seq, dx=1, dy=0):
-    return {"v": 2, "type": "input", "entity": eid, "seq": seq, "dx": dx, "dy": dy}
+    return {"v": wire.VERSION, "type": "input", "tick": 0, "entity": eid, "seq": seq, "dx": dx, "dy": dy}
 
 
 @pytest.mark.fast

@@ -75,7 +75,7 @@ class Session:
         reader, writer = await asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES)
         writer.write(wire.encode({"v": wire.VERSION, "type": "join", "resume": None}))
         hello = await wire.read(reader)
-        frame: wire.Message = {"v": wire.VERSION, "type": "input", "entity": hello.get("entity")}
+        frame: wire.Message = {"v": wire.VERSION, "type": "input", "tick": 0, "entity": hello.get("entity")}
         while frame["entity"] is None:  # N7: the player's room and avatar come in its enter frame
             msg = await asyncio.wait_for(wire.read(reader), 3)
             if msg["type"] == "enter":

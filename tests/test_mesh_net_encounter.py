@@ -11,7 +11,7 @@ def test_range_cooldown_duplicate_attack_and_single_award():
     a, b = room.join(), room.join()
 
     def act(owner, seq, action):
-        room.input(owner, {"v": 2, "type": "input", "entity": owner, "seq": seq, "dx": 0, "dy": 0, "action": action})
+        room.input(owner, {"v": wire.VERSION, "type": "input", "tick": 0, "entity": owner, "seq": seq, "dx": 0, "dy": 0, "action": action})
 
     room.players[a].x = 20
     act(a, 1, "attack")
@@ -34,7 +34,7 @@ def test_range_cooldown_duplicate_attack_and_single_award():
     assert room.enemy.dead and room.pickup
     # A new connection with an old entity id cannot claim loot.
     with pytest.raises(wire.Invalid):
-        room.input(b, {"v": 2, "type": "input", "entity": a, "seq": 4, "dx": 0, "dy": 0, "action": "take"})
+        room.input(b, {"v": wire.VERSION, "type": "input", "tick": 0, "entity": a, "seq": 4, "dx": 0, "dy": 0, "action": "take"})
     act(b, 2, "take")
     act(a, 4, "take")
     room.step()

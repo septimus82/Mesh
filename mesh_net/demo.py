@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import time
 from contextlib import contextmanager
 from importlib.resources import files
 
@@ -63,6 +64,7 @@ class Arena:
         self.checks: dict = {}  # connect()'s validators; mesh_net.scene_client passes the scene room's
         self.playback = Playback()
         self.local_interpolation = False
+        self.clock = time.monotonic  # (s) when a key press happened (tests: a virtual clock)
         self.status = "Connecting"
         window.push_handlers(on_key_press=self.press, on_key_release=self.release,
                              on_close=self.stop, on_deactivate=self.blur)
@@ -105,6 +107,8 @@ class Arena:
                 self.playback = Playback(client.check)
                 loop = asyncio.get_running_loop()
                 self.playback.push(client.state, loop.time())
+                self.on_state(client.state, client.entity, True)
+
                 async def send_inputs() -> None:
                     due = loop.time()
                     while True:
@@ -118,6 +122,7 @@ class Arena:
                     while True:
                         state = await client.receive()
                         self.playback.push(state, loop.time())
+                        self.on_state(state, client.entity, False)
                         self.status = self.describe(state, client.entity)
 
                 tasks = [asyncio.create_task(send_inputs()), asyncio.create_task(receive_states())]
@@ -136,6 +141,9 @@ class Arena:
             self.client = None
             self.blur()
             self.playback = Playback()
+
+    def on_state(self, state: wire.Message, entity: int, fresh: bool) -> None:
+        """A state the client applied (``fresh``: the welcome's, a session's first). A scene room presents combat."""
 
     def describe(self, state: wire.Message, entity: int) -> str:
         loot = int(state["holder"] == entity)

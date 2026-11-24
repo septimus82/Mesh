@@ -1,9 +1,8 @@
 # M4 — responsive server-authoritative online combat: measurements and design (M4-0)
 
-> **Status:** investigation and design for owner review (escalation of major architecture, owner's standing rule).
-> Nothing here is implemented. This PR adds this document, a headless measurement tool
-> (`tooling/m4_latency_probe.py`) and one test of the tool's link model and statistics. `mesh_net` and `engine`
-> behaviour is unchanged.
+> **Status:** design approved by the owner (2026-11-24, OD1–OD11 below); being implemented in stages.
+> M4-0 (#609) added this document, a headless measurement tool (`tooling/m4_latency_probe.py`) and one test of the
+> tool's link model and statistics. M4-1 (#610) is merged. M4-2 (protocol v3 and attack presentation) is in progress.
 >
 > **Authority:** owner decision D7 (2026-11-23, `docs/plans/hd2d_online_investigation.md` §6, §7.4): M4 is approved
 > to begin now that M3 has passed. Focus: responsive server-authoritative online combat, including simulated latency.
@@ -18,6 +17,33 @@
 > - the server-stall disconnect is added;
 > - citations are fixed;
 > - every OD carries a recommendation.
+>
+> **Revision 3** (owner approval, 2026-11-24, and the reviewer's notes on revision 2):
+> - **The owner approved OD1–OD11 as recommended** (§5), with these settings:
+>   - OD1: responsive movement and swing feedback through 100 ms RTT with ±10 ms jitter and 1% loss; median hit
+>     confirmation at most RTT + 75 ms; playable and server-authoritative at 200 ms; actual limitations reported;
+>   - OD2: protocol v3, explicit v2 refusal, no downgrade;
+>   - OD3: local movement prediction and reconciliation through the shared movement implementation (M4-3);
+>   - OD4: immediate local swing animation, sound and feedback; hits, damage, HP and death stay server-confirmed;
+>   - OD5: conditional, PvE-only lag compensation, 300 ms cap, never rewinding the attacker (M4-5);
+>   - OD6: stay at 20 Hz;
+>   - OD7: server-authoritative moving enemies in M4-4 through a shared graphics-free model, with the enemy position
+>     fields in protocol v3 now (static until M4-4);
+>   - OD8: same-seed virtual-clock comparisons, at least 3 seeds (7, 8, 9) × 24 sessions; p95 and wall-clock timings
+>     report-only;
+>   - OD9: TCP stays;
+>   - OD10: the server matches single-player's persistent hitbox timing without changing single-player behaviour;
+>   - OD11: a bounded input queue, one consumed input per server tick, starting depth 2, proper input acks (the queue
+>     itself is M4-3; v3 carries the per-row `ack` and the intended tick now).
+> - **The owner's safeguards:** input correctness is mandatory. Immediate local presentation is kept distinct from
+>   server-confirmed outcomes. Targets are goals, never permission to hide failures. No unrelated redesign, no UDP,
+>   no PvP, no M5 work.
+> - **The reviewer's notes:**
+>   - (i) OD2, OD7 and OD11 were decided together, so v3 carries the enemy placement and the input fields at once;
+>   - (ii) the intended tick never lets the server apply more than one input per tick;
+>   - (iii) when the queue is full and an input is dropped, any pending attack is kept;
+>   - (iv) the seed spread is worded as about 10 ms and about 4 points (§2.1, §4).
+> - M4-1 is marked merged (#610).
 
 ## 0. Summary
 
@@ -42,9 +68,10 @@ Numbers are 20 Hz, ranges over seeds 7/8/9 (§2.1).
   - In the model, one lost segment at 200 ms RTT delivers 9 inputs at once.
   - On loopback, a server event-loop stall of 600 ms or 1000 ms disconnected a 20 Hz client; 200, 300 and 450 ms did
     not (§2.5).
-  - The fix, M4-1, is being done separately as a defect fix.
+  - The fix, M4-1, was done separately as a defect fix (#610, merged): a token bucket (`InputBudget`) replaced the
+    per-tick limit.
 - **Recommendation (§4):** stay server-authoritative on TCP, and stage the work as follows:
-  - **M4-1:** the burst defect fix, in progress separately.
+  - **M4-1:** the burst defect fix, merged (#610).
   - **M4-2:** one protocol v3 that carries everything M4-3 and M4-5 need, plus local swing presentation.
   - **M4-3:** own-avatar prediction through the one shared floor solver, with the server reading inputs one per tick
     (OD11).
@@ -130,8 +157,8 @@ document is that measurement.
     **24 sessions** per profile, and the run repeats for **3 seeds**. Every number is reported as
     [lowest, highest] over the seeds.
 - **Seed spread** (20 Hz, 24 sessions):
-  - medians within 10 ms of each other;
-  - hit and fairness rates within 4 percentage points;
+  - medians within about 10 ms of each other;
+  - hit and fairness rates within about 4 percentage points;
   - **p95 within 5–87 ms**: at 1% loss a retransmission is a rare event, so the tail moves with the seed.
   - Revision 1 claimed "about 5 ms and 2 points" from 6 sessions. That was wrong: at 6 sessions the reviewer's seed-8
     run differed by up to 18 ms on medians, 94 ms on p95 and 6.2 points on rates.
@@ -425,11 +452,11 @@ The measurements rank the levers.
 **Acceptance method for every stage (OD8).**
 - Run the probe before and after the change with the **same seeds (at least 7, 8 and 9) and 24 sessions**.
 - A criterion passes only if it holds **on every seed**, with a margin larger than the measured cross-seed spread of
-  that metric (§2.1). For example, a median improvement must exceed 15 ms on each seed, against a spread of at most
-  10 ms.
+  that metric (§2.1). For example, a median improvement must exceed 15 ms on each seed, against a spread of about
+  10 ms (rates: about 4 points).
 - p95 values and wall-clock timings are reported, never gated.
 
-**M4-1 — input-burst defect fix (in progress separately, as a defect fix):**
+**M4-1 — input-burst defect fix (merged, #610):**
 - A bounded token bucket in `Server` and `WorldServer` in place of "more than 8 frames per tick".
 - **Acceptance:**
   - Bursts of 9–40 inputs after a simulated stall keep the session; sustained floods are still refused.
@@ -459,6 +486,22 @@ The measurements rank the levers.
   - The N6/N7 resume-sync tests (`tests/test_mesh_net_resume.py`, from #498/#499) and the N8 character tests
     (`tests/test_mesh_net_characters.py`) are green under v3.
   - The `"v": 2` literals in about 10 `tests/test_mesh_net_*` files are updated.
+- **As implemented** (`mesh_net/protocol.py` has the frame reference):
+  - player row `[entity, x, y, facing, elevation, floor, ack, attack_seq]`; enemy row
+    `[id, hp, hit_seq, x, y, elevation, floor]` (`floor` `null` for an enemy the authority never stood on a floor);
+    `welcome` (N6 and N7) carries `hz`; every `input` carries `tick`; an attack may carry `view_tick` (a number,
+    reserved: nothing sends it yet, the server ignores it).
+  - Today the server is still last-input-wins: `ack` is the newest input a tick consumed. M4-3's queue changes what
+    is consumed, not the wire.
+  - Clients refuse, before applying anything, a counter or `ack` that goes back within a room instance and an own
+    `ack` beyond the last `seq` sent (`check_progress`); they take a new baseline at `welcome` and `enter`.
+  - OD10, counted as single-player's Hitbox counts: each update adds 1/HZ s to its timer and the update that reaches
+    0.2 s removes it. At 20 Hz it lives ceil(0.2 × 20) = 4 ticks, and the first 3 (the attack's own tick and the next
+    two) check overlaps; the 4th only removes it. A parity test runs the real Combat and Hitbox behaviours at
+    1/HZ s against the authority.
+  - The client mirrors the cooldown on its own clock and sends nothing for a press inside it. Known limitation until
+    M4-3: under loss, a retransmission can bunch two attack inputs closer than the cooldown, and the server then refuses
+    the second; the window showed its swing, which reads as a miss (no flash).
 
 **M4-3 — own-movement prediction (b), with OD11:**
 - Extract the per-body step. Add the input queue (if OD11(a)). One predictor for both arenas. HD-2D corrections snap
@@ -538,13 +581,15 @@ Each decision carries the recommendation; the reviewer's view is noted where it 
 11. **OD11 — how the server uses inputs.** **Recommended: (a)**, a bounded per-player queue read one per tick, tagged
     by `seq` (and intended tick), sized with M4-1's bucket, holding the last input for 5 ticks when empty. Depth **2**
     (the reviewer recommends 2–3). The alternative is (b): keep last-input-wins and accept routine one-step corrections.
+    The intended tick never lets the server apply more than one input per tick, and when a full queue drops an input,
+    any pending attack is kept.
 
 ## 6. Risks
 
 - **Prediction errors near changing solids and floors.** Doors, gates, dying solid enemies, stair edges. Mitigation:
   reconcile on every snapshot; snap elevation and floor; the stairs and floor parity tests.
 - **Queue and latency trade-off (OD11(a)).** Each queued input adds up to one tick. Mitigation: depth 2; drop to the
-  newest input on overflow.
+  newest input on overflow, keeping any pending attack.
 - **Session boundaries.** Prediction or counters leaking across a resume or transfer. Mitigation: clear at `welcome`
   and `enter`; acks scoped to the room instance; the resume-sync, transfer and N8 tests.
 - **Float determinism across platforms.** Mitigation: always reconcile; never trust the prediction.

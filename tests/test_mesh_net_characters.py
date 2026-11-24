@@ -286,7 +286,7 @@ def test_unlocks_are_earned_once_by_who_was_there(files, store):
     with pytest.raises(ValueError):
         store.complete(ada["id"], d.w.progress.run, "made up", "admin")  # no key outside the rules
     with pytest.raises(wire.Invalid):
-        d.w.party(a, {"v": 2, "type": "party", "op": "unlock"})  # and no request a client could send
+        d.w.party(a, {"v": wire.VERSION, "type": "party", "op": "unlock"})  # and no request a client could send
 
 
 def test_storage_failures_are_never_successes(files, store):
@@ -449,7 +449,7 @@ def test_the_admin_command_never_prints_a_key(tmp_path):
 
 
 def test_clients_check_character_frames():
-    good = {"v": 2, "type": "character", "id": "a" * 32, "name": "Ada", "items": [["relic_shard", 1]],
+    good = {"v": wire.VERSION, "type": "character", "id": "a" * 32, "name": "Ada", "items": [["relic_shard", 1]],
             "unlocks": [UNLOCK], "completed": 1, "loot": [BANDIT]}
     check_character(good)
     for bad in ({"items": [["relic_shard", 0]]}, {"items": [["Relic", 1]]}, {"unlocks": ["Admin!"]},
@@ -515,7 +515,7 @@ class SheetPeer(Peer):
     @classmethod
     async def open_as(cls, port, world, credential):
         reader, writer = await asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES)
-        writer.write(wire.encode({"v": 2, "type": "join", "resume": None, "character": credential}))
+        writer.write(wire.encode({"v": wire.VERSION, "type": "join", "resume": None, "character": credential}))
         peer = cls(reader, writer, world)
         hello = await wire.read(reader)
         check_welcome(hello, world.identity)
@@ -526,7 +526,7 @@ class SheetPeer(Peer):
     async def refused_as(port, credential):
         reader, writer = await asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES)
         try:
-            writer.write(wire.encode({"v": 2, "type": "join", "resume": None, "character": credential}))
+            writer.write(wire.encode({"v": wire.VERSION, "type": "join", "resume": None, "character": credential}))
             msg = await wire.read(reader)
             assert msg["type"] == "refused"
             return msg["code"]

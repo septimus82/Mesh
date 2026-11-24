@@ -20,9 +20,14 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-from mesh_net.world import expedition_files
-from mesh_net.world_client import SIZE, WorldArena, read_character
-from tooling.net_scene_probe import capture, rendered
+import pyglet
+
+# A test driver never uses the sound card (tests/conftest.py's rule): a swing or a hit plays a sound (M4-2).
+pyglet.options["audio"] = ("silent",)
+
+from mesh_net.world import expedition_files  # noqa: E402
+from mesh_net.world_client import SIZE, WorldArena, read_character  # noqa: E402
+from tooling.net_scene_probe import capture, rendered  # noqa: E402
 
 PX = 32.0  # engine.hd2d.settings.PIXELS_PER_METRE
 # Only the keys this probe sends reach the client or the game window: they carry OWN, a modifier bit no keyboard sets

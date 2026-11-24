@@ -523,8 +523,8 @@ class _Walker:
             d = self.sign
         self.last = here
         self.seq += 1
-        room.input(self.eid, {"v": wire.VERSION, "type": "input", "entity": self.eid, "seq": self.seq,
-                              "dx": d if axis == 0 else 0, "dy": d if axis == 1 else 0})
+        room.input(self.eid, wire.input_frame(self.eid, self.seq, d if axis == 0 else 0, d if axis == 1 else 0,
+                                              room.tick + 1))
 
 
 def summary(values: list[float]) -> dict[str, Any]:
