@@ -992,6 +992,170 @@ def test_the_drain_shortens_a_lasting_backlog_one_direction_at_a_time_never_an_a
             assert room.drained_moves == room.dropped_moves == 0 and len(p.moves) == 4, "off: the backlog lasts"
 
 
+def queue_room(arena: str, depth: int, hold: int, drain: int) -> tuple[Callable[..., None], Callable[[], None], Any, Any]:
+    """A player in a room built with these queue settings, ready to walk east a few steps: (send(seq, dx, dy), step(),
+    the room, the player). "n6": the co-op room; "n6 stairs": the floors demo's stairs, on them; "n7": a world's hub
+    instance, through World.input and World.step."""
+    from mesh_net.scene_room import COOP_SCENE, coop_files, disposable_project
+    from mesh_net.world import World, expedition_files
+
+    if arena == "n7":
+        with disposable_project(expedition_files(), scaffold=False) as root:
+            d = Driver(World(root, depth=depth, hold=hold, drain=drain))
+        a, _ = d.join()
+        inst, eid = d.room(a), d.m(a).eid
+
+        def n7_send(seq: int, dx: int, dy: int) -> None:
+            d.w.input(a, wire.input_frame(eid, seq, dx, dy, inst.room.tick, room=d.m(a).instance))
+
+        return n7_send, d.step, inst.room, d.player(a)
+    if arena == "n6 stairs":
+        with stairs_room() as room:
+            pass
+        room.depth, room.hold, room.drain = depth, hold, drain  # (as SceneRoom(..., depth=, hold=, drain=) sets them)
+        eid = room.join()
+        to_stairs_edge(room, eid)
+    else:
+        with disposable_project(coop_files(), scaffold=False) as root:
+            room = SceneRoom(root / COOP_SCENE, root, depth=depth, hold=hold, drain=drain)
+        eid = room.join()
+        place(room, eid, *OPEN, 0)
+    return lambda seq, dx, dy: send(room, eid, seq, dx, dy), room.step, room, room.players[eid]
+
+
+@pytest.mark.parametrize("arena", ["n6", "n6 stairs", "n7"])
+@pytest.mark.parametrize("preset", ["small", "deep", (5, 3, 0)], ids=str)
+def test_every_room_queues_with_its_own_depth_and_hold(arena: str, preset: Any) -> None:
+    """A room built with a preset (or raw settings) keeps at most its own depth waiting (the newest; the rest counted
+    as dropped) and walks the last direction read for its own hold, never the module's defaults: N6, on stairs (no
+    slope rule touches a full queue or the hold), and an N7 instance."""
+    from mesh_net.scene_room import queue_settings
+
+    depth, hold, drain = queue_settings(*(preset if isinstance(preset, tuple) else ()),
+                                        preset=preset if isinstance(preset, str) else None)
+    send_input, step, room, p = queue_room(arena, depth, hold, drain)
+    assert (room.depth, room.hold, room.drain) == (depth, hold, drain)
+    for seq in range(1, depth + 4):  # (a burst of still inputs: three more than the room keeps)
+        send_input(seq, 0, 0)
+    assert [m[0] for m in p.moves] == list(range(4, depth + 4)) and room.dropped_moves == 3, "its own depth"
+    step()
+    assert not p.moves and p.ack == depth + 3
+    start, step_px = (p.body.center_x, p.body.center_y), room.step_px
+    send_input(depth + 4, *((0, 1) if arena == "n6 stairs" else (1, 0)))  # (up the stairs; else east)
+    walked = []
+    for _ in range(hold + 2):
+        step()
+        walked.append(round(math.dist(start, (p.body.center_x, p.body.center_y)) / step_px, 1))
+    assert walked == [float(min(i, hold)) for i in range(1, hold + 3)], "walked on for its own hold, then stopped"
+
+
+def test_ordinary_walking_never_drains() -> None:
+    """A window walking on a steady link: one input waits after each read (the next one is already in). That is no
+    backlog: the drain never drops a step, and every input is walked on its own tick."""
+    with coop_room() as room:
+        eid = room.join()
+        place(room, eid, *OPEN, 0)
+        p, xs = room.players[eid], []
+        send(room, eid, 1, 1, 0)
+        for seq in range(2, 42):  # (left and right in turn: in place, a step each tick)
+            send(room, eid, seq, 1 if seq % 2 else -1, 0)
+            room.step()
+            assert p.ack == seq - 1 and len(p.moves) == 1
+            xs.append(at(room, eid)[0])
+        assert room.drain == 4 and room.drained_moves == room.dropped_moves == 0
+        assert xs == [OPEN[0] + room.step_px * (i % 2 == 0) for i in range(len(xs))]
+
+
+def test_leaving_resets_the_drain_count() -> None:
+    """A player that leaves (a transfer, a disconnect) with a backlog three ticks old comes back counting from 0: its
+    next backlog drains on its 4th tick, not its 1st."""
+    with coop_room() as room:
+        eid = room.join()
+        place(room, eid, *OPEN, 0)
+        p, seq = room.players[eid], 0
+
+        def backlog(ticks: int) -> list[int]:
+            nonlocal seq
+            for _ in range(3):
+                seq += 1
+                send(room, eid, seq, 0, 1 if seq % 2 else -1)
+            drained = []
+            for tick in range(1, ticks + 1):
+                seq += 1
+                send(room, eid, seq, 0, 1 if seq % 2 else -1)
+                before = room.drained_moves
+                room.step()
+                drained += [tick] * (room.drained_moves - before)
+            return drained
+
+        assert backlog(room.drain - 1) == [] and p.deep == room.drain - 1
+        eid = room.join(room.leave(eid))
+        seq = 0
+        assert backlog(room.drain) == [room.drain], "counted from 0 again"
+
+
+@pytest.mark.parametrize("where", ["mid-stairs", "below the landing", "beside the bandit"])
+def test_the_drain_never_drops_a_step_at_a_fork(where: str) -> None:
+    """Drain preset, a backlog four ticks old whose oldest waiting input is a step that turns the inputs behind it
+    (pushes that walk nowhere). Dropping it must leave those inputs within a step of where they lead, on the same
+    floor, else the window would replay them down another branch: the drain waits a tick, then drops the next one.
+    - mid-stairs (HD-2D): a step north, then pushes east into the stairs' edge, blocked either way: dropped on time;
+    - below the landing (HD-2D): the step north is onto the landing (the pushes east blocked on both): another floor;
+    - beside the bandit (2D): a step west puts the bandit in the way of the pushes north: they end 3 steps apart."""
+    if where == "beside the bandit":
+        with coop_room() as room:
+            pass
+        eid = room.join()
+        place(room, eid, 632.0, 244.0, 0)
+        plan = [(1, 0), (-1, 0), (1, 0), (-1, 0), (-1, 0)] + [(0, 1)] * 6  # (seqs 1-4 in place; 5: west; then north)
+    else:
+        with stairs_room() as room:
+            pass
+        eid = room.join()
+        to_stairs_edge(room, eid)
+        p, seq = room.players[eid], 0
+        while p.body.center_y < (240.0 if where == "mid-stairs" else 288.0):
+            seq += 1
+            send(room, eid, seq, 1, 1)
+            room.step()
+        p.seq = p.ack = p.dx = p.dy = 0
+        assert p.body.mesh_hd2d_floor == "crossing/col_stairs_west" and p.body.center_x >= 350.0
+        plan = [(1, 0)] * 4 + [(0, 1)] + [(1, 0)] * 6  # (seqs 1-4 pushing into the edge; 5: north; then east)
+    p = room.players[eid]
+    for seq, (dx, dy) in enumerate(plan[:4], 1):
+        send(room, eid, seq, dx, dy)
+    drops, path = [], []
+    for tick, (seq, (dx, dy)) in enumerate(enumerate(plan[4:], 5), 1):
+        send(room, eid, seq, dx, dy)
+        before = room.drained_moves
+        room.step()
+        drops += [tick] * (room.drained_moves - before)
+        path.append((round(p.body.center_x, 1), round(p.body.center_y, 1), p.body.mesh_hd2d_floor))
+    assert room.drain == 4 and room.dropped_moves == 0
+    if where == "mid-stairs":
+        assert drops[0] == 4, "no fork: dropped on its 4th tick in a row"
+    else:
+        assert drops[0] == 5, "the turning step kept; the next tick drains"
+        assert path[4][2] == ("crossing/col_landing_west" if where == "below the landing" else None), path
+        assert where != "beside the bandit" or path[4][:2] == (624.5, 244.0), path
+
+
+@pytest.mark.parametrize("preset", ["small", "deep", "drain"])
+def test_a_full_queue_drops_its_oldest_even_at_a_fork(preset: str) -> None:
+    """The fork guard is the drain's alone: a full queue drops its oldest direction whatever it would cost (depth is
+    a bound), here a step west beside the bandit that turns the pushes north behind it."""
+    from mesh_net.scene_room import COOP_SCENE, coop_files, disposable_project, queue_settings
+
+    depth, hold, drain = queue_settings(preset=preset)
+    with disposable_project(coop_files(), scaffold=False) as root:
+        room = SceneRoom(root / COOP_SCENE, root, depth=depth, hold=hold, drain=drain)
+    eid = room.join()
+    place(room, eid, 632.0, 244.0, 0)
+    for seq, (dx, dy) in enumerate([(-1, 0)] + [(0, 1)] * depth, 1):
+        send(room, eid, seq, dx, dy)
+    assert [m[0] for m in room.players[eid].moves] == list(range(2, depth + 2)) and room.dropped_moves == 1
+
+
 # --- the one step ------------------------------------------------------------------------------------------------
 
 

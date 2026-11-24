@@ -3,8 +3,9 @@
 > **Status:** design approved by the owner (2026-11-24, OD1–OD11 below); being implemented in stages.
 > M4-0 (#609) added this document, a headless measurement tool (`tooling/m4_latency_probe.py`) and one test of the
 > tool's link model and statistics. M4-1 (#610) and M4-2 (#611: protocol v3 and attack presentation) are merged.
-> M4-3 (own-movement prediction and the server's input queue) is in review: §4 M4-3 "As implemented". Its input queue
-> is the owner's choice after playing; "drain" is the provisional default (owner decision, 2026-11-24).
+> M4-3 (own-movement prediction and the server's input queue, #613) is merged; its follow-ups (round 4: tests, the
+> probe's flag order, the drain's fork guard) are in review: §4 M4-3 "As implemented". Its input queue is the owner's
+> choice after playing; "drain" is the provisional default (owner decision, 2026-11-24).
 >
 > **Authority:** owner decision D7 (2026-11-23, `docs/plans/hd2d_online_investigation.md` §6, §7.4): M4 is approved
 > to begin now that M3 has passed. Focus: responsive server-authoritative online combat, including simulated latency.
@@ -593,8 +594,63 @@ The measurements rank the levers.
   - The resume-sync and N8 tests green.
   - M3 acceptance unchanged in intent: the own avatar converges to the server row.
 - **As implemented** (owner decisions OD3 and OD11; review rounds 1–3 of #613 and the owner's decision of
-  2026-11-24; `mesh_net/scene_room.py` has the code and its notes). Round 3 comes first. Round 2's text below stays
-  as it was measured; its "chosen design" is now the "deep" preset.
+  2026-11-24; `mesh_net/scene_room.py` has the code and its notes). Round 4 comes first, then round 3. Round 3's
+  and round 2's text below stays as it was measured; round 2's "chosen design" is now the "deep" preset.
+  - **Round 4 (follow-ups to #613's independent review): the drain never drops a step at a fork.**
+    - **The rule** (`SceneRoom._forks`): before the drain drops the oldest waiting input, the authority walks this
+      tick's step and every input still waiting twice, from a copy of the body: with that input and without it,
+      through the one step (`walk`, so `World.move`; no floor logic of its own). If the two ends are more than one
+      step apart, or on different floors, the drop is refused this tick. The drain's count runs on, so a later tick
+      drains instead (usually the next one). The client replays exactly those inputs from the next snapshot, so the
+      two ends' distance is about the correction the drop would cost. Inputs still in flight are not seen.
+    - **Why:** the review found that most large stair corrections followed a drain drop on a stair step. A step
+      short beside a fork in the floors (stairs and the landing or ground beside them, where one floor blocks a
+      walk that the other doesn't) sends the replayed inputs down the other branch.
+    - **Rejected first: "never drain on a sloped floor".** It held the backlog for the whole stair walk (longest
+      backlog 261–313 ticks, about 15 s, at 0–100 ms). Because the backlog delayed the server, the walk overshot
+      onto the landing and the ground beside the stairs, so the drops happened there, at the forks. At 100 ms that
+      made it worse: 6.3–7.8 large corrections a minute, all over 30 px, worst 98 px. The reviewer's "only on the
+      ground" check is not general (it names the demo's floor).
+    - **Same seeds** (7/8/9 × 24 sessions, every profile), drain preset, before → after:
+
+      | Stairs, 16 s strafing (6 min a seed) | 0 ms ±10 1% | 50 ms ±10 1% | 100 ms ±10 1% | 200 ms ±10 1% |
+      |---|---|---|---|---|
+      | Corrections (n) | 175–201 → same | 258–270 → 257–270 | 334–368 → 243–309 | 293–333 → 213–238 |
+      | p95 of the corrections px | 5.3 → 5.3 | 5.3 → 5.3 | 5.3 → 5.3 | 35.6–45.3 → 7.5–15 |
+      | Worst px | 5.3 → 5.3 | 5.3 → 5.3 | 41–71 → 19–27 | 71–102 → 55–64 |
+      | Large (over one step) per minute | 0 → 0 | 0 → 0 | 1.8–2.7 → 0.8–1.3 | 5.5–6.7 → 1.8–3.0 |
+      | Large over 30 px (per 6 min) | 0 → 0 | 0 → 0 | 4–7 → **0** | 18–23 → 2–5 |
+      | Large with an elevation or floor snap | 0 → 0 | 0 → 0 | 11–16 → 5–8 | 33–36 → 10–14 |
+      | Level-caused disagreement | 0.5% → 0.5% | 0.9–1.0% → 0.9–1.1% | 1.5–1.6% → 1.1–1.4% | 1.4–1.7% → 0.6–0.7% |
+      | Directions drained / overflowed | 177–201 / 0 → same | 259–273 / 0 → same | 335–369 / 0 → 332–367 / 0 | 342–389 / 76–84 → 341–388 / 76–84 |
+      | Backlog (2+ waiting) length, p95 / longest ticks | 11–12 / 12–15 → 11–12 / 12–17 | 15 / 16–19 → 15 / 17–19 | 19 / 23 → 20 / 25–26 | 23 / 23–25 → 23–25 / 28–29 |
+
+      - **Unchanged, identical to the number:** the 2D scenarios, so movement, walking, standing attacks and the
+        moving targets. That includes the corrections (movement and walking: max 7.5 px at 0–100 ms, 15 px at
+        200 ms), the peer view while walking (p50 270–291 ms at 100 ms), the walking-swing confirmation (p50 210–229
+        ms), discarded steps, attacks never executed, and snapshot sizes. The rule could refuse a 2D drop (a wall or
+        an enemy in the way: tested); none happened in these runs. Jitter alone and 0 ms with no loss: 0 corrections
+        before and after.
+      - **What it costs:** a backlog on the stairs lasts up to 3 ticks longer: 25–26 ticks (about 1.3 s) at 100 ms
+        and 28–29 at 200 ms, against 21–25 elsewhere. Up to 150 ms more lateness for peers, for about a second,
+        near a fork.
+      - **The remaining large ones, at 100 ms:** 5–8 in 6 minutes, 19–27 px, every one with an elevation or floor
+        snap, every one after a drain drop (no overflow at 100 ms). *(Inferred: a fork reached by inputs still in
+        flight, which the server can't see.)* Making the check assume the newest direction is held for the inputs in
+        flight was tried on seed 7. It cut 100 ms from 7 to 5 but raised 200 ms (over 30 px: 3 → 7), so it was not
+        kept.
+      - **At 200 ms**, the drops of a full queue (76–84 per seed beyond depth 8, which deep has too) are untouched by
+        the rule, and 2–5 large corrections over 30 px remain.
+    - **Deep and small are unchanged** (their drain is 0, so the rule never runs). Their stairs runs, same seeds and
+      every profile, are byte-identical before and after. Tests drive both presets, and a raw depth 5 / hold 3,
+      through N6, the stairs and an N7 instance.
+    - **Also in round 4:**
+      - Tests for the review's surviving mutants: each room overflows at its own depth and walks on for its own hold
+        (T12/T13), ordinary walking (one input waiting) never drains (T01), and `leave` resets the drain's count
+        (T11).
+      - The probe's `--depth/--hold/--drain` now beat `--queue`, as the server's flags do (`queue_of`).
+      - The probe reports, per scenario, the large corrections (count, per minute, over 30 px, with a snap) and each
+        backlog's length.
   - **Round 3: the queue is the owner's choice, with a provisional default.**
     - The round-2 review found the conflict. Design A ("deep") keeps a retransmission burst as a backlog that never
       drains while the player walks: peers see the walk 333–340 ms late even at 0 ms ±10 ms 1% (D: 179–188 ms), and
@@ -704,10 +760,10 @@ The measurements rank the levers.
       |---|---|---|---|
       | Local first move within one frame, every seed and profile | MET (16.7 ms) | MET | MET |
       | Zero corrections with no loss and static solids | MET (0 at 0 ms and jitter alone) | MET | **NOT MET** (jitter alone: 83–147) |
-      | p95 correction ≤ one step (7.5 px) at 100 ms | MET (movement 7.5, walking 7.5, stairs 5.3), but stairs max 41–71 px, 1.8–2.7 large a minute | MET (none) | **NOT MET** (37.5 px; stairs 26.5) |
-      | Stairs level-caused disagreement < 5% at 100 ms | MET (1.5–1.6%) | MET (0.0%) | MET (1.4–1.7%) |
+      | p95 correction ≤ one step (7.5 px) at 100 ms | MET (movement 7.5, walking 7.5, stairs 5.3), but stairs max 41–71 px, 1.8–2.7 large a minute; round 4: max 19–27 px, 0.8–1.3 large a minute, none over 30 px | MET (none) | **NOT MET** (37.5 px; stairs 26.5) |
+      | Stairs level-caused disagreement < 5% at 100 ms | MET (1.5–1.6%; round 4: 1.1–1.4%) | MET (0.0%) | MET (1.4–1.7%) |
       | Buffers cleared on resume, transfer, enter; resume-sync and N8 green; M3 acceptance | MET (default tested) | MET (round 2) | MET (round 1) |
-      | Owner condition 6: no persistent timing corruption from stalls, retransmissions, disconnects, transfers | MET, bounded: a backlog lasts at most 21–23 ticks (about 1.1 s); peer view 270–291 ms | **NOT MET**: the backlog lasts the whole walk; peer view 516–541 ms, and 333–340 ms even at 0 ms ±10 1% | MET (at most 1 waiting) |
+      | Owner condition 6: no persistent timing corruption from stalls, retransmissions, disconnects, transfers | MET, bounded: a backlog lasts at most 21–23 ticks (about 1.1 s); peer view 270–291 ms; round 4: up to 25–26 ticks on the stairs | **NOT MET**: the backlog lasts the whole walk; peer view 516–541 ms, and 333–340 ms even at 0 ms ±10 1% | MET (at most 1 waiting) |
       | OD1: responsive movement and swing feedback | MET | MET | MET |
       | OD1: median hit confirmation ≤ RTT + 75 ms (175 ms), standing | **NOT MET** (166.0–175.9; seed 9 0.9 ms over) | **NOT MET** (same) | **NOT MET** (same) |
       | OD1: the same for a swing made while walking | **NOT MET** (210–229) | **NOT MET** (457–474) | **NOT MET** (200–205) |
@@ -720,8 +776,10 @@ The measurements rank the levers.
         a swing made while walking.
       - "deep" breaks the owner's condition 6.
       - "small" fails the correction criteria.
-      - "drain" meets the §4 criteria as written, but makes large stair corrections about twice a minute of stair
-        walking at 100 ms (up to 71 px, with a floor snap) and about six a minute at 200 ms.
+      - "drain" meets the §4 criteria as written, but made large stair corrections about twice a minute of stair
+        walking at 100 ms (up to 71 px, with a floor snap) and about six a minute at 200 ms. Since round 4's fork
+        guard: about one a minute at 100 ms (up to 27 px, still with a snap) and two to three a minute at 200 ms (up
+        to 64 px). That is fewer, but not none.
       - Drain is the provisional default by the owner's instruction, to be judged by playing all three in the M4 demo.
     - **Also in round 3:**
       - `riders` is reset at an `enter` and at a session's end (the reviewer's R05).
