@@ -358,3 +358,39 @@ def test_the_authority_has_no_floor_solver_of_its_own(room: SceneRoom, monkeypat
     room.leave(eid)
     assert calls == [scene_room.move], "the authority's movement is World.move with its sweep"
 
+
+def movers(source: str) -> set[str]:
+    """The functions (by name; ``<module>`` outside any) in ``source`` that call ``move`` or ``<anything>.move``."""
+    found: set[str] = set()
+
+    def visit(node: ast.AST, where: str) -> None:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            where = node.name
+        if isinstance(node, ast.Call):
+            func = node.func
+            if (isinstance(func, ast.Name) and func.id == "move") or (isinstance(func, ast.Attribute) and func.attr == "move"):
+                found.add(where)
+        for child in ast.iter_child_nodes(node):
+            visit(child, where)
+
+    visit(ast.parse(source), "<module>")
+    return found
+
+
+def test_one_movement_step_serves_the_authority_and_the_prediction() -> None:
+    """M4-3 (owner decision OD3): mesh_net moves a body in one place, SceneRoom.walk (World.move with this module's
+    sweep, or the sweep alone in a 2D room). The authority's tick and the window's prediction of its own avatar
+    (mesh_net.scene_room.Prediction) both call it (tests/test_mesh_net_prediction.py spies on both); nothing else in
+    mesh_net calls World.move or the sweep, and nothing else is called ``walk``."""
+    where = {path.name: names for path in sorted((REPO / "mesh_net").rglob("*.py"))
+             if (names := movers(path.read_text(encoding="utf-8")))}
+    assert where == {"scene_room.py": {"walk"}}, f"a body moved outside SceneRoom.walk: {where}"
+    walks = [path.name for path in sorted((REPO / "mesh_net").rglob("*.py"))
+             if "walk" in {n.name for n in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+                           if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}]
+    assert walks == ["scene_room.py"]
+    for source, caught in (("def predict(b):\n    room.world.move(b, (1, 0), [])", {"predict"}),
+                           ("def step(self):\n    move(self.body, (1, 0), [])", {"step"}),
+                           ("x = move(b, d, s)", {"<module>"})):  # (what the scan must catch)
+        assert movers(source) == caught, source
+

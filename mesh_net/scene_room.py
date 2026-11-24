@@ -24,6 +24,10 @@ avatars there and check them against their own world (check_state), never send t
 Wire v3 (M4-2): each player row adds the input it last consumed (``ack``) and its attack count, each enemy row its hit
 count and placement. An attack is Combat's persistent hitbox, server-side (owner decision OD10, :class:`Hitbox`).
 Clients show their own swing at once and a hit only once a snapshot confirms it (:class:`Feedback`).
+
+M4-3: the server reads one input a tick (owner decision OD11: DEPTH, HOLD) and walks each body through
+:meth:`SceneRoom.walk`, the one movement step; a client predicts its own avatar through the same step and reconciles
+it with each snapshot (:class:`Prediction`, owner decision OD3).
 """
 
 from __future__ import annotations
@@ -85,6 +89,49 @@ HITBOX_S = 0.2  # the hitbox Combat makes lives this long (engine.behaviours.com
 # 2 ticks to spare) and 14 at 200 ms with 1% loss (beyond it: 7 of 895 swings stale, counted).
 COOLDOWN_CLAIM_WINDOW = 12
 PENDING = 4  # attacks, and uses or takes, a player may have waiting (one of each is read a tick); more are dropped
+# How the server reads inputs (owner decision OD11, M4-3): each tick reads ONE input, the oldest waiting, and walks one
+# step with its direction; at most ``depth`` wait (a full queue drops its oldest: the newest direction wins). An input's
+# actions wait apart (``attacks``, ``actions``: PENDING each, one of each kind a tick) and run once the tick reads
+# their own input or a later one, so a dropped direction never loses an attack, a use or a take. A tick with nothing
+# waiting walks only while under ``hold`` ticks from the last input read (its own included): with hold 1, never a step
+# no input gave. While the player stands, of two still inputs waiting, the older is dropped (it would walk nowhere, as
+# the one after it; its actions run with that one: never a correction). ``drain`` (0: off): whenever more than one
+# input has waited ``drain`` ticks in a row, the oldest waiting is dropped (its direction, never its actions): a backlog
+# decays, at a one-step correction each, instead of lasting until the player stands.
+# Why: TCP holds everything behind a lost segment for RTT + RTO (6 ticks at 100 ms, 8 at 200 ms), then delivers it at
+# once. A shallow queue drops that burst (corrections); a deep one keeps it and runs that many ticks behind while the
+# player walks on; the drain keeps it and then gives the lateness back a step at a time. Measured, per preset, in
+# docs/plans/m4_online_combat.md (M4-3 "As implemented").
+# THE DEFAULT IS PROVISIONAL (owner decision, 2026-11-24): "drain", subject to the owner playing the alternatives in the
+# M4 demo; it is not the permanent architecture. All three stay selectable (mesh_net.server: --queue, --input-*).
+QUEUE_PRESETS = {
+    "drain": (8, 1, 4),  # deep, never walking on, a lasting backlog drained a step every 4 ticks (PROVISIONAL default)
+    "deep": (8, 1, 0),  # deep, never walking on, no drain: no correction from a held burst; lateness while walking
+    "small": (2, 5, 0),  # OD11's starting depth with the old 5-tick lease: little lateness; corrections after a burst
+}
+QUEUE = "drain"
+DEPTH, HOLD, DRAIN = QUEUE_PRESETS[QUEUE]
+QUEUE_LIMITS = {"depth": (1, 20), "hold": (1, wire.HZ // 4), "drain": (2, 20)}  # (drain 0 is off)
+
+
+def queue_settings(depth: object = None, hold: object = None, drain: object = None,
+                   preset: object = None) -> tuple[int, int, int]:
+    """The server's input-queue settings (depth, hold, drain), checked: each given value, else the preset's
+    (QUEUE_PRESETS; None: DEPTH, HOLD, DRAIN). Whole numbers within QUEUE_LIMITS (depth up to a second of input, hold up
+    to the old 5-tick lease, drain 0 or 2-20 ticks); anything else, or an unknown preset, is refused (ValueError)."""
+    if preset is not None and (not isinstance(preset, str) or preset not in QUEUE_PRESETS):
+        raise ValueError(f"input queue preset must be one of {', '.join(QUEUE_PRESETS)}, not {str(preset)[:16]!r}")
+    base = QUEUE_PRESETS[preset] if isinstance(preset, str) else (DEPTH, HOLD, DRAIN)
+    values: dict[str, Any] = {name: base[i] if value is None else value for i, (name, value) in
+              enumerate((("depth", depth), ("hold", hold), ("drain", drain)))}
+    for name, value in values.items():
+        low, high = QUEUE_LIMITS[name]
+        if type(value) is not int or not (low <= value <= high or (name == "drain" and value == 0)):
+            raise ValueError(f"input queue {name} must be a whole number in {low}-{high}"
+                             f"{' or 0 (off)' if name == 'drain' else ''}, not {value!r}")
+    return values["depth"], values["hold"], values["drain"]
+
+
 # The packaged co-op room (tooling/make_coop_scene.py): where each file goes in a project.
 COOP_FILES = {"packs/core_regions/scenes/start.json": "scene.json", "packs/core_regions/maps/start.json": "map.json",
               "assets/prefabs.json": "prefabs.json"}
@@ -176,6 +223,14 @@ def move(mover: Body, delta: tuple[float, float], solids: list[Body]) -> None:
     result = sweep_axis_separate(MoveRequest("player", (start.x, start.y), delta, start), query)
     mover.center_x += result.final_pos[0] - start.x
     mover.center_y += result.final_pos[1] - start.y
+
+
+def facing_of(dx: int, dy: int, current: int) -> int:
+    """The facing (an index into FACINGS, as the wire has it) an input's direction gives: its horizontal part when that
+    is at least as long, else its vertical part; ``current`` for no direction."""
+    if not (dx or dy):
+        return current
+    return FACINGS.index((dx, 0) if abs(dx) >= abs(dy) and dx else (0, dy))
 
 
 @cache
@@ -402,15 +457,17 @@ class Hitbox:
 @dataclass
 class Player:
     body: Body
-    dx: float = 0.0
-    dy: float = 0.0
+    dx: int = 0  # the direction of the last input read (-1, 0 or 1 each, as the wire has it)
+    dy: int = 0
     facing: int = 3
-    seq: int = 0
-    last_input: int = -100
-    actions: list[str] = field(default_factory=list)  # uses and takes waiting, oldest first (one read a tick)
-    attacks: list[int] = field(default_factory=list)  # attacks waiting: the tick each was meant for (one a tick)
+    seq: int = 0  # the newest input received
+    held: int = HOLD  # ticks since the last input was read (0: this tick's); it walks while under the room's hold
+    deep: int = 0  # ticks in a row that more than one input waited after the read (the room's drain)
+    moves: deque[tuple[int, int, int]] = field(default_factory=deque)  # inputs waiting (seq, dx, dy), at most DEPTH
+    actions: list[tuple[int, str]] = field(default_factory=list)  # uses and takes waiting (seq of its input, action)
+    attacks: list[tuple[int, int]] = field(default_factory=list)  # attacks waiting (seq of its input, tick meant for)
     attack_after: int = 0  # the first tick an attack may be meant for (its cooldown, judged on meant ticks)
-    ack: int = 0  # the seq of the input the last tick consumed (wire v3), since it joined this room
+    ack: int = 0  # the seq of the last input a tick read (wire v3), since it joined this room
     attack_seq: int = 0  # the attacks started since it joined this room (wire v3)
     hitboxes: list[Hitbox] = field(default_factory=list)  # its live ones
 
@@ -440,7 +497,10 @@ def hitbox_ticks(hz: int = wire.HZ) -> int:
 class SceneRoom:
     """Same interface as mesh_net.simulation.Room, so mesh_net.server.Server hosts either."""
 
-    def __init__(self, path: Path, root: Path | None = None) -> None:
+    def __init__(self, path: Path, root: Path | None = None, *, depth: int | None = None, hold: int | None = None,
+                 drain: int | None = None) -> None:
+        """``depth``, ``hold``, ``drain``: the input queue's settings (queue_settings; None: DEPTH, HOLD, DRAIN)."""
+        self.depth, self.hold, self.drain = queue_settings(depth, hold, drain)
         root = root or path.parent
         scene_hash, scene = load_scene(path)
         refuse_unsupported(scene)
@@ -511,8 +571,9 @@ class SceneRoom:
         self.next_id = 1
         self.players: dict[int, Player] = {}
         # Attacks not run (diagnostics; never on the wire): stale (meant more than COOLDOWN_CLAIM_WINDOW ticks ago), refused in
-        # the cooldown; and actions dropped because PENDING were already waiting.
-        self.stale_attacks = self.refused_attacks = self.dropped_actions = 0
+        # the cooldown; actions dropped because PENDING were already waiting; directions dropped from a full queue
+        # (depth), and directions the drain dropped from a lasting backlog (drain) (their actions still run).
+        self.stale_attacks = self.refused_attacks = self.dropped_actions = self.dropped_moves = self.drained_moves = 0
         try:
             wire.encode({"v": wire.VERSION, **self._worst_snapshot()})
         except wire.Invalid as exc:
@@ -592,8 +653,9 @@ class SceneRoom:
 
     def leave(self, eid: int) -> Player:
         p = self.players.pop(eid)
-        p.dx = p.dy = 0.0
-        p.seq, p.last_input = 0, -100
+        p.dx = p.dy = 0
+        p.seq, p.held, p.deep = 0, self.hold, 0
+        p.moves.clear()  # (no input sent for this room ever walks it in another)
         p.actions.clear()
         p.attacks.clear()
         p.ack = p.attack_seq = 0  # (counted per room join: wire v3)
@@ -603,53 +665,92 @@ class SceneRoom:
     def input(self, eid: int, msg: wire.Message) -> None:
         seq, dx, dy, action = parse_input(msg, eid)
         p = self.players[eid]
-        if seq > p.seq:
-            p.seq, p.last_input = seq, self.tick
-            p.dx, p.dy = (dx, dy) if not (dx and dy) else (dx / math.sqrt(2), dy / math.sqrt(2))
-            if dx or dy:
-                p.facing = FACINGS.index((dx, 0) if abs(dx) >= abs(dy) and dx else (0, dy))
-            # (never one replacing another: each runs in turn, one of each kind a tick)
-            if action == "attack" and len(p.attacks) < PENDING:
-                p.attacks.append(msg["tick"])
-            elif action is not None and action != "attack" and len(p.actions) < PENDING:
-                p.actions.append(action)
-            elif action is not None:
-                self.dropped_actions += 1
+        if seq <= p.seq:
+            return
+        p.seq = seq
+        if len(p.moves) >= self.depth:  # (full: the oldest direction goes; its actions stay, and run with this one)
+            p.moves.popleft()
+            self.dropped_moves += 1
+        p.moves.append((seq, dx, dy))
+        # (never one action replacing another: each runs in turn, one of each kind a tick)
+        if action == "attack" and len(p.attacks) < PENDING:
+            p.attacks.append((seq, msg["tick"]))
+        elif action is not None and action != "attack" and len(p.actions) < PENDING:
+            p.actions.append((seq, action))
+        elif action is not None:
+            self.dropped_actions += 1
 
     # --- simulation -----------------------------------------------------------------------------------
 
-    def solids(self) -> list[Body]:
-        doors = [b for i, (b, _) in self.doors.items() if b is not None and i in self.locked]
-        alive = [e.body for e in self.enemies.values() if e.solid and not e.state.dead]
-        return self.scenery + doors + alive
+    def solids(self, state: wire.Message | None = None) -> list[Body]:
+        """What blocks a walk now; given a (checked) snapshot of this room, what blocked as it was then: its gates
+        open, its enemies alive (HP above 0) where it put them (a client's prediction: Prediction)."""
+        if state is None:
+            locked, alive = self.locked, {i for i, e in self.enemies.items() if not e.state.dead}
+        else:
+            locked, alive = set(self.doors) - set(state["open"]), {r[0] for r in state["enemies"] if r[1] > 0}
+        doors = [b for i, (b, _) in self.doors.items() if b is not None and i in locked]
+        return self.scenery + doors + [e.body for i, e in self.enemies.items() if e.solid and i in alive]
+
+    def walk(self, body: Body, dx: int, dy: int, solids: list[Body]) -> None:
+        """One tick of one body's walk (owner decision OD3): an input's direction (``dx``, ``dy``: -1, 0 or 1; a
+        diagonal normalised) at the player template's speed through ``solids``: in an HD-2D room the one floor solver
+        (World.move) with this module's sweep, in a 2D room the sweep alone; then within the wire's bound (an open map
+        has no edge). The one movement step: the authority's (step) and a client's prediction of its own avatar
+        (Prediction) both run this, never a second."""
+        if not (dx or dy):
+            return
+        ndx, ndy = (dx, dy) if not (dx and dy) else (dx / math.sqrt(2), dy / math.sqrt(2))
+        delta = (ndx * self.step_px, ndy * self.step_px)
+        if self.world is not None:
+            self.world.move(body, delta, solids, sweep=move)
+        else:
+            move(body, delta, solids)
+        body.center_x = max(-BOUND, min(BOUND, body.center_x))
+        body.center_y = max(-BOUND, min(BOUND, body.center_y))
 
     def step(self) -> None:
+        """One tick. Each player (by entity id): the oldest input waiting is read (OD11: DEPTH; its direction and
+        facing, and ``ack``; while standing, an older still input is dropped first: DEPTH's note); its earlier
+        hitboxes update; the actions whose input has been read run, one attack and one use or take, from where the
+        player stands (where its client showed it when they were pressed: Prediction); then it walks one step (walk),
+        while under HOLD ticks from the last input read."""
         self.tick += 1
         solids = self.solids()
         for eid, p in sorted(self.players.items()):
-            p.ack = p.seq  # (last input wins: this tick consumes the newest; M4-3's queue will read one a tick)
-            if self.tick - p.last_input <= wire.HZ // 4 and (p.dx or p.dy):
-                delta = (p.dx * self.step_px, p.dy * self.step_px)
-                if self.world is not None:  # HD-2D: the shared floor solver, its 2D part this module's sweep
-                    self.world.move(p.body, delta, solids, sweep=move)
-                else:
-                    move(p.body, delta, solids)
-                # An open map has no edge: stay inside what clients accept on the wire.
-                p.body.center_x = max(-BOUND, min(BOUND, p.body.center_x))
-                p.body.center_y = max(-BOUND, min(BOUND, p.body.center_y))
+            while len(p.moves) > 1 and not any(p.moves[0][1:]) and not any(p.moves[1][1:]):
+                p.moves.popleft()  # (standing: the older of two still inputs, which walks nowhere: a tick given back)
+            if p.moves:
+                p.ack, p.dx, p.dy = p.moves.popleft()
+                p.held = 0
+                p.facing = facing_of(p.dx, p.dy, p.facing)
+                p.deep = p.deep + 1 if len(p.moves) > 1 else 0
+                if self.drain and p.deep >= self.drain:  # (a lasting backlog: its oldest direction goes, never an action)
+                    p.moves.popleft()
+                    p.deep = 0
+                    self.drained_moves += 1
+            else:
+                p.held += 1
             if p.hitboxes:  # its earlier attacks' hitboxes, where they were made, the attacker as it now stands
                 p.hitboxes = [box for box in p.hitboxes if self._strike(p, box)]
                 solids = self.solids()
-            if p.attacks and self._may_attack(p, p.attacks.pop(0)):
+            if p.attacks and self._ready(p, p.attacks[0][0]) and self._may_attack(p, p.attacks.pop(0)[1]):
                 p.attack_seq += 1
                 self._attack(p)
                 solids = self.solids()
-            action = p.actions.pop(0) if p.actions else None
+            action = p.actions.pop(0)[1] if p.actions and self._ready(p, p.actions[0][0]) else None
             if action == "use":
                 self._use(p)
-                solids = self.solids()  # a gate that just opened stops blocking the players after this one
+                solids = self.solids()  # a gate that just opened stops blocking from here on
             elif action == "take":
                 self._take(p)
+            if p.held < self.hold:
+                self.walk(p.body, p.dx, p.dy, solids)
+
+    @staticmethod
+    def _ready(p: Player, seq: int) -> bool:
+        """Whether the action carried by input ``seq`` may run this tick: once that input (or a later one) is read."""
+        return seq <= p.ack
 
     def _may_attack(self, p: Player, meant: int) -> bool:
         """Whether an attack meant for tick ``meant`` starts now. Its cooldown is judged on the meant tick, as the
@@ -937,7 +1038,10 @@ class Feedback:
     def baseline(self, state: wire.Message, cooldown: int, now: float) -> None:
         """A new room instance or session: what ``state`` (applied at ``now``) counts is already seen, and its tick
         starts the reckoning. ``cooldown``: the room's, in ticks. The last swing's tick is kept while it is not ahead of
-        the reckoned tick (the same room, resumed: its cooldown still runs there); else it is another count of ticks."""
+        the reckoned tick (the same room, resumed: its cooldown still runs there); else it is another count of ticks.
+        (So a resume straight after a swing shown during a server stall, its tick claimed ahead of the server's,
+        forgets that swing: the next press may swing inside the server's cooldown, and that one attack is refused,
+        counted in SceneRoom.refused_attacks. One at most: the swing it shows starts the cooldown anew.)"""
         self.cooldown = cooldown
         self.samples.clear()
         self.samples.append(state["tick"] - now * wire.HZ)
@@ -970,6 +1074,115 @@ class Feedback:
         self.swings = {r[0]: r[7] for r in state["players"]}
         self.hits = {r[0]: r[2] for r in state["enemies"]}
         return swung, hit
+
+
+SMOOTH_S = 0.1  # s: a correction's x/y offset fades out over this (Prediction.shown)
+
+
+class Prediction:
+    """A client's own avatar, ahead of the server (owner decision OD3, M4-3): presentation only. The server alone places
+    bodies; nothing predicted is ever sent.
+
+    Each input this client sends walks the avatar at once through SceneRoom.walk, the authority's own step (one movement
+    implementation, never a second), and waits in ``inputs`` until a snapshot's ``ack`` says the server has read it.
+    Each snapshot (``reconcile``) puts the avatar back on the server's row (x, y, elevation, floor) and walks the inputs
+    the server has not read yet again, through what blocked in that snapshot. The server reads one input a tick (OD11),
+    so with no loss and nothing changing the result is where the avatar already was; otherwise (an input the server
+    dropped from a full queue, after a stall or an outage longer than DEPTH ticks; a gate or an enemy the snapshot
+    changed) the difference is a correction. Its x/y offset fades out over SMOOTH_S; elevation and floor take the server's at once,
+    so the avatar is never drawn between floors. Hidden per-body solver state is never carried (the floor solver's
+    water escape cap, ``mesh_hd2d_deep_cap``, is not on the wire): replays start without it, so a prediction there can
+    differ until the next snapshot puts it back (online rooms refuse such water today: hd2d_world, owner decision D4).
+
+    A direction pressed between two sends builds the next input at once (``press``): the avatar moves on the frame
+    that reads the key, and that input is the one the next send carries (``next``, then ``sent`` with its seq). The
+    send rate stays one input a tick.
+
+    ``start`` at a welcome (a resume's too) and when a room is first shown after an enter; ``stop`` at an enter and at a
+    session's end: no input is ever walked again in another room or session."""
+
+    def __init__(self) -> None:
+        self.room: SceneRoom | None = None
+        self.body: Body | None = None  # the predicted avatar (None: not predicting)
+        # [seq (None: built, not sent yet), dx, dy] of each input the server has not read, oldest first. (Bounded far
+        # beyond a session's life without a snapshot: wire.read gives up on a silent server after 5 s.)
+        self.inputs: deque[list[Any]] = deque(maxlen=10 * wire.HZ)
+        self.state: wire.Message | None = None  # the latest snapshot: what blocks (SceneRoom.solids)
+        self.offset = (0.0, 0.0)  # the x/y correction (px) shown at its fullest, fading out over ``fade`` s
+        self.fade = 0.0
+
+    def start(self, room: SceneRoom, state: wire.Message, own: int) -> None:
+        """Predict anew from the server's row for ``own`` in ``state`` (``room``: this client's copy of the room)."""
+        self.room, self.state = room, state
+        self.body = self._place(next(r for r in state["players"] if r[0] == own))
+        self.inputs.clear()
+        self.offset, self.fade = (0.0, 0.0), 0.0
+
+    def stop(self) -> None:
+        self.body, self.state = None, None
+        self.inputs.clear()
+
+    def press(self, direction: tuple[int, int]) -> bool:
+        """A direction key pressed: unless an input is already built and not sent, build the next one now (True)."""
+        if self.body is not None and (not self.inputs or self.inputs[-1][0] is not None):
+            self._build(direction)
+            return True
+        return False
+
+    def next(self, direction: tuple[int, int]) -> tuple[int, int]:
+        """The direction the next input sends: the one built at a press since the last send, else ``direction`` (the
+        keys held now), built now. (Not predicting: ``direction``.)"""
+        if self.body is None:
+            return direction
+        if not self.inputs or self.inputs[-1][0] is not None:
+            self._build(direction)
+        return self.inputs[-1][1], self.inputs[-1][2]
+
+    def sent(self, seq: int) -> None:
+        """The input ``next`` gave goes out as ``seq``."""
+        if self.inputs and self.inputs[-1][0] is None:
+            self.inputs[-1][0] = seq
+
+    def _build(self, direction: tuple[int, int]) -> None:
+        assert self.room is not None and self.body is not None
+        self.inputs.append([None, *direction])
+        self.room.walk(self.body, *direction, self.room.solids(self.state))
+
+    def _place(self, row: list[Any]) -> Body:
+        assert self.room is not None
+        return Body(row[1], row[2], *self.room.size, {**self.room.template, "elevation": row[4]}, row[5])
+
+    def _shown_offset(self) -> tuple[float, float]:
+        k = self.fade / SMOOTH_S
+        return self.offset[0] * k, self.offset[1] * k
+
+    def reconcile(self, state: wire.Message, own: int) -> tuple[float, float, bool]:
+        """A newer (checked) snapshot: back to its row, the inputs it hasn't read walked again. Returns the correction:
+        how far (px) the avatar moved in x/y and in elevation, and whether its floor changed. (Not predicting: none.)"""
+        if self.body is None or self.room is None:
+            return 0.0, 0.0, False
+        row = next(r for r in state["players"] if r[0] == own)
+        while self.inputs and self.inputs[0][0] is not None and self.inputs[0][0] <= row[6]:
+            self.inputs.popleft()
+        before, level = (self.body.center_x, self.body.center_y), self.room.level(self.body)
+        self.state, self.body = state, self._place(row)
+        solids = self.room.solids(state)
+        for _, dx, dy in self.inputs:
+            self.room.walk(self.body, dx, dy, solids)
+        ex, ey = before[0] - self.body.center_x, before[1] - self.body.center_y
+        if ex or ey:
+            shown = self._shown_offset()
+            self.offset, self.fade = (shown[0] + ex, shown[1] + ey), SMOOTH_S
+        z, floor = self.room.level(self.body)
+        return math.hypot(ex, ey), abs(z - level[0]), floor != level[1]
+
+    def shown(self, dt: float) -> tuple[float, float, float, str | None]:
+        """Where to draw the avatar ``dt`` s after the last call: (x, y, elevation, floor) as a snapshot row has them,
+        the x/y with what is left of the corrections' offset."""
+        assert self.room is not None and self.body is not None
+        self.fade = max(0.0, self.fade - dt)
+        ox, oy = self._shown_offset()
+        return (self.body.center_x + ox, self.body.center_y + oy, *self.room.level(self.body))
 
 
 def check_levels(players: list[Any], room: SceneRoom) -> None:

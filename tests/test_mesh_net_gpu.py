@@ -279,7 +279,7 @@ def test_two_windows_meet_party_travel_and_return(record_testsuite_property):
             last["server"] = {m.pid: (m.instance, m.eid, m.online) for m in world.members.values()}
             last["trace"] = reply["trace"] if reply else None
             last["history"] = list(world.history)[-12:]
-            last["server_ticks"] = {i: (inst.room.tick, {e: (p.body.center_x, p.body.center_y, p.seq, p.last_input)
+            last["server_ticks"] = {i: (inst.room.tick, {e: (p.body.center_x, p.body.center_y, p.seq, p.ack, p.held)
                                                          for e, p in inst.room.players.items()})
                                     for i, inst in world.instances.items()}
             raise AssertionError(f"condition at line {predicate.__code__.co_firstlineno} not reached; last: {last}") from exc

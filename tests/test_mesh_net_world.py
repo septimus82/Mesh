@@ -870,7 +870,7 @@ def test_the_client_applies_only_its_own_rooms_frames_in_order(world):
     within its room a state must be newer than the last."""
     from types import SimpleNamespace
 
-    from mesh_net.scene_room import Feedback
+    from mesh_net.scene_room import Feedback, Prediction
     from mesh_net.world_client import WorldArena
 
     ids = {k: d.proto.identity for k, d in world.defs.items()}
@@ -878,7 +878,7 @@ def test_the_client_applies_only_its_own_rooms_frames_in_order(world):
     state = world.hub.room.snapshot()
     arena = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
                             playback=None, pending=None, phase="loading", party=None, notice=None,
-                            feedback=Feedback(), seq=0, actions=[], view=None, shown=None)
+                            feedback=Feedback(), prediction=Prediction(), seq=0, actions=[], view=None, shown=None)
     WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "enter", "room": "start:1", "key": HUB, "entity": 1, "state": state}, 0.0)
     assert arena.room == "start:1" and arena.pending is not None
     WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "room_state", "room": "start:7", "state": {**state, "tick": 99}}, 0.1)

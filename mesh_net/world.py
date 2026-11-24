@@ -134,8 +134,9 @@ class Party:
     members: list[int]
 
 
-def room_defs(root: Path, world_file: str = WORLD_FILE) -> tuple[str, dict[str, RoomDef]]:
-    """Every room of the world file, validated as one world: (start key, {key: RoomDef})."""
+def room_defs(root: Path, world_file: str = WORLD_FILE, **queue: int | None) -> tuple[str, dict[str, RoomDef]]:
+    """Every room of the world file, validated as one world: (start key, {key: RoomDef}). ``queue``: the rooms'
+    input-queue settings (SceneRoom: depth, hold, drain)."""
     world = json.loads((root / world_file).read_text(encoding="utf-8"))
     scenes = world.get("scenes")
     if not isinstance(scenes, dict) or not scenes or len(scenes) > MAX_INSTANCES:
@@ -145,7 +146,7 @@ def room_defs(root: Path, world_file: str = WORLD_FILE) -> tuple[str, dict[str, 
         if not KEY.fullmatch(str(key)) or not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
             raise Unsupported(f"room '{key}' needs a short lower-case key and a scene path")
         path = root / entry["path"]
-        proto = SceneRoom(path, root)  # every N6 refusal applies
+        proto = SceneRoom(path, root, **queue)  # every N6 refusal applies
         _, scene = load_scene(path)
         doors: list[Door] = []
         arrivals: dict[str, tuple[float, float]] = {}
@@ -205,11 +206,13 @@ class World:
     """Every room instance, player and party of one server. Only its owner calls step(); everything is in-process
     and deterministic, so a transfer between rooms happens inside one tick."""
 
-    def __init__(self, root: Path, world_file: str = WORLD_FILE, store: Any = None, rules: Any = None) -> None:
+    def __init__(self, root: Path, world_file: str = WORLD_FILE, store: Any = None, rules: Any = None, *,
+                 depth: int | None = None, hold: int | None = None, drain: int | None = None) -> None:
         """``store`` (a mesh_net.characters.CharacterStore) and ``rules`` (progression rules) make the world's
-        characters persistent (N8); without them it is N7's world exactly."""
+        characters persistent (N8); without them it is N7's world exactly. ``depth``, ``hold``, ``drain``: every
+        room's input queue (mesh_net.scene_room.queue_settings; None: the defaults)."""
         self.root = root
-        self.start, self.defs = room_defs(root, world_file)
+        self.start, self.defs = room_defs(root, world_file, depth=depth, hold=hold, drain=drain)
         self.progress = persistence.Progress.open(root, self.defs, store, rules) if store is not None else None
         identities = sorted([key, d.proto.identity, d.expedition] for key, d in self.defs.items())
         self.identity = hashlib.sha256(json.dumps(identities).encode()).hexdigest()

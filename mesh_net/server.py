@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import secrets
 from contextlib import ExitStack
 from pathlib import Path
@@ -25,7 +26,9 @@ class InputBudget:
     twice the rate a client sends at, so a client keeping to it never runs the bucket dry, and the burst a stall of up
     to BURST / HZ seconds (3 s) builds up always fits. A session that does run it dry sends faster than any client
     and is closed, as before. Its frames are never dropped or merged instead: the frames past the limit are the newest
-    ones, which last-input-wins would apply.
+    ones, which a room's input queue would keep. (The bucket bounds how fast frames come; the room bounds what it
+    keeps of a burst: mesh_net.scene_room.DEPTH directions, the newest, and PENDING actions of each kind, read one a
+    tick. So a burst the bucket lets through never walks a body faster, nor loses an attack.)
 
     A new session starts with START tokens, the 8 frames at once the old per-tick limit allowed (a world client's
     most: 4 queued party requests and an input). Its bucket fills at RATE, twice as fast as a client's backlog can
@@ -268,6 +271,29 @@ async def serve(port: int, room: Any = None, host: type[Server] = Server) -> Non
         await server.close()
 
 
+QUEUE_NAMES = ("depth", "hold", "drain")
+
+
+def queue_from(args: argparse.Namespace, environ: Any = os.environ) -> dict[str, int]:
+    """A scene or world server's input-queue settings (mesh_net.scene_room.queue_settings): a preset from ``--queue``
+    (else MESH_NET_QUEUE, else the provisional default), each knob from its flag (``--input-depth``, ``--input-hold``,
+    ``--input-drain``), else MESH_NET_INPUT_DEPTH / _HOLD / _DRAIN, else the preset's; checked, ValueError naming
+    what was wrong."""
+    from .scene_room import queue_settings  # noqa: PLC0415
+
+    preset = getattr(args, "queue", None) or environ.get("MESH_NET_QUEUE")
+    values: dict[str, Any] = {}
+    for name in QUEUE_NAMES:
+        value, env = getattr(args, f"input_{name}", None), f"MESH_NET_INPUT_{name.upper()}"
+        if value is None and environ.get(env) is not None:
+            try:
+                value = int(environ[env])
+            except ValueError:
+                raise ValueError(f"{env} must be a whole number, not {environ[env][:16]!r}") from None
+        values[name] = value
+    return dict(zip(QUEUE_NAMES, queue_settings(**values, preset=preset)))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=46870)
@@ -276,9 +302,25 @@ def main() -> None:
                         help="host the packaged hub and expedition rooms (mesh_net/expedition)")
     parser.add_argument("--store", help="with --expedition: keep characters in this character store (N8; it must "
                                         "exist: python -m mesh_net.characters new-store PATH)")
+    from .scene_room import QUEUE, QUEUE_PRESETS  # noqa: PLC0415
+
+    parser.add_argument("--queue", choices=sorted(QUEUE_PRESETS), help="with --coop or --expedition: the input queue's "
+                        f"preset ({QUEUE} is the provisional default; else MESH_NET_QUEUE): " + "; ".join(
+                            f"{k} = depth {d}, hold {h}, drain {r}" for k, (d, h, r) in QUEUE_PRESETS.items()))
+    for name, what in (("depth", "inputs that may wait (1-20)"),
+                       ("hold", "ticks a direction is walked counting the one that reads it (1-5)"),
+                       ("drain", "drop the oldest waiting input when more than one has waited this many ticks in a "
+                                 "row (2-20; 0 off)")):
+        parser.add_argument(f"--input-{name}", type=int, help=f"with --coop or --expedition: the input queue's {name}: "
+                                                              f"{what}; else MESH_NET_INPUT_{name.upper()}, else the "
+                                                              "preset's")
     args = parser.parse_args()
     if args.store and not args.expedition:
         parser.error("--store needs --expedition")
+    try:
+        queue = queue_from(args)
+    except ValueError as exc:
+        parser.error(str(exc))
     store_path = Path(args.store).resolve() if args.store else None  # (before the room folder becomes the cwd)
     with ExitStack() as stack:
         room: Any = None
@@ -300,7 +342,8 @@ def main() -> None:
                 stack.callback(store.close)
             root = stack.enter_context(disposable_project(expedition_files(), scaffold=False))
             try:
-                world = World(root, store=store, rules=expedition_rules() if store is not None else None)
+                world = World(root, store=store, rules=expedition_rules() if store is not None else None,
+                              depth=queue["depth"], hold=queue["hold"], drain=queue["drain"])
             except StoreUnavailable as exc:  # (the journal of owed completions cannot be used: mesh_net.owed)
                 raise SystemExit(f"[Mesh][Net] {exc}") from None
             room, host = world, WorldServer
@@ -315,8 +358,10 @@ def main() -> None:
             from .scene_room import COOP_SCENE, SceneRoom, coop_files, disposable_project
 
             root = stack.enter_context(disposable_project(coop_files(), scaffold=False))
-            room = SceneRoom(root / COOP_SCENE, root)
+            room = SceneRoom(root / COOP_SCENE, root, **queue)
             print(f"Mesh scene {room.identity[:12]}", flush=True)
+        if args.coop or args.expedition:
+            print("Mesh input queue " + " ".join(f"{k} {v}" for k, v in queue.items()), flush=True)
         try:
             asyncio.run(serve(args.port, room, host))
         except KeyboardInterrupt:

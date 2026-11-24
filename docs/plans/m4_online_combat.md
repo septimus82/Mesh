@@ -2,7 +2,9 @@
 
 > **Status:** design approved by the owner (2026-11-24, OD1–OD11 below); being implemented in stages.
 > M4-0 (#609) added this document, a headless measurement tool (`tooling/m4_latency_probe.py`) and one test of the
-> tool's link model and statistics. M4-1 (#610) is merged. M4-2 (protocol v3 and attack presentation) is in progress.
+> tool's link model and statistics. M4-1 (#610) and M4-2 (#611: protocol v3 and attack presentation) are merged.
+> M4-3 (own-movement prediction and the server's input queue) is in review: §4 M4-3 "As implemented". Its input queue
+> is the owner's choice after playing; "drain" is the provisional default (owner decision, 2026-11-24).
 >
 > **Authority:** owner decision D7 (2026-11-23, `docs/plans/hd2d_online_investigation.md` §6, §7.4): M4 is approved
 > to begin now that M3 has passed. Focus: responsive server-authoritative online combat, including simulated latency.
@@ -532,6 +534,10 @@ The measurements rank the levers.
       - From a second plus a round trip after the stall, every swing shown runs again.
       - The window never swings early: its cooldown runs from the last swing's tick as sent, which a reckoning that
         came down reaches only later.
+      - **One narrow case remains (noted in M4-3):** a resume straight after a swing shown during a stall takes a
+        new baseline whose tick is behind that swing's claimed tick, so the window forgets the swing
+        (`Feedback.baseline`). Its next press may then swing inside the server's cooldown: that one attack is refused
+        and counted in `refused_attacks`. At most one, since that swing starts the window's cooldown again.
     - **A press swings** only a cooldown of reckoned ticks after the last swing. Its attack input carries that tick.
     - **The server** (`SceneRoom._may_attack`) judges the cooldown on that tick, within `[now - COOLDOWN_CLAIM_WINDOW, now]`.
       A tick not reached yet counts as now. An older one is **stale**: dropped, counted in `stale_attacks`, never run.
@@ -586,6 +592,351 @@ The measurements rank the levers.
     flight, and an N7 resume.
   - The resume-sync and N8 tests green.
   - M3 acceptance unchanged in intent: the own avatar converges to the server row.
+- **As implemented** (owner decisions OD3 and OD11; review rounds 1–3 of #613 and the owner's decision of
+  2026-11-24; `mesh_net/scene_room.py` has the code and its notes). Round 3 comes first. Round 2's text below stays
+  as it was measured; its "chosen design" is now the "deep" preset.
+  - **Round 3: the queue is the owner's choice, with a provisional default.**
+    - The round-2 review found the conflict. Design A ("deep") keeps a retransmission burst as a backlog that never
+      drains while the player walks: peers see the walk 333–340 ms late even at 0 ms ±10 ms 1% (D: 179–188 ms), and
+      516–541 ms at 100 ms. That breaks the owner's 600 ms condition 6: "stalls, retransmissions, disconnects and room
+      transfers must not cause persistent timing corruption". The round-2 acceptance table had left that condition
+      out.
+    - **Owner decision, 2026-11-24, quoted verbatim:**
+
+      > "Decide after playing. Use Drain as the provisional default, subject to the full 24-session measurements.
+      > Keep all three strategies switchable in the M4 playable demo. Do not designate Drain as the permanent
+      > architecture until I've experienced the alternatives. Specifically: Report the frequency and circumstances of
+      > large stair corrections. Distinguish discarded movement steps from attack inputs that were shown locally but
+      > never executed by the server. Do not treat lost or unconfirmed attacks as acceptable merely because they occur
+      > at 200 ms RTT. Preserve input-correctness and server-authority safeguards. If all three approaches fail
+      > important acceptance criteria, report that rather than declaring a winner."
+
+    - **The three strategies** (`mesh_net.scene_room.QUEUE_PRESETS`). Every one reads one input a tick, oldest first,
+      and keeps the standing rule:
+
+      | Preset | depth | hold | drain | What it does with a retransmission burst |
+      |---|---|---|---|---|
+      | **drain** (PROVISIONAL default) | 8 | 1 | 4 | keeps it, then drops the oldest waiting direction whenever more than one input has waited 4 ticks in a row (never an action; one step each) |
+      | deep (round 2's A) | 8 | 1 | 0 | keeps it; the server runs that many ticks behind until the player stands |
+      | small (round 1's D) | 2 | 5 | 0 | drops all but the newest two; walks the last direction on for up to 4 ticks with nothing waiting |
+
+      - **Switching:** `python -m mesh_net.server --coop|--expedition --queue drain|deep|small`, or the raw knobs
+        `--input-depth N` (1–20), `--input-hold N` (1–5) and `--input-drain N` (0 off, or 2–20). Each falls back to
+        `MESH_NET_QUEUE` / `MESH_NET_INPUT_DEPTH` / `_HOLD` / `_DRAIN`, then to the preset's value.
+      - Every value is checked (`queue_settings`); anything else is refused at start with the reason.
+      - `SceneRoom(..., depth=, hold=, drain=)` and `World(..., depth=, hold=, drain=)` take them, and every N7 room
+        instance inherits them. The probe takes `--queue` or `--depth/--hold/--drain`.
+      - The client needs nothing: it predicts one step per input either way.
+    - **"drain" held up at 24 sessions** (seeds 7/8/9, every profile), so it is the default, labelled PROVISIONAL in
+      the code. Drain thresholds measured beside A, C and D, all at 100 ms ±10 ms 1% unless noted:
+
+      | Variant | Corrections: movement n / max | Stairs p95 / max px | Walking corrections (one step each) | Stop after release p95 ms | Peer view while walking p50 ms | Walking swing p50 ms | Ticks in a row 2+ deep | 0 ms ±10 1%: peer view p50 | 200 ms: walking swings never run |
+      |---|---|---|---|---|---|---|---|---|---|
+      | drain 3 | 123–145 / 7.5 | 5.3 / 34–56 | 398–459 | 350–382 | 265–279 | 208–223 | 17 | 180–193 | 17–19 of ~693 |
+      | **drain 4** | 72–89 / 7.5 | 5.3 / 41–71 | 382–435 | 224–323 | 270–291 | 210–229 | 21–23 | 183–193 | 17–25 |
+      | drain 6 | 57–63 / 7.5 | 5.3–19.1 / 56–71 | 346–386 | 237–268 | 277–293 | 222–233 | 32–35 | 185–195 | 20–28 |
+      | deep (A) | 0 | 0 / 0 | 0 | 6–8 | 516–541 | 457–474 | 295–308 (the whole walk) | 333–340 | 75–139 |
+      | C (depth 6) | 76–89 / 15 | 10.6 / 19–34 | 93–116 | 262–286 | 459–463 | 392–399 | 295–308 | 333–340 | 8–13 |
+      | small (D) | 486–565 / 45 | 26.5 / 39–81 | 450–528 (up to 45 px) | 319–369 | 260–266 | 200–205 | 0 | 179–188 | 7–11 |
+
+      - With jitter alone (100 ms ±10 ms, no loss), every drain threshold and deep give 0 corrections; small gives
+        83–147.
+      - Drain 4 is kept as the reviewer measured it. Drain 3 lowers the worst stair correction (to 34–56 px) at about
+        twice the movement corrections. Drain 6 corrects less but lets a backlog last longer.
+    - **Large stair corrections** (over one step, 7.5 px x/y).
+      - Method: 24 sessions × 3 seeds of 16 s strafing up and down the floors demo's stairs against their east edge;
+        6 minutes of stair walking per seed and profile.
+      - Each correction is attributed to what the server did in the ticks it covers: a drain drop (on a stair step or
+        not), an overflow drop, or a step walked with nothing waiting.
+
+      | Preset | RTT | Large per minute | Over 30 px (per 6 min) | 15–30 px | Worst | With a floor change | Cause of the large ones |
+      |---|---|---|---|---|---|---|---|
+      | drain | 100 ms ±10 1% | 1.8–2.7 | 4–7 | 6–9 | 71 px (16 px height, floor change) | 11–16 of 11–16 | drain drop on a stair step: 11–15; drain drop elsewhere: 0–2 |
+      | drain | 200 ms ±10 1% | 5.5–6.7 | 18–23 | 10–13 | 102 px (30 px height) | 32–35 of 33–40 | drain drop on a stair step: 23–27; elsewhere: 4–8; overflow beyond depth 8: 2–9 |
+      | drain | 0 ms ±10 1%, 50 ms, jitter alone | 0 | 0 | 0 | 5.3 px | — | (only one-step corrections) |
+      | deep | 100 ms ±10 1% | 0 | 0 | 0 | none | — | — |
+      | deep | 200 ms ±10 1% | 0.17–0.5 | 0–1 | 0 | 36 px (26 px height) | 0–1 | overflow beyond depth 8 |
+      | small | 100 ms ±10 1% | 11–12.8 | 5–13 | 58–63 | 81 px (24 px height) | 15–20 of 66–77 | overflow drop: 66–76; walked on: 0–1 |
+      | small | 200 ms ±10 1% | 12.8–14.7 | 59–70 | 15–17 | 124 px (38 px height) | 55–65 of 77–88 | overflow drop: 62–74; walked on: 14–17 |
+      | small | 0 ms ±10 1% | 9.2–10 | 0 | 52–54 | 21 px | 3–4 | overflow drop |
+
+      - **Why one dropped step makes a large correction on the stairs.** The drop leaves the server one step short in
+        y. At the stairs' east edge that can put it on the other floor: the ground instead of the stairs, or the
+        reverse.
+      - The edge blocks an eastward walk from the stairs, but not from the ground. So the inputs still unread (5–7 at
+        100 ms) replay from the other floor, eastward instead of blocked, and the correction grows to many steps,
+        with an elevation and floor snap.
+      - Every large one starts from a retransmission burst: with jitter alone there are none.
+      - On flat floors a dropped step corrects exactly one step (7.5 px; walking max 7.5 px).
+    - **(a) Movement steps the server discarded** (directions dropped, never their actions; the window corrects
+      them). Inputs sent per seed run: about 28,550 in movement and 9,600 in walking.
+
+      | Preset | RTT | Movement: overflow / drained (share of inputs) | Walking: overflow / drained (share) |
+      |---|---|---|---|
+      | drain | 0 ms (none), jitter alone | 0 / 0 | 0 / 0 |
+      | drain | 0 ms ±10 1% | 0 / 88–90 (0.3%) | 0 / 220–242 (2.3–2.5%) |
+      | drain | 50 ms ±10 1% | 0 / 74–112 (0.3–0.4%) | 0 / 304–328 (3.2–3.4%) |
+      | drain | 100 ms ±10 1% | 0 / 114–133 (0.4–0.5%) | 0 / 382–435 (4.0–4.5%) |
+      | drain | 200 ms ±10 1% | 262–282 / 148–157 (1.4–1.5%) | 95–105 / 409–481 (5.3–6.1%) |
+      | deep | 0–100 ms, jitter alone | 0 / 0 | 0 / 0 |
+      | deep | 200 ms ±10 1% | 262–284 / 0 (0.9–1.0%) | 103–109 / 0 (1.1%) |
+      | small | 0 ms ±10 1% | 799–831 / 0 (2.8–2.9%) | 263–279 / 0 (2.7–2.9%) |
+      | small | 100 ms ±10 1% | 1393–1502 / 0 (4.9–5.3%) | 457–547 / 0 (4.8–5.7%) |
+      | small | 200 ms ±10 1% | 1877–2031 / 0 (6.6–7.1%) | 651–737 / 0 (6.8–7.7%) |
+
+    - **(b) Attacks shown locally but never executed by the server** (stale + refused + dropped). Standing presses:
+      720 per seed run, all shown. Walking swings: about 693 per seed run.
+      - **0 for every preset at 0, 50 and 100 ms (±10 ms, 1%) and with jitter alone**, standing and walking. Nothing
+        to flag within OD1's envelope.
+      - **At 200 ms ±10 ms 1%** they are not acceptable just because the latency is high. They are reported:
+
+        | Preset | Standing, never run | Walking, never run |
+        |---|---|---|
+        | drain | 3–10 of 720 (0.4–1.4%), all stale | 17–25 of 692–695 (2.4–3.6%), all stale |
+        | deep | 3–10 of 720 (0.4–1.4%), all stale | 75–139 (10.8–20.1%), all stale |
+        | small | 3–10 of 720 (0.4–1.4%), all stale | 7–11 (1.0–1.6%), all stale |
+
+      - None was refused in the cooldown and none was dropped from a full action queue. Every one was a claim older
+        than the 600 ms window when the server read it, which the window shows as a miss.
+    - **Acceptance per preset** (§4's and the owner's own words; numbers at 100 ms ±10 ms 1% unless noted):
+
+      | Criterion | drain (provisional default) | deep (A) | small (D) |
+      |---|---|---|---|
+      | Local first move within one frame, every seed and profile | MET (16.7 ms) | MET | MET |
+      | Zero corrections with no loss and static solids | MET (0 at 0 ms and jitter alone) | MET | **NOT MET** (jitter alone: 83–147) |
+      | p95 correction ≤ one step (7.5 px) at 100 ms | MET (movement 7.5, walking 7.5, stairs 5.3), but stairs max 41–71 px, 1.8–2.7 large a minute | MET (none) | **NOT MET** (37.5 px; stairs 26.5) |
+      | Stairs level-caused disagreement < 5% at 100 ms | MET (1.5–1.6%) | MET (0.0%) | MET (1.4–1.7%) |
+      | Buffers cleared on resume, transfer, enter; resume-sync and N8 green; M3 acceptance | MET (default tested) | MET (round 2) | MET (round 1) |
+      | Owner condition 6: no persistent timing corruption from stalls, retransmissions, disconnects, transfers | MET, bounded: a backlog lasts at most 21–23 ticks (about 1.1 s); peer view 270–291 ms | **NOT MET**: the backlog lasts the whole walk; peer view 516–541 ms, and 333–340 ms even at 0 ms ±10 1% | MET (at most 1 waiting) |
+      | OD1: responsive movement and swing feedback | MET | MET | MET |
+      | OD1: median hit confirmation ≤ RTT + 75 ms (175 ms), standing | **NOT MET** (166.0–175.9; seed 9 0.9 ms over) | **NOT MET** (same) | **NOT MET** (same) |
+      | OD1: the same for a swing made while walking | **NOT MET** (210–229) | **NOT MET** (457–474) | **NOT MET** (200–205) |
+      | Attacks shown but never executed within OD1's envelope | MET (0) | MET (0) | MET (0) |
+      | At 200 ms: attacks shown but never executed (reported, not accepted) | 0.4–1.4% standing, 2.4–3.6% walking | 0.4–1.4% standing, 10.8–20.1% walking | 0.4–1.4% standing, 1.0–1.6% walking |
+      | Input-correctness and server-authority safeguards (every tick at most one step, only an input's direction; nothing walked into a new room or session; no attack twice) | MET (tests and mutants, default) | MET | MET |
+
+      **All three fail important criteria, so no winner is declared.**
+      - Every preset misses OD1's hit-confirmation aim: by 0.9 ms on one seed for a standing attacker, and clearly for
+        a swing made while walking.
+      - "deep" breaks the owner's condition 6.
+      - "small" fails the correction criteria.
+      - "drain" meets the §4 criteria as written, but makes large stair corrections about twice a minute of stair
+        walking at 100 ms (up to 71 px, with a floor snap) and about six a minute at 200 ms.
+      - Drain is the provisional default by the owner's instruction, to be judged by playing all three in the M4 demo.
+    - **Also in round 3:**
+      - `riders` is reset at an `enter` and at a session's end (the reviewer's R05).
+      - The drain's drops are counted apart from overflow (`drained_moves`).
+      - Tests cover the presets, the bounds, the server's flags and environment, a world's instances inheriting the
+        settings, and the drain (one direction at a time, never an action, never two steps a tick).
+  - **One movement step.** `SceneRoom.walk(body, dx, dy, solids)` is the only code in `mesh_net` that moves a body:
+    `World.move` with this module's sweep in HD-2D, the sweep alone in 2D, a diagonal normalised, then the wire's
+    bound. The authority's tick (N6, so every N7 room instance) and the window's prediction both call it. The
+    no-duplicate scan in `tests/test_hd2d_net_parity.py` fails if any other `mesh_net` function calls
+    `move`/`World.move` or defines a second `walk`; a spy test checks that both sides call it. Single-player is
+    untouched: replays 13/13, no golden updated.
+  - **The server's input queue (OD11), as chosen in round 2.**
+    - Each tick reads ONE input, the oldest waiting, and walks one step with its direction. `ack` is the seq of that
+      input.
+    - At most `DEPTH` = **8** wait; a full queue drops its oldest direction (`dropped_moves`).
+    - `HOLD` = **1**: a tick with nothing waiting walks nothing. The server never takes a step no input gave (the
+      old 5-tick lease is gone).
+    - While the player stands, of two still inputs waiting, the older is dropped (the "standing rule"). It walks
+      nowhere and its actions run with the next, so this never causes a correction.
+    - An input's attack and its use or take wait in M4-2's queues (`PENDING` of each, one of each kind a tick),
+      tagged with their input's seq. They run on the tick that reads their own input or a later one, **before** that
+      tick's step: from where the window showed the player when the key was pressed. A dropped direction never loses
+      an action.
+    - `leave` (disconnect, transfer) empties the queue. M4-1's `InputBudget` bounds how fast frames come; the queue
+      bounds what is kept. A burst never walks a body faster than one step a tick.
+  - **Why depth 8 and hold 1, not OD11's starting depth 2.** OD11 says that if depth 2 fails, the queue is to be
+    adjusted with measurements rather than forced.
+    - Depth 2 fails §4's "p95 correction at most one step" at 100 ms, read honestly: the corrections that happen have
+      p95 37.5 px and max 45 px.
+    - The cause: TCP holds everything behind a lost segment for RTT + RTO (6 ticks at 100 ms, 8 at 200 ms) and then
+      delivers it at once.
+    - Depth 2 threw that burst away, so the server ended steps short of the window. The 5-tick lease walked on
+      during the hold and overshot a release by up to 4 steps (30 px).
+    - Depth 8 keeps the burst and walks every step the player took, one a tick, later. Hold 1 never guesses. So the
+      prediction is not corrected at all at 100 ms.
+  - **The variant matrix** (same seeds 7/8/9 × 24 sessions; every profile; scenarios movement, attack, stairs and the
+    new `walking`; `tooling/m4_latency_probe.py` with the queue patched per cell).
+    - The grid: depth {2, 4, 6, 8} × hold {5, 1} × standing rule on/off × "actions run early when nothing still to
+      walk is queued ahead of them" (the reviewer's suggestion) on/off, plus a slow drain.
+    - The drain: a queue two deep for a second gives one input back, a one-step correction.
+    - Dominated cells are shown.
+    - The costs columns come from `walking`, 20 s without stopping (turning every second) with a swing every
+      ~600 ms:
+      - how many inputs wait after each tick;
+      - how late a peer's view shows each step, from the input's send to a peer's `Playback` showing a state that
+        read it;
+      - how long a swing made while walking waits, from the press to the first frame after the state of the tick
+        that started it.
+    - Every cell is 100 ms ±10 ms 1% unless the column says otherwise. "Jitter-only" is 100 ms ±10 ms with no loss
+      (corrections summed over movement, stairs and walking).
+
+    | Variant | Corrections at 100 ms: n / p95 / max px | Stairs p95 / max px | Jitter-only corrections | Stop after release p95 ms | Peer first move p50 ms | Standing hit p50 ms | Queue while walking p50 / max | Peer view while walking p50 ms | Walking swing p50 ms | 200 ms: corrections p95 / max px | 200 ms: walking swings stale |
+    |---|---|---|---|---|---|---|---|---|---|---|---|
+    | d2_h1_s0_e0 | 131–142 / 37.5 / 45 | 26.5–38.6 / 38.6–43.7 | 0 | 264–299 | 242–244 | 204–209 | 1 / 1 | 262–269 | 200–208 | 52.5 / 52.5–60 | 7–11 of 692–695 |
+    | d2_h1_s0_e1 | 131–142 / 37.5 / 45 | 26.5–38.6 / 38.6–43.7 | 0 | 264–299 | 242–244 | 166–176 | 1 / 1 | 262–269 | 200–208 | 52.5 / 52.5–60 | 7–11 of 692–695 |
+    | d2_h1_s1_e0 | 123–137 / 37.5 / 45 | 26.5–38.6 / 38.6–43.7 | 0 | 264–299 | 207–216 | 166–176 | 1 / 1 | 260–266 | 200–205 | 52.5 / 52.5–60 | 7–11 of 692–695 |
+    | d2_h1_s1_e1 | 123–137 / 37.5 / 45 | 26.5–38.6 / 38.6–43.7 | 0 | 264–299 | 207–216 | 166–176 | 1 / 1 | 260–266 | 200–205 | 52.5 / 52.5–60 | 7–11 of 692–695 |
+    | d2_h5_s0_e0 | 418–472 / 37.5 / 45 | 26.5 / 38.6–80.9 | 2–10 | 314–371 | 242–244 | 204–209 | 1 / 1 | 262–269 | 200–208 | 45 / 52.5–60 | 7–11 of 692–695 |
+    | d2_h5_s0_e1 | 418–472 / 37.5 / 45 | 26.5 / 38.6–80.9 | 2–10 | 314–371 | 242–244 | 166–176 | 1 / 1 | 262–269 | 200–208 | 45 / 52.5–60 | 7–11 of 692–695 |
+    | d2_h5_s1_e0 | 486–565 / 37.5 / 45 | 26.5 / 38.6–80.9 | 91–161 | 319–369 | 207–216 | 166–176 | 1 / 1 | 260–266 | 200–205 | 37.5–45 / 52.5–60 | 7–11 of 692–695 |
+    | d2_h5_s1_e1 | 486–565 / 37.5 / 45 | 26.5 / 38.6–80.9 | 91–161 | 319–369 | 207–216 | 166–176 | 1 / 1 | 260–266 | 200–205 | 37.5–45 / 52.5–60 | 7–11 of 692–695 |
+    | d4_h1_s0_e0 | 112–119 / 22.5 / 30 | 15.9–21.2 / 28.6–42.8 | 0 | 269–300 | 341–344 | 302–308 | 3 / 3 | 361–368 | 297–306 | 37.5 / 37.5–45 | 7–11 of 692–695 |
+    | d4_h1_s0_e1 | 112–119 / 22.5 / 30 | 15.9–21.2 / 28.6–42.8 | 0 | 269–300 | 341–344 | 166–176 | 3 / 3 | 361–368 | 297–306 | 37.5 / 37.5–45 | 7–11 of 692–695 |
+    | d4_h1_s0_e1_drain | 198–236 / 22.5 / 30 | 15.9–21.2 / 28.6–42.8 | 0 | 312–319 | 274–281 | 166–176 | 1 / 3 | 296–297 | 235–243 | 37.5 / 37.5–45 | 7–11 of 692–695 |
+    | d4_h1_s1_e0 | 103–116 / 22.5 / 30 | 15.9–21.2 / 28.6–42.8 | 0 | 269–300 | 207–217 | 166–176 | 2–3 / 3 | 359–363 | 295–301 | 37.5 / 37.5–45 | 7–11 of 692–695 |
+    | d4_h1_s1_e1 | 103–116 / 22.5 / 30 | 15.9–21.2 / 28.6–42.8 | 0 | 269–300 | 207–217 | 166–176 | 2–3 / 3 | 359–363 | 295–301 | 37.5 / 37.5–45 | 7–11 of 692–695 |
+    | d4_h1_s1_e1_drain | 103–116 / 22.5 / 30 | 15.9–21.2 / 28.6–42.8 | 0 | 269–300 | 207–217 | 166–176 | 1 / 3 | 296 | 233–242 | 37.5 / 37.5–45 | 7–11 of 692–695 |
+    | d4_h5_s0_e0 | 341–396 / 22.5 / 30 | 15.9–35.6 / 57.4–72.1 | 2–10 | 316–398 | 341–344 | 302–308 | 3 / 3 | 361–368 | 297–306 | 37.5 / 37.5–45 | 7–11 of 692–695 |
+    | d4_h5_s0_e1 | 341–396 / 22.5 / 30 | 15.9–35.6 / 57.4–72.1 | 2–10 | 316–398 | 341–344 | 166–176 | 3 / 3 | 361–368 | 297–306 | 37.5 / 37.5–45 | 7–11 of 692–695 |
+    | d4_h5_s1_e0 | 458–545 / 22.5 / 30 | 15.9–35.6 / 57.4–72.1 | 91–161 | 323–373 | 207–217 | 166–176 | 2–3 / 3 | 359–363 | 295–301 | 37.5 / 37.5–45 | 7–11 of 692–695 |
+    | d4_h5_s1_e1 | 458–545 / 22.5 / 30 | 15.9–35.6 / 57.4–72.1 | 91–161 | 323–373 | 207–217 | 166–176 | 2–3 / 3 | 359–363 | 295–301 | 37.5 / 37.5–45 | 7–11 of 692–695 |
+    | d6_h1_s1_e0 | 76–89 / 7.5–15 / 15 | 10.6 / 19.1–34 | 0 | 262–286 | 207–217 | 166–176 | 4–5 / 5 | 459–463 | 392–399 | 22.5–30 / 22.5–30 | 8–13 of 692–695 |
+    | d6_h1_s1_e1 | 76–89 / 7.5–15 / 15 | 10.6 / 19.1–34 | 0 | 262–286 | 207–217 | 166–176 | 4–5 / 5 | 459–463 | 392–399 | 22.5–30 / 22.5–30 | 8–13 of 692–695 |
+    | d8_h1_s0_e0 | 0 / 0 / 0 | 0 / 0 | 0 | 6–8 | 505–516 | 465–479 | 6 / 7 | 523–541 | 462–476 | 7.5–15 / 15 | 75–146 of 692–695 |
+    | d8_h1_s0_e1 | 0 / 0 / 0 | 0 / 0 | 0 | 6–8 | 505–516 | 166–176 | 6 / 7 | 523–541 | 462–476 | 7.5–15 / 15 | 75–146 of 692–695 |
+    | d8_h1_s0_e1_drain | 198–207 / 7.5 / 7.5 | 7.5–35.6 / 50.3–63.9 | 0 | 339–354 | 368–380 | 166–176 | 3 / 7 | 383–412 | 324–355 | 7.5 / 15 | 30–46 of 692–695 |
+    | d8_h1_s1_e0 | 0 / 0 / 0 | 0 / 0 | 0 | 6–8 | 207–217 | 166–176 | 6 / 7 | 516–541 | 457–474 | 7.5–15 / 15 | 75–139 of 692–695 |
+    | d8_h1_s1_e1 | 0 / 0 / 0 | 0 / 0 | 0 | 6–8 | 207–217 | 166–176 | 6 / 7 | 516–541 | 457–474 | 7.5–15 / 15 | 75–139 of 692–695 |
+    | d8_h1_s1_e1_drain | 0 / 0 / 0 | 7.5–35.6 / 50.3–63.9 | 0 | 6–8 | 207–217 | 166–176 | 2 / 7 | 372–397 | 316–343 | 7.5–15 / 15 | 30–46 of 692–695 |
+    | d8_h5_s0_e0 | 19–28 / 7.5 / 7.5 | 5.3 / 5.3 | 2–10 | 6–9 | 505–516 | 465–479 | 6 / 7 | 523–541 | 462–476 | 7.5 / 15 | 75–146 of 692–695 |
+    | d8_h5_s0_e1 | 19–28 / 7.5 / 7.5 | 5.3 / 5.3 | 2–10 | 6–9 | 505–516 | 166–176 | 6 / 7 | 523–541 | 462–476 | 7.5 / 15 | 75–146 of 692–695 |
+    | d8_h5_s1_e0 | 347–424 / 7.5 / 7.5 | 5.3 / 5.3 | 91–161 | 185–206 | 207–217 | 166–176 | 6 / 7 | 516–541 | 457–474 | 7.5 / 15 | 75–139 of 692–695 |
+    | d8_h5_s1_e1 | 347–424 / 7.5 / 7.5 | 5.3 / 5.3 | 91–161 | 185–206 | 207–217 | 166–176 | 6 / 7 | 516–541 | 457–474 | 7.5 / 15 | 75–139 of 692–695 |
+
+    - **Not in the grid, tried and dominated:** "hold credit". A step walked on with nothing waiting stands in for the
+      missing input, which is then not walked when it comes. At 6 sessions it gave more corrections than plain depth
+      8 / hold 1 and still built a backlog.
+    - **Early actions (e1) change nothing once the standing rule is on.** The rule already empties a standing
+      player's queue. Without the rule (s0 e1) a standing swing is as quick, but a peer sees a walk start 505–516 ms
+      after the press, against 207–217 ms. So the rule is kept and early actions are not added.
+  - **The chosen design, measured** (`--depth 8` is now the game's own; before = b81765ae, M4-2):
+
+    | RTT (jitter, loss) | Local first move p50 / max ms | Corrections (movement; stairs; walking) | Stairs level-caused | Hit confirmed p50 ms (standing) | Stop after release p95 ms |
+    |---|---|---|---|---|---|
+    | 0 (none) | 54.0–60.8 / 115 → **8.0–8.5 / 16.7** | **0; 0; 0** | 14.8–15.5% → **0.0%** | 52.6–57.6 → 61.8–65.7 | 40.6–45.9 → 4.1–7.5 |
+    | 0 (±10, 1%) | 65.8–71.4 / 446 → **7.6–8.2 / 16.7** | **0; 0; 0** | 16.6–17.8% → 0.0% | 63.4–71.8 → 72.0–77.3 | 93.6–128.8 → 7.0–7.7 |
+    | 50 (±10, 1%) | 106.9–113.5 / 567 → **8.0–8.7 / 16.7** | **0; 0; 0** | 22.7–23.1% → 0.0% | 106.0–114.4 → 115.0–122.8 | 144.4–159.4 → 5.3–7.7 |
+    | 100 (±10, 1%) | 157.4–167.6 / 714 → **8.1–8.6 / 16.7** | **0; 0; 0** | 27.4–29.0% → **0.0%** | 155.8–165.4 → 166.0–175.9 | 241.5–262.6 → 5.7–7.6 |
+    | 200 (±10, 1%) | 260.9–264.6 / 2102 → **8.1–8.9 / 16.7** | 61–69 (p95 7.5–15, max 15); 30–41 (max 10.6–35.6); 92–100 (max 15) | 33.1–33.4% → 0.2% | 263.8–265.4 → 269.0–273.4 | 386.2–432.1 → 386.3–470.9 |
+    | 100 (±10, no loss) | — → 8.3–8.7 / 16.7 | **0; 0; 0** | — → 0.0% | — → 163.7–171.4 | — → 6.3–8.4 |
+
+    Its costs, while a player keeps walking (`walking`):
+
+    | RTT (jitter, loss) | Inputs waiting after each tick p50 / max | Ticks in a row two or more deep (of 370) | Peer view of each step p50 / p95 ms | Swing made walking confirmed p50 / p95 ms | Walking swings stale |
+    |---|---|---|---|---|---|
+    | 0 (none) | 0 / 0 | 0 | 130–136 / 163–165 | 65–70 / 98–110 | 0 |
+    | 0 (±10, 1%) | 4 / 5 | 332–341 | 333–340 / 365–373 | 269–271 / 316–321 | 0 |
+    | 50 (±10, 1%) | 5 / 6 | 265–360 | 419–436 / 459–467 | 359–371 / 416–430 | 0 |
+    | 100 (±10, 1%) | 6 / 7 | 295–308 | 516–541 / 564–575 | 457–474 / 517–566 | 0 |
+    | 200 (±10, 1%) | 6–7 / 7 | 272–296 | 657–666 / 710–732 | 585–593 / 659–728 | **75–139 of 692–695** |
+    | 100 (±10, no loss) | 0 / 1 | 0 | 237–245 / 261–270 | 177–180 / 216–225 | 0 |
+
+    - **A backlog never drains while the player keeps walking.** The client sends one input a tick, the server reads
+      one a tick, and nothing may walk two steps in a tick. It drains when the player stops: the steps already sent
+      are walked out (peers see the walk finish late), then the standing rule drops the still inputs.
+    - At depth 2 the same walk costs: peer view 260–266 ms, swing 200–205 ms, and at 200 ms 7–11 stale swings. That
+      is the trade-off: what depth 2 threw away (corrections), depth 8 keeps as lateness.
+  - **Against the acceptance** (§4's own words; each MET or NOT MET, with the measurement):
+    - "Local first move within one frame on every seed and profile": **MET**. Max 16.7 ms on every seed and every
+      profile, 200 ms included.
+    - "With OD11(a): zero corrections with no loss and static solids": **MET**. 0 corrections in every scenario on
+      every seed at both no-loss profiles: 0 ms without jitter, and 100 ms ±10 ms without loss.
+    - "p95 correction at most one step (7.5 px) at 100 ms, ±10 ms, 1%": **MET**. There is no correction at all (0 of
+      about 28,500 movement, 7,640 stairs and 9,560 walking reconciliations per seed). Round 1's depth 2 did NOT meet
+      it: p95 37.5 px of the corrections that happened.
+    - "Stairs level-caused disagreement below 5% at 100 ms on every seed (today 27–29%)": **MET**, 0.0% on every
+      seed.
+    - "Prediction buffers cleared on resume, transfer and enter: tests for N6 resume, an N7 transfer with inputs in
+      flight, and an N7 resume": **MET** (`tests/test_mesh_net_prediction.py`).
+    - "The resume-sync and N8 tests green": **MET**.
+    - "M3 acceptance unchanged in intent: the own avatar converges to the server row": **MET**
+      (`tests/test_mesh_net_hd2d_gpu.py`, hidden windows).
+    - OD1, "responsive movement and swing feedback through 100 ms RTT with ±10 ms jitter and 1% loss": **MET**.
+      Local move and swing within one frame.
+    - OD1, "median hit confirmation at most RTT + 75 ms" (175 ms at 100 ms), for a standing attacker: **NOT MET**.
+      - 166.0–175.9 ms; seed 9 is 0.9 ms over.
+      - M4-2 reported 155.8–165.4 ms, but its probe let a press ride the next send without the frame that reads it.
+        Arena.run dispatches key events once a frame. The reviewer re-ran round 1's queue with M4-2's press timing and
+        got M4-2's figures back, so M4-2's numbers were about 10 ms optimistic. Under the honest measurement
+        the aim is missed by 0.9 ms on one seed.
+    - OD1, the same, for a swing made **while walking** (a measurement new in round 2): **NOT MET** by any variant.
+      - 457–474 ms here, 200–205 ms at depth 2 (100 ms, 1%).
+      - Without loss it is 177–180 ms here.
+    - OD1, "playable and server-authoritative at 200 ms; report actual limitations": authority unchanged.
+      Limitations are below.
+    - Owner safeguard "queue overflow must not create ... stale actions": overflow drops directions, never actions.
+      But at 200 ms the walking backlog ages swing claims beyond the 600 ms window: 75–139 of 692–695 swings made
+      while walking were stale (dropped, counted, shown as misses). That is **a cost of this design, reported**.
+  - **Options for the owner (M4 checkpoint).** The chosen design meets every §4 criterion; it pays in walking
+    lateness.
+
+    | Option | §4 corrections criterion | Walking costs at 100 ms (peer view / swing) | 200 ms walking swings stale |
+    |---|---|---|---|
+    | A (chosen): depth 8, hold 1, standing rule | MET (0) | 516–541 / 457–474 ms | 75–139 of ~693 |
+    | B: A plus the slow drain (one step back per second of a two-deep queue) | NOT MET on stairs (p95 7.5–35.6, max 64 px); movement 0; walking one-step corrections 217–225 | 372–397 / 316–343 ms | 30–46 |
+    | C: depth 6, hold 1, standing rule | NOT MET on one seed (p95 7.5–15, max 15 px) | 459–463 / 392–399 ms | 8–13 |
+    | D: round 1 (depth 2, hold 5, standing rule) | NOT MET (p95 37.5, max 45 px) | 260–266 / 200–205 ms | 7–11 |
+
+    - Not built, for the owner's consideration: a client-side drain. While snapshots show the server some inputs
+      behind, the window could skip one send: its avatar pauses 50 ms instead of being corrected. It needs the window
+      to estimate the server's backlog from `ack` and its own send times. It is not measured.
+  - **Also in round 2:**
+    - **A swing pressed after a direction's input was built** (item 6). The window showed that swing from after the
+      step, while the server ran it before (7.5 px off). Such an action now waits for the next input, which the server
+      reads from where the window showed it (`Arena.riders`). Tested.
+    - **Gaps the reviewer's mutants found are tested:**
+      - an action never runs a step before its own input;
+      - prediction through what a snapshot opened (the window's room copy never steps, so its own gate stays locked);
+      - a second correction during a fade never moves the shown avatar;
+      - every input labelled with the seq it goes as, over real sockets, N6 and N7;
+      - take/use chosen from the predicted position, in both arenas.
+    - **The probe** gained the `walking` scenario. It drives keys and swings through `mesh_net.demo.Arena` itself
+      (press, act, outgoing), so the window's own rules are measured.
+  - **Kept from round 1:**
+    - The prediction is one `Prediction` for `SceneArena` and `WorldArena`.
+    - A press builds the next input at once; the send rate stays one a tick.
+    - Each snapshot rebuilds the avatar from the row (no hidden solver state carried; the deep-water note above) and
+      walks the unread inputs again through the snapshot's solids.
+    - x/y fades over 0.1 s exactly to zero; elevation and floor snap.
+    - It starts at a welcome and when an N7 room first shows; it stops at every `enter` and at a session's end.
+    - Every input carries `Feedback`'s reckoned tick (one estimate).
+    - The M4-2 follow-ups: the reckoning pinned, `dropped_actions` in the probe, the repository test cited, the
+      resume note.
+  - **Owner safeguards, tested** (`tests/test_mesh_net_prediction.py`, the probe's virtual clock and link, seeds
+    7/8/9).
+    - Scenarios:
+      - quick direction reversals (every 20–70 ms);
+      - key release and a 30 ms tap;
+      - attacks mashed while walking;
+      - the cooldown, and jitter;
+      - a 300 ms loss burst, a 1.2 s server stall and a 1.5 s outage;
+      - N6 and N7 resume, and an N7 transfer with inputs waiting and in flight;
+      - overflow at the queue's depth.
+    - Each tick the server walks at most one step, only a direction the input it read gave (hold 1), in its sense. It
+      stops once the keys are let go, and the window ends exactly on the server's row.
+    - The reviewer's own `adversarial.py` (54 cases): 45 pass every assertion. The other 9, its "mash + reversals +
+      1.2 s server stall" cases, fail only its `refused == 0` assertion: 2 swings shown during the stall are refused.
+      That is M4-2's documented stall behaviour (at most 3, counted), identical on round 1's queue.
+    - The server never walks beyond the inputs: at most 1.0 step of net displacement past them, against 4.0 steps on
+      round 1's 5-tick lease.
+  - **Immediate presentation and server-confirmed outcomes stay apart.** The local avatar's movement and its swing
+    are presentation, immediate and corrected by the server's row. Hits, damage, HP, death, loot and every position
+    on the wire are the server's. Nothing predicted is sent.
+  - **Honest limitations at 200 ms (±10, 1%):**
+    - Corrections (movement): 61–69 per seed run, median one step, max 15 px (p95 7.5–15). They come from
+      retransmission holds longer than 8 ticks, whose oldest steps the queue drops.
+    - On the stairs: 30–41, max 10.6–35.6 px, with 15–16 floor or height snaps.
+    - After a release the avatar can be carried on later by those corrections: stop-after-release p95 386–471 ms.
+    - Hits still confirm a round trip later: 269–273 ms standing, 585–593 ms for swings made walking.
+    - Stale swings: 3–10 of 720 standing, and 75–139 of ~693 made while walking.
+    - Peers see a walking player 657–666 ms late once a burst has been kept.
+    - Moving targets are unchanged; they need M4-4 and M4-5.
+    - These are simulation results; no claim about how it feels is made. That needs M4-6's rendered evidence and a
+      person's play-test.
 
 **M4-4 — enemies move on floors server-side (if OD7):**
 - `FloorRoute`'s decision logic (route legs, waits, walk-out; `engine/behaviours/floor_route.py:82` onwards) moves
@@ -659,8 +1010,9 @@ Each decision carries the recommendation; the reviewer's view is noted where it 
 
 - **Prediction errors near changing solids and floors.** Doors, gates, dying solid enemies, stair edges. Mitigation:
   reconcile on every snapshot; snap elevation and floor; the stairs and floor parity tests.
-- **Queue and latency trade-off (OD11(a)).** Each queued input adds up to one tick. Mitigation: depth 2; drop to the
-  newest input on overflow, keeping any pending attack.
+- **Queue and latency trade-off (OD11(a)).** Each queued input adds up to one tick. M4-3 measured it (§4 M4-3 "As
+  implemented": the variant matrix): depth 8 keeps a retransmission burst (no correction) and pays in lateness while
+  the player keeps walking; a standing player's queue is emptied; the owner's options are listed there.
 - **Session boundaries.** Prediction or counters leaking across a resume or transfer. Mitigation: clear at `welcome`
   and `enter`; acks scoped to the room instance; the resume-sync, transfer and N8 tests.
 - **Float determinism across platforms.** Mitigation: always reconcile; never trust the prediction.
@@ -681,8 +1033,8 @@ Each decision carries the recommendation; the reviewer's view is noted where it 
     more than one per tick.
   - **But after a pause it can bank a burst.** Claiming the oldest tick accepted on every tick gives a run on
     consecutive ticks of 1 + COOLDOWN_CLAIM_WINDOW // (cooldown − 1) attacks. Short cooldowns gain the most. Measured
-    by `tests/test_mesh_net_combat.py::test_a_lying_client_gains_one_caps_worth_at_most` and the reviewer's
-    `m42_liar.py` (200 ticks after a 100-tick pause):
+    by `tests/test_mesh_net_combat.py::test_a_lying_client_gains_one_caps_worth_at_most` (200 ticks after a
+    100-tick pause):
 
     | Cooldown (ticks) | Run on consecutive ticks | Greedy liar / honest starts in 200 ticks |
     |---|---|---|

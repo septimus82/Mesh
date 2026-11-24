@@ -31,6 +31,7 @@ from mesh_net.scene_room import (
     COOP_SCENE,
     Feedback,
     Player,
+    Prediction,
     SceneRoom,
     Unsupported,
     check_state,
@@ -103,7 +104,7 @@ class Walker:
 
     def drive(self, eid: int, dx: int, dy: int, target: float, ticks: int = 400) -> bool:
         """Hold a direction until the feet reach ``target`` m on that axis (True) or stop moving (False), then let
-        go (the authority holds the last input a few ticks)."""
+        go: a stop, read on a tick of its own (the server reads one input a tick, M4-3)."""
         axis = 0 if dx else 1
         try:
             for _ in range(ticks):
@@ -117,6 +118,7 @@ class Walker:
             return False
         finally:
             self.send(eid, 0, 0)
+            self.room.step()
 
     def send(self, eid: int, dx: int, dy: int) -> None:
         self.seq += 1
@@ -478,7 +480,8 @@ def test_a_body_on_the_deck_arrives_at_other_clients_at_deck_height(crossing: di
     assert row(state, deck)[4:6] == [64.0, DECK] and row(state, under)[4:6] == [0.0, "ground"]
     view = headless_view(client)
     arena: Any = SimpleNamespace(client=SimpleNamespace(state=state, entity=under), playback=playback, view=view,
-                                 last=None)
+                                 last=None, prediction=Prediction())
+    arena.prediction.start(client, state, under)  # (as its welcome did: its own avatar predicted from its row)
     SceneArena.draw(arena, 1.0)  # (this client is the one under the bridge; its peer is on the deck)
     peer, own = view.avatars[deck], view.avatars[under]
     assert (peer.mesh_entity_data["elevation"], peer.mesh_hd2d_floor) == (64.0, DECK)
@@ -537,7 +540,7 @@ def test_malformed_rows_are_refused_whole(crossing: dict[str, bytes]) -> None:
     # The world client: a refused frame changes nothing it holds (no half-applied state).
     arena: Any = SimpleNamespace(identities={"start": room.identity}, defs={"start": SimpleNamespace(proto=room)},
                                  room=None, key=None, entity=None, state=None, playback=None, pending=None, phase="loading",
-                                 feedback=Feedback(), seq=0, actions=[], view=None, shown=None)
+                                 feedback=Feedback(), prediction=Prediction(), seq=0, actions=[], view=None, shown=None)
     enter = {"v": wire.VERSION, "type": "enter", "room": "start:1", "key": "start", "entity": deck}
     with pytest.raises(wire.Invalid):
         WorldArena.on_frame(arena, {**enter, "state": with_deck(nan)}, 0.0)

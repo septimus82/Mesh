@@ -20,7 +20,7 @@ from engine.interaction import DEFAULT_INTERACT_MAX_DIST
 
 from . import protocol as wire
 from .demo import Arena, open_arena
-from .scene_room import Feedback, SceneRoom, check_progress, check_state, coop_files, parse_input
+from .scene_room import Feedback, Prediction, SceneRoom, check_progress, check_state, coop_files, parse_input
 
 KEEP = ("Animator",)  # draws the picture the server's movement implies
 FOLLOW = "CameraFollow"  # the local player's avatar keeps the scene's own camera behaviour
@@ -187,12 +187,16 @@ class SceneView:
 
 
 class SceneArena(Arena):
+    feedback: Feedback
+    prediction: Prediction
+
     def __init__(self, window: Any, arcade: Any, root: Path, scene: str) -> None:
         super().__init__(window, arcade)
         self.view = SceneView(window, arcade, SceneRoom(root / scene, root))  # what the server builds, from own files
         self.identity = self.view.identity
         self.checks = {"check": self.view.check, "check_input": parse_input, "progress": check_progress}
         self.feedback = Feedback()
+        self.prediction = Prediction()
         self.last: float | None = None
 
     # (the room's presentation, as tooling/net_scene_probe.py reads it)
@@ -212,16 +216,22 @@ class SceneArena(Arena):
             return True
         if symbol == self.arcade.key.E and client and symbol not in self.action_keys:
             self.action_keys.add(symbol)
+            # (where the window shows itself: the server runs it from there, Prediction)
+            body = self.prediction.body
             own = next(r for r in client.state["players"] if r[0] == client.entity)
-            self.act("take" if self.view.near_drop(own[1], own[2], client.state) else "use")
+            x, y = (body.center_x, body.center_y) if body else (own[1], own[2])
+            self.act("take" if self.view.near_drop(x, y, client.state) else "use")
             return True
         return super().press(symbol, modifiers)
 
     def on_state(self, state: wire.Message, entity: int, fresh: bool) -> None:
-        """Others' swings and every hit, as the server's counters confirm them; a welcome is a new baseline."""
+        """Others' swings and every hit, as the server's counters confirm them, and the own avatar reconciled; a
+        welcome is a new baseline, and a new prediction."""
         if fresh:
             self.feedback.baseline(state, self.view.room.cooldown, self.clock())
+            self.prediction.start(self.view.room, state, entity)
             return
+        self.prediction.reconcile(state, entity)
         swung, hit = self.feedback.update(state, entity, self.clock())
         for eid in swung:
             self.view.swing(eid, own=False)
@@ -235,15 +245,14 @@ class SceneArena(Arena):
         return f"P{entity} | gate {gate} | {enemies} | loot {loot} | E use/take, Space attack, F2 leave"
 
     def draw(self, now: float) -> None:
-        """Remote players two ticks behind, as Playback plays them; the local one where the server last put it."""
+        """Remote players two ticks behind, as Playback plays them; the local one where it predicts itself."""
         dt = 0.0 if self.last is None else min(0.1, now - self.last)
         self.last = now
         client = self.client
         state = client.state if client else None
         positions = self.playback.positions(now) if state else {}
-        if client and state:
-            own = next(r for r in state["players"] if r[0] == client.entity)
-            positions[own[0]] = (own[1], own[2], own[4], own[5])
+        if client and state and self.prediction.body is not None:
+            positions[client.entity] = self.prediction.shown(dt)
         self.view.sync(state, positions, client.entity if client else None, dt)
         self.view.draw(dt)
 

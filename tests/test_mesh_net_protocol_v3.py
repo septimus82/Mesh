@@ -19,6 +19,7 @@ from mesh_net.persistence import check_character
 from mesh_net.scene_room import (
     COOP_SCENE,
     Feedback,
+    Prediction,
     SceneRoom,
     check_progress,
     check_state,
@@ -383,7 +384,7 @@ def test_stale_or_inconsistent_counters_are_refused_whole(coop: SceneRoom, world
     ids = {k: d.proto.identity for k, d in world.defs.items()}
     for why, bad in stale_variants(state, eid)[1:3]:  # (the players' counters; an ack beyond what was sent: below)
         arena: Any = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
-                                     playback=None, pending=None, phase="loading", feedback=Feedback(), seq=1,
+                                     playback=None, pending=None, phase="loading", feedback=Feedback(), prediction=Prediction(), seq=1,
                                      actions=[], view=None, shown=None)
         WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "enter", "room": hub.id, "key": hub.key, "entity": eid,
                                     "state": state}, 0.0)
@@ -463,7 +464,7 @@ def test_a_resumed_world_player_counts_anew_in_its_room(world: World) -> None:
     assert [r[6:] for r in enter["state"]["players"] if r[0] == enter["entity"]] == [[0, 0]]
     ids = {k: d.proto.identity for k, d in world.defs.items()}
     arena: Any = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
-                                 playback=None, pending=None, phase="loading", feedback=Feedback(), seq=0, actions=[],
+                                 playback=None, pending=None, phase="loading", feedback=Feedback(), prediction=Prediction(), seq=0, actions=[],
                                  view=None, shown=None)
     WorldArena.on_frame(arena, enter, 0.0)
     for _ in range(3):
