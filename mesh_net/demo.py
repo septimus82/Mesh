@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import time
 from contextlib import contextmanager
 from importlib.resources import files
 
 from . import protocol as wire
 from .client import Client, connect
 from .playback import Playback
-from .scene_room import disposable_project
+from .scene_room import PENDING, disposable_project
 
 OWN = (61, 225, 188)
 OTHER = (255, 191, 76)
@@ -55,7 +56,9 @@ class Arena:
                            key.A: (-1, 0), key.LEFT: (-1, 0), key.D: (1, 0), key.RIGHT: (1, 0)}
         self.keys: list[int] = []
         self.action_keys: set[int] = set()
-        self.action: str | None = None
+        # Actions pressed and not yet sent, oldest first, each with the tick it is meant for (None: the next): one rides
+        # each input sent, so none replaces another (an attack whose swing showed is sent even if E follows at once).
+        self.actions: list[tuple[str, int | None]] = []
         self.running = True
         self.request: str | None = "resume"
         self.client: Client | None = None
@@ -63,6 +66,7 @@ class Arena:
         self.checks: dict = {}  # connect()'s validators; mesh_net.scene_client passes the scene room's
         self.playback = Playback()
         self.local_interpolation = False
+        self.clock = time.monotonic  # (s) when a key press happened (tests: a virtual clock)
         self.status = "Connecting"
         window.push_handlers(on_key_press=self.press, on_key_release=self.release,
                              on_close=self.stop, on_deactivate=self.blur)
@@ -73,7 +77,7 @@ class Arena:
             self.keys.append(symbol)
         elif symbol in (key.SPACE, key.E) and self.client and symbol not in self.action_keys:
             self.action_keys.add(symbol)
-            self.action = "attack" if symbol == key.SPACE else "take"
+            self.act("attack" if symbol == key.SPACE else "take")
         elif symbol == key.ESCAPE:
             self.stop()
         elif symbol == key.F2:
@@ -88,10 +92,24 @@ class Arena:
             self.keys.remove(symbol)
         return True
 
+    def act(self, action: str, tick: int | None = None) -> None:
+        """Queue an action to send. An attack whose swing the window showed (it has its meant tick) always queues
+        (the cooldown already spaces them); any other action while fewer than PENDING wait (the server keeps no more)."""
+        if tick is not None or sum(t is None for _, t in self.actions) < PENDING:
+            self.actions.append((action, tick))
+
+    def next_action(self) -> tuple[str | None, int | None]:
+        """What the next input carries: the oldest attack whose swing showed first (its meant tick ages while it
+        waits: SceneRoom._may_attack's cap), else the oldest other action; (None, None) when nothing waits."""
+        for index, (_, tick) in enumerate(self.actions):
+            if tick is not None:
+                return self.actions.pop(index)
+        return self.actions.pop(0) if self.actions else (None, None)
+
     def blur(self) -> bool:
+        """Focus lost: release every held key (none sticks), but keep the actions pressed: they are still sent."""
         self.keys.clear()
         self.action_keys.clear()
-        self.action = None
         return True
 
     def stop(self) -> bool:
@@ -105,12 +123,14 @@ class Arena:
                 self.playback = Playback(client.check)
                 loop = asyncio.get_running_loop()
                 self.playback.push(client.state, loop.time())
+                self.on_state(client.state, client.entity, True)
+
                 async def send_inputs() -> None:
                     due = loop.time()
                     while True:
                         direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
-                        action, self.action = self.action, None
-                        await client.input(*direction, action=action)
+                        action, tick = self.next_action()
+                        await client.input(*direction, action=action, tick=tick)
                         due = max(due + 1 / wire.HZ, loop.time())  # fixed schedule: no drift; after a stall, one extra send
                         await asyncio.sleep(due - loop.time())
 
@@ -118,6 +138,7 @@ class Arena:
                     while True:
                         state = await client.receive()
                         self.playback.push(state, loop.time())
+                        self.on_state(state, client.entity, False)
                         self.status = self.describe(state, client.entity)
 
                 tasks = [asyncio.create_task(send_inputs()), asyncio.create_task(receive_states())]
@@ -135,7 +156,11 @@ class Arena:
         finally:
             self.client = None
             self.blur()
+            self.actions.clear()  # (the session they were pressed in is over: never sent in another)
             self.playback = Playback()
+
+    def on_state(self, state: wire.Message, entity: int, fresh: bool) -> None:
+        """A state the client applied (``fresh``: the welcome's, a session's first). A scene room presents combat."""
 
     def describe(self, state: wire.Message, entity: int) -> str:
         loot = int(state["holder"] == entity)

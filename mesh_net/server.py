@@ -113,7 +113,8 @@ class Server:
             self.offline.pop(key, None)  # (only once joined: a refused join keeps the retained character)
             self.peers[eid] = writer
             writer.write(wire.encode({"v": wire.VERSION, "type": "welcome", "session": secrets.token_hex(16),
-                                      "entity": eid, "resume": credential, "state": self.room.snapshot()}))
+                                      "entity": eid, "resume": credential, "state": self.room.snapshot(),
+                                      "hz": wire.HZ}))
             budget = InputBudget()
             while True:
                 msg = await wire.read(reader)

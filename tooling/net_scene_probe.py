@@ -12,8 +12,13 @@ import sys
 from typing import Any
 from unittest.mock import patch
 
-from mesh_net.scene_client import SIZE, SceneArena
-from mesh_net.scene_room import coop_files
+import pyglet
+
+# A test driver never uses the sound card (tests/conftest.py's rule): a swing or a hit plays a sound (M4-2).
+pyglet.options["audio"] = ("silent",)
+
+from mesh_net.scene_client import SIZE, SceneArena  # noqa: E402
+from mesh_net.scene_room import coop_files  # noqa: E402
 
 
 def rendered(arena) -> Any:

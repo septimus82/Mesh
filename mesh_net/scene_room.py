@@ -20,6 +20,10 @@ template that can't stand where it is. The room's ``World.collision_digest`` is 
 files give another collision world is refused before it enters (mesh_net.scene_client.check_window_world adds its
 window's own world). Snapshots carry each body's elevation and floor (wire v2, mesh_net.protocol); clients place
 avatars there and check them against their own world (check_state), never send them.
+
+Wire v3 (M4-2): each player row adds the input it last consumed (``ack``) and its attack count, each enemy row its hit
+count and placement. An attack is Combat's persistent hitbox, server-side (owner decision OD10, :class:`Hitbox`).
+Clients show their own swing at once and a hit only once a snapshot confirms it (:class:`Feedback`).
 """
 
 from __future__ import annotations
@@ -29,6 +33,7 @@ import json
 import math
 import os
 import random
+from collections import deque
 from collections.abc import Callable, Iterator
 from contextlib import chdir, contextmanager
 from dataclasses import dataclass, field
@@ -65,7 +70,21 @@ ROUNDING = 0.005  # px: how far a snapshot's x/y (rounded to 0.01 px) may be fro
 FLIP_MASK = 0x80000000 | 0x40000000 | 0x20000000  # engine.tilemap.FLIP_MASK (that module needs Arcade)
 # The authored defaults of the behaviours read here (their PARAM_DEFS; a test keeps them equal).
 SPEED = 150.0
-COMBAT = {"damage": 1.0, "cooldown": 1.0, "range": 32.0, "hitbox_size": 32.0, "target_tag": "enemy"}
+COMBAT = {"damage": 1.0, "cooldown": 1.0, "range": 32.0, "hitbox_size": 32.0, "target_tag": "enemy",
+          "attack_anim": "attack", "attack_sound": "assets/sounds/attack.wav"}
+HITBOX_S = 0.2  # the hitbox Combat makes lives this long (engine.behaviours.combat: its Hitbox's "duration")
+# An attack's COOLDOWN is judged on the tick its client meant it for (the input's ``tick``: Player.attacks), as the
+# client judged it, so latency and TCP's bunching never refuse a swing the window showed. A claim older than this many
+# ticks when the server reads it is stale: dropped, never run (SceneRoom.stale_attacks counts it); a claim of a tick
+# not yet reached counts as now. The claim decides only whether the cooldown has passed: the attack itself, its hitbox,
+# hits, damage and death are the server's, on its current geometry and floors, never a past tick's (owner condition 4;
+# this is not OD5's separate 300 ms lag-compensation cap, which M4-5 would add). The one place the window is set.
+# Owner decision 2026-11-24: 600 ms (12 ticks) approved for the cooperative PvE prototype only (docs/plans/
+# m4_online_combat.md). Measured (M4-2 "As implemented"; mashing, 3 seeds x 8 sessions, about 900 swings a profile),
+# the oldest an honest claim read was 4 ticks at 100 ms RTT +-10 ms, 10 with 1% loss (owner decision OD1's envelope:
+# 2 ticks to spare) and 14 at 200 ms with 1% loss (beyond it: 7 of 895 swings stale, counted).
+COOLDOWN_CLAIM_WINDOW = 12
+PENDING = 4  # attacks, and uses or takes, a player may have waiting (one of each is read a tick); more are dropped
 # The packaged co-op room (tooling/make_coop_scene.py): where each file goes in a project.
 COOP_FILES = {"packs/core_regions/scenes/start.json": "scene.json", "packs/core_regions/maps/start.json": "map.json",
               "assets/prefabs.json": "prefabs.json"}
@@ -370,6 +389,17 @@ def _tiles(tilemap: dict[str, Any], layers: list[dict[str, Any]], scene_dir: Pat
 
 
 @dataclass
+class Hitbox:
+    """Single-player's hitbox (engine.behaviours.hitbox.Hitbox, which Combat makes), on the server (owner decision
+    OD10): it stays where it was made; each tick ages it and, until it is as old as its lifetime, it damages each live
+    enemy it overlaps on the attacker's level as the attacker stands that tick, each enemy once."""
+
+    area: Aabb
+    age: int = 0  # the ticks it has been updated (the first: the tick it was made)
+    hit: set[str] = field(default_factory=set)
+
+
+@dataclass
 class Player:
     body: Body
     dx: float = 0.0
@@ -377,8 +407,12 @@ class Player:
     facing: int = 3
     seq: int = 0
     last_input: int = -100
-    action: str | None = None
-    attack_after: int = 0
+    actions: list[str] = field(default_factory=list)  # uses and takes waiting, oldest first (one read a tick)
+    attacks: list[int] = field(default_factory=list)  # attacks waiting: the tick each was meant for (one a tick)
+    attack_after: int = 0  # the first tick an attack may be meant for (its cooldown, judged on meant ticks)
+    ack: int = 0  # the seq of the input the last tick consumed (wire v3), since it joined this room
+    attack_seq: int = 0  # the attacks started since it joined this room (wire v3)
+    hitboxes: list[Hitbox] = field(default_factory=list)  # its live ones
 
 
 @dataclass
@@ -389,6 +423,18 @@ class Enemy:
     loot: list[dict[str, Any]] = field(default_factory=list)
     dropped: bool = False  # loot is on the ground
     holder: Player | None = None
+    hit_seq: int = 0  # the hits it has taken in this room instance (wire v3)
+
+
+def hitbox_ticks(hz: int = wire.HZ) -> int:
+    """The update on which single-player's Hitbox removes itself at a fixed step of 1/``hz`` s: each update adds the
+    step to its timer, and the one that reaches HITBOX_S removes it; every update before checks overlaps. That is
+    ceil(HITBOX_S * hz) (4 at 20 Hz: 3 checking ticks), counted as the Hitbox counts it."""
+    timer, updates = 0.0, 0
+    while timer < HITBOX_S:
+        timer += 1 / hz
+        updates += 1
+    return updates
 
 
 class SceneRoom:
@@ -429,6 +475,8 @@ class SceneRoom:
         self.damage, self.reach, self.hitbox = float(combat["damage"]), float(combat["range"]), float(combat["hitbox_size"])
         self.cooldown = max(1, math.ceil(float(combat["cooldown"]) * wire.HZ))
         self.target_tag = str(combat["target_tag"])
+        self.combat = combat  # (a client presents a swing with its animation and sound: mesh_net.scene_client)
+        self.lifetime = hitbox_ticks()
 
         others = [e for e in entities if e is not template]
         self.levers = {e["id"]: (e, c) for e in others if (c := config(e, "SwitchInteract")) is not None}
@@ -462,6 +510,9 @@ class SceneRoom:
         self.tick = 0
         self.next_id = 1
         self.players: dict[int, Player] = {}
+        # Attacks not run (diagnostics; never on the wire): stale (meant more than COOLDOWN_CLAIM_WINDOW ticks ago), refused in
+        # the cooldown; and actions dropped because PENDING were already waiting.
+        self.stale_attacks = self.refused_attacks = self.dropped_actions = 0
         try:
             wire.encode({"v": wire.VERSION, **self._worst_snapshot()})
         except wire.Invalid as exc:
@@ -533,15 +584,20 @@ class SceneRoom:
         far = -BOUND + 0.01
         floor = max(sorted(self.floor_ids), key=len, default=None)
         return {"type": "scene_state", "tick": wire.MAX_SEQ, "scene": self.identity,
-                "players": [[wire.MAX_SEQ - i, far, far, 3, far, floor] for i in range(wire.MAX_PLAYERS)],
+                "players": [[wire.MAX_SEQ - i, far, far, 3, far, floor, wire.MAX_SEQ, wire.MAX_SEQ]
+                            for i in range(wire.MAX_PLAYERS)],
                 "open": sorted(self.doors), "used": sorted(self.levers),
-                "enemies": [[i, e.state.max_hp] for i, e in self.enemies.items()],
+                "enemies": [[i, e.state.max_hp, wire.MAX_SEQ, far, far, far, floor] for i, e in self.enemies.items()],
                 "drops": sorted(self.enemies), "loot": [[i, wire.MAX_SEQ] for i in self.enemies]}
 
     def leave(self, eid: int) -> Player:
         p = self.players.pop(eid)
         p.dx = p.dy = 0.0
-        p.seq, p.last_input, p.action = 0, -100, None
+        p.seq, p.last_input = 0, -100
+        p.actions.clear()
+        p.attacks.clear()
+        p.ack = p.attack_seq = 0  # (counted per room join: wire v3)
+        p.hitboxes.clear()
         return p
 
     def input(self, eid: int, msg: wire.Message) -> None:
@@ -552,8 +608,13 @@ class SceneRoom:
             p.dx, p.dy = (dx, dy) if not (dx and dy) else (dx / math.sqrt(2), dy / math.sqrt(2))
             if dx or dy:
                 p.facing = FACINGS.index((dx, 0) if abs(dx) >= abs(dy) and dx else (0, dy))
-            if p.action is None:
-                p.action = action
+            # (never one replacing another: each runs in turn, one of each kind a tick)
+            if action == "attack" and len(p.attacks) < PENDING:
+                p.attacks.append(msg["tick"])
+            elif action is not None and action != "attack" and len(p.actions) < PENDING:
+                p.actions.append(action)
+            elif action is not None:
+                self.dropped_actions += 1
 
     # --- simulation -----------------------------------------------------------------------------------
 
@@ -566,6 +627,7 @@ class SceneRoom:
         self.tick += 1
         solids = self.solids()
         for eid, p in sorted(self.players.items()):
+            p.ack = p.seq  # (last input wins: this tick consumes the newest; M4-3's queue will read one a tick)
             if self.tick - p.last_input <= wire.HZ // 4 and (p.dx or p.dy):
                 delta = (p.dx * self.step_px, p.dy * self.step_px)
                 if self.world is not None:  # HD-2D: the shared floor solver, its 2D part this module's sweep
@@ -575,16 +637,40 @@ class SceneRoom:
                 # An open map has no edge: stay inside what clients accept on the wire.
                 p.body.center_x = max(-BOUND, min(BOUND, p.body.center_x))
                 p.body.center_y = max(-BOUND, min(BOUND, p.body.center_y))
-            action, p.action = p.action, None
+            if p.hitboxes:  # its earlier attacks' hitboxes, where they were made, the attacker as it now stands
+                p.hitboxes = [box for box in p.hitboxes if self._strike(p, box)]
+                solids = self.solids()
+            if p.attacks and self._may_attack(p, p.attacks.pop(0)):
+                p.attack_seq += 1
+                self._attack(p)
+                solids = self.solids()
+            action = p.actions.pop(0) if p.actions else None
             if action == "use":
                 self._use(p)
                 solids = self.solids()  # a gate that just opened stops blocking the players after this one
-            elif action == "attack" and self.tick >= p.attack_after:
-                p.attack_after = self.tick + self.cooldown
-                self._attack(p)
-                solids = self.solids()
             elif action == "take":
                 self._take(p)
+
+    def _may_attack(self, p: Player, meant: int) -> bool:
+        """Whether an attack meant for tick ``meant`` starts now. Its cooldown is judged on the meant tick, as the
+        client judged it, within [now - COOLDOWN_CLAIM_WINDOW, now]: a claim of a tick not yet reached counts as now, an older
+        one is stale and dropped (counted, never run). Refused in the cooldown otherwise (counted).
+
+        What a client lying about its ticks gains: meant ticks that start attacks rise at least a cooldown apart and are
+        never older than COOLDOWN_CLAIM_WINDOW when read, and at most one starts a tick. So over any W ticks at most
+        1 + (W + COOLDOWN_CLAIM_WINDOW) // cooldown attacks start, against 1 + W // cooldown judged on arrival: the same long-run
+        rate, plus one cap's worth. Its most on consecutive ticks, after a pause, claiming the oldest tick accepted each
+        tick: 1 + COOLDOWN_CLAIM_WINDOW // (cooldown - 1) for a cooldown of 2 ticks or more (13 at 2, 7 at 3, 4 at 5, 2 at 10);
+        a cooldown of 1 tick allows one a tick anyway."""
+        if meant < self.tick - COOLDOWN_CLAIM_WINDOW:
+            self.stale_attacks += 1
+            return False
+        meant = min(meant, self.tick)
+        if meant < p.attack_after:
+            self.refused_attacks += 1
+            return False
+        p.attack_after = meant + self.cooldown
+        return True
 
     def _level(self, a: Body, b: Body) -> bool:
         """Whether ``a`` may use, attack or pick up ``b``: engine.hd2d.world.same_level (M3-4), single-player's own
@@ -627,18 +713,32 @@ class SceneRoom:
             self.locked -= {i for i, (_, c) in self.doors.items() if c.get("unlock_event") == event}  # locked -> open only
 
     def _attack(self, p: Player) -> None:
-        """Combat's hitbox (range ahead, hitbox_size square) against each live enemy's shape; Health's damage rule."""
+        """Combat's hitbox (range ahead, hitbox_size square), made where the attacker stands now, and its first update
+        (this tick's: _strike); it is kept for the rest of its lifetime (step)."""
         fx, fy = FACINGS[p.facing]
-        hit = Aabb(p.body.center_x + fx * self.reach, p.body.center_y + fy * self.reach, self.hitbox, self.hitbox)
+        box = Hitbox(Aabb(p.body.center_x + fx * self.reach, p.body.center_y + fy * self.reach, self.hitbox, self.hitbox))
+        if self._strike(p, box):
+            p.hitboxes.append(box)
+
+    def _strike(self, p: Player, box: Hitbox) -> bool:
+        """One update of a Hitbox ``p`` made: it ages a tick; until its lifetime, each live enemy whose shape it
+        overlaps, on the attacker's level (as single-player's Hitbox asks), that it has not hit yet takes Health's
+        damage rule. False once it has expired (that update checks nothing, as the Hitbox's last)."""
+        box.age += 1
+        if box.age >= self.lifetime:
+            return False
         for enemy_id, enemy in sorted(self.enemies.items()):
-            if enemy.state.dead or not shapes_overlap(hit, entity_shape(enemy.body)):
+            if enemy_id in box.hit or enemy.state.dead or not shapes_overlap(box.area, entity_shape(enemy.body)):
                 continue
-            if not self._level(p.body, enemy.body):  # (the attacker's level, as single-player's Hitbox asks)
+            if not self._level(p.body, enemy.body):
                 continue
+            box.hit.add(enemy_id)
+            enemy.hit_seq += 1
             spec = AttackSpec(f"player:{id(p)}", enemy_id, self.damage, 0.0, "combat.default")
             enemy.state, result = resolve_attack(spec, enemy.state)
             if result.target_dead and enemy.loot:
                 enemy.dropped = True
+        return True
 
     def _take(self, p: Player) -> None:
         for _, enemy in sorted(self.enemies.items()):
@@ -650,10 +750,11 @@ class SceneRoom:
     def snapshot(self) -> wire.Message:
         owner = {id(p): eid for eid, p in self.players.items()}
         return {"v": wire.VERSION, "type": "scene_state", "tick": self.tick, "scene": self.identity,
-                "players": [[eid, round(p.body.center_x, 2), round(p.body.center_y, 2), p.facing, *self.level(p.body)]
-                            for eid, p in sorted(self.players.items())],
+                "players": [[eid, round(p.body.center_x, 2), round(p.body.center_y, 2), p.facing, *self.level(p.body),
+                             p.ack, p.attack_seq] for eid, p in sorted(self.players.items())],
                 "open": sorted(set(self.doors) - self.locked), "used": sorted(self.used),
-                "enemies": [[i, e.state.hp] for i, e in sorted(self.enemies.items())],
+                "enemies": [[i, e.state.hp, e.hit_seq, round(e.body.center_x, 2), round(e.body.center_y, 2),
+                             *self.level(e.body)] for i, e in sorted(self.enemies.items())],
                 "drops": sorted(i for i, e in self.enemies.items() if e.dropped),
                 "loot": [[i, owner.get(id(e.holder))] for i, e in sorted(self.enemies.items()) if e.holder is not None]}
 
@@ -692,9 +793,8 @@ def roll_drops(cfg: dict[str, Any] | None) -> list[dict[str, Any]]:
 
 
 def parse_input(msg: wire.Message, eid: int) -> tuple[int, int, int, str | None]:
-    """An input frame from the owner of ``eid``: eight directions and an optional action."""
-    optional = ("action",) if "action" in msg else ()
-    wire.fields(msg, "input", "entity", "seq", "dx", "dy", *optional)
+    """An input frame from the owner of ``eid``: eight directions and an optional action (and its ticks: wire v3)."""
+    wire.input_fields(msg)
     action = msg.get("action")
     if action is not None and action not in ACTIONS:
         raise wire.Invalid("unknown action")
@@ -725,23 +825,151 @@ def check_state(msg: wire.Message, scene: str | None = None, room: SceneRoom | N
     if type(players) is not list or len(players) > wire.MAX_PLAYERS:
         raise wire.Invalid("invalid players")
     seen = set()
-    for row in players:  # [entity, x, y, facing, elevation, floor] (mesh_net.protocol)
-        if (not isinstance(row, list) or len(row) != 6 or not wire.integer(row[0], 1) or row[0] in seen
+    for row in players:  # [entity, x, y, facing, elevation, floor, ack, attack_seq] (mesh_net.protocol)
+        if (not isinstance(row, list) or len(row) != 8 or not wire.integer(row[0], 1) or row[0] in seen
                 or not all(_number(v) for v in (row[1], row[2], row[4])) or not wire.integer(row[3], 0, 3)
-                or not (row[5] is None or (isinstance(row[5], str) and 0 < len(row[5]) <= MAX_FLOOR))):
+                or not _floor(row[5]) or not wire.integer(row[6], 0) or not wire.integer(row[7], 0)):
             raise wire.Invalid("invalid player row")
         seen.add(row[0])
     for key in ("open", "used", "drops"):
         if type(msg[key]) is not list or len(msg[key]) > MAX_OBJECTS or not all(isinstance(i, str) for i in msg[key]):
             raise wire.Invalid(f"invalid {key}")
-    for key, check in (("enemies", lambda v: isinstance(v, (int, float)) and not isinstance(v, bool) and v >= 0),
-                       ("loot", lambda v: v is None or (wire.integer(v, 1) and v in seen))):
-        rows = msg[key]
-        if type(rows) is not list or len(rows) > MAX_OBJECTS or not all(
-                isinstance(r, list) and len(r) == 2 and isinstance(r[0], str) and check(r[1]) for r in rows):
-            raise wire.Invalid(f"invalid {key}")
+    enemies = msg["enemies"]  # [id, hp, hit_seq, x, y, elevation, floor]
+    if type(enemies) is not list or len(enemies) > MAX_OBJECTS or not all(
+            isinstance(r, list) and len(r) == 7 and isinstance(r[0], str) and _number(r[1]) and r[1] >= 0
+            and wire.integer(r[2], 0) and all(_number(v) for v in r[3:6]) and _floor(r[6]) for r in enemies) \
+            or len({r[0] for r in enemies}) != len(enemies):
+        raise wire.Invalid("invalid enemies")
+    loot = msg["loot"]
+    if type(loot) is not list or len(loot) > MAX_OBJECTS or not all(
+            isinstance(r, list) and len(r) == 2 and isinstance(r[0], str)
+            and (r[1] is None or (wire.integer(r[1], 1) and r[1] in seen)) for r in loot):
+        raise wire.Invalid("invalid loot")
     if room is not None:
         check_levels(players, room)
+        check_enemies(enemies, room)
+
+
+def _floor(value: Any) -> bool:
+    """A floor id as the wire carries one (mesh_net.protocol), or none."""
+    return value is None or (isinstance(value, str) and 0 < len(value) <= MAX_FLOOR)
+
+
+def check_enemies(rows: list[Any], room: SceneRoom) -> None:
+    """Each (well-formed) enemy row against the client's own room: an enemy it has, placed as a body can be there. A 2D
+    room: elevation 0 and no floor. An HD-2D room: no floor (a body the authority never stood on one), or a floor its
+    collision world has, under the enemy's own box within a step of its elevation (check_levels' rule)."""
+    if any(r[0] not in room.enemies for r in rows):
+        raise wire.Invalid("an enemy row names an enemy this room does not have")
+    if room.world is None:
+        if any(r[5] != 0 or r[6] is not None for r in rows):
+            raise wire.Invalid("a 2D room's enemy row carries an elevation or a floor")
+        return
+    from engine.hd2d.settings import PIXELS_PER_METRE  # noqa: PLC0415
+    from engine.hd2d.world import STEP  # noqa: PLC0415
+
+    for enemy_id, _hp, _hits, x, y, elevation, floor in rows:
+        if floor is None:
+            continue
+        if floor not in room.floor_ids:
+            raise wire.Invalid(f"an enemy row stands on a floor this room does not have: {str(floor)[:48]!r}")
+        body = room.enemies[enemy_id].body
+        box = entity_aabb(Body(x, y, body.width, body.height, body.mesh_entity_data))
+        z = elevation / PIXELS_PER_METRE
+        if not any(s.floor == floor and abs(height - z) <= STEP + 1e-6
+                   for height, s in room.world.heights_at(box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE)):
+            raise wire.Invalid(f"an enemy row's floor {floor!r} is not under it at elevation {elevation:g} px")
+
+
+def check_progress(before: wire.Message, after: wire.Message, own: int, sent: int) -> None:
+    """A client's check of a newer (checked) scene_state against the last it applied in the same room instance (wire
+    v3): no player's ``ack`` or ``attack_seq`` and no enemy's ``hit_seq`` goes back, and its own ``ack`` (entity
+    ``own``) is never a ``seq`` beyond ``sent``, the last it sent. Anything else is stale or inconsistent: refused."""
+    rows = {r[0]: r for r in before["players"]}
+    for row in after["players"]:
+        if row[0] == own and row[6] > sent:
+            raise wire.Invalid("the server acknowledges an input this client never sent")
+        old = rows.get(row[0])
+        if old is not None and (row[6] < old[6] or row[7] < old[7]):
+            raise wire.Invalid("a player's acknowledgement or attack count went back")
+    hits = {r[0]: r[2] for r in before["enemies"]}
+    if any(r[2] < hits.get(r[0], 0) for r in after["enemies"]):
+        raise wire.Invalid("an enemy's hit count went back")
+
+
+RECKONING = wire.HZ  # snapshots in a row (a second's), all late, after which a client's reckoning comes down (Feedback)
+
+
+class Feedback:
+    """A client's combat presentation (owner decision OD4): its own swing the moment it is pressed, others' swings
+    and every hit only as the server's counters confirm them (wire v3).
+
+    ``press`` mirrors the attack cooldown (SceneRoom.cooldown, from the room's own player template) on the room's
+    tick, as the client reckons it (``tick``: a snapshot's tick advanced by the time since it came, taking the one
+    that came soonest); it returns that tick, which the attack's input carries, and the server judges the cooldown on
+    it (SceneRoom._may_attack). So a press the window swings for is one the server runs, whatever latency and TCP's
+    bunching do to its arrival, unless it reaches the server more than COOLDOWN_CLAIM_WINDOW ticks after that tick (then it is
+    stale: dropped, and the swing reads as a miss). A press within the cooldown swings for nothing and sends nothing.
+
+    The reckoning may come down: a server that stalls skips the ticks it missed (mesh_net.server.Server._run_clock), so
+    its tick falls behind the clock, and the reckoning follows once RECKONING snapshots in a row (a second's) all came
+    more than a tick later than the soonest. Meanwhile (the stall and about a second after it) the reckoning runs
+    ahead, its ticks count as now, and a swing shown then can be refused in the cooldown (counted:
+    SceneRoom.refused_attacks). The window never swings early for it: the cooldown runs from the last swing's tick as
+    it was sent, which a reckoning that came down reaches only later.
+    ``update`` reads each newer state against the last, after its checks (check_state, check_progress). Its counters
+    and tick are a room instance's: ``baseline`` takes them anew at a welcome (a resume's too) and at every enter."""
+
+    def __init__(self) -> None:
+        self.cooldown = 0  # ticks
+        self.offset = -math.inf  # the room's tick minus the client's clock (s) times HZ, at the soonest snapshot
+        self.samples: deque[float] = deque(maxlen=RECKONING)  # that difference for the latest snapshots
+        self.last = -math.inf  # the tick of the last swing shown
+        self.swings: dict[int, int] = {}  # entity -> attack_seq last applied
+        self.hits: dict[str, int] = {}  # enemy -> hit_seq last applied
+
+    def tick(self, now: float) -> int:
+        """The room's tick at ``now`` (s on the client's clock), as this client reckons it. Not ahead of the server's
+        while the server keeps time (each snapshot's tick came no sooner than it was made); it comes down after a server
+        stall (the class's note)."""
+        return math.floor(now * wire.HZ + self.offset + 1e-6) if self.offset > -math.inf else 0
+
+    def baseline(self, state: wire.Message, cooldown: int, now: float) -> None:
+        """A new room instance or session: what ``state`` (applied at ``now``) counts is already seen, and its tick
+        starts the reckoning. ``cooldown``: the room's, in ticks. The last swing's tick is kept while it is not ahead of
+        the reckoned tick (the same room, resumed: its cooldown still runs there); else it is another count of ticks."""
+        self.cooldown = cooldown
+        self.samples.clear()
+        self.samples.append(state["tick"] - now * wire.HZ)
+        self.offset = self.samples[0]
+        if self.last > self.tick(now):
+            self.last = -math.inf
+        self.swings = {r[0]: r[7] for r in state["players"]}
+        self.hits = {r[0]: r[2] for r in state["enemies"]}
+
+    def press(self, now: float) -> int | None:
+        """The tick an attack pressed at ``now`` (s) is meant for, when it swings (shown at once, and sent with that
+        tick); None within the cooldown of the last swing (nothing shown, nothing sent)."""
+        tick = self.tick(now)
+        if tick < self.last + self.cooldown:
+            return None
+        self.last = tick
+        return tick
+
+    def update(self, state: wire.Message, own: int, now: float) -> tuple[list[int], list[str]]:
+        """The players other than ``own`` who started an attack, and the enemies hit, since the last state applied
+        (at ``now``)."""
+        self.samples.append(state["tick"] - now * wire.HZ)
+        recent = max(self.samples)
+        # The soonest snapshot so far, unless the latest RECKONING all came more than a tick later than it would have
+        # (no jitter or TCP retransmission delays that many in a row: the server's tick fell behind, a stall); then
+        # the soonest of those.
+        self.offset = recent if recent < self.offset - 1 and len(self.samples) == RECKONING else max(self.offset, recent)
+        swung = [r[0] for r in state["players"] if r[0] != own and r[7] > self.swings.get(r[0], r[7])]
+        hit = [r[0] for r in state["enemies"] if r[2] > self.hits.get(r[0], 0)]
+        self.swings = {r[0]: r[7] for r in state["players"]}
+        self.hits = {r[0]: r[2] for r in state["enemies"]}
+        return swung, hit
 
 
 def check_levels(players: list[Any], room: SceneRoom) -> None:

@@ -14,11 +14,13 @@ import math
 from pathlib import Path
 from typing import Any
 
+from engine.animation_state import request_animation_state
+from engine.behaviours.combat import _try_rumble
 from engine.interaction import DEFAULT_INTERACT_MAX_DIST
 
 from . import protocol as wire
 from .demo import Arena, open_arena
-from .scene_room import SceneRoom, check_state, coop_files, parse_input
+from .scene_room import Feedback, SceneRoom, check_progress, check_state, coop_files, parse_input
 
 KEEP = ("Animator",)  # draws the picture the server's movement implies
 FOLLOW = "CameraFollow"  # the local player's avatar keeps the scene's own camera behaviour
@@ -26,6 +28,9 @@ SIZE = (640, 360)
 PEER_TINT = (255, 214, 140)
 DROP_COLOR = (240, 200, 70, 255)
 USED_TINT = (128, 128, 128)
+FLASH_TINT = (255, 96, 96)  # an enemy the server confirms hit, for FLASH_S
+FLASH_S = 0.15
+HIT_SOUND = "assets/sounds/hit.wav"  # (engine.behaviours.hitbox's, as are its volume and profile)
 
 
 class JoinRefused(RuntimeError):
@@ -76,6 +81,8 @@ class SceneView:
         self.colors = {i: tuple(self.sprites[i].color) for i in self.levers}
         self.avatars: dict[int, Any] = {}
         self.drops: dict[str, Any] = {}
+        self.enemy_colors = {i: tuple(self.sprites[i].color) for i in room.enemies}
+        self.flashes: dict[str, float] = {}  # enemy -> seconds of its hit flash left
 
     def check(self, msg: wire.Message) -> None:
         check_state(msg, self.identity, self.room)
@@ -91,6 +98,31 @@ class SceneView:
         return any(math.hypot(x - self.sprites[i].center_x, y - self.sprites[i].center_y) <= DEFAULT_INTERACT_MAX_DIST
                    for i in state["drops"])
 
+    def swing(self, eid: int, own: bool) -> None:
+        """Combat.attack's presentation on the avatar of ``eid``: its attack animation and sound, and for the local
+        player (``own``) the rumble. Presentation only: whether it hits, the server says (``flash``)."""
+        sprite = self.avatars.get(eid)
+        if sprite is None:
+            return
+        if getattr(sprite, "mesh_animator", None):
+            request_animation_state(sprite, str(self.room.combat["attack_anim"]), priority=10, ttl=0.5)
+        audio = getattr(self.window, "audio", None)
+        if audio is not None:
+            audio.play_world_sfx(str(self.room.combat["attack_sound"]), world_pos=(float(sprite.center_x),
+                                 float(sprite.center_y)), window=self.window, base_volume=0.5, profile="attack")
+        if own:
+            _try_rumble(self.window, 0.2, 0.03)
+
+    def flash(self, enemy: str) -> None:
+        """A hit the server confirmed (the enemy's hit count rose): the enemy flashes and the Hitbox's hit sound plays."""
+        sprite = self.sprites[enemy]
+        sprite.color = FLASH_TINT
+        self.flashes[enemy] = FLASH_S
+        audio = getattr(self.window, "audio", None)
+        if audio is not None:
+            audio.play_world_sfx(HIT_SOUND, world_pos=(float(sprite.center_x), float(sprite.center_y)),
+                                 window=self.window, base_volume=0.6, profile="melee")
+
     def _spawn(self, eid: int, own: bool) -> Any:
         data = {**self.template, "id": f"net_player_{eid}", "name": f"Player {eid}"}
         sprite = self.scene._create_sprite(data)
@@ -104,6 +136,11 @@ class SceneView:
              own: int | None, dt: float) -> None:
         """Make the room look like ``state``, its players at ``positions`` (x, y, elevation, floor: a snapshot row's,
         mesh_net.protocol) (``own``: the local player's avatar)."""
+        for enemy in list(self.flashes):
+            self.flashes[enemy] -= dt
+            if self.flashes[enemy] <= 0:
+                del self.flashes[enemy]
+                self.sprites[enemy].color = self.enemy_colors[enemy]
         for eid in [e for e in self.avatars if e not in positions]:
             self.scene.entities.enqueue_despawn(self.avatars.pop(eid))
         for eid, (x, y, elevation, floor) in positions.items():
@@ -126,7 +163,7 @@ class SceneView:
             self.sprites[door].visible = door not in state["open"]
         for lever in self.levers:
             self.sprites[lever].color = USED_TINT if lever in state["used"] else self.colors[lever]
-        for enemy, hp in state["enemies"]:
+        for enemy, hp, *_ in state["enemies"]:  # (its hit count and placement: Feedback; M4-4 moves it)
             self.sprites[enemy].visible = hp > 0
         for enemy in [e for e in self.drops if e not in state["drops"]]:
             self.scene.entities.enqueue_despawn(self.drops.pop(enemy))
@@ -154,7 +191,8 @@ class SceneArena(Arena):
         super().__init__(window, arcade)
         self.view = SceneView(window, arcade, SceneRoom(root / scene, root))  # what the server builds, from own files
         self.identity = self.view.identity
-        self.checks = {"check": self.view.check, "check_input": parse_input}
+        self.checks = {"check": self.view.check, "check_input": parse_input, "progress": check_progress}
+        self.feedback = Feedback()
         self.last: float | None = None
 
     # (the room's presentation, as tooling/net_scene_probe.py reads it)
@@ -165,15 +203,33 @@ class SceneArena(Arena):
 
     def press(self, symbol: int, modifiers: int) -> bool:
         client = self.client
+        if symbol == self.arcade.key.SPACE and client and symbol not in self.action_keys:
+            self.action_keys.add(symbol)
+            tick = self.feedback.press(self.clock())  # (in the cooldown: no swing, and nothing sent)
+            if tick is not None:
+                self.act("attack", tick)  # the server judges its cooldown on this tick, as the window did
+                self.view.swing(client.entity, own=True)  # at once: the server confirms only a hit
+            return True
         if symbol == self.arcade.key.E and client and symbol not in self.action_keys:
             self.action_keys.add(symbol)
             own = next(r for r in client.state["players"] if r[0] == client.entity)
-            self.action = "take" if self.view.near_drop(own[1], own[2], client.state) else "use"
+            self.act("take" if self.view.near_drop(own[1], own[2], client.state) else "use")
             return True
         return super().press(symbol, modifiers)
 
+    def on_state(self, state: wire.Message, entity: int, fresh: bool) -> None:
+        """Others' swings and every hit, as the server's counters confirm them; a welcome is a new baseline."""
+        if fresh:
+            self.feedback.baseline(state, self.view.room.cooldown, self.clock())
+            return
+        swung, hit = self.feedback.update(state, entity, self.clock())
+        for eid in swung:
+            self.view.swing(eid, own=False)
+        for enemy in hit:
+            self.view.flash(enemy)
+
     def describe(self, state: wire.Message, entity: int) -> str:
-        enemies = ", ".join(f"{self.sprites[i].mesh_name} {hp:g}" for i, hp in state["enemies"])
+        enemies = ", ".join(f"{self.sprites[r[0]].mesh_name} {r[1]:g}" for r in state["enemies"])
         loot = sum(1 for _, holder in state["loot"] if holder == entity)
         gate = "open" if state["open"] else "locked"
         return f"P{entity} | gate {gate} | {enemies} | loot {loot} | E use/take, Space attack, F2 leave"

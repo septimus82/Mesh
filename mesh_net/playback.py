@@ -25,8 +25,8 @@ class Playback:
         return True
 
     def positions(self, now: float) -> dict[int, tuple[Any, ...]]:
-        """Each player's (x, y) two ticks behind; for a scene room's rows (mesh_net.protocol v2) (x, y, elevation,
-        floor): the elevation interpolated with x and y, the floor the nearer state's."""
+        """Each player's (x, y) two ticks behind; for a scene room's rows (mesh_net.protocol v2 and on) (x, y,
+        elevation, floor): the elevation interpolated with x and y, the floor the nearer state's."""
         if not self.states:
             return {}
         latest = self.states[-1]
@@ -41,7 +41,7 @@ class Playback:
         for row in latest["players"]:
             a, b = before.get(row[0], row), after.get(row[0], row)
             at: tuple[Any, ...] = (a[1] + alpha * (b[1] - a[1]), a[2] + alpha * (b[2] - a[2]))
-            if len(row) == 6:
+            if len(row) > 3:  # (a scene room's row)
                 at += (a[4] + alpha * (b[4] - a[4]), (a if alpha < 0.5 else b)[5])
             result[row[0]] = at
         return result

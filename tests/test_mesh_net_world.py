@@ -79,14 +79,15 @@ class Driver:
     def send(self, pid, dx=0, dy=0, action=None, room=None, entity=None):
         self.seq[pid] = self.seq.get(pid, 0) + 1
         m = self.m(pid)
-        msg = {"v": 2, "type": "input", "room": room or m.instance, "entity": entity or m.eid or 1,
-               "seq": self.seq[pid], "dx": dx, "dy": dy}
+        inst = self.w.instances.get(m.instance or "")
+        msg = wire.input_frame(entity or m.eid or 1, self.seq[pid], dx, dy, inst.room.tick if inst else 0,
+                               room=room or m.instance)  # (meant for now)
         if action:
             msg["action"] = action
         self.w.input(pid, msg)
 
     def ask(self, pid, op, **fields):
-        self.w.party(pid, {"v": 2, "type": "party", "op": op, **fields})
+        self.w.party(pid, {"v": wire.VERSION, "type": "party", "op": op, **fields})
 
     def step(self, n=1):
         for _ in range(n):
@@ -446,7 +447,7 @@ def test_forged_and_malformed_party_requests(world):
     for bad in ({"op": "invite", "player": b, "party": 1}, {"op": "promote"}, {"op": "accept"},
                 {"op": "invite", "player": "2"}, {"op": "leave", "v": 1}):
         with pytest.raises(wire.Invalid):
-            d.w.party(c, {"v": 2, "type": "party", **bad})
+            d.w.party(c, {"v": wire.VERSION, "type": "party", **bad})
 
 
 @pytest.mark.integration
@@ -588,7 +589,7 @@ class Peer:
     @classmethod
     async def open(cls, port, world, resume=None):
         reader, writer = await asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES)
-        writer.write(wire.encode({"v": 2, "type": "join", "resume": resume}))
+        writer.write(wire.encode({"v": wire.VERSION, "type": "join", "resume": resume}))
         peer = cls(reader, writer, world)
         hello = await wire.read(reader)
         check_welcome(hello, world.identity)
@@ -618,7 +619,8 @@ class Peer:
 
     async def move(self, dx, dy, action=None):
         self.seq += 1
-        frame = {"v": 2, "type": "input", "room": self.room, "entity": self.entity, "seq": self.seq, "dx": dx, "dy": dy}
+        tick = self.state["tick"] + 1 if self.state else 0  # (the next tick, as the world client sends)
+        frame = wire.input_frame(self.entity, self.seq, dx, dy, tick, room=self.room)
         if action:
             frame["action"] = action
         await self.send(frame)
@@ -655,9 +657,9 @@ def test_two_clients_travel_reconnect_and_return_over_sockets(files):
             b = await Peer.open(port, world)
             peers += [a, b]
             await asyncio.gather(a.until(lambda p: p.room and p.party), b.until(lambda p: p.room and p.party))
-            await a.send({"v": 2, "type": "party", "op": "invite", "player": b.player})
+            await a.send({"v": wire.VERSION, "type": "party", "op": "invite", "player": b.player})
             await b.until(lambda p: p.party["invites"])
-            await b.send({"v": 2, "type": "party", "op": "accept", "party": b.party["invites"][0][0]})
+            await b.send({"v": wire.VERSION, "type": "party", "op": "accept", "party": b.party["invites"][0][0]})
             await a.until(lambda p: p.party["party"] and len(p.party["members"]) == 2)
             await walk_until([a, b], 1, 0, lambda p: p.key == R1)
             assert a.room == b.room and a.room.startswith(f"{R1}:") and a.own()[1:3] == [64.0, 160.0]
@@ -826,10 +828,10 @@ def test_malformed_requests_raise_invalid_only(world):
     a, _ = d.join()
     for bad in ({"op": []}, {"op": {}}, {"op": None}):
         with pytest.raises(wire.Invalid):
-            d.w.party(a, {"v": 2, "type": "party", **bad})
+            d.w.party(a, {"v": wire.VERSION, "type": "party", **bad})
     for room in ([], 5, None, "start:1:2", "START:1"):
         with pytest.raises(wire.Invalid):
-            d.w.input(a, {"v": 2, "type": "input", "room": room, "entity": 1, "seq": 1, "dx": 0, "dy": 0})
+            d.w.input(a, {"v": wire.VERSION, "type": "input", "tick": 0, "room": room, "entity": 1, "seq": 1, "dx": 0, "dy": 0})
 
 
 @pytest.mark.integration
@@ -838,9 +840,9 @@ def test_clients_reject_malformed_frames(world):
     hub = world.hub.room.snapshot()
     world.hub.room.join()
     hub_with_one = world.hub.room.snapshot()
-    good_enter = {"v": 2, "type": "enter", "room": "start:1", "key": HUB, "entity": 1, "state": hub_with_one}
+    good_enter = {"v": wire.VERSION, "type": "enter", "room": "start:1", "key": HUB, "entity": 1, "state": hub_with_one}
     check_frame(good_enter, ids)
-    party = {"v": 2, "type": "party", "you": 1, "party": None, "leader": None, "members": [], "invites": [], "nearby": []}
+    party = {"v": wire.VERSION, "type": "party", "you": 1, "party": None, "leader": None, "members": [], "invites": [], "nearby": []}
     check_frame(party, ids)
     bad = [
         {**good_enter, "key": [HUB]},
@@ -850,10 +852,10 @@ def test_clients_reject_malformed_frames(world):
         {**good_enter, "state": {**hub_with_one, "scene": "0" * 64}},  # another scene
         {**party, "members": [[1, True, [HUB]]]},
         {**party, "members": [[1, True, "nowhere"]]},
-        {"v": 2, "type": "notice", "code": ["busy"]},
-        {"v": 2, "type": "notice", "code": "teleported"},
-        {"v": 2, "type": "room_state", "room": "start", "state": hub_with_one},
-        {"v": 2, "type": "welcome"},
+        {"v": wire.VERSION, "type": "notice", "code": ["busy"]},
+        {"v": wire.VERSION, "type": "notice", "code": "teleported"},
+        {"v": wire.VERSION, "type": "room_state", "room": "start", "state": hub_with_one},
+        {"v": wire.VERSION, "type": "welcome"},
     ]
     for frame in bad:
         with pytest.raises(wire.Invalid):
@@ -868,23 +870,25 @@ def test_the_client_applies_only_its_own_rooms_frames_in_order(world):
     within its room a state must be newer than the last."""
     from types import SimpleNamespace
 
+    from mesh_net.scene_room import Feedback
     from mesh_net.world_client import WorldArena
 
     ids = {k: d.proto.identity for k, d in world.defs.items()}
     world.hub.room.join()
     state = world.hub.room.snapshot()
     arena = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
-                            playback=None, pending=None, phase="loading", party=None, notice=None)
-    WorldArena.on_frame(arena, {"v": 2, "type": "enter", "room": "start:1", "key": HUB, "entity": 1, "state": state}, 0.0)
+                            playback=None, pending=None, phase="loading", party=None, notice=None,
+                            feedback=Feedback(), seq=0, actions=[], view=None, shown=None)
+    WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "enter", "room": "start:1", "key": HUB, "entity": 1, "state": state}, 0.0)
     assert arena.room == "start:1" and arena.pending is not None
-    WorldArena.on_frame(arena, {"v": 2, "type": "room_state", "room": "start:7", "state": {**state, "tick": 99}}, 0.1)
+    WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "room_state", "room": "start:7", "state": {**state, "tick": 99}}, 0.1)
     assert arena.state["tick"] == state["tick"]  # another room's: dropped
     world.hub.room.step()
     newer = world.hub.room.snapshot()
-    WorldArena.on_frame(arena, {"v": 2, "type": "room_state", "room": "start:1", "state": newer}, 0.1)
+    WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "room_state", "room": "start:1", "state": newer}, 0.1)
     assert arena.state["tick"] == newer["tick"]
     with pytest.raises(wire.Invalid):
-        WorldArena.on_frame(arena, {"v": 2, "type": "room_state", "room": "start:1", "state": newer}, 0.2)
+        WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "room_state", "room": "start:1", "state": newer}, 0.2)
 
 
 @pytest.mark.integration
@@ -1057,7 +1061,7 @@ def test_the_server_refuses_requests_past_its_budget(files, monkeypatch, caplog)
             peer = await Peer.open(port, world)
             await peer.until(lambda p: p.room and p.party)
             for _ in range(Frozen.START + 1):  # the first allowance, and one more
-                await peer.send({"v": 2, "type": "party", "op": "leave"})
+                await peer.send({"v": wire.VERSION, "type": "party", "op": "leave"})
             assert await _within(3, lambda: not any(m.online for m in world.members.values()))
             await peer.close()
         finally:
@@ -1070,7 +1074,8 @@ def test_the_server_refuses_requests_past_its_budget(files, monkeypatch, caplog)
 @pytest.mark.integration
 def test_pressing_e_before_a_new_room_shows_does_not_ask_the_old_room():
     """Just after an enter, the window still shows the last room until its next frame. E then must not look the new
-    room's drops up in the old room's view (that raised KeyError out of the window's event dispatch)."""
+    room's drops up in the old room's view (that raised KeyError out of the window's event dispatch); nor is it
+    queued, to run in a room the player hasn't seen yet (M4-2 review)."""
     from types import SimpleNamespace
 
     from mesh_net.world_client import WorldArena
@@ -1081,7 +1086,8 @@ def test_pressing_e_before_a_new_room_shows_does_not_ask_the_old_room():
     key = SimpleNamespace(E=1, SPACE=2, P=3, I=4, Y=5, N=6, L=7, ESCAPE=8, F2=9, R=10)
     state = {"players": [[1, 100.0, 100.0, 0]], "drops": [GUARDIAN]}
     arena = SimpleNamespace(arcade=SimpleNamespace(key=key), directions={}, connected=True, action_keys=set(),
-                            action=None, phase="loading", request=None, note=lambda event: None, state=state,
+                            actions=[], phase="loading", request=None, note=lambda event: None, state=state,
                             entity=1, view=SimpleNamespace(near_drop=old_view_lookup), shown="start:1",
                             room=f"{R2}:3", _own=lambda: state["players"][0])
-    assert WorldArena.press(arena, key.E, 0) is True and arena.action == "use"
+    arena.act = lambda action, tick=None: arena.actions.append((action, tick))
+    assert WorldArena.press(arena, key.E, 0) is True and arena.actions == []

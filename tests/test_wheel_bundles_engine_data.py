@@ -180,7 +180,7 @@ from mesh_net.world import World, check_frame, check_welcome, expedition_files
 
 async def peer(port, world):
     r, w = await asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES)
-    w.write(wire.encode({"v": 2, "type": "join", "resume": None}))
+    w.write(wire.encode({"v": wire.VERSION, "type": "join", "resume": None}))
     hello = await wire.read(r)
     check_welcome(hello, world.identity)
     return {"r": r, "w": w, "pid": hello["player"], "seq": 0, "key": None, "party": None}
@@ -204,10 +204,10 @@ async def main():
         for p in (a, b):
             while p["party"] is None:
                 await pump(p, ids)
-        a["w"].write(wire.encode({"v": 2, "type": "party", "op": "invite", "player": b["pid"]}))
+        a["w"].write(wire.encode({"v": wire.VERSION, "type": "party", "op": "invite", "player": b["pid"]}))
         while not b["party"]["invites"]:
             await pump(b, ids)
-        b["w"].write(wire.encode({"v": 2, "type": "party", "op": "accept", "party": b["party"]["invites"][0][0]}))
+        b["w"].write(wire.encode({"v": wire.VERSION, "type": "party", "op": "accept", "party": b["party"]["invites"][0][0]}))
         while len(a["party"]["members"]) < 2:
             await pump(a, ids)
         for _ in range(400):
@@ -216,7 +216,7 @@ async def main():
             for p in (a, b):
                 if p["key"] != "ancient_ruins_layer_1":
                     p["seq"] += 1
-                    p["w"].write(wire.encode({"v": 2, "type": "input", "room": p["room"], "entity": p["entity"],
+                    p["w"].write(wire.encode({"v": wire.VERSION, "type": "input", "tick": 0, "room": p["room"], "entity": p["entity"],
                                               "seq": p["seq"], "dx": 1, "dy": 0}))
                 await pump(p, ids)
         print("MESH-WORLD " + json.dumps({"rooms": [a["room"], b["room"]], "instances": sorted(world.instances),
@@ -275,7 +275,7 @@ async def main():
     port = await server.start()
     try:
         r, w = await asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES)
-        w.write(wire.encode({"v": 2, "type": "join", "resume": None, "character": credential}))
+        w.write(wire.encode({"v": wire.VERSION, "type": "join", "resume": None, "character": credential}))
         check_welcome(await wire.read(r), world.identity)
         sheet = None
         while sheet is None:

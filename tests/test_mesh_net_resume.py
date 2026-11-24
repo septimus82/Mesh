@@ -146,7 +146,7 @@ def test_the_new_wait_returns_the_resumed_session():
     m = world.members[pid]
     assert seen == [False] and m.online and back["player"] == pid
     assert back["entity"] == m.eid != before and back["room"] == room and back["key"] == LAYER_2
-    assert back["state"]["enemies"] == [[GUARDIAN, 0.0]] and [p[0] for p in back["state"]["players"]] == [m.eid]
+    assert [r[:2] for r in back["state"]["enemies"]] == [[GUARDIAN, 0.0]] and [p[0] for p in back["state"]["players"]] == [m.eid]
     assert sorted(int(e) for e in window.capture()["drawn"]) == [back["entity"]]
     assert [e[2] for e in world.history if e[3] == pid][-2:] == ["disconnect", "resume"]
 
@@ -237,7 +237,7 @@ def scene_session(driver, fault=None):
     from unittest.mock import patch
 
     from mesh_net import demo
-    from mesh_net.scene_room import COOP_SCENE, SceneRoom, check_state, coop_files, parse_input
+    from mesh_net.scene_room import COOP_SCENE, SceneRoom, check_progress, check_state, coop_files, parse_input
     from mesh_net.server import Server
 
     with disposable_project(coop_files(), scaffold=False) as root:
@@ -268,7 +268,8 @@ def scene_session(driver, fault=None):
         server = Server(room)
         port = await server.start()
         arena = Window(window, SimpleNamespace(key=key))
-        arena.checks = {"check": lambda msg: check_state(msg, room.identity), "check_input": parse_input}
+        arena.checks = {"check": lambda msg: check_state(msg, room.identity, room), "check_input": parse_input,
+                        "progress": check_progress}  # (the scene client's own checks: SceneArena.checks)
         aid = room.join()
         task = asyncio.create_task(arena.run(port))
         stale = None

@@ -11,6 +11,9 @@ intent every 1/HZ s on its own clock (mesh_net.demo.Arena.session), at a seeded 
 fixed for the session. No socket, no window, no GPU, no wall clock: the same seeds give the same numbers. Several seeds
 (``--seeds``) give each number's spread (``ranges``).
 
+The window's combat presentation is the client's own rule (mesh_net.scene_room.Feedback, wire v3): a swing on the
+first frame after the press, a hit flash on the first frame after a state whose enemy hit count rose.
+
 What the tool adds that the game doesn't have: a scripted mover for the moving-target case (today's authority never
 moves an enemy) and that enemy's position in the client's copy of each snapshot (today's wire carries none), shown
 through Playback as a peer is. Hit questions are asked of the authority's own ``_attack`` (geometry and same_level),
@@ -41,7 +44,7 @@ if __package__ in (None, ""):  # (run as a script: the checkout's packages; impo
 from engine.combat_model import TargetState  # noqa: E402
 from mesh_net import protocol as wire  # noqa: E402
 from mesh_net.playback import Playback  # noqa: E402
-from mesh_net.scene_room import COOP_SCENE, Body, Player, SceneRoom, coop_files, disposable_project  # noqa: E402
+from mesh_net.scene_room import COOP_SCENE, Body, Feedback, Player, SceneRoom, coop_files, disposable_project  # noqa: E402
 
 FRAME_MS = 1000 / 60  # the client window's frame (mesh_net.demo.Arena.run)
 RTO_MS = 200.0  # a lost segment arrives RTT + this later (Linux's RTO is SRTT + 4 RTTVAR, at least 200 ms; --rto)
@@ -91,7 +94,8 @@ class Session:
     jitter_ms: float
     loss: float
     seed: int
-    intent: Callable[[float, list[Any]], tuple[int, int, str | None]] = lambda now, shown: (0, 0, None)
+    # (dx, dy, action[, the tick the action is meant for: the window's Feedback.press; else the next tick])
+    intent: Callable[[float, list[Any]], tuple[Any, ...]] = lambda now, shown: (0, 0, None)
     mover: Callable[[int], None] | None = None
     setup: Callable[[SceneRoom, int], None] | None = None  # puts the joined player somewhere first (the tool's)
     frame: Callable[[float, "Session"], None] | None = None
@@ -101,7 +105,9 @@ class Session:
     playback: Playback = field(default_factory=lambda: Playback(lambda s: None))
     poses: dict[int, dict[str, Any]] = field(default_factory=dict)  # tick -> the authority's bodies after it
     applied: list[tuple[float, int]] = field(default_factory=list)  # (input send ms, tick it is applied on)
-    burst: int = 0  # the most inputs read in one tick (mesh_net.server ends a session that sends more than 8)
+    # The most inputs read in one tick. (Reported only: since M4-1 a burst never ends a session; mesh_net.server's
+    # InputBudget token bucket refuses only a sustained flood.)
+    burst: int = 0
 
     def __post_init__(self) -> None:
         rng = random.Random(self.seed)
@@ -123,7 +129,7 @@ class Session:
     def observed(self) -> dict[str, Any]:
         """The snapshot, plus each enemy as a player row (id 1000+) for the client's Playback: the tool's addition."""
         state = self.room.snapshot()
-        extra = [[1000 + i, round(e.body.center_x, 2), round(e.body.center_y, 2), 0, *self.room.level(e.body)]
+        extra = [[1000 + i, round(e.body.center_x, 2), round(e.body.center_y, 2), 0, *self.room.level(e.body), 0, 0]
                  for i, (_, e) in enumerate(sorted(self.room.enemies.items()))]
         return {**state, "players": state["players"] + extra}
 
@@ -167,12 +173,10 @@ class Session:
                     self.latest = state
                 self.playback.push(state, t / 1000)
             elif self.next_send <= t:
-                dx, dy, action = self.intent(t, self.own_row())
+                dx, dy, action, *meant = self.intent(t, self.own_row())
                 self.seq += 1
-                msg: dict[str, Any] = {"v": wire.VERSION, "type": "input", "entity": self.eid, "seq": self.seq,
-                                       "dx": dx, "dy": dy}
-                if action is not None:
-                    msg["action"] = action
+                tick = meant[0] if meant and meant[0] is not None else self.latest["tick"] + 1
+                msg = wire.input_frame(self.eid, self.seq, dx, dy, tick, action)
                 self.serial += 1
                 heapq.heappush(self.to_server, (self.up.arrival(t), self.serial, t, msg))
                 self.next_send += self.period
@@ -198,7 +202,7 @@ def ask(room: SceneRoom, own: tuple[Any, ...], targets: dict[str, tuple[float, f
     (x, y, elevation, facing) and each enemy at ``targets``, all alive, then everything put back."""
     x, y, z, facing = own[:4]
     probe = Player(Body(x, y, *room.size, {**room.template, "elevation": z}), facing=facing)
-    saved = {i: (e.state, e.dropped, e.body.center_x, e.body.center_y, e.body.mesh_entity_data)
+    saved = {i: (e.state, e.dropped, e.body.center_x, e.body.center_y, e.body.mesh_entity_data, e.hit_seq)
              for i, e in room.enemies.items()}
     try:
         level = True
@@ -211,7 +215,7 @@ def ask(room: SceneRoom, own: tuple[Any, ...], targets: dict[str, tuple[float, f
         return any(e.state.hp < e.state.max_hp for e in room.enemies.values()), level
     finally:
         for i, e in room.enemies.items():
-            e.state, e.dropped, e.body.center_x, e.body.center_y, e.body.mesh_entity_data = saved[i]
+            e.state, e.dropped, e.body.center_x, e.body.center_y, e.body.mesh_entity_data, e.hit_seq = saved[i]
 
 
 # --- rooms -----------------------------------------------------------------------------------------------------------
@@ -304,11 +308,16 @@ def movement(rtt: float, jitter: float, loss: float, seed: int, trials: int = 40
 
 def attack(rtt: float, jitter: float, loss: float, seed: int, trials: int = 30) -> dict[str, Any]:
     """Stand next to the bandit, press attack: when does the hit show (the snapshot's lower HP: the caption, or the
-    sprite hidden at 0)? The bandit's HP is put back between trials (the tool's)."""
+    sprite hidden at 0), and when do the swing and the confirmed hit's flash show (Feedback)? The bandit's HP is put
+    back between trials (the tool's)."""
     rng = random.Random(seed)
     presses = [1000.0 + i * 1500 + rng.uniform(0, 100) for i in range(trials)]
     sent: set[float] = set()
     hp_seen: list[tuple[float, float]] = []
+    feedback = Feedback()
+    shown: list[Any] = [None]  # (the state the last frame showed)
+    swings: list[float] = []  # (the frame each press swung on: inf when the cooldown refused it)
+    flashes: list[float] = []
 
     def intent(now: float, shown: list[Any]) -> tuple[int, int, str | None]:
         due = [p for p in presses if p <= now and p not in sent]
@@ -316,7 +325,14 @@ def attack(rtt: float, jitter: float, loss: float, seed: int, trials: int = 30) 
         return 0, 0, "attack" if due else None
 
     def frame(now: float, s: Session) -> None:
-        hp_seen.append((now, dict(s.latest["enemies"])[BANDIT]))
+        hp_seen.append((now, next(r[1] for r in s.latest["enemies"] if r[0] == BANDIT)))
+        if shown[0] is None:
+            feedback.baseline(s.latest, room.cooldown, now / 1000)
+        elif s.latest is not shown[0]:
+            flashes.extend(now for _ in feedback.update(s.latest, s.eid, now / 1000)[1])
+        shown[0] = s.latest
+        if len(swings) < len(presses) and presses[len(swings)] <= now:  # (a press: the window's next frame reads it)
+            swings.append(now if feedback.press(now / 1000) is not None else math.inf)
 
     with coop_room() as room:
         s = Session(room, rtt, jitter, loss, seed, intent=intent, frame=frame,
@@ -329,7 +345,10 @@ def attack(rtt: float, jitter: float, loss: float, seed: int, trials: int = 30) 
         seen = next((t for (_, before), (t, hp) in zip(hp_seen, hp_seen[1:]) if t > p and hp < before), None)
         if seen is not None:
             confirm.append(seen - p)
-    return {"hit_confirmed_ms": confirm, "trials": trials}
+    swing = [t - p for p, t in zip(presses, swings) if t < math.inf]
+    flash = [next((t for t in flashes if t > p), math.inf) - p for p in presses]
+    return {"hit_confirmed_ms": confirm, "swing_visible_ms": swing, "hit_flash_ms": [f for f in flash if f < 1200],
+            "trials": trials, "stale_attacks": room.stale_attacks, "refused_attacks": room.refused_attacks}
 
 
 def judge(s: Session, samples: list[tuple[float, tuple[Any, ...], dict[str, tuple[float, float, float]]]],
@@ -431,7 +450,7 @@ def to_stairs_edge(room: SceneRoom, eid: int) -> None:
             if done(p.body):
                 break
             seq += 1
-            room.input(eid, {"v": wire.VERSION, "type": "input", "entity": eid, "seq": seq, "dx": dx, "dy": dy})
+            room.input(eid, wire.input_frame(eid, seq, dx, dy, room.tick + 1))
             room.step()
     p.seq = 0  # (the session's own inputs count from 1)
     assert p.body.mesh_hd2d_floor == "crossing/col_stairs_west" and p.body.center_x >= 350.0, "not at the stairs' edge"
@@ -516,8 +535,10 @@ def measure(seed: int = 7, sessions: int = 6) -> dict[str, Any]:
                          "local_frames_without_movement_while_walking": round(sum(m["frozen"]) / max(1, len(m["frozen"])), 3),
                          "local_largest_frame_step_px": round(max(m["steps"], default=0.0), 1),
                          "most_inputs_in_one_tick": m["max_inputs_in_one_tick"]},
-            "attack": {"swing_visible_ms": None, "hit_confirmed_ms": summary(a["hit_confirmed_ms"]),
-                       "hits_seen": f"{len(a['hit_confirmed_ms'])}/{a['trials']}"},
+            "attack": {"swing_visible_ms": summary(a["swing_visible_ms"]), "hit_confirmed_ms": summary(a["hit_confirmed_ms"]),
+                       "hit_flash_ms": summary(a["hit_flash_ms"]), "hits_seen": f"{len(a['hit_confirmed_ms'])}/{a['trials']}",
+                       # (attacks the server did not run: never hidden, owner decision of 2026-11-24, condition 7)
+                       "stale_attacks": a["stale_attacks"], "refused_attacks": a["refused_attacks"]},
             "moving_target_70": fairness(pooled(moving_target, seeds, *profile, 70.0)),
             "moving_target_150": fairness(pooled(moving_target, seeds, *profile, 150.0)),
             "moving_attacker": fairness(pooled(moving_attacker, seeds, *profile)),

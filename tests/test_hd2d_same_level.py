@@ -135,7 +135,7 @@ def authority(room: SceneRoom, actor: tuple[float, float, float], target: tuple[
     enemy.state, enemy.dropped, enemy.holder = TargetState(hp=3.0, max_hp=3.0), action == "take", None
     eid = room.join(Player(Body(actor[0], actor[1], *room._template_size(), {**room.template, "elevation": actor[2]}),
                            facing=0))
-    room.input(eid, {"v": wire.VERSION, "type": "input", "entity": eid, "seq": 1, "dx": 0, "dy": 0, "action": action})
+    room.input(eid, wire.input_frame(eid, 1, 0, 0, room.tick, action))  # (meant for now)
     room.step()
     player = room.leave(eid)
     return {"use": GATE not in room.locked, "attack": enemy.state.hp < 3.0, "take": enemy.holder is player}[action]
@@ -271,7 +271,7 @@ def test_without_an_hd2d_world_nothing_changes(room: SceneRoom, monkeypatch: pyt
     gate = next(i for i, (_b, c) in flat.doors.items() if c.get("unlock_event") == _cfg["event_id"])
     eid = flat.join(Player(Body(float(lever["x"]), float(lever["y"]), *flat._template_size(),
                                 {**flat.template, "elevation": 64.0})))
-    flat.input(eid, {"v": wire.VERSION, "type": "input", "entity": eid, "seq": 1, "dx": 0, "dy": 0, "action": "use"})
+    flat.input(eid, {"v": wire.VERSION, "type": "input", "tick": 0, "entity": eid, "seq": 1, "dx": 0, "dy": 0, "action": "use"})
     flat.step()
     assert gate not in flat.locked and lever_id in flat.used, "a 2D room's lever is used whatever the elevations"
 
@@ -421,3 +421,153 @@ def test_the_ground_never_counts_as_a_floor_between() -> None:
     assert ground_at(world, 16.0, 8.0) > 0.35, "buried more than a step deep"
     for thing, up in ((offset, hero(9.5)), (buried, hero(9.0))):
         assert same_level(world, up, thing) and same_level(world, thing, up)
+
+
+def test_the_hitbox_asks_the_attackers_level_as_it_stands_each_tick(room: SceneRoom, world: World,
+                                                                    monkeypatch: pytest.MonkeyPatch) -> None:
+    """OD10: single-player's Hitbox asks same_level of its attacker (``mesh_attacker``) on every update, so an attacker
+    that rises within reach of a target its swing was refused at hits it on a later update; the authority's hitbox
+    asks of the attacker as it stands each tick too. Updates at 1/HZ s; the same update hits in both runtimes."""
+    Combat, Hitbox, Health = behaviour("Combat"), behaviour("Hitbox"), behaviour("Health")
+    monkeypatch.setattr(optional_arcade.arcade, "check_for_collision",
+                        lambda a, b: shapes_overlap(entity_shape(a), entity_shape(b)))
+    actor, target = placed(room, "stairs, just beyond reach above")
+    rises = [0.0, 0.0, 8.0, 8.0]  # px over its floor, on updates 1-4: within reach from update 3
+
+    actor_sprite: Any = sprite(*actor[:2], room._template_size(), {**room.template, "elevation": actor[2]})
+    actor_sprite.mesh_tag = actor_sprite.mesh_name = "player"
+    actor_sprite.angle, actor_sprite.change_x, actor_sprite.change_y = 0.0, 0.0, 0.0
+    enemy: Any = Thing(**vars(sprite(target[0], target[1], (0.0, 0.0), {"id": "target", "x": target[0],
+                                                                       "y": target[1], "elevation": target[2],
+                                                                       "components": BOX})))
+    enemy.mesh_tag, enemy.mesh_name, enemy.visible = "enemy", "target", True
+    enemy.remove_from_sprite_lists = lambda: None
+    hits = MagicMock()
+    hits.hd2d_world, hits.game_state_controller = world, None
+    health = Health(enemy, hits, max_hp=3.0, hp=3.0)
+    enemy.mesh_behaviours_runtime = [health]
+    made: list[Any] = []
+    hits.scene_controller = SimpleNamespace(
+        _create_sprite=lambda data: made.append(SimpleNamespace(center_x=data["x"], center_y=data["y"],
+                                                                width=room.hitbox, height=room.hitbox,
+                                                                mesh_entity_data=data, mesh_tag="",
+                                                                remove_from_sprite_lists=lambda: None)) or made[-1],
+        add_sprite_to_layer=lambda *_a: None, all_sprites=[actor_sprite, enemy])
+    assert Combat(actor_sprite, hits, damage=1.0, range=room.reach, hitbox_size=room.hitbox, cooldown=1.0).attack()
+    (box,) = made
+    hits.scene_controller.all_sprites.append(box)
+    hitbox = Hitbox(box, hits, **box.mesh_entity_data["behaviour_config"]["Hitbox"])
+    single = []
+    for k, rise in enumerate(rises, 1):
+        actor_sprite.mesh_entity_data["elevation"] = actor[2] + rise
+        before = health.hp
+        hitbox.update(1 / wire.HZ)
+        if health.hp < before:
+            single.append(k)
+
+    bandit = room.enemies[ENEMY]
+    bandit.body.center_x, bandit.body.center_y = target[:2]
+    bandit.body.mesh_entity_data["elevation"] = target[2]
+    bandit.state, bandit.dropped, bandit.holder = TargetState(hp=3.0, max_hp=3.0), False, None
+    eid = room.join(Player(Body(actor[0], actor[1], *room._template_size(), {**room.template, "elevation": actor[2]}),
+                           facing=0))
+    p = room.players[eid]
+    try:
+        room.input(eid, wire.input_frame(eid, 1, 0, 0, room.tick + 1, "attack"))
+        server, seen = [], bandit.hit_seq
+        for k, rise in enumerate(rises, 1):
+            p.body.mesh_entity_data["elevation"] = actor[2] + rise  # (the tool lifts it; nobody walks)
+            room.step()
+            if bandit.hit_seq > seen:
+                server.append(k)
+            seen = bandit.hit_seq
+    finally:
+        room.leave(eid)
+    assert single == [3], "single-player: refused while out of reach, hit once the attacker is within it"
+    assert server == single, "the authority asks the attacker's level as it stands on each tick, as the Hitbox"
+
+
+def test_a_cross_floor_attack_swings_and_never_flashes(room: SceneRoom) -> None:
+    """OD4: from the deck at an enemy on the ground beneath (in reach in the plane, refused by the floor rule), the
+    window shows the swing at once; the server starts the attack (its attack count rises) but nothing is hit, so the
+    enemy's hit count stays and the window shows no hit."""
+    from mesh_net.scene_client import SceneArena
+    from mesh_net.scene_room import Feedback
+
+    actor, target = placed(room, "deck, ground directly beneath")
+    bandit = room.enemies[ENEMY]
+    bandit.body.center_x, bandit.body.center_y = target[:2]
+    bandit.body.mesh_entity_data["elevation"] = target[2]
+    bandit.state, bandit.dropped, bandit.holder = TargetState(hp=3.0, max_hp=3.0), False, None
+    eid = room.join(Player(Body(actor[0], actor[1], *room._template_size(), {**room.template, "elevation": actor[2]}),
+                           facing=0))
+    shown: dict[str, list[Any]] = {"swings": [], "flashes": []}
+    view = SimpleNamespace(room=room, swing=lambda e, own: shown["swings"].append((e, own)),
+                           flash=lambda enemy: shown["flashes"].append(enemy))
+    arena: Any = SimpleNamespace(client=SimpleNamespace(entity=eid), arcade=SimpleNamespace(key=SimpleNamespace(SPACE=32)),
+                                 action_keys=set(), actions=[], feedback=Feedback(), view=view, clock=lambda: 5.0)
+    arena.act = lambda action, tick=None: arena.actions.append((action, tick))
+    try:
+        SceneArena.on_state(arena, room.snapshot(), eid, True)
+        SceneArena.press(arena, 32, 0)
+        ((action, tick),) = arena.actions
+        assert action == "attack" and shown["swings"] == [(eid, True)], "the swing, at once"
+        before = bandit.hit_seq
+        room.input(eid, wire.input_frame(eid, 1, 0, 0, tick, action))
+        for _ in range(room.lifetime + 1):
+            room.step()
+            SceneArena.on_state(arena, room.snapshot(), eid, False)
+        assert room.players[eid].attack_seq == 1, "the server ran the attack"
+        assert bandit.hit_seq == before and bandit.state.hp == 3.0, "nothing hit through the deck"
+        assert shown["flashes"] == [] and shown["swings"] == [(eid, True)], "no hit shown (and no second swing)"
+    finally:
+        room.leave(eid)
+
+
+def test_an_enemy_row_standing_on_a_floor_not_under_it_is_refused(room: SceneRoom) -> None:
+    """check_enemies: an HD-2D enemy row may name a floor (M4-4's movers) only where that floor is under it at its
+    elevation, within a step; a floor that exists but is elsewhere, or at another height, is refused, as a player
+    row's is; no floor (never stood) is fine."""
+    from mesh_net.scene_room import check_state
+
+    eid = room.join()
+    try:
+        state = room.snapshot()
+        (row,) = state["enemies"]
+
+        def with_enemy(x: float, y: float, elevation: float, floor: Any) -> dict[str, Any]:
+            return {**state, "enemies": [[row[0], row[1], row[2], x, y, elevation, floor]]}
+
+        check_state(state, room.identity, room)
+        check_state(with_enemy(*DECK_AT, 2.0 * M, "crossing/col_bridge_deck"), room.identity, room)
+        for bad in (with_enemy(*DECK_AT, 0.0, "crossing/col_bridge_deck"),  # (under the deck, at ground height)
+                    with_enemy(*OPEN_AT, 2.0 * M, "crossing/col_bridge_deck")):  # (the deck is elsewhere)
+            with pytest.raises(wire.Invalid, match="is not under it"):
+                check_state(bad, room.identity, room)
+        with pytest.raises(wire.Invalid, match="floor this room does not have"):
+            check_state(with_enemy(*DECK_AT, 2.0 * M, "crossing/col_no_such"), room.identity, room)
+    finally:
+        room.leave(eid)
+
+
+def test_an_old_attack_claim_never_lets_a_hit_cross_floors(room: SceneRoom) -> None:
+    """Owner condition 4 on floors: the attacker on the deck now, the enemy on the ground beneath; an attack claiming a
+    tick 10 back (when, say, both stood on the ground) runs, from the deck, and hits nothing: the floors are the
+    server's current ones."""
+    actor, target = placed(room, "deck, ground directly beneath")
+    bandit = room.enemies[ENEMY]
+    bandit.body.center_x, bandit.body.center_y = target[:2]
+    bandit.body.mesh_entity_data["elevation"] = target[2]
+    bandit.state, bandit.dropped, bandit.holder = TargetState(hp=3.0, max_hp=3.0), False, None
+    eid = room.join(Player(Body(actor[0], actor[1], *room._template_size(), {**room.template, "elevation": actor[2]}),
+                           facing=0))
+    try:
+        for _ in range(20):
+            room.step()
+        before = bandit.hit_seq
+        room.input(eid, wire.input_frame(eid, 1, 0, 0, room.tick - 10, "attack"))
+        for _ in range(room.lifetime + 1):
+            room.step()
+        assert room.players[eid].attack_seq == 1 and bandit.hit_seq == before and bandit.state.hp == 3.0
+    finally:
+        room.leave(eid)

@@ -613,17 +613,19 @@ class World:
 
 def welcome(session: str, player: int, resume: str, world: str) -> wire.Message:
     """The frame a world server answers a join with (mesh_net.server.WorldServer; check_welcome reads it)."""
-    return {"v": wire.VERSION, "type": "welcome", "session": session, "player": player, "resume": resume, "world": world}
+    return {"v": wire.VERSION, "type": "welcome", "session": session, "player": player, "resume": resume, "world": world,
+            "hz": wire.HZ}
 
 
 # --- client-side validation (a world client checks every frame it receives) -----------------------
 
 
 def check_welcome(msg: wire.Message, world: str) -> None:
-    wire.fields(msg, "welcome", "session", "player", "resume", "world")
+    wire.fields(msg, "welcome", "session", "player", "resume", "world", "hz")
     if (not isinstance(msg["session"], str) or not re.fullmatch(r"[0-9a-f]{32}", msg["session"])
             or not wire.integer(msg["player"], 1) or not wire.token(msg["resume"])):
         raise wire.Invalid("invalid welcome")
+    wire.check_hz(msg)
     if msg["world"] != world:
         raise wire.Invalid("the server runs a different world")
 

@@ -25,7 +25,7 @@ from . import protocol as wire
 from .demo import Arena, open_arena, reason
 from .playback import Playback
 from .scene_client import JoinRefused, SceneView
-from .scene_room import check_state
+from .scene_room import Feedback, check_progress, check_state
 from .world import World, check_frame, check_welcome, expedition_files
 
 SIZE = (640, 360)
@@ -66,6 +66,7 @@ class WorldArena(Arena):
         self.notice: tuple[str, float] | None = None
         self.requests: list[wire.Message] = []
         self.seq = 0
+        self.feedback = Feedback()
         self.last: float | None = None
         self.loads: list[str] = []  # the rooms this window loaded, in order (for diagnostics and tests)
         self.trace: deque[tuple[float, str]] = deque(maxlen=48)  # (monotonic seconds, what happened): diagnostics
@@ -92,13 +93,21 @@ class WorldArena(Arena):
         if self.connected and symbol not in self.action_keys:
             self.action_keys.add(symbol)
             if symbol == key.SPACE:
-                self.action = "attack"
+                # Only in the room on screen (inputs wait while one loads), and never in the cooldown: then a swing
+                # shows at once and the attack is sent; the server confirms only a hit.
+                tick = (self.feedback.press(self.clock()) if self.phase == "playing" and self.view is not None
+                        and self.shown == self.room and self.entity is not None else None)
+                if tick is not None and self.view is not None and self.entity is not None:
+                    self.act("attack", tick)  # the server judges its cooldown on this tick, as the window did
+                    self.view.swing(self.entity, own=True)
             elif symbol == key.E:
                 own = self._own()
-                # (the view must show the room the state is for: just after an enter it still shows the last one)
-                near = own is not None and self.view is not None and self.state is not None \
-                    and self.shown == self.room and self.view.near_drop(own[1], own[2], self.state)
-                self.action = "take" if near else "use"
+                # Only in the room on screen, as an attack: never one pressed while the next room loads (it would run
+                # in a room the player hasn't seen). (The view shows the state's room: just after an enter it doesn't.)
+                if (self.phase == "playing" and self.view is not None and self.state is not None
+                        and self.shown == self.room):
+                    near = own is not None and self.view.near_drop(own[1], own[2], self.state)
+                    self.act("take" if near else "use")
             elif symbol == key.P:
                 self._ask("create")
             elif symbol == key.I:
@@ -145,6 +154,8 @@ class WorldArena(Arena):
             check_state(msg["state"], identity, room)  # (its rows against this window's own room, before any is kept)
             self.room, self.key, self.entity = msg["room"], msg["key"], msg["entity"]
             self.state = msg["state"]
+            self.feedback.baseline(self.state, room.cooldown, now)  # (another room instance: its own counters)
+            self.actions.clear()  # (what was pressed in the last room is never sent into this one)
             self.playback = Playback(lambda s: check_state(s, identity, room))
             self.playback.push(self.state, now)
             self.pending, self.phase = msg, "loading"
@@ -155,10 +166,19 @@ class WorldArena(Arena):
             check_state(state, self.identities[self.key], self.defs[self.key].proto)
             if self.state is not None and state["tick"] <= self.state["tick"]:
                 raise wire.Invalid("room state out of order")
-            if not any(r[0] == self.entity for r in state["players"]):
+            own = self.entity
+            if own is None or not any(r[0] == own for r in state["players"]):
                 raise wire.Invalid("room state without the player's own avatar")
+            if self.state is not None:
+                check_progress(self.state, state, own, self.seq)
             self.state = state
             self.playback.push(state, now)
+            swung, hit = self.feedback.update(state, own, now)
+            if self.view is not None and self.shown == self.room:  # (a view still loading shows none of it)
+                for eid in swung:
+                    self.view.swing(eid, own=False)
+                for enemy in hit:
+                    self.view.flash(enemy)
         elif kind == "party":
             self.party = msg
         elif kind == "character":
@@ -192,15 +212,15 @@ class WorldArena(Arena):
                         for request in self.requests:
                             writer.write(wire.encode(request))
                         self.requests.clear()
-                        if self.phase == "playing" and self.shown == self.room:  # no input while a room loads
+                        if self.phase == "playing" and self.shown == self.room and self.entity is not None:
+                            # (no input while a room loads)
                             direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
-                            action, self.action = self.action, None
+                            action, tick = self.next_action()
                             self.seq += 1
-                            frame = {"v": wire.VERSION, "type": "input", "room": self.room, "entity": self.entity,
-                                     "seq": self.seq, "dx": direction[0], "dy": direction[1]}
-                            if action is not None:
-                                frame["action"] = action
-                            writer.write(wire.encode(frame))
+                            if tick is None:  # (the next tick)
+                                tick = self.state["tick"] + 1 if self.state is not None else 0
+                            writer.write(wire.encode(wire.input_frame(self.entity, self.seq, *direction, tick, action,
+                                                                      room=self.room)))
                         await asyncio.wait_for(writer.drain(), 2)
                         due = max(due + 1 / wire.HZ, loop.time())  # fixed schedule: no drift; after a stall, one extra send
                         await asyncio.sleep(due - loop.time())
@@ -244,6 +264,7 @@ class WorldArena(Arena):
         finally:
             self.phase, self.room, self.pending = "disconnected", None, None
             self.blur()
+            self.actions.clear()  # (the session they were pressed in is over: never sent in another)
             self.requests.clear()
 
     def caption(self) -> str:

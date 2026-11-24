@@ -201,13 +201,13 @@ def test_two_windows_play_the_studio_scene_together(record_testsuite_property):
             await go(a, aid, "DOWN", *ON_ENEMY)
             await hold(b, "RIGHT", b, lambda s: pos(s, bid)[0] >= 560)
             await tap(a, "SPACE")
-            await observe(b, lambda s: s["enemies"] == [[bandit, 2.0]])
+            await observe(b, lambda s: [e[:2] for e in s["enemies"]] == [[bandit, 2.0]])
             await tap(b, "SPACE")
-            await observe(a, lambda s: s["enemies"] == [[bandit, 1.0]])
+            await observe(a, lambda s: [e[:2] for e in s["enemies"]] == [[bandit, 1.0]])
             ready = room.tick + room.cooldown
             await observe(a, lambda s: s["tick"] >= ready)
             await tap(a, "SPACE")
-            await asyncio.gather(*(observe(p, lambda s: s["enemies"] == [[bandit, 0.0]] and s["drops"] == [bandit])
+            await asyncio.gather(*(observe(p, lambda s: [e[:2] for e in s["enemies"]] == [[bandit, 0.0]] and s["drops"] == [bandit])
                                    for p in procs))
             for proc in procs:
                 shot = await command(proc, "capture")
@@ -380,10 +380,10 @@ def test_two_windows_meet_party_travel_and_return(record_testsuite_property):
                 await go(proc, "DOWN", *ON_ENEMY)
                 await until(proc, lambda r: facing(r) == 3)
             await tap(a, "SPACE")
-            await until(b, lambda r: r["state"]["enemies"] == [[guardian, 1.0]])
+            await until(b, lambda r: [e[:2] for e in r["state"]["enemies"]] == [[guardian, 1.0]])
             await tap(b, "SPACE")
             for proc in procs:
-                await until(proc, lambda r: r["state"]["enemies"] == [[guardian, 0.0]] and r["state"]["drops"] == [guardian])
+                await until(proc, lambda r: [e[:2] for e in r["state"]["enemies"]] == [[guardian, 0.0]] and r["state"]["drops"] == [guardian])
                 assert (await command(proc, "capture"))["drops"] == [guardian]
 
             # a returns to Layer 1 (b stays): each window shows only its own room's players.
@@ -408,7 +408,7 @@ def test_two_windows_meet_party_travel_and_return(record_testsuite_property):
                 return until(a, lambda r: [m[1] for m in r["party"]["members"]] == [True, False])
             back = await drop_and_resume(lambda cmd: command(b, cmd), world, pids[b], rb["room"], away=b_away)
             assert back["room"] == rb["room"] and back["key"] == r2 and len(back["state"]["players"]) == 1
-            assert back["state"]["enemies"] == [[guardian, 0.0]]
+            assert [e[:2] for e in back["state"]["enemies"]] == [[guardian, 0.0]]
             await until(a, lambda r: [m[1] for m in r["party"]["members"]] == [True, True])
             await shot(b, [back["entity"]])
         finally:
@@ -555,7 +555,7 @@ def test_two_characters_persist_through_a_server_restart(tmp_path, record_testsu
                 await _go(p, "DOWN", *ON_ENEMY, walks)
                 await _state(p, lambda r: r["phase"] == "playing" and r["state"] and _own(r)[2] == 3, why="facing it")
             await _tap(a, "SPACE")
-            await _state(b, lambda r: playing(r) and r["state"]["enemies"] == [[guardian, 1.0]], why="first hit")
+            await _state(b, lambda r: playing(r) and [e[:2] for e in r["state"]["enemies"]] == [[guardian, 1.0]], why="first hit")
             await _tap(b, "SPACE")
             for p in procs:  # both were there: both earn the unlock, both may take their own sigil
                 await _state(p, lambda r: playing(r) and unlock in r["sheet"]["unlocks"] and r["sheet"]["loot"],

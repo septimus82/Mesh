@@ -16,6 +16,7 @@ import copy
 
 import pytest
 
+from mesh_net import protocol as wire
 from mesh_net.scene_room import COOP_SCENE, SceneRoom, coop_files, disposable_project
 from mesh_net.world import World, expedition_files
 from tests.net_sim_time import run as simulated
@@ -81,7 +82,7 @@ class LateWindow:
         if not self.deaf:
             self.seq += 1
             dx, dy = DIRECTIONS[self.keys[-1]] if self.keys else (0, 0)
-            self.room.input(self.eid, {"v": 2, "type": "input", "entity": self.eid, "seq": self.seq, "dx": dx, "dy": dy})
+            self.room.input(self.eid, {"v": wire.VERSION, "type": "input", "tick": 0, "entity": self.eid, "seq": self.seq, "dx": dx, "dy": dy})
         self.room.step()
 
 

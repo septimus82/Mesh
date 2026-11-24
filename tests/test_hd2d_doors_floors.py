@@ -115,7 +115,7 @@ def authority(net: NetWorld, at: Body, z: float, script: list[tuple[int, int]]) 
     hub.touching[m.eid] = net._doors_touched(hub, body)
     assert not hub.touching[m.eid], "nothing touched where it starts"
     for tick, (dx, dy) in enumerate(script, 1):
-        net.input(pid, {"v": wire.VERSION, "type": "input", "room": m.instance, "entity": m.eid, "seq": tick,
+        net.input(pid, {"v": wire.VERSION, "type": "input", "tick": 0, "room": m.instance, "entity": m.eid, "seq": tick,
                         "dx": dx, "dy": dy})
         net.step()
         if m.instance != hub.id:

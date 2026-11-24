@@ -303,7 +303,7 @@ class Client:
 
         client = cls()
         client.reader, client.writer = await asyncio.open_connection("127.0.0.1", port, limit=wire.MAX_BYTES)
-        client.writer.write(wire.encode({"v": 2, "type": "join", "resume": None, "character": credential}))
+        client.writer.write(wire.encode({"v": wire.VERSION, "type": "join", "resume": None, "character": credential}))
         client.task = asyncio.create_task(client._read())
         return client
 

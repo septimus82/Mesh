@@ -27,7 +27,17 @@ from engine.physics_model import entity_aabb
 from mesh_net import protocol as wire
 from mesh_net.client import connect
 from mesh_net.scene_client import JoinRefused, SceneView, check_window_world
-from mesh_net.scene_room import COOP_SCENE, Player, SceneRoom, Unsupported, check_state, coop_files, disposable_project, load_scene
+from mesh_net.scene_room import (
+    COOP_SCENE,
+    Feedback,
+    Player,
+    SceneRoom,
+    Unsupported,
+    check_state,
+    coop_files,
+    disposable_project,
+    load_scene,
+)
 from mesh_net.server import Server
 from mesh_net.world import WORLD_FILE, World, check_welcome, welcome
 
@@ -110,7 +120,7 @@ class Walker:
 
     def send(self, eid: int, dx: int, dy: int) -> None:
         self.seq += 1
-        self.room.input(eid, {"v": 2, "type": "input", "entity": eid, "seq": self.seq, "dx": dx, "dy": dy})
+        self.room.input(eid, {"v": wire.VERSION, "type": "input", "tick": 0, "entity": eid, "seq": self.seq, "dx": dx, "dy": dy})
 
 
 def test_the_authority_walks_the_crossing_on_the_shared_floor_solver(crossing: dict[str, bytes]) -> None:
@@ -227,7 +237,7 @@ def make_world(files: dict[str, bytes]) -> World:
 def walk_through(world: World, pid: int, dx: int, dy: int, ticks: int = 60) -> None:
     for seq in range(1, ticks + 1):
         m = world.members[pid]
-        world.input(pid, {"v": 2, "type": "input", "room": m.instance, "entity": m.eid, "seq": seq, "dx": dx, "dy": dy})
+        world.input(pid, {"v": wire.VERSION, "type": "input", "tick": 0, "room": m.instance, "entity": m.eid, "seq": seq, "dx": dx, "dy": dy})
         world.step()
         if m.instance != world.hub.id or world.members[pid].outbox and any(
                 f["type"] == "notice" for f in world.members[pid].outbox):
@@ -247,7 +257,7 @@ def test_an_arrival_keeps_the_rooms_elevation_and_one_that_cant_stand_is_refused
     walk_through(world, pid, 0, -1)  # into "down": the deck room's player (2 m up) can't stand on its ground arrival
     m = world.members[pid]
     assert m.instance == world.hub.id and m.eid in world.hub.room.players, "refused: still where it was"
-    assert {"v": 2, "type": "notice", "code": "transfer_failed"} in m.outbox
+    assert {"v": wire.VERSION, "type": "notice", "code": "transfer_failed"} in m.outbox
     assert world.history[-1][2:] == ("transfer", pid, f"{world.hub.id} down transfer_failed")
     m.outbox.clear()
     walk_through(world, pid, 0, 1)  # into "up": its arrival on the west platform
@@ -256,7 +266,7 @@ def test_an_arrival_keeps_the_rooms_elevation_and_one_that_cant_stand_is_refused
     body = world.instances[m.instance or ""].room.players[m.eid].body
     assert (body.center_x, body.center_y) == (317.0, 391.5), "the marker's x/y"
     assert body.mesh_entity_data["elevation"] == 64.0, "the room's player elevation, kept (single-player's rule)"
-    world.input(pid, {"v": 2, "type": "input", "room": m.instance, "entity": m.eid, "seq": 999, "dx": 0, "dy": -1})
+    world.input(pid, {"v": wire.VERSION, "type": "input", "tick": 0, "room": m.instance, "entity": m.eid, "seq": 999, "dx": 0, "dy": -1})
     world.step()
     assert getattr(body, "mesh_hd2d_floor", None) == "crossing/col_platform_west" and body.mesh_entity_data["elevation"] == 64.0
 
@@ -402,10 +412,11 @@ def test_the_authority_runs_an_hd2d_room_without_graphics(crossing: dict[str, by
         (project / rel).parent.mkdir(parents=True, exist_ok=True)
         (project / rel).write_bytes(data)
     code = ("import sys; from pathlib import Path; from mesh_net.scene_room import *; from mesh_net.server import Server\n"
+            "from mesh_net import protocol as wire\n"
             f"files = {{p.relative_to(r).as_posix(): p.read_bytes() for r in [Path({str(project)!r})] for p in r.rglob('*') if p.is_file()}}\n"
             "with disposable_project(files, scaffold=False) as root: room = SceneRoom(root / 'packs/core_regions/scenes/start.json', root)\n"
             "Server(room); eid = room.join()\n"
-            "for seq in range(1, 31): room.input(eid, {'v': 2, 'type': 'input', 'entity': eid, 'seq': seq, 'dx': -1, 'dy': 0}); room.step()\n"
+            "for seq in range(1, 31): room.input(eid, wire.input_frame(eid, seq, -1, 0, room.tick + 1)); room.step()\n"
             "assert room.world is not None and room.players[eid].body.center_x < 512 - 100\n"
             "bad = [k for k in ('arcade', 'pyglet', 'engine.game', 'engine.studio', 'engine.physics_runtime') if k in sys.modules]\n"
             "assert not bad, bad\n"
@@ -441,6 +452,7 @@ def headless_view(room: SceneRoom) -> SceneView:
     view.window, view.arcade, view.scene = SimpleNamespace(hd2d_renderer=None, on_draw=lambda: None), None, scene
     view.room, view.identity, view.template = room, room.identity, dict(room.template)
     view.sprites, view.doors, view.levers, view.colors, view.avatars, view.drops = {}, [], [], {}, {}, {}
+    view.enemy_colors, view.flashes = {}, {}
     return view
 
 
@@ -463,7 +475,7 @@ def test_a_body_on_the_deck_arrives_at_other_clients_at_deck_height(crossing: di
         server.step()
         state = server.snapshot()
         assert playback.push(state, t / wire.HZ)
-    assert row(state, deck)[4:] == [64.0, DECK] and row(state, under)[4:] == [0.0, "ground"]
+    assert row(state, deck)[4:6] == [64.0, DECK] and row(state, under)[4:6] == [0.0, "ground"]
     view = headless_view(client)
     arena: Any = SimpleNamespace(client=SimpleNamespace(state=state, entity=under), playback=playback, view=view,
                                  last=None)
@@ -482,7 +494,7 @@ def test_the_level_on_the_wire_is_the_authoritys_own(crossing: dict[str, bytes])
     room, client = make_room(crossing), make_room(dict(crossing))
     walk = Walker(room)
     a = room.join()
-    assert row(room.snapshot(), a)[4:] == [0.0, "ground"], "a body not yet moved"
+    assert row(room.snapshot(), a)[4:6] == [0.0, "ground"], "a body not yet moved"
     walk.drive(a, -1, 0, 10.0)
     floors = set()
     for _ in range(80):
@@ -491,7 +503,7 @@ def test_the_level_on_the_wire_is_the_authoritys_own(crossing: dict[str, bytes])
         state = room.snapshot()
         check_state(state, client.identity, client)
         elevation, floor = walk.where(a)
-        assert row(state, a)[4:] == [elevation, floor]
+        assert row(state, a)[4:6] == [elevation, floor]
         floors.add(floor)
     assert {"ground", "crossing/col_stairs_west", "crossing/col_platform_west"} <= floors
 
@@ -512,31 +524,34 @@ def test_malformed_rows_are_refused_whole(crossing: dict[str, bytes]) -> None:
     def with_deck(new: list[Any]) -> dict[str, Any]:
         return {**good, "players": [new if r[0] == deck else r for r in good["players"]]}
 
-    nan = [*d[:4], float("nan"), DECK]
-    bad_rows = [d[:5], [*d, None], [*d[:4], "64", DECK], [*d[:4], True, DECK], [*d[:4], None, DECK], nan,
-                [*d[:4], float("inf"), DECK], [*d[:4], -float("inf"), DECK], [*d[:4], 100_001.0, DECK],
-                [*d[:4], 64.0, 3], [*d[:4], 64.0, ""], [*d[:4], 64.0, "x" * 129], [*d[:4], 64.0, "crossing/col_no_such"],
+    nan = [*d[:4], float("nan"), DECK, *d[6:]]
+    bad_rows = [d[:5], d[:6], [*d, None], [*d[:4], "64", DECK, *d[6:]], [*d[:4], True, DECK, *d[6:]],
+                [*d[:4], None, DECK, *d[6:]], nan, [*d[:4], float("inf"), DECK, *d[6:]],
+                [*d[:4], -float("inf"), DECK, *d[6:]], [*d[:4], 100_001.0, DECK, *d[6:]], [*d[:4], 64.0, 3, *d[6:]],
+                [*d[:4], 64.0, "", *d[6:]], [*d[:4], 64.0, "x" * 129, *d[6:]],
+                [*d[:4], 64.0, "crossing/col_no_such", *d[6:]],
                 [d[0], float("nan"), *d[2:]]]
     for bad in bad_rows:
         with pytest.raises(wire.Invalid):
             check_state(with_deck(bad), room.identity, room)
     # The world client: a refused frame changes nothing it holds (no half-applied state).
     arena: Any = SimpleNamespace(identities={"start": room.identity}, defs={"start": SimpleNamespace(proto=room)},
-                                 room=None, key=None, entity=None, state=None, playback=None, pending=None, phase="loading")
-    enter = {"v": 2, "type": "enter", "room": "start:1", "key": "start", "entity": deck}
+                                 room=None, key=None, entity=None, state=None, playback=None, pending=None, phase="loading",
+                                 feedback=Feedback(), seq=0, actions=[], view=None, shown=None)
+    enter = {"v": wire.VERSION, "type": "enter", "room": "start:1", "key": "start", "entity": deck}
     with pytest.raises(wire.Invalid):
         WorldArena.on_frame(arena, {**enter, "state": with_deck(nan)}, 0.0)
     assert (arena.room, arena.state, arena.playback, arena.pending) == (None, None, None, None)
     WorldArena.on_frame(arena, {**enter, "state": good}, 0.0)
     kept = arena.state
-    newer = {**with_deck([*d[:4], float("inf"), DECK]), "tick": good["tick"] + 1}
+    newer = {**with_deck([*d[:4], float("inf"), DECK, *d[6:]]), "tick": good["tick"] + 1}
     with pytest.raises(wire.Invalid):
-        WorldArena.on_frame(arena, {"v": 2, "type": "room_state", "room": "start:1", "state": newer}, 0.1)
+        WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "room_state", "room": "start:1", "state": newer}, 0.1)
     assert arena.state is kept and arena.playback.states[-1] is kept
     # Inconsistent (well-formed, newer, but the deck body standing on the ground at deck height): refused whole too.
-    wrong = {**with_deck([*d[:4], 64.0, "ground"]), "tick": good["tick"] + 1}
+    wrong = {**with_deck([*d[:4], 64.0, "ground", *d[6:]]), "tick": good["tick"] + 1}
     with pytest.raises(wire.Invalid, match="is not under it") as refused:
-        WorldArena.on_frame(arena, {"v": 2, "type": "room_state", "room": "start:1", "state": wrong}, 0.1)
+        WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "room_state", "room": "start:1", "state": wrong}, 0.1)
     assert arena.state is kept and list(arena.playback.states) == [kept], "nothing of it applied"
     assert "is not under it" in reason(refused.value), "the session ends saying why"
 
@@ -549,11 +564,13 @@ def test_rows_inconsistent_with_the_clients_own_world_are_refused(crossing: dict
     room.step()
     good = room.snapshot()
     d, u = row(good, deck), row(good, under)
-    for bad_deck, bad_under in (([*d[:4], 0.0, DECK], u), (d, [*u[:4], 0.0, DECK]), ([*d[:4], 64.0, "ground"], u),
-                                ([*d[:4], 64.0, "crossing/col_platform_east"], u), ([*d[:4], 50.0, DECK], u)):
+    for bad_deck, bad_under in (([*d[:4], 0.0, DECK, *d[6:]], u), (d, [*u[:4], 0.0, DECK, *u[6:]]),
+                                ([*d[:4], 64.0, "ground", *d[6:]], u),
+                                ([*d[:4], 64.0, "crossing/col_platform_east", *d[6:]], u),
+                                ([*d[:4], 50.0, DECK, *d[6:]], u)):
         with pytest.raises(wire.Invalid, match="is not under it"):
             check_state({**good, "players": sorted([bad_deck, bad_under])}, room.identity, room)
-    check_state({**good, "players": sorted([[*d[:4], 60.0, DECK], u])}, room.identity, room)  # (within a step)
+    check_state({**good, "players": sorted([[*d[:4], 60.0, DECK, *d[6:]], u])}, room.identity, room)  # (within a step)
 
 
 def test_a_client_can_never_place_a_body(crossing: dict[str, bytes]) -> None:
@@ -563,7 +580,7 @@ def test_a_client_can_never_place_a_body(crossing: dict[str, bytes]) -> None:
 
     room = make_room(crossing)
     eid = room.join()
-    base = {"v": 2, "type": "input", "entity": eid, "seq": 1, "dx": 0, "dy": 0}
+    base = {"v": wire.VERSION, "type": "input", "tick": 0, "entity": eid, "seq": 1, "dx": 0, "dy": 0}
     for extra in ({"elevation": 64.0}, {"floor": DECK}, {"x": 1.0, "y": 1.0}, {"z": 2.0}, {"level": [64.0, DECK]}):
         with pytest.raises(wire.Invalid):
             room.input(eid, {**base, **extra})
@@ -629,4 +646,4 @@ def test_a_row_within_its_rounding_of_a_floors_edge_is_accepted(crossing: dict[s
     check_state(at(0.004), room.identity, room)  # within the rounding: accepted
     with pytest.raises(wire.Invalid, match="is not under it"):
         check_state(at(0.02), room.identity, room)  # beyond it: refused
-    assert d[4:] == [64.0, DECK]
+    assert d[4:6] == [64.0, DECK]
