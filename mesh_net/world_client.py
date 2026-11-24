@@ -162,6 +162,7 @@ class WorldArena(Arena):
             self.state = msg["state"]
             self.feedback.baseline(self.state, room.cooldown, now)  # (another room instance: its own counters)
             self.actions.clear()  # (what was pressed in the last room is never sent into this one)
+            self.riders = None
             self.prediction.stop()  # (nor walked again in this one)
             self.playback = Playback(lambda s: check_state(s, identity, room))
             self.playback.push(self.state, now)
@@ -272,6 +273,7 @@ class WorldArena(Arena):
             self.phase, self.room, self.pending = "disconnected", None, None
             self.blur()
             self.actions.clear()  # (the session they were pressed in is over: never sent in another)
+            self.riders = None
             self.prediction.stop()
             self.requests.clear()
 

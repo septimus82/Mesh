@@ -90,22 +90,48 @@ HITBOX_S = 0.2  # the hitbox Combat makes lives this long (engine.behaviours.com
 COOLDOWN_CLAIM_WINDOW = 12
 PENDING = 4  # attacks, and uses or takes, a player may have waiting (one of each is read a tick); more are dropped
 # How the server reads inputs (owner decision OD11, M4-3): each tick reads ONE input, the oldest waiting, and walks one
-# step with its direction; at most DEPTH wait (a full queue drops its oldest: the newest direction wins). An input's
+# step with its direction; at most ``depth`` wait (a full queue drops its oldest: the newest direction wins). An input's
 # actions wait apart (``attacks``, ``actions``: PENDING each, one of each kind a tick) and run once the tick reads
 # their own input or a later one, so a dropped direction never loses an attack, a use or a take. A tick with nothing
-# waiting walks only while under HOLD ticks from the last input read (its own included): with HOLD 1, never a step no
-# input gave. One input is one step, so a client predicts its own avatar exactly (Prediction).
-# DEPTH 8 and HOLD 1 were chosen over OD11's starting depth 2 (and the old 5-tick lease) on same-seed measurements
-# (docs/plans/m4_online_combat.md, M4-3 "As implemented": the variant matrix). TCP holds everything behind a lost
-# segment for RTT + RTO (6 ticks at 100 ms, 8 at 200 ms) and then delivers it at once: a queue that keeps that burst
-# walks every step the player took, a tick each, so the window's prediction is not corrected; depth 2 dropped them
-# (corrections p95 37.5 px at 100 ms), and walking on with nothing waiting overshot a release. The cost: once a burst
-# is kept, the server runs that many ticks behind while the player keeps walking (others see it later, a swing made
-# walking waits behind those steps), until the player stands.
-# While the player stands, that backlog is given back: of two still inputs waiting, the older is dropped (it would walk
-# nowhere, as the one after it; its actions run with that one). Never a step: no correction.
-DEPTH = 8
-HOLD = 1
+# waiting walks only while under ``hold`` ticks from the last input read (its own included): with hold 1, never a step
+# no input gave. While the player stands, of two still inputs waiting, the older is dropped (it would walk nowhere, as
+# the one after it; its actions run with that one: never a correction). ``drain`` (0: off): whenever more than one
+# input has waited ``drain`` ticks in a row, the oldest waiting is dropped (its direction, never its actions): a backlog
+# decays, at a one-step correction each, instead of lasting until the player stands.
+# Why: TCP holds everything behind a lost segment for RTT + RTO (6 ticks at 100 ms, 8 at 200 ms), then delivers it at
+# once. A shallow queue drops that burst (corrections); a deep one keeps it and runs that many ticks behind while the
+# player walks on; the drain keeps it and then gives the lateness back a step at a time. Measured, per preset, in
+# docs/plans/m4_online_combat.md (M4-3 "As implemented").
+# THE DEFAULT IS PROVISIONAL (owner decision, 2026-11-24): "drain", subject to the owner playing the alternatives in the
+# M4 demo; it is not the permanent architecture. All three stay selectable (mesh_net.server: --queue, --input-*).
+QUEUE_PRESETS = {
+    "drain": (8, 1, 4),  # deep, never walking on, a lasting backlog drained a step every 4 ticks (PROVISIONAL default)
+    "deep": (8, 1, 0),  # deep, never walking on, no drain: no correction from a held burst; lateness while walking
+    "small": (2, 5, 0),  # OD11's starting depth with the old 5-tick lease: little lateness; corrections after a burst
+}
+QUEUE = "drain"
+DEPTH, HOLD, DRAIN = QUEUE_PRESETS[QUEUE]
+QUEUE_LIMITS = {"depth": (1, 20), "hold": (1, wire.HZ // 4), "drain": (2, 20)}  # (drain 0 is off)
+
+
+def queue_settings(depth: object = None, hold: object = None, drain: object = None,
+                   preset: object = None) -> tuple[int, int, int]:
+    """The server's input-queue settings (depth, hold, drain), checked: each given value, else the preset's
+    (QUEUE_PRESETS; None: DEPTH, HOLD, DRAIN). Whole numbers within QUEUE_LIMITS (depth up to a second of input, hold up
+    to the old 5-tick lease, drain 0 or 2-20 ticks); anything else, or an unknown preset, is refused (ValueError)."""
+    if preset is not None and (not isinstance(preset, str) or preset not in QUEUE_PRESETS):
+        raise ValueError(f"input queue preset must be one of {', '.join(QUEUE_PRESETS)}, not {str(preset)[:16]!r}")
+    base = QUEUE_PRESETS[preset] if isinstance(preset, str) else (DEPTH, HOLD, DRAIN)
+    values: dict[str, Any] = {name: base[i] if value is None else value for i, (name, value) in
+              enumerate((("depth", depth), ("hold", hold), ("drain", drain)))}
+    for name, value in values.items():
+        low, high = QUEUE_LIMITS[name]
+        if type(value) is not int or not (low <= value <= high or (name == "drain" and value == 0)):
+            raise ValueError(f"input queue {name} must be a whole number in {low}-{high}"
+                             f"{' or 0 (off)' if name == 'drain' else ''}, not {value!r}")
+    return values["depth"], values["hold"], values["drain"]
+
+
 # The packaged co-op room (tooling/make_coop_scene.py): where each file goes in a project.
 COOP_FILES = {"packs/core_regions/scenes/start.json": "scene.json", "packs/core_regions/maps/start.json": "map.json",
               "assets/prefabs.json": "prefabs.json"}
@@ -435,7 +461,8 @@ class Player:
     dy: int = 0
     facing: int = 3
     seq: int = 0  # the newest input received
-    held: int = HOLD  # ticks since the last input was read (0: this tick's); it walks while under HOLD
+    held: int = HOLD  # ticks since the last input was read (0: this tick's); it walks while under the room's hold
+    deep: int = 0  # ticks in a row that more than one input waited after the read (the room's drain)
     moves: deque[tuple[int, int, int]] = field(default_factory=deque)  # inputs waiting (seq, dx, dy), at most DEPTH
     actions: list[tuple[int, str]] = field(default_factory=list)  # uses and takes waiting (seq of its input, action)
     attacks: list[tuple[int, int]] = field(default_factory=list)  # attacks waiting (seq of its input, tick meant for)
@@ -470,7 +497,10 @@ def hitbox_ticks(hz: int = wire.HZ) -> int:
 class SceneRoom:
     """Same interface as mesh_net.simulation.Room, so mesh_net.server.Server hosts either."""
 
-    def __init__(self, path: Path, root: Path | None = None) -> None:
+    def __init__(self, path: Path, root: Path | None = None, *, depth: int | None = None, hold: int | None = None,
+                 drain: int | None = None) -> None:
+        """``depth``, ``hold``, ``drain``: the input queue's settings (queue_settings; None: DEPTH, HOLD, DRAIN)."""
+        self.depth, self.hold, self.drain = queue_settings(depth, hold, drain)
         root = root or path.parent
         scene_hash, scene = load_scene(path)
         refuse_unsupported(scene)
@@ -541,9 +571,9 @@ class SceneRoom:
         self.next_id = 1
         self.players: dict[int, Player] = {}
         # Attacks not run (diagnostics; never on the wire): stale (meant more than COOLDOWN_CLAIM_WINDOW ticks ago), refused in
-        # the cooldown; actions dropped because PENDING were already waiting; and directions dropped from a full
-        # queue (DEPTH: their actions still run).
-        self.stale_attacks = self.refused_attacks = self.dropped_actions = self.dropped_moves = 0
+        # the cooldown; actions dropped because PENDING were already waiting; directions dropped from a full queue
+        # (depth), and directions the drain dropped from a lasting backlog (drain) (their actions still run).
+        self.stale_attacks = self.refused_attacks = self.dropped_actions = self.dropped_moves = self.drained_moves = 0
         try:
             wire.encode({"v": wire.VERSION, **self._worst_snapshot()})
         except wire.Invalid as exc:
@@ -624,7 +654,7 @@ class SceneRoom:
     def leave(self, eid: int) -> Player:
         p = self.players.pop(eid)
         p.dx = p.dy = 0
-        p.seq, p.held = 0, HOLD
+        p.seq, p.held, p.deep = 0, self.hold, 0
         p.moves.clear()  # (no input sent for this room ever walks it in another)
         p.actions.clear()
         p.attacks.clear()
@@ -638,7 +668,7 @@ class SceneRoom:
         if seq <= p.seq:
             return
         p.seq = seq
-        if len(p.moves) >= DEPTH:  # (full: the oldest direction goes; its actions stay, and run when this one is read)
+        if len(p.moves) >= self.depth:  # (full: the oldest direction goes; its actions stay, and run with this one)
             p.moves.popleft()
             self.dropped_moves += 1
         p.moves.append((seq, dx, dy))
@@ -694,6 +724,11 @@ class SceneRoom:
                 p.ack, p.dx, p.dy = p.moves.popleft()
                 p.held = 0
                 p.facing = facing_of(p.dx, p.dy, p.facing)
+                p.deep = p.deep + 1 if len(p.moves) > 1 else 0
+                if self.drain and p.deep >= self.drain:  # (a lasting backlog: its oldest direction goes, never an action)
+                    p.moves.popleft()
+                    p.deep = 0
+                    self.drained_moves += 1
             else:
                 p.held += 1
             if p.hitboxes:  # its earlier attacks' hitboxes, where they were made, the attacker as it now stands
@@ -709,7 +744,7 @@ class SceneRoom:
                 solids = self.solids()  # a gate that just opened stops blocking from here on
             elif action == "take":
                 self._take(p)
-            if p.held < HOLD:
+            if p.held < self.hold:
                 self.walk(p.body, p.dx, p.dy, solids)
 
     @staticmethod

@@ -185,6 +185,7 @@ class Arena:
             self.client = None
             self.blur()
             self.actions.clear()  # (the session they were pressed in is over: never sent in another)
+            self.riders = None
             if self.prediction is not None:
                 self.prediction.stop()  # (nor walked again in another)
             self.playback = Playback()

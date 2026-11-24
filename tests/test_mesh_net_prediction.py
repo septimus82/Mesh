@@ -392,9 +392,10 @@ def test_an_n7_transfer_walks_nothing_into_the_new_room() -> None:
     for seq in (1, 2, 3):  # sent in the last room, never acknowledged there
         arena.prediction.next((1, 0))
         arena.prediction.sent(seq)
-    arena.seq = 3
+    arena.seq, arena.riders = 3, 0  # (and an action pressed after a press-built input, waiting for the next)
     WorldArena.on_frame(arena, enter, 1.0)
     assert arena.prediction.body is None and not arena.prediction.inputs, "stopped at the enter"
+    assert arena.riders is None, "no action held back for an input of the last room"
     arena.prediction.press((1, 0))  # (a key while the room loads: nothing predicted, nothing built)
     assert not arena.prediction.inputs
     original = world_client.SceneView
@@ -424,13 +425,14 @@ def test_a_sessions_end_stops_the_prediction() -> None:
             arena.prediction = Prediction()
             arena.prediction.start(room, room.snapshot(), eid)
             arena.prediction.next((1, 0))
+            arena.riders = 0
             if make == "scene":
                 asyncio.run(Arena.session(arena, port))
             else:
                 arena.__dict__.update(port=None, character=None, note=lambda _e: None, phase="playing", room="start:1",
                                       pending=None, requests=[])
                 asyncio.run(WorldArena.session(arena, port))
-            assert arena.prediction.body is None and not arena.prediction.inputs, make
+            assert arena.prediction.body is None and not arena.prediction.inputs and arena.riders is None, make
 
 
 # --- the owner's safeguards, on the virtual clock ---------------------------------------------------------------
@@ -701,6 +703,7 @@ def test_the_prediction_walks_through_what_the_snapshot_opened() -> None:
     server, client = two_rooms()
     gate = next(iter(client.doors))
     assert gate in client.locked and gate not in server.locked
+    server.drain = 0  # (what blocks is the question here: the backlog below is kept whole, as "deep" keeps it)
     eid = server.join()
     place(server, eid, 380.0, 256.0, 0)  # (a locked gate stops a walk right at 390.5)
     prediction = Prediction()
@@ -887,6 +890,106 @@ def test_an_n7_window_labels_each_input_with_the_seq_it_goes_as() -> None:
 
     labels = asyncio.run(run())
     assert len(labels.got) >= 5 and labels.given[:len(labels.got)] == labels.got
+
+
+# --- the queue's settings (M4-3 round 3: the owner chooses at the M4 checkpoint) -----------------------------
+
+
+def test_the_queue_settings_are_checked_and_bounded() -> None:
+    """depth 1-20, hold 1-5, drain 0 (off) or 2-20, whole numbers only: anything else is refused, before a room is
+    built. The defaults are the provisional preset, "drain" (owner decision 2026-11-24); "deep" and "small" are the
+    others, and a knob given overrides its preset's."""
+    from mesh_net.scene_room import DRAIN, QUEUE, QUEUE_LIMITS, QUEUE_PRESETS, queue_settings
+
+    assert QUEUE == "drain" and queue_settings() == (DEPTH, HOLD, DRAIN) == (8, 1, 4)
+    assert QUEUE_PRESETS == {"drain": (8, 1, 4), "deep": (8, 1, 0), "small": (2, 5, 0)}
+    assert queue_settings(preset="small") == (2, 5, 0) and queue_settings(preset="deep") == (8, 1, 0)
+    assert queue_settings(drain=0, preset="drain") == (8, 1, 0) and queue_settings(depth=4, preset="small") == (4, 5, 0)
+    for bad in ("fast", "", 3, "DRAIN"):
+        with pytest.raises(ValueError, match="preset"):
+            queue_settings(preset=bad)
+    assert QUEUE_LIMITS == {"depth": (1, 20), "hold": (1, wire.HZ // 4), "drain": (2, 20)}
+    for good in ((1, 1, 0), (20, 5, 20), (2, 5, 2), (8, 1, 4)):
+        assert queue_settings(*good) == good
+    for bad in ({"depth": 0}, {"depth": 21}, {"depth": -1}, {"depth": True}, {"depth": 2.0}, {"depth": "8"},
+                {"hold": 0}, {"hold": 6}, {"drain": 1}, {"drain": 21}, {"drain": -4}, {"drain": False}):
+        with pytest.raises(ValueError, match="input queue"):
+            queue_settings(**bad)
+    from mesh_net.scene_room import COOP_SCENE, coop_files, disposable_project
+
+    with disposable_project(coop_files(), scaffold=False) as root:
+        with pytest.raises(ValueError, match="depth"):
+            SceneRoom(root / COOP_SCENE, root, depth=0)
+        room = SceneRoom(root / COOP_SCENE, root, depth=2, hold=5, drain=4)
+    assert (room.depth, room.hold, room.drain) == (2, 5, 4)
+
+
+def test_the_servers_take_the_queue_settings_from_flags_or_the_environment() -> None:
+    """mesh_net.server: each setting from its flag, else MESH_NET_INPUT_<NAME>, else the default, checked; a world's
+    rooms (and every instance made from them) take them; the server refuses a bad one at start, saying why."""
+    import argparse
+    import subprocess
+    import sys
+
+    from mesh_net.server import queue_from
+
+    none = argparse.Namespace(queue=None, input_depth=None, input_hold=None, input_drain=None)
+    assert queue_from(none, {}) == {"depth": 8, "hold": 1, "drain": 4}, "the provisional default: drain"
+    assert queue_from(none, {"MESH_NET_QUEUE": "small"}) == {"depth": 2, "hold": 5, "drain": 0}
+    deep = argparse.Namespace(queue="deep", input_depth=None, input_hold=None, input_drain=None)
+    assert queue_from(deep, {"MESH_NET_QUEUE": "small"}) == {"depth": 8, "hold": 1, "drain": 0}, "the flag first"
+    env = {"MESH_NET_INPUT_DEPTH": "2", "MESH_NET_INPUT_HOLD": "5", "MESH_NET_INPUT_DRAIN": "4"}
+    assert queue_from(none, env) == {"depth": 2, "hold": 5, "drain": 4}
+    flags = argparse.Namespace(queue=None, input_depth=6, input_hold=None, input_drain=0)
+    assert queue_from(flags, env) == {"depth": 6, "hold": 5, "drain": 0}, "a flag beats the environment"
+    for bad in ({"MESH_NET_INPUT_DEPTH": "x"}, {"MESH_NET_INPUT_DRAIN": "1"}, {"MESH_NET_INPUT_HOLD": "9"},
+                {"MESH_NET_QUEUE": "fast"}):
+        with pytest.raises(ValueError):
+            queue_from(none, bad)
+    from mesh_net.scene_room import disposable_project
+    from mesh_net.world import World, expedition_files
+
+    with disposable_project(expedition_files(), scaffold=False) as root:
+        world = World(root, depth=2, hold=5, drain=4)
+    inst = world._create(next(k for k, d in world.defs.items() if d.expedition), 1)
+    for room in [d.proto for d in world.defs.values()] + [world.hub.room, inst.room]:
+        assert (room.depth, room.hold, room.drain) == (2, 5, 4)
+    done = subprocess.run([sys.executable, "-m", "mesh_net.server", "--coop", "--input-depth", "0"], cwd=REPO,
+                          capture_output=True, text=True, timeout=60)
+    assert done.returncode == 2 and "input queue depth" in done.stderr
+
+
+def test_the_drain_shortens_a_lasting_backlog_one_direction_at_a_time_never_an_action() -> None:
+    """drain 4: a player walking with more than one input waiting after each read for 4 ticks in a row loses the
+    oldest waiting direction (counted; one step), never its action, and never walks two steps a tick. Off (0): the
+    backlog lasts."""
+    from mesh_net.scene_room import COOP_SCENE, coop_files, disposable_project
+
+    for drain in (4, 0):
+        with disposable_project(coop_files(), scaffold=False) as root:
+            room = SceneRoom(root / COOP_SCENE, root, drain=drain)
+        eid = room.join()
+        place(room, eid, 150.0, 200.0, 0)
+        for seq in range(1, 5):  # (a burst: four waiting)
+            send(room, eid, seq, 1, 0, "use" if seq == 2 else None)
+        seq, xs, drops, after_4 = 4, [at(room, eid)[0]], [], []
+        p = room.players[eid]
+        for tick in range(1, 13):  # (one more each tick, as a window sends: the backlog would stay)
+            seq += 1
+            send(room, eid, seq, 1, 0)
+            before = room.drained_moves
+            room.step()
+            xs.append(at(room, eid)[0])
+            drops += [tick] * (room.drained_moves - before)
+            if tick == 4:
+                after_4 = [m[0] for m in p.moves]
+        assert all(0 <= b - a <= room.step_px + 1e-9 for a, b in zip(xs, xs[1:])), "never two steps a tick"
+        assert p.actions == [], "the use ran"
+        if drain:  # (four reads in a row with more than one waiting, each time: ticks 4, 8 and 12)
+            assert drops == [4, 8, 12] and room.dropped_moves == 0 and len(p.moves) == 1, "one at a time, 4 ticks apart"
+            assert after_4 == [6, 7, 8], "the oldest waiting (input 5) went, never a newer one"
+        else:
+            assert room.drained_moves == room.dropped_moves == 0 and len(p.moves) == 4, "off: the backlog lasts"
 
 
 # --- the one step ------------------------------------------------------------------------------------------------

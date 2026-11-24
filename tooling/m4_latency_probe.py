@@ -15,7 +15,7 @@ fixed for the session. No socket, no window, no GPU, no wall clock: the same see
 The window's combat presentation is the client's own rule (mesh_net.scene_room.Feedback, wire v3): a swing on the
 first frame after the press, a hit flash on the first frame after a state whose enemy hit count rose. Every input
 carries the tick Feedback reckons (one estimate, as the arenas send). ``--depth``: what-if, the server's input queue
-(mesh_net.scene_room.DEPTH, owner decision OD11). ``walking`` (M4-3 round 2) measures the queue's costs while a player
+(mesh_net.scene_room.DEPTH, owner decision OD11), with ``--hold`` and ``--drain``. ``walking`` (M4-3 round 2) measures the queue's costs while a player
 never stops: how deep it stays, how late a peer sees the walk, how long a swing made while walking waits.
 
 What the tool adds that the game doesn't have: a scripted mover for the moving-target case (today's authority never
@@ -51,7 +51,6 @@ from mesh_net import scene_room  # noqa: E402
 from mesh_net.playback import Playback  # noqa: E402
 from mesh_net.scene_room import (  # noqa: E402
     COOP_SCENE,
-    HOLD,
     Body,
     Feedback,
     Player,
@@ -204,7 +203,7 @@ class Session:
                     self.mover(self.room.tick + 1)
                 self.room.step()
                 p = self.room.players[self.eid]
-                self.held_steps += 0 < p.held < HOLD and bool(p.dx or p.dy)
+                self.held_steps += 0 < p.held < self.room.hold and bool(p.dx or p.dy)
                 self.waiting.append(len(p.moves))
                 self.record()
                 self.serial += 1
@@ -387,7 +386,8 @@ def queue(s: Session) -> dict[str, Any]:
     walked on an empty one."""
     return {"corrections_px": [px for _, px, _, _ in s.corrections],
             "level_snaps": sum(dz > CORRECTED or floor for _, _, dz, floor in s.corrections),
-            "dropped_moves": s.room.dropped_moves, "held_steps": s.held_steps}
+            "dropped_moves": s.room.dropped_moves, "drained_moves": s.room.drained_moves, "held_steps": s.held_steps,
+            "inputs_sent": len(s.sends)}
 
 
 def attack(rtt: float, jitter: float, loss: float, seed: int, trials: int = 30) -> dict[str, Any]:
@@ -699,7 +699,7 @@ def corrections(c: dict[str, Any]) -> dict[str, Any]:
     moved = [v for v in px if v > CORRECTED]
     return {"reconciliations": len(px), "p95_px": round(pct(px, 0.95), 2) if px else 0.0, "corrections": len(moved),
             "corrected_px": summary(moved), "level_snaps": c["level_snaps"], "dropped_moves": c["dropped_moves"],
-            "held_steps": c["held_steps"]}
+            "drained_moves": c.get("drained_moves", 0), "held_steps": c["held_steps"]}
 
 
 def measure(seed: int = 7, sessions: int = 6) -> dict[str, Any]:
@@ -727,7 +727,7 @@ def measure(seed: int = 7, sessions: int = 6) -> dict[str, Any]:
             "stairs": fairness(pooled(stairs, seeds, *profile)),
             "walking": walking_costs(pooled(walking, seeds, *profile))})
     return {"seed": seed, "sessions_per_profile": sessions, "frame_ms": round(FRAME_MS, 2), "rto_ms": RTO_MS,
-            "hz": wire.HZ, "depth": scene_room.DEPTH, "profiles": rows}
+            "hz": wire.HZ, "depth": scene_room.DEPTH, "hold": scene_room.HOLD, "drain": scene_room.DRAIN, "profiles": rows}
 
 
 def snapshot_bytes() -> dict[str, dict[int, int]]:
@@ -767,10 +767,18 @@ def main() -> None:
                                                                 "rate (the game's is mesh_net.protocol.HZ)")
     parser.add_argument("--depth", type=int, default=scene_room.DEPTH, help="what-if: the server's input queue (the "
                                                                             "game's is mesh_net.scene_room.DEPTH)")
+    parser.add_argument("--hold", type=int, default=scene_room.HOLD, help="what-if: mesh_net.scene_room.HOLD")
+    parser.add_argument("--queue", choices=sorted(scene_room.QUEUE_PRESETS), help="a preset (mesh_net.scene_room."
+                        "QUEUE_PRESETS) in place of --depth, --hold and --drain")
+    parser.add_argument("--drain", type=int, default=scene_room.DRAIN, help="what-if: mesh_net.scene_room.DRAIN (0: off)")
     parser.add_argument("--json", help="also write the full result here")
     args = parser.parse_args()
     RTO_MS = args.rto
-    with mock.patch.object(wire, "HZ", args.hz), mock.patch.object(scene_room, "DEPTH", args.depth):
+    if args.queue:
+        args.depth, args.hold, args.drain = scene_room.QUEUE_PRESETS[args.queue]
+    scene_room.queue_settings(args.depth, args.hold, args.drain)  # (refused here, before minutes of work)
+    with (mock.patch.object(wire, "HZ", args.hz), mock.patch.object(scene_room, "DEPTH", args.depth),
+          mock.patch.object(scene_room, "HOLD", args.hold), mock.patch.object(scene_room, "DRAIN", args.drain)):
         runs = [measure(seed, args.sessions) for seed in args.seeds]
         result = {"seeds": args.seeds, "range": ranges(runs), "runs": runs, "snapshot_bytes": snapshot_bytes()}
     text = json.dumps(result, indent=1)
