@@ -15,7 +15,8 @@ fixed for the session. No socket, no window, no GPU, no wall clock: the same see
 The window's combat presentation is the client's own rule (mesh_net.scene_room.Feedback, wire v3): a swing on the
 first frame after the press, a hit flash on the first frame after a state whose enemy hit count rose. Every input
 carries the tick Feedback reckons (one estimate, as the arenas send). ``--depth``: what-if, the server's input queue
-(mesh_net.scene_room.DEPTH, owner decision OD11).
+(mesh_net.scene_room.DEPTH, owner decision OD11). ``walking`` (M4-3 round 2) measures the queue's costs while a player
+never stops: how deep it stays, how late a peer sees the walk, how long a swing made while walking waits.
 
 What the tool adds that the game doesn't have: a scripted mover for the moving-target case (today's authority never
 moves an enemy) and that enemy's position in the client's copy of each snapshot (today's wire carries none), shown
@@ -135,6 +136,10 @@ class Session:
     held_steps: int = 0  # ticks the authority walked a direction no input of that tick gave (its queue empty: HOLD)
     own_shown: tuple[Any, ...] = ()  # (x, y, elevation, floor) of the own avatar on the last frame
     hits: list[float] = field(default_factory=list)  # ms each confirmed hit arrived (Feedback.update)
+    # The window's own key and action handling (mesh_net.demo.Arena: press, act, outgoing), driving the keys ``held``
+    # says; else ``intent`` gives each input (the older scenarios).
+    arena: Any = None
+    waiting: list[int] = field(default_factory=list)  # inputs waiting in the authority's queue after each tick
 
     def __post_init__(self) -> None:
         rng = random.Random(self.seed)
@@ -151,6 +156,9 @@ class Session:
         self.prediction.start(self.room, self.latest, self.eid)
         self.own_shown = self.prediction.shown(0.0)
         self.pressed = (0, 0)
+        if self.arena is not None:
+            self.arena.prediction, self.arena.feedback = self.prediction, self.feedback
+            self.arena.clock = lambda: self.now / 1000
         self.to_server: list[tuple[float, int, float, dict[str, Any]]] = []  # (arrival, serial, sent, frame)
         self.to_client: list[tuple[float, int, dict[str, Any]]] = []
         self.seq = self.serial = 0
@@ -197,6 +205,7 @@ class Session:
                 self.room.step()
                 p = self.room.players[self.eid]
                 self.held_steps += 0 < p.held < HOLD and bool(p.dx or p.dy)
+                self.waiting.append(len(p.moves))
                 self.record()
                 self.serial += 1
                 heapq.heappush(self.to_client, (self.down.arrival(t), self.serial, self.observed()))
@@ -210,12 +219,15 @@ class Session:
                     self.hits.extend(t for _ in self.feedback.update(real, self.eid, t / 1000)[1])
                 self.playback.push(state, t / 1000)
             elif self.next_send <= t:
-                dx, dy, action, *meant = self.intent(t, self.own_row())
-                dx, dy = self.prediction.next((dx, dy))  # (Arena.outgoing: the input a press built, if any)
+                if self.arena is not None:  # (Arena.session's send loop)
+                    (dx, dy), action, tick = self.arena.outgoing()
+                else:
+                    dx, dy, action, *meant = self.intent(t, self.own_row())
+                    dx, dy = self.prediction.next((dx, dy))  # (Arena.outgoing: the input a press built, if any)
+                    tick = meant[0] if meant and meant[0] is not None else self.feedback.tick(t / 1000)
                 self.seq += 1
                 self.prediction.sent(self.seq)
                 self.sends.append((t, self.seq))
-                tick = meant[0] if meant and meant[0] is not None else self.feedback.tick(t / 1000)
                 msg = wire.input_frame(self.eid, self.seq, dx, dy, tick, action)
                 self.serial += 1
                 heapq.heappush(self.to_server, (self.up.arrival(t), self.serial, t, msg))
@@ -223,7 +235,13 @@ class Session:
             else:
                 if self.held is not None:  # (Arena.press: the frame's dispatch_events reads a direction pressed)
                     direction = self.held(t)
-                    if direction != self.pressed and direction != (0, 0):
+                    if self.arena is not None and direction != self.pressed:
+                        keys = {d: k for k, d in self.arena.directions.items()}
+                        if self.pressed != (0, 0):
+                            self.arena.release(keys[self.pressed], 0)
+                        if direction != (0, 0):
+                            self.arena.press(keys[direction], 0)
+                    elif direction != self.pressed and direction != (0, 0):
                         self.prediction.press(direction)
                     self.pressed = direction
                 self.own_shown = self.prediction.shown(FRAME_MS / 1000)  # (SceneArena.draw)
@@ -413,6 +431,80 @@ def attack(rtt: float, jitter: float, loss: float, seed: int, trials: int = 30) 
             "dropped_actions": room.dropped_actions}
 
 
+def window_arena() -> Any:
+    """mesh_net.demo.Arena without a window: the client's own key, action and send handling."""
+    from types import SimpleNamespace  # noqa: PLC0415
+
+    from mesh_net.demo import Arena  # noqa: PLC0415
+
+    keys = SimpleNamespace(**{n: i for i, n in enumerate("W UP S DOWN A LEFT D RIGHT SPACE E ESCAPE F2 R N".split())})
+    return Arena(SimpleNamespace(push_handlers=lambda **_kw: None), SimpleNamespace(key=keys))
+
+
+def walking(rtt: float, jitter: float, loss: float, seed: int, ms: float = 20000) -> dict[str, Any]:
+    """The costs of the server's input queue while a player never stops (M4-3): it walks for 20 s, turning between
+    left and right every second, and swings about every 600 ms, through the window's own handling (window_arena).
+    How many inputs wait in the authority's queue after each tick (``waiting``: ticks it runs behind the newest it
+    has) and how long a deep queue lasts; how late a peer sees each step (ms from the input being sent to a peer's
+    Playback showing a state that read it); and how long a swing made while walking waits for its confirmation (ms
+    from the press to the first frame after a state counting that attack)."""
+    rng = random.Random(seed)
+    presses, t = [], 1500.0
+    while t < ms - 1500:
+        presses.append(t)
+        t += 600.0 + rng.uniform(-50, 50)
+    swung: list[tuple[float, int]] = []  # (press ms, meant tick) of each swing shown
+    ran: dict[int, int] = {}  # meant tick -> the tick the authority started that attack (stale ones never start)
+    confirmed: list[float] = []
+    peer: list[float] = []
+
+    def held(now: float) -> tuple[int, int]:
+        return ((1 if (now // 1000) % 2 == 0 else -1), 0) if 1000.0 <= now < ms - 500 else (0, 0)
+
+    def frame(now: float, s: Session) -> None:
+        for p in [p for p in presses if now - FRAME_MS < p <= now]:
+            tick = s.feedback.press(now / 1000)
+            if tick is not None:
+                s.arena.act("attack", tick)
+                swung.append((p, tick))
+        for press, meant in [w for w in swung if w[1] in ran and s.latest["tick"] >= ran[w[1]]]:
+            confirmed.append(now - press)  # (the first frame after a state from the tick that started it)
+            swung.remove((press, meant))
+        s.playback.positions(now / 1000)
+        left = next(st for st in reversed(s.playback.states) if st["tick"] <= s.playback.cursor)
+        seen = next(r[6] for r in left["players"] if r[0] == s.eid)
+        while shown_upto[0] < len(s.sends) and s.sends[shown_upto[0]][1] <= seen:
+            sent_at = s.sends[shown_upto[0]][0]
+            if 1000.0 <= sent_at < ms - 500:
+                peer.append(now - sent_at)
+            shown_upto[0] += 1
+
+    shown_upto = [0]
+    with coop_room() as room:
+        judge_attack = room._may_attack
+
+        def may_attack(p: Any, meant: int) -> bool:
+            started = judge_attack(p, meant)
+            if started:
+                ran[meant] = room.tick
+            return started
+
+        room._may_attack = may_attack  # type: ignore[method-assign]
+        s = Session(room, rtt, jitter, loss, seed, frame=frame, held=held, arena=window_arena(),
+                    setup=lambda room, eid: place(room, eid, 500.0, 256.0, 0))
+        s.run(ms)
+        walking_ticks = [w for tick, w in zip(range(1, len(s.waiting) + 1), s.waiting) if 1000 <= tick * 50 < ms - 500]
+    longest = run = 0
+    for w in walking_ticks:
+        run = run + 1 if w >= 2 else 0
+        longest = max(longest, run)
+    tail = walking_ticks[-5 * wire.HZ:]
+    return {**queue(s), "waiting": walking_ticks, "max_deep_queue_ticks": longest,
+            "waiting_last_5s": [sum(tail) / max(1, len(tail))], "peer_view_ms": peer, "walking_swing_confirmed_ms": confirmed,
+            "walking_swings": len(confirmed) + len(swung), "walking_stale": room.stale_attacks,
+            "walking_refused": room.refused_attacks}
+
+
 def judge(s: Session, samples: list[tuple[float, tuple[Any, ...], dict[str, tuple[float, float, float]]]],
           ) -> dict[str, Any]:
     """Per sampled frame (a press there): the hit as the attacker's screen showed it against the authority's hit on the
@@ -590,6 +682,16 @@ def fairness(c: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def walking_costs(w: dict[str, Any]) -> dict[str, Any]:
+    """walking's pooled results: the queue's depth while walking, how late a peer sees it, swings confirmed."""
+    return {"waiting": summary([float(v) for v in w["waiting"]]),
+            "max_deep_queue_ticks": w["max_deep_queue_ticks"],
+            "waiting_last_5s_mean": round(max(w["waiting_last_5s"]), 2),
+            "peer_view_ms": summary(w["peer_view_ms"]), "walking_swing_confirmed_ms": summary(w["walking_swing_confirmed_ms"]),
+            "walking_swings": w["walking_swings"], "walking_stale": w["walking_stale"], "walking_refused": w["walking_refused"],
+            "prediction": corrections(w)}
+
+
 def corrections(c: dict[str, Any]) -> dict[str, Any]:
     """The prediction's corrections (M4-3): p95 over every reconciliation (one per snapshot), and the ones that moved
     the avatar (over CORRECTED px): how many, how far; elevation or floor snaps; and the queue's drops and holds."""
@@ -622,7 +724,8 @@ def measure(seed: int = 7, sessions: int = 6) -> dict[str, Any]:
             "moving_target_70": fairness(pooled(moving_target, seeds, *profile, 70.0)),
             "moving_target_150": fairness(pooled(moving_target, seeds, *profile, 150.0)),
             "moving_attacker": fairness(pooled(moving_attacker, seeds, *profile)),
-            "stairs": fairness(pooled(stairs, seeds, *profile))})
+            "stairs": fairness(pooled(stairs, seeds, *profile)),
+            "walking": walking_costs(pooled(walking, seeds, *profile))})
     return {"seed": seed, "sessions_per_profile": sessions, "frame_ms": round(FRAME_MS, 2), "rto_ms": RTO_MS,
             "hz": wire.HZ, "depth": scene_room.DEPTH, "profiles": rows}
 

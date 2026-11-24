@@ -92,14 +92,20 @@ PENDING = 4  # attacks, and uses or takes, a player may have waiting (one of eac
 # How the server reads inputs (owner decision OD11, M4-3): each tick reads ONE input, the oldest waiting, and walks one
 # step with its direction; at most DEPTH wait (a full queue drops its oldest: the newest direction wins). An input's
 # actions wait apart (``attacks``, ``actions``: PENDING each, one of each kind a tick) and run once the tick reads
-# their own input or a later one, so a dropped direction never loses an attack, a use or a take. With nothing waiting,
-# the last input read is walked on until HOLD ticks after it (its own included), then the body stops. One input is one
-# step, so a client predicts its own avatar exactly (Prediction), except across a full or an empty queue.
-# A queue that stays one input deep adds a tick to everything the server does for that player (its attacks, what
-# others see of it). While the player stands, that tick is given back: of two still inputs waiting, the older is
-# dropped (it would walk nowhere, as the one after it; its actions run with that one). Never a step: no correction.
-DEPTH = 2
-HOLD = wire.HZ // 4
+# their own input or a later one, so a dropped direction never loses an attack, a use or a take. A tick with nothing
+# waiting walks only while under HOLD ticks from the last input read (its own included): with HOLD 1, never a step no
+# input gave. One input is one step, so a client predicts its own avatar exactly (Prediction).
+# DEPTH 8 and HOLD 1 were chosen over OD11's starting depth 2 (and the old 5-tick lease) on same-seed measurements
+# (docs/plans/m4_online_combat.md, M4-3 "As implemented": the variant matrix). TCP holds everything behind a lost
+# segment for RTT + RTO (6 ticks at 100 ms, 8 at 200 ms) and then delivers it at once: a queue that keeps that burst
+# walks every step the player took, a tick each, so the window's prediction is not corrected; depth 2 dropped them
+# (corrections p95 37.5 px at 100 ms), and walking on with nothing waiting overshot a release. The cost: once a burst
+# is kept, the server runs that many ticks behind while the player keeps walking (others see it later, a swing made
+# walking waits behind those steps), until the player stands.
+# While the player stands, that backlog is given back: of two still inputs waiting, the older is dropped (it would walk
+# nowhere, as the one after it; its actions run with that one). Never a step: no correction.
+DEPTH = 8
+HOLD = 1
 # The packaged co-op room (tooling/make_coop_scene.py): where each file goes in a project.
 COOP_FILES = {"packs/core_regions/scenes/start.json": "scene.json", "packs/core_regions/maps/start.json": "map.json",
               "assets/prefabs.json": "prefabs.json"}
@@ -693,11 +699,11 @@ class SceneRoom:
             if p.hitboxes:  # its earlier attacks' hitboxes, where they were made, the attacker as it now stands
                 p.hitboxes = [box for box in p.hitboxes if self._strike(p, box)]
                 solids = self.solids()
-            if p.attacks and p.attacks[0][0] <= p.ack and self._may_attack(p, p.attacks.pop(0)[1]):
+            if p.attacks and self._ready(p, p.attacks[0][0]) and self._may_attack(p, p.attacks.pop(0)[1]):
                 p.attack_seq += 1
                 self._attack(p)
                 solids = self.solids()
-            action = p.actions.pop(0)[1] if p.actions and p.actions[0][0] <= p.ack else None
+            action = p.actions.pop(0)[1] if p.actions and self._ready(p, p.actions[0][0]) else None
             if action == "use":
                 self._use(p)
                 solids = self.solids()  # a gate that just opened stops blocking from here on
@@ -705,6 +711,11 @@ class SceneRoom:
                 self._take(p)
             if p.held < HOLD:
                 self.walk(p.body, p.dx, p.dy, solids)
+
+    @staticmethod
+    def _ready(p: Player, seq: int) -> bool:
+        """Whether the action carried by input ``seq`` may run this tick: once that input (or a later one) is read."""
+        return seq <= p.ack
 
     def _may_attack(self, p: Player, meant: int) -> bool:
         """Whether an attack meant for tick ``meant`` starts now. Its cooldown is judged on the meant tick, as the
@@ -1042,8 +1053,8 @@ class Prediction:
     Each snapshot (``reconcile``) puts the avatar back on the server's row (x, y, elevation, floor) and walks the inputs
     the server has not read yet again, through what blocked in that snapshot. The server reads one input a tick (OD11),
     so with no loss and nothing changing the result is where the avatar already was; otherwise (an input the server
-    dropped from a full queue or walked on while its queue was empty, a gate or an enemy the snapshot changed) the
-    difference is a correction. Its x/y offset fades out over SMOOTH_S; elevation and floor take the server's at once,
+    dropped from a full queue, after a stall or an outage longer than DEPTH ticks; a gate or an enemy the snapshot
+    changed) the difference is a correction. Its x/y offset fades out over SMOOTH_S; elevation and floor take the server's at once,
     so the avatar is never drawn between floors. Hidden per-body solver state is never carried (the floor solver's
     water escape cap, ``mesh_hd2d_deep_cap``, is not on the wire): replays start without it, so a prediction there can
     differ until the next snapshot puts it back (online rooms refuse such water today: hd2d_world, owner decision D4).
@@ -1076,10 +1087,12 @@ class Prediction:
         self.body, self.state = None, None
         self.inputs.clear()
 
-    def press(self, direction: tuple[int, int]) -> None:
-        """A direction key pressed: unless an input is already built and not sent, build the next one now."""
+    def press(self, direction: tuple[int, int]) -> bool:
+        """A direction key pressed: unless an input is already built and not sent, build the next one now (True)."""
         if self.body is not None and (not self.inputs or self.inputs[-1][0] is not None):
             self._build(direction)
+            return True
+        return False
 
     def next(self, direction: tuple[int, int]) -> tuple[int, int]:
         """The direction the next input sends: the one built at a press since the last send, else ``direction`` (the

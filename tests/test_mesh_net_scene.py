@@ -356,7 +356,8 @@ def test_replayed_frames_never_steer_or_act(room_factory):
     y = d.at(a)[1]
     d.send(a, 0, -1, action="attack", seq=d.seq[a])  # the same sequence number again, another direction
     room.step()
-    assert d.at(a)[1] == y + room.step_px and room.players[a].attack_after == 0  # still the first frame's walk
+    # neither steered back nor acted on (and nothing walked: the server walks no step no input gave, HOLD 1)
+    assert d.at(a)[1] == y and room.players[a].attack_after == 0
 
 
 @pytest.mark.integration

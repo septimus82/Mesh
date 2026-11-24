@@ -2,8 +2,8 @@
 
 - The queue (mesh_net.scene_room.SceneRoom.input and step): one input read a tick, the oldest; at most DEPTH waiting, a
   full queue dropping its oldest direction but never an attack, a use or a take (they run when a later input is read);
-  ``ack`` is the input the tick read; with nothing waiting the last direction is walked on until HOLD ticks after it,
-  then the body stops. An input's actions run from where the player stood before its step: where the window showed it.
+  ``ack`` is the input the tick read; with nothing waiting nothing is walked (HOLD 1); a standing player's older still
+  inputs are dropped. An input's actions run from where the player stood before its step: where the window showed it.
 - The prediction (mesh_net.scene_room.Prediction): each input walks the avatar at once through SceneRoom.walk (one
   step for both sides: tests/test_hd2d_net_parity.py); each snapshot puts it back on the server's row and walks again
   what the server has not read; elevation and floor take the server's at once, x/y fades; nothing hidden is carried.
@@ -11,7 +11,7 @@
 - The owner's safeguards, on the probe's virtual clock and TCP link model (tooling/m4_latency_probe.py), seeds 7, 8 and 9:
   quick direction reversals, key release and short taps, attacks mashed while walking, the cooldown, jitter, loss
   bursts, a server stall of more than a second and a network outage of 1.5 s. Every tick the server walks at most one
-  step, only a direction an input gave (read that tick, or walked on within HOLD), its way; it stops once the keys are
+  step, only a direction an input gave (read that tick: HOLD 1), its way; it stops once the keys are
   let go; no attack starts twice or without a swing shown; and the window ends exactly where the server has it.
 - Feedback's reckoning rides out a TCP retransmission hold and follows a real server stall (M4-2 review follow-up).
 """
@@ -93,7 +93,7 @@ def test_the_server_reads_one_input_a_tick_oldest_first_and_acks_it() -> None:
 
 
 def test_a_full_queue_keeps_the_newest_direction_and_every_action() -> None:
-    """DEPTH waiting and more come (a burst after a stall): the oldest directions are dropped (counted), never their
+    """DEPTH (8) waiting and more come (a burst after a stall): the oldest directions are dropped (counted), never their
     actions: an attack and a use carried by dropped inputs run on the tick that reads a later input. Never more than one
     step a tick."""
     with coop_room() as room:
@@ -101,10 +101,11 @@ def test_a_full_queue_keeps_the_newest_direction_and_every_action() -> None:
         place(room, eid, 568.0, 256.0, 0)  # (next to the bandit, facing it)
         p, step = room.players[eid], room.step_px
         room.enemies[BANDIT].state = TargetState(hp=100.0, max_hp=100.0)
-        burst = [(1, 0, -1, "attack"), (2, 0, -1, "use"), (3, 0, 1, None), (4, 0, 0, None), (5, 0, 1, None)]
+        burst = [(1, 0, -1, "attack"), (2, 0, -1, "use"), (3, 0, 1, None), (4, 0, 0, None)]
+        burst += [(seq, 0, 1, None) for seq in range(5, 12)]
         for seq, dx, dy, action in burst:
             send(room, eid, seq, dx, dy, action)
-        assert DEPTH == 2 and [m[0] for m in p.moves] == [4, 5], "the newest two wait"
+        assert DEPTH == 8 and [m[0] for m in p.moves] == list(range(4, 12)), "the newest eight wait"
         assert room.dropped_moves == len(burst) - DEPTH and room.dropped_actions == 0
         before = at(room, eid)
         room.step()
@@ -142,8 +143,8 @@ def test_a_standing_player_gets_its_queues_tick_back_and_nothing_else_changes() 
 
 
 def test_an_empty_queue_walks_the_last_direction_until_hold_then_stops() -> None:
-    """One input and nothing after it: walked HOLD ticks (its own included: today's lease), then the body stops;
-    ``ack`` stays the input read."""
+    """One input and nothing after it: walked on its own tick only (HOLD 1: never a step no input gave), then the body
+    stops; ``ack`` stays the input read."""
     with coop_room() as room:
         eid = room.join()
         place(room, eid, *OPEN, 0)
@@ -152,7 +153,7 @@ def test_an_empty_queue_walks_the_last_direction_until_hold_then_stops() -> None
         for _ in range(HOLD + 3):
             room.step()
             xs.append(at(room, eid)[0])
-        assert xs == [OPEN[0] + room.step_px * min(i, HOLD) for i in range(1, HOLD + 4)]
+        assert HOLD == 1 and xs == [OPEN[0] + room.step_px * min(i, HOLD) for i in range(1, HOLD + 4)]
         assert room.players[eid].ack == 1
 
 
@@ -658,6 +659,234 @@ def test_the_reckoning_rides_out_a_retransmission_but_follows_a_stall() -> None:
     assert feedback.tick(9.0) == 180, "not yet"
     arrive(60 + late - 1 - 20, 5.0 + (60 + late - 1) / wire.HZ + 0.02)
     assert feedback.tick(9.0) == 159, "RECKONING late in a row: it follows the stall"
+
+
+# --- gaps the review of #613 found ---------------------------------------------------------------------------
+
+
+def test_an_action_waits_for_its_own_input_behind_a_step() -> None:
+    """Two inputs read in turn, the second carrying the attack (and then a take): neither runs on the tick that
+    reads the first, a step early; each runs on the tick that reads its own input, from where the first left it."""
+    with coop_room() as room:
+        eid = room.join()
+        place(room, eid, *OPEN, 0)
+        p, step = room.players[eid], room.step_px
+        made: list[float] = []
+        attack = room._attack
+        room._attack = lambda pl: (made.append(pl.body.center_x), attack(pl))[1]  # type: ignore[method-assign]
+        send(room, eid, 1, 1, 0)
+        send(room, eid, 2, 1, 0, "attack")
+        room.step()
+        assert made == [] and p.attack_seq == 0, "not with the first input's step"
+        room.step()
+        assert made == [OPEN[0] + step] and p.attack_seq == 1
+        send(room, eid, 3, 1, 0)
+        send(room, eid, 4, 1, 0, "take")
+        room.step()
+        assert p.actions == [(4, "take")], "the take waits for its own input too"
+        room.step()
+        assert p.actions == []
+
+
+def two_rooms() -> tuple[SceneRoom, SceneRoom]:
+    with coop_room() as server, coop_room() as client:  # (coop_room opens the gate: the client's copy is locked again)
+        client.locked = {i for i, (_, c) in client.doors.items() if c.get("starts_locked", True)}
+        return server, client
+
+
+def test_the_prediction_walks_through_what_the_snapshot_opened() -> None:
+    """The window's copy of the room never steps, so its own gate stays locked; the server's is open. Predicting
+    through the snapshot's account of what blocks (its open gates, its live enemies), the window walks through the
+    gate with the server, never a correction."""
+    server, client = two_rooms()
+    gate = next(iter(client.doors))
+    assert gate in client.locked and gate not in server.locked
+    eid = server.join()
+    place(server, eid, 380.0, 256.0, 0)  # (a locked gate stops a walk right at 390.5)
+    prediction = Prediction()
+    prediction.start(client, server.snapshot(), eid)
+    for seq in range(1, DEPTH + 1):  # (sent at once: each snapshot below leaves some unread, walked again)
+        prediction.next((1, 0))
+        prediction.sent(seq)
+        send(server, eid, seq, 1, 0)
+    moved = []
+    for _ in range(DEPTH):
+        server.step()
+        moved.append(prediction.reconcile(server.snapshot(), eid)[0])
+    assert max(moved) <= CORRECTED and prediction.body is not None and prediction.body.center_x > 432.0
+
+
+def test_a_correction_never_moves_the_avatar_where_it_is_shown() -> None:
+    """A second correction while the first still fades: the avatar is drawn exactly where it was the frame before
+    (the new offset carries the old one's remainder), and both fade out together."""
+    with coop_room() as room:
+        eid = room.join()
+        place(room, eid, *OPEN, 0)
+        prediction = Prediction()
+        prediction.start(room, room.snapshot(), eid)
+        for seq in (1, 2, 3, 4):
+            prediction.next((1, 0))
+            prediction.sent(seq)
+        room.players[eid].ack = 2  # (input 2 dropped: one step fewer)
+        prediction.reconcile(room.snapshot(), eid)
+        before = prediction.shown(SMOOTH_S / 2)[0]
+        room.players[eid].ack = 4  # (input 4 dropped too)
+        prediction.reconcile(room.snapshot(), eid)
+        assert prediction.shown(0.0)[0] == pytest.approx(before), "no jump where it is drawn"
+        assert prediction.shown(SMOOTH_S)[0] == OPEN[0], "and all of it gone after SMOOTH_S"
+
+
+def test_a_take_or_use_is_chosen_where_the_window_shows_itself() -> None:
+    """E near a drop the predicted avatar stands by (the server's row is still far from it): a take, in both arenas,
+    since the server runs it from where the window shows the player."""
+    with coop_room() as room:
+        eid = room.join()
+        place(room, eid, *OPEN, 0)
+        state = room.snapshot()
+        far = next(r for r in state["players"] if r[0] == eid)
+        view = SimpleNamespace(near_drop=lambda x, y, _state: x > 400.0, swing=lambda *_a: None)
+        for make in ("scene", "world"):
+            prediction = Prediction()
+            prediction.start(room, state, eid)
+            assert prediction.body is not None
+            prediction.body.center_x = 450.0  # (walked there, the server not yet)
+            keys = SimpleNamespace(SPACE=32, E=101, P=1, I=2, Y=3, N=4, L=5, ESCAPE=6, F2=7, R=8)
+            arena: Any = SimpleNamespace(actions=[], action_keys=set(), directions={}, keys=[], prediction=prediction,
+                                         arcade=SimpleNamespace(key=keys), view=view, feedback=Feedback())
+            arena.act = lambda action, tick=None, a=arena: Arena.act(a, action, tick)
+            if make == "scene":
+                arena.client = SimpleNamespace(entity=eid, state=state)
+                SceneArena.press(arena, keys.E, 0)
+            else:
+                arena.__dict__.update(phase="playing", shown="start:1", room="start:1", entity=eid, state=state,
+                                      connected=True, note=lambda _e: None, request=None, _own=lambda: far)
+                WorldArena.press(arena, keys.E, 0)
+            assert arena.actions == [("take", None)], make
+
+
+def test_space_after_a_press_built_input_swings_where_the_server_runs_it() -> None:
+    """A direction pressed (its input built: the avatar steps at once) and Space before that input goes: the swing
+    showed from after that step, so the attack waits for the next input, which the server reads from there. The
+    window and the server agree on where the attack is made."""
+    keys = SimpleNamespace(**{n: i for i, n in enumerate("W UP S DOWN A LEFT D RIGHT SPACE E ESCAPE F2 R N".split())})
+    with coop_room() as room:
+        eid = room.join()
+        place(room, eid, *OPEN, 0)
+        arena: Any = Arena(SimpleNamespace(push_handlers=lambda **_kw: None), SimpleNamespace(key=keys))
+        arena.prediction, arena.feedback = Prediction(), Feedback()
+        arena.feedback.baseline(room.snapshot(), room.cooldown, 0.0)
+        arena.prediction.start(room, room.snapshot(), eid)
+        arena.clock = lambda: 0.0
+        arena.press(keys.RIGHT, 0)
+        shown = arena.prediction.body.center_x
+        arena.act("attack", arena.feedback.press(0.0))  # (SceneArena.press: Space, the same frame)
+        made: list[float] = []
+        attack = room._attack
+        room._attack = lambda pl: (made.append(pl.body.center_x), attack(pl))[1]  # type: ignore[method-assign]
+        for seq in (1, 2):
+            direction, action, tick = arena.outgoing()
+            assert (action is None) == (seq == 1), "the built input goes without it; the next carries it"
+            arena.prediction.sent(seq)
+            room.input(eid, wire.input_frame(eid, seq, *direction, tick, action))
+            room.step()
+        assert made == [shown] == [OPEN[0] + room.step_px]
+
+
+class Labels:
+    """Each seq a window gave its prediction (``Prediction.sent``), and the seqs (with directions) the server read."""
+
+    def __init__(self, prediction: Prediction) -> None:
+        self.given: list[int] = []
+        self.got: list[int] = []
+        sent = prediction.sent
+        prediction.sent = lambda seq: (self.given.append(seq), sent(seq))[1]  # type: ignore[method-assign]
+
+
+def test_an_n6_window_labels_each_input_with_the_seq_it_goes_as() -> None:
+    """A scene window over a real server and socket, a key held: every input it predicts is labelled with the seq
+    the server receives it as (the acks it reconciles by mean those inputs)."""
+    from mesh_net.scene_room import check_progress, check_state, parse_input
+    from mesh_net.server import Server
+
+    keys = SimpleNamespace(**{n: i for i, n in enumerate("W UP S DOWN A LEFT D RIGHT SPACE E ESCAPE F2 R N".split())})
+
+    async def run() -> Labels:
+        with coop_room() as room:
+            server = Server(room)
+            port = await server.start(0)
+
+            class Window(Arena):
+                def on_state(self, state: wire.Message, entity: int, fresh: bool) -> None:
+                    if fresh:
+                        self.feedback.baseline(state, room.cooldown, self.clock())
+                        self.prediction.start(room, state, entity)
+                    else:
+                        self.prediction.reconcile(state, entity)
+
+                def describe(self, state: wire.Message, entity: int) -> str:
+                    return ""
+
+            window = Window(SimpleNamespace(push_handlers=lambda **_kw: None), SimpleNamespace(key=keys))
+            window.prediction, window.feedback = Prediction(), Feedback()
+            window.checks = {"check": lambda m: check_state(m, room.identity, room), "check_input": parse_input,
+                             "progress": check_progress}
+            labels = Labels(window.prediction)
+            received = room.input
+            room.input = lambda e, m: (labels.got.append(m["seq"]), received(e, m))[1]  # type: ignore[method-assign]
+            window.keys = [keys.RIGHT]
+            try:
+                await asyncio.wait_for(window.session(port), 0.8)
+            except TimeoutError:
+                pass
+            finally:
+                await server.close()
+            return labels
+
+    labels = asyncio.run(run())
+    assert len(labels.got) >= 5 and labels.given[:len(labels.got)] == labels.got
+
+
+def test_an_n7_window_labels_each_input_with_the_seq_it_goes_as() -> None:
+    """The world window over a real world server and socket, once its room shows, a key held: every input it
+    predicts is labelled with the seq the server receives it as."""
+    from mesh_net.scene_room import disposable_project
+    from mesh_net.server import WorldServer
+    from mesh_net.world import World, expedition_files
+
+    keys = SimpleNamespace(**{n: i for i, n in enumerate("W UP S DOWN A LEFT D RIGHT SPACE E ESCAPE F2 R N".split())})
+
+    async def run() -> Labels:
+        with disposable_project(expedition_files(), scaffold=False) as root:
+            world = World(root)
+        server = WorldServer(world)
+        port = await server.start(0)
+        window: Any = WorldArena.__new__(WorldArena)
+        with disposable_project(expedition_files(), scaffold=False) as root:
+            WorldArena.__init__(window, SimpleNamespace(push_handlers=lambda **_kw: None), SimpleNamespace(key=keys),
+                                root, "")
+        labels = Labels(window.prediction)
+        received = world.input
+        world.input = lambda pid, m: (labels.got.append(m["seq"]), received(pid, m))[1]  # type: ignore[method-assign]
+
+        async def show() -> None:  # (WorldArena.draw, without a window: the room shows once entered)
+            while window.pending is None:
+                await asyncio.sleep(0.01)
+            window.shown, window.pending, window.phase = window.room, None, "playing"
+            window.prediction.start(window.defs[window.key].proto, window.state, window.entity)
+            window.keys = [keys.RIGHT]
+
+        shower = asyncio.create_task(show())
+        try:
+            await asyncio.wait_for(window.session(port), 1.0)
+        except TimeoutError:
+            pass
+        finally:
+            shower.cancel()
+            await server.close()
+        return labels
+
+    labels = asyncio.run(run())
+    assert len(labels.got) >= 5 and labels.given[:len(labels.got)] == labels.got
 
 
 # --- the one step ------------------------------------------------------------------------------------------------

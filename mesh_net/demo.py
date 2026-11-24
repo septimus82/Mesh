@@ -59,6 +59,10 @@ class Arena:
         # Actions pressed and not yet sent, oldest first, each with the tick it is meant for (None: the next): one rides
         # each input sent, so none replaces another (an attack whose swing showed is sent even if E follows at once).
         self.actions: list[tuple[str, int | None]] = []
+        # How many of those may ride the input a direction press built (the ones pressed before it: the avatar showed
+        # them from before its step, where the server runs them); later ones wait for the input after it. None: no
+        # input built at a press is waiting.
+        self.riders: int | None = None
         self.running = True
         self.request: str | None = "resume"
         self.client: Client | None = None
@@ -79,8 +83,8 @@ class Arena:
         key = self.arcade.key
         if symbol in self.directions and symbol not in self.keys:
             self.keys.append(symbol)
-            if self.prediction is not None:  # (the avatar moves on this frame: the next input is built now)
-                self.prediction.press(self.directions[symbol])
+            if self.prediction is not None and self.prediction.press(self.directions[symbol]):
+                self.riders = len(self.actions)  # (the avatar moved on this frame: the next input is built now)
         elif symbol in (key.SPACE, key.E) and self.client and symbol not in self.action_keys:
             self.action_keys.add(symbol)
             self.act("attack" if symbol == key.SPACE else "take")
@@ -104,22 +108,27 @@ class Arena:
         if tick is not None or sum(t is None for _, t in self.actions) < PENDING:
             self.actions.append((action, tick))
 
-    def next_action(self) -> tuple[str | None, int | None]:
+    def next_action(self, limit: int | None = None) -> tuple[str | None, int | None]:
         """What the next input carries: the oldest attack whose swing showed first (its meant tick ages while it
-        waits: SceneRoom._may_attack's cap), else the oldest other action; (None, None) when nothing waits."""
-        for index, (_, tick) in enumerate(self.actions):
+        waits: SceneRoom._may_attack's cap), else the oldest other action; (None, None) when nothing waits.
+        ``limit``: only the oldest that many may go (``riders``)."""
+        pool = self.actions[:limit] if limit is not None else self.actions
+        for index, (_, tick) in enumerate(pool):
             if tick is not None:
                 return self.actions.pop(index)
-        return self.actions.pop(0) if self.actions else (None, None)
+        return self.actions.pop(0) if pool else (None, None)
 
     def outgoing(self) -> tuple[tuple[int, int], str | None, int | None]:
         """The next input: its direction (a predicting window's built input, else the keys held), its action and the
         tick it is meant for (an attack's as its swing reckoned it; else the room's tick as reckoned now: Feedback;
         None in the 2D sample: the next). The caller says ``prediction.sent(seq)`` before it goes."""
         direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
+        limit, self.riders = self.riders, None
         if self.prediction is not None:
+            built = bool(self.prediction.inputs) and self.prediction.inputs[-1][0] is None  # (at a press)
             direction = self.prediction.next(direction)
-        action, tick = self.next_action()
+            limit = limit if built else None
+        action, tick = self.next_action(limit)
         if tick is None and self.feedback is not None:
             tick = self.feedback.tick(self.clock())
         return direction, action, tick
