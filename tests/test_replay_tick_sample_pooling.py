@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import json
+import os
+import threading
 import time
 from pathlib import Path
 
@@ -41,7 +44,42 @@ def _run_suite(tmp_path: Path, case_id: str) -> tuple[int, dict]:
         ["replays", "run", "--suite", str(_suite(tmp_path, case_id)), "--out-dir", str(tmp_path / "out"),
          "--seed", "123", "--budgets-only-on", "all", "--quiet"]
     )
-    return code, _read_json(tmp_path / "out" / case_id / "performance.json")
+    perf_path = tmp_path / "out" / case_id / "performance.json"
+    return code, (_read_json(perf_path) if perf_path.exists() else {})
+
+
+def _why(code: int, perf: dict, tmp_path: Path | None = None, case_id: str = "ep05") -> str:
+    """#612: a failure here must name the violated metric / failure cause and the process state, not just ``1 == 0``.
+
+    Defensive on purpose: a non-budget exit (exception in a run, golden mismatch) may leave no ``budget``/``performance``.
+    """
+    load = os.getloadavg() if hasattr(os, "getloadavg") else None
+    parts = [
+        f"exit={code}",
+        f"budget={perf.get('budget')}",
+        f"pooled={(perf.get('performance') or {}).get('pooled')}",
+        f"threads={threading.active_count()}",
+        f"gc_stats={gc.get_stats()}",
+        f"loadavg={load}",
+        f"cpus={os.cpu_count()}",
+    ]
+    if tmp_path is not None:
+        out = tmp_path / "out"
+        try:
+            suite = _read_json(out / "suite_report.json")
+            parts.append(f"suite_summary={suite.get('summary')}")
+            for case in suite.get("cases") or []:
+                parts.append(
+                    f"case={ {k: case.get(k) for k in ('id', 'ok', 'run_ok', 'match', 'error', 'mismatches')} }"
+                )
+            report = _read_json(out / case_id / "replay_report.json")
+            parts.append(
+                f"replay_ok={report.get('ok')} determinism={report.get('determinism')} "
+                f"run_1_error={(report.get('run_1') or {}).get('error')} run_2_error={(report.get('run_2') or {}).get('error')}"
+            )
+        except (OSError, ValueError, AttributeError) as exc:
+            parts.append(f"suite_outputs_unreadable={exc!r}")
+    return " ".join(parts)
 
 
 def _replay_check(case_id: str, out_dir: Path, *, min_samples: int) -> int:
@@ -95,8 +133,8 @@ def test_budget_judges_pooled_p95_but_keeps_the_canonical_max() -> None:
 
 def test_ep05_pools_enough_samples_and_passes_budget(tmp_path: Path) -> None:
     code, perf = _run_suite(tmp_path, "ep05")
+    assert code == 0 and (perf.get("budget") or {}).get("ok") is True, _why(code, perf, tmp_path)
     pooled = perf["performance"]["pooled"]
-    assert code == 0 and perf["budget"]["ok"] is True
     assert pooled["pooled_count"] >= replays_module.MIN_TICK_SAMPLES and pooled["min_samples_met"] is True
     assert pooled["executions"] <= MAX_TIMING_EXECUTIONS
     assert perf["performance"]["tick_ms_p95"] == pooled["tick_ms_p95"]
