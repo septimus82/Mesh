@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import json
+import os
+import threading
 import time
 from pathlib import Path
 
@@ -42,6 +45,15 @@ def _run_suite(tmp_path: Path, case_id: str) -> tuple[int, dict]:
          "--seed", "123", "--budgets-only-on", "all", "--quiet"]
     )
     return code, _read_json(tmp_path / "out" / case_id / "performance.json")
+
+
+def _why(code: int, perf: dict) -> str:
+    """#612: a failure here must name the violated metric and the process state, not just ``1 == 0``."""
+    load = os.getloadavg() if hasattr(os, "getloadavg") else None
+    return (
+        f"exit={code} budget={perf.get('budget')} pooled={perf['performance'].get('pooled')} "
+        f"threads={threading.active_count()} gc_stats={gc.get_stats()} loadavg={load} cpus={os.cpu_count()}"
+    )
 
 
 def _replay_check(case_id: str, out_dir: Path, *, min_samples: int) -> int:
@@ -96,7 +108,7 @@ def test_budget_judges_pooled_p95_but_keeps_the_canonical_max() -> None:
 def test_ep05_pools_enough_samples_and_passes_budget(tmp_path: Path) -> None:
     code, perf = _run_suite(tmp_path, "ep05")
     pooled = perf["performance"]["pooled"]
-    assert code == 0 and perf["budget"]["ok"] is True
+    assert code == 0 and perf["budget"]["ok"] is True, _why(code, perf)
     assert pooled["pooled_count"] >= replays_module.MIN_TICK_SAMPLES and pooled["min_samples_met"] is True
     assert pooled["executions"] <= MAX_TIMING_EXECUTIONS
     assert perf["performance"]["tick_ms_p95"] == pooled["tick_ms_p95"]
