@@ -383,11 +383,21 @@ def movement(rtt: float, jitter: float, loss: float, seed: int, trials: int = 40
 def queue(s: Session) -> dict[str, Any]:
     """The prediction's corrections and what the authority's input queue did (M4-3): every reconciliation's x/y move
     (px) and whether it changed elevation (by over CORRECTED px) or floor; directions dropped from a full queue; steps
-    walked on an empty one."""
+    walked on an empty one. Also, from 1 s on, the large ones (over one step: ``large``, over 30 px, with an elevation
+    or floor snap) and the minutes they are counted over; and each backlog's length (``backlog_ticks``: ticks in a row
+    that two or more inputs waited after the read, how long the authority ran behind)."""
+    late = [(px, dz > CORRECTED or floor) for t, px, dz, floor in s.corrections if t >= 1000]
+    large = [(px, snap) for px, snap in late if px > s.room.step_px * 1.01]
+    runs, run = [], 0
+    for w in [*s.waiting, 0]:
+        run, done = (run + 1, 0) if w >= 2 else (0, run)
+        runs += [done] if done else []
     return {"corrections_px": [px for _, px, _, _ in s.corrections],
             "level_snaps": sum(dz > CORRECTED or floor for _, _, dz, floor in s.corrections),
             "dropped_moves": s.room.dropped_moves, "drained_moves": s.room.drained_moves, "held_steps": s.held_steps,
-            "inputs_sent": len(s.sends)}
+            "inputs_sent": len(s.sends), "large": len(large), "large_over_30px": sum(px > 30 for px, _ in large),
+            "large_with_level_snap": sum(snap for _, snap in large), "minutes": max(0.0, s.now - 1000) / 60000,
+            "backlog_ticks": runs}
 
 
 def attack(rtt: float, jitter: float, loss: float, seed: int, trials: int = 30) -> dict[str, Any]:
@@ -699,7 +709,9 @@ def corrections(c: dict[str, Any]) -> dict[str, Any]:
     moved = [v for v in px if v > CORRECTED]
     return {"reconciliations": len(px), "p95_px": round(pct(px, 0.95), 2) if px else 0.0, "corrections": len(moved),
             "corrected_px": summary(moved), "level_snaps": c["level_snaps"], "dropped_moves": c["dropped_moves"],
-            "drained_moves": c.get("drained_moves", 0), "held_steps": c["held_steps"]}
+            "drained_moves": c.get("drained_moves", 0), "held_steps": c["held_steps"], "large": c["large"],
+            "large_per_minute": round(c["large"] / max(1e-9, c["minutes"]), 2), "large_over_30px": c["large_over_30px"],
+            "large_with_level_snap": c["large_with_level_snap"], "backlog_ticks": summary(c["backlog_ticks"])}
 
 
 def measure(seed: int = 7, sessions: int = 6) -> dict[str, Any]:
@@ -756,6 +768,12 @@ def ranges(runs: list[Any]) -> Any:
     return first
 
 
+def queue_of(args: argparse.Namespace) -> tuple[int, int, int]:
+    """The queue settings to measure, as mesh_net.server.queue_from takes them: each knob given (``--depth``,
+    ``--hold``, ``--drain``), else ``--queue``'s preset's, else the game's default; checked (ValueError)."""
+    return scene_room.queue_settings(args.depth, args.hold, args.drain, preset=args.queue)
+
+
 def main() -> None:
     global RTO_MS
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -765,20 +783,18 @@ def main() -> None:
     parser.add_argument("--rto", type=float, default=RTO_MS, help="a lost segment arrives RTT + this many ms later")
     parser.add_argument("--hz", type=int, default=wire.HZ, help="what-if: the authority's tick and the client's send "
                                                                 "rate (the game's is mesh_net.protocol.HZ)")
-    parser.add_argument("--depth", type=int, default=scene_room.DEPTH, help="what-if: the server's input queue (the "
-                                                                            "game's is mesh_net.scene_room.DEPTH)")
-    parser.add_argument("--hold", type=int, default=scene_room.HOLD, help="what-if: mesh_net.scene_room.HOLD")
+    parser.add_argument("--depth", type=int, help="what-if: the server's input queue (the game's is "
+                                                  "mesh_net.scene_room.DEPTH)")
+    parser.add_argument("--hold", type=int, help="what-if: mesh_net.scene_room.HOLD")
     parser.add_argument("--queue", choices=sorted(scene_room.QUEUE_PRESETS), help="a preset (mesh_net.scene_room."
-                        "QUEUE_PRESETS) in place of --depth, --hold and --drain")
-    parser.add_argument("--drain", type=int, default=scene_room.DRAIN, help="what-if: mesh_net.scene_room.DRAIN (0: off)")
+                        "QUEUE_PRESETS); --depth, --hold and --drain given beat its values, as the server's flags do")
+    parser.add_argument("--drain", type=int, help="what-if: mesh_net.scene_room.DRAIN (0: off)")
     parser.add_argument("--json", help="also write the full result here")
     args = parser.parse_args()
     RTO_MS = args.rto
-    if args.queue:
-        args.depth, args.hold, args.drain = scene_room.QUEUE_PRESETS[args.queue]
-    scene_room.queue_settings(args.depth, args.hold, args.drain)  # (refused here, before minutes of work)
-    with (mock.patch.object(wire, "HZ", args.hz), mock.patch.object(scene_room, "DEPTH", args.depth),
-          mock.patch.object(scene_room, "HOLD", args.hold), mock.patch.object(scene_room, "DRAIN", args.drain)):
+    depth, hold, drain = queue_of(args)  # (refused here, before minutes of work)
+    with (mock.patch.object(wire, "HZ", args.hz), mock.patch.object(scene_room, "DEPTH", depth),
+          mock.patch.object(scene_room, "HOLD", hold), mock.patch.object(scene_room, "DRAIN", drain)):
         runs = [measure(seed, args.sessions) for seed in args.seeds]
         result = {"seeds": args.seeds, "range": ranges(runs), "runs": runs, "snapshot_bytes": snapshot_bytes()}
     text = json.dumps(result, indent=1)

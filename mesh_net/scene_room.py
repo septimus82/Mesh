@@ -97,7 +97,12 @@ PENDING = 4  # attacks, and uses or takes, a player may have waiting (one of eac
 # no input gave. While the player stands, of two still inputs waiting, the older is dropped (it would walk nowhere, as
 # the one after it; its actions run with that one: never a correction). ``drain`` (0: off): whenever more than one
 # input has waited ``drain`` ticks in a row, the oldest waiting is dropped (its direction, never its actions): a backlog
-# decays, at a one-step correction each, instead of lasting until the player stands.
+# decays, at a one-step correction each, instead of lasting until the player stands. Never a drop that would take the
+# inputs still waiting somewhere else than a step from where they lead, or onto another floor (SceneRoom._forks: walked
+# both ways through the one step); the count runs on, so a later tick drains instead. Why: a step short beside a fork
+# in the floors (the stairs' edge and the landing or ground beside them, where one floor blocks a walk the other
+# doesn't) sends the inputs the window replays down the other branch, a correction of many steps with an elevation and
+# floor snap (measured: M4-3 "As implemented"). Elsewhere a dropped step corrects one step.
 # Why: TCP holds everything behind a lost segment for RTT + RTO (6 ticks at 100 ms, 8 at 200 ms), then delivers it at
 # once. A shallow queue drops that burst (corrections); a deep one keeps it and runs that many ticks behind while the
 # player walks on; the drain keeps it and then gives the lateness back a step at a time. Measured, per preset, in
@@ -725,7 +730,8 @@ class SceneRoom:
                 p.held = 0
                 p.facing = facing_of(p.dx, p.dy, p.facing)
                 p.deep = p.deep + 1 if len(p.moves) > 1 else 0
-                if self.drain and p.deep >= self.drain:  # (a lasting backlog: its oldest direction goes, never an action)
+                if self.drain and p.deep >= self.drain and not self._forks(p, solids):  # (a lasting backlog: its
+                    # oldest direction goes, never an action; never at a fork: DEPTH's note)
                     p.moves.popleft()
                     p.deep = 0
                     self.drained_moves += 1
@@ -746,6 +752,23 @@ class SceneRoom:
                 self._take(p)
             if p.held < self.hold:
                 self.walk(p.body, p.dx, p.dy, solids)
+
+    def _forks(self, p: Player, solids: list[Body]) -> bool:
+        """Whether the drain dropping ``p``'s oldest waiting input would change where this tick's step and the inputs
+        still waiting take it by more than a step, or leave it on another floor: both walked (walk: the one step) from
+        a copy of its body as a snapshot would show it. The window replays those inputs from the snapshot, so that is
+        about the correction the drop costs (inputs still in flight unseen). One step is the drain's price."""
+        ends = []
+        for skip in (False, True):
+            b = p.body
+            twin = Body(b.center_x, b.center_y, b.width, b.height, dict(b.mesh_entity_data), b.mesh_hd2d_floor)
+            for i, (_seq, dx, dy) in enumerate([(p.ack, p.dx, p.dy), *p.moves]):
+                if not (skip and i == 1):
+                    self.walk(twin, dx, dy, solids)
+            ends.append(twin)
+        kept, dropped = ends
+        return (kept.mesh_hd2d_floor != dropped.mesh_hd2d_floor
+                or math.dist((kept.center_x, kept.center_y), (dropped.center_x, dropped.center_y)) > self.step_px * 1.01)
 
     @staticmethod
     def _ready(p: Player, seq: int) -> bool:
