@@ -73,14 +73,17 @@ SPEED = 150.0
 COMBAT = {"damage": 1.0, "cooldown": 1.0, "range": 32.0, "hitbox_size": 32.0, "target_tag": "enemy",
           "attack_anim": "attack", "attack_sound": "assets/sounds/attack.wav"}
 HITBOX_S = 0.2  # the hitbox Combat makes lives this long (engine.behaviours.combat: its Hitbox's "duration")
-# An attack's cooldown is judged on the tick its client meant it for (the input's ``tick``: Player.attacks), as the
+# An attack's COOLDOWN is judged on the tick its client meant it for (the input's ``tick``: Player.attacks), as the
 # client judged it, so latency and TCP's bunching never refuse a swing the window showed. A claim older than this many
 # ticks when the server reads it is stale: dropped, never run (SceneRoom.stale_attacks counts it); a claim of a tick
-# not yet reached counts as now. The one place the window is set. Measured (docs/plans/m4_online_combat.md, M4-2 "As
-# implemented"; mashing, 3 seeds x 8 sessions, about 900 swings a profile), the oldest an honest claim read was 4 ticks
-# at 100 ms RTT +-10 ms, 10 with 1% loss (owner decision OD1's envelope: 2 ticks to spare) and 14 at 200 ms with 1%
-# loss (beyond it: 7 of 895 swings stale). 12 ticks is 600 ms; the owner is deciding whether that window is acceptable.
-ATTACK_CAP = 12
+# not yet reached counts as now. The claim decides only whether the cooldown has passed: the attack itself, its hitbox,
+# hits, damage and death are the server's, on its current geometry and floors, never a past tick's (owner condition 4;
+# this is not OD5's separate 300 ms lag-compensation cap, which M4-5 would add). The one place the window is set.
+# Owner decision 2026-11-24: 600 ms (12 ticks) approved for the cooperative PvE prototype only (docs/plans/
+# m4_online_combat.md). Measured (M4-2 "As implemented"; mashing, 3 seeds x 8 sessions, about 900 swings a profile),
+# the oldest an honest claim read was 4 ticks at 100 ms RTT +-10 ms, 10 with 1% loss (owner decision OD1's envelope:
+# 2 ticks to spare) and 14 at 200 ms with 1% loss (beyond it: 7 of 895 swings stale, counted).
+COOLDOWN_CLAIM_WINDOW = 12
 PENDING = 4  # attacks, and uses or takes, a player may have waiting (one of each is read a tick); more are dropped
 # The packaged co-op room (tooling/make_coop_scene.py): where each file goes in a project.
 COOP_FILES = {"packs/core_regions/scenes/start.json": "scene.json", "packs/core_regions/maps/start.json": "map.json",
@@ -507,7 +510,7 @@ class SceneRoom:
         self.tick = 0
         self.next_id = 1
         self.players: dict[int, Player] = {}
-        # Attacks not run (diagnostics; never on the wire): stale (meant more than ATTACK_CAP ticks ago), refused in
+        # Attacks not run (diagnostics; never on the wire): stale (meant more than COOLDOWN_CLAIM_WINDOW ticks ago), refused in
         # the cooldown; and actions dropped because PENDING were already waiting.
         self.stale_attacks = self.refused_attacks = self.dropped_actions = 0
         try:
@@ -650,16 +653,16 @@ class SceneRoom:
 
     def _may_attack(self, p: Player, meant: int) -> bool:
         """Whether an attack meant for tick ``meant`` starts now. Its cooldown is judged on the meant tick, as the
-        client judged it, within [now - ATTACK_CAP, now]: a claim of a tick not yet reached counts as now, an older
+        client judged it, within [now - COOLDOWN_CLAIM_WINDOW, now]: a claim of a tick not yet reached counts as now, an older
         one is stale and dropped (counted, never run). Refused in the cooldown otherwise (counted).
 
         What a client lying about its ticks gains: meant ticks that start attacks rise at least a cooldown apart and are
-        never older than ATTACK_CAP when read, and at most one starts a tick. So over any W ticks at most
-        1 + (W + ATTACK_CAP) // cooldown attacks start, against 1 + W // cooldown judged on arrival: the same long-run
+        never older than COOLDOWN_CLAIM_WINDOW when read, and at most one starts a tick. So over any W ticks at most
+        1 + (W + COOLDOWN_CLAIM_WINDOW) // cooldown attacks start, against 1 + W // cooldown judged on arrival: the same long-run
         rate, plus one cap's worth. Its most on consecutive ticks, after a pause, claiming the oldest tick accepted each
-        tick: 1 + ATTACK_CAP // (cooldown - 1) for a cooldown of 2 ticks or more (13 at 2, 7 at 3, 4 at 5, 2 at 10);
+        tick: 1 + COOLDOWN_CLAIM_WINDOW // (cooldown - 1) for a cooldown of 2 ticks or more (13 at 2, 7 at 3, 4 at 5, 2 at 10);
         a cooldown of 1 tick allows one a tick anyway."""
-        if meant < self.tick - ATTACK_CAP:
+        if meant < self.tick - COOLDOWN_CLAIM_WINDOW:
             self.stale_attacks += 1
             return False
         meant = min(meant, self.tick)
@@ -905,7 +908,7 @@ class Feedback:
     tick, as the client reckons it (``tick``: a snapshot's tick advanced by the time since it came, taking the one
     that came soonest); it returns that tick, which the attack's input carries, and the server judges the cooldown on
     it (SceneRoom._may_attack). So a press the window swings for is one the server runs, whatever latency and TCP's
-    bunching do to its arrival, unless it reaches the server more than ATTACK_CAP ticks after that tick (then it is
+    bunching do to its arrival, unless it reaches the server more than COOLDOWN_CLAIM_WINDOW ticks after that tick (then it is
     stale: dropped, and the swing reads as a miss). A press within the cooldown swings for nothing and sends nothing.
 
     The reckoning may come down: a server that stalls skips the ticks it missed (mesh_net.server.Server._run_clock), so

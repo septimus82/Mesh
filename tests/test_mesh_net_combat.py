@@ -304,7 +304,8 @@ def play(profile: tuple[float, float, float], seed: int, when: list[float],
         return {"swings": [t for t, eid, own in arena.view.swings if own and eid == s.eid], "sent": sent,
                 "attacks": room.players[s.eid].attack_seq, "hits": hits, "hit_at": hit_at,
                 "flashes": [t for t, _enemy in arena.view.flashes], "stale": room.stale_attacks,
-                "refused": room.refused_attacks, "cooldown": room.cooldown, "claims": claims, "outcomes": outcomes}
+                "refused": room.refused_attacks, "cooldown": room.cooldown, "claims": claims, "outcomes": outcomes,
+                "reckoned_ahead": arena.feedback.tick(now[0] / 1000) - room.tick}
 
 
 @pytest.mark.parametrize("seed", [7, 8, 9])
@@ -343,7 +344,7 @@ def test_mashing_never_shows_a_swing_the_server_does_not_run(seed: int, profile:
     bring attack inputs to the server closer together than the cooldown. Judged on the ticks the window meant them for
     (SceneRoom._may_attack), every swing shown is an attack the server starts within owner decision OD1's envelope (to
     100 ms RTT, +-10 ms, 1% loss): none refused in the cooldown, none stale. At 200 ms with 1% loss a claim can read
-    older than ATTACK_CAP (two ticks beyond it, measured): such a swing is stale, dropped and counted, never run late,
+    older than COOLDOWN_CLAIM_WINDOW (two ticks beyond it, measured): such a swing is stale, dropped and counted, never run late,
     and never refused; every other swing runs. Each starts once and hits once, no faster than the cooldown allows."""
     for session in range(2):
         got = play(profile, seed * 100 + session, mashing(random.Random(seed * 1000 + session), 1000.0, 20000.0))
@@ -359,6 +360,7 @@ def test_mashing_never_shows_a_swing_the_server_does_not_run(seed: int, profile:
         assert len(swings) == len(got["sent"]) == got["attacks"] + got["stale"], "every other swing shown starts"
         assert all(got["outcomes"][claim] in ("run", "stale") for _, claim in got["claims"])
         assert got["hits"] == got["attacks"], "each hits once"
+        assert got["reckoned_ahead"] <= 0, "the window's reckoning is not ahead of the server"
 
 
 @pytest.mark.parametrize("stall_ms", [200, 450, 1000])
@@ -381,6 +383,8 @@ def test_after_a_server_stall_every_swing_shown_runs_again(stall_ms: int, seed: 
     allowed = ("run", "stale") if profile[0] > 100 else ("run",)
     assert [(t, got["outcomes"].get(claim)) for t, claim in after if got["outcomes"].get(claim) not in allowed] == []
     assert got["refused"] <= 3, "refused only around the stall"
+    assert got["reckoned_ahead"] <= 0, "no lasting drift: the reckoning came back down"
+    assert got["attacks"] <= len(got["swings"]) and got["hits"] == got["attacks"], "no attack or hit twice"
     tick_ms = 1000 / wire.HZ
     swings = got["swings"]
     assert all(b - a >= got["cooldown"] * tick_ms - tick_ms - FRAME_MS for a, b in zip(swings, swings[1:])), \
@@ -472,10 +476,10 @@ def test_the_server_never_drops_an_attack_for_a_use_in_the_same_tick(coop: Scene
 
 def test_the_cooldown_is_judged_on_the_meant_tick_within_its_cap(coop: SceneRoom) -> None:
     """SceneRoom._may_attack: an attack meant for a tick a cooldown after the last starts whenever it arrives within
-    ATTACK_CAP ticks; one meant earlier is refused (the cooldown); one older than ATTACK_CAP is stale (dropped,
+    COOLDOWN_CLAIM_WINDOW ticks; one meant earlier is refused (the cooldown); one older than COOLDOWN_CLAIM_WINDOW is stale (dropped,
     counted, never run); one meant for a tick not reached counts as now. (A liar's gain:
     test_a_lying_client_gains_one_caps_worth_at_most.)"""
-    from mesh_net.scene_room import ATTACK_CAP
+    from mesh_net.scene_room import COOLDOWN_CLAIM_WINDOW
 
     room = coop
     eid = room.join()
@@ -495,15 +499,15 @@ def test_the_cooldown_is_judged_on_the_meant_tick_within_its_cap(coop: SceneRoom
         for _ in range(40):
             room.step()
         c, now = room.cooldown, room.tick
-        assert c + 3 < ATTACK_CAP + 3 < 40
-        first = now + 1 - ATTACK_CAP  # (read next tick, as old as the cap allows)
-        assert attack(first), "meant ATTACK_CAP ticks before it is read: on time"
+        assert c + 3 < COOLDOWN_CLAIM_WINDOW + 3 < 40
+        first = now + 1 - COOLDOWN_CLAIM_WINDOW  # (read next tick, as old as the cap allows)
+        assert attack(first), "meant COOLDOWN_CLAIM_WINDOW ticks before it is read: on time"
         assert not attack(first + c - 1), "within the cooldown of the meant tick: refused"
         assert attack(first + c), "a cooldown after it by meant ticks, though it runs 2 ticks after: starts"
         assert room.refused_attacks - counts[1] == 1
         for _ in range(3 * c):
             room.step()
-        assert not attack(room.tick - ATTACK_CAP), "read more than the cap after its tick: stale"
+        assert not attack(room.tick - COOLDOWN_CLAIM_WINDOW), "read more than the cap after its tick: stale"
         assert room.stale_attacks - counts[0] == 1
         for _ in range(3 * c):
             room.step()
@@ -521,10 +525,10 @@ def test_the_cooldown_is_judged_on_the_meant_tick_within_its_cap(coop: SceneRoom
 @pytest.mark.parametrize("cooldown", [2, 3, 5, 10])
 def test_a_lying_client_gains_one_caps_worth_at_most(cooldown: int, coop: SceneRoom) -> None:
     """A greedy liar: after a pause, one attack input every tick claiming the oldest tick the server accepts
-    (max(attack_after, now - ATTACK_CAP)). Its run of attacks on consecutive ticks is 1 + ATTACK_CAP // (cooldown - 1)
-    (13 at a cooldown of 2, 7 at 3, 4 at 5, 2 at 10); over any W ticks it starts at most 1 + (W + ATTACK_CAP) //
+    (max(attack_after, now - COOLDOWN_CLAIM_WINDOW)). Its run of attacks on consecutive ticks is 1 + COOLDOWN_CLAIM_WINDOW // (cooldown - 1)
+    (13 at a cooldown of 2, 7 at 3, 4 at 5, 2 at 10); over any W ticks it starts at most 1 + (W + COOLDOWN_CLAIM_WINDOW) //
     cooldown, against an honest client's 1 + W // cooldown; and in the long run it keeps the honest rate."""
-    from mesh_net.scene_room import ATTACK_CAP
+    from mesh_net.scene_room import COOLDOWN_CLAIM_WINDOW
 
     room = coop
     saved = room.cooldown
@@ -548,19 +552,19 @@ def test_a_lying_client_gains_one_caps_worth_at_most(cooldown: int, coop: SceneR
             room.leave(eid)
 
     try:
-        liar = starts(lambda p, next_tick: max(p.attack_after, next_tick - ATTACK_CAP))
+        liar = starts(lambda p, next_tick: max(p.attack_after, next_tick - COOLDOWN_CLAIM_WINDOW))
         honest = starts(lambda p, next_tick: next_tick)
         stale = room.stale_attacks
         backdated = starts(lambda p, next_tick: p.attack_after)  # (claims older than the cap: refused as stale)
         assert room.stale_attacks > stale and len(backdated) <= len(liar)
         for i, first in enumerate(backdated):
-            assert sum(1 for t in backdated[i:] if t <= first + 40) <= 1 + (40 + ATTACK_CAP) // cooldown
+            assert sum(1 for t in backdated[i:] if t <= first + 40) <= 1 + (40 + COOLDOWN_CLAIM_WINDOW) // cooldown
         run = next(k for k in range(1, len(liar)) if liar[k] != liar[0] + k)
-        assert run == 1 + ATTACK_CAP // (cooldown - 1), "its run on consecutive ticks"
+        assert run == 1 + COOLDOWN_CLAIM_WINDOW // (cooldown - 1), "its run on consecutive ticks"
         for i, first in enumerate(liar):
             for w in range(0, 120):
-                assert sum(1 for t in liar[i:] if t <= first + w) <= 1 + (w + ATTACK_CAP) // cooldown
-        assert len(liar) <= len(honest) + 1 + ATTACK_CAP // cooldown + 1, "one cap's worth over 400 ticks"
+                assert sum(1 for t in liar[i:] if t <= first + w) <= 1 + (w + COOLDOWN_CLAIM_WINDOW) // cooldown
+        assert len(liar) <= len(honest) + 1 + COOLDOWN_CLAIM_WINDOW // cooldown + 1, "one cap's worth over 400 ticks"
         late = [t for t in liar if t > liar[0] + 200]
         assert len(late) <= 1 + (late[-1] - late[0]) // cooldown, "after the burst, the honest rate"
         assert all(b > a for a, b in zip(liar, liar[1:])), "never two a tick"
@@ -743,6 +747,10 @@ def test_a_transfer_from_a_long_running_room_lets_the_first_press_swing() -> Non
     world.input(pid, wire.input_frame(m.eid, 1, 0, 0, tick, action, room=fresh.id))
     world.step()
     assert fresh.room.players[m.eid].attack_seq == 1, "and the server runs it there"
+    for _ in range(30):
+        world.step()
+    assert fresh.room.players[m.eid].attack_seq == 1, "once"
+    assert arena.feedback.tick(clock[0]) <= fresh.room.tick, "the reckoning is the fresh room's, not the old one's"
 
 
 def test_leaving_a_room_drops_what_was_waiting() -> None:
@@ -827,7 +835,7 @@ def test_a_full_queue_never_drops_a_shown_swing() -> None:
 def test_attacks_bunched_by_tcp_run_in_the_order_sent(coop: SceneRoom) -> None:
     """Two attack inputs a cooldown apart (by meant ticks) reach the server in one tick (a retransmission bunched
     them): the server reads the oldest first, so both run, one a tick; read newest first, the older would be refused."""
-    from mesh_net.scene_room import ATTACK_CAP
+    from mesh_net.scene_room import COOLDOWN_CLAIM_WINDOW
 
     room = coop
     eid = room.join()
@@ -835,7 +843,7 @@ def test_attacks_bunched_by_tcp_run_in_the_order_sent(coop: SceneRoom) -> None:
     try:
         for _ in range(40):
             room.step()
-        first = room.tick + 1 - ATTACK_CAP
+        first = room.tick + 1 - COOLDOWN_CLAIM_WINDOW
         for seq, meant in ((1, first), (2, first + room.cooldown)):
             room.input(eid, wire.input_frame(eid, seq, 0, 0, meant, "attack"))
         refused = room.refused_attacks
@@ -844,3 +852,45 @@ def test_attacks_bunched_by_tcp_run_in_the_order_sent(coop: SceneRoom) -> None:
         assert p.attack_seq == 2 and room.refused_attacks == refused and p.attacks == []
     finally:
         room.leave(eid)
+
+
+def test_an_old_claim_judges_the_cooldown_only_never_the_hit(coop: SceneRoom) -> None:
+    """Owner condition 4: an attack claiming a tick COOLDOWN_CLAIM_WINDOW allows (10 ticks back) runs from where the
+    attacker stands when the server reads it, against where the enemy is then: an enemy in reach at the claimed tick
+    but gone since is not hit, one that came into reach since is; an attacker that walked off swings from where it
+    is. The claim never brings back a past position."""
+    from mesh_net.scene_room import COOLDOWN_CLAIM_WINDOW
+
+    room = coop
+    eid = room.join()
+    enemy = room.enemies[BANDIT]
+    saved = (enemy.state, enemy.hit_seq, enemy.body.center_x)
+    enemy.state = TargetState(hp=100.0, max_hp=100.0)
+    p = room.players[eid]
+    seq = 0
+
+    def attack_from(at: float, enemy_now: float) -> tuple[int, int]:
+        """Attacker and enemy in reach of each other until 10 ticks ago; then put at ``at`` and ``enemy_now``; an attack
+        claiming 10 ticks ago read now. (attacks started, hits taken)."""
+        nonlocal seq
+        place(room, eid, 568.0, 256.0, 0)
+        enemy.body.center_x = saved[2]
+        for _ in range(3 * room.cooldown):  # (in reach of each other through the claimed tick)
+            room.step()
+        claimed = room.tick - 10
+        assert claimed >= room.tick + 1 - COOLDOWN_CLAIM_WINDOW
+        p.body.center_x, enemy.body.center_x = at, enemy_now
+        attacks, hits = p.attack_seq, enemy.hit_seq
+        seq += 1
+        room.input(eid, wire.input_frame(eid, seq, 0, 0, claimed, "attack"))
+        room.step()
+        return p.attack_seq - attacks, enemy.hit_seq - hits
+
+    try:
+        assert attack_from(568.0, saved[2]) == (1, 1), "both where they were: a hit"
+        assert attack_from(568.0, 900.0) == (1, 0), "the enemy gone since the claimed tick: a miss"
+        assert attack_from(300.0, saved[2]) == (1, 0), "the attacker walked off: it swings where it is, a miss"
+        assert attack_from(860.0, 900.0) == (1, 1), "both somewhere new, in reach now: a hit"
+    finally:
+        room.leave(eid)
+        enemy.state, enemy.hit_seq, enemy.body.center_x = saved

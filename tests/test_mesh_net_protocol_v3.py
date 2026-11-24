@@ -426,6 +426,14 @@ def test_a_resumed_scene_session_passes_its_own_checks(coop: SceneRoom) -> None:
                 for _ in range(12):
                     await client.input(0, 1)
                     await client.receive()
+                own = next(r for r in client.state["players"] if r[0] == client.entity)
+                assert own[7] == 0, "nothing pressed before the drop runs after the resume"
+                await client.input(0, 0, "attack", client.state["tick"])
+                for _ in range(12):
+                    await client.input(0, 0)
+                    await client.receive()
+                own = next(r for r in client.state["players"] if r[0] == client.entity)
+                assert own[7] == 1, "one attack pressed after the resume runs, once"
         finally:
             await server.close()
             for eid in list(room.players):

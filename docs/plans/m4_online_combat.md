@@ -44,6 +44,21 @@
 >   - (iii) when the queue is full and an input is dropped, any pending attack is kept;
 >   - (iv) the seed spread is worded as about 10 ms and about 4 points (§2.1, §4).
 > - M4-1 is marked merged (#610).
+> - **Owner decision, 2026-11-24, on the 600 ms attack-claim window (#611), quoted verbatim:**
+>
+>   > "600 ms APPROVED, with the following conditions. 1. This approval applies to the current cooperative PvE
+>   > prototype. It is not blanket approval for competitive PvP or public deployment. 2. Keep OD5's separate 300 ms
+>   > maximum for historical hit validation unchanged. 3. The server must remain authoritative over attack execution,
+>   > hit detection, damage, death and cooldown enforcement. 4. Never use the client's claimed attack tick to authorize
+>   > a hit against historical positions. Hits remain evaluated against current server-authoritative geometry and
+>   > supporting floors until M4-5 is separately approved. 5. Preserve and verify the bounded attack-rate guarantees.
+>   > Record the dishonest-client burst advantage, including short-cooldown attacks, as an explicit security limitation
+>   > requiring attention before public deployment. 6. Server stalls, retransmissions, disconnects and room transfers
+>   > must not cause persistent timing corruption or duplicate attacks. 7. Count and report stale or refused attacks. Do
+>   > not conceal them, weaken acceptance tests or silently change the agreed latency targets."
+>
+>   The approval covers the co-op PvE prototype only. See §4 M4-2 "As implemented" and §6
+>   "Security limitation: before public deployment".
 > - The review of M4-2 (#611, rounds 2 and 3) is recorded in §4 M4-2 "As implemented": the attack cooldown is judged
 >   on the intended tick, the client's reckoning of the tick recovers from a server stall, the true lying-client bound,
 >   and no pressed action is replaced or lost on its way.
@@ -518,10 +533,10 @@ The measurements rank the levers.
       - The window never swings early: its cooldown runs from the last swing's tick as sent, which a reckoning that
         came down reaches only later.
     - **A press swings** only a cooldown of reckoned ticks after the last swing. Its attack input carries that tick.
-    - **The server** (`SceneRoom._may_attack`) judges the cooldown on that tick, within `[now - ATTACK_CAP, now]`.
+    - **The server** (`SceneRoom._may_attack`) judges the cooldown on that tick, within `[now - COOLDOWN_CLAIM_WINDOW, now]`.
       A tick not reached yet counts as now. An older one is **stale**: dropped, counted in `stale_attacks`, never run.
       Every attack still runs when it arrives, from where the attacker stands then.
-    - **ATTACK_CAP is 12 ticks (600 ms), one named constant.** Measured while mashing over 3 seeds × 8 sessions (about
+    - **COOLDOWN_CLAIM_WINDOW is 12 ticks (600 ms), one named constant.** Measured while mashing over 3 seeds × 8 sessions (about
       900 swings per profile), with the reckoning settled, the oldest claim read was:
       - 100 ms, no loss: 4 ticks;
       - 100 ms, 1% loss: 10 ticks, so OD1's envelope has 2 ticks to spare;
@@ -529,13 +544,18 @@ The measurements rank the levers.
 
       Round 2 reported 9 and 12 ticks. Those were 1–2 ticks low because the probe delivers its first snapshot with no
       delay, and the old reckoning kept that too-early sample forever. OD5's 300 ms (6 ticks) would drop about 2% of
-      swings at 100 ms with 1% loss. The owner is deciding whether a 600 ms window is acceptable.
+      swings at 100 ms with 1% loss. **The owner approved the 600 ms window on 2026-11-24, for the cooperative PvE
+      prototype only, with conditions** (below).
+    - **The claim judges the cooldown only.** The attack runs when it is read: its hitbox, hits, damage and death are
+      evaluated on the server's current geometry and floors, never on positions from the claimed tick. A test checks
+      this (`test_an_old_claim_judges_the_cooldown_only_never_the_hit`). `COOLDOWN_CLAIM_WINDOW` is named apart from
+      OD5's separate 300 ms cap for historical hit validation (M4-5, not approved yet), which stays unchanged.
     - **What a lying client can gain:** meant ticks that start attacks rise at least a cooldown apart and are never
       older than the cap when read, and at most one attack starts per tick.
-      - Over any W ticks it can start at most 1 + (W + ATTACK_CAP) // cooldown attacks, against 1 + W // cooldown when
+      - Over any W ticks it can start at most 1 + (W + COOLDOWN_CLAIM_WINDOW) // cooldown attacks, against 1 + W // cooldown when
         judged on arrival. That is the same long-run rate plus one cap's worth.
       - Its longest run on consecutive ticks, after a pause, comes from claiming the oldest tick accepted on every tick.
-        That run is 1 + ATTACK_CAP // (cooldown − 1) attacks: 13 at a cooldown of 2 ticks, 7 at 3, 4 at 5 and 2 at 10
+        That run is 1 + COOLDOWN_CLAIM_WINDOW // (cooldown − 1) attacks: 13 at a cooldown of 2 ticks, 7 at 3, 4 at 5 and 2 at 10
         (the co-op room's).
       - Over 200 ticks a greedy liar gets 6, 4, 3 and 2 more attacks than an honest client at those cooldowns.
       - A 1-tick cooldown allows one attack per tick anyway.
@@ -652,6 +672,27 @@ Each decision carries the recommendation; the reviewer's view is noted where it 
   responsiveness (as N5.1 said).
 - **Player-perceived unfairness at the BODY boundary** remains until (b). The server's rule never changes; owner D8
   stands.
+
+- **Security limitation: before public deployment** (owner decision of 2026-11-24, condition 5). This needs attention
+  before any competitive PvP or public deployment.
+  - **What a dishonest client can do:** it can claim attack ticks up to `COOLDOWN_CLAIM_WINDOW` (12 ticks, 600 ms)
+    old. It cannot raise its long-run attack rate. Over any W ticks it starts at most
+    1 + (W + COOLDOWN_CLAIM_WINDOW) // cooldown attacks, against 1 + W // cooldown for an honest client, and never
+    more than one per tick.
+  - **But after a pause it can bank a burst.** Claiming the oldest tick accepted on every tick gives a run on
+    consecutive ticks of 1 + COOLDOWN_CLAIM_WINDOW // (cooldown − 1) attacks. Short cooldowns gain the most. Measured
+    by `tests/test_mesh_net_combat.py::test_a_lying_client_gains_one_caps_worth_at_most` and the reviewer's
+    `m42_liar.py` (200 ticks after a 100-tick pause):
+
+    | Cooldown (ticks) | Run on consecutive ticks | Greedy liar / honest starts in 200 ticks |
+    |---|---|---|
+    | 2 | 13 | 106 / 100 |
+    | 3 | 7 | 71 / 67 |
+    | 5 | 4 | 43 / 40 |
+    | 10 (the co-op room's) | 2 | 22 / 20 |
+
+  - **Mitigations to consider before deployment:** a shorter window, a per-player rate check on top of the claim, or
+    server-side input timestamps once M4-3's queue exists.
 
 **Out of scope:**
 - RPG content;

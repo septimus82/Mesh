@@ -25,7 +25,7 @@ once, so that no later M4 stage needs a v4:
   this room instance. Its placement is as a player row's (static until enemies move, M4-4; ``floor`` is ``null`` for
   a body the authority has never stood on a floor);
 * every ``input`` carries ``tick``, the server tick the client means it for (OD11). An attack's cooldown is judged
-  on it, as the window judged it, within [now - ATTACK_CAP, now] (mesh_net.scene_room.SceneRoom._may_attack): an
+  on it, as the window judged it, within [now - COOLDOWN_CLAIM_WINDOW, now] (mesh_net.scene_room.SceneRoom._may_attack): an
   older claim is stale and dropped, a later one counts as now. An attack may carry ``view_tick``, the tick (a number:
   between two ticks, a fraction) its window showed (reserved for lag compensation, M4-5). Neither lets the authority
   start more than one attack (or one use or take) a tick;

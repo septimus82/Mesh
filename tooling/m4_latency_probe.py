@@ -348,7 +348,7 @@ def attack(rtt: float, jitter: float, loss: float, seed: int, trials: int = 30) 
     swing = [t - p for p, t in zip(presses, swings) if t < math.inf]
     flash = [next((t for t in flashes if t > p), math.inf) - p for p in presses]
     return {"hit_confirmed_ms": confirm, "swing_visible_ms": swing, "hit_flash_ms": [f for f in flash if f < 1200],
-            "trials": trials}
+            "trials": trials, "stale_attacks": room.stale_attacks, "refused_attacks": room.refused_attacks}
 
 
 def judge(s: Session, samples: list[tuple[float, tuple[Any, ...], dict[str, tuple[float, float, float]]]],
@@ -536,7 +536,9 @@ def measure(seed: int = 7, sessions: int = 6) -> dict[str, Any]:
                          "local_largest_frame_step_px": round(max(m["steps"], default=0.0), 1),
                          "most_inputs_in_one_tick": m["max_inputs_in_one_tick"]},
             "attack": {"swing_visible_ms": summary(a["swing_visible_ms"]), "hit_confirmed_ms": summary(a["hit_confirmed_ms"]),
-                       "hit_flash_ms": summary(a["hit_flash_ms"]), "hits_seen": f"{len(a['hit_confirmed_ms'])}/{a['trials']}"},
+                       "hit_flash_ms": summary(a["hit_flash_ms"]), "hits_seen": f"{len(a['hit_confirmed_ms'])}/{a['trials']}",
+                       # (attacks the server did not run: never hidden, owner decision of 2026-11-24, condition 7)
+                       "stale_attacks": a["stale_attacks"], "refused_attacks": a["refused_attacks"]},
             "moving_target_70": fairness(pooled(moving_target, seeds, *profile, 70.0)),
             "moving_target_150": fairness(pooled(moving_target, seeds, *profile, 150.0)),
             "moving_attacker": fairness(pooled(moving_attacker, seeds, *profile)),

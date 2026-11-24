@@ -548,3 +548,26 @@ def test_an_enemy_row_standing_on_a_floor_not_under_it_is_refused(room: SceneRoo
             check_state(with_enemy(*DECK_AT, 2.0 * M, "crossing/col_no_such"), room.identity, room)
     finally:
         room.leave(eid)
+
+
+def test_an_old_attack_claim_never_lets_a_hit_cross_floors(room: SceneRoom) -> None:
+    """Owner condition 4 on floors: the attacker on the deck now, the enemy on the ground beneath; an attack claiming a
+    tick 10 back (when, say, both stood on the ground) runs, from the deck, and hits nothing: the floors are the
+    server's current ones."""
+    actor, target = placed(room, "deck, ground directly beneath")
+    bandit = room.enemies[ENEMY]
+    bandit.body.center_x, bandit.body.center_y = target[:2]
+    bandit.body.mesh_entity_data["elevation"] = target[2]
+    bandit.state, bandit.dropped, bandit.holder = TargetState(hp=3.0, max_hp=3.0), False, None
+    eid = room.join(Player(Body(actor[0], actor[1], *room._template_size(), {**room.template, "elevation": actor[2]}),
+                           facing=0))
+    try:
+        for _ in range(20):
+            room.step()
+        before = bandit.hit_seq
+        room.input(eid, wire.input_frame(eid, 1, 0, 0, room.tick - 10, "attack"))
+        for _ in range(room.lifetime + 1):
+            room.step()
+        assert room.players[eid].attack_seq == 1 and bandit.hit_seq == before and bandit.state.hp == 3.0
+    finally:
+        room.leave(eid)
