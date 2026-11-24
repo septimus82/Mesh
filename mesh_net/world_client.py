@@ -25,7 +25,7 @@ from . import protocol as wire
 from .demo import Arena, open_arena, reason
 from .playback import Playback
 from .scene_client import JoinRefused, SceneView
-from .scene_room import Feedback, check_progress, check_state
+from .scene_room import Feedback, Prediction, check_progress, check_state
 from .world import World, check_frame, check_welcome, expedition_files
 
 SIZE = (640, 360)
@@ -42,6 +42,9 @@ NOTICE_TEXT = {"need_party": "an expedition needs a party (P)", "no_instance": "
 
 
 class WorldArena(Arena):
+    feedback: Feedback
+    prediction: Prediction
+
     def __init__(self, window: Any, arcade: Any, root: Path, scene: str) -> None:
         super().__init__(window, arcade)
         world = World(root)  # the rooms as the server validates them, built from this window's own files
@@ -67,6 +70,7 @@ class WorldArena(Arena):
         self.requests: list[wire.Message] = []
         self.seq = 0
         self.feedback = Feedback()
+        self.prediction = Prediction()  # (predicting only in the room on screen: from when it shows to the next enter)
         self.last: float | None = None
         self.loads: list[str] = []  # the rooms this window loaded, in order (for diagnostics and tests)
         self.trace: deque[tuple[float, str]] = deque(maxlen=48)  # (monotonic seconds, what happened): diagnostics
@@ -106,7 +110,9 @@ class WorldArena(Arena):
                 # in a room the player hasn't seen). (The view shows the state's room: just after an enter it doesn't.)
                 if (self.phase == "playing" and self.view is not None and self.state is not None
                         and self.shown == self.room):
-                    near = own is not None and self.view.near_drop(own[1], own[2], self.state)
+                    body = self.prediction.body  # (where the window shows itself: the server runs it from there)
+                    at = (body.center_x, body.center_y) if body else (own[1], own[2]) if own is not None else None
+                    near = at is not None and self.view.near_drop(at[0], at[1], self.state)
                     self.act("take" if near else "use")
             elif symbol == key.P:
                 self._ask("create")
@@ -156,6 +162,7 @@ class WorldArena(Arena):
             self.state = msg["state"]
             self.feedback.baseline(self.state, room.cooldown, now)  # (another room instance: its own counters)
             self.actions.clear()  # (what was pressed in the last room is never sent into this one)
+            self.prediction.stop()  # (nor walked again in this one)
             self.playback = Playback(lambda s: check_state(s, identity, room))
             self.playback.push(self.state, now)
             self.pending, self.phase = msg, "loading"
@@ -173,6 +180,7 @@ class WorldArena(Arena):
                 check_progress(self.state, state, own, self.seq)
             self.state = state
             self.playback.push(state, now)
+            self.prediction.reconcile(state, own)  # (predicting only once the room shows)
             swung, hit = self.feedback.update(state, own, now)
             if self.view is not None and self.shown == self.room:  # (a view still loading shows none of it)
                 for eid in swung:
@@ -214,11 +222,10 @@ class WorldArena(Arena):
                         self.requests.clear()
                         if self.phase == "playing" and self.shown == self.room and self.entity is not None:
                             # (no input while a room loads)
-                            direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
-                            action, tick = self.next_action()
+                            direction, action, tick = self.outgoing()
+                            assert tick is not None  # (this window reckons the room's tick: Feedback)
                             self.seq += 1
-                            if tick is None:  # (the next tick)
-                                tick = self.state["tick"] + 1 if self.state is not None else 0
+                            self.prediction.sent(self.seq)
                             writer.write(wire.encode(wire.input_frame(self.entity, self.seq, *direction, tick, action,
                                                                       room=self.room)))
                         await asyncio.wait_for(writer.drain(), 2)
@@ -265,6 +272,7 @@ class WorldArena(Arena):
             self.phase, self.room, self.pending = "disconnected", None, None
             self.blur()
             self.actions.clear()  # (the session they were pressed in is over: never sent in another)
+            self.prediction.stop()
             self.requests.clear()
 
     def caption(self) -> str:
@@ -308,6 +316,8 @@ class WorldArena(Arena):
                 self.window.clear(color=(16, 16, 24))
                 return
             self.shown, self.pending, self.last, self.phase, self.refusal = self.room, None, None, "playing", None
+            if self.state is not None and self.entity is not None:  # (predicting from the latest row, nothing sent yet)
+                self.prediction.start(self.defs[self.key].proto, self.state, self.entity)
         dt = 0.0 if self.last is None else min(0.1, now - self.last)
         self.last = now
         if self.view is None:
@@ -315,9 +325,8 @@ class WorldArena(Arena):
             return
         state = self.state if self.connected and self.shown == self.room else None
         positions = self.playback.positions(now) if state else {}
-        own = self._own() if state else None
-        if own is not None:
-            positions[own[0]] = (own[1], own[2], own[4], own[5])
+        if state and self.entity is not None and self.prediction.body is not None:
+            positions[self.entity] = self.prediction.shown(dt)
         self.view.sync(state, positions, self.entity if state else None, dt)
         self.view.draw(dt)
 

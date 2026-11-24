@@ -11,7 +11,7 @@ from importlib.resources import files
 from . import protocol as wire
 from .client import Client, connect
 from .playback import Playback
-from .scene_room import PENDING, disposable_project
+from .scene_room import PENDING, Feedback, Prediction, disposable_project
 
 OWN = (61, 225, 188)
 OTHER = (255, 191, 76)
@@ -66,6 +66,10 @@ class Arena:
         self.checks: dict = {}  # connect()'s validators; mesh_net.scene_client passes the scene room's
         self.playback = Playback()
         self.local_interpolation = False
+        # A scene room's (mesh_net.scene_client, mesh_net.world_client): its combat presentation and the room's tick as
+        # reckoned (every input carries it: one estimate), and its own avatar's prediction. None in the 2D sample.
+        self.feedback: Feedback | None = None
+        self.prediction: Prediction | None = None
         self.clock = time.monotonic  # (s) when a key press happened (tests: a virtual clock)
         self.status = "Connecting"
         window.push_handlers(on_key_press=self.press, on_key_release=self.release,
@@ -75,6 +79,8 @@ class Arena:
         key = self.arcade.key
         if symbol in self.directions and symbol not in self.keys:
             self.keys.append(symbol)
+            if self.prediction is not None:  # (the avatar moves on this frame: the next input is built now)
+                self.prediction.press(self.directions[symbol])
         elif symbol in (key.SPACE, key.E) and self.client and symbol not in self.action_keys:
             self.action_keys.add(symbol)
             self.act("attack" if symbol == key.SPACE else "take")
@@ -106,6 +112,18 @@ class Arena:
                 return self.actions.pop(index)
         return self.actions.pop(0) if self.actions else (None, None)
 
+    def outgoing(self) -> tuple[tuple[int, int], str | None, int | None]:
+        """The next input: its direction (a predicting window's built input, else the keys held), its action and the
+        tick it is meant for (an attack's as its swing reckoned it; else the room's tick as reckoned now: Feedback;
+        None in the 2D sample: the next). The caller says ``prediction.sent(seq)`` before it goes."""
+        direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
+        if self.prediction is not None:
+            direction = self.prediction.next(direction)
+        action, tick = self.next_action()
+        if tick is None and self.feedback is not None:
+            tick = self.feedback.tick(self.clock())
+        return direction, action, tick
+
     def blur(self) -> bool:
         """Focus lost: release every held key (none sticks), but keep the actions pressed: they are still sent."""
         self.keys.clear()
@@ -128,8 +146,9 @@ class Arena:
                 async def send_inputs() -> None:
                     due = loop.time()
                     while True:
-                        direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
-                        action, tick = self.next_action()
+                        direction, action, tick = self.outgoing()
+                        if self.prediction is not None:
+                            self.prediction.sent(client.seq + 1)  # (Client.input numbers it so)
                         await client.input(*direction, action=action, tick=tick)
                         due = max(due + 1 / wire.HZ, loop.time())  # fixed schedule: no drift; after a stall, one extra send
                         await asyncio.sleep(due - loop.time())
@@ -157,6 +176,8 @@ class Arena:
             self.client = None
             self.blur()
             self.actions.clear()  # (the session they were pressed in is over: never sent in another)
+            if self.prediction is not None:
+                self.prediction.stop()  # (nor walked again in another)
             self.playback = Playback()
 
     def on_state(self, state: wire.Message, entity: int, fresh: bool) -> None:

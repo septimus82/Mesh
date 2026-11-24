@@ -27,7 +27,7 @@ from engine.physics_model import entity_shape, shapes_overlap
 from mesh_net import protocol as wire
 from mesh_net.demo import Arena
 from mesh_net.scene_client import SceneArena
-from mesh_net.scene_room import COOP_SCENE, Feedback, SceneRoom, coop_files, disposable_project, hitbox_ticks
+from mesh_net.scene_room import COOP_SCENE, Feedback, Prediction, SceneRoom, coop_files, disposable_project, hitbox_ticks
 from mesh_net.world import World, expedition_files
 from mesh_net.world_client import WorldArena
 from tests.test_hd2d_net_parity import sprite
@@ -207,7 +207,8 @@ class View:
 
 def window(**attrs: Any) -> Any:
     """A window as the arenas' handlers read it: their action queue (Arena.act) and the attributes given."""
-    arena: Any = SimpleNamespace(**{"action_keys": set(), "actions": [], "directions": {}, "keys": [], **attrs})
+    arena: Any = SimpleNamespace(**{"action_keys": set(), "actions": [], "directions": {}, "keys": [],
+                                    "prediction": Prediction(), **attrs})
     arena.act = lambda action, tick=None: Arena.act(arena, action, tick)
     return arena
 
@@ -216,7 +217,7 @@ def scene_arena(entity: int, state: wire.Message, now: list[float]) -> Any:
     """What SceneArena.press, Arena.release and SceneArena.on_state read of a window."""
     arena = window(client=SimpleNamespace(entity=entity, state=state), arcade=SimpleNamespace(key=KEYS),
                    feedback=Feedback(), view=View(now), clock=lambda: now[0] / 1000)
-    arena.view.room = SimpleNamespace(cooldown=0)  # (set by the caller)
+    arena.view.room = SimpleNamespace(cooldown=0, size=(0.0, 0.0), template={})  # (or the caller's room)
     return arena
 
 
@@ -266,7 +267,7 @@ def play(profile: tuple[float, float, float], seed: int, when: list[float],
         now[0] = t
         if arena is None:
             arena = scene_arena(s.eid, s.latest, now)
-            arena.view.room.cooldown = s.room.cooldown
+            arena.view.room = s.room
             SceneArena.on_state(arena, s.latest, s.eid, True)
         elif s.latest is not last[0]:
             SceneArena.on_state(arena, s.latest, s.eid, False)
@@ -463,9 +464,9 @@ def test_the_server_never_drops_an_attack_for_a_use_in_the_same_tick(coop: Scene
         for seq, action in ((1, "use"), (2, "attack"), (3, "take"), (4, "use")):
             room.input(eid, wire.input_frame(eid, seq, 0, 0, room.tick, action))
         p = room.players[eid]
-        assert p.attacks == [room.tick] and p.actions == ["use", "take", "use"]
+        assert p.attacks == [(2, room.tick)] and p.actions == [(1, "use"), (3, "take"), (4, "use")]  # (by input)
         room.step()
-        assert p.attack_seq == 1 and enemy.hit_seq == 1 and p.actions == ["take", "use"], "the attack, and the use"
+        assert p.attack_seq == 1 and enemy.hit_seq == 1 and p.actions == [(3, "take"), (4, "use")], "the attack, the use"
         room.step()
         room.step()
         assert p.actions == [] and room.dropped_actions == dropped
@@ -587,7 +588,7 @@ def test_a_resume_takes_a_new_baseline(coop: SceneRoom) -> None:
     try:
         state = room.snapshot()
         arena = scene_arena(a, state, [0.0])
-        arena.view.room.cooldown = room.cooldown
+        arena.view.room = room
         SceneArena.on_state(arena, rows(state, 1, {b: 1}), a, True)
         SceneArena.on_state(arena, rows(state, 1, {b: 1}), a, False)
         assert not arena.view.flashes and not arena.view.swings
@@ -613,7 +614,7 @@ def test_every_enter_takes_a_new_baseline() -> None:
     ids = {k: d.proto.identity for k, d in world.defs.items()}
     view = View([0.0])
     arena: Any = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
-                                 playback=None, pending=None, phase="playing", feedback=Feedback(), seq=0,
+                                 playback=None, pending=None, phase="playing", feedback=Feedback(), prediction=Prediction(), seq=0,
                                  actions=[], view=view, shown=None)
 
     def enter(inst: Any) -> int:
@@ -652,7 +653,7 @@ def test_a_room_still_loading_shows_no_swing_or_hit_and_later_none_of_its_past()
     ids = {k: d.proto.identity for k, d in world.defs.items()}
     view = View([0.0])
     arena: Any = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
-                                 playback=None, pending=None, phase="loading", feedback=Feedback(), seq=0, actions=[],
+                                 playback=None, pending=None, phase="loading", feedback=Feedback(), prediction=Prediction(), seq=0, actions=[],
                                  view=view, shown="start:1")
     eid, peer = inst.room.join(), inst.room.join()
     WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "enter", "room": inst.id, "key": key, "entity": eid,

@@ -492,7 +492,7 @@ def test_a_cross_floor_attack_swings_and_never_flashes(room: SceneRoom) -> None:
     window shows the swing at once; the server starts the attack (its attack count rises) but nothing is hit, so the
     enemy's hit count stays and the window shows no hit."""
     from mesh_net.scene_client import SceneArena
-    from mesh_net.scene_room import Feedback
+    from mesh_net.scene_room import Feedback, Prediction
 
     actor, target = placed(room, "deck, ground directly beneath")
     bandit = room.enemies[ENEMY]
@@ -505,7 +505,7 @@ def test_a_cross_floor_attack_swings_and_never_flashes(room: SceneRoom) -> None:
     view = SimpleNamespace(room=room, swing=lambda e, own: shown["swings"].append((e, own)),
                            flash=lambda enemy: shown["flashes"].append(enemy))
     arena: Any = SimpleNamespace(client=SimpleNamespace(entity=eid), arcade=SimpleNamespace(key=SimpleNamespace(SPACE=32)),
-                                 action_keys=set(), actions=[], feedback=Feedback(), view=view, clock=lambda: 5.0)
+                                 action_keys=set(), actions=[], feedback=Feedback(), prediction=Prediction(), view=view, clock=lambda: 5.0)
     arena.act = lambda action, tick=None: arena.actions.append((action, tick))
     try:
         SceneArena.on_state(arena, room.snapshot(), eid, True)

@@ -25,7 +25,9 @@ class InputBudget:
     twice the rate a client sends at, so a client keeping to it never runs the bucket dry, and the burst a stall of up
     to BURST / HZ seconds (3 s) builds up always fits. A session that does run it dry sends faster than any client
     and is closed, as before. Its frames are never dropped or merged instead: the frames past the limit are the newest
-    ones, which last-input-wins would apply.
+    ones, which a room's input queue would keep. (The bucket bounds how fast frames come; the room bounds what it
+    keeps of a burst: mesh_net.scene_room.DEPTH directions, the newest, and PENDING actions of each kind, read one a
+    tick. So a burst the bucket lets through never walks a body faster, nor loses an attack.)
 
     A new session starts with START tokens, the 8 frames at once the old per-tick limit allowed (a world client's
     most: 4 queued party requests and an input). Its bucket fills at RATE, twice as fast as a client's backlog can

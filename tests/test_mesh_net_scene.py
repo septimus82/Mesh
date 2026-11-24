@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import math
 import subprocess
 import sys
 from contextlib import AsyncExitStack
@@ -122,8 +123,8 @@ def test_movement_matches_the_engine_runtime(room_factory):
             solids = room.solids()
             d.send(a, dx, dy)
             room.step()
-            p = room.players[a]
-            move_entity_with_physics(twin, (p.dx * room.step_px, p.dy * room.step_px), solids)
+            n = math.sqrt(2) if dx and dy else 1  # (a diagonal normalised: SceneRoom.walk)
+            move_entity_with_physics(twin, (dx / n * room.step_px, dy / n * room.step_px), solids)
             assert (twin.center_x, twin.center_y) == d.at(a)
     assert d.at(a)[0] + footprint(body.width, body.height)["w"] / 2 <= 416  # its feet never passed the wall, nor the gate
 

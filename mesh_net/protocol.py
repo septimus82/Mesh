@@ -19,7 +19,8 @@ Version 3 (M4, owner decisions OD1-OD11, docs/plans/m4_online_combat.md) adds wh
 once, so that no later M4 stage needs a v4:
 
 * a player row is ``[entity, x, y, facing, elevation, floor, ack, attack_seq]``. ``ack``: the ``seq`` of the input
-  the authority last consumed for that player since it joined this room instance (0: none). ``attack_seq``: how many
+  the authority last consumed for that player since it joined this room instance (0: none; since M4-3 it reads one a
+  tick, mesh_net.scene_room.DEPTH, so a client replays the inputs above it: Prediction). ``attack_seq``: how many
   attacks the authority has started for that player since it joined this room instance;
 * an enemy row is ``[id, hp, hit_seq, x, y, elevation, floor]``. ``hit_seq``: how many hits the enemy has taken in
   this room instance. Its placement is as a player row's (static until enemies move, M4-4; ``floor`` is ``null`` for
