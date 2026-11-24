@@ -44,6 +44,8 @@
 >   - (iii) when the queue is full and an input is dropped, any pending attack is kept;
 >   - (iv) the seed spread is worded as about 10 ms and about 4 points (§2.1, §4).
 > - M4-1 is marked merged (#610).
+> - The review of M4-2 (#611, round 2) is recorded in §4 M4-2 "As implemented": the attack cooldown is judged on the
+>   intended tick, and no pressed action is replaced or lost on its way.
 
 ## 0. Summary
 
@@ -499,9 +501,39 @@ The measurements rank the levers.
     0.2 s removes it. At 20 Hz it lives ceil(0.2 × 20) = 4 ticks, and the first 3 (the attack's own tick and the next
     two) check overlaps; the 4th only removes it. A parity test runs the real Combat and Hitbox behaviours at
     1/HZ s against the authority.
-  - The client mirrors the cooldown on its own clock and sends nothing for a press inside it. Known limitation until
-    M4-3: under loss, a retransmission can bunch two attack inputs closer than the cooldown, and the server then refuses
-    the second; the window showed its swing, which reads as a miss (no flash).
+  - **The attack cooldown is judged on the intended tick** (review round 2 of #611; design (a)).
+    - **Why:** judged on arrival, jitter alone (100 ms RTT, ±10 ms, no loss) let mashing show swings that the server
+      then refused: 0, 5 and 3 on seeds 7, 8 and 9 in 19 s. With 1% loss it was 3, 7 and 4, and at 200 ms 3, 8 and 5.
+      The client counted the cooldown from the press and the server from the arrival.
+    - **The client** reckons the room's tick: the newest tick seen, advanced by the time since, taken from whichever
+      snapshot came soonest. That reckoning never runs ahead of the server and never goes back.
+    - **A press swings** only a cooldown of reckoned ticks after the last swing. Its attack input carries that tick.
+    - **The server** (`SceneRoom._may_attack`) judges the cooldown on that tick, within `[now - ATTACK_CAP, now]`.
+      A tick not reached yet counts as now. An older one is **stale**: dropped, counted in `stale_attacks`, never run.
+      Every attack still runs when it arrives, from where the attacker stands then.
+    - **Why ATTACK_CAP is 12 ticks (600 ms):** that is the oldest an honest claim reads in OD1's envelope (100 ms
+      RTT, ±10 ms, one retransmission at RTT + 200 ms). Measured while mashing over 3 seeds × 8 sessions, the oldest
+      claim read was:
+      - 100 ms with no loss: 3 ticks;
+      - 100 ms with 1% loss: 9 ticks;
+      - 200 ms with 1% loss: 12 ticks, at the cap, so a second retransmission there would be stale.
+
+      OD5's 300 ms (6 ticks) would have dropped 20 of 899 swings at 100 ms with 1% loss.
+    - **What a lying client can gain:** meant ticks that start attacks rise at least a cooldown apart and are never
+      older than the cap. So after a pause it can start at most 1 + ATTACK_CAP // cooldown attacks on consecutive ticks
+      (one a tick). Over any W ticks it can start at most 1 + (W + ATTACK_CAP) // cooldown, against 1 + W // cooldown
+      when judged on arrival. In the co-op room (cooldown 10 ticks) that is one extra attack per pause, and the
+      long-run rate is unchanged.
+    - **Result:** the mashing test (seeds 7/8/9, every profile, plus jitter alone at 100 ms) has 0 swings shown that the
+      server did not run, 0 refused and 0 stale, at 200 ms too.
+  - **Nothing pressed is replaced or lost on the way:**
+    - The window queues pressed actions, each with its meant tick, and sends one per input.
+    - The server queues attacks, and uses and takes, separately (`PENDING` = 4 of each), and reads one of each per
+      tick. An attack is never dropped for a use in the same tick (note iii).
+    - Losing focus releases held keys but keeps what was pressed. Only a session's end, or an `enter`, clears it.
+  - **The enemy limit:** v3's longer rows lower how many enemies fit in a frame. With 8 players and floor ids at their
+    128-character limit, about 25 fit with 12-character ids, 22 with 24-character ids and 18 with 40-character ids,
+    against the 32 networked objects allowed before. A room that wouldn't fit is refused at load, never at run time.
 
 **M4-3 — own-movement prediction (b), with OD11:**
 - Extract the per-body step. Add the input queue (if OD11(a)). One predictor for both arenas. HD-2D corrections snap

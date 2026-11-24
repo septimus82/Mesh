@@ -25,9 +25,10 @@ class Client:
     # (before, after, own entity, last seq sent): a room's checks across states (mesh_net.scene_room.check_progress)
     progress: Callable[[wire.Message, wire.Message, int, int], None] | None = None
 
-    async def input(self, dx: int, dy: int, action: str | None = None) -> None:
+    async def input(self, dx: int, dy: int, action: str | None = None, tick: int | None = None) -> None:
+        """Send an input; ``tick``: the tick it is meant for (an attack's, as the window reckoned it), else the next."""
         self.seq += 1
-        msg = wire.input_frame(self.entity, self.seq, dx, dy, self.state["tick"] + 1, action)  # (the next tick)
+        msg = wire.input_frame(self.entity, self.seq, dx, dy, self.state["tick"] + 1 if tick is None else tick, action)
         self.check_input(msg, self.entity)
         self.writer.write(wire.encode(msg))
         await asyncio.wait_for(self.writer.drain(), 2)

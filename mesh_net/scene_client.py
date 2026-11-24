@@ -205,23 +205,24 @@ class SceneArena(Arena):
         client = self.client
         if symbol == self.arcade.key.SPACE and client and symbol not in self.action_keys:
             self.action_keys.add(symbol)
-            if self.feedback.press(self.clock()):  # (in the cooldown: no swing, and nothing sent)
-                self.action = "attack"
+            tick = self.feedback.press(self.clock())  # (in the cooldown: no swing, and nothing sent)
+            if tick is not None:
+                self.act("attack", tick)  # the server judges its cooldown on this tick, as the window did
                 self.view.swing(client.entity, own=True)  # at once: the server confirms only a hit
             return True
         if symbol == self.arcade.key.E and client and symbol not in self.action_keys:
             self.action_keys.add(symbol)
             own = next(r for r in client.state["players"] if r[0] == client.entity)
-            self.action = "take" if self.view.near_drop(own[1], own[2], client.state) else "use"
+            self.act("take" if self.view.near_drop(own[1], own[2], client.state) else "use")
             return True
         return super().press(symbol, modifiers)
 
     def on_state(self, state: wire.Message, entity: int, fresh: bool) -> None:
         """Others' swings and every hit, as the server's counters confirm them; a welcome is a new baseline."""
         if fresh:
-            self.feedback.baseline(state, self.view.room.cooldown)
+            self.feedback.baseline(state, self.view.room.cooldown, self.clock())
             return
-        swung, hit = self.feedback.update(state, entity)
+        swung, hit = self.feedback.update(state, entity, self.clock())
         for eid in swung:
             self.view.swing(eid, own=False)
         for enemy in hit:

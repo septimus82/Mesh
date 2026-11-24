@@ -135,7 +135,7 @@ def authority(room: SceneRoom, actor: tuple[float, float, float], target: tuple[
     enemy.state, enemy.dropped, enemy.holder = TargetState(hp=3.0, max_hp=3.0), action == "take", None
     eid = room.join(Player(Body(actor[0], actor[1], *room._template_size(), {**room.template, "elevation": actor[2]}),
                            facing=0))
-    room.input(eid, {"v": wire.VERSION, "type": "input", "tick": 0, "entity": eid, "seq": 1, "dx": 0, "dy": 0, "action": action})
+    room.input(eid, wire.input_frame(eid, 1, 0, 0, room.tick, action))  # (meant for now)
     room.step()
     player = room.leave(eid)
     return {"use": GATE not in room.locked, "attack": enemy.state.hp < 3.0, "take": enemy.holder is player}[action]
@@ -505,18 +505,46 @@ def test_a_cross_floor_attack_swings_and_never_flashes(room: SceneRoom) -> None:
     view = SimpleNamespace(room=room, swing=lambda e, own: shown["swings"].append((e, own)),
                            flash=lambda enemy: shown["flashes"].append(enemy))
     arena: Any = SimpleNamespace(client=SimpleNamespace(entity=eid), arcade=SimpleNamespace(key=SimpleNamespace(SPACE=32)),
-                                 action_keys=set(), action=None, feedback=Feedback(), view=view, clock=lambda: 5.0)
+                                 action_keys=set(), actions=[], feedback=Feedback(), view=view, clock=lambda: 5.0)
+    arena.act = lambda action, tick=None: arena.actions.append((action, tick))
     try:
         SceneArena.on_state(arena, room.snapshot(), eid, True)
         SceneArena.press(arena, 32, 0)
-        assert arena.action == "attack" and shown["swings"] == [(eid, True)], "the swing, at once"
+        ((action, tick),) = arena.actions
+        assert action == "attack" and shown["swings"] == [(eid, True)], "the swing, at once"
         before = bandit.hit_seq
-        room.input(eid, wire.input_frame(eid, 1, 0, 0, room.tick + 1, arena.action))
+        room.input(eid, wire.input_frame(eid, 1, 0, 0, tick, action))
         for _ in range(room.lifetime + 1):
             room.step()
             SceneArena.on_state(arena, room.snapshot(), eid, False)
         assert room.players[eid].attack_seq == 1, "the server ran the attack"
         assert bandit.hit_seq == before and bandit.state.hp == 3.0, "nothing hit through the deck"
         assert shown["flashes"] == [] and shown["swings"] == [(eid, True)], "no hit shown (and no second swing)"
+    finally:
+        room.leave(eid)
+
+
+def test_an_enemy_row_standing_on_a_floor_not_under_it_is_refused(room: SceneRoom) -> None:
+    """check_enemies: an HD-2D enemy row may name a floor (M4-4's movers) only where that floor is under it at its
+    elevation, within a step; a floor that exists but is elsewhere, or at another height, is refused, as a player
+    row's is; no floor (never stood) is fine."""
+    from mesh_net.scene_room import check_state
+
+    eid = room.join()
+    try:
+        state = room.snapshot()
+        (row,) = state["enemies"]
+
+        def with_enemy(x: float, y: float, elevation: float, floor: Any) -> dict[str, Any]:
+            return {**state, "enemies": [[row[0], row[1], row[2], x, y, elevation, floor]]}
+
+        check_state(state, room.identity, room)
+        check_state(with_enemy(*DECK_AT, 2.0 * M, "crossing/col_bridge_deck"), room.identity, room)
+        for bad in (with_enemy(*DECK_AT, 0.0, "crossing/col_bridge_deck"),  # (under the deck, at ground height)
+                    with_enemy(*OPEN_AT, 2.0 * M, "crossing/col_bridge_deck")):  # (the deck is elsewhere)
+            with pytest.raises(wire.Invalid, match="is not under it"):
+                check_state(bad, room.identity, room)
+        with pytest.raises(wire.Invalid, match="floor this room does not have"):
+            check_state(with_enemy(*DECK_AT, 2.0 * M, "crossing/col_no_such"), room.identity, room)
     finally:
         room.leave(eid)

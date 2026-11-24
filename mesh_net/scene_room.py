@@ -72,6 +72,13 @@ SPEED = 150.0
 COMBAT = {"damage": 1.0, "cooldown": 1.0, "range": 32.0, "hitbox_size": 32.0, "target_tag": "enemy",
           "attack_anim": "attack", "attack_sound": "assets/sounds/attack.wav"}
 HITBOX_S = 0.2  # the hitbox Combat makes lives this long (engine.behaviours.combat: its Hitbox's "duration")
+# An attack's cooldown is judged on the tick its client meant it for (the input's ``tick``: Player.attacks), as the
+# client judged it, so latency and TCP's bunching never refuse a swing the window showed. A claim older than this many
+# ticks when the server reads it is stale: dropped, never run (SceneRoom.stale_attacks counts it); a claim of a tick
+# not yet reached counts as now. 12 ticks (600 ms) is the oldest an honest claim reads at 100 ms RTT, +-10 ms jitter,
+# with one retransmission (RTT + 200 ms) delaying it: owner decision OD1's envelope (docs/plans/m4_online_combat.md).
+ATTACK_CAP = 12
+PENDING = 4  # attacks, and uses or takes, a player may have waiting (one of each is read a tick); more are dropped
 # The packaged co-op room (tooling/make_coop_scene.py): where each file goes in a project.
 COOP_FILES = {"packs/core_regions/scenes/start.json": "scene.json", "packs/core_regions/maps/start.json": "map.json",
               "assets/prefabs.json": "prefabs.json"}
@@ -394,8 +401,9 @@ class Player:
     facing: int = 3
     seq: int = 0
     last_input: int = -100
-    action: str | None = None
-    attack_after: int = 0
+    actions: list[str] = field(default_factory=list)  # uses and takes waiting, oldest first (one read a tick)
+    attacks: list[int] = field(default_factory=list)  # attacks waiting: the tick each was meant for (one a tick)
+    attack_after: int = 0  # the first tick an attack may be meant for (its cooldown, judged on meant ticks)
     ack: int = 0  # the seq of the input the last tick consumed (wire v3), since it joined this room
     attack_seq: int = 0  # the attacks started since it joined this room (wire v3)
     hitboxes: list[Hitbox] = field(default_factory=list)  # its live ones
@@ -496,6 +504,9 @@ class SceneRoom:
         self.tick = 0
         self.next_id = 1
         self.players: dict[int, Player] = {}
+        # Attacks not run (diagnostics; never on the wire): stale (meant more than ATTACK_CAP ticks ago), refused in
+        # the cooldown; and actions dropped because PENDING were already waiting.
+        self.stale_attacks = self.refused_attacks = self.dropped_actions = 0
         try:
             wire.encode({"v": wire.VERSION, **self._worst_snapshot()})
         except wire.Invalid as exc:
@@ -576,7 +587,9 @@ class SceneRoom:
     def leave(self, eid: int) -> Player:
         p = self.players.pop(eid)
         p.dx = p.dy = 0.0
-        p.seq, p.last_input, p.action = 0, -100, None
+        p.seq, p.last_input = 0, -100
+        p.actions.clear()
+        p.attacks.clear()
         p.ack = p.attack_seq = 0  # (counted per room join: wire v3)
         p.hitboxes.clear()
         return p
@@ -589,8 +602,13 @@ class SceneRoom:
             p.dx, p.dy = (dx, dy) if not (dx and dy) else (dx / math.sqrt(2), dy / math.sqrt(2))
             if dx or dy:
                 p.facing = FACINGS.index((dx, 0) if abs(dx) >= abs(dy) and dx else (0, dy))
-            if p.action is None:
-                p.action = action
+            # (never one replacing another: each runs in turn, one of each kind a tick)
+            if action == "attack" and len(p.attacks) < PENDING:
+                p.attacks.append(msg["tick"])
+            elif action is not None and action != "attack" and len(p.actions) < PENDING:
+                p.actions.append(action)
+            elif action is not None:
+                self.dropped_actions += 1
 
     # --- simulation -----------------------------------------------------------------------------------
 
@@ -616,17 +634,33 @@ class SceneRoom:
             if p.hitboxes:  # its earlier attacks' hitboxes, where they were made, the attacker as it now stands
                 p.hitboxes = [box for box in p.hitboxes if self._strike(p, box)]
                 solids = self.solids()
-            action, p.action = p.action, None
-            if action == "use":
-                self._use(p)
-                solids = self.solids()  # a gate that just opened stops blocking the players after this one
-            elif action == "attack" and self.tick >= p.attack_after:
-                p.attack_after = self.tick + self.cooldown
+            if p.attacks and self._may_attack(p, p.attacks.pop(0)):
                 p.attack_seq += 1
                 self._attack(p)
                 solids = self.solids()
+            action = p.actions.pop(0) if p.actions else None
+            if action == "use":
+                self._use(p)
+                solids = self.solids()  # a gate that just opened stops blocking the players after this one
             elif action == "take":
                 self._take(p)
+
+    def _may_attack(self, p: Player, meant: int) -> bool:
+        """Whether an attack meant for tick ``meant`` starts now. Its cooldown is judged on the meant tick, as the
+        client judged it, within [now - ATTACK_CAP, now]: a claim of a tick not yet reached counts as now, an older
+        one is stale and dropped (counted, never run). So meant ticks that start attacks rise at least a cooldown apart
+        and are never older than ATTACK_CAP: after a pause, at most 1 + ATTACK_CAP // cooldown attacks can start on
+        consecutive ticks (one a tick), and over any W ticks at most 1 + (W + ATTACK_CAP) // cooldown, against
+        1 + W // cooldown judged on arrival. Refused in the cooldown otherwise (counted)."""
+        if meant < self.tick - ATTACK_CAP:
+            self.stale_attacks += 1
+            return False
+        meant = min(meant, self.tick)
+        if meant < p.attack_after:
+            self.refused_attacks += 1
+            return False
+        p.attack_after = meant + self.cooldown
+        return True
 
     def _level(self, a: Body, b: Body) -> bool:
         """Whether ``a`` may use, attack or pick up ``b``: engine.hd2d.world.same_level (M3-4), single-player's own
@@ -857,33 +891,51 @@ class Feedback:
     """A client's combat presentation (owner decision OD4): its own swing the moment it is pressed, others' swings
     and every hit only as the server's counters confirm them (wire v3).
 
-    ``press`` mirrors the attack cooldown (SceneRoom.cooldown, from the room's own player template) on the client's
-    clock, so the window never shows a swing that cooldown refuses; a press it refuses is not sent either. ``update``
-    reads each newer state against the last, after its checks (check_state, check_progress). Its counters are a room
-    instance's: ``baseline`` takes them anew at a welcome (a resume's too) and at every enter."""
+    ``press`` mirrors the attack cooldown (SceneRoom.cooldown, from the room's own player template) on the room's
+    tick, as the client reckons it (``tick``: the newest tick seen, advanced by the time since, taking the snapshot that
+    came soonest); it returns that tick, which the attack's input carries, and the server judges the cooldown on it
+    (SceneRoom._may_attack). So a press the window swings for is one the server runs, whatever latency and TCP's
+    bunching do to its arrival, unless it reaches the server more than ATTACK_CAP ticks after that tick (then it is
+    stale: dropped, and the swing reads as a miss). A press within the cooldown swings for nothing and sends nothing.
+    ``update`` reads each newer state against the last, after its checks (check_state, check_progress). Its counters
+    and tick are a room instance's: ``baseline`` takes them anew at a welcome (a resume's too) and at every enter."""
 
     def __init__(self) -> None:
-        self.cooldown = 0.0  # s
-        self.ready = -math.inf  # the client's clock (s) from which a press swings again
+        self.cooldown = 0  # ticks
+        self.offset = -math.inf  # the room's tick minus the client's clock (s) times HZ, at the soonest snapshot
+        self.last = -math.inf  # the tick of the last swing shown
         self.swings: dict[int, int] = {}  # entity -> attack_seq last applied
         self.hits: dict[str, int] = {}  # enemy -> hit_seq last applied
 
-    def baseline(self, state: wire.Message, cooldown: int) -> None:
-        """A new room instance or session: what ``state`` counts is already seen. ``cooldown``: the room's, in ticks.
-        (``ready`` stays: a cooldown that began in the last room only ever holds a swing back.)"""
-        self.cooldown = cooldown / wire.HZ
+    def tick(self, now: float) -> int:
+        """The room's tick at ``now`` (s on the client's clock), as this client reckons it: never ahead of the server's
+        (each snapshot's tick came no sooner than it was made), and never going back."""
+        return math.floor(now * wire.HZ + self.offset + 1e-6) if self.offset > -math.inf else 0
+
+    def baseline(self, state: wire.Message, cooldown: int, now: float) -> None:
+        """A new room instance or session: what ``state`` (applied at ``now``) counts is already seen, and its tick
+        starts the reckoning. ``cooldown``: the room's, in ticks. The last swing's tick is kept while it is not ahead of
+        the reckoned tick (the same room, resumed: its cooldown still runs there); else it is another count of ticks."""
+        self.cooldown = cooldown
+        self.offset = state["tick"] - now * wire.HZ
+        if self.last > self.tick(now):
+            self.last = -math.inf
         self.swings = {r[0]: r[7] for r in state["players"]}
         self.hits = {r[0]: r[2] for r in state["enemies"]}
 
-    def press(self, now: float) -> bool:
-        """Whether an attack pressed at ``now`` (s) swings (shown at once, and sent): not within the cooldown."""
-        if now < self.ready:
-            return False
-        self.ready = now + self.cooldown
-        return True
+    def press(self, now: float) -> int | None:
+        """The tick an attack pressed at ``now`` (s) is meant for, when it swings (shown at once, and sent with that
+        tick); None within the cooldown of the last swing (nothing shown, nothing sent)."""
+        tick = self.tick(now)
+        if tick < self.last + self.cooldown:
+            return None
+        self.last = tick
+        return tick
 
-    def update(self, state: wire.Message, own: int) -> tuple[list[int], list[str]]:
-        """The players other than ``own`` who started an attack, and the enemies hit, since the last state applied."""
+    def update(self, state: wire.Message, own: int, now: float) -> tuple[list[int], list[str]]:
+        """The players other than ``own`` who started an attack, and the enemies hit, since the last state applied
+        (at ``now``)."""
+        self.offset = max(self.offset, state["tick"] - now * wire.HZ)
         swung = [r[0] for r in state["players"] if r[0] != own and r[7] > self.swings.get(r[0], r[7])]
         hit = [r[0] for r in state["enemies"] if r[2] > self.hits.get(r[0], 0)]
         self.swings = {r[0]: r[7] for r in state["players"]}

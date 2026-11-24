@@ -166,17 +166,20 @@ def test_rapid_attacks_never_duplicate_an_attack_or_a_hit(coop: SceneRoom) -> No
     enemy.state = TargetState(hp=1000.0, max_hp=1000.0)
     place(room, eid, 568.0, 256.0, 0)
     try:
-        seq, start = 0, enemy.hit_seq
-        ticks = 3 * room.cooldown + 1
-        for _ in range(ticks):
-            for _ in range(3):
+        seq, start, started = 0, enemy.hit_seq, []
+        p = room.players[eid]
+        for i in range(3 * room.cooldown + 1 + 10):  # (a flood, then quiet ticks while what waits drains)
+            for _ in range(3 if i <= 3 * room.cooldown else 0):
                 seq += 1
                 room.input(eid, wire.input_frame(eid, seq, 0, 0, room.tick + 1, "attack"))
+            before = p.attack_seq
             room.step()
-        attacks = math.ceil(ticks / room.cooldown)
-        assert room.players[eid].attack_seq == attacks
-        assert enemy.hit_seq - start == attacks
-        assert enemy.state.hp == 1000.0 - attacks
+            if p.attack_seq > before:
+                started.append(room.tick)
+        assert p.attack_seq == len(started) == 4 and len(p.attacks) == 0, "one attack a cooldown"
+        assert all(b - a >= room.cooldown for a, b in zip(started, started[1:])), "never closer than the cooldown"
+        assert enemy.hit_seq - start == p.attack_seq, "each attack's hitbox hits once"
+        assert enemy.state.hp == 1000.0 - p.attack_seq
     finally:
         room.leave(eid)
         enemy.state, enemy.hit_seq = saved
@@ -201,19 +204,24 @@ class View:
         return False
 
 
+def window(**attrs: Any) -> Any:
+    """A window as the arenas' handlers read it: their action queue (Arena.act) and the attributes given."""
+    arena: Any = SimpleNamespace(**{"action_keys": set(), "actions": [], "directions": {}, "keys": [], **attrs})
+    arena.act = lambda action, tick=None: Arena.act(arena, action, tick)
+    return arena
+
+
 def scene_arena(entity: int, state: wire.Message, now: list[float]) -> Any:
     """What SceneArena.press, Arena.release and SceneArena.on_state read of a window."""
-    arena: Any = SimpleNamespace(client=SimpleNamespace(entity=entity, state=state), arcade=SimpleNamespace(key=KEYS),
-                                 action_keys=set(), action=None, feedback=Feedback(), view=View(now),
-                                 clock=lambda: now[0] / 1000, directions={}, keys=[])
+    arena = window(client=SimpleNamespace(entity=entity, state=state), arcade=SimpleNamespace(key=KEYS),
+                   feedback=Feedback(), view=View(now), clock=lambda: now[0] / 1000)
     arena.view.room = SimpleNamespace(cooldown=0)  # (set by the caller)
     return arena
 
 
 def presses(rng: random.Random, start: float, until: float) -> list[float]:
     """Bursts of rapid presses (every 50 ms for 400 ms), a burst every 1.6-1.7 s: every burst's first press swings,
-    the rest fall in the co-op room's 0.5 s cooldown. (1.6 s exceeds the cooldown by more than a retransmission can
-    bunch two attack inputs at 200 ms RTT (+400 ms), so the server starts every attack the window showed.)"""
+    the rest fall in the co-op room's 0.5 s cooldown."""
     found, t = [], start
     while t < until:
         found.extend(t + 50.0 * i + rng.uniform(0, 10) for i in range(8))
@@ -221,95 +229,257 @@ def presses(rng: random.Random, start: float, until: float) -> list[float]:
     return found
 
 
+def mashing(rng: random.Random, start: float, until: float) -> list[float]:
+    """Space mashed about every 70 ms (50-90 ms), as a player holds the attack rhythm against the cooldown: a swing on
+    the first press each cooldown allows, so attacks reach the server as close together as the cooldown permits."""
+    found, t = [], start
+    while t < until:
+        found.append(t)
+        t += 70.0 + rng.uniform(-20, 20)
+    return found
+
+
+def play(profile: tuple[float, float, float], seed: int, when: list[float]) -> dict[str, Any]:
+    """The window (SceneArena's press and on_state; the send loop takes the oldest queued action with its tick, as
+    Arena.session does) next to the bandit, over the probe's link, pressing Space at ``when`` (ms): what it showed and
+    sent, and what the server did."""
+    rtt, jitter, loss = profile
+    now = [0.0]
+    sent: list[float] = []
+    arena: Any = None
+    last: list[Any] = [None]
+
+    def intent(t: float, shown: list[Any]) -> tuple[Any, ...]:
+        action, tick = arena.actions.pop(0) if arena.actions else (None, None)  # (Arena.session's send loop)
+        if action == "attack":
+            sent.append(t)
+        return 0, 0, action, tick
+
+    def frame(t: float, s: Session) -> None:
+        nonlocal arena
+        now[0] = t
+        if arena is None:
+            arena = scene_arena(s.eid, s.latest, now)
+            arena.view.room.cooldown = s.room.cooldown
+            SceneArena.on_state(arena, s.latest, s.eid, True)
+        elif s.latest is not last[0]:
+            SceneArena.on_state(arena, s.latest, s.eid, False)
+        last[0] = s.latest
+        arena.client.state = s.latest
+        for p in [p for p in when if t - FRAME_MS < p <= t]:  # (the frame's dispatch_events reads the press)
+            SceneArena.press(arena, SPACE, 0)
+            Arena.release(arena, SPACE, 0)
+
+    with coop_room() as room:
+        room.enemies[BANDIT].state = TargetState(hp=100_000.0, max_hp=100_000.0)
+        s = Session(room, rtt, jitter, loss, seed, intent=intent, frame=frame,
+                    setup=lambda room, eid: place(room, eid, 568.0, 256.0, 0))
+        s.run(when[-1] + 3000.0)
+        hits = room.enemies[BANDIT].hit_seq
+        # hit count n -> virtual ms of the server tick that made it (each hit takes 1 HP; tick k runs at k / HZ s)
+        hit_at = {n: min(t for t, pose in s.poses.items() if pose["hp"][BANDIT] <= 100_000.0 - n) * 1000 / wire.HZ
+                  for n in range(1, hits + 1)}
+        return {"swings": [t for t, eid, own in arena.view.swings if own and eid == s.eid], "sent": sent,
+                "attacks": room.players[s.eid].attack_seq, "hits": hits, "hit_at": hit_at,
+                "flashes": [t for t, _enemy in arena.view.flashes], "stale": room.stale_attacks,
+                "refused": room.refused_attacks, "cooldown": room.cooldown}
+
+
 @pytest.mark.parametrize("seed", [7, 8, 9])
 @pytest.mark.parametrize("profile", PROFILES, ids=lambda p: f"rtt{p[0]}-jitter{p[1]}-loss{p[2]}")
 def test_the_swing_shows_within_a_frame_and_a_hit_only_once_confirmed(seed: int, profile: tuple[float, float, float],
                                                                       ) -> None:
-    """The window (SceneArena's press and on_state; the send loop takes its latched action, as Arena.session does) next
-    to the bandit, over the probe's link: each press outside the cooldown swings on the frame that reads it (within
-    one frame of the press) and is sent; a press in the cooldown shows nothing and sends nothing; a flash only on a
-    frame after a snapshot whose hit count rose, never before the server's hit; one server attack per swing and one
-    hit per attack."""
-    rtt, jitter, loss = profile
-    now = [0.0]
-    sent: list[float] = []
+    """Bursts of presses: each press outside the cooldown swings on the frame that reads it (within one frame of the
+    press) and is sent; a press in the cooldown shows nothing and sends nothing; a flash only on a frame after a
+    snapshot whose hit count rose, never before the server's hit reached the window; one server attack per swing and
+    one hit per attack."""
+    rtt, jitter, _loss = profile
     for session in range(2):
-        rng = random.Random(seed * 1000 + session)
-        when = presses(rng, 1000.0, 9000.0)
-        arena: Any = None
-        last: list[Any] = [None]
-
-        def intent(t: float, shown: list[Any]) -> tuple[int, int, str | None]:
-            action, arena.action = arena.action, None  # (Arena.session's send loop)
-            if action == "attack":
-                sent.append(t)
-            return 0, 0, action
-
-        def frame(t: float, s: Session) -> None:
-            nonlocal arena
-            now[0] = t
-            if arena is None:
-                arena = scene_arena(s.eid, s.latest, now)
-                arena.view.room.cooldown = s.room.cooldown
-                SceneArena.on_state(arena, s.latest, s.eid, True)
-            elif s.latest is not last[0]:
-                SceneArena.on_state(arena, s.latest, s.eid, False)
-            last[0] = s.latest
-            arena.client.state = s.latest
-            for p in [p for p in when if t - FRAME_MS < p <= t]:  # (the frame's dispatch_events reads the press)
-                SceneArena.press(arena, SPACE, 0)
-                Arena.release(arena, SPACE, 0)
-
-        with coop_room() as room:
-            room.enemies[BANDIT].state = TargetState(hp=1000.0, max_hp=1000.0)
-            s = Session(room, rtt, jitter, loss, seed * 100 + session, intent=intent, frame=frame,
-                        setup=lambda room, eid: place(room, eid, 568.0, 256.0, 0))
-            sent.clear()
-            s.run(when[-1] + 3000.0)
-            server = room.players[s.eid]
-            hits = room.enemies[BANDIT].hit_seq
-        # hit count n -> virtual ms of the server tick that made it (each hit takes 1 HP; tick k runs at k / HZ s)
-        hit_at = {n: min(t for t, pose in s.poses.items() if pose["hp"][BANDIT] <= 1000.0 - n) * 1000 / wire.HZ
-                  for n in range(1, hits + 1)}
-        swings = [t for t, eid, own in arena.view.swings if own and eid == s.eid]
+        when = presses(random.Random(seed * 1000 + session), 1000.0, 9000.0)
+        got = play(profile, seed * 100 + session, when)
+        swings, hits = got["swings"], got["hits"]
         bursts = [p for i, p in enumerate(when) if i % 8 == 0]
         assert len(swings) == len(bursts), "each burst's first press swings, and only it"
         for p, t in zip(bursts, swings):
             assert 0.0 <= t - p <= FRAME_MS + 1e-9, f"swing {t - p:.1f} ms after its press"
-        assert len(sent) == len(swings), "every swing's attack is sent, and no press in the cooldown"
-        assert server.attack_seq == len(swings), "the server starts each attack shown, once"
-        assert hits == server.attack_seq, "each attack hits the bandit once"
-        flashes = [t for t, enemy in arena.view.flashes]
-        assert len(flashes) == hits, "every confirmed hit flashes, once"
-        for n, t in enumerate(flashes, 1):  # (n: the hit count that flash confirms)
-            assert t >= hit_at[n] + max(0.0, rtt / 2 - jitter), "a flash only after the server's hit reached the window"
-        assert all(t > swing for t, swing in zip(flashes, swings)), "the swing first, then (later) its hit"
+        assert len(got["sent"]) == len(swings), "every swing's attack is sent, and no press in the cooldown"
+        assert got["attacks"] == len(swings), "the server starts each attack shown, once"
+        assert hits == got["attacks"], "each attack hits the bandit once"
+        assert len(got["flashes"]) == hits, "every confirmed hit flashes, once"
+        for n, t in enumerate(got["flashes"], 1):  # (n: the hit count that flash confirms)
+            assert t >= got["hit_at"][n] + max(0.0, rtt / 2 - jitter), "a flash only after the hit reached the window"
+        assert all(t > swing for t, swing in zip(got["flashes"], swings)), "the swing first, then (later) its hit"
+
+
+MASHING_PROFILES = (*PROFILES[:4], (100, 10, 0.0), PROFILES[4])  # (+ jitter alone at 100 ms: the review's case)
+
+
+@pytest.mark.parametrize("seed", [7, 8, 9])
+@pytest.mark.parametrize("profile", MASHING_PROFILES, ids=lambda p: f"rtt{p[0]}-jitter{p[1]}-loss{p[2]}")
+def test_mashing_never_shows_a_swing_the_server_does_not_run(seed: int, profile: tuple[float, float, float]) -> None:
+    """Space mashed for 19 s against the cooldown, the attack rhythm as tight as it allows: jitter and TCP's bunching
+    bring attack inputs to the server closer together than the cooldown. Judged on the ticks the window meant them for
+    (SceneRoom._may_attack), every swing shown is an attack the server starts: none refused in the cooldown, none
+    stale, within owner decision OD1's envelope (to 100 ms RTT, +-10 ms, 1% loss) and, measured here, at 200 ms too;
+    each starts once and hits once, no faster than the cooldown allows."""
+    for session in range(2):
+        got = play(profile, seed * 100 + session, mashing(random.Random(seed * 1000 + session), 1000.0, 20000.0))
+        swings = got["swings"]
+        assert len(swings) >= 19 * 1000 / (got["cooldown"] * 1000 / wire.HZ) * 0.9, "the cooldown's rhythm, kept"
+        # (a cooldown of the window's reckoned ticks: in its own time, less at most the tick a sooner snapshot moves
+        # the reckoning on, and the frame that reads the press)
+        tick_ms = 1000 / wire.HZ
+        assert all(b - a >= got["cooldown"] * tick_ms - tick_ms - FRAME_MS for a, b in zip(swings, swings[1:]))
+        assert (got["refused"], got["stale"]) == (0, 0), "no swing shown is refused or stale"
+        assert got["attacks"] == len(swings) == len(got["sent"]), "every swing shown is an attack the server starts"
+        assert got["hits"] == got["attacks"], "each hits once"
 
 
 def test_a_press_in_the_cooldown_never_swings_and_the_world_window_waits_for_its_room() -> None:
-    """Feedback mirrors the room's cooldown on the window's clock. WorldArena swings (and sends) only in the room on
-    screen: a press while a room loads does nothing."""
+    """Feedback mirrors the room's cooldown on the room's tick, as the window reckons it from snapshots. WorldArena
+    swings (and sends) only in the room on screen: a press while a room loads does nothing."""
     feedback = Feedback()
-    feedback.baseline({"players": [], "enemies": []}, 20)  # 1 s at 20 Hz
-    assert feedback.press(10.0)
-    assert not feedback.press(10.5) and not feedback.press(10.999)
-    assert feedback.press(11.0)
+    feedback.baseline({"tick": 100, "players": [], "enemies": []}, 20, 10.0)  # 1 s at 20 Hz; tick 100 seen at 10 s
+    assert feedback.press(10.0) == 100
+    assert feedback.press(10.5) is None and feedback.press(10.99) is None
+    assert feedback.press(11.0) == 120, "the meant tick: the one seen, advanced by the time since"
+    feedback.update({"tick": 140, "players": [], "enemies": []}, 1, 11.9)  # (a snapshot that came sooner)
+    assert feedback.tick(11.9) == 140 and feedback.press(11.9) == 140
     view = View([0.0])
-    arena: Any = SimpleNamespace(arcade=SimpleNamespace(key=SimpleNamespace(SPACE=SPACE, E=E, P=1, I=2, Y=3, N=4,
-                                                                            L=5, ESCAPE=6, F2=7, R=8)),
-                                 directions={}, phase="loading", action_keys=set(), action=None, request=None,
-                                 view=view, shown="start:1", room="start:2", entity=1, feedback=Feedback(),
-                                 clock=lambda: 50.0, note=lambda _e: None, connected=True)
-    arena.feedback.baseline({"players": [], "enemies": []}, 20)
+    keys = SimpleNamespace(SPACE=SPACE, E=E, P=1, I=2, Y=3, N=4, L=5, ESCAPE=6, F2=7, R=8)
+    arena = window(arcade=SimpleNamespace(key=keys), phase="loading", request=None, view=view, shown="start:1",
+                   room="start:2", entity=1, feedback=Feedback(), clock=lambda: 50.0, note=lambda _e: None,
+                   connected=True)
+    arena.feedback.baseline({"tick": 7, "players": [], "enemies": []}, 20, 50.0)
     WorldArena.press(arena, SPACE, 0)
-    assert arena.action is None and not view.swings, "no swing while the next room loads"
+    assert arena.actions == [] and not view.swings, "no swing while the next room loads"
     arena.action_keys.clear()
     arena.phase, arena.shown = "playing", "start:2"
     WorldArena.press(arena, SPACE, 0)
-    assert arena.action == "attack" and view.swings == [(0.0, 1, True)]
-    arena.action, arena.action_keys = None, set()
+    assert arena.actions == [("attack", 7)] and view.swings == [(0.0, 1, True)]
+    arena.actions, arena.action_keys = [], set()
     WorldArena.press(arena, SPACE, 0)  # (the same instant: in the cooldown)
-    assert arena.action is None and len(view.swings) == 1
+    assert arena.actions == [] and len(view.swings) == 1
+
+
+def test_e_right_after_space_never_replaces_the_attack() -> None:
+    """Space then E before the next input goes out (in both arenas): the attack whose swing showed and the use are
+    both sent, in order, one an input."""
+    own = [1, 0.0, 0.0, 0, 0, None, 0, 0]
+    state = {"tick": 30, "players": [own], "enemies": [], "drops": []}
+    scene = scene_arena(1, state, [5000.0])
+    scene.view.room.cooldown = 10
+    SceneArena.on_state(scene, state, 1, True)
+    SceneArena.press(scene, SPACE, 0)
+    SceneArena.press(scene, E, 0)
+    assert scene.actions == [("attack", 30), ("use", None)] and len(scene.view.swings) == 1
+    view = View([0.0])
+    world = window(arcade=SimpleNamespace(key=SimpleNamespace(SPACE=SPACE, E=E, P=1, I=2, Y=3, N=4, L=5, ESCAPE=6,
+                                                                F2=7, R=8)),
+                   phase="playing", request=None, view=view, shown="start:1", room="start:1", entity=1, state=state,
+                   feedback=Feedback(), clock=lambda: 5.0, note=lambda _e: None, connected=True, _own=lambda: own)
+    world.feedback.baseline(state, 10, 5.0)
+    WorldArena.press(world, SPACE, 0)
+    WorldArena.press(world, E, 0)
+    assert world.actions == [("attack", 30), ("use", None)] and len(view.swings) == 1
+
+
+def test_losing_focus_releases_keys_but_keeps_the_pressed_actions() -> None:
+    """Arena.blur (the window loses focus): held keys are released (none sticks), but an attack whose swing showed is
+    still sent; a session's end clears what it never sent."""
+    arena = window(keys=[1, 2], actions=[("attack", 9)])
+    arena.action_keys = {32}
+    Arena.blur(arena)
+    assert arena.keys == [] and arena.action_keys == set() and arena.actions == [("attack", 9)]
+
+
+def test_the_server_never_drops_an_attack_for_a_use_in_the_same_tick(coop: SceneRoom) -> None:
+    """An attack and a use (or take) in one tick, either first: both run, the attack that tick; actions queue, one of
+    each kind a tick, so none replaces another."""
+    room = coop
+    eid = room.join()
+    enemy = room.enemies[BANDIT]
+    saved = (enemy.state, enemy.hit_seq)
+    enemy.state = TargetState(hp=100.0, max_hp=100.0)
+    place(room, eid, 568.0, 256.0, 0)
+    dropped = room.dropped_actions
+    try:
+        for seq, action in ((1, "use"), (2, "attack"), (3, "take"), (4, "use")):
+            room.input(eid, wire.input_frame(eid, seq, 0, 0, room.tick, action))
+        p = room.players[eid]
+        assert p.attacks == [room.tick] and p.actions == ["use", "take", "use"]
+        room.step()
+        assert p.attack_seq == 1 and enemy.hit_seq == 1 and p.actions == ["take", "use"], "the attack, and the use"
+        room.step()
+        room.step()
+        assert p.actions == [] and room.dropped_actions == dropped
+    finally:
+        room.leave(eid)
+        enemy.state, enemy.hit_seq = saved
+
+
+def test_the_cooldown_is_judged_on_the_meant_tick_within_its_cap(coop: SceneRoom) -> None:
+    """SceneRoom._may_attack: an attack meant for a tick a cooldown after the last starts whenever it arrives within
+    ATTACK_CAP ticks; one meant earlier is refused (the cooldown); one older than ATTACK_CAP is stale (dropped,
+    counted, never run); one meant for a tick not reached counts as now. A client lying about its ticks gains at most
+    one cap's worth: after a pause, 1 + ATTACK_CAP // cooldown attacks, on consecutive ticks; never more than one a
+    tick."""
+    from mesh_net.scene_room import ATTACK_CAP
+
+    room = coop
+    eid = room.join()
+    p = room.players[eid]
+    counts = (room.stale_attacks, room.refused_attacks)
+    seq = 0
+
+    def attack(meant: int) -> bool:
+        nonlocal seq
+        seq += 1
+        before = p.attack_seq
+        room.input(eid, wire.input_frame(eid, seq, 0, 0, meant, "attack"))
+        room.step()
+        return p.attack_seq > before
+
+    try:
+        for _ in range(40):
+            room.step()
+        c, now = room.cooldown, room.tick
+        assert c + 3 < ATTACK_CAP + 3 < 40
+        first = now + 1 - ATTACK_CAP  # (read next tick, as old as the cap allows)
+        assert attack(first), "meant ATTACK_CAP ticks before it is read: on time"
+        assert not attack(first + c - 1), "within the cooldown of the meant tick: refused"
+        assert attack(first + c), "a cooldown after it by meant ticks, though it runs 2 ticks after: starts"
+        assert room.refused_attacks - counts[1] == 1
+        for _ in range(3 * c):
+            room.step()
+        assert not attack(room.tick - ATTACK_CAP), "read more than the cap after its tick: stale"
+        assert room.stale_attacks - counts[0] == 1
+        for _ in range(3 * c):
+            room.step()
+        assert attack(room.tick), "meant for now"
+        far = room.tick + 1000
+        assert not attack(far), "a far-future claim counts as now: within the last one's cooldown"
+        for _ in range(3 * c):
+            room.step()
+        assert attack(far), "a far-future claim counts as now: it starts once the cooldown has passed"
+        assert not attack(room.tick + 5), "and its cooldown runs from the tick it counted as, not the claim"
+        # A liar after a pause: claims back-dated to the cap, a cooldown apart, all sent before the next tick.
+        for _ in range(3 * c):
+            room.step()
+        start, first = p.attack_seq, room.tick + 1 - ATTACK_CAP
+        for k in range(4):
+            seq += 1
+            room.input(eid, wire.input_frame(eid, seq, 0, 0, first + k * c, "attack"))
+        ticks = []
+        for _ in range(4):
+            before = p.attack_seq
+            room.step()
+            if p.attack_seq > before:
+                ticks.append(room.tick)
+        assert p.attack_seq - start == 1 + ATTACK_CAP // c, "at most one cap's worth beyond the cooldown"
+        assert ticks == list(range(ticks[0], ticks[0] + len(ticks))), "one a tick"
+    finally:
+        room.leave(eid)
 
 
 def rows(state: wire.Message, hit_seq: int | None = None, attack_seq: dict[int, int] | None = None) -> wire.Message:
@@ -353,8 +523,8 @@ def test_every_enter_takes_a_new_baseline() -> None:
     ids = {k: d.proto.identity for k, d in world.defs.items()}
     view = View([0.0])
     arena: Any = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
-                                 playback=None, pending=None, phase="playing", feedback=Feedback(), seq=0, action=None,
-                                 view=view, shown=None)
+                                 playback=None, pending=None, phase="playing", feedback=Feedback(), seq=0,
+                                 actions=[], view=view, shown=None)
 
     def enter(inst: Any) -> int:
         eid = inst.room.join()
@@ -371,11 +541,79 @@ def test_every_enter_takes_a_new_baseline() -> None:
     enter(first)
     tick(first)
     assert not view.flashes, "the enemy's hits before the enter are the baseline"
-    arena.action = "attack"  # (pressed in the first room, never sent)
+    arena.actions = [("attack", 3), ("use", None)]  # (pressed in the first room, never sent)
     enter(second)
-    assert arena.action is None, "an attack pressed in the last room is never sent into this one"
+    assert arena.actions == [], "what was pressed in the last room is never sent into this one"
     tick(second)
     assert not view.flashes
     second.room.enemies[enemy].hit_seq = 1  # the first hit in this instance: below the last room's 5, yet a hit
     tick(second)
     assert [e for _, e in view.flashes] == [enemy]
+
+
+def test_a_room_still_loading_shows_no_swing_or_hit_and_later_none_of_its_past() -> None:
+    """WorldArena: while the view still shows the last room (the next one loading), a state's swings and hits are
+    counted but never shown (they belong to a room not on screen); once the room shows, only what happens after."""
+    with disposable_project(expedition_files(), scaffold=False) as root:
+        world = World(root)
+    key = next(k for k, d in world.defs.items() if d.proto.enemies)
+    inst = world._create(key, 1)
+    enemy = sorted(inst.room.enemies)[0]
+    ids = {k: d.proto.identity for k, d in world.defs.items()}
+    view = View([0.0])
+    arena: Any = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
+                                 playback=None, pending=None, phase="loading", feedback=Feedback(), seq=0, actions=[],
+                                 view=view, shown="start:1")
+    eid, peer = inst.room.join(), inst.room.join()
+    WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "enter", "room": inst.id, "key": key, "entity": eid,
+                                "state": inst.room.snapshot()}, 0.0)
+
+    def tick(hits: int, swings: int) -> None:
+        inst.room.enemies[enemy].hit_seq, inst.room.players[peer].attack_seq = hits, swings
+        inst.room.step()
+        WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "room_state", "room": inst.id,
+                                    "state": inst.room.snapshot()}, 0.1)
+
+    tick(2, 1)
+    assert view.flashes == [] and view.swings == [], "nothing shown while the room loads"
+    arena.shown = inst.id  # (the room shows)
+    tick(2, 1)
+    assert view.flashes == [] and view.swings == [], "and none of it later"
+    tick(3, 2)
+    assert [e for _, e in view.flashes] == [enemy] and [(e, o) for _, e, o in view.swings] == [(peer, False)]
+
+
+def test_the_views_swing_and_flash_present_as_combat_and_the_hitbox_do(coop: SceneRoom) -> None:
+    """SceneView.swing: Combat's attack animation (its priority and time), its attack sound at the avatar, rumble
+    only for the window's own player; flash: the enemy tinted, the Hitbox's hit sound, and the tint undone once the
+    flash's time is over. (Sound calls are recorded, never played.)"""
+    from mesh_net.scene_client import FLASH_S, FLASH_TINT, HIT_SOUND
+    from tests.test_mesh_net_hd2d import headless_view
+
+    view = headless_view(coop)
+    audio, rumble = MagicMock(), MagicMock()
+    view.window = SimpleNamespace(hd2d_renderer=None, on_draw=lambda: None, audio=audio,
+                                  input_controller=SimpleNamespace(manager=SimpleNamespace(rumble=rumble)))
+    enemy = SimpleNamespace(center_x=600.0, center_y=256.0, color=(255, 255, 255), visible=True)
+    view.sprites, view.enemy_colors = {BANDIT: enemy}, {BANDIT: (255, 255, 255)}
+    own = SimpleNamespace(center_x=10.0, center_y=20.0, mesh_animator=object(), mesh_entity_data={})
+    peer = SimpleNamespace(center_x=30.0, center_y=40.0, mesh_animator=object(), mesh_entity_data={})
+    view.avatars = {1: own, 2: peer}
+    view.swing(1, own=True)
+    assert own.mesh_entity_data["animation_state"] == coop.combat["attack_anim"] == "attack"
+    assert own.mesh_entity_data["_animation_state_meta"] == {"priority": 10.0, "timer": 0.5}
+    audio.play_world_sfx.assert_called_once_with(coop.combat["attack_sound"], world_pos=(10.0, 20.0),
+                                                 window=view.window, base_volume=0.5, profile="attack")
+    rumble.assert_called_once_with(0.2, 0.03, 0)
+    view.swing(2, own=False)
+    assert peer.mesh_entity_data["animation_state"] == "attack" and rumble.call_count == 1, "no rumble for a peer"
+    view.swing(99, own=False)  # (no avatar yet: nothing)
+    audio.reset_mock()
+    view.flash(BANDIT)
+    assert enemy.color == FLASH_TINT
+    audio.play_world_sfx.assert_called_once_with(HIT_SOUND, world_pos=(600.0, 256.0), window=view.window,
+                                                 base_volume=0.6, profile="melee")
+    view.sync(None, {}, None, FLASH_S / 2)
+    assert enemy.color == FLASH_TINT, "still flashing"
+    view.sync(None, {}, None, FLASH_S / 2 + 0.01)
+    assert enemy.color == (255, 255, 255) and view.flashes == {}, "the tint undone"

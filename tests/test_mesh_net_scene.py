@@ -27,7 +27,7 @@ class Driver:
 
     def send(self, eid, dx=0, dy=0, action=None, seq=None):
         self.seq[eid] = seq if seq is not None else self.seq.get(eid, 0) + 1
-        msg = {"v": wire.VERSION, "type": "input", "tick": 0, "entity": eid, "seq": self.seq[eid], "dx": dx, "dy": dy}
+        msg = wire.input_frame(eid, self.seq[eid], dx, dy, self.room.tick)  # (meant for now)
         if action:
             msg["action"] = action
         self.room.input(eid, msg)

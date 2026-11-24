@@ -79,8 +79,9 @@ class Driver:
     def send(self, pid, dx=0, dy=0, action=None, room=None, entity=None):
         self.seq[pid] = self.seq.get(pid, 0) + 1
         m = self.m(pid)
-        msg = {"v": wire.VERSION, "type": "input", "tick": 0, "room": room or m.instance, "entity": entity or m.eid or 1,
-               "seq": self.seq[pid], "dx": dx, "dy": dy}
+        inst = self.w.instances.get(m.instance or "")
+        msg = wire.input_frame(entity or m.eid or 1, self.seq[pid], dx, dy, inst.room.tick if inst else 0,
+                               room=room or m.instance)  # (meant for now)
         if action:
             msg["action"] = action
         self.w.input(pid, msg)
@@ -618,7 +619,8 @@ class Peer:
 
     async def move(self, dx, dy, action=None):
         self.seq += 1
-        frame = {"v": wire.VERSION, "type": "input", "tick": 0, "room": self.room, "entity": self.entity, "seq": self.seq, "dx": dx, "dy": dy}
+        tick = self.state["tick"] + 1 if self.state else 0  # (the next tick, as the world client sends)
+        frame = wire.input_frame(self.entity, self.seq, dx, dy, tick, room=self.room)
         if action:
             frame["action"] = action
         await self.send(frame)
@@ -876,7 +878,7 @@ def test_the_client_applies_only_its_own_rooms_frames_in_order(world):
     state = world.hub.room.snapshot()
     arena = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
                             playback=None, pending=None, phase="loading", party=None, notice=None,
-                            feedback=Feedback(), seq=0, action=None, view=None, shown=None)
+                            feedback=Feedback(), seq=0, actions=[], view=None, shown=None)
     WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "enter", "room": "start:1", "key": HUB, "entity": 1, "state": state}, 0.0)
     assert arena.room == "start:1" and arena.pending is not None
     WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "room_state", "room": "start:7", "state": {**state, "tick": 99}}, 0.1)
@@ -1083,7 +1085,8 @@ def test_pressing_e_before_a_new_room_shows_does_not_ask_the_old_room():
     key = SimpleNamespace(E=1, SPACE=2, P=3, I=4, Y=5, N=6, L=7, ESCAPE=8, F2=9, R=10)
     state = {"players": [[1, 100.0, 100.0, 0]], "drops": [GUARDIAN]}
     arena = SimpleNamespace(arcade=SimpleNamespace(key=key), directions={}, connected=True, action_keys=set(),
-                            action=None, phase="loading", request=None, note=lambda event: None, state=state,
+                            actions=[], phase="loading", request=None, note=lambda event: None, state=state,
                             entity=1, view=SimpleNamespace(near_drop=old_view_lookup), shown="start:1",
                             room=f"{R2}:3", _own=lambda: state["players"][0])
-    assert WorldArena.press(arena, key.E, 0) is True and arena.action == "use"
+    arena.act = lambda action, tick=None: arena.actions.append((action, tick))
+    assert WorldArena.press(arena, key.E, 0) is True and arena.actions == [("use", None)]

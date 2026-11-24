@@ -537,7 +537,7 @@ def test_malformed_rows_are_refused_whole(crossing: dict[str, bytes]) -> None:
     # The world client: a refused frame changes nothing it holds (no half-applied state).
     arena: Any = SimpleNamespace(identities={"start": room.identity}, defs={"start": SimpleNamespace(proto=room)},
                                  room=None, key=None, entity=None, state=None, playback=None, pending=None, phase="loading",
-                                 feedback=Feedback(), seq=0, action=None, view=None, shown=None)
+                                 feedback=Feedback(), seq=0, actions=[], view=None, shown=None)
     enter = {"v": wire.VERSION, "type": "enter", "room": "start:1", "key": "start", "entity": deck}
     with pytest.raises(wire.Invalid):
         WorldArena.on_frame(arena, {**enter, "state": with_deck(nan)}, 0.0)

@@ -95,16 +95,17 @@ class WorldArena(Arena):
             if symbol == key.SPACE:
                 # Only in the room on screen (inputs wait while one loads), and never in the cooldown: then a swing
                 # shows at once and the attack is sent; the server confirms only a hit.
-                if (self.phase == "playing" and self.view is not None and self.shown == self.room
-                        and self.entity is not None and self.feedback.press(self.clock())):
-                    self.action = "attack"
+                tick = (self.feedback.press(self.clock()) if self.phase == "playing" and self.view is not None
+                        and self.shown == self.room and self.entity is not None else None)
+                if tick is not None and self.view is not None and self.entity is not None:
+                    self.act("attack", tick)  # the server judges its cooldown on this tick, as the window did
                     self.view.swing(self.entity, own=True)
             elif symbol == key.E:
                 own = self._own()
                 # (the view must show the room the state is for: just after an enter it still shows the last one)
                 near = own is not None and self.view is not None and self.state is not None \
                     and self.shown == self.room and self.view.near_drop(own[1], own[2], self.state)
-                self.action = "take" if near else "use"
+                self.act("take" if near else "use")
             elif symbol == key.P:
                 self._ask("create")
             elif symbol == key.I:
@@ -151,8 +152,8 @@ class WorldArena(Arena):
             check_state(msg["state"], identity, room)  # (its rows against this window's own room, before any is kept)
             self.room, self.key, self.entity = msg["room"], msg["key"], msg["entity"]
             self.state = msg["state"]
-            self.feedback.baseline(self.state, room.cooldown)  # (another room instance: its own counters)
-            self.action = None  # (an attack pressed in the last room is never sent into this one)
+            self.feedback.baseline(self.state, room.cooldown, now)  # (another room instance: its own counters)
+            self.actions.clear()  # (what was pressed in the last room is never sent into this one)
             self.playback = Playback(lambda s: check_state(s, identity, room))
             self.playback.push(self.state, now)
             self.pending, self.phase = msg, "loading"
@@ -170,7 +171,7 @@ class WorldArena(Arena):
                 check_progress(self.state, state, own, self.seq)
             self.state = state
             self.playback.push(state, now)
-            swung, hit = self.feedback.update(state, own)
+            swung, hit = self.feedback.update(state, own, now)
             if self.view is not None and self.shown == self.room:  # (a view still loading shows none of it)
                 for eid in swung:
                     self.view.swing(eid, own=False)
@@ -212,9 +213,10 @@ class WorldArena(Arena):
                         if self.phase == "playing" and self.shown == self.room and self.entity is not None:
                             # (no input while a room loads)
                             direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
-                            action, self.action = self.action, None
+                            action, tick = self.actions.pop(0) if self.actions else (None, None)
                             self.seq += 1
-                            tick = self.state["tick"] + 1 if self.state is not None else 0  # (the next tick)
+                            if tick is None:  # (the next tick)
+                                tick = self.state["tick"] + 1 if self.state is not None else 0
                             writer.write(wire.encode(wire.input_frame(self.entity, self.seq, *direction, tick, action,
                                                                       room=self.room)))
                         await asyncio.wait_for(writer.drain(), 2)
@@ -260,6 +262,7 @@ class WorldArena(Arena):
         finally:
             self.phase, self.room, self.pending = "disconnected", None, None
             self.blur()
+            self.actions.clear()  # (the session they were pressed in is over: never sent in another)
             self.requests.clear()
 
     def caption(self) -> str:

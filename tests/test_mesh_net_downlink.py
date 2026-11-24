@@ -82,7 +82,7 @@ def test_release_and_attack_reach_authority_during_nine_tick_downlink_pause():
 
 
 def test_session_shutdown_joins_input_even_if_cancellation_is_swallowed(monkeypatch):
-    async def delayed_input(self, dx, dy, action=None):
+    async def delayed_input(self, dx, dy, action=None, tick=None):
         try:
             await asyncio.sleep(10)
         except asyncio.CancelledError:

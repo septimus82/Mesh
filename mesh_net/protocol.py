@@ -24,10 +24,16 @@ once, so that no later M4 stage needs a v4:
 * an enemy row is ``[id, hp, hit_seq, x, y, elevation, floor]``. ``hit_seq``: how many hits the enemy has taken in
   this room instance. Its placement is as a player row's (static until enemies move, M4-4; ``floor`` is ``null`` for
   a body the authority has never stood on a floor);
-* every ``input`` carries ``tick``, the server tick the client means it for (OD11), and an attack may carry
-  ``view_tick``, the tick (a number: between two ticks, a fraction) its window showed (reserved for lag compensation,
-  M4-5). Neither lets the authority apply more than one input a tick;
+* every ``input`` carries ``tick``, the server tick the client means it for (OD11). An attack's cooldown is judged
+  on it, as the window judged it, within [now - ATTACK_CAP, now] (mesh_net.scene_room.SceneRoom._may_attack): an
+  older claim is stale and dropped, a later one counts as now. An attack may carry ``view_tick``, the tick (a number:
+  between two ticks, a fraction) its window showed (reserved for lag compensation, M4-5). Neither lets the authority
+  start more than one attack (or one use or take) a tick;
 * a ``welcome`` carries ``hz``, the authority's tick rate, which must be this side's ``HZ``.
+
+A frame is at most MAX_BYTES, and a room whose largest snapshot would not fit is refused at load (Unsupported), never
+at run time. v3's longer rows lower how many enemies fit: with 8 players and floor ids at their 128-character limit,
+about 25 enemies with 12-character ids, 22 with 24, 18 with 40 (fewer than the 32 networked objects allowed before).
 
 Counters, not events, so a lost or late snapshot is never ambiguous. Within a room instance (a client takes a new
 baseline at every ``welcome`` and ``enter``) no counter or acknowledgement goes back, and a client's own ``ack`` never

@@ -384,7 +384,7 @@ def test_stale_or_inconsistent_counters_are_refused_whole(coop: SceneRoom, world
     for why, bad in stale_variants(state, eid)[1:3]:  # (the players' counters; an ack beyond what was sent: below)
         arena: Any = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
                                      playback=None, pending=None, phase="loading", feedback=Feedback(), seq=1,
-                                     action=None, view=None, shown=None)
+                                     actions=[], view=None, shown=None)
         WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "enter", "room": hub.id, "key": hub.key, "entity": eid,
                                     "state": state}, 0.0)
         kept, kept_playback = arena.state, list(arena.playback.states)
@@ -396,3 +396,70 @@ def test_stale_or_inconsistent_counters_are_refused_whole(coop: SceneRoom, world
         WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "room_state", "room": hub.id,
                                     "state": {**state, "tick": state["tick"] + 1}}, 0.1)
     assert arena.state is kept
+
+
+def test_a_resumed_scene_session_passes_its_own_checks(coop: SceneRoom) -> None:
+    """N6 through the real Server with the scene client's own checks (check_state against its room, check_progress):
+    a session that sent inputs and attacks (its ack and attack count above 0) drops and resumes; the resumed one
+    starts counting anew (SceneRoom.leave: per room join), so its first states pass check_progress against the new
+    client's own seq, and it plays on."""
+    room = coop
+    room.locked.clear()
+
+    async def run() -> None:
+        server = Server(room)
+        port = await server.start()
+        checks = {"check": lambda s: check_state(s, room.identity, room), "check_input": parse_input,
+                  "progress": check_progress}
+        try:
+            async with connect(port, **checks) as client:
+                for _ in range(12):
+                    await client.input(1, 0, "attack", client.state["tick"])
+                    await client.receive()
+                own = next(r for r in client.state["players"] if r[0] == client.entity)
+                assert own[6] > 0 and own[7] > 0, "acknowledged inputs and an attack before the drop"
+                token = client.resume
+            await asyncio.sleep(0.2)
+            async with connect(port, token, **checks) as client:
+                own = next(r for r in client.state["players"] if r[0] == client.entity)
+                assert own[6:] == [0, 0], "a new room join counts anew"
+                for _ in range(12):
+                    await client.input(0, 1)
+                    await client.receive()
+        finally:
+            await server.close()
+            for eid in list(room.players):
+                room.leave(eid)
+
+    asyncio.run(run())
+
+
+def test_a_resumed_world_player_counts_anew_in_its_room(world: World) -> None:
+    """N7: a resume always arrives as an enter (a new baseline), and the window keeps one seq for its life, so its
+    path differs from N6's; the room still counts the resumed player anew (leave: per room join), and a window that
+    has sent nothing yet (seq 0) accepts the states that follow."""
+    from mesh_net.world_client import WorldArena
+
+    pid, token = world.connect(None)
+    m = world.members[pid]
+    inst = world.instances[m.instance]
+    for seq in range(1, 6):
+        world.input(pid, wire.input_frame(m.eid, seq, 0, 0, inst.room.tick, "attack" if seq == 1 else None,
+                                          room=inst.id))
+        world.step()
+    own = next(r for r in inst.room.snapshot()["players"] if r[0] == m.eid)
+    assert own[6] == 5 and own[7] == 1
+    world.disconnect(pid)
+    world.connect(token)
+    (enter,) = [f for f in world.take(pid) if f["type"] == "enter"]
+    assert [r[6:] for r in enter["state"]["players"] if r[0] == enter["entity"]] == [[0, 0]]
+    ids = {k: d.proto.identity for k, d in world.defs.items()}
+    arena: Any = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
+                                 playback=None, pending=None, phase="loading", feedback=Feedback(), seq=0, actions=[],
+                                 view=None, shown=None)
+    WorldArena.on_frame(arena, enter, 0.0)
+    for _ in range(3):
+        world.step()
+        (state,) = [f for f in world.deliver()[pid] if f["type"] == "room_state"]
+        WorldArena.on_frame(arena, state, 0.1)
+    world.disconnect(pid)

@@ -94,7 +94,8 @@ class Session:
     jitter_ms: float
     loss: float
     seed: int
-    intent: Callable[[float, list[Any]], tuple[int, int, str | None]] = lambda now, shown: (0, 0, None)
+    # (dx, dy, action[, the tick the action is meant for: the window's Feedback.press; else the next tick])
+    intent: Callable[[float, list[Any]], tuple[Any, ...]] = lambda now, shown: (0, 0, None)
     mover: Callable[[int], None] | None = None
     setup: Callable[[SceneRoom, int], None] | None = None  # puts the joined player somewhere first (the tool's)
     frame: Callable[[float, "Session"], None] | None = None
@@ -172,9 +173,10 @@ class Session:
                     self.latest = state
                 self.playback.push(state, t / 1000)
             elif self.next_send <= t:
-                dx, dy, action = self.intent(t, self.own_row())
+                dx, dy, action, *meant = self.intent(t, self.own_row())
                 self.seq += 1
-                msg = wire.input_frame(self.eid, self.seq, dx, dy, self.latest["tick"] + 1, action)
+                tick = meant[0] if meant and meant[0] is not None else self.latest["tick"] + 1
+                msg = wire.input_frame(self.eid, self.seq, dx, dy, tick, action)
                 self.serial += 1
                 heapq.heappush(self.to_server, (self.up.arrival(t), self.serial, t, msg))
                 self.next_send += self.period
@@ -325,12 +327,12 @@ def attack(rtt: float, jitter: float, loss: float, seed: int, trials: int = 30) 
     def frame(now: float, s: Session) -> None:
         hp_seen.append((now, next(r[1] for r in s.latest["enemies"] if r[0] == BANDIT)))
         if shown[0] is None:
-            feedback.baseline(s.latest, room.cooldown)
+            feedback.baseline(s.latest, room.cooldown, now / 1000)
         elif s.latest is not shown[0]:
-            flashes.extend(now for _ in feedback.update(s.latest, s.eid)[1])
+            flashes.extend(now for _ in feedback.update(s.latest, s.eid, now / 1000)[1])
         shown[0] = s.latest
         if len(swings) < len(presses) and presses[len(swings)] <= now:  # (a press: the window's next frame reads it)
-            swings.append(now if feedback.press(now / 1000) else math.inf)
+            swings.append(now if feedback.press(now / 1000) is not None else math.inf)
 
     with coop_room() as room:
         s = Session(room, rtt, jitter, loss, seed, intent=intent, frame=frame,
