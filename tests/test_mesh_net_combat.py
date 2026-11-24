@@ -12,6 +12,7 @@ and a hit only once the server confirms it (OD4), whatever the latency.
 
 from __future__ import annotations
 
+import asyncio
 import math
 import random
 from types import SimpleNamespace
@@ -239,18 +240,23 @@ def mashing(rng: random.Random, start: float, until: float) -> list[float]:
     return found
 
 
-def play(profile: tuple[float, float, float], seed: int, when: list[float]) -> dict[str, Any]:
-    """The window (SceneArena's press and on_state; the send loop takes the oldest queued action with its tick, as
-    Arena.session does) next to the bandit, over the probe's link, pressing Space at ``when`` (ms): what it showed and
-    sent, and what the server did."""
+def play(profile: tuple[float, float, float], seed: int, when: list[float],
+         stall: tuple[float, float] | None = None) -> dict[str, Any]:
+    """The window (SceneArena's press and on_state; the send loop takes Arena.next_action, as Arena.session does) next
+    to the bandit, over the probe's link, pressing Space at ``when`` (ms): what it showed and sent, and what the
+    server did with each swing's attack (``outcomes``: its meant tick -> "run", "stale" or "refused"). ``stall``: (start,
+    end) ms in which the server runs no tick (its event loop blocked), and skips the ticks it missed, as
+    mesh_net.server.Server._run_clock does."""
     rtt, jitter, loss = profile
     now = [0.0]
     sent: list[float] = []
+    claims: list[tuple[float, int]] = []  # (press ms, meant tick) of each swing shown
+    outcomes: dict[int, str] = {}
     arena: Any = None
     last: list[Any] = [None]
 
     def intent(t: float, shown: list[Any]) -> tuple[Any, ...]:
-        action, tick = arena.actions.pop(0) if arena.actions else (None, None)  # (Arena.session's send loop)
+        action, tick = Arena.next_action(arena)  # (Arena.session's send loop)
         if action == "attack":
             sent.append(t)
         return 0, 0, action, tick
@@ -267,11 +273,27 @@ def play(profile: tuple[float, float, float], seed: int, when: list[float]) -> d
         last[0] = s.latest
         arena.client.state = s.latest
         for p in [p for p in when if t - FRAME_MS < p <= t]:  # (the frame's dispatch_events reads the press)
+            before = len(arena.view.swings)
             SceneArena.press(arena, SPACE, 0)
             Arena.release(arena, SPACE, 0)
+            if len(arena.view.swings) > before:
+                claims.append((p, arena.actions[-1][1]))
 
     with coop_room() as room:
         room.enemies[BANDIT].state = TargetState(hp=100_000.0, max_hp=100_000.0)
+        judge, step = room._may_attack, room.step
+
+        def may_attack(p: Any, meant: int) -> bool:
+            stale = room.stale_attacks
+            started = judge(p, meant)
+            outcomes[meant] = "run" if started else "stale" if room.stale_attacks > stale else "refused"
+            return started
+
+        def stalled_step() -> None:
+            if stall is None or not stall[0] <= s.now < stall[1]:
+                step()
+
+        room._may_attack, room.step = may_attack, stalled_step  # type: ignore[method-assign]
         s = Session(room, rtt, jitter, loss, seed, intent=intent, frame=frame,
                     setup=lambda room, eid: place(room, eid, 568.0, 256.0, 0))
         s.run(when[-1] + 3000.0)
@@ -282,7 +304,7 @@ def play(profile: tuple[float, float, float], seed: int, when: list[float]) -> d
         return {"swings": [t for t, eid, own in arena.view.swings if own and eid == s.eid], "sent": sent,
                 "attacks": room.players[s.eid].attack_seq, "hits": hits, "hit_at": hit_at,
                 "flashes": [t for t, _enemy in arena.view.flashes], "stale": room.stale_attacks,
-                "refused": room.refused_attacks, "cooldown": room.cooldown}
+                "refused": room.refused_attacks, "cooldown": room.cooldown, "claims": claims, "outcomes": outcomes}
 
 
 @pytest.mark.parametrize("seed", [7, 8, 9])
@@ -319,9 +341,10 @@ MASHING_PROFILES = (*PROFILES[:4], (100, 10, 0.0), PROFILES[4])  # (+ jitter alo
 def test_mashing_never_shows_a_swing_the_server_does_not_run(seed: int, profile: tuple[float, float, float]) -> None:
     """Space mashed for 19 s against the cooldown, the attack rhythm as tight as it allows: jitter and TCP's bunching
     bring attack inputs to the server closer together than the cooldown. Judged on the ticks the window meant them for
-    (SceneRoom._may_attack), every swing shown is an attack the server starts: none refused in the cooldown, none
-    stale, within owner decision OD1's envelope (to 100 ms RTT, +-10 ms, 1% loss) and, measured here, at 200 ms too;
-    each starts once and hits once, no faster than the cooldown allows."""
+    (SceneRoom._may_attack), every swing shown is an attack the server starts within owner decision OD1's envelope (to
+    100 ms RTT, +-10 ms, 1% loss): none refused in the cooldown, none stale. At 200 ms with 1% loss a claim can read
+    older than ATTACK_CAP (two ticks beyond it, measured): such a swing is stale, dropped and counted, never run late,
+    and never refused; every other swing runs. Each starts once and hits once, no faster than the cooldown allows."""
     for session in range(2):
         got = play(profile, seed * 100 + session, mashing(random.Random(seed * 1000 + session), 1000.0, 20000.0))
         swings = got["swings"]
@@ -330,9 +353,38 @@ def test_mashing_never_shows_a_swing_the_server_does_not_run(seed: int, profile:
         # the reckoning on, and the frame that reads the press)
         tick_ms = 1000 / wire.HZ
         assert all(b - a >= got["cooldown"] * tick_ms - tick_ms - FRAME_MS for a, b in zip(swings, swings[1:]))
-        assert (got["refused"], got["stale"]) == (0, 0), "no swing shown is refused or stale"
-        assert got["attacks"] == len(swings) == len(got["sent"]), "every swing shown is an attack the server starts"
+        assert got["refused"] == 0, "no swing shown is refused in the cooldown"
+        if profile[0] <= 100:
+            assert got["stale"] == 0, "none stale within OD1's envelope"
+        assert len(swings) == len(got["sent"]) == got["attacks"] + got["stale"], "every other swing shown starts"
+        assert all(got["outcomes"][claim] in ("run", "stale") for _, claim in got["claims"])
         assert got["hits"] == got["attacks"], "each hits once"
+
+
+@pytest.mark.parametrize("stall_ms", [200, 450, 1000])
+@pytest.mark.parametrize("seed", [7, 8, 9])
+@pytest.mark.parametrize("profile", MASHING_PROFILES, ids=lambda p: f"rtt{p[0]}-jitter{p[1]}-loss{p[2]}")
+def test_after_a_server_stall_every_swing_shown_runs_again(stall_ms: int, seed: int,
+                                                           profile: tuple[float, float, float]) -> None:
+    """Mashing through a server stall (its event loop blocked 200, 450 or 1000 ms at 5 s): the server skips the ticks
+    it missed, so its tick falls behind the clock and the window's reckoning runs ahead; the reckoning comes back down
+    once RECKONING snapshots in a row have come late (Feedback.update), never swinging early. A swing shown during the
+    stall or just after it may be refused (counted: at most 3 here); every swing pressed from RECKONING snapshots (a
+    second) plus a round trip after the stall runs (or, at 200 ms, is stale), as without a stall."""
+    from mesh_net.scene_room import RECKONING
+
+    stall = (5000.0, 5000.0 + stall_ms)
+    got = play(profile, seed, mashing(random.Random(seed * 1000), 1000.0, 20000.0), stall)
+    recovered = stall[1] + RECKONING * 1000 / wire.HZ + profile[0]
+    after = [(t, claim) for t, claim in got["claims"] if t >= recovered]
+    assert len(after) >= 20
+    allowed = ("run", "stale") if profile[0] > 100 else ("run",)
+    assert [(t, got["outcomes"].get(claim)) for t, claim in after if got["outcomes"].get(claim) not in allowed] == []
+    assert got["refused"] <= 3, "refused only around the stall"
+    tick_ms = 1000 / wire.HZ
+    swings = got["swings"]
+    assert all(b - a >= got["cooldown"] * tick_ms - tick_ms - FRAME_MS for a, b in zip(swings, swings[1:])), \
+        "never a swing early: its cooldown runs from the last swing's tick as sent"
 
 
 def test_a_press_in_the_cooldown_never_swings_and_the_world_window_waits_for_its_room() -> None:
@@ -421,9 +473,8 @@ def test_the_server_never_drops_an_attack_for_a_use_in_the_same_tick(coop: Scene
 def test_the_cooldown_is_judged_on_the_meant_tick_within_its_cap(coop: SceneRoom) -> None:
     """SceneRoom._may_attack: an attack meant for a tick a cooldown after the last starts whenever it arrives within
     ATTACK_CAP ticks; one meant earlier is refused (the cooldown); one older than ATTACK_CAP is stale (dropped,
-    counted, never run); one meant for a tick not reached counts as now. A client lying about its ticks gains at most
-    one cap's worth: after a pause, 1 + ATTACK_CAP // cooldown attacks, on consecutive ticks; never more than one a
-    tick."""
+    counted, never run); one meant for a tick not reached counts as now. (A liar's gain:
+    test_a_lying_client_gains_one_caps_worth_at_most.)"""
     from mesh_net.scene_room import ATTACK_CAP
 
     room = coop
@@ -463,23 +514,58 @@ def test_the_cooldown_is_judged_on_the_meant_tick_within_its_cap(coop: SceneRoom
             room.step()
         assert attack(far), "a far-future claim counts as now: it starts once the cooldown has passed"
         assert not attack(room.tick + 5), "and its cooldown runs from the tick it counted as, not the claim"
-        # A liar after a pause: claims back-dated to the cap, a cooldown apart, all sent before the next tick.
-        for _ in range(3 * c):
-            room.step()
-        start, first = p.attack_seq, room.tick + 1 - ATTACK_CAP
-        for k in range(4):
-            seq += 1
-            room.input(eid, wire.input_frame(eid, seq, 0, 0, first + k * c, "attack"))
-        ticks = []
-        for _ in range(4):
-            before = p.attack_seq
-            room.step()
-            if p.attack_seq > before:
-                ticks.append(room.tick)
-        assert p.attack_seq - start == 1 + ATTACK_CAP // c, "at most one cap's worth beyond the cooldown"
-        assert ticks == list(range(ticks[0], ticks[0] + len(ticks))), "one a tick"
     finally:
         room.leave(eid)
+
+
+@pytest.mark.parametrize("cooldown", [2, 3, 5, 10])
+def test_a_lying_client_gains_one_caps_worth_at_most(cooldown: int, coop: SceneRoom) -> None:
+    """A greedy liar: after a pause, one attack input every tick claiming the oldest tick the server accepts
+    (max(attack_after, now - ATTACK_CAP)). Its run of attacks on consecutive ticks is 1 + ATTACK_CAP // (cooldown - 1)
+    (13 at a cooldown of 2, 7 at 3, 4 at 5, 2 at 10); over any W ticks it starts at most 1 + (W + ATTACK_CAP) //
+    cooldown, against an honest client's 1 + W // cooldown; and in the long run it keeps the honest rate."""
+    from mesh_net.scene_room import ATTACK_CAP
+
+    room = coop
+    saved = room.cooldown
+    room.cooldown = cooldown
+
+    def starts(claim: Any, ticks: int = 400) -> list[int]:
+        eid = room.join()
+        p = room.players[eid]
+        try:
+            for _ in range(100):  # (a pause)
+                room.step()
+            found = []
+            for seq in range(1, ticks + 1):
+                room.input(eid, wire.input_frame(eid, seq, 0, 0, max(0, claim(p, room.tick + 1)), "attack"))
+                before = p.attack_seq
+                room.step()
+                if p.attack_seq > before:
+                    found.append(room.tick)
+            return found
+        finally:
+            room.leave(eid)
+
+    try:
+        liar = starts(lambda p, next_tick: max(p.attack_after, next_tick - ATTACK_CAP))
+        honest = starts(lambda p, next_tick: next_tick)
+        stale = room.stale_attacks
+        backdated = starts(lambda p, next_tick: p.attack_after)  # (claims older than the cap: refused as stale)
+        assert room.stale_attacks > stale and len(backdated) <= len(liar)
+        for i, first in enumerate(backdated):
+            assert sum(1 for t in backdated[i:] if t <= first + 40) <= 1 + (40 + ATTACK_CAP) // cooldown
+        run = next(k for k in range(1, len(liar)) if liar[k] != liar[0] + k)
+        assert run == 1 + ATTACK_CAP // (cooldown - 1), "its run on consecutive ticks"
+        for i, first in enumerate(liar):
+            for w in range(0, 120):
+                assert sum(1 for t in liar[i:] if t <= first + w) <= 1 + (w + ATTACK_CAP) // cooldown
+        assert len(liar) <= len(honest) + 1 + ATTACK_CAP // cooldown + 1, "one cap's worth over 400 ticks"
+        late = [t for t in liar if t > liar[0] + 200]
+        assert len(late) <= 1 + (late[-1] - late[0]) // cooldown, "after the burst, the honest rate"
+        assert all(b > a for a, b in zip(liar, liar[1:])), "never two a tick"
+    finally:
+        room.cooldown = saved
 
 
 def rows(state: wire.Message, hit_seq: int | None = None, attack_seq: dict[int, int] | None = None) -> wire.Message:
@@ -617,3 +703,144 @@ def test_the_views_swing_and_flash_present_as_combat_and_the_hitbox_do(coop: Sce
     assert enemy.color == FLASH_TINT, "still flashing"
     view.sync(None, {}, None, FLASH_S / 2 + 0.01)
     assert enemy.color == (255, 255, 255) and view.flashes == {}, "the tint undone"
+
+
+def test_a_transfer_from_a_long_running_room_lets_the_first_press_swing() -> None:
+    """N7: from a room far into its ticks to a fresh one (its tick count starts again): the last swing's tick belongs
+    to the old room's count, so the new room's first press swings at once, and the server runs it there."""
+    with disposable_project(expedition_files(), scaffold=False) as root:
+        world = World(root)
+    for _ in range(2000):
+        world.hub.room.step()
+    pid, _token = world.connect(None)
+    m = world.members[pid]
+    old = world.instances[m.instance]
+    ids = {k: d.proto.identity for k, d in world.defs.items()}
+    view = View([0.0])
+    clock = [100.0]
+    keys = SimpleNamespace(SPACE=SPACE, E=E, P=1, I=2, Y=3, N=4, L=5, ESCAPE=6, F2=7, R=8)
+    arena = window(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None, playback=None,
+                   pending=None, phase="playing", feedback=Feedback(), seq=0, view=view, shown=None,
+                   arcade=SimpleNamespace(key=keys), request=None, note=lambda _e: None, connected=True,
+                   clock=lambda: clock[0])
+    (enter,) = [f for f in world.take(pid) if f["type"] == "enter"]
+    WorldArena.on_frame(arena, enter, clock[0])
+    arena.shown, arena.phase = arena.room, "playing"  # (the window's next draw shows the room)
+    WorldArena.press(arena, SPACE, 0)
+    assert arena.actions and arena.actions[-1][1] >= 2000, "a swing in the old room, at its tick"
+    arena.actions.clear()
+    arena.action_keys.clear()
+    key = next(k for k, d in world.defs.items() if d.proto.enemies and k != old.key)
+    fresh = world._create(key, 1)
+    assert world._move(m, old, fresh, fresh.room.spawn)
+    clock[0] += 0.2
+    (enter,) = [f for f in world.take(pid) if f["type"] == "enter"]
+    WorldArena.on_frame(arena, enter, clock[0])
+    arena.shown, arena.phase = arena.room, "playing"  # (the window's next draw shows the room)
+    WorldArena.press(arena, SPACE, 0)
+    assert len(view.swings) == 2, "the first press in the fresh room swings"
+    (action, tick), = arena.actions
+    world.input(pid, wire.input_frame(m.eid, 1, 0, 0, tick, action, room=fresh.id))
+    world.step()
+    assert fresh.room.players[m.eid].attack_seq == 1, "and the server runs it there"
+
+
+def test_leaving_a_room_drops_what_was_waiting() -> None:
+    """SceneRoom.leave: attacks, uses and takes still waiting are dropped with the session (never run on a resume)."""
+    with disposable_project(coop_files(), scaffold=False) as root:
+        room = SceneRoom(root / COOP_SCENE, root)
+    eid = room.join()
+    place(room, eid, 568.0, 256.0, 0)
+    room.input(eid, wire.input_frame(eid, 1, 0, 0, room.tick, "attack"))
+    room.input(eid, wire.input_frame(eid, 2, 0, 0, room.tick, "use"))
+    player = room.leave(eid)
+    assert player.attacks == [] and player.actions == []
+    back = room.join(player)
+    room.step()
+    assert room.players[back].attack_seq == 0 and room.enemies[BANDIT].hit_seq == 0, "nothing ran after the resume"
+
+
+def test_a_sessions_end_drops_the_windows_unsent_actions() -> None:
+    """Arena.session and WorldArena.session: when a session ends (here its connection fails), actions pressed in it and
+    not yet sent are dropped, never sent in a resumed session or into another room."""
+    import socket
+
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]  # (nothing listens there once closed)
+    keys = SimpleNamespace(**{n: i for i, n in enumerate("W UP S DOWN A LEFT D RIGHT SPACE E ESCAPE F2 R N".split())})
+    scene = Arena(SimpleNamespace(push_handlers=lambda **_kw: None), SimpleNamespace(key=keys))
+    scene.actions = [("attack", 7), ("use", None)]
+    asyncio.run(scene.session(port))
+    assert scene.actions == [] and "Disconnected" in scene.status
+    world = window(port=None, token=None, character=None, note=lambda _e: None, status="", phase="playing",
+                   room="start:1", pending=None, requests=[], actions=[("attack", 7), ("take", None)])
+    world.blur = lambda: Arena.blur(world)
+    asyncio.run(WorldArena.session(world, port))
+    assert world.actions == [] and world.phase == "disconnected"
+
+
+def test_a_flood_of_uses_stays_bounded_on_both_sides(coop: SceneRoom) -> None:
+    """Uses at the input rate limit (mesh_net.server.InputBudget: 40 a second, two an input tick) against one read a
+    tick: the server keeps at most PENDING waiting (the rest dropped, counted), and so does the window."""
+    from mesh_net.scene_room import PENDING
+
+    room = coop
+    eid = room.join()
+    dropped = room.dropped_actions
+    try:
+        seq = 0
+        for _ in range(40):  # 2 s
+            for _ in range(2):
+                seq += 1
+                room.input(eid, wire.input_frame(eid, seq, 0, 0, room.tick, "use"))
+                assert len(room.players[eid].actions) <= PENDING
+            room.step()
+        assert room.dropped_actions - dropped >= 40 - PENDING
+    finally:
+        room.leave(eid)
+    arena = window()
+    for _ in range(40):
+        Arena.act(arena, "use")
+    assert len(arena.actions) == PENDING
+
+
+def test_a_full_queue_never_drops_a_shown_swing() -> None:
+    """Four uses waiting (the window's PENDING), then Space: the swing shows and its attack is queued all the same,
+    and it rides the next input, ahead of the uses (its meant tick ages while it waits)."""
+    from mesh_net.scene_room import PENDING
+
+    own = [1, 0.0, 0.0, 0, 0, None, 0, 0]
+    state = {"tick": 30, "players": [own], "enemies": [], "drops": []}
+    arena = scene_arena(1, state, [5000.0])
+    arena.view.room.cooldown = 10
+    SceneArena.on_state(arena, state, 1, True)
+    for _ in range(PENDING + 2):
+        SceneArena.press(arena, E, 0)
+        arena.action_keys.clear()
+    assert arena.actions == [("use", None)] * PENDING
+    SceneArena.press(arena, SPACE, 0)
+    assert len(arena.view.swings) == 1 and ("attack", 30) in arena.actions
+    assert Arena.next_action(arena) == ("attack", 30) and Arena.next_action(arena) == ("use", None)
+
+
+def test_attacks_bunched_by_tcp_run_in_the_order_sent(coop: SceneRoom) -> None:
+    """Two attack inputs a cooldown apart (by meant ticks) reach the server in one tick (a retransmission bunched
+    them): the server reads the oldest first, so both run, one a tick; read newest first, the older would be refused."""
+    from mesh_net.scene_room import ATTACK_CAP
+
+    room = coop
+    eid = room.join()
+    p = room.players[eid]
+    try:
+        for _ in range(40):
+            room.step()
+        first = room.tick + 1 - ATTACK_CAP
+        for seq, meant in ((1, first), (2, first + room.cooldown)):
+            room.input(eid, wire.input_frame(eid, seq, 0, 0, meant, "attack"))
+        refused = room.refused_attacks
+        room.step()
+        room.step()
+        assert p.attack_seq == 2 and room.refused_attacks == refused and p.attacks == []
+    finally:
+        room.leave(eid)

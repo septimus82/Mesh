@@ -33,6 +33,7 @@ import json
 import math
 import os
 import random
+from collections import deque
 from collections.abc import Callable, Iterator
 from contextlib import chdir, contextmanager
 from dataclasses import dataclass, field
@@ -75,8 +76,10 @@ HITBOX_S = 0.2  # the hitbox Combat makes lives this long (engine.behaviours.com
 # An attack's cooldown is judged on the tick its client meant it for (the input's ``tick``: Player.attacks), as the
 # client judged it, so latency and TCP's bunching never refuse a swing the window showed. A claim older than this many
 # ticks when the server reads it is stale: dropped, never run (SceneRoom.stale_attacks counts it); a claim of a tick
-# not yet reached counts as now. 12 ticks (600 ms) is the oldest an honest claim reads at 100 ms RTT, +-10 ms jitter,
-# with one retransmission (RTT + 200 ms) delaying it: owner decision OD1's envelope (docs/plans/m4_online_combat.md).
+# not yet reached counts as now. The one place the window is set. Measured (docs/plans/m4_online_combat.md, M4-2 "As
+# implemented"; mashing, 3 seeds x 8 sessions, about 900 swings a profile), the oldest an honest claim read was 4 ticks
+# at 100 ms RTT +-10 ms, 10 with 1% loss (owner decision OD1's envelope: 2 ticks to spare) and 14 at 200 ms with 1%
+# loss (beyond it: 7 of 895 swings stale). 12 ticks is 600 ms; the owner is deciding whether that window is acceptable.
 ATTACK_CAP = 12
 PENDING = 4  # attacks, and uses or takes, a player may have waiting (one of each is read a tick); more are dropped
 # The packaged co-op room (tooling/make_coop_scene.py): where each file goes in a project.
@@ -648,10 +651,14 @@ class SceneRoom:
     def _may_attack(self, p: Player, meant: int) -> bool:
         """Whether an attack meant for tick ``meant`` starts now. Its cooldown is judged on the meant tick, as the
         client judged it, within [now - ATTACK_CAP, now]: a claim of a tick not yet reached counts as now, an older
-        one is stale and dropped (counted, never run). So meant ticks that start attacks rise at least a cooldown apart
-        and are never older than ATTACK_CAP: after a pause, at most 1 + ATTACK_CAP // cooldown attacks can start on
-        consecutive ticks (one a tick), and over any W ticks at most 1 + (W + ATTACK_CAP) // cooldown, against
-        1 + W // cooldown judged on arrival. Refused in the cooldown otherwise (counted)."""
+        one is stale and dropped (counted, never run). Refused in the cooldown otherwise (counted).
+
+        What a client lying about its ticks gains: meant ticks that start attacks rise at least a cooldown apart and are
+        never older than ATTACK_CAP when read, and at most one starts a tick. So over any W ticks at most
+        1 + (W + ATTACK_CAP) // cooldown attacks start, against 1 + W // cooldown judged on arrival: the same long-run
+        rate, plus one cap's worth. Its most on consecutive ticks, after a pause, claiming the oldest tick accepted each
+        tick: 1 + ATTACK_CAP // (cooldown - 1) for a cooldown of 2 ticks or more (13 at 2, 7 at 3, 4 at 5, 2 at 10);
+        a cooldown of 1 tick allows one a tick anyway."""
         if meant < self.tick - ATTACK_CAP:
             self.stale_attacks += 1
             return False
@@ -887,29 +894,41 @@ def check_progress(before: wire.Message, after: wire.Message, own: int, sent: in
         raise wire.Invalid("an enemy's hit count went back")
 
 
+RECKONING = wire.HZ  # snapshots in a row (a second's), all late, after which a client's reckoning comes down (Feedback)
+
+
 class Feedback:
     """A client's combat presentation (owner decision OD4): its own swing the moment it is pressed, others' swings
     and every hit only as the server's counters confirm them (wire v3).
 
     ``press`` mirrors the attack cooldown (SceneRoom.cooldown, from the room's own player template) on the room's
-    tick, as the client reckons it (``tick``: the newest tick seen, advanced by the time since, taking the snapshot that
-    came soonest); it returns that tick, which the attack's input carries, and the server judges the cooldown on it
-    (SceneRoom._may_attack). So a press the window swings for is one the server runs, whatever latency and TCP's
+    tick, as the client reckons it (``tick``: a snapshot's tick advanced by the time since it came, taking the one
+    that came soonest); it returns that tick, which the attack's input carries, and the server judges the cooldown on
+    it (SceneRoom._may_attack). So a press the window swings for is one the server runs, whatever latency and TCP's
     bunching do to its arrival, unless it reaches the server more than ATTACK_CAP ticks after that tick (then it is
     stale: dropped, and the swing reads as a miss). A press within the cooldown swings for nothing and sends nothing.
+
+    The reckoning may come down: a server that stalls skips the ticks it missed (mesh_net.server.Server._run_clock), so
+    its tick falls behind the clock, and the reckoning follows once RECKONING snapshots in a row (a second's) all came
+    more than a tick later than the soonest. Meanwhile (the stall and about a second after it) the reckoning runs
+    ahead, its ticks count as now, and a swing shown then can be refused in the cooldown (counted:
+    SceneRoom.refused_attacks). The window never swings early for it: the cooldown runs from the last swing's tick as
+    it was sent, which a reckoning that came down reaches only later.
     ``update`` reads each newer state against the last, after its checks (check_state, check_progress). Its counters
     and tick are a room instance's: ``baseline`` takes them anew at a welcome (a resume's too) and at every enter."""
 
     def __init__(self) -> None:
         self.cooldown = 0  # ticks
         self.offset = -math.inf  # the room's tick minus the client's clock (s) times HZ, at the soonest snapshot
+        self.samples: deque[float] = deque(maxlen=RECKONING)  # that difference for the latest snapshots
         self.last = -math.inf  # the tick of the last swing shown
         self.swings: dict[int, int] = {}  # entity -> attack_seq last applied
         self.hits: dict[str, int] = {}  # enemy -> hit_seq last applied
 
     def tick(self, now: float) -> int:
-        """The room's tick at ``now`` (s on the client's clock), as this client reckons it: never ahead of the server's
-        (each snapshot's tick came no sooner than it was made), and never going back."""
+        """The room's tick at ``now`` (s on the client's clock), as this client reckons it. Not ahead of the server's
+        while the server keeps time (each snapshot's tick came no sooner than it was made); it comes down after a server
+        stall (the class's note)."""
         return math.floor(now * wire.HZ + self.offset + 1e-6) if self.offset > -math.inf else 0
 
     def baseline(self, state: wire.Message, cooldown: int, now: float) -> None:
@@ -917,7 +936,9 @@ class Feedback:
         starts the reckoning. ``cooldown``: the room's, in ticks. The last swing's tick is kept while it is not ahead of
         the reckoned tick (the same room, resumed: its cooldown still runs there); else it is another count of ticks."""
         self.cooldown = cooldown
-        self.offset = state["tick"] - now * wire.HZ
+        self.samples.clear()
+        self.samples.append(state["tick"] - now * wire.HZ)
+        self.offset = self.samples[0]
         if self.last > self.tick(now):
             self.last = -math.inf
         self.swings = {r[0]: r[7] for r in state["players"]}
@@ -935,7 +956,12 @@ class Feedback:
     def update(self, state: wire.Message, own: int, now: float) -> tuple[list[int], list[str]]:
         """The players other than ``own`` who started an attack, and the enemies hit, since the last state applied
         (at ``now``)."""
-        self.offset = max(self.offset, state["tick"] - now * wire.HZ)
+        self.samples.append(state["tick"] - now * wire.HZ)
+        recent = max(self.samples)
+        # The soonest snapshot so far, unless the latest RECKONING all came more than a tick later than it would have
+        # (no jitter or TCP retransmission delays that many in a row: the server's tick fell behind, a stall); then
+        # the soonest of those.
+        self.offset = recent if recent < self.offset - 1 and len(self.samples) == RECKONING else max(self.offset, recent)
         swung = [r[0] for r in state["players"] if r[0] != own and r[7] > self.swings.get(r[0], r[7])]
         hit = [r[0] for r in state["enemies"] if r[2] > self.hits.get(r[0], 0)]
         self.swings = {r[0]: r[7] for r in state["players"]}

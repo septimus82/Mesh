@@ -102,10 +102,12 @@ class WorldArena(Arena):
                     self.view.swing(self.entity, own=True)
             elif symbol == key.E:
                 own = self._own()
-                # (the view must show the room the state is for: just after an enter it still shows the last one)
-                near = own is not None and self.view is not None and self.state is not None \
-                    and self.shown == self.room and self.view.near_drop(own[1], own[2], self.state)
-                self.act("take" if near else "use")
+                # Only in the room on screen, as an attack: never one pressed while the next room loads (it would run
+                # in a room the player hasn't seen). (The view shows the state's room: just after an enter it doesn't.)
+                if (self.phase == "playing" and self.view is not None and self.state is not None
+                        and self.shown == self.room):
+                    near = own is not None and self.view.near_drop(own[1], own[2], self.state)
+                    self.act("take" if near else "use")
             elif symbol == key.P:
                 self._ask("create")
             elif symbol == key.I:
@@ -213,7 +215,7 @@ class WorldArena(Arena):
                         if self.phase == "playing" and self.shown == self.room and self.entity is not None:
                             # (no input while a room loads)
                             direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
-                            action, tick = self.actions.pop(0) if self.actions else (None, None)
+                            action, tick = self.next_action()
                             self.seq += 1
                             if tick is None:  # (the next tick)
                                 tick = self.state["tick"] + 1 if self.state is not None else 0

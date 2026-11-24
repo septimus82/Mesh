@@ -93,9 +93,18 @@ class Arena:
         return True
 
     def act(self, action: str, tick: int | None = None) -> None:
-        """Queue an action to send (at most PENDING waiting: the server keeps no more either)."""
-        if len(self.actions) < PENDING:
+        """Queue an action to send. An attack whose swing the window showed (it has its meant tick) always queues
+        (the cooldown already spaces them); any other action while fewer than PENDING wait (the server keeps no more)."""
+        if tick is not None or sum(t is None for _, t in self.actions) < PENDING:
             self.actions.append((action, tick))
+
+    def next_action(self) -> tuple[str | None, int | None]:
+        """What the next input carries: the oldest attack whose swing showed first (its meant tick ages while it
+        waits: SceneRoom._may_attack's cap), else the oldest other action; (None, None) when nothing waits."""
+        for index, (_, tick) in enumerate(self.actions):
+            if tick is not None:
+                return self.actions.pop(index)
+        return self.actions.pop(0) if self.actions else (None, None)
 
     def blur(self) -> bool:
         """Focus lost: release every held key (none sticks), but keep the actions pressed: they are still sent."""
@@ -120,7 +129,7 @@ class Arena:
                     due = loop.time()
                     while True:
                         direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
-                        action, tick = self.actions.pop(0) if self.actions else (None, None)
+                        action, tick = self.next_action()
                         await client.input(*direction, action=action, tick=tick)
                         due = max(due + 1 / wire.HZ, loop.time())  # fixed schedule: no drift; after a stall, one extra send
                         await asyncio.sleep(due - loop.time())

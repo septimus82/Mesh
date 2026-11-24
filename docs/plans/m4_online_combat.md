@@ -44,8 +44,9 @@
 >   - (iii) when the queue is full and an input is dropped, any pending attack is kept;
 >   - (iv) the seed spread is worded as about 10 ms and about 4 points (§2.1, §4).
 > - M4-1 is marked merged (#610).
-> - The review of M4-2 (#611, round 2) is recorded in §4 M4-2 "As implemented": the attack cooldown is judged on the
->   intended tick, and no pressed action is replaced or lost on its way.
+> - The review of M4-2 (#611, rounds 2 and 3) is recorded in §4 M4-2 "As implemented": the attack cooldown is judged
+>   on the intended tick, the client's reckoning of the tick recovers from a server stall, the true lying-client bound,
+>   and no pressed action is replaced or lost on its way.
 
 ## 0. Summary
 
@@ -505,32 +506,50 @@ The measurements rank the levers.
     - **Why:** judged on arrival, jitter alone (100 ms RTT, ±10 ms, no loss) let mashing show swings that the server
       then refused: 0, 5 and 3 on seeds 7, 8 and 9 in 19 s. With 1% loss it was 3, 7 and 4, and at 200 ms 3, 8 and 5.
       The client counted the cooldown from the press and the server from the arrival.
-    - **The client** reckons the room's tick: the newest tick seen, advanced by the time since, taken from whichever
-      snapshot came soonest. That reckoning never runs ahead of the server and never goes back.
+    - **The client** reckons the room's tick: a snapshot's tick advanced by the time since it arrived, taken from
+      whichever snapshot arrived soonest. While the server keeps time, that reckoning is never ahead of the server.
+    - **After a server stall** the server skips the ticks it missed (`Server._run_clock`), so its tick falls behind the
+      clock. The reckoning comes back down once `RECKONING` snapshots in a row (a second's worth) have all arrived more
+      than a tick late (review round 3).
+      - During the stall and about a second after it, the reckoning runs ahead, its ticks count as now, and a swing
+        shown then can be refused. Mashing through a 200, 450 or 1000 ms stall gives 0–3 refused swings per run, all
+        pressed no later than 250 ms after the stall ends.
+      - From a second plus a round trip after the stall, every swing shown runs again.
+      - The window never swings early: its cooldown runs from the last swing's tick as sent, which a reckoning that
+        came down reaches only later.
     - **A press swings** only a cooldown of reckoned ticks after the last swing. Its attack input carries that tick.
     - **The server** (`SceneRoom._may_attack`) judges the cooldown on that tick, within `[now - ATTACK_CAP, now]`.
       A tick not reached yet counts as now. An older one is **stale**: dropped, counted in `stale_attacks`, never run.
       Every attack still runs when it arrives, from where the attacker stands then.
-    - **Why ATTACK_CAP is 12 ticks (600 ms):** that is the oldest an honest claim reads in OD1's envelope (100 ms
-      RTT, ±10 ms, one retransmission at RTT + 200 ms). Measured while mashing over 3 seeds × 8 sessions, the oldest
-      claim read was:
-      - 100 ms with no loss: 3 ticks;
-      - 100 ms with 1% loss: 9 ticks;
-      - 200 ms with 1% loss: 12 ticks, at the cap, so a second retransmission there would be stale.
+    - **ATTACK_CAP is 12 ticks (600 ms), one named constant.** Measured while mashing over 3 seeds × 8 sessions (about
+      900 swings per profile), with the reckoning settled, the oldest claim read was:
+      - 100 ms, no loss: 4 ticks;
+      - 100 ms, 1% loss: 10 ticks, so OD1's envelope has 2 ticks to spare;
+      - 200 ms, 1% loss: 14 ticks, beyond the cap. 7 of 895 swings were stale (0.8%): dropped and counted, never run.
 
-      OD5's 300 ms (6 ticks) would have dropped 20 of 899 swings at 100 ms with 1% loss.
+      Round 2 reported 9 and 12 ticks. Those were 1–2 ticks low because the probe delivers its first snapshot with no
+      delay, and the old reckoning kept that too-early sample forever. OD5's 300 ms (6 ticks) would drop about 2% of
+      swings at 100 ms with 1% loss. The owner is deciding whether a 600 ms window is acceptable.
     - **What a lying client can gain:** meant ticks that start attacks rise at least a cooldown apart and are never
-      older than the cap. So after a pause it can start at most 1 + ATTACK_CAP // cooldown attacks on consecutive ticks
-      (one a tick). Over any W ticks it can start at most 1 + (W + ATTACK_CAP) // cooldown, against 1 + W // cooldown
-      when judged on arrival. In the co-op room (cooldown 10 ticks) that is one extra attack per pause, and the
-      long-run rate is unchanged.
+      older than the cap when read, and at most one attack starts per tick.
+      - Over any W ticks it can start at most 1 + (W + ATTACK_CAP) // cooldown attacks, against 1 + W // cooldown when
+        judged on arrival. That is the same long-run rate plus one cap's worth.
+      - Its longest run on consecutive ticks, after a pause, comes from claiming the oldest tick accepted on every tick.
+        That run is 1 + ATTACK_CAP // (cooldown − 1) attacks: 13 at a cooldown of 2 ticks, 7 at 3, 4 at 5 and 2 at 10
+        (the co-op room's).
+      - Over 200 ticks a greedy liar gets 6, 4, 3 and 2 more attacks than an honest client at those cooldowns.
+      - A 1-tick cooldown allows one attack per tick anyway.
     - **Result:** the mashing test (seeds 7/8/9, every profile, plus jitter alone at 100 ms) has 0 swings shown that the
-      server did not run, 0 refused and 0 stale, at 200 ms too.
+      server did not run within OD1's envelope. At 200 ms the only ones not run are stale. None are refused.
   - **Nothing pressed is replaced or lost on the way:**
-    - The window queues pressed actions, each with its meant tick, and sends one per input.
+    - The window queues pressed actions, each with its meant tick, and sends one per input, the oldest attack first.
+      An attack whose swing showed always queues; the cap of `PENDING` = 4 applies only to uses and takes.
+    - The world window queues E only in the room on screen, so nothing pressed while a room loads runs in a room the
+      player hasn't seen.
     - The server queues attacks, and uses and takes, separately (`PENDING` = 4 of each), and reads one of each per
       tick. An attack is never dropped for a use in the same tick (note iii).
-    - Losing focus releases held keys but keeps what was pressed. Only a session's end, or an `enter`, clears it.
+    - Losing focus releases held keys but keeps what was pressed. Only a session's end, or an `enter`, clears it. The
+      server drops what was waiting when a player leaves.
   - **The enemy limit:** v3's longer rows lower how many enemies fit in a frame. With 8 players and floor ids at their
     128-character limit, about 25 fit with 12-character ids, 22 with 24-character ids and 18 with 40-character ids,
     against the 32 networked objects allowed before. A room that wouldn't fit is refused at load, never at run time.

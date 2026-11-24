@@ -1074,7 +1074,8 @@ def test_the_server_refuses_requests_past_its_budget(files, monkeypatch, caplog)
 @pytest.mark.integration
 def test_pressing_e_before_a_new_room_shows_does_not_ask_the_old_room():
     """Just after an enter, the window still shows the last room until its next frame. E then must not look the new
-    room's drops up in the old room's view (that raised KeyError out of the window's event dispatch)."""
+    room's drops up in the old room's view (that raised KeyError out of the window's event dispatch); nor is it
+    queued, to run in a room the player hasn't seen yet (M4-2 review)."""
     from types import SimpleNamespace
 
     from mesh_net.world_client import WorldArena
@@ -1089,4 +1090,4 @@ def test_pressing_e_before_a_new_room_shows_does_not_ask_the_old_room():
                             entity=1, view=SimpleNamespace(near_drop=old_view_lookup), shown="start:1",
                             room=f"{R2}:3", _own=lambda: state["players"][0])
     arena.act = lambda action, tick=None: arena.actions.append((action, tick))
-    assert WorldArena.press(arena, key.E, 0) is True and arena.actions == [("use", None)]
+    assert WorldArena.press(arena, key.E, 0) is True and arena.actions == []
