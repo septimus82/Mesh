@@ -94,9 +94,14 @@ class SceneView:
         sprite.mesh_behaviours = [b for b in sprite.mesh_behaviours if b in names]
         self.scene._rebuild_behaviours_for_sprite(sprite)
 
+    @staticmethod
+    def drops_at(state: wire.Message) -> dict[str, tuple[float, float]]:
+        """Where each drop in ``state`` lies: its enemy's row in that same state (where it died; SceneRoom._take
+        measures from there), never the enemy's sprite, which Playback shows two ticks behind (#616 review)."""
+        return {r[0]: (r[3], r[4]) for r in state["enemies"] if r[0] in state["drops"]}
+
     def near_drop(self, x: float, y: float, state: wire.Message) -> bool:
-        return any(math.hypot(x - self.sprites[i].center_x, y - self.sprites[i].center_y) <= DEFAULT_INTERACT_MAX_DIST
-                   for i in state["drops"])
+        return any(math.hypot(x - dx, y - dy) <= DEFAULT_INTERACT_MAX_DIST for dx, dy in self.drops_at(state).values())
 
     def swing(self, eid: int, own: bool) -> None:
         """Combat.attack's presentation on the avatar of ``eid``: its attack animation and sound, and for the local
@@ -165,10 +170,10 @@ class SceneView:
             self.sprites[enemy].visible = hp > 0
         for enemy in [e for e in self.drops if e not in state["drops"]]:
             self.scene.entities.enqueue_despawn(self.drops.pop(enemy))
-        for enemy in state["drops"]:
+        for enemy, (x, y) in self.drops_at(state).items():
             if enemy not in self.drops:
                 drop = self.drops[enemy] = self.arcade.SpriteCircle(6, DROP_COLOR)
-                drop.center_x, drop.center_y = self.sprites[enemy].center_x, self.sprites[enemy].center_y
+                drop.center_x, drop.center_y = x, y
                 drop.mesh_id = drop.mesh_name = f"drop:{enemy}"
                 self.scene.entities.enqueue_spawn(drop, layer_name="entities", is_solid=False)
 

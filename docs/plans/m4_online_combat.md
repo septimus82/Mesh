@@ -6,8 +6,9 @@
 > M4-3 (own-movement prediction and the server's input queue, #613) is merged; its follow-ups (round 4: tests, the
 > probe's flag order, the drain's fork guard) are merged (#615): §4 M4-3 "As implemented". Its input queue is the owner's
 > choice after playing; "drain" is the provisional default (owner decision, 2026-11-24). M4-4 (server-authoritative
-> moving enemies through one shared `FloorRoute` model, OD7) is in review, with the measurements M4-5 depends on: §4 M4-4
-> "As implemented".
+> moving enemies through one shared `FloorRoute` model, OD7) is merged (#616), with the measurements M4-5 depends on:
+> §4 M4-4 "As implemented". The M4-6 groundwork (a TCP delay proxy, a hidden-window capture harness and one trial;
+> two #616 review follow-ups) is in review: §4 M4-6 "groundwork as implemented". M4-5 awaits the owner.
 >
 > **Authority:** owner decision D7 (2026-11-23, `docs/plans/hd2d_online_investigation.md` §6, §7.4): M4 is approved
 > to begin now that M3 has passed. Focus: responsive server-authoritative online combat, including simulated latency.
@@ -1246,6 +1247,114 @@ owner's budget:**
 - A small asyncio TCP delay proxy in `tooling/`. Two hidden windows (non-activating hook) at 100 and 200 ms.
   Framebuffer evidence of the local swing, prediction, confirmed hit, and a transfer under latency.
 - Descriptive timings only.
+- **M4-6 groundwork as implemented** (the proxy, the capture harness and one trial; **not** the final evidence set,
+  which waits for the owner's M4-5 decision; no rewind or historical hit validation anywhere: hits stay judged at the
+  server's current positions).
+  - **Two review follow-ups from #616.**
+    - *A drop lies where the server measures a take from.* `SceneView` placed a new drop marker at the enemy's
+      sprite, which `Playback` shows two ticks behind, and never moved it; `near_drop` measured from that sprite too.
+      A walking enemy's marker could sit 5–9 px from the server's drop, so E could pick use instead of take (or the
+      reverse) at the edge of the pickup reach. Now both come from the enemy's row in the same state
+      (`SceneView.drops_at`: where it died; `SceneRoom._take` measures from that body). One path serves both arenas
+      (`world_client` calls the same `near_drop`). Test:
+      `test_mesh_net_moving_enemies.py::test_a_drop_lies_where_the_state_says_its_enemy_died` (fails before the fix).
+    - *`floor_under`'s rounding tolerance has an upper bound for enemy rows.*
+      `test_an_enemy_row_rounded_over_a_floors_edge_is_accepted` now also refuses a row 0.02 px beyond the stairs'
+      edge. Before, `ROUNDING = 0.5` (a 1 px span) survived that module; only the player-row test in
+      `test_mesh_net_hd2d.py` caught it.
+  - **The delay proxy** (`tooling/net_delay_proxy.py`: asyncio, standard library only, loopback only).
+    - **One link model.** M4-0's `Link` (one way RTT/2 ± uniform jitter; a loss arrives RTT + RTO later; never before
+      the message sent earlier) moved into the proxy, with the RTO as a field. `tooling/m4_latency_probe.py` imports
+      it and passes its `--rto`, so the probe's numbers are unchanged (the same arithmetic and the same random draws).
+    - Each chunk read from a socket is one "message". It is written on at `Link.arrival`, from a FIFO queue, so jitter
+      and stalls never reorder bytes. There are two guards: the link's head-of-line rule and the queue. An end of
+      stream follows its bytes the same way.
+    - "Stall bursts" are the probe's own loss model (`--loss`, `--rto-ms`), not a second one: at `--loss 0.01` the
+      proxy runs OD1's profile.
+    - Each connection draws its two links from one `--seed`ed stream, in arrival order. The chunking itself is the
+      OS's, so a run's byte timing repeats only as far as its reads do.
+    - **Windows' timer.** asyncio's Windows loop wakes on the 15.6 ms system timer, which added 0–15.6 ms each way
+      (100 ms RTT measured 121–124 ms). The proxy holds a 1 ms timer (`timeBeginPeriod`) while it runs. Then 100 ms
+      measures 100.5–102.4 ms, 200 ms 200.6–202.6 ms and 0 ms 0.3–0.6 ms (echo over loopback, 20 pings each).
+    - **Tests** (`tests/test_net_delay_proxy.py`; the socket tests are `integration`, the model test `fast`):
+      - the delay stays within the jitter;
+      - a 200 kB stream arrives in order, then its end of stream;
+      - a loss stalls by a retransmission;
+      - one seed, one run;
+      - the real co-op `Server` with two real clients (`mesh_net.client.connect`) through it at 100 ms: an input is
+        acknowledged no sooner than a round trip.
+
+      The CLI was also run in front of the sample server: join to welcome took 1.6 / 102.5 / 203.6 ms at 0 / 100 /
+      200 ms.
+  - **Launching two clients through the proxy** (PowerShell, from the checkout, one process per terminal). First the
+    authority, with the input queue to play (`drain` is the provisional default):
+
+    ```powershell
+    $env:PYTHONPATH = '<checkout>'
+    py -3.13 -m mesh_net.server --expedition --queue drain --port 46870     # or --queue deep / --queue small; or --coop
+    ```
+
+    Then one of these proxies (clients join port 46871; OD1's ±10 ms and 1% loss on the delayed ones):
+
+    ```powershell
+    py -3.13 tooling/net_delay_proxy.py --listen 46871 --target 127.0.0.1:46870 --rtt-ms 0
+    py -3.13 tooling/net_delay_proxy.py --listen 46871 --target 127.0.0.1:46870 --rtt-ms 50 --jitter-ms 10 --loss 0.01 --seed 7
+    py -3.13 tooling/net_delay_proxy.py --listen 46871 --target 127.0.0.1:46870 --rtt-ms 100 --jitter-ms 10 --loss 0.01 --seed 7
+    py -3.13 tooling/net_delay_proxy.py --listen 46871 --target 127.0.0.1:46870 --rtt-ms 200 --jitter-ms 10 --loss 0.01 --seed 7
+    ```
+
+    Then, in two more terminals, the clients through it:
+    - `py -3.13 -m mesh_net.world_client --port 46871` (the expedition);
+    - with `--coop`: `py -3.13 -m mesh_net.scene_client --port 46871`;
+    - the 2D sample: `py -3.13 -m mesh_net.demo --port 46871`, against `py -3.13 -m mesh_net.server --port 46870`.
+
+    Drop `--jitter-ms` and `--loss` for a pure delay.
+  - **The capture harness** (`tooling/m4_render_evidence.py OUT [--rtt-ms] [--jitter-ms] [--loss] [--rto-ms] [--seed]
+    [--queue drain|deep|small]`).
+    - **Two Python processes.** The harness runs the authority (`WorldServer` over the expedition) and the proxy on
+      an event loop in a thread, and window A on its main thread. Window B is `tooling/net_world_probe.py`, over its
+      command channel.
+    - Both windows are hidden and never activated (`tooling.hidden_windows.no_activate`), the audio is silent, and
+      the controls hint is off (a new `--no-hint` on the probe). The probe's command handling and window setup are
+      now `handle` and `hidden_arena`, which the harness shares.
+    - **Inputs** go through the client's own key handling: key events dispatched to the window with the probe's own
+      modifier mark, as the window tests do. No OS input.
+    - **Scenario** (the N7 GPU test's proven walk): both meet in the hub and form a party, both go to Layer 1 (a
+      transfer), A opens the gate, both go to Layer 2 (a transfer), A walks onto the guardian from above and swings
+      once.
+    - **Frames** come from each window's framebuffer (`arcade.get_image` after a draw):
+      - the hub, and after each transfer;
+      - A's local swing, taken as the window shows it (a key event reaches the window at its next dispatch), and
+        100 ms later;
+      - the server-confirmed hit, taken inside the flash (which lasts 0.15 s);
+      - B's frames once its state shows A's swing and the hit.
+    - **`evidence.json`** has:
+      - the link, seed, HZ and queue preset;
+      - each frame (window, moment, time, client and server tick, room);
+      - every event in A's window with both ticks: `local_swing_shown`, `prediction_correction` (over 0.05 px),
+        `server_confirmed_hit`, `room_transfer_enter` and `room_shown`;
+      - the proxy's chunk counts and every held chunk's delay;
+      - the GL renderer.
+  - **Trial** (one run: 100 ms ±10 ms, 1% loss, seed 7, drain, an RTX 4070): 26.3 s from start to the last frame, and
+    32.8 s with process start and teardown. 11 frames and 13 events. These numbers are descriptive, from one run:
+    - press to swing shown: 17.8 ms (the next frame); press to hit confirmed: 184 ms (the flash frame at 205 ms);
+    - transfers, enter to room shown: 120–172 ms;
+    - 5 prediction corrections of 7.5 px (one step) on the hub and Layer 1 walks, none in Layer 2;
+    - the proxy held 75 of 957 chunks up and 78 of 966 down beyond the jitter: 1% loss and the chunks queued behind
+      each stall (65–360 ms);
+    - foreground monitor: 0 focus changes.
+  - **Limitations.**
+    - **The local swing has no pixels in the packaged expedition.** Its player's Animator has no `attack` clip and the
+      sound is silenced, so frame `06_A_local_swing` looks like a standing frame. The swing is evidenced by the event
+      (`local_swing_shown` on the frame after the press), not by the picture. The final set needs a visible swing (an
+      attack clip or a marker): that is content, not network code.
+    - B's "peer swing seen" and "peer hit seen" frames are the same picture: the swing and the hit arrive in one state.
+    - Window A shares a process, and its GIL, with the authority and the proxy, so a frame of A can delay a tick or a
+      delivery by a few ms. That keeps the run within the owner's two-process limit.
+    - The proxy delays read chunks, not TCP segments: a chunk may hold several frames, and they share one fate. Loss
+      is the probe's per-message model, not bursty loss.
+    - One trial, at 100 ms only, as briefed. 200 ms and the other presets were not run. The final evidence set (100
+      and 200 ms, every preset the owner wants) waits for the M4-5 decision.
 
 ## 5. Owner decisions needed
 

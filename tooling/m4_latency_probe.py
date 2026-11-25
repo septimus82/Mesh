@@ -63,6 +63,7 @@ from mesh_net.scene_room import (  # noqa: E402
     disposable_project,
     facing_of,
 )
+from tooling.net_delay_proxy import Link  # noqa: E402  # (M4-6's proxy delays real sockets by this same model)
 
 FRAME_MS = 1000 / 60  # the client window's frame (mesh_net.demo.Arena.run)
 RTO_MS = 200.0  # a lost segment arrives RTT + this later (Linux's RTO is SRTT + 4 RTTVAR, at least 200 ms; --rto)
@@ -85,24 +86,6 @@ def summary(values: list[float]) -> dict[str, float]:
         return {"n": 0}
     return {"n": len(values), "p50": round(pct(values, 0.5), 1), "p95": round(pct(values, 0.95), 1),
             "max": round(max(values), 1)}
-
-
-@dataclass
-class Link:
-    """One direction of a TCP connection: each message's arrival time (ms), in send order."""
-
-    one_way_ms: float
-    jitter_ms: float
-    loss: float
-    rng: random.Random
-    last: float = -math.inf
-
-    def arrival(self, sent: float) -> float:
-        delay = max(0.0, self.one_way_ms + self.rng.uniform(-self.jitter_ms, self.jitter_ms))
-        if self.rng.random() < self.loss:
-            delay += 2 * self.one_way_ms + RTO_MS  # retransmitted after a timeout: RTT + RTO_MS
-        self.last = max(self.last, sent + delay)  # head-of-line: never before the one sent earlier
-        return self.last
 
 
 @dataclass
@@ -145,8 +128,8 @@ class Session:
 
     def __post_init__(self) -> None:
         rng = random.Random(self.seed)
-        self.up = Link(self.rtt_ms / 2, self.jitter_ms, self.loss, random.Random(rng.random()))
-        self.down = Link(self.rtt_ms / 2, self.jitter_ms, self.loss, random.Random(rng.random()))
+        self.up = Link(self.rtt_ms / 2, self.jitter_ms, self.loss, random.Random(rng.random()), RTO_MS)
+        self.down = Link(self.rtt_ms / 2, self.jitter_ms, self.loss, random.Random(rng.random()), RTO_MS)
         self.period = 1000 / wire.HZ
         self.phase = rng.uniform(0, self.period)  # the client's send clock against the server's tick
         self.eid = self.room.join()
