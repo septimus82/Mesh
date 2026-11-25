@@ -1418,9 +1418,11 @@ owner's budget:**
       | moving both | 227.5–250.6 / 414.9–531 | 225.5–237.3 / 414.1–522.8 |
 
       - At 0 ms with no loss, the moving target 70 p95 is 94.5–107.7 → 157.7–198.8.
-      - *(Inferred:)* the hits are a different set. More of them land on the persistent hitbox's second and third
-        ticks (OD10): a target judged five ticks back reaches the box later in its rewound walk. So the median moves
-        6–19 ms and the p95 40–90 ms later.
+      - **Why confirmation is later (measured by the #626 reviewer):** the hits are a different set, and more of them
+        land on the persistent hitbox's second and third updates (OD10), since a target judged several ticks back
+        reaches the box later in its rewound walk. At 100 ms ±10 ms 1% over 12 sessions: without rewind every real hit
+        landed on hitbox update 1; with rewind 5 of 21 confirmed hits (moving target 70) and 8 of 29 (stairs) landed on
+        updates 2–3. So the median moves 6–19 ms and the p95 40–90 ms later.
       - **OD1's "median hit confirmation at most RTT + 75 ms" (175 ms)**, for a still attacker against a moving enemy,
         is now missed:
         - on every seed on the stairs (by up to 12.7 ms) and on the deck (by up to 6.8 ms);

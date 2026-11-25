@@ -454,7 +454,9 @@ def headless_view(room: SceneRoom) -> SceneView:
     view.window, view.arcade, view.scene = SimpleNamespace(hd2d_renderer=None, on_draw=lambda: None), None, scene
     view.room, view.identity, view.template = room, room.identity, dict(room.template)
     view.sprites, view.doors, view.levers, view.colors, view.avatars, view.drops = {}, [], [], {}, {}, {}
-    view.enemy_colors, view.flashes = {}, {}
+    view.enemy_colors, view.flashes, view.marks, view.textures = {}, {}, [], {}
+    view.arcade = SimpleNamespace(Texture=lambda image, hash: SimpleNamespace(image=image, hash=hash),  # (marks)
+                                  Sprite=lambda texture: SimpleNamespace(texture=texture, angle=0.0))
     return view
 
 

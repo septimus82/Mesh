@@ -129,21 +129,35 @@ def test_a_view_judges_the_targets_where_the_window_showed_them(files: dict[str,
 
 
 def test_the_attacker_is_never_rewound(files: dict[str, bytes]) -> None:
-    """Rewinding moves only the enemies: an attacker that stood in reach of the enemy when its window showed it, but
-    has walked off since, swings from where it is now, a miss."""
+    """Rewinding moves only the enemies. The attacker stood, from before the view tick, where its hitbox lay on the
+    bandit's pose at that tick, then walked two steps west. Its attack judged with that very view (the bandit put back
+    to the pose the hitbox was placed against), facing east as then, is made where the attacker stands now: a miss. Put
+    back where it stood at the view, the same attack hits: the miss is the attacker's own move, so an attacker rewound
+    to the view would hit (#626 review: walking 6 steps judged a moment other than the one the hitbox was placed
+    against, where the bandit had walked on, so a rewound attacker missed too)."""
     room = ground_room(files)
     eid = room.join()
-    walking_east(room)
-    view = room.tick - 4
-    stand(room, eid, edge(room, pose(room, view)))
-    assert hits(room, eid, view)
-    p = room.players[eid]
+    trial = copy.deepcopy(room, {id(room.world): room.world})  # (the same walk: deterministic, tested below)
+    walking_east(trial)
+    view = trial.tick - 4
+    box = edge(trial, pose(trial, view))
+    while room.tick < view - 2:
+        room.step()
+    p = stand(room, eid, box)  # (standing there from before the view tick)
+    while room.tick < trial.tick:
+        room.step()
+    assert pose(room, view) == pose(trial, view), "the same walk, the attacker standing by"
+    assert hits(room, eid, view), "where it stood at the view: a hit"
     then = p.body.center_x
-    for seq in range(1, 7):  # (it walks west, through the authority's own steps, past the view's reach)
+    for seq in (1, 2):  # (two steps west, through the authority's own steps)
         room.input(eid, wire.input_frame(eid, seq, -1, 0, room.tick + 1))
         room.step()
-    assert p.body.center_x < then - 30.0
-    assert not hits(room, eid, room.tick - 6), "the hitbox is made where the attacker stands now"
+    assert then - p.body.center_x == pytest.approx(2 * room.step_px)
+    p.facing = 0  # (facing east again, as at the view: only where it stands differs)
+    assert room.tick - REWIND_CAP == view, "the very view the hitbox was placed against, within the cap"
+    assert not hits(room, eid, view), "the hitbox is made where the attacker stands now"
+    p.body.center_x = then
+    assert hits(room, eid, view), "(control) back where it stood at the view: a hit, so the miss is its own move"
 
 
 def test_a_view_ahead_of_the_tick_is_judged_now(files: dict[str, bytes]) -> None:
