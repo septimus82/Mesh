@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+import engine.optional_arcade as optional_arcade
+from engine.log_utils import get_logger
+from engine.paths import resolve_path
 
 if TYPE_CHECKING:
     from arcade import Sprite
@@ -11,6 +16,22 @@ from ..event_emit import emit_gameplay_event
 from ..events import MeshEvent
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
+
+logger = get_logger(__name__)
+
+
+def _show_picture(behaviour: Behaviour, path: str) -> None:
+    """Swap the object's picture through the asset manager, as PictureByFlags does. A missing file keeps the current
+    picture (the asset manager would show its placeholder)."""
+    if not path:
+        return
+    assets = getattr(behaviour.window, "assets", None)
+    if assets is None or not Path(resolve_path(path)).is_file():
+        logger.warning("Picture '%s' not found; '%s' keeps its picture", path, getattr(behaviour.entity, "mesh_name", ""))
+        return
+    texture = assets.get_texture(path)
+    if texture is not None:
+        behaviour.entity.texture = texture
 
 
 def _explicit_attr(ctx: object, name: str) -> Any:
@@ -111,13 +132,7 @@ class SwitchInteract(Behaviour):
             source_behaviour="SwitchInteract",
         )
 
-        # Visual feedback
-        if self.active_sprite:
-            # In a real engine we'd swap the texture.
-            # For now, let's just log or maybe change color if possible.
-            # self.entity.texture = load_texture(self.active_sprite)
-            pass
-
+        _show_picture(self, self.active_sprite)  # "Picture once used"
         print(f"[Puzzle] Switch {self.entity} activated, emitted '{self.event_id}'")
 
     def can_interact_with(self, _actor: Sprite) -> bool:
@@ -167,12 +182,27 @@ class DoorLock(Behaviour):
         self.unlock_event = config.get("unlock_event", "")
         self.locked = config.get("starts_locked", True)
         self.open_sprite = config.get("open_sprite", "")
+        self._picture_open = False
 
         self._unsubscribe = None
         if self.unlock_event:
             self._unsubscribe = self.window.event_bus.subscribe(self.unlock_event, self._on_unlock_event)
+        # A door that starts unlocked opens on the first frame: the loader adds a solid sprite to the solid list after
+        # this constructor (as ConditionalActivator notes).
 
-        self._update_collision()
+    def pre_update(self, dt: float) -> None:  # noqa: ARG002
+        if not self.locked:
+            self._open()
+
+    def _open(self) -> None:
+        """Let the player through and show "Picture when open". Solidity is membership of the scene controller's
+        solid list (what the movers collide with); the door never relocks."""
+        solids = getattr(getattr(self.window, "scene_controller", None), "solid_sprites", None)
+        if isinstance(solids, optional_arcade.arcade.SpriteList) and self.entity in solids:
+            solids.remove(self.entity)
+        if not self._picture_open:
+            self._picture_open = True
+            _show_picture(self, self.open_sprite)
 
     def _on_unlock_event(self, event: MeshEvent) -> None:
         if not self.locked:
@@ -180,7 +210,7 @@ class DoorLock(Behaviour):
 
         print(f"[Puzzle] Door {self.entity} unlocked by event '{event.type}'")
         self.locked = False
-        self._update_collision()
+        self._open()
 
         # Emit door_unlocked event for chaining.
         _emit_puzzle_event(
@@ -190,20 +220,6 @@ class DoorLock(Behaviour):
             source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
             source_behaviour="DoorLock",
         )
-
-    def _update_collision(self) -> None:
-        # If locked, it should be solid. If unlocked, pass-through.
-        # This depends on how the physics engine handles tags or properties.
-        # Assuming 'solid' tag or property.
-        if self.locked:
-            # Ensure it blocks
-            pass
-        else:
-            # Disable collision
-            # In arcade, we might remove from wall list or change properties
-            if hasattr(self.entity, "properties"):
-                self.entity.properties["solid"] = False
-                self.entity.properties["walkable"] = True
 
     def destroy(self) -> None:
         """Unsubscribe from event bus on teardown."""
