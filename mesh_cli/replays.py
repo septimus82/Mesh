@@ -1044,6 +1044,23 @@ def _extract_performance_metrics(timing_payload: dict[str, Any]) -> dict[str, An
     return metrics
 
 
+def _ticks_over_threshold(performance: Any, threshold: float) -> list[dict[str, Any]]:
+    """#612 (report-only): which execution (1 = canonical, whose max is the judged ``tick_ms_max``) and tick went over.
+
+    Drawn from each execution's 3 slowest ticks, so it lists at most 3 per execution.
+    """
+    pooled = performance.get("pooled") if isinstance(performance, dict) else None
+    slowest = pooled.get("slowest_ticks_per_execution") if isinstance(pooled, dict) else None
+    if not isinstance(slowest, list):
+        return []
+    return [
+        {"execution": execution, **tick}
+        for execution, ticks in enumerate(slowest, start=1)
+        for tick in (ticks if isinstance(ticks, list) else [])
+        if isinstance(tick, dict) and float(tick.get("ms", 0.0)) > threshold
+    ]
+
+
 def _evaluate_case_budget(
     *,
     budgets: ReplayBudgets | None,
@@ -1103,14 +1120,15 @@ def _evaluate_case_budget(
             )
             continue
         if observed_value > limit_value:
-            violations.append(
-                {
-                    "metric": metric_name,
-                    "threshold": limit_value,
-                    "observed": observed_value,
-                    "reason": f"{metric_name} exceeds {limit_name}",
-                }
-            )
+            violation: dict[str, Any] = {
+                "metric": metric_name,
+                "threshold": limit_value,
+                "observed": observed_value,
+                "reason": f"{metric_name} exceeds {limit_name}",
+            }
+            if metric_name.startswith("tick_ms_"):
+                violation["ticks_over_threshold"] = _ticks_over_threshold(performance, limit_value)
+            violations.append(violation)
 
     return {
         "ok": not violations,
@@ -1478,6 +1496,12 @@ def _format_suite_report_text(report: dict[str, Any]) -> str:
                         f"  * budget {violation.get('metric')}: "
                         f"threshold={violation.get('threshold')} observed={violation.get('observed')}"
                     )
+                    for tick in violation.get("ticks_over_threshold") or []:
+                        lines.append(
+                            f"    - execution {tick.get('execution')} tick {tick.get('tick')}: {tick.get('ms')} ms "
+                            f"at +{tick.get('start_ms')} ms (cpu {tick.get('cpu_ms')} ms, gc {tick.get('gc_ms')} ms, "
+                            f"imports {tick.get('modules_imported')}, phases {tick.get('phases_ms')})"
+                        )
     lines.append("")
     return "\n".join(lines) + "\n"
 

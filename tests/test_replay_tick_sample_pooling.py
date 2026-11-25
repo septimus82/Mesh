@@ -54,12 +54,19 @@ def _why(code: int, perf: dict, tmp_path: Path | None = None, case_id: str = "ep
     Defensive on purpose: a non-budget exit (exception in a run, golden mismatch) may leave no ``budget``/``performance``.
     """
     load = os.getloadavg() if hasattr(os, "getloadavg") else None
+    # Only ever evaluated after a failure, so the heap census and the timed full collection cost the gate nothing.
+    gc_stats, gc_count, tracked = gc.get_stats(), gc.get_count(), len(gc.get_objects())
+    started = time.perf_counter()
+    gc.collect()
+    full_collect_ms = round((time.perf_counter() - started) * 1000.0, 1)
     parts = [
         f"exit={code}",
         f"budget={perf.get('budget')}",
         f"pooled={(perf.get('performance') or {}).get('pooled')}",
-        f"threads={threading.active_count()}",
-        f"gc_stats={gc.get_stats()}",
+        f"threads={threading.active_count()} thread_names={[t.name for t in threading.enumerate()]}",
+        f"gc_stats={gc_stats}",
+        f"gc_threshold={gc.get_threshold()} gc_count_before={gc_count} gc_tracked_objects={tracked}",
+        f"full_gc_collect_ms_after_failure={full_collect_ms}",
         f"loadavg={load}",
         f"cpus={os.cpu_count()}",
     ]
@@ -126,6 +133,24 @@ def test_budget_judges_pooled_p95_but_keeps_the_canonical_max() -> None:
         budgets=limits, performance={"total_ms": 60.0, "tick_ms_p95": 2.5, "tick_ms_max": 200.0}, enforce_budgets=True
     )
     assert [v["metric"] for v in stalled["violations"]] == ["tick_ms_max"]
+
+
+def test_tick_violation_names_execution_and_tick_without_changing_the_verdict() -> None:
+    """#612: report-only detail; the judged numbers and the violation list are what they were without it."""
+    details = [[{"tick": i, "ms": ms, "start_ms": 20.0 + i} for i, ms in enumerate(run)] for run in
+               ([2.0, 846.1, 3.0, 2.5], [2.0, 2.2, 2.1, 2.4])]
+    pooled = pooled_timing_summary([[d["ms"] for d in run] for run in details], min_samples=8, tick_details=details)
+    plain = pooled_timing_summary([[d["ms"] for d in run] for run in details], min_samples=8)
+    assert {k: v for k, v in pooled.items() if k != "slowest_ticks_per_execution"} == plain
+    assert [[t["tick"] for t in run] for run in pooled["slowest_ticks_per_execution"]] == [[1, 2, 3], [3, 1, 2]]
+    limits = replays_module.ReplayBudgets(max_total_ms=3000.0, max_tick_ms_p95=50.0, max_tick_ms_max=150.0)
+    budget = replays_module._evaluate_case_budget(
+        budgets=limits,
+        performance={"total_ms": 853.6, "tick_ms_p95": 3.0, "tick_ms_max": 846.1, "pooled": pooled},
+        enforce_budgets=True,
+    )
+    assert [v["metric"] for v in budget["violations"]] == ["tick_ms_max"]
+    assert budget["violations"][0]["ticks_over_threshold"] == [{"execution": 1, "tick": 1, "ms": 846.1, "start_ms": 21.0}]
 
 
 # --- real replays -------------------------------------------------------------------------------------------------

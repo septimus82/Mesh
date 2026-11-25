@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import hashlib
 import inspect
 import json
@@ -116,6 +117,8 @@ class ReplayRunResult:
     tick_ms_p95: float
     tick_ms_max: float
     save_restore_diagnostics: dict[str, Any]
+    # #612: report-only per-tick breakdown (never judged, never replay state); see _run_replay_once.
+    tick_details: list[dict[str, Any]] = field(default_factory=list)
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
@@ -246,7 +249,11 @@ def _handle_replay_check(args: argparse.Namespace) -> int:
                         repeats_consistent = False
                         break
         pooled_timing = (
-            pooled_timing_summary([r.tick_ms_list for r in timing_runs], min_samples=timing_min_samples)
+            pooled_timing_summary(
+                [r.tick_ms_list for r in timing_runs],
+                min_samples=timing_min_samples,
+                tick_details=[r.tick_details for r in timing_runs],
+            )
             if timing_min_samples > 0 and run_1.ok and run_2.ok
             else None
         )
@@ -1305,7 +1312,29 @@ def _parse_replay_script(payload: dict[str, Any]) -> tuple[list[float], list[Par
     return dt_schedule, actions, save_actions, restore_actions
 
 
+class _GcPauseProbe:
+    """#612 (report-only): gc pause time and collections per generation while it sits in ``gc.callbacks``."""
+
+    __slots__ = ("ms", "collections", "_started")
+
+    def __init__(self) -> None:
+        self.ms = 0.0
+        self.collections = [0, 0, 0]
+        self._started = 0.0
+
+    def __call__(self, phase: str, info: dict[str, Any]) -> None:
+        now = time.perf_counter()
+        if phase == "start":
+            self._started = now
+        else:
+            self.ms += (now - self._started) * 1000.0
+            self.collections[min(int(info.get("generation", 0)), 2)] += 1
+
+
 def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> ReplayRunResult:
+    execution_start = time.perf_counter()
+    gc_probe = _GcPauseProbe()
+    gc.callbacks.append(gc_probe)
     try:
         dt_schedule, actions, save_actions, restore_actions = _parse_replay_script(replay_payload)
         ctx = _build_context(spec, start_quest=spec.quest_id is not None)
@@ -1315,6 +1344,7 @@ def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> Repla
         snapshots: list[dict[str, Any]] = []
         digests: list[dict[str, Any]] = []
         tick_ms_list: list[float] = []
+        tick_details: list[dict[str, Any]] = []
         save_slots: dict[str, dict[str, Any]] = {}
         frame = 0
 
@@ -1333,6 +1363,10 @@ def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> Repla
             actions_by_tick[action.tick].append(action)
 
         for tick_index, dt in enumerate(dt_schedule):
+            # #612 probes are read outside the timed window; inside it only two phase marks are added.
+            gc_ms_before, gc_collections_before = gc_probe.ms, list(gc_probe.collections)
+            modules_before = len(sys.modules)
+            cpu_before = time.thread_time()  # coarse (~15.6 ms) on Windows; wall >> cpu means the thread was not running
             tick_start = time.perf_counter()
             for action in actions_by_tick.get(tick_index, []):
                 ctx = _execute_action(
@@ -1349,10 +1383,32 @@ def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> Repla
                     dt=0.0,
                 )
 
+            actions_end = time.perf_counter()
             _advance(ctx, dt)
+            advance_end = time.perf_counter()
             _record(f"t{tick_index}:post_tick", tick=tick_index, dt=dt)
-            tick_elapsed_ms = (time.perf_counter() - tick_start) * 1000.0
+            tick_end = time.perf_counter()
+            tick_elapsed_ms = (tick_end - tick_start) * 1000.0
             tick_ms_list.append(_round_ms(tick_elapsed_ms))
+            cpu_ms = (time.thread_time() - cpu_before) * 1000.0
+            new_modules = list(sys.modules)[modules_before:] if len(sys.modules) > modules_before else []
+            tick_details.append(
+                {
+                    "tick": tick_index,
+                    "ms": _round_ms(tick_elapsed_ms),
+                    "start_ms": _round_ms((tick_start - execution_start) * 1000.0),
+                    "cpu_ms": _round_ms(cpu_ms),
+                    "phases_ms": {
+                        "actions": _round_ms((actions_end - tick_start) * 1000.0),
+                        "advance": _round_ms((advance_end - actions_end) * 1000.0),
+                        "record": _round_ms((tick_end - advance_end) * 1000.0),
+                    },
+                    "gc_ms": _round_ms(gc_probe.ms - gc_ms_before),
+                    "gc_collections": [a - b for a, b in zip(gc_probe.collections, gc_collections_before)],
+                    "modules_imported": len(new_modules),
+                    "first_modules": new_modules[:5],
+                }
+            )
 
         _drain_until_empty(ctx)
         _record("final", tick=len(dt_schedule), dt=0.0)
@@ -1382,6 +1438,7 @@ def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> Repla
             tick_ms_p95=tick_ms_p95,
             tick_ms_max=tick_ms_max,
             save_restore_diagnostics=save_restore_diags.to_json(),
+            tick_details=tick_details,
         )
     except Exception as exc:  # noqa: BLE001  # REASON: replay runner should convert unexpected execution failures into a deterministic failed result payload
         return ReplayRunResult(
@@ -1400,6 +1457,8 @@ def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> Repla
             tick_ms_max=0.0,
             save_restore_diagnostics={"counts": {"total": 0, "errors": 0, "warnings": 0, "infos": 0}, "diagnostics": []},
         )
+    finally:
+        gc.callbacks.remove(gc_probe)
 
 
 def _execute_action(
@@ -1663,10 +1722,15 @@ def _round_ms(value: float, *, decimals: int = 3) -> float:
     return float(f"{float(value):.{decimals}f}")
 
 
-def pooled_timing_summary(tick_lists: list[list[float]], *, min_samples: int) -> dict[str, Any]:
-    """Pool comparable tick samples from several executions of one replay (timing-only; never replay state)."""
+def pooled_timing_summary(
+    tick_lists: list[list[float]], *, min_samples: int, tick_details: list[list[dict[str, Any]]] | None = None
+) -> dict[str, Any]:
+    """Pool comparable tick samples from several executions of one replay (timing-only; never replay state).
+
+    ``tick_details`` (#612, report-only) adds each execution's 3 slowest ticks; it never changes any judged number.
+    """
     pooled = [float(v) for ticks in tick_lists for v in ticks]
-    return {
+    summary: dict[str, Any] = {
         "min_samples": min_samples,
         "executions": len(tick_lists),
         "repeats": max(0, len(tick_lists) - 2),
@@ -1678,6 +1742,11 @@ def pooled_timing_summary(tick_lists: list[list[float]], *, min_samples: int) ->
         "tick_ms_p95": _compute_percentile_ms(pooled, 0.95),
         "tick_ms_max": _round_ms(max(pooled)) if pooled else 0.0,
     }
+    if tick_details is not None:
+        summary["slowest_ticks_per_execution"] = [
+            sorted(details, key=lambda d: (-float(d["ms"]), int(d["tick"])))[:3] for details in tick_details
+        ]
+    return summary
 
 
 def _compute_percentile_ms(values: list[float], percentile: float) -> float:
