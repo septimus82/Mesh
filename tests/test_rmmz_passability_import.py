@@ -15,8 +15,9 @@ from engine.tooling.rmmz_passability import (
 
 # The owner's own RPG Maker project, used only as an optional real-data smoke check. It is edited over
 # time, so nothing here asserts its exact counts (they asserted 324 blocked cells; the map now has 323).
-RMMZ_MAP002 = Path(r"C:/Users/slebb/Documents/RMMZ/light test/data/Map002.json")
-RMMZ_TILESETS = Path(r"C:/Users/slebb/Documents/RMMZ/light test/data/Tilesets.json")
+_RMMZ_DATA = Path.home() / "Documents" / "RMMZ" / "light test" / "data"
+RMMZ_MAP002 = _RMMZ_DATA / "Map002.json"
+RMMZ_TILESETS = _RMMZ_DATA / "Tilesets.json"
 
 pytestmark = pytest.mark.fast
 

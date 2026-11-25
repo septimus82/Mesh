@@ -79,7 +79,7 @@
       ],
       "details": [
         "Imported Stairs as assets/models/stairs.glb. Place in scene puts a copy in the room.",
-        "Imported 2026-10-25 from\nC:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\s5b_evidence\\blender_exports\\cottage.glb",
+        "Imported 2026-10-25 from\nC:\\Users\\<user>\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\s5b_evidence\\blender_exports\\cottage.glb",
         "0 copies in this room. File: assets/models/cottage.glb"
       ]
     },
@@ -213,7 +213,7 @@
     {
       "step": "failure_and_undo",
       "refusal": [
-        "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\s5b_evidence\\blender_exports\\cottage.glb:\nits glTF description is damaged (a cut-off or\ncorrupted file?)"
+        "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\s5b_evidence\\blender_exports\\cottage.glb:\nits glTF description is damaged (a cut-off or\ncorrupted file?)"
       ],
       "reimport_button_disabled": true,
       "project_files_unchanged": true,
