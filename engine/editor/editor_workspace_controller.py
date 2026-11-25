@@ -346,9 +346,6 @@ class EditorWorkspaceController:
                 return root
             if root is not None:
                 return Path(root)
-        root = getattr(self._editor.window, "repo_root", None)
-        if isinstance(root, Path):
-            return root
         from engine.repo_root import get_repo_root  # noqa: PLC0415
 
         return get_repo_root()

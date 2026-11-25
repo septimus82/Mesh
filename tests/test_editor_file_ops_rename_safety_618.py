@@ -37,6 +37,7 @@ class _Explorer:
 
     def __init__(self, root: Path) -> None:
         self.root, self.paths, self.selectable_rows = root, [], []
+        self.repo_root = root
         self.row = None
 
     def select(self, *rels: str) -> None:
@@ -71,7 +72,7 @@ def project(tmp_path: Path):
     outside.mkdir()
     (outside / "keep.txt").write_bytes(b"OUTSIDE")
     undo: list = []
-    editor = SimpleNamespace(window=SimpleNamespace(repo_root=root, scene_controller=None),
+    editor = SimpleNamespace(window=SimpleNamespace(scene_controller=None), _get_repo_root=lambda: root,
                              project_explorer=_Explorer(root), feedback=_Feedback(), _push_command=undo.append)
     editor.confirm_modal = EditorConfirmModalController(editor)
     editor.file_ops = EditorFileOpsController(editor)

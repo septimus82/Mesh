@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Dict, List, cast
 
 from engine.editor.scene_lint_model import build_scene_lint_issues
@@ -54,9 +53,7 @@ class EditorProvidersController:
         if not isinstance(scene_data, dict):
             return []
 
-        repo_root = getattr(window, "repo_root", None)
-        if not isinstance(repo_root, Path):
-            return []
+        repo_root = self._editor._get_repo_root()  # (the real window has no repo_root: #641)
 
         def resolver(prefab_id: str) -> bool:
             try:

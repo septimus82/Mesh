@@ -23,13 +23,14 @@ def mock_repo(tmp_path):
 def ops_ctrl(mock_repo):
     """Refactor Controller with mocked Editor environment."""
     ctrl = MagicMock()
-    ctrl.window.repo_root = mock_repo
+    ctrl._get_repo_root.return_value = mock_repo  # (the project root file ops act in: #641)
 
     # Mock confirmation modal
     ctrl.confirm_modal = MagicMock()
 
     # Mock project_explorer
     ctrl.project_explorer = MagicMock()
+    ctrl.project_explorer.repo_root = mock_repo
 
     ops = EditorFileOpsController(ctrl)
 

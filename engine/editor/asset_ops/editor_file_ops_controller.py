@@ -44,7 +44,6 @@ from .asset_rename_model import (
     apply_reference_replacements,
     compute_reference_replacements,
     compute_rename_paths,
-    find_scene_asset_references,
     format_rename_undo_label,
 )
 
@@ -176,9 +175,25 @@ class EditorFileOpsController:
                 _log_swallow("EFOC-004", "blanket exception fallback", once=False)
                 print(f"CRITICAL: Failed to restore {dst} -> {src}: {e}")
 
+    def _project_root(self) -> Optional[Path]:
+        """The folder file operations act in: the project the Project panel shows (#641). None, after an error toast,
+        when there isn't one, or when the panel still lists another folder than the open project (a main-menu project
+        switch doesn't rescan it), since its paths would then name another project's files. Never the current
+        folder: a relative path resolved against it deleted or renamed whatever file had that name there."""
+        root = Path(self.controller._get_repo_root())
+        shown = Path(self.controller.project_explorer.repo_root)
+        if not root.is_dir():
+            why = f"the project folder {root} isn't there"
+        elif root.resolve() != shown.resolve():
+            why = f"the Project panel shows {shown}, not the open project {root}; reopen the project"
+        else:
+            return shown
+        self._refuse("File operation refused", f"{why}. Nothing was changed.")
+        return None
+
     def purge_trash(self, op_id: str) -> None:
-        repo_root = getattr(self.controller.window, "repo_root", None)
-        if not repo_root:
+        repo_root = self._project_root()
+        if repo_root is None:
             return
         trash_root = self._trash_root(repo_root, op_id)
         if trash_root.exists():
@@ -247,8 +262,9 @@ class EditorFileOpsController:
             self._pending_refactor_plan = None
             return
 
-        repo_root = getattr(self.controller.window, "repo_root", None)
-        if not repo_root:
+        repo_root = self._project_root()
+        if repo_root is None:
+            self._pending_refactor_plan = None
             return
 
         # 0. Re-check the whole plan against the disk as it is now (it may have changed while the dialog was open):
@@ -484,10 +500,10 @@ class EditorFileOpsController:
         # For now, allow any folder in repo
         return True
 
-    def list_repo_json_assets(self) -> List[str]:
+    def list_repo_json_assets(self, repo_root: Optional[Path] = None) -> List[str]:
         """Deterministic list of candidate files to scan (scenes/prefabs)."""
-        repo_root = getattr(self.controller.window, "repo_root", None)
-        if not repo_root or not isinstance(repo_root, Path):
+        repo_root = repo_root or self._project_root()
+        if repo_root is None:
             return []
 
         candidates = []
@@ -565,7 +581,10 @@ class EditorFileOpsController:
 
         # Attempt filesystem rename on native runtime
         if not is_web:
-            if not self._perform_fs_rename(old_rel, new_rel):  # (no reference changes for a file not renamed: #618)
+            repo = self._project_root()
+            if repo is None:
+                return False
+            if not self._perform_fs_rename(repo, old_rel, new_rel):  # (no reference changes for a file not renamed: #618)
                 self._refuse("Rename failed", f"{old_rel} couldn't be renamed to {new_rel}; nothing was changed.")
                 return False
 
@@ -649,14 +668,9 @@ class EditorFileOpsController:
         is_web = self._is_web_runtime()
 
         if not is_web:
-            if not self._perform_fs_rename(old_rel, new_rel):
+            repo = self._project_root()
+            if repo is None or not self._perform_fs_rename(repo, old_rel, new_rel):
                 return False  # Abort on move failure usually
-
-            # Note: The original code for rename swallows the error, but for move in validate_destination it checks logic.
-            # But the original code for move actually doesn't have the try/except block shown in my rename read?
-            # Wait, I didn't verify the move implementation fully. Let's assume consistent behavior.
-            # Original code for rename continues on FS fail.
-            # Original code for move: I need to check exactly what it does.
 
         if replacements:
             new_scene = apply_reference_replacements(scene, replacements)
@@ -696,63 +710,6 @@ class EditorFileOpsController:
 
         return True
 
-    def delete_selected_paths(self, paths: list[str]) -> bool:
-        """Delete multiple assets and update references.
-
-        Native runtime deletes files; web runtime previews only.
-        """
-        if not paths:
-            return False
-
-        is_web = self._is_web_runtime()
-        repo = Path(getattr(self.controller.window, "repo_root", None) or ".")
-        scene = self._get_current_scene_payload()
-
-        ordered = sorted({p for p in paths if p})
-        if not ordered:
-            return False
-
-        replacements: list[Replacement] = []
-        for old_rel in ordered:
-            replacements.extend(self._compute_delete_replacements(scene, old_rel))
-
-        if replacements:
-            new_scene = apply_replacements(scene, replacements)
-            self._set_current_scene_payload(new_scene)
-            undo_label = f"Delete Assets · {len(ordered)}"
-            self.controller._push_command({
-                "type": "safe_delete_batch",
-                "label": undo_label,
-                "paths": ordered,
-                "replacements": [
-                    {
-                        "entity_id": r.entity_id,
-                        "field_path": r.field_path,
-                        "old_value": r.old_value,
-                        "new_value": r.new_value,
-                    }
-                    for r in replacements
-                ],
-            })
-
-        if not is_web:
-            for old_rel in ordered:
-                try:
-                    abs_path = repo / old_rel
-                    if abs_path.exists() and abs_path.is_file():
-                        abs_path.unlink()
-                except Exception:
-                    _log_swallow("EFOC-017", "blanket exception fallback", once=False)
-                    pass
-
-        self._refresh_project_tree()
-
-        if is_web:
-            self._toast(f"Preview: Deleted {len(ordered)} asset(s)")
-        else:
-            self._toast(f"Deleted {len(ordered)} asset(s)")
-        return True
-
     def move_selected_paths_to_folder(self, paths: list[str], dest_folder_rel: str) -> bool:
         """Move multiple assets into a folder and update references.
 
@@ -783,10 +740,13 @@ class EditorFileOpsController:
             replacements.extend(compute_reference_replacements(scene, old_rel, new_rel))
 
         if not is_web:  # (a move that fails: the ones done are undone and no reference changes: #618)
+            repo = self._project_root()
+            if repo is None:
+                return False
             done: list[FsStep] = []
             for old_rel, new_rel in moves:
-                if not self._perform_fs_rename(old_rel, new_rel):
-                    self._rollback_fs(done, Path(getattr(self.controller.window, "repo_root", None) or "."))
+                if not self._perform_fs_rename(repo, old_rel, new_rel):
+                    self._rollback_fs(done, repo)
                     self._refuse("Move failed", f"{old_rel} couldn't be moved to {new_rel}; nothing was changed.")
                     return False
                 done.append(FsStep(old_rel, new_rel, "move"))
@@ -945,26 +905,8 @@ class EditorFileOpsController:
     def _is_web_runtime(self) -> bool:
         return sys.platform == "emscripten" or os.environ.get("PYGBAG") == "1"
 
-    def _compute_delete_replacements(self, scene: Dict[str, Any], old_rel: str) -> list[Replacement]:
-        old_norm = str(old_rel or "").strip().replace("\\", "/")
-        if not old_norm:
-            return []
-        references = find_scene_asset_references(scene)
-        replacements: list[Replacement] = []
-        for ref in references:
-            if ref.value == old_norm:
-                replacements.append(Replacement(
-                    entity_id=ref.entity_id,
-                    field_path=ref.field_path,
-                    old_value=ref.value,
-                    new_value="",
-                    order_key=f"{ref.entity_id}|{ref.field_path}",
-                ))
-        return replacements
-
-    def _perform_fs_rename(self, old_rel: str, new_rel: str) -> bool:
+    def _perform_fs_rename(self, repo: Path, old_rel: str, new_rel: str) -> bool:
         try:
-            repo = Path(getattr(self.controller.window, "repo_root", None) or ".")
             old_abs = repo / old_rel
             new_abs = repo / new_rel
             case_only = is_case_only_rename(old_rel, new_rel)
@@ -1023,18 +965,12 @@ class EditorFileOpsController:
         if not row:
             return False
         entry = getattr(row, "entry", None)
-        path_str = getattr(entry, "path", None)
-        if not path_str:
+        old_rel = getattr(entry, "rel_path", None)  # (the Project panel's rows carry no absolute path: #641)
+        if not isinstance(old_rel, str) or not old_rel:
             return False
 
-        repo_root = getattr(self.controller.window, "repo_root", None)
-        if not repo_root:
-            return False
-
-        old_full = Path(path_str)
-        try:
-            old_rel = old_full.relative_to(repo_root).as_posix()
-        except ValueError:
+        repo_root = self._project_root()
+        if repo_root is None:
             return False
 
         # 2. Paths: a rename gives a new name in the same folder, never a path (#618)
@@ -1049,7 +985,7 @@ class EditorFileOpsController:
 
         # 3. Plan Data
         mapping = compute_rename_mapping(old_rel, new_rel)
-        modifications, all_replacements = self._scan_and_compute_replacements(mapping)
+        modifications, all_replacements = self._scan_and_compute_replacements(repo_root, mapping)
 
         # 4. Build Plan
         # Rename is effectively a move
@@ -1098,6 +1034,10 @@ class EditorFileOpsController:
         if not project:
             return False
 
+        repo_root = self._project_root()
+        if repo_root is None:
+            return False
+
         if hasattr(project, "ensure_rows"):
             project.ensure_rows()
 
@@ -1118,19 +1058,14 @@ class EditorFileOpsController:
                         candidate = path_candidate
             if candidate:
                 try:
-                    repo_root_path = Path(getattr(self.controller.window, "repo_root", ""))
                     candidate_path = Path(str(candidate))
-                    if repo_root_path and candidate_path.is_absolute():
-                        candidate = candidate_path.relative_to(repo_root_path).as_posix()
+                    if candidate_path.is_absolute():
+                        candidate = candidate_path.relative_to(repo_root).as_posix()
                 except Exception:
                     _log_swallow("EFOC-022", "blanket exception fallback", once=False)
                     pass
                 paths = [str(candidate).replace("\\", "/")]
         if not paths:
-            return False
-
-        repo_root = getattr(self.controller.window, "repo_root", None)
-        if not repo_root:
             return False
 
         if str(dest_folder or "").strip()[:1] in ("/", "\\"):  # (an absolute path, never the project's root: #618)
@@ -1163,7 +1098,7 @@ class EditorFileOpsController:
         if not fs_steps:
              return False
 
-        modifications, all_replacements = self._scan_and_compute_replacements(full_mapping)
+        modifications, all_replacements = self._scan_and_compute_replacements(repo_root, full_mapping)
         refusal = self._plan_refusal(repo_root, fs_steps, list(modifications))
         if refusal:
             self._refuse("Move refused", refusal)
@@ -1213,8 +1148,8 @@ class EditorFileOpsController:
         """Request V2 safe batch delete."""
         if not paths:
             return False
-        repo_root = getattr(self.controller.window, "repo_root", None)
-        if not repo_root:
+        repo_root = self._project_root()
+        if repo_root is None:
             return False
 
         # Build mapping for all paths -> delete (None)
@@ -1238,7 +1173,7 @@ class EditorFileOpsController:
             mapping[p] = ""
             fs_steps.append(FsStep(src_rel=p, dst_rel=None, kind="delete"))
 
-        modifications, all_replacements = self._scan_and_compute_replacements(mapping)
+        modifications, all_replacements = self._scan_and_compute_replacements(repo_root, mapping)
 
         fs_summary = f"Delete {len(sorted_paths)} items:\n" + "\n".join([f"  - {p}" for p in sorted_paths[:5]])
         if len(sorted_paths) > 5:
@@ -1277,12 +1212,11 @@ class EditorFileOpsController:
         )
         return True
 
-    def _scan_and_compute_replacements(self, mapping: Dict[str, str]) -> Tuple[Dict[str, List[Replacement]], List[Replacement]]:
+    def _scan_and_compute_replacements(
+        self, repo_root: Path, mapping: Dict[str, str]
+    ) -> Tuple[Dict[str, List[Replacement]], List[Replacement]]:
         """Helper to scan repo and find references."""
-        candidates = self.list_repo_json_assets()
-        repo_root = getattr(self.controller.window, "repo_root", None)
-        if not repo_root:
-            return {}, []
+        candidates = self.list_repo_json_assets(repo_root)
 
         modifications: Dict[str, List[Replacement]] = {}
         all_refs: List[Replacement] = []
