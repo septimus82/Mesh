@@ -16,7 +16,7 @@ S1-0 was investigation and planning only: no production code changed.
 | 2 | [11_subsystem_risk_map.md](11_subsystem_risk_map.md) | Subsystem Risk Map: severity, defects, architectural risks, coupling, ownership, test reality and reliability per subsystem |
 | 3 | [12_stabilization_roadmap.md](12_stabilization_roadmap.md) | S1 Stabilization Roadmap: stages S1-1 to S1-7, the per-item fields, exit criteria E1–E12, and an appendix mapping every issue to its roadmap item |
 | 4 | [13_testing_ci_proposal.md](13_testing_ci_proposal.md) | Testing and CI Improvement Proposal: costed changes, the lane map, the flake policy and growth rules |
-| 5 | [14_owner_decision_brief.md](14_owner_decision_brief.md) | Owner Decision Brief: D1–D14, each with options, a recommendation and consequences |
+| 5 | [14_owner_decision_brief.md](14_owner_decision_brief.md) | Owner Decision Brief: D1–D15, each with options, a recommendation and consequences |
 
 ## Investigation parts (inputs)
 
@@ -41,4 +41,10 @@ S1-0 was investigation and planning only: no production code changed.
 
 ## Provenance note
 
-Commit `035d0280` on this branch briefly contained the owner's Windows username inside temp paths in copied s1v outputs. It was scrubbed in `30d44f27`, but it remains in that commit's history, because rewriting history was not authorised. See `10_health_report.md` §8.
+**This branch is pushed and the repository is public.**
+- Commit `035d0280` contains the owner's Windows username inside temp paths in 7 copied s1v outputs, so it is publicly readable through that commit.
+- `30d44f27` scrubbed it, and the current tree is clean.
+- Six tracked files that predate S1 also contain the username.
+- Rewriting or deleting the branch, and scrubbing those six files, is owner decision D15.
+
+See `10_health_report.md` §8.

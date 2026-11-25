@@ -16,12 +16,13 @@ The evidence is in `10_health_report.md` and the items in `12_stabilization_road
 | D6 | Room/entity state persistence | Per-entity facts in room memory |
 | D7 | Item database scaffold policy | Scaffold a small starter `items.json` and degrade to an empty database |
 | D8 | Draft PR #629 | Merge as historical evidence |
-| D9 | CI dedup (changes what runs where) | Approve R1 and R4; approve R2 after measuring; R3 optional |
+| D9 | CI dedup (changes what runs where) | Approve R4; approve R2 after measuring; R3 optional; decline R1 unless the pytest-fast ceiling moves with it |
 | D10 | Flake quarantine policy | Approve as written |
 | D11 | Duplicate runtimes in S1 | Contain (bounded steps); no merges in S1 |
 | D12 | Existing files with tool-written `hp: 1.0` | `mesh doctor` warning plus opt-in fix; never auto-rewrite |
 | D13 | Owner hands-on Studio GUI acceptance as an exit step | Yes, once, at the end |
 | D14 | Load-time entity gates and sample content | Keep the semantics; warn in tooling; convert the sample exits |
+| D15 | Username exposure in public history | Squash-merge the S1 docs, then delete the branch; scrub the 6 pre-S1 files; ask GitHub Support to purge if you want it gone |
 
 ---
 
@@ -36,6 +37,10 @@ The evidence is in `10_health_report.md` and the items in `12_stabilization_road
 - **A:** about 35–40 PRs to the finish line, with P2 debt carried forward by name.
 - **B:** adds about 16 PRs of convergence work, and S1 gets longer.
 - **C:** fixes today's defects but leaves the five test patterns that produced them, so the same class recurs.
+
+**Also decide (scope):**
+- **(a) Move #643 into S1-3?** The HUD health panel never draws, in every game whose player has Health. Once #651 is fixed, players have HP they can't see. **Recommended: yes** (S, one helper, about 5 s of CI).
+- **(b) E7 and #390.** #390 says game saves embed whole-room settings and replay stale settings after the creator edits a room. That is save-data correctness, not visual backlog. It predates S1-0 and was not re-verified. **Recommended:** exclude it from E7 with this recorded disposition, because nothing is destroyed (the save still loads) and the fix is a design change to what saves carry. Revisit post-S1. **Alternative:** include it in S1-2 after a verification step.
 
 ---
 
@@ -159,14 +164,16 @@ A Studio item operation is post-S1.
 
 | Change | Effect | Risk | Recommendation |
 |---|---|---|---|
-| R1: fast tier not re-run in `verify` | −3.6 job-min per run | The fast-tier timing budget needs a new home (report-only, from pytest durations) | **Approve** |
+| R1: fast tier not re-run in `verify` | −3.6 job-min per run (off the critical path) | **This is a gate change, not just dedup.** The pytest-fast step has a **failing hard ceiling** (fails over 130.4 s, #427) and exercises the fast tier as its own collection (`conftest.py:244-255`). Making it report-only removes a failing gate, and #373 would then close by removal, not by a fix | **Decline**, unless the variant that keeps the gate is built: a `-m fast --collect-only` floor plus a failing ceiling recalibrated from pytest-job durations. Approving outright removal of the ceiling needs your explicit yes |
 | R2: in-suite verify-all out of the critical path | est. −1.5 to −3 min wall per OS | Unmeasured. Audit tests would read the `verify` job's reports | **Approve "measure first"; decide on numbers** |
 | R3: fold the `web-smoke` job | −0.5 job-min | negligible | Optional |
 | R4: push-side identical-tree dedup | up to −58 / −104 job-min per merge | Must never skip when the base moved; the #344 rule is the template | **Approve**, with the identical-tree proof linked in the run |
 
-**Consequence of approving all:** per-merge cost goes from ≈ 345 to ≈ 200 job-minutes, and CI wall falls ≈ 1–3 min.
+**Consequence of approving the recommendation** (R4, R2 after measurement, R3): per-merge cost goes from ≈ 345 to ≈ 210–230 job-minutes (≈ 200 if the preserved-ceiling R1 is also built), CI wall falls ≈ 1–3 min, and E10's cost limit is ≤ 250.
 
-**Consequence of declining:** the new contract tests push CI p90 above today's 15.7 min, so B1's Linux shard split becomes mandatory to meet E10.
+**Consequence of declining:**
+- The new contract tests push CI p90 to about 16.7 min without an offset. B1 (roadmap 5.9, exit-required) is what keeps it within E10's ≤ 16 min.
+- **Per-merge cost rises above today's:** ≈ 360 job-minutes, against ≈ 345 now. E10's cost limit then becomes ≤ 370 instead of ≤ 250.
 
 ---
 
@@ -247,3 +254,29 @@ A Studio item operation is post-S1.
 - C: leaves sample chapters confusing, though checkout-only.
 
 **Also decide:** whether to add walls around the 14 walk-round sample gates (#658). Recommended: only if the campaign is meant as a showcase, since it is checkout-only content.
+
+---
+
+### D15: The owner's username in public git history
+
+**Context** (`10_health_report.md` §8):
+- `docs/s1-0-investigation` is pushed, and the repository is **public**.
+- Commit `035d0280` contains your Windows username in temp paths in 7 s1v output files. The current tree is clean (scrubbed in `30d44f27`).
+- Separately, **6 tracked files that predate S1** contain it on the integration branch, and 3 of those are also on `main`:
+  - `docs/map_collision_paint.md`;
+  - `docs/monster_rpg_roadmap.md`;
+  - `docs/reviews/milestone16_stage5b_evidence/pipeline_check.json`;
+  - `docs/reviews/milestone4_screens/report.json`;
+  - `docs/reviews/milestone9_test_audit.md`;
+  - `tests/test_rmmz_passability_import.py`.
+
+| Option | What | Consequence |
+|---|---|---|
+| **A. Contain going forward** | Squash-merge the S1 docs PR, so `035d0280` never enters the integration branch's history, then delete `docs/s1-0-investigation`. Open a small scrub PR for the 6 pre-S1 files. Optionally ask GitHub Support to purge the now-unreachable commit | The username leaves every current tree and every branch's reachable history, **except** the older history of the 6 pre-S1 files. SHAs cited in issue comments (`f8efb42a`, `aa4ed794`, `7ebae9bc`, `1291f64b`, `035d0280`, `30d44f27`, `1f006a69`) become unreachable, though their content survives in the squashed commit. GitHub may keep serving an unreachable SHA until Support purges it, and existing clones and forks keep their copies |
+| B. Force-push a rewritten S1 branch now | Rewrite `docs/s1-0-investigation` without `035d0280`'s content, then force-push | Same exposure reduction as A for this branch, but it breaks the coordinator's and reviewers' local copies and the cited SHAs immediately. It still needs GitHub Support for the cached SHA |
+| C. Full purge across all history | Rewrite the integration branch and `main` to remove every occurrence, including the 6 pre-S1 files' history | The only complete removal, but it is L-sized and disruptive. Every SHA cited in issues, PRs and memory notes changes, and every clone must re-sync |
+| D. Accept | No change | The username stays publicly readable in 7 + 6 files' history, and in the current tree of the 6 pre-S1 files |
+
+**Recommendation:** **A**, including the scrub PR for the 6 pre-S1 files. Add a GitHub Support purge request if you want the unreachable commit removed from GitHub's caches. C is only worth it if the username itself must be gone from all public history.
+
+No history has been rewritten. Doing so needs your explicit authorisation.

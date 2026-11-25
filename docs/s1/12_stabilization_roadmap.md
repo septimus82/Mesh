@@ -7,7 +7,7 @@
 - `11_subsystem_risk_map.md`;
 - `13_testing_ci_proposal.md`, the source of the CI costs used below.
 
-**Decisions** referenced as D1–D14 are in `14_owner_decision_brief.md`.
+**Decisions** referenced as D1–D15 are in `14_owner_decision_brief.md`.
 
 ## 1. Summary
 
@@ -19,16 +19,17 @@
 | **S1-2** | Destructive operations and save-data integrity | P1 3, P2 1 | 5 | yes |
 | **S1-3** | Studio-authored features work at runtime | P1 5, P2 1 (test fixture) | 10 | yes |
 | **S1-4** | Authored state persists; entities end cleanly | P1 4, P2 1 | 6 | yes |
-| **S1-5** | Gates, CI trust, real-runtime contracts | P1 1, P2 6, P3 1 | 14 | yes, except 5.4 and 5.8 |
+| **S1-5** | Gates, CI trust, real-runtime contracts | P1 1, P2 7, P3 1 | 13 | yes, except 5.4 and 5.8 (5.9, the shard rebalance, **is** exit-required: it pays for E10) |
 | **S1-6** | Bounded convergence of duplicate runtimes (P2 debt with demonstrated impact) | P2 9 | 11 | no: carry forward with owner disposition |
-| **S1-7** | Optional cleanup | P3 5 | ~5 | no |
+| **S1-7** | Optional cleanup | P3 6 | ~6 | no |
 
 **Totals:**
-- **42 items:** P0 1, P1 16, P2 18, P3 6, plus 1 housekeeping item (1.5). Item 1.2 is counted under P1 until verified.
+- **44 items:** P0 1, P1 16, P2 19, P3 7, plus 1 housekeeping item (1.5). Item 1.2 is counted under P1 until verified.
 - **About 55 PRs.** About 25 of them make up the P0/P1 core and its two exit-required enablers (2.2 and 3.0).
 
 **Parallelism:**
-- S1-5 touches only `tests/`, `tooling/` and CI. It can run alongside S1-2 to S1-4 once S1-1 has landed.
+- S1-5 changes `tests/`, `tooling/`, `.github/`, `pyproject.toml` and `mesh_cli/verify_steps/pipeline.py` (5.1). It edits no `engine/` file, so it can run alongside S1-2 to S1-4 once S1-1 has landed.
+- RUF100, which removes about 2,355 `noqa` comments across `engine/`, `mesh_cli/` and `mesh_net/`, would conflict with those PRs and isn't needed for E5. It has moved to 7.6, after S1-4.
 - S1-3 and S1-4 both edit `puzzle_behaviours.py`. Test the **combined merge tree** before the second of any two parallel PRs on one module merges (the #600 + #601 lesson).
 
 **Complexity:**
@@ -44,7 +45,7 @@ There are no L items in S1-1 to S1-5.
 - Unless stated otherwise, each P1 fix adds about 3–5 s per OS to the required `pytest` jobs.
 
 **Every fix PR follows the established rules:**
-1. Reproduce first, with the script in `docs/s1/evidence/` (it exits 1 while the defect is present).
+1. Reproduce first, with the script in `docs/s1/evidence/`. The triage repros (`repro_saves_follow_cwd.py`, `repro_dialogue_once_reward_repeats.py`, `repro_quest_one_event_two_stages.py`, `repro_dead_actions_cutscenes.py`, `repro_legacy_delete_hazards.py`) live at `audit/deep-audit-triage:docs/audits/deep_audit_2026_11/repro/` instead. Either kind exits 1 while the defect is present.
 2. Add a regression test through the **real runtime**: a hidden GameWindow, `perform_interaction`, keys through `dispatch_event`, the real loader or save/load.
 3. Prove the test with a mutation: reverting the fix fails it.
 4. Have it independently reviewed.
@@ -84,7 +85,12 @@ There are no L items in S1-1 to S1-5.
 - **Files:** `engine/game_runtime/input_dispatch.py`, the Ctrl+S debug save handler, tests.
 - **Dependencies / risks:** after 1.1. Risk: developers who rely on F3 in `main.py` runs (offer the env var).
 - **Compatibility:** shipped games lose the cheat and debug keys; editor launches keep them.
-- **Acceptance:** real-window export launch: F3 then Ctrl+S changes no file under the bundle, F10 changes no party state, and editor launch mode still allows them. Mutation proof.
+- **Acceptance:** real-window export launch:
+  - F3 then Ctrl+S changes no file under the bundle;
+  - F10 changes no party state;
+  - editor launch mode still allows them;
+  - read-only debug overlays behave as D4 decides;
+  - mutation proof.
 - **Complexity:** S. **Decision:** **D4** (what debug mode may do in shipped games).
 
 ### 1.3 #612: ep05 replay budget flake (P1, CI safeguard), in flight as #661
@@ -100,8 +106,17 @@ There are no L items in S1-1 to S1-5.
 
 ### 1.4 #622: live-runtime wiring for ActionLists and cutscenes (P1), in flight as #635
 
-- **Problem / evidence:** ActionListRunner is inert under live `on_event` delivery; cutscene `move_entity` / `camera_focus` raise on the missing `find_sprite`; `.behaviours` is read where sprites have `mesh_behaviours_runtime` (triage repro; part A).
-- **Approach:** PR #635 (approved in review; still a GitHub draft): `subscribed_event_types` / `on_event`, `find_entity`, `mesh_behaviours_runtime`.
+- **Problem / evidence:**
+  - ActionListRunner is inert under live `on_event` delivery;
+  - cutscene `move_entity` / `camera_focus` raise on the missing `find_sprite`;
+  - `.behaviours` is read where sprites have `mesh_behaviours_runtime`.
+
+  Evidence: `audit/deep-audit-triage:docs/audits/deep_audit_2026_11/repro/repro_dead_actions_cutscenes.py`; part A.
+- **Root cause:**
+  - the runner implements only `handle_event`, while the runtime delivers through `on_event` / `subscribed_event_types`;
+  - cutscene steps call `SceneController.find_sprite`, which only the test double (`DummySceneController`) defines;
+  - `.behaviours` is an attribute that tests set by hand.
+- **Approach:** PR #635: `subscribed_event_types` / `on_event`, `find_entity`, `mesh_behaviours_runtime`. The independent reviewer agent approved it at `8f83a161`; the approval is in the coordinator's log, there is no GitHub review object, and the PR is still a GitHub draft.
 - **Files:** `action_list_runner.py`, `cutscene_controller.py`, tests.
 - **Dependencies / risks:** **merge after 1.3**, since its CI hit the #612 flake. Dispatch Extended (runtime event delivery). Later 2.4 and 6.2 touch `cutscene_controller.py`, so land this first.
 - **Compatibility:** scenes that relied on actions doing nothing will now act (11 repo scenes). That is intended.
@@ -110,11 +125,16 @@ There are no L items in S1-1 to S1-5.
 
 ### 1.5 Issue hygiene (no code)
 
-Bring the issue titles and labels in line with the corrected severities, as housekeeping:
-- #653 → P2;
-- #654, #623 → as decided in D2;
-- #631 → P1;
-- #624 → B is P2/P3.
+Bring the issue titles and labels in line with the corrected severities and reach, as housekeeping.
+
+**Already done by the coordinator:** #653 retitled P2; #654 and #624 retitled.
+
+**Remaining:**
+- #651: the title says "102 of 154 shipped configs". It should say 160 configs with prefabs merged, 102 without `hp`, and that the campaign is checkout-only sample content;
+- #658: the title says "shipped". It should say sample (checkout-only) content;
+- #654: drop "shipped" if the retitle kept it, and set the severity per D2;
+- #623: severity per D2;
+- #631: mark it P1.
 
 Also:
 - link #618's closure to the real-window caveat (it is re-verified in 2.1);
@@ -160,20 +180,20 @@ Also:
   - never replace an existing entry;
   - exclude `.mesh_trash` from `list_repo_json_assets`.
 - **Files:** `editor_file_ops_controller.py`, tests.
-- **Dependencies:** after 2.1.
+- **Dependencies / risks:** after 2.1. Risk: the in-operation rollback (`_restore_deletes_from_trash`) and any purge code must learn the new layout, or a failed operation could restore from the wrong folder.
 - **Compatibility:** old trash layout stays readable.
 - **Acceptance:** delete, re-create, delete leaves both copies recoverable; the refactor ignores `.mesh_trash`; mutation proof.
 - **Complexity:** S. **Decision:** no (if D3 picks "disable", this becomes moot and is closed with it).
 
 ### 2.3 One project-root resolver; saves stop following the CWD (#623 and the CWD family)
 
-- **Problem / evidence:** `repro_saves_follow_cwd.py`: project B's quicksave lands in project A's `saves/`. Other CWD-relative project reads:
+- **Problem / evidence:** `audit/deep-audit-triage:docs/audits/deep_audit_2026_11/repro/repro_saves_follow_cwd.py`: project B's quicksave lands in project A's `saves/`. Other CWD-relative project reads:
   - `cutscenes.json` (`cutscene_controller.py:54`);
   - the item database (`inventory.py:45`);
   - `savegame.py:138`;
   - `.mesh/ai_history.jsonl`.
 
-  #641 belongs to the same family, but is fixed in 2.1 through the editor's existing root.
+  #641 belongs to the same family, but is fixed in 2.1 through the editor's existing root. #391 reports that AI scatter resolves footprints against the wrong root (not re-verified in S1-0). Verify it here; if it is present, route it through the resolver.
 - **Root cause:** there is no single pinned project root; modules assume the CWD is the project. `main.py` and `mesh edit` chdir, which hides the problem; `run_game(project_root=)`, the checkout project browser and the legacy editor don't.
 - **Approach:**
   1. **PR 1:** one resolver, `project_root(window)` or the existing game root. `DEFAULT_SAVE_DIR` resolves against it (`save_runtime/storage.py:97-98`). As a read-only fallback, find an existing CWD-relative slot and offer it, but never write there.
@@ -200,7 +220,9 @@ Also:
   2. Add `cutscenes.json` to `run_validation`.
   3. In `GameWindow.__init__`, catch SchemaValidationError, skip the bad file or entry, and show a toast and a log line.
 - **Files:** `engine/ai_ops.py`, `engine/mcp_server/tools.py`, `engine/game.py`, tests.
-- **Dependencies:** after 1.4 (the same controller); coordinate with 6.2 (cutscene schema convergence).
+- **Dependencies / risks:** after 1.4 (the same controller); coordinate with 6.2 (cutscene schema convergence). Risks:
+  - an MCP edit of an existing hand-written cutscene that doesn't meet the schema is now refused (the file still loads, with a warning);
+  - tolerant loading must never hide the error, so it always shows a toast and a log line.
 - **Compatibility:** projects with a bad file now open, with a warning.
 - **Acceptance:**
   - a bad MCP op is refused and the file is unchanged;
@@ -214,7 +236,11 @@ Also:
 
 ### 3.0 Shared real-window contract fixture and picker-contract skeleton (P2, enabler)
 
-- **Problem / evidence:** 9 of the 10 part-C case-study defects passed tests that used fakes or asserted documents. Only 49 of 2,027 test files use a real window. No test authors a behaviour through Studio ops and plays it.
+- **Problem / evidence:**
+  - 9 of the 10 part-C case-study defects passed tests that used fakes or asserted documents.
+  - Only 146 of 1,996 test files are real-window files, by part C's definition: they construct a GameWindow, the headless editor, or worker/Studio processes, or hold a `gl` test.
+  - No test authors a behaviour through Studio ops and plays it.
+- **Root cause:** tests reach runtime behaviour through unspec'd fakes, or by asserting authored documents. No shared harness authors through Studio ops and plays in a real window, so each test file builds its own double (part C §1.3).
 - **Approach:**
   - **Fixture:** `real_game(scenes)` (hidden, muted, never activated, throwaway scenes; the pattern of `_hidden_game.py` and `tests/_game_window_live.py`) with these helpers:
     - `interact` → `perform_interaction`;
@@ -229,7 +255,7 @@ Also:
     4. asserts the declared persistence rule after `revisit` and save/load.
   - Rows for currently broken features carry `xfail(strict=True, reason="#NNN")`, so each fix PR flips its own row, and an unexpected pass fails CI.
 - **Files:** `tests/_real_game.py`, `tests/test_picker_behaviour_contract.py`.
-- **Dependencies:** none; land first in S1-3. Fix PRs adopt it.
+- **Dependencies / risks:** none; land first in S1-3, and fix PRs adopt it. Risk: each strict-xfail row must flip in the same PR as its fix, so fix PRs share one contract file. Keep one row per line to limit merge conflicts.
 - **Compatibility:** n/a.
 - **Acceptance:** every guided behaviour has a row, or an explicit "not runtime-testable: reason" entry. The rows for #636, #639, #640, #651, #652, #654 and #620 are strict-xfail with their issue number.
 - **CI cost:** about 15 rows × 2 s ≈ **+30 s per OS** (part C §5.1).
@@ -301,7 +327,9 @@ Also:
 - **Root cause:** `DoorLock._update_collision` writes `entity.properties["solid"]`, which nothing reads. Solidity is membership of `scene_controller.solid_sprites`. `open_sprite` and `active_sprite` are stored but unused (`puzzle_behaviours.py:115-119` is a `pass`).
 - **Approach:** remove the door from `solid_sprites` on unlock and re-add it on relock; apply the pictures through the asset manager; drop the `properties` write.
 - **Files:** `engine/behaviours/puzzle_behaviours.py`, tests.
-- **Dependencies:** none. The persistence half is 4.3. **mesh_net parity:** see 6.5.
+- **Dependencies / risks:** none; the persistence half is 4.3, and mesh_net parity is in 6.5. Risks:
+  - relocking while the player stands inside the door (defer the relock until the space is clear);
+  - a missing open or used picture (keep the current picture and log it).
 - **Compatibility:** sample gates now open, as authored.
 - **Acceptance:**
   - press, then walk through, with the real mover;
@@ -322,7 +350,7 @@ Also:
   - **keep `entered_zone`**, because the campaign wires through it;
   - align the engine doc ("Label") with Studio ("Event it sends").
 - **Files:** `engine/behaviours/trigger_zone.py`, tests.
-- **Dependencies:** none.
+- **Dependencies / risks:** none. Risk: a sample counter keyed on `entered_zone` may have been tuned to the double count.
 - **Compatibility:** anything counting `entered_zone` now counts once. Scan sample content for counters on `entered_zone` before merging.
 - **Acceptance:**
   - the configured event fires once per entry;
@@ -341,7 +369,7 @@ Also:
   3. Content: the Ashen and Hollow Grove merchants get the Ridge pattern, and `showcase_interior` gets `stock`.
   4. Fix the guide example (#663 item 1).
 - **Files:** `engine/behaviours/vendor.py`, `project_ops.py`, docs, sample scenes, tests.
-- **Dependencies:** **after 3.2 (#652)**, without which the Vendor isn't built in created projects. #637 (4.5) removes Vendor's never-released subscription; the order doesn't matter.
+- **Dependencies / risks:** **after 3.2 (#652)**, without which the Vendor isn't built in created projects. #637 (4.5) removes Vendor's never-released subscription; the order doesn't matter. Risk: on an entity with both Dialogue and Vendor, interaction priority must pick one predictable action.
 - **Compatibility:** an existing `listen_event` still works.
 - **Acceptance:**
   - E on a Studio-authored Shopkeeper opens its stock, and a purchase works;
@@ -365,27 +393,31 @@ Also:
   - the factory applies facts on construction (re-entry and load), and behaviours write facts when they change;
   - a missing record means "as authored", which keeps old saves loading.
 - **Files:** `engine/scene_runtime/room_memory.py`, `scene_controller_parts/entity_factory.py`, `behaviours/base.py`, tests.
-- **Dependencies:** none. 4.2, 4.3 and 4.4 depend on it.
+- **Dependencies / risks:** none; 4.2, 4.3 and 4.4 depend on it. Risks:
+  - **Entity-id stability.** Facts are keyed by entity id. R3 stable identity covers authored ids; spawned entities have no stable id and get no facts. Renaming an id orphans its facts, which then fall back to "as authored".
+  - **Save growth.** Small, one record per changed entity.
 - **Compatibility:** old saves load with "as authored"; the save format gains one optional key.
 - **Acceptance:** a test behaviour's fact survives re-entry and save → load → revisit; a save made before the fact existed loads; mutation proof.
 - **Complexity:** M. **Decision:** **D6** (the state model).
 
 ### 4.2 #620: "Only once" dialogue and choices stay spent (P1)
 
-- **Problem / evidence:** `repro_dialogue_once_reward_repeats.py`; chain E: the overpayment is carried in saves.
+- **Problem / evidence:** `audit/deep-audit-triage:docs/audits/deep_audit_2026_11/repro/repro_dialogue_once_reward_repeats.py`; chain E: the overpayment is carried in saves.
 - **Root cause:** `_has_played` and the choice-once markers live on the Dialogue instance.
 - **Approach:** store them as facts (4.1), keyed by room, entity and choice.
 - **Files:** `engine/behaviours/dialogue.py`, tests.
-- **Dependencies:** 4.1.
+- **Dependencies / risks:** 4.1. Risk: keying by choice index breaks when the creator reorders choices, so key by a stable choice id (or a text hash).
 - **Compatibility:** saves made before the fix carry no fact, so a reward already paid once can be paid one more time after the upgrade (once). Document this.
 - **Acceptance:** re-entry and save → load → revisit pay once; the picker row flips; mutant O4 is killed (with 5.5); mutation proof.
 - **Complexity:** S. **Decision:** D6.
 
 ### 4.3 #639b: door unlock and "Only once" button press persist (P1)
 
+- **Problem / evidence:** `repro_lever_door_studio_puzzle.py`: after leaving and re-entering, and after loading a save made after the unlock, the door is locked again and the "Only once" button is usable again. Part D chain F: `gate locked after load: True`.
+- **Root cause:** `locked` and `activated` live only on the instance. Neither class has `saveable_state` or writes game state. Both are allow-listed in `test_save_participation_policy.py:30-31`, DoorLock with "TODO: add save".
 - **Approach:** DoorLock `unlocked` and SwitchInteract `activated` become facts (4.1).
 - **Files:** `puzzle_behaviours.py`, and remove the "TODO: add save" allow-list entries in `test_save_participation_policy.py`.
-- **Dependencies:** 4.1 and 3.3.
+- **Dependencies / risks:** 4.1 and 3.3. Risk: 3.3 and 4.4 edit the same file, so test the combined merge tree.
 - **Compatibility:** old saves → "as authored".
 - **Acceptance:** after re-entry and save → load → revisit, the gate stays open and the button stays spent. The sample Ch2 Ambush pair passes. Mutation proof.
 - **Complexity:** S. **Decision:** D6.
@@ -407,7 +439,7 @@ Also:
      - DropTable: grant the gold independently, and leave refused items as a world pickup or a toast (decide consistently with pickups).
      - Fold in the vendor nits (`str(item_id)` at `vendor.py:107/116`).
 - **Files:** `puzzle_behaviours.py`, `drop_table.py`, `vendor.py`, tests.
-- **Dependencies:** 4.1 and 3.2.
+- **Dependencies / risks:** 4.1 and 3.2. Risk: the pickup-style refusal leaves a chest closed when the inventory is full. That is a visible behaviour change from today's silent "looted", so toast it.
 - **Compatibility:** old saves → "not yet looted".
 - **Acceptance:**
   - empty inventory: the item and gold arrive, then `looted`, then the event;
@@ -427,7 +459,7 @@ Also:
   - in `_end_behaviours`, run and clear `sprite.mesh_behaviour_unsubscribes` (unsubscribe is idempotent), which covers all 12 subscribers;
   - verify #638 through real delivery, then fix or close it. NEW-3 (a self-removing entity misses its own event) is latent and masked; NEW-4 (EventLogger) can be fixed by subscribing in `__init__`.
 - **Files:** `entity_factory.py`, tests.
-- **Dependencies:** none. The removal contract in 5.6 generalises the test.
+- **Dependencies / risks:** none; the removal contract in 5.6 generalises the test. Risk: a behaviour that relied on staying subscribed after removal. The scan found none. The rusted key relies on a synchronous emit before removal, and that still happens.
 - **Compatibility:** the sample rusted key (SetGameStateOnEvent on a self-removing pickup) must still set its flag.
 - **Acceptance:**
   - each of the six behaviours through each removal path changes nothing after removal;
@@ -440,18 +472,21 @@ Also:
 
 ## 6. S1-5: gates, CI trust, real-runtime contracts
 
-These items are costed in `13_testing_ci_proposal.md`. Only `tests/`, `tooling/`, `.github/` and `pyproject.toml` change.
+These items are costed in `13_testing_ci_proposal.md`.
+
+**Files touched:** `tests/`, `tooling/`, `.github/`, `pyproject.toml` and `mesh_cli/verify_steps/pipeline.py` (5.1). No `engine/` file changes. RUF100 has moved to 7.6.
 
 | Item | Problem / evidence | Root cause | Approach | Files | Deps / risks | Compat | Acceptance | Cx | Decision |
 |---|---|---|---|---|---|---|---|---|---|
-| **5.1 Gates fail closed: #624 B–D (P2)** | The mypy-island exits 0 when mypy can't run (`probe_gate_fail_open.py`). "Tooling unavailable" → code 0 at 7 sites in `pipeline.py`. Four steps pass silently when their input is missing. Baselines can grow in the same PR. The mypy count guard is a no-op. RUF100 is off (2,355 unchecked `noqa`) | Gates parse output and ignore return codes; ratchets compare against git-ignored state | Three PRs: (a) mypy-island reads its returncode; "tooling unavailable" is code 2; silent steps report `skipped:` and CI fails on any skip not in an allow-list. (b) Baseline-growth check against the merge base (any growth needs a `baseline-growth:` line in the PR); the mypy guard compares against the merge base's `tooling/mypy_baseline.txt`. (c) RUF100 with `lint.external` for documentation-only codes | `tooling/mypy_island.py`, `mesh_cli/verify_steps/pipeline.py`, `tooling/*_gate.py`, `pyproject.toml`, `ci.yml` | Risk: RUF100 cleanup churn (keep it to one mechanical PR) | none | Each gate has a test with the tool or input absent → nonzero; a baseline-growth PR without the marker fails | S×3 | no |
+| **5.1 Gates fail closed: #624 B–D (P2)** | The mypy-island exits 0 when mypy can't run (`probe_gate_fail_open.py`). "Tooling unavailable" → code 0 at 7 sites in `pipeline.py`. Four steps pass silently when their input is missing. Baselines can grow in the same PR. The mypy count guard is a no-op | Gates parse output and ignore return codes; ratchets compare against git-ignored state | Two PRs: (a) mypy-island reads its returncode; "tooling unavailable" is code 2; silent steps report `skipped:` and CI fails on any skip not in an allow-list. (b) Baseline-growth check against the merge base (any growth needs a `baseline-growth:` line in the PR); the mypy guard compares against the merge base's `tooling/mypy_baseline.txt` | `tooling/mypy_island.py`, `mesh_cli/verify_steps/pipeline.py`, `tooling/*_gate.py`, `ci.yml` | Risk: the allow-list of legitimate skips (`verify-demo` without arcade, and similar) must be explicit | none | Each gate has a test with the tool or input absent → nonzero; a baseline-growth PR without the marker fails | S×2 | no |
 | **5.2 Lane floors: #648 (P2)** | No floor on the default suite; gpu 256 vs 621 | Floors set at lane creation and never raised | Raise gpu to about 600; `--min-selected` about 13,500 on the Windows shard check; Linux job JUnit plus the same floor via `test_tiers.lane_problems` | `ci.yml`, `extended.yml`, `test_tiers.py`, `ci_shards.py` | Risk: a legitimate test removal must lower the floor on purpose (the documented rule) | none | A selection under the floor fails (unit test); a contract test keeps each floor within 5% of collection | S | no |
 | **5.3 Flake policy and quarantine (P2)** | ≈ 5% non-change failures; reruns are ad hoc; NEW-15 and the replays-job flake are untracked | No policy mechanism | Quarantine only with an issue, a dated `quarantine` baseline entry, an Extended lane that still runs and reports it, and a contract test that fails on expired or issue-less entries. No silent retries; required lanes keep `-W error`. Triage the older gate-trust issues #359, #394, #466 here | `tests/baselines/quarantine.txt`, conftest, `extended.yml`, contract test | Risk: quarantine used as a dumping ground (expiry prevents it) | none | The contract test exists; every quarantined id has a live issue and an expiry ≤ 30 days | S | **D10** |
-| **5.4 Silent CI gaps: #649 (P3)** | MCP-present test always skips; pyright configured, never run, excludes mesh_net; `replays --quiet` hides the failing case | CI installs `.[dev]` only; leftover config | Install `.[mcp]` in the Linux pytest job; delete `pyrightconfig.json`; print failing replay cases on failure | `ci.yml`, `pyrightconfig.json` | none | none | The MCP test runs (not skipped) in that job's report | S | no |
-| **5.5 Mutation survivors: #650 (P2)** | Q1, Q3, Q5, O1, O3, O4, V1, V2, V4 survive | Missing negative branches | About 10 assertions, each proven to kill its mutant with `mutation_probe.py` | tests only | none | none | Re-running the 8-group probe gives ≥ 36/40 killed | S | no |
+| **5.4 Silent CI gaps: #649 (P3)** | MCP-present test always skips; pyright configured, never run, excludes mesh_net; `replays --quiet` hides the failing case | CI installs `.[dev]` only; leftover config | Install `.[mcp]` in the Linux pytest job; delete `pyrightconfig.json`; print failing replay cases on failure | `ci.yml`, `pyrightconfig.json` | Risk: the `mcp` install adds about 10 s and a dependency to one job | none | The MCP test runs (not skipped) in that job's report | S | no |
+| **5.5 Mutation survivors: #650 (P2)** | Q1, Q3, Q5, O1, O3, O4, V1, V2, V4 survive | Missing negative branches | About 10 assertions, each proven to kill its named mutant. The same PR updates `mutation_probe.py`: it hard-codes each group's test files and exact-text anchors, so it gains the new test files and refreshes any anchor the code moved | tests; `docs/s1/evidence/mutation_probe.py` | Risk: stale anchors make a mutant "not applied", which can look like a kill. The probe must report "anchor not found" as an error | none | Each named mutant is killed by its named test (probe output kept in the PR) | S | no |
 | **5.6 Contract-suite completion (P2)** | 15 fake-only window attributes; 20 spec'd doubles; no removal contract; no cross-component smokes | Unspec'd doubles bless missing APIs | (a) A removal contract parametrised over every behaviour that subscribes in `__init__`. (b) `contract_gaps_real_window.py` as a meta-test: fail on a production `getattr(window, x)` for an `x` nothing creates (allow-list with issue numbers). (c) A `fake_window()` generated from a real window's attributes, plus `spec=` for entity and interactor mocks, migrated as files are touched, starting with the case-study files. (d) Smokes: a cutscene step on the real SceneController; MCP cutscene write → GameWindow | tests, `tests/_real_game.py` | After 3.0 and 4.5. Risk: the meta-test needs an allow-list for lazily created attributes | none | The meta-test is green with every allow-list entry tied to an issue; the removal contract covers all subscribers | M | no |
-| **5.7 End-to-end creator workflow and template smoke (P1, verification)** | Part D's chain needed workarounds; no CI test composes creation → export | No test spans the seams | Promote `e2e_creation_to_export_chain.py` and the s1v scripts to `tests/test_e2e_creator_workflow.py` (marker `e2e`, Extended `extended` lane, both OSes). Promote `scan_project_templates.py` to a template smoke. Steps for open defects are strict-xfail with the issue number until fixed | tests, `extended.yml`, `test_tiers.py` | Lands early; goes fully green after S1-3 and S1-4. Risk: runtime (estimate 2–4 min per OS, off Extended's critical path) | none | See exit criterion E3 | M | no |
-| **5.8 CI cost (P2)** | ≈ 345 job-min per merge; fast tier run twice; second verify-all in the pytest job; the same tree tested twice per merge; Windows gpu shards unbalanced | Duplicate execution (R1–R4); a stale shard plan | (a) R1: verify-all with `MESH_SKIP_PYTEST_FAST=1` in CI's `verify` jobs; R3: fold `web-smoke`. (b) R2: measure the in-suite verify-all fixture with `--durations`, then drop it from the critical path if it costs minutes. (c) R4: push-side dedup only when a green PR run tested the **identical tree** at the same workflow revision. (d) Re-split the Windows gpu plan; optionally shard Linux pytest | `ci.yml`, `extended.yml`, `tooling/extended_dedup.py`, `ci_shards.py` | R4 must keep combined-tree protection (base moved → trees differ → runs) | none | Per-merge job-min and p90 measured with `ci_timing_analysis.py` (E10) | S×4 | **D9** |
+| **5.7 End-to-end creator workflow and template smoke (P1, verification)** | Part D's chain needed workarounds; no CI test composes creation → export | No test spans the seams | Promote `e2e_creation_to_export_chain.py` and the s1v scripts to a test in two parts. **(i)** The non-GL chain (2D rooms, every picker feature, `main.py` play, F5/F9 across processes, export, exported play): marker `e2e`, Extended `extended` lane, both OSes. **(ii)** The HD-2D leg (door into an HD-2D room, walk, draw, return): marked `gl`, so it runs only in the gpu lane with `MESH_GL_SMOKE`, per repo policy (`extended` is `(slow or e2e) and not gl`). Promote `scan_project_templates.py` to a template smoke (in `extended`; the `hd2d_rpg` template's draw check goes in the gpu part). Steps for open defects are strict-xfail with the issue number until fixed | tests, `extended.yml`, `test_tiers.py` | Lands early; goes fully green after S1-3 and S1-4. Risk: runtime, estimated at 2–4 min per OS for (i) and about 1 min for (ii). Wall impact is not yet measured (§3 of the proposal) | none | Exit criterion E3 | M | no |
+| **5.8 CI dedup (P2; not exit-required)** | ≈ 345 job-min per merge; a second verify-all inside the pytest job; the same tree tested twice per merge; the `web-smoke` job duplicates verify-all steps; the fast tier runs twice | Duplicate execution (R1–R4) | (a) R3: fold `web-smoke`. (b) R2: measure the in-suite verify-all fixture with `--durations`, then drop it from the critical path if it costs minutes. (c) R4: push-side dedup only when a green PR run tested the **identical tree** at the same workflow revision. (d) R1 **only as D9 approves it**: the pytest-fast step in verify-all carries a **failing hard ceiling** (fails over 130.4 s, #427). R1 may remove the second run only if a failing ceiling and the fast tier's own collection (`conftest.py:244-255`) move to a new home with them. Otherwise R1 is dropped. Removing the ceiling outright is a gate removal that needs your explicit approval, and #373 would then close by removal, not by a fix | `ci.yml`, `extended.yml`, `tooling/extended_dedup.py`, verify-all step config | R4 must keep combined-tree protection (base moved → trees differ → runs) | none | Per-merge job-min and p90 measured with `ci_timing_analysis.py` (E10) | S×3 | **D9** |
+| **5.9 Shard rebalancing (P2; exit-required: it is E10's offset)** | The Windows gpu shards are unbalanced (2/2 takes 37.2 min, 1/2 takes 29.6); Linux pytest (13.1 min) is CI's critical path. The new contract and e2e tests add about 1 min to required lanes | A stale shard plan | Re-split the Windows gpu plan from measured timings (optionally 3 shards); shard Linux pytest in two. The 5.7(ii) gl leg runs in the gpu lane on both OSes; the new plan places it in the lighter shard on each OS | `ci_shards.py`, `ci.yml`, `extended.yml` | Risk: about +2–3 job-min of setup per extra shard; fan-in checks must list the new shard jobs | none | CI push p90 and Extended push p90 within E10 | S | no (nothing changes about what runs) |
 
 ---
 
@@ -461,12 +496,12 @@ These items are costed in `13_testing_ci_proposal.md`. Only `tests/`, `tooling/`
 
 | Item | Problem / evidence | Root cause | Approach (bounded) | Files | Deps / risks | Compat | Acceptance | Cx | Decision |
 |---|---|---|---|---|---|---|---|---|---|
-| **6.1 One QuestManager: #621, #644, T-2, T-3** | #621: one event completes two stages (`repro_quest_one_event_two_stages.py`). #644: console `quest` / `quest active` / `rules` raise. T-3: warnings on every load. T-2: suspected ignored fields. Quests kill 1/5 mutants | D-1: tests and the restore code use the lightweight API | (1) GameStateController's default becomes `engine.quests.QuestManager`; move tests to it; retire the lightweight API's production callers (console, `quest_state.py` restore, golden-slice label). (2) #621: an event completes at most one stage per quest; the second pass re-checks starts only. (3) Verify T-2 and fix it, or close it | `game_state_controller.py`, `quest_manager.py`, `quests.py`, `quest_runtime/progress.py`, `console_runtime/*`, `save_runtime/quest_state.py`, about 35 test files | Risk: test churn (mechanical); dispatch Extended | quest save format unchanged | Console commands run on a real window; `handle_event` with consecutive same-trigger stages advances one; no restore warnings; Q1/Q3/Q5 killed | M | **D11a** |
+| **6.1 One QuestManager: #621, #644, T-2, T-3** | #621: one event completes two stages (`audit/deep-audit-triage:docs/audits/deep_audit_2026_11/repro/repro_quest_one_event_two_stages.py`). #644: console `quest` / `quest active` / `rules` raise. T-3: warnings on every load. T-2: suspected ignored fields. Quests kill 1/5 mutants | D-1: tests and the restore code use the lightweight API | (1) GameStateController's default becomes `engine.quests.QuestManager`; move tests to it; retire the lightweight API's production callers (console, `quest_state.py` restore, golden-slice label). (2) #621: an event completes at most one stage per quest; the second pass re-checks starts only. (3) Verify T-2 and fix it, or close it | `game_state_controller.py`, `quest_manager.py`, `quests.py`, `quest_runtime/progress.py`, `console_runtime/*`, `save_runtime/quest_state.py`, about 35 test files | Risk: test churn (mechanical); dispatch Extended | quest save format unchanged | Console commands run on a real window; `handle_event` with consecutive same-trigger stages advances one; no restore warnings; Q1/Q3/Q5 killed | M | **D11a** |
 | **6.2 Cutscene runtimes** | D-4: `mesh cutscene validate` accepts commands the game's schema refuses | Two runtimes, two schemas | `mesh cutscene validate/simulate` validates against `cutscene.schema.json` (the live one) first; document CutsceneRunner as the CLI/test runner. Merging the runtimes is post-S1 | `cutscene_runtime/schema.py`, `mesh_cli` cutscene command | After 1.4 and 2.4 | none | A file the game refuses is refused by `validate` | S | **D11b** |
 | **6.3 Hotkeys** | D-2: 5+ shadowing incidents; #660 | Two dispatchers | A binding-matrix test: every documented binding fires under each state (game, editor, Creator Mode, pause, console), driven through `dispatch_event`. A lint that fails when one key is bound in both systems without an explicit precedence entry. Merging the dispatchers is post-S1 | tests; `input_dispatch.py` and router tables (read) | Risk: the matrix needs a states fixture | none | The matrix test exists; a deliberately shadowed binding fails it | M | **D11c** |
 | **6.4 Episode harness on MagicMock windows** | D-3 / M4 D11: "integration" episodes take the GameplayEventBus route | The harness builds a `MagicMock()` window | Add one real-window episode run (hidden GameWindow) of an existing episode; label the MagicMock episodes "harness" in test names and docs so they are not counted as integration evidence. A full migration is post-S1 | `mesh_cli/episode.py`, `tests/test_episode_0*` | Risk: goldens may differ on the real route, which is itself a finding | goldens unchanged for the harness | One episode passes on a real window | M | **D11d** |
 | **6.5 mesh_net shared rules: #647** | D-7: copied gate, interaction-ranking and drop rules; #647 copied into both | Copy-paste for authority-side code | mesh_net calls the engine's pure functions: DropTable normalisation (fixing #647 in both places: default only when missing or None) and `select_interaction_candidate`. Add a parity test for the gate after 3.3/4.3 (net "open for good" vs engine) | `mesh_net/scene_room.py`, `engine/behaviours/drop_table.py`, `engine/interaction.py` | Risk: the net replay goldens | net protocol unchanged | `chance: 0` never drops in either runtime; a parity test asserts one function | S–M | **D11e** |
-| **6.6 Player-facing fake-only contracts: #643, #645** | #643: HUD panel never draws. #645: Continue never sees saves | `window.player`; D-5 `savegame.py` | #643: one `find_player(window)` helper (via `scene_controller._find_player_sprite`) for the HUD and the debug bundle. #645: Continue uses SaveManager (latest slot or quicksave); `savegame.py` becomes read-only import | `ui_overlays/hud.py`, `debug_bundle.py`, `main_menu_overlay.py`, `savegame.py` | none | old `save_1.json` still readable | Real window: the HUD view model shows hp/max_hp; F5 then Continue loads the quicksave | S×2 | no |
+| **6.6 Player-facing fake-only contracts: #643, #645** | #643: HUD panel never draws, in every game whose player has Health. After #651 (3.1), players have HP they can't see, so moving #643 into S1-3 is offered as owner choice D1 a (recommended). #645: Continue never sees saves | `window.player`; D-5 `savegame.py` | #643: one `find_player(window)` helper (via `scene_controller._find_player_sprite`) for the HUD and the debug bundle. #645: Continue uses SaveManager (latest slot or quicksave); `savegame.py` becomes read-only import | `ui_overlays/hud.py`, `debug_bundle.py`, `main_menu_overlay.py`, `savegame.py` | none | old `save_1.json` still readable | Real window: the HUD view model shows hp/max_hp; F5 then Continue loads the quicksave | S×2 | no |
 | **6.7 Flag-gated entities: #653** | Exits gated by entity-level `require_flags` appear only after re-entry (65–71 sample exits; tool-producible via `set_entity_fields`) | Documented load-time semantics | Keep the semantics. (1) `set_entity_fields` warns and points to `set_show_when` (#663 item 3 rides here). (2) A one-off script converts the sample exits to ConditionalActivator. Re-evaluating at runtime is the alternative (D14) | `project_ops.py` / authoring ops, `packs/` content, docs | Content-only risk | none | The Ambush exit appears in the same visit; a warning on the entity-level gate | S–M | **D14** |
 | **6.8 Legacy editor out of game launches** | D-11: `EditorModeController` (fan-out 74) and its overlays are built in every GameWindow; #660 | Construction is unconditional | Construct the legacy editor and register its overlays only when `legacy_editor_allowed` could become true. Defence in depth after 1.1 | `engine/game.py`, `ui_dispatcher.py`, `editor_controller.py` | Risk: code reaching `window.editor_controller` in games (scan first) | editor launches unchanged | A game launch has no editor controller; F4 in a game is a no-op | M | **D3** |
 | **6.9 M3/M4 owed tests and the demo world** | D9: owed tests #630 L03/L04, #634 X4/X5. D5: the M4 demo world is built from `tooling/` at run time (not in the wheel; a test imports tooling) | Review follow-ups not yet scheduled | Add the owed tests; package the demo world as data like `mesh_net/coop` and `expedition`, or state "checkout-only" explicitly (relates to #357) | `tests/test_mesh_net_*`, `tooling/m4_demo_world.py` | none | none | Each owed test kills its named mutant; the demo world loads without `tooling/` on `sys.path` (or the docs say checkout-only) | S–M | no (D1 = OD11 queue presets stays an owner decision outside S1) |
@@ -475,13 +510,14 @@ These items are costed in `13_testing_ci_proposal.md`. Only `tests/`, `tooling/`
 
 ## 8. S1-7: optional P3 cleanup (opportunistic only)
 
-| Item | Covers | Approach | Cx |
-|---|---|---|---|
-| 7.1 Fake-only P3 bundle | #646 (plugin `console` / `asset_manager`, debug panels, legacy overlays, `purge_trash`, workspace scene key, inspector history, golden-slice label, dead `saveable` helpers) | Read the real attribute or delete the dead branch; driven by the 5.6 meta-test allow-list | S–M |
-| 7.2 Authoring and docs bundle | #663 (item 1 in 3.5, item 2 in 3.5, item 3 in 6.7; close when those land) | Close-out only | — |
-| 7.3 Sample content | #658 (walls or tilemap around 14 walk-round gates; the model catalogue stores a basename or project-relative path) | Content PR plus a one-line provenance change | S |
-| 7.4 Data-integrity P3s (part A §3) | A copied project shares its `game_id`; non-exported settings overwritten; Studio reimport rollback non-atomic (`studio_hd2d.py:2807-2823`); mesh_net owed-journal fixed temp name; launcher dump fixed `.tmp` | Unique temp names / atomic restore; `game_id` regenerated on copy detection (D-free) | S each |
-| 7.5 Developer-only P3s | T-4 duplicate toast; D-9 five snap helpers (#392); D-10 three-layer persistence proxy; queued events in a door frame reach the next room (document it); QuestHook harness-only leak; a docstring for `current_scene_path` after a load | Small cleanups | S each |
+| Item | Problem / evidence | Root cause | Approach | Files | Deps / risks | Compat | Acceptance | Cx | Decision |
+|---|---|---|---|---|---|---|---|---|---|
+| **7.1 Fake-only P3 bundle: #646** | Plugin `ctx.console` / `asset_manager` always None; debug panels' quest and cutscene state empty; debug bundle without digests; MenuBar and ContextMenu overlays never draw; legacy `purge_trash` inert; workspace `current_scene_key` always None; inspector event history empty; golden-slice quest label empty; dead `saveable` helpers (part B §1.2, `repro_fake_only_window_contracts.py`) | Production reads attribute names that only test fakes provide | Read the real attribute (`console_controller`, `assets`, `quest_manager`, …) or delete the dead branch, driven by the 5.6 meta-test allow-list | `plugin_system.py`, `debug_panels_state.py`, `debug_bundle.py`, `menu_bar_overlay.py`, `context_menu_overlay.py`, `editor_file_ops_controller.py:180`, `editor_workspace_controller.py:281`, `editor/behaviour_inspector.py`, `ui_overlays/golden_slice.py`, `behaviours/saveable.py` | After 5.6. Risk: deleting an overlay the legacy editor still relies on (check D3 first) | none | Each name leaves the meta-test allow-list; each surface shows real data on a real window | S–M | no |
+| **7.2 Authoring and docs bundle: #663** | The guide's shop example uses an event that is never sent; talk plus shop opens both on one E; `set_entity_fields` silently accepts load-time gates | Docs drift; no interaction precedence; no authoring warning | Close-out only: item 1 and item 2 ride in 3.5, item 3 in 6.7 | `developer_guide.md`, `vendor.py`, authoring ops | After 3.5 and 6.7 | none | Each of the three items is closed by its PR | — | no |
+| **7.3 Sample content: #658** | 14 of 15 solid sample gates can be walked round while locked (`repro_core_regions_gates.py`); the model catalogue stores the creator's absolute source path (chain B) | Sample scenes have no collision layer; provenance stores the raw path | Walls or a tilemap around each gate (only if D14 treats the campaign as a showcase); store a basename or project-relative source path | `packs/core_regions/scenes/*`, the HD-2D catalogue import | After 3.3. Risk: content churn in checkout-only scenes | Old catalogues with absolute paths still read | Gates block while locked; a new import stores no absolute path | S | D14 |
+| **7.4 Data-integrity P3s (part A §3)** | A hand-copied project shares its `game_id`; non-exported settings are overwritten; the Studio reimport rollback is non-atomic (`studio_hd2d.py:2807-2823`); the mesh_net owed journal uses a fixed temp name; the launcher dump uses a fixed `.tmp` | Fixed temp names, plain writes, and a copied identity | Unique temp names and atomic restore. Regenerate `game_id` only on an explicit "duplicate project", never on load | `save_runtime/storage.py`, `runtime_settings_storage.py`, `studio_hd2d.py`, `mesh_net/owed.py`, `launcher.py` | Risk: regenerating a `game_id` would orphan an exported game's existing player saves (hence explicit duplicate only) | Existing `game_id` values are kept | One test per site (atomic restore survives an injected failure; two writers use different temps) | S each | no |
+| **7.5 Developer-only P3s** | T-4 duplicate toast on quickload; five snap helpers (D-9, #392); a three-layer persistence proxy (D-10); queued events in a door frame reach the next room; QuestHook leaks under the harness only; `current_scene_path` holds the save slot after a load | Accreted duplication and undocumented semantics | Small cleanups; document the door-frame semantics and `current_scene_path` | quickload toast handlers, snap helpers, `scene_controller_save_load.py`, `quest_hook.py`, scene docs | Risk: consolidating the snap maths could shift placement by rounding (never compared numerically), so assert identical outputs first | Placement unchanged (asserted) | Per change | S each | no |
+| **7.6 RUF100 (moved from 5.1)** | 2,355 `noqa` comments go unchecked, most naming rules that aren't enabled | RUF100 not selected (`pyproject.toml:305-307`) | Enable RUF100 with `lint.external` for the documentation-only codes; one mechanical PR | `pyproject.toml`; `noqa` removals across `engine/`, `mesh_cli/`, `mesh_net/`, `tooling/` | **After S1-4** (it touches files S1-2 to S1-4 edit). Risk: merge conflicts, so land it when no engine PR is open | none | Ruff with RUF100 is clean in CI | S (mechanical, large diff) | no |
 
 ---
 
@@ -489,22 +525,27 @@ These items are costed in `13_testing_ci_proposal.md`. Only `tests/`, `tooling/`
 
 S1 is **done** when every criterion below holds at one integration commit. Technical debt is not zero at that point. Anything not listed is carried into the post-S1 backlog with an owner disposition.
 
+**Counting rule for run-based criteria (E3, E9, E10):** count only runs that **executed**.
+- When R4 (5.8) skips a push run, that push contributes the linked PR-side run that actually tested the identical tree. It counts once, never twice.
+- A skip never counts as a pass.
+- Skipped runs are excluded from p90 and duration statistics, so dedup can't lower them artificially.
+
 | # | Criterion | Measure (concrete) | Today |
 |---|---|---|---|
-| **E1** | No unresolved confirmed P0 | `gh issue list` with a P0 label or title → 0 open; F4 and debug-mode keys are no-ops in an export launch (1.1, 1.2 tests) | 1 (#660) |
+| **E1** | No unresolved confirmed P0 | `gh issue list` with a P0 label or title → 0 open. In an export launch, F4 and the **state-changing** debug keys (as D4 defines them) are no-ops (1.1, 1.2 tests) | 1 (#660) |
 | **E2** | Every confirmed P1 fixed or owner-dispositioned | Each P1 in the appendix is closed by a merged PR with a real-runtime regression test and a mutation proof, **or** the issue carries a written owner disposition (deferred / won't fix, with the reason) | 12 product P1s plus #612 open |
-| **E3** | Critical end-to-end workflow verified | `tests/test_e2e_creator_workflow.py` (5.7) passes in Extended on Windows and Linux for **5 consecutive integration pushes**, with **zero strict-xfail steps and zero workaround steps** (no hand-written data files, no `solid_sprites` patching). Steps: `mesh new` (each launcher template) → author through Studio ops, `mesh author` and MCP: dialogue with a once-reward, shop, chest, pickup, enemy with Health and drops, lever + gate, zone, quest, cutscene, doors to 2D and HD-2D → play via `main.py` with keys through `dispatch_event` → F5 → new process → F9 → `mesh export build` → exported play, save and reload | 6 of 11 elements broken, 1 workaround |
+| **E3** | Critical end-to-end workflow verified | Both parts of the workflow test (5.7) pass on **5 consecutive executed Extended runs** on integration-branch commits, with **zero strict-xfail steps and zero workaround steps** (no hand-written data files, no `solid_sprites` patching). Part (i), the non-GL chain, runs in the `extended` lane on Windows and Linux. Part (ii), the HD-2D leg, runs in the gpu lane. Steps: `mesh new` (each launcher template) → author through Studio ops, `mesh author` and MCP: dialogue with a once-reward, shop, chest, pickup, enemy with Health and drops, lever + gate, zone, quest, cutscene, a door to a 2D room [(i)] and to an HD-2D room [(ii)] → play via `main.py` with keys through `dispatch_event` → F5 → new process → F9 → `mesh export build` → exported play, save and reload | 6 of 11 elements broken, 1 workaround |
 | **E4** | Every listed template starts | The template smoke (5.7): every id `mesh new --template` accepts starts, walks and draws | 5 of 7 |
-| **E5** | Quality gates fail closed and give trustworthy results | Every gate in `03_testing_ci_debt.md` §3.4 has a test showing a nonzero exit with its tool or input absent; CI fails on any un-allow-listed `skipped:` step; baseline growth needs a PR marker (5.1) | mypy-island, 7 "unavailable" sites and 4 silent steps fail open |
+| **E5** | Quality gates fail closed and give trustworthy results | Every gate in `03_testing_ci_debt.md` §3.4 has a test showing a nonzero exit with its tool or input absent. CI fails on any un-allow-listed `skipped:` step. Baseline growth needs a PR marker (5.1). No failing gate is removed without explicit owner approval (cf. D9 R1) | mypy-island, 7 "unavailable" sites and 4 silent steps fail open |
 | **E6** | Lane floors in place | The default suite (both OSes), gpu, extended and acceptance each have a floor ≥ 95% of the current collection, enforced by a contract test (5.2) | default suite: none; gpu: 41% |
-| **E7** | No unresolved known destructive filesystem or save-data problem | #623, #631, #632, #641, #642 and #660 closed. Every legacy delete path confirms and trashes (or is disabled per D3). A re-run of the part A §3 sweep has no CONFIRMED row | 6 open |
-| **E8** | Realistic runtime integration coverage for the **6 high-risk contracts** | Each has a real-window parametrised test in the required `pytest` jobs: **(1)** picker behaviour → creator-visible outcome (100% of `behaviour_guide.GUIDES` rows, or a reasoned exclusion); **(2)** entity removal → listeners released (all subscribers); **(3)** authored facts survive re-entry and save/load; **(4)** a Studio/MCP write → GameWindow opens (cutscene, quest, items); **(5)** live event delivery for runners (ActionList, cutscene) on the real SceneController; **(6)** project-root resolution with the CWD ≠ project (saves, items, cutscenes, legacy file ops). Plus: the fake-only-attribute meta-test is green, and every allow-list entry is tied to an issue | 0 of 6 |
-| **E9** | CI is reliable | Attempt-1 failures not caused by the change: **≤ 2% of the last 50 integration-branch CI pushes** (today 4.1% of 49), and **0 in the last 30 Extended pushes**. Every quarantined test has an issue and an expiry (5.3) | 4.1% / 0% |
-| **E10** | CI and Extended stay manageable | Over the last 30 runs at close: CI push p90 ≤ **15.7 min** and Extended push p90 ≤ **38.7 min** (today's levels; the contract and e2e tests must be offset). Per-merge cost ≤ **345 job-min** (≤ 250 if D9's dedup is approved). Measured with `docs/s1/evidence/ci_timing_analysis.py` | 15.7 / 38.7 / 345 |
-| **E11** | Measured blind spots closed | A re-run of `mutation_probe.py` on its 8 groups gives ≥ 36/40 killed, and all 9 #650 survivors killed | 28/40 |
+| **E7** | No unresolved known destructive filesystem or save-data problem | #623, #631, #632, #641, #642 and #660 closed. Every legacy delete path confirms and trashes (or is disabled per D3). A re-run of the part A §3 sweep has no CONFIRMED row. **#390** (saves replay stale room settings after edits: a save-data correctness issue that predates S1-0 and was not re-verified) is **excluded only by a recorded owner disposition** (D1 b); otherwise it is included | 6 open (+ #390 to disposition) |
+| **E8** | Realistic runtime integration coverage for the **6 high-risk contracts** | Each has a real-window parametrised test in the required `pytest` jobs. **(1)** Picker behaviour → creator-visible outcome (100% of `behaviour_guide.GUIDES` rows, or a reasoned exclusion). **(2)** Entity removal → listeners released (all subscribers). **(3)** Authored facts survive re-entry and save/load. **(4)** A Studio/MCP write → GameWindow opens (cutscene, quest, items). **(5)** Live event delivery for runners (ActionList, cutscene) on the real SceneController. **(6)** Project-root resolution with the CWD ≠ project (saves, items, cutscenes, legacy file ops). Plus: the fake-only-attribute meta-test is green, and every allow-list entry is tied to an issue | 0 of 6 |
+| **E9** | CI is reliable | Attempt-1 failures not caused by the change: **≤ 2% of the last 50 executed CI runs on integration-branch commits** (today 4.1% of 49 pushes), and **0 in the last 30 executed Extended runs** on those commits. Every quarantined test has an issue and an expiry (5.3) | 4.1% / 0% |
+| **E10** | CI and Extended stay manageable | Over the last 30 executed runs at close, using the part C 5.10 budgets as tolerant limits (not today's p90s): **CI push p90 ≤ 16 min** (Linux pytest p90 ≤ 15, Windows shards ≤ 13, verify ≤ 7), and **Extended push p90 ≤ 40 min**. Per-merge cost: **≤ 250 job-min if D9 approves R4**, otherwise **≤ 370 job-min**. That is the estimated ≈ 360 with D9 = no, plus about 3% tolerance, and above today's ≈ 345. 5.9 (shard rebalancing) is exit-required because it offsets the added tests. Measured with `docs/s1/evidence/ci_timing_analysis.py` | 15.7 / 38.7 / 345 |
+| **E11** | Measured blind spots closed | **Each of the 9 #650 mutants is killed by its named new test**, run through `mutation_probe.py` with the group test lists and anchors that 5.5 updates. The overall re-run of the 8-group probe is reported, but not gated, because its anchors move with the code | 9 of 9 survive |
 | **E12** | Owner hands-on acceptance (if D13 = yes) | The owner authors the E3 project once in the **Studio GUI** and plays it, since agents may not run visible GUI automation. Pass or fail is the owner's call; no feel or quality pass is implied otherwise | not done |
 
-**Not required for exit:** S1-6 and S1-7. Each open P2 or P3 is carried into the post-S1 backlog with its roadmap reference.
+**Not required for exit:** S1-6, S1-7 and 5.8. Each open P2 or P3 is carried into the post-S1 backlog with its roadmap reference. If you choose it under D1 a, #643 moves into S1-3.
 
 ---
 
@@ -518,6 +559,7 @@ S1 is **done** when every criterion below holds at one integration commit. Techn
 4.1 facts ──► 4.2 #620, 4.3 #639b (also after 3.3), 4.4 #636 (persistence before grant)
 3.4 #640, 3.1 #651, 4.5 #637, S1-5 items: independent
 Parallel PRs on puzzle_behaviours.py (3.3, 4.3, 4.4): test the combined merge tree
+S1-4 merged ──► 7.6 RUF100 ; 3.0 + 5.6 + 5.7 (added test time) ──► 5.9 shard rebalance (E10 offset)
 ```
 
 ---
@@ -530,7 +572,7 @@ Parallel PRs on puzzle_behaviours.py (3.3, 4.3, 4.4): test the combined merge tr
 | F3 debug mode in shipped games (from #660) | P0/P1 candidate (suspected) | 1.2 | not filed; file on verification |
 | #612 | P1 CI safeguard (confirmed) | 1.3 | PR #661 in flight |
 | #659 | investigation (not a defect) | deferred: owner said no action authorised; measure after S1 | open |
-| #622 | P1 (confirmed) | 1.4 | PR #635 approved, blocked on #612 |
+| #622 | P1 (confirmed) | 1.4 | PR #635 approved by the independent reviewer agent at `8f83a161` (coordinator's log; no GitHub review object), blocked on #612 |
 | #618 | historical | 2.1 (real-window re-verification) | closed (#628) |
 | #619 | historical | — (V1/V2/V4 survivors in 5.5) | closed (#625) |
 | #641 | P1 (confirmed) | 2.1 | open |
@@ -552,7 +594,7 @@ Parallel PRs on puzzle_behaviours.py (3.3, 4.3, 4.4): test the combined merge tr
 | #627 | P2 (confirmed without items; suspected when full) | 4.4 | open |
 | #637 | P2 (confirmed) | 4.5 | open |
 | #638 | P3 (suspected) | 4.5 | open |
-| #624 | A historical (#633); B P2/P3; C/D P2 (confirmed) | 5.1 | open |
+| #624 | A historical (#633); B P2/P3; C/D P2 (confirmed) | 5.1 (RUF100 moved to 7.6) | open |
 | #648 | P2 (confirmed) | 5.2 | open |
 | NEW-15 ownership-race flake; replays-job flake | suspected | 5.3 | tracked in #649 |
 | #649 | P3 (confirmed) | 5.4 | open |
@@ -603,5 +645,8 @@ Parallel PRs on puzzle_behaviours.py (3.3, 4.3, 4.4): test the combined merge tr
 | #359 (stale replay goldens), #394 (release pipeline verify-demo), #466 (test-order dependence) | triage in 5.3 (gate trust): if still present, fold into 5.1 or 5.3 |
 | #357 (pip-installed Mesh imports `tooling/`) | with 6.9 |
 | #392 (op registry, module sizes, placement maths) | 7.5 for the snap maths; the rest deferred |
-| #373 (Windows pytest-fast budget) | check against 5.8 (R1 removes pytest-fast from `verify`) |
-| #603, #461, #460, #458, the older HD-2D items (#375, #381, #390, #391, #393, #396, #365), #398, #462, #449, #422 | deferred: feature or visual backlogs, not S1 reliability; #422 and #449 are roadmap trackers that S1 supersedes for their reliability parts |
+| #373 (Windows pytest-fast budget) | stays open. If D9 approves removing the pytest-fast ceiling (5.8 d), #373 would close **by removal, not by a fix**; if the ceiling moves to a new home, #373 moves with it |
+| #390 (game saves embed whole-room settings: heavy, and replay stale settings after edits) | **save-data correctness, not backlog.** Not re-verified in S1-0. An explicit E7 exclusion by owner disposition (D1 b), or included in S1 if you choose |
+| #391 (Studio reloads the whole HD-2D room per edit; two model caches; AI scatter resolves footprints against the wrong root) | The wrong-root part belongs to the 2.3 CWD/root family: verify it there and fold it in if present. The reload and cache parts are performance, deferred |
+| #393 (a bad HD-2D key turns the whole room 2D) | **Load robustness:** it degrades to 2D with no data loss. Not re-verified; deferred post-S1 (candidate for S1-6 if you want it) |
+| #603, #461, #460, #458, the older HD-2D items (#375, #381, #396, #365), #398, #462, #449, #422 | deferred: feature or visual backlogs, not S1 reliability; #422 and #449 are roadmap trackers that S1 supersedes for their reliability parts |

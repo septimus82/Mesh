@@ -5,27 +5,30 @@
 ## 1. Conclusion first
 
 **The problem is where the tests point, not how many there are.**
-- Mesh has 13,971 tests, but about 5% of the tests that gate a PR use a real window. 3,717 tests use a fake window with no real counterpart, and the whole suite has only 20 spec'd doubles.
-- Every P1 that S1-0 found sat on a seam the tests skip:
+- Mesh has 13,971 tests in 1,996 files. Only 146 files are real-window files: by part C's definition, a file that constructs a GameWindow, the headless editor, or worker/Studio processes, or holds a `gl` test. About 680 non-GL tests in those files (≈ 5%) gate every PR.
+- 3,717 tests sit in files that use a fake window and no real window (a per-file classification). The whole suite has only 20 spec'd doubles.
+- Every P1 that S1-0 found sat on a seam the tests skip (part C proved the pattern on 10 case studies; the later P1s are mapped in `10_health_report.md` §1):
   - event delivery;
   - removal;
   - room re-entry;
   - save/load across rooms;
   - Studio → runtime;
-  - the project root.
+  - the project root;
+  - real key input in a player launch (#660).
 
 **The proposal adds confidence where it is missing and removes duplicate work:**
 - **Add about 30 real-runtime contract rows** (6 contracts), **1 end-to-end creator workflow test**, **1 template smoke** and **about 10 mutation-proven assertions**. That is roughly 60 tests, not thousands.
 - **Make every gate fail closed**, put **floors** on every lane, and adopt a written **flake policy**.
-- **Remove duplicate execution** (R1–R4) and rebalance shards.
+- **Remove duplicate execution** (R2–R4), and rebalance shards (B1, exit-required).
+- **Keep the pytest-fast hard ceiling.** R1 is only a candidate, and only if the ceiling moves with it (§3).
 
 **Net effect if everything here is approved:**
 
 | Measure | Today | After S1 (all approved) | After S1 with D9 = no (B1 rebalancing still applied) |
 |---|---|---|---|
 | CI push wall, p90 | 15.7 min | ≈ 12–14 min | ≈ 15–15.7 min (meets E10 only because B1 splits Linux pytest; without B1, ≈ 16.7, **breaching E10**) |
-| Extended push wall, p90 | 38.7 min | ≈ 35 min | ≈ 35 min (the e2e test is off the critical path) |
-| Job-minutes per merge | ≈ 345 | ≈ 200–220 | ≈ 360 |
+| Extended push wall, p90 | 38.7 min | ≈ 35–36 min (B1 rebalancing −3 to −4 min; the gl e2e leg adds about 1 min to a gpu shard, not yet measured) | ≈ 35–36 min |
+| Job-minutes per merge | ≈ 345 | ≈ 210–230 (≈ 200 if R1 is also approved with its ceiling kept) | ≈ 360 (E10 limit with D9 = no: ≤ 370) |
 | Real-runtime tests on the six high-risk contracts | 0 of 6 contracts | 6 of 6 | 6 of 6 |
 | Mutation kill (40-mutant probe) | 28/40 | ≥ 36/40 | ≥ 36/40 |
 | Non-change CI failures | ≈ 5% (ep05 4 of 7) | ≤ 2% (target E9) | ≤ 2% |
@@ -58,17 +61,17 @@ The wall figures are estimates from part C's medians, since CI records no per-te
 | **A5** | **Two cross-component smokes:** a cutscene step on the real SceneController; MCP cutscene write → `GameWindow` | #622 B, #642 | `pytest` | +≈ 3 s | 5.6 | no |
 | **A6** | **Fact persistence and CWD contracts:** re-entry and save/load of authored facts; CWD ≠ project for saves, items, cutscenes and legacy file ops | #620, #636, #639, #623, #641 | `pytest` | +≈ 10 s | 2.1, 2.3, 4.1 | no |
 | **A7** | **Mutation-survivor assertions** (about 10) | Q1, Q3, Q5, O1, O3, O4, V1, V2, V4 | `pytest` | **< 2 s** | 5.5 | no |
-| **A8** | **E2E creator workflow test** (`e2e` marker, which has no users today): `mesh new` → Studio ops, `mesh author` and MCP authoring of every picker feature → `main.py` play with keys through `dispatch_event` → F5 → new process → F9 → export → exported play, save and reload. Promoted from `e2e_creation_to_export_chain.py` and the s1v scripts | The whole create → export chain (E3) | `extended`, both OSes | **+≈ 2–4 min per OS in job-min (estimate); 0 on Extended wall** (the `extended` job is 3–4.5 min against a 37 min gpu critical path) | 5.7 | no |
-| **A9** | **Template smoke:** every `--template` id creates, starts, walks and draws | #656 class (E4) | `extended` | +≈ 1 min job-min; 0 wall | 5.7 | no |
+| **A8** | **E2E creator workflow test**, in two parts. **(i)** Non-GL chain (`e2e` marker, which has no users today): `mesh new` → Studio ops, `mesh author` and MCP authoring of every picker feature → a door to a 2D room → `main.py` play with keys through `dispatch_event` → F5 → new process → F9 → export → exported play, save and reload. **(ii)** HD-2D leg (a door into an HD-2D room, walk, draw, return): marked `gl`, so it runs only in the gpu lane with `MESH_GL_SMOKE`, per repo policy. Promoted from `e2e_creation_to_export_chain.py` and the s1v scripts | The whole create → export chain (E3) | (i) `extended`, both OSes; (ii) gpu lane | (i) +≈ 2–4 min job-min per OS (estimate); expected to leave Extended wall unchanged, since the `extended` job would reach about 6–9 min against the 30–37 min gpu shards, but not measured. (ii) +≈ 1 min in one gpu shard per OS; wall impact depends on B1's placement and is not established | 5.7 | no |
+| **A9** | **Template smoke:** every `--template` id creates, starts, walks and draws (the `hd2d_rpg` draw check sits in the gl part) | #656 class (E4) | `extended` (+ gpu for HD-2D) | +≈ 1 min job-min; wall expected unchanged (not measured) | 5.7 | no |
 | **G1** | **Gates fail closed:** mypy-island reads its returncode; "tooling unavailable" exits 2; silent missing-input steps report `skipped:` and CI fails on un-allow-listed skips | #624 C/D, the mypy-island probe | `verify` | +≈ 5 s | 5.1 | no |
-| **G2** | **Baseline growth checked against the merge base**; the mypy count guard reads the committed baseline; RUF100 on | #624 B/C | `verify` | +≈ 5 s | 5.1 | no |
+| **G2** | **Baseline growth checked against the merge base**; the mypy count guard reads the committed baseline. RUF100 has moved to roadmap 7.6, after S1-4, because it edits about 2,355 `noqa` lines across `engine/`, `mesh_cli/` and `mesh_net/` and would conflict with the fix PRs | #624 B/C | `verify` | +≈ 5 s | 5.1 | no |
 | **G3** | **Lane floors:** gpu 256 → about 600; Windows shard check `--min-selected` about 13,500; Linux JUnit plus a floor; a contract test keeps every floor within 5% of collection | #648 (E6) | all | ≈ 0 | 5.2 | no |
 | **G4** | **Silent gaps:** `.[mcp]` in the Linux pytest job; delete `pyrightconfig.json`; replays print failing cases | #649 | `pytest`, `replays` | +≈ 10 s install | 5.4 | no |
-| **R1** | **Fast tier once:** verify-all in CI's `verify` jobs runs with `MESH_SKIP_PYTEST_FAST=1`, because the pytest job already ran all 6,292 fast tests. The fast-tier timing budget moves to a report-only step fed from the pytest job's durations | duplicate execution | `verify` | **−≈ 3.6 job-min per run** (≈ −10 per merge); off the critical path | 5.8 | **D9** |
+| **R1** | **Fast tier once (only with its gate preserved).** Today the pytest-fast step in verify-all is a **failing gate**: it fails over a hard ceiling of 130.4 s (#427, part C §3.4), and it exercises the fast tier as its own collection (`-m fast` skips modules without fast tests, `conftest.py:244-255`). Skipping it in CI's `verify` jobs (`MESH_SKIP_PYTEST_FAST=1`) is acceptable only if both move to a new home: a cheap `pytest -m fast --collect-only` with a count floor, plus a **failing** ceiling computed from the pytest job's durations for fast-marked tests. That ceiling needs recalibration, because durations inside the full suite differ from a standalone run. Making the budget report-only would **remove a failing gate**: that needs your explicit approval, and #373 would then close by removal, not by a fix | duplicate execution | `verify` | **−≈ 3.6 job-min per run** (≈ −10 per merge); off the critical path. Recommended: decline, unless the preserved-ceiling variant is built | 5.8 | **D9** (gate change) |
 | **R2** | **Second verify-all out of the pytest job:** first measure the `verify_all_audit_artifacts` fixture (17 test files) with `--durations`. If it costs minutes, feed those audit tests the `verify` job's reports, or unit-test the audits on fixtures | duplicate execution on the critical path | `pytest` | **est. −1.5 to −3 min wall per OS** (measure before deciding) | 5.8 | **D9** |
 | **R3** | Fold the `web-smoke` job into verify-all's identical steps, or the reverse | duplicate execution | CI | −≈ 0.5 job-min | 5.8 | D9 |
 | **R4** | **Push-side dedup:** skip a push run's jobs only when a green PR run tested the **identical tree** (the merge commit's tree hash equals the tested merge ref's tree) at the same workflow revision, and link that run as evidence, as the #344 rule does. If the base moved, the trees differ and the run happens, which keeps the #600 + #601 combined-tree protection | the same tree tested twice | CI and Extended | **up to −58 (CI) and −104 (Extended) job-min per merge** when the PR was current (≈ −45% of per-merge cost) | 5.8 | **D9** |
-| **B1** | **Rebalance the Windows gpu plan** from measured timings (shard 2/2 takes 37.2 min, shard 1/2 29.6); optionally 3 shards. Optionally shard Linux pytest in two | critical path | Extended, CI | Extended wall **−3 to −4 min** (balanced; ≈ −12 with 3 shards, +≈ 3 job-min); CI wall −1 to −2 min (+≈ 2 job-min) | 5.8 | no (no change to what runs) |
+| **B1** | **Rebalance the Windows gpu plan** from measured timings (shard 2/2 takes 37.2 min, shard 1/2 29.6); optionally 3 shards. **Shard Linux pytest in two.** **Exit-required:** it is the offset that keeps E10 within budget | critical path | Extended, CI | Extended wall **−3 to −4 min** (balanced; ≈ −12 with 3 shards, +≈ 3 job-min); CI wall −1 to −2 min (+≈ 2 job-min) | 5.9 | no (no change to what runs) |
 | **P1** | **Flake policy** (§5) and a quarantine mechanism | #612-class gate trust (E9) | all | ≈ 0 | 5.3 | **D10** |
 | **P2** | **Lane budgets** in the existing report-only `timing rolling check`: pytest (ubuntu) p90 ≤ 15 min; Windows shards ≤ 13; verify ≤ 7; Extended wall ≤ 40. A PR adding > 30 s to a required lane names its offset or justification | slow growth | report-only | ≈ 0 | 5.8 | no |
 | **C1** | **Retire document-shape tests:** the 24 `*_content_contract.py` files (246 tests) assert JSON values that nothing reads (#640). Replace them with one data-driven content check that loads each chapter in the real runtime for its key interactions, or rely on verify-all's content audit for shape | maintenance, false confidence | `pytest` | small − | 6.x / opportunistic | no |
@@ -77,17 +80,17 @@ The wall figures are estimates from part C's medians, since CI records no per-te
 - ≈ +55–60 s wall per OS (A2–A7, G1, G2, G4);
 - offset by R2 (−1.5 to −3 min) and B1 (CI −1 to −2 min).
 
-Without R2 or the Linux shard split, CI p90 rises by about 1 minute and E10 would need an offset, so B1's Linux split becomes mandatory.
+Without R2, the Linux shard split in B1 is what keeps CI p90 within E10's ≤ 16 min. That is why B1 (roadmap 5.9) is exit-required.
 
 ## 4. Lane map after S1 (what runs where)
 
 | Lane | Runs | Changes in S1 |
 |---|---|---|
 | `pytest` (required, every PR and push, both OSes) | default suite (`not slow and not e2e`) | + contracts A2–A7; + floor (G3); − in-suite verify-all if R2 approved; Linux possibly 2 shards (B1) |
-| `verify` (required) | verify-all, release bundle, baseline diff | − fast tier (R1, if approved); gates fail closed (G1, G2) |
+| `verify` (required) | verify-all, release bundle, baseline diff | the fast tier and its failing 130.4 s ceiling stay, unless D9 approves R1 with the ceiling moved; gates fail closed (G1, G2) |
 | `acceptance`, `installed`, `replays`, `arcade3-canary`, `web-smoke` | unchanged | `replays` prints failing cases (G4); `web-smoke` folded into verify-all (R3, if approved) |
-| Extended `extended` (every push and dispatch) | `(slow or e2e) and not gl` | + e2e workflow (A8) + template smoke (A9); floor stays equal to the count |
-| Extended `gpu` (2 shards per OS) | `gl` | rebalanced (B1); floor 256 → about 600 (G3) |
+| Extended `extended` (every push and dispatch) | `(slow or e2e) and not gl` | + e2e workflow part (i) (A8) + template smoke (A9); floor stays equal to the count |
+| Extended `gpu` (2–3 shards per OS) | `gl` | rebalanced (B1); floor 256 → about 600 (G3); + the e2e HD-2D leg (A8 ii) |
 | Extended `quarantine` (new, report-only) | quarantined tests with live issues | §5 |
 | Push runs (CI, Extended) | the merge commit | skipped only on proven identical-tree evidence (R4, if approved) |
 
@@ -118,9 +121,9 @@ Without R2 or the Linux shard split, CI p90 rises by about 1 minute and E10 woul
 | E3, E4 (e2e, templates) | the Extended `extended` lane result over 5 consecutive pushes | each stage boundary |
 | E5, E6 (gates, floors) | their own contract tests in `pytest` and `verify` | every run |
 | E8 (6 contracts) | test ids present and green; meta-test allow-list ⊆ open issues | every run |
-| E9 (flakes) | `docs/s1/evidence/fetch_ci_history.sh` + `ci_timing_analysis.py` (attempt-1 failures classified from logs) | each stage boundary |
-| E10 (time, cost) | `ci_timing_analysis.py` (median, p90, job-min per merge over 30 runs) | each stage boundary |
-| E11 (mutation) | `docs/s1/evidence/mutation_probe.py` + `mutation_run.sh` (one process at a time) | once at close |
+| E9 (flakes) | `docs/s1/evidence/fetch_ci_history.sh` + `ci_timing_analysis.py` (attempt-1 failures classified from logs; executed runs only, with an R4-skipped push counted through its linked PR-side run) | each stage boundary |
+| E10 (time, cost) | `ci_timing_analysis.py` (median, p90, job-min per merge over 30 executed runs; skipped runs excluded) | each stage boundary |
+| E11 (mutation) | each named #650 mutant killed by its named test, via `docs/s1/evidence/mutation_probe.py` (test lists and anchors updated in 5.5) + `mutation_run.sh` (one process at a time) | once at close |
 
 ## 8. What this proposal does not do
 

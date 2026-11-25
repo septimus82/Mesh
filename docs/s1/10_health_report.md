@@ -44,35 +44,46 @@ The s1v verification repeated these on every playable template and on the export
 | **P0** | **1** | #660: F4 opens the legacy editor in exported games, and Edit > Delete then permanently deletes game files. The fix is in flight (#662) |
 | **P1** | **12 product + 1 CI safeguard** | #620, #622, #623†, #631, #636, #639, #640, #641, #642, #651, #652, #654†; CI: #612 |
 | **P2** | 14 | #621, #624 (B–D), #627, #632, #637, #643, #644, #645, #648, #650, #653, #655, #656, #658 |
-| **P3** | 6 | #638 (suspected), #646, #647, #649, #657, #663 |
+| **P3** | 5 confirmed | #646, #647, #649, #657, #663 |
+| Suspected (tracked) | 1 | #638 (P3 if confirmed) |
 
 † The severity is disputed between reviewers. See §4 and the decision brief.
 
 **Fixes in flight:**
 - #612: GC isolation, draft PR #661;
-- #622: PR #635, approved in review, still a GitHub draft, and blocked on #612;
+- #622: PR #635. The independent reviewer agent approved it at `8f83a161`; the approval is recorded in the coordinator's log, and there is no GitHub review object. The PR is still a GitHub draft and is blocked on #612;
 - #660: draft PR #662.
 
 **Already merged:** #625 (#619), #628 (#618), #633 (#624 phase A) and #634 (the #612 diagnostic).
 
-**Why "supposedly completed systems never worked together"** comes down to five recurring test patterns (§3). Every P1 sat behind one of them:
+**Why "supposedly completed systems never worked together"** comes down to five recurring test patterns (§3):
 - the fake invents the API;
 - the test calls the hook it assumes the runtime calls;
 - the test asserts the document or internal state, not the outcome;
 - a negative branch is missing;
 - a parallel runtime is tested instead of the live one.
 
-The suite is large (13,971 tests). But about 5% of the tests that gate a PR use a real window. 3,717 tests use a fake window with no real-window counterpart, and only 20 test doubles in the whole suite are spec'd.
+All 10 defects that part C analysed as case studies sat behind one of these patterns (#619, #620, #622 A/B, #636, #637, #639, #640, #641, #642). The P1s found after that analysis were not studied the same way. The seam each one slipped through:
+- **#651:** tests build Health and Combat directly, bypassing the factory, and the real-window arena always writes `hp`. The construction path was never exercised.
+- **#652 and #623:** tests run from the engine checkout, whose current folder has `items.json` and `saves/`. That environment masks both.
+- **#654:** vendor tests call `handle_buy_request` directly; nothing opens a shop through interaction.
+- **#660:** `test_legacy_ui_cleanup.py` calls `_toggle_editor` on fake windows instead of sending a real key (the test calls the hook it assumes the runtime calls).
+
+The suite is large: 13,971 tests in 1,996 files.
+- **Real-window files:** part C classifies a file as real-window when it constructs a GameWindow, the headless editor, or worker/Studio processes, or holds a `gl` test. 146 files qualify, holding 1,298 tests.
+- **Of those, about 680 non-GL tests gate every PR**, roughly 5% of the suite.
+- **3,717 tests sit in files that use a fake window and no real window** (a per-file classification).
+- **Only 20 test doubles in the whole suite are spec'd.**
 
 **The repairs are bounded. No broad rewrite is warranted.**
-- Every confirmed defect has a root cause in one or two functions, and a fix of S or M size (`12_stabilization_roadmap.md`).
+- Every confirmed defect has its root cause in a small, bounded set of functions. The largest are #651 (three causes across seven files) and the #623 family (five modules). Each has a fix of S or M size (`12_stabilization_roadmap.md`).
 - The architectural risks (duplicate runtimes, the god-facade window, the change hub in `project_ops`) are real. But each one has a targeted containment step, and the evidence doesn't show that targeted repair is inadequate anywhere.
 
 **Verdict:** Mesh is **not yet reliable enough to finish a game with**. It can get there in a bounded S1:
 - 7 stages and about 55 small PRs, of which about 25 are the P0/P1 core;
 - a measurable finish line (`12_stabilization_roadmap.md` §9).
 
-The core of it is about 13 P1 fixes, a shared real-runtime contract test, and one end-to-end workflow test that runs in Extended.
+The core of it is about 13 P1 fixes, a shared real-runtime contract test, and one end-to-end workflow test. That test runs in Extended; its HD-2D leg runs in the gpu lane, because it needs GL.
 
 ---
 
@@ -80,7 +91,7 @@ The core of it is about 13 P1 fixes, a shared real-runtime contract test, and on
 
 | Area | Evidence |
 |---|---|
-| `mesh new` (5 of 7 templates start, walk and draw) | part D §3; s1v `make_out.txt` |
+| `mesh new` (5 of 7 templates start, walk and draw) | part D §3 (`scan_project_templates.py`); s1v `evidence/s1v/s1v_make.py` and the #652 issue comment. The make script's output file is not committed (`*_out.txt` is git-ignored) |
 | Studio project model: rooms, imports (picture, tileset, sound, .glb), model reimport, HD-2D kit | part D W1/W2 |
 | Authoring transaction (`mesh author apply`, 48 changes) and MCP `apply_ops` writes | part D W1 |
 | Doors between 2D and HD-2D rooms; HD-2D room walks and draws | part D W3 |
@@ -102,7 +113,7 @@ Each significant finding carries one class: **Confirmed defect**, **Architectura
 
 | Issue | Finding | Sev (final) | Reach that carries the severity | Root-cause theme |
 |---|---|---|---|---|
-| #660 | F4 opens the legacy editor in exported and `main.py` games; Edit > Delete then unlinks `config.json`, assets and rooms | **P0** | every exported game, by one key | gate on a route no key uses (#347) |
+| #660 | F4 opens the legacy editor in exported and `main.py` games. Edit > Delete then unlinked a sprite and `config.json` (reproduced). The room files are exposed to the same delete; deleting them was not shown | **P0** | every exported game, by one key | gate on a route no key uses (#347) |
 | #631 | Legacy Edit > Delete / palette "Delete Selected": no confirmation, no trash. In a real window the Del key does nothing (challenge correction) | P1 | legacy editor; through #660, exports | legacy file ops |
 | #641 | Legacy file ops read `window.repo_root`, which never exists. The safe operations are inert; the plain ones act on the CWD | P1 | legacy editor | fake-only contract, CWD |
 | #623 | Non-exported saves resolve against the CWD, so a project switch or `run_game(project_root=)` overwrites another project's slot | P1 (disputed: P2) | checkout project browser, legacy editor, public `run_game` API | CWD-relative paths |
@@ -218,7 +229,7 @@ Each is accepted by design or documented:
 | 1 | Legacy rename overwrites the destination (P1) | #618 | **Historical:** fixed by #628, issue closed. Real-window reach waits on #641 | closed | re-verified in 2.1 |
 | 2 | Save slots cross project boundaries (P1) | #623 | **Confirmed, open** | P1 recommended (challenge: P2) | 2.3 |
 | 3 | Reward chest grants nothing (P1) | #636 (supersedes #627's chest part) | **Confirmed, open** | P1 | 4.4 |
-| 4 | Authored actions and cutscene steps fail (P1) | #622 | **Confirmed.** Fix PR #635 approved, blocked on #612 | P1 | 1.4 |
+| 4 | Authored actions and cutscene steps fail (P1) | #622 | **Confirmed.** Fix PR #635 was approved by the independent reviewer agent at `8f83a161` (coordinator's log; no GitHub review object) and is blocked on #612 | P1 | 1.4 |
 | 5 | One quest event advances two stages (P2) | #621 | **Confirmed, open** | P2 (agrees with #629) | 6.1 |
 | 6 | One-shot dialogue reward resets (P2) | #620 | **Confirmed, open** | **P1** (disagrees with #629: it breaks an explicit Studio promise on the main path, without limit) | 4.2 |
 | 7 | Removed entities keep handling events (P2) | #637 | **Confirmed, open**; does not multiply | P2 (agrees) | 4.5 |
@@ -229,7 +240,28 @@ Each is accepted by design or documented:
 - #629 made no renderer measurements;
 - its "test doubles supply missing interfaces" warning is the central finding of this report.
 
-**#629's remediation order** is followed, except that #660 (P0) now comes first.
+**How the roadmap differs from #629's remediation order:**
+
+#629's order was:
+1. #618;
+2. #623;
+3. #636;
+4. #622;
+5. #621, #620 and #637;
+6. the gates (#624).
+
+The roadmap departs from it as follows:
+
+| Change | Why |
+|---|---|
+| #660 (P0, new) comes first (1.1) | It is the only P0 |
+| #618 is done (#628), but its real-window re-verification moves into the legacy-editor item (2.1) with #641 and #631 | #628's fix is unreachable in a real window until #641 lands |
+| #622 (1.4) moves ahead of #623 (2.3) and #636 (4.4) | Its fix is ready and blocked only on #612 |
+| #636 moves to S1-4 (4.4), after #652 (3.2) and the facts mechanism (4.1) | Without persistence, a working grant creates a farmable reward. Item grants need `items.json` in created projects |
+| #620 and #637 stay together in S1-4 (4.2, 4.5) | #620 now depends on the facts mechanism |
+| #621 moves to S1-6 (6.1), which is not exit-required | It is P2, and its fix belongs with the quest-manager convergence |
+| The gates (#624 B–D) run in parallel in S1-5 instead of last | They touch no `engine/` file |
+| New P1s are interleaved through S1-2 and S1-3: #641, #642, #651, #652, #639, #640, #654 | Found after #629 |
 
 **Disposition of draft PR #629:** **merge it as historical evidence**, together with or after the S1-0 docs. It is docs-only, faithfully records owner-supplied evidence with its provenance (audited at `49686331`), and is cited here. This report's table carries the reconciliation, so the audit document needs no edits. Alternative: close it as superseded. That loses the in-repo record of an owner-supplied input, so it is not recommended. See decision D8.
 
@@ -252,8 +284,9 @@ Each is accepted by design or documented:
 | Measure | Value | Source |
 |---|---|---|
 | Tests / files | 13,971 / 1,996 | part C §1.1 |
+| Real-window test files: a file that constructs a GameWindow, the headless editor, or worker/Studio processes, or holds a `gl` test | 146 of 1,996 files (1,298 tests) | part C §1.2. This is the definition used throughout S1. Part B's narrower scan counted only GameWindows built through helpers it recognises: 49 of 2,027 files |
 | Non-GL real-window tests gating every PR | ≈ 680 (≈ 5%) | part C §1.2 |
-| Fake-window tests with no real-window counterpart | 3,717 (26.6%) | part C §1.2 |
+| Tests in files that use a fake window and no real window (per-file classification) | 3,717 (26.6%) | part C §1.2 |
 | Spec'd doubles | 20 sites in 12 files | part C §1.2 |
 | Window attributes production reads that only fakes provide | 15 | part B §1.1 |
 | Mutation kill rate (40 hand mutants, 8 modules) | 70% own files, 75% wider; quests 1/5 | part C §2 |
@@ -293,7 +326,28 @@ Collected from each part, the s1v verification and this synthesis. **No feel, vi
   - `30d44f27` (scrub);
   - this synthesis.
 - **Evidence scripts** are in `docs/s1/evidence/` (exit 1 while the defect is present). CI data is in `evidence/data/`. s1v scripts and outputs are in `evidence/s1v/`.
-- **Evidence slip (disclosed):** commit `035d0280` briefly contained the owner's Windows username inside temp paths in the copied s1v outputs (`evidence/s1v/play_*.txt`). Commit `30d44f27` replaced it with `<home>`, and the current tree contains no occurrence. **It remains in the history of that one commit**, because rewriting history was not authorised. If this branch is ever pushed or merged, the owner may want to squash or rewrite that commit first. The branch has not been pushed.
+- **Evidence slip (disclosed; corrected after review):**
+  - Commit `035d0280` contains the owner's Windows username inside temp paths in 7 copied s1v outputs:
+    - `docs/s1/evidence/s1v/play_export1.txt`;
+    - `play_export2.txt`;
+    - `play_n_adventure.txt`;
+    - `play_n_blank.txt`;
+    - `play_n_hd2d_rpg_2.txt`;
+    - `play_n_monster.txt`;
+    - `play_n_starter.txt`.
+  - Commit `30d44f27` replaced it with `<home>`, and **the current tree is clean**.
+  - **The branch is pushed to origin and the repository is public.** So the username is publicly readable today through commit `035d0280`. An earlier version of this section wrongly said the branch was unpushed.
+  - Rewriting history was not authorised in S1-0. Whether to rewrite or delete the branch is owner decision **D15** (`14_owner_decision_brief.md`).
+  - GitHub may keep serving a commit by its SHA after a force-push makes it unreachable, so a full purge may need a request to GitHub Support. Existing clones and forks keep their copies regardless.
+- **Pre-existing occurrences, not from S1:** the same username appears in **6 tracked files on the integration branch** that predate S1. 3 of them are also on `main`. The username itself is not reproduced here.
+  - `docs/map_collision_paint.md` (also on `main`);
+  - `docs/monster_rpg_roadmap.md` (also on `main`);
+  - `docs/reviews/milestone16_stage5b_evidence/pipeline_check.json`;
+  - `docs/reviews/milestone4_screens/report.json`;
+  - `docs/reviews/milestone9_test_audit.md`;
+  - `tests/test_rmmz_passability_import.py` (also on `main`).
+
+  Found with `git grep -l -i <username> HEAD` and `origin/main`. The reviewer counted 5; this check found 6. A scrub PR for these files is offered as an owner choice in D15. Their earlier history would still contain the username unless history is rewritten.
 - **Not this branch's evidence:**
   - #660's repro logs (coordinator);
   - the triage repro scripts (`audit/deep-audit-triage:docs/audits/deep_audit_2026_11/repro/`);

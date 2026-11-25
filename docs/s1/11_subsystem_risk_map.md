@@ -19,7 +19,7 @@
 4. **Project scaffolding and data.**
 5. **Persistence of authored state.**
 
-Each of these breaks a creator workflow today. None needs a rewrite: every confirmed defect traces to one or two functions.
+Each of these breaks a creator workflow today. None needs a rewrite: every confirmed defect traces to a small, bounded set of functions. The largest are #651 (three causes across seven files) and the #623 family (five modules).
 
 | Subsystem | Sev | Confirmed defects (open) | Architectural risks | Coupling and change-coupling evidence | Ownership clarity | Test reality (real runtime vs mock) | Reliability |
 |---|---|---|---|---|---|---|---|
