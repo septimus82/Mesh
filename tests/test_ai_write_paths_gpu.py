@@ -46,6 +46,8 @@ def test_ai_job_typed_into_the_console_of_a_studio_play_test_changes_nothing(tmp
 
     driver = StudioDriver(root)
     studio, window, key = driver.studio, driver.window, driver.arcade.key
+    # Studio runs as ``mesh edit`` launches it (engine.game_launch): a dev launch, where the console opens (#664)
+    setattr(window.engine_config, "_mesh_launch_mode", "editor")
     try:
         authoring.apply(studio.project, [{"op": "place_prefab", "prefab": "person", "x": 64, "y": 64},
                                          {"op": "rename_entity", "entity_id": "@0", "name": "Unsaved Warden"}])
