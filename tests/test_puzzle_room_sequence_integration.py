@@ -75,7 +75,7 @@ def _build_hint_plaque(window: MagicMock):
     plaque.mesh_tags = []
 
     runner = DialogueRunnerBehaviour(plaque, window, **config)
-    plaque.behaviours = [runner]
+    plaque.mesh_behaviours_runtime = [runner]
 
     return plaque, runner
 

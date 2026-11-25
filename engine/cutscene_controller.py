@@ -140,10 +140,22 @@ class CutsceneController:
         return True
 
     def _find_entity(self, identifier: Any):
+        """The scene's sprite named ``identifier`` (SceneController.find_entity), or None.
+
+        A target that isn't in the scene is a guarded no-op, as every step has always treated it: the step ends
+        (start_dialogue then looks for the dialogue on any sprite) and a warning names it. Errors from the lookup
+        itself are not caught."""
         sc = getattr(self.window, "scene_controller", None)
         if sc is None:
             return None
-        return sc.find_sprite(identifier)
+        sprite = sc.find_entity(identifier)
+        if sprite is None:
+            logger.warning(
+                "[Mesh][Cutscene] '%s': target %r is not in the scene",
+                getattr(self.active, "id", "?"),
+                identifier,
+            )
+        return sprite
 
     def _step_move_entity(self, data: dict[str, Any], dt: float) -> bool:
         target_name = data.get("entity") or data.get("target")
@@ -233,7 +245,7 @@ class CutsceneController:
             candidates = [target] if target is not None else list(getattr(getattr(self.window, "scene_controller", None), "all_sprites", []) or [])
             try:
                 for entity in candidates:
-                    for behaviour in getattr(entity, "behaviours", []):
+                    for behaviour in getattr(entity, "mesh_behaviours_runtime", None) or []:
                         if type(behaviour).__name__ != "DialogueRunnerBehaviour":
                             continue
                         if dialogue_id and getattr(behaviour, "dialogue_id", "") != dialogue_id:

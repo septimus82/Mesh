@@ -87,7 +87,7 @@ def _build_hint_plaque(window: MagicMock):
     plaque.mesh_tags = []
 
     runner = DialogueRunnerBehaviour(plaque, window, **config)
-    plaque.behaviours = [runner]
+    plaque.mesh_behaviours_runtime = [runner]
 
     return plaque, runner
 
@@ -104,7 +104,7 @@ def _build_timer(window: MagicMock):
     timer_entity.mesh_tags = []
 
     timer = TimerBehaviour(timer_entity, window, **config)
-    timer_entity.behaviours = [timer]
+    timer_entity.mesh_behaviours_runtime = [timer]
 
     return timer_entity, timer
 

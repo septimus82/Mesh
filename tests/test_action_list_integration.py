@@ -147,7 +147,7 @@ class TestTriggerActionListIntegration:
             timer_id="my_timer",
         )
 
-        action_entity.behaviours = [timer]
+        action_entity.mesh_behaviours_runtime = [timer]
 
         # Create action runner that starts the timer
         action_runner = ActionListRunnerBehaviour(
