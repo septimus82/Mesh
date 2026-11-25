@@ -18,10 +18,12 @@ carries the tick Feedback reckons (one estimate, as the arenas send). ``--depth`
 (mesh_net.scene_room.DEPTH, owner decision OD11), with ``--hold`` and ``--drain``. ``walking`` (M4-3 round 2) measures the queue's costs while a player
 never stops: how deep it stays, how late a peer sees the walk, how long a swing made while walking waits.
 
-What the tool adds that the game doesn't have: a scripted mover for the moving-target case (today's authority never
-moves an enemy) and that enemy's position in the client's copy of each snapshot (today's wire carries none), shown
-through Playback as a peer is. Hit questions are asked of the authority's own ``_attack`` (geometry and same_level),
-with the bodies put where the client showed them, or where the authority had them on the tick the attack lands.
+Moving targets (M4-4) are the real mover: the bandit walks a FloorRoute on the authority (engine.hd2d.route, the model
+single-player's behaviour runs), its rows carry where it is, and the window shows it through Playback.enemies, two
+ticks behind, as it shows peers (never predicted). Hit questions are asked of the authority's own ``_attack``
+(geometry and same_level; its first update), with the bodies put where the client showed them, or where the authority
+had them on the tick the attack lands; a disagreement is put down to the floor rule, the target's motion or the
+attacker's (``judge``).
 """
 
 from __future__ import annotations
@@ -36,6 +38,7 @@ import sys
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from functools import cache
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -165,11 +168,8 @@ class Session:
         self.record()
 
     def observed(self) -> dict[str, Any]:
-        """The snapshot, plus each enemy as a player row (id 1000+) for the client's Playback: the tool's addition."""
-        state = self.room.snapshot()
-        extra = [[1000 + i, round(e.body.center_x, 2), round(e.body.center_y, 2), 0, *self.room.level(e.body), 0, 0]
-                 for i, (_, e) in enumerate(sorted(self.room.enemies.items()))]
-        return {**state, "players": state["players"] + extra}
+        """The snapshot the client gets (wire v3: enemy rows carry where each enemy is)."""
+        return self.room.snapshot()
 
     def record(self) -> None:
         p = self.room.players[self.eid]
@@ -179,7 +179,9 @@ class Session:
             "own": (p.body.center_x, p.body.center_y, z, p.facing, floor),
             "enemies": {i: (e.body.center_x, e.body.center_y, e.body.mesh_entity_data.get("elevation", 0.0))
                         for i, e in self.room.enemies.items()},
-            "hp": {i: e.state.hp for i, e in self.room.enemies.items()}}
+            "hp": {i: e.state.hp for i, e in self.room.enemies.items()},
+            "hit_seq": {i: e.hit_seq for i, e in self.room.enemies.items()},
+            "enemy_floors": {i: e.body.mesh_hd2d_floor for i, e in self.room.enemies.items()}}
 
     def own_row(self) -> list[Any]:
         return next(r for r in self.latest["players"] if r[0] == self.eid)
@@ -213,9 +215,8 @@ class Session:
                 _, _, state = heapq.heappop(self.to_client)
                 if state["tick"] > self.latest["tick"]:  # (SceneArena.on_state: reconciled, then the reckoning)
                     self.latest = state
-                    real = {**state, "players": [r for r in state["players"] if r[0] < 1000]}  # (not the tool's rows)
-                    self.corrections.append((t, *self.prediction.reconcile(real, self.eid)))
-                    self.hits.extend(t for _ in self.feedback.update(real, self.eid, t / 1000)[1])
+                    self.corrections.append((t, *self.prediction.reconcile(state, self.eid)))
+                    self.hits.extend(t for _ in self.feedback.update(state, self.eid, t / 1000)[1])
                 self.playback.push(state, t / 1000)
             elif self.next_send <= t:
                 if self.arena is not None:  # (Arena.session's send loop)
@@ -266,6 +267,10 @@ class Session:
         positions[self.eid] = self.own_shown
         return positions
 
+    def enemies_shown(self, t: float) -> dict[str, tuple[float, float, float]]:
+        """Each enemy (x, y, elevation px) as the window draws it at ``t``: Playback, two ticks behind (M4-4)."""
+        return {i: at[:3] for i, at in self.playback.enemies(t / 1000).items()}
+
 
 def ask(room: SceneRoom, own: tuple[Any, ...], targets: dict[str, tuple[float, float, float]]) -> tuple[bool, bool]:
     """(hit, every target in reach on the attacker's level): the authority's own ``_attack``, the attacker at ``own``
@@ -299,23 +304,33 @@ def coop_room() -> Iterator[SceneRoom]:
     yield room
 
 
-@contextmanager
-def stairs_room() -> Iterator[SceneRoom]:
-    """The floors demo's crossing (HD-2D: tooling/hd2d_floors_demo.py) with the co-op bandit on the ground right beside
-    the west stairs' east edge, level with the stairs where they are 1.5 m up (BODY: same_level's reach)."""
+@cache
+def crossing_files() -> dict[str, bytes]:
+    """The floors demo's crossing project (HD-2D: tooling/hd2d_floors_demo.py), built once."""
     sys.path.insert(0, str(REPO / "tooling"))
     try:
         import hd2d_floors_demo
     finally:
         sys.path.remove(str(REPO / "tooling"))
-    bandit = next(e for e in json.loads(files("mesh_net").joinpath("coop", "scene.json").read_text(encoding="utf-8"))
-                  ["entities"] if e["id"] == BANDIT)
-    scene_rel = "packs/core_regions/scenes/start.json"
     with disposable_project({}, scaffold=False) as root:  # (the build writes nowhere else)
         project = hd2d_floors_demo.build(root / "crossing")
-        crossing = {q.relative_to(project).as_posix(): q.read_bytes() for q in project.rglob("*") if q.is_file()}
+        return {q.relative_to(project).as_posix(): q.read_bytes() for q in project.rglob("*") if q.is_file()}
+
+
+@contextmanager
+def stairs_room(x: float = 384.0, y: float = 275.0, route: dict[str, Any] | None = None) -> Iterator[SceneRoom]:
+    """The crossing with the co-op bandit at (x, y): by default on the ground right beside the west stairs' east edge,
+    level with the stairs where they are 1.5 m up (BODY: same_level's reach). ``route``: its FloorRoute settings, which
+    the authority walks it by (M4-4)."""
+    bandit = copy.deepcopy(next(e for e in json.loads(files("mesh_net").joinpath("coop", "scene.json").read_text(
+        encoding="utf-8"))["entities"] if e["id"] == BANDIT))
+    if route is not None:
+        bandit["behaviours"] = [*bandit["behaviours"], "FloorRoute"]
+        bandit.setdefault("behaviour_config", {})["FloorRoute"] = route
+    scene_rel = "packs/core_regions/scenes/start.json"
+    crossing = crossing_files()
     scene = json.loads(crossing[scene_rel])
-    scene["entities"].append({**copy.deepcopy(bandit), "x": 384.0, "y": 275.0})
+    scene["entities"].append({**bandit, "x": x, "y": y})
     with disposable_project({**crossing, scene_rel: json.dumps(scene).encode()}, scaffold=False) as root:
         room = SceneRoom(root / scene_rel, root)  # (as tests/test_mesh_net_hd2d.py builds the crossing's room)
     yield room
@@ -521,7 +536,8 @@ def judge(s: Session, samples: list[tuple[float, tuple[Any, ...], dict[str, tupl
     tick the press lands, from where it ran it (Session.combat_pose); also with the authority rewinding the targets to
     what the screen showed (lag compensation)."""
     counts = {"view_hit": 0, "view_miss": 0, "looked_hit_missed": 0, "looked_miss_hit": 0, "rewind_disagree": 0,
-              "level_looked_ok_refused": 0, "level_looked_refused_ok": 0}
+              "level_looked_ok_refused": 0, "level_looked_refused_ok": 0, "cause_target": 0, "cause_attacker": 0,
+              "cause_both": 0}
     for t, own, targets in samples:
         tick = s.landing_tick(t)
         if tick is None or tick not in s.poses:
@@ -534,53 +550,186 @@ def judge(s: Session, samples: list[tuple[float, tuple[Any, ...], dict[str, tupl
         counts["looked_hit_missed"] += seen_hit and not real_hit
         counts["looked_miss_hit"] += real_hit and not seen_hit
         counts["rewind_disagree"] += rewound_hit != seen_hit
+        level = (seen_hit and not real_hit and seen_level and not real_level) or (
+            real_hit and not seen_hit and real_level and not seen_level)
         counts["level_looked_ok_refused"] += seen_hit and not real_hit and seen_level and not real_level
         counts["level_looked_refused_ok"] += real_hit and not seen_hit and real_level and not seen_level
+        if seen_hit != real_hit and not level:  # (the floor rule's own are counted above)
+            # (the real attacker against the targets as shown agrees with the screen: the targets' motion did it; the
+            # attacker as shown against the real targets does: the attacker's; neither alone: both)
+            if rewound_hit == seen_hit:
+                counts["cause_target"] += 1
+            elif ask(s.room, own, server["enemies"])[0] == seen_hit:
+                counts["cause_attacker"] += 1
+            else:
+                counts["cause_both"] += 1
     return counts
 
 
-def moving_target(rtt: float, jitter: float, loss: float, seed: int, speed: float, ms: float = 12000) -> dict[str, Any]:
-    """A still attacker facing a bandit the tool walks back and forth through its hitbox at ``speed`` px/s, shown on
-    the attacker's screen through Playback as a peer is. Fairness, and how the target's motion looks."""
-    lo, hi = 530.0, 640.0
-    span = 2 * (hi - lo)
+GROUND_Y = 122.0  # px: a sprite centre on the crossing's open ground (feet on a navigation row, 3.25 m), south of it
+GROUND_ROUTE = (552.0, 664.0)  # px: the bandit's feet walk between these, through the still attacker's hitbox
 
-    def at(tick: int) -> float:
-        d = (tick * speed / wire.HZ) % span
-        return lo + (d if d <= hi - lo else span - d)
 
-    samples: list[tuple[float, tuple[Any, ...], dict[str, tuple[float, float, float]]]] = []
-    shown_x: list[float] = []
+def swinging(s: Session, presses: list[float]) -> tuple[Callable[[float], None], dict[str, Any]]:
+    """Swings pressed at ``presses`` (ms) through the window's own handling (Arena.act, Feedback), and what became of
+    them: ``frame(now)`` presses those due; ``done()`` gives, per swing shown, whether the authority ran it, and for
+    each hit its swing scored, how long from the press until the window first showed a state of the tick it hit on.
+    The bandit is healed before every tick (the tool's: it never dies)."""
+    swung: list[tuple[float, int]] = []  # (press ms, meant tick) of each swing shown
+    ran: dict[int, int] = {}  # meant tick -> the tick the authority started it
+    seen: list[tuple[float, int]] = []  # (frame ms, the latest tick the window has)
+    judge_attack = s.room._may_attack
 
-    with coop_room() as room:
-        def mover(tick: int) -> None:
-            room.enemies[BANDIT].body.center_x = at(tick)
+    def may_attack(p: Any, meant: int) -> bool:
+        started = judge_attack(p, meant)
+        if started:
+            ran[meant] = s.room.tick
+        return started
 
-        def frame(now: float, s: Session) -> None:
-            if now < 1000:
-                return
-            shown = s.shown(now)
-            own = shown[s.eid]
-            bx, by, bz, _floor = shown[1000]
-            samples.append((now, (own[0], own[1], own[2], 0), {BANDIT: (bx, by, bz)}))
-            shown_x.append(bx)
+    s.room._may_attack = may_attack  # type: ignore[method-assign]
 
-        s = Session(room, rtt, jitter, loss, seed, mover=mover, frame=frame,
-                    setup=lambda room, eid: place(room, eid, 520.0, 256.0, 0))
-        s.run(ms)
-        result = judge(s, samples)
-    deltas = [q - p for p, q in zip(shown_x, shown_x[1:])]
-    per_frame = speed / 60
-    turns = round((ms - 1000) / 1000 * speed / (hi - lo))  # the target's own reversals in the sampled time
-    signs = [d > 0 for d in deltas if abs(d) > 1e-6]
-    reversals = sum(a != b for a, b in zip(signs, signs[1:]))
+    def frame(now: float) -> None:
+        for p in [p for p in presses if now - FRAME_MS < p <= now]:
+            tick = s.feedback.press(now / 1000)
+            if tick is not None:
+                s.arena.act("attack", tick)
+                swung.append((p, tick))
+        seen.append((now, s.latest["tick"]))
+
+    def done() -> dict[str, Any]:
+        starts = sorted((tick, press) for press, meant in swung if (tick := ran.get(meant)) is not None)
+        hit_ticks = [t for t in sorted(s.poses) if t - 1 in s.poses and s.poses[t]["hit_seq"] != s.poses[t - 1]["hit_seq"]]
+        confirmed = []
+        for t in hit_ticks:  # (each hit put down to the latest swing started at or before it, within a hitbox's life)
+            press = next((p for start, p in reversed(starts) if start <= t < start + s.room.lifetime), None)
+            shown_at = next((now for now, tick in seen if tick >= t), None)
+            if press is not None and shown_at is not None:
+                confirmed.append(shown_at - press)
+        return {"swings": len(swung), "swings_never_run": sum(meant not in ran for _, meant in swung),
+                "hit_confirmed_ms": confirmed, "stale_attacks": s.room.stale_attacks,
+                "refused_attacks": s.room.refused_attacks, "dropped_actions": s.room.dropped_actions}
+
+    return frame, done
+
+
+def heal(room: SceneRoom) -> Callable[[int], None]:
+    def mover(tick: int) -> None:
+        for e in room.enemies.values():
+            e.state = TargetState(hp=e.state.max_hp, max_hp=e.state.max_hp)
+    return mover
+
+
+def swing_times(seed: int, ms: float) -> list[float]:
+    rng = random.Random(seed)
+    presses, t = [], 1500.0
+    while t < ms - 1500:
+        presses.append(t)
+        t += 600.0 + rng.uniform(-50, 50)
+    return presses
+
+
+def target_motion(shown: list[tuple[float, float]], server: list[float], ms: float) -> dict[str, Any]:
+    """How the target's motion looked (frame-to-frame x as shown) and how fast it really went (the authority's x a
+    tick, while it walked)."""
+    xs = [x for x, _ in shown]
+    deltas = [q - p for p, q in zip(xs, xs[1:])]
+    steps = [abs(q - p) for p, q in zip(server, server[1:])]
+    walked = [d for d in steps if d > 1e-6]
     longest = run = 0
     for d in deltas:
         run = run + 1 if abs(d) <= 1e-6 else 0
         longest = max(longest, run)
-    return {**result, "target_frames": len(deltas), "target_frozen": sum(abs(d) <= 1e-6 for d in deltas),
-            "max_target_freeze_frames": longest, "target_snaps_over_2x_speed": sum(abs(d) > 2 * per_frame + 0.01 for d in deltas),
-            "target_extra_reversals": max(0, reversals - turns)}
+    return {"target_frames": len(deltas), "target_frozen": sum(abs(d) <= 1e-6 for d in deltas),
+            "max_target_freeze_frames": longest,
+            "target_px_per_s": [sum(steps) / max(1e-9, len(steps) / wire.HZ)],
+            "target_step_px_max": [max(walked, default=0.0)],
+            "target_snaps_over_2x_step": sum(abs(d) > 2 * max(walked, default=0.0) * wire.HZ / 60 + 0.01 for d in deltas)}
+
+
+def moving_target(rtt: float, jitter: float, loss: float, seed: int, speed: float, ms: float = 12000) -> dict[str, Any]:
+    """HD-2D, the crossing's open ground: a still attacker facing east, and the bandit walking its FloorRoute (at
+    ``speed`` px/s as authored, no wait) east and west through the attacker's hitbox, on the authority (M4-4); the
+    window shows it through Playback.enemies. Fairness (every frame a hypothetical press), real swings about every
+    600 ms (shown, run, hits confirmed), and how the target's motion looks."""
+    samples: list[tuple[float, tuple[Any, ...], dict[str, tuple[float, float, float]]]] = []
+    shown_x: list[tuple[float, float]] = []
+    route = {"route": [[GROUND_ROUTE[0], GROUND_Y - 18, 0.0], [GROUND_ROUTE[1], GROUND_Y - 18, 0.0]], "speed": speed,
+             "wait": 0.0}
+    with stairs_room(GROUND_ROUTE[0], GROUND_Y, route) as room:
+        presses = swing_times(seed, ms)
+        holder: dict[str, Any] = {}
+
+        def frame(now: float, s: Session) -> None:
+            holder["frame"](now)
+            if now < 1000:
+                return
+            target = s.enemies_shown(now)
+            own = s.own_shown
+            samples.append((now, (own[0], own[1], own[2], 0), target))
+            shown_x.append((target[BANDIT][0], now))
+
+        s = Session(room, rtt, jitter, loss, seed, mover=heal(room), frame=frame, held=lambda now: (0, 0),
+                    arena=window_arena(), setup=lambda room, eid: place(room, eid, 520.0, GROUND_Y, 0))
+        holder["frame"], done = swinging(s, presses)
+        s.run(ms)
+        server_x = [s.poses[t]["enemies"][BANDIT][0] for t in sorted(s.poses) if t * 1000 / wire.HZ >= 1000]
+        return {**judge(s, samples), **done(), **target_motion(shown_x, server_x, ms)}
+
+
+def moving_both(rtt: float, jitter: float, loss: float, seed: int, ms: float = 12000) -> dict[str, Any]:
+    """HD-2D, the open ground: the attacker walks up to the walking bandit and away (east and west, turning every
+    700 ms, facing the way it walks; its window predicting it, M4-3) while the bandit walks its FloorRoute (70 px/s)
+    through the same stretch. Fairness by cause, swings made walking (shown, run, hits confirmed), and the queue."""
+    samples: list[tuple[float, tuple[Any, ...], dict[str, tuple[float, float, float]]]] = []
+    route = {"route": [[GROUND_ROUTE[0], GROUND_Y - 18, 0.0], [GROUND_ROUTE[1], GROUND_Y - 18, 0.0]], "speed": 70.0,
+             "wait": 0.0}
+
+    def held(now: float) -> tuple[int, int]:
+        return (1 if (now // 700) % 2 == 0 else -1), 0
+
+    with stairs_room(GROUND_ROUTE[0], GROUND_Y, route) as room:
+        holder: dict[str, Any] = {}
+
+        def frame(now: float, s: Session) -> None:
+            holder["frame"](now)
+            if now >= 1000:  # (seen: where the window shows itself, facing the way it is walking)
+                x, y, z, _floor = s.own_shown
+                samples.append((now, (x, y, z, facing_of(*held(now), 0)), s.enemies_shown(now)))
+
+        s = Session(room, rtt, jitter, loss, seed, mover=heal(room), frame=frame, held=held, arena=window_arena(),
+                    setup=lambda room, eid: place(room, eid, 500.0, GROUND_Y, 0))
+        holder["frame"], done = swinging(s, swing_times(seed, ms))
+        s.run(ms)
+        return {**judge(s, samples), **done(), **queue(s)}
+
+
+STAIRS_X = 328.0  # px: the bandit's feet on the west stairs (a navigation column, clear of their east edge)
+STAIRS_ROUTE = ((152.0, 4.0), (264.0, 60.0))  # (feet y, elevation) px: near their foot and near their top
+
+
+def stairs_moving(rtt: float, jitter: float, loss: float, seed: int, ms: float = 12000) -> dict[str, Any]:
+    """HD-2D: the bandit walks its FloorRoute (70 px/s) up and down the west stairs while a still attacker on the
+    ground beside their east edge faces it, its hitbox over the stretch where the bandit climbs out of same_level's
+    reach (1.5 m: BODY). Fairness by cause (the floor rule's share now from the target's motion), real swings."""
+    samples: list[tuple[float, tuple[Any, ...], dict[str, tuple[float, float, float]]]] = []
+    (y0, z0), (y1, z1) = STAIRS_ROUTE
+    route = {"route": [[STAIRS_X, y0, z0], [STAIRS_X, y1, z1]], "speed": 70.0, "wait": 0.0}
+    with stairs_room(STAIRS_X, y0 + 18, route) as room:
+        holder: dict[str, Any] = {}
+
+        def frame(now: float, s: Session) -> None:
+            holder["frame"](now)
+            if now >= 1000:
+                own = s.own_shown
+                samples.append((now, (own[0], own[1], own[2], 2), s.enemies_shown(now)))
+
+        s = Session(room, rtt, jitter, loss, seed, mover=heal(room), frame=frame, held=lambda now: (0, 0),
+                    arena=window_arena(), setup=lambda room, eid: place(room, eid, 368.0, 240.0, 2))
+        holder["frame"], done = swinging(s, swing_times(seed, ms))
+        s.run(ms)
+        heights = [s.poses[t]["enemies"][BANDIT][2] for t in s.poses]
+        floors = sorted({f for t in s.poses if (f := s.poses[t]["enemy_floors"][BANDIT])})
+        return {**judge(s, samples), **done(), "floors_walked": floors, "max_elevation_px": max(heights)}
 
 
 def moving_attacker(rtt: float, jitter: float, loss: float, seed: int, ms: float = 12000) -> dict[str, Any]:
@@ -679,12 +828,22 @@ def fairness(c: dict[str, Any]) -> dict[str, Any]:
               "disagree_pct": round(100 * (c["looked_hit_missed"] + c["looked_miss_hit"]) / max(1, n), 1),
               "disagree_with_rewind_pct": round(100 * c["rewind_disagree"] / max(1, n), 1),
               "level_caused_disagree_pct": round(100 * (c["level_looked_ok_refused"] + c["level_looked_refused_ok"])
-                                                 / max(1, n), 1)}
+                                                 / max(1, n), 1),
+              # (M4-4: every disagreement put down to one cause: the floor rule (above), the target's motion, the
+              # attacker's, or both together)
+              "target_caused_disagree_pct": round(100 * c["cause_target"] / max(1, n), 1),
+              "attacker_caused_disagree_pct": round(100 * c["cause_attacker"] / max(1, n), 1),
+              "both_caused_disagree_pct": round(100 * c["cause_both"] / max(1, n), 1)}
     if "target_frames" in c:
         result.update({"target_frames_frozen_pct": round(100 * c["target_frozen"] / max(1, c["target_frames"]), 1),
                        "target_longest_freeze_ms": round(c["max_target_freeze_frames"] * FRAME_MS),
-                       "target_snaps_over_2x_speed": c["target_snaps_over_2x_speed"],
-                       "target_extra_reversals": c["target_extra_reversals"]})
+                       "target_snaps_over_2x_step": c["target_snaps_over_2x_step"],
+                       "target_px_per_s": round(sum(c["target_px_per_s"]) / len(c["target_px_per_s"]), 1),
+                       "target_step_px_max": round(max(c["target_step_px_max"]), 2)})
+    if "swings" in c:  # (real swings: owner condition 7, never hidden)
+        result.update({"swings": c["swings"], "swings_never_run": c["swings_never_run"],
+                       "hit_confirmed_ms": summary(c["hit_confirmed_ms"]), "stale_attacks": c["stale_attacks"],
+                       "refused_attacks": c["refused_attacks"], "dropped_actions": c["dropped_actions"]})
     if "floors_walked" in c:
         result.update({"floors_walked": sorted(set(c["floors_walked"])), "max_elevation_px": c["max_elevation_px"]})
     if "corrections_px" in c:
@@ -735,6 +894,8 @@ def measure(seed: int = 7, sessions: int = 6) -> dict[str, Any]:
                        "dropped_actions": a["dropped_actions"]},
             "moving_target_70": fairness(pooled(moving_target, seeds, *profile, 70.0)),
             "moving_target_150": fairness(pooled(moving_target, seeds, *profile, 150.0)),
+            "moving_both": fairness(pooled(moving_both, seeds, *profile)),
+            "stairs_moving": fairness(pooled(stairs_moving, seeds, *profile)),
             "moving_attacker": fairness(pooled(moving_attacker, seeds, *profile)),
             "stairs": fairness(pooled(stairs, seeds, *profile)),
             "walking": walking_costs(pooled(walking, seeds, *profile))})

@@ -329,7 +329,8 @@ class WorldArena(Arena):
         positions = self.playback.positions(now) if state else {}
         if state and self.entity is not None and self.prediction.body is not None:
             positions[self.entity] = self.prediction.shown(dt)
-        self.view.sync(state, positions, self.entity if state else None, dt)
+        enemies = self.playback.enemies(now) if state else {}  # (M4-4: walking on the server, shown as peers are)
+        self.view.sync(state, positions, self.entity if state else None, dt, enemies)
         self.view.draw(dt)
 
 

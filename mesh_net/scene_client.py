@@ -133,9 +133,10 @@ class SceneView:
         return sprite
 
     def sync(self, state: wire.Message | None, positions: dict[int, tuple[float, float, float, str | None]],
-             own: int | None, dt: float) -> None:
-        """Make the room look like ``state``, its players at ``positions`` (x, y, elevation, floor: a snapshot row's,
-        mesh_net.protocol) (``own``: the local player's avatar)."""
+             own: int | None, dt: float, enemies: dict[str, tuple[float, float, float, str | None]] | None = None) -> None:
+        """Make the room look like ``state``, its players at ``positions`` and its enemies at ``enemies`` (x, y,
+        elevation, floor: a snapshot row's, mesh_net.protocol; Playback's, two ticks behind) (``own``: the local
+        player's avatar)."""
         for enemy in list(self.flashes):
             self.flashes[enemy] -= dt
             if self.flashes[enemy] <= 0:
@@ -143,17 +144,14 @@ class SceneView:
                 self.sprites[enemy].color = self.enemy_colors[enemy]
         for eid in [e for e in self.avatars if e not in positions]:
             self.scene.entities.enqueue_despawn(self.avatars.pop(eid))
-        for eid, (x, y, elevation, floor) in positions.items():
+        for eid, at in positions.items():
             sprite = self.avatars.get(eid)
             if sprite is None:
                 sprite = self.avatars[eid] = self._spawn(eid, eid == own)
-                sprite.center_x, sprite.center_y = x, y
-            vx, vy = ((x - sprite.center_x) / dt, (y - sprite.center_y) / dt) if dt > 0 else (0.0, 0.0)
-            sprite.center_x, sprite.center_y = x, y
-            sprite.mesh_velocity_x, sprite.mesh_velocity_y = vx, vy  # the Animator walks or stands by these
-            if self.room.world is not None:  # HD-2D: where the server stands it (what the renderer draws from)
-                sprite.mesh_entity_data["elevation"] = elevation
-                sprite.mesh_hd2d_floor = floor
+                sprite.center_x, sprite.center_y = at[:2]
+            self._place(sprite, at, dt)
+        for enemy, at in (enemies or {}).items():  # (M4-4: walking on the server; shown as peers are, never predicted)
+            self._place(self.sprites[enemy], at, dt)
         renderer = getattr(self.window, "hd2d_renderer", None)
         if renderer is not None:  # (every frame: a room change or a resume brings a new renderer and avatar)
             renderer.camera_target = self.avatars.get(own) if own is not None else None
@@ -163,7 +161,7 @@ class SceneView:
             self.sprites[door].visible = door not in state["open"]
         for lever in self.levers:
             self.sprites[lever].color = USED_TINT if lever in state["used"] else self.colors[lever]
-        for enemy, hp, *_ in state["enemies"]:  # (its hit count and placement: Feedback; M4-4 moves it)
+        for enemy, hp, *_ in state["enemies"]:  # (its hit count: Feedback; its placement: ``enemies``)
             self.sprites[enemy].visible = hp > 0
         for enemy in [e for e in self.drops if e not in state["drops"]]:
             self.scene.entities.enqueue_despawn(self.drops.pop(enemy))
@@ -173,6 +171,17 @@ class SceneView:
                 drop.center_x, drop.center_y = self.sprites[enemy].center_x, self.sprites[enemy].center_y
                 drop.mesh_id = drop.mesh_name = f"drop:{enemy}"
                 self.scene.entities.enqueue_spawn(drop, layer_name="entities", is_solid=False)
+
+    def _place(self, sprite: Any, at: tuple[float, float, float, str | None], dt: float) -> None:
+        """A body where the server's row puts it (x, y, elevation, floor), its Animator walking or standing by how far
+        it moved since the last frame."""
+        x, y, elevation, floor = at
+        vx, vy = ((x - sprite.center_x) / dt, (y - sprite.center_y) / dt) if dt > 0 else (0.0, 0.0)
+        sprite.center_x, sprite.center_y = x, y
+        sprite.mesh_velocity_x, sprite.mesh_velocity_y = vx, vy  # the Animator walks or stands by these
+        if self.room.world is not None:  # HD-2D: where the server stands it (what the renderer draws from)
+            sprite.mesh_entity_data["elevation"] = elevation
+            sprite.mesh_hd2d_floor = floor
 
     def draw(self, dt: float) -> None:
         self.scene.entities.apply_pending_ops(self.scene)
@@ -245,7 +254,8 @@ class SceneArena(Arena):
         return f"P{entity} | gate {gate} | {enemies} | loot {loot} | E use/take, Space attack, F2 leave"
 
     def draw(self, now: float) -> None:
-        """Remote players two ticks behind, as Playback plays them; the local one where it predicts itself."""
+        """Remote players and enemies two ticks behind, as Playback plays them; the local one where it predicts
+        itself."""
         dt = 0.0 if self.last is None else min(0.1, now - self.last)
         self.last = now
         client = self.client
@@ -253,7 +263,8 @@ class SceneArena(Arena):
         positions = self.playback.positions(now) if state else {}
         if client and state and self.prediction.body is not None:
             positions[client.entity] = self.prediction.shown(dt)
-        self.view.sync(state, positions, client.entity if client else None, dt)
+        enemies = self.playback.enemies(now) if state else {}
+        self.view.sync(state, positions, client.entity if client else None, dt, enemies)
         self.view.draw(dt)
 
 
