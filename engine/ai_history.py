@@ -8,7 +8,14 @@ from engine.swallowed_exceptions import _log_swallow
 
 logger = get_logger(__name__)
 
-HISTORY_FILE = Path(".mesh/ai_history.jsonl")
+HISTORY_FILE = Path(".mesh/ai_history.jsonl")  # (relative: in the game project, engine.paths.project_root)
+
+
+def _history_file() -> Path:
+    """The log in the game project's ``.mesh`` folder, not the current folder's (#623)."""
+    from engine.paths import project_root  # noqa: PLC0415
+
+    return HISTORY_FILE if HISTORY_FILE.is_absolute() else project_root() / HISTORY_FILE
 
 
 class AIHistoryEntry(TypedDict):
@@ -35,8 +42,9 @@ def append_history_entry(
         entry["goal"] = goal
 
     try:
-        HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with open(HISTORY_FILE, "a", encoding="utf-8") as f:
+        path = _history_file()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
     except Exception as e:
         logger.warning("Failed to append history: %s", e)
@@ -44,11 +52,12 @@ def append_history_entry(
 def load_history() -> list[AIHistoryEntry]:
     """Load all history entries from the log."""
     entries: list[AIHistoryEntry] = []
-    if not HISTORY_FILE.exists():
+    path = _history_file()
+    if not path.exists():
         return entries
 
     try:
-        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 if line.strip():
                     try:

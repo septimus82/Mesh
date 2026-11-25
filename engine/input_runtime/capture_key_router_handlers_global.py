@@ -289,7 +289,7 @@ def _handle_savegame_load_or_play(window: Any) -> bool:
     from engine import savegame  # noqa: PLC0415
 
     try:
-        save_path = savegame.resolve_savegame_path()
+        save_path = savegame.resolve_savegame_path(reading=True)
         save = savegame.load_savegame(save_path)
         if save is None:
             logger = getattr(window, "console_log", None)

@@ -25,6 +25,7 @@ from __future__ import annotations
 import copy
 import inspect
 import json
+from pathlib import Path
 from typing import Any, Callable
 
 from engine import project_ops as ops
@@ -124,7 +125,7 @@ def apply(project: Project, changes: list[Doc], *, pins: list[Doc] | None = None
         raise ChangeError(0, "?", "changes must be a list of objects like {\"op\": ..., ...}.")
     created: dict[int, str | int] = {}
     lights: dict[str, set[int]] = {}  # room -> indexes of the lights this batch added (they sit at the end)
-    with project.transaction():
+    with project.transaction(), ops.in_project(project.root):  # (#391: its files, whatever the current folder)
         for index, change in enumerate(changes):
             made = _apply_one(project, index, change, created, pins, lights)
             if made is not None:
@@ -404,9 +405,13 @@ def _path_text(path: tuple[Any, ...]) -> str:
 
 
 # --------------------------------------------------------------------------------------- summary
-def summarize(before: Doc, after: Doc) -> list[str]:
+def summarize(before: Doc, after: Doc, root: Path | None = None) -> list[str]:
     """Plain-language lines for what changed between two whole-project views, room by room, then the shared player
-    (what it is and says is the view's ``player``, not in any room)."""
+    (what it is and says is the view's ``player``, not in any room). ``root``: the project's folder, whose files
+    (structures' models) the lines read (#391), whatever the current folder."""
+    if root is not None:
+        with ops.in_project(root):
+            return summarize(before, after)
     lines: list[str] = []
     world_b, world_a = before.get("world") or {}, after.get("world") or {}
     rooms_b, rooms_a = before.get("rooms") or {}, after.get("rooms") or {}

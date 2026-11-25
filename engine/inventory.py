@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterator, Tuple, cast
 
-_ITEM_DB_CACHE: "ItemDatabase | None" = None
+_ITEM_DB_CACHE: "ItemDatabase | None" = None  # (cleared when the project changes: engine.paths.pin_config/reset)
 
 
 def load_item_database(root: str | Path | None = None) -> "ItemDatabase":
@@ -43,8 +43,11 @@ class ItemDatabase:
 
     @classmethod
     def load(cls, root: str | Path | None = None) -> "ItemDatabase":
-        base = Path(root or Path.cwd())
-        data_path = base / "assets" / "data" / "items.json"
+        """The items of the project at ``root``; by default the game project's (engine.paths.project_root), never
+        the bare current folder's (#623)."""
+        from engine.paths import project_root  # noqa: PLC0415
+
+        data_path = Path(root or project_root()) / "assets" / "data" / "items.json"
         if not data_path.exists():
             raise FileNotFoundError(f"Item database not found at {data_path}")
         raw = json.loads(data_path.read_text(encoding="utf-8"))

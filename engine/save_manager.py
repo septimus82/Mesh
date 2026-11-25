@@ -91,7 +91,8 @@ def _diag_context(
 
 
 def _game_root(window: Any) -> Path | None:
-    """The folder holding the game's config.json (an export's own folder), however the game was started."""
+    """The folder holding the game's config.json (an export's own folder), however the game was started: the project
+    root a GameWindow pins (``engine.paths.project_root``), read from the window's own config (#623)."""
     base = getattr(getattr(window, "engine_config", None), "_config_base_dir", None)
     return Path(base).resolve() if isinstance(base, str) and base else None
 
@@ -106,16 +107,24 @@ class SaveManager:
 
     def __init__(self, window: GameWindow, save_dir: str | Path | None = None) -> None:
         """``save_dir`` given: saves go there. Otherwise where the game keeps them (engine.save_runtime.storage): per
-        player for an exported game, ``saves`` in the folder it runs in for a project."""
+        player for an exported game, ``saves`` in its project folder for a project."""
         self.window = window
-        self.legacy_dir: Path | None = None  # an older export's saves in its installation: read, never written
-        if save_dir is None:
-            location = save_storage.resolve(_game_root(window), _config_values(window))
-            save_dir, self.legacy_dir = location.save_dir, location.legacy_dir
-        self.save_dir = Path(save_dir)
-        self._ensure_save_dir()
         self._last_loaded_signature: tuple[str, int] | None = None
         self._last_saved_signature: str | None = None
+        if save_dir is None:
+            self.relocate()
+            return
+        self.legacy_dir: Path | None = None
+        self.save_dir = Path(save_dir)
+        self._ensure_save_dir()
+
+    def relocate(self) -> None:
+        """Where the window's game keeps its saves, again (its project changed: the main menu's project switch)."""
+        location = save_storage.resolve(_game_root(self.window), _config_values(self.window))
+        self.save_dir = Path(location.save_dir)
+        # An older export's saves in its installation, or a project's in the folder it ran in (#623): read, never written.
+        self.legacy_dir = location.legacy_dir
+        self._ensure_save_dir()
 
     def _ensure_save_dir(self) -> bool:
         """Make the save folder; False (said once, the game carries on) when it can't be made."""
