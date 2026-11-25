@@ -31,6 +31,14 @@ def legacy_editor_allowed(window: object) -> bool:
     return getattr(getattr(window, "engine_config", None), "_mesh_launch_mode", None) == "editor"
 
 
+def dev_tools_allowed(window: object) -> bool:
+    """Whether the developer tools are on: the console and F3 debug mode, and the scene saving, painting and
+    capture it unlocks. A game as players run it (``main.py``, an export) has none: they overwrote the game's files
+    (#664). A dev launch keeps them: ``mesh play`` (launch mode "play"), and wherever the legacy editor is allowed."""
+    mode = getattr(getattr(window, "engine_config", None), "_mesh_launch_mode", None)
+    return mode == "play" or legacy_editor_allowed(window)
+
+
 def _toggle_editor(window: object) -> None:
     editor = getattr(window, "editor_controller", None)
     toggle = getattr(editor, "toggle", None) if editor is not None else None

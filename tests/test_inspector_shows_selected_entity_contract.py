@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -82,6 +83,7 @@ def _make_controller(monkeypatch: pytest.MonkeyPatch) -> tuple[EditorModeControl
     window = EditorWindowStub(scene_controller=scene, width=800, height=600)
     controller = EditorModeController(as_game_window(window))
     setattr(window, "editor_controller", controller)
+    window.engine_config = SimpleNamespace(_mesh_launch_mode="editor")  # an editor launch: F4 may open the editor (#660)
     controller.toggle()
     return controller, window, sprite
 

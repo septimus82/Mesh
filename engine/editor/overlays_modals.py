@@ -70,6 +70,13 @@ def pending_action_set(self: Any, value: Callable[[], None] | None) -> None:
 
 
 def toggle(self: Any) -> None:
+    # Every F4 route (input dispatch, key router, action registry) lands here: a game launch never opens the legacy
+    # editor (#347, #660). An open editor or a play-test can always be left.
+    from engine.action_runtime.registry import legacy_editor_allowed  # noqa: PLC0415  # registry imports UI modules
+
+    if not legacy_editor_allowed(self.window):
+        _EDITOR_LOGGER.info("[Editor] F4 ignored: the legacy editor is off in a game launch")
+        return
     if self.play_session.is_playing:
         self.stop_playing()
         return

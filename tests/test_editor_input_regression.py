@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 import arcade
@@ -72,6 +73,7 @@ def test_selection_picks_topmost_and_arrow_nudges_and_pushes_undo(monkeypatch) -
 
     window = EditorWindowStub(scene_controller=scene)
     controller = EditorModeController(as_game_window(window))
+    window.engine_config = SimpleNamespace(_mesh_launch_mode="editor")  # an editor launch: F4 may open the editor (#660)
     controller.toggle()
     assert controller.active is True
     assert window.paused is True

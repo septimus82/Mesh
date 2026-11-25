@@ -245,6 +245,7 @@ def _handle_play(args: argparse.Namespace) -> int:
     config = load_config()
     if args.scene_path:
         config.start_scene = args.scene_path
+    setattr(config, "_mesh_launch_mode", "play")  # a developer's run: the console and F3 debug stay on (#664)
 
     window = GameWindow(
         width=config.width,

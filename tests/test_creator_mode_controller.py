@@ -708,6 +708,7 @@ class _DispatchWindow(_MockWindow):
         super().__init__()
         self.game_over = False
         self.engine_config = EngineConfig()
+        setattr(self.engine_config, "_mesh_launch_mode", "editor")  # an editor launch: F4 may open the editor (#660)
         self.console_controller = MagicMock(active=False)
         self.ui_controller = MagicMock(on_key_press=lambda *_args: False)
         self.settings_overlay = MagicMock()
