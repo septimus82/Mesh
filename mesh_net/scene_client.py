@@ -91,6 +91,7 @@ class SceneView:
         self.enemy_colors = {i: tuple(self.sprites[i].color) for i in room.enemies}
         self.flashes: dict[str, float] = {}  # enemy -> seconds of its hit flash left
         self.marks: list[list[Any]] = []  # [sprite, seconds left, the sprite it stays on or None]: swings and hits
+        self.own_swing: tuple[Any, float, float] | None = None  # the window's last own swing mark, and where from
         self.textures: dict[str, Any] = {}
 
     def check(self, msg: wire.Message) -> None:
@@ -154,8 +155,10 @@ class SceneView:
         if sprite is None:
             return
         fx, fy = FACINGS[facing]
-        self._mark(f"swing{facing}", sprite.center_x + fx * self.room.reach, sprite.center_y + fy * self.room.reach,
-                   sprite, HITBOX_S)
+        mark = self._mark(f"swing{facing}", sprite.center_x + fx * self.room.reach,
+                          sprite.center_y + fy * self.room.reach, sprite, HITBOX_S)
+        if own:  # (where the server will strike from: the avatar as the press showed it)
+            self.own_swing = (mark, sprite.center_x, sprite.center_y)
         if getattr(sprite, "mesh_animator", None):
             request_animation_state(sprite, str(self.room.combat["attack_anim"]), priority=10, ttl=0.5)
         audio = getattr(self.window, "audio", None)
@@ -164,6 +167,16 @@ class SceneView:
                                  float(sprite.center_y)), window=self.window, base_volume=0.5, profile="attack")
         if own:
             _try_rumble(self.window, 0.2, 0.03)
+
+    def aim(self, facing: int) -> None:
+        """Turn the window's own last swing, while it shows, to ``facing``: the way the server will strike once it has
+        read the input the attack rides (a direction pressed after Space, before the send, turns it first)."""
+        if self.own_swing is None or not any(m is self.own_swing[0] for m, *_ in self.marks):
+            return
+        mark, x, y = self.own_swing
+        fx, fy = FACINGS[facing]
+        mark.texture = self._texture(f"swing{facing}")
+        mark.center_x, mark.center_y = x + fx * self.room.reach, y + fy * self.room.reach
 
     def flash(self, enemy: str) -> None:
         """A hit the server confirmed (the enemy's hit count rose): the enemy flashes and the Hitbox's hit sound plays."""
@@ -314,6 +327,12 @@ class SceneArena(Arena):
             self.view.swing(eid, own=False, facing=rows[eid][3])  # (facing as that state has it: its attack's)
         for enemy in hit:
             self.view.flash(enemy)
+
+    def aim(self) -> None:
+        client = self.client
+        if client is not None:
+            own = next(r for r in client.state["players"] if r[0] == client.entity)
+            self.view.aim(self.prediction.facing(own[3]))
 
     def describe(self, state: wire.Message, entity: int) -> str:
         enemies = ", ".join(f"{self.sprites[r[0]].mesh_name} {r[1]:g}" for r in state["enemies"])

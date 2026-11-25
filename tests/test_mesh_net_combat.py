@@ -28,7 +28,7 @@ from engine.physics_model import entity_shape, shapes_overlap
 from mesh_net import protocol as wire
 from mesh_net.demo import Arena
 from mesh_net.scene_client import SceneArena
-from mesh_net.scene_room import COOP_SCENE, Feedback, Prediction, SceneRoom, coop_files, disposable_project, hitbox_ticks
+from mesh_net.scene_room import COOP_SCENE, FACINGS, Feedback, Prediction, SceneRoom, coop_files, disposable_project, hitbox_ticks
 from mesh_net.world import World, expedition_files
 from mesh_net.world_client import WorldArena
 from tests.test_hd2d_net_parity import sprite
@@ -793,6 +793,97 @@ def test_the_own_swing_is_marked_on_the_press_facing_as_the_server_will_and_a_pe
     peer_mark = view.marks[-1][0]
     assert (peer_mark.center_x, peer_mark.center_y) == (view.avatars[peer].center_x,
                                                         view.avatars[peer].center_y + room.reach), "facing up"
+
+
+ARROWS = SimpleNamespace(**{n: i for i, n in enumerate("W UP S DOWN A LEFT D RIGHT SPACE E ESCAPE F2 R N P I Y L".split())})
+
+
+def reversal_window(kind: str, room: SceneRoom, eid: int) -> Any:
+    """A real SceneArena or WorldArena (its own handlers and Arena's queue and sends) over a window-less SceneView of
+    ``room``, its player ``eid`` standing where the room put it."""
+    from tests.test_mesh_net_hd2d import headless_view
+
+    cls = SceneArena if kind == "scene" else WorldArena
+    arena: Any = cls.__new__(cls)
+    Arena.__init__(arena, SimpleNamespace(push_handlers=lambda **_kw: None), SimpleNamespace(key=ARROWS))
+    state = room.snapshot()
+    arena.view = headless_view(room)
+    row = next(r for r in state["players"] if r[0] == eid)
+    arena.view.avatars = {eid: SimpleNamespace(center_x=row[1], center_y=row[2], mesh_entity_data={})}
+    arena.feedback, arena.prediction = Feedback(), Prediction()
+    arena.feedback.baseline(state, room.cooldown, 0.0)
+    arena.prediction.start(room, state, eid)
+    arena.clock = lambda: 1.0
+    if kind == "scene":
+        arena.client = SimpleNamespace(entity=eid, state=state)
+    else:
+        arena.phase, arena.room, arena.shown, arena.entity, arena.state = "playing", "r", "r", eid, state
+        arena.request, arena.note = None, lambda _event: None
+    return arena
+
+
+@pytest.mark.parametrize("kind", ["scene", "world"])
+@pytest.mark.parametrize(("order", "shown", "struck"), [
+    ("space left", 2, 2),  # (the Left builds the input the waiting attack rides: turned at that press)
+    ("left space", 2, 2),  # (the Space finds the Left input built: west at once)
+    ("left space right", 2, 0),  # (Right finds the Left input built and waits for the next, which the attack rides)
+])
+def test_a_quick_reversal_turns_the_shown_swing_to_where_the_server_strikes(kind: str, order: str, shown: int,
+                                                                         struck: int) -> None:
+    """The owner's quick-reversal safeguard (#630 review): facing east, keys pressed within one send. Whichever input
+    the waiting attack rides, the server turns to it first and strikes that way, and the shown swing ends up facing
+    it too (Arena.aim, at a press that builds that input and when the attack is sent), over that hitbox from where the
+    press showed the avatar. ``shown``: its facing straight after the presses, before anything is sent; ``struck``:
+    the server's, which the swing faces once the attack has gone. Presentation only: what is sent is the same."""
+    keys = {"space": ARROWS.SPACE, "left": ARROWS.LEFT, "right": ARROWS.RIGHT}
+    with coop_room() as room:
+        eid = room.join()
+        place(room, eid, 300.0, 200.0, 0)  # facing east
+        arena = reversal_window(kind, room, eid)
+        for key in order.split():
+            type(arena).press(arena, keys[key], 0)
+        ((mark, _, _),) = arena.view.marks
+        assert mark.texture.hash == f"mesh_net_swing{shown}_mark", "as the presses leave it, before any send"
+        seen: list[int] = []
+        attack = room._attack
+        room._attack = lambda p, view=None: (seen.append(p.facing), attack(p, view))[1]  # type: ignore[method-assign]
+        for seq in (1, 2):
+            direction, action, tick, view = arena.outgoing()
+            arena.prediction.sent(seq)
+            room.input(eid, wire.input_frame(eid, seq, *direction, tick, action, view))
+            room.step()
+        assert seen == [struck], "the server struck once, that way"
+        fx, fy = FACINGS[struck]
+        assert mark.texture.hash == f"mesh_net_swing{struck}_mark", "the swing faces the way the server struck"
+        assert (mark.center_x, mark.center_y) == (300.0 + fx * room.reach, 200.0 + fy * room.reach), "over that hitbox"
+
+
+def test_a_peers_swing_in_the_world_window_faces_as_its_state_says() -> None:
+    """WorldArena: a peer's swing is marked when a room state shows it, facing as that state's row has it."""
+    from tests.test_mesh_net_hd2d import headless_view
+
+    with disposable_project(expedition_files(), scaffold=False) as root:
+        world = World(root)
+    key = next(k for k, d in world.defs.items() if d.proto.enemies)
+    inst = world._create(key, 1)
+    ids = {k: d.proto.identity for k, d in world.defs.items()}
+    view = headless_view(inst.room)
+    arena: Any = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
+                                 playback=None, pending=None, phase="loading", feedback=Feedback(),
+                                 prediction=Prediction(), seq=0, actions=[], view=view, shown=None)
+    eid, peer = inst.room.join(), inst.room.join()
+    WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "enter", "room": inst.id, "key": key, "entity": eid,
+                                "state": inst.room.snapshot()}, 0.0)
+    arena.shown = inst.id
+    rows = {r[0]: r for r in inst.room.snapshot()["players"]}
+    view.avatars = {e: SimpleNamespace(center_x=r[1], center_y=r[2], mesh_entity_data={}) for e, r in rows.items()}
+    inst.room.players[peer].attack_seq, inst.room.players[peer].facing = 1, 1  # (a swing, facing up)
+    inst.room.step()
+    WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "room_state", "room": inst.id,
+                                "state": inst.room.snapshot()}, 0.1)
+    ((mark, _, _),) = view.marks
+    assert mark.texture.hash == "mesh_net_swing1_mark"
+    assert (mark.center_x, mark.center_y) == (rows[peer][1], rows[peer][2] + inst.room.reach)
 
 
 def test_a_transfer_from_a_long_running_room_lets_the_first_press_swing() -> None:

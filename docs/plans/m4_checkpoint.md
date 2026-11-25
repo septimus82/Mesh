@@ -35,7 +35,11 @@ provisional default.
 | Local swing visible in rendered frames (one run each), ms | — | 7.1 | not run | 6.3 (drain), 15.9 (deep), 18.0 (small) | 15.4 | evidence, measurements table |
 
 Since M4-6 the swing has a picture: a white crescent over the hitbox. Before it, nothing was drawn (the packaged
-player has no `attack` clip).
+player has no `attack` clip). After a quick reversal (Space, then a new direction before the next send), the crescent
+turns to the facing the server will strike in (#630 review).
+
+**2D presentation changed too.** The crescent and the confirmed-hit burst are scene sprites, so they appear in 2D
+rooms (the co-op room, the expedition, the ruins) as well as HD-2D. The red tint on a hit enemy is still there in 2D.
 
 ### 1.2 Hit confirmation, p50 ms (press to the first frame showing the server's hit)
 

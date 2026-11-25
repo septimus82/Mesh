@@ -16,9 +16,30 @@ the input queue and lag compensation. The rendered evidence of the same world is
 
 ## Launch
 
-Open a PowerShell window for each process below and paste one line into each, in this order. Every line starts from
-the checkout, so it works in a fresh window. Use the checkout this branch is merged into (here `D:\Games\Mesh`;
-change the path if yours differs).
+**0. First, once: bring your checkout up to date (after this PR has merged).** `D:\Games\Mesh` is on
+`redesign/visual-editor` but far behind it, so `tooling/m4_demo_world.py` isn't there yet. A fast-forward brings it in:
+
+```powershell
+git -C D:\Games\Mesh pull --ff-only
+```
+
+- **Your local files are kept.** A fast-forward only moves the branch forward and never touches untracked files. The
+  review checked that your modified `user_settings.json` hasn't changed upstream, and that none of your untracked
+  files (`MESH_HANDOFF.md`, `mygame/`, the `scenes/door_field.json.*` copies and the rest) collide with anything
+  coming in.
+- If git refuses (`Not possible to fast-forward` or `would be overwritten`), it has changed nothing. Stop there and
+  use the alternative below.
+- **Alternative: a fresh worktree beside it.** Your checkout stays untouched:
+
+  ```powershell
+  git -C D:\Games\Mesh fetch origin; git -C D:\Games\Mesh worktree add D:\Games\Mesh-m4demo origin/redesign/visual-editor
+  ```
+
+  Then use `D:\Games\Mesh-m4demo` wherever the lines below say `D:\Games\Mesh`, in both the `cd` and
+  `PYTHONPATH`.
+
+Then open a PowerShell window for each process below and paste one line into each, in this order. Every line starts
+from the checkout, so it works in a fresh window.
 
 **1. The server (one window).** It prints `Mesh room listening on 127.0.0.1:46870`. This line starts it with the
 defaults, drain and lag compensation on:
@@ -115,8 +136,11 @@ focus lets go of its held keys.
 ## What to look for
 
 - **Your swing and a confirmed hit are different things.**
+  - Both marks are new in M4-6 and also appear in the 2D ruins, where the old red tint on a hit enemy still shows
+    too.
   - The **white crescent with a blue rim** is your own swing. It shows the moment you press Space, over the hitbox
-    the server will make, in the direction you face, for 0.2 s. It promises nothing.
+    the server will make, in the direction you face, for 0.2 s. It promises nothing. Press a new direction
+    right after Space and the crescent turns with you, since the server turns before it strikes.
   - The **red burst with a yellow core** on a bandit is a **hit the server confirmed**. It comes about a round trip
     later.
   - A crescent with no burst is a miss.

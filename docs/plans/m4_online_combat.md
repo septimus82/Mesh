@@ -1614,8 +1614,13 @@ owner's budget:**
     - A confirmed hit (`hit_seq`) adds a red burst with a yellow core on the enemy, following it as it walks, for
       `FLASH_S`. The old red tint is kept for 2D; HD-2D's billboards ignore a sprite's tint, so before this an HD-2D
       hit showed nothing.
-    - Both are scene sprites, so the 2D renderer and the HD-2D billboards both draw them. They share no colour and no
-      place.
+    - Both are scene sprites, so the 2D renderer and the HD-2D billboards both draw them, and **2D rooms show them
+      too** (the red tint stays there). They share no colour and no place.
+    - **A quick reversal** (#630 review). A direction pressed after Space but before the next send builds the input
+      the waiting attack rides, so the server turns first and strikes the new way. `Arena.aim` then turns the shown
+      swing to that facing, from where the press showed the avatar. It runs at that press, and again when an attack
+      leaves on an input. Presentation only: nothing sent changes. Tests: Space then Left, and Left then Space, agree
+      with the server's facing in both arenas.
     - Tests (`tests/test_mesh_net_combat.py`):
       - the mark's place, facing, life and floor;
       - the hit burst following its enemy;

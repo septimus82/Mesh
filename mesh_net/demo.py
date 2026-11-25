@@ -86,6 +86,8 @@ class Arena:
             self.keys.append(symbol)
             if self.prediction is not None and self.prediction.press(self.directions[symbol]):
                 self.riders = len(self.actions)  # (the avatar moved on this frame: the next input is built now)
+                if any(action == "attack" for action, _, _ in self.actions):
+                    self.aim()  # (a waiting attack rides that input: the server turns first, then strikes)
         elif symbol in (key.SPACE, key.E) and self.client and symbol not in self.action_keys:
             self.action_keys.add(symbol)
             self.act("attack" if symbol == key.SPACE else "take")
@@ -132,9 +134,16 @@ class Arena:
             direction = self.prediction.next(direction)
             limit = limit if built else None
         action, tick, view = self.next_action(limit)
+        if action == "attack":
+            self.aim()  # (the input it rides is known now, and so the facing the server will strike in)
         if tick is None and self.feedback is not None:
             tick = self.feedback.tick(self.clock())
         return direction, action, tick, view
+
+    def aim(self) -> None:
+        """A waiting attack's input changed or became known: the facing the server will strike in may differ from the
+        one its swing showed at the press (a quick reversal). A scene room's arena turns the shown swing to it;
+        presentation only, nothing sent changes. (The 2D sample shows no swing.)"""
 
     def blur(self) -> bool:
         """Focus lost: release every held key (none sticks), but keep the actions pressed: they are still sent."""

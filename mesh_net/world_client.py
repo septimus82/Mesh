@@ -136,6 +136,11 @@ class WorldArena(Arena):
             return True
         return super().press(symbol, modifiers) if symbol in (key.ESCAPE, key.F2) else True
 
+    def aim(self) -> None:
+        own = self._own()
+        if own is not None and self.view is not None and self.shown == self.room:
+            self.view.aim(self.prediction.facing(own[3]))
+
     def _ask(self, op: str, **fields: int) -> None:
         if len(self.requests) < 4:
             self.requests.append({"v": wire.VERSION, "type": "party", "op": op, **fields})
