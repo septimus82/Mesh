@@ -20,6 +20,7 @@ import contextlib
 import math
 import random
 import sys
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -111,14 +112,13 @@ class DelayProxy:
     async def _pipe(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, link: Link, counts: Counts) -> None:
         """Reads ``reader`` and writes each chunk to ``writer`` at its ``link`` arrival; an end of stream goes the same
         way (after the chunks before it). A queue in between, so reading never waits for a delivery."""
-        loop = asyncio.get_running_loop()
         queue: asyncio.Queue[tuple[float, bytes]] = asyncio.Queue()
         allowed = link.one_way_ms + link.jitter_ms + 1e-6
 
         async def read() -> None:
             while True:
                 data = await reader.read(CHUNK)
-                now = loop.time() * 1000
+                now = time.perf_counter() * 1000
                 due = link.arrival(now)
                 if data:
                     counts.chunks += 1
@@ -133,9 +133,7 @@ class DelayProxy:
         async def deliver() -> None:
             while True:
                 due, data = await queue.get()
-                wait = due / 1000 - loop.time()
-                if wait > 0:
-                    await asyncio.sleep(wait)
+                await until(due / 1000)
                 if not data:
                     if writer.can_write_eof():
                         writer.write_eof()
@@ -144,6 +142,19 @@ class DelayProxy:
                 await writer.drain()
 
         await together(read(), deliver())
+
+
+async def until(due: float) -> None:
+    """Waits until ``time.perf_counter()`` reaches ``due`` (s), never returning sooner. Before Python 3.13 the event
+    loop's clock on Windows is GetTickCount64, in 15.6 ms steps, and the loop runs a timer up to that much early (a
+    100 ms round trip read 75.8 ms on CI's Python 3.11). So the loop sleeps the bulk and a worker thread's
+    ``time.sleep`` (fine on every version) the rest; on a fine loop clock the rest is ~0 and no thread is used."""
+    wait = due - time.perf_counter()
+    if wait > 0:
+        await asyncio.sleep(wait)
+    rest = due - time.perf_counter()
+    if rest > 0:
+        await asyncio.to_thread(time.sleep, rest)
 
 
 def fine_timer(on: bool) -> None:

@@ -1276,11 +1276,18 @@ owner's budget:**
     - **Windows' timer.** asyncio's Windows loop wakes on the 15.6 ms system timer, which added 0–15.6 ms each way
       (100 ms RTT measured 121–124 ms). The proxy holds a 1 ms timer (`timeBeginPeriod`) while it runs. Then 100 ms
       measures 100.5–102.4 ms, 200 ms 200.6–202.6 ms and 0 ms 0.3–0.6 ms (echo over loopback, 20 pings each).
+    - **Never early, on every Python.** Before Python 3.13 the loop's clock on Windows is GetTickCount64, in 15.6 ms
+      steps. CI's first run (Python 3.11, Windows) read one 100 ms ±10 ms round trip as 75.8 ms, under the 80 ms the
+      model allows, when the proxy stamped and waited on the loop's clock. It now stamps each chunk on
+      `time.perf_counter()` and waits until then (`until`): the loop sleeps the bulk, and a worker thread's
+      `time.sleep` the rest, which on a fine loop clock is about nothing. Locally under Python 3.10 (the same coarse
+      clock): 100 ms with no jitter read 100.4–106.5 ms.
     - **Tests** (`tests/test_net_delay_proxy.py`; the socket tests are `integration`, the model test `fast`):
       - the delay stays within the jitter;
       - a 200 kB stream arrives in order, then its end of stream;
       - a loss stalls by a retransmission;
       - one seed, one run;
+      - a delivery never comes early even when the loop wakes early;
       - the real co-op `Server` with two real clients (`mesh_net.client.connect`) through it at 100 ms: an input is
         acknowledged no sooner than a round trip.
 

@@ -162,3 +162,24 @@ def test_the_coop_server_and_two_clients_play_through_it() -> None:
 
     acked = asyncio.run(run())
     assert 100.0 - 1.0 <= acked <= 100.0 + 50.0 + SLACK_MS, f"acknowledged after {acked:.1f} ms"
+
+
+@pytest.mark.fast
+def test_a_delivery_never_comes_early_even_if_the_loop_wakes_early(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Before Python 3.13 the Windows event loop's clock moves in 15.6 ms steps and runs timers up to that much early
+    (CI's Python 3.11 read a 100 ms round trip as 75.8 ms). ``until`` waits out the rest on perf_counter."""
+    import tooling.net_delay_proxy as proxy_module
+
+    real_sleep = asyncio.sleep
+
+    async def early(delay: float) -> None:
+        await real_sleep(0)  # (a loop that wakes at once)
+
+    monkeypatch.setattr(proxy_module.asyncio, "sleep", early)
+
+    async def run() -> float:
+        due = time.perf_counter() + 0.03
+        await proxy_module.until(due)
+        return time.perf_counter() - due
+
+    assert asyncio.run(run()) >= 0.0
