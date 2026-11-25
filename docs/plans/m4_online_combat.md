@@ -1391,7 +1391,7 @@ owner's budget:**
     | bridge deck | 25.0–26.0 / 6.2–6.6 → 1.4–2.3 / 0.1–0.3 (16–33) | 33.7–37.7 / 9.2–10.0 → 7.9–8.8 / 1.9–2.1 (237–260) |
     | arrival | 21.7–25.4 / 11.0–14.6 → 0.5–2.4 / 0–1.7 (0–36) | 27.7–37.4 / 10.1–17.4 → 4.5–8.0 / 1.5–5.0 (34–100) |
 
-    - Hits the player didn't see still happen with M4-5: 0.2–1.2% of presses that looked like misses at 100 ms, and
+    - Hits the player didn't see still happen with M4-5: 0–1.7% of presses that looked like misses at 100 ms, and
       0.8–5.1% at 200 ms (from clamped views). The baseline's are 2.1–18.4% and 2.4–25.2%. The counts are net per
       run: which of them the rewind itself created was not paired press by press.
     - **0 at 0 ms with no loss**, in every scenario except moving both, where the remaining part is the attacker's own
