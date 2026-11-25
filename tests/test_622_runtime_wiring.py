@@ -92,6 +92,29 @@ def test_action_list_runs_from_the_live_event_delivery(arena: Arena) -> None:
     assert handled == ["lever_pulled", "lever_pulled"] and runner.run_count == 2 and len(opened) == 2
 
 
+def test_payload_filtered_runner_sees_the_live_event_payload(arena: Arena) -> None:
+    """Shipped runners filter on payload (dialogue_completed by dialogue_id, the dialogue_choice listeners): the live
+    path must hand them the event's payload, or they silently never fire."""
+    listener = {"id": "listener", "name": "Listener", "x": 0, "y": 0, "sprite": PIC,
+                "behaviours": ["ActionListRunner"],
+                "behaviour_config": {"ActionListRunner": {
+                    "listen_events": ["dialogue_completed"],
+                    "event_filter": {"dialogue_id": "gate_talk"},
+                    "actions": [{"type": "set_flag", "flag": "talked_to_gate"}]}}}
+    arena.write_room(HERO, listener)
+    arena.enter()
+    window = arena.window
+    runner = _behaviour(arena.by_id("listener"), "ActionListRunnerBehaviour")
+
+    window.emit_signal("dialogue_completed", dialogue_id="other_talk")
+    _frames(window, 3)
+    assert runner.run_count == 0 and window.get_flag("talked_to_gate") is False  # non-matching payload: no run
+
+    window.emit_signal("dialogue_completed", dialogue_id="gate_talk")
+    _frames(window, 3)
+    assert runner.run_count == 1 and window.get_flag("talked_to_gate") is True  # matching payload: runs
+
+
 def test_cutscene_steps_find_targets_through_the_scene_controller(arena: Arena) -> None:
     arena.write_room(HERO, GATE)
     arena.enter()
