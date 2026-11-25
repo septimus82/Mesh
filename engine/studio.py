@@ -2373,7 +2373,8 @@ class Studio(InspectorMixin, SoundMixin):
         name, kind = spec["name"], spec.get("type")
         label = behaviour_guide.setting_label(behaviour, name)
         note = str(spec.get("description") or "")
-        value = config.get(name, spec.get("default"))
+        # A setting the behaviour works out when unset (Health's "Starts with": full) shows empty, not a default.
+        value = config.get(name, None if name in ops.DERIVED_WHEN_UNSET.get(behaviour, ()) else spec.get("default"))
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         row.add(self._label(label, color=C_MUTED, size=10, width=120))
         if ops.is_point_list(spec) and all(isinstance(item, dict) for item in value or []):

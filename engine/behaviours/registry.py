@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Iterable, List, Optional, Type, TypeVar
 
-from .base import Behaviour, ParamDef
+from .base import AUTHORED_PARAMS, Behaviour, ParamDef
 
 _B = TypeVar("_B", bound=Behaviour)
 
@@ -229,6 +229,9 @@ def create_behaviour(
         config or {},
         fill_defaults=fill_defaults,
     )
+    # Built from every default (the values behaviours have always had), but only what the author wrote counts as
+    # explicit: Behaviour.__init__ reads this (#651).
+    authored = AUTHORED_PARAMS.set(frozenset(k for k in (config or {}) if k != "type"))
 
     try:
         instance = cls(entity, window, **normalized_config)
@@ -245,6 +248,8 @@ def create_behaviour(
     except Exception as exc:  # noqa: BLE001  # REASON: behaviour constructor failures should be reported without breaking scene load
         print(f"[Mesh][Behaviour] ERROR: Failed to instantiate '{canonical}': {exc}")
         return None
+    finally:
+        AUTHORED_PARAMS.reset(authored)
 
     if instance is not None:
         setattr(instance, "config", dict(normalized_config))

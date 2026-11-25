@@ -66,6 +66,7 @@ See Also:
 from __future__ import annotations
 
 import copy
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, Mapping
 
@@ -75,6 +76,11 @@ if TYPE_CHECKING:  # pragma: no cover - import guard for typing only
     from engine.game import GameWindow
 
     from ..events import MeshEvent
+
+# The settings the author actually wrote, while engine.behaviours.registry.create_behaviour builds a behaviour from a
+# config with every default filled in (#651). The next Behaviour.__init__ takes it (once): only these count as explicit,
+# so "not set" branches (Health's hp, the player's stats) still see what the author left out. None: every given key.
+AUTHORED_PARAMS: ContextVar[frozenset[str] | None] = ContextVar("mesh_authored_params", default=None)
 
 
 @dataclass(slots=True)
@@ -158,6 +164,8 @@ class Behaviour:
         self.entity = entity
         self.window = window
         self._explicit_params: set[str] = set()
+        self._authored = AUTHORED_PARAMS.get()
+        AUTHORED_PARAMS.set(None)  # (a behaviour this one builds is not the author's: create_behaviour restores it)
         self.config: dict[str, Any] = self._merge_param_config(config)
 
     # ------------------------------------------------------------------
@@ -212,7 +220,7 @@ class Behaviour:
         for name, definition in self.param_defs().items():
             raw_value = incoming.pop(name, _PARAM_SENTINEL)
             value = self._coerce_param_value(raw_value, definition)
-            if raw_value is not _PARAM_SENTINEL:
+            if raw_value is not _PARAM_SENTINEL and (self._authored is None or name in self._authored):
                 self._explicit_params.add(name)
             merged[name] = value
             setattr(self, name, value)

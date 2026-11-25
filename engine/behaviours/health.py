@@ -82,8 +82,12 @@ class Health(Behaviour):
         except Exception:
             stats = None
 
+        # The player's stats give max_hp unless the author set one (the config always holds a value: #651).
         default_max_hp = stats.get("max_hp") if stats else None
-        self.max_hp = float(self.config.get("max_hp", default_max_hp if default_max_hp is not None else 1.0))
+        if default_max_hp is not None and "max_hp" not in self._explicit_params:
+            self.max_hp = float(default_max_hp)
+        else:
+            self.max_hp = float(self.config.get("max_hp", 1.0))
         if "hp" not in self._explicit_params:
             self.hp = float(self.max_hp)
             self.config["hp"] = self.hp
