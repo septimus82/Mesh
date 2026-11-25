@@ -572,50 +572,52 @@ class {class_name}(Behaviour):
         return False
 
 
-def create_quest(name: str, target_file: str = "assets/data/quests.json") -> bool:
-    """Append a new quest to the quests registry."""
-    path = Path(target_file)
-    if not path.exists():
-        print(f"[Mesh][Scaffold] Creating new quest registry at '{target_file}'")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        data = []
-    else:
+def create_quest(name: str, target_file: str | Path | None = None) -> bool:
+    """Add a quest with one stage to a quest list in the form the game loads (``{"quests": [...]}``), creating the
+    file if needed (#655). ``target_file`` defaults to ``assets/data/quests.json`` in the current folder (``mesh
+    new-quest`` runs in the project). An older list-rooted file (which the game ignored) is moved into that form."""
+    path = Path(target_file or "assets/data/quests.json")
+    data: Any = {"quests": []}
+    if path.exists():
         try:
-            with path.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-                if not isinstance(data, list):
-                    print(f"[Mesh][Scaffold] ERROR: '{target_file}' is not a list of quests.")
-                    return False
-        except Exception as e:
-            _log_swallow("SCAF-005", f"Failed to read '{target_file}': {e}")
-            print(f"[Mesh][Scaffold] ERROR: Failed to read '{target_file}': {e}")
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            _log_swallow("SCAF-005", f"Failed to read '{path}': {e}")
+            print(f"[Mesh][Scaffold] ERROR: Failed to read '{path}': {e}")
             return False
+        if isinstance(data, list):
+            print(f"[Mesh][Scaffold] '{path}' was a bare list, which the game doesn't load: now {{\"quests\": [...]}}")
+            data = {"quests": data}
+    quests = data.get("quests", []) if isinstance(data, dict) else None
+    if not isinstance(quests, (list, dict)):
+        print(f"[Mesh][Scaffold] ERROR: '{path}' isn't a quest list ({{\"quests\": [...]}}); nothing was changed.")
+        return False
 
     quest_id = name.lower().replace(" ", "_")
-
-    # Check for duplicates
-    if any(q.get("id") == quest_id for q in data):
-        print(f"[Mesh][Scaffold] ERROR: Quest '{quest_id}' already exists in '{target_file}'.")
+    ids = set(quests) if isinstance(quests, dict) else {q.get("id") for q in quests if isinstance(q, dict)}
+    if quest_id in ids:
+        print(f"[Mesh][Scaffold] ERROR: Quest '{quest_id}' already exists in '{path}'.")
         return False
 
     new_quest = {
         "id": quest_id,
         "title": name.replace("_", " ").title(),
         "description": "TODO: Add description",
-        "state": "inactive",
-        "tags": [],
-        "requirements": {}
+        "stages": [{"id": "start", "title": "Start", "text": "TODO: what the player does first"}],
     }
-
-    data.append(new_quest)
+    if isinstance(quests, dict):
+        quests[quest_id] = new_quest
+    else:
+        quests.append(new_quest)
+    data["quests"] = quests
 
     try:
         json_io.write_json_atomic(path, data)
-        print(f"[Mesh][Scaffold] Added quest '{quest_id}' to '{target_file}'")
+        print(f"[Mesh][Scaffold] Added quest '{quest_id}' to '{path}'")
         return True
     except Exception as e:
-        _log_swallow("SCAF-006", f"Failed to write '{target_file}': {e}")
-        print(f"[Mesh][Scaffold] ERROR: Failed to write '{target_file}': {e}")
+        _log_swallow("SCAF-006", f"Failed to write '{path}': {e}")
+        print(f"[Mesh][Scaffold] ERROR: Failed to write '{path}': {e}")
         return False
 
 

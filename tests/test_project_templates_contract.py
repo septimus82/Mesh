@@ -12,7 +12,7 @@ def test_list_templates_stable():
     ids = [t.id for t in templates]
     assert "blank" in ids
     assert "lighting_playground" in ids
-    assert "demo_slice" in ids
+    assert "demo_slice" not in ids  # retired (#656): a pre-schema scene that couldn't start
 
     # Check structure
     iso = templates[0]
@@ -38,35 +38,19 @@ def test_apply_template_blank(tmp_path):
     assert next(p for p in prefabs if p["id"] == "player")["entity"]["tag"] == "player"
 
 def test_apply_template_lighting_playground(tmp_path):
-    """Test lighting playground template."""
+    """The lighting playground in the current room format (#656): lit, two lamps, a wall, the shared player."""
+    from engine.scene_loader import SceneLoader
+
     root = tmp_path / "light_proj"
     create_project(root, "LightTest", template_id="lighting_playground")
 
     start_scene = root / "packs/core_regions/scenes/start.json"
     data = json.loads(start_scene.read_text("utf-8"))
+    assert "layers" not in data or isinstance(data["layers"], list)
+    assert len(data["lights"]) == 2
+    assert data["settings"]["lighting_enabled"] is True
+    assert any(e.get("prefab_id") == "player" for e in data["entities"])
+    assert not SceneLoader().validate_scene_file(str(start_scene)).errors
 
-    # Check for lights
-    assert "lights" in data["layers"]
-    assert len(data["layers"]["lights"]) > 0
-
-    # Check config
     config = json.loads((root / "config.json").read_text("utf-8"))
     assert config["lighting_enabled"] is True
-
-def test_apply_template_demo_slice(tmp_path):
-    """Test demo slice template."""
-    root = tmp_path / "demo_proj"
-    create_project(root, "DemoTest", template_id="demo_slice")
-
-    # Check quest
-    quest_file = root / "packs/core_regions/quests/intro.json"
-    assert quest_file.exists()
-
-    # Check start scene has NPC and interaction
-    start_scene = root / "packs/core_regions/scenes/start.json"
-    data = json.loads(start_scene.read_text("utf-8"))
-
-    entities = data["layers"]["entities"]
-    npcs = [e for e in entities if e.get("type") == "npc"]
-    assert len(npcs) > 0
-    assert npcs[0]["interaction"]["quest_trigger"] == "intro_quest"

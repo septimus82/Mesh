@@ -115,6 +115,12 @@ def create_blank_project(name: str, dest: Path, *, template_id: str = "blank", f
     if problem:
         print(f"[mesh] Error: invalid project name {name!r}: {problem}.", file=sys.stderr)
         return 1
+    from engine.project_templates import list_templates
+
+    known = [t.id for t in list_templates()]
+    if template_id not in known:  # (demo_slice was retired in #656)
+        print(f"[mesh] Error: no template {template_id!r}; templates: {', '.join(known)}.", file=sys.stderr)
+        return 1
     # Exactly DEST/NAME: only DEST is resolved, so a link at NAME is seen, never followed.
     resolved_dest = dest.resolve()
     project_dir = resolved_dest / name

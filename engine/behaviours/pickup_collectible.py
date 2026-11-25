@@ -10,9 +10,12 @@ if TYPE_CHECKING:
 from ..constants import EVENT_COLLECTED
 from ..events import MeshEvent
 from ..inventory import get_or_create_inventory, load_item_database
+from ..logging_tools import get_logger
 from .base import Behaviour, ParamDef
 from .inventory_holder import InventoryHolder
 from .registry import register_behaviour
+
+_LOG = get_logger("engine.behaviours.pickup_collectible")
 
 
 @register_behaviour(
@@ -86,6 +89,18 @@ class PickupCollectible(Behaviour):
             if actor_tag != self.allowed_tag:
                 return
 
+        # A pickup the inventory can't take (full stack, owned non-stackable, unknown id) stays in the world, and
+        # says why: never taken for nothing (#652, owner decision D7).
+        if self.item_id and self.item_amount > 0:
+            refusal = get_or_create_inventory(window.game_state.values).refusal(self.item_id, self.item_amount)
+            if refusal is not None:
+                _LOG.warning("Pickup '%s' refused: %s", getattr(self.entity, "mesh_name", "<unnamed>"), refusal)
+                hud = getattr(window, "player_hud", None)
+                enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
+                if callable(enqueue):
+                    enqueue(refusal, seconds=2.0)
+                return
+
         self._already_collected = True
 
         granted_items = self._grant_inventory_items(window)
@@ -117,7 +132,10 @@ class PickupCollectible(Behaviour):
         if granted_items:
             self._log_inventory_gain(window, granted_items)
 
-        if self.remove_on_collect:
+        holder = self._find_inventory_holder()
+        if holder is not None and holder.consume_on_transfer and holder.has_items():  # what the inventory couldn't take
+            self._already_collected = False
+        elif self.remove_on_collect:
             self.entity.remove_from_sprite_lists()
         else:
             self.entity.visible = False

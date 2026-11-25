@@ -104,6 +104,20 @@ _MONSTER_STARTER_FILES = (
 )
 
 
+# The item database every new project starts with (#652, owner decision D7), in engine.inventory's format: without
+# one, pickups, shops and drops had no items to give. Edit assets/data/items.json to add more.
+ITEMS_FILE = "assets/data/items.json"
+STARTER_ITEMS: list[dict[str, Any]] = [
+    {"id": "healing_potion", "name": "Healing Potion", "description": "Restores a small amount of health.",
+     "icon": None, "stackable": True, "max_stack": 10, "tags": ["consumable"], "effects": {"heal": 2.0}},
+    {"id": "rusty_sword", "name": "Rusty Sword", "description": "A dull blade, better than nothing.",
+     "icon": None, "stackable": False, "max_stack": 1, "tags": ["equipment", "weapon"],
+     "effects": {"tier": 1, "damage": 5}},
+    {"id": "old_key", "name": "Old Key", "description": "It must open something.",
+     "icon": None, "stackable": False, "max_stack": 1, "tags": ["quest"], "effects": {}},
+]
+
+
 def validate_new_project_target(root: Path) -> tuple[bool, str]:
     """Check if the target directory is valid for a new project.
 
@@ -225,6 +239,8 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
     json_io.write_json_atomic(root / "assets/data/events.json", {"events": []})
 
     apply_template(root, template_id)
+    if not (root / ITEMS_FILE).exists():  # (a template's own list is kept)
+        json_io.write_json_atomic(root / ITEMS_FILE, {"items": STARTER_ITEMS})
     for rel_path in _STARTER_FILES:
         if rel_path == _LEGACY_PLACEHOLDER and not _names_legacy_placeholder(root):
             continue  # no template uses it: new projects get only Mesh's own art (and pip installs don't ship it)

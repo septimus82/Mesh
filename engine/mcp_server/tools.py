@@ -68,15 +68,21 @@ OP_CATALOG: dict[str, dict[str, Any]] = {
 
 # ---------------------------------------------------------------- read tools
 def list_scenes(root: str = ".") -> list[str]:
-    """List scene file paths (relative to ``root``) under ``scenes/``."""
+    """List scene file paths (relative to ``root``): the rooms of the project's world (``config.json``'s
+    ``world_file``, start room first), then any other ``scenes/*.json``."""
+    from engine.project_ops import world_rooms  # noqa: PLC0415
+
     base = _root_path(root)
+    rooms: list[str] = []
+    try:
+        world_file = json.loads((base / "config.json").read_text(encoding="utf-8")).get("world_file")
+        world = json.loads((base / str(world_file)).read_text(encoding="utf-8")) if world_file else {}
+        rooms = [path for _key, _label, path in world_rooms(world) if path and (base / path).is_file()]
+    except (OSError, ValueError, AttributeError):  # (no project, or an unreadable one: only scenes/)
+        pass
     scenes_dir = base / "scenes"
-    if not scenes_dir.is_dir():
-        return []
-    return sorted(
-        str(path.relative_to(base).as_posix())
-        for path in scenes_dir.glob("*.json")
-    )
+    loose = sorted(path.relative_to(base).as_posix() for path in scenes_dir.glob("*.json")) if scenes_dir.is_dir() else []
+    return list(dict.fromkeys(rooms + loose))
 
 
 def read_scene(scene_path: str, root: str = ".") -> dict[str, Any]:

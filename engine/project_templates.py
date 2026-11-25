@@ -7,8 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from engine.swallowed_exceptions import _log_swallow
-
 from . import json_io
 from .logging_tools import get_logger
 
@@ -42,9 +40,9 @@ _TEMPLATES = [
              "to talk to. Import Blender GLB models and edit in 3D. A preview: some features are still experimental.",
              launcher=True, preview="assets/templates/hd2d_rpg.png"),
     Template("monster", "Monster Test Game", "Blank room plus the companion-monster test data (species, moves, battle sprites, sounds)."),
-    # Older scene layout (top-level "layers"); Mesh Studio can't edit these. Kept for the CLI.
-    Template("lighting_playground", "Lighting Playground", "Scene with lights, occluders, and fog preset."),
-    Template("demo_slice", "Demo Slice", "Interactive scene with NPC, quest, and gameplay mechanics."),
+    # CLI only. (demo_slice, a pre-schema scene that couldn't start, was retired in #656: its Guide is the starter's.)
+    Template("lighting_playground", "Lighting Playground",
+             "A dark room with two coloured lamps and a wall that casts their shadows."),
 ]
 
 
@@ -64,7 +62,7 @@ def apply_template(root: Path, template_id: str) -> None:
         _LOG.warning("Unknown template '%s', defaulting to blank", template_id)
         builder = _apply_blank
     builder(root)
-    if builder in (_apply_blank, _apply_adventure, _apply_starter, _apply_hd2d_rpg):
+    if builder in (_apply_blank, _apply_adventure, _apply_starter, _apply_hd2d_rpg, _apply_lighting_playground):
         _share_player(root)
 
 
@@ -261,86 +259,24 @@ def _apply_hd2d_rpg(root: Path) -> None:
 
 
 def _apply_lighting_playground(root: Path) -> None:
-    # Scene with lights and occluders
-    scene = {
-        "format_version": 1,
-        "scene_id": "start",
-        "name": "Lighting Playground",
-        "world_ambient_light": [50, 50, 60],
-        "layers": {
-            "background": [
-                # Simple floor
-                 {"x": 100, "y": 100, "texture": "floor_tile", "layer": "background"}
-            ],
-            "entities": [
-                # Player spawn
-                {"type": "player_spawn", "x": 200, "y": 200},
-                # Wall (Occluder)
-                {"type": "wall", "x": 300, "y": 300, "width": 50, "height": 200},
-            ],
-            "lights": [
-                {
-                    "type": "point_light",
-                    "x": 400, "y": 300,
-                    "radius": 150,
-                    "color": [255, 200, 100]
-                },
-                {
-                    "type": "point_light",
-                    "x": 100, "y": 100,
-                    "radius": 100,
-                    "color": [100, 100, 255]
-                }
-            ]
-        }
-    }
-    _write_json(root / "packs/core_regions/scenes/start.json", scene)
+    """A dark room with a warm and a cool lamp either side of a brick wall that casts their shadows (ported from the
+    pre-schema scene, #656), built with the editor's operations so Mesh Studio can edit it."""
+    from . import project_ops as ops  # noqa: PLC0415  # keep scaffolding import-light
 
-    # Update config to ensure lighting is on
+    scene = _blank_scene()
+    scene["name"] = "Lighting Playground"
+    scene, map_path, skeleton = ops.add_map(scene, _START, width=24, height=16, ground=ops.STARTER_GRASS)
+    _write_json(root / map_path, skeleton)
+    scene = ops.paint_tiles(scene, ops.WALLS, ops.rect_cells((9, 5), (10, 10)), 10)  # brick: walls block light
+    scene = ops.set_room_lighting(scene, enabled=True, ambient=[50, 50, 60])
+    scene, _ = ops.add_light(scene, 400, 300, color=[255, 200, 100], radius=150)
+    scene, _ = ops.add_light(scene, 100, 100, color=[100, 100, 255], radius=100)
+    _write_json(root / _START, scene)
+    _write_person_prefab(root)
     config_path = root / "config.json"
-    if config_path.exists():
-        try:
-            config = json.loads(config_path.read_text(encoding="utf-8"))
-            config["lighting_enabled"] = True
-            _write_json(config_path, config)
-        except Exception:
-            _log_swallow("PROJ-001", "engine/project_templates.py pass-only blanket swallow")
-            pass
-
-
-def _apply_demo_slice(root: Path) -> None:
-    # Quest logic
-    quest = {
-        "id": "intro_quest",
-        "title": "Hello World",
-        "steps": [
-            {"id": "talk_npc", "description": "Talk to the Guide"}
-        ]
-    }
-    _write_json(root / "packs/core_regions/quests/intro.json", quest)
-
-    # Scene with NPC
-    scene = {
-        "format_version": 1,
-        "scene_id": "start",
-        "name": "Demo Village",
-        "layers": {
-             "entities": [
-                {"type": "player_spawn", "x": 100, "y": 100},
-                {
-                    "type": "npc",
-                    "x": 300, "y": 100,
-                    "name": "Guide",
-                    "interaction": {
-                        "type": "dialogue",
-                        "text": "Welcome to Mesh Engine!",
-                        "quest_trigger": "intro_quest"
-                    }
-                }
-             ]
-        }
-    }
-    _write_json(root / "packs/core_regions/scenes/start.json", scene)
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    config["lighting_enabled"] = True
+    _write_json(config_path, config)
 
 
 _BUILDERS = {
@@ -350,5 +286,4 @@ _BUILDERS = {
     "monster": _apply_blank,  # the monster data itself is copied by create_project
     "hd2d_rpg": _apply_hd2d_rpg,
     "lighting_playground": _apply_lighting_playground,
-    "demo_slice": _apply_demo_slice,
 }

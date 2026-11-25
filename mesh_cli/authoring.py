@@ -40,7 +40,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     # New Quest
     new_quest_parser = subparsers.add_parser("new-quest", help="Create a new quest")
     new_quest_parser.add_argument("name", help="Quest name")
-    new_quest_parser.add_argument("--target", help="Target entity/location")
+    new_quest_parser.add_argument("--target", help="Quest file to add it to (default: assets/data/quests.json)")
 
     # New Behaviour
     new_behaviour_parser = subparsers.add_parser("new-behaviour", help="Create a new behaviour script")
@@ -98,8 +98,7 @@ def _handle_place_npc(args: argparse.Namespace) -> int:
 def _handle_new_quest(args: argparse.Namespace) -> int:
     """Create a new quest entry."""
     try:
-        scaffold.create_quest(args.name, args.target)
-        return 0
+        return 0 if scaffold.create_quest(args.name, args.target) else 1
     except Exception as e:
         print(f"[Mesh][CLI] Error creating quest: {e}")
         return 1
