@@ -26,7 +26,7 @@ The owner approved S1 stabilization at the S1-0 checkpoint. The decisions below 
 
 **What was done:**
 - **No PR from the investigation branch.** No pull request has been, or will be, opened from `docs/s1-0-investigation`. That history contains commit `035d0280`, which briefly held the owner's Windows username inside temp-file paths in copied tool output.
-- **Clean publication.** These documents are published from a new branch, `docs/s1-stabilization-plan`, created from the integration tip. It holds only the reviewed, clean `docs/s1/` tree, plus this file, and its history never contained the exposing commit.
+- **Clean publication.** These documents are published from a new branch, `docs/s1-stabilization-plan`, created from the integration tip. It holds the reviewed, clean `docs/s1/` tree and this file, plus a narrow `pyproject.toml` change that keeps the ruff and mypy gates off the evidence scripts. Its history never contained the exposing commit.
 - **Scrub PR.** A separate focused PR scrubs the six pre-existing tracked files that contain the username (listed in [10_health_report.md](10_health_report.md) §8).
 - **Clean evidence.** The audit evidence is kept without personal machine paths.
 - **History untouched.** No integration or `main` history is rewritten or force-pushed.
