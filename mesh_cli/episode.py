@@ -12,6 +12,8 @@ import re
 import sys
 import time
 from collections import Counter, defaultdict
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -208,7 +210,12 @@ def _handle_replay_check(args: argparse.Namespace) -> int:
             outro_cutscene_id=outro_cutscene_id,
         )
 
-        with suppress_stdout():
+        # Timing-only repeats (T-07): extra fresh executions when run_1 + run_2 give too few tick samples. Their
+        # digests/events/final state must equal run_1's, but nothing from them is ever written as replay state.
+        timing_min_samples = int(getattr(args, "timing_min_samples", 0) or 0)
+        repeats_consistent = True
+        # Every timed execution runs with the host process's existing heap frozen (#612).
+        with _host_heap_frozen(), suppress_stdout():
             run_1 = _run_replay_once(spec, script_payload)
             run_2 = _run_replay_once(spec, script_payload) if run_1.ok else ReplayRunResult(
                 ok=False,
@@ -226,14 +233,8 @@ def _handle_replay_check(args: argparse.Namespace) -> int:
                 tick_ms_max=0.0,
                 save_restore_diagnostics={"counts": {"total": 0, "errors": 0, "warnings": 0, "infos": 0}, "diagnostics": []},
             )
-
-        # Timing-only repeats (T-07): extra fresh executions when run_1 + run_2 give too few tick samples. Their
-        # digests/events/final state must equal run_1's, but nothing from them is ever written as replay state.
-        timing_min_samples = int(getattr(args, "timing_min_samples", 0) or 0)
-        timing_runs: list[ReplayRunResult] = [run_1, run_2]
-        repeats_consistent = True
-        if timing_min_samples > 0 and run_1.ok and run_2.ok:
-            with suppress_stdout():
+            timing_runs: list[ReplayRunResult] = [run_1, run_2]
+            if timing_min_samples > 0 and run_1.ok and run_2.ok:
                 while (
                     sum(len(r.tick_ms_list) for r in timing_runs) < timing_min_samples
                     and len(timing_runs) < MAX_TIMING_EXECUTIONS
@@ -1329,6 +1330,28 @@ class _GcPauseProbe:
         else:
             self.ms += (now - self._started) * 1000.0
             self.collections[min(int(info.get("generation", 0)), 2)] += 1
+
+
+@contextmanager
+def _host_heap_frozen() -> Iterator[None]:
+    """#612: keep the host process's existing heap out of the timed replay executions' garbage collections.
+
+    Replay harness only, never the game runtime. A long-lived host (the pytest process, ~1.5M tracked objects late in
+    a CI run) can land a full collection of its own heap inside a timed tick: CI saw one 1155 ms tick, 1145 ms of it gc.
+    Collecting first drops the host's garbage, then freezing moves its live objects to the permanent generation, so
+    collections during the run scan only what the replay itself allocates; those still happen and are still timed.
+    ``gc.unfreeze()`` releases every frozen object, so a host that froze objects of its own is left exactly as it was:
+    no collect, no freeze. Enabled state and thresholds are never touched.
+    """
+    if gc.get_freeze_count():
+        yield
+        return
+    gc.collect()
+    gc.freeze()
+    try:
+        yield
+    finally:
+        gc.unfreeze()
 
 
 def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> ReplayRunResult:
