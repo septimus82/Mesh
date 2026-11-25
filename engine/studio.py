@@ -438,7 +438,8 @@ class Studio(InspectorMixin, SoundMixin):
         for text, ok in ((terrain_error, False), (scatter_error, False), (rivers_error, False), (motion_error, False),
                          (dof_message, False),
                          (f"Weather is off in this room: {error}" if error else None, False),
-                         (f"Water is off in this room: {water_error}" if water_error else None, False), (notice, True)):
+                         (f"Water is off in this room: {water_error}" if water_error else None, False), (notice, True),
+                         (getattr(self.window, "cutscenes_error", None), False)):  # (#642: the project's, set aside)
             if text and text not in self._weather_said:
                 self._weather_said.add(text)
                 self._say(text, ok=ok)

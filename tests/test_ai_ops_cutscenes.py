@@ -42,7 +42,7 @@ def test_insert_update_delete_step(tmp_path: Path):
     res = ops.update_cutscene_step(
         "intro",
         0,
-        {"duration": 0.5},
+        {"event": "bang"},
         cutscenes_path=str(path),
     )
     assert res.ok
