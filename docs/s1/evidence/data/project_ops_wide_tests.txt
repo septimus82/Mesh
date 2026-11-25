@@ -1,0 +1,12 @@
+tests/test_ai_preview_player_summary.py
+tests/test_entity_paint_add_remove_idempotent.py
+tests/test_mcp_onboarding_cli_contract.py
+tests/test_mcp_project_ownership.py
+tests/test_project_ops.py
+tests/test_project_ops_authoring.py
+tests/test_studio_ai_identity.py
+tests/test_studio_canvas.py
+tests/test_studio_object_identity.py
+tests/test_studio_project_ownership.py
+tests/test_studio_room_undo_save.py
+tests/test_studio_undo_history_sharing.py
