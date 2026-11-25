@@ -92,6 +92,23 @@ def _author(root: Path) -> None:
     (root / ROOM).write_text(json.dumps(doc, indent=2), encoding="utf-8")
 
 
+def test_camera_follow_built_by_the_factory_keeps_its_filled_defaults() -> None:
+    """The other "not set" readers keep what the factory always gave them: CameraFollow's unset zoom is 1.0 (never the
+    scene's or the entity's), follow_strength doesn't replace lerp_factor; LightSource's unset flicker_seed is None."""
+    from types import SimpleNamespace
+
+    from engine.behaviours import load_builtin_behaviours
+    from engine.behaviours.registry import create_behaviour
+
+    load_builtin_behaviours()
+    entity = SimpleNamespace(mesh_entity_data={"zoom": 2.0}, mesh_tag="player", center_x=0.0, center_y=0.0)
+    window = SimpleNamespace(engine_config=None, lighting=None)
+    camera = create_behaviour("CameraFollow", entity, window, config={"follow_strength": 9.0})
+    assert (camera.zoom_target, camera.lerp_factor) == (1.0, 5.0)
+    light = create_behaviour("LightSource", entity, window, config={"flicker_enabled": True})
+    assert light._legacy_flicker_seed_value() is None
+
+
 def _states(node: Any) -> list[dict[str, Any]]:
     """Every saved Health state in a save file (dicts holding hp and max_hp)."""
     if isinstance(node, dict):
