@@ -334,3 +334,20 @@ def test_the_window_places_enemies_where_playback_shows_them() -> None:
     assert (sprite.center_x, sprite.center_y, sprite.mesh_entity_data["elevation"], sprite.mesh_hd2d_floor) == (
         10.0, 20.0, 32.0, "deck")
     assert (sprite.mesh_velocity_x, sprite.mesh_velocity_y) == pytest.approx((100.0, 200.0))
+
+
+def test_an_enemy_row_rounded_over_a_floors_edge_is_accepted(routed: dict[str, bytes]) -> None:
+    """A walking enemy's row is its x/y to 0.01 px. One whose feet stand on the west stairs' east edge (11 m) can be
+    sent 0.004 px beyond it: the client's check samples the rounding's corners, as for players (floor_under), and
+    accepts it; a whole pixel beyond is refused."""
+    room = room_of(routed)
+    state = room.snapshot()
+
+    def row_at(x: float) -> dict[str, Any]:
+        r = next(r for r in state["enemies"] if r[0] == BANDIT)
+        return {**state, "enemies": [[r[0], r[1], r[2], x, 200.0 + 18.0, 28.0, "crossing/col_stairs_west"]]}
+
+    check_state(row_at(352.0 - 1.0), room.identity, room)
+    check_state(row_at(352.004), room.identity, room)
+    with pytest.raises(wire.Invalid, match="not under it"):
+        check_state(row_at(353.0), room.identity, room)

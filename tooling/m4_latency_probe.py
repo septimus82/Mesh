@@ -570,7 +570,7 @@ GROUND_Y = 122.0  # px: a sprite centre on the crossing's open ground (feet on a
 GROUND_ROUTE = (552.0, 664.0)  # px: the bandit's feet walk between these, through the still attacker's hitbox
 
 
-def swinging(s: Session, presses: list[float]) -> tuple[Callable[[float], None], dict[str, Any]]:
+def swinging(s: Session, presses: list[float]) -> tuple[Callable[[float], None], Callable[[], dict[str, Any]]]:
     """Swings pressed at ``presses`` (ms) through the window's own handling (Arena.act, Feedback), and what became of
     them: ``frame(now)`` presses those due; ``done()`` gives, per swing shown, whether the authority ran it, and for
     each hit its swing scored, how long from the press until the window first showed a state of the tick it hit on.
