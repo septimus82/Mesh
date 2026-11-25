@@ -18,6 +18,7 @@ from .persistence_io import SAVE_FORMAT_VERSION, read_json, write_json_atomic
 from .save_runtime import constants as save_constants
 from .save_runtime import io as save_io
 from .save_runtime import payloads as save_payloads
+from .save_runtime import storage as save_storage
 from .save_runtime.restore_policy import SNAPSHOT_POLICY
 from .save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from .save_runtime.ux_codes import (
@@ -230,13 +231,23 @@ class SaveGameV1:
         )
 
 
-def resolve_savegame_path(path: str | None = None) -> Path:
+def resolve_savegame_path(path: str | None = None, *, reading: bool = False) -> Path:
+    """``path``, else the env override, else ``saves/save_1.json`` in the game project (engine.paths.project_root,
+    #623), never the current folder's. ``reading``: when the project has none, an older one in the current folder
+    (save_storage.cwd_legacy_saves: never written, never another project's)."""
     raw = str(path or "").strip()
     if not raw:
         raw = str(os.environ.get("MESH_SAVEGAME_PATH") or os.environ.get("MESH_SAVE_PATH") or "").strip()
-    if not raw:
-        return DEFAULT_SAVEGAME_PATH
-    return Path(raw)
+    if raw:
+        return Path(raw)
+    from engine.paths import project_root  # noqa: PLC0415
+
+    root = project_root()
+    resolved = root / DEFAULT_SAVEGAME_PATH
+    legacy_dir = save_storage.cwd_legacy_saves(root) if reading and not resolved.is_file() else None
+    if legacy_dir is not None and (legacy_dir / DEFAULT_SAVEGAME_PATH.name).is_file():
+        return legacy_dir / DEFAULT_SAVEGAME_PATH.name
+    return resolved
 
 
 def _resolve_quest_manager(window: Any) -> Any | None:
@@ -336,7 +347,7 @@ def save_savegame(path: str | Path | None, save: SaveGameV1) -> None:
 def load_savegame(path: str | Path | None) -> SaveGameV1 | None:
     if _is_web_runtime():
         return None
-    in_path = Path(path) if path is not None else resolve_savegame_path()
+    in_path = Path(path) if path is not None else resolve_savegame_path(reading=True)
     if not in_path.exists():
         diag_warn(
             LOAD_NOT_FOUND,

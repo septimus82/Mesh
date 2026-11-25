@@ -50,8 +50,21 @@ class CutsceneController:
             if cutscene:
                 self.cutscenes[cutscene.id] = cutscene
 
+    def load_project_cutscenes(self) -> None:
+        """The game project's ``cutscenes.json`` (none is fine), in place of any cutscenes held (a project switch)."""
+        self.cutscenes.clear()
+        try:
+            self.load_from_file("cutscenes.json")
+        except FileNotFoundError:
+            pass
+
     def load_from_file(self, path: str) -> None:
+        """A relative ``path`` is the game project's (engine.paths.project_root), not the current folder's (#623)."""
+        from engine.paths import project_root  # noqa: PLC0415
+
         p = Path(path)
+        if not p.is_absolute():
+            p = project_root() / p
         raw = json.loads(p.read_text(encoding="utf-8"))
         validate(raw, "cutscene.schema.json", p)
         raw_entries = raw.get("cutscenes", [])

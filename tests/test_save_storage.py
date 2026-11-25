@@ -136,7 +136,7 @@ def test_a_project_keeps_saving_in_its_folder(tmp_path: Path, player: Path, monk
     project = _install(tmp_path / "Mesh Projects" / "My Game", exported=False)
     monkeypatch.chdir(project)
     manager = SaveManager(Window(project))
-    assert manager.save_dir == Path("saves") and manager.legacy_dir is None
+    assert manager.save_dir == project.resolve() / "saves" and manager.legacy_dir is None
     assert manager.save_game("dev") and (project / "saves" / "dev.json").is_file() and not player.exists()
 
 
@@ -256,6 +256,79 @@ def test_a_broken_older_save_fails_to_load_and_stays_untouched(tmp_path: Path, p
     assert not SaveManager(window).load_game("slot1") and window.gold == 9
     assert broken.read_text(encoding="utf-8") == '{"meta": "corrupt"'
     assert sorted(p.name for p in broken.parent.iterdir()) == ["slot1.json"], "no diagnostics files in the installation"
+
+
+# --------------------------------------------------------------------------- a project started from another folder (#623)
+
+
+def _tree(folder: Path) -> dict[str, bytes]:
+    return {p.relative_to(folder).as_posix(): p.read_bytes() for p in sorted(folder.rglob("*")) if p.is_file()}
+
+
+def test_two_projects_keep_their_own_quicksaves_whatever_the_current_folder(tmp_path: Path, player: Path,
+                                                                           monkeypatch: pytest.MonkeyPatch) -> None:
+    """The defect: the current folder stayed at project A (``mesh edit A``, then the main menu switched to B, or
+    ``run_game(project_root=B)``), so B's quicksave went to A's ``saves`` and overwrote A's."""
+    a = _install(tmp_path / "project_a", exported=False)
+    b = _install(tmp_path / "project_b", exported=False)
+    monkeypatch.chdir(a)
+    for root, gold in ((a, 1), (b, 2)):
+        window = Window(root)
+        window.game_state_controller.state.counters["gold"] = gold
+        assert SaveManager(window).save_game("quicksave")
+    assert (a / "saves" / "quicksave.json").is_file() and (b / "saves" / "quicksave.json").is_file()
+    for root, gold in ((a, 1), (b, 2)):
+        window = Window(root)
+        assert SaveManager(window).load_game("quicksave") and window.gold == gold, root.name
+
+
+def test_an_older_save_in_the_current_folder_loads_but_new_saves_go_to_the_project(
+        tmp_path: Path, player: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Owner decision D5: an older save is still offered (read-only) where a project started from another folder
+    left it; nothing is ever written there, and saving that slot again writes the project's own copy."""
+    launch, project = tmp_path / "launch", _install(tmp_path / "project", exported=False)
+    _legacy(launch, "slot1", 5)  # (a plain folder, no config.json: only this game's older saves can be in it)
+    before = _tree(launch)
+    monkeypatch.chdir(launch)
+    window = Window(project)
+    manager = window.save_manager = SaveManager(window)
+    assert manager.save_dir == project.resolve() / "saves" and manager.legacy_dir == launch.resolve() / "saves"
+    assert manager.list_saves() == ["slot1"]
+    assert manager.load_game("slot1") and window.gold == 5
+    window.game_state_controller.state.counters["gold"] = 9
+    assert manager.save_game("slot1") and manager.save_game("quicksave")
+    assert sorted(p.name for p in (project / "saves").glob("*.json")) == ["quicksave.json", "slot1.json"]
+    assert _tree(launch) == before, "nothing written, changed or removed in the current folder"
+    window.game_state_controller.state.counters["gold"] = 0
+    assert manager.load_game("slot1") and window.gold == 9, "the project's copy now"
+
+
+def test_a_current_folder_that_is_another_project_is_never_offered_nor_written(
+        tmp_path: Path, player: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ambiguous: Mesh's checkout under its project browser, or another project, holds its own saves (perhaps mixed
+    with this one's from before #623). None of them is offered to this game, and nothing is written there."""
+    other, project = _install(tmp_path / "other", exported=False), _install(tmp_path / "project", exported=False)
+    _legacy(other, "slot1", 5)
+    before = _tree(other)
+    monkeypatch.chdir(other)
+    window = Window(project)
+    manager = SaveManager(window)
+    assert manager.legacy_dir is None and manager.list_saves() == []
+    assert not manager.load_game("slot1")
+    assert manager.save_game("slot1") and (project / "saves" / "slot1.json").is_file()
+    assert _tree(other) == before
+
+
+def test_a_project_switch_moves_the_saves_with_it(tmp_path: Path, player: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    a = _install(tmp_path / "project_a", exported=False)
+    b = _install(tmp_path / "project_b", exported=False)
+    monkeypatch.chdir(a)
+    window = Window(a)
+    manager = SaveManager(window)
+    window.engine_config = Window(b).engine_config  # (the main menu loads the other project's config)
+    manager.relocate()
+    assert manager.save_dir == b.resolve() / "saves" and manager.save_game("quicksave")
+    assert not (a / "saves" / "quicksave.json").exists()
 
 
 # --------------------------------------------------------------------------- when it can't

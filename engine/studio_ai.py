@@ -189,7 +189,7 @@ class StudioAIHost:
             return {"ok": False, "mode": "live_studio", "reason": "invalid_change", "index": err.index, "op": err.op,
                     "message": str(err)}
         proposal = Proposal(changes=pinned, title=title, source=source, base_revision=base_revision,
-                            base=before, after=after, summary=authoring.summarize(before, after) or ["(no visible change)"],
+                            base=before, after=after, summary=authoring.summarize(before, after, self.project.root) or ["(no visible change)"],
                             base_revision_id=base_revision_id)
         self.proposals.append(proposal)
         self.studio.on_ai_proposal(proposal)

@@ -258,6 +258,14 @@ class MainMenuOverlay(UIElement):
         if is_standalone_project_root(Path(root_text)):
             pin_launched_project_root(Path(root_text), config=self.window.engine_config)
             setattr(self.window, "standalone_launch", True)
+        # The game's saves and cutscenes are the new project's now, not the folder Mesh runs in (#623); the item
+        # database follows engine.paths.project_root by itself.
+        relocate = getattr(getattr(self.window, "save_manager", None), "relocate", None)
+        if callable(relocate):
+            relocate()
+        reload_cutscenes = getattr(getattr(self.window, "cutscene_controller", None), "load_project_cutscenes", None)
+        if callable(reload_cutscenes):
+            reload_cutscenes()
 
         # Reload workspace settings if editor is present
         if hasattr(self.window, "editor") and callable(getattr(self.window.editor, "load_workspace", None)):
@@ -387,7 +395,7 @@ class MainMenuOverlay(UIElement):
             if os.environ.get("PYTEST_CURRENT_TEST"):
                 if not (os.environ.get("MESH_SAVEGAME_PATH") or os.environ.get("MESH_SAVE_PATH")):
                     return False
-            return load_savegame(resolve_savegame_path()) is not None
+            return load_savegame(resolve_savegame_path(reading=True)) is not None
         except Exception:
             return False
 
@@ -662,7 +670,7 @@ class MainMenuOverlay(UIElement):
         try:
             from ..savegame import apply_savegame, load_savegame, resolve_savegame_path  # noqa: PLC0415
 
-            save = load_savegame(resolve_savegame_path())
+            save = load_savegame(resolve_savegame_path(reading=True))
             if save is None:
                 return
             if self._confirm_unsaved_action("Load Game", lambda: apply_savegame(self.window, save.to_payload())):

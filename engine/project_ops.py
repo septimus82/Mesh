@@ -17,6 +17,7 @@ import posixpath
 import re
 from contextlib import contextmanager
 from contextvars import ContextVar
+from pathlib import Path
 from typing import Any, Collection, Iterable, Iterator
 
 from engine.ai_ops import build_prefab_entity_definition
@@ -82,7 +83,19 @@ def entity_ref(scene: Doc, ref: Any) -> str:
 _RETIRED: ContextVar[Collection[str]] = ContextVar("mesh_retired_entity_ids", default=frozenset())
 _ROOM: ContextVar[str | None] = ContextVar("mesh_editing_room", default=None)
 _PLAYERS: ContextVar[Collection[str]] = ContextVar("mesh_editing_room_players", default=frozenset())
+_PROJECT: ContextVar[Path | None] = ContextVar("mesh_editing_project_root", default=None)
 _SCOPE = "\x1f"  # (#462 R3: between a scoped id's parts, never in an id Mesh makes)
+
+
+@contextmanager
+def in_project(root: Path) -> Iterator[None]:
+    """While editing the project at ``root`` (#391, #623): files its rooms name (a structure's model) are read from it,
+    not from whatever project the process's own folder is in (an authoring session started elsewhere, MCP)."""
+    token = _PROJECT.set(Path(root))
+    try:
+        yield
+    finally:
+        _PROJECT.reset(token)
 
 
 @contextmanager
@@ -3901,7 +3914,8 @@ def _model_read(model: str) -> Any:
     from engine.paths import resolve_path  # noqa: PLC0415
 
     try:
-        path = resolve_path(model)
+        root = _PROJECT.get()
+        path = root / model if root is not None and not Path(model).is_absolute() else resolve_path(model)
         key = (str(path), path.stat().st_mtime)
         if key not in _MODELS_READ:
             _MODELS_READ[key] = load_glb(path)

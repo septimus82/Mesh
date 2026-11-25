@@ -277,7 +277,7 @@ def _apply_to_files(root: str | Path, changes: list[Doc], dry_run: bool, held: A
         project = open_project(root)
         before, after = authoring.dry_run(project, changes)
         if dry_run:
-            return {"ok": True, "source": "files", "dry_run": True, "summary": authoring.summarize(before, after)}
+            return {"ok": True, "source": "files", "dry_run": True, "summary": authoring.summarize(before, after, project.root)}
         result = authoring.apply(project, changes)
         written = project.save(owner=held)
     except authoring.ChangeError as err:
@@ -288,5 +288,5 @@ def _apply_to_files(root: str | Path, changes: list[Doc], dry_run: bool, held: A
                  else "Apply them again once the problem is fixed.")
         return _fail("save_failed", f"The changes were checked but not saved: {err} {again}",
                      save={**err.report, "unsaved_edits_kept": False})
-    return {"ok": True, "source": "files", "summary": authoring.summarize(before, after),
+    return {"ok": True, "source": "files", "summary": authoring.summarize(before, after, project.root),
             "created": {str(k): v for k, v in result["created"].items()}, "written": written}

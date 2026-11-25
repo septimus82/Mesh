@@ -8,7 +8,9 @@ saves per player, outside its installation, which may be read-only (Program File
     Linux    $XDG_DATA_HOME/MeshMind Studios/<game id>/saves   ($XDG_DATA_HOME: ~/.local/share when unset or relative)
 
 ``MESH_SAVE_DIR`` names the saves folder itself instead (tests, automation). Anything else (a project in Mesh Studio,
-``python main.py`` in a project folder) keeps saving to ``saves`` in the folder it runs in, as before.
+``python main.py``, ``run_game(project_root=)``) saves to ``saves`` in its project folder (the one holding its
+config.json), whatever folder it runs in (#623); an older ``saves`` in the folder it runs in is offered read-only
+(``cwd_legacy_saves``).
 
 An export made before H9 saved into ``<installation>/saves``: those saves stay where they are, are listed and load
 (read-only), and are never moved, changed or deleted; a slot saved again is written to the per-user folder, and a slot
@@ -82,7 +84,7 @@ def is_exported_game(game_root: Path | None) -> bool:
 @dataclass(frozen=True)
 class SaveLocation:
     save_dir: Path  # where saves are written (and read first)
-    legacy_dir: Path | None  # an older export's saves in its installation: read, never written
+    legacy_dir: Path | None  # an older export's saves in its installation, or a project's in the CWD: read, never written
     exported: bool
     game_id: str | None
 
@@ -95,9 +97,24 @@ def resolve(game_root: Path | None, config: Mapping[str, Any]) -> SaveLocation:
     if override:
         return SaveLocation(Path(override), legacy, exported, game_identity(config) if exported else None)
     if not exported:
-        return SaveLocation(Path(DEFAULT_SAVE_DIR), None, False, None)
+        if game_root is None:  # (no project folder known: the folder it runs in, as before)
+            return SaveLocation(Path(DEFAULT_SAVE_DIR), None, False, None)
+        return SaveLocation(game_root / DEFAULT_SAVE_DIR, cwd_legacy_saves(game_root), False, None)
     game_id = game_identity(config)
     return SaveLocation(game_data_dir(config) / "saves", legacy, True, game_id)
+
+
+def cwd_legacy_saves(game_root: Path) -> Path | None:
+    """#623 (owner decision D5): ``saves`` in the current folder, where a project started from another folder saved
+    before saves followed its root. Offered for loading only, never written (``SaveLocation.legacy_dir``). None when
+    it is the project's own folder, or missing, or ambiguous: the current folder is a project itself (it has a
+    config.json, e.g. Mesh's checkout under its project browser), so its saves are its own, or mixed with others'
+    that can't be told apart, and loading one into this game would be a guess."""
+    cwd = Path.cwd().resolve()
+    legacy = cwd / DEFAULT_SAVE_DIR
+    if cwd == game_root.resolve() or (cwd / "config.json").is_file() or not legacy.is_dir():
+        return None
+    return legacy
 
 
 def game_data_dir(config: Mapping[str, Any]) -> Path:
