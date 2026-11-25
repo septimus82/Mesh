@@ -58,6 +58,7 @@ def build() -> dict[str, str]:
     hub = ops.set_entity_fields(hub, player, x=128.0, y=256.0)
     hub = ops.add_behaviour(hub, player, "Combat")
     hub = ops.set_behaviour_param(hub, player, "Combat", "cooldown", 0.5)
+    hub = ops.set_behaviour_param(hub, player, "Combat", "damage", 1.0)  # (the server's; not the player's stats)
     hub = ops.paint_tiles(hub, ops.WALLS, _edge(ops, 24, 16), ops.STARTER_WALL)
     hub["name"] = HUB_LABEL
     world["scenes"]["start"]["label"] = HUB_LABEL

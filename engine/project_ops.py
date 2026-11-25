@@ -353,8 +353,14 @@ def entity_behaviours(entity: Doc) -> list[str]:
     return names
 
 
+# Settings a behaviour works out itself when they are not set, so add_behaviour never writes their defaults (#651):
+# Health starts full (hp), the player's Health and Combat take max_hp and damage from the player's stats.
+DERIVED_WHEN_UNSET: dict[str, frozenset[str]] = {"Health": frozenset({"hp", "max_hp"}), "Combat": frozenset({"damage"})}
+
+
 def add_behaviour(scene: Doc, entity_id: str, behaviour: str) -> Doc:
-    """Give an object a behaviour (see list_behaviours), with that behaviour's default settings."""
+    """Give an object a behaviour (see list_behaviours), with that behaviour's default settings (but none of
+    DERIVED_WHEN_UNSET's: those stay unset until the creator sets them)."""
     fields = _fields(behaviour)
     out = copy.deepcopy(scene)
     entity = find_entity(out, entity_id)
@@ -362,8 +368,9 @@ def add_behaviour(scene: Doc, entity_id: str, behaviour: str) -> Doc:
         raise OpError(f"This object already has {behaviour}.")
     entity.setdefault("behaviours", []).append(behaviour)
     config = entity.setdefault("behaviour_config", {}).setdefault(behaviour, {})
+    derived = DERIVED_WHEN_UNSET.get(behaviour, frozenset())
     for name, spec in fields.items():
-        if name not in config and spec.get("default") is not None:
+        if name not in config and name not in derived and spec.get("default") is not None:
             config[name] = copy.deepcopy(spec["default"])
     return _checked(scene, out)
 

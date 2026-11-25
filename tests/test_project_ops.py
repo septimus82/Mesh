@@ -65,8 +65,13 @@ def test_add_behaviour_uses_registry_defaults_and_rejects_bad_requests() -> None
     assert "Health" in ops.entity_behaviours(entity)
     fields = {f["name"]: f for f in next(b for b in ops.behaviour_catalog() if b["name"] == "Health")["fields"]}
     for name, spec in fields.items():
-        if spec.get("default") is not None:
+        if name in ops.DERIVED_WHEN_UNSET["Health"]:  # #651: hp starts full, max_hp is the player's stats'
+            assert name not in entity["behaviour_config"]["Health"]
+        elif spec.get("default") is not None:
             assert entity["behaviour_config"]["Health"][name] == spec["default"]
+    combat = ops.find_entity(ops.add_behaviour(_scene(), "start_player", "Combat"), "start_player")
+    assert "damage" not in combat["behaviour_config"]["Combat"]  # (the player's stats' attack)
+    assert combat["behaviour_config"]["Combat"]["cooldown"] == 1.0
     with pytest.raises(ops.OpError, match="already"):
         ops.add_behaviour(scene, "start_player", "Health")
     with pytest.raises(ops.OpError, match="Unknown behaviour"):

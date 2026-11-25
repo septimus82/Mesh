@@ -117,7 +117,11 @@ class CameraFollowBehaviour(Behaviour):
         self.deadzone_w = float(self.config.get("deadzone_w", 0.0))
         self.deadzone_h = float(self.config.get("deadzone_h", 0.0))
         self.max_speed = float(self.config.get("max_speed", 0.0))
-        if "follow_strength" in self._explicit_params and "lerp_factor" not in self._explicit_params:
+        # #651 made only what the author wrote explicit. Built by the scene factory, CameraFollow has always used its
+        # filled defaults here (follow_strength never stood in for lerp_factor; an unset zoom meant 1.0, not the scene's
+        # zoom): kept, so existing scenes follow and frame exactly as before.
+        factory_built = self._authored is not None
+        if "follow_strength" in self._explicit_params and "lerp_factor" not in self._explicit_params and not factory_built:
             self.lerp_factor = self.follow_strength
         self.padding = float(self.config.get("padding", 0.0))
         self.offset_x = float(self.config.get("offset_x", 0.0))
@@ -126,7 +130,7 @@ class CameraFollowBehaviour(Behaviour):
         self.min_zoom = float(self.config.get("min_zoom", 0.25))
         self.max_zoom = float(self.config.get("max_zoom", 3.0))
 
-        if "zoom" in self._explicit_params:
+        if "zoom" in self._explicit_params or factory_built:
             self.zoom_target = self._parse_optional_float(self.config.get("zoom"))
         else:
             entity_values = getattr(entity, "mesh_entity_data", {}) or {}

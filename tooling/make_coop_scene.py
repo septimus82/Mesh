@@ -43,6 +43,7 @@ def build() -> dict[str, str]:
     scene = ops.set_entity_fields(scene, player, x=128.0, y=256.0)
     scene = ops.add_behaviour(scene, player, "Combat")
     scene = ops.set_behaviour_param(scene, player, "Combat", "cooldown", 0.5)
+    scene = ops.set_behaviour_param(scene, player, "Combat", "damage", 1.0)  # (the server's; not the player's stats)
 
     # Walls on the map's collision layer: the room's edge, and a wall at column 13 with a two-tile gap for the gate.
     edge = [c for c in ops.rect_cells((0, 0), (23, 15)) if c[0] in (0, 23) or c[1] in (0, 15)]
