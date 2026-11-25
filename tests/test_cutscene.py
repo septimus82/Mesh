@@ -32,7 +32,7 @@ class DummySceneController:
         self._sprite = sprite
         self.all_sprites = [sprite]
 
-    def find_sprite(self, identifier):
+    def find_entity(self, identifier):
         name = str(identifier)
         if getattr(self._sprite, "mesh_name", None) == name:
             return self._sprite
@@ -201,7 +201,7 @@ def test_cutscene_start_dialogue_targets_dialogue_runner():
     sprite = optional_arcade.arcade.Sprite()
     sprite.mesh_name = "mentor"
     runner = DialogueRunnerBehaviour("intro_dialogue")
-    sprite.behaviours = [runner]
+    sprite.mesh_behaviours_runtime = [runner]
     window = DummyWindow(sprite)
     window.ui_controller = None
     controller = CutsceneController(window)

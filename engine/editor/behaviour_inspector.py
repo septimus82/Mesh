@@ -166,7 +166,10 @@ def build_entity_behaviour_summary(
 
     # Get behaviours from entity
     behaviours = []
-    if hasattr(entity, "behaviours"):
+    runtime = getattr(entity, "mesh_behaviours_runtime", None)  # a scene sprite's live behaviours
+    if isinstance(runtime, list):
+        behaviours = runtime
+    elif hasattr(entity, "behaviours"):
         behaviours = entity.behaviours
     elif hasattr(entity, "_behaviours"):
         behaviours = entity._behaviours

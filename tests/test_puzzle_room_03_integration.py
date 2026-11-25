@@ -103,7 +103,7 @@ def _build_timer(window: MagicMock):
     timer_entity.mesh_tags = []
 
     timer = TimerBehaviour(timer_entity, window, **config)
-    timer_entity.behaviours = [timer]
+    timer_entity.mesh_behaviours_runtime = [timer]
 
     return timer_entity, timer
 

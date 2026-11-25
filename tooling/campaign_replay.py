@@ -112,7 +112,7 @@ def _build_action_runners(
         runner_entity.mesh_id = entity.get("id", "")
         runner_entity.mesh_name = entity.get("name", "")
         runner_entity.mesh_tags = []
-        runner_entity.behaviours = []
+        runner_entity.mesh_behaviours_runtime = []
         runner = ActionListRunnerBehaviour(runner_entity, window, **config)
         runners.append(runner)
     return runners
@@ -319,7 +319,7 @@ def _setup_puzzle(window: MagicMock) -> Dict[str, Any]:
     timer_entity.mesh_id = "puzzle_room_03_timer"
     timer_entity.mesh_name = "PuzzleTimer03"
     timer_entity.mesh_tags = []
-    timer_entity.behaviours = []
+    timer_entity.mesh_behaviours_runtime = []
     timer_beh = TimerBehaviour(timer_entity, window, **timer_cfg)
 
     player = MagicMock()

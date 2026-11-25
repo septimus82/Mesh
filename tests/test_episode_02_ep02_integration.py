@@ -152,7 +152,7 @@ def _build_episode_context(*, start_quest: bool = True) -> dict[str, Any]:
         entity.mesh_tags = list(prefab.get("tags", [])) if isinstance(prefab.get("tags"), list) else []
         entity.center_x = float(raw.get("x", 0.0))
         entity.center_y = float(raw.get("y", 0.0))
-        entity.behaviours = []
+        entity.mesh_behaviours_runtime = []
         entity.mesh_entity_data = {
             **(prefab_entity if isinstance(prefab_entity, dict) else {}),
             "require_flags": list(prefab.get("require_flags", [])) if isinstance(prefab.get("require_flags"), list) else [],
@@ -168,7 +168,7 @@ def _build_episode_context(*, start_quest: bool = True) -> dict[str, Any]:
             if isinstance(override_cfg.get(behaviour_name), dict):
                 cfg.update(override_cfg[behaviour_name])
             instance = builder(entity, window, **cfg)
-            entity.behaviours.append(instance)
+            entity.mesh_behaviours_runtime.append(instance)
             per_entity_behaviours[str(behaviour_name)] = instance
             if behaviour_name == "ActionListRunner":
                 action_runners.append(instance)
@@ -243,7 +243,7 @@ def _start_dialogue_from_cutscene_event(ctx: dict[str, Any], payload: dict[str, 
     target = _find_entity(ctx, target_id)
     if target is None:
         return
-    for behaviour in getattr(target, "behaviours", []):
+    for behaviour in getattr(target, "mesh_behaviours_runtime", None) or []:
         if type(behaviour).__name__ != "DialogueRunnerBehaviour":
             continue
         if dialogue_id and getattr(behaviour, "dialogue_id", "") != dialogue_id:
