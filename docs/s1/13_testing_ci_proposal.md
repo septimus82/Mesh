@@ -28,12 +28,25 @@
 |---|---|---|---|
 | CI push wall, p90 | 15.7 min | ≈ 12–14 min | ≈ 15–15.7 min (meets E10 only because B1 splits Linux pytest; without B1, ≈ 16.7, **breaching E10**) |
 | Extended push wall, p90 | 38.7 min | ≈ 35–36 min (B1 rebalancing −3 to −4 min; the gl e2e leg adds about 1 min to a gpu shard, not yet measured) | ≈ 35–36 min |
-| Job-minutes per merge | ≈ 345 | ≈ 210–230 (≈ 200 if R1 is also approved with its ceiling kept) | ≈ 360 (E10 limit with D9 = no: ≤ 370) |
+| Job-minutes per merge | ≈ 345 | ≈ 210–230 (≈ 200 if R1 is also approved with its ceiling kept); E10 limit ≤ 250 | ≈ 375–385 (derivation below); E10 limit ≤ 390 |
 | Real-runtime tests on the six high-risk contracts | 0 of 6 contracts | 6 of 6 | 6 of 6 |
-| Mutation kill (40-mutant probe) | 28/40 | ≥ 36/40 | ≥ 36/40 |
+| Mutation blind spots | 9 named #650 mutants survive | all 9 killed by their named tests (gated, E11); overall 40-mutant probe reported but not gated (expected ≥ 36/40) | same |
 | Non-change CI failures | ≈ 5% (ep05 4 of 7) | ≤ 2% (target E9) | ≤ 2% |
 
 The wall figures are estimates from part C's medians, since CI records no per-test durations. Each change below is measurable with `docs/s1/evidence/ci_timing_analysis.py`.
+
+**Per-merge cost with D9 = no (the round-2 review's itemisation of this document's own estimates).** It uses part C's per-merge mix of about 2.7 CI runs and 1.8 Extended runs:
+
+| Added item | Per run | Job-min per merge |
+|---|---|---|
+| Contract tests A2–A7, G1, G2, G4 (required `pytest` and `verify` jobs) | ≈ +1 min per OS-job | ≈ +5 |
+| A8 (i) non-GL e2e chain (`extended`, 2 OSes) | +2–4 min per OS | +7–14 |
+| A9 template smoke (`extended`, 2 OSes) | +0.5–1 min per OS | +2–4 |
+| A8 (ii) HD-2D leg (gpu lane, 2 OSes) | ≈ +1 min per OS | ≈ +4 |
+| B1 / 5.9 extra shards (setup) | CI +2, Extended +3 | ≈ +11 |
+| **Total** | | **+29–38, so ≈ 375–385** |
+
+The E10 limit with D9 = no is therefore **≤ 390 job-min per merge**: the upper estimate plus about 1–4% tolerance. With R4 approved, the limit stays **≤ 250**, which has margin against the ≈ 210–230 estimate. That estimate assumes R4 skips the push runs of most merges; if bases often move, the saving shrinks, and the measured number decides.
 
 ## 2. What the current suite misses, and the cheapest catch for each
 
@@ -73,7 +86,7 @@ The wall figures are estimates from part C's medians, since CI records no per-te
 | **R4** | **Push-side dedup:** skip a push run's jobs only when a green PR run tested the **identical tree** (the merge commit's tree hash equals the tested merge ref's tree) at the same workflow revision, and link that run as evidence, as the #344 rule does. If the base moved, the trees differ and the run happens, which keeps the #600 + #601 combined-tree protection | the same tree tested twice | CI and Extended | **up to −58 (CI) and −104 (Extended) job-min per merge** when the PR was current (≈ −45% of per-merge cost) | 5.8 | **D9** |
 | **B1** | **Rebalance the Windows gpu plan** from measured timings (shard 2/2 takes 37.2 min, shard 1/2 29.6); optionally 3 shards. **Shard Linux pytest in two.** **Exit-required:** it is the offset that keeps E10 within budget | critical path | Extended, CI | Extended wall **−3 to −4 min** (balanced; ≈ −12 with 3 shards, +≈ 3 job-min); CI wall −1 to −2 min (+≈ 2 job-min) | 5.9 | no (no change to what runs) |
 | **P1** | **Flake policy** (§5) and a quarantine mechanism | #612-class gate trust (E9) | all | ≈ 0 | 5.3 | **D10** |
-| **P2** | **Lane budgets** in the existing report-only `timing rolling check`: pytest (ubuntu) p90 ≤ 15 min; Windows shards ≤ 13; verify ≤ 7; Extended wall ≤ 40. A PR adding > 30 s to a required lane names its offset or justification | slow growth | report-only | ≈ 0 | 5.8 | no |
+| **P2** | **Lane budgets** in the existing report-only `timing rolling check`: pytest (ubuntu) p90 ≤ 15 min; Windows shards ≤ 13; verify ≤ 7; Extended wall ≤ 40. The per-job budgets are **informational only**; E10 gates just the CI wall (≤ 16) and the Extended wall (≤ 40), because Windows shard 2/2's p90 is already 13.0 min. A PR adding > 30 s to a required lane names its offset or justification | slow growth | report-only | ≈ 0 | 5.8 | no |
 | **C1** | **Retire document-shape tests:** the 24 `*_content_contract.py` files (246 tests) assert JSON values that nothing reads (#640). Replace them with one data-driven content check that loads each chapter in the real runtime for its key interactions, or rely on verify-all's content audit for shape | maintenance, false confidence | `pytest` | small − | 6.x / opportunistic | no |
 
 **Sum of the additions to required lanes:**
@@ -118,7 +131,7 @@ Without R2, the Linux shard split in B1 is what keeps CI p90 within E10's ≤ 16
 
 | Exit criterion | Tool | Cadence |
 |---|---|---|
-| E3, E4 (e2e, templates) | the Extended `extended` lane result over 5 consecutive pushes | each stage boundary |
+| E3, E4 (e2e, templates) | part (i) in the Extended `extended` lane and part (ii), the HD-2D leg, in the gpu lane: both green on 5 consecutive **executed** Extended runs on integration-branch commits (an R4-skipped push counts through its linked PR-side run, once) | each stage boundary |
 | E5, E6 (gates, floors) | their own contract tests in `pytest` and `verify` | every run |
 | E8 (6 contracts) | test ids present and green; meta-test allow-list ⊆ open issues | every run |
 | E9 (flakes) | `docs/s1/evidence/fetch_ci_history.sh` + `ci_timing_analysis.py` (attempt-1 failures classified from logs; executed runs only, with an R4-skipped push counted through its linked PR-side run) | each stage boundary |

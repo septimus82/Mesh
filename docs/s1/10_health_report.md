@@ -338,6 +338,7 @@ Collected from each part, the s1v verification and this synthesis. **No feel, vi
   - Commit `30d44f27` replaced it with `<home>`, and **the current tree is clean**.
   - **The branch is pushed to origin and the repository is public.** So the username is publicly readable today through commit `035d0280`. An earlier version of this section wrongly said the branch was unpushed.
   - Rewriting history was not authorised in S1-0. Whether to rewrite or delete the branch is owner decision **D15** (`14_owner_decision_brief.md`).
+  - **No PR has been opened from `docs/s1-0-investigation`, and none must be.** A PR's `refs/pull/N/head` would keep `035d0280` visible on GitHub even after a squash-merge and branch deletion. D15 recommends publishing the docs from a new single-commit branch that excludes it.
   - GitHub may keep serving a commit by its SHA after a force-push makes it unreachable, so a full purge may need a request to GitHub Support. Existing clones and forks keep their copies regardless.
 - **Pre-existing occurrences, not from S1:** the same username appears in **6 tracked files on the integration branch** that predate S1. 3 of them are also on `main`. The username itself is not reproduced here.
   - `docs/map_collision_paint.md` (also on `main`);

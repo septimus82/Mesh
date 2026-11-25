@@ -22,7 +22,7 @@ The evidence is in `10_health_report.md` and the items in `12_stabilization_road
 | D12 | Existing files with tool-written `hp: 1.0` | `mesh doctor` warning plus opt-in fix; never auto-rewrite |
 | D13 | Owner hands-on Studio GUI acceptance as an exit step | Yes, once, at the end |
 | D14 | Load-time entity gates and sample content | Keep the semantics; warn in tooling; convert the sample exits |
-| D15 | Username exposure in public history | Squash-merge the S1 docs, then delete the branch; scrub the 6 pre-S1 files; ask GitHub Support to purge if you want it gone |
+| D15 | Username exposure in public history | Never open a PR from `docs/s1-0-investigation`. Publish the docs from a new single-commit branch, delete the old branch, ask GitHub Support to purge `035d0280`, and scrub the 6 pre-S1 files |
 
 ---
 
@@ -173,7 +173,7 @@ A Studio item operation is post-S1.
 
 **Consequence of declining:**
 - The new contract tests push CI p90 to about 16.7 min without an offset. B1 (roadmap 5.9, exit-required) is what keeps it within E10's ≤ 16 min.
-- **Per-merge cost rises above today's:** ≈ 360 job-minutes, against ≈ 345 now. E10's cost limit then becomes ≤ 370 instead of ≤ 250.
+- **Per-merge cost rises above today's:** ≈ 375–385 job-minutes, against ≈ 345 now. That is +29–38 for the added tests and shards, itemised in `13_testing_ci_proposal.md` §1. E10's cost limit then becomes ≤ 390 instead of ≤ 250.
 
 ---
 
@@ -272,11 +272,13 @@ A Studio item operation is post-S1.
 
 | Option | What | Consequence |
 |---|---|---|
-| **A. Contain going forward** | Squash-merge the S1 docs PR, so `035d0280` never enters the integration branch's history, then delete `docs/s1-0-investigation`. Open a small scrub PR for the 6 pre-S1 files. Optionally ask GitHub Support to purge the now-unreachable commit | The username leaves every current tree and every branch's reachable history, **except** the older history of the 6 pre-S1 files. SHAs cited in issue comments (`f8efb42a`, `aa4ed794`, `7ebae9bc`, `1291f64b`, `035d0280`, `30d44f27`, `1f006a69`) become unreachable, though their content survives in the squashed commit. GitHub may keep serving an unreachable SHA until Support purges it, and existing clones and forks keep their copies |
-| B. Force-push a rewritten S1 branch now | Rewrite `docs/s1-0-investigation` without `035d0280`'s content, then force-push | Same exposure reduction as A for this branch, but it breaks the coordinator's and reviewers' local copies and the cited SHAs immediately. It still needs GitHub Support for the cached SHA |
+| **A. Contain going forward** | (1) **Do not open a PR from `docs/s1-0-investigation`.** A PR creates `refs/pull/N/head` on GitHub, which survives a squash-merge and branch deletion, so the PR's Commits tab would show `035d0280` permanently unless GitHub Support removes it. No PR has been opened from this branch (verified by the coordinator). (2) Build the docs PR from a **new branch whose history excludes `035d0280`**: one commit containing the final `docs/s1/` tree on top of the integration tip. (3) Delete `docs/s1-0-investigation` from origin. (4) Ask GitHub Support to purge `035d0280`, now unreachable. (5) Open a small scrub PR for the 6 pre-S1 files | The username leaves every current tree and every branch's reachable history, **except** the older history of the 6 pre-S1 files. SHAs cited in issue comments (`f8efb42a`, `aa4ed794`, `7ebae9bc`, `1291f64b`, `035d0280`, `30d44f27`, `1f006a69`, `4f7bc28a`) become unreachable, but their content survives in the new commit. Until Support purges it, GitHub may keep serving `035d0280` by SHA. Existing clones and forks keep their copies |
+| B. Force-push a rewritten S1 branch now | Rewrite `docs/s1-0-investigation` without `035d0280`'s content, force-push, and only then open a PR from it | Same exposure reduction as A, but it rewrites a branch others have fetched (the coordinator's and reviewers' copies) and breaks the cited SHAs immediately. It still needs GitHub Support for the cached SHA |
 | C. Full purge across all history | Rewrite the integration branch and `main` to remove every occurrence, including the 6 pre-S1 files' history | The only complete removal, but it is L-sized and disruptive. Every SHA cited in issues, PRs and memory notes changes, and every clone must re-sync |
 | D. Accept | No change | The username stays publicly readable in 7 + 6 files' history, and in the current tree of the 6 pre-S1 files |
 
-**Recommendation:** **A**, including the scrub PR for the 6 pre-S1 files. Add a GitHub Support purge request if you want the unreachable commit removed from GitHub's caches. C is only worth it if the username itself must be gone from all public history.
+**Recommendation:** **A**, all five steps, including the GitHub Support purge request and the scrub PR for the 6 pre-S1 files. C is only worth it if the username must be gone from all public history.
+
+**Whatever you choose, never open a PR from `docs/s1-0-investigation`.**
 
 No history has been rewritten. Doing so needs your explicit authorisation.

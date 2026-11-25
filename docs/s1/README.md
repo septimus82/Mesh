@@ -45,6 +45,7 @@ S1-0 was investigation and planning only: no production code changed.
 - Commit `035d0280` contains the owner's Windows username inside temp paths in 7 copied s1v outputs, so it is publicly readable through that commit.
 - `30d44f27` scrubbed it, and the current tree is clean.
 - Six tracked files that predate S1 also contain the username.
+- **No PR has been opened from this branch, and none must be.** A PR ref would keep `035d0280` on GitHub permanently. Publish the docs from a new branch whose history excludes it (D15).
 - Rewriting or deleting the branch, and scrubbing those six files, is owner decision D15.
 
 See `10_health_report.md` §8.
