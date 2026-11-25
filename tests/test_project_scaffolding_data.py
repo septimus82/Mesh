@@ -145,8 +145,15 @@ def _play(root: Path, monkeypatch: pytest.MonkeyPatch, drive: Callable[[_Game], 
     of the window's run loop."""
     import engine.dpi_bootstrap
     from engine.game import GameWindow
+    from engine.paths import reset_path_caches
+    from engine.repo_root import clear_launched_project_root
 
     monkeypatch.chdir(root.parent)
+    # As a fresh process starts: no project another test left pinned (tests/test_mesh_net_hd2d_gpu.py's module fixture
+    # leaves its game in MESH_REPO_ROOT for the rest of the session, and main.py then opened that game instead).
+    monkeypatch.delenv("MESH_REPO_ROOT", raising=False)
+    clear_launched_project_root()
+    reset_path_caches()
     # (process-wide and once only: it would rescale every later window of the test run)
     monkeypatch.setattr(engine.dpi_bootstrap, "set_process_dpi_unaware", lambda: None)
     failures: list[BaseException] = []
@@ -370,6 +377,10 @@ def test_a_new_project_gets_its_first_quest_from_mcp_and_from_mesh_new_quest(tmp
     from engine.mcp_server import tools
 
     root = _new(tmp_path, "starter")
+    from engine.paths import reset_path_caches
+
+    monkeypatch.delenv("MESH_REPO_ROOT", raising=False)  # (no project another test left pinned; see _play)
+    reset_path_caches()
     monkeypatch.chdir(root)  # (as a creator runs mesh new-quest; the quest manager reads this project's packs too)
     assert not (root / "assets/data/quests.json").exists()
     quest = {"title": "The Vault", "stages": [{"id": "find", "title": "Find the vault"}]}
