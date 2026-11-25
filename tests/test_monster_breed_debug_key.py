@@ -19,6 +19,7 @@ def test_f10_breeds_party_when_debug_mode_enabled() -> None:
     window = _window()
     window.engine_config = load_config("config.json")
     window.engine_config.debug_mode = True
+    setattr(window.engine_config, "_mesh_launch_mode", "play")  # (a developer launch, mesh play: S1 D4)
     window.debug_breed_first_party_pair = MagicMock(return_value=True)
 
     input_dispatch.on_key_press(

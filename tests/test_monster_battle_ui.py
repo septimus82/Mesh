@@ -389,6 +389,7 @@ def test_debug_f12_launches_through_real_dispatch_when_debug_mode_enabled() -> N
     window = _window()
     window.engine_config = load_config("config.json")
     window.engine_config.debug_mode = True
+    setattr(window.engine_config, "_mesh_launch_mode", "play")  # (a developer launch, mesh play: S1 D4)
     window.input_controller = InputController(as_any(window))
     window.start_debug_monster_battle = MagicMock(return_value=True)
     dev_browser = types.SimpleNamespace(toggle=MagicMock())

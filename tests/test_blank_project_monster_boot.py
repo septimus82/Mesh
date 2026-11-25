@@ -66,6 +66,7 @@ def test_blank_project_f8_companion_battle_starts(tmp_path: Path, monkeypatch: p
 
     window = SimpleNamespace()
     window.console_log = MagicMock()
+    window.engine_config = SimpleNamespace(_mesh_launch_mode="play")  # (a developer launch, mesh play: S1 D4)
     window.monster_battle_mode = SimpleNamespace(active=False)
     window.game_state_controller = __import__(
         "engine.game_state_controller", fromlist=["GameStateController"]

@@ -62,7 +62,7 @@ def _mind(aggression: float, fear: float, *, traits: tuple[str, ...] = ()) -> Co
 
 def _window_for_save() -> types.SimpleNamespace:
     window = types.SimpleNamespace()
-    window.engine_config = types.SimpleNamespace(debug_mode=True)
+    window.engine_config = types.SimpleNamespace(debug_mode=True, _mesh_launch_mode="play")  # (mesh play: S1 D4)
     window.console_log = MagicMock()
     window.game_state_controller = GameStateController(window)
     window.monster_catalog = types.SimpleNamespace(species=SPECIES)

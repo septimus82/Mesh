@@ -61,11 +61,17 @@ def _toggle_help(window: object) -> None:
         toggle()
 
 
-def _toggle_variant_picker(window: object) -> None:
-    overlay = getattr(window, "variant_picker_overlay", None)
+def _toggle_dev_overlay(window: object, name: str) -> None:
+    """The variant picker and the scene/world browser warp the player to any world or room: a developer launch only
+    (S1 D4). (It never opens in a game launch, so there is nothing to close there; Esc closes either.)"""
+    overlay = getattr(window, name, None)
     toggle = getattr(overlay, "toggle", None) if overlay is not None else None
-    if callable(toggle):
+    if callable(toggle) and dev_tools_allowed(window):
         toggle()
+
+
+def _toggle_variant_picker(window: object) -> None:
+    _toggle_dev_overlay(window, "variant_picker_overlay")
 
 
 def _toggle_inspector(window: object) -> None:
@@ -76,10 +82,7 @@ def _toggle_inspector(window: object) -> None:
 
 
 def _toggle_dev_browser(window: object) -> None:
-    overlay = getattr(window, "dev_browser_overlay", None)
-    toggle = getattr(overlay, "toggle", None) if overlay is not None else None
-    if callable(toggle):
-        toggle()
+    _toggle_dev_overlay(window, "dev_browser_overlay")
 
 
 def _toggle_quest_log(window: object) -> None:

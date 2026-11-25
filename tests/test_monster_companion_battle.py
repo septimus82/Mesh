@@ -230,6 +230,7 @@ def test_f8_launches_companion_battle_when_debug_mode_enabled() -> None:
     window = _window()
     window.engine_config = load_config("config.json")
     window.engine_config.debug_mode = True
+    setattr(window.engine_config, "_mesh_launch_mode", "play")  # (a developer launch, mesh play: S1 D4)
     window.start_debug_companion_monster_battle = MagicMock(return_value=True)
 
     input_dispatch.on_key_press(

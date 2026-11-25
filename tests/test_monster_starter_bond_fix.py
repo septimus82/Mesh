@@ -23,6 +23,7 @@ def _debug_companion_window() -> types.SimpleNamespace:
     window = types.SimpleNamespace()
     window.console_log = MagicMock()
     window.monster_battle_mode = types.SimpleNamespace(active=False)
+    window.engine_config = types.SimpleNamespace(_mesh_launch_mode="play")  # (a developer launch, mesh play: S1 D4)
     window.game_state_controller = GameStateController(window)
     window.scene_controller = types.SimpleNamespace(current_scene_path="scenes/test.json")
     captured: dict[str, object] = {}
