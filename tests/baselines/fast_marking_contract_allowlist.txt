@@ -9,7 +9,6 @@ tests/test_arcade_reference_singleton_contract.py
 tests/test_asset_index_contract.py
 tests/test_asset_move_model_contract.py
 tests/test_asset_place_mode_contract.py
-tests/test_asset_refactor_model_contract.py
 tests/test_asset_rename_model_contract.py
 tests/test_authoring_playable_prefabs_contract.py
 tests/test_auto_wire_target_scene_contract.py
