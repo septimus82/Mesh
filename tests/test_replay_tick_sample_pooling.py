@@ -314,14 +314,25 @@ def test_gc_disabled_by_the_host_stays_disabled(tmp_path: Path, no_host_frozen_o
 def test_a_host_that_froze_its_own_objects_is_left_exactly_as_it_was(
     tmp_path: Path, monkeypatch, no_host_frozen_objects
 ) -> None:
-    """gc.unfreeze() would release the host's frozen objects too, so the harness must not freeze or unfreeze."""
+    """gc.unfreeze() would release the host's frozen objects too, so the harness must not freeze or unfreeze.
+
+    The freeze count alone is not exact: a frozen object that is deallocated leaves the permanent generation, so in a
+    big process the count drifts down by itself. Never up (nothing newly frozen), and the host's objects stay frozen.
+    """
+    host_object = [1, 2, 3]
+
+    def collectable() -> bool:
+        return any(o is host_object for g in range(3) for o in gc.get_objects(g))
+
     gc.freeze()
     try:
         frozen = gc.get_freeze_count()
-        seen = _probe_executions(monkeypatch, gc.get_freeze_count)
+        seen = _probe_executions(monkeypatch, lambda: (gc.get_freeze_count(), collectable()))
         assert _replay_check("ep01", tmp_path / "o", min_samples=0) == 0
-        assert [before for before, _ in seen] == [frozen, frozen]
-        assert gc.get_freeze_count() == frozen
+        assert len(seen) == 2
+        for (count, host_object_collectable), _ in seen:
+            assert count <= frozen and not host_object_collectable
+        assert 0 < gc.get_freeze_count() <= frozen and not collectable()
     finally:
         gc.unfreeze()
 
