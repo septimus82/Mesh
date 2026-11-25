@@ -719,7 +719,7 @@ def test_a_swing_is_marked_over_its_hitbox_and_a_confirmed_hit_unmistakably_othe
     marks the hitbox the server makes (the room's reach ahead in the facing, at the swinger's height and floor) for the
     hitbox's life; a confirmed hit puts a red burst on the enemy, staying on it as it walks, for FLASH_S. A swing never
     marks an enemy, a hit never a hitbox, and the two pictures share no colour."""
-    from mesh_net.scene_client import ANGLES, FLASH_S
+    from mesh_net.scene_client import FLASH_S
     from mesh_net.scene_room import FACINGS, HITBOX_S
     from tests.test_mesh_net_hd2d import headless_view
 
@@ -734,7 +734,10 @@ def test_a_swing_is_marked_over_its_hitbox_and_a_confirmed_hit_unmistakably_othe
         view.swing(1, own=facing % 2 == 0, facing=facing)
         mark, left, on = view.marks[-1]
         assert (mark.center_x, mark.center_y) == (100.0 + fx * coop.reach, 200.0 + fy * coop.reach), "over the hitbox"
-        assert mark.angle == ANGLES[facing] and mark.texture.hash == "mesh_net_swing_mark"
+        assert mark.texture.hash == f"mesh_net_swing{facing}_mark" and mark.mesh_name == "swing_mark"
+        x0, y0, x1, y1 = mark.texture.image.getbbox()  # (rows from the top: the picture's own turn)
+        half = mark.texture.image.width / 2
+        assert (x0 > half, y1 < half, x1 < half, y0 > half)[facing], "the crescent on the facing's side"
         assert mark.mesh_entity_data == {"elevation": 64.0} and mark.mesh_hd2d_floor == "deck"
         assert (left, on) == (HITBOX_S, None)
     assert spawned == [m for m, *_ in view.marks], "each in the room at once (drawn by the next frame)"
@@ -753,7 +756,7 @@ def test_a_swing_is_marked_over_its_hitbox_and_a_confirmed_hit_unmistakably_othe
     assert (burst.center_x, burst.center_y) == (640.0, 248.0), "staying on it as it walks"
     view.sync(None, here, None, FLASH_S / 2 + 0.01)
     assert view.marks == [] and gone[-1] is burst
-    swing_px = set(view._texture("swing").image.getdata()) - {(0, 0, 0, 0)}
+    swing_px = set(view._texture("swing0").image.getdata()) - {(0, 0, 0, 0)}
     hit_px = set(view._texture("hit").image.getdata()) - {(0, 0, 0, 0)}
     assert swing_px and hit_px and not swing_px & hit_px, "no colour shared"
     assert not any(r > 200 and g < 100 for r, g, _, _ in swing_px) and any(r > 200 and g < 100 for r, g, _, _ in hit_px)

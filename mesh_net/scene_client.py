@@ -20,8 +20,7 @@ from engine.interaction import DEFAULT_INTERACT_MAX_DIST
 
 from . import protocol as wire
 from .demo import Arena, open_arena
-from .scene_room import (FACINGS, HITBOX_S, Feedback, Prediction, SceneRoom, check_progress, check_state, coop_files,
-                         parse_input)
+from .scene_room import FACINGS, HITBOX_S, Feedback, Prediction, SceneRoom, check_progress, check_state, coop_files, parse_input
 
 KEEP = ("Animator",)  # draws the picture the server's movement implies
 FOLLOW = "CameraFollow"  # the local player's avatar keeps the scene's own camera behaviour
@@ -39,7 +38,6 @@ HIT_SOUND = "assets/sounds/hit.wav"  # (engine.behaviours.hitbox's, as are its v
 MARK_PX = 48
 SWING_RGBA, SWING_EDGE = (255, 255, 255, 245), (70, 150, 255, 255)
 HIT_RGBA, HIT_CORE = (255, 48, 32, 255), (255, 220, 90, 255)
-ANGLES = (0.0, -90.0, 180.0, 90.0)  # FACINGS (right, up, left, down) as Arcade's clockwise sprite angles
 
 
 class JoinRefused(RuntimeError):
@@ -115,15 +113,18 @@ class SceneView:
         return any(math.hypot(x - dx, y - dy) <= DEFAULT_INTERACT_MAX_DIST for dx, dy in self.drops_at(state).values())
 
     def _texture(self, kind: str) -> Any:
-        """The swing's slash or the hit's burst, drawn once per view (no art: the packaged player has no attack clip)."""
+        """A mark's picture, drawn once per view (no art: the packaged player has no attack clip): ``swing0`` to
+        ``swing3``, a crescent bulging the way of FACINGS[k] (the picture itself turned, as HD-2D's billboards ignore a
+        sprite's angle), or ``hit``, a burst."""
         if kind not in self.textures:
             from PIL import Image, ImageDraw  # noqa: PLC0415
 
             image = Image.new("RGBA", (MARK_PX, MARK_PX), (0, 0, 0, 0))
             draw, c = ImageDraw.Draw(image), MARK_PX / 2
-            if kind == "swing":  # a crescent on the right (Arcade turns it to the facing)
+            if kind.startswith("swing"):  # bulging right, then turned a quarter anticlockwise per facing
                 draw.arc((1, 1, MARK_PX - 2, MARK_PX - 2), -75, 75, fill=SWING_EDGE, width=10)
                 draw.arc((3, 3, MARK_PX - 4, MARK_PX - 4), -66, 66, fill=SWING_RGBA, width=6)
+                image = image.rotate(90 * int(kind[5:]))
             else:  # a burst: eight rays round a bright core
                 for k in range(8):
                     a = k * math.pi / 4
@@ -137,7 +138,7 @@ class SceneView:
         (``on``: a sprite it stays on while it lasts)."""
         mark = self.arcade.Sprite(self._texture(kind))
         mark.center_x, mark.center_y = x, y
-        mark.mesh_id = mark.mesh_name = f"{kind}_mark"
+        mark.mesh_id = mark.mesh_name = f"{kind.rstrip('0123')}_mark"
         mark.mesh_entity_data = {"elevation": (getattr(body, "mesh_entity_data", None) or {}).get("elevation", 0.0)}
         mark.mesh_hd2d_floor = getattr(body, "mesh_hd2d_floor", None)
         self.scene.entities.enqueue_spawn(mark, layer_name="entities", is_solid=False)
@@ -153,9 +154,8 @@ class SceneView:
         if sprite is None:
             return
         fx, fy = FACINGS[facing]
-        mark = self._mark("swing", sprite.center_x + fx * self.room.reach, sprite.center_y + fy * self.room.reach,
-                          sprite, HITBOX_S)
-        mark.angle = ANGLES[facing]
+        self._mark(f"swing{facing}", sprite.center_x + fx * self.room.reach, sprite.center_y + fy * self.room.reach,
+                   sprite, HITBOX_S)
         if getattr(sprite, "mesh_animator", None):
             request_animation_state(sprite, str(self.room.combat["attack_anim"]), priority=10, ttl=0.5)
         audio = getattr(self.window, "audio", None)
