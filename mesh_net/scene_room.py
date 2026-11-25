@@ -764,11 +764,11 @@ class SceneRoom:
 
     def step(self) -> None:
         """One tick. First each enemy walking a FloorRoute walks (_walk_enemies), so this tick's hits and blocking are
-        where the enemies are now. Then each player (by entity id): the oldest input waiting is read (OD11: DEPTH; its direction and
-        facing, and ``ack``; while standing, an older still input is dropped first: DEPTH's note); its earlier
-        hitboxes update; the actions whose input has been read run, one attack and one use or take, from where the
-        player stands (where its client showed it when they were pressed: Prediction); then it walks one step (walk),
-        while under HOLD ticks from the last input read."""
+        where the enemies are now. Then each player (by entity id): the oldest input waiting is read (OD11: DEPTH; its
+        direction and facing, and ``ack``; while standing, an older still input is dropped first: DEPTH's note); its
+        earlier hitboxes update; the actions whose input has been read run, one attack and one use or take, from where
+        the player stands (where its client showed it when they were pressed: Prediction); then it walks one step
+        (walk), while under HOLD ticks from the last input read."""
         self.tick += 1
         self._walk_enemies()
         solids = self.solids()
