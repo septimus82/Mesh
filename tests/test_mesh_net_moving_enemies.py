@@ -22,6 +22,7 @@ from typing import Any
 import pytest
 
 from engine.hd2d.route import FloorRoute
+from engine.interaction import DEFAULT_INTERACT_MAX_DIST
 from mesh_net import protocol as wire
 from mesh_net import scene_room
 from mesh_net.playback import Playback
@@ -357,8 +358,31 @@ def test_an_enemy_row_rounded_over_a_floors_edge_is_accepted(routed: dict[str, b
 
     check_state(row_at(352.0 - 1.0), room.identity, room)
     check_state(row_at(352.004), room.identity, room)
+    with pytest.raises(wire.Invalid, match="not under it"):  # (the tolerance's upper bound: the rounding, not more)
+        check_state(row_at(352.02), room.identity, room)
     with pytest.raises(wire.Invalid, match="not under it"):
         check_state(row_at(353.0), room.identity, room)
+
+
+def test_a_drop_lies_where_the_state_says_its_enemy_died() -> None:
+    """#616 review: a drop appears at its enemy's row in that state (where the server measures a take from), not at
+    the enemy's sprite, which Playback shows two ticks behind; and take vs use is chosen from there too."""
+    from mesh_net.scene_client import SceneView
+
+    spawned: list[Any] = []
+    sprite = SimpleNamespace(center_x=100.0, center_y=50.0, mesh_entity_data={"elevation": 0.0}, mesh_hd2d_floor=None,
+                             visible=True, color=(1, 2, 3))
+    view = object.__new__(SceneView)
+    view.flashes, view.avatars, view.sprites, view.drops, view.doors, view.levers = {}, {}, {"e": sprite}, {}, [], []
+    view.room, view.window = SimpleNamespace(world=None), SimpleNamespace()
+    view.arcade = SimpleNamespace(SpriteCircle=lambda *_a: SimpleNamespace())
+    view.scene = SimpleNamespace(entities=SimpleNamespace(enqueue_spawn=lambda s, **_k: spawned.append(s)))
+    state = {"open": [], "used": [], "enemies": [["e", 0, 3, 108.0, 50.0, 0.0, None]], "drops": ["e"], "loot": []}
+    view.sync(state, {}, None, 0.05, {"e": (100.0, 50.0, 0.0, None)})  # (the sprite: two ticks behind, 8 px west)
+    assert [(d.center_x, d.center_y) for d in spawned] == [(108.0, 50.0)]
+    reach = DEFAULT_INTERACT_MAX_DIST
+    assert view.near_drop(108.0 + reach, 50.0, state), "in reach of the server's drop: take"
+    assert not view.near_drop(100.0 - reach + 0.5, 50.0, state), "in reach of the sprite only: use"
 
 
 def test_the_authority_walks_enemies_without_graphics(routed: dict[str, bytes], tmp_path: Any) -> None:
