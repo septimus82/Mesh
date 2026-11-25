@@ -37,6 +37,9 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     doctor_parser.add_argument("--quiet", action="store_true", help="Only summary + suggested commands")
     doctor_parser.add_argument("--explain", action="store_true", help="Output explain format (same as mesh explain)")
     doctor_parser.add_argument("--json", action="store_true", help="Machine-readable output")
+    doctor_parser.add_argument("--fix-health-defaults", action="store_true",
+                               help="Drop the Health/Combat settings Mesh's tools wrote before #651 (doctor lists them; "
+                                    "backups under .mesh/backups/)")
 
     # Explain
     explain_parser = subparsers.add_parser("explain", help="Explain doctor/validation failures", description="Explain doctor/validation failures")

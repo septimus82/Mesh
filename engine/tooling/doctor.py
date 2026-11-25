@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from engine.config import load_config
 from engine.content_lock import build_lock, compute_content_fingerprint, read_lock
-from engine.tooling import check, validate_all
+from engine.tooling import check, health_defaults, validate_all
 from engine.tooling.tool_result import Issue, ToolResult
 
 
@@ -47,6 +47,12 @@ class DoctorRunner:
                 suggestions=suggested,
                 meta={"target": target_path, "runs": [self._run_to_dict(r) for r in runs]},
             )
+
+        # 0) settings Mesh's tools wrote before #651 (D12: a warning; the fix only on request)
+        health = health_defaults.find(target_path)
+        issues.extend(Issue(code="health-defaults", message=f.message, severity="warn", path=f.file) for f in health)
+        if health:
+            suggested.append(f"mesh doctor {health_defaults.FIX_FLAG}" + (f" --world {world}" if world else ""))
 
         # 1) validate-all (canonical validation)
         v_run = self._run_tool("validate-all", lambda: validate_all.main([target_path]))
