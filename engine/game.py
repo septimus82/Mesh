@@ -121,6 +121,7 @@ from .repo_root import is_standalone_project_root, pin_launched_project_root
 from .save_manager import SaveManager
 from .scene_controller import SceneController
 from .scene_loader import SceneLoader
+from .schema_validation import SchemaValidationError
 from .services import (
     InputService,
     PersistenceService,
@@ -601,10 +602,17 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self._undo_ts_counter: int = 0
         self._undo_suppress_count: int = 0
         self.cutscene_controller = CutsceneController(self)
+        # A cutscenes.json the game can't read is set aside, said in the log and on screen (a toast; Mesh Studio's
+        # status line): the game and the editors still start, so the file can be repaired (#642).
+        self.cutscenes_error: str | None = None
         try:
             self.cutscene_controller.load_from_file("cutscenes.json")
         except FileNotFoundError:
             pass
+        except (SchemaValidationError, ValueError) as exc:
+            detail = f"at {exc.json_pointer or '/'}: {exc.message}" if isinstance(exc, SchemaValidationError) else str(exc)
+            self.cutscenes_error = f"cutscenes.json is set aside, so no cutscene plays: {detail}"
+            logger.error("[Mesh][Cutscene] %s", self.cutscenes_error)
         ambient = list(getattr(self.engine_config, "lighting_ambient_color", [10, 10, 10, 255]))
         ambient_alpha = getattr(self.engine_config, "ambient_darkness_alpha", None)
         if ambient_alpha is not None and len(ambient) >= 4:
@@ -636,6 +644,9 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         )
 
         _init_ui_dispatcher(self)
+        enqueue_toast = getattr(getattr(self, "player_hud", None), "enqueue_toast", None)
+        if self.cutscenes_error and callable(enqueue_toast):
+            enqueue_toast(self.cutscenes_error, seconds=10.0)
 
         self.paused: bool = False
         self.game_over: bool = False

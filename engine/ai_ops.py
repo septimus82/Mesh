@@ -228,6 +228,18 @@ class AIOps:
     def _save_cutscene_store(self, path: Path, payload: dict[str, Any]) -> None:
         _write_json(path, payload)
 
+    def _cutscene_refusal(self, path: Path, payload: dict[str, Any]) -> AIOpsResult | None:
+        """The refusal for a cutscene document the game couldn't load (``cutscene.schema.json``, as
+        ``CutsceneController.load_from_file`` checks it), or None. Checked before writing: refused, nothing is written
+        (#642: a write that reported success made the project unable to start)."""
+        from .schema_validation import SchemaValidationError, validate
+
+        try:
+            validate(payload, "cutscene.schema.json", path.relative_to(self.base_dir.resolve()).as_posix())
+        except SchemaValidationError as exc:
+            return AIOpsResult(False, f"Refused, nothing written: {exc} (list_op_types gives each step type's fields)")
+        return None
+
     # ------------------------------------------------------------------ operations
     def create_scene(self, name: str, template: str = "empty") -> AIOpsResult:
         from .tooling_runtime import scaffold
@@ -594,14 +606,19 @@ class AIOps:
         path, payload = self._load_cutscene_store(cutscenes_path)
         steps = steps or []
         cutscene_list = payload.setdefault("cutscenes", [])
+        verb = "Added"
         for entry in cutscene_list:
             if isinstance(entry, dict) and entry.get("id") == cutscene_id:
                 entry["steps"] = steps
-                self._save_cutscene_store(path, payload)
-                return AIOpsResult(True, f"Updated cutscene '{cutscene_id}'", {"id": cutscene_id})
-        cutscene_list.append({"id": cutscene_id, "steps": steps})
+                verb = "Updated"
+                break
+        else:
+            cutscene_list.append({"id": cutscene_id, "steps": steps})
+        refusal = self._cutscene_refusal(path, payload)
+        if refusal is not None:
+            return refusal
         self._save_cutscene_store(path, payload)
-        return AIOpsResult(True, f"Added cutscene '{cutscene_id}'", {"id": cutscene_id})
+        return AIOpsResult(True, f"{verb} cutscene '{cutscene_id}'", {"id": cutscene_id})
 
     def delete_cutscene(self, cutscene_id: str, *, cutscenes_path: str | None = None) -> AIOpsResult:
         path, payload = self._load_cutscene_store(cutscenes_path)
@@ -632,6 +649,9 @@ class AIOps:
             return AIOpsResult(False, "Step must include 'type'")
         insert_at = len(steps) if index is None else max(0, min(int(index), len(steps)))
         steps.insert(insert_at, step)
+        refusal = self._cutscene_refusal(path, payload)
+        if refusal is not None:
+            return refusal
         self._save_cutscene_store(path, payload)
         return AIOpsResult(True, f"Inserted step at {insert_at}", {"index": insert_at, "step": step})
 
@@ -656,6 +676,9 @@ class AIOps:
         if not isinstance(target, dict):
             return AIOpsResult(False, f"Step at {index} is not an object")
         target.update(patch)
+        refusal = self._cutscene_refusal(path, payload)
+        if refusal is not None:
+            return refusal
         self._save_cutscene_store(path, payload)
         return AIOpsResult(True, f"Updated step {index}", {"index": index, "step": target})
 
@@ -687,13 +710,26 @@ class AIOps:
         return None
 
     def run_validation(self, scene_path: str | None = None) -> AIOpsResult:
-        if scene_path is None:
+        """The scene at ``scene_path`` (if given) and the project's ``cutscenes.json`` (if it has one, #642)."""
+        from .schema_validation import SchemaValidationError, validate
+
+        errors: list[str] = []
+        warnings: list[str] = []
+        cutscenes = self.base_dir / "cutscenes.json"
+        if cutscenes.is_file():
+            try:
+                validate(_load_json(cutscenes), "cutscene.schema.json", "cutscenes.json")
+            except (SchemaValidationError, ValueError) as exc:
+                errors.append(str(exc))
+        elif scene_path is None:
             return AIOpsResult(True, "No scene provided; skipped validation")
-        loader = SceneLoader()
-        report = loader.validate_scene_file(scene_path)
-        ok = not report.errors
-        message = "ok" if ok else f"{len(report.errors)} error(s)"
-        return AIOpsResult(ok, message, {"errors": report.errors, "warnings": report.warnings})
+        if scene_path is not None:
+            report = SceneLoader().validate_scene_file(scene_path)
+            errors += report.errors
+            warnings += report.warnings
+        ok = not errors
+        message = "ok" if ok else f"{len(errors)} error(s)"
+        return AIOpsResult(ok, message, {"errors": errors, "warnings": warnings})
 
     # ------------------------------------------------------------------ job runner
     def apply_job(self, job_payload: dict[str, Any]) -> dict[str, Any]:

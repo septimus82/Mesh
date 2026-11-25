@@ -38,7 +38,7 @@ PATHS: dict[str, tuple[str, Callable[[str], Any], str]] = {  # label: (tool, its
     "quests": ("apply_ops", lambda world: [{"type": "add_quest_definition", "quest_id": "ai_quest",
                                             "quest": {"title": "From the AI"}}], "assets/data/quests.json"),
     "cutscenes": ("apply_ops", lambda world: [{"type": "add_cutscene", "id": "ai_scene",
-                                               "steps": [{"type": "wait", "seconds": 1}]}], "cutscenes.json"),
+                                               "steps": [{"type": "wait", "duration": 1}]}], "cutscenes.json"),
     "create_scene": ("create_scene", lambda world: SCENE, SCENE + ".json"),
 }
 CALL = """

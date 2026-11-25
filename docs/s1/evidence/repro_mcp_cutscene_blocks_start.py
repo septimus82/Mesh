@@ -42,7 +42,8 @@ try:
     print("MCP apply_ops ok:", result.get("ok"), "| op:", [(r.get("type"), r.get("ok"), r.get("message"))
                                                          for r in result.get("results", [])])
     print("MCP validation ok:", (result.get("validation") or {}).get("ok"))
-    print("cutscenes.json now:", json.loads((project / "cutscenes.json").read_text(encoding="utf-8")))
+    written = project / "cutscenes.json"
+    print("cutscenes.json now:", json.loads(written.read_text(encoding="utf-8")) if written.exists() else "(none)")
 
     from tooling.hidden_windows import no_activate
 

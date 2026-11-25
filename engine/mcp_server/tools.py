@@ -33,6 +33,16 @@ def _root_path(root: str) -> Path:
     return Path(root)
 
 
+# What a cutscene step may be (engine/schemas/cutscene.schema.json; a test keeps the two in step). "a | b": at least
+# one of them; "?": optional. A step with another type or field is refused, nothing written (#642).
+CUTSCENE_STEP_FORMAT = (
+    "Each step is {type, ...fields}: wait {duration}; start_dialogue {text | lines | entries | dialogue_id | target, "
+    "speaker?, node_id?} (lines/entries: [{text, speaker?}]); wait_dialogue_end {}; "
+    "move_entity {entity | target, x?, y?, duration?}; camera_focus {entity | target}; camera_pan {x, y, duration?}; "
+    "set_flag {flag | name, value?}; add_counter {counter | name, delta?}; emit_event {event | name, payload?, reason?}. "
+    "No other step types or fields."
+)
+
 # Catalog of every operation `apply_ops` can run, mirroring the dispatch in
 # engine.ai_ops.AIOps.apply_job. "required" fields are accessed via op["..."]
 # (a KeyError if missing); "optional" via op.get(...). A drift-guard test
@@ -57,11 +67,15 @@ OP_CATALOG: dict[str, dict[str, Any]] = {
     "add_world_scene": {"required": ["scene_key", "path"], "optional": ["world_path", "label", "tags"], "summary": "Register a scene in the world."},
     "link_world_scenes": {"required": ["from_key", "to_key"], "optional": ["world_path", "via", "bidirectional"], "summary": "Link two world scenes."},
     "set_world_start": {"required": [], "optional": ["world_path", "start_scene", "start_spawn"], "summary": "Set the world start scene/spawn."},
-    "add_cutscene": {"required": ["id"], "optional": ["steps", "cutscenes_path"], "summary": "Add a cutscene."},
-    "update_cutscene": {"required": ["id"], "optional": ["steps", "cutscenes_path"], "summary": "Update a cutscene."},
+    "add_cutscene": {"required": ["id"], "optional": ["steps", "cutscenes_path"], "summary": "Add a cutscene.",
+                     "step_format": CUTSCENE_STEP_FORMAT},
+    "update_cutscene": {"required": ["id"], "optional": ["steps", "cutscenes_path"], "summary": "Update a cutscene.",
+                        "step_format": CUTSCENE_STEP_FORMAT},
     "delete_cutscene": {"required": ["id"], "optional": ["cutscenes_path"], "summary": "Delete a cutscene."},
-    "insert_cutscene_step": {"required": ["id"], "optional": ["step", "index", "cutscenes_path"], "summary": "Insert a step into a cutscene."},
-    "update_cutscene_step": {"required": ["id"], "optional": ["index", "patch", "cutscenes_path"], "summary": "Patch a cutscene step by index."},
+    "insert_cutscene_step": {"required": ["id"], "optional": ["step", "index", "cutscenes_path"], "summary": "Insert a step into a cutscene.",
+                             "step_format": CUTSCENE_STEP_FORMAT},
+    "update_cutscene_step": {"required": ["id"], "optional": ["index", "patch", "cutscenes_path"], "summary": "Patch a cutscene step by index.",
+                             "step_format": CUTSCENE_STEP_FORMAT},
     "delete_cutscene_step": {"required": ["id"], "optional": ["index", "cutscenes_path"], "summary": "Delete a cutscene step by index."},
 }
 
