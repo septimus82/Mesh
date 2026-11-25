@@ -34,7 +34,7 @@ INFO:engine.assets:Creating generated placeholder texture
 [Mesh][UI] Registering HealthBar for WolfA
 [Mesh][UI] Registering HealthBar for WolfM
 [Mesh][UI] Registering HealthBar for WolfDrop2
-S1V engine {"file": "C:\\Users\\slebb\\AppData\\Local\\Temp\\s1v_LqPs\\n_adventure\\dist\\bundle\\engine\\__init__.py", "mode": "export"}
+S1V engine {"file": "<home>\\AppData\\Local\\Temp\\s1v_LqPs\\n_adventure\\dist\\bundle\\engine\\__init__.py", "mode": "export"}
 S1V start {"room": "start", "player": true, "sprites": 19}
 S1V 651_player {"stats_max_hp": 30.0, "stats_attack": 5.0, "health": [1.0, 1.0], "combat_damage": 1.0}
 S1V 651_healths {"Player": [1.0, 1.0, "player"], "WolfS": [1.0, 50.0, null], "WolfDrop": [1.0, 1.0, null], "WolfA": [1.0, 50.0, null], "WolfM": [1.0, 50.0, null], "WolfDrop2": [1.0, 1.0, null]}

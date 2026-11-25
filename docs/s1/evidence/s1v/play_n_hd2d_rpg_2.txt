@@ -46,7 +46,7 @@ INFO:engine.console_controller:[Mesh][Console] Entity 'WolfS' died!
 [Mesh][Health] 'WolfS' took 1.0 damage -> 0.0/50.0
 S1V 651_wolfS_after_one_damage {"still_there": false, "hp": null}
 S1V 652_items_json_present {"present": false}
-WARNING:engine.interaction:Interaction behaviour PickupCollectible failed: FileNotFoundError('Item database not found at C:\\Users\\slebb\\AppData\\Local\\Temp\\s1v_LqPs\\n_hd2d_rpg\\assets\\data\\items.json')
+WARNING:engine.interaction:Interaction behaviour PickupCollectible failed: FileNotFoundError('Item database not found at <home>\\AppData\\Local\\Temp\\s1v_LqPs\\n_hd2d_rpg\\assets\\data\\items.json')
 INFO:engine.console_controller:[Mesh][Console] Entity 'WolfDrop' died!
 ERROR:engine.events:[Mesh][EventBus] ERROR delivering 'died' to <bound method DropTable._on_event of <engine.behaviours.drop_table.DropTable object at 0x000002A9F321AA50>>: Item database not found at <home>\AppData\Local\Temp\s1v_LqPs\n_hd2d_rpg\assets\data\items.json
 [Puzzle] RewardChest <engine.scene_controller_parts.entity_factory._entity_sprite_class.<locals>.MeshEntitySprite object at 0x000002A9F36785F0> enabled by 'chest_open'
