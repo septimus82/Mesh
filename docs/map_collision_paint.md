@@ -62,7 +62,7 @@ Your RMMZ **Map002** (`light test/data/Map002.json`) matches the spike parallax 
 
 ```bash
 python tooling/import_rmmz_passability.py \
-  --map "C:/Users/slebb/Documents/RMMZ/light test/data/Map002.json" \
+  --map "C:/Users/<user>/Documents/RMMZ/light test/data/Map002.json" \
   --scene packs/core_regions/scenes/start.json
 ```
 

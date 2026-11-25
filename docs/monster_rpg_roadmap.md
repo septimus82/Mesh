@@ -160,5 +160,5 @@ battle models on one substrate.** The command-battler (Phases 0–1) stays as th
 - **Board hygiene:** always run the suite with `--basetemp`; the Windows temp-cleanup `PermissionError` is
   spurious. After a burst of fast PRs, do a gate-triage pass (separate real failures from Windows noise;
   fix real ones, never mass-baseline).
-- **One checkout:** work from a single repo path (a user-owned folder, e.g. `C:\Users\slebb\source\Mesh`,
+- **One checkout:** work from a single repo path (a user-owned folder, e.g. `C:\Users\<user>\source\Mesh`,
   not `Program Files`), and launch everything from there — mixed checkouts cause silent root/path mismatches.
