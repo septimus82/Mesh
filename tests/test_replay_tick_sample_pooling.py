@@ -8,7 +8,10 @@ import json
 import os
 import threading
 import time
+import weakref
 from pathlib import Path
+
+import pytest
 
 import mesh_cli
 from mesh_cli import episode as episode_module
@@ -66,6 +69,7 @@ def _why(code: int, perf: dict, tmp_path: Path | None = None, case_id: str = "ep
         f"threads={threading.active_count()} thread_names={[t.name for t in threading.enumerate()]}",
         f"gc_stats={gc_stats}",
         f"gc_threshold={gc.get_threshold()} gc_count_before={gc_count} gc_tracked_objects={tracked}",
+        f"gc_freeze_count={gc.get_freeze_count()}",
         f"full_gc_collect_ms_after_failure={full_collect_ms}",
         f"loadavg={load}",
         f"cpus={os.cpu_count()}",
@@ -212,3 +216,146 @@ def test_execution_cap_bounds_repeats(tmp_path: Path) -> None:
     assert _replay_check("ep01", tmp_path / "o", min_samples=10_000) == 0
     pooled = _read_json(tmp_path / "o" / "timings.json")["timing"]["pooled"]
     assert pooled["executions"] == MAX_TIMING_EXECUTIONS and pooled["min_samples_met"] is False
+
+
+# --- #612: timed executions are isolated from the host process's heap --------------------------------------------
+
+
+class _Cycle:
+    me: object = None
+
+
+def _gc_state() -> tuple[bool, tuple[int, ...], int]:
+    return gc.isenabled(), gc.get_threshold(), gc.get_freeze_count()
+
+
+@pytest.fixture
+def no_host_frozen_objects():
+    if gc.get_freeze_count():
+        pytest.skip("this process already froze objects; the harness leaves such a host alone")
+
+
+def _probe_executions(monkeypatch, sample) -> list:  # noqa: ANN001
+    """Wrap every timed execution: ``sample()`` runs just before it starts, its result is kept beside the execution."""
+    real, seen = episode_module._run_replay_once, []
+
+    def probe(spec, payload):  # noqa: ANN001
+        before = sample()
+        result = real(spec, payload)
+        seen.append((before, result))
+        return result
+
+    monkeypatch.setattr(episode_module, "_run_replay_once", probe)
+    return seen
+
+
+def test_every_timed_execution_runs_with_the_host_heap_collected_then_frozen(
+    tmp_path: Path, monkeypatch, no_host_frozen_objects
+) -> None:
+    """A big pre-existing heap sits in the permanent generation, out of reach of every collection a timed tick can
+    trigger, for run_1, run_2 and every timing-only repeat; the host's old garbage was collected, not frozen with it."""
+    heap = [[i] for i in range(300_000)]
+    sentinel = heap[-1]
+    garbage = _Cycle()
+    garbage.me = garbage
+    garbage_ref = weakref.ref(garbage)
+    gc.collect()  # the cycle is now old (generation 2): no young collection before the harness can free it
+    del garbage
+
+    def sample() -> dict:
+        return {
+            "frozen": gc.get_freeze_count(),
+            "garbage_alive": garbage_ref() is not None,
+            "heap_collectable": any(o is sentinel for g in range(3) for o in gc.get_objects(g)),
+        }
+
+    seen = _probe_executions(monkeypatch, sample)
+    assert _replay_check("ep01", tmp_path / "o", min_samples=40) == 0
+    assert len(seen) == 5  # run_1, run_2 and three repeats
+    for before, result in seen:
+        assert result.ok
+        assert before == {"frozen": before["frozen"], "garbage_alive": False, "heap_collectable": False}
+        assert before["frozen"] >= len(heap)
+    assert gc.get_freeze_count() == 0
+    assert any(o is sentinel for o in gc.get_objects(2)), "unfrozen afterwards, collectable again"
+
+
+def test_gc_state_is_restored_after_success_and_after_an_exception_mid_run(
+    tmp_path: Path, monkeypatch, no_host_frozen_objects
+) -> None:
+    before = _gc_state()
+    assert _replay_check("ep01", tmp_path / "ok", min_samples=40) == 0
+    assert _gc_state() == before
+
+    real, calls = episode_module._run_replay_once, {"n": 0}
+
+    def explode_in_run_2(spec, payload):  # noqa: ANN001
+        calls["n"] += 1
+        if calls["n"] == 2:
+            assert gc.get_freeze_count() > 0
+            raise RuntimeError("boom mid-run")
+        return real(spec, payload)
+
+    monkeypatch.setattr(episode_module, "_run_replay_once", explode_in_run_2)
+    assert _replay_check("ep01", tmp_path / "boom", min_samples=40) == 1
+    assert calls["n"] == 2
+    assert _gc_state() == before
+
+
+def test_gc_disabled_by_the_host_stays_disabled(tmp_path: Path, no_host_frozen_objects) -> None:
+    gc.disable()
+    try:
+        assert _replay_check("ep01", tmp_path / "o", min_samples=0) == 0
+        assert gc.isenabled() is False and gc.get_freeze_count() == 0
+    finally:
+        gc.enable()
+
+
+def test_a_host_that_froze_its_own_objects_is_left_exactly_as_it_was(
+    tmp_path: Path, monkeypatch, no_host_frozen_objects
+) -> None:
+    """gc.unfreeze() would release the host's frozen objects too, so the harness must not freeze or unfreeze.
+
+    The freeze count alone is not exact: a frozen object that is deallocated leaves the permanent generation, so in a
+    big process the count drifts down by itself. Never up (nothing newly frozen), and the host's objects stay frozen.
+    """
+    host_object = [1, 2, 3]
+
+    def collectable() -> bool:
+        return any(o is host_object for g in range(3) for o in gc.get_objects(g))
+
+    gc.freeze()
+    try:
+        frozen = gc.get_freeze_count()
+        seen = _probe_executions(monkeypatch, lambda: (gc.get_freeze_count(), collectable()))
+        assert _replay_check("ep01", tmp_path / "o", min_samples=0) == 0
+        assert len(seen) == 2
+        for (count, host_object_collectable), _ in seen:
+            assert count <= frozen and not host_object_collectable
+        assert 0 < gc.get_freeze_count() <= frozen and not collectable()
+    finally:
+        gc.unfreeze()
+
+
+def test_replay_allocations_are_still_collected_and_timed_inside_ticks(
+    tmp_path: Path, monkeypatch, no_host_frozen_objects
+) -> None:
+    """Freezing only removes the host's old heap: what a replay allocates is still collected inside its ticks and the
+    pause is still part of the measured tick time (and the per-tick #634 gc breakdown)."""
+    real_advance = episode_module._advance
+
+    def allocating_advance(ctx, dt):  # noqa: ANN001
+        live = [[i] for i in range(30_000)]  # alive across the tick, so the allocation counter really climbs
+        real_advance(ctx, dt)
+        del live
+
+    monkeypatch.setattr(episode_module, "_advance", allocating_advance)
+    seen = _probe_executions(monkeypatch, gc.get_freeze_count)
+    assert _replay_check("ep01", tmp_path / "o", min_samples=0) == 0
+    assert len(seen) == 2
+    for frozen, result in seen:
+        assert frozen > 0
+        ticks = result.tick_details
+        assert sum(sum(t["gc_collections"]) for t in ticks) >= len(ticks)  # at least one collection per tick
+        assert sum(t["gc_ms"] for t in ticks) > 0.0
+        assert all(t["ms"] >= t["gc_ms"] for t in ticks)

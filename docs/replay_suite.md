@@ -170,6 +170,12 @@ scheduler stall used to fail `max_tick_ms_p95`. The budget values are unchanged;
   `repeats` (beyond `run_1` and `run_2`), `samples_per_execution`, `total_ms_per_execution`, `pooled_count`,
   `tick_ms_p50`, `tick_ms_p95`, `tick_ms_max`. `tick_ms_count` / `tick_ms_list` remain the canonical execution's.
 - Campaign cases record placeholder zero timings, so their budgets are not a timing measurement.
+- The timed executions (`run_1`, `run_2`, every repeat) run with the host process's existing heap collected and then
+  frozen (`gc.collect()` + `gc.freeze()`, `gc.unfreeze()` afterwards, even on an exception), so a full collection of an
+  unrelated heap (the pytest process's, #612) can't land inside a timed tick. Collections of what the replay itself
+  allocates still happen inside its ticks and are still timed. A host that already froze objects of its own is left
+  alone (no collect, no freeze), because `gc.unfreeze()` would release those too. This is the replay harness only; the
+  engine's gc policy is unchanged.
 
 ## CI Budget Notes
 
