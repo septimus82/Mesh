@@ -271,11 +271,10 @@ class EditorSearchController:
             assets = self._editor._asset_browser_cached_rows
 
         if not assets:
-            repo_root = getattr(window, "repo_root", None)
-            if repo_root:
-                from engine.asset_index import scan_assets  # noqa: PLC0415
+            from engine.asset_index import scan_assets  # noqa: PLC0415
 
-                assets = scan_assets(repo_root)
+            # The project's assets, kept as the asset browser keeps them (the real window has no repo_root: #641).
+            assets = self._editor._asset_browser_cached_rows = scan_assets(self._editor._get_repo_root())
 
         # Get problems
         problems = self._ui_get_problems(scene_data, window)
@@ -309,13 +308,9 @@ class EditorSearchController:
         if not isinstance(scene_data, dict):
             return []
 
-        from pathlib import Path  # noqa: PLC0415
-
         from engine.editor.scene_lint_model import build_scene_lint_issues  # noqa: PLC0415
 
-        repo_root = getattr(window, "repo_root", None) if window else None
-        if not isinstance(repo_root, Path):
-            return []
+        repo_root = self._editor._get_repo_root()  # (the real window has no repo_root: #641)
 
         def resolver(prefab_id: str) -> bool:
             try:

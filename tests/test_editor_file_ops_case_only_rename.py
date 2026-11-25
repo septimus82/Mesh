@@ -24,7 +24,8 @@ class _Entry:
 
 
 class _ProjectExplorer:
-    def __init__(self, entry: _Entry) -> None:
+    def __init__(self, repo_root: Path, entry: _Entry) -> None:
+        self.repo_root = repo_root
         self._row = SimpleNamespace(entry=entry)
 
     def get_selected_row(self) -> object:
@@ -35,16 +36,16 @@ class _ProjectExplorer:
 
 
 class _Window:
-    def __init__(self, repo_root: Path) -> None:
-        self.repo_root = repo_root
+    def __init__(self) -> None:
         self.scene_controller = SimpleNamespace(_loaded_scene_data={"entities": []})
         self.player_hud = SimpleNamespace(enqueue_toast=lambda *args, **kwargs: None)
 
 
 class _Controller:
     def __init__(self, repo_root: Path, entry: _Entry) -> None:
-        self.window = _Window(repo_root)
-        self.project_explorer = _ProjectExplorer(entry)
+        self.window = _Window()
+        self.project_explorer = _ProjectExplorer(repo_root, entry)
+        self._get_repo_root = lambda: repo_root
 
     def _push_command(self, _payload: dict) -> None:
         pass

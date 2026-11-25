@@ -21,8 +21,9 @@ class MockRow:
 @pytest.fixture
 def mock_controller(tmp_path):
     mc = MagicMock()
-    mc.window.repo_root = tmp_path
+    mc._get_repo_root.return_value = tmp_path  # (the project root file ops act in: #641)
     mc.project_explorer = MagicMock()
+    mc.project_explorer.repo_root = tmp_path
     mc.state = MagicMock()
     mc.state.current_scene_path = None
     mc.state.current_scene_data = None
@@ -51,6 +52,7 @@ def test_rename_workflow_v2(file_ops, tmp_path):
     # Mock Selection
     mock_row = MagicMock()
     mock_row.entry.path = str(old)
+    mock_row.entry.rel_path = old.relative_to(tmp_path).as_posix()  # (what a Project panel row carries)
     mock_row.entry.is_dir = False
 
     with patch.object(file_ops, "_get_selected_project_row", return_value=mock_row):
@@ -83,6 +85,7 @@ def test_rollback_on_json_failure(file_ops, tmp_path):
 
     mock_row = MagicMock()
     mock_row.entry.path = str(old)
+    mock_row.entry.rel_path = old.relative_to(tmp_path).as_posix()  # (what a Project panel row carries)
 
     with patch.object(file_ops, "_get_selected_project_row", return_value=mock_row):
         file_ops.request_safe_rename_refactor("b.png")
@@ -122,6 +125,7 @@ def test_rollback_on_fs_failure(file_ops, tmp_path):
 
     mock_row = MagicMock()
     mock_row.entry.path = str(old)
+    mock_row.entry.rel_path = old.relative_to(tmp_path).as_posix()  # (what a Project panel row carries)
 
     # Need mocks for validation phases inside request_safe_rename
     with patch.object(file_ops, "_get_selected_project_row", return_value=mock_row):

@@ -39,7 +39,9 @@ class EditorProjectExplorerActionsController:
         paths = self._editor.project_explorer.selected_paths(self._editor._project_explorer_selectable_rows())
         if not paths:
             return False
-        self._editor._file_ops_ctl.delete_selected_paths(paths)
+        # Edit > Delete, the palette's "Delete Selected" and the Project panel's Del all end here: the one safe delete
+        # (confirmation dialog, references cleared, files kept in .mesh_trash), never a direct unlink (#631).
+        self._editor._file_ops_ctl.request_safe_delete_refactor(paths)
         return True
 
     def get_display_rows(self) -> list[Any]:

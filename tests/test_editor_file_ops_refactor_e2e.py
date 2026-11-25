@@ -26,9 +26,8 @@ def repo(tmp_path):
 def editor(repo):
     """Stub editor controller wired to temp repo."""
     ctrl = MagicMock()
-    # Ensure window has repo_root
     ctrl.window = MagicMock()
-    ctrl.window.repo_root = repo # Important!
+    ctrl._get_repo_root.return_value = repo  # (the project root file ops act in: #641)
     ctrl.scene_controller = MagicMock()
 
     # Real Confirm Modal (logic only)
@@ -39,6 +38,7 @@ def editor(repo):
     proj.selectable_rows = []
     proj._selected_paths_return = []
     proj.selected_paths.side_effect = lambda rows: proj._selected_paths_return
+    proj.repo_root = repo
     ctrl.project_explorer = proj
 
     # Real File Ops

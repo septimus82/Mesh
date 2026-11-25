@@ -252,7 +252,8 @@ def compute_replacements(refs: List[AssetReference], mapping: Dict[str, str]) ->
             old_dir_prefix = old_prefix + "/"
             if ref_val.startswith(old_dir_prefix):
                 suffix = ref_val[len(old_dir_prefix):]
-                new_val = f"{new_prefix}/{suffix}"
+                # A folder mapped to "" (deleted) clears what was inside it, never "/<suffix>" (#668 review).
+                new_val = f"{new_prefix}/{suffix}" if new_prefix else ""
                 match_found = True
                 break
 
