@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from engine.editor.asset_ops import editor_file_ops_controller as efoc
 from engine.editor.editor_file_ops_controller import (
     EditorFileOpsController,
     compute_temp_rename_rel,
@@ -57,13 +58,13 @@ def _make_controller(tmp_path: Path, rel_path: str) -> EditorFileOpsController:
 
 def _recording_replace(monkeypatch: pytest.MonkeyPatch):
     calls: list[tuple[Path, Path]] = []
-    real_replace = os.replace
+    real_replace = efoc._move_no_clobber
 
     def _wrapped(src: str | Path, dst: str | Path) -> None:
         calls.append((Path(src), Path(dst)))
         real_replace(src, dst)
 
-    monkeypatch.setattr("engine.editor.editor_file_ops_controller.os.replace", _wrapped)
+    monkeypatch.setattr(efoc, "_move_no_clobber", _wrapped)  # (every file step's move since #618)
     return calls
 
 

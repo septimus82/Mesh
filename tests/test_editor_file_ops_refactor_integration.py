@@ -129,8 +129,8 @@ def test_rollback_on_fs_failure(file_ops, tmp_path):
 
     assert file_ops._pending_refactor_plan is not None
 
-    # Mock os.replace to fail
-    with patch("os.replace", side_effect=OSError("Access Denied")):
+    # Make the file step fail (the no-clobber move every file step goes through, #618)
+    with patch("engine.editor.asset_ops.editor_file_ops_controller._move_no_clobber", side_effect=OSError("Access Denied")):
         file_ops.execute_pending_refactor()
 
     # Verify Rollback

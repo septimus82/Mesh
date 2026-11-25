@@ -3,7 +3,6 @@
 Rollback Matrix contract tests for Safe Refactor Ops.
 Simulates failure modes (network, disk full, permission denied) to ensure atomicity.
 """
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -103,7 +102,7 @@ def test_rollback_fs_move_fails(ops_ctrl, mock_repo):
     setup_plan(ops_ctrl, mock_repo)
 
     with patch("engine.editor.persistence_utils.write_atomic_utf8"):
-        with patch("os.replace", side_effect=OSError("File Locked")):
+        with patch("engine.editor.asset_ops.editor_file_ops_controller._move_no_clobber", side_effect=OSError("File Locked")):
              ops_ctrl.execute_pending_refactor()
 
     assert ops_ctrl._show_error_modal.called
@@ -136,7 +135,8 @@ def test_rollback_fs_multi_step_fails_v2(ops_ctrl, mock_repo):
 
     # We use a real replace (unpatched) or manual side effect that writes to disk
     # so that rollback logic (which checks dst.exists()) works.
-    original_replace = os.replace
+    from engine.editor.asset_ops import editor_file_ops_controller as efoc
+    original_replace = efoc._move_no_clobber
 
     def side_effect(src, dst):
         s_str = str(src)
@@ -145,7 +145,7 @@ def test_rollback_fs_multi_step_fails_v2(ops_ctrl, mock_repo):
         # Perform real move for A
         original_replace(src, dst)
 
-    with patch("os.replace", side_effect=side_effect) as mock_replace:
+    with patch("engine.editor.asset_ops.editor_file_ops_controller._move_no_clobber", side_effect=side_effect) as mock_replace:
         ops_ctrl.execute_pending_refactor()
 
     # Assert Rollback happened

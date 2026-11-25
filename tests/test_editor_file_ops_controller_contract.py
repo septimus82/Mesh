@@ -123,7 +123,7 @@ def test_no_op_rename(controller):
     controller._push_command.assert_not_called()
 
 def test_safe_error_handling_fs_fail(controller, tmp_path):
-    """FS failure shouldn't crash, still tries ref update if desired (or handled gracefully)."""
+    """FS failure doesn't crash, and changes no reference for a file that wasn't renamed (#618)."""
     # Setup
     old_file = tmp_path / "assets" / "old.png"
     old_file.parent.mkdir(parents=True)
@@ -138,15 +138,14 @@ def test_safe_error_handling_fs_fail(controller, tmp_path):
     # Actually mock _perform_fs_rename to return False
     with patch.object(ops, "_perform_fs_rename", return_value=False):
         with patch("engine.editor.editor_file_ops_controller.sys.platform", "win32"):
-            # Should still return result (True or False depending on implementation choice,
-            # original code continued with ref update so returns True)
             result = ops.rename_selected_asset("new.png")
 
-    assert result is True
+    assert result is False
 
-    # Ref update still happened
+    # No reference update for a rename that didn't happen (#618), and no undo step
     entities = controller.window.scene_controller._loaded_scene_data["entities"]
-    assert entities[0]["sprite"] == "assets/new.png"
+    assert entities[0]["sprite"] == "assets/old.png"
+    controller._push_command.assert_not_called()
 
 def test_move_selected_asset(controller, tmp_path):
     # Setup
