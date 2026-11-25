@@ -28,8 +28,10 @@ once, so that no later M4 stage needs a v4:
 * every ``input`` carries ``tick``, the server tick the client means it for (OD11). An attack's cooldown is judged
   on it, as the window judged it, within [now - COOLDOWN_CLAIM_WINDOW, now] (mesh_net.scene_room.SceneRoom._may_attack): an
   older claim is stale and dropped, a later one counts as now. An attack may carry ``view_tick``, the tick (a number:
-  between two ticks, a fraction) its window showed (reserved for lag compensation, M4-5). Neither lets the authority
-  start more than one attack (or one use or take) a tick;
+  between two ticks, a fraction) its window showed the room at (Playback's cursor when the key was read). Since M4-5 the
+  authority judges that attack's targets where they were then (lag compensation, mesh_net.scene_room.REWIND_CAP: at
+  most 300 ms back, never ahead of its tick, never before the player joined that room instance; the attacker where it
+  stands now). Neither lets the authority start more than one attack (or one use or take) a tick;
 * a ``welcome`` carries ``hz``, the authority's tick rate, which must be this side's ``HZ``.
 
 A frame is at most MAX_BYTES, and a room whose largest snapshot would not fit is refused at load (Unsupported), never
@@ -126,13 +128,15 @@ async def read(reader: asyncio.StreamReader, timeout: float = 5.0) -> Message:
 
 
 def input_frame(entity: int, seq: int, dx: int, dy: int, tick: int = 0, action: str | None = None,
-                **extra: Any) -> Message:
-    """An input frame: ``tick`` is the server tick the client means it for; ``extra`` (N7's ``room``, an attack's
-    ``view_tick``) as given."""
+                view_tick: float | None = None, **extra: Any) -> Message:
+    """An input frame: ``tick`` is the server tick the client means it for; ``view_tick`` (an attack's: the tick its
+    window showed, M4-5) unless None; ``extra`` (N7's ``room``) as given."""
     msg: Message = {"v": VERSION, "type": "input", "entity": entity, "seq": seq, "tick": tick, "dx": dx, "dy": dy,
                     **extra}
     if action is not None:
         msg["action"] = action
+    if view_tick is not None:
+        msg["view_tick"] = view_tick
     return msg
 
 

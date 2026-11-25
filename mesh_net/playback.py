@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from . import protocol as wire
+
+
+def between(a: Sequence[Any], b: Sequence[Any], alpha: float) -> tuple[float, float, float, Any]:
+    """(x, y, elevation, floor) ``alpha`` of the way from pose ``a`` to pose ``b``: x, y and elevation interpolated,
+    the floor the nearer pose's. How a window shows an enemy between two states (Playback.enemies) and how the authority
+    rewinds one to the tick the window showed (mesh_net.scene_room.SceneRoom._rewound, M4-5): one rule, never two."""
+    return (a[0] + alpha * (b[0] - a[0]), a[1] + alpha * (b[1] - a[1]), a[2] + alpha * (b[2] - a[2]),
+            (a if alpha < 0.5 else b)[3])
 
 
 class Playback:
@@ -63,6 +71,5 @@ class Playback:
         result: dict[str, tuple[float, float, float, Any]] = {}
         for row in latest["enemies"]:
             a, b = before.get(row[0], row), after.get(row[0], row)
-            result[row[0]] = (a[3] + alpha * (b[3] - a[3]), a[4] + alpha * (b[4] - a[4]), a[5] + alpha * (b[5] - a[5]),
-                              (a if alpha < 0.5 else b)[6])
+            result[row[0]] = between(a[3:7], b[3:7], alpha)
         return result

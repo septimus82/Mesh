@@ -647,6 +647,7 @@ def test_a_row_within_its_rounding_of_a_floors_edge_is_accepted(crossing: dict[s
 
     assert not on_deck(outside + 0.004 / PIXELS_PER_METRE), "the row's own point is off the deck"
     check_state(at(0.004), room.identity, room)  # within the rounding: accepted
-    with pytest.raises(wire.Invalid, match="is not under it"):
-        check_state(at(0.02), room.identity, room)  # beyond it: refused
+    for past in (0.009, 0.02):  # beyond it: refused (0.009: a tolerance of 0.01 px or more would take it)
+        with pytest.raises(wire.Invalid, match="is not under it"):
+            check_state(at(past), room.identity, room)
     assert d[4:6] == [64.0, DECK]

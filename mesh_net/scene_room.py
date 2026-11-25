@@ -33,6 +33,12 @@ M4-4 (owner decision OD7): an enemy that walks a ``FloorRoute`` in an HD-2D room
 engine.hd2d.route.FloorRoute, the one model single-player's behaviour runs (World.path and World.move with this
 module's sweep); its row carries where it is now, and hits are judged there. Any other way of moving an enemy, or a
 solid, is refused at load (MOVERS): it would stand still here while it walks in single-player.
+
+M4-5 (owner decision of 2026-11-25, OD5): bounded lag compensation. An attack's ``view_tick`` (the tick its window
+showed the enemies at: Playback's cursor) has its targets judged where they were then (REWIND_CAP, SceneRoom.history,
+SceneRoom._judged_at), the attacker where it stands now; never further back than 300 ms, never ahead, never before the
+attacker joined this room instance, never an enemy's pose from another identity. Damage, death, drops and cooldowns
+stay this tick's.
 """
 
 from __future__ import annotations
@@ -67,6 +73,7 @@ from engine.physics_model import (
 )
 
 from . import protocol as wire
+from .playback import between
 
 if TYPE_CHECKING:  # (2D rooms never load the 3D code)
     from engine.hd2d.route import FloorRoute
@@ -88,12 +95,22 @@ HITBOX_S = 0.2  # the hitbox Combat makes lives this long (engine.behaviours.com
 # ticks when the server reads it is stale: dropped, never run (SceneRoom.stale_attacks counts it); a claim of a tick
 # not yet reached counts as now. The claim decides only whether the cooldown has passed: the attack itself, its hitbox,
 # hits, damage and death are the server's, on its current geometry and floors, never a past tick's (owner condition 4;
-# this is not OD5's separate 300 ms lag-compensation cap, which M4-5 would add). The one place the window is set.
+# OD5's separate 300 ms lag-compensation cap, REWIND_CAP, is apart: only an attack's view_tick ever selects a past
+# pose, never this claim). The one place the window is set.
 # Owner decision 2026-11-24: 600 ms (12 ticks) approved for the cooperative PvE prototype only (docs/plans/
 # m4_online_combat.md). Measured (M4-2 "As implemented"; mashing, 3 seeds x 8 sessions, about 900 swings a profile),
 # the oldest an honest claim read was 4 ticks at 100 ms RTT +-10 ms, 10 with 1% loss (owner decision OD1's envelope:
 # 2 ticks to spare) and 14 at 200 ms with 1% loss (beyond it: 7 of 895 swings stale, counted).
 COOLDOWN_CLAIM_WINDOW = 12
+# Lag compensation (M4-5; owner decision of 2026-11-25 on OD5, cooperative PvE prototype only): an attack whose input
+# carries ``view_tick`` (the tick, a fraction between two, its window showed the enemies at: Playback's cursor when the
+# key was read) is judged with its targets where they were then and the attacker where it stands now
+# (SceneRoom._judged_at, SceneRoom._rewound). At most this many ticks back (300 ms): an older view is clamped to it. A
+# view ahead of this tick, one from before the attacker joined this room instance, or one with REWIND off, is judged
+# where the targets are now, as before M4-5 (counted: future_views, unseen_views; clamped_views). Never a hit invented:
+# an enemy whose poses for that time are missing, or another identity's (a new Enemy under its id), is judged now.
+REWIND_CAP = 6
+REWIND = True  # the game's own; mesh_net.server --rewind off (or MESH_NET_REWIND=0) and the probe's --rewind off: none
 PENDING = 4  # attacks, and uses or takes, a player may have waiting (one of each is read a tick); more are dropped
 # How the server reads inputs (owner decision OD11, M4-3): each tick reads ONE input, the oldest waiting, and walks one
 # step with its direction; at most ``depth`` wait (a full queue drops its oldest: the newest direction wins). An input's
@@ -469,6 +486,10 @@ class Hitbox:
     area: Aabb
     age: int = 0  # the ticks it has been updated (the first: the tick it was made)
     hit: set[str] = field(default_factory=set)
+    # M4-5: the (past) tick its targets are judged at on the tick it was made (``made``), None: where they are now.
+    # Each later update keeps the same lag (at + ticks since made), as its window's view goes on lagging by as much.
+    at: float | None = None
+    made: int = 0
 
 
 @dataclass
@@ -482,7 +503,9 @@ class Player:
     deep: int = 0  # ticks in a row that more than one input waited after the read (the room's drain)
     moves: deque[tuple[int, int, int]] = field(default_factory=deque)  # inputs waiting (seq, dx, dy), at most DEPTH
     actions: list[tuple[int, str]] = field(default_factory=list)  # uses and takes waiting (seq of its input, action)
-    attacks: list[tuple[int, int]] = field(default_factory=list)  # attacks waiting (seq of its input, tick meant for)
+    # attacks waiting (seq of its input, tick meant for, view tick or None: M4-5)
+    attacks: list[tuple[int, int, float | None]] = field(default_factory=list)
+    joined: int = 0  # the room's tick when it joined this room instance: no view before it was ever its own (M4-5)
     attack_after: int = 0  # the first tick an attack may be meant for (its cooldown, judged on meant ticks)
     ack: int = 0  # the seq of the last input a tick read (wire v3), since it joined this room
     attack_seq: int = 0  # the attacks started since it joined this room (wire v3)
@@ -516,9 +539,11 @@ class SceneRoom:
     """Same interface as mesh_net.simulation.Room, so mesh_net.server.Server hosts either."""
 
     def __init__(self, path: Path, root: Path | None = None, *, depth: int | None = None, hold: int | None = None,
-                 drain: int | None = None) -> None:
-        """``depth``, ``hold``, ``drain``: the input queue's settings (queue_settings; None: DEPTH, HOLD, DRAIN)."""
+                 drain: int | None = None, rewind: bool | None = None) -> None:
+        """``depth``, ``hold``, ``drain``: the input queue's settings (queue_settings; None: DEPTH, HOLD, DRAIN).
+        ``rewind``: lag compensation (M4-5; None: REWIND)."""
         self.depth, self.hold, self.drain = queue_settings(depth, hold, drain)
+        self.rewind = REWIND if rewind is None else bool(rewind)
         root = root or path.parent
         scene_hash, scene = load_scene(path)
         refuse_unsupported(scene)
@@ -599,6 +624,14 @@ class SceneRoom:
         # the cooldown; actions dropped because PENDING were already waiting; directions dropped from a full queue
         # (depth), and directions the drain dropped from a lasting backlog (drain) (their actions still run).
         self.stale_attacks = self.refused_attacks = self.dropped_actions = self.dropped_moves = self.drained_moves = 0
+        # M4-5 (diagnostics, never on the wire): views ahead of the tick, older than REWIND_CAP (clamped), from before
+        # the attacker joined (both judged now).
+        self.future_views = self.clamped_views = self.unseen_views = 0
+        # Each live enemy's pose after each of the last REWIND_CAP + 1 ticks, as its snapshot row has it: tick ->
+        # {id: (the Enemy, x, y, elevation px, floor)}. Bounded; kept only with rewind on (_remember).
+        self.history: deque[tuple[int, dict[str, tuple[Enemy, float, float, float, str | None]]]] = deque(
+            maxlen=REWIND_CAP + 1)
+        self._remember()
         try:
             wire.encode({"v": wire.VERSION, **self._worst_snapshot()})
         except wire.Invalid as exc:
@@ -643,6 +676,7 @@ class SceneRoom:
                 raise wire.Invalid("the body can't stand where it joins")
             player.body.mesh_hd2d_floor = stood[1]
         eid, self.next_id = self.next_id, self.next_id + 1
+        player.joined = self.tick  # (its first state here is this tick's: no view of this room before it, M4-5)
         self.players[eid] = player
         return eid
 
@@ -723,7 +757,7 @@ class SceneRoom:
         p.moves.append((seq, dx, dy))
         # (never one action replacing another: each runs in turn, one of each kind a tick)
         if action == "attack" and len(p.attacks) < PENDING:
-            p.attacks.append((seq, msg["tick"]))
+            p.attacks.append((seq, msg["tick"], msg.get("view_tick")))
         elif action is not None and action != "attack" and len(p.actions) < PENDING:
             p.actions.append((seq, action))
         elif action is not None:
@@ -764,13 +798,15 @@ class SceneRoom:
 
     def step(self) -> None:
         """One tick. First each enemy walking a FloorRoute walks (_walk_enemies), so this tick's hits and blocking are
-        where the enemies are now. Then each player (by entity id): the oldest input waiting is read (OD11: DEPTH; its
+        where the enemies are now (an attack with a view: where they were then, M4-5), and their poses are kept
+        (_remember). Then each player (by entity id): the oldest input waiting is read (OD11: DEPTH; its
         direction and facing, and ``ack``; while standing, an older still input is dropped first: DEPTH's note); its
         earlier hitboxes update; the actions whose input has been read run, one attack and one use or take, from where
         the player stands (where its client showed it when they were pressed: Prediction); then it walks one step
         (walk), while under HOLD ticks from the last input read."""
         self.tick += 1
         self._walk_enemies()
+        self._remember()
         solids = self.solids()
         for eid, p in sorted(self.players.items()):
             while len(p.moves) > 1 and not any(p.moves[0][1:]) and not any(p.moves[1][1:]):
@@ -790,10 +826,12 @@ class SceneRoom:
             if p.hitboxes:  # its earlier attacks' hitboxes, where they were made, the attacker as it now stands
                 p.hitboxes = [box for box in p.hitboxes if self._strike(p, box)]
                 solids = self.solids()
-            if p.attacks and self._ready(p, p.attacks[0][0]) and self._may_attack(p, p.attacks.pop(0)[1]):
-                p.attack_seq += 1
-                self._attack(p)
-                solids = self.solids()
+            if p.attacks and self._ready(p, p.attacks[0][0]):
+                _seq, meant, view = p.attacks.pop(0)
+                if self._may_attack(p, meant):
+                    p.attack_seq += 1
+                    self._attack(p, view)
+                    solids = self.solids()
             action = p.actions.pop(0)[1] if p.actions and self._ready(p, p.actions[0][0]) else None
             if action == "use":
                 self._use(p)
@@ -813,6 +851,53 @@ class SceneRoom:
             if enemy.route is not None and not enemy.state.dead:
                 solids = self.solids() if solids is None else solids
                 enemy.route.update(self.world, enemy.body, 1 / wire.HZ, solids, sweep=move)
+
+    def _remember(self) -> None:
+        """This tick's pose of each live enemy, as this tick's snapshot row carries it (x/y to 0.01 px, elevation to
+        0.001 px, floor), with the Enemy it belongs to (M4-5: history). Enemies move only in _walk_enemies, so it is
+        taken right after (and once at load). Nothing kept with rewind off."""
+        if self.rewind:
+            self.history.append((self.tick, {i: (e, round(e.body.center_x, 2), round(e.body.center_y, 2),
+                                                 *self.level(e.body))
+                                             for i, e in self.enemies.items() if not e.state.dead}))
+
+    def _judged_at(self, p: Player, view: Any) -> float | None:
+        """The (past) tick an attack's targets are judged at, from its ``view_tick`` (M4-5), checked against this room's
+        own history: None (where they are now, as before M4-5) with rewind off or no view, for a view ahead of this
+        tick (counted: future_views) or from before ``p`` joined this room instance (no state of it was its own then:
+        unseen_views); else the view, but never more than REWIND_CAP ticks back (an older one is clamped: clamped_views).
+        The attacker is never rewound: the hitbox is made where it stands now."""
+        if not self.rewind or view is None:
+            return None
+        if view > self.tick:
+            self.future_views += 1
+            return None
+        if view < p.joined:
+            self.unseen_views += 1
+            return None
+        if view < self.tick - REWIND_CAP:
+            self.clamped_views += 1
+            return float(self.tick - REWIND_CAP)
+        return float(view) if view < self.tick else None
+
+    def _rewound(self, at: float) -> dict[str, Body]:
+        """Each enemy as it stood at tick ``at`` (a fraction: between the two ticks around it, as Playback.enemies shows
+        it, playback.between), from history. Only an enemy alive in both of those ticks' poses and still the same Enemy
+        (not another identity under its id); the rest are judged where they are now. Nothing older than history keeps:
+        a time it no longer covers gives none."""
+        lo, hi = math.floor(at), math.ceil(at)
+        past = dict(self.history)
+        if lo not in past or hi not in past:
+            return {}
+        rewound = {}
+        for enemy_id, enemy in self.enemies.items():
+            a, b = past[lo].get(enemy_id), past[hi].get(enemy_id)
+            if a is None or b is None or a[0] is not enemy or b[0] is not enemy:
+                continue
+            x, y, z, floor = between(a[1:], b[1:], at - lo)
+            data = {**enemy.body.mesh_entity_data, "elevation": z}
+            rewound[enemy_id] = Body(x, y, enemy.body.width, enemy.body.height, data, floor)
+        return rewound
 
     def _forks(self, p: Player, solids: list[Body]) -> bool:
         """Whether the drain dropping ``p``'s oldest waiting input would change where this tick's step and the inputs
@@ -897,25 +982,31 @@ class SceneRoom:
             self.used.add(lever_id)
             self.locked -= {i for i, (_, c) in self.doors.items() if c.get("unlock_event") == event}  # locked -> open only
 
-    def _attack(self, p: Player) -> None:
+    def _attack(self, p: Player, view: Any = None) -> None:
         """Combat's hitbox (range ahead, hitbox_size square), made where the attacker stands now, and its first update
-        (this tick's: _strike); it is kept for the rest of its lifetime (step)."""
+        (this tick's: _strike); it is kept for the rest of its lifetime (step). ``view``: the attack's view tick, which
+        may judge its targets where they were (M4-5: _judged_at)."""
         fx, fy = FACINGS[p.facing]
-        box = Hitbox(Aabb(p.body.center_x + fx * self.reach, p.body.center_y + fy * self.reach, self.hitbox, self.hitbox))
+        box = Hitbox(Aabb(p.body.center_x + fx * self.reach, p.body.center_y + fy * self.reach, self.hitbox, self.hitbox),
+                     at=self._judged_at(p, view), made=self.tick)
         if self._strike(p, box):
             p.hitboxes.append(box)
 
     def _strike(self, p: Player, box: Hitbox) -> bool:
-        """One update of a Hitbox ``p`` made: it ages a tick; until its lifetime, each live enemy whose shape it
-        overlaps, on the attacker's level (as single-player's Hitbox asks), that it has not hit yet takes Health's
-        damage rule. False once it has expired (that update checks nothing, as the Hitbox's last)."""
+        """One update of a Hitbox ``p`` made: it ages a tick; until its lifetime, each enemy alive now whose shape it
+        overlaps, on the attacker's level as the attacker stands now (as single-player's Hitbox asks), that it has not
+        hit yet takes Health's damage rule. With a view (M4-5: ``box.at``) the shape and level are the enemy's then, as
+        far back as when the box was made (_rewound); the damage, death and drop are now's. False once it has expired
+        (that update checks nothing, as the Hitbox's last)."""
         box.age += 1
         if box.age >= self.lifetime:
             return False
+        rewound = self._rewound(box.at + (self.tick - box.made)) if box.at is not None else {}
         for enemy_id, enemy in sorted(self.enemies.items()):
-            if enemy_id in box.hit or enemy.state.dead or not shapes_overlap(box.area, entity_shape(enemy.body)):
+            target = rewound.get(enemy_id, enemy.body)
+            if enemy_id in box.hit or enemy.state.dead or not shapes_overlap(box.area, entity_shape(target)):
                 continue
-            if not self._level(p.body, enemy.body):
+            if not self._level(p.body, target):
                 continue
             box.hit.add(enemy_id)
             enemy.hit_seq += 1

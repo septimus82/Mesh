@@ -11,7 +11,10 @@ import pytest
 
 from tooling.net_delay_proxy import DelayProxy, Link
 
-SLACK_MS = 60.0  # a loaded runner's scheduling (and Windows' 15.6 ms timer) on top of the model's delay: report-only
+# A loaded runner's scheduling (and Windows' 15.6 ms timer) on top of the model's delay. The upper bounds it widens
+# are hard ceilings (asserted), as the repo's "report-only + hard ceilings" practice has it: generous enough for a busy
+# CI runner, and still a failure when a delivery is held far beyond the model; the lower bounds (never early) take none of it.
+SLACK_MS = 60.0
 
 
 async def echo_server() -> tuple[asyncio.Server, int]:

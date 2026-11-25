@@ -274,6 +274,22 @@ async def serve(port: int, room: Any = None, host: type[Server] = Server) -> Non
 QUEUE_NAMES = ("depth", "hold", "drain")
 
 
+def rewind_from(args: argparse.Namespace, environ: Any = os.environ) -> bool:
+    """A scene or world server's lag compensation (M4-5): ``--rewind on|off``, else MESH_NET_REWIND (1 or 0), else the
+    game's own (mesh_net.scene_room.REWIND); anything else is refused (ValueError)."""
+    from .scene_room import REWIND  # noqa: PLC0415
+
+    flag = getattr(args, "rewind", None)
+    if flag is not None:
+        return bool(flag == "on")
+    value = environ.get("MESH_NET_REWIND")
+    if value is None:
+        return REWIND
+    if value not in ("0", "1"):
+        raise ValueError(f"MESH_NET_REWIND must be 1 (on) or 0 (off), not {value[:16]!r}")
+    return bool(value == "1")
+
+
 def queue_from(args: argparse.Namespace, environ: Any = os.environ) -> dict[str, int]:
     """A scene or world server's input-queue settings (mesh_net.scene_room.queue_settings): a preset from ``--queue``
     (else MESH_NET_QUEUE, else the provisional default), each knob from its flag (``--input-depth``, ``--input-hold``,
@@ -314,11 +330,15 @@ def main() -> None:
         parser.add_argument(f"--input-{name}", type=int, help=f"with --coop or --expedition: the input queue's {name}: "
                                                               f"{what}; else MESH_NET_INPUT_{name.upper()}, else the "
                                                               "preset's")
+    parser.add_argument("--rewind", choices=("on", "off"), help="with --coop or --expedition: lag compensation (M4-5: "
+                        "an attack's targets judged where its window showed them, at most 300 ms back); else "
+                        "MESH_NET_REWIND (1/0), else on")
     args = parser.parse_args()
     if args.store and not args.expedition:
         parser.error("--store needs --expedition")
     try:
         queue = queue_from(args)
+        rewind = rewind_from(args)
     except ValueError as exc:
         parser.error(str(exc))
     store_path = Path(args.store).resolve() if args.store else None  # (before the room folder becomes the cwd)
@@ -343,7 +363,7 @@ def main() -> None:
             root = stack.enter_context(disposable_project(expedition_files(), scaffold=False))
             try:
                 world = World(root, store=store, rules=expedition_rules() if store is not None else None,
-                              depth=queue["depth"], hold=queue["hold"], drain=queue["drain"])
+                              depth=queue["depth"], hold=queue["hold"], drain=queue["drain"], rewind=rewind)
             except StoreUnavailable as exc:  # (the journal of owed completions cannot be used: mesh_net.owed)
                 raise SystemExit(f"[Mesh][Net] {exc}") from None
             room, host = world, WorldServer
@@ -358,10 +378,11 @@ def main() -> None:
             from .scene_room import COOP_SCENE, SceneRoom, coop_files, disposable_project
 
             root = stack.enter_context(disposable_project(coop_files(), scaffold=False))
-            room = SceneRoom(root / COOP_SCENE, root, **queue)
+            room = SceneRoom(root / COOP_SCENE, root, **queue, rewind=rewind)
             print(f"Mesh scene {room.identity[:12]}", flush=True)
         if args.coop or args.expedition:
             print("Mesh input queue " + " ".join(f"{k} {v}" for k, v in queue.items()), flush=True)
+            print(f"Mesh lag compensation {'on' if rewind else 'off'}", flush=True)
         try:
             asyncio.run(serve(args.port, room, host))
         except KeyboardInterrupt:
