@@ -272,15 +272,12 @@ def _handle_inline_rename_cancel(window: Any) -> bool:
 
 
 def _handle_inline_rename_confirm(window: Any) -> bool:
+    # The registry's inline-rename commit, as the editor's own Enter runs it: the safe rename (confirmation,
+    # references updated, never over an existing file). This called ``confirm_inline_rename``, which the project
+    # explorer doesn't have (#670). Unhandled (False) when the commit is disabled, e.g. with the editor closed.
     editor = getattr(window, "editor_controller", None)
-    project = getattr(editor, "project_explorer", None) if editor else None
-    if project is None:
-        return False
-    confirm = getattr(project, "confirm_inline_rename", None)
-    if callable(confirm):
-        confirm()
-        return True
-    return False
+    run = getattr(editor, "run_editor_action", None) if editor else None
+    return bool(run("editor.project_explorer.inline_rename.commit")) if callable(run) else False
 
 
 # CONSOLE handlers
@@ -315,7 +312,6 @@ def _handle_project_explorer_action(window: Any, action_id: str) -> bool:
         "capture.project_explorer.expand": ("expand_selected", None),
         "capture.project_explorer.open": ("open_selected", None),
         "capture.project_explorer.rename": ("start_inline_rename", None),
-        "capture.project_explorer.delete": ("delete_selected", None),
         "capture.project_explorer.home": ("navigate_to_first", None),
         "capture.project_explorer.end": ("navigate_to_last", None),
         "capture.project_explorer.page_up": ("page_up", None),

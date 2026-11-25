@@ -6,6 +6,10 @@ safe rename, move and delete returned False and did nothing, and the older ones 
 folder: Edit > Delete unlinked the current folder's same-named file. Edit > Delete and the palette's "Delete Selected"
 also unlinked with no question and no trash. Now every operation acts in the project the Project panel shows, every
 delete entry point asks first and keeps a copy in ``.mesh_trash``, and with no usable project root they refuse.
+
+#632: every delete stages into its own trash folder, so deleting a re-created file again keeps both copies, and the
+reference scan skips ``.mesh_trash``. #670: an inline rename (F2, typed name, Return) commits through the safe rename
+on both Return routes.
 """
 
 from __future__ import annotations
@@ -66,7 +70,7 @@ def ed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
     room.write_text(json.dumps({"name": "Room", "schema_version": 1, "version": 1, "layers": [], "entities": []}),
                     encoding="utf-8")
     cfg = EngineConfig(width=320, height=200, title="file ops", vsync=False, start_scene="", world_file=None,
-                       main_menu_scene=None)
+                       main_menu_scene=None, tour_completed=True)  # (a returning user: the tour takes Enter)
     setattr(cfg, "_mesh_launch_mode", "editor")  # (as engine.game_launch does for ``mesh edit``)
     window = GameWindow(width=320, height=200, title=cfg.title, vsync=False, config=cfg)
     window._allow_dispatch_event = True  # (pyglet queues a hidden window's events outside its own loop otherwise)
@@ -306,3 +310,166 @@ def test_618_move_into_a_folder_holding_a_same_named_file_is_refused(ed: Any) ->
     assert not _dialog_open(ed)
     assert _files(ed.project) == before
     assert any("already exists" in m for m in _errors(ed))
+
+
+# ------------------------------------------------------------------------------------------ #632 unique trash entries
+
+
+def _trash(root: Path) -> dict[str, bytes]:
+    return {k: v for k, v in _files(root).items() if k.startswith(".mesh_trash/")}
+
+
+def _confirm_delete(ed: Any, rel: str) -> str:
+    """Delete ``rel`` through Edit > Delete and Confirm; the plan's op_id."""
+    _select(ed, rel)
+    ed.editor.run_editor_action("editor.delete")
+    assert _dialog_open(ed)
+    op_id = ed.editor.file_ops._pending_refactor_plan.op_id
+    ed.editor.confirm_modal.execute_confirm()
+    return str(op_id)
+
+
+def test_632_delete_recreate_delete_keeps_both_trash_copies(ed: Any) -> None:
+    first = _confirm_delete(ed, VILLAIN)
+    (ed.project / VILLAIN).write_bytes(b"VILLAIN-2")
+    ed.editor.project_explorer.refresh_tree()  # (the panel lists the re-created file)
+    second = _confirm_delete(ed, VILLAIN)
+
+    assert first == second  # (the same plan: the deterministic trash path collided here)
+    assert not (ed.project / VILLAIN).exists()
+    trash = _trash(ed.project)
+    assert sorted(trash.values()) == [b"PROJECT-VILLAIN", b"VILLAIN-2"], trash
+    assert all(k.endswith("/" + VILLAIN) for k in trash)
+    assert not _errors(ed)
+
+
+def test_632_a_later_rename_never_rewrites_scene_files_in_the_trash(ed: Any) -> None:
+    old_layout = ed.project / ".mesh_trash" / "0123456789ab" / "scenes" / "old.json"  # (a trash entry from before #632)
+    old_layout.parent.mkdir(parents=True)
+    old_layout.write_text(json.dumps({"entities": [{"id": "o", "sprite": HERO}]}), encoding="utf-8")
+    level_before = (ed.project / "scenes/level.json").read_bytes()
+    _confirm_delete(ed, "scenes/level.json")  # (a scene that references HERO, now in the trash)
+    trash_before = _trash(ed.project)
+    assert level_before in trash_before.values()
+
+    _select(ed, HERO)
+    assert ed.editor.file_ops.request_safe_rename_refactor("hero2.png") is True
+    ed.editor.confirm_modal.execute_confirm()
+
+    assert (ed.project / "assets/sprites/hero2.png").read_bytes() == b"PROJECT-HERO"
+    assert _trash(ed.project) == trash_before
+    assert not _errors(ed)
+
+
+def test_632_rollback_after_a_failed_reference_write_restores_from_its_own_trash_folder(
+        ed: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    import engine.editor.persistence_utils as persistence_utils
+
+    level = ed.project / "scenes/level.json"
+    level_before = level.read_bytes()
+    first = _confirm_delete(ed, HERO)
+    assert _trash(ed.project) and _sprite(ed.project) == ""
+    level.write_bytes(level_before)  # (the same plan again: HERO re-created, still referenced)
+    (ed.project / HERO).write_bytes(b"HERO-2")
+    ed.editor.project_explorer.refresh_tree()
+
+    real_write = persistence_utils.write_atomic_utf8
+
+    def failing_write(path: Any, text: str, *args: Any, **kwargs: Any) -> Any:
+        if Path(path).name == "level.json":
+            raise OSError("disk full")
+        return real_write(path, text, *args, **kwargs)
+
+    monkeypatch.setattr(persistence_utils, "write_atomic_utf8", failing_write)
+    trash_before = _trash(ed.project)
+    assert _confirm_delete(ed, HERO) == first
+
+    assert (ed.project / HERO).read_bytes() == b"HERO-2"  # (restored from this staging's folder)
+    assert level.read_bytes() == level_before
+    assert _trash(ed.project) == trash_before  # (the earlier copy untouched)
+    assert list(trash_before.values()) == [b"PROJECT-HERO"]
+    assert any("Reference update failed" in m for m in _errors(ed)), ed.editor.feedback.pending()
+
+
+# ---------------------------------------------------------------------------- #668 review: folder at Confirm time
+
+
+def test_a_file_turned_into_a_folder_while_the_dialog_is_open_is_refused_at_confirm(ed: Any) -> None:
+    _select(ed, HERO)
+    ed.editor.run_editor_action("editor.delete")
+    assert _dialog_open(ed)
+    (ed.project / HERO).unlink()
+    (ed.project / HERO).mkdir()
+    (ed.project / HERO / "inside.png").write_bytes(b"INSIDE")
+    before = _files(ed.project)
+    ed.editor.confirm_modal.execute_confirm()
+    assert _files(ed.project) == before
+    assert _sprite(ed.project) == HERO
+    assert any("is a folder" in m for m in _errors(ed)), ed.editor.feedback.pending()
+
+
+# ----------------------------------------------------------------------------- #670 inline rename with real keys
+
+
+def _type(window: Any, text: str) -> None:
+    for ch in text:
+        window.dispatch_event("on_text", ch)
+
+
+def _start_inline_rename(ed: Any, rel: str, new_stem: str) -> None:
+    """F2 on ``rel`` in the Project panel and the stem replaced by ``new_stem``, all real keys and typed text."""
+    _select(ed, rel)
+    _key(ed.window, "F2")
+    project = ed.editor.project_explorer
+    assert project.inline_rename_active, "F2 didn't start an inline rename"
+    for _ in project.inline_rename_state.current_text:
+        _key(ed.window, "BACKSPACE")
+    _type(ed.window, new_stem)
+
+
+def _capture_router_return(ed: Any) -> bool:
+    """Return through the capture key router's own route. The editor's router runs first and takes Enter in an inline
+    rename itself; this route is the one reached whenever the editor leaves it unhandled."""
+    from engine.input_runtime import capture_key_router as router
+    from engine.input_runtime.capture_focus_query import get_capture_focus_snapshot
+
+    controller = ed.window.input_controller
+    ret = optional_arcade.arcade.key.RETURN
+    return bool(router.route_and_dispatch(controller, ret, 0, get_capture_focus_snapshot(controller, 0)))
+
+
+@pytest.mark.parametrize("route", ["return_key", "capture_router"])
+def test_670_f2_typed_name_and_return_renames_through_the_safe_rename(ed: Any, route: str) -> None:
+    _start_inline_rename(ed, HERO, "hero2")
+    if route == "return_key":
+        _key(ed.window, "RETURN")
+    else:
+        assert _capture_router_return(ed)
+    assert _dialog_open(ed), "Return did nothing"
+    ed.editor.confirm_modal.execute_confirm()
+    assert not (ed.project / HERO).exists()
+    assert (ed.project / "assets/sprites/hero2.png").read_bytes() == b"PROJECT-HERO"
+    assert _sprite(ed.project) == "assets/sprites/hero2.png"  # (references follow: the safe rename)
+    assert not ed.editor.project_explorer.inline_rename_active
+    assert not _errors(ed)
+
+
+@pytest.mark.parametrize("route", ["return_key", "capture_router"])
+def test_670_return_onto_an_existing_name_is_refused(ed: Any, route: str) -> None:
+    before = _files(ed.project)
+    _start_inline_rename(ed, HERO, "villain")
+    if route == "return_key":
+        _key(ed.window, "RETURN")
+    else:
+        _capture_router_return(ed)
+    assert not _dialog_open(ed)
+    assert _files(ed.project) == before
+    assert any("already exists" in m for m in _errors(ed)), ed.editor.feedback.pending()
+
+
+def test_670_with_the_editor_closed_a_left_over_rename_leaves_return_to_the_game(ed: Any) -> None:
+    _start_inline_rename(ed, HERO, "hero2")
+    ed.editor.toggle()
+    assert ed.editor.active is False and ed.editor.project_explorer.inline_rename_active
+    assert _capture_router_return(ed) is False  # (unhandled: the commit is disabled, so the game still gets Enter)
+    assert (ed.project / HERO).exists() and not _dialog_open(ed)

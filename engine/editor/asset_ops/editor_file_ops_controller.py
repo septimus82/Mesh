@@ -6,8 +6,10 @@ import hashlib
 import json
 import os
 import posixpath
+import secrets
 import shutil
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
@@ -65,7 +67,7 @@ class PendingRefactorPlan:
     fs_steps: List[FsStep]
     json_updates: Dict[str, List[Replacement]]
     preview_lines: List[str]
-    trash_moves: List[Tuple[str, str]]
+    trash_moves: List[Tuple[str, str]]  # (file to delete, its project-relative path)
     # State to restore/update after success
     active_scene_update: Optional[Dict[str, Any]] = None
     undo_command: Optional[Dict[str, Any]] = None
@@ -120,37 +122,45 @@ class EditorFileOpsController:
         payload = json.dumps(signature, sort_keys=True, separators=(",", ":"))
         return hashlib.md5(payload.encode("utf-8")).hexdigest()[:12]
 
-    def _trash_root(self, repo_root: Path, op_id: str) -> Path:
-        return repo_root / ".mesh_trash" / op_id
+    def _trash_root(self, repo_root: Path, entry: str) -> Path:
+        return repo_root / ".mesh_trash" / entry
 
-    def _build_trash_moves(
-        self, repo_root: Path, fs_steps: List[FsStep], op_id: str
-    ) -> List[Tuple[str, str]]:
-        moves: List[Tuple[str, str]] = []
-        trash_root = self._trash_root(repo_root, op_id)
-        for step in fs_steps:
-            if step.kind != "delete":
+    def _new_trash_root(self, repo_root: Path, op_id: str) -> Path:
+        """A trash folder no staging has used, made here: ``.mesh_trash/<op_id>-<UTC time>-<nonce>`` (#632).
+
+        The op_id is a hash of the plan, so deleting a re-created file again has the same one: a folder named by it
+        alone was reused, and the second copy replaced the first. ``mkdir`` without ``exist_ok`` claims the name
+        atomically, so two stagings never share a folder. Folders from before #632 (just ``<op_id>``) are left as
+        they are."""
+        stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+        while True:
+            root = self._trash_root(repo_root, f"{op_id}-{stamp}-{secrets.token_hex(4)}")
+            try:
+                root.mkdir(parents=True)
+                return root
+            except FileExistsError:
                 continue
-            src = repo_root / step.src_rel
-            dst = trash_root / step.src_rel
-            moves.append((str(src), str(dst)))
-        return moves
+
+    def _build_trash_moves(self, repo_root: Path, fs_steps: List[FsStep]) -> List[Tuple[str, str]]:
+        """(file, its project-relative path) for every delete; its trash folder is made when it is staged (#632)."""
+        return [(str(repo_root / step.src_rel), step.src_rel) for step in fs_steps if step.kind == "delete"]
 
     def _stage_deletes_to_trash(self, plan: PendingRefactorPlan, repo_root: Path) -> List[Tuple[str, str]]:
+        """Move every file to delete into one new trash folder; the (file, trash copy) pairs moved. Nothing in the
+        trash is ever replaced: the folder is new and each move refuses an existing destination."""
         staged: List[Tuple[str, str]] = []
-        for src_str, dst_str in plan.trash_moves:
+        trash_root: Optional[Path] = None
+        for src_str, rel in plan.trash_moves:
             src = Path(src_str)
-            dst = Path(dst_str)
             if not src.exists():
                 continue
-            dst.parent.mkdir(parents=True, exist_ok=True)
             try:
-                try:
-                    os.replace(src, dst)
-                except Exception:
-                    _log_swallow("EFOC-001", "blanket exception fallback", once=False)
-                    shutil.move(str(src), str(dst))
-                staged.append((src_str, dst_str))
+                if trash_root is None:
+                    trash_root = self._new_trash_root(repo_root, plan.op_id)
+                dst = trash_root / rel
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                _move_no_clobber(src, dst)
+                staged.append((src_str, str(dst)))
             except Exception:
                 _log_swallow("EFOC-002", "blanket exception fallback", once=False)
                 # Roll back any staged moves before bubbling up
@@ -159,6 +169,8 @@ class EditorFileOpsController:
         return staged
 
     def _restore_deletes_from_trash(self, staged: List[Tuple[str, str]]) -> None:
+        """Move staged files back from the trash copies ``_stage_deletes_to_trash`` returned (never over a file made
+        at the old path meanwhile: the copy then stays in the trash)."""
         for src_str, dst_str in reversed(staged):
             src = Path(src_str)
             dst = Path(dst_str)
@@ -166,11 +178,7 @@ class EditorFileOpsController:
                 continue
             src.parent.mkdir(parents=True, exist_ok=True)
             try:
-                try:
-                    os.replace(dst, src)
-                except Exception:
-                    _log_swallow("EFOC-003", "blanket exception fallback", once=False)
-                    shutil.move(str(dst), str(src))
+                _move_no_clobber(dst, src)
             except Exception as e:
                 _log_swallow("EFOC-004", "blanket exception fallback", once=False)
                 print(f"CRITICAL: Failed to restore {dst} -> {src}: {e}")
@@ -191,11 +199,13 @@ class EditorFileOpsController:
         self._refuse("File operation refused", f"{why}. Nothing was changed.")
         return None
 
-    def purge_trash(self, op_id: str) -> None:
+    def purge_trash(self, entry: str) -> None:
+        """Delete one trash entry: a folder directly in ``.mesh_trash``, ``<op_id>-<UTC time>-<nonce>`` (#632), or
+        ``<op_id>`` for one from before."""
         repo_root = self._project_root()
-        if repo_root is None:
+        if repo_root is None or name_refusal(entry):
             return
-        trash_root = self._trash_root(repo_root, op_id)
+        trash_root = self._trash_root(repo_root, entry)
         if trash_root.exists():
             shutil.rmtree(trash_root, ignore_errors=True)
 
@@ -514,7 +524,8 @@ class EditorFileOpsController:
         # Exclude patterns
         exclude_dirs = {
             "__pycache__", ".git", ".pytest_cache", "build", "dist",
-            "node_modules", "venv", ".vscode"
+            "node_modules", "venv", ".vscode",
+            ".mesh_trash",  # (deleted files: a refactor must never rewrite them, #632)
         }
 
         # DEBUG
@@ -1200,7 +1211,7 @@ class EditorFileOpsController:
         }
 
         op_id = self._compute_refactor_op_id("delete", fs_steps, modifications)
-        trash_moves = self._build_trash_moves(repo_root, fs_steps, op_id)
+        trash_moves = self._build_trash_moves(repo_root, fs_steps)
         self._pending_refactor_plan = PendingRefactorPlan(
             op_kind="delete",
             op_id=op_id,

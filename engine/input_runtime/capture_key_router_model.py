@@ -646,6 +646,9 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             action_id="capture.project_explorer.rename",
             when=_when_always,
         ),
+        # Del never acts here: the editor's own router runs first and sends it to the safe delete
+        # (editor.project_explorer.refactor_delete_selected). This route only keeps Del, unhandled, from reaching
+        # entity_select.delete while the Project panel has focus (#670).
         RouteSpec(
             scope=SCOPE_PROJECT_EXPLORER,
             combo=KeyCombo(key=key.DELETE, mods=0),
