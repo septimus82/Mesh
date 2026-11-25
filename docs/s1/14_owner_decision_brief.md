@@ -279,6 +279,6 @@ A Studio item operation is post-S1.
 
 **Recommendation:** **A**, all five steps, including the GitHub Support purge request and the scrub PR for the 6 pre-S1 files. C is only worth it if the username must be gone from all public history.
 
-**Whatever you choose, never open a PR from `docs/s1-0-investigation`.**
+**Whatever you choose, never open a PR from `docs/s1-0-investigation` while it still contains `035d0280`.**
 
 No history has been rewritten. Doing so needs your explicit authorisation.
