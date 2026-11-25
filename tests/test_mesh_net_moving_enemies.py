@@ -359,3 +359,27 @@ def test_an_enemy_row_rounded_over_a_floors_edge_is_accepted(routed: dict[str, b
     check_state(row_at(352.004), room.identity, room)
     with pytest.raises(wire.Invalid, match="not under it"):
         check_state(row_at(353.0), room.identity, room)
+
+
+def test_the_authority_walks_enemies_without_graphics(routed: dict[str, bytes], tmp_path: Any) -> None:
+    """In a fresh process (no Arcade, no behaviours loaded): the routed room loads and its enemy walks, importing
+    neither Arcade, pyglet, the game's physics runtime nor the single-player behaviour (the model alone)."""
+    import subprocess
+    import sys
+
+    project = tmp_path / "proj"
+    for rel, data in routed.items():
+        (project / rel).parent.mkdir(parents=True, exist_ok=True)
+        (project / rel).write_bytes(data)
+    code = ("import sys; from pathlib import Path; from mesh_net.scene_room import *\n"
+            f"files = {{p.relative_to(r).as_posix(): p.read_bytes() for r in [Path({str(project)!r})] for p in r.rglob('*') if p.is_file()}}\n"
+            f"with disposable_project(files, scaffold=False) as root: room = SceneRoom(root / {SCENE!r}, root)\n"
+            f"body = room.enemies[{BANDIT!r}].body; start = (body.center_x, body.center_y)\n"
+            "for _ in range(40): room.step()\n"
+            "assert (body.center_x, body.center_y) != start and room.enemies[" + repr(BANDIT) + "].route is not None\n"
+            "bad = [k for k in ('arcade', 'pyglet', 'engine.game', 'engine.studio', 'engine.physics_runtime',\n"
+            "                   'engine.behaviours.floor_route') if k in sys.modules]\n"
+            "assert not bad, bad\n"
+            "print('engine.hd2d.route' in sys.modules)")
+    done = subprocess.run([sys.executable, "-c", code], check=True, capture_output=True, text=True)
+    assert done.stdout.strip().splitlines()[-1] == "True"
