@@ -505,15 +505,16 @@ def test_a_cross_floor_attack_swings_and_never_flashes(room: SceneRoom) -> None:
     view = SimpleNamespace(room=room, swing=lambda e, own: shown["swings"].append((e, own)),
                            flash=lambda enemy: shown["flashes"].append(enemy))
     arena: Any = SimpleNamespace(client=SimpleNamespace(entity=eid), arcade=SimpleNamespace(key=SimpleNamespace(SPACE=32)),
-                                 action_keys=set(), actions=[], feedback=Feedback(), prediction=Prediction(), view=view, clock=lambda: 5.0)
-    arena.act = lambda action, tick=None: arena.actions.append((action, tick))
+                                 action_keys=set(), actions=[], feedback=Feedback(), prediction=Prediction(), view=view, clock=lambda: 5.0,
+                                 playback=SimpleNamespace(cursor=float(room.tick)))  # (the frame on screen: this tick's)
+    arena.act = lambda action, tick=None, view=None: arena.actions.append((action, tick, view))
     try:
         SceneArena.on_state(arena, room.snapshot(), eid, True)
         SceneArena.press(arena, 32, 0)
-        ((action, tick),) = arena.actions
+        ((action, tick, view),) = arena.actions
         assert action == "attack" and shown["swings"] == [(eid, True)], "the swing, at once"
         before = bandit.hit_seq
-        room.input(eid, wire.input_frame(eid, 1, 0, 0, tick, action))
+        room.input(eid, wire.input_frame(eid, 1, 0, 0, tick, action, view))
         for _ in range(room.lifetime + 1):
             room.step()
             SceneArena.on_state(arena, room.snapshot(), eid, False)

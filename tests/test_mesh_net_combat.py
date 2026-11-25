@@ -205,11 +205,14 @@ class View:
         return False
 
 
+CURSOR = 6.5  # (the fake windows' Playback cursor: the tick their frame on screen showed, an attack's view tick)
+
+
 def window(**attrs: Any) -> Any:
     """A window as the arenas' handlers read it: their action queue (Arena.act) and the attributes given."""
     arena: Any = SimpleNamespace(**{"action_keys": set(), "actions": [], "directions": {}, "keys": [],
-                                    "prediction": Prediction(), **attrs})
-    arena.act = lambda action, tick=None: Arena.act(arena, action, tick)
+                                    "prediction": Prediction(), "playback": SimpleNamespace(cursor=CURSOR), **attrs})
+    arena.act = lambda action, tick=None, view=None: Arena.act(arena, action, tick, view)
     return arena
 
 
@@ -257,7 +260,7 @@ def play(profile: tuple[float, float, float], seed: int, when: list[float],
     last: list[Any] = [None]
 
     def intent(t: float, shown: list[Any]) -> tuple[Any, ...]:
-        action, tick = Arena.next_action(arena)  # (Arena.session's send loop)
+        action, tick, _view = Arena.next_action(arena)  # (Arena.session's send loop)
         if action == "attack":
             sent.append(t)
         return 0, 0, action, tick
@@ -413,7 +416,7 @@ def test_a_press_in_the_cooldown_never_swings_and_the_world_window_waits_for_its
     arena.action_keys.clear()
     arena.phase, arena.shown = "playing", "start:2"
     WorldArena.press(arena, SPACE, 0)
-    assert arena.actions == [("attack", 7)] and view.swings == [(0.0, 1, True)]
+    assert arena.actions == [("attack", 7, CURSOR)] and view.swings == [(0.0, 1, True)], "with the view on screen"
     arena.actions, arena.action_keys = [], set()
     WorldArena.press(arena, SPACE, 0)  # (the same instant: in the cooldown)
     assert arena.actions == [] and len(view.swings) == 1
@@ -429,7 +432,7 @@ def test_e_right_after_space_never_replaces_the_attack() -> None:
     SceneArena.on_state(scene, state, 1, True)
     SceneArena.press(scene, SPACE, 0)
     SceneArena.press(scene, E, 0)
-    assert scene.actions == [("attack", 30), ("use", None)] and len(scene.view.swings) == 1
+    assert scene.actions == [("attack", 30, CURSOR), ("use", None, None)] and len(scene.view.swings) == 1
     view = View([0.0])
     world = window(arcade=SimpleNamespace(key=SimpleNamespace(SPACE=SPACE, E=E, P=1, I=2, Y=3, N=4, L=5, ESCAPE=6,
                                                                 F2=7, R=8)),
@@ -438,16 +441,16 @@ def test_e_right_after_space_never_replaces_the_attack() -> None:
     world.feedback.baseline(state, 10, 5.0)
     WorldArena.press(world, SPACE, 0)
     WorldArena.press(world, E, 0)
-    assert world.actions == [("attack", 30), ("use", None)] and len(view.swings) == 1
+    assert world.actions == [("attack", 30, CURSOR), ("use", None, None)] and len(view.swings) == 1
 
 
 def test_losing_focus_releases_keys_but_keeps_the_pressed_actions() -> None:
     """Arena.blur (the window loses focus): held keys are released (none sticks), but an attack whose swing showed is
     still sent; a session's end clears what it never sent."""
-    arena = window(keys=[1, 2], actions=[("attack", 9)])
+    arena = window(keys=[1, 2], actions=[("attack", 9, 7.0)])
     arena.action_keys = {32}
     Arena.blur(arena)
-    assert arena.keys == [] and arena.action_keys == set() and arena.actions == [("attack", 9)]
+    assert arena.keys == [] and arena.action_keys == set() and arena.actions == [("attack", 9, 7.0)]
 
 
 def test_the_server_never_drops_an_attack_for_a_use_in_the_same_tick(coop: SceneRoom) -> None:
@@ -464,7 +467,7 @@ def test_the_server_never_drops_an_attack_for_a_use_in_the_same_tick(coop: Scene
         for seq, action in ((1, "use"), (2, "attack"), (3, "take"), (4, "use")):
             room.input(eid, wire.input_frame(eid, seq, 0, 0, room.tick, action))
         p = room.players[eid]
-        assert p.attacks == [(2, room.tick)] and p.actions == [(1, "use"), (3, "take"), (4, "use")]  # (by input)
+        assert p.attacks == [(2, room.tick, None)] and p.actions == [(1, "use"), (3, "take"), (4, "use")]  # (by input)
         room.step()
         assert p.attack_seq == 1 and enemy.hit_seq == 1 and p.actions == [(3, "take"), (4, "use")], "the attack, the use"
         room.step()
@@ -632,7 +635,7 @@ def test_every_enter_takes_a_new_baseline() -> None:
     enter(first)
     tick(first)
     assert not view.flashes, "the enemy's hits before the enter are the baseline"
-    arena.actions = [("attack", 3), ("use", None)]  # (pressed in the first room, never sent)
+    arena.actions = [("attack", 3, 1.0), ("use", None, None)]  # (pressed in the first room, never sent)
     enter(second)
     assert arena.actions == [], "what was pressed in the last room is never sent into this one"
     tick(second)
@@ -744,8 +747,8 @@ def test_a_transfer_from_a_long_running_room_lets_the_first_press_swing() -> Non
     arena.shown, arena.phase = arena.room, "playing"  # (the window's next draw shows the room)
     WorldArena.press(arena, SPACE, 0)
     assert len(view.swings) == 2, "the first press in the fresh room swings"
-    (action, tick), = arena.actions
-    world.input(pid, wire.input_frame(m.eid, 1, 0, 0, tick, action, room=fresh.id))
+    (action, tick, view), = arena.actions
+    world.input(pid, wire.input_frame(m.eid, 1, 0, 0, tick, action, view, room=fresh.id))
     world.step()
     assert fresh.room.players[m.eid].attack_seq == 1, "and the server runs it there"
     for _ in range(30):
@@ -779,11 +782,11 @@ def test_a_sessions_end_drops_the_windows_unsent_actions() -> None:
         port = probe.getsockname()[1]  # (nothing listens there once closed)
     keys = SimpleNamespace(**{n: i for i, n in enumerate("W UP S DOWN A LEFT D RIGHT SPACE E ESCAPE F2 R N".split())})
     scene = Arena(SimpleNamespace(push_handlers=lambda **_kw: None), SimpleNamespace(key=keys))
-    scene.actions = [("attack", 7), ("use", None)]
+    scene.actions = [("attack", 7, 5.0), ("use", None, None)]
     asyncio.run(scene.session(port))
     assert scene.actions == [] and "Disconnected" in scene.status
     world = window(port=None, token=None, character=None, note=lambda _e: None, status="", phase="playing",
-                   room="start:1", pending=None, requests=[], actions=[("attack", 7), ("take", None)])
+                   room="start:1", pending=None, requests=[], actions=[("attack", 7, 5.0), ("take", None, None)])
     world.blur = lambda: Arena.blur(world)
     asyncio.run(WorldArena.session(world, port))
     assert world.actions == [] and world.phase == "disconnected"
@@ -827,10 +830,10 @@ def test_a_full_queue_never_drops_a_shown_swing() -> None:
     for _ in range(PENDING + 2):
         SceneArena.press(arena, E, 0)
         arena.action_keys.clear()
-    assert arena.actions == [("use", None)] * PENDING
+    assert arena.actions == [("use", None, None)] * PENDING
     SceneArena.press(arena, SPACE, 0)
-    assert len(arena.view.swings) == 1 and ("attack", 30) in arena.actions
-    assert Arena.next_action(arena) == ("attack", 30) and Arena.next_action(arena) == ("use", None)
+    assert len(arena.view.swings) == 1 and ("attack", 30, CURSOR) in arena.actions
+    assert Arena.next_action(arena) == ("attack", 30, CURSOR) and Arena.next_action(arena) == ("use", None, None)
 
 
 def test_attacks_bunched_by_tcp_run_in_the_order_sent(coop: SceneRoom) -> None:

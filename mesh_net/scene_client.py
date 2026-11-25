@@ -225,7 +225,9 @@ class SceneArena(Arena):
             self.action_keys.add(symbol)
             tick = self.feedback.press(self.clock())  # (in the cooldown: no swing, and nothing sent)
             if tick is not None:
-                self.act("attack", tick)  # the server judges its cooldown on this tick, as the window did
+                # the server judges its cooldown on this tick, as the window did, and its targets where the window
+                # showed them (Playback's cursor at the frame on screen: M4-5's view tick)
+                self.act("attack", tick, self.playback.cursor)
                 self.view.swing(client.entity, own=True)  # at once: the server confirms only a hit
             return True
         if symbol == self.arcade.key.E and client and symbol not in self.action_keys:

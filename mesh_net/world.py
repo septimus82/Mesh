@@ -134,9 +134,9 @@ class Party:
     members: list[int]
 
 
-def room_defs(root: Path, world_file: str = WORLD_FILE, **queue: int | None) -> tuple[str, dict[str, RoomDef]]:
+def room_defs(root: Path, world_file: str = WORLD_FILE, **queue: Any) -> tuple[str, dict[str, RoomDef]]:
     """Every room of the world file, validated as one world: (start key, {key: RoomDef}). ``queue``: the rooms'
-    input-queue settings (SceneRoom: depth, hold, drain)."""
+    input-queue settings (SceneRoom: depth, hold, drain) and lag compensation (rewind)."""
     world = json.loads((root / world_file).read_text(encoding="utf-8"))
     scenes = world.get("scenes")
     if not isinstance(scenes, dict) or not scenes or len(scenes) > MAX_INSTANCES:
@@ -207,12 +207,14 @@ class World:
     and deterministic, so a transfer between rooms happens inside one tick."""
 
     def __init__(self, root: Path, world_file: str = WORLD_FILE, store: Any = None, rules: Any = None, *,
-                 depth: int | None = None, hold: int | None = None, drain: int | None = None) -> None:
+                 depth: int | None = None, hold: int | None = None, drain: int | None = None,
+                 rewind: bool | None = None) -> None:
         """``store`` (a mesh_net.characters.CharacterStore) and ``rules`` (progression rules) make the world's
         characters persistent (N8); without them it is N7's world exactly. ``depth``, ``hold``, ``drain``: every
-        room's input queue (mesh_net.scene_room.queue_settings; None: the defaults)."""
+        room's input queue (mesh_net.scene_room.queue_settings; None: the defaults). ``rewind``: every room's lag
+        compensation (M4-5; None: mesh_net.scene_room.REWIND). Each room instance keeps its own history."""
         self.root = root
-        self.start, self.defs = room_defs(root, world_file, depth=depth, hold=hold, drain=drain)
+        self.start, self.defs = room_defs(root, world_file, depth=depth, hold=hold, drain=drain, rewind=rewind)
         self.progress = persistence.Progress.open(root, self.defs, store, rules) if store is not None else None
         identities = sorted([key, d.proto.identity, d.expedition] for key, d in self.defs.items())
         self.identity = hashlib.sha256(json.dumps(identities).encode()).hexdigest()

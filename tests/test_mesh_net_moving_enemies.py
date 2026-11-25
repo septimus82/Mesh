@@ -227,7 +227,8 @@ def test_every_n7_instance_walks_its_own_enemies(routed: dict[str, bytes], monke
 
 def test_a_hit_on_a_moving_enemy_is_judged_where_it_is_now(routed: dict[str, bytes]) -> None:
     """The attack's hitbox is made where the attacker stands, on the tick the server reads it, against the enemy where
-    it has just walked that tick (owner condition 4: current server geometry, never a past position): a hitbox that
+    it has just walked that tick (owner condition 4: current server geometry, never a past position; an attack with no
+    view tick, M4-5: tests/test_mesh_net_lag_compensation.py has those): a hitbox that
     overlaps its feet box after this tick's walk by half a step, but not before it, hits on that tick; one where it
     stood 20 ticks ago misses."""
     from engine.physics_model import entity_aabb
@@ -348,7 +349,8 @@ def test_the_window_places_enemies_where_playback_shows_them() -> None:
 def test_an_enemy_row_rounded_over_a_floors_edge_is_accepted(routed: dict[str, bytes]) -> None:
     """A walking enemy's row is its x/y to 0.01 px. One whose feet stand on the west stairs' east edge (11 m) can be
     sent 0.004 px beyond it: the client's check samples the rounding's corners, as for players (floor_under), and
-    accepts it; a whole pixel beyond is refused."""
+    accepts it; 0.009 px beyond (past the rounding's 0.005 px corner: a tolerance of 0.01 px or more would take it),
+    0.02 px and a whole pixel beyond are refused."""
     room = room_of(routed)
     state = room.snapshot()
 
@@ -358,8 +360,9 @@ def test_an_enemy_row_rounded_over_a_floors_edge_is_accepted(routed: dict[str, b
 
     check_state(row_at(352.0 - 1.0), room.identity, room)
     check_state(row_at(352.004), room.identity, room)
-    with pytest.raises(wire.Invalid, match="not under it"):  # (the tolerance's upper bound: the rounding, not more)
-        check_state(row_at(352.02), room.identity, room)
+    for x in (352.009, 352.02):  # (the tolerance's upper bound: the rounding, not more)
+        with pytest.raises(wire.Invalid, match="not under it"):
+            check_state(row_at(x), room.identity, room)
     with pytest.raises(wire.Invalid, match="not under it"):
         check_state(row_at(353.0), room.identity, room)
 

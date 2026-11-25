@@ -102,7 +102,9 @@ class WorldArena(Arena):
                 tick = (self.feedback.press(self.clock()) if self.phase == "playing" and self.view is not None
                         and self.shown == self.room and self.entity is not None else None)
                 if tick is not None and self.view is not None and self.entity is not None:
-                    self.act("attack", tick)  # the server judges its cooldown on this tick, as the window did
+                    # the server judges its cooldown on this tick, as the window did, and its targets where the window
+                    # showed them (Playback's cursor at the frame on screen: M4-5's view tick)
+                    self.act("attack", tick, self.playback.cursor)
                     self.view.swing(self.entity, own=True)
             elif symbol == key.E:
                 own = self._own()
@@ -223,12 +225,12 @@ class WorldArena(Arena):
                         self.requests.clear()
                         if self.phase == "playing" and self.shown == self.room and self.entity is not None:
                             # (no input while a room loads)
-                            direction, action, tick = self.outgoing()
+                            direction, action, tick, view = self.outgoing()
                             assert tick is not None  # (this window reckons the room's tick: Feedback)
                             self.seq += 1
                             self.prediction.sent(self.seq)
                             writer.write(wire.encode(wire.input_frame(self.entity, self.seq, *direction, tick, action,
-                                                                      room=self.room)))
+                                                                      view, room=self.room)))
                         await asyncio.wait_for(writer.drain(), 2)
                         due = max(due + 1 / wire.HZ, loop.time())  # fixed schedule: no drift; after a stall, one extra send
                         await asyncio.sleep(due - loop.time())

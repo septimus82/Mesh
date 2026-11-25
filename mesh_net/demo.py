@@ -56,9 +56,10 @@ class Arena:
                            key.A: (-1, 0), key.LEFT: (-1, 0), key.D: (1, 0), key.RIGHT: (1, 0)}
         self.keys: list[int] = []
         self.action_keys: set[int] = set()
-        # Actions pressed and not yet sent, oldest first, each with the tick it is meant for (None: the next): one rides
-        # each input sent, so none replaces another (an attack whose swing showed is sent even if E follows at once).
-        self.actions: list[tuple[str, int | None]] = []
+        # Actions pressed and not yet sent, oldest first, each with the tick it is meant for (None: the next) and, for an
+        # attack, the tick the window showed when it was pressed (M4-5's view_tick; None: none): one rides each input
+        # sent, so none replaces another (an attack whose swing showed is sent even if E follows at once).
+        self.actions: list[tuple[str, int | None, float | None]] = []
         # How many of those may ride the input a direction press built (the ones pressed before it: the avatar showed
         # them from before its step, where the server runs them); later ones wait for the input after it. None: no
         # input built at a press is waiting.
@@ -102,36 +103,38 @@ class Arena:
             self.keys.remove(symbol)
         return True
 
-    def act(self, action: str, tick: int | None = None) -> None:
-        """Queue an action to send. An attack whose swing the window showed (it has its meant tick) always queues
-        (the cooldown already spaces them); any other action while fewer than PENDING wait (the server keeps no more)."""
-        if tick is not None or sum(t is None for _, t in self.actions) < PENDING:
-            self.actions.append((action, tick))
+    def act(self, action: str, tick: int | None = None, view: float | None = None) -> None:
+        """Queue an action to send. An attack whose swing the window showed (it has its meant tick, and ``view``, the
+        tick the window showed then: Playback's cursor) always queues (the cooldown already spaces them); any other
+        action while fewer than PENDING wait (the server keeps no more)."""
+        if tick is not None or sum(t is None for _, t, _ in self.actions) < PENDING:
+            self.actions.append((action, tick, view))
 
-    def next_action(self, limit: int | None = None) -> tuple[str | None, int | None]:
+    def next_action(self, limit: int | None = None) -> tuple[str | None, int | None, float | None]:
         """What the next input carries: the oldest attack whose swing showed first (its meant tick ages while it
-        waits: SceneRoom._may_attack's cap), else the oldest other action; (None, None) when nothing waits.
-        ``limit``: only the oldest that many may go (``riders``)."""
+        waits: SceneRoom._may_attack's cap), else the oldest other action, each with its view tick; (None, None, None)
+        when nothing waits. ``limit``: only the oldest that many may go (``riders``)."""
         pool = self.actions[:limit] if limit is not None else self.actions
-        for index, (_, tick) in enumerate(pool):
+        for index, (_, tick, _) in enumerate(pool):
             if tick is not None:
                 return self.actions.pop(index)
-        return self.actions.pop(0) if pool else (None, None)
+        return self.actions.pop(0) if pool else (None, None, None)
 
-    def outgoing(self) -> tuple[tuple[int, int], str | None, int | None]:
-        """The next input: its direction (a predicting window's built input, else the keys held), its action and the
+    def outgoing(self) -> tuple[tuple[int, int], str | None, int | None, float | None]:
+        """The next input: its direction (a predicting window's built input, else the keys held), its action, the
         tick it is meant for (an attack's as its swing reckoned it; else the room's tick as reckoned now: Feedback;
-        None in the 2D sample: the next). The caller says ``prediction.sent(seq)`` before it goes."""
+        None in the 2D sample: the next) and its view tick (an attack's, M4-5; else None). The caller says
+        ``prediction.sent(seq)`` before it goes."""
         direction = self.directions[self.keys[-1]] if self.keys else (0, 0)
         limit, self.riders = self.riders, None
         if self.prediction is not None:
             built = bool(self.prediction.inputs) and self.prediction.inputs[-1][0] is None  # (at a press)
             direction = self.prediction.next(direction)
             limit = limit if built else None
-        action, tick = self.next_action(limit)
+        action, tick, view = self.next_action(limit)
         if tick is None and self.feedback is not None:
             tick = self.feedback.tick(self.clock())
-        return direction, action, tick
+        return direction, action, tick, view
 
     def blur(self) -> bool:
         """Focus lost: release every held key (none sticks), but keep the actions pressed: they are still sent."""
@@ -155,10 +158,10 @@ class Arena:
                 async def send_inputs() -> None:
                     due = loop.time()
                     while True:
-                        direction, action, tick = self.outgoing()
+                        direction, action, tick, view = self.outgoing()
                         if self.prediction is not None:
                             self.prediction.sent(client.seq + 1)  # (Client.input numbers it so)
-                        await client.input(*direction, action=action, tick=tick)
+                        await client.input(*direction, action=action, tick=tick, view_tick=view)
                         due = max(due + 1 / wire.HZ, loop.time())  # fixed schedule: no drift; after a stall, one extra send
                         await asyncio.sleep(due - loop.time())
 

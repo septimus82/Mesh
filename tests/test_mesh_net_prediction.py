@@ -168,7 +168,7 @@ def test_an_inputs_actions_run_from_where_the_window_showed_the_player() -> None
         place(room, eid, *OPEN, 0)
         made: list[float] = []
         attack = room._attack
-        room._attack = lambda p: (made.append(p.body.center_x), attack(p))[1]  # type: ignore[method-assign]
+        room._attack = lambda p, view=None: (made.append(p.body.center_x), attack(p, view))[1]  # type: ignore[method-assign]
         for seq, action in ((1, None), (2, None), (3, "attack")):  # (one a tick, as a window sends them)
             send(room, eid, seq, 1, 0, action)
             room.step()
@@ -236,10 +236,10 @@ def test_every_input_carries_the_tick_the_window_reckons() -> None:
     arena.clock, arena.feedback = lambda: now[0], Feedback()
     arena.feedback.baseline({"tick": 100, "players": [], "enemies": []}, 10, 10.0)  # tick 100 seen at 10 s
     now[0] = 10.26
-    assert arena.outgoing() == ((0, 0), None, 105)
-    arena.act("attack", 103)
+    assert arena.outgoing() == ((0, 0), None, 105, None)
+    arena.act("attack", 103, 101.25)
     arena.press(keys.RIGHT, 0)
-    assert arena.outgoing() == ((1, 0), "attack", 103)
+    assert arena.outgoing() == ((1, 0), "attack", 103, 101.25), "an attack's view tick rides with it (M4-5)"
 
 
 def test_an_hd2d_correction_snaps_elevation_and_floor_and_fades_only_x_and_y() -> None:
@@ -677,7 +677,7 @@ def test_an_action_waits_for_its_own_input_behind_a_step() -> None:
         p, step = room.players[eid], room.step_px
         made: list[float] = []
         attack = room._attack
-        room._attack = lambda pl: (made.append(pl.body.center_x), attack(pl))[1]  # type: ignore[method-assign]
+        room._attack = lambda pl, view=None: (made.append(pl.body.center_x), attack(pl, view))[1]  # type: ignore[method-assign]
         send(room, eid, 1, 1, 0)
         send(room, eid, 2, 1, 0, "attack")
         room.step()
@@ -758,7 +758,7 @@ def test_a_take_or_use_is_chosen_where_the_window_shows_itself() -> None:
             keys = SimpleNamespace(SPACE=32, E=101, P=1, I=2, Y=3, N=4, L=5, ESCAPE=6, F2=7, R=8)
             arena: Any = SimpleNamespace(actions=[], action_keys=set(), directions={}, keys=[], prediction=prediction,
                                          arcade=SimpleNamespace(key=keys), view=view, feedback=Feedback())
-            arena.act = lambda action, tick=None, a=arena: Arena.act(a, action, tick)
+            arena.act = lambda action, tick=None, view=None, a=arena: Arena.act(a, action, tick, view)
             if make == "scene":
                 arena.client = SimpleNamespace(entity=eid, state=state)
                 SceneArena.press(arena, keys.E, 0)
@@ -766,7 +766,7 @@ def test_a_take_or_use_is_chosen_where_the_window_shows_itself() -> None:
                 arena.__dict__.update(phase="playing", shown="start:1", room="start:1", entity=eid, state=state,
                                       connected=True, note=lambda _e: None, request=None, _own=lambda: far)
                 WorldArena.press(arena, keys.E, 0)
-            assert arena.actions == [("take", None)], make
+            assert arena.actions == [("take", None, None)], make
 
 
 def test_space_after_a_press_built_input_swings_where_the_server_runs_it() -> None:
@@ -787,12 +787,12 @@ def test_space_after_a_press_built_input_swings_where_the_server_runs_it() -> No
         arena.act("attack", arena.feedback.press(0.0))  # (SceneArena.press: Space, the same frame)
         made: list[float] = []
         attack = room._attack
-        room._attack = lambda pl: (made.append(pl.body.center_x), attack(pl))[1]  # type: ignore[method-assign]
+        room._attack = lambda pl, view=None: (made.append(pl.body.center_x), attack(pl, view))[1]  # type: ignore[method-assign]
         for seq in (1, 2):
-            direction, action, tick = arena.outgoing()
+            direction, action, tick, view = arena.outgoing()
             assert (action is None) == (seq == 1), "the built input goes without it; the next carries it"
             arena.prediction.sent(seq)
-            room.input(eid, wire.input_frame(eid, seq, *direction, tick, action))
+            room.input(eid, wire.input_frame(eid, seq, *direction, tick, action, view))
             room.step()
         assert made == [shown] == [OPEN[0] + room.step_px]
 

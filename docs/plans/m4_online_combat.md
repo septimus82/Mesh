@@ -8,7 +8,9 @@
 > choice after playing; "drain" is the provisional default (owner decision, 2026-11-24). M4-4 (server-authoritative
 > moving enemies through one shared `FloorRoute` model, OD7) is merged (#616), with the measurements M4-5 depends on:
 > §4 M4-4 "As implemented". The M4-6 groundwork (a TCP delay proxy, a hidden-window capture harness and one trial;
-> two #616 review follow-ups) is in review: §4 M4-6 "groundwork as implemented". M4-5 awaits the owner.
+> two #616 review follow-ups) is merged (#617): §4 M4-6 "groundwork as implemented". M4-5 (bounded server-side lag
+> compensation, approved by the owner on 2026-11-25) is in review: §4 M4-5 "As implemented", and §6 for its security
+> and fairness limitation.
 >
 > **Authority:** owner decision D7 (2026-11-23, `docs/plans/hd2d_online_investigation.md` §6, §7.4): M4 is approved
 > to begin now that M3 has passed. Focus: responsive server-authoritative online combat, including simulated latency.
@@ -557,7 +559,8 @@ The measurements rank the levers.
       swings at 100 ms with 1% loss. **The owner approved the 600 ms window on 2026-11-24, for the cooperative PvE
       prototype only, with conditions** (below).
     - **The claim judges the cooldown only.** The attack runs when it is read: its hitbox, hits, damage and death are
-      evaluated on the server's current geometry and floors, never on positions from the claimed tick. A test checks
+      evaluated on the server's current geometry and floors, never on positions from the claimed tick (since M4-5,
+      only the separate `view_tick`, within 300 ms, rewinds the targets: §4 M4-5). A test checks
       this (`test_an_old_claim_judges_the_cooldown_only_never_the_hit`). `COOLDOWN_CLAIM_WINDOW` is named apart from
       OD5's separate 300 ms cap for historical hit validation (M4-5, not approved yet), which stays unchanged.
     - **What a lying client can gain:** meant ticks that start attacks rise at least a cooldown apart and are never
@@ -1242,6 +1245,239 @@ The measurements rank the levers.
 owner's budget:**
 - Rewind history, `view_tick`, and the OD5 cap.
 - **Acceptance:** same-seed probe under the budget; cap and cross-floor tests.
+- **Owner decision, 2026-11-25, quoted verbatim:**
+
+  > "M4-5 APPROVED. The measured disagreement rates against moving enemies justify implementing bounded server-side
+  > lag compensation for the cooperative PvE prototype.
+  > Authorized design
+  > * Rewind enemy positions only, never the attacker.
+  > * Maximum historical rewind: 300 ms (6 server ticks).
+  > * Retain the separate 600 ms delayed-attack-input allowance.
+  > * Use the existing protocol v3 `view_tick`; no protocol v4.
+  > * The server remains authoritative over attack execution, hit detection, damage, cooldowns and death.
+  > * Single-player behaviour and existing replay recordings remain unchanged.
+  > Mandatory safeguards
+  > * Validate the client's requested historical time against authoritative server history.
+  > * Never accept future timestamps or permit unbounded rewind.
+  > * Preserve floor-aware reach, collision and obstruction checks, including bridge decks and stairs.
+  > * Historical targets must belong to the same valid room instance.
+  > * Do not reuse history across transfers, despawns, respawns or invalidated entity identities.
+  > * Handle missing or insufficient history conservatively, without inventing a hit.
+  > * Keep historical data bounded in memory and deterministic in tests.
+  > * Document the cheating and fairness limitations before any public deployment.
+  > Acceptance
+  > Measure actual implementation results against the existing non-compensated baseline at 0, 50, 100 and 200 ms RTT,
+  > including jitter and 1% loss.
+  > Test stationary and moving attackers, moving enemies, stairs, bridge decks, room transitions and the 300 ms boundary.
+  > Use independent review, mutation proofs, CI and Extended. Do not weaken tests to meet a target.
+  > Report measured improvements and remaining disagreement honestly. The ideal rewind result is a theoretical bound,
+  > not an assumed outcome."
+
+- **As implemented** (`mesh_net/scene_room.py`: `REWIND_CAP`, `SceneRoom.history`, `_remember`, `_judged_at`,
+  `_rewound`, `_strike`; `mesh_net/playback.py`: `between`). No protocol change: v3's optional `view_tick` on attack
+  inputs was already on the wire (`mesh_net/protocol.py`'s note on it is updated, documentation only).
+  - **What the client sends.** On Space, `SceneArena.press` and `WorldArena.press` queue the attack with
+    `Playback.cursor`: the tick, with its fraction, that the frame on screen showed the enemies at. The cursor is
+    updated at each draw, so a key read at the next dispatch carries what the player was looking at. It rides the
+    attack in the window's action queue (`Arena.actions` entries are now `(action, tick, view)`), so a view never
+    outlives its attack or crosses into another room or session (both clear the queue). `wire.input_frame(...,
+    view_tick=)` is the one builder.
+    - *Conservative mapping:* the cursor is never ahead of the newest state received, so an honest view is never ahead
+      of the server's tick. Before the window's first draw in a room its cursor is 0, which the server judges as "now"
+      (counted as `unseen_views`).
+  - **What the server keeps.** Each room instance (the N6 room, and each N7 instance, which is its own deep copy) keeps
+    `history`: a `deque(maxlen=REWIND_CAP + 1)` holding, for each of the last 7 ticks, each **live** enemy's pose
+    exactly as that tick's snapshot row carries it (x/y to 0.01 px, elevation to 0.001 px, floor), together with the
+    `Enemy` object it belongs to.
+    - It is taken right after `_walk_enemies` each tick (enemies move nowhere else) and once at load.
+    - It is bounded (7 ticks × live enemies) and deterministic (tested: two rooms stepped alike keep equal histories).
+    - With rewind off it keeps nothing.
+  - **How a view is validated** (`_judged_at`, on the tick the attack starts; counters are diagnostics, never on the
+    wire):
+    - no view, or rewind off: judged now, exactly as before M4-5;
+    - a view ahead of this tick: judged now (`future_views`). It could not select anything anyway: history never holds
+      a future tick;
+    - a view from before the attacker **joined this room instance** (`Player.joined`, set by every `join`: a
+      transfer, a resume, a first join): judged now (`unseen_views`). No state of that instance was the player's then;
+    - a view more than 6 ticks (300 ms) back: **clamped** to 6 ticks back (`clamped_views`), as OD5 recommended
+      ("clamp, never refuse"). An honest window that far behind (a TCP retransmission stall) is judged at the nearest
+      pose allowed, which is nearer what it saw than the pose now; a liar gains nothing beyond the window either way;
+    - otherwise the view itself.
+  - **How the targets are rewound** (`_rewound`). For a time *t*, the poses of ticks floor(*t*) and ceil(*t*) are
+    interpolated by `playback.between`, the very function `Playback.enemies` draws with, on the same rounded rows. The
+    server judges the pose the window drew, to the bit (tested). An enemy is rewound only if both ticks hold a pose of
+    **the same `Enemy` object** (an id reused by a new enemy, a respawn, or an enemy dead in either tick never
+    matches). Otherwise, and whenever history lacks either tick, that enemy is judged where it is now: **nothing is
+    made up from a neighbouring pose**.
+  - **The hit test is the one that ran before** (`_strike`): `shapes_overlap(hitbox, entity_shape(target))` and
+    `same_level(attacker, target)`. Only `target` changes, from the enemy's body to its rewound pose.
+    - The hitbox is made where the attacker stands **now**, and the level is asked of the attacker as it stands now.
+      The attacker is never rewound; no player pose is kept at all.
+    - Floors, stairs and bridge decks are judged at the rewound pose by the same rule (`same_level`'s vertical reach
+      and its floor-between check).
+    - Damage, death, drops (where the enemy is now), hit counters and the cooldown are this tick's. An enemy dead now
+      is never hit through history; a hitbox hits each enemy once.
+  - **OD10's later ticks.** The hitbox checks on 3 ticks. Each later update judges the targets **the same time behind**
+    as its first (*t* + ticks since it was made), since the window's view goes on lagging by as much. That stays within
+    the 6 kept ticks by construction.
+  - **The 600 ms claim window is untouched.** The input's `tick` still judges only the cooldown; only `view_tick`
+    selects a past pose (tested: an old claim with no view is judged now).
+  - **Switchable, for the same-seed baseline:** `SceneRoom(..., rewind=)`, `World(..., rewind=)`,
+    `python -m mesh_net.server --rewind on|off` (else `MESH_NET_REWIND=1|0`, else on), and the probe's `--rewind off`.
+    The default is on.
+  - **Single-player is untouched:** nothing under `engine/` changed. Replays 13/13, no golden updated.
+  - **With rewind off the implementation is the M4-4 baseline, to the number.** The extracted `a4465258` probe and this
+    branch's `--rewind off` give identical results on seed 7 × 24 sessions for moving target 70, moving both and stairs
+    moving, at 100 and 200 ms ±10 ms 1%: every count equal. The window now sends its view; the server ignores it.
+
+  - **Measurements: the implementation against the non-compensated baseline.** Method: `tooling/m4_latency_probe.py
+    --queue Q --rewind on|off --seeds S --sessions 24 --scenarios ... --profiles ...`, seeds 7/8/9 run one at a time,
+    24 sessions each. The baseline is this branch with `--rewind off`, which equals M4-4 to the number (above).
+    - **The "real" answer is now the authority's own.** For every sampled frame (a hypothetical press), the probe asks
+      the server's `_attack` with the view tick that frame's press would carry, on the landing tick's actual history.
+      It is no longer a re-derivation.
+    - "Ideal" is still the theoretical bound: the real attacker against the targets exactly as shown.
+    - Each cell is [lowest, highest] over the three seeds. Every sampled frame is a press: about 15,790 per seed per
+      scenario (2,860 for `arrival`). Real swings: 192 per seed (48 for `arrival`).
+    - New scenarios:
+      - `bridge`: a still attacker on the bridge deck; the bandit walks the deck through its hitbox.
+      - `under_bridge`: the same walk over a still attacker on the ground under the deck. It must never be hit.
+      - `arrival`: a room transition. The player joins an instance whose bandit has walked 1–4 s, and swings from
+        the first frame.
+    - 300 ms ±10 1% is added as the boundary profile, where nearly every view is beyond the cap.
+
+    **Disagreement**, % of all sampled presses, drain (provisional default), baseline → **M4-5**. For moving both,
+    the ideal bound is in brackets; it is 0 everywhere else.
+
+    | Scenario | 0 (none) | 0 ±10 1% | 50 ±10 1% | 100 ±10 1% | 200 ±10 1% | 300 ±10 1% (boundary) |
+    |---|---|---|---|---|---|---|
+    | moving target 70 (52 px/s) | 6.0–6.1 → **0** | 6.4–6.5 → **0–0.1** | 8.1–8.5 → **0.2** | 10.2–10.3 → **0.4–0.6** | 14.2–15.4 → **2.9–3.6** | 18.9–19.6 → **7.2–8.5** |
+    | moving target 150 (88.6 px/s) | 11.3–11.6 → **0** | 12.0–12.1 → **0.1** | 15.9–16.1 → **0.1–0.5** | 19.8–20.1 → **0.6–1.5** | 27.3–28.3 → **5.4–7.2** | 34.6–36.5 → **14.3–15.4** |
+    | moving both (walking attacker) | 3.3–3.4 → **0.7–0.8** [0.7–0.8] | 3.7–4.2 → **1.0–1.2** [0.9–1.2] | 4.4–4.7 → **1.2–1.4** [1.1–1.2] | 4.8–5.5 → **1.4–1.6** [1.2–1.5] | 6.4–7.4 → **2.1–2.8** [1.4–1.8] | 7.4–8.0 → **4.2–4.8** [2.4–3.3] |
+    | stairs, moving enemy | 16.0–16.3 → **0** | 17.5–18.2 → **0.1** | 22.8–23.5 → **0.2–0.5** | 28.2–29.6 → **1.3–1.5** | 38.2–39.7 → **7.6–8.3** | 40.8–41.6 → **18.7–21.3** |
+    | bridge deck, moving enemy | 6.0–6.1 → **0** | 6.4–6.5 → **0–0.1** | 8.0–8.5 → **0.2–0.3** | 10.2–10.4 → **0.4–0.7** | 14.3–15.2 → **3.2–3.4** | 19.3–19.4 → **7.8–7.9** |
+    | under the deck (never in reach) | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 |
+    | arrival (room transition) | 6.2–7.5 → **0** | 8.8–10.1 → **0–0.2** | 10.2–14.0 → **0–0.4** | 14.0–17.2 → **0.1–1.4** | 12.8–21.7 → **2.0–5.2** | 26.0–27.7 → **9.6–12.4** |
+
+    - **Within OD1's envelope (100 ms ±10 ms 1%)** the remaining disagreement is 0.4–1.5% for a still attacker. On the
+      stairs it is 1.3–1.5%, of which 0.4–0.9 points are the floor rule. With a walking attacker it is 1.4–1.6%, of
+      which 1.0–1.2 points are the attacker's own motion, which rewinding never addresses (the ideal bound is
+      1.2–1.5%).
+    - **What remains comes from views beyond the cap.** At 100 ms, 9.0–10.5% of a still attacker's presses need more
+      than 6 ticks (every one during a TCP retransmission stall). They are clamped, and 3.7–16.6% of those still
+      disagree. Every remaining disagreement for a still attacker is target-caused or floor-caused at a clamped
+      view; the attacker causes none.
+    - **The rewind needed is larger than §4 M4-4 inferred.** It is the whole round trip: the view is half a round trip
+      old when shown, and the attack lands half a round trip later. Add the two-tick display delay and up to about two
+      ticks of send and tick quantisation.
+      - Share of a still attacker's presses beyond 300 ms: 0 at 0 ms; 1.4–1.5% at 0 ms ±10 1%; 4.9–5.0% at 50 ms;
+        9.0–10.5% at 100 ms; **97.8–99.2% at 200 ms**; 100% at 300 ms.
+      - At 200 ms almost every view is clamped to 300 ms back. That still removes three quarters of the disagreement
+        (14.2–15.4% → 2.9–3.6% at 52 px/s), because 300 ms back is far nearer what the window showed than now is.
+        It is not the ideal bound.
+    - **A walking attacker clamps more often under queues that delay its attacks.** The server runs an attack only on
+      the tick that reads its own input, so a backlog adds lag. Beyond the cap at 100 ms: drain 37.9–53.3%, deep
+      73.6–78.4%, small 18.6–29.9%.
+
+    **Looked like a hit but missed / looked like a miss but hit** (the second is "hits the player didn't see", which a
+    rewind can create; the count is presses per seed with M4-5), baseline → M4-5:
+
+    | Scenario | 100 ±10 1% | 200 ±10 1% |
+    |---|---|---|
+    | moving target 70 | 27.3–27.8 / 6.3–6.5 → 0.6–1.9 / 0.2–0.3 (31–43) | 37.7–39.7 / 8.9–9.8 → 8.5–9.8 / 1.6–2.3 (204–297) |
+    | moving target 150 | 45.8–46.4 / 12.8–13.0 → 1.2–2.7 / 0.5–1.2 (58–152) | 62.9–64.0 / 17.7–18.8 → 10.8–15.6 / 3.9–4.9 (483–603) |
+    | moving both | 26.9–33.1 / 2.1–2.3 → 11.3–12.0 / 0.2–0.4 (21–58) | 40.3–41.3 / 2.4–3.4 → 13.3–17.4 / 0.8–1.3 (117–186) |
+    | stairs, moving enemy | 68.8–70.5 / 17.2–18.4 → 3.2–4.2 / 0.6–1.0 (78–128) | 92.9–93.3 / 23.5–25.2 → 19.4–20.8 / 4.5–5.1 (557–624) |
+    | bridge deck | 25.0–26.0 / 6.2–6.6 → 1.4–2.3 / 0.1–0.3 (16–33) | 33.7–37.7 / 9.2–10.0 → 7.9–8.8 / 1.9–2.1 (237–260) |
+    | arrival | 21.7–25.4 / 11.0–14.6 → 0.5–2.4 / 0–1.7 (0–36) | 27.7–37.4 / 10.1–17.4 → 4.5–8.0 / 1.5–5.0 (34–100) |
+
+    - Hits the player didn't see still happen with M4-5: 0.2–1.2% of presses that looked like misses at 100 ms, and
+      0.8–5.1% at 200 ms (from clamped views). The baseline's are 2.1–18.4% and 2.4–25.2%. The counts are net per
+      run: which of them the rewind itself created was not paired press by press.
+    - **0 at 0 ms with no loss**, in every scenario except moving both, where the remaining part is the attacker's own
+      motion.
+    - **Under the deck: 0 hits taken**, on or off, at every profile: the deck's 2 m is never within reach.
+    - **On the deck:** 47–50 hits taken against 48 without rewind (192 swings).
+    - **Views never refused unseen** (`unseen_views` = 0 everywhere, `arrival` included): an honest window never sends
+      a view from before it joined. `future_views` = 0 everywhere.
+
+    **Real swings, and how soon a hit shows** (still attacker unless named; drain):
+    - **Swings shown but never executed are unchanged by M4-5**, which never touches the cooldown or the claim window:
+      - 0 up to 100 ms;
+      - at 200 ms, 1–7 of 192 (moving both 3–10);
+      - at 300 ms, 7–10 (moving both 19–26).
+
+      All are stale claims, as before.
+    - **Hit confirmation, p50 / p95 ms, 100 ±10 1%:**
+
+      | Case | Baseline | M4-5 |
+      |---|---|---|
+      | moving target 70 | 159.5–173.5 / 213.7–237.2 | 165.8–180.3 / 276.5–299.7 |
+      | stairs | 166.7–168.4 / 238.9–360.2 | 181.4–187.7 / 391–415.5 |
+      | bridge | 159.5–173.5 / 221.7–237.2 | 178.6–181.8 / 252–295.6 |
+      | moving both | 227.5–250.6 / 414.9–531 | 225.5–237.3 / 414.1–522.8 |
+
+      - At 0 ms with no loss, the moving target 70 p95 is 94.5–107.7 → 157.7–198.8.
+      - *(Inferred:)* the hits are a different set. More of them land on the persistent hitbox's second and third
+        ticks (OD10): a target judged five ticks back reaches the box later in its rewound walk. So the median moves
+        6–19 ms and the p95 40–90 ms later.
+      - **OD1's "median hit confirmation at most RTT + 75 ms" (175 ms)**, for a still attacker against a moving enemy,
+        is now missed:
+        - on every seed on the stairs (by up to 12.7 ms) and on the deck (by up to 6.8 ms);
+        - on at least one seed against moving target 70 (by up to 5.3 ms).
+
+        Without rewind it was met there (159.5–173.5). The 2D standing attack (166.0–175.9) has no moving enemy and is
+        unchanged. Reported, not hidden: the owner may weigh fairness against these milliseconds.
+
+    **The three queue presets** (moving both, the only scenario where they differ; disagreement baseline → M4-5):
+
+    | Preset | 0 ±10 1% | 50 ±10 1% | 100 ±10 1% | 200 ±10 1% | 300 ±10 1% |
+    |---|---|---|---|---|---|
+    | drain (provisional) | 3.7–4.2 → 1.0–1.2 | 4.4–4.7 → 1.2–1.4 | 4.8–5.5 → 1.4–1.6 | 6.4–7.4 → 2.1–2.8 | 7.4–8.0 → 4.2–4.8 |
+    | deep | 5.1–5.3 → 1.3–1.4 | 5.8–6.2 → 1.8–2.1 | 7.2–7.7 → 2.9–3.5 | 8.2–9.1 → 4.4–4.9 | 9.3–10.2 → 6.1–6.8 |
+    | small | 3.7–3.9 → 0.9 | 3.6–4.2 → 0.8–1.1 | 4.3–4.7 → 1.4–1.6 | 6.5–7.4 → 2.7–3.0 | 7.1–7.7 → 4.1–4.9 |
+
+    Deep keeps the most residual, because its backlog lags the attack beyond the cap. Still-attacker scenarios are
+    identical in all three presets (the standing rule empties the queue).
+
+    **The history's cost** (report-only; Python 3.13, this PC, best of 5, the crossing room):
+    - 1 walking enemy: one tick takes 45.3 → 51.1 µs; history 7 ticks, about 3.3 KB.
+    - 1 walking plus 20 standing enemies: one tick takes 105.3 → 141.5 µs; history about 26.5 KB.
+    - Taking a tick's poses costs 2.1 µs (1 enemy) and 36.8 µs (21 enemies).
+    - An attack with a view takes 4.0 → 6.4 µs (1 enemy) and 58.8 → 82.8 µs (21 enemies).
+    - At 20 Hz that is under 0.1% of a core per room instance, and at most 8 instances × 26.5 KB.
+
+    **Against the owner's acceptance:**
+    - Measured against the baseline at 0, 50, 100 and 200 ms with jitter and 1% loss, plus 0 ms with no loss and the
+      300 ms boundary: **done, above**.
+    - Scenarios: still and moving attackers, moving enemies, stairs, bridge decks (on and under), room transitions,
+      the 300 ms boundary: **done**.
+    - Tests (`tests/test_mesh_net_lag_compensation.py`) cover:
+      - the view judging then;
+      - the attacker never rewound;
+      - future views;
+      - the cap, and clamping rather than refusing;
+      - no view before the join;
+      - another identity;
+      - missing history;
+      - dead now;
+      - the later ticks' lag;
+      - the drawn pose to the bit;
+      - stairs and the deck at the rewound pose;
+      - the wire path;
+      - N7 instances and transfers;
+      - the switch;
+      - a bounded, deterministic history;
+      - the send loop over a real socket.
+    - **Mutation proof: 25 lag-compensation mutants, all killed** (listed in the PR), plus the owed rounding
+      tolerance's (0.01, 0.015 and 0.03 px, killed).
+    - Independent review, CI and Extended: on the PR.
+    - **Remaining disagreement, honestly:**
+      - 0.4–1.5% for a still attacker at 100 ms, up to 7.6–8.3% on the stairs at 200 ms and 18.7–21.3% at 300 ms;
+      - nearly all of it from views beyond the 300 ms cap;
+      - with a walking attacker, its own motion (about 1 point) on top.
+    - The ideal bound remains a bound: the implementation reaches it within OD1's envelope only where the view is
+      within the cap.
 
 **M4-6 — rendered evidence:**
 - A small asyncio TCP delay proxy in `tooling/`. Two hidden windows (non-activating hook) at 100 and 200 ms.
@@ -1449,6 +1685,38 @@ Each decision carries the recommendation; the reviewer's view is noted where it 
 
   - **Mitigations to consider before deployment:** a shorter window, a per-player rate check on top of the claim, or
     server-side input timestamps once M4-3's queue exists.
+
+- **Security and fairness limitation of lag compensation (M4-5): before public deployment.** The owner's decision of
+  2026-11-25 requires this to be documented; it needs attention before any public deployment, and it rules out PvP
+  as built.
+  - **What a lying client can do.** The server cannot tell which frame a window really showed. It accepts any
+    `view_tick` between the later of the attacker's join and 6 ticks ago, and now. A client can therefore pick, per
+    attack, the most favourable pose each enemy had over the last 300 ms, anywhere along its path (fractions included).
+  - **The bound.** Along an enemy's motion, the stretch of attacker positions from which a hit lands grows from
+    (hitbox + the enemy's shape), what an honest client gets for the one pose it saw, by at most the distance the enemy
+    walked in 300 ms:
+    - 15.6 px at the co-op bandit's 52 px/s on the server (70 authored);
+    - 26.6 px at 88.6 px/s (150 authored);
+    - in general, speed × 0.3 s.
+
+    Against the 32 px hitbox and the bandit's 19 px wide collider (51 px of reach along the motion), that is up to +31%
+    and +52%. On
+    stairs, it can also pick a moment when the enemy was still within `same_level`'s 1.5 m. At the bandit's climb
+    (half its walk), that is up to about 8 px (0.25 m) of elevation.
+  - **What it cannot do:**
+    - rewind itself: the hitbox and the level are always the attacker's current ones;
+    - reach back further than 300 ms, ahead of the tick, or before it joined the room instance;
+    - use another instance's or another identity's history;
+    - hit an enemy dead now, or one never on its level at the chosen moment (decks, stairs);
+    - attack more often: the cooldown is judged apart, with the 600 ms claim limitation above.
+  - **Honest-client side effects, counted rather than hidden:** a rewound hit can land on an enemy the player sees as
+    already past (it was in reach where the window showed it), and the reverse. The probe counts "looked like a miss
+    but hit" with and without rewind (§4 M4-5).
+  - **Mitigations to consider before deployment:**
+    - bound the accepted view by the server's own measure of each client's delay (round trip from `ack` timing plus
+      the fixed two-tick interpolation), with a small tolerance, instead of a flat 300 ms;
+    - log and rate-limit clients whose views sit consistently at the oldest allowed;
+    - keep it PvE-only.
 
 **Out of scope:**
 - RPG content;
