@@ -300,6 +300,9 @@ exclude = [
     "dist",
     ".git",
     "__pycache__",
+    # S1-0 investigation evidence: one-off reproduction scripts kept verbatim as the record of what was run.
+    # They are not product code and are never imported; product code coverage is unchanged.
+    "docs/s1/evidence",
 ]
 
 [tool.ruff.lint]
@@ -327,6 +330,8 @@ exclude = [
     "dist",
     "artifacts",
     "examples",
+    # S1-0 investigation evidence scripts (see the ruff exclude above).
+    "docs/s1/evidence",
 ]
 
 # Keep these data-model modules stricter than the repo default because they are
