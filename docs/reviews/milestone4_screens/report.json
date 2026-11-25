@@ -40,7 +40,7 @@
    "ok": true,
    "error": null,
    "detail": {
-    "target": "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö\\Village Quest"
+    "target": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö\\Village Quest"
    },
    "seconds": 8.8,
    "screenshot": "05_name_and_destination.png"
@@ -117,7 +117,7 @@
     "recent": [
      {
       "name": "Village Quest",
-      "path": "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö\\Village Quest",
+      "path": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö\\Village Quest",
       "missing": false
      }
     ]
@@ -186,7 +186,7 @@
    "ok": true,
    "error": null,
    "detail": {
-    "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m3acc6\\work\\village": {
+    "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m3acc6\\work\\village": {
      "tilesets": [
       "Starter",
       "Meadow"
@@ -208,9 +208,9 @@
    "ok": true,
    "error": null,
    "detail": {
-    "not a project": "There's no Mesh project in C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö: it has no config.json. Choose the folder that contains config.json.",
-    "moved": "C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö\\Empty Canvas isn't there any more. It may have been moved, renamed or deleted. Use Open Project to find it, or Remove to take it off this list.",
-    "Village Quest": "There is already a Mesh project at C:\\Users\\slebb\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö\\Village Quest. Use Open Project to open it, or pick another name.",
+    "not a project": "There's no Mesh project in C:\\Users\\<user>\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö: it has no config.json. Choose the folder that contains config.json.",
+    "moved": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö\\Empty Canvas isn't there any more. It may have been moved, renamed or deleted. Use Open Project to find it, or Remove to take it off this list.",
+    "Village Quest": "There is already a Mesh project at C:\\Users\\<user>\\AppData\\Local\\Temp\\claude\\D--Games-Mesh\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\m4final\\work\\Mina spel – Åäö\\Village Quest. Use Open Project to open it, or pick another name.",
     "What?": "A name can't contain any of these: < > : \" / \\ | ? *",
     "engine folder": "Choose a folder outside the Mesh engine folder (D:\\Games\\Mesh): your game and the engine stay separate."
    },
