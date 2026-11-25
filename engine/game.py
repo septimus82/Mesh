@@ -150,6 +150,18 @@ _OPTIONAL_BEHAVIOUR_DEFAULTS: tuple[tuple[str, str], ...] = ()
 _MISSING = object()
 logger = get_logger(__name__)
 
+
+def _debug_cheats_allowed(window: Any) -> bool:
+    """Debug battles and breeding change the game state: a developer launch only (S1 D4). Every route to them, F3's
+    keys or any other, comes through here; a game as players run it (``main.py``, an export) is refused."""
+    from engine.action_runtime.registry import dev_tools_allowed  # noqa: PLC0415  # registry imports UI modules
+
+    if dev_tools_allowed(window):
+        return True
+    window.console_log("[Debug] Debug battles and breeding need a developer launch (mesh play)")
+    return False
+
+
 class GameWindow(engine.optional_arcade.arcade.Window):
     """Main game window and central facade for the Mesh Engine.
 
@@ -751,6 +763,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def start_debug_monster_battle(self) -> Any:
         """Start a fixture monster battle for MON-0f dogfooding."""
 
+        if not _debug_cheats_allowed(self):
+            return None
         from engine.monster.battle_model import MonsterInstance  # noqa: PLC0415
         from engine.monster.collection import load_battle_party_from_values  # noqa: PLC0415
         from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
@@ -793,6 +807,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def start_debug_trainer_monster_battle(self) -> Any:
         """Start a fixture trainer battle with a multi-monster opponent team."""
 
+        if not _debug_cheats_allowed(self):
+            return None
         from engine.monster.battle_model import MonsterInstance  # noqa: PLC0415
         from engine.monster.collection import load_battle_party_from_values  # noqa: PLC0415
         from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
@@ -841,6 +857,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def start_debug_companion_monster_battle(self) -> Any:
         """Start a companion battle where the monster acts autonomously."""
 
+        if not _debug_cheats_allowed(self):
+            return None
         from engine.monster.battle_model import MonsterInstance  # noqa: PLC0415
         from engine.monster.collection import (  # noqa: PLC0415
             add_caught_monster,
@@ -922,7 +940,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         )
         from engine.paths import resolve_monster_data_dir  # noqa: PLC0415
 
-        if not bool(getattr(self.engine_config, "debug_mode", False)):
+        if not bool(getattr(self.engine_config, "debug_mode", False)) or not _debug_cheats_allowed(self):
             return False
 
         catalog, validation = load_monster_catalog(resolve_monster_data_dir())

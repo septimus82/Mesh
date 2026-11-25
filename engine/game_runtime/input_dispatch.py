@@ -31,6 +31,15 @@ def _is_shift_function_key(key: int, modifiers: int, expected_key: int | None) -
     )
 
 
+def _debug_keys_on(window: "GameWindow") -> bool:
+    """F3's state-changing keys (debug battles, breeding, the batching toggle) need debug mode and a developer launch
+    (S1 D4). In a game as players run it F3 shows only the read-only debug HUD, and these keys do what they do
+    without debug mode; the same holds when an export's config.json sets debug_mode."""
+    from engine.action_runtime.registry import dev_tools_allowed  # noqa: PLC0415  # registry imports UI modules
+
+    return bool(getattr(window.engine_config, "debug_mode", False)) and dev_tools_allowed(window)
+
+
 def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noqa: ARG001
     editor = getattr(window, "editor_controller", None)
     editor_active = editor is not None and getattr(editor, "active", False)
@@ -155,28 +164,28 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
             return
 
     if key == optional_arcade.arcade.key.F12:
-        if bool(getattr(window.engine_config, "debug_mode", False)):
+        if _debug_keys_on(window):
             starter = getattr(window, "start_debug_monster_battle", None)
             if callable(starter):
                 starter()
         return
 
     if key == optional_arcade.arcade.key.F7:
-        if bool(getattr(window.engine_config, "debug_mode", False)):
+        if _debug_keys_on(window):
             starter = getattr(window, "start_debug_trainer_monster_battle", None)
             if callable(starter):
                 starter()
             return
 
     if key == optional_arcade.arcade.key.F8:
-        if bool(getattr(window.engine_config, "debug_mode", False)):
+        if _debug_keys_on(window):
             starter = getattr(window, "start_debug_companion_monster_battle", None)
             if callable(starter):
                 starter()
             return
 
     if key == optional_arcade.arcade.key.F10:
-        if bool(getattr(window.engine_config, "debug_mode", False)):
+        if _debug_keys_on(window):
             breeder = getattr(window, "debug_breed_first_party_pair", None)
             if callable(breeder):
                 breeder()
@@ -187,7 +196,7 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
     if window.game_over:
         return
 
-    if key == optional_arcade.arcade.key.F9 and bool(getattr(window.engine_config, "debug_mode", False)):
+    if key == optional_arcade.arcade.key.F9 and _debug_keys_on(window):
         enabled = bool(getattr(window, "render_batching_enabled", False))
         next_enabled = not enabled
         setattr(window, "render_batching_enabled", next_enabled)
@@ -198,7 +207,7 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
         )
         return
 
-    # Toggle debug overlay
+    # Toggle the debug HUD: read-only, so players keep it (S1 D4); what changes state checks _debug_keys_on
     if key == optional_arcade.arcade.key.F3:
         window.engine_config.debug_mode = not window.engine_config.debug_mode
 
