@@ -1,0 +1,59 @@
+{"group":"vendor","id":"baseline","module":"engine/behaviours/vendor.py","exit":0,"verdict":"green","seconds":8,"line":"19 passed in 4.38s"}
+{"group":"vendor","id":"V1","module":"engine/behaviours/vendor.py","exit":0,"verdict":"SURVIVED","seconds":5,"line":"19 passed in 4.42s"}
+{"group":"vendor","id":"V2","module":"engine/behaviours/vendor.py","exit":0,"verdict":"SURVIVED","seconds":6,"line":"19 passed in 4.39s"}
+{"group":"vendor","id":"V3","module":"engine/behaviours/vendor.py","exit":1,"verdict":"killed","seconds":6,"line":"FAILED tests/test_vendor_shop.py::test_vendor_buy_success - assert 2 == 1"}
+{"group":"vendor","id":"V4","module":"engine/behaviours/vendor.py","exit":0,"verdict":"SURVIVED","seconds":6,"line":"19 passed in 4.41s"}
+{"group":"vendor","id":"V5","module":"engine/behaviours/vendor.py","exit":1,"verdict":"killed","seconds":6,"line":"FAILED tests/test_vendor_shop.py::test_vendor_sell_success - AssertionError: ..."}
+{"group":"project_save","id":"baseline","module":"engine/project_save.py","exit":0,"verdict":"green","seconds":30,"line":"122 passed, 8 skipped in 29.51s"}
+{"group":"project_save","id":"P1","module":"engine/project_save.py","exit":1,"verdict":"killed","seconds":11,"line":"FAILED tests/test_project_save_transaction.py::test_a_file_changed_during_the_save_is_not_replaced"}
+{"group":"project_save","id":"P2","module":"engine/project_save.py","exit":1,"verdict":"killed","seconds":10,"line":"FAILED tests/test_project_save_transaction.py::test_a_file_changed_after_this_save_wrote_it_is_never_put_back_over[rewritten]"}
+{"group":"project_save","id":"P3","module":"engine/project_save.py","exit":1,"verdict":"killed","seconds":9,"line":"FAILED tests/test_project_save_transaction.py::test_a_failure_writing_the_second_file_leaves_the_project_on_disk_as_it_was"}
+{"group":"project_save","id":"P4","module":"engine/project_save.py","exit":1,"verdict":"killed","seconds":21,"line":"FAILED tests/test_safe_scene_creation.py::test_a_file_that_appears_before_save_is_never_overwritten[a_creators_scene]"}
+{"group":"project_save","id":"P5","module":"engine/project_save.py","exit":1,"verdict":"killed","seconds":11,"line":"FAILED tests/test_project_save_transaction.py::test_a_resized_map_file_goes_back_to_its_size_when_its_room_fails"}
+{"group":"save_entity_state","id":"baseline","module":"engine/save_runtime/entity_state.py","exit":0,"verdict":"green","seconds":29,"line":"124 passed in 27.49s"}
+{"group":"save_entity_state","id":"S1","module":"engine/save_runtime/entity_state.py","exit":0,"verdict":"SURVIVED","seconds":30,"line":"124 passed in 27.16s"}
+{"group":"save_entity_state","id":"S2","module":"engine/save_runtime/entity_state.py","exit":1,"verdict":"killed","seconds":12,"line":"FAILED tests/test_b01_save_identity.py::test_T1_dup_names_roundtrip_v3 - asse..."}
+{"group":"save_entity_state","id":"S3","module":"engine/save_runtime/entity_state.py","exit":1,"verdict":"killed","seconds":28,"line":"FAILED tests/test_b02_primary_tag.py::test_primary_tag_wins_over_live_and_sorted_order"}
+{"group":"save_entity_state","id":"S4","module":"engine/save_runtime/entity_state.py","exit":1,"verdict":"killed","seconds":29,"line":"FAILED tests/test_save_serialization_strictness.py::TestSerializeEntityStrictMode::test_strict_raises_on_bad_behaviour"}
+{"group":"save_entity_state","id":"S5","module":"engine/save_runtime/entity_state.py","exit":1,"verdict":"killed","seconds":15,"line":"FAILED tests/test_b01_save_identity.py::test_T11_idless_same_name_same_xy_not_applied_and_reported"}
+{"group":"quests","id":"baseline","module":"engine/quest_runtime/progress.py","exit":0,"verdict":"green","seconds":22,"line":"118 passed in 21.26s"}
+{"group":"quests","id":"Q1","module":"engine/quest_runtime/progress.py","exit":0,"verdict":"SURVIVED","seconds":23,"line":"118 passed in 21.31s"}
+{"group":"quests","id":"Q2","module":"engine/quest_runtime/progress.py","exit":1,"verdict":"killed","seconds":23,"line":"FAILED tests/test_quest_toast_order_regression.py::test_completion_happens_before_dependent_start_deterministically"}
+{"group":"quests","id":"Q3","module":"engine/quest_runtime/progress.py","exit":0,"verdict":"SURVIVED","seconds":23,"line":"118 passed in 21.25s"}
+{"group":"quests","id":"Q4","module":"engine/quest_runtime/progress.py","exit":0,"verdict":"SURVIVED","seconds":22,"line":"118 passed in 21.07s"}
+{"group":"quests","id":"Q5","module":"engine/quest_runtime/progress.py","exit":0,"verdict":"SURVIVED","seconds":22,"line":"118 passed in 21.28s"}
+{"group":"quests_wide","id":"baseline","module":"engine/quest_runtime/progress.py","exit":0,"verdict":"green","seconds":126,"line":"524 passed, 1 skipped, 5 deselected in 124.95s (0:02:04)"}
+{"group":"quests_wide","id":"Q1","module":"engine/quest_runtime/progress.py","exit":0,"verdict":"SURVIVED","seconds":125,"line":"524 passed, 1 skipped, 5 deselected in 123.81s (0:02:03)"}
+{"group":"quests_wide","id":"Q3","module":"engine/quest_runtime/progress.py","exit":0,"verdict":"SURVIVED","seconds":126,"line":"524 passed, 1 skipped, 5 deselected in 123.96s (0:02:03)"}
+{"group":"quests_wide","id":"Q4","module":"engine/quest_runtime/progress.py","exit":1,"verdict":"killed","seconds":127,"line":"FAILED tests/test_savegame_snapshot.py::test_snapshot_integration_with_real_quest_reward"}
+{"group":"quests_wide","id":"Q5","module":"engine/quest_runtime/progress.py","exit":0,"verdict":"SURVIVED","seconds":127,"line":"524 passed, 1 skipped, 5 deselected in 124.84s (0:02:04)"}
+{"group":"entity_factory","id":"baseline","module":"engine/scene_controller_parts/entity_factory.py","exit":0,"verdict":"green","seconds":22,"line":"50 passed in 19.91s"}
+{"group":"entity_factory","id":"E1","module":"engine/scene_controller_parts/entity_factory.py","exit":1,"verdict":"killed","seconds":15,"line":"FAILED tests/test_behaviour_teardown_on_entity_removal.py::test_removal_ends_behaviours_once"}
+{"group":"entity_factory","id":"E2","module":"engine/scene_controller_parts/entity_factory.py","exit":1,"verdict":"killed","seconds":13,"line":"FAILED tests/test_behaviour_teardown_on_entity_removal.py::test_kill_ends_behaviours_and_listeners_return_to_baseline"}
+{"group":"entity_factory","id":"E3","module":"engine/scene_controller_parts/entity_factory.py","exit":1,"verdict":"killed","seconds":12,"line":"FAILED tests/test_behaviour_teardown_on_entity_removal.py::test_kill_ends_behaviours_and_listeners_return_to_baseline"}
+{"group":"entity_factory","id":"E4","module":"engine/scene_controller_parts/entity_factory.py","exit":1,"verdict":"killed","seconds":14,"line":"FAILED tests/test_behaviour_teardown_on_entity_removal.py::test_scene_change_ends_listeners_and_a_later_room_works"}
+{"group":"entity_factory","id":"E5","module":"engine/scene_controller_parts/entity_factory.py","exit":1,"verdict":"killed","seconds":11,"line":"FAILED tests/test_behaviour_teardown_on_entity_removal.py::test_kill_ends_behaviours_and_listeners_return_to_baseline"}
+{"group":"project_ops","id":"baseline","module":"engine/project_ops.py","exit":0,"verdict":"green","seconds":7,"line":"58 passed in 5.82s"}
+{"group":"project_ops","id":"O1","module":"engine/project_ops.py","exit":0,"verdict":"SURVIVED","seconds":7,"line":"58 passed in 5.74s"}
+{"group":"project_ops","id":"O2","module":"engine/project_ops.py","exit":1,"verdict":"killed","seconds":7,"line":"FAILED tests/test_project_ops.py::test_move_remove_and_rename_updates_matching_speaker"}
+{"group":"project_ops","id":"O3","module":"engine/project_ops.py","exit":0,"verdict":"SURVIVED","seconds":6,"line":"58 passed in 5.72s"}
+{"group":"project_ops","id":"O4","module":"engine/project_ops.py","exit":0,"verdict":"SURVIVED","seconds":6,"line":"58 passed in 5.76s"}
+{"group":"project_ops","id":"O5","module":"engine/project_ops.py","exit":1,"verdict":"killed","seconds":7,"line":"FAILED tests/test_project_ops.py::test_move_remove_and_rename_updates_matching_speaker"}
+{"group":"project_ops_wide","id":"baseline","module":"engine/project_ops.py","exit":0,"verdict":"green","seconds":242,"line":"194 passed in 240.30s (0:04:00)"}
+{"group":"project_ops_wide","id":"O1","module":"engine/project_ops.py","exit":0,"verdict":"SURVIVED","seconds":242,"line":"194 passed in 240.66s (0:04:00)"}
+{"group":"project_ops_wide","id":"O3","module":"engine/project_ops.py","exit":0,"verdict":"SURVIVED","seconds":243,"line":"194 passed in 241.07s (0:04:01)"}
+{"group":"project_ops_wide","id":"O4","module":"engine/project_ops.py","exit":0,"verdict":"SURVIVED","seconds":242,"line":"194 passed in 239.08s (0:03:59)"}
+{"group":"scene_room","id":"baseline","module":"mesh_net/scene_room.py","exit":0,"verdict":"green","seconds":27,"line":"147 passed in 25.28s"}
+{"group":"scene_room","id":"N1","module":"mesh_net/scene_room.py","exit":1,"verdict":"killed","seconds":7,"line":"FAILED tests/test_mesh_net_scene.py::test_lever_opens_the_gate_once_for_everyone"}
+{"group":"scene_room","id":"N2","module":"mesh_net/scene_room.py","exit":1,"verdict":"killed","seconds":10,"line":"FAILED tests/test_mesh_net_scene.py::test_a_lever_behind_the_player_is_out_of_reach_as_in_single_player"}
+{"group":"scene_room","id":"N3","module":"mesh_net/scene_room.py","exit":1,"verdict":"killed","seconds":7,"line":"FAILED tests/test_mesh_net_scene.py::test_two_players_defeat_the_bandit_and_one_takes_its_loot"}
+{"group":"scene_room","id":"N4","module":"mesh_net/scene_room.py","exit":0,"verdict":"SURVIVED","seconds":27,"line":"147 passed in 25.29s"}
+{"group":"scene_room","id":"N5","module":"mesh_net/scene_room.py","exit":1,"verdict":"killed","seconds":8,"line":"FAILED tests/test_mesh_net_scene.py::test_inputs_and_snapshots_are_validated"}
+{"group":"scene_room_wide","id":"baseline","module":"mesh_net/scene_room.py","exit":0,"verdict":"green","seconds":14,"line":"58 passed in 13.20s"}
+{"group":"scene_room_wide","id":"N4","module":"mesh_net/scene_room.py","exit":1,"verdict":"killed","seconds":12,"line":"FAILED tests/test_hd2d_same_level.py::test_both_runtimes_give_the_floor_rules_answer[deck, ground directly beneath]"}
+{"group":"editor_file_ops","id":"baseline","module":"engine/editor/asset_ops/editor_file_ops_controller.py","exit":0,"verdict":"green","seconds":10,"line":"87 passed, 1 skipped in 8.77s"}
+{"group":"editor_file_ops","id":"F1","module":"engine/editor/asset_ops/editor_file_ops_controller.py","exit":1,"verdict":"killed","seconds":9,"line":"FAILED tests/test_editor_file_ops_rename_safety_618.py::test_rename_onto_an_existing_file_is_refused_before_the_dialog"}
+{"group":"editor_file_ops","id":"F2","module":"engine/editor/asset_ops/editor_file_ops_controller.py","exit":1,"verdict":"killed","seconds":9,"line":"FAILED tests/test_editor_file_ops_rename_safety_618.py::test_two_items_with_one_destination_are_refused"}
+{"group":"editor_file_ops","id":"F3","module":"engine/editor/asset_ops/editor_file_ops_controller.py","exit":1,"verdict":"killed","seconds":9,"line":"FAILED tests/test_editor_file_ops_rename_safety_618.py::test_a_folder_can_not_move_inside_itself"}
+{"group":"editor_file_ops","id":"F4","module":"engine/editor/asset_ops/editor_file_ops_controller.py","exit":1,"verdict":"killed","seconds":9,"line":"FAILED tests/test_editor_file_ops_rename_safety_618.py::test_rename_to_something_that_is_not_one_plain_name_is_refused[trail.]"}
+{"group":"editor_file_ops","id":"F5","module":"engine/editor/asset_ops/editor_file_ops_controller.py","exit":1,"verdict":"killed","seconds":10,"line":"FAILED tests/test_editor_file_ops_rename_safety_618.py::test_a_destination_made_during_confirm_is_never_overwritten"}

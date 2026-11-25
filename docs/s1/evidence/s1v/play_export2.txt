@@ -1,0 +1,139 @@
+INFO:engine.game:[Mesh][World] Loaded world 'main' from packs/core_regions/worlds/main.json
+INFO:engine.perks:[Mesh][Perks] Loaded 0 perks
+INFO:engine.game:[Mesh][GameWindow] Initialized 1280x720 window
+INFO:engine.assets:Creating generated placeholder texture
+[Mesh][Prefabs] Loaded 3 prefabs
+[Mesh][Quests] Quest file missing: <home>\AppData\Local\Temp\s1v_LqPs\n_adventure\dist\bundle\assets\data\quests.json
+[Mesh][Scene] Loading scene 'packs/core_regions/scenes/start.json'
+[Mesh][SceneLoader] Loaded scene 'Village' with 21 entities
+[Mesh][Tilemap] Loaded 'start.json' with 2 draw layer(s) and 55 collision sprite(s)
+[Mesh][Scene] [+] Spawned 'Player' at (128.0, 128.0)
+[Mesh][Scene] [+] Spawned 'Guide' at (320.0, 128.0)
+[Mesh][Scene] [+] Spawned 'Sign' at (336.0, 240.0)
+[Mesh][Scene] [+] Spawned 'Door to House' at (384.0, 272.0)
+[Mesh][Scene] [+] Spawned 'Arrival from House' at (384.0, 176.0)
+[Mesh][Scene] [+] Spawned 'WolfS' at (328.0, 128.0)
+[Mesh][Scene] [+] Spawned 'Potion' at (128.0, 288.0)
+[Mesh][Scene] [+] Spawned 'MerchantS' at (128.0, 448.0)
+[Mesh][Scene] [+] Spawned 'MerchantPlain' at (128.0, 608.0)
+[Mesh][Scene] [+] Spawned 'Button' at (528.0, 128.0)
+[Mesh][Scene] [+] Spawned 'Chest' at (528.0, 288.0)
+[Mesh][Scene] [+] Spawned 'WolfDrop' at (528.0, 448.0)
+[Mesh][Scene] [+] Spawned 'ObjZone' at (728.0, 128.0)
+[Mesh][Scene] [+] Spawned 'WolfA' at (328.0, 288.0)
+[Mesh][Scene] [+] Spawned 'WolfM' at (328.0, 448.0)
+[Mesh][Scene] [+] Spawned 'Door to Vault' at (728.0, 328.0)
+[Mesh][Scene] [+] Spawned 'Arrival from Vault' at (728.0, 232.0)
+[Mesh][Scene] [+] Spawned 'Arrival from Annex' at (728.0, 432.0)
+[Mesh][Scene] [+] Spawned 'WolfDrop2' at (528.0, 608.0)
+[Mesh][Scene] Scene ready with 19 sprite(s)
+[Mesh][UI] Rebuilding UI for scene
+[Mesh][UI] Registering HealthBar for Player
+[Mesh][UI] Registering HealthBar for WolfS
+[Mesh][UI] Registering HealthBar for WolfDrop
+[Mesh][UI] Registering HealthBar for WolfA
+[Mesh][UI] Registering HealthBar for WolfM
+[Mesh][UI] Registering HealthBar for WolfDrop2
+S1V engine {"file": "<home>\\AppData\\Local\\Temp\\s1v_LqPs\\n_adventure\\dist\\bundle\\engine\\__init__.py", "mode": "export"}
+S1V start {"room": "start", "player": true, "sprites": 19}
+S1V 651_player {"stats_max_hp": 30.0, "stats_attack": 5.0, "health": [1.0, 1.0], "combat_damage": 1.0}
+S1V 651_healths {"Player": [1.0, 1.0, "player"], "WolfS": [1.0, 50.0, null], "WolfDrop": [1.0, 1.0, null], "WolfA": [1.0, 50.0, null], "WolfM": [1.0, 50.0, null], "WolfDrop2": [1.0, 1.0, null]}
+INFO:engine.console_controller:[Mesh][Console] Entity 'WolfS' died!
+[Mesh][Health] 'WolfS' took 1.0 damage -> 0.0/50.0
+S1V 651_wolfS_after_one_damage {"still_there": false, "hp": null}
+S1V 652_items_json_present {"present": true}
+INFO:engine.console_controller:[Mesh][Console] Entity 'WolfDrop' died!
+INFO:engine.console_controller:[Mesh][Console] Loot: +1x Healing Potion
+[Puzzle] RewardChest <engine.scene_controller_parts.entity_factory._entity_sprite_class.<locals>.MeshEntitySprite object at 0x0000029D078AC230> enabled by 'chest_open'
+[Puzzle] Switch <engine.scene_controller_parts.entity_factory._entity_sprite_class.<locals>.MeshEntitySprite object at 0x0000029D078AC140> activated, emitted 'chest_open'
+[Puzzle] RewardChest looted! Item: healing_potion, Gold: 0
+[Mesh][Health] 'WolfDrop' took 1.0 damage -> 0.0/1.0
+S1V 652_no_items {"pickup": {"potions_before": 0, "after": 0, "potion_still_there": true}, "MerchantS": {"present": true, "behaviours": ["Vendor", "InteractableBehaviour"], "shop_open_after_E": true, "stock_rows": 1}, "MerchantPlain": {"present": true, "behaviours": ["Vendor"], "shop_open_after_E": false}, "chest_before_E": {"enabled": true, "looted": false}, "chest": {"potions_before": 0, "after": 0, "looted": true}, "drop": {"potions_before": 0, "after": 1, "drop_enemy": "WolfDrop", "present_before": true, "still_there": false, "loose_pickups": []}}
+S1V 653_before {"flag": false, "vault_door": [true, false], "annex_door": false, "gated_sign": false}
+S1V 653_touch_hidden_vault_door_before_flag {"room_now": "start"}
+S1V 653_after_flag_same_visit {"flag": true, "room": "start", "vault_door": [true, true], "annex_door_built": false, "gated_sign_built": false}
+INFO:engine.console_controller:[Mesh][Console] Transitioning to 'vault' via spawn 'from_start'
+INFO:engine.console_controller:[Mesh][Console] Moved player to spawn 'from_start'
+[Mesh][Scene] Queued scene change to 'packs/core_regions/scenes/vault.json'
+[Mesh][Scene] Loading pending scene 'packs/core_regions/scenes/vault.json'
+[Mesh][Scene] Loading scene 'packs/core_regions/scenes/vault.json'
+[Mesh][SceneLoader] Loaded scene 'Vault' with 3 entities
+[Mesh][Tilemap] Loaded 'vault.json' with 2 draw layer(s) and 66 collision sprite(s)
+[Mesh][Scene] [+] Spawned 'Player' at (128.0, 128.0)
+[Mesh][Scene] [+] Spawned 'Door to Village' at (320.0, 240.0)
+[Mesh][Scene] [+] Spawned 'Arrival from Village' at (320.0, 144.0)
+[Mesh][Scene] Scene ready with 3 sprite(s)
+[Mesh][UI] Rebuilding UI for scene
+[Mesh][UI] Registering HealthBar for Player
+S1V 653_touch_vault_door {"room_now": "vault"}
+[Mesh][Scene] Loading scene 'packs/core_regions/scenes/start.json'
+[Mesh][SceneLoader] Loaded scene 'Village' with 21 entities
+[Mesh][Tilemap] Loaded 'start.json' with 2 draw layer(s) and 55 collision sprite(s)
+[Mesh][Scene] [+] Spawned 'Player' at (128.0, 128.0)
+[Mesh][Scene] [+] Spawned 'Guide' at (320.0, 128.0)
+[Mesh][Scene] [+] Spawned 'Sign' at (336.0, 240.0)
+[Mesh][Scene] [+] Spawned 'Door to House' at (384.0, 272.0)
+[Mesh][Scene] [+] Spawned 'Arrival from House' at (384.0, 176.0)
+[Mesh][Scene] [+] Spawned 'Potion' at (128.0, 288.0)
+[Mesh][Scene] [+] Spawned 'MerchantS' at (128.0, 448.0)
+[Mesh][Scene] [+] Spawned 'MerchantPlain' at (128.0, 608.0)
+[Mesh][Scene] [+] Spawned 'Button' at (528.0, 128.0)
+[Mesh][Scene] [+] Spawned 'Chest' at (528.0, 288.0)
+[Mesh][Scene] [+] Spawned 'ObjZone' at (728.0, 128.0)
+[Mesh][Scene] [+] Spawned 'WolfA' at (328.0, 288.0)
+[Mesh][Scene] [+] Spawned 'WolfM' at (328.0, 448.0)
+[Mesh][Scene] [+] Spawned 'Door to Vault' at (728.0, 328.0)
+[Mesh][Scene] [+] Spawned 'Arrival from Vault' at (728.0, 232.0)
+[Mesh][Scene] [+] Spawned 'Door to Annex' at (728.0, 528.0)
+[Mesh][Scene] [+] Spawned 'Arrival from Annex' at (728.0, 432.0)
+[Mesh][Scene] [+] Spawned 'GatedSign' at (728.0, 688.0)
+[Mesh][Scene] [+] Spawned 'WolfDrop2' at (528.0, 608.0)
+[Mesh][Scene] Scene ready with 19 sprite(s)
+[Mesh][UI] Rebuilding UI for scene
+[Mesh][UI] Registering HealthBar for Player
+[Mesh][UI] Registering HealthBar for WolfA
+[Mesh][UI] Registering HealthBar for WolfM
+[Mesh][UI] Registering HealthBar for WolfDrop2
+S1V 653_after_reentry {"room": "start", "annex_door_built": true, "gated_sign_built": true}
+INFO:engine.console_controller:[Mesh][Console] Transitioning to 'annex' via spawn 'from_start'
+INFO:engine.console_controller:[Mesh][Console] Moved player to spawn 'from_start'
+[Mesh][Scene] Queued scene change to 'packs/core_regions/scenes/annex.json'
+[Mesh][Scene] Loading pending scene 'packs/core_regions/scenes/annex.json'
+[Mesh][Scene] Loading scene 'packs/core_regions/scenes/annex.json'
+[Mesh][SceneLoader] Loaded scene 'Annex' with 3 entities
+[Mesh][Tilemap] Loaded 'annex.json' with 2 draw layer(s) and 66 collision sprite(s)
+[Mesh][Scene] [+] Spawned 'Player' at (128.0, 128.0)
+[Mesh][Scene] [+] Spawned 'Door to Village' at (320.0, 240.0)
+[Mesh][Scene] [+] Spawned 'Arrival from Village' at (320.0, 144.0)
+[Mesh][Scene] Scene ready with 3 sprite(s)
+[Mesh][UI] Rebuilding UI for scene
+[Mesh][UI] Registering HealthBar for Player
+S1V 653_touch_annex_door_after_reentry {"room_now": "annex"}
+[Mesh][Scene] Loading scene 'packs/core_regions/scenes/start.json'
+[Mesh][SceneLoader] Loaded scene 'Village' with 21 entities
+[Mesh][Tilemap] Loaded 'start.json' with 2 draw layer(s) and 55 collision sprite(s)
+[Mesh][Scene] [+] Spawned 'Player' at (128.0, 128.0)
+[Mesh][Scene] [+] Spawned 'Guide' at (320.0, 128.0)
+[Mesh][Scene] [+] Spawned 'Sign' at (336.0, 240.0)
+[Mesh][Scene] [+] Spawned 'Door to House' at (384.0, 272.0)
+[Mesh][Scene] [+] Spawned 'Arrival from House' at (384.0, 176.0)
+[Mesh][Scene] [+] Spawned 'Potion' at (128.0, 288.0)
+[Mesh][Scene] [+] Spawned 'MerchantS' at (128.0, 448.0)
+[Mesh][Scene] [+] Spawned 'MerchantPlain' at (128.0, 608.0)
+[Mesh][Scene] [+] Spawned 'Button' at (528.0, 128.0)
+[Mesh][Scene] [+] Spawned 'Chest' at (528.0, 288.0)
+[Mesh][Scene] [+] Spawned 'ObjZone' at (728.0, 128.0)
+[Mesh][Scene] [+] Spawned 'WolfA' at (328.0, 288.0)
+[Mesh][Scene] [+] Spawned 'WolfM' at (328.0, 448.0)
+[Mesh][Scene] [+] Spawned 'Door to Vault' at (728.0, 328.0)
+[Mesh][Scene] [+] Spawned 'Arrival from Vault' at (728.0, 232.0)
+[Mesh][Scene] [+] Spawned 'Door to Annex' at (728.0, 528.0)
+[Mesh][Scene] [+] Spawned 'Arrival from Annex' at (728.0, 432.0)
+[Mesh][Scene] [+] Spawned 'GatedSign' at (728.0, 688.0)
+[Mesh][Scene] [+] Spawned 'WolfDrop2' at (528.0, 608.0)
+[Mesh][Scene] Scene ready with 19 sprite(s)
+[Mesh][UI] Rebuilding UI for scene
+[Mesh][UI] Registering HealthBar for Player
+[Mesh][UI] Registering HealthBar for WolfA
+[Mesh][UI] Registering HealthBar for WolfM
+[Mesh][UI] Registering HealthBar for WolfDrop2
