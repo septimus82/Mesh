@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import subprocess
@@ -66,15 +67,18 @@ def _run_ruff(repo_root: Path) -> tuple[int, list[str]]:
     for folder in untracked_game_projects(repo_root):
         command += ["--extend-exclude", folder]
     result = subprocess.run(command, cwd=repo_root, capture_output=True, text=True)
-    output = result.stdout or "[]"
     try:
-        findings = json.loads(output)
+        findings = json.loads(result.stdout or "")
     except json.JSONDecodeError:
-        print(result.stdout, end="")
+        findings = None
+    # Clean, ruff prints "[]" (exit 0); with findings, a JSON list (exit 1). Exit 1 with nothing on stdout is ruff
+    # not running at all ("No module named ruff", a missing binary), never "no findings" (#624).
+    if result.returncode not in (0, 1) or not isinstance(findings, list):
+        print(f"[ruff-gate] ruff did not report findings (exit {result.returncode}, stdout is not a JSON list):",
+              file=sys.stderr)
+        print(result.stdout, end="", file=sys.stderr)
         print(result.stderr, end="", file=sys.stderr)
         return result.returncode if result.returncode not in (0, 1) else 2, []
-    if not isinstance(findings, list):
-        return 2, []
     return result.returncode, normalize_findings(findings, repo_root)
 
 
@@ -104,6 +108,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Ruff ratchet gate")
     parser.add_argument("--update-baseline", action="store_true", help="Update baseline with current ruff output")
     args = parser.parse_args(argv)
+
+    if importlib.util.find_spec("ruff") is None:  # the interpreter that runs `-m ruff` below (#624)
+        print(f"[ruff-gate] ruff is not available: no ruff module for {sys.executable}; "
+              'install the dev tools (pip install -e ".[dev]")', file=sys.stderr)
+        return 2
 
     repo_root = _repo_root()
     code, current_lines = _run_ruff(repo_root)
