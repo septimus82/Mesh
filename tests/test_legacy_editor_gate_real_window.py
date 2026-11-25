@@ -25,7 +25,7 @@ pytestmark = [pytest.mark.integration,
 VICTIM = "assets/data/precious.json"
 
 
-def _window(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, launch_mode: str | None) -> Any:
+def _window(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, launch_mode: str | None, **config: Any) -> Any:
     from engine.game import GameWindow
 
     monkeypatch.chdir(tmp_path)  # (a game runs in its own folder; the editor would list and delete files there)
@@ -35,14 +35,17 @@ def _window(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, launch_mode: str | 
     room.write_text(json.dumps({"name": "Room", "schema_version": 1, "version": 1, "layers": [], "entities": []}),
                     encoding="utf-8")
     cfg = EngineConfig(width=320, height=200, title="F4 gate", vsync=False, start_scene="", world_file=None,
-                       main_menu_scene=None)
+                       main_menu_scene=None, **config)
     if launch_mode is not None:
         setattr(cfg, "_mesh_launch_mode", launch_mode)  # (as engine.game_launch does for ``mesh edit``)
     window = GameWindow(width=320, height=200, title=cfg.title, vsync=False, config=cfg)
     window.editor_controller._repo_root_override = tmp_path  # (the editor lists, and would delete, this game's files)
     window.editor_controller.project_explorer.set_repo_root(tmp_path)
     window._allow_dispatch_event = True  # (pyglet queues a hidden window's events outside its own loop otherwise)
-    window.scene_controller.load_scene(str(room))
+    window.load_scene(str(room))  # (as main.py does)
+    menu = getattr(window, "main_menu_overlay", None)
+    if menu is not None and menu.visible:  # (the player is past the title screen: it takes every key)
+        menu.close()
     return window
 
 

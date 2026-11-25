@@ -631,7 +631,10 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.monster_battle_mode_active: bool = False
         self.world_width: int | None = None
         self.world_height: int | None = None
-        self.show_debug: bool = bool(self.engine_config.debug_on_start)
+        from engine.action_runtime.registry import dev_tools_allowed  # noqa: PLC0415  # registry imports UI modules
+
+        # (a project's debug_on_start ships in its export's config.json: a game launch never starts in debug, #664)
+        self.show_debug: bool = bool(self.engine_config.debug_on_start) and dev_tools_allowed(self)
         self._debug_text = engine.optional_arcade.arcade.Text(
             text="",
             x=10,

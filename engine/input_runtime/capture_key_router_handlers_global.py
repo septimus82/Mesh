@@ -143,6 +143,13 @@ def _handle_profiler_toggle(window: Any) -> bool:
 
 
 def _handle_debug_toggle(window: Any, controller: Any) -> bool:
+    from engine.action_runtime.registry import dev_tools_allowed  # noqa: PLC0415  # registry imports UI modules
+
+    # F3 debug mode unlocks every scene-writing tool (save, save as, create, tile/entity paint, capture): never in a
+    # game launch (#664). It can always be turned off.
+    if not window.show_debug and not dev_tools_allowed(window):
+        controller._log_debug("[Mesh][Debug] debug mode ignored: developer tools are off in a game launch")
+        return True
     window.show_debug = not window.show_debug
     controller._log_debug(f"[Mesh][Debug] show_debug = {window.show_debug}")
     return True
