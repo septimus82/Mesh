@@ -1313,6 +1313,13 @@ class Prediction:
         if self.inputs and self.inputs[-1][0] is None:
             self.inputs[-1][0] = seq
 
+    def facing(self, row: int) -> int:
+        """The facing the server will have once it has read the inputs it hasn't yet, from ``row`` (the own row's
+        facing in the latest snapshot), as SceneRoom.step turns it (facing_of): where a swing shown now strikes."""
+        for _, dx, dy in self.inputs:
+            row = facing_of(dx, dy, row)
+        return row
+
     def _build(self, direction: tuple[int, int]) -> None:
         assert self.room is not None and self.body is not None
         self.inputs.append([None, *direction])

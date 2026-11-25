@@ -338,6 +338,7 @@ def test_the_window_places_enemies_where_playback_shows_them() -> None:
                              visible=True, color=(1, 2, 3))
     view = object.__new__(SceneView)
     view.flashes, view.avatars, view.sprites, view.drops, view.doors, view.levers = {}, {}, {"e": sprite}, {}, [], []
+    view.marks = []
     view.room = SimpleNamespace(world=object())
     view.window = SimpleNamespace()
     view.sync(None, {}, None, 0.1, {"e": (10.0, 20.0, 32.0, "deck")})
@@ -377,6 +378,7 @@ def test_a_drop_lies_where_the_state_says_its_enemy_died() -> None:
                              visible=True, color=(1, 2, 3))
     view = object.__new__(SceneView)
     view.flashes, view.avatars, view.sprites, view.drops, view.doors, view.levers = {}, {}, {"e": sprite}, {}, [], []
+    view.marks = []
     view.room, view.window = SimpleNamespace(world=None), SimpleNamespace()
     view.arcade = SimpleNamespace(SpriteCircle=lambda *_a: SimpleNamespace())
     view.scene = SimpleNamespace(entities=SimpleNamespace(enqueue_spawn=lambda s, **_k: spawned.append(s)))

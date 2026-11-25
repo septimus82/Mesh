@@ -9,8 +9,10 @@
 > moving enemies through one shared `FloorRoute` model, OD7) is merged (#616), with the measurements M4-5 depends on:
 > §4 M4-4 "As implemented". The M4-6 groundwork (a TCP delay proxy, a hidden-window capture harness and one trial;
 > two #616 review follow-ups) is merged (#617): §4 M4-6 "groundwork as implemented". M4-5 (bounded server-side lag
-> compensation, approved by the owner on 2026-11-25) is in review: §4 M4-5 "As implemented", and §6 for its security
-> and fairness limitation.
+> compensation, approved by the owner on 2026-11-25) is merged (#626): §4 M4-5 "As implemented", and §6 for its
+> security and fairness limitation. M4-6's final evidence (a visible swing, the playable demo and its launch
+> instructions, the rendered set) is in review: §4 M4-6 "Final evidence as implemented". **M4 stops there, at the
+> agreed checkpoint:** `docs/plans/m4_checkpoint.md`.
 >
 > **Authority:** owner decision D7 (2026-11-23, `docs/plans/hd2d_online_investigation.md` §6, §7.4): M4 is approved
 > to begin now that M3 has passed. Focus: responsive server-authoritative online combat, including simulated latency.
@@ -1418,9 +1420,11 @@ owner's budget:**
       | moving both | 227.5–250.6 / 414.9–531 | 225.5–237.3 / 414.1–522.8 |
 
       - At 0 ms with no loss, the moving target 70 p95 is 94.5–107.7 → 157.7–198.8.
-      - *(Inferred:)* the hits are a different set. More of them land on the persistent hitbox's second and third
-        ticks (OD10): a target judged five ticks back reaches the box later in its rewound walk. So the median moves
-        6–19 ms and the p95 40–90 ms later.
+      - **Why confirmation is later (measured by the #626 reviewer):** the hits are a different set, and more of them
+        land on the persistent hitbox's second and third updates (OD10), since a target judged several ticks back
+        reaches the box later in its rewound walk. At 100 ms ±10 ms 1% over 12 sessions: without rewind every real hit
+        landed on hitbox update 1; with rewind 5 of 21 confirmed hits (moving target 70) and 8 of 29 (stairs) landed on
+        updates 2–3. So the median moves 6–19 ms and the p95 40–90 ms later.
       - **OD1's "median hit confirmation at most RTT + 75 ms" (175 ms)**, for a still attacker against a moving enemy,
         is now missed:
         - on every seed on the stairs (by up to 12.7 ms) and on the deck (by up to 6.8 ms);
@@ -1598,6 +1602,68 @@ owner's budget:**
       is the probe's per-message model, not bursty loss.
     - One trial, at 100 ms only, as briefed. 200 ms and the other presets were not run. The final evidence set (100
       and 200 ms, every preset the owner wants) waits for the M4-5 decision.
+- **Final evidence as implemented** (after M4-5, #626; the owner: "finish the M4-6 rendered evidence with clearly
+  visible swing feedback, provide playable launch instructions and stop at the agreed M4 checkpoint").
+  - **A visible swing** (`mesh_net/scene_client.py`: `SceneView.swing`, `flash`, `_mark`; client presentation only,
+    nothing under `engine/`, no protocol or rule change).
+    - A swing draws a white crescent with a blue rim over the hitbox the server makes: the room's reach ahead, in the
+      facing direction, the picture turned that way. It lasts the hitbox's life (`HITBOX_S`, 0.2 s), at the swinger's
+      height and floor.
+    - The window's own swing shows on the press (OD4), facing as the server will once it reads the inputs it hasn't
+      yet (`Prediction.facing`). A peer's swing shows when its state shows it, facing as that state's row has it.
+    - A confirmed hit (`hit_seq`) adds a red burst with a yellow core on the enemy, following it as it walks, for
+      `FLASH_S`. The old red tint is kept for 2D; HD-2D's billboards ignore a sprite's tint, so before this an HD-2D
+      hit showed nothing.
+    - Both are scene sprites, so the 2D renderer and the HD-2D billboards both draw them, and **2D rooms show them
+      too** (the red tint stays there). They share no colour and no place.
+    - **A quick reversal** (#630 review). A direction pressed after Space but before the next send builds the input
+      the waiting attack rides, so the server turns first and strikes the new way. `Arena.aim` then turns the shown
+      swing to that facing, from where the press showed the avatar. It runs at that press, and again when an attack
+      leaves on an input. Presentation only: nothing sent changes. Tests: Space then Left, and Left then Space, agree
+      with the server's facing in both arenas.
+    - Tests (`tests/test_mesh_net_combat.py`):
+      - the mark's place, facing, life and floor;
+      - the hit burst following its enemy;
+      - no shared colour;
+      - the own swing marked on the press before any snapshot, and not again at the confirmation;
+      - a peer's swing marked from its state.
+    - **Mutation proof: 9 mutants, all killed.**
+      - no mark on a swing;
+      - no own mark until the server's reply, in either arena;
+      - the hit drawn with the swing's picture;
+      - the burst left behind a walking enemy;
+      - the mark at the attacker instead of the hitbox;
+      - the own facing from the stale row instead of the prediction;
+      - a peer's facing ignored;
+      - a mark outliving the hitbox.
+    - **Single-player cannot show it:** the marks live in `mesh_net`, which the engine never imports, and nothing
+      under `engine/` changed. Replays 13/13, no golden updated.
+  - **The playable demo** (`tooling/m4_demo_world.py`; launch: `docs/plans/m4_playable_demo.md`).
+    - The packaged expedition has no moving enemy: an enemy walks online only in an HD-2D room (M4-4). So the demo is
+      a two-room world built from repository files:
+      - the floors demo's HD-2D crossing, with three co-op bandits (30 HP) walking the probe's `FloorRoute`s on the
+        open ground, the west stairs and the bridge deck;
+      - a walk-in door to the expedition's Layer 1 (2D), here a shared room.
+    - Its `server` takes `--queue drain|deep|small` and `--rewind on|off` (and the same `MESH_NET_*` variables as
+      `python -m mesh_net.server`). Its `client` is `mesh_net.world_client`'s window.
+  - **The rendered set** (`tooling/m4_render_evidence.py` on the demo world; `docs/reviews/m4_rendered_evidence/`).
+    - Runs, seed 7, rewind on, hidden windows, a foreground monitor (0 focus changes in every run):
+      - 0, 100 and 200 ms ±10 ms 1% with drain;
+      - 100 ms with deep and with small.
+    - Each run shows:
+      - prediction (the own avatar moving 4–20 ms after the press, the server's row a round trip later);
+      - the local swing visible on the frame that reads the press (6–18 ms);
+      - a server-confirmed hit on the bandit while it walks (81, 168, 273, 161 and 182 ms);
+      - the swing seen in B's window;
+      - a room transfer (136–150 ms from the enter to the room shown).
+    - One run each: descriptive, never gating.
+    - `tooling/net_world_probe.py`'s replies now list the marks on screen.
+  - **#626's owed review items.**
+    - `test_the_attacker_is_never_rewound` now judges the very view the hitbox was placed against. The attacker
+      stands there from before the view tick and walks two steps west, and a control puts it back. An
+      attacker-rewinding mutant (a test-local seam) fails its discriminating assertion; under the old six steps it
+      passed it.
+    - "Inferred" for the slower confirmation is replaced by the reviewer's measured breakdown (§4 M4-5).
 
 ## 5. Owner decisions needed
 

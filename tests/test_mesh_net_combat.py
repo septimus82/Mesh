@@ -13,6 +13,7 @@ and a hit only once the server confirms it (OD4), whatever the latency.
 from __future__ import annotations
 
 import asyncio
+import copy
 import math
 import random
 from types import SimpleNamespace
@@ -27,7 +28,7 @@ from engine.physics_model import entity_shape, shapes_overlap
 from mesh_net import protocol as wire
 from mesh_net.demo import Arena
 from mesh_net.scene_client import SceneArena
-from mesh_net.scene_room import COOP_SCENE, Feedback, Prediction, SceneRoom, coop_files, disposable_project, hitbox_ticks
+from mesh_net.scene_room import COOP_SCENE, FACINGS, Feedback, Prediction, SceneRoom, coop_files, disposable_project, hitbox_ticks
 from mesh_net.world import World, expedition_files
 from mesh_net.world_client import WorldArena
 from tests.test_hd2d_net_parity import sprite
@@ -195,7 +196,7 @@ class View:
     def __init__(self, clock: list[float]) -> None:
         self.clock, self.swings, self.flashes = clock, [], []
 
-    def swing(self, eid: int, own: bool) -> None:
+    def swing(self, eid: int, own: bool, facing: int = 3) -> None:
         self.swings.append((self.clock[0], eid, own))
 
     def flash(self, enemy: str) -> None:
@@ -409,7 +410,7 @@ def test_a_press_in_the_cooldown_never_swings_and_the_world_window_waits_for_its
     keys = SimpleNamespace(SPACE=SPACE, E=E, P=1, I=2, Y=3, N=4, L=5, ESCAPE=6, F2=7, R=8)
     arena = window(arcade=SimpleNamespace(key=keys), phase="loading", request=None, view=view, shown="start:1",
                    room="start:2", entity=1, feedback=Feedback(), clock=lambda: 50.0, note=lambda _e: None,
-                   connected=True)
+                   connected=True, state=None)
     arena.feedback.baseline({"tick": 7, "players": [], "enemies": []}, 20, 50.0)
     WorldArena.press(arena, SPACE, 0)
     assert arena.actions == [] and not view.swings, "no swing while the next room loads"
@@ -711,6 +712,178 @@ def test_the_views_swing_and_flash_present_as_combat_and_the_hitbox_do(coop: Sce
     assert enemy.color == FLASH_TINT, "still flashing"
     view.sync(None, {}, None, FLASH_S / 2 + 0.01)
     assert enemy.color == (255, 255, 255) and view.flashes == {}, "the tint undone"
+
+
+def test_a_swing_is_marked_over_its_hitbox_and_a_confirmed_hit_unmistakably_otherwise(coop: SceneRoom) -> None:
+    """SceneView's marks (M4-6; the packaged player has no attack clip, so the slash is the swing's picture): a swing
+    marks the hitbox the server makes (the room's reach ahead in the facing, at the swinger's height and floor) for the
+    hitbox's life; a confirmed hit puts a red burst on the enemy, staying on it as it walks, for FLASH_S. A swing never
+    marks an enemy, a hit never a hitbox, and the two pictures share no colour."""
+    from mesh_net.scene_client import FLASH_S
+    from mesh_net.scene_room import FACINGS, HITBOX_S
+    from tests.test_mesh_net_hd2d import headless_view
+
+    view = headless_view(coop)
+    spawned: list[Any] = []
+    gone: list[Any] = []
+    view.scene.entities.enqueue_spawn = lambda sprite, **_kw: spawned.append(sprite)
+    view.scene.entities.enqueue_despawn = gone.append
+    view.avatars = {1: SimpleNamespace(center_x=100.0, center_y=200.0, mesh_entity_data={"elevation": 64.0},
+                                       mesh_hd2d_floor="deck")}
+    for facing, (fx, fy) in enumerate(FACINGS):
+        view.swing(1, own=facing % 2 == 0, facing=facing)
+        mark, left, on = view.marks[-1]
+        assert (mark.center_x, mark.center_y) == (100.0 + fx * coop.reach, 200.0 + fy * coop.reach), "over the hitbox"
+        assert mark.texture.hash == f"mesh_net_swing{facing}_mark" and mark.mesh_name == "swing_mark"
+        x0, y0, x1, y1 = mark.texture.image.getbbox()  # (rows from the top: the picture's own turn)
+        half = mark.texture.image.width / 2
+        assert (x0 > half, y1 < half, x1 < half, y0 > half)[facing], "the crescent on the facing's side"
+        assert mark.mesh_entity_data == {"elevation": 64.0} and mark.mesh_hd2d_floor == "deck"
+        assert (left, on) == (HITBOX_S, None)
+    assert spawned == [m for m, *_ in view.marks], "each in the room at once (drawn by the next frame)"
+    here = {1: (100.0, 200.0, 64.0, "deck")}  # (the swinger stays)
+    view.sync(None, here, None, HITBOX_S / 2)
+    assert len(view.marks) == 4 and not gone, "for the hitbox's life"
+    view.sync(None, here, None, HITBOX_S / 2 + 0.01)
+    assert view.marks == [] and gone == spawned, "then gone"
+    enemy = SimpleNamespace(center_x=600.0, center_y=256.0, color=(255, 255, 255), visible=True, mesh_entity_data={})
+    view.sprites, view.enemy_colors = {BANDIT: enemy}, {BANDIT: (255, 255, 255)}
+    view.flash(BANDIT)
+    ((burst, left, on),) = view.marks
+    assert burst.texture.hash == "mesh_net_hit_mark" and (left, on) == (FLASH_S, enemy)
+    assert (burst.center_x, burst.center_y) == (600.0, 254.0), "on the enemy (in front of it)"
+    view.sync(None, here, None, FLASH_S / 2, {BANDIT: (640.0, 250.0, 0.0, None)})
+    assert (burst.center_x, burst.center_y) == (640.0, 248.0), "staying on it as it walks"
+    view.sync(None, here, None, FLASH_S / 2 + 0.01)
+    assert view.marks == [] and gone[-1] is burst
+    swing_px = set(view._texture("swing0").image.getdata()) - {(0, 0, 0, 0)}
+    hit_px = set(view._texture("hit").image.getdata()) - {(0, 0, 0, 0)}
+    assert swing_px and hit_px and not swing_px & hit_px, "no colour shared"
+    assert not any(r > 200 and g < 100 for r, g, _, _ in swing_px) and any(r > 200 and g < 100 for r, g, _, _ in hit_px)
+
+
+def test_the_own_swing_is_marked_on_the_press_facing_as_the_server_will_and_a_peers_from_its_state(
+        coop: SceneRoom) -> None:
+    """OD4: the window marks its own swing on the press itself, before any snapshot, facing as the server will once it
+    reads the inputs it hasn't yet (Prediction.facing); the snapshot that confirms that swing marks nothing more. A
+    peer's swing is marked when a snapshot shows it, facing as that snapshot's row has it."""
+    from tests.test_mesh_net_hd2d import headless_view
+
+    room = copy.deepcopy(coop)
+    eid, peer = room.join(), room.join()
+    state = room.snapshot()
+    now = [0.0]
+    arena = scene_arena(eid, state, now)
+    arena.view = view = headless_view(room)
+    rows = {r[0]: r for r in state["players"]}
+    view.avatars = {e: SimpleNamespace(center_x=rows[e][1], center_y=rows[e][2], mesh_entity_data={}) for e in rows}
+    arena.feedback.baseline(state, room.cooldown, 0.0)
+    arena.prediction.start(room, state, eid)
+    assert rows[eid][3] == 3, "the server has it facing down"
+    arena.prediction.press((-1, 0))  # (left, not read by the server yet)
+    SceneArena.press(arena, SPACE, 0)
+    ((mark, _, _),) = view.marks
+    assert (mark.center_x, mark.center_y) == (rows[eid][1] - room.reach, rows[eid][2]), "at once, ahead to the left"
+    assert arena.actions and arena.actions[0][0] == "attack"
+    room.players[eid].attack_seq, room.players[peer].attack_seq, room.players[peer].facing = 1, 1, 1
+    room.step()
+    now[0] = 100.0
+    SceneArena.on_state(arena, room.snapshot(), eid, False)
+    assert len(view.marks) == 2, "the confirmation marks nothing more for the own swing; the peer's swing is marked"
+    peer_mark = view.marks[-1][0]
+    assert (peer_mark.center_x, peer_mark.center_y) == (view.avatars[peer].center_x,
+                                                        view.avatars[peer].center_y + room.reach), "facing up"
+
+
+ARROWS = SimpleNamespace(**{n: i for i, n in enumerate("W UP S DOWN A LEFT D RIGHT SPACE E ESCAPE F2 R N P I Y L".split())})
+
+
+def reversal_window(kind: str, room: SceneRoom, eid: int) -> Any:
+    """A real SceneArena or WorldArena (its own handlers and Arena's queue and sends) over a window-less SceneView of
+    ``room``, its player ``eid`` standing where the room put it."""
+    from tests.test_mesh_net_hd2d import headless_view
+
+    cls = SceneArena if kind == "scene" else WorldArena
+    arena: Any = cls.__new__(cls)
+    Arena.__init__(arena, SimpleNamespace(push_handlers=lambda **_kw: None), SimpleNamespace(key=ARROWS))
+    state = room.snapshot()
+    arena.view = headless_view(room)
+    row = next(r for r in state["players"] if r[0] == eid)
+    arena.view.avatars = {eid: SimpleNamespace(center_x=row[1], center_y=row[2], mesh_entity_data={})}
+    arena.feedback, arena.prediction = Feedback(), Prediction()
+    arena.feedback.baseline(state, room.cooldown, 0.0)
+    arena.prediction.start(room, state, eid)
+    arena.clock = lambda: 1.0
+    if kind == "scene":
+        arena.client = SimpleNamespace(entity=eid, state=state)
+    else:
+        arena.phase, arena.room, arena.shown, arena.entity, arena.state = "playing", "r", "r", eid, state
+        arena.request, arena.note = None, lambda _event: None
+    return arena
+
+
+@pytest.mark.parametrize("kind", ["scene", "world"])
+@pytest.mark.parametrize(("order", "shown", "struck"), [
+    ("space left", 2, 2),  # (the Left builds the input the waiting attack rides: turned at that press)
+    ("left space", 2, 2),  # (the Space finds the Left input built: west at once)
+    ("left space right", 2, 0),  # (Right finds the Left input built and waits for the next, which the attack rides)
+])
+def test_a_quick_reversal_turns_the_shown_swing_to_where_the_server_strikes(kind: str, order: str, shown: int,
+                                                                         struck: int) -> None:
+    """The owner's quick-reversal safeguard (#630 review): facing east, keys pressed within one send. Whichever input
+    the waiting attack rides, the server turns to it first and strikes that way, and the shown swing ends up facing
+    it too (Arena.aim, at a press that builds that input and when the attack is sent), over that hitbox from where the
+    press showed the avatar. ``shown``: its facing straight after the presses, before anything is sent; ``struck``:
+    the server's, which the swing faces once the attack has gone. Presentation only: what is sent is the same."""
+    keys = {"space": ARROWS.SPACE, "left": ARROWS.LEFT, "right": ARROWS.RIGHT}
+    with coop_room() as room:
+        eid = room.join()
+        place(room, eid, 300.0, 200.0, 0)  # facing east
+        arena = reversal_window(kind, room, eid)
+        for key in order.split():
+            type(arena).press(arena, keys[key], 0)
+        ((mark, _, _),) = arena.view.marks
+        assert mark.texture.hash == f"mesh_net_swing{shown}_mark", "as the presses leave it, before any send"
+        seen: list[int] = []
+        attack = room._attack
+        room._attack = lambda p, view=None: (seen.append(p.facing), attack(p, view))[1]  # type: ignore[method-assign]
+        for seq in (1, 2):
+            direction, action, tick, view = arena.outgoing()
+            arena.prediction.sent(seq)
+            room.input(eid, wire.input_frame(eid, seq, *direction, tick, action, view))
+            room.step()
+        assert seen == [struck], "the server struck once, that way"
+        fx, fy = FACINGS[struck]
+        assert mark.texture.hash == f"mesh_net_swing{struck}_mark", "the swing faces the way the server struck"
+        assert (mark.center_x, mark.center_y) == (300.0 + fx * room.reach, 200.0 + fy * room.reach), "over that hitbox"
+
+
+def test_a_peers_swing_in_the_world_window_faces_as_its_state_says() -> None:
+    """WorldArena: a peer's swing is marked when a room state shows it, facing as that state's row has it."""
+    from tests.test_mesh_net_hd2d import headless_view
+
+    with disposable_project(expedition_files(), scaffold=False) as root:
+        world = World(root)
+    key = next(k for k, d in world.defs.items() if d.proto.enemies)
+    inst = world._create(key, 1)
+    ids = {k: d.proto.identity for k, d in world.defs.items()}
+    view = headless_view(inst.room)
+    arena: Any = SimpleNamespace(identities=ids, defs=world.defs, room=None, key=None, entity=None, state=None,
+                                 playback=None, pending=None, phase="loading", feedback=Feedback(),
+                                 prediction=Prediction(), seq=0, actions=[], view=view, shown=None)
+    eid, peer = inst.room.join(), inst.room.join()
+    WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "enter", "room": inst.id, "key": key, "entity": eid,
+                                "state": inst.room.snapshot()}, 0.0)
+    arena.shown = inst.id
+    rows = {r[0]: r for r in inst.room.snapshot()["players"]}
+    view.avatars = {e: SimpleNamespace(center_x=r[1], center_y=r[2], mesh_entity_data={}) for e, r in rows.items()}
+    inst.room.players[peer].attack_seq, inst.room.players[peer].facing = 1, 1  # (a swing, facing up)
+    inst.room.step()
+    WorldArena.on_frame(arena, {"v": wire.VERSION, "type": "room_state", "room": inst.id,
+                                "state": inst.room.snapshot()}, 0.1)
+    ((mark, _, _),) = view.marks
+    assert mark.texture.hash == "mesh_net_swing1_mark"
+    assert (mark.center_x, mark.center_y) == (rows[peer][1], rows[peer][2] + inst.room.reach)
 
 
 def test_a_transfer_from_a_long_running_room_lets_the_first_press_swing() -> None:

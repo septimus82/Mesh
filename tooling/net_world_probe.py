@@ -116,6 +116,9 @@ def handle(arena, cmd: list[str]) -> dict[str, Any]:
               "status": arena.status, "identity": arena.identity, "loads": arena.loads, "trace": list(arena.trace),
               "sheet": arena.sheet, "refused": arena.refused, "refusal": arena.refusal, "seq": arena.seq,
               "foreign_keys": FOREIGN[0],
+              # (the swing and hit marks on screen: mesh_net.scene_client.SceneView.marks)
+              "marks": [[m.mesh_name, round(m.center_x, 1), round(m.center_y, 1)] for m, *_ in arena.view.marks]
+              if arena.view is not None else [],
               "window": window_facts(arena), "hd2d_error": getattr(arena.window, "hd2d_error", None),
               "scene_path": getattr(arena.window.scene_controller, "current_scene_path", None)}
     if cmd[0] == "capture" and arena.view is not None:

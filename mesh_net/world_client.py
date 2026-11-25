@@ -105,7 +105,9 @@ class WorldArena(Arena):
                     # the server judges its cooldown on this tick, as the window did, and its targets where the window
                     # showed them (Playback's cursor at the frame on screen: M4-5's view tick)
                     self.act("attack", tick, self.playback.cursor)
-                    self.view.swing(self.entity, own=True)
+                    rows = {r[0]: r for r in self.state["players"]} if self.state else {}
+                    facing = self.prediction.facing(rows[self.entity][3]) if self.entity in rows else 3
+                    self.view.swing(self.entity, own=True, facing=facing)  # (at once, facing as the server will)
             elif symbol == key.E:
                 own = self._own()
                 # Only in the room on screen, as an attack: never one pressed while the next room loads (it would run
@@ -133,6 +135,11 @@ class WorldArena(Arena):
             self.request = "resume" if symbol == key.R else "new"
             return True
         return super().press(symbol, modifiers) if symbol in (key.ESCAPE, key.F2) else True
+
+    def aim(self) -> None:
+        own = self._own()
+        if own is not None and self.view is not None and self.shown == self.room:
+            self.view.aim(self.prediction.facing(own[3]))
 
     def _ask(self, op: str, **fields: int) -> None:
         if len(self.requests) < 4:
@@ -186,8 +193,9 @@ class WorldArena(Arena):
             self.prediction.reconcile(state, own)  # (predicting only once the room shows)
             swung, hit = self.feedback.update(state, own, now)
             if self.view is not None and self.shown == self.room:  # (a view still loading shows none of it)
+                rows = {r[0]: r for r in state["players"]}
                 for eid in swung:
-                    self.view.swing(eid, own=False)
+                    self.view.swing(eid, own=False, facing=rows[eid][3])  # (facing as that state has it)
                 for enemy in hit:
                     self.view.flash(enemy)
         elif kind == "party":

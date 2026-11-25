@@ -502,9 +502,9 @@ def test_a_cross_floor_attack_swings_and_never_flashes(room: SceneRoom) -> None:
     eid = room.join(Player(Body(actor[0], actor[1], *room._template_size(), {**room.template, "elevation": actor[2]}),
                            facing=0))
     shown: dict[str, list[Any]] = {"swings": [], "flashes": []}
-    view = SimpleNamespace(room=room, swing=lambda e, own: shown["swings"].append((e, own)),
+    view = SimpleNamespace(room=room, swing=lambda e, own, facing=3: shown["swings"].append((e, own)),
                            flash=lambda enemy: shown["flashes"].append(enemy))
-    arena: Any = SimpleNamespace(client=SimpleNamespace(entity=eid), arcade=SimpleNamespace(key=SimpleNamespace(SPACE=32)),
+    arena: Any = SimpleNamespace(client=SimpleNamespace(entity=eid, state=room.snapshot()), arcade=SimpleNamespace(key=SimpleNamespace(SPACE=32)),
                                  action_keys=set(), actions=[], feedback=Feedback(), prediction=Prediction(), view=view, clock=lambda: 5.0,
                                  playback=SimpleNamespace(cursor=float(room.tick)))  # (the frame on screen: this tick's)
     arena.act = lambda action, tick=None, view=None: arena.actions.append((action, tick, view))
