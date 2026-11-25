@@ -28,6 +28,11 @@ Clients show their own swing at once and a hit only once a snapshot confirms it 
 M4-3: the server reads one input a tick (owner decision OD11: DEPTH, HOLD) and walks each body through
 :meth:`SceneRoom.walk`, the one movement step; a client predicts its own avatar through the same step and reconciles
 it with each snapshot (:class:`Prediction`, owner decision OD3).
+
+M4-4 (owner decision OD7): an enemy that walks a ``FloorRoute`` in an HD-2D room walks it here, each tick, through
+engine.hd2d.route.FloorRoute, the one model single-player's behaviour runs (World.path and World.move with this
+module's sweep); its row carries where it is now, and hits are judged there. Any other way of moving an enemy, or a
+solid, is refused at load (MOVERS): it would stand still here while it walks in single-player.
 """
 
 from __future__ import annotations
@@ -64,6 +69,7 @@ from engine.physics_model import (
 from . import protocol as wire
 
 if TYPE_CHECKING:  # (2D rooms never load the 3D code)
+    from engine.hd2d.route import FloorRoute
     from engine.hd2d.world import World
 
 ACTIONS = ("attack", "take", "use")
@@ -117,6 +123,12 @@ QUEUE_PRESETS = {
 QUEUE = "drain"
 DEPTH, HOLD, DRAIN = QUEUE_PRESETS[QUEUE]
 QUEUE_LIMITS = {"depth": (1, 20), "hold": (1, wire.HZ // 4), "drain": (2, 20)}  # (drain 0 is off)
+# The behaviours that move their character in single-player. This authority moves only an enemy's FloorRoute, in an
+# HD-2D room (M4-4; in a 2D room FloorRoute moves nothing, here or in single-player). An enemy, or anything solid,
+# carrying any other (or a solid non-enemy carrying FloorRoute in an HD-2D room) would stand still here while it walks
+# in single-player: refused at load (SceneRoom).
+MOVERS = ("ChaseTarget", "EnemyAI", "FleeFromTarget", "FloorRoute", "FollowPath", "FollowTarget", "NpcSchedule",
+          "Patrol", "PatrolChase", "PatrolPath", "PlayerController", "RangedEnemyAI", "SequencePlayer", "Wander")
 
 
 def queue_settings(depth: object = None, hold: object = None, drain: object = None,
@@ -486,6 +498,7 @@ class Enemy:
     dropped: bool = False  # loot is on the ground
     holder: Player | None = None
     hit_seq: int = 0  # the hits it has taken in this room instance (wire v3)
+    route: FloorRoute | None = None  # HD-2D: the FloorRoute it walks (M4-4), each tick while alive
 
 
 def hitbox_ticks(hz: int = wire.HZ) -> int:
@@ -560,7 +573,14 @@ class SceneRoom:
             health = {**{k: e[k] for k in ("max_hp", "hp", "invulnerable") if k in e}, **health}  # Health reads both
             hp = float(health.get("max_hp", 1.0))
             state = TargetState(hp=float(health.get("hp", hp)), max_hp=hp, invulnerable=bool(health.get("invulnerable")))
-            self.enemies[e["id"]] = Enemy(body(e, root), state, bool(e.get("solid")), roll_drops(config(e, "DropTable")))
+            b = body(e, root)
+            b.mesh_entity_data = dict(e)  # (its own: walking sets its elevation)
+            self.enemies[e["id"]] = Enemy(b, state, bool(e.get("solid")), roll_drops(config(e, "DropTable")),
+                                          route=self._route(b))
+        for e in others:
+            self._refuse_mover(e)
+        if self.world is not None and any(e.route for e in self.enemies.values()):
+            self.world.walkable()  # (its navigation grid, built now rather than on the first tick)
         if len(self.levers) + len(self.doors) + len(self.enemies) > MAX_OBJECTS:
             raise Unsupported(f"more than {MAX_OBJECTS} networked objects")
         networked = set(self.levers) | set(self.doors) | set(self.enemies)
@@ -583,6 +603,30 @@ class SceneRoom:
             wire.encode({"v": wire.VERSION, **self._worst_snapshot()})
         except wire.Invalid as exc:
             raise Unsupported("the room's largest snapshot would not fit in one frame (shorter ids, fewer objects)") from exc
+
+    def _route(self, b: Body) -> FloorRoute | None:
+        """An enemy's FloorRoute in an HD-2D room (engine.hd2d.route: the model single-player's behaviour runs), or
+        None. Refused where it can't stand at its start: single-player would first walk it out (or strand it, saying
+        so in a gameplay event a shared room doesn't have)."""
+        cfg = config(b.mesh_entity_data, "FloorRoute")
+        if cfg is None or self.world is None:
+            return None
+        if not self.stands(b):
+            raise Unsupported(f"HD-2D: the enemy '{b.mesh_entity_data['id']}' walks a FloorRoute but can't stand where "
+                              "it is at its elevation (no floor within a step, or inside a wall or under a low deck)")
+        from engine.hd2d.route import FloorRoute  # noqa: PLC0415  # (2D rooms never load the 3D code)
+
+        return FloorRoute.from_config(cfg)
+
+    def _refuse_mover(self, e: dict[str, Any]) -> None:
+        """MOVERS: an enemy moving by anything but FloorRoute, or a solid moving at all, is refused (Unsupported)."""
+        enemy = e["id"] in self.enemies
+        moving = [n for n in MOVERS if config(e, n) is not None
+                  and not (n == "FloorRoute" and (enemy or self.world is None))]
+        if moving and (enemy or e.get("solid")):
+            what = "the enemy" if enemy else "the solid"
+            raise Unsupported(f"{what} '{e['id']}' moves by {moving[0]}, which this server does not run (online, only "
+                              "FloorRoute moves an enemy, in an HD-2D room): it would stand still here")
 
     # --- sessions (called by mesh_net.server) ---------------------------------------------------------
 
@@ -689,13 +733,17 @@ class SceneRoom:
 
     def solids(self, state: wire.Message | None = None) -> list[Body]:
         """What blocks a walk now; given a (checked) snapshot of this room, what blocked as it was then: its gates
-        open, its enemies alive (HP above 0) where it put them (a client's prediction: Prediction)."""
+        open, its enemies alive (HP above 0) where its rows put them (a client's prediction: Prediction; M4-4's enemies
+        move)."""
         if state is None:
-            locked, alive = self.locked, {i for i, e in self.enemies.items() if not e.state.dead}
+            locked = self.locked
+            enemies = [e.body for e in self.enemies.values() if e.solid and not e.state.dead]
         else:
-            locked, alive = set(self.doors) - set(state["open"]), {r[0] for r in state["enemies"] if r[1] > 0}
+            locked, rows = set(self.doors) - set(state["open"]), {r[0]: r for r in state["enemies"] if r[1] > 0}
+            enemies = [Body(r[3], r[4], e.body.width, e.body.height, {**e.body.mesh_entity_data, "elevation": r[5]}, r[6])
+                       for i, e in self.enemies.items() if e.solid and (r := rows.get(i)) is not None]
         doors = [b for i, (b, _) in self.doors.items() if b is not None and i in locked]
-        return self.scenery + doors + [e.body for i, e in self.enemies.items() if e.solid and i in alive]
+        return self.scenery + doors + enemies
 
     def walk(self, body: Body, dx: int, dy: int, solids: list[Body]) -> None:
         """One tick of one body's walk (owner decision OD3): an input's direction (``dx``, ``dy``: -1, 0 or 1; a
@@ -715,12 +763,14 @@ class SceneRoom:
         body.center_y = max(-BOUND, min(BOUND, body.center_y))
 
     def step(self) -> None:
-        """One tick. Each player (by entity id): the oldest input waiting is read (OD11: DEPTH; its direction and
-        facing, and ``ack``; while standing, an older still input is dropped first: DEPTH's note); its earlier
-        hitboxes update; the actions whose input has been read run, one attack and one use or take, from where the
-        player stands (where its client showed it when they were pressed: Prediction); then it walks one step (walk),
-        while under HOLD ticks from the last input read."""
+        """One tick. First each enemy walking a FloorRoute walks (_walk_enemies), so this tick's hits and blocking are
+        where the enemies are now. Then each player (by entity id): the oldest input waiting is read (OD11: DEPTH; its
+        direction and facing, and ``ack``; while standing, an older still input is dropped first: DEPTH's note); its
+        earlier hitboxes update; the actions whose input has been read run, one attack and one use or take, from where
+        the player stands (where its client showed it when they were pressed: Prediction); then it walks one step
+        (walk), while under HOLD ticks from the last input read."""
         self.tick += 1
+        self._walk_enemies()
         solids = self.solids()
         for eid, p in sorted(self.players.items()):
             while len(p.moves) > 1 and not any(p.moves[0][1:]) and not any(p.moves[1][1:]):
@@ -752,6 +802,17 @@ class SceneRoom:
                 self._take(p)
             if p.held < self.hold:
                 self.walk(p.body, p.dx, p.dy, solids)
+
+    def _walk_enemies(self) -> None:
+        """Each live enemy with a FloorRoute (by id) walks one tick of it (1/HZ s; M4-4): the model single-player's
+        behaviour runs, through World.path and World.move with this module's sweep, blocked by what blocks now (the
+        enemies before it where they have just walked). Players never block it, as single-player's player (not solid)
+        doesn't."""
+        solids = None
+        for _, enemy in sorted(self.enemies.items()):
+            if enemy.route is not None and not enemy.state.dead:
+                solids = self.solids() if solids is None else solids
+                enemy.route.update(self.world, enemy.body, 1 / wire.HZ, solids, sweep=move)
 
     def _forks(self, p: Player, solids: list[Body]) -> bool:
         """Whether the drain dropping ``p``'s oldest waiting input would change where this tick's step and the inputs
@@ -982,26 +1043,21 @@ def _floor(value: Any) -> bool:
 def check_enemies(rows: list[Any], room: SceneRoom) -> None:
     """Each (well-formed) enemy row against the client's own room: an enemy it has, placed as a body can be there. A 2D
     room: elevation 0 and no floor. An HD-2D room: no floor (a body the authority never stood on one), or a floor its
-    collision world has, under the enemy's own box within a step of its elevation (check_levels' rule)."""
+    collision world has, under the enemy's own box within a step of its elevation (check_levels' rule: floor_under;
+    M4-4's enemies walk, so its 0.01 px rounding at a floor's edge too)."""
     if any(r[0] not in room.enemies for r in rows):
         raise wire.Invalid("an enemy row names an enemy this room does not have")
     if room.world is None:
         if any(r[5] != 0 or r[6] is not None for r in rows):
             raise wire.Invalid("a 2D room's enemy row carries an elevation or a floor")
         return
-    from engine.hd2d.settings import PIXELS_PER_METRE  # noqa: PLC0415
-    from engine.hd2d.world import STEP  # noqa: PLC0415
-
     for enemy_id, _hp, _hits, x, y, elevation, floor in rows:
         if floor is None:
             continue
         if floor not in room.floor_ids:
             raise wire.Invalid(f"an enemy row stands on a floor this room does not have: {str(floor)[:48]!r}")
         body = room.enemies[enemy_id].body
-        box = entity_aabb(Body(x, y, body.width, body.height, body.mesh_entity_data))
-        z = elevation / PIXELS_PER_METRE
-        if not any(s.floor == floor and abs(height - z) <= STEP + 1e-6
-                   for height, s in room.world.heights_at(box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE)):
+        if not floor_under(room, Body(x, y, body.width, body.height, body.mesh_entity_data), floor, elevation):
             raise wire.Invalid(f"an enemy row's floor {floor!r} is not under it at elevation {elevation:g} px")
 
 
@@ -1218,17 +1274,26 @@ def check_levels(players: list[Any], room: SceneRoom) -> None:
         if any(row[4] != 0 or row[5] is not None for row in players):
             raise wire.Invalid("a 2D room's player row carries an elevation or a floor")
         return
+    w, h = room.size
+    for row in players:
+        floor = row[5]
+        if floor not in room.floor_ids:
+            raise wire.Invalid(f"a player row stands on a floor this room does not have: {str(floor)[:48]!r}")
+        if not floor_under(room, Body(row[1], row[2], w, h, room.template), floor, row[4]):
+            raise wire.Invalid(f"a player row's floor {floor!r} is not under it at elevation {row[4]:g} px")
+
+
+def floor_under(room: SceneRoom, body: Body, floor: str, elevation: float) -> bool:
+    """Whether ``floor`` lies under ``body``'s feet (its movement box's centre: where World.move stands it) within a
+    step (World.STEP) of ``elevation`` px, sampled there and at the corners of the wire's 0.01 px rounding, so the
+    rounding itself never refuses a floor's own edge (check_levels, check_enemies)."""
     from engine.hd2d.settings import PIXELS_PER_METRE  # noqa: PLC0415
     from engine.hd2d.world import STEP  # noqa: PLC0415
 
-    w, h = room.size
-    for row in players:
-        floor, z = row[5], row[4] / PIXELS_PER_METRE
-        if floor not in room.floor_ids:
-            raise wire.Invalid(f"a player row stands on a floor this room does not have: {str(floor)[:48]!r}")
-        box = entity_aabb(Body(row[1], row[2], w, h, room.template))
-        x, y, r = box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE, ROUNDING / PIXELS_PER_METRE
-        if not any(s.floor == floor and abs(height - z) <= STEP + 1e-6
-                   for px, py in ((x, y), (x - r, y - r), (x + r, y - r), (x - r, y + r), (x + r, y + r))
-                   for height, s in room.world.heights_at(px, py)):
-            raise wire.Invalid(f"a player row's floor {floor!r} is not under it at elevation {row[4]:g} px")
+    assert room.world is not None
+    box = entity_aabb(body)
+    z = elevation / PIXELS_PER_METRE
+    x, y, r = box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE, ROUNDING / PIXELS_PER_METRE
+    return any(s.floor == floor and abs(height - z) <= STEP + 1e-6
+               for px, py in ((x, y), (x - r, y - r), (x + r, y - r), (x - r, y + r), (x + r, y + r))
+               for height, s in room.world.heights_at(px, py))

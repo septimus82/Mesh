@@ -4,8 +4,10 @@
 > M4-0 (#609) added this document, a headless measurement tool (`tooling/m4_latency_probe.py`) and one test of the
 > tool's link model and statistics. M4-1 (#610) and M4-2 (#611: protocol v3 and attack presentation) are merged.
 > M4-3 (own-movement prediction and the server's input queue, #613) is merged; its follow-ups (round 4: tests, the
-> probe's flag order, the drain's fork guard) are in review: §4 M4-3 "As implemented". Its input queue is the owner's
-> choice after playing; "drain" is the provisional default (owner decision, 2026-11-24).
+> probe's flag order, the drain's fork guard) are merged (#615): §4 M4-3 "As implemented". Its input queue is the owner's
+> choice after playing; "drain" is the provisional default (owner decision, 2026-11-24). M4-4 (server-authoritative
+> moving enemies through one shared `FloorRoute` model, OD7) is in review, with the measurements M4-5 depends on: §4 M4-4
+> "As implemented".
 >
 > **Authority:** owner decision D7 (2026-11-23, `docs/plans/hd2d_online_investigation.md` §6, §7.4): M4 is approved
 > to begin now that M3 has passed. Focus: responsive server-authoritative online combat, including simulated latency.
@@ -1006,6 +1008,234 @@ The measurements rank the levers.
   - Single-player vs authority parity of a `FloorRoute` walk at equal deltas.
   - The probe's moving-target scenario on the real mover.
   - Replays unchanged.
+- **As implemented** (owner decision OD7; no protocol change: v3's enemy rows `[id, hp, hit_seq, x, y, elevation,
+  floor]` were already on the wire, static until now).
+  - **One model.** `engine/hd2d/route.py`: `FloorRoute(route, speed, wait, on_stuck=, on_strand=)`, `from_config`,
+    `parse_route`, and `update(world, body, dt, solids, sweep)`. It holds the route legs, the waits, walking out of
+    water it can't stand in, stranding and backing off a point it can't reach, moved verbatim from the behaviour. It
+    imports only `engine.hd2d.world`, `engine.physics_model` and the standard library, and moves any body `World.move`
+    moves (a sprite, or the authority's `Body`).
+    - **Single-player** (`engine/behaviours/floor_route.py`) is now a thin adapter. Each frame it hands the model the
+      window's World and solid sprites, with the game's sweep. It writes the model's two reports to its log, and the
+      strand report also as the `stranded` gameplay event.
+    - **The authority** (`SceneRoom`): an enemy with `FloorRoute` in an HD-2D room gets a model at load
+      (`Enemy.route`). Each tick, *before* the players, every live one walks 1/HZ s (`_walk_enemies`) through
+      `World.path`/`World.move` with the authority's Arcade-free sweep. So this tick's hits and blocking use where the
+      enemy is now. That holds in N6 and in every N7 instance (each instance is its own copy).
+    - Players don't block enemies, as single-player's player (not solid) doesn't. A solid enemy blocks players where
+      it stands now.
+    - A dead enemy stops walking, and its loot is where it died.
+  - **What can't be reproduced is refused at load**, with the reason:
+    - an enemy that moves by any other behaviour (`MOVERS`: Patrol, Wander, ChaseTarget, EnemyAI and the rest);
+    - a solid that moves at all;
+    - an enemy whose route starts where it can't stand (single-player would walk it out first, or strand it with a
+      gameplay event the room doesn't have).
+
+    A `FloorRoute` in a 2D room moves nothing in either runtime, so it loads. A non-solid, non-enemy mover (for
+    example the floors demo's warden) loads too: it blocks nothing, and the window stands it still, as before.
+  - **Rows carry live positions.** A client's own room checks every row, and an enemy row is now checked as player
+    rows are: the floor under it, sampled at the corners of the 0.01 px rounding (`floor_under`). Otherwise a walking
+    enemy at a floor's edge could have its frame refused. The client's prediction blocks on solid enemies where the
+    snapshot's rows put them (`SceneRoom.solids(state)`), not where the scene file did.
+  - **Clients** show enemies as they show peers: `Playback.enemies`, two ticks behind, x/y/elevation interpolated,
+    the nearer state's floor, never predicted. `SceneView.sync(..., enemies)` places the sprite there and sets the
+    velocity its Animator walks by. Hit flashes still key off `hit_seq`.
+  - **Single-player stays identical.**
+    - `tests/test_floor_route_model.py` replays four traces recorded from the behaviour as it was at 94f1792c, before
+      the extraction (`tests/fixtures/floor_route_traces.json`):
+      - the floors demo warden's route at 1/20 s;
+      - the same route blocked by a crate (it replans, then backs off once);
+      - a deep-water walk-out at 1/60 s;
+      - a stranding.
+
+      Each trace matches at every sample, and a digest of every update matches.
+    - Replays 13/13, no golden updated.
+    - `git diff --stat` over `engine/` is the extraction only: `engine/hd2d/route.py` (new) and the adapter.
+  - **Parity, single-player vs authority, at equal deltas** (`tests/test_mesh_net_moving_enemies.py`): an enemy
+    walks 1,400 ticks across the crossing in both runtimes, and the per-tick x/y match to 1e-6 px, with the same
+    elevation and floor every tick. The walk goes from the east platform over the bridge deck, down the west stairs,
+    across the ground and up the east stairs. In the co-op room (2D), neither runtime moves it.
+  - **No duplicate.** `tests/test_hd2d_net_parity.py`'s scan fails if `mesh_net` or the adapter defines a piece of
+    the route model, or calls `path`, `ways_out` or `blocked` itself. A spy checks that both runtimes call
+    `FloorRoute.update`. A fresh process walks a routed enemy without importing Arcade, pyglet, the game's physics
+    runtime or the behaviour.
+  - **#615 review gaps:**
+    - (F02) `_forks` leaves the real body's position, floor and entity data untouched, on the stairs, where its walks
+      climb.
+    - (F05) The threshold is pinned: one step exactly is dropped; √2 and √5 steps are refused.
+  - **A limitation of the shared walk, at the server's tick.**
+    - `FloorRoute` spends the update that reaches each 0.5 m navigation waypoint standing. At 1/20 s that pause is
+      50 ms; at single-player's 1/60 s it is 17 ms.
+    - So the same authored speed walks slower online. Measured on the ground route: 70 px/s authored walks 52 px/s on
+      the server, against about 64 px/s at 60 fps single-player *(computed)*. 150 px/s authored walks 88.6 px/s,
+      against about 120 *(computed)*.
+    - Parity holds at equal deltas, which is the acceptance. Making the walk frame-rate-independent would change
+      single-player's trace, so it is not done here (a STOP condition). It is listed for the owner as a follow-up
+      decision.
+  - **Measurements** (`tooling/m4_latency_probe.py --queue drain|small|deep`, seeds 7/8/9 × 24 sessions, every
+    profile; each cell is the range over the seeds). The moving-target scenarios now use **the real mover**: the
+    co-op bandit walking a `FloorRoute` on the authority, shown through `Playback.enemies`. All are HD-2D, since
+    `FloorRoute` moves nothing in 2D:
+    - `moving_target_70` and `_150`: a still attacker on the crossing's open ground, facing east. The bandit walks east
+      and west through its hitbox, at 70 or 150 px/s as authored (52 and 88.6 px/s on the server).
+    - `moving_both`: the attacker walks up to the walking bandit (70) and away, turning every 700 ms, predicted.
+    - `stairs_moving`: the bandit walks up and down the west stairs (70), with a still attacker on the ground beside
+      their east edge. Its hitbox covers where the bandit climbs out of `same_level`'s 1.5 m reach.
+    - Each scenario samples every frame as a hypothetical press, as before. A disagreement is put down to one cause:
+      - the **floor rule** (`same_level` differs between the shown and the real poses);
+      - else the **target's motion** (the real attacker against the targets as shown agrees with the screen);
+      - else the **attacker's motion** (the attacker as shown against the real targets agrees);
+      - else **both**.
+    - Real swings about every 600 ms go through the window's own handling (`Arena.act`, `Feedback`) and are followed
+      to the server: started, or never executed (stale, refused, dropped). Each hit is confirmed at the first frame
+      that shows the state of the tick it hit on.
+    - Both hit questions ask the hitbox's **first** update. The persistent hitbox's later two ticks (OD10) are not in
+      the fairness numbers.
+    - The 2D static-enemy scenarios (`movement`, `attack`, `walking`, `moving_attacker`, `stairs`) are unchanged by
+      M4-4. Their drain numbers equal M4-3 round 4's, to the number. For example: stairs corrections 243–309 at
+      100 ms, peer view while walking 270–291 ms, standing hit p50 166.0–175.9 ms, walking drained 382–435.
+
+    **drain (PROVISIONAL default).** Disagreement, % of all sampled presses: *total (target / attacker / floor rule /
+    both)* [with an ideal rewind bound]:
+
+    | Scenario | 0 (none) | 0 ±10 1% | 50 ±10 1% | 100 ±10 1% | 200 ±10 1% | 100 ±10, no loss |
+    |---|---|---|---|---|---|---|
+    | moving target 70 (52 px/s) | 6.0–6.1 (all target) [0] | 6.4–6.5 [0] | 8.1–8.5 [0] | **10.2–10.3 (all target) [0]** | 14.2–15.4 [0] | 9.6–9.8 [0] |
+    | moving target 150 (88.6 px/s) | 11.3–11.6 (all target) [0] | 12.0–12.1 [0] | 15.9–16.1 [0] | **19.8–20.1 (all target) [0]** | 27.3–28.3 [0] | 18.7–19.0 [0] |
+    | moving both | 3.3–3.4 (2.6 / 0.7–0.8 / 0 / 0) [0.7–0.8] | 3.7–4.2 [0.9–1.2] | 4.4–4.7 [1.1–1.2] | **4.8–5.5 (4.0–4.6 / 0.6–0.7 / 0 / 0.1–0.2) [1.2–1.5]** | 6.4–7.4 (5.5–6.4 / 0.6–0.7 / 0 / 0.3–0.4) [1.4–1.8] | 4.5–4.6 [0.7–0.8] |
+    | stairs, moving enemy | 16.0–16.3 (8.8–9.0 / 0 / 7.1–7.3 / 0) [0] | 17.5–18.2 [0] | 22.8–23.5 [0] | **28.2–29.6 (14.3–15.2 / 0 / 13.8–14.4 / 0) [0]** | 38.2–39.7 (19.8–20.9 / 0 / 18.3–18.9 / 0) [0] | 27.6–27.8 [0] |
+    | (2D) attacker walks to a still enemy | 1.5–1.7 (all attacker) | 1.8–2.3 | 2.3–2.7 | 2.3–3.0 | 2.4–2.8 | 1.7–1.9 |
+    | stairs, still enemy, attacker strafing | 0 | 1.2–1.3 | 2.1–2.3 | 2.1–2.7 (0 / 1.0–1.3 / 1.1–1.4 / 0) | 1.2–1.5 | 0 |
+
+    Seen as a hit but missed / seen as a miss but hit, % of each:
+
+    | Scenario | 0 (none) | 100 ±10 1% | 200 ±10 1% |
+    |---|---|---|---|
+    | moving target 70 | 16.4–16.7 / 3.7 | 27.3–27.8 / 6.3–6.5 | 37.7–39.7 / 8.9–9.8 |
+    | moving target 150 | 25.2–25.8 / 7.6–7.8 | 45.8–46.4 / 12.8–13.0 | 62.9–64.0 / 17.7–18.8 |
+    | moving both | 20.3–20.9 / 1.2–1.3 | 26.9–33.1 / 2.1–2.3 | 40.3–41.3 / 2.4–3.4 |
+    | stairs, moving enemy | 39.3–40.2 / 9.6–9.9 | 68.8–70.5 / 17.2–18.4 | 92.9–93.3 / 23.5–25.2 |
+
+    Hit confirmation, p50 / p95 ms (hits):
+
+    | Case | 0 (none) | 0 ±10 1% | 50 ±10 1% | 100 ±10 1% | 200 ±10 1% | 100 ±10, no loss |
+    |---|---|---|---|---|---|---|
+    | standing, still enemy (2D `attack`: HP drop seen) | 61.8–65.7 / 94–103 | 72.0–77.3 / 127–210 | 115–123 / 213–267 | **166.0–175.9** / 369–385 | 269–273 / 561–596 | 163.7–171.4 / 206–208 |
+    | walking swing, still enemy (2D `walking`: its tick seen) | 65–70 / 98–110 | 120–123 / 258–263 | 165–173 / 345–357 | **210–229** / 449–469 | 321–325 / 604–616 | 177–180 / 216–225 |
+    | standing, moving enemy 70 (48 hits) | 62–66 / 95–108 | 67–82 / 122–281 | 110–117 / 161–355 | **160–174** / 214–237 | 273–276 / 552–634 | 163–176 / 202–213 |
+    | standing, moving enemy 150 (55–89 hits) | 59–64 / 94–103 | 68–78 / 121–160 | 115–130 / 182–241 | **164–173** / 244–394 | 261–273 / 314–450 | 160–167 / 196–205 |
+    | walking, moving enemy (12–27 hits) | 51–61 / 80–93 | 101–133 / 223–296 | 170–182 / 308–388 | **228–251** / 415–531 | 319–365 / 579–796 | 183–195 / 238–275 |
+    | standing, enemy on the stairs (66–72 hits) | 56–71 / 101–120 | 67–71 / 123–200 | 119–132 / 183–246 | **167–168** / 239–360 | 253–267 / 316–615 | 161–167 / 200–208 |
+
+    Swings shown but never executed (all stale: a claim older than the 600 ms window; none refused, none dropped).
+    With the 2D ones (720 standing, about 693 walking), that is **0 for every case up to 100 ms ±10 1%** and with
+    jitter alone:
+
+    | Case | 200 ±10 1% |
+    |---|---|
+    | standing, still enemy (2D) | 3–10 of 720 |
+    | walking, still enemy (2D) | 17–25 of 692–695 |
+    | moving target 70 / 150 / stairs (standing) | 1–7 of 192 each |
+    | moving both (walking) | 3–10 of 192 |
+
+    Discarded movement steps (overflow / drained), inputs sent per seed run: movement about 28,550, walking about
+    9,600:
+
+    | Scenario | 0 (none), jitter alone | 0 ±10 1% | 50 ±10 1% | 100 ±10 1% | 200 ±10 1% |
+    |---|---|---|---|---|---|
+    | movement | 0 / 0 | 0 / 88–90 | 0 / 74–112 | 0 / 114–133 | 262–282 / 148–157 |
+    | walking | 0 / 0 | 0 / 220–242 | 0 / 304–328 | 0 / 382–435 | 95–105 / 409–481 |
+    | moving both | 0 / 0 | 0 / 132–146 | 0 / 187–204 | 0 / 257–290 | 54–65 / 214–301 |
+
+    How a moving enemy looks (moving target, the window's frames). Frozen frames include the walk's own waypoint
+    pauses: 18.5% and 31.9% of frames at 0 ms.
+
+    | | 0 (none) | 0 ±10 1% | 100 ±10 1% | 200 ±10 1% | 100 ±10, no loss |
+    |---|---|---|---|---|---|
+    | 70: frozen frames / longest freeze ms / frames over twice a step | 18.5% / 100 / 0 | 18.5–19.0% / 200–250 / 45–61 | 16.7–17.8% / 333–350 / 82–100 | 18.1–19.4% / 417–433 / 76–90 | 13.5–13.8% / 100 / 29–43 |
+    | 150: the same | 31.9% / 100 / 0 | 30.1–30.8% / 250–267 / 47–58 | 26.1–27.0% / 350 / 62–84 | 27.3–28.3% / 433–450 / 65–76 | 23.1–23.2% / 100 / 17–21 |
+
+    - At 0 ms the walk on screen is the server's walk two ticks late, waypoint pauses and all. Under loss it freezes
+      for up to one retransmission, then catches up in a jump, exactly as a peer does (§2.5).
+    - The window's frames run at 60 fps against 20 Hz states, interpolated, so a 50 ms pause shows as 3 frozen frames.
+
+    **Corrections near a moving solid enemy (new; `moving both`)**:
+    - The prediction blocks on the enemy where the last snapshot had it. The server has walked it on since: up to one
+      of its steps by the tick that reads the input, plus the latency.
+    - So a player pushing against a walking solid enemy is corrected on most snapshots. With no loss: 255–260
+      corrections at 0 ms and 427–437 at 100 ms ±10 ms, each at most 3.5 px (one bandit step).
+    - Under loss a few are large: at 100 ms ±10 1%, max 7.5–99 px and 0–0.23 large ones a minute; at 200 ms, max
+      93–128 px and 0.45–1.14 a minute.
+    - *(Inferred:)* the enemy walks into and through a player (players don't block enemies, in either runtime). A
+      player inside a solid enemy's box then slides out differently in the replay and on the server.
+    - Not fixed here: it would take predicting enemies (they are server-authoritative, never predicted, by the brief)
+      or players blocking enemies (single-player's player doesn't).
+    **The three presets** (same seeds, every profile).
+    - **Identical in all three, to the number:** the still-attacker scenarios. That covers moving target 70 and 150
+      and the enemy on the stairs, for fairness, causes, hit confirmation and swings never run. A standing player's
+      queue is emptied by the standing rule in every preset. Standing hit confirmation is identical too.
+    - The 2D static-enemy rows equal each preset's own M4-3 round-3/4 numbers. For example, at 100 ms the peer view
+      while walking is 270–291 ms (drain), 260–266 (small) and 516–541 (deep).
+    - **Where the presets differ:** a walking attacker. The values are drain / small / deep:
+
+    | At 100 ms ±10 1% (and 200 ms) | drain (PROVISIONAL) | small | deep |
+    |---|---|---|---|
+    | Moving both: disagreement % (target / attacker / both) [ideal rewind] | 4.8–5.5 (4.0–4.6 / 0.6–0.7 / 0.1–0.2) [1.2–1.5] | 4.3–4.7 (3.2–3.4 / 0.7–1.0 / 0.2–0.4) [1.3–1.6] | 7.2–7.7 (6.6–7.0 / 0.4 / 0.1–0.2) [0.5–0.7] |
+    | ... at 200 ms | 6.4–7.4 [1.4–1.8] | 6.5–7.4 [2.1–2.7] | 8.2–9.1 [0.8–1.0] |
+    | Moving both: seen as a hit but missed % | 26.9–33.1 | 25.6–27.3 | 53.7–61.9 |
+    | Walking swing confirmed p50 / p95 ms, still enemy | 210–229 / 449–469 | 200–205 / 348–394 | 457–474 / 517–566 |
+    | Walking hit on a moving enemy, p50 / p95 ms | 228–251 / 415–531 | 197–210 / 265–523 | 451–487 / 500–589 |
+    | Swings shown, never executed: 0 at 0–100 ms in every preset; at 200 ms, walking (2D) / moving both | 17–25 of ~693 / 3–10 of 192 | 7–11 / 1–8 | 75–139 / 18–35 |
+    | Discarded steps, overflow / drained: movement, walking, moving both | 0/114–133, 0/382–435, 0/257–290 | 1393–1502/0, 457–547/0, 313–358/0 | 0/0, 0/0, 0/0 |
+    | ... at 200 ms | 262–282/148–157, 95–105/409–481, 54–65/214–301 | 1877–2031/0, 651–737/0, 344–456/0 | 262–284/0, 103–109/0, 60–67/0 |
+    | Corrections near the moving enemy (moving both): n, max px, large a minute | 732–796, 7.5–99, 0–0.23 | 768–827, 94.5–109.5, 11.1–13.0 | 449–468, 3.5, 0 |
+    | ... at 200 ms | 941–1107, 93–128, 0.45–1.14 | 955–1122, 109.5–133.5, 8.2–11.8 | 705–720, 93–128, 0.45–0.91 |
+
+    - Under deep, a walking attacker's backlog makes its attacks land later. So the target has moved further by then,
+      and target-caused disagreement is higher (6.6–7.0% against 4.0–4.6%).
+    - Under small, the dropped steps add corrections (11–13 large a minute beside the moving enemy).
+    - Drain sits between them.
+    - None of this changes the M4-3 verdict: **all three presets still fail important criteria, so no winner is
+      declared, and drain stays PROVISIONAL**, to be judged by the owner playing all three:
+      - OD1's walking-swing confirmation is missed by every preset;
+      - deep breaks condition 6;
+      - small fails the correction criteria.
+    - M4-4 adds no new failure that separates them. Swings never executed stay 0 within OD1's envelope in all three.
+      At 200 ms they are reported, not accepted (all stale; none refused, none dropped).
+
+  - **The M4-5 question: does moving-target disagreement at OD1's envelope justify lag compensation?** The numbers,
+    at 100 ms ±10 ms 1% (identical in every preset for a still attacker):
+    - **Target motion is now the dominant cause.**
+      - A still attacker against a walking bandit: 10.2–10.3% of presses disagree at 52 px/s and 19.8–20.1% at
+        88.6 px/s, every one caused by the target's motion.
+      - On the stairs: 28.2–29.6%, about half from the target's motion and half from the floor rule as the target
+        climbs through `same_level`'s reach.
+      - Of what looked like a hit, 27.3–27.8%, 45.8–46.4% and 68.8–70.5% missed.
+      - With M4-3's prediction, the attacker's own share is small: 0.6–0.7% in moving both, 2.3–3.0% for the 2D
+        walk-up.
+    - **Latency's own part.** At 0 ms the same scenarios disagree 6.0–6.1%, 11.3–11.6% and 16.0–16.3%. That floor
+      comes from showing the enemy two ticks behind (Playback) plus the tick quantisation. So 100 ms adds about 4, 8
+      and 13 points.
+    - **What a rewind could remove.** The ideal rewind bound (the real attacker against the targets as shown) is 0% in
+      all three. It would also remove the floor-rule part on the stairs, since the target's elevation would be the
+      one shown. In moving both it leaves 1.2–1.5%: the attacker's share.
+    - **Caveats.**
+      - The bound is not a measurement of an implementation.
+      - The rewind needed at 100 ms is the uplink (about 50 ms), the two-tick display delay (100 ms) and up to a tick
+        of quantisation, so about 150–250 ms *(inferred)*. That is inside OD5's 300 ms cap. At 200 ms it would reach
+        the cap.
+      - These are the probe's adversarial walks, through the hitbox. Real fights will vary.
+      - The judge asks the hitbox's first update. The persistent hitbox's two later ticks already forgive some misses
+        on the server (an enemy walking into the swing).
+    - **Recommendation (for the owner to decide or escalate): the measurements support approving M4-5.**
+      - At OD1's 100 ms envelope, between a quarter and a half of the presses that look like hits on a walking enemy
+        miss, and about 70% beside stairs. Target motion, which only lag compensation addresses, causes essentially
+        all of it.
+      - Without a rewind, the reachable improvement is the 0 ms floor (6–16%). Only a shorter interpolation delay or a
+        higher tick rate would lower that.
+      - The plan sets no numeric "owner's budget", so whether these numbers exceed it is the owner's call. If the
+        owner judges 10–30% disagreement on walking enemies acceptable for the co-op prototype, M4-5 can stay unbuilt.
+      - The 600 ms claim window's condition 4 stands either way: today, hits use the current server geometry only.
 
 **M4-5 — lag compensation (d), only if M4-4's measured moving-target disagreement at OD1's envelope exceeds the
 owner's budget:**

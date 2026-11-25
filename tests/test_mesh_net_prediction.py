@@ -19,8 +19,10 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import math
 import random
+from collections import deque
 from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
@@ -374,7 +376,7 @@ def test_an_n7_transfer_walks_nothing_into_the_new_room() -> None:
         def __init__(self, *_args: Any) -> None:
             pass
 
-        def sync(self, state: Any, positions: dict[int, Any], own: Any, dt: float) -> None:
+        def sync(self, state: Any, positions: dict[int, Any], own: Any, dt: float, enemies: Any = None) -> None:
             shown.append(positions.get(own))
 
         def draw(self, dt: float) -> None:
@@ -1138,6 +1140,55 @@ def test_the_drain_never_drops_a_step_at_a_fork(where: str) -> None:
         assert drops[0] == 5, "the turning step kept; the next tick drains"
         assert path[4][2] == ("crossing/col_landing_west" if where == "below the landing" else None), path
         assert where != "beside the bandit" or path[4][:2] == (624.5, 244.0), path
+
+
+def test_the_fork_check_walks_copies_never_the_real_body() -> None:
+    """(#615 review, F02) SceneRoom._forks walks this tick's step and the waiting inputs twice from copies of the body:
+    the real body's position, floor and entity data (its elevation, as the floor solver writes it) are untouched,
+    here on the stairs, where those walks climb."""
+    with stairs_room() as room:
+        pass
+    eid = room.join()
+    to_stairs_edge(room, eid)
+    p = room.players[eid]
+    p.ack, p.dx, p.dy = 0, 0, 1
+    p.moves = deque([(1, 0, 1), (2, 0, 1), (3, -1, 1), (4, 0, 1)])
+    data = p.body.mesh_entity_data
+    before = (p.body.center_x, p.body.center_y, p.body.mesh_hd2d_floor, copy.deepcopy(data))
+    solids = room.solids()
+    room._forks(p, solids)
+    assert (p.body.center_x, p.body.center_y, p.body.mesh_hd2d_floor, p.body.mesh_entity_data) == before
+    assert p.body.mesh_entity_data is data, "its own entity data, not a copy put in its place"
+    twin = copy.deepcopy(p.body)
+    for _seq, dx, dy in [(0, 0, 1), *p.moves]:
+        room.walk(twin, dx, dy, solids)
+    assert twin.mesh_entity_data["elevation"] != data["elevation"], "(those walks do climb: the check could tell)"
+
+
+@pytest.mark.parametrize(("x", "norths", "steps", "forks"), [(636.0, 2, 1.0, False), (632.0, 1, math.sqrt(2), True),
+                                                             (632.0, 2, math.sqrt(5), True)])
+def test_the_fork_threshold_is_one_step(x: float, norths: int, steps: float, forks: bool) -> None:
+    """(#615 review, F05) The drain may cost one step and no more: beside the bandit (2D), the oldest waiting input a
+    step west, then ``norths`` steps north. At x 636 the bandit is never in the way: the two ends are exactly one step
+    apart, dropped. At 632 the step west puts it in the way of the steps north: the ends are sqrt(2) and sqrt(5) steps
+    apart (just over one, about two), refused."""
+    with coop_room() as room:
+        pass
+    eid = room.join()
+    place(room, eid, x, 244.0, 0)
+    p = room.players[eid]
+    p.ack, p.dx, p.dy = 0, 0, 0
+    p.moves = deque([(1, -1, 0)] + [(2 + i, 0, 1) for i in range(norths)])
+    solids = room.solids()
+    ends = []
+    for skip in (False, True):
+        twin = copy.deepcopy(p.body)
+        for i, (_seq, dx, dy) in enumerate([(0, 0, 0), *p.moves]):
+            if not (skip and i == 1):
+                room.walk(twin, dx, dy, solids)
+        ends.append((twin.center_x, twin.center_y))
+    assert math.dist(*ends) / room.step_px == pytest.approx(steps)
+    assert room._forks(p, solids) is forks
 
 
 @pytest.mark.parametrize("preset", ["small", "deep", "drain"])

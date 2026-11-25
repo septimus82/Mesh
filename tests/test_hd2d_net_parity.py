@@ -394,3 +394,32 @@ def test_one_movement_step_serves_the_authority_and_the_prediction() -> None:
                            ("x = move(b, d, s)", {"<module>"})):  # (what the scan must catch)
         assert movers(source) == caught, source
 
+
+
+def calls_to(source: str, names: set[str]) -> set[str]:
+    """The ``<anything>.name(...)`` calls in ``source`` whose attribute is one of ``names``."""
+    return {n.func.attr for n in ast.walk(ast.parse(source))
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr in names}
+
+
+def test_one_route_model_serves_single_player_and_the_authority() -> None:
+    """M4-4 (owner decision OD7): FloorRoute's decision logic (route legs, waits, walking out, stranding, backing off)
+    is engine.hd2d.route alone. Single-player's behaviour (engine/behaviours/floor_route.py) and the net authority
+    (mesh_net) define none of it and plan nothing themselves (no World.path, ways_out, blocked or stand of their own
+    for a route); both call the model (tests/test_mesh_net_moving_enemies.py spies on both)."""
+    route = {"_walk_out", "_strand", "_arrive", "parse_route", "from_config", "REPLANS", "BACK_OFF_S", "STUCK_S",
+             "RETRY_S", "_replans", "_waiting", "_ways", "FloorRoute"}
+    planning = {"path", "ways_out", "blocked"}
+    adapter = REPO / "engine" / "behaviours" / "floor_route.py"
+    for path in [adapter, *sorted((REPO / "mesh_net").rglob("*.py"))]:
+        source = path.read_text(encoding="utf-8")
+        assert not defined_names(source) & route, f"{path.relative_to(REPO)} defines a piece of the route model"
+        assert not calls_to(source, planning), f"{path.relative_to(REPO)} plans a route itself"
+    assert not calls_to(adapter.read_text(encoding="utf-8"), {"move", "stand"}), "the adapter moves nothing itself"
+    model = (REPO / "engine" / "hd2d" / "route.py").read_text(encoding="utf-8")
+    imported = {n.module for n in ast.walk(ast.parse(model)) if isinstance(n, ast.ImportFrom)} | {
+        a.name for n in ast.walk(ast.parse(model)) if isinstance(n, ast.Import) for a in n.names}
+    assert imported <= {"__future__", "math", "typing", "engine.hd2d.world", "engine.physics_model"}, imported
+    for source, caught in (("class FloorRoute: pass", route), ("def _walk_out(self): pass", route),
+                           ("world.path(a, b)", None), ("self.world.ways_out(x, y, z)", None)):  # (what it must catch)
+        assert (defined_names(source) & caught) if caught else calls_to(source, planning), source
