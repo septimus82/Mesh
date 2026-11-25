@@ -205,13 +205,17 @@ class EditorFileOpsController:
         The whole plan is checked before any of it runs: every move's source exists and its destination is a plain
         project path that doesn't exist yet (a case-only rename of the same file excepted), is no other step's
         destination and isn't inside the folder being moved; every file touched, links and junctions followed, is
-        inside the project. ``os.replace`` overwrites silently, so this is what stands between a rename and a lost
-        file."""
+        inside the project; nothing deleted is a folder (its references would be rewritten wrongly and a move to the
+        trash can stop half-way). ``os.replace`` overwrites silently, so this is what stands between a rename and a
+        lost file."""
         root = Path(repo_root)
         claimed: set[str] = set()
         for step in fs_steps:
             if not contained(root, step.src_rel):
                 return f"{step.src_rel} is not a path inside the project."
+            if step.kind == "delete" and os.path.isdir(root / step.src_rel):
+                # The whole selection is refused, never part of it: a half-done delete is worse than none (#668).
+                return f"{step.src_rel} is a folder. Deleting folders isn't supported here; delete the files inside, or use Studio."
             if step.kind != "move" or not step.dst_rel:
                 continue
             src, dst = root / step.src_rel, root / step.dst_rel
@@ -1172,6 +1176,11 @@ class EditorFileOpsController:
             # Assuming model treats empty string as "replace with empty".
             mapping[p] = ""
             fs_steps.append(FsStep(src_rel=p, dst_rel=None, kind="delete"))
+
+        refusal = self._plan_refusal(repo_root, fs_steps, [])  # (folders and paths outside the project: nothing asked)
+        if refusal:
+            self._refuse("Delete refused", f"{refusal} Nothing was changed.")
+            return False
 
         modifications, all_replacements = self._scan_and_compute_replacements(repo_root, mapping)
 

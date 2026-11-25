@@ -1,6 +1,8 @@
 """
 Contract tests for asset refactoring model (V2).
 """
+import pytest
+
 from engine.editor.asset_refactor_model import (
     AssetReference,
     Replacement,
@@ -67,6 +69,18 @@ def test_compute_replacements_folder_prefix():
     assert val_map["assets/chars/hero.png"] == "assets/unit_v2/hero.png"
     assert val_map["assets/chars/villain.png"] == "assets/unit_v2/villain.png"
     # box.png should not be touched
+
+@pytest.mark.fast
+def test_compute_replacements_folder_mapped_to_empty_clears_its_contents():
+    """A deleted folder (mapped to "") clears the references inside it, never rewrites them to "/<name>" (#668)."""
+    refs = [
+        AssetReference("e1", "sprite", "assets/chars/hero.png", "k1"),
+        AssetReference("e2", "sprite", "assets/chars/sub/villain.png", "k2"),
+        AssetReference("e3", "sprite", "assets/props/box.png", "k3"),
+    ]
+    reps = compute_replacements(refs, {"assets/chars": ""})
+    assert {r.old_value: r.new_value for r in reps} == {"assets/chars/hero.png": "", "assets/chars/sub/villain.png": ""}
+
 
 def test_apply_replacements_scene_immutability():
     scene = {

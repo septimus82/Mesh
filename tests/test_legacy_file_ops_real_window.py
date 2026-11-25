@@ -140,6 +140,53 @@ def test_every_delete_entry_point_asks_first_and_keeps_a_trash_copy(ed: Any, ent
     assert not _errors(ed)
 
 
+def _scene_reference_in_memory(ed: Any) -> dict[str, Any]:
+    """The open scene holds a reference into assets/sprites, as an edited scene would (the folder delete rewrote it
+    to "/hero.png" before it was refused: #668 review)."""
+    scene = ed.window.scene_controller._loaded_scene_data
+    scene["entities"].append({"id": "ref", "sprite": HERO})
+    return scene
+
+
+@pytest.mark.parametrize("entry", ["edit_menu", "palette", "del_key"])
+def test_deleting_a_folder_is_refused_at_every_entry_point(ed: Any, entry: str) -> None:
+    import copy
+
+    from engine.editor.editor_actions import run_editor_action
+
+    scene = _scene_reference_in_memory(ed)
+    scene_before, files_before = copy.deepcopy(scene), _files(ed.project)
+    _select(ed, "assets/sprites")
+    if entry == "edit_menu":
+        run_editor_action("editor.delete", ed.editor, ed.window)
+    elif entry == "palette":
+        run_editor_action("editor.project_explorer.delete_selected", ed.editor, ed.window)
+    else:
+        _key(ed.window, "DELETE")
+    assert not _dialog_open(ed)
+    assert _files(ed.project) == files_before
+    assert ed.window.scene_controller._loaded_scene_data == scene_before
+    assert any("Deleting folders isn't supported here" in m for m in _errors(ed)), ed.editor.feedback.pending()
+
+
+def test_a_selection_mixing_files_and_a_folder_is_refused_whole(ed: Any) -> None:
+    import copy
+
+    (ed.project / "assets/other/box.png").write_bytes(b"PROJECT-BOX")
+    scene = _scene_reference_in_memory(ed)
+    scene_before, files_before = copy.deepcopy(scene), _files(ed.project)
+    _select(ed, HERO)
+    ed.editor.project_explorer._toggle_selection_by_path("assets/other")
+    editor = ed.editor
+    assert sorted(editor.project_explorer.selected_paths(editor._project_explorer_selectable_rows())) == [
+        "assets/other", HERO]
+    editor.run_editor_action("editor.delete")
+    assert not _dialog_open(ed)
+    assert _files(ed.project) == files_before
+    assert ed.window.scene_controller._loaded_scene_data == scene_before
+    assert any("Deleting folders isn't supported here" in m for m in _errors(ed))
+
+
 def test_cancelling_the_delete_dialog_changes_nothing(ed: Any) -> None:
     before = _files(ed.project)
     _select(ed, HERO)
