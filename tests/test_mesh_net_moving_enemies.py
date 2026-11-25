@@ -226,18 +226,28 @@ def test_every_n7_instance_walks_its_own_enemies(routed: dict[str, bytes], monke
 
 def test_a_hit_on_a_moving_enemy_is_judged_where_it_is_now(routed: dict[str, bytes]) -> None:
     """The attack's hitbox is made where the attacker stands, on the tick the server reads it, against the enemy where
-    it has just walked that tick (owner condition 4: current server geometry, never a past position)."""
+    it has just walked that tick (owner condition 4: current server geometry, never a past position): a hitbox that
+    overlaps its feet box after this tick's walk by half a step, but not before it, hits on that tick; one where it
+    stood 20 ticks ago misses."""
+    from engine.physics_model import entity_aabb
+
     room = room_of(routed)
-    for _ in range(60):  # (off the east platform's middle, walking)
+    for _ in range(60):  # (off the east platform's middle, walking west along it)
         room.step()
     enemy = room.enemies[BANDIT]
-    start = (enemy.body.center_x, enemy.body.center_y)
+    long_ago = (enemy.body.center_x, enemy.body.center_y)
     for _ in range(20):
         room.step()
+    before = entity_aabb(enemy.body)
     twin = copy.deepcopy(room, {id(room.world): room.world})
     twin.step()
-    nxt = twin.enemies[BANDIT].body
-    assert ((nxt.center_x - start[0]) ** 2 + (nxt.center_y - start[1]) ** 2) ** 0.5 > 48, "well away from there"
+    after = entity_aabb(twin.enemies[BANDIT].body)
+    dx = after.x - before.x
+    assert after.y == before.y and abs(dx) > 1.0, "walking along x this tick"
+    side = 1.0 if dx > 0 else -1.0
+    near = after.x + side * (after.w / 2 - abs(dx) / 2)  # (the hitbox's edge: half a step into where its feet are now)
+    centre = near + side * room.hitbox / 2
+    assert abs(centre - after.x) < (room.hitbox + after.w) / 2 <= abs(centre - before.x), "overlaps now, not before"
 
     def swing_at(x: float, y: float) -> bool:
         """An attack read on the next tick by a player facing east whose hitbox is centred at (x, y) px."""
@@ -250,12 +260,10 @@ def test_a_hit_on_a_moving_enemy_is_judged_where_it_is_now(routed: dict[str, byt
         trial.step()
         return trial.enemies[BANDIT].hit_seq == 1
 
-    from engine.physics_model import entity_aabb
-
-    then = entity_aabb(scene_room.Body(*start, nxt.width, nxt.height, nxt.mesh_entity_data))
-    now = entity_aabb(nxt)
-    assert not swing_at(then.x, then.y), "where it was: a miss"
-    assert swing_at(now.x, now.y), "where it is now (this tick's walk done first): a hit"
+    then = entity_aabb(scene_room.Body(*long_ago, enemy.body.width, enemy.body.height, enemy.body.mesh_entity_data))
+    assert abs(then.x - after.x) > 48, "well away from there"
+    assert not swing_at(then.x, then.y), "where it was 20 ticks ago: a miss"
+    assert swing_at(centre, after.y), "where it is after this tick's walk: a hit, on this tick"
 
 
 @pytest.mark.parametrize("case", ["enemy patrol", "enemy wander", "solid patrol", "solid floor route",
