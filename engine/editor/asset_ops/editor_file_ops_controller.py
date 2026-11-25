@@ -11,11 +11,13 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
+from engine.editor.project_explorer.project_explorer_inline_rename_model import INVALID_FILENAME_CHARS
 from engine.editor.project_explorer_power_tools_model import (
     compute_common_parent,
     format_paths_for_clipboard,
 )
 from engine.editor.project_explorer_reveal_model import format_copy_path_text
+from engine.hd2d.glb import contained
 from engine.swallowed_exceptions import _log_swallow
 
 from .asset_move_model import (
@@ -181,6 +183,49 @@ class EditorFileOpsController:
         if trash_root.exists():
             shutil.rmtree(trash_root, ignore_errors=True)
 
+    def _plan_refusal(self, repo_root: Path, fs_steps: List[FsStep], json_paths: List[str]) -> Optional[str]:
+        """Why this plan can't run without destroying or escaping anything, or None (#618).
+
+        The whole plan is checked before any of it runs: every move's source exists and its destination is a plain
+        project path that doesn't exist yet (a case-only rename of the same file excepted), is no other step's
+        destination and isn't inside the folder being moved; every file touched, links and junctions followed, is
+        inside the project. ``os.replace`` overwrites silently, so this is what stands between a rename and a lost
+        file."""
+        root = Path(repo_root)
+        claimed: set[str] = set()
+        for step in fs_steps:
+            if not contained(root, step.src_rel):
+                return f"{step.src_rel} is not a path inside the project."
+            if step.kind != "move" or not step.dst_rel:
+                continue
+            src, dst = root / step.src_rel, root / step.dst_rel
+            if not os.path.lexists(src):
+                return f"{step.src_rel} no longer exists."
+            why = rel_refusal(step.dst_rel)
+            if why:
+                return f"Can't use {step.dst_rel}: {why}"
+            if not contained(root, step.dst_rel):
+                return f"{step.dst_rel} is outside the project."
+            if f"{step.dst_rel}/".startswith(f"{step.src_rel}/"):
+                return f"{step.src_rel} can't be moved inside itself."
+            if any(f"{step.src_rel}/".startswith(f"{other.src_rel}/") for other in fs_steps if other is not step):
+                return f"{step.src_rel} is inside another item being moved; move one or the other."
+            case_only = step.src_rel.casefold() == step.dst_rel.casefold()
+            if os.path.lexists(dst) and not (case_only and _same_file(src, dst)):
+                return f"{step.dst_rel} already exists. Rename or move it first; nothing was changed."
+            key = os.path.normcase(step.dst_rel)
+            if key in claimed:
+                return f"Two items would both become {step.dst_rel}; nothing was changed."
+            claimed.add(key)
+        for path_rel in json_paths:
+            if not contained(root, path_rel):
+                return f"{path_rel} is not a file inside the project."
+        return None
+
+    def _refuse(self, title: str, reason: str) -> None:
+        print(f"[Refactor] {title}: {reason}")
+        self._toast(f"{title}: {reason}", severity="error", seconds=6.0)
+
     def execute_pending_refactor(self) -> None:
         """
         Execute the staged refactor plan with rollback support.
@@ -203,6 +248,14 @@ class EditorFileOpsController:
 
         repo_root = getattr(self.controller.window, "repo_root", None)
         if not repo_root:
+            return
+
+        # 0. Re-check the whole plan against the disk as it is now (it may have changed while the dialog was open):
+        # refused before anything is written, so nothing needs rolling back (#618).
+        refusal = self._plan_refusal(repo_root, plan.fs_steps, list(plan.json_updates))
+        if refusal:
+            self._refuse(f"{plan.op_kind.capitalize()} refused", refusal)
+            self._pending_refactor_plan = None
             return
 
         print(f"[Refactor] Executing {plan.op_kind}...")
@@ -911,6 +964,8 @@ class EditorFileOpsController:
             case_only = is_case_only_rename(old_rel, new_rel)
 
             # Basic checks
+            if self._plan_refusal(repo, [FsStep(old_rel, new_rel, "move")], []):  # (#618: same guard as V2)
+                return False
             if not old_abs.exists():
                 return False
             if new_abs.exists() and not case_only:
@@ -976,13 +1031,13 @@ class EditorFileOpsController:
         except ValueError:
             return False
 
-        # 2. Paths
-        parent_dir = old_full.parent
-        new_full = parent_dir / new_name
-        try:
-            new_rel = new_full.relative_to(repo_root).as_posix()
-        except ValueError:
+        # 2. Paths: a rename gives a new name in the same folder, never a path (#618)
+        why = name_refusal(new_name)
+        if why:
+            self._refuse("Rename refused", why)
             return False
+        parent_rel = posixpath.dirname(old_rel)
+        new_rel = f"{parent_rel}/{new_name}" if parent_rel else new_name
         if old_rel == new_rel:
             return False
 
@@ -993,6 +1048,10 @@ class EditorFileOpsController:
         # 4. Build Plan
         # Rename is effectively a move
         fs_step = FsStep(src_rel=old_rel, dst_rel=new_rel, kind="move")
+        refusal = self._plan_refusal(repo_root, [fs_step], list(modifications))
+        if refusal:
+            self._refuse("Rename refused", refusal)
+            return False
 
         fs_summary = f"Rename: {old_rel} -> {new_name}"
         preview_lines = format_refactor_preview(
@@ -1068,6 +1127,9 @@ class EditorFileOpsController:
         if not repo_root:
             return False
 
+        if str(dest_folder or "").strip()[:1] in ("/", "\\"):  # (an absolute path, never the project's root: #618)
+            self._refuse("Move refused", f"{dest_folder} is not a folder path inside the project (like assets/sprites).")
+            return False
         dest_norm = normalize_repo_rel(dest_folder)
         full_mapping: dict[str, str] = {}
         fs_steps: list[FsStep] = []
@@ -1096,6 +1158,10 @@ class EditorFileOpsController:
              return False
 
         modifications, all_replacements = self._scan_and_compute_replacements(full_mapping)
+        refusal = self._plan_refusal(repo_root, fs_steps, list(modifications))
+        if refusal:
+            self._refuse("Move refused", refusal)
+            return False
 
         if len(fs_steps) == 1:
             fs_summary = f"Move: {fs_steps[0].src_rel} -> {fs_steps[0].dst_rel}"
@@ -1243,6 +1309,44 @@ class EditorFileOpsController:
         if reps:
             return apply_replacements(current_scene, reps)
         return None
+
+
+_WINDOWS_RESERVED = frozenset(
+    {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
+)
+
+
+def name_refusal(name: str) -> Optional[str]:
+    """Why ``name`` can't be one file or folder name in a project on any OS (#618), or None.
+
+    Refuses separators and drive colons (a name is never a path), ``.``/``..``, Windows-invalid characters, a
+    trailing space or dot (Windows drops it, so it names another file) and Windows' reserved device names."""
+    if name in ("", ".", ".."):
+        return f"'{name}' is not a file name."
+    if any(ch in INVALID_FILENAME_CHARS or ord(ch) < 32 for ch in name):
+        return f'\'{name}\' contains a character a file name can\'t have (/ \\ : < > " | ? * or a control character).'
+    if name.rstrip(" .") != name:
+        return f"'{name}' ends in a space or a dot, which Windows drops."
+    if name.split(".")[0].rstrip(" ").upper() in _WINDOWS_RESERVED:
+        return f"'{name}' is a device name Windows reserves."
+    return None
+
+
+def rel_refusal(rel: str) -> Optional[str]:
+    """Why ``rel`` isn't a plain project-relative path (``a/b/c.png``: no absolute path, drive, ``..`` or
+    backslash; every part a valid name), or None."""
+    for part in rel.split("/"):
+        why = name_refusal(part)
+        if why:
+            return why
+    return None
+
+
+def _same_file(a: Path, b: Path) -> bool:
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
 
 
 def is_case_only_rename(old_rel: str, new_rel: str) -> bool:
