@@ -98,14 +98,26 @@ class Inventory:
             self.state_bucket["items"] = items
         self._state = items
 
+    @staticmethod
+    def _max_stack(item_id: str) -> int | None:
+        """How many of ``item_id`` one inventory can hold; None for an id the item database does not know."""
+        item = load_item_database().get(item_id)
+        if item is None:
+            return None
+        return item.max_stack if item.stackable else 1
+
+    def can_add(self, item_id: str, count: int = 1) -> bool:
+        """True when ``add_item(item_id, count)`` would add all ``count`` items (known id, room in the stack)."""
+        max_stack = self._max_stack(item_id)
+        return count > 0 and max_stack is not None and self.get_count(item_id) + count <= max_stack
+
     def add_item(self, item_id: str, count: int = 1) -> bool:
         if count <= 0:
             return False
-        item = load_item_database().get(item_id)
-        if item is None:
+        max_stack = self._max_stack(item_id)
+        if max_stack is None:
             return False
         bucket = int(self._state.get(item_id, 0))
-        max_stack = item.max_stack if item.stackable else 1
         new_total = min(max_stack, bucket + count)
         self._state[item_id] = new_total
         return new_total > bucket

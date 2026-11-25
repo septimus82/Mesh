@@ -101,11 +101,18 @@ class Vendor(Behaviour):
         current_currency = gs.get_counter(self.currency_counter, 0)
         if current_currency < price:
             return self._result(False, "Not enough gold", item_id=str(item_id), qty=1)
+        inv = get_or_create_inventory(gs.state.values)
+        # Check before charging: a purchase the inventory refuses (unknown id, full stack, owned non-stackable)
+        # must cost neither gold nor stock (#619).
+        if not inv.can_add(str(item_id), 1):
+            if self._item_db.get(str(item_id)) is None:
+                return self._result(False, f"Can't buy {item_id}: unknown item", item_id=str(item_id), qty=1)
+            name = self._resolve_item_name(str(item_id), item)
+            return self._result(False, f"Can't carry any more {name}", item_id=str(item_id), qty=1)
 
         # Deduct currency
         gs.add_counter(self.currency_counter, -price)
         # Add item to inventory
-        inv = get_or_create_inventory(gs.state.values)
         inv.add_item(item_id, 1)
         # Decrement stock if finite
         if quantity > 0:
