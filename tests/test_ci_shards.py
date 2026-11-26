@@ -118,6 +118,19 @@ def test_every_way_the_shards_fail_to_add_up_is_refused(change: str) -> None:
     assert problems, change
 
 
+def test_a_whole_run_as_one_shard_is_held_to_its_floor() -> None:
+    # Linux's default suite (#648): the whole suite as shard 1/1, checked the same way and held to the suite's floor,
+    # so a collection that lost tests fails instead of passing green.
+    outcomes = {t: "passed" for t in COLLECTED}
+    record = {"schema": 1, "complete": True, "shard": 1, "shards": 1, "commit": COMMIT, "scheme_digest": scheme_digest(1),
+              "collected": list(COLLECTED), "collected_digest": ids_digest(COLLECTED), "collection_skips": [],
+              "selected": list(COLLECTED), "outcomes": outcomes, "durations": {}, "exitstatus": 0}
+    junit = {1: {"tests": len(COLLECTED), "failures": 0, "errors": 0, "skipped": 0}}
+    assert check([record], shards=1, commit=COMMIT, junit=junit, min_selected=len(COLLECTED))[0] == []
+    problems, _ = check([record], shards=1, commit=COMMIT, junit=junit, min_selected=len(COLLECTED) + 1)
+    assert problems == [f"the shards' suite holds {len(COLLECTED)} tests, fewer than the {len(COLLECTED) + 1} it should"]
+
+
 def test_a_record_for_another_commit_than_this_run_is_refused() -> None:
     assert check(_records(), commit="c" * 40)[0]
 
