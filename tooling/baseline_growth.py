@@ -36,6 +36,11 @@ BASELINES: dict[str, str] = {
     "tests/baselines/never_runs.txt": "lines",
     "tests/baselines/fast_marking_contract_allowlist.txt": "lines",
     "tests/test_todo_audit_ratchet_contract.py": "BASELINE_TOTAL",  # the tech-debt marker cap, a constant in the test
+    "tests/baselines/public_api_exports.txt": "lines",  # the public API grows only on purpose
+    # Budgets and tolerances: every number in them is a limit, so a higher one (or one removed) loosens a gate.
+    "tooling/metrics/verify_step_budget.json": "counts",
+    "tooling/metrics/authoring_trace_budget.json": "counts",
+    "tooling/perf_baselines/baselines.json": "counts",
 }
 MYPY_BASELINE = "tooling/mypy_baseline.txt"
 _MARKER_RE = re.compile(r"^[ \t]*baseline-growth:[ \t]*(?P<path>[^\s:]+)[ \t]*:[ \t]*(?P<reason>[^\s\x00].*?)[ \t]*$",
@@ -62,23 +67,40 @@ def _entries(text: str) -> Counter[str]:
                    if line.strip() and not line.lstrip().startswith("#"))
 
 
-def _counts(text: str, path: str) -> dict[str, int]:
+def _flatten(value: object, prefix: str, out: dict[str, float]) -> None:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key != "schema_version":
+                _flatten(item, f"{prefix}.{key}" if prefix else str(key), out)
+    elif isinstance(value, list):
+        ids = [item.get("id") for item in value if isinstance(item, dict)]
+        keyed = len(ids) == len(value) and all(isinstance(i, str) for i in ids) and len(set(ids)) == len(ids)
+        for index, item in enumerate(value):  # a list of records with unique ids: by id, so reordering isn't growth
+            key = item["id"] if keyed and isinstance(item, dict) else index
+            _flatten(item, f"{prefix}[{key}]", out)
+    elif isinstance(value, (int, float)) and not isinstance(value, bool):
+        out[prefix] = value
+
+
+def _counts(text: str, path: str) -> dict[str, float]:
+    """Every number in the JSON by its path (``a.b[id].c``); strings and booleans don't count."""
     try:
         payload = json.loads(text)
     except json.JSONDecodeError as exc:
         raise CheckError(f"{path} is not valid JSON: {exc}") from exc
     if not isinstance(payload, dict):
         raise CheckError(f"{path} is not a JSON object")
-    return {key: value for key, value in payload.items()
-            if key != "schema_version" and isinstance(value, int) and not isinstance(value, bool)}
+    out: dict[str, float] = {}
+    _flatten(payload, "", out)
+    return out
 
 
 def _number(text: str, path: str, kind: str) -> int:
     if kind == "number":
         found = text.strip()
     else:
-        match = re.search(rf"^{kind}\s*=\s*(\d+)\s*$", text, re.M)
-        found = match.group(1) if match else ""
+        assigned = re.findall(rf"^{kind}\s*=\s*(\d+)\s*$", text, re.M)
+        found = assigned[-1] if assigned else ""  # the last assignment wins, as in Python
     try:
         return int(found)
     except ValueError as exc:

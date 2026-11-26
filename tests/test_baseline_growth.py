@@ -20,6 +20,22 @@ POLICY = "tooling/exception_policy_baseline.json"
 BUDGET = "tooling/metrics/exception_budget_count.txt"
 NEVER_RUNS = "tests/baselines/never_runs.txt"
 MARKER_CAP = "tests/test_todo_audit_ratchet_contract.py"
+STEP_BUDGET = "tooling/metrics/verify_step_budget.json"
+PERF = "tooling/perf_baselines/baselines.json"
+_STEP_BUDGET = {"schema_version": 2, "tolerance_ms": 50, "budgets_ms": {"verify-demo": 100},
+                "platforms": {"linux": {"budgets_ms": {"verify-demo": 80}, "ratio_limits": {"verify-demo": 1.25}}},
+                "report_only_note": "text is not a limit"}
+_PERF = {"schema_version": 1, "ticks": 120, "metric_names": ["a"],
+         "scenes": [{"id": "hall", "path": "h.json", "counters": {"a": 5}},
+                    {"id": "field", "path": "f.json", "counters": {"a": 7}}]}
+
+
+def _json_with(base: dict, change) -> str:  # noqa: ANN001
+    data = json.loads(json.dumps(base))
+    change(data)
+    return json.dumps(data)
+
+
 BASE_FILES = {
     RUFF: "a.py: F401 unused\nb.py: E501 long\n",
     baseline_growth.MYPY_BASELINE: "c.py: error: bad  [arg-type]\n",
@@ -27,6 +43,8 @@ BASE_FILES = {
     BUDGET: "3\n",
     NEVER_RUNS: "# header\ntests/test_x.py::test_a  # needs a thing\n",
     MARKER_CAP: "BASELINE_TOTAL = 35\n",
+    STEP_BUDGET: json.dumps(_STEP_BUDGET),
+    PERF: json.dumps(_PERF),
 }
 
 
@@ -121,6 +139,11 @@ def test_a_marker_on_the_base_branch_does_not_count(repo: Path) -> None:
     (BUDGET, "2\n"),
     (MARKER_CAP, "BASELINE_TOTAL = 30\n"),
     (NEVER_RUNS, "# a reworded header\ntests/test_x.py::test_a  # a reworded reason\n"),  # same entries
+    (MARKER_CAP, "BASELINE_TOTAL = 99\nBASELINE_TOTAL = 30\n"),  # the last assignment is the cap
+    (STEP_BUDGET, _json_with(_STEP_BUDGET, lambda d: d["platforms"]["linux"]["budgets_ms"].update({"verify-demo": 70}))),
+    (STEP_BUDGET, _json_with(_STEP_BUDGET, lambda d: d.update(report_only_note="reworded", schema_version=3))),
+    (PERF, _json_with(_PERF, lambda d: d["scenes"].reverse())),  # records by id: reordering isn't growth
+    (PERF, _json_with(_PERF, lambda d: d["scenes"][0]["counters"].update(a=4))),
 ])
 def test_shrinking_or_rewording_passes(repo: Path, rel: str, text: str) -> None:
     _change(repo, rel, text)
@@ -136,6 +159,14 @@ def test_shrinking_or_rewording_passes(repo: Path, rel: str, text: str) -> None:
     (POLICY, json.dumps({"schema_version": 1, "ble001_count_total": 5}), "broad_catch_count_total: 9 -> removed"),
     (BUDGET, "4\n", "3 -> 4"),
     (MARKER_CAP, "BASELINE_TOTAL = 36\n", "35 -> 36"),
+    (MARKER_CAP, "BASELINE_TOTAL = 30\nBASELINE_TOTAL = 40\n", "35 -> 40"),  # Python keeps the last one
+    (STEP_BUDGET, _json_with(_STEP_BUDGET, lambda d: d["platforms"]["linux"]["ratio_limits"].update({"verify-demo": 1.5})),
+     "platforms.linux.ratio_limits.verify-demo: 1.25 -> 1.5"),
+    (STEP_BUDGET, _json_with(_STEP_BUDGET, lambda d: d.update(tolerance_ms=60)), "tolerance_ms: 50 -> 60"),
+    (STEP_BUDGET, _json_with(_STEP_BUDGET, lambda d: d["budgets_ms"].pop("verify-demo")),
+     "budgets_ms.verify-demo: 100 -> removed"),
+    (PERF, _json_with(_PERF, lambda d: d["scenes"][1]["counters"].update(a=8)), "scenes[field].counters.a: 7 -> 8"),
+    (PERF, _json_with(_PERF, lambda d: d["scenes"].pop(0)), "scenes[hall].counters.a: 5 -> removed"),
     (BUDGET, None, "deleted"),
 ])
 def test_every_kind_of_baseline_growth_fails(repo: Path, rel: str, text: str | None, row: str) -> None:
@@ -146,6 +177,20 @@ def test_every_kind_of_baseline_growth_fails(repo: Path, rel: str, text: str | N
     assert code == 1
     assert lines[0].startswith(f"{rel} grew since ")
     assert row in [line.strip() for line in lines[1:]]
+
+
+def test_a_new_public_api_export_is_growth(repo: Path) -> None:
+    api = "tests/baselines/public_api_exports.txt"
+    _git(repo, "checkout", "-q", "main")
+    (repo / api).write_text("runtime:run_game\n", encoding="utf-8")
+    _commit(repo, "api")
+    _git(repo, "checkout", "-q", "feature")
+    _git(repo, "merge", "-q", "--no-edit", "main")
+    _change(repo, api, "runtime:run_game\nruntime:load_scene_payload\n")
+
+    code, lines = baseline_growth.check(repo, "main")
+
+    assert code == 1 and "+ runtime:load_scene_payload" in [line.strip() for line in lines]
 
 
 def test_a_baseline_new_since_the_merge_base_has_nothing_to_grow_from(repo: Path) -> None:
@@ -178,13 +223,16 @@ def test_the_command_line_exit_codes(repo: Path, capsys: pytest.CaptureFixture[s
     _change(repo, BUDGET, "4\n")
     assert baseline_growth.main(["--base", "main", "--repo", str(repo)]) == 1
     assert "FAILED: a baseline grew without a reason" in capsys.readouterr().out
+    assert baseline_growth.main(["--base", "origin/no-such-branch", "--repo", str(repo)]) == 2  # never a pass
+    assert "could not check" in capsys.readouterr().out
 
 
 def test_every_listed_baseline_exists_in_this_checkout() -> None:
     root = Path(__file__).resolve().parents[1]
     assert [rel for rel in baseline_growth.BASELINES if not (root / rel).is_file()] == []
-    marker_cap = (root / MARKER_CAP).read_text(encoding="utf-8")
-    baseline_growth.growth(MARKER_CAP, baseline_growth.BASELINES[MARKER_CAP], marker_cap, marker_cap)  # it parses
+    for rel, kind in baseline_growth.BASELINES.items():  # each parses as its kind, and equals itself
+        text = (root / rel).read_text(encoding="utf-8")
+        assert baseline_growth.growth(rel, kind, text, text) == [], rel
 
 
 # --------------------------------------------------------------------------- #

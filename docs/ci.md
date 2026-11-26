@@ -72,11 +72,12 @@ Each ratchet lets through what its committed baseline lists, so a change could a
 pull request (#624). The `baseline-growth (ubuntu-latest, py3.11)` job, required through both `tests` fan-ins like the
 replays job, runs `python -m tooling.baseline_growth --base <base>`: it compares each baseline in
 `tooling/baseline_growth.py` (`BASELINES`: the ruff and mypy baselines, `exception_policy_baseline.json`, the exception
-budget count, the unmarked-test, never-runs and fast-marking lists, and the tech-debt marker cap in
-`tests/test_todo_audit_ratchet_contract.py`) with the same file at `git merge-base HEAD <base>`. The base is the pull
-request's base branch, or on a push what the branch held before it.
+budget count, the unmarked-test, never-runs and fast-marking lists, the public API export list, the tech-debt marker
+cap in `tests/test_todo_audit_ratchet_contract.py` (its last assignment), and the timing and perf budgets
+`verify_step_budget.json`, `authoring_trace_budget.json` and `perf_baselines/baselines.json`) with the same file at
+`git merge-base HEAD <base>`. The base is the pull request's base branch, or on a push what the branch held before it.
 
-Any growth (a new entry, a higher count, a removed count or a deleted file) fails, unless a commit between the merge base
+Any growth (a new entry, any number in a JSON baseline going up or removed, a deleted file) fails, unless a commit between the merge base
 and `HEAD` has a line, at the start of a line in its message:
 
 ```text

@@ -265,6 +265,20 @@ def test_broad_catch_growth_fails_the_exception_policy_scan(
         False, "broad catches grew: 1 -> 2")
 
 
+def test_the_budget_artifact_is_not_ok_when_its_baseline_is_missing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """exception_budget.json is read by health, trends and release notes: a skipped budget is no passing one (#624)."""
+    repo = _synthetic_repo(monkeypatch, tmp_path)
+    allow_synthetic_repo_skips(monkeypatch)
+
+    _code, by_name, _payload = _run(capsys, "--artifacts", str(repo / "artifacts"))
+
+    assert by_name["exception-budget-guard"]["error"] == "skipped: no tooling/metrics/exception_budget_count.txt"
+    budget = json.loads((repo / "artifacts" / "exception_budget.json").read_text(encoding="utf-8"))
+    assert budget["ok"] is False
+
+
 def test_verify_all_routes_verify_demo_to_artifacts_scoped_scratch(monkeypatch, tmp_path, capsys):
     captured: dict[str, Any] = {}
     repo = _synthetic_repo(monkeypatch, tmp_path, captured)

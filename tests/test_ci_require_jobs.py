@@ -145,6 +145,13 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     assert 'base="origin/$BASE_REF"' in growth_job and 'base="$BEFORE"' in growth_job
     assert re.findall(r"^    (?:if|continue-on-error):.*$", growth_job, re.M) == [
         "    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}"]
+    # Its result is the check's own exit code: the step's last line, exactly, with nothing that could swallow a failure
+    # ("|| true", "|| :", "; exit 0", "set +e", a step-level continue-on-error or condition, another shell).
+    growth_step = growth_job[growth_job.index("- name: No baseline grew without a reason"):]
+    run_lines = [ln for ln in growth_step.split("run: |", 1)[1].splitlines() if ln.strip()]
+    assert run_lines[-1] == '          python -m tooling.baseline_growth --base "$base"'
+    for forbidden in ("||", "exit 0", "set +e", "continue-on-error", "shell:", "\n        if:"):
+        assert forbidden not in growth_step, forbidden
     assert "if: ${{ always() && needs.dedup.outputs.skip != 'true' }}" in tests_job
     assert "tooling/ci_require_jobs.py --os \"${{ matrix.os }}\"" in tests_job
     assert "NEEDS_RESULTS: ${{ toJSON(needs.*.result) }}" in tests_job
