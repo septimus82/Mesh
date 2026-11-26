@@ -30,11 +30,13 @@ def validate_scene_payload(scene_payload: dict[str, Any]) -> list[str]:
         full = scene_payload
     report = loader.validate_scene(full, strict=False)
     errors = [str(e) for e in (report.errors or [])]
-    # #665: what would be written must pass the loader's own schema check, or the room no longer loads.
-    try:
-        validate(migrate_payload("scene", compact_scene_payload(scene_payload)), "scene.schema.json", "scene")
-    except SchemaValidationError as exc:
-        errors.append(f"schema {exc.json_pointer or '/'}: {exc.message}")
+    # #665: what would be written must pass the loader's own schema check, or the room no longer loads. (Only once the
+    # structural checks pass: a payload they reject, e.g. entities not a list, can't be compacted; it is refused anyway.)
+    if not errors:
+        try:
+            validate(migrate_payload("scene", compact_scene_payload(scene_payload)), "scene.schema.json", "scene")
+        except SchemaValidationError as exc:
+            errors.append(f"schema {exc.json_pointer or '/'}: {exc.message}")
     errors.sort()
     return errors
 
