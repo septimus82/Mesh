@@ -191,6 +191,8 @@ class SaveManager:
 
     def save_game(self, slot_name: str, compact: bool = False) -> bool:
         """Save the current game state to a slot."""
+        if self._waiting_for_switched_room("Saved"):
+            return False
         path = self.get_save_path(slot_name)
         try:
             serialize_diags: list[Diagnostic] = []
@@ -278,8 +280,21 @@ class SaveManager:
         if callable(enqueue):
             enqueue(message)
 
+    def _waiting_for_switched_room(self, action: str) -> bool:
+        """#721: after a main-menu project switch, until a room of the new project loads (the legacy editor holds scene
+        loads; a Cancel at its unsaved-changes prompt drops the request), the previous project's room is still the one
+        built. A save would record its objects in the new project's slot, so saving and loading wait: refused, said."""
+        if getattr(self.window, "switch_room_pending", False) is not True:
+            return False
+        print(f"[Mesh][Save] {action} refused: the switched-to project's start room hasn't loaded yet")
+        self._toast(f"Not {action.lower()}: the new project's room hasn't loaded yet. Close the editor or start the "
+                    "game from the main menu first")
+        return True
+
     def load_game(self, slot_name: str) -> bool:
         """Load a game state from a slot."""
+        if self._waiting_for_switched_room("Loaded"):
+            return False
         editor = getattr(self.window, "editor_controller", None)
         active = getattr(editor, "active", False) if editor is not None else False
         if isinstance(active, bool) and active:

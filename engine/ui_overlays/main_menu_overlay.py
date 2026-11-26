@@ -276,7 +276,14 @@ class MainMenuOverlay(UIElement):
         # this one's saves. Choosing the project already open keeps the game going.)
         if Path(root_text).expanduser().resolve() != previous_project:
             self._reset_session()
+            # (#721: until a room of this project loads, the previous one's room is still built: no save or load)
+            setattr(self.window, "switch_room_pending", True)
             self._request_start_scene()
+            editor = getattr(self.window, "editor_controller", None)
+            enqueue = getattr(getattr(self.window, "player_hud", None), "enqueue_toast", None)
+            if editor is not None and getattr(editor, "active", False) is True and callable(enqueue):
+                enqueue(f"Switched to {Path(root_text).name}: its start room loads when the editor closes; "
+                        "saving waits until then", seconds=6.0)
 
         # Reload workspace settings if editor is present
         if hasattr(self.window, "editor") and callable(getattr(self.window.editor, "load_workspace", None)):

@@ -290,6 +290,8 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     checked = take(controller, scene_path)  # (a reload checked this scene before clearing anything: built from that)
     scene = checked if checked is not None else controller.window.scene_loader.load_scene(scene_path)
     controller.current_scene_path = scene_path
+    if getattr(controller.window, "switch_room_pending", False) is True:
+        controller.window.switch_room_pending = False  # (#721: the switched-to project's room is built now)
     # (B-09: the save's own id-less objects are told from its room's by this; None: not loaded from a save)
     controller._room_idless = None if checked is not None else getattr(controller.window.scene_loader, "last_room_idless", None)
     # The room this is, also when it comes from a save slot (which records the room it was made in).

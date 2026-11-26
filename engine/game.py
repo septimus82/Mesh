@@ -562,6 +562,9 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.hot_reload_error_scene_path: str = ""
         self.hot_reload_error_visible: bool = False
         self.scene_persist_armed: bool = False
+        # (#721) a main-menu project switch asked for the new project's start room, which hasn't loaded yet: the
+        # previous project's room is still the one built, so saving and loading wait (engine.save_manager)
+        self.switch_room_pending: bool = False
         self.entity_snap_to_tile: bool = False
         self.last_duplicate_count: int = 0
         self.last_duplicate_primary: str = ""
