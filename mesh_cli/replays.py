@@ -249,6 +249,8 @@ def _handle_replays_run(args: argparse.Namespace) -> int:
             sys.stdout.write("\n")
         elif not quiet:
             print(_format_suite_report_text(report), end="")
+        elif not ok:  # (quiet still says which cases failed and why: CI's log showed only "exit 1", #649)
+            print(_format_suite_report_text({**report, "cases": [c for c in case_reports if not c.get("ok")]}), end="")
 
         return 0 if ok else 1
     except ValueError as exc:

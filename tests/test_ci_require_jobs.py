@@ -170,7 +170,14 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     assert ("-p tooling.ci_shards_plugin --mesh-shard ${{ matrix.shard }} --mesh-shard-record "
             "artifacts/shards/shard-${{ matrix.shard_index }}.json --junitxml=artifacts/shards/junit-"
             "${{ matrix.shard_index }}.xml") in windows_run
+    # The optional MCP SDK in the Linux job, so the real-FastMCP server build runs somewhere instead of skipping (#649).
+    mcp = pytest_job[pytest_job.index("Install the optional MCP SDK (Linux)"):pytest_job.index("Compile Python sources")]
+    assert "if: runner.os != 'Windows'" in mcp and 'python -m pip install -e ".[mcp]"' in mcp
+    mcp_code = "\n".join(ln for ln in mcp.splitlines() if not ln.lstrip().startswith("#"))
+    assert not any(soft in mcp_code for soft in ("||", "exit 0", "continue-on-error")), "the install must fail loudly"
     linux_run = pytest_job[pytest_job.index("Run pytest (Linux)"):]
+    # ... and the job requires it, so a failed import fails the MCP test instead of skipping it.
+    assert 'env:\n          MESH_REQUIRE_MCP: "1"' in linux_run[:linux_run.index("xvfb-run")]
     # Linux runs the whole suite as one "shard" and checks its record the same way, held to the default suite's floor
     # (#648; the floor itself: tests/test_test_lanes_contract.py).
     floor = f"--min-selected {ci_shards.DEFAULT_MIN_SELECTED} "

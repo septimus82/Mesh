@@ -19,13 +19,5 @@ def test_workspace_python_resolution_contract() -> None:
     extra_paths = settings.get("python.analysis.extraPaths")
     assert isinstance(extra_paths, list)
     assert "${workspaceFolder}" in extra_paths
-
-    pyright_path = repo_root / "pyrightconfig.json"
-    assert pyright_path.exists(), "missing pyrightconfig.json"
-    pyright = json.loads(pyright_path.read_text(encoding="utf-8"))
-
-    assert pyright.get("venvPath") == "."
-    assert pyright.get("venv") == ".venv"
-    include = pyright.get("include")
-    assert isinstance(include, list)
-    assert "tests" in include
+    # pyrightconfig.json was removed (#649): no gate ran pyright, and its include list left out mesh_net. Without it
+    # the editor's Pylance takes the settings above (a pyrightconfig.json overrides python.analysis.*).
