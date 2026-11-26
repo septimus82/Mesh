@@ -16,9 +16,10 @@ holds at least ``DEFAULT_MIN_SELECTED`` tests. Since S1 5.9 Linux's suite is spl
 records (``check --shards 1`` still checks a whole run as one shard, ``--mesh-shard 1/1``).
 
 The gpu lane (``extended.yml``) is split the same way on Windows, by its own plan (``--plan gpu``: its own pins, so the
-default suite's balance and the gpu lane's never move each other): ``gpu (windows-latest, py3.11, shard 1/2)`` and
-``2/2``, each collecting the whole ``gl`` selection, and a fan-in named ``gpu (windows-latest, py3.11)`` that runs
-``check --plan gpu --min-selected N``: the same checks, plus the lane's ``min_selected`` applied to the whole selection.
+default suite's balance and the gpu lane's never move each other), into three shards since S1 5.9 (``PLAN_SHARDS``):
+``gpu (windows-latest, py3.11, shard 1/3)``, ``2/3`` and ``3/3``, each collecting the whole ``gl`` selection, and a
+fan-in named ``gpu (windows-latest, py3.11)`` that runs ``check --plan gpu --shards 3 --min-selected N``: the same
+checks, plus the lane's ``min_selected`` applied to the whole selection.
 Linux's gpu lane (#422 CI-422B) is split the same way by a plan of its own, ``gpu-linux`` (``--shard-plan gpu-linux``):
 Linux's module costs aren't Windows' (the slowest Linux modules include one Windows' plan leaves to the hash), so each
 OS's pins come from its own lane's timings and neither moves the other. Its fan-in is ``gpu (ubuntu-latest, py3.11)``.
@@ -76,34 +77,45 @@ PINNED: dict[str, int] = {
 }
 
 
-# The gpu lane's (``python -m tooling.test_tiers --shard K/2 gpu``): its 20 heaviest modules, pinned to balance the two
-# given where the hash puts the rest (S1 5.9). Measured on CI's Windows gpu lane (Mesa llvmpipe), the mean of 6 green
-# Extended push runs 45797221431-45839494580 (setup + call + teardown): 3,530 s in all, 91 modules; the hash alone gave
-# the rest 408/663 s, with the pins 1,738/1,791 s (the old pins, from #456, had drifted to 1,630/1,899; each run's
-# heavier shard is 64-350 s shorter). The 5.7 (ii) HD-2D e2e leg is pinned to the lighter shard. Re-measure and
-# re-pin (bumping SCHEME) when the shards drift far apart.
+# The gpu lane's (``python -m tooling.test_tiers --shard K/3 gpu``): three shards since S1 5.9, its 30 heaviest modules
+# pinned to balance the three given where the hash puts the rest. Measured on CI's Windows gpu lane (Mesa llvmpipe), the
+# mean of 6 green Extended push runs 45797221431-45839494580 (setup + call + teardown): 3,530 s in all, 91 modules; the
+# hash alone gave the rest 259/153/239 s, with the pins 1,175/1,178/1,177 s (each run's three within 67 s of each
+# other). Two shards balanced too (1,738/1,791 s), but runners differ by up to 0.74-1.19x per job, which left the
+# heavier of two near Extended's 40-minute limit at p90. The 5.7 (ii) HD-2D e2e leg is pinned to the lightest shard.
+# Re-measure and re-pin (bumping SCHEME) when the shards drift far apart.
 GPU_PINNED: dict[str, int] = {
-    "tests/test_terrain_gpu.py": 1,  # 306.7 s
-    "tests/test_hd2d_lighting_controls_gpu.py": 2,  # 222.0 s
+    "tests/test_terrain_gpu.py": 2,  # 306.7 s
+    "tests/test_hd2d_lighting_controls_gpu.py": 3,  # 222.0 s
     "tests/test_water_gpu.py": 1,  # 183.6 s
-    "tests/test_mesh_net_hd2d_gpu.py": 2,  # 182.4 s
-    "tests/test_dialogue_reopen_gpu.py": 1,  # 163.0 s
-    "tests/test_fire_gpu.py": 1,  # 163.0 s
+    "tests/test_mesh_net_hd2d_gpu.py": 1,  # 182.4 s
+    "tests/test_dialogue_reopen_gpu.py": 2,  # 163.0 s
+    "tests/test_fire_gpu.py": 3,  # 163.0 s
     "tests/test_studio_panel_scroll_gpu.py": 2,  # 153.7 s
-    "tests/test_weather_authoring_gpu.py": 2,  # 143.8 s
+    "tests/test_weather_authoring_gpu.py": 3,  # 143.8 s
     "tests/test_hd2d_m1b_scene_gpu.py": 1,  # 112.7 s
     "tests/test_scatter_gpu.py": 1,  # 104.2 s
-    "tests/test_hd2d_bloom_gpu.py": 2,  # 92.4 s
-    "tests/test_hd2d_asset_pipeline_gpu.py": 1,  # 86.1 s
-    "tests/test_mesh_net_gpu.py": 2,  # 83.4 s
-    "tests/test_river_falls_gpu.py": 1,  # 78.7 s
+    "tests/test_hd2d_bloom_gpu.py": 3,  # 92.4 s
+    "tests/test_hd2d_asset_pipeline_gpu.py": 2,  # 86.1 s
+    "tests/test_mesh_net_gpu.py": 1,  # 83.4 s
+    "tests/test_river_falls_gpu.py": 3,  # 78.7 s
     "tests/test_hd2d_starter_gpu.py": 2,  # 77.6 s
     "tests/test_hd2d_haze_gpu.py": 1,  # 71.2 s
-    "tests/test_hd2d_post_gpu.py": 2,  # 64.4 s
-    "tests/test_weather_collisions_gpu.py": 1,  # 60.9 s
-    "tests/test_studio_3d_selection_gpu.py": 2,  # 54.5 s
+    "tests/test_hd2d_post_gpu.py": 3,  # 64.4 s
+    "tests/test_weather_collisions_gpu.py": 2,  # 60.9 s
+    "tests/test_studio_3d_selection_gpu.py": 1,  # 54.5 s
     "tests/test_hd2d_studio_gpu.py": 2,  # 54.0 s
-    "tests/test_e2e_creator_workflow.py": 1,  # 7.6 s (5.7 ii, the lighter shard)
+    "tests/test_studio_workflow_polish_gpu.py": 3,  # 52.2 s
+    "tests/test_river_tool_gpu.py": 1,  # 47.7 s
+    "tests/test_river_gpu.py": 2,  # 46.3 s
+    "tests/test_studio_workspace_gpu.py": 3,  # 44.3 s
+    "tests/test_indoor_weather_gpu.py": 1,  # 41.5 s
+    "tests/test_water_passable_gpu.py": 3,  # 39.8 s
+    "tests/test_room_file_ownership_gpu.py": 2,  # 39.5 s
+    "tests/test_start_room_music_gpu.py": 3,  # 36.7 s
+    "tests/test_dof_studio_gpu.py": 1,  # 34.8 s
+    "tests/test_room_transition_gl_lifetime_gpu.py": 2,  # 31.2 s
+    "tests/test_e2e_creator_workflow.py": 2,  # 6.4 s (5.7 ii: the lightest shard without it, 1,172 s)
 }
 # Linux's gpu lane (``--shard 1/2 --shard-plan gpu-linux gpu``, #422 CI-422B): its 12 heaviest modules, pinned to balance
 # the two given where the hash puts the rest. Measured on CI's Linux gpu lane (Xvfb + Mesa llvmpipe), the mean of 7
@@ -130,6 +142,9 @@ GPU_LINUX_PINNED: dict[str, int] = {
 # Each split's pins, by plan name: ``default`` is the default suite's (ci.yml), ``gpu`` Windows' gpu lane's and
 # ``gpu-linux`` Linux's (extended.yml).
 PLANS: dict[str, dict[str, int]] = {"default": PINNED, "gpu": GPU_PINNED, "gpu-linux": GPU_LINUX_PINNED}
+# How many shards each plan's pins are for (its workflow's matrix and fan-in ``--shards``): a plan's pins apply only at
+# its own count; split any other way, every module goes by the hash.
+PLAN_SHARDS: dict[str, int] = {"default": SHARDS, "gpu": 3, "gpu-linux": SHARDS}
 
 
 def module_of(nodeid: str) -> str:
@@ -142,7 +157,7 @@ def shard_of(module: str, shards: int = SHARDS, plan: str = "default") -> int:
     if shards == 1:
         return 1
     pinned = PLANS[plan]
-    if shards == SHARDS and module in pinned:
+    if shards == PLAN_SHARDS[plan] and module in pinned:
         return pinned[module]
     return int(hashlib.sha256(module.encode("utf-8")).hexdigest(), 16) % shards + 1
 
@@ -151,7 +166,7 @@ def scheme_digest(shards: int, plan: str = "default") -> str:
     """What decides the assignment, as one digest: two records agree on it, or they weren't split the same way. (The
     plans' pins differ, so their digests do; the default plan's is what it was before plans.)"""
     scheme = {"scheme": SCHEME, "shards": shards,
-              "pinned": dict(sorted(PLANS[plan].items())) if shards == SHARDS else {}}
+              "pinned": dict(sorted(PLANS[plan].items())) if shards == PLAN_SHARDS[plan] else {}}
     return hashlib.sha256(json.dumps(scheme, sort_keys=True).encode("utf-8")).hexdigest()
 
 

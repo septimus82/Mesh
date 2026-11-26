@@ -22,9 +22,9 @@ a finished one that didn't succeed, an older attempt's entry or an incomplete li
 
     python tooling/ci_require_jobs.py --os ubuntu-latest --python 3.11
 
-Another fan-in names its jobs itself (extended.yml's gpu shards, one fan-in per OS: #422 F13, CI-422B):
+Another fan-in names its jobs itself (extended.yml's gpu shards, one fan-in per OS: #422 F13, CI-422B; Windows' three since S1 5.9):
 
-    python tooling/ci_require_jobs.py --job "gpu (windows-latest, py3.11, shard 1/2)" --job "..." --name "gpu (...)"
+    python tooling/ci_require_jobs.py --job "gpu (windows-latest, py3.11, shard 1/3)" --job "..." --name "gpu (...)"
 """
 
 from __future__ import annotations

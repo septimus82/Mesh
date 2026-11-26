@@ -113,16 +113,16 @@ def test_the_gpu_plan_runs_real_shards_by_its_own_pins(tmp_path: Path, plan: str
     # plan's or the other OS's.
     project, out = _project(tmp_path), tmp_path / "records"
     pinned = "tests/test_water_gpu.py"
-    pins = ci_shards.PLANS[plan]
-    assert ci_shards.shard_of(pinned) != pins[pinned], "the example needs a pin that moves it"
+    pins, n = ci_shards.PLANS[plan], ci_shards.PLAN_SHARDS[plan]  # (S1 5.9: Windows' gpu plan is for 3 shards)
+    assert ci_shards.shard_of(pinned, n, "default") != pins[pinned], "the example needs a pin that moves it"
     (project / pinned).write_text("def test_a():\n    pass\n", encoding="utf-8")
-    for shard in ("1/2", "2/2"):
-        proc = _run(project, out, shard, "--mesh-shard-plan", plan)
+    for k in range(1, n + 1):
+        proc = _run(project, out, f"{k}/{n}", "--mesh-shard-plan", plan)
         assert proc.returncode == 0, proc.stdout + proc.stderr
-    records = {k: json.loads((out / f"shard-{k}.json").read_text(encoding="utf-8")) for k in (1, 2)}
+    records = {k: json.loads((out / f"shard-{k}.json").read_text(encoding="utf-8")) for k in range(1, n + 1)}
     home = pins[pinned]
     assert f"{pinned}::test_a" in records[home]["selected"] and records[home]["plan"] == plan
-    assert ci_shards.main(["check", str(out), "--plan", plan]) == 0
-    assert ci_shards.main(["check", str(out)]) == 1
-    assert ci_shards.main(["check", str(out), "--plan", other]) == 1
+    assert ci_shards.main(["check", str(out), "--plan", plan, "--shards", str(n)]) == 0
+    assert ci_shards.main(["check", str(out), "--shards", str(n)]) == 1
+    assert ci_shards.main(["check", str(out), "--plan", other, "--shards", str(n)]) == 1
     assert _run(project, tmp_path / "bad", "1/2", "--mesh-shard-plan", "nope").returncode == 4

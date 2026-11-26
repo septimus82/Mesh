@@ -81,16 +81,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Each OS x lane, as before, except the gpu lanes: two shards each (whole modules), whose fan-in below keeps
-        # the lane's name, `gpu (<os>, py3.11)`. Linux's shards split by Linux's own plan (plan: gpu-linux); Windows'
-        # by the lane's (gpu, the default).
+        # Each OS x lane, as before, except the gpu lanes: shards of whole modules, whose fan-in below keeps the
+        # lane's name, `gpu (<os>, py3.11)`. Linux's two split by Linux's own plan (plan: gpu-linux); Windows' three
+        # (S1 5.9) by the lane's (gpu, the default). Each count is its plan's (tooling/ci_shards.py PLAN_SHARDS).
         include:
           - { os: ubuntu-latest, lane: extended }
           - { os: windows-latest, lane: extended }
           - { os: ubuntu-latest, lane: gpu, shard: "1/2", shard_index: 1, plan: gpu-linux }
           - { os: ubuntu-latest, lane: gpu, shard: "2/2", shard_index: 2, plan: gpu-linux }
-          - { os: windows-latest, lane: gpu, shard: "1/2", shard_index: 1 }
-          - { os: windows-latest, lane: gpu, shard: "2/2", shard_index: 2 }
+          - { os: windows-latest, lane: gpu, shard: "1/3", shard_index: 1 }
+          - { os: windows-latest, lane: gpu, shard: "2/3", shard_index: 2 }
+          - { os: windows-latest, lane: gpu, shard: "3/3", shard_index: 3 }
 
     defaults:
       run:
@@ -172,7 +173,7 @@ jobs:
 
   gpu-shards:
     # Each OS's gpu lane, as one result under the name its check always had (#422 F13; Linux since CI-422B), one leg per
-    # OS with that OS's plan. Green only when both of its OS's shard jobs
+    # OS with that OS's plan and shard count. Green only when every one of its OS's shard jobs
     # succeeded (their conclusions, from the run's jobs list: tooling/ci_require_jobs.py) and their records show the
     # whole gl selection ran exactly once, on this commit, with at least the lane's min_selected tests, every test with
     # a passing outcome and each JUnit report agreeing with its record (tooling/ci_shards.py check --plan <plan>). The
@@ -192,8 +193,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: windows-latest, plan: gpu }
-          - { os: ubuntu-latest, plan: gpu-linux }
+          - { os: windows-latest, plan: gpu, shards: 3 }
+          - { os: ubuntu-latest, plan: gpu-linux, shards: 2 }
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -211,20 +212,21 @@ jobs:
         shell: bash
         run: |
           set +e
-          python3 tooling/ci_shards.py check gpu-shards --plan ${{ matrix.plan }} --min-selected 605 --commit "${{ github.sha }}" > shards.txt 2>&1
+          python3 tooling/ci_shards.py check gpu-shards --plan ${{ matrix.plan }} --shards ${{ matrix.shards }} --min-selected 605 --commit "${{ github.sha }}" > shards.txt 2>&1
           code=$?
           cat shards.txt
           { echo "## gpu lane (${{ matrix.os }}): the shards together"; echo; echo '```'; cat shards.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $code
 
-      - name: Both shard jobs succeeded
+      - name: Every shard job succeeded
         if: always()  # (also when the download failed or the run was cancelled: then it refuses, red)
         env:
           GH_TOKEN: ${{ github.token }}
           NEEDS_RESULTS: ${{ toJSON(needs.*.result) }}  # (the engine's word when the jobs list lags)
-        run: >-
-          python3 tooling/ci_require_jobs.py --name "gpu (${{ matrix.os }}, py3.11)"
-          --job "gpu (${{ matrix.os }}, py3.11, shard 1/2)" --job "gpu (${{ matrix.os }}, py3.11, shard 2/2)"
+        shell: bash
+        run: |
+          jobs=(); for k in $(seq 1 ${{ matrix.shards }}); do jobs+=(--job "gpu (${{ matrix.os }}, py3.11, shard $k/${{ matrix.shards }})"); done
+          python3 tooling/ci_require_jobs.py --name "gpu (${{ matrix.os }}, py3.11)" "${jobs[@]}"
 
   quarantine:
     # D10 (S1 5.3): the tests in tests/baselines/quarantine.txt, which every required lane deselects (tests/conftest.py),
