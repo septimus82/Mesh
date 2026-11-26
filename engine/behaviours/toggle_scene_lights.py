@@ -27,7 +27,7 @@ from .registry import register_behaviour
         },
         {
             "name": "indices",
-            "type": "list[int]",
+            "type": "array",
             "default": [],
             "description": "Optional list of indices into scene['lights'].",
         },

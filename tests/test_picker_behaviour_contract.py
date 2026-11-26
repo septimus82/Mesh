@@ -535,7 +535,7 @@ ROWS: dict[str, Row] = {
     "LightSource": Row(place("Lantern", X, Y, ("LightSource", {"radius": 96}))
                        + [{"op": "set_room_lighting", "enabled": True}], _carried_light),
     "ToggleSceneLights": Row(place("Switchboard", X, Y, ("ToggleSceneLights", {"listen_event": "lights_out",
-                                                                              "mode": "off"}))
+                                                                              "indices": [0], "mode": "off"}))
                              + [{"op": "add_light", "x": 200, "y": 200}, {"op": "set_room_lighting", "enabled": True}],
                              _room_lights),
     # --- Gameplay
@@ -615,8 +615,6 @@ def test_every_picker_behaviour_has_a_row_or_a_reasoned_exclusion() -> None:
 BROKEN: dict[str, str] = {
     "AutoAnimationByMovement": "#703: never switches to walk for anything that moves by position "
                                "(it trusts Sprite.change_x/change_y, which every arcade sprite has as 0.0)",
-    "ToggleSceneLights": "#704: Studio can't add it: add_behaviour fills its 'indices' default [] but "
-                         "its declared type 'list[int]' validates as a string",
 }
 
 
