@@ -29,7 +29,6 @@ _SAVE_EXEMPT: dict[str, str] = {
     # Render-only / transient state — re-derived from scene on load
     "SwitchInteract": "Visual toggle state is re-initialised from scene JSON",
     "DoorLock": "Lock state is re-initialised from scene JSON (TODO: add save)",
-    "RewardChest": "Loot state is re-initialised from scene JSON (TODO: add save)",
     "EventLogger": "Debug-only; no gameplay state",
     "DamageOnTouch": "Transient collision helper; no meaningful state",
     "Hitbox": "Transient collision helper; no meaningful state",
@@ -119,6 +118,8 @@ def _has_mutable_gameplay_state(cls: type) -> bool:
 
 
 def _has_saveable(cls: type) -> bool:
+    if getattr(cls, "FACT_FIELDS", ()):  # (per-entity facts in room memory, which saves carry: S1 4.1, D6)
+        return True
     return (
         hasattr(cls, "saveable_state")
         and callable(getattr(cls, "saveable_state", None))

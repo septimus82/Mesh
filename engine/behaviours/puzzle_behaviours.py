@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
+from engine.inventory import get_or_create_inventory
 from engine.log_utils import get_logger
 from engine.paths import resolve_path
 
@@ -253,7 +254,15 @@ class DoorLock(Behaviour):
     ],
 )
 class RewardChest(Behaviour):
-    """Spawns or enables a reward when unlocked."""
+    """Gives its item and gold once, when unlocked (Studio's "Treasure chest").
+
+    The reward goes into the game-state inventory and the ``gold`` counter, all or nothing (#636, owner decision D7):
+    a chest whose item the inventory can't take (full stack, owned non-stackable, unknown id) stays closed, gold
+    included, and says why, as a pickup does. ``looted`` and ``enabled`` (unlocked) are facts in room memory (D6), so a
+    looted chest stays looted, and a refused one stays unlocked, across re-entry and saves. A save from before facts
+    has none: its chests are as authored (not yet looted)."""
+
+    FACT_FIELDS = ("looted", "enabled")
 
     PARAM_DEFS = {
         "unlock_event": ParamDef(str, default="", description="Event ID that reveals the reward"),
@@ -281,7 +290,7 @@ class RewardChest(Behaviour):
             self.enabled = True
 
     def _on_unlock_event(self, event: MeshEvent) -> None:
-        self.enabled = True
+        self.record_fact("enabled", True)
         print(f"[Puzzle] RewardChest {self.entity} enabled by '{event.type}'")
 
     def destroy(self) -> None:
@@ -290,20 +299,25 @@ class RewardChest(Behaviour):
             self._unsubscribe()
             self._unsubscribe = None
 
-    def on_interact(self, interactor: Sprite) -> None:
+    def on_interact(self, interactor: Sprite) -> None:  # noqa: ARG002
         if not self.enabled or self.looted:
             return
-
-        self.looted = True
+        gs = self.window.game_state_controller
+        inventory = get_or_create_inventory(gs.state.values)
+        refusal = inventory.refusal(self.item_id) if self.item_id else None
+        if refusal is not None:  # stays closed: nothing granted, nothing recorded, no event
+            logger.warning("RewardChest '%s' refused: %s", getattr(self.entity, "mesh_name", ""), refusal)
+            hud = getattr(self.window, "player_hud", None)
+            enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
+            if callable(enqueue):
+                enqueue(refusal, seconds=2.0)
+            return
+        if self.item_id:
+            inventory.add_item(self.item_id)
+        if self.gold:
+            gs.add_counter("gold", self.gold)
+        self.record_fact("looted", True)  # (only after the grant)
         print(f"[Puzzle] RewardChest looted! Item: {self.item_id}, Gold: {self.gold}")
-
-        # Grant rewards
-        # Assuming interactor has inventory
-        if hasattr(interactor, "inventory"):
-            if self.item_id:
-                interactor.inventory.add_item(self.item_id)
-            if self.gold:
-                interactor.inventory.add_gold(self.gold)
 
         emit_gameplay_event(
             self.window,
