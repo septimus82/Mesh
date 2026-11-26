@@ -67,3 +67,4 @@ tests/test_variant_g_quest_progression.py
 tests/test_variant_h_quest_progression.py
 tests/test_vertical_slice_smoke.py
 tests/test_world_vertical_slice.py
+tests/test_quest_progress_guards.py

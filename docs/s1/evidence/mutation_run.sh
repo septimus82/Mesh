@@ -15,6 +15,8 @@ module=$(printf '%s' "$plan" | cut -f2)
 tests=$(printf '%s' "$plan" | cut -f3)
 mutants=$(printf '%s' "$plan" | cut -f4)
 git diff --quiet -- "$module" || { echo "refusing: $module has uncommitted changes"; exit 2; }
+# A stale anchor or test id is an ERROR before anything runs, never a mutant that "didn't apply" (#650).
+$PY "$here/mutation_probe.py" --check "$group" || { echo "ERROR: [$group] stale anchor or test file: no mutants run"; exit 2; }
 backup=$(mktemp)
 cp -p "$module" "$backup"
 want=$(sha256sum < "$module" | cut -d' ' -f1)
@@ -52,13 +54,22 @@ record baseline "$([ "$code" = 0 ] && echo green || echo red)"
 [ "$code" = 0 ] || { echo "baseline not green: no mutants run"; exit 1; }
 
 for mid in $mutants; do
-  $PY "$here/mutation_probe.py" --apply "$group" "$mid" || { restore; echo "apply $mid failed"; exit 2; }
+  if ! $PY "$here/mutation_probe.py" --apply "$group" "$mid"; then
+    restore; code=2; secs=0; line="apply failed"; record "$mid" ERROR
+    echo "ERROR: [$group] $mid could not be applied"; exit 2
+  fi
   run_tests
   restore
-  verdict=$([ "$code" = 0 ] && echo SURVIVED || echo killed)
+  case "$code" in  # 1 = a test failed, 2 = collection errors; 4/5 (usage, nothing collected) are no kill
+    0) verdict=SURVIVED ;;
+    1|2) verdict=killed ;;
+    *) verdict=ERROR ;;
+  esac
   echo "[$group] $mid $verdict exit $code ${secs}s | $line"
   record "$mid" "$verdict"
+  [ "$verdict" = ERROR ] && errors=1
 done
 trap - EXIT
 rm -f "$backup"
 git diff --quiet -- "$module" || { echo "ERROR: $module differs from git"; exit 3; }
+exit "${errors:-0}"

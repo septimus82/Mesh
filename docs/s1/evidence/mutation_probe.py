@@ -6,9 +6,14 @@
 The mutant table lives here; mutation_run.sh drives it so that only ONE Python process ever runs at a time (the
 owner's CPU rule): per group it copies the module aside, runs the module's own test files unmutated (they must pass),
 then for each mutant: ``--apply GROUP ID`` (writes it and exits), one pytest process (the repo's default addopts, as
-CI's pytest job selects, ``-x``, no cache), then copies the module back and checks its SHA-256. Exit 0 = the mutant
-SURVIVED; any other exit = KILLED. A mutant is one exact text replacement that must match exactly once, and
-``--apply`` refuses a module with uncommitted changes.
+CI's pytest job selects, ``-x``, no cache), then copies the module back and checks its SHA-256. pytest exit 0 = the
+mutant SURVIVED; 1 (a test failed) or 2 (collection errors) = KILLED; anything else (4 usage error, 5 no tests
+collected: a stale test id) = ERROR, never a kill. A mutant is one exact text replacement that must match exactly once:
+an anchor found 0 or 2+ times is an ERROR (exit 2, from ``--check`` before the baseline and from ``--apply``), so a
+stale anchor can never pass for a killed mutant. ``--apply`` refuses a module with uncommitted changes.
+
+E11 (S1 5.5, #650): ``e11_<id>`` groups run one named mutant against only the test named to kill it
+(``bash docs/s1/evidence/mutation_run.sh e11_Q1``, and so on for each id in ``E11``).
 """
 
 from __future__ import annotations
@@ -89,7 +94,8 @@ GROUPS: dict[str, tuple[str, list[str], list[tuple[str, str, str, str]]]] = {
          "tests/test_quest_system_unification_contract.py", "tests/test_quest_toast_order_regression.py",
          "tests/test_quest_validation.py", "tests/test_quest_runner_integration.py", "tests/test_quest_runner_golden.py",
          "tests/test_replace_state_quest_sync.py", "tests/test_demo_quest_contract.py",
-         "tests/test_perk_effects_rewards.py", "tests/test_new_game_isolation.py"],
+         "tests/test_perk_effects_rewards.py", "tests/test_new_game_isolation.py",
+         "tests/test_quest_progress_guards.py"],
         [
             ("Q1", "a stage keyed on payload_value completes for any value (kill wolf vs kill boar)",
              '        if "payload_value" in spec and payload.get(payload_field) != spec.get("payload_value"):\n',
@@ -213,6 +219,48 @@ GROUPS["scene_room_wide"] = (
 )
 
 
+# E11 (#650): each named survivor and the one test that must kill it, as its own group (one mutant, one test).
+_QG, _OA, _VP = ("tests/test_quest_progress_guards.py::", "tests/test_project_ops_authoring.py::",
+                 "tests/test_vendor_purchase_integrity.py::")
+E11: dict[str, tuple[str, str]] = {
+    "Q1": ("quests", _QG + "test_a_stage_keyed_on_payload_value_completes_only_for_that_value"),
+    "Q3": ("quests", _QG + "test_completing_a_completed_quest_pays_its_reward_once"),
+    "Q5": ("quests", _QG + "test_complete_stage_leaves_a_stage_that_is_not_current_alone"),
+    "O1": ("project_ops", _OA + "test_removing_an_object_that_is_not_there_is_refused"),
+    "O3": ("project_ops", _OA + "test_unticking_solid_makes_the_object_passable_again"),
+    "O4": ("project_ops", _OA + "test_unticking_only_once_stores_false"),
+    "V1": ("vendor", _VP + "test_an_item_costing_exactly_your_gold_is_bought"),
+    "V2": ("vendor", _VP + "test_an_out_of_stock_item_is_refused"),
+    "V4": ("vendor", _VP + "test_selling_an_item_no_longer_carried_pays_nothing"),
+}
+for _mid, (_group, _test) in E11.items():
+    GROUPS[f"e11_{_mid}"] = (GROUPS[_group][0], [_test], [m for m in GROUPS[_group][2] if m[0] == _mid])
+
+
+def _anchor_error(module: str, text: str, mid: str, old_text: str) -> str | None:
+    found = text.count(old_text)
+    if found == 1:
+        return None
+    what = "anchor not found" if found == 0 else f"anchor matches {found} times"
+    return f"ERROR: {mid}: {what} in {module} (refresh its text in mutation_probe.py)"
+
+
+def _module_text(module: str) -> str:
+    # (a Windows checkout with core.autocrlf: the table is written with LF, so compare with LF)
+    return (REPO / module).read_bytes().decode("utf-8").replace("\r\n", "\n")
+
+
+def check(name: str) -> int:
+    """Every anchor of group ``name`` matches its module exactly once, and every test file exists; else exit 2."""
+    module, tests, mutants = GROUPS[name]
+    text = _module_text(module)
+    errors = [e for mid, _w, old, _n in mutants if (e := _anchor_error(module, text, mid, old))]
+    errors += [f"ERROR: test file not found: {t}" for t in tests if not (REPO / t.split("::")[0]).is_file()]
+    for error in errors:
+        print(error)
+    return 2 if errors else 0
+
+
 def apply(name: str, mid: str) -> int:
     """Write mutant ``mid`` of group ``name`` into its module (the driver restores the module afterwards)."""
     module, _tests, mutants = GROUPS[name]
@@ -225,8 +273,8 @@ def apply(name: str, mid: str) -> int:
         if each == mid:
             if "\r\n" in text:  # (a Windows checkout with core.autocrlf: the table is written with \n)
                 old_text, new_text = old_text.replace("\n", "\r\n"), new_text.replace("\n", "\r\n")
-            if text.count(old_text) != 1:
-                print(f"refusing: {mid}'s text matches {text.count(old_text)} times in {module}")
+            if error := _anchor_error(module, text, mid, old_text):
+                print(error)
                 return 2
             path.write_bytes(text.replace(old_text, new_text, 1).encode("utf-8"))
             return 0
@@ -239,9 +287,12 @@ def main() -> int:
     parser.add_argument("--apply", nargs=2, metavar=("GROUP", "MUTANT"))
     parser.add_argument("--plan", action="store_true", help="tab-separated: group, module, tests, mutant ids")
     parser.add_argument("--describe", nargs=2, metavar=("GROUP", "MUTANT"))
+    parser.add_argument("--check", metavar="GROUP", help="exit 2 if an anchor or test file is stale ('all': every group)")
     args = parser.parse_args()
     if args.apply:
         return apply(*args.apply)
+    if args.check:
+        return max(check(name) for name in (GROUPS if args.check == "all" else [args.check]))
     if args.describe:
         group, mid = args.describe
         print(next(what for each, what, _o, _n in GROUPS[group][2] if each == mid))
