@@ -153,7 +153,11 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     # The optional MCP SDK in the Linux job, so the real-FastMCP server build runs somewhere instead of skipping (#649).
     mcp = pytest_job[pytest_job.index("Install the optional MCP SDK (Linux)"):pytest_job.index("Compile Python sources")]
     assert "if: runner.os != 'Windows'" in mcp and 'python -m pip install -e ".[mcp]"' in mcp
+    mcp_code = "\n".join(ln for ln in mcp.splitlines() if not ln.lstrip().startswith("#"))
+    assert not any(soft in mcp_code for soft in ("||", "exit 0", "continue-on-error")), "the install must fail loudly"
     linux_run = pytest_job[pytest_job.index("Run pytest (Linux)"):]
+    # ... and the job requires it, so a failed import fails the MCP test instead of skipping it.
+    assert 'env:\n          MESH_REQUIRE_MCP: "1"' in linux_run[:linux_run.index("xvfb-run")]
     assert "xvfb-run -a python -m pytest -q\n" in linux_run and "mesh-shard" not in linux_run
     record_upload = pytest_job[pytest_job.index("Upload the shard's record"):]
     assert "if: always() && matrix.shard != ''" in record_upload and "overwrite: true" in record_upload

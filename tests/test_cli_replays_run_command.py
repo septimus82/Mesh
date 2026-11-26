@@ -174,6 +174,26 @@ def test_cli_replays_run_mismatch_fails_with_actionable_report(tmp_path: Path, c
     assert "expected_event_digest" in text_report
 
 
+def test_cli_replays_run_quiet_failure_prints_only_the_failed_cases(tmp_path: Path, monkeypatch, capsys) -> None:
+    # #649: the failing case is named in the log, and the passing ones stay out of it.
+    suite = tmp_path / "suite.json"
+    out_dir = tmp_path / "out"
+    base = {"scene": "scenes/episode_01_intro.json", "script": "replays/ep01.json"}
+    cases = [{**base, "id": "ep01", "golden": str(tmp_path / "a.json"), "budgets": {"max_total_ms": 100.0}},
+             {**base, "id": "ep01_passing", "golden": str(tmp_path / "b.json")}]
+    suite.write_text(json.dumps(cases, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    monkeypatch.setattr("mesh_cli.replays.episode_commands.handle", _fake_episode_handle_factory(
+        total_ms=120.0, tick_ms_p95=2.0, tick_ms_max=3.0, tick_ms_list=[1.0, 2.0, 2.0, 3.0]))
+    assert _bootstrap_golden(suite, out_dir, reason="bootstrap two cases") == 0
+    capsys.readouterr()
+
+    rc = mesh_cli.main(["replays", "run", "--suite", str(suite), "--out-dir", str(out_dir), "--seed", "123", "--quiet"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- ep01 [episode]: FAILED (budget exceeded)" in out
+    assert "ep01_passing" not in out
+
+
 def test_cli_replays_update_golden_is_deterministic_for_fixture(tmp_path: Path) -> None:
     suite = tmp_path / "suite.json"
     golden = tmp_path / "ep01_golden.json"

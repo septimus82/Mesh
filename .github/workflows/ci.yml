@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 on:
   # One run per commit (#373): feature branches run through their pull request (the merge result);
@@ -289,6 +289,8 @@ jobs:
 
       - name: Run pytest (Linux)
         if: runner.os != 'Windows'
+        env:
+          MESH_REQUIRE_MCP: "1"  # (#649: the real-FastMCP server build fails here, never skips, if mcp doesn't import)
         run: |
           xvfb-run -a python -m pytest -q
 
