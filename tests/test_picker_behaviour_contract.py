@@ -345,7 +345,9 @@ def _animates(g: RealGame) -> None:
 
 def _walk_animation(g: RealGame) -> None:
     walker = g.named("Strider")
+    start = (walker.center_x, walker.center_y)
     g.frames(20)
+    assert math.hypot(walker.center_x - start[0], walker.center_y - start[1]) >= 12, "Strider didn't move"
     assert walker.mesh_animator.current_state == "walk", "walking shows the walk frames"
 
 
@@ -613,8 +615,6 @@ def test_every_picker_behaviour_has_a_row_or_a_reasoned_exclusion() -> None:
 
 # Rows a production defect fails today: strict, so the fix flips its own row (an unexpected pass fails CI).
 BROKEN: dict[str, str] = {
-    "AutoAnimationByMovement": "#703: never switches to walk for anything that moves by position "
-                               "(it trusts Sprite.change_x/change_y, which every arcade sprite has as 0.0)",
     "ToggleSceneLights": "#704: Studio can't add it: add_behaviour fills its 'indices' default [] but "
                          "its declared type 'list[int]' validates as a string",
 }
