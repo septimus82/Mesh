@@ -21,13 +21,21 @@ def handle_event(manager: Any, event: MeshEvent) -> None:
         return
     # Two passes ensure quests that depend on flags/counters set by other quests completing
     # on the same event get a chance to start deterministically, regardless of definition order.
+    # One event completes at most one stage of a quest: the second pass must not complete the stage the first pass
+    # just moved on to (#640: two stages on the same entered_zone both completed on one entry).
+    progressed: set[str] = set()
     for _ in range(2):
         for quest in manager._definitions.values():
             state = manager._ensure_state(quest["id"])
             if state.get("status") == "completed":
                 continue
             check_start_triggers(manager, quest, state, event)
+            if quest["id"] in progressed:
+                continue
+            before = state.get("current_stage")
             check_completion_triggers(manager, quest, state, event)
+            if state.get("current_stage") != before:
+                progressed.add(quest["id"])
 
     # Also check requirements since state might have changed
     manager.check_requirements()

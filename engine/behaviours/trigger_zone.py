@@ -13,7 +13,7 @@ from .registry import register_behaviour
 
 @register_behaviour(
     "TriggerZone",
-    description="Fires once when a target sprite enters a radius.",
+    description="Sends entered_zone, and the event it sends (on_trigger) if set, once when a target sprite enters a radius.",
     config_fields=[
         {
             "name": "trigger_radius",
@@ -29,19 +29,23 @@ from .registry import register_behaviour
         },
         {
             "name": "on_trigger",
-            "description": "Label describing the triggered event",
+            "description": "Event it sends when the target comes within reach (entered_zone is always sent too)",
             "type": "string",
             "default": "",
         },
     ],
 )
 class TriggerZoneBehaviour(Behaviour):
-    """Detects when a target sprite enters a radius."""
+    """Detects when a target sprite enters a radius, once.
+
+    It then sends ``entered_zone`` (payload ``zone``: its name, ``actor``: the target's name, ``position``) and, when
+    ``on_trigger`` is set, that event ("Event it sends" in Studio) with the same payload. Each is sent once.
+    """
 
     PARAM_DEFS = {
         "trigger_radius": ParamDef(float, default=0.0, description="Distance threshold for triggering"),
         "trigger_target": ParamDef(str, default="", description="Name of the sprite to watch"),
-        "on_trigger": ParamDef(str, default="", description="Label describing the triggered event"),
+        "on_trigger": ParamDef(str, default="", description="Event it sends when the target comes within reach"),
     }
 
     def __init__(self, entity, window, **config: Any) -> None:
@@ -81,25 +85,20 @@ class TriggerZoneBehaviour(Behaviour):
             print(f"[Mesh][Trigger] {entity_name} triggered {event}")
             actor_name = getattr(target, "mesh_name", "<unnamed>")
 
-            # Emit explicit event via gameplay bus adapter.
-            emit_gameplay_event(
-                self.window,
-                EVENT_ENTERED_ZONE,
-                {
-                    "zone": entity_name,
-                    "actor": actor_name,
-                    "position": (float(self.entity.center_x), float(self.entity.center_y)),
-                },
-                source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
-                source_behaviour="TriggerZone",
-            )
-
-            # Legacy signal support (optional, but good for compatibility)
-            if hasattr(self.window, "emit_signal"):
-                position = (float(self.entity.center_x), float(self.entity.center_y))
-                self.window.emit_signal(
-                    EVENT_ENTERED_ZONE,
-                    zone=entity_name,
-                    actor=actor_name,
-                    position=position,
-                )
+            payload = {
+                "zone": entity_name,
+                "actor": actor_name,
+                "position": (float(self.entity.center_x), float(self.entity.center_y)),
+            }
+            # entered_zone (what shipped content keys on, with the zone's name), then the creator's own event; each
+            # once, through the one emit path (#640: a second window.emit_signal put every entered_zone on the bus
+            # twice). A chosen event named entered_zone is not sent a second time.
+            for name in dict.fromkeys((EVENT_ENTERED_ZONE, self.event_name)):
+                if name:
+                    emit_gameplay_event(
+                        self.window,
+                        name,
+                        payload,
+                        source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
+                        source_behaviour="TriggerZone",
+                    )
