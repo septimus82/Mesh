@@ -4,6 +4,7 @@ from __future__ import annotations
 from contextlib import nullcontext
 from typing import Any, cast
 
+from engine.scene_runtime import room_memory
 from engine.swallowed_exceptions import _log_swallow
 
 
@@ -236,6 +237,7 @@ def _create_behaviour_instances(self, sprite: Any, names: list[str], config_root
             current_config.update(config_for_behaviour)
         else:
             setattr(behaviour, "config", dict(config_for_behaviour))
+        room_memory.bind_facts(self, sprite, behaviour)  # (what already happened to it here, before its first update)
         runtime_instances.append(behaviour)
     return runtime_instances
 

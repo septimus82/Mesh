@@ -70,6 +70,8 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, Mapping
 
+from engine.scene_runtime import room_memory
+
 if TYPE_CHECKING:  # pragma: no cover - import guard for typing only
     from arcade import Sprite
 
@@ -152,6 +154,10 @@ class Behaviour:
     """
 
     PARAM_DEFS: Dict[str, ParamDef] = {}
+    # Attributes that record what already happened to this object (a door's "unlocked"), kept per room and object in
+    # room memory: see ``record_fact`` and ``apply_facts``. Empty: none.
+    FACT_FIELDS: tuple[str, ...] = ()
+    _mesh_fact_key: tuple[str, str, Any] | None = None  # (room, entity id, game session): set by the factory
 
     def __init__(self, entity: "Sprite", window: "GameWindow", **config: Any) -> None:
         """Initialize a behaviour instance.
@@ -362,6 +368,25 @@ class Behaviour:
                         self.flash_red()
         """
         return
+
+    # ------------------------------------------------------------------
+    # Facts: what already happened, kept per room and object (S1 4.1, D6)
+    # ------------------------------------------------------------------
+    def apply_facts(self, facts: Mapping[str, Any]) -> None:
+        """Take this object's recorded facts (only declared ones, only those recorded), called once as the behaviour is
+        built for a room entry, re-entry or a loaded save, before its first update. Sets each as an attribute; override
+        (calling this) when a fact implies more, e.g. an unlocked door's solidity."""
+        for name, value in facts.items():
+            setattr(self, name, value)
+
+    def record_fact(self, name: str, value: Any) -> None:
+        """Set the declared fact ``name`` (an attribute) and write it into room memory now, so re-entry and any save
+        keep it (``engine.scene_runtime.room_memory``). ``value`` must be JSON data. On an object without its own
+        authored id in the room (spawned at runtime) only the attribute is set."""
+        if name not in self.FACT_FIELDS:
+            raise ValueError(f"{type(self).__name__}: {name!r} is not one of its FACT_FIELDS {self.FACT_FIELDS!r}")
+        room_memory.record_fact(self, name, value)
+        setattr(self, name, value)
 
 
 _PARAM_SENTINEL = object()

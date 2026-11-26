@@ -362,6 +362,8 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     entities_payload = [e for e in entities_payload if not (isinstance(e, dict) and e.get("id") in gone)]
     controller._room_spawned_ids = room_memory.spawned_ids(entities_payload)
     controller._room_session = room_memory.session(controller.window)  # (what it records belongs to this game)
+    all_entities = scene.get("entities")  # (all of them: an id shared with a gated or removed object still is)
+    controller._room_fact_ids = room_memory.fact_ids(all_entities if isinstance(all_entities, list) else [])
     for entity in entities_payload:
         sprite = controller._create_sprite(entity)
         if not sprite:
