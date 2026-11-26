@@ -2256,7 +2256,6 @@ tests/test_event_monitor_model_contract.py::test_event_monitor_reads_filters_fro
 tests/test_event_order_regression.py::test_emit_signal_uses_bus_wildcard_as_single_enqueue_path
 tests/test_event_spam_guard.py::TestEventSpamGuard::test_micro_optimization_usage
 tests/test_event_spam_guard.py::TestEventSpamGuard::test_spam_guard_logs_once_and_counts
-tests/test_event_subscription_lifecycle_policy.py::TestEventSubscriptionLifecycle::test_all_subscriptions_have_cleanup
 tests/test_event_trace.py::TestEventTrace::test_recorder_hook
 tests/test_event_trace.py::TestEventTrace::test_schema_version
 tests/test_event_trace.py::TestEventTrace::test_structured_history

@@ -48,12 +48,18 @@ _ENTITY_SPRITE_CLASSES: dict[type, type] = {}
 
 
 def _end_behaviours(sprite: Any) -> None:
-    """Tell the sprite's behaviours it is gone (``on_destroy``), once: their event-bus subscriptions end with it."""
+    """Tell the sprite's behaviours it is gone (``on_destroy``), once, and end every event-bus subscription they
+    made (#637: several release theirs only in ``destroy()``/``dispose()``, which nothing calls)."""
     import engine.scene_controller_core as scene_controller_module
 
     if getattr(sprite, "_mesh_behaviours_ended", False):
         return
     sprite._mesh_behaviours_ended = True
+    # (the scene's record holds the same functions and runs them again on leaving the room: each is idempotent)
+    unsubscribes = getattr(sprite, "mesh_behaviour_unsubscribes", None) or []
+    sprite.mesh_behaviour_unsubscribes = []
+    for unsubscribe in unsubscribes:
+        unsubscribe()
     for behaviour in list(getattr(sprite, "mesh_behaviours_runtime", None) or ()):
         on_destroy = getattr(behaviour, "on_destroy", None)
         if not callable(on_destroy):
