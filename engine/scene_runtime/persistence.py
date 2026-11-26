@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 def build_scene_snapshot(controller: SceneController, compact: bool = False) -> Dict[str, Any]:
     """Build a JSON-serializable snapshot of the current scene state."""
-    from ..scene_serializer import compact_scene_payload
+    from ..scene_serializer import compact_scene_payload, strip_runtime_tilemap_fields
 
     authored_payload = getattr(controller, "_loaded_scene_source_data", None)
     if not isinstance(authored_payload, dict):
@@ -183,7 +183,7 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
             overrides["layers"] = dict(controller.tilemap_instance.layer_data)
             tilemap["overrides"] = overrides
         snapshot["tilemap"] = tilemap
-    _remove_runtime_tilemap_fields(snapshot)
+    strip_runtime_tilemap_fields(snapshot)
 
     # Normalize using SceneLoader to ensure valid schema
     # We use a temporary loader instance or the existing one
@@ -328,15 +328,6 @@ def _remove_runtime_only_entity_fields(entity: dict[str, Any]) -> None:
     if isinstance(entity.get("prefab_id"), str) and str(entity.get("prefab_id")).strip():
         for key in _PREFAB_OWNED_ENTITY_FIELDS:
             entity.pop(key, None)
-
-
-def _remove_runtime_tilemap_fields(snapshot: dict[str, Any]) -> None:
-    tilemap = snapshot.get("tilemap")
-    if not isinstance(tilemap, dict):
-        return
-    tilemap.pop("resolved_path", None)
-    if "tile_layers" in tilemap and not tilemap.get("layers"):
-        tilemap.pop("layers", None)  # added empty by the loader; the inline-layers format forbids it
 
 
 def apply_scene_state(controller: SceneController, state_block: Any) -> None:
