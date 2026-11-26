@@ -13,6 +13,8 @@ from ..events import MeshEvent
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
+_COMPLETED = frozenset({"advance_complete", "choice_complete"})  # (dialogue_finished reasons: had to its end)
+
 
 @register_behaviour(
     "Dialogue",
@@ -90,8 +92,10 @@ class Dialogue(Behaviour):
     """Feeds scripted or branching dialogue into the DialogueBox overlay."""
 
     # What stays spent when the room is left and re-entered, or a save loaded (room memory facts, S1 4.1; #620):
-    # ``played``, an "Only once" conversation already had; ``spent_choices``, the keys (``_once_key``) of the "Choice
-    # once" choices already taken. Each is recorded the moment it happens, before the choice pays anything.
+    # ``played``, an "Only once" conversation had to its end (one closed early, or saved mid-way, can be had again);
+    # ``spent_choices``, the keys (``_once_key``) of the choices used up (``_spends``: "Choice once", and in an "Only
+    # once" conversation any choice that changes something). Each is recorded the moment it happens, a choice before
+    # it pays anything.
     FACT_FIELDS = ("played", "spent_choices")
 
     PARAM_DEFS = {
@@ -522,9 +526,6 @@ class Dialogue(Behaviour):
             success = box.play(self._script, owner=self._owner_id)
         if not success:
             return False
-        if self.once and not self._has_played:
-            self.record_fact("played", True)  # (now: leaving, or a save made mid-conversation, keeps it spent)
-        self._has_played = True
         self._active = True
         self._last_actor = actor_name
         # The press that opened this (or closed the previous speaker's box) must not skip its first line.
@@ -621,7 +622,7 @@ class Dialogue(Behaviour):
         return entry
 
     def _choice_is_available(self, choice: dict[str, Any]) -> bool:
-        if choice.get("once") and choice.get("once_key") in self._choice_history:
+        if self._spends(choice) and choice.get("once_key") in self._choice_history:
             return False
         state = getattr(self.window, "game_state", None)
         flags = getattr(state, "flags", {}) if state else {}
@@ -632,6 +633,13 @@ class Dialogue(Behaviour):
             if flags.get(flag, False):
                 return False
         return True
+
+    def _spends(self, choice: dict[str, Any]) -> bool:
+        """Whether taking ``choice`` uses it up (``spent_choices``): "Choice once"; or, in an "Only once" conversation
+        (spent only once it completes), any choice that changes something, so a save made after it paid but before
+        the conversation completed can't pay it again."""
+        effects = ("set_flags", "clear_flags", "inc_counters", "event")
+        return bool(choice.get("once") or (self.once and any(choice.get(key) for key in effects)))
 
     def _advance_graph_dialogue(self) -> bool:
         if not self._graph_active or not self._current_node_id:
@@ -706,7 +714,7 @@ class Dialogue(Behaviour):
                 break
         if choice is None or not self._choice_is_available(choice):
             return
-        if choice.get("once"):
+        if self._spends(choice):
             self._choice_history.add(choice["once_key"])
             self.record_fact("spent_choices", sorted(self._choice_history))  # (before it pays)
         self._apply_choice_effects(choice)
@@ -759,6 +767,10 @@ class Dialogue(Behaviour):
         self._active = False
         self._graph_active = False
         self._current_node_id = None
+        if reason in _COMPLETED:  # (one closed early, or saved mid-way, can be had again)
+            if self.once and not self._has_played:
+                self.record_fact("played", True)
+            self._has_played = True
         box = self._get_box()
         if box is not None:
             box.clear(owner=self._owner_id)
