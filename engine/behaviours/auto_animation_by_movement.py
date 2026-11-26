@@ -123,9 +123,11 @@ class AutoAnimationByMovement(Behaviour):
         return set()
 
     def _compute_speed(self, dt: float) -> float:
+        # Velocity-driven sprites (projectiles, physics) set change_x/y; Mesh's movers set center_x/y
+        # and leave change_x/y at arcade's 0.0, so only a nonzero velocity is trusted over the position delta.
         vx = getattr(self.entity, "change_x", None)
         vy = getattr(self.entity, "change_y", None)
-        if isinstance(vx, (int, float)) and isinstance(vy, (int, float)):
+        if isinstance(vx, (int, float)) and isinstance(vy, (int, float)) and (vx or vy):
             return float(math.hypot(float(vx), float(vy)))
 
         if dt <= 0:
