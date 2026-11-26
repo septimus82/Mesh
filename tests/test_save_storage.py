@@ -115,6 +115,21 @@ def test_an_exported_game_saves_in_its_player_s_folder_not_its_installation(tmp_
     assert (_saves(player) / "slot1.json").is_file() and not (install / "saves").exists()
 
 
+def test_an_exported_game_s_player_save_keeps_room_memory_facts(tmp_path: Path, player: Path,
+                                                                monkeypatch: pytest.MonkeyPatch) -> None:
+    """S1 4.1: room memory's facts are game state, so a player's own save carries them (and its removed objects)."""
+    install = _install(tmp_path / "Program Files" / "My Game")
+    monkeypatch.chdir(install)
+    window = Window(install)
+    memory = {"rooms/yard.json": {"removed": ["coin"], "facts": {"gate": {"DoorLock": {"unlocked": True}}}}}
+    window.game_state_controller.set_var("room_memory", memory)
+    manager = SaveManager(window)
+    assert manager.save_game("slot1") and (_saves(player) / "slot1.json").is_file()
+    window.game_state_controller.set_var("room_memory", {})
+    assert manager.load_game("slot1")
+    assert window.game_state_controller.get_var("room_memory") == memory
+
+
 @pytest.mark.skipif(os.name == "nt", reason="POSIX permissions; the installed lane runs this on Windows (an ACL)")
 def test_a_read_only_installation_starts_saves_and_loads(tmp_path: Path, player: Path,
                                                         monkeypatch: pytest.MonkeyPatch) -> None:

@@ -26,7 +26,7 @@ So two things went wrong:
 | `lights`, `occluders`, backgrounds, `layers` | **no** | copied from the authored room, never updated |
 | `entities` | **yes**: positions, behaviour settings | updated from the running sprites |
 | entities' inner states (health, timers, quest hooks...) | **yes** | `saved_entities` (each behaviour's `saveable_state`), by id |
-| game state: flags, variables, quests, **room memory** (authored objects collected, destroyed, defeated) | **yes** | `state` / `game_state` |
+| game state: flags, variables, quests, **room memory** (authored objects collected, destroyed, defeated; and per-object facts such as a door unlocked, S1 4.1) | **yes** | `state` / `game_state` |
 
 ## The design
 
