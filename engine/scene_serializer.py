@@ -53,7 +53,21 @@ def compact_scene_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         if not compacted["entities"]:
             del compacted["entities"]
 
+    # 4. Drop what the loader resolved into the tilemap (#665)
+    strip_runtime_tilemap_fields(compacted)
+
     return compacted
+
+
+def strip_runtime_tilemap_fields(scene: Dict[str, Any]) -> None:
+    """Remove the tilemap keys the loader adds at load time (never authored; ``scene.schema.json`` forbids them): the
+    machine-absolute ``resolved_path``, and the empty legacy ``layers`` it adds beside inline ``tile_layers``."""
+    tilemap = scene.get("tilemap")
+    if not isinstance(tilemap, dict):
+        return
+    tilemap.pop("resolved_path", None)
+    if "tile_layers" in tilemap and not tilemap.get("layers"):
+        tilemap.pop("layers", None)
 
 
 def _compact_entity(entity: Dict[str, Any]) -> Dict[str, Any]:

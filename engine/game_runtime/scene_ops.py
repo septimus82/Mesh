@@ -84,10 +84,18 @@ def persist_scene_to_disk(window: Any) -> Any:
     if not isinstance(payload, dict) or not scene_path:
         return persist_scene_payload(scene_path or "", {}, strict_no_overwrite=False)
 
+    # (#665: the authored fields only, schema-checked; a payload the loader would reject is refused, never written)
     result = persist_scene_payload(scene_path, payload, strict_no_overwrite=False)
     window.last_persist_path = str(result.path)
     if result.ok:
         clear_scene_dirty(window)
+    else:
+        message = "Room not saved: " + ("; ".join(result.errors) or "error")
+        print(f"SCENE_PERSIST refused {message}")
+        hud = getattr(window, "player_hud", None)
+        enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        if callable(enqueue):
+            enqueue(message, seconds=4.0)
     return result
 
 def save_scene_as(window: Any, new_scene_path: str) -> Any:
