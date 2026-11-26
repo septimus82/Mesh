@@ -229,6 +229,7 @@ tests/test_release_web_demo_contract.py
 tests/test_removal_contract.py
 tests/test_repo_hygiene_policy_contract.py
 tests/test_restore_policy_matrix_contract.py
+tests/test_runtime_wiring_contract.py
 tests/test_safe_refactor_ops_matrix_contract.py
 tests/test_safe_refactor_ops_rollback_matrix_contract.py
 tests/test_save_payload_normalization_contract.py
