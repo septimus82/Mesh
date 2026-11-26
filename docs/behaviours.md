@@ -1624,7 +1624,7 @@ Toggle or force on/off one or more scene lights in response to an event.
 | --- | --- | --- | --- |
 | listen_event | Name of the event to listen for. | string | - |
 | group | Optional group name to match lights by their 'group' field. | string | - |
-| indices | Optional list of indices into scene['lights']. | string | [] |
+| indices | Optional list of indices into scene['lights']. | array | [] |
 | mode | One of 'toggle', 'on', 'off'. | string | toggle |
 
 Example configuration snippet:
