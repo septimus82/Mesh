@@ -7,6 +7,14 @@ import pytest
 pytestmark = [pytest.mark.slow, pytest.mark.integration]
 
 
+@pytest.fixture(autouse=True)
+def _synthetic_repo_skips(monkeypatch):
+    """These verify-alls run on a synthetic repo without the checkout's step inputs: allow exactly its skips (#624)."""
+    from tests._verify_skips import allow_synthetic_repo_skips
+
+    allow_synthetic_repo_skips(monkeypatch)
+
+
 def _stub_config():
     return type(
         "C",

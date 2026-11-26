@@ -154,3 +154,44 @@ def test_verify_local_swallow_scan_bad_artifact_keeps_deterministic_error(
     assert by_name["swallow-scan-gate"]["ok"] is False
     assert by_name["swallow-scan-gate"]["error"] == "pass-only blanket swallows found"
     assert payload["artifacts"]["written"]["swallow_scan"] == "artifacts/swallow_scan.json"
+
+
+def test_verify_local_fails_when_the_tooling_package_is_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A missing tooling package is a failure, not "skipped" with code 0 (#624)."""
+    import builtins
+
+    import mesh_cli
+    import mesh_cli.legacy_impl as legacy_impl
+    import tooling.find_blanket_swallow as find_blanket_swallow
+    import tooling.scan_exception_policies as scan_exception_policies
+    from engine import repo_root as repo_root_mod
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "pyproject.toml").write_text("[project]\nname='mesh'\n", encoding="utf-8")
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(repo_root_mod, "get_repo_root", lambda start=None, strict=True: repo.resolve())
+    monkeypatch.setattr(legacy_impl, "load_config", lambda: type("Cfg", (), {"world_file": "worlds/main_world.json"})())
+    monkeypatch.setattr(legacy_impl.validate_all, "main", lambda argv: 0)
+    monkeypatch.setattr(find_blanket_swallow, "main", lambda argv: 0)
+    monkeypatch.setattr(scan_exception_policies, "scan", lambda roots, repo_root=None: {})
+    original_import = builtins.__import__
+
+    def _blocked_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "tooling" and "mypy_island" in (fromlist or ()):
+            raise ModuleNotFoundError("No module named 'tooling.mypy_island'", name="tooling.mypy_island")
+        return original_import(name, globals, locals, fromlist or (), level)
+
+    monkeypatch.setattr(builtins, "__import__", _blocked_import)
+
+    code = mesh_cli.main(["verify-local"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert code == 1
+    assert payload["ok"] is False
+    island = next(row for row in payload["steps"] if row["name"] == "mypy-island")
+    assert (island["ok"], island["code"], island["error"]) == (False, 2, "tooling package unavailable")
