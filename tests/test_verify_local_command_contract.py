@@ -21,10 +21,12 @@ def test_verify_local_parser_contract() -> None:
     assert "--artifacts" in help_text
 
 
+@pytest.mark.parametrize("in_suite", [True, False], ids=["suite-flag", "pytest-imported-only"])
 def test_verify_local_outputs_deterministic_subset_payload(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
+    in_suite: bool,
 ) -> None:
     import mesh_cli
     import mesh_cli.legacy_impl as legacy_impl
@@ -83,11 +85,28 @@ def test_verify_local_outputs_deterministic_subset_payload(
         },
     )
 
+    started: list[list[str]] = []
+    if not in_suite:
+        # #693: pytest imported (as it is here) must not skip the fast tier; only the suite's flag does.
+        import subprocess
+
+        original_run = subprocess.run
+
+        def _run_stub(cmd, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003, ANN202
+            if isinstance(cmd, list) and "tooling.pytest_fast" in cmd:
+                started.append(list(cmd))
+                return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+            return original_run(cmd, *args, **kwargs)
+
+        monkeypatch.delenv("MESH_VERIFY_IN_TEST_SUITE")
+        monkeypatch.setattr(subprocess, "run", _run_stub)
+
     code = mesh_cli.main(["verify-local", "--artifacts", "artifacts"])
     payload = json.loads(capsys.readouterr().out)
 
     assert code == 0
     assert payload["ok"] is True
+    assert len(started) == (0 if in_suite else 1)
     assert [row["name"] for row in payload["steps"]] == [
         "verify-strict",
         "mypy-island",
@@ -95,7 +114,7 @@ def test_verify_local_outputs_deterministic_subset_payload(
         "exception-policy-scan",
         "pytest-fast",
     ]
-    assert payload["steps"][-1]["error"] == "skipped: running under pytest"
+    assert payload["steps"][-1]["error"] == ("skipped: running under pytest" if in_suite else "")
     assert payload["artifacts"]["written"]["swallow_scan"] == "artifacts/swallow_scan.json"
     assert payload["artifacts"]["written"]["exception_policy_scan"] == "artifacts/exception_policy_scan.json"
 
