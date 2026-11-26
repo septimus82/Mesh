@@ -78,7 +78,7 @@ TIERS: dict[str, TierDef] = {
     "tier2": TierDef(pytest_mark=None, verify_all=False, compileall=False),
     # The installed-product tests are slow but already run, isolated, in CI's required installed (<os>) jobs.
     "extended": TierDef(pytest_mark="(slow or e2e) and not gl", verify_all=False, compileall=False,
-                        pytest_args=("--ignore=tests/test_wheel_bundles_engine_data.py",), min_selected=162),
+                        pytest_args=("--ignore=tests/test_wheel_bundles_engine_data.py",), min_selected=189),
     # Rendering, in hidden windows (nothing shown on the desktop, no input), wherever a GL context exists.
     "gpu": TierDef(pytest_mark="gl", verify_all=False, compileall=False, env=GL_ENV, min_selected=256,
                    calibrate=True),
