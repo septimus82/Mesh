@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Tuple
+import hashlib
+import json
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Mapping, Tuple
 
 if TYPE_CHECKING:
     from arcade import Sprite
@@ -86,6 +88,11 @@ from .registry import register_behaviour
 )
 class Dialogue(Behaviour):
     """Feeds scripted or branching dialogue into the DialogueBox overlay."""
+
+    # What stays spent when the room is left and re-entered, or a save loaded (room memory facts, S1 4.1; #620):
+    # ``played``, an "Only once" conversation already had; ``spent_choices``, the keys (``_once_key``) of the "Choice
+    # once" choices already taken. Each is recorded the moment it happens, before the choice pays anything.
+    FACT_FIELDS = ("played", "spent_choices")
 
     PARAM_DEFS = {
         "start_event": ParamDef(str, default="", description="Mesh event name that auto-starts this dialogue"),
@@ -329,9 +336,20 @@ class Dialogue(Behaviour):
                 "require_flags": self._normalize_flag_list(choice_data.get("require_flags")),
                 "forbid_flags": self._normalize_flag_list(choice_data.get("forbid_flags")),
                 "once": bool(choice_data.get("once", False)),
+                "once_key": self._once_key(node_id, choice_data),
             }
             normalized.append(choice)
         return normalized
+
+    @staticmethod
+    def _once_key(node_id: str, choice_data: Mapping[str, Any]) -> str:
+        """What a "Choice once" choice is remembered by once taken (``spent_choices``): its line and its own authored
+        ``id``, or, without one (Studio writes none), its line and its words. Never its position, so reordering a
+        line's choices keeps each one's state. Editing a choice's words (when it has no id) or renaming its line makes
+        it a new choice, not yet taken."""
+        own = str(choice_data.get("id", "")).strip()
+        identity = ["id", own] if own else ["text", str(choice_data.get("text", ""))]
+        return hashlib.sha256(json.dumps([node_id, *identity]).encode("utf-8")).hexdigest()[:16]
 
     def _normalize_flag_map(self, value: Any) -> dict[str, bool]:
         if not isinstance(value, dict):
@@ -399,6 +417,12 @@ class Dialogue(Behaviour):
         return {}
 
     # --- behaviour lifecycle -----------------------------------------------
+
+    def apply_facts(self, facts: Mapping[str, Any]) -> None:
+        """This object's recorded once-state in this room (re-entry, a loaded save): onto the markers the checks read."""
+        if facts.get("played"):
+            self._has_played = True
+        self._choice_history.update(str(key) for key in facts.get("spent_choices") or ())
 
     def update(self, dt: float) -> None:  # noqa: D401 ARG002
         if self._pending_auto and (self._script or self._graph_nodes) and not self._box_busy_elsewhere():
@@ -498,6 +522,8 @@ class Dialogue(Behaviour):
             success = box.play(self._script, owner=self._owner_id)
         if not success:
             return False
+        if self.once and not self._has_played:
+            self.record_fact("played", True)  # (now: leaving, or a save made mid-conversation, keeps it spent)
         self._has_played = True
         self._active = True
         self._last_actor = actor_name
@@ -595,7 +621,7 @@ class Dialogue(Behaviour):
         return entry
 
     def _choice_is_available(self, choice: dict[str, Any]) -> bool:
-        if choice.get("once") and choice.get("id") in self._choice_history:
+        if choice.get("once") and choice.get("once_key") in self._choice_history:
             return False
         state = getattr(self.window, "game_state", None)
         flags = getattr(state, "flags", {}) if state else {}
@@ -681,7 +707,8 @@ class Dialogue(Behaviour):
         if choice is None or not self._choice_is_available(choice):
             return
         if choice.get("once"):
-            self._choice_history.add(choice.get("id"))
+            self._choice_history.add(choice["once_key"])
+            self.record_fact("spent_choices", sorted(self._choice_history))  # (before it pays)
         self._apply_choice_effects(choice)
         self._emit_choice_event(choice)
         next_node = choice.get("next")
