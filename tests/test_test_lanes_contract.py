@@ -9,8 +9,9 @@ import sys
 from pathlib import Path
 
 import pytest
+from _pytest.mark.expression import Expression
 
-from tooling import test_tiers
+from tooling import ci_shards, test_tiers
 
 # The subprocess checks are `integration` (the default suite), not `fast`: the fast tier is timed in verify-all.
 
@@ -90,7 +91,7 @@ def test_an_empty_or_all_skipped_lane_is_not_a_success(tmp_path: Path) -> None:
     assert test_tiers.lane_problems(good, gl_renderer="x", gl_tier=False, min_selected=3) == [
         "the lane selected 2 tests, fewer than the 3 it should"]
     assert {name: tier.min_selected for name, tier in test_tiers.TIERS.items() if tier.min_selected} == {
-        "extended": 162, "gpu": 256, "acceptance": 22}
+        "extended": 189, "gpu": 605, "acceptance": 22}
 
 
 @pytest.mark.fast
@@ -140,3 +141,44 @@ def test_the_windows_gpu_lane_gets_a_desktop_big_enough_for_its_window_tests() -
     step = text[text.index("Desktop 1920x1080 (Windows, gpu lane)"):text.index("Run the ${{ matrix.lane }} lane")]
     assert "if: runner.os == 'Windows' && matrix.lane == 'gpu'" in step
     assert "Set-DisplayResolution -Width 1920 -Height 1080" in step and "assert s.width >= 1280" in step
+
+
+DEFAULT_SUITE = "not slow and not e2e"  # (pytest.ini's addopts: what CI's pytest jobs select)
+
+
+def _selected(rows: list[tuple[str, frozenset[str]]], expression: str, paths: set[str] | None = None,
+              ignored: set[str] | None = None) -> int:
+    """How many of the collected tests (module, marker names) a lane selects: ``-m expression``, in ``paths`` (all
+    modules when none), minus the ``ignored`` modules."""
+    compiled = Expression.compile(expression)
+    count = 0
+    for module, marks in rows:
+        def has(name: str, /, **_kwargs: object) -> bool:
+            return name in marks  # (evaluated at once, inside this iteration)
+        if (not paths or module in paths) and module not in (ignored or set()) and compiled.evaluate(has):
+            count += 1
+    return count
+
+
+@pytest.mark.integration
+def test_every_lane_floor_is_within_5_percent_of_what_the_lane_collects(
+        lane_collection: tuple[bool, list[tuple[str, frozenset[str]]]]) -> None:
+    # A floor far under its lane lets most of the lane vanish and stay green (#648: gpu was 256 of 621). Each floor is
+    # at most what its lane collects (a legitimate test removal lowers the floor on purpose, in the same PR) and at
+    # least 95% of it (growth past 5% raises it there too), so none can rot low.
+    whole, rows = lane_collection
+    if not whole:
+        if os.environ.get("CI") == "true":  # (CI's default-suite runs collect the whole suite: never skip there)
+            pytest.fail("CI collected less than the whole suite, so the lane floors can't be checked")
+        pytest.skip("needs the whole suite's collection: run pytest with no paths, e.g. `pytest -k lane_floor`")
+    assert f'-m "{DEFAULT_SUITE}"' in (REPO / "pytest.ini").read_text(encoding="utf-8")
+    floors = {"default": ci_shards.DEFAULT_MIN_SELECTED,
+              **{name: tier.min_selected for name, tier in test_tiers.TIERS.items() if tier.min_selected}}
+    counts = {"default": _selected(rows, DEFAULT_SUITE)}
+    for lane, tier in test_tiers.TIERS.items():
+        if tier.min_selected:
+            ignored = {a.split("=", 1)[1] for a in tier.pytest_args if a.startswith("--ignore=")}
+            counts[lane] = _selected(rows, tier.pytest_mark or "", set(tier.paths), ignored)
+    off = {lane: f"floor {floors[lane]}, collects {counts[lane]}" for lane in floors
+           if not 0.95 * counts[lane] <= floors[lane] <= counts[lane]}
+    assert not off, f"lane floors not within 5% under their collection (set each just under it): {off}"

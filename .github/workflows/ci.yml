@@ -287,12 +287,20 @@ jobs:
         run: |
           python -m pytest -q -p no:cacheprovider -p tooling.ci_shards_plugin --mesh-shard ${{ matrix.shard }} --mesh-shard-record artifacts/shards/shard-${{ matrix.shard_index }}.json --junitxml=artifacts/shards/junit-${{ matrix.shard_index }}.xml
 
+      # Linux runs the whole suite as one "shard" (1/1), so its record proves the same as Windows' two (#648): every
+      # collected test ran once with a passing outcome, and the suite holds at least its floor of tests
+      # (tooling/ci_shards.py DEFAULT_MIN_SELECTED), so a change that drops most of it turns this red.
       - name: Run pytest (Linux)
         if: runner.os != 'Windows'
         env:
           MESH_REQUIRE_MCP: "1"  # (#649: the real-FastMCP server build fails here, never skips, if mcp doesn't import)
         run: |
-          xvfb-run -a python -m pytest -q
+          xvfb-run -a python -m pytest -q -p tooling.ci_shards_plugin --mesh-shard 1/1 --mesh-shard-record artifacts/shards/shard-1.json --junitxml=artifacts/shards/junit-1.xml
+
+      - name: The suite ran whole, each test once, with at least its floor of tests (Linux)
+        if: runner.os != 'Windows'
+        run: |
+          python tooling/ci_shards.py check artifacts/shards --shards 1 --min-selected 13600 --commit "${{ github.sha }}"
 
       # The shard's record and JUnit report, for the fan-in (whatever happened: a missing or incomplete one is refused
       # there). ``overwrite``: a re-run attempt of the shard replaces its earlier record.
@@ -833,7 +841,7 @@ jobs:
 
       - name: The Windows shards together ran the whole suite, each test once
         if: matrix.os == 'windows-latest'
-        run: python3 tooling/ci_shards.py check shard-records --commit "${{ github.sha }}"
+        run: python3 tooling/ci_shards.py check shard-records --min-selected 13600 --commit "${{ github.sha }}"
 
   timing-rolling:
     # Report-only (#373, #400): the integration branch's recent CI timings against the committed advisory model, so a
