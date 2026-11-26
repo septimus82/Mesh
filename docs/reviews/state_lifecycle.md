@@ -11,7 +11,7 @@ transitions behaved correctly and are now protected by tests.
 |---|---|---|
 | Flags, counters, values (variables), chapter, playtime, level, xp, equipment, perks | `GameStateController.state`, a `GameState` (`engine/game_state_controller.py`); `window.game_state` is a read-only view of it | — |
 | Quest progress | `GameState.values["quests"]`; the full `QuestManager` (`engine/quests.py`, installed by `GameWindow`) keeps no state of its own | `QuestManager.reload_from_state` (auto_start quests, awaiting stages) |
-| Room memory (objects collected or defeated) | `GameState.values["room_memory"]`, written by `scene_runtime.room_memory.remember_removed` when a room is left or a game is saved | A room's objects, filtered when the room is loaded |
+| Room memory (objects collected or defeated; per-object facts, S1 4.1) | `GameState.values["room_memory"]`, written by `scene_runtime.room_memory.remember_removed` when a room is left or a game is saved, and by `Behaviour.record_fact` when a fact changes | A room's objects, filtered when the room is loaded; facts applied as each object's behaviours are built |
 | HUD "shown once" hints, quest-progress toasts | Flags (`hint_shown_*`) and `values["hud_last_quest_progress"]`, so they follow the state | Quest log and quest UI read `list_active_quests()` every draw (no copy) |
 | A room's objects and their behaviours | The scene controller, rebuilt on every scene load | — |
 | Event-bus listeners | Window-level ones live as long as the window (`engine/game.py`, plugins). A room's behaviours' ones belong to that room. | — |
