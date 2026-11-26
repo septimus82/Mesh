@@ -95,6 +95,20 @@ def _rewrite_evidence(source: Path, change: Callable[[dict[str, Any]], None]) ->
 
 # --------------------------------------------------------------------- the decision
 
+def test_the_mypy_guard_skip_without_a_merge_base_does_not_refuse_the_reuse(tmp_path: Path, now: dict[str, Any]) -> None:
+    # CI's verify jobs have no merge base, so every CI verify-all records this skip, and so would the release check's
+    # own run in the same MESH_* environment (#624 B): refusing would cost a whole verify-all for the same result.
+    from mesh_cli.verify_steps.pipeline import MYPY_GUARD_NO_BASE
+
+    source = _ci_verify_all(tmp_path / "artifacts")
+    _rewrite_evidence(source, lambda e: next(s for s in e["steps"] if s["name"] == "mypy-baseline-guard").update(
+        error=MYPY_GUARD_NO_BASE))
+    release_dir = tmp_path / "release"
+    release_dir.mkdir()
+    outputs = verify_reuse.reuse(source, release_dir, repo_root=tmp_path, deterministic=True)
+    assert outputs is not None and outputs["verify_all_ok"] is True
+
+
 def test_a_passing_run_on_this_clean_commit_is_reused_with_a_record(tmp_path: Path, now: dict[str, Any]) -> None:
     source = _ci_verify_all(tmp_path / "artifacts")
     release_dir = tmp_path / "release"
@@ -126,6 +140,9 @@ def _refuse(case: str, source: Path, now: dict[str, Any]) -> None:
         _rewrite_evidence(source, lambda e: e["steps"][3].update(code=1, error="boom"))
     elif case == "a step skipped":
         _rewrite_evidence(source, lambda e: e["steps"][-1].update(code=2, error="skipped: previous step failed"))
+    elif case == "an allow-listed skip":  # passes verify-all, but the step didn't run: not proof (#624)
+        _rewrite_evidence(source, lambda e: next(s for s in e["steps"] if s["name"] == "pytest-fast").update(
+            error="skipped: running under pytest"))
     elif case == "steps missing":
         _rewrite_evidence(source, lambda e: e["steps"].pop())
     elif case == "pytest arguments":
@@ -169,7 +186,8 @@ def _refuse(case: str, source: Path, now: dict[str, Any]) -> None:
 REFUSALS = {
     "no evidence": "no verify_all_evidence.json", "unreadable evidence": "can't be read",
     "unknown format": "unknown format", "failed": "didn't pass", "a step failed": "didn't pass or didn't run",
-    "a step skipped": "didn't pass or didn't run", "steps missing": "complete list",
+    "a step skipped": "didn't pass or didn't run", "an allow-listed skip": "didn't pass or didn't run",
+    "steps missing": "complete list",
     "pytest arguments": "narrowed selection", "web smoke skipped": "narrowed selection",
     "another commit now": "this is dddd", "commit moved during the run": "this is cccc", "dirty before": "clean",
     "dirty now": "clean", "unknown git state": "this is None", "another tool version": "tool_version differs",
