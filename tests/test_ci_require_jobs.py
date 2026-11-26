@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from tooling import ci_require_jobs as fanin
+from tooling import ci_shards
 from tooling.ci_require_jobs import COMPONENTS, SHARDED, FetchError, check, fetch_jobs, required_jobs, verdict
 
 pytestmark = [pytest.mark.fast]
@@ -170,13 +171,18 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
             "artifacts/shards/shard-${{ matrix.shard_index }}.json --junitxml=artifacts/shards/junit-"
             "${{ matrix.shard_index }}.xml") in windows_run
     linux_run = pytest_job[pytest_job.index("Run pytest (Linux)"):]
-    assert "xvfb-run -a python -m pytest -q\n" in linux_run and "mesh-shard" not in linux_run
+    # Linux runs the whole suite as one "shard" and checks its record the same way, held to the default suite's floor
+    # (#648; the floor itself: tests/test_test_lanes_contract.py).
+    floor = f"--min-selected {ci_shards.DEFAULT_MIN_SELECTED} "
+    assert ("xvfb-run -a python -m pytest -q -p tooling.ci_shards_plugin --mesh-shard 1/1 --mesh-shard-record "
+            "artifacts/shards/shard-1.json --junitxml=artifacts/shards/junit-1.xml\n") in linux_run
+    assert f'python tooling/ci_shards.py check artifacts/shards --shards 1 {floor}--commit "${{{{ github.sha }}}}"' in linux_run
     record_upload = pytest_job[pytest_job.index("Upload the shard's record"):]
     assert "if: always() && matrix.shard != ''" in record_upload and "overwrite: true" in record_upload
     assert "name: pytest-shard-${{ matrix.shard_index }}-${{ matrix.os }}-py${{ matrix.python }}" in record_upload
     # The Windows fan-in refuses unless the shards' records prove the whole suite ran once, on this commit.
     assert "pattern: pytest-shard-*-${{ matrix.os }}-py${{ matrix.python }}" in tests_job
-    assert 'python3 tooling/ci_shards.py check shard-records --commit "${{ github.sha }}"' in tests_job
+    assert f'python3 tooling/ci_shards.py check shard-records {floor}--commit "${{{{ github.sha }}}}"' in tests_job
     assert tests_job.count("if: matrix.os == 'windows-latest'") == 2
     # Neither component may be skipped by a condition of its own, or soften its result (job-level keys only; verify's
     # PR-comment steps may fail softly, as before the split). The one job-level condition is #422's duplicate gate,

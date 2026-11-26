@@ -10,8 +10,9 @@ module's fixtures and test order stay together; ``tooling/ci_shards_plugin.py`` 
 Each shard collects the whole suite, then keeps its own modules, and writes a record (``ci_shards_plugin``). The
 Windows ``tests`` fan-in runs ``python3 tooling/ci_shards.py check`` on both records, which fails unless every
 check in ``check`` holds: both shards finished and passed, on the same commit, the same collection and the same scheme;
-each ran exactly its modules' tests, no test twice, none missing, every selected test with an outcome. Linux runs the
-whole suite unsharded, as before.
+each ran exactly its modules' tests, no test twice, none missing, every selected test with an outcome, and the suite
+holds at least ``DEFAULT_MIN_SELECTED`` tests. Linux runs the whole suite as one "shard" (``--mesh-shard 1/1``) and
+checks its one record the same way (``check --shards 1``), floor included.
 
 The gpu lane (``extended.yml``) is split the same way on Windows, by its own plan (``--plan gpu``: its own pins, so the
 default suite's balance and the gpu lane's never move each other): ``gpu (windows-latest, py3.11, shard 1/2)`` and
@@ -36,6 +37,12 @@ from typing import Any
 from xml.etree import ElementTree
 
 SHARDS = 2  # (Windows; .github/workflows/ci.yml and tooling/ci_require_jobs.py name the same two jobs)
+# The default suite's floor (#648): CI's checks of it on both OSes (``check --min-selected``: Windows' fan-in over its two
+# shards, Linux's single run as ``--shards 1``) fail when it collects fewer tests, so a conftest, marker or collection
+# change that drops most of the suite turns CI red instead of green. Set just under the measured collection (13,979 at
+# 721bd909, both OSes); tests/test_test_lanes_contract.py keeps it within 5% of what the suite collects. A legitimate
+# test removal lowers it on purpose, in the same PR; growth past 5% raises it there too.
+DEFAULT_MIN_SELECTED = 13_600
 SCHEME = "f13c-1"  # (bump when the assignment rule changes: records of another scheme are refused)
 RECORD_SCHEMA = 1
 OK_OUTCOMES = ("passed", "skipped", "xfailed", "xpassed")  # (what lets an unsharded run pass too)

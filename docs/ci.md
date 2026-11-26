@@ -10,7 +10,7 @@ The GitHub Actions workflow at `.github/workflows/ci.yml` runs on every push and
 Each matrix run executes:
 
 1. `python -m compileall -q engine mesh_cli tooling tests`
-2. `python -m pytest -q` (Windows uses `-p no:cacheprovider`, and runs it as two shards: see below)
+2. `python -m pytest -q` (Windows uses `-p no:cacheprovider`, and runs it as two shards; Linux runs it whole as one "shard", `--mesh-shard 1/1`, so both OSes check their records the same way and hold the suite to its floor: see below)
 3. `python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact --reuse-evidence` (step budgets enforced)
 4. `python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed 123 --reuse-verify-all artifacts`: its release check reuses step 3's verify-all only when that run's evidence proves it passed on this exact clean commit with unchanged reports, and otherwise runs verify-all itself (F13-B, `docs/release_bundle.md`)
 5. `python -m mesh_cli bundle verify --zip artifacts/release_bundle.zip --strict`
@@ -30,7 +30,9 @@ Retention is 7 days.
 ## Windows Test Shards (F13-C)
 
 Windows' full default suite (`not slow and not e2e`) was the longest job of every run, so it runs as two jobs,
-`pytest (windows-latest, py3.11, shard 1/2)` and `shard 2/2`. Linux runs the whole suite in one job, as before.
+`pytest (windows-latest, py3.11, shard 1/2)` and `shard 2/2`. Linux runs the whole suite in one job, as before, as
+shard 1/1 of the same scheme, and checks its one record in that job (`ci_shards.py check artifacts/shards --shards 1
+--min-selected N`).
 
 - **Whole modules.** A shard runs whole test modules, so a module's fixtures and test order are as in a full run.
   `tooling/ci_shards.py` decides which: the heaviest modules (`PINNED`, by measured duration) are pinned to balance the
@@ -48,6 +50,13 @@ Windows' full default suite (`not slow and not e2e`) was the longest job of ever
   ids don't match its own digest; a test selected twice, run in both shards, run in neither or without an outcome; a
   test that didn't pass; and a JUnit report that is missing or disagrees with its record. Test ids that embed the
   checkout's path are written `<repo>`; a module skipped at collection is reported by both shards and counted once.
+- **Lane floors (#648).** Both OSes' checks pass `--min-selected` with the default suite's floor
+  (`tooling/ci_shards.py` `DEFAULT_MIN_SELECTED`), and refuse a suite that collects fewer tests: a conftest, marker or
+  collection change that drops most of the suite turns CI red instead of green. Extended's gpu fan-ins do the same
+  with the gpu lane's floor, and every lane run by `tooling/test_tiers.py` checks its own `min_selected`. Each floor sits
+  just under what its lane collects; `tests/test_test_lanes_contract.py` keeps it within 5% of that (a whole-suite run
+  counts every lane). **The rule:** a legitimate test removal lowers the floor on purpose, in the same PR; growth past
+  5% raises it there too.
 
 Run one shard locally the way CI does:
 
