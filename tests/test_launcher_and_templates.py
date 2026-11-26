@@ -59,7 +59,7 @@ def test_the_launcher_offers_blank_adventure_and_the_hd2d_preview_with_pictures(
     assert [t.id for t in offered] == ["blank", "adventure", "hd2d_rpg"]
     for template in offered:
         assert (ENGINE_ROOT / template.preview).is_file(), f"run tooling/make_template_previews.py ({template.id})"
-    assert {"starter", "lighting_playground", "demo_slice", "monster"} <= {t.id for t in list_templates()}
+    assert {"starter", "lighting_playground", "monster"} <= {t.id for t in list_templates()}
 
 
 def _open(root: Path) -> Project:

@@ -388,7 +388,8 @@ class AIOps:
         quests_path: str = "assets/data/quests.json",
     ) -> AIOpsResult:
         path = self._scene_path(quests_path)
-        payload = _load_json(path)
+        # A project's first quest makes its quest list (#655); new projects have none.
+        payload = _load_json(path) if os.path.lexists(path) else {"quests": []}
         if not isinstance(payload, dict):
             return AIOpsResult(False, "quests root must be an object")
         quests = payload.setdefault("quests", {})

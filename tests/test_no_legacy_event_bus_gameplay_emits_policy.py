@@ -16,7 +16,7 @@ pytestmark = [pytest.mark.fast]
 
 # Legacy emit sites intentionally tolerated for compatibility-only paths.
 LEGACY_EVENT_BUS_EMIT_ALLOWLIST: dict[str, str] = {
-    "engine/behaviours/pickup_collectible.py:108": "legacy collectible bridge",
+    "engine/behaviours/pickup_collectible.py:123": "legacy collectible bridge",
     "engine/tooling/replay_goldens_command.py:51": "legacy tooling replay bridge",
     "tooling/campaign_replay.py:231": "legacy SceneExit bridge in campaign tooling",
     "tooling/campaign_replay.py:233": "legacy SceneExit bridge in campaign tooling",

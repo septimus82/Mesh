@@ -193,7 +193,7 @@ The Milestone 1 and 2 acceptance tests pass on the same code (15/15 and 23/23).
 | Blank Project | **Done** | A grass map, the player and the Person object type. No monster, battle, quest or demo files (checked). |
 | Top-down Adventure | **Done** | A village and a house linked by doors, collision, a Guide with dialogue, a Grandma indoors, the starter tileset, save and load in the Esc menu. Built with `project_ops`. |
 | Extensible template definitions | **Done** | One `Template` entry and one builder per genre; the launcher lists those marked `launcher=True`. |
-| Old templates hidden, recoverable | **Done** | `lighting_playground` and `demo_slice` (older scene layout) are kept for the CLI and hidden from the launcher. |
+| Old templates hidden, recoverable | **Done** | `lighting_playground` and `demo_slice` (older scene layout) are kept for the CLI and hidden from the launcher. #656: `lighting_playground` ported to the current format, `demo_slice` retired. |
 | Studio protects unsaved work on close | **Done** | The first close warns; a second close leaves. |
 
 ### How it was validated

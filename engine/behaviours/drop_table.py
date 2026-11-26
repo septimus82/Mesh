@@ -6,8 +6,11 @@ import random
 from typing import Any, Callable
 
 from ..inventory import get_or_create_inventory, load_item_database
+from ..logging_tools import get_logger
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
+
+_LOG = get_logger("engine.behaviours.drop_table")
 
 
 @register_behaviour(
@@ -109,15 +112,23 @@ class DropTable(Behaviour):
         item_id = drop.get("item_id")
         gold = drop.get("gold")
         if item_id:
-            try:
-                db = load_item_database()
-                item_def = db.get(item_id)
-                label = item_def.name if item_def is not None else item_id
-            except Exception:
-                label = item_id
+            item_def = load_item_database().get(item_id)
+            label = item_def.name if item_def is not None else item_id
             inv = get_or_create_inventory(gs.state.values)
+            refusal = inv.refusal(item_id, qty)  # (asked before adding: add_item takes what fits)
+            before = inv.get_count(item_id)
             inv.add_item(item_id, qty)
-            self._log(f"Loot: +{qty}x {label}")
+            granted = inv.get_count(item_id) - before
+            if granted > 0:
+                self._log(f"Loot: +{granted}x {label}")
+            if refusal is not None:  # never silently (#652/#627, owner decision D7); the gold below still comes
+                _LOG.warning("Drop of %sx %s refused (%s granted): %s", qty, item_id, granted, refusal)
+                self._log(f"Loot: {qty - granted}x {label} left behind: {refusal}")
+                hud = getattr(self.window, "player_hud", None)
+                enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
+                # The player is told about a full bag; an unknown id is the creator's to fix (the log and console).
+                if item_def is not None and callable(enqueue):
+                    enqueue(refusal, seconds=2.0)
         if gold is not None:
             gold_total = int(gold) * max(1, qty)
             gs.add_counter("gold", gold_total)
