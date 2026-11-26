@@ -316,6 +316,7 @@ start_monster_battle
 stop_camera_shake
 strict_mode
 studio
+switch_room_pending
 text_cache
 tile_paint_overlay
 tile_paint_state
