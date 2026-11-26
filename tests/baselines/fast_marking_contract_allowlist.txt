@@ -168,6 +168,7 @@ tests/test_physics_model_contract.py
 tests/test_physics_runtime_broadphase_cache_invalidation_contract.py
 tests/test_physics_runtime_broadphase_cache_invalidation_mutation_contract.py
 tests/test_physics_runtime_broadphase_integration_contract.py
+tests/test_picker_behaviour_contract.py
 tests/test_play_from_here_contract.py
 tests/test_player_controller_contract.py
 tests/test_prefab_variant_inspector_lines_contract.py
@@ -196,6 +197,7 @@ tests/test_project_explorer_recents_integration_contract.py
 tests/test_project_explorer_recents_model_contract.py
 tests/test_project_explorer_reveal_model_contract.py
 tests/test_project_explorer_selection_model_contract.py
+tests/test_project_root_contract.py
 tests/test_project_scaffold_contract.py
 tests/test_project_templates_contract.py
 tests/test_projects_json_golden_contract.py
@@ -224,6 +226,7 @@ tests/test_release_contract_report_schema_v1_ok.py
 tests/test_release_contract_report_schema_v1_rejects_bad_types.py
 tests/test_release_notes_contract.py
 tests/test_release_web_demo_contract.py
+tests/test_removal_contract.py
 tests/test_repo_hygiene_policy_contract.py
 tests/test_restore_policy_matrix_contract.py
 tests/test_safe_refactor_ops_matrix_contract.py
