@@ -82,7 +82,6 @@ class _Puzzle:
     """The running game, with the player's view of the gate, the button and the open door."""
 
     def __init__(self, game: _Game, hall: str, monkeypatch: pytest.MonkeyPatch) -> None:
-        from engine.behaviours.player_controller import PlayerController
         from engine.save_manager import SaveManager
 
         self.game, self.window, self.sc, self.hall = game, game.window, game.sc, hall
@@ -91,16 +90,20 @@ class _Puzzle:
         self.window.event_bus.subscribe(EVENT, lambda event: self.presses.append(event.type))
         hero = self.hero()
         self.spawn = (hero.center_x, hero.center_y)  # (the player's authored spot: where a fresh room puts them)
-        # Whether the gate was solid when the player's mover first ran after each room build (None: not yet).
+        # Whether the gate was solid when the behaviours' update (the player's mover: PlayerController) first ran after
+        # each room build (None: not yet). Watched on this scene controller, not on the PlayerController class: a test
+        # that re-imports the behaviour modules can leave the registry building players from another class object.
         self.solid_at_first_move: bool | None = None
-        update = PlayerController.update
+        self.stage_calls = 0
+        stage =self.sc._update_behaviour_stage
 
-        def watched(behaviour: Any, dt: float) -> None:
+        def watched(dt: float) -> None:
+            self.stage_calls += 1
             if self.solid_at_first_move is None and self.gate() is not None:
                 self.solid_at_first_move = self.gate() in self.sc.solid_sprites
-            update(behaviour, dt)
+            stage(dt)
 
-        monkeypatch.setattr(PlayerController, "update", watched)
+        monkeypatch.setattr(self.sc, "_update_behaviour_stage", watched)
 
     def named(self, name: str) -> Any:
         return self.game.named(name)
@@ -148,10 +151,19 @@ class _Puzzle:
         entry = (self.window.game_state_controller.get_var(room_memory.VAR) or {}).get(START) or {}
         return dict(entry.get("facts") or {})
 
+    def frames(self) -> dict[str, Any]:
+        """Why the first movement might not have been seen (a failure message)."""
+        return {"behaviour updates": self.stage_calls, "paused": self.window.paused,
+                "game over": self.window.game_over, "player frozen": getattr(self.hero(), "frozen", None)}
+
     def visit(self, room: str) -> None:
         self.solid_at_first_move = None
         self.sc.load_scene(room)
         self.game.step(2)
+        for _ in range(10):  # (until the first behaviour update of the gate's room: a queued load can take a frame)
+            if self.solid_at_first_move is not None or self.gate() is None:
+                break
+            self.game.step(1)
 
     def come_back(self) -> None:
         """Walk to the Hall and back."""
@@ -197,7 +209,7 @@ def test_an_opened_gate_and_a_spent_button_stay_so_across_re_entry_and_save_fres
         assert p.facts() == {gate_id: {"DoorLock": {"locked": False}},
                              button_id: {"SwitchInteract": {"activated": True}}}  # (none for the open door)
         p.come_back()
-        assert p.solid_at_first_move is False, "the gate was out of the solid list before the player first moved"
+        assert p.solid_at_first_move is False, f"out of the solid list before the first movement: {p.frames()}"
         assert p.state() == OPENED
         assert not p.press() and p.presses == [EVENT], "the spent button can't be pressed again"
         p.walk_east(220)
@@ -213,9 +225,9 @@ def test_an_opened_gate_and_a_spent_button_stay_so_across_re_entry_and_save_fres
         p.solid_at_first_move = None
         p.game.step(3)
         assert str(p.sc.room_path) == START
-        assert p.solid_at_first_move is False and p.state() == OPENED, "loaded into the gate's room"
+        assert p.solid_at_first_move is False and p.state() == OPENED, f"loaded into the gate's room: {p.frames()}"
         p.come_back()
-        assert p.solid_at_first_move is False and p.state() == OPENED, "and on revisiting it"
+        assert p.solid_at_first_move is False and p.state() == OPENED, f"and on revisiting it: {p.frames()}"
         assert not p.press() and p.presses == []
         p.walk_east(220)
         assert p.past()
