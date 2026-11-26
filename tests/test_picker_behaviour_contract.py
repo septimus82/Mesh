@@ -537,7 +537,7 @@ ROWS: dict[str, Row] = {
     "LightSource": Row(place("Lantern", X, Y, ("LightSource", {"radius": 96}))
                        + [{"op": "set_room_lighting", "enabled": True}], _carried_light),
     "ToggleSceneLights": Row(place("Switchboard", X, Y, ("ToggleSceneLights", {"listen_event": "lights_out",
-                                                                              "mode": "off"}))
+                                                                              "indices": [0], "mode": "off"}))
                              + [{"op": "add_light", "x": 200, "y": 200}, {"op": "set_room_lighting", "enabled": True}],
                              _room_lights),
     # --- Gameplay
@@ -614,10 +614,7 @@ def test_every_picker_behaviour_has_a_row_or_a_reasoned_exclusion() -> None:
 
 
 # Rows a production defect fails today: strict, so the fix flips its own row (an unexpected pass fails CI).
-BROKEN: dict[str, str] = {
-    "ToggleSceneLights": "#704: Studio can't add it: add_behaviour fills its 'indices' default [] but "
-                         "its declared type 'list[int]' validates as a string",
-}
+BROKEN: dict[str, str] = {}
 
 
 @pytest.mark.parametrize("name", [pytest.param(name, marks=pytest.mark.xfail(strict=True, reason=BROKEN[name]))

@@ -376,10 +376,14 @@ class MainMenuOverlay(UIElement):
             return
 
     def _attempt_create_project(self) -> None:
+        from ..editor.project_ownership import project_root  # noqa: PLC0415
         from ..project_scaffold import create_project, validate_new_project_target  # noqa: PLC0415
 
-        path = Path(self._create_path)
+        path = Path(self._create_path).expanduser()
         valid, msg = validate_new_project_target(path)
+        enclosing = project_root(path.parent)
+        if valid and enclosing is not None:  # (#675: a project inside another's folder becomes part of that one)
+            valid, msg = False, f"That folder is inside the Mesh project {enclosing}; pick a folder outside it."
         if not valid:
             self._create_error = msg
             return
@@ -588,7 +592,10 @@ class MainMenuOverlay(UIElement):
                 if self._create_name.strip():
                     self.state = "create_project_path"
                     safe_name = self._create_name.strip().replace(" ", "_").lower()
-                    self._create_path = str((Path.cwd() / safe_name).resolve())
+                    from ..projects import default_projects_dir  # noqa: PLC0415
+
+                    # (#675: Documents/Mesh Projects, as the launcher offers; the current folder can be a project's)
+                    self._create_path = str((default_projects_dir() / safe_name).resolve())
                 return True
             if key == optional_arcade.arcade.key.ESCAPE:
                 self.state = "create_project_template"
