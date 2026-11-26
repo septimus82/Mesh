@@ -233,9 +233,10 @@ jobs:
   # Each OS's tests run as two parallel jobs (H3, #422 F13; neither uses the other's results): ``pytest`` (the full
   # default suite) and ``verify`` (verify-all, the release bundle and its strict verification, the artifacts). The
   # ``tests (<os>, py3.11)`` job after them is the result to look at: green only when both of that OS's jobs succeeded.
-  # Each OS's suite runs as two shards of whole modules (F13-C, tooling/ci_shards.py; Linux since S1 5.9), each a job
-  # of its own: ``pytest (<os>, py3.11, shard 1/2)`` and ``2/2``. Each writes a record of what it collected and ran,
-  # and the OS's ``tests`` fan-in refuses unless together they ran every test exactly once, at least the suite's floor.
+  # Each OS's suite runs as shards of whole modules (F13-C, tooling/ci_shards.py), each a job of its own: Linux's two
+  # (``pytest (ubuntu-latest, py3.11, shard 1/2)``, ``2/2``; plan default), Windows' three (``shard 1/3`` to ``3/3``;
+  # plan default-windows, since S1 5.9's follow-up). Each writes a record of what it collected and ran, and the OS's
+  # ``tests`` fan-in refuses unless together they ran every test exactly once, at least the suite's floor.
   pytest:
     name: pytest (${{ matrix.os }}, py${{ matrix.python }}${{ matrix.shard && format(', shard {0}', matrix.shard) || '' }})
     needs: dedup
@@ -251,8 +252,9 @@ jobs:
         include:
           - { os: ubuntu-latest, python: "3.11", shard: "1/2", shard_index: 1 }
           - { os: ubuntu-latest, python: "3.11", shard: "2/2", shard_index: 2 }
-          - { os: windows-latest, python: "3.11", shard: "1/2", shard_index: 1 }
-          - { os: windows-latest, python: "3.11", shard: "2/2", shard_index: 2 }
+          - { os: windows-latest, python: "3.11", shard: "1/3", shard_index: 1 }
+          - { os: windows-latest, python: "3.11", shard: "2/3", shard_index: 2 }
+          - { os: windows-latest, python: "3.11", shard: "3/3", shard_index: 3 }
 
     defaults:
       run:
@@ -286,7 +288,7 @@ jobs:
       - name: Run pytest (Windows, one shard)
         if: runner.os == 'Windows'
         run: |
-          python -m pytest -q -p no:cacheprovider -p tooling.ci_shards_plugin --mesh-shard ${{ matrix.shard }} --mesh-shard-record artifacts/shards/shard-${{ matrix.shard_index }}.json --junitxml=artifacts/shards/junit-${{ matrix.shard_index }}.xml
+          python -m pytest -q -p no:cacheprovider -p tooling.ci_shards_plugin --mesh-shard ${{ matrix.shard }} --mesh-shard-plan default-windows --mesh-shard-record artifacts/shards/shard-${{ matrix.shard_index }}.json --junitxml=artifacts/shards/junit-${{ matrix.shard_index }}.xml
 
       # Linux's shards (S1 5.9; until then one job ran the whole suite as shard 1/1, checked in the job): the Linux
       # ``tests`` fan-in checks their two records the same way as Windows' (#648: every collected test ran once with a
@@ -855,8 +857,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python: ["3.11"]
+        include:  # (each OS's shard plan and count: tooling/ci_shards.py PLAN_SHARDS, tooling/ci_require_jobs.py SHARDED)
+          - { os: ubuntu-latest, python: "3.11", plan: default, shards: 2 }
+          - { os: windows-latest, python: "3.11", plan: default-windows, shards: 3 }
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -876,7 +879,7 @@ jobs:
 
       - name: The shards together ran the whole suite, each test once
         if: always()  # (also when the download failed: then it refuses, red)
-        run: python3 tooling/ci_shards.py check shard-records --min-selected 13600 --commit "${{ github.sha }}"
+        run: python3 tooling/ci_shards.py check shard-records --plan ${{ matrix.plan }} --shards ${{ matrix.shards }} --min-selected 13600 --commit "${{ github.sha }}"
 
   timing-rolling:
     # Report-only (#373, #400): the integration branch's recent CI timings against the committed advisory model, so a

@@ -81,7 +81,8 @@ def test_the_default_suites_split_is_the_s1_5_9_one() -> None:
     assert scheme_digest(2) == "4c825fd905d1b1bec2b5176af6713297789c73ac4e7408eb888ecefa65a88e91"
     assert scheme_digest(1) == "d8c2ec23482332827f2a0a7032e9676ed92b3b75c23984427d9a642e6ca950b5"
     assert all(shard_of(m) == k for m, k in PINNED.items())
-    assert ci_shards.PLANS == {"default": PINNED, "gpu": GPU_PINNED, "gpu-linux": GPU_LINUX_PINNED}
+    assert ci_shards.PLANS == {"default": PINNED, "default-windows": ci_shards.DEFAULT_WINDOWS_PINNED, "gpu": GPU_PINNED,
+                               "gpu-linux": GPU_LINUX_PINNED}
 
 
 def test_windows_gpu_split_is_the_s1_5_9_one() -> None:
