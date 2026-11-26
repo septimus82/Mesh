@@ -8,19 +8,17 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from engine.behaviours.puzzle_behaviours import DoorLock, RewardChest
+from tests._fake_window import fake_sprite, fake_window
 
 
 def _make_window() -> MagicMock:
-    window = MagicMock()
-    unsub = MagicMock()
-    window.event_bus.subscribe.return_value = unsub
+    window = fake_window(event_bus=MagicMock())  # (spec'd: only the real window's attributes, S1 5.6 (c))
+    window.event_bus.subscribe.return_value = MagicMock()
     return window
 
 
 def _make_entity() -> MagicMock:
-    entity = MagicMock()
-    entity.mesh_entity_data = {}
-    return entity
+    return fake_sprite(mesh_entity_data={})
 
 
 class TestDoorLockLifecycle:
