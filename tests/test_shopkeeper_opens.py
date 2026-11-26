@@ -36,10 +36,11 @@ def _key(name: str) -> int:
     return int(getattr(optional_arcade.arcade.key, name))
 
 
-def _author(root: Path, *, once: bool = False) -> None:
+def _author(root: Path, *, once: bool = False, event_only: bool = False) -> None:
     """The starter Guide (a Person who talks) becomes a Shopkeeper too; beside the player: a Shopkeeper selling
     potions, one selling a sword (shop id "smithy"), and a Trader who talks, sells, and has the old workaround (a
-    "React when the player presses E" sending ``open_shop``)."""
+    "React when the player presses E" sending ``open_shop``). ``event_only``: the Guide is set to ``open_on: "event"``,
+    and a Counter (a Shopkeeper who doesn't talk, shop id "counter") likewise."""
     from engine import project_ops as ops
     from engine.editor import project_ownership
     from engine.studio_project import Project
@@ -71,7 +72,9 @@ def _author(root: Path, *, once: bool = False) -> None:
             for name, value in settings.items():
                 edit(lambda s, n=name, v=value: ops.set_behaviour_param(s, ident, "Vendor", n, v))
 
-        shopkeeper(GUIDE, POTIONS)
+        shopkeeper(GUIDE, POTIONS, **({"open_on": "event"} if event_only else {}))
+        if event_only:
+            shopkeeper(place("Counter", 192, 96), SWORD, shop_id="counter", open_on="event")
         if once:
             edit(lambda s: ops.set_behaviour_param(s, GUIDE, "Dialogue", "once", True))  # "Only once"
         shopkeeper(place("Shopkeeper", 320, -32), POTIONS)
@@ -196,6 +199,62 @@ def test_a_spent_only_once_talk_lets_e_open_the_shop_and_the_event_route_still_w
     assert seen["first talk"], "the conversation, then the shop"
     assert seen["spent"] == (False, True), "an \"Only once\" talk already had: E opens the shop straight away"
     assert seen["event"] == (True, ["rusty_sword"]), "open_shop naming a shop id opens that shop"
+
+
+def test_a_conversation_closed_before_it_completes_opens_no_shop(tmp_path: Path,
+                                                                  monkeypatch: pytest.MonkeyPatch) -> None:
+    """D2 is "after the conversation completes": one cut off (here the way loading a save closes the conversation
+    box) opens nothing. The next one, finished, does."""
+    root = _new(tmp_path, "starter")
+    _author(root)
+    seen: dict[str, Any] = {}
+
+    def drive(game: _Game) -> None:
+        shop = _Shop(game.window)
+        game.use("Guide")
+        seen["talking"] = _talking(game)
+        game.window.ui_controller.reset_transient_state()  # (engine/save_runtime/payloads.py on a load)
+        game.step(10)
+        seen["cut off"] = (_talking(game), shop.vendor is not None, len(shop.opens))
+        game.use("Guide")
+        game.press(_key("E"))
+        game.step(10)
+        seen["finished"] = (shop.vendor is game.behaviour("Guide", "Vendor"), len(shop.opens))
+
+    _play(root, monkeypatch, drive)
+    assert seen["talking"], "E started the conversation"
+    assert seen["cut off"] == (False, False, 0), "a conversation that didn't complete opens no shop"
+    assert seen["finished"] == (True, 1)
+
+
+def test_open_on_event_leaves_e_alone_and_the_event_opens_it(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """``open_on: "event"`` (the choice-driven option): E on a Shopkeeper who doesn't talk opens nothing, nor does
+    finishing a conversation or E once an "Only once" conversation is spent; ``open_shop`` still opens it."""
+    root = _new(tmp_path, "starter")
+    _author(root, once=True, event_only=True)
+    seen: dict[str, Any] = {}
+
+    def drive(game: _Game) -> None:
+        shop = _Shop(game.window)
+        game.use("Counter")
+        seen["counter E"] = (shop.vendor is not None, len(shop.opens))
+        game.use("Guide")
+        seen["talking"] = _talking(game)
+        game.press(_key("E"))  # (its only line: the conversation completes)
+        game.step(10)
+        seen["talk done"] = (shop.vendor is not None, len(shop.opens))
+        game.use("Guide")  # (it has nothing more to say)
+        seen["spent E"] = (_talking(game), shop.vendor is not None, len(shop.opens))
+        game.window.emit_signal("open_shop", shop_id="counter")
+        game.step(2)
+        seen["event"] = (shop.vendor is game.behaviour("Counter", "Vendor"), len(shop.opens))
+
+    _play(root, monkeypatch, drive)
+    assert seen["counter E"] == (False, 0), "E doesn't open an open_on: event shop"
+    assert seen["talking"], "E still talks"
+    assert seen["talk done"] == (False, 0), "nor does the end of the conversation"
+    assert seen["spent E"] == (False, False, 0), "nor E once the conversation is spent"
+    assert seen["event"] == (True, 1), "open_shop opens it"
 
 
 def test_the_shipped_merchants_open(monkeypatch: pytest.MonkeyPatch) -> None:
