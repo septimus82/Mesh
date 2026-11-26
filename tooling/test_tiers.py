@@ -10,6 +10,8 @@
   GL test skipped for want of GL fails instead of passing quietly.
 * ``acceptance``: the creator-workflow GL tests (``ACCEPTANCE``): save and reopen, dialogue, new-game isolation,
   creator editing, background rendering. A subset of ``gpu``.
+* ``quarantine``: only the tests in tests/baselines/quarantine.txt (D10, ``tooling/quarantine.py``), which every other
+  run deselects; GL ones get GL where there is a context. Extended's report-only quarantine job runs it.
 
 Every lane writes a JUnit report and ``pytest_<tier>_summary.json`` under artifacts/, and fails when it selects or
 runs no test, besides failing on any failed test (pytest's own exit code).
@@ -37,7 +39,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from tooling import ci_shards
+from tooling import ci_shards, quarantine
 from tooling.pytest_runner_common import (
     build_pytest_args,
     build_pytest_env,
@@ -85,6 +87,9 @@ TIERS: dict[str, TierDef] = {
                    calibrate=True),
     "acceptance": TierDef(pytest_mark="gl", verify_all=False, compileall=False, paths=ACCEPTANCE, env=GL_ENV,
                           min_selected=22),
+    # Every marker (no -m), only the quarantined tests (tests/conftest.py). No floor: it is empty when nothing is.
+    "quarantine": TierDef(pytest_mark=None, verify_all=False, compileall=False, env=(("MESH_GL_SMOKE", "1"),),
+                          pytest_args=("--mesh-quarantined",)),
 }
 
 
@@ -291,6 +296,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.shard_plan and (not args.shard or plan not in ci_shards.PLANS
                             or not (plan == args.tier or plan.startswith(f"{args.tier}-"))):
         parser.error(f"--shard-plan {plan}: needs --shard and one of the {args.tier} lane's plans in tooling/ci_shards.py")
+
+    if args.tier == "quarantine" and not quarantine.quarantined():
+        print("test-tiers: quarantine: no test is quarantined (tests/baselines/quarantine.txt)")
+        return 0
 
     extra_args = args.pytest_args
     if extra_args and extra_args[0] == "--":

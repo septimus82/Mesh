@@ -34,6 +34,7 @@ BASELINES: dict[str, str] = {
     "tooling/metrics/exception_budget_count.txt": "number",
     "tests/baselines/unmarked_test_nodeids.txt": "lines",
     "tests/baselines/never_runs.txt": "lines",
+    "tests/baselines/quarantine.txt": "lines",  # a new or renewed quarantine (D10): its changed line is growth
     "tests/baselines/fast_marking_contract_allowlist.txt": "lines",
     "tests/test_todo_audit_ratchet_contract.py": "BASELINE_TOTAL",  # the tech-debt marker cap, a constant in the test
     "tests/baselines/public_api_exports.txt": "lines",  # the public API grows only on purpose

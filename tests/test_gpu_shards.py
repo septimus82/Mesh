@@ -364,7 +364,7 @@ def _jobs() -> dict[str, str]:
 
 def test_each_os_s_gpu_lane_runs_as_two_shards_and_every_other_lane_as_before() -> None:
     jobs = _jobs()
-    assert set(jobs) == {"dedup", "lane", "gpu-shards"}
+    assert set(jobs) == {"dedup", "lane", "gpu-shards", "quarantine"}  # (quarantine: D10, report-only)
     lane = jobs["lane"]
     legs = re.findall(r"^          - \{ (.*) \}$", lane, re.M)
     assert legs == ["os: ubuntu-latest, lane: extended", "os: windows-latest, lane: extended",

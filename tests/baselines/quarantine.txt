@@ -1,0 +1,6 @@
+# Quarantined flaky tests (S1 5.3, owner decision D10). One per line, four fields separated by spaces:
+#   <node id> <issue number> <added YYYY-MM-DD> <expires YYYY-MM-DD>
+# e.g. tests/test_example.py::test_races 649 2026-11-26 2026-12-26
+# A listed test runs in no required lane, only in Extended's report-only quarantine job. Each entry needs an open issue
+# with the failure evidence and expires at most 30 days after it was added (tests/test_flake_quarantine_contract.py).
+# How to quarantine and unquarantine: docs/ci.md, "Flake Quarantine".

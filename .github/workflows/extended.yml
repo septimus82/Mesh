@@ -35,6 +35,8 @@ on:
       - "tests/conftest.py"
       - "pytest.ini"
       - "tests/baselines/never_runs.txt"
+      - "tests/baselines/quarantine.txt"
+      - "tooling/quarantine.py"
 
 concurrency:
   group: extended-${{ github.ref }}
@@ -223,3 +225,71 @@ jobs:
         run: >-
           python3 tooling/ci_require_jobs.py --name "gpu (${{ matrix.os }}, py3.11)"
           --job "gpu (${{ matrix.os }}, py3.11, shard 1/2)" --job "gpu (${{ matrix.os }}, py3.11, shard 2/2)"
+
+  quarantine:
+    # D10 (S1 5.3): the tests in tests/baselines/quarantine.txt, which every required lane deselects (tests/conftest.py),
+    # still run here on both OSes and their outcome goes in the job summary (a failure also as a warning annotation).
+    # Report-only: the job passes whatever they do, and nothing is retried. Nothing quarantined: it only says so.
+    name: quarantine (${{ matrix.os }}, py3.11, report-only)
+    needs: dedup
+    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}  # (left out with the lanes on a duplicate #344 run)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      MESH_CI_SEED: "123"
+      CI: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Any test quarantined?
+        id: list
+        run: |
+          $entries = @(Get-Content tests/baselines/quarantine.txt | Where-Object { $_.Trim() -and -not $_.TrimStart().StartsWith("#") })
+          "count=$($entries.Count)" >> $env:GITHUB_OUTPUT
+          $lines = @("## quarantine (${{ matrix.os }}, report-only)", "", "- quarantined: $($entries.Count) (``<node id> <issue> <added> <expires>``)")
+          foreach ($e in $entries) { $lines += "  - ``$e``" }
+          $lines -join "`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+
+      - name: Set up Python, the project and a display
+        if: steps.list.outputs.count != '0'
+        uses: ./.github/actions/mesh-ci-setup
+        with:
+          python-version: "3.11"
+
+      - name: Desktop 1920x1080 (Windows)
+        if: steps.list.outputs.count != '0' && runner.os == 'Windows'
+        run: Set-DisplayResolution -Width 1920 -Height 1080 -Force
+
+      - name: Run the quarantined tests (report-only)
+        if: steps.list.outputs.count != '0'
+        run: |
+          if ($IsLinux) { xvfb-run -a python -m tooling.test_tiers quarantine } else { python -m tooling.test_tiers quarantine }
+          $code = $LASTEXITCODE
+          $path = "artifacts/pytest_quarantine_summary.json"
+          $s = if (Test-Path $path) { Get-Content $path -Raw | ConvertFrom-Json } else { $null }
+          $lines = @("", "- pytest exit $code; selected $($s.selected), passed $($s.passed), failed $($s.failed.Count), errors $($s.errors.Count), skipped $($s.skipped)")
+          foreach ($f in @($s.failed) + @($s.errors)) { if ($f) { $lines += "- FAILED: ``$f``"; "::warning title=quarantined test failed::$f" } }
+          foreach ($p in $s.problems) { $lines += "- PROBLEM: $p" }
+          $lines -join "`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+          if ($code -ne 0) { "::warning title=quarantine lane::the quarantined tests did not all pass (exit $code); report-only, see the summary" }
+          exit 0
+
+      - name: Upload the quarantine report
+        if: always() && steps.list.outputs.count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: quarantine-${{ matrix.os }}-py3.11
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            artifacts/pytest_quarantine*
