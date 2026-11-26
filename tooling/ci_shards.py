@@ -11,13 +11,15 @@ Each shard collects the whole suite, then keeps its own modules, and writes a re
 Windows ``tests`` fan-in runs ``python3 tooling/ci_shards.py check`` on both records, which fails unless every
 check in ``check`` holds: both shards finished and passed, on the same commit, the same collection and the same scheme;
 each ran exactly its modules' tests, no test twice, none missing, every selected test with an outcome, and the suite
-holds at least ``DEFAULT_MIN_SELECTED`` tests. Linux runs the whole suite as one "shard" (``--mesh-shard 1/1``) and
-checks its one record the same way (``check --shards 1``), floor included.
+holds at least ``DEFAULT_MIN_SELECTED`` tests. Since S1 5.9 Linux's suite is split the same way, by the same plan, into
+``pytest (ubuntu-latest, py3.11, shard 1/2)`` and ``2/2``, and its ``tests`` fan-in runs the same check on its two
+records (``check --shards 1`` still checks a whole run as one shard, ``--mesh-shard 1/1``).
 
 The gpu lane (``extended.yml``) is split the same way on Windows, by its own plan (``--plan gpu``: its own pins, so the
-default suite's balance and the gpu lane's never move each other): ``gpu (windows-latest, py3.11, shard 1/2)`` and
-``2/2``, each collecting the whole ``gl`` selection, and a fan-in named ``gpu (windows-latest, py3.11)`` that runs
-``check --plan gpu --min-selected N``: the same checks, plus the lane's ``min_selected`` applied to the whole selection.
+default suite's balance and the gpu lane's never move each other), into three shards since S1 5.9 (``PLAN_SHARDS``):
+``gpu (windows-latest, py3.11, shard 1/3)``, ``2/3`` and ``3/3``, each collecting the whole ``gl`` selection, and a
+fan-in named ``gpu (windows-latest, py3.11)`` that runs ``check --plan gpu --shards 3 --min-selected N``: the same
+checks, plus the lane's ``min_selected`` applied to the whole selection.
 Linux's gpu lane (#422 CI-422B) is split the same way by a plan of its own, ``gpu-linux`` (``--shard-plan gpu-linux``):
 Linux's module costs aren't Windows' (the slowest Linux modules include one Windows' plan leaves to the hash), so each
 OS's pins come from its own lane's timings and neither moves the other. Its fan-in is ``gpu (ubuntu-latest, py3.11)``.
@@ -36,66 +38,92 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
 
-SHARDS = 2  # (Windows; .github/workflows/ci.yml and tooling/ci_require_jobs.py name the same two jobs)
-# The default suite's floor (#648): CI's checks of it on both OSes (``check --min-selected``: Windows' fan-in over its two
-# shards, Linux's single run as ``--shards 1``) fail when it collects fewer tests, so a conftest, marker or collection
+SHARDS = 2  # (each OS; .github/workflows/ci.yml and tooling/ci_require_jobs.py name the same two jobs per OS)
+# The default suite's floor (#648): CI's checks of it on both OSes (``check --min-selected``: each OS's fan-in over its
+# two shards) fail when it collects fewer tests, so a conftest, marker or collection
 # change that drops most of the suite turns CI red instead of green. Set just under the measured collection (13,979 at
 # 721bd909, both OSes); tests/test_test_lanes_contract.py keeps it within 5% of what the suite collects. A legitimate
 # test removal lowers it on purpose, in the same PR; growth past 5% raises it there too.
 DEFAULT_MIN_SELECTED = 13_600
-SCHEME = "f13c-1"  # (bump when the assignment rule changes: records of another scheme are refused)
+SCHEME = "f13c-2"  # (bump when the assignment rule changes: records of another scheme are refused; 2: S1 5.9's re-pin)
 RECORD_SCHEMA = 1
 OK_OUTCOMES = ("passed", "skipped", "xfailed", "xpassed")  # (what lets an unsharded run pass too)
 # The 20 heaviest modules of the default suite, each on the shard that balances the two given where the hash puts the
-# rest. Measured at a06783c (local Windows 11, setup + call + teardown): 485 s in all; the hash alone gave the rest
-# 102/142 s, with the pins 245/240 s. Re-measure and re-pin (bumping SCHEME) when the shards drift far apart.
+# rest (S1 5.9). Measured on CI's Windows shards, the mean of 6 green push runs 45797221746-45839494752 (setup + call +
+# teardown): 1,311 s in all, 1,944 modules; the hash alone gave the rest 348/397 s, with the pins 659/652 s (the old
+# pins, from a06783c, had drifted to 577/733). Linux's two shards use the same plan. Re-measure and re-pin (bumping
+# SCHEME) when the shards drift far apart.
 PINNED: dict[str, int] = {
-    "tests/test_authoring_session_discovery.py": 1,  # 51.8 s
-    "tests/test_exported_game_locales.py": 2,  # 32.2 s
-    "tests/test_cli_release_bundle_command.py": 1,  # 15.3 s
-    "tests/test_studio_ai_base_revision.py": 1,  # 15.0 s
-    "tests/test_export_bundle.py": 2,  # 12.8 s
-    "tests/test_perf_run_thresholds.py": 1,  # 12.7 s
-    "tests/test_cli_doctor_assets.py": 2,  # 11.2 s
-    "tests/test_scatter_diagnostics_hash_seeds.py": 1,  # 9.8 s
-    "tests/test_release_bundle_self_verify_contract.py": 2,  # 9.2 s
-    "tests/test_logging_policy_contract.py": 1,  # 7.8 s
-    "tests/test_test_lanes_contract.py": 2,  # 7.2 s
-    "tests/test_cocreative_live_bridge.py": 1,  # 7.1 s
-    "tests/test_perf_run_replay_report.py": 2,  # 7.1 s
-    "tests/test_cocreative_proposal_inbox.py": 1,  # 6.5 s
-    "tests/test_verify_all_reuse_bundle.py": 2,  # 6.3 s
-    "tests/test_authoring_session.py": 2,  # 6.2 s
-    "tests/test_generated_docs_freshness_contract.py": 1,  # 5.9 s
-    "tests/test_version_single_source_policy.py": 1,  # 5.7 s
-    "tests/test_no_direct_singleton_imports_policy.py": 2,  # 5.7 s
-    "tests/test_verify_all_reuse.py": 1,  # 5.5 s
+    "tests/test_studio_project_ownership.py": 1,  # 53.5 s
+    "tests/test_stale_plan_undo.py": 2,  # 52.9 s
+    "tests/test_mcp_project_ownership.py": 1,  # 48.4 s
+    "tests/test_authoring_session_discovery.py": 2,  # 46.8 s
+    "tests/test_baseline_growth.py": 1,  # 32.0 s
+    "tests/test_cli_write_guard.py": 1,  # 29.6 s
+    "tests/test_cli_new_force_safety.py": 2,  # 28.3 s
+    "tests/test_studio_object_identity.py": 1,  # 27.8 s
+    "tests/test_mesh_net_prediction.py": 2,  # 27.7 s
+    "tests/test_live_bridge_request_states.py": 1,  # 26.8 s
+    "tests/test_exported_game_locales.py": 2,  # 26.6 s
+    "tests/test_mesh_net_burst.py": 1,  # 22.8 s
+    "tests/test_replay_tick_sample_pooling.py": 2,  # 21.7 s
+    "tests/test_ai_write_paths.py": 1,  # 19.8 s
+    "tests/test_legacy_file_ops_real_window.py": 2,  # 19.4 s
+    "tests/test_water_passable.py": 1,  # 18.2 s
+    "tests/test_export_bundle_replacement.py": 2,  # 16.7 s
+    "tests/test_studio_ai_base_revision.py": 1,  # 16.2 s
+    "tests/test_mesh_net_owed.py": 2,  # 15.3 s
+    "tests/test_logging_policy_contract.py": 1,  # 15.3 s
 }
 
 
-# The gpu lane's (``python -m tooling.test_tiers --shard K/2 gpu``): its 12 heaviest modules, pinned to balance the two
-# given where the hash puts the rest. Measured on CI's Windows gpu lane (Mesa llvmpipe), the mean of #456's ad51026 and
-# baba1e7 runs (setup + call + teardown): 1,956-2,107 s in all, 45 modules; the hash alone gave the rest 207/267 s,
-# with the pins 1,012/1,020 s. Re-measure and re-pin (bumping SCHEME) when the shards drift far apart.
+# The gpu lane's (``python -m tooling.test_tiers --shard K/3 gpu``): three shards since S1 5.9, its 30 heaviest modules
+# pinned to balance the three given where the hash puts the rest. Measured on CI's Windows gpu lane (Mesa llvmpipe), the
+# mean of 6 green Extended push runs 45797221431-45839494580 (setup + call + teardown): 3,530 s in all, 91 modules; the
+# hash alone gave the rest 259/153/239 s, with the pins 1,175/1,178/1,177 s (each run's three within 67 s of each
+# other). Two shards balanced too (1,738/1,791 s), but runners differ by up to 0.74-1.19x per job, which left the
+# heavier of two near Extended's 40-minute limit at p90. The 5.7 (ii) HD-2D e2e leg is pinned to the lightest shard.
+# Re-measure and re-pin (bumping SCHEME) when the shards drift far apart.
 GPU_PINNED: dict[str, int] = {
-    "tests/test_dialogue_reopen_gpu.py": 1,  # 295.2 s
-    "tests/test_terrain_gpu.py": 2,  # 285.2 s
-    "tests/test_water_gpu.py": 1,  # 190.7 s
-    "tests/test_fire_gpu.py": 2,  # 183.1 s
-    "tests/test_weather_authoring_gpu.py": 1,  # 149.8 s
-    "tests/test_scatter_gpu.py": 2,  # 111.8 s
-    "tests/test_studio_workflow_polish_gpu.py": 1,  # 104.3 s
-    "tests/test_hd2d_asset_pipeline_gpu.py": 2,  # 90.5 s
-    "tests/test_hd2d_starter_gpu.py": 2,  # 82.4 s
-    "tests/test_weather_collisions_gpu.py": 1,  # 65.3 s
-    "tests/test_studio_3d_selection_gpu.py": 1,  # 57.4 s
-    "tests/test_hd2d_studio_gpu.py": 2,  # 57.3 s
+    "tests/test_terrain_gpu.py": 2,  # 306.7 s
+    "tests/test_hd2d_lighting_controls_gpu.py": 3,  # 222.0 s
+    "tests/test_water_gpu.py": 1,  # 183.6 s
+    "tests/test_mesh_net_hd2d_gpu.py": 1,  # 182.4 s
+    "tests/test_dialogue_reopen_gpu.py": 2,  # 163.0 s
+    "tests/test_fire_gpu.py": 3,  # 163.0 s
+    "tests/test_studio_panel_scroll_gpu.py": 2,  # 153.7 s
+    "tests/test_weather_authoring_gpu.py": 3,  # 143.8 s
+    "tests/test_hd2d_m1b_scene_gpu.py": 1,  # 112.7 s
+    "tests/test_scatter_gpu.py": 1,  # 104.2 s
+    "tests/test_hd2d_bloom_gpu.py": 3,  # 92.4 s
+    "tests/test_hd2d_asset_pipeline_gpu.py": 2,  # 86.1 s
+    "tests/test_mesh_net_gpu.py": 1,  # 83.4 s
+    "tests/test_river_falls_gpu.py": 3,  # 78.7 s
+    "tests/test_hd2d_starter_gpu.py": 2,  # 77.6 s
+    "tests/test_hd2d_haze_gpu.py": 1,  # 71.2 s
+    "tests/test_hd2d_post_gpu.py": 3,  # 64.4 s
+    "tests/test_weather_collisions_gpu.py": 2,  # 60.9 s
+    "tests/test_studio_3d_selection_gpu.py": 1,  # 54.5 s
+    "tests/test_hd2d_studio_gpu.py": 2,  # 54.0 s
+    "tests/test_studio_workflow_polish_gpu.py": 3,  # 52.2 s
+    "tests/test_river_tool_gpu.py": 1,  # 47.7 s
+    "tests/test_river_gpu.py": 2,  # 46.3 s
+    "tests/test_studio_workspace_gpu.py": 3,  # 44.3 s
+    "tests/test_indoor_weather_gpu.py": 1,  # 41.5 s
+    "tests/test_water_passable_gpu.py": 3,  # 39.8 s
+    "tests/test_room_file_ownership_gpu.py": 2,  # 39.5 s
+    "tests/test_start_room_music_gpu.py": 3,  # 36.7 s
+    "tests/test_dof_studio_gpu.py": 1,  # 34.8 s
+    "tests/test_room_transition_gl_lifetime_gpu.py": 2,  # 31.2 s
+    "tests/test_e2e_creator_workflow.py": 2,  # 6.4 s (5.7 ii: the lightest shard without it, 1,172 s)
 }
 # Linux's gpu lane (``--shard 1/2 --shard-plan gpu-linux gpu``, #422 CI-422B): its 12 heaviest modules, pinned to balance
 # the two given where the hash puts the rest. Measured on CI's Linux gpu lane (Xvfb + Mesa llvmpipe), the mean of 7
 # green Extended runs at 1d11670-af380e7 on 5 CPU models (EPYC 9V45/9V74/7763, Xeon 8370C/6973P-C; setup + call +
 # teardown): 1,129-1,863 s in all, 66 modules; the hash alone gave the rest 191/290 s, with the pins 767/767 s (each run
-# within 3% of even). Re-measure and re-pin (bumping SCHEME) when the shards drift far apart.
+# within 3% of even). Re-measure and re-pin (bumping SCHEME) when the shards drift far apart. (S1 5.9 left these pins:
+# Linux's gpu shards, at 913/816 s on the same 6 runs, are far off Extended's critical path; it only pinned the 5.7 (ii)
+# HD-2D e2e leg to the lighter shard.)
 GPU_LINUX_PINNED: dict[str, int] = {
     "tests/test_dialogue_reopen_gpu.py": 1,  # 176.4 s
     "tests/test_hd2d_lighting_controls_gpu.py": 1,  # 169.4 s
@@ -109,10 +137,14 @@ GPU_LINUX_PINNED: dict[str, int] = {
     "tests/test_hd2d_starter_gpu.py": 2,  # 49.9 s
     "tests/test_hd2d_post_gpu.py": 2,  # 48.5 s
     "tests/test_hd2d_studio_gpu.py": 2,  # 35.4 s
+    "tests/test_e2e_creator_workflow.py": 2,  # 3.4 s (5.7 ii, the lighter shard)
 }
 # Each split's pins, by plan name: ``default`` is the default suite's (ci.yml), ``gpu`` Windows' gpu lane's and
 # ``gpu-linux`` Linux's (extended.yml).
 PLANS: dict[str, dict[str, int]] = {"default": PINNED, "gpu": GPU_PINNED, "gpu-linux": GPU_LINUX_PINNED}
+# How many shards each plan's pins are for (its workflow's matrix and fan-in ``--shards``): a plan's pins apply only at
+# its own count; split any other way, every module goes by the hash.
+PLAN_SHARDS: dict[str, int] = {"default": SHARDS, "gpu": 3, "gpu-linux": SHARDS}
 
 
 def module_of(nodeid: str) -> str:
@@ -125,7 +157,7 @@ def shard_of(module: str, shards: int = SHARDS, plan: str = "default") -> int:
     if shards == 1:
         return 1
     pinned = PLANS[plan]
-    if shards == SHARDS and module in pinned:
+    if shards == PLAN_SHARDS[plan] and module in pinned:
         return pinned[module]
     return int(hashlib.sha256(module.encode("utf-8")).hexdigest(), 16) % shards + 1
 
@@ -134,7 +166,7 @@ def scheme_digest(shards: int, plan: str = "default") -> str:
     """What decides the assignment, as one digest: two records agree on it, or they weren't split the same way. (The
     plans' pins differ, so their digests do; the default plan's is what it was before plans.)"""
     scheme = {"scheme": SCHEME, "shards": shards,
-              "pinned": dict(sorted(PLANS[plan].items())) if shards == SHARDS else {}}
+              "pinned": dict(sorted(PLANS[plan].items())) if shards == PLAN_SHARDS[plan] else {}}
     return hashlib.sha256(json.dumps(scheme, sort_keys=True).encode("utf-8")).hexdigest()
 
 

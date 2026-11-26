@@ -119,8 +119,8 @@ def test_every_way_the_shards_fail_to_add_up_is_refused(change: str) -> None:
 
 
 def test_a_whole_run_as_one_shard_is_held_to_its_floor() -> None:
-    # Linux's default suite (#648): the whole suite as shard 1/1, checked the same way and held to the suite's floor,
-    # so a collection that lost tests fails instead of passing green.
+    # A whole run as shard 1/1 (Linux's default suite until S1 5.9 split it, #648), checked the same way and held to the
+    # suite's floor, so a collection that lost tests fails instead of passing green.
     outcomes = {t: "passed" for t in COLLECTED}
     record = {"schema": 1, "complete": True, "shard": 1, "shards": 1, "commit": COMMIT, "scheme_digest": scheme_digest(1),
               "collected": list(COLLECTED), "collected_digest": ids_digest(COLLECTED), "collection_skips": [],
@@ -183,6 +183,24 @@ def test_the_cli_passes_good_records_and_refuses_bad_ones(tmp_path: Path, capsys
     assert ci_shards.main(["check", str(tmp_path / "absent"), "--commit", COMMIT]) == 1
     out = capsys.readouterr().out
     assert "no JUnit report" in out and "no record from shard(s) 1/2, 2/2" in out
+
+
+def test_an_os_fan_in_refuses_a_missing_shard_and_a_suite_under_its_floor(
+        tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    # S1 5.9: each OS's ``tests`` fan-in (Linux's now too) runs ``check shard-records --min-selected N --commit SHA`` on
+    # its two shards' records, so a shard that left no record (missing, cancelled, its upload lost) or a suite that
+    # collected under the floor turns the OS's check red.
+    floor = len(COLLECTED)
+    args = ["--min-selected", str(floor), "--commit", COMMIT]
+    _write(tmp_path / "both", _records())
+    assert ci_shards.main(["check", str(tmp_path / "both"), *args]) == 0
+    _write(tmp_path / "one", _records()[:1])
+    assert ci_shards.main(["check", str(tmp_path / "one"), *args]) == 1
+    assert "FAILED  no record from shard(s) 2/2" in capsys.readouterr().out
+    _write(tmp_path / "low", _records())
+    assert ci_shards.main(["check", str(tmp_path / "low"), "--min-selected", str(floor + 1), "--commit", COMMIT]) == 1
+    out = capsys.readouterr().out
+    assert f"fewer than the {floor + 1} it should" in out and "REFUSED: 1 problem(s)" in out
 
 
 @pytest.mark.parametrize("damage", ["truncated", "not an object"])
