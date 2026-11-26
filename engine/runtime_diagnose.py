@@ -242,7 +242,7 @@ def _dialogue_choices(behaviour: Any, flag: Any) -> tuple[Doc, set[str]]:
         for choice in node.get("choices", []) if isinstance(node, dict) else []:
             require, forbid = list(choice.get("require_flags") or []), list(choice.get("forbid_flags") or [])
             ok, detail = _gate(require, forbid, flag)
-            used = bool(choice.get("once") and choice.get("id") in behaviour._choice_history)
+            used = bool(behaviour._spends(choice) and choice.get("once_key") in behaviour._choice_history)
             flags |= set(detail["values"])
             if len(choices) < CHOICES_MAX:
                 met = bool(behaviour._choice_is_available(choice))

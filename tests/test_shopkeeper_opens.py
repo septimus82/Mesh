@@ -302,7 +302,10 @@ def test_the_shipped_merchants_open(monkeypatch: pytest.MonkeyPatch) -> None:
                     ("packs/core_regions/scenes/Ridge Outpost_hub.json", "RidgeMerchant", ("DOWN", "DOWN"), ("DOWN",)),
                     ("scenes/door_interior.json", "Merchant", ("DOWN", "UP"), ("DOWN",))):
                 for keys, label in ((other, "other choice"), (trade, "trade choice")):
-                    shop = enter(path)  # (afresh: the door interior's merchant talks only once)
+                    # A new game each time: the door interior's merchant talks only once, and since #620 that stays
+                    # so when its room is entered again.
+                    window.game_state_controller.replace_state({})
+                    shop = enter(path)
                     if merchant == "RidgeMerchant":
                         game.use(merchant)
                     else:  # the door interior's merchant has no picture, so E can't reach it: its conversation directly

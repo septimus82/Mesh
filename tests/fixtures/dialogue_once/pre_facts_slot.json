@@ -1,0 +1,669 @@
+{
+  "entities": [
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "Animator": {
+          "animation_frame_rate": 8.0,
+          "animation_state": "idle_down",
+          "animations": {
+            "idle_down": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 0
+            },
+            "idle_left": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 4
+            },
+            "idle_right": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 8
+            },
+            "idle_up": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 12
+            },
+            "walk_down": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 0
+            },
+            "walk_left": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 4
+            },
+            "walk_right": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 8
+            },
+            "walk_up": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 12
+            }
+          },
+          "directional_mode": "4-way",
+          "enable_auto_state": true,
+          "facing_default": "down",
+          "idle_clip": "idle_down",
+          "speed_threshold": 5.0,
+          "walk_clip": "walk_down"
+        },
+        "CameraFollow": {
+          "padding": 12,
+          "zoom": 1.0
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "PlayerController"
+        },
+        {
+          "params": {},
+          "type": "CameraFollow"
+        },
+        {
+          "params": {},
+          "type": "Animator"
+        }
+      ],
+      "components": {
+        "collider": {
+          "auto": true,
+          "kind": "box"
+        }
+      },
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "start_player_128_128_0_0",
+      "layer": "entities",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "prefab_id": "player",
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite_sheet": {},
+      "tag": "player",
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 296.0,
+      "y": 240.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "Animator": {
+          "animation_frame_rate": 8.0,
+          "animation_state": "idle_down",
+          "animations": {
+            "idle_down": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 0
+            },
+            "idle_left": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 4
+            },
+            "idle_right": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 8
+            },
+            "idle_up": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 12
+            },
+            "walk_down": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 0
+            },
+            "walk_left": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 4
+            },
+            "walk_right": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 8
+            },
+            "walk_up": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 12
+            }
+          },
+          "directional_mode": "4-way",
+          "enable_auto_state": true,
+          "facing_default": "down",
+          "idle_clip": "idle_down",
+          "speed_threshold": 5.0,
+          "walk_clip": "walk_down"
+        },
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "inc_counters": {
+                      "gold": 50.0
+                    },
+                    "once": true,
+                    "text": "Thank you"
+                  },
+                  {
+                    "text": "Goodbye"
+                  }
+                ],
+                "text": "Welcome to the village! The house up the path is open: walk into its door.\nPress Esc for the menu, where you can save and load your game."
+              }
+            },
+            "speaker": "Guide",
+            "start": "root"
+          },
+          "dialogue_lines": [],
+          "once": false
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "Dialogue"
+        },
+        {
+          "params": {},
+          "type": "Animator"
+        }
+      ],
+      "components": {
+        "collider": {
+          "auto": true,
+          "kind": "box"
+        }
+      },
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "start_guide_320_128_0_0",
+      "layer": "entities",
+      "name": "Guide",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/sprites/starter_villager.png",
+      "sprite_sheet": {},
+      "tag": "npc",
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 320.0,
+      "y": 128.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "text": "Grandma's house. Visitors welcome!"
+              }
+            },
+            "speaker": "",
+            "start": "root"
+          },
+          "dialogue_lines": [],
+          "once": true
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "Dialogue"
+        }
+      ],
+      "components": {
+        "collider": {
+          "auto": true,
+          "kind": "box"
+        }
+      },
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "start_sign_336_240_0_0",
+      "layer": "entities",
+      "name": "Sign",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/sprites/starter_sign.png",
+      "sprite_sheet": {},
+      "tag": "sign",
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 336.0,
+      "y": 240.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "SceneTransition": {
+          "allow_interact": false,
+          "spawn_id": "from_start",
+          "target_scene": "house",
+          "target_tag": "player",
+          "trigger_on_touch": true
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SceneTransition"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "start_door_to_house_384_272_0_0",
+      "layer": "entities",
+      "name": "Door to House",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/sprites/door.png",
+      "sprite_sheet": {},
+      "tag": "door",
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 384.0,
+      "y": 272.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {},
+      "behaviours": [],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "start_arrival_house_384_176_0_0",
+      "layer": "entities",
+      "name": "Arrival from House",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "spawn_id": "from_house",
+      "sprite": null,
+      "sprite_sheet": {},
+      "tag": "spawn_point",
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 384.0,
+      "y": 176.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "text": "Fine wares, friend."
+              }
+            },
+            "speaker": "Shopkeeper",
+            "start": "root"
+          },
+          "dialogue_lines": [],
+          "once": true
+        },
+        "Vendor": {
+          "buy_rate": 1.0,
+          "buy_sound": "",
+          "currency_counter": "gold",
+          "fail_sound": "",
+          "listen_event": "open_shop",
+          "open_on": "interact",
+          "sell_blacklist": [],
+          "sell_enabled": true,
+          "sell_rate": 0.5,
+          "sell_whitelist": [],
+          "shop_id": "",
+          "stock": [
+            {
+              "item_id": "healing_potion",
+              "price": 5,
+              "quantity": 3
+            }
+          ]
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "Dialogue"
+        },
+        {
+          "params": {},
+          "type": "Vendor"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "start_shopkeeper_160_240_0_0",
+      "layer": "entities",
+      "name": "Shopkeeper",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/sprites/starter_sign.png",
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 160.0,
+      "y": 240.0
+    }
+  ],
+  "game_state": {
+    "chapter": 1,
+    "counters": {
+      "gold": 50.0
+    },
+    "equipment": {
+      "accessory": null,
+      "armor": null,
+      "weapon": null
+    },
+    "flags": {
+      "hint_shown_controls": true
+    },
+    "level": 1,
+    "main_quest_id": null,
+    "perks": [],
+    "playtime_seconds": 0.55,
+    "quests": {
+      "quests": {},
+      "schema_version": 1
+    },
+    "values": {
+      "quests": {},
+      "time_of_day_hours": 21.0
+    },
+    "variables": {
+      "quests": {},
+      "time_of_day_hours": 21.0
+    },
+    "xp": 0
+  },
+  "layers": [
+    {
+      "name": "background"
+    },
+    {
+      "name": "entities"
+    },
+    {
+      "name": "foreground"
+    }
+  ],
+  "meta": {
+    "music": {
+      "path": null
+    },
+    "room_entity_ids": [
+      "start_arrival_house_384_176_0_0",
+      "start_door_to_house_384_272_0_0",
+      "start_guide_320_128_0_0",
+      "start_player_128_128_0_0",
+      "start_shopkeeper_160_240_0_0",
+      "start_sign_336_240_0_0"
+    ],
+    "scene_path": "packs/core_regions/scenes/start.json",
+    "slot": "slot",
+    "timestamp": "2026-11-26T06:21:49.903933",
+    "version": 2
+  },
+  "name": "Village",
+  "save_format_version": 1,
+  "save_schema_version": 3,
+  "saved_entities": {
+    "counters": {
+      "id": 6,
+      "name": 0
+    },
+    "entities": [
+      {
+        "entity_id": "Arrival from House",
+        "keying": "id",
+        "mesh_id": "start_arrival_house_384_176_0_0",
+        "occurrence": 0,
+        "primary_tag": "spawn_point",
+        "tags": [
+          "spawn_point"
+        ],
+        "x": 384.0,
+        "y": 176.0
+      },
+      {
+        "entity_id": "Door to House",
+        "keying": "id",
+        "mesh_id": "start_door_to_house_384_272_0_0",
+        "occurrence": 0,
+        "primary_tag": "door",
+        "tags": [
+          "door"
+        ],
+        "x": 384.0,
+        "y": 272.0
+      },
+      {
+        "entity_id": "Guide",
+        "keying": "id",
+        "mesh_id": "start_guide_320_128_0_0",
+        "occurrence": 0,
+        "primary_tag": "npc",
+        "tags": [
+          "npc"
+        ],
+        "x": 320.0,
+        "y": 128.0
+      },
+      {
+        "entity_id": "Player",
+        "keying": "id",
+        "mesh_id": "start_player_128_128_0_0",
+        "occurrence": 0,
+        "prefab_id": "player",
+        "primary_tag": "player",
+        "tags": [
+          "player"
+        ],
+        "x": 296.0,
+        "y": 240.0
+      },
+      {
+        "entity_id": "Shopkeeper",
+        "keying": "id",
+        "mesh_id": "start_shopkeeper_160_240_0_0",
+        "occurrence": 0,
+        "x": 160.0,
+        "y": 240.0
+      },
+      {
+        "entity_id": "Sign",
+        "keying": "id",
+        "mesh_id": "start_sign_336_240_0_0",
+        "occurrence": 0,
+        "primary_tag": "sign",
+        "tags": [
+          "sign"
+        ],
+        "x": 336.0,
+        "y": 240.0
+      }
+    ],
+    "scene_path": "packs/core_regions/scenes/start.json",
+    "schema_version": 2,
+    "unresolved": []
+  },
+  "saved_flags": {},
+  "saved_quests": {
+    "quests": {},
+    "schema_version": 1
+  },
+  "saved_runners": {},
+  "saved_time": {},
+  "schema_version": 1,
+  "settings": {
+    "camera": {
+      "zoom": {
+        "initial": 1.0,
+        "max": 3.0,
+        "min": 0.25,
+        "speed": 5.0,
+        "target": 1.0
+      }
+    }
+  },
+  "spawn_zone_id": null,
+  "state": {
+    "chapter": 1,
+    "counters": {
+      "gold": 50.0
+    },
+    "equipment": {
+      "accessory": null,
+      "armor": null,
+      "weapon": null
+    },
+    "flags": {
+      "hint_shown_controls": true
+    },
+    "level": 1,
+    "main_quest_id": null,
+    "perks": [],
+    "playtime_seconds": 0.55,
+    "quests": {
+      "quests": {},
+      "schema_version": 1
+    },
+    "values": {
+      "quests": {},
+      "time_of_day_hours": 21.0
+    },
+    "variables": {
+      "quests": {},
+      "time_of_day_hours": 21.0
+    },
+    "xp": 0
+  },
+  "version": 1
+}
