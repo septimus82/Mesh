@@ -9,6 +9,7 @@ from __future__ import annotations
 import builtins
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -102,7 +103,7 @@ def _run(capsys: pytest.CaptureFixture[str], *argv: str) -> tuple[int, dict[str,
 
 @pytest.mark.parametrize(("step", "module", "nth"), [
     ("mypy-gate", "mypy_gate", 1),
-    ("mypy-baseline-guard", "mypy_gate", 2),  # the guard's own import, after mypy-gate's succeeded
+    ("mypy-baseline-guard", "baseline_growth", 1),
     ("ruff-gate", "ruff_gate", 1),
     ("mypy-island", "mypy_island", 1),
     ("swallow-scan-gate", "find_blanket_swallow", 1),
@@ -171,6 +172,9 @@ def test_allow_listed_skips_still_pass(
         ("player-package-gate", "skipped: no engine/ and mesh_cli/ sources"),
         ("perf-baseline-compare", "skipped: no perf scene set or baseline"),
         ("content-audit", "skipped: no content roots"),
+        ("exception-budget-guard", "skipped: no tooling/metrics/exception_budget_count.txt"),
+        ("exception-policy-scan", "skipped: no tooling/exception_policy_baseline.json"),
+        ("mypy-baseline-guard", "skipped: no merge base (MESH_BASELINE_BASE not set)"),
     ]:
         assert (by_name[step]["ok"], by_name[step]["error"]) == (True, error)
 
@@ -182,13 +186,97 @@ def test_mesh_skip_pytest_fast_is_not_an_allow_listed_skip(
     _synthetic_repo(monkeypatch, tmp_path)
     allow_synthetic_repo_skips(monkeypatch)
     monkeypatch.setenv("MESH_SKIP_PYTEST_FAST", "1")
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
-    monkeypatch.delitem(sys.modules, "pytest")  # restored at teardown
+    monkeypatch.delenv("MESH_VERIFY_IN_TEST_SUITE")  # as outside the suite
 
     code, by_name, _payload = _run(capsys)
 
     assert code == 2
     assert by_name["pytest-fast"]["error"] == "skip not allow-listed (pipeline.ALLOWED_SKIPS): skipped: MESH_SKIP_PYTEST_FAST=1"
+
+
+def _stub_pytest_fast(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
+    """``python -m tooling.pytest_fast`` passes at once (recorded); every other subprocess runs as usual."""
+    import subprocess
+
+    started: list[list[str]] = []
+    original_run = subprocess.run
+
+    def _run_stub(cmd: Any, *args: Any, **kwargs: Any) -> Any:
+        if isinstance(cmd, list) and "tooling.pytest_fast" in cmd:
+            started.append(list(cmd))
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        return original_run(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", _run_stub)
+    return started
+
+
+def test_a_pytest_import_in_the_verify_process_does_not_skip_pytest_fast(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """#693: only the suite's explicit flag skips the fast tier. pytest imported (and PYTEST_CURRENT_TEST set, as in
+    this very process) used to skip it, so a stray import in CI's verify-all would have dropped D9's gate."""
+    _synthetic_repo(monkeypatch, tmp_path)
+    allow_synthetic_repo_skips(monkeypatch)
+    monkeypatch.delenv("MESH_VERIFY_IN_TEST_SUITE")
+    assert "pytest" in sys.modules and os.environ.get("PYTEST_CURRENT_TEST")
+    started = _stub_pytest_fast(monkeypatch)
+
+    _code, by_name, _payload = _run(capsys)
+
+    assert (by_name["pytest-fast"]["ok"], by_name["pytest-fast"]["error"]) == (True, "")
+    assert len(started) == 1
+
+
+def test_the_suites_flag_still_skips_pytest_fast(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _synthetic_repo(monkeypatch, tmp_path)
+    allow_synthetic_repo_skips(monkeypatch)
+    monkeypatch.setenv("MESH_VERIFY_IN_TEST_SUITE", "1")
+    started = _stub_pytest_fast(monkeypatch)
+
+    _code, by_name, _payload = _run(capsys)
+
+    assert (by_name["pytest-fast"]["ok"], by_name["pytest-fast"]["error"]) == (True, "skipped: running under pytest")
+    assert started == []
+
+
+def test_broad_catch_growth_fails_the_exception_policy_scan(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """broad_catch_count_total was in the baseline and in every scan, and checked by nothing (#624)."""
+    from tooling import scan_exception_policies
+
+    repo = _synthetic_repo(monkeypatch, tmp_path)
+    allow_synthetic_repo_skips(monkeypatch)
+    (repo / "tooling").mkdir()
+    (repo / "tooling" / "exception_policy_baseline.json").write_text(json.dumps({
+        "ble001_count_total": 0, "broad_catch_count_total": 1, "silent_broad_catch_count_total": 0,
+        "silent_broad_catch_max": 0, "ble001_missing_reason_max": 0}), encoding="utf-8")
+    monkeypatch.setattr(scan_exception_policies, "scan", lambda _roots, *, repo_root: {
+        "ble001_count_total": 0, "broad_catch_count_total": 2, "silent_broad_catch_count_total": 0,
+        "missing_ble001_reason_total": 0})
+
+    code, by_name, _payload = _run(capsys)
+
+    assert code != 0
+    assert (by_name["exception-policy-scan"]["ok"], by_name["exception-policy-scan"]["error"]) == (
+        False, "broad catches grew: 1 -> 2")
+
+
+def test_the_budget_artifact_is_not_ok_when_its_baseline_is_missing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """exception_budget.json is read by health, trends and release notes: a skipped budget is no passing one (#624)."""
+    repo = _synthetic_repo(monkeypatch, tmp_path)
+    allow_synthetic_repo_skips(monkeypatch)
+
+    _code, by_name, _payload = _run(capsys, "--artifacts", str(repo / "artifacts"))
+
+    assert by_name["exception-budget-guard"]["error"] == "skipped: no tooling/metrics/exception_budget_count.txt"
+    budget = json.loads((repo / "artifacts" / "exception_budget.json").read_text(encoding="utf-8"))
+    assert budget["ok"] is False
 
 
 def test_verify_all_routes_verify_demo_to_artifacts_scoped_scratch(monkeypatch, tmp_path, capsys):

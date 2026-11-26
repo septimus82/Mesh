@@ -19,6 +19,11 @@ def test_verify_summary_payload_schema_and_deterministic_order(tmp_path: Path) -
         {"name": "verify-demo", "ok": True, "code": 0, "error": "", "artifact": None},
         {"name": "mypy-gate", "ok": False, "code": 2, "error": "skipped: previous step failed", "artifact": None},
         {"name": "player-package-gate", "ok": True, "code": 0, "error": "", "artifact": "artifacts/player_pkg/package_check.json"},
+        # Code-2 failures, not skips (#693): they used to be labelled "skipped": true.
+        {"name": "ruff-gate", "ok": False, "code": 2, "error": "tooling package unavailable", "artifact": None},
+        {"name": "content-audit", "ok": False, "code": 2,
+         "error": "skip not allow-listed (pipeline.ALLOWED_SKIPS): skipped: no content roots", "artifact": None},
+        {"name": "web-smoke", "ok": True, "code": 0, "error": "skipped: disabled by args", "artifact": None},
     ]
     artifacts_written: dict[str, str | None] = {
         "player_package_manifest": "artifacts/player_pkg/manifest.json",
@@ -47,8 +52,9 @@ def test_verify_summary_payload_schema_and_deterministic_order(tmp_path: Path) -
 
     step_rows = payload["steps"]
     assert isinstance(step_rows, list)
-    assert [row["name"] for row in step_rows] == ["verify-demo", "mypy-gate", "player-package-gate"]
-    assert [row["skipped"] for row in step_rows] == [False, True, False]
+    assert [row["name"] for row in step_rows] == [
+        "verify-demo", "mypy-gate", "player-package-gate", "ruff-gate", "content-audit", "web-smoke"]
+    assert [row["skipped"] for row in step_rows] == [False, True, False, False, False, True]
     assert step_rows[2]["artifact"] == "artifacts/player_pkg/package_check.json"
 
     key_artifacts = payload["key_artifacts"]

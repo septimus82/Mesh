@@ -68,3 +68,27 @@ def test_the_fast_tier_collection_rule(tmp_path: Path) -> None:
         (tmp_path / name).write_text(source, encoding="utf-8")
     kept = {name for name in cases if _may_hold_fast_tests(tmp_path / name, {})}
     assert kept == {"test_marked.py", "test_alias.py", "test_behaviour_loading_contract.py"}
+
+
+@pytest.mark.parametrize("listing", ["unmarked_test_nodeids.txt", "never_runs.txt"])
+def test_listed_tests_still_exist(listing: str) -> None:
+    # The other direction of each ratchet (#624, as the fast-marking allow-list's "no longer needed" check): a listed
+    # test that was deleted or renamed leaves a free slot for a new one. Checked on the source, so any partial run
+    # (a shard, one file) sees the same; a listed test that was since marked needs a full collection to notice.
+    import re
+
+    root = _BASELINE_PATH.parents[2]
+    sources: dict[str, str] = {}
+    stale = []
+    for line in (_BASELINE_PATH.parent / listing).read_text(encoding="utf-8").splitlines():
+        nodeid = line.split("  #", 1)[0].strip()
+        if not nodeid or nodeid.startswith("#"):
+            continue
+        path, _, rest = nodeid.partition("::")
+        if path not in sources:
+            source_path = root / path
+            sources[path] = source_path.read_text(encoding="utf-8") if source_path.is_file() else ""
+        name = rest.split("::")[-1].split("[")[0]
+        if not re.search(rf"\b{re.escape(name)}\b", sources[path]):
+            stale.append(nodeid)
+    assert not stale, f"tests/baselines/{listing} lists tests that no longer exist; remove them:\n" + "\n".join(stale)

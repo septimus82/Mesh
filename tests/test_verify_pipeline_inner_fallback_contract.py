@@ -262,6 +262,8 @@ def test_exception_policy_missing_reason_logging_does_not_fail_verify_step(
     tooling_dir = repo / "tooling"
     tooling_dir.mkdir()
     (tooling_dir / "mypy_baseline.txt").write_text("", encoding="utf-8")
+    (tooling_dir / "metrics").mkdir()
+    (tooling_dir / "metrics" / "exception_budget_count.txt").write_text("0", encoding="utf-8")  # the step before
     (tooling_dir / "exception_policy_baseline.json").write_text(
         json.dumps(
             {

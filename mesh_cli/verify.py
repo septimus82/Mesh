@@ -142,13 +142,12 @@ def _build_verify_summary_payload(
         name = str(row.get("name", "")).strip()
         ok_raw = row.get("ok")
         ok = bool(ok_raw) if isinstance(ok_raw, bool) else False
-        code_raw = row.get("code")
         error_text = str(row.get("error", "") or "")
-        skipped = (isinstance(code_raw, (int, float)) and int(code_raw) == 2) or error_text.startswith("skipped:")
         item: dict[str, object] = {
             "name": name,
             "ok": ok,
-            "skipped": bool(skipped),
+            # Only a step that didn't run; a failure with code 2 is a failure, not "skipped" (#693).
+            "skipped": error_text.startswith("skipped:"),
         }
         artifact_raw = row.get("artifact")
         if isinstance(artifact_raw, str) and artifact_raw.strip():
@@ -1686,14 +1685,14 @@ def _build_exception_budget_payload(
 
 def _evaluate_exception_budget_guard(repo_root: Path, baseline_path: Path) -> tuple[int, str, int, int, dict[str, int]]:
     current, per_file = _count_exception_budget(repo_root, _EXCEPTION_BUDGET_FILES)
-    if baseline_path.exists():
-        try:
-            baseline = int(baseline_path.read_text(encoding="utf-8").strip() or "0")
-        except (OSError, ValueError):
-            _log_swallow("VFYC-011", "exception-budget baseline parse fallback", once=False)
-            baseline = current
-    else:
-        baseline = current
+    # Fails closed (#624): with no baseline, or one that doesn't read, there is nothing to compare against. A missing
+    # file is a labelled skip, which verify-all fails unless pipeline.ALLOWED_SKIPS lists it (it doesn't).
+    if not baseline_path.is_file():
+        return 0, "skipped: no tooling/metrics/exception_budget_count.txt", current, 0, per_file
+    try:
+        baseline = int(baseline_path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError) as exc:
+        return 2, f"invalid exception budget baseline: {type(exc).__name__}: {exc}", current, 0, per_file
     if current > baseline:
         return (
             2,
@@ -2026,7 +2025,9 @@ def _handle_verify_local(args: argparse.Namespace) -> int:
                 _add_step("exception-policy-scan", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
 
             try:
-                if "pytest" in sys.modules:
+                from mesh_cli.verify_steps.pipeline import running_in_test_suite
+
+                if running_in_test_suite():  # never "pytest in sys.modules" (#693)
                     _add_step("pytest-fast", 0, error="skipped: running under pytest", artifact=None)
                 else:
                     cmd = [sys.executable, "-m", "tooling.pytest_fast"]

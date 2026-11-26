@@ -803,13 +803,53 @@ jobs:
           if-no-files-found: warn
           path: artifacts/replay_suite/**
 
+  baseline-growth:
+    # #624 (phase B, PR b): no ratchet's committed baseline (tooling/baseline_growth.py BASELINES) grows without a reason.
+    # Each is compared with the merge base; growth needs a "baseline-growth: <file>: <reason>" line in a commit message
+    # (docs/ci.md). Required through the `tests` fan-in. A treeless full-history clone: the commits give the merge base
+    # and the messages; the two versions of each baseline are fetched on demand.
+    name: baseline-growth (${{ matrix.os }}, py${{ matrix.python }})
+    needs: dedup
+    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      matrix:  # one leg; a matrix so that, left out by the duplicate check, it never reports a skipped real check
+        os: [ubuntu-latest]
+        python: ["3.11"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: tree:0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: No baseline grew without a reason
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # A pull request: its base branch. A push: what the branch held before it. Otherwise: the integration branch.
+          if [ "$EVENT" = pull_request ]; then base="origin/$BASE_REF"
+          elif [ "$EVENT" = push ] && [ -n "$BEFORE" ] && [ "$BEFORE" != 0000000000000000000000000000000000000000 ]; then base="$BEFORE"
+          else base=origin/redesign/visual-editor; fi
+          python -m tooling.baseline_growth --base "$base"
+
   tests:
-    # The fan-in: one OS's result, green only when its pytest, verify, installed and acceptance jobs and the replays job (R-2, ubuntu only) all succeeded (failed,
+    # The fan-in: one OS's result, green only when its pytest, verify, installed and acceptance jobs, the replays job (R-2, ubuntu only) and the baseline-growth job all succeeded (failed,
     # cancelled, skipped or missing: red). It always runs once they are done, so it never waits forever, and keeps the check name
     # reviews and merges have always looked at. The one exception: a run the duplicate check positively left out (`dedup`),
     # where there is nothing to fan in and the push run of the same tree is the result.
     name: tests (${{ matrix.os }}, py${{ matrix.python }})
-    needs: [dedup, pytest, verify, installed, acceptance, replays]
+    needs: [dedup, pytest, verify, installed, acceptance, replays, baseline-growth]
     if: ${{ always() && needs.dedup.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10

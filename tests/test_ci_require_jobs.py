@@ -26,6 +26,8 @@ def _names(part: str) -> list[str]:
     """A component's Windows job names (F13-C: ``pytest`` is two shard jobs)."""
     if part == "replays":  # R-2: one job on ubuntu, required by every OS's fan-in
         return ["replays (ubuntu-latest, py3.11)"]
+    if part == "baseline-growth":  # #624: one job, required by every OS's fan-in
+        return ["baseline-growth (ubuntu-latest, py3.11)"]
     return SHARD_JOBS if part == "pytest" else [f"{part} (windows-latest, py3.11)"]
 
 
@@ -34,7 +36,7 @@ def _jobs(**conclusions: str | None) -> list[dict[str, object]]:
             for part, c in conclusions.items() for name in _names(part)]
 
 
-PARTS = (*COMPONENTS, "replays")
+PARTS = (*COMPONENTS, "replays", "baseline-growth")
 ALL_OK = {part: "success" for part in PARTS}
 
 
@@ -44,11 +46,11 @@ def test_the_required_jobs_are_this_os_s_pytest_verify_installed_and_acceptance(
     assert SHARDED == {"windows-latest": 2}
     assert REQUIRED == [*SHARD_JOBS, "verify (windows-latest, py3.11)",
                         "installed (windows-latest, py3.11)", "acceptance (windows-latest, py3.11)",
-                        "replays (ubuntu-latest, py3.11)"]
+                        "replays (ubuntu-latest, py3.11)", "baseline-growth (ubuntu-latest, py3.11)"]
     assert required_jobs("ubuntu-latest", "3.11") == [
         "pytest (ubuntu-latest, py3.11)", "verify (ubuntu-latest, py3.11)",
         "installed (ubuntu-latest, py3.11)", "acceptance (ubuntu-latest, py3.11)",
-        "replays (ubuntu-latest, py3.11)"]
+        "replays (ubuntu-latest, py3.11)", "baseline-growth (ubuntu-latest, py3.11)"]
 
 
 def test_the_shard_count_is_the_one_the_shards_use() -> None:
@@ -59,7 +61,7 @@ def test_the_shard_count_is_the_one_the_shards_use() -> None:
 
 def test_green_only_when_all_succeeded() -> None:
     ok, lines = verdict(_jobs(**ALL_OK), REQUIRED)
-    assert ok and len(lines) == 6
+    assert ok and len(lines) == 7
 
 
 @pytest.mark.parametrize("bad", ["failure", "cancelled", "skipped", None, "missing"])
@@ -124,7 +126,7 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     # It always runs after both (never left pending or skipped) and asks the jobs list (needs.*.result only settles a
     # stale "running" entry: ci_require_jobs.observe); the one exception is a run #422's duplicate check positively left
     # out (tests/test_extended_dedup.py).
-    assert "needs: [dedup, pytest, verify, installed, acceptance, replays]" in tests_job
+    assert "needs: [dedup, pytest, verify, installed, acceptance, replays, baseline-growth]" in tests_job
     # R-2: the replay suite runs on every PR/push, only compares, and is required via the fan-in (ubuntu only).
     replays_job = _job_block(text, "replays")
     assert "name: replays (${{ matrix.os }}, py${{ matrix.python }})" in replays_job
@@ -134,6 +136,23 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     assert "$LASTEXITCODE -ne 0" in replays_job and "upload-artifact" in replays_job
     code = chr(10).join(ln for ln in replays_job.splitlines() if not ln.lstrip().startswith("#"))
     assert "update-golden" not in code.replace("'replays update-golden --reason'", "")
+    # #624: the baseline-growth check runs on every PR/push against the merge base, with the history it needs.
+    growth_job = _job_block(text, "baseline-growth")
+    assert "name: baseline-growth (${{ matrix.os }}, py${{ matrix.python }})" in growth_job
+    assert "os: [ubuntu-latest]" in growth_job
+    assert "if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}" in growth_job
+    assert "fetch-depth: 0" in growth_job and "filter: tree:0" in growth_job
+    assert 'python -m tooling.baseline_growth --base "$base"' in growth_job
+    assert 'base="origin/$BASE_REF"' in growth_job and 'base="$BEFORE"' in growth_job
+    assert re.findall(r"^    (?:if|continue-on-error):.*$", growth_job, re.M) == [
+        "    if: ${{ !cancelled() && needs.dedup.outputs.skip != 'true' }}"]
+    # Its result is the check's own exit code: the step's last line, exactly, with nothing that could swallow a failure
+    # ("|| true", "|| :", "; exit 0", "set +e", a step-level continue-on-error or condition, another shell).
+    growth_step = growth_job[growth_job.index("- name: No baseline grew without a reason"):]
+    run_lines = [ln for ln in growth_step.split("run: |", 1)[1].splitlines() if ln.strip()]
+    assert run_lines[-1] == '          python -m tooling.baseline_growth --base "$base"'
+    for forbidden in ("||", "exit 0", "set +e", "continue-on-error", "shell:", "\n        if:"):
+        assert forbidden not in growth_step, forbidden
     assert "if: ${{ always() && needs.dedup.outputs.skip != 'true' }}" in tests_job
     assert "tooling/ci_require_jobs.py --os \"${{ matrix.os }}\"" in tests_job
     assert "NEEDS_RESULTS: ${{ toJSON(needs.*.result) }}" in tests_job
@@ -267,7 +286,7 @@ def test_a_transient_api_failure_is_read_again() -> None:
 
 def test_an_incomplete_list_is_read_again() -> None:
     ok, _, sleeps, log = _fan_in(_read(ALL_OK, total=15), _read(ALL_OK))
-    assert ok and "incomplete list: 6 of 15 jobs" in log[0]
+    assert ok and "incomplete list: 7 of 15 jobs" in log[0]
 
 
 @pytest.mark.parametrize("persistent", ["api", "missing", "running", "stale"])
@@ -300,9 +319,9 @@ def test_successes_from_different_reads_are_never_combined() -> None:
 def test_an_older_success_never_hides_a_newer_failure() -> None:
     older = _read(ALL_OK, attempt=1)[0]
     newer = _read({**ALL_OK, "pytest": "failure"})[0]
-    ok, lines, _, _ = _fan_in((older + newer, 12))
+    ok, lines, _, _ = _fan_in((older + newer, 14))
     assert not ok and f"FAILED  {SHARD_JOBS[0]}: failure" in lines and f"FAILED  {SHARD_JOBS[1]}: failure" in lines
-    ok, _, _, _ = _fan_in((newer + older, 12))
+    ok, _, _, _ = _fan_in((newer + older, 14))
     assert not ok, "whatever the order GitHub lists them in"
 
 

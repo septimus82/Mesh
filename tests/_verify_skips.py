@@ -16,6 +16,8 @@ SYNTHETIC_REPO_SKIPS: dict[tuple[str, str], str] = {
     ("web-smoke", "skipped: web target unavailable"): "no web_main.py / pygbag.toml in a synthetic repo",
     ("perf-baseline-compare", "skipped: no perf scene set or baseline"): "no tooling/perf_baselines in a synthetic repo",
     ("content-audit", "skipped: no content roots"): "no content roots in a synthetic repo",
+    ("exception-budget-guard", "skipped: no tooling/metrics/exception_budget_count.txt"): "no tooling/ in a synthetic repo",
+    ("exception-policy-scan", "skipped: no tooling/exception_policy_baseline.json"): "no tooling/ in a synthetic repo",
 }
 
 

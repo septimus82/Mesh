@@ -45,6 +45,8 @@ SHARDED = {"windows-latest": 2}
 # R-2: the replay suite is one job on one OS (ubuntu, the release job's choice; its digests are the same everywhere, only
 # the time budgets are Linux-only), required by every OS's fan-in so a replay mismatch turns both ``tests`` checks red.
 REPLAYS = "replays (ubuntu-latest, py{python})"
+# #624 (phase B, PR b): no ratchet's baseline grows without a reason (tooling/baseline_growth.py); one job, both fan-ins.
+BASELINE_GROWTH = "baseline-growth (ubuntu-latest, py{python})"
 
 
 def required_jobs(os_name: str, python: str) -> list[str]:
@@ -53,7 +55,7 @@ def required_jobs(os_name: str, python: str) -> list[str]:
         shards = SHARDED.get(os_name, 0) if part == "pytest" else 0
         names += [f"{part} ({os_name}, py{python}, shard {k}/{shards})" for k in range(1, shards + 1)] or [
             f"{part} ({os_name}, py{python})"]
-    return [*names, REPLAYS.format(python=python)]
+    return [*names, REPLAYS.format(python=python), BASELINE_GROWTH.format(python=python)]
 
 
 def verdict(jobs: Iterable[Mapping[str, Any]], required: Iterable[str]) -> tuple[bool, list[str]]:

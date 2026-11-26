@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import json
 import importlib.util
+import os
 from engine.log_utils import get_logger
 from engine.swallowed_exceptions import _log_swallow
 from pathlib import Path
@@ -19,6 +20,18 @@ _VERIFY_WEB_GATE_EXCEPTIONS: tuple[type[Exception], ...] = (
     ValueError,
 )
 
+# The test suite sets this (tests/conftest.py) so a verify-all it runs doesn't start the fast tier inside itself (#693).
+# Nothing else may skip pytest-fast: a stray "import pytest" in a CI verify-all must not drop D9's fast-tier gate.
+IN_TEST_SUITE_ENV = "MESH_VERIFY_IN_TEST_SUITE"
+# The branch or commit a change merges into: mypy-baseline-guard compares tooling/mypy_baseline.txt with it (#624 B).
+BASELINE_BASE_ENV = "MESH_BASELINE_BASE"
+MYPY_GUARD_NO_BASE = f"skipped: no merge base ({BASELINE_BASE_ENV} not set)"
+
+
+def running_in_test_suite() -> bool:
+    return os.getenv(IN_TEST_SUITE_ENV) == "1"
+
+
 # The labelled skips verify-all accepts as a pass (#624): (step, its exact "skipped: ..." text) -> why it is legitimate.
 # Any other skip fails the run (code 2): a step whose input is missing checked nothing, and a pass would hide that.
 ALLOWED_SKIPS: dict[tuple[str, str], str] = {
@@ -26,6 +39,9 @@ ALLOWED_SKIPS: dict[tuple[str, str], str] = {
         "headless installs without arcade (and the test suite's headless stub) can't open the demo window",
     ("pytest-fast", "skipped: running under pytest"):
         "verify-all inside the test suite (the shared audit run) must not start the fast tier inside itself",
+    ("mypy-baseline-guard", MYPY_GUARD_NO_BASE):
+        "CI's required baseline-growth job checks every baseline, this one included, against the merge base "
+        "(tooling/baseline_growth.py); CI's verify jobs are shallow clones with no merge base to read",
     ("pytest-fast-duration-guard", "skipped: pytest-fast not run"):
         "follows an allow-listed pytest-fast skip: there are no durations to compare",
     ("web-smoke", "skipped: disabled by args"):
@@ -59,24 +75,6 @@ def _cleanup_stale_pytest_fast_budget_artifacts(
                 stale_path.unlink()
             except FileNotFoundError:
                 continue
-
-
-def _read_mypy_baseline_count(metrics_path: Path, *, current_count: int) -> int:
-    try:
-        return int(metrics_path.read_text(encoding="utf-8").strip() or "0")
-    except OSError:  # REASON: mypy-baseline-guard metrics file fallback
-        _log_swallow(
-            "VSTP-005",
-            f"mypy-baseline-guard metrics read fallback path={_normalize_diag_path(metrics_path)}",
-            once=False,
-        )
-    except ValueError:  # REASON: mypy-baseline-guard metrics coercion fallback
-        _log_swallow(
-            "VSTP-005",
-            f"mypy-baseline-guard metrics coercion fallback path={_normalize_diag_path(metrics_path)}",
-            once=False,
-        )
-    return current_count
 
 
 def _read_swallow_scan_total_matches(scan_path: Path) -> int | None:
@@ -458,29 +456,17 @@ def run_verify_steps(state: VerifyStepContext) -> None:
             _skipped_step("mypy-baseline-guard")
         else:
             try:
-                from tooling import mypy_gate
+                from tooling import baseline_growth
 
-                baseline_path = mypy_gate.BASELINE_PATH
-                if baseline_path.exists():
-                    raw = baseline_path.read_text(encoding="utf-8")
-                    current_count = sum(1 for line in raw.splitlines() if line.strip())
+                base = os.getenv(BASELINE_BASE_ENV, "").strip()
+                if not base:
+                    code, error = 0, MYPY_GUARD_NO_BASE
                 else:
-                    current_count = 0
-
-                metrics_path = repo_root / ".mesh" / "metrics" / "mypy_baseline_count.txt"
-                metrics_path.parent.mkdir(parents=True, exist_ok=True)
-                if metrics_path.exists():
-                    previous_count = _read_mypy_baseline_count(metrics_path, current_count=current_count)
-                else:
-                    previous_count = current_count
-
-                if current_count > previous_count:
-                    code = 2
-                    error = f"mypy baseline grew: {previous_count} -> {current_count}"
-                else:
-                    code = 0
-                    error = ""
-                    metrics_path.write_text(f"{current_count}\n", encoding="utf-8")
+                    # The committed baseline at the merge base, not local state (#624 B): growth needs a
+                    # "baseline-growth: tooling/mypy_baseline.txt: <reason>" line in a commit message.
+                    code, lines = baseline_growth.check(repo_root, base, [baseline_growth.MYPY_BASELINE])
+                    error = "" if code == 0 else ("mypy baseline grew: " if code == 1 else "") + " ".join(
+                        line.strip() for line in lines if "explained:" not in line)
             except ModuleNotFoundError as exc:
                 if str(getattr(exc, "name", "")).startswith("tooling"):
                     code = 2
@@ -561,7 +547,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
 
                     budget_payload = {
                         **_build_exception_budget_payload(
-                            ok=code == 0,
+                            ok=code == 0 and not error,  # a labelled skip (no baseline) is no pass
                             current_count=current,
                             baseline_count=baseline,
                             per_file_counts=per_file,
@@ -690,6 +676,14 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             path=baseline_path_ep,
                             purpose="exception-policy-scan baseline coercion fallback",
                         )
+                        bl_broad = _coerce_int_field(  # counted by every scan, checked by none until #624
+                            bl,
+                            "broad_catch_count_total",
+                            default=0,
+                            tag="VSTP-048",
+                            path=baseline_path_ep,
+                            purpose="exception-policy-scan baseline coercion fallback",
+                        )
                         bl_ble001_missing_reason_max = _coerce_int_field(
                             bl,
                             "ble001_missing_reason_max",
@@ -700,6 +694,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         )
                         cur_ble001 = int(ep_result.get("ble001_count_total", 0))
                         cur_silent = int(ep_result.get("silent_broad_catch_count_total", 0))
+                        cur_broad = int(ep_result.get("broad_catch_count_total", 0))
                         cur_ble001_missing_reason = int(
                             ep_result.get(
                                 "missing_ble001_reason_total",
@@ -707,7 +702,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             )
                         )
 
-                        if None in (bl_ble001, bl_silent, bl_silent_max, bl_ble001_missing_reason_max):
+                        if None in (bl_ble001, bl_silent, bl_silent_max, bl_broad, bl_ble001_missing_reason_max):
                             code = 1
                             error = "invalid exception_policy_baseline.json"
                         else:
@@ -719,6 +714,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                                 violations.append(
                                     f"BLE001 grew: {baseline_ble001} -> {cur_ble001}"
                                 )
+                            if cur_broad > cast(int, bl_broad):
+                                violations.append(f"broad catches grew: {bl_broad} -> {cur_broad}")
                             if cur_silent > baseline_silent_max:
                                 violations.append(
                                     f"silent broad catches ({cur_silent}) exceed max ({baseline_silent_max})"
@@ -736,9 +733,9 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                                 code = 0
                                 error = ""
                 else:
-                    # No baseline yet → pass but warn
+                    # Fails closed (#624): no baseline, nothing compared. A labelled skip, not allow-listed.
                     code = 0
-                    error = ""
+                    error = "skipped: no tooling/exception_policy_baseline.json"
 
             except ModuleNotFoundError as exc:
                 if str(getattr(exc, "name", "")).startswith("tooling"):
@@ -761,7 +758,6 @@ def run_verify_steps(state: VerifyStepContext) -> None:
             _skipped_step("pytest-fast")
         else:
             try:
-                import os
                 import subprocess
                 import sys
 
@@ -769,7 +765,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     code = 2
                     error = "tooling package unavailable"
                     pytest_fast_ran = False
-                elif os.getenv("PYTEST_CURRENT_TEST") or "pytest" in sys.modules:
+                elif running_in_test_suite():
                     code = 0
                     error = "skipped: running under pytest"
                     pytest_fast_ran = False
@@ -815,7 +811,6 @@ def run_verify_steps(state: VerifyStepContext) -> None:
             _add_step("pytest-fast-duration-guard", 0, error="skipped: pytest-fast not run", artifact=None)
         else:
             try:
-                import os
 
                 metrics_dir = repo_root / ".mesh" / "metrics"
                 wall_ms = next((row["ms"] for row in reversed(step_duration_rows) if row["name"] == "pytest-fast"), None)

@@ -149,6 +149,7 @@ def write_evidence(artifacts_dir: Path, *, repo_root: Path, before: dict[str, An
 def check(source: Path, repo_root: Path) -> tuple[dict[str, Any] | None, str]:
     """``(evidence, "")`` when the verify-all recorded in ``source`` can stand for one run now, else ``(None, why)``."""
     from mesh_cli.verify_steps import STEP_ORDER
+    from mesh_cli.verify_steps.pipeline import MYPY_GUARD_NO_BASE
 
     try:
         evidence = json.loads((source / EVIDENCE).read_text(encoding="utf-8"))
@@ -163,7 +164,12 @@ def check(source: Path, repo_root: Path) -> tuple[dict[str, Any] | None, str]:
     steps = [s for s in _part(evidence, "steps", list) if isinstance(s, dict)]
     if [s.get("name") for s in steps] != list(STEP_ORDER) or len(steps) != len(_part(evidence, "steps", list)):
         return None, "that verify-all's steps aren't the complete list"
-    unrun = [str(s["name"]) for s in steps if s.get("code") != 0 or str(s.get("error") or "").startswith("skipped")]
+    # One skip a fresh run would repeat exactly: mypy-baseline-guard without MESH_BASELINE_BASE, which the MESH_*
+    # environment check below compares (#624 B; CI's baseline-growth job is that check). Refusing for it would only run
+    # verify-all again to the same result. Any other skip is a step that didn't run.
+    repeatable = {("mypy-baseline-guard", MYPY_GUARD_NO_BASE)}
+    unrun = [str(s["name"]) for s in steps if s.get("code") != 0 or (
+        str(s.get("error") or "").startswith("skipped") and (s.get("name"), s.get("error")) not in repeatable)]
     if unrun:
         return None, f"steps that didn't pass or didn't run: {', '.join(unrun)}"
     selection = _part(evidence, "selection", dict)

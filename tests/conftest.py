@@ -35,6 +35,11 @@ if os.getenv("MESH_TEST_BLOCK_ARCADE") != "1":
 # part of the GPU lane (#422). Their frames are still drawn. MESH_REVIEW_MEDIA=1 writes them (tooling/review_media.py).
 os.environ.setdefault("MESH_REVIEW_MEDIA", "0")
 
+# A verify-all the suite runs (the shared audit run, the synthetic-repo tests) skips its fast tier instead of starting
+# it inside itself. The suite says so explicitly: verify-all no longer guesses from "pytest" in sys.modules, which a
+# stray import in CI's verify-all could have satisfied, dropping D9's fast-tier gate (#693).
+os.environ["MESH_VERIFY_IN_TEST_SUITE"] = "1"
+
 
 class _ArcadeBlocker(importlib.abc.MetaPathFinder):
     """Block arcade imports for headless-fast enforcement."""

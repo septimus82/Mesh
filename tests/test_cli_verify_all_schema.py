@@ -140,7 +140,8 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
         assert step["code"] == 0
         if step["name"] in {"pytest-fast", "pytest-fast-duration-guard", "web-smoke"}:  # web-smoke: skipped without a web build
             assert step["error"]
-        elif step["name"] in {"runtime-player-smoke", "player-package-gate", "perf-baseline-compare", "content-audit"}:
+        elif step["name"] in {"runtime-player-smoke", "player-package-gate", "perf-baseline-compare", "content-audit",
+                                  "mypy-baseline-guard", "exception-budget-guard", "exception-policy-scan"}:
             assert step["error"].startswith("skipped: no ")  # the synthetic repo has no input for it (#624)
         else:
             assert step["error"] == ""
