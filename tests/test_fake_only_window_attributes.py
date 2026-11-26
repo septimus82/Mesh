@@ -91,13 +91,10 @@ def test_every_allowed_name_names_its_issue() -> None:
 
 
 def _manifest_names(window: Any) -> list[str]:
-    """The real window's attribute names, the same on every OS: what its engine, arcade and pyglet's portable base
-    classes define, its public instance attributes, and every name production creates on a window. (pyglet's
-    per-OS window classes add their own private state, which no fake should touch.)"""
-    portable = ("engine", "arcade", "pyglet.window", "pyglet.event")
-    names = {name for cls in type(window).__mro__ if cls.__module__.split(".")[0] in ("engine", "arcade")
-             or cls.__module__ in portable for name in vars(cls)}
-    names |= {name for name in vars(window) if not name.startswith("_")}
+    """The engine's own window attributes: what the engine's window classes define and every name production creates on
+    a window. (arcade's and pyglet's side differs by OS and version, so tests/_fake_window.py takes it from the
+    installed arcade.Window instead of from this file.)"""
+    names = {name for cls in type(window).__mro__ if cls.__module__.split(".")[0] == "engine" for name in vars(cls)}
     names |= scan.production_window_writes()
     return sorted(name for name in names if not name.startswith("__"))
 
