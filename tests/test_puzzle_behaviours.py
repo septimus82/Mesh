@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 from engine.behaviours.puzzle_behaviours import DoorLock, RewardChest, SwitchInteract
 from engine.events import MeshEvent
+from engine.game_state_controller import GameStateController
 
 
 class TestPuzzleBehaviours(unittest.TestCase):
@@ -54,10 +55,9 @@ class TestPuzzleBehaviours(unittest.TestCase):
         chest._on_unlock_event(MeshEvent("reveal_me", {}))
         self.assertTrue(chest.enabled)
 
-        # Interact
-        player = MagicMock()
-        player.inventory = MagicMock()
-        chest.on_interact(player)
+        # Interact: the gold goes to the game's counter (#636), not to the player sprite
+        self.window.game_state_controller = GameStateController(self.window)
+        chest.on_interact(MagicMock())
 
-        player.inventory.add_gold.assert_called_with(100)
+        self.assertEqual(self.window.game_state_controller.get_counter("gold"), 100)
         self.assertTrue(chest.looted)

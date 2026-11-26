@@ -148,7 +148,7 @@ class Vendor(Behaviour):
 
     # ------------------------------------------------------------------
     def handle_buy_request(self, item: dict[str, Any]) -> "VendorResult":
-        item_id = item.get("item_id")
+        item_id = str(item.get("item_id") or "")  # (one id for the check and the add: items.json ids are strings, #627)
         base_price = int(item.get("price", 0))
         price = int(base_price * self._buy_rate)
         if price < 0:
@@ -160,18 +160,18 @@ class Vendor(Behaviour):
         if gs is None:
             return self._result(False, "Purchase failed")
         if quantity == 0:
-            return self._result(False, "Out of stock", item_id=str(item_id), qty=1)
+            return self._result(False, "Out of stock", item_id=item_id, qty=1)
         current_currency = gs.get_counter(self.currency_counter, 0)
         if current_currency < price:
-            return self._result(False, "Not enough gold", item_id=str(item_id), qty=1)
+            return self._result(False, "Not enough gold", item_id=item_id, qty=1)
         inv = get_or_create_inventory(gs.state.values)
         # Check before charging: a purchase the inventory refuses (unknown id, full stack, owned non-stackable)
         # must cost neither gold nor stock (#619).
-        if not inv.can_add(str(item_id), 1):
-            if self._item_db.get(str(item_id)) is None:
-                return self._result(False, f"Can't buy {item_id}: unknown item", item_id=str(item_id), qty=1)
-            name = self._resolve_item_name(str(item_id), item)
-            return self._result(False, f"Can't carry any more {name}", item_id=str(item_id), qty=1)
+        if not inv.can_add(item_id, 1):
+            if self._item_db.get(item_id) is None:
+                return self._result(False, f"Can't buy {item_id}: unknown item", item_id=item_id, qty=1)
+            name = self._resolve_item_name(item_id, item)
+            return self._result(False, f"Can't carry any more {name}", item_id=item_id, qty=1)
 
         # Deduct currency
         gs.add_counter(self.currency_counter, -price)
@@ -180,12 +180,12 @@ class Vendor(Behaviour):
         # Decrement stock if finite
         if quantity > 0:
             item["quantity"] = quantity - 1
-        name = self._resolve_item_name(str(item_id), item)
+        name = self._resolve_item_name(item_id, item)
         return self._result(
             True,
             f"Bought {name} x1 (-{price}g)",
             gold_delta=-price,
-            item_id=str(item_id),
+            item_id=item_id,
             qty=1,
         )
 
