@@ -41,9 +41,16 @@ class QuestManager:
 
     def __init__(self, window, data_path: str = "assets/data/quests.json") -> None:
         self.window = window
+        self._data_rel = data_path
         self.data_path = resolve_path(data_path)
         self._definitions: dict[str, dict[str, Any]] = {}
         self._stage_lookup: dict[str, dict[str, Any]] = {}
+        self.load_definitions()
+
+    def relocate(self) -> None:
+        """Read the quest definitions again, from the window's project (it changed: the main menu's project switch,
+        #675), so the previous project's quests no longer drive the quest state the new project's saves keep."""
+        self.data_path = resolve_path(self._data_rel)
         self.load_definitions()
 
     # ------------------------------------------------------------------

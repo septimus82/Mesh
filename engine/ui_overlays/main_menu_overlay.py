@@ -266,6 +266,9 @@ class MainMenuOverlay(UIElement):
         reload_cutscenes = getattr(getattr(self.window, "cutscene_controller", None), "load_project_cutscenes", None)
         if callable(reload_cutscenes):
             reload_cutscenes()
+        relocate_quests = getattr(getattr(self.window, "quest_manager", None), "relocate", None)  # (#675)
+        if callable(relocate_quests):
+            relocate_quests()
 
         # Reload workspace settings if editor is present
         if hasattr(self.window, "editor") and callable(getattr(self.window.editor, "load_workspace", None)):
