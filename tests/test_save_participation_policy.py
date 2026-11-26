@@ -27,8 +27,6 @@ from engine.behaviours.base import Behaviour
 # --------------------------------------------------------------------------- #
 _SAVE_EXEMPT: dict[str, str] = {
     # Render-only / transient state — re-derived from scene on load
-    "SwitchInteract": "Visual toggle state is re-initialised from scene JSON",
-    "DoorLock": "Lock state is re-initialised from scene JSON (TODO: add save)",
     "EventLogger": "Debug-only; no gameplay state",
     "DamageOnTouch": "Transient collision helper; no meaningful state",
     "Hitbox": "Transient collision helper; no meaningful state",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -102,7 +103,13 @@ def _emit_puzzle_event(
     ],
 )
 class SwitchInteract(Behaviour):
-    """Emits an event when interacted with."""
+    """Emits an event when interacted with (Studio's "Button").
+
+    An "Only once" button's press (``activated``) is a fact in room memory (#639, D6): after re-entry or a load it
+    still refuses a second press and shows "Picture once used". A save from before facts has none: the button is
+    unpressed, so it can open what it opens once more (its event doesn't fire again by itself)."""
+
+    FACT_FIELDS = ("activated",)
 
     PARAM_DEFS = {
         "event_id": ParamDef(str, default="", description="Event ID to emit"),
@@ -124,7 +131,10 @@ class SwitchInteract(Behaviour):
         if not self.event_id:
             return
 
-        self.activated = True
+        if self.one_shot:
+            self.record_fact("activated", True)
+        else:
+            self.activated = True
         _emit_puzzle_event(
             self.window,
             self.event_id,
@@ -135,6 +145,11 @@ class SwitchInteract(Behaviour):
 
         _show_picture(self, self.active_sprite)  # "Picture once used"
         print(f"[Puzzle] Switch {self.entity} activated, emitted '{self.event_id}'")
+
+    def apply_facts(self, facts: Mapping[str, Any]) -> None:
+        super().apply_facts(facts)
+        if self.activated:
+            _show_picture(self, self.active_sprite)
 
     def can_interact_with(self, _actor: Sprite) -> bool:
         if self.activated and self.one_shot:
@@ -170,7 +185,14 @@ class SwitchInteract(Behaviour):
     ],
 )
 class DoorLock(Behaviour):
-    """Unlocks when a specific event is received."""
+    """Unlocks when a specific event is received (Studio's "Locked until an event").
+
+    The unlock (``locked`` False) is a fact in room memory (#639, D6). A door restored unlocked opens as one that
+    starts unlocked does: ``pre_update`` takes it out of the solid list and shows "Picture when open" before the
+    player's first movement (the loader adds it to the list after building its behaviours). A save from before facts
+    has none: the door is locked again, until its event fires again."""
+
+    FACT_FIELDS = ("locked",)
 
     PARAM_DEFS = {
         "unlock_event": ParamDef(str, default="", description="Event ID that unlocks this door"),
@@ -210,7 +232,7 @@ class DoorLock(Behaviour):
             return
 
         print(f"[Puzzle] Door {self.entity} unlocked by event '{event.type}'")
-        self.locked = False
+        self.record_fact("locked", False)
         self._open()
 
         # Emit door_unlocked event for chaining.

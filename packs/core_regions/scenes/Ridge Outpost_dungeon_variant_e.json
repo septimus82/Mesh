@@ -93,7 +93,7 @@
     {
       "behaviour_config": {
         "RewardChest": {
-          "item_id": "health_potion"
+          "item_id": "healing_potion"
         }
       },
       "behaviours": [
