@@ -90,6 +90,27 @@ def test_console_ai_job_writes_the_windows_project_not_the_current_folders(tmp_p
         _close(window)
 
 
+def test_console_ai_job_from_a_project_nested_in_the_windows_writes_the_windows(tmp_path: Path,
+                                                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    """#717 review: the current folder is inside the window's project A by path, but it is a nested project B (its
+    own config.json), another project by Mesh's rule (project_ownership.project_root). A gets the change, B none."""
+    game = _project(tmp_path / "game", "game")
+    inner = _project(game / "inner", "inner")
+    job = tmp_path / "job.json"
+    job.write_text(json.dumps({"operations": [
+        {"type": "delete_entity", "scene_path": "scenes/start.json", "entity_id": "crate"}]}), encoding="utf-8")
+    window = _window(game, inner, monkeypatch, mode="play")
+    try:
+        _console(window, f"ai_job {job.as_posix()}")
+        log = "\n".join(window.console_controller.lines)
+        assert "[AI] Applied 1 operation(s)" in log, log
+        assert _entities(game) == [], "the window's project was not changed"
+        assert _entities(inner) == ["crate"], "the nested project was changed"
+        assert not (inner / ".mesh").exists(), "the nested project was locked"
+    finally:
+        _close(window)
+
+
 # --------------------------------------------------------------------- 2. Create New Project
 
 def _create(window: Any, name: str, path: str | None = None) -> Any:
@@ -111,6 +132,7 @@ def test_create_new_project_offers_the_projects_folder_not_the_current_one(tmp_p
     from engine.projects import default_projects_dir
 
     here, game = _project(tmp_path / "here", "here"), _project(tmp_path / "game", "game")
+    monkeypatch.setenv("MESH_PROJECTS_DIR", str(tmp_path / "projects"))  # (never the real Documents folder)
     window = _window(game, here, monkeypatch)
     try:
         menu = _create(window, "New Game")
@@ -171,3 +193,25 @@ def test_older_saves_in_an_ambiguous_current_folder_are_not_offered(tmp_path: Pa
         assert manager.legacy_dir == ((cwd / "saves").resolve() if offered else None)
     finally:
         _close(window)
+
+
+def test_older_saves_beside_an_unreadable_child_are_not_offered(tmp_path: Path,
+                                                                monkeypatch: pytest.MonkeyPatch) -> None:
+    """A child the scan can't read (PermissionError) might be another project: can't tell, so not offered."""
+    from engine.save_runtime.storage import cwd_legacy_saves
+
+    game = _project(tmp_path / "game", "game")
+    cwd = tmp_path / "plain"
+    (cwd / "saves").mkdir(parents=True)
+    (cwd / "locked").mkdir()
+    real_is_file = Path.is_file
+
+    def is_file(self: Path, *args: Any, **kwargs: Any) -> bool:
+        if self.parent.name == "locked":
+            raise PermissionError(13, "Access is denied", str(self))
+        return real_is_file(self, *args, **kwargs)
+
+    monkeypatch.chdir(cwd)
+    assert cwd_legacy_saves(game) == (cwd / "saves").resolve()  # (control: readable, offered)
+    monkeypatch.setattr(Path, "is_file", is_file)
+    assert cwd_legacy_saves(game) is None

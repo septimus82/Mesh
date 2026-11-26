@@ -44,9 +44,10 @@ def handle_ai_job(controller: Any, args: list[str]) -> bool:
 
     # (#675: the window's project, not the current folder's: after run_game(project_root=) or a main-menu switch they
     # differ, and the job wrote, under that folder's lock, into a project the window isn't playing. A current folder
-    # inside the project still bases the job's paths, as before.)
+    # inside the project still bases the job's paths, as before; one inside a project nested in it is another
+    # project's (project_ownership.project_root: the nearest config.json), so the window's project bases the job.)
     cwd, project = Path.cwd().resolve(), project_root()
-    root = cwd if cwd.is_relative_to(project) else project
+    root = cwd if project_ownership.project_root(cwd) == project else project
     try:
         held = project_ownership.acquire(project_ownership.ownership_root(root), project_ownership.AUTHORING, wait=0.5)
     except (project_ownership.OwnedElsewhere, project_ownership.OwnershipUnavailable) as exc:

@@ -116,13 +116,17 @@ def cwd_legacy_saves(game_root: Path) -> Path | None:
     cwd = Path.cwd().resolve()
     legacy = cwd / DEFAULT_SAVE_DIR
     game = game_root.resolve()
-    if cwd == game or not legacy.is_dir():
-        return None
-    enclosing = next((folder for folder in (cwd, *cwd.parents) if (folder / "config.json").is_file()), None)
-    if enclosing not in (None, game):
-        return None
-    # ponytail: direct subfolders only; deeper project trees under the current folder are not looked for
-    if any((child / "config.json").is_file() and child.resolve() != game for child in cwd.iterdir() if child.is_dir()):
+    try:
+        if cwd == game or not legacy.is_dir():
+            return None
+        enclosing = next((folder for folder in (cwd, *cwd.parents) if (folder / "config.json").is_file()), None)
+        if enclosing not in (None, game):
+            return None
+        # ponytail: direct subfolders only; deeper project trees under the current folder are not looked for
+        if any((child / "config.json").is_file() and child.resolve() != game
+               for child in cwd.iterdir() if child.is_dir()):
+            return None
+    except OSError:  # (e.g. PermissionError from an unreadable child: can't tell whose saves these are, so refused)
         return None
     return legacy
 
