@@ -266,7 +266,15 @@ def pytest_ignore_collect(collection_path, config):
     return True
 
 
+def pytest_addoption(parser):
+    parser.addoption("--mesh-quarantined", action="store_true",
+                     help="Run only the tests in tests/baselines/quarantine.txt (Extended's report-only quarantine job).")
+
+
 def pytest_collection_modifyitems(config, items):
+    from tooling.quarantine import quarantined
+
+    quarantine = quarantined()
     unmarked: list[str] = []
     fast_rule = config.__dict__.setdefault("_mesh_fast_rule", {})
     outside_rule: set[str] = set()
@@ -296,13 +304,31 @@ def pytest_collection_modifyitems(config, items):
             gl_unmarked.add(nodeid)
         if _never_runs(item):
             never_runs.add(nodeid)
-        lane_rows.append((nodeid.split("::", 1)[0], frozenset(marker.name for marker in item.iter_markers())))
+        if nodeid not in quarantine:  # (a lane's floor counts only the tests it runs: see _quarantine below)
+            lane_rows.append((nodeid.split("::", 1)[0], frozenset(marker.name for marker in item.iter_markers())))
     config._mesh_unmarked_nodeids = sorted(unmarked)
     config._mesh_fast_tests_outside_rule = sorted(outside_rule)
     config._mesh_gl_opt_in_unmarked = sorted(gl_unmarked)
     config._mesh_never_runs = sorted(never_runs)
     config._mesh_lane_rows = lane_rows
     config._mesh_whole_suite = _collects_whole_suite(config)
+    _quarantine(config, items, quarantine)
+
+
+def _quarantine(config, items, quarantine: set[str]) -> None:
+    """D10 (S1 5.3): a quarantined test runs in no required lane, only with ``--mesh-quarantined`` (Extended's
+    report-only quarantine job), which runs nothing else. Deselected here, before ``-m`` and the shard plugin, so every
+    floor (``ci_shards.py check --min-selected``, ``test_tiers`` ``min_selected``, the lane-floor contract through
+    ``lane_rows``) counts only tests that actually run: a quarantine that would take a lane under its floor fails."""
+    only = config.getoption("mesh_quarantined", default=False)  # (unregistered when this conftest was not an initial one)
+    if not quarantine and not only:
+        return
+    keep, drop = [], []
+    for item in items:
+        (keep if (item.nodeid.replace("\\", "/") in quarantine) == only else drop).append(item)
+    if drop:
+        config.hook.pytest_deselected(items=drop)
+        items[:] = keep
 
 
 def _collects_whole_suite(config) -> bool:

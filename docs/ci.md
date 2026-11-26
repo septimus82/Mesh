@@ -81,7 +81,7 @@ Each ratchet lets through what its committed baseline lists, so a change could a
 pull request (#624). The `baseline-growth (ubuntu-latest, py3.11)` job, required through both `tests` fan-ins like the
 replays job, runs `python -m tooling.baseline_growth --base <base>`: it compares each baseline in
 `tooling/baseline_growth.py` (`BASELINES`: the ruff and mypy baselines, `exception_policy_baseline.json`, the exception
-budget count, the unmarked-test, never-runs and fast-marking lists, the public API export list, the tech-debt marker
+budget count, the unmarked-test, never-runs, quarantine and fast-marking lists, the public API export list, the tech-debt marker
 cap in `tests/test_todo_audit_ratchet_contract.py` (its last assignment), and the timing and perf budgets
 `verify_step_budget.json`, `authoring_trace_budget.json` and `perf_baselines/baselines.json`) with the same file at
 `git merge-base HEAD <base>`. The base is the pull request's base branch, or on a push what the branch held before it.
@@ -99,6 +99,45 @@ Run it locally with `python -m tooling.baseline_growth --base origin/redesign/vi
 until it is committed with its line). verify-all's `mypy-baseline-guard` runs the same check on the mypy baseline when
 `MESH_BASELINE_BASE` names the base; CI's verify jobs are shallow clones, so there it is an allow-listed skip and this
 job is the check. Entries for tests that no longer exist fail `tests/test_tier_marker_ratchet.py`.
+
+## Flake Quarantine (D10)
+
+A flaky test is never loosened, skipped or retried automatically: no `pytest-rerunfailures`, no retry loops
+(`tests/test_flake_quarantine_contract.py` fails on them). Re-running a failed attempt is a person's decision, recorded
+in the PR or issue. The required lanes keep `-W error`. What a flaky test may get is a dated, issue-linked quarantine
+with an expiry, in `tests/baselines/quarantine.txt`, one test per line:
+
+```text
+tests/test_example.py::test_races 649 2026-11-26 2026-12-26
+```
+
+That's the node id, the issue number, the date it was added and the expiry date (`YYYY-MM-DD`).
+
+- **Effect.** `tests/conftest.py` deselects a listed test from every run: CI's pytest jobs, the fast tier and
+  verify-all, and every `tooling/test_tiers.py` lane. Only `pytest --mesh-quarantined` runs it, and that runs nothing
+  else (`python -m tooling.test_tiers quarantine`). Extended's `quarantine (<os>, py3.11, report-only)` job runs it on
+  both OSes after every merge, nightly and on dispatch. It lists each entry and the outcome in its job summary, and
+  raises a warning annotation for each failure. It passes whatever the tests do: it reports, it doesn't gate.
+- **Floors.** Each lane's floor counts only the tests the lane runs, not quarantined ones. `ci_shards.py check
+  --min-selected` and `test_tiers` `min_selected` see the suite after the quarantine is deselected, and so does
+  `test_every_lane_floor_is_within_5_percent_of_what_the_lane_collects`. So a quarantine that takes a lane under its
+  floor fails the PR that adds it. Never lower a floor to make room for a quarantine; fix the test instead.
+- **The contract** (`tests/test_flake_quarantine_contract.py`, fast tier) fails on an entry with no issue number, a
+  malformed date, an `added` date in the future, an expiry in the past (UTC), an expiry more than 30 days after
+  `added`, or a node id whose test doesn't exist. It can't check offline that the issue is still open: the reviewer
+  does.
+
+**To quarantine** (when the same test fails a second time within 30 days, on attempt 1, for reasons unrelated to the
+change):
+1. Open an issue with the evidence: the run ids and a log excerpt.
+2. Add the line, with today's date as `added` and an expiry no more than 30 days later.
+3. Commit it with a `baseline-growth: tests/baselines/quarantine.txt: <reason, issue>` line. A new or changed entry is
+   baseline growth.
+
+**To unquarantine:** fix the cause and delete the line in the same PR. The test is back in its required lane, and
+removing an entry is never growth. An entry that expires before the fix makes the contract test fail CI for everyone.
+Then fix the test, or renew the entry: a new `added` date and expiry, with fresh evidence on the issue and a
+`baseline-growth:` line.
 
 ## Release Branch Ship Job
 
