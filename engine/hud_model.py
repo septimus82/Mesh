@@ -94,6 +94,13 @@ def normalize_event_history(
     return tuple(records)
 
 
+def find_player(window: Any) -> Any | None:
+    """The running room's player, as the game finds it (``scene_controller._find_player_sprite``). The real window
+    has no ``player`` attribute; reading one made the HUD's health panel never draw (#643)."""
+    finder = getattr(getattr(window, "scene_controller", None), "_find_player_sprite", None)
+    return finder() if callable(finder) else None
+
+
 def build_hud_view_model(
     player_entity: Any,
     gameplay_event_bus_history: Iterable[Any],

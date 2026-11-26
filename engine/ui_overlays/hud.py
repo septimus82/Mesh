@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence
 import engine.optional_arcade as optional_arcade
 
-from ..hud_model import HudViewModel, build_hud_view_model, merge_event_histories
+from ..hud_model import HudViewModel, build_hud_view_model, find_player, merge_event_histories
 from engine.swallowed_exceptions import _log_swallow
 from .common import (
     UIElement,
@@ -604,9 +604,6 @@ class PlayerHUD(UIElement):
             font_size=14,
             anchor_y="top",
         )
-
-    def clear_toasts(self) -> None:
-        self._toast_manager.clear()
         self._xp_text = optional_arcade.arcade.Text(
             text="",
             x=20,
@@ -634,16 +631,9 @@ class PlayerHUD(UIElement):
             multiline=True,
             width=300
         )
-        self._toast_text = optional_arcade.arcade.Text(
-            text="",
-            x=20,
-            y=self.window.height - 110,
-            color=optional_arcade.arcade.color.LIGHT_GRAY,
-            font_size=12,
-            anchor_y="top",
-            multiline=True,
-            width=360,
-        )
+
+    def clear_toasts(self) -> None:
+        self._toast_manager.clear()
 
     @staticmethod
     def build_pinned_objective_text(quest_manager: Any, *, max_chars: int = 220) -> str | None:
@@ -864,8 +854,9 @@ class PlayerHUD(UIElement):
                 top = bottom - 6.0
 
     def _draw_stats(self) -> None:
-        player = getattr(self.window, "player", None)
-        if not player:
+        player = find_player(self.window)
+        if player is None:
+            self._latest_view_model = None
             return
 
         self._latest_view_model = build_hud_view_model(

@@ -58,7 +58,8 @@ def test_toasts_show_for_a_player_without_health_stats():
     from engine.ui import PlayerHUD
 
     hud = PlayerHUD.__new__(PlayerHUD)
-    hud.window = SimpleNamespace(editor_controller=None, player=None)
+    # (the real window's player lookup, #643: a room without a player)
+    hud.window = SimpleNamespace(editor_controller=None, scene_controller=SimpleNamespace(_find_player_sprite=lambda: None))
     hud._draw_toasts = MagicMock()
     hud.draw()
     hud._draw_toasts.assert_called_once()
