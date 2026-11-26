@@ -139,3 +139,32 @@ def test_a_non_string_item_id_is_checked_and_added_as_the_same_id(shop, monkeypa
     vendor = Vendor(types.SimpleNamespace(name="shopkeeper", properties={}), shop.window, stock=[])
     result = vendor.handle_buy_request({"item_id": 42, "price": 10, "quantity": 3})
     assert result.ok and (shop.gs.get_counter("gold"), shop.inv.get_count("42")) == (990, 1)
+
+
+# #650 (S1 5.5): the economy rules beside #619, each killing its named mutant in docs/s1/evidence/mutation_probe.py.
+
+def test_an_item_costing_exactly_your_gold_is_bought(shop):
+    """Mutant V1 (``<`` becomes ``<=``): the last coins buy the item."""
+    shop.gs.set_counter("gold", 50)
+    entry = shop.buy({"item_id": "iron_sword", "price": 50, "quantity": 2})
+    assert (shop.gs.get_counter("gold"), shop.inv.get_count("iron_sword"), entry["quantity"]) == (0, 1, 1)
+    assert shop.toasts == ["Bought Iron Sword x1 (-50g)"]
+
+
+def test_an_out_of_stock_item_is_refused(shop):
+    """Mutant V2: a sold-out entry (quantity 0) sells nothing and costs nothing."""
+    entry = shop.buy({"item_id": "iron_sword", "price": 50, "quantity": 0})
+    _assert_refused(shop, entry, "iron_sword", 0, 0, "Out of stock")
+
+
+def test_selling_an_item_no_longer_carried_pays_nothing(shop):
+    """Mutant V4: the sell list showed a potion, which was used up before Enter; the sale is refused, no gold paid."""
+    shop.inv.add_item("healing_potion", 1)
+    vendor = Vendor(types.SimpleNamespace(name="shopkeeper", properties={}), shop.window,
+                    stock=[{"item_id": "healing_potion", "price": 10, "quantity": -1}], fail_sound="fail.wav")
+    panel = ShopPanel(as_any(shop.window))
+    panel.open(vendor, vendor.stock, mode="sell")
+    shop.inv.remove_item("healing_potion", 1)  # (drunk while the sell list was showing)
+    panel.confirm_purchase()
+    assert (shop.gs.get_counter("gold"), shop.inv.get_count("healing_potion")) == (1000, 0)
+    assert shop.toasts == ["You don't have that item"] and shop.sounds == ["fail.wav"]

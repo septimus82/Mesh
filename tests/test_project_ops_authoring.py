@@ -235,3 +235,29 @@ def test_shadow_settings_store_only_what_differs_from_the_defaults() -> None:
     assert ops.casts_shadow(scene["entities"][1])
     with pytest.raises(ops.OpError, match="strength"):
         ops.set_shadows(scene, "p", strength=5)
+
+
+# #650 (S1 5.5): each kills its named mutant in docs/s1/evidence/mutation_probe.py.
+
+def test_removing_an_object_that_is_not_there_is_refused() -> None:
+    """Mutant O1: an MCP/AI remove of a wrong id must fail, not report success with nothing removed."""
+    scene, grave = _with_grave()
+    with pytest.raises(ops.OpError, match="no object with id 'grave_typo'"):
+        ops.remove_entity(scene, "grave_typo")
+    assert [e["id"] for e in ops.entities(ops.remove_entity(scene, grave))] == ["start_player"]
+
+
+def test_unticking_solid_makes_the_object_passable_again() -> None:
+    """Mutant O3: Studio's "solid" box unticked takes the field away (absent = passable)."""
+    scene, grave = _with_grave()
+    scene = ops.set_solid(ops.set_solid(scene, grave, True), grave, False)
+    assert "solid" not in ops.find_entity(scene, grave)
+
+
+def test_unticking_only_once_stores_false() -> None:
+    """Mutant O4: the conversation's "Only once" toggle turned off again is off in the data the runtime reads."""
+    scene, grave = _with_grave()
+    scene, _line = ops.add_line(scene, grave, text="Rest here.")
+    scene = ops.set_conversation(ops.set_conversation(scene, grave, once=True), grave, once=False)
+    assert ops.conversation(ops.find_entity(scene, grave))["once"] is False
+    assert ops.find_entity(scene, grave)["behaviour_config"]["Dialogue"]["once"] is False
