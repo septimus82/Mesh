@@ -16,7 +16,7 @@ import pytest
 import engine.inventory as inventory_module
 from engine.behaviours.vendor import Vendor
 from engine.game_state_controller import GameStateController
-from engine.inventory import ItemDatabase, get_or_create_inventory
+from engine.inventory import ItemDatabase, ItemDefinition, get_or_create_inventory
 from engine.ui_overlays.shop_panel import ShopPanel
 from tests._typing import as_any
 
@@ -118,3 +118,24 @@ def test_save_round_trip_after_refused_purchase(shop):
     assert restored.get_counter("gold") == 950
     assert get_or_create_inventory(restored.state.values).get_count("iron_sword") == 1
     assert saved["values"]["inventory"] == {"items": {"iron_sword": 1}}
+
+
+def _own_items(monkeypatch, *items: ItemDefinition) -> None:
+    monkeypatch.setattr(inventory_module, "_ITEM_DB_CACHE", ItemDatabase({item.id: item for item in items}))
+
+
+def test_a_non_stackable_item_is_one_per_inventory_whatever_its_max_stack(shop, monkeypatch):
+    """#627 (mutant O5 of #625): ``stackable: false`` wins over a ``max_stack`` above 1."""
+    _own_items(monkeypatch, ItemDefinition("lantern", "Lantern", "", None, False, 5, [], {}))
+    entry = shop.buy({"item_id": "lantern", "price": 10, "quantity": 3}, times=2)
+    assert (shop.gs.get_counter("gold"), shop.inv.get_count("lantern"), entry["quantity"]) == (990, 1, 2)
+    assert shop.toasts == ["Bought Lantern x1 (-10g)", "Can't carry any more Lantern"]
+
+
+def test_a_non_string_item_id_is_checked_and_added_as_the_same_id(shop, monkeypatch):
+    """#627: a direct caller's ``42`` is the database's ``"42"`` for both the check and the add, so a purchase never
+    charges for an item it didn't add."""
+    _own_items(monkeypatch, ItemDefinition("42", "Lucky Coin", "", None, True, 9, [], {}))
+    vendor = Vendor(types.SimpleNamespace(name="shopkeeper", properties={}), shop.window, stock=[])
+    result = vendor.handle_buy_request({"item_id": 42, "price": 10, "quantity": 3})
+    assert result.ok and (shop.gs.get_counter("gold"), shop.inv.get_count("42")) == (990, 1)
