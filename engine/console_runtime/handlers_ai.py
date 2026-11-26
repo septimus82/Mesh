@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from engine.ai_ops import AIOps, load_job
@@ -40,14 +39,18 @@ def handle_ai_job(controller: Any, args: list[str]) -> bool:
         return True
 
     from engine.editor import project_ownership  # noqa: PLC0415  # (the editor package is heavy: only when writing)
+    from engine.paths import project_root  # noqa: PLC0415
 
+    # (#675: the window's project, not the current folder: after run_game(project_root=) or a main-menu switch they
+    # differ, and the job wrote, under that folder's lock, into a project the window isn't playing)
+    root = project_root()
     try:
-        held = project_ownership.acquire(project_ownership.ownership_root(Path.cwd()), project_ownership.AUTHORING, wait=0.5)
+        held = project_ownership.acquire(project_ownership.ownership_root(root), project_ownership.AUTHORING, wait=0.5)
     except (project_ownership.OwnedElsewhere, project_ownership.OwnershipUnavailable) as exc:
         controller.log("[AI] " + project_ownership.refused_write("ai_job", exc))
         return True
     with held:
-        result = AIOps(".", owner=held).apply_job(job)  # (only the held project's files)
+        result = AIOps(root, owner=held).apply_job(job)  # (only the held project's files)
     ok = result.get("ok", False)
     op_count = len(result.get("results") or [])
     scenes = {

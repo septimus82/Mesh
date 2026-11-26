@@ -121,7 +121,7 @@ def test_project_browser_create_flow(tmp_path: Path, monkeypatch) -> None:
         assert menu._create_name == "MyGame"
 
         # Press Enter
-        with patch("pathlib.Path.cwd", return_value=tmp_path):
+        with patch.dict(os.environ, {"MESH_PROJECTS_DIR": str(tmp_path)}):  # (#675: the projects folder, not the CWD)
              menu.on_key_press(optional_arcade.arcade.key.ENTER)
 
         assert menu.state == "create_project_path"

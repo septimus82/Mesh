@@ -107,12 +107,22 @@ def resolve(game_root: Path | None, config: Mapping[str, Any]) -> SaveLocation:
 def cwd_legacy_saves(game_root: Path) -> Path | None:
     """#623 (owner decision D5): ``saves`` in the current folder, where a project started from another folder saved
     before saves followed its root. Offered for loading only, never written (``SaveLocation.legacy_dir``). None when
-    it is the project's own folder, or missing, or ambiguous: the current folder is a project itself (it has a
-    config.json, e.g. Mesh's checkout under its project browser), so its saves are its own, or mixed with others'
-    that can't be told apart, and loading one into this game would be a guess."""
+    it is the project's own folder, or missing, or ambiguous, where loading one into this game would be a guess:
+    - the current folder is another project, or inside one (a ``config.json`` in it or a folder above it, e.g. Mesh's
+      checkout under its project browser): its saves are that project's;
+    - it holds another project's folder (a parent of several projects, #675): those projects, run from here, all saved
+      here, and their saves can't be told apart.
+    Never written either way (owner decision D5)."""
     cwd = Path.cwd().resolve()
     legacy = cwd / DEFAULT_SAVE_DIR
-    if cwd == game_root.resolve() or (cwd / "config.json").is_file() or not legacy.is_dir():
+    game = game_root.resolve()
+    if cwd == game or not legacy.is_dir():
+        return None
+    enclosing = next((folder for folder in (cwd, *cwd.parents) if (folder / "config.json").is_file()), None)
+    if enclosing not in (None, game):
+        return None
+    # ponytail: direct subfolders only; deeper project trees under the current folder are not looked for
+    if any((child / "config.json").is_file() and child.resolve() != game for child in cwd.iterdir() if child.is_dir()):
         return None
     return legacy
 
