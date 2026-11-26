@@ -32,6 +32,10 @@ def _iter_layered_sprites(self) -> Iterable[object]:
 
 
 def _deliver_events_to_behaviours(self, events: Sequence[object]) -> None:
+    """Last frame's events, to the ``on_event`` of every entity still in the scene. An entity removed since (killed,
+    collected, despawned) gets none, also not the event its own removal sent (#638 NEW-3, by design): reacting after
+    removal could bring back what is gone (a room fact recorded for a collected object). What must react to its own
+    removal subscribes on the event bus, which delivers before the removal (SetGameStateOnEvent, DropTable)."""
     if not events:
         return
     interest_cache: dict[int, "frozenset[str] | None"] = {}

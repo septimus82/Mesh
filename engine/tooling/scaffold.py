@@ -552,12 +552,9 @@ class {class_name}(Behaviour):
         # TODO: Add per-frame logic
         pass
 
-    def on_added(self) -> None:
-        """Called when the behaviour is attached to an entity."""
-        pass
-
-    def on_removed(self) -> None:
-        """Called when the behaviour is removed from an entity."""
+    def on_destroy(self) -> None:
+        """Called once when the entity is removed (killed, collected, despawned or deleted). Event-bus
+        subscriptions made in __init__ end by themselves then, and when the room is left."""
         pass
 '''
 
