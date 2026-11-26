@@ -90,7 +90,7 @@ def test_an_empty_or_all_skipped_lane_is_not_a_success(tmp_path: Path) -> None:
     assert test_tiers.lane_problems(good, gl_renderer="x", gl_tier=False, min_selected=3) == [
         "the lane selected 2 tests, fewer than the 3 it should"]
     assert {name: tier.min_selected for name, tier in test_tiers.TIERS.items() if tier.min_selected} == {
-        "extended": 162, "gpu": 256, "acceptance": 22}
+        "extended": 186, "gpu": 256, "acceptance": 22}
 
 
 @pytest.mark.fast
