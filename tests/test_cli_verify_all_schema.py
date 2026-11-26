@@ -8,6 +8,14 @@ import pytest
 pytestmark = [pytest.mark.slow, pytest.mark.integration]
 
 
+@pytest.fixture(autouse=True)
+def _synthetic_repo_skips(monkeypatch):
+    """These verify-alls run on a synthetic repo without the checkout's step inputs: allow exactly its skips (#624)."""
+    from tests._verify_skips import allow_synthetic_repo_skips
+
+    allow_synthetic_repo_skips(monkeypatch)
+
+
 def _stub_config():
     return type("C", (), {"world_file": "worlds/main_world.json"})()
 
@@ -132,6 +140,8 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
         assert step["code"] == 0
         if step["name"] in {"pytest-fast", "pytest-fast-duration-guard", "web-smoke"}:  # web-smoke: skipped without a web build
             assert step["error"]
+        elif step["name"] in {"runtime-player-smoke", "player-package-gate", "perf-baseline-compare", "content-audit"}:
+            assert step["error"].startswith("skipped: no ")  # the synthetic repo has no input for it (#624)
         else:
             assert step["error"] == ""
         assert step["artifact"] in {None, *written.values()}
