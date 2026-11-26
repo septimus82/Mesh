@@ -87,6 +87,12 @@ def test_a_dev_launch_room_save_writes_a_room_that_still_loads(
         assert "SCENE_PERSIST ok" in out, out
         saved = _assert_loads(room)
         assert saved["tilemap"]["path"] == "maps/room_map.json"
+        # (the strip drops only what the loader added: the authored tile layers, inline or legacy, are kept with every
+        # authored field; the loader's defaults for the others may be written beside them)
+        field = "tile_layers" if kind == "inline" else "layers"
+        authored = TILEMAPS[kind][field]
+        kept = [{k: layer.get(k) for k in want} for layer, want in zip(saved["tilemap"].get(field, []), authored)]
+        assert len(saved["tilemap"].get(field, [])) == len(authored) and kept == authored, saved["tilemap"]
         if route == "persist":
             assert saved["entities"][0]["x"] == 96.0  # (the save happened)
         assert window.reload_scene_from_disk() is True
@@ -106,6 +112,8 @@ def test_a_payload_the_loader_would_reject_is_refused_and_the_room_is_untouched(
         _persist(window)
         out = capsys.readouterr().out
         assert "SCENE_PERSIST fail" in out and "Room not saved: schema /tilemap" in out, out
+        toasts = window.player_hud.active_toasts()
+        assert any("Room not saved: schema /tilemap" in t for t in toasts), toasts  # (the player is told, too)
         assert room.read_bytes() == before
         assert window.reload_scene_from_disk() is True
     finally:
