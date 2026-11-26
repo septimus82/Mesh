@@ -54,7 +54,7 @@ class ToggleSceneLights(Behaviour):
         self._listen_event: str = self.config.get("listen_event", "") or ""
         self._group: str = self.config.get("group", "") or ""
         indices = self.config.get("indices", []) or []
-        self._indices = [int(i) for i in indices if isinstance(i, (int, float, str))]
+        self._indices = [int(i) for i in indices if isinstance(i, (int, float)) or (isinstance(i, str) and i.strip().isdigit())]
         self._mode: str = (self.config.get("mode", "toggle") or "toggle").lower()
 
         self._subscription: Callable[[], None] | None = None
