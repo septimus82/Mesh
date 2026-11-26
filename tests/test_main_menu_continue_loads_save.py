@@ -39,6 +39,9 @@ def test_main_menu_continue_loads_save(tmp_path: Path, monkeypatch) -> None:
     menu = MainMenuOverlay(as_any(window))
     menu.open()
     if getattr(menu, "state", "") == "project_browser":
+        # "Use current repo" (#675: a recent project left by an earlier test is another project, which starts afresh
+        # at its own start scene)
+        menu._project_index = [item["kind"] for item in menu._project_items()].index("current")
         menu._activate_project_selection()
     assert menu.visible is True
 

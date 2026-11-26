@@ -242,6 +242,9 @@ class MainMenuOverlay(UIElement):
         flusher = getattr(editor, "_flush_workspace_autosave", None) if editor is not None else None
         if callable(flusher):
             flusher()
+        from ..repo_root import get_repo_root  # noqa: PLC0415
+
+        previous_project = Path(get_repo_root()).resolve()  # (what the menu lists as "Use current repo")
         os.environ["MESH_REPO_ROOT"] = root_text
         reset_path_caches()
         workspace_owner = getattr(self.window, "editor", None)
@@ -266,6 +269,14 @@ class MainMenuOverlay(UIElement):
         reload_cutscenes = getattr(getattr(self.window, "cutscene_controller", None), "load_project_cutscenes", None)
         if callable(reload_cutscenes):
             reload_cutscenes()
+        relocate_quests = getattr(getattr(self.window, "quest_manager", None), "relocate", None)  # (#675)
+        if callable(relocate_quests):
+            relocate_quests()
+        # (#675: another project starts as New Game does: none of the previous one's progress, nor its room, goes into
+        # this one's saves. Choosing the project already open keeps the game going.)
+        if Path(root_text).expanduser().resolve() != previous_project:
+            self._reset_session()
+            self._request_start_scene()
 
         # Reload workspace settings if editor is present
         if hasattr(self.window, "editor") and callable(getattr(self.window.editor, "load_workspace", None)):
@@ -703,6 +714,29 @@ class MainMenuOverlay(UIElement):
         return False
 
     def _handle_start_game_impl(self) -> None:
+        self._reset_session()
+        if self._request_start_scene():
+            self.close()
+
+    def _request_start_scene(self) -> bool:
+        """Ask for the project's start scene on the next frame; False when it has none (or the window can't)."""
+        from ..game_runtime.scene_flow import resolve_game_start_scene  # noqa: PLC0415
+
+        target_scene = resolve_game_start_scene(
+            engine_config=getattr(self.window, "engine_config", None),
+            world_controller=getattr(self.window, "world_controller", None),
+        )
+
+        requester = getattr(self.window, "request_scene_change", None)
+        if callable(requester) and target_scene is not None:
+            requester(target_scene)
+            return True
+        return False
+
+    def _reset_session(self) -> None:
+        """What a new game starts with: a clean game state (flags, counters, values: inventory, room memory, quest
+        progress; quests restart as in a fresh game) and none of the demo hints shown. New Game, and a project switch
+        (#675: the previous project's progress was saved into the new project's saves)."""
         controller = getattr(self.window, "game_state_controller", None)
         if controller is not None:  # a new game starts clean: flags, counters, values and quests (Watchfire R1)
             try:
@@ -724,18 +758,6 @@ class MainMenuOverlay(UIElement):
                 except Exception:
                     _log_swallow("MAIN-002", "engine/ui_overlays/main_menu_overlay.py pass-only blanket swallow")
                     pass
-
-        from ..game_runtime.scene_flow import resolve_game_start_scene  # noqa: PLC0415
-
-        target_scene = resolve_game_start_scene(
-            engine_config=getattr(self.window, "engine_config", None),
-            world_controller=getattr(self.window, "world_controller", None),
-        )
-
-        requester = getattr(self.window, "request_scene_change", None)
-        if callable(requester) and target_scene is not None:
-            requester(target_scene)
-            self.close()
 
     def _rebuild_text_cache(self, left: float, top: float) -> None:
         self._text_lines.clear()
