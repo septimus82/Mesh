@@ -52,8 +52,13 @@ while gate and not pathlib.Path(gate).exists():
     time.sleep(0.005)
 tool, arg = paths[label]
 result = tools.apply_ops(arg, root=root, validate=False) if tool == "apply_ops" else tools.create_scene(arg, root=root)
-print("result " + json.dumps({"ok": result.get("ok"), "reason": result.get("reason"), "message": result.get("message")}), flush=True)
+print("result " + json.dumps({k: result.get(k) for k in ("ok", "reason", "problem", "message")}), flush=True)
 """
+# (#724) The refusals a write racing a starting Studio may get: Studio's, or, while Studio owns the project but its
+# session isn't confirmed yet (it owns the project before it writes its session record; or its bridge didn't answer
+# in time), the uncertain one. Any other refusal (project_busy, ownership_unknown, ...) is a failure.
+RACE_REFUSALS = {("studio_open", None), ("studio_session_uncertain", "owned_without_session"),
+                 ("studio_session_uncertain", "unverified_live_session")}
 
 
 @pytest.fixture
@@ -106,6 +111,11 @@ def _files(root: Path) -> dict[str, str]:
     skip = {".mesh/owner.lock", ".mesh/live_session.json"}
     return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
             for p in sorted(root.rglob("*")) if p.is_file() and p.relative_to(root).as_posix() not in skip}
+
+
+def _refused_untouched(answer: dict[str, Any], before: dict[str, str], after: dict[str, str]) -> bool:
+    """Refused for a reason the race allows (``RACE_REFUSALS``), and not one file changed."""
+    return answer["ok"] is False and (answer["reason"], answer.get("problem")) in RACE_REFUSALS and after == before
 
 
 def _pause(monkeypatch: pytest.MonkeyPatch, label: str) -> tuple[threading.Event, threading.Event]:
@@ -248,13 +258,26 @@ def test_studio_and_an_mcp_write_started_at_once_never_overlap(root: Path, tmp_p
             if answer["ok"]:
                 assert target.stat().st_mtime <= since, "Studio owned the project before the tool's write"
             else:
-                assert answer["reason"] == "studio_open" and _files(root) == before
+                assert _refused_untouched(answer, before, _files(root)), answer
             assert studio.close() == 0
         finally:
             writer.kill()
             writer.wait(timeout=30)
             assert writer.stdout is not None
             writer.stdout.close()
+
+
+def test_the_race_accepts_only_an_allowed_refusal_that_wrote_nothing() -> None:
+    """(#724) What the race above takes as a refusal: an allowed reason, nothing written; anything else fails it."""
+    same, changed = {"a": "1"}, {"a": "2"}
+    for reason, problem in RACE_REFUSALS:
+        assert _refused_untouched({"ok": False, "reason": reason, "problem": problem}, same, same)
+        assert not _refused_untouched({"ok": False, "reason": reason, "problem": problem}, same, changed)
+    assert not _refused_untouched({"ok": True, "reason": None, "problem": None}, same, same)
+    for reason, problem in [("project_busy", None), ("ownership_unknown", None), ("other_editor_open", None),
+                            ("studio_not_open", None), ("studio_session_uncertain", "unreadable_live_session"),
+                            ("studio_session_uncertain", "ownership_unknown")]:
+        assert not _refused_untouched({"ok": False, "reason": reason, "problem": problem}, same, same), reason
 
 
 # ------------------------------------------------------------------------- failures and interruptions let it go
