@@ -437,6 +437,11 @@ class Dialogue(Behaviour):
         if started:
             self._emit_line_event(stage="start", actor_name=actor_name)
 
+    @property
+    def talking(self) -> bool:
+        """A conversation of this object's is showing (started and not yet finished)."""
+        return self._active
+
     def can_interact_with(self, _actor: Sprite) -> bool:
         if self._is_box_active():
             return True

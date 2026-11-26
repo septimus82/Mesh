@@ -16,11 +16,13 @@ def test_registry_reset_propagates_seed_deterministically() -> None:
     assert seq_a == seq_b
 
 
-def test_registry_reset_clears_known_mutable_singletons() -> None:
+def test_registry_reset_clears_known_mutable_singletons(monkeypatch) -> None:
     reset_registry_for_tests(seed=7)
     _ = action_registry.get_actions()
-    setattr(behaviours_pkg, "_BUILTINS_LOADED", True)
-    setattr(encounter_sets, "_THEME_MANAGER", object())
+    # Restored afterwards: this module's encounter_sets can be a stale copy (tests/test_import_no_side_effects.py
+    # re-imports it), which the reset doesn't reach but modules imported earlier (the scene controller) still use.
+    monkeypatch.setattr(behaviours_pkg, "_BUILTINS_LOADED", True)
+    monkeypatch.setattr(encounter_sets, "_THEME_MANAGER", object())
 
     before = get_registry().snapshot_singletons()
     assert before["action_registry_cached_actions"] > 0

@@ -4,9 +4,17 @@
     {
       "behaviour_config": {
         "Vendor": {
-          "inventory": [
-            "potion",
-            "sword"
+          "stock": [
+            {
+              "item_id": "healing_potion",
+              "price": 10,
+              "quantity": -1
+            },
+            {
+              "item_id": "rusty_sword",
+              "price": 10,
+              "quantity": 1
+            }
           ]
         }
       },

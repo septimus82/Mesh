@@ -372,7 +372,8 @@ Edit `assets/data/quests.json` to add new quests.
   - `enter_event`: optional Mesh event emitted when entering a block.
   - Reads time from DayNight or `game_state.variables["time_of_day_hours"]`; wraps across midnight.
 - Shops & Vendors: **Vendor** opens a Shop panel and sells items.
-  - Config: `currency_counter` (default `gold`), `stock` [{item_id, price, quantity}], optional `listen_event` to open, `buy_sound`/`fail_sound`, `buy_rate`/`sell_rate`, `sell_enabled`, `sell_whitelist`/`sell_blacklist`.
+  - Config: `currency_counter` (default `gold`), `stock` [{item_id, price, quantity}], `shop_id`, `open_on`, `listen_event` (default `open_shop`), `buy_sound`/`fail_sound`, `buy_rate`/`sell_rate`, `sell_enabled`, `sell_whitelist`/`sell_blacklist`.
+  - Opening (`open_on`, default `interact`): the player presses E on the shopkeeper. If the same object also talks (**Dialogue**), E starts the conversation and the shop opens when the conversation completes; an "Only once" conversation that was already had opens the shop straight away. `open_on: "event"` turns E off for the shop: only `listen_event` opens it, which is how a conversation choice opens a shop (a choice with `"event": {"type": "open_shop", "payload": {"shop_id": "..."}}`; see Ridge Outpost's merchant). `listen_event` also opens an `interact` shop; sent during that object's conversation, it waits for the conversation's end. An event whose payload names a `shop_id` opens only the shop with that id.
   - Shop UI supports BUY/SELL modes (toggle with Left/Right/Tab), shows prices (rates applied) and player gold; navigation uses arrows/Enter/Esc; player input is blocked while open.
   - Currency uses GameState counters; items go to `game_state.values.inventory`.
   - Example NightMerchant:
@@ -383,7 +384,6 @@ Edit `assets/data/quests.json` to add new quests.
       "behaviour_config": {
         "TimeOfDayGate": { "start_hour": 20, "end_hour": 4, "affect_visibility": true },
         "Vendor": {
-          "listen_event": "interact",
           "stock": [
             { "item_id": "potion_small", "price": 50, "quantity": 5 },
             { "item_id": "potion_large", "price": 150, "quantity": -1 }
