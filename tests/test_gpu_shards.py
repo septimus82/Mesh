@@ -28,7 +28,7 @@ EXTENDED = REPO / ".github" / "workflows" / "extended.yml"
 COMMIT = "c" * 40
 # Two pinned gpu modules, one on each shard and each pinned away from where the hash would put it, and four hashed
 # ones; the physical-GPU skip as in the real lane.
-MODULES = ["tests/test_water_gpu.py", "tests/test_fire_gpu.py",
+MODULES = ["tests/test_water_gpu.py", "tests/test_hd2d_starter_gpu.py",
            *(f"tests/test_g{i}_gpu.py" for i in range(4))]
 COLLECTED = sorted(f"{m}::test_{t}" for m in MODULES for t in ("a", "b"))
 PHYSICAL = "tests/test_g0_gpu.py::test_b"  # (skipped: needs a physical GPU)
@@ -60,18 +60,20 @@ def _check(records: list[dict[str, Any]], plan: str = "gpu", **kwargs: Any) -> t
 
 # --- the plans ------------------------------------------------------------------------------------------------------
 
-def test_the_default_suites_split_is_unchanged() -> None:
-    # The digests and assignment ci.yml's shards had before plans existed (57dc0c3): its records still match.
-    assert scheme_digest(2) == "337c292c31a29b91f76c9955a1f83a1045f55275afbc70cf28883926d02356b1"
-    assert scheme_digest(1) == "ad47ad828de6a9bbef5dcaaf10edddbf63de97873e28e8bd3fb1e9e9d597d8a6"
+def test_the_default_suites_split_is_the_s1_5_9_one() -> None:
+    # The digests and assignment ci.yml's shards (both OSes) have since S1 5.9's re-pin (scheme f13c-2); a change to
+    # either moves modules between shards, so it is made on purpose, from measured timings, with these updated.
+    assert scheme_digest(2) == "4c825fd905d1b1bec2b5176af6713297789c73ac4e7408eb888ecefa65a88e91"
+    assert scheme_digest(1) == "d8c2ec23482332827f2a0a7032e9676ed92b3b75c23984427d9a642e6ca950b5"
     assert all(shard_of(m) == k for m, k in PINNED.items())
     assert ci_shards.PLANS == {"default": PINNED, "gpu": GPU_PINNED, "gpu-linux": GPU_LINUX_PINNED}
 
 
-def test_windows_gpu_split_is_unchanged_by_linux_s() -> None:
-    # #422 CI-422B: Windows' gpu shards split as they did before Linux had a plan (5a9d8f6): same pins, same scheme.
-    assert scheme_digest(2, "gpu") == "236fa33ad55c0852a2ab943f08b932c96be64d52a4caa820e4af9fd224538424"
-    assert len(GPU_PINNED) == 12 and GPU_PINNED["tests/test_terrain_gpu.py"] == 2
+def test_windows_gpu_split_is_the_s1_5_9_one() -> None:
+    # S1 5.9: Windows' gpu shards re-pinned from 6 push runs' timings (20 heaviest modules plus the 5.7 (ii) e2e leg).
+    assert scheme_digest(2, "gpu") == "2b2dbfcb6aac82d5c6a12d63f5c2a77de66f34fdda53be703db272b503985f59"
+    assert scheme_digest(2, "gpu-linux") == "2eac12d62cc1713bc65af2cf99091929e8bb7383ff7a25141848dae21b909fa2"
+    assert len(GPU_PINNED) == 21 and GPU_PINNED["tests/test_terrain_gpu.py"] == 1
 
 
 @pytest.mark.parametrize("plan", GPU_PLANS)
@@ -108,13 +110,21 @@ def test_every_gl_module_today_and_any_new_one_lands_in_exactly_one_shard(plan: 
 
 
 def test_linux_s_plan_comes_from_linux_s_timings_not_windows() -> None:
-    # The slowest Linux module but one isn't among Windows' pins: copying Windows' plan would have left Linux uneven.
-    assert "tests/test_hd2d_lighting_controls_gpu.py" in GPU_LINUX_PINNED
-    assert "tests/test_hd2d_lighting_controls_gpu.py" not in GPU_PINNED
-    assert len(GPU_LINUX_PINNED) == 12 and scheme_digest(2, "gpu-linux") != scheme_digest(2, "gpu")
+    # Each OS's pins come from its own lane's timings: Linux's split differs from Windows' (terrain and lighting
+    # controls share Linux's shard 1, while Windows' plan separates them).
+    assert GPU_LINUX_PINNED["tests/test_hd2d_lighting_controls_gpu.py"] == GPU_LINUX_PINNED["tests/test_terrain_gpu.py"]
+    assert GPU_PINNED["tests/test_hd2d_lighting_controls_gpu.py"] != GPU_PINNED["tests/test_terrain_gpu.py"]
+    assert len(GPU_LINUX_PINNED) == 13 and scheme_digest(2, "gpu-linux") != scheme_digest(2, "gpu")
 
 
-@pytest.mark.parametrize(("plan", "shard"), [("gpu", 2), ("gpu-linux", 1)])
+# S1 5.9 (roadmap 5.9, 5.7 ii): the HD-2D e2e leg (gl tests in the e2e module) runs in each OS's lighter gpu shard:
+# Windows' 1 (1,738 s against 1,791 s on the measured runs), Linux's 2 (816 s against 913 s).
+@pytest.mark.parametrize(("plan", "shard"), [("gpu", 1), ("gpu-linux", 2)])
+def test_the_hd2d_e2e_leg_runs_in_the_lighter_gpu_shard(plan: str, shard: int) -> None:
+    assert shard_of("tests/test_e2e_creator_workflow.py", 2, plan) == shard
+
+
+@pytest.mark.parametrize(("plan", "shard"), [("gpu", 1), ("gpu-linux", 1)])
 def test_the_terrain_module_and_its_measurement_run_in_one_shard(plan: str, shard: int) -> None:
     # (its gated stroke, zero-reload guard, report-only measurements and fault-detection test, all in one module)
     assert shard_of("tests/test_terrain_gpu.py", 2, plan) == shard

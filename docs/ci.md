@@ -10,7 +10,7 @@ The GitHub Actions workflow at `.github/workflows/ci.yml` runs on every push and
 Each matrix run executes:
 
 1. `python -m compileall -q engine mesh_cli tooling tests`
-2. `python -m pytest -q` (Windows uses `-p no:cacheprovider`, and runs it as two shards; Linux runs it whole as one "shard", `--mesh-shard 1/1`, so both OSes check their records the same way and hold the suite to its floor: see below)
+2. `python -m pytest -q` (Windows uses `-p no:cacheprovider`; each OS runs it as two shards, whose records its fan-in checks the same way and holds to the suite's floor: see below)
 3. `python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact --reuse-evidence` (step budgets enforced)
 4. `python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed 123 --reuse-verify-all artifacts`: its release check reuses step 3's verify-all only when that run's evidence proves it passed on this exact clean commit with unchanged reports, and otherwise runs verify-all itself (F13-B, `docs/release_bundle.md`)
 5. `python -m mesh_cli bundle verify --zip artifacts/release_bundle.zip --strict`
@@ -27,12 +27,11 @@ Artifact names follow this pattern:
 
 Retention is 7 days.
 
-## Windows Test Shards (F13-C)
+## Test Shards (F13-C; Linux since S1 5.9)
 
-Windows' full default suite (`not slow and not e2e`) was the longest job of every run, so it runs as two jobs,
-`pytest (windows-latest, py3.11, shard 1/2)` and `shard 2/2`. Linux runs the whole suite in one job, as before, as
-shard 1/1 of the same scheme, and checks its one record in that job (`ci_shards.py check artifacts/shards --shards 1
---min-selected N`).
+Each OS's full default suite (`not slow and not e2e`) runs as two jobs, `pytest (<os>, py3.11, shard 1/2)` and
+`shard 2/2`: Windows' since F13-C, Linux's since S1 5.9 (its single job had become CI's critical path). Both OSes split
+by the same plan (`default`) and are checked the same way, each by its own `tests` fan-in.
 
 - **Whole modules.** A shard runs whole test modules, so a module's fixtures and test order are as in a full run.
   `tooling/ci_shards.py` decides which: the heaviest modules (`PINNED`, by measured duration) are pinned to balance the
@@ -43,20 +42,24 @@ shard 1/1 of the same scheme, and checks its one record in that job (`ci_shards.
   --mesh-shard K/2`), and writes a record (`artifacts/shards/shard-K.json`): the commit, the collected test ids and
   their digest, the scheme's digest, the selected ids, every test's outcome and seconds, its subtests' outcome counts, the modules skipped at
   collection and pytest's exit status, with `complete: true` only once the session finished. Its JUnit report sits
-  beside it. Both go up as `pytest-shard-K-windows-latest-py3.11`, whatever the job's result.
-- **The fan-in.** `tests (windows-latest, py3.11)` requires both shard jobs (`tooling/ci_require_jobs.py`), downloads
+  beside it. Both go up as `pytest-shard-K-<os>-py3.11`, whatever the job's result.
+- **The fan-in.** `tests (<os>, py3.11)` requires both of its OS's shard jobs (`tooling/ci_require_jobs.py`), downloads
   their records and runs `python3 tooling/ci_shards.py check shard-records --commit <sha>`. It refuses a missing,
   duplicate, incomplete or failed shard; a record of another commit, collection, shard count or scheme, or one whose
   ids don't match its own digest; a test selected twice, run in both shards, run in neither or without an outcome; a
   test that didn't pass; and a JUnit report that is missing or disagrees with its record. Test ids that embed the
   checkout's path are written `<repo>`; a module skipped at collection is reported by both shards and counted once.
+- **The suite's MCP test (#649).** Both Linux shards install `.[mcp]` and set `MESH_REQUIRE_MCP=1`, so the real
+  FastMCP server build fails, never skips, in whichever shard holds it.
 - **Lane floors (#648).** Both OSes' checks pass `--min-selected` with the default suite's floor
   (`tooling/ci_shards.py` `DEFAULT_MIN_SELECTED`), and refuse a suite that collects fewer tests: a conftest, marker or
   collection change that drops most of the suite turns CI red instead of green. Extended's gpu fan-ins do the same
   with the gpu lane's floor, and every lane run by `tooling/test_tiers.py` checks its own `min_selected`. Each floor sits
   just under what its lane collects; `tests/test_test_lanes_contract.py` keeps it within 5% of that (a whole-suite run
   counts every lane). **The rule:** a legitimate test removal lowers the floor on purpose, in the same PR; growth past
-  5% raises it there too.
+  5% raises it there too. The lane-floor test needs the whole suite's collection; every shard collects the whole suite
+before keeping its own modules, so it runs in its shard on each OS, and under `CI=true` it fails rather than skips if
+the collection was ever narrowed.
 
 Run one shard locally the way CI does:
 

@@ -233,9 +233,9 @@ jobs:
   # Each OS's tests run as two parallel jobs (H3, #422 F13; neither uses the other's results): ``pytest`` (the full
   # default suite) and ``verify`` (verify-all, the release bundle and its strict verification, the artifacts). The
   # ``tests (<os>, py3.11)`` job after them is the result to look at: green only when both of that OS's jobs succeeded.
-  # Windows' suite, the longest job of a run, runs as two shards of whole modules (F13-C, tooling/ci_shards.py), each a
-  # job of its own: ``pytest (windows-latest, py3.11, shard 1/2)`` and ``2/2``. Each writes a record of what it
-  # collected and ran, and the Windows ``tests`` fan-in refuses unless together they ran every test exactly once.
+  # Each OS's suite runs as two shards of whole modules (F13-C, tooling/ci_shards.py; Linux since S1 5.9), each a job
+  # of its own: ``pytest (<os>, py3.11, shard 1/2)`` and ``2/2``. Each writes a record of what it collected and ran,
+  # and the OS's ``tests`` fan-in refuses unless together they ran every test exactly once, at least the suite's floor.
   pytest:
     name: pytest (${{ matrix.os }}, py${{ matrix.python }}${{ matrix.shard && format(', shard {0}', matrix.shard) || '' }})
     needs: dedup
@@ -249,7 +249,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest, python: "3.11", shard: "", shard_index: 0 }
+          - { os: ubuntu-latest, python: "3.11", shard: "1/2", shard_index: 1 }
+          - { os: ubuntu-latest, python: "3.11", shard: "2/2", shard_index: 2 }
           - { os: windows-latest, python: "3.11", shard: "1/2", shard_index: 1 }
           - { os: windows-latest, python: "3.11", shard: "2/2", shard_index: 2 }
 
@@ -271,8 +272,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      # The optional MCP SDK in one job (#649): without it the real-FastMCP server build
-      # (tests/test_mcp_server_tools_contract.py::test_server_build_succeeds_when_mcp_present) skipped in every job.
+      # The optional MCP SDK on Linux (#649), both shards (whichever holds the MCP test): without it the real-FastMCP
+      # server build (tests/test_mcp_server_tools_contract.py::test_server_build_succeeds_when_mcp_present) skipped.
       - name: Install the optional MCP SDK (Linux)
         if: runner.os != 'Windows'
         run: |
@@ -287,25 +288,20 @@ jobs:
         run: |
           python -m pytest -q -p no:cacheprovider -p tooling.ci_shards_plugin --mesh-shard ${{ matrix.shard }} --mesh-shard-record artifacts/shards/shard-${{ matrix.shard_index }}.json --junitxml=artifacts/shards/junit-${{ matrix.shard_index }}.xml
 
-      # Linux runs the whole suite as one "shard" (1/1), so its record proves the same as Windows' two (#648): every
-      # collected test ran once with a passing outcome, and the suite holds at least its floor of tests
-      # (tooling/ci_shards.py DEFAULT_MIN_SELECTED), so a change that drops most of it turns this red.
-      - name: Run pytest (Linux)
+      # Linux's shards (S1 5.9; until then one job ran the whole suite as shard 1/1, checked in the job): the Linux
+      # ``tests`` fan-in checks their two records the same way as Windows' (#648: every collected test ran once with a
+      # passing outcome, and the suite holds at least its floor, tooling/ci_shards.py DEFAULT_MIN_SELECTED).
+      - name: Run pytest (Linux, one shard)
         if: runner.os != 'Windows'
         env:
           MESH_REQUIRE_MCP: "1"  # (#649: the real-FastMCP server build fails here, never skips, if mcp doesn't import)
         run: |
-          xvfb-run -a python -m pytest -q -p tooling.ci_shards_plugin --mesh-shard 1/1 --mesh-shard-record artifacts/shards/shard-1.json --junitxml=artifacts/shards/junit-1.xml
-
-      - name: The suite ran whole, each test once, with at least its floor of tests (Linux)
-        if: runner.os != 'Windows'
-        run: |
-          python tooling/ci_shards.py check artifacts/shards --shards 1 --min-selected 13600 --commit "${{ github.sha }}"
+          xvfb-run -a python -m pytest -q -p tooling.ci_shards_plugin --mesh-shard ${{ matrix.shard }} --mesh-shard-record artifacts/shards/shard-${{ matrix.shard_index }}.json --junitxml=artifacts/shards/junit-${{ matrix.shard_index }}.xml
 
       # The shard's record and JUnit report, for the fan-in (whatever happened: a missing or incomplete one is refused
       # there). ``overwrite``: a re-run attempt of the shard replaces its earlier record.
       - name: Upload the shard's record
-        if: always() && matrix.shard != ''
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pytest-shard-${{ matrix.shard_index }}-${{ matrix.os }}-py${{ matrix.python }}
@@ -322,7 +318,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-outputs-${{ matrix.os }}-py${{ matrix.python }}${{ matrix.shard && format('-shard-{0}', matrix.shard_index) || '' }}
+          name: pytest-outputs-${{ matrix.os }}-py${{ matrix.python }}-shard-${{ matrix.shard_index }}
           retention-days: 7
           if-no-files-found: ignore
           path: |
@@ -871,16 +867,15 @@ jobs:
           NEEDS_RESULTS: ${{ toJSON(needs.*.result) }}  # (the engine's word when the jobs list lags)
         run: python3 tooling/ci_require_jobs.py --os "${{ matrix.os }}" --python "${{ matrix.python }}"
 
-      - name: Download the Windows shards' records
-        if: matrix.os == 'windows-latest'
+      - name: Download the shards' records
         uses: actions/download-artifact@v4
         with:
           pattern: pytest-shard-*-${{ matrix.os }}-py${{ matrix.python }}
           path: shard-records
           merge-multiple: true
 
-      - name: The Windows shards together ran the whole suite, each test once
-        if: matrix.os == 'windows-latest'
+      - name: The shards together ran the whole suite, each test once
+        if: always()  # (also when the download failed: then it refuses, red)
         run: python3 tooling/ci_shards.py check shard-records --min-selected 13600 --commit "${{ github.sha }}"
 
   timing-rolling:

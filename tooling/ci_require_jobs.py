@@ -1,7 +1,7 @@
 """The CI fan-in (H3, #422 F13): one OS's ``tests`` result is green only when every job it is made of succeeded.
 
-Each OS's work runs as parallel jobs: ``pytest (<os>, py3.11)`` (the full default suite; on Windows, since F13-C,
-two shard jobs ``pytest (windows-latest, py3.11, shard 1/2)`` and ``2/2``), ``verify (<os>, py3.11)``
+Each OS's work runs as parallel jobs: ``pytest`` (the full default suite as two shard jobs, ``pytest (<os>, py3.11,
+shard 1/2)`` and ``2/2``: Windows since F13-C, Linux since S1 5.9), ``verify (<os>, py3.11)``
 (verify-all, the release bundle and its strict verification, the artifacts) and, since H5, ``installed (<os>,
 py3.11)`` (this commit's wheel installed and run outside the checkout) and, since H6, ``acceptance (<os>, py3.11)``
 (the creator-workflow GL tests). The ``tests (<os>, py3.11)`` job, the check
@@ -40,8 +40,9 @@ from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
 COMPONENTS = ("pytest", "verify", "installed", "acceptance")
-# F13-C: an OS whose ``pytest`` runs as shards, one job each (``tooling/ci_shards.py`` SHARDS; ci.yml's matrix).
-SHARDED = {"windows-latest": 2}
+# F13-C: an OS whose ``pytest`` runs as shards, one job each (``tooling/ci_shards.py`` SHARDS; ci.yml's matrix). Linux
+# since S1 5.9: a missing shard job is as red as a failed one.
+SHARDED = {"windows-latest": 2, "ubuntu-latest": 2}
 # R-2: the replay suite is one job on one OS (ubuntu, the release job's choice; its digests are the same everywhere, only
 # the time budgets are Linux-only), required by every OS's fan-in so a replay mismatch turns both ``tests`` checks red.
 REPLAYS = "replays (ubuntu-latest, py{python})"
