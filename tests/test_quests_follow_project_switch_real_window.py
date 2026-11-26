@@ -1,4 +1,4 @@
-﻿"""#675 item 3: the main menu's project switch moved the saves, cutscenes and items to the new project (#623), but the
+"""#675 item 3: the main menu's project switch moved the saves, cutscenes and items to the new project (#623), but the
 quest manager kept the previous project's quest definitions (read once, from an absolute path, when the window was
 made). Those kept driving the quest state, which was then saved into the new project's saves. Now the switch reads
 the new project's quests again; the previous project's quest state goes with them.
