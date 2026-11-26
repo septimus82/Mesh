@@ -271,6 +271,13 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      # The optional MCP SDK in one job (#649): without it the real-FastMCP server build
+      # (tests/test_mcp_server_tools_contract.py::test_server_build_succeeds_when_mcp_present) skipped in every job.
+      - name: Install the optional MCP SDK (Linux)
+        if: runner.os != 'Windows'
+        run: |
+          python -m pip install -e ".[mcp]"
+
       - name: Compile Python sources
         run: |
           python -m compileall -q engine mesh_cli tooling tests

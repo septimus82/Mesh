@@ -89,7 +89,7 @@ def _fake_episode_handle_factory(
     return _fake_episode_handle
 
 
-def test_cli_replays_run_suite_writes_artifacts_and_passes_against_golden(tmp_path: Path) -> None:
+def test_cli_replays_run_suite_writes_artifacts_and_passes_against_golden(tmp_path: Path, capsys) -> None:
     suite = tmp_path / "suite.json"
     golden = tmp_path / "ep01_golden.json"
     out_dir = tmp_path / "out"
@@ -105,6 +105,7 @@ def test_cli_replays_run_suite_writes_artifacts_and_passes_against_golden(tmp_pa
     assert (case_dir / "digests.json").exists()
     assert (case_dir / "final_state_bundle.json").exists()
     assert (case_dir / "performance.json").exists()
+    capsys.readouterr()
 
     rc_compare = mesh_cli.main(
         [
@@ -120,6 +121,7 @@ def test_cli_replays_run_suite_writes_artifacts_and_passes_against_golden(tmp_pa
         ]
     )
     assert rc_compare == 0
+    assert capsys.readouterr().out == "", "a passing --quiet run prints nothing"
 
     report = _read_json(out_dir / "suite_report.json")
     assert report["ok"] is True
@@ -129,7 +131,7 @@ def test_cli_replays_run_suite_writes_artifacts_and_passes_against_golden(tmp_pa
     assert report["cases"][0]["match"] is True
 
 
-def test_cli_replays_run_mismatch_fails_with_actionable_report(tmp_path: Path) -> None:
+def test_cli_replays_run_mismatch_fails_with_actionable_report(tmp_path: Path, capsys) -> None:
     suite = tmp_path / "suite.json"
     golden = tmp_path / "ep01_golden.json"
     out_dir = tmp_path / "out"
@@ -140,6 +142,7 @@ def test_cli_replays_run_mismatch_fails_with_actionable_report(tmp_path: Path) -
     payload = _read_json(golden)
     payload["expected_event_digest"] = "0" * 64
     golden.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    capsys.readouterr()
 
     rc = mesh_cli.main(
         [
@@ -155,6 +158,10 @@ def test_cli_replays_run_mismatch_fails_with_actionable_report(tmp_path: Path) -
         ]
     )
     assert rc == 1
+    # Even --quiet (CI's replays job) names the failed case and why in the log, not only in the artifact (#649).
+    out = capsys.readouterr().out
+    assert "Result: FAILED" in out and "- ep01 [episode]: FAILED (golden mismatch (1 field(s)))" in out
+    assert "expected_event_digest" in out
 
     report = _read_json(out_dir / "suite_report.json")
     assert report["ok"] is False

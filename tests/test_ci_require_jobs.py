@@ -150,6 +150,9 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     assert ("-p tooling.ci_shards_plugin --mesh-shard ${{ matrix.shard }} --mesh-shard-record "
             "artifacts/shards/shard-${{ matrix.shard_index }}.json --junitxml=artifacts/shards/junit-"
             "${{ matrix.shard_index }}.xml") in windows_run
+    # The optional MCP SDK in the Linux job, so the real-FastMCP server build runs somewhere instead of skipping (#649).
+    mcp = pytest_job[pytest_job.index("Install the optional MCP SDK (Linux)"):pytest_job.index("Compile Python sources")]
+    assert "if: runner.os != 'Windows'" in mcp and 'python -m pip install -e ".[mcp]"' in mcp
     linux_run = pytest_job[pytest_job.index("Run pytest (Linux)"):]
     assert "xvfb-run -a python -m pytest -q\n" in linux_run and "mesh-shard" not in linux_run
     record_upload = pytest_job[pytest_job.index("Upload the shard's record"):]
