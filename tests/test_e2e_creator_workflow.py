@@ -15,7 +15,12 @@ The game (the ``starter`` template's room, walled, with an inner wall whose gap 
   sets the flag that completes the quest;
 - the quest (MCP): started by the Elder's choice, its first stage done when the gate opens, its last by the flag;
 - a door to a second 2D room (the Shed) and back.
-After re-entry, and after F9 in the new process, nothing pays twice and the gate stays open.
+After re-entry, and after F9 in the new process, nothing pays twice and the gate stays open. The game also counts
+what must happen exactly once or never: ``entered_zone`` and the zone's event per entry (#640), and a Bell (a button
+used any number of times) heard by the Potion and the Wolf only until they are picked up / defeated (#637). The player
+gets Health and Combat with no numbers authored: both come from its stats (#651). The game started again for F9 runs
+from another folder and still saves in its project (#623). The exported bundle's files are hashed before and after
+its runs: it writes nothing into its own folder.
 
 Every step is its own test, on one game made and played once (module fixtures; the children run one at a time). A step
 that fails because of an open defect is ``xfail(strict=True)`` with the issue's number (none today). (i) the chain and
@@ -28,6 +33,7 @@ child process gets its own APPDATA / XDG folders inside the test's temporary fol
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import io
 import json
 import os
@@ -79,7 +85,7 @@ def _in_folder(folder: Path) -> Iterator[None]:
             reset_path_caches()
 
 
-def _child(mode: str, game: Path, base: Path, *, exported: bool = False) -> dict[str, Any]:
+def _child(mode: str, game: Path, base: Path, *, exported: bool = False, cwd: str = "elsewhere") -> dict[str, Any]:
     """The driver in a new process, one at a time. Its per-user folders (saves, settings, the projects list) are
     ``base/home``; an exported game runs isolated (``-I``: no PYTHONPATH, no user site) from another folder."""
     home = base / "home"
@@ -91,16 +97,22 @@ def _child(mode: str, game: Path, base: Path, *, exported: bool = False) -> dict
     else:
         env["PYTHONPATH"] = os.pathsep.join([str(REPO), *filter(None, [os.environ.get("PYTHONPATH")])])
         env["MESH_RUNTIME_SETTINGS_PATH"] = str(home / "user_settings.json")
-    cwd = base / "elsewhere"
-    cwd.mkdir(exist_ok=True)
-    args = [sys.executable, *(["-I"] if exported else []), str(DRIVER), mode, str(game), str(HIDDEN)]
-    proc = subprocess.run(args, cwd=cwd, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace",
+    (base / cwd).mkdir(exist_ok=True)
+    # (-B: Python writes no bytecode cache, so the bundle's own files can be compared before and after)
+    args = [sys.executable, *(["-I", "-B"] if exported else []), str(DRIVER), mode, str(game), str(HIDDEN)]
+    proc = subprocess.run(args, cwd=base / cwd, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace",
                           timeout=420)
     line = next((x for x in reversed(proc.stdout.splitlines()) if x.startswith("MESH-E2E ")), None)
     assert line is not None, f"{mode}: the game crashed (exit {proc.returncode}):\n{(proc.stdout + proc.stderr)[-4000:]}"
     facts: dict[str, Any] = json.loads(line[len("MESH-E2E "):])
     assert "error" not in facts, f"{mode}: {facts['error']}\n{(proc.stdout + proc.stderr)[-3000:]}"
     return facts
+
+
+def _files(folder: Path) -> dict[str, str]:
+    """Every file under ``folder``, by its relative path, with its SHA-256."""
+    return {p.relative_to(folder).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(folder.rglob("*")) if p.is_file()}
 
 
 def _step(facts: dict[str, Any], name: str) -> dict[str, Any]:
@@ -159,23 +171,27 @@ def _author(root: Path) -> dict[str, Any]:
             changes.extend({"op": "set_behaviour_param", "room": "start", "entity_id": ref, "behaviour": behaviour,
                             "param": k, "value": v} for k, v in params.items())
 
-    thing("Potion", 150, 220, ("PickupCollectible", {"item_id": "healing_potion", "item_amount": 1}))
+    # The Potion and the Wolf also answer the Bell (a button used any number of times) with a counter: once they are
+    # gone (picked up; defeated) the Bell must reach neither (#637).
+    thing("Bell", 90, 330, ("SwitchInteract", {"event_id": "bell_rung"}))
+    thing("Potion", 150, 220, ("PickupCollectible", {"item_id": "healing_potion", "item_amount": 1}),
+          ("SetGameStateOnEvent", {"event_type": "bell_rung", "inc_counters": {"potion_hears": 1}}))
     thing("Merchant", 300, 420, ("Vendor", {"stock": [{"item_id": "healing_potion", "price": 5, "quantity": 3}]}))
     thing("Wolf", 330, 250, ("Health", {"max_hp": 3}), ("DropTable", {"drops": [{"gold": 5, "chance": 1.0}]}),
-          tag="enemy")
+          ("SetGameStateOnEvent", {"event_type": "bell_rung", "inc_counters": {"howls": 1}}), tag="enemy")
     thing("Lever", 400, 160, ("SwitchInteract", {"event_id": "gate_open", "one_shot": True}),
           ("CutsceneTrigger", {"listen_event": "gate_open", "cutscene_id": "gate_opens"}))
     thing("Gate", 464, 256, ("DoorLock", {"unlock_event": "gate_open"}), sprite="assets/sprites/door.png", solid=True)
     thing("Chest", 600, 320, ("RewardChest", {"unlock_event": "gate_open", "gold": 10}))
     thing("VaultZone", 620, 160, ("TriggerZone", {"trigger_radius": 40, "trigger_target": "Player",
                                                   "on_trigger": "vault_reached"}),
-          ("SetGameStateOnEvent", {"event_type": "vault_reached", "set_flags": {"reached_vault": True}}))
+          ("SetGameStateOnEvent", {"event_type": "vault_reached", "set_flags": {"reached_vault": True},
+                                   "inc_counters": {"vault_events": 1}}))
+    thing("ZoneTally", 700, 450, ("IncrementCounterOnEvent", {"event_type": "entered_zone", "counter": "zone_entries"}))
     changes += [
         {"op": "link_rooms", "key_a": "start", "at_a": [80, 440], "key_b": shed, "at_b": [320, 240]},
         {"op": "add_behaviour", "room": "start", "entity_id": "Player", "behaviour": "Combat"},
-        {"op": "add_behaviour", "room": "start", "entity_id": "Player", "behaviour": "Health"},
-        {"op": "set_behaviour_param", "room": "start", "entity_id": "Player", "behaviour": "Health",
-         "param": "max_hp", "value": 50},
+        {"op": "add_behaviour", "room": "start", "entity_id": "Player", "behaviour": "Health"},  # (its stats: #651)
     ]
     plan = root.parent / "changes.json"
     plan.write_text(json.dumps(changes), encoding="utf-8")
@@ -220,7 +236,7 @@ def game(base: Path) -> dict[str, Any]:
 def played(game: dict[str, Any], base: Path) -> dict[str, Any]:
     """Process 1 plays and quicksaves (F5); process 2, a new one, quickloads (F9) and revisits."""
     play = _child("play", game["root"], base)
-    return {"play": play, "resume": _child("resume", game["root"], base)}
+    return {"play": play, "resume": _child("resume", game["root"], base, cwd="another_folder")}  # (#623)
 
 
 @pytest.fixture(scope="module")
@@ -230,8 +246,10 @@ def exported(game: dict[str, Any], base: Path) -> dict[str, Any]:
     bundle = game["root"] / "dist" / "bundle"
     out: dict[str, Any] = {"exit": code, "bundle": bundle}
     if code == 0:
+        out["files_before"] = _files(bundle)
         out["play"] = _child("export_play", bundle, base, exported=True)
         out["resume"] = _child("export_resume", bundle, base, exported=True)
+        out["files_after"] = _files(bundle)
     return out
 
 
@@ -265,6 +283,20 @@ def test_play_shop_purchase(played: dict[str, Any]) -> None:
     _ok(played["play"], "shop_purchase")
 
 
+def test_play_the_player_uses_its_stats(played: dict[str, Any]) -> None:
+    """#651: the player's Health (no max_hp authored) and Combat take max_hp and attack from the player's stats."""
+    start = played["play"]["start"]
+    stats_hp, stats_attack = float(start["player_stats"]["max_hp"]), float(start["player_stats"]["attack"])
+    assert stats_hp > 1 and stats_attack > 1, start["player_stats"]
+    assert start["player_hp"] == [stats_hp, stats_hp], start
+    assert start["player_damage"] == stats_attack, start
+
+
+def test_play_removed_entities_stop_listening(played: dict[str, Any]) -> None:
+    """#637: the Bell reaches the Potion and the Wolf while they are there, and neither once picked up / defeated."""
+    _ok(played["play"], "removed_entities_stop_listening")
+
+
 def test_play_enemy_with_health_is_defeated(played: dict[str, Any]) -> None:
     assert played["play"]["start"]["wolf_hp"] == [3.0, 3.0], "Health starts full (#651)"
     _ok(played["play"], "enemy_defeated")
@@ -284,7 +316,10 @@ def test_play_chest(played: dict[str, Any]) -> None:
 
 
 def test_play_trigger_zone_event(played: dict[str, Any]) -> None:
+    """#640: the zone sends its event and ``entered_zone`` exactly once for the one entry (counted by the game)."""
     _ok(played["play"], "zone_event")
+    counts = {k: played["play"]["before_save"][k] for k in ("zone_entries", "vault_events")}
+    assert counts == {"zone_entries": 1.0, "vault_events": 1.0}, counts
 
 
 def test_play_door_to_another_room_and_back(played: dict[str, Any]) -> None:
@@ -295,9 +330,12 @@ def test_play_nothing_repeats_on_reentry(played: dict[str, Any]) -> None:
     _ok(played["play"], "reentry_nothing_repeats")
 
 
-def test_f5_then_a_new_process_f9_keeps_the_game(played: dict[str, Any]) -> None:
+def test_f5_then_a_new_process_f9_keeps_the_game(played: dict[str, Any], game: dict[str, Any]) -> None:
     before, after = played["play"]["before_save"], played["resume"]["after_load"]
     assert "quicksave" in played["play"]["saves"] and "quicksave" in played["resume"]["slots_at_start"]
+    root = game["root"].resolve()
+    for facts in (played["play"], played["resume"]):  # (#623: in the project, wherever the game was started from)
+        assert Path(facts["save_dir"]).is_absolute() and Path(facts["save_dir"]).resolve() == root / "saves", facts
     fresh = played["resume"]["before_load"]  # (the new process starts a new game: F9 is what brings it back)
     assert (fresh["gold"], fresh["elder_thanked"], fresh["gate_locked"]) == (0.0, False, True), fresh
     assert after == before, json.dumps({"before": before, "after": after}, indent=1)
@@ -327,7 +365,13 @@ def test_exported_game_saves_per_player_and_reloads(exported: dict[str, Any], ba
     assert "quicksave" in resume["slots_at_start"] and resume["save_dir"] == play["save_dir"]
     assert resume["before_load"]["gold"] == 0.0
     assert resume["after_load"] == play["before_save"] and play["before_save"]["gold"] == 25.0
-    assert not (exported["bundle"] / "saves").exists(), "an exported game writes nothing into its own folder"
+
+
+def test_exported_game_writes_nothing_into_its_own_folder(exported: dict[str, Any]) -> None:
+    """Every file of the bundle, hashed after the build and after both runs: none added, changed or removed."""
+    before, after = exported["files_before"], exported["files_after"]
+    changed = sorted(k for k in before.keys() | after.keys() if before.get(k) != after.get(k))
+    assert before and not changed, f"the exported game changed its own folder: {changed}"
 
 
 # ----------------------------------------------------------------------------------------- (iii) template smoke

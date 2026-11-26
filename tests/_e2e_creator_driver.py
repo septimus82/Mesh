@@ -193,6 +193,7 @@ class Player:
                 "reached_vault": bool(self.gs.get_flag("reached_vault")),
                 "vault_badge": self.gs.get_counter("vault_badge", 0),
                 "gate_scene_seen": bool(self.gs.get_flag("gate_scene_seen")), "renown": self.gs.get_counter("renown", 0),
+                **{c: self.gs.get_counter(c, 0) for c in ("howls", "potion_hears", "zone_entries", "vault_events")},
                 "wolf_present": self.named("Wolf") is not None, "potion_present": self.named("Potion") is not None,
                 "gate_locked": getattr(gate, "locked", None),
                 "gate_solid": self.named("Gate") in self.sc.solid_sprites if self.named("Gate") else None,
@@ -239,10 +240,12 @@ def through_gate(p: Player, eastward: bool) -> dict[str, Any]:
 
 def play(p: Player) -> None:
     wolf_hp = p.behaviour("Wolf", "Health")
-    hero_hp = next((b for b in p.hero().mesh_behaviours_runtime if type(b).__name__ == "Health"), None)
+    mine = {type(b).__name__: b for b in p.hero().mesh_behaviours_runtime}
     facts["start"] = p.snapshot()
     facts["start"]["wolf_hp"] = [getattr(wolf_hp, "hp", None), getattr(wolf_hp, "max_hp", None)]
-    facts["start"]["player_hp"] = [getattr(hero_hp, "hp", None), getattr(hero_hp, "max_hp", None)]
+    facts["start"]["player_hp"] = [getattr(mine.get("Health"), "hp", None), getattr(mine.get("Health"), "max_hp", None)]
+    facts["start"]["player_damage"] = getattr(mine.get("Combat"), "damage", None)
+    facts["start"]["player_stats"] = dict(p.gs.get_player_stats() or {})
 
     # 1. The Elder: an "Only once" conversation whose "Thank you" is a "Choice once" reward (+25 gold).
     first = p.talk("Elder", "Thank you")
@@ -252,6 +255,11 @@ def play(p: Player) -> None:
            first=first, again=again, gold_after_first=paid, gold_after_second=p.gold())
     p.note("quest_started", p.quest().get("status") == "active" and p.quest().get("current_stage") == "open_gate",
            quest=p.quest())
+
+    # 1b. The Bell, while the Potion and the Wolf are there: each counts it.
+    p.approach("Bell")
+    p.press(K.E, 5)
+    heard = (p.gs.get_counter("potion_hears", 0), p.gs.get_counter("howls", 0))
 
     # 2. A potion to pick up.
     p.approach("Potion")
@@ -284,6 +292,14 @@ def play(p: Player) -> None:
     p.note("enemy_defeated", p.named("Wolf") is None and p.gold() == gold0 + 5,
            attacks=attacks, gold_before=gold0, gold_after=p.gold(), wolf_hp_at_start=facts["start"]["wolf_hp"])
 
+    # 4b. The Bell again: the picked-up Potion and the defeated Wolf no longer hear it.
+    p.approach("Bell")
+    p.press(K.E, 5)
+    p.step(5)
+    after = (p.gs.get_counter("potion_hears", 0), p.gs.get_counter("howls", 0))
+    p.note("removed_entities_stop_listening", heard == (1.0, 1.0) and after == heard, while_there=heard,
+           after_removal=after)
+
     # 5. The Button opens the gate; walk through it.
     walked = p.approach("Lever")
     p.press(K.E, 5)
@@ -310,8 +326,10 @@ def play(p: Player) -> None:
     # 7. The zone: its event sets reached_vault, which completes the quest.
     zone = p.named("VaultZone")
     walked = p.walk_to(zone.center_x, zone.center_y)
-    p.step(10)
-    p.note("zone_event", bool(p.gs.get_flag("reached_vault")), walk=walked)
+    p.step(20)
+    counts = (p.gs.get_counter("zone_entries", 0), p.gs.get_counter("vault_events", 0))
+    p.note("zone_event", bool(p.gs.get_flag("reached_vault")) and counts == (1.0, 1.0), walk=walked,
+           entered_zone_and_its_event=counts)
     p.note("quest_completed", p.quest().get("status") == "completed" and p.gs.get_counter("vault_badge", 0) == 1,
            quest=p.quest(), vault_badge=p.gs.get_counter("vault_badge", 0))
 
