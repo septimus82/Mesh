@@ -76,7 +76,8 @@ GUIDES: dict[str, Guide] = {
                    {"unlock_event": "Opens on event", "starts_locked": "Starts locked", "open_sprite": "Picture when open"}),
     "RewardChest": _G("Treasure chest", "Gives an item or gold once it is unlocked.", "Interaction",
                       ("unlock_event", "item_id", "gold"), {"unlock_event": "Opens on event", "item_id": "Item"}),
-    "Vendor": _G("Shopkeeper", "Opens a shop with the items you list.", "Interaction", ("stock",), {"stock": "Items for sale"}),
+    "Vendor": _G("Shopkeeper", "Opens a shop with the items you list when the player presses E (after the talk, if it "
+                 "also talks).", "Interaction", ("stock",), {"stock": "Items for sale", "open_on": "Opens on"}),
     "SceneTransition": _G("Go to another room", "Takes the player to another room (Studio's doors use this).", "Interaction"),
     # --- Dialogue and events
     "Dialogue": _G("Talk", "Says lines, with choices, when the player talks to it (the Dialogue tab sets it up).",

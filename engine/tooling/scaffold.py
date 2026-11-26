@@ -643,8 +643,9 @@ NPC_TEMPLATES: Dict[str, Dict[str, Any]] = {
             "lines": ["Finest wares in the city!", "Take a look."]
         },
         "behaviour_config": {
-            "Vendor": {
-                "inventory": ["potion", "sword"]
+            "Vendor": {  # (the starter item list's ids: every new project has them)
+                "stock": [{"item_id": "healing_potion", "price": 10, "quantity": -1},
+                          {"item_id": "rusty_sword", "price": 10, "quantity": 1}]
             }
         }
     },

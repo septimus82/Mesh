@@ -254,6 +254,7 @@
         },
         "Vendor": {
           "listen_event": "open_shop",
+          "open_on": "event",
           "shop_id": "interior_shop",
           "stock": [
             {

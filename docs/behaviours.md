@@ -1718,7 +1718,7 @@ Example configuration snippet:
 ```
 
 ## Vendor
-Handles shop stock and opens the shop UI on events.
+Sells items: E opens its shop (on an object that also talks, once the conversation ends), as does its listen_event.
 
 | Name | Description | Type | Default |
 | --- | --- | --- | --- |
@@ -1726,6 +1726,7 @@ Handles shop stock and opens the shop UI on events.
 | currency_counter | GameState counter used as currency. | string | gold |
 | stock | List of {item_id, price, quantity} entries. | array | [] |
 | listen_event | Mesh event to open this shop. | string | open_shop |
+| open_on | "interact": E opens it; on an object that also talks, after the conversation. "event": only listen_event does (e.g. a conversation choice that sends it). | string | interact |
 | buy_sound | Sound to play on successful purchase. | string | - |
 | fail_sound | Sound to play on failed purchase. | string | - |
 | buy_rate | Multiplier for prices when buying. | float | 1.0 |
