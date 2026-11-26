@@ -214,6 +214,13 @@ def never_runs_nodeids(pytestconfig):
 
 
 @pytest.fixture(scope="session")
+def lane_collection(pytestconfig):
+    """``(whole, rows)``: whether this run collected the whole suite, and each collected test's module and marker names
+    (before ``-m``/``-k`` deselect any), from which every lane's selection can be counted (#648)."""
+    return (getattr(pytestconfig, "_mesh_whole_suite", False), list(getattr(pytestconfig, "_mesh_lane_rows", [])))
+
+
+@pytest.fixture(scope="session")
 def exception_policy_scan():
     """One exception-policy scan of the repository, shared by the tests that only read it (a scan takes seconds)."""
     from pathlib import Path
@@ -260,6 +267,7 @@ def pytest_collection_modifyitems(config, items):
     outside_rule: set[str] = set()
     gl_unmarked: set[str] = set()
     never_runs: set[str] = set()
+    lane_rows: list[tuple[str, frozenset[str]]] = []
     sources: dict = {}
     for item in items:
         nodeid = item.nodeid.replace("\\", "/")
@@ -283,10 +291,22 @@ def pytest_collection_modifyitems(config, items):
             gl_unmarked.add(nodeid)
         if _never_runs(item):
             never_runs.add(nodeid)
+        lane_rows.append((nodeid.split("::", 1)[0], frozenset(marker.name for marker in item.iter_markers())))
     config._mesh_unmarked_nodeids = sorted(unmarked)
     config._mesh_fast_tests_outside_rule = sorted(outside_rule)
     config._mesh_gl_opt_in_unmarked = sorted(gl_unmarked)
     config._mesh_never_runs = sorted(never_runs)
+    config._mesh_lane_rows = lane_rows
+    config._mesh_whole_suite = _collects_whole_suite(config)
+
+
+def _collects_whole_suite(config) -> bool:
+    """Whether this run collected every test: no paths given (pytest used ``testpaths``), nothing ignored, no
+    last-failed or stepwise narrowing, and not the fast tier's narrowed collection (``pytest_ignore_collect``). ``-m``,
+    ``-k`` and ``--deselect`` don't count: they deselect after this hook has seen every item."""
+    return (config.args_source == pytest.Config.ArgsSource.TESTPATHS and config.getoption("markexpr") != "fast"
+            and not config.getoption("ignore") and not config.getoption("ignore_glob")
+            and not config.getoption("lf", False) and not config.getoption("stepwise", False))
 
 
 # Test lanes (H6, #422): tooling/test_tiers.py runs each test somewhere. A test needs a real GL context when it opts

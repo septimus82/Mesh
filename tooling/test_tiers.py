@@ -55,7 +55,8 @@ class TierDef:
     env: tuple[tuple[str, str], ...] = ()
     pytest_args: tuple[str, ...] = ()
     # The lane fails when it selects fewer: a marker or rule change that drops tests is caught, not reported as green.
-    # Lower it only on purpose, when tests are removed.
+    # Lower it only on purpose, when tests are removed, in the same PR. tests/test_test_lanes_contract.py keeps each
+    # floor within 5% of what its lane collects (#648), so growth raises it too.
     min_selected: int = 0
     calibrate: bool = False  # measure the runner before and after (tooling/runner_calibration.py), reporting only
 
@@ -80,7 +81,7 @@ TIERS: dict[str, TierDef] = {
     "extended": TierDef(pytest_mark="(slow or e2e) and not gl", verify_all=False, compileall=False,
                         pytest_args=("--ignore=tests/test_wheel_bundles_engine_data.py",), min_selected=162),
     # Rendering, in hidden windows (nothing shown on the desktop, no input), wherever a GL context exists.
-    "gpu": TierDef(pytest_mark="gl", verify_all=False, compileall=False, env=GL_ENV, min_selected=256,
+    "gpu": TierDef(pytest_mark="gl", verify_all=False, compileall=False, env=GL_ENV, min_selected=605,
                    calibrate=True),
     "acceptance": TierDef(pytest_mark="gl", verify_all=False, compileall=False, paths=ACCEPTANCE, env=GL_ENV,
                           min_selected=22),
