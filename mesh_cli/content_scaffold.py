@@ -226,6 +226,7 @@ def apply_episode_scaffold(plan: EpisodeScaffoldPlan, *, dry_run: bool) -> list[
     quests_root["quests"] = quests_list
     cutscenes_root["cutscenes"] = cutscenes_list
     dialogues_root["dialogues"] = dialogues_list
+    _refuse_unloadable_cutscenes(cutscenes_root, plan.cutscenes_rel_path)  # (before anything is written)
 
     actions: list[tuple[str, str]] = []
     _record_action(actions, plan, plan.events_rel_path, f"append {len(new_events)} events")
@@ -250,6 +251,17 @@ def apply_episode_scaffold(plan: EpisodeScaffoldPlan, *, dry_run: bool) -> list[
     json_io.write_text_atomic(plan.out_dir / plan.test_rel_path, new_test, encoding="utf-8")
 
     return actions
+
+
+def _refuse_unloadable_cutscenes(cutscenes_root: dict[str, Any], rel_path: Path) -> None:
+    """#676: the cutscene file as it would be written must pass the check the game's loader makes
+    (``CutsceneController.load_from_file``; MCP cutscene writes check the same, #674), or nothing is written."""
+    from engine.schema_validation import SchemaValidationError, validate  # noqa: PLC0415
+
+    try:
+        validate(cutscenes_root, "cutscene.schema.json", rel_path.as_posix())
+    except SchemaValidationError as exc:
+        raise ValueError(f"refusing to write a cutscene file the game can't load, nothing written: {exc}") from exc
 
 
 def _ensure_file_absent(path: Path) -> None:
@@ -434,37 +446,27 @@ def _build_quest_entry(plan: EpisodeScaffoldPlan) -> dict[str, Any]:
 
 
 def _build_cutscene_entries(plan: EpisodeScaffoldPlan) -> list[dict[str, Any]]:
+    """The game's own cutscene shape (``cutscene.schema.json``: ``id`` and ``steps`` only). #676: these entries also
+    carried ``schema_version`` and ``commands`` (the second runtime's script shape), which the game's loader refuses,
+    so it set the whole ``cutscenes.json`` aside. ``mesh episode`` builds its runner's commands from ``steps``."""
     mentor_name = _mentor_mesh_name(plan)
     return [
         {
             "id": plan.cutscene_intro_id,
-            "schema_version": 1,
             "steps": [
                 {"type": "wait", "duration": 0.3},
                 {"type": "emit_event", "event": plan.event_intro_done},
-            ],
-            "commands": [
-                {"type": "wait", "duration": 0.3},
-                {"type": "emit_event", "event_type": plan.event_intro_done},
                 {"type": "start_dialogue", "dialogue_id": plan.dialogue_id, "target": mentor_name},
-                {"type": "stop"},
             ],
         },
         {
             "id": plan.cutscene_outro_id,
-            "schema_version": 1,
             "steps": [
                 {"type": "wait", "duration": 0.2},
                 {"type": "emit_event", "event": plan.event_complete},
             ],
-            "commands": [
-                {"type": "wait", "duration": 0.2},
-                {"type": "emit_event", "event_type": plan.event_complete},
-                {"type": "stop"},
-            ],
         },
     ]
-
 
 def _build_dialogue_entry(plan: EpisodeScaffoldPlan) -> dict[str, Any]:
     return {

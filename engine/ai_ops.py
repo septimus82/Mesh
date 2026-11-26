@@ -14,6 +14,13 @@ from .editor_palette import load_prefab_palette
 from .scene_loader import SceneLoader
 
 
+def _cutscene_step_types() -> set[str]:
+    """Every step ``type`` ``cutscene.schema.json`` accepts (each step shape's ``type`` const)."""
+    schema = _load_json(Path(__file__).with_name("schemas") / "cutscene.schema.json")
+    return {str(d["properties"]["type"]["const"]) for d in schema.get("$defs", {}).values()
+            if isinstance(d, dict) and "const" in d.get("properties", {}).get("type", {})}
+
+
 def _load_json(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -237,6 +244,13 @@ class AIOps:
         try:
             validate(payload, "cutscene.schema.json", path.relative_to(self.base_dir.resolve()).as_posix())
         except SchemaValidationError as exc:
+            # (#676: a step of an unknown type fails every step shape, and the schema's own message names a field of
+            # one of them, e.g. "'duration' is a required property": say the type instead)
+            unknown = sorted({str(step.get("type")) for entry in payload.get("cutscenes") or [] if isinstance(entry, dict)
+                              for step in entry.get("steps") or [] if isinstance(step, dict)} - _cutscene_step_types())
+            if unknown:
+                exc.message = (f"unknown step type {', '.join(map(repr, unknown))} "
+                               f"(known: {', '.join(sorted(_cutscene_step_types()))})")
             return AIOpsResult(False, f"Refused, nothing written: {exc} (list_op_types gives each step type's fields)")
         return None
 

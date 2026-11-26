@@ -61,6 +61,8 @@ def test_apply_ops_refuses_a_cutscene_the_game_cant_load_and_writes_nothing(root
     message = result["results"][0]["message"]
     assert message.startswith("Refused, nothing written: Schema validation failed for 'cutscenes.json'"), message
     assert "list_op_types" in message
+    if "unknown step" in op:  # (#676: the type is named, not a field of some other step shape)
+        assert "unknown step type 'fade_to_black'" in message and "is a required property" not in message, message
     assert _cutscenes(root).read_bytes() == before
 
 
