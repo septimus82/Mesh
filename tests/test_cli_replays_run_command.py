@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 import mesh_cli
 from mesh_cli import replays as replays_module
 
@@ -174,6 +176,7 @@ def test_cli_replays_run_mismatch_fails_with_actionable_report(tmp_path: Path, c
     assert "expected_event_digest" in text_report
 
 
+@pytest.mark.integration
 def test_cli_replays_run_quiet_failure_prints_only_the_failed_cases(tmp_path: Path, monkeypatch, capsys) -> None:
     # #649: the failing case is named in the log, and the passing ones stay out of it.
     suite = tmp_path / "suite.json"
