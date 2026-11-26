@@ -1,4 +1,4 @@
-"""The ruff and mypy gates fail closed when their tool can't run (#624).
+"""The ruff and mypy gates and the mypy island fail closed when their tool can't run (#624).
 
 Each case runs the real gate (`python -m tooling.<gate>`) in a child process. The tool is made absent for that child,
 and for the tool process the gate starts, by a sitecustomize that blocks the import; or it is replaced by a stand-in
@@ -107,3 +107,46 @@ def test_mypy_gate_still_passes_clean_and_fails_new_errors(tmp_path: Path) -> No
     found = _run_gate(tmp_path / "found", "mypy_gate", "mypy", stdout=_MYPY_FINDING, exit_code=1)
     assert found.returncode == 1, found.stdout + found.stderr
     assert 'engine/not_in_baseline.py: error: Name "gate_test_624" is not defined  [name-defined]' in found.stdout
+
+
+def test_mypy_island_fails_closed_when_mypy_is_absent(tmp_path: Path) -> None:
+    result = _run_gate(tmp_path, "mypy_island", "mypy", absent=True)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "[mypy-island] mypy is not available" in result.stderr
+    assert "[mypy-island] ok" not in result.stdout
+
+
+@pytest.mark.parametrize(("stdout", "stderr", "exit_code"), [
+    ("", "Traceback (most recent call last):\nRuntimeError: boom\n", 2),  # a fatal exit: nothing was checked
+    ("", "No module named mypy\n", 1),                                   # exit 1 without a single error line
+    ("", "INTERNAL ERROR\n", 3),
+], ids=["fatal-exit-2", "no-errors-exit-1", "exit-3"])
+def test_mypy_island_fails_closed_when_mypy_does_not_check(
+    tmp_path: Path, stdout: str, stderr: str, exit_code: int
+) -> None:
+    result = _run_gate(tmp_path, "mypy_island", "mypy", stdout=stdout, stderr=stderr, exit_code=exit_code)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "[mypy-island] mypy did not check the island" in result.stderr
+    assert "[mypy-island] ok" not in result.stdout
+
+
+def test_mypy_island_still_passes_clean_and_fails_errors(tmp_path: Path) -> None:
+    clean = _run_gate(tmp_path / "clean", "mypy_island", "mypy", exit_code=0)  # --no-error-summary: silent when clean
+    assert clean.returncode == 0, clean.stdout + clean.stderr
+    assert "[mypy-island] ok" in clean.stdout
+    found = _run_gate(tmp_path / "found", "mypy_island", "mypy", stdout=_MYPY_FINDING, exit_code=1)
+    assert found.returncode == 1, found.stdout + found.stderr
+    assert 'engine/not_in_baseline.py:1: error: Name "gate_test_624" is not defined' in found.stdout
+
+
+def test_mypy_island_fails_closed_when_an_island_module_is_missing(monkeypatch: pytest.MonkeyPatch,
+                                                                    capsys: pytest.CaptureFixture[str]) -> None:
+    """A moved or deleted island module used to drop out of the check silently (and an empty island passed)."""
+    from tooling import mypy_island
+
+    monkeypatch.setattr(mypy_island, "TYPED_ISLAND_MODULES", ("engine/not_an_island_module_624.py",))
+    monkeypatch.setattr(mypy_island.importlib.util, "find_spec", lambda name, package=None: object())
+    assert mypy_island.main([]) == 2
+    captured = capsys.readouterr()
+    assert "island module not found: engine/not_an_island_module_624.py" in captured.err
+    assert "[mypy-island] ok" not in captured.out

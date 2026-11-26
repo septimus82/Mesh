@@ -56,6 +56,8 @@ def _build_mypy_command(repo_root: Path) -> tuple[list[str], Path]:
         "mypy",
         ".",
         "--show-error-codes",
+        "--error-summary",  # the result check below needs the summary line, whatever the config says (#624)
+        "--no-color-output",  # FORCE_COLOR would wrap the lines this gate parses in escape codes
         "--incremental",
         "--cache-dir",
         str(cache_dir),

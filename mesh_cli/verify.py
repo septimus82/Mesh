@@ -1974,7 +1974,7 @@ def _handle_verify_local(args: argparse.Namespace) -> int:
                 _add_step("mypy-island", code, error="" if code == 0 else f"failed with code {code}", artifact=None)
             except ModuleNotFoundError as exc:
                 if str(getattr(exc, "name", "")).startswith("tooling"):
-                    _add_step("mypy-island", 0, error="skipped: tooling package unavailable", artifact=None)
+                    _add_step("mypy-island", 2, error="tooling package unavailable", artifact=None)
                 else:
                     raise
             except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:

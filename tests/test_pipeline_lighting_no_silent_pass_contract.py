@@ -18,11 +18,11 @@ _BASELINE_SILENT_PASSES = {
     "engine/ui_overlays/hud.py": (),
 }
 _BASELINE_EXCEPTION_ENVELOPES = {
-    "mesh_cli/verify_steps/pipeline.py": (  # the same 31 handlers; #422 F13 (H4) moved them down 3-6 lines
-        342, 382, 402, 427, 471, 497, 523, 562, 602, 730,
-        781, 812, 875, 954, 1091, 1149, 1193, 1386, 1591, 1824,
-        2090, 2123, 2155, 2189, 2212, 2238, 2274, 2331, 2396, 2450,
-        2486,
+    "mesh_cli/verify_steps/pipeline.py": (  # the same 31 handlers; #422 F13 (H4) and #624 B (ALLOWED_SKIPS) moved them
+        361, 401, 421, 446, 490, 516, 542, 581, 621, 749,
+        800, 831, 894, 976, 1113, 1171, 1215, 1408, 1613, 1846,
+        2112, 2145, 2177, 2211, 2234, 2260, 2296, 2353, 2418, 2472,
+        2508,
     ),
     "engine/lighting/__init__.py": (  # the same handlers; Milestones 12, 12.1, 13 and the post-M16 health check
         480, 488, 497, 505, 514, 533, 542, 552, 796, 936,   # (one line: the old light layer's release) moved them
