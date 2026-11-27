@@ -681,6 +681,8 @@ def test_export_outside_a_project_refuses_and_writes_nothing(
 def test_an_exported_game_keeps_its_cutscenes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """#744: `export build` left out the project's root cutscenes.json (MCP add_cutscene writes it, the game loads it
     from its root), so an exported game played none of its cutscenes. The export's own game finds them now."""
+    import shutil
+
     import mesh_cli
     from engine.ai_ops import AIOps
     from engine.config import load_config
@@ -693,8 +695,9 @@ def test_an_exported_game_keeps_its_cutscenes(tmp_path: Path, monkeypatch: pytes
     assert AIOps(base_dir=game).add_or_update_cutscene("intro", [{"type": "wait", "duration": 0.5}]).ok
     assert mesh_cli.main(["export", "build", "--repo-root", str(game), "--deterministic"]) == 0
 
-    bundle = game / "dist" / "bundle"
-    assert (bundle / "cutscenes.json").read_bytes() == (game / "cutscenes.json").read_bytes()
+    assert (game / "dist" / "bundle" / "cutscenes.json").read_bytes() == (game / "cutscenes.json").read_bytes()
+    bundle = Path(shutil.copytree(game / "dist" / "bundle", tmp_path / "shipped"))  # (stands alone: no project above)
+    shutil.rmtree(game)
     monkeypatch.chdir(bundle)  # what the exported main.py does, then its GameWindow pins its config
     pin_config(load_config(str(bundle / "config.json")))
     controller = CutsceneController(None)

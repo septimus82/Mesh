@@ -70,7 +70,7 @@ isn't needed.
 
 `mesh export build`, run in a project folder, writes a standalone game to `dist/bundle`:
 
-- the project's `main.py`, `config.json`, `packs/`, `locales/*.json` and every file in its `assets/`;
+- the project's `main.py`, `config.json`, `cutscenes.json` (when it has one), `packs/`, `locales/*.json` and every file in its `assets/`;
 - the installed `engine` package as its runtime;
 - the engine's interface text, `share/mesh-engine/locales/*.json` (the installed Mesh's allow-listed copy);
 - `bundle_manifest.json`, with each file's hash and no path of the maker's machine.
