@@ -190,6 +190,9 @@ class Vendor(Behaviour):
         )
 
     def handle_sell_request(self, item: dict[str, Any]) -> "VendorResult":
+        """Sell one ``item_id`` for its stock price times ``sell_rate``; a refusal changes no item, gold or equipment.
+        Selling the last owned copy of an equipped item unequips it; while another copy is owned the equipped one
+        stays equipped (GameStateController._normalize_equipment, #757)."""
         if not self._sell_enabled:
             return self._result(False, "Cannot sell here")
         item_id = item.get("item_id")

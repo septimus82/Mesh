@@ -31,6 +31,7 @@ def test_round_trip_determinism(tmp_path):
     gs = window.game_state_controller.state
     gs.counters["gold"] = 100
     gs.flags["boss_defeated"] = True
+    gs.values["inventory"] = {"items": {"sword_01": 1}}  # (equipment needs an owned copy, #757)
     gs.equipment["weapon"] = "sword_01"
     gs.perks = ["perk_b", "perk_a"] # Unsorted
     gs.xp = 500

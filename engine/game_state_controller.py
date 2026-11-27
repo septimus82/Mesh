@@ -106,12 +106,38 @@ class GameStateController:
         return self.state
 
     def _normalize_equipment(self) -> None:
-        """Ensure equipment slots exist."""
+        """Ensure equipment slots exist, each holding an item the inventory owns (#757).
+
+        Every filled slot needs its own owned copy, counted in slot order (weapon, armor, accessory, then any other
+        slot by name): a slot whose item has no copy left is cleared. So removing the last copy of an equipped item,
+        by any path (a Vendor sale, the console, using it, a save that lost it), unequips it, and while another copy
+        is owned the equipped one stays equipped. Every reader of equipment comes through here: get_equipment, the
+        stat bonuses, export_state (saves) and import_state (loads repair an old save in memory, never on disk)."""
         if not isinstance(self.state.equipment, dict):
             self.state.equipment = {}
+        equipment = self.state.equipment
         for slot in self._equipment_slots:
-            if slot not in self.state.equipment:
-                self.state.equipment[slot] = None
+            if slot not in equipment:
+                equipment[slot] = None
+        if not any(equipment.values()):
+            return
+        values = self.state.values if isinstance(self.state.values, dict) else {}
+        bucket = values.get("inventory")
+        items = bucket.get("items") if isinstance(bucket, dict) else None
+        owned = dict(items) if isinstance(items, dict) else {}
+        extra = sorted(slot for slot in equipment if slot not in self._equipment_slots)
+        for slot in (*self._equipment_slots, *extra):
+            item_id = equipment[slot]
+            if not item_id:
+                continue
+            try:
+                left = int(owned.get(item_id, 0))
+            except (TypeError, ValueError):
+                left = 0
+            if left <= 0:
+                equipment[slot] = None
+            else:
+                owned[item_id] = left - 1
 
     def add_perk(self, perk_id: str) -> bool:
         """Add a perk to the player's active perks."""
