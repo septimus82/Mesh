@@ -572,3 +572,47 @@ def test_an_old_attack_claim_never_lets_a_hit_cross_floors(room: SceneRoom) -> N
         assert room.players[eid].attack_seq == 1 and bandit.hit_seq == before and bandit.state.hp == 3.0
     finally:
         room.leave(eid)
+
+
+def test_a_refused_drop_lies_on_the_level_its_enemy_fell_on(room: SceneRoom, world: World,
+                                                            monkeypatch: pytest.MonkeyPatch) -> None:
+    """#627: an enemy killed on the bridge deck (2 m up) with the player's bag full leaves its loot on the deck, at its
+    elevation and floor, so the player who stood beside it can pick it up; from the ground beneath it is out of reach.
+    (At elevation 0 it would be under the deck, beyond reach from where it fell, and remembered there for good.)"""
+    from engine.inventory import ItemDatabase, ItemDefinition
+
+    DropTable = behaviour("DropTable")
+    module = sys.modules[DropTable.__module__]
+    potion = ItemDefinition(id="healing_potion", name="Healing Potion", description="", icon=None, stackable=True,
+                            max_stack=10, tags=[], effects={})
+    for owner in (module, sys.modules[module.get_or_create_inventory.__module__]):
+        monkeypatch.setattr(owner, "load_item_database", lambda *_a: ItemDatabase({potion.id: potion}))
+    (ax, ay, az), _target = placed(room, "deck, deck")
+    enemy: Any = sprite(ax + 32.0, ay, room._template_size(), {**room.template, "elevation": az})
+    feet = entity_aabb(enemy)
+    stood = world.stand(feet.x / M, feet.y / M, az / M, 0.0, 0.0)
+    assert stood is not None and abs(stood[0] * M - az) < 1.0, "the enemy stands on the deck"
+    enemy.mesh_hd2d_floor = stood[1]
+    laid: list[Any] = []
+
+    def create(data: dict[str, Any]) -> Any:
+        laid.append(sprite(data["x"], data["y"], (16.0, 16.0), data))
+        laid[-1].mesh_behaviours_runtime = []
+        return laid[-1]
+
+    def ignore(*_a: Any, **_k: Any) -> None:
+        return None
+
+    state = SimpleNamespace(values={"inventory": {"items": {potion.id: 10}}})
+    window = SimpleNamespace(event_bus=None, player_hud=None, console_log=ignore,
+                             game_state_controller=SimpleNamespace(state=state, add_counter=ignore),
+                             scene_controller=SimpleNamespace(_create_sprite=create, entities=SimpleNamespace(
+                                 enqueue_spawn=ignore, apply_pending_ops=ignore)))
+    table = DropTable(enemy, window, drops=[{"item_id": potion.id, "quantity": 3}], match_self=False)
+    table._on_event(SimpleNamespace(payload={}))
+    (pile,) = laid
+    beside = sprite(ax, ay, room._template_size(), {**room.template, "elevation": az})
+    assert same_level(world, beside, pile), "where the enemy fell, its loot is in reach"
+    assert pile.mesh_entity_data.get("elevation") == az and pile.mesh_hd2d_floor == stood[1]
+    (gx, gy, gz), _target = placed(room, "under the deck, ground")
+    assert not same_level(world, sprite(gx, gy, room._template_size(), {**room.template, "elevation": gz}), pile)

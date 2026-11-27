@@ -31,7 +31,7 @@ class DropTable(Behaviour):
     laid again as the room loads, ``lay_remembered_loot``) until it is picked up. On an entity without its own
     authored id the loot is not remembered: it is gone once the player leaves the room."""
 
-    FACT_FIELDS = ("left",)  # {"x", "y", "items": {item id: count}}, or None: nothing (left any more)
+    FACT_FIELDS = ("left",)  # {"x", "y", "elevation"[, "floor"], "items": {item id: count}}, or None: nothing left
 
     PARAM_DEFS = {
         "listen_event": ParamDef(str, default="died", description="Event name to listen for."),
@@ -111,14 +111,14 @@ class DropTable(Behaviour):
                 refused[drop["item_id"]] = refused.get(drop["item_id"], 0) + left
         if refused:
             at = getattr(self, "_mesh_fact_key", None)
-            x, y = float(self.entity.center_x), float(self.entity.center_y)
+            spot = _spot_of(self.entity)
             if at is not None:
                 items = _left(self.window, at)
                 for item_id, count in refused.items():
                     items[item_id] = items.get(item_id, 0) + count
-                room_memory.write_fact(self.window, at, "DropTable", "left", {"x": x, "y": y, "items": items})
+                room_memory.write_fact(self.window, at, "DropTable", "left", {**spot, "items": items})
             for item_id, count in refused.items():
-                _lay(self.window, at, x, y, item_id, count)
+                _lay(self.window, at, spot, item_id, count)
 
     def _roll(self, chance: float) -> bool:
         if chance >= 1.0:
@@ -200,9 +200,28 @@ def _left(window: Any, at: tuple[str, str, Any]) -> dict[str, int]:
     return dict(_fact(window, at[0], at[1]).get("items", {}))
 
 
-def _lay(window: Any, at: tuple[str, str, Any] | None, x: float, y: float, item_id: str, count: int) -> None:
-    """Put ``count`` of ``item_id`` on the ground at (x, y): a pickup ("Can be picked up") with the item's icon. Taking it
-    takes it off the fact ``left`` of the DropTable at ``at`` (None: not remembered)."""
+SPOT = ("x", "y", "elevation", "floor")
+
+
+def _spot_of(entity: Any) -> dict[str, Any]:
+    """Where ``entity`` stands: its centre (px), its HD-2D elevation (px: what same_level compares, so the loot is on
+    the level it fell on: a deck, a platform, a hill) and the floor it stands on (``mesh_hd2d_floor``) if it has one."""
+    data = getattr(entity, "mesh_entity_data", None)
+    z = data.get("elevation", 0.0) if isinstance(data, dict) else 0.0
+    spot: dict[str, Any] = {
+        "x": float(entity.center_x),
+        "y": float(entity.center_y),
+        "elevation": float(z) if isinstance(z, (int, float)) and not isinstance(z, bool) else 0.0,
+    }
+    floor = getattr(entity, "mesh_hd2d_floor", None)
+    if isinstance(floor, str):
+        spot["floor"] = floor
+    return spot
+
+
+def _lay(window: Any, at: tuple[str, str, Any] | None, spot: dict[str, Any], item_id: str, count: int) -> None:
+    """Put ``count`` of ``item_id`` on the ground at ``spot`` (``_spot_of``): a pickup ("Can be picked up") with the
+    item's icon. Taking it takes it off the fact ``left`` of the DropTable at ``at`` (None: not remembered)."""
     controller = getattr(window, "scene_controller", None)
     item = load_item_database().get(item_id)
     if controller is None or item is None:
@@ -210,8 +229,9 @@ def _lay(window: Any, at: tuple[str, str, Any] | None, x: float, y: float, item_
     sprite = controller._create_sprite(
         {
             "name": item.name,
-            "x": x,
-            "y": y,
+            "x": float(spot["x"]),
+            "y": float(spot["y"]),
+            "elevation": float(spot.get("elevation", 0.0)),
             "sprite": item.icon or "assets/placeholder.png",
             "scale": 0.5,
             "layer": "entities",
@@ -222,6 +242,8 @@ def _lay(window: Any, at: tuple[str, str, Any] | None, x: float, y: float, item_
     )
     if sprite is None:
         return
+    if isinstance(spot.get("floor"), str):
+        sprite.mesh_hd2d_floor = spot["floor"]
     controller.entities.enqueue_spawn(sprite, layer_name="entities", is_solid=False)
     controller.entities.apply_pending_ops(controller, stage="immediate")
     if at is None:
@@ -231,8 +253,10 @@ def _lay(window: Any, at: tuple[str, str, Any] | None, x: float, y: float, item_
         items = _left(window, at)
         items[item_id] = items.get(item_id, 0) - count
         items = {k: v for k, v in items.items() if v > 0}
-        room_memory.write_fact(window, at, "DropTable", "left", {"x": x, "y": y, "items": items} if items else None)
+        room_memory.write_fact(window, at, "DropTable", "left", {**spot, "items": items} if items else None)
 
+    # ponytail: a runtime callback; a pile whose behaviours are rebuilt (the console's rebuild, dev only) no longer
+    # clears the fact when taken and comes back on re-entry. Derive the link from entity data if that ever matters.
     for behaviour in sprite.mesh_behaviours_runtime:
         if type(behaviour).__name__ == "PickupCollectible":
             behaviour.on_taken = taken
@@ -246,11 +270,13 @@ def lay_remembered_loot(controller: Any) -> None:
         if LEFT_TAG in (getattr(sprite, "mesh_tags", None) or ()):
             sprite.remove_from_sprite_lists()
     room = room_memory.room_key(getattr(controller, "room_path", None))
-    ids = getattr(controller, "_room_fact_ids", None) or ()
+    # Every enemy's, also one whose id the room no longer has (renamed or deleted since): its loot is still the
+    # player's. One fact per id, so each pile is laid once; taking it clears that id's fact.
     for entity_id in room_memory.room_facts(controller.window, room):
         left = _fact(controller.window, room, entity_id)
-        if entity_id not in ids or not left:
+        if not left:
             continue
         at = (room, entity_id, getattr(controller, "_room_session", None))
+        spot = {key: left[key] for key in SPOT if key in left}
         for item_id, count in left["items"].items():
-            _lay(controller.window, at, float(left.get("x", 0)), float(left.get("y", 0)), str(item_id), int(count))
+            _lay(controller.window, at, {"x": 0.0, "y": 0.0, **spot}, str(item_id), int(count))

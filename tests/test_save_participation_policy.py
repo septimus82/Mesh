@@ -39,7 +39,6 @@ _SAVE_EXEMPT: dict[str, str] = {
     "EnemyAI": "Re-derived from scene + patrol data on load",
     "FollowBehaviour": "Transient chase; target re-acquired each frame",
     "FollowPathBehaviour": "Transient path following; re-derived from scene",
-    "DropTable": "Config-only loot table reference",
     "CameraFollowBehaviour": "Re-derived from scene config",
     "PlayerController": "Input handler; state is in GameState + Health",
     "SceneExit": "Config-only zone trigger",
