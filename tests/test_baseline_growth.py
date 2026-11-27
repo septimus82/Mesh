@@ -142,6 +142,7 @@ def test_a_marker_on_the_base_branch_does_not_count(repo: Path) -> None:
     (MARKER_CAP, "BASELINE_TOTAL = 99\nBASELINE_TOTAL = 30\n"),  # the last assignment is the cap
     (STEP_BUDGET, _json_with(_STEP_BUDGET, lambda d: d["platforms"]["linux"]["budgets_ms"].update({"verify-demo": 70}))),
     (STEP_BUDGET, _json_with(_STEP_BUDGET, lambda d: d.update(report_only_note="reworded", schema_version=3))),
+    (STEP_BUDGET, _json_with(_STEP_BUDGET, lambda d: d["budgets_ms"].update({"web-smoke": 10}))),  # a new limit
     (PERF, _json_with(_PERF, lambda d: d["scenes"].reverse())),  # records by id: reordering isn't growth
     (PERF, _json_with(_PERF, lambda d: d["scenes"][0]["counters"].update(a=4))),
 ])
@@ -165,6 +166,11 @@ def test_shrinking_or_rewording_passes(repo: Path, rel: str, text: str) -> None:
     (STEP_BUDGET, _json_with(_STEP_BUDGET, lambda d: d.update(tolerance_ms=60)), "tolerance_ms: 50 -> 60"),
     (STEP_BUDGET, _json_with(_STEP_BUDGET, lambda d: d["budgets_ms"].pop("verify-demo")),
      "budgets_ms.verify-demo: 100 -> removed"),
+    # a new report-only ceiling turns a hard timing limit report-only (#697)
+    (STEP_BUDGET, _json_with(_STEP_BUDGET, lambda d: d.update(report_only_ceiling_ratios={"verify-demo": 1.65})),
+     "report_only_ceiling_ratios.verify-demo: new 1.65"),
+    (STEP_BUDGET, _json_with(_STEP_BUDGET, lambda d: d["platforms"]["linux"].update(
+        report_only_ceiling_ratios={"verify-demo": 1.65})), "platforms.linux.report_only_ceiling_ratios.verify-demo: new 1.65"),
     (PERF, _json_with(_PERF, lambda d: d["scenes"][1]["counters"].update(a=8)), "scenes[field].counters.a: 7 -> 8"),
     (PERF, _json_with(_PERF, lambda d: d["scenes"].pop(0)), "scenes[hall].counters.a: 5 -> removed"),
     (BUDGET, None, "deleted"),
