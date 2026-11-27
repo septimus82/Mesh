@@ -48,11 +48,14 @@ class TestPuzzleBehaviours(unittest.TestCase):
     def test_door_lock(self):
         self.assertEqual(self._unlocked_door().type, "door_unlocked")
 
-    # A real entity sprite has mesh_id, not id: the door_unlocked payload's door_id is always "unknown" in a game.
+    # A real entity sprite has mesh_id, not id: door_id comes from mesh_id (#710; it was always "unknown" in a game).
     # (The MagicMock entity this test had answered .id; the spec'd one, like the game, doesn't.)
-    @pytest.mark.xfail(strict=True, reason="#710: DoorLock's door_unlocked names door_id from entity.id")
     def test_door_unlocked_names_the_door(self):
         self.assertEqual(self._unlocked_door().payload["door_id"], "door_1")
+
+    def test_door_unlocked_without_a_mesh_id_says_unknown(self):
+        self.entity = fake_sprite(mesh_entity_data={}, mesh_name="Door")
+        self.assertEqual(self._unlocked_door().payload["door_id"], "unknown")
 
     def test_reward_chest(self):
         chest = RewardChest(self.entity, self.window, unlock_event="reveal_me", gold=100)
