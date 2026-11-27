@@ -92,7 +92,7 @@ cap in `tests/test_todo_audit_ratchet_contract.py` (its last assignment), and th
 `verify_step_budget.json`, `authoring_trace_budget.json` and `perf_baselines/baselines.json`) with the same file at
 `git merge-base HEAD <base>`. The base is the pull request's base branch, or on a push what the branch held before it.
 
-Any growth (a new entry, any number in a JSON baseline going up or removed, a deleted file) fails, unless a commit between the merge base
+Any growth (a new entry, any number in a JSON baseline going up or removed, a new key under `report_only_ceiling_ratios` in `verify_step_budget.json`, which makes a hard ceiling report-only, a deleted file) fails, unless a commit between the merge base
 and `HEAD` has a line, at the start of a line in its message:
 
 ```text

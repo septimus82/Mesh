@@ -43,6 +43,10 @@ BASELINES: dict[str, str] = {
     "tooling/metrics/authoring_trace_budget.json": "counts",
     "tooling/perf_baselines/baselines.json": "counts",
 }
+# path -> sections of a "counts" file in which a new key is growth too (it turns a limit off, not just up)
+LOOSENING_SECTIONS: dict[str, tuple[str, ...]] = {
+    "tooling/metrics/verify_step_budget.json": ("report_only_ceiling_ratios",),
+}
 MYPY_BASELINE = "tooling/mypy_baseline.txt"
 _MARKER_RE = re.compile(r"^[ \t]*baseline-growth:[ \t]*(?P<path>[^\s:]+)[ \t]*:[ \t]*(?P<reason>[^\s\x00].*?)[ \t]*$",
                         re.M)
@@ -119,8 +123,11 @@ def growth(path: str, kind: str, base: str, head: str | None) -> list[str]:
         return [f"+ {row}" for row in rows[:20]] + ([f"... and {len(rows) - 20} more"] if len(rows) > 20 else [])
     if kind == "counts":
         old, new = _counts(base, path), _counts(head, path)
-        return [f"{key}: {old[key]} -> {new[key] if key in new else 'removed'}"
-                for key in sorted(old) if key not in new or new[key] > old[key]]
+        grew = [f"{key}: {old[key]} -> {new[key] if key in new else 'removed'}"
+                for key in sorted(old) if key not in new or new[key] > old[key]]  # (up or removed)
+        # A new key here makes a hard limit report-only, so adding one loosens a gate too (#697).
+        return grew + [f"{key}: new {new[key]}" for key in sorted(new) if key not in old
+                       and any(f".{part}." in f".{key}" for part in LOOSENING_SECTIONS.get(path, ()))]
     old_n, new_n = _number(base, path, kind), _number(head, path, kind)
     return [f"{old_n} -> {new_n}"] if new_n > old_n else []
 
