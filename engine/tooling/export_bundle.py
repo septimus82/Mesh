@@ -74,6 +74,7 @@ RUNTIME_INCLUDES: tuple[str, ...] = (
     "main.py",
     "config.json",
     "pyproject.toml",
+    "cutscenes.json",  # the game loads it from its root (CutsceneController, #744); a game without one has none
 )
 
 # Runtime directories to include

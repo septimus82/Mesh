@@ -675,3 +675,28 @@ def test_export_outside_a_project_refuses_and_writes_nothing(
     assert (game / "dist" / "bundle" / "bundle_manifest.json").is_file() == (command == "build")
     assert (game / "plan.json").is_file() == (command == "plan")
     assert sorted(p.relative_to(home).as_posix() for p in home.rglob("*")) == ["notes", "notes/todo.txt"]
+
+
+@pytest.mark.integration  # (#744: writes a project and its export in tmp_path)
+def test_an_exported_game_keeps_its_cutscenes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """#744: `export build` left out the project's root cutscenes.json (MCP add_cutscene writes it, the game loads it
+    from its root), so an exported game played none of its cutscenes. The export's own game finds them now."""
+    import mesh_cli
+    from engine.ai_ops import AIOps
+    from engine.config import load_config
+    from engine.cutscene_controller import CutsceneController
+    from engine.paths import pin_config
+    from engine.project_scaffold import create_project
+
+    game = tmp_path / "game"
+    create_project(game, "Game", "blank")
+    assert AIOps(base_dir=game).add_or_update_cutscene("intro", [{"type": "wait", "duration": 0.5}]).ok
+    assert mesh_cli.main(["export", "build", "--repo-root", str(game), "--deterministic"]) == 0
+
+    bundle = game / "dist" / "bundle"
+    assert (bundle / "cutscenes.json").read_bytes() == (game / "cutscenes.json").read_bytes()
+    monkeypatch.chdir(bundle)  # what the exported main.py does, then its GameWindow pins its config
+    pin_config(load_config(str(bundle / "config.json")))
+    controller = CutsceneController(None)
+    controller.load_project_cutscenes()
+    assert set(controller.cutscenes) == {"intro"}
