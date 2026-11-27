@@ -217,16 +217,21 @@ def test_mesh_studio_opening_during_a_plan_is_turned_away_until_it_is_written(ro
 
 def test_studio_and_a_plan_starting_at_once_never_both_have_the_project(root: Path, tmp_path: Path) -> None:
     """Started at the same instant, three times: whichever owns the project first, Studio never holds a view the
-    plan then writes behind. Either the plan was refused (nothing written) or Studio read the room after it."""
+    plan then writes behind. Either the plan was refused (nothing written) or Studio read the room after it.
+
+    The plan holds the project longer than Studio's own 2 s wait (each action 2.5 s late, as on a slow runner: #700),
+    so Studio here waits as long as it takes (bounded) instead: the race is who owns it first, not how fast a plan is."""
     applied = 0
     for attempt in range(3):
         gate, opening = tmp_path / f"gate_{attempt}", []
         starting = threading.Thread(target=lambda: opening.append(StudioProcess(  # (it answers once through the gate)
-            root, log=tmp_path / f"race_{attempt}.log", env={"MESH_TEST_OWNER_WAIT": "2.0",
+            root, log=tmp_path / f"race_{attempt}.log", env={"MESH_TEST_OWNER_WAIT": "60",
                                                             "MESH_TEST_START_GATE": str(gate)})))
         starting.start()
         writer = subprocess.Popen([sys.executable, "-c", (
             "import sys, time, argparse, pathlib; sys.path.insert(0, sys.argv[1]); from mesh_cli import ai; "
+            "from engine.tooling.plan_executor import PlanExecutor; run = PlanExecutor._run_action; "
+            "PlanExecutor._run_action = lambda self, action: (time.sleep(2.5), run(self, action))[1]; "
             "from engine.editor import project_ownership; gate = pathlib.Path(sys.argv[3]); print('ready', flush=True)\n"
             "while not gate.exists(): time.sleep(0.005)\n"
             "print('exit', ai._handle_apply_plan(argparse.Namespace(command='apply-plan', plan_path=sys.argv[2], "
@@ -238,7 +243,7 @@ def test_studio_and_a_plan_starting_at_once_never_both_have_the_project(root: Pa
             gate.write_text("go", encoding="utf-8")
             starting.join(120)
             studio = opening[0]
-            assert studio.start["ready"], studio.start  # (it waits up to 2 s, as Studio does: a plan is quicker)
+            assert studio.start["ready"], studio.start  # (it waits for the plan, however slow, up to 60 s)
             code = int(next(line for line in writer.stdout if line.startswith("exit")).split()[1])
             names = studio.ask("state")["names"]
             print(f"attempt {attempt}: {'plan first, Studio waited' if code == 0 else 'Studio first, plan refused'}")
