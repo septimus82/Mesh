@@ -137,12 +137,23 @@ def test_a_package_made_before_749_is_refused_with_its_own_message(project: Path
     before = _tree(tmp_path)
     assert _package(out) == 1
     assert _tree(tmp_path) == before and builds == []
-    assert f"made before #749 (no ownership record), so it is never replaced: delete {out} once by hand" \
-        in capsys.readouterr().out
+    assert (f"made before #749 (no ownership record), so it is never replaced: check nothing of yours is inside {out}, "
+            "then delete it once by hand") in capsys.readouterr().out
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="Windows path spellings")
-@pytest.mark.parametrize("where", ["project", "home", "inside sources", "UNC project"])
+@pytest.mark.parametrize(("spelled", "plain"), [
+    ("\\\\?\\C:\\Users\\me", "C:\\Users\\me"), ("\\\\?\\c:", "c:"), ("\\\\.\\D:\\x", "D:\\x"),
+    ("\\\\?\\UNC\\localhost\\C$\\Users", "C:\\Users"), ("\\\\localhost\\d$", "d:\\"), ("\\\\127.0.0.1\\C$\\x", "C:\\x"),
+    ("//?/C:/Users/me", "C:\\Users\\me"), ("C:\\plain", "C:\\plain"), ("\\\\server\\share\\x", "\\\\server\\share\\x"),
+    ("\\\\?\\Volume{0e3c6a2b-1111-2222-3333-444455556666}\\x", None), ("\\\\?\\GLOBALROOT\\Device\\HarddiskVolume3", None),
+    ("\\\\.\\PhysicalDrive0", None), ("\\\\?\\UNC", None)])
+def test_windows_spellings_of_a_local_folder_are_read_as_its_drive_path(spelled: str, plain: str | None) -> None:
+    """The text mapping, on every OS; device paths (a volume GUID, GLOBALROOT, a raw drive) are never built into."""
+    assert eb.windows_local_spelling(spelled) == plain
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows path spellings: the default lane runs this on Windows")
+@pytest.mark.parametrize("where", ["project", "home", "inside sources", "UNC project", "volume GUID"])
 def test_windows_spellings_of_a_protected_folder_are_refused(
         where: str, project: Path, builds: list[Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     home = tmp_path / "home"
@@ -153,6 +164,9 @@ def test_windows_spellings_of_a_protected_folder_are_refused(
         unc = Path(f"\\\\localhost\\{drive[0]}$" + rest)
         assert eb.unsafe_output(unc, protected=(project,)) is not None
         assert eb.unsafe_output(Path("\\\\?\\UNC\\localhost\\" + f"{drive[0]}$" + rest), protected=(project,))
+        return
+    if where == "volume GUID":  # (never a folder relative to the working directory: refused as a device path)
+        assert "device path" in (eb.unsafe_output(Path("\\\\?\\Volume{0e3c6a2b-1111-2222-3333-444455556666}\\out")) or "")
         return
     target = {"project": project, "home": home, "inside sources": project / "engine" / "pkg"}[where]
     before = _tree(tmp_path)

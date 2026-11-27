@@ -77,13 +77,6 @@ def _cleanup_stale_pytest_fast_budget_artifacts(
                 continue
 
 
-def _error_line(result: Any) -> str:
-    """The last ``ERROR:`` line a failed command printed (why it refused an output folder, say), or ""."""
-    lines = [line.strip() for text in (result.stdout or "", result.stderr or "") for line in text.splitlines()]
-    found = [line for line in lines if "ERROR:" in line]
-    return f": {found[-1]}" if found else ""
-
-
 def _read_swallow_scan_total_matches(scan_path: Path) -> int | None:
     try:
         payload = json.loads(scan_path.read_text(encoding="utf-8"))
@@ -2537,3 +2530,10 @@ def run_verify_steps(state: VerifyStepContext) -> None:
     state.exit_code = int(exit_code)
     state.failure_seen = bool(failure_seen)
     state.step_duration_total_ms = int(step_duration_total_ms)
+
+
+def _error_line(result: Any) -> str:
+    """The last ``ERROR:`` line a failed command printed (why it refused an output folder, say), or ""."""
+    lines = [line.strip() for text in (result.stdout or "", result.stderr or "") for line in text.splitlines()]
+    found = [line for line in lines if "ERROR:" in line]
+    return f": {found[-1]}" if found else ""

@@ -898,19 +898,30 @@ def build_bundle(
 _LOCAL_SHARE = re.compile(r"^\\\\(?:localhost|127\.0\.0\.1|\.)\\([A-Za-z])\$(\\.*)?$", re.IGNORECASE)
 
 
-def _canonical(path: Path) -> Path:
-    """``path`` as one spelling per folder, for comparing: links resolved, case folded on Windows, and the Windows
-    spellings of a local folder (``\\\\?\\C:\\x``, ``\\\\?\\UNC\\localhost\\C$\\x``, ``\\\\localhost\\C$\\x``) made ``C:\\x``."""
-    text = str(path)
-    if os.name == "nt":
-        if text[:8].upper() == "\\\\?\\UNC\\":
-            text = "\\\\" + text[8:]
-        elif text[:4] in ("\\\\?\\", "\\\\.\\"):
-            text = text[4:]
-        share = _LOCAL_SHARE.match(text)
-        if share:
-            text = f"{share[1]}:{share[2] or chr(92)}"
-    return Path(os.path.normcase(os.path.realpath(text)))
+_DRIVE_PATH = re.compile(r"^[A-Za-z]:(\\|$)")
+
+
+def windows_local_spelling(text: str) -> str | None:
+    """The plain drive spelling of a Windows path to a local folder (``\\\\?\\C:\\x``, ``\\\\?\\UNC\\localhost\\C$\\x``,
+    ``\\\\localhost\\C$\\x``, ``\\\\.\\C:\\x`` are all ``C:\\x``); other paths as they are. None for a device path
+    (``\\\\?\\Volume{…}``, ``\\\\?\\GLOBALROOT\\…``, ``\\\\.\\PhysicalDrive0``): Mesh never builds into one. A pure function
+    of the text, the same on every OS."""
+    text = text.replace("/", "\\")
+    if text[:8].upper() == "\\\\?\\UNC\\":
+        text = "\\\\" + text[8:]
+    elif text[:4] in ("\\\\?\\", "\\\\.\\"):
+        text = text[4:]
+        if not _DRIVE_PATH.match(text):
+            return None
+    share = _LOCAL_SHARE.match(text)
+    return f"{share[1]}:{share[2] or chr(92)}" if share else text
+
+
+def _canonical(path: Path) -> Path | None:
+    """``path`` as one spelling per folder, for comparing: on Windows its local spelling (``windows_local_spelling``;
+    None for a device path), then links resolved and case folded."""
+    text = windows_local_spelling(str(path)) if os.name == "nt" else str(path)
+    return None if text is None else Path(os.path.normcase(os.path.realpath(text)))
 
 
 def unsafe_output(output_dir: Path, *, protected: Iterable[Path] = (), sources: Iterable[Path] = ()) -> str | None:
@@ -918,15 +929,18 @@ def unsafe_output(output_dir: Path, *, protected: Iterable[Path] = (), sources: 
     home, the engine's own folder or one of ``protected``; or it lies inside one of ``sources`` (what is being packaged,
     so the package would hold itself). Decided on canonical paths (``_canonical``), before anything is touched."""
     out = _canonical(output_dir)
+    if out is None:
+        return f"{output_dir} is a device path; give the output folder as a drive path"
     if out.parent == out:
         return f"{output_dir} is a drive root"
-    for root in (Path.home(), Path(__file__).resolve().parents[2], *protected):
-        root = _canonical(root)
+    for given in (Path.home(), Path(__file__).resolve().parents[2], *protected):
+        root = _canonical(given) or given
         if out == root or out in root.parents:
             return f"{output_dir} is or holds {root}"
-    for source in sources:
-        if out.is_relative_to(_canonical(source)):
-            return f"{output_dir} is inside {_canonical(source)}, which is being packaged or built from"
+    for given in sources:
+        source = _canonical(given) or given
+        if out.is_relative_to(source):
+            return f"{output_dir} is inside {source}, which is being packaged or built from"
     return None
 
 
@@ -957,8 +971,8 @@ def _not_replaceable(output_dir: Path, created_by: str | None, legacy: tuple[str
     problems = _bundle_problems(output_dir)
     if (problems and legacy and not _is_link(output_dir) and not os.path.lexists(output_dir / MANIFEST_NAME)
             and all(os.path.lexists(output_dir / name) for name in legacy)):
-        return (f"{output_dir} was made before #749 (no ownership record), so it is never replaced: delete "
-                f"{output_dir} once by hand, then rerun")
+        return (f"{output_dir} was made before #749 (no ownership record), so it is never replaced: check nothing of "
+                f"yours is inside {output_dir}, then delete it once by hand and rerun")
     if not problems and any(output_dir.iterdir()):
         try:
             maker = json.loads((output_dir / MANIFEST_NAME).read_text(encoding="utf-8")).get("created_by")
