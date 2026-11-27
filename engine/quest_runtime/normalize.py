@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
+REWARD_AMOUNT_KEYS = ("gold", "xp")
+REWARD_KEYS = frozenset({"set_flags", "inc_counters", *REWARD_AMOUNT_KEYS})
+
 
 def quest_entries(quests_root: Any) -> list[dict[str, Any]]:
     """Raw quest dicts from a quests.json ``"quests"`` value (list or dict form), same id rule as the loader.
@@ -189,5 +192,19 @@ def normalize_reward(data: Any) -> dict[str, Any]:
             inc_counters[name] = float(value)
         except (TypeError, ValueError):
             continue
-    return {"set_flags": set_flags, "inc_counters": inc_counters}
+    reward: dict[str, Any] = {"set_flags": set_flags, "inc_counters": inc_counters}
+    # gold / xp: paid by complete_quest (#755: they were validated, then dropped here). Kept only when present,
+    # so a reward without them normalizes as before.
+    for key in REWARD_AMOUNT_KEYS:
+        if key not in data:
+            continue
+        value = data[key]
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+            reward[key] = value
+        else:
+            print(f"[Mesh][Quests] Ignoring reward.{key} {value!r}: it must be a number of 0 or more")
+    unknown = sorted(str(key) for key in data if key not in REWARD_KEYS)
+    if unknown:
+        print(f"[Mesh][Quests] Ignoring unknown reward field(s) {unknown}; supported: {sorted(REWARD_KEYS)}")
+    return reward
 

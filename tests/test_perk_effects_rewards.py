@@ -18,6 +18,8 @@ class TestPerkEffectsRewards(unittest.TestCase):
 
         # Mock window.game_state property to return controller.state
         self.window.game_state = self.window.game_state_controller.state
+        # The game window's inc_counter (engine/game_parts/state_facade.py): quest gold goes to the "gold" counter
+        self.window.inc_counter = self.window.game_state_controller.inc_counter
 
         self.quest_manager = QuestManager(self.window, data_path="assets/data/quests.json")
         # Prevent actual loading
@@ -37,13 +39,11 @@ class TestPerkEffectsRewards(unittest.TestCase):
         quest = {"id": "q1", "title": "Q1", "reward": {"gold": 100}}
         state = {"status": "active"}
 
-        # Mock values
-        self.window.game_state.values = {"gold": 0}
-
         self.quest_manager._complete_quest(quest, state, source="test")
 
-        # Base 100 + 50% = 150
-        self.assertEqual(self.window.game_state.values["gold"], 150)
+        # Base 100 + 50% = 150, on the counter vendors spend (#755: it went to values["gold"], which nothing reads)
+        self.assertEqual(self.window.game_state_controller.get_counter("gold"), 150)
+        self.assertNotIn("gold", self.window.game_state.values)
 
     def test_xp_reward_bonus(self):
         # Add perk

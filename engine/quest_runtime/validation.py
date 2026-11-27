@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from .normalize import REWARD_AMOUNT_KEYS, REWARD_KEYS
+
 # Current quest definition schema version.
 # Increment when adding new required fields or changing semantics.
 # v1: Initial schema with stages, rewards, triggers
@@ -503,7 +505,7 @@ def _validate_reward(
             json_path=base_path,
             code="reward.type",
             message=f"Quest '{quest_id}' reward must be an object",
-            hint="Use format: \"reward\": {\"set_flags\": {...}, \"inc_counters\": {...}}",
+            hint="Use format: \"reward\": {\"set_flags\": {...}, \"inc_counters\": {...}, \"gold\": 100, \"xp\": 30}",
         ))
         return errors
 
@@ -551,10 +553,12 @@ def _validate_reward(
                         hint="Use a numeric value",
                     ))
 
-    # Validate gold/xp shortcuts
-    for field in ("gold", "xp"):
-        value = reward.get(field)
-        if value is not None and (not isinstance(value, (int, float)) or isinstance(value, bool)):
+    # Validate gold/xp (paid on completion: gold to the "gold" counter vendors spend, xp to the player's progression)
+    for field in REWARD_AMOUNT_KEYS:
+        if field not in reward:
+            continue
+        value = reward[field]
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
             errors.append(QuestValidationError(
                 file_path=file_path,
                 json_path=f"{base_path}.{field}",
@@ -562,6 +566,24 @@ def _validate_reward(
                 message=f"Quest '{quest_id}' reward.{field} must be a number",
                 hint=f"Use a numeric value like \"{field}\": 100",
             ))
+        elif value < 0:
+            errors.append(QuestValidationError(
+                file_path=file_path,
+                json_path=f"{base_path}.{field}",
+                code=f"reward.{field}.negative",
+                message=f"Quest '{quest_id}' reward.{field} must not be negative (got {value})",
+                hint=f"Use 0 or more, like \"{field}\": 100",
+            ))
+
+    # Anything else would be dropped at load without paying anything
+    for key in sorted(str(k) for k in reward if k not in REWARD_KEYS):
+        errors.append(QuestValidationError(
+            file_path=file_path,
+            json_path=f"{base_path}.{key}",
+            code="reward.unknown_field",
+            message=f"Quest '{quest_id}' reward has an unknown field '{key}'; it would pay nothing",
+            hint=f"Supported reward fields: {', '.join(sorted(REWARD_KEYS))}",
+        ))
 
     return errors
 

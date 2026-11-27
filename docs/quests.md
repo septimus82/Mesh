@@ -62,7 +62,7 @@ When the trigger is just a string (e.g., `"collectible_picked"`), the quest list
 
 ### Rewards & runtime state
 
-`reward.set_flags` flips entries inside `GameWindow.game_state.flags` and `reward.inc_counters` increments numeric counters. Helper events fire during quest progression so other behaviours can listen without coupling to the quest JSON:
+`reward.set_flags` flips entries inside `GameWindow.game_state.flags` and `reward.inc_counters` increments numeric counters. `reward.gold` (a number, 0 or more) is added to the `gold` counter, the balance vendors spend (gold perk bonuses apply), and `reward.xp` goes to the player's XP and level (XP perk bonuses apply). A quest pays its reward once, when it completes; validation rejects any other reward field. Helper events fire during quest progression so other behaviours can listen without coupling to the quest JSON:
 
 - `quest_stage_started` (`quest_id`, `stage_id`, `quest_title`, `stage_title`)
 - `quest_stage_completed` (same payload)
