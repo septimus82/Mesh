@@ -1,5 +1,7 @@
 # S1: stabilization investigation (S1-0)
 
+> **S1 closed on 2026-11-27 at `4e937002`.** See [16_s1_exit_record.md](16_s1_exit_record.md) for the exit criteria, the owner exceptions for E9 and E10, the E12 acceptance and the backlog carried over.
+
 S1-0 was investigation and planning only: no production code changed.
 
 **Baselines:**
@@ -18,6 +20,7 @@ S1-0 was investigation and planning only: no production code changed.
 | 4 | [13_testing_ci_proposal.md](13_testing_ci_proposal.md) | Testing and CI Improvement Proposal: costed changes, the lane map, the flake policy and growth rules |
 | 5 | [14_owner_decision_brief.md](14_owner_decision_brief.md) | Owner Decision Brief: D1–D15, each with options, a recommendation and consequences |
 | — | [15_owner_decisions.md](15_owner_decisions.md) | **Owner decisions at the S1-0 checkpoint (2026-11-25)**: what was approved, and the D15 retrievability note |
+| — | [16_s1_exit_record.md](16_s1_exit_record.md) | **S1 exit record (2026-11-27)**: E1–E12 at `4e937002`, the E9/E10 owner exceptions, the E12 acceptance and the carried-over backlog |
 
 ## Investigation parts (inputs)
 
