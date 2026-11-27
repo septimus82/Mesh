@@ -361,10 +361,12 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     getter = getattr(controller.window, "get_flag", None)
     entities_payload = filter_entities_by_flags(scene.get("entities", []), get_flag=getter if callable(getter) else None)
     gone = room_memory.removed_ids(controller.window, controller.room_path)  # collected or defeated earlier
-    entities_payload = [e for e in entities_payload if not (isinstance(e, dict) and e.get("id") in gone)]
+    entities_payload = [e for e in entities_payload
+                        if not (isinstance(e, dict) and e.get("id") in gone and not room_memory.is_player(e))]  # (#750)
     controller._room_spawned_ids = room_memory.spawned_ids(entities_payload)
     controller._room_session = room_memory.session(controller.window)  # (what it records belongs to this game)
     all_entities = scene.get("entities")  # (all of them: an id shared with a gated or removed object still is)
+    controller._room_player_ids = room_memory.player_ids(all_entities if isinstance(all_entities, list) else [])
     controller._room_fact_ids = room_memory.fact_ids(all_entities if isinstance(all_entities, list) else [])
     for entity in entities_payload:
         sprite = controller._create_sprite(entity)
