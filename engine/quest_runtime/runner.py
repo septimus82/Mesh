@@ -374,6 +374,9 @@ class QuestRunner:
         emitted: list[GameplayEvent] = []
 
         # Two passes for determinism (quests may affect each other)
+        # One event completes at most one stage of a quest: the second pass must not complete the stage the first pass
+        # just moved on to (#621, the same guard as QuestManager's in progress.handle_event).
+        progressed: set[str] = set()
         for _ in range(2):
             for quest_id in self._sorted_quest_ids:
                 quest = self._definitions[quest_id]
@@ -386,9 +389,13 @@ class QuestRunner:
                 start_emitted = self._check_start_trigger(quest, state, event)
                 emitted.extend(start_emitted)
 
+                if quest_id in progressed:
+                    continue
                 # Check completion triggers for current stages
                 complete_emitted = self._check_completion_trigger(quest, state, event)
                 emitted.extend(complete_emitted)
+                if complete_emitted:
+                    progressed.add(quest_id)
 
         return emitted
 
