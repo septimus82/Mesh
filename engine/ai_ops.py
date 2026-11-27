@@ -383,7 +383,10 @@ class AIOps:
                 return AIOpsResult(False, why)
             if quest_id not in index:
                 return AIOpsResult(False, f"Quest '{quest_id}' not found")
-            quests[index[quest_id]] = _deep_merge(quests[index[quest_id]], patch)
+            entry = quests[index[quest_id]] = _deep_merge(quests[index[quest_id]], patch)
+            refused = self._reward_refusal(quest_id, entry)
+            if refused is not None:
+                return refused
             _write_json(path, payload)
             return AIOpsResult(True, f"Updated quest '{quest_id}'")
         if not isinstance(quests, dict):
@@ -391,9 +394,21 @@ class AIOps:
         quest = quests.get(quest_id)
         if not isinstance(quest, dict):
             return AIOpsResult(False, f"Quest '{quest_id}' not found")
-        quests[quest_id] = _deep_merge(quest, patch)
+        entry = quests[quest_id] = _deep_merge(quest, patch)
+        refused = self._reward_refusal(quest_id, entry)
+        if refused is not None:
+            return refused
         _write_json(path, payload)
         return AIOpsResult(True, f"Updated quest '{quest_id}'")
+
+    @staticmethod
+    def _reward_refusal(quest_id: str, entry: dict[str, Any]) -> AIOpsResult | None:
+        """A reward the game would drop (unknown field, negative or non-finite amount): the refusal; nothing is written
+        (#755). Otherwise None."""
+        from .quest_runtime.validation import validate_quest_definition  # noqa: PLC0415
+
+        bad = [str(e) for e in validate_quest_definition({"id": quest_id, **entry}) if e.code.startswith("reward")]
+        return AIOpsResult(False, f"Quest '{quest_id}' not written: " + "; ".join(bad)) if bad else None
 
     def add_or_update_quest_definition(
         self,
@@ -424,12 +439,9 @@ class AIOps:
                 entry = quests[quest_id] = quest_data
         else:
             return AIOpsResult(False, "quests must be an object or a list; refusing to touch quests.json")
-        # A reward the game would drop (unknown field, negative or non-finite amount) is refused, nothing written (#755)
-        from .quest_runtime.validation import validate_quest_definition  # noqa: PLC0415
-
-        bad = [str(e) for e in validate_quest_definition({"id": quest_id, **entry}) if e.code.startswith("reward")]
-        if bad:
-            return AIOpsResult(False, f"Quest '{quest_id}' not written: " + "; ".join(bad))
+        refused = self._reward_refusal(quest_id, entry)
+        if refused is not None:
+            return refused
         _write_json(path, payload)
         return AIOpsResult(True, f"Upserted quest '{quest_id}'")
 

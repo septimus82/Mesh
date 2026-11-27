@@ -162,8 +162,9 @@ def test_a_window_whose_inc_counter_returns_nothing_still_gets_xp_and_the_comple
 @pytest.mark.integration  # (mesh new in a temporary folder)
 def test_the_mcp_quest_ops_refuse_a_reward_the_game_would_drop(tmp_path: Path,
                                                                monkeypatch: pytest.MonkeyPatch) -> None:
-    """add_quest_definition / update_quest_definition wrote any reward and said ok: the only sign was a line at game
-    load. A reward with an unknown field, or a negative or non-finite amount, is refused and nothing is written."""
+    """add_quest_definition / update_quest_definition / edit_quest wrote any reward and said ok: the only sign was a
+    line at game load. A reward with an unknown field, or a negative or non-finite amount, is refused and nothing is
+    written."""
     from engine.mcp_server import tools
     from engine.paths import reset_path_caches
     from tests.test_project_scaffolding_data import _new
@@ -188,6 +189,11 @@ def test_the_mcp_quest_ops_refuse_a_reward_the_game_would_drop(tmp_path: Path,
         result = op("update_quest_definition", {"reward": reward})
         assert not result["ok"], result
         assert quests.read_bytes() == before, "the file is unchanged"
+    for reward, code in (({"items": {"coin": 5}}, "reward.unknown_field"), ({"gold": -5}, "reward.gold.negative")):
+        result = tools.apply_ops([{"type": "edit_quest", "quest_id": "bounty", "patch": {"reward": reward}}],
+                                 root=str(root), validate=False)
+        assert not result["ok"] and code in result["results"][0]["message"], result
+        assert quests.read_bytes() == before, "edit_quest wrote nothing"
 
 
 @pytest.mark.integration  # (a content tree in a temporary folder)
