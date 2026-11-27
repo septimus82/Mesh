@@ -637,3 +637,30 @@ def test_a_new_2d_game_has_the_sounds_its_menus_play(tmp_path: Path, template: s
         (project / rel).unlink()
     ensure_starter_files(project)  # (what Mesh Studio does to a project it edits)
     assert not any((project / rel).exists() for rel in sounds), "an existing project is left as it is"
+
+
+@pytest.mark.integration  # (#737: writes folders in tmp_path)
+@pytest.mark.parametrize("command", ["build", "plan"])
+def test_export_outside_a_project_refuses_and_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], command: str
+) -> None:
+    """#737: `export build` run from a folder that isn't a Mesh project (a home folder) said OK and wrote an empty
+    dist/bundle there. It now refuses, names the folder, and leaves it as it was; a project still exports."""
+    import shutil
+
+    import mesh_cli
+
+    home = tmp_path / "home"
+    (home / "notes").mkdir(parents=True)
+    (home / "notes" / "todo.txt").write_text("mine", encoding="utf-8")
+    before = sorted(p.relative_to(home).as_posix() for p in home.rglob("*"))
+    monkeypatch.chdir(home)
+    assert mesh_cli.main(["export", command]) == 1
+    assert f"{Path('.').resolve()} is not a Mesh project" in capsys.readouterr().out
+    assert sorted(p.relative_to(home).as_posix() for p in home.rglob("*")) == before
+
+    game = tmp_path / "game"
+    shutil.copytree(FIXTURES_GOOD, game)
+    monkeypatch.chdir(game)
+    assert mesh_cli.main(["export", command]) == 0
+    assert (game / "dist" / "bundle" / "bundle_manifest.json").is_file() == (command == "build")

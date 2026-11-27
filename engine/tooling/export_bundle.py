@@ -423,6 +423,10 @@ def compute_export_plan(
         ExportPlan with files to include and any issues
     """
     plan = ExportPlan()
+    if not (repo_root / "config.json").is_file():  # (every Mesh root has one: a project, an export, the engine's own)
+        plan.errors.append(f"{repo_root} is not a Mesh project (no config.json); run this from your project's folder "
+                           f"or pass --repo-root <project folder>")
+        return plan
     include_unused = include_unused or is_project(repo_root)  # a project ships all of its own assets
 
     # Build manifest and dependency report
