@@ -66,6 +66,10 @@ class Game:
         if menu is not None and menu.visible:
             menu.close()
         self.window.save_manager = SaveManager(self.window, save_dir=project / "saves")
+        self.toasts: list[str] = []
+        hud = getattr(self.window, "player_hud", None)
+        if hud is not None:
+            monkeypatch.setattr(hud, "enqueue_toast", lambda message, **_: self.toasts.append(message))
         self.gs = self.window.game_state_controller
 
     @property
@@ -121,6 +125,7 @@ def test_selling_the_equipped_sword_unequips_it_and_drops_its_bonus(game) -> Non
     g.sell("rusty_sword")
     assert g.state() == (None, 5, 5, {})
     assert g.gs.export_state()["equipment"]["weapon"] is None
+    assert g.toasts[-1] == "Sold Rusty Sword x1 (+5g) (unequipped)"
 
 
 def test_selling_one_of_two_copies_keeps_the_equipped_one(game) -> None:
@@ -129,8 +134,36 @@ def test_selling_one_of_two_copies_keeps_the_equipped_one(game) -> None:
     assert g.gs.equip_item("throwing_knife")["ok"]
     g.sell("throwing_knife")
     assert g.state() == ("throwing_knife", 10, 2, {"throwing_knife": 1})
+    assert g.toasts[-1] == "Sold Throwing Knife x1 (+2g)"  # (still equipped: nothing to say)
     g.sell("throwing_knife")
     assert g.state() == (None, 5, 4, {})
+    assert g.toasts[-1] == "Sold Throwing Knife x1 (+2g) (unequipped)"
+
+
+def test_two_slots_holding_one_item_need_two_copies(game) -> None:
+    """An "equipment" item fits any slot; each slot needs its own copy, counted weapon, armor, accessory."""
+    g = game()
+    g.inv.add_item("throwing_knife", 2)
+    assert g.gs.equip_item("throwing_knife", slot="weapon")["ok"]
+    assert g.gs.equip_item("throwing_knife", slot="accessory")["ok"]
+    assert g.gs.get_player_stats()["attack"] == 15
+    g.sell("throwing_knife")
+    equipment = g.gs.get_equipment()
+    assert (equipment["weapon"], equipment["accessory"]) == ("throwing_knife", None)
+    assert g.gs.get_player_stats()["attack"] == 10
+    assert g.toasts[-1] == "Sold Throwing Knife x1 (+2g) (unequipped)"
+
+
+def test_one_copy_cant_be_equipped_in_two_slots(game) -> None:
+    g = game()
+    g.inv.add_item("throwing_knife", 1)
+    assert g.gs.equip_item("throwing_knife", slot="weapon")["ok"]
+    assert g.gs.equip_item("throwing_knife", slot="accessory") == {"ok": False, "reason": "no_spare_copy"}
+    assert g.gs.equip_item("throwing_knife", slot="weapon") == {"ok": True, "slot": "weapon", "item": "throwing_knife",
+                                                                 "previous": "throwing_knife"}  # (same slot: no-op)
+    equipment = g.gs.get_equipment()
+    assert (equipment["weapon"], equipment["accessory"]) == ("throwing_knife", None)
+    assert g.gs.get_player_stats()["attack"] == 10
 
 
 @pytest.mark.parametrize("case", ["not_owned", "refused", "not_stocked", "zero_count", "negative_count", "disabled"])

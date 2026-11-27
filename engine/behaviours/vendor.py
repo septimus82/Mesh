@@ -214,12 +214,14 @@ class Vendor(Behaviour):
         payout = max(0, int(base_price * self._sell_rate))
         if payout <= 0:
             return self._result(False, "Cannot sell that item", item_id=str(item_id), qty=1)
+        held = list(gs.get_equipment().values()).count(item_id)
         inv.remove_item(item_id, 1)
         gs.add_counter(self.currency_counter, payout)
+        unequipped = list(gs.get_equipment().values()).count(item_id) < held
         name = self._resolve_item_name(str(item_id), item)
         return self._result(
             True,
-            f"Sold {name} x1 (+{payout}g)",
+            f"Sold {name} x1 (+{payout}g)" + (" (unequipped)" if unequipped else ""),
             gold_delta=payout,
             item_id=str(item_id),
             qty=1,

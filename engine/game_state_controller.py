@@ -111,8 +111,11 @@ class GameStateController:
         Every filled slot needs its own owned copy, counted in slot order (weapon, armor, accessory, then any other
         slot by name): a slot whose item has no copy left is cleared. So removing the last copy of an equipped item,
         by any path (a Vendor sale, the console, using it, a save that lost it), unequips it, and while another copy
-        is owned the equipped one stays equipped. Every reader of equipment comes through here: get_equipment, the
-        stat bonuses, export_state (saves) and import_state (loads repair an old save in memory, never on disk)."""
+        is owned the equipped one stays equipped. Loads repair an old save in memory, never on disk.
+
+        It runs on effectively every controller call, through _ensure_game_state (counters, flags, update() every
+        frame, export_state, import_state), not only on equipment reads. Hazard: code that empties the inventory and
+        then refills it (a swap, a rebuild) must not touch the controller in between, or the item is unequipped."""
         if not isinstance(self.state.equipment, dict):
             self.state.equipment = {}
         equipment = self.state.equipment
@@ -311,6 +314,10 @@ class GameStateController:
             return result
 
         self._normalize_equipment()
+        # Each slot needs its own copy (#757): the copies other slots hold aren't free to equip here.
+        if inv.get_count(item_id) <= sum(1 for s, v in state.equipment.items() if s != slot_name and v == item_id):
+            result["reason"] = "no_spare_copy"
+            return result
         previous = state.equipment.get(slot_name)
         state.equipment[slot_name] = item_id
         result.update({"ok": True, "slot": slot_name, "item": item_id, "previous": previous})
