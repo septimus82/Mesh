@@ -52,7 +52,6 @@ _SAVE_EXEMPT: dict[str, str] = {
     "GrantExperience": "One-shot grant; state is in GameState",
     "OfferPerkChoice": "UI-only behaviour; no persistent state",
     "ToggleSwitch": "Visual toggle state; re-initialised from scene JSON",
-    "TriggerZoneBehaviour": "Transient zone trigger; re-initialised from scene",
     "MonsterEncounterZoneBehaviour": "Transient encounter trigger; cooldown/roll state is re-derived from scene",
     "SequencePlayer": "Transient animation sequence; re-derived on load",
     "ParticleEmitter": "Transient visual effect; no persistent state",

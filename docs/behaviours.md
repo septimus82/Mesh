@@ -1695,13 +1695,14 @@ Example configuration snippet:
 ```
 
 ## TriggerZone
-Fires once when a target sprite enters a radius.
+Sends entered_zone, and the event it sends (on_trigger) if set, once when a target sprite enters a radius: once each time the room loads, or with Play once (play_once) once per playthrough, kept in room memory and saves. Play once counts as used when the events are sent, so a cutscene they start that is interrupted is not replayed.
 
 | Name | Description | Type | Default |
 | --- | --- | --- | --- |
 | trigger_radius | Distance threshold for triggering | float | 0.0 |
 | trigger_target | Name of the sprite to watch | string | - |
-| on_trigger | Label describing the triggered event | string | - |
+| on_trigger | Event it sends when the target comes within reach (entered_zone is always sent too) | string | - |
+| play_once | On: it fires once per playthrough, never again after leaving the room or loading a save (a cutscene it starts that is interrupted is not replayed). Off: once each time the room loads. | bool | False |
 
 Example configuration snippet:
 ```json
