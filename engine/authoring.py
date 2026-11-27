@@ -753,6 +753,7 @@ _BEHAVIOUR_WORDS = {
     ("Dialogue", "start_event"): "conversation starts when",
     ("PictureByFlags",): "picture changes (by flags)",
     ("TriggerVolume",): "trigger zone",
+    ("TriggerZone", "play_once"): "zone plays only once per playthrough",
     ("SetGameStateOnEvent",): "sets flags when the zone is entered",
 }
 
