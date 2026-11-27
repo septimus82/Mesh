@@ -24,3 +24,14 @@ def test_quest_normalization_preserves_toast_fields_and_fallbacks() -> None:
     assert quest["stages"][0]["title"] == "Stage One"
     assert quest["stages"][0]["text"] == "Stage One"
 
+
+def test_quest_normalization_preserves_shortcut_rewards() -> None:
+    qm = QuestManager.__new__(QuestManager)
+    quest = qm._normalize_quest({
+        "id": "Q1",
+        "stages": [{"id": "s"}],
+        "reward": {"gold": 100, "xp": 30},
+    })
+    assert quest is not None
+    assert quest["reward"] == {"set_flags": {}, "inc_counters": {}, "gold": 100.0, "xp": 30.0}
+

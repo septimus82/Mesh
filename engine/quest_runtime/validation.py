@@ -507,6 +507,17 @@ def _validate_reward(
         ))
         return errors
 
+    allowed_keys = {"set_flags", "inc_counters", "gold", "xp"}
+    for key in reward:
+        if key not in allowed_keys:
+            errors.append(QuestValidationError(
+                file_path=file_path,
+                json_path=f"{base_path}.{key}",
+                code="reward.key.unknown",
+                message=f"Quest '{quest_id}' reward has unknown key '{key}'",
+                hint="Use set_flags, inc_counters, gold, or xp",
+            ))
+
     # Validate set_flags
     set_flags = reward.get("set_flags")
     if set_flags is not None:
@@ -561,6 +572,14 @@ def _validate_reward(
                 code=f"reward.{field}.type",
                 message=f"Quest '{quest_id}' reward.{field} must be a number",
                 hint=f"Use a numeric value like \"{field}\": 100",
+            ))
+        elif isinstance(value, (int, float)) and value < 0:
+            errors.append(QuestValidationError(
+                file_path=file_path,
+                json_path=f"{base_path}.{field}",
+                code=f"reward.{field}.negative",
+                message=f"Quest '{quest_id}' reward.{field} must not be negative",
+                hint=f"Use zero or a positive numeric value for \"{field}\"",
             ))
 
     return errors
