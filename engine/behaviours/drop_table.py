@@ -7,10 +7,12 @@ from typing import Any, Callable
 
 from ..inventory import get_or_create_inventory, load_item_database
 from ..logging_tools import get_logger
+from ..scene_runtime import room_memory
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
 _LOG = get_logger("engine.behaviours.drop_table")
+LEFT_TAG = "left_loot"  # a remembered drop lying on the ground (its DropTable's fact ``left``)
 
 
 @register_behaviour(
@@ -24,6 +26,13 @@ _LOG = get_logger("engine.behaviours.drop_table")
     ],
 )
 class DropTable(Behaviour):
+    """Grants its rolled items and gold. What the inventory can't take is left on the ground where its entity was, as
+    a pickup, never lost (#627, owner decision D7); the fact ``left`` keeps it there across re-entry and saves (it is
+    laid again as the room loads, ``lay_remembered_loot``) until it is picked up. On an entity without its own
+    authored id the loot is not remembered: it is gone once the player leaves the room."""
+
+    FACT_FIELDS = ("left",)  # {"x", "y", "items": {item id: count}}, or None: nothing (left any more)
+
     PARAM_DEFS = {
         "listen_event": ParamDef(str, default="died", description="Event name to listen for."),
         "drops": ParamDef(list, default=[], description="List of drop entries."),
@@ -88,6 +97,7 @@ class DropTable(Behaviour):
         if not self.drops:
             return
 
+        refused: dict[str, int] = {}
         for drop in self.drops:
             if not drop:
                 continue
@@ -96,7 +106,19 @@ class DropTable(Behaviour):
             qty = self._rng.randint(drop["min_quantity"], drop["max_quantity"])
             if qty <= 0:
                 continue
-            self._apply_drop(drop, qty)
+            left = self._apply_drop(drop, qty)
+            if left:
+                refused[drop["item_id"]] = refused.get(drop["item_id"], 0) + left
+        if refused:
+            at = getattr(self, "_mesh_fact_key", None)
+            x, y = float(self.entity.center_x), float(self.entity.center_y)
+            if at is not None:
+                items = _left(self.window, at)
+                for item_id, count in refused.items():
+                    items[item_id] = items.get(item_id, 0) + count
+                room_memory.write_fact(self.window, at, "DropTable", "left", {"x": x, "y": y, "items": items})
+            for item_id, count in refused.items():
+                _lay(self.window, at, x, y, item_id, count)
 
     def _roll(self, chance: float) -> bool:
         if chance >= 1.0:
@@ -105,10 +127,12 @@ class DropTable(Behaviour):
             return False
         return self._rng.random() <= chance
 
-    def _apply_drop(self, drop: dict[str, Any], qty: int) -> None:
+    def _apply_drop(self, drop: dict[str, Any], qty: int) -> int:
+        """Grant one rolled drop; returns how many of its item the inventory refused (to leave on the ground)."""
         gs = getattr(self.window, "game_state_controller", None)
         if gs is None:
-            return
+            return 0
+        left = 0
         item_id = drop.get("item_id")
         gold = drop.get("gold")
         if item_id:
@@ -124,6 +148,8 @@ class DropTable(Behaviour):
             if refusal is not None:  # never silently (#652/#627, owner decision D7); the gold below still comes
                 _LOG.warning("Drop of %sx %s refused (%s granted): %s", qty, item_id, granted, refusal)
                 self._log(f"Loot: {qty - granted}x {label} left behind: {refusal}")
+                if item_def is not None:  # (on the ground to take once there's room; an unknown id never could be)
+                    left = qty - granted
                 hud = getattr(self.window, "player_hud", None)
                 enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
                 # The player is told about a full bag; an unknown id is the creator's to fix (the log and console).
@@ -133,6 +159,7 @@ class DropTable(Behaviour):
             gold_total = int(gold) * max(1, qty)
             gs.add_counter("gold", gold_total)
             self._log(f"Loot: +{gold_total} gold")
+        return left
 
     def _log(self, message: str) -> None:
         logger = getattr(self.window, "console_log", None)
@@ -158,3 +185,72 @@ class DropTable(Behaviour):
         on_destroy = getattr(super(), "on_destroy", None)
         if callable(on_destroy):
             on_destroy()
+
+
+def _fact(window: Any, room: str, entity_id: str) -> dict[str, Any]:
+    """The fact ``left`` of the DropTable on ``entity_id`` in ``room`` ({} when there is none)."""
+    own = room_memory.room_facts(window, room).get(entity_id)
+    kind = own.get("DropTable") if isinstance(own, dict) else None
+    left = kind.get("left") if isinstance(kind, dict) else None
+    return left if isinstance(left, dict) and isinstance(left.get("items"), dict) else {}
+
+
+def _left(window: Any, at: tuple[str, str, Any]) -> dict[str, int]:
+    """What the DropTable at ``at`` (room, entity id, session) has left on the ground: {item id: count}."""
+    return dict(_fact(window, at[0], at[1]).get("items", {}))
+
+
+def _lay(window: Any, at: tuple[str, str, Any] | None, x: float, y: float, item_id: str, count: int) -> None:
+    """Put ``count`` of ``item_id`` on the ground at (x, y): a pickup ("Can be picked up") with the item's icon. Taking it
+    takes it off the fact ``left`` of the DropTable at ``at`` (None: not remembered)."""
+    controller = getattr(window, "scene_controller", None)
+    item = load_item_database().get(item_id)
+    if controller is None or item is None:
+        return
+    sprite = controller._create_sprite(
+        {
+            "name": item.name,
+            "x": x,
+            "y": y,
+            "sprite": item.icon or "assets/placeholder.png",
+            "scale": 0.5,
+            "layer": "entities",
+            "behaviours": ["PickupCollectible"],
+            "behaviour_config": {"PickupCollectible": {"item_id": item_id, "item_amount": count}},
+            **({"tags": [LEFT_TAG]} if at is not None else {}),  # (a save carries it too: lay_remembered_loot)
+        }
+    )
+    if sprite is None:
+        return
+    controller.entities.enqueue_spawn(sprite, layer_name="entities", is_solid=False)
+    controller.entities.apply_pending_ops(controller, stage="immediate")
+    if at is None:
+        return
+
+    def taken() -> None:
+        items = _left(window, at)
+        items[item_id] = items.get(item_id, 0) - count
+        items = {k: v for k, v in items.items() if v > 0}
+        room_memory.write_fact(window, at, "DropTable", "left", {"x": x, "y": y, "items": items} if items else None)
+
+    for behaviour in sprite.mesh_behaviours_runtime:
+        if type(behaviour).__name__ == "PickupCollectible":
+            behaviour.on_taken = taken
+
+
+def lay_remembered_loot(controller: Any) -> None:
+    """Lay again what defeated enemies left on the ground in the room ``controller`` is loading (its DropTables' fact
+    ``left``): the room loader calls this once its objects are made. A save carries the remembered loot it was made
+    with as objects of its own (``engine.scene_runtime.saved_world``): those are replaced by the facts' loot."""
+    for sprite in list(controller.all_sprites):  # a loaded save's copies of it: the facts say what is still there
+        if LEFT_TAG in (getattr(sprite, "mesh_tags", None) or ()):
+            sprite.remove_from_sprite_lists()
+    room = room_memory.room_key(getattr(controller, "room_path", None))
+    ids = getattr(controller, "_room_fact_ids", None) or ()
+    for entity_id in room_memory.room_facts(controller.window, room):
+        left = _fact(controller.window, room, entity_id)
+        if entity_id not in ids or not left:
+            continue
+        at = (room, entity_id, getattr(controller, "_room_session", None))
+        for item_id, count in left["items"].items():
+            _lay(controller.window, at, float(left.get("x", 0)), float(left.get("y", 0)), str(item_id), int(count))

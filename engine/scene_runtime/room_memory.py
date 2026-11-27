@@ -10,7 +10,8 @@ state's variables (``room_memory``), so saves carry them with everything else, a
 when the room loads again. A new game (a new game state) starts with every room as authored.
 
 What does not: objects spawned at runtime (projectiles, effects), positions of things that move, and
-anything a flag already controls (flags persist on their own).
+anything a flag already controls (flags persist on their own). (A defeated enemy's drop the inventory refused is a
+fact of its DropTable, laid again on entry: ``engine.behaviours.drop_table``.)
 
 Facts (S1 4.1, D6): what already happened to an authored object (a door unlocked, a chest looted), which its
 behaviours would otherwise forget on re-entry. A behaviour declares them (``Behaviour.FACT_FIELDS``) and writes one
@@ -160,8 +161,22 @@ def record_fact(behaviour: Any, field: str, value: Any) -> bool:
             logger.debug("room memory: %s on %r has no authored id of its own in this room; its facts are not kept",
                          type(behaviour).__name__, getattr(getattr(behaviour, "entity", None), "mesh_name", None))
         return False
+    return write_fact(window, at, type(behaviour).__name__, field, value)
+
+
+def room_facts(window: Any, room: str) -> dict[str, Any]:
+    """Every fact recorded in ``room``: {entity id: {behaviour class name: {field: value}}}."""
+    entry = _memory(window).get(room_key(room))
+    facts = entry.get(FACTS) if isinstance(entry, dict) else None
+    return facts if isinstance(facts, dict) else {}
+
+
+def write_fact(window: Any, at: tuple[str, str, Any], kind: str, field: str, value: Any) -> bool:
+    """Write the fact ``field`` of the behaviour class ``kind`` on the object ``at`` (``_mesh_fact_key``: room, entity
+    id, game session) into room memory, also once that object is gone. False for a room an earlier game loaded."""
+    state = _state(window)
     room, entity_id, loaded_in = at
-    if loaded_in is not None and loaded_in is not session(window):
+    if state is None or (loaded_in is not None and loaded_in is not session(window)):
         return False
     memory = dict(_memory(window))
     entry = memory.get(room)
@@ -170,10 +185,10 @@ def record_fact(behaviour: Any, field: str, value: Any) -> bool:
     facts = dict(facts) if isinstance(facts, dict) else {}
     own = facts.get(entity_id)
     own = dict(own) if isinstance(own, dict) else {}
-    kind = own.get(type(behaviour).__name__)
-    kind = dict(kind) if isinstance(kind, dict) else {}
-    kind[field] = value
-    own[type(behaviour).__name__] = kind
+    fields = own.get(kind)
+    fields = dict(fields) if isinstance(fields, dict) else {}
+    fields[field] = value
+    own[kind] = fields
     facts[entity_id] = own
     entry[FACTS] = facts
     memory[room] = entry
