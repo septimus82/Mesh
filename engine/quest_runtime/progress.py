@@ -230,8 +230,8 @@ def complete_quest(manager: Any, quest: dict[str, Any], state: dict[str, Any], *
     # values["gold"], which nothing reads.) XP goes through the progression's add_xp, which applies the XP perk bonus.
     gold = reward.get("gold", 0)
     if gold > 0:
-        balance = manager.window.inc_counter("gold", float(gold))
-        print(f"[Mesh][Quests] Rewarded {gold} gold (balance {balance:g})")
+        manager.window.inc_counter("gold", float(gold))
+        print(f"[Mesh][Quests] Rewarded {gold} gold")
 
     xp = reward.get("xp", 0)
     if xp > 0:

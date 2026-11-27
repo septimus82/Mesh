@@ -15,6 +15,7 @@ Validation produces QuestValidationError objects with:
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -565,6 +566,14 @@ def _validate_reward(
                 code=f"reward.{field}.type",
                 message=f"Quest '{quest_id}' reward.{field} must be a number",
                 hint=f"Use a numeric value like \"{field}\": 100",
+            ))
+        elif not math.isfinite(value):
+            errors.append(QuestValidationError(
+                file_path=file_path,
+                json_path=f"{base_path}.{field}",
+                code=f"reward.{field}.not_finite",
+                message=f"Quest '{quest_id}' reward.{field} must be a finite number (got {value})",
+                hint=f"Use a plain number, like \"{field}\": 100",
             ))
         elif value < 0:
             errors.append(QuestValidationError(

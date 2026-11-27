@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Any
 
 REWARD_AMOUNT_KEYS = ("gold", "xp")
@@ -199,10 +200,10 @@ def normalize_reward(data: Any) -> dict[str, Any]:
         if key not in data:
             continue
         value = data[key]
-        if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0:
             reward[key] = value
         else:
-            print(f"[Mesh][Quests] Ignoring reward.{key} {value!r}: it must be a number of 0 or more")
+            print(f"[Mesh][Quests] Ignoring reward.{key} {value!r}: it must be a finite number of 0 or more")
     unknown = sorted(str(key) for key in data if key not in REWARD_KEYS)
     if unknown:
         print(f"[Mesh][Quests] Ignoring unknown reward field(s) {unknown}; supported: {sorted(REWARD_KEYS)}")

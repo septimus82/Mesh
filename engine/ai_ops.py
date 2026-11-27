@@ -412,17 +412,24 @@ class AIOps:
             if index is None:
                 return AIOpsResult(False, why)
             if quest_id in index:
-                quests[index[quest_id]] = _deep_merge(quests[index[quest_id]], quest_data) | {"id": quest_id}
+                entry = quests[index[quest_id]] = _deep_merge(quests[index[quest_id]], quest_data) | {"id": quest_id}
             else:
-                quests.append({"id": quest_id} | deepcopy(quest_data) | {"id": quest_id})
+                entry = {"id": quest_id} | deepcopy(quest_data) | {"id": quest_id}
+                quests.append(entry)
         elif isinstance(quests, dict):
             existing = quests.get(quest_id, {})
             if isinstance(existing, dict):
-                quests[quest_id] = _deep_merge(existing, quest_data)
+                entry = quests[quest_id] = _deep_merge(existing, quest_data)
             else:
-                quests[quest_id] = quest_data
+                entry = quests[quest_id] = quest_data
         else:
             return AIOpsResult(False, "quests must be an object or a list; refusing to touch quests.json")
+        # A reward the game would drop (unknown field, negative or non-finite amount) is refused, nothing written (#755)
+        from .quest_runtime.validation import validate_quest_definition  # noqa: PLC0415
+
+        bad = [str(e) for e in validate_quest_definition({"id": quest_id, **entry}) if e.code.startswith("reward")]
+        if bad:
+            return AIOpsResult(False, f"Quest '{quest_id}' not written: " + "; ".join(bad))
         _write_json(path, payload)
         return AIOpsResult(True, f"Upserted quest '{quest_id}'")
 

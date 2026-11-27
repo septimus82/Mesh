@@ -86,6 +86,8 @@ def test_the_wip_packs_item_reward_is_now_reported() -> None:
     ({"gold": "100"}, "reward.gold.type"),
     ({"xp": True}, "reward.xp.type"),
     ({"gold": None}, "reward.gold.type"),
+    ({"gold": float("inf")}, "reward.gold.not_finite"),
+    ({"xp": float("nan")}, "reward.xp.not_finite"),
     ({"coins": 10}, "reward.unknown_field"),
     ({"add_items": {"coin": 50}}, "reward.unknown_field"),
     ([{"gold": 5}], "reward.type"),
@@ -102,6 +104,11 @@ def test_an_invalid_amount_is_not_paid_and_is_reported_at_load(capsys: pytest.Ca
     assert quest is not None and quest["reward"] == {"set_flags": {}, "inc_counters": {"gold": 1.0}}
     out = capsys.readouterr().out
     assert "reward.gold -5" in out and "reward.xp 'lots'" in out and "['coins']" in out
+    # json.loads accepts Infinity / NaN: never a counter of inf
+    quest = normalize_quest(_quest(json.loads('{"gold": Infinity, "xp": NaN}')))
+    assert quest is not None and quest["reward"] == {"set_flags": {}, "inc_counters": {}}
+    out = capsys.readouterr().out
+    assert "reward.gold inf" in out and "reward.xp nan" in out
 
 
 # ------------------------------------------------------------------------------------- paying (fast)
@@ -137,6 +144,67 @@ def test_perk_bonuses_apply_exactly_once_and_the_reward_pays_once() -> None:
     assert gs.get_counter("gold") == 150.0  # 100 + 50%, not 225 (bonus twice) nor 300 (paid twice)
     assert gs.get_xp() == 150
     assert "gold" not in gs.state.values
+
+
+@pytest.mark.fast
+def test_a_window_whose_inc_counter_returns_nothing_still_gets_xp_and_the_completion() -> None:
+    """Test doubles (and any host) may return None from inc_counter: the payout mustn't depend on its value."""
+    manager, gs = _manager({})
+    manager.window.inc_counter = MagicMock(return_value=None)
+    assert manager.complete_quest("bounty")
+    manager.window.inc_counter.assert_called_once_with("gold", 100.0)
+    assert gs.get_xp() == 100
+    assert any(c.args[:1] == ("quest_completed",) for c in manager.window.emit_signal.call_args_list)
+
+
+# ---------------------------------------------------- the authoring write path and content audit (integration)
+
+@pytest.mark.integration  # (mesh new in a temporary folder)
+def test_the_mcp_quest_ops_refuse_a_reward_the_game_would_drop(tmp_path: Path,
+                                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    """add_quest_definition / update_quest_definition wrote any reward and said ok: the only sign was a line at game
+    load. A reward with an unknown field, or a negative or non-finite amount, is refused and nothing is written."""
+    from engine.mcp_server import tools
+    from engine.paths import reset_path_caches
+    from tests.test_project_scaffolding_data import _new
+
+    root = _new(tmp_path, "starter")
+    monkeypatch.delenv("MESH_REPO_ROOT", raising=False)
+    reset_path_caches()
+    quests = root / "assets/data/quests.json"
+
+    def op(kind: str, quest: dict[str, Any]) -> dict[str, Any]:
+        return tools.apply_ops([{"type": kind, "quest_id": "bounty", "quest": quest}], root=str(root), validate=False)
+
+    for reward, code in (({"items": {"coin": 5}}, "reward.unknown_field"), ({"gold": -5}, "reward.gold.negative")):
+        result = op("add_quest_definition", {"title": "Bounty", "stages": STAGE, "reward": reward})
+        assert not result["ok"] and code in result["results"][0]["message"], result
+        assert "not written" in result["results"][0]["message"]
+        assert not quests.exists(), "nothing written"
+
+    assert op("add_quest_definition", {"title": "Bounty", "stages": STAGE, "reward": {"gold": 10}})["ok"]
+    before = quests.read_bytes()
+    for reward in ({"items": {"coin": 5}}, {"gold": -5}, {"xp": float("inf")}):
+        result = op("update_quest_definition", {"reward": reward})
+        assert not result["ok"], result
+        assert quests.read_bytes() == before, "the file is unchanged"
+
+
+@pytest.mark.integration  # (a content tree in a temporary folder)
+def test_the_content_audit_warns_about_a_reward_the_game_would_drop(tmp_path: Path) -> None:
+    from mesh_cli.content_integrity import run_content_audit
+    from tests.test_content_integrity_audit import _build_valid_content_fixture, _make_minimums, _write_json
+
+    _build_valid_content_fixture(tmp_path)
+    path = tmp_path / "assets/data/quests.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["quests"][0]["reward"] = {"gold": -5, "items": {"coin": 1}}
+    _write_json(path, data)
+    report = run_content_audit(tmp_path, minimum_counts=_make_minimums())
+    assert report.ok, "warnings: shipped content doesn't fail"
+    found = {(w.code, w.pointer) for w in report.warnings if w.code.startswith("content.quests.reward")}
+    assert found == {("content.quests.reward.gold.negative", "$/quests/0/reward/gold"),
+                     ("content.quests.reward.unknown_field", "$/quests/0/reward/items")}
 
 
 # ------------------------------------------------------------------------ the game (integration, real window)
