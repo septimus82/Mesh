@@ -1046,8 +1046,8 @@ def test_the_server_refuses_requests_past_its_budget(files, monkeypatch, caplog)
     import mesh_net.server
 
     class Frozen(mesh_net.server.InputBudget):  # (its clock stands still: no refill, only the first allowance)
-        def __init__(self):
-            super().__init__()
+        def __init__(self, *args):
+            super().__init__(*args)
             self.clock, self.at = (lambda: 0.0), 0.0
 
     monkeypatch.setattr(mesh_net.server, "InputBudget", Frozen)

@@ -54,6 +54,32 @@ def test_the_budget_takes_a_stalls_backlog_and_refuses_a_flood():
     assert clock[0] - start - 10 <= InputBudget.BURST / wire.HZ + 0.1 and sent > InputBudget.BURST
 
 
+@pytest.mark.fast
+def test_the_servers_own_stall_is_never_held_against_a_session():
+    """#727, on a fake clock: the backlog of a 4 s stall is more than a full bucket. Refused when nothing says the
+    server was held up (a client that went quiet, then floods); taken in full when the server's own loop was held
+    up for it (``held``); and a sustained flood after it is still refused."""
+    def backlog_fits(stalled: float) -> bool:
+        clock, held = [0.0], [0.0]
+        steady = budget(clock)
+        steady.held = lambda: held[0]
+        for _ in range(10 * wire.HZ):
+            clock[0] += 1 / wire.HZ
+            assert steady.take()
+        clock[0] += 4.0
+        held[0] += stalled
+        fits = all(steady.take() for _ in range(4 * wire.HZ + 1))
+        sent = 0
+        while steady.take():  # then five frames a tick: refused within seconds, as ever
+            clock[0] += 1 / (5 * wire.HZ)
+            sent += 1
+        assert sent < 10 * wire.HZ
+        return fits
+
+    assert not backlog_fits(0.0)
+    assert backlog_fits(4.0 - 1 / wire.HZ)  # (Server.held counts what is beyond a tick)
+
+
 # --- over sockets: N6 Server and N7 WorldServer -----------------------------------------------------------------
 
 
@@ -212,6 +238,79 @@ def test_a_server_stall_with_a_real_20hz_client_keeps_the_session():
     try:
         asyncio.run(client())
         assert max(held["ticks"].values()) > 8, held["ticks"]  # the stall's backlog arrived within one tick
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(10)
+    assert not thread.is_alive()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(("kind", "where"), [("N7", "step"), ("N6", "loop")])
+def test_a_server_stall_longer_than_the_bucket_never_ends_a_session(kind: str, where: str):
+    """(d) #727: the server's loop is held up for 4 s, longer than BURST / HZ (3 s) and shorter than a client's 5 s
+    read timeout: inside a step, as a store commit slow to reach the disk holds it (N7, the hosted Windows failure),
+    or by anything else on the loop (N6). Two clients on their own loop keep to HZ throughout, so the backlog is more
+    than a full bucket; both sessions stay, because the server's own stall is never held against them."""
+    stall, ready, held = 4.0, threading.Event(), {}
+    armed = threading.Event()
+
+    def serve() -> None:
+        loop = asyncio.new_event_loop()
+        server, target = host(kind)
+        original = target.step
+
+        def step() -> None:
+            original()
+            if armed.is_set():
+                armed.clear()
+                time.sleep(stall)
+
+        target.step = step
+        held.update(loop=loop, server=server, port=loop.run_until_complete(server.start()))
+        ready.set()
+        try:
+            loop.run_forever()
+        finally:
+            loop.run_until_complete(server.close())
+            loop.close()
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    assert ready.wait(20)
+    loop, server = held["loop"], held["server"]
+
+    async def keep_to_hz(session: Session) -> None:
+        clock = asyncio.get_running_loop()
+        due = clock.time()
+        while True:
+            session.send(1)
+            due = max(due + 1 / wire.HZ, clock.time())
+            await asyncio.sleep(due - clock.time())
+
+    async def clients() -> None:
+        sessions = [await Session.open(held["port"]) for _ in range(2)]
+        sending = [asyncio.create_task(keep_to_hz(s)) for s in sessions]
+        try:
+            await asyncio.sleep(1)
+            if where == "step":
+                armed.set()
+            else:
+                loop.call_soon_threadsafe(time.sleep, stall)
+            await asyncio.sleep(stall + 0.5)
+            received = [s.received for s in sessions]
+            await asyncio.sleep(1)
+            for session, before in zip(sessions, received):
+                assert not session.reading.done() and session.id in server.peers, "the server's stall ended a session"
+                assert session.received > before
+        finally:
+            for task in sending:
+                task.cancel()
+            for session in sessions:
+                await session.close()
+
+    try:
+        asyncio.run(clients())
+        assert server.stalled > InputBudget.BURST / wire.HZ, server.stalled  # (the stall outlasted a full bucket)
     finally:
         loop.call_soon_threadsafe(loop.stop)
         thread.join(10)

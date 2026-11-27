@@ -7,6 +7,7 @@ import asyncio
 import logging
 import os
 import secrets
+from collections.abc import Callable
 from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,11 @@ class InputBudget:
 
     The clock is ``loop.time()``, never the tick count: after a server stall the clock skips the missed ticks
     (``Server._run_clock``), but the backlog to read covers all of the stall's time.
+
+    The server's own stalls are never held against a session (#727): ``held`` (``Server.held``) says how long the
+    server's loop has been held up, and each second of it adds HZ tokens over BURST, the frames a client keeping to
+    HZ sent meanwhile. Without it, a stall over BURST / HZ (a store commit slow to reach the disk) ended every session
+    at once. (A session's tokens over BURST are only ever spent, never cut back by a refill.)
     """
 
     # (RATE and BURST are fixed from wire.HZ at import: HZ is implicit on both sides of the wire, so changing it
@@ -44,15 +50,17 @@ class InputBudget:
     BURST = 3 * wire.HZ  # 3 s of a client's input: a 2 s stall's backlog (40) with room to spare
     START = 8
 
-    def __init__(self) -> None:
+    def __init__(self, held: Callable[[], float] = lambda: 0.0) -> None:
         self.clock = asyncio.get_running_loop().time
         self.tokens, self.at = float(self.START), self.clock()
+        self.held, self.seen = held, held()
 
     def take(self) -> bool:
         """Spend a token on one frame; False when there is none (the session must end)."""
-        now = self.clock()
-        self.tokens = min(self.BURST, self.tokens + (now - self.at) * self.RATE)
-        self.at = now
+        now, held = self.clock(), self.held()
+        refill = min(max(self.BURST, self.tokens), self.tokens + (now - self.at) * self.RATE)
+        self.tokens = refill + (held - self.seen) * wire.HZ
+        self.at, self.seen = now, held
         if self.tokens < 1:
             return False
         self.tokens -= 1
@@ -68,6 +76,27 @@ class Server:
         self.peers: dict[int, asyncio.StreamWriter] = {}
         self.offline: dict[str, tuple[int, Player]] = {}
         self._lifecycle = asyncio.Lock()
+        self.due: float | None = None  # (loop time) when the clock's current tick is due
+        self.stalled = 0.0  # seconds the loop was held up beyond a tick, as the clock has counted them
+
+    def held(self) -> float:
+        """Seconds this server's loop has been held up beyond a tick (a step, a store write, GC, the process paused),
+        counting a hold-up the clock has not yet run since: what InputBudget never holds against a session."""
+        if self.due is None:
+            return self.stalled
+        return self.stalled + max(0.0, asyncio.get_running_loop().time() - self.due - 1 / wire.HZ)
+
+    async def _next_tick(self, loop: asyncio.AbstractEventLoop) -> None:
+        """Wait for the next tick. Excess elapsed time after a stall is dropped (counted in ``stalled``), never burst
+        as queued steps."""
+        if self.due is None:
+            self.due = loop.time()
+        self.due += 1 / wire.HZ
+        await asyncio.sleep(max(0.0, self.due - loop.time()))
+        late = loop.time() - self.due - 1 / wire.HZ
+        if late > 0:
+            self.stalled += late
+            self.due += late
 
     async def start(self, port: int = 0) -> int:
         async with self._lifecycle:
@@ -118,7 +147,7 @@ class Server:
             writer.write(wire.encode({"v": wire.VERSION, "type": "welcome", "session": secrets.token_hex(16),
                                       "entity": eid, "resume": credential, "state": self.room.snapshot(),
                                       "hz": wire.HZ}))
-            budget = InputBudget()
+            budget = InputBudget(self.held)
             while True:
                 msg = await wire.read(reader)
                 if not budget.take():
@@ -145,12 +174,8 @@ class Server:
 
     async def _run_clock(self) -> None:
         loop = asyncio.get_running_loop()
-        deadline = loop.time()
         while True:
-            deadline += 1 / wire.HZ
-            await asyncio.sleep(max(0.0, deadline - loop.time()))
-            # Drop excess elapsed time after a process stall, never burst queued physics steps.
-            deadline = max(deadline, loop.time() - 1 / wire.HZ)
+            await self._next_tick(loop)
             self.room.step()
             self.offline = {k: v for k, v in self.offline.items() if v[0] > self.room.tick}
             data = wire.encode(self.room.snapshot())
@@ -177,6 +202,7 @@ class Server:
             if listener is not None:
                 await listener.wait_closed()
             self.offline.clear()
+            self.due = None  # (a later start's clock starts afresh, not late by the time it was stopped)
 
 
 class WorldServer(Server):
@@ -203,7 +229,7 @@ class WorldServer(Server):
             writer.write(wire.encode(welcome(secrets.token_hex(16), pid, credential, self.world.identity)))
             for frame in self.world.take(pid):
                 writer.write(wire.encode(frame))
-            budget = InputBudget()
+            budget = InputBudget(self.held)
             while True:
                 msg = await wire.read(reader)
                 if not budget.take():
@@ -227,11 +253,8 @@ class WorldServer(Server):
 
     async def _run_clock(self) -> None:
         loop = asyncio.get_running_loop()
-        deadline = loop.time()
         while True:
-            deadline += 1 / wire.HZ
-            await asyncio.sleep(max(0.0, deadline - loop.time()))
-            deadline = max(deadline, loop.time() - 1 / wire.HZ)  # never burst queued steps after a stall
+            await self._next_tick(loop)
             try:
                 self.world.step()
                 self._send(self.world.deliver())
