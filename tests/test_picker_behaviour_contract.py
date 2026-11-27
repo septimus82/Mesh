@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
 
@@ -27,6 +28,9 @@ import pytest
 import engine.optional_arcade as optional_arcade
 from engine.authoring import ChangeError
 from engine.behaviour_guide import GUIDES
+from engine.behaviours.flee_from_target import FLEE_RNG_STREAM
+from engine.behaviours.wander import WANDER_RNG_STREAM
+from engine.rng_service import get_rng
 from tests._real_game import PIC, RealGame, author, batch, new_project, place, real_game
 
 pytestmark = [pytest.mark.integration,  # (a generated project in a temporary folder; one hidden game window)
@@ -37,6 +41,7 @@ X, Y = 320.0, 240.0  # (the middle of a new room: 20 x 15 tiles of floor inside 
 OTHER = "assets/sprites/starter_villager.png"
 SHEET = "assets/sprites/starter_hero.png"  # (the template's hero sheet: 32 x 48 frames, four to a row)
 ITEM = "healing_potion"
+ROW_SEED = 733  # (a row with an RNG stream: Row.rng)
 
 
 @dataclass(frozen=True)
@@ -46,6 +51,7 @@ class Row:
     rule: str = AGAIN
     kept: Callable[[RealGame], None] | None = None  # KEPT: what still shows after re-entry and after a load
     loaded: Callable[[RealGame], None] | None = None  # what a load shows, when it differs (a save keeps the moment)
+    rng: str | None = None  # the behaviour's RNG stream: seeded before each visit, so no random pick decides it (#733)
 
 
 def sheep(x: float) -> list[dict[str, Any]]:
@@ -461,13 +467,13 @@ ROWS: dict[str, Row] = {
     "Patrol": Row(place("Guard", 200, Y, ("Patrol", {"patrol_points": [{"x": 460, "y": Y}, {"x": 200, "y": Y}],
                                                      "patrol_speed": 120})), _moves("Guard")),
     "Wander": Row(place("Goat", X, Y, ("Wander", {"wander_radius": 3, "speed": 80, "idle_time_min": 0,
-                                                  "idle_time_max": 0})), _moves("Goat", 90, 8)),
+                                                  "idle_time_max": 0})), _moves("Goat", 90, 8), rng=WANDER_RNG_STREAM),
     "FollowTarget": Row(place("Dog", 480, 320, ("FollowTarget", {"follow_target": "Player", "follow_speed": 120})),
                         _nears_player("Dog")),
     "ChaseTarget": Row(place("Hound", 480, 320, ("ChaseTarget", {"target_tag": "player", "acquire_radius_tiles": 15,
                                                                  "speed": 120})), _nears_player("Hound", 90)),
     "FleeFromTarget": Row(place("Deer", X, Y, ("FleeFromTarget", {"threat_tags": ["player"], "detection_radius": 6,
-                                                                  "speed": 120})), _flees),
+                                                                  "speed": 120})), _flees, rng=FLEE_RNG_STREAM),
     "PatrolChase": Row(place("Sentry", 480, 320, ("PatrolChase", {
         "patrol_points": [{"x": 480, "y": 320}, {"x": 520, "y": 320}], "target_tag": "player",
         "acquire_radius_tiles": 15, "chase_speed": 120})), _nears_player("Sentry", 90)),
@@ -623,17 +629,35 @@ def test_picker_behaviour_contract(game: RealGame, name: str) -> None:
     row = ROWS[name]
     assert name not in REFUSED, f"Studio refuses to author it: {REFUSED.get(name)}"
     room = game.room(name)
-    game.enter(room)
-    row.play(game)
-    for phase, leave in (("leaving and coming back", game.revisit), ("a save and a load", lambda _r: game.save_load())):
-        leave(room)
-        try:
-            if row.loaded is not None and phase == "a save and a load":
-                row.loaded(game)
-            elif row.rule == KEPT:
-                assert row.kept is not None
-                row.kept(game)
-            else:
-                row.play(game)
-        except AssertionError as err:
-            raise AssertionError(f"after {phase}: {err}") from err
+    with _seeded(row.rng) as reseed:
+        reseed()
+        game.enter(room)
+        row.play(game)
+        for phase, leave in (("leaving and coming back", game.revisit), ("a save and a load", lambda _r: game.save_load())):
+            reseed()  # (before the room is built again: its behaviours pick from the seeded stream from the start)
+            leave(room)
+            try:
+                if row.loaded is not None and phase == "a save and a load":
+                    row.loaded(game)
+                elif row.rule == KEPT:
+                    assert row.kept is not None
+                    row.kept(game)
+                else:
+                    row.play(game)
+            except AssertionError as err:
+                raise AssertionError(f"after {phase}: {err}") from err
+
+
+@contextmanager
+def _seeded(stream: str | None) -> Iterator[Callable[[], None]]:
+    """``reseed()`` seeds the row's RNG stream with a fixed value, and the stream's state is put back after. Unseeded,
+    a random wander point that lands near where the walker started failed the Wander row about 1 run in 5 (#733)."""
+    if stream is None:
+        yield lambda: None
+        return
+    rng = get_rng(stream)
+    saved = rng.get_state()
+    try:
+        yield lambda: rng.seed(ROW_SEED)
+    finally:
+        rng.set_state(saved)
