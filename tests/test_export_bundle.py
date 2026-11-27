@@ -637,3 +637,41 @@ def test_a_new_2d_game_has_the_sounds_its_menus_play(tmp_path: Path, template: s
         (project / rel).unlink()
     ensure_starter_files(project)  # (what Mesh Studio does to a project it edits)
     assert not any((project / rel).exists() for rel in sounds), "an existing project is left as it is"
+
+
+@pytest.mark.integration  # (#737: writes folders in tmp_path)
+@pytest.mark.parametrize("command", ["build", "plan"])
+def test_export_outside_a_project_refuses_and_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], command: str
+) -> None:
+    """#737: `export build` run from a folder that isn't a Mesh project (a home folder) said OK and wrote an empty
+    dist/bundle there. It now refuses, names the folder, and leaves it as it was; a project still exports."""
+    import shutil
+
+    import mesh_cli
+
+    def tree() -> list[str]:
+        return sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*"))
+
+    home, game = tmp_path / "home", tmp_path / "game"
+    (home / "notes").mkdir(parents=True)
+    (home / "notes" / "todo.txt").write_text("mine", encoding="utf-8")
+    shutil.copytree(FIXTURES_GOOD, game)
+    before = tree()
+    report = ["--out", "plan.json"] if command == "plan" else []  # (relative: it would land in the refused folder)
+
+    monkeypatch.chdir(home)  # the issue: run from a home folder, --repo-root defaulting to "."
+    assert mesh_cli.main(["export", command, *report]) == 1
+    assert f"{home.resolve()} is not a Mesh project" in capsys.readouterr().out
+    monkeypatch.chdir(game)  # a non-project --repo-root, run from inside a project
+    assert mesh_cli.main(["export", command, "--repo-root", str(home), *report]) == 1
+    assert f"{home.resolve()} is not a Mesh project" in capsys.readouterr().out
+    if command == "plan":
+        assert mesh_cli.main(["export", "plan", "--repo-root", str(home), "--out", str(tmp_path / "plan.json")]) == 1
+    assert tree() == before, "nothing written in either folder"
+
+    monkeypatch.chdir(home)  # a project --repo-root, run from a non-project folder
+    assert mesh_cli.main(["export", command, "--repo-root", str(game), *report]) == 0
+    assert (game / "dist" / "bundle" / "bundle_manifest.json").is_file() == (command == "build")
+    assert (game / "plan.json").is_file() == (command == "plan")
+    assert sorted(p.relative_to(home).as_posix() for p in home.rglob("*")) == ["notes", "notes/todo.txt"]
