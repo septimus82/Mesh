@@ -239,6 +239,8 @@ def on_update(window: "GameWindow", delta_time: float) -> None:
         window.cutscene_controller.update(delta_time)
 
     window.scene_controller.update(delta_time)
+    if getattr(window, "cutscene_controller", None) is not None:
+        window.cutscene_controller.handle_dialogue_input()
     hd2d = getattr(window, "hd2d_renderer", None)
     if hd2d is not None:
         hd2d.update(delta_time)
