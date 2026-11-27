@@ -19,6 +19,7 @@ from typing import Any
 import pytest
 
 import engine.optional_arcade as optional_arcade
+from engine.action_runtime.registry import dispatch_action
 from tests._game_window_live import dispose_game_window
 from tests.test_quests_follow_project_switch_real_window import _project
 
@@ -78,7 +79,11 @@ def _assert_refused_while_a_room_is_built(window: Any, b: Path) -> None:
     _press(window, "F5")  # (the quicksave key: it has no editor gate)
     assert window.save_manager.save_game("quicksave") is False
     assert window.save_manager.load_game("quicksave") is False
-    assert not (b / "saves" / "quicksave.json").exists()
+    # (#723) the snapshot actions, invoked directly whichever hotkey system wins: nothing written, nothing loaded
+    assert dispatch_action(window, "quick_save") and dispatch_action(window, "quick_load")
+    assert window.switch_room_pending is True and _room_ids(window) == ["crate_a"]
+    assert not (b / "saves" / "quicksave.json").exists() and not (b / "saves" / "quick.json").exists()
+    assert not any("snapshot" in toast.lower() for toast in window.player_hud.active_toasts())  # (neither one ran)
     assert any("room hasn't loaded yet" in toast for toast in window.player_hud.active_toasts())
 
 

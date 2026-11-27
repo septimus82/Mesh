@@ -194,7 +194,19 @@ def _quickload_action(window: object) -> None:
             hud.enqueue_toast("No Save Found")
 
 
+def _waiting_for_switched_room(window: object, action: str) -> bool:
+    """SaveManager's #721 refusal for the snapshot actions too (#723): they write and read quick.json themselves."""
+    if getattr(window, "switch_room_pending", False) is not True:
+        return False
+    refuse = getattr(getattr(window, "save_manager", None), "waiting_for_switched_room", None)
+    if callable(refuse):
+        refuse(action)  # (it says why, as a save or load does)
+    return True
+
+
 def _quick_save_snapshot_action(window: object) -> None:
+    if _waiting_for_switched_room(window, "Saved"):
+        return
     hud = getattr(window, "player_hud", None)
 
     ok = savegame.save_quick_snapshot(window)
@@ -203,6 +215,8 @@ def _quick_save_snapshot_action(window: object) -> None:
 
 
 def _quick_load_snapshot_action(window: object) -> None:
+    if _waiting_for_switched_room(window, "Loaded"):
+        return
     hud = getattr(window, "player_hud", None)
 
     ok = savegame.load_quick_snapshot(window)
