@@ -60,9 +60,10 @@ RELEASE_REPORTS = frozenset({
     "verify_all_summary.json", "verify_step_budget_check.json", "verify_step_durations.json",
     "verify_step_speed_advisory.json", "verify_summary.json", "verify_summary.txt", "web_smoke.json", "worlds_index.json",
     "web_build/_web_build_stage.apk", "web_build/_web_build_stage.tar.gz", "web_build/favicon.png", "web_build/index.html",
+    "web_build/bundle_manifest.json",  # (#749: how the next web build knows the folder as its own)
     # the player-package gate's own records; the package's files are the ones its manifest lists
     "player_pkg/manifest.json", "player_pkg/package_check.json", "player_pkg/runtime_diagnostics_snapshot.json",
-    "player_pkg/runtime_smoke.json",
+    "player_pkg/runtime_smoke.json", "player_pkg/bundle_manifest.json",
 })
 PACKAGE = "player_pkg/"
 # Python's cache of a module, <dir>/__pycache__/<name>.<tag>.pyc for <dir>/<name>.py: the player-package gate's smoke run

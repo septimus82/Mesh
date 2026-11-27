@@ -92,7 +92,8 @@ def _output_guard(repo_root: Path) -> dict[str, Any]:
     """What the web output folder may never be (#749): the project or the build stage (or what holds them), nor a
     folder inside the stage, which the next build empties."""
     stage_root = repo_root / STAGE_DIR
-    return {"created_by": WEB_CREATOR, "protected": (repo_root, stage_root), "sources": (stage_root,)}
+    return {"created_by": WEB_CREATOR, "protected": (repo_root, stage_root), "sources": (stage_root,),
+            "legacy": ("index.html", "_web_build_stage.apk")}
 
 
 def _copy_built_output(*, source_dir: Path, target_dir: Path, repo_root: Path) -> None:

@@ -46,7 +46,7 @@ SHARDS = 2  # (the default split; a plan with another count says so in PLAN_SHAR
 # change that drops most of the suite turns CI red instead of green. Set just under the measured collection (13,979 at
 # 721bd909, both OSes); tests/test_test_lanes_contract.py keeps it within 5% of what the suite collects. A legitimate
 # test removal lowers it on purpose, in the same PR; growth past 5% raises it there too.
-DEFAULT_MIN_SELECTED = 13_600
+DEFAULT_MIN_SELECTED = 14_000
 SCHEME = "f13c-2"  # (bump when the assignment rule changes: records of another scheme are refused; 2: S1 5.9's re-pin)
 RECORD_SCHEMA = 1
 OK_OUTCOMES = ("passed", "skipped", "xfailed", "xpassed")  # (what lets an unsharded run pass too)

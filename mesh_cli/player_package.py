@@ -152,7 +152,7 @@ def package_player_bundle(
         return 0
 
     result = build_into(out_root, build, tag="[Mesh][PackagePlayer]", created_by="mesh package-player",
-                        protected=(repo_root, cwd),
+                        protected=(repo_root, cwd), legacy=("manifest.json", "package_check.json", "engine", "mesh_cli"),
                         sources=[repo_root / name for name in _PACKAGE_SOURCE_ROOTS])
     return 0 if result == 0 else 1
 

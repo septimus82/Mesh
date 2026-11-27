@@ -895,20 +895,38 @@ def build_bundle(
     return (0, manifest) if manifest is not None else (1, None)
 
 
+_LOCAL_SHARE = re.compile(r"^\\\\(?:localhost|127\.0\.0\.1|\.)\\([A-Za-z])\$(\\.*)?$", re.IGNORECASE)
+
+
+def _canonical(path: Path) -> Path:
+    """``path`` as one spelling per folder, for comparing: links resolved, case folded on Windows, and the Windows
+    spellings of a local folder (``\\\\?\\C:\\x``, ``\\\\?\\UNC\\localhost\\C$\\x``, ``\\\\localhost\\C$\\x``) made ``C:\\x``."""
+    text = str(path)
+    if os.name == "nt":
+        if text[:8].upper() == "\\\\?\\UNC\\":
+            text = "\\\\" + text[8:]
+        elif text[:4] in ("\\\\?\\", "\\\\.\\"):
+            text = text[4:]
+        share = _LOCAL_SHARE.match(text)
+        if share:
+            text = f"{share[1]}:{share[2] or chr(92)}"
+    return Path(os.path.normcase(os.path.realpath(text)))
+
+
 def unsafe_output(output_dir: Path, *, protected: Iterable[Path] = (), sources: Iterable[Path] = ()) -> str | None:
     """Why ``output_dir`` must never be built into (None when it may be): it is a drive root, or is or holds the user's
     home, the engine's own folder or one of ``protected``; or it lies inside one of ``sources`` (what is being packaged,
-    so the package would hold itself). Decided on resolved paths, before anything is touched."""
-    out = output_dir.resolve()
+    so the package would hold itself). Decided on canonical paths (``_canonical``), before anything is touched."""
+    out = _canonical(output_dir)
     if out.parent == out:
-        return f"{out} is a drive root"
+        return f"{output_dir} is a drive root"
     for root in (Path.home(), Path(__file__).resolve().parents[2], *protected):
-        root = root.resolve()
+        root = _canonical(root)
         if out == root or out in root.parents:
-            return f"{out} is or holds {root}"
+            return f"{output_dir} is or holds {root}"
     for source in sources:
-        if out.is_relative_to(source.resolve()):
-            return f"{out} is inside {source.resolve()}, which is being packaged"
+        if out.is_relative_to(_canonical(source)):
+            return f"{output_dir} is inside {_canonical(source)}, which is being packaged or built from"
     return None
 
 
@@ -929,12 +947,18 @@ def seal_bundle(folder: Path, created_by: str) -> None:
         raise ExportError(f"the new output is not complete ({'; '.join(problems[:3])})")
 
 
-def _not_replaceable(output_dir: Path, created_by: str | None) -> str | None:
+def _not_replaceable(output_dir: Path, created_by: str | None, legacy: tuple[str, ...] = ()) -> str | None:
     """Why an existing ``output_dir`` may not be replaced (None when absent, empty, or exactly an earlier bundle made by
-    ``created_by``; None is ``mesh export build``, whose manifests name no maker). Never a link or junction."""
+    ``created_by``; None is ``mesh export build``, whose manifests name no maker). Never a link or junction. A folder
+    with no manifest but every one of ``legacy`` (what an output of the command held before #749) gets its own
+    message: still refused, never deleted."""
     if not os.path.lexists(output_dir):
         return None
     problems = _bundle_problems(output_dir)
+    if (problems and legacy and not _is_link(output_dir) and not os.path.lexists(output_dir / MANIFEST_NAME)
+            and all(os.path.lexists(output_dir / name) for name in legacy)):
+        return (f"{output_dir} was made before #749 (no ownership record), so it is never replaced: delete "
+                f"{output_dir} once by hand, then rerun")
     if not problems and any(output_dir.iterdir()):
         try:
             maker = json.loads((output_dir / MANIFEST_NAME).read_text(encoding="utf-8")).get("created_by")
@@ -949,15 +973,16 @@ def _not_replaceable(output_dir: Path, created_by: str | None) -> str | None:
 
 
 def output_refusal(output_dir: Path, *, created_by: str | None = None, protected: Iterable[Path] = (),
-                   sources: Iterable[Path] = ()) -> str | None:
+                   sources: Iterable[Path] = (), legacy: tuple[str, ...] = ()) -> str | None:
     """Why ``build_into`` would refuse ``output_dir``, for a command to check before it starts any work (None when it
     would build there); ``build_into`` checks again."""
-    return unsafe_output(output_dir, protected=protected, sources=sources) or _not_replaceable(output_dir, created_by)
+    return (unsafe_output(output_dir, protected=protected, sources=sources)
+            or _not_replaceable(output_dir, created_by, legacy))
 
 
 def build_into(output_dir: Path, build: Callable[[Path], T], *, tag: str = "[export-bundle]",
                created_by: str | None = None, protected: Iterable[Path] = (),
-               sources: Iterable[Path] = ()) -> T | None:
+               sources: Iterable[Path] = (), legacy: tuple[str, ...] = ()) -> T | None:
     """Build into a working folder beside ``output_dir`` (``build`` is given it, and raises ExportError or OSError to
     stop) and only then swap it in for ``output_dir`` (F4, see the module docstring). ``output_dir`` is replaced only
     when it is absent, empty or exactly an earlier bundle of ``created_by`` (see ``seal_bundle``), never when it is a
@@ -981,7 +1006,7 @@ def build_into(output_dir: Path, build: Callable[[Path], T], *, tag: str = "[exp
     try:
         output_dir.parent.mkdir(parents=True, exist_ok=True)
         _recover(output_dir)
-        refusal = _not_replaceable(output_dir, created_by)
+        refusal = _not_replaceable(output_dir, created_by, legacy)
         if refusal:
             print(f"{tag} ERROR: {refusal}; nothing was changed. Choose another folder, or move those files out")
             return None

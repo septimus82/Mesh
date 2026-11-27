@@ -19,7 +19,8 @@ from mesh_cli.version_info import get_tool_version
 def handle_dist(args: argparse.Namespace) -> int:
     """Build the distribution beside its output folder and swap it in only when every step passed (#749). An existing
     output is replaced only when empty or an earlier distribution exactly as built; a folder that is, or holds, the
-    project, the home folder, a drive root or build-demo's ``dist/demo_content`` is refused before anything is touched."""
+    project, the home folder, a drive root or build-demo's ``dist/demo_content``, or lies inside that, is refused before
+    anything is touched."""
     engine_version = get_tool_version()
     dist_dir = Path(os.path.abspath(args.out or Path("dist") / f"mesh_dist_{engine_version}"))  # (a link is refused)
     print(f"[Mesh][Dist] Building distribution v{engine_version} to {dist_dir}...")
@@ -30,8 +31,9 @@ def handle_dist(args: argparse.Namespace) -> int:
         export_bundle.seal_bundle(stage, "mesh dist")
         return 0
 
-    if export_bundle.build_into(dist_dir, build, tag="[Mesh][Dist]", created_by="mesh dist",
-                                protected=(Path.cwd(), Path("dist/demo_content"))) is None:
+    demo = Path("dist/demo_content")  # (build-demo's own folder: it empties it, then dist moves it in)
+    if export_bundle.build_into(dist_dir, build, tag="[Mesh][Dist]", created_by="mesh dist", protected=(Path.cwd(), demo),
+                                sources=(demo,), legacy=("dist_manifest.json", "plan_schema.json")) is None:
         return 1
     print(f"\n[Mesh][Dist] Distribution complete: {dist_dir}")
     return 0

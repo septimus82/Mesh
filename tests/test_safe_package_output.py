@@ -105,7 +105,7 @@ def test_package_player_refuses_a_folder_it_did_not_make_and_touches_nothing(
     assert builds == []
 
 
-@pytest.mark.parametrize("case", ["link to it", "link inside it", "edited", "made by dist"])
+@pytest.mark.parametrize("case", ["link to it", "link inside it", "edited", "edited, same size", "made by dist"])
 def test_package_player_never_replaces_anything_but_its_own_package_as_built(
         case: str, project: Path, steps: list[str], builds: list[Path], tmp_path: Path) -> None:
     """Replacing needs both the marker naming package-player and exactly the files it wrote; a link is never followed."""
@@ -120,10 +120,44 @@ def test_package_player_never_replaces_anything_but_its_own_package_as_built(
         _link(out / "engine" / "photos", victim)
     elif case == "edited":
         (out / "engine" / "runtime.py").write_text("A = 'mine'\n", encoding="utf-8")
+    elif case == "edited, same size":
+        (out / "engine" / "runtime.py").write_text("A = 9\n", encoding="utf-8")  # (was "A = 1\n")
     before, started = _tree(tmp_path), len(builds)
     assert _package(target) == 1
     assert _tree(tmp_path) == before
     assert len(builds) == started
+
+
+def test_a_package_made_before_749_is_refused_with_its_own_message(project: Path, builds: list[Path], tmp_path: Path,
+                                                                    capsys: pytest.CaptureFixture[str]) -> None:
+    out = tmp_path / "out" / "pkg"
+    for rel in ("manifest.json", "package_check.json", "engine/runtime.py", "mesh_cli/__init__.py"):
+        (out / rel).parent.mkdir(parents=True, exist_ok=True)
+        (out / rel).write_text("old\n", encoding="utf-8")
+    before = _tree(tmp_path)
+    assert _package(out) == 1
+    assert _tree(tmp_path) == before and builds == []
+    assert f"made before #749 (no ownership record), so it is never replaced: delete {out} once by hand" \
+        in capsys.readouterr().out
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows path spellings")
+@pytest.mark.parametrize("where", ["project", "home", "inside sources", "UNC project"])
+def test_windows_spellings_of_a_protected_folder_are_refused(
+        where: str, project: Path, builds: list[Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setattr(Path, "home", lambda: home)
+    if where == "UNC project":  # (checked without building: an admin share may not be reachable)
+        drive, rest = os.path.splitdrive(str(project))
+        unc = Path(f"\\\\localhost\\{drive[0]}$" + rest)
+        assert eb.unsafe_output(unc, protected=(project,)) is not None
+        assert eb.unsafe_output(Path("\\\\?\\UNC\\localhost\\" + f"{drive[0]}$" + rest), protected=(project,))
+        return
+    target = {"project": project, "home": home, "inside sources": project / "engine" / "pkg"}[where]
+    before = _tree(tmp_path)
+    assert _package("\\\\?\\" + str(target)) == 1
+    assert _tree(tmp_path) == before and builds == []
 
 
 def test_package_player_replaces_its_own_earlier_package(project: Path, tmp_path: Path) -> None:
@@ -139,20 +173,22 @@ def test_package_player_replaces_its_own_earlier_package(project: Path, tmp_path
 
 def test_a_package_that_fails_midway_leaves_the_earlier_one_intact(project: Path, tmp_path: Path,
                                                                    monkeypatch: pytest.MonkeyPatch) -> None:
+    """The new package fails after its changed ``engine/runtime.py`` was written: the earlier one is byte-identical."""
     out = tmp_path / "out" / "pkg"
     assert _package(out) == 0
     before = _tree(out)
+    (project / "engine" / "runtime.py").write_text("A = 2\n", encoding="utf-8")
     real, calls = pp.shutil.copy2, [0]
 
     def failing(*args: object, **kwargs: object) -> object:
         calls[0] += 1
-        if calls[0] > 1:
+        if calls[0] > 2:  # (engine/__init__.py, engine/runtime.py copied; mesh_cli/__init__.py fails)
             raise OSError("disk full (injected)")
         return real(*args, **kwargs)  # type: ignore[arg-type]
 
     monkeypatch.setattr(pp.shutil, "copy2", failing)
     assert _package(out) == 1
-    assert calls[0] == 2
+    assert calls[0] == 3
     assert _tree(out) == before
     assert sorted(p.name for p in out.parent.iterdir()) == ["pkg"]
 
@@ -178,14 +214,15 @@ def _dist(out: str | Path, world: str = "worlds/main.json") -> int:
 
 
 @pytest.mark.parametrize("where", ["project", "dot", "ancestor", "unrelated", "home", "traversal to home",
-                                   "demo content"])
+                                   "demo content", "inside demo content"])
 def test_dist_refuses_a_folder_it_did_not_make_and_touches_nothing(
         where: str, project: Path, steps: list[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setattr(Path, "home", lambda: home)
     out = {"project": project, "dot": ".", "ancestor": tmp_path / "work", "unrelated": _unrelated(tmp_path),
-           "home": home, "traversal to home": os.path.join("..", "..", "home"), "demo content": project / "dist"}[where]
+           "home": home, "traversal to home": os.path.join("..", "..", "home"), "demo content": project / "dist",
+           "inside demo content": project / "dist" / "demo_content" / "out"}[where]
     before = _tree(tmp_path)
     assert _dist(out) == 1
     assert _tree(tmp_path) == before
@@ -206,7 +243,13 @@ def test_a_dist_that_fails_midway_leaves_the_earlier_one_intact(project: Path, s
     out = tmp_path / "out" / "dist"
     assert _dist(out) == 0
     before = _tree(out)
-    monkeypatch.setattr(dist_command.build_demo_command, "handle_build_demo", lambda a: 1)
+    (project / "dist" / "demo_content").mkdir(parents=True)
+    (project / "dist" / "demo_content" / "build_manifest.json").write_text("v2\n", encoding="utf-8")
+
+    def failing_snapshot(a: object) -> None:  # (step 4: demo_content has already been moved into the new build)
+        raise SystemExit(1)
+
+    monkeypatch.setattr(dist_command.cli_snapshot_command, "cli_snapshot_command", failing_snapshot)
     assert _dist(out, world="worlds/other.json") == 1
     assert _tree(out) == before
     assert sorted(p.name for p in out.parent.iterdir()) == ["dist"]
@@ -281,7 +324,9 @@ def test_a_web_publish_that_fails_leaves_the_earlier_output_intact(project: Path
     before = _tree(out)
     web["page"] = "v2"
 
-    def failing(*args: object, **kwargs: object) -> object:
+    def failing(src: Path, dst: Path, **kwargs: object) -> object:  # (writes the changed page, then fails)
+        Path(dst).mkdir(parents=True, exist_ok=True)
+        (Path(dst) / "index.html").write_text("v2", encoding="utf-8")
         raise OSError("disk full (injected)")
 
     monkeypatch.setattr(build_web.shutil, "copytree", failing)
@@ -297,3 +342,25 @@ def test_a_manifest_path_inside_the_output_is_written_with_the_new_package(proje
         assert pp.package_player_bundle(out_dir=str(out), manifest_path=str(out / "manifest.json")) == 0
     assert '"mesh_cli package-player"' in (out / "manifest.json").read_text(encoding="utf-8")
     assert sorted(p.name for p in out.parent.iterdir()) == ["pkg"]
+
+
+def test_a_web_build_made_before_749_is_refused_with_its_own_message(
+        project: Path, web: dict[str, Any], tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    out = tmp_path / "site"
+    out.mkdir()
+    for name in ("index.html", "_web_build_stage.apk", "favicon.png"):
+        (out / name).write_text("old", encoding="utf-8")
+    before = _tree(tmp_path)
+    assert _web(out) == 1
+    assert _tree(tmp_path) == before and web["runs"] == 0
+    assert "made before #749 (no ownership record)" in capsys.readouterr().err
+
+
+def test_verify_all_steps_show_why_a_command_refused() -> None:
+    from types import SimpleNamespace
+
+    from mesh_cli.verify_steps.pipeline import _error_line
+
+    refused = SimpleNamespace(stdout="[Mesh][PackagePlayer] ERROR: x is or holds y; nothing was changed\n", stderr="")
+    assert _error_line(refused) == ": [Mesh][PackagePlayer] ERROR: x is or holds y; nothing was changed"
+    assert _error_line(SimpleNamespace(stdout="", stderr=None)) == ""
