@@ -123,8 +123,9 @@ class Combat(Behaviour):
                     return name
         return "<unnamed>"
 
-    def attack(self) -> bool:
-        """Attempt to perform an attack. Returns True if successful."""
+    def attack(self, toward: tuple[float, float] | None = None) -> bool:
+        """Attempt to perform an attack. Returns True if successful. ``toward``: the way to swing (EnemyAI's: at its
+        target); without it, the way the attacker faces."""
         if self._cooldown_timer > 0:
             return False
 
@@ -137,7 +138,7 @@ class Combat(Behaviour):
             request_animation_state(self.entity, self.attack_anim, priority=10, ttl=0.5)
 
         # Spawn hitbox
-        self._spawn_hitbox()
+        self._spawn_hitbox(toward)
 
         # Play sound
         if hasattr(self.window, "audio"):
@@ -153,9 +154,10 @@ class Combat(Behaviour):
 
         return True
 
-    def _spawn_hitbox(self) -> None:
+    def _spawn_hitbox(self, toward: tuple[float, float] | None = None) -> None:
         import math
 
+        from ..interaction import _facing_vector
         from ..inventory import load_item_database
 
         # Calculate damage - start with base damage
@@ -180,17 +182,18 @@ class Combat(Behaviour):
                         _log_swallow("COMB-001", "engine/behaviours/combat.py pass-only blanket swallow")
                         pass
 
-        # Calculate position based on facing direction
-        # Assuming entity has 'angle' or we use last movement direction
-        # For now, let's use the entity's angle if it exists, or default to right
-        angle_rad = math.radians(getattr(self.entity, "angle", 0.0))
-
-        # Better: Check if we have a velocity to determine direction
-        dx = getattr(self.entity, "change_x", 0.0)
-        dy = getattr(self.entity, "change_y", 0.0)
-
-        if abs(dx) > 0.1 or abs(dy) > 0.1:
-            angle_rad = math.atan2(dy, dx)
+        # The swing goes ``toward`` (an enemy's: at its target), else the way the attacker faces (up/down/left/right,
+        # kept by PlayerController / Animator / EnemyAI and read as interaction and the net authority read it), else
+        # its movement or angle (an entity that keeps no facing), else east. (#751: the player could only hit east.)
+        aim = toward if toward is not None and (toward[0] or toward[1]) else _facing_vector(self.entity)
+        if aim is not None:
+            angle_rad = math.atan2(aim[1], aim[0])
+        else:
+            angle_rad = math.radians(getattr(self.entity, "angle", 0.0))
+            dx = getattr(self.entity, "change_x", 0.0)
+            dy = getattr(self.entity, "change_y", 0.0)
+            if abs(dx) > 0.1 or abs(dy) > 0.1:
+                angle_rad = math.atan2(dy, dx)
 
         offset_x = math.cos(angle_rad) * self.range
         offset_y = math.sin(angle_rad) * self.range

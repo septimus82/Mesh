@@ -237,10 +237,7 @@ class EnemyAI(Behaviour):
         scene_controller = getattr(self.window, "scene_controller", None)
         if scene_controller:
             scene_controller.move_entity_with_collision(self.entity, move_x, move_y)
-        self._update_facing_from_vector(nx, ny)
-        if dx != 0 or dy != 0:
-            angle = math.degrees(math.atan2(dy, dx))
-            self.entity.angle = angle
+        self._update_facing_from_vector(nx, ny)  # (facing, never the sprite's angle: an upright character spun upside down)
 
     def _update_attack(self, dt: float, dx: float, dy: float, dist: float) -> None:  # noqa: ARG002
         self.entity.change_x = 0
@@ -280,11 +277,13 @@ class EnemyAI(Behaviour):
             except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
                 _log_swallow("ENAI-002", "engine/behaviours/enemy_ai.py blanket swallow", once=True)
                 self._log_exception_once("request_state_override", exc)
+        target = self._target  # (swing at it, wherever it now stands: #751)
+        toward = None if target is None else (target.center_x - self.entity.center_x, target.center_y - self.entity.center_y)
         behaviours = getattr(self.entity, "mesh_behaviours_runtime", [])
         for behaviour in behaviours:
             if hasattr(behaviour, "attack"):
                 try:
-                    behaviour.attack()
+                    behaviour.attack(toward=toward)
                 except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
                     _log_swallow("ENAI-003", "engine/behaviours/enemy_ai.py blanket swallow", once=True)
                     self._log_exception_once("combat_attack", exc)
