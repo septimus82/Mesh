@@ -356,13 +356,13 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     controller._load_tilemap_layers(scene, scene_dir)
 
     total_spawned = 0
-    from engine.scene_entity_gating import filter_entities_by_flags  # noqa: PLC0415
+    from engine.scene_entity_gating import filter_entities_by_flags, is_player_entity_payload  # noqa: PLC0415
 
     getter = getattr(controller.window, "get_flag", None)
     entities_payload = filter_entities_by_flags(scene.get("entities", []), get_flag=getter if callable(getter) else None)
     gone = room_memory.removed_ids(controller.window, controller.room_path)  # collected or defeated earlier
     entities_payload = [e for e in entities_payload
-                        if not (isinstance(e, dict) and e.get("id") in gone and not room_memory.is_player(e))]  # (#750)
+                        if not (isinstance(e, dict) and e.get("id") in gone and not is_player_entity_payload(e))]  # (#750)
     controller._room_spawned_ids = room_memory.spawned_ids(entities_payload)
     controller._room_session = room_memory.session(controller.window)  # (what it records belongs to this game)
     all_entities = scene.get("entities")  # (all of them: an id shared with a gated or removed object still is)

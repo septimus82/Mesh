@@ -14,12 +14,16 @@ def _normalize_flag_list(value: Any) -> list[str]:
 
 
 def is_player_entity_payload(entity: Any) -> bool:
+    """Whether a room's object (its authored payload) is the player: tagged ``player`` (any case, as the game finds
+    its player), the shared player's prefab (a Studio room's thin ``{"id", "x", "y", "prefab_id": "player"}``), or a
+    PlayerController. Flags never gate it, and room memory never remembers it as removed (#750)."""
     if not isinstance(entity, dict):
         return False
-    if entity.get("tag") == "player":
+    tag = entity.get("tag")
+    if isinstance(tag, str) and tag.strip().lower() == "player":
         return True
     tags = entity.get("tags")
-    if isinstance(tags, list) and any(isinstance(t, str) and t.strip() == "player" for t in tags):
+    if isinstance(tags, list) and any(isinstance(t, str) and t.strip().lower() == "player" for t in tags):
         return True
     if entity.get("prefab_id") == "player":
         return True

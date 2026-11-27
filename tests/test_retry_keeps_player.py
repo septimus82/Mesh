@@ -11,7 +11,8 @@ Checked with a real hidden GameWindow and a combat room like ``scenes/game1a_com
 with Health, two enemies): the player dies through its Health, SPACE goes through the window's own key dispatch and
 tick. What retry restores: the room as authored (the player at its authored place with its authored HP, game over
 cleared), except what room memory keeps: an enemy defeated before the death stays defeated (room memory's design since
-it exists; only the player is exempt).
+it exists; only the player is exempt). The same with the shared player (Project.player) in a room Studio made, whose
+file has only a thin ``{"id", "x", "y", "prefab_id": "player"}`` for it.
 """
 
 from __future__ import annotations
@@ -25,12 +26,12 @@ import pytest
 
 import engine.optional_arcade as optional_arcade
 from engine.scene_runtime import room_memory
-from tests._real_game import HALL, PIC, RealGame, new_project, real_game
+from tests._real_game import HALL, PIC, RealGame, author, new_project, place, real_game
 
 pytestmark = [pytest.mark.integration,  # (a generated project in a temporary folder; one hidden game window)
               pytest.mark.skipif(not optional_arcade.has_arcade(), reason="needs real arcade (a hidden window)")]
 
-ARENA = "Arena"
+ARENA, COMMONS = "Arena", "Commons"  # its own player / the shared player (Studio's way)
 PLAYER = "arena_player"
 HOME = (96.0, 180.0)  # where the Arena has its player
 
@@ -57,6 +58,15 @@ def running(tmp_path_factory: pytest.TempPathFactory) -> Iterator[RealGame]:
     path = Path(project.root) / project.path(key)  # (its own player in place of the shared one: written as a file)
     scene = json.loads(path.read_text(encoding="utf-8"))
     path.write_text(json.dumps({**scene, "entities": _arena_entities()}, indent=2), encoding="utf-8")
+    commons = project.add_room(COMMONS)
+    (shared,) = project.shared_players(commons)
+    health = {"op": "set_behaviour_param", "entity_id": shared, "behaviour": "Health"}
+    author(project, commons, [{"op": "add_behaviour", "entity_id": shared, "behaviour": "Health"},
+                              {**health, "param": "max_hp", "value": 12}, {**health, "param": "hp", "value": 12}])
+    author(project, commons, place("Wolf", 300, 200, ("Health", {"max_hp": 5, "hp": 5})))
+    thin = next(e for e in json.loads((Path(project.root) / project.path(commons)).read_text(encoding="utf-8"))["entities"]
+                if e.get("id") == shared)
+    assert set(thin) <= {"id", "x", "y", "elevation", "prefab_id"} and thin["prefab_id"] == "player"  # (as Studio stores it)
     launch = base / "elsewhere"
     launch.mkdir()
     with real_game(project, launch) as started:
@@ -82,9 +92,9 @@ def _removed(g: RealGame) -> set[str]:
     return room_memory.removed_ids(g.window, _arena(g))
 
 
-def _die(g: RealGame) -> None:
+def _die(g: RealGame, enemy: str = "Enemy A") -> None:
     """An enemy is defeated, then the player dies: both through their Health, as a hit does."""
-    g.behaviour("Enemy A", "Health").apply_damage(100, source_entity="Player")
+    g.behaviour(enemy, "Health").apply_damage(100, source_entity="Player")
     g.behaviour("Player", "Health").apply_damage(100, source_entity="Enemy B")
     g.frames(3)
     assert g.player() is None and g.window.game_over is True and g.window.game_over_screen.visible is True
@@ -95,16 +105,16 @@ def _retry(g: RealGame) -> None:
     g.frames(3)
 
 
-def _assert_playable(g: RealGame) -> None:
+def _assert_playable(g: RealGame, home: tuple[float, float] = HOME, hp: float = 20) -> None:
     player = g.player()
     assert player is not None, "the room came back without the player"
-    assert (player.center_x, player.center_y) == HOME
-    health = g.behaviour("Player", "Health")
-    assert (health.hp, health.max_hp, health._dead) == (20, 20, False)
+    assert (player.center_x, player.center_y) == home
+    health = next(b for b in player.mesh_behaviours_runtime if type(b).__name__ == "Health")
+    assert (health.hp, health.max_hp, health._dead) == (hp, hp, False)
     window = g.window
     assert window.game_over is False and window.game_over_screen.visible is False and window.paused is False
     g.key("D", 10)
-    assert player.center_x > HOME[0], "the player doesn't move on input"
+    assert player.center_x > home[0], "the player doesn't move on input"
 
 
 def test_retry_after_death_brings_the_player_back(game: RealGame) -> None:
@@ -164,3 +174,21 @@ def test_a_player_id_in_this_games_room_memory_is_ignored_on_entry(game: RealGam
     game.enter(game.room(ARENA))
     assert game.named("Enemy A") is None
     _assert_playable(game)
+
+
+def test_retry_brings_back_the_shared_player_of_a_studio_room(game: RealGame) -> None:
+    room = game.room(COMMONS)
+    game.enter(room)
+    (shared,) = game.project.shared_players(room)
+    file = Path(game.project.root) / game.path(room)
+    thin = next(e for e in json.loads(file.read_text(encoding="utf-8"))["entities"] if e["id"] == shared)
+    home = (float(thin["x"]), float(thin["y"]))
+    wolf = game.named("Wolf").mesh_entity_data["id"]
+    _die(game, "Wolf")
+    _retry(game)
+    _assert_playable(game, home, hp=12)
+    assert game.named("Wolf") is None
+    assert room_memory.removed_ids(game.window, room_memory.room_key(game.path(room))) == {wolf}  # (never the player)
+    game.save_load()
+    player = game.player()
+    assert player is not None and player.mesh_entity_data["id"] == shared and game.named("Wolf") is None

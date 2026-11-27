@@ -8,7 +8,7 @@ What persists: the authored objects (those with an ``id``) that were in the room
 were removed during play (collected, destroyed, defeated). They are recorded per room in the game
 state's variables (``room_memory``), so saves carry them with everything else, and they are left out
 when the room loads again. A new game (a new game state) starts with every room as authored. The player is never one of
-them, though it leaves the room's sprite lists when it dies (#750: ``is_player``).
+them, though it leaves the room's sprite lists when it dies (#750: ``engine.scene_entity_gating.is_player_entity_payload``).
 
 What does not: objects spawned at runtime (projectiles, effects), positions of things that move, and
 anything a flag already controls (flags persist on their own). (A defeated enemy's drop the inventory refused is a
@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Any
 
 from engine.log_utils import get_logger
+from engine.scene_entity_gating import is_player_entity_payload
 
 logger = get_logger(__name__)
 
@@ -66,23 +67,11 @@ def spawned_ids(entities: list[Any]) -> set[str]:
     return {str(e["id"]) for e in entities if isinstance(e, dict) and isinstance(e.get("id"), str) and e["id"]}
 
 
-def is_player(entity: Any) -> bool:
-    """Whether a room's object is the player (tagged ``player``, the shared player's prefab, or a PlayerController).
-
-    The player is never remembered as removed (#750): it dies and comes back on retry, it isn't a room's defeated
-    content. Saves that recorded it anyway (before #750) still load with it: reads ignore its id too."""
-    if not isinstance(entity, dict):
-        return False
-    tag = entity.get("tag")
-    if (isinstance(tag, str) and tag.strip().lower() == "player") or entity.get("prefab_id") == "player":
-        return True
-    behaviours = entity.get("behaviours")
-    return isinstance(behaviours, list) and any(
-        (b.get("type") if isinstance(b, dict) else b) == "PlayerController" for b in behaviours)
-
-
 def player_ids(entities: Any) -> set[str]:
-    return {str(e["id"]) for e in entities or [] if is_player(e) and isinstance(e.get("id"), str) and e["id"]}
+    """The ids of a room's player objects: never remembered as removed (#750; a dead player leaves the sprite lists
+    too, and comes back on retry). Saves that recorded one anyway still load with it: reads ignore it too."""
+    return {str(e["id"]) for e in entities or []
+            if is_player_entity_payload(e) and isinstance(e.get("id"), str) and e["id"]}
 
 
 def is_save_slot(window: Any, path: str) -> bool:
