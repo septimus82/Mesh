@@ -267,6 +267,27 @@ class TestValidateQuestDefinition:
         errors = validate_quest_definition(quest)
         assert any(e.code == "reward.inc_counters.value.type" for e in errors)
 
+    @pytest.mark.parametrize("field", ["gold", "xp"])
+    def test_reward_shortcut_must_be_non_negative(self, field):
+        quest = {
+            "id": "quest",
+            "title": "Quest",
+            "stages": [{"id": "s1", "title": "S1"}],
+            "reward": {field: -1},
+        }
+        errors = validate_quest_definition(quest)
+        assert any(e.code == f"reward.{field}.negative" for e in errors)
+
+    def test_reward_unknown_key_is_rejected(self):
+        quest = {
+            "id": "quest",
+            "title": "Quest",
+            "stages": [{"id": "s1", "title": "S1"}],
+            "reward": {"add_items": {"coin": 50}},
+        }
+        errors = validate_quest_definition(quest)
+        assert any(e.code == "reward.key.unknown" for e in errors)
+
     def test_requires_flags_not_array(self):
         """Non-array requires_flags produces error."""
         quest = {

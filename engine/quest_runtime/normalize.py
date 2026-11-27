@@ -170,5 +170,10 @@ def normalize_reward(data: Any) -> dict[str, Any]:
             inc_counters[name] = float(value)
         except (TypeError, ValueError):
             continue
-    return {"set_flags": set_flags, "inc_counters": inc_counters}
+    reward = {"set_flags": set_flags, "inc_counters": inc_counters}
+    for key in ("gold", "xp"):
+        value = data.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            reward[key] = float(value)
+    return reward
 
