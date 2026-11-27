@@ -382,6 +382,9 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     # Build deterministic per-scene entity index once per load.
     # Use the same iteration order as legacy lookup paths (layer order).
     controller.entities.apply_pending_ops(controller, stage="load")
+    from engine.behaviours.drop_table import lay_remembered_loot  # noqa: PLC0415
+
+    lay_remembered_loot(controller)  # what defeated enemies left on the ground (#627)
     health = _player_health(controller) if carried_hp is not None else None
     if health is not None and carried_hp is not None:  # (before a loaded save's states: those win)
         health.hp = min(carried_hp, float(health.max_hp))
