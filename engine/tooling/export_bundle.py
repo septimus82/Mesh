@@ -106,6 +106,11 @@ def is_project(root: Path) -> bool:
     return (root / "config.json").is_file() and (root / "packs").is_dir() and not (root / "engine").is_dir()
 
 
+def is_mesh_root(root: Path) -> bool:
+    """Anything Mesh can export (#737): every Mesh root has a config.json (a project, an export, the engine's own)."""
+    return (root / "config.json").is_file()
+
+
 def _runtime_dirs(repo_root: Path) -> list[tuple[str, Path]]:
     """(name in the bundle, folder): the engine's own runtime folders, or for a project the installed engine package."""
     if is_project(repo_root):
@@ -423,7 +428,7 @@ def compute_export_plan(
         ExportPlan with files to include and any issues
     """
     plan = ExportPlan()
-    if not (repo_root / "config.json").is_file():  # (every Mesh root has one: a project, an export, the engine's own)
+    if not is_mesh_root(repo_root):
         plan.errors.append(f"{repo_root} is not a Mesh project (no config.json); run this from your project's folder "
                            f"or pass --repo-root <project folder>")
         return plan

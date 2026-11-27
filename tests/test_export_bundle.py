@@ -650,17 +650,28 @@ def test_export_outside_a_project_refuses_and_writes_nothing(
 
     import mesh_cli
 
-    home = tmp_path / "home"
+    def tree() -> list[str]:
+        return sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*"))
+
+    home, game = tmp_path / "home", tmp_path / "game"
     (home / "notes").mkdir(parents=True)
     (home / "notes" / "todo.txt").write_text("mine", encoding="utf-8")
-    before = sorted(p.relative_to(home).as_posix() for p in home.rglob("*"))
-    monkeypatch.chdir(home)
-    assert mesh_cli.main(["export", command]) == 1
-    assert f"{Path('.').resolve()} is not a Mesh project" in capsys.readouterr().out
-    assert sorted(p.relative_to(home).as_posix() for p in home.rglob("*")) == before
-
-    game = tmp_path / "game"
     shutil.copytree(FIXTURES_GOOD, game)
-    monkeypatch.chdir(game)
-    assert mesh_cli.main(["export", command]) == 0
+    before = tree()
+    report = ["--out", "plan.json"] if command == "plan" else []  # (relative: it would land in the refused folder)
+
+    monkeypatch.chdir(home)  # the issue: run from a home folder, --repo-root defaulting to "."
+    assert mesh_cli.main(["export", command, *report]) == 1
+    assert f"{home.resolve()} is not a Mesh project" in capsys.readouterr().out
+    monkeypatch.chdir(game)  # a non-project --repo-root, run from inside a project
+    assert mesh_cli.main(["export", command, "--repo-root", str(home), *report]) == 1
+    assert f"{home.resolve()} is not a Mesh project" in capsys.readouterr().out
+    if command == "plan":
+        assert mesh_cli.main(["export", "plan", "--repo-root", str(home), "--out", str(tmp_path / "plan.json")]) == 1
+    assert tree() == before, "nothing written in either folder"
+
+    monkeypatch.chdir(home)  # a project --repo-root, run from a non-project folder
+    assert mesh_cli.main(["export", command, "--repo-root", str(game), *report]) == 0
     assert (game / "dist" / "bundle" / "bundle_manifest.json").is_file() == (command == "build")
+    assert (game / "plan.json").is_file() == (command == "plan")
+    assert sorted(p.relative_to(home).as_posix() for p in home.rglob("*")) == ["notes", "notes/todo.txt"]
