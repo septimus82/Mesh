@@ -14,6 +14,7 @@ from collections.abc import Iterator
 import pytest
 
 import engine.optional_arcade as optional_arcade
+from engine.interaction import _facing_vector
 from tests._real_game import RealGame, author, batch, new_project, place, real_game
 
 pytestmark = [
@@ -72,7 +73,9 @@ def test_the_player_hits_the_way_it_last_walked_while_standing_still(game: RealG
         dummy = game.named(name)
         dummy.center_x, dummy.center_y = x + side * fx * GAP, y + side * fy * GAP
     game.frames(1)
+    hero.change_x, hero.change_y = -fx * 5.0, -fy * 5.0  # (a leftover velocity the other way: the facing decides)
     game.key("SPACE", 1)
+    hero.change_x = hero.change_y = 0.0
     game.frames(15)  # (the swing's hitbox lives 0.2 s)
     assert _hp(game, "Ahead") < 50.0, f"facing {way}: the dummy {way} of the player is hit"
     assert _hp(game, "Behind") == 50.0, f"facing {way}: the dummy behind is not"
@@ -92,7 +95,8 @@ def test_an_enemy_swings_at_the_player_wherever_it_stands(game: RealGame) -> Non
     hero.center_x, hero.center_y = wolf.center_x - GAP, wolf.center_y
     game.frames(30)  # (past its cooldown: it swings again, standing its ground)
     assert _hp(game, "Player") < east, "hit while west of the wolf"
-
+    assert game.behaviour("Wolf", "EnemyAI")._facing == "left", "and it turns to face the way it swings"
+    assert _facing_vector(wolf) == (-1.0, 0.0), "the facing the sprite shows (and Combat reads)"
 
 
 def test_a_chasing_enemy_stays_upright_and_still_hits(game: RealGame) -> None:

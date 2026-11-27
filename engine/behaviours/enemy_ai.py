@@ -279,6 +279,8 @@ class EnemyAI(Behaviour):
                 self._log_exception_once("request_state_override", exc)
         target = self._target  # (swing at it, wherever it now stands: #751)
         toward = None if target is None else (target.center_x - self.entity.center_x, target.center_y - self.entity.center_y)
+        if toward is not None and (toward[0] or toward[1]):
+            self._update_facing_from_vector(*toward)  # (and shown facing it: a swing west faces west)
         behaviours = getattr(self.entity, "mesh_behaviours_runtime", [])
         for behaviour in behaviours:
             if hasattr(behaviour, "attack"):
