@@ -98,6 +98,17 @@ def test_a_one_line_cutscene_dialogue_closes_on_one_press(game: RealGame) -> Non
     _finished_cleanly(game)
 
 
+def test_holding_the_key_steps_one_line_per_press(game: RealGame) -> None:
+    _play(game, ["Line one.", "Line two.", "Line three."])
+    game.key("E", 30)
+    assert _text(game) == "Line two.", "a held key is one press, not one per frame"
+    game.key("E", 30)
+    assert _text(game) == "Line three."
+    game.key("E", 30)  # (the closing press, held: still not a press to the Elder)
+    game.frames(3)
+    _finished_cleanly(game)
+
+
 def test_a_press_on_the_frame_the_box_opens_does_not_skip_its_first_line(game: RealGame) -> None:
     cc = game.window.cutscene_controller
     cc.register_cutscenes([{"id": "mash", "steps": [{"type": "start_dialogue", "lines": [{"text": "First."}, {"text": "Second."}]},
