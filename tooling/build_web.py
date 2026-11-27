@@ -1,15 +1,21 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
 import time
 import tomllib
 from pathlib import Path
+from typing import Any
 
 from engine.diagnostics import clear_diagnostics, diagnostics_to_json, get_diagnostics
 from engine.diagnostics import error as diag_error
+from engine.tooling.export_bundle import build_into, output_refusal, seal_bundle
+
+STAGE_DIR = Path("artifacts") / "_web_build_stage"
+WEB_CREATOR = "mesh build-web"
 
 
 def _read_pygbag_toml(path: Path) -> dict:
@@ -82,22 +88,27 @@ def _copy_stage_tree(*, repo_root: Path, stage_root: Path, entrypoint: str, conf
             shutil.copy2(source, target)
 
 
-def _copy_built_output(*, source_dir: Path, target_dir: Path) -> None:
+def _output_guard(repo_root: Path) -> dict[str, Any]:
+    """What the web output folder may never be (#749): the project or the build stage (or what holds them), nor a
+    folder inside the stage, which the next build empties."""
+    stage_root = repo_root / STAGE_DIR
+    return {"created_by": WEB_CREATOR, "protected": (repo_root, stage_root), "sources": (stage_root,)}
+
+
+def _copy_built_output(*, source_dir: Path, target_dir: Path, repo_root: Path) -> None:
+    """Publish the built web output to ``target_dir``: copied beside it, swapped in once complete (#749). An existing
+    ``target_dir`` is replaced only when empty or an earlier web build exactly as published; raises OSError otherwise
+    (nothing changed)."""
     if not source_dir.exists():
         raise FileNotFoundError(f"expected staged web output not found: {source_dir.as_posix()}")
-    last_error: OSError | None = None
-    for _attempt in range(5):
-        try:
-            if target_dir.exists():
-                shutil.rmtree(target_dir)
-            target_dir.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(source_dir, target_dir)
-            return
-        except OSError as exc:
-            last_error = exc
-            time.sleep(0.5)
-    if last_error is not None:
-        raise last_error
+
+    def build(stage: Path) -> int:
+        shutil.copytree(source_dir, stage, dirs_exist_ok=True)
+        seal_bundle(stage, WEB_CREATOR)
+        return 0
+
+    if build_into(target_dir, build, tag="[Mesh][Web]", **_output_guard(repo_root)) is None:
+        raise OSError(f"the web build was not published to {target_dir} (see above)")
 
 
 def _staged_output_dir(*, stage_root: Path, config: dict) -> Path:
@@ -193,8 +204,15 @@ def main(argv: list[str] | None = None) -> int:
     if output_dir:
         print(f"[Mesh][Web] Output directory: {output_dir}")
 
+    target_dir_raw = str(getattr(args, "out_dir", "") or "").strip()
+    target_dir = Path(os.path.abspath(repo_root / (target_dir_raw or output_dir or "build/web")))  # (never resolved)
+    refusal = output_refusal(target_dir, **_output_guard(repo_root))
+    if refusal:
+        print(f"[Mesh][Web] ERROR: {refusal}; nothing was changed. Choose an output folder of its own", file=sys.stderr)
+        return 1
+
     entrypoint = str(args.entrypoint)
-    stage_root = repo_root / "artifacts" / "_web_build_stage"
+    stage_root = repo_root / STAGE_DIR
     try:
         _copy_stage_tree(repo_root=repo_root, stage_root=stage_root, entrypoint=entrypoint, config=config)
     except OSError as exc:
@@ -230,13 +248,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[Mesh][Web] pygbag returned {int(result.returncode)} but staged output passed web smoke; continuing")
 
     try:
-        target_dir_raw = str(getattr(args, "out_dir", "") or "").strip()
-        target_dir = Path(target_dir_raw) if target_dir_raw else repo_root / (output_dir or "build/web")
-        if not target_dir.is_absolute():
-            target_dir = repo_root / target_dir
         _copy_built_output(
             source_dir=staged_output_dir,
             target_dir=target_dir,
+            repo_root=repo_root,
         )
     except OSError as exc:
         _emit_tooling_failure_diagnostic(

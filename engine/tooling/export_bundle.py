@@ -52,10 +52,11 @@ import shutil
 import stat
 import sys
 import time
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from engine.tooling.asset_manifest import (
     audit_dependencies,
@@ -68,6 +69,7 @@ from engine.tooling.asset_manifest import (
 # --------------------------------------------------------------------------- #
 
 BUNDLE_MANIFEST_VERSION = 1
+T = TypeVar("T")
 
 # Runtime files to always include (relative to repo root)
 RUNTIME_INCLUDES: tuple[str, ...] = (
@@ -888,11 +890,88 @@ def build_bundle(
         return 1, None
 
     # The output folder: only ever an empty one or an earlier bundle, replaced once the new one is complete (F4)
+    manifest = build_into(output_dir, lambda stage: _stage(plan, repo_root, stage, deterministic=deterministic),
+                          protected=(repo_root,))
+    return (0, manifest) if manifest is not None else (1, None)
+
+
+def unsafe_output(output_dir: Path, *, protected: Iterable[Path] = (), sources: Iterable[Path] = ()) -> str | None:
+    """Why ``output_dir`` must never be built into (None when it may be): it is a drive root, or is or holds the user's
+    home, the engine's own folder or one of ``protected``; or it lies inside one of ``sources`` (what is being packaged,
+    so the package would hold itself). Decided on resolved paths, before anything is touched."""
+    out = output_dir.resolve()
+    if out.parent == out:
+        return f"{out} is a drive root"
+    for root in (Path.home(), Path(__file__).resolve().parents[2], *protected):
+        root = root.resolve()
+        if out == root or out in root.parents:
+            return f"{out} is or holds {root}"
+    for source in sources:
+        if out.is_relative_to(source.resolve()):
+            return f"{out} is inside {source.resolve()}, which is being packaged"
+    return None
+
+
+def seal_bundle(folder: Path, created_by: str) -> None:
+    """Write ``bundle_manifest.json`` for everything ``folder`` holds (bar the bytecode Python makes beside a ``.py``),
+    naming the command that made it: the mark by which ``build_into`` for that same command knows it later as an
+    earlier output it may replace. Raises ExportError when the folder isn't then exactly that bundle (a link in it)."""
+    files = sorted(p.relative_to(folder).as_posix() for p in folder.rglob("*") if p.is_file() and not _is_link(p))
+    sources: dict[str, dict[str, Any]] = {rel: {} for rel in files if rel.endswith(".py")}
+    entries = [{"path": rel, "size": (folder / rel).stat().st_size, "sha256": compute_sha256(folder / rel)}
+               for rel in files if rel != MANIFEST_NAME and not _generated(rel, sources)]
+    with (folder / MANIFEST_NAME).open("w", encoding="utf-8") as f:
+        json.dump({"version": BUNDLE_MANIFEST_VERSION, "created_by": created_by, "file_count": len(entries),
+                   "files": entries}, f, indent=2, sort_keys=True)
+        f.write("\n")
+    problems = _bundle_problems(folder, empty_ok=False)
+    if problems:
+        raise ExportError(f"the new output is not complete ({'; '.join(problems[:3])})")
+
+
+def _not_replaceable(output_dir: Path, created_by: str | None) -> str | None:
+    """Why an existing ``output_dir`` may not be replaced (None when absent, empty, or exactly an earlier bundle made by
+    ``created_by``; None is ``mesh export build``, whose manifests name no maker). Never a link or junction."""
+    if not os.path.lexists(output_dir):
+        return None
+    problems = _bundle_problems(output_dir)
+    if not problems and any(output_dir.iterdir()):
+        try:
+            maker = json.loads((output_dir / MANIFEST_NAME).read_text(encoding="utf-8")).get("created_by")
+        except (OSError, ValueError):
+            maker = "?"
+        if maker != created_by:
+            problems = [f"it was made by {maker or 'mesh export build'}, not {created_by or 'mesh export build'}"]
+    if not problems:
+        return None
+    return (f"{output_dir} is not empty and is not an earlier bundle as Mesh exported it with this command "
+            f"({len(problems)} problem(s), e.g. {'; '.join(problems[:3])})")
+
+
+def output_refusal(output_dir: Path, *, created_by: str | None = None, protected: Iterable[Path] = (),
+                   sources: Iterable[Path] = ()) -> str | None:
+    """Why ``build_into`` would refuse ``output_dir``, for a command to check before it starts any work (None when it
+    would build there); ``build_into`` checks again."""
+    return unsafe_output(output_dir, protected=protected, sources=sources) or _not_replaceable(output_dir, created_by)
+
+
+def build_into(output_dir: Path, build: Callable[[Path], T], *, tag: str = "[export-bundle]",
+               created_by: str | None = None, protected: Iterable[Path] = (),
+               sources: Iterable[Path] = ()) -> T | None:
+    """Build into a working folder beside ``output_dir`` (``build`` is given it, and raises ExportError or OSError to
+    stop) and only then swap it in for ``output_dir`` (F4, see the module docstring). ``output_dir`` is replaced only
+    when it is absent, empty or exactly an earlier bundle of ``created_by`` (see ``seal_bundle``), never when it is a
+    link or junction, and never when ``unsafe_output`` refuses it. Returns what
+    ``build`` returned, or None after printing why nothing was replaced."""
+    unsafe = unsafe_output(output_dir, protected=protected, sources=sources)
+    if unsafe:
+        print(f"{tag} ERROR: {unsafe}; nothing was changed. Choose an output folder of its own")
+        return None
     staging, backup = _staging_paths(output_dir)
     token = secrets.token_hex(16)
     journaled = False
 
-    def tidy() -> None:  # (this export's working folders, whatever they still hold of no value, and its journal)
+    def tidy() -> None:  # (this build's working folders, whatever they still hold of no value, and its journal)
         if _owned(staging, token):
             _remove_tree(staging)
         if _owned(backup, token) and not os.path.lexists(backup / INNER):
@@ -902,46 +981,43 @@ def build_bundle(
     try:
         output_dir.parent.mkdir(parents=True, exist_ok=True)
         _recover(output_dir)
-        if os.path.lexists(output_dir):
-            problems = _bundle_problems(output_dir)
-            if problems:
-                print(f"[export-bundle] ERROR: {output_dir} is not empty and is not an earlier bundle as Mesh exported "
-                      f"it ({len(problems)} problem(s), e.g. {'; '.join(problems[:3])}); nothing was changed. Choose "
-                      "another folder, or move those files out")
-                return 1, None
+        refusal = _not_replaceable(output_dir, created_by)
+        if refusal:
+            print(f"{tag} ERROR: {refusal}; nothing was changed. Choose another folder, or move those files out")
+            return None
         _write_journal(output_dir, token)
         journaled = True
         _make_wrapper(staging, token)
         (staging / INNER).mkdir()
     except (OSError, ExportError) as exc:
-        print(f"[export-bundle] ERROR: {exc}")
+        print(f"{tag} ERROR: {exc}")
         if journaled:
             try:
                 tidy()
             except OSError:
-                pass  # (the next export to this folder recovers it)
-        return 1, None
+                pass  # (the next build to this folder recovers it)
+        return None
     try:
-        manifest = _stage(plan, repo_root, staging / INNER, deterministic=deterministic)
+        result = build(staging / INNER)
         _publish(output_dir, token)
     except ExportKept as exc:
-        print(f"[export-bundle] ERROR: {exc}")
-        return 1, None
+        print(f"{tag} ERROR: {exc}")
+        return None
     except (OSError, ExportError) as exc:
-        print(f"[export-bundle] ERROR: {exc}")
+        print(f"{tag} ERROR: {exc}")
         try:
-            tidy()  # (the unfinished build; an emptied ~old: the earlier export is back in place)
+            tidy()  # (the unfinished build; an emptied ~old: the earlier output is back in place)
         except OSError as again:
-            print(f"[export-bundle] WARNING: the unfinished export in {staging} could not be deleted ({again}); the "
-                  "next export to this folder removes it")
-        return 1, None
-    except BaseException:  # (interrupted: the same tidying; the next export recovers anything left)
+            print(f"{tag} WARNING: the unfinished build in {staging} could not be deleted ({again}); the "
+                  "next build to this folder removes it")
+        return None
+    except BaseException:  # (interrupted: the same tidying; the next build recovers anything left)
         try:
             tidy()
         except OSError:
             pass
         raise
-    return 0, manifest
+    return result
 
 
 def _stage(plan: ExportPlan, repo_root: Path, staging: Path, *, deterministic: bool) -> BundleManifest:

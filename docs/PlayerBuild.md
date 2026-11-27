@@ -14,6 +14,17 @@ This writes:
 
 - `artifacts/player_pkg/manifest.json`
 - `artifacts/player_pkg/package_check.json`
+- `artifacts/player_pkg/bundle_manifest.json` (every file with its size and SHA-256: how a later run knows the folder as its own)
+
+### The output folder
+
+The package is built beside the output folder (in `.player_pkg~new`) and swapped in only when it is complete and its checks pass; a failed run leaves the earlier package as it was. `--out` is replaced only when it is absent, empty, or an earlier package exactly as package-player built it. Anything else is refused before anything is touched, with a non-zero exit:
+
+- a folder holding other files (including a package made before this check existed, or one whose files were edited: delete it by hand once)
+- a folder that is, or holds, the project or repository, your home folder, or a drive root (so `--out .` is refused)
+- a folder inside the packaged sources (`engine/`, `mesh_cli/`)
+
+A link or junction given as `--out` is refused, never followed, and a folder with a link anywhere inside it is never replaced. Each output names the command that made it, so one command never replaces another's output (or a `mesh export build` bundle). `mesh dist --out` and the web build (`tooling/build_web.py --out-dir`) follow the same rules; dist also refuses a folder that is or holds `dist/demo_content`, and the web build one that is, holds or lies inside its stage `artifacts/_web_build_stage`.
 
 ### 2) Build + run packaged smoke (recommended)
 
