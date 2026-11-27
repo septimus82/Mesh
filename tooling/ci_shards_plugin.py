@@ -25,8 +25,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     group.addoption("--mesh-shard", default=None, help="Run shard K/N of the collected suite (whole modules).")
     group.addoption("--mesh-shard-record", default=None, help="Where to write the shard's record (JSON).")
     group.addoption("--mesh-shard-plan", default="default",
-                    help="Whose split (tooling/ci_shards.py PLANS): default (ci.yml's suite), gpu or gpu-linux "
-                         "(the gpu lane on Windows or Linux).")
+                    help="Whose split (tooling/ci_shards.py PLANS): default or default-windows (ci.yml's suite on "
+                         "Linux or Windows), gpu or gpu-linux (the gpu lane on Windows or Linux).")
 
 
 class _Shard:

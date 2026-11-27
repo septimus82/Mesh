@@ -203,6 +203,62 @@ def test_an_os_fan_in_refuses_a_missing_shard_and_a_suite_under_its_floor(
     assert f"fewer than the {floor + 1} it should" in out and "REFUSED: 1 problem(s)" in out
 
 
+def _plan_records(plan: str) -> list[dict[str, Any]]:
+    """Good records for COLLECTED split by ``plan`` at its own count (PLAN_SHARDS), as that plan's shard jobs write them."""
+    n = ci_shards.PLAN_SHARDS[plan]
+    records = []
+    for k in range(1, n + 1):
+        selected = [t for t in COLLECTED if shard_of(module_of(t), n, plan) == k]
+        records.append({"schema": 1, "complete": True, "shard": k, "shards": n, "commit": COMMIT, "plan": plan,
+                        "scheme_digest": scheme_digest(n, plan), "collected": list(COLLECTED),
+                        "collected_digest": ids_digest(COLLECTED), "collection_skips": list(SKIPS),
+                        "selected": selected, "outcomes": {t: "passed" for t in selected},
+                        "durations": {t: 0.5 for t in selected}, "exitstatus": 0})
+    return records
+
+
+@pytest.mark.parametrize("change", ["none", "missing 3/3", "failed shard", "under the floor", "as two shards",
+                                    "as the default plan"])
+def test_the_windows_fan_in_checks_three_shards_and_fails_closed(
+        tmp_path: Path, capsys: pytest.CaptureFixture[str], change: str) -> None:
+    # S1 5.9 follow-up: Windows' suite runs as three shards by its own plan; its ``tests`` fan-in runs ``check
+    # shard-records --plan default-windows --shards 3 --min-selected N``. A missing 3/3 (cancelled, its upload lost),
+    # a failed shard, a suite under the floor, or records checked as another split all turn it red.
+    records = _plan_records("default-windows")
+    assert {len(r["selected"]) > 0 for r in records} == {True}, "the example needs tests on all three shards"
+    floor, args = len(COLLECTED), ["--plan", "default-windows", "--shards", "3"]
+    if change == "missing 3/3":
+        records = records[:2]
+    elif change == "failed shard":
+        records[1]["outcomes"][records[1]["selected"][0]] = "failed"
+        records[1]["exitstatus"] = 1
+    elif change == "under the floor":
+        floor += 1
+    elif change == "as two shards":
+        args = ["--plan", "default-windows", "--shards", "2"]
+    elif change == "as the default plan":
+        args = ["--shards", "3"]
+    _write(tmp_path, records)
+    code = ci_shards.main(["check", str(tmp_path), *args, "--min-selected", str(floor), "--commit", COMMIT])
+    out = capsys.readouterr().out
+    assert code == (0 if change == "none" else 1), out
+    if change == "missing 3/3":
+        assert "FAILED  no record from shard(s) 3/3" in out
+    elif change == "failed shard":
+        assert "shard 2/3: pytest exited 1" in out and "didn't pass" in out
+
+
+def test_windows_own_plan_pins_real_modules_to_its_three_shards() -> None:
+    pins = ci_shards.DEFAULT_WINDOWS_PINNED
+    assert len(pins) == 30 and set(pins.values()) == {1, 2, 3} and ci_shards.PLAN_SHARDS["default-windows"] == 3
+    for module, shard in pins.items():
+        assert (ROOT / module).is_file(), f"{module} is pinned in default-windows but gone: re-measure and re-pin"
+        assert shard_of(module, 3, "default-windows") == shard
+    # Linux's split (the default plan, two shards) is untouched by it.
+    assert scheme_digest(2) == "4c825fd905d1b1bec2b5176af6713297789c73ac4e7408eb888ecefa65a88e91"
+    assert scheme_digest(3, "default-windows") == "09c4faad8abd21dae8318703f6557f0bfe7395a59a094e1e2758f81c9270cf58"
+
+
 @pytest.mark.parametrize("damage", ["truncated", "not an object"])
 def test_an_unreadable_record_is_refused_not_skipped(tmp_path: Path, damage: str) -> None:
     _write(tmp_path, _records())

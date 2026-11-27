@@ -10,7 +10,7 @@ The GitHub Actions workflow at `.github/workflows/ci.yml` runs on every push and
 Each matrix run executes:
 
 1. `python -m compileall -q engine mesh_cli tooling tests`
-2. `python -m pytest -q` (Windows uses `-p no:cacheprovider`; each OS runs it as two shards, whose records its fan-in checks the same way and holds to the suite's floor: see below)
+2. `python -m pytest -q` (Windows uses `-p no:cacheprovider`; Linux runs it as two shards and Windows as three, whose records each OS's fan-in checks the same way and holds to the suite's floor: see below)
 3. `python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact --reuse-evidence` (step budgets enforced)
 4. `python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed 123 --reuse-verify-all artifacts`: its release check reuses step 3's verify-all only when that run's evidence proves it passed on this exact clean commit with unchanged reports, and otherwise runs verify-all itself (F13-B, `docs/release_bundle.md`)
 5. `python -m mesh_cli bundle verify --zip artifacts/release_bundle.zip --strict`
@@ -27,24 +27,27 @@ Artifact names follow this pattern:
 
 Retention is 7 days.
 
-## Test Shards (F13-C; Linux since S1 5.9)
+## Test Shards (F13-C; Linux since S1 5.9; Windows in three since its follow-up)
 
-Each OS's full default suite (`not slow and not e2e`) runs as two jobs, `pytest (<os>, py3.11, shard 1/2)` and
-`shard 2/2`: Windows' since F13-C, Linux's since S1 5.9 (its single job had become CI's critical path). Both OSes split
-by the same plan (`default`) and are checked the same way, each by its own `tests` fan-in.
+Each OS's full default suite (`not slow and not e2e`) runs as shard jobs, `pytest (<os>, py3.11, shard K/N)`: Linux's
+as two (`1/2`, `2/2`, plan `default`; since S1 5.9, when its single job had become CI's critical path) and Windows' as
+three (`1/3` to `3/3`, plan `default-windows`; since S1 5.9's follow-up, when its two shards had become CI's slowest
+jobs). Each OS's plan has its own pins and count (`tooling/ci_shards.py` `PLANS`, `PLAN_SHARDS`), and each OS is checked
+the same way by its own `tests` fan-in, with that plan and count.
 
 - **Whole modules.** A shard runs whole test modules, so a module's fixtures and test order are as in a full run.
-  `tooling/ci_shards.py` decides which: the heaviest modules (`PINNED`, by measured duration) are pinned to balance the
-  two; every other module, present or new, goes to `sha256(path) % 2 + 1`, fixed whatever else changes.
+  `tooling/ci_shards.py` decides which: the heaviest modules (the plan's pins, by measured duration) are pinned to
+  balance the shards; every other module, present or new, goes to `sha256(path) % N + 1`, fixed whatever else changes.
 - **Separate processes.** Each shard is its own job (its own runner, checkout and Python): no `pytest-xdist`, nothing
   shared between them.
 - **Evidence.** Each shard collects the whole suite and keeps its own modules (`-p tooling.ci_shards_plugin
-  --mesh-shard K/2`), and writes a record (`artifacts/shards/shard-K.json`): the commit, the collected test ids and
+  --mesh-shard K/N`, with `--mesh-shard-plan default-windows` on Windows), and writes a record (`artifacts/shards/shard-K.json`): the commit, the collected test ids and
   their digest, the scheme's digest, the selected ids, every test's outcome and seconds, its subtests' outcome counts, the modules skipped at
   collection and pytest's exit status, with `complete: true` only once the session finished. Its JUnit report sits
   beside it. Both go up as `pytest-shard-K-<os>-py3.11`, whatever the job's result.
-- **The fan-in.** `tests (<os>, py3.11)` requires both of its OS's shard jobs (`tooling/ci_require_jobs.py`), downloads
-  their records and runs `python3 tooling/ci_shards.py check shard-records --commit <sha>`. It refuses a missing,
+- **The fan-in.** `tests (<os>, py3.11)` requires every one of its OS's shard jobs (`tooling/ci_require_jobs.py`),
+  downloads their records and runs `python3 tooling/ci_shards.py check shard-records --plan <plan> --shards <N>
+  --min-selected <floor> --commit <sha>`. It refuses a missing,
   duplicate, incomplete or failed shard; a record of another commit, collection, shard count or scheme, or one whose
   ids don't match its own digest; a test selected twice, run in both shards, run in neither or without an outcome; a
   test that didn't pass; and a JUnit report that is missing or disagrees with its record. Test ids that embed the
@@ -61,11 +64,11 @@ by the same plan (`default`) and are checked the same way, each by its own `test
 before keeping its own modules, so it runs in its shard on each OS, and under `CI=true` it fails rather than skips if
 the collection was ever narrowed.
 
-Run one shard locally the way CI does:
+Run one Windows shard locally the way CI does (the check needs all three records to pass):
 
 ```powershell
-python -m pytest -q -p no:cacheprovider -p tooling.ci_shards_plugin --mesh-shard 1/2 --mesh-shard-record artifacts/shards/shard-1.json --junitxml=artifacts/shards/junit-1.xml
-python tooling/ci_shards.py check artifacts/shards
+python -m pytest -q -p no:cacheprovider -p tooling.ci_shards_plugin --mesh-shard 1/3 --mesh-shard-plan default-windows --mesh-shard-record artifacts/shards/shard-1.json --junitxml=artifacts/shards/junit-1.xml
+python tooling/ci_shards.py check artifacts/shards --plan default-windows --shards 3
 ```
 
 ## Replay Suite (every PR and push)

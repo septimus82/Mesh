@@ -19,7 +19,7 @@ pytestmark = [pytest.mark.fast]
 
 REQUIRED = required_jobs("windows-latest", "3.11")
 WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "ci.yml"
-SHARD_JOBS = ["pytest (windows-latest, py3.11, shard 1/2)", "pytest (windows-latest, py3.11, shard 2/2)"]
+SHARD_JOBS = [f"pytest (windows-latest, py3.11, shard {k}/3)" for k in (1, 2, 3)]  # (S1 5.9 follow-up: three)
 LINUX_SHARD_JOBS = ["pytest (ubuntu-latest, py3.11, shard 1/2)", "pytest (ubuntu-latest, py3.11, shard 2/2)"]
 LINUX_REQUIRED = required_jobs("ubuntu-latest", "3.11")
 
@@ -44,8 +44,8 @@ ALL_OK = {part: "success" for part in PARTS}
 
 def test_the_required_jobs_are_this_os_s_pytest_verify_installed_and_acceptance() -> None:
     assert COMPONENTS == ("pytest", "verify", "installed", "acceptance")
-    # F13-C: Windows' pytest is two shard jobs, each required; Linux's too since S1 5.9.
-    assert SHARDED == {"windows-latest": 2, "ubuntu-latest": 2}
+    # F13-C: Windows' pytest is shard jobs, each required (three since S1 5.9's follow-up); Linux's two since S1 5.9.
+    assert SHARDED == {"windows-latest": 3, "ubuntu-latest": 2}
     assert REQUIRED == [*SHARD_JOBS, "verify (windows-latest, py3.11)",
                         "installed (windows-latest, py3.11)", "acceptance (windows-latest, py3.11)",
                         "replays (ubuntu-latest, py3.11)", "baseline-growth (ubuntu-latest, py3.11)"]
@@ -58,12 +58,14 @@ def test_the_required_jobs_are_this_os_s_pytest_verify_installed_and_acceptance(
 def test_the_shard_count_is_the_one_the_shards_use() -> None:
     from tooling import ci_shards
 
-    assert SHARDED["windows-latest"] == SHARDED["ubuntu-latest"] == ci_shards.SHARDS
+    # Each OS's count is its plan's: Windows' default-windows (3), Linux's default (2).
+    assert SHARDED == {"windows-latest": ci_shards.PLAN_SHARDS["default-windows"],
+                       "ubuntu-latest": ci_shards.PLAN_SHARDS["default"]} == {"windows-latest": 3, "ubuntu-latest": 2}
 
 
 def test_green_only_when_all_succeeded() -> None:
     ok, lines = verdict(_jobs(**ALL_OK), REQUIRED)
-    assert ok and len(lines) == 7
+    assert ok and len(lines) == 8
 
 
 @pytest.mark.parametrize("bad", ["failure", "cancelled", "skipped", None, "missing"])
@@ -177,21 +179,24 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     assert "tooling/ci_require_jobs.py --os \"${{ matrix.os }}\"" in tests_job
     assert "NEEDS_RESULTS: ${{ toJSON(needs.*.result) }}" in tests_job
     assert "actions: read" in tests_job
-    for block in (verify_job, installed_job, acceptance_job, tests_job):
+    for block in (verify_job, installed_job, acceptance_job):
         assert "os: [ubuntu-latest, windows-latest]" in block
     for block in (pytest_job, verify_job, installed_job, acceptance_job, tests_job):
         assert "fail-fast: false" in block
-    # F13-C, S1 5.9: pytest's matrix is each OS as the two shards required_jobs names, nothing else.
+    # F13-C, S1 5.9: pytest's matrix is each OS as the shards required_jobs names, nothing else.
     legs = re.findall(r"^          - \{ (.*) \}$", pytest_job, re.M)
     assert legs == ['os: ubuntu-latest, python: "3.11", shard: "1/2", shard_index: 1',
                     'os: ubuntu-latest, python: "3.11", shard: "2/2", shard_index: 2',
-                    'os: windows-latest, python: "3.11", shard: "1/2", shard_index: 1',
-                    'os: windows-latest, python: "3.11", shard: "2/2", shard_index: 2']
+                    'os: windows-latest, python: "3.11", shard: "1/3", shard_index: 1',
+                    'os: windows-latest, python: "3.11", shard: "2/3", shard_index: 2',
+                    'os: windows-latest, python: "3.11", shard: "3/3", shard_index: 3']
     windows_run = pytest_job[pytest_job.index("Run pytest (Windows"):pytest_job.index("Run pytest (Linux")]
     shard_args = ("-p tooling.ci_shards_plugin --mesh-shard ${{ matrix.shard }} --mesh-shard-record "
                   "artifacts/shards/shard-${{ matrix.shard_index }}.json --junitxml=artifacts/shards/junit-"
                   "${{ matrix.shard_index }}.xml")
-    assert f"python -m pytest -q -p no:cacheprovider {shard_args}\n" in windows_run
+    # Windows' shards split by Windows' own plan (S1 5.9 follow-up); Linux's by the default one (no plan flag).
+    windows_args = shard_args.replace("--mesh-shard-record", "--mesh-shard-plan default-windows --mesh-shard-record")
+    assert f"python -m pytest -q -p no:cacheprovider {windows_args}\n" in windows_run
     # The optional MCP SDK in the Linux job, so the real-FastMCP server build runs somewhere instead of skipping (#649).
     mcp = pytest_job[pytest_job.index("Install the optional MCP SDK (Linux)"):pytest_job.index("Compile Python sources")]
     assert "if: runner.os != 'Windows'" in mcp and 'python -m pip install -e ".[mcp]"' in mcp
@@ -215,8 +220,17 @@ def test_the_workflow_fans_every_job_into_the_tests_check() -> None:
     assert "pattern: pytest-shard-*-${{ matrix.os }}-py${{ matrix.python }}" in tests_job
     check_step = tests_job[tests_job.index("- name: The shards together ran the whole suite"):]
     assert "        if: always()" in check_step
-    assert f'python3 tooling/ci_shards.py check shard-records {floor}--commit "${{{{ github.sha }}}}"' in check_step
-    assert "--shards" not in check_step and "matrix.os ==" not in tests_job
+    assert ('python3 tooling/ci_shards.py check shard-records --plan ${{ matrix.plan }} --shards ${{ matrix.shards }} '
+            f'{floor}--commit "${{{{ github.sha }}}}"') in check_step
+    assert "matrix.os ==" not in tests_job
+    # One fan-in leg per OS, with that OS's plan and count, which are the ones its shard jobs ran and required_jobs names.
+    fanin_legs = re.findall(r"^          - \{ (.*) \}$", tests_job, re.M)
+    assert fanin_legs == ['os: ubuntu-latest, python: "3.11", plan: default, shards: 2',
+                          'os: windows-latest, python: "3.11", plan: default-windows, shards: 3']
+    for leg in fanin_legs:
+        os_name, plan, shards = leg.split(", ")[0][4:], leg.split("plan: ")[1].split(",")[0], int(leg[-1])
+        assert ci_shards.PLAN_SHARDS[plan] == SHARDED[os_name] == shards
+        assert sum(f"os: {os_name}," in pytest_leg for pytest_leg in legs) == shards
     # Neither component may be skipped by a condition of its own, or soften its result (job-level keys only; verify's
     # PR-comment steps may fail softly, as before the split). The one job-level condition is #422's duplicate gate,
     # which leaves a job out only when the duplicate check positively said so (tests/test_extended_dedup.py).
@@ -311,8 +325,9 @@ def test_a_transient_api_failure_is_read_again() -> None:
 
 
 def test_an_incomplete_list_is_read_again() -> None:
-    ok, _, sleeps, log = _fan_in(_read(ALL_OK, total=15), _read(ALL_OK))
-    assert ok and "incomplete list: 7 of 15 jobs" in log[0]
+    listed = len(_read(ALL_OK)[0])
+    ok, _, sleeps, log = _fan_in(_read(ALL_OK, total=listed + 7), _read(ALL_OK))
+    assert ok and f"incomplete list: {listed} of {listed + 7} jobs" in log[0]
 
 
 @pytest.mark.parametrize("persistent", ["api", "missing", "running", "stale"])
@@ -345,9 +360,9 @@ def test_successes_from_different_reads_are_never_combined() -> None:
 def test_an_older_success_never_hides_a_newer_failure() -> None:
     older = _read(ALL_OK, attempt=1)[0]
     newer = _read({**ALL_OK, "pytest": "failure"})[0]
-    ok, lines, _, _ = _fan_in((older + newer, 14))
-    assert not ok and f"FAILED  {SHARD_JOBS[0]}: failure" in lines and f"FAILED  {SHARD_JOBS[1]}: failure" in lines
-    ok, _, _, _ = _fan_in((newer + older, 14))
+    ok, lines, _, _ = _fan_in((older + newer, len(older + newer)))
+    assert not ok and all(f"FAILED  {job}: failure" in lines for job in SHARD_JOBS)
+    ok, _, _, _ = _fan_in((newer + older, len(older + newer)))
     assert not ok, "whatever the order GitHub lists them in"
 
 
