@@ -80,6 +80,79 @@ def test_the_servers_own_stall_is_never_held_against_a_session():
     assert backlog_fits(4.0 - 1 / wire.HZ)  # (Server.held counts what is beyond a tick)
 
 
+@pytest.mark.fast
+@pytest.mark.parametrize("stall", [4.0, 30.0, 3600.0])
+def test_a_stalls_credit_is_bounded_and_drains_away(stall: float):
+    """#727 review: a session quiet through a stall (one frame after it) cannot bank the credit. At once it may send at
+    most BURST + CREDIT, however long the stall; a few seconds on, no more than BURST, as ever. Nor do ten stalls in a
+    row, or an hour of a slow server's lateness (40% of each tick), add up to more."""
+    clock, held = [0.0], [0.0]
+    quiet = budget(clock)
+    quiet.held = lambda: held[0]
+    for _ in range(10 * wire.HZ):
+        clock[0] += 1 / wire.HZ
+        assert quiet.take()
+
+    def bounded() -> None:
+        """At once at most BURST + CREDIT; after three quiet seconds, at most BURST."""
+        assert quiet.tokens <= InputBudget.BURST + InputBudget.CREDIT, quiet.tokens
+        clock[0] += 3.0
+        burst = 0
+        while quiet.take():
+            burst += 1
+        assert burst <= InputBudget.BURST, burst
+        clock[0] += 10  # (a full bucket again)
+
+    clock[0] += stall
+    held[0] += stall - 1 / wire.HZ
+    assert quiet.take()
+    bounded()
+    for _ in range(10):  # ten 30 s stalls in a row, one frame after each
+        clock[0] += 30
+        held[0] += 30 - 1 / wire.HZ
+        assert quiet.take()
+    bounded()
+    for _ in range(360):  # an hour of a server late by 40% of each second, one frame every 10 s
+        clock[0] += 10
+        held[0] += 4
+        assert quiet.take()
+    bounded()
+
+
+@pytest.mark.fast
+def test_the_clock_never_bursts_a_stalls_missed_ticks(monkeypatch: pytest.MonkeyPatch):
+    """Server._next_tick on a fake clock: after a 2 s stall the next tick comes at once (the late one) and every tick
+    after it 1/HZ later, never a run of the missed ones; and the stall is counted in ``stalled`` once."""
+    import mesh_net.server
+
+    clock = [0.0]
+
+    class Loop:
+        def time(self) -> float:
+            return clock[0]
+
+    async def sleep(delay: float) -> None:
+        clock[0] += max(0.0, delay)
+
+    monkeypatch.setattr(mesh_net.server.asyncio, "sleep", sleep)
+    server, loop = Server(), Loop()
+
+    def tick() -> float:
+        before, step = clock[0], server._next_tick(loop)
+        with pytest.raises(StopIteration):
+            step.send(None)
+        return clock[0] - before
+
+    assert all(tick() == pytest.approx(1 / wire.HZ) for _ in range(10))
+    clock[0] += 2.0
+    tick()
+    counted = server.stalled
+    assert counted == pytest.approx(2.0 - 2 / wire.HZ)
+    waits = [tick() for _ in range(20)]
+    assert sum(w < 1e-9 for w in waits) <= 1 and waits[1:] == pytest.approx([1 / wire.HZ] * 19), waits
+    assert server.stalled == counted
+
+
 # --- over sockets: N6 Server and N7 WorldServer -----------------------------------------------------------------
 
 

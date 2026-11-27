@@ -41,7 +41,10 @@ class InputBudget:
     The server's own stalls are never held against a session (#727): ``held`` (``Server.held``) says how long the
     server's loop has been held up, and each second of it adds HZ tokens over BURST, the frames a client keeping to
     HZ sent meanwhile. Without it, a stall over BURST / HZ (a store commit slow to reach the disk) ended every session
-    at once. (A session's tokens over BURST are only ever spent, never cut back by a refill.)
+    at once. That credit is for the stall's backlog, which arrives at once, and nothing else: tokens over BURST drain
+    back to it at RATE (never refill), and a session never holds more than BURST + CREDIT (CREDIT: a client's 5 s
+    read timeout, wire.read, which ends an honest session in any longer stall). So a session quiet after a stall
+    cannot bank it, nor add up stalls or a slow server's lateness: a few seconds on, its burst is BURST again.
     """
 
     # (RATE and BURST are fixed from wire.HZ at import: HZ is implicit on both sides of the wire, so changing it
@@ -49,6 +52,7 @@ class InputBudget:
     RATE = 2 * wire.HZ  # tokens a second
     BURST = 3 * wire.HZ  # 3 s of a client's input: a 2 s stall's backlog (40) with room to spare
     START = 8
+    CREDIT = 5 * wire.HZ  # the most stall credit over BURST: 5 s of a client's input
 
     def __init__(self, held: Callable[[], float] = lambda: 0.0) -> None:
         self.clock = asyncio.get_running_loop().time
@@ -58,8 +62,12 @@ class InputBudget:
     def take(self) -> bool:
         """Spend a token on one frame; False when there is none (the session must end)."""
         now, held = self.clock(), self.held()
-        refill = min(max(self.BURST, self.tokens), self.tokens + (now - self.at) * self.RATE)
-        self.tokens = refill + (held - self.seen) * wire.HZ
+        elapsed = (now - self.at) * self.RATE
+        if self.tokens > self.BURST:  # (a stall's credit, left after its backlog: drains back to BURST)
+            refill = max(self.BURST, self.tokens - elapsed)
+        else:
+            refill = min(self.BURST, self.tokens + elapsed)
+        self.tokens = min(self.BURST + self.CREDIT, refill + (held - self.seen) * wire.HZ)
         self.at, self.seen = now, held
         if self.tokens < 1:
             return False
