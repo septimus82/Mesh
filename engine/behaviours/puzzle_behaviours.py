@@ -239,7 +239,7 @@ class DoorLock(Behaviour):
         _emit_puzzle_event(
             self.window,
             "door_unlocked",
-            {"door_id": getattr(self.entity, "id", "unknown")},
+            {"door_id": getattr(self.entity, "mesh_id", None) or getattr(self.entity, "id", "unknown")},
             source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
             source_behaviour="DoorLock",
         )
