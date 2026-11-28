@@ -7,7 +7,7 @@ def move_entity_with_collision(self, sprite, dx: float, dy: float, friction: flo
     import math
 
     import engine.scene_controller_core as scene_controller_module
-    from engine.physics_model import Aabb, axis_stop, depenetrate, fast_move_steps, first_step, keep_inside
+    from engine.physics_model import Aabb, axis_stop, depenetrate, fast_move_steps, first_step, keep_inside, solid_box
     from engine.physics_runtime import room_bounds
 
     if not (math.isfinite(dx) and math.isfinite(dy)):  # a NaN/inf move would park the sprite at NaN for good
@@ -25,18 +25,18 @@ def move_entity_with_collision(self, sprite, dx: float, dy: float, friction: flo
         finally:
             sprite.center_x, sprite.center_y = old
 
-    # Partly in a wall its first step is still in: pushed out first, as the player is (physics_model.depenetrate,
+    # Partly in a wall tile its first step is still in: pushed out first, as the player is (physics_model.depenetrate,
     # #764). That step's check is the loop's own first one, asked once.
     bounds = room_bounds(getattr(self, "window", None))
     start = box(sprite)
-    step = first_step(start, (dx, dy))
+    step = first_step((dx, dy), sprite.width, sprite.height)  # (the loop below cuts its move by these)
     first: tuple[tuple[float, float], list[Any]] | None = None
     if step is not None:
         x0, y0 = sprite.center_x, sprite.center_y
         at = (x0 + step[0], y0 + step[1])
         near = hits_at(*at)
-        out = depenetrate(start, lambda a: [box(w) for w in hits_at(x0 + a.x - start.x, y0 + a.y - start.y)],
-                          bounds, [box(w) for w in near])
+        out = depenetrate(start, lambda a: [solid_box(w, box(w)) for w in hits_at(x0 + a.x - start.x, y0 + a.y - start.y)],
+                          bounds, [solid_box(w, box(w)) for w in near])
         if out is not start:
             sprite.center_x += out.x - start.x
             sprite.center_y += out.y - start.y

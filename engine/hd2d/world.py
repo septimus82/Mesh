@@ -43,7 +43,7 @@ import json
 import math
 from dataclasses import dataclass
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Callable, Iterable
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Protocol
 
 from engine.hd2d.settings import PIXELS_PER_METRE, Hd2dSettings
 from engine.physics_model import entity_aabb
@@ -63,6 +63,13 @@ ESCAPE_SLACK = 0.05  # m: one found in deeper water may wade out through water t
 # carved bed's triangles between the samples taken; set once, so it never adds up)
 WADE_STEP = 14.0 / PIXELS_PER_METRE  # m: a wading step every this far (as engine.behaviours.water_surface)
 NAV_CELL = 0.5  # m: the navigation grid's cell
+class Sweep(Protocol):
+    """World.move's 2D move through its level's solids: engine.physics_runtime.move_entity_with_physics, or
+    mesh_net.scene_room.move. ``push_out=False``: without its push out of wall tiles (physics_model.depenetrate)."""
+
+    def __call__(self, sprite: Any, delta: tuple[float, float], solids: list[Any], /, *, push_out: bool = True) -> Any: ...
+
+
 NAV_HALF = (0.3, 0.19)  # m: half the footprint the navigation grid plans for (a character's feet box)
 _BUCKET = 2.0  # m: the spatial index's cell
 DIGEST_VERSION = 1  # World.collision_digest's solver version: bump on any change to how support, collision or water
@@ -503,7 +510,7 @@ class World:
 
     # ------------------------------------------------------------------ moving a sprite
     def move(self, sprite: Any, delta: tuple[float, float], solids: Iterable[Any] | None,
-             sweep: Callable[[Any, tuple[float, float], list[Any]], Any] | None = None) -> None:
+             sweep: Sweep | None = None) -> None:
         """Move ``sprite`` by ``delta`` (px) as far as the floors, walls and its level's 2D solids allow, and set its
         elevation to the floor it ends on (``mesh_entity_data["elevation"]``, px; saved with the game).
 
@@ -542,7 +549,7 @@ class World:
             self.on_wade(sprite, (sprite.center_x, sprite.bottom), water[1])
 
     def _step(self, sprite: Any, delta: tuple[float, float], solids: list[Any],
-              sweep: Callable[[Any, tuple[float, float], list[Any]], Any]) -> None:
+              sweep: Sweep) -> None:
         box = entity_aabb(sprite)
         hw, hh = box.w / 2 / PIXELS_PER_METRE, box.h / 2 / PIXELS_PER_METRE
         x, y, z = box.x / PIXELS_PER_METRE, box.y / PIXELS_PER_METRE, elevation_of(sprite)
@@ -610,9 +617,20 @@ class World:
         level = [s for s in solids if s is not sprite and _on_level(s, z)
                  and (getattr(s, "mesh_entity_data", None) or {}).get("id") not in self._pond_ids]  # (R4B: by outline)
         sweep(sprite, (dx, dy), level)  # the scene's 2D solids on this level
-        moved = (sprite.center_x - start[0]) / PIXELS_PER_METRE, (sprite.center_y - start[1]) / PIXELS_PER_METRE
-        if not self._settle(sprite, x + moved[0], y + moved[1], z, hw, hh, deep, block):
+        if self._settle_moved(sprite, start, x, y, z, hw, hh, deep, block):
+            return
+        # The 2D sweep's push out of a wall tile (#764) knows no floors: where it ends in a World wall or off a floor,
+        # the step goes again without it (as before #764), rather than being refused every frame.
+        sprite.center_x, sprite.center_y = start
+        sweep(sprite, (dx, dy), level, push_out=False)
+        if not self._settle_moved(sprite, start, x, y, z, hw, hh, deep, block):
             sprite.center_x, sprite.center_y = start  # (never expected: each axis was checked)
+
+    def _settle_moved(self, sprite: Any, start: tuple[float, float], x: float, y: float, z: float, hw: float,
+                      hh: float, deep: float, block: float | None) -> bool:
+        """_settle where the 2D sweep took ``sprite`` from ``start`` (px), its feet then at (x, y) m."""
+        return self._settle(sprite, x + (sprite.center_x - start[0]) / PIXELS_PER_METRE,
+                            y + (sprite.center_y - start[1]) / PIXELS_PER_METRE, z, hw, hh, deep, block)
 
     def _settle(self, sprite: Any, x: float, y: float, z: float, hw: float, hh: float,
                 deep: float = DEEP_SLACK, block: float | None = None) -> bool:

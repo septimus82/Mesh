@@ -14,7 +14,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from engine.physics_model import Aabb, MoveRequest, _sweep, depenetrate, sweep_axis_separate
+from engine.physics_model import Aabb, EntityBox, MoveRequest, _sweep, depenetrate, sweep_axis_separate
 
 pytestmark = pytest.mark.fast
 
@@ -280,29 +280,30 @@ def test_the_scene_controller_mover_walks_out_of_a_wall_too(monkeypatch: pytest.
 
 
 class _Solid(_Sprite):
-    """A sprite with a box collider of its own size (so the player mover reads it without Arcade)."""
+    """A solid entity: entity data, with a box collider of its own size (so the player mover reads it without Arcade).
+    Map collision tiles carry no entity data (_Sprite, _tile_row)."""
 
     def __init__(self, x: float, y: float, w: float = 32.0, h: float = 32.0) -> None:
         super().__init__(x, y, w, h)
-        self.mesh_entity_data = {"components": {"collider": {"kind": "box", "w": w, "h": h}}}
+        self.mesh_entity_data = {"id": "solid", "components": {"collider": {"kind": "box", "w": w, "h": h}}}
 
 
-def _row_sprites(cls=_Solid) -> list:
-    return [cls(16 + 32 * i, 176.0, 32.0, 32.0) for i in range(8)]  # y 160..192, x 0..256
+def _tile_row() -> list[_Sprite]:
+    return [_Sprite(16 + 32 * i, 176.0, 32.0, 32.0) for i in range(8)]  # map collision tiles: y 160..192, x 0..256
 
 
-def test_the_player_mover_slides_along_a_row_even_when_solid_and_keeps_the_room_on_a_push() -> None:
-    """move_entity_with_physics (the player; World.move's default sweep): a solid mover is in the solids list itself,
-    and its own collider must not count as a wall it is in (it would block every push)."""
+def test_the_player_mover_slides_along_a_tile_row_even_when_solid_and_keeps_the_room_on_a_push() -> None:
+    """move_entity_with_physics (the player; World.move's default sweep). A solid mover is in the solids list itself:
+    its own collider is an entity it is already in, so it is neither pushed out of nor in the way of a push."""
     from engine.physics_runtime import move_entity_with_physics
 
     feet = _Solid(100, 190, 19, 12)
-    solids = _row_sprites() + [feet]
+    solids = _tile_row() + [feet]
     for _ in range(10):
         move_entity_with_physics(feet, (3.0, 0.0), solids)
     assert (feet.center_x, feet.bottom) == (pytest.approx(130.0), pytest.approx(192.0))
     box = _Solid(NEAR_EDGE.x, NEAR_EDGE.y, 12, 12)
-    move_entity_with_physics(box, (0.0, -3.0), [_Solid(EDGE_WALL.x, EDGE_WALL.y)], ROOM)
+    move_entity_with_physics(box, (0.0, -3.0), [_Sprite(EDGE_WALL.x, EDGE_WALL.y, 32, 32)], ROOM)
     assert (box.left, box.bottom) == (5.0, pytest.approx(EDGE_WALL.top)), "pushed up, not out of the room"
 
 
@@ -314,11 +315,11 @@ def _scene_controller(monkeypatch: pytest.MonkeyPatch, solids: list, room=None) 
     return SimpleNamespace(solid_sprites=solids, window=window)
 
 
-def test_the_scene_controller_mover_slides_along_a_row_and_keeps_the_room_too(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_scene_controller_mover_slides_along_a_tile_row_and_keeps_the_room_too(monkeypatch: pytest.MonkeyPatch) -> None:
     from engine.scene_controller_parts.gameplay_runtime import move_entity_with_collision
 
-    enemy = _Sprite(100, 190, 19, 12)
-    controller = _scene_controller(monkeypatch, _row_sprites(_Sprite) + [enemy])  # (Arcade skips the mover itself)
+    enemy = _Solid(100, 190, 19, 12)
+    controller = _scene_controller(monkeypatch, _tile_row() + [enemy])  # (Arcade skips the mover itself)
     for _ in range(10):
         move_entity_with_collision(controller, enemy, 3.0, 0.0)
     assert (enemy.center_x, enemy.bottom) == (pytest.approx(130.0), pytest.approx(192.0))
@@ -350,13 +351,69 @@ def test_both_movers_agree_on_random_moves_overlapping_or_not(monkeypatch: pytes
     assert overlapping > 300, "the sample must include many starts inside walls"
 
 
-def test_the_network_mover_slides_along_a_row_even_in_its_own_solids() -> None:
-    """mesh_net.scene_room.move (the authority and a client's prediction run this one step): an enemy walking a route
-    is in the solids it walks through."""
+def test_the_network_mover_slides_along_a_tile_row_even_in_its_own_solids() -> None:
+    """mesh_net.scene_room.move (the authority and a client's prediction run this one step): its tile bodies carry no
+    entity data; an enemy walking a route is an entity in the solids it walks through."""
     from mesh_net.scene_room import Body, move
 
     row = [Body(16 + 32 * i, 176.0, 32, 32, {}) for i in range(8)]
-    walker = Body(100, 190, 19, 12, {})
+    walker = Body(100, 190, 19, 12, {"id": "walker"})
     for _ in range(10):
         move(walker, (3.0, 0.0), row + [walker])
     assert (walker.center_x, walker.center_y) == (pytest.approx(130.0), pytest.approx(198.0))
+
+
+HERO = Aabb(100, 100, 19, 12)  # x 90.5..109.5
+NPC = Aabb(110, 100, 32, 32)  # x 94..126: a solid NPC 15.5 px into the hero from its right
+
+
+def test_a_solid_entity_the_mover_overlaps_never_pushes_it_sideways(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Only wall tiles are pushed out of (#764 is about rows of them): an NPC walking through the player must not
+    shove it aside when it moves. axis_stop's walk-out rule frees it (walking up is free; walking into it stops)."""
+    from engine.physics_runtime import move_entity_with_physics
+    from engine.scene_controller_parts.gameplay_runtime import move_entity_with_collision
+    from mesh_net.scene_room import Body, move
+
+    moved, _ = _move(HERO, (0.0, 3.0), EntityBox(NPC.x, NPC.y, NPC.w, NPC.h))
+    assert (moved.x, moved.y) == (HERO.x, HERO.y + 3.0), "pure model: an EntityBox is never pushed out of"
+    assert _move(HERO, (0.0, 3.0), NPC)[0].x == pytest.approx(HERO.x - 15.5), "(a wall tile there would be)"
+
+    hero = _Solid(HERO.x, HERO.y, HERO.w, HERO.h)
+    move_entity_with_physics(hero, (0.0, 3.0), [_Solid(NPC.x, NPC.y, NPC.w, NPC.h)])
+    assert (hero.center_x, hero.center_y) == (HERO.x, HERO.y + 3.0), "the player mover"
+
+    sprite = _Sprite(HERO.x, HERO.y, HERO.w, HERO.h)
+    move_entity_with_collision(_scene_controller(monkeypatch, [_Solid(NPC.x, NPC.y, NPC.w, NPC.h)]), sprite, 0.0, 3.0)
+    assert (sprite.center_x, sprite.center_y) == (HERO.x, HERO.y + 3.0), "the SceneController mover"
+
+    walker = Body(HERO.x, HERO.y, HERO.w, HERO.h, {"id": "hero"})
+    move(walker, (0.0, 3.0), [Body(NPC.x, NPC.y, NPC.w, NPC.h, {"id": "npc"})])
+    assert (walker.center_x, walker.center_y) == (HERO.x, HERO.y + 3.0), "the network mover"
+
+
+@pytest.mark.parametrize("overlap", [2.0, 3.0, 6.0])
+def test_in_hd2d_a_push_into_a_world_wall_is_dropped_so_the_player_still_walks_along_it(overlap: float) -> None:
+    """Feet flush against a World wall (floor geometry, which the 2D push doesn't know), a wall tile `overlap` px into
+    them from the other side: the push (into the World wall) ends where World._step's floors refuse it. The step goes
+    again without the push, so the player walks along the wall as before #764 instead of being refused every frame."""
+    from pathlib import Path
+
+    from engine.hd2d.glb import Collider, Model
+    from engine.hd2d.settings import parse_hd2d
+    from engine.hd2d.world import World
+    from engine.physics_model import entity_aabb
+
+    settings = parse_hd2d({"structures": [{"id": "s", "model": "m.glb", "x": 0, "y": 0}],
+                           "ground": {"from": [-320, -320], "to": [320, 320]}})
+    for d in (3.0, -3.0):
+        world = World(settings, {"m.glb": Model(Path("m.glb"), [], [Collider("w", "wall", [], (1.0, -5, 0),
+                                                                              (1.05, 5, 3))])})  # x 32..33.6 px
+        hero = SimpleNamespace(center_x=22.5, center_y=18.0, width=32.0, height=48.0, scale_x=1.0,
+                               mesh_entity_data={"elevation": 0.0, "components": {"collider": {"kind": "box", "auto": True}}})
+        hero.center_x += 32.0 - entity_aabb(hero).right  # feet flush against the World wall
+        feet = entity_aabb(hero)
+        tile = SimpleNamespace(center_x=feet.left + overlap - 16.0, center_y=feet.y, width=32.0, height=32.0)
+        start = (hero.center_x, hero.center_y)
+        for _ in range(5):
+            world.move(hero, (0.0, d), [tile])
+        assert (hero.center_x, hero.center_y) == (start[0], pytest.approx(start[1] + 5 * d)), (overlap, d)

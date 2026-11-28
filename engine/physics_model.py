@@ -273,7 +273,8 @@ def axis_stop(box: Aabb, delta: float, walls: Sequence[Aabb], axis: int) -> Opti
 
     Moving *along* walls it is in would be free only past a wall centred on the box: along a row of tiles the next
     tile's centre is ahead, so the box would stop flush against it and stay pinned there. Both movers therefore push
-    an overlapping box out first (depenetrate: along its shallower axis), so it slides along the row (#764).
+    a box out of the wall tiles it overlaps first (depenetrate: along its shallower axis), so it slides along the row
+    (#764). Solid entities are not pushed out of: this rule alone frees a box from one (EntityBox).
     """
     half = (box.w if axis == 0 else box.h) / 2
     centre = box.x if axis == 0 else box.y
@@ -284,6 +285,19 @@ def axis_stop(box: Aabb, delta: float, walls: Sequence[Aabb], axis: int) -> Opti
         return min(near) - half if near else None
     near = [w.right if axis == 0 else w.top for w in walls if (w.x if axis == 0 else w.y) < centre]
     return max(near) + half if near else None
+
+
+@dataclass
+class EntityBox(Aabb):
+    """A solid entity's collider as a wall query returns it (solid_box). It blocks a move like any wall, but
+    depenetrate never pushes a box out of it: #764 is about rows of wall tiles, and axis_stop's walk-out rule already
+    frees a box from an entity (a solid NPC walking through the player must not shove it aside)."""
+
+
+def solid_box(solid: Any, box: Aabb) -> Aabb:
+    """``box``, ``solid``'s collider, as a wall query returns it: an EntityBox for a solid entity (one with entity
+    data), a plain Aabb for a map collision tile (engine.tilemap's, mesh_net's tile bodies: none)."""
+    return EntityBox(box.x, box.y, box.w, box.h) if getattr(solid, "mesh_entity_data", None) else box
 
 
 _DEPTH_EPS = 1e-6  # px: flush contact (float noise from a flush stop) is not an overlap
@@ -306,11 +320,12 @@ def _escape(box: Aabb, wall: Aabb, axis: int) -> Optional[float]:
     return None
 
 
-def first_step(box: Aabb, delta: Tuple[float, float]) -> Optional[Tuple[float, float]]:
+def first_step(delta: Tuple[float, float], w: float, h: float) -> Optional[Tuple[float, float]]:
     """The offset of the box the sweep's first wall query looks at: the first piece of its x move, else of its y move
-    (None: no move). Both movers look there first, so its answer decides whether depenetrate runs."""
+    (None: no move), cut by fast_move_steps from the size (``w``, ``h``) the mover cuts its own move by. Both movers
+    look there first, so its answer decides whether depenetrate runs."""
     dx, dy = delta
-    piece_x, piece_y = dx / fast_move_steps(dx, box.w), dy / fast_move_steps(dy, box.h)
+    piece_x, piece_y = dx / fast_move_steps(dx, w), dy / fast_move_steps(dy, h)
     if abs(piece_x) > 1e-9:
         return (piece_x, 0.0)
     if abs(piece_y) > 1e-9:
@@ -320,13 +335,14 @@ def first_step(box: Aabb, delta: Tuple[float, float]) -> Optional[Tuple[float, f
 
 def depenetrate(box: Aabb, query: "TileQuery", bounds: Optional[Tuple[float, float, float, float]] = None,
                 near: Optional[Sequence[Aabb]] = None) -> Aabb:
-    """``box`` pushed out of the walls it overlaps by the shortest push that leaves it in none, or ``box`` itself.
+    """``box`` pushed out of the wall tiles it overlaps by the shortest push that leaves it in none, or ``box`` itself.
 
     Run at the start of a move (sweep_axis_separate, SceneController.move_entity_with_collision), so a box partly in
     a row of tiles is lifted out along its shallower axis and then slides along the row instead of pinning (#764).
     ``near``: what the move's first step's query returned (first_step). A box in none of those walls is left as it
     is with no query of its own, so a move clear of walls (the normal case) costs nothing extra; a step that leaves
     every wall it started in needs no push either. Nor does a box in only walls centred on it (no push leaves them).
+    Solid entities (EntityBox) are never pushed out of; a push may not end in one the box wasn't already in.
 
     Each wall can only be left away from its centre on an axis (``_escape``), so a box is never pushed through a
     wall, a thin one included. A push may combine both axes (the inside corner of an L: out of the floor row and
@@ -336,9 +352,11 @@ def depenetrate(box: Aabb, query: "TileQuery", bounds: Optional[Tuple[float, flo
     the shortest wins; equal ones go x before y, the way the sweep moves.
     """
     if near is not None and all(_escape(box, w, 0) is None and _escape(box, w, 1) is None
-                                for w in near if _overlaps(box, w)):
+                                for w in near if _overlaps(box, w) and not isinstance(w, EntityBox)):
         return box
-    inside = [w for w in query(box) if _overlaps(box, w)]
+    found = [w for w in query(box) if _overlaps(box, w)]
+    inside = [w for w in found if not isinstance(w, EntityBox)]
+    already = [w for w in found if isinstance(w, EntityBox)]  # (incl. a solid mover's own collider)
     if not inside:
         return box
     escapes = [(_escape(box, w, 0), _escape(box, w, 1)) for w in inside]
@@ -362,7 +380,7 @@ def depenetrate(box: Aabb, query: "TileQuery", bounds: Optional[Tuple[float, flo
             if ((px > 0 and moved.right > right + _DEPTH_EPS) or (px < 0 and moved.left < left - _DEPTH_EPS)
                     or (py > 0 and moved.top > top + _DEPTH_EPS) or (py < 0 and moved.bottom < bottom - _DEPTH_EPS)):
                 continue
-        if not any(_overlaps(moved, w) for w in query(moved)):
+        if not any(_overlaps(moved, w) and w not in already for w in query(moved)):
             return moved
     return box
 
@@ -411,6 +429,7 @@ def sweep_axis_separate(
     req: MoveRequest,
     query_tiles: TileQuery,
     bounds: Optional[Tuple[float, float, float, float]] = None,
+    push_out: bool = True,
 ) -> MoveResult:
     """Resolve movement collision using axis-separated sweep.
 
@@ -431,9 +450,10 @@ def sweep_axis_separate(
         req: Movement request containing entity, start pos, delta, and AABB.
         query_tiles: Callback returning blocking tiles in a region.
         bounds: The room rectangle a depenetration push may not cross (keep_inside's; None: an open map).
+        push_out: False skips depenetration (World._step's retry when a push ends where its floors refuse it).
 
-    A box whose first step (:func:`first_step`) would still be in a wall it starts in is first pushed out of the
-    walls it overlaps (:func:`depenetrate`), so it slides along a row of tiles it is partly in (#764). That step's
+    A box whose first step (:func:`first_step`) would still be in a wall tile it starts in is first pushed out of the
+    wall tiles it overlaps (:func:`depenetrate`), so it slides along a row of tiles it is partly in (#764). That step's
     query is the sweep's own first one, asked once, so a move clear of walls makes no extra query.
 
     Returns:
@@ -457,7 +477,7 @@ def sweep_axis_separate(
     dx, dy = req.delta
     if not (math.isfinite(dx) and math.isfinite(dy)):  # a NaN/inf move would park the entity at NaN for good
         return MoveResult(final_pos=(req.aabb.x, req.aabb.y), hit_x=False, hit_y=False)
-    step = first_step(req.aabb, req.delta)
+    step = first_step(req.delta, req.aabb.w, req.aabb.h) if push_out else None
     if step is None:
         return _sweep(req, query_tiles)
     probe = req.aabb.move(*step)  # the box _sweep queries first: asked once, its answer reused
