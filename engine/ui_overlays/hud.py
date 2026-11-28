@@ -8,6 +8,7 @@ import engine.optional_arcade as optional_arcade
 
 from ..hud_model import HudViewModel, build_hud_view_model, find_player, merge_event_histories
 from engine.swallowed_exceptions import _log_swallow
+from ..text_draw import TextCache, draw_text_cached, get_text_scale
 from .common import (
     UIElement,
     _draw_tb_rectangle_outline,
@@ -29,6 +30,7 @@ TOAST_PAD_X, TOAST_PAD_Y = 12.0, 6.0
 TOAST_MIN_WIDTH, TOAST_MAX_WIDTH = 180.0, 640.0  # (a short message keeps its box; a long one wraps before 640 px)
 TOAST_LINE_HEIGHT = 22.0  # the line pitch at text scale 1, as before; a taller font or text scale gets more
 TOAST_FONT, TOAST_FONT_SIZE = "Consolas", 12.0
+ELLIPSIS = "\u2026"  # ends the last Quest Log line that fits when more of its text doesn't
 
 
 @dataclass(frozen=True, slots=True)
@@ -357,6 +359,12 @@ class QuestLog(UIElement):
             font_size=12,
             anchor_y="top",
         )
+        self._probes: dict[float, Any] = {}  # font size -> a Text that measures lines in it
+        self._layouts: dict[tuple[str, float, float], tuple[list[tuple[str, float]], float]] = {}
+        self._ellipses: dict[tuple[str, float, float], tuple[str, float]] = {}
+        self._text_cache = TextCache()  # one Text a line drawn
+        # What the last draw put on screen: (kind, line, left, top, width, height); kind "title:<n>" or "detail".
+        self.drawn_lines: list[tuple[str, str, float, float, float, float]] = []
 
     def on_resize(self, width: int, height: int) -> None:  # noqa: ARG002
         """QuestLog computes layout per draw; no persistent cache to update."""
@@ -444,77 +452,97 @@ class QuestLog(UIElement):
         content_y = top - 52.0
         padding = 20.0
         content_width = width - padding * 1.5
+        floor = bottom + 40.0  # (text stops above the "Press Q to close" hint)
+        self.drawn_lines = []
         if not entries:
-            optional_arcade.arcade.draw_text(
-                "No tracked quests yet.",
-                left + padding,
-                content_y,
-                color=optional_arcade.arcade.color.LIGHT_GRAY,
-                font_size=13,
-                anchor_y="top",
-                width=content_width,
-            )
+            self._draw_wrapped("No tracked quests yet.", left + padding, content_y, content_width, floor,
+                               font_size=13, color=optional_arcade.arcade.color.LIGHT_GRAY)
             return
 
         left_width = max(180.0, content_width * 0.45)
         right_left = left + padding + left_width + 16.0
         right_width = right - right_left - padding
         entries = entries[:50]
-        self._selection_index = min(max(0, self._selection_index), max(0, len(entries) - 1))
+        self._selection_index = selected_index = min(max(0, self._selection_index), max(0, len(entries) - 1))
 
+        # The list starts at the first title that keeps the selected one in view (it doesn't scroll otherwise).
+        heights = []
+        for entry in entries[: selected_index + 1]:
+            lines, pitch = self._layout(str(entry.get("title", "<quest>")), 14, left_width)
+            heights.append(len(lines) * pitch)
+        first = 0
+        while first < selected_index and sum(heights[first:]) > content_y - floor:
+            first += 1
         y = content_y
-        for idx, entry in enumerate(entries):
-            if y < bottom + 60.0:
-                break
-            title_color = optional_arcade.arcade.color.YELLOW if idx == self._selection_index else optional_arcade.arcade.color.WHITE
+        for idx in range(first, len(entries)):
+            entry = entries[idx]
+            title_color = optional_arcade.arcade.color.YELLOW if idx == selected_index else optional_arcade.arcade.color.WHITE
             if entry.get("completed"):
                 title_color = optional_arcade.arcade.color.GRAY
-            optional_arcade.arcade.draw_text(
-                entry.get("title", "<quest>"),
-                left + padding,
-                y,
-                color=title_color,
-                font_size=14,
-                width=left_width,
-                anchor_y="top",
-            )
-            y -= 18.0
+            y = self._draw_wrapped(str(entry.get("title", "<quest>")), left + padding, y, left_width, floor,
+                                   font_size=14, color=title_color, kind=f"title:{idx}")
 
-        if entries:
-            selected = entries[self._selection_index]
-            detail_color = optional_arcade.arcade.color.LIGHT_GRAY
-            status = "Complete" if selected.get("completed") else "Active"
-            optional_arcade.arcade.draw_text(
-                f"Status: {status}",
-                right_left,
-                content_y,
-                color=detail_color,
-                font_size=12,
-                width=right_width,
-                anchor_y="top",
-            )
-            objective = selected.get("current_objective") or selected.get("text") or ""
-            if objective:
-                optional_arcade.arcade.draw_text(
-                    f"Objective: {objective}",
-                    right_left,
-                    content_y - 20.0,
-                    color=detail_color,
-                    font_size=12,
-                    width=right_width,
-                    anchor_y="top",
-                    multiline=True,
-                )
-            else:
-                optional_arcade.arcade.draw_text(
-                    "Objective: -",
-                    right_left,
-                    content_y - 20.0,
-                    color=detail_color,
-                    font_size=12,
-                    width=right_width,
-                    anchor_y="top",
-                )
+        selected = entries[selected_index]
+        detail_color = optional_arcade.arcade.color.LIGHT_GRAY
+        status = "Complete" if selected.get("completed") else "Active"
+        objective = selected.get("current_objective") or selected.get("text") or "-"
+        y = self._draw_wrapped(f"Status: {status}", right_left, content_y, right_width, floor,
+                               font_size=12, color=detail_color, kind="detail")
+        self._draw_wrapped(f"Objective: {objective}", right_left, min(y, content_y - 20.0), right_width, floor,
+                           font_size=12, color=detail_color, kind="detail")
+
+    def _measure(self, line: str, size: float) -> float:
+        """``line``'s width in the Quest Log's font at ``size`` (text scale applied)."""
+        probe = self._probes.get(size)
+        if probe is None:
+            probe = self._probes[size] = optional_arcade.arcade.Text("Ag", 0, 0, font_size=size)
+        probe.text = line
+        return float(getattr(probe, "content_width", 0.6 * size * len(line)))
+
+    def _layout(self, text: str, font_size: float, width: float) -> tuple[list[tuple[str, float]], float]:
+        """``text`` in lines no wider than ``width`` (each with its width), broken at its newlines too, and the line
+        pitch: measured once in the font it is drawn in, at the text scale."""
+        size = font_size * get_text_scale()
+        key = (text, size, width)
+        layout = self._layouts.get(key)
+        if layout is None:
+            self._measure("Ag", size)  # (the font's line height, whatever the probe measured last)
+            pitch = float(getattr(self._probes[size], "content_height", 1.5 * size))
+            lines = [line for part in text.split("\n") for line in _wrap(part, lambda s: self._measure(s, size) <= width)]
+            if len(self._layouts) > 128:
+                self._layouts.clear()
+            layout = self._layouts[key] = ([(line, self._measure(line, size)) for line in lines], pitch)
+        return layout
+
+    def _ellipsized(self, line: str, size: float, width: float) -> tuple[str, float]:
+        """``line`` shortened to end in an ellipsis within ``width``, and its width."""
+        key = (line, size, width)
+        cached = self._ellipses.get(key)
+        if cached is None:
+            cut = line.rstrip()
+            while cut and self._measure(cut + ELLIPSIS, size) > width:
+                cut = cut[:-1].rstrip()
+            if len(self._ellipses) > 128:
+                self._ellipses.clear()
+            cached = self._ellipses[key] = (cut + ELLIPSIS, self._measure(cut + ELLIPSIS, size))
+        return cached
+
+    def _draw_wrapped(self, text: str, x: float, top: float, width: float, floor: float, *, font_size: float,
+                      color: Any, kind: str = "text") -> float:
+        """Draw ``text`` from ``top`` down in lines no wider than ``width``, one cached Text a line (arcade's
+        draw_text keeps one label for every call with the same font and width, and its ``multiline`` isn't part of
+        that key, so a single-line call before it left a multiline one unwrapped). Lines that would reach below
+        ``floor`` are left out, the last one kept ending in an ellipsis. Returns the top of the next line."""
+        lines, pitch = self._layout(text, font_size, width)
+        for n, (line, line_width) in enumerate(lines):
+            if top - pitch < floor:
+                break
+            if n + 1 < len(lines) and top - 2 * pitch < floor:  # (the last line with room, and more to come)
+                line, line_width = self._ellipsized(line, font_size * get_text_scale(), width)
+            draw_text_cached(line, x, top, color=color, font_size=font_size, anchor_y="top", cache=self._text_cache)
+            self.drawn_lines.append((kind, line, x, top, line_width, pitch))
+            top -= pitch
+        return top
 
     def _collect_entries(self) -> list[dict[str, Any]]:
         from ..quest_ui import get_active_quests  # noqa: PLC0415
