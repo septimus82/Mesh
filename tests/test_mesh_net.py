@@ -66,7 +66,8 @@ def test_two_sockets_move_disconnect_resume_and_shutdown():
                         async with connect(port, old):
                             pytest.fail("reused credential")
                     c.writer.write(wire.encode(intent(b.entity, 1)))
-                    await until(a, lambda s: len(s["players"]) == 1)
+                    # (a still holds 1-player snapshots from before c joined: only a later one shows c closed)
+                    await until(a, lambda s: s["tick"] > c.state["tick"] and len(s["players"]) == 1)
                 await server.close()
                 with pytest.raises((EOFError, OSError)):
                     await until(a, lambda s: False)
@@ -121,7 +122,10 @@ def test_quota_rejects_flood_and_limits_half_open_connections(monkeypatch, caplo
                         pytest.fail("ninth simultaneous client admitted")
                 flood = clients[-1]
                 flood.writer.write(b"".join(wire.encode(intent(flood.entity, n)) for n in range(1, 25)))
-                await until(clients[0], lambda s: len(s["players"]) == wire.MAX_PLAYERS - 1)
+                # clients[0] may hold snapshots buffered from before the flood client joined (7 players, when a tick
+                # fell between the 7th and 8th joins): only a snapshot after its welcome can show it gone.
+                joined = flood.state["tick"]
+                await until(clients[0], lambda s: s["tick"] > joined and len(s["players"]) == wire.MAX_PLAYERS - 1)
                 assert flood.entity not in server.peers
                 assert "[Mesh][Net] session closed: input rate" in caplog.messages
             monkeypatch.setattr(wire, "read", bounded_read)
