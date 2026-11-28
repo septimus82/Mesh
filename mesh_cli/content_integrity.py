@@ -422,6 +422,17 @@ def scan_quests(
                 if not isinstance(flag, str) or not flag.strip() or not FLAG_RE.fullmatch(flag):
                     collector.error(code="content.flags.invalid_name", file=file, pointer=flag_ptr, message=f"invalid flag name '{flag}'")
 
+        if quest.get("reward") is not None:  # warnings: a reward the game drops pays nothing (#755)
+            from engine.quest_runtime.validation import validate_quest_definition
+
+            for issue in validate_quest_definition(quest):
+                if issue.code.startswith("reward"):
+                    pointer = base_ptr
+                    for token in issue.json_path.split(".")[1:]:  # "quests[0].reward.gold" -> .../reward/gold
+                        pointer = _ptr(pointer, token)
+                    collector.warning(code=f"content.quests.{issue.code}", file=file, pointer=pointer,
+                                      message=f"{issue.message} ({issue.hint})")
+
         stages = quest.get("stages")
         if stages is None and isinstance(quest.get("steps"), list):
             stages = quest.get("steps")

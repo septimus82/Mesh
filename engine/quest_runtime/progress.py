@@ -226,18 +226,15 @@ def complete_quest(manager: Any, quest: dict[str, Any], state: dict[str, Any], *
     for counter, amount in reward.get("inc_counters", {}).items():
         manager.window.inc_counter(counter, float(amount))
 
-    # Apply Gold and XP rewards with perk bonuses
+    # Gold goes to the counter vendors spend; add_counter applies the gold perk bonus (once). (#755: it went to
+    # values["gold"], which nothing reads.) XP goes through the progression's add_xp, which applies the XP perk bonus.
     gold = reward.get("gold", 0)
     if gold > 0:
-        bonus = manager.window.game_state_controller.get_perk_bonus("gold_bonus_pct")
-        amount = int(gold * (1.0 + bonus))
-        current_gold = manager.window.game_state.values.get("gold", 0)
-        manager.window.game_state.values["gold"] = current_gold + amount
-        print(f"[Mesh][Quests] Rewarded {amount} gold (base {gold} + {int(bonus*100)}%)")
+        manager.window.inc_counter("gold", float(gold))
+        print(f"[Mesh][Quests] Rewarded {gold} gold")
 
     xp = reward.get("xp", 0)
     if xp > 0:
-        # Let add_xp handle the bonus
         manager.window.game_state_controller.add_xp(xp)
         print(f"[Mesh][Quests] Rewarded {xp} XP")
 
